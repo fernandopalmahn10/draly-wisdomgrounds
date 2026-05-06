@@ -147,62 +147,77 @@
     }
   }
 
-  // === Custom music (HTMLAudio) — uses battle-theme.mp3 if present, falls back to synth otherwise ===
-  let bgAudioEl = null;
-  let bgAudioReady = false;
-  let bgAudioFailed = false;
+  // === Custom music via Web Audio API ===
+  // Web Audio plays even in iPhone silent mode (HTMLAudio does not).
+  // Falls back to procedural synth music if the file fails to load.
+  let bgBuffer = null;
+  let bgSource = null;
+  let bgFailed = false;
+  let bgLoading = false;
 
-  function tryStartCustomMusic() {
-    if (bgAudioFailed) return false;
-    if (!bgAudioEl) {
-      bgAudioEl = new Audio('/assets/music/battle-theme.mp3');
-      bgAudioEl.loop = true;
-      bgAudioEl.preload = 'auto';
-      bgAudioEl.volume = 0; // start silent, fade in
-      bgAudioEl.addEventListener('canplaythrough', () => { bgAudioReady = true; }, { once: true });
-      bgAudioEl.addEventListener('error', () => { bgAudioFailed = true; });
+  async function loadBgBuffer() {
+    if (bgBuffer || bgLoading || bgFailed) return bgBuffer;
+    bgLoading = true;
+    try {
+      const res = await fetch('/assets/music/battle-theme.mp3');
+      if (!res.ok) throw new Error('fetch failed');
+      const arr = await res.arrayBuffer();
+      const ctx = ensureCtx();
+      if (!ctx) throw new Error('no audio ctx');
+      bgBuffer = await new Promise((resolve, reject) =>
+        ctx.decodeAudioData(arr, resolve, reject)
+      );
+      return bgBuffer;
+    } catch (e) {
+      bgFailed = true;
+      return null;
+    } finally {
+      bgLoading = false;
     }
-    const targetVol = muted ? 0 : 0.45;
-    const playPromise = bgAudioEl.play();
-    if (playPromise) {
-      playPromise.then(() => {
-        // Fade in
-        let v = 0;
-        const fade = setInterval(() => {
-          v = Math.min(targetVol, v + 0.04);
-          if (bgAudioEl) bgAudioEl.volume = v;
-          if (v >= targetVol) clearInterval(fade);
-        }, 60);
-      }).catch(() => { bgAudioFailed = true; });
-    }
+  }
+
+  async function tryStartCustomMusic() {
+    if (bgFailed) return false;
+    const ctx = ensureCtx();
+    if (!ctx) return false;
+    if (bgSource) return true; // already playing
+    const buf = bgBuffer || await loadBgBuffer();
+    if (!buf) return false;
+    bgSource = ctx.createBufferSource();
+    bgSource.buffer = buf;
+    bgSource.loop = true;
+    // Fade in
+    const targetVol = muted ? 0 : 0.6;
+    musicGain.gain.cancelScheduledValues(ctx.currentTime);
+    musicGain.gain.setValueAtTime(0, ctx.currentTime);
+    musicGain.gain.linearRampToValueAtTime(targetVol, ctx.currentTime + 1.5);
+    bgSource.connect(musicGain);
+    bgSource.start(0);
     return true;
   }
 
   function stopCustomMusic() {
-    if (bgAudioEl && !bgAudioEl.paused) {
-      // Fade out then pause
-      const startVol = bgAudioEl.volume;
-      let t = 0;
-      const fade = setInterval(() => {
-        t += 0.06;
-        if (bgAudioEl) bgAudioEl.volume = Math.max(0, startVol * (1 - t));
-        if (t >= 1) {
-          clearInterval(fade);
-          if (bgAudioEl) { bgAudioEl.pause(); bgAudioEl.currentTime = 0; }
-        }
-      }, 30);
-    }
+    const ctx = audioCtx;
+    if (!ctx || !bgSource) return;
+    musicGain.gain.cancelScheduledValues(ctx.currentTime);
+    musicGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
+    const src = bgSource;
+    bgSource = null;
+    setTimeout(() => {
+      try { src.stop(); src.disconnect(); } catch (e) {}
+    }, 600);
   }
 
-  function startMusic() {
-    // Prefer the custom MP3. Fall back to procedural koto only if it fails.
-    if (tryStartCustomMusic()) return;
+  async function startMusic() {
+    // Prefer the custom MP3 via Web Audio. Fall back to procedural koto only if MP3 fails.
+    const ok = await tryStartCustomMusic();
+    if (ok) return;
     const ctx = ensureCtx();
     if (!ctx) return;
     if (musicTimer) return;
     musicGain.gain.cancelScheduledValues(ctx.currentTime);
     musicGain.gain.setValueAtTime(0, ctx.currentTime);
-    musicGain.gain.linearRampToValueAtTime(muted ? 0 : 0.45, ctx.currentTime + 1.5);
+    musicGain.gain.linearRampToValueAtTime(muted ? 0 : 0.6, ctx.currentTime + 1.5);
     nextBarTime = ctx.currentTime + 0.2;
     scheduleAhead();
     musicTimer = setInterval(scheduleAhead, 1000);
@@ -319,17 +334,7 @@
     muted = !muted;
     if (audioCtx && sfxGain && musicGain) {
       sfxGain.gain.linearRampToValueAtTime(muted ? 0 : 0.7, audioCtx.currentTime + 0.2);
-      musicGain.gain.linearRampToValueAtTime(muted ? 0 : 0.45, audioCtx.currentTime + 0.2);
-    }
-    if (bgAudioEl) {
-      const target = muted ? 0 : 0.45;
-      let from = bgAudioEl.volume;
-      let t = 0;
-      const fade = setInterval(() => {
-        t += 0.1;
-        if (bgAudioEl) bgAudioEl.volume = from + (target - from) * Math.min(1, t);
-        if (t >= 1) clearInterval(fade);
-      }, 30);
+      musicGain.gain.linearRampToValueAtTime(muted ? 0 : 0.6, audioCtx.currentTime + 0.2);
     }
     return muted;
   };

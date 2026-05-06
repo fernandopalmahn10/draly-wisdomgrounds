@@ -5,11 +5,14 @@
   function enter() {
     if (entered) return;
     entered = true;
+    // Hide any "tap for sound" hint
+    const hint = document.getElementById('sound-hint');
+    if (hint) hint.classList.add('dismissed');
     if (window.unlockAudio) window.unlockAudio();
     if (!window.MochiSounds) return;
     // Soft welcome chime (1.5s)
     MochiSounds.welcome();
-    // Then ease into the looping pentatonic koto + taiko ambient
+    // Then ease into the looping music
     setTimeout(() => {
       if (MochiSounds.startMusic) MochiSounds.startMusic();
     }, 1700);
