@@ -9,14 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-    }
-  }
-  </script>
 </head>
 <body class="hub-bg">
   <div class="lantern l1"></div>
@@ -25,11 +17,10 @@
 
   <div class="container hub-home">
     <div class="hub-hero" style="margin-bottom:24px;">
-      <div class="dralingo-stage" style="width:min(60vw,260px); height:min(60vw,260px); margin-bottom:8px;">
+      <div class="dralingo-stage" style="width:min(45vw,200px); height:min(45vw,200px); margin-bottom:8px;">
         <div class="dralingo-rays static"></div>
         <div class="dralingo-orb"></div>
-        <div id="dralingo-3d-home" class="dralingo-3d-mount"></div>
-        <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-floating dralingo-2d-fallback">
+        <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-floating">
       </div>
       <h1 class="hub-title" style="font-size:clamp(1.8rem,5vw,2.8rem);">Draly Wisdomgrounds</h1>
       <p class="hub-tagline" style="margin-top:4px;">Where wisdom takes flight 🐉</p>
@@ -57,31 +48,6 @@
 
   <script src="/js/sounds.js"></script>
   <script src="/js/enter.js"></script>
-  <script type="module">
-    // Try mounting the 3D Dralingo. If WebGL is unavailable, the 2D fallback stays visible.
-    try {
-      const m = await import('/js/dralingo-3d.js');
-      const Dralingo3D = m.default;
-      const container = document.getElementById('dralingo-3d-home');
-      if (container) {
-        const handle = await Dralingo3D.mount(container, {
-          variant: 'flying',
-          hover: true,
-          rotate: true,
-          glow: true,
-          onReady: () => {
-            // Hide 2D fallback once the 3D model is rendered
-            document.querySelectorAll('.dralingo-2d-fallback').forEach((el) => el.style.display = 'none');
-          }
-        });
-        // Preload other variants for legendary appearances
-        Dralingo3D.preload('emperor');
-        Dralingo3D.preload('eating');
-      }
-    } catch (e) {
-      console.warn('3D Dralingo unavailable, using 2D image fallback', e);
-    }
-  </script>
   <script>
     // If URL contains ?pin=X, jump to player flow
     const params = new URLSearchParams(location.search);

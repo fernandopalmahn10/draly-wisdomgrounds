@@ -245,18 +245,13 @@
 .dralingo-overlay .legendary-image {
   position: relative;
   width: min(70vmin, 600px);
-  height: min(70vmin, 600px);
-  aspect-ratio: 1;
+  height: auto;
   z-index: 2;
   filter:
     drop-shadow(0 0 80px rgba(255, 213, 122, 1))
     drop-shadow(0 0 160px rgba(255, 213, 122, 0.8))
     drop-shadow(0 0 240px rgba(255, 215, 0, 0.6));
   animation: legendaryEntry 3.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-.dralingo-overlay .legendary-image canvas {
-  width: 100% !important;
-  height: 100% !important;
 }
 @keyframes legendaryEntry {
   0%   { transform: scale(0.1) translateY(80px) rotate(-30deg); opacity: 0; }

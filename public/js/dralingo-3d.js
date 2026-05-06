@@ -91,12 +91,16 @@ const Dralingo3D = {
     const glow = opts.glow !== false;
 
     // --- Renderer ---
+    // Default to transparent background. Only opaque if a hex color is passed.
+    const transparent = !opts.bg || opts.bg === 'transparent';
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
-      alpha: opts.bg !== 'transparent' ? false : true,
-      powerPreference: 'high-performance'
+      alpha: transparent,
+      powerPreference: 'low-power' // friendlier on mobile GPUs
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    if (transparent) renderer.setClearColor(0x000000, 0);
+    // Cap pixel ratio at 1 — DPR 2/3 on phones doubles GPU cost for negligible visual gain
+    renderer.setPixelRatio(1);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
