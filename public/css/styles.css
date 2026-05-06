@@ -897,3 +897,38 @@ body::before {
   cursor: pointer;
   font-weight: 700;
 }
+
+/* Sticky PIN badge — visible during active game so latecomers can join */
+.sticky-pin {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(13, 14, 26, 0.85);
+  border: 2px solid rgba(255, 213, 122, 0.4);
+  border-radius: 12px;
+  padding: 8px 16px;
+  box-shadow: 0 0 20px rgba(255, 213, 122, 0.15);
+  backdrop-filter: blur(6px);
+}
+.sticky-pin-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--ink-dim);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.sticky-pin-value {
+  font-family: 'ZCOOL XiaoWei', monospace;
+  font-size: 1.6rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  background: linear-gradient(135deg, var(--gold-glow), var(--red-glow));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-variant-numeric: tabular-nums;
+}

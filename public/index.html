@@ -16,48 +16,84 @@
   <div class="lantern l3"></div>
 
   <div class="container hub-home">
-    <div class="hub-hero">
-      <div class="dralingo-stage">
+    <div class="hub-hero" style="margin-bottom:24px;">
+      <div class="dralingo-stage" style="width:min(45vw,200px); height:min(45vw,200px); margin-bottom:8px;">
         <div class="dralingo-rays static"></div>
         <div class="dralingo-orb"></div>
         <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-floating">
       </div>
-      <h1 class="hub-title">Draly Wisdomgrounds</h1>
-      <p class="hub-tagline">Where wisdom takes flight 🐉</p>
+      <h1 class="hub-title" style="font-size:clamp(1.8rem,5vw,2.8rem);">Draly Wisdomgrounds</h1>
+      <p class="hub-tagline" style="margin-top:4px;">Where wisdom takes flight 🐉</p>
     </div>
 
-    <div class="hub-games">
-      <div class="hub-games-label">👑 Host a battle — pick your game</div>
-      <a href="/sets.html?game=mochi-mash" class="game-tile clickable active">
-        <div class="game-tile-emoji">🥮</div>
-        <div class="game-tile-info">
-          <div class="game-tile-name">Mochi Mash</div>
-          <div class="game-tile-desc">Team battle · Answer right, mash to feed your zoo</div>
-        </div>
-        <div class="game-tile-arrow">▶</div>
-      </a>
-      <a href="/sets.html?game=color-splash" class="game-tile clickable active">
-        <div class="game-tile-emoji">🎨</div>
-        <div class="game-tile-info">
-          <div class="game-tile-name">Color Splash</div>
-          <div class="game-tile-desc">Team battle · Walk to paint your territory in 3D</div>
-        </div>
-        <div class="game-tile-arrow">▶</div>
-      </a>
+    <div class="card" style="width:100%; max-width:400px; margin-bottom:14px;">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input class="input" id="home-pin" type="tel" maxlength="4" placeholder="Game PIN" inputmode="numeric" autocomplete="off">
+        <input class="input" id="home-name" type="text" maxlength="20" placeholder="Your name" autocomplete="given-name">
+        <button class="btn btn-jade btn-xl" id="home-join-btn">🎮 &nbsp; JOIN</button>
+        <p id="home-error" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em; margin:0;"></p>
+      </div>
     </div>
 
-    <div class="hub-actions" style="margin-top:24px;">
-      <button class="btn btn-gold btn-xl" onclick="location.href='/player.html' + location.search">
-        🎮 &nbsp; Join a Battle
+    <div id="rematch-wrap" style="width:100%; max-width:400px; margin-bottom:24px; display:none;">
+      <button class="btn btn-gold btn-xl" id="rematch-btn" style="width:100%;">
+        🔄 &nbsp; REMATCH<span id="rematch-name-suffix"></span>
       </button>
     </div>
+
+    <a href="/games.html" class="hub-host-link" id="host-link">
+      👑 Host a battle &nbsp;→
+    </a>
   </div>
 
   <script src="/js/sounds.js"></script>
   <script src="/js/enter.js"></script>
   <script>
+    // If URL contains ?pin=X, jump to player flow
     const params = new URLSearchParams(location.search);
-    if (params.get('pin')) location.href = '/player.html' + location.search;
+    if (params.get('pin')) {
+      location.href = '/player.html' + location.search;
+    }
+
+    // Restore the rematch button if we have a recent saved game
+    const REMATCH_KEY = 'dralyLastJoin';
+    const REMATCH_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours
+    let saved = null;
+    try {
+      const raw = localStorage.getItem(REMATCH_KEY);
+      if (raw) saved = JSON.parse(raw);
+    } catch (e) { /* ignore */ }
+
+    if (saved && saved.pin && saved.name && saved.ts && Date.now() - saved.ts < REMATCH_MAX_AGE_MS) {
+      const wrap = document.getElementById('rematch-wrap');
+      wrap.style.display = 'block';
+      document.getElementById('rematch-name-suffix').textContent = ' AS ' + saved.name.toUpperCase();
+      // Pre-fill the inputs too for convenience
+      document.getElementById('home-pin').value = saved.pin;
+      document.getElementById('home-name').value = saved.name;
+      document.getElementById('rematch-btn').onclick = () => {
+        if (window.MochiSounds) MochiSounds.join();
+        location.href = `/player.html?pin=${encodeURIComponent(saved.pin)}&name=${encodeURIComponent(saved.name)}&autojoin=1`;
+      };
+    }
+
+    // Join flow — same destination as Rematch but uses the typed inputs
+    document.getElementById('home-join-btn').addEventListener('click', tryJoin);
+    document.getElementById('home-pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('home-name').focus(); });
+    document.getElementById('home-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryJoin(); });
+
+    function tryJoin() {
+      const pin = document.getElementById('home-pin').value.trim();
+      const name = document.getElementById('home-name').value.trim();
+      const err = document.getElementById('home-error');
+      if (!pin || !name) {
+        err.textContent = 'Enter PIN and name';
+        return;
+      }
+      err.textContent = '';
+      if (window.MochiSounds) MochiSounds.join();
+      location.href = `/player.html?pin=${encodeURIComponent(pin)}&name=${encodeURIComponent(name)}&autojoin=1`;
+    }
   </script>
 </body>
 </html>
