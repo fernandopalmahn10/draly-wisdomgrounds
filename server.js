@@ -553,24 +553,8 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Watchdog: if a player goes >12s without receiving a question while game is active, force one
-  setInterval(() => {
-    Object.entries(games).forEach(([pin, g]) => {
-      if (g.state !== 'active') return;
-      const now = Date.now();
-      Object.entries(g.players).forEach(([pid, p]) => {
-        // Only push a question if they're not in active answer/walk/mash state and haven't gotten one recently
-        const inAction = p.mashUntil > now || p.walkUntil > now || p.currentQ;
-        if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {
-          const q = nextQuestionFor(g, pid);
-          if (q) {
-            p.lastQuestionAt = now;
-            io.to(pid).emit('question', q);
-          }
-        }
-      });
-    });
-  }, 4000);
+  // (Watchdog moved outside the connection handler — see bottom of file. The previous
+  // version registered a new interval on every connection, which compounded as a CPU leak.)
 
   socket.on('disconnect', () => {
     if (!currentPin || !games[currentPin]) return;
@@ -589,6 +573,27 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+// === Single global watchdog ===
+// Periodically checks every active game and pushes a question to any player who's been
+// waiting too long with nothing happening. This protects against the rare race where
+// the next-question setTimeout never fires (e.g. server restart mid-round, scheduling glitch).
+setInterval(() => {
+  const now = Date.now();
+  Object.entries(games).forEach(([pin, g]) => {
+    if (g.state !== 'active') return;
+    Object.entries(g.players).forEach(([pid, p]) => {
+      const inAction = p.mashUntil > now || p.walkUntil > now || p.currentQ;
+      if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {
+        const q = nextQuestionFor(g, pid);
+        if (q) {
+          p.lastQuestionAt = now;
+          io.to(pid).emit('question', q);
+        }
+      }
+    });
+  });
+}, 4000);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
