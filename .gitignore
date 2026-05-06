@@ -3,6 +3,7 @@ node_modules/
 *.log
 .env
 .env.local
+.render-token
 cloudflared.exe
 # Original (uncompressed) 3D models — only the compressed dralingo-*.glb + john-monk.glb ship to git
 public/assets/Arab Dralingo flying with white ghutra.glb
