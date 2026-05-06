@@ -8,6 +8,14 @@
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
   <link rel="stylesheet" href="/css/color-splash.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -17,7 +25,8 @@
 
   <!-- JOIN -->
   <div id="screen-join" class="container" style="justify-content:center; align-items:center;">
-    <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-corner">
+    <div id="dralingo-3d-corner" class="dralingo-3d-corner"></div>
+    <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-corner dralingo-2d-fallback">
     <div style="max-width:400px; width:100%;">
       <div style="text-align:center; font-size:4rem; margin-bottom:8px;">🥮</div>
       <h1 class="title" style="font-size:2.5rem;">Join Battle</h1>
@@ -134,5 +143,29 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/player.js"></script>
+  <script type="module">
+    // Load 3D Dralingo module for legendary appearances + corner mount
+    try {
+      const m = await import('/js/dralingo-3d.js');
+      const Dralingo3D = m.default;
+      const corner = document.getElementById('dralingo-3d-corner');
+      if (corner) {
+        await Dralingo3D.mount(corner, {
+          variant: 'flying',
+          hover: true,
+          rotate: true,
+          glow: true,
+          onReady: () => {
+            document.querySelectorAll('.dralingo-2d-fallback').forEach((el) => el.style.display = 'none');
+          }
+        });
+      }
+      // Pre-load alternate variants for legendary appearances during the game
+      Dralingo3D.preload('emperor');
+      Dralingo3D.preload('eating');
+    } catch (e) {
+      console.warn('3D unavailable, using 2D fallback', e);
+    }
+  </script>
 </body>
 </html>
