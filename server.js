@@ -80,6 +80,15 @@ const CS_WALK_DURATION_MS = 5000;
 const CS_MOVE_COOLDOWN_MS = 130; // ~7 steps/sec max
 const CS_WRONG_AUTO_PAINTS = 3;
 
+// Color Clash (market theme, continuous movement, energy-based)
+const CC_GRID_W = 30;
+const CC_GRID_H = 18;
+const CC_MOVE_COOLDOWN_MS = 110; // 9 steps/sec max
+const CC_START_ENERGY = 50;
+const CC_ENERGY_PER_TILE = 1;
+const CC_CORRECT_ENERGY = 30;
+const CC_WRONG_ENEMY_PAINTS = 4;
+
 function genPin() {
   let pin;
   do {
@@ -172,22 +181,27 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const type = opts.gameType === 'color-splash' ? 'color-splash' : 'mochi-mash';
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash'];
+    const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
+    const defaultDuration = type === 'color-clash' ? 180 : (type === 'color-splash' ? 90 : 60);
+    let grid = null;
+    if (type === 'color-splash') {
+      grid = Array.from({ length: CS_GRID_H }, () => Array(CS_GRID_W).fill(null));
+    } else if (type === 'color-clash') {
+      grid = Array.from({ length: CC_GRID_H }, () => Array(CC_GRID_W).fill(null));
+    }
     games[pin] = {
       gameType: type,
       hostId: socket.id,
       state: 'lobby',
-      duration: type === 'color-splash' ? 90 : 60,
+      duration: defaultDuration,
       startedAt: null,
       endsAt: null,
       questions: [],
       players: {},
       teamScores: { red: 0, gold: 0 },
       feed: [],
-      // Color-splash specific:
-      grid: type === 'color-splash'
-        ? Array.from({ length: CS_GRID_H }, () => Array(CS_GRID_W).fill(null))
-        : null
+      grid
     };
     currentPin = pin;
     role = 'host';
@@ -303,32 +317,37 @@ io.on('connection', (socket) => {
         p.walkUntil = 0;
         p.recentTaps = [];
       });
-      // Reset color-splash grid
-      if (g.gameType === 'color-splash') {
-        g.grid = Array.from({ length: CS_GRID_H }, () => Array(CS_GRID_W).fill(null));
-        // Re-spawn players (in case team swaps changed things)
+      // Reset grid + spawn positions for grid-based games
+      if (g.gameType === 'color-splash' || g.gameType === 'color-clash') {
+        const w = g.gameType === 'color-clash' ? CC_GRID_W : CS_GRID_W;
+        const h = g.gameType === 'color-clash' ? CC_GRID_H : CS_GRID_H;
+        const spawnFn = g.gameType === 'color-clash' ? ccSpawnPosition : csSpawnPosition;
+        g.grid = Array.from({ length: h }, () => Array(w).fill(null));
         Object.values(g.players).forEach((p) => {
-          const pos = csSpawnPosition(g, p.team);
+          const pos = spawnFn(g, p.team);
           p.x = pos.x;
           p.y = pos.y;
+          if (g.gameType === 'color-clash') p.energy = CC_START_ENERGY;
         });
-        // Send init payload to everyone
         const playersInit = {};
         Object.entries(g.players).forEach(([id, p]) => {
           playersInit[id] = { name: p.name, team: p.team, x: p.x, y: p.y };
         });
         io.to(pin).emit('cs:init', {
-          gridW: CS_GRID_W,
-          gridH: CS_GRID_H,
+          gridW: w,
+          gridH: h,
           players: playersInit,
           teamScores: g.teamScores
         });
       }
       broadcast(pin);
-      Object.keys(g.players).forEach((pid) => {
-        const q = nextQuestionFor(g, pid);
-        if (q) io.to(pid).emit('question', q);
-      });
+      // Mochi Mash + Color Splash auto-deal first question; Color Clash players request via button
+      if (g.gameType !== 'color-clash') {
+        Object.keys(g.players).forEach((pid) => {
+          const q = nextQuestionFor(g, pid);
+          if (q) io.to(pid).emit('question', q);
+        });
+      }
       g.endTimer = setTimeout(() => {
         if (!games[pin] || games[pin].state !== 'active') return;
         endGame(pin);
@@ -406,11 +425,16 @@ io.on('connection', (socket) => {
         y: 0,
         walkUntil: 0,
         lastMove: 0,
+        energy: CC_START_ENERGY,
         disconnected: false,
         disconnectedAt: null
       };
       if (g.gameType === 'color-splash') {
         const pos = csSpawnPosition(g, team);
+        player.x = pos.x;
+        player.y = pos.y;
+      } else if (g.gameType === 'color-clash') {
+        const pos = ccSpawnPosition(g, team);
         player.x = pos.x;
         player.y = pos.y;
       }
@@ -422,38 +446,43 @@ io.on('connection', (socket) => {
     role = 'player';
     socket.join(pin);
 
+    const gridW = g.gameType === 'color-clash' ? CC_GRID_W : CS_GRID_W;
+    const gridH = g.gameType === 'color-clash' ? CC_GRID_H : CS_GRID_H;
     cb({
       ok: true,
       team: player.team,
       playerId: socket.id,
       gameType: g.gameType,
-      gridW: CS_GRID_W,
-      gridH: CS_GRID_H,
+      gridW,
+      gridH,
       x: player.x,
       y: player.y,
+      energy: player.energy,
       rejoined: isRejoin,
-      gameState: g.state // so client knows if it should jump straight into question
+      gameState: g.state
     });
     broadcast(pin);
 
     // If joining/rejoining mid-game, send them a question to keep playing
     if (g.state === 'active') {
-      // For Color Splash, also send the current grid so they can render
-      if (g.gameType === 'color-splash') {
+      // For Color Splash and Color Clash, send the current grid + paint state so the rejoiner sees everything
+      if (g.gameType === 'color-splash' || g.gameType === 'color-clash') {
+        const w = g.gameType === 'color-clash' ? CC_GRID_W : CS_GRID_W;
+        const h = g.gameType === 'color-clash' ? CC_GRID_H : CS_GRID_H;
         const playersInit = {};
         Object.entries(g.players).forEach(([id, p]) => {
           playersInit[id] = { name: p.name, team: p.team, x: p.x, y: p.y };
         });
         io.to(socket.id).emit('cs:init', {
-          gridW: CS_GRID_W,
-          gridH: CS_GRID_H,
+          gridW: w,
+          gridH: h,
           players: playersInit,
           teamScores: g.teamScores
         });
         // Also send a "paint" event with all currently-painted cells so the rejoiner sees the state
         const paintedCells = [];
-        for (let y = 0; y < CS_GRID_H; y++) {
-          for (let x = 0; x < CS_GRID_W; x++) {
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
             if (g.grid[y][x]) paintedCells.push({ x, y, team: g.grid[y][x] });
           }
         }
@@ -502,6 +531,31 @@ io.on('connection', (socket) => {
     return true;
   }
 
+  function ccSpawnPosition(g, team) {
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const y = Math.floor(Math.random() * CC_GRID_H);
+      const x = team === 'red'
+        ? Math.floor(Math.random() * 4)
+        : CC_GRID_W - 1 - Math.floor(Math.random() * 4);
+      const occupied = Object.values(g.players).some((p) => p.x === x && p.y === y);
+      if (!occupied) return { x, y };
+    }
+    return {
+      x: team === 'red' ? 0 : CC_GRID_W - 1,
+      y: Math.floor(Math.random() * CC_GRID_H)
+    };
+  }
+
+  function ccPaintCell(g, x, y, team) {
+    if (x < 0 || x >= CC_GRID_W || y < 0 || y >= CC_GRID_H) return false;
+    const prev = g.grid[y][x];
+    if (prev === team) return false;
+    if (prev) g.teamScores[prev]--;
+    g.grid[y][x] = team;
+    g.teamScores[team]++;
+    return true;
+  }
+
   socket.on('player:answer', ({ pin, qid, choiceIdx }) => {
     const g = games[pin];
     if (!g || g.state !== 'active') return;
@@ -536,6 +590,26 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
         io.to(pin).emit('cs:paint', { cells: painted, teamScores: g.teamScores });
       }
+    } else if (g.gameType === 'color-clash') {
+      // Color Clash: correct → +energy, wrong → enemy gets random paints
+      if (correct) {
+        p.energy = (p.energy || 0) + CC_CORRECT_ENERGY;
+        io.to(socket.id).emit('answer-result', {
+          correct: true,
+          energy: p.energy,
+          correctText
+        });
+      } else {
+        const enemy = p.team === 'red' ? 'gold' : 'red';
+        const painted = [];
+        for (let i = 0; i < CC_WRONG_ENEMY_PAINTS; i++) {
+          const rx = Math.floor(Math.random() * CC_GRID_W);
+          const ry = Math.floor(Math.random() * CC_GRID_H);
+          if (ccPaintCell(g, rx, ry, enemy)) painted.push({ x: rx, y: ry, team: enemy });
+        }
+        io.to(socket.id).emit('answer-result', { correct: false, correctText, energy: p.energy });
+        io.to(pin).emit('cs:paint', { cells: painted, teamScores: g.teamScores });
+      }
     } else {
       // Mochi Mash logic
       if (correct) {
@@ -553,15 +627,65 @@ io.on('connection', (socket) => {
       }
     }
 
-    const nextDelay = correct
-      ? (g.gameType === 'color-splash' ? CS_WALK_DURATION_MS + 600 : MASH_DURATION_MS + 600)
-      : 1400;
-    setTimeout(() => {
-      if (!games[pin] || games[pin].state !== 'active') return;
-      const q = nextQuestionFor(g, socket.id);
-      if (q) io.to(socket.id).emit('question', q);
-    }, nextDelay);
+    let nextDelay;
+    if (g.gameType === 'color-clash') {
+      // Color Clash players request questions via button — don't auto-push another
+      nextDelay = -1;
+    } else if (g.gameType === 'color-splash') {
+      nextDelay = correct ? CS_WALK_DURATION_MS + 600 : 1400;
+    } else {
+      nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
+    }
+    if (nextDelay >= 0) {
+      setTimeout(() => {
+        if (!games[pin] || games[pin].state !== 'active') return;
+        const q = nextQuestionFor(g, socket.id);
+        if (q) io.to(socket.id).emit('question', q);
+      }, nextDelay);
+    }
     broadcast(pin);
+  });
+
+  // Color Clash: continuous movement (no walk window). Each move costs 1 energy.
+  socket.on('player:cc-move', ({ pin, dx, dy }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'color-clash' || g.state !== 'active') return;
+    const p = g.players[socket.id];
+    if (!p) return;
+    const now = Date.now();
+    if (now - p.lastMove < CC_MOVE_COOLDOWN_MS) return;
+    if ((p.energy || 0) < CC_ENERGY_PER_TILE) return; // out of energy — must answer questions
+    dx = Math.sign(Number(dx) || 0);
+    dy = Math.sign(Number(dy) || 0);
+    if (dx === 0 && dy === 0) return;
+    if (dx !== 0 && dy !== 0) return; // cardinal only
+    const nx = Math.max(0, Math.min(CC_GRID_W - 1, p.x + dx));
+    const ny = Math.max(0, Math.min(CC_GRID_H - 1, p.y + dy));
+    if (nx === p.x && ny === p.y) return; // hit edge
+    p.x = nx;
+    p.y = ny;
+    p.lastMove = now;
+    p.energy -= CC_ENERGY_PER_TILE;
+    const painted = ccPaintCell(g, nx, ny, p.team);
+    if (painted) p.score++;
+    io.to(socket.id).emit('cc:energy', { energy: p.energy });
+    io.to(pin).emit('cs:move', {
+      playerId: socket.id,
+      x: nx, y: ny,
+      paint: painted ? { x: nx, y: ny, team: p.team } : null,
+      teamScores: g.teamScores
+    });
+  });
+
+  // Color Clash: player explicitly requests a question
+  socket.on('player:request-question', ({ pin }) => {
+    const g = games[pin];
+    if (!g || g.state !== 'active') return;
+    const p = g.players[socket.id];
+    if (!p) return;
+    if (p.currentQ) return; // already has one open
+    const q = nextQuestionFor(g, socket.id);
+    if (q) io.to(socket.id).emit('question', q);
   });
 
   socket.on('player:move', ({ pin, dx, dy }) => {

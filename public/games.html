@@ -44,21 +44,40 @@
         <button class="btn btn-red btn-xl game-card-play">▶ Play Mochi Mash</button>
       </div>
 
+      <div class="game-card" id="card-clash">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🏮</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Market Clash</div>
+            <div class="game-tile-badge new">New!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🏮 Team Lantern vs 🥟 Team Dumpling. Walk the Chinese market — every step paints a tile your team's color. Energy runs out fast — tap "Answer Questions" to refill it. The Color Clash inspired build.
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Territory</span>
+          <span class="tag">Continuous</span>
+          <span class="tag">Energy</span>
+          <span class="tag">3 min</span>
+        </div>
+        <button class="btn btn-red btn-xl game-card-play">▶ Play Market Clash</button>
+      </div>
+
       <div class="game-card" id="card-color">
         <div class="game-card-header">
           <div class="game-card-emoji">🎨</div>
           <div class="game-card-title-row">
             <div class="game-card-title">Color Splash</div>
-            <div class="game-tile-badge new">New!</div>
+            <div class="game-tile-badge">WIP</div>
           </div>
         </div>
         <div class="game-card-desc">
-          🎨 Two teams, one isometric city. Walk around with your D-pad — every step paints that tile your color. Other team can paint over yours. Whoever owns more tiles when time runs out wins.
+          🎨 Earlier prototype — answer right to unlock 5-second walk windows for painting. Less polished, kept around for testing.
         </div>
         <div class="game-card-tags">
-          <span class="tag">Territory</span>
-          <span class="tag">Movement</span>
-          <span class="tag">Strategy</span>
+          <span class="tag">Walk windows</span>
+          <span class="tag">Prototype</span>
         </div>
         <button class="btn btn-jade btn-xl game-card-play">▶ Play Color Splash</button>
       </div>
@@ -78,6 +97,9 @@
       document.querySelector('#card-mochi .game-card-play').onclick = () => {
         location.href = '/host.html?setId=' + encodeURIComponent(setId);
       };
+      document.querySelector('#card-clash .game-card-play').onclick = () => {
+        location.href = '/host-clash.html?setId=' + encodeURIComponent(setId);
+      };
       document.querySelector('#card-color .game-card-play').onclick = () => {
         location.href = '/host-color.html?setId=' + encodeURIComponent(setId);
       };
@@ -87,6 +109,9 @@
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Choose'));
       document.querySelector('#card-mochi .game-card-play').onclick = () => {
         location.href = '/sets.html?game=mochi-mash';
+      };
+      document.querySelector('#card-clash .game-card-play').onclick = () => {
+        location.href = '/sets.html?game=color-clash';
       };
       document.querySelector('#card-color .game-card-play').onclick = () => {
         location.href = '/sets.html?game=color-splash';
