@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
   <link rel="stylesheet" href="/css/color-splash.css">
+  <link rel="stylesheet" href="/css/color-clash.css">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -69,6 +70,43 @@
   <!-- RESULT (between question and mash) -->
   <div id="screen-result" class="hidden player-screen">
     <div class="result-feedback" id="result-feedback"></div>
+  </div>
+
+  <!-- COLOR CLASH PLAYER SCREEN — continuous play, energy-based -->
+  <div id="screen-cc-play" class="hidden cc-player-screen">
+    <div class="cc-hud">
+      <span class="cc-hud-tag" id="cc-team-tag">🏮 Team</span>
+      <div class="cc-energy-wrap">
+        <span class="cc-energy-icon">⚡</span>
+        <div class="cc-energy-bar"><div class="cc-energy-fill" id="cc-energy-fill"></div></div>
+        <span class="cc-energy-num" id="cc-energy-num">50</span>
+      </div>
+    </div>
+
+    <div class="cc-mini-stage">
+      <div class="cc-mini-floor" id="cc-mini-floor">
+        <div class="cs-mini-grid" id="cc-mini-grid"></div>
+        <div class="cs-players" id="cc-mini-players" style="position:absolute; top:8px; left:8px; pointer-events:none;"></div>
+      </div>
+    </div>
+
+    <div class="cc-action-panel">
+      <button class="cc-answer-btn" id="cc-answer-btn">
+        <span class="cc-answer-icon">📜</span>
+        <span class="cc-answer-label">Answer Questions</span>
+      </button>
+      <div class="cs-dpad cc-dpad-mini" id="cc-dpad">
+        <button class="cs-dpad-btn empty"></button>
+        <button class="cs-dpad-btn cs-dpad-up" data-cc-dir="up">▲</button>
+        <button class="cs-dpad-btn empty"></button>
+        <button class="cs-dpad-btn cs-dpad-left" data-cc-dir="left">◀</button>
+        <button class="cs-dpad-btn empty"></button>
+        <button class="cs-dpad-btn cs-dpad-right" data-cc-dir="right">▶</button>
+        <button class="cs-dpad-btn empty"></button>
+        <button class="cs-dpad-btn cs-dpad-down" data-cc-dir="down">▼</button>
+        <button class="cs-dpad-btn empty"></button>
+      </div>
+    </div>
   </div>
 
   <!-- COLOR SPLASH WALK MODE -->
