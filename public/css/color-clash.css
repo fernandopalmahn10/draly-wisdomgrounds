@@ -94,32 +94,38 @@
   justify-content: center;
   position: relative;
   overflow: hidden;
+  perspective: 1500px;
+  perspective-origin: 50% 25%;
 }
 
-/* The market floor — parchment + lantern decorations */
+/* The market floor — parchment + lantern decorations, tilted for Monopoly 3D feel */
 .cc-market-floor {
   position: relative;
   background:
-    radial-gradient(ellipse at 50% 50%, rgba(255, 213, 122, 0.08) 0%, transparent 70%),
-    linear-gradient(135deg, rgba(60, 30, 20, 0.7) 0%, rgba(40, 18, 12, 0.6) 100%);
-  border-radius: 16px;
-  padding: 20px;
-  border: 2px solid rgba(255, 213, 122, 0.25);
+    radial-gradient(ellipse at 50% 50%, rgba(255, 213, 122, 0.1) 0%, transparent 70%),
+    linear-gradient(135deg, rgba(80, 40, 25, 0.75) 0%, rgba(50, 22, 15, 0.7) 100%);
+  border-radius: 18px;
+  padding: 24px;
+  border: 3px solid rgba(255, 213, 122, 0.4);
   box-shadow:
-    0 0 40px rgba(255, 213, 122, 0.15),
-    inset 0 0 60px rgba(60, 30, 20, 0.4);
+    0 0 60px rgba(255, 213, 122, 0.2),
+    inset 0 0 80px rgba(60, 30, 20, 0.5),
+    0 30px 60px rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
+  transform: rotateX(48deg) rotateZ(0deg);
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease-out;
 }
 
 .cc-lantern {
   position: absolute;
-  font-size: 1.6rem;
+  font-size: 2rem;
   pointer-events: none;
   animation: lanternFloat 3.5s ease-in-out infinite;
-  filter: drop-shadow(0 0 8px rgba(255, 90, 102, 0.5));
-  z-index: 5;
+  filter: drop-shadow(0 0 12px rgba(255, 90, 102, 0.6));
+  z-index: 6;
 }
 .cc-lantern:nth-child(2) { animation-delay: 0.5s; }
 .cc-lantern:nth-child(3) { animation-delay: 1s; }
@@ -136,28 +142,39 @@
   z-index: 2;
 }
 .cc-cell {
-  background: rgba(244, 232, 208, 0.06);
-  border-radius: 3px;
+  background:
+    repeating-linear-gradient(45deg, rgba(244, 232, 208, 0.04) 0, rgba(244, 232, 208, 0.04) 4px, transparent 4px, transparent 8px),
+    rgba(244, 232, 208, 0.06);
+  border-radius: 4px;
   position: relative;
-  transition: background 0.2s;
+  transition: transform 0.25s ease-out, box-shadow 0.25s;
   width: var(--cc-cell-size, 24px);
   height: var(--cc-cell-size, 24px);
+  transform-style: preserve-3d;
 }
 .cc-cell.red {
-  background: linear-gradient(135deg, #ff5a66, #d92e3a);
-  box-shadow: 0 0 4px rgba(255, 90, 102, 0.5), inset 0 0 4px rgba(139, 26, 35, 0.4);
+  background: linear-gradient(180deg, #ff7a86 0%, #d92e3a 50%, #8b1a23 100%);
+  box-shadow:
+    0 4px 0 #6b0a13,
+    0 0 8px rgba(255, 90, 102, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateZ(6px);
 }
 .cc-cell.gold {
-  background: linear-gradient(135deg, #ffd57a, #e8b14a);
-  box-shadow: 0 0 4px rgba(255, 213, 122, 0.5), inset 0 0 4px rgba(168, 122, 31, 0.4);
+  background: linear-gradient(180deg, #ffe9a8 0%, #e8b14a 50%, #a87a1f 100%);
+  box-shadow:
+    0 4px 0 #6b4810,
+    0 0 8px rgba(255, 213, 122, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transform: translateZ(6px);
 }
 .cc-cell.fresh {
-  animation: paintFlash 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: paintFlash 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 @keyframes paintFlash {
-  0%   { transform: scale(0.5); }
-  60%  { transform: scale(1.3); }
-  100% { transform: scale(1); }
+  0%   { transform: translateZ(0) scale(0.5); }
+  50%  { transform: translateZ(20px) scale(1.4); }
+  100% { transform: translateZ(6px) scale(1); }
 }
 
 .cc-players {
@@ -175,46 +192,73 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--cc-cell-size, 24px) * 0.85);
   transition: left 0.1s ease-out, top 0.1s ease-out;
-  filter:
-    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6))
-    drop-shadow(0 0 6px currentColor);
+  transform-style: preserve-3d;
 }
 .cc-player.red { color: var(--red-glow); }
 .cc-player.gold { color: var(--gold-glow); }
 
+/* The cubby — counters the board's rotateX(48deg) so it stands UP like a Monopoly token */
 .cc-player-emoji {
   display: inline-block;
-  animation: playerBob 0.8s ease-in-out infinite;
+  font-size: calc(var(--cc-cell-size, 24px) * 1.4);
+  transform: rotateX(-48deg) translateZ(calc(var(--cc-cell-size, 24px) * 0.5));
+  transform-origin: bottom center;
+  animation: cubbyBob 0.9s ease-in-out infinite;
+  filter:
+    drop-shadow(0 4px 4px rgba(0, 0, 0, 0.7))
+    drop-shadow(0 0 8px currentColor);
 }
-@keyframes playerBob {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-2px); }
+@keyframes cubbyBob {
+  0%, 100% { transform: rotateX(-48deg) translateZ(calc(var(--cc-cell-size, 24px) * 0.5)) translateY(0); }
+  50%      { transform: rotateX(-48deg) translateZ(calc(var(--cc-cell-size, 24px) * 0.5)) translateY(-3px); }
+}
+
+/* Drop shadow (separate element on the floor under the cubby) */
+.cc-player::before {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 70%;
+  height: 8px;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.5) 0%, transparent 70%);
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
 .cc-player-name {
   position: absolute;
-  bottom: -12px;
+  top: calc(var(--cc-cell-size, 24px) * -0.7);
   left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.6rem;
+  transform: rotateX(-48deg) translateX(-50%);
+  transform-origin: bottom center;
+  font-size: 0.62rem;
   font-weight: 800;
   white-space: nowrap;
-  background: rgba(13, 14, 26, 0.85);
-  padding: 1px 5px;
-  border-radius: 3px;
+  background: rgba(13, 14, 26, 0.92);
+  border: 1px solid rgba(255, 213, 122, 0.5);
+  color: var(--ink);
+  padding: 2px 6px;
+  border-radius: 4px;
   letter-spacing: 0.02em;
+  pointer-events: none;
 }
 
-/* === COLOR CLASH PLAYER SCREEN === */
+/* === COLOR CLASH PLAYER SCREEN — fits any phone, no scrolling === */
 .cc-player-screen {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh; /* fallback */
+  height: 100dvh; /* dynamic viewport — handles iOS URL bar correctly */
+  max-height: 100dvh;
   padding: 8px 10px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  padding-top: max(8px, env(safe-area-inset-top));
   user-select: none;
   -webkit-user-select: none;
+  overflow: hidden;
+  box-sizing: border-box;
   background:
     radial-gradient(ellipse at top, #5c2018 0%, #2a0d0a 60%, #0d0e1a 100%);
 }
@@ -222,20 +266,21 @@
 .cc-hud {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 6px;
+  margin-bottom: 4px;
   align-items: center;
 }
 .cc-hud-tag {
   background: rgba(13, 14, 26, 0.85);
   border: 1px solid rgba(244, 232, 208, 0.15);
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 999px;
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  flex-shrink: 0;
 }
 .cc-hud-tag.red { border-color: var(--red); color: var(--red-glow); }
 .cc-hud-tag.gold { border-color: var(--gold); color: var(--gold-glow); }
@@ -243,12 +288,13 @@
 .cc-energy-wrap {
   background: rgba(13, 14, 26, 0.7);
   border-radius: 999px;
-  padding: 6px 14px;
+  padding: 4px 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   flex: 1;
   border: 1px solid rgba(255, 213, 122, 0.3);
+  min-width: 0;
 }
 .cc-energy-icon { font-size: 1.1rem; }
 .cc-energy-bar {
@@ -273,32 +319,37 @@
   text-align: right;
 }
 
-/* The mini player view of the market */
+/* The mini player view of the market — slightly tilted Monopoly perspective */
 .cc-mini-stage {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 8px 0;
+  margin: 6px 0;
   overflow: hidden;
+  min-height: 0; /* allow grid row to shrink */
+  perspective: 700px;
+  perspective-origin: 50% 30%;
 }
 .cc-mini-floor {
   position: relative;
   background:
-    radial-gradient(ellipse at 50% 50%, rgba(255, 213, 122, 0.1) 0%, transparent 70%),
+    radial-gradient(ellipse at 50% 50%, rgba(255, 213, 122, 0.12) 0%, transparent 70%),
     linear-gradient(135deg, rgba(60, 30, 20, 0.7), rgba(40, 18, 12, 0.6));
   border: 2px solid rgba(255, 213, 122, 0.3);
-  border-radius: 12px;
-  padding: 8px;
-  box-shadow: inset 0 0 30px rgba(60, 30, 20, 0.3);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: inset 0 0 30px rgba(60, 30, 20, 0.3), 0 12px 30px rgba(0, 0, 0, 0.5);
+  transform: rotateX(35deg) rotateZ(0deg);
+  transform-style: preserve-3d;
+  transition: transform 0.5s ease-out;
 }
 
-/* Action panel: Answer Questions button + D-pad */
+/* Bottom action panel — Answer Questions on the LEFT (one-thumb reach), D-pad on the RIGHT */
 .cc-action-panel {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 8px 0 12px;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 4px 0 4px;
 }
 .cc-answer-btn {
   background: linear-gradient(135deg, var(--gold), var(--gold-dark));
@@ -306,48 +357,66 @@
   color: #2a1a0a;
   font-weight: 900;
   font-family: inherit;
-  font-size: 1.05rem;
-  padding: 14px;
+  font-size: 0.95rem;
+  padding: 8px 10px;
   border-radius: 14px;
-  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 213, 122, 0.3);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4), 0 0 18px rgba(255, 213, 122, 0.3);
   cursor: pointer;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   transition: transform 0.06s, box-shadow 0.06s;
+  flex: 0 0 auto;
+  width: 92px;
+  align-self: flex-end;
 }
 .cc-answer-btn:active {
   transform: translateY(3px);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
 }
 .cc-answer-btn.pulsing {
   animation: needAnswers 1s ease-in-out infinite;
 }
 @keyframes needAnswers {
-  0%, 100% { box-shadow: 0 6px 0 rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 90, 102, 0.4); }
-  50%      { box-shadow: 0 6px 0 rgba(0, 0, 0, 0.4), 0 0 35px rgba(255, 90, 102, 0.9); }
+  0%, 100% { box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4), 0 0 18px rgba(255, 90, 102, 0.4); }
+  50%      { box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4), 0 0 35px rgba(255, 90, 102, 0.9); }
 }
-.cc-answer-icon { font-size: 1.6rem; }
-.cc-answer-label { font-size: 0.85rem; }
+.cc-answer-icon { font-size: 1.4rem; }
+.cc-answer-label { font-size: 0.7rem; line-height: 1.1; text-align: center; }
 
 .cc-dpad-mini {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
   gap: 4px;
-  width: min(50vw, 200px);
-  height: min(50vw, 200px);
+  width: min(46vw, 175px);
+  height: min(46vw, 175px);
   margin-left: auto;
   user-select: none;
   -webkit-user-select: none;
   justify-self: end;
+  flex: 0 0 auto;
+  align-self: flex-end;
 }
 .cc-dpad-mini .cs-dpad-btn {
-  border-radius: 12px;
-  font-size: 1.6rem;
+  border-radius: 10px;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+}
+.cc-dpad-mini .cs-dpad-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Smaller phones (≤360px wide) */
+@media (max-width: 380px) {
+  .cc-dpad-mini { width: 145px; height: 145px; }
+  .cc-answer-btn { width: 80px; padding: 6px 8px; }
+  .cc-answer-icon { font-size: 1.2rem; }
+  .cc-answer-label { font-size: 0.65rem; }
 }
 
 /* Out-of-energy indicator (D-pad disabled visual) */
