@@ -21,12 +21,38 @@
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
+  // Pool of 3D legendary mounts — pre-create one to avoid first-time delay
+  let legendaryHandle = null;
+  let legendaryHost = null;
+
+  async function ensureLegendary3D() {
+    if (legendaryHandle || !window.Dralingo3D) return null;
+    legendaryHost = document.createElement('div');
+    legendaryHost.className = 'legendary-3d-host';
+    legendaryHost.style.position = 'fixed';
+    legendaryHost.style.pointerEvents = 'none';
+    legendaryHost.style.opacity = '0';
+    legendaryHost.style.zIndex = '-1';
+    legendaryHost.style.left = '-9999px';
+    legendaryHost.style.width = '600px';
+    legendaryHost.style.height = '600px';
+    document.body.appendChild(legendaryHost);
+    try {
+      legendaryHandle = await window.Dralingo3D.mount(legendaryHost, {
+        variant: 'emperor',
+        hover: true,
+        rotate: true,
+        glow: true
+      });
+    } catch (e) { /* WebGL may not be available */ }
+    return legendaryHandle;
+  }
+
   function legendaryAppearance(opts) {
     opts = opts || {};
-    // Don't allow overlap
     if (document.querySelector('.dralingo-overlay')) return;
     const now = Date.now();
-    if (now - lastAppearance < 8000) return; // 8s minimum between appearances
+    if (now - lastAppearance < 8000) return;
     lastAppearance = now;
 
     const overlay = document.createElement('div');
@@ -36,7 +62,6 @@
     rays.className = 'legendary-rays';
     overlay.appendChild(rays);
 
-    // Sparks
     for (let i = 0; i < 24; i++) {
       const spark = document.createElement('div');
       spark.className = 'legendary-spark';
@@ -50,11 +75,41 @@
       overlay.appendChild(spark);
     }
 
-    const img = document.createElement('img');
-    img.src = '/assets/dralingo.png';
-    img.alt = 'Dralingo';
-    img.className = 'legendary-image';
-    overlay.appendChild(img);
+    // Container for the image OR 3D model
+    const figure = document.createElement('div');
+    figure.className = 'legendary-image';
+    overlay.appendChild(figure);
+
+    // Try 3D first
+    let used3D = false;
+    if (window.Dralingo3D) {
+      const variant = opts.variant || (Math.random() < 0.5 ? 'emperor' : 'flying');
+      try {
+        // Mount fresh 3D for this appearance
+        window.Dralingo3D.mount(figure, {
+          variant,
+          hover: true,
+          rotate: true,
+          glow: true,
+          onReady: () => {
+            // Stash so we can dispose later
+            figure.dataset.has3d = '1';
+          }
+        }).then((h) => {
+          if (h) figure._handle = h;
+        });
+        used3D = true;
+      } catch (e) { /* fall through to 2D */ }
+    }
+    if (!used3D) {
+      const img = document.createElement('img');
+      img.src = '/assets/dralingo.png';
+      img.alt = 'Dralingo';
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'contain';
+      figure.appendChild(img);
+    }
 
     const quote = document.createElement('div');
     quote.className = 'legendary-quote';
@@ -67,7 +122,12 @@
       MochiSounds.legendary();
     }
 
-    setTimeout(() => overlay.remove(), 3500);
+    setTimeout(() => {
+      if (figure._handle && figure._handle.dispose) {
+        try { figure._handle.dispose(); } catch (e) { /* ignore */ }
+      }
+      overlay.remove();
+    }, 3500);
   }
 
   function startRandomAppearances(opts) {

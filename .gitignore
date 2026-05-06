@@ -4,5 +4,10 @@ node_modules/
 .env
 .env.local
 cloudflared.exe
-# 3D models — too big for free GitHub. Hosted externally for production.
-public/assets/*.glb
+# Original (uncompressed) 3D models — only the compressed dralingo-*.glb + john-monk.glb ship to git
+public/assets/Arab Dralingo flying with white ghutra.glb
+public/assets/Arab Dralingo in Red F8.glb
+public/assets/Chinese Emperor Dralingo with ankh and Qin Dynasty Emperor Hat.glb
+public/assets/Dralingo eating characters.glb
+public/assets/DralySheikh white ghutra.glb
+public/assets/JohnMonkglbforTextures.glb
