@@ -83,7 +83,7 @@ const CS_WRONG_AUTO_PAINTS = 3;
 function genPin() {
   let pin;
   do {
-    pin = String(Math.floor(100000 + Math.random() * 900000));
+    pin = String(Math.floor(1000 + Math.random() * 9000));
   } while (games[pin]);
   return pin;
 }
@@ -130,6 +130,7 @@ function nextQuestionFor(game, playerId) {
   const qid = `q-${p.queueIdx}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const image = Images.urlForQuestion(q);
   p.currentQ = { qid, correctIdx: shuffled.indexOf(q.correct), text: q.text, answers: shuffled, image };
+  p.lastQuestionAt = Date.now();
   return { qid, text: q.text, answers: shuffled, image };
 }
 
@@ -541,12 +542,35 @@ io.on('connection', (socket) => {
     p.score += points;
     g.teamScores[p.team] += points;
     io.to(socket.id).emit('tap-ack', { points, combo, score: p.score });
-    io.to(pin).emit('score-update', { teamScores: g.teamScores });
+    // Throttle score broadcasts: max 1 per 150ms per game (was every tap = thousands/sec lag)
+    if (!g.lastScoreBroadcast || now - g.lastScoreBroadcast >= 150) {
+      g.lastScoreBroadcast = now;
+      io.to(pin).emit('score-update', { teamScores: g.teamScores });
+    }
     if (combo && Math.random() < 0.15) {
       g.feed.push({ type: 'combo', name: p.name, team: p.team, t: now });
       broadcast(pin);
     }
   });
+
+  // Watchdog: if a player goes >12s without receiving a question while game is active, force one
+  setInterval(() => {
+    Object.entries(games).forEach(([pin, g]) => {
+      if (g.state !== 'active') return;
+      const now = Date.now();
+      Object.entries(g.players).forEach(([pid, p]) => {
+        // Only push a question if they're not in active answer/walk/mash state and haven't gotten one recently
+        const inAction = p.mashUntil > now || p.walkUntil > now || p.currentQ;
+        if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {
+          const q = nextQuestionFor(g, pid);
+          if (q) {
+            p.lastQuestionAt = now;
+            io.to(pid).emit('question', q);
+          }
+        }
+      });
+    });
+  }, 4000);
 
   socket.on('disconnect', () => {
     if (!currentPin || !games[currentPin]) return;

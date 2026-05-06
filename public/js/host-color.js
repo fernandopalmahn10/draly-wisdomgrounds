@@ -23,6 +23,7 @@
   socket.emit('host:create', { gameType: 'color-splash' }, ({ pin: p }) => {
     pin = p;
     $('pin-display').textContent = p;
+    if ($('active-pin-display')) $('active-pin-display').textContent = p;
     $('join-url').textContent = `${location.origin}/?pin=${p}`;
     document.title = `Color Splash · ${p}`;
     socket.emit('host:load-set', { pin, setId: chosenSetId }, (resp) => {
@@ -93,11 +94,7 @@
   socket.on('countdown', () => {
     showScreen('countdown');
     MochiSounds.startMusic();
-    Dralingo.startRandom({
-      minMs: 30000,
-      maxMs: 60000,
-      isActive: () => state && state.state === 'active'
-    });
+    // Dralingo only appears on player phones (host's big screen stays focused)
     let n = 3;
     const numEl = $('countdown-num');
     const tick = () => {
@@ -234,8 +231,6 @@
   socket.on('game-end', (data) => {
     if (timerInterval) clearInterval(timerInterval);
     MochiSounds.stopMusic();
-    Dralingo.stopRandom();
-    setTimeout(() => Dralingo.legendary({ quote: 'The canvas chooses its champion 🐉' }), 600);
     showScreen('win');
     const total = gridW * gridH;
     const rPct = Math.round((data.teamScores.red / total) * 100);

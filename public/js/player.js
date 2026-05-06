@@ -35,10 +35,17 @@
   document.addEventListener('click', () => window.unlockAudio && window.unlockAudio(), { once: true });
   document.addEventListener('touchstart', () => window.unlockAudio && window.unlockAudio(), { once: true });
 
-  // Pre-fill PIN from URL
+  // Pre-fill PIN + name from URL (e.g., from home page or rematch link)
   const params = new URLSearchParams(location.search);
-  if (params.get('pin')) {
-    $('pin-input').value = params.get('pin');
+  const urlPin = params.get('pin');
+  const urlName = params.get('name');
+  const urlAutojoin = params.get('autojoin') === '1';
+  if (urlPin) $('pin-input').value = urlPin;
+  if (urlName) $('name-input').value = urlName;
+  if (urlPin && urlName && urlAutojoin) {
+    // Auto-fire join
+    setTimeout(tryJoin, 50);
+  } else if (urlPin) {
     $('name-input').focus();
   }
 
@@ -64,6 +71,10 @@
       myName = name;
       myPlayerId = resp.playerId;
       gameType = resp.gameType || 'mochi-mash';
+      // Remember this game for the Rematch button on the home page
+      try {
+        localStorage.setItem('dralyLastJoin', JSON.stringify({ pin: p, name, ts: Date.now() }));
+      } catch (e) { /* ignore */ }
       if (gameType === 'color-splash') {
         csGridW = resp.gridW || 24;
         csGridH = resp.gridH || 14;

@@ -32,6 +32,7 @@
   socket.emit('host:create', ({ pin: p }) => {
     pin = p;
     $('pin-display').textContent = p;
+    if ($('active-pin-display')) $('active-pin-display').textContent = p;
     $('join-url').textContent = `${location.origin}/?pin=${p}`;
     document.title = `Mochi Mash · ${p}`;
 
@@ -169,12 +170,7 @@
     initTerritory('red');
     initTerritory('gold');
     MochiSounds.startMusic();
-    // Start random Dralingo appearances during battle
-    Dralingo.startRandom({
-      minMs: 25000,
-      maxMs: 50000,
-      isActive: () => state && state.state === 'active'
-    });
+    // (Dralingo's legendary appearances only happen on player phones — keeps host's big screen uninterrupted)
     let n = 3;
     const overlay = $('screen-countdown');
     const numEl = $('countdown-num');
@@ -227,9 +223,7 @@
   socket.on('game-end', (data) => {
     if (timerInterval) clearInterval(timerInterval);
     MochiSounds.stopMusic();
-    Dralingo.stopRandom();
-    // Final legendary salute
-    setTimeout(() => Dralingo.legendary({ quote: 'Wisdom prevails! 🐉' }), 600);
+    // No Dralingo legendary on host screen — just confetti & win banner
     showScreen('win');
     $('final-red').textContent = data.teamScores.red;
     $('final-gold').textContent = data.teamScores.gold;
