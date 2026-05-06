@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Pick a Game · Draly Wisdomgrounds</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+</head>
+<body class="hub-bg">
+  <div class="lantern l1"></div>
+  <div class="lantern l2"></div>
+
+  <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-corner">
+
+  <div class="container">
+    <div class="hub-back">
+      <button class="btn btn-ghost" onclick="location.href='/sets.html'">← Back to Sets</button>
+    </div>
+
+    <h1 class="hub-title" style="font-size:2.5rem; margin-bottom:8px;">🎮 Choose a Game</h1>
+    <p class="hub-tagline" style="margin-bottom:24px;">
+      Set: <strong id="set-name" style="color:var(--gold-glow);">…</strong>
+    </p>
+
+    <div class="games-picker">
+      <div class="game-card" id="card-mochi">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🥮</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Mochi Mash</div>
+            <div class="game-tile-badge">Live</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🐼 Team Panda vs 🦊 Team Kitsune. Answer right to unlock 5 seconds of mash mode — tap to feed dumplings to your team's spirit creature. Most population wins.
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Team battle</span>
+          <span class="tag">Tap-to-win</span>
+          <span class="tag">2-30 players</span>
+        </div>
+        <button class="btn btn-red btn-xl game-card-play">▶ Play Mochi Mash</button>
+      </div>
+
+      <div class="game-card" id="card-color">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🎨</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Color Splash</div>
+            <div class="game-tile-badge new">New!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🎨 Two teams, one isometric city. Walk around with your D-pad — every step paints that tile your color. Other team can paint over yours. Whoever owns more tiles when time runs out wins.
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Territory</span>
+          <span class="tag">Movement</span>
+          <span class="tag">Strategy</span>
+        </div>
+        <button class="btn btn-jade btn-xl game-card-play">▶ Play Color Splash</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/sounds.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const setId = params.get('setId');
+    if (!setId) { location.href = '/sets.html'; }
+
+    fetch('/api/sets/' + encodeURIComponent(setId)).then(r => r.json()).then(s => {
+      document.getElementById('set-name').textContent = s.title || 'unknown';
+    });
+
+    document.querySelector('#card-mochi .game-card-play').onclick = () => {
+      location.href = '/host.html?setId=' + encodeURIComponent(setId);
+    };
+    document.querySelector('#card-color .game-card-play').onclick = () => {
+      location.href = '/host-color.html?setId=' + encodeURIComponent(setId);
+    };
+
+  </script>
+  <script src="/js/enter.js"></script>
+</body>
+</html>

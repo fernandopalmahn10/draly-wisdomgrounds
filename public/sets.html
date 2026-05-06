@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>My Sets · Draly Wisdomgrounds</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+</head>
+<body class="hub-bg">
+  <div class="lantern l1"></div>
+  <div class="lantern l2"></div>
+
+  <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-corner">
+
+  <div class="container">
+    <div class="hub-back">
+      <button class="btn btn-ghost" onclick="location.href='/'">← Back</button>
+    </div>
+
+    <h1 class="hub-title" style="font-size:2.5rem; margin-bottom:8px;">📚 My Sets</h1>
+    <p class="hub-tagline" style="margin-bottom:8px;" id="game-context">Pick a question pack to battle with — or upload a new one.</p>
+    <div id="chosen-game-banner" style="display:none; text-align:center; padding:10px 14px; margin-bottom:18px; background:rgba(255,213,122,0.08); border:1px solid rgba(255,213,122,0.25); border-radius:10px;">
+      <span id="chosen-game-emoji" style="font-size:1.3rem;"></span>
+      <span style="margin:0 8px; font-weight:800;" id="chosen-game-name"></span>
+      <a href="/" style="color:var(--ink-dim); font-size:0.85rem; margin-left:6px;">change game</a>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <div class="upload-area" style="margin-bottom:0;">
+        <div style="font-size:2rem;">📤</div>
+        <div style="margin-top:8px; font-size:0.9rem; color:var(--ink-dim);">
+          Drop a <strong>CSV</strong> or <strong>Excel (.xlsx)</strong> file here<br>
+          <span style="font-size:0.8rem; opacity:0.7;">columns: question, correct, wrong1, wrong2, wrong3, image (optional)</span>
+        </div>
+        <label class="label">
+          Upload new set
+          <input type="file" id="upload-input" accept=".csv,.xlsx,.xls" style="display:none;">
+        </label>
+        <div class="upload-status" id="upload-status"></div>
+      </div>
+    </div>
+
+    <div id="sets-list" class="sets-list">
+      <div class="sets-loading">Loading…</div>
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(location.search);
+    const chosenGame = urlParams.get('game'); // 'mochi-mash' | 'color-splash' | null
+    const GAME_INFO = {
+      'mochi-mash':  { emoji: '🥮', name: 'Mochi Mash',  host: '/host.html' },
+      'color-splash':{ emoji: '🎨', name: 'Color Splash', host: '/host-color.html' }
+    };
+    if (chosenGame && GAME_INFO[chosenGame]) {
+      const info = GAME_INFO[chosenGame];
+      document.getElementById('chosen-game-emoji').textContent = info.emoji;
+      document.getElementById('chosen-game-name').textContent = info.name;
+      document.getElementById('chosen-game-banner').style.display = 'block';
+      document.getElementById('game-context').textContent = `Pick a question pack to play ${info.name} with.`;
+    }
+
+    async function loadSets() {
+      const list = document.getElementById('sets-list');
+      try {
+        const res = await fetch('/api/sets');
+        const data = await res.json();
+        if (!data.sets || data.sets.length === 0) {
+          list.innerHTML = '<div class="sets-empty">No sets yet. Upload a CSV or Excel file above to begin.</div>';
+          return;
+        }
+        list.innerHTML = '';
+        data.sets.forEach((s) => {
+          const row = document.createElement('div');
+          row.className = 'set-row';
+          row.innerHTML = `
+            <div class="set-icon">${s.ext === 'csv' ? '📄' : '📊'}</div>
+            <div class="set-info">
+              <div class="set-title">${escapeHtml(s.title)}</div>
+              <div class="set-meta">${s.questionCount} questions · ${s.sizeKb} KB · ${s.ext.toUpperCase()}</div>
+            </div>
+            <div class="set-actions">
+              <button class="btn btn-jade btn-sm play-btn">▶ Play</button>
+              <button class="btn btn-ghost btn-sm rename-btn" title="Rename">✏️</button>
+              <button class="btn btn-ghost btn-sm delete-btn" title="Delete">🗑</button>
+            </div>
+          `;
+          row.querySelector('.play-btn').onclick = () => {
+            if (chosenGame && GAME_INFO[chosenGame]) {
+              // Game already chosen on home — go straight to host
+              location.href = GAME_INFO[chosenGame].host + '?setId=' + encodeURIComponent(s.id);
+            } else {
+              // Browse-flow: pick a game next
+              location.href = '/games.html?setId=' + encodeURIComponent(s.id);
+            }
+          };
+          row.querySelector('.rename-btn').onclick = async () => {
+            const newTitle = prompt('New title:', s.title);
+            if (!newTitle || newTitle === s.title) return;
+            const r = await fetch('/api/sets/' + encodeURIComponent(s.id) + '/rename', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title: newTitle })
+            });
+            const j = await r.json();
+            if (j.error) alert(j.error); else loadSets();
+          };
+          row.querySelector('.delete-btn').onclick = async () => {
+            if (!confirm(`Delete "${s.title}"?`)) return;
+            await fetch('/api/sets/' + encodeURIComponent(s.id), { method: 'DELETE' });
+            loadSets();
+          };
+          list.appendChild(row);
+        });
+      } catch (e) {
+        list.innerHTML = '<div class="sets-empty err">Could not load sets: ' + e.message + '</div>';
+      }
+    }
+
+    document.getElementById('upload-input').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const status = document.getElementById('upload-status');
+      status.textContent = 'Uploading…';
+      status.className = 'upload-status';
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const base64 = ev.target.result.split(',')[1];
+        const res = await fetch('/api/sets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, content: base64 })
+        });
+        const data = await res.json();
+        if (data.error) {
+          status.className = 'upload-status err';
+          status.textContent = '✗ ' + data.error;
+        } else {
+          status.className = 'upload-status ok';
+          status.textContent = `✓ ${data.title} (${data.questionCount} questions) saved`;
+          loadSets();
+        }
+        e.target.value = '';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    loadSets();
+  </script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/enter.js"></script>
+</body>
+</html>

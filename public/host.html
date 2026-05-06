@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mochi Mash · Host</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+</head>
+<body>
+  <div class="lantern l1"></div>
+  <div class="lantern l2"></div>
+  <div class="lantern l3"></div>
+
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+
+  <!-- LOBBY -->
+  <div id="screen-lobby" class="container">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em;">GAME PIN</div>
+      <div class="pin-display" id="pin-display">······</div>
+      <div style="color:var(--ink-dim); font-size:0.9rem;">
+        Players go to <span id="join-url" style="color:var(--gold-glow); font-weight:800;">this URL</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div style="font-size:2rem;">📚</div>
+        <div style="flex:1;">
+          <div style="font-size:0.75rem; color:var(--ink-dim); letter-spacing:0.15em; text-transform:uppercase;">Set Loaded</div>
+          <div id="set-title-display" style="font-weight:800; font-size:1.15rem;">…</div>
+          <div id="set-count-display" style="color:var(--ink-dim); font-size:0.85rem;">…</div>
+          <div id="images-progress-badge" style="margin-top:6px; font-size:0.85rem; color:var(--gold-glow); display:none;">
+            🔥 <span id="images-progress-text">0/0</span> images ready
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="location.href='/sets.html'">Change</button>
+      </div>
+
+      <div class="duration-control">
+        <span>⏱ Duration</span>
+        <input type="range" id="duration-slider" min="30" max="300" step="15" value="60">
+        <span class="duration-value" id="duration-value">60s</span>
+      </div>
+    </div>
+
+    <div class="host-grid">
+      <div class="team-panel team-red">
+        <div class="team-header">
+          <div class="team-mascot">🐼</div>
+          <div>
+            <div class="team-name">Team Panda</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">紅</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-red"></div>
+      </div>
+      <div class="team-panel team-gold">
+        <div class="team-header">
+          <div class="team-mascot">🦊</div>
+          <div>
+            <div class="team-name">Team Kitsune</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">金</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-gold"></div>
+      </div>
+    </div>
+
+    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:12px;">
+      Tap a player chip to swap their team
+    </p>
+
+    <div class="controls-panel">
+      <div class="controls-row" style="justify-content:center;">
+        <button class="btn btn-ghost" id="balance-btn">⚖️ Auto-balance</button>
+        <button class="btn btn-jade" id="start-btn" disabled>▶️ Start Battle</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="screen-countdown" class="hidden countdown-overlay">
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <!-- ACTIVE GAME -->
+  <div id="screen-active" class="hidden container">
+    <div class="timer-display" id="timer-display">60</div>
+    <div class="timer-bar" id="timer-bar"><div class="timer-bar-fill" id="timer-bar-fill" style="width:100%"></div></div>
+
+    <div class="host-grid">
+      <div class="team-panel team-red">
+        <div class="team-header">
+          <div class="team-mascot eating" id="mascot-red">🐼</div>
+          <div class="team-name">Team Panda</div>
+        </div>
+        <div class="team-score-label">Population · 紅</div>
+        <div class="team-score" id="score-red">0</div>
+        <div class="zoo-floor" id="zoo-red">
+          <div class="zoo-bamboo tl">🎋</div>
+          <div class="zoo-bamboo tr">🎋</div>
+          <div class="zoo-bamboo bl">🎋</div>
+          <div class="zoo-bamboo br">🎋</div>
+          <div class="territory" id="grid-red"></div>
+          <div class="zoo-grass"></div>
+          <div class="zoo-guardian-wrap">
+            <div class="zoo-guardian"><span class="bob">🐼</span></div>
+          </div>
+        </div>
+        <div class="player-chips" id="active-players-red"></div>
+      </div>
+      <div class="team-panel team-gold">
+        <div class="team-header">
+          <div class="team-mascot eating" id="mascot-gold">🦊</div>
+          <div class="team-name">Team Kitsune</div>
+        </div>
+        <div class="team-score-label">Population · 金</div>
+        <div class="team-score" id="score-gold">0</div>
+        <div class="zoo-floor" id="zoo-gold">
+          <div class="zoo-bamboo tl">🎋</div>
+          <div class="zoo-bamboo tr">🎋</div>
+          <div class="zoo-bamboo bl">🎋</div>
+          <div class="zoo-bamboo br">🎋</div>
+          <div class="territory" id="grid-gold"></div>
+          <div class="zoo-grass"></div>
+          <div class="zoo-guardian-wrap">
+            <div class="zoo-guardian gold"><span class="bob">🦊</span></div>
+          </div>
+        </div>
+        <div class="player-chips" id="active-players-gold"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <h3 style="margin-bottom:8px; font-family:'ZCOOL XiaoWei',serif;">📜 Battle Feed</h3>
+      <div class="feed" id="feed"></div>
+    </div>
+
+    <div style="text-align:center; margin-top:16px;">
+      <button class="btn btn-ghost" id="end-now-btn">🛑 End Round</button>
+    </div>
+  </div>
+
+  <!-- WIN -->
+  <div id="screen-win" class="hidden container">
+    <div class="win-screen">
+      <div id="win-emoji" style="font-size:7rem;">🎉</div>
+      <div class="winner-banner" id="win-banner">Team Panda Wins!</div>
+      <div class="final-scores">
+        <div><span class="red" id="final-red">0</span> <span style="color:var(--ink-dim); font-size:1rem;">🐼</span></div>
+        <div style="color:var(--ink-dim);">vs</div>
+        <div><span style="color:var(--ink-dim); font-size:1rem;">🦊</span> <span class="gold" id="final-gold">0</span></div>
+      </div>
+      <div class="leaderboard" id="leaderboard"></div>
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Home</button>
+        <button class="btn btn-jade" id="play-again-btn">🔄 Play Again</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/dralingo.js"></script>
+  <script src="/js/host.js"></script>
+</body>
+</html>
