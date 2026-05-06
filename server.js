@@ -362,48 +362,118 @@ io.on('connection', (socket) => {
   socket.on('player:join', ({ pin, name }, cb) => {
     const g = games[pin];
     if (!g) return cb({ ok: false, error: 'No game with that PIN' });
-    if (g.state !== 'lobby') return cb({ ok: false, error: 'Game already in progress' });
+    if (g.state === 'ended') return cb({ ok: false, error: 'Game has ended' });
     const cleanName = String(name || '').trim().slice(0, 20);
     if (!cleanName) return cb({ ok: false, error: 'Please enter a name' });
-    if (Object.values(g.players).some((p) => p.name.toLowerCase() === cleanName.toLowerCase()))
-      return cb({ ok: false, error: 'Name already taken' });
-    const team = pickTeam(g);
-    const player = {
-      name: cleanName,
-      team,
-      score: 0,
-      queueIdx: 0,
-      mashUntil: 0,
-      lastTap: 0,
-      recentTaps: [],
-      currentQ: null,
-      // color-splash:
-      x: 0,
-      y: 0,
-      walkUntil: 0,
-      lastMove: 0
-    };
-    if (g.gameType === 'color-splash') {
-      const pos = csSpawnPosition(g, team);
-      player.x = pos.x;
-      player.y = pos.y;
+
+    // Look for existing player by name (case-insensitive). If found, attach to that slot.
+    const existingEntry = Object.entries(g.players).find(
+      ([id, p]) => p.name.toLowerCase() === cleanName.toLowerCase()
+    );
+
+    let player;
+    let isRejoin = false;
+    if (existingEntry) {
+      const [oldId, existingPlayer] = existingEntry;
+      isRejoin = true;
+      player = existingPlayer;
+      player.disconnected = false;
+      player.disconnectedAt = null;
+      // Move slot to new socket id (preserves all state — score, position, team)
+      if (oldId !== socket.id) {
+        g.players[socket.id] = player;
+        delete g.players[oldId];
+        // Cancel any pending cleanup timer
+        if (player.cleanupTimer) {
+          clearTimeout(player.cleanupTimer);
+          player.cleanupTimer = null;
+        }
+      }
+      g.feed.push({ type: 'rejoin', name: cleanName, team: player.team, t: Date.now() });
+    } else {
+      // New player — pick smaller team, spawn position for color splash
+      const team = pickTeam(g);
+      player = {
+        name: cleanName,
+        team,
+        score: 0,
+        queueIdx: 0,
+        mashUntil: 0,
+        lastTap: 0,
+        recentTaps: [],
+        currentQ: null,
+        x: 0,
+        y: 0,
+        walkUntil: 0,
+        lastMove: 0,
+        disconnected: false,
+        disconnectedAt: null
+      };
+      if (g.gameType === 'color-splash') {
+        const pos = csSpawnPosition(g, team);
+        player.x = pos.x;
+        player.y = pos.y;
+      }
+      g.players[socket.id] = player;
+      g.feed.push({ type: 'join', name: cleanName, team: player.team, t: Date.now() });
     }
-    g.players[socket.id] = player;
+
     currentPin = pin;
     role = 'player';
     socket.join(pin);
-    g.feed.push({ type: 'join', name: cleanName, team, t: Date.now() });
+
     cb({
       ok: true,
-      team,
+      team: player.team,
       playerId: socket.id,
       gameType: g.gameType,
       gridW: CS_GRID_W,
       gridH: CS_GRID_H,
       x: player.x,
-      y: player.y
+      y: player.y,
+      rejoined: isRejoin,
+      gameState: g.state // so client knows if it should jump straight into question
     });
     broadcast(pin);
+
+    // If joining/rejoining mid-game, send them a question to keep playing
+    if (g.state === 'active') {
+      // For Color Splash, also send the current grid so they can render
+      if (g.gameType === 'color-splash') {
+        const playersInit = {};
+        Object.entries(g.players).forEach(([id, p]) => {
+          playersInit[id] = { name: p.name, team: p.team, x: p.x, y: p.y };
+        });
+        io.to(socket.id).emit('cs:init', {
+          gridW: CS_GRID_W,
+          gridH: CS_GRID_H,
+          players: playersInit,
+          teamScores: g.teamScores
+        });
+        // Also send a "paint" event with all currently-painted cells so the rejoiner sees the state
+        const paintedCells = [];
+        for (let y = 0; y < CS_GRID_H; y++) {
+          for (let x = 0; x < CS_GRID_W; x++) {
+            if (g.grid[y][x]) paintedCells.push({ x, y, team: g.grid[y][x] });
+          }
+        }
+        if (paintedCells.length > 0) {
+          io.to(socket.id).emit('cs:paint', { cells: paintedCells, teamScores: g.teamScores });
+        }
+      }
+      // Send an active question (preserve their currentQ if rejoining)
+      if (player.currentQ) {
+        io.to(socket.id).emit('question', {
+          qid: player.currentQ.qid,
+          text: player.currentQ.text,
+          answers: player.currentQ.answers,
+          image: player.currentQ.image
+        });
+      } else {
+        const q = nextQuestionFor(g, socket.id);
+        if (q) io.to(socket.id).emit('question', q);
+      }
+    }
   });
 
   function csSpawnPosition(g, team) {
@@ -567,16 +637,43 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     if (!currentPin || !games[currentPin]) return;
     const g = games[currentPin];
+
     if (role === 'host') {
-      if (g.endTimer) clearTimeout(g.endTimer);
-      io.to(currentPin).emit('host-left');
-      delete games[currentPin];
+      // Soft disconnect: give the host 60 seconds to reconnect (mobile lock screens, network blips)
+      g.hostDisconnectedAt = Date.now();
+      g.feed.push({ type: 'host-disconnect', t: Date.now() });
+      broadcast(currentPin);
+      // Schedule final cleanup if host doesn't return
+      g.hostCleanupTimer = setTimeout(() => {
+        const stillExists = games[currentPin];
+        if (!stillExists) return;
+        // Only end if no new host has reconnected (hostId would have changed)
+        if (stillExists.hostId === socket.id) {
+          if (stillExists.endTimer) clearTimeout(stillExists.endTimer);
+          io.to(currentPin).emit('host-left');
+          delete games[currentPin];
+        }
+      }, 60000);
     } else if (role === 'player') {
       const p = g.players[socket.id];
       if (p) {
+        // Soft disconnect: keep slot for rejoin, mark as disconnected
+        p.disconnected = true;
+        p.disconnectedAt = Date.now();
         g.feed.push({ type: 'leave', name: p.name, t: Date.now() });
-        delete g.players[socket.id];
         broadcast(currentPin);
+        // Schedule full cleanup after 5 minutes of inactivity
+        const grabbedSocketId = socket.id;
+        p.cleanupTimer = setTimeout(() => {
+          const stillExists = games[currentPin];
+          if (!stillExists) return;
+          const stillThere = stillExists.players[grabbedSocketId];
+          if (stillThere && stillThere.disconnected && stillThere.disconnectedAt &&
+              Date.now() - stillThere.disconnectedAt >= 4 * 60 * 1000) {
+            delete stillExists.players[grabbedSocketId];
+            broadcast(currentPin);
+          }
+        }, 5 * 60 * 1000);
       }
     }
   });
