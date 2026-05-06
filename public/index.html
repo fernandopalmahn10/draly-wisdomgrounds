@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Draly Wisdomgrounds</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+</head>
+<body class="hub-bg">
+  <div class="lantern l1"></div>
+  <div class="lantern l2"></div>
+  <div class="lantern l3"></div>
+
+  <div class="container hub-home">
+    <div class="hub-hero">
+      <div class="dralingo-stage">
+        <div class="dralingo-rays static"></div>
+        <div class="dralingo-orb"></div>
+        <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-floating">
+      </div>
+      <h1 class="hub-title">Draly Wisdomgrounds</h1>
+      <p class="hub-tagline">Where wisdom takes flight 🐉</p>
+    </div>
+
+    <div class="hub-games">
+      <div class="hub-games-label">👑 Host a battle — pick your game</div>
+      <a href="/sets.html?game=mochi-mash" class="game-tile clickable active">
+        <div class="game-tile-emoji">🥮</div>
+        <div class="game-tile-info">
+          <div class="game-tile-name">Mochi Mash</div>
+          <div class="game-tile-desc">Team battle · Answer right, mash to feed your zoo</div>
+        </div>
+        <div class="game-tile-arrow">▶</div>
+      </a>
+      <a href="/sets.html?game=color-splash" class="game-tile clickable active">
+        <div class="game-tile-emoji">🎨</div>
+        <div class="game-tile-info">
+          <div class="game-tile-name">Color Splash</div>
+          <div class="game-tile-desc">Team battle · Walk to paint your territory in 3D</div>
+        </div>
+        <div class="game-tile-arrow">▶</div>
+      </a>
+    </div>
+
+    <div class="hub-actions" style="margin-top:24px;">
+      <button class="btn btn-gold btn-xl" onclick="location.href='/player.html' + location.search">
+        🎮 &nbsp; Join a Battle
+      </button>
+    </div>
+  </div>
+
+  <script src="/js/sounds.js"></script>
+  <script src="/js/enter.js"></script>
+  <script>
+    const params = new URLSearchParams(location.search);
+    if (params.get('pin')) location.href = '/player.html' + location.search;
+  </script>
+</body>
+</html>

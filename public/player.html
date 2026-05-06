@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <title>Mochi Mash · Play</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+  <link rel="stylesheet" href="/css/color-splash.css">
+</head>
+<body>
+  <div class="lantern l1"></div>
+  <div class="lantern l2"></div>
+
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+
+  <!-- JOIN -->
+  <div id="screen-join" class="container" style="justify-content:center; align-items:center;">
+    <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-corner">
+    <div style="max-width:400px; width:100%;">
+      <div style="text-align:center; font-size:4rem; margin-bottom:8px;">🥮</div>
+      <h1 class="title" style="font-size:2.5rem;">Join Battle</h1>
+      <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:-4px; margin-bottom:16px;">Draly Wisdomgrounds</p>
+
+      <div class="card" style="margin-top:8px;">
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <input class="input" id="pin-input" type="tel" maxlength="6" placeholder="Game PIN" inputmode="numeric">
+          <input class="input" id="name-input" type="text" maxlength="20" placeholder="Your name">
+          <button class="btn btn-jade" id="join-btn">Join!</button>
+          <p id="join-error" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em;"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOBBY (waiting) -->
+  <div id="screen-lobby" class="hidden player-screen" style="justify-content:center; align-items:center;">
+    <div style="text-align:center;">
+      <div id="lobby-mascot" style="font-size:7rem;">🐼</div>
+      <h2 id="lobby-team-name" style="font-family:'ZCOOL XiaoWei',serif; font-size:2rem; margin:8px 0;">Team Panda</h2>
+      <p style="color:var(--ink-dim);">Welcome <strong id="lobby-name"></strong></p>
+      <p style="color:var(--ink-dim); margin-top:24px;">Waiting for host to start...</p>
+      <div style="font-size:3rem; margin-top:16px;" class="pulse">🪷</div>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="screen-countdown" class="hidden countdown-overlay">
+    <div class="countdown-num" id="player-countdown-num">3</div>
+  </div>
+
+  <!-- QUESTION -->
+  <div id="screen-question" class="hidden player-screen">
+    <div class="player-header" id="player-header">
+      <span id="player-name-tag">You</span>
+      <span>Score: <span id="player-score">0</span></span>
+    </div>
+    <div class="question-image-wrap" id="question-image-wrap">
+      <div class="img-loading">🐉</div>
+      <img id="question-image" alt="" style="display:none;">
+    </div>
+    <div class="question-card">
+      <div class="question-text" id="question-text"></div>
+    </div>
+    <div class="answers" id="answers"></div>
+  </div>
+
+  <!-- RESULT (between question and mash) -->
+  <div id="screen-result" class="hidden player-screen">
+    <div class="result-feedback" id="result-feedback"></div>
+  </div>
+
+  <!-- COLOR SPLASH WALK MODE -->
+  <div id="screen-cs-walk" class="hidden cs-player-screen">
+    <div class="player-header" id="cs-walk-header">
+      <span id="cs-walk-name-tag">You</span>
+      <span>Tiles: <span id="cs-walk-score">0</span></span>
+    </div>
+    <div class="cs-walk-banner">⚡ WALK MODE ⚡</div>
+    <div class="cs-mini-board-wrap">
+      <div class="cs-mini-board">
+        <div class="cs-mini-grid" id="cs-mini-grid"></div>
+        <div class="cs-players" id="cs-mini-players" style="position:absolute; top:4px; left:4px; pointer-events:none;"></div>
+      </div>
+    </div>
+    <div class="cs-walk-timer"><div class="cs-walk-timer-fill" id="cs-walk-timer-fill"></div></div>
+    <div class="cs-dpad" id="cs-dpad">
+      <button class="cs-dpad-btn empty"></button>
+      <button class="cs-dpad-btn cs-dpad-up" data-dir="up">▲</button>
+      <button class="cs-dpad-btn empty"></button>
+      <button class="cs-dpad-btn cs-dpad-left" data-dir="left">◀</button>
+      <button class="cs-dpad-btn empty"></button>
+      <button class="cs-dpad-btn cs-dpad-right" data-dir="right">▶</button>
+      <button class="cs-dpad-btn empty"></button>
+      <button class="cs-dpad-btn cs-dpad-down" data-dir="down">▼</button>
+      <button class="cs-dpad-btn empty"></button>
+    </div>
+    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:8px;">Each step paints a tile your color 🎨</p>
+  </div>
+
+  <!-- MASH MODE -->
+  <div id="screen-mash" class="hidden player-screen">
+    <div class="player-header" id="mash-header">
+      <span id="mash-name-tag">You</span>
+      <span>Score: <span id="mash-score">0</span></span>
+    </div>
+    <div class="mash-screen">
+      <div style="font-size:1.5rem; font-weight:900; letter-spacing:0.05em; margin-bottom:16px; color:var(--gold-glow); text-shadow:0 0 20px var(--gold-glow);">
+        ⚡ MASH MODE ⚡
+      </div>
+      <button class="mash-button" id="mash-button">
+        <div class="mash-mascot" id="mash-mascot">🐼</div>
+        <div class="mash-counter" id="mash-counter">+0</div>
+      </button>
+      <div class="mash-timer"><div class="mash-timer-fill" id="mash-timer-fill"></div></div>
+      <p style="color:var(--ink-dim); margin-top:16px; font-size:0.9rem;">TAP TAP TAP! 🔥 8/sec for combo</p>
+    </div>
+  </div>
+
+  <!-- ENDED -->
+  <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
+    <div class="win-screen">
+      <div id="end-emoji" style="font-size:6rem;">🎉</div>
+      <div class="winner-banner" id="end-banner">Round Over</div>
+      <p style="color:var(--ink-dim); margin-top:8px;">Your team scored <strong id="end-team-score">0</strong></p>
+      <p style="color:var(--ink-dim);">You scored <strong id="end-personal-score">0</strong></p>
+      <button class="btn btn-ghost" style="margin-top:24px;" onclick="location.href='/'">🏠 Home</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/dralingo.js"></script>
+  <script src="/js/player.js"></script>
+</body>
+</html>

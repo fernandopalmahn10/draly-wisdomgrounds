@@ -1,0 +1,8 @@
+node_modules/
+.DS_Store
+*.log
+.env
+.env.local
+cloudflared.exe
+# 3D models — too big for free GitHub. Hosted externally for production.
+public/assets/*.glb
