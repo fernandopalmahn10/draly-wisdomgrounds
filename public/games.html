@@ -69,18 +69,29 @@
   <script>
     const params = new URLSearchParams(location.search);
     const setId = params.get('setId');
-    if (!setId) { location.href = '/sets.html'; }
 
-    fetch('/api/sets/' + encodeURIComponent(setId)).then(r => r.json()).then(s => {
-      document.getElementById('set-name').textContent = s.title || 'unknown';
-    });
-
-    document.querySelector('#card-mochi .game-card-play').onclick = () => {
-      location.href = '/host.html?setId=' + encodeURIComponent(setId);
-    };
-    document.querySelector('#card-color .game-card-play').onclick = () => {
-      location.href = '/host-color.html?setId=' + encodeURIComponent(setId);
-    };
+    if (setId) {
+      // Arrived from Sets page: show set + Play goes straight to host
+      fetch('/api/sets/' + encodeURIComponent(setId)).then(r => r.json()).then(s => {
+        document.getElementById('set-name').textContent = s.title || 'unknown';
+      });
+      document.querySelector('#card-mochi .game-card-play').onclick = () => {
+        location.href = '/host.html?setId=' + encodeURIComponent(setId);
+      };
+      document.querySelector('#card-color .game-card-play').onclick = () => {
+        location.href = '/host-color.html?setId=' + encodeURIComponent(setId);
+      };
+    } else {
+      // Arrived from Home with no set chosen: pick game first → then go to Sets filtered by game
+      document.getElementById('set-name').textContent = 'pick a game, then a question set';
+      document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Choose'));
+      document.querySelector('#card-mochi .game-card-play').onclick = () => {
+        location.href = '/sets.html?game=mochi-mash';
+      };
+      document.querySelector('#card-color .game-card-play').onclick = () => {
+        location.href = '/sets.html?game=color-splash';
+      };
+    }
 
   </script>
   <script src="/js/enter.js"></script>

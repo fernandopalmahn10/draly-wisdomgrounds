@@ -547,6 +547,14 @@ io.on('connection', (socket) => {
       g.lastScoreBroadcast = now;
       io.to(pin).emit('score-update', { teamScores: g.teamScores });
     }
+    // Per-game aggregated tap-fx broadcast: collect taps in 100ms windows then send one event with the count
+    if (!g.tapFxBuffer) g.tapFxBuffer = { red: 0, gold: 0 };
+    g.tapFxBuffer[p.team] += points;
+    if (!g.lastTapFx || now - g.lastTapFx >= 100) {
+      g.lastTapFx = now;
+      io.to(pin).emit('tap-fx', { red: g.tapFxBuffer.red, gold: g.tapFxBuffer.gold });
+      g.tapFxBuffer = { red: 0, gold: 0 };
+    }
     if (combo && Math.random() < 0.15) {
       g.feed.push({ type: 'combo', name: p.name, team: p.team, t: now });
       broadcast(pin);

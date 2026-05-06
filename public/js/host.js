@@ -6,7 +6,7 @@
   let urgentTriggered = false;
   let lastFilled = { red: 0, gold: 0 };
   const TERRITORY_CELLS = 24;
-  const POINTS_PER_CELL = 20;
+  const POINTS_PER_CELL = 6; // was 20 — fills MUCH faster so every few taps adds a panda
 
   const $ = (id) => document.getElementById(id);
 
@@ -118,16 +118,76 @@
     }
   });
 
+  // Smoothly animate the displayed score toward the real one — feels alive
+  const displayedScores = { red: 0, gold: 0 };
+  function tweenScore(team, target) {
+    const el = $('score-' + team);
+    if (!el) return;
+    const step = () => {
+      const curr = displayedScores[team];
+      if (curr === target) return;
+      // Adaptive step: faster when far behind, smoother when close
+      const diff = target - curr;
+      const inc = diff > 20 ? Math.ceil(diff / 6) : (diff > 5 ? 2 : 1);
+      displayedScores[team] = Math.min(target, curr + inc);
+      el.textContent = displayedScores[team];
+      el.classList.add('pop');
+      clearTimeout(el._popTimer);
+      el._popTimer = setTimeout(() => el.classList.remove('pop'), 120);
+      if (displayedScores[team] < target) requestAnimationFrame(step);
+    };
+    step();
+  }
+
   socket.on('score-update', ({ teamScores }) => {
     if (state && state.state === 'active') {
       state.teamScores = teamScores;
-      $('score-red').textContent = teamScores.red;
-      $('score-gold').textContent = teamScores.gold;
+      tweenScore('red', teamScores.red);
+      tweenScore('gold', teamScores.gold);
       updateTerritory('red', teamScores.red);
       updateTerritory('gold', teamScores.gold);
       bumpMascots();
     }
   });
+
+  // Tap-fx: fountain of flying pandas/foxes spawning over each team's panel as taps land
+  socket.on('tap-fx', ({ red, gold }) => {
+    if (!state || state.state !== 'active') return;
+    if (red > 0) spawnTapBurst('red', red);
+    if (gold > 0) spawnTapBurst('gold', gold);
+  });
+
+  function spawnTapBurst(team, points) {
+    const panel = document.querySelector('.team-' + team);
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const emoji = team === 'red' ? '🐼' : '🦊';
+    // Cap at 12 floaters per burst so we don't lag with massive bursts
+    const count = Math.min(12, Math.max(1, Math.floor(points)));
+    for (let i = 0; i < count; i++) {
+      const f = document.createElement('div');
+      f.className = 'tap-floater ' + team;
+      f.textContent = emoji;
+      const x = r.left + r.width / 2 + (Math.random() - 0.5) * r.width * 0.7;
+      const y = r.top + r.height * 0.55 + (Math.random() - 0.5) * 30;
+      f.style.left = x + 'px';
+      f.style.top = y + 'px';
+      f.style.setProperty('--drift', ((Math.random() - 0.5) * 60) + 'px');
+      f.style.animationDelay = (i * 0.025) + 's';
+      document.body.appendChild(f);
+      setTimeout(() => f.remove(), 900 + i * 30);
+    }
+    // Show a "+N PANDAS!" badge over the panel for big bursts
+    if (points >= 4) {
+      const badge = document.createElement('div');
+      badge.className = 'tap-burst-badge ' + team;
+      badge.textContent = '+' + points + (team === 'red' ? ' 🐼' : ' 🦊');
+      badge.style.left = (r.left + r.width / 2) + 'px';
+      badge.style.top = (r.top + 30) + 'px';
+      document.body.appendChild(badge);
+      setTimeout(() => badge.remove(), 800);
+    }
+  }
 
   function initTerritory(team) {
     const grid = $(`grid-${team}`);
