@@ -147,7 +147,56 @@
     }
   }
 
+  // === Custom music (HTMLAudio) — uses battle-theme.mp3 if present, falls back to synth otherwise ===
+  let bgAudioEl = null;
+  let bgAudioReady = false;
+  let bgAudioFailed = false;
+
+  function tryStartCustomMusic() {
+    if (bgAudioFailed) return false;
+    if (!bgAudioEl) {
+      bgAudioEl = new Audio('/assets/music/battle-theme.mp3');
+      bgAudioEl.loop = true;
+      bgAudioEl.preload = 'auto';
+      bgAudioEl.volume = 0; // start silent, fade in
+      bgAudioEl.addEventListener('canplaythrough', () => { bgAudioReady = true; }, { once: true });
+      bgAudioEl.addEventListener('error', () => { bgAudioFailed = true; });
+    }
+    const targetVol = muted ? 0 : 0.45;
+    const playPromise = bgAudioEl.play();
+    if (playPromise) {
+      playPromise.then(() => {
+        // Fade in
+        let v = 0;
+        const fade = setInterval(() => {
+          v = Math.min(targetVol, v + 0.04);
+          if (bgAudioEl) bgAudioEl.volume = v;
+          if (v >= targetVol) clearInterval(fade);
+        }, 60);
+      }).catch(() => { bgAudioFailed = true; });
+    }
+    return true;
+  }
+
+  function stopCustomMusic() {
+    if (bgAudioEl && !bgAudioEl.paused) {
+      // Fade out then pause
+      const startVol = bgAudioEl.volume;
+      let t = 0;
+      const fade = setInterval(() => {
+        t += 0.06;
+        if (bgAudioEl) bgAudioEl.volume = Math.max(0, startVol * (1 - t));
+        if (t >= 1) {
+          clearInterval(fade);
+          if (bgAudioEl) { bgAudioEl.pause(); bgAudioEl.currentTime = 0; }
+        }
+      }, 30);
+    }
+  }
+
   function startMusic() {
+    // Prefer the custom MP3. Fall back to procedural koto only if it fails.
+    if (tryStartCustomMusic()) return;
     const ctx = ensureCtx();
     if (!ctx) return;
     if (musicTimer) return;
@@ -160,6 +209,7 @@
   }
 
   function stopMusic() {
+    stopCustomMusic();
     if (musicTimer) clearInterval(musicTimer);
     musicTimer = null;
     if (musicGain && audioCtx) {
@@ -270,6 +320,16 @@
     if (audioCtx && sfxGain && musicGain) {
       sfxGain.gain.linearRampToValueAtTime(muted ? 0 : 0.7, audioCtx.currentTime + 0.2);
       musicGain.gain.linearRampToValueAtTime(muted ? 0 : 0.45, audioCtx.currentTime + 0.2);
+    }
+    if (bgAudioEl) {
+      const target = muted ? 0 : 0.45;
+      let from = bgAudioEl.volume;
+      let t = 0;
+      const fade = setInterval(() => {
+        t += 0.1;
+        if (bgAudioEl) bgAudioEl.volume = from + (target - from) * Math.min(1, t);
+        if (t >= 1) clearInterval(fade);
+      }, 30);
     }
     return muted;
   };
