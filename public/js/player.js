@@ -420,7 +420,8 @@
     const fill = $('cc-energy-fill');
     const num = $('cc-energy-num');
     if (!fill) return;
-    const pct = Math.max(0, Math.min(100, ccEnergy));
+    // Energy meter caps visually at 30 (since we start at 20, +12 per answer ≈ ~32 max usually)
+    const pct = Math.max(0, Math.min(100, (ccEnergy / 30) * 100));
     fill.style.width = pct + '%';
     num.textContent = ccEnergy;
     const dpad = $('cc-dpad');
@@ -494,12 +495,23 @@
       e.preventDefault();
       move(dir);
     });
-    // Answer button
+    // Answer button — robust pointer + click handler with dedupe
     const answerBtn = $('cc-answer-btn');
     if (answerBtn) {
-      answerBtn.addEventListener('click', () => {
+      let lastFire = 0;
+      const handleAnswer = (e) => {
+        const now = Date.now();
+        if (now - lastFire < 250) return;
+        lastFire = now;
+        if (e) e.preventDefault();
+        answerBtn.classList.add('pressed');
+        setTimeout(() => answerBtn.classList.remove('pressed'), 180);
+        if (navigator.vibrate) navigator.vibrate(20);
+        MochiSounds.tick();
         socket.emit('player:request-question', { pin });
-      });
+      };
+      answerBtn.addEventListener('click', handleAnswer);
+      answerBtn.addEventListener('touchstart', handleAnswer, { passive: false });
     }
   }
 

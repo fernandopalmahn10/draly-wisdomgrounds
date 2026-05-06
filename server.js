@@ -81,12 +81,13 @@ const CS_MOVE_COOLDOWN_MS = 130; // ~7 steps/sec max
 const CS_WRONG_AUTO_PAINTS = 3;
 
 // Color Clash (market theme, continuous movement, energy-based)
+// Tuned for "answer questions often" — players burn through energy fast
 const CC_GRID_W = 30;
 const CC_GRID_H = 18;
 const CC_MOVE_COOLDOWN_MS = 110; // 9 steps/sec max
-const CC_START_ENERGY = 50;
+const CC_START_ENERGY = 20;     // burns out in ~20 moves
 const CC_ENERGY_PER_TILE = 1;
-const CC_CORRECT_ENERGY = 30;
+const CC_CORRECT_ENERGY = 12;   // ~12 more moves per correct answer
 const CC_WRONG_ENEMY_PAINTS = 4;
 
 function genPin() {
