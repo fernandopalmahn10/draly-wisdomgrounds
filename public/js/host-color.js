@@ -289,7 +289,9 @@
     }
   }
 
-  socket.on('host-left', () => alert('Connection lost. Please reload.'));
+  socket.on('disconnect', () => console.log('[host-color] socket disconnected, reconnecting…'));
+  socket.on('connect', () => console.log('[host-color] socket connected'));
+  socket.on('host-left', () => console.warn('[host-color] host-left received'));
 
   function showScreen(name) {
     ['lobby', 'countdown', 'active', 'win'].forEach((n) => {

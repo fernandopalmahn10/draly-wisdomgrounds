@@ -31,6 +31,47 @@
     $('mute-btn').textContent = muted ? '🔇 Off' : '🔊 On';
   });
 
+  // Auto-rejoin on socket reconnect (handles phone sleep, network blips, tab switches)
+  function showReconnectOverlay(message) {
+    let el = document.getElementById('reconnect-overlay');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'reconnect-overlay';
+      el.className = 'reconnect-overlay';
+      el.innerHTML = '<div class="reconnect-spinner">🐉</div><div class="reconnect-text"></div>';
+      document.body.appendChild(el);
+    }
+    el.querySelector('.reconnect-text').textContent = message || 'Reconnecting...';
+    el.classList.remove('hidden');
+  }
+  function hideReconnectOverlay() {
+    const el = document.getElementById('reconnect-overlay');
+    if (el) el.classList.add('hidden');
+  }
+  socket.on('disconnect', (reason) => {
+    if (pin && myName) showReconnectOverlay('Reconnecting...');
+  });
+  socket.on('connect', () => {
+    // On any reconnect (after the first), re-emit player:join with stored credentials
+    if (pin && myName) {
+      socket.emit('player:join', { pin, name: myName }, (resp) => {
+        if (resp.ok) {
+          myPlayerId = resp.playerId; // new socket id after reconnect
+          team = resp.team;
+          if (resp.gameType) gameType = resp.gameType;
+          hideReconnectOverlay();
+          // If they were re-attached during an active game, server will send them
+          // their cs:init / question event automatically. Player UI catches up.
+        } else {
+          showReconnectOverlay(resp.error || 'Could not rejoin');
+        }
+      });
+    }
+  });
+  socket.on('connect_error', () => {
+    if (pin && myName) showReconnectOverlay('Reconnecting...');
+  });
+
   // Unlock audio on first tap
   document.addEventListener('click', () => window.unlockAudio && window.unlockAudio(), { once: true });
   document.addEventListener('touchstart', () => window.unlockAudio && window.unlockAudio(), { once: true });
@@ -566,8 +607,9 @@
   });
 
   socket.on('host-left', () => {
-    alert('Host disconnected. Returning home.');
-    location.href = '/';
+    // Gentler than an alert — show a friendly card so kids don't panic
+    showReconnectOverlay('The host has ended this round. Returning home...');
+    setTimeout(() => { location.href = '/'; }, 3500);
   });
 
   socket.on('state', (s) => {

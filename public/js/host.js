@@ -393,8 +393,17 @@
     }
   }
 
+  socket.on('disconnect', () => {
+    // Network blip — Socket.IO will auto-retry. Don't panic.
+    console.log('[host] socket disconnected, reconnecting…');
+  });
+  socket.on('connect', () => {
+    console.log('[host] socket connected');
+  });
   socket.on('host-left', () => {
-    alert('Connection lost. Please reload.');
+    // Only show this if it's not us coming back online — if we're getting this it means
+    // the server-side grace period expired before our reconnect.
+    console.warn('[host] host-left received');
   });
 
   function showScreen(name) {
