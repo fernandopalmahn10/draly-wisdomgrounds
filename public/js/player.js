@@ -26,6 +26,8 @@
   // Market Quest state
   let mqWorld = { w: 1600, h: 900 };
   let mqVendors = [];
+  let mqPickups = [];
+  let mqPickupFx = [];
   let mqPlayers = {};
   let mqDisplayPlayers = {};
   let mqAssets = { scene: null };
@@ -693,6 +695,8 @@
     mqWorld.w = data.worldW;
     mqWorld.h = data.worldH;
     mqVendors = data.vendors || [];
+    mqPickups = data.pickups || [];
+    mqPickupFx = [];
     mqPlayers = data.players || {};
     mqDisplayPlayers = {};
     Object.entries(mqPlayers).forEach(([id, p]) => {
@@ -734,6 +738,44 @@
     const v = mqVendors.find((x) => x.id === vendorId);
     if (v) v.claimedBy = team;
     MochiSounds.correct();
+  });
+
+  socket.on('mq:pickup-grabbed', ({ id, icon, team }) => {
+    const pk = mqPickups.find((x) => x.id === id);
+    if (pk) {
+      pk.available = false;
+      mqPickupFx.push({ x: pk.x, y: pk.y, icon, until: performance.now() + 600 });
+    }
+    MochiSounds.populate(team);
+  });
+
+  socket.on('mq:pickup-respawn', ({ id }) => {
+    const pk = mqPickups.find((x) => x.id === id);
+    if (pk) pk.available = true;
+  });
+
+  // Server tells THIS player they personally grabbed a pickup → bag bump + sparkles
+  socket.on('mq:my-pickup', ({ icon, playerScore }) => {
+    mqItemsCollected = playerScore;
+    const itemsEl = $('mq-player-items');
+    if (itemsEl) itemsEl.textContent = mqItemsCollected;
+    // Tiny "+1" floater + sparkle, no big toast (that's reserved for vendor claims)
+    const bag = $('mq-bag');
+    if (bag) {
+      bag.classList.remove('bumped');
+      void bag.offsetWidth;
+      bag.classList.add('bumped');
+    }
+    const bagRecent = $('mq-bag-recent');
+    if (bagRecent) {
+      const item = document.createElement('span');
+      item.className = 'mq-bag-item';
+      item.textContent = icon || '🍎';
+      bagRecent.appendChild(item);
+      while (bagRecent.children.length > 5) bagRecent.removeChild(bagRecent.firstChild);
+    }
+    if (navigator.vibrate) navigator.vibrate(20);
+    MochiSounds.tap();
   });
 
   function bindMqJoystick() {
@@ -876,6 +918,24 @@
       // Vendors
       mqVendors.forEach((v) => drawMqVendor(ctx, v, t));
 
+      // Pickups (food items scattered on the floor)
+      mqPickups.forEach((pickup) => drawMqPickup(ctx, pickup, t));
+
+      // Grab effects — picked-up items rising and fading
+      mqPickupFx = mqPickupFx.filter((fx) => fx.until > now);
+      mqPickupFx.forEach((fx) => {
+        const elapsed = 600 - (fx.until - now);
+        const pr = elapsed / 600;
+        const rise = 70 * pr;
+        ctx.save();
+        ctx.globalAlpha = 1 - pr;
+        ctx.font = `${36 + 18 * pr}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(fx.icon, fx.x, fx.y - rise);
+        ctx.restore();
+      });
+
       // Players (Y-sorted)
       const sortedIds = Object.keys(mqDisplayPlayers).sort((a, b) =>
         mqDisplayPlayers[a].y - mqDisplayPlayers[b].y
@@ -952,6 +1012,32 @@
     ctx.textBaseline = 'middle';
     const bob = claimed ? 0 : Math.sin(t * 2 + v.id) * 3;
     ctx.fillText(v.icon, x, y - 26 + bob);
+    ctx.restore();
+  }
+
+  function drawMqPickup(ctx, pickup, t) {
+    if (!pickup.available) return;
+    const x = pickup.x, y = pickup.y;
+    const bob = Math.sin(t * 2.2 + pickup.id) * 4;
+    ctx.save();
+    // Glow ring
+    const glow = ctx.createRadialGradient(x, y + bob, 4, x, y + bob, 32);
+    glow.addColorStop(0, 'rgba(255, 220, 130, 0.5)');
+    glow.addColorStop(1, 'rgba(255, 213, 122, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y + bob, 32, 0, Math.PI * 2);
+    ctx.fill();
+    // Ground shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 18, 12, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // The food sprite
+    ctx.font = '28px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(pickup.icon, x, y + bob);
     ctx.restore();
   }
 

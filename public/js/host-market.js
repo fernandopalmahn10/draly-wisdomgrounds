@@ -8,6 +8,8 @@
   // World state (kept up to date by mq:init + mq:tick + mq:vendor-claimed)
   let world = { w: 1600, h: 900 };
   let vendors = [];
+  let pickups = [];            // id → { id, x, y, icon, available }
+  let pickupFx = [];           // active grab-animation effects { x, y, icon, until }
   let players = {};            // id → { name, team, x, y, dir, moving }
   let displayPlayers = {};     // id → smoothed render position
   let scores = { red: 0, gold: 0 };
@@ -145,6 +147,8 @@
     world.w = data.worldW;
     world.h = data.worldH;
     vendors = data.vendors || [];
+    pickups = data.pickups || [];
+    pickupFx = [];
     players = data.players || {};
     scores = data.teamScores || { red: 0, gold: 0 };
     // Initialize display positions to match server positions
@@ -189,6 +193,24 @@
       updateScores(scores);
     }
     MochiSounds.correct();
+  });
+
+  socket.on('mq:pickup-grabbed', ({ id, icon, team, teamScores }) => {
+    const pickup = pickups.find((p) => p.id === id);
+    if (pickup) {
+      pickup.available = false;
+      pickupFx.push({ x: pickup.x, y: pickup.y, icon, team, until: performance.now() + 600 });
+    }
+    if (teamScores) {
+      scores = teamScores;
+      updateScores(scores);
+    }
+    MochiSounds.populate(team);
+  });
+
+  socket.on('mq:pickup-respawn', ({ id }) => {
+    const pickup = pickups.find((p) => p.id === id);
+    if (pickup) pickup.available = true;
   });
 
   function updateScores(s) {
@@ -271,10 +293,28 @@
       ctx.fillRect(0, 0, W, H);
     }
 
-    // Draw vendor stalls
+    // Draw vendor stalls + pickups
     const t = now / 1000;
     vendors.forEach((v) => {
       drawVendor(ctx, v, t);
+    });
+    pickups.forEach((pickup) => {
+      drawPickup(ctx, pickup, t);
+    });
+    // Grab effects: items flying upward and fading
+    pickupFx = pickupFx.filter((fx) => fx.until > now);
+    pickupFx.forEach((fx) => {
+      const elapsed = 600 - (fx.until - now);
+      const p = elapsed / 600;
+      const rise = 60 * p;
+      const alpha = 1 - p;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.font = `${40 + 20 * p}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(fx.icon, fx.x, fx.y - rise);
+      ctx.restore();
     });
 
     // Draw players (sorted by Y so closer ones overlap correctly)
@@ -357,6 +397,33 @@
       ctx.closePath();
       ctx.fill();
     }
+    ctx.restore();
+  }
+
+  function drawPickup(ctx, pickup, t) {
+    if (!pickup.available) return; // hidden until respawn
+    const x = pickup.x;
+    const y = pickup.y;
+    const bob = Math.sin(t * 2.2 + pickup.id) * 4;
+    ctx.save();
+    // Soft glow ring around pickup so kids notice it
+    const glow = ctx.createRadialGradient(x, y + bob, 4, x, y + bob, 36);
+    glow.addColorStop(0, 'rgba(255, 220, 130, 0.45)');
+    glow.addColorStop(1, 'rgba(255, 213, 122, 0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y + bob, 36, 0, Math.PI * 2);
+    ctx.fill();
+    // Shadow on the ground
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 18, 14, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // The food item
+    ctx.font = '32px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(pickup.icon, x, y + bob);
     ctx.restore();
   }
 

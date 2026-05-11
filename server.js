@@ -126,6 +126,52 @@ const MQ_VENDORS = [
   { id: 9,  x: 80,   y: 460,  icon: '🛍️' },
   { id: 10, x: 720,  y: 460,  icon: '🍶' }
 ];
+const MQ_VENDOR_POINTS = 5;
+const MQ_PICKUP_POINTS = 1;
+const MQ_PICKUP_RADIUS = 50;
+const MQ_PICKUP_RESPAWN_MS = 20000; // pickup reappears 20s after being grabbed
+
+// Pickup positions — scattered food items on the market floor, between vendors.
+// Walking over one = +1 team point + sound + sparkle. Respawns after 20s.
+const MQ_PICKUPS = [
+  { id: 0,  x: 400,  y: 110, icon: '🍊' },
+  { id: 1,  x: 720,  y: 110, icon: '🍇' },
+  { id: 2,  x: 1040, y: 110, icon: '🥭' },
+  { id: 3,  x: 1300, y: 340, icon: '🍓' },
+  { id: 4,  x: 1300, y: 580, icon: '🍍' },
+  { id: 5,  x: 1040, y: 800, icon: '🍐' },
+  { id: 6,  x: 720,  y: 800, icon: '🍒' },
+  { id: 7,  x: 400,  y: 800, icon: '🥝' },
+  { id: 8,  x: 160,  y: 580, icon: '🍋' },
+  { id: 9,  x: 160,  y: 340, icon: '🌽' },
+  { id: 10, x: 480,  y: 460, icon: '🥬' },
+  { id: 11, x: 800,  y: 360, icon: '🌶' },
+  { id: 12, x: 1120, y: 460, icon: '🥒' },
+  { id: 13, x: 320,  y: 280, icon: '🍅' },
+  { id: 14, x: 960,  y: 280, icon: '🥕' },
+  { id: 15, x: 320,  y: 620, icon: '🍆' },
+  { id: 16, x: 960,  y: 620, icon: '🥥' },
+  { id: 17, x: 800,  y: 560, icon: '🍑' }
+];
+
+// Map Chinese vocab → matching emoji. Used so the collection toast shows
+// the right icon (was using the vendor's static icon, which mismatched).
+const VOCAB_EMOJI = {
+  '苹果': '🍎', '水': '💧', '茶': '🍵', '米饭': '🍚', '菜': '🥬',
+  '钱': '💰', '块': '💵', '吃': '🍽', '喝': '🥤', '买': '🛒',
+  '商店': '🏪', '饭店': '🍱', '杯子': '🥛', '水果': '🍇',
+  '东西': '📦', '多少': '🔢', '请': '🙏', '谢谢': '🙏',
+  '不客气': '😊', '好': '👍', '想': '💭', '喜欢': '❤️'
+};
+function emojiForChinese(chinese) {
+  if (!chinese) return null;
+  // Try whole word match first, then first char
+  if (VOCAB_EMOJI[chinese]) return VOCAB_EMOJI[chinese];
+  for (const key of Object.keys(VOCAB_EMOJI)) {
+    if (chinese.includes(key)) return VOCAB_EMOJI[key];
+  }
+  return null;
+}
 
 function genPin() {
   let pin;
@@ -459,15 +505,16 @@ io.on('connection', (socket) => {
         });
       }
 
-      // Market Quest: assign vendor → vocab mapping, reset everything, send init
+      // Market Quest: assign vendor → vocab mapping, reset pickups, send init
       if (g.gameType === 'market-quest') {
-        // Shuffle vocab indexes and assign to vendors
         const vocabIdxs = g.questions.map((_, i) => i).sort(() => Math.random() - 0.5);
         g.vendors = MQ_VENDORS.map((v, i) => ({
           ...v,
           claimedBy: null,
           vocabIdx: vocabIdxs[i % vocabIdxs.length]
         }));
+        // Initialize fresh pickups (all available)
+        g.pickups = MQ_PICKUPS.map((pk) => ({ ...pk, available: true, respawnAt: 0 }));
         // Reset players to spawn positions
         Object.values(g.players).forEach((p) => {
           p.x = p.team === 'red' ? 100 + Math.random() * 60 : MQ_WORLD_W - 160 + Math.random() * 60;
@@ -481,6 +528,7 @@ io.on('connection', (socket) => {
           worldW: MQ_WORLD_W,
           worldH: MQ_WORLD_H,
           vendors: g.vendors,
+          pickups: g.pickups,
           players: Object.fromEntries(
             Object.entries(g.players).map(([id, p]) => [id, {
               name: p.name, team: p.team, x: p.x, y: p.y, dir: p.dir
@@ -639,6 +687,7 @@ io.on('connection', (socket) => {
           worldW: MQ_WORLD_W,
           worldH: MQ_WORLD_H,
           vendors: g.vendors,
+          pickups: g.pickups,
           players: Object.fromEntries(
             Object.entries(g.players).map(([id, pl]) => [id, {
               name: pl.name, team: pl.team, x: pl.x, y: pl.y, dir: pl.dir || 'down'
@@ -780,16 +829,21 @@ io.on('connection', (socket) => {
       const vendorId = cqData.vendorId;
       const vendor = g.vendors && g.vendors.find((v) => v.id === vendorId);
       // Extract Chinese characters + pinyin from the question text for the toast
-      // Question format: "¿Qué significa 苹果 (píngguǒ)?" or "¿Cómo se dice "X" en chino?"
       let itemChinese = '';
+      let itemHanzi = '';
       const m = cqData.text.match(/([一-鿿]+)\s*\(([^)]+)\)/);
-      if (m) itemChinese = `${m[1]} (${m[2]})`;
-      const vendorIcon = vendor ? vendor.icon : '🛍';
+      if (m) {
+        itemHanzi = m[1];
+        itemChinese = `${m[1]} (${m[2]})`;
+      }
+      // Use vocab-specific emoji if we can find one, else fall back to vendor's icon
+      const matchedEmoji = emojiForChinese(itemHanzi);
+      const itemIcon = matchedEmoji || (vendor ? vendor.icon : '🛍');
 
       if (correct && vendor && !vendor.claimedBy) {
         vendor.claimedBy = p.team;
-        p.score = (p.score || 0) + 1;
-        g.teamScores[p.team]++;
+        p.score = (p.score || 0) + MQ_VENDOR_POINTS;
+        g.teamScores[p.team] = (g.teamScores[p.team] || 0) + MQ_VENDOR_POINTS;
         io.to(pin).emit('mq:vendor-claimed', {
           vendorId,
           team: p.team,
@@ -801,15 +855,16 @@ io.on('connection', (socket) => {
           vendorId,
           correctText,
           playerScore: p.score,
-          itemIcon: vendorIcon,
-          itemChinese
+          itemIcon,
+          itemChinese,
+          pointsAwarded: MQ_VENDOR_POINTS
         });
       } else if (correct) {
-        io.to(socket.id).emit('answer-result', { correct: true, vendorId, correctText, itemIcon: vendorIcon, itemChinese });
+        io.to(socket.id).emit('answer-result', { correct: true, vendorId, correctText, itemIcon, itemChinese });
       } else {
         if (!p.vendorCooldowns) p.vendorCooldowns = {};
         p.vendorCooldowns[vendorId] = Date.now() + 8000;
-        io.to(socket.id).emit('answer-result', { correct: false, vendorId, correctText, itemIcon: vendorIcon, itemChinese });
+        io.to(socket.id).emit('answer-result', { correct: false, vendorId, correctText, itemIcon, itemChinese });
       }
       // Win check: all vendors claimed → end game early
       if (g.vendors.every((v) => v.claimedBy)) {
@@ -1150,7 +1205,43 @@ setInterval(() => {
           }
         }
       }
+
+      // Pickup collision — passive: stepping over a pickup grabs it (+1 team point)
+      if (g.pickups) {
+        for (const pickup of g.pickups) {
+          if (!pickup.available) continue;
+          const dx2 = p.x - pickup.x;
+          const dy2 = p.y - pickup.y;
+          if (dx2 * dx2 + dy2 * dy2 < MQ_PICKUP_RADIUS * MQ_PICKUP_RADIUS) {
+            pickup.available = false;
+            pickup.respawnAt = now + MQ_PICKUP_RESPAWN_MS;
+            p.score = (p.score || 0) + MQ_PICKUP_POINTS;
+            g.teamScores[p.team] = (g.teamScores[p.team] || 0) + MQ_PICKUP_POINTS;
+            io.to(pin).emit('mq:pickup-grabbed', {
+              id: pickup.id,
+              icon: pickup.icon,
+              team: p.team,
+              teamScores: g.teamScores
+            });
+            io.to(pid).emit('mq:my-pickup', {
+              icon: pickup.icon,
+              playerScore: p.score
+            });
+          }
+        }
+      }
     });
+
+    // Respawn pickups whose timer has elapsed
+    if (g.pickups) {
+      const now2 = Date.now();
+      g.pickups.forEach((pickup) => {
+        if (!pickup.available && pickup.respawnAt && now2 >= pickup.respawnAt) {
+          pickup.available = true;
+          io.to(pin).emit('mq:pickup-respawn', { id: pickup.id });
+        }
+      });
+    }
 
     // Broadcast tick — compact positions
     const positions = {};
