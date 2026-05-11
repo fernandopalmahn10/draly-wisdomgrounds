@@ -1,7 +1,33 @@
 /* ============================================
-   COLOR SPLASH — isometric 3D-look board
+   COLOR SPLASH v2 — Tinta y Bambú (ink + bamboo, Asian theme)
    ============================================ */
 
+.rice-paper-bg {
+  background:
+    /* Subtle paper grain — soft radial spots */
+    radial-gradient(circle at 18% 22%, rgba(140, 100, 60, 0.06) 0, transparent 8%),
+    radial-gradient(circle at 62% 38%, rgba(120, 80, 50, 0.05) 0, transparent 7%),
+    radial-gradient(circle at 36% 72%, rgba(150, 110, 70, 0.06) 0, transparent 9%),
+    radial-gradient(circle at 84% 86%, rgba(130, 90, 55, 0.05) 0, transparent 7%),
+    /* Warm cream paper base */
+    linear-gradient(180deg, #2a1f15 0%, #3a2a1c 100%);
+  background-size: 80px 80px, 60px 60px, 100px 100px, 70px 70px, 100% 100%;
+}
+
+.ink-banner {
+  font-family: 'Long Cang', 'ZCOOL XiaoWei', serif;
+  font-size: clamp(1.6rem, 5vw, 2.6rem);
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, #1a1a1a, #4a3020, #1a1a1a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 30px rgba(244, 232, 208, 0.3);
+  -webkit-text-stroke: 1px rgba(255, 213, 122, 0.7);
+}
+
+/* === ACTIVE GAME LAYOUT === */
 .cs-container {
   display: flex;
   flex-direction: column;
@@ -12,230 +38,192 @@
 .cs-topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
-  padding: 10px 16px;
-  background: rgba(13, 14, 26, 0.7);
-  border-radius: 14px;
-  margin-bottom: 8px;
-  backdrop-filter: blur(8px);
+  height: 50px;
+  margin-bottom: 6px;
+  background: rgba(244, 232, 208, 0.94);
+  border-radius: 12px;
+  padding: 0 16px;
+  border: 2px solid #6b4a30;
+  box-shadow: 0 4px 12px rgba(60, 30, 10, 0.4);
 }
-
-.cs-team-score {
+.cs-team {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 800;
   flex: 1;
+  color: #2a1a0a;
 }
-.cs-team-score.gold { justify-content: flex-end; }
+.cs-team.gold { justify-content: flex-end; }
+.cs-team.red .cs-team-label { color: var(--red-dark); }
+.cs-team.gold .cs-team-label { color: var(--gold-dark); }
 .cs-team-emoji { font-size: 1.8rem; line-height: 1; }
 .cs-team-label {
-  font-family: 'Cinzel', serif;
-  font-size: 0.95rem;
+  font-family: 'ZCOOL XiaoWei', 'Cinzel', serif;
+  font-weight: 900;
   letter-spacing: 0.05em;
+  font-size: 1.1rem;
 }
-.cs-team-score.red .cs-team-label { color: var(--red-glow); }
-.cs-team-score.gold .cs-team-label { color: var(--gold-glow); }
 .cs-team-pct {
-  font-size: 1.6rem;
+  font-size: 2rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 16px currentColor;
   min-width: 60px;
   text-align: center;
 }
-.cs-team-score.red .cs-team-pct { color: var(--red-glow); }
-.cs-team-score.gold .cs-team-pct { color: var(--gold-glow); }
+.cs-team.red .cs-team-pct { color: #8b1a23; }
+.cs-team.gold .cs-team-pct { color: #a87a1f; }
 
 .cs-time {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 900;
   font-variant-numeric: tabular-nums;
-  color: var(--ink);
+  min-width: 80px;
   text-align: center;
-  min-width: 60px;
+  background: #2a1a0a;
+  color: #f4e8c8;
+  padding: 4px 12px;
+  border-radius: 8px;
 }
-.cs-time.urgent { color: var(--red-glow); animation: urgentPulse 0.5s ease-in-out infinite; }
+.cs-time.urgent {
+  color: #ff5a66;
+  animation: urgentPulse 0.5s ease-in-out infinite;
+}
 
-/* The 3D stage */
 .cs-stage {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 1400px;
-  perspective-origin: 50% 30%;
+  position: relative;
   overflow: hidden;
-  padding: 20px 8px;
-}
-
-.cs-board {
-  position: relative;
-  transform-style: preserve-3d;
-  transform: rotateX(48deg) rotateZ(0deg);
-  transition: transform 0.8s ease-out;
-  filter: drop-shadow(0 30px 30px rgba(0, 0, 0, 0.4));
-}
-
-.cs-board-tilt {
-  position: relative;
-  transform-style: preserve-3d;
-}
-
-/* Grid sits flat on the "ground" plane */
-.cs-grid {
-  display: grid;
-  gap: 3px;
-  padding: 12px;
-  background:
-    linear-gradient(135deg, #1a1d2e 0%, #2d2342 100%);
   border-radius: 14px;
+  border: 4px solid #6b4a30;
   box-shadow:
-    0 0 0 2px rgba(244, 232, 208, 0.1),
-    inset 0 0 60px rgba(13, 14, 26, 0.6);
-  /* Grid template-columns set inline by JS based on board size */
+    0 0 40px rgba(255, 213, 122, 0.15),
+    inset 0 0 50px rgba(60, 30, 10, 0.3);
+  background:
+    /* Rice paper texture inside the canvas frame */
+    radial-gradient(circle at 25% 35%, rgba(180, 140, 95, 0.12) 0, transparent 6%),
+    radial-gradient(circle at 75% 65%, rgba(160, 120, 80, 0.12) 0, transparent 7%),
+    radial-gradient(circle at 50% 50%, rgba(240, 220, 180, 0.15) 0%, transparent 60%),
+    linear-gradient(135deg, #f4e4c0 0%, #e8d4a0 50%, #d4bc88 100%);
 }
 
-.cs-cell {
-  background: rgba(244, 232, 208, 0.07);
-  border-radius: 4px;
-  position: relative;
-  transition: all 0.25s ease-out;
-  aspect-ratio: 1;
-  min-width: 22px;
-  min-height: 22px;
-}
-.cs-cell.red {
-  background: linear-gradient(135deg, #ff5a66, #d92e3a);
-  box-shadow:
-    0 0 6px rgba(255, 90, 102, 0.6),
-    inset 0 0 8px rgba(139, 26, 35, 0.5);
-  transform: translateZ(2px);
-}
-.cs-cell.gold {
-  background: linear-gradient(135deg, #ffd57a, #e8b14a);
-  box-shadow:
-    0 0 6px rgba(255, 213, 122, 0.6),
-    inset 0 0 8px rgba(168, 122, 31, 0.4);
-  transform: translateZ(2px);
-}
-.cs-cell.fresh {
-  animation: paintSplash 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-@keyframes paintSplash {
-  0%   { transform: translateZ(2px) scale(0.4); }
-  60%  { transform: translateZ(8px) scale(1.4); }
-  100% { transform: translateZ(2px) scale(1); }
+#cs-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
 }
 
-/* Players are positioned absolutely over the grid */
-.cs-players {
+/* Bamboo decorations at edges of the stage */
+.cs-bamboo {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  font-size: 2.6rem;
   pointer-events: none;
+  z-index: 5;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+  animation: bambooSway 3.5s ease-in-out infinite;
+}
+.cs-bamboo-tl { top: 4px; left: 6px; }
+.cs-bamboo-tr { top: 4px; right: 6px; animation-delay: 1s; transform: scaleX(-1); }
+.cs-bamboo-bl { bottom: 50px; left: 6px; animation-delay: 0.5s; }
+.cs-bamboo-br { bottom: 50px; right: 6px; animation-delay: 1.5s; transform: scaleX(-1); }
+
+/* Floating paper lanterns */
+.cs-lantern {
+  position: absolute;
+  font-size: 2.2rem;
+  pointer-events: none;
+  z-index: 5;
+  filter: drop-shadow(0 0 12px rgba(255, 90, 102, 0.5));
+  animation: lanternFloat 4s ease-in-out infinite;
+}
+.cs-lantern-1 { top: 10%; left: 15%; }
+.cs-lantern-2 { top: 8%; right: 18%; animation-delay: 2s; }
+@keyframes lanternFloat {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50%      { transform: translateY(-8px) rotate(3deg); }
 }
 
-.cs-player {
-  position: absolute;
-  width: var(--cell-size, 32px);
-  height: var(--cell-size, 32px);
+/* === COLOR SPLASH PLAYER SCREEN === */
+.cs-player-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom));
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  z-index: 100;
+  background:
+    radial-gradient(ellipse at top, #4a3020 0%, #2a1a0a 60%, #0d0e1a 100%);
+}
+
+.cs-player-hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 14px;
+  background: rgba(244, 232, 208, 0.9);
+  border-radius: 999px;
+  border: 2px solid #6b4a30;
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: #2a1a0a;
+  margin: 0 6px 6px;
+}
+.cs-player-tag.red { color: #8b1a23; }
+.cs-player-tag.gold { color: #a87a1f; }
+
+.cs-mini-stage-v2 {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(var(--cell-size, 32px) * 0.7);
-  z-index: 10;
-  transition: transform 0.13s ease-out;
-  transform-origin: bottom center;
-  filter:
-    drop-shadow(0 4px 4px rgba(0, 0, 0, 0.6))
-    drop-shadow(0 0 6px currentColor);
-  pointer-events: none;
-  /* Stand the player UP off the floor for 3D look */
-  transform-style: preserve-3d;
-  /* x/y are set inline */
+  margin: 4px 0;
+  overflow: hidden;
+  min-height: 0;
+  border-radius: 12px;
+  border: 3px solid #6b4a30;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(240, 220, 180, 0.4) 0%, transparent 70%),
+    linear-gradient(135deg, #f4e4c0 0%, #d4bc88 100%);
 }
-.cs-player.red { color: var(--red-glow); }
-.cs-player.gold { color: var(--gold-glow); }
-
-.cs-player-emoji {
-  display: inline-block;
-  transform: rotateX(-48deg) translateZ(0);
-}
-
-.cs-player-name {
-  position: absolute;
-  bottom: -16px;
-  left: 50%;
-  transform: rotateX(-48deg) translateX(-50%);
-  font-size: 0.65rem;
-  font-weight: 800;
-  white-space: nowrap;
-  background: rgba(13, 14, 26, 0.85);
-  padding: 1px 6px;
-  border-radius: 4px;
-  letter-spacing: 0.02em;
-}
-
-/* === COLOR SPLASH PLAYER UI (D-pad + mini board) === */
-.cs-player-screen {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  padding: 12px;
-  user-select: none;
-  -webkit-user-select: none;
+.cs-mini-stage-v2 canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
 }
 
 .cs-walk-banner {
   text-align: center;
-  font-family: 'Cinzel', serif;
-  font-size: 1.4rem;
+  font-family: 'Long Cang', 'ZCOOL XiaoWei', serif;
+  font-size: 1.6rem;
   font-weight: 900;
   color: var(--gold-glow);
   text-shadow: 0 0 20px var(--gold-glow);
-  margin-bottom: 8px;
+  margin: 4px 0;
   letter-spacing: 0.08em;
   animation: walkBanner 0.5s ease-out;
 }
-@keyframes walkBanner {
-  from { opacity: 0; transform: scale(0.8); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.cs-mini-board-wrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  perspective: 800px;
-  padding: 8px;
-}
-.cs-mini-board {
-  transform: rotateX(35deg);
-  transform-style: preserve-3d;
-  position: relative;
-}
-.cs-mini-grid {
-  display: grid;
-  gap: 1px;
-  padding: 4px;
-  background: rgba(13, 14, 26, 0.6);
-  border-radius: 6px;
-}
-.cs-mini-grid .cs-cell {
-  min-width: 8px;
-  min-height: 8px;
-  border-radius: 2px;
-}
-
 .cs-walk-timer {
   height: 8px;
   background: rgba(13, 14, 26, 0.6);
   border-radius: 999px;
   overflow: hidden;
-  margin: 8px 0;
+  margin: 4px 8px;
 }
 .cs-walk-timer-fill {
   height: 100%;
@@ -247,49 +235,39 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  gap: 8px;
-  width: min(75vw, 280px);
-  height: min(75vw, 280px);
-  margin: 0 auto;
-  user-select: none;
-  -webkit-user-select: none;
+  gap: 6px;
+  width: min(55vw, 200px);
+  height: min(55vw, 200px);
+  margin: 4px auto;
 }
 .cs-dpad-btn {
-  background: linear-gradient(135deg, var(--bg-surface), var(--bg-mid));
-  border: 2px solid rgba(244, 232, 208, 0.15);
-  border-radius: 18px;
-  font-size: 2.5rem;
-  color: var(--ink);
+  background:
+    radial-gradient(circle at 30% 30%, #f4e4c0, #c8a878 60%, #8b6840);
+  border: 2px solid #4a3020;
+  border-radius: 12px;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #2a1a0a;
+  cursor: pointer;
+  font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 900;
-  transition: transform 0.06s, filter 0.1s, box-shadow 0.1s;
-  touch-action: manipulation;
-  box-shadow: 0 6px 0 rgba(0,0,0,0.3);
+  box-shadow: 0 4px 0 #4a3020;
+  touch-action: none;
+  transition: transform 0.06s;
 }
 .cs-dpad-btn:active, .cs-dpad-btn.pressed {
   transform: translateY(3px);
-  box-shadow: 0 2px 0 rgba(0,0,0,0.3);
-  filter: brightness(1.3);
+  box-shadow: 0 1px 0 #4a3020;
 }
-.cs-dpad-btn.empty { background: transparent; border: none; box-shadow: none; cursor: default; pointer-events: none; }
-.cs-dpad-up    { grid-column: 2; grid-row: 1; }
-.cs-dpad-left  { grid-column: 1; grid-row: 2; }
+.cs-dpad-btn.empty { background: transparent; border: none; box-shadow: none; pointer-events: none; }
+.cs-dpad-up { grid-column: 2; grid-row: 1; }
+.cs-dpad-left { grid-column: 1; grid-row: 2; }
 .cs-dpad-right { grid-column: 3; grid-row: 2; }
-.cs-dpad-down  { grid-column: 2; grid-row: 3; }
+.cs-dpad-down { grid-column: 2; grid-row: 3; }
 
 .cs-dpad.idle {
-  filter: grayscale(0.6) brightness(0.6);
+  filter: grayscale(0.7) brightness(0.7);
   pointer-events: none;
-}
-
-/* Final result */
-.cs-final-pct {
-  font-size: 4rem;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 30px currentColor;
 }

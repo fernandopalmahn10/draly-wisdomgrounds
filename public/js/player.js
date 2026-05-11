@@ -366,8 +366,8 @@
       teamLabel = isRed ? 'Team Lantern 紅燈籠' : 'Team Dumpling 餃子';
       teamMascot = isRed ? '🏮' : '🥟';
     } else if (gameType === 'color-splash') {
-      teamLabel = isRed ? 'Team Crimson 紅' : 'Team Sunburst 金';
-      teamMascot = isRed ? '🎨' : '🖌️';
+      teamLabel = isRed ? 'Equipo Tinta 紅墨' : 'Equipo Pluma 金筆';
+      teamMascot = isRed ? '🖌' : '🖋';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
