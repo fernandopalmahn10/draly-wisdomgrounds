@@ -90,6 +90,29 @@ const CC_ENERGY_PER_TILE = 1;
 const CC_CORRECT_ENERGY = 12;   // ~12 more moves per correct answer
 const CC_WRONG_ENEMY_PAINTS = 4;
 
+// Market Quest (Canvas-based RPG) — players walk around a market,
+// approach vendor NPCs, answer vocab questions to claim items.
+const MQ_WORLD_W = 1600;   // game world width in "game pixels"
+const MQ_WORLD_H = 900;    // game world height
+const MQ_PLAYER_SPEED = 4; // pixels per server tick
+const MQ_VENDOR_RADIUS = 80; // collision radius for vendor interaction
+const MQ_TICK_MS = 50;       // 20Hz server tick
+// Vendor positions. Each vendor occupies a spot. The mapping to vocab question
+// happens at game start based on the loaded set. food sprite index from food-tiles.png
+const MQ_VENDORS = [
+  { id: 0,  x: 240,  y: 220,  icon: '🍎' },
+  { id: 1,  x: 560,  y: 220,  icon: '🍵' },
+  { id: 2,  x: 880,  y: 220,  icon: '🥟' },
+  { id: 3,  x: 1200, y: 220,  icon: '🥢' },
+  { id: 4,  x: 1360, y: 460,  icon: '💰' },
+  { id: 5,  x: 1200, y: 700,  icon: '🍚' },
+  { id: 6,  x: 880,  y: 700,  icon: '🥮' },
+  { id: 7,  x: 560,  y: 700,  icon: '🍡' },
+  { id: 8,  x: 240,  y: 700,  icon: '🏮' },
+  { id: 9,  x: 80,   y: 460,  icon: '🛍️' },
+  { id: 10, x: 720,  y: 460,  icon: '🍶' }
+];
+
 function genPin() {
   let pin;
   do {
@@ -182,14 +205,22 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
-    const defaultDuration = type === 'color-clash' ? 180 : (type === 'color-splash' ? 90 : 60);
+    const defaultDuration =
+      type === 'market-quest' ? 240 :
+      type === 'color-clash'  ? 180 :
+      type === 'color-splash' ? 90 :
+      60;
     let grid = null;
+    let vendors = null;
     if (type === 'color-splash') {
       grid = Array.from({ length: CS_GRID_H }, () => Array(CS_GRID_W).fill(null));
     } else if (type === 'color-clash') {
       grid = Array.from({ length: CC_GRID_H }, () => Array(CC_GRID_W).fill(null));
+    } else if (type === 'market-quest') {
+      // Each vendor starts unclaimed. vocabIdx is set on game start.
+      vendors = MQ_VENDORS.map((v) => ({ ...v, claimedBy: null, vocabIdx: -1 }));
     }
     games[pin] = {
       gameType: type,
@@ -202,7 +233,8 @@ io.on('connection', (socket) => {
       players: {},
       teamScores: { red: 0, gold: 0 },
       feed: [],
-      grid
+      grid,
+      vendors
     };
     currentPin = pin;
     role = 'host';
@@ -341,6 +373,37 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores
         });
       }
+
+      // Market Quest: assign vendor → vocab mapping, reset everything, send init
+      if (g.gameType === 'market-quest') {
+        // Shuffle vocab indexes and assign to vendors
+        const vocabIdxs = g.questions.map((_, i) => i).sort(() => Math.random() - 0.5);
+        g.vendors = MQ_VENDORS.map((v, i) => ({
+          ...v,
+          claimedBy: null,
+          vocabIdx: vocabIdxs[i % vocabIdxs.length]
+        }));
+        // Reset players to spawn positions
+        Object.values(g.players).forEach((p) => {
+          p.x = p.team === 'red' ? 100 + Math.random() * 60 : MQ_WORLD_W - 160 + Math.random() * 60;
+          p.y = MQ_WORLD_H / 2 + (Math.random() - 0.5) * 200;
+          p.dir = p.team === 'red' ? 'right' : 'left';
+          p.moving = false;
+          p.vendorCooldowns = {};
+          p.input = { left: false, right: false, up: false, down: false };
+        });
+        io.to(pin).emit('mq:init', {
+          worldW: MQ_WORLD_W,
+          worldH: MQ_WORLD_H,
+          vendors: g.vendors,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, p]) => [id, {
+              name: p.name, team: p.team, x: p.x, y: p.y, dir: p.dir
+            }])
+          ),
+          teamScores: g.teamScores
+        });
+      }
       broadcast(pin);
       // Mochi Mash + Color Splash auto-deal first question; Color Clash players request via button
       if (g.gameType !== 'color-clash') {
@@ -438,6 +501,13 @@ io.on('connection', (socket) => {
         const pos = ccSpawnPosition(g, team);
         player.x = pos.x;
         player.y = pos.y;
+      } else if (g.gameType === 'market-quest') {
+        // Spawn on the appropriate team side of the world, vertically random
+        player.x = team === 'red' ? 100 + Math.random() * 60 : MQ_WORLD_W - 160 + Math.random() * 60;
+        player.y = MQ_WORLD_H / 2 + (Math.random() - 0.5) * 200;
+        player.dir = team === 'red' ? 'right' : 'left';
+        player.moving = false;
+        player.vendorCooldowns = {}; // vendor id → unlock timestamp
       }
       g.players[socket.id] = player;
       g.feed.push({ type: 'join', name: cleanName, team: player.team, t: Date.now() });
@@ -464,8 +534,22 @@ io.on('connection', (socket) => {
     });
     broadcast(pin);
 
-    // If joining/rejoining mid-game, send them a question to keep playing
+    // If joining/rejoining mid-game, sync them up
     if (g.state === 'active') {
+      // Market Quest: send the world state
+      if (g.gameType === 'market-quest') {
+        io.to(socket.id).emit('mq:init', {
+          worldW: MQ_WORLD_W,
+          worldH: MQ_WORLD_H,
+          vendors: g.vendors,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, pl]) => [id, {
+              name: pl.name, team: pl.team, x: pl.x, y: pl.y, dir: pl.dir || 'down'
+            }])
+          ),
+          teamScores: g.teamScores
+        });
+      }
       // For Color Splash and Color Clash, send the current grid + paint state so the rejoiner sees everything
       if (g.gameType === 'color-splash' || g.gameType === 'color-clash') {
         const w = g.gameType === 'color-clash' ? CC_GRID_W : CS_GRID_W;
@@ -492,16 +576,19 @@ io.on('connection', (socket) => {
         }
       }
       // Send an active question (preserve their currentQ if rejoining)
-      if (player.currentQ) {
-        io.to(socket.id).emit('question', {
-          qid: player.currentQ.qid,
-          text: player.currentQ.text,
-          answers: player.currentQ.answers,
-          image: player.currentQ.image
-        });
-      } else {
-        const q = nextQuestionFor(g, socket.id);
-        if (q) io.to(socket.id).emit('question', q);
+      // Market Quest doesn't auto-push: players get questions by approaching vendors
+      if (g.gameType !== 'market-quest') {
+        if (player.currentQ) {
+          io.to(socket.id).emit('question', {
+            qid: player.currentQ.qid,
+            text: player.currentQ.text,
+            answers: player.currentQ.answers,
+            image: player.currentQ.image
+          });
+        } else {
+          const q = nextQuestionFor(g, socket.id);
+          if (q) io.to(socket.id).emit('question', q);
+        }
       }
     }
   });
@@ -557,14 +644,78 @@ io.on('connection', (socket) => {
     return true;
   }
 
+  // Market Quest: serve a vendor-specific question
+  function nextQuestionForVendor(g, playerId, vendorId) {
+    const p = g.players[playerId];
+    const vendor = g.vendors && g.vendors.find((v) => v.id === vendorId);
+    if (!p || !vendor || vendor.vocabIdx < 0) return null;
+    const q = g.questions[vendor.vocabIdx];
+    if (!q) return null;
+    const shuffled = [...q.answers];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const qid = `mq-${vendorId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const image = Images.urlForQuestion(q);
+    p.currentQ = {
+      qid,
+      correctIdx: shuffled.indexOf(q.correct),
+      text: q.text,
+      answers: shuffled,
+      image,
+      vendorId
+    };
+    p.lastQuestionAt = Date.now();
+    return { qid, text: q.text, answers: shuffled, image, vendorId };
+  }
+
   socket.on('player:answer', ({ pin, qid, choiceIdx }) => {
     const g = games[pin];
     if (!g || g.state !== 'active') return;
     const p = g.players[socket.id];
     if (!p || !p.currentQ || p.currentQ.qid !== qid) return;
-    const correct = p.currentQ.correctIdx === choiceIdx;
-    const correctText = p.currentQ.answers[p.currentQ.correctIdx];
+    const cqData = p.currentQ;
+    const correct = cqData.correctIdx === choiceIdx;
+    const correctText = cqData.answers[cqData.correctIdx];
     p.currentQ = null;
+
+    if (g.gameType === 'market-quest') {
+      const vendorId = cqData.vendorId;
+      const vendor = g.vendors && g.vendors.find((v) => v.id === vendorId);
+      if (correct && vendor && !vendor.claimedBy) {
+        vendor.claimedBy = p.team;
+        p.score = (p.score || 0) + 1;
+        g.teamScores[p.team]++;
+        io.to(pin).emit('mq:vendor-claimed', {
+          vendorId,
+          team: p.team,
+          playerName: p.name,
+          teamScores: g.teamScores
+        });
+        io.to(socket.id).emit('answer-result', {
+          correct: true,
+          vendorId,
+          correctText,
+          playerScore: p.score
+        });
+      } else if (correct) {
+        // Already claimed somehow — no score
+        io.to(socket.id).emit('answer-result', { correct: true, vendorId, correctText });
+      } else {
+        // Wrong: 8-second cooldown for this player on this vendor
+        if (!p.vendorCooldowns) p.vendorCooldowns = {};
+        p.vendorCooldowns[vendorId] = Date.now() + 8000;
+        io.to(socket.id).emit('answer-result', { correct: false, vendorId, correctText });
+      }
+      // Win check: all vendors claimed → end game early
+      if (g.vendors.every((v) => v.claimedBy)) {
+        if (g.endTimer) clearTimeout(g.endTimer);
+        endGame(pin);
+      }
+      broadcast(pin);
+      return; // don't run other game branches
+    }
 
     if (g.gameType === 'color-splash') {
       // Color Splash: correct → walk window, wrong → enemy gets free random paints
@@ -676,6 +827,17 @@ io.on('connection', (socket) => {
       paint: painted ? { x: nx, y: ny, team: p.team } : null,
       teamScores: g.teamScores
     });
+  });
+
+  // Market Quest: player sends their movement input state (held keys/joystick)
+  socket.on('player:mq-input', ({ pin, left, right, up, down }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'market-quest' || g.state !== 'active') return;
+    const p = g.players[socket.id];
+    if (!p) return;
+    p.input = {
+      left: !!left, right: !!right, up: !!up, down: !!down
+    };
   });
 
   // Color Clash: player explicitly requests a question
@@ -805,13 +967,12 @@ io.on('connection', (socket) => {
 });
 
 // === Single global watchdog ===
-// Periodically checks every active game and pushes a question to any player who's been
-// waiting too long with nothing happening. This protects against the rare race where
-// the next-question setTimeout never fires (e.g. server restart mid-round, scheduling glitch).
+// (Skips market-quest — that game uses vendor collision triggers, not auto-push)
 setInterval(() => {
   const now = Date.now();
   Object.entries(games).forEach(([pin, g]) => {
     if (g.state !== 'active') return;
+    if (g.gameType === 'market-quest') return; // vendor-driven, no watchdog needed
     Object.entries(g.players).forEach(([pid, p]) => {
       const inAction = p.mashUntil > now || p.walkUntil > now || p.currentQ;
       if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {
@@ -824,6 +985,66 @@ setInterval(() => {
     });
   });
 }, 4000);
+
+// === Market Quest 20Hz physics tick ===
+// Advances player positions based on their input, checks vendor collisions,
+// auto-triggers a vocab question on first proximity (with cooldowns).
+setInterval(() => {
+  const now = Date.now();
+  Object.entries(games).forEach(([pin, g]) => {
+    if (g.gameType !== 'market-quest' || g.state !== 'active') return;
+
+    // Update positions
+    Object.entries(g.players).forEach(([pid, p]) => {
+      if (!p.input) p.input = {};
+      let vx = 0, vy = 0;
+      if (p.input.left)  vx -= 1;
+      if (p.input.right) vx += 1;
+      if (p.input.up)    vy -= 1;
+      if (p.input.down)  vy += 1;
+      if (vx !== 0 && vy !== 0) { vx *= 0.707; vy *= 0.707; }
+      vx *= MQ_PLAYER_SPEED;
+      vy *= MQ_PLAYER_SPEED;
+      if (vx !== 0 || vy !== 0) {
+        p.x = Math.max(40, Math.min(MQ_WORLD_W - 40, p.x + vx));
+        p.y = Math.max(40, Math.min(MQ_WORLD_H - 40, p.y + vy));
+        p.moving = true;
+        if (Math.abs(vx) > Math.abs(vy)) p.dir = vx > 0 ? 'right' : 'left';
+        else p.dir = vy > 0 ? 'down' : 'up';
+      } else {
+        p.moving = false;
+      }
+
+      // Vendor collision check — auto-trigger quiz if near unclaimed vendor
+      if (!p.currentQ) {
+        for (const v of g.vendors) {
+          if (v.claimedBy) continue;
+          const cd = (p.vendorCooldowns && p.vendorCooldowns[v.id]) || 0;
+          if (cd > now) continue;
+          const dx = p.x - v.x;
+          const dy = p.y - v.y;
+          if (dx * dx + dy * dy < MQ_VENDOR_RADIUS * MQ_VENDOR_RADIUS) {
+            const q = nextQuestionForVendor(g, pid, v.id);
+            if (q) io.to(pid).emit('question', q);
+            break;
+          }
+        }
+      }
+    });
+
+    // Broadcast tick — compact positions
+    const positions = {};
+    Object.entries(g.players).forEach(([id, p]) => {
+      positions[id] = {
+        x: Math.round(p.x),
+        y: Math.round(p.y),
+        d: p.dir || 'down',
+        m: p.moving ? 1 : 0
+      };
+    });
+    io.to(pin).emit('mq:tick', { p: positions });
+  });
+}, MQ_TICK_MS);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

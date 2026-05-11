@@ -44,12 +44,32 @@
         <button class="btn btn-red btn-xl game-card-play">▶ Play Mochi Mash</button>
       </div>
 
+      <div class="game-card" id="card-quest">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🛍</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Market Quest</div>
+            <div class="game-tile-badge new">New!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🐲 Team Long vs 🦁 Team Shi. Walk through a Chinese market with a real 2D character! Approach a vendor stall → vocab question pops up → answer right to claim that item. First team to collect the most stalls wins.
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Canvas RPG</span>
+          <span class="tag">Joystick</span>
+          <span class="tag">2D walking</span>
+          <span class="tag">4 min</span>
+        </div>
+        <button class="btn btn-jade btn-xl game-card-play">▶ Play Market Quest</button>
+      </div>
+
       <div class="game-card" id="card-clash">
         <div class="game-card-header">
           <div class="game-card-emoji">🏮</div>
           <div class="game-card-title-row">
             <div class="game-card-title">Market Clash</div>
-            <div class="game-tile-badge new">New!</div>
+            <div class="game-tile-badge">Live</div>
           </div>
         </div>
         <div class="game-card-desc">
@@ -97,6 +117,9 @@
       document.querySelector('#card-mochi .game-card-play').onclick = () => {
         location.href = '/host.html?setId=' + encodeURIComponent(setId);
       };
+      document.querySelector('#card-quest .game-card-play').onclick = () => {
+        location.href = '/host-market.html?setId=' + encodeURIComponent(setId);
+      };
       document.querySelector('#card-clash .game-card-play').onclick = () => {
         location.href = '/host-clash.html?setId=' + encodeURIComponent(setId);
       };
@@ -104,11 +127,13 @@
         location.href = '/host-color.html?setId=' + encodeURIComponent(setId);
       };
     } else {
-      // Arrived from Home with no set chosen: pick game first → then go to Sets filtered by game
       document.getElementById('set-name').textContent = 'pick a game, then a question set';
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Choose'));
       document.querySelector('#card-mochi .game-card-play').onclick = () => {
         location.href = '/sets.html?game=mochi-mash';
+      };
+      document.querySelector('#card-quest .game-card-play').onclick = () => {
+        location.href = '/sets.html?game=market-quest';
       };
       document.querySelector('#card-clash .game-card-play').onclick = () => {
         location.href = '/sets.html?game=color-clash';
