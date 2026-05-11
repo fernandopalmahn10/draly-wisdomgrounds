@@ -30,22 +30,22 @@
       <div style="display:flex; flex-direction:column; gap:10px;">
         <input class="input" id="home-pin" type="tel" maxlength="4" placeholder="Game PIN" inputmode="numeric" autocomplete="off">
         <input class="input" id="home-name" type="text" maxlength="20" placeholder="Your name" autocomplete="given-name">
-        <button class="btn btn-jade btn-xl" id="home-join-btn">🎮 &nbsp; JOIN</button>
+        <button class="btn btn-jade btn-xl" id="home-join-btn">🎮 &nbsp; ENTRAR</button>
         <p id="home-error" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em; margin:0;"></p>
       </div>
     </div>
 
     <div id="rematch-wrap" style="width:100%; max-width:400px; margin-bottom:24px; display:none;">
       <button class="btn btn-gold btn-xl" id="rematch-btn" style="width:100%;">
-        🔄 &nbsp; REMATCH<span id="rematch-name-suffix"></span>
+        🔄 &nbsp; REVANCHA<span id="rematch-name-suffix"></span>
       </button>
     </div>
 
     <a href="/games.html" class="hub-host-link" id="host-link">
-      👑 Host a battle &nbsp;→
+      👑 Hospedar batalla &nbsp;→
     </a>
 
-    <div id="sound-hint" class="sound-hint">🔊 Tap anywhere for sound</div>
+    <div id="sound-hint" class="sound-hint">🔊 Toca la pantalla para el sonido</div>
   </div>
 
   <script src="/js/sounds.js"></script>
@@ -69,7 +69,7 @@
     if (saved && saved.pin && saved.name && saved.ts && Date.now() - saved.ts < REMATCH_MAX_AGE_MS) {
       const wrap = document.getElementById('rematch-wrap');
       wrap.style.display = 'block';
-      document.getElementById('rematch-name-suffix').textContent = ' AS ' + saved.name.toUpperCase();
+      document.getElementById('rematch-name-suffix').textContent = ' COMO ' + saved.name.toUpperCase();
       // Pre-fill the inputs too for convenience
       document.getElementById('home-pin').value = saved.pin;
       document.getElementById('home-name').value = saved.name;
@@ -89,7 +89,7 @@
       const name = document.getElementById('home-name').value.trim();
       const err = document.getElementById('home-error');
       if (!pin || !name) {
-        err.textContent = 'Enter PIN and name';
+        err.textContent = 'Ingresa el PIN y tu nombre';
         return;
       }
       err.textContent = '';

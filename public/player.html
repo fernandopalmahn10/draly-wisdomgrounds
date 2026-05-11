@@ -37,15 +37,21 @@
     </div>
   </div>
 
-  <!-- LOBBY (waiting) -->
-  <div id="screen-lobby" class="hidden player-screen" style="justify-content:center; align-items:center;">
-    <div style="text-align:center;">
-      <div id="lobby-mascot" style="font-size:7rem;">🐼</div>
-      <h2 id="lobby-team-name" style="font-family:'ZCOOL XiaoWei',serif; font-size:2rem; margin:8px 0;">Team Panda</h2>
-      <p style="color:var(--ink-dim);">¡Bienvenido <strong id="lobby-name"></strong>!</p>
-      <p style="color:var(--ink-dim); margin-top:24px;">Esperando a que el anfitrión empiece…</p>
-      <div style="font-size:3rem; margin-top:16px;" class="pulse">🪷</div>
+  <!-- LOBBY (waiting) — with a tiny Flappy mini-game to pass the time -->
+  <div id="screen-lobby" class="hidden player-screen lobby-screen">
+    <div class="lobby-header">
+      <div id="lobby-mascot" style="font-size:3.5rem;">🐼</div>
+      <h2 id="lobby-team-name" style="font-family:'ZCOOL XiaoWei',serif; font-size:1.4rem; margin:2px 0;">Team Panda</h2>
+      <p style="color:var(--ink-dim); font-size:0.85rem; margin:2px 0;">¡Bienvenido <strong id="lobby-name"></strong>!</p>
+      <p style="color:var(--gold-glow); font-weight:700; font-size:0.85rem; margin-top:4px;">Esperando al anfitrión… mientras tanto:</p>
     </div>
+    <div class="lobby-flappy-wrap">
+      <canvas id="lobby-flappy-canvas" width="400" height="280"></canvas>
+      <div class="lobby-flappy-score">
+        🐲 Mejor: <span id="lobby-flappy-best">0</span>
+      </div>
+    </div>
+    <p class="lobby-flappy-hint">Toca la pantalla para volar 🪶</p>
   </div>
 
   <!-- COUNTDOWN -->
@@ -88,7 +94,11 @@
   <div id="screen-mq-play" class="hidden mq-player-screen">
     <div class="mq-player-hud">
       <span class="mq-player-tag" id="mq-player-tag">🐲 Long</span>
-      <span class="mq-player-items">🛍 <span id="mq-player-items">0</span></span>
+      <div class="mq-bag" id="mq-bag">
+        <div class="mq-bag-icon">🛍</div>
+        <div class="mq-bag-count" id="mq-player-items">0</div>
+        <div class="mq-bag-recent" id="mq-bag-recent"></div>
+      </div>
     </div>
     <div class="mq-player-stage">
       <canvas id="mq-player-canvas" width="600" height="450"></canvas>
@@ -97,7 +107,16 @@
       <div class="mq-joystick-base" id="mq-joystick">
         <div class="mq-joystick-knob" id="mq-joystick-knob"></div>
       </div>
-      <div class="mq-hint" id="mq-hint">Walk to a stall</div>
+      <div class="mq-hint" id="mq-hint">Camina hacia un puesto del mercado</div>
+    </div>
+    <!-- Big collection toast that pops over everything when you claim an item -->
+    <div class="mq-collect-toast hidden" id="mq-collect-toast">
+      <div class="mq-toast-icon" id="mq-toast-icon">🍎</div>
+      <div class="mq-toast-text">
+        <div class="mq-toast-title">¡Bien!</div>
+        <div class="mq-toast-sub" id="mq-toast-sub">Coleccionaste manzana</div>
+        <div class="mq-toast-chinese" id="mq-toast-chinese">苹果 (píngguǒ)</div>
+      </div>
     </div>
   </div>
 
@@ -192,7 +211,7 @@
       <div class="winner-banner" id="end-banner">¡Fin de la ronda!</div>
       <p style="color:var(--ink-dim); margin-top:8px;">Tu equipo: <strong id="end-team-score">0</strong></p>
       <p style="color:var(--ink-dim);">Tu puntaje: <strong id="end-personal-score">0</strong></p>
-      <button class="btn btn-ghost" style="margin-top:24px;" onclick="location.href='/'">🏠 Home</button>
+      <button class="btn btn-ghost" style="margin-top:24px;" onclick="location.href='/'">🏠 Inicio</button>
     </div>
   </div>
 

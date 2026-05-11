@@ -779,6 +779,13 @@ io.on('connection', (socket) => {
     if (g.gameType === 'market-quest') {
       const vendorId = cqData.vendorId;
       const vendor = g.vendors && g.vendors.find((v) => v.id === vendorId);
+      // Extract Chinese characters + pinyin from the question text for the toast
+      // Question format: "¿Qué significa 苹果 (píngguǒ)?" or "¿Cómo se dice "X" en chino?"
+      let itemChinese = '';
+      const m = cqData.text.match(/([一-鿿]+)\s*\(([^)]+)\)/);
+      if (m) itemChinese = `${m[1]} (${m[2]})`;
+      const vendorIcon = vendor ? vendor.icon : '🛍';
+
       if (correct && vendor && !vendor.claimedBy) {
         vendor.claimedBy = p.team;
         p.score = (p.score || 0) + 1;
@@ -793,16 +800,16 @@ io.on('connection', (socket) => {
           correct: true,
           vendorId,
           correctText,
-          playerScore: p.score
+          playerScore: p.score,
+          itemIcon: vendorIcon,
+          itemChinese
         });
       } else if (correct) {
-        // Already claimed somehow — no score
-        io.to(socket.id).emit('answer-result', { correct: true, vendorId, correctText });
+        io.to(socket.id).emit('answer-result', { correct: true, vendorId, correctText, itemIcon: vendorIcon, itemChinese });
       } else {
-        // Wrong: 8-second cooldown for this player on this vendor
         if (!p.vendorCooldowns) p.vendorCooldowns = {};
         p.vendorCooldowns[vendorId] = Date.now() + 8000;
-        io.to(socket.id).emit('answer-result', { correct: false, vendorId, correctText });
+        io.to(socket.id).emit('answer-result', { correct: false, vendorId, correctText, itemIcon: vendorIcon, itemChinese });
       }
       // Win check: all vendors claimed → end game early
       if (g.vendors.every((v) => v.claimedBy)) {
