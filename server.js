@@ -73,12 +73,12 @@ const COMBO_THRESHOLD = 8;
 const WRONG_PENALTY = 3;
 const COUNTDOWN_MS = 3500;
 
-// Color Splash
-const CS_GRID_W = 24;
-const CS_GRID_H = 14;
-const CS_WALK_DURATION_MS = 5000;
-const CS_MOVE_COOLDOWN_MS = 130; // ~7 steps/sec max
-const CS_WRONG_AUTO_PAINTS = 3;
+// Color Splash — bigger map + wide brush stroke (paints a cross pattern per step)
+const CS_GRID_W = 30;
+const CS_GRID_H = 18;
+const CS_WALK_DURATION_MS = 5500;  // slightly longer burst
+const CS_MOVE_COOLDOWN_MS = 130;   // ~7 steps/sec max
+const CS_WRONG_AUTO_PAINTS = 5;    // wrong answer = enemy splashes 5 cells
 
 // Color Clash (market theme, continuous movement, energy-based)
 // Tuned for "answer questions often" — players burn through energy fast
@@ -764,6 +764,15 @@ io.on('connection', (socket) => {
     g.teamScores[team]++;
     return true;
   }
+  // Cross-pattern brush stroke: paint center + 4 cardinal neighbors (up to 5 cells)
+  function csPaintCross(g, cx, cy, team) {
+    const painted = [];
+    [[0,0],[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx,dy]) => {
+      const x = cx + dx, y = cy + dy;
+      if (csPaintCell(g, x, y, team)) painted.push({ x, y, team });
+    });
+    return painted;
+  }
 
   function ccSpawnPosition(g, team) {
     for (let attempt = 0; attempt < 30; attempt++) {
@@ -879,15 +888,16 @@ io.on('connection', (socket) => {
       // Color Splash: correct → walk window, wrong → enemy gets free random paints
       if (correct) {
         p.walkUntil = Date.now() + CS_WALK_DURATION_MS;
-        // Paint the cell they're standing on
-        const painted = csPaintCell(g, p.x, p.y, p.team);
+        // Paint a starting cross around the player's position
+        const painted = csPaintCross(g, p.x, p.y, p.team);
+        p.score += painted.length;
         io.to(socket.id).emit('answer-result', {
           correct: true,
           walkUntil: p.walkUntil,
           correctText
         });
-        if (painted) {
-          io.to(pin).emit('cs:paint', { cells: [{ x: p.x, y: p.y, team: p.team }], teamScores: g.teamScores });
+        if (painted.length) {
+          io.to(pin).emit('cs:paint', { cells: painted, teamScores: g.teamScores });
         }
       } else {
         const enemy = p.team === 'red' ? 'gold' : 'red';
@@ -1036,12 +1046,13 @@ io.on('connection', (socket) => {
     p.x = nx;
     p.y = ny;
     p.lastMove = now;
-    const painted = csPaintCell(g, nx, ny, p.team);
-    if (painted) p.score++;
+    // Wide brush: paint center + 4 neighbors
+    const paintedCells = csPaintCross(g, nx, ny, p.team);
+    p.score += paintedCells.length;
     io.to(pin).emit('cs:move', {
       playerId: socket.id,
       x: nx, y: ny,
-      paint: painted ? { x: nx, y: ny, team: p.team } : null,
+      paint: paintedCells.length ? paintedCells : null,
       teamScores: g.teamScores
     });
   });
