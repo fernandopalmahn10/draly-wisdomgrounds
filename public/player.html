@@ -22,14 +22,14 @@
     <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-corner">
     <div style="max-width:400px; width:100%;">
       <div style="text-align:center; font-size:4rem; margin-bottom:8px;">🥮</div>
-      <h1 class="title" style="font-size:2.5rem;">Join Battle</h1>
+      <h1 class="title" style="font-size:2.5rem;">Únete</h1>
       <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:-4px; margin-bottom:16px;">Draly Wisdomgrounds</p>
 
       <div class="card" style="margin-top:8px;">
         <div style="display:flex; flex-direction:column; gap:12px;">
-          <input class="input" id="pin-input" type="tel" maxlength="4" placeholder="Game PIN" inputmode="numeric">
-          <input class="input" id="name-input" type="text" maxlength="20" placeholder="Your name">
-          <button class="btn btn-jade" id="join-btn">Join!</button>
+          <input class="input" id="pin-input" type="tel" maxlength="4" placeholder="PIN del juego" inputmode="numeric">
+          <input class="input" id="name-input" type="text" maxlength="20" placeholder="Tu nombre">
+          <button class="btn btn-jade" id="join-btn">¡Entrar!</button>
           <p id="join-error" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em;"></p>
         </div>
       </div>
@@ -41,8 +41,8 @@
     <div style="text-align:center;">
       <div id="lobby-mascot" style="font-size:7rem;">🐼</div>
       <h2 id="lobby-team-name" style="font-family:'ZCOOL XiaoWei',serif; font-size:2rem; margin:8px 0;">Team Panda</h2>
-      <p style="color:var(--ink-dim);">Welcome <strong id="lobby-name"></strong></p>
-      <p style="color:var(--ink-dim); margin-top:24px;">Waiting for host to start...</p>
+      <p style="color:var(--ink-dim);">¡Bienvenido <strong id="lobby-name"></strong>!</p>
+      <p style="color:var(--ink-dim); margin-top:24px;">Esperando a que el anfitrión empiece…</p>
       <div style="font-size:3rem; margin-top:16px;" class="pulse">🪷</div>
     </div>
   </div>
@@ -111,7 +111,7 @@
     <div class="cc-action-panel">
       <button class="cc-answer-btn" id="cc-answer-btn">
         <span class="cc-answer-icon">📜</span>
-        <span class="cc-answer-label">Answer Questions</span>
+        <span class="cc-answer-label">Responder<br>preguntas</span>
       </button>
       <div class="cs-dpad cc-dpad-mini" id="cc-dpad">
         <button class="cs-dpad-btn empty"></button>
@@ -133,7 +133,7 @@
       <span id="cs-walk-name-tag">You</span>
       <span>Tiles: <span id="cs-walk-score">0</span></span>
     </div>
-    <div class="cs-walk-banner">⚡ WALK MODE ⚡</div>
+    <div class="cs-walk-banner">⚡ ¡A CAMINAR! ⚡</div>
     <div class="cs-mini-board-wrap">
       <div class="cs-mini-board">
         <div class="cs-mini-grid" id="cs-mini-grid"></div>
@@ -152,7 +152,7 @@
       <button class="cs-dpad-btn cs-dpad-down" data-dir="down">▼</button>
       <button class="cs-dpad-btn empty"></button>
     </div>
-    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:8px;">Each step paints a tile your color 🎨</p>
+    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:8px;">Cada paso pinta una baldosa de tu color 🎨</p>
   </div>
 
   <!-- MASH MODE -->
@@ -163,14 +163,14 @@
     </div>
     <div class="mash-screen">
       <div style="font-size:1.5rem; font-weight:900; letter-spacing:0.05em; margin-bottom:16px; color:var(--gold-glow); text-shadow:0 0 20px var(--gold-glow);">
-        ⚡ MASH MODE ⚡
+        ⚡ ¡A APLASTAR! ⚡
       </div>
       <button class="mash-button" id="mash-button">
         <div class="mash-mascot" id="mash-mascot">🐼</div>
         <div class="mash-counter" id="mash-counter">+0</div>
       </button>
       <div class="mash-timer"><div class="mash-timer-fill" id="mash-timer-fill"></div></div>
-      <p style="color:var(--ink-dim); margin-top:16px; font-size:0.9rem;">TAP TAP TAP! 🔥 8/sec for combo</p>
+      <p style="color:var(--ink-dim); margin-top:16px; font-size:0.9rem;">¡TOCA, TOCA, TOCA! 🔥 8/seg = combo</p>
     </div>
   </div>
 
@@ -178,9 +178,9 @@
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
-      <div class="winner-banner" id="end-banner">Round Over</div>
-      <p style="color:var(--ink-dim); margin-top:8px;">Your team scored <strong id="end-team-score">0</strong></p>
-      <p style="color:var(--ink-dim);">You scored <strong id="end-personal-score">0</strong></p>
+      <div class="winner-banner" id="end-banner">¡Fin de la ronda!</div>
+      <p style="color:var(--ink-dim); margin-top:8px;">Tu equipo: <strong id="end-team-score">0</strong></p>
+      <p style="color:var(--ink-dim);">Tu puntaje: <strong id="end-personal-score">0</strong></p>
       <button class="btn btn-ghost" style="margin-top:24px;" onclick="location.href='/'">🏠 Home</button>
     </div>
   </div>

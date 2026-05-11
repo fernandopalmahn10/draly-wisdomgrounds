@@ -95,7 +95,7 @@ const CC_WRONG_ENEMY_PAINTS = 4;
 const MQ_WORLD_W = 1600;   // game world width in "game pixels"
 const MQ_WORLD_H = 900;    // game world height
 const MQ_PLAYER_SPEED = 4; // pixels per server tick
-const MQ_VENDOR_RADIUS = 80; // collision radius for vendor interaction
+const MQ_VENDOR_RADIUS = 130; // collision radius for vendor interaction (forgiving)
 const MQ_TICK_MS = 50;       // 20Hz server tick
 // Vendor positions. Each vendor occupies a spot. The mapping to vocab question
 // happens at game start based on the loaded set. food sprite index from food-tiles.png

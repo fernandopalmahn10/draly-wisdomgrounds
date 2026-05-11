@@ -55,7 +55,7 @@
       el.innerHTML = '<div class="reconnect-spinner">🐉</div><div class="reconnect-text"></div>';
       document.body.appendChild(el);
     }
-    el.querySelector('.reconnect-text').textContent = message || 'Reconnecting...';
+    el.querySelector('.reconnect-text').textContent = message || 'Reconectando…';
     el.classList.remove('hidden');
   }
   function hideReconnectOverlay() {
@@ -63,7 +63,7 @@
     if (el) el.classList.add('hidden');
   }
   socket.on('disconnect', (reason) => {
-    if (pin && myName) showReconnectOverlay('Reconnecting...');
+    if (pin && myName) showReconnectOverlay('Reconectando…');
   });
   socket.on('connect', () => {
     // On any reconnect (after the first), re-emit player:join with stored credentials
@@ -83,7 +83,7 @@
     }
   });
   socket.on('connect_error', () => {
-    if (pin && myName) showReconnectOverlay('Reconnecting...');
+    if (pin && myName) showReconnectOverlay('Reconectando…');
   });
 
   // Unlock audio on first tap
@@ -296,22 +296,22 @@
       if (gameType === 'market-quest') {
         const vendor = mqVendors.find((v) => v.id === vendorId);
         happyMascot = vendor ? vendor.icon : '🛍';
-        sub = '¡Reclamado! +1 item';
+        sub = '¡Puesto reclamado! +1 producto';
         if (typeof playerScore === 'number') mqItemsCollected = playerScore;
       } else if (gameType === 'color-clash') {
         happyMascot = team === 'red' ? '🏮' : '🥟';
-        sub = `+30 energy! ⚡`;
+        sub = `+30 energía ⚡`;
       } else if (gameType === 'color-splash') {
         happyMascot = team === 'red' ? '🎨' : '🖌️';
-        sub = 'Walk and paint! ⚡';
+        sub = '¡Camina y pinta! ⚡';
       } else {
         happyMascot = team === 'red' ? '🐼' : '🦊';
-        sub = 'Feed your team! ⚡';
+        sub = '¡Alimenta a tu equipo! ⚡';
       }
       showResultFeedback({
         mascot: happyMascot,
         mascotCls: 'happy',
-        title: 'Correct!',
+        title: '¡Correcto!',
         sub,
         cls: 'correct'
       });
@@ -338,8 +338,8 @@
       showResultFeedback({
         mascot: '💢',
         mascotCls: 'angry',
-        title: 'Wrong!',
-        sub: `Answer: ${escapeHtml(correctText || '')}`,
+        title: '¡Incorrecto!',
+        sub: `Respuesta: ${escapeHtml(correctText || '')}`,
         cls: 'wrong'
       });
       if (navigator.vibrate) navigator.vibrate([100, 30, 100]);
@@ -658,6 +658,37 @@
   function drawMqVendor(ctx, v, t) {
     const x = v.x, y = v.y;
     ctx.save();
+
+    // Detection-radius aura on UNCLAIMED vendors
+    if (!v.claimedBy) {
+      const pulse = 0.55 + Math.sin(t * 2 + v.id) * 0.15;
+      const grad = ctx.createRadialGradient(x, y + 12, 8, x, y + 12, 140);
+      grad.addColorStop(0, `rgba(255, 220, 130, ${0.22 * pulse})`);
+      grad.addColorStop(0.5, `rgba(255, 200, 100, ${0.14 * pulse})`);
+      grad.addColorStop(1, 'rgba(255, 213, 122, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y + 12, 140, 0, Math.PI * 2);
+      ctx.fill();
+
+      // "💬 ¡Habla!" indicator if I'm within range
+      const me = mqPlayers[myPlayerId];
+      if (me) {
+        const dx = me.x - v.x;
+        const dy = me.y - v.y;
+        if (dx * dx + dy * dy < 130 * 130) {
+          const bob = Math.sin(t * 6) * 3;
+          ctx.font = 'bold 22px serif';
+          ctx.textAlign = 'center';
+          ctx.fillStyle = '#fff8e0';
+          ctx.strokeStyle = '#2a1a0a';
+          ctx.lineWidth = 4;
+          ctx.strokeText('💬', x, y - 70 + bob);
+          ctx.fillText('💬', x, y - 70 + bob);
+        }
+      }
+    }
+
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();
     ctx.ellipse(x, y + 36, 55, 16, 0, 0, Math.PI * 2);
@@ -760,10 +791,10 @@
       if (dx * dx + dy * dy < 110 * 110) { nearVendor = v; break; }
     }
     if (nearVendor) {
-      hint.textContent = `${nearVendor.icon} Approaching stall!`;
+      hint.textContent = `${nearVendor.icon} ¡Cerca! Habla con el vendedor`;
       hint.classList.add('near-vendor');
     } else {
-      hint.textContent = 'Walk to a stall';
+      hint.textContent = 'Camina hacia un puesto del mercado';
       hint.classList.remove('near-vendor');
     }
   }
@@ -800,7 +831,7 @@
     const b = document.createElement('div');
     b.id = 'cc-low-energy-banner';
     b.className = 'cc-low-energy';
-    b.textContent = '⚡ Out of energy! Answer questions to recharge';
+    b.textContent = '⚡ ¡Sin energía! Responde preguntas para recargar';
     document.body.appendChild(b);
   }
   function hideLowEnergyBanner() {
@@ -1133,17 +1164,17 @@
     $('end-personal-score').textContent = myScore;
     if (tie) {
       $('end-emoji').textContent = '🤝';
-      $('end-banner').textContent = 'Tie Battle!';
+      $('end-banner').textContent = '¡Empate!';
       $('end-banner').className = 'winner-banner tie';
       MochiSounds.lose();
     } else if (won) {
       $('end-emoji').textContent = team === 'red' ? '🐼' : '🦊';
-      $('end-banner').textContent = 'Victory!';
+      $('end-banner').textContent = '¡Victoria!';
       $('end-banner').className = `winner-banner ${team}`;
       MochiSounds.win();
     } else {
       $('end-emoji').textContent = '💔';
-      $('end-banner').textContent = 'Defeat';
+      $('end-banner').textContent = 'Derrota';
       $('end-banner').className = 'winner-banner';
       MochiSounds.lose();
     }
@@ -1152,7 +1183,7 @@
 
   socket.on('host-left', () => {
     // Gentler than an alert — show a friendly card so kids don't panic
-    showReconnectOverlay('The host has ended this round. Returning home...');
+    showReconnectOverlay('El anfitrión terminó la ronda. Volviendo al inicio…');
     setTimeout(() => { location.href = '/'; }, 3500);
   });
 
