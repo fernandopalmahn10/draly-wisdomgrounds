@@ -155,6 +155,63 @@
   let bgFailed = false;
   let bgLoading = false;
 
+  // Cache of additional music tracks (win/lose/tie/fanfare)
+  const extraBuffers = {};       // url → AudioBuffer
+  const extraSources = {};       // url → currently-playing source (for stopping)
+
+  async function loadExtra(url) {
+    if (extraBuffers[url]) return extraBuffers[url];
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const arr = await res.arrayBuffer();
+      const ctx = ensureCtx();
+      if (!ctx) return null;
+      const buf = await new Promise((resolve, reject) =>
+        ctx.decodeAudioData(arr, resolve, reject)
+      );
+      extraBuffers[url] = buf;
+      return buf;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function playExtraTrack(url, opts) {
+    opts = opts || {};
+    const ctx = ensureCtx();
+    if (!ctx) return null;
+    const buf = await loadExtra(url);
+    if (!buf) return null;
+    // Stop any previous instance of this track
+    if (extraSources[url]) {
+      try { extraSources[url].stop(); extraSources[url].disconnect(); } catch (e) {}
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = !!opts.loop;
+    const gain = ctx.createGain();
+    const targetVol = muted ? 0 : (opts.volume != null ? opts.volume : 0.6);
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(targetVol, ctx.currentTime + (opts.fadeIn || 0.3));
+    src.connect(gain).connect(musicGain);
+    src.start(0);
+    extraSources[url] = src;
+    return { source: src, gain };
+  }
+
+  function stopExtraTrack(url, fadeOut) {
+    const src = extraSources[url];
+    if (!src || !audioCtx) return;
+    try {
+      // Quick stop after a brief fade
+      setTimeout(() => {
+        try { src.stop(); src.disconnect(); } catch (e) {}
+      }, (fadeOut || 0.4) * 1000);
+    } catch (e) {}
+    delete extraSources[url];
+  }
+
   async function loadBgBuffer() {
     if (bgBuffer || bgLoading || bgFailed) return bgBuffer;
     bgLoading = true;
@@ -326,8 +383,28 @@
       tone({ freq: 110, dur: 1.0, type: 'triangle', vol: 0.18, delay: 2.0 });
     },
     startMusic,
-    stopMusic
-  };
+    stopMusic,
+    // Win/Lose celebration music (Kenney Music Loops, ~30s each, loops)
+    winMusic() {
+      stopMusic(); // kill battle theme first
+      return playExtraTrack('/assets/music/win-theme.ogg', { loop: true, volume: 0.55, fadeIn: 0.5 });
+    },
+    loseMusic() {
+      stopMusic();
+      return playExtraTrack('/assets/music/lose-theme.ogg', { loop: true, volume: 0.5, fadeIn: 0.5 });
+    },
+    tieMusic() {
+      stopMusic();
+      return playExtraTrack('/assets/music/tie-theme.ogg', { loop: true, volume: 0.55, fadeIn: 0.5 });
+    },
+    winFanfare() {
+      // Short triumphant sting (Kenney steeldrum jingle ~2s) — plays once over the music
+      return playExtraTrack('/assets/music/win-fanfare.ogg', { loop: false, volume: 0.7, fadeIn: 0.05 });
+    },
+    stopEndMusic() {
+      ['/assets/music/win-theme.ogg', '/assets/music/lose-theme.ogg', '/assets/music/tie-theme.ogg']
+        .forEach((u) => stopExtraTrack(u, 0.5));
+    }
 
   window.MochiSounds = Sounds;
   window.toggleMute = function () {

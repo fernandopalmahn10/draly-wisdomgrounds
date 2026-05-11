@@ -241,19 +241,21 @@
       $('win-banner').textContent = '🎨 Crimson Wins!';
       $('win-banner').className = 'winner-banner red';
       $('win-emoji').textContent = '🎨';
-      MochiSounds.win();
+      MochiSounds.winMusic();
+      setTimeout(() => MochiSounds.winFanfare(), 400);
       launchConfetti(['#ff5a66', '#d92e3a', '#ffd57a']);
     } else if (data.winner === 'gold') {
       $('win-banner').textContent = '🖌️ Sunburst Wins!';
       $('win-banner').className = 'winner-banner gold';
       $('win-emoji').textContent = '🖌️';
-      MochiSounds.win();
+      MochiSounds.winMusic();
+      setTimeout(() => MochiSounds.winFanfare(), 400);
       launchConfetti(['#ffd57a', '#e8b14a', '#ff5a66']);
     } else {
       $('win-banner').textContent = '🤝 Tie Splatter!';
       $('win-banner').className = 'winner-banner tie';
       $('win-emoji').textContent = '⚖️';
-      MochiSounds.lose();
+      MochiSounds.tieMusic();
     }
   });
 

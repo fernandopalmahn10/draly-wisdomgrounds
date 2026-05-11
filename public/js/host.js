@@ -79,6 +79,7 @@
 
   // Play again
   $('play-again-btn').addEventListener('click', () => {
+    if (MochiSounds.stopEndMusic) MochiSounds.stopEndMusic();
     socket.emit('host:reset', { pin });
     showScreen('lobby');
   });
@@ -283,27 +284,36 @@
   socket.on('game-end', (data) => {
     if (timerInterval) clearInterval(timerInterval);
     MochiSounds.stopMusic();
-    // No Dralingo legendary on host screen — just confetti & win banner
     showScreen('win');
+    // Schedule the cinematic narration after the win banner pops
+    renderWinNarration(data);
     $('final-red').textContent = data.teamScores.red;
     $('final-gold').textContent = data.teamScores.gold;
     if (data.winner === 'red') {
-      $('win-banner').textContent = '🐼 Team Panda Wins!';
+      $('win-banner').textContent = '🐼 ¡Equipo Panda gana!';
       $('win-banner').className = 'winner-banner red';
       $('win-emoji').textContent = '🐼';
-      MochiSounds.win();
+      MochiSounds.winMusic();
+      setTimeout(() => MochiSounds.winFanfare(), 400);
       launchConfetti(['#ff5a66', '#d92e3a', '#ffd57a']);
     } else if (data.winner === 'gold') {
-      $('win-banner').textContent = '🦊 Team Kitsune Wins!';
+      $('win-banner').textContent = '🦊 ¡Equipo Kitsune gana!';
       $('win-banner').className = 'winner-banner gold';
       $('win-emoji').textContent = '🦊';
-      MochiSounds.win();
+      MochiSounds.winMusic();
+      setTimeout(() => MochiSounds.winFanfare(), 400);
       launchConfetti(['#ffd57a', '#e8b14a', '#ff5a66']);
     } else {
-      $('win-banner').textContent = '🤝 Tie Battle!';
+      $('win-banner').textContent = '🤝 ¡Empate épico!';
       $('win-banner').className = 'winner-banner tie';
       $('win-emoji').textContent = '⚖️';
-      MochiSounds.lose();
+      MochiSounds.tieMusic();
+    }
+    // Confetti burst again after 4 sec for celebration emphasis
+    if (data.winner === 'red' || data.winner === 'gold') {
+      setTimeout(() => launchConfetti(data.winner === 'red'
+        ? ['#ff5a66', '#d92e3a', '#ffd57a']
+        : ['#ffd57a', '#e8b14a', '#ff5a66']), 4000);
     }
     const lb = $('leaderboard');
     lb.innerHTML = '';
@@ -319,6 +329,59 @@
       lb.appendChild(row);
     });
   });
+
+  // Cinematic Spanish narration for the win screen (host + game type aware).
+  // Looks at leaderboard + scores to call out MVPs, score gap, etc.
+  function renderWinNarration(data) {
+    const narrEl = $('win-narration');
+    const mvpEl = $('win-mvp');
+    const encEl = $('win-encourage');
+    if (!narrEl) return;
+    const r = data.teamScores.red || 0;
+    const g = data.teamScores.gold || 0;
+    const gap = Math.abs(r - g);
+    const winnerColor = data.winner === 'red' ? 'red-team' : 'gold-team';
+    const winnerLabel = data.winner === 'red'
+      ? '🐼 <span class="red-team">Equipo Panda</span>'
+      : data.winner === 'gold'
+      ? '🦊 <span class="gold-team">Equipo Kitsune</span>'
+      : null;
+
+    let story = '';
+    if (winnerLabel) {
+      const margin =
+        gap > 30 ? 'una victoria aplastante 🔥' :
+        gap > 10 ? 'una victoria sólida 💪' :
+        gap > 3  ? 'una pelea reñida ⚔️' :
+        'una victoria de fotografía 📸';
+      story = `${winnerLabel} se lleva ${margin} con <strong>${data.winner === 'red' ? r : g}</strong> dumplings — ${gap} más que el rival.`;
+    } else {
+      story = `🤝 <strong>¡Empate dramático!</strong> Ambos equipos terminaron con <strong>${r}</strong> dumplings.`;
+    }
+    narrEl.innerHTML = story;
+
+    // MVP shoutout — top scorer from the winning team (or overall if tie)
+    const lb = data.leaderboard || [];
+    if (lb.length > 0 && mvpEl) {
+      const mvp = data.winner !== 'tie'
+        ? lb.find((p) => p.team === data.winner)
+        : lb[0];
+      if (mvp) {
+        const team = mvp.team === 'red' ? '🐼' : '🦊';
+        mvpEl.style.display = 'block';
+        mvpEl.innerHTML = `🏆 <strong>MVP:</strong> ${team} <span class="mvp-name">${escapeHtml(mvp.name)}</span> · ${mvp.score} pts`;
+      }
+    }
+
+    // Encouragement for the losing team
+    if (encEl && data.winner !== 'tie') {
+      const loser = data.winner === 'red' ? 'gold' : 'red';
+      const loserName = loser === 'red' ? 'Panda 🐼' : 'Kitsune 🦊';
+      encEl.textContent = `Equipo ${loserName}: ¡Buen esfuerzo! La próxima ronda les pertenece.`;
+    } else if (encEl) {
+      encEl.textContent = '¡Ambos equipos jugaron increíble!';
+    }
+  }
 
   function renderLobbyPlayers(players) {
     const red = $('players-red');
