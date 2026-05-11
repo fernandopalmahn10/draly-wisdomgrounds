@@ -1713,19 +1713,20 @@
     $('end-personal-score').textContent = myScore;
     if (tie) {
       $('end-emoji').textContent = '🤝';
-      $('end-banner').textContent = '¡Empate!';
+      $('end-banner').textContent = '¡Empate épico!';
       $('end-banner').className = 'winner-banner tie';
-      MochiSounds.lose();
+      MochiSounds.tieMusic();
     } else if (won) {
       $('end-emoji').textContent = team === 'red' ? '🐼' : '🦊';
       $('end-banner').textContent = '¡Victoria!';
       $('end-banner').className = `winner-banner ${team}`;
-      MochiSounds.win();
+      MochiSounds.winMusic();
+      setTimeout(() => MochiSounds.winFanfare(), 400);
     } else {
       $('end-emoji').textContent = '💔';
-      $('end-banner').textContent = 'Derrota';
+      $('end-banner').textContent = '¡Mejor suerte la próxima!';
       $('end-banner').className = 'winner-banner';
-      MochiSounds.lose();
+      MochiSounds.loseMusic();
     }
     showScreen('end');
   });

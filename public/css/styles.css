@@ -866,6 +866,58 @@ body::before {
   justify-content: center;
   text-align: center;
   padding: 24px;
+  position: relative;
+}
+
+/* Cinematic narration card that pops in after the winner banner */
+.win-narration {
+  background: rgba(13, 14, 26, 0.85);
+  border: 2px solid rgba(255, 213, 122, 0.4);
+  border-radius: 18px;
+  padding: 14px 22px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+  max-width: 480px;
+  margin: 16px auto;
+  animation: narrationIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 0.4s;
+  opacity: 0;
+}
+.win-narration strong { color: var(--gold-glow); }
+.win-narration .red-team { color: var(--red-glow); }
+.win-narration .gold-team { color: var(--gold-glow); }
+
+@keyframes narrationIn {
+  from { transform: scale(0.7) translateY(20px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* MVP shoutout — special call-out for the top scorer */
+.win-mvp {
+  background: linear-gradient(135deg, rgba(255, 213, 122, 0.15), rgba(255, 90, 102, 0.1));
+  border: 1px solid rgba(255, 213, 122, 0.5);
+  border-radius: 14px;
+  padding: 12px 20px;
+  margin: 8px auto;
+  max-width: 380px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  animation: narrationIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 1.2s;
+  opacity: 0;
+}
+.win-mvp .mvp-name { color: var(--gold-glow); font-size: 1.15rem; }
+
+/* Encouragement banner for the losing side / players */
+.win-encourage {
+  color: var(--ink-dim);
+  font-style: italic;
+  margin-top: 12px;
+  animation: narrationIn 0.5s ease-out both;
+  animation-delay: 2s;
+  opacity: 0;
 }
 .winner-banner {
   font-family: 'ZCOOL XiaoWei', serif;
