@@ -400,27 +400,27 @@
     const narr = $('win-narration');
     const gap = Math.abs(rPct - gPct);
     if (data.winner === 'red') {
-      $('win-banner').textContent = '🖌 ¡Equipo Tinta gana!';
+      $('win-banner').textContent = '✏️ ¡Estudiantes ganan!';
       $('win-banner').className = 'winner-banner red';
-      $('win-emoji').textContent = '🖌';
+      $('win-emoji').textContent = '✏️';
       MochiSounds.winMusic();
       setTimeout(() => MochiSounds.winFanfare(), 400);
-      if (narr) narr.innerHTML = `🖌 <span class="red-team">Equipo Tinta</span> cubrió el papel con <strong>${rPct}%</strong> — ${gap > 20 ? 'una obra maestra 🎨' : gap > 8 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
+      if (narr) narr.innerHTML = `✏️ <span class="red-team">Los Estudiantes</span> cubrieron el papel con <strong>${rPct}%</strong> — ${gap > 20 ? 'una obra maestra 🎨' : gap > 8 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
       launchConfetti(['#ff5a66', '#d92e3a', '#ffd57a']);
     } else if (data.winner === 'gold') {
-      $('win-banner').textContent = '🖋 ¡Equipo Pluma gana!';
+      $('win-banner').textContent = '📚 ¡Maestros ganan!';
       $('win-banner').className = 'winner-banner gold';
-      $('win-emoji').textContent = '🖋';
+      $('win-emoji').textContent = '📚';
       MochiSounds.winMusic();
       setTimeout(() => MochiSounds.winFanfare(), 400);
-      if (narr) narr.innerHTML = `🖋 <span class="gold-team">Equipo Pluma</span> cubrió el papel con <strong>${gPct}%</strong> — ${gap > 20 ? 'una obra maestra 🎨' : gap > 8 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
+      if (narr) narr.innerHTML = `📚 <span class="gold-team">Los Maestros</span> cubrieron el papel con <strong>${gPct}%</strong> — ${gap > 20 ? 'una obra maestra 🎨' : gap > 8 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
       launchConfetti(['#ffd57a', '#e8b14a', '#ff5a66']);
     } else {
-      $('win-banner').textContent = '🤝 ¡Empate de tinta!';
+      $('win-banner').textContent = '🤝 ¡Empate en clase!';
       $('win-banner').className = 'winner-banner tie';
       $('win-emoji').textContent = '⚖️';
       MochiSounds.tieMusic();
-      if (narr) narr.innerHTML = `🤝 Ambos equipos pintaron el mismo <strong>${rPct}%</strong> del papel.`;
+      if (narr) narr.innerHTML = `🤝 Ambos equipos pintaron el mismo <strong>${rPct}%</strong> del papel de caligrafía.`;
     }
     setTimeout(() => launchConfetti(data.winner === 'red' ? ['#ff5a66', '#d92e3a', '#ffd57a'] : ['#ffd57a', '#e8b14a', '#ff5a66']), 4000);
   });
@@ -449,7 +449,7 @@
       c.style.left = Math.random() * 100 + '%';
       c.style.animationDelay = Math.random() * 1.5 + 's';
       c.style.animationDuration = 2 + Math.random() * 2 + 's';
-      c.textContent = ['🎋', '🖌', '🖋', '🏮', '✨'][i % 5];
+      c.textContent = ['📚', '✏️', '🖌', '🍎', '✨'][i % 5];
       c.style.fontSize = (1 + Math.random() * 1) + 'rem';
       c.style.background = 'transparent';
       document.body.appendChild(c);

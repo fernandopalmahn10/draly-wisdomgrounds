@@ -20,6 +20,8 @@
   let csWalkEndTime = 0;
   let csWalkTimerInterval = null;
   let csTilesPainted = 0;
+  // Color Splash canvas renderer state
+  let csRaf = null;
   // Color Clash state
   let ccEnergy = 50;
   let ccDpadHandlerBound = false;
@@ -366,8 +368,8 @@
       teamLabel = isRed ? 'Team Lantern 紅燈籠' : 'Team Dumpling 餃子';
       teamMascot = isRed ? '🏮' : '🥟';
     } else if (gameType === 'color-splash') {
-      teamLabel = isRed ? 'Equipo Tinta 紅墨' : 'Equipo Pluma 金筆';
-      teamMascot = isRed ? '🖌' : '🖋';
+      teamLabel = isRed ? 'Equipo Estudiante 學生' : 'Equipo Maestro 老師';
+      teamMascot = isRed ? '✏️' : '📚';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
@@ -1451,6 +1453,137 @@
     }
   }
 
+  // === COLOR SPLASH (Tinta y Bambú) — canvas renderer for player walk view ===
+  function startCsWalkRender() {
+    cancelAnimationFrame(csRaf);
+    function frame(now) {
+      const canvas = $('cs-walk-canvas');
+      if (!canvas) { csRaf = requestAnimationFrame(frame); return; }
+      // Stop if we've left the walk screen
+      const walkScreen = $('screen-cs-walk');
+      if (walkScreen && walkScreen.classList.contains('hidden')) {
+        csRaf = null;
+        return;
+      }
+      const ctx = canvas.getContext('2d');
+      const cssW = canvas.clientWidth;
+      const cssH = canvas.clientHeight;
+      if (canvas.width !== cssW || canvas.height !== cssH) {
+        canvas.width = cssW;
+        canvas.height = cssH;
+      }
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // Compute cell size
+      const margin = 16;
+      const cs = Math.floor(Math.min((W - margin * 2) / csGridW, (H - margin * 2) / csGridH));
+      const gridPxW = cs * csGridW;
+      const gridPxH = cs * csGridH;
+      const ox = (W - gridPxW) / 2;
+      const oy = (H - gridPxH) / 2;
+
+      // Rice paper inside the canvas (very faint, CSS already provides the bulk)
+      ctx.fillStyle = 'rgba(244, 228, 192, 0.0)';
+      ctx.fillRect(0, 0, W, H);
+
+      // Faint grid lines (calligraphy paper marks)
+      ctx.strokeStyle = 'rgba(100, 70, 40, 0.1)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= csGridW; i += 3) {
+        ctx.beginPath();
+        ctx.moveTo(ox + i * cs, oy);
+        ctx.lineTo(ox + i * cs, oy + gridPxH);
+        ctx.stroke();
+      }
+      for (let i = 0; i <= csGridH; i += 3) {
+        ctx.beginPath();
+        ctx.moveTo(ox, oy + i * cs);
+        ctx.lineTo(ox + gridPxW, oy + i * cs);
+        ctx.stroke();
+      }
+
+      // Ink splats — draw painted cells
+      for (let y = 0; y < csGridH; y++) {
+        for (let x = 0; x < csGridW; x++) {
+          const cell = csGrid[y] && csGrid[y][x];
+          if (!cell) continue;
+          const cx = ox + x * cs + cs / 2;
+          const cy = oy + y * cs + cs / 2;
+          const baseColor = cell === 'red' ? '#8b1a23' : '#a87a1f';
+          const accent = cell === 'red' ? '#d92e3a' : '#e8b14a';
+          const glow = cell === 'red' ? 'rgba(217,46,58,0.3)' : 'rgba(232,177,74,0.3)';
+          // Glow
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(cx, cy, cs * 0.85, 0, Math.PI * 2);
+          ctx.fill();
+          // Splat
+          ctx.fillStyle = baseColor;
+          const seed = x + y;
+          const wob1 = ((seed * 17) % 100) / 100 * 0.3 + 0.85;
+          const wob2 = ((seed * 31) % 100) / 100 * 0.3 + 0.85;
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, cs * 0.55 * wob1, cs * 0.55 * wob2, ((seed * 7) % 360) * Math.PI / 180, 0, Math.PI * 2);
+          ctx.fill();
+          // Highlight
+          ctx.fillStyle = accent;
+          ctx.beginPath();
+          ctx.ellipse(cx - cs * 0.1, cy - cs * 0.1, cs * 0.3, cs * 0.3, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Player avatars (myself + others). My character is highlighted with a star.
+      Object.entries(csPlayers).forEach(([id, p]) => {
+        const cx = ox + p.x * cs + cs / 2;
+        const cy = oy + p.y * cs + cs / 2;
+        const isMe = id === myPlayerId;
+        const robe = p.team === 'red' ? '#d92e3a' : '#e8b14a';
+        const robeDark = p.team === 'red' ? '#8b1a23' : '#a87a1f';
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + cs * 0.5, cs * 0.5, cs * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const bob = isMe ? Math.sin(now / 100) * 2 : 0;
+        // Robe
+        ctx.fillStyle = robeDark;
+        ctx.beginPath();
+        ctx.arc(cx, cy + cs * 0.2 - bob, cs * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = robe;
+        ctx.beginPath();
+        ctx.arc(cx, cy + cs * 0.15 - bob, cs * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        // Head
+        ctx.fillStyle = '#f4d8b8';
+        ctx.beginPath();
+        ctx.arc(cx, cy - cs * 0.3 - bob, cs * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        // Eyes
+        ctx.fillStyle = '#1a0d08';
+        ctx.beginPath();
+        ctx.arc(cx - cs * 0.13, cy - cs * 0.32 - bob, cs * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + cs * 0.13, cy - cs * 0.32 - bob, cs * 0.06, 0, Math.PI * 2);
+        ctx.fill();
+        // Star over me
+        if (isMe) {
+          ctx.fillStyle = '#ffd57a';
+          ctx.font = `bold ${cs * 0.5}px serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('⭐', cx, cy - cs * 0.85 - bob);
+        }
+      });
+
+      csRaf = requestAnimationFrame(frame);
+    }
+    csRaf = requestAnimationFrame(frame);
+  }
+
   // === COLOR SPLASH and COLOR CLASH (shared map renderer) ===
   // Picks the right DOM containers depending on which game we're in
   function miniGridEl() {
@@ -1469,8 +1602,14 @@
       csMyY = csPlayers[myPlayerId].y;
     }
     csTilesPainted = 0;
-    buildMiniGrid();
-    initMiniPlayers();
+    if (gameType === 'color-splash') {
+      // Tinta y Bambú: canvas-rendered. Reset grid.
+      csGrid = Array.from({ length: csGridH }, () => Array(csGridW).fill(null));
+    } else {
+      // Color Clash: keeps the DOM mini-board (still works)
+      buildMiniGrid();
+      initMiniPlayers();
+    }
   });
 
   socket.on('cs:move', ({ playerId, x, y, paint, teamScores }) => {
@@ -1482,20 +1621,42 @@
       csMyX = x;
       csMyY = y;
     }
-    moveMiniPlayer(playerId, x, y);
-    if (paint) {
-      paintMiniCell(paint.x, paint.y, paint.team);
-      if (playerId === myPlayerId && paint.team === team) {
-        csTilesPainted++;
-        if (gameType === 'color-splash' && $('cs-walk-score')) {
-          $('cs-walk-score').textContent = csTilesPainted;
+    if (gameType === 'color-splash') {
+      // Apply paint to local canvas grid
+      if (Array.isArray(paint)) {
+        paint.forEach((c) => { csGrid[c.y][c.x] = c.team; });
+        if (playerId === myPlayerId && paint.length) {
+          csTilesPainted += paint.filter((c) => c.team === team).length;
+          if ($('cs-walk-score')) $('cs-walk-score').textContent = csTilesPainted;
+        }
+      } else if (paint) {
+        csGrid[paint.y][paint.x] = paint.team;
+        if (playerId === myPlayerId && paint.team === team) {
+          csTilesPainted++;
+          if ($('cs-walk-score')) $('cs-walk-score').textContent = csTilesPainted;
+        }
+      }
+    } else {
+      // Color Clash: existing DOM path
+      moveMiniPlayer(playerId, x, y);
+      if (paint) {
+        const single = Array.isArray(paint) ? paint[0] : paint;
+        if (single) {
+          paintMiniCell(single.x, single.y, single.team);
+          if (playerId === myPlayerId && single.team === team) {
+            csTilesPainted++;
+          }
         }
       }
     }
   });
 
   socket.on('cs:paint', ({ cells }) => {
-    cells.forEach((c) => paintMiniCell(c.x, c.y, c.team));
+    if (gameType === 'color-splash') {
+      cells.forEach((c) => { csGrid[c.y][c.x] = c.team; });
+    } else {
+      cells.forEach((c) => paintMiniCell(c.x, c.y, c.team));
+    }
   });
 
   function getMiniCellSize() {
@@ -1580,10 +1741,14 @@
     csTilesPainted = 0;
     $('cs-walk-score').textContent = '0';
     $('cs-walk-name-tag').textContent = myName;
-    $('cs-walk-header').className = `player-header ${team}`;
+    if ($('cs-walk-name-tag')) {
+      $('cs-walk-name-tag').className = `cs-player-tag ${team}`;
+    }
     $('cs-walk-timer-fill').style.width = '100%';
     const dpad = $('cs-dpad');
     dpad.classList.remove('idle');
+    // Start canvas renderer for Color Splash player walk view
+    if (gameType === 'color-splash') startCsWalkRender();
 
     if (csWalkTimerInterval) clearInterval(csWalkTimerInterval);
     const totalDur = csWalkEndTime - Date.now();
@@ -1701,6 +1866,7 @@
     if (csWalkTimerInterval) clearInterval(csWalkTimerInterval);
     if (mqRaf) { cancelAnimationFrame(mqRaf); mqRaf = null; }
     if (flRaf) { cancelAnimationFrame(flRaf); flRaf = null; }
+    if (csRaf) { cancelAnimationFrame(csRaf); csRaf = null; }
     if (mashTapHandler) {
       $('mash-button').removeEventListener('pointerdown', mashTapHandler);
       mashTapHandler = null;

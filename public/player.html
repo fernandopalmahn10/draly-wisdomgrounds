@@ -161,18 +161,15 @@
     </div>
   </div>
 
-  <!-- COLOR SPLASH WALK MODE -->
+  <!-- COLOR SPLASH WALK MODE (Tinta y Bambú · school theme) — canvas-rendered -->
   <div id="screen-cs-walk" class="hidden cs-player-screen">
-    <div class="player-header" id="cs-walk-header">
-      <span id="cs-walk-name-tag">You</span>
-      <span>Tiles: <span id="cs-walk-score">0</span></span>
+    <div class="cs-player-hud">
+      <span class="cs-player-tag" id="cs-walk-name-tag">Tú</span>
+      <span style="font-weight:800;">🖌 <span id="cs-walk-score">0</span></span>
     </div>
-    <div class="cs-walk-banner">⚡ ¡A CAMINAR! ⚡</div>
-    <div class="cs-mini-board-wrap">
-      <div class="cs-mini-board">
-        <div class="cs-mini-grid" id="cs-mini-grid"></div>
-        <div class="cs-players" id="cs-mini-players" style="position:absolute; top:4px; left:4px; pointer-events:none;"></div>
-      </div>
+    <div class="cs-walk-banner">⚡ ¡A PINTAR! ⚡</div>
+    <div class="cs-mini-stage-v2" id="cs-walk-stage">
+      <canvas id="cs-walk-canvas" width="600" height="450"></canvas>
     </div>
     <div class="cs-walk-timer"><div class="cs-walk-timer-fill" id="cs-walk-timer-fill"></div></div>
     <div class="cs-dpad" id="cs-dpad">
@@ -186,7 +183,7 @@
       <button class="cs-dpad-btn cs-dpad-down" data-dir="down">▼</button>
       <button class="cs-dpad-btn empty"></button>
     </div>
-    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:8px;">Cada paso pinta una baldosa de tu color 🎨</p>
+    <p style="text-align:center; color:#d4bc88; font-size:0.85rem; margin: 4px 0;">Cada paso pinta 5 celdas en cruz 🖌</p>
   </div>
 
   <!-- MASH MODE -->

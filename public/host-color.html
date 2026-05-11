@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Tinta y Bambú · Color Splash</title>
+  <title>Clase de Caligrafía · Color Splash</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Long+Cang&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
@@ -15,7 +15,7 @@
   <!-- LOBBY -->
   <div id="screen-lobby" class="container">
     <div style="text-align:center; margin-bottom:16px;">
-      <div class="ink-banner">🖌 墨竹 · Tinta y Bambú 🎋</div>
+      <div class="ink-banner">🎓 学校 · La Clase de Caligrafía 🖌</div>
       <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
       <div class="pin-display" id="pin-display">····</div>
       <div style="color:var(--ink-dim); font-size:0.9rem;">
@@ -46,20 +46,20 @@
     <div class="host-grid">
       <div class="team-panel team-red">
         <div class="team-header">
-          <div class="team-mascot">🖌</div>
+          <div class="team-mascot">✏️</div>
           <div>
-            <div class="team-name">Equipo Tinta</div>
-            <div style="color:var(--ink-dim); font-size:0.85rem;">紅墨</div>
+            <div class="team-name">Equipo Estudiante</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">學生 · xuésheng</div>
           </div>
         </div>
         <div class="player-chips" id="players-red"></div>
       </div>
       <div class="team-panel team-gold">
         <div class="team-header">
-          <div class="team-mascot">🖋</div>
+          <div class="team-mascot">📚</div>
           <div>
-            <div class="team-name">Equipo Pluma</div>
-            <div style="color:var(--ink-dim); font-size:0.85rem;">金筆</div>
+            <div class="team-name">Equipo Maestro</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">老師 · lǎoshī</div>
           </div>
         </div>
         <div class="player-chips" id="players-gold"></div>
@@ -91,27 +91,27 @@
     </div>
     <div class="cs-topbar">
       <div class="cs-team red">
-        <span class="cs-team-emoji">🖌</span>
-        <span class="cs-team-label">Tinta</span>
+        <span class="cs-team-emoji">✏️</span>
+        <span class="cs-team-label">Estudiantes</span>
         <span class="cs-team-pct" id="pct-red">0%</span>
       </div>
       <div class="cs-time"><span id="timer-display">2:00</span></div>
       <div class="cs-team gold">
         <span class="cs-team-pct" id="pct-gold">0%</span>
-        <span class="cs-team-label">Pluma</span>
-        <span class="cs-team-emoji">🖋</span>
+        <span class="cs-team-label">Maestros</span>
+        <span class="cs-team-emoji">📚</span>
       </div>
     </div>
 
     <div class="cs-stage">
-      <!-- Bamboo decorations on the edges -->
-      <div class="cs-bamboo cs-bamboo-tl">🎋</div>
-      <div class="cs-bamboo cs-bamboo-tr">🎋</div>
-      <div class="cs-bamboo cs-bamboo-bl">🎋</div>
-      <div class="cs-bamboo cs-bamboo-br">🎋</div>
-      <!-- Floating lanterns -->
-      <div class="cs-lantern cs-lantern-1">🏮</div>
-      <div class="cs-lantern cs-lantern-2">🏮</div>
+      <!-- School decorations on the edges (calligraphy class theme) -->
+      <div class="cs-bamboo cs-bamboo-tl">📚</div>
+      <div class="cs-bamboo cs-bamboo-tr">✏️</div>
+      <div class="cs-bamboo cs-bamboo-bl">📖</div>
+      <div class="cs-bamboo cs-bamboo-br">🖌</div>
+      <!-- Floating teacher's apple + paper scroll -->
+      <div class="cs-lantern cs-lantern-1">🍎</div>
+      <div class="cs-lantern cs-lantern-2">📜</div>
       <canvas id="cs-canvas" width="1500" height="900"></canvas>
     </div>
 
