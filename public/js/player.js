@@ -698,6 +698,7 @@
     mqPickups = data.pickups || [];
     mqPickupFx = [];
     mqPlayers = data.players || {};
+    if (data.teamScores) updateMqTeamScores(data.teamScores);
     mqDisplayPlayers = {};
     Object.entries(mqPlayers).forEach(([id, p]) => {
       mqDisplayPlayers[id] = { x: p.x, y: p.y, dir: p.dir, moving: false };
@@ -737,15 +738,22 @@
   socket.on('mq:vendor-claimed', ({ vendorId, team, teamScores }) => {
     const v = mqVendors.find((x) => x.id === vendorId);
     if (v) v.claimedBy = team;
+    if (teamScores) updateMqTeamScores(teamScores);
     MochiSounds.correct();
   });
 
-  socket.on('mq:pickup-grabbed', ({ id, icon, team }) => {
+  function updateMqTeamScores(scores) {
+    if ($('mq-team-red')) $('mq-team-red').textContent = scores.red || 0;
+    if ($('mq-team-gold')) $('mq-team-gold').textContent = scores.gold || 0;
+  }
+
+  socket.on('mq:pickup-grabbed', ({ id, icon, team, teamScores }) => {
     const pk = mqPickups.find((x) => x.id === id);
     if (pk) {
       pk.available = false;
       mqPickupFx.push({ x: pk.x, y: pk.y, icon, until: performance.now() + 600 });
     }
+    if (teamScores) updateMqTeamScores(teamScores);
     MochiSounds.populate(team);
   });
 
