@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/css/dralingo.css">
   <link rel="stylesheet" href="/css/color-splash.css">
   <link rel="stylesheet" href="/css/color-clash.css">
+  <link rel="stylesheet" href="/css/market-quest.css">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -70,6 +71,23 @@
   <!-- RESULT (between question and mash) -->
   <div id="screen-result" class="hidden player-screen">
     <div class="result-feedback" id="result-feedback"></div>
+  </div>
+
+  <!-- MARKET QUEST PLAYER SCREEN — joystick + mini-map -->
+  <div id="screen-mq-play" class="hidden mq-player-screen">
+    <div class="mq-player-hud">
+      <span class="mq-player-tag" id="mq-player-tag">🐲 Long</span>
+      <span class="mq-player-items">🛍 <span id="mq-player-items">0</span></span>
+    </div>
+    <div class="mq-player-stage">
+      <canvas id="mq-player-canvas" width="600" height="450"></canvas>
+    </div>
+    <div class="mq-joystick-area">
+      <div class="mq-joystick-base" id="mq-joystick">
+        <div class="mq-joystick-knob" id="mq-joystick-knob"></div>
+      </div>
+      <div class="mq-hint" id="mq-hint">Walk to a stall</div>
+    </div>
   </div>
 
   <!-- COLOR CLASH PLAYER SCREEN — continuous play, energy-based -->

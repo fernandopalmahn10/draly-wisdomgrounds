@@ -23,6 +23,17 @@
   // Color Clash state
   let ccEnergy = 50;
   let ccDpadHandlerBound = false;
+  // Market Quest state
+  let mqWorld = { w: 1600, h: 900 };
+  let mqVendors = [];
+  let mqPlayers = {};
+  let mqDisplayPlayers = {};
+  let mqAssets = { scene: null };
+  let mqJoystickBound = false;
+  let mqInput = { left: false, right: false, up: false, down: false };
+  let mqLastInputSent = 0;
+  let mqRaf = null;
+  let mqItemsCollected = 0;
 
   const $ = (id) => document.getElementById(id);
 
@@ -144,7 +155,10 @@
     const isRed = team === 'red';
     // Lobby title varies by game type
     let teamLabel, teamMascot;
-    if (gameType === 'color-clash') {
+    if (gameType === 'market-quest') {
+      teamLabel = isRed ? 'Team Long 紅龍' : 'Team Shi 金獅';
+      teamMascot = isRed ? '🐲' : '🦁';
+    } else if (gameType === 'color-clash') {
       teamLabel = isRed ? 'Team Lantern 紅燈籠' : 'Team Dumpling 餃子';
       teamMascot = isRed ? '🏮' : '🥟';
     } else if (gameType === 'color-splash') {
@@ -176,6 +190,11 @@
       $('cc-team-tag').className = `cc-hud-tag ${team}`;
       $('cc-team-tag').textContent = isRed ? '🏮 Lantern' : '🥟 Dumpling';
     }
+    // Market Quest team tag
+    if ($('mq-player-tag')) {
+      $('mq-player-tag').className = `mq-player-tag ${team}`;
+      $('mq-player-tag').textContent = isRed ? '🐲 Long' : '🦁 Shi';
+    }
   }
 
   socket.on('team-changed', ({ team: newTeam }) => {
@@ -194,12 +213,19 @@
       isActive: () => true
     });
     // Color Clash: after the countdown ends, drop straight into the play screen
-    // (other games wait for the first question event to arrive)
     if (gameType === 'color-clash') {
       setTimeout(() => {
         showScreen('cc-play');
         bindCcDpad();
         updateCcEnergyDisplay();
+      }, 3500);
+    }
+    // Market Quest: after countdown, switch to the joystick + canvas play screen
+    if (gameType === 'market-quest') {
+      setTimeout(() => {
+        showScreen('mq-play');
+        bindMqJoystick();
+        startMqRender();
       }, 3500);
     }
     let n = 3;
@@ -263,11 +289,16 @@
     showScreen('question');
   });
 
-  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText }) => {
+  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore }) => {
     if (correct) {
       MochiSounds.correct();
       let happyMascot, sub;
-      if (gameType === 'color-clash') {
+      if (gameType === 'market-quest') {
+        const vendor = mqVendors.find((v) => v.id === vendorId);
+        happyMascot = vendor ? vendor.icon : '🛍';
+        sub = '¡Reclamado! +1 item';
+        if (typeof playerScore === 'number') mqItemsCollected = playerScore;
+      } else if (gameType === 'color-clash') {
         happyMascot = team === 'red' ? '🏮' : '🥟';
         sub = `+30 energy! ⚡`;
       } else if (gameType === 'color-splash') {
@@ -287,7 +318,10 @@
       burstSparkles('✨', 12);
       if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
       setTimeout(() => {
-        if (gameType === 'color-clash') {
+        if (gameType === 'market-quest') {
+          showScreen('mq-play');
+          if ($('mq-player-items')) $('mq-player-items').textContent = mqItemsCollected;
+        } else if (gameType === 'color-clash') {
           if (typeof energy === 'number') ccEnergy = energy;
           showScreen('cc-play');
           updateCcEnergyDisplay();
@@ -314,6 +348,11 @@
           if (typeof energy === 'number') ccEnergy = energy;
           showScreen('cc-play');
           updateCcEnergyDisplay();
+        }, 1400);
+      }
+      if (gameType === 'market-quest') {
+        setTimeout(() => {
+          showScreen('mq-play');
         }, 1400);
       }
     }
@@ -408,6 +447,325 @@
         endMash();
       }
     }, 50);
+  }
+
+  // === MARKET QUEST ===
+  socket.on('mq:init', (data) => {
+    mqWorld.w = data.worldW;
+    mqWorld.h = data.worldH;
+    mqVendors = data.vendors || [];
+    mqPlayers = data.players || {};
+    mqDisplayPlayers = {};
+    Object.entries(mqPlayers).forEach(([id, p]) => {
+      mqDisplayPlayers[id] = { x: p.x, y: p.y, dir: p.dir, moving: false };
+    });
+    // Pre-load the scene image for the player's mini view
+    if (!mqAssets.scene) {
+      const img = new Image();
+      img.onload = () => { mqAssets.scene = img; };
+      img.src = '/assets/market-quest/tiny-town-scene.png';
+    }
+  });
+
+  socket.on('mq:tick', ({ p: positions }) => {
+    Object.entries(positions).forEach(([id, pos]) => {
+      if (!mqPlayers[id]) {
+        mqPlayers[id] = { name: '?', team: 'red', x: pos.x, y: pos.y, dir: pos.d };
+        mqDisplayPlayers[id] = { x: pos.x, y: pos.y, dir: pos.d, moving: !!pos.m };
+      }
+      mqPlayers[id].x = pos.x;
+      mqPlayers[id].y = pos.y;
+      mqPlayers[id].dir = pos.d;
+      mqPlayers[id].moving = !!pos.m;
+    });
+    Object.keys(mqDisplayPlayers).forEach((id) => {
+      if (!positions[id]) delete mqDisplayPlayers[id];
+    });
+    Object.keys(mqPlayers).forEach((id) => {
+      if (!mqDisplayPlayers[id]) {
+        mqDisplayPlayers[id] = {
+          x: mqPlayers[id].x, y: mqPlayers[id].y, dir: mqPlayers[id].dir, moving: false
+        };
+      }
+    });
+    updateMqHint();
+  });
+
+  socket.on('mq:vendor-claimed', ({ vendorId, team, teamScores }) => {
+    const v = mqVendors.find((x) => x.id === vendorId);
+    if (v) v.claimedBy = team;
+    MochiSounds.correct();
+  });
+
+  function bindMqJoystick() {
+    if (mqJoystickBound) return;
+    mqJoystickBound = true;
+    const base = $('mq-joystick');
+    const knob = $('mq-joystick-knob');
+    if (!base || !knob) return;
+
+    let touching = false;
+    let pointerId = null;
+
+    function setKnob(dx, dy) {
+      const max = base.clientWidth * 0.32;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d > max) { dx = dx * max / d; dy = dy * max / d; }
+      knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+      // Compute directional input
+      const deadzone = max * 0.25;
+      mqInput = { left: false, right: false, up: false, down: false };
+      if (dx < -deadzone) mqInput.left = true;
+      if (dx > deadzone) mqInput.right = true;
+      if (dy < -deadzone) mqInput.up = true;
+      if (dy > deadzone) mqInput.down = true;
+    }
+
+    function reset() {
+      touching = false;
+      pointerId = null;
+      knob.style.transform = 'translate(-50%, -50%)';
+      mqInput = { left: false, right: false, up: false, down: false };
+      // Send the stopped state immediately
+      socket.emit('player:mq-input', { pin, ...mqInput });
+    }
+
+    base.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      touching = true;
+      pointerId = e.pointerId;
+      try { base.setPointerCapture(e.pointerId); } catch (err) {}
+      const r = base.getBoundingClientRect();
+      setKnob(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+    });
+    base.addEventListener('pointermove', (e) => {
+      if (!touching || e.pointerId !== pointerId) return;
+      const r = base.getBoundingClientRect();
+      setKnob(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2));
+    });
+    base.addEventListener('pointerup', reset);
+    base.addEventListener('pointercancel', reset);
+    base.addEventListener('pointerleave', (e) => {
+      if (touching && e.pointerId === pointerId) reset();
+    });
+
+    // Keyboard fallback for desktop testing
+    const keyMap = { ArrowLeft: 'left', a: 'left', ArrowRight: 'right', d: 'right', ArrowUp: 'up', w: 'up', ArrowDown: 'down', s: 'down' };
+    document.addEventListener('keydown', (e) => {
+      const dir = keyMap[e.key];
+      if (!dir || gameType !== 'market-quest') return;
+      mqInput[dir] = true;
+    });
+    document.addEventListener('keyup', (e) => {
+      const dir = keyMap[e.key];
+      if (!dir || gameType !== 'market-quest') return;
+      mqInput[dir] = false;
+    });
+
+    // Send input to server at 20Hz
+    setInterval(() => {
+      if (gameType !== 'market-quest') return;
+      const now = Date.now();
+      if (now - mqLastInputSent < 45) return;
+      mqLastInputSent = now;
+      socket.emit('player:mq-input', { pin, ...mqInput });
+    }, 50);
+  }
+
+  function startMqRender() {
+    cancelAnimationFrame(mqRaf);
+    let lastF = performance.now();
+    function frame(now) {
+      const canvas = $('mq-player-canvas');
+      if (!canvas) { mqRaf = requestAnimationFrame(frame); return; }
+      const ctx = canvas.getContext('2d');
+
+      // Resize canvas backing to match display size (for crisp rendering)
+      const cssW = canvas.clientWidth;
+      const cssH = canvas.clientHeight;
+      if (canvas.width !== cssW || canvas.height !== cssH) {
+        canvas.width = cssW;
+        canvas.height = cssH;
+      }
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // Smooth display positions
+      Object.entries(mqPlayers).forEach(([id, p]) => {
+        const d = mqDisplayPlayers[id];
+        if (!d) return;
+        d.x += (p.x - d.x) * 0.3;
+        d.y += (p.y - d.y) * 0.3;
+        d.dir = p.dir;
+        d.moving = p.moving;
+      });
+
+      // Camera follows me
+      const me = mqDisplayPlayers[myPlayerId];
+      const camScale = Math.min(W / 800, H / 600); // show ~half the world around player
+      const camX = me ? me.x : mqWorld.w / 2;
+      const camY = me ? me.y : mqWorld.h / 2;
+
+      ctx.fillStyle = '#1a0d08';
+      ctx.fillRect(0, 0, W, H);
+
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.scale(camScale, camScale);
+      ctx.translate(-camX, -camY);
+
+      // Background scene
+      if (mqAssets.scene) {
+        ctx.imageSmoothingEnabled = false;
+        const sceneScale = Math.max(mqWorld.w / mqAssets.scene.width, mqWorld.h / mqAssets.scene.height);
+        const sw = mqAssets.scene.width * sceneScale;
+        const sh = mqAssets.scene.height * sceneScale;
+        ctx.drawImage(mqAssets.scene, (mqWorld.w - sw) / 2, (mqWorld.h - sh) / 2, sw, sh);
+        ctx.fillStyle = 'rgba(20, 10, 5, 0.25)';
+        ctx.fillRect(0, 0, mqWorld.w, mqWorld.h);
+      } else {
+        const grad = ctx.createLinearGradient(0, 0, 0, mqWorld.h);
+        grad.addColorStop(0, '#7a4f33');
+        grad.addColorStop(1, '#432817');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, mqWorld.w, mqWorld.h);
+      }
+
+      const t = now / 1000;
+
+      // Vendors
+      mqVendors.forEach((v) => drawMqVendor(ctx, v, t));
+
+      // Players (Y-sorted)
+      const sortedIds = Object.keys(mqDisplayPlayers).sort((a, b) =>
+        mqDisplayPlayers[a].y - mqDisplayPlayers[b].y
+      );
+      sortedIds.forEach((id) => {
+        const d = mqDisplayPlayers[id];
+        const p = mqPlayers[id];
+        if (!d || !p) return;
+        drawMqPlayer(ctx, d, p, t, id === myPlayerId);
+      });
+
+      ctx.restore();
+
+      mqRaf = requestAnimationFrame(frame);
+    }
+    mqRaf = requestAnimationFrame(frame);
+  }
+
+  function drawMqVendor(ctx, v, t) {
+    const x = v.x, y = v.y;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 36, 55, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const claimed = v.claimedBy;
+    const roofColor = claimed === 'red' ? '#d92e3a' : claimed === 'gold' ? '#e8b14a' : '#8b1a23';
+    ctx.fillStyle = roofColor;
+    ctx.beginPath();
+    ctx.moveTo(x - 60, y - 30);
+    ctx.quadraticCurveTo(x, y - 50, x + 60, y - 30);
+    ctx.lineTo(x + 45, y - 12);
+    ctx.lineTo(x - 45, y - 12);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#7a4d2a';
+    ctx.fillRect(x - 45, y - 10, 90, 24);
+
+    ctx.font = '40px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const bob = claimed ? 0 : Math.sin(t * 2 + v.id) * 3;
+    ctx.fillText(v.icon, x, y - 26 + bob);
+    ctx.restore();
+  }
+
+  function drawMqPlayer(ctx, d, p, t, isMe) {
+    const x = d.x, y = d.y;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 28, 22, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const bob = d.moving ? Math.sin(t * 12) * 3 : 0;
+    const team = p.team;
+    const body = team === 'red' ? '#ff5a66' : '#ffd57a';
+    const bodyDark = team === 'red' ? '#8b1a23' : '#a87a1f';
+
+    ctx.fillStyle = bodyDark;
+    ctx.beginPath();
+    ctx.arc(x, y + 8 - bob, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.arc(x, y + 5 - bob, 16, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#f4d8b8';
+    ctx.beginPath();
+    ctx.arc(x, y - 18 - bob, 14, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#1a0d08';
+    const eyeOffsetX = d.dir === 'left' ? -4 : d.dir === 'right' ? 4 : 0;
+    const eyeOffsetY = d.dir === 'up' ? -3 : d.dir === 'down' ? 2 : 0;
+    ctx.beginPath();
+    ctx.arc(x - 5 + eyeOffsetX, y - 19 - bob + eyeOffsetY, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + 5 + eyeOffsetX, y - 19 - bob + eyeOffsetY, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = bodyDark;
+    ctx.beginPath();
+    ctx.ellipse(x, y - 28 - bob, 14, 6, 0, Math.PI, 2 * Math.PI);
+    ctx.fill();
+
+    // Star marker over "me"
+    if (isMe) {
+      ctx.fillStyle = '#ffd57a';
+      ctx.font = 'bold 18px serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⭐', x, y - 42 - bob);
+    }
+
+    // Name
+    ctx.font = 'bold 11px Nunito, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const name = p.name || '?';
+    const nameW = ctx.measureText(name).width;
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fillRect(x - nameW / 2 - 4, y - 55 - bob, nameW + 8, 14);
+    ctx.fillStyle = team === 'red' ? '#ff9aa5' : '#ffd57a';
+    ctx.fillText(name, x, y - 54 - bob);
+    ctx.restore();
+  }
+
+  function updateMqHint() {
+    const me = mqPlayers[myPlayerId];
+    const hint = $('mq-hint');
+    if (!me || !hint) return;
+    let nearVendor = null;
+    for (const v of mqVendors) {
+      if (v.claimedBy) continue;
+      const dx = me.x - v.x;
+      const dy = me.y - v.y;
+      if (dx * dx + dy * dy < 110 * 110) { nearVendor = v; break; }
+    }
+    if (nearVendor) {
+      hint.textContent = `${nearVendor.icon} Approaching stall!`;
+      hint.classList.add('near-vendor');
+    } else {
+      hint.textContent = 'Walk to a stall';
+      hint.classList.remove('near-vendor');
+    }
   }
 
   // === COLOR CLASH ===
@@ -762,6 +1120,7 @@
     Dralingo.stopRandom();
     if (mashTimerInterval) clearInterval(mashTimerInterval);
     if (csWalkTimerInterval) clearInterval(csWalkTimerInterval);
+    if (mqRaf) { cancelAnimationFrame(mqRaf); mqRaf = null; }
     if (mashTapHandler) {
       $('mash-button').removeEventListener('pointerdown', mashTapHandler);
       mashTapHandler = null;
@@ -807,7 +1166,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'cs-walk', 'cc-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'cs-walk', 'cc-play', 'mq-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });
