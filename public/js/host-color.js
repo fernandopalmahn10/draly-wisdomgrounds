@@ -10,6 +10,8 @@
 
   // World state
   let grid = [];               // 2D array of team or null
+  let pickups = [];            // [{ id, x, y, icon, available }]
+  let pickupFx = [];           // active grab animations
   let players = {};            // id → { name, team, x, y }
   let displayPlayers = {};     // smoothed positions
   let scores = { red: 0, gold: 0 };
@@ -135,9 +137,35 @@
     Object.entries(players).forEach(([id, p]) => {
       displayPlayers[id] = { x: p.x, y: p.y };
     });
+    pickups = data.pickups || [];
+    pickupFx = [];
     paintFx = [];
     scores = data.teamScores || { red: 0, gold: 0 };
     updateScores(scores);
+  });
+
+  socket.on('cs:pickup-grabbed', ({ id, icon, x, y, team, bonusCells, teamScores }) => {
+    const pk = pickups.find((p) => p.id === id);
+    if (pk) {
+      pk.available = false;
+      pickupFx.push({ x: pk.x, y: pk.y, icon, team, until: performance.now() + 700 });
+    }
+    if (Array.isArray(bonusCells)) {
+      bonusCells.forEach((c) => {
+        grid[c.y][c.x] = c.team;
+        paintFx.push({ x: c.x, y: c.y, team: c.team, until: performance.now() + 450 });
+      });
+    }
+    if (teamScores) {
+      scores = teamScores;
+      updateScores(scores);
+    }
+    MochiSounds.populate(team);
+  });
+
+  socket.on('cs:pickup-respawn', ({ id }) => {
+    const pk = pickups.find((p) => p.id === id);
+    if (pk) pk.available = true;
   });
 
   socket.on('cs:move', ({ playerId, x, y, paint, teamScores }) => {
@@ -261,6 +289,48 @@
       }
     }
     ctx.restore();
+
+    // Pickups — glowing school items on the rice paper
+    pickups.forEach((pickup) => {
+      if (!pickup.available) return;
+      const cx = offsetX + pickup.x * cellSize + cellSize / 2;
+      const cy = offsetY + pickup.y * cellSize + cellSize / 2;
+      const bob = Math.sin(now / 400 + pickup.id) * 4;
+      // Soft golden glow ring
+      const glow = ctx.createRadialGradient(cx, cy + bob, 4, cx, cy + bob, cellSize * 1.4);
+      glow.addColorStop(0, 'rgba(255, 220, 130, 0.55)');
+      glow.addColorStop(1, 'rgba(255, 213, 122, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(cx, cy + bob, cellSize * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+      // Ground shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + cellSize * 0.55, cellSize * 0.4, cellSize * 0.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // The school item
+      ctx.font = `${cellSize * 1.1}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(pickup.icon, cx, cy + bob);
+    });
+
+    // Pickup grab effect — item flies up + fades
+    pickupFx = pickupFx.filter((fx) => fx.until > now);
+    pickupFx.forEach((fx) => {
+      const elapsed = 700 - (fx.until - now);
+      const p = elapsed / 700;
+      const cx = offsetX + fx.x * cellSize + cellSize / 2;
+      const cy = offsetY + fx.y * cellSize + cellSize / 2 - 70 * p;
+      ctx.save();
+      ctx.globalAlpha = 1 - p;
+      ctx.font = `${cellSize * (1.2 + p * 0.8)}px serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(fx.icon, cx, cy);
+      ctx.restore();
+    });
 
     // Fresh paint pulse — recently painted cells get a brighter highlight
     paintFx = paintFx.filter((fx) => fx.until > now);

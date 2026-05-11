@@ -22,6 +22,8 @@
   let csTilesPainted = 0;
   // Color Splash canvas renderer state
   let csRaf = null;
+  let csPickups = [];
+  let csPickupFx = [];
   // Color Clash state
   let ccEnergy = 50;
   let ccDpadHandlerBound = false;
@@ -1534,6 +1536,48 @@
         }
       }
 
+      // Pickups (school items)
+      csPickups.forEach((pickup) => {
+        if (!pickup.available) return;
+        const pcx = ox + pickup.x * cs + cs / 2;
+        const pcy = oy + pickup.y * cs + cs / 2;
+        const bob = Math.sin(now / 400 + pickup.id) * 3;
+        // Glow
+        const glow = ctx.createRadialGradient(pcx, pcy + bob, 4, pcx, pcy + bob, cs * 1.2);
+        glow.addColorStop(0, 'rgba(255, 220, 130, 0.6)');
+        glow.addColorStop(1, 'rgba(255, 213, 122, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(pcx, pcy + bob, cs * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        // Shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(pcx, pcy + cs * 0.55, cs * 0.35, cs * 0.13, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Icon
+        ctx.font = `${cs * 1.05}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(pickup.icon, pcx, pcy + bob);
+      });
+
+      // Pickup grab effect
+      csPickupFx = csPickupFx.filter((fx) => fx.until > now);
+      csPickupFx.forEach((fx) => {
+        const elapsed = 700 - (fx.until - now);
+        const p = elapsed / 700;
+        const pcx = ox + fx.x * cs + cs / 2;
+        const pcy = oy + fx.y * cs + cs / 2 - 50 * p;
+        ctx.save();
+        ctx.globalAlpha = 1 - p;
+        ctx.font = `${cs * (1.1 + p * 0.8)}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(fx.icon, pcx, pcy);
+        ctx.restore();
+      });
+
       // Player avatars (myself + others). My character is highlighted with a star.
       Object.entries(csPlayers).forEach(([id, p]) => {
         const cx = ox + p.x * cs + cs / 2;
@@ -1603,8 +1647,10 @@
     }
     csTilesPainted = 0;
     if (gameType === 'color-splash') {
-      // Tinta y Bambú: canvas-rendered. Reset grid.
+      // Clase de Caligrafía: canvas-rendered. Reset grid + pickups.
       csGrid = Array.from({ length: csGridH }, () => Array(csGridW).fill(null));
+      csPickups = data.pickups || [];
+      csPickupFx = [];
     } else {
       // Color Clash: keeps the DOM mini-board (still works)
       buildMiniGrid();
@@ -1657,6 +1703,29 @@
     } else {
       cells.forEach((c) => paintMiniCell(c.x, c.y, c.team));
     }
+  });
+
+  // Color Splash pickup events
+  socket.on('cs:pickup-grabbed', ({ id, icon, team, bonusCells, teamScores }) => {
+    const pk = csPickups.find((p) => p.id === id);
+    if (pk) {
+      pk.available = false;
+      csPickupFx.push({ x: pk.x, y: pk.y, icon, until: performance.now() + 700 });
+    }
+    if (Array.isArray(bonusCells)) {
+      bonusCells.forEach((c) => { csGrid[c.y][c.x] = c.team; });
+    }
+    MochiSounds.populate(team);
+    // Small toast/HUD nudge if I grabbed it personally — using my socket id as proxy
+    if (csPickups.find((p) => p.id === id)) {
+      // We don't know the grabber socket here, so just sound+vibrate softly
+      if (navigator.vibrate) navigator.vibrate(15);
+    }
+  });
+
+  socket.on('cs:pickup-respawn', ({ id }) => {
+    const pk = csPickups.find((p) => p.id === id);
+    if (pk) pk.available = true;
   });
 
   function getMiniCellSize() {
