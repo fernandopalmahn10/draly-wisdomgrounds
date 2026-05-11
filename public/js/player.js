@@ -157,6 +157,176 @@
     $('lobby-name').textContent = myName;
     updateTeamUI();
     showScreen('lobby');
+    startLobbyFlappy();
+  }
+
+  // ===== LOBBY MINI-GAME: a tiny client-side Flappy that runs while waiting =====
+  // Pure local — no server. Just to entertain players.
+  let lobbyFl = null;
+  function startLobbyFlappy() {
+    const canvas = $('lobby-flappy-canvas');
+    if (!canvas) return;
+    if (lobbyFl) return; // already running
+
+    const ctx = canvas.getContext('2d');
+    const W = 400, H = 280;
+    canvas.width = W;
+    canvas.height = H;
+
+    // Load Kenney plane + rocks (cached after first load)
+    const assets = { bg: null, ru: null, rd: null, plane: [] };
+    function loadImg(src) {
+      return new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => r(null); i.src = src; });
+    }
+    Promise.all([
+      loadImg('/assets/flappy/background.png'),
+      loadImg('/assets/flappy/rock-up.png'),
+      loadImg('/assets/flappy/rock-down.png'),
+      loadImg(`/assets/flappy/${team === 'red' ? 'red' : 'gold'}-1.png`),
+      loadImg(`/assets/flappy/${team === 'red' ? 'red' : 'gold'}-2.png`),
+      loadImg(`/assets/flappy/${team === 'red' ? 'red' : 'gold'}-3.png`)
+    ]).then(([bg, ru, rd, p1, p2, p3]) => {
+      assets.bg = bg;
+      assets.ru = ru;
+      assets.rd = rd;
+      assets.plane = [p1, p2, p3].filter(Boolean);
+    });
+
+    const state = {
+      x: 90, y: H / 2, vy: 0,
+      pipes: [], scrollX: 0,
+      alive: true, score: 0, best: parseInt(localStorage.getItem('dralyFlappyBest') || '0', 10),
+      raf: null, started: false
+    };
+    $('lobby-flappy-best').textContent = state.best;
+
+    function newPipe(x) {
+      return { x, gap: 90 + Math.random() * (H - 180), scored: false };
+    }
+    function reset() {
+      state.y = H / 2;
+      state.vy = 0;
+      state.pipes = [newPipe(W + 50), newPipe(W + 220), newPipe(W + 390)];
+      state.alive = true;
+      state.score = 0;
+      state.started = false;
+    }
+    reset();
+
+    function flap() {
+      if (!state.alive) { reset(); return; }
+      if (!state.started) state.started = true;
+      state.vy = -5.5;
+    }
+    canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); flap(); });
+
+    function tick(now) {
+      if (state.started && state.alive) {
+        state.vy += 0.35;
+        state.y += state.vy;
+        state.scrollX += 1.6;
+
+        state.pipes.forEach((p) => p.x -= 1.6);
+        state.pipes = state.pipes.filter((p) => p.x > -80);
+        while (state.pipes.length < 3) {
+          const lastX = Math.max(...state.pipes.map((p) => p.x), W);
+          state.pipes.push(newPipe(lastX + 170));
+        }
+
+        if (state.y < 18 || state.y > H - 18) state.alive = false;
+
+        for (const p of state.pipes) {
+          if (!p.scored && p.x + 60 < state.x - 18) {
+            p.scored = true; state.score++;
+            if (state.score > state.best) {
+              state.best = state.score;
+              localStorage.setItem('dralyFlappyBest', String(state.best));
+            }
+            $('lobby-flappy-best').textContent = state.best;
+          }
+          if (state.x + 18 > p.x && state.x - 18 < p.x + 60) {
+            const top = p.gap - 50;
+            const bot = p.gap + 50;
+            if (state.y - 18 < top || state.y + 18 > bot) state.alive = false;
+          }
+        }
+      }
+
+      // Render
+      ctx.clearRect(0, 0, W, H);
+      if (assets.bg) {
+        const bw = (assets.bg.width / assets.bg.height) * H;
+        const phase = state.scrollX % bw;
+        ctx.drawImage(assets.bg, -phase, 0, bw, H);
+        ctx.drawImage(assets.bg, bw - phase, 0, bw, H);
+      } else {
+        const g = ctx.createLinearGradient(0, 0, 0, H);
+        g.addColorStop(0, '#4ec9f5'); g.addColorStop(1, '#c8e7f5');
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      }
+
+      state.pipes.forEach((p) => {
+        const rockH = 200;
+        if (assets.ru && assets.rd) {
+          ctx.drawImage(assets.rd, p.x, p.gap - 50 - rockH, 60, rockH);
+          ctx.drawImage(assets.ru, p.x, p.gap + 50, 60, rockH);
+        } else {
+          ctx.fillStyle = '#3a8a3a';
+          ctx.fillRect(p.x, 0, 60, p.gap - 50);
+          ctx.fillRect(p.x, p.gap + 50, 60, H);
+        }
+      });
+
+      // Plane
+      const planeImgs = assets.plane;
+      const f = Math.floor((now / 100) % Math.max(1, planeImgs.length));
+      const img = planeImgs[f];
+      ctx.save();
+      ctx.translate(state.x, state.y);
+      ctx.rotate(Math.max(-0.5, Math.min(0.7, state.vy * 0.08)));
+      if (img) {
+        ctx.drawImage(img, -28, -22, 56, 44);
+      } else {
+        ctx.font = '40px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(team === 'red' ? '🐲' : '🦅', 0, 0);
+      }
+      ctx.restore();
+
+      // Score
+      ctx.font = 'bold 26px Nunito, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillText(state.score, W / 2 + 1, 40);
+      ctx.fillStyle = '#fff';
+      ctx.fillText(state.score, W / 2, 39);
+
+      // Start prompt
+      if (!state.started && state.alive) {
+        ctx.fillStyle = 'rgba(13, 14, 26, 0.65)';
+        ctx.fillRect(0, H / 2 - 32, W, 64);
+        ctx.font = 'bold 18px Nunito, sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText('Toca para empezar', W / 2, H / 2 + 4);
+      }
+      if (!state.alive) {
+        ctx.fillStyle = 'rgba(139, 26, 35, 0.45)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.font = 'bold 22px Nunito, sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.fillText('¡Boom! Toca para volver a volar', W / 2, H / 2 + 6);
+      }
+
+      state.raf = requestAnimationFrame(tick);
+    }
+    state.raf = requestAnimationFrame(tick);
+    lobbyFl = state;
+  }
+
+  function stopLobbyFlappy() {
+    if (lobbyFl && lobbyFl.raf) cancelAnimationFrame(lobbyFl.raf);
+    lobbyFl = null;
   }
 
   function updateTeamUI() {
@@ -220,6 +390,7 @@
   });
 
   socket.on('countdown', () => {
+    stopLobbyFlappy();
     showScreen('countdown');
     MochiSounds.startMusic();
     // Independent random Dralingo appearances on each player's phone
@@ -314,7 +485,7 @@
     showScreen('question');
   });
 
-  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore }) => {
+  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese }) => {
     if (correct) {
       MochiSounds.correct();
       let happyMascot, sub;
@@ -324,8 +495,10 @@
       } else if (gameType === 'market-quest') {
         const vendor = mqVendors.find((v) => v.id === vendorId);
         happyMascot = vendor ? vendor.icon : '🛍';
-        sub = '¡Puesto reclamado! +1 producto';
+        sub = '¡Puesto reclamado!';
         if (typeof playerScore === 'number') mqItemsCollected = playerScore;
+        // Big collection toast + flying item + bag bump
+        showMqCollectionFeedback(itemIcon || (vendor && vendor.icon) || '🛍', correctText, itemChinese);
       } else if (gameType === 'color-clash') {
         happyMascot = team === 'red' ? '🏮' : '🥟';
         sub = `+30 energía ⚡`;
@@ -809,6 +982,45 @@
     ctx.fillStyle = team === 'red' ? '#ff9aa5' : '#ffd57a';
     ctx.fillText(name, x, y - 54 - bob);
     ctx.restore();
+  }
+
+  function showMqCollectionFeedback(icon, spanishWord, chinesePhrase) {
+    const toast = $('mq-collect-toast');
+    const toastIcon = $('mq-toast-icon');
+    const toastSub = $('mq-toast-sub');
+    const toastChinese = $('mq-toast-chinese');
+    if (toast) {
+      toastIcon.textContent = icon || '🛍';
+      toastSub.textContent = `Coleccionaste ${spanishWord || 'un producto'}`;
+      toastChinese.textContent = chinesePhrase || '';
+      toastChinese.style.display = chinesePhrase ? 'block' : 'none';
+      toast.classList.remove('hidden');
+      // Restart animation
+      toast.classList.remove('visible');
+      void toast.offsetWidth;
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.add('hidden'), 2200);
+    }
+    // Add item to the visible bag (last 5 collected)
+    const bagRecent = $('mq-bag-recent');
+    if (bagRecent) {
+      const item = document.createElement('span');
+      item.className = 'mq-bag-item';
+      item.textContent = icon || '🛍';
+      bagRecent.appendChild(item);
+      // Keep only the last 5 items
+      while (bagRecent.children.length > 5) bagRecent.removeChild(bagRecent.firstChild);
+    }
+    // Bump the bag with a satisfying squish
+    const bag = $('mq-bag');
+    if (bag) {
+      bag.classList.remove('bumped');
+      void bag.offsetWidth;
+      bag.classList.add('bumped');
+    }
+    // Sparkles + vibration
+    burstSparkles('✨', 16);
+    if (navigator.vibrate) navigator.vibrate([50, 30, 80, 30, 50]);
   }
 
   function updateMqHint() {
@@ -1356,6 +1568,7 @@
   socket.on('game-end', (data) => {
     MochiSounds.stopMusic();
     Dralingo.stopRandom();
+    stopLobbyFlappy();
     if (mashTimerInterval) clearInterval(mashTimerInterval);
     if (csWalkTimerInterval) clearInterval(csWalkTimerInterval);
     if (mqRaf) { cancelAnimationFrame(mqRaf); mqRaf = null; }

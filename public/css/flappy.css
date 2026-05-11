@@ -2,6 +2,64 @@
    FLAPPY DRAGON — Canvas-based Flappy Bird with vocab revives
    ============================================ */
 
+/* === LOBBY MINI-GAME (Flappy while you wait) === */
+.lobby-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 16px 12px;
+  gap: 8px;
+}
+.lobby-header {
+  text-align: center;
+  flex-shrink: 0;
+}
+.lobby-flappy-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+}
+#lobby-flappy-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 360px;
+  border-radius: 14px;
+  border: 3px solid rgba(255, 213, 122, 0.4);
+  background: linear-gradient(180deg, #4ec9f5 0%, #82d4f5 60%, #c8e7f5 100%);
+  cursor: pointer;
+  touch-action: none;
+  box-shadow: 0 0 30px rgba(255, 213, 122, 0.2);
+  image-rendering: pixelated;
+}
+.lobby-flappy-score {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  background: rgba(13, 14, 26, 0.85);
+  border: 1px solid rgba(255, 213, 122, 0.4);
+  color: var(--gold-glow);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+.lobby-flappy-hint {
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+  margin: 6px 0 2px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
 /* === HOST view === */
 .fl-host-container {
   display: flex;

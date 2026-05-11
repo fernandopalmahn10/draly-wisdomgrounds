@@ -44,25 +44,6 @@
         <button class="btn btn-red btn-xl game-card-play">▶ Play Mochi Mash</button>
       </div>
 
-      <div class="game-card" id="card-flappy">
-        <div class="game-card-header">
-          <div class="game-card-emoji">🐲</div>
-          <div class="game-card-title-row">
-            <div class="game-card-title">Flappy Dragon</div>
-            <div class="game-tile-badge new">¡Nuevo!</div>
-          </div>
-        </div>
-        <div class="game-card-desc">
-          🐲 vs 🦅 — Cada jugador pilota su avión. Toca para volar, esquiva las rocas. Cuando te estrellas, responde una pregunta para revivir. ¡Equipo con más puntos gana!
-        </div>
-        <div class="game-card-tags">
-          <span class="tag">Tap-to-flap</span>
-          <span class="tag">Reflejos</span>
-          <span class="tag">2 min</span>
-        </div>
-        <button class="btn btn-red btn-xl game-card-play">▶ Play Flappy Dragon</button>
-      </div>
-
       <div class="game-card" id="card-quest">
         <div class="game-card-header">
           <div class="game-card-emoji">🛍</div>
@@ -136,9 +117,6 @@
       document.querySelector('#card-mochi .game-card-play').onclick = () => {
         location.href = '/host.html?setId=' + encodeURIComponent(setId);
       };
-      document.querySelector('#card-flappy .game-card-play').onclick = () => {
-        location.href = '/host-flappy.html?setId=' + encodeURIComponent(setId);
-      };
       document.querySelector('#card-quest .game-card-play').onclick = () => {
         location.href = '/host-market.html?setId=' + encodeURIComponent(setId);
       };
@@ -153,9 +131,6 @@
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
       document.querySelector('#card-mochi .game-card-play').onclick = () => {
         location.href = '/sets.html?game=mochi-mash';
-      };
-      document.querySelector('#card-flappy .game-card-play').onclick = () => {
-        location.href = '/sets.html?game=flappy';
       };
       document.querySelector('#card-quest .game-card-play').onclick = () => {
         location.href = '/sets.html?game=market-quest';
