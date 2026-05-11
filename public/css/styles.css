@@ -597,6 +597,19 @@ body::before {
   padding: 16px;
 }
 
+/* Question screen: bounded height + scroll fallback so the 4th answer is never trapped */
+#screen-question.player-screen {
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+  padding: 10px 12px max(10px, env(safe-area-inset-bottom));
+  gap: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .player-header {
   display: flex;
   justify-content: space-between;
@@ -611,11 +624,12 @@ body::before {
 
 .question-card {
   background: rgba(35, 39, 68, 0.85);
-  border-radius: 20px;
-  padding: 24px;
-  margin-bottom: 16px;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
   border: 2px solid rgba(244, 232, 208, 0.1);
   animation: questionPop 0.4s ease-out;
+  flex-shrink: 0;
 }
 @keyframes questionPop {
   from { transform: scale(0.95) translateY(10px); opacity: 0; }
@@ -623,35 +637,42 @@ body::before {
 }
 
 .question-text {
-  font-size: clamp(1.2rem, 4vw, 1.6rem);
+  font-size: clamp(1rem, 3.4vw, 1.35rem);
   font-weight: 800;
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 0;
+  line-height: 1.25;
 }
 
 .answers {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-@media (max-width: 480px) {
-  .answers { grid-template-columns: 1fr; }
+  gap: 8px;
+  flex-shrink: 0;
+  margin-top: auto; /* push to bottom of the question screen */
 }
 
 .answer-btn {
   background: linear-gradient(135deg, var(--bg-surface), var(--bg-mid));
   border: 2px solid transparent;
   color: var(--ink);
-  padding: 20px 16px;
+  padding: 12px 12px;
   border-radius: 14px;
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
+  line-height: 1.2;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   transition: all 0.15s;
   text-align: left;
+  min-height: 56px;
+  word-break: break-word;
+}
+@media (min-height: 700px) {
+  .answer-btn { padding: 16px 14px; font-size: 1rem; min-height: 64px; }
+  .answers { gap: 10px; }
 }
 .answer-btn:hover { transform: translateY(-2px); border-color: var(--gold); }
 .answer-btn:active { transform: scale(0.97); }
