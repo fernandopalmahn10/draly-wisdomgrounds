@@ -405,6 +405,7 @@
       ['/assets/music/win-theme.ogg', '/assets/music/lose-theme.ogg', '/assets/music/tie-theme.ogg']
         .forEach((u) => stopExtraTrack(u, 0.5));
     }
+  };
 
   window.MochiSounds = Sounds;
   window.toggleMute = function () {
