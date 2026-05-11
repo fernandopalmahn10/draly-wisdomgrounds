@@ -167,6 +167,34 @@ function nextQuestionFor(game, playerId) {
   return { qid, text: q.text, answers: shuffled, image };
 }
 
+// Market Quest: serve a question tied to a specific vendor (module scope so the
+// global tick loop can call it — it was previously inside the connection handler,
+// causing ReferenceError crashes on vendor collision).
+function nextQuestionForVendor(g, playerId, vendorId) {
+  const p = g.players[playerId];
+  const vendor = g.vendors && g.vendors.find((v) => v.id === vendorId);
+  if (!p || !vendor || vendor.vocabIdx < 0) return null;
+  const q = g.questions[vendor.vocabIdx];
+  if (!q) return null;
+  const shuffled = [...q.answers];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  const qid = `mq-${vendorId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+  const image = Images.urlForQuestion(q);
+  p.currentQ = {
+    qid,
+    correctIdx: shuffled.indexOf(q.correct),
+    text: q.text,
+    answers: shuffled,
+    image,
+    vendorId
+  };
+  p.lastQuestionAt = Date.now();
+  return { qid, text: q.text, answers: shuffled, image, vendorId };
+}
+
 function endGame(pin) {
   const g = games[pin];
   if (!g) return;
@@ -642,32 +670,6 @@ io.on('connection', (socket) => {
     g.grid[y][x] = team;
     g.teamScores[team]++;
     return true;
-  }
-
-  // Market Quest: serve a vendor-specific question
-  function nextQuestionForVendor(g, playerId, vendorId) {
-    const p = g.players[playerId];
-    const vendor = g.vendors && g.vendors.find((v) => v.id === vendorId);
-    if (!p || !vendor || vendor.vocabIdx < 0) return null;
-    const q = g.questions[vendor.vocabIdx];
-    if (!q) return null;
-    const shuffled = [...q.answers];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    const qid = `mq-${vendorId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const image = Images.urlForQuestion(q);
-    p.currentQ = {
-      qid,
-      correctIdx: shuffled.indexOf(q.correct),
-      text: q.text,
-      answers: shuffled,
-      image,
-      vendorId
-    };
-    p.lastQuestionAt = Date.now();
-    return { qid, text: q.text, answers: shuffled, image, vendorId };
   }
 
   socket.on('player:answer', ({ pin, qid, choiceIdx }) => {
