@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Flappy Dragon · Host</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Long+Cang&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+  <link rel="stylesheet" href="/css/flappy.css">
+</head>
+<body>
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+
+  <!-- LOBBY -->
+  <div id="screen-lobby" class="container">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div class="market-banner">🐲 Flappy Dragon 🛩</div>
+      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
+      <div class="pin-display" id="pin-display">····</div>
+      <div style="color:var(--ink-dim); font-size:0.9rem;">
+        Tus jugadores entran en <span id="join-url" style="color:var(--gold-glow); font-weight:800;">esta URL</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div style="font-size:2rem;">📚</div>
+        <div style="flex:1;">
+          <div style="font-size:0.75rem; color:var(--ink-dim); letter-spacing:0.15em; text-transform:uppercase;">Set Cargado</div>
+          <div id="set-title-display" style="font-weight:800; font-size:1.15rem;">…</div>
+          <div id="set-count-display" style="color:var(--ink-dim); font-size:0.85rem;">…</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="location.href='/games.html?setId=' + new URLSearchParams(location.search).get('setId')">Cambiar juego</button>
+      </div>
+      <div class="duration-control">
+        <span>⏱ Duración</span>
+        <input type="range" id="duration-slider" min="60" max="300" step="30" value="120">
+        <span class="duration-value" id="duration-value">2m</span>
+      </div>
+    </div>
+
+    <div class="host-grid">
+      <div class="team-panel team-red">
+        <div class="team-header">
+          <div class="team-mascot">🐲</div>
+          <div>
+            <div class="team-name">Equipo Rojo</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">紅龍</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-red"></div>
+      </div>
+      <div class="team-panel team-gold">
+        <div class="team-header">
+          <div class="team-mascot">🦅</div>
+          <div>
+            <div class="team-name">Equipo Dorado</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">金鷹</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-gold"></div>
+      </div>
+    </div>
+
+    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:12px;">
+      Toca el chip de un jugador para cambiar de equipo
+    </p>
+
+    <div class="controls-panel">
+      <div class="controls-row" style="justify-content:center;">
+        <button class="btn btn-ghost" id="balance-btn">⚖️ Equilibrar</button>
+        <button class="btn btn-jade" id="start-btn" disabled>▶️ ¡Despegar!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="screen-countdown" class="hidden countdown-overlay">
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <!-- ACTIVE — leaderboard view, since each player has their own world -->
+  <div id="screen-active" class="hidden fl-host-container">
+    <div class="sticky-pin">
+      <span class="sticky-pin-label">PIN</span>
+      <span class="sticky-pin-value" id="active-pin-display">····</span>
+    </div>
+    <div class="fl-topbar">
+      <div class="fl-team red">
+        <span class="fl-team-emoji">🐲</span>
+        <span class="fl-team-label">Rojo</span>
+        <span class="fl-team-score" id="score-red">0</span>
+      </div>
+      <div class="fl-time"><span id="timer-display">2:00</span></div>
+      <div class="fl-team gold">
+        <span class="fl-team-score" id="score-gold">0</span>
+        <span class="fl-team-label">Dorado</span>
+        <span class="fl-team-emoji">🦅</span>
+      </div>
+    </div>
+
+    <div class="fl-leaderboard-wrap">
+      <h2 style="font-family:'Cinzel',serif; font-size:1.2rem; letter-spacing:0.1em; margin-bottom:12px; text-align:center; color:var(--gold-glow);">🏆 Tabla de líderes en vivo</h2>
+      <div class="fl-leaderboard" id="fl-leaderboard"></div>
+    </div>
+
+    <div style="text-align:center; padding:8px;">
+      <button class="btn btn-ghost btn-sm" id="end-now-btn">🛑 Terminar ronda</button>
+    </div>
+  </div>
+
+  <!-- WIN -->
+  <div id="screen-win" class="hidden container">
+    <div class="win-screen">
+      <div id="win-emoji" style="font-size:7rem;">🎉</div>
+      <div class="winner-banner" id="win-banner">¡Equipo Rojo gana!</div>
+      <div class="final-scores">
+        <div><span class="red" id="final-red">0</span></div>
+        <div style="color:var(--ink-dim);">vs</div>
+        <div><span class="gold" id="final-gold">0</span></div>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Inicio</button>
+        <button class="btn btn-jade" id="play-again-btn">🔄 Otra ronda</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/host-flappy.js"></script>
+</body>
+</html>

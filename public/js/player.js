@@ -34,6 +34,14 @@
   let mqLastInputSent = 0;
   let mqRaf = null;
   let mqItemsCollected = 0;
+  // Flappy state
+  let flWorld = { w: 800, h: 480, pipeW: 80, pipeGap: 160, playerX: 180 };
+  let flMe = { y: 240, alive: true, score: 0 };
+  let flPipes = [];
+  let flScrollPhase = 0; // for parallax animation
+  let flRaf = null;
+  let flTapBound = false;
+  let flAssets = { bg: null, rockUp: null, rockDown: null, red: [], gold: [] };
 
   const $ = (id) => document.getElementById(id);
 
@@ -155,7 +163,10 @@
     const isRed = team === 'red';
     // Lobby title varies by game type
     let teamLabel, teamMascot;
-    if (gameType === 'market-quest') {
+    if (gameType === 'flappy') {
+      teamLabel = isRed ? 'Equipo Rojo 紅龍' : 'Equipo Dorado 金鷹';
+      teamMascot = isRed ? '🐲' : '🦅';
+    } else if (gameType === 'market-quest') {
       teamLabel = isRed ? 'Team Long 紅龍' : 'Team Shi 金獅';
       teamMascot = isRed ? '🐲' : '🦁';
     } else if (gameType === 'color-clash') {
@@ -195,6 +206,11 @@
       $('mq-player-tag').className = `mq-player-tag ${team}`;
       $('mq-player-tag').textContent = isRed ? '🐲 Long' : '🦁 Shi';
     }
+    // Flappy team tag
+    if ($('fl-player-tag')) {
+      $('fl-player-tag').className = `fl-player-tag ${team}`;
+      $('fl-player-tag').textContent = isRed ? '🐲 Rojo' : '🦅 Dorado';
+    }
   }
 
   socket.on('team-changed', ({ team: newTeam }) => {
@@ -226,6 +242,15 @@
         showScreen('mq-play');
         bindMqJoystick();
         startMqRender();
+      }, 3500);
+    }
+    // Flappy: after countdown, switch to canvas + tap-to-flap
+    if (gameType === 'flappy') {
+      setTimeout(() => {
+        showScreen('fl-play');
+        loadFlappyAssets();
+        bindFlTap();
+        startFlRender();
       }, 3500);
     }
     let n = 3;
@@ -293,7 +318,10 @@
     if (correct) {
       MochiSounds.correct();
       let happyMascot, sub;
-      if (gameType === 'market-quest') {
+      if (gameType === 'flappy') {
+        happyMascot = team === 'red' ? '🐲' : '🦅';
+        sub = '¡Revivido! Sigue volando ⚡';
+      } else if (gameType === 'market-quest') {
         const vendor = mqVendors.find((v) => v.id === vendorId);
         happyMascot = vendor ? vendor.icon : '🛍';
         sub = '¡Puesto reclamado! +1 producto';
@@ -318,7 +346,9 @@
       burstSparkles('✨', 12);
       if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
       setTimeout(() => {
-        if (gameType === 'market-quest') {
+        if (gameType === 'flappy') {
+          showScreen('fl-play');
+        } else if (gameType === 'market-quest') {
           showScreen('mq-play');
           if ($('mq-player-items')) $('mq-player-items').textContent = mqItemsCollected;
         } else if (gameType === 'color-clash') {
@@ -355,6 +385,8 @@
           showScreen('mq-play');
         }, 1400);
       }
+      // Flappy: stays dead; server will auto-send next revive question via setTimeout
+      // (no screen change needed — the question screen will re-appear automatically)
     }
   });
 
@@ -799,6 +831,181 @@
     }
   }
 
+  // === FLAPPY ===
+  socket.on('fl:init', (data) => {
+    flWorld.w = data.worldW;
+    flWorld.h = data.worldH;
+    flWorld.pipeW = data.pipeW;
+    flWorld.pipeGap = data.pipeGap;
+    flWorld.playerX = data.playerX;
+  });
+
+  socket.on('fl:tick', ({ me, pipes, teamScores }) => {
+    if (me) {
+      flMe.y = me.y;
+      flMe.alive = me.alive;
+      flMe.score = me.score;
+    }
+    if (pipes) flPipes = pipes;
+    if ($('fl-player-score')) $('fl-player-score').textContent = flMe.score;
+  });
+
+  socket.on('fl:died', ({ score }) => {
+    MochiSounds.wrong();
+    flMe.alive = false;
+    flMe.score = score;
+    if (navigator.vibrate) navigator.vibrate([60, 40, 100]);
+  });
+
+  socket.on('fl:revived', () => {
+    MochiSounds.correct();
+    flMe.alive = true;
+    if (navigator.vibrate) navigator.vibrate(30);
+  });
+
+  function loadFlappyAssets() {
+    if (flAssets.bg) return; // already loaded
+    function loadImg(src) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+      });
+    }
+    Promise.all([
+      loadImg('/assets/flappy/background.png'),
+      loadImg('/assets/flappy/rock-up.png'),
+      loadImg('/assets/flappy/rock-down.png'),
+      loadImg('/assets/flappy/red-1.png'),
+      loadImg('/assets/flappy/red-2.png'),
+      loadImg('/assets/flappy/red-3.png'),
+      loadImg('/assets/flappy/gold-1.png'),
+      loadImg('/assets/flappy/gold-2.png'),
+      loadImg('/assets/flappy/gold-3.png')
+    ]).then(([bg, ru, rd, r1, r2, r3, g1, g2, g3]) => {
+      flAssets.bg = bg;
+      flAssets.rockUp = ru;
+      flAssets.rockDown = rd;
+      flAssets.red = [r1, r2, r3].filter(Boolean);
+      flAssets.gold = [g1, g2, g3].filter(Boolean);
+    });
+  }
+
+  function bindFlTap() {
+    if (flTapBound) return;
+    flTapBound = true;
+    const surface = $('screen-fl-play');
+    const handleTap = (e) => {
+      e.preventDefault();
+      if (!flMe.alive) return;
+      MochiSounds.tap();
+      if (navigator.vibrate) navigator.vibrate(8);
+      socket.emit('player:fl-flap', { pin });
+      const hint = $('fl-tap-hint');
+      if (hint) hint.classList.add('hidden-hint');
+    };
+    surface.addEventListener('pointerdown', handleTap);
+    document.addEventListener('keydown', (e) => {
+      if (gameType !== 'flappy') return;
+      if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') {
+        handleTap(e);
+      }
+    });
+  }
+
+  function startFlRender() {
+    cancelAnimationFrame(flRaf);
+    function frame(now) {
+      const canvas = $('fl-canvas');
+      if (!canvas) { flRaf = requestAnimationFrame(frame); return; }
+      const ctx = canvas.getContext('2d');
+      const cssW = canvas.clientWidth;
+      const cssH = canvas.clientHeight;
+      if (canvas.width !== cssW || canvas.height !== cssH) {
+        canvas.width = cssW;
+        canvas.height = cssH;
+      }
+      const W = canvas.width;
+      const H = canvas.height;
+      const sx = W / flWorld.w;
+      const sy = H / flWorld.h;
+
+      // Background — tile horizontally for parallax
+      if (flAssets.bg) {
+        ctx.imageSmoothingEnabled = false;
+        const bgW = flAssets.bg.width * sy / (flAssets.bg.height / flWorld.h);
+        flScrollPhase = (flScrollPhase + 0.5) % bgW;
+        ctx.drawImage(flAssets.bg, -flScrollPhase, 0, bgW, H);
+        ctx.drawImage(flAssets.bg, bgW - flScrollPhase, 0, bgW, H);
+      } else {
+        const grad = ctx.createLinearGradient(0, 0, 0, H);
+        grad.addColorStop(0, '#4ec9f5');
+        grad.addColorStop(1, '#c8e7f5');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // Pipes
+      const halfGap = flWorld.pipeGap / 2;
+      flPipes.forEach((pipe) => {
+        const px = pipe.x * sx;
+        const pw = flWorld.pipeW * sx;
+        const gy = pipe.g * sy;
+        if (flAssets.rockUp && flAssets.rockDown) {
+          ctx.imageSmoothingEnabled = false;
+          const rockH = (flAssets.rockDown.height * pw) / flAssets.rockDown.width;
+          // top pipe (rockDown points down from ceiling)
+          ctx.drawImage(flAssets.rockDown, px, gy - halfGap * sy - rockH, pw, rockH);
+          // bottom pipe
+          ctx.drawImage(flAssets.rockUp, px, gy + halfGap * sy, pw, rockH);
+        } else {
+          ctx.fillStyle = '#2d8a3a';
+          ctx.fillRect(px, 0, pw, gy - halfGap * sy);
+          ctx.fillRect(px, gy + halfGap * sy, pw, H);
+        }
+      });
+
+      // Player plane
+      const planeImgs = team === 'red' ? flAssets.red : flAssets.gold;
+      const planeFrameIdx = Math.floor((now / 100) % Math.max(1, planeImgs.length));
+      const img = planeImgs[planeFrameIdx];
+      const ppx = flWorld.playerX * sx;
+      const ppy = flMe.y * sy;
+      const planeW = 60 * sx;
+      const planeH = 50 * sy;
+      ctx.save();
+      ctx.translate(ppx, ppy);
+      // Tilt based on velocity (use approximated from flapping)
+      ctx.rotate((flMe.alive ? -0.2 : 0.6));
+      if (img) {
+        ctx.drawImage(img, -planeW / 2, -planeH / 2, planeW, planeH);
+      } else {
+        // Fallback dragon emoji
+        ctx.font = `${planeH}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(team === 'red' ? '🐲' : '🦅', 0, 0);
+      }
+      ctx.restore();
+
+      // Dead overlay
+      if (!flMe.alive) {
+        ctx.fillStyle = 'rgba(139, 26, 35, 0.4)';
+        ctx.fillRect(0, 0, W, H);
+        ctx.font = 'bold 28px Nunito, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fff';
+        ctx.fillText('¡Estrellaste!', W / 2, H / 2 - 20);
+        ctx.font = '18px Nunito, sans-serif';
+        ctx.fillText('Responde para revivir →', W / 2, H / 2 + 14);
+      }
+
+      flRaf = requestAnimationFrame(frame);
+    }
+    flRaf = requestAnimationFrame(frame);
+  }
+
   // === COLOR CLASH ===
   socket.on('cc:energy', ({ energy }) => {
     ccEnergy = energy;
@@ -1152,6 +1359,7 @@
     if (mashTimerInterval) clearInterval(mashTimerInterval);
     if (csWalkTimerInterval) clearInterval(csWalkTimerInterval);
     if (mqRaf) { cancelAnimationFrame(mqRaf); mqRaf = null; }
+    if (flRaf) { cancelAnimationFrame(flRaf); flRaf = null; }
     if (mashTapHandler) {
       $('mash-button').removeEventListener('pointerdown', mashTapHandler);
       mashTapHandler = null;
@@ -1197,7 +1405,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'cs-walk', 'cc-play', 'mq-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

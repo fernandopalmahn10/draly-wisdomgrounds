@@ -1,0 +1,177 @@
+/* ============================================
+   FLAPPY DRAGON — Canvas-based Flappy Bird with vocab revives
+   ============================================ */
+
+/* === HOST view === */
+.fl-host-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 6px 10px;
+  background:
+    linear-gradient(180deg, #4ec9f5 0%, #82d4f5 60%, #c8e7f5 100%);
+}
+
+.fl-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 50px;
+  margin-bottom: 6px;
+  background: rgba(13, 14, 26, 0.7);
+  border-radius: 12px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 213, 122, 0.3);
+}
+.fl-team {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+.fl-team.gold { justify-content: flex-end; }
+.fl-team.red .fl-team-label { color: var(--red-glow); }
+.fl-team.gold .fl-team-label { color: var(--gold-glow); }
+.fl-team-emoji { font-size: 1.8rem; line-height: 1; }
+.fl-team-label {
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  font-size: 1rem;
+}
+.fl-team-score {
+  font-size: 2rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  min-width: 50px;
+  text-align: center;
+  text-shadow: 0 0 16px currentColor;
+}
+.fl-team.red .fl-team-score { color: var(--red-glow); }
+.fl-team.gold .fl-team-score { color: var(--gold-glow); }
+
+.fl-time {
+  font-size: 1.4rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  min-width: 80px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px 12px;
+  border-radius: 8px;
+  color: var(--ink);
+}
+.fl-time.urgent {
+  color: var(--red-glow);
+  animation: urgentPulse 0.5s ease-in-out infinite;
+}
+
+.fl-leaderboard-wrap {
+  flex: 1;
+  background: rgba(13, 14, 26, 0.85);
+  border: 2px solid rgba(255, 213, 122, 0.3);
+  border-radius: 14px;
+  padding: 16px;
+  overflow-y: auto;
+}
+.fl-leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.fl-lb-row {
+  display: grid;
+  grid-template-columns: 50px 40px 1fr 40px 80px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(35, 39, 68, 0.7);
+  border-radius: 10px;
+  font-weight: 700;
+  transition: all 0.3s;
+}
+.fl-lb-row.red { border-left: 4px solid var(--red); }
+.fl-lb-row.gold { border-left: 4px solid var(--gold); }
+.fl-lb-row.dead { opacity: 0.55; }
+.fl-lb-rank { font-size: 1.3rem; }
+.fl-lb-plane { font-size: 1.4rem; }
+.fl-lb-name { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-lb-status { font-size: 1.3rem; text-align: center; }
+.fl-lb-score {
+  font-size: 1.6rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--gold-glow);
+  text-shadow: 0 0 10px currentColor;
+}
+
+/* === PLAYER view === */
+.fl-player-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  padding: max(8px, env(safe-area-inset-top)) 0 max(8px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, #4ec9f5 0%, #82d4f5 60%, #c8e7f5 100%);
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  z-index: 100;
+}
+
+.fl-player-hud {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 14px;
+  background: rgba(13, 14, 26, 0.85);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 213, 122, 0.3);
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin: 0 12px 6px;
+}
+.fl-player-tag.red { color: var(--red-glow); }
+.fl-player-tag.gold { color: var(--gold-glow); }
+.fl-player-score {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  background: rgba(255, 213, 122, 0.15);
+  padding: 2px 12px;
+  border-radius: 999px;
+  color: var(--gold-glow);
+}
+
+#fl-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: linear-gradient(180deg, #4ec9f5 0%, #82d4f5 60%, #c8e7f5 100%);
+  touch-action: none;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.fl-tap-hint {
+  text-align: center;
+  padding: 8px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: rgba(13, 14, 26, 0.7);
+  letter-spacing: 0.04em;
+  animation: tapHintPulse 1.4s ease-in-out infinite;
+}
+@keyframes tapHintPulse {
+  0%, 100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
+.fl-tap-hint.hidden-hint { opacity: 0; }
