@@ -76,9 +76,26 @@ const COUNTDOWN_MS = 3500;
 // Color Splash — bigger map + wide brush stroke (paints a cross pattern per step)
 const CS_GRID_W = 30;
 const CS_GRID_H = 18;
-const CS_WALK_DURATION_MS = 5500;  // slightly longer burst
-const CS_MOVE_COOLDOWN_MS = 130;   // ~7 steps/sec max
-const CS_WRONG_AUTO_PAINTS = 5;    // wrong answer = enemy splashes 5 cells
+const CS_WALK_DURATION_MS = 5500;   // walk-window burst
+const CS_MOVE_COOLDOWN_MS = 100;    // ~10 steps/sec — even across phones/tablets
+const CS_WRONG_AUTO_PAINTS = 5;     // wrong answer = enemy splashes 5 cells
+
+// Pickups — school items scattered on the rice paper
+const CS_PICKUP_RADIUS = 1;         // grid cells of detection (adjacent or on)
+const CS_PICKUP_BONUS_RADIUS = 1;   // 3x3 splat around the pickup
+const CS_PICKUP_RESPAWN_MS = 15000; // 15-sec respawn
+const CS_PICKUPS = [
+  { id: 0,  x: 5,  y: 3,  icon: '📚' },
+  { id: 1,  x: 15, y: 2,  icon: '📜' },
+  { id: 2,  x: 25, y: 3,  icon: '🍎' },
+  { id: 3,  x: 10, y: 8,  icon: '✏️' },
+  { id: 4,  x: 20, y: 8,  icon: '🖌' },
+  { id: 5,  x: 5,  y: 14, icon: '📕' },
+  { id: 6,  x: 15, y: 15, icon: '📖' },
+  { id: 7,  x: 25, y: 14, icon: '📒' },
+  { id: 8,  x: 2,  y: 9,  icon: '🧧' },
+  { id: 9,  x: 27, y: 9,  icon: '📃' }
+];
 
 // Color Clash (market theme, continuous movement, energy-based)
 // Tuned for "answer questions often" — players burn through energy fast
@@ -466,6 +483,10 @@ io.on('connection', (socket) => {
           p.y = pos.y;
           if (g.gameType === 'color-clash') p.energy = CC_START_ENERGY;
         });
+        // Color Splash: initialize school pickups
+        if (g.gameType === 'color-splash') {
+          g.pickups = CS_PICKUPS.map((pk) => ({ ...pk, available: true, respawnAt: 0 }));
+        }
         const playersInit = {};
         Object.entries(g.players).forEach(([id, p]) => {
           playersInit[id] = { name: p.name, team: p.team, x: p.x, y: p.y };
@@ -474,7 +495,8 @@ io.on('connection', (socket) => {
           gridW: w,
           gridH: h,
           players: playersInit,
-          teamScores: g.teamScores
+          teamScores: g.teamScores,
+          pickups: g.pickups || null
         });
       }
 
@@ -708,7 +730,8 @@ io.on('connection', (socket) => {
           gridW: w,
           gridH: h,
           players: playersInit,
-          teamScores: g.teamScores
+          teamScores: g.teamScores,
+          pickups: g.pickups || null
         });
         // Also send a "paint" event with all currently-painted cells so the rejoiner sees the state
         const paintedCells = [];
@@ -1055,6 +1078,37 @@ io.on('connection', (socket) => {
       paint: paintedCells.length ? paintedCells : null,
       teamScores: g.teamScores
     });
+
+    // Pickup collision check — within radius of any available pickup
+    if (g.pickups) {
+      const nowMs = Date.now();
+      for (const pickup of g.pickups) {
+        if (!pickup.available) continue;
+        if (Math.abs(p.x - pickup.x) > CS_PICKUP_RADIUS) continue;
+        if (Math.abs(p.y - pickup.y) > CS_PICKUP_RADIUS) continue;
+        // Grab!
+        pickup.available = false;
+        pickup.respawnAt = nowMs + CS_PICKUP_RESPAWN_MS;
+        // 3x3 paint splat around the pickup
+        const bonus = [];
+        for (let by = pickup.y - CS_PICKUP_BONUS_RADIUS; by <= pickup.y + CS_PICKUP_BONUS_RADIUS; by++) {
+          for (let bx = pickup.x - CS_PICKUP_BONUS_RADIUS; bx <= pickup.x + CS_PICKUP_BONUS_RADIUS; bx++) {
+            if (csPaintCell(g, bx, by, p.team)) bonus.push({ x: bx, y: by, team: p.team });
+          }
+        }
+        p.score += bonus.length;
+        io.to(pin).emit('cs:pickup-grabbed', {
+          id: pickup.id,
+          icon: pickup.icon,
+          x: pickup.x, y: pickup.y,
+          team: p.team,
+          playerName: p.name,
+          bonusCells: bonus,
+          teamScores: g.teamScores
+        });
+        break; // grab one per step
+      }
+    }
   });
 
   socket.on('player:tap', ({ pin }) => {
@@ -1362,6 +1416,21 @@ function sendReviveQuestion(g, pid) {
   const q = nextQuestionFor(g, pid);
   if (q) io.to(pid).emit('question', q);
 }
+
+// Color Splash pickup respawn loop — 1Hz is plenty for 15-sec respawns
+setInterval(() => {
+  const now = Date.now();
+  Object.entries(games).forEach(([pin, g]) => {
+    if (g.gameType !== 'color-splash' || g.state !== 'active') return;
+    if (!g.pickups) return;
+    g.pickups.forEach((pickup) => {
+      if (!pickup.available && pickup.respawnAt && now >= pickup.respawnAt) {
+        pickup.available = true;
+        io.to(pin).emit('cs:pickup-respawn', { id: pickup.id });
+      }
+    });
+  });
+}, 1000);
 
 // Every 500ms, broadcast a slim leaderboard payload to flappy games (for the host UI)
 setInterval(() => {
