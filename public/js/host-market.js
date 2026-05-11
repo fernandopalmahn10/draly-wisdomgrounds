@@ -294,6 +294,20 @@
     // Stall base — wooden table
     ctx.save();
     const stallW = 90, stallH = 60;
+
+    // Detection-radius aura on UNCLAIMED vendors so players see where to go
+    if (!v.claimedBy) {
+      const pulse = 0.55 + Math.sin(t * 2 + v.id) * 0.15;
+      const grad = ctx.createRadialGradient(x, y + 12, 8, x, y + 12, 140);
+      grad.addColorStop(0, `rgba(255, 220, 130, ${0.18 * pulse})`);
+      grad.addColorStop(0.5, `rgba(255, 200, 100, ${0.12 * pulse})`);
+      grad.addColorStop(1, 'rgba(255, 213, 122, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y + 12, 140, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.beginPath();

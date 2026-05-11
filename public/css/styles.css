@@ -727,7 +727,7 @@ body::before {
   cursor: default;
 }
 .mash-button.idle::after {
-  content: 'WAITING...';
+  content: 'ESPERANDO…';
   position: absolute;
   bottom: 30%;
   left: 50%;
