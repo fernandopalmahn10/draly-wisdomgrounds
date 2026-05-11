@@ -97,6 +97,20 @@ const MQ_WORLD_H = 900;    // game world height
 const MQ_PLAYER_SPEED = 4; // pixels per server tick
 const MQ_VENDOR_RADIUS = 130; // collision radius for vendor interaction (forgiving)
 const MQ_TICK_MS = 50;       // 20Hz server tick
+
+// Flappy Dragon — each player has their own parallel-play world.
+// Tap to flap, gravity drops you, scrolling pipes, die = answer-to-revive.
+const FL_WORLD_W = 800;
+const FL_WORLD_H = 480;
+const FL_GRAVITY = 0.5;      // px/tick² (downward acceleration)
+const FL_FLAP_VY = -7.5;     // upward velocity on tap
+const FL_SCROLL_SPEED = 3;   // px/tick (~60 px/sec)
+const FL_PIPE_GAP = 160;     // vertical gap between top + bottom rocks
+const FL_PIPE_W = 80;        // pipe width
+const FL_PIPE_SPACING = 280; // horizontal spacing between pipe pairs
+const FL_PLAYER_X = 180;     // fixed x position of the player's plane on screen
+const FL_PLAYER_R = 28;      // collision radius
+const FL_TICK_MS = 33;       // ~30Hz tick
 // Vendor positions. Each vendor occupies a spot. The mapping to vocab question
 // happens at game start based on the loaded set. food sprite index from food-tiles.png
 const MQ_VENDORS = [
@@ -167,6 +181,21 @@ function nextQuestionFor(game, playerId) {
   return { qid, text: q.text, answers: shuffled, image };
 }
 
+// Flappy: spawn the initial run of pipes far enough ahead that the player can ramp up
+function generateInitialPipes() {
+  const pipes = [];
+  let x = FL_WORLD_W + 100; // first pipe just past the right edge
+  for (let i = 0; i < 4; i++) {
+    pipes.push({
+      x,
+      gapY: 100 + Math.random() * (FL_WORLD_H - 200), // gap center between 100 and worldH-100
+      scored: false
+    });
+    x += FL_PIPE_SPACING;
+  }
+  return pipes;
+}
+
 // Market Quest: serve a question tied to a specific vendor (module scope so the
 // global tick loop can call it — it was previously inside the connection handler,
 // causing ReferenceError crashes on vendor collision).
@@ -233,9 +262,10 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
+      type === 'flappy'       ? 120 :
       type === 'market-quest' ? 240 :
       type === 'color-clash'  ? 180 :
       type === 'color-splash' ? 90 :
@@ -402,6 +432,33 @@ io.on('connection', (socket) => {
         });
       }
 
+      // Flappy: reset each player's bird/score/pipes and send init
+      if (g.gameType === 'flappy') {
+        Object.values(g.players).forEach((p) => {
+          p.flY = FL_WORLD_H / 2;
+          p.flVy = 0;
+          p.flScore = 0;
+          p.flAlive = true;
+          p.flPipes = generateInitialPipes();
+          p.flPipeIdx = p.flPipes.length;
+          p.flScrollX = 0;
+          p.flDeathReason = null;
+        });
+        io.to(pin).emit('fl:init', {
+          worldW: FL_WORLD_W,
+          worldH: FL_WORLD_H,
+          pipeW: FL_PIPE_W,
+          pipeGap: FL_PIPE_GAP,
+          playerX: FL_PLAYER_X,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, pl]) => [id, {
+              name: pl.name, team: pl.team, y: pl.flY, score: 0, alive: true
+            }])
+          ),
+          teamScores: g.teamScores
+        });
+      }
+
       // Market Quest: assign vendor → vocab mapping, reset everything, send init
       if (g.gameType === 'market-quest') {
         // Shuffle vocab indexes and assign to vendors
@@ -433,8 +490,10 @@ io.on('connection', (socket) => {
         });
       }
       broadcast(pin);
-      // Mochi Mash + Color Splash auto-deal first question; Color Clash players request via button
-      if (g.gameType !== 'color-clash') {
+      // Mochi Mash + Color Splash auto-deal first question.
+      // Color Clash → button-driven; Market Quest → vendor-driven; Flappy → death-driven.
+      const skipAutoPush = ['color-clash', 'market-quest', 'flappy'].includes(g.gameType);
+      if (!skipAutoPush) {
         Object.keys(g.players).forEach((pid) => {
           const q = nextQuestionFor(g, pid);
           if (q) io.to(pid).emit('question', q);
@@ -536,6 +595,16 @@ io.on('connection', (socket) => {
         player.dir = team === 'red' ? 'right' : 'left';
         player.moving = false;
         player.vendorCooldowns = {}; // vendor id → unlock timestamp
+      } else if (g.gameType === 'flappy') {
+        // Each player has their own scrolling world. Server-side state per player:
+        player.flY = FL_WORLD_H / 2;
+        player.flVy = 0;
+        player.flScore = 0;
+        player.flAlive = true;
+        player.flPipes = [];     // queue of pipes {x, gapY}
+        player.flPipeIdx = 0;    // next pipe id counter (for unique keys)
+        player.flScrollX = 0;    // total distance scrolled (for parallax + score)
+        player.flDeathReason = null;
       }
       g.players[socket.id] = player;
       g.feed.push({ type: 'join', name: cleanName, team: player.team, t: Date.now() });
@@ -604,8 +673,8 @@ io.on('connection', (socket) => {
         }
       }
       // Send an active question (preserve their currentQ if rejoining)
-      // Market Quest doesn't auto-push: players get questions by approaching vendors
-      if (g.gameType !== 'market-quest') {
+      // Market Quest + Flappy don't auto-push: market = vendor collision, flappy = on death
+      if (g.gameType !== 'market-quest' && g.gameType !== 'flappy') {
         if (player.currentQ) {
           io.to(socket.id).emit('question', {
             qid: player.currentQ.qid,
@@ -681,6 +750,31 @@ io.on('connection', (socket) => {
     const correct = cqData.correctIdx === choiceIdx;
     const correctText = cqData.answers[cqData.correctIdx];
     p.currentQ = null;
+
+    if (g.gameType === 'flappy') {
+      if (correct) {
+        // Revive: full health, mid-screen, fresh pipes
+        p.flY = FL_WORLD_H / 2;
+        p.flVy = 0;
+        p.flAlive = true;
+        p.flDeathReason = null;
+        // Clear pipes that would immediately kill them; respawn ahead
+        p.flPipes = generateInitialPipes();
+        io.to(socket.id).emit('answer-result', { correct: true, correctText, revived: true });
+        io.to(socket.id).emit('fl:revived');
+      } else {
+        // Wrong: stay dead, get another question after a short delay
+        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+        setTimeout(() => {
+          if (!games[pin] || games[pin].state !== 'active') return;
+          if (g.players[socket.id] && !g.players[socket.id].flAlive) {
+            sendReviveQuestion(g, socket.id);
+          }
+        }, 1800);
+      }
+      broadcast(pin);
+      return;
+    }
 
     if (g.gameType === 'market-quest') {
       const vendorId = cqData.vendorId;
@@ -831,6 +925,15 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Flappy: tap to flap (gives upward velocity)
+  socket.on('player:fl-flap', ({ pin }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'flappy' || g.state !== 'active') return;
+    const p = g.players[socket.id];
+    if (!p || !p.flAlive) return;
+    p.flVy = FL_FLAP_VY;
+  });
+
   // Market Quest: player sends their movement input state (held keys/joystick)
   socket.on('player:mq-input', ({ pin, left, right, up, down }) => {
     const g = games[pin];
@@ -975,6 +1078,7 @@ setInterval(() => {
   Object.entries(games).forEach(([pin, g]) => {
     if (g.state !== 'active') return;
     if (g.gameType === 'market-quest') return; // vendor-driven, no watchdog needed
+    if (g.gameType === 'flappy') return;       // revive-driven, no watchdog
     Object.entries(g.players).forEach(([pid, p]) => {
       const inAction = p.mashUntil > now || p.walkUntil > now || p.currentQ;
       if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {
@@ -1047,6 +1151,119 @@ setInterval(() => {
     io.to(pin).emit('mq:tick', { p: positions });
   });
 }, MQ_TICK_MS);
+
+// === Flappy ~30Hz physics tick ===
+// Each player has independent state: gravity, scrolling pipes, collisions.
+// When they die, server sends them a question; on correct answer they revive.
+setInterval(() => {
+  Object.entries(games).forEach(([pin, g]) => {
+    if (g.gameType !== 'flappy' || g.state !== 'active') return;
+
+    const updates = {};
+    Object.entries(g.players).forEach(([pid, p]) => {
+      if (!p.flAlive) {
+        // Dead — just report position so client renders frozen plane
+        updates[pid] = { y: Math.round(p.flY), s: p.flScore, a: 0 };
+        return;
+      }
+      // Physics
+      p.flVy += FL_GRAVITY;
+      p.flY += p.flVy;
+      p.flScrollX += FL_SCROLL_SPEED;
+
+      // Floor/ceiling = instant death
+      if (p.flY < 20 || p.flY > FL_WORLD_H - 20) {
+        p.flAlive = false;
+        p.flDeathReason = p.flY < 20 ? 'ceiling' : 'floor';
+        io.to(pid).emit('fl:died', { reason: p.flDeathReason, score: p.flScore });
+        // Send a question to revive
+        sendReviveQuestion(g, pid);
+        updates[pid] = { y: Math.round(p.flY), s: p.flScore, a: 0 };
+        return;
+      }
+
+      // Scroll pipes left
+      p.flPipes.forEach((pipe) => { pipe.x -= FL_SCROLL_SPEED; });
+      // Remove pipes that left the screen, add new ones on the right
+      p.flPipes = p.flPipes.filter((pipe) => pipe.x > -FL_PIPE_W - 50);
+      while (p.flPipes.length < 4) {
+        const lastX = p.flPipes.length > 0
+          ? Math.max(...p.flPipes.map((pp) => pp.x))
+          : FL_WORLD_W;
+        p.flPipes.push({
+          x: lastX + FL_PIPE_SPACING,
+          gapY: 100 + Math.random() * (FL_WORLD_H - 200),
+          scored: false
+        });
+      }
+
+      // Collision check + score pipes the player has passed
+      const px = FL_PLAYER_X;
+      for (const pipe of p.flPipes) {
+        // Score when pipe has fully passed player's x
+        if (!pipe.scored && pipe.x + FL_PIPE_W < px - FL_PLAYER_R) {
+          pipe.scored = true;
+          p.flScore++;
+          g.teamScores[p.team]++;
+        }
+        // Collision if player x overlaps pipe x range AND y is outside gap
+        if (px + FL_PLAYER_R > pipe.x && px - FL_PLAYER_R < pipe.x + FL_PIPE_W) {
+          const gapTop = pipe.gapY - FL_PIPE_GAP / 2;
+          const gapBot = pipe.gapY + FL_PIPE_GAP / 2;
+          if (p.flY - FL_PLAYER_R < gapTop || p.flY + FL_PLAYER_R > gapBot) {
+            p.flAlive = false;
+            p.flDeathReason = 'pipe';
+            io.to(pid).emit('fl:died', { reason: 'pipe', score: p.flScore });
+            sendReviveQuestion(g, pid);
+            break;
+          }
+        }
+      }
+
+      updates[pid] = { y: Math.round(p.flY), s: p.flScore, a: 1 };
+    });
+
+    // Broadcast everyone's positions + scores + pipes-relative-to-each-player
+    // For efficiency: send pipes only to each individual player (they're per-player)
+    Object.entries(g.players).forEach(([pid, p]) => {
+      io.to(pid).emit('fl:tick', {
+        me: {
+          y: Math.round(p.flY),
+          alive: p.flAlive,
+          score: p.flScore
+        },
+        pipes: p.flPipes.map((pp) => ({ x: Math.round(pp.x), g: Math.round(pp.gapY) })),
+        teamScores: g.teamScores,
+        // Compact summary of all players (for leaderboard on host + teammate flags)
+        all: updates
+      });
+    });
+  });
+}, FL_TICK_MS);
+
+// Helper: send a revive question to a player who just died in Flappy
+function sendReviveQuestion(g, pid) {
+  const q = nextQuestionFor(g, pid);
+  if (q) io.to(pid).emit('question', q);
+}
+
+// Every 500ms, broadcast a slim leaderboard payload to flappy games (for the host UI)
+setInterval(() => {
+  Object.entries(games).forEach(([pin, g]) => {
+    if (g.gameType !== 'flappy' || g.state !== 'active') return;
+    const players = {};
+    Object.entries(g.players).forEach(([id, p]) => {
+      players[id] = {
+        name: p.name,
+        team: p.team,
+        y: Math.round(p.flY || 0),
+        score: p.flScore || 0,
+        alive: !!p.flAlive
+      };
+    });
+    io.to(pin).emit('fl:scores', { teamScores: g.teamScores, players });
+  });
+}, 500);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

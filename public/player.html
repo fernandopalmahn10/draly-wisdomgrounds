@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="/css/color-splash.css">
   <link rel="stylesheet" href="/css/color-clash.css">
   <link rel="stylesheet" href="/css/market-quest.css">
+  <link rel="stylesheet" href="/css/flappy.css">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -71,6 +72,16 @@
   <!-- RESULT (between question and mash) -->
   <div id="screen-result" class="hidden player-screen">
     <div class="result-feedback" id="result-feedback"></div>
+  </div>
+
+  <!-- FLAPPY DRAGON PLAYER SCREEN — full-canvas tap-to-flap -->
+  <div id="screen-fl-play" class="hidden fl-player-screen">
+    <div class="fl-player-hud">
+      <span class="fl-player-tag" id="fl-player-tag">🐲 Rojo</span>
+      <span class="fl-player-score">🏆 <span id="fl-player-score">0</span></span>
+    </div>
+    <canvas id="fl-canvas" width="800" height="480"></canvas>
+    <div class="fl-tap-hint" id="fl-tap-hint">Toca la pantalla para volar</div>
   </div>
 
   <!-- MARKET QUEST PLAYER SCREEN — joystick + mini-map -->
