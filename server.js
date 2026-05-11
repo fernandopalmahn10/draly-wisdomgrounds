@@ -1128,6 +1128,13 @@ setInterval(() => {
         p.moving = false;
       }
 
+      // Stale-question cleanup: if a player has had a question hanging for >10 seconds
+      // without responding (e.g. lost it due to client race condition, network drop, etc.),
+      // clear it so they can trigger fresh ones.
+      if (p.currentQ && p.lastQuestionAt && now - p.lastQuestionAt > 10000) {
+        p.currentQ = null;
+      }
+
       // Vendor collision check — auto-trigger quiz if near unclaimed vendor
       if (!p.currentQ) {
         for (const v of g.vendors) {

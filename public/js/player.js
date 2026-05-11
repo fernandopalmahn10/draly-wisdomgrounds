@@ -200,13 +200,24 @@
     };
     $('lobby-flappy-best').textContent = state.best;
 
+    // Tuning: easier than classic Flappy — gentler gravity, bigger gap, slower scroll
+    const TUNING = {
+      gravity: 0.28,        // was 0.35 — slower fall
+      flapVy: -5.2,          // was -5.5
+      scrollSpeed: 1.35,    // was 1.6 — slower pipes
+      pipeGapHalf: 70,      // was 50 (so total gap is 140 instead of 100)
+      pipeSpacing: 200,     // was 170
+      playerR: 16           // was 18
+    };
+
     function newPipe(x) {
-      return { x, gap: 90 + Math.random() * (H - 180), scored: false };
+      // Keep gap center within safe vertical range
+      return { x, gap: 80 + Math.random() * (H - 160), scored: false };
     }
     function reset() {
       state.y = H / 2;
       state.vy = 0;
-      state.pipes = [newPipe(W + 50), newPipe(W + 220), newPipe(W + 390)];
+      state.pipes = [newPipe(W + 80), newPipe(W + 80 + TUNING.pipeSpacing), newPipe(W + 80 + TUNING.pipeSpacing * 2)];
       state.alive = true;
       state.score = 0;
       state.started = false;
@@ -216,38 +227,48 @@
     function flap() {
       if (!state.alive) { reset(); return; }
       if (!state.started) state.started = true;
-      state.vy = -5.5;
+      state.vy = TUNING.flapVy;
+      // Sound: tap/whoosh
+      if (window.MochiSounds) MochiSounds.tap();
     }
     canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); flap(); });
 
     function tick(now) {
       if (state.started && state.alive) {
-        state.vy += 0.35;
+        state.vy += TUNING.gravity;
         state.y += state.vy;
-        state.scrollX += 1.6;
+        state.scrollX += TUNING.scrollSpeed;
 
-        state.pipes.forEach((p) => p.x -= 1.6);
+        state.pipes.forEach((p) => p.x -= TUNING.scrollSpeed);
         state.pipes = state.pipes.filter((p) => p.x > -80);
         while (state.pipes.length < 3) {
           const lastX = Math.max(...state.pipes.map((p) => p.x), W);
-          state.pipes.push(newPipe(lastX + 170));
+          state.pipes.push(newPipe(lastX + TUNING.pipeSpacing));
         }
 
-        if (state.y < 18 || state.y > H - 18) state.alive = false;
+        if (state.y < TUNING.playerR || state.y > H - TUNING.playerR) {
+          if (state.alive && window.MochiSounds) MochiSounds.wrong();
+          state.alive = false;
+        }
 
         for (const p of state.pipes) {
-          if (!p.scored && p.x + 60 < state.x - 18) {
+          if (!p.scored && p.x + 60 < state.x - TUNING.playerR) {
             p.scored = true; state.score++;
+            if (window.MochiSounds) MochiSounds.tick();
             if (state.score > state.best) {
               state.best = state.score;
               localStorage.setItem('dralyFlappyBest', String(state.best));
+              if (window.MochiSounds) MochiSounds.combo();
             }
             $('lobby-flappy-best').textContent = state.best;
           }
-          if (state.x + 18 > p.x && state.x - 18 < p.x + 60) {
-            const top = p.gap - 50;
-            const bot = p.gap + 50;
-            if (state.y - 18 < top || state.y + 18 > bot) state.alive = false;
+          if (state.x + TUNING.playerR > p.x && state.x - TUNING.playerR < p.x + 60) {
+            const top = p.gap - TUNING.pipeGapHalf;
+            const bot = p.gap + TUNING.pipeGapHalf;
+            if (state.y - TUNING.playerR < top || state.y + TUNING.playerR > bot) {
+              if (state.alive && window.MochiSounds) MochiSounds.wrong();
+              state.alive = false;
+            }
           }
         }
       }
@@ -266,14 +287,14 @@
       }
 
       state.pipes.forEach((p) => {
-        const rockH = 200;
+        const rockH = 220;
         if (assets.ru && assets.rd) {
-          ctx.drawImage(assets.rd, p.x, p.gap - 50 - rockH, 60, rockH);
-          ctx.drawImage(assets.ru, p.x, p.gap + 50, 60, rockH);
+          ctx.drawImage(assets.rd, p.x, p.gap - TUNING.pipeGapHalf - rockH, 60, rockH);
+          ctx.drawImage(assets.ru, p.x, p.gap + TUNING.pipeGapHalf, 60, rockH);
         } else {
           ctx.fillStyle = '#3a8a3a';
-          ctx.fillRect(p.x, 0, 60, p.gap - 50);
-          ctx.fillRect(p.x, p.gap + 50, 60, H);
+          ctx.fillRect(p.x, 0, 60, p.gap - TUNING.pipeGapHalf);
+          ctx.fillRect(p.x, p.gap + TUNING.pipeGapHalf, 60, H);
         }
       });
 
@@ -407,21 +428,34 @@
         updateCcEnergyDisplay();
       }, 3500);
     }
-    // Market Quest: after countdown, switch to the joystick + canvas play screen
+    // After countdown — only switch screens if we're still on countdown.
+    // The server may fire a 'question' event during the transition (vendor collision on spawn)
+    // and we don't want to clobber that. Helper: only switch if currently showing countdown.
+    function safeSwitchAfterCountdown(targetScreen, onSwitch) {
+      const countdownEl = $('screen-countdown');
+      const stillOnCountdown = countdownEl && !countdownEl.classList.contains('hidden');
+      if (stillOnCountdown) {
+        showScreen(targetScreen);
+      }
+      // Always run initialization (joystick bindings, render loop start) regardless
+      if (onSwitch) onSwitch();
+    }
+
     if (gameType === 'market-quest') {
       setTimeout(() => {
-        showScreen('mq-play');
-        bindMqJoystick();
-        startMqRender();
+        safeSwitchAfterCountdown('mq-play', () => {
+          bindMqJoystick();
+          startMqRender();
+        });
       }, 3500);
     }
-    // Flappy: after countdown, switch to canvas + tap-to-flap
     if (gameType === 'flappy') {
       setTimeout(() => {
-        showScreen('fl-play');
-        loadFlappyAssets();
-        bindFlTap();
-        startFlRender();
+        safeSwitchAfterCountdown('fl-play', () => {
+          loadFlappyAssets();
+          bindFlTap();
+          startFlRender();
+        });
       }, 3500);
     }
     let n = 3;
