@@ -493,7 +493,27 @@
       if (narr) narr.innerHTML = `🤝 Ambos equipos pintaron el mismo <strong>${rPct}%</strong> del papel de caligrafía.`;
     }
     setTimeout(() => launchConfetti(data.winner === 'red' ? ['#ff5a66', '#d92e3a', '#ffd57a'] : ['#ffd57a', '#e8b14a', '#ff5a66']), 4000);
+    renderLeaderboard(data);
   });
+
+  function renderLeaderboard(data) {
+    const lb = $('leaderboard');
+    if (!lb) return;
+    lb.innerHTML = '';
+    const rows = (data.leaderboard || []).slice(0, 12);
+    rows.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = `lb-row ${p.team}`;
+      const medal = ['🥇', '🥈', '🥉'][i] || `#${i + 1}`;
+      const teamEmoji = p.team === 'red' ? '✏️' : '📚';
+      row.innerHTML = `
+        <span class="lb-rank">${medal}</span>
+        <span class="lb-name">${teamEmoji} ${escapeHtml(p.name)}</span>
+        <span class="lb-score">${p.score} pts</span>
+      `;
+      lb.appendChild(row);
+    });
+  }
 
   function renderLobbyPlayers(playersMap) {
     const red = $('players-red');

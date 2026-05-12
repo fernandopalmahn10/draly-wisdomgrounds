@@ -210,7 +210,47 @@
       $('win-emoji').textContent = '⚖️';
       MochiSounds.tieMusic();
     }
+    renderWinNarration(data);
+    renderFinalLeaderboard(data);
   });
+
+  function renderWinNarration(data) {
+    const narr = $('win-narration');
+    if (!narr) return;
+    const r = data.teamScores.red || 0;
+    const g = data.teamScores.gold || 0;
+    const gap = Math.abs(r - g);
+    let story = '';
+    if (data.winner === 'red') {
+      const margin = gap > 50 ? 'una victoria aplastante 🔥' : gap > 20 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️';
+      story = `🐲 <span class="red-team">Equipo Rojo</span> voló a ${margin} con <strong>${r}</strong> pts.`;
+    } else if (data.winner === 'gold') {
+      const margin = gap > 50 ? 'una victoria aplastante 🔥' : gap > 20 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️';
+      story = `🦅 <span class="gold-team">Equipo Dorado</span> voló a ${margin} con <strong>${g}</strong> pts.`;
+    } else {
+      story = `🤝 <strong>¡Empate!</strong> Ambos equipos terminaron con <strong>${r}</strong> pts.`;
+    }
+    narr.innerHTML = story;
+  }
+
+  function renderFinalLeaderboard(data) {
+    const lb = $('leaderboard');
+    if (!lb) return;
+    lb.innerHTML = '';
+    const rows = (data.leaderboard || []).slice(0, 12);
+    rows.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = `lb-row ${p.team}`;
+      const medal = ['🥇', '🥈', '🥉'][i] || `#${i + 1}`;
+      const teamEmoji = p.team === 'red' ? '🐲' : '🦅';
+      row.innerHTML = `
+        <span class="lb-rank">${medal}</span>
+        <span class="lb-name">${teamEmoji} ${escapeHtml(p.name)}</span>
+        <span class="lb-score">${p.score} pts</span>
+      `;
+      lb.appendChild(row);
+    });
+  }
 
   function renderLobbyPlayers(playersMap) {
     const red = $('players-red');

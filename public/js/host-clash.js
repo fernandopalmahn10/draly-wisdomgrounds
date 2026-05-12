@@ -235,6 +235,8 @@
     if (timerInterval) clearInterval(timerInterval);
     MochiSounds.stopMusic();
     showScreen('win');
+    renderLeaderboardCC(data);
+    renderWinNarrationCC(data);
     const total = gridW * gridH;
     const rPct = Math.round((data.teamScores.red / total) * 100);
     const gPct = Math.round((data.teamScores.gold / total) * 100);
@@ -261,6 +263,44 @@
       MochiSounds.tieMusic();
     }
   });
+
+  function renderLeaderboardCC(data) {
+    const lb = $('leaderboard');
+    if (!lb) return;
+    lb.innerHTML = '';
+    const rows = (data.leaderboard || []).slice(0, 12);
+    rows.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = `lb-row ${p.team}`;
+      const medal = ['🥇', '🥈', '🥉'][i] || `#${i + 1}`;
+      const teamEmoji = p.team === 'red' ? '🏮' : '🥟';
+      row.innerHTML = `
+        <span class="lb-rank">${medal}</span>
+        <span class="lb-name">${teamEmoji} ${escapeHtml(p.name)}</span>
+        <span class="lb-score">${p.score} pts</span>
+      `;
+      lb.appendChild(row);
+    });
+  }
+  function renderWinNarrationCC(data) {
+    const narrEl = $('win-narration');
+    if (!narrEl) return;
+    const total = gridW * gridH;
+    const rPct = Math.round((data.teamScores.red / total) * 100);
+    const gPct = Math.round((data.teamScores.gold / total) * 100);
+    const gap = Math.abs(rPct - gPct);
+    let story = '';
+    if (data.winner === 'red') {
+      const margin = gap > 20 ? 'una victoria aplastante 🔥' : gap > 8 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️';
+      story = `🏮 <span class="red-team">Team Lantern</span> pintó ${margin} con <strong>${rPct}%</strong> del mercado.`;
+    } else if (data.winner === 'gold') {
+      const margin = gap > 20 ? 'una victoria aplastante 🔥' : gap > 8 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️';
+      story = `🥟 <span class="gold-team">Team Dumpling</span> pintó ${margin} con <strong>${gPct}%</strong> del mercado.`;
+    } else {
+      story = `🤝 <strong>¡Empate!</strong> Ambos equipos cubrieron el mismo porcentaje.`;
+    }
+    narrEl.innerHTML = story;
+  }
 
   function renderLobbyPlayers(players) {
     const red = $('players-red');

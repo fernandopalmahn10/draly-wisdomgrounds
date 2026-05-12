@@ -159,7 +159,9 @@
     updateScores(scores);
   });
 
-  socket.on('mq:tick', ({ p: positions }) => {
+  socket.on('mq:tick', ({ p: positions, full }) => {
+    // Server now sends deltas — only positions of players whose state changed.
+    // Every ~1.5s the server sends `full:1` to let us prune disconnects.
     Object.entries(positions).forEach(([id, pos]) => {
       if (!players[id]) {
         // New player mid-game — server didn't send re-init, fabricate entry
@@ -171,10 +173,21 @@
       players[id].dir = pos.d;
       players[id].moving = !!pos.m;
     });
-    // Remove stale players not in tick
-    Object.keys(displayPlayers).forEach((id) => {
-      if (!positions[id]) delete displayPlayers[id];
-    });
+    // On full snapshots only, prune players the server no longer has.
+    if (full) {
+      Object.keys(displayPlayers).forEach((id) => {
+        if (!positions[id]) delete displayPlayers[id];
+      });
+      Object.keys(players).forEach((id) => {
+        if (!positions[id]) delete players[id];
+      });
+    } else {
+      // For deltas: any player missing from this packet is simply idle —
+      // mark them as not moving so animations stop, but keep their position.
+      Object.keys(players).forEach((id) => {
+        if (!positions[id] && players[id].moving) players[id].moving = false;
+      });
+    }
     // Ensure new ones have display entries
     Object.keys(players).forEach((id) => {
       if (!displayPlayers[id]) {
@@ -497,6 +510,8 @@
     cancelAnimationFrame(raf);
     MochiSounds.stopMusic();
     showScreen('win');
+    renderLeaderboard(data);
+    renderWinNarration(data);
     const r = data.teamScores.red || 0;
     const g = data.teamScores.gold || 0;
     $('final-red').textContent = r;
@@ -522,6 +537,46 @@
       MochiSounds.tieMusic();
     }
   });
+
+  // Final leaderboard at game-end — everyone's totals, top 3 medaled
+  function renderLeaderboard(data) {
+    const lb = $('leaderboard');
+    if (!lb) return;
+    lb.innerHTML = '';
+    const rows = (data.leaderboard || []).slice(0, 12);
+    rows.forEach((p, i) => {
+      const row = document.createElement('div');
+      row.className = `lb-row ${p.team}`;
+      const medal = ['🥇', '🥈', '🥉'][i] || `#${i + 1}`;
+      const teamEmoji = p.team === 'red' ? '🐲' : '🦁';
+      row.innerHTML = `
+        <span class="lb-rank">${medal}</span>
+        <span class="lb-name">${teamEmoji} ${escapeHtml(p.name)}</span>
+        <span class="lb-score">${p.score} pts</span>
+      `;
+      lb.appendChild(row);
+    });
+  }
+
+  // Spanish narration for the win — margin-aware
+  function renderWinNarration(data) {
+    const narrEl = $('win-narration');
+    if (!narrEl) return;
+    const r = data.teamScores.red || 0;
+    const g = data.teamScores.gold || 0;
+    const gap = Math.abs(r - g);
+    let story = '';
+    if (data.winner === 'red') {
+      const margin = gap > 50 ? 'una victoria aplastante 🔥' : gap > 20 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️';
+      story = `🐲 <span class="red-team">Equipo Long</span> reclamó ${margin} con <strong>${r}</strong> pts.`;
+    } else if (data.winner === 'gold') {
+      const margin = gap > 50 ? 'una victoria aplastante 🔥' : gap > 20 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️';
+      story = `🦁 <span class="gold-team">Equipo Shi</span> reclamó ${margin} con <strong>${g}</strong> pts.`;
+    } else {
+      story = `🤝 <strong>¡Empate!</strong> Ambos equipos terminaron con <strong>${r}</strong> pts.`;
+    }
+    narrEl.innerHTML = story;
+  }
 
   function renderLobbyPlayers(playersMap) {
     const red = $('players-red');

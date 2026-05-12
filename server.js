@@ -1308,17 +1308,32 @@ setInterval(() => {
       });
     }
 
-    // Broadcast tick — compact positions
+    // Broadcast tick — compact deltas only.
+    // To cut bandwidth and client CPU, we only include players whose position
+    // or animation state actually changed since the last broadcast. Every 30
+    // ticks (~1.5s at 20Hz) we send a full snapshot to keep late-joiners and
+    // out-of-sync clients corrected.
+    g._mqTickCount = (g._mqTickCount || 0) + 1;
+    const isFullSync = (g._mqTickCount % 30) === 0;
     const positions = {};
+    let changed = 0;
     Object.entries(g.players).forEach(([id, p]) => {
-      positions[id] = {
-        x: Math.round(p.x),
-        y: Math.round(p.y),
-        d: p.dir || 'down',
-        m: p.moving ? 1 : 0
-      };
+      const xr = Math.round(p.x);
+      const yr = Math.round(p.y);
+      const d  = p.dir || 'down';
+      const m  = p.moving ? 1 : 0;
+      const prev = p._lastBroadcast;
+      const dirty = !prev || prev.x !== xr || prev.y !== yr || prev.d !== d || prev.m !== m;
+      if (isFullSync || dirty) {
+        positions[id] = { x: xr, y: yr, d, m };
+        p._lastBroadcast = { x: xr, y: yr, d, m };
+        changed++;
+      }
     });
-    io.to(pin).emit('mq:tick', { p: positions });
+    // Skip empty deltas — nothing to say means no packet to send.
+    if (isFullSync || changed > 0) {
+      io.to(pin).emit('mq:tick', { p: positions, full: isFullSync ? 1 : 0 });
+    }
   });
 }, MQ_TICK_MS);
 
