@@ -856,7 +856,17 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.state !== 'active') return;
     const p = g.players[socket.id];
-    if (!p || !p.currentQ || p.currentQ.qid !== qid) return;
+    if (!p) return;
+    // If the player has no open question at all → tell the client so they can recover
+    // (otherwise their answer buttons stay disabled forever — the "frozen" bug).
+    if (!p.currentQ) {
+      io.to(socket.id).emit('answer-stale', { reason: 'no-question' });
+      return;
+    }
+    // Tolerant qid matching: a brief reconnect or socket churn can leave the
+    // client holding an older qid than the server's freshly-assigned one. We
+    // accept the answer using the SERVER's currentQ.qid as ground truth as
+    // long as a question exists. (qid is informational, not security.)
     const cqData = p.currentQ;
     const correct = cqData.correctIdx === choiceIdx;
     const correctText = cqData.answers[cqData.correctIdx];

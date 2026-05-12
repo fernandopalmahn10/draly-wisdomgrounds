@@ -4,6 +4,7 @@
   let team = null;
   let myName = '';
   let currentQid = null;
+  let answerRecoveryTimer = null;   // re-enables answer buttons if server is silent
   let mashEndTime = 0;
   let mashTimerInterval = null;
   let mashTapHandler = null;
@@ -521,6 +522,8 @@
     }
     const ansEl = $('answers');
     ansEl.innerHTML = '';
+    // Clear any pending answer-recovery timer from a prior question
+    if (answerRecoveryTimer) { clearTimeout(answerRecoveryTimer); answerRecoveryTimer = null; }
     q.answers.forEach((a, i) => {
       const btn = document.createElement('button');
       btn.className = 'answer-btn';
@@ -529,13 +532,42 @@
         socket.emit('player:answer', { pin, qid: currentQid, choiceIdx: i });
         document.querySelectorAll('.answer-btn').forEach((b) => b.disabled = true);
         btn.style.outline = '3px solid var(--ink)';
+        // Recovery: if no answer-result arrives in 3.5s the server probably
+        // dropped this answer (stale qid after a reconnect, lost packet, etc).
+        // Re-enable the buttons so the player can tap again instead of being
+        // stuck staring at a frozen question screen.
+        if (answerRecoveryTimer) clearTimeout(answerRecoveryTimer);
+        answerRecoveryTimer = setTimeout(() => {
+          document.querySelectorAll('.answer-btn').forEach((b) => {
+            b.disabled = false;
+            b.style.outline = '';
+          });
+          // Tell user to retry — small inline hint above the answers
+          const hint = document.createElement('div');
+          hint.className = 'answer-retry-hint';
+          hint.textContent = '⚠️ Toca de nuevo (la respuesta no llegó)';
+          const existing = ansEl.querySelector('.answer-retry-hint');
+          if (existing) existing.remove();
+          ansEl.insertBefore(hint, ansEl.firstChild);
+        }, 3500);
       });
       ansEl.appendChild(btn);
     });
     showScreen('question');
   });
 
+  // If the server tells us our answer was stale (qid mismatch, no open question),
+  // re-enable the buttons so the player can retry instead of being stuck.
+  socket.on('answer-stale', () => {
+    if (answerRecoveryTimer) { clearTimeout(answerRecoveryTimer); answerRecoveryTimer = null; }
+    document.querySelectorAll('.answer-btn').forEach((b) => {
+      b.disabled = false;
+      b.style.outline = '';
+    });
+  });
+
   socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese }) => {
+    if (answerRecoveryTimer) { clearTimeout(answerRecoveryTimer); answerRecoveryTimer = null; }
     if (correct) {
       MochiSounds.correct();
       let happyMascot, sub;
@@ -649,11 +681,21 @@
     const mashBtn = $('mash-button');
     let localTaps = 0;
 
-    // Re-skin the headline / hint depending on which game is in play
+    // Re-skin the headline / hint + button based on game
     if (gameType === 'pinata') {
-      if ($('mash-headline')) $('mash-headline').innerHTML = '🥢 ¡ROMPE EL TIGRE! 🐯';
-      if ($('mash-hint')) $('mash-hint').innerHTML = '¡TOCA RÁPIDO! Cada toque = 1 golpe a tu tigre 🥢💥';
+      document.body.classList.add('pinata-active');
+      if ($('mash-headline')) $('mash-headline').innerHTML = '🥢 ¡ROMPE EL TIGRE!';
+      if ($('mash-hint')) $('mash-hint').innerHTML = 'Cada toque = un golpe a tu tigre. ¡Sigue golpeando hasta romperlo!';
+      // Set the mash button to "happy/calm" tiger initially. It gets angrier
+      // as the player taps more during the smash window.
+      const mascotEl = $('mash-mascot');
+      if (mascotEl) {
+        mascotEl.textContent = '🐯';
+        mascotEl.classList.remove('pinata-angry', 'pinata-furious', 'pinata-hit');
+        mascotEl._pnTaps = 0;
+      }
     } else {
+      document.body.classList.remove('pinata-active');
       if ($('mash-headline')) $('mash-headline').innerHTML = '⚡ ¡A APLASTAR! ⚡';
       if ($('mash-hint')) $('mash-hint').innerHTML = '¡TOCA, TOCA, TOCA! 🔥 8/seg = combo';
     }
@@ -672,6 +714,8 @@
     function endMash() {
       mashBtn.classList.add('idle');
       mashBtn.classList.remove('combo');
+      // Strip piñata-only body class so the next question screen looks normal
+      document.body.classList.remove('pinata-active');
       if (mashTapHandler) {
         mashBtn.removeEventListener('pointerdown', mashTapHandler);
         mashTapHandler = null;
@@ -1929,6 +1973,27 @@
       }
     } else {
       $('mash-button').classList.remove('combo');
+    }
+    // Piñata: tiger gets visibly angrier the more you tap during this window.
+    // Stage 1: 🐯 calm, Stage 2: 😾 annoyed, Stage 3: 👹 furious.
+    if (gameType === 'pinata') {
+      const mascotEl = $('mash-mascot');
+      if (mascotEl) {
+        const tapsThisRound = (mascotEl._pnTaps || 0) + 1;
+        mascotEl._pnTaps = tapsThisRound;
+        let face = '🐯';
+        let cls = '';
+        if (tapsThisRound > 18) { face = '👹'; cls = 'pinata-furious'; }
+        else if (tapsThisRound > 8) { face = '😾'; cls = 'pinata-angry'; }
+        if (mascotEl.textContent !== face) mascotEl.textContent = face;
+        mascotEl.classList.remove('pinata-angry', 'pinata-furious');
+        if (cls) mascotEl.classList.add(cls);
+        // Per-tap shake — quick wobble to make it feel like you really hit it
+        mascotEl.classList.remove('pinata-hit');
+        void mascotEl.offsetWidth;
+        mascotEl.classList.add('pinata-hit');
+        if (MochiSounds.thwack) MochiSounds.thwack();
+      }
     }
   });
 
