@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Piñata Tigre · Anfitrión</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Long+Cang&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+  <link rel="stylesheet" href="/css/pinata.css">
+</head>
+<body class="market-bg">
+  <div class="lantern l1"></div>
+  <div class="lantern l2"></div>
+
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+
+  <!-- LOBBY -->
+  <div id="screen-lobby" class="container">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div class="market-banner">🐯 ¡Piñata Tigre! 老虎</div>
+      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
+      <div class="pin-display" id="pin-display">····</div>
+      <div style="color:var(--ink-dim); font-size:0.9rem;">
+        Tus jugadores entran en <span id="join-url" style="color:var(--gold-glow); font-weight:800;">esta URL</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div style="font-size:2rem;">📚</div>
+        <div style="flex:1;">
+          <div style="font-size:0.75rem; color:var(--ink-dim); letter-spacing:0.15em; text-transform:uppercase;">Set cargado</div>
+          <div id="set-title-display" style="font-weight:800; font-size:1.15rem;">…</div>
+          <div id="set-count-display" style="color:var(--ink-dim); font-size:0.85rem;">…</div>
+          <div id="images-progress-badge" style="margin-top:6px; font-size:0.85rem; color:var(--gold-glow); display:none;">
+            🔥 <span id="images-progress-text">0/0</span> imágenes listas
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="location.href='/games.html?setId=' + new URLSearchParams(location.search).get('setId')">Cambiar juego</button>
+      </div>
+
+      <div class="duration-control">
+        <span>⏱ Duración máxima</span>
+        <input type="range" id="duration-slider" min="120" max="600" step="30" value="240">
+        <span class="duration-value" id="duration-value">4m</span>
+      </div>
+    </div>
+
+    <div class="host-grid">
+      <div class="team-panel team-red">
+        <div class="team-header">
+          <div class="team-mascot">🥢</div>
+          <div>
+            <div class="team-name">Equipo Bastón</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">紅棍 · hóng gùn</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-red"></div>
+      </div>
+      <div class="team-panel team-gold">
+        <div class="team-header">
+          <div class="team-mascot">🏹</div>
+          <div>
+            <div class="team-name">Equipo Arco</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">金弓 · jīn gōng</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-gold"></div>
+      </div>
+    </div>
+
+    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:12px;">
+      Toca el chip de un jugador para cambiar de equipo
+    </p>
+
+    <div class="controls-panel">
+      <div class="controls-row" style="justify-content:center;">
+        <button class="btn btn-ghost" id="balance-btn">⚖️ Equilibrar</button>
+        <button class="btn btn-jade" id="start-btn" disabled>▶️ ¡A romper la piñata!</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se juega</div>
+      <ol style="color:var(--ink-dim); font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
+        <li>Una pregunta sale en TODOS los teléfonos al mismo tiempo.</li>
+        <li>El <strong>primero</strong> que responde bien se gana un golpe a la piñata 🥢.</li>
+        <li>En su teléfono aparece un <strong>medidor de potencia</strong> — pulsa al centro para <strong>crítico</strong> 💥.</li>
+        <li>Cada golpe baja la vida del tigre y suelta un premio del color del equipo.</li>
+        <li>¡Cuando la piñata se rompe (HP = 0), gana el equipo con más daño total!</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="screen-countdown" class="hidden countdown-overlay">
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <!-- ACTIVE -->
+  <div id="screen-active" class="hidden pn-container">
+    <div class="sticky-pin">
+      <span class="sticky-pin-label">PIN</span>
+      <span class="sticky-pin-value" id="active-pin-display">····</span>
+    </div>
+
+    <div class="pn-topbar">
+      <div class="pn-team red">
+        <span class="pn-team-emoji">🥢</span>
+        <span class="pn-team-label">Bastón</span>
+        <span class="pn-team-score" id="score-red">0</span>
+      </div>
+      <div class="pn-time"><span id="timer-display">4:00</span></div>
+      <div class="pn-team gold">
+        <span class="pn-team-score" id="score-gold">0</span>
+        <span class="pn-team-label">Arco</span>
+        <span class="pn-team-emoji">🏹</span>
+      </div>
+    </div>
+
+    <div class="pn-stage">
+      <!-- Atmospheric lanterns -->
+      <div class="pn-lantern pn-lantern-tl">🏮</div>
+      <div class="pn-lantern pn-lantern-tr">🏮</div>
+      <div class="pn-lantern pn-lantern-bl">🏮</div>
+      <div class="pn-lantern pn-lantern-br">🏮</div>
+
+      <!-- HP bar above the tiger -->
+      <div class="pn-hp-wrap">
+        <div class="pn-hp-label" id="pn-hp-label">HP 100 / 100</div>
+        <div class="pn-hp-bar">
+          <div class="pn-hp-fill" id="pn-hp-fill" style="width:100%;"></div>
+        </div>
+      </div>
+
+      <!-- The piñata tiger itself -->
+      <div class="pn-rope"></div>
+      <div class="pn-tiger-wrap" id="pn-tiger-wrap">
+        <div class="pn-tiger" id="pn-tiger">🐯</div>
+        <div class="pn-cracks" id="pn-cracks"></div>
+        <div class="pn-stick-fx" id="pn-stick-fx"></div>
+      </div>
+
+      <!-- Status banner (question / waiting / winner) -->
+      <div class="pn-banner" id="pn-banner">¡Esperando a los retadores!</div>
+
+      <!-- Question text shown to host (mirrors what's on phones) -->
+      <div class="pn-question" id="pn-question" style="display:none;"></div>
+
+      <!-- Prize tray bottom corners -->
+      <div class="pn-loot red" id="pn-loot-red"></div>
+      <div class="pn-loot gold" id="pn-loot-gold"></div>
+
+      <!-- Flying prize effects layer -->
+      <div class="pn-fx-layer" id="pn-fx-layer"></div>
+    </div>
+
+    <div style="text-align:center; padding:8px;">
+      <button class="btn btn-ghost btn-sm" id="end-now-btn">🛑 Terminar ronda</button>
+    </div>
+  </div>
+
+  <!-- WIN -->
+  <div id="screen-win" class="hidden container">
+    <div class="win-screen">
+      <div id="win-emoji" style="font-size:7rem;">🎉</div>
+      <div class="winner-banner" id="win-banner">¡Equipo Bastón gana!</div>
+      <div class="final-scores">
+        <div><span class="red" id="final-red">0</span></div>
+        <div style="color:var(--ink-dim);">vs</div>
+        <div><span class="gold" id="final-gold">0</span></div>
+      </div>
+      <div class="win-narration" id="win-narration"></div>
+      <div class="leaderboard" id="leaderboard"></div>
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Inicio</button>
+        <button class="btn btn-jade" id="play-again-btn">🔄 Nueva ronda</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/dralingo.js"></script>
+  <script src="/js/host-pinata.js"></script>
+</body>
+</html>
