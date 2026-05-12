@@ -350,6 +350,13 @@
       tone({ freq: 140, dur: 0.12, type: 'square', vol: 0.22, slideTo: 60 });
       tone({ freq: 320, dur: 0.06, type: 'triangle', vol: 0.10, delay: 0.005 });
     },
+    whoosh() {
+      // Wing-flap whoosh: airy noise sweep + low rising tone. Different
+      // character from the piñata thwack — feels like wind catching wings.
+      noise({ dur: 0.22, vol: 0.18 });
+      tone({ freq: 180, dur: 0.18, type: 'sine', vol: 0.16, slideTo: 480 });
+      tone({ freq: 90,  dur: 0.12, type: 'triangle', vol: 0.10, delay: 0.04 });
+    },
     candySpill() {
       // Cheerful confetti-y cascade for when the piñata bursts
       [880, 1320, 1760, 2200, 1760, 1320].forEach((f, i) =>
