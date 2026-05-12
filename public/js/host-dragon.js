@@ -11,8 +11,10 @@
 
   let scores = { red: 0, gold: 0 };
   let eyes = { red: 0, gold: 0 };
-  let eyeHitsToWin = 5;
-  let awakened = false;
+  let revealRed = 0;
+  let revealGold = 0;
+  let revealMax = 100;
+  let awakened = null; // 'red' | 'gold' | null
 
   const $ = (id) => document.getElementById(id);
 
@@ -64,11 +66,14 @@
     if (MochiSounds.stopEndMusic) MochiSounds.stopEndMusic();
     socket.emit('host:reset', { pin });
     showScreen('lobby');
-    clearDots();
+    clearDots('red');
+    clearDots('gold');
     scores = { red: 0, gold: 0 };
     eyes = { red: 0, gold: 0 };
-    awakened = false;
-    updateScores();
+    revealRed = 0;
+    revealGold = 0;
+    awakened = null;
+    updateRevealBars();
   });
 
   function updateStartBtn() {
@@ -115,42 +120,50 @@
   });
 
   socket.on('dragon:init', (data) => {
-    if (data.eyeHitsToWin) eyeHitsToWin = data.eyeHitsToWin;
+    if (data.revealMax) revealMax = data.revealMax;
     scores = data.teamScores || { red: 0, gold: 0 };
     eyes = { red: 0, gold: 0 };
-    awakened = false;
-    clearDots();
-    updateScores();
-    setBanner('¡Comienza la batalla! 战斗开始');
+    revealRed = 0;
+    revealGold = 0;
+    awakened = null;
+    clearDots('red');
+    clearDots('gold');
+    updateRevealBars();
+    setBanner('¡A revelar al dragón! 揭开真龙');
   });
 
-  socket.on('dragon:dot', ({ x, y, team, isEye, playerName, points, eyeHitsRed, eyeHitsGold, teamScores }) => {
+  socket.on('dragon:dot', ({ x, y, team, zone, isEye, reveal, playerName, revealRed: rR, revealGold: rG, eyeHitsRed, eyeHitsGold, teamScores }) => {
     if (teamScores) scores = teamScores;
+    if (typeof rR === 'number') revealRed = rR;
+    if (typeof rG === 'number') revealGold = rG;
     eyes.red = eyeHitsRed || 0;
     eyes.gold = eyeHitsGold || 0;
-    updateScores();
+    updateRevealBars();
     spawnDot(x, y, team, isEye);
     if (isEye) {
-      flashEye(x);
-      setBanner(`👁 ¡${escapeHtml(playerName)} acertó en el OJO! +${points}`);
+      flashEye(team, x);
+      setBanner(`👁 ¡${escapeHtml(playerName)} acertó en el OJO! +${reveal}% revelado`);
       MochiSounds.winFanfare && MochiSounds.winFanfare();
-    } else {
-      setBanner(`✒️ ${escapeHtml(playerName)} pintó un punto (+${points})`);
+    } else if (zone === 'head') {
+      setBanner(`🐉 ${escapeHtml(playerName)} reveló la cabeza (+${reveal}%)`);
       MochiSounds.populate && MochiSounds.populate(team);
+    } else if (zone === 'body') {
+      setBanner(`✒️ ${escapeHtml(playerName)} pintó el cuerpo (+${reveal}%)`);
+      MochiSounds.populate && MochiSounds.populate(team);
+    } else {
+      setBanner(`🖌️ ${escapeHtml(playerName)} pintó al lado (+${reveal}%)`);
     }
   });
 
   socket.on('dragon:awakened', ({ team }) => {
-    awakened = true;
+    awakened = team;
     const emoji = team === 'red' ? '✒️' : '🖌️';
     setBanner(`🐉 ¡EL DRAGÓN DESPERTÓ! ${emoji} ¡${team === 'red' ? 'Pincel' : 'Tinta'} ganó!`);
-    const dragon = $('dr-dragon-wrap');
-    if (dragon) {
-      dragon.classList.add('awakened');
-    }
+    const dragonWrap = $('dragon-' + team + '-wrap');
+    if (dragonWrap) dragonWrap.classList.add('awakened');
     MochiSounds.winFanfare && MochiSounds.winFanfare();
     setTimeout(() => MochiSounds.winMusic && MochiSounds.winMusic(), 500);
-    burstFireworks();
+    burstFireworks(team);
   });
 
   socket.on('game-end', (data) => {
@@ -193,7 +206,7 @@
   });
 
   function spawnDot(x, y, team, isEye) {
-    const layer = $('dr-dot-layer');
+    const layer = $('dots-' + team);
     if (!layer) return;
     const dot = document.createElement('div');
     dot.className = 'dr-dot ' + team + (isEye ? ' eye-hit' : '');
@@ -202,24 +215,35 @@
     layer.appendChild(dot);
   }
 
-  function flashEye(x) {
-    // Pick which eye glow to flash based on x: left eye ~0.42, right ~0.55
-    const glow = x < 0.5 ? $('dr-eye-glow-l') : $('dr-eye-glow-r');
+  function flashEye(team, x) {
+    const glow = x < 0.5 ? $('eye-glow-' + team + '-l') : $('eye-glow-' + team + '-r');
     if (!glow) return;
     glow.classList.remove('flash');
     void glow.offsetWidth;
     glow.classList.add('flash');
   }
 
-  function clearDots() {
-    const layer = $('dr-dot-layer');
+  function clearDots(team) {
+    const layer = $('dots-' + team);
     if (layer) layer.innerHTML = '';
   }
 
-  function updateScores() {
-    $('score-red').textContent = scores.red || 0;
-    $('score-gold').textContent = scores.gold || 0;
-    if ($('eyes-red')) $('eyes-red').textContent = eyes.red || 0;
+  // Drive both the reveal bars (% text + fill) and the dragon opacity reveal.
+  function updateRevealBars() {
+    const pctR = Math.min(100, Math.round((revealRed  / revealMax) * 100));
+    const pctG = Math.min(100, Math.round((revealGold / revealMax) * 100));
+    if ($('reveal-red-fill'))  $('reveal-red-fill').style.width  = pctR + '%';
+    if ($('reveal-gold-fill')) $('reveal-gold-fill').style.width = pctG + '%';
+    if ($('reveal-red-text'))  $('reveal-red-text').textContent  = pctR + '%';
+    if ($('reveal-gold-text')) $('reveal-gold-text').textContent = pctG + '%';
+    // Dragon opacity: starts at 0.15 (faint sketch), grows to 1.0 (fully shown)
+    const opR = 0.15 + (revealRed  / revealMax) * 0.85;
+    const opG = 0.15 + (revealGold / revealMax) * 0.85;
+    const rWrap = $('dragon-red-wrap');
+    const gWrap = $('dragon-gold-wrap');
+    if (rWrap) rWrap.style.setProperty('--reveal', opR.toFixed(3));
+    if (gWrap) gWrap.style.setProperty('--reveal', opG.toFixed(3));
+    if ($('eyes-red'))  $('eyes-red').textContent  = eyes.red  || 0;
     if ($('eyes-gold')) $('eyes-gold').textContent = eyes.gold || 0;
   }
 
@@ -232,9 +256,8 @@
     b.classList.add('flash');
   }
 
-  function burstFireworks() {
-    // Big celebratory burst of stars from the dragon
-    const wrap = $('dr-dragon-wrap');
+  function burstFireworks(team) {
+    const wrap = $('dragon-' + (team || 'red') + '-wrap');
     if (!wrap) return;
     for (let i = 0; i < 30; i++) {
       const s = document.createElement('div');

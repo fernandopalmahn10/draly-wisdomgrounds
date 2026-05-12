@@ -208,28 +208,26 @@
   </div>
 
   <!-- DRAGON AIM — opens after correct answer in Dragon's Eye game.
-       Reticle bounces left↔right across a small dragon preview; tap the AIM
-       button when it lines up with an eye. Wide locked X = body hit (1 pt),
-       narrow eye band = eye hit (10 pts + dragon roars). -->
+       The player TAPS anywhere on the dragon image to place the pearl.
+       Eyes are highlighted in gold so they're easy to target. No moving
+       reticle, no time pressure (8 s window with optional confirm step). -->
   <div id="screen-dragon-aim" class="hidden player-screen dr-aim-screen">
-    <div class="dr-aim-headline">🎯 ¡Apunta a los ojos del dragón! 👁</div>
-    <div class="dr-aim-stage">
+    <div class="dr-aim-headline">🎯 ¡Toca el OJO del dragón! 👁</div>
+    <div class="dr-aim-timer-wrap">
+      <div class="dr-aim-timer-fill" id="dr-aim-timer-fill"></div>
+    </div>
+    <div class="dr-aim-stage" id="dr-aim-stage">
       <img class="dr-aim-dragon" src="/assets/hanyu.png" alt="Dragón" draggable="false">
       <!-- Two eye targets highlighted on the preview -->
       <div class="dr-aim-eye-mark left"></div>
       <div class="dr-aim-eye-mark right"></div>
-      <!-- The aiming reticle slides across the eye band -->
-      <div class="dr-aim-reticle" id="dr-aim-reticle">🎯</div>
+      <!-- Crosshair appears where the player tapped — they can adjust by tapping again -->
+      <div class="dr-aim-crosshair hidden" id="dr-aim-crosshair">+</div>
     </div>
-    <div class="dr-aim-track">
-      <div class="dr-aim-track-marker" id="dr-aim-track-marker"></div>
-      <div class="dr-aim-eye-zone left"></div>
-      <div class="dr-aim-eye-zone right"></div>
-    </div>
-    <button class="dr-aim-tap-btn" id="dr-aim-tap-btn">
+    <button class="dr-aim-tap-btn" id="dr-aim-tap-btn" disabled>
       🐉 <span style="margin: 0 8px;">¡LANZAR PERLA!</span> 🔮
     </button>
-    <p class="dr-aim-hint">Toca cuando el marcador esté sobre un ojo dorado. Tienes 5 s ⏱</p>
+    <p class="dr-aim-hint">Toca al dragón para apuntar. Pulsa el botón para lanzar.</p>
   </div>
 
   <!-- PIÑATA SMASH — replaces the generic mash screen for piñata.

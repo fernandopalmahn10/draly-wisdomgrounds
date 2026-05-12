@@ -192,46 +192,47 @@ const VOCAB_EMOJI = {
   '不客气': '😊', '好': '👍', '想': '💭', '喜欢': '❤️'
 };
 // === Dragon's Eye (画龙点睛) constants ===
-// Each correct answer drops one dot on the dragon at a random position. With
-// some probability the dot lands inside an EYE zone — that team scores big
-// and progress toward "awakening" the dragon. First team to 5 eye-hits wins.
-// Coordinates are 0..1 normalized; clients scale to the displayed dragon size.
-const DR_EYE_HITS_TO_WIN = 5;
-const DR_EYE_BONUS_PTS   = 10;
-const DR_BODY_PTS        = 1;
-// Eye bounding boxes (left-eye and right-eye on hanyu.png — measured from the
-// 1000×1000 source). Center coords + half-width radius.
+// Each team has its OWN dragon. Both start as faint sketches and progressively
+// reveal as players score points. Reveal = (team's reveal pts) / DR_REVEAL_MAX.
+// When a team reaches 100% reveal, their dragon awakens and they win.
+//
+// Each correct vocab answer opens an AIM screen on the player's phone — they
+// TAP exactly where they want the pearl to land on a small dragon image.
+// Eye-zone tap = big reveal jump (also lights up an eye glow on the host).
+// Body tap = modest reveal. Way off = small reveal.
+const DR_REVEAL_MAX     = 100;   // 100% reveal = dragon awakens
+const DR_EYE_REVEAL     = 18;    // eye hit: huge reveal boost
+const DR_HEAD_REVEAL    = 8;     // head/face: good reveal
+const DR_BODY_REVEAL    = 4;     // body anywhere on dragon: ok
+const DR_OFF_REVEAL     = 1;     // off-target: at least a brush stroke
+const DR_AIM_WINDOW_MS  = 8000;  // 8 seconds — plenty of time to aim
+// Eye bounding boxes on hanyu.png (1000x1000)
 const DR_EYES = [
-  { name: 'right', cx: 0.42, cy: 0.20, r: 0.045 },
-  { name: 'left',  cx: 0.55, cy: 0.20, r: 0.045 }
+  { name: 'right', cx: 0.42, cy: 0.20, r: 0.06 },  // slightly bigger than visual to be forgiving
+  { name: 'left',  cx: 0.55, cy: 0.20, r: 0.06 }
 ];
-// Dragon "body" mask — anywhere outside this loose disk = miss
-const DR_BODY = { cx: 0.50, cy: 0.50, r: 0.40 };
+const DR_HEAD = { cx: 0.485, cy: 0.22, r: 0.18 };  // head bounding circle
+const DR_BODY = { cx: 0.50,  cy: 0.50, r: 0.42 };  // body bounding circle
 
-function pickDragonDot() {
-  // Bias slightly toward the dragon's head area (where the eyes are) so it
-  // feels skill/luck-driven rather than uniformly random. ~22% of dots end
-  // up in the head zone, ~12% of those hit an eye.
-  const headWeighted = Math.random() < 0.55;
-  let x, y;
-  if (headWeighted) {
-    // Sample inside the head bbox
-    x = 0.30 + Math.random() * 0.40; // 0.30..0.70
-    y = 0.08 + Math.random() * 0.30; // 0.08..0.38
-  } else {
-    // Sample anywhere on the dragon body disk
-    const ang = Math.random() * Math.PI * 2;
-    const rad = Math.sqrt(Math.random()) * DR_BODY.r;
-    x = DR_BODY.cx + Math.cos(ang) * rad;
-    y = DR_BODY.cy + Math.sin(ang) * rad;
-  }
-  // Eye check
-  let isEye = false, eyeName = null;
+// Given a normalized (x, y) tap position, score it.
+function scoreDragonTap(x, y) {
+  x = Math.max(0, Math.min(1, Number(x) || 0.5));
+  y = Math.max(0, Math.min(1, Number(y) || 0.5));
   for (const eye of DR_EYES) {
     const dx = x - eye.cx, dy = y - eye.cy;
-    if (dx * dx + dy * dy < eye.r * eye.r) { isEye = true; eyeName = eye.name; break; }
+    if (dx * dx + dy * dy < eye.r * eye.r) {
+      return { x, y, zone: 'eye', reveal: DR_EYE_REVEAL, isEye: true };
+    }
   }
-  return { x, y, isEye, eyeName };
+  const dhx = x - DR_HEAD.cx, dhy = y - DR_HEAD.cy;
+  if (dhx * dhx + dhy * dhy < DR_HEAD.r * DR_HEAD.r) {
+    return { x, y, zone: 'head', reveal: DR_HEAD_REVEAL, isEye: false };
+  }
+  const dbx = x - DR_BODY.cx, dby = y - DR_BODY.cy;
+  if (dbx * dbx + dby * dby < DR_BODY.r * DR_BODY.r) {
+    return { x, y, zone: 'body', reveal: DR_BODY_REVEAL, isEye: false };
+  }
+  return { x, y, zone: 'off', reveal: DR_OFF_REVEAL, isEye: false };
 }
 
 // === Piñata Tigre constants ===
@@ -350,50 +351,51 @@ function nextQuestionForVendor(g, playerId, vendorId) {
   return { qid, text: q.text, answers: shuffled, image, vendorId };
 }
 
-// Dragon's Eye: resolve a pearl landing once the player has aimed.
-// `aimX` is 0..1, the horizontal position the player locked in. Server computes
-// the final dot position with a small vertical jitter at the eye-line and
-// scores based on whether it lands within an eye bounding box.
-function resolveDragonPearl(pin, pid, aimX) {
+// Dragon's Eye: resolve a pearl landing using the player's tap-position aim.
+// `aimX, aimY` are 0..1 normalized on the dragon image. The zone (eye/head/
+// body/off) determines reveal points added to that team's dragon.
+function resolveDragonPearl(pin, pid, aimX, aimY) {
   const g = games[pin];
   if (!g || g.gameType !== 'dragon-eye' || !g.dragon || g.dragon.awakened) return;
   const p = g.players[pid];
   if (!p) return;
-  aimX = Math.max(0, Math.min(1, Number(aimX) || 0.5));
-  // The eyes sit around y=0.20. Add slight jitter so it's not a perfect line.
-  const y = 0.18 + (Math.random() - 0.5) * 0.06;
-  // Convert player's 0..1 across the aim bar into the dragon-x range. We map
-  // a wide aiming bar onto the dragon's horizontal extent (0.18..0.82) so the
-  // eyes (0.42, 0.55) sit nicely in the middle.
-  const x = 0.18 + aimX * 0.64;
-  let isEye = false;
-  for (const eye of DR_EYES) {
-    const dx = x - eye.cx, dy = y - eye.cy;
-    if (dx * dx + dy * dy < eye.r * eye.r) { isEye = true; break; }
-  }
-  const pts = isEye ? DR_EYE_BONUS_PTS : DR_BODY_PTS;
-  const dotEntry = { x, y, team: p.team, isEye, by: p.name, t: Date.now() };
-  g.dragon.dots.push(dotEntry);
-  p.score = (p.score || 0) + pts;
-  g.teamScores[p.team] = (g.teamScores[p.team] || 0) + pts;
-  if (isEye) {
+  const res = scoreDragonTap(aimX, aimY);
+  const revealKey = p.team === 'red' ? 'revealRed' : 'revealGold';
+  const prevReveal = g.dragon[revealKey] || 0;
+  g.dragon[revealKey] = Math.min(DR_REVEAL_MAX, prevReveal + res.reveal);
+  // Personal score = total reveal pts contributed (handy for leaderboard)
+  p.score = (p.score || 0) + res.reveal;
+  g.teamScores[p.team] = g.dragon[revealKey];  // team score == their dragon's reveal %
+  if (res.isEye) {
     if (p.team === 'red') g.dragon.eyeHitsRed++;
     else g.dragon.eyeHitsGold++;
   }
-  // Tell the player how they did
-  io.to(pid).emit('dragon:pearl-landed', { isEye, points: pts, x, y });
-  // Broadcast for everyone (host draws the dot)
+  // Tell the player how they did so the phone can show landing feedback
+  io.to(pid).emit('dragon:pearl-landed', {
+    zone: res.zone,
+    isEye: res.isEye,
+    reveal: res.reveal,
+    x: res.x,
+    y: res.y
+  });
+  // Broadcast to host: it places a dot on the right dragon + updates reveal bar
   io.to(pin).emit('dragon:dot', {
-    x, y, team: p.team, isEye,
-    playerName: p.name, points: pts,
+    x: res.x, y: res.y,
+    team: p.team,
+    zone: res.zone,
+    isEye: res.isEye,
+    reveal: res.reveal,
+    playerName: p.name,
+    revealRed:  g.dragon.revealRed,
+    revealGold: g.dragon.revealGold,
     eyeHitsRed: g.dragon.eyeHitsRed,
     eyeHitsGold: g.dragon.eyeHitsGold,
     teamScores: g.teamScores
   });
-  // Win check — first team to DR_EYE_HITS_TO_WIN eye dots wakes the dragon
+  // Win check — first team to hit DR_REVEAL_MAX wakes their dragon
   const winnerTeam =
-    g.dragon.eyeHitsRed >= DR_EYE_HITS_TO_WIN ? 'red' :
-    g.dragon.eyeHitsGold >= DR_EYE_HITS_TO_WIN ? 'gold' : null;
+    g.dragon.revealRed  >= DR_REVEAL_MAX ? 'red' :
+    g.dragon.revealGold >= DR_REVEAL_MAX ? 'gold' : null;
   if (winnerTeam) {
     g.dragon.awakened = winnerTeam;
     io.to(pin).emit('dragon:awakened', { team: winnerTeam });
@@ -676,17 +678,19 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores
         });
       }
-      // Dragon's Eye: initialize empty dot board, send asset path + eye coords.
+      // Dragon's Eye: TWO dragons, one per team. Each starts with revealPct=0
+      // and grows toward 100. First to 100 awakens and wins.
       if (g.gameType === 'dragon-eye') {
         g.dragon = {
-          dots: [],
+          revealRed: 0,
+          revealGold: 0,
           eyeHitsRed: 0,
           eyeHitsGold: 0,
           awakened: null
         };
         io.to(pin).emit('dragon:init', {
+          revealMax: DR_REVEAL_MAX,
           eyes: DR_EYES,
-          eyeHitsToWin: DR_EYE_HITS_TO_WIN,
           players: Object.fromEntries(
             Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team }])
           ),
@@ -1127,24 +1131,24 @@ io.on('connection', (socket) => {
       // dragon. The server then resolves the pearl landing using THAT position.
       if (correct && g.dragon && !g.dragon.awakened) {
         // Open an aim window — the player will emit 'dragon:aim-place' soon
-        p.dragonAim = {
-          openedAt: Date.now(),
-          deadline: Date.now() + 5000
-        };
+        p.dragonAim = { openedAt: Date.now(), deadline: Date.now() + DR_AIM_WINDOW_MS };
         io.to(socket.id).emit('answer-result', {
           correct: true,
           correctText,
-          dragonAim: true   // signals the client to open the aim mini-game
+          dragonAim: true,
+          dragonAimMs: DR_AIM_WINDOW_MS
         });
-        // Safety net: if the player never aims (closed phone, etc.), auto-place
-        // their pearl after the deadline at a random X so the game keeps moving.
+        // Safety net: if the player never aims, auto-place at a random head spot
         setTimeout(() => {
           if (!games[pin] || games[pin].state !== 'active') return;
           const pNow = games[pin].players[socket.id];
           if (!pNow || !pNow.dragonAim) return;
           pNow.dragonAim = null;
-          resolveDragonPearl(pin, socket.id, Math.random());
-        }, 5200);
+          // Auto-aim at a random point in the head region (still gives reveal)
+          resolveDragonPearl(pin, socket.id,
+            0.35 + Math.random() * 0.30,
+            0.10 + Math.random() * 0.20);
+        }, DR_AIM_WINDOW_MS + 300);
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
@@ -1243,14 +1247,15 @@ io.on('connection', (socket) => {
   });
 
   // Market Quest: player sends their movement input state (held keys/joystick)
-  // Dragon's Eye: player has locked the aim reticle. aimX is 0..1.
-  socket.on('dragon:aim-place', ({ pin, aimX }) => {
+  // Dragon's Eye: player tapped a position on the dragon image to aim.
+  // aimX and aimY are 0..1 normalized on the dragon image.
+  socket.on('dragon:aim-place', ({ pin, aimX, aimY }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'dragon-eye' || g.state !== 'active') return;
     const p = g.players[socket.id];
     if (!p || !p.dragonAim) return; // no aim window open for this player
     p.dragonAim = null;
-    resolveDragonPearl(pin, socket.id, aimX);
+    resolveDragonPearl(pin, socket.id, aimX, aimY);
   });
 
   socket.on('player:mq-input', ({ pin, left, right, up, down }) => {

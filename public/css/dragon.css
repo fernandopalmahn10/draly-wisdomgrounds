@@ -127,20 +127,104 @@ body.dragon-bg .win-screen { color: #3a1505; }
   to   { transform: translateX(120vw); }
 }
 
-/* The dragon image + dot layer share the same percentage coordinate system */
-.dr-dragon-wrap {
+/* Two-dragon split layout */
+.dr-two-dragons {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(65vh, 520px);
-  height: min(65vh, 520px);
-  animation: dragon-float 3.5s ease-in-out infinite alternate;
+  inset: 12px 12px 96px 12px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: stretch;
   z-index: 2;
 }
+.dr-team-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(60, 24, 8, 0.32);
+  border-radius: 18px;
+  padding: 14px 14px 10px 14px;
+  position: relative;
+  align-items: center;
+}
+.dr-team-col.red  { border: 2px solid rgba(255,138,145,0.5); box-shadow: inset 0 0 40px rgba(217,46,58,0.15); }
+.dr-team-col.gold { border: 2px solid rgba(255,213,122,0.5); box-shadow: inset 0 0 40px rgba(232,177,74,0.15); }
+.dr-team-tag {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-align: center;
+  font-size: 1.1rem;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+.dr-team-tag.red  { color: #ff8a91; background: rgba(217,46,58,0.18); border: 1px solid rgba(255,138,145,0.4); }
+.dr-team-tag.gold { color: #ffd57a; background: rgba(232,177,74,0.18); border: 1px solid rgba(255,213,122,0.4); }
+.dr-vs {
+  display: flex;
+  align-items: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 2.4rem;
+  color: rgba(255,213,122,0.6);
+  text-shadow: 0 0 12px rgba(255,213,122,0.4);
+  letter-spacing: 0.1em;
+}
+
+/* Reveal progress bar — shows team's reveal % and fills with the team color */
+.dr-reveal-bar {
+  position: relative;
+  width: 100%;
+  height: 24px;
+  background: rgba(0,0,0,0.45);
+  border: 2px solid rgba(255,220,130,0.6);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
+}
+.dr-reveal-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.5s ease;
+  background: linear-gradient(180deg, #ffeaa8, #f08732);
+}
+.dr-reveal-fill.red  { background: linear-gradient(180deg, #ff8a91, #c11d2a); }
+.dr-reveal-fill.gold { background: linear-gradient(180deg, #ffd57a, #e89134); }
+.dr-reveal-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #fff8e0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  font-size: 0.95rem;
+}
+
+.dr-eye-tally {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff8e0;
+  font-size: 0.95rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* The dragon image + dot layer share the same percentage coordinate system.
+   `--reveal` is set by JS from 0.15 (faint sketch) up to 1.0 (fully shown). */
+.dr-dragon-wrap {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 240px;
+  animation: dragon-float 3.5s ease-in-out infinite alternate;
+  --reveal: 0.15;
+}
 @keyframes dragon-float {
-  from { transform: translate(-50%, -50%) translateY(0); }
-  to   { transform: translate(-50%, -50%) translateY(-14px); }
+  from { transform: translateY(0); }
+  to   { transform: translateY(-12px); }
 }
 .dr-dragon {
   width: 100%;
@@ -148,16 +232,20 @@ body.dragon-bg .win-screen { color: #3a1505; }
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
-  filter: drop-shadow(0 12px 30px rgba(0,0,0,0.4));
+  filter:
+    drop-shadow(0 12px 30px rgba(0,0,0,0.4))
+    saturate(calc(0.3 + var(--reveal) * 0.7));
+  opacity: var(--reveal);
+  transition: opacity 0.5s ease, filter 0.5s ease;
 }
-.dr-dragon-wrap.awakened .dr-dragon {
+.dr-dragon-wrap.awakened {
   animation: dragon-awakened 4s ease-in-out forwards;
 }
 @keyframes dragon-awakened {
-  0%   { transform: scale(1) rotate(0); filter: drop-shadow(0 12px 30px rgba(0,0,0,0.4)); }
-  20%  { transform: scale(1.2) rotate(-3deg); filter: drop-shadow(0 0 40px gold) drop-shadow(0 12px 30px rgba(0,0,0,0.4)); }
-  60%  { transform: scale(1.1) translate(-40vw, -30vh) rotate(15deg); }
-  100% { transform: scale(0.6) translate(-100vw, -100vh) rotate(45deg); opacity: 0; }
+  0%   { transform: scale(1) rotate(0); }
+  20%  { transform: scale(1.25) rotate(-3deg); filter: drop-shadow(0 0 40px gold); }
+  60%  { transform: scale(1.15) translate(0, -20vh) rotate(15deg); }
+  100% { transform: scale(0.5) translate(0, -120vh) rotate(45deg); opacity: 0; }
 }
 
 /* Dot layer fills the dragon-wrap; dots are positioned in %. */
@@ -290,13 +378,47 @@ body.dragon-bg .win-screen { color: #3a1505; }
 .dr-aim-stage {
   position: relative;
   width: 100%;
-  max-width: 360px;
+  max-width: 380px;
   aspect-ratio: 1 / 1;
   background: radial-gradient(ellipse at center, rgba(255,250,210,0.5), transparent 65%);
   border-radius: 20px;
   border: 3px solid rgba(255, 220, 130, 0.55);
   overflow: hidden;
   flex-shrink: 0;
+  cursor: crosshair;
+  touch-action: none; /* prevent browser pan/zoom while aiming */
+  user-select: none;
+}
+.dr-aim-timer-wrap {
+  width: 100%;
+  max-width: 380px;
+  height: 8px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.dr-aim-timer-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ffeaa8, #ff6b1a, #c4191a);
+  transition: width 0.1s linear;
+}
+.dr-aim-crosshair {
+  position: absolute;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 3rem;
+  color: #fff;
+  text-shadow: 0 0 14px gold, 0 0 6px #fff;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 4;
+  animation: dr-crosshair-pulse 0.6s ease-in-out infinite alternate;
+}
+.dr-aim-crosshair.hidden { display: none; }
+@keyframes dr-crosshair-pulse {
+  from { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
+  to   { transform: translate(-50%, -50%) scale(1.25); opacity: 0.85; }
 }
 .dr-aim-dragon {
   width: 100%;
@@ -304,6 +426,7 @@ body.dragon-bg .win-screen { color: #3a1505; }
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
+  pointer-events: none; /* let the stage capture all taps */
   filter: drop-shadow(0 8px 16px rgba(0,0,0,0.35));
   animation: dragon-float-aim 3s ease-in-out infinite alternate;
 }
@@ -314,15 +437,16 @@ body.dragon-bg .win-screen { color: #3a1505; }
 /* Highlight the two eye targets so the player knows where to aim */
 .dr-aim-eye-mark {
   position: absolute;
-  width: 9%;
-  height: 9%;
+  width: 12%;
+  height: 12%;
   border-radius: 50%;
-  border: 3px solid gold;
-  box-shadow: 0 0 12px gold, inset 0 0 8px rgba(255, 220, 100, 0.6);
+  border: 4px solid gold;
+  box-shadow: 0 0 18px gold, 0 0 6px #fff, inset 0 0 10px rgba(255, 220, 100, 0.7);
   pointer-events: none;
   top: 20%;
   transform: translate(-50%, -50%);
   animation: eye-mark-pulse 1.3s ease-in-out infinite alternate;
+  z-index: 2;
 }
 .dr-aim-eye-mark.left  { left: 42%; }
 .dr-aim-eye-mark.right { left: 55%; }
