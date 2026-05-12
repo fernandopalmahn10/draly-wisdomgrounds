@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="/css/market-quest.css">
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
+  <link rel="stylesheet" href="/css/dragon.css">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -204,6 +205,31 @@
       <div class="mash-timer"><div class="mash-timer-fill" id="mash-timer-fill"></div></div>
       <p id="mash-hint" style="color:var(--ink-dim); margin-top:16px; font-size:0.9rem;">¡TOCA, TOCA, TOCA! 🔥 8/seg = combo</p>
     </div>
+  </div>
+
+  <!-- DRAGON AIM — opens after correct answer in Dragon's Eye game.
+       Reticle bounces left↔right across a small dragon preview; tap the AIM
+       button when it lines up with an eye. Wide locked X = body hit (1 pt),
+       narrow eye band = eye hit (10 pts + dragon roars). -->
+  <div id="screen-dragon-aim" class="hidden player-screen dr-aim-screen">
+    <div class="dr-aim-headline">🎯 ¡Apunta a los ojos del dragón! 👁</div>
+    <div class="dr-aim-stage">
+      <img class="dr-aim-dragon" src="/assets/hanyu.png" alt="Dragón" draggable="false">
+      <!-- Two eye targets highlighted on the preview -->
+      <div class="dr-aim-eye-mark left"></div>
+      <div class="dr-aim-eye-mark right"></div>
+      <!-- The aiming reticle slides across the eye band -->
+      <div class="dr-aim-reticle" id="dr-aim-reticle">🎯</div>
+    </div>
+    <div class="dr-aim-track">
+      <div class="dr-aim-track-marker" id="dr-aim-track-marker"></div>
+      <div class="dr-aim-eye-zone left"></div>
+      <div class="dr-aim-eye-zone right"></div>
+    </div>
+    <button class="dr-aim-tap-btn" id="dr-aim-tap-btn">
+      🐉 <span style="margin: 0 8px;">¡LANZAR PERLA!</span> 🔮
+    </button>
+    <p class="dr-aim-hint">Toca cuando el marcador esté sobre un ojo dorado. Tienes 5 s ⏱</p>
   </div>
 
   <!-- PIÑATA SMASH — replaces the generic mash screen for piñata.

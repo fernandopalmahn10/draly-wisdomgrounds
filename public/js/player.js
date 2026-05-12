@@ -1,29 +1,101 @@
 (function () {
-  const socket = io();
+  // Prefer WebSocket transport — long-polling on flaky mobile networks is the
+  // #1 cause of "I tapped and nothing happened." Aggressive reconnection so
+  // the socket recovers within ~1 second of a drop.
+  const socket = io({
+    transports: ['websocket', 'polling'],
+    upgrade: true,
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 500,
+    reconnectionDelayMax: 3000,
+    timeout: 8000
+  });
   let pin = null;
   let team = null;
   let myName = '';
   let currentQid = null;
-  let answerRecoveryTimer = null;   // re-enables answer buttons if server is silent
+  // (legacy timer kept for any reference; bulletproof flow below replaces it)
 
-  // Bulletproof answer transmission: uses a Socket.IO ack with timeout. If the
-  // server doesn't acknowledge within 1.5 s, retry the emit up to 2 more times.
-  // This is the cure for "I answered and nothing happened" on flaky phones.
-  function sendAnswerWithRetry(qid, choiceIdx, attempt) {
-    attempt = attempt || 1;
+  // === BULLETPROOF ANSWER FLOW ===
+  // Multi-layered to make "I tapped and nothing happened" impossible:
+  //  1. Immediate visual feedback ("Enviando…" overlay) so the player KNOWS the
+  //     tap registered, regardless of network state.
+  //  2. Heartbeat: re-emit the answer every 1 s until we hear back from server,
+  //     OR an 8 s deadline elapses, OR a new question arrives (it'd supersede).
+  //  3. After 8 s with no result, force a socket reconnect + re-enable buttons.
+  //  4. Server ACKs immediately on receipt so we know transport is alive even
+  //     before the full answer-result is computed.
+  let pendingAnswer = null;
+  let answerHeartbeat = null;
+
+  function sendAnswerBulletproof(qid, choiceIdx) {
+    if (pendingAnswer && pendingAnswer.qid === qid) return; // already pending
+    pendingAnswer = { qid, choiceIdx, startedAt: Date.now(), attempts: 0 };
+    showSendingOverlay('Enviando respuesta…');
+    attemptAnswerSend();
+    if (answerHeartbeat) clearInterval(answerHeartbeat);
+    answerHeartbeat = setInterval(() => {
+      if (!pendingAnswer) {
+        clearInterval(answerHeartbeat); answerHeartbeat = null;
+        return;
+      }
+      const age = Date.now() - pendingAnswer.startedAt;
+      if (age > 8000) {
+        // Give up. Force-reconnect the socket; show an error; let player retry.
+        clearAnswerHeartbeat();
+        showSendingOverlay('Conexión inestable. Reconectando…');
+        try { socket.disconnect(); socket.connect(); } catch (_) {}
+        setTimeout(() => {
+          hideSendingOverlay();
+          document.querySelectorAll('.answer-btn').forEach((b) => {
+            b.disabled = false; b.style.outline = '';
+          });
+        }, 2500);
+        return;
+      }
+      attemptAnswerSend();
+    }, 1000);
+  }
+
+  function attemptAnswerSend() {
+    if (!pendingAnswer) return;
+    pendingAnswer.attempts++;
+    const payload = {
+      pin,
+      qid: pendingAnswer.qid,
+      choiceIdx: pendingAnswer.choiceIdx
+    };
     try {
-      socket.timeout(1500).emit('player:answer', { pin, qid, choiceIdx }, (err) => {
-        if (err && attempt < 3) {
-          // No ack came back in time — try again immediately
-          sendAnswerWithRetry(qid, choiceIdx, attempt + 1);
-        }
-        // If we got an ack (no err), do nothing — the answer-result event will
-        // arrive shortly and drive the UI transition.
+      socket.timeout(700).emit('player:answer', payload, (err) => {
+        if (!err && pendingAnswer) pendingAnswer.acked = true;
       });
     } catch (_) {
-      // socket.timeout may not exist on very old socket.io builds — fall back
-      try { socket.emit('player:answer', { pin, qid, choiceIdx }); } catch (e) {}
+      // Older socket.io fallback
+      try { socket.emit('player:answer', payload); } catch (e) {}
     }
+  }
+
+  function clearAnswerHeartbeat() {
+    pendingAnswer = null;
+    if (answerHeartbeat) { clearInterval(answerHeartbeat); answerHeartbeat = null; }
+  }
+
+  function showSendingOverlay(text) {
+    let el = document.getElementById('sending-overlay');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'sending-overlay';
+      el.className = 'sending-overlay';
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.classList.remove('hidden');
+  }
+
+  function hideSendingOverlay() {
+    const el = document.getElementById('sending-overlay');
+    if (el) el.classList.add('hidden');
   }
   let mashEndTime = 0;
   let mashTimerInterval = null;
@@ -538,43 +610,50 @@
     }
     const ansEl = $('answers');
     ansEl.innerHTML = '';
-    // Clear any pending answer-recovery timer from a prior question
-    if (answerRecoveryTimer) { clearTimeout(answerRecoveryTimer); answerRecoveryTimer = null; }
+    // A new question arriving means any pending answer for the OLD question
+    // is irrelevant. Clear the heartbeat + overlay so we don't keep retrying
+    // a stale answer that the server has already moved past.
+    clearAnswerHeartbeat();
+    hideSendingOverlay();
     q.answers.forEach((a, i) => {
       const btn = document.createElement('button');
       btn.className = 'answer-btn';
       btn.innerHTML = `<span class="answer-shape shape-${i}">${SHAPES[i]}</span><span>${escapeHtml(a)}</span>`;
-      btn.addEventListener('click', () => {
-        sendAnswerWithRetry(currentQid, i);
+      // Use pointerdown — fires faster than 'click' and isn't subject to the
+      // 300ms tap-delay or synthetic-click-eaten-by-scroll bugs on mobile.
+      const onTap = (e) => {
+        if (e) e.preventDefault();
+        if (btn.disabled) return;
+        // Capture qid at tap time (closure-protected — even if a new question
+        // arrives mid-tap, the local var is stable for this handler).
+        const qidAtTap = currentQid;
+        sendAnswerBulletproof(qidAtTap, i);
         document.querySelectorAll('.answer-btn').forEach((b) => b.disabled = true);
         btn.style.outline = '3px solid var(--ink)';
-        // Recovery: if no answer-result arrives in 3.5s, re-enable the buttons.
-        // (sendAnswerWithRetry handles transport-level retries silently below.)
-        if (answerRecoveryTimer) clearTimeout(answerRecoveryTimer);
-        answerRecoveryTimer = setTimeout(() => {
-          document.querySelectorAll('.answer-btn').forEach((b) => {
-            b.disabled = false;
-            b.style.outline = '';
-          });
-        }, 3500);
-      });
+        btn.style.transform = 'scale(0.97)';
+      };
+      btn.addEventListener('pointerdown', onTap);
+      btn.addEventListener('click', onTap); // keyboard / accessibility fallback
       ansEl.appendChild(btn);
     });
     showScreen('question');
   });
 
-  // If the server tells us our answer was stale (qid mismatch, no open question),
+  // If the server tells us our answer was stale (no open question on server),
   // re-enable the buttons so the player can retry instead of being stuck.
   socket.on('answer-stale', () => {
-    if (answerRecoveryTimer) { clearTimeout(answerRecoveryTimer); answerRecoveryTimer = null; }
+    clearAnswerHeartbeat();
+    hideSendingOverlay();
     document.querySelectorAll('.answer-btn').forEach((b) => {
       b.disabled = false;
       b.style.outline = '';
+      b.style.transform = '';
     });
   });
 
-  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, points }) => {
-    if (answerRecoveryTimer) { clearTimeout(answerRecoveryTimer); answerRecoveryTimer = null; }
+  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, points }) => {
+    clearAnswerHeartbeat();
+    hideSendingOverlay();
     if (correct) {
       MochiSounds.correct();
       let happyMascot, sub;
@@ -598,13 +677,8 @@
         happyMascot = team === 'red' ? '🥢' : '🏹';
         sub = '¡Golpea la piñata! 🐯💥';
       } else if (gameType === 'dragon-eye') {
-        if (dragonDot && dragonDot.isEye) {
-          happyMascot = '👁';
-          sub = `🐉 ¡PUNTO EN EL OJO! +${points || 10} pts`;
-        } else {
-          happyMascot = team === 'red' ? '✒️' : '🖌️';
-          sub = `Pintaste un punto +${points || 1}`;
-        }
+        happyMascot = team === 'red' ? '✒️' : '🖌️';
+        sub = '¡A apuntar al ojo! 🎯';
       } else {
         happyMascot = team === 'red' ? '🐼' : '🦊';
         sub = '¡Alimenta a tu equipo! ⚡';
@@ -635,8 +709,9 @@
           mashEndTime = mashUntil;
           startPinataSmash();
         } else if (gameType === 'dragon-eye') {
-          // Dragon: no mash window — the next 'question' event will drive the
-          // transition back to the question screen. Just stay on result for a beat.
+          // Dragon: correct → open the aim mini-game on phone. The pearl lands
+          // wherever the player locks the reticle. Wrong answer = no aim screen.
+          if (dragonAim) startDragonAim();
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -828,6 +903,74 @@
       setTimeout(() => c.remove(), 1500);
     }
   }
+
+  // === Dragon's Eye aim mini-game ===
+  // A 🎯 reticle bounces horizontally across a small dragon preview. Player
+  // taps to lock — the X position decides where the pearl lands on the host's
+  // big dragon. Eye band is a narrow zone, so eye hits feel earned.
+  let dragonAimRaf = null;
+  let dragonAimDir = 1;
+  let dragonAimX = 0;       // 0..1, current reticle position
+  let dragonAimLocked = false;
+
+  function startDragonAim() {
+    showScreen('dragon-aim');
+    dragonAimLocked = false;
+    dragonAimX = 0;
+    dragonAimDir = 1;
+    const reticle = $('dr-aim-reticle');
+    const marker = $('dr-aim-track-marker');
+    const btn = $('dr-aim-tap-btn');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = '🐉 ¡LANZAR PERLA! 🔮';
+      // Use pointerdown for instant response on mobile
+      const onTap = (e) => {
+        if (e) e.preventDefault();
+        if (dragonAimLocked) return;
+        dragonAimLocked = true;
+        btn.disabled = true;
+        btn.textContent = '🔮 ¡Lanzada!';
+        // Visual lock effect — emit aim to server
+        socket.emit('dragon:aim-place', { pin, aimX: dragonAimX });
+        if (navigator.vibrate) navigator.vibrate(40);
+        MochiSounds.populate && MochiSounds.populate(team);
+      };
+      btn.onpointerdown = onTap;
+      btn.onclick = onTap;
+    }
+    // Animate the reticle
+    let last = performance.now();
+    function frame(now) {
+      const dt = (now - last) / 1000;
+      last = now;
+      if (!dragonAimLocked) {
+        dragonAimX += dragonAimDir * dt * 0.55; // ~1.8s for a sweep
+        if (dragonAimX > 1) { dragonAimX = 1; dragonAimDir = -1; }
+        if (dragonAimX < 0) { dragonAimX = 0; dragonAimDir = 1; }
+      }
+      // Position the reticle inside the dragon preview's eye band (which
+      // visually spans 18%..82% of the preview width, matching the server map).
+      const pctInDragon = 18 + dragonAimX * 64; // 18..82
+      if (reticle) reticle.style.left = pctInDragon + '%';
+      if (marker)  marker.style.left  = (dragonAimX * 100) + '%';
+      dragonAimRaf = requestAnimationFrame(frame);
+    }
+    cancelAnimationFrame(dragonAimRaf);
+    dragonAimRaf = requestAnimationFrame(frame);
+  }
+
+  // Server tells us where the pearl actually landed (after applying our aim)
+  socket.on('dragon:pearl-landed', ({ isEye, points }) => {
+    if (dragonAimRaf) { cancelAnimationFrame(dragonAimRaf); dragonAimRaf = null; }
+    const btn = $('dr-aim-tap-btn');
+    if (btn) btn.textContent = isEye ? `👁 ¡OJO! +${points}` : `✒️ Cuerpo +${points}`;
+    if (isEye) {
+      MochiSounds.winFanfare && MochiSounds.winFanfare();
+      burstSparkles('✨', 18);
+    }
+    // The next 'question' event will move us back to the question screen.
+  });
 
   function startMash() {
     showScreen('mash');
@@ -2284,7 +2427,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-aim', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

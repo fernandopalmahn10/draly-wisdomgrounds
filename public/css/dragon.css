@@ -257,3 +257,150 @@ body.dragon-bg .win-screen { color: #3a1505; }
   0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
   100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.4) rotate(540deg); opacity: 0; }
 }
+
+/* ============================================================ */
+/* === PLAYER AIM SCREEN === */
+/* ============================================================ */
+/* Opens on phone after a correct vocab answer. Reticle sweeps over a small
+   dragon preview; player taps to lock and launch a pearl. Skill mini-game. */
+
+.dr-aim-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 14px;
+  gap: 14px;
+  align-items: center;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,238,150,0.6), transparent 55%),
+    linear-gradient(180deg, #ffd54a 0%, #ff8a1a 60%, #b03808 100%);
+  color: #fff8e0;
+  text-align: center;
+}
+
+.dr-aim-headline {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.3rem;
+  letter-spacing: 0.04em;
+  text-shadow: 0 3px 8px rgba(120, 12, 12, 0.6);
+  margin-top: 4px;
+}
+
+.dr-aim-stage {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 1 / 1;
+  background: radial-gradient(ellipse at center, rgba(255,250,210,0.5), transparent 65%);
+  border-radius: 20px;
+  border: 3px solid rgba(255, 220, 130, 0.55);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.dr-aim-dragon {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.35));
+  animation: dragon-float-aim 3s ease-in-out infinite alternate;
+}
+@keyframes dragon-float-aim {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-8px); }
+}
+/* Highlight the two eye targets so the player knows where to aim */
+.dr-aim-eye-mark {
+  position: absolute;
+  width: 9%;
+  height: 9%;
+  border-radius: 50%;
+  border: 3px solid gold;
+  box-shadow: 0 0 12px gold, inset 0 0 8px rgba(255, 220, 100, 0.6);
+  pointer-events: none;
+  top: 20%;
+  transform: translate(-50%, -50%);
+  animation: eye-mark-pulse 1.3s ease-in-out infinite alternate;
+}
+.dr-aim-eye-mark.left  { left: 42%; }
+.dr-aim-eye-mark.right { left: 55%; }
+@keyframes eye-mark-pulse {
+  from { opacity: 0.55; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 1;    transform: translate(-50%, -50%) scale(1.15); }
+}
+.dr-aim-reticle {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  font-size: 1.8rem;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 8px white);
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Linear track at the bottom showing where the reticle is in 0..1 space.
+   Player can also use this as a visual guide. */
+.dr-aim-track {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 220, 130, 0.5);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.dr-aim-track-marker {
+  position: absolute;
+  top: -3px;
+  width: 6px;
+  height: 28px;
+  background: #fff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
+  border-radius: 3px;
+  left: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+/* Eye zones on the track — wherever the marker is in these, eye hit */
+.dr-aim-eye-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse, rgba(255, 215, 0, 0.6), rgba(255, 215, 0, 0.2));
+  pointer-events: none;
+}
+.dr-aim-eye-zone.left  { left: 35%; width: 9%; }
+.dr-aim-eye-zone.right { left: 56%; width: 9%; }
+
+.dr-aim-tap-btn {
+  width: 100%;
+  max-width: 360px;
+  font-size: 1.4rem;
+  font-weight: 900;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.04em;
+  padding: 18px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ffb84a 0%, #ff6b1a 50%, #b03808 100%);
+  border: 4px solid #1a0c08;
+  color: #fff;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.6);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4), inset 0 4px 10px rgba(255, 220, 120, 0.4);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.dr-aim-tap-btn:active { transform: scale(0.97); }
+.dr-aim-tap-btn:disabled { opacity: 0.7; }
+
+.dr-aim-hint {
+  color: #fff8e0;
+  font-size: 0.85rem;
+  opacity: 0.9;
+  text-shadow: 0 1px 3px rgba(120, 12, 12, 0.6);
+  margin: 0;
+}
