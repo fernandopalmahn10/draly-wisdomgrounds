@@ -852,7 +852,10 @@ io.on('connection', (socket) => {
     return true;
   }
 
-  socket.on('player:answer', ({ pin, qid, choiceIdx }) => {
+  socket.on('player:answer', ({ pin, qid, choiceIdx }, ack) => {
+    // Immediate ack so the client knows the server received the tap. If transport
+    // is flaky, the client uses this to decide whether to retry the emit.
+    if (typeof ack === 'function') ack({ ok: true });
     const g = games[pin];
     if (!g || g.state !== 'active') return;
     const p = g.players[socket.id];

@@ -5,6 +5,26 @@
   let myName = '';
   let currentQid = null;
   let answerRecoveryTimer = null;   // re-enables answer buttons if server is silent
+
+  // Bulletproof answer transmission: uses a Socket.IO ack with timeout. If the
+  // server doesn't acknowledge within 1.5 s, retry the emit up to 2 more times.
+  // This is the cure for "I answered and nothing happened" on flaky phones.
+  function sendAnswerWithRetry(qid, choiceIdx, attempt) {
+    attempt = attempt || 1;
+    try {
+      socket.timeout(1500).emit('player:answer', { pin, qid, choiceIdx }, (err) => {
+        if (err && attempt < 3) {
+          // No ack came back in time — try again immediately
+          sendAnswerWithRetry(qid, choiceIdx, attempt + 1);
+        }
+        // If we got an ack (no err), do nothing — the answer-result event will
+        // arrive shortly and drive the UI transition.
+      });
+    } catch (_) {
+      // socket.timeout may not exist on very old socket.io builds — fall back
+      try { socket.emit('player:answer', { pin, qid, choiceIdx }); } catch (e) {}
+    }
+  }
   let mashEndTime = 0;
   let mashTimerInterval = null;
   let mashTapHandler = null;
@@ -529,26 +549,17 @@
       btn.className = 'answer-btn';
       btn.innerHTML = `<span class="answer-shape shape-${i}">${SHAPES[i]}</span><span>${escapeHtml(a)}</span>`;
       btn.addEventListener('click', () => {
-        socket.emit('player:answer', { pin, qid: currentQid, choiceIdx: i });
+        sendAnswerWithRetry(currentQid, i);
         document.querySelectorAll('.answer-btn').forEach((b) => b.disabled = true);
         btn.style.outline = '3px solid var(--ink)';
-        // Recovery: if no answer-result arrives in 3.5s the server probably
-        // dropped this answer (stale qid after a reconnect, lost packet, etc).
-        // Re-enable the buttons so the player can tap again instead of being
-        // stuck staring at a frozen question screen.
+        // Recovery: if no answer-result arrives in 3.5s, re-enable the buttons.
+        // (sendAnswerWithRetry handles transport-level retries silently below.)
         if (answerRecoveryTimer) clearTimeout(answerRecoveryTimer);
         answerRecoveryTimer = setTimeout(() => {
           document.querySelectorAll('.answer-btn').forEach((b) => {
             b.disabled = false;
             b.style.outline = '';
           });
-          // Tell user to retry — small inline hint above the answers
-          const hint = document.createElement('div');
-          hint.className = 'answer-retry-hint';
-          hint.textContent = '⚠️ Toca de nuevo (la respuesta no llegó)';
-          const existing = ansEl.querySelector('.answer-retry-hint');
-          if (existing) existing.remove();
-          ansEl.insertBefore(hint, ansEl.firstChild);
         }, 3500);
       });
       ansEl.appendChild(btn);
@@ -616,6 +627,9 @@
         } else if (gameType === 'color-splash') {
           csWalkEndTime = walkUntil;
           startWalk();
+        } else if (gameType === 'pinata') {
+          mashEndTime = mashUntil;
+          startPinataSmash();
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -673,6 +687,138 @@
       s.style.setProperty('--rot', (Math.random() * 720) + 'deg');
       document.body.appendChild(s);
       setTimeout(() => s.remove(), 900);
+    }
+  }
+
+  // === Piñata smash screen — the real interaction. ===
+  // Hanging tiger that swings, a wooden Mexican stick at the bottom-right that
+  // arcs up to hit on every tap, and candies that burst from the tiger and fall.
+  let pnSmashTimerInt = null;
+  let pnSmashTaps = 0;
+  let pnSmashActive = false;
+
+  function startPinataSmash() {
+    pnSmashActive = true;
+    pnSmashTaps = 0;
+    document.body.classList.add('pinata-active');
+    if ($('pn-smash-name-tag')) $('pn-smash-name-tag').textContent = myName;
+    if ($('pn-smash-score')) $('pn-smash-score').textContent = myScore;
+    if ($('pn-smash-header')) $('pn-smash-header').className = `player-header ${team}`;
+    // Reset tiger
+    const tiger = $('pn-smash-tiger');
+    const tigerWrap = $('pn-smash-tiger-wrap');
+    if (tiger) {
+      tiger.textContent = '🐯';
+      tiger.classList.remove('hit', 'angry');
+    }
+    if (tigerWrap) tigerWrap.classList.remove('damaged');
+    // Clear any leftover candies
+    const layer = $('pn-smash-candy-layer');
+    if (layer) layer.innerHTML = '';
+    // Reset timer fill
+    const fill = $('pn-smash-timer-fill');
+    if (fill) fill.style.width = '100%';
+    showScreen('pinata-smash');
+    // Bind tap button
+    const btn = $('pn-smash-tap-btn');
+    if (btn) {
+      btn.onpointerdown = (e) => {
+        e.preventDefault();
+        pnHandleSmashTap();
+      };
+    }
+    // Also let the player tap the tiger directly
+    if (tigerWrap) {
+      tigerWrap.onpointerdown = (e) => {
+        e.preventDefault();
+        pnHandleSmashTap();
+      };
+    }
+    // Timer
+    if (pnSmashTimerInt) clearInterval(pnSmashTimerInt);
+    const totalDur = mashEndTime - Date.now();
+    pnSmashTimerInt = setInterval(() => {
+      const remaining = Math.max(0, mashEndTime - Date.now());
+      if (fill) fill.style.width = ((remaining / totalDur) * 100) + '%';
+      if (remaining <= 0) {
+        clearInterval(pnSmashTimerInt);
+        pnSmashTimerInt = null;
+        pnSmashActive = false;
+        document.body.classList.remove('pinata-active');
+        // The next 'question' event will move us to screen-question naturally.
+      }
+    }, 50);
+  }
+
+  // Called from inside the tap-ack handler when piñata is the active game. We
+  // animate the stick swing + spawn candies + shake the tiger. The actual tap
+  // event was already sent to the server by the regular mash flow.
+  function pnSmashScreenTap() {
+    if (!pnSmashActive) return;
+    pnSmashTaps++;
+    if ($('pn-smash-score')) $('pn-smash-score').textContent = myScore;
+    const stick = $('pn-smash-stick');
+    if (stick) {
+      stick.classList.remove('swing');
+      void stick.offsetWidth;
+      stick.classList.add('swing');
+    }
+    const tigerWrap = $('pn-smash-tiger-wrap');
+    if (tigerWrap) {
+      tigerWrap.classList.remove('shake');
+      void tigerWrap.offsetWidth;
+      tigerWrap.classList.add('shake');
+      // After ~8 taps the tiger looks visibly damaged
+      if (pnSmashTaps > 8) tigerWrap.classList.add('damaged');
+      // Tiger face turns angry after a while (no demon)
+      const tiger = $('pn-smash-tiger');
+      if (tiger && pnSmashTaps > 6) tiger.textContent = '😾';
+    }
+    spawnPnCandyBurst();
+  }
+
+  function pnHandleSmashTap() {
+    if (!pnSmashActive) return;
+    if (Date.now() > mashEndTime) {
+      pnSmashActive = false;
+      document.body.classList.remove('pinata-active');
+      return;
+    }
+    if (navigator.vibrate) navigator.vibrate(15);
+    MochiSounds.tap && MochiSounds.tap();
+    // Send tap to server — server emits tap-ack, which calls pnSmashScreenTap
+    // for the animations. We do the visuals optimistically here too so it feels
+    // instant even on a slow connection.
+    socket.emit('player:tap', { pin });
+    pnSmashScreenTap();
+  }
+
+  function spawnPnCandyBurst() {
+    const layer = $('pn-smash-candy-layer');
+    if (!layer) return;
+    const tigerWrap = $('pn-smash-tiger-wrap');
+    if (!tigerWrap) return;
+    const stageRect = layer.getBoundingClientRect();
+    const tigerRect = tigerWrap.getBoundingClientRect();
+    const cx = tigerRect.left - stageRect.left + tigerRect.width / 2;
+    const cy = tigerRect.top - stageRect.top + tigerRect.height / 2;
+    const candies = ['🍬', '🍭', '🍫', '🧧', '🪙', '🥮', '🍡'];
+    const count = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < count; i++) {
+      const c = document.createElement('div');
+      c.className = 'pn-candy';
+      c.textContent = candies[Math.floor(Math.random() * candies.length)];
+      c.style.left = cx + 'px';
+      c.style.top = cy + 'px';
+      const dx = (Math.random() - 0.5) * 280;
+      const dy = 220 + Math.random() * 180; // always falls down
+      const rot = (Math.random() * 720 - 360) + 'deg';
+      c.style.setProperty('--dx', dx + 'px');
+      c.style.setProperty('--dy', dy + 'px');
+      c.style.setProperty('--rot', rot);
+      c.style.animationDuration = (0.9 + Math.random() * 0.4) + 's';
+      layer.appendChild(c);
+      setTimeout(() => c.remove(), 1500);
     }
   }
 
@@ -1977,23 +2123,25 @@
     // Piñata: tiger gets visibly angrier the more you tap during this window.
     // Stage 1: 🐯 calm, Stage 2: 😾 annoyed, Stage 3: 👹 furious.
     if (gameType === 'pinata') {
+      // The brand-new piñata smash screen has its own per-tap visuals — see
+      // pnSmashScreenTap() below. The legacy mash-mascot reskin only runs as a
+      // fallback if for any reason the player ended up on the standard mash
+      // screen. No demon face — just calm tiger → angry cat (per user feedback).
       const mascotEl = $('mash-mascot');
       if (mascotEl) {
         const tapsThisRound = (mascotEl._pnTaps || 0) + 1;
         mascotEl._pnTaps = tapsThisRound;
-        let face = '🐯';
-        let cls = '';
-        if (tapsThisRound > 18) { face = '👹'; cls = 'pinata-furious'; }
-        else if (tapsThisRound > 8) { face = '😾'; cls = 'pinata-angry'; }
+        const face = tapsThisRound > 6 ? '😾' : '🐯';
         if (mascotEl.textContent !== face) mascotEl.textContent = face;
-        mascotEl.classList.remove('pinata-angry', 'pinata-furious');
-        if (cls) mascotEl.classList.add(cls);
-        // Per-tap shake — quick wobble to make it feel like you really hit it
+        mascotEl.classList.remove('pinata-furious');
+        if (tapsThisRound > 6) mascotEl.classList.add('pinata-angry');
         mascotEl.classList.remove('pinata-hit');
         void mascotEl.offsetWidth;
         mascotEl.classList.add('pinata-hit');
         if (MochiSounds.thwack) MochiSounds.thwack();
       }
+      // Drive the new piñata smash screen if it's active
+      pnSmashScreenTap();
     }
   });
 
@@ -2076,10 +2224,30 @@
       myScore = 0;
       enterLobby();
     }
+    // === Catch-up watchdog ===
+    // If the server says we're 'active' but we're still showing the lobby or
+    // a frozen countdown screen, we missed the 'countdown' event (flaky wifi,
+    // backgrounded tab, etc.). Force a transition into the right play screen
+    // so the player isn't stuck on "3-2-1-Go" forever.
+    if (s.state === 'active') {
+      const lobbyVisible = $('screen-lobby') && !$('screen-lobby').classList.contains('hidden');
+      const countdownVisible = $('screen-countdown') && !$('screen-countdown').classList.contains('hidden');
+      if (lobbyVisible || countdownVisible) {
+        // Pick the right destination screen for this game type
+        let target = 'question'; // default — server will likely have a question for us
+        if (gameType === 'flappy') target = 'fl-play';
+        else if (gameType === 'market-quest') target = 'mq-play';
+        else if (gameType === 'color-clash') target = 'cc-play';
+        // For mochi/pinata/color-splash we wait on screen-question if no Q yet;
+        // it'll get repopulated when 'question' arrives.
+        showScreen(target);
+        stopLobbyFlappy();
+      }
+    }
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

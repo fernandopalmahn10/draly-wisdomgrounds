@@ -206,6 +206,40 @@
     </div>
   </div>
 
+  <!-- PIÑATA SMASH — replaces the generic mash screen for piñata.
+       Player taps anywhere on the scene: a Mexican wooden stick swings up
+       and hits the tiger; candies burst out and fall. -->
+  <div id="screen-pinata-smash" class="hidden player-screen pn-smash-screen">
+    <div class="player-header" id="pn-smash-header">
+      <span id="pn-smash-name-tag">You</span>
+      <span>Golpes: <span id="pn-smash-score">0</span></span>
+    </div>
+    <div class="pn-smash-headline">🎉 ¡ROMPE LA PIÑATA! 🎉</div>
+    <div class="pn-smash-stage" id="pn-smash-stage">
+      <div class="pn-smash-rope"></div>
+      <div class="pn-smash-tiger-wrap" id="pn-smash-tiger-wrap">
+        <div class="pn-smash-tiger" id="pn-smash-tiger">🐯</div>
+      </div>
+      <!-- Candies burst from tiger position into this layer -->
+      <div class="pn-smash-candy-layer" id="pn-smash-candy-layer"></div>
+      <!-- Wooden Mexican piñata stick: bottom-right, swings up on each tap -->
+      <div class="pn-smash-stick" id="pn-smash-stick">
+        <div class="pn-smash-stick-shaft"></div>
+        <div class="pn-smash-stick-grip"></div>
+        <div class="pn-smash-stick-ribbon r1"></div>
+        <div class="pn-smash-stick-ribbon r2"></div>
+        <div class="pn-smash-stick-ribbon r3"></div>
+      </div>
+    </div>
+    <div class="pn-smash-timer-wrap">
+      <div class="pn-smash-timer-fill" id="pn-smash-timer-fill"></div>
+    </div>
+    <button class="pn-smash-tap-btn" id="pn-smash-tap-btn">
+      🥢 <span style="margin: 0 8px;">¡GOLPEAR!</span> 🥢
+    </button>
+    <p class="pn-smash-hint">Toca el botón rápido — cada golpe rompe más al tigre 🐯💥</p>
+  </div>
+
   <!-- ENDED -->
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
