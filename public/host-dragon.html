@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Ojo del Dragón · Anfitrión</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Long+Cang&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+  <link rel="stylesheet" href="/css/dragon.css">
+</head>
+<body class="dragon-bg">
+  <div class="lantern l1"></div>
+  <div class="lantern l2"></div>
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+
+  <!-- LOBBY -->
+  <div id="screen-lobby" class="container">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div class="market-banner">🐉 画龙点睛 · Ojo del Dragón ✒️</div>
+      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
+      <div class="pin-display" id="pin-display">····</div>
+      <div style="color:var(--ink-dim); font-size:0.9rem;">
+        Tus jugadores entran en <span id="join-url" style="color:var(--gold-glow); font-weight:800;">esta URL</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div style="font-size:2rem;">📚</div>
+        <div style="flex:1;">
+          <div style="font-size:0.75rem; color:var(--ink-dim); letter-spacing:0.15em; text-transform:uppercase;">Set cargado</div>
+          <div id="set-title-display" style="font-weight:800; font-size:1.15rem;">…</div>
+          <div id="set-count-display" style="color:var(--ink-dim); font-size:0.85rem;">…</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="location.href='/games.html?setId=' + new URLSearchParams(location.search).get('setId')">Cambiar juego</button>
+      </div>
+      <div class="duration-control">
+        <span>⏱ Duración máxima</span>
+        <input type="range" id="duration-slider" min="120" max="600" step="30" value="240">
+        <span class="duration-value" id="duration-value">4m</span>
+      </div>
+    </div>
+
+    <div class="host-grid">
+      <div class="team-panel team-red">
+        <div class="team-header">
+          <div class="team-mascot">✒️</div>
+          <div>
+            <div class="team-name">Equipo Pincel</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">紅毛筆 · máobǐ</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-red"></div>
+      </div>
+      <div class="team-panel team-gold">
+        <div class="team-header">
+          <div class="team-mascot">🖌️</div>
+          <div>
+            <div class="team-name">Equipo Tinta</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">金墨水 · mòshuǐ</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-gold"></div>
+      </div>
+    </div>
+
+    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:12px;">
+      Toca el chip de un jugador para cambiar de equipo
+    </p>
+
+    <div class="controls-panel">
+      <div class="controls-row" style="justify-content:center;">
+        <button class="btn btn-ghost" id="balance-btn">⚖️ Equilibrar</button>
+        <button class="btn btn-jade" id="start-btn" disabled>▶️ ¡A pintar el dragón!</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se juega</div>
+      <ol style="color:var(--ink-dim); font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
+        <li>Una leyenda china dice que cuando un pintor le pone <strong>ojos</strong> a su dragón… ¡el dragón cobra vida y vuela! 🐉</li>
+        <li>Cada respuesta correcta pinta <strong>un punto</strong> sobre el dragón.</li>
+        <li>Si el punto cae sobre el <strong>ojo</strong> 👁 — <strong>¡10 puntos!</strong> + el dragón ruge.</li>
+        <li>Si cae en el cuerpo: 1 punto.</li>
+        <li>El primer equipo en marcar <strong>5 ojos</strong> despierta al dragón y gana.</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="screen-countdown" class="hidden countdown-overlay">
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <!-- ACTIVE -->
+  <div id="screen-active" class="hidden dr-container">
+    <div class="sticky-pin">
+      <span class="sticky-pin-label">PIN</span>
+      <span class="sticky-pin-value" id="active-pin-display">····</span>
+    </div>
+
+    <div class="dr-topbar">
+      <div class="dr-team red">
+        <span class="dr-team-emoji">✒️</span>
+        <span class="dr-team-label">Pincel</span>
+        <span class="dr-team-score" id="score-red">0</span>
+        <span class="dr-eye-counter">👁 <span id="eyes-red">0</span>/5</span>
+      </div>
+      <div class="dr-time"><span id="timer-display">4:00</span></div>
+      <div class="dr-team gold">
+        <span class="dr-eye-counter">👁 <span id="eyes-gold">0</span>/5</span>
+        <span class="dr-team-score" id="score-gold">0</span>
+        <span class="dr-team-label">Tinta</span>
+        <span class="dr-team-emoji">🖌️</span>
+      </div>
+    </div>
+
+    <div class="dr-stage">
+      <div class="dr-clouds c1">☁️</div>
+      <div class="dr-clouds c2">☁️</div>
+      <div class="dr-dragon-wrap" id="dr-dragon-wrap">
+        <img class="dr-dragon" id="dr-dragon" src="/assets/hanyu.png" alt="Dragón" draggable="false">
+        <!-- Dots are placed inside this layer with absolute % coords -->
+        <div class="dr-dot-layer" id="dr-dot-layer"></div>
+        <!-- Eye glow overlays — flash on eye hits -->
+        <div class="dr-eye-glow dr-eye-glow-l" id="dr-eye-glow-l"></div>
+        <div class="dr-eye-glow dr-eye-glow-r" id="dr-eye-glow-r"></div>
+      </div>
+      <div class="dr-banner" id="dr-banner">¡Pintores, listos! 准备好</div>
+    </div>
+
+    <div style="text-align:center; padding:8px;">
+      <button class="btn btn-ghost btn-sm" id="end-now-btn">🛑 Terminar ronda</button>
+    </div>
+  </div>
+
+  <!-- WIN -->
+  <div id="screen-win" class="hidden container">
+    <div class="win-screen">
+      <div id="win-emoji" style="font-size:7rem;">🐉</div>
+      <div class="winner-banner" id="win-banner">¡El dragón despertó!</div>
+      <div class="final-scores">
+        <div><span class="red" id="final-red">0</span></div>
+        <div style="color:var(--ink-dim);">vs</div>
+        <div><span class="gold" id="final-gold">0</span></div>
+      </div>
+      <div class="win-narration" id="win-narration"></div>
+      <div class="leaderboard" id="leaderboard"></div>
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Inicio</button>
+        <button class="btn btn-jade" id="play-again-btn">🔄 Nueva ronda</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/dralingo.js"></script>
+  <script src="/js/host-dragon.js"></script>
+</body>
+</html>
