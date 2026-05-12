@@ -709,10 +709,11 @@
           mashEndTime = mashUntil;
           startPinataSmash();
         } else if (gameType === 'dragon-eye') {
-          // Dragon flight: same flow as piñata/mochi — open the mash window
-          // where each tap is a wing-flap that lifts the team dragon higher.
+          // Dragon flight: SWIPE-UP gesture, NOT tap mashing. Each upswipe
+          // gestures sends a player:tap (server logic unchanged) but the
+          // physical motion on the phone is wholly different.
           mashEndTime = mashUntil;
-          startMash();
+          startDragonFlap();
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -905,8 +906,123 @@
     }
   }
 
-  // (Dragon aim mini-game was here — replaced by the Mochi-style flap mash
-  // reskin in startMash() above. See body.dragon-flying-active in dragon.css.)
+  // === Dragon flight: swipe-up to flap ===
+  // Different gesture from Mochi/Piñata tap-mash. The player swipes upward
+  // anywhere on the screen; each successful upswipe lifts their team's
+  // dragon. Server logic is unchanged — we re-use the player:tap event.
+  let dragonFlapActive = false;
+  let dragonFlapCount = 0;
+  let dragonFlapTimerRaf = null;
+  let dragonFlapPointer = null;
+  let dragonFlapTapHandler = null;
+
+  function startDragonFlap() {
+    dragonFlapActive = true;
+    dragonFlapCount = 0;
+    showScreen('dragon-flap');
+    const dragonEl = $('dr-flap-dragon');
+    if (dragonEl) {
+      dragonEl.textContent = team === 'red' ? '🐉' : '🐲';
+      dragonEl.style.transform = '';
+    }
+    if ($('dr-flap-counter')) $('dr-flap-counter').textContent = '0';
+    const fill = $('dr-flap-timer-fill');
+    if (fill) fill.style.width = '100%';
+    const area = $('dr-flap-area');
+    if (!area) return;
+
+    // === Swipe gesture detection ===
+    let startY = 0, startT = 0, started = false, peakDeltaY = 0;
+    function onDown(e) {
+      if (!dragonFlapActive) return;
+      e.preventDefault();
+      started = true;
+      peakDeltaY = 0;
+      startY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+      startT = Date.now();
+      dragonFlapPointer = e.pointerId;
+      if (area.setPointerCapture && e.pointerId != null) {
+        try { area.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+    }
+    function onMove(e) {
+      if (!started || !dragonFlapActive) return;
+      const cy = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+      const dy = cy - startY; // negative = swiping up
+      if (dy < peakDeltaY) peakDeltaY = dy;
+      // Visual: dragon follows the finger upward in lock-step (capped at -180px)
+      if (dragonEl) {
+        const lift = Math.max(0, Math.min(180, -dy));
+        dragonEl.style.transform = `translate(-50%, -${lift}px) rotate(-${lift * 0.06}deg)`;
+      }
+    }
+    function onUp(e) {
+      if (!started) return;
+      started = false;
+      const dt = Date.now() - startT;
+      // Detect a valid upswipe: at least 50 px and faster than 800 ms
+      if (peakDeltaY <= -50 && dt < 800) {
+        registerFlap();
+      }
+      // Dragon settles back to base position
+      if (dragonEl) {
+        dragonEl.style.transition = 'transform 0.35s cubic-bezier(.22,1.6,.36,1)';
+        dragonEl.style.transform = '';
+        setTimeout(() => { if (dragonEl) dragonEl.style.transition = ''; }, 380);
+      }
+    }
+    // Wire (and remove any previously-wired) listeners idempotently
+    area.onpointerdown = onDown;
+    area.onpointermove = onMove;
+    area.onpointerup = onUp;
+    area.onpointercancel = onUp;
+    area.onpointerleave = (e) => { if (started) onUp(e); };
+
+    // === Timer + auto-close ===
+    cancelAnimationFrame(dragonFlapTimerRaf);
+    const totalMs = mashEndTime - Date.now();
+    function tick() {
+      const remaining = Math.max(0, mashEndTime - Date.now());
+      if (fill) fill.style.width = ((remaining / totalMs) * 100) + '%';
+      if (remaining <= 0) {
+        dragonFlapActive = false;
+        // Next 'question' event drives the next transition.
+        return;
+      }
+      dragonFlapTimerRaf = requestAnimationFrame(tick);
+    }
+    tick();
+  }
+
+  function registerFlap() {
+    if (!dragonFlapActive) return;
+    if (Date.now() > mashEndTime) {
+      dragonFlapActive = false;
+      return;
+    }
+    dragonFlapCount++;
+    if ($('dr-flap-counter')) $('dr-flap-counter').textContent = dragonFlapCount;
+    // Send to server — re-uses the same player:tap path so altitude logic and
+    // host visuals (cloud puff fx + dragon climb) work unchanged.
+    socket.emit('player:tap', { pin });
+    if (navigator.vibrate) navigator.vibrate(25);
+    MochiSounds.whoosh ? MochiSounds.whoosh() : (MochiSounds.thwack && MochiSounds.thwack());
+    // "+1" popup pulses upward from the dragon to celebrate the flap
+    const layer = $('dr-flap-popup-layer');
+    const dragonEl = $('dr-flap-dragon');
+    if (layer && dragonEl) {
+      const pop = document.createElement('div');
+      pop.className = 'dr-flap-popup';
+      pop.textContent = '+1';
+      // Position near the dragon's current center
+      const dr = dragonEl.getBoundingClientRect();
+      const lr = layer.getBoundingClientRect();
+      pop.style.left = ((dr.left + dr.width / 2) - lr.left) + 'px';
+      pop.style.top  = ((dr.top  + dr.height / 2) - lr.top)  + 'px';
+      layer.appendChild(pop);
+      setTimeout(() => pop.remove(), 800);
+    }
+  }
 
   function startMash() {
     showScreen('mash');
@@ -924,16 +1040,6 @@
         mascotEl.textContent = '🐯';
         mascotEl.classList.remove('pinata-angry', 'pinata-furious', 'pinata-hit');
         mascotEl._pnTaps = 0;
-      }
-    } else if (gameType === 'dragon-eye') {
-      document.body.classList.add('dragon-flying-active');
-      document.body.classList.remove('pinata-active');
-      if ($('mash-headline')) $('mash-headline').innerHTML = '🐉 ¡AYUDA AL DRAGÓN A VOLAR!';
-      if ($('mash-hint')) $('mash-hint').innerHTML = 'Cada toque = un aleteo. ¡Sube hasta las nubes celestiales! ☁️✨';
-      const mascotEl = $('mash-mascot');
-      if (mascotEl) {
-        mascotEl.textContent = team === 'red' ? '🐉' : '🐲';
-        mascotEl.classList.remove('dragon-flap');
       }
     } else {
       document.body.classList.remove('pinata-active', 'dragon-flying-active');
@@ -2257,15 +2363,8 @@
       }
       pnSmashScreenTap();
     } else if (gameType === 'dragon-eye') {
-      // Dragon flap visual on each tap: wing-flap animation + cloud puff
-      const mascotEl = $('mash-mascot');
-      if (mascotEl) {
-        mascotEl.classList.remove('dragon-flap');
-        void mascotEl.offsetWidth;
-        mascotEl.classList.add('dragon-flap');
-      }
-      // Wing-beat sound: use the same thwack as piñata (works well for impact)
-      if (MochiSounds.thwack) MochiSounds.thwack();
+      // Dragon: visual + sound happen at swipe-time on the flap screen
+      // (see registerFlap). Tap-ack just confirms the server got it.
     }
   });
 
@@ -2381,7 +2480,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

@@ -207,8 +207,32 @@
     </div>
   </div>
 
-  <!-- (Dragon aim screen removed — Dragon's Eye is now a tap-mash flight game,
-       reuses the standard #screen-mash with body.dragon-flying-active reskin.) -->
+  <!-- DRAGON FLAP — opens after correct answer in Vuelo del Dragón.
+       Instead of tap-mashing (Mochi/Piñata pattern), the player SWIPES UP on
+       the screen to flap the dragon's wings. Each successful upswipe lifts the
+       team's dragon higher on the host screen. -->
+  <div id="screen-dragon-flap" class="hidden player-screen dr-flap-screen">
+    <div class="dr-flap-header">
+      <div class="dr-flap-title">🐉 ¡DESLIZA HACIA ARRIBA! ☁️</div>
+      <div class="dr-flap-counter"><span id="dr-flap-counter">0</span> aleteos</div>
+    </div>
+    <div class="dr-flap-timer-wrap">
+      <div class="dr-flap-timer-fill" id="dr-flap-timer-fill"></div>
+    </div>
+    <div class="dr-flap-area" id="dr-flap-area">
+      <!-- Floating scenery to give a sense of climbing -->
+      <div class="dr-flap-cloud c1">☁️</div>
+      <div class="dr-flap-cloud c2">☁️</div>
+      <div class="dr-flap-cloud c3">☁️</div>
+      <!-- The dragon at the bottom — visually rises with finger during swipe -->
+      <div class="dr-flap-dragon" id="dr-flap-dragon">🐉</div>
+      <!-- Arrow hint -->
+      <div class="dr-flap-arrow" id="dr-flap-arrow">⬆️</div>
+      <!-- Floating "+1" pops when each swipe registers -->
+      <div class="dr-flap-popup-layer" id="dr-flap-popup-layer"></div>
+    </div>
+    <div class="dr-flap-hint">Toca y arrastra HACIA ARRIBA cualquier parte de la pantalla 🐉💨</div>
+  </div>
 
   <!-- PIÑATA SMASH — replaces the generic mash screen for piñata.
        Player taps anywhere on the scene: a Mexican wooden stick swings up
