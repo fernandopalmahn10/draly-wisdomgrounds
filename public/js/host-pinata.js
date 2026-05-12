@@ -1,7 +1,8 @@
 // Piñata Tigre — host view.
-// Lobby is shared with the other team-vs-team games. Once active, this view
-// shows a swinging tiger piñata with HP, mirrors the current race question,
-// and animates "smack" hits + prize drops as players land swings.
+// Two tigers, one per team. Players use a Mochi-Mash-style flow on their phones:
+// answer a vocab question correctly → 5 s smash window → every tap is one stick
+// strike on THEIR team's tiger. The host screen shows both tigers in real time,
+// deforming + cracking as damage accumulates. First tiger to break (HP = 0) wins.
 (function () {
   const socket = io();
   let pin = null;
@@ -9,11 +10,13 @@
   let timerInterval = null;
   let urgentTriggered = false;
 
-  let hp = 100;
-  let maxHp = 100;
+  let maxHp = 220;
+  let hpRed = 220;
+  let hpGold = 220;
   let scores = { red: 0, gold: 0 };
   let lootRed = [];
   let lootGold = [];
+  let gameOver = false;
 
   const $ = (id) => document.getElementById(id);
 
@@ -80,11 +83,11 @@
     if (MochiSounds.stopEndMusic) MochiSounds.stopEndMusic();
     socket.emit('host:reset', { pin });
     showScreen('lobby');
-    hp = maxHp;
-    lootRed = [];
-    lootGold = [];
+    hpRed = hpGold = maxHp;
+    lootRed = []; lootGold = [];
+    gameOver = false;
     renderLoot();
-    setHpBar();
+    setHpBars();
   });
 
   function updateStartBtn() {
@@ -131,65 +134,49 @@
   });
 
   socket.on('pn:init', (data) => {
-    hp = data.hp;
     maxHp = data.maxHp;
+    hpRed  = data.hpRed;
+    hpGold = data.hpGold;
     scores = data.teamScores || { red: 0, gold: 0 };
-    lootRed = [];
-    lootGold = [];
-    setHpBar();
+    lootRed = []; lootGold = [];
+    gameOver = false;
+    setHpBars();
     updateScores();
     renderLoot();
-    setBanner('¡Comienza la batalla! 战斗开始');
-    $('pn-question').style.display = 'none';
+    setBanner('¡Ataquen a su tigre! 攻击老虎');
   });
 
-  socket.on('pn:question', ({ text, hp: serverHp }) => {
-    if (typeof serverHp === 'number') {
-      hp = serverHp;
-      setHpBar();
-    }
-    setBanner('🗣 ¿Quién responde primero?');
-    const qEl = $('pn-question');
-    qEl.textContent = text;
-    qEl.style.display = 'block';
-    qEl.classList.remove('won');
-    MochiSounds.questionAppear && MochiSounds.questionAppear();
+  // HP throttled broadcast — drives the deformation visuals
+  socket.on('pn:hp', ({ hpRed: r, hpGold: g, maxHp: m }) => {
+    if (typeof r === 'number') hpRed = r;
+    if (typeof g === 'number') hpGold = g;
+    if (typeof m === 'number') maxHp = m;
+    setHpBars();
   });
 
-  socket.on('pn:race-won', ({ team, playerName, correctText }) => {
-    const teamEmoji = team === 'red' ? '🥢' : '🏹';
-    setBanner(`${teamEmoji} ¡${escapeHtml(playerName)} respondió primero! Cargando golpe…`);
-    const qEl = $('pn-question');
-    qEl.textContent = `✓ ${correctText}`;
-    qEl.classList.add('won');
-    MochiSounds.correct && MochiSounds.correct();
+  // Team-aggregated tap effects (already broadcast by server for Mochi-style).
+  // Each chunk of taps spawns a flying stick + small candy puff per team.
+  socket.on('tap-fx', ({ red, gold }) => {
+    if (red && red > 0)  spawnStrikes('red',  Math.min(red, 6));
+    if (gold && gold > 0) spawnStrikes('gold', Math.min(gold, 6));
   });
 
-  socket.on('pn:hit', ({ team, playerName, power, label, dmg, hp: serverHp, teamScores, prizeIcon }) => {
-    hp = serverHp;
+  socket.on('score-update', ({ teamScores }) => {
+    if (teamScores) { scores = teamScores; updateScores(); }
+  });
+
+  socket.on('pn:broken', ({ team, hpRed: r, hpGold: g, teamScores }) => {
+    gameOver = true;
+    if (typeof r === 'number') hpRed = r;
+    if (typeof g === 'number') hpGold = g;
     if (teamScores) scores = teamScores;
-    setHpBar();
+    setHpBars();
     updateScores();
-    playSwingFx(team, label, dmg);
-    dropPrize(team, prizeIcon);
-    const labelText =
-      label === 'crit' ? '💥 ¡CRÍTICO!' :
-      label === 'weak' ? '😅 Golpe débil' :
-      '👊 Buen golpe';
-    setBanner(`${labelText} · ${escapeHtml(playerName)} hizo ${dmg} de daño`);
-    if (label === 'crit') {
-      MochiSounds.populate && MochiSounds.populate(team);
-    } else {
-      MochiSounds.populate && MochiSounds.populate(team);
-    }
-  });
-
-  socket.on('pn:broken', ({ teamScores }) => {
-    if (teamScores) scores = teamScores;
-    updateScores();
-    setBanner('💥💥 ¡LA PIÑATA SE ROMPIÓ! 老虎破了！');
-    burstPrizes();
-    MochiSounds.winFanfare && MochiSounds.winFanfare();
+    const emoji = team === 'red' ? '🥢' : '🏹';
+    setBanner(`💥💥 ¡${team === 'red' ? 'Bastón' : 'Arco'} rompió su tigre primero! ${emoji}`);
+    burstCandy(team);
+    MochiSounds.candySpill && MochiSounds.candySpill();
+    setTimeout(() => MochiSounds.winFanfare && MochiSounds.winFanfare(), 400);
   });
 
   socket.on('game-end', (data) => {
@@ -208,7 +195,7 @@
       $('win-emoji').textContent = '🥢';
       MochiSounds.winMusic && MochiSounds.winMusic();
       setTimeout(() => MochiSounds.winFanfare && MochiSounds.winFanfare(), 400);
-      if (narr) narr.innerHTML = `🥢 <span class="red-team">Equipo Bastón</span> destrozó la piñata con <strong>${r}</strong> pts — ${gap > 50 ? 'una paliza 🔥' : gap > 20 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
+      if (narr) narr.innerHTML = `🥢 <span class="red-team">Equipo Bastón</span> rompió la piñata con <strong>${r}</strong> golpes — ${gap > 80 ? 'una paliza 🔥' : gap > 30 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
       launchConfetti(['#ff5a66', '#d92e3a', '#ffd57a']);
     } else if (data.winner === 'gold') {
       $('win-banner').textContent = '🏹 ¡Equipo Arco gana!';
@@ -216,14 +203,14 @@
       $('win-emoji').textContent = '🏹';
       MochiSounds.winMusic && MochiSounds.winMusic();
       setTimeout(() => MochiSounds.winFanfare && MochiSounds.winFanfare(), 400);
-      if (narr) narr.innerHTML = `🏹 <span class="gold-team">Equipo Arco</span> destrozó la piñata con <strong>${g}</strong> pts — ${gap > 50 ? 'una paliza 🔥' : gap > 20 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
+      if (narr) narr.innerHTML = `🏹 <span class="gold-team">Equipo Arco</span> rompió la piñata con <strong>${g}</strong> golpes — ${gap > 80 ? 'una paliza 🔥' : gap > 30 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
       launchConfetti(['#ffd57a', '#e8b14a', '#ff5a66']);
     } else {
       $('win-banner').textContent = '🤝 ¡Empate!';
       $('win-banner').className = 'winner-banner tie';
       $('win-emoji').textContent = '⚖️';
       MochiSounds.tieMusic && MochiSounds.tieMusic();
-      if (narr) narr.innerHTML = `🤝 Ambos equipos hicieron el mismo daño: <strong>${r}</strong> pts.`;
+      if (narr) narr.innerHTML = `🤝 Ambos equipos golpearon igual: <strong>${r}</strong> golpes.`;
     }
     renderLeaderboard(data);
     setTimeout(() => launchConfetti(data.winner === 'red'
@@ -231,32 +218,56 @@
       : ['#ffd57a', '#e8b14a', '#ff5a66']), 4000);
   });
 
-  function setHpBar() {
+  // === Visuals ===
+
+  function setHpBars() {
+    setHpBar('red',  hpRed);
+    setHpBar('gold', hpGold);
+  }
+
+  function setHpBar(team, hp) {
     const pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
-    $('pn-hp-fill').style.width = pct + '%';
-    $('pn-hp-label').textContent = `HP ${hp} / ${maxHp}`;
-    // Color shifts from gold → orange → red as HP drains
-    const fill = $('pn-hp-fill');
-    if (pct > 66) fill.className = 'pn-hp-fill ok';
-    else if (pct > 33) fill.className = 'pn-hp-fill warn';
-    else fill.className = 'pn-hp-fill danger';
-    // Show cracks proportional to damage
-    const cracks = $('pn-cracks');
-    cracks.innerHTML = '';
+    const fill = $('hp-' + team + '-fill');
+    const txt = $('hp-' + team + '-text');
+    if (fill) fill.style.width = pct + '%';
+    if (txt) txt.textContent = `HP ${hp} / ${maxHp}`;
+    if (fill) {
+      if (pct > 66) fill.className = 'pn-hp-fill ok';
+      else if (pct > 33) fill.className = 'pn-hp-fill warn';
+      else fill.className = 'pn-hp-fill danger';
+    }
+    // Deformation: cracks + tilt proportional to damage taken.
+    const wrap = $('tiger-' + team + '-wrap');
+    const tiger = $('tiger-' + team);
+    const cracks = $('cracks-' + team);
+    if (!wrap || !cracks) return;
     const damageRatio = 1 - (hp / maxHp);
-    const cracksToShow = Math.floor(damageRatio * 8);
-    for (let i = 0; i < cracksToShow; i++) {
+    // Tilt + scale-down as it falls apart
+    const tilt = (damageRatio * 28) * (team === 'red' ? -1 : 1);
+    wrap.style.setProperty('--deform-tilt', tilt + 'deg');
+    wrap.style.setProperty('--deform-scale', (1 - damageRatio * 0.18).toFixed(3));
+    // Tint progressively darker / desaturated
+    if (tiger) tiger.style.filter = `drop-shadow(0 8px 20px rgba(0,0,0,0.7)) brightness(${(1 - damageRatio * 0.45).toFixed(2)}) saturate(${(1 - damageRatio * 0.55).toFixed(2)})`;
+    // Crack overlays — count grows with damage
+    const cracksTarget = Math.floor(damageRatio * 12);
+    while (cracks.children.length < cracksTarget) {
       const c = document.createElement('div');
-      c.className = 'pn-crack pn-crack-' + (i % 4);
+      c.className = 'pn-crack pn-crack-' + (cracks.children.length % 4);
       c.style.left = (10 + Math.random() * 80) + '%';
       c.style.top = (10 + Math.random() * 75) + '%';
       c.style.transform = `rotate(${Math.floor(Math.random() * 90 - 45)}deg)`;
       cracks.appendChild(c);
     }
+    while (cracks.children.length > cracksTarget) {
+      cracks.removeChild(cracks.lastChild);
+    }
+    // Big crack when ~70% damaged
+    if (damageRatio > 0.7) wrap.classList.add('heavily-damaged');
+    else wrap.classList.remove('heavily-damaged');
   }
 
   function updateScores() {
-    $('score-red').textContent = scores.red || 0;
+    $('score-red').textContent  = scores.red  || 0;
     $('score-gold').textContent = scores.gold || 0;
   }
 
@@ -269,65 +280,69 @@
     b.classList.add('flash');
   }
 
-  function playSwingFx(team, label, dmg) {
-    const stickFx = $('pn-stick-fx');
-    const stick = document.createElement('div');
-    stick.className = 'pn-stick ' + team + (label === 'crit' ? ' crit' : '');
-    stick.textContent = team === 'red' ? '🥢' : '🏹';
-    stickFx.appendChild(stick);
-    setTimeout(() => stick.remove(), 700);
-
-    const wrap = $('pn-tiger-wrap');
-    wrap.classList.remove('shake', 'shake-crit');
+  // Spawn `count` overlapping stick strikes on the given team's tiger.
+  function spawnStrikes(team, count) {
+    if (gameOver) return;
+    MochiSounds.thwack && MochiSounds.thwack();
+    const stickFx = $('stick-fx-' + team);
+    const wrap = $('tiger-' + team + '-wrap');
+    if (!stickFx || !wrap) return;
+    for (let i = 0; i < count; i++) {
+      // Each strike: stick flies in, tiger shakes briefly
+      const stick = document.createElement('div');
+      stick.className = 'pn-stick ' + team;
+      stick.textContent = team === 'red' ? '🥢' : '🏹';
+      // Random origin + slight delay so multiple taps look like a flurry
+      stick.style.animationDelay = (i * 60) + 'ms';
+      stickFx.appendChild(stick);
+      setTimeout(() => stick.remove(), 750 + i * 60);
+    }
+    wrap.classList.remove('shake');
     void wrap.offsetWidth;
-    wrap.classList.add(label === 'crit' ? 'shake-crit' : 'shake');
-
-    // Damage popup
-    const pop = document.createElement('div');
-    pop.className = 'pn-dmg-popup ' + team + (label === 'crit' ? ' crit' : '');
-    pop.textContent = `-${dmg}`;
-    stickFx.appendChild(pop);
-    setTimeout(() => pop.remove(), 900);
+    wrap.classList.add('shake');
   }
 
-  function dropPrize(team, icon) {
+  // When a tiger breaks: explosion of candy + prizes from that side.
+  function burstCandy(team) {
     const layer = $('pn-fx-layer');
-    const prize = document.createElement('div');
-    prize.className = 'pn-prize-fly ' + team;
-    prize.textContent = icon || '🎁';
-    // Start near tiger center, end in that team's loot tray corner
-    layer.appendChild(prize);
-    requestAnimationFrame(() => {
-      prize.classList.add('fly');
-    });
-    setTimeout(() => {
-      prize.remove();
-      if (team === 'red') lootRed.push(icon);
-      else lootGold.push(icon);
-      renderLoot();
-    }, 900);
+    const wrap = $('tiger-' + team + '-wrap');
+    if (!layer || !wrap) return;
+    // Hide the actual tiger emoji (it's burst)
+    const tiger = $('tiger-' + team);
+    if (tiger) tiger.style.opacity = '0';
+    const rect = wrap.getBoundingClientRect();
+    const stageRect = layer.getBoundingClientRect();
+    const cx = rect.left - stageRect.left + rect.width / 2;
+    const cy = rect.top  - stageRect.top  + rect.height / 2;
+    const candies = ['🍬', '🍭', '🍫', '🧧', '💰', '🪙', '🎁', '🥮', '🏮'];
+    for (let i = 0; i < 38; i++) {
+      const p = document.createElement('div');
+      p.className = 'pn-burst-prize';
+      p.textContent = candies[i % candies.length];
+      const angle = (Math.PI * 2 * i) / 38 + Math.random() * 0.3;
+      const dist = 300 + Math.random() * 240;
+      p.style.left = cx + 'px';
+      p.style.top = cy + 'px';
+      p.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+      p.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+      p.style.animationDuration = (1.4 + Math.random() * 0.8) + 's';
+      layer.appendChild(p);
+      setTimeout(() => p.remove(), 2400);
+    }
+    // Loot tray collects some candies
+    for (let i = 0; i < 16; i++) {
+      const c = candies[Math.floor(Math.random() * candies.length)];
+      if (team === 'red') lootRed.push(c);
+      else lootGold.push(c);
+    }
+    setTimeout(renderLoot, 700);
   }
 
   function renderLoot() {
-    const r = $('pn-loot-red');
-    const g = $('pn-loot-gold');
-    if (r) r.innerHTML = lootRed.slice(-30).map((i) => `<span>${i}</span>`).join('');
-    if (g) g.innerHTML = lootGold.slice(-30).map((i) => `<span>${i}</span>`).join('');
-  }
-
-  function burstPrizes() {
-    const layer = $('pn-fx-layer');
-    for (let i = 0; i < 24; i++) {
-      const p = document.createElement('div');
-      p.className = 'pn-burst-prize';
-      p.textContent = ['🎁', '💰', '🪙', '🍬', '🥮', '🧧', '🏮'][i % 7];
-      const angle = (Math.PI * 2 * i) / 24;
-      const dist = 280 + Math.random() * 180;
-      p.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
-      p.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
-      layer.appendChild(p);
-      setTimeout(() => p.remove(), 1800);
-    }
+    const r = $('loot-red');
+    const g = $('loot-gold');
+    if (r) r.innerHTML = lootRed.slice(-40).map((i) => `<span>${i}</span>`).join('');
+    if (g) g.innerHTML = lootGold.slice(-40).map((i) => `<span>${i}</span>`).join('');
   }
 
   function startTimer() {
@@ -392,7 +407,7 @@
       c.style.left = Math.random() * 100 + '%';
       c.style.animationDelay = Math.random() * 1.5 + 's';
       c.style.animationDuration = 2 + Math.random() * 2 + 's';
-      c.textContent = ['🥢', '🏹', '🎁', '🧧', '✨'][i % 5];
+      c.textContent = ['🥢', '🏹', '🍬', '🧧', '🎁'][i % 5];
       c.style.fontSize = (1 + Math.random() * 1) + 'rem';
       c.style.background = 'transparent';
       document.body.appendChild(c);

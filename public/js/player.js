@@ -394,7 +394,13 @@
       mashBtn.classList.add(team);
     }
     if ($('mash-mascot')) {
-      $('mash-mascot').textContent = isRed ? '🐼' : '🦊';
+      // Piñata reskins the mash button: the target IS the tiger; the team
+      // identity is read from the stick/bow emoji elsewhere.
+      if (gameType === 'pinata') {
+        $('mash-mascot').textContent = '🐯';
+      } else {
+        $('mash-mascot').textContent = isRed ? '🐼' : '🦊';
+      }
     }
     // Color Clash team tag
     if ($('cc-team-tag')) {
@@ -467,13 +473,7 @@
         });
       }, 3500);
     }
-    if (gameType === 'pinata') {
-      setTimeout(() => {
-        safeSwitchAfterCountdown('pn-wait', () => {
-          setPnWait('🐯', '¡Listos para la primera pregunta!', 'La pregunta llega en unos segundos…', null);
-        });
-      }, 3500);
-    }
+    // Piñata uses the standard question + mash flow — no special countdown branch needed.
     let n = 3;
     const numEl = $('player-countdown-num');
     const tick = () => {
@@ -555,6 +555,9 @@
       } else if (gameType === 'color-splash') {
         happyMascot = team === 'red' ? '🎨' : '🖌️';
         sub = '¡Camina y pinta! ⚡';
+      } else if (gameType === 'pinata') {
+        happyMascot = team === 'red' ? '🥢' : '🏹';
+        sub = '¡Golpea la piñata! 🐯💥';
       } else {
         happyMascot = team === 'red' ? '🐼' : '🦊';
         sub = '¡Alimenta a tu equipo! ⚡';
@@ -613,158 +616,6 @@
     }
   });
 
-  // === Piñata Tigre player-side ===
-  // pn:question — broadcast race question. Shows the standard question UI but
-  // routes the tap to `pn:answer`. Tracks lockout from previous wrong answers.
-  let pnLockedUntil = 0;
-  let pnPower = 0;
-  let pnPowerRaf = null;
-  let pnPowerStartedAt = 0;
-
-  socket.on('pn:question', (q) => {
-    if (gameType !== 'pinata') return;
-    pnPower = 0;
-    currentQid = q.qid;
-    const now = Date.now();
-    if (pnLockedUntil > now) {
-      // Still locked from previous round — just show waiting screen
-      setPnWait('⏳', 'Bloqueado este turno', `Vuelves en ${Math.ceil((pnLockedUntil - now) / 1000)}s…`, 'locked');
-      showScreen('pn-wait');
-      return;
-    }
-    // Render question + answer buttons (mirror of normal question screen)
-    $('question-text').textContent = q.text;
-    const imgWrap = $('question-image-wrap');
-    const img = $('question-image');
-    const loader = imgWrap.querySelector('.img-loading');
-    if (q.image) {
-      img.style.display = 'none';
-      loader.style.display = 'flex';
-      img.onload = () => { img.style.display = 'block'; loader.style.display = 'none'; };
-      img.onerror = () => { loader.textContent = '📚'; };
-      img.src = q.image;
-      imgWrap.style.display = 'flex';
-    } else {
-      imgWrap.style.display = 'none';
-    }
-    const ansEl = $('answers');
-    ansEl.innerHTML = '';
-    q.answers.forEach((a, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'answer-btn';
-      btn.innerHTML = `<span class="answer-shape shape-${i}">${SHAPES[i]}</span><span>${escapeHtml(a)}</span>`;
-      btn.addEventListener('click', () => {
-        socket.emit('pn:answer', { pin, qid: currentQid, choiceIdx: i });
-        document.querySelectorAll('.answer-btn').forEach((b) => b.disabled = true);
-        btn.style.outline = '3px solid var(--ink)';
-      });
-      ansEl.appendChild(btn);
-    });
-    showScreen('question');
-  });
-
-  socket.on('pn:wrong', ({ correctText, lockoutMs }) => {
-    if (gameType !== 'pinata') return;
-    pnLockedUntil = Date.now() + (lockoutMs || 4500);
-    MochiSounds.wrong && MochiSounds.wrong();
-    setPnWait('❌', 'Respuesta incorrecta', `La correcta era: <strong>${escapeHtml(correctText || '?')}</strong>`, 'locked');
-    showScreen('pn-wait');
-  });
-
-  socket.on('pn:answer-closed', ({ winnerName, winnerTeam }) => {
-    if (gameType !== 'pinata') return;
-    // If we're still on the question screen and didn't win, slide to waiting view.
-    const onQuestion = !$('screen-question').classList.contains('hidden');
-    if (onQuestion) {
-      const teamEmoji = winnerTeam === 'red' ? '🥢' : '🏹';
-      setPnWait(teamEmoji, `${escapeHtml(winnerName)} respondió primero`, 'Mirando el golpe…', null);
-      showScreen('pn-wait');
-    }
-  });
-
-  socket.on('pn:race-won', ({ team, playerName, correctText }) => {
-    if (gameType !== 'pinata') return;
-    // If this player was the winner, the server also emits pn:swing-granted to them.
-    // Other players just see a waiting screen.
-  });
-
-  socket.on('pn:swing-granted', () => {
-    if (gameType !== 'pinata') return;
-    MochiSounds.correct && MochiSounds.correct();
-    startPnPowerMeter();
-  });
-
-  socket.on('pn:hit', ({ team, playerName, label, dmg, hp, maxHp }) => {
-    if (gameType !== 'pinata') return;
-    // Stop power meter loop if it was running (auto-fired)
-    stopPnPowerMeter();
-    const teamEmoji = team === 'red' ? '🥢' : '🏹';
-    const labelText = label === 'crit' ? '💥 ¡CRÍTICO!' : label === 'weak' ? '😅 Débil' : '👊 Golpe';
-    setPnWait(teamEmoji, `${labelText} ${escapeHtml(playerName)} −${dmg}`, `HP del tigre: <strong>${hp}/${maxHp}</strong>`, null);
-    showScreen('pn-wait');
-  });
-
-  socket.on('pn:broken', () => {
-    if (gameType !== 'pinata') return;
-    stopPnPowerMeter();
-    setPnWait('💥', '¡La piñata se rompió!', 'Esperando los resultados…', 'won');
-    showScreen('pn-wait');
-  });
-
-  function setPnWait(emoji, title, statusHtml, statusCls) {
-    if ($('pn-wait-emoji')) $('pn-wait-emoji').textContent = emoji || '🐯';
-    if ($('pn-wait-title')) $('pn-wait-title').textContent = title || '';
-    const s = $('pn-wait-status');
-    if (s) {
-      s.innerHTML = statusHtml || '';
-      s.className = 'pn-race-status' + (statusCls ? ' ' + statusCls : '');
-    }
-  }
-
-  function startPnPowerMeter() {
-    showScreen('pn-power');
-    const marker = $('pn-power-marker');
-    const btn = $('pn-power-tap-btn');
-    if (!marker || !btn) return;
-    // Reset animation so it starts from left every time
-    marker.style.animation = 'none';
-    marker.offsetWidth; // force reflow
-    marker.style.animation = '';
-    pnPowerStartedAt = Date.now();
-
-    const onTap = () => {
-      // Read the marker's live computed left position to derive power 0–100.
-      // The track is a 30/30/20/20 zone gradient (left=red weak → right=red weak,
-      // center 60-80 = green crit zone). We expose power as distance from left
-      // edge as a percentage, then re-map so center=highest.
-      const track = $('pn-power-track');
-      const rect = track.getBoundingClientRect();
-      const mRect = marker.getBoundingClientRect();
-      let pct = ((mRect.left + mRect.width / 2) - rect.left) / rect.width;
-      pct = Math.max(0, Math.min(1, pct));
-      // Map physical position → power score with peak around the 60-80% sweet spot
-      // Distance from sweet center (0.70):
-      const dist = Math.abs(pct - 0.70);
-      const power = Math.round(Math.max(0, 100 - dist * 250)); // hits ~100 at sweet spot
-      pnPower = power;
-      socket.emit('pn:swing', { pin, power });
-      btn.disabled = true;
-      btn.textContent = power >= 80 ? '💥 ¡CRÍTICO!' : power >= 40 ? '👊 ¡Golpe!' : '😅 Débil';
-      marker.style.animationPlayState = 'paused';
-      stopPnPowerMeter();
-    };
-    btn.disabled = false;
-    btn.textContent = '💥 ¡GOLPEAR!';
-    btn.onclick = onTap;
-  }
-
-  function stopPnPowerMeter() {
-    const btn = $('pn-power-tap-btn');
-    if (btn) btn.onclick = null;
-    if (pnPowerRaf) cancelAnimationFrame(pnPowerRaf);
-    pnPowerRaf = null;
-  }
-
   function showResultFeedback({ mascot, mascotCls, title, sub, cls }) {
     $('result-feedback').innerHTML = `
       <div class="big-mascot ${mascotCls}">${mascot}</div>
@@ -797,6 +648,15 @@
     showScreen('mash');
     const mashBtn = $('mash-button');
     let localTaps = 0;
+
+    // Re-skin the headline / hint depending on which game is in play
+    if (gameType === 'pinata') {
+      if ($('mash-headline')) $('mash-headline').innerHTML = '🥢 ¡ROMPE EL TIGRE! 🐯';
+      if ($('mash-hint')) $('mash-hint').innerHTML = '¡TOCA RÁPIDO! Cada toque = 1 golpe a tu tigre 🥢💥';
+    } else {
+      if ($('mash-headline')) $('mash-headline').innerHTML = '⚡ ¡A APLASTAR! ⚡';
+      if ($('mash-hint')) $('mash-hint').innerHTML = '¡TOCA, TOCA, TOCA! 🔥 8/seg = combo';
+    }
 
     // Reset button state
     mashBtn.classList.remove('combo', 'idle', 'tapped');
@@ -2154,7 +2014,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'pn-wait', 'pn-power', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

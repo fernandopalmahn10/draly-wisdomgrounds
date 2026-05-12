@@ -342,6 +342,21 @@
       const f = team === 'red' ? 880 : 1100;
       tone({ freq: f, dur: 0.18, type: 'sine', vol: 0.12 });
     },
+    thwack() {
+      // Wooden stick hitting piñata: short noise burst with a thumpy low tone,
+      // plus a brief mid resonance for the "crack" character. Distinct from
+      // every other sound in the game.
+      noise({ dur: 0.09, vol: 0.22 });
+      tone({ freq: 140, dur: 0.12, type: 'square', vol: 0.22, slideTo: 60 });
+      tone({ freq: 320, dur: 0.06, type: 'triangle', vol: 0.10, delay: 0.005 });
+    },
+    candySpill() {
+      // Cheerful confetti-y cascade for when the piñata bursts
+      [880, 1320, 1760, 2200, 1760, 1320].forEach((f, i) =>
+        tone({ freq: f, dur: 0.12, type: 'triangle', vol: 0.18, delay: i * 0.04 })
+      );
+      noise({ dur: 0.4, vol: 0.10, delay: 0.05 });
+    },
     welcome() {
       // Soft Chinese-style welcoming chime: low gong + pentatonic bells + airy shimmer
       // Low warm gong base

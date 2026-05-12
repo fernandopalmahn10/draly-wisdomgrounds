@@ -84,11 +84,11 @@
     <div class="card" style="margin-top:18px;">
       <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se juega</div>
       <ol style="color:var(--ink-dim); font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
-        <li>Una pregunta sale en TODOS los teléfonos al mismo tiempo.</li>
-        <li>El <strong>primero</strong> que responde bien se gana un golpe a la piñata 🥢.</li>
-        <li>En su teléfono aparece un <strong>medidor de potencia</strong> — pulsa al centro para <strong>crítico</strong> 💥.</li>
-        <li>Cada golpe baja la vida del tigre y suelta un premio del color del equipo.</li>
-        <li>¡Cuando la piñata se rompe (HP = 0), gana el equipo con más daño total!</li>
+        <li>Cada equipo tiene <strong>su propio tigre piñata</strong> 🐯 colgando en la pantalla grande.</li>
+        <li>Cada jugador recibe preguntas en su teléfono. ¿Respondes bien? Se desbloquea <strong>5 segundos de golpes</strong>.</li>
+        <li>Durante esos 5 segundos pulsas el botón con tu palo 🥢 — <strong>cada toque = un golpe</strong> al tigre de TU equipo.</li>
+        <li>El tigre se va deformando en tiempo real: cuanto más le pegan, más se rompe.</li>
+        <li>¡El primer equipo que <strong>rompe su propio tigre</strong> (HP = 0) gana y se lleva los caramelos! 🍬🧧</li>
       </ol>
     </div>
   </div>
@@ -126,33 +126,53 @@
       <div class="pn-lantern pn-lantern-bl">🏮</div>
       <div class="pn-lantern pn-lantern-br">🏮</div>
 
-      <!-- HP bar above the tiger -->
-      <div class="pn-hp-wrap">
-        <div class="pn-hp-label" id="pn-hp-label">HP 100 / 100</div>
-        <div class="pn-hp-bar">
-          <div class="pn-hp-fill" id="pn-hp-fill" style="width:100%;"></div>
+      <!-- TWO tigers side by side, one per team. Each deforms in real time
+           as their team smashes it during their mash windows. -->
+      <div class="pn-two-tigers">
+        <!-- RED TEAM TIGER -->
+        <div class="pn-team-col red">
+          <div class="pn-team-tag red">🥢 Equipo Bastón</div>
+          <div class="pn-hp-bar">
+            <div class="pn-hp-fill ok" id="hp-red-fill" style="width:100%;"></div>
+          </div>
+          <div class="pn-hp-text" id="hp-red-text">HP 220 / 220</div>
+          <div class="pn-tiger-stage">
+            <div class="pn-rope"></div>
+            <div class="pn-tiger-wrap" id="tiger-red-wrap">
+              <div class="pn-tiger" id="tiger-red">🐯</div>
+              <div class="pn-cracks" id="cracks-red"></div>
+              <div class="pn-stick-fx" id="stick-fx-red"></div>
+            </div>
+          </div>
+          <div class="pn-loot red" id="loot-red"></div>
+        </div>
+
+        <!-- VS divider -->
+        <div class="pn-vs">VS</div>
+
+        <!-- GOLD TEAM TIGER -->
+        <div class="pn-team-col gold">
+          <div class="pn-team-tag gold">🏹 Equipo Arco</div>
+          <div class="pn-hp-bar">
+            <div class="pn-hp-fill ok" id="hp-gold-fill" style="width:100%;"></div>
+          </div>
+          <div class="pn-hp-text" id="hp-gold-text">HP 220 / 220</div>
+          <div class="pn-tiger-stage">
+            <div class="pn-rope"></div>
+            <div class="pn-tiger-wrap" id="tiger-gold-wrap">
+              <div class="pn-tiger" id="tiger-gold">🐯</div>
+              <div class="pn-cracks" id="cracks-gold"></div>
+              <div class="pn-stick-fx" id="stick-fx-gold"></div>
+            </div>
+          </div>
+          <div class="pn-loot gold" id="loot-gold"></div>
         </div>
       </div>
 
-      <!-- The piñata tiger itself -->
-      <div class="pn-rope"></div>
-      <div class="pn-tiger-wrap" id="pn-tiger-wrap">
-        <div class="pn-tiger" id="pn-tiger">🐯</div>
-        <div class="pn-cracks" id="pn-cracks"></div>
-        <div class="pn-stick-fx" id="pn-stick-fx"></div>
-      </div>
+      <!-- Status banner across the bottom -->
+      <div class="pn-banner" id="pn-banner">¡Comienza el caos! 🐯💥</div>
 
-      <!-- Status banner (question / waiting / winner) -->
-      <div class="pn-banner" id="pn-banner">¡Esperando a los retadores!</div>
-
-      <!-- Question text shown to host (mirrors what's on phones) -->
-      <div class="pn-question" id="pn-question" style="display:none;"></div>
-
-      <!-- Prize tray bottom corners -->
-      <div class="pn-loot red" id="pn-loot-red"></div>
-      <div class="pn-loot gold" id="pn-loot-gold"></div>
-
-      <!-- Flying prize effects layer -->
+      <!-- Flying prize/candy effects layer (siempre encima) -->
       <div class="pn-fx-layer" id="pn-fx-layer"></div>
     </div>
 

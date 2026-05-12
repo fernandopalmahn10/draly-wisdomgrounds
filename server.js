@@ -181,16 +181,13 @@ const VOCAB_EMOJI = {
   '不客气': '😊', '好': '👍', '想': '💭', '喜欢': '❤️'
 };
 // === Piñata Tigre constants ===
-// Buzzer race game. All players see the question; first correct answer earns a
-// "swing" at the tiger piñata. A power meter on the player's phone determines
-// how hard the swing lands. HP runs out → tiger breaks, prizes spill, game ends.
-const PN_MAX_HP            = 100;        // tiger total HP
-const PN_BASE_DMG          = 6;          // base damage before power multiplier
-const PN_CRIT_THRESHOLD    = 80;         // power >= this = critical hit (2x)
-const PN_WEAK_THRESHOLD    = 30;         // power < this = glancing hit (0.4x)
-const PN_QUESTION_GAP_MS   = 2200;       // pause between rounds (let UI catch up)
-const PN_WRONG_LOCKOUT_MS  = 4500;       // wrong answer → can't buzz for this long
-const PN_POWERMETER_MS     = 4000;       // max time to lock in power (auto-fires at end)
+// Each TEAM has its own tiger piñata on the host screen. Players play it like
+// Mochi Mash: answer a vocab question right → unlocks a short "smash mode"
+// where every tap = swing of their stick = 1 damage to their team's tiger.
+// First tiger to reach 0 HP loses (their opponents broke the most piñata).
+const PN_TIGER_HP   = 220;   // each tiger's HP — tuned so a ~3 min match breaks one
+const PN_MASH_MS    = 5000;  // smash-mode duration after correct answer
+const PN_HP_BCAST_MS = 100;  // throttle HP broadcasts to ~10 Hz
 
 function emojiForChinese(chinese) {
   if (!chinese) return null;
@@ -297,94 +294,6 @@ function nextQuestionForVendor(g, playerId, vendorId) {
   };
   p.lastQuestionAt = Date.now();
   return { qid, text: q.text, answers: shuffled, image, vendorId };
-}
-
-// === Piñata Tigre round driver ===
-// Picks the next vocab question, shuffles answers, and broadcasts to ALL players
-// for a buzzer-style race. The first to send a correct answer wins the swing.
-function pnNextRound(pin) {
-  const g = games[pin];
-  if (!g || g.state !== 'active' || g.gameType !== 'pinata' || !g.pinata) return;
-  if (g.pinata.phase === 'broken') return;
-  const qList = g.questions;
-  if (!qList || !qList.length) return;
-  // Round-robin through the question bank using game-level cursor
-  g.pnQueueIdx = (g.pnQueueIdx || 0);
-  const q = qList[g.pnQueueIdx % qList.length];
-  g.pnQueueIdx++;
-
-  const shuffled = [...q.answers];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  const qid = `pn-${g.pnQueueIdx}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-  const image = Images.urlForQuestion(q);
-  g.pinata.currentQid = qid;
-  g.pinata.correctIdx = shuffled.indexOf(q.correct);
-  g.pinata.winnerId = null;
-  g.pinata.phase = 'question';
-  // Lockouts expire automatically; we just check timestamps on answer
-  // Pull a vocab emoji for the prize drop preview
-  let itemHanzi = '';
-  const m = q.text.match(/([一-鿿]+)/);
-  if (m) itemHanzi = m[1];
-  g.pinata.currentPrize = emojiForChinese(itemHanzi) || '🎁';
-  g.pinata.currentText = q.text;
-  g.pinata.currentCorrect = q.correct;
-
-  io.to(pin).emit('pn:question', {
-    qid,
-    text: q.text,
-    answers: shuffled,
-    image,
-    hp: g.pinata.hp
-  });
-}
-
-function pnApplySwing(pin, power) {
-  const g = games[pin];
-  if (!g || g.gameType !== 'pinata' || !g.pinata) return;
-  if (g.pinata.phase !== 'powermeter') return;
-  const pid = g.pinata.winnerId;
-  const p = g.players[pid];
-  if (!p) return;
-  power = Math.max(0, Math.min(100, Number(power) || 0));
-  let multiplier = 1.0;
-  let label = 'hit';
-  if (power >= PN_CRIT_THRESHOLD) { multiplier = 2.0; label = 'crit'; }
-  else if (power < PN_WEAK_THRESHOLD) { multiplier = 0.4; label = 'weak'; }
-  const dmg = Math.max(1, Math.round(PN_BASE_DMG * multiplier));
-  g.pinata.hp = Math.max(0, g.pinata.hp - dmg);
-  g.teamScores[p.team] = (g.teamScores[p.team] || 0) + dmg;
-  p.score = (p.score || 0) + dmg;
-  p.pnDmg = (p.pnDmg || 0) + dmg;
-  p.pnHits = (p.pnHits || 0) + 1;
-  if (label === 'crit') p.pnCrits = (p.pnCrits || 0) + 1;
-  const prizeIcon = g.pinata.currentPrize || '🎁';
-  g.pinata.prizes.push({ team: p.team, icon: prizeIcon });
-  io.to(pin).emit('pn:hit', {
-    team: p.team,
-    playerName: p.name,
-    power,
-    label,
-    dmg,
-    hp: g.pinata.hp,
-    maxHp: g.pinata.maxHp,
-    teamScores: g.teamScores,
-    prizeIcon,
-    correctText: g.pinata.currentCorrect
-  });
-  // Broken?
-  if (g.pinata.hp <= 0) {
-    g.pinata.phase = 'broken';
-    io.to(pin).emit('pn:broken', { teamScores: g.teamScores });
-    if (g.endTimer) clearTimeout(g.endTimer);
-    setTimeout(() => endGame(pin), 3200);
-    return;
-  }
-  g.pinata.phase = 'idle';
-  setTimeout(() => pnNextRound(pin), PN_QUESTION_GAP_MS);
 }
 
 function endGame(pin) {
@@ -660,38 +569,30 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores
         });
       }
-      // Piñata Tigre: initialize the tiger, then broadcast the first race question.
+      // Piñata Tigre: two tigers (one per team), each with HP. Players answer
+      // questions like Mochi Mash — correct answer unlocks a 5s smash window
+      // where every tap deals 1 damage to THEIR team's tiger.
       if (g.gameType === 'pinata') {
         g.pinata = {
-          hp: PN_MAX_HP,
-          maxHp: PN_MAX_HP,
-          phase: 'idle',
-          currentQid: null,
-          correctIdx: -1,
-          winnerId: null,
-          lockedOut: {}, // pid -> unlock timestamp (lost the buzz race this round)
-          prizes: []
+          hpRed: PN_TIGER_HP,
+          hpGold: PN_TIGER_HP,
+          maxHp: PN_TIGER_HP,
+          brokenTeam: null
         };
-        Object.values(g.players).forEach((p) => {
-          p.pnDmg = 0;
-          p.pnHits = 0;
-          p.pnCrits = 0;
-        });
         io.to(pin).emit('pn:init', {
-          hp: g.pinata.hp,
+          hpRed: g.pinata.hpRed,
+          hpGold: g.pinata.hpGold,
           maxHp: g.pinata.maxHp,
           players: Object.fromEntries(
             Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team }])
           ),
           teamScores: g.teamScores
         });
-        // Dispatch first race question after a brief beat
-        setTimeout(() => pnNextRound(pin), 600);
       }
       broadcast(pin);
-      // Mochi Mash + Color Splash auto-deal first question.
-      // Color Clash → button-driven; Market Quest → vendor-driven; Flappy → death-driven; Piñata → race broadcast.
-      const skipAutoPush = ['color-clash', 'market-quest', 'flappy', 'pinata'].includes(g.gameType);
+      // Mochi Mash + Color Splash + Piñata auto-deal first question.
+      // Color Clash → button-driven; Market Quest → vendor-driven; Flappy → death-driven.
+      const skipAutoPush = ['color-clash', 'market-quest', 'flappy'].includes(g.gameType);
       if (!skipAutoPush) {
         Object.keys(g.players).forEach((pid) => {
           const q = nextQuestionFor(g, pid);
@@ -1082,6 +983,19 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('answer-result', { correct: false, correctText, energy: p.energy });
         io.to(pin).emit('cs:paint', { cells: painted, teamScores: g.teamScores });
       }
+    } else if (g.gameType === 'pinata') {
+      // Piñata: correct → unlock smash mode; wrong → no team-score penalty (the
+      // damage that matters is dealt by the player's own taps to their tiger).
+      if (correct) {
+        p.mashUntil = Date.now() + PN_MASH_MS;
+        io.to(socket.id).emit('answer-result', {
+          correct: true,
+          mashUntil: p.mashUntil,
+          correctText
+        });
+      } else {
+        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+      }
     } else {
       // Mochi Mash logic
       if (correct) {
@@ -1105,6 +1019,8 @@ io.on('connection', (socket) => {
       nextDelay = -1;
     } else if (g.gameType === 'color-splash') {
       nextDelay = correct ? CS_WALK_DURATION_MS + 600 : 1400;
+    } else if (g.gameType === 'pinata') {
+      nextDelay = correct ? PN_MASH_MS + 600 : 1400;
     } else {
       nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
     }
@@ -1116,63 +1032,6 @@ io.on('connection', (socket) => {
       }, nextDelay);
     }
     broadcast(pin);
-  });
-
-  // === Piñata Tigre: race-to-answer ===
-  // Unlike per-player questions, the piñata broadcasts ONE question to everyone.
-  // First correct response wins the swing. Wrong answers lock that player out
-  // for this round (and a short while after).
-  socket.on('pn:answer', ({ pin, qid, choiceIdx }) => {
-    const g = games[pin];
-    if (!g || g.state !== 'active' || g.gameType !== 'pinata' || !g.pinata) return;
-    const p = g.players[socket.id];
-    if (!p) return;
-    if (g.pinata.phase !== 'question') return;
-    if (g.pinata.currentQid !== qid) return;
-    const now = Date.now();
-    const lockedUntil = g.pinata.lockedOut[socket.id] || 0;
-    if (lockedUntil > now) return; // still locked out from a previous wrong answer
-    const correct = (Number(choiceIdx) === g.pinata.correctIdx);
-    if (correct) {
-      // First correct → win the swing
-      g.pinata.winnerId = socket.id;
-      g.pinata.phase = 'powermeter';
-      io.to(socket.id).emit('pn:swing-granted', { qid });
-      io.to(pin).emit('pn:race-won', {
-        team: p.team,
-        playerName: p.name,
-        correctText: g.pinata.currentCorrect
-      });
-      // Notify other players the round is over so their UI dims
-      io.to(pin).emit('pn:answer-closed', { winnerName: p.name, winnerTeam: p.team });
-      // Auto-fire swing at half power if they don't lock the meter in time
-      g.pinata.powerTimer = setTimeout(() => {
-        if (g.pinata && g.pinata.phase === 'powermeter' && g.pinata.winnerId === socket.id) {
-          pnApplySwing(pin, 50);
-        }
-      }, PN_POWERMETER_MS);
-    } else {
-      // Wrong → lockout, brief penalty
-      g.pinata.lockedOut[socket.id] = now + PN_WRONG_LOCKOUT_MS;
-      io.to(socket.id).emit('pn:wrong', {
-        correctText: g.pinata.currentCorrect,
-        lockoutMs: PN_WRONG_LOCKOUT_MS
-      });
-    }
-  });
-
-  // Piñata: player commits their swing power (0-100). Server applies damage,
-  // broadcasts the hit, and schedules the next round.
-  socket.on('pn:swing', ({ pin, power }) => {
-    const g = games[pin];
-    if (!g || g.state !== 'active' || g.gameType !== 'pinata' || !g.pinata) return;
-    if (g.pinata.phase !== 'powermeter') return;
-    if (g.pinata.winnerId !== socket.id) return;
-    if (g.pinata.powerTimer) {
-      clearTimeout(g.pinata.powerTimer);
-      g.pinata.powerTimer = null;
-    }
-    pnApplySwing(pin, power);
   });
 
   // Color Clash: continuous movement (no walk window). Each move costs 1 energy.
@@ -1333,6 +1192,35 @@ io.on('connection', (socket) => {
     if (combo && Math.random() < 0.15) {
       g.feed.push({ type: 'combo', name: p.name, team: p.team, t: now });
       broadcast(pin);
+    }
+
+    // === Piñata: each tap damages this player's TEAM tiger ===
+    // teamScores already incremented above represents damage dealt by this team
+    // (which equals damage taken by their own tiger). HP is the visual countdown.
+    if (g.gameType === 'pinata' && g.pinata && !g.pinata.brokenTeam) {
+      const hpKey = p.team === 'red' ? 'hpRed' : 'hpGold';
+      g.pinata[hpKey] = Math.max(0, g.pinata[hpKey] - points);
+      // Throttled HP broadcast — clients lerp between ticks
+      if (!g.lastPnHpBcast || now - g.lastPnHpBcast >= PN_HP_BCAST_MS) {
+        g.lastPnHpBcast = now;
+        io.to(pin).emit('pn:hp', {
+          hpRed:  g.pinata.hpRed,
+          hpGold: g.pinata.hpGold,
+          maxHp:  g.pinata.maxHp
+        });
+      }
+      // Broken? End the round and award victory to the team that broke their own piñata.
+      if (g.pinata[hpKey] <= 0) {
+        g.pinata.brokenTeam = p.team;
+        io.to(pin).emit('pn:broken', {
+          team: p.team,
+          hpRed: g.pinata.hpRed,
+          hpGold: g.pinata.hpGold,
+          teamScores: g.teamScores
+        });
+        if (g.endTimer) clearTimeout(g.endTimer);
+        setTimeout(() => endGame(pin), 3500);
+      }
     }
   });
 
