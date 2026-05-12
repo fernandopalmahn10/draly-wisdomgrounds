@@ -17,7 +17,7 @@
   <!-- LOBBY -->
   <div id="screen-lobby" class="container">
     <div style="text-align:center; margin-bottom:16px;">
-      <div class="market-banner">🐉 画龙点睛 · Ojo del Dragón ✒️</div>
+      <div class="market-banner">🐉 飞龙 · Vuelo del Dragón ☁️</div>
       <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
       <div class="pin-display" id="pin-display">····</div>
       <div style="color:var(--ink-dim); font-size:0.9rem;">
@@ -45,20 +45,20 @@
     <div class="host-grid">
       <div class="team-panel team-red">
         <div class="team-header">
-          <div class="team-mascot">✒️</div>
+          <div class="team-mascot">🐉</div>
           <div>
-            <div class="team-name">Equipo Pincel</div>
-            <div style="color:var(--ink-dim); font-size:0.85rem;">紅毛筆 · máobǐ</div>
+            <div class="team-name">Equipo Dragón Rojo</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">紅龍 · hóng lóng</div>
           </div>
         </div>
         <div class="player-chips" id="players-red"></div>
       </div>
       <div class="team-panel team-gold">
         <div class="team-header">
-          <div class="team-mascot">🖌️</div>
+          <div class="team-mascot">🐲</div>
           <div>
-            <div class="team-name">Equipo Tinta</div>
-            <div style="color:var(--ink-dim); font-size:0.85rem;">金墨水 · mòshuǐ</div>
+            <div class="team-name">Equipo Dragón Dorado</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">金龍 · jīn lóng</div>
           </div>
         </div>
         <div class="player-chips" id="players-gold"></div>
@@ -79,11 +79,11 @@
     <div class="card" style="margin-top:18px;">
       <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se juega</div>
       <ol style="color:var(--ink-dim); font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
-        <li>Una leyenda china dice que cuando un pintor le pone <strong>ojos</strong> a su dragón… ¡el dragón cobra vida y vuela! 🐉</li>
-        <li>Cada respuesta correcta pinta <strong>un punto</strong> sobre el dragón.</li>
-        <li>Si el punto cae sobre el <strong>ojo</strong> 👁 — <strong>¡10 puntos!</strong> + el dragón ruge.</li>
-        <li>Si cae en el cuerpo: 1 punto.</li>
-        <li>El primer equipo en marcar <strong>5 ojos</strong> despierta al dragón y gana.</li>
+        <li>Cada equipo tiene su propio dragón 🐉 que empieza en los tejados de la aldea.</li>
+        <li>Responde una pregunta bien → <strong>5 segundos de aleteo</strong> 🐉💨.</li>
+        <li>Durante esos 5 segundos toca rápido — <strong>cada toque = un aleteo</strong> y tu dragón sube más alto.</li>
+        <li>Conforme suben, se revelan nuevas escenas: bambú 🎋, montañas 🏔, nubes ☁️, hasta el <strong>cielo celestial</strong> ✨.</li>
+        <li>El primer dragón en llegar a las nubes celestiales gana! 🐲☁️</li>
       </ol>
     </div>
   </div>
@@ -102,59 +102,61 @@
 
     <div class="dr-topbar">
       <div class="dr-team red">
-        <span class="dr-team-emoji">✒️</span>
-        <span class="dr-team-label">Pincel</span>
+        <span class="dr-team-emoji">🐉</span>
+        <span class="dr-team-label">Rojo</span>
+        <span class="dr-team-alt"><span id="alt-red">0</span> m</span>
       </div>
       <div class="dr-time"><span id="timer-display">4:00</span></div>
       <div class="dr-team gold">
-        <span class="dr-team-label">Tinta</span>
-        <span class="dr-team-emoji">🖌️</span>
+        <span class="dr-team-alt"><span id="alt-gold">0</span> m</span>
+        <span class="dr-team-label">Dorado</span>
+        <span class="dr-team-emoji">🐲</span>
       </div>
     </div>
 
-    <!-- TWO dragons side by side. Each starts faint and progressively reveals
-         as the team scores. First to 100% reveal awakens and wins. -->
+    <!-- TWO vertical flight columns. Each has scenery layers stacked from
+         rooftops at the bottom up to the heavens at the top. Each team's
+         dragon emoji floats up its column as altitude grows. -->
     <div class="dr-stage">
-      <div class="dr-clouds c1">☁️</div>
-      <div class="dr-clouds c2">☁️</div>
-
-      <div class="dr-two-dragons">
+      <div class="dr-flight-cols">
         <!-- LEFT — RED TEAM -->
-        <div class="dr-team-col red">
-          <div class="dr-team-tag red">✒️ Equipo Pincel</div>
-          <div class="dr-reveal-bar">
-            <div class="dr-reveal-fill red" id="reveal-red-fill" style="width:0%;"></div>
-            <span class="dr-reveal-text" id="reveal-red-text">0%</span>
+        <div class="dr-flight-col red" id="flight-col-red">
+          <div class="dr-flight-tag red">🐉 Rojo</div>
+          <!-- Scenery layers — positioned by altitude band (top = high alt) -->
+          <div class="dr-scenery heavens"><span>✨</span><span>☀️</span><span>✨</span></div>
+          <div class="dr-scenery temple"><span>⛩</span><span>🏯</span><span>⛩</span></div>
+          <div class="dr-scenery clouds"><span>☁️</span><span>☁️</span><span>☁️</span></div>
+          <div class="dr-scenery mountains"><span>🏔</span><span>⛰</span><span>🏔</span></div>
+          <div class="dr-scenery bamboo"><span>🎋</span><span>🏮</span><span>🎋</span></div>
+          <div class="dr-scenery rooftops"><span>🏯</span><span>🏘</span><span>🏯</span></div>
+          <!-- The flying dragon — JS animates its `bottom` % based on altitude -->
+          <div class="dr-flying-dragon" id="flying-dragon-red">🐉</div>
+          <!-- Wing-flap FX layer -->
+          <div class="dr-flap-fx" id="flap-fx-red"></div>
+          <!-- Altitude progress bar on the side of the column -->
+          <div class="dr-alt-bar">
+            <div class="dr-alt-fill red" id="alt-fill-red" style="height:0%;"></div>
           </div>
-          <div class="dr-dragon-wrap" id="dragon-red-wrap" style="--reveal: 0;">
-            <img class="dr-dragon" src="/assets/hanyu.png" alt="Dragón Pincel" draggable="false">
-            <div class="dr-dot-layer" id="dots-red"></div>
-            <div class="dr-eye-glow dr-eye-glow-l" id="eye-glow-red-l"></div>
-            <div class="dr-eye-glow dr-eye-glow-r" id="eye-glow-red-r"></div>
-          </div>
-          <div class="dr-eye-tally">👁 <span id="eyes-red">0</span></div>
         </div>
 
-        <div class="dr-vs">VS</div>
-
         <!-- RIGHT — GOLD TEAM -->
-        <div class="dr-team-col gold">
-          <div class="dr-team-tag gold">🖌️ Equipo Tinta</div>
-          <div class="dr-reveal-bar">
-            <div class="dr-reveal-fill gold" id="reveal-gold-fill" style="width:0%;"></div>
-            <span class="dr-reveal-text" id="reveal-gold-text">0%</span>
+        <div class="dr-flight-col gold" id="flight-col-gold">
+          <div class="dr-flight-tag gold">🐲 Dorado</div>
+          <div class="dr-scenery heavens"><span>✨</span><span>☀️</span><span>✨</span></div>
+          <div class="dr-scenery temple"><span>⛩</span><span>🏯</span><span>⛩</span></div>
+          <div class="dr-scenery clouds"><span>☁️</span><span>☁️</span><span>☁️</span></div>
+          <div class="dr-scenery mountains"><span>🏔</span><span>⛰</span><span>🏔</span></div>
+          <div class="dr-scenery bamboo"><span>🎋</span><span>🏮</span><span>🎋</span></div>
+          <div class="dr-scenery rooftops"><span>🏯</span><span>🏘</span><span>🏯</span></div>
+          <div class="dr-flying-dragon" id="flying-dragon-gold">🐲</div>
+          <div class="dr-flap-fx" id="flap-fx-gold"></div>
+          <div class="dr-alt-bar">
+            <div class="dr-alt-fill gold" id="alt-fill-gold" style="height:0%;"></div>
           </div>
-          <div class="dr-dragon-wrap" id="dragon-gold-wrap" style="--reveal: 0;">
-            <img class="dr-dragon" src="/assets/hanyu.png" alt="Dragón Tinta" draggable="false">
-            <div class="dr-dot-layer" id="dots-gold"></div>
-            <div class="dr-eye-glow dr-eye-glow-l" id="eye-glow-gold-l"></div>
-            <div class="dr-eye-glow dr-eye-glow-r" id="eye-glow-gold-r"></div>
-          </div>
-          <div class="dr-eye-tally">👁 <span id="eyes-gold">0</span></div>
         </div>
       </div>
 
-      <div class="dr-banner" id="dr-banner">¡A revelar al dragón! 揭开真龙</div>
+      <div class="dr-banner" id="dr-banner">¡A volar! 飞起来！</div>
     </div>
 
     <div style="text-align:center; padding:8px;">

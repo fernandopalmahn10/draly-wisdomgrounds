@@ -1,7 +1,8 @@
-// Dragon's Eye (画龙点睛) — host view.
-// One big dragon image; each correct vocab answer lands a colored dot on it
-// from the player's team. Eye-hits flash + boost score. First team to 5 eye
-// hits wakes the dragon and wins.
+// Vuelo del Dragón (飞龙) — host view.
+// Two dragons race vertically through scenery layers. Each correct vocab
+// answer earns a player 5s of flap-mode; every tap lifts their team's dragon
+// higher. Scenery reveals as altitude grows (rooftops → bamboo → mountains
+// → clouds → heavens). First dragon to the top wins.
 (function () {
   const socket = io();
   let pin = null;
@@ -9,12 +10,11 @@
   let timerInterval = null;
   let urgentTriggered = false;
 
+  let altRed = 0;
+  let altGold = 0;
+  let maxAlt = 500;
   let scores = { red: 0, gold: 0 };
-  let eyes = { red: 0, gold: 0 };
-  let revealRed = 0;
-  let revealGold = 0;
-  let revealMax = 100;
-  let awakened = null; // 'red' | 'gold' | null
+  let gameOver = false;
 
   const $ = (id) => document.getElementById(id);
 
@@ -33,7 +33,7 @@
     $('pin-display').textContent = p;
     if ($('active-pin-display')) $('active-pin-display').textContent = p;
     $('join-url').textContent = `${location.origin}/?pin=${p}`;
-    document.title = `Ojo del Dragón · ${p}`;
+    document.title = `Vuelo del Dragón · ${p}`;
     socket.emit('host:load-set', { pin, setId: chosenSetId }, (resp) => {
       if (!resp.ok) {
         alert('No se pudo cargar el set: ' + (resp.error || 'desconocido'));
@@ -66,14 +66,10 @@
     if (MochiSounds.stopEndMusic) MochiSounds.stopEndMusic();
     socket.emit('host:reset', { pin });
     showScreen('lobby');
-    clearDots('red');
-    clearDots('gold');
+    altRed = altGold = 0;
     scores = { red: 0, gold: 0 };
-    eyes = { red: 0, gold: 0 };
-    revealRed = 0;
-    revealGold = 0;
-    awakened = null;
-    updateRevealBars();
+    gameOver = false;
+    updateAltDisplay();
   });
 
   function updateStartBtn() {
@@ -105,7 +101,7 @@
         n--;
         setTimeout(tick, 900);
       } else {
-        numEl.textContent = '¡龙!';
+        numEl.textContent = '飞!';
         numEl.style.animation = 'none';
         numEl.offsetHeight;
         numEl.style.animation = '';
@@ -120,50 +116,42 @@
   });
 
   socket.on('dragon:init', (data) => {
-    if (data.revealMax) revealMax = data.revealMax;
+    maxAlt = data.maxAlt || 500;
+    altRed = 0;
+    altGold = 0;
     scores = data.teamScores || { red: 0, gold: 0 };
-    eyes = { red: 0, gold: 0 };
-    revealRed = 0;
-    revealGold = 0;
-    awakened = null;
-    clearDots('red');
-    clearDots('gold');
-    updateRevealBars();
-    setBanner('¡A revelar al dragón! 揭开真龙');
+    gameOver = false;
+    updateAltDisplay();
+    setBanner('¡A volar! 飞起来！');
   });
 
-  socket.on('dragon:dot', ({ x, y, team, zone, isEye, reveal, playerName, revealRed: rR, revealGold: rG, eyeHitsRed, eyeHitsGold, teamScores }) => {
+  // Altitude updates from server (throttled to ~10Hz)
+  socket.on('dragon:alt', ({ altRed: aR, altGold: aG, maxAlt: m }) => {
+    if (typeof aR === 'number') altRed = aR;
+    if (typeof aG === 'number') altGold = aG;
+    if (typeof m === 'number') maxAlt = m;
+    updateAltDisplay();
+  });
+
+  // Team-aggregated tap fx → wing flap animation + altitude lift sound
+  socket.on('tap-fx', ({ red, gold }) => {
+    if (red && red > 0)  spawnFlaps('red', Math.min(red, 5));
+    if (gold && gold > 0) spawnFlaps('gold', Math.min(gold, 5));
+  });
+
+  socket.on('score-update', ({ teamScores }) => {
+    if (teamScores) { scores = teamScores; }
+  });
+
+  socket.on('dragon:reached-heavens', ({ team, teamScores }) => {
+    gameOver = true;
     if (teamScores) scores = teamScores;
-    if (typeof rR === 'number') revealRed = rR;
-    if (typeof rG === 'number') revealGold = rG;
-    eyes.red = eyeHitsRed || 0;
-    eyes.gold = eyeHitsGold || 0;
-    updateRevealBars();
-    spawnDot(x, y, team, isEye);
-    if (isEye) {
-      flashEye(team, x);
-      setBanner(`👁 ¡${escapeHtml(playerName)} acertó en el OJO! +${reveal}% revelado`);
-      MochiSounds.winFanfare && MochiSounds.winFanfare();
-    } else if (zone === 'head') {
-      setBanner(`🐉 ${escapeHtml(playerName)} reveló la cabeza (+${reveal}%)`);
-      MochiSounds.populate && MochiSounds.populate(team);
-    } else if (zone === 'body') {
-      setBanner(`✒️ ${escapeHtml(playerName)} pintó el cuerpo (+${reveal}%)`);
-      MochiSounds.populate && MochiSounds.populate(team);
-    } else {
-      setBanner(`🖌️ ${escapeHtml(playerName)} pintó al lado (+${reveal}%)`);
-    }
-  });
-
-  socket.on('dragon:awakened', ({ team }) => {
-    awakened = team;
-    const emoji = team === 'red' ? '✒️' : '🖌️';
-    setBanner(`🐉 ¡EL DRAGÓN DESPERTÓ! ${emoji} ¡${team === 'red' ? 'Pincel' : 'Tinta'} ganó!`);
-    const dragonWrap = $('dragon-' + team + '-wrap');
-    if (dragonWrap) dragonWrap.classList.add('awakened');
+    const emoji = team === 'red' ? '🐉' : '🐲';
+    setBanner(`✨ ¡${emoji} El dragón ${team === 'red' ? 'Rojo' : 'Dorado'} llegó al cielo celestial! ✨`);
+    const dragon = $('flying-dragon-' + team);
+    if (dragon) dragon.classList.add('ascended');
     MochiSounds.winFanfare && MochiSounds.winFanfare();
-    setTimeout(() => MochiSounds.winMusic && MochiSounds.winMusic(), 500);
-    burstFireworks(team);
+    burstStars(team);
   });
 
   socket.on('game-end', (data) => {
@@ -177,27 +165,27 @@
     const gap = Math.abs(r - g);
     const narr = $('win-narration');
     if (data.winner === 'red') {
-      $('win-banner').textContent = '✒️ ¡Equipo Pincel despertó al dragón!';
+      $('win-banner').textContent = '🐉 ¡Dragón Rojo voló más alto!';
       $('win-banner').className = 'winner-banner red';
       $('win-emoji').textContent = '🐉';
       MochiSounds.winMusic && MochiSounds.winMusic();
       setTimeout(() => MochiSounds.winFanfare && MochiSounds.winFanfare(), 400);
-      if (narr) narr.innerHTML = `🐉 <span class="red-team">Equipo Pincel</span> hizo despertar al dragón con <strong>${r}</strong> puntos — ${gap > 30 ? 'una pintura maestra 🎨' : gap > 10 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
+      if (narr) narr.innerHTML = `🐉 <span class="red-team">El Dragón Rojo</span> llegó a las nubes celestiales con <strong>${r}</strong> aleteos — ${gap > 100 ? 'una hazaña épica 🔥' : gap > 40 ? 'una victoria sólida 💪' : 'un vuelo reñido ⚔️'}.`;
       launchConfetti(['#ff5a66', '#d92e3a', '#ffd57a']);
     } else if (data.winner === 'gold') {
-      $('win-banner').textContent = '🖌️ ¡Equipo Tinta despertó al dragón!';
+      $('win-banner').textContent = '🐲 ¡Dragón Dorado voló más alto!';
       $('win-banner').className = 'winner-banner gold';
-      $('win-emoji').textContent = '🐉';
+      $('win-emoji').textContent = '🐲';
       MochiSounds.winMusic && MochiSounds.winMusic();
       setTimeout(() => MochiSounds.winFanfare && MochiSounds.winFanfare(), 400);
-      if (narr) narr.innerHTML = `🐉 <span class="gold-team">Equipo Tinta</span> hizo despertar al dragón con <strong>${g}</strong> puntos — ${gap > 30 ? 'una pintura maestra 🎨' : gap > 10 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
+      if (narr) narr.innerHTML = `🐲 <span class="gold-team">El Dragón Dorado</span> llegó a las nubes celestiales con <strong>${g}</strong> aleteos — ${gap > 100 ? 'una hazaña épica 🔥' : gap > 40 ? 'una victoria sólida 💪' : 'un vuelo reñido ⚔️'}.`;
       launchConfetti(['#ffd57a', '#e8b14a', '#ff5a66']);
     } else {
-      $('win-banner').textContent = '🤝 ¡Empate!';
+      $('win-banner').textContent = '🤝 ¡Empate en el cielo!';
       $('win-banner').className = 'winner-banner tie';
       $('win-emoji').textContent = '⚖️';
       MochiSounds.tieMusic && MochiSounds.tieMusic();
-      if (narr) narr.innerHTML = `🤝 Ambos pintores empataron con <strong>${r}</strong> puntos.`;
+      if (narr) narr.innerHTML = `🤝 Ambos dragones volaron igual: <strong>${r}</strong> aleteos.`;
     }
     renderLeaderboard(data);
     setTimeout(() => launchConfetti(data.winner === 'red'
@@ -205,47 +193,50 @@
       : ['#ffd57a', '#e8b14a', '#ff5a66']), 4000);
   });
 
-  function spawnDot(x, y, team, isEye) {
-    const layer = $('dots-' + team);
-    if (!layer) return;
-    const dot = document.createElement('div');
-    dot.className = 'dr-dot ' + team + (isEye ? ' eye-hit' : '');
-    dot.style.left = (x * 100) + '%';
-    dot.style.top = (y * 100) + '%';
-    layer.appendChild(dot);
+  // === Visuals ===
+
+  function updateAltDisplay() {
+    const pctR = Math.min(100, Math.round((altRed  / maxAlt) * 100));
+    const pctG = Math.min(100, Math.round((altGold / maxAlt) * 100));
+    if ($('alt-red'))  $('alt-red').textContent  = altRed;
+    if ($('alt-gold')) $('alt-gold').textContent = altGold;
+    if ($('alt-fill-red'))  $('alt-fill-red').style.height  = pctR + '%';
+    if ($('alt-fill-gold')) $('alt-fill-gold').style.height = pctG + '%';
+    // Position the flying dragon: bottom = 4% (rooftops start) → 92% (heavens)
+    const dragonR = $('flying-dragon-red');
+    const dragonG = $('flying-dragon-gold');
+    if (dragonR) dragonR.style.bottom = (4 + pctR * 0.88) + '%';
+    if (dragonG) dragonG.style.bottom = (4 + pctG * 0.88) + '%';
+    // Toggle scenery visibility based on altitude (each layer unlocks at a band)
+    setSceneryReveal('red',  pctR);
+    setSceneryReveal('gold', pctG);
   }
 
-  function flashEye(team, x) {
-    const glow = x < 0.5 ? $('eye-glow-' + team + '-l') : $('eye-glow-' + team + '-r');
-    if (!glow) return;
-    glow.classList.remove('flash');
-    void glow.offsetWidth;
-    glow.classList.add('flash');
-  }
-
-  function clearDots(team) {
-    const layer = $('dots-' + team);
-    if (layer) layer.innerHTML = '';
-  }
-
-  // Drive both the reveal bars (% text + fill) and the dragon opacity reveal.
-  function updateRevealBars() {
-    const pctR = Math.min(100, Math.round((revealRed  / revealMax) * 100));
-    const pctG = Math.min(100, Math.round((revealGold / revealMax) * 100));
-    if ($('reveal-red-fill'))  $('reveal-red-fill').style.width  = pctR + '%';
-    if ($('reveal-gold-fill')) $('reveal-gold-fill').style.width = pctG + '%';
-    if ($('reveal-red-text'))  $('reveal-red-text').textContent  = pctR + '%';
-    if ($('reveal-gold-text')) $('reveal-gold-text').textContent = pctG + '%';
-    // Reveal 0..1 drives brightness/saturation filter (CSS handles the rest).
-    // At 0 the dragon is a dark silhouette; at 1 it's fully colored.
-    const reR = revealRed  / revealMax;
-    const reG = revealGold / revealMax;
-    const rWrap = $('dragon-red-wrap');
-    const gWrap = $('dragon-gold-wrap');
-    if (rWrap) rWrap.style.setProperty('--reveal', reR.toFixed(3));
-    if (gWrap) gWrap.style.setProperty('--reveal', reG.toFixed(3));
-    if ($('eyes-red'))  $('eyes-red').textContent  = eyes.red  || 0;
-    if ($('eyes-gold')) $('eyes-gold').textContent = eyes.gold || 0;
+  function setSceneryReveal(team, pct) {
+    const col = $('flight-col-' + team);
+    if (!col) return;
+    // Each scenery layer reveals at a specific altitude %:
+    //   rooftops: always (0%+)
+    //   bamboo: 15%+
+    //   mountains: 30%+
+    //   clouds: 50%+
+    //   temple: 70%+
+    //   heavens: 90%+
+    const thresholds = {
+      rooftops: 0,
+      bamboo: 15,
+      mountains: 30,
+      clouds: 50,
+      temple: 70,
+      heavens: 90
+    };
+    Object.entries(thresholds).forEach(([cls, threshold]) => {
+      const layers = col.querySelectorAll('.dr-scenery.' + cls);
+      layers.forEach((l) => {
+        if (pct >= threshold) l.classList.add('revealed');
+        else l.classList.remove('revealed');
+      });
+    });
   }
 
   function setBanner(text) {
@@ -257,18 +248,50 @@
     b.classList.add('flash');
   }
 
-  function burstFireworks(team) {
-    const wrap = $('dragon-' + (team || 'red') + '-wrap');
-    if (!wrap) return;
-    for (let i = 0; i < 30; i++) {
+  // Spawn N wing-flap animations on the team's column. Each is a small puff
+  // of cloud + a quick scale-bounce on the dragon emoji.
+  function spawnFlaps(team, count) {
+    if (gameOver) return;
+    MochiSounds.thwack && MochiSounds.thwack();
+    const fxLayer = $('flap-fx-' + team);
+    const dragon = $('flying-dragon-' + team);
+    if (!fxLayer || !dragon) return;
+    for (let i = 0; i < count; i++) {
+      const puff = document.createElement('div');
+      puff.className = 'dr-flap-puff';
+      puff.textContent = '💨';
+      // Spawn at the dragon's current position
+      const dRect = dragon.getBoundingClientRect();
+      const lRect = fxLayer.getBoundingClientRect();
+      puff.style.left = ((dRect.left + dRect.width / 2) - lRect.left) + 'px';
+      puff.style.top  = ((dRect.top  + dRect.height / 2) - lRect.top)  + 'px';
+      puff.style.animationDelay = (i * 50) + 'ms';
+      fxLayer.appendChild(puff);
+      setTimeout(() => puff.remove(), 700 + i * 50);
+    }
+    // Bounce the dragon emoji to indicate flap
+    dragon.classList.remove('flap');
+    void dragon.offsetWidth;
+    dragon.classList.add('flap');
+  }
+
+  function burstStars(team) {
+    const fxLayer = $('flap-fx-' + team);
+    const dragon = $('flying-dragon-' + team);
+    if (!fxLayer || !dragon) return;
+    for (let i = 0; i < 24; i++) {
       const s = document.createElement('div');
-      s.className = 'dr-firework';
-      s.textContent = ['✨','🎆','⭐','🐉','🧧'][i % 5];
-      const ang = (Math.PI * 2 * i) / 30 + Math.random() * 0.4;
-      const dist = 240 + Math.random() * 200;
+      s.className = 'dr-burst-star';
+      s.textContent = ['✨','⭐','🌟','🌠','☀️'][i % 5];
+      const dRect = dragon.getBoundingClientRect();
+      const lRect = fxLayer.getBoundingClientRect();
+      s.style.left = ((dRect.left + dRect.width / 2) - lRect.left) + 'px';
+      s.style.top  = ((dRect.top  + dRect.height / 2) - lRect.top)  + 'px';
+      const ang = (Math.PI * 2 * i) / 24 + Math.random() * 0.4;
+      const dist = 160 + Math.random() * 120;
       s.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
       s.style.setProperty('--dy', Math.sin(ang) * dist + 'px');
-      wrap.appendChild(s);
+      fxLayer.appendChild(s);
       setTimeout(() => s.remove(), 1800);
     }
   }
@@ -301,11 +324,11 @@
       const row = document.createElement('div');
       row.className = `lb-row ${p.team}`;
       const medal = ['🥇', '🥈', '🥉'][i] || `#${i + 1}`;
-      const teamEmoji = p.team === 'red' ? '✒️' : '🖌️';
+      const teamEmoji = p.team === 'red' ? '🐉' : '🐲';
       row.innerHTML = `
         <span class="lb-rank">${medal}</span>
         <span class="lb-name">${teamEmoji} ${escapeHtml(p.name)}</span>
-        <span class="lb-score">${p.score} pts</span>
+        <span class="lb-score">${p.score} aleteos</span>
       `;
       lb.appendChild(row);
     });
@@ -335,7 +358,7 @@
       c.style.left = Math.random() * 100 + '%';
       c.style.animationDelay = Math.random() * 1.5 + 's';
       c.style.animationDuration = 2 + Math.random() * 2 + 's';
-      c.textContent = ['🐉', '✒️', '🖌️', '🧧', '✨'][i % 5];
+      c.textContent = ['🐉', '🐲', '☁️', '✨', '🏯'][i % 5];
       c.style.fontSize = (1 + Math.random() * 1) + 'rem';
       c.style.background = 'transparent';
       document.body.appendChild(c);
