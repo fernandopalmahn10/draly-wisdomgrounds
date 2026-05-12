@@ -715,7 +715,8 @@
     }
   });
 
-  socket.on('mq:tick', ({ p: positions }) => {
+  socket.on('mq:tick', ({ p: positions, full }) => {
+    // Server sends deltas (only moving players) with periodic full syncs.
     Object.entries(positions).forEach(([id, pos]) => {
       if (!mqPlayers[id]) {
         mqPlayers[id] = { name: '?', team: 'red', x: pos.x, y: pos.y, dir: pos.d };
@@ -726,9 +727,18 @@
       mqPlayers[id].dir = pos.d;
       mqPlayers[id].moving = !!pos.m;
     });
-    Object.keys(mqDisplayPlayers).forEach((id) => {
-      if (!positions[id]) delete mqDisplayPlayers[id];
-    });
+    if (full) {
+      Object.keys(mqDisplayPlayers).forEach((id) => {
+        if (!positions[id]) delete mqDisplayPlayers[id];
+      });
+      Object.keys(mqPlayers).forEach((id) => {
+        if (!positions[id]) delete mqPlayers[id];
+      });
+    } else {
+      Object.keys(mqPlayers).forEach((id) => {
+        if (!positions[id] && mqPlayers[id].moving) mqPlayers[id].moving = false;
+      });
+    }
     Object.keys(mqPlayers).forEach((id) => {
       if (!mqDisplayPlayers[id]) {
         mqDisplayPlayers[id] = {
