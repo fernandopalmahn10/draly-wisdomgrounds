@@ -651,9 +651,17 @@
     });
   });
 
-  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, points }) => {
+  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points }) => {
     clearAnswerHeartbeat();
     hideSendingOverlay();
+    // Dragon-Eye fast path: skip the 900ms result celebration and go straight
+    // to the aim screen so the player has the full timer to think + tap.
+    if (correct && gameType === 'dragon-eye' && dragonAim) {
+      MochiSounds.correct();
+      if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+      startDragonAim(dragonAimMs || 12000);
+      return;
+    }
     if (correct) {
       MochiSounds.correct();
       let happyMascot, sub;
@@ -977,12 +985,22 @@
       btn.onclick = onLaunch;
     }
 
-    // === Countdown bar ===
+    // === Countdown bar + giant number ===
+    const countdownEl = $('dr-aim-countdown');
     cancelAnimationFrame(dragonAimTimerRaf);
     function tick() {
       const remaining = Math.max(0, dragonAimDeadline - Date.now());
       const pct = (remaining / totalMs) * 100;
       if (timerFill) timerFill.style.width = pct + '%';
+      if (countdownEl) {
+        const secsLeft = Math.ceil(remaining / 1000);
+        if (countdownEl.textContent !== String(secsLeft)) {
+          countdownEl.textContent = secsLeft;
+        }
+        // Glow red in the last 3 seconds
+        if (secsLeft <= 3) countdownEl.classList.add('urgent');
+        else countdownEl.classList.remove('urgent');
+      }
       if (remaining <= 0) {
         // Time's up — if they aimed but didn't fire, auto-launch with their selection.
         if (!dragonAimFired) {

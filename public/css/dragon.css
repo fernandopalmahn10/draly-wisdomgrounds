@@ -213,14 +213,16 @@ body.dragon-bg .win-screen { color: #3a1505; }
 }
 
 /* The dragon image + dot layer share the same percentage coordinate system.
-   `--reveal` is set by JS from 0.15 (faint sketch) up to 1.0 (fully shown). */
+   `--reveal` is 0..1, set by JS. The dragon stays at FULL opacity always so
+   it's never invisible — instead, brightness + saturation animate from
+   "dark silhouette" to "fully revealed gold dragon" as the team scores. */
 .dr-dragon-wrap {
   position: relative;
   width: 100%;
   flex: 1;
   min-height: 240px;
   animation: dragon-float 3.5s ease-in-out infinite alternate;
-  --reveal: 0.15;
+  --reveal: 0;
 }
 @keyframes dragon-float {
   from { transform: translateY(0); }
@@ -232,11 +234,16 @@ body.dragon-bg .win-screen { color: #3a1505; }
   object-fit: contain;
   user-select: none;
   -webkit-user-drag: none;
+  /* Always opacity:1 — never hidden. We "reveal" via brightness + saturation:
+     at reveal=0 → dark silhouette. At reveal=1 → fully colored dragon.
+     The drop-shadow stays so the dragon always has presence on the orange bg. */
+  opacity: 1;
   filter:
-    drop-shadow(0 12px 30px rgba(0,0,0,0.4))
-    saturate(calc(0.3 + var(--reveal) * 0.7));
-  opacity: var(--reveal);
-  transition: opacity 0.5s ease, filter 0.5s ease;
+    drop-shadow(0 12px 30px rgba(0,0,0,0.45))
+    brightness(calc(0.30 + var(--reveal) * 0.70))
+    saturate(calc(0.10 + var(--reveal) * 0.90))
+    contrast(calc(0.95 + var(--reveal) * 0.05));
+  transition: filter 0.5s ease;
 }
 .dr-dragon-wrap.awakened {
   animation: dragon-awakened 4s ease-in-out forwards;
@@ -373,6 +380,35 @@ body.dragon-bg .win-screen { color: #3a1505; }
   letter-spacing: 0.04em;
   text-shadow: 0 3px 8px rgba(120, 12, 12, 0.6);
   margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.dr-aim-countdown {
+  display: inline-block;
+  min-width: 56px;
+  height: 56px;
+  line-height: 52px;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 2.6rem;
+  background: rgba(0, 0, 0, 0.55);
+  border: 3px solid rgba(255, 220, 130, 0.7);
+  border-radius: 50%;
+  color: #fff8e0;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+.dr-aim-countdown.urgent {
+  color: #ff5a66;
+  border-color: #ff5a66;
+  animation: countdown-pulse 0.5s ease-in-out infinite alternate;
+}
+@keyframes countdown-pulse {
+  from { transform: scale(1);    box-shadow: 0 4px 14px rgba(255,90,102,0.5); }
+  to   { transform: scale(1.15); box-shadow: 0 6px 22px rgba(255,90,102,0.9); }
 }
 
 .dr-aim-stage {

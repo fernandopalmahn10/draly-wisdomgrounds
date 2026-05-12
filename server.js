@@ -200,12 +200,12 @@ const VOCAB_EMOJI = {
 // TAP exactly where they want the pearl to land on a small dragon image.
 // Eye-zone tap = big reveal jump (also lights up an eye glow on the host).
 // Body tap = modest reveal. Way off = small reveal.
-const DR_REVEAL_MAX     = 100;   // 100% reveal = dragon awakens
-const DR_EYE_REVEAL     = 18;    // eye hit: huge reveal boost
-const DR_HEAD_REVEAL    = 8;     // head/face: good reveal
-const DR_BODY_REVEAL    = 4;     // body anywhere on dragon: ok
-const DR_OFF_REVEAL     = 1;     // off-target: at least a brush stroke
-const DR_AIM_WINDOW_MS  = 8000;  // 8 seconds — plenty of time to aim
+const DR_REVEAL_MAX     = 100;    // 100% reveal = dragon awakens
+const DR_EYE_REVEAL     = 25;     // eye hit: huge reveal — 4 eye hits to win
+const DR_HEAD_REVEAL    = 14;     // head/face: nice
+const DR_BODY_REVEAL    = 8;      // body: solid contribution
+const DR_OFF_REVEAL     = 3;      // off-target: you still tried
+const DR_AIM_WINDOW_MS  = 12000;  // 12 seconds — generous time to aim
 // Eye bounding boxes on hanyu.png (1000x1000)
 const DR_EYES = [
   { name: 'right', cx: 0.42, cy: 0.20, r: 0.06 },  // slightly bigger than visual to be forgiving
