@@ -396,6 +396,9 @@
     } else if (gameType === 'pinata') {
       teamLabel = isRed ? 'Equipo Bastón 紅棍' : 'Equipo Arco 金弓';
       teamMascot = isRed ? '🥢' : '🏹';
+    } else if (gameType === 'dragon-eye') {
+      teamLabel = isRed ? 'Equipo Pincel 紅毛筆' : 'Equipo Tinta 金墨水';
+      teamMascot = isRed ? '✒️' : '🖌️';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
@@ -479,19 +482,12 @@
 
     if (gameType === 'market-quest') {
       setTimeout(() => {
-        safeSwitchAfterCountdown('mq-play', () => {
-          bindMqJoystick();
-          startMqRender();
-        });
+        safeSwitchAfterCountdown('mq-play', () => initGameplayScreen('market-quest'));
       }, 3500);
     }
     if (gameType === 'flappy') {
       setTimeout(() => {
-        safeSwitchAfterCountdown('fl-play', () => {
-          loadFlappyAssets();
-          bindFlTap();
-          startFlRender();
-        });
+        safeSwitchAfterCountdown('fl-play', () => initGameplayScreen('flappy'));
       }, 3500);
     }
     // Piñata uses the standard question + mash flow — no special countdown branch needed.
@@ -577,7 +573,7 @@
     });
   });
 
-  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese }) => {
+  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, points }) => {
     if (answerRecoveryTimer) { clearTimeout(answerRecoveryTimer); answerRecoveryTimer = null; }
     if (correct) {
       MochiSounds.correct();
@@ -601,6 +597,14 @@
       } else if (gameType === 'pinata') {
         happyMascot = team === 'red' ? '🥢' : '🏹';
         sub = '¡Golpea la piñata! 🐯💥';
+      } else if (gameType === 'dragon-eye') {
+        if (dragonDot && dragonDot.isEye) {
+          happyMascot = '👁';
+          sub = `🐉 ¡PUNTO EN EL OJO! +${points || 10} pts`;
+        } else {
+          happyMascot = team === 'red' ? '✒️' : '🖌️';
+          sub = `Pintaste un punto +${points || 1}`;
+        }
       } else {
         happyMascot = team === 'red' ? '🐼' : '🦊';
         sub = '¡Alimenta a tu equipo! ⚡';
@@ -630,6 +634,9 @@
         } else if (gameType === 'pinata') {
           mashEndTime = mashUntil;
           startPinataSmash();
+        } else if (gameType === 'dragon-eye') {
+          // Dragon: no mash window — the next 'question' event will drive the
+          // transition back to the question screen. Just stay on result for a beat.
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -1011,6 +1018,26 @@
     if (navigator.vibrate) navigator.vibrate(20);
     MochiSounds.tap();
   });
+
+  // === Shared gameplay-screen initializer ===
+  // Called from BOTH the 'countdown' event AND the state-watchdog catch-up
+  // path (when a player missed countdown). Idempotent — each underlying init
+  // function self-guards against being called twice.
+  function initGameplayScreen(forGameType) {
+    if (forGameType === 'market-quest') {
+      bindMqJoystick();
+      startMqRender();
+    } else if (forGameType === 'flappy') {
+      loadFlappyAssets();
+      bindFlTap();
+      startFlRender();
+    } else if (forGameType === 'color-clash') {
+      bindCcDpad();
+      updateCcEnergyDisplay();
+    }
+    // color-splash, mochi-mash, pinata: nothing extra to initialize — they
+    // drive their own screens off the 'question' / 'answer-result' event flow.
+  }
 
   function bindMqJoystick() {
     if (mqJoystickBound) return;
@@ -2228,21 +2255,31 @@
     // If the server says we're 'active' but we're still showing the lobby or
     // a frozen countdown screen, we missed the 'countdown' event (flaky wifi,
     // backgrounded tab, etc.). Force a transition into the right play screen
-    // so the player isn't stuck on "3-2-1-Go" forever.
+    // AND run the gameplay-screen initializer so joystick / canvas / etc are
+    // actually live — otherwise the player sees a dead UI with no inputs.
     if (s.state === 'active') {
       const lobbyVisible = $('screen-lobby') && !$('screen-lobby').classList.contains('hidden');
       const countdownVisible = $('screen-countdown') && !$('screen-countdown').classList.contains('hidden');
       if (lobbyVisible || countdownVisible) {
-        // Pick the right destination screen for this game type
-        let target = 'question'; // default — server will likely have a question for us
+        let target = 'question';
         if (gameType === 'flappy') target = 'fl-play';
         else if (gameType === 'market-quest') target = 'mq-play';
         else if (gameType === 'color-clash') target = 'cc-play';
-        // For mochi/pinata/color-splash we wait on screen-question if no Q yet;
-        // it'll get repopulated when 'question' arrives.
         showScreen(target);
         stopLobbyFlappy();
+        // Critical: initialize input handlers for the gameplay screen we just
+        // forced them onto. Without this, the joystick/dpad/canvas are dead.
+        initGameplayScreen(gameType);
       }
+      // Even if they ARE on the right play screen but the handlers somehow
+      // weren't bound (e.g. they hot-reloaded the tab while the game was running),
+      // make sure the initializer ran. The internal flags make it cheap to call.
+      const mqPlayVisible = $('screen-mq-play') && !$('screen-mq-play').classList.contains('hidden');
+      const flPlayVisible = $('screen-fl-play') && !$('screen-fl-play').classList.contains('hidden');
+      const ccPlayVisible = $('screen-cc-play') && !$('screen-cc-play').classList.contains('hidden');
+      if (mqPlayVisible) initGameplayScreen('market-quest');
+      else if (flPlayVisible) initGameplayScreen('flappy');
+      else if (ccPlayVisible) initGameplayScreen('color-clash');
     }
   });
 

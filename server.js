@@ -180,6 +180,49 @@ const VOCAB_EMOJI = {
   '东西': '📦', '多少': '🔢', '请': '🙏', '谢谢': '🙏',
   '不客气': '😊', '好': '👍', '想': '💭', '喜欢': '❤️'
 };
+// === Dragon's Eye (画龙点睛) constants ===
+// Each correct answer drops one dot on the dragon at a random position. With
+// some probability the dot lands inside an EYE zone — that team scores big
+// and progress toward "awakening" the dragon. First team to 5 eye-hits wins.
+// Coordinates are 0..1 normalized; clients scale to the displayed dragon size.
+const DR_EYE_HITS_TO_WIN = 5;
+const DR_EYE_BONUS_PTS   = 10;
+const DR_BODY_PTS        = 1;
+// Eye bounding boxes (left-eye and right-eye on hanyu.png — measured from the
+// 1000×1000 source). Center coords + half-width radius.
+const DR_EYES = [
+  { name: 'right', cx: 0.42, cy: 0.20, r: 0.045 },
+  { name: 'left',  cx: 0.55, cy: 0.20, r: 0.045 }
+];
+// Dragon "body" mask — anywhere outside this loose disk = miss
+const DR_BODY = { cx: 0.50, cy: 0.50, r: 0.40 };
+
+function pickDragonDot() {
+  // Bias slightly toward the dragon's head area (where the eyes are) so it
+  // feels skill/luck-driven rather than uniformly random. ~22% of dots end
+  // up in the head zone, ~12% of those hit an eye.
+  const headWeighted = Math.random() < 0.55;
+  let x, y;
+  if (headWeighted) {
+    // Sample inside the head bbox
+    x = 0.30 + Math.random() * 0.40; // 0.30..0.70
+    y = 0.08 + Math.random() * 0.30; // 0.08..0.38
+  } else {
+    // Sample anywhere on the dragon body disk
+    const ang = Math.random() * Math.PI * 2;
+    const rad = Math.sqrt(Math.random()) * DR_BODY.r;
+    x = DR_BODY.cx + Math.cos(ang) * rad;
+    y = DR_BODY.cy + Math.sin(ang) * rad;
+  }
+  // Eye check
+  let isEye = false, eyeName = null;
+  for (const eye of DR_EYES) {
+    const dx = x - eye.cx, dy = y - eye.cy;
+    if (dx * dx + dy * dy < eye.r * eye.r) { isEye = true; eyeName = eye.name; break; }
+  }
+  return { x, y, isEye, eyeName };
+}
+
 // === Piñata Tigre constants ===
 // Each TEAM has its own tiger piñata on the host screen. Players play it like
 // Mochi Mash: answer a vocab question right → unlocks a short "smash mode"
@@ -334,7 +377,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -342,6 +385,7 @@ io.on('connection', (socket) => {
       type === 'color-clash'  ? 180 :
       type === 'color-splash' ? 90 :
       type === 'pinata'       ? 240 :
+      type === 'dragon-eye'   ? 240 :
       60;
     let grid = null;
     let vendors = null;
@@ -569,6 +613,24 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores
         });
       }
+      // Dragon's Eye: initialize empty dot board, send asset path + eye coords.
+      if (g.gameType === 'dragon-eye') {
+        g.dragon = {
+          dots: [],
+          eyeHitsRed: 0,
+          eyeHitsGold: 0,
+          awakened: null
+        };
+        io.to(pin).emit('dragon:init', {
+          eyes: DR_EYES,
+          eyeHitsToWin: DR_EYE_HITS_TO_WIN,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team }])
+          ),
+          teamScores: g.teamScores
+        });
+      }
+
       // Piñata Tigre: two tigers (one per team), each with HP. Players answer
       // questions like Mochi Mash — correct answer unlocks a 5s smash window
       // where every tap deals 1 damage to THEIR team's tiger.
@@ -996,6 +1058,46 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('answer-result', { correct: false, correctText, energy: p.energy });
         io.to(pin).emit('cs:paint', { cells: painted, teamScores: g.teamScores });
       }
+    } else if (g.gameType === 'dragon-eye') {
+      // Each correct answer = one dot. Wrong = miss (no dot, no points).
+      if (correct && g.dragon && !g.dragon.awakened) {
+        const dot = pickDragonDot();
+        const pts = dot.isEye ? DR_EYE_BONUS_PTS : DR_BODY_PTS;
+        const dotEntry = { x: dot.x, y: dot.y, team: p.team, isEye: dot.isEye, by: p.name, t: Date.now() };
+        g.dragon.dots.push(dotEntry);
+        p.score = (p.score || 0) + pts;
+        g.teamScores[p.team] = (g.teamScores[p.team] || 0) + pts;
+        if (dot.isEye) {
+          if (p.team === 'red') g.dragon.eyeHitsRed++;
+          else g.dragon.eyeHitsGold++;
+        }
+        io.to(socket.id).emit('answer-result', {
+          correct: true,
+          correctText,
+          dragonDot: dotEntry,
+          points: pts
+        });
+        // Broadcast the dot to everyone so the host renders it landing
+        io.to(pin).emit('dragon:dot', {
+          x: dot.x, y: dot.y, team: p.team, isEye: dot.isEye,
+          playerName: p.name, points: pts,
+          eyeHitsRed: g.dragon.eyeHitsRed,
+          eyeHitsGold: g.dragon.eyeHitsGold,
+          teamScores: g.teamScores
+        });
+        // Win check — first team to DR_EYE_HITS_TO_WIN eye dots wakes the dragon
+        const winnerTeam =
+          g.dragon.eyeHitsRed >= DR_EYE_HITS_TO_WIN ? 'red' :
+          g.dragon.eyeHitsGold >= DR_EYE_HITS_TO_WIN ? 'gold' : null;
+        if (winnerTeam) {
+          g.dragon.awakened = winnerTeam;
+          io.to(pin).emit('dragon:awakened', { team: winnerTeam });
+          if (g.endTimer) clearTimeout(g.endTimer);
+          setTimeout(() => endGame(pin), 4500);
+        }
+      } else {
+        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+      }
     } else if (g.gameType === 'pinata') {
       // Piñata: correct → unlock smash mode; wrong → no team-score penalty (the
       // damage that matters is dealt by the player's own taps to their tiger).
@@ -1034,6 +1136,9 @@ io.on('connection', (socket) => {
       nextDelay = correct ? CS_WALK_DURATION_MS + 600 : 1400;
     } else if (g.gameType === 'pinata') {
       nextDelay = correct ? PN_MASH_MS + 600 : 1400;
+    } else if (g.gameType === 'dragon-eye') {
+      // Dragon: tighter cadence — single-dot, no mash window, keep momentum.
+      nextDelay = correct ? 1600 : 1400;
     } else {
       nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
     }
