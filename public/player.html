@@ -194,7 +194,7 @@
       <span>Score: <span id="mash-score">0</span></span>
     </div>
     <div class="mash-screen">
-      <div style="font-size:1.5rem; font-weight:900; letter-spacing:0.05em; margin-bottom:16px; color:var(--gold-glow); text-shadow:0 0 20px var(--gold-glow);">
+      <div id="mash-headline" style="font-size:1.5rem; font-weight:900; letter-spacing:0.05em; margin-bottom:16px; color:var(--gold-glow); text-shadow:0 0 20px var(--gold-glow);">
         ⚡ ¡A APLASTAR! ⚡
       </div>
       <button class="mash-button" id="mash-button">
@@ -202,26 +202,8 @@
         <div class="mash-counter" id="mash-counter">+0</div>
       </button>
       <div class="mash-timer"><div class="mash-timer-fill" id="mash-timer-fill"></div></div>
-      <p style="color:var(--ink-dim); margin-top:16px; font-size:0.9rem;">¡TOCA, TOCA, TOCA! 🔥 8/seg = combo</p>
+      <p id="mash-hint" style="color:var(--ink-dim); margin-top:16px; font-size:0.9rem;">¡TOCA, TOCA, TOCA! 🔥 8/seg = combo</p>
     </div>
-  </div>
-
-  <!-- PIÑATA: power meter screen (shown to the player who won the buzz race) -->
-  <div id="screen-pn-power" class="hidden player-screen pn-player-screen">
-    <div class="pn-player-title" id="pn-power-title">🥢 ¡Tu turno!</div>
-    <div class="pn-player-sub">Pulsa cuando la barra blanca esté en el centro <strong>verde</strong> para un <strong>crítico</strong> 💥</div>
-    <div class="pn-power-track" id="pn-power-track">
-      <div class="pn-power-marker bounce" id="pn-power-marker"></div>
-    </div>
-    <button class="pn-power-tap-btn" id="pn-power-tap-btn">💥 ¡GOLPEAR!</button>
-    <div class="pn-player-sub" style="font-size:0.85rem;">El medidor rebota cada ~1.4 s. Tienes ~4 s antes que se dispare automático.</div>
-  </div>
-
-  <!-- PIÑATA: idle/lockout/waiting state -->
-  <div id="screen-pn-wait" class="hidden player-screen pn-player-screen">
-    <div style="font-size:5rem;" id="pn-wait-emoji">🐯</div>
-    <div class="pn-player-title" id="pn-wait-title">¡Espera tu oportunidad!</div>
-    <div class="pn-race-status" id="pn-wait-status">La próxima pregunta llega pronto…</div>
   </div>
 
   <!-- ENDED -->

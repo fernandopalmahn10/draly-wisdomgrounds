@@ -86,30 +86,72 @@
   50%     { transform: translateY(-8px) rotate(3deg); }
 }
 
-/* HP bar floats up top */
-.pn-hp-wrap {
+/* Two-tiger split layout */
+.pn-two-tigers {
   position: absolute;
-  top: 18px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(560px, 70%);
-  z-index: 3;
-  text-align: center;
+  inset: 12px 12px 110px 12px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: stretch;
+  z-index: 2;
 }
-.pn-hp-label {
+.pn-team-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0,0,0,0.32);
+  border-radius: 18px;
+  padding: 14px 14px 8px 14px;
+  position: relative;
+}
+.pn-team-col.red {
+  border: 2px solid rgba(255,138,145,0.4);
+  box-shadow: inset 0 0 40px rgba(217,46,58,0.15);
+}
+.pn-team-col.gold {
+  border: 2px solid rgba(255,213,122,0.4);
+  box-shadow: inset 0 0 40px rgba(232,177,74,0.15);
+}
+.pn-team-tag {
   font-family: 'Cinzel', serif;
   font-weight: 900;
-  letter-spacing: 0.12em;
-  color: #ffd57a;
-  font-size: 0.95rem;
-  margin-bottom: 4px;
-  text-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  letter-spacing: 0.08em;
+  text-align: center;
+  font-size: 1.1rem;
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+.pn-team-tag.red  { color: #ff8a91; background: rgba(217,46,58,0.15); border: 1px solid rgba(255,138,145,0.4); }
+.pn-team-tag.gold { color: #ffd57a; background: rgba(232,177,74,0.15); border: 1px solid rgba(255,213,122,0.4); }
+.pn-vs {
+  display: flex;
+  align-items: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 2.4rem;
+  color: rgba(255,213,122,0.5);
+  text-shadow: 0 0 12px rgba(255,213,122,0.4);
+  letter-spacing: 0.1em;
+}
+.pn-hp-text {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-size: 0.85rem;
+  color: #ffe0a8;
+}
+.pn-tiger-stage {
+  position: relative;
+  flex: 1;
+  min-height: 280px;
 }
 .pn-hp-bar {
-  height: 22px;
+  height: 18px;
   background: rgba(0,0,0,0.5);
-  border: 2px solid rgba(255,213,122,0.6);
-  border-radius: 12px;
+  border: 2px solid rgba(255,213,122,0.55);
+  border-radius: 10px;
   overflow: hidden;
   box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
 }
@@ -126,39 +168,51 @@
   to   { box-shadow: inset 0 0 24px rgba(255,80,80,1); }
 }
 
-/* Rope holding the tiger */
+/* Rope holding each tiger */
 .pn-rope {
   position: absolute;
   top: 0;
   left: 50%;
   width: 4px;
-  height: 22%;
+  height: 28%;
   background: linear-gradient(180deg, #b58a55, #8c6a3f);
   transform: translateX(-50%);
   z-index: 2;
   box-shadow: 0 0 4px rgba(0,0,0,0.5);
 }
 
-/* Tiger piñata — swings gently, jolts on hit */
+/* Tiger piñata — swings gently. Deformation transforms (tilt/scale) come
+   from CSS custom properties set by JS based on HP. */
 .pn-tiger-wrap {
   position: absolute;
-  top: 22%;
+  top: 28%;
   left: 50%;
-  transform: translateX(-50%);
+  --deform-tilt: 0deg;
+  --deform-scale: 1;
+  transform: translateX(-50%) rotate(var(--deform-tilt)) scale(var(--deform-scale));
   z-index: 3;
   transform-origin: top center;
   animation: pinata-swing 3.5s ease-in-out infinite;
+  transition: transform 0.6s ease;
 }
 @keyframes pinata-swing {
-  0%,100% { transform: translateX(-50%) rotate(-5deg); }
-  50%     { transform: translateX(-50%) rotate(5deg); }
+  0%,100% { transform: translateX(-50%) rotate(calc(var(--deform-tilt) - 5deg)) scale(var(--deform-scale)); }
+  50%     { transform: translateX(-50%) rotate(calc(var(--deform-tilt) + 5deg)) scale(var(--deform-scale)); }
+}
+.pn-tiger-wrap.heavily-damaged {
+  animation: pinata-swing-bad 1.6s ease-in-out infinite;
+}
+@keyframes pinata-swing-bad {
+  0%,100% { transform: translateX(-52%) rotate(calc(var(--deform-tilt) - 12deg)) scale(var(--deform-scale)); }
+  50%     { transform: translateX(-48%) rotate(calc(var(--deform-tilt) + 12deg)) scale(var(--deform-scale)); }
 }
 .pn-tiger {
-  font-size: clamp(8rem, 16vw, 14rem);
+  font-size: clamp(5rem, 11vw, 9rem);
   filter: drop-shadow(0 8px 20px rgba(0,0,0,0.7));
   user-select: none;
   position: relative;
   text-align: center;
+  transition: filter 0.4s ease, opacity 0.4s ease;
 }
 .pn-cracks {
   position: absolute;
@@ -178,52 +232,45 @@
 .pn-crack-2 { width: 50px; height: 3px; transform: rotate(60deg); }
 .pn-crack-3 { width: 70px; height: 4px; transform: rotate(-30deg); }
 
-/* Shake on hit */
-.pn-tiger-wrap.shake { animation: pinata-shake 0.5s ease-out; }
-.pn-tiger-wrap.shake-crit { animation: pinata-shake-crit 0.7s ease-out; }
+/* Shake on hit — overrides the swing animation briefly */
+.pn-tiger-wrap.shake { animation: pinata-shake 0.45s ease-out; }
 @keyframes pinata-shake {
-  0%   { transform: translateX(-50%) rotate(-5deg); }
-  20%  { transform: translateX(-58%) rotate(-15deg); }
-  40%  { transform: translateX(-42%) rotate(12deg); }
-  60%  { transform: translateX(-54%) rotate(-8deg); }
-  80%  { transform: translateX(-48%) rotate(5deg); }
-  100% { transform: translateX(-50%) rotate(0deg); }
-}
-@keyframes pinata-shake-crit {
-  0%   { transform: translateX(-50%) rotate(-5deg) scale(1); }
-  15%  { transform: translateX(-65%) rotate(-22deg) scale(1.1); filter: brightness(2) drop-shadow(0 0 30px #ffd57a); }
-  35%  { transform: translateX(-35%) rotate(20deg) scale(1.05); }
-  55%  { transform: translateX(-60%) rotate(-15deg) scale(1.08); }
-  80%  { transform: translateX(-45%) rotate(8deg) scale(1.02); }
-  100% { transform: translateX(-50%) rotate(0deg) scale(1); filter: none; }
+  0%   { transform: translateX(-50%) rotate(calc(var(--deform-tilt) - 5deg)) scale(var(--deform-scale)); }
+  20%  { transform: translateX(-60%) rotate(calc(var(--deform-tilt) - 18deg)) scale(calc(var(--deform-scale) * 1.05)); }
+  45%  { transform: translateX(-40%) rotate(calc(var(--deform-tilt) + 15deg)) scale(calc(var(--deform-scale) * 1.04)); }
+  70%  { transform: translateX(-56%) rotate(calc(var(--deform-tilt) - 8deg)) scale(var(--deform-scale)); }
+  100% { transform: translateX(-50%) rotate(calc(var(--deform-tilt))) scale(var(--deform-scale)); }
 }
 
-/* Flying stick (the swing visual) */
+/* Flying stick (the swing visual) — fires inside each team column */
 .pn-stick-fx {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 4;
+  overflow: hidden;
 }
 .pn-stick {
   position: absolute;
-  top: 30%;
-  font-size: 4rem;
+  top: 38%;
+  font-size: 3rem;
   filter: drop-shadow(0 6px 12px rgba(0,0,0,0.7));
   animation: stick-fly 0.7s ease-out forwards;
+  opacity: 0;
 }
 .pn-stick.red  { left: -10%; animation-name: stick-fly-red; }
 .pn-stick.gold { right: -10%; animation-name: stick-fly-gold; }
-.pn-stick.crit { font-size: 5.5rem; filter: drop-shadow(0 0 18px #ffd57a) drop-shadow(0 6px 12px rgba(0,0,0,0.7)); }
 @keyframes stick-fly-red {
   0%   { left: -10%; opacity: 0; transform: rotate(-20deg) scale(0.5); }
-  40%  { opacity: 1; }
-  100% { left: 40%; opacity: 0; transform: rotate(35deg) scale(1.2); }
+  35%  { opacity: 1; }
+  60%  { left: 45%; opacity: 1; transform: rotate(20deg) scale(1.25); }
+  100% { left: 60%; opacity: 0; transform: rotate(45deg) scale(0.8); }
 }
 @keyframes stick-fly-gold {
   0%   { right: -10%; opacity: 0; transform: rotate(20deg) scale(0.5); }
-  40%  { opacity: 1; }
-  100% { right: 40%; opacity: 0; transform: rotate(-35deg) scale(1.2); }
+  35%  { opacity: 1; }
+  60%  { right: 45%; opacity: 1; transform: rotate(-20deg) scale(1.25); }
+  100% { right: 60%; opacity: 0; transform: rotate(-45deg) scale(0.8); }
 }
 
 /* Damage popup */
@@ -248,15 +295,15 @@
   100% { opacity: 0; transform: translate(-50%, -90px) scale(1); }
 }
 
-/* Banner above the question */
+/* Banner pinned at the bottom strip of the stage */
 .pn-banner {
   position: absolute;
-  bottom: 24%;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
   font-family: 'Cinzel', serif;
   font-weight: 900;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   letter-spacing: 0.04em;
   color: #ffe8b3;
   background: rgba(0,0,0,0.55);
@@ -264,9 +311,9 @@
   border-radius: 14px;
   padding: 10px 22px;
   text-shadow: 0 2px 6px rgba(0,0,0,0.8);
-  max-width: 84%;
+  max-width: 86%;
   text-align: center;
-  z-index: 4;
+  z-index: 6;
 }
 .pn-banner.flash { animation: banner-flash 0.35s ease-out; }
 @keyframes banner-flash {
@@ -299,25 +346,24 @@
   background: rgba(20,40,28,0.7);
 }
 
-/* Loot trays — running tally of prizes per team */
+/* Loot trays — running tally of prizes per team, sits at the bottom of each column */
 .pn-loot {
-  position: absolute;
-  bottom: 10px;
-  width: 230px;
-  height: 70px;
-  border-radius: 14px;
+  position: relative;
+  width: 100%;
+  height: 60px;
+  border-radius: 12px;
   background: rgba(0,0,0,0.45);
-  padding: 6px 8px;
+  padding: 4px 6px;
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  font-size: 1.3rem;
+  font-size: 1.15rem;
   overflow: hidden;
   align-content: flex-end;
   z-index: 5;
 }
-.pn-loot.red  { left: 12px;  border: 2px solid var(--red-glow, #ff8a91); }
-.pn-loot.gold { right: 12px; border: 2px solid var(--gold-glow, #ffd57a); }
+.pn-loot.red  { border: 2px solid var(--red-glow, #ff8a91); }
+.pn-loot.gold { border: 2px solid var(--gold-glow, #ffd57a); }
 .pn-loot span {
   display: inline-block;
   animation: prize-pop 0.35s ease-out;
@@ -347,19 +393,19 @@
 .pn-prize-fly.red.fly  { transform: translate(calc(-50vw + 120px), 60vh) scale(0.8) rotate(-180deg); opacity: 0; }
 .pn-prize-fly.gold.fly { transform: translate(calc(50vw - 120px), 60vh) scale(0.8) rotate(180deg); opacity: 0; }
 
-/* Final piñata burst */
+/* Final piñata burst — origin is set by JS via inline left/top in pixels */
 .pn-burst-prize {
   position: absolute;
-  top: 36%;
-  left: 50%;
   font-size: 2.4rem;
   --dx: 0px;
   --dy: 0px;
-  animation: burst 1.8s ease-out forwards;
+  animation: burst 1.6s ease-out forwards;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.6));
 }
 @keyframes burst {
-  0%   { transform: translate(-50%, -50%) scale(0.5) rotate(0); opacity: 1; }
-  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.4) rotate(720deg); opacity: 0; }
+  0%   { transform: translate(-50%, -50%) scale(0.4) rotate(0); opacity: 1; }
+  20%  { transform: translate(calc(-50% + (var(--dx) * 0.3)), calc(-50% + (var(--dy) * 0.3))) scale(1.6) rotate(180deg); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.1) rotate(720deg); opacity: 0; }
 }
 
 /* ============================================================ */
