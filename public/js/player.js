@@ -709,9 +709,9 @@
           mashEndTime = mashUntil;
           startPinataSmash();
         } else if (gameType === 'dragon-eye') {
-          // Dragon: correct → open the aim mini-game on phone. The pearl lands
-          // wherever the player locks the reticle. Wrong answer = no aim screen.
-          if (dragonAim) startDragonAim();
+          // Dragon: correct → open tap-anywhere aim screen. Player taps on the
+          // dragon to place the pearl, then presses LANZAR.
+          if (dragonAim) startDragonAim(8000);
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -904,67 +904,109 @@
     }
   }
 
-  // === Dragon's Eye aim mini-game ===
-  // A 🎯 reticle bounces horizontally across a small dragon preview. Player
-  // taps to lock — the X position decides where the pearl lands on the host's
-  // big dragon. Eye band is a narrow zone, so eye hits feel earned.
-  let dragonAimRaf = null;
-  let dragonAimDir = 1;
-  let dragonAimX = 0;       // 0..1, current reticle position
-  let dragonAimLocked = false;
+  // === Dragon's Eye aim mini-game (tap-anywhere) ===
+  // Player taps anywhere on the dragon image. A + crosshair shows where their
+  // pearl will land — they can re-tap to adjust. Pressing the launch button
+  // commits the shot. Plenty of time (8 s window with visual countdown).
+  let dragonAimX = 0.5, dragonAimY = 0.5;
+  let dragonAimSelected = false;
+  let dragonAimFired = false;
+  let dragonAimTimerRaf = null;
+  let dragonAimDeadline = 0;
 
-  function startDragonAim() {
+  function startDragonAim(windowMs) {
     showScreen('dragon-aim');
-    dragonAimLocked = false;
-    dragonAimX = 0;
-    dragonAimDir = 1;
-    const reticle = $('dr-aim-reticle');
-    const marker = $('dr-aim-track-marker');
+    dragonAimSelected = false;
+    dragonAimFired = false;
+    dragonAimX = 0.5;
+    dragonAimY = 0.5;
+    const totalMs = windowMs || 8000;
+    dragonAimDeadline = Date.now() + totalMs;
+    const stage = $('dr-aim-stage');
+    const crosshair = $('dr-aim-crosshair');
     const btn = $('dr-aim-tap-btn');
+    const timerFill = $('dr-aim-timer-fill');
+    if (crosshair) crosshair.classList.add('hidden');
     if (btn) {
-      btn.disabled = false;
-      btn.textContent = '🐉 ¡LANZAR PERLA! 🔮';
-      // Use pointerdown for instant response on mobile
-      const onTap = (e) => {
+      btn.disabled = true;
+      btn.textContent = 'Toca al dragón primero ↑';
+    }
+
+    // === Tap-on-dragon handler ===
+    if (stage) {
+      const onAimTap = (e) => {
+        if (dragonAimFired) return;
         if (e) e.preventDefault();
-        if (dragonAimLocked) return;
-        dragonAimLocked = true;
+        const r = stage.getBoundingClientRect();
+        const clientX = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+        const clientY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+        const px = (clientX - r.left) / r.width;
+        const py = (clientY - r.top) / r.height;
+        dragonAimX = Math.max(0, Math.min(1, px));
+        dragonAimY = Math.max(0, Math.min(1, py));
+        dragonAimSelected = true;
+        if (crosshair) {
+          crosshair.classList.remove('hidden');
+          crosshair.style.left = (dragonAimX * 100) + '%';
+          crosshair.style.top  = (dragonAimY * 100) + '%';
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '🐉 <span style="margin:0 8px;">¡LANZAR PERLA!</span> 🔮';
+        }
+        if (navigator.vibrate) navigator.vibrate(15);
+      };
+      // Bind only once per session — overwrite onpointerdown so each new round
+      // doesn't accumulate listeners.
+      stage.onpointerdown = onAimTap;
+    }
+
+    // === Launch button ===
+    if (btn) {
+      const onLaunch = (e) => {
+        if (e) e.preventDefault();
+        if (dragonAimFired || !dragonAimSelected) return;
+        dragonAimFired = true;
         btn.disabled = true;
         btn.textContent = '🔮 ¡Lanzada!';
-        // Visual lock effect — emit aim to server
-        socket.emit('dragon:aim-place', { pin, aimX: dragonAimX });
+        socket.emit('dragon:aim-place', { pin, aimX: dragonAimX, aimY: dragonAimY });
         if (navigator.vibrate) navigator.vibrate(40);
         MochiSounds.populate && MochiSounds.populate(team);
       };
-      btn.onpointerdown = onTap;
-      btn.onclick = onTap;
+      btn.onpointerdown = onLaunch;
+      btn.onclick = onLaunch;
     }
-    // Animate the reticle
-    let last = performance.now();
-    function frame(now) {
-      const dt = (now - last) / 1000;
-      last = now;
-      if (!dragonAimLocked) {
-        dragonAimX += dragonAimDir * dt * 0.55; // ~1.8s for a sweep
-        if (dragonAimX > 1) { dragonAimX = 1; dragonAimDir = -1; }
-        if (dragonAimX < 0) { dragonAimX = 0; dragonAimDir = 1; }
+
+    // === Countdown bar ===
+    cancelAnimationFrame(dragonAimTimerRaf);
+    function tick() {
+      const remaining = Math.max(0, dragonAimDeadline - Date.now());
+      const pct = (remaining / totalMs) * 100;
+      if (timerFill) timerFill.style.width = pct + '%';
+      if (remaining <= 0) {
+        // Time's up — if they aimed but didn't fire, auto-launch with their selection.
+        if (!dragonAimFired) {
+          dragonAimFired = true;
+          if (btn) { btn.disabled = true; btn.textContent = '🔮 ¡Tiempo!'; }
+          socket.emit('dragon:aim-place', { pin, aimX: dragonAimX, aimY: dragonAimY });
+        }
+        return;
       }
-      // Position the reticle inside the dragon preview's eye band (which
-      // visually spans 18%..82% of the preview width, matching the server map).
-      const pctInDragon = 18 + dragonAimX * 64; // 18..82
-      if (reticle) reticle.style.left = pctInDragon + '%';
-      if (marker)  marker.style.left  = (dragonAimX * 100) + '%';
-      dragonAimRaf = requestAnimationFrame(frame);
+      dragonAimTimerRaf = requestAnimationFrame(tick);
     }
-    cancelAnimationFrame(dragonAimRaf);
-    dragonAimRaf = requestAnimationFrame(frame);
+    tick();
   }
 
-  // Server tells us where the pearl actually landed (after applying our aim)
-  socket.on('dragon:pearl-landed', ({ isEye, points }) => {
-    if (dragonAimRaf) { cancelAnimationFrame(dragonAimRaf); dragonAimRaf = null; }
+  // Server tells us where the pearl actually landed
+  socket.on('dragon:pearl-landed', ({ zone, isEye, reveal }) => {
+    cancelAnimationFrame(dragonAimTimerRaf);
     const btn = $('dr-aim-tap-btn');
-    if (btn) btn.textContent = isEye ? `👁 ¡OJO! +${points}` : `✒️ Cuerpo +${points}`;
+    if (btn) {
+      if (isEye) btn.textContent = `👁 ¡OJO! +${reveal}% revelado`;
+      else if (zone === 'head') btn.textContent = `🐉 ¡Cabeza! +${reveal}%`;
+      else if (zone === 'body') btn.textContent = `✒️ Cuerpo +${reveal}%`;
+      else btn.textContent = `🖌️ Al lado +${reveal}%`;
+    }
     if (isEye) {
       MochiSounds.winFanfare && MochiSounds.winFanfare();
       burstSparkles('✨', 18);
