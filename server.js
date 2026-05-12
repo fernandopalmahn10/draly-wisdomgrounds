@@ -7,7 +7,18 @@ const Images = require('./core/images');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' }, maxHttpBufferSize: 5e6 });
+const io = new Server(server, {
+  cors: { origin: '*' },
+  maxHttpBufferSize: 5e6,
+  // Detect dead clients faster — default is 25s/20s which is too forgiving for
+  // classroom wifi. With these, a frozen client is reaped after ~20s and the
+  // grace-period rejoin path kicks in cleanly instead of leaving phantom slots.
+  pingInterval: 10000,
+  pingTimeout: 20000,
+  // Allow both transports; clients prefer websocket first but fall back to
+  // polling on locked-down networks.
+  transports: ['websocket', 'polling']
+});
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '5mb' }));
@@ -337,6 +348,58 @@ function nextQuestionForVendor(g, playerId, vendorId) {
   };
   p.lastQuestionAt = Date.now();
   return { qid, text: q.text, answers: shuffled, image, vendorId };
+}
+
+// Dragon's Eye: resolve a pearl landing once the player has aimed.
+// `aimX` is 0..1, the horizontal position the player locked in. Server computes
+// the final dot position with a small vertical jitter at the eye-line and
+// scores based on whether it lands within an eye bounding box.
+function resolveDragonPearl(pin, pid, aimX) {
+  const g = games[pin];
+  if (!g || g.gameType !== 'dragon-eye' || !g.dragon || g.dragon.awakened) return;
+  const p = g.players[pid];
+  if (!p) return;
+  aimX = Math.max(0, Math.min(1, Number(aimX) || 0.5));
+  // The eyes sit around y=0.20. Add slight jitter so it's not a perfect line.
+  const y = 0.18 + (Math.random() - 0.5) * 0.06;
+  // Convert player's 0..1 across the aim bar into the dragon-x range. We map
+  // a wide aiming bar onto the dragon's horizontal extent (0.18..0.82) so the
+  // eyes (0.42, 0.55) sit nicely in the middle.
+  const x = 0.18 + aimX * 0.64;
+  let isEye = false;
+  for (const eye of DR_EYES) {
+    const dx = x - eye.cx, dy = y - eye.cy;
+    if (dx * dx + dy * dy < eye.r * eye.r) { isEye = true; break; }
+  }
+  const pts = isEye ? DR_EYE_BONUS_PTS : DR_BODY_PTS;
+  const dotEntry = { x, y, team: p.team, isEye, by: p.name, t: Date.now() };
+  g.dragon.dots.push(dotEntry);
+  p.score = (p.score || 0) + pts;
+  g.teamScores[p.team] = (g.teamScores[p.team] || 0) + pts;
+  if (isEye) {
+    if (p.team === 'red') g.dragon.eyeHitsRed++;
+    else g.dragon.eyeHitsGold++;
+  }
+  // Tell the player how they did
+  io.to(pid).emit('dragon:pearl-landed', { isEye, points: pts, x, y });
+  // Broadcast for everyone (host draws the dot)
+  io.to(pin).emit('dragon:dot', {
+    x, y, team: p.team, isEye,
+    playerName: p.name, points: pts,
+    eyeHitsRed: g.dragon.eyeHitsRed,
+    eyeHitsGold: g.dragon.eyeHitsGold,
+    teamScores: g.teamScores
+  });
+  // Win check — first team to DR_EYE_HITS_TO_WIN eye dots wakes the dragon
+  const winnerTeam =
+    g.dragon.eyeHitsRed >= DR_EYE_HITS_TO_WIN ? 'red' :
+    g.dragon.eyeHitsGold >= DR_EYE_HITS_TO_WIN ? 'gold' : null;
+  if (winnerTeam) {
+    g.dragon.awakened = winnerTeam;
+    io.to(pin).emit('dragon:awakened', { team: winnerTeam });
+    if (g.endTimer) clearTimeout(g.endTimer);
+    setTimeout(() => endGame(pin), 4500);
+  }
 }
 
 function endGame(pin) {
@@ -1059,42 +1122,29 @@ io.on('connection', (socket) => {
         io.to(pin).emit('cs:paint', { cells: painted, teamScores: g.teamScores });
       }
     } else if (g.gameType === 'dragon-eye') {
-      // Each correct answer = one dot. Wrong = miss (no dot, no points).
+      // NEW: correct answer = the player gets an AIM TURN. The phone shows a
+      // moving reticle they tap to lock onto a horizontal position on the
+      // dragon. The server then resolves the pearl landing using THAT position.
       if (correct && g.dragon && !g.dragon.awakened) {
-        const dot = pickDragonDot();
-        const pts = dot.isEye ? DR_EYE_BONUS_PTS : DR_BODY_PTS;
-        const dotEntry = { x: dot.x, y: dot.y, team: p.team, isEye: dot.isEye, by: p.name, t: Date.now() };
-        g.dragon.dots.push(dotEntry);
-        p.score = (p.score || 0) + pts;
-        g.teamScores[p.team] = (g.teamScores[p.team] || 0) + pts;
-        if (dot.isEye) {
-          if (p.team === 'red') g.dragon.eyeHitsRed++;
-          else g.dragon.eyeHitsGold++;
-        }
+        // Open an aim window — the player will emit 'dragon:aim-place' soon
+        p.dragonAim = {
+          openedAt: Date.now(),
+          deadline: Date.now() + 5000
+        };
         io.to(socket.id).emit('answer-result', {
           correct: true,
           correctText,
-          dragonDot: dotEntry,
-          points: pts
+          dragonAim: true   // signals the client to open the aim mini-game
         });
-        // Broadcast the dot to everyone so the host renders it landing
-        io.to(pin).emit('dragon:dot', {
-          x: dot.x, y: dot.y, team: p.team, isEye: dot.isEye,
-          playerName: p.name, points: pts,
-          eyeHitsRed: g.dragon.eyeHitsRed,
-          eyeHitsGold: g.dragon.eyeHitsGold,
-          teamScores: g.teamScores
-        });
-        // Win check — first team to DR_EYE_HITS_TO_WIN eye dots wakes the dragon
-        const winnerTeam =
-          g.dragon.eyeHitsRed >= DR_EYE_HITS_TO_WIN ? 'red' :
-          g.dragon.eyeHitsGold >= DR_EYE_HITS_TO_WIN ? 'gold' : null;
-        if (winnerTeam) {
-          g.dragon.awakened = winnerTeam;
-          io.to(pin).emit('dragon:awakened', { team: winnerTeam });
-          if (g.endTimer) clearTimeout(g.endTimer);
-          setTimeout(() => endGame(pin), 4500);
-        }
+        // Safety net: if the player never aims (closed phone, etc.), auto-place
+        // their pearl after the deadline at a random X so the game keeps moving.
+        setTimeout(() => {
+          if (!games[pin] || games[pin].state !== 'active') return;
+          const pNow = games[pin].players[socket.id];
+          if (!pNow || !pNow.dragonAim) return;
+          pNow.dragonAim = null;
+          resolveDragonPearl(pin, socket.id, Math.random());
+        }, 5200);
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
@@ -1193,6 +1243,16 @@ io.on('connection', (socket) => {
   });
 
   // Market Quest: player sends their movement input state (held keys/joystick)
+  // Dragon's Eye: player has locked the aim reticle. aimX is 0..1.
+  socket.on('dragon:aim-place', ({ pin, aimX }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'dragon-eye' || g.state !== 'active') return;
+    const p = g.players[socket.id];
+    if (!p || !p.dragonAim) return; // no aim window open for this player
+    p.dragonAim = null;
+    resolveDragonPearl(pin, socket.id, aimX);
+  });
+
   socket.on('player:mq-input', ({ pin, left, right, up, down }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'market-quest' || g.state !== 'active') return;
