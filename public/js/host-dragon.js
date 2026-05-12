@@ -236,13 +236,14 @@
     if ($('reveal-gold-fill')) $('reveal-gold-fill').style.width = pctG + '%';
     if ($('reveal-red-text'))  $('reveal-red-text').textContent  = pctR + '%';
     if ($('reveal-gold-text')) $('reveal-gold-text').textContent = pctG + '%';
-    // Dragon opacity: starts at 0.15 (faint sketch), grows to 1.0 (fully shown)
-    const opR = 0.15 + (revealRed  / revealMax) * 0.85;
-    const opG = 0.15 + (revealGold / revealMax) * 0.85;
+    // Reveal 0..1 drives brightness/saturation filter (CSS handles the rest).
+    // At 0 the dragon is a dark silhouette; at 1 it's fully colored.
+    const reR = revealRed  / revealMax;
+    const reG = revealGold / revealMax;
     const rWrap = $('dragon-red-wrap');
     const gWrap = $('dragon-gold-wrap');
-    if (rWrap) rWrap.style.setProperty('--reveal', opR.toFixed(3));
-    if (gWrap) gWrap.style.setProperty('--reveal', opG.toFixed(3));
+    if (rWrap) rWrap.style.setProperty('--reveal', reR.toFixed(3));
+    if (gWrap) gWrap.style.setProperty('--reveal', reG.toFixed(3));
     if ($('eyes-red'))  $('eyes-red').textContent  = eyes.red  || 0;
     if ($('eyes-gold')) $('eyes-gold').textContent = eyes.gold || 0;
   }
