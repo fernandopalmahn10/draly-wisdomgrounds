@@ -654,14 +654,6 @@
   socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points }) => {
     clearAnswerHeartbeat();
     hideSendingOverlay();
-    // Dragon-Eye fast path: skip the 900ms result celebration and go straight
-    // to the aim screen so the player has the full timer to think + tap.
-    if (correct && gameType === 'dragon-eye' && dragonAim) {
-      MochiSounds.correct();
-      if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
-      startDragonAim(dragonAimMs || 12000);
-      return;
-    }
     if (correct) {
       MochiSounds.correct();
       let happyMascot, sub;
@@ -685,8 +677,8 @@
         happyMascot = team === 'red' ? '🥢' : '🏹';
         sub = '¡Golpea la piñata! 🐯💥';
       } else if (gameType === 'dragon-eye') {
-        happyMascot = team === 'red' ? '✒️' : '🖌️';
-        sub = '¡A apuntar al ojo! 🎯';
+        happyMascot = team === 'red' ? '🐉' : '🐲';
+        sub = '¡A volar! Toca rápido para subir ☁️';
       } else {
         happyMascot = team === 'red' ? '🐼' : '🦊';
         sub = '¡Alimenta a tu equipo! ⚡';
@@ -717,9 +709,10 @@
           mashEndTime = mashUntil;
           startPinataSmash();
         } else if (gameType === 'dragon-eye') {
-          // Dragon: correct → open tap-anywhere aim screen. Player taps on the
-          // dragon to place the pearl, then presses LANZAR.
-          if (dragonAim) startDragonAim(8000);
+          // Dragon flight: same flow as piñata/mochi — open the mash window
+          // where each tap is a wing-flap that lifts the team dragon higher.
+          mashEndTime = mashUntil;
+          startMash();
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -912,125 +905,8 @@
     }
   }
 
-  // === Dragon's Eye aim mini-game (tap-anywhere) ===
-  // Player taps anywhere on the dragon image. A + crosshair shows where their
-  // pearl will land — they can re-tap to adjust. Pressing the launch button
-  // commits the shot. Plenty of time (8 s window with visual countdown).
-  let dragonAimX = 0.5, dragonAimY = 0.5;
-  let dragonAimSelected = false;
-  let dragonAimFired = false;
-  let dragonAimTimerRaf = null;
-  let dragonAimDeadline = 0;
-
-  function startDragonAim(windowMs) {
-    showScreen('dragon-aim');
-    dragonAimSelected = false;
-    dragonAimFired = false;
-    dragonAimX = 0.5;
-    dragonAimY = 0.5;
-    const totalMs = windowMs || 8000;
-    dragonAimDeadline = Date.now() + totalMs;
-    const stage = $('dr-aim-stage');
-    const crosshair = $('dr-aim-crosshair');
-    const btn = $('dr-aim-tap-btn');
-    const timerFill = $('dr-aim-timer-fill');
-    if (crosshair) crosshair.classList.add('hidden');
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Toca al dragón primero ↑';
-    }
-
-    // === Tap-on-dragon handler ===
-    if (stage) {
-      const onAimTap = (e) => {
-        if (dragonAimFired) return;
-        if (e) e.preventDefault();
-        const r = stage.getBoundingClientRect();
-        const clientX = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
-        const clientY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-        const px = (clientX - r.left) / r.width;
-        const py = (clientY - r.top) / r.height;
-        dragonAimX = Math.max(0, Math.min(1, px));
-        dragonAimY = Math.max(0, Math.min(1, py));
-        dragonAimSelected = true;
-        if (crosshair) {
-          crosshair.classList.remove('hidden');
-          crosshair.style.left = (dragonAimX * 100) + '%';
-          crosshair.style.top  = (dragonAimY * 100) + '%';
-        }
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '🐉 <span style="margin:0 8px;">¡LANZAR PERLA!</span> 🔮';
-        }
-        if (navigator.vibrate) navigator.vibrate(15);
-      };
-      // Bind only once per session — overwrite onpointerdown so each new round
-      // doesn't accumulate listeners.
-      stage.onpointerdown = onAimTap;
-    }
-
-    // === Launch button ===
-    if (btn) {
-      const onLaunch = (e) => {
-        if (e) e.preventDefault();
-        if (dragonAimFired || !dragonAimSelected) return;
-        dragonAimFired = true;
-        btn.disabled = true;
-        btn.textContent = '🔮 ¡Lanzada!';
-        socket.emit('dragon:aim-place', { pin, aimX: dragonAimX, aimY: dragonAimY });
-        if (navigator.vibrate) navigator.vibrate(40);
-        MochiSounds.populate && MochiSounds.populate(team);
-      };
-      btn.onpointerdown = onLaunch;
-      btn.onclick = onLaunch;
-    }
-
-    // === Countdown bar + giant number ===
-    const countdownEl = $('dr-aim-countdown');
-    cancelAnimationFrame(dragonAimTimerRaf);
-    function tick() {
-      const remaining = Math.max(0, dragonAimDeadline - Date.now());
-      const pct = (remaining / totalMs) * 100;
-      if (timerFill) timerFill.style.width = pct + '%';
-      if (countdownEl) {
-        const secsLeft = Math.ceil(remaining / 1000);
-        if (countdownEl.textContent !== String(secsLeft)) {
-          countdownEl.textContent = secsLeft;
-        }
-        // Glow red in the last 3 seconds
-        if (secsLeft <= 3) countdownEl.classList.add('urgent');
-        else countdownEl.classList.remove('urgent');
-      }
-      if (remaining <= 0) {
-        // Time's up — if they aimed but didn't fire, auto-launch with their selection.
-        if (!dragonAimFired) {
-          dragonAimFired = true;
-          if (btn) { btn.disabled = true; btn.textContent = '🔮 ¡Tiempo!'; }
-          socket.emit('dragon:aim-place', { pin, aimX: dragonAimX, aimY: dragonAimY });
-        }
-        return;
-      }
-      dragonAimTimerRaf = requestAnimationFrame(tick);
-    }
-    tick();
-  }
-
-  // Server tells us where the pearl actually landed
-  socket.on('dragon:pearl-landed', ({ zone, isEye, reveal }) => {
-    cancelAnimationFrame(dragonAimTimerRaf);
-    const btn = $('dr-aim-tap-btn');
-    if (btn) {
-      if (isEye) btn.textContent = `👁 ¡OJO! +${reveal}% revelado`;
-      else if (zone === 'head') btn.textContent = `🐉 ¡Cabeza! +${reveal}%`;
-      else if (zone === 'body') btn.textContent = `✒️ Cuerpo +${reveal}%`;
-      else btn.textContent = `🖌️ Al lado +${reveal}%`;
-    }
-    if (isEye) {
-      MochiSounds.winFanfare && MochiSounds.winFanfare();
-      burstSparkles('✨', 18);
-    }
-    // The next 'question' event will move us back to the question screen.
-  });
+  // (Dragon aim mini-game was here — replaced by the Mochi-style flap mash
+  // reskin in startMash() above. See body.dragon-flying-active in dragon.css.)
 
   function startMash() {
     showScreen('mash');
@@ -1040,18 +916,27 @@
     // Re-skin the headline / hint + button based on game
     if (gameType === 'pinata') {
       document.body.classList.add('pinata-active');
+      document.body.classList.remove('dragon-flying-active');
       if ($('mash-headline')) $('mash-headline').innerHTML = '🥢 ¡ROMPE EL TIGRE!';
       if ($('mash-hint')) $('mash-hint').innerHTML = 'Cada toque = un golpe a tu tigre. ¡Sigue golpeando hasta romperlo!';
-      // Set the mash button to "happy/calm" tiger initially. It gets angrier
-      // as the player taps more during the smash window.
       const mascotEl = $('mash-mascot');
       if (mascotEl) {
         mascotEl.textContent = '🐯';
         mascotEl.classList.remove('pinata-angry', 'pinata-furious', 'pinata-hit');
         mascotEl._pnTaps = 0;
       }
-    } else {
+    } else if (gameType === 'dragon-eye') {
+      document.body.classList.add('dragon-flying-active');
       document.body.classList.remove('pinata-active');
+      if ($('mash-headline')) $('mash-headline').innerHTML = '🐉 ¡AYUDA AL DRAGÓN A VOLAR!';
+      if ($('mash-hint')) $('mash-hint').innerHTML = 'Cada toque = un aleteo. ¡Sube hasta las nubes celestiales! ☁️✨';
+      const mascotEl = $('mash-mascot');
+      if (mascotEl) {
+        mascotEl.textContent = team === 'red' ? '🐉' : '🐲';
+        mascotEl.classList.remove('dragon-flap');
+      }
+    } else {
+      document.body.classList.remove('pinata-active', 'dragon-flying-active');
       if ($('mash-headline')) $('mash-headline').innerHTML = '⚡ ¡A APLASTAR! ⚡';
       if ($('mash-hint')) $('mash-hint').innerHTML = '¡TOCA, TOCA, TOCA! 🔥 8/seg = combo';
     }
@@ -1070,8 +955,8 @@
     function endMash() {
       mashBtn.classList.add('idle');
       mashBtn.classList.remove('combo');
-      // Strip piñata-only body class so the next question screen looks normal
-      document.body.classList.remove('pinata-active');
+      // Strip game-specific body classes so the next question screen is clean
+      document.body.classList.remove('pinata-active', 'dragon-flying-active');
       if (mashTapHandler) {
         mashBtn.removeEventListener('pointerdown', mashTapHandler);
         mashTapHandler = null;
@@ -2370,8 +2255,17 @@
         mascotEl.classList.add('pinata-hit');
         if (MochiSounds.thwack) MochiSounds.thwack();
       }
-      // Drive the new piñata smash screen if it's active
       pnSmashScreenTap();
+    } else if (gameType === 'dragon-eye') {
+      // Dragon flap visual on each tap: wing-flap animation + cloud puff
+      const mascotEl = $('mash-mascot');
+      if (mascotEl) {
+        mascotEl.classList.remove('dragon-flap');
+        void mascotEl.offsetWidth;
+        mascotEl.classList.add('dragon-flap');
+      }
+      // Wing-beat sound: use the same thwack as piñata (works well for impact)
+      if (MochiSounds.thwack) MochiSounds.thwack();
     }
   });
 
@@ -2487,7 +2381,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-aim', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

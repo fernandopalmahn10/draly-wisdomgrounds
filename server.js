@@ -191,49 +191,15 @@ const VOCAB_EMOJI = {
   '东西': '📦', '多少': '🔢', '请': '🙏', '谢谢': '🙏',
   '不客气': '😊', '好': '👍', '想': '💭', '喜欢': '❤️'
 };
-// === Dragon's Eye (画龙点睛) constants ===
-// Each team has its OWN dragon. Both start as faint sketches and progressively
-// reveal as players score points. Reveal = (team's reveal pts) / DR_REVEAL_MAX.
-// When a team reaches 100% reveal, their dragon awakens and they win.
-//
-// Each correct vocab answer opens an AIM screen on the player's phone — they
-// TAP exactly where they want the pearl to land on a small dragon image.
-// Eye-zone tap = big reveal jump (also lights up an eye glow on the host).
-// Body tap = modest reveal. Way off = small reveal.
-const DR_REVEAL_MAX     = 100;    // 100% reveal = dragon awakens
-const DR_EYE_REVEAL     = 25;     // eye hit: huge reveal — 4 eye hits to win
-const DR_HEAD_REVEAL    = 14;     // head/face: nice
-const DR_BODY_REVEAL    = 8;      // body: solid contribution
-const DR_OFF_REVEAL     = 3;      // off-target: you still tried
-const DR_AIM_WINDOW_MS  = 12000;  // 12 seconds — generous time to aim
-// Eye bounding boxes on hanyu.png (1000x1000)
-const DR_EYES = [
-  { name: 'right', cx: 0.42, cy: 0.20, r: 0.06 },  // slightly bigger than visual to be forgiving
-  { name: 'left',  cx: 0.55, cy: 0.20, r: 0.06 }
-];
-const DR_HEAD = { cx: 0.485, cy: 0.22, r: 0.18 };  // head bounding circle
-const DR_BODY = { cx: 0.50,  cy: 0.50, r: 0.42 };  // body bounding circle
-
-// Given a normalized (x, y) tap position, score it.
-function scoreDragonTap(x, y) {
-  x = Math.max(0, Math.min(1, Number(x) || 0.5));
-  y = Math.max(0, Math.min(1, Number(y) || 0.5));
-  for (const eye of DR_EYES) {
-    const dx = x - eye.cx, dy = y - eye.cy;
-    if (dx * dx + dy * dy < eye.r * eye.r) {
-      return { x, y, zone: 'eye', reveal: DR_EYE_REVEAL, isEye: true };
-    }
-  }
-  const dhx = x - DR_HEAD.cx, dhy = y - DR_HEAD.cy;
-  if (dhx * dhx + dhy * dhy < DR_HEAD.r * DR_HEAD.r) {
-    return { x, y, zone: 'head', reveal: DR_HEAD_REVEAL, isEye: false };
-  }
-  const dbx = x - DR_BODY.cx, dby = y - DR_BODY.cy;
-  if (dbx * dbx + dby * dby < DR_BODY.r * DR_BODY.r) {
-    return { x, y, zone: 'body', reveal: DR_BODY_REVEAL, isEye: false };
-  }
-  return { x, y, zone: 'off', reveal: DR_OFF_REVEAL, isEye: false };
-}
+// === Vuelo del Dragón (Dragon Flight) constants ===
+// Each team has its OWN dragon. Players answer vocab → unlock 5 s of flap-mode.
+// Every tap during flap-mode is one wing-beat that lifts the team's dragon
+// higher. As altitude crosses milestones the host reveals new scenery layers
+// (rooftops → bamboo → mountains → clouds → heavens). First dragon to reach
+// the top wins.
+const DR_ALT_MAX     = 500;   // altitude needed to reach the heavens + win
+const DR_MASH_MS     = 5000;  // 5 s flap window after a correct answer
+const DR_ALT_BCAST_MS = 100;  // throttle altitude broadcasts to ~10 Hz
 
 // === Piñata Tigre constants ===
 // Each TEAM has its own tiger piñata on the host screen. Players play it like
@@ -349,59 +315,6 @@ function nextQuestionForVendor(g, playerId, vendorId) {
   };
   p.lastQuestionAt = Date.now();
   return { qid, text: q.text, answers: shuffled, image, vendorId };
-}
-
-// Dragon's Eye: resolve a pearl landing using the player's tap-position aim.
-// `aimX, aimY` are 0..1 normalized on the dragon image. The zone (eye/head/
-// body/off) determines reveal points added to that team's dragon.
-function resolveDragonPearl(pin, pid, aimX, aimY) {
-  const g = games[pin];
-  if (!g || g.gameType !== 'dragon-eye' || !g.dragon || g.dragon.awakened) return;
-  const p = g.players[pid];
-  if (!p) return;
-  const res = scoreDragonTap(aimX, aimY);
-  const revealKey = p.team === 'red' ? 'revealRed' : 'revealGold';
-  const prevReveal = g.dragon[revealKey] || 0;
-  g.dragon[revealKey] = Math.min(DR_REVEAL_MAX, prevReveal + res.reveal);
-  // Personal score = total reveal pts contributed (handy for leaderboard)
-  p.score = (p.score || 0) + res.reveal;
-  g.teamScores[p.team] = g.dragon[revealKey];  // team score == their dragon's reveal %
-  if (res.isEye) {
-    if (p.team === 'red') g.dragon.eyeHitsRed++;
-    else g.dragon.eyeHitsGold++;
-  }
-  // Tell the player how they did so the phone can show landing feedback
-  io.to(pid).emit('dragon:pearl-landed', {
-    zone: res.zone,
-    isEye: res.isEye,
-    reveal: res.reveal,
-    x: res.x,
-    y: res.y
-  });
-  // Broadcast to host: it places a dot on the right dragon + updates reveal bar
-  io.to(pin).emit('dragon:dot', {
-    x: res.x, y: res.y,
-    team: p.team,
-    zone: res.zone,
-    isEye: res.isEye,
-    reveal: res.reveal,
-    playerName: p.name,
-    revealRed:  g.dragon.revealRed,
-    revealGold: g.dragon.revealGold,
-    eyeHitsRed: g.dragon.eyeHitsRed,
-    eyeHitsGold: g.dragon.eyeHitsGold,
-    teamScores: g.teamScores
-  });
-  // Win check — first team to hit DR_REVEAL_MAX wakes their dragon
-  const winnerTeam =
-    g.dragon.revealRed  >= DR_REVEAL_MAX ? 'red' :
-    g.dragon.revealGold >= DR_REVEAL_MAX ? 'gold' : null;
-  if (winnerTeam) {
-    g.dragon.awakened = winnerTeam;
-    io.to(pin).emit('dragon:awakened', { team: winnerTeam });
-    if (g.endTimer) clearTimeout(g.endTimer);
-    setTimeout(() => endGame(pin), 4500);
-  }
 }
 
 function endGame(pin) {
@@ -678,19 +591,18 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores
         });
       }
-      // Dragon's Eye: TWO dragons, one per team. Each starts with revealPct=0
-      // and grows toward 100. First to 100 awakens and wins.
+      // Vuelo del Dragón: TWO dragons, one per team. Players answer vocab to
+      // unlock flap windows; each tap raises their dragon's altitude. First to
+      // DR_ALT_MAX reaches the heavens and wins.
       if (g.gameType === 'dragon-eye') {
         g.dragon = {
-          revealRed: 0,
-          revealGold: 0,
-          eyeHitsRed: 0,
-          eyeHitsGold: 0,
-          awakened: null
+          altRed: 0,
+          altGold: 0,
+          maxAlt: DR_ALT_MAX,
+          winner: null
         };
         io.to(pin).emit('dragon:init', {
-          revealMax: DR_REVEAL_MAX,
-          eyes: DR_EYES,
+          maxAlt: DR_ALT_MAX,
           players: Object.fromEntries(
             Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team }])
           ),
@@ -1126,29 +1038,14 @@ io.on('connection', (socket) => {
         io.to(pin).emit('cs:paint', { cells: painted, teamScores: g.teamScores });
       }
     } else if (g.gameType === 'dragon-eye') {
-      // NEW: correct answer = the player gets an AIM TURN. The phone shows a
-      // moving reticle they tap to lock onto a horizontal position on the
-      // dragon. The server then resolves the pearl landing using THAT position.
-      if (correct && g.dragon && !g.dragon.awakened) {
-        // Open an aim window — the player will emit 'dragon:aim-place' soon
-        p.dragonAim = { openedAt: Date.now(), deadline: Date.now() + DR_AIM_WINDOW_MS };
+      // Vuelo del Dragón: correct → 5s flap window. Wrong = nothing (no penalty).
+      if (correct && g.dragon && !g.dragon.winner) {
+        p.mashUntil = Date.now() + DR_MASH_MS;
         io.to(socket.id).emit('answer-result', {
           correct: true,
-          correctText,
-          dragonAim: true,
-          dragonAimMs: DR_AIM_WINDOW_MS
+          mashUntil: p.mashUntil,
+          correctText
         });
-        // Safety net: if the player never aims, auto-place at a random head spot
-        setTimeout(() => {
-          if (!games[pin] || games[pin].state !== 'active') return;
-          const pNow = games[pin].players[socket.id];
-          if (!pNow || !pNow.dragonAim) return;
-          pNow.dragonAim = null;
-          // Auto-aim at a random point in the head region (still gives reveal)
-          resolveDragonPearl(pin, socket.id,
-            0.35 + Math.random() * 0.30,
-            0.10 + Math.random() * 0.20);
-        }, DR_AIM_WINDOW_MS + 300);
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
@@ -1191,8 +1088,7 @@ io.on('connection', (socket) => {
     } else if (g.gameType === 'pinata') {
       nextDelay = correct ? PN_MASH_MS + 600 : 1400;
     } else if (g.gameType === 'dragon-eye') {
-      // Dragon: tighter cadence — single-dot, no mash window, keep momentum.
-      nextDelay = correct ? 1600 : 1400;
+      nextDelay = correct ? DR_MASH_MS + 600 : 1400;
     } else {
       nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
     }
@@ -1247,17 +1143,6 @@ io.on('connection', (socket) => {
   });
 
   // Market Quest: player sends their movement input state (held keys/joystick)
-  // Dragon's Eye: player tapped a position on the dragon image to aim.
-  // aimX and aimY are 0..1 normalized on the dragon image.
-  socket.on('dragon:aim-place', ({ pin, aimX, aimY }) => {
-    const g = games[pin];
-    if (!g || g.gameType !== 'dragon-eye' || g.state !== 'active') return;
-    const p = g.players[socket.id];
-    if (!p || !p.dragonAim) return; // no aim window open for this player
-    p.dragonAim = null;
-    resolveDragonPearl(pin, socket.id, aimX, aimY);
-  });
-
   socket.on('player:mq-input', ({ pin, left, right, up, down }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'market-quest' || g.state !== 'active') return;
@@ -1375,6 +1260,33 @@ io.on('connection', (socket) => {
     if (combo && Math.random() < 0.15) {
       g.feed.push({ type: 'combo', name: p.name, team: p.team, t: now });
       broadcast(pin);
+    }
+
+    // === Vuelo del Dragón: each tap lifts this player's TEAM dragon ===
+    if (g.gameType === 'dragon-eye' && g.dragon && !g.dragon.winner) {
+      const altKey = p.team === 'red' ? 'altRed' : 'altGold';
+      g.dragon[altKey] = Math.min(g.dragon.maxAlt, g.dragon[altKey] + points);
+      // Throttled altitude broadcast
+      if (!g.lastDrAltBcast || now - g.lastDrAltBcast >= DR_ALT_BCAST_MS) {
+        g.lastDrAltBcast = now;
+        io.to(pin).emit('dragon:alt', {
+          altRed: g.dragon.altRed,
+          altGold: g.dragon.altGold,
+          maxAlt: g.dragon.maxAlt
+        });
+      }
+      // Win check
+      if (g.dragon[altKey] >= g.dragon.maxAlt) {
+        g.dragon.winner = p.team;
+        io.to(pin).emit('dragon:reached-heavens', {
+          team: p.team,
+          altRed: g.dragon.altRed,
+          altGold: g.dragon.altGold,
+          teamScores: g.teamScores
+        });
+        if (g.endTimer) clearTimeout(g.endTimer);
+        setTimeout(() => endGame(pin), 4000);
+      }
     }
 
     // === Piñata: each tap damages this player's TEAM tiger ===

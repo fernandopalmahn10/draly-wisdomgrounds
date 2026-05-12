@@ -1,11 +1,11 @@
-/* Ojo del Dragón (画龙点睛) — host + player styling. Orange→yellow theme. */
+/* Vuelo del Dragón (飞龙) — host + player styling. Sky/heavens theme. */
 
-/* === Game-specific background — bright festival orange-yellow === */
+/* === Game-specific background — sunset sky === */
 body.dragon-bg {
   background:
-    radial-gradient(ellipse at 20% 0%,  rgba(255,238,140,0.55), transparent 55%),
-    radial-gradient(ellipse at 80% 100%,rgba(255,150,40,0.50), transparent 55%),
-    linear-gradient(155deg, #fff2a0 0%, #ffc94d 35%, #ff8a1a 72%, #c4500c 100%);
+    radial-gradient(ellipse at 20% 0%,  rgba(255,238,150,0.6),  transparent 55%),
+    radial-gradient(ellipse at 80% 100%,rgba(255,140,40,0.55), transparent 55%),
+    linear-gradient(180deg, #ffe07a 0%, #ffae3b 40%, #ff6e2b 75%, #b03808 100%);
   background-attachment: fixed;
   color: #3a1505;
 }
@@ -54,31 +54,28 @@ body.dragon-bg .win-screen { color: #3a1505; }
 .dr-team {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   font-weight: 800;
 }
 .dr-team.red  { color: #ff8a91; justify-content: flex-start; }
 .dr-team.gold { color: #ffd57a; justify-content: flex-end; }
-.dr-team-emoji { font-size: 1.8rem; }
+.dr-team-emoji { font-size: 1.8rem; filter: drop-shadow(0 0 8px currentColor); }
 .dr-team-label {
   font-family: 'Cinzel', serif;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-size: 0.95rem;
 }
-.dr-team-score {
-  font-size: 1.9rem;
+.dr-team-alt {
+  font-family: 'Cinzel', serif;
   font-weight: 900;
-  min-width: 60px;
+  font-size: 1.4rem;
+  min-width: 70px;
   text-align: center;
-}
-.dr-eye-counter {
   background: rgba(0,0,0,0.35);
-  border: 1px solid rgba(255,220,130,0.5);
   padding: 4px 10px;
   border-radius: 10px;
-  font-size: 0.95rem;
-  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
 }
 .dr-time {
   font-family: 'Cinzel', serif;
@@ -101,234 +98,214 @@ body.dragon-bg .win-screen { color: #3a1505; }
   to   { transform: scale(1.08); }
 }
 
-/* === Stage with floating clouds + dragon === */
+/* === Stage with the two flight columns === */
 .dr-stage {
   position: relative;
   flex: 1;
-  background:
-    radial-gradient(ellipse at 50% 20%, rgba(255,250,200,0.55), transparent 60%),
-    linear-gradient(180deg, #ffd54a 0%, #ff8a1a 60%, #b03808 100%);
-  border: 3px solid rgba(255,220,130,0.6);
+  background: transparent;
   border-radius: 22px;
   overflow: hidden;
-  box-shadow: inset 0 0 60px rgba(80,12,12,0.4), 0 8px 28px rgba(0,0,0,0.3);
-}
-.dr-clouds {
-  position: absolute;
-  font-size: 3rem;
-  opacity: 0.7;
-  animation: cloud-drift 25s linear infinite;
-  pointer-events: none;
-}
-.dr-clouds.c1 { top: 8%; left: -10%; animation-duration: 30s; }
-.dr-clouds.c2 { top: 18%; left: -10%; animation-delay: -15s; animation-duration: 35s; }
-@keyframes cloud-drift {
-  from { transform: translateX(0); }
-  to   { transform: translateX(120vw); }
 }
 
-/* Two-dragon split layout */
-.dr-two-dragons {
+.dr-flight-cols {
   position: absolute;
-  inset: 12px 12px 96px 12px;
+  inset: 6px 6px 64px 6px;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  gap: 12px;
-  align-items: stretch;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
   z-index: 2;
 }
-.dr-team-col {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  background: rgba(60, 24, 8, 0.32);
+
+/* Each flight column is a tall vertical sky from rooftops at the bottom to
+   heavens at the top. The dragon emoji flies up inside it as the team scores. */
+.dr-flight-col {
+  position: relative;
   border-radius: 18px;
-  padding: 14px 14px 10px 14px;
-  position: relative;
-  align-items: center;
-}
-.dr-team-col.red  { border: 2px solid rgba(255,138,145,0.5); box-shadow: inset 0 0 40px rgba(217,46,58,0.15); }
-.dr-team-col.gold { border: 2px solid rgba(255,213,122,0.5); box-shadow: inset 0 0 40px rgba(232,177,74,0.15); }
-.dr-team-tag {
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-align: center;
-  font-size: 1.1rem;
-  padding: 4px 10px;
-  border-radius: 8px;
-}
-.dr-team-tag.red  { color: #ff8a91; background: rgba(217,46,58,0.18); border: 1px solid rgba(255,138,145,0.4); }
-.dr-team-tag.gold { color: #ffd57a; background: rgba(232,177,74,0.18); border: 1px solid rgba(255,213,122,0.4); }
-.dr-vs {
-  display: flex;
-  align-items: center;
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  font-size: 2.4rem;
-  color: rgba(255,213,122,0.6);
-  text-shadow: 0 0 12px rgba(255,213,122,0.4);
-  letter-spacing: 0.1em;
-}
-
-/* Reveal progress bar — shows team's reveal % and fills with the team color */
-.dr-reveal-bar {
-  position: relative;
-  width: 100%;
-  height: 24px;
-  background: rgba(0,0,0,0.45);
-  border: 2px solid rgba(255,220,130,0.6);
-  border-radius: 12px;
   overflow: hidden;
-  box-shadow: inset 0 2px 6px rgba(0,0,0,0.4);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+  /* Sky gradient: dawn at top → sunset middle → dusk at bottom */
+  background:
+    linear-gradient(180deg,
+      #fff3b0 0%,      /* heavens (top) */
+      #ffe07a 12%,
+      #ffc34d 28%,     /* clouds band */
+      #ff9036 50%,     /* mountains */
+      #d6601a 75%,     /* bamboo */
+      #8c3208 100%);   /* rooftops (bottom) */
 }
-.dr-reveal-fill {
-  height: 100%;
-  width: 0%;
-  transition: width 0.5s ease;
-  background: linear-gradient(180deg, #ffeaa8, #f08732);
-}
-.dr-reveal-fill.red  { background: linear-gradient(180deg, #ff8a91, #c11d2a); }
-.dr-reveal-fill.gold { background: linear-gradient(180deg, #ffd57a, #e89134); }
-.dr-reveal-text {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  color: #fff8e0;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.6);
-  font-size: 0.95rem;
-}
+.dr-flight-col.red  { border: 4px solid rgba(255,138,145,0.7); }
+.dr-flight-col.gold { border: 4px solid rgba(255,213,122,0.7); }
 
-.dr-eye-tally {
-  font-family: 'Cinzel', serif;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #fff8e0;
-  font-size: 0.95rem;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-}
-
-/* The dragon image + dot layer share the same percentage coordinate system.
-   `--reveal` is 0..1, set by JS. The dragon stays at FULL opacity always so
-   it's never invisible — instead, brightness + saturation animate from
-   "dark silhouette" to "fully revealed gold dragon" as the team scores. */
-.dr-dragon-wrap {
-  position: relative;
-  width: 100%;
-  flex: 1;
-  min-height: 240px;
-  animation: dragon-float 3.5s ease-in-out infinite alternate;
-  --reveal: 0;
-}
-@keyframes dragon-float {
-  from { transform: translateY(0); }
-  to   { transform: translateY(-12px); }
-}
-.dr-dragon {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  user-select: none;
-  -webkit-user-drag: none;
-  /* Always opacity:1 — never hidden. We "reveal" via brightness + saturation:
-     at reveal=0 → dark silhouette. At reveal=1 → fully colored dragon.
-     The drop-shadow stays so the dragon always has presence on the orange bg. */
-  opacity: 1;
-  filter:
-    drop-shadow(0 12px 30px rgba(0,0,0,0.45))
-    brightness(calc(0.30 + var(--reveal) * 0.70))
-    saturate(calc(0.10 + var(--reveal) * 0.90))
-    contrast(calc(0.95 + var(--reveal) * 0.05));
-  transition: filter 0.5s ease;
-}
-.dr-dragon-wrap.awakened {
-  animation: dragon-awakened 4s ease-in-out forwards;
-}
-@keyframes dragon-awakened {
-  0%   { transform: scale(1) rotate(0); }
-  20%  { transform: scale(1.25) rotate(-3deg); filter: drop-shadow(0 0 40px gold); }
-  60%  { transform: scale(1.15) translate(0, -20vh) rotate(15deg); }
-  100% { transform: scale(0.5) translate(0, -120vh) rotate(45deg); opacity: 0; }
-}
-
-/* Dot layer fills the dragon-wrap; dots are positioned in %. */
-.dr-dot-layer {
+.dr-flight-tag {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 3;
-}
-.dr-dot {
-  position: absolute;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-  border: 2px solid #2a0d0a;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-  animation: dot-land 0.5s cubic-bezier(.22,1.6,.36,1);
-}
-.dr-dot.red  { background: radial-gradient(circle, #ff8a91, #c11d2a); }
-.dr-dot.gold { background: radial-gradient(circle, #ffd57a, #b87420); }
-.dr-dot.eye-hit {
-  width: 36px; height: 36px;
-  border-width: 3px;
-  box-shadow: 0 0 24px gold, 0 0 8px #fff;
-  animation: dot-eye-land 0.8s cubic-bezier(.22,1.6,.36,1);
-}
-@keyframes dot-land {
-  0%   { transform: translate(-50%, -50%) scale(3); opacity: 0; }
-  60%  { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-}
-@keyframes dot-eye-land {
-  0%   { transform: translate(-50%, -50%) scale(4); opacity: 0; }
-  40%  { transform: translate(-50%, -50%) scale(1.6); opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-}
-
-/* Eye glow overlays */
-.dr-eye-glow {
-  position: absolute;
-  width: 12%;
-  height: 12%;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 4;
-  opacity: 0;
-  background: radial-gradient(circle, gold 0%, rgba(255,200,50,0.6) 40%, transparent 70%);
-}
-.dr-eye-glow-l { left: 42%; top: 20%; transform: translate(-50%, -50%); }
-.dr-eye-glow-r { left: 55%; top: 20%; transform: translate(-50%, -50%); }
-.dr-eye-glow.flash { animation: eye-flash 1s ease-out; }
-@keyframes eye-flash {
-  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-  30%  { opacity: 1; transform: translate(-50%, -50%) scale(2.5); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(3.5); }
-}
-
-.dr-banner {
-  position: absolute;
-  bottom: 16px;
+  top: 8px;
   left: 50%;
   transform: translateX(-50%);
   font-family: 'Cinzel', serif;
   font-weight: 900;
-  font-size: 1.25rem;
+  letter-spacing: 0.08em;
+  font-size: 1.05rem;
+  padding: 4px 14px;
+  border-radius: 10px;
+  z-index: 10;
+}
+.dr-flight-tag.red  { color: #ff8a91; background: rgba(60,12,12,0.6); border: 1px solid rgba(255,138,145,0.5); }
+.dr-flight-tag.gold { color: #ffd57a; background: rgba(60,40,8,0.6); border: 1px solid rgba(255,213,122,0.5); }
+
+/* === Scenery layers === Each is positioned at a specific altitude band.
+   Starts dim+small; "revealed" class fades them to full size+color when the
+   team's dragon reaches that altitude. */
+.dr-scenery {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  font-size: 2.2rem;
+  opacity: 0;
+  filter: brightness(0.4) blur(2px);
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, filter 0.6s ease, transform 0.6s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+.dr-scenery.revealed {
+  opacity: 1;
+  filter: brightness(1) blur(0);
+  transform: translateY(0);
+  animation: scenery-bob 4s ease-in-out infinite alternate;
+}
+@keyframes scenery-bob {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-6px); }
+}
+.dr-scenery.heavens   { top: 4%; }
+.dr-scenery.heavens span { font-size: 3rem; filter: drop-shadow(0 0 14px gold); }
+.dr-scenery.temple    { top: 16%; }
+.dr-scenery.clouds    { top: 30%; font-size: 3rem; filter: drop-shadow(0 0 8px white); }
+.dr-scenery.mountains { top: 50%; font-size: 3rem; }
+.dr-scenery.bamboo    { top: 70%; }
+.dr-scenery.rooftops  { bottom: 4%; }
+/* Rooftops are always revealed (starting altitude) */
+.dr-flight-col .dr-scenery.rooftops {
+  opacity: 1;
+  filter: brightness(1) blur(0);
+  transform: translateY(0);
+  animation: scenery-bob 4s ease-in-out infinite alternate;
+}
+
+/* === The flying dragon === */
+.dr-flying-dragon {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 4%;
+  font-size: clamp(3rem, 8vw, 5rem);
+  filter: drop-shadow(0 6px 14px rgba(0,0,0,0.5));
+  transition: bottom 0.4s ease-out;
+  z-index: 5;
+  animation: dragon-hover 1.8s ease-in-out infinite alternate;
+}
+@keyframes dragon-hover {
+  from { transform: translateX(-50%) translateY(0)    rotate(-2deg); }
+  to   { transform: translateX(-50%) translateY(-8px) rotate(2deg); }
+}
+.dr-flying-dragon.flap {
+  animation: dragon-flap 0.3s ease-out;
+}
+@keyframes dragon-flap {
+  0%   { transform: translateX(-50%) scale(1) rotate(-3deg); }
+  35%  { transform: translateX(-50%) scale(1.25) translateY(-12px) rotate(8deg); filter: drop-shadow(0 0 20px gold) drop-shadow(0 6px 14px rgba(0,0,0,0.5)); }
+  100% { transform: translateX(-50%) scale(1) rotate(0); }
+}
+.dr-flying-dragon.ascended {
+  animation: dragon-ascended 4s ease-out forwards;
+}
+@keyframes dragon-ascended {
+  0%   { transform: translateX(-50%) scale(1) rotate(0); bottom: 92%; }
+  30%  { transform: translateX(-50%) scale(1.4) rotate(-8deg); bottom: 92%; filter: drop-shadow(0 0 30px gold) drop-shadow(0 6px 14px rgba(0,0,0,0.5)); }
+  100% { transform: translateX(-50%) scale(1.6) rotate(15deg); bottom: 110%; opacity: 0.8; }
+}
+
+/* === Flap FX layer === Puffs of cloud spawn from the dragon on each tap */
+.dr-flap-fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+.dr-flap-puff {
+  position: absolute;
+  font-size: 1.6rem;
+  transform: translate(-50%, -50%);
+  animation: flap-puff 0.6s ease-out forwards;
+  pointer-events: none;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 4px white);
+}
+@keyframes flap-puff {
+  0%   { opacity: 0;   transform: translate(-50%, -50%) scale(0.4); }
+  30%  { opacity: 0.9; transform: translate(-50%, 0)    scale(1.1); }
+  100% { opacity: 0;   transform: translate(-50%, 30px) scale(0.6); }
+}
+.dr-burst-star {
+  position: absolute;
+  font-size: 2.2rem;
+  transform: translate(-50%, -50%);
+  --dx: 0px;
+  --dy: 0px;
+  animation: dr-star-burst 1.6s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes dr-star-burst {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(0.4) rotate(0); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.4) rotate(720deg); }
+}
+
+/* === Altitude bar on the right edge of each column === */
+.dr-alt-bar {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 70%;
+  background: rgba(0,0,0,0.45);
+  border: 2px solid rgba(255,220,130,0.55);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  z-index: 7;
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.4);
+}
+.dr-alt-fill {
+  width: 100%;
+  transition: height 0.4s ease;
+}
+.dr-alt-fill.red  { background: linear-gradient(0deg, #ff5a66, #ffd57a); }
+.dr-alt-fill.gold { background: linear-gradient(0deg, #e89134, #ffd57a); }
+
+/* === Bottom banner === */
+.dr-banner {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.2rem;
   letter-spacing: 0.04em;
   color: #fff8e0;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.6);
   border: 1px solid rgba(255,220,130,0.5);
   border-radius: 14px;
-  padding: 10px 22px;
+  padding: 8px 20px;
   text-shadow: 0 2px 6px rgba(0,0,0,0.8);
   max-width: 86%;
   text-align: center;
-  z-index: 6;
+  z-index: 8;
 }
 .dr-banner.flash { animation: banner-flash 0.35s ease-out; }
 @keyframes banner-flash {
@@ -336,231 +313,97 @@ body.dragon-bg .win-screen { color: #3a1505; }
   100% { transform: translateX(-50%) scale(1); opacity: 1; }
 }
 
-/* Fireworks on dragon awaken */
-.dr-firework {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  font-size: 2.4rem;
-  --dx: 0px;
-  --dy: 0px;
-  animation: dr-firework-burst 1.6s ease-out forwards;
-  pointer-events: none;
-  z-index: 5;
-}
-@keyframes dr-firework-burst {
-  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
-  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1.4) rotate(540deg); opacity: 0; }
-}
-
 /* ============================================================ */
-/* === PLAYER AIM SCREEN === */
+/* === PLAYER FLAP SCREEN === */
 /* ============================================================ */
-/* Opens on phone after a correct vocab answer. Reticle sweeps over a small
-   dragon preview; player taps to lock and launch a pearl. Skill mini-game. */
+/* When body.dragon-flying-active is set (we re-use #screen-mash for piñata-
+   style tap mode), the mash button becomes a giant flying dragon. */
 
-.dr-aim-screen {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  padding: 14px;
-  gap: 14px;
-  align-items: center;
+body.dragon-flying-active {
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(255,238,150,0.6), transparent 55%),
-    linear-gradient(180deg, #ffd54a 0%, #ff8a1a 60%, #b03808 100%);
-  color: #fff8e0;
-  text-align: center;
+    radial-gradient(ellipse at 50% 0%, rgba(255,238,140,0.6), transparent 55%),
+    linear-gradient(180deg, #ffe07a 0%, #ffae3b 35%, #ff6e2b 70%, #b03808 100%) !important;
+  background-attachment: fixed;
 }
 
-.dr-aim-headline {
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  font-size: 1.3rem;
-  letter-spacing: 0.04em;
-  text-shadow: 0 3px 8px rgba(120, 12, 12, 0.6);
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
+body.dragon-flying-active #mash-headline {
+  color: #fff4d0 !important;
+  text-shadow: 0 0 22px rgba(255, 200, 80, 0.9), 0 3px 8px rgba(120, 12, 12, 0.7) !important;
+  font-size: 1.6rem !important;
 }
-.dr-aim-countdown {
-  display: inline-block;
-  min-width: 56px;
-  height: 56px;
-  line-height: 52px;
-  text-align: center;
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  font-size: 2.6rem;
+body.dragon-flying-active #mash-hint {
+  color: #fff4d0 !important;
+  text-shadow: 0 1px 4px rgba(120, 12, 12, 0.8);
+}
+
+body.dragon-flying-active #mash-button {
+  background: radial-gradient(circle at 40% 30%, #fff7d6 0%, #ffd64a 30%, #f48a14 65%, #6b1a08 100%) !important;
+  border: 5px solid #1a0c08 !important;
+  box-shadow:
+    0 0 40px rgba(255, 200, 90, 0.6),
+    0 16px 30px rgba(0, 0, 0, 0.45),
+    inset 0 6px 14px rgba(255, 240, 200, 0.5),
+    inset 0 -10px 18px rgba(80, 12, 12, 0.4) !important;
+  width: min(78vw, 360px) !important;
+  height: min(78vw, 360px) !important;
+  position: relative;
+  overflow: hidden;
+}
+body.dragon-flying-active #mash-counter {
+  position: absolute;
+  bottom: 8px;
+  right: 14px;
+  font-size: 1.6rem !important;
+  color: #fff !important;
   background: rgba(0, 0, 0, 0.55);
-  border: 3px solid rgba(255, 220, 130, 0.7);
-  border-radius: 50%;
-  color: #fff8e0;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-}
-.dr-aim-countdown.urgent {
-  color: #ff5a66;
-  border-color: #ff5a66;
-  animation: countdown-pulse 0.5s ease-in-out infinite alternate;
-}
-@keyframes countdown-pulse {
-  from { transform: scale(1);    box-shadow: 0 4px 14px rgba(255,90,102,0.5); }
-  to   { transform: scale(1.15); box-shadow: 0 6px 22px rgba(255,90,102,0.9); }
-}
-
-.dr-aim-stage {
-  position: relative;
-  width: 100%;
-  max-width: 380px;
-  aspect-ratio: 1 / 1;
-  background: radial-gradient(ellipse at center, rgba(255,250,210,0.5), transparent 65%);
-  border-radius: 20px;
-  border: 3px solid rgba(255, 220, 130, 0.55);
-  overflow: hidden;
-  flex-shrink: 0;
-  cursor: crosshair;
-  touch-action: none; /* prevent browser pan/zoom while aiming */
-  user-select: none;
-}
-.dr-aim-timer-wrap {
-  width: 100%;
-  max-width: 380px;
-  height: 8px;
-  background: rgba(0,0,0,0.3);
-  border-radius: 6px;
-  overflow: hidden;
-}
-.dr-aim-timer-fill {
-  height: 100%;
-  width: 100%;
-  background: linear-gradient(90deg, #ffeaa8, #ff6b1a, #c4191a);
-  transition: width 0.1s linear;
-}
-.dr-aim-crosshair {
-  position: absolute;
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  font-size: 3rem;
-  color: #fff;
-  text-shadow: 0 0 14px gold, 0 0 6px #fff;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 4;
-  animation: dr-crosshair-pulse 0.6s ease-in-out infinite alternate;
-}
-.dr-aim-crosshair.hidden { display: none; }
-@keyframes dr-crosshair-pulse {
-  from { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
-  to   { transform: translate(-50%, -50%) scale(1.25); opacity: 0.85; }
-}
-.dr-aim-dragon {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  user-select: none;
-  -webkit-user-drag: none;
-  pointer-events: none; /* let the stage capture all taps */
-  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.35));
-  animation: dragon-float-aim 3s ease-in-out infinite alternate;
-}
-@keyframes dragon-float-aim {
-  from { transform: translateY(0); }
-  to   { transform: translateY(-8px); }
-}
-/* Highlight the two eye targets so the player knows where to aim */
-.dr-aim-eye-mark {
-  position: absolute;
-  width: 12%;
-  height: 12%;
-  border-radius: 50%;
-  border: 4px solid gold;
-  box-shadow: 0 0 18px gold, 0 0 6px #fff, inset 0 0 10px rgba(255, 220, 100, 0.7);
-  pointer-events: none;
-  top: 20%;
-  transform: translate(-50%, -50%);
-  animation: eye-mark-pulse 1.3s ease-in-out infinite alternate;
-  z-index: 2;
-}
-.dr-aim-eye-mark.left  { left: 42%; }
-.dr-aim-eye-mark.right { left: 55%; }
-@keyframes eye-mark-pulse {
-  from { opacity: 0.55; transform: translate(-50%, -50%) scale(1); }
-  to   { opacity: 1;    transform: translate(-50%, -50%) scale(1.15); }
-}
-.dr-aim-reticle {
-  position: absolute;
-  top: 20%;
-  left: 50%;
-  font-size: 1.8rem;
-  transform: translate(-50%, -50%);
-  filter: drop-shadow(0 0 8px white);
-  z-index: 3;
-  pointer-events: none;
-}
-
-/* Linear track at the bottom showing where the reticle is in 0..1 space.
-   Player can also use this as a visual guide. */
-.dr-aim-track {
-  position: relative;
-  width: 100%;
-  max-width: 360px;
-  height: 22px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(255, 220, 130, 0.5);
   border-radius: 12px;
-  overflow: hidden;
+  padding: 2px 10px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.7);
 }
-.dr-aim-track-marker {
-  position: absolute;
-  top: -3px;
-  width: 6px;
-  height: 28px;
-  background: #fff;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.9);
-  border-radius: 3px;
-  left: 0;
-  pointer-events: none;
-  z-index: 2;
-}
-/* Eye zones on the track — wherever the marker is in these, eye hit */
-.dr-aim-eye-zone {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  background: radial-gradient(ellipse, rgba(255, 215, 0, 0.6), rgba(255, 215, 0, 0.2));
-  pointer-events: none;
-}
-.dr-aim-eye-zone.left  { left: 35%; width: 9%; }
-.dr-aim-eye-zone.right { left: 56%; width: 9%; }
-
-.dr-aim-tap-btn {
-  width: 100%;
-  max-width: 360px;
-  font-size: 1.4rem;
-  font-weight: 900;
-  font-family: 'Cinzel', serif;
-  letter-spacing: 0.04em;
-  padding: 18px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #ffb84a 0%, #ff6b1a 50%, #b03808 100%);
-  border: 4px solid #1a0c08;
-  color: #fff;
-  text-shadow: 0 2px 5px rgba(0,0,0,0.6);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.4), inset 0 4px 10px rgba(255, 220, 120, 0.4);
-  cursor: pointer;
+body.dragon-flying-active #mash-mascot {
+  font-size: clamp(10rem, 36vw, 16rem) !important;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.5));
+  transition: transform 0.15s ease;
   user-select: none;
-  -webkit-tap-highlight-color: transparent;
+  animation: dragon-fly-hover 2s ease-in-out infinite alternate;
 }
-.dr-aim-tap-btn:active { transform: scale(0.97); }
-.dr-aim-tap-btn:disabled { opacity: 0.7; }
-
-.dr-aim-hint {
-  color: #fff8e0;
-  font-size: 0.85rem;
-  opacity: 0.9;
-  text-shadow: 0 1px 3px rgba(120, 12, 12, 0.6);
-  margin: 0;
+@keyframes dragon-fly-hover {
+  from { transform: translateY(0)   rotate(-3deg); }
+  to   { transform: translateY(-12px) rotate(3deg); }
+}
+body.dragon-flying-active #mash-mascot.dragon-flap {
+  animation: dragon-mash-flap 0.3s ease-out;
+}
+@keyframes dragon-mash-flap {
+  0%   { transform: scale(1) rotate(0); }
+  35%  { transform: scale(1.2) translateY(-18px) rotate(-12deg); filter: drop-shadow(0 0 24px gold) drop-shadow(0 6px 14px rgba(0,0,0,0.5)); }
+  100% { transform: scale(1) rotate(0); }
+}
+/* Cloud puff overlay flash on each tap */
+body.dragon-flying-active #mash-button::before {
+  content: '💨';
+  position: absolute;
+  bottom: -10%;
+  left: 50%;
+  font-size: 3rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+body.dragon-flying-active #mash-button.tapped::before {
+  animation: dragon-puff-flash 0.4s ease-out;
+}
+@keyframes dragon-puff-flash {
+  0%   { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+  40%  { opacity: 0.95; transform: translate(-50%, 40%) scale(1.4); }
+  100% { opacity: 0; transform: translate(-50%, 100%) scale(0.8); }
+}
+body.dragon-flying-active #mash-button.combo {
+  box-shadow:
+    0 0 60px rgba(255, 200, 80, 0.95),
+    0 16px 30px rgba(0, 0, 0, 0.45),
+    inset 0 0 30px rgba(255, 240, 180, 0.6) !important;
+}
+body.dragon-flying-active .mash-timer-fill {
+  background: linear-gradient(90deg, #fff3b0, #ff9036, #b03808) !important;
 }
