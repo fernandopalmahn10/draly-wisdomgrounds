@@ -394,6 +394,200 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   font-weight: 900;
 }
 
+/* ============================================================ */
+/* === PLAYER MINI-BOARD === The same board shape as the host, scaled to phone */
+/* ============================================================ */
+.mp-mini-board {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  margin: 8px auto 0;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(5, 1fr);
+  gap: 3px;
+  padding: 8px;
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at center, rgba(80,12,12,0.4), transparent 60%),
+    linear-gradient(135deg, #2c0608 0%, #4a0808 50%, #2c0608 100%);
+  border: 3px solid rgba(255, 220, 130, 0.6);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.5), inset 0 0 30px rgba(255,200,80,0.15);
+}
+
+/* Center plate spans 2..5 in both axes (3x3 in the middle). Houses the dice. */
+.mp-mini-center {
+  grid-column: 2 / 5;
+  grid-row: 2 / 5;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at center, rgba(255,200,80,0.18), transparent 60%),
+    linear-gradient(180deg, rgba(120,12,12,0.55), rgba(60,6,6,0.55));
+  border-radius: 12px;
+  border: 2px dashed rgba(255, 220, 130, 0.5);
+  touch-action: none;
+  cursor: grab;
+}
+.mp-mini-center:active { cursor: grabbing; }
+
+.mp-mini-dice {
+  width: 78%;
+  height: 78%;
+  max-width: 160px;
+  max-height: 160px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 20px rgba(255, 200, 80, 0.7))
+    drop-shadow(0 8px 14px rgba(0, 0, 0, 0.7));
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter 0.3s ease;
+  transform-origin: center;
+  pointer-events: auto;
+}
+.mp-mini-dice.shaking {
+  animation: mp-dice-shake 0.08s linear infinite;
+  filter: drop-shadow(0 0 36px gold) drop-shadow(0 8px 14px rgba(0,0,0,0.7));
+}
+.mp-mini-dice.tumbling {
+  animation: mp-dice-tumble 0.6s cubic-bezier(.22,.1,.36,1);
+  filter: drop-shadow(0 0 36px gold) drop-shadow(0 12px 20px rgba(0,0,0,0.7));
+}
+.mp-mini-dice.locked {
+  animation: mp-dice-lock 0.5s cubic-bezier(.22,1.6,.36,1) forwards;
+  filter: drop-shadow(0 0 60px gold) drop-shadow(0 8px 14px rgba(0,0,0,0.7));
+}
+
+/* Floating toast over the center for tile-action text after the walk */
+.mp-mini-action-toast {
+  position: absolute;
+  inset: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid rgba(255, 220, 130, 0.7);
+  border-radius: 12px;
+  color: #fff8e0;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.05rem;
+  padding: 10px;
+  z-index: 5;
+  box-shadow: 0 0 24px rgba(255, 200, 80, 0.4);
+}
+.mp-mini-action-toast.hidden { display: none; }
+.mp-mini-action-toast.pop {
+  animation: mp-toast-pop 0.45s cubic-bezier(.22,1.6,.36,1);
+}
+@keyframes mp-toast-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.mp-mini-balance {
+  color: #6fdc8c;
+  font-size: 1.3rem;
+  margin-top: 6px;
+}
+
+/* Mini tiles — same idea as host but smaller */
+.mp-mini-tile {
+  position: relative;
+  background: linear-gradient(180deg, #fff5d8 0%, #f7d68f 100%);
+  border: 1.5px solid #3a1505;
+  border-radius: 6px;
+  padding: 2px 1px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  color: #3a1505;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  font-family: 'Nunito', sans-serif;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+.mp-mini-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+.mp-mini-name {
+  font-size: 0.55rem;
+  font-weight: 800;
+  text-align: center;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+.mp-mini-tile.tile-start    { background: linear-gradient(180deg, #ffe7a0, #f5b73d); }
+.mp-mini-tile.tile-festival { background: linear-gradient(180deg, #fff4a0, #ffb84a); }
+.mp-mini-tile.tile-jail     { background: linear-gradient(180deg, #d0d8e8, #8b95a8); }
+.mp-mini-tile.tile-tax      { background: linear-gradient(180deg, #ffe5e5, #ff8a91); }
+.mp-mini-tile.tile-card     { background: linear-gradient(180deg, #fff0d0, #e89134); }
+.mp-mini-tile.tile-treasure { background: linear-gradient(180deg, #fff8b0, #ffd54a); }
+
+.mp-mini-tile.owned-red  { box-shadow: 0 0 0 2px #ff5a66, 0 2px 4px rgba(0,0,0,0.4); }
+.mp-mini-tile.owned-gold { box-shadow: 0 0 0 2px #ffd57a, 0 2px 4px rgba(0,0,0,0.4); }
+
+.mp-mini-tokens {
+  position: absolute;
+  bottom: 1px;
+  left: 1px;
+  right: 1px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1px;
+  min-height: 12px;
+  z-index: 2;
+}
+.mp-mini-token {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.4);
+}
+.mp-mini-token.red  { box-shadow: 0 0 0 1.5px #ff5a66; }
+.mp-mini-token.gold { box-shadow: 0 0 0 1.5px #ffd57a; }
+.mp-mini-token.me   { box-shadow: 0 0 0 2.5px #fff, 0 0 10px gold; transform: scale(1.15); z-index: 3; }
+.mp-mini-token img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  pointer-events: none;
+}
+.mp-mini-token.walking {
+  animation: mp-mini-walk 0.28s ease-out;
+}
+@keyframes mp-mini-walk {
+  0%   { transform: translateY(0)    scale(1); }
+  50%  { transform: translateY(-10px) scale(1.3); }
+  100% { transform: translateY(0)    scale(1); }
+}
+.mp-mini-token.me.walking {
+  animation: mp-mini-walk-me 0.28s ease-out;
+}
+@keyframes mp-mini-walk-me {
+  0%   { transform: translateY(0)    scale(1.15); }
+  50%  { transform: translateY(-12px) scale(1.45); }
+  100% { transform: translateY(0)    scale(1.15); }
+}
+
 /* === Player dice-stopper screen === */
 .mp-roll-screen {
   display: flex;
