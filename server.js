@@ -226,6 +226,8 @@ const MP_TILES = [
 ];
 const MP_BOARD_SIZE     = MP_TILES.length;
 const MP_START_MONEY    = 200;
+// Player character slots — 6 distinct Kenney toon characters
+const MP_CHAR_COUNT     = 6;
 const MP_PASS_BONUS     = 200;     // each time you cross START
 const MP_INSTANT_WIN    = 2000;    // a team hitting this total wealth wins instantly
 const MP_FESTIVAL_BONUS = 150;
@@ -484,6 +486,7 @@ function processMonopolyRoll(pin, pid, playerRoll) {
     playerId: pid,
     playerName: p.name,
     team: p.team,
+    char: p.mpChar,
     ...turn,
     ownership: g.monopoly.ownership,
     teamScores: g.teamScores,
@@ -795,24 +798,33 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores
         });
       }
-      // Chinese Monopoly: reset board + each player gets a fresh start
+      // Chinese Monopoly: reset board + each player gets a fresh start + character
       if (g.gameType === 'monopoly') {
         g.monopoly = { ownership: {} };
-        Object.values(g.players).forEach((p) => {
+        // Assign each player a character (0..MP_CHAR_COUNT-1) by join order
+        const pids = Object.keys(g.players);
+        pids.forEach((pid, idx) => {
+          const p = g.players[pid];
           p.mpPos = 0;
           p.mpMoney = MP_START_MONEY;
           p.mpSkip = false;
+          p.mpChar = idx % MP_CHAR_COUNT;
         });
         io.to(pin).emit('mp:init', {
           tiles: MP_TILES,
           startMoney: MP_START_MONEY,
           instantWin: MP_INSTANT_WIN,
+          charCount: MP_CHAR_COUNT,
           players: Object.fromEntries(
             Object.entries(g.players).map(([id, p]) => [id, {
-              name: p.name, team: p.team, pos: 0, money: MP_START_MONEY
+              name: p.name, team: p.team, pos: 0, money: MP_START_MONEY, char: p.mpChar
             }])
           ),
           teamScores: g.teamScores
+        });
+        // Tell each player privately which character is theirs (so their phone shows it)
+        pids.forEach((pid) => {
+          io.to(pid).emit('mp:my-char', { charIdx: g.players[pid].mpChar });
         });
       }
 
