@@ -226,8 +226,16 @@ const MP_TILES = [
 ];
 const MP_BOARD_SIZE     = MP_TILES.length;
 const MP_START_MONEY    = 200;
-// Player character slots — 6 distinct Kenney toon characters
+// Player character slots — 6 distinct Kenney toon characters with names
 const MP_CHAR_COUNT     = 6;
+const MP_CHAR_NAMES = [
+  'Mei 🛡️',       // 0 — Female adventurer
+  'Liáng 🛡️',     // 1 — Male adventurer
+  'Sara 👩',       // 2 — Female person
+  'Daniel 👨',     // 3 — Male person
+  'Robot-Bao 🤖',  // 4 — Robot
+  'Zombi 🧟'       // 5 — Zombie
+];
 const MP_PASS_BONUS     = 200;     // each time you cross START
 const MP_INSTANT_WIN    = 2000;    // a team hitting this total wealth wins instantly
 const MP_FESTIVAL_BONUS = 150;
@@ -815,16 +823,23 @@ io.on('connection', (socket) => {
           startMoney: MP_START_MONEY,
           instantWin: MP_INSTANT_WIN,
           charCount: MP_CHAR_COUNT,
+          charNames: MP_CHAR_NAMES,
           players: Object.fromEntries(
             Object.entries(g.players).map(([id, p]) => [id, {
-              name: p.name, team: p.team, pos: 0, money: MP_START_MONEY, char: p.mpChar
+              name: p.name, team: p.team, pos: 0, money: MP_START_MONEY,
+              char: p.mpChar, charName: MP_CHAR_NAMES[p.mpChar]
             }])
           ),
           teamScores: g.teamScores
         });
-        // Tell each player privately which character is theirs (so their phone shows it)
+        // Tell each player privately which character is theirs + show welcome
         pids.forEach((pid) => {
-          io.to(pid).emit('mp:my-char', { charIdx: g.players[pid].mpChar });
+          const charIdx = g.players[pid].mpChar;
+          io.to(pid).emit('mp:my-char', {
+            charIdx,
+            charName: MP_CHAR_NAMES[charIdx],
+            welcome: true
+          });
         });
       }
 
@@ -1026,6 +1041,39 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores
         });
       }
+      // Monopoly: send the board state + assign/restore character
+      if (g.gameType === 'monopoly' && g.monopoly) {
+        // If this player slot has no character yet (truly new mid-game joiner),
+        // assign one based on the current player count.
+        if (typeof player.mpChar !== 'number') {
+          player.mpChar = (Object.keys(g.players).length - 1) % MP_CHAR_COUNT;
+          player.mpPos = 0;
+          player.mpMoney = MP_START_MONEY;
+          player.mpSkip = false;
+        }
+        io.to(socket.id).emit('mp:init', {
+          tiles: MP_TILES,
+          startMoney: MP_START_MONEY,
+          instantWin: MP_INSTANT_WIN,
+          charCount: MP_CHAR_COUNT,
+          charNames: MP_CHAR_NAMES,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, pl]) => [id, {
+              name: pl.name, team: pl.team, pos: pl.mpPos || 0,
+              money: pl.mpMoney || 0, char: pl.mpChar,
+              charName: MP_CHAR_NAMES[pl.mpChar]
+            }])
+          ),
+          teamScores: g.teamScores,
+          ownership: g.monopoly.ownership
+        });
+        io.to(socket.id).emit('mp:my-char', {
+          charIdx: player.mpChar,
+          charName: MP_CHAR_NAMES[player.mpChar],
+          welcome: !isRejoin    // brand-new joiner gets welcome modal; rejoin doesn't
+        });
+      }
+
       // For Color Splash and Color Clash, send the current grid + paint state so the rejoiner sees everything
       if (g.gameType === 'color-splash' || g.gameType === 'color-clash') {
         const w = g.gameType === 'color-clash' ? CC_GRID_W : CS_GRID_W;

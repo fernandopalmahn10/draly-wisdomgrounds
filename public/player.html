@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260513b">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -207,6 +208,19 @@
     </div>
   </div>
 
+  <!-- MONOPOLY WELCOME — first time you join the monopoly game, see your
+       assigned character with a big intro. Auto-dismisses to lobby/question. -->
+  <div id="screen-monopoly-welcome" class="hidden player-screen mp-welcome-screen">
+    <div class="mp-welcome-card">
+      <div class="mp-welcome-line1">¡Hola, jugador!</div>
+      <img class="mp-welcome-char" id="mp-welcome-char" src="/assets/monopoly/chars/char-0.png" alt="Tu personaje">
+      <div class="mp-welcome-line2">Tu personaje es</div>
+      <div class="mp-welcome-name" id="mp-welcome-name">…</div>
+      <div class="mp-welcome-line3">Responde bien para tirar el dado 🎲 y caminar por el tablero</div>
+      <button class="mp-welcome-btn" id="mp-welcome-btn">¡A jugar!</button>
+    </div>
+  </div>
+
   <!-- MONOPOLY MINI-BOARD — the player's view of the same board the host shows.
        Opens after a correct answer. Player sees their character on its tile,
        throws the dice in the center, watches their character walk tile-by-tile
@@ -308,9 +322,9 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js"></script>
+  <script src="/js/sounds.js?v=20260513b"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/player.js"></script>
+  <script src="/js/player.js?v=20260513b"></script>
 </body>
 </html>

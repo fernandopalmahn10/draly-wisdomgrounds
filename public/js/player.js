@@ -1042,8 +1042,10 @@
   // the center — player holds-and-throws — character walks tile-by-tile to
   // its destination — action toast pops over the landing tile.
   let mpMyChar = 0;
+  let mpMyCharName = '';
   let mpTiles = [];                  // tile definitions from server
   let mpPlayersState = {};           // pid → { name, team, pos, money, char }
+  let mpOwnership = {};              // tileId → 'red' | 'gold' | null
   let mpShakeInterval = null;
   let mpShakeValue = 1;
   let mpDiceLocked = false;
@@ -1052,19 +1054,72 @@
   let mpIsHolding = false;
   let mpWalking = false;             // true while character animates around the board
 
-  socket.on('mp:my-char', ({ charIdx }) => {
+  socket.on('mp:my-char', ({ charIdx, charName, welcome }) => {
     mpMyChar = (typeof charIdx === 'number') ? charIdx : 0;
+    mpMyCharName = charName || '';
     const lobbyImg = $('mp-roll-char');
     if (lobbyImg) lobbyImg.src = '/assets/monopoly/chars/char-' + mpMyChar + '.png';
+    if (welcome) showMonopolyWelcome();
   });
+
+  function showMonopolyWelcome() {
+    const wc = $('mp-welcome-char');
+    const wn = $('mp-welcome-name');
+    const btn = $('mp-welcome-btn');
+    if (wc) wc.src = '/assets/monopoly/chars/char-' + mpMyChar + '.png';
+    if (wn) wn.textContent = mpMyCharName || 'Tu personaje';
+    showScreen('monopoly-welcome');
+    MochiSounds.correct && MochiSounds.correct();
+    // Auto-dismiss after 3.5s OR on button tap
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
+      // After welcome, the player should see whatever they'd see otherwise.
+      // If a question is pending, the question handler will switch back; meanwhile
+      // we go to a holding screen that shows the board so they can see other moves.
+      // Easiest: just go to the question screen if mp-question-text has content,
+      // otherwise to the mini-board view (without dice prompt).
+      const qText = $('question-text');
+      if (qText && qText.textContent && qText.textContent.length > 1) {
+        showScreen('question');
+      } else {
+        // Show the mini-board in "view-only" mode (no dice prompt)
+        showMiniBoardIdle();
+      }
+    };
+    if (btn) {
+      btn.onpointerdown = btn.onclick = (e) => { if (e) e.preventDefault(); dismiss(); };
+    }
+    setTimeout(dismiss, 3500);
+  }
+
+  // Show the mini-board screen in view-only mode (no dice prompt) so the player
+  // can see the board while waiting for their next question.
+  function showMiniBoardIdle() {
+    showScreen('monopoly-roll');
+    placeAllTokensOnMiniBoard();
+    const dice = $('mp-mini-dice');
+    if (dice) dice.style.display = 'none';
+    const hint = $('mp-roll-hint');
+    if (hint) hint.textContent = 'Esperando la próxima pregunta…';
+    const title = $('mp-roll-title');
+    if (title) title.textContent = '👀 Mira el tablero';
+    const fill = $('mp-roll-timer-fill');
+    if (fill) fill.style.width = '0%';
+    const action = $('mp-mini-action');
+    if (action) action.classList.add('hidden');
+  }
 
   socket.on('mp:init', (data) => {
     if (gameType !== 'monopoly') return;
     mpTiles = data.tiles || [];
     mpPlayersState = data.players || {};
+    mpOwnership = data.ownership || {};
     // Build the mini-board scaffolding once. Tile positions stay static; only
     // tokens + ownership rings move/update.
     renderMiniBoard();
+    updateOwnershipRings(mpOwnership);
     placeAllTokensOnMiniBoard();
   });
 
@@ -2832,7 +2887,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-roll', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });
