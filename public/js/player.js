@@ -684,30 +684,7 @@
         sub = '¡A volar! Toca rápido para subir ☁️';
       } else if (gameType === 'monopoly') {
         happyMascot = '🎲';
-        if (monopoly) {
-          // Build rich feedback: dice + tile result
-          const diceText = monopoly.skipped
-            ? '🏛 Turno perdido (cárcel)'
-            : `🎲 ${monopoly.roll}!  →  ${monopoly.tile ? monopoly.tile.icon + ' ' + monopoly.tile.name : ''}`;
-          let action = '';
-          switch (monopoly.action) {
-            case 'bought':       action = `🏙 Compraste por ¥${-monopoly.moneyDelta}`; break;
-            case 'own-city':     action = `🏙 Tu propia ciudad`; break;
-            case 'paid-rent':    action = `💸 Pagaste ¥${monopoly.rentAmount} de renta`; break;
-            case 'cant-afford':  action = `😅 Sin dinero para comprar`; break;
-            case 'card-bonus':   action = `🎴 +¥${monopoly.moneyDelta}`; break;
-            case 'treasure':     action = `🐉 ¡Tesoro! +¥${monopoly.moneyDelta}`; break;
-            case 'tax':          action = `💰 -¥${-monopoly.moneyDelta} de impuestos`; break;
-            case 'festival':     action = `🏮 ¡FIESTA! +¥${monopoly.moneyDelta}`; break;
-            case 'jail':         action = `🏛 ¡Cárcel! Pierdes el próximo turno`; break;
-            case 'start-bonus':  action = `🏯 +¥${monopoly.moneyDelta} en START`; break;
-            case 'skipped':      action = `🏛 Turno saltado`; break;
-            default:             action = '';
-          }
-          sub = `${diceText}<br>${action}<br>💼 Saldo: ¥${monopoly.money}`;
-        } else {
-          sub = '🎲 Lanzando dado...';
-        }
+        sub = '¡A lanzar el dado!';
       } else {
         happyMascot = team === 'red' ? '🐼' : '🦊';
         sub = '¡Alimenta a tu equipo! ⚡';
@@ -744,8 +721,11 @@
           mashEndTime = mashUntil;
           startDragonFlap();
         } else if (gameType === 'monopoly') {
-          // Monopoly: result feedback IS the gameplay step (dice + tile shown
-          // in the result subtitle). Just stay on result; next question fires.
+          // Monopoly: open the interactive dice-stopper screen so the player
+          // actively rolls. Whatever number they tap-stop on becomes their move.
+          if (monopoly && monopoly.needsRoll) {
+            startMonopolyRoll(monopoly.money || 0);
+          }
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -1055,6 +1035,113 @@
       setTimeout(() => pop.remove(), 800);
     }
   }
+
+  // === Monopoly: dice-stopper interaction ===
+  // After a correct answer, the dice spins through 1-6 rapidly. Player taps
+  // STOP (the button OR the dice itself) to lock the number. That value is
+  // sent to the server, which moves the player + resolves the tile. The
+  // player then sees the result screen briefly before the next question.
+  const DICE_FACES = ['⚀','⚁','⚂','⚃','⚄','⚅'];
+  let mpDiceTimer = null;
+  let mpDiceValue = 1;
+  let mpDiceStopped = false;
+  let mpDiceFiredAt = 0;
+
+  function startMonopolyRoll(currentCash) {
+    showScreen('monopoly-roll');
+    mpDiceStopped = false;
+    mpDiceValue = 1 + Math.floor(Math.random() * 6);
+    mpDiceFiredAt = Date.now();
+    if ($('mp-roll-cash')) $('mp-roll-cash').textContent = currentCash;
+    const diceEl = $('mp-dice-big');
+    const btn = $('mp-roll-btn');
+    const fill = $('mp-roll-timer-fill');
+    if (btn) btn.disabled = false;
+    if (fill) fill.style.width = '100%';
+    // Cycle the dice face rapidly (every 110ms)
+    if (mpDiceTimer) clearInterval(mpDiceTimer);
+    mpDiceTimer = setInterval(() => {
+      if (mpDiceStopped) return;
+      mpDiceValue = 1 + Math.floor(Math.random() * 6);
+      if (diceEl) diceEl.textContent = DICE_FACES[mpDiceValue - 1];
+      // subtle tick on each cycle
+      MochiSounds.tick && MochiSounds.tick();
+    }, 110);
+    // Tap-to-stop
+    const stopDice = (e) => {
+      if (e) e.preventDefault();
+      if (mpDiceStopped) return;
+      mpDiceStopped = true;
+      if (mpDiceTimer) { clearInterval(mpDiceTimer); mpDiceTimer = null; }
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = `🎲 ¡${mpDiceValue}! 🎲`;
+      }
+      if (diceEl) {
+        diceEl.classList.remove('locked');
+        void diceEl.offsetWidth;
+        diceEl.classList.add('locked');
+      }
+      MochiSounds.correct && MochiSounds.correct();
+      if (navigator.vibrate) navigator.vibrate([20, 60, 20]);
+      socket.emit('monopoly:roll', { pin, roll: mpDiceValue });
+    };
+    if (btn) {
+      btn.onpointerdown = stopDice;
+      btn.onclick = stopDice;
+    }
+    if (diceEl) {
+      diceEl.onpointerdown = stopDice;
+    }
+    // 5-second window — auto-stop if no tap
+    const totalMs = 5000;
+    function tickTimer() {
+      if (mpDiceStopped) return;
+      const remaining = Math.max(0, (mpDiceFiredAt + totalMs) - Date.now());
+      if (fill) fill.style.width = ((remaining / totalMs) * 100) + '%';
+      if (remaining <= 0) {
+        stopDice();
+        return;
+      }
+      requestAnimationFrame(tickTimer);
+    }
+    requestAnimationFrame(tickTimer);
+  }
+
+  // Server tells us how the turn resolved (where we moved, what happened)
+  socket.on('mp:result', (data) => {
+    if (gameType !== 'monopoly') return;
+    showScreen('monopoly-result');
+    if ($('mp-result-dice')) {
+      $('mp-result-dice').textContent = data.skipped ? '🏛 ¡Cárcel!' : `🎲 ${data.roll}`;
+    }
+    if ($('mp-result-tile') && data.tile) {
+      $('mp-result-tile').innerHTML = `${data.tile.icon} <strong>${escapeHtml(data.tile.name)}</strong>`;
+    }
+    let action = '';
+    switch (data.action) {
+      case 'bought':       action = `🏙 ¡Compraste por ¥${-data.moneyDelta}!`; break;
+      case 'own-city':     action = `🏙 Tu propia ciudad — gratis`; break;
+      case 'paid-rent':    action = `💸 Pagaste ¥${data.rentAmount} de renta`; break;
+      case 'cant-afford':  action = `😅 Sin dinero — sigues adelante`; break;
+      case 'card-bonus':   action = `🎴 ¡Carta! +¥${data.moneyDelta}`; break;
+      case 'treasure':     action = `🐉 ¡Tesoro! +¥${data.moneyDelta}`; break;
+      case 'tax':          action = `💰 ¡Impuesto! -¥${-data.moneyDelta}`; break;
+      case 'festival':     action = `🏮 ¡FIESTA! +¥${data.moneyDelta}`; break;
+      case 'jail':         action = `🏛 ¡A la cárcel! Pierdes un turno`; break;
+      case 'start-bonus':  action = `🏯 ¡Cayó en Salida! +¥${data.moneyDelta}`; break;
+      case 'skipped':      action = `🏛 Turno perdido (cárcel)`; break;
+      default:             action = '';
+    }
+    if ($('mp-result-action')) $('mp-result-action').innerHTML = action;
+    if ($('mp-result-balance')) $('mp-result-balance').innerHTML = `💼 ¥${data.money}`;
+    // Sound flavor
+    if (data.action === 'bought' || data.action === 'card-bonus' || data.action === 'treasure' || data.action === 'festival' || data.action === 'start-bonus') {
+      MochiSounds.correct && MochiSounds.correct();
+    } else if (data.action === 'paid-rent' || data.action === 'tax' || data.action === 'jail') {
+      MochiSounds.wrong && MochiSounds.wrong();
+    }
+  });
 
   function startMash() {
     showScreen('mash');
@@ -2512,7 +2599,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-roll', 'monopoly-result', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

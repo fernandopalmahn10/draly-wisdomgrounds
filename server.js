@@ -207,22 +207,22 @@ const DR_ALT_BCAST_MS = 100;  // throttle altitude broadcasts to ~10 Hz
 // bonuses on landing. Pass over START → +¥200. Team wealth (sum of player
 // cash + property values) drives the win condition.
 const MP_TILES = [
-  { id: 0,  type: 'start',    name: '北京 START',   icon: '🏯', side: 'top'    },
-  { id: 1,  type: 'city',     name: '上海',         icon: '🏙', side: 'top',    cost: 80,  rent: 20 },
-  { id: 2,  type: 'card',     name: 'Carta',        icon: '🎴', side: 'top',    bonus: 40 },
-  { id: 3,  type: 'city',     name: '广州',         icon: '🏙', side: 'top',    cost: 80,  rent: 20 },
-  { id: 4,  type: 'treasure', name: 'Tesoro',       icon: '🐉', side: 'right',  bonus: 100 },
-  { id: 5,  type: 'city',     name: '西安',         icon: '🕌', side: 'right',  cost: 100, rent: 25 },
-  { id: 6,  type: 'card',     name: 'Carta',        icon: '🎴', side: 'right',  bonus: 40 },
-  { id: 7,  type: 'city',     name: '杭州',         icon: '🌸', side: 'right',  cost: 120, rent: 30 },
-  { id: 8,  type: 'festival', name: '¡FIESTA!',     icon: '🏮', side: 'bottom' },
-  { id: 9,  type: 'city',     name: '长城',         icon: '🧱', side: 'bottom', cost: 140, rent: 35 },
-  { id: 10, type: 'tax',      name: 'Impuesto',     icon: '💰', side: 'bottom', penalty: 50 },
-  { id: 11, type: 'city',     name: '颐和园',       icon: '⛲', side: 'bottom', cost: 160, rent: 40 },
-  { id: 12, type: 'jail',     name: 'Cárcel',       icon: '🏛', side: 'left'   },
-  { id: 13, type: 'city',     name: '故宫',         icon: '🏯', side: 'left',   cost: 180, rent: 45 },
-  { id: 14, type: 'treasure', name: 'Tesoro',       icon: '🐉', side: 'left',   bonus: 100 },
-  { id: 15, type: 'city',     name: '天安门',       icon: '🏛', side: 'left',   cost: 200, rent: 50 }
+  { id: 0,  type: 'start',    name: 'Salida',      icon: '🏯', side: 'top'    },
+  { id: 1,  type: 'city',     name: 'Shànghǎi',    icon: '🏙', side: 'top',    cost: 80,  rent: 20 },
+  { id: 2,  type: 'card',     name: 'Carta',       icon: '🎴', side: 'top',    bonus: 40 },
+  { id: 3,  type: 'city',     name: 'Guǎngzhōu',   icon: '🛕', side: 'top',    cost: 80,  rent: 20 },
+  { id: 4,  type: 'treasure', name: 'Tesoro',      icon: '🐉', side: 'right',  bonus: 100 },
+  { id: 5,  type: 'city',     name: 'Xī’ān',  icon: '🕌', side: 'right',  cost: 100, rent: 25 },
+  { id: 6,  type: 'card',     name: 'Carta',       icon: '🎴', side: 'right',  bonus: 40 },
+  { id: 7,  type: 'city',     name: 'Hángzhōu',    icon: '🌸', side: 'right',  cost: 120, rent: 30 },
+  { id: 8,  type: 'festival', name: '¡Fiesta!',    icon: '🏮', side: 'bottom' },
+  { id: 9,  type: 'city',     name: 'Chángchéng',  icon: '🧱', side: 'bottom', cost: 140, rent: 35 },
+  { id: 10, type: 'tax',      name: 'Impuesto',    icon: '💰', side: 'bottom', penalty: 50 },
+  { id: 11, type: 'city',     name: 'Yíhéyuán',    icon: '⛲', side: 'bottom', cost: 160, rent: 40 },
+  { id: 12, type: 'jail',     name: 'Cárcel',      icon: '🏛', side: 'left'   },
+  { id: 13, type: 'city',     name: 'Gùgōng',      icon: '🏯', side: 'left',   cost: 180, rent: 45 },
+  { id: 14, type: 'treasure', name: 'Tesoro',      icon: '🐉', side: 'left',   bonus: 100 },
+  { id: 15, type: 'city',     name: 'Tiān’ānmén', icon: '🏛', side: 'left', cost: 200, rent: 50 }
 ];
 const MP_BOARD_SIZE     = MP_TILES.length;
 const MP_START_MONEY    = 200;
@@ -349,10 +349,10 @@ function nextQuestionForVendor(g, playerId, vendorId) {
 }
 
 // === Chinese Monopoly turn resolver ===
-// On a correct answer, roll 1d6, advance the player's dragon, then apply the
-// landing-tile effect. Returns a `result` object the answer handler emits to
-// the player + broadcasts to the host for animation.
-function resolveMonopolyTurn(g, pid) {
+// The player rolls their own dice on their phone — server is just the ref.
+// If a `roll` is provided (player's tap-stopped value), it's used; otherwise
+// the server rolls (safety fallback). Server clamps to 1..6.
+function resolveMonopolyTurn(g, pid, playerRoll) {
   const p = g.players[pid];
   if (!p) return null;
   if (!g.monopoly) return null;
@@ -362,7 +362,10 @@ function resolveMonopolyTurn(g, pid) {
     return { skipped: true, roll: 0, fromPos: p.mpPos, toPos: p.mpPos,
              money: p.mpMoney, action: 'skipped' };
   }
-  const roll = MP_DICE_MIN + Math.floor(Math.random() * (MP_DICE_MAX - MP_DICE_MIN + 1));
+  let roll = Number(playerRoll);
+  if (!roll || roll < MP_DICE_MIN || roll > MP_DICE_MAX) {
+    roll = MP_DICE_MIN + Math.floor(Math.random() * (MP_DICE_MAX - MP_DICE_MIN + 1));
+  }
   const fromPos = p.mpPos || 0;
   const newPos = (fromPos + roll) % MP_BOARD_SIZE;
   // Pass-over-START bonus (if we wrap around, we passed start)
@@ -455,6 +458,53 @@ function resolveMonopolyTurn(g, pid) {
   p.score = (p.score || 0) + Math.max(0, result.moneyDelta) + (result.bought ? tile.cost : 0);
   result.money = p.mpMoney;
   return result;
+}
+
+// Once the player commits their tap-stopped dice roll (or the safety timer
+// fires), this resolves the turn, broadcasts the move, and queues the next
+// question for the player.
+function processMonopolyRoll(pin, pid, playerRoll) {
+  const g = games[pin];
+  if (!g || g.gameType !== 'monopoly' || g.state !== 'active') return;
+  const p = g.players[pid];
+  if (!p || !p.mpAwaitingRoll) return;
+  p.mpAwaitingRoll = false;
+  const turn = resolveMonopolyTurn(g, pid, playerRoll);
+  g.teamScores = {
+    red:  monopolyTeamWealth(g, 'red'),
+    gold: monopolyTeamWealth(g, 'gold')
+  };
+  // Tell the player their turn outcome
+  io.to(pid).emit('mp:result', {
+    ...turn,
+    money: p.mpMoney
+  });
+  // Broadcast for host board animation
+  io.to(pin).emit('mp:move', {
+    playerId: pid,
+    playerName: p.name,
+    team: p.team,
+    ...turn,
+    ownership: g.monopoly.ownership,
+    teamScores: g.teamScores,
+    // Also send player's running wealth for the live leaderboard on the host
+    playerWealth: p.mpMoney
+  });
+  // Instant-win check
+  const w = (g.teamScores.red >= MP_INSTANT_WIN) ? 'red'
+          : (g.teamScores.gold >= MP_INSTANT_WIN) ? 'gold' : null;
+  if (w) {
+    if (g.endTimer) clearTimeout(g.endTimer);
+    io.to(pin).emit('mp:tycoon', { team: w, teamScores: g.teamScores });
+    setTimeout(() => endGame(pin), 3500);
+    return;
+  }
+  // Queue next question after a beat so the player sees the result
+  setTimeout(() => {
+    if (!games[pin] || games[pin].state !== 'active') return;
+    const q = nextQuestionFor(g, pid);
+    if (q) io.to(pid).emit('question', q);
+  }, 2400);
 }
 
 // Sum total team wealth: cash + value of owned cities.
@@ -1225,36 +1275,24 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
     } else if (g.gameType === 'monopoly') {
-      // Chinese Monopoly: correct → roll a die, advance, resolve tile.
+      // Correct answer = you earn the RIGHT TO ROLL THE DICE. The player taps
+      // a stop-the-spinner mini-game on their phone; whatever number they land
+      // on is sent via 'monopoly:roll' (see handler below). We mark the player
+      // as "awaiting roll" so the next-question timer doesn't fire too early.
       if (correct && g.monopoly) {
-        const turn = resolveMonopolyTurn(g, socket.id);
-        // Sync team scores = team wealth (cash + property values)
-        g.teamScores = {
-          red:  monopolyTeamWealth(g, 'red'),
-          gold: monopolyTeamWealth(g, 'gold')
-        };
+        p.mpAwaitingRoll = true;
         io.to(socket.id).emit('answer-result', {
           correct: true,
           correctText,
-          monopoly: turn
+          monopoly: { needsRoll: true, money: p.mpMoney }
         });
-        // Broadcast for the host's board animation
-        io.to(pin).emit('mp:move', {
-          playerId: socket.id,
-          playerName: p.name,
-          team: p.team,
-          ...turn,
-          ownership: g.monopoly.ownership,
-          teamScores: g.teamScores
-        });
-        // Instant-win check
-        const w = (g.teamScores.red >= MP_INSTANT_WIN) ? 'red'
-                : (g.teamScores.gold >= MP_INSTANT_WIN) ? 'gold' : null;
-        if (w) {
-          if (g.endTimer) clearTimeout(g.endTimer);
-          io.to(pin).emit('mp:tycoon', { team: w, teamScores: g.teamScores });
-          setTimeout(() => endGame(pin), 3500);
-        }
+        // Safety net: if the player never taps stop within 8s, server auto-rolls.
+        setTimeout(() => {
+          if (!games[pin] || games[pin].state !== 'active') return;
+          const pNow = games[pin].players[socket.id];
+          if (!pNow || !pNow.mpAwaitingRoll) return;
+          processMonopolyRoll(pin, socket.id, null);
+        }, 8000);
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
@@ -1299,9 +1337,9 @@ io.on('connection', (socket) => {
     } else if (g.gameType === 'dragon-eye') {
       nextDelay = correct ? DR_MASH_MS + 600 : 1400;
     } else if (g.gameType === 'monopoly') {
-      // Snappy cadence — each question = one turn. Slightly longer on correct
-      // so the player can read their tile result.
-      nextDelay = correct ? 2600 : 1500;
+      // Correct → wait for the player's dice roll (handled separately).
+      // Wrong → next question normally.
+      nextDelay = correct ? -1 : 1500;
     } else {
       nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
     }
@@ -1356,6 +1394,13 @@ io.on('connection', (socket) => {
   });
 
   // Market Quest: player sends their movement input state (held keys/joystick)
+  // Chinese Monopoly: player committed their tap-stopped dice value (1..6).
+  socket.on('monopoly:roll', ({ pin, roll }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'monopoly' || g.state !== 'active') return;
+    processMonopolyRoll(pin, socket.id, roll);
+  });
+
   socket.on('player:mq-input', ({ pin, left, right, up, down }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'market-quest' || g.state !== 'active') return;

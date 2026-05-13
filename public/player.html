@@ -207,6 +207,34 @@
     </div>
   </div>
 
+  <!-- MONOPOLY DICE ROLL — opens after correct answer in Dàfùwēng.
+       The dice cycles through 1-6 rapidly; player taps STOP to lock the
+       number. Whatever they stop on = their move. Active interaction! -->
+  <div id="screen-monopoly-roll" class="hidden player-screen mp-roll-screen">
+    <div class="mp-roll-header">
+      <div class="mp-roll-title">🎲 ¡Lanza el dado! 🎲</div>
+      <div class="mp-roll-cash">💼 ¥<span id="mp-roll-cash">0</span></div>
+    </div>
+    <div class="mp-roll-stage">
+      <div class="mp-dice-big" id="mp-dice-big">⚀</div>
+      <div class="mp-roll-hint">Toca STOP cuando salga un número grande</div>
+    </div>
+    <button class="mp-roll-btn" id="mp-roll-btn">🎲 ¡STOP! 🎲</button>
+    <div class="mp-roll-timer-wrap">
+      <div class="mp-roll-timer-fill" id="mp-roll-timer-fill"></div>
+    </div>
+  </div>
+
+  <!-- MONOPOLY RESULT — shown after server processes the roll. -->
+  <div id="screen-monopoly-result" class="hidden player-screen mp-result-screen">
+    <div class="mp-result-card">
+      <div class="mp-result-dice" id="mp-result-dice">🎲 6</div>
+      <div class="mp-result-tile" id="mp-result-tile"></div>
+      <div class="mp-result-action" id="mp-result-action"></div>
+      <div class="mp-result-balance" id="mp-result-balance">💼 ¥0</div>
+    </div>
+  </div>
+
   <!-- DRAGON FLAP — opens after correct answer in Vuelo del Dragón.
        Instead of tap-mashing (Mochi/Piñata pattern), the player SWIPES UP on
        the screen to flap the dragon's wings. Each successful upswipe lifts the
