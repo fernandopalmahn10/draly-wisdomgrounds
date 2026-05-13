@@ -201,6 +201,37 @@ const DR_ALT_MAX     = 500;   // altitude needed to reach the heavens + win
 const DR_MASH_MS     = 5000;  // 5 s flap window after a correct answer
 const DR_ALT_BCAST_MS = 100;  // throttle altitude broadcasts to ~10 Hz
 
+// === 中国大富翁 · Chinese Trivia Monopoly ===
+// 16-tile perimeter board. Each correct vocab answer rolls a 1d6 and advances
+// the player's dragon token by that many tiles. Tiles trigger auto-buy / rent /
+// bonuses on landing. Pass over START → +¥200. Team wealth (sum of player
+// cash + property values) drives the win condition.
+const MP_TILES = [
+  { id: 0,  type: 'start',    name: '北京 START',   icon: '🏯', side: 'top'    },
+  { id: 1,  type: 'city',     name: '上海',         icon: '🏙', side: 'top',    cost: 80,  rent: 20 },
+  { id: 2,  type: 'card',     name: 'Carta',        icon: '🎴', side: 'top',    bonus: 40 },
+  { id: 3,  type: 'city',     name: '广州',         icon: '🏙', side: 'top',    cost: 80,  rent: 20 },
+  { id: 4,  type: 'treasure', name: 'Tesoro',       icon: '🐉', side: 'right',  bonus: 100 },
+  { id: 5,  type: 'city',     name: '西安',         icon: '🕌', side: 'right',  cost: 100, rent: 25 },
+  { id: 6,  type: 'card',     name: 'Carta',        icon: '🎴', side: 'right',  bonus: 40 },
+  { id: 7,  type: 'city',     name: '杭州',         icon: '🌸', side: 'right',  cost: 120, rent: 30 },
+  { id: 8,  type: 'festival', name: '¡FIESTA!',     icon: '🏮', side: 'bottom' },
+  { id: 9,  type: 'city',     name: '长城',         icon: '🧱', side: 'bottom', cost: 140, rent: 35 },
+  { id: 10, type: 'tax',      name: 'Impuesto',     icon: '💰', side: 'bottom', penalty: 50 },
+  { id: 11, type: 'city',     name: '颐和园',       icon: '⛲', side: 'bottom', cost: 160, rent: 40 },
+  { id: 12, type: 'jail',     name: 'Cárcel',       icon: '🏛', side: 'left'   },
+  { id: 13, type: 'city',     name: '故宫',         icon: '🏯', side: 'left',   cost: 180, rent: 45 },
+  { id: 14, type: 'treasure', name: 'Tesoro',       icon: '🐉', side: 'left',   bonus: 100 },
+  { id: 15, type: 'city',     name: '天安门',       icon: '🏛', side: 'left',   cost: 200, rent: 50 }
+];
+const MP_BOARD_SIZE     = MP_TILES.length;
+const MP_START_MONEY    = 200;
+const MP_PASS_BONUS     = 200;     // each time you cross START
+const MP_INSTANT_WIN    = 2000;    // a team hitting this total wealth wins instantly
+const MP_FESTIVAL_BONUS = 150;
+const MP_DICE_MIN       = 1;
+const MP_DICE_MAX       = 6;
+
 // === Piñata Tigre constants ===
 // Each TEAM has its own tiger piñata on the host screen. Players play it like
 // Mochi Mash: answer a vocab question right → unlocks a short "smash mode"
@@ -317,6 +348,128 @@ function nextQuestionForVendor(g, playerId, vendorId) {
   return { qid, text: q.text, answers: shuffled, image, vendorId };
 }
 
+// === Chinese Monopoly turn resolver ===
+// On a correct answer, roll 1d6, advance the player's dragon, then apply the
+// landing-tile effect. Returns a `result` object the answer handler emits to
+// the player + broadcasts to the host for animation.
+function resolveMonopolyTurn(g, pid) {
+  const p = g.players[pid];
+  if (!p) return null;
+  if (!g.monopoly) return null;
+  // Skipped this turn? (landed on Jail last time)
+  if (p.mpSkip) {
+    p.mpSkip = false;
+    return { skipped: true, roll: 0, fromPos: p.mpPos, toPos: p.mpPos,
+             money: p.mpMoney, action: 'skipped' };
+  }
+  const roll = MP_DICE_MIN + Math.floor(Math.random() * (MP_DICE_MAX - MP_DICE_MIN + 1));
+  const fromPos = p.mpPos || 0;
+  const newPos = (fromPos + roll) % MP_BOARD_SIZE;
+  // Pass-over-START bonus (if we wrap around, we passed start)
+  if (fromPos + roll >= MP_BOARD_SIZE) {
+    p.mpMoney = (p.mpMoney || 0) + MP_PASS_BONUS;
+  }
+  p.mpPos = newPos;
+  const tile = MP_TILES[newPos];
+  const result = {
+    skipped: false,
+    roll,
+    fromPos,
+    toPos: newPos,
+    tile: { id: tile.id, type: tile.type, name: tile.name, icon: tile.icon },
+    action: 'landed',
+    moneyDelta: 0,
+    rentTo: null,
+    bought: false,
+    money: 0
+  };
+  switch (tile.type) {
+    case 'start':
+      // Landing exactly on START → extra +¥200 (in addition to pass bonus)
+      p.mpMoney += MP_PASS_BONUS;
+      result.moneyDelta = MP_PASS_BONUS;
+      result.action = 'start-bonus';
+      break;
+    case 'city': {
+      const owner = g.monopoly.ownership[tile.id];
+      if (!owner) {
+        // Auto-buy if player has enough cash
+        if (p.mpMoney >= tile.cost) {
+          p.mpMoney -= tile.cost;
+          g.monopoly.ownership[tile.id] = p.team;
+          result.bought = true;
+          result.action = 'bought';
+          result.moneyDelta = -tile.cost;
+        } else {
+          result.action = 'cant-afford';
+        }
+      } else if (owner === p.team) {
+        result.action = 'own-city';
+      } else {
+        // Pay rent to the enemy team — split equally among that team's players
+        const enemyTeam = owner;
+        const rentDue = Math.min(p.mpMoney, tile.rent);
+        p.mpMoney -= rentDue;
+        // Distribute rent among the enemy team's players (so it's MP team wealth)
+        const enemies = Object.values(g.players).filter((q) => q.team === enemyTeam);
+        if (enemies.length) {
+          const each = Math.floor(rentDue / enemies.length) || 0;
+          const remainder = rentDue - each * enemies.length;
+          enemies.forEach((q, i) => { q.mpMoney = (q.mpMoney || 0) + each + (i === 0 ? remainder : 0); });
+        }
+        result.action = 'paid-rent';
+        result.moneyDelta = -rentDue;
+        result.rentTo = enemyTeam;
+        result.rentAmount = rentDue;
+      }
+      break;
+    }
+    case 'card':
+      p.mpMoney += (tile.bonus || 40);
+      result.moneyDelta = tile.bonus || 40;
+      result.action = 'card-bonus';
+      break;
+    case 'treasure':
+      p.mpMoney += (tile.bonus || 100);
+      result.moneyDelta = tile.bonus || 100;
+      result.action = 'treasure';
+      break;
+    case 'tax': {
+      const pen = Math.min(p.mpMoney, tile.penalty || 50);
+      p.mpMoney -= pen;
+      result.moneyDelta = -pen;
+      result.action = 'tax';
+      break;
+    }
+    case 'festival':
+      p.mpMoney += MP_FESTIVAL_BONUS;
+      result.moneyDelta = MP_FESTIVAL_BONUS;
+      result.action = 'festival';
+      break;
+    case 'jail':
+      p.mpSkip = true;
+      result.action = 'jail';
+      break;
+  }
+  // Personal score reflects player's individual progress (cash earned)
+  p.score = (p.score || 0) + Math.max(0, result.moneyDelta) + (result.bought ? tile.cost : 0);
+  result.money = p.mpMoney;
+  return result;
+}
+
+// Sum total team wealth: cash + value of owned cities.
+function monopolyTeamWealth(g, team) {
+  let total = 0;
+  Object.values(g.players).forEach((p) => {
+    if (p.team === team) total += (p.mpMoney || 0);
+  });
+  MP_TILES.forEach((t) => {
+    if (t.type !== 'city') return;
+    if (g.monopoly && g.monopoly.ownership[t.id] === team) total += t.cost;
+  });
+  return total;
+}
+
 function endGame(pin) {
   const g = games[pin];
   if (!g) return;
@@ -355,7 +508,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -364,6 +517,7 @@ io.on('connection', (socket) => {
       type === 'color-splash' ? 90 :
       type === 'pinata'       ? 240 :
       type === 'dragon-eye'   ? 240 :
+      type === 'monopoly'     ? 300 :
       60;
     let grid = null;
     let vendors = null;
@@ -591,6 +745,27 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores
         });
       }
+      // Chinese Monopoly: reset board + each player gets a fresh start
+      if (g.gameType === 'monopoly') {
+        g.monopoly = { ownership: {} };
+        Object.values(g.players).forEach((p) => {
+          p.mpPos = 0;
+          p.mpMoney = MP_START_MONEY;
+          p.mpSkip = false;
+        });
+        io.to(pin).emit('mp:init', {
+          tiles: MP_TILES,
+          startMoney: MP_START_MONEY,
+          instantWin: MP_INSTANT_WIN,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, p]) => [id, {
+              name: p.name, team: p.team, pos: 0, money: MP_START_MONEY
+            }])
+          ),
+          teamScores: g.teamScores
+        });
+      }
+
       // Vuelo del Dragón: TWO dragons, one per team. Players answer vocab to
       // unlock flap windows; each tap raises their dragon's altitude. First to
       // DR_ALT_MAX reaches the heavens and wins.
@@ -1049,6 +1224,40 @@ io.on('connection', (socket) => {
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
+    } else if (g.gameType === 'monopoly') {
+      // Chinese Monopoly: correct → roll a die, advance, resolve tile.
+      if (correct && g.monopoly) {
+        const turn = resolveMonopolyTurn(g, socket.id);
+        // Sync team scores = team wealth (cash + property values)
+        g.teamScores = {
+          red:  monopolyTeamWealth(g, 'red'),
+          gold: monopolyTeamWealth(g, 'gold')
+        };
+        io.to(socket.id).emit('answer-result', {
+          correct: true,
+          correctText,
+          monopoly: turn
+        });
+        // Broadcast for the host's board animation
+        io.to(pin).emit('mp:move', {
+          playerId: socket.id,
+          playerName: p.name,
+          team: p.team,
+          ...turn,
+          ownership: g.monopoly.ownership,
+          teamScores: g.teamScores
+        });
+        // Instant-win check
+        const w = (g.teamScores.red >= MP_INSTANT_WIN) ? 'red'
+                : (g.teamScores.gold >= MP_INSTANT_WIN) ? 'gold' : null;
+        if (w) {
+          if (g.endTimer) clearTimeout(g.endTimer);
+          io.to(pin).emit('mp:tycoon', { team: w, teamScores: g.teamScores });
+          setTimeout(() => endGame(pin), 3500);
+        }
+      } else {
+        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+      }
     } else if (g.gameType === 'pinata') {
       // Piñata: correct → unlock smash mode; wrong → no team-score penalty (the
       // damage that matters is dealt by the player's own taps to their tiger).
@@ -1089,6 +1298,10 @@ io.on('connection', (socket) => {
       nextDelay = correct ? PN_MASH_MS + 600 : 1400;
     } else if (g.gameType === 'dragon-eye') {
       nextDelay = correct ? DR_MASH_MS + 600 : 1400;
+    } else if (g.gameType === 'monopoly') {
+      // Snappy cadence — each question = one turn. Slightly longer on correct
+      // so the player can read their tile result.
+      nextDelay = correct ? 2600 : 1500;
     } else {
       nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
     }
