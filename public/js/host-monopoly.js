@@ -127,19 +127,20 @@
     renderBoard();
     placeTokensInitial();
     updateWealthDisplay();
+    renderLiveLeaderboard();
     setRecentEvent('¡Que rueden los dados! 🎲');
   });
 
   socket.on('mp:move', (data) => {
     if (data.teamScores) scores = data.teamScores;
     if (data.ownership)  ownership = data.ownership;
-    // Update player position
+    // Update player position + wealth (drives the live leaderboard)
+    const wealth = (typeof data.playerWealth === 'number') ? data.playerWealth : data.money;
     if (players[data.playerId]) {
       players[data.playerId].pos = data.toPos;
-      players[data.playerId].money = data.money;
+      players[data.playerId].money = wealth;
     } else {
-      // Late-joiner — fabricate entry
-      players[data.playerId] = { name: data.playerName, team: data.team, pos: data.toPos, money: data.money };
+      players[data.playerId] = { name: data.playerName, team: data.team, pos: data.toPos, money: wealth };
     }
     // Animate the move (one tile at a time)
     animateMove(data.playerId, data.fromPos, data.toPos, () => {
@@ -149,6 +150,7 @@
     if (!data.skipped) showDice(data.roll);
     refreshOwnership();
     updateWealthDisplay();
+    renderLiveLeaderboard();
   });
 
   socket.on('mp:tycoon', ({ team, teamScores }) => {
@@ -417,6 +419,26 @@
   function updateWealthDisplay() {
     if ($('wealth-red'))  $('wealth-red').textContent  = scores.red  || 0;
     if ($('wealth-gold')) $('wealth-gold').textContent = scores.gold || 0;
+  }
+
+  // Top-5 live leaderboard inside the board center — Monopoly-style ranking
+  // that updates every time a player completes a move. Sorted by wealth.
+  function renderLiveLeaderboard() {
+    const lb = $('mp-leaderboard');
+    if (!lb) return;
+    const ranked = Object.entries(players)
+      .map(([id, p]) => ({ id, name: p.name, team: p.team, money: p.money || 0 }))
+      .sort((a, b) => b.money - a.money)
+      .slice(0, 5);
+    lb.innerHTML = ranked.map((p, i) => {
+      const medal = ['🥇', '🥈', '🥉'][i] || `#${i + 1}`;
+      const teamEmoji = p.team === 'red' ? '🐉' : '🐲';
+      return `<div class="mp-lb-row ${p.team}">
+        <span class="mp-lb-rank">${medal}</span>
+        <span class="mp-lb-name">${teamEmoji} ${escapeHtml(p.name)}</span>
+        <span class="mp-lb-cash">¥${p.money}</span>
+      </div>`;
+    }).join('');
   }
 
   function startTimer() {
