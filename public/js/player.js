@@ -1036,71 +1036,144 @@
     }
   }
 
-  // === Monopoly: dice-stopper interaction ===
-  // After a correct answer, the dice spins through 1-6 rapidly. Player taps
-  // STOP (the button OR the dice itself) to lock the number. That value is
-  // sent to the server, which moves the player + resolves the tile. The
-  // player then sees the result screen briefly before the next question.
-  const DICE_FACES = ['⚀','⚁','⚂','⚃','⚄','⚅'];
-  let mpDiceTimer = null;
-  let mpDiceValue = 1;
-  let mpDiceStopped = false;
-  let mpDiceFiredAt = 0;
+  // === Monopoly: shake-and-throw dice ===
+  // Player HOLDS finger on the dice → it jitters wildly (like shaking in
+  // a cup). RELEASES → dice tumbles and lands on a final face. Real-feeling
+  // physical interaction. Whatever face it lands on becomes their move.
+  //
+  // Backup: 8-second window auto-fires a release if they never tap.
+  let mpMyChar = 0;
+  let mpShakeInterval = null;
+  let mpShakeValue = 1;
+  let mpDiceLocked = false;
+  let mpRollStartTime = 0;
+  let mpHoldStartTime = 0;
+  let mpIsHolding = false;
+
+  socket.on('mp:my-char', ({ charIdx }) => {
+    mpMyChar = (typeof charIdx === 'number') ? charIdx : 0;
+    // Update lobby/HUD character images if those exist
+    const lobbyImg = $('mp-roll-char');
+    if (lobbyImg) lobbyImg.src = '/assets/monopoly/chars/char-' + mpMyChar + '.png';
+    const resultImg = $('mp-result-char');
+    if (resultImg) resultImg.src = '/assets/monopoly/chars/char-' + mpMyChar + '.png';
+  });
 
   function startMonopolyRoll(currentCash) {
     showScreen('monopoly-roll');
-    mpDiceStopped = false;
-    mpDiceValue = 1 + Math.floor(Math.random() * 6);
-    mpDiceFiredAt = Date.now();
+    mpDiceLocked = false;
+    mpIsHolding = false;
+    mpShakeValue = 1 + Math.floor(Math.random() * 6);
+    mpRollStartTime = Date.now();
     if ($('mp-roll-cash')) $('mp-roll-cash').textContent = currentCash;
-    const diceEl = $('mp-dice-big');
-    const btn = $('mp-roll-btn');
+    if ($('mp-roll-name')) $('mp-roll-name').textContent = myName || 'Tú';
+    if ($('mp-roll-char')) $('mp-roll-char').src = '/assets/monopoly/chars/char-' + mpMyChar + '.png';
+    const dice = $('mp-dice-img');
+    const hint = $('mp-roll-hint');
     const fill = $('mp-roll-timer-fill');
-    if (btn) btn.disabled = false;
     if (fill) fill.style.width = '100%';
-    // Cycle the dice face rapidly (every 110ms)
-    if (mpDiceTimer) clearInterval(mpDiceTimer);
-    mpDiceTimer = setInterval(() => {
-      if (mpDiceStopped) return;
-      mpDiceValue = 1 + Math.floor(Math.random() * 6);
-      if (diceEl) diceEl.textContent = DICE_FACES[mpDiceValue - 1];
-      // subtle tick on each cycle
-      MochiSounds.tick && MochiSounds.tick();
-    }, 110);
-    // Tap-to-stop
-    const stopDice = (e) => {
+    if (dice) {
+      dice.src = '/assets/monopoly/dice/dice-1.png';
+      dice.classList.remove('shaking', 'tumbling', 'locked');
+    }
+    if (hint) hint.textContent = '👆 Mantén el dedo presionado en el dado y luego suelta';
+
+    // HOLD = shake (dice jitters wildly)
+    const onPress = (e) => {
       if (e) e.preventDefault();
-      if (mpDiceStopped) return;
-      mpDiceStopped = true;
-      if (mpDiceTimer) { clearInterval(mpDiceTimer); mpDiceTimer = null; }
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = `🎲 ¡${mpDiceValue}! 🎲`;
+      if (mpDiceLocked) return;
+      mpIsHolding = true;
+      mpHoldStartTime = Date.now();
+      if (dice) {
+        dice.classList.remove('tumbling', 'locked');
+        dice.classList.add('shaking');
       }
-      if (diceEl) {
-        diceEl.classList.remove('locked');
-        void diceEl.offsetWidth;
-        diceEl.classList.add('locked');
-      }
-      MochiSounds.correct && MochiSounds.correct();
-      if (navigator.vibrate) navigator.vibrate([20, 60, 20]);
-      socket.emit('monopoly:roll', { pin, roll: mpDiceValue });
+      if (hint) hint.textContent = '✊ ¡Sigue sacudiendo! Suelta para lanzar';
+      // While holding, rotate dice face rapidly
+      if (mpShakeInterval) clearInterval(mpShakeInterval);
+      mpShakeInterval = setInterval(() => {
+        if (!mpIsHolding || mpDiceLocked) return;
+        mpShakeValue = 1 + Math.floor(Math.random() * 6);
+        if (dice) dice.src = '/assets/monopoly/dice/dice-' + mpShakeValue + '.png';
+        MochiSounds.tick && MochiSounds.tick();
+        if (navigator.vibrate) navigator.vibrate(8);
+      }, 80);
     };
-    if (btn) {
-      btn.onpointerdown = stopDice;
-      btn.onclick = stopDice;
+
+    // RELEASE = throw (dice tumbles + lands)
+    const onRelease = (e) => {
+      if (e) e.preventDefault();
+      if (mpDiceLocked || !mpIsHolding) return;
+      mpIsHolding = false;
+      if (mpShakeInterval) { clearInterval(mpShakeInterval); mpShakeInterval = null; }
+      const heldMs = Date.now() - mpHoldStartTime;
+      // If they barely held it (<150ms = accidental tap), require longer hold
+      if (heldMs < 150) {
+        if (hint) hint.textContent = '👆 Mantén PRESIONADO más tiempo, luego suelta';
+        return;
+      }
+      // Tumble — dice spins for 600ms then settles on final face
+      if (dice) {
+        dice.classList.remove('shaking');
+        dice.classList.add('tumbling');
+      }
+      MochiSounds.whoosh && MochiSounds.whoosh();
+      if (navigator.vibrate) navigator.vibrate([30, 30, 60]);
+      // Cycle face rapidly for visual tumble, then lock
+      let tumbleTicks = 6;
+      function tumbleStep() {
+        if (tumbleTicks-- <= 0) {
+          // Final landing
+          mpShakeValue = 1 + Math.floor(Math.random() * 6);
+          if (dice) {
+            dice.src = '/assets/monopoly/dice/dice-' + mpShakeValue + '.png';
+            dice.classList.remove('tumbling');
+            dice.classList.add('locked');
+          }
+          mpDiceLocked = true;
+          MochiSounds.correct && MochiSounds.correct();
+          if (navigator.vibrate) navigator.vibrate([40, 40, 80]);
+          if (hint) hint.textContent = `🎲 ¡Sacaste un ${mpShakeValue}! Tu personaje avanza...`;
+          socket.emit('monopoly:roll', { pin, roll: mpShakeValue });
+          return;
+        }
+        mpShakeValue = 1 + Math.floor(Math.random() * 6);
+        if (dice) dice.src = '/assets/monopoly/dice/dice-' + mpShakeValue + '.png';
+        setTimeout(tumbleStep, 90);
+      }
+      tumbleStep();
+    };
+
+    const stage = $('mp-roll-stage');
+    if (dice) {
+      dice.onpointerdown = onPress;
+      dice.onpointerup = onRelease;
+      dice.onpointercancel = onRelease;
+      dice.onpointerleave = (e) => { if (mpIsHolding) onRelease(e); };
     }
-    if (diceEl) {
-      diceEl.onpointerdown = stopDice;
+    if (stage) {
+      // Make the whole stage area pressable so kids don't need to hit exactly on the dice
+      stage.onpointerdown = onPress;
+      stage.onpointerup = onRelease;
+      stage.onpointercancel = onRelease;
+      stage.onpointerleave = (e) => { if (mpIsHolding) onRelease(e); };
     }
-    // 5-second window — auto-stop if no tap
-    const totalMs = 5000;
+
+    // 8-second total window — auto-throw at the deadline
+    const totalMs = 8000;
     function tickTimer() {
-      if (mpDiceStopped) return;
-      const remaining = Math.max(0, (mpDiceFiredAt + totalMs) - Date.now());
+      if (mpDiceLocked) return;
+      const remaining = Math.max(0, (mpRollStartTime + totalMs) - Date.now());
       if (fill) fill.style.width = ((remaining / totalMs) * 100) + '%';
       if (remaining <= 0) {
-        stopDice();
+        // Auto-throw if player never engaged
+        if (!mpIsHolding) {
+          mpIsHolding = true;
+          mpHoldStartTime = Date.now() - 500;
+          onRelease();
+        } else {
+          onRelease();
+        }
         return;
       }
       requestAnimationFrame(tickTimer);
@@ -1112,8 +1185,11 @@
   socket.on('mp:result', (data) => {
     if (gameType !== 'monopoly') return;
     showScreen('monopoly-result');
-    if ($('mp-result-dice')) {
-      $('mp-result-dice').textContent = data.skipped ? '🏛 ¡Cárcel!' : `🎲 ${data.roll}`;
+    if ($('mp-result-char')) $('mp-result-char').src = '/assets/monopoly/chars/char-' + mpMyChar + '.png';
+    if ($('mp-result-dice-img')) {
+      $('mp-result-dice-img').src = '/assets/monopoly/dice/dice-' + (data.roll || 1) + '.png';
+      if (data.skipped) $('mp-result-dice-img').style.opacity = '0.4';
+      else $('mp-result-dice-img').style.opacity = '1';
     }
     if ($('mp-result-tile') && data.tile) {
       $('mp-result-tile').innerHTML = `${data.tile.icon} <strong>${escapeHtml(data.tile.name)}</strong>`;
@@ -1135,7 +1211,6 @@
     }
     if ($('mp-result-action')) $('mp-result-action').innerHTML = action;
     if ($('mp-result-balance')) $('mp-result-balance').innerHTML = `💼 ¥${data.money}`;
-    // Sound flavor
     if (data.action === 'bought' || data.action === 'card-bonus' || data.action === 'treasure' || data.action === 'festival' || data.action === 'start-bonus') {
       MochiSounds.correct && MochiSounds.correct();
     } else if (data.action === 'paid-rent' || data.action === 'tax' || data.action === 'jail') {

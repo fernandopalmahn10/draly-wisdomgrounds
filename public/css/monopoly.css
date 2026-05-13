@@ -294,13 +294,25 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   z-index: 3;
 }
 .mp-token {
-  font-size: 1.1rem;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
-  line-height: 1;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.4);
   transition: transform 0.15s ease;
+  flex-shrink: 0;
 }
-.mp-token.red  { filter: drop-shadow(0 1px 2px rgba(255,90,102,0.9)) drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
-.mp-token.gold { filter: drop-shadow(0 1px 2px rgba(255,213,122,0.9)) drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+.mp-token.red  { box-shadow: 0 0 0 2px #ff5a66, 0 1px 4px rgba(0,0,0,0.5); }
+.mp-token.gold { box-shadow: 0 0 0 2px #ffd57a, 0 1px 4px rgba(0,0,0,0.5); }
+.mp-token-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
 .mp-token.hopping {
   animation: mp-token-hop 0.3s ease-out;
 }
@@ -400,13 +412,38 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   justify-content: space-between;
   align-items: center;
   padding: 0 8px;
+  gap: 12px;
+}
+.mp-roll-char-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0,0,0,0.45);
+  border: 2px solid rgba(255, 220, 130, 0.55);
+  border-radius: 14px;
+  padding: 4px 10px 4px 4px;
+}
+.mp-roll-char {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+.mp-roll-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #ffd57a;
+  font-size: 1rem;
+  letter-spacing: 0.04em;
 }
 .mp-roll-title {
   font-family: 'Cinzel', serif;
   font-weight: 900;
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   letter-spacing: 0.04em;
   text-shadow: 0 3px 8px rgba(120, 12, 12, 0.7);
+  text-align: center;
+  margin: 4px 0;
 }
 .mp-roll-cash {
   background: rgba(0,0,0,0.5);
@@ -426,31 +463,60 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   justify-content: center;
   gap: 14px;
 }
-.mp-dice-big {
-  font-size: clamp(11rem, 42vw, 18rem);
+/* The Kenney dice PNG, scaled big. We layer drop-shadows for depth + add a
+   golden glow base; the .shaking / .tumbling / .locked classes overlay
+   animations to give it a tactile 3D feel. */
+.mp-dice-img {
+  width: clamp(11rem, 50vw, 18rem);
+  height: clamp(11rem, 50vw, 18rem);
+  object-fit: contain;
   filter:
-    drop-shadow(0 0 30px rgba(255, 200, 80, 0.8))
-    drop-shadow(0 12px 20px rgba(0, 0, 0, 0.6));
-  cursor: pointer;
+    drop-shadow(0 0 30px rgba(255, 200, 80, 0.55))
+    drop-shadow(0 12px 20px rgba(0, 0, 0, 0.7));
+  cursor: grab;
   user-select: none;
+  -webkit-user-drag: none;
   -webkit-tap-highlight-color: transparent;
-  animation: mp-dice-tumble 0.15s linear infinite;
+  touch-action: none;
   transition: filter 0.3s ease;
+  transform-origin: center;
+}
+.mp-dice-img.shaking {
+  animation: mp-dice-shake 0.08s linear infinite;
+  cursor: grabbing;
+  filter:
+    drop-shadow(0 0 50px gold)
+    drop-shadow(0 12px 20px rgba(0, 0, 0, 0.7));
+}
+@keyframes mp-dice-shake {
+  0%   { transform: translate(-4px,  3px) rotate(-12deg) scale(1.05); }
+  25%  { transform: translate( 5px, -4px) rotate(14deg)  scale(1.08); }
+  50%  { transform: translate(-3px, -3px) rotate(-8deg)  scale(1.04); }
+  75%  { transform: translate( 4px,  2px) rotate(10deg)  scale(1.06); }
+  100% { transform: translate(-2px,  4px) rotate(-13deg) scale(1.05); }
+}
+.mp-dice-img.tumbling {
+  animation: mp-dice-tumble 0.6s cubic-bezier(.22,.1,.36,1);
+  filter:
+    drop-shadow(0 0 50px gold)
+    drop-shadow(0 18px 30px rgba(0, 0, 0, 0.7));
 }
 @keyframes mp-dice-tumble {
-  0%   { transform: rotate(-6deg) scale(1); }
-  50%  { transform: rotate(6deg)  scale(1.02); }
-  100% { transform: rotate(-3deg) scale(1); }
+  0%   { transform: translateY(-50px) rotate(-180deg) scale(1.3); }
+  30%  { transform: translateY(0)      rotate(-90deg) scale(1.2); }
+  55%  { transform: translateY(-15px)  rotate(60deg)  scale(1.15); }
+  75%  { transform: translateY(0)      rotate(20deg)  scale(1.1); }
+  100% { transform: translateY(0)      rotate(0)      scale(1.1); }
 }
-.mp-dice-big.locked {
-  animation: mp-dice-lock 0.6s cubic-bezier(.22,1.6,.36,1);
+.mp-dice-img.locked {
+  animation: mp-dice-lock 0.5s cubic-bezier(.22,1.6,.36,1) forwards;
   filter:
-    drop-shadow(0 0 60px gold)
-    drop-shadow(0 12px 20px rgba(0, 0, 0, 0.6));
+    drop-shadow(0 0 80px gold)
+    drop-shadow(0 12px 20px rgba(0, 0, 0, 0.7));
 }
 @keyframes mp-dice-lock {
-  0%   { transform: scale(1) rotate(0); }
-  35%  { transform: scale(1.4) rotate(-12deg); }
+  0%   { transform: scale(1)   rotate(0); }
+  50%  { transform: scale(1.3) rotate(-6deg); }
   100% { transform: scale(1.15) rotate(0); }
 }
 .mp-roll-hint {
@@ -459,28 +525,7 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   font-size: 0.95rem;
   text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
-.mp-roll-btn {
-  width: 100%;
-  font-size: 1.6rem;
-  font-weight: 900;
-  font-family: 'Cinzel', serif;
-  letter-spacing: 0.08em;
-  padding: 22px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #ffd57a 0%, #e89134 50%, #6a2010 100%);
-  border: 4px solid #1a0c08;
-  color: #fff;
-  text-shadow: 0 3px 6px rgba(0,0,0,0.6);
-  box-shadow: 0 8px 22px rgba(0,0,0,0.45), inset 0 4px 10px rgba(255, 240, 200, 0.45);
-  cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-.mp-roll-btn:active { transform: scale(0.97); }
-.mp-roll-btn:disabled {
-  opacity: 0.85;
-  background: linear-gradient(135deg, #6fdc8c 0%, #2fa14b 100%);
-}
+/* (Old STOP button removed — dice itself is the interactive element now) */
 .mp-roll-timer-wrap {
   height: 8px;
   background: rgba(0,0,0,0.45);
@@ -525,14 +570,31 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   from { transform: scale(0.7); opacity: 0; }
   to   { transform: scale(1);   opacity: 1; }
 }
-.mp-result-dice {
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  font-size: 2.4rem;
-  background: rgba(255,200,80,0.18);
-  padding: 6px 18px;
-  border-radius: 14px;
-  border: 2px solid rgba(255,220,130,0.6);
+.mp-result-dice-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.mp-result-char {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+  animation: mp-result-char-walk 0.6s ease-in-out infinite alternate;
+}
+@keyframes mp-result-char-walk {
+  from { transform: translateY(0)   rotate(-3deg); }
+  to   { transform: translateY(-6px) rotate(3deg); }
+}
+.mp-result-dice-img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 18px gold)
+    drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+  transition: opacity 0.3s ease;
 }
 .mp-result-tile {
   font-size: 1.4rem;

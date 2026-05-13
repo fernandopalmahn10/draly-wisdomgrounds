@@ -140,7 +140,7 @@
       players[data.playerId].pos = data.toPos;
       players[data.playerId].money = wealth;
     } else {
-      players[data.playerId] = { name: data.playerName, team: data.team, pos: data.toPos, money: wealth };
+      players[data.playerId] = { name: data.playerName, team: data.team, pos: data.toPos, money: wealth, char: data.char };
     }
     // Animate the move (one tile at a time)
     animateMove(data.playerId, data.fromPos, data.toPos, () => {
@@ -256,13 +256,21 @@
     Object.entries(players).forEach(([pid, p]) => {
       const slot = $('mp-tokens-' + (p.pos || 0));
       if (!slot) return;
-      const token = document.createElement('div');
-      token.id = 'mp-token-' + pid;
-      token.className = 'mp-token ' + p.team;
-      token.textContent = p.team === 'red' ? '🐉' : '🐲';
-      token.title = p.name;
+      const token = makeTokenEl(pid, p);
       slot.appendChild(token);
     });
+  }
+
+  // Build a token element that uses the player's Kenney character PNG. The
+  // team-colored ring around it keeps the per-team coloring readable.
+  function makeTokenEl(pid, p) {
+    const token = document.createElement('div');
+    token.id = 'mp-token-' + pid;
+    token.className = 'mp-token ' + p.team;
+    token.title = p.name;
+    const charIdx = (typeof p.char === 'number') ? p.char : 0;
+    token.innerHTML = `<img class="mp-token-img" src="/assets/monopoly/chars/char-${charIdx}.png" alt="${escapeHtml(p.name)}">`;
+    return token;
   }
 
   function animateMove(pid, fromPos, toPos, onDone) {
@@ -271,11 +279,7 @@
       // Token wasn't placed yet (player joined late) — place directly
       const slot = $('mp-tokens-' + toPos);
       if (slot && players[pid]) {
-        const t = document.createElement('div');
-        t.id = 'mp-token-' + pid;
-        t.className = 'mp-token ' + players[pid].team;
-        t.textContent = players[pid].team === 'red' ? '🐉' : '🐲';
-        slot.appendChild(t);
+        slot.appendChild(makeTokenEl(pid, players[pid]));
       }
       if (onDone) onDone();
       return;

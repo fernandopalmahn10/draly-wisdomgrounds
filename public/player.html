@@ -207,28 +207,35 @@
     </div>
   </div>
 
-  <!-- MONOPOLY DICE ROLL — opens after correct answer in Dàfùwēng.
-       The dice cycles through 1-6 rapidly; player taps STOP to lock the
-       number. Whatever they stop on = their move. Active interaction! -->
+  <!-- MONOPOLY DICE ROLL — interactive shake-and-throw mechanic.
+       Player HOLDS the dice → it jitters wildly (like shaking). RELEASES →
+       dice tumbles and lands on a face. Whatever lands becomes the move. -->
   <div id="screen-monopoly-roll" class="hidden player-screen mp-roll-screen">
     <div class="mp-roll-header">
-      <div class="mp-roll-title">🎲 ¡Lanza el dado! 🎲</div>
+      <div class="mp-roll-char-wrap">
+        <img class="mp-roll-char" id="mp-roll-char" src="/assets/monopoly/chars/char-0.png" alt="Tu personaje">
+        <div class="mp-roll-name" id="mp-roll-name">Tú</div>
+      </div>
       <div class="mp-roll-cash">💼 ¥<span id="mp-roll-cash">0</span></div>
     </div>
-    <div class="mp-roll-stage">
-      <div class="mp-dice-big" id="mp-dice-big">⚀</div>
-      <div class="mp-roll-hint">Toca STOP cuando salga un número grande</div>
+    <div class="mp-roll-title">🎲 ¡Sacude y lanza el dado!</div>
+    <div class="mp-roll-stage" id="mp-roll-stage">
+      <img class="mp-dice-img" id="mp-dice-img" src="/assets/monopoly/dice/dice-1.png" alt="Dado">
     </div>
-    <button class="mp-roll-btn" id="mp-roll-btn">🎲 ¡STOP! 🎲</button>
+    <div class="mp-roll-hint" id="mp-roll-hint">👆 Mantén el dedo presionado en el dado y luego suelta</div>
     <div class="mp-roll-timer-wrap">
       <div class="mp-roll-timer-fill" id="mp-roll-timer-fill"></div>
     </div>
   </div>
 
-  <!-- MONOPOLY RESULT — shown after server processes the roll. -->
+  <!-- MONOPOLY RESULT — shown after server processes the roll. Character
+       slides from old tile → new tile on a mini track. -->
   <div id="screen-monopoly-result" class="hidden player-screen mp-result-screen">
     <div class="mp-result-card">
-      <div class="mp-result-dice" id="mp-result-dice">🎲 6</div>
+      <div class="mp-result-dice-row">
+        <img class="mp-result-char" id="mp-result-char" src="/assets/monopoly/chars/char-0.png" alt="Personaje">
+        <img class="mp-result-dice-img" id="mp-result-dice-img" src="/assets/monopoly/dice/dice-1.png" alt="Dado">
+      </div>
       <div class="mp-result-tile" id="mp-result-tile"></div>
       <div class="mp-result-action" id="mp-result-action"></div>
       <div class="mp-result-balance" id="mp-result-balance">💼 ¥0</div>
