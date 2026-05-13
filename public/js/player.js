@@ -471,6 +471,9 @@
     } else if (gameType === 'dragon-eye') {
       teamLabel = isRed ? 'Equipo Pincel 紅毛筆' : 'Equipo Tinta 金墨水';
       teamMascot = isRed ? '✒️' : '🖌️';
+    } else if (gameType === 'monopoly') {
+      teamLabel = isRed ? 'Equipo Rojo 紅龍' : 'Equipo Dorado 金龍';
+      teamMascot = isRed ? '🐉' : '🐲';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
@@ -651,7 +654,7 @@
     });
   });
 
-  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points }) => {
+  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly }) => {
     clearAnswerHeartbeat();
     hideSendingOverlay();
     if (correct) {
@@ -679,6 +682,32 @@
       } else if (gameType === 'dragon-eye') {
         happyMascot = team === 'red' ? '🐉' : '🐲';
         sub = '¡A volar! Toca rápido para subir ☁️';
+      } else if (gameType === 'monopoly') {
+        happyMascot = '🎲';
+        if (monopoly) {
+          // Build rich feedback: dice + tile result
+          const diceText = monopoly.skipped
+            ? '🏛 Turno perdido (cárcel)'
+            : `🎲 ${monopoly.roll}!  →  ${monopoly.tile ? monopoly.tile.icon + ' ' + monopoly.tile.name : ''}`;
+          let action = '';
+          switch (monopoly.action) {
+            case 'bought':       action = `🏙 Compraste por ¥${-monopoly.moneyDelta}`; break;
+            case 'own-city':     action = `🏙 Tu propia ciudad`; break;
+            case 'paid-rent':    action = `💸 Pagaste ¥${monopoly.rentAmount} de renta`; break;
+            case 'cant-afford':  action = `😅 Sin dinero para comprar`; break;
+            case 'card-bonus':   action = `🎴 +¥${monopoly.moneyDelta}`; break;
+            case 'treasure':     action = `🐉 ¡Tesoro! +¥${monopoly.moneyDelta}`; break;
+            case 'tax':          action = `💰 -¥${-monopoly.moneyDelta} de impuestos`; break;
+            case 'festival':     action = `🏮 ¡FIESTA! +¥${monopoly.moneyDelta}`; break;
+            case 'jail':         action = `🏛 ¡Cárcel! Pierdes el próximo turno`; break;
+            case 'start-bonus':  action = `🏯 +¥${monopoly.moneyDelta} en START`; break;
+            case 'skipped':      action = `🏛 Turno saltado`; break;
+            default:             action = '';
+          }
+          sub = `${diceText}<br>${action}<br>💼 Saldo: ¥${monopoly.money}`;
+        } else {
+          sub = '🎲 Lanzando dado...';
+        }
       } else {
         happyMascot = team === 'red' ? '🐼' : '🦊';
         sub = '¡Alimenta a tu equipo! ⚡';
@@ -714,6 +743,9 @@
           // physical motion on the phone is wholly different.
           mashEndTime = mashUntil;
           startDragonFlap();
+        } else if (gameType === 'monopoly') {
+          // Monopoly: result feedback IS the gameplay step (dice + tile shown
+          // in the result subtitle). Just stay on result; next question fires.
         } else {
           mashEndTime = mashUntil;
           startMash();

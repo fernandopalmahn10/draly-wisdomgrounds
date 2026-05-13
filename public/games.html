@@ -84,6 +84,25 @@
         <button class="btn btn-red btn-xl game-card-play">▶ Play Market Clash</button>
       </div>
 
+      <div class="game-card" id="card-monopoly">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🏯</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Dàfùwēng · Monopolio Chino</div>
+            <div class="game-tile-badge new">¡Nuevo!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🎲 大富翁 — Tu dragoncito da vueltas por un tablero 3D de ciudades chinas (北京, 上海, 长城, 故宫…). Cada respuesta correcta lanza el dado y avanzas. Compra ciudades, cobra renta, evita los impuestos y la cárcel. ¡Equipo más rico gana!
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Tablero 3D</span>
+          <span class="tag">Compra ciudades</span>
+          <span class="tag">Dado 🎲</span>
+        </div>
+        <button class="btn btn-red btn-xl game-card-play">▶ ¡A girar el dado!</button>
+      </div>
+
       <div class="game-card" id="card-dragon">
         <div class="game-card-header">
           <div class="game-card-emoji">🐉</div>
@@ -171,6 +190,9 @@
       document.querySelector('#card-dragon .game-card-play').onclick = () => {
         location.href = '/host-dragon.html?setId=' + encodeURIComponent(setId);
       };
+      document.querySelector('#card-monopoly .game-card-play').onclick = () => {
+        location.href = '/host-monopoly.html?setId=' + encodeURIComponent(setId);
+      };
     } else {
       document.getElementById('set-name').textContent = 'elige un juego, luego una serie';
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
@@ -191,6 +213,9 @@
       };
       document.querySelector('#card-dragon .game-card-play').onclick = () => {
         location.href = '/sets.html?game=dragon-eye';
+      };
+      document.querySelector('#card-monopoly .game-card-play').onclick = () => {
+        location.href = '/sets.html?game=monopoly';
       };
     }
 
