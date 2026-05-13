@@ -1036,49 +1036,168 @@
     }
   }
 
-  // === Monopoly: shake-and-throw dice ===
-  // Player HOLDS finger on the dice → it jitters wildly (like shaking in
-  // a cup). RELEASES → dice tumbles and lands on a final face. Real-feeling
-  // physical interaction. Whatever face it lands on becomes their move.
-  //
-  // Backup: 8-second window auto-fires a release if they never tap.
+  // === Chinese Monopoly: full board on the player's phone ===
+  // Each player sees a mini-replica of the host's board. Their character sits
+  // on its current tile. After a correct vocab answer, the dice appears in
+  // the center — player holds-and-throws — character walks tile-by-tile to
+  // its destination — action toast pops over the landing tile.
   let mpMyChar = 0;
+  let mpTiles = [];                  // tile definitions from server
+  let mpPlayersState = {};           // pid → { name, team, pos, money, char }
   let mpShakeInterval = null;
   let mpShakeValue = 1;
   let mpDiceLocked = false;
   let mpRollStartTime = 0;
   let mpHoldStartTime = 0;
   let mpIsHolding = false;
+  let mpWalking = false;             // true while character animates around the board
 
   socket.on('mp:my-char', ({ charIdx }) => {
     mpMyChar = (typeof charIdx === 'number') ? charIdx : 0;
-    // Update lobby/HUD character images if those exist
     const lobbyImg = $('mp-roll-char');
     if (lobbyImg) lobbyImg.src = '/assets/monopoly/chars/char-' + mpMyChar + '.png';
-    const resultImg = $('mp-result-char');
-    if (resultImg) resultImg.src = '/assets/monopoly/chars/char-' + mpMyChar + '.png';
   });
 
+  socket.on('mp:init', (data) => {
+    if (gameType !== 'monopoly') return;
+    mpTiles = data.tiles || [];
+    mpPlayersState = data.players || {};
+    // Build the mini-board scaffolding once. Tile positions stay static; only
+    // tokens + ownership rings move/update.
+    renderMiniBoard();
+    placeAllTokensOnMiniBoard();
+  });
+
+  socket.on('mp:move', (data) => {
+    if (gameType !== 'monopoly') return;
+    // Update everyone's positions/money so the leaderboard + tokens stay in sync.
+    if (mpPlayersState[data.playerId]) {
+      mpPlayersState[data.playerId].pos = data.toPos;
+      mpPlayersState[data.playerId].money = (typeof data.playerWealth === 'number') ? data.playerWealth : data.money;
+    } else {
+      mpPlayersState[data.playerId] = {
+        name: data.playerName,
+        team: data.team,
+        pos: data.toPos,
+        money: data.money,
+        char: data.char
+      };
+    }
+    // For OTHER players' moves, just relocate their token on our mini-board
+    // (no need to animate the walk for them — host shows the cinematic).
+    if (data.playerId !== myPlayerId) {
+      moveOtherTokenInstant(data.playerId, data.toPos);
+    }
+    // Update ownership rings if any tile just got bought
+    if (data.ownership) updateOwnershipRings(data.ownership);
+  });
+
+  // === Build the mini-board grid ===
+  // Same perimeter logic as the host: 16 tiles around a 5x5 grid, center plate
+  // holds the dice + action toast.
+  function renderMiniBoard() {
+    const board = $('mp-mini-board');
+    if (!board || !mpTiles.length) return;
+    // Remove any prior tile elements (preserve center)
+    [...board.querySelectorAll('.mp-mini-tile')].forEach((el) => el.remove());
+    mpTiles.forEach((t) => {
+      const el = document.createElement('div');
+      el.className = 'mp-mini-tile tile-' + t.type;
+      el.id = 'mp-mini-tile-' + t.id;
+      el.innerHTML = `
+        <div class="mp-mini-icon">${t.icon}</div>
+        <div class="mp-mini-name">${escapeHtml(t.name)}</div>
+        <div class="mp-mini-tokens" id="mp-mini-tokens-${t.id}"></div>
+      `;
+      const { col, row } = miniTileGridPos(t.id);
+      el.style.gridColumn = col;
+      el.style.gridRow = row;
+      board.appendChild(el);
+    });
+  }
+  function miniTileGridPos(id) {
+    if (id <= 3)  return { row: 1, col: id + 1 };
+    if (id <= 7)  return { row: id - 3, col: 5 };
+    if (id <= 11) return { row: 5, col: 13 - id };
+    return { row: 17 - id, col: 1 };
+  }
+
+  function placeAllTokensOnMiniBoard() {
+    // Wipe existing tokens
+    mpTiles.forEach((t) => {
+      const slot = $('mp-mini-tokens-' + t.id);
+      if (slot) slot.innerHTML = '';
+    });
+    // Place every player's token on their current tile
+    Object.entries(mpPlayersState).forEach(([pid, p]) => {
+      const slot = $('mp-mini-tokens-' + (p.pos || 0));
+      if (!slot) return;
+      slot.appendChild(makeMiniTokenEl(pid, p));
+    });
+  }
+  function makeMiniTokenEl(pid, p) {
+    const t = document.createElement('div');
+    t.id = 'mp-mini-token-' + pid;
+    t.className = 'mp-mini-token ' + p.team + (pid === myPlayerId ? ' me' : '');
+    t.title = p.name;
+    const ch = (typeof p.char === 'number') ? p.char : 0;
+    t.innerHTML = `<img src="/assets/monopoly/chars/char-${ch}.png" alt="">`;
+    return t;
+  }
+  function moveOtherTokenInstant(pid, toPos) {
+    const tok = document.getElementById('mp-mini-token-' + pid);
+    const slot = $('mp-mini-tokens-' + toPos);
+    if (tok && slot) slot.appendChild(tok);
+    else if (slot && mpPlayersState[pid]) slot.appendChild(makeMiniTokenEl(pid, mpPlayersState[pid]));
+  }
+  function updateOwnershipRings(ownership) {
+    mpTiles.forEach((t) => {
+      if (t.type !== 'city') return;
+      const el = $('mp-mini-tile-' + t.id);
+      if (!el) return;
+      el.classList.remove('owned-red', 'owned-gold');
+      const owner = ownership[t.id];
+      if (owner === 'red')  el.classList.add('owned-red');
+      if (owner === 'gold') el.classList.add('owned-gold');
+    });
+  }
+
   function startMonopolyRoll(currentCash) {
+    if (!mpTiles.length) {
+      // Defensive: shouldn't happen, but if board state never arrived, fall back
+      console.warn('[mp] startMonopolyRoll without tiles — bailing');
+      return;
+    }
     showScreen('monopoly-roll');
+    // Make sure tokens reflect any moves we missed while on the question screen
+    placeAllTokensOnMiniBoard();
     mpDiceLocked = false;
     mpIsHolding = false;
+    mpWalking = false;
     mpShakeValue = 1 + Math.floor(Math.random() * 6);
     mpRollStartTime = Date.now();
     if ($('mp-roll-cash')) $('mp-roll-cash').textContent = currentCash;
     if ($('mp-roll-name')) $('mp-roll-name').textContent = myName || 'Tú';
     if ($('mp-roll-char')) $('mp-roll-char').src = '/assets/monopoly/chars/char-' + mpMyChar + '.png';
-    const dice = $('mp-dice-img');
+    if ($('mp-roll-title')) $('mp-roll-title').textContent = '🎲 ¡Sacude y lanza el dado!';
+    const dice = $('mp-mini-dice');
     const hint = $('mp-roll-hint');
     const fill = $('mp-roll-timer-fill');
+    const actionToast = $('mp-mini-action');
+    if (actionToast) { actionToast.textContent = ''; actionToast.classList.add('hidden'); }
     if (fill) fill.style.width = '100%';
     if (dice) {
       dice.src = '/assets/monopoly/dice/dice-1.png';
       dice.classList.remove('shaking', 'tumbling', 'locked');
+      dice.style.display = '';
     }
-    if (hint) hint.textContent = '👆 Mantén el dedo presionado en el dado y luego suelta';
+    if (hint) hint.textContent = '👆 Mantén el dedo en el dado y suelta para lanzar';
 
-    // HOLD = shake (dice jitters wildly)
+    // Highlight my own token by re-placing it (so it gets the .me class glow)
+    const myTok = document.getElementById('mp-mini-token-' + myPlayerId);
+    if (myTok) myTok.classList.add('me');
+
+    // === Hold-to-shake / release-to-throw ===
     const onPress = (e) => {
       if (e) e.preventDefault();
       if (mpDiceLocked) return;
@@ -1089,7 +1208,6 @@
         dice.classList.add('shaking');
       }
       if (hint) hint.textContent = '✊ ¡Sigue sacudiendo! Suelta para lanzar';
-      // While holding, rotate dice face rapidly
       if (mpShakeInterval) clearInterval(mpShakeInterval);
       mpShakeInterval = setInterval(() => {
         if (!mpIsHolding || mpDiceLocked) return;
@@ -1099,31 +1217,22 @@
         if (navigator.vibrate) navigator.vibrate(8);
       }, 80);
     };
-
-    // RELEASE = throw (dice tumbles + lands)
     const onRelease = (e) => {
       if (e) e.preventDefault();
       if (mpDiceLocked || !mpIsHolding) return;
       mpIsHolding = false;
       if (mpShakeInterval) { clearInterval(mpShakeInterval); mpShakeInterval = null; }
       const heldMs = Date.now() - mpHoldStartTime;
-      // If they barely held it (<150ms = accidental tap), require longer hold
       if (heldMs < 150) {
-        if (hint) hint.textContent = '👆 Mantén PRESIONADO más tiempo, luego suelta';
+        if (hint) hint.textContent = '👆 Mantén PRESIONADO más tiempo';
         return;
       }
-      // Tumble — dice spins for 600ms then settles on final face
-      if (dice) {
-        dice.classList.remove('shaking');
-        dice.classList.add('tumbling');
-      }
+      if (dice) { dice.classList.remove('shaking'); dice.classList.add('tumbling'); }
       MochiSounds.whoosh && MochiSounds.whoosh();
       if (navigator.vibrate) navigator.vibrate([30, 30, 60]);
-      // Cycle face rapidly for visual tumble, then lock
       let tumbleTicks = 6;
       function tumbleStep() {
         if (tumbleTicks-- <= 0) {
-          // Final landing
           mpShakeValue = 1 + Math.floor(Math.random() * 6);
           if (dice) {
             dice.src = '/assets/monopoly/dice/dice-' + mpShakeValue + '.png';
@@ -1133,7 +1242,7 @@
           mpDiceLocked = true;
           MochiSounds.correct && MochiSounds.correct();
           if (navigator.vibrate) navigator.vibrate([40, 40, 80]);
-          if (hint) hint.textContent = `🎲 ¡Sacaste un ${mpShakeValue}! Tu personaje avanza...`;
+          if (hint) hint.textContent = `🎲 ¡Sacaste un ${mpShakeValue}! Tu personaje camina...`;
           socket.emit('monopoly:roll', { pin, roll: mpShakeValue });
           return;
         }
@@ -1144,36 +1253,27 @@
       tumbleStep();
     };
 
-    const stage = $('mp-roll-stage');
-    if (dice) {
-      dice.onpointerdown = onPress;
-      dice.onpointerup = onRelease;
-      dice.onpointercancel = onRelease;
-      dice.onpointerleave = (e) => { if (mpIsHolding) onRelease(e); };
-    }
-    if (stage) {
-      // Make the whole stage area pressable so kids don't need to hit exactly on the dice
-      stage.onpointerdown = onPress;
-      stage.onpointerup = onRelease;
-      stage.onpointercancel = onRelease;
-      stage.onpointerleave = (e) => { if (mpIsHolding) onRelease(e); };
-    }
+    // Bind interaction. Use the dice itself + the center plate as the press area.
+    const center = dice && dice.closest('.mp-mini-center');
+    [dice, center].filter(Boolean).forEach((el) => {
+      el.onpointerdown = onPress;
+      el.onpointerup = onRelease;
+      el.onpointercancel = onRelease;
+      el.onpointerleave = (e) => { if (mpIsHolding) onRelease(e); };
+    });
 
-    // 8-second total window — auto-throw at the deadline
+    // Timer: auto-throw at the 8-second deadline
     const totalMs = 8000;
     function tickTimer() {
       if (mpDiceLocked) return;
       const remaining = Math.max(0, (mpRollStartTime + totalMs) - Date.now());
       if (fill) fill.style.width = ((remaining / totalMs) * 100) + '%';
       if (remaining <= 0) {
-        // Auto-throw if player never engaged
         if (!mpIsHolding) {
           mpIsHolding = true;
           mpHoldStartTime = Date.now() - 500;
-          onRelease();
-        } else {
-          onRelease();
         }
+        onRelease();
         return;
       }
       requestAnimationFrame(tickTimer);
@@ -1181,42 +1281,100 @@
     requestAnimationFrame(tickTimer);
   }
 
-  // Server tells us how the turn resolved (where we moved, what happened)
+  // === Server result handler: walk the character + show action toast ===
   socket.on('mp:result', (data) => {
     if (gameType !== 'monopoly') return;
-    showScreen('monopoly-result');
-    if ($('mp-result-char')) $('mp-result-char').src = '/assets/monopoly/chars/char-' + mpMyChar + '.png';
-    if ($('mp-result-dice-img')) {
-      $('mp-result-dice-img').src = '/assets/monopoly/dice/dice-' + (data.roll || 1) + '.png';
-      if (data.skipped) $('mp-result-dice-img').style.opacity = '0.4';
-      else $('mp-result-dice-img').style.opacity = '1';
+    if ($('mp-roll-title')) $('mp-roll-title').textContent = `🎲 ${data.roll || 0}  →  caminando…`;
+    // Hide the dice during the walk (it served its purpose)
+    const dice = $('mp-mini-dice');
+    if (dice) dice.style.display = 'none';
+    // Animate the character walking from fromPos → toPos one tile at a time
+    walkOwnCharacter(data.fromPos, data.toPos, data.skipped, () => {
+      // After walk: float a tile-action toast over the landing tile
+      showActionToast(data);
+      // Brief pause, then trigger the next question by signaling we're done
+      setTimeout(() => {
+        const action = $('mp-mini-action');
+        if (action) action.classList.add('hidden');
+        // The server already scheduled the next question on its side (2.4s).
+        // We just clean up here. If the question hasn't arrived yet, the
+        // question-event handler will swap screens when it does.
+      }, 2200);
+    });
+  });
+
+  function walkOwnCharacter(fromPos, toPos, skipped, onDone) {
+    if (skipped || fromPos === toPos) {
+      if (onDone) onDone();
+      return;
     }
-    if ($('mp-result-tile') && data.tile) {
-      $('mp-result-tile').innerHTML = `${data.tile.icon} <strong>${escapeHtml(data.tile.name)}</strong>`;
+    mpWalking = true;
+    const tok = document.getElementById('mp-mini-token-' + myPlayerId);
+    if (!tok) {
+      // Couldn't find our token — place it on destination directly
+      const slot = $('mp-mini-tokens-' + toPos);
+      if (slot && mpPlayersState[myPlayerId]) {
+        slot.appendChild(makeMiniTokenEl(myPlayerId, mpPlayersState[myPlayerId]));
+      }
+      mpWalking = false;
+      if (onDone) onDone();
+      return;
     }
-    let action = '';
+    const total = mpTiles.length || 16;
+    const steps = ((toPos - fromPos) + total) % total;
+    let cur = fromPos, i = 0;
+    function step() {
+      cur = (cur + 1) % total;
+      i++;
+      const slot = $('mp-mini-tokens-' + cur);
+      if (slot) {
+        slot.appendChild(tok);
+        tok.classList.remove('walking');
+        void tok.offsetWidth;
+        tok.classList.add('walking');
+      }
+      MochiSounds.tick && MochiSounds.tick();
+      if (navigator.vibrate) navigator.vibrate(10);
+      if (i < steps) {
+        setTimeout(step, 280);
+      } else {
+        mpWalking = false;
+        if (onDone) onDone();
+      }
+    }
+    step();
+  }
+
+  function showActionToast(data) {
+    const toast = $('mp-mini-action');
+    if (!toast) return;
+    let txt = '';
     switch (data.action) {
-      case 'bought':       action = `🏙 ¡Compraste por ¥${-data.moneyDelta}!`; break;
-      case 'own-city':     action = `🏙 Tu propia ciudad — gratis`; break;
-      case 'paid-rent':    action = `💸 Pagaste ¥${data.rentAmount} de renta`; break;
-      case 'cant-afford':  action = `😅 Sin dinero — sigues adelante`; break;
-      case 'card-bonus':   action = `🎴 ¡Carta! +¥${data.moneyDelta}`; break;
-      case 'treasure':     action = `🐉 ¡Tesoro! +¥${data.moneyDelta}`; break;
-      case 'tax':          action = `💰 ¡Impuesto! -¥${-data.moneyDelta}`; break;
-      case 'festival':     action = `🏮 ¡FIESTA! +¥${data.moneyDelta}`; break;
-      case 'jail':         action = `🏛 ¡A la cárcel! Pierdes un turno`; break;
-      case 'start-bonus':  action = `🏯 ¡Cayó en Salida! +¥${data.moneyDelta}`; break;
-      case 'skipped':      action = `🏛 Turno perdido (cárcel)`; break;
-      default:             action = '';
+      case 'bought':       txt = `🏙 ¡Compraste!  -¥${-data.moneyDelta}`; break;
+      case 'own-city':     txt = `🏙 Tu ciudad`; break;
+      case 'paid-rent':    txt = `💸 Renta -¥${data.rentAmount}`; break;
+      case 'cant-afford':  txt = `😅 Sin dinero`; break;
+      case 'card-bonus':   txt = `🎴 +¥${data.moneyDelta}`; break;
+      case 'treasure':     txt = `🐉 ¡Tesoro!  +¥${data.moneyDelta}`; break;
+      case 'tax':          txt = `💰 Impuesto -¥${-data.moneyDelta}`; break;
+      case 'festival':     txt = `🏮 ¡FIESTA! +¥${data.moneyDelta}`; break;
+      case 'jail':         txt = `🏛 ¡A la cárcel!`; break;
+      case 'start-bonus':  txt = `🏯 Salida +¥${data.moneyDelta}`; break;
+      case 'skipped':      txt = `🏛 Turno perdido`; break;
+      default:             txt = '';
     }
-    if ($('mp-result-action')) $('mp-result-action').innerHTML = action;
-    if ($('mp-result-balance')) $('mp-result-balance').innerHTML = `💼 ¥${data.money}`;
-    if (data.action === 'bought' || data.action === 'card-bonus' || data.action === 'treasure' || data.action === 'festival' || data.action === 'start-bonus') {
+    toast.innerHTML = txt + `<div class="mp-mini-balance">💼 ¥${data.money}</div>`;
+    toast.classList.remove('hidden');
+    toast.classList.remove('pop');
+    void toast.offsetWidth;
+    toast.classList.add('pop');
+    // Sound flavor
+    if (['bought','card-bonus','treasure','festival','start-bonus'].includes(data.action)) {
       MochiSounds.correct && MochiSounds.correct();
-    } else if (data.action === 'paid-rent' || data.action === 'tax' || data.action === 'jail') {
+    } else if (['paid-rent','tax','jail'].includes(data.action)) {
       MochiSounds.wrong && MochiSounds.wrong();
     }
-  });
+  }
 
   function startMash() {
     showScreen('mash');
@@ -2674,7 +2832,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-roll', 'monopoly-result', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-roll', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

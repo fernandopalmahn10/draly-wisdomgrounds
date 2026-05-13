@@ -207,9 +207,11 @@
     </div>
   </div>
 
-  <!-- MONOPOLY DICE ROLL — interactive shake-and-throw mechanic.
-       Player HOLDS the dice → it jitters wildly (like shaking). RELEASES →
-       dice tumbles and lands on a face. Whatever lands becomes the move. -->
+  <!-- MONOPOLY MINI-BOARD — the player's view of the same board the host shows.
+       Opens after a correct answer. Player sees their character on its tile,
+       throws the dice in the center, watches their character walk tile-by-tile
+       to the destination, then a floating action toast over the landing tile.
+  -->
   <div id="screen-monopoly-roll" class="hidden player-screen mp-roll-screen">
     <div class="mp-roll-header">
       <div class="mp-roll-char-wrap">
@@ -218,27 +220,18 @@
       </div>
       <div class="mp-roll-cash">💼 ¥<span id="mp-roll-cash">0</span></div>
     </div>
-    <div class="mp-roll-title">🎲 ¡Sacude y lanza el dado!</div>
-    <div class="mp-roll-stage" id="mp-roll-stage">
-      <img class="mp-dice-img" id="mp-dice-img" src="/assets/monopoly/dice/dice-1.png" alt="Dado">
+    <div class="mp-roll-title" id="mp-roll-title">🎲 ¡Sacude y lanza el dado!</div>
+    <!-- Mini-board: same 5x5 grid as host, scaled to phone. Tiles rendered by JS. -->
+    <div class="mp-mini-board" id="mp-mini-board">
+      <!-- The dice sits in the center plate. Player holds + releases on it. -->
+      <div class="mp-mini-center">
+        <img class="mp-mini-dice" id="mp-mini-dice" src="/assets/monopoly/dice/dice-1.png" alt="Dado">
+        <div class="mp-mini-action-toast hidden" id="mp-mini-action"></div>
+      </div>
     </div>
-    <div class="mp-roll-hint" id="mp-roll-hint">👆 Mantén el dedo presionado en el dado y luego suelta</div>
+    <div class="mp-roll-hint" id="mp-roll-hint">👆 Mantén el dedo en el dado y suelta para lanzar</div>
     <div class="mp-roll-timer-wrap">
       <div class="mp-roll-timer-fill" id="mp-roll-timer-fill"></div>
-    </div>
-  </div>
-
-  <!-- MONOPOLY RESULT — shown after server processes the roll. Character
-       slides from old tile → new tile on a mini track. -->
-  <div id="screen-monopoly-result" class="hidden player-screen mp-result-screen">
-    <div class="mp-result-card">
-      <div class="mp-result-dice-row">
-        <img class="mp-result-char" id="mp-result-char" src="/assets/monopoly/chars/char-0.png" alt="Personaje">
-        <img class="mp-result-dice-img" id="mp-result-dice-img" src="/assets/monopoly/dice/dice-1.png" alt="Dado">
-      </div>
-      <div class="mp-result-tile" id="mp-result-tile"></div>
-      <div class="mp-result-action" id="mp-result-action"></div>
-      <div class="mp-result-balance" id="mp-result-balance">💼 ¥0</div>
     </div>
   </div>
 
