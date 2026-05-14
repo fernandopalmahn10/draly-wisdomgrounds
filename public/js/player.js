@@ -17,6 +17,51 @@
   let currentQid = null;
   // (legacy timer kept for any reference; bulletproof flow below replaces it)
 
+  // === Global stuck-watchdog ===
+  // The single biggest source of player frustration is "I'm stuck on a screen
+  // and nothing is happening." We bump `lastActivityAt` on every meaningful
+  // socket event. If 12s pass with no activity while we're in-game, we ping
+  // player:resync — server then tells us exactly what to do (re-send the open
+  // question, push a fresh question if idle, etc.) so we get unstuck.
+  let lastActivityAt = Date.now();
+  function markActivity() { lastActivityAt = Date.now(); }
+
+  setInterval(() => {
+    if (!pin || !myName) return;
+    // Skip if the page is hidden/backgrounded — phones throttle JS there and
+    // we'd false-positive constantly.
+    if (document.hidden) return;
+    // Skip if we're explicitly on a "waiting" screen like join/lobby/end —
+    // these are intentional pauses, not freezes.
+    const onLobby = $('screen-lobby')  && !$('screen-lobby').classList.contains('hidden');
+    const onJoin  = $('screen-join')   && !$('screen-join').classList.contains('hidden');
+    const onEnd   = $('screen-end')    && !$('screen-end').classList.contains('hidden');
+    if (onLobby || onJoin || onEnd) return;
+    if (Date.now() - lastActivityAt > 12000) {
+      console.warn('[watchdog] 12s without activity — pinging resync');
+      try { socket.emit('player:resync', { pin }); } catch (_) {}
+      markActivity(); // don't spam
+    }
+  }, 3000);
+
+  // Server's response to a resync ping. Mostly the server will already have
+  // pushed us a fresh question by now; this handler clears any pending
+  // overlays and re-enables the answer buttons in case they were stuck.
+  socket.on('state-resync', (data) => {
+    markActivity();
+    hideSendingOverlay();
+    clearAnswerHeartbeat();
+    document.querySelectorAll('.answer-btn').forEach((b) => {
+      b.disabled = false;
+      b.style.outline = '';
+      b.style.transform = '';
+    });
+    // If the server says we're still in a mash window, restore the timer.
+    if (data && typeof data.mashUntil === 'number' && data.mashUntil > Date.now()) {
+      mashEndTime = data.mashUntil;
+    }
+  });
+
   // === BULLETPROOF ANSWER FLOW ===
   // Multi-layered to make "I tapped and nothing happened" impossible:
   //  1. Immediate visual feedback ("Enviando…" overlay) so the player KNOWS the
@@ -590,6 +635,7 @@
   });
 
   socket.on('question', (q) => {
+    markActivity();
     currentQid = q.qid;
     $('question-text').textContent = q.text;
     // Show image (or placeholder while loading)
@@ -655,6 +701,7 @@
   });
 
   socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly }) => {
+    markActivity();
     clearAnswerHeartbeat();
     hideSendingOverlay();
     if (correct) {
@@ -1124,6 +1171,7 @@
   });
 
   socket.on('mp:move', (data) => {
+    markActivity();
     if (gameType !== 'monopoly') return;
     // Update everyone's positions/money so the leaderboard + tokens stay in sync.
     if (mpPlayersState[data.playerId]) {
@@ -1219,8 +1267,15 @@
 
   function startMonopolyRoll(currentCash) {
     if (!mpTiles.length) {
-      // Defensive: shouldn't happen, but if board state never arrived, fall back
-      console.warn('[mp] startMonopolyRoll without tiles — bailing');
+      // Board state never arrived — request a resync so the server re-sends
+      // mp:init + we can retry the roll. Without this, the player would be
+      // stuck on the result screen indefinitely.
+      console.warn('[mp] startMonopolyRoll without tiles — requesting resync');
+      try { socket.emit('player:resync', { pin }); } catch (_) {}
+      // Auto-roll a safety value so the game keeps moving for this player
+      setTimeout(() => {
+        try { socket.emit('monopoly:roll', { pin, roll: 1 + Math.floor(Math.random() * 6) }); } catch (_) {}
+      }, 1500);
       return;
     }
     showScreen('monopoly-roll');
@@ -1338,6 +1393,7 @@
 
   // === Server result handler: walk the character + show action toast ===
   socket.on('mp:result', (data) => {
+    markActivity();
     if (gameType !== 'monopoly') return;
     if ($('mp-roll-title')) $('mp-roll-title').textContent = `🎲 ${data.roll || 0}  →  caminando…`;
     // Hide the dice during the walk (it served its purpose)
@@ -2736,6 +2792,7 @@
   bindDpad();
 
   socket.on('tap-ack', ({ points, combo, score }) => {
+    markActivity();
     myScore = score;
     $('player-score').textContent = myScore;
     $('mash-score').textContent = myScore;
