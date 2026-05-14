@@ -1454,6 +1454,59 @@ io.on('connection', (socket) => {
   });
 
   // Market Quest: player sends their movement input state (held keys/joystick)
+  // === Player stuck-recovery resync ===
+  // Client watchdog pings this when nothing has happened on its end for 12s.
+  // Server replies with the player's current state + re-emits the current
+  // question if one is open + pushes a NEW question if the player is idle
+  // (no mash window, no walk window, no pending dice roll, etc).
+  // This is the last-resort safety net that gets stuck players unstuck.
+  socket.on('player:resync', ({ pin }) => {
+    const g = games[pin];
+    if (!g) return;
+    const p = g.players[socket.id];
+    if (!p) return;
+    const now = Date.now();
+    const inAction =
+      (p.mashUntil && p.mashUntil > now) ||
+      (p.walkUntil && p.walkUntil > now) ||
+      !!p.currentQ ||
+      !!p.mpAwaitingRoll ||
+      !!p.dragonAim;
+    io.to(socket.id).emit('state-resync', {
+      state: g.state,
+      gameType: g.gameType,
+      hasOpenQuestion: !!p.currentQ,
+      mashUntil:      p.mashUntil || 0,
+      walkUntil:      p.walkUntil || 0,
+      energy:         p.energy    || 0,
+      score:          p.score     || 0,
+      mpAwaitingRoll: !!p.mpAwaitingRoll,
+      inAction
+    });
+    // Re-emit the active question so the client can re-render the screen
+    if (p.currentQ && g.state === 'active') {
+      io.to(socket.id).emit('question', {
+        qid: p.currentQ.qid,
+        text: p.currentQ.text,
+        answers: p.currentQ.answers,
+        image: p.currentQ.image,
+        vendorId: p.currentQ.vendorId
+      });
+      return;
+    }
+    // If the player is genuinely idle and the game is running, push them a
+    // fresh question to get them moving again. Skip for games that drive
+    // their own question dispatch (market-quest uses vendor collisions,
+    // flappy uses death-revives, color-clash uses request buttons).
+    if (g.state === 'active' && !inAction) {
+      const driveYourOwn = ['market-quest', 'flappy', 'color-clash'];
+      if (!driveYourOwn.includes(g.gameType)) {
+        const q = nextQuestionFor(g, socket.id);
+        if (q) io.to(socket.id).emit('question', q);
+      }
+    }
+  });
+
   // Chinese Monopoly: player committed their tap-stopped dice value (1..6).
   socket.on('monopoly:roll', ({ pin, roll }) => {
     const g = games[pin];
