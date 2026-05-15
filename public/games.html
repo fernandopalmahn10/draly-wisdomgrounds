@@ -103,6 +103,25 @@
         <button class="btn btn-red btn-xl game-card-play">▶ ¡A girar el dado!</button>
       </div>
 
+      <div class="game-card" id="card-zombie">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🧟</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Zombie Escape</div>
+            <div class="game-tile-badge new">¡Nuevo!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🏃💨 末日逃生 — La horda de zombies persigue a tu equipo. Responde bien para correr (cada toque = un paso). Responde mal y los zombies se acercan. ¡Llega primero al helipuerto 🚁 antes que te alcancen!
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Apocalipsis</span>
+          <span class="tag">Carrera</span>
+          <span class="tag">Coop</span>
+        </div>
+        <button class="btn btn-red btn-xl game-card-play">▶ ¡Escapar de los zombies!</button>
+      </div>
+
       <div class="game-card" id="card-dragon">
         <div class="game-card-header">
           <div class="game-card-emoji">🐉</div>
@@ -193,6 +212,9 @@
       document.querySelector('#card-monopoly .game-card-play').onclick = () => {
         location.href = '/host-monopoly.html?setId=' + encodeURIComponent(setId);
       };
+      document.querySelector('#card-zombie .game-card-play').onclick = () => {
+        location.href = '/host-zombie.html?setId=' + encodeURIComponent(setId);
+      };
     } else {
       document.getElementById('set-name').textContent = 'elige un juego, luego una serie';
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
@@ -216,6 +238,9 @@
       };
       document.querySelector('#card-monopoly .game-card-play').onclick = () => {
         location.href = '/sets.html?game=monopoly';
+      };
+      document.querySelector('#card-zombie .game-card-play').onclick = () => {
+        location.href = '/sets.html?game=zombie';
       };
     }
 
