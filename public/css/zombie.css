@@ -311,10 +311,220 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
 }
 
 /* ============================================================ */
-/* === PLAYER SPRINT SCREEN === */
+/* === PLAYER SPRINT SCREEN (timed jump platformer) === */
 /* ============================================================ */
-/* Body class applied during the sprint window. Reskins the mash button into
-   a sprinting survivor — same tap mechanic as Mochi Mash. */
+.zb-sprint-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 8px 8px 14px;
+  gap: 10px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(120, 240, 80, 0.22), transparent 55%),
+    linear-gradient(180deg, #4a3020 0%, #2a2018 40%, #1a140e 100%);
+  color: #d9e9ce;
+  position: relative;
+  overflow: hidden;
+}
+.zb-sprint-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  gap: 8px;
+}
+.zb-sprint-name {
+  background: rgba(0,0,0,0.5);
+  border: 2px solid rgba(180,230,130,0.55);
+  padding: 4px 10px;
+  border-radius: 10px;
+  color: #c4f0a8;
+  font-size: 0.9rem;
+}
+.zb-sprint-clear {
+  background: rgba(0,0,0,0.5);
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+.zb-sprint-timer {
+  background: rgba(255, 90, 102, 0.18);
+  border: 2px solid rgba(255, 90, 102, 0.5);
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  color: #ffaeae;
+}
+
+/* The stage — side-scrolling scene */
+.zb-sprint-stage {
+  position: relative;
+  flex: 1;
+  min-height: 280px;
+  border-radius: 14px;
+  border: 3px solid rgba(180, 230, 130, 0.55);
+  overflow: hidden;
+  background: linear-gradient(180deg, #d27040 0%, #a04830 40%, #2a2018 75%, #1a140e 100%);
+}
+.zb-sprint-sky {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(180,180,160,0.18), transparent 35%),
+    radial-gradient(ellipse at 70% 50%, rgba(150,150,140,0.12), transparent 30%);
+  pointer-events: none;
+}
+.zb-sprint-skyline {
+  position: absolute;
+  bottom: 38%;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 1.6rem;
+  opacity: 0.35;
+  letter-spacing: -4px;
+  filter: blur(0.5px);
+  pointer-events: none;
+  animation: zb-skyline-drift 18s linear infinite;
+}
+@keyframes zb-skyline-drift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-40px); }
+}
+.zb-sprint-horde {
+  position: absolute;
+  bottom: 24%;
+  left: -5%;
+  font-size: 1.8rem;
+  letter-spacing: -8px;
+  filter: drop-shadow(0 0 8px rgba(120, 240, 80, 0.6));
+  z-index: 2;
+  animation: zb-horde-shamble 0.6s ease-in-out infinite alternate;
+  user-select: none;
+}
+@keyframes zb-horde-shamble {
+  from { transform: translateY(0)   rotate(-2deg); }
+  to   { transform: translateY(-4px) rotate(2deg); }
+}
+
+/* Track — survivor sits here, obstacles slide across */
+.zb-sprint-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 45%;
+}
+.zb-sprint-ground {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.4) 100%),
+    repeating-linear-gradient(90deg, rgba(60,40,30,0.5) 0 24px, rgba(40,28,20,0.5) 24px 48px);
+}
+.zb-sprint-survivor {
+  position: absolute;
+  bottom: 8px;
+  left: 24%;
+  transform: translateX(-50%);
+  font-size: clamp(3rem, 9vw, 4.5rem);
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.7));
+  z-index: 4;
+  animation: zb-surv-run 0.3s ease-in-out infinite alternate;
+  user-select: none;
+}
+@keyframes zb-surv-run {
+  from { transform: translateX(-50%) translateY(0); }
+  to   { transform: translateX(-50%) translateY(-3px); }
+}
+.zb-sprint-survivor.jumping {
+  animation: zb-surv-jump 0.6s cubic-bezier(.4, -0.2, .6, 1.2) forwards;
+}
+@keyframes zb-surv-jump {
+  0%   { transform: translateX(-50%) translateY(0)    rotate(0); }
+  45%  { transform: translateX(-50%) translateY(-80px) rotate(-15deg); }
+  100% { transform: translateX(-50%) translateY(0)    rotate(0); }
+}
+.zb-sprint-survivor.stumble {
+  animation: zb-surv-stumble 0.4s ease-out;
+}
+@keyframes zb-surv-stumble {
+  0%   { transform: translateX(-50%) rotate(0)      scale(1); filter: drop-shadow(0 4px 8px rgba(0,0,0,0.7)); }
+  35%  { transform: translateX(-65%) rotate(-25deg) scale(0.95); filter: drop-shadow(0 0 14px #ff5a66) drop-shadow(0 4px 8px rgba(0,0,0,0.7)); }
+  100% { transform: translateX(-50%) rotate(0)      scale(1); }
+}
+
+.zb-sprint-obstacles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.zb-obstacle {
+  position: absolute;
+  bottom: 10px;
+  left: 100%;
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+  pointer-events: none;
+}
+@keyframes zb-obstacle-slide {
+  from { left: 100%; }
+  to   { left: -10%; }
+}
+
+.zb-sprint-pop {
+  position: absolute;
+  bottom: 70px;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.8rem;
+  color: #c4f0a8;
+  text-shadow: 0 0 12px #c4f0a8, 0 3px 6px rgba(0,0,0,0.7);
+  animation: zb-pop-up 0.7s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes zb-pop-up {
+  0%   { opacity: 0; transform: translateY(0) scale(0.6); }
+  30%  { opacity: 1; transform: translateY(-20px) scale(1.3); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.9); }
+}
+
+.zb-jump-btn {
+  width: 100%;
+  font-size: 1.6rem;
+  font-weight: 900;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.08em;
+  padding: 22px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #c4f0a8 0%, #6fbf3f 50%, #2a5a18 100%);
+  border: 4px solid #0e0606;
+  color: #fff;
+  text-shadow: 0 3px 6px rgba(0,0,0,0.7);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.5), 0 0 30px rgba(120, 240, 80, 0.4), inset 0 4px 10px rgba(220, 255, 200, 0.4);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.zb-jump-btn:active {
+  transform: scale(0.96);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 50px rgba(120, 240, 80, 0.7), inset 0 4px 10px rgba(220, 255, 200, 0.3);
+}
+.zb-sprint-hint {
+  text-align: center;
+  color: #c4f0a8;
+  font-size: 0.85rem;
+  opacity: 0.9;
+  margin: 0;
+}
+
+/* ============================================================ */
+/* === LEGACY tap-mash zombie reskin (now unused but kept for safety) === */
+/* ============================================================ */
 body.zombie-sprinting {
   background:
     radial-gradient(ellipse at 50% 0%, rgba(120, 240, 80, 0.25), transparent 55%),

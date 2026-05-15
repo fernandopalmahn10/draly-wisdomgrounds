@@ -560,7 +560,7 @@ function endGame(pin) {
     winner,
     mvpRed: mvpRed ? { name: mvpRed.name, score: mvpRed.score } : null,
     mvpGold: mvpGold ? { name: mvpGold.name, score: mvpGold.score } : null,
-    leaderboard: sorted.map((p) => ({ name: p.name, score: p.score, team: p.team }))
+    leaderboard: sorted.map((p) => ({ name: p.name, score: p.score, team: p.team, avatar: p.avatar || '' }))
   });
   broadcast(pin);
 }

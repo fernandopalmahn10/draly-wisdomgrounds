@@ -578,8 +578,11 @@
     }
     if ($('player-header')) $('player-header').className = `player-header ${team}`;
     if ($('mash-header')) $('mash-header').className = `player-header ${team}`;
-    if ($('player-name-tag')) $('player-name-tag').textContent = myName;
-    if ($('mash-name-tag')) $('mash-name-tag').textContent = myName;
+    // Avatar+name on every gameplay header so the kid always sees themselves
+    const av = getMyAvatar();
+    const nameWithAv = av ? `${av} ${myName}` : myName;
+    if ($('player-name-tag')) $('player-name-tag').textContent = nameWithAv;
+    if ($('mash-name-tag')) $('mash-name-tag').textContent = nameWithAv;
     const mashBtn = $('mash-button');
     if (mashBtn) {
       mashBtn.classList.remove('red', 'gold');
@@ -823,9 +826,9 @@
             startMonopolyRoll(monopoly.money || 0);
           }
         } else if (gameType === 'zombie') {
-          // Sprint mode — re-use the mash screen with the survivor reskin
+          // Sprint mode — auto-runner with timed JUMP button (NOT tap-mash).
           mashEndTime = mashUntil;
-          startMash();
+          startZombieSprint();
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -897,7 +900,10 @@
     pnSmashActive = true;
     pnSmashTaps = 0;
     document.body.classList.add('pinata-active');
-    if ($('pn-smash-name-tag')) $('pn-smash-name-tag').textContent = myName;
+    if ($('pn-smash-name-tag')) {
+      const a = getMyAvatar();
+      $('pn-smash-name-tag').textContent = a ? `${a} ${myName}` : myName;
+    }
     if ($('pn-smash-score')) $('pn-smash-score').textContent = myScore;
     if ($('pn-smash-header')) $('pn-smash-header').className = `player-header ${team}`;
     // Reset tiger
@@ -1016,6 +1022,170 @@
       layer.appendChild(c);
       setTimeout(() => c.remove(), 1500);
     }
+  }
+
+  // === Zombie Escape: timed-jump auto-runner ===
+  // Survivor runs in place. Zombie-hand obstacles spawn on the right and slide
+  // left toward the survivor. Player taps SALTAR at the right moment to jump
+  // over each one. Successful jump = +1 step (sent to server via player:tap).
+  // Mistimed jump or no jump = stumble (red flash, no points). 5-second window.
+  let zbSprintActive = false;
+  let zbSprintEndsAt = 0;
+  let zbSprintCleared = 0;
+  let zbObstacleSpawner = null;
+  let zbObstacleCleanup = null;
+  let zbTimerInterval = null;
+  let zbJumping = false;
+  let zbObstacleList = [];        // [{el, startedAt, durationMs, cleared}]
+
+  function startZombieSprint() {
+    showScreen('zombie-sprint');
+    zbSprintActive = true;
+    zbSprintEndsAt = mashEndTime;
+    zbSprintCleared = 0;
+    zbJumping = false;
+    zbObstacleList = [];
+    if ($('zb-sprint-cleared')) $('zb-sprint-cleared').textContent = '0';
+    if ($('zb-sprint-name')) {
+      const avatar = getMyAvatar();
+      $('zb-sprint-name').textContent = `${avatar} ${myName}`;
+    }
+    const surv = $('zb-sprint-survivor');
+    if (surv) {
+      surv.textContent = team === 'red' ? '🏃' : '🏃‍♀️';
+      surv.classList.remove('jumping', 'stumble');
+    }
+    const obsLayer = $('zb-sprint-obstacles');
+    if (obsLayer) obsLayer.innerHTML = '';
+
+    // Bind jump button
+    const btn = $('zb-jump-btn');
+    if (btn) {
+      const onJump = (e) => {
+        if (e) e.preventDefault();
+        if (!zbSprintActive || zbJumping) return;
+        doJump();
+      };
+      btn.onpointerdown = onJump;
+      btn.onclick = onJump;
+    }
+
+    // Obstacle spawner — every ~900ms a new obstacle starts moving left
+    if (zbObstacleSpawner) clearInterval(zbObstacleSpawner);
+    zbObstacleSpawner = setInterval(() => {
+      if (!zbSprintActive) return;
+      spawnObstacle();
+    }, 900);
+    // Spawn the first one immediately so they have something to react to
+    setTimeout(spawnObstacle, 200);
+
+    // Collision detector — runs continuously while sprint is active
+    if (zbObstacleCleanup) clearInterval(zbObstacleCleanup);
+    zbObstacleCleanup = setInterval(checkCollisions, 60);
+
+    // Countdown timer
+    if (zbTimerInterval) clearInterval(zbTimerInterval);
+    zbTimerInterval = setInterval(() => {
+      const remaining = Math.max(0, zbSprintEndsAt - Date.now());
+      const sec = Math.ceil(remaining / 1000);
+      if ($('zb-sprint-timer-num')) $('zb-sprint-timer-num').textContent = sec;
+      if (remaining <= 0) endZombieSprint();
+    }, 100);
+  }
+
+  function spawnObstacle() {
+    if (!zbSprintActive) return;
+    const layer = $('zb-sprint-obstacles');
+    if (!layer) return;
+    const el = document.createElement('div');
+    el.className = 'zb-obstacle';
+    // Randomly pick obstacle type
+    const variants = ['🤚', '🪨', '🪦', '🦴'];
+    el.textContent = variants[Math.floor(Math.random() * variants.length)];
+    layer.appendChild(el);
+    const duration = 1500; // ms to slide from right edge to left edge
+    el.style.animation = `zb-obstacle-slide ${duration}ms linear forwards`;
+    const entry = { el, startedAt: Date.now(), durationMs: duration, cleared: false };
+    zbObstacleList.push(entry);
+    // Remove the element when its animation ends
+    setTimeout(() => {
+      el.remove();
+      zbObstacleList = zbObstacleList.filter((o) => o !== entry);
+    }, duration + 80);
+  }
+
+  function doJump() {
+    if (zbJumping) return;
+    zbJumping = true;
+    const surv = $('zb-sprint-survivor');
+    if (surv) {
+      surv.classList.remove('stumble');
+      void surv.offsetWidth;
+      surv.classList.add('jumping');
+    }
+    if (MochiSounds.whoosh) MochiSounds.whoosh();
+    if (navigator.vibrate) navigator.vibrate(20);
+    setTimeout(() => {
+      zbJumping = false;
+      if (surv) surv.classList.remove('jumping');
+    }, 600);
+  }
+
+  // The survivor sits at horizontal ~24% of the track. The animation moves
+  // obstacles from 100% → -10% over `durationMs`. We compute the obstacle's
+  // current position and check against the survivor's hit zone.
+  function checkCollisions() {
+    if (!zbSprintActive) return;
+    const now = Date.now();
+    const survHitZone = { min: 18, max: 32 }; // percent
+    zbObstacleList.forEach((obs) => {
+      if (obs.cleared) return;
+      const t = (now - obs.startedAt) / obs.durationMs;
+      const pct = 100 - t * 110; // 100% → -10%
+      if (pct >= survHitZone.min && pct <= survHitZone.max) {
+        // Obstacle is overlapping the survivor's x — were we jumping?
+        if (zbJumping) {
+          obs.cleared = true;
+          // Successful jump → emit a server tap (1 distance step)
+          socket.emit('player:tap', { pin });
+          zbSprintCleared++;
+          if ($('zb-sprint-cleared')) $('zb-sprint-cleared').textContent = zbSprintCleared;
+          // Floating "+1" toast over the obstacle
+          spawnSprintPop(obs.el, '+1');
+          MochiSounds.correct && MochiSounds.correct();
+        } else {
+          obs.cleared = true;
+          // Stumble — no points, just visual feedback
+          const surv = $('zb-sprint-survivor');
+          if (surv) {
+            surv.classList.remove('stumble');
+            void surv.offsetWidth;
+            surv.classList.add('stumble');
+          }
+          spawnSprintPop(obs.el, '💥');
+          if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
+        }
+      }
+    });
+  }
+
+  function spawnSprintPop(anchorEl, text) {
+    const layer = $('zb-sprint-obstacles');
+    if (!layer || !anchorEl) return;
+    const pop = document.createElement('div');
+    pop.className = 'zb-sprint-pop';
+    pop.textContent = text;
+    pop.style.left = anchorEl.style.left || '24%';
+    layer.appendChild(pop);
+    setTimeout(() => pop.remove(), 700);
+  }
+
+  function endZombieSprint() {
+    zbSprintActive = false;
+    if (zbObstacleSpawner) { clearInterval(zbObstacleSpawner); zbObstacleSpawner = null; }
+    if (zbObstacleCleanup) { clearInterval(zbObstacleCleanup); zbObstacleCleanup = null; }
+    if (zbTimerInterval)   { clearInterval(zbTimerInterval);   zbTimerInterval   = null; }
+    // The next 'question' event will switch screens for us.
   }
 
   // === Dragon flight: swipe-up to flap ===
@@ -1556,16 +1726,6 @@
         mascotEl.textContent = '🐯';
         mascotEl.classList.remove('pinata-angry', 'pinata-furious', 'pinata-hit');
         mascotEl._pnTaps = 0;
-      }
-    } else if (gameType === 'zombie') {
-      document.body.classList.add('zombie-sprinting');
-      document.body.classList.remove('pinata-active', 'dragon-flying-active');
-      if ($('mash-headline')) $('mash-headline').innerHTML = '🏃💨 ¡CORRE! Los zombies se acercan';
-      if ($('mash-hint')) $('mash-hint').innerHTML = 'Cada toque = un paso hacia la zona segura 🚁';
-      const mascotEl = $('mash-mascot');
-      if (mascotEl) {
-        mascotEl.textContent = team === 'red' ? '🏃' : '🏃‍♀️';
-        mascotEl.classList.remove('zb-sprint-hit', 'pinata-angry', 'pinata-furious', 'pinata-hit');
       }
     } else {
       document.body.classList.remove('pinata-active', 'dragon-flying-active', 'zombie-sprinting');
@@ -3014,7 +3174,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

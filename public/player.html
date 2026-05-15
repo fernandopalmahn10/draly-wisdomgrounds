@@ -319,6 +319,29 @@
   </div>
 
   <!-- ENDED -->
+  <!-- ZOMBIE SPRINT — auto-runner with timed JUMP button. Survivor runs in
+       place while zombie-hand obstacles approach from the right. Player taps
+       SALTAR at the right moment to jump over each one. Skill = timing. -->
+  <div id="screen-zombie-sprint" class="hidden player-screen zb-sprint-screen">
+    <div class="zb-sprint-header">
+      <span class="zb-sprint-name" id="zb-sprint-name">🏃 Tú</span>
+      <span class="zb-sprint-clear">👟 <span id="zb-sprint-cleared">0</span></span>
+      <span class="zb-sprint-timer"><span id="zb-sprint-timer-num">5</span>s</span>
+    </div>
+    <div class="zb-sprint-stage" id="zb-sprint-stage">
+      <div class="zb-sprint-sky"></div>
+      <div class="zb-sprint-skyline">🏚 🏚 🏢 🏚 🏯 🏚 🏢</div>
+      <div class="zb-sprint-horde">🧟‍♂️🧟🧟‍♀️🧟</div>
+      <div class="zb-sprint-track">
+        <div class="zb-sprint-ground"></div>
+        <div class="zb-sprint-survivor" id="zb-sprint-survivor">🏃</div>
+        <div class="zb-sprint-obstacles" id="zb-sprint-obstacles"></div>
+      </div>
+    </div>
+    <button class="zb-jump-btn" id="zb-jump-btn">🦘 ¡SALTAR! 🦘</button>
+    <div class="zb-sprint-hint">Toca SALTAR justo cuando el obstáculo llega 🤚</div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
