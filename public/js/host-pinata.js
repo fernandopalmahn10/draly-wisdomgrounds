@@ -376,7 +376,7 @@
       const teamEmoji = p.team === 'red' ? '🥢' : '🏹';
       row.innerHTML = `
         <span class="lb-rank">${medal}</span>
-        <span class="lb-name">${teamEmoji} ${escapeHtml(p.name)}</span>
+        <span class="lb-name">${p.avatar ? p.avatar + " " : ""}${teamEmoji} ${escapeHtml(p.name)}</span>
         <span class="lb-score">${p.score} pts</span>
       `;
       lb.appendChild(row);
