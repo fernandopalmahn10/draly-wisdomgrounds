@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
   <link rel="stylesheet" href="/css/monopoly.css?v=20260513b">
+  <link rel="stylesheet" href="/css/zombie.css?v=20260515">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -55,6 +56,13 @@
       </div>
     </div>
     <p class="lobby-flappy-hint">Toca la pantalla para volar 🪶</p>
+
+    <!-- Avatar picker — kids pick an animal that follows them into every game.
+         Persisted in localStorage so it survives across rounds. -->
+    <div class="avatar-picker">
+      <div class="avatar-picker-title">🎭 Elige tu avatar</div>
+      <div class="avatar-grid" id="avatar-grid"></div>
+    </div>
   </div>
 
   <!-- COUNTDOWN -->

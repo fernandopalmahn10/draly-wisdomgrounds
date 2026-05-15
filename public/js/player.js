@@ -220,7 +220,7 @@
   socket.on('connect', () => {
     // On any reconnect (after the first), re-emit player:join with stored credentials
     if (pin && myName) {
-      socket.emit('player:join', { pin, name: myName }, (resp) => {
+      socket.emit('player:join', { pin, name: myName, avatar: getMyAvatar() }, (resp) => {
         if (resp.ok) {
           myPlayerId = resp.playerId; // new socket id after reconnect
           team = resp.team;
@@ -267,7 +267,7 @@
       $('join-error').textContent = 'Enter PIN and name';
       return;
     }
-    socket.emit('player:join', { pin: p, name }, (resp) => {
+    socket.emit('player:join', { pin: p, name, avatar: getMyAvatar() }, (resp) => {
       if (!resp.ok) {
         $('join-error').textContent = resp.error || 'Could not join';
         MochiSounds.wrong();
@@ -302,6 +302,47 @@
     updateTeamUI();
     showScreen('lobby');
     startLobbyFlappy();
+    renderAvatarPicker();
+  }
+
+  // === Avatar picker ===
+  // Curated animals + characters. Kids tap to pick; selection persists in
+  // localStorage and is broadcast to the server so every host page can show
+  // the avatar next to the player's name in lobby chips + game UIs.
+  const AVATAR_CHOICES = [
+    '🐱','🐶','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐸',
+    '🐵','🐔','🐲','🐺','🦝','🐹','🐭','🦔','🦦','🦥',
+    '🐢','🐙','🦄','🐳','🦖','🦕','🐧','🦉','🦋','🐝'
+  ];
+  function getMyAvatar() {
+    return localStorage.getItem('dralyAvatar') || '🐱';
+  }
+  function setMyAvatar(a) {
+    try { localStorage.setItem('dralyAvatar', a); } catch (_) {}
+    if (pin) {
+      try { socket.emit('player:set-avatar', { pin, avatar: a }); } catch (_) {}
+    }
+  }
+  function renderAvatarPicker() {
+    const grid = $('avatar-grid');
+    if (!grid) return;
+    const current = getMyAvatar();
+    grid.innerHTML = '';
+    AVATAR_CHOICES.forEach((a) => {
+      const cell = document.createElement('div');
+      cell.className = 'avatar-cell' + (a === current ? ' selected' : '');
+      cell.textContent = a;
+      cell.addEventListener('pointerdown', (e) => {
+        if (e) e.preventDefault();
+        setMyAvatar(a);
+        // Re-render to update selected state
+        grid.querySelectorAll('.avatar-cell').forEach((c) => c.classList.remove('selected'));
+        cell.classList.add('selected');
+        if (navigator.vibrate) navigator.vibrate(15);
+        MochiSounds.swap && MochiSounds.swap();
+      });
+      grid.appendChild(cell);
+    });
   }
 
   // ===== LOBBY MINI-GAME: a tiny client-side Flappy that runs while waiting =====
@@ -519,11 +560,18 @@
     } else if (gameType === 'monopoly') {
       teamLabel = isRed ? 'Equipo Rojo 紅龍' : 'Equipo Dorado 金龍';
       teamMascot = isRed ? '🐉' : '🐲';
+    } else if (gameType === 'zombie') {
+      teamLabel = isRed ? 'Equipo Sobreviviente Rojo' : 'Equipo Sobreviviente Dorado';
+      teamMascot = isRed ? '🏃' : '🏃‍♀️';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
     }
-    if ($('lobby-mascot')) $('lobby-mascot').textContent = teamMascot;
+    // Show team mascot + the player's chosen avatar side by side
+    if ($('lobby-mascot')) {
+      const av = getMyAvatar();
+      $('lobby-mascot').innerHTML = av ? `${av}<span style="margin:0 6px; opacity:0.5;">·</span>${teamMascot}` : teamMascot;
+    }
     if ($('lobby-team-name')) {
       $('lobby-team-name').textContent = teamLabel;
       $('lobby-team-name').style.color = isRed ? 'var(--red-glow)' : 'var(--gold-glow)';
@@ -729,6 +777,9 @@
       } else if (gameType === 'dragon-eye') {
         happyMascot = team === 'red' ? '🐉' : '🐲';
         sub = '¡A volar! Toca rápido para subir ☁️';
+      } else if (gameType === 'zombie') {
+        happyMascot = team === 'red' ? '🏃' : '🏃‍♀️';
+        sub = '¡Corre! Toca rápido para huir 🧟💨';
       } else if (gameType === 'monopoly') {
         happyMascot = '🎲';
         sub = '¡A lanzar el dado!';
@@ -768,11 +819,13 @@
           mashEndTime = mashUntil;
           startDragonFlap();
         } else if (gameType === 'monopoly') {
-          // Monopoly: open the interactive dice-stopper screen so the player
-          // actively rolls. Whatever number they tap-stop on becomes their move.
           if (monopoly && monopoly.needsRoll) {
             startMonopolyRoll(monopoly.money || 0);
           }
+        } else if (gameType === 'zombie') {
+          // Sprint mode — re-use the mash screen with the survivor reskin
+          mashEndTime = mashUntil;
+          startMash();
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -1495,7 +1548,7 @@
     // Re-skin the headline / hint + button based on game
     if (gameType === 'pinata') {
       document.body.classList.add('pinata-active');
-      document.body.classList.remove('dragon-flying-active');
+      document.body.classList.remove('dragon-flying-active', 'zombie-sprinting');
       if ($('mash-headline')) $('mash-headline').innerHTML = '🥢 ¡ROMPE EL TIGRE!';
       if ($('mash-hint')) $('mash-hint').innerHTML = 'Cada toque = un golpe a tu tigre. ¡Sigue golpeando hasta romperlo!';
       const mascotEl = $('mash-mascot');
@@ -1504,8 +1557,18 @@
         mascotEl.classList.remove('pinata-angry', 'pinata-furious', 'pinata-hit');
         mascotEl._pnTaps = 0;
       }
-    } else {
+    } else if (gameType === 'zombie') {
+      document.body.classList.add('zombie-sprinting');
       document.body.classList.remove('pinata-active', 'dragon-flying-active');
+      if ($('mash-headline')) $('mash-headline').innerHTML = '🏃💨 ¡CORRE! Los zombies se acercan';
+      if ($('mash-hint')) $('mash-hint').innerHTML = 'Cada toque = un paso hacia la zona segura 🚁';
+      const mascotEl = $('mash-mascot');
+      if (mascotEl) {
+        mascotEl.textContent = team === 'red' ? '🏃' : '🏃‍♀️';
+        mascotEl.classList.remove('zb-sprint-hit', 'pinata-angry', 'pinata-furious', 'pinata-hit');
+      }
+    } else {
+      document.body.classList.remove('pinata-active', 'dragon-flying-active', 'zombie-sprinting');
       if ($('mash-headline')) $('mash-headline').innerHTML = '⚡ ¡A APLASTAR! ⚡';
       if ($('mash-hint')) $('mash-hint').innerHTML = '¡TOCA, TOCA, TOCA! 🔥 8/seg = combo';
     }
@@ -1525,7 +1588,7 @@
       mashBtn.classList.add('idle');
       mashBtn.classList.remove('combo');
       // Strip game-specific body classes so the next question screen is clean
-      document.body.classList.remove('pinata-active', 'dragon-flying-active');
+      document.body.classList.remove('pinata-active', 'dragon-flying-active', 'zombie-sprinting');
       if (mashTapHandler) {
         mashBtn.removeEventListener('pointerdown', mashTapHandler);
         mashTapHandler = null;
@@ -2827,8 +2890,15 @@
       }
       pnSmashScreenTap();
     } else if (gameType === 'dragon-eye') {
-      // Dragon: visual + sound happen at swipe-time on the flap screen
-      // (see registerFlap). Tap-ack just confirms the server got it.
+      // Dragon: visuals happen at swipe-time on the flap screen.
+    } else if (gameType === 'zombie') {
+      const mascotEl = $('mash-mascot');
+      if (mascotEl) {
+        mascotEl.classList.remove('zb-sprint-hit');
+        void mascotEl.offsetWidth;
+        mascotEl.classList.add('zb-sprint-hit');
+      }
+      if (MochiSounds.whoosh) MochiSounds.whoosh();
     }
   });
 

@@ -1,0 +1,426 @@
+/* Zombie Escape (末日逃生) — host + player styling. Apocalyptic green/grey. */
+
+/* Game-specific background — dark grimy apocalypse sky */
+body.zombie-bg {
+  background:
+    radial-gradient(ellipse at 30% 0%,  rgba(112, 240, 100, 0.18), transparent 55%),
+    radial-gradient(ellipse at 80% 100%, rgba(60, 14, 14, 0.55), transparent 55%),
+    linear-gradient(160deg, #2a3026 0%, #1a1f18 35%, #2c1212 70%, #0e0606 100%);
+  background-attachment: fixed;
+  color: #d9e9ce;
+}
+body.zombie-bg .lantern { display: none; }
+body.zombie-bg .market-banner,
+body.zombie-bg .pin-display {
+  color: #c4f0a8;
+  text-shadow: 0 3px 10px rgba(0,0,0,0.7), 0 0 22px rgba(112, 200, 80, 0.5);
+}
+body.zombie-bg .card {
+  background: rgba(20, 24, 18, 0.85);
+  border-color: rgba(180, 230, 130, 0.35);
+  color: #d9e9ce;
+}
+body.zombie-bg .team-panel {
+  background: rgba(8, 10, 6, 0.65);
+  border-color: rgba(180, 230, 130, 0.5);
+  color: #d9e9ce;
+}
+body.zombie-bg .countdown-overlay { background: rgba(8, 24, 6, 0.86); }
+body.zombie-bg .win-screen { color: #d9e9ce; }
+
+/* === Active stage layout === */
+.zb-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: calc(100vh - 24px);
+}
+
+.zb-topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 14px;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(8,12,6,0.92), rgba(20,24,18,0.92));
+  border: 1px solid rgba(180,230,130,0.45);
+  border-radius: 14px;
+  padding: 10px 16px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+  color: #d9e9ce;
+}
+.zb-team {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 800;
+}
+.zb-team.red  { color: #ff8a91; justify-content: flex-start; }
+.zb-team.gold { color: #ffd57a; justify-content: flex-end; }
+.zb-team-emoji { font-size: 1.8rem; filter: drop-shadow(0 0 10px currentColor); }
+.zb-team-label {
+  font-family: 'Cinzel', serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+}
+.zb-team-dist {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.4rem;
+  background: rgba(0,0,0,0.4);
+  padding: 4px 10px;
+  border-radius: 10px;
+  min-width: 80px;
+  text-align: center;
+}
+.zb-time {
+  font-family: 'Cinzel', serif;
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #d9e9ce;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(180,230,130,0.5);
+  padding: 4px 18px;
+  border-radius: 12px;
+  min-width: 110px;
+  text-align: center;
+}
+.zb-time .urgent {
+  color: #ff5a66;
+  animation: zb-urgent 0.5s ease-in-out infinite alternate;
+}
+@keyframes zb-urgent {
+  from { transform: scale(1); }
+  to   { transform: scale(1.08); }
+}
+
+/* === Stage === Two lanes stacked vertically */
+.zb-stage {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 4px 50px;
+}
+
+.zb-lane {
+  position: relative;
+  flex: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+  /* Apocalyptic horizon — distant dusk fading to dark ground */
+  background:
+    linear-gradient(180deg,
+      #d27040 0%,     /* far horizon (smoky orange) */
+      #a04830 22%,
+      #4a3020 45%,    /* mid-distance hills */
+      #2a2018 65%,    /* near ground */
+      #1a140e 100%);
+}
+.zb-lane.red  { border: 3px solid rgba(255, 138, 145, 0.6); }
+.zb-lane.gold { border: 3px solid rgba(255, 213, 122, 0.6); }
+.zb-lane.caught {
+  animation: zb-caught-flash 0.4s ease-out infinite alternate;
+}
+@keyframes zb-caught-flash {
+  from { box-shadow: inset 0 0 20px rgba(120, 12, 12, 0.5); }
+  to   { box-shadow: inset 0 0 50px rgba(255, 30, 30, 0.85); }
+}
+
+/* Drifting smoke clouds for atmosphere */
+.zb-bg-clouds {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(150,150,140,0.18), transparent 35%),
+    radial-gradient(ellipse at 60% 50%, rgba(180,180,160,0.12), transparent 30%),
+    radial-gradient(ellipse at 85% 25%, rgba(160,170,150,0.15), transparent 30%);
+  pointer-events: none;
+  animation: zb-smoke-drift 30s linear infinite;
+}
+@keyframes zb-smoke-drift {
+  from { background-position: 0 0, 0 0, 0 0; }
+  to   { background-position: -200px 0, 200px 0, -100px 0; }
+}
+
+/* The horizontal track — survivor + zombies move along this */
+.zb-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 65%;
+  /* Cracked-pavement ground gradient */
+  background:
+    linear-gradient(180deg, transparent, rgba(0,0,0,0.4)),
+    repeating-linear-gradient(90deg, rgba(60,40,30,0.3) 0 20px, rgba(40,28,20,0.3) 20px 40px);
+}
+
+.zb-survivor {
+  position: absolute;
+  bottom: 18%;
+  left: 0%;
+  font-size: clamp(2.6rem, 6vw, 4rem);
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.7));
+  z-index: 3;
+  transition: left 0.4s ease-out;
+  user-select: none;
+}
+.zb-survivor.sprinting {
+  animation: zb-survivor-sprint 0.3s ease-out;
+}
+@keyframes zb-survivor-sprint {
+  0%   { transform: translateY(0) rotate(0); }
+  35%  { transform: translateY(-12px) rotate(-8deg) scale(1.1); filter: drop-shadow(0 0 10px gold) drop-shadow(0 4px 8px rgba(0,0,0,0.7)); }
+  100% { transform: translateY(0) rotate(0); }
+}
+.zb-survivor.escaped {
+  animation: zb-survivor-escape 3s ease-in forwards;
+}
+@keyframes zb-survivor-escape {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.4) translateY(-30px); filter: drop-shadow(0 0 30px gold); }
+  100% { transform: scale(0.5) translate(80px, -200px); opacity: 0; }
+}
+
+.zb-zombies {
+  position: absolute;
+  bottom: 18%;
+  left: -10%;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  letter-spacing: -8px;
+  filter: drop-shadow(0 0 8px rgba(120, 240, 80, 0.6)) drop-shadow(0 4px 8px rgba(0,0,0,0.7));
+  z-index: 2;
+  transition: left 0.4s ease-out;
+  animation: zb-zombies-shamble 0.6s ease-in-out infinite alternate;
+  user-select: none;
+}
+@keyframes zb-zombies-shamble {
+  from { transform: translateY(0)   rotate(-2deg); }
+  to   { transform: translateY(-4px) rotate(2deg); }
+}
+
+.zb-safe-zone {
+  position: absolute;
+  right: 1%;
+  bottom: 18%;
+  font-size: clamp(2.4rem, 5vw, 3.5rem);
+  filter: drop-shadow(0 0 16px rgba(120, 240, 80, 0.8));
+  animation: zb-helo-hover 1.5s ease-in-out infinite alternate;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+@keyframes zb-helo-hover {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-8px); }
+}
+.zb-safe-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  background: rgba(0,0,0,0.7);
+  color: #c4f0a8;
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-top: 4px;
+  border: 1px solid rgba(180,230,130,0.5);
+}
+
+.zb-lane-tag {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 8px;
+  z-index: 5;
+}
+.zb-lane-tag.red  { color: #fff; background: rgba(217, 46, 58, 0.85); border: 1px solid #ff8a91; }
+.zb-lane-tag.gold { color: #2a1a05; background: rgba(255, 213, 122, 0.92); border: 1px solid #e89134; }
+
+/* Dust puff behind sprinting runner */
+.zb-puff {
+  position: absolute;
+  bottom: 22%;
+  font-size: 1.6rem;
+  opacity: 0.9;
+  animation: zb-puff 0.6s ease-out forwards;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes zb-puff {
+  0%   { opacity: 0;   transform: translate(0, 0)   scale(0.4); }
+  30%  { opacity: 1;   transform: translate(-10px, -8px) scale(1.1); }
+  100% { opacity: 0;   transform: translate(-40px, 6px)  scale(0.7); }
+}
+.zb-spark {
+  position: absolute;
+  font-size: 2rem;
+  animation: zb-spark-pop 1.4s ease-out forwards;
+  pointer-events: none;
+  z-index: 6;
+}
+@keyframes zb-spark-pop {
+  0%   { opacity: 0;  transform: scale(0.3) rotate(0); }
+  40%  { opacity: 1;  transform: scale(1.4) rotate(180deg); }
+  100% { opacity: 0;  transform: scale(0.8) rotate(540deg) translateY(-50px); }
+}
+
+/* Bottom banner */
+.zb-banner {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.2rem;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(180, 230, 130, 0.6);
+  border-radius: 12px;
+  padding: 8px 18px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+  max-width: 86%;
+  text-align: center;
+  z-index: 9;
+}
+.zb-banner.flash { animation: zb-banner-flash 0.4s ease-out; }
+@keyframes zb-banner-flash {
+  0%   { transform: translateX(-50%) scale(0.9); opacity: 0.4; }
+  100% { transform: translateX(-50%) scale(1);   opacity: 1; }
+}
+
+/* === Avatar chip on host player list (used everywhere) === */
+.chip-avatar {
+  margin-right: 6px;
+  font-size: 1.15rem;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}
+
+/* ============================================================ */
+/* === PLAYER SPRINT SCREEN === */
+/* ============================================================ */
+/* Body class applied during the sprint window. Reskins the mash button into
+   a sprinting survivor — same tap mechanic as Mochi Mash. */
+body.zombie-sprinting {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(120, 240, 80, 0.25), transparent 55%),
+    linear-gradient(160deg, #2a3026 0%, #1a1f18 50%, #0e0606 100%) !important;
+  background-attachment: fixed;
+}
+body.zombie-sprinting #mash-headline {
+  color: #c4f0a8 !important;
+  text-shadow: 0 0 22px rgba(120, 240, 80, 0.7), 0 3px 8px rgba(0,0,0,0.8) !important;
+  font-size: 1.5rem !important;
+}
+body.zombie-sprinting #mash-hint {
+  color: #c4f0a8 !important;
+}
+body.zombie-sprinting #mash-button {
+  background: radial-gradient(circle at 40% 30%, #c4f0a8 0%, #7fbf52 40%, #2a4520 100%) !important;
+  border: 5px solid #0e0606 !important;
+  box-shadow:
+    0 0 40px rgba(120, 240, 80, 0.5),
+    0 16px 30px rgba(0, 0, 0, 0.5),
+    inset 0 6px 14px rgba(220, 255, 200, 0.3) !important;
+  width: min(78vw, 360px) !important;
+  height: min(78vw, 360px) !important;
+  position: relative;
+  overflow: hidden;
+}
+body.zombie-sprinting #mash-mascot {
+  font-size: clamp(10rem, 36vw, 16rem) !important;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.6));
+  user-select: none;
+  animation: zb-mash-hover 1.4s ease-in-out infinite alternate;
+}
+@keyframes zb-mash-hover {
+  from { transform: translateY(0)   rotate(-3deg); }
+  to   { transform: translateY(-10px) rotate(3deg); }
+}
+body.zombie-sprinting #mash-mascot.zb-sprint-hit {
+  animation: zb-mash-sprint 0.25s ease-out;
+}
+@keyframes zb-mash-sprint {
+  0%   { transform: scale(1) rotate(0); }
+  40%  { transform: scale(1.2) translateY(-15px) rotate(-10deg); filter: drop-shadow(0 0 24px #c4f0a8) drop-shadow(0 6px 14px rgba(0,0,0,0.6)); }
+  100% { transform: scale(1) rotate(0); }
+}
+body.zombie-sprinting #mash-button::before {
+  content: '💨';
+  position: absolute;
+  bottom: -10%;
+  left: 50%;
+  font-size: 3rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+body.zombie-sprinting #mash-button.tapped::before {
+  animation: zb-puff-flash 0.4s ease-out;
+}
+@keyframes zb-puff-flash {
+  0%   { opacity: 0;    transform: translate(-50%, 0)    scale(0.5); }
+  40%  { opacity: 0.95; transform: translate(-50%, 40%)  scale(1.4); }
+  100% { opacity: 0;    transform: translate(-50%, 100%) scale(0.8); }
+}
+body.zombie-sprinting .mash-timer-fill {
+  background: linear-gradient(90deg, #c4f0a8, #7fbf52, #ff5a66) !important;
+}
+
+/* ============================================================ */
+/* === AVATAR PICKER (in lobby) === */
+/* ============================================================ */
+.avatar-picker {
+  margin: 16px 0;
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(255, 213, 122, 0.4);
+  border-radius: 14px;
+}
+.avatar-picker-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--gold-glow, #ffd57a);
+  text-align: center;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+.avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+  gap: 8px;
+}
+.avatar-cell {
+  font-size: 1.8rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 213, 122, 0.2);
+  border-radius: 10px;
+  padding: 8px 4px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, border-color 0.2s ease, background 0.2s ease;
+  text-align: center;
+}
+.avatar-cell:active { transform: scale(0.92); }
+.avatar-cell.selected {
+  background: rgba(255, 213, 122, 0.25);
+  border-color: var(--gold-glow, #ffd57a);
+  box-shadow: 0 0 16px rgba(255, 213, 122, 0.6);
+  transform: scale(1.1);
+}

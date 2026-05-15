@@ -191,6 +191,17 @@ const VOCAB_EMOJI = {
   '东西': '📦', '多少': '🔢', '请': '🙏', '谢谢': '🙏',
   '不客气': '😊', '好': '👍', '想': '💭', '喜欢': '❤️'
 };
+// === Zombie Escape (末日逃生) constants ===
+// Each team has a survivor sprinting toward the safe zone with a zombie wave
+// closing in. Correct answer → 5s sprint window where every tap = step
+// forward. Wrong answer → zombies gain ground on that team's survivor.
+// Win = first survivor to reach the safe zone. Lose = zombies catch you.
+const ZB_TRACK_LEN     = 200;   // total distance to safe zone
+const ZB_SPRINT_MS     = 5000;  // sprint mode duration after correct answer
+const ZB_ZOMBIE_GAIN   = 8;     // distance zombies advance on a wrong answer
+const ZB_ZOMBIE_START_BACK = 60; // how far behind the survivor zombies start
+const ZB_HP_BCAST_MS   = 100;
+
 // === Vuelo del Dragón (Dragon Flight) constants ===
 // Each team has its OWN dragon. Players answer vocab → unlock 5 s of flap-mode.
 // Every tap during flap-mode is one wing-beat that lifts the team's dragon
@@ -286,7 +297,7 @@ function publicState(game) {
     players: Object.fromEntries(
       Object.entries(game.players).map(([id, p]) => [
         id,
-        { name: p.name, team: p.team, score: p.score }
+        { name: p.name, team: p.team, score: p.score, avatar: p.avatar || '' }
       ])
     ),
     feed: game.feed.slice(-12)
@@ -569,7 +580,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -579,6 +590,7 @@ io.on('connection', (socket) => {
       type === 'pinata'       ? 240 :
       type === 'dragon-eye'   ? 240 :
       type === 'monopoly'     ? 300 :
+      type === 'zombie'       ? 240 :
       60;
     let grid = null;
     let vendors = null;
@@ -882,6 +894,27 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores
         });
       }
+      // Zombie Escape: each team has a survivor at distance 0 with zombies
+      // chasing at distance -60. Track length 200. First to 200 wins; if the
+      // zombies catch the survivor (distance == survivor), that team loses.
+      if (g.gameType === 'zombie') {
+        g.zombie = {
+          survRed:   0,
+          survGold:  0,
+          zombRed:  -ZB_ZOMBIE_START_BACK,
+          zombGold: -ZB_ZOMBIE_START_BACK,
+          trackLen: ZB_TRACK_LEN,
+          finishedTeam: null,
+          caughtTeam: null
+        };
+        io.to(pin).emit('zb:init', {
+          trackLen: ZB_TRACK_LEN,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team, avatar: p.avatar }])
+          ),
+          teamScores: g.teamScores
+        });
+      }
       broadcast(pin);
       // Mochi Mash + Color Splash + Piñata auto-deal first question.
       // Color Clash → button-driven; Market Quest → vendor-driven; Flappy → death-driven.
@@ -922,7 +955,7 @@ io.on('connection', (socket) => {
     broadcast(pin);
   });
 
-  socket.on('player:join', ({ pin, name }, cb) => {
+  socket.on('player:join', ({ pin, name, avatar }, cb) => {
     const g = games[pin];
     if (!g) return cb({ ok: false, error: 'No game with that PIN' });
     if (g.state === 'ended') return cb({ ok: false, error: 'Game has ended' });
@@ -952,6 +985,8 @@ io.on('connection', (socket) => {
           player.cleanupTimer = null;
         }
       }
+      // Refresh avatar on rejoin so kids can change it across rounds
+      if (avatar && typeof avatar === 'string') player.avatar = String(avatar).slice(0, 8);
       g.feed.push({ type: 'rejoin', name: cleanName, team: player.team, t: Date.now() });
     } else {
       // New player — pick smaller team, spawn position for color splash
@@ -959,6 +994,7 @@ io.on('connection', (socket) => {
       player = {
         name: cleanName,
         team,
+        avatar: (avatar && typeof avatar === 'string') ? String(avatar).slice(0, 8) : '',
         score: 0,
         queueIdx: 0,
         mashUntil: 0,
@@ -1357,15 +1393,41 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
     } else if (g.gameType === 'pinata') {
-      // Piñata: correct → unlock smash mode; wrong → no team-score penalty (the
-      // damage that matters is dealt by the player's own taps to their tiger).
       if (correct) {
         p.mashUntil = Date.now() + PN_MASH_MS;
         io.to(socket.id).emit('answer-result', {
-          correct: true,
-          mashUntil: p.mashUntil,
-          correctText
+          correct: true, mashUntil: p.mashUntil, correctText
         });
+      } else {
+        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+      }
+    } else if (g.gameType === 'zombie') {
+      // Zombie Escape: correct → sprint window. Wrong → zombies gain ground.
+      if (correct && g.zombie && !g.zombie.finishedTeam && !g.zombie.caughtTeam) {
+        p.mashUntil = Date.now() + ZB_SPRINT_MS;
+        io.to(socket.id).emit('answer-result', {
+          correct: true, mashUntil: p.mashUntil, correctText
+        });
+      } else if (!correct && g.zombie && !g.zombie.finishedTeam && !g.zombie.caughtTeam) {
+        // Wrong answer → THIS team's zombies advance
+        const zKey = p.team === 'red' ? 'zombRed' : 'zombGold';
+        const sKey = p.team === 'red' ? 'survRed' : 'survGold';
+        g.zombie[zKey] = Math.min(g.zombie[sKey], g.zombie[zKey] + ZB_ZOMBIE_GAIN);
+        io.to(pin).emit('zb:state', {
+          survRed:  g.zombie.survRed,
+          survGold: g.zombie.survGold,
+          zombRed:  g.zombie.zombRed,
+          zombGold: g.zombie.zombGold,
+          trackLen: g.zombie.trackLen
+        });
+        // Caught? If zombies reach the survivor's distance, that team is lost.
+        if (g.zombie[zKey] >= g.zombie[sKey]) {
+          g.zombie.caughtTeam = p.team;
+          io.to(pin).emit('zb:caught', { team: p.team });
+          if (g.endTimer) clearTimeout(g.endTimer);
+          setTimeout(() => endGame(pin), 3500);
+        }
+        io.to(socket.id).emit('answer-result', { correct: false, correctText });
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
@@ -1397,9 +1459,9 @@ io.on('connection', (socket) => {
     } else if (g.gameType === 'dragon-eye') {
       nextDelay = correct ? DR_MASH_MS + 600 : 1400;
     } else if (g.gameType === 'monopoly') {
-      // Correct → wait for the player's dice roll (handled separately).
-      // Wrong → next question normally.
       nextDelay = correct ? -1 : 1500;
+    } else if (g.gameType === 'zombie') {
+      nextDelay = correct ? ZB_SPRINT_MS + 600 : 1400;
     } else {
       nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
     }
@@ -1454,6 +1516,17 @@ io.on('connection', (socket) => {
   });
 
   // Market Quest: player sends their movement input state (held keys/joystick)
+  // Avatar swap — kids can change their avatar in the lobby without rejoining.
+  socket.on('player:set-avatar', ({ pin, avatar }) => {
+    const g = games[pin];
+    if (!g) return;
+    const p = g.players[socket.id];
+    if (!p) return;
+    if (typeof avatar !== 'string') return;
+    p.avatar = String(avatar).slice(0, 8);
+    broadcast(pin);
+  });
+
   // === Player stuck-recovery resync ===
   // Client watchdog pings this when nothing has happened on its end for 12s.
   // Server replies with the player's current state + re-emits the current
@@ -1631,6 +1704,34 @@ io.on('connection', (socket) => {
     if (combo && Math.random() < 0.15) {
       g.feed.push({ type: 'combo', name: p.name, team: p.team, t: now });
       broadcast(pin);
+    }
+
+    // === Zombie Escape: each tap sprints this player's TEAM survivor forward ===
+    if (g.gameType === 'zombie' && g.zombie && !g.zombie.finishedTeam && !g.zombie.caughtTeam) {
+      const sKey = p.team === 'red' ? 'survRed' : 'survGold';
+      g.zombie[sKey] = Math.min(g.zombie.trackLen, g.zombie[sKey] + points);
+      if (!g.lastZbBcast || now - g.lastZbBcast >= ZB_HP_BCAST_MS) {
+        g.lastZbBcast = now;
+        io.to(pin).emit('zb:state', {
+          survRed:  g.zombie.survRed,
+          survGold: g.zombie.survGold,
+          zombRed:  g.zombie.zombRed,
+          zombGold: g.zombie.zombGold,
+          trackLen: g.zombie.trackLen
+        });
+      }
+      // Win check — first survivor to reach the safe zone
+      if (g.zombie[sKey] >= g.zombie.trackLen) {
+        g.zombie.finishedTeam = p.team;
+        io.to(pin).emit('zb:escaped', {
+          team: p.team,
+          survRed:  g.zombie.survRed,
+          survGold: g.zombie.survGold,
+          teamScores: g.teamScores
+        });
+        if (g.endTimer) clearTimeout(g.endTimer);
+        setTimeout(() => endGame(pin), 3500);
+      }
     }
 
     // === Vuelo del Dragón: each tap lifts this player's TEAM dragon ===

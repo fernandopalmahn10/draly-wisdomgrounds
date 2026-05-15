@@ -523,7 +523,7 @@
     Object.entries(playersMap || {}).forEach(([id, p]) => {
       const chip = document.createElement('div');
       chip.className = 'player-chip';
-      chip.innerHTML = `<span>${escapeHtml(p.name)}</span><span class="swap-arrow">↔</span>`;
+      chip.innerHTML = `${p.avatar ? `<span class="chip-avatar">${p.avatar}</span>` : ""}<span>${escapeHtml(p.name)}</span><span class="swap-arrow">↔</span>`;
       chip.addEventListener('click', () => {
         socket.emit('host:swap-team', { pin, playerId: id });
         MochiSounds.swap();

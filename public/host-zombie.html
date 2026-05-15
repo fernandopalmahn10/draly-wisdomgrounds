@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>末日逃生 · Zombie Escape · Host</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+  <link rel="stylesheet" href="/css/zombie.css">
+</head>
+<body class="zombie-bg">
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+
+  <!-- LOBBY -->
+  <div id="screen-lobby" class="container">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div class="market-banner">🧟 末日逃生 · Zombie Escape 🏃</div>
+      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
+      <div class="pin-display" id="pin-display">····</div>
+      <div style="color:var(--ink-dim); font-size:0.9rem;">
+        Tus jugadores entran en <span id="join-url" style="color:var(--gold-glow); font-weight:800;">esta URL</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div style="font-size:2rem;">📚</div>
+        <div style="flex:1;">
+          <div style="font-size:0.75rem; color:var(--ink-dim); letter-spacing:0.15em; text-transform:uppercase;">Set cargado</div>
+          <div id="set-title-display" style="font-weight:800; font-size:1.15rem;">…</div>
+          <div id="set-count-display" style="color:var(--ink-dim); font-size:0.85rem;">…</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="location.href='/games.html?setId=' + new URLSearchParams(location.search).get('setId')">Cambiar juego</button>
+      </div>
+      <div class="duration-control">
+        <span>⏱ Duración máxima</span>
+        <input type="range" id="duration-slider" min="120" max="600" step="30" value="240">
+        <span class="duration-value" id="duration-value">4m</span>
+      </div>
+    </div>
+
+    <div class="host-grid">
+      <div class="team-panel team-red">
+        <div class="team-header">
+          <div class="team-mascot">👨</div>
+          <div>
+            <div class="team-name">Equipo Sobreviviente Rojo</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">紅幸存者</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-red"></div>
+      </div>
+      <div class="team-panel team-gold">
+        <div class="team-header">
+          <div class="team-mascot">👩</div>
+          <div>
+            <div class="team-name">Equipo Sobreviviente Dorado</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">金幸存者</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-gold"></div>
+      </div>
+    </div>
+
+    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:12px;">
+      Toca el chip de un jugador para cambiar de equipo
+    </p>
+
+    <div class="controls-panel">
+      <div class="controls-row" style="justify-content:center;">
+        <button class="btn btn-ghost" id="balance-btn">⚖️ Equilibrar</button>
+        <button class="btn btn-jade" id="start-btn" disabled>▶️ ¡A correr de los zombies!</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se juega</div>
+      <ol style="color:var(--ink-dim); font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
+        <li>Cada equipo tiene un <strong>sobreviviente 🏃</strong> con una <strong>horda de zombies 🧟</strong> persiguiéndolos.</li>
+        <li>Responde bien → <strong>5 s de sprint</strong>. Cada toque = un paso hacia la zona segura 🚁.</li>
+        <li>Responde mal → la horda <strong>se acerca</strong> a tu sobreviviente.</li>
+        <li>Si los zombies te <strong>alcanzan</strong>: tu equipo pierde.</li>
+        <li>Primer sobreviviente que llega al helipuerto: ¡el equipo gana! 🚁✈️</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="screen-countdown" class="hidden countdown-overlay">
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <!-- ACTIVE — side-scrolling escape view -->
+  <div id="screen-active" class="hidden zb-container">
+    <div class="sticky-pin">
+      <span class="sticky-pin-label">PIN</span>
+      <span class="sticky-pin-value" id="active-pin-display">····</span>
+    </div>
+
+    <div class="zb-topbar">
+      <div class="zb-team red">
+        <span class="zb-team-emoji">🏃</span>
+        <span class="zb-team-label">Rojo</span>
+        <span class="zb-team-dist"><span id="dist-red">0</span> m</span>
+      </div>
+      <div class="zb-time"><span id="timer-display">4:00</span></div>
+      <div class="zb-team gold">
+        <span class="zb-team-dist"><span id="dist-gold">0</span> m</span>
+        <span class="zb-team-label">Dorado</span>
+        <span class="zb-team-emoji">🏃‍♀️</span>
+      </div>
+    </div>
+
+    <!-- Two lanes, one per team. Each lane is a horizontal track. -->
+    <div class="zb-stage">
+      <div class="zb-lane red" id="zb-lane-red">
+        <div class="zb-bg-clouds"></div>
+        <div class="zb-track">
+          <div class="zb-zombies" id="zb-zombies-red">🧟🧟‍♂️🧟🧟‍♀️🧟</div>
+          <div class="zb-survivor" id="zb-survivor-red">🏃</div>
+          <div class="zb-safe-zone">🚁<div class="zb-safe-label">ZONA SEGURA</div></div>
+        </div>
+        <div class="zb-lane-tag red">🏃 Equipo Rojo</div>
+      </div>
+
+      <div class="zb-lane gold" id="zb-lane-gold">
+        <div class="zb-bg-clouds"></div>
+        <div class="zb-track">
+          <div class="zb-zombies" id="zb-zombies-gold">🧟🧟‍♂️🧟🧟‍♀️🧟</div>
+          <div class="zb-survivor" id="zb-survivor-gold">🏃‍♀️</div>
+          <div class="zb-safe-zone">🚁<div class="zb-safe-label">ZONA SEGURA</div></div>
+        </div>
+        <div class="zb-lane-tag gold">🏃‍♀️ Equipo Dorado</div>
+      </div>
+
+      <div class="zb-banner" id="zb-banner">¡A correr! 跑！</div>
+    </div>
+
+    <div style="text-align:center; padding:8px;">
+      <button class="btn btn-ghost btn-sm" id="end-now-btn">🛑 Terminar ronda</button>
+    </div>
+  </div>
+
+  <!-- WIN -->
+  <div id="screen-win" class="hidden container">
+    <div class="win-screen">
+      <div id="win-emoji" style="font-size:7rem;">🚁</div>
+      <div class="winner-banner" id="win-banner">¡Equipo Rojo escapó!</div>
+      <div class="final-scores">
+        <div><span class="red" id="final-red">0</span></div>
+        <div style="color:var(--ink-dim);">vs</div>
+        <div><span class="gold" id="final-gold">0</span></div>
+      </div>
+      <div class="win-narration" id="win-narration"></div>
+      <div class="leaderboard" id="leaderboard"></div>
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Inicio</button>
+        <button class="btn btn-jade" id="play-again-btn">🔄 Nueva ronda</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js?v=20260515"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/host-zombie.js?v=20260515"></script>
+</body>
+</html>
