@@ -203,6 +203,85 @@ const ZB_WRONG_SETBACK = 8;     // survivor steps back this many m on wrong answ
 const ZB_ZOMBIE_START_BACK = 60; // how far behind the survivor zombies start
 const ZB_HP_BCAST_MS   = 100;
 
+// === Mi Familia (Family House Tycoon) constants ===
+// Each team builds out a 4-room house: Sala / Cocina / Dormitorio / Jardín.
+// Correct answer awards the player a random token (family member, pet, or
+// furniture). They tap a room on their phone to place it. The host screen
+// shows both team houses in real time, getting more decorated with each
+// placement. Win = most items placed at time end (or first to fill all rooms).
+const FM_ROOMS = ['sala', 'cocina', 'dormitorio', 'jardin'];
+const FM_ROOM_LABELS = { sala: 'Sala', cocina: 'Cocina', dormitorio: 'Dormitorio', jardin: 'Jardín' };
+// Each token has an emoji + which rooms it makes sense in. Items can be
+// placed in `any` room or restricted to specific rooms for realism.
+const FM_TOKENS = [
+  { id: 'dad',    emoji: '👨',    name: 'Papá',    rooms: ['sala', 'cocina', 'dormitorio'] },
+  { id: 'mom',    emoji: '👩',    name: 'Mamá',    rooms: ['sala', 'cocina', 'dormitorio'] },
+  { id: 'kid',    emoji: '🧒',    name: 'Hijo',    rooms: ['sala', 'dormitorio', 'jardin'] },
+  { id: 'baby',   emoji: '👶',    name: 'Bebé',    rooms: ['sala', 'dormitorio'] },
+  { id: 'gran',   emoji: '👵',    name: 'Abuela',  rooms: ['sala', 'cocina'] },
+  { id: 'grandpa',emoji: '👴',    name: 'Abuelo',  rooms: ['sala', 'jardin'] },
+  { id: 'dog',    emoji: '🐕',    name: 'Perro',   rooms: ['sala', 'jardin'] },
+  { id: 'cat',    emoji: '🐱',    name: 'Gato',    rooms: ['sala', 'dormitorio', 'jardin'] },
+  { id: 'fish',   emoji: '🐠',    name: 'Pez',     rooms: ['sala'] },
+  { id: 'sofa',   emoji: '🛋',     name: 'Sofá',    rooms: ['sala'] },
+  { id: 'tv',     emoji: '📺',    name: 'TV',      rooms: ['sala'] },
+  { id: 'lamp',   emoji: '💡',    name: 'Lámpara', rooms: ['sala', 'dormitorio'] },
+  { id: 'fridge', emoji: '🧊',    name: 'Nevera',  rooms: ['cocina'] },
+  { id: 'stove',  emoji: '🍳',    name: 'Estufa',  rooms: ['cocina'] },
+  { id: 'pot',    emoji: '🍲',    name: 'Olla',    rooms: ['cocina'] },
+  { id: 'noodle', emoji: '🍜',    name: 'Fideos',  rooms: ['cocina'] },
+  { id: 'tea',    emoji: '🍵',    name: 'Té',      rooms: ['cocina', 'sala'] },
+  { id: 'bed',    emoji: '🛏',     name: 'Cama',    rooms: ['dormitorio'] },
+  { id: 'book',   emoji: '📚',    name: 'Libros',  rooms: ['dormitorio', 'sala'] },
+  { id: 'plant',  emoji: '🪴',    name: 'Planta',  rooms: ['jardin', 'sala'] },
+  { id: 'flower', emoji: '🌸',    name: 'Flores',  rooms: ['jardin'] },
+  { id: 'tree',   emoji: '🌳',    name: 'Árbol',   rooms: ['jardin'] },
+  { id: 'bike',   emoji: '🚲',    name: 'Bici',    rooms: ['jardin'] },
+  { id: 'sun',    emoji: '☀️',    name: 'Sol',     rooms: ['jardin'] },
+  { id: 'lantern',emoji: '🏮',    name: 'Farolillo', rooms: ['sala', 'jardin'] }
+];
+const FM_PLACE_WINDOW_MS = 8000; // player has 8s to pick a room
+
+function fmPickToken() {
+  return FM_TOKENS[Math.floor(Math.random() * FM_TOKENS.length)];
+}
+
+// Apply a placement: token goes into the requested room (or first valid room
+// if the requested one doesn't fit), updates team score, broadcasts to room,
+// queues the next question for the player.
+function fmPlace(pin, pid, requestedRoom) {
+  const g = games[pin];
+  if (!g || g.gameType !== 'family' || g.state !== 'active') return;
+  const p = g.players[pid];
+  if (!p || !p.fmToken) return;
+  const t = p.fmToken;
+  // Validate room — if invalid for this token, use the first valid room
+  const room = (FM_ROOMS.includes(requestedRoom) && t.rooms.includes(requestedRoom))
+    ? requestedRoom
+    : t.rooms[0];
+  p.fmToken = null;
+  if (!g.family[p.team]) {
+    g.family[p.team] = { sala: [], cocina: [], dormitorio: [], jardin: [] };
+  }
+  g.family[p.team][room].push({ id: t.id, emoji: t.emoji, by: p.name, t: Date.now() });
+  p.score = (p.score || 0) + 1;
+  g.teamScores[p.team] = (g.teamScores[p.team] || 0) + 1;
+  io.to(pin).emit('fm:placed', {
+    team: p.team,
+    room,
+    token: { id: t.id, emoji: t.emoji, name: t.name },
+    playerName: p.name,
+    teamScores: g.teamScores
+  });
+  io.to(pid).emit('fm:place-confirmed', { room, token: t });
+  // Queue next question
+  setTimeout(() => {
+    if (!games[pin] || games[pin].state !== 'active') return;
+    const q = nextQuestionFor(g, pid);
+    if (q) io.to(pid).emit('question', q);
+  }, 1400);
+}
+
 // === Vuelo del Dragón (Dragon Flight) constants ===
 // Each team has its OWN dragon. Players answer vocab → unlock 5 s of flap-mode.
 // Every tap during flap-mode is one wing-beat that lifts the team's dragon
@@ -612,7 +691,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -623,6 +702,7 @@ io.on('connection', (socket) => {
       type === 'dragon-eye'   ? 240 :
       type === 'monopoly'     ? 300 :
       type === 'zombie'       ? 240 :
+      type === 'family'       ? 300 :
       60;
     let grid = null;
     let vendors = null;
@@ -929,6 +1009,24 @@ io.on('connection', (socket) => {
       // Zombie Escape: each team has a survivor at distance 0 with zombies
       // chasing at distance -60. Track length 200. First to 200 wins; if the
       // zombies catch the survivor (distance == survivor), that team loses.
+      if (g.gameType === 'family') {
+        // Initialize an empty 4-room house per team
+        g.family = {
+          red:  { sala: [], cocina: [], dormitorio: [], jardin: [] },
+          gold: { sala: [], cocina: [], dormitorio: [], jardin: [] }
+        };
+        // Each player can have one pending token at a time
+        Object.values(g.players).forEach((p) => { p.fmToken = null; });
+        io.to(pin).emit('fm:init', {
+          rooms: FM_ROOMS,
+          roomLabels: FM_ROOM_LABELS,
+          tokens: FM_TOKENS,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team, avatar: p.avatar }])
+          ),
+          teamScores: g.teamScores
+        });
+      }
       if (g.gameType === 'zombie') {
         g.zombie = {
           survRed:   0,
@@ -1432,6 +1530,30 @@ io.on('connection', (socket) => {
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
+    } else if (g.gameType === 'family') {
+      // Mi Familia: correct → award a random token; the player will tap a room
+      // on their phone to place it. Wrong → no reward, next question normally.
+      if (correct) {
+        const token = fmPickToken();
+        p.fmToken = token;
+        p.fmTokenAt = Date.now();
+        io.to(socket.id).emit('answer-result', {
+          correct: true,
+          correctText,
+          familyToken: token
+        });
+        // Safety: if the player never places within the window, auto-place in
+        // the first valid room so the game keeps moving
+        setTimeout(() => {
+          if (!games[pin] || games[pin].state !== 'active') return;
+          const pNow = games[pin].players[socket.id];
+          if (!pNow || !pNow.fmToken) return;
+          const t = pNow.fmToken;
+          fmPlace(pin, socket.id, t.rooms[0]);
+        }, FM_PLACE_WINDOW_MS + 300);
+      } else {
+        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+      }
     } else if (g.gameType === 'zombie') {
       // Zombie Escape: correct → sprint window. Wrong → SURVIVOR steps back
       // (jump-back penalty) but the game never auto-ends from a wrong answer.
@@ -1492,6 +1614,9 @@ io.on('connection', (socket) => {
       nextDelay = correct ? -1 : 1500;
     } else if (g.gameType === 'zombie') {
       nextDelay = correct ? ZB_SPRINT_MS + 600 : 1400;
+    } else if (g.gameType === 'family') {
+      // Correct → wait for placement; placement handler queues next question.
+      nextDelay = correct ? -1 : 1500;
     } else {
       nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
     }
@@ -1608,6 +1733,11 @@ io.on('connection', (socket) => {
         if (q) io.to(socket.id).emit('question', q);
       }
     }
+  });
+
+  // Mi Familia: player tapped a room to place their awarded token.
+  socket.on('family:place', ({ pin, room }) => {
+    fmPlace(pin, socket.id, room);
   });
 
   // Chinese Monopoly: player committed their tap-stopped dice value (1..6).

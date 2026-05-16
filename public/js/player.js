@@ -572,6 +572,9 @@
     } else if (gameType === 'zombie') {
       teamLabel = isRed ? 'Equipo Sobreviviente Rojo' : 'Equipo Sobreviviente Dorado';
       teamMascot = isRed ? '🏃' : '🏃‍♀️';
+    } else if (gameType === 'family') {
+      teamLabel = isRed ? 'Familia Roja 紅家' : 'Familia Dorada 金家';
+      teamMascot = isRed ? '🏡' : '🏠';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
@@ -760,7 +763,7 @@
     });
   });
 
-  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly }) => {
+  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly, familyToken }) => {
     markActivity();
     clearAnswerHeartbeat();
     hideSendingOverlay();
@@ -792,6 +795,9 @@
       } else if (gameType === 'zombie') {
         happyMascot = team === 'red' ? '🏃' : '🏃‍♀️';
         sub = '¡Corre! Toca rápido para huir 🧟💨';
+      } else if (gameType === 'family') {
+        happyMascot = familyToken ? familyToken.emoji : '🎁';
+        sub = `¡Ganaste ${familyToken ? familyToken.name : 'un objeto'}! Elige un cuarto…`;
       } else if (gameType === 'monopoly') {
         happyMascot = '🎲';
         sub = '¡A lanzar el dado!';
@@ -835,9 +841,10 @@
             startMonopolyRoll(monopoly.money || 0);
           }
         } else if (gameType === 'zombie') {
-          // Sprint mode — auto-runner with timed JUMP button (NOT tap-mash).
           mashEndTime = mashUntil;
           startZombieSprint();
+        } else if (gameType === 'family') {
+          if (familyToken) startFamilyPlace(familyToken);
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -1032,6 +1039,57 @@
       setTimeout(() => c.remove(), 1500);
     }
   }
+
+  // === Mi Familia: place-token screen ===
+  // Player gets an awarded token + picks a room. Hooked into the standard
+  // answer-result flow but uses its own dedicated screen.
+  let fmActiveTimer = null;
+  let fmActiveDeadline = 0;
+  function startFamilyPlace(token) {
+    if (!token) return;
+    showScreen('family-place');
+    if ($('fm-token-emoji')) $('fm-token-emoji').textContent = token.emoji;
+    if ($('fm-token-name'))  $('fm-token-name').textContent  = token.name || '';
+    // Mark recommended rooms (where this item really fits) brighter.
+    const rooms = ['sala', 'cocina', 'dormitorio', 'jardin'];
+    rooms.forEach((r) => {
+      const btn = document.querySelector(`.fm-place-room-btn[data-room="${r}"]`);
+      if (!btn) return;
+      btn.classList.remove('picked');
+      const fits = Array.isArray(token.rooms) && token.rooms.includes(r);
+      if (fits) btn.classList.remove('disabled');
+      else btn.classList.add('disabled');
+      btn.disabled = false;
+      btn.onpointerdown = (e) => {
+        if (e) e.preventDefault();
+        // Visual lock immediately
+        document.querySelectorAll('.fm-place-room-btn').forEach((b) => b.disabled = true);
+        btn.classList.add('picked');
+        socket.emit('family:place', { pin, room: r });
+        if (navigator.vibrate) navigator.vibrate(20);
+        MochiSounds.correct && MochiSounds.correct();
+      };
+    });
+    // 8-second window timer bar
+    const totalMs = 8000;
+    fmActiveDeadline = Date.now() + totalMs;
+    if (fmActiveTimer) clearInterval(fmActiveTimer);
+    fmActiveTimer = setInterval(() => {
+      const remaining = Math.max(0, fmActiveDeadline - Date.now());
+      const fill = $('fm-place-timer-fill');
+      if (fill) fill.style.width = ((remaining / totalMs) * 100) + '%';
+      if (remaining <= 0) {
+        clearInterval(fmActiveTimer);
+        fmActiveTimer = null;
+        // Server auto-places after window; client just shows a soft state
+      }
+    }, 100);
+  }
+  socket.on('fm:place-confirmed', ({ room, token }) => {
+    if (fmActiveTimer) { clearInterval(fmActiveTimer); fmActiveTimer = null; }
+    // Stay on the family-place screen briefly so the player sees their choice;
+    // the next 'question' event will switch us back to the question screen.
+  });
 
   // === Zombie Escape: timed-jump auto-runner ===
   // Pseudo-3D parallax environment (sky → mountains → skyline → smoke → horde
@@ -3226,7 +3284,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });
