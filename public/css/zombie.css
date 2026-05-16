@@ -455,16 +455,20 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
   25%  { opacity: 0.85; transform: scale(1);    }
   100% { opacity: 0;    transform: scale(1.02); }
 }
-.zb-sprint-stage.rumble {
-  animation: zb-stage-rumble 0.4s linear;
-}
-@keyframes zb-stage-rumble {
-  0%   { transform: translate(0, 0); }
-  20%  { transform: translate(-3px, 2px); }
-  40%  { transform: translate(2px, -3px); }
-  60%  { transform: translate(-2px, 3px); }
-  80%  { transform: translate(3px, -2px); }
-  100% { transform: translate(0, 0); }
+/* Stage rumble — toned down per host-screen calmness directive. The rumble
+   now only fires on the player's phone (small viewport), not on the host's
+   big screen, by guarding the rule with a max-width media query. */
+@media (max-width: 768px) {
+  .zb-sprint-stage.rumble {
+    animation: zb-stage-rumble 0.4s linear;
+  }
+  @keyframes zb-stage-rumble {
+    0%   { transform: translate(0, 0); }
+    25%  { transform: translate(-2px, 1px); }
+    50%  { transform: translate(1px, -2px); }
+    75%  { transform: translate(-1px, 2px); }
+    100% { transform: translate(0, 0); }
+  }
 }
 .zb-sprint-sky {
   position: absolute;

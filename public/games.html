@@ -103,6 +103,25 @@
         <button class="btn btn-red btn-xl game-card-play">▶ ¡A girar el dado!</button>
       </div>
 
+      <div class="game-card" id="card-family">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🏡</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Mi Familia</div>
+            <div class="game-tile-badge new">¡Nuevo!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🏡 我的家庭 — Construye tu casa con tu familia. Cada respuesta correcta te da un objeto sorpresa: 👨 papá, 🐕 perro, 🛋 sofá, 🌳 árbol… Tú eliges en qué cuarto ponerlo. ¡El equipo con la casa más decorada gana!
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Tycoon</span>
+          <span class="tag">Coop</span>
+          <span class="tag">Vocabulario</span>
+        </div>
+        <button class="btn btn-red btn-xl game-card-play">▶ Construir la casa</button>
+      </div>
+
       <div class="game-card" id="card-zombie">
         <div class="game-card-header">
           <div class="game-card-emoji">🧟</div>
@@ -215,6 +234,9 @@
       document.querySelector('#card-zombie .game-card-play').onclick = () => {
         location.href = '/host-zombie.html?setId=' + encodeURIComponent(setId);
       };
+      document.querySelector('#card-family .game-card-play').onclick = () => {
+        location.href = '/host-family.html?setId=' + encodeURIComponent(setId);
+      };
     } else {
       document.getElementById('set-name').textContent = 'elige un juego, luego una serie';
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
@@ -241,6 +263,9 @@
       };
       document.querySelector('#card-zombie .game-card-play').onclick = () => {
         location.href = '/sets.html?game=zombie';
+      };
+      document.querySelector('#card-family .game-card-play').onclick = () => {
+        location.href = '/sets.html?game=family';
       };
     }
 
