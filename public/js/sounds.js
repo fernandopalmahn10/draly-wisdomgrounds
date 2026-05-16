@@ -357,6 +357,15 @@
       tone({ freq: 180, dur: 0.18, type: 'sine', vol: 0.16, slideTo: 480 });
       tone({ freq: 90,  dur: 0.12, type: 'triangle', vol: 0.10, delay: 0.04 });
     },
+    zombieGroan(intensity) {
+      // Low, growling groan with downward pitch slide + breathy noise tail.
+      // Intensity 0..1 scales volume + duration so distant ambient groans
+      // sound faint and "near miss" scares sound loud + close.
+      const v = Math.max(0.05, Math.min(1, intensity || 0.4));
+      tone({ freq: 110, dur: 0.7 * v + 0.2, type: 'sawtooth', vol: 0.10 * v, slideTo: 55 });
+      tone({ freq: 75,  dur: 0.5 * v + 0.15, type: 'triangle', vol: 0.08 * v, slideTo: 40, delay: 0.06 });
+      noise({ dur: 0.4 * v, vol: 0.06 * v, delay: 0.05 });
+    },
     candySpill() {
       // Cheerful confetti-y cascade for when the piñata bursts
       [880, 1320, 1760, 2200, 1760, 1320].forEach((f, i) =>

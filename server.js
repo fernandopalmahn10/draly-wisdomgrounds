@@ -199,6 +199,7 @@ const VOCAB_EMOJI = {
 const ZB_TRACK_LEN     = 200;   // total distance to safe zone
 const ZB_SPRINT_MS     = 5000;  // sprint mode duration after correct answer
 const ZB_ZOMBIE_GAIN   = 8;     // distance zombies advance on a wrong answer
+const ZB_WRONG_SETBACK = 8;     // survivor steps back this many m on wrong answer
 const ZB_ZOMBIE_START_BACK = 60; // how far behind the survivor zombies start
 const ZB_HP_BCAST_MS   = 100;
 
@@ -273,7 +274,14 @@ function emojiForChinese(chinese) {
 }
 
 function genPin() {
+  // Prefer short 3-digit PINs (100-999) so kids can type them in 1 second.
+  // If we ever have so many active games that 3-digit space is exhausted
+  // (~50+ collisions in a row), fall back to a 4-digit PIN (1000-9999).
   let pin;
+  for (let tries = 0; tries < 50; tries++) {
+    pin = String(Math.floor(100 + Math.random() * 900));
+    if (!games[pin]) return pin;
+  }
   do {
     pin = String(Math.floor(1000 + Math.random() * 9000));
   } while (games[pin]);
@@ -304,9 +312,33 @@ function publicState(game) {
   };
 }
 
+// Throttled broadcast — coalesces rapid-fire calls (avatar swap, swap-team,
+// join/rejoin churn) into at most one 'state' emit per 120ms per game.
+// This is the cheapest lag win: instead of pushing 5-10 state events per
+// second during busy moments, we push max ~8/s — clients still feel realtime
+// but use 5x less bandwidth + render budget.
+const BROADCAST_THROTTLE_MS = 120;
 function broadcast(pin) {
   if (!games[pin]) return;
-  io.to(pin).emit('state', publicState(games[pin]));
+  const g = games[pin];
+  const now = Date.now();
+  // Always send if more than threshold has passed
+  if (!g._lastBcast || now - g._lastBcast >= BROADCAST_THROTTLE_MS) {
+    g._lastBcast = now;
+    if (g._pendingBcast) { clearTimeout(g._pendingBcast); g._pendingBcast = null; }
+    io.to(pin).emit('state', publicState(g));
+    return;
+  }
+  // Coalesce: schedule a single trailing-edge broadcast so the latest state
+  // gets through even if the burst keeps firing.
+  if (g._pendingBcast) return;
+  const wait = BROADCAST_THROTTLE_MS - (now - g._lastBcast);
+  g._pendingBcast = setTimeout(() => {
+    g._pendingBcast = null;
+    if (!games[pin]) return;
+    games[pin]._lastBcast = Date.now();
+    io.to(pin).emit('state', publicState(games[pin]));
+  }, Math.max(20, wait));
 }
 
 function nextQuestionFor(game, playerId) {
@@ -904,8 +936,7 @@ io.on('connection', (socket) => {
           zombRed:  -ZB_ZOMBIE_START_BACK,
           zombGold: -ZB_ZOMBIE_START_BACK,
           trackLen: ZB_TRACK_LEN,
-          finishedTeam: null,
-          caughtTeam: null
+          finishedTeam: null
         };
         io.to(pin).emit('zb:init', {
           trackLen: ZB_TRACK_LEN,
@@ -1402,17 +1433,21 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
     } else if (g.gameType === 'zombie') {
-      // Zombie Escape: correct → sprint window. Wrong → zombies gain ground.
-      if (correct && g.zombie && !g.zombie.finishedTeam && !g.zombie.caughtTeam) {
+      // Zombie Escape: correct → sprint window. Wrong → SURVIVOR steps back
+      // (jump-back penalty) but the game never auto-ends from a wrong answer.
+      // This avoids the "I got kicked for one wrong answer" feeling.
+      if (correct && g.zombie && !g.zombie.finishedTeam) {
         p.mashUntil = Date.now() + ZB_SPRINT_MS;
         io.to(socket.id).emit('answer-result', {
           correct: true, mashUntil: p.mashUntil, correctText
         });
-      } else if (!correct && g.zombie && !g.zombie.finishedTeam && !g.zombie.caughtTeam) {
-        // Wrong answer → THIS team's zombies advance
-        const zKey = p.team === 'red' ? 'zombRed' : 'zombGold';
+      } else if (!correct && g.zombie && !g.zombie.finishedTeam) {
         const sKey = p.team === 'red' ? 'survRed' : 'survGold';
-        g.zombie[zKey] = Math.min(g.zombie[sKey], g.zombie[zKey] + ZB_ZOMBIE_GAIN);
+        const zKey = p.team === 'red' ? 'zombRed' : 'zombGold';
+        // Survivor stumbles back; never below 0
+        g.zombie[sKey] = Math.max(0, g.zombie[sKey] - ZB_WRONG_SETBACK);
+        // Zombies creep a little closer (visual threat, not a kill condition)
+        g.zombie[zKey] = Math.min(g.zombie[sKey] - 10, g.zombie[zKey] + 4);
         io.to(pin).emit('zb:state', {
           survRed:  g.zombie.survRed,
           survGold: g.zombie.survGold,
@@ -1420,14 +1455,9 @@ io.on('connection', (socket) => {
           zombGold: g.zombie.zombGold,
           trackLen: g.zombie.trackLen
         });
-        // Caught? If zombies reach the survivor's distance, that team is lost.
-        if (g.zombie[zKey] >= g.zombie[sKey]) {
-          g.zombie.caughtTeam = p.team;
-          io.to(pin).emit('zb:caught', { team: p.team });
-          if (g.endTimer) clearTimeout(g.endTimer);
-          setTimeout(() => endGame(pin), 3500);
-        }
-        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+        io.to(socket.id).emit('answer-result', {
+          correct: false, correctText, zombieSetback: ZB_WRONG_SETBACK
+        });
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
@@ -1707,7 +1737,7 @@ io.on('connection', (socket) => {
     }
 
     // === Zombie Escape: each tap sprints this player's TEAM survivor forward ===
-    if (g.gameType === 'zombie' && g.zombie && !g.zombie.finishedTeam && !g.zombie.caughtTeam) {
+    if (g.gameType === 'zombie' && g.zombie && !g.zombie.finishedTeam) {
       const sKey = p.team === 'red' ? 'survRed' : 'survGold';
       g.zombie[sKey] = Math.min(g.zombie.trackLen, g.zombie[sKey] + points);
       if (!g.lastZbBcast || now - g.lastZbBcast >= ZB_HP_BCAST_MS) {

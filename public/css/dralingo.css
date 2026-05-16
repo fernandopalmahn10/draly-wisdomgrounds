@@ -103,6 +103,50 @@
   }
 }
 
+/* === Simplified home layout — Join + Rematch === */
+.home-paths {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+.home-rematch {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+.home-rematch button { width: 100%; }
+.home-rematch-sub {
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+}
+.home-join-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+}
+.home-join-label {
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--gold-glow);
+  text-align: center;
+  font-size: 1rem;
+  text-transform: uppercase;
+}
+.home-input-big {
+  font-size: 1.6rem !important;
+  text-align: center;
+  letter-spacing: 0.3em;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
 /* "Tap for sound" hint — fades out on first interaction */
 .sound-hint {
   position: fixed;
