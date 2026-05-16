@@ -594,12 +594,17 @@ body.zombie-sprinting .mash-timer-fill {
 /* ============================================================ */
 /* === AVATAR PICKER (in lobby) === */
 /* ============================================================ */
+/* Picker scales with the viewport so it never overflows or shrinks past
+   tappability on phones / tablets / desktops. The grid auto-fills as many
+   columns as fit, with a min cell size that grows with viewport width. */
 .avatar-picker {
   margin: 16px 0;
-  padding: 14px;
-  background: rgba(0, 0, 0, 0.35);
-  border: 2px solid rgba(255, 213, 122, 0.4);
-  border-radius: 14px;
+  padding: clamp(10px, 2.5vw, 16px);
+  background: rgba(0, 0, 0, 0.42);
+  border: 2px solid rgba(255, 213, 122, 0.45);
+  border-radius: 16px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 .avatar-picker-title {
   font-family: 'Cinzel', serif;
@@ -607,30 +612,41 @@ body.zombie-sprinting .mash-timer-fill {
   letter-spacing: 0.06em;
   color: var(--gold-glow, #ffd57a);
   text-align: center;
-  font-size: 1rem;
+  font-size: clamp(0.9rem, 2.4vw, 1.15rem);
   margin-bottom: 10px;
 }
 .avatar-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
-  gap: 8px;
+  /* Auto-fit columns; each cell ~52..72px wide depending on viewport */
+  grid-template-columns: repeat(auto-fit, minmax(clamp(48px, 10vw, 64px), 1fr));
+  gap: clamp(6px, 1.4vw, 10px);
+  width: 100%;
+  box-sizing: border-box;
 }
 .avatar-cell {
-  font-size: 1.8rem;
+  /* Square aspect so emoji always sits in a clean tile, and the touch target
+     stays generous (>=44px on phones) regardless of viewport */
+  aspect-ratio: 1 / 1;
+  font-size: clamp(1.6rem, 4.5vw, 2.4rem);
   background: rgba(255, 255, 255, 0.08);
-  border: 2px solid rgba(255, 213, 122, 0.2);
-  border-radius: 10px;
-  padding: 8px 4px;
+  border: 2px solid rgba(255, 213, 122, 0.22);
+  border-radius: 12px;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.12s ease, border-color 0.2s ease, background 0.2s ease;
-  text-align: center;
+  transition: transform 0.12s ease, border-color 0.2s ease,
+              background 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
 }
-.avatar-cell:active { transform: scale(0.92); }
+.avatar-cell:active { transform: scale(0.9); }
 .avatar-cell.selected {
-  background: rgba(255, 213, 122, 0.25);
+  background: rgba(255, 213, 122, 0.28);
   border-color: var(--gold-glow, #ffd57a);
-  box-shadow: 0 0 16px rgba(255, 213, 122, 0.6);
-  transform: scale(1.1);
+  box-shadow: 0 0 18px rgba(255, 213, 122, 0.7), inset 0 0 8px rgba(255, 240, 200, 0.4);
+  transform: scale(1.08);
 }

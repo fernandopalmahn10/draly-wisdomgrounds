@@ -309,10 +309,19 @@
   // Curated animals + characters. Kids tap to pick; selection persists in
   // localStorage and is broadcast to the server so every host page can show
   // the avatar next to the player's name in lobby chips + game UIs.
+  // Kids' favorites first — capybara + dinos prominently up front.
+  // 🦫 is the closest standard emoji to a capybara (capybara isn't a separate
+  // Unicode emoji as of this writing; beaver is what every emoji keyboard
+  // calls "capybara" in casual chat).
   const AVATAR_CHOICES = [
-    '🐱','🐶','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐸',
-    '🐵','🐔','🐲','🐺','🦝','🐹','🐭','🦔','🦦','🦥',
-    '🐢','🐙','🦄','🐳','🦖','🦕','🐧','🦉','🦋','🐝'
+    '🦫','🦖','🦕','🐲','🦄',
+    '🐱','🐶','🦊','🐯','🦁',
+    '🐰','🐻','🐼','🐨','🐸',
+    '🐵','🐺','🦝','🐹','🐭',
+    '🦔','🦦','🦥','🐢','🐙',
+    '🐳','🐧','🦉','🦋','🐝',
+    '🐔','🦅','🦜','🦩','🦓',
+    '🦒','🐊','🐍','🦂','🐌'
   ];
   function getMyAvatar() {
     return localStorage.getItem('dralyAvatar') || '🐱';
