@@ -118,19 +118,46 @@
     updateScores();
   });
 
-  // A player placed a token into a room
-  socket.on('fm:placed', ({ team, room, token, teamScores }) => {
+  // A player placed a token into a room — animate it landing + show +1 pop
+  // + flash a combo banner if any combos unlocked from this placement.
+  socket.on('fm:placed', ({ team, room, token, teamScores, combos }) => {
     if (teamScores) { scores = teamScores; updateScores(); }
     const slot = $(`fm-${team}-${room}`);
-    if (!slot) return;
-    const item = document.createElement('span');
-    item.className = 'fm-item';
-    item.textContent = token.emoji;
-    item.title = token.name;
-    slot.appendChild(item);
-    // Small chime on placement — generic, no individual name mentioned
+    if (slot) {
+      const item = document.createElement('span');
+      item.className = 'fm-item';
+      item.textContent = token.emoji;
+      item.title = token.name;
+      slot.appendChild(item);
+      // +1 popup over the room (or +bonus if combos unlocked)
+      const roomEl = slot.closest('.fm-room');
+      if (roomEl) spawnRoomPop(roomEl, '+1');
+    }
     MochiSounds.populate && MochiSounds.populate(team);
+    // Combo celebration — bigger pop, banner across the host
+    if (Array.isArray(combos) && combos.length > 0) {
+      combos.forEach((c) => spawnComboBanner(team, c));
+      MochiSounds.winFanfare && MochiSounds.winFanfare();
+    }
   });
+
+  function spawnRoomPop(roomEl, text) {
+    const pop = document.createElement('div');
+    pop.className = 'fm-room-pop';
+    pop.textContent = text;
+    roomEl.appendChild(pop);
+    setTimeout(() => pop.remove(), 900);
+  }
+
+  function spawnComboBanner(team, combo) {
+    const houseEl = $('fm-house-' + team);
+    if (!houseEl) return;
+    const banner = document.createElement('div');
+    banner.className = 'fm-combo-banner-host ' + team;
+    banner.innerHTML = `<span class="fm-combo-emoji">${combo.emoji}</span><span class="fm-combo-name">${combo.name}</span><span class="fm-combo-bonus">+${combo.bonus}</span>`;
+    houseEl.appendChild(banner);
+    setTimeout(() => banner.remove(), 2200);
+  }
 
   socket.on('game-end', (data) => {
     if (timerInterval) clearInterval(timerInterval);

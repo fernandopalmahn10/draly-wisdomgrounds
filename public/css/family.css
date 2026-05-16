@@ -196,19 +196,104 @@ body.family-bg .win-screen { color: #3a1505; }
   to   { transform: translateY(-12px) rotate(3deg); }
 }
 
+/* === HOST: room +N pop on placement === */
+.fm-room-pop {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.6rem;
+  color: #6fdc8c;
+  text-shadow: 0 0 12px #6fdc8c, 0 3px 6px rgba(0,0,0,0.7);
+  pointer-events: none;
+  z-index: 6;
+  animation: fm-room-pop 0.9s ease-out forwards;
+}
+@keyframes fm-room-pop {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  30%  { opacity: 1; transform: translate(-50%, -90%) scale(1.4); }
+  100% { opacity: 0; transform: translate(-50%, -160%) scale(1); }
+}
+
+/* === HOST: combo banner across the team's house when a combo unlocks === */
+.fm-combo-banner-host {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, rgba(255,200,80,0.95), rgba(232,145,52,0.95));
+  border: 3px solid #6e2010;
+  border-radius: 16px;
+  padding: 12px 22px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #2a0d05;
+  z-index: 20;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.5), 0 0 30px rgba(255,200,80,0.7);
+  animation: fm-combo-banner-pop 2.2s ease-out forwards;
+  pointer-events: none;
+}
+.fm-combo-banner-host.red  { border-color: #c11d2a; }
+.fm-combo-banner-host.gold { border-color: #e89134; }
+.fm-combo-banner-host .fm-combo-emoji { font-size: 2.2rem; }
+.fm-combo-banner-host .fm-combo-name  { font-size: 1.1rem; }
+.fm-combo-banner-host .fm-combo-bonus { font-size: 1.6rem; color: #2a4a1a; text-shadow: 0 0 8px rgba(120,240,80,0.6); }
+@keyframes fm-combo-banner-pop {
+  0%   { transform: translate(-50%, -50%) scale(0.3) rotate(-8deg); opacity: 0; }
+  15%  { transform: translate(-50%, -50%) scale(1.15) rotate(2deg); opacity: 1; }
+  85%  { transform: translate(-50%, -50%) scale(1) rotate(0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.9) rotate(0); opacity: 0; }
+}
+
 /* ============================================================ */
-/* === PLAYER PLACEMENT SCREEN === */
+/* === PLAYER PLACEMENT SCREEN (drag-and-drop blueprint) === */
 /* ============================================================ */
 .fm-place-screen {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding: 16px;
-  gap: 14px;
+  padding: 12px;
+  gap: 10px;
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(255,220,140,0.5), transparent 55%),
-    linear-gradient(165deg, #f7d68f 0%, #d9a665 50%, #6e3a18 100%);
+    radial-gradient(ellipse at 50% 0%, rgba(255,220,140,0.55), transparent 55%),
+    linear-gradient(165deg, #fff3d6 0%, #f7d68f 35%, #d9a665 70%, #6e3a18 100%);
   color: #3a1505;
+  overflow: hidden;
+  touch-action: none;
+}
+.fm-place-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 6px;
+}
+.fm-place-score-pill {
+  background: rgba(0,0,0,0.55);
+  border: 2px solid rgba(255,220,130,0.6);
+  color: #ffd57a;
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1rem;
+}
+.fm-place-timer-num {
+  width: 48px;
+  height: 48px;
+  line-height: 44px;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.6rem;
+  background: rgba(0,0,0,0.6);
+  border: 3px solid rgba(255,200,80,0.65);
+  border-radius: 50%;
+  color: #fff8e0;
 }
 .fm-place-headline {
   text-align: center;
@@ -216,97 +301,165 @@ body.family-bg .win-screen { color: #3a1505; }
   font-weight: 900;
   letter-spacing: 0.06em;
   color: #4a1606;
-  font-size: clamp(1rem, 3.5vw, 1.3rem);
-  margin-top: 4px;
+  font-size: clamp(1rem, 3.5vw, 1.25rem);
 }
-.fm-place-token-card {
-  background: rgba(255, 250, 230, 0.95);
-  border: 3px solid rgba(140, 80, 30, 0.5);
-  border-radius: 18px;
-  padding: 16px 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.35);
-  animation: fm-token-pop 0.5s cubic-bezier(.22,1.6,.36,1);
-}
-@keyframes fm-token-pop {
-  from { transform: scale(0.6); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
-}
-.fm-place-token-emoji {
-  font-size: clamp(5rem, 16vw, 7rem);
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.35));
-  animation: fm-token-bob 1.4s ease-in-out infinite alternate;
-}
-@keyframes fm-token-bob {
-  from { transform: translateY(0)   rotate(-3deg); }
-  to   { transform: translateY(-8px) rotate(3deg); }
-}
-.fm-place-token-name {
-  font-family: 'Cinzel', serif;
-  font-weight: 900;
-  font-size: 1.4rem;
-  color: #5a2e10;
-  letter-spacing: 0.05em;
-}
-.fm-place-rooms {
+
+/* The blueprint — a 2x2 grid of room drop zones. The draggable token sits
+   on top of all of them and gets moved by the player's finger. */
+.fm-blueprint {
+  position: relative;
+  flex: 1;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  grid-template-rows: 1fr 1fr;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgba(60, 30, 12, 0.35);
+  border: 3px dashed rgba(140, 80, 30, 0.5);
 }
-.fm-place-room-btn {
+.fm-roomzone {
+  position: relative;
+  border-radius: 12px;
+  border: 3px solid rgba(140, 80, 30, 0.5);
+  background: rgba(255, 250, 230, 0.85);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 18px 10px;
-  border-radius: 14px;
-  border: 3px solid rgba(140, 80, 30, 0.5);
-  background: rgba(255, 250, 230, 0.92);
-  color: #4a1606;
   font-family: 'Cinzel', serif;
   font-weight: 900;
-  font-size: 1.1rem;
-  letter-spacing: 0.05em;
-  cursor: pointer;
+  color: #4a1606;
+  font-size: clamp(0.9rem, 3vw, 1.15rem);
+  letter-spacing: 0.04em;
+  text-align: center;
+  transition: transform 0.15s ease, border-color 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+}
+.fm-roomzone.sala       { background-color: rgba(255, 220, 180, 0.92); }
+.fm-roomzone.cocina     { background-color: rgba(255, 240, 200, 0.92); }
+.fm-roomzone.dormitorio { background-color: rgba(220, 220, 250, 0.92); }
+.fm-roomzone.jardin     { background-color: rgba(190, 235, 180, 0.92); }
+.fm-roomzone-tag {
+  font-size: 1.05em;
+  line-height: 1.2;
+}
+.fm-roomzone-fill {
+  font-size: 0.85em;
+  opacity: 0.65;
+  margin-top: 2px;
+}
+.fm-roomzone.recommended {
+  border-color: #2fa14b;
+  box-shadow: 0 0 18px rgba(120, 240, 80, 0.55), inset 0 0 10px rgba(120, 240, 80, 0.25);
+  background-color: rgba(170, 245, 170, 0.92);
+}
+.fm-roomzone.hovering {
+  transform: scale(1.05);
+  border-color: #f4ad28;
+  box-shadow: 0 0 24px rgba(255, 213, 80, 0.85), inset 0 0 14px rgba(255, 213, 80, 0.45);
+}
+.fm-roomzone.dropped {
+  animation: fm-roomzone-drop 0.6s cubic-bezier(.22,1.6,.36,1);
+}
+@keyframes fm-roomzone-drop {
+  0%   { background-color: var(--drop-bg, rgba(140, 240, 130, 0.95)); transform: scale(1); }
+  50%  { background-color: rgba(255, 255, 255, 1); transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* The big draggable token */
+.fm-drag-token {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(255, 250, 220, 0.98), rgba(255, 220, 150, 0.95));
+  border: 4px solid #6e3a18;
+  border-radius: 18px;
+  box-shadow:
+    0 0 30px rgba(255, 200, 80, 0.7),
+    0 12px 24px rgba(0, 0, 0, 0.45),
+    inset 0 2px 8px rgba(255, 240, 200, 0.5);
+  pointer-events: auto;
+  cursor: grab;
   user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.12s ease, background 0.2s ease, border-color 0.2s ease;
+  -webkit-user-drag: none;
+  touch-action: none;
+  z-index: 10;
+  transition: transform 0.18s cubic-bezier(.22,1.6,.36,1);
+  animation: fm-token-bob 1.6s ease-in-out infinite alternate;
 }
-.fm-place-room-btn .fm-place-room-emoji { font-size: 2.4rem; line-height: 1; }
-.fm-place-room-btn:active { transform: scale(0.95); }
-.fm-place-room-btn.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  filter: grayscale(0.7);
+.fm-drag-token.dragging {
+  cursor: grabbing;
+  transition: none;
+  animation: none;
+  filter: drop-shadow(0 0 16px gold);
 }
-.fm-place-room-btn.sala       { background-color: rgba(255, 220, 180, 0.92); }
-.fm-place-room-btn.cocina     { background-color: rgba(255, 240, 200, 0.92); }
-.fm-place-room-btn.dormitorio { background-color: rgba(220, 220, 250, 0.92); }
-.fm-place-room-btn.jardin     { background-color: rgba(190, 235, 180, 0.92); }
-.fm-place-room-btn.picked {
-  border-color: #6fdc8c;
-  background: rgba(140, 240, 160, 0.9);
-  box-shadow: 0 0 20px rgba(120, 240, 130, 0.65);
+.fm-drag-token.flying {
+  transition: transform 0.45s cubic-bezier(.5, -0.1, .7, 1);
+  pointer-events: none;
+  opacity: 0;
 }
+@keyframes fm-token-bob {
+  from { transform: translate(-50%, -50%) rotate(-3deg); }
+  to   { transform: translate(-50%, -54%) rotate(3deg); }
+}
+.fm-drag-emoji {
+  font-size: clamp(3.4rem, 12vw, 5.5rem);
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
+  line-height: 1;
+}
+.fm-drag-name {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1rem;
+  color: #5a2e10;
+  letter-spacing: 0.04em;
+}
+
 .fm-place-hint {
   text-align: center;
   color: #5a2e10;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   opacity: 0.85;
+  margin: 0;
 }
-.fm-place-timer-wrap {
-  height: 8px;
-  background: rgba(0,0,0,0.3);
-  border-radius: 6px;
-  overflow: hidden;
+
+/* Combo banner on the player phone — pops over the bottom of the screen */
+.fm-combo-banner {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ffd57a 0%, #e89134 50%, #6e2010 100%);
+  border: 3px solid #2a0d05;
+  border-radius: 18px;
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #fff;
+  text-shadow: 0 2px 5px rgba(0,0,0,0.6);
+  z-index: 999;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.55), 0 0 30px rgba(255,200,80,0.6);
+  max-width: 92%;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1rem;
 }
-.fm-place-timer-fill {
-  height: 100%;
-  width: 100%;
-  background: linear-gradient(90deg, #6fdc8c, #ff9036, #c4191a);
-  transition: width 0.1s linear;
+.fm-combo-banner.hidden { display: none; }
+.fm-combo-banner.pop {
+  animation: fm-banner-pop 2.2s ease-out forwards;
+}
+@keyframes fm-banner-pop {
+  0%   { transform: translate(-50%, 60px) scale(0.6); opacity: 0; }
+  15%  { transform: translate(-50%, 0) scale(1.15); opacity: 1; }
+  85%  { transform: translate(-50%, 0) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -20px) scale(1); opacity: 0; }
 }

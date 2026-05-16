@@ -767,6 +767,15 @@
     markActivity();
     clearAnswerHeartbeat();
     hideSendingOverlay();
+    // === FAMILY fast path === Skip the 900ms result-feedback screen entirely
+    // for Mi Familia — go DIRECTLY to the drag-and-drop placement screen so
+    // the cadence stays snappy and kids never see a mismatched mascot.
+    if (correct && gameType === 'family' && familyToken) {
+      MochiSounds.correct && MochiSounds.correct();
+      if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+      startFamilyPlace(familyToken);
+      return;
+    }
     if (correct) {
       MochiSounds.correct();
       let happyMascot, sub;
@@ -1040,55 +1049,167 @@
     }
   }
 
-  // === Mi Familia: place-token screen ===
-  // Player gets an awarded token + picks a room. Hooked into the standard
-  // answer-result flow but uses its own dedicated screen.
-  let fmActiveTimer = null;
-  let fmActiveDeadline = 0;
+  // === Mi Familia: drag-and-drop placement ===
+  // The awarded token is a draggable element. Player presses-and-drags it
+  // into one of the 4 room drop zones. On release inside a zone → emit
+  // family:place. Recommended rooms glow green. Combos pop a banner.
+  let fmTimerInt = null;
+  let fmDeadline = 0;
+  let fmFired = false;
+  let fmCurrentToken = null;
+
   function startFamilyPlace(token) {
     if (!token) return;
+    fmCurrentToken = token;
+    fmFired = false;
     showScreen('family-place');
-    if ($('fm-token-emoji')) $('fm-token-emoji').textContent = token.emoji;
-    if ($('fm-token-name'))  $('fm-token-name').textContent  = token.name || '';
-    // Mark recommended rooms (where this item really fits) brighter.
-    const rooms = ['sala', 'cocina', 'dormitorio', 'jardin'];
-    rooms.forEach((r) => {
-      const btn = document.querySelector(`.fm-place-room-btn[data-room="${r}"]`);
-      if (!btn) return;
-      btn.classList.remove('picked');
-      const fits = Array.isArray(token.rooms) && token.rooms.includes(r);
-      if (fits) btn.classList.remove('disabled');
-      else btn.classList.add('disabled');
-      btn.disabled = false;
-      btn.onpointerdown = (e) => {
+    const tokenEl = $('fm-drag-token');
+    const emoji = $('fm-token-emoji');
+    const nameEl = $('fm-token-name');
+    if (emoji) emoji.textContent = token.emoji;
+    if (nameEl) nameEl.textContent = token.name || '';
+    if (tokenEl) {
+      tokenEl.classList.remove('dropping', 'flying');
+      tokenEl.style.transform = '';
+      tokenEl.style.left = '';
+      tokenEl.style.top = '';
+    }
+    // Highlight recommended rooms (where this token belongs)
+    document.querySelectorAll('.fm-roomzone').forEach((z) => {
+      const fits = Array.isArray(token.rooms) && token.rooms.includes(z.dataset.room);
+      z.classList.toggle('recommended', !!fits);
+      z.classList.remove('hovering', 'dropped');
+    });
+    const banner = $('fm-combo-banner');
+    if (banner) banner.classList.add('hidden');
+    const hint = $('fm-place-hint');
+    if (hint) hint.textContent = '👆 Mantén el dedo y arrastra hacia un cuarto';
+
+    // === Drag handling ===
+    let dragging = false;
+    let startX = 0, startY = 0;
+    let origLeft = 0, origTop = 0;
+    function onPress(e) {
+      if (fmFired || !tokenEl) return;
+      if (e) e.preventDefault();
+      dragging = true;
+      const r = tokenEl.getBoundingClientRect();
+      const px = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+      const py = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+      startX = px; startY = py;
+      origLeft = r.left; origTop = r.top;
+      tokenEl.classList.add('dragging');
+      if (navigator.vibrate) navigator.vibrate(15);
+      try { tokenEl.setPointerCapture && tokenEl.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+    function onMove(e) {
+      if (!dragging || fmFired) return;
+      const px = e.clientX != null ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : 0);
+      const py = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+      const dx = px - startX, dy = py - startY;
+      if (tokenEl) tokenEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(1.1)`;
+      // Highlight the room under the finger
+      const hoverEl = document.elementFromPoint(px, py);
+      const zone = hoverEl ? hoverEl.closest('.fm-roomzone') : null;
+      document.querySelectorAll('.fm-roomzone').forEach((z) => z.classList.toggle('hovering', z === zone));
+    }
+    function onRelease(e) {
+      if (!dragging || fmFired) return;
+      dragging = false;
+      const px = e.clientX != null ? e.clientX : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : 0);
+      const py = e.clientY != null ? e.clientY : (e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : 0);
+      const hoverEl = document.elementFromPoint(px, py);
+      const zone = hoverEl ? hoverEl.closest('.fm-roomzone') : null;
+      if (zone) {
+        commitPlacement(zone.dataset.room, zone);
+      } else {
+        // Snap back to center
+        if (tokenEl) {
+          tokenEl.classList.remove('dragging');
+          tokenEl.style.transform = '';
+          if (navigator.vibrate) navigator.vibrate([10, 30]);
+        }
+      }
+      document.querySelectorAll('.fm-roomzone').forEach((z) => z.classList.remove('hovering'));
+    }
+    function commitPlacement(room, zone) {
+      if (fmFired) return;
+      fmFired = true;
+      // Visual: token "flies" to room center, then disappears
+      if (tokenEl && zone) {
+        tokenEl.classList.remove('dragging');
+        tokenEl.classList.add('flying');
+        const tRect = tokenEl.getBoundingClientRect();
+        const zRect = zone.getBoundingClientRect();
+        const dx = (zRect.left + zRect.width / 2) - (tRect.left + tRect.width / 2);
+        const dy = (zRect.top  + zRect.height / 2) - (tRect.top  + tRect.height / 2);
+        tokenEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.3) rotate(180deg)`;
+      }
+      if (zone) zone.classList.add('dropped');
+      socket.emit('family:place', { pin, room });
+      if (navigator.vibrate) navigator.vibrate([20, 60, 20]);
+      MochiSounds.correct && MochiSounds.correct();
+    }
+    // Also support tap-to-place as a fallback for kids who don't drag
+    document.querySelectorAll('.fm-roomzone').forEach((z) => {
+      z.onpointerdown = (e) => {
+        if (fmFired) return;
         if (e) e.preventDefault();
-        // Visual lock immediately
-        document.querySelectorAll('.fm-place-room-btn').forEach((b) => b.disabled = true);
-        btn.classList.add('picked');
-        socket.emit('family:place', { pin, room: r });
-        if (navigator.vibrate) navigator.vibrate(20);
-        MochiSounds.correct && MochiSounds.correct();
+        commitPlacement(z.dataset.room, z);
       };
     });
-    // 8-second window timer bar
+    if (tokenEl) {
+      tokenEl.onpointerdown = onPress;
+      tokenEl.onpointermove = onMove;
+      tokenEl.onpointerup = onRelease;
+      tokenEl.onpointercancel = onRelease;
+    }
+    // Capture moves at the document level so dragging across zones works
+    document._fmMove = onMove;
+    document._fmUp = onRelease;
+    document.addEventListener('pointermove', onMove, { passive: false });
+    document.addEventListener('pointerup', onRelease, { passive: false });
+
+    // 8-second timer
     const totalMs = 8000;
-    fmActiveDeadline = Date.now() + totalMs;
-    if (fmActiveTimer) clearInterval(fmActiveTimer);
-    fmActiveTimer = setInterval(() => {
-      const remaining = Math.max(0, fmActiveDeadline - Date.now());
-      const fill = $('fm-place-timer-fill');
-      if (fill) fill.style.width = ((remaining / totalMs) * 100) + '%';
+    fmDeadline = Date.now() + totalMs;
+    if (fmTimerInt) clearInterval(fmTimerInt);
+    fmTimerInt = setInterval(() => {
+      const remaining = Math.max(0, fmDeadline - Date.now());
+      const sec = Math.ceil(remaining / 1000);
+      if ($('fm-place-timer-num')) $('fm-place-timer-num').textContent = sec;
       if (remaining <= 0) {
-        clearInterval(fmActiveTimer);
-        fmActiveTimer = null;
-        // Server auto-places after window; client just shows a soft state
+        clearInterval(fmTimerInt);
+        fmTimerInt = null;
+        // Server auto-places. Player just sees the next question soon.
       }
     }, 100);
   }
-  socket.on('fm:place-confirmed', ({ room, token }) => {
-    if (fmActiveTimer) { clearInterval(fmActiveTimer); fmActiveTimer = null; }
-    // Stay on the family-place screen briefly so the player sees their choice;
-    // the next 'question' event will switch us back to the question screen.
+
+  socket.on('fm:place-confirmed', ({ room, token, combos, teamScore }) => {
+    if (fmTimerInt) { clearInterval(fmTimerInt); fmTimerInt = null; }
+    if (document._fmMove) document.removeEventListener('pointermove', document._fmMove);
+    if (document._fmUp) document.removeEventListener('pointerup', document._fmUp);
+    document._fmMove = null;
+    document._fmUp = null;
+    if (typeof teamScore === 'number' && $('fm-place-score')) {
+      $('fm-place-score').textContent = teamScore;
+    }
+    // Show combo banner if any unlocked
+    if (Array.isArray(combos) && combos.length > 0) {
+      const banner = $('fm-combo-banner');
+      if (banner) {
+        const lines = combos.map(c => `<span>${c.emoji} <strong>${c.name}</strong> +${c.bonus}</span>`).join('');
+        banner.innerHTML = lines;
+        banner.classList.remove('hidden');
+        banner.classList.remove('pop');
+        void banner.offsetWidth;
+        banner.classList.add('pop');
+        MochiSounds.winFanfare && MochiSounds.winFanfare();
+        if (navigator.vibrate) navigator.vibrate([40, 30, 40, 30, 80]);
+      }
+    }
+    // Next question handler will swap us off this screen automatically
   });
 
   // === Zombie Escape: timed-jump auto-runner ===
