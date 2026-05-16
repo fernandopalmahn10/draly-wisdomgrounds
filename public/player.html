@@ -13,8 +13,8 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260516">
-  <link rel="stylesheet" href="/css/zombie.css?v=20260516">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260516b">
+  <link rel="stylesheet" href="/css/zombie.css?v=20260516b">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -319,9 +319,19 @@
   </div>
 
   <!-- ENDED -->
-  <!-- ZOMBIE SPRINT — auto-runner with timed JUMP button. Survivor runs in
-       place while zombie-hand obstacles approach from the right. Player taps
-       SALTAR at the right moment to jump over each one. Skill = timing. -->
+  <!-- ZOMBIE SPRINT — auto-runner with pseudo-3D parallax depth.
+       Layers from far to near:
+         1. Sky (gradient)
+         2. Mountain silhouettes (far)
+         3. Skyline (mid)
+         4. Smoke fog (mid-near)
+         5. Zombie horde (near, behind runner)
+         6. Track + survivor + approaching obstacles (foreground)
+         7. Foreground particles (closest)
+       Each layer scrolls at a different speed = pseudo-3D depth.
+       The render loop is split into modular drawLayer() calls so we can swap
+       in real sprite sheets or WebGL renderers later without touching logic.
+  -->
   <div id="screen-zombie-sprint" class="hidden player-screen zb-sprint-screen">
     <div class="zb-sprint-header">
       <span class="zb-sprint-name" id="zb-sprint-name">🏃 Tú</span>
@@ -329,14 +339,25 @@
       <span class="zb-sprint-timer"><span id="zb-sprint-timer-num">5</span>s</span>
     </div>
     <div class="zb-sprint-stage" id="zb-sprint-stage">
+      <!-- Layer 1: sky -->
       <div class="zb-sprint-sky"></div>
-      <div class="zb-sprint-skyline">🏚 🏚 🏢 🏚 🏯 🏚 🏢</div>
+      <!-- Layer 2: distant mountain silhouettes (slowest parallax) -->
+      <div class="zb-layer zb-layer-mountains" id="zb-layer-mountains"></div>
+      <!-- Layer 3: skyline (medium parallax) -->
+      <div class="zb-sprint-skyline" id="zb-sprint-skyline">🏚 🏚 🏢 🏚 🏯 🏚 🏢</div>
+      <!-- Layer 4: smoke fog (drifts gently) -->
+      <div class="zb-layer zb-layer-smoke"></div>
+      <!-- Layer 5: zombie horde shambling behind the runner -->
       <div class="zb-sprint-horde">🧟‍♂️🧟🧟‍♀️🧟</div>
+      <!-- Layer 6: track + survivor + obstacles (foreground action) -->
       <div class="zb-sprint-track">
         <div class="zb-sprint-ground"></div>
         <div class="zb-sprint-survivor" id="zb-sprint-survivor">🏃</div>
         <div class="zb-sprint-obstacles" id="zb-sprint-obstacles"></div>
       </div>
+      <!-- Layer 7: foreground particles + scare-jumpscare flash overlay -->
+      <div class="zb-layer zb-layer-particles" id="zb-layer-particles"></div>
+      <div class="zb-jumpscare" id="zb-jumpscare"></div>
     </div>
     <button class="zb-jump-btn" id="zb-jump-btn">🦘 ¡SALTAR! 🦘</button>
     <div class="zb-sprint-hint">Toca SALTAR justo cuando el obstáculo llega 🤚</div>
@@ -353,9 +374,9 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260516"></script>
+  <script src="/js/sounds.js?v=20260516b"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/player.js?v=20260516"></script>
+  <script src="/js/player.js?v=20260516b"></script>
 </body>
 </html>

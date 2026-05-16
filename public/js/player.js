@@ -1034,10 +1034,14 @@
   }
 
   // === Zombie Escape: timed-jump auto-runner ===
-  // Survivor runs in place. Zombie-hand obstacles spawn on the right and slide
-  // left toward the survivor. Player taps SALTAR at the right moment to jump
-  // over each one. Successful jump = +1 step (sent to server via player:tap).
-  // Mistimed jump or no jump = stumble (red flash, no points). 5-second window.
+  // Pseudo-3D parallax environment (sky → mountains → skyline → smoke → horde
+  // → ground/survivor → particles → jumpscare flash). Each layer is a discrete
+  // DOM element so the render code is modular: swap in canvas/WebGL/sprites
+  // later by replacing the drawLayer* helpers without touching game logic.
+  //
+  // Mechanic: survivor runs in place, obstacles approach, tap SALTAR to jump.
+  // Successful jump = +1 step (server tap). Mistimed = stumble (red flash,
+  // no points). Wrong vocab answer = survivor steps BACK -8m + screen rumble.
   let zbSprintActive = false;
   let zbSprintEndsAt = 0;
   let zbSprintCleared = 0;
@@ -1088,9 +1092,10 @@
     // Spawn the first one immediately so they have something to react to
     setTimeout(spawnObstacle, 200);
 
-    // Collision detector — runs continuously while sprint is active
+    // Unified 60Hz tick: collisions + scare cues + ambient audio
     if (zbObstacleCleanup) clearInterval(zbObstacleCleanup);
-    zbObstacleCleanup = setInterval(checkCollisions, 60);
+    zbObstacleCleanup = setInterval(zbTick, 60);
+    zbLastAmbient = 0;
 
     // Countdown timer
     if (zbTimerInterval) clearInterval(zbTimerInterval);
@@ -1108,19 +1113,47 @@
     if (!layer) return;
     const el = document.createElement('div');
     el.className = 'zb-obstacle';
-    // Randomly pick obstacle type
-    const variants = ['🤚', '🪨', '🪦', '🦴'];
-    el.textContent = variants[Math.floor(Math.random() * variants.length)];
+    const variants = ['🤚', '🪨', '🪦', '🦴', '🧟', '🧟‍♂️'];
+    const pick = variants[Math.floor(Math.random() * variants.length)];
+    el.textContent = pick;
+    // Zombies are "scarier" obstacles — they get an aura class for visual emphasis
+    if (pick === '🧟' || pick === '🧟‍♂️') el.classList.add('scary');
     layer.appendChild(el);
-    const duration = 1500; // ms to slide from right edge to left edge
+    const duration = 1500;
     el.style.animation = `zb-obstacle-slide ${duration}ms linear forwards`;
-    const entry = { el, startedAt: Date.now(), durationMs: duration, cleared: false };
+    const entry = { el, startedAt: Date.now(), durationMs: duration, cleared: false, isScary: el.classList.contains('scary') };
     zbObstacleList.push(entry);
-    // Remove the element when its animation ends
+    // Random 30% chance to trigger an audio "scare" cue when this obstacle
+    // gets within striking distance (groan + faint rumble — environment feels alive)
+    entry.scareAt = Math.random() < 0.3 ? entry.startedAt + duration * 0.55 : 0;
     setTimeout(() => {
       el.remove();
       zbObstacleList = zbObstacleList.filter((o) => o !== entry);
     }, duration + 80);
+  }
+
+  // Periodic ambient zombie groan — distant audio that makes the env feel alive
+  function zbAmbientGroan() {
+    if (!zbSprintActive) return;
+    // Quietly play a groan-like noise burst (we synthesize via sounds.js)
+    if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.5);
+  }
+  // Trigger a jumpscare flash + rumble + loud groan
+  function zbJumpscare() {
+    const flash = $('zb-jumpscare');
+    const stage = $('zb-sprint-stage');
+    if (flash) {
+      flash.classList.remove('flash');
+      void flash.offsetWidth;
+      flash.classList.add('flash');
+    }
+    if (stage) {
+      stage.classList.remove('rumble');
+      void stage.offsetWidth;
+      stage.classList.add('rumble');
+    }
+    if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(1);
+    if (navigator.vibrate) navigator.vibrate([30, 40, 60]);
   }
 
   function doJump() {
@@ -1140,31 +1173,33 @@
     }, 600);
   }
 
-  // The survivor sits at horizontal ~24% of the track. The animation moves
-  // obstacles from 100% → -10% over `durationMs`. We compute the obstacle's
-  // current position and check against the survivor's hit zone.
-  function checkCollisions() {
+  // Unified tick — drives collision detection, scare-trigger timing, and
+  // ambient audio. Runs at 60Hz target via setInterval(16ms).
+  function zbTick() {
     if (!zbSprintActive) return;
     const now = Date.now();
-    const survHitZone = { min: 18, max: 32 }; // percent
+    const survHitZone = { min: 18, max: 32 }; // percent (survivor's x)
     zbObstacleList.forEach((obs) => {
       if (obs.cleared) return;
       const t = (now - obs.startedAt) / obs.durationMs;
       const pct = 100 - t * 110; // 100% → -10%
+      // Scare cue — fires ONCE when the obstacle is mid-approach (~55% in)
+      if (obs.scareAt && !obs.scareFired && now >= obs.scareAt) {
+        obs.scareFired = true;
+        // Scary obstacles trigger a louder jumpscare; normal ones get a faint groan
+        if (obs.isScary) zbJumpscare();
+        else if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.35);
+      }
       if (pct >= survHitZone.min && pct <= survHitZone.max) {
-        // Obstacle is overlapping the survivor's x — were we jumping?
         if (zbJumping) {
           obs.cleared = true;
-          // Successful jump → emit a server tap (1 distance step)
           socket.emit('player:tap', { pin });
           zbSprintCleared++;
           if ($('zb-sprint-cleared')) $('zb-sprint-cleared').textContent = zbSprintCleared;
-          // Floating "+1" toast over the obstacle
           spawnSprintPop(obs.el, '+1');
           MochiSounds.correct && MochiSounds.correct();
         } else {
           obs.cleared = true;
-          // Stumble — no points, just visual feedback
           const surv = $('zb-sprint-survivor');
           if (surv) {
             surv.classList.remove('stumble');
@@ -1173,10 +1208,18 @@
           }
           spawnSprintPop(obs.el, '💥');
           if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
+          // Heavy stumble on scary obstacles = jumpscare too
+          if (obs.isScary) zbJumpscare();
         }
       }
     });
+    // Roll for an ambient groan every ~3s (purely atmospheric)
+    if (!zbLastAmbient || now - zbLastAmbient > 3000) {
+      zbLastAmbient = now;
+      if (Math.random() < 0.4) zbAmbientGroan();
+    }
   }
+  let zbLastAmbient = 0;
 
   function spawnSprintPop(anchorEl, text) {
     const layer = $('zb-sprint-obstacles');

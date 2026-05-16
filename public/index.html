@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20260516">
-  <link rel="stylesheet" href="/css/dralingo.css?v=20260516">
+  <link rel="stylesheet" href="/css/styles.css?v=20260516b">
+  <link rel="stylesheet" href="/css/dralingo.css?v=20260516b">
 </head>
 <body class="hub-bg">
   <div class="lantern l1"></div>
@@ -16,33 +16,42 @@
   <div class="lantern l3"></div>
 
   <div class="container hub-home">
-    <div class="hub-hero" style="margin-bottom:24px;">
-      <div class="dralingo-stage" style="width:min(45vw,200px); height:min(45vw,200px); margin-bottom:8px;">
+    <!-- Simplified hero — just the brand mark + title -->
+    <div class="hub-hero">
+      <div class="dralingo-stage" style="width:min(40vw,170px); height:min(40vw,170px); margin-bottom:6px;">
         <div class="dralingo-rays static"></div>
         <div class="dralingo-orb"></div>
         <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-floating">
       </div>
-      <h1 class="hub-title" style="font-size:clamp(1.8rem,5vw,2.8rem);">Draly Wisdomgrounds</h1>
-      <p class="hub-tagline" style="margin-top:4px;">Where wisdom takes flight 🐉</p>
+      <h1 class="hub-title" style="font-size:clamp(1.7rem,4.6vw,2.6rem); margin:0;">Draly Wisdomgrounds</h1>
+      <p class="hub-tagline" style="margin-top:2px;">Where wisdom takes flight 🐉</p>
     </div>
 
-    <div class="card" style="width:100%; max-width:400px; margin-bottom:14px;">
-      <div style="display:flex; flex-direction:column; gap:10px;">
-        <input class="input" id="home-pin" type="tel" maxlength="4" placeholder="Game PIN" inputmode="numeric" autocomplete="off">
-        <input class="input" id="home-name" type="text" maxlength="20" placeholder="Your name" autocomplete="given-name">
-        <button class="btn btn-jade btn-xl" id="home-join-btn">🎮 &nbsp; ENTRAR</button>
+    <!-- TWO clear paths: JOIN (with inline PIN+name form) + REMATCH (if available).
+         Everything else (host, audio hint) lives in the corners. -->
+    <div class="home-paths">
+      <!-- REMATCH lives ABOVE join so returning players see it first -->
+      <div id="rematch-wrap" class="home-rematch" style="display:none;">
+        <button class="btn btn-gold btn-xl" id="rematch-btn">
+          🔄 &nbsp; REVANCHA<span id="rematch-name-suffix"></span>
+        </button>
+        <div class="home-rematch-sub" id="rematch-sub"></div>
+      </div>
+
+      <div class="card home-join-card">
+        <div class="home-join-label">🎮 Entra a una batalla</div>
+        <input class="input home-input-big" id="home-pin" type="tel" maxlength="4" placeholder="PIN" inputmode="numeric" autocomplete="off">
+        <input class="input" id="home-name" type="text" maxlength="20" placeholder="Tu nombre" autocomplete="given-name">
+        <button class="btn btn-jade btn-xl" id="home-join-btn" style="width:100%;">
+          ENTRAR &nbsp;→
+        </button>
         <p id="home-error" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em; margin:0;"></p>
       </div>
     </div>
 
-    <div id="rematch-wrap" style="width:100%; max-width:400px; margin-bottom:24px; display:none;">
-      <button class="btn btn-gold btn-xl" id="rematch-btn" style="width:100%;">
-        🔄 &nbsp; REVANCHA<span id="rematch-name-suffix"></span>
-      </button>
-    </div>
-
+    <!-- Host link stays floating in the corner via .hub-host-link CSS -->
     <a href="/games.html" class="hub-host-link" id="host-link">
-      👑 Hospedar batalla &nbsp;→
+      👑 Hospedar &nbsp;→
     </a>
 
     <div id="sound-hint" class="sound-hint">🔊 Toca la pantalla para el sonido</div>
@@ -69,7 +78,9 @@
     if (saved && saved.pin && saved.name && saved.ts && Date.now() - saved.ts < REMATCH_MAX_AGE_MS) {
       const wrap = document.getElementById('rematch-wrap');
       wrap.style.display = 'block';
-      document.getElementById('rematch-name-suffix').textContent = ' COMO ' + saved.name.toUpperCase();
+      document.getElementById('rematch-name-suffix').textContent = '';
+      const sub = document.getElementById('rematch-sub');
+      if (sub) sub.textContent = `Volver como ${saved.name} · PIN ${saved.pin}`;
       // Pre-fill the inputs too for convenience
       document.getElementById('home-pin').value = saved.pin;
       document.getElementById('home-name').value = saved.name;

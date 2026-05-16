@@ -359,7 +359,7 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
   color: #ffaeae;
 }
 
-/* The stage — side-scrolling scene */
+/* The stage — pseudo-3D side-scrolling scene with parallax depth layers */
 .zb-sprint-stage {
   position: relative;
   flex: 1;
@@ -368,6 +368,103 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
   border: 3px solid rgba(180, 230, 130, 0.55);
   overflow: hidden;
   background: linear-gradient(180deg, #d27040 0%, #a04830 40%, #2a2018 75%, #1a140e 100%);
+  /* CSS perspective gives us a real 3D camera-feel without full WebGL.
+     Layers can apply translateZ() to sit at different depths. */
+  perspective: 800px;
+  perspective-origin: 50% 60%;
+}
+
+/* Generic parallax layer wrapper. Each gets its own scroll speed via JS or
+   animation-duration overrides below. */
+.zb-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Layer 2 — distant mountains (slowest scroll, sits deepest in 3D) */
+.zb-layer-mountains {
+  bottom: 38%;
+  top: auto;
+  height: 22%;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(40,28,20,0.6) 100%),
+    radial-gradient(ellipse 80px 24px at 18% 80%, #5a3520 60%, transparent 62%),
+    radial-gradient(ellipse 110px 30px at 38% 78%, #4a2a18 60%, transparent 62%),
+    radial-gradient(ellipse 70px 22px at 58% 82%, #5a3520 60%, transparent 62%),
+    radial-gradient(ellipse 130px 36px at 78% 76%, #3a2010 60%, transparent 62%);
+  background-repeat: repeat-x;
+  background-size: 100% 100%;
+  transform: translateZ(-200px) scale(1.25); /* push back, scale up to fill */
+  animation: zb-parallax-slow 32s linear infinite;
+  opacity: 0.85;
+}
+@keyframes zb-parallax-slow {
+  from { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
+  to   { background-position: -200px 0, -200px 0, -200px 0, -200px 0, -200px 0; }
+}
+
+/* Layer 4 — smoke fog drifting across the mid-ground */
+.zb-layer-smoke {
+  background:
+    radial-gradient(ellipse 200px 60px at 20% 55%, rgba(220, 220, 200, 0.18), transparent 70%),
+    radial-gradient(ellipse 240px 70px at 70% 60%, rgba(200, 200, 180, 0.14), transparent 70%);
+  background-repeat: repeat-x;
+  background-size: 60% 100%, 70% 100%;
+  animation: zb-smoke-drift 18s linear infinite;
+  transform: translateZ(-50px);
+}
+@keyframes zb-smoke-drift {
+  from { background-position: 0 0, 0 0; }
+  to   { background-position: -300px 0, 300px 0; }
+}
+
+/* Layer 7 — foreground floating particles (dust, ash flakes) */
+.zb-layer-particles {
+  background:
+    radial-gradient(circle at 12% 30%, rgba(255,255,255,0.4) 0 1px, transparent 2px),
+    radial-gradient(circle at 45% 70%, rgba(255,255,255,0.3) 0 1px, transparent 2px),
+    radial-gradient(circle at 82% 20%, rgba(255,255,255,0.35) 0 1px, transparent 2px),
+    radial-gradient(circle at 68% 88%, rgba(255,255,255,0.3) 0 1px, transparent 2px);
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  animation: zb-particles-drift 8s linear infinite;
+  transform: translateZ(40px);
+  opacity: 0.7;
+}
+@keyframes zb-particles-drift {
+  from { background-position: 0 0, 0 0, 0 0, 0 0; }
+  to   { background-position: -200px 50px, -200px -30px, -200px 40px, -200px -20px; }
+}
+
+/* Jumpscare flash overlay — fires when a "hidden zombie" trigger hits.
+   Quick red-flash + screen rumble for an "alive environment" feeling. */
+.zb-jumpscare {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, transparent 30%, rgba(180, 20, 20, 0.55) 90%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+.zb-jumpscare.flash {
+  animation: zb-jumpscare-flash 0.5s ease-out;
+}
+@keyframes zb-jumpscare-flash {
+  0%   { opacity: 0;    transform: scale(1.02); }
+  25%  { opacity: 0.85; transform: scale(1);    }
+  100% { opacity: 0;    transform: scale(1.02); }
+}
+.zb-sprint-stage.rumble {
+  animation: zb-stage-rumble 0.4s linear;
+}
+@keyframes zb-stage-rumble {
+  0%   { transform: translate(0, 0); }
+  20%  { transform: translate(-3px, 2px); }
+  40%  { transform: translate(2px, -3px); }
+  60%  { transform: translate(-2px, 3px); }
+  80%  { transform: translate(3px, -2px); }
+  100% { transform: translate(0, 0); }
 }
 .zb-sprint-sky {
   position: absolute;
@@ -470,6 +567,15 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
   font-size: clamp(2rem, 5vw, 2.8rem);
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
   pointer-events: none;
+}
+.zb-obstacle.scary {
+  font-size: clamp(2.4rem, 6vw, 3.2rem);
+  filter: drop-shadow(0 0 12px rgba(120, 240, 80, 0.9)) drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+  animation: zb-obstacle-shamble 0.4s ease-in-out infinite alternate;
+}
+@keyframes zb-obstacle-shamble {
+  from { transform: translateY(0)   rotate(-3deg); }
+  to   { transform: translateY(-3px) rotate(3deg); }
 }
 @keyframes zb-obstacle-slide {
   from { left: 100%; }
