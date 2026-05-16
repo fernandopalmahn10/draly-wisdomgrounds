@@ -13,9 +13,9 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260516b">
-  <link rel="stylesheet" href="/css/zombie.css?v=20260516b">
-  <link rel="stylesheet" href="/css/family.css?v=20260516c">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260516d">
+  <link rel="stylesheet" href="/css/zombie.css?v=20260516d">
+  <link rel="stylesheet" href="/css/family.css?v=20260516d">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -320,33 +320,42 @@
   </div>
 
   <!-- ENDED -->
-  <!-- MI FAMILIA — placement screen. Opens after a correct answer:
-       shows the awarded token (emoji + name) and 4 room buttons. Player
-       taps a room to place it. -->
+  <!-- MI FAMILIA — DRAG-and-DROP placement. The awarded token is the player's
+       finger-puppet — drag it into one of the 4 room zones laid out like a
+       blueprint of the house. Recommended rooms glow. Drop = placement.
+       Combo banner flashes if the placement unlocks a combo. -->
   <div id="screen-family-place" class="hidden player-screen fm-place-screen">
-    <div class="fm-place-headline">🎁 ¡Recibiste un objeto! ¿Dónde lo pones?</div>
-    <div class="fm-place-token-card">
-      <div class="fm-place-token-emoji" id="fm-token-emoji">🛋</div>
-      <div class="fm-place-token-name" id="fm-token-name">Sofá</div>
+    <div class="fm-place-top">
+      <div class="fm-place-score-pill">💼 <span id="fm-place-score">0</span> pts</div>
+      <div class="fm-place-timer-num" id="fm-place-timer-num">8</div>
     </div>
-    <div class="fm-place-timer-wrap">
-      <div class="fm-place-timer-fill" id="fm-place-timer-fill"></div>
+    <div class="fm-place-headline">🏡 ¡Arrastra al cuarto correcto!</div>
+    <div class="fm-blueprint" id="fm-blueprint">
+      <div class="fm-roomzone sala" data-room="sala">
+        <span class="fm-roomzone-tag">🛋 Sala</span>
+        <span class="fm-roomzone-fill"></span>
+      </div>
+      <div class="fm-roomzone cocina" data-room="cocina">
+        <span class="fm-roomzone-tag">🍳 Cocina</span>
+        <span class="fm-roomzone-fill"></span>
+      </div>
+      <div class="fm-roomzone dormitorio" data-room="dormitorio">
+        <span class="fm-roomzone-tag">🛏 Dormitorio</span>
+        <span class="fm-roomzone-fill"></span>
+      </div>
+      <div class="fm-roomzone jardin" data-room="jardin">
+        <span class="fm-roomzone-tag">🌳 Jardín</span>
+        <span class="fm-roomzone-fill"></span>
+      </div>
+      <!-- The draggable token sits in the center until grabbed -->
+      <div class="fm-drag-token" id="fm-drag-token">
+        <span class="fm-drag-emoji" id="fm-token-emoji">🛋</span>
+        <span class="fm-drag-name" id="fm-token-name">Sofá</span>
+      </div>
     </div>
-    <div class="fm-place-rooms" id="fm-place-rooms">
-      <button class="fm-place-room-btn sala" data-room="sala">
-        <span class="fm-place-room-emoji">🛋️</span>Sala
-      </button>
-      <button class="fm-place-room-btn cocina" data-room="cocina">
-        <span class="fm-place-room-emoji">🍳</span>Cocina
-      </button>
-      <button class="fm-place-room-btn dormitorio" data-room="dormitorio">
-        <span class="fm-place-room-emoji">🛏</span>Dormitorio
-      </button>
-      <button class="fm-place-room-btn jardin" data-room="jardin">
-        <span class="fm-place-room-emoji">🌳</span>Jardín
-      </button>
-    </div>
-    <p class="fm-place-hint">Las opciones verdes son las que mejor le quedan.</p>
+    <p class="fm-place-hint" id="fm-place-hint">👆 Mantén el dedo y arrastra hacia un cuarto</p>
+    <!-- Combo banner — flashes when this placement unlocks a combo -->
+    <div class="fm-combo-banner hidden" id="fm-combo-banner"></div>
   </div>
 
   <!-- ZOMBIE SPRINT — auto-runner with pseudo-3D parallax depth.
@@ -404,9 +413,9 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260516b"></script>
+  <script src="/js/sounds.js?v=20260516d"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/player.js?v=20260516b"></script>
+  <script src="/js/player.js?v=20260516d"></script>
 </body>
 </html>

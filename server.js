@@ -240,7 +240,136 @@ const FM_TOKENS = [
   { id: 'sun',    emoji: '☀️',    name: 'Sol',     rooms: ['jardin'] },
   { id: 'lantern',emoji: '🏮',    name: 'Farolillo', rooms: ['sala', 'jardin'] }
 ];
-const FM_PLACE_WINDOW_MS = 8000; // player has 8s to pick a room
+const FM_PLACE_WINDOW_MS = 8000; // player has 8s to drag
+
+// === Combos === Each combo defines a condition over a team's house and a
+// bonus to award when first met. Combos only trigger ONCE per house (tracked
+// via team.combosAchieved set). The check runs after every placement.
+const FM_COMBOS = [
+  {
+    id: 'pareja',
+    name: '¡Pareja! 💞',
+    emoji: '💞',
+    bonus: 5,
+    test: (h) => h.sala.some(i=>i.id==='dad') && h.sala.some(i=>i.id==='mom')
+  },
+  {
+    id: 'familia',
+    name: '¡Familia completa! 👨‍👩‍👧',
+    emoji: '👨‍👩‍👧',
+    bonus: 10,
+    test: (h) => {
+      const all = [...h.sala, ...h.cocina, ...h.dormitorio, ...h.jardin];
+      const ids = new Set(all.map(i=>i.id));
+      return ids.has('dad') && ids.has('mom') && (ids.has('kid')||ids.has('baby'));
+    }
+  },
+  {
+    id: 'abuelos',
+    name: '¡Abuelos! 👴👵',
+    emoji: '👴',
+    bonus: 6,
+    test: (h) => {
+      const all = [...h.sala, ...h.cocina, ...h.dormitorio, ...h.jardin];
+      const ids = new Set(all.map(i=>i.id));
+      return ids.has('gran') && ids.has('grandpa');
+    }
+  },
+  {
+    id: 'mascotas',
+    name: '¡Mascotas! 🐕🐱',
+    emoji: '🐕',
+    bonus: 5,
+    test: (h) => {
+      const all = [...h.sala, ...h.cocina, ...h.dormitorio, ...h.jardin];
+      const ids = new Set(all.map(i=>i.id));
+      return ids.has('dog') && ids.has('cat');
+    }
+  },
+  {
+    id: 'cena',
+    name: '¡Cena familiar! 🍳🍲',
+    emoji: '🍲',
+    bonus: 6,
+    test: (h) => {
+      const ids = new Set(h.cocina.map(i=>i.id));
+      return ids.has('stove') && ids.has('pot');
+    }
+  },
+  {
+    id: 'jardin-bonito',
+    name: '¡Jardín bonito! 🌳🌸',
+    emoji: '🌸',
+    bonus: 5,
+    test: (h) => {
+      const ids = new Set(h.jardin.map(i=>i.id));
+      return ids.has('tree') && ids.has('flower');
+    }
+  },
+  {
+    id: 'sala-cozy',
+    name: '¡Sala acogedora! 🛋📺',
+    emoji: '🛋',
+    bonus: 5,
+    test: (h) => {
+      const ids = new Set(h.sala.map(i=>i.id));
+      return ids.has('sofa') && ids.has('tv');
+    }
+  },
+  {
+    id: 'dormitorio-listo',
+    name: '¡Dormitorio listo! 🛏📚',
+    emoji: '🛏',
+    bonus: 5,
+    test: (h) => {
+      const ids = new Set(h.dormitorio.map(i=>i.id));
+      return ids.has('bed') && ids.has('book');
+    }
+  },
+  {
+    id: 'sala-llena',
+    name: '¡Sala llena! +5 objetos',
+    emoji: '🏡',
+    bonus: 8,
+    test: (h) => h.sala.length >= 5
+  },
+  {
+    id: 'cocina-llena',
+    name: '¡Cocina llena!',
+    emoji: '🍳',
+    bonus: 8,
+    test: (h) => h.cocina.length >= 5
+  },
+  {
+    id: 'jardin-lleno',
+    name: '¡Jardín exuberante!',
+    emoji: '🌳',
+    bonus: 8,
+    test: (h) => h.jardin.length >= 5
+  },
+  {
+    id: 'casa-completa',
+    name: '🏆 ¡CASA COMPLETA! ',
+    emoji: '🏆',
+    bonus: 25,
+    test: (h) => h.sala.length>=3 && h.cocina.length>=3 && h.dormitorio.length>=3 && h.jardin.length>=3
+  }
+];
+
+function fmCheckCombos(g, team) {
+  const house = g.family[team];
+  if (!house._combos) house._combos = new Set();
+  const newCombos = [];
+  for (const c of FM_COMBOS) {
+    if (house._combos.has(c.id)) continue;
+    if (c.test(house)) {
+      house._combos.add(c.id);
+      newCombos.push(c);
+      g.teamScores[team] = (g.teamScores[team] || 0) + c.bonus;
+    }
+  }
+  return newCombos;
+}
 
 function fmPickToken() {
   return FM_TOKENS[Math.floor(Math.random() * FM_TOKENS.length)];
@@ -266,20 +395,27 @@ function fmPlace(pin, pid, requestedRoom) {
   g.family[p.team][room].push({ id: t.id, emoji: t.emoji, by: p.name, t: Date.now() });
   p.score = (p.score || 0) + 1;
   g.teamScores[p.team] = (g.teamScores[p.team] || 0) + 1;
+  // Check for new combos unlocked by THIS placement
+  const newCombos = fmCheckCombos(g, p.team);
   io.to(pin).emit('fm:placed', {
     team: p.team,
     room,
     token: { id: t.id, emoji: t.emoji, name: t.name },
-    playerName: p.name,
-    teamScores: g.teamScores
+    teamScores: g.teamScores,
+    combos: newCombos.map(c => ({ id: c.id, name: c.name, emoji: c.emoji, bonus: c.bonus }))
   });
-  io.to(pid).emit('fm:place-confirmed', { room, token: t });
-  // Queue next question
+  io.to(pid).emit('fm:place-confirmed', {
+    room,
+    token: t,
+    combos: newCombos.map(c => ({ id: c.id, name: c.name, emoji: c.emoji, bonus: c.bonus })),
+    teamScore: g.teamScores[p.team]
+  });
+  // Snappy cadence — fire next question quickly so kids never wait
   setTimeout(() => {
     if (!games[pin] || games[pin].state !== 'active') return;
     const q = nextQuestionFor(g, pid);
     if (q) io.to(pid).emit('question', q);
-  }, 1400);
+  }, newCombos.length > 0 ? 1800 : 900);
 }
 
 // === Vuelo del Dragón (Dragon Flight) constants ===
