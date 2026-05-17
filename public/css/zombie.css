@@ -311,6 +311,62 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
 }
 
 /* ============================================================ */
+/* === PERSISTENT SPOOKY AMBIENCE (covers ALL screens during zombie mode) === */
+/* ============================================================ */
+.zombie-ambience {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9990;
+}
+.zombie-ambience.hidden { display: none; }
+.zombie-ambience::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  /* Subtle vignette so the whole game feels dark and creepy */
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(20, 8, 4, 0.45) 100%);
+  pointer-events: none;
+}
+.zb-peek {
+  position: fixed;
+  font-size: clamp(3rem, 9vw, 4.5rem);
+  filter: drop-shadow(0 0 12px rgba(120, 240, 80, 0.85)) drop-shadow(0 4px 8px rgba(0,0,0,0.85));
+  pointer-events: none;
+  z-index: 9991;
+  opacity: 0;
+  /* Each direction has its own peek-in animation */
+}
+.zb-peek.top    { top: -10vh; left: 50%; animation: zb-peek-top 2.4s ease-in-out forwards; }
+.zb-peek.bottom { bottom: -10vh; left: 50%; animation: zb-peek-bottom 2.4s ease-in-out forwards; }
+.zb-peek.left   { left: -10vw; top: 50%; animation: zb-peek-left 2.4s ease-in-out forwards; }
+.zb-peek.right  { right: -10vw; top: 50%; animation: zb-peek-right 2.4s ease-in-out forwards; }
+@keyframes zb-peek-top {
+  0%   { opacity: 0; transform: translate(-50%, -100%) rotate(180deg); }
+  25%  { opacity: 1; transform: translate(-50%, 0)     rotate(180deg); }
+  75%  { opacity: 1; transform: translate(-50%, 0)     rotate(180deg); }
+  100% { opacity: 0; transform: translate(-50%, -100%) rotate(180deg); }
+}
+@keyframes zb-peek-bottom {
+  0%   { opacity: 0; transform: translate(-50%, 100%); }
+  25%  { opacity: 1; transform: translate(-50%, 0);    }
+  75%  { opacity: 1; transform: translate(-50%, 0);    }
+  100% { opacity: 0; transform: translate(-50%, 100%); }
+}
+@keyframes zb-peek-left {
+  0%   { opacity: 0; transform: translate(-100%, -50%); }
+  25%  { opacity: 1; transform: translate(0,     -50%); }
+  75%  { opacity: 1; transform: translate(0,     -50%); }
+  100% { opacity: 0; transform: translate(-100%, -50%); }
+}
+@keyframes zb-peek-right {
+  0%   { opacity: 0; transform: translate(100%, -50%); }
+  25%  { opacity: 1; transform: translate(0,    -50%); }
+  75%  { opacity: 1; transform: translate(0,    -50%); }
+  100% { opacity: 0; transform: translate(100%, -50%); }
+}
+
+/* ============================================================ */
 /* === PLAYER SPRINT SCREEN (timed jump platformer) === */
 /* ============================================================ */
 .zb-sprint-screen {

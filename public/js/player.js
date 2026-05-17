@@ -636,12 +636,13 @@
     stopLobbyFlappy();
     showScreen('countdown');
     MochiSounds.startMusic();
-    // Independent random Dralingo appearances on each player's phone
-    Dralingo.startRandom({
-      minMs: 25000,
-      maxMs: 50000,
-      isActive: () => true
-    });
+    // (Random Dralingo pop-ins were here — disabled per user feedback;
+    // they were too intrusive during active gameplay.)
+    if (Dralingo && Dralingo.stopRandom) Dralingo.stopRandom();
+    // Zombie game: start the spooky ambient layer that haunts the player's
+    // question/result screens with peeks + groans (separate from the in-sprint
+    // jumpscares — this one runs the WHOLE game)
+    if (gameType === 'zombie') startZombieAmbience();
     // Color Clash: after the countdown ends, drop straight into the play screen
     if (gameType === 'color-clash') {
       setTimeout(() => {
@@ -1211,6 +1212,71 @@
     }
     // Next question handler will swap us off this screen automatically
   });
+
+  // === Zombie Escape: persistent spooky ambience overlay ===
+  // Lives in #zombie-ambience (sits above every screen). Random zombie peeks
+  // from the screen edges + ambient groans, throughout the WHOLE zombie game,
+  // not just during the sprint mini-game. Makes the entire match feel haunted.
+  let zbAmbienceInterval = null;
+  let zbAmbiencePeekTimer = null;
+
+  function startZombieAmbience() {
+    const layer = $('zombie-ambience');
+    if (!layer) return;
+    layer.classList.remove('hidden');
+    if (zbAmbienceInterval) clearInterval(zbAmbienceInterval);
+    if (zbAmbiencePeekTimer) clearTimeout(zbAmbiencePeekTimer);
+    // Periodic ambient groan every 6-12s
+    zbAmbienceInterval = setInterval(() => {
+      if (document.hidden) return;
+      if (Math.random() < 0.6) {
+        if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.4);
+      }
+    }, 9000);
+    schedulePeek();
+  }
+
+  function stopZombieAmbience() {
+    const layer = $('zombie-ambience');
+    if (layer) {
+      layer.classList.add('hidden');
+      layer.innerHTML = '';
+    }
+    if (zbAmbienceInterval) { clearInterval(zbAmbienceInterval); zbAmbienceInterval = null; }
+    if (zbAmbiencePeekTimer) { clearTimeout(zbAmbiencePeekTimer); zbAmbiencePeekTimer = null; }
+  }
+
+  function schedulePeek() {
+    // Next peek in 8-20s
+    const wait = 8000 + Math.random() * 12000;
+    zbAmbiencePeekTimer = setTimeout(() => {
+      spawnZombiePeek();
+      schedulePeek();
+    }, wait);
+  }
+
+  function spawnZombiePeek() {
+    if (gameType !== 'zombie') return;
+    if (document.hidden) return;
+    const layer = $('zombie-ambience');
+    if (!layer) return;
+    // Pick a side at random — top, bottom, left, right
+    const sides = ['top', 'bottom', 'left', 'right'];
+    const side = sides[Math.floor(Math.random() * sides.length)];
+    const variants = ['🧟', '🧟‍♂️', '🧟‍♀️', '🤚', '👁'];
+    const emoji = variants[Math.floor(Math.random() * variants.length)];
+    const peek = document.createElement('div');
+    peek.className = `zb-peek ${side}`;
+    peek.textContent = emoji;
+    // Random position along the chosen edge
+    const pos = 15 + Math.random() * 70; // 15..85%
+    if (side === 'top' || side === 'bottom') peek.style.left = pos + '%';
+    if (side === 'left' || side === 'right') peek.style.top = pos + '%';
+    layer.appendChild(peek);
+    if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.35);
+    if (navigator.vibrate) navigator.vibrate(25);
+    setTimeout(() => peek.remove(), 2400);
+  }
 
   // === Zombie Escape: timed-jump auto-runner ===
   // Pseudo-3D parallax environment (sky → mountains → skyline → smoke → horde
@@ -3323,6 +3389,7 @@
   socket.on('game-end', (data) => {
     MochiSounds.stopMusic();
     Dralingo.stopRandom();
+    stopZombieAmbience();
     stopLobbyFlappy();
     if (mashTimerInterval) clearInterval(mashTimerInterval);
     if (csWalkTimerInterval) clearInterval(csWalkTimerInterval);
