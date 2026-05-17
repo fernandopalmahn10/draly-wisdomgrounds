@@ -1226,14 +1226,14 @@
     layer.classList.remove('hidden');
     if (zbAmbienceInterval) clearInterval(zbAmbienceInterval);
     if (zbAmbiencePeekTimer) clearTimeout(zbAmbiencePeekTimer);
-    // Periodic ambient groan every 6-12s
+    // Distant ambient groan every ~7-10s
     zbAmbienceInterval = setInterval(() => {
       if (document.hidden) return;
       if (Math.random() < 0.6) {
-        if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.4);
+        if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.35);
       }
-    }, 9000);
-    schedulePeek();
+    }, 8000);
+    scheduleSpookyEvent();
   }
 
   function stopZombieAmbience() {
@@ -1246,13 +1246,120 @@
     if (zbAmbiencePeekTimer) { clearTimeout(zbAmbiencePeekTimer); zbAmbiencePeekTimer = null; }
   }
 
-  function schedulePeek() {
-    // Next peek in 8-20s
-    const wait = 8000 + Math.random() * 12000;
+  // Random "spooky event" scheduler — picks one of many possible scares each cycle.
+  // The variety (peek, BIG jumpscare, blood splat, screen crack, lights flicker,
+  // hand grab from edge) makes the game feel unpredictable and alive instead of
+  // just having the same little corner-emoji over and over.
+  function scheduleSpookyEvent() {
+    const wait = 5000 + Math.random() * 8000; // 5–13s between scares
     zbAmbiencePeekTimer = setTimeout(() => {
-      spawnZombiePeek();
-      schedulePeek();
+      spawnSpookyEvent();
+      scheduleSpookyEvent();
     }, wait);
+  }
+
+  function spawnSpookyEvent() {
+    if (gameType !== 'zombie') return;
+    if (document.hidden) return;
+    // Weighted roll over the available scare types
+    const r = Math.random();
+    if (r < 0.30)      spawnBigZombieJumpscare();   // 30% — the BIG one
+    else if (r < 0.55) spawnHandGrab();              // 25%
+    else if (r < 0.72) spawnZombiePeek();            // 17% (edge peek)
+    else if (r < 0.85) spawnBloodSplat();            // 13%
+    else if (r < 0.94) spawnLightsFlicker();         // 9%
+    else               spawnScreenCrack();           // 6%
+  }
+
+  // BIG center-screen zombie jumpscare — the marquee scare. A huge zombie
+  // face/torso lunges out of the middle of the screen, glows green, shakes
+  // the world, and lets out a loud groan. Disappears after ~1.8s.
+  function spawnBigZombieJumpscare() {
+    const layer = $('zombie-ambience');
+    if (!layer) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'zb-bigscare';
+    const variants = ['🧟', '🧟‍♂️', '🧟‍♀️', '👻', '💀', '👹'];
+    const pick = variants[Math.floor(Math.random() * variants.length)];
+    wrap.innerHTML = `
+      <div class="zb-bigscare-glow"></div>
+      <div class="zb-bigscare-emoji">${pick}</div>
+      <div class="zb-bigscare-vignette"></div>
+    `;
+    layer.appendChild(wrap);
+    // Audio: full scream + a chunky thump for that "in your face" punch.
+    if (MochiSounds.zombieScream) MochiSounds.zombieScream();
+    else if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.95);
+    setTimeout(() => { if (MochiSounds.heartbeat) MochiSounds.heartbeat(); }, 480);
+    // Heavy haptic burst on phones
+    if (navigator.vibrate) navigator.vibrate([60, 40, 120, 30, 80]);
+    // Shake the body for emphasis (CSS hooked to .zb-world-shake)
+    document.body.classList.add('zb-world-shake');
+    setTimeout(() => document.body.classList.remove('zb-world-shake'), 700);
+    setTimeout(() => wrap.remove(), 1800);
+  }
+
+  // Bloody handprint slaps onto the screen, drips, fades
+  function spawnBloodSplat() {
+    const layer = $('zombie-ambience');
+    if (!layer) return;
+    const splat = document.createElement('div');
+    splat.className = 'zb-blood';
+    splat.style.left = (10 + Math.random() * 70) + '%';
+    splat.style.top  = (15 + Math.random() * 60) + '%';
+    splat.textContent = ['🩸', '🖐', '✋'][Math.floor(Math.random() * 3)];
+    layer.appendChild(splat);
+    if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.45);
+    if (navigator.vibrate) navigator.vibrate([40, 20, 40]);
+    setTimeout(() => splat.remove(), 2600);
+  }
+
+  // Spooky "the power is out" flicker — black overlay flashes a few times
+  function spawnLightsFlicker() {
+    const layer = $('zombie-ambience');
+    if (!layer) return;
+    const flick = document.createElement('div');
+    flick.className = 'zb-flicker';
+    layer.appendChild(flick);
+    if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.25);
+    setTimeout(() => flick.remove(), 1400);
+  }
+
+  // Cracked-glass screen overlay — slams in then fades
+  function spawnScreenCrack() {
+    const layer = $('zombie-ambience');
+    if (!layer) return;
+    const crack = document.createElement('div');
+    crack.className = 'zb-crack';
+    crack.innerHTML = '<svg viewBox="0 0 100 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M50,50 L10,15 M50,50 L92,8 M50,50 L98,55 M50,50 L88,92 M50,50 L50,98 M50,50 L8,90 M50,50 L4,50 M50,50 L20,30 M50,50 L75,25 M50,50 L80,70" ' +
+      'stroke="rgba(255,255,255,0.9)" stroke-width="0.4" fill="none"/>' +
+      '<path d="M30,30 L36,38 M70,30 L65,40 M30,70 L40,62 M70,70 L60,62" stroke="rgba(255,255,255,0.6)" stroke-width="0.25" fill="none"/>' +
+      '</svg>';
+    layer.appendChild(crack);
+    if (MochiSounds.wrong) MochiSounds.wrong();
+    if (navigator.vibrate) navigator.vibrate([80, 40, 80]);
+    document.body.classList.add('zb-world-shake');
+    setTimeout(() => document.body.classList.remove('zb-world-shake'), 400);
+    setTimeout(() => crack.remove(), 2200);
+  }
+
+  // Hand grabs in from an edge — feels like a zombie is trying to drag you
+  function spawnHandGrab() {
+    const layer = $('zombie-ambience');
+    if (!layer) return;
+    const sides = ['top', 'bottom', 'left', 'right'];
+    const side = sides[Math.floor(Math.random() * sides.length)];
+    const grab = document.createElement('div');
+    grab.className = `zb-grab ${side}`;
+    grab.textContent = Math.random() < 0.5 ? '🤚' : '🖐';
+    const pos = 20 + Math.random() * 60;
+    if (side === 'top' || side === 'bottom') grab.style.left = pos + '%';
+    if (side === 'left' || side === 'right') grab.style.top = pos + '%';
+    layer.appendChild(grab);
+    if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.5);
+    if (navigator.vibrate) navigator.vibrate(45);
+    setTimeout(() => grab.remove(), 1800);
   }
 
   function spawnZombiePeek() {
@@ -1273,10 +1380,13 @@
     if (side === 'top' || side === 'bottom') peek.style.left = pos + '%';
     if (side === 'left' || side === 'right') peek.style.top = pos + '%';
     layer.appendChild(peek);
-    if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.35);
+    if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.4);
     if (navigator.vibrate) navigator.vibrate(25);
     setTimeout(() => peek.remove(), 2400);
   }
+
+  // Keep old name working — some callers still reference schedulePeek
+  function schedulePeek() { scheduleSpookyEvent(); }
 
   // === Zombie Escape: timed-jump auto-runner ===
   // Pseudo-3D parallax environment (sky → mountains → skyline → smoke → horde
