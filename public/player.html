@@ -13,15 +13,19 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260516d">
-  <link rel="stylesheet" href="/css/zombie.css?v=20260516d">
-  <link rel="stylesheet" href="/css/family.css?v=20260516d">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260516e">
+  <link rel="stylesheet" href="/css/zombie.css?v=20260516e">
+  <link rel="stylesheet" href="/css/family.css?v=20260516e">
 </head>
 <body>
   <div class="lantern l1"></div>
   <div class="lantern l2"></div>
 
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
+
+  <!-- Zombie-game ambience layer: hovers above EVERY screen during zombie mode.
+       Spooky peeks, edge glows, occasional shadow hands. Hidden by default. -->
+  <div id="zombie-ambience" class="zombie-ambience hidden"></div>
 
   <!-- JOIN -->
   <div id="screen-join" class="container" style="justify-content:center; align-items:center;">
@@ -413,9 +417,9 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260516d"></script>
+  <script src="/js/sounds.js?v=20260516e"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/player.js?v=20260516d"></script>
+  <script src="/js/player.js?v=20260516e"></script>
 </body>
 </html>
