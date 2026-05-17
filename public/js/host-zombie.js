@@ -79,10 +79,18 @@
   }
 
   socket.on('state', (s) => {
+    // Always store the latest server state — the timer needs `endsAt`, which
+    // only gets set once the round starts. Filtering out non-lobby states
+    // froze the host's time-remaining display.
     state = s;
     if (s.state === 'lobby') {
       renderLobbyPlayers(s.players);
       updateStartBtn();
+    }
+    // If we already entered the active screen and the timer wasn't running
+    // yet (because endsAt wasn't on the lobby state), kick it off now.
+    if (s.state === 'active' && s.endsAt && !timerInterval) {
+      startTimer();
     }
   });
 
@@ -256,7 +264,12 @@
   }
 
   function startTimer() {
-    if (!state || !state.endsAt) return;
+    // No endsAt yet? Try again every 200ms until the server state catches up.
+    // Without this the timer would silently never start, freezing the host clock.
+    if (!state || !state.endsAt) {
+      setTimeout(startTimer, 200);
+      return;
+    }
     urgentTriggered = false;
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {

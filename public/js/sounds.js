@@ -366,6 +366,22 @@
       tone({ freq: 75,  dur: 0.5 * v + 0.15, type: 'triangle', vol: 0.08 * v, slideTo: 40, delay: 0.06 });
       noise({ dur: 0.4 * v, vol: 0.06 * v, delay: 0.05 });
     },
+    zombieScream() {
+      // Big jumpscare scream — high gnarled screech slamming down into a growl,
+      // followed by a fat low rumble and a noise burst. The center-screen
+      // zombie attack uses this; volume is meant to be JARRING (not background).
+      tone({ freq: 880, dur: 0.55, type: 'sawtooth', vol: 0.28, slideTo: 180 });
+      tone({ freq: 660, dur: 0.45, type: 'square',  vol: 0.18, slideTo: 120, delay: 0.04 });
+      tone({ freq: 320, dur: 0.7,  type: 'sawtooth', vol: 0.22, slideTo: 70, delay: 0.18 });
+      tone({ freq: 55,  dur: 1.0,  type: 'sine',    vol: 0.30, slideTo: 38, delay: 0.05 });
+      noise({ dur: 0.7, vol: 0.22 });
+      noise({ dur: 0.5, vol: 0.14, delay: 0.35 });
+    },
+    heartbeat() {
+      // Quick double-thump — handy for "they're getting close" cues
+      tone({ freq: 70, dur: 0.18, type: 'sine', vol: 0.28, slideTo: 45 });
+      tone({ freq: 65, dur: 0.20, type: 'sine', vol: 0.26, slideTo: 40, delay: 0.22 });
+    },
     candySpill() {
       // Cheerful confetti-y cascade for when the piñata bursts
       [880, 1320, 1760, 2200, 1760, 1320].forEach((f, i) =>

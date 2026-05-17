@@ -330,8 +330,9 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
 }
 .zb-peek {
   position: fixed;
-  font-size: clamp(3rem, 9vw, 4.5rem);
-  filter: drop-shadow(0 0 12px rgba(120, 240, 80, 0.85)) drop-shadow(0 4px 8px rgba(0,0,0,0.85));
+  /* MUCH bigger — phones get a chunky scare, tablets/desktops get monster-sized */
+  font-size: clamp(6rem, 22vw, 14rem);
+  filter: drop-shadow(0 0 18px rgba(120, 240, 80, 0.95)) drop-shadow(0 6px 14px rgba(0,0,0,0.9));
   pointer-events: none;
   z-index: 9991;
   opacity: 0;
@@ -341,6 +342,175 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
 .zb-peek.bottom { bottom: -10vh; left: 50%; animation: zb-peek-bottom 2.4s ease-in-out forwards; }
 .zb-peek.left   { left: -10vw; top: 50%; animation: zb-peek-left 2.4s ease-in-out forwards; }
 .zb-peek.right  { right: -10vw; top: 50%; animation: zb-peek-right 2.4s ease-in-out forwards; }
+
+/* === BIG center-screen jumpscare === */
+/* Huge emoji slams into the center of the viewport, glowing, with vignette
+   and a bright green shockwave. Reads as a "zombie attack appear on the
+   players play screen". */
+.zb-bigscare {
+  position: fixed;
+  inset: 0;
+  z-index: 9995;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.zb-bigscare-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, transparent 28%, rgba(40, 0, 0, 0.85) 95%);
+  opacity: 0;
+  animation: zb-bigscare-vig 1.8s ease-out forwards;
+}
+.zb-bigscare-glow {
+  position: absolute;
+  width: min(140vw, 140vh);
+  height: min(140vw, 140vh);
+  background: radial-gradient(circle, rgba(120, 240, 80, 0.55) 0%, rgba(160, 30, 30, 0.4) 35%, transparent 70%);
+  opacity: 0;
+  animation: zb-bigscare-glow 1.8s ease-out forwards;
+  border-radius: 50%;
+  filter: blur(8px);
+}
+.zb-bigscare-emoji {
+  position: relative;
+  /* Take up MAJOR real estate — kids should feel the zombie is right in their face */
+  font-size: clamp(14rem, 60vmin, 32rem);
+  filter:
+    drop-shadow(0 0 32px rgba(120, 240, 80, 0.95))
+    drop-shadow(0 0 60px rgba(40, 200, 30, 0.7))
+    drop-shadow(0 10px 22px rgba(0,0,0,0.9));
+  animation: zb-bigscare-lunge 1.8s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+  user-select: none;
+}
+@keyframes zb-bigscare-lunge {
+  0%   { opacity: 0; transform: scale(0.2) rotate(-6deg); }
+  15%  { opacity: 1; transform: scale(1.25) rotate(2deg); }
+  30%  { transform: scale(1.05) rotate(-3deg); }
+  45%  { transform: scale(1.15) rotate(2deg); }
+  70%  { opacity: 1; transform: scale(1.08) rotate(0); }
+  100% { opacity: 0; transform: scale(0.85) rotate(0); }
+}
+@keyframes zb-bigscare-vig {
+  0%   { opacity: 0; }
+  25%  { opacity: 1; }
+  85%  { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+@keyframes zb-bigscare-glow {
+  0%   { opacity: 0; transform: scale(0.3); }
+  20%  { opacity: 0.9; transform: scale(1); }
+  60%  { opacity: 0.6; transform: scale(1.15); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+
+/* World-shake — applies to body so the WHOLE phone view rattles */
+body.zb-world-shake { animation: zb-world-shake 0.65s linear; }
+@keyframes zb-world-shake {
+  0%, 100% { transform: translate(0, 0); }
+  10%      { transform: translate(-6px, 4px) rotate(-0.4deg); }
+  25%      { transform: translate(5px, -6px) rotate(0.5deg); }
+  40%      { transform: translate(-7px, 3px) rotate(-0.3deg); }
+  55%      { transform: translate(4px, 5px) rotate(0.4deg); }
+  70%      { transform: translate(-4px, -3px) rotate(-0.2deg); }
+  85%      { transform: translate(3px, 2px) rotate(0.1deg); }
+}
+
+/* Bloody hand splat — sticks for a beat, then drips and fades */
+.zb-blood {
+  position: fixed;
+  font-size: clamp(5rem, 18vw, 11rem);
+  z-index: 9992;
+  opacity: 0;
+  filter: drop-shadow(0 0 14px rgba(200, 20, 20, 0.9)) hue-rotate(-10deg) saturate(1.6);
+  animation: zb-blood-splat 2.6s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes zb-blood-splat {
+  0%   { opacity: 0; transform: scale(0.3) rotate(-12deg); }
+  15%  { opacity: 1; transform: scale(1.4) rotate(2deg); }
+  30%  { transform: scale(1.15) rotate(-2deg); }
+  80%  { opacity: 0.9; transform: scale(1) translateY(8px); }
+  100% { opacity: 0; transform: scale(0.95) translateY(40px); }
+}
+
+/* Lights-flicker overlay — black slab that pulses on/off like a power surge */
+.zb-flicker {
+  position: fixed;
+  inset: 0;
+  z-index: 9994;
+  background: rgba(2, 0, 2, 0.92);
+  opacity: 0;
+  pointer-events: none;
+  animation: zb-flicker-anim 1.4s steps(1, end) forwards;
+}
+@keyframes zb-flicker-anim {
+  0%   { opacity: 0; }
+  8%   { opacity: 0.85; }
+  14%  { opacity: 0; }
+  22%  { opacity: 0.9; }
+  30%  { opacity: 0.1; }
+  42%  { opacity: 0.8; }
+  55%  { opacity: 0; }
+  72%  { opacity: 0.6; }
+  100% { opacity: 0; }
+}
+
+/* Cracked-glass overlay — full-viewport SVG of fracture lines */
+.zb-crack {
+  position: fixed;
+  inset: 0;
+  z-index: 9993;
+  pointer-events: none;
+  opacity: 0;
+  animation: zb-crack-anim 2.2s ease-out forwards;
+}
+.zb-crack svg { width: 100%; height: 100%; }
+@keyframes zb-crack-anim {
+  0%   { opacity: 0; transform: scale(0.96); }
+  10%  { opacity: 1; transform: scale(1.02); }
+  60%  { opacity: 0.95; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+/* Hand grab from an edge — claws onto the screen, hangs, slides back */
+.zb-grab {
+  position: fixed;
+  font-size: clamp(5rem, 18vw, 11rem);
+  filter: drop-shadow(0 0 14px rgba(120, 240, 80, 0.8)) drop-shadow(0 6px 12px rgba(0,0,0,0.85));
+  pointer-events: none;
+  z-index: 9992;
+  opacity: 0;
+}
+.zb-grab.top    { top: -12vh; left: 50%; animation: zb-grab-top 1.8s ease-out forwards; }
+.zb-grab.bottom { bottom: -12vh; left: 50%; animation: zb-grab-bottom 1.8s ease-out forwards; }
+.zb-grab.left   { left: -14vw; top: 50%; animation: zb-grab-left 1.8s ease-out forwards; }
+.zb-grab.right  { right: -14vw; top: 50%; animation: zb-grab-right 1.8s ease-out forwards; }
+@keyframes zb-grab-top {
+  0%   { opacity: 0; transform: translate(-50%, 0)     rotate(180deg) scale(0.8); }
+  30%  { opacity: 1; transform: translate(-50%, 22vh)  rotate(180deg) scale(1.1); }
+  70%  { opacity: 1; transform: translate(-50%, 18vh)  rotate(180deg) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, 0)     rotate(180deg) scale(0.9); }
+}
+@keyframes zb-grab-bottom {
+  0%   { opacity: 0; transform: translate(-50%, 0)      scale(0.8); }
+  30%  { opacity: 1; transform: translate(-50%, -22vh)  scale(1.1); }
+  70%  { opacity: 1; transform: translate(-50%, -18vh)  scale(1); }
+  100% { opacity: 0; transform: translate(-50%, 0)      scale(0.9); }
+}
+@keyframes zb-grab-left {
+  0%   { opacity: 0; transform: translate(0,    -50%) rotate(90deg) scale(0.8); }
+  30%  { opacity: 1; transform: translate(22vw, -50%) rotate(90deg) scale(1.1); }
+  70%  { opacity: 1; transform: translate(18vw, -50%) rotate(90deg) scale(1); }
+  100% { opacity: 0; transform: translate(0,    -50%) rotate(90deg) scale(0.9); }
+}
+@keyframes zb-grab-right {
+  0%   { opacity: 0; transform: translate(0,     -50%) rotate(-90deg) scale(0.8); }
+  30%  { opacity: 1; transform: translate(-22vw, -50%) rotate(-90deg) scale(1.1); }
+  70%  { opacity: 1; transform: translate(-18vw, -50%) rotate(-90deg) scale(1); }
+  100% { opacity: 0; transform: translate(0,     -50%) rotate(-90deg) scale(0.9); }
+}
 @keyframes zb-peek-top {
   0%   { opacity: 0; transform: translate(-50%, -100%) rotate(180deg); }
   25%  { opacity: 1; transform: translate(-50%, 0)     rotate(180deg); }
@@ -372,8 +542,14 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
 .zb-sprint-screen {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  padding: 8px 8px 14px;
+  /* Use dynamic viewport height so the JUMP button never gets pushed below
+     the fold on tablets / desktops / phones-with-URL-bar. Also clamp the
+     content to a sane reading width on big screens. */
+  height: 100vh;
+  height: 100dvh;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 12px 18px;
   gap: 10px;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(120, 240, 80, 0.22), transparent 55%),
@@ -381,6 +557,7 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
   color: #d9e9ce;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 .zb-sprint-header {
   display: flex;
@@ -418,8 +595,10 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
 /* The stage — pseudo-3D side-scrolling scene with parallax depth layers */
 .zb-sprint-stage {
   position: relative;
-  flex: 1;
-  min-height: 280px;
+  flex: 1 1 auto;
+  /* Generous minimum so the map feels BIG on tablets & desktops, but still
+     leaves room for the jump button at the bottom. */
+  min-height: clamp(320px, 60vh, 700px);
   border-radius: 14px;
   border: 3px solid rgba(180, 230, 130, 0.55);
   overflow: hidden;
@@ -587,7 +766,9 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
   bottom: 8px;
   left: 24%;
   transform: translateX(-50%);
-  font-size: clamp(3rem, 9vw, 4.5rem);
+  /* Bigger! Scales up to 7rem on tablets/desktops so the character is clearly
+     visible, not a tiny dot. */
+  font-size: clamp(4.5rem, 13vmin, 7rem);
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.7));
   z-index: 4;
   animation: zb-surv-run 0.3s ease-in-out infinite alternate;
@@ -624,13 +805,13 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
   position: absolute;
   bottom: 10px;
   left: 100%;
-  font-size: clamp(2rem, 5vw, 2.8rem);
+  font-size: clamp(3rem, 10vmin, 5.5rem);
   filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
   pointer-events: none;
 }
 .zb-obstacle.scary {
-  font-size: clamp(2.4rem, 6vw, 3.2rem);
-  filter: drop-shadow(0 0 12px rgba(120, 240, 80, 0.9)) drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+  font-size: clamp(3.6rem, 12vmin, 6.5rem);
+  filter: drop-shadow(0 0 14px rgba(120, 240, 80, 0.95)) drop-shadow(0 4px 6px rgba(0,0,0,0.6));
   animation: zb-obstacle-shamble 0.4s ease-in-out infinite alternate;
 }
 @keyframes zb-obstacle-shamble {
@@ -660,12 +841,18 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
 }
 
 .zb-jump-btn {
+  /* Always visible at the bottom of the sprint screen, even on tall tablet/
+     desktop viewports. Locked to a fixed flex slot so the stage can never
+     push it off-screen. */
+  flex: 0 0 auto;
   width: 100%;
-  font-size: 1.6rem;
+  /* Scales with viewport so the label stays readable on every size */
+  font-size: clamp(1.4rem, 4.5vmin, 2.4rem);
   font-weight: 900;
   font-family: 'Cinzel', serif;
   letter-spacing: 0.08em;
-  padding: 22px;
+  padding: clamp(18px, 3.5vmin, 30px) 20px;
+  min-height: clamp(72px, 11vh, 120px);
   border-radius: 18px;
   background: linear-gradient(135deg, #c4f0a8 0%, #6fbf3f 50%, #2a5a18 100%);
   border: 4px solid #0e0606;
@@ -675,6 +862,12 @@ body.zombie-bg .win-screen { color: #d9e9ce; }
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  /* Friendly attention-pulse so kids see it on first look */
+  animation: zb-jump-pulse 1.6s ease-in-out infinite;
+}
+@keyframes zb-jump-pulse {
+  0%, 100% { box-shadow: 0 8px 22px rgba(0,0,0,0.5), 0 0 30px rgba(120, 240, 80, 0.4), inset 0 4px 10px rgba(220, 255, 200, 0.4); }
+  50%      { box-shadow: 0 8px 22px rgba(0,0,0,0.5), 0 0 55px rgba(120, 240, 80, 0.8), inset 0 4px 10px rgba(220, 255, 200, 0.5); }
 }
 .zb-jump-btn:active {
   transform: scale(0.96);
