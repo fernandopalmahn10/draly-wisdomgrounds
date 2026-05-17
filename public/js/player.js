@@ -764,21 +764,51 @@
     });
   });
 
+  // === Player-side streak tracking — feeds the global Rewards toast system.
+  // Reset on a wrong answer. Used to escalate from common → great → epic
+  // messages so kids feel a real "I'm on a roll" arc as they get questions right.
+  let correctStreak = 0;
+  let lastAnswerAt = 0;
+  function fireRewardForCorrect() {
+    if (!window.Rewards) return;
+    correctStreak++;
+    const now = Date.now();
+    const fastAnswer = lastAnswerAt > 0 && (now - lastAnswerAt) < 6000;
+    lastAnswerAt = now;
+    // Tier ladder: 1-2 common, 3-5 great, 6+ epic
+    if (correctStreak >= 6) {
+      window.Rewards.epic();
+    } else if (correctStreak >= 3) {
+      window.Rewards.streak(correctStreak);
+    } else if (fastAnswer && Math.random() < 0.5) {
+      window.Rewards.speed();
+    } else if (Math.random() < 0.25) {
+      // Occasional Chinese-language sprinkle — keeps the educational vibe
+      window.Rewards.chinese();
+    } else {
+      window.Rewards.show();
+    }
+  }
+  function resetStreak() { correctStreak = 0; }
+
   socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly, familyToken }) => {
     markActivity();
     clearAnswerHeartbeat();
     hideSendingOverlay();
+    if (!correct) resetStreak();
     // === FAMILY fast path === Skip the 900ms result-feedback screen entirely
     // for Mi Familia — go DIRECTLY to the drag-and-drop placement screen so
     // the cadence stays snappy and kids never see a mismatched mascot.
     if (correct && gameType === 'family' && familyToken) {
       MochiSounds.correct && MochiSounds.correct();
       if (navigator.vibrate) navigator.vibrate([20, 40, 20]);
+      fireRewardForCorrect();
       startFamilyPlace(familyToken);
       return;
     }
     if (correct) {
       MochiSounds.correct();
+      fireRewardForCorrect();
       let happyMascot, sub;
       if (gameType === 'flappy') {
         happyMascot = team === 'red' ? '🐲' : '🦅';
@@ -1224,15 +1254,24 @@
     const layer = $('zombie-ambience');
     if (!layer) return;
     layer.classList.remove('hidden');
+    // Force-unlock the audio context — the player WILL have tapped to join
+    // at this point, but some browsers re-suspend the context after a long
+    // idle. Without this the spooky groans were inaudible despite firing.
+    if (window.unlockAudio) window.unlockAudio();
     if (zbAmbienceInterval) clearInterval(zbAmbienceInterval);
     if (zbAmbiencePeekTimer) clearTimeout(zbAmbiencePeekTimer);
-    // Distant ambient groan every ~7-10s
+    // More frequent ambient groan — every ~5s, 75% chance
     zbAmbienceInterval = setInterval(() => {
       if (document.hidden) return;
-      if (Math.random() < 0.6) {
-        if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.35);
+      if (Math.random() < 0.75) {
+        if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.55);
       }
-    }, 8000);
+    }, 5000);
+    // Guaranteed first BIG jumpscare 4-6s after match start — establishes the
+    // mood immediately so the player isn't waiting for randomness to deliver.
+    setTimeout(() => {
+      if (gameType === 'zombie' && !document.hidden) spawnBigZombieJumpscare();
+    }, 4000 + Math.random() * 2000);
     scheduleSpookyEvent();
   }
 
@@ -1251,7 +1290,10 @@
   // hand grab from edge) makes the game feel unpredictable and alive instead of
   // just having the same little corner-emoji over and over.
   function scheduleSpookyEvent() {
-    const wait = 5000 + Math.random() * 8000; // 5–13s between scares
+    // Much tighter cadence so the game feels actively haunted — a scare
+    // roughly every 3-7s instead of 5-13s. Combined with the guaranteed
+    // first jumpscare, the player sees something every few seconds.
+    const wait = 3000 + Math.random() * 4000;
     zbAmbiencePeekTimer = setTimeout(() => {
       spawnSpookyEvent();
       scheduleSpookyEvent();
@@ -1261,14 +1303,15 @@
   function spawnSpookyEvent() {
     if (gameType !== 'zombie') return;
     if (document.hidden) return;
-    // Weighted roll over the available scare types
+    // Weighted roll over the available scare types. BIG jumpscare is the
+    // headliner — it now rolls 40% of the time so kids see them often.
     const r = Math.random();
-    if (r < 0.30)      spawnBigZombieJumpscare();   // 30% — the BIG one
-    else if (r < 0.55) spawnHandGrab();              // 25%
-    else if (r < 0.72) spawnZombiePeek();            // 17% (edge peek)
-    else if (r < 0.85) spawnBloodSplat();            // 13%
-    else if (r < 0.94) spawnLightsFlicker();         // 9%
-    else               spawnScreenCrack();           // 6%
+    if (r < 0.40)      spawnBigZombieJumpscare();   // 40% — the BIG one
+    else if (r < 0.62) spawnHandGrab();              // 22%
+    else if (r < 0.78) spawnZombiePeek();            // 16% (edge peek)
+    else if (r < 0.88) spawnBloodSplat();            // 10%
+    else if (r < 0.95) spawnLightsFlicker();         // 7%
+    else               spawnScreenCrack();           // 5%
   }
 
   // BIG center-screen zombie jumpscare — the marquee scare. A huge zombie
@@ -1399,18 +1442,25 @@
   // no points). Wrong vocab answer = survivor steps BACK -8m + screen rumble.
   let zbSprintActive = false;
   let zbSprintEndsAt = 0;
+  let zbSprintStartAt = 0;
   let zbSprintCleared = 0;
   let zbObstacleSpawner = null;
   let zbObstacleCleanup = null;
   let zbTimerInterval = null;
+  let zbHordeTimer = null;
   let zbJumping = false;
   let zbObstacleList = [];        // [{el, startedAt, durationMs, cleared}]
+  let zbCombo = 0;                // consecutive successful jumps
+  let zbBestCombo = 0;
 
   function startZombieSprint() {
     showScreen('zombie-sprint');
     zbSprintActive = true;
     zbSprintEndsAt = mashEndTime;
+    zbSprintStartAt = Date.now();
     zbSprintCleared = 0;
+    zbCombo = 0;
+    zbBestCombo = 0;
     zbJumping = false;
     zbObstacleList = [];
     if ($('zb-sprint-cleared')) $('zb-sprint-cleared').textContent = '0';
@@ -1438,14 +1488,49 @@
       btn.onclick = onJump;
     }
 
-    // Obstacle spawner — every ~900ms a new obstacle starts moving left
-    if (zbObstacleSpawner) clearInterval(zbObstacleSpawner);
-    zbObstacleSpawner = setInterval(() => {
+    // Obstacle spawner — interval shrinks over time (difficulty ramp).
+    // Re-arms itself with a fresh setTimeout each spawn so the cadence
+    // actually scales with elapsed time.
+    function scheduleNextObstacle() {
       if (!zbSprintActive) return;
-      spawnObstacle();
-    }, 900);
-    // Spawn the first one immediately so they have something to react to
+      const elapsed = Date.now() - zbSprintStartAt;
+      // Base 900ms → as low as 480ms after 60s. Rare double-spawns mix it up.
+      const base = Math.max(480, 900 - elapsed * 7 / 1000);
+      const jitter = 200 + Math.random() * 250;
+      zbObstacleSpawner = setTimeout(() => {
+        spawnObstacle();
+        // 18% chance: also drop a power-up so the player has variety in what
+        // they're tracking — not just dodge-dodge-dodge
+        if (Math.random() < 0.18) setTimeout(spawnPowerUp, 250);
+        scheduleNextObstacle();
+      }, base + jitter);
+    }
+    scheduleNextObstacle();
+    // Spawn the first obstacle immediately so they have something to react to
     setTimeout(spawnObstacle, 200);
+
+    // Horde event: every 20-30s, send a tight cluster of 3 obstacles in a row.
+    // Reads as "the horde just caught up to you" — pure adrenaline beat.
+    function scheduleHorde() {
+      if (!zbSprintActive) return;
+      const wait = 20000 + Math.random() * 10000;
+      zbHordeTimer = setTimeout(() => {
+        if (!zbSprintActive) return;
+        if (window.Rewards) window.Rewards.show({
+          tier: 'epic', icon: '🧟', text: '¡VIENE LA HORDA!', duration: 1800,
+        });
+        if (MochiSounds.zombieScream) MochiSounds.zombieScream();
+        if (document.body.classList) {
+          document.body.classList.add('zb-world-shake');
+          setTimeout(() => document.body.classList.remove('zb-world-shake'), 700);
+        }
+        spawnObstacle(true);
+        setTimeout(() => spawnObstacle(true), 380);
+        setTimeout(() => spawnObstacle(true), 760);
+        scheduleHorde();
+      }, wait);
+    }
+    scheduleHorde();
 
     // Unified 60Hz tick: collisions + scare cues + ambient audio
     if (zbObstacleCleanup) clearInterval(zbObstacleCleanup);
@@ -1462,25 +1547,61 @@
     }, 100);
   }
 
-  function spawnObstacle() {
+  function spawnObstacle(isHorde) {
     if (!zbSprintActive) return;
     const layer = $('zb-sprint-obstacles');
     if (!layer) return;
     const el = document.createElement('div');
     el.className = 'zb-obstacle';
-    const variants = ['🤚', '🪨', '🪦', '🦴', '🧟', '🧟‍♂️'];
+    const variants = ['🤚', '🪨', '🪦', '🦴', '🧟', '🧟‍♂️', '🐀', '🕷', '🦇'];
     const pick = variants[Math.floor(Math.random() * variants.length)];
     el.textContent = pick;
-    // Zombies are "scarier" obstacles — they get an aura class for visual emphasis
-    if (pick === '🧟' || pick === '🧟‍♂️') el.classList.add('scary');
+    // Zombies + horde events get the "scary" aura
+    if (pick === '🧟' || pick === '🧟‍♂️' || isHorde) el.classList.add('scary');
     layer.appendChild(el);
-    const duration = 1500;
+    // Slide duration shrinks slightly over time — obstacles get faster.
+    const elapsed = Date.now() - zbSprintStartAt;
+    let duration = Math.max(900, 1500 - elapsed * 7 / 1000);
+    if (isHorde) duration = Math.max(800, duration - 200);
     el.style.animation = `zb-obstacle-slide ${duration}ms linear forwards`;
-    const entry = { el, startedAt: Date.now(), durationMs: duration, cleared: false, isScary: el.classList.contains('scary') };
+    const entry = { el, startedAt: Date.now(), durationMs: duration, cleared: false, isScary: el.classList.contains('scary'), kind: 'obstacle' };
     zbObstacleList.push(entry);
-    // Random 30% chance to trigger an audio "scare" cue when this obstacle
-    // gets within striking distance (groan + faint rumble — environment feels alive)
-    entry.scareAt = Math.random() < 0.3 ? entry.startedAt + duration * 0.55 : 0;
+    // Audio scare cue 30% of the time (or always for horde)
+    entry.scareAt = (isHorde || Math.random() < 0.3) ? entry.startedAt + duration * 0.55 : 0;
+    setTimeout(() => {
+      el.remove();
+      zbObstacleList = zbObstacleList.filter((o) => o !== entry);
+    }, duration + 80);
+  }
+
+  // Power-up pickup — a star/coin that floats at survivor-height. Jumping
+  // over it = collect + bonus +3. Missing one = no penalty. Adds variety
+  // without making the game harder.
+  function spawnPowerUp() {
+    if (!zbSprintActive) return;
+    const layer = $('zb-sprint-obstacles');
+    if (!layer) return;
+    const el = document.createElement('div');
+    el.className = 'zb-obstacle zb-powerup';
+    const powerups = [
+      { icon: '⭐', val: 3, msg: '+3 ⭐' },
+      { icon: '💎', val: 5, msg: '+5 💎' },
+      { icon: '🎁', val: 4, msg: '+4 🎁' },
+      { icon: '🪙', val: 2, msg: '+2 🪙' },
+      { icon: '❤️', val: 3, msg: '+3 ❤️' },
+    ];
+    const pup = powerups[Math.floor(Math.random() * powerups.length)];
+    el.textContent = pup.icon;
+    layer.appendChild(el);
+    const duration = 1700;
+    // Two layered animations: scroll AND spin. Keep them on a single
+    // animation property so the JS-set inline style still wins over CSS.
+    el.style.animation = `zb-obstacle-slide ${duration}ms linear forwards, zb-powerup-spin 1.2s ease-in-out infinite`;
+    const entry = {
+      el, startedAt: Date.now(), durationMs: duration, cleared: false,
+      isScary: false, kind: 'powerup', value: pup.val, msg: pup.msg,
+    };
+    zbObstacleList.push(entry);
     setTimeout(() => {
       el.remove();
       zbObstacleList = zbObstacleList.filter((o) => o !== entry);
@@ -1546,15 +1667,38 @@
         else if (MochiSounds.zombieGroan) MochiSounds.zombieGroan(0.35);
       }
       if (pct >= survHitZone.min && pct <= survHitZone.max) {
-        if (zbJumping) {
+        if (obs.kind === 'powerup') {
+          // Power-ups are always collected (player jumps over them OR walks
+          // through them) — kid-friendly: don't punish good vibes.
+          obs.cleared = true;
+          // Each value point counts as a tap, so the server reflects the bonus
+          for (let i = 0; i < obs.value; i++) socket.emit('player:tap', { pin });
+          zbSprintCleared += obs.value;
+          if ($('zb-sprint-cleared')) $('zb-sprint-cleared').textContent = zbSprintCleared;
+          spawnSprintPop(obs.el, obs.msg);
+          MochiSounds.correct && MochiSounds.correct();
+          if (window.Rewards) window.Rewards.show({
+            tier: 'great', icon: obs.el.textContent, text: '¡Bonus!', duration: 1200,
+          });
+        } else if (zbJumping) {
+          // Clean jump — +1, advance combo counter
           obs.cleared = true;
           socket.emit('player:tap', { pin });
           zbSprintCleared++;
+          zbCombo++;
+          if (zbCombo > zbBestCombo) zbBestCombo = zbCombo;
           if ($('zb-sprint-cleared')) $('zb-sprint-cleared').textContent = zbSprintCleared;
-          spawnSprintPop(obs.el, '+1');
+          spawnSprintPop(obs.el, zbCombo >= 3 ? `+1 x${zbCombo}` : '+1');
           MochiSounds.correct && MochiSounds.correct();
+          // Combo milestones — gentle rewards toast every few jumps
+          if (window.Rewards && (zbCombo === 3 || zbCombo === 5 || zbCombo === 8 || zbCombo >= 10 && zbCombo % 5 === 0)) {
+            if (zbCombo >= 10) window.Rewards.epic();
+            else window.Rewards.combo(zbCombo);
+          }
         } else {
+          // Missed jump — reset combo, stumble
           obs.cleared = true;
+          zbCombo = 0;
           const surv = $('zb-sprint-survivor');
           if (surv) {
             surv.classList.remove('stumble');
@@ -1589,9 +1733,17 @@
 
   function endZombieSprint() {
     zbSprintActive = false;
-    if (zbObstacleSpawner) { clearInterval(zbObstacleSpawner); zbObstacleSpawner = null; }
+    // Spawner is now a chained setTimeout, not setInterval — use clearTimeout.
+    if (zbObstacleSpawner) { clearTimeout(zbObstacleSpawner); zbObstacleSpawner = null; }
     if (zbObstacleCleanup) { clearInterval(zbObstacleCleanup); zbObstacleCleanup = null; }
     if (zbTimerInterval)   { clearInterval(zbTimerInterval);   zbTimerInterval   = null; }
+    if (zbHordeTimer)      { clearTimeout(zbHordeTimer);       zbHordeTimer      = null; }
+    // Celebrate the best combo if it was meaningful
+    if (window.Rewards && zbBestCombo >= 5) {
+      window.Rewards.show({
+        tier: 'great', icon: '🏆', text: `¡Mejor combo x${zbBestCombo}!`, duration: 2000,
+      });
+    }
     // The next 'question' event will switch screens for us.
   }
 

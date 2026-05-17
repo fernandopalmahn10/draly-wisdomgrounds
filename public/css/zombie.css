@@ -543,11 +543,11 @@ body.zb-world-shake { animation: zb-world-shake 0.65s linear; }
   display: flex;
   flex-direction: column;
   /* Use dynamic viewport height so the JUMP button never gets pushed below
-     the fold on tablets / desktops / phones-with-URL-bar. Also clamp the
-     content to a sane reading width on big screens. */
+     the fold on tablets / desktops / phones-with-URL-bar. Width is now
+     fully fluid (no 720px cap) so tablet & desktop actually fill the screen. */
   height: 100vh;
   height: 100dvh;
-  max-width: 720px;
+  width: 100%;
   margin: 0 auto;
   padding: 8px 12px 18px;
   gap: 10px;
@@ -558,6 +558,23 @@ body.zb-world-shake { animation: zb-world-shake 0.65s linear; }
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
+}
+/* Tablet: wider gameplay area, larger gaps, larger header text */
+@media (min-width: 768px) {
+  .zb-sprint-screen {
+    max-width: 1100px;
+    padding: 12px 20px 22px;
+    gap: 14px;
+  }
+  .zb-sprint-header { font-size: 1.15rem; }
+}
+/* Desktop: max out at 1500px, even more breathing room */
+@media (min-width: 1200px) {
+  .zb-sprint-screen {
+    max-width: 1500px;
+    padding: 16px 32px 28px;
+    gap: 18px;
+  }
 }
 .zb-sprint-header {
   display: flex;
@@ -610,11 +627,35 @@ body.zb-world-shake { animation: zb-world-shake 0.65s linear; }
 }
 
 /* Generic parallax layer wrapper. Each gets its own scroll speed via JS or
-   animation-duration overrides below. */
+   animation-duration overrides below. GPU-promoted via translateZ to avoid
+   layout-paint repaints on every frame (was a key lag culprit on tablet). */
 .zb-layer {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  will-change: transform, background-position;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Reduce expensive double drop-shadows on tablet/desktop where every pixel
+   counts more. Phones can keep the moody glow; bigger viewports get a
+   single, lighter shadow for smoother frames. */
+@media (min-width: 768px) {
+  .zb-sprint-survivor { filter: drop-shadow(0 4px 8px rgba(0,0,0,0.55)); }
+  .zb-sprint-horde    { filter: drop-shadow(0 0 6px rgba(120, 240, 80, 0.45)); }
+  .zb-obstacle        { filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+  .zb-obstacle.scary  { filter: drop-shadow(0 0 10px rgba(120, 240, 80, 0.75)); }
+}
+
+/* Honor reduced-motion preference — kill the constant background animations
+   so kids with motion sensitivity don't get sick. */
+@media (prefers-reduced-motion: reduce) {
+  .zb-layer-mountains,
+  .zb-layer-smoke,
+  .zb-layer-particles,
+  .zb-sprint-skyline,
+  .zb-jump-btn { animation: none !important; }
 }
 
 /* Layer 2 — distant mountains (slowest scroll, sits deepest in 3D) */
@@ -813,6 +854,22 @@ body.zb-world-shake { animation: zb-world-shake 0.65s linear; }
   font-size: clamp(3.6rem, 12vmin, 6.5rem);
   filter: drop-shadow(0 0 14px rgba(120, 240, 80, 0.95)) drop-shadow(0 4px 6px rgba(0,0,0,0.6));
   animation: zb-obstacle-shamble 0.4s ease-in-out infinite alternate;
+}
+/* Power-up pickups — gold/rainbow glow so they read clearly as REWARDS,
+   not threats. Float at survivor head-height so jumping naturally grabs them. */
+.zb-obstacle.zb-powerup {
+  bottom: clamp(60px, 14vh, 160px);
+  font-size: clamp(2.8rem, 9vmin, 5rem);
+  filter:
+    drop-shadow(0 0 14px rgba(255, 213, 122, 0.95))
+    drop-shadow(0 0 26px rgba(255, 255, 200, 0.5))
+    drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+  animation: zb-obstacle-slide var(--slide, 1700ms) linear forwards,
+             zb-powerup-spin 1.2s ease-in-out infinite;
+}
+@keyframes zb-powerup-spin {
+  0%, 100% { transform: scale(1) rotate(-6deg); }
+  50%      { transform: scale(1.12) rotate(6deg); }
 }
 @keyframes zb-obstacle-shamble {
   from { transform: translateY(0)   rotate(-3deg); }
