@@ -331,6 +331,27 @@
     if (pin) {
       try { socket.emit('player:set-avatar', { pin, avatar: a }); } catch (_) {}
     }
+    // BUG FIX: the team header at the top of every game screen reads the
+    // avatar via getMyAvatar(). When the player picks a new avatar mid-lobby,
+    // we used to wait for the next server state push to refresh — meaning the
+    // top emoji visibly lagged behind the picker selection. Now we re-render
+    // the local team UI immediately so it changes ON ALL DEVICES the moment
+    // the player taps (server broadcast still propagates to other clients).
+    try { updateTeamUI(); } catch (_) {}
+    // Re-render any cached header references on screens the player might
+    // already be looking at (lobby, mash, pinata, family-place, etc.)
+    refreshAvatarHeaders();
+  }
+
+  // Pushes the new avatar into every spot on the page that shows the player's
+  // own avatar (header tags, name labels, lobby mascot, family token wrapper).
+  function refreshAvatarHeaders() {
+    const av = (typeof getMyAvatar === 'function') ? getMyAvatar() : '🐱';
+    const nameWithAv = av ? `${av} ${myName || ''}`.trim() : (myName || '');
+    if ($('player-name-tag')) $('player-name-tag').textContent = nameWithAv;
+    if ($('mash-name-tag'))   $('mash-name-tag').textContent   = nameWithAv;
+    if ($('pn-smash-name'))   $('pn-smash-name').textContent   = nameWithAv;
+    // Lobby mascot: avatar · team-mascot combo. Re-build via updateTeamUI.
   }
   function renderAvatarPicker() {
     const grid = $('avatar-grid');
