@@ -108,12 +108,16 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   overflow: hidden;
 }
 
-/* Pseudo-3D — perspective + slight rotateX gives the table-top feel */
+/* Pseudo-3D — perspective + slight rotateX gives the table-top feel.
+   Scales with viewport so it fills more of a TV / projector. */
 .mp-board-perspective {
-  width: min(95%, 920px);
+  width: min(95%, 1100px);
   height: 100%;
   perspective: 1400px;
   perspective-origin: 50% 30%;
+}
+@media (min-width: 1400px) {
+  .mp-board-perspective { width: min(95%, 1280px); }
 }
 
 .mp-board {
@@ -622,13 +626,16 @@ body.monopoly-bg .win-screen { color: #3a1505; }
 .mp-welcome-btn:active { transform: scale(0.94); animation: none; }
 
 /* ============================================================ */
-/* === PLAYER MINI-BOARD === The same board shape as the host, scaled to phone */
+/* === PLAYER MINI-BOARD === Scales with viewport — phone keeps the
+       compact 380px feel, tablets get 600px, desktops 760px. The whole
+       board is also the camera "stage": we apply transform: scale+translate
+       via CSS variables to pan it during the walk animation. */
 /* ============================================================ */
 .mp-mini-board {
   position: relative;
+  /* Sizing — scales up substantially on bigger screens */
   width: min(96vw, 380px);
   height: min(96vw, 380px);
-  /* Fallback for older browsers that don't support aspect-ratio */
   aspect-ratio: 1 / 1;
   margin: 8px auto 0;
   display: grid;
@@ -642,6 +649,57 @@ body.monopoly-bg .win-screen { color: #3a1505; }
     linear-gradient(135deg, #2c0608 0%, #4a0808 50%, #2c0608 100%);
   border: 3px solid rgba(255, 220, 130, 0.6);
   box-shadow: 0 12px 28px rgba(0,0,0,0.5), inset 0 0 30px rgba(255,200,80,0.15);
+  /* === Camera variables ===
+     --cam-scale: zoom level (1 = static view, 1.6+ = follow-cam)
+     --cam-x / --cam-y: pan offsets (driven by JS panCameraToTile) */
+  --cam-scale: 1;
+  --cam-x: 0%;
+  --cam-y: 0%;
+  transform: scale(var(--cam-scale)) translate(var(--cam-x), var(--cam-y));
+  transform-origin: center center;
+  transition: transform 320ms cubic-bezier(.4, 0, .25, 1);
+  will-change: transform;
+}
+.mp-mini-board.mp-camera-on {
+  --cam-scale: 1.55;
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.7),
+    inset 0 0 40px rgba(255, 200, 80, 0.3),
+    0 0 60px rgba(255, 200, 80, 0.35);
+}
+@media (min-width: 768px) {
+  .mp-mini-board {
+    width: min(78vmin, 620px);
+    height: min(78vmin, 620px);
+    gap: 6px;
+    padding: 14px;
+    border-radius: 24px;
+    border-width: 4px;
+  }
+  .mp-mini-board.mp-camera-on { --cam-scale: 1.6; }
+}
+@media (min-width: 1200px) {
+  .mp-mini-board {
+    width: min(72vmin, 760px);
+    height: min(72vmin, 760px);
+    gap: 8px;
+    padding: 18px;
+  }
+  .mp-mini-board.mp-camera-on { --cam-scale: 1.7; }
+}
+
+/* The whole roll screen also needs to GROW on bigger viewports so the
+   header + board + hint use the real estate they're given. */
+@media (min-width: 768px) {
+  .mp-roll-screen { padding: 24px 32px; gap: 18px; max-width: 900px; margin: 0 auto; }
+  .mp-roll-header { font-size: 1.15rem; }
+  .mp-roll-char  { width: 64px; height: 64px; }
+  .mp-roll-title { font-size: clamp(1.5rem, 3vw, 2.1rem); }
+}
+@media (min-width: 1200px) {
+  .mp-roll-screen { padding: 32px 48px; max-width: 1200px; gap: 22px; }
+  .mp-roll-char  { width: 78px; height: 78px; }
+  .mp-roll-title { font-size: clamp(1.8rem, 2.4vw, 2.4rem); }
 }
 
 /* Center plate spans 2..5 in both axes (3x3 in the middle). Houses the dice. */
@@ -671,12 +729,36 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   filter:
     drop-shadow(0 0 20px rgba(255, 200, 80, 0.7))
     drop-shadow(0 8px 14px rgba(0, 0, 0, 0.7));
+  /* HARD-block long-press save-image popup on mobile browsers + Safari
+     callout menus. user-select, drag, callout, and tap-highlight all need
+     to be disabled or the rapid-tap mechanic feels broken. */
   user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
   -webkit-user-drag: none;
+  -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  pointer-events: auto;
   transition: filter 0.3s ease;
   transform-origin: center;
-  pointer-events: auto;
+}
+/* Same protections for the entire dice tap area (center plate) */
+.mp-mini-center {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+/* New: per-tap snap-pop so each rapid tap has visual juice */
+.mp-mini-dice.tapped {
+  animation: mp-dice-tap 0.18s cubic-bezier(.22, 1.6, .36, 1);
+}
+@keyframes mp-dice-tap {
+  0%   { transform: scale(1) rotate(0); }
+  40%  { transform: scale(1.18) rotate(var(--tap-rot, 8deg)); filter: drop-shadow(0 0 36px gold) drop-shadow(0 8px 14px rgba(0,0,0,0.7)); }
+  100% { transform: scale(1) rotate(0); }
 }
 .mp-mini-dice.shaking {
   animation: mp-dice-shake 0.08s linear infinite;
@@ -828,7 +910,14 @@ body.monopoly-bg .win-screen { color: #3a1505; }
     linear-gradient(155deg, #6e1010 0%, #9a1616 35%, #c0301a 65%, #5a0808 100%);
   color: #fff8e0;
   text-align: center;
+  /* Globally disable iOS save-image callout / long-press menus on this
+     entire screen — kids should be tapping, not getting save-image popups. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
+.mp-roll-screen img { -webkit-user-drag: none; pointer-events: none; }
+.mp-roll-screen img.mp-mini-dice { pointer-events: auto; }
 .mp-roll-header {
   display: flex;
   justify-content: space-between;
@@ -1410,3 +1499,134 @@ body.monopoly-bg .win-screen { color: #3a1505; }
 .mp-tile-fx.fx-own-city { background: radial-gradient(circle, rgba(255, 213, 122, 0.4), rgba(0, 0, 0, 0.55)); }
 .mp-tile-fx.fx-skipped  { background: rgba(0, 0, 0, 0.7); }
 .mp-tile-fx.fx-broke    { background: rgba(60, 6, 10, 0.7); }
+
+/* ============================================================ */
+/* === TILE PASS-BY CARD — pops while the camera follows the walk === */
+/* ============================================================ */
+.mp-passby-card {
+  position: fixed;
+  top: clamp(60px, 12vh, 130px);
+  left: 50%;
+  transform: translate(-50%, -16px) scale(0.85);
+  background: linear-gradient(180deg, rgba(20, 6, 4, 0.95), rgba(50, 12, 8, 0.95));
+  border: 3px solid rgba(255, 220, 130, 0.85);
+  border-radius: 18px;
+  padding: 10px 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: 'Cinzel', serif;
+  color: #fff8e0;
+  pointer-events: none;
+  z-index: 9100;
+  opacity: 0;
+  transition: opacity 180ms ease-out, transform 220ms cubic-bezier(.22, 1.6, .36, 1);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55), 0 0 35px rgba(255, 200, 80, 0.45);
+  max-width: 90vw;
+}
+.mp-passby-card.show {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+.mp-passby-icon {
+  font-size: clamp(1.8rem, 5vmin, 2.6rem);
+  line-height: 1;
+  filter: drop-shadow(0 0 8px rgba(255, 200, 80, 0.7));
+}
+.mp-passby-name {
+  font-family: 'ZCOOL XiaoWei', 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(1.1rem, 3.4vmin, 1.5rem);
+  color: #fff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.mp-passby-type {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(0.7rem, 2vmin, 0.9rem);
+  letter-spacing: 0.1em;
+  color: #ffd57a;
+  opacity: 0.85;
+  font-weight: 700;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 213, 122, 0.45);
+}
+.mp-passby-card.tile-jail     { border-color: #8b95a8; box-shadow: 0 10px 30px rgba(0,0,0,0.55), 0 0 35px rgba(120, 140, 180, 0.55); }
+.mp-passby-card.tile-treasure { border-color: gold;    box-shadow: 0 10px 30px rgba(0,0,0,0.55), 0 0 50px rgba(255, 200, 80, 0.7); }
+.mp-passby-card.tile-festival { border-color: #ff8a91; box-shadow: 0 10px 30px rgba(0,0,0,0.55), 0 0 40px rgba(255, 138, 145, 0.55); }
+.mp-passby-card.tile-tax      { border-color: #ff5a66; }
+.mp-passby-card.tile-card     { border-color: #e89134; }
+
+/* ============================================================ */
+/* === ANIMATED TILE STATES — fires when landed on === */
+/* ============================================================ */
+/* Jail: bars overlay + flickering red light */
+.mp-mini-tile.tile-jail.mp-mini-landed::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(90deg,
+      rgba(20, 20, 30, 0.95) 0 3px,
+      transparent 3px 9px);
+  animation: mp-jail-bars 1.2s cubic-bezier(.5, 0, .8, 0.4);
+  z-index: 4;
+  pointer-events: none;
+}
+.mp-mini-tile.tile-jail.mp-mini-landed::after {
+  content: '🚨';
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.4rem;
+  animation: mp-jail-light 0.6s ease-in-out infinite alternate;
+  z-index: 5;
+}
+@keyframes mp-jail-bars {
+  0%   { transform: scaleY(0); transform-origin: top; }
+  100% { transform: scaleY(1); transform-origin: top; }
+}
+@keyframes mp-jail-light {
+  from { filter: drop-shadow(0 0 8px red);    opacity: 0.6; }
+  to   { filter: drop-shadow(0 0 24px red);   opacity: 1; }
+}
+/* Treasure: golden glow pulse */
+.mp-mini-tile.tile-treasure.mp-mini-landed {
+  animation: mp-tile-landed 1.4s ease-out,
+             mp-treasure-glow 1.4s ease-in-out;
+}
+@keyframes mp-treasure-glow {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(255, 200, 80, 0.5); }
+  50%      { box-shadow: 0 0 0 4px gold, 0 0 38px rgba(255, 200, 80, 1); }
+}
+/* Festival: rainbow ring */
+.mp-mini-tile.tile-festival.mp-mini-landed {
+  animation: mp-tile-landed 1.4s ease-out,
+             mp-festival-rainbow 1.4s linear;
+}
+@keyframes mp-festival-rainbow {
+  0%   { box-shadow: 0 0 0 4px #ff5a66; }
+  25%  { box-shadow: 0 0 0 4px gold; }
+  50%  { box-shadow: 0 0 0 4px #6fdc8c; }
+  75%  { box-shadow: 0 0 0 4px #9fd5ff; }
+  100% { box-shadow: 0 0 0 4px #ff8a91; }
+}
+
+/* Mini-tile readability boost on tablets/desktops where the cells are bigger */
+@media (min-width: 768px) {
+  .mp-mini-icon { font-size: 1.6rem; }
+  .mp-mini-name { font-size: 0.78rem; }
+  .mp-mini-tokens { min-height: 22px; }
+  .mp-mini-token { width: 26px; height: 26px; }
+  .mp-mini-token img { width: 24px; height: 24px; }
+}
+@media (min-width: 1200px) {
+  .mp-mini-icon { font-size: 2rem; }
+  .mp-mini-name { font-size: 0.92rem; }
+  .mp-mini-tokens { min-height: 26px; }
+  .mp-mini-token { width: 32px; height: 32px; }
+  .mp-mini-token img { width: 30px; height: 30px; }
+}
