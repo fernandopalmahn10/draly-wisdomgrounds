@@ -13,9 +13,9 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260517g">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260517h">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
-  <link rel="stylesheet" href="/css/family.css?v=20260517g">
+  <link rel="stylesheet" href="/css/family.css?v=20260517h">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -337,6 +337,13 @@
   <div id="screen-family-place" class="hidden player-screen fm-place-screen">
     <div class="fm-place-top">
       <div class="fm-place-score-pill">💼 <span id="fm-place-score">0</span> pts</div>
+      <!-- Mini house construction widget — mirrors the host's growing-house
+           silhouette so the player can see their TEAM's progress at a glance
+           while they're placing. Updates on every fm:placed event. -->
+      <div class="fm-mini-house" id="fm-mini-house">
+        <span class="fm-mini-house-stage" id="fm-mini-house-stage">🏗</span>
+        <span class="fm-mini-house-count">🧱 <span id="fm-mini-house-bricks">0</span></span>
+      </div>
       <div class="fm-place-timer-num" id="fm-place-timer-num">8</div>
     </div>
     <div class="fm-place-headline">🏡 ¡Arrastra al cuarto correcto!</div>
@@ -426,10 +433,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260517g"></script>
+  <script src="/js/sounds.js?v=20260517h"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/rewards.js?v=20260517g"></script>
-  <script src="/js/player.js?v=20260517g"></script>
+  <script src="/js/rewards.js?v=20260517h"></script>
+  <script src="/js/player.js?v=20260517h"></script>
 </body>
 </html>

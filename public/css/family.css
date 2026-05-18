@@ -108,22 +108,29 @@ body.family-bg .win-screen { color: #3a1505; }
 .fm-house {
   position: relative;
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(255,240,200,0.35), transparent 60%),
-    linear-gradient(180deg, #f7e0a8 0%, #e8b878 70%, #8a5a30 100%);
-  border-radius: 14px;
-  padding: 28px 12px 12px;
+    /* warm interior light at the top */
+    radial-gradient(ellipse at 50% 0%, rgba(255,240,200,0.45), transparent 60%),
+    /* wood floor at the bottom */
+    linear-gradient(180deg, #f7e0a8 0%, #d89058 55%, #6e3a18 100%);
+  border-radius: 16px;
+  padding: 32px 14px 14px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
-  gap: 6px;
-  /* Deeper 3D shadow + inner glow so the house panel reads as a physical card */
+  gap: 10px;
+  /* Real card-on-table depth — multiple stacked shadows mimic raised carving */
   box-shadow:
-    0 12px 30px rgba(0,0,0,0.55),
-    0 4px 8px rgba(0,0,0,0.35),
-    inset 0 0 30px rgba(120,60,20,0.28),
-    inset 0 -8px 20px rgba(60, 30, 10, 0.35);
+    0 18px 38px rgba(0,0,0,0.6),
+    0 6px 10px rgba(0,0,0,0.4),
+    inset 0 0 30px rgba(120,60,20,0.32),
+    inset 0 -10px 22px rgba(60, 30, 10, 0.45),
+    inset 0 4px 8px rgba(255, 240, 200, 0.35);
   overflow: hidden;
   transform: translateZ(20px);
+  /* Inner perspective so each room can sit at its own depth */
+  perspective: 1200px;
+  perspective-origin: 50% 30%;
+  transform-style: preserve-3d;
 }
 .fm-house.red  { border: 4px solid rgba(255,138,145,0.7); }
 .fm-house.gold { border: 4px solid rgba(255,213,122,0.7); }
@@ -155,33 +162,84 @@ body.family-bg .win-screen { color: #3a1505; }
   z-index: 1;
 }
 
-/* Each room is a clean tile with a label + an items grid */
+/* Each room is now a real 3D card with depth: back wall (gradient), floor
+   (perspective stripe), raised border, and a banner-label on top. Items
+   drop INTO the room with z-depth so they sit on the "floor" naturally. */
 .fm-room {
   position: relative;
-  background: rgba(255, 250, 232, 0.7);
-  border: 2px solid rgba(140, 80, 30, 0.4);
-  border-radius: 10px;
-  padding: 26px 6px 6px;
+  border-radius: 12px;
+  padding: 32px 8px 22px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: background 0.4s ease;
+  transition: background 0.4s ease, transform 0.2s ease;
+  /* Raised "carved" 3D look */
+  border: 2px solid rgba(80, 40, 16, 0.65);
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.45),
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -6px 12px rgba(60, 30, 10, 0.35);
+  /* Each room sits slightly forward of the house background */
+  transform: translateZ(8px);
 }
-.fm-room.sala       { background-color: rgba(255, 220, 180, 0.55); }
-.fm-room.cocina     { background-color: rgba(255, 240, 200, 0.6); }
-.fm-room.dormitorio { background-color: rgba(220, 220, 250, 0.55); }
-.fm-room.jardin     { background-color: rgba(190, 235, 180, 0.6); }
+/* Floor — a perspective stripe at the bottom that gives the room real depth */
+.fm-room::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 18px;
+  background: linear-gradient(180deg,
+    rgba(0, 0, 0, 0.18) 0%,
+    rgba(0, 0, 0, 0.35) 100%);
+  border-top: 1px solid rgba(80, 40, 16, 0.55);
+  pointer-events: none;
+}
+/* Room atmospherics: each room type gets its own wall-paper + accent */
+.fm-room.sala {
+  background:
+    linear-gradient(180deg, rgba(255, 220, 180, 0.95) 0%, rgba(220, 175, 130, 0.95) 100%),
+    /* subtle wall paper stripes */
+    repeating-linear-gradient(90deg, transparent 0 22px, rgba(120, 60, 20, 0.05) 22px 24px);
+}
+.fm-room.cocina {
+  background:
+    linear-gradient(180deg, rgba(255, 240, 200, 0.95) 0%, rgba(225, 195, 140, 0.95) 100%),
+    /* tile floor pattern */
+    repeating-linear-gradient(45deg, transparent 0 14px, rgba(255, 255, 255, 0.12) 14px 16px);
+}
+.fm-room.dormitorio {
+  background:
+    linear-gradient(180deg, rgba(220, 220, 250, 0.92) 0%, rgba(180, 180, 220, 0.92) 100%),
+    /* gentle starry dots */
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.35) 0 1px, transparent 2px),
+    radial-gradient(circle at 70% 35%, rgba(255, 255, 255, 0.3) 0 1px, transparent 2px),
+    radial-gradient(circle at 85% 70%, rgba(255, 255, 255, 0.3) 0 1px, transparent 2px);
+}
+.fm-room.jardin {
+  background:
+    linear-gradient(180deg, rgba(170, 220, 250, 0.85) 0%, rgba(160, 230, 160, 0.95) 60%, rgba(120, 180, 100, 0.95) 100%);
+}
+/* Label is now a top "plaque" / banner across the room */
 .fm-room-label {
   position: absolute;
   top: 4px;
-  left: 8px;
+  left: 50%;
+  transform: translateX(-50%) translateZ(12px);
   font-family: 'Cinzel', serif;
   font-weight: 900;
-  letter-spacing: 0.06em;
-  color: #5a2e10;
-  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: #fff;
+  font-size: clamp(0.85rem, 1.4vw, 1.05rem);
   text-transform: uppercase;
-  opacity: 0.75;
+  padding: 3px 14px;
+  background: linear-gradient(180deg, #6e3a18, #4a1e0a);
+  border-radius: 999px;
+  border: 1.5px solid rgba(255, 213, 122, 0.7);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 213, 122, 0.4);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+  z-index: 5;
+  white-space: nowrap;
 }
 .fm-room-items {
   flex: 1;
@@ -295,6 +353,43 @@ body.family-bg .win-screen { color: #3a1505; }
   justify-content: space-between;
   align-items: center;
   padding: 0 6px;
+  gap: 8px;
+}
+/* Mini house widget — mirrors host's construction stage so the player
+   sees their TEAM's growing house on their phone. Updates every fm:placed. */
+.fm-mini-house {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: linear-gradient(135deg, rgba(40, 20, 8, 0.85), rgba(80, 40, 16, 0.85));
+  border: 2px solid rgba(255, 213, 122, 0.7);
+  border-radius: 999px;
+  color: #ffd57a;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(0.78rem, 2.4vw, 0.95rem);
+  letter-spacing: 0.03em;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 200, 80, 0.35);
+  white-space: nowrap;
+}
+.fm-mini-house-stage {
+  font-size: 1.4em;
+  line-height: 1;
+  display: inline-block;
+  filter: drop-shadow(0 0 8px rgba(255, 200, 80, 0.7));
+}
+.fm-mini-house-stage.fm-mini-house-pulse {
+  animation: fm-mini-house-pulse 0.7s cubic-bezier(.22, 1.6, .36, 1);
+}
+@keyframes fm-mini-house-pulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.5) rotate(8deg); filter: drop-shadow(0 0 20px gold); }
+  100% { transform: scale(1) rotate(0); }
+}
+.fm-mini-house-count {
+  font-size: 0.95em;
+  white-space: nowrap;
 }
 .fm-place-score-pill {
   background: rgba(0,0,0,0.55);
@@ -541,10 +636,22 @@ body.family-bg .win-screen { color: #3a1505; }
 /* + full-screen combo flash for big combos                     */
 /* ============================================================ */
 
-/* Items in rooms are now noticeably bigger so the houses don't read empty.
-   User feedback: "all the icons should be bigger." Bumped again. */
+/* Items in rooms — properly BIG now + 3D drop-in animation with a ground
+   shadow so each item reads as sitting on the room floor, not floating. */
 .fm-item {
-  font-size: clamp(2.4rem, 4vw, 3.6rem) !important;
+  font-size: clamp(2.8rem, 5vw, 4.2rem) !important;
+  /* Each placed emoji gets a soft ground shadow so it looks physical */
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25)) !important;
+  animation: fm-item-drop-3d 0.55s cubic-bezier(.22, 1.6, .36, 1) !important;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 4px;
+}
+@keyframes fm-item-drop-3d {
+  0%   { transform: translateY(-60px) scale(0.3) rotate(-30deg); opacity: 0; }
+  60%  { transform: translateY(6px)   scale(1.25) rotate(8deg);   opacity: 1; }
+  80%  { transform: translateY(-3px)  scale(1.05) rotate(-2deg); }
+  100% { transform: translateY(0)     scale(1)   rotate(0);       opacity: 1; }
 }
 .fm-room-label {
   font-size: clamp(0.95rem, 1.4vw, 1.15rem) !important;

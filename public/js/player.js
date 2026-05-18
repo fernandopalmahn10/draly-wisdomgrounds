@@ -1250,6 +1250,88 @@
     }, 100);
   }
 
+  // === Player-side family progress tracking ===
+  // Mirrors the host's brick counter + construction stage on the player's
+  // mini-house widget. Also fires periodic "your team did great!" Rewards
+  // toasts so kids see their team's progress even when they aren't holding
+  // a token — they don't watch the host screen, they look at their phone.
+  const FM_PLAYER_STAGES = [
+    { at: 0,  icon: '🏗' },   { at: 1,  icon: '🧱' },
+    { at: 4,  icon: '🧱🧱' }, { at: 8,  icon: '🏚' },
+    { at: 12, icon: '🏠' },   { at: 16, icon: '🏡' },
+    { at: 20, icon: '🏡💨' }, { at: 24, icon: '🏡🌳' },
+    { at: 28, icon: '🏡☀️' },
+  ];
+  let fmMyTeamBricks = 0;
+  let fmTeammateMomentum = 0;  // counter for teammate-progress toasts
+
+  socket.on('fm:init', () => {
+    fmMyTeamBricks = 0;
+    fmTeammateMomentum = 0;
+    updateFmMiniHouse();
+  });
+
+  socket.on('fm:placed', (data) => {
+    // Only count placements from MY team toward MY mini-house
+    if (data.team !== team) return;
+    fmMyTeamBricks++;
+    updateFmMiniHouse();
+    // Random "your team is winning" Rewards toast — fires every ~3rd placement
+    // so it's not spam but kids do see consistent positive feedback. Tier
+    // escalates with brick count to mirror the streak ladder logic.
+    fmTeammateMomentum++;
+    if (window.Rewards) {
+      const milestone = FM_PLAYER_STAGES.find((s) => s.at === fmMyTeamBricks);
+      if (milestone && fmMyTeamBricks >= 4) {
+        // Big milestone — fire an epic toast
+        window.Rewards.show({
+          tier: 'epic',
+          icon: milestone.icon,
+          text: `¡Tu equipo construyó ${fmMyTeamBricks} ladrillos!`,
+          duration: 2000,
+        });
+      } else if (fmTeammateMomentum % 3 === 0) {
+        const phrases = [
+          '¡Vamos equipo!', '¡Buen trabajo!', '¡Tu equipo va genial!',
+          '¡Sigan así!', '¡Casa subiendo!', '¡Muy bien equipo!',
+          '¡A construir!', '¡Imparables!',
+        ];
+        const tier = fmMyTeamBricks >= 12 ? 'great' : 'common';
+        window.Rewards.show({
+          tier,
+          icon: '🧱',
+          text: phrases[Math.floor(Math.random() * phrases.length)],
+        });
+      }
+    }
+    // Combo broadcast — when MY team unlocks a combo, celebrate big
+    if (Array.isArray(data.combos) && data.combos.length > 0 && window.Rewards) {
+      const c = data.combos[0];
+      window.Rewards.show({
+        tier: 'epic',
+        icon: c.emoji,
+        text: `¡${c.name}! +${c.bonus}`,
+        duration: 2200,
+      });
+    }
+  });
+
+  function updateFmMiniHouse() {
+    const num = $('fm-mini-house-bricks');
+    if (num) num.textContent = fmMyTeamBricks;
+    const stageEl = $('fm-mini-house-stage');
+    if (stageEl) {
+      const cur = [...FM_PLAYER_STAGES].reverse().find((s) => fmMyTeamBricks >= s.at);
+      if (cur) {
+        stageEl.textContent = cur.icon;
+        // Pulse the icon so the upgrade is visible
+        stageEl.classList.remove('fm-mini-house-pulse');
+        void stageEl.offsetWidth;
+        stageEl.classList.add('fm-mini-house-pulse');
+      }
+    }
+  }
+
   socket.on('fm:place-confirmed', ({ room, token, combos, teamScore }) => {
     if (fmTimerInt) { clearInterval(fmTimerInt); fmTimerInt = null; }
     if (document._fmMove) document.removeEventListener('pointermove', document._fmMove);
