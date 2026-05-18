@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Long+Cang&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/family.css?v=20260517f">
+  <link rel="stylesheet" href="/css/family.css?v=20260517g">
 </head>
 <body class="family-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -122,33 +122,71 @@
     </div>
 
     <div class="fm-houses">
-      <!-- RED house -->
-      <div class="fm-house red" id="fm-house-red">
-        <div class="fm-house-tag">🏡 Familia Roja</div>
-        <!-- Construction progress: how many bricks have been laid (= items placed).
-             Visual bricks fill in below the rooms as the team builds the house. -->
-        <div class="fm-bricks-counter" id="fm-bricks-counter-red">🧱 <span id="fm-bricks-num-red">0</span> ladrillos</div>
-        <div class="fm-roof"></div>
-        <!-- Roof decorations unlocked at brick milestones -->
-        <div class="fm-roof-decor" id="fm-roof-decor-red"></div>
-        <div class="fm-room sala"      data-room="sala"><div class="fm-room-label">Sala</div><div class="fm-room-items" id="fm-red-sala"></div></div>
-        <div class="fm-room cocina"    data-room="cocina"><div class="fm-room-label">Cocina</div><div class="fm-room-items" id="fm-red-cocina"></div></div>
-        <div class="fm-room dormitorio" data-room="dormitorio"><div class="fm-room-label">Dormitorio</div><div class="fm-room-items" id="fm-red-dormitorio"></div></div>
-        <div class="fm-room jardin"    data-room="jardin"><div class="fm-room-label">Jardín</div><div class="fm-room-items" id="fm-red-jardin"></div></div>
-        <!-- Brick wall foundation that fills in left-to-right with each placement -->
-        <div class="fm-brick-wall" id="fm-brick-wall-red"></div>
+      <!-- RED house — 3D-tilted column with a growing house silhouette on
+           the LEFT (construction progresses through stages: lot → foundation
+           → walls → windows → roof → chimney smoke) and the room grid on the
+           right where players actually drop items. -->
+      <div class="fm-house-col red">
+        <!-- Side: literal house being constructed, brick by brick -->
+        <div class="fm-construction red" id="fm-construction-red">
+          <div class="fm-construction-stage" id="fm-construction-stage-red" data-stage="0">
+            <div class="fm-c-ground"></div>
+            <div class="fm-c-foundation"></div>
+            <div class="fm-c-walls"></div>
+            <div class="fm-c-windows">🪟🪟</div>
+            <div class="fm-c-door">🚪</div>
+            <div class="fm-c-roof"></div>
+            <div class="fm-c-chimney"></div>
+            <div class="fm-c-smoke">💨</div>
+            <div class="fm-c-garden">🌳🪴🌸</div>
+            <div class="fm-c-sun">☀️</div>
+          </div>
+          <div class="fm-construction-label">
+            <span class="fm-c-stage-text" id="fm-c-stage-text-red">Lote vacío</span>
+          </div>
+        </div>
+        <div class="fm-house red" id="fm-house-red">
+          <div class="fm-house-tag">🏡 Familia Roja</div>
+          <div class="fm-bricks-counter" id="fm-bricks-counter-red">🧱 <span id="fm-bricks-num-red">0</span></div>
+          <div class="fm-roof"></div>
+          <div class="fm-roof-decor" id="fm-roof-decor-red"></div>
+          <div class="fm-room sala"      data-room="sala"><div class="fm-room-label">Sala</div><div class="fm-room-items" id="fm-red-sala"></div></div>
+          <div class="fm-room cocina"    data-room="cocina"><div class="fm-room-label">Cocina</div><div class="fm-room-items" id="fm-red-cocina"></div></div>
+          <div class="fm-room dormitorio" data-room="dormitorio"><div class="fm-room-label">Dormitorio</div><div class="fm-room-items" id="fm-red-dormitorio"></div></div>
+          <div class="fm-room jardin"    data-room="jardin"><div class="fm-room-label">Jardín</div><div class="fm-room-items" id="fm-red-jardin"></div></div>
+          <div class="fm-brick-wall" id="fm-brick-wall-red"></div>
+        </div>
       </div>
-      <!-- GOLD house -->
-      <div class="fm-house gold" id="fm-house-gold">
-        <div class="fm-house-tag">🏠 Familia Dorada</div>
-        <div class="fm-bricks-counter" id="fm-bricks-counter-gold">🧱 <span id="fm-bricks-num-gold">0</span> ladrillos</div>
-        <div class="fm-roof"></div>
-        <div class="fm-roof-decor" id="fm-roof-decor-gold"></div>
-        <div class="fm-room sala"      data-room="sala"><div class="fm-room-label">Sala</div><div class="fm-room-items" id="fm-gold-sala"></div></div>
-        <div class="fm-room cocina"    data-room="cocina"><div class="fm-room-label">Cocina</div><div class="fm-room-items" id="fm-gold-cocina"></div></div>
-        <div class="fm-room dormitorio" data-room="dormitorio"><div class="fm-room-label">Dormitorio</div><div class="fm-room-items" id="fm-gold-dormitorio"></div></div>
-        <div class="fm-room jardin"    data-room="jardin"><div class="fm-room-label">Jardín</div><div class="fm-room-items" id="fm-gold-jardin"></div></div>
-        <div class="fm-brick-wall" id="fm-brick-wall-gold"></div>
+      <!-- GOLD house — same structure, construction silhouette on the RIGHT -->
+      <div class="fm-house-col gold">
+        <div class="fm-house gold" id="fm-house-gold">
+          <div class="fm-house-tag">🏠 Familia Dorada</div>
+          <div class="fm-bricks-counter" id="fm-bricks-counter-gold">🧱 <span id="fm-bricks-num-gold">0</span></div>
+          <div class="fm-roof"></div>
+          <div class="fm-roof-decor" id="fm-roof-decor-gold"></div>
+          <div class="fm-room sala"      data-room="sala"><div class="fm-room-label">Sala</div><div class="fm-room-items" id="fm-gold-sala"></div></div>
+          <div class="fm-room cocina"    data-room="cocina"><div class="fm-room-label">Cocina</div><div class="fm-room-items" id="fm-gold-cocina"></div></div>
+          <div class="fm-room dormitorio" data-room="dormitorio"><div class="fm-room-label">Dormitorio</div><div class="fm-room-items" id="fm-gold-dormitorio"></div></div>
+          <div class="fm-room jardin"    data-room="jardin"><div class="fm-room-label">Jardín</div><div class="fm-room-items" id="fm-gold-jardin"></div></div>
+          <div class="fm-brick-wall" id="fm-brick-wall-gold"></div>
+        </div>
+        <div class="fm-construction gold" id="fm-construction-gold">
+          <div class="fm-construction-stage" id="fm-construction-stage-gold" data-stage="0">
+            <div class="fm-c-ground"></div>
+            <div class="fm-c-foundation"></div>
+            <div class="fm-c-walls"></div>
+            <div class="fm-c-windows">🪟🪟</div>
+            <div class="fm-c-door">🚪</div>
+            <div class="fm-c-roof"></div>
+            <div class="fm-c-chimney"></div>
+            <div class="fm-c-smoke">💨</div>
+            <div class="fm-c-garden">🌳🪴🌸</div>
+            <div class="fm-c-sun">☀️</div>
+          </div>
+          <div class="fm-construction-label">
+            <span class="fm-c-stage-text" id="fm-c-stage-text-gold">Lote vacío</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -183,8 +221,8 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260517f"></script>
+  <script src="/js/sounds.js?v=20260517g"></script>
   <script src="/js/enter.js"></script>
-  <script src="/js/host-family.js?v=20260517f"></script>
+  <script src="/js/host-family.js?v=20260517g"></script>
 </body>
 </html>

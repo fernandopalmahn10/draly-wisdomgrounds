@@ -124,6 +124,19 @@
     { at: 24, emoji: '🐦', label: 'pájaro' },
     { at: 28, emoji: '☀️', label: 'sol' },
   ];
+  // Construction stages — the side house silhouette progresses through these
+  // as bricks accumulate. Each stage unlocks a new visual layer (CSS-driven).
+  const FM_CONSTRUCTION_STAGES = [
+    { at: 0,  stage: 0, label: 'Lote vacío' },
+    { at: 1,  stage: 1, label: 'Cimientos 🧱' },
+    { at: 4,  stage: 2, label: 'Paredes 🧱🧱' },
+    { at: 8,  stage: 3, label: 'Ventanas 🪟' },
+    { at: 12, stage: 4, label: 'Puerta 🚪' },
+    { at: 16, stage: 5, label: 'Techo 🏠' },
+    { at: 20, stage: 6, label: 'Chimenea 🏠💨' },
+    { at: 24, stage: 7, label: 'Jardín 🌳' },
+    { at: 28, stage: 8, label: '¡CASA COMPLETA! ☀️' },
+  ];
   let bricksRed = 0;
   let bricksGold = 0;
 
@@ -135,6 +148,7 @@
     resetBrickWalls();
     updateScores();
     startAmbientCritters();
+    startCozyEvents();
   });
 
   // A player placed a token into a room — animate it landing + show +1 pop
@@ -227,7 +241,31 @@
       if (decor) decor.innerHTML = '';
       const num = $('fm-bricks-num-' + team);
       if (num) num.textContent = '0';
+      // Reset the side construction silhouette to stage 0
+      const stageEl = $('fm-construction-stage-' + team);
+      if (stageEl) stageEl.setAttribute('data-stage', '0');
+      const stageText = $('fm-c-stage-text-' + team);
+      if (stageText) stageText.textContent = 'Lote vacío';
     });
+  }
+
+  // Bump the side construction silhouette's `data-stage` attribute based on
+  // brick count. CSS rules display/hide the foundation/walls/roof/etc. layers
+  // depending on the stage attribute, so the house literally grows visibly.
+  function advanceConstruction(team, brickCount) {
+    const stageDef = [...FM_CONSTRUCTION_STAGES].reverse().find((s) => brickCount >= s.at);
+    if (!stageDef) return;
+    const stageEl = $('fm-construction-stage-' + team);
+    if (stageEl && stageEl.getAttribute('data-stage') !== String(stageDef.stage)) {
+      stageEl.setAttribute('data-stage', String(stageDef.stage));
+      // Flash the silhouette so the upgrade is noticed
+      stageEl.classList.remove('fm-c-upgrade');
+      void stageEl.offsetWidth;
+      stageEl.classList.add('fm-c-upgrade');
+      setTimeout(() => stageEl.classList.remove('fm-c-upgrade'), 1100);
+    }
+    const stageText = $('fm-c-stage-text-' + team);
+    if (stageText) stageText.textContent = stageDef.label;
   }
 
   function layBrick(team) {
@@ -268,6 +306,8 @@
     // Brick-lay "drop in" particle right under the room that received the
     // placement — feels physical, like a brick was actually laid.
     spawnBrickLayFx(team);
+    // Advance the side construction silhouette — the house literally grows
+    advanceConstruction(team, count);
   }
 
   function spawnBrickLayFx(team) {
@@ -306,6 +346,50 @@
     c.style.top = (15 + Math.random() * 35) + '%';
     layer.appendChild(c);
     setTimeout(() => c.remove(), k.duration);
+  }
+
+  // === Cozy interactive house events ===
+  // The Mi Familia equivalent of the zombie game's spooky pop-ins: random
+  // life-in-the-house beats that fire over the houses for ~2s. Doorbell,
+  // dog barking, kettle steam, baby crying, mail delivery, lights flicker,
+  // rainy spell, sunshine. Each picks a random team to bias visually.
+  let cozyEventTimer = null;
+  function startCozyEvents() {
+    if (cozyEventTimer) clearTimeout(cozyEventTimer);
+    const scheduleNext = () => {
+      cozyEventTimer = setTimeout(() => {
+        if (!gameOver) spawnCozyEvent();
+        scheduleNext();
+      }, 6000 + Math.random() * 6000);  // every 6-12s
+    };
+    scheduleNext();
+  }
+  function spawnCozyEvent() {
+    const houseEl = $('fm-house-' + (Math.random() < 0.5 ? 'red' : 'gold'));
+    if (!houseEl) return;
+    const events = [
+      { icon: '🔔', text: '¡Ding-Dong!',  cls: 'doorbell' },
+      { icon: '🐶', text: '¡Guau guau!',  cls: 'dog' },
+      { icon: '☕', text: '¡La tetera!',   cls: 'kettle' },
+      { icon: '👶', text: '¡El bebé!',     cls: 'baby' },
+      { icon: '📬', text: '¡Carta!',       cls: 'mail' },
+      { icon: '💡', text: '¡Parpadeo!',    cls: 'flicker' },
+      { icon: '🎉', text: '¡Fiesta!',     cls: 'party' },
+      { icon: '🍪', text: '¡Galletas!',    cls: 'cookies' },
+    ];
+    const ev = events[Math.floor(Math.random() * events.length)];
+    const el = document.createElement('div');
+    el.className = 'fm-cozy-event ' + ev.cls;
+    el.innerHTML = `<span class="fm-cozy-icon">${ev.icon}</span><span class="fm-cozy-text">${ev.text}</span>`;
+    el.style.left = (10 + Math.random() * 60) + '%';
+    el.style.top  = (20 + Math.random() * 50) + '%';
+    houseEl.appendChild(el);
+    if (ev.cls === 'flicker' || ev.cls === 'kettle') {
+      // Flicker also briefly dims the room background
+      houseEl.classList.add('fm-house-event-' + ev.cls);
+      setTimeout(() => houseEl.classList.remove('fm-house-event-' + ev.cls), 900);
+    }
+    setTimeout(() => el.remove(), 2000);
   }
 
   // Big combo (≥10 bonus) — full-screen flash + confetti, like the
