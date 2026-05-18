@@ -104,6 +104,10 @@ body.family-bg .win-screen { color: #3a1505; }
 .fm-house-col.red  { transform: rotateX(8deg) rotateY(4deg);  }
 .fm-house-col.gold { transform: rotateX(8deg) rotateY(-4deg); }
 .fm-house-col.gold { grid-template-columns: 1fr minmax(120px, 28%); }
+/* GPU promotion — keeps the tilted col on its own layer so the in-tree
+   ambient critters / brick-lay particles don't cause the whole house to
+   repaint on each animation frame. */
+.fm-house-col { will-change: transform; backface-visibility: hidden; }
 
 .fm-house {
   position: relative;
@@ -568,8 +572,10 @@ body.family-bg .win-screen { color: #3a1505; }
 .fm-roomzone-item {
   font-size: clamp(1.4rem, 4.5vw, 2.2rem);
   line-height: 1;
-  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  /* Single shadow only — cheaper for the dozens of items that pile up */
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.42));
   animation: fm-roomzone-item-drop 0.55s cubic-bezier(.22, 1.6, .36, 1);
+  will-change: transform;
 }
 @keyframes fm-roomzone-item-drop {
   0%   { transform: translateY(-30px) scale(0.3) rotate(-20deg); opacity: 0; }
@@ -757,12 +763,14 @@ body.family-bg .win-screen { color: #3a1505; }
    shadow so each item reads as sitting on the room floor, not floating. */
 .fm-item {
   font-size: clamp(2.8rem, 5vw, 4.2rem) !important;
-  /* Each placed emoji gets a soft ground shadow so it looks physical */
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25)) !important;
+  /* Single drop-shadow only (was two) — the double filter was eating frames
+     when 20+ items stacked in a room. Visually identical at this size. */
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.42)) !important;
   animation: fm-item-drop-3d 0.55s cubic-bezier(.22, 1.6, .36, 1) !important;
   position: relative;
   z-index: 2;
   margin-bottom: 4px;
+  will-change: transform;
 }
 @keyframes fm-item-drop-3d {
   0%   { transform: translateY(-60px) scale(0.3) rotate(-30deg); opacity: 0; }
