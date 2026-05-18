@@ -13,9 +13,9 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260517e">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260517f">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
-  <link rel="stylesheet" href="/css/family.css?v=20260517e">
+  <link rel="stylesheet" href="/css/family.css?v=20260517f">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -357,10 +357,13 @@
         <span class="fm-roomzone-tag">🌳 Jardín</span>
         <span class="fm-roomzone-fill"></span>
       </div>
-      <!-- The draggable token sits in the center until grabbed -->
+      <!-- The draggable token sits in the center until grabbed. The hint
+           tells kids WHERE this thing belongs ("Llévame a la Sala 🛋") so
+           they're not guessing whether grandpa goes to the dormitorio. -->
       <div class="fm-drag-token" id="fm-drag-token">
         <span class="fm-drag-emoji" id="fm-token-emoji">🛋</span>
         <span class="fm-drag-name" id="fm-token-name">Sofá</span>
+        <span class="fm-drag-hint" id="fm-token-hint">¡Llévame!</span>
       </div>
     </div>
     <p class="fm-place-hint" id="fm-place-hint">👆 Mantén el dedo y arrastra hacia un cuarto</p>
@@ -423,10 +426,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260517e"></script>
+  <script src="/js/sounds.js?v=20260517f"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/rewards.js?v=20260517e"></script>
-  <script src="/js/player.js?v=20260517e"></script>
+  <script src="/js/rewards.js?v=20260517f"></script>
+  <script src="/js/player.js?v=20260517f"></script>
 </body>
 </html>

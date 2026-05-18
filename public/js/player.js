@@ -1105,6 +1105,18 @@
       tokenEl.style.left = '';
       tokenEl.style.top = '';
     }
+    // Build a "where does this go?" hint from the token's recommended rooms.
+    // Kids were guessing whether grandpa goes to the sala or dormitorio — the
+    // hint now spells it out: "¡Llévame a la Sala o Jardín!" so the cognitive
+    // load is on the LANGUAGE, not the placement puzzle.
+    const ROOM_LABELS = { sala: '🛋 Sala', cocina: '🍳 Cocina', dormitorio: '🛏 Dormitorio', jardin: '🌳 Jardín' };
+    const hintEl = $('fm-token-hint');
+    if (hintEl) {
+      const recs = (Array.isArray(token.rooms) ? token.rooms : []).map((r) => ROOM_LABELS[r] || r);
+      if (recs.length === 0) hintEl.textContent = '¡Llévame al cuarto correcto!';
+      else if (recs.length === 1) hintEl.textContent = `¡Llévame a la ${recs[0]}!`;
+      else hintEl.textContent = `¡Llévame a ${recs.slice(0, -1).join(', ')} o ${recs[recs.length - 1]}!`;
+    }
     // Highlight recommended rooms (where this token belongs)
     document.querySelectorAll('.fm-roomzone').forEach((z) => {
       const fits = Array.isArray(token.rooms) && token.rooms.includes(z.dataset.room);
