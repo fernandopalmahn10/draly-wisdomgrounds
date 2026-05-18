@@ -285,6 +285,9 @@
       return;
     }
     if (fromPos === toPos) { if (onDone) onDone(); return; }
+    // Clear any prior "active" auras and apply to the moving token
+    document.querySelectorAll('.mp-token.active').forEach((t) => t.classList.remove('active'));
+    token.classList.add('active');
     // Hop one tile at a time around the board
     const steps = ((toPos - fromPos) + tiles.length) % tiles.length;
     let cur = fromPos;
@@ -293,16 +296,31 @@
       cur = (cur + 1) % tiles.length;
       i++;
       const newSlot = $('mp-tokens-' + cur);
+      const passedTile = $('mp-tile-' + cur);
       if (newSlot) {
         newSlot.appendChild(token);
         token.classList.remove('hopping');
         void token.offsetWidth;
         token.classList.add('hopping');
       }
+      // Trail-light each tile briefly as the token passes over it
+      if (passedTile) {
+        passedTile.classList.remove('mp-tile-passed');
+        void passedTile.offsetWidth;
+        passedTile.classList.add('mp-tile-passed');
+        setTimeout(() => passedTile.classList.remove('mp-tile-passed'), 700);
+      }
       MochiSounds.tick && MochiSounds.tick();
       if (i < steps) {
         setTimeout(step, 160);
       } else {
+        // Landing emphasis on the final tile
+        if (passedTile) {
+          passedTile.classList.add('mp-tile-landed');
+          setTimeout(() => passedTile.classList.remove('mp-tile-landed'), 1400);
+        }
+        // Drop the active aura after a beat
+        setTimeout(() => token.classList.remove('active'), 1600);
         if (onDone) onDone();
       }
     }
@@ -316,14 +334,18 @@
     const teamEmoji = data.team === 'red' ? '🐉' : '🐲';
     let msg = '';
     let sound = null;
+    const tEl = $('mp-tile-' + data.toPos);
     switch (data.action) {
       case 'bought':
         msg = `${teamEmoji} ${escapeHtml(data.playerName)} compró ${tile.name} por ¥${-data.moneyDelta}`;
         spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        sound = 'correct';
+        spawnPropertyRipple(tEl, data.team);
+        sound = 'cashRegister';
+        if (MochiSounds.titleStamp) MochiSounds.titleStamp();
         break;
       case 'own-city':
         msg = `${teamEmoji} ${escapeHtml(data.playerName)} llegó a su propia ciudad ${tile.name}`;
+        sound = 'coinClink';
         break;
       case 'paid-rent':
         msg = `${teamEmoji} ${escapeHtml(data.playerName)} pagó ¥${data.rentAmount} de renta en ${tile.name}`;
@@ -336,12 +358,14 @@
       case 'card-bonus':
         msg = `🎴 ${escapeHtml(data.playerName)} sacó una carta +¥${data.moneyDelta}`;
         spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        sound = 'correct';
+        sound = 'coinClink';
         break;
       case 'treasure':
         msg = `🐉 ${escapeHtml(data.playerName)} encontró un tesoro +¥${data.moneyDelta}`;
         spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        sound = 'correct';
+        spawnTreasureBurst(tEl);
+        sound = 'dragonRoar';
+        setTimeout(() => MochiSounds.cashRegister && MochiSounds.cashRegister(), 500);
         break;
       case 'tax':
         msg = `💰 ${escapeHtml(data.playerName)} pagó ¥${-data.moneyDelta} de impuestos`;
@@ -351,15 +375,17 @@
       case 'festival':
         msg = `🏮 ¡FIESTA! ${escapeHtml(data.playerName)} ganó +¥${data.moneyDelta}`;
         spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        sound = 'winFanfare';
+        spawnFestivalBurst(tEl);
+        sound = 'festival';
         break;
       case 'jail':
         msg = `🏛 ${escapeHtml(data.playerName)} cayó en la cárcel — pierde el próximo turno`;
+        sound = 'jailSlam';
         break;
       case 'start-bonus':
         msg = `🏯 ${escapeHtml(data.playerName)} cayó en START +¥${data.moneyDelta}`;
         spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        sound = 'correct';
+        sound = 'cashRegister';
         break;
       case 'skipped':
         msg = `🏛 ${escapeHtml(data.playerName)} estaba en la cárcel — turno perdido`;
@@ -369,6 +395,54 @@
     }
     setRecentEvent(msg);
     if (sound && MochiSounds[sound]) MochiSounds[sound]();
+  }
+
+  // Property-buy ripple — a colored ring expands outward from the bought tile,
+  // visually announcing the new owner without you having to read the toast.
+  function spawnPropertyRipple(tileEl, team) {
+    if (!tileEl) return;
+    const ripple = document.createElement('div');
+    ripple.className = 'mp-tile-ripple ' + team;
+    tileEl.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 1100);
+  }
+  function spawnTreasureBurst(tileEl) {
+    if (!tileEl) return;
+    const layer = $('mp-fx-layer');
+    if (!layer) return;
+    const r = tileEl.getBoundingClientRect();
+    const lr = layer.getBoundingClientRect();
+    for (let i = 0; i < 10; i++) {
+      const c = document.createElement('div');
+      c.className = 'mp-treasure-spark';
+      c.textContent = ['🪙', '💰', '🧧', '✨', '🐉'][i % 5];
+      c.style.left = ((r.left + r.width / 2) - lr.left) + 'px';
+      c.style.top  = ((r.top  + r.height / 2) - lr.top)  + 'px';
+      c.style.setProperty('--dx', (Math.random() * 160 - 80) + 'px');
+      c.style.setProperty('--dy', (-60 - Math.random() * 100) + 'px');
+      c.style.animationDelay = (i * 50) + 'ms';
+      layer.appendChild(c);
+      setTimeout(() => c.remove(), 1400);
+    }
+  }
+  function spawnFestivalBurst(tileEl) {
+    if (!tileEl) return;
+    const layer = $('mp-fx-layer');
+    if (!layer) return;
+    const r = tileEl.getBoundingClientRect();
+    const lr = layer.getBoundingClientRect();
+    for (let i = 0; i < 14; i++) {
+      const c = document.createElement('div');
+      c.className = 'mp-treasure-spark festival';
+      c.textContent = ['🏮', '🎊', '🎉', '🧧', '✨'][i % 5];
+      c.style.left = ((r.left + r.width / 2) - lr.left) + 'px';
+      c.style.top  = ((r.top  + r.height / 2) - lr.top)  + 'px';
+      c.style.setProperty('--dx', (Math.random() * 200 - 100) + 'px');
+      c.style.setProperty('--dy', (-80 - Math.random() * 140) + 'px');
+      c.style.animationDelay = (i * 40) + 'ms';
+      layer.appendChild(c);
+      setTimeout(() => c.remove(), 1500);
+    }
   }
 
   function spawnMoneyPop(tilePos, delta, team) {
