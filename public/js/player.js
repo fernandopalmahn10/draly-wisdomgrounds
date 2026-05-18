@@ -1269,6 +1269,11 @@
     fmMyTeamBricks = 0;
     fmTeammateMomentum = 0;
     updateFmMiniHouse();
+    // Wipe any items left in the player's room zones from a prior round
+    ['sala', 'cocina', 'dormitorio', 'jardin'].forEach((r) => {
+      const c = $('fm-roomzone-items-' + r);
+      if (c) c.innerHTML = '';
+    });
   });
 
   socket.on('fm:placed', (data) => {
@@ -1276,6 +1281,17 @@
     if (data.team !== team) return;
     fmMyTeamBricks++;
     updateFmMiniHouse();
+    // Mirror the item INTO the corresponding room zone on the player's
+    // drag board — kids see their team's house actually filling up with
+    // sofás/dogs/plants as they answer questions. Drops in with 3D animation.
+    const itemHost = $('fm-roomzone-items-' + data.room);
+    if (itemHost && data.token && data.token.emoji) {
+      const item = document.createElement('span');
+      item.className = 'fm-roomzone-item';
+      item.textContent = data.token.emoji;
+      item.title = data.token.name || '';
+      itemHost.appendChild(item);
+    }
     // Random "your team is winning" Rewards toast — fires every ~3rd placement
     // so it's not spam but kids do see consistent positive feedback. Tier
     // escalates with brick count to mirror the streak ladder logic.

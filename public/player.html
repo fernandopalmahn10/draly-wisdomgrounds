@@ -13,9 +13,9 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260517h">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260517i">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
-  <link rel="stylesheet" href="/css/family.css?v=20260517h">
+  <link rel="stylesheet" href="/css/family.css?v=20260517i">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -347,26 +347,28 @@
       <div class="fm-place-timer-num" id="fm-place-timer-num">8</div>
     </div>
     <div class="fm-place-headline">🏡 ¡Arrastra al cuarto correcto!</div>
+    <!-- The blueprint is a 3D-tilted house cross-section with 4 rooms.
+         Each room has a plaque label, a wallpaper background, a perspective
+         floor, and an items area that fills up with everything the player's
+         team places. Drag the token from the center into the right room. -->
     <div class="fm-blueprint" id="fm-blueprint">
       <div class="fm-roomzone sala" data-room="sala">
-        <span class="fm-roomzone-tag">🛋 Sala</span>
-        <span class="fm-roomzone-fill"></span>
+        <span class="fm-roomzone-plaque">🛋 Sala</span>
+        <div class="fm-roomzone-items" id="fm-roomzone-items-sala"></div>
       </div>
       <div class="fm-roomzone cocina" data-room="cocina">
-        <span class="fm-roomzone-tag">🍳 Cocina</span>
-        <span class="fm-roomzone-fill"></span>
+        <span class="fm-roomzone-plaque">🍳 Cocina</span>
+        <div class="fm-roomzone-items" id="fm-roomzone-items-cocina"></div>
       </div>
       <div class="fm-roomzone dormitorio" data-room="dormitorio">
-        <span class="fm-roomzone-tag">🛏 Dormitorio</span>
-        <span class="fm-roomzone-fill"></span>
+        <span class="fm-roomzone-plaque">🛏 Dormitorio</span>
+        <div class="fm-roomzone-items" id="fm-roomzone-items-dormitorio"></div>
       </div>
       <div class="fm-roomzone jardin" data-room="jardin">
-        <span class="fm-roomzone-tag">🌳 Jardín</span>
-        <span class="fm-roomzone-fill"></span>
+        <span class="fm-roomzone-plaque">🌳 Jardín</span>
+        <div class="fm-roomzone-items" id="fm-roomzone-items-jardin"></div>
       </div>
-      <!-- The draggable token sits in the center until grabbed. The hint
-           tells kids WHERE this thing belongs ("Llévame a la Sala 🛋") so
-           they're not guessing whether grandpa goes to the dormitorio. -->
+      <!-- The draggable token sits in the center until grabbed -->
       <div class="fm-drag-token" id="fm-drag-token">
         <span class="fm-drag-emoji" id="fm-token-emoji">🛋</span>
         <span class="fm-drag-name" id="fm-token-name">Sofá</span>
@@ -433,10 +435,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260517h"></script>
+  <script src="/js/sounds.js?v=20260517i"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/rewards.js?v=20260517h"></script>
-  <script src="/js/player.js?v=20260517h"></script>
+  <script src="/js/rewards.js?v=20260517i"></script>
+  <script src="/js/player.js?v=20260517i"></script>
 </body>
 </html>
