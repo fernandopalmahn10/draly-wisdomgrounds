@@ -759,21 +759,46 @@ function processMonopolyRoll(pin, pid, playerRoll) {
     // Also send player's running wealth for the live leaderboard on the host
     playerWealth: p.mpMoney
   });
-  // Instant-win check
+  // Tycoon milestone — celebrate the team hitting MP_INSTANT_WIN, but
+  // RESPECT THE TIMER. Per teacher feedback, games (except piñata + zombie)
+  // should run for the full duration the host set. Fire the tycoon banner
+  // once per team per match so the celebration still happens.
   const w = (g.teamScores.red >= MP_INSTANT_WIN) ? 'red'
           : (g.teamScores.gold >= MP_INSTANT_WIN) ? 'gold' : null;
-  if (w) {
-    if (g.endTimer) clearTimeout(g.endTimer);
+  if (w && !g.monopoly.tycoonAnnounced) {
+    g.monopoly.tycoonAnnounced = w;
     io.to(pin).emit('mp:tycoon', { team: w, teamScores: g.teamScores });
-    setTimeout(() => endGame(pin), 3500);
-    return;
+    // No setTimeout/endGame — the round continues until the duration expires.
   }
-  // Queue next question after a beat so the player sees the result
-  setTimeout(() => {
+  // Queue next question after the worst-case client animation budget:
+  // 6 walk-steps × 360ms + camera-hold 1.7s + tile reaction overlay 1.9s
+  // = ~5800ms. We use 6500ms as a safety ceiling so the player never gets
+  // kicked off the walk/celebration mid-animation. The client also emits
+  // a "monopoly:ready" signal — whichever arrives first wins.
+  if (g.mpQuestionTimers && g.mpQuestionTimers[pid]) {
+    clearTimeout(g.mpQuestionTimers[pid]);
+  }
+  if (!g.mpQuestionTimers) g.mpQuestionTimers = {};
+  const sendNext = () => {
+    if (g.mpQuestionTimers) delete g.mpQuestionTimers[pid];
     if (!games[pin] || games[pin].state !== 'active') return;
+    if (!g.players[pid]) return;
+    // Don't double-send if a question was already pushed via the ready signal
+    if (g.players[pid]._mpQuestionSent) {
+      g.players[pid]._mpQuestionSent = false;
+      return;
+    }
+    g.players[pid]._mpQuestionSent = true;
     const q = nextQuestionFor(g, pid);
     if (q) io.to(pid).emit('question', q);
-  }, 2400);
+  };
+  g.mpQuestionTimers[pid] = setTimeout(() => {
+    g.players[pid] && (g.players[pid]._mpQuestionSent = false);
+    sendNext();
+  }, 6500);
+  // Stash the resolver so the client's `monopoly:ready` event can call it.
+  if (!g.mpQuestionResolvers) g.mpQuestionResolvers = {};
+  g.mpQuestionResolvers[pid] = sendNext;
 }
 
 // Sum total team wealth: cash + value of owned cities.
@@ -1568,10 +1593,14 @@ io.on('connection', (socket) => {
         p.vendorCooldowns[vendorId] = Date.now() + 8000;
         io.to(socket.id).emit('answer-result', { correct: false, vendorId, correctText, itemIcon, itemChinese });
       }
-      // Win check: all vendors claimed → end game early
-      if (g.vendors.every((v) => v.claimedBy)) {
-        if (g.endTimer) clearTimeout(g.endTimer);
-        endGame(pin);
+      // All vendors claimed — celebrate the milestone BUT respect the
+      // duration the host set. Resetting all vendors lets the round keep
+      // generating new claim opportunities (each respawns with a fresh
+      // cooldown), so the gameplay loop continues until the timer expires.
+      if (g.vendors.every((v) => v.claimedBy) && !g.mqRoundCompleted) {
+        g.mqRoundCompleted = true;
+        // Optional: announce the achievement without ending the round
+        io.to(pin).emit('mq:all-claimed', { teamScores: g.teamScores });
       }
       broadcast(pin);
       return; // don't run other game branches
@@ -1883,6 +1912,27 @@ io.on('connection', (socket) => {
     processMonopolyRoll(pin, socket.id, roll);
   });
 
+  // Client signals: walk + tile-reaction overlay done, push my next question.
+  // Lets the next question fire AS SOON AS the player is ready, instead of
+  // waiting for the 6.5s safety ceiling — keeps the round snappy when the
+  // player rolled a low number (short walk).
+  socket.on('monopoly:ready', ({ pin }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'monopoly' || g.state !== 'active') return;
+    const resolver = g.mpQuestionResolvers && g.mpQuestionResolvers[socket.id];
+    if (typeof resolver === 'function') {
+      // Cancel the safety timer — we're firing the question via this signal
+      if (g.mpQuestionTimers && g.mpQuestionTimers[socket.id]) {
+        clearTimeout(g.mpQuestionTimers[socket.id]);
+        delete g.mpQuestionTimers[socket.id];
+      }
+      delete g.mpQuestionResolvers[socket.id];
+      // Reset the "sent" flag so resolver actually sends
+      if (g.players[socket.id]) g.players[socket.id]._mpQuestionSent = false;
+      resolver();
+    }
+  });
+
   socket.on('player:mq-input', ({ pin, left, right, up, down }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'market-quest' || g.state !== 'active') return;
@@ -2043,17 +2093,19 @@ io.on('connection', (socket) => {
           maxAlt: g.dragon.maxAlt
         });
       }
-      // Win check
-      if (g.dragon[altKey] >= g.dragon.maxAlt) {
-        g.dragon.winner = p.team;
+      // Reaching the heavens — celebrate, but RESPECT the timer. The team
+      // can keep playing (collecting more taps + points) until duration ends.
+      // Once a team has hit the heavens, they cannot go higher (capped above)
+      // but they can keep contributing to their score via the normal tap flow.
+      if (g.dragon[altKey] >= g.dragon.maxAlt && !g.dragon.heavensAnnounced) {
+        g.dragon.heavensAnnounced = p.team;
         io.to(pin).emit('dragon:reached-heavens', {
           team: p.team,
           altRed: g.dragon.altRed,
           altGold: g.dragon.altGold,
           teamScores: g.teamScores
         });
-        if (g.endTimer) clearTimeout(g.endTimer);
-        setTimeout(() => endGame(pin), 4000);
+        // No endGame here — wait for the duration timer to fire.
       }
     }
 

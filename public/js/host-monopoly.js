@@ -158,7 +158,9 @@
     if (teamScores) scores = teamScores;
     updateWealthDisplay();
     const emoji = team === 'red' ? '🐉' : '🐲';
-    setRecentEvent(`🏆 ¡${emoji} EL EQUIPO ${team === 'red' ? 'ROJO' : 'DORADO'} ALCANZÓ ¥${instantWin}! ¡VICTORIA INSTANTÁNEA!`);
+    // Celebrate the milestone but keep the round going — the teacher wants
+    // the duration timer to control when the round actually ends.
+    setRecentEvent(`🏆 ¡${emoji} EQUIPO ${team === 'red' ? 'ROJO' : 'DORADO'} llegó a ¥${instantWin}! 💰 ¡Sigan jugando!`);
     MochiSounds.winFanfare && MochiSounds.winFanfare();
   });
 

@@ -874,7 +874,18 @@ body.monopoly-bg .win-screen { color: #3a1505; }
 }
 .mp-mini-token.red  { box-shadow: 0 0 0 1.5px #ff5a66; }
 .mp-mini-token.gold { box-shadow: 0 0 0 1.5px #ffd57a; }
-.mp-mini-token.me   { box-shadow: 0 0 0 2.5px #fff, 0 0 10px gold; transform: scale(1.15); z-index: 3; }
+/* YOUR character — significantly bigger so you can always SEE yourself
+   on the board. The white halo + gold glow keep it visually distinct from
+   teammates' tokens of the same color. */
+.mp-mini-token.me {
+  width: 30px;
+  height: 30px;
+  box-shadow: 0 0 0 3px #fff, 0 0 16px gold, 0 0 28px rgba(255, 200, 80, 0.7);
+  transform: scale(1.35);
+  z-index: 5;
+  background: rgba(255, 255, 255, 0.6);
+}
+.mp-mini-token.me img { width: 26px; height: 26px; }
 .mp-mini-token img {
   width: 14px;
   height: 14px;
@@ -882,20 +893,36 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   pointer-events: none;
 }
 .mp-mini-token.walking {
-  animation: mp-mini-walk 0.28s ease-out;
+  animation: mp-mini-walk 0.36s ease-out;
 }
 @keyframes mp-mini-walk {
   0%   { transform: translateY(0)    scale(1); }
-  50%  { transform: translateY(-10px) scale(1.3); }
+  50%  { transform: translateY(-12px) scale(1.4); }
   100% { transform: translateY(0)    scale(1); }
 }
+/* YOUR character mid-walk gets an even bigger pop so you cannot miss it */
 .mp-mini-token.me.walking {
-  animation: mp-mini-walk-me 0.28s ease-out;
+  animation: mp-mini-walk-me 0.36s ease-out;
 }
 @keyframes mp-mini-walk-me {
-  0%   { transform: translateY(0)    scale(1.15); }
-  50%  { transform: translateY(-12px) scale(1.45); }
-  100% { transform: translateY(0)    scale(1.15); }
+  0%   { transform: translateY(0)    scale(1.35); filter: drop-shadow(0 0 10px gold); }
+  45%  { transform: translateY(-18px) scale(1.85); filter: drop-shadow(0 0 24px gold) drop-shadow(0 6px 10px rgba(0,0,0,0.7)); }
+  100% { transform: translateY(0)    scale(1.35); filter: drop-shadow(0 0 10px gold); }
+}
+/* When camera-zoom is active, your character is BIG — scale even more so
+   it dominates the screen as it traverses tiles. Looks like the "hero
+   focus" pattern in real games. */
+.mp-mini-board.mp-camera-on .mp-mini-token.me {
+  transform: scale(1.55);
+  z-index: 6;
+}
+.mp-mini-board.mp-camera-on .mp-mini-token.me.walking {
+  animation: mp-mini-walk-me-cam 0.36s ease-out;
+}
+@keyframes mp-mini-walk-me-cam {
+  0%   { transform: translateY(0)    scale(1.55); filter: drop-shadow(0 0 14px gold); }
+  45%  { transform: translateY(-22px) scale(2.05); filter: drop-shadow(0 0 30px gold) drop-shadow(0 8px 14px rgba(0,0,0,0.8)); }
+  100% { transform: translateY(0)    scale(1.55); filter: drop-shadow(0 0 14px gold); }
 }
 
 /* === Player dice-stopper screen === */

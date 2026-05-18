@@ -144,10 +144,12 @@
   });
 
   socket.on('dragon:reached-heavens', ({ team, teamScores }) => {
-    gameOver = true;
+    // Celebrate but DON'T set gameOver — the duration timer should still
+    // control when the round actually ends. Lets the other team keep playing
+    // and possibly catch up; the achievement is a celebration, not a kill switch.
     if (teamScores) scores = teamScores;
     const emoji = team === 'red' ? '🐉' : '🐲';
-    setBanner(`✨ ¡${emoji} El dragón ${team === 'red' ? 'Rojo' : 'Dorado'} llegó al cielo celestial! ✨`);
+    setBanner(`✨ ¡${emoji} El dragón ${team === 'red' ? 'Rojo' : 'Dorado'} llegó al cielo! 🎉 ¡Sigan volando!`);
     const dragon = $('flying-dragon-' + team);
     if (dragon) dragon.classList.add('ascended');
     MochiSounds.winFanfare && MochiSounds.winFanfare();
