@@ -123,6 +123,7 @@
   socket.on('fm:placed', ({ team, room, token, teamScores, combos }) => {
     if (teamScores) { scores = teamScores; updateScores(); }
     const slot = $(`fm-${team}-${room}`);
+    const roomEl = slot && slot.closest('.fm-room');
     if (slot) {
       const item = document.createElement('span');
       item.className = 'fm-item';
@@ -130,14 +131,25 @@
       item.title = token.name;
       slot.appendChild(item);
       // +1 popup over the room (or +bonus if combos unlocked)
-      const roomEl = slot.closest('.fm-room');
       if (roomEl) spawnRoomPop(roomEl, '+1');
     }
+    // Room WAKES UP — flash + scale pulse so the placement reads as a beat
+    if (roomEl) {
+      roomEl.classList.remove('fm-room-celebrate');
+      void roomEl.offsetWidth;
+      roomEl.classList.add('fm-room-celebrate');
+      setTimeout(() => roomEl.classList.remove('fm-room-celebrate'), 900);
+      // Each room type spawns its own ambient particle on placement
+      spawnRoomAmbient(roomEl, room);
+    }
     MochiSounds.populate && MochiSounds.populate(team);
-    // Combo celebration — bigger pop, banner across the host
+    // Combo celebration — bigger pop, banner across the host + full-screen
+    // flash for big-bonus combos (≥10) so the moment feels earned.
     if (Array.isArray(combos) && combos.length > 0) {
       combos.forEach((c) => spawnComboBanner(team, c));
       MochiSounds.winFanfare && MochiSounds.winFanfare();
+      const biggest = combos.reduce((m, c) => Math.max(m, c.bonus || 0), 0);
+      if (biggest >= 10) spawnComboFullscreen(team, combos[0], biggest);
     }
   });
 
@@ -149,6 +161,28 @@
     setTimeout(() => pop.remove(), 900);
   }
 
+  // Per-room-type ambient particle when an item is placed — gives each room
+  // its own personality. Sala = 📺/sparkle, Cocina = 🍳/steam, Dormitorio =
+  // 💤, Jardín = 🦋/leaves.
+  function spawnRoomAmbient(roomEl, room) {
+    const banks = {
+      sala:       ['✨', '📺', '🎵', '☕'],
+      cocina:     ['💨', '🍳', '🥢', '✨'],
+      dormitorio: ['💤', '🌙', '✨', '⭐'],
+      jardin:     ['🦋', '🌸', '🍃', '🐝'],
+    };
+    const icons = banks[room] || ['✨'];
+    for (let i = 0; i < 4; i++) {
+      const p = document.createElement('div');
+      p.className = 'fm-room-ambient';
+      p.textContent = icons[Math.floor(Math.random() * icons.length)];
+      p.style.left = (10 + Math.random() * 80) + '%';
+      p.style.animationDelay = (i * 80) + 'ms';
+      roomEl.appendChild(p);
+      setTimeout(() => p.remove(), 1400);
+    }
+  }
+
   function spawnComboBanner(team, combo) {
     const houseEl = $('fm-house-' + team);
     if (!houseEl) return;
@@ -157,6 +191,31 @@
     banner.innerHTML = `<span class="fm-combo-emoji">${combo.emoji}</span><span class="fm-combo-name">${combo.name}</span><span class="fm-combo-bonus">+${combo.bonus}</span>`;
     houseEl.appendChild(banner);
     setTimeout(() => banner.remove(), 2200);
+  }
+
+  // Big combo (≥10 bonus) — full-screen flash + confetti, like the
+  // "the team just scored something massive" vibe in a real game.
+  function spawnComboFullscreen(team, combo, bonus) {
+    const layer = document.createElement('div');
+    layer.className = 'fm-combo-fullscreen ' + team;
+    layer.innerHTML = `
+      <div class="fm-combo-fs-burst"></div>
+      <div class="fm-combo-fs-icon">${combo.emoji}</div>
+      <div class="fm-combo-fs-name">${combo.name}</div>
+      <div class="fm-combo-fs-bonus">+${bonus}</div>
+    `;
+    document.body.appendChild(layer);
+    // Confetti burst from the layer's bottom edge
+    for (let i = 0; i < 30; i++) {
+      const c = document.createElement('div');
+      c.className = 'fm-combo-confetti';
+      c.textContent = ['🎉', '🎊', '✨', '🧧', '🏡'][i % 5];
+      c.style.left = (Math.random() * 100) + '%';
+      c.style.animationDelay = (Math.random() * 800) + 'ms';
+      c.style.animationDuration = (1.6 + Math.random() * 1.2) + 's';
+      layer.appendChild(c);
+    }
+    setTimeout(() => layer.remove(), 2600);
   }
 
   socket.on('game-end', (data) => {

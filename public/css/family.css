@@ -463,3 +463,142 @@ body.family-bg .win-screen { color: #3a1505; }
   85%  { transform: translate(-50%, 0) scale(1); opacity: 1; }
   100% { transform: translate(-50%, -20px) scale(1); opacity: 0; }
 }
+
+/* ============================================================ */
+/* === Mi Familia POLISH: room celebration + ambient particles  */
+/* + full-screen combo flash for big combos                     */
+/* ============================================================ */
+
+/* Items in rooms are now noticeably bigger so the houses don't read empty */
+.fm-item {
+  font-size: clamp(1.8rem, 3vw, 2.6rem) !important;
+}
+
+/* Room celebrate animation — fires when an item drops into it */
+.fm-room.fm-room-celebrate {
+  animation: fm-room-celebrate 0.85s cubic-bezier(.22, 1.6, .36, 1);
+  z-index: 3;
+}
+@keyframes fm-room-celebrate {
+  0%   { transform: scale(1);   box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+  35%  { transform: scale(1.06); box-shadow: 0 0 0 4px rgba(255, 213, 122, 0.7), 0 0 28px rgba(255, 200, 80, 0.55); filter: brightness(1.15); }
+  100% { transform: scale(1);   box-shadow: 0 4px 8px rgba(0,0,0,0.2); filter: brightness(1); }
+}
+
+/* Per-room ambient particles — emoji floats up + fades */
+.fm-room-ambient {
+  position: absolute;
+  bottom: 0;
+  font-size: 1.3rem;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  animation: fm-room-ambient 1.3s ease-out forwards;
+  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));
+}
+@keyframes fm-room-ambient {
+  0%   { opacity: 0; transform: translateY(0) scale(0.6) rotate(-10deg); }
+  30%  { opacity: 1; transform: translateY(-30px) scale(1.1) rotate(8deg); }
+  100% { opacity: 0; transform: translateY(-90px) scale(0.9) rotate(-6deg); }
+}
+
+/* ============================================================ */
+/* === Fullscreen BIG-combo celebration ("¡CASA COMPLETA!") === */
+/* Fires when any combo with bonus ≥10 triggers. Massive overlay
+   like a real game's "level up" / "boss defeated" beat. */
+/* ============================================================ */
+.fm-combo-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9700;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.85) 80%);
+  animation: fm-fs-fade 2.6s ease-out forwards;
+}
+@keyframes fm-fs-fade {
+  0%   { opacity: 0; }
+  8%   { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+.fm-combo-fs-burst {
+  position: absolute;
+  width: min(140vw, 140vh);
+  height: min(140vw, 140vh);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 213, 122, 0.65) 0%, rgba(255, 90, 102, 0.5) 35%, transparent 70%);
+  filter: blur(8px);
+  animation: fm-fs-burst 2.6s ease-out forwards;
+}
+.fm-combo-fullscreen.gold .fm-combo-fs-burst { background: radial-gradient(circle, rgba(255, 213, 122, 0.75), rgba(232, 145, 52, 0.55) 35%, transparent 70%); }
+.fm-combo-fullscreen.red  .fm-combo-fs-burst { background: radial-gradient(circle, rgba(255, 138, 145, 0.75), rgba(217, 46, 58, 0.55) 35%, transparent 70%); }
+@keyframes fm-fs-burst {
+  0%   { transform: scale(0.3); opacity: 0; }
+  30%  { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+.fm-combo-fs-icon {
+  position: relative;
+  font-size: clamp(7rem, 30vmin, 16rem);
+  filter:
+    drop-shadow(0 0 30px gold)
+    drop-shadow(0 0 60px rgba(255, 200, 80, 0.8))
+    drop-shadow(0 10px 20px rgba(0, 0, 0, 0.8));
+  animation: fm-fs-icon 2.4s cubic-bezier(.22, 1.6, .36, 1);
+}
+@keyframes fm-fs-icon {
+  0%   { transform: scale(0.2) rotate(-25deg); opacity: 0; }
+  25%  { transform: scale(1.4) rotate(10deg);  opacity: 1; }
+  50%  { transform: scale(1.1) rotate(-5deg); }
+  75%  { transform: scale(1.25) rotate(3deg); }
+  100% { transform: scale(1.1) rotate(0);     opacity: 1; }
+}
+.fm-combo-fs-name {
+  position: relative;
+  margin-top: 14px;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(2rem, 7vmin, 4rem);
+  color: #fff;
+  text-shadow: 0 0 22px gold, 0 4px 12px rgba(0, 0, 0, 0.9);
+  letter-spacing: 0.05em;
+  animation: fm-fs-name 2.4s ease-out;
+}
+@keyframes fm-fs-name {
+  0%   { transform: translateY(30px); opacity: 0; }
+  35%  { transform: translateY(0);    opacity: 1; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+.fm-combo-fs-bonus {
+  position: relative;
+  margin-top: 8px;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(2.5rem, 9vmin, 5rem);
+  color: #6fdc8c;
+  text-shadow: 0 0 24px #6fdc8c, 0 4px 12px rgba(0, 0, 0, 0.9);
+  animation: fm-fs-bonus 2.4s cubic-bezier(.22, 1.6, .36, 1);
+}
+@keyframes fm-fs-bonus {
+  0%   { transform: scale(0.4); opacity: 0; }
+  40%  { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+.fm-combo-confetti {
+  position: absolute;
+  bottom: -10vh;
+  font-size: clamp(1.5rem, 4vmin, 2.4rem);
+  pointer-events: none;
+  animation: fm-confetti-rise 1.8s ease-out forwards;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+}
+@keyframes fm-confetti-rise {
+  0%   { transform: translateY(0)    rotate(0); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translateY(-110vh) rotate(720deg); opacity: 0; }
+}

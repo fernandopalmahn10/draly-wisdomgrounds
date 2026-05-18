@@ -2300,13 +2300,13 @@
     walkOwnCharacter(data.fromPos, data.toPos, data.skipped, () => {
       // After walk: float a tile-action toast over the landing tile
       showActionToast(data);
-      // Brief pause, then trigger the next question by signaling we're done
+      // Hold the celebration for ~2.2s, then signal the server we're ready
+      // for the next question. The server has a 6.5s safety ceiling so even
+      // if this signal gets lost, the next question still arrives.
       setTimeout(() => {
         const action = $('mp-mini-action');
         if (action) action.classList.add('hidden');
-        // The server already scheduled the next question on its side (2.4s).
-        // We just clean up here. If the question hasn't arrived yet, the
-        // question-event handler will swap screens when it does.
+        try { socket.emit('monopoly:ready', { pin }); } catch (_) {}
       }, 2200);
     });
   });
