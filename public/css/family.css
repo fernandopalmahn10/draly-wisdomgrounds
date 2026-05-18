@@ -350,8 +350,34 @@ body.family-bg .win-screen { color: #3a1505; }
 }
 .fm-roomzone.recommended {
   border-color: #2fa14b;
-  box-shadow: 0 0 18px rgba(120, 240, 80, 0.55), inset 0 0 10px rgba(120, 240, 80, 0.25);
-  background-color: rgba(170, 245, 170, 0.92);
+  background-color: rgba(170, 245, 170, 0.95);
+  /* Strong green pulse + arrow so kids can SEE which room is recommended,
+     not just notice a subtle color shift. */
+  animation: fm-roomzone-pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes fm-roomzone-pulse {
+  from {
+    box-shadow: 0 0 18px rgba(120, 240, 80, 0.6), inset 0 0 12px rgba(120, 240, 80, 0.3);
+    transform: scale(1);
+  }
+  to {
+    box-shadow: 0 0 40px rgba(120, 240, 80, 0.95), inset 0 0 22px rgba(120, 240, 80, 0.55);
+    transform: scale(1.04);
+  }
+}
+.fm-roomzone.recommended::after {
+  content: '👉';
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 1.4rem;
+  animation: fm-rec-arrow 1s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 6px gold);
+  z-index: 4;
+}
+@keyframes fm-rec-arrow {
+  from { transform: rotate(-12deg) scale(1); }
+  to   { transform: rotate(12deg) scale(1.15); }
 }
 .fm-roomzone.hovering {
   transform: scale(1.05);
@@ -410,16 +436,38 @@ body.family-bg .win-screen { color: #3a1505; }
   to   { transform: translate(-50%, -54%) rotate(3deg); }
 }
 .fm-drag-emoji {
-  font-size: clamp(3.4rem, 12vw, 5.5rem);
-  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
+  /* Bigger so the kid actually SEES what they're holding */
+  font-size: clamp(4.5rem, 16vw, 7rem);
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.45));
   line-height: 1;
 }
 .fm-drag-name {
   font-family: 'Cinzel', serif;
   font-weight: 900;
-  font-size: 1rem;
+  font-size: clamp(1.05rem, 3.5vw, 1.3rem);
   color: #5a2e10;
   letter-spacing: 0.04em;
+}
+/* "¡Llévame a la Sala o Jardín!" hint chip — tells you WHERE this thing
+   belongs. Critical for cases like grandpa where the placement isn't
+   obvious. */
+.fm-drag-hint {
+  margin-top: 6px;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, #2fa14b, #6fdc8c);
+  color: #fff;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: clamp(0.85rem, 2.6vw, 1rem);
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  border: 2px solid #1a5a2c;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35), 0 0 16px rgba(120, 240, 80, 0.5);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  max-width: 92%;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.15;
 }
 
 .fm-place-hint {
@@ -469,9 +517,19 @@ body.family-bg .win-screen { color: #3a1505; }
 /* + full-screen combo flash for big combos                     */
 /* ============================================================ */
 
-/* Items in rooms are now noticeably bigger so the houses don't read empty */
+/* Items in rooms are now noticeably bigger so the houses don't read empty.
+   User feedback: "all the icons should be bigger." Bumped again. */
 .fm-item {
-  font-size: clamp(1.8rem, 3vw, 2.6rem) !important;
+  font-size: clamp(2.4rem, 4vw, 3.6rem) !important;
+}
+.fm-room-label {
+  font-size: clamp(0.95rem, 1.4vw, 1.15rem) !important;
+}
+.fm-house-tag {
+  font-size: clamp(1.05rem, 1.6vw, 1.4rem);
+}
+@media (min-width: 768px) {
+  .fm-room { padding: 32px 8px 8px; }
 }
 
 /* Room celebrate animation — fires when an item drops into it */
@@ -601,4 +659,201 @@ body.family-bg .win-screen { color: #3a1505; }
   0%   { transform: translateY(0)    rotate(0); opacity: 0; }
   15%  { opacity: 1; }
   100% { transform: translateY(-110vh) rotate(720deg); opacity: 0; }
+}
+
+/* ============================================================ */
+/* === BRICK CONSTRUCTION === foundation wall + counter + roof === */
+/* === Per-placement: +1 brick visually fills the foundation,   */
+/* === and at milestones the roof gets a new decoration         */
+/* === (window, door, plant, tree, lantern, bird, sun).         */
+/* ============================================================ */
+.fm-bricks-counter {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff8e0;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(0.8rem, 1.4vw, 1.05rem);
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 213, 122, 0.6);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  z-index: 6;
+  letter-spacing: 0.05em;
+}
+
+.fm-brick-wall {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 4px;
+  height: 28px;
+  pointer-events: none;
+  z-index: 2;
+}
+.fm-brick {
+  position: absolute;
+  width: clamp(14px, 3vw, 22px);
+  height: 14px;
+  background: linear-gradient(180deg, #c25a2c 0%, #8b3a16 60%, #6e2c0e 100%);
+  border: 1.5px solid #4a1e0a;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 200, 150, 0.3);
+  animation: fm-brick-land 0.5s cubic-bezier(.22, 1.6, .36, 1);
+}
+@keyframes fm-brick-land {
+  0%   { transform: translateY(-60px) rotate(-15deg); opacity: 0; }
+  60%  { transform: translateY(4px) rotate(2deg);     opacity: 1; }
+  100% { transform: translateY(0) rotate(0);          opacity: 1; }
+}
+
+/* Brick-lay puff at a random spot above the wall when an item is placed */
+.fm-brick-lay-fx {
+  position: absolute;
+  bottom: 32px;
+  font-size: 2rem;
+  pointer-events: none;
+  animation: fm-brick-lay-fx 0.9s ease-out forwards;
+  z-index: 4;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+@keyframes fm-brick-lay-fx {
+  0%   { transform: translateY(-30px) scale(0.6); opacity: 0; }
+  35%  { transform: translateY(0)     scale(1.3); opacity: 1; }
+  100% { transform: translateY(20px)  scale(0.9); opacity: 0; }
+}
+
+/* Roof decoration strip — sits above the roof, fills with milestone unlocks */
+.fm-roof-decor {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  z-index: 5;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+.fm-roof-decor-item {
+  animation: fm-roof-decor-in 0.7s cubic-bezier(.22, 1.6, .36, 1);
+  line-height: 1;
+}
+@keyframes fm-roof-decor-in {
+  0%   { transform: scale(0.2) translateY(-20px) rotate(-25deg); opacity: 0; }
+  60%  { transform: scale(1.3) translateY(0)     rotate(8deg);   opacity: 1; }
+  100% { transform: scale(1)   translateY(0)     rotate(0);      opacity: 1; }
+}
+
+/* Milestone toast — fires when a brick milestone unlocks new house decor */
+.fm-milestone-toast {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #2fa14b, #6fdc8c);
+  color: #fff;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(1rem, 2vw, 1.3rem);
+  padding: 10px 22px;
+  border-radius: 999px;
+  border: 3px solid #1a5a2c;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45), 0 0 30px rgba(120, 240, 80, 0.55);
+  z-index: 10;
+  pointer-events: none;
+  animation: fm-milestone-pop 2s cubic-bezier(.22, 1.6, .36, 1);
+  white-space: nowrap;
+}
+.fm-milestone-toast span:first-child { font-size: 1.6em; }
+@keyframes fm-milestone-pop {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+  20%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  80%  { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+  100% { transform: translate(-50%, -80px) scale(0.9); opacity: 0; }
+}
+
+/* ============================================================ */
+/* === AMBIENT SKY + CRITTERS === drifting clouds, sun,        */
+/* === occasional birds/butterflies flying across the screen   */
+/* ============================================================ */
+.fm-sky {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: clamp(60px, 12vh, 120px);
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.fm-sky-cloud {
+  position: absolute;
+  top: 20%;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  opacity: 0.65;
+  filter: drop-shadow(0 2px 4px rgba(255, 255, 255, 0.4));
+  animation: fm-cloud-drift 32s linear infinite;
+}
+.fm-sky-cloud.c1 { top: 18%; animation-duration: 38s; animation-delay: 0s;  }
+.fm-sky-cloud.c2 { top: 42%; animation-duration: 50s; animation-delay: -16s; }
+.fm-sky-cloud.c3 { top: 28%; animation-duration: 42s; animation-delay: -26s; }
+@keyframes fm-cloud-drift {
+  from { left: -10%; }
+  to   { left: 110%; }
+}
+.fm-sky-sun {
+  position: absolute;
+  top: 12%;
+  right: 6%;
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  filter: drop-shadow(0 0 18px gold);
+  animation: fm-sun-bob 6s ease-in-out infinite alternate;
+}
+@keyframes fm-sun-bob {
+  from { transform: translateY(0)   rotate(-4deg); }
+  to   { transform: translateY(-6px) rotate(4deg); }
+}
+
+/* Critters layer sits ABOVE the houses; flies across periodically */
+.fm-critters {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  overflow: hidden;
+}
+.fm-critter {
+  position: absolute;
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+  left: -8%;
+  will-change: transform, left;
+}
+.fm-critter.bird {
+  animation: fm-bird-fly 5.5s linear forwards;
+}
+@keyframes fm-bird-fly {
+  0%   { left: -8%;  transform: translateY(0); }
+  25%  { transform: translateY(-12px); }
+  50%  { transform: translateY(6px); }
+  75%  { transform: translateY(-10px); }
+  100% { left: 108%; transform: translateY(0); }
+}
+.fm-critter.butterfly {
+  animation: fm-butterfly-flit 6.5s linear forwards;
+}
+@keyframes fm-butterfly-flit {
+  0%   { left: -8%;  transform: translateY(0)    rotate(-6deg); }
+  20%  { transform: translateY(-30px) rotate(8deg); }
+  40%  { transform: translateY(20px)  rotate(-6deg); }
+  60%  { transform: translateY(-20px) rotate(10deg); }
+  80%  { transform: translateY(15px)  rotate(-8deg); }
+  100% { left: 108%; transform: translateY(0)    rotate(0); }
 }

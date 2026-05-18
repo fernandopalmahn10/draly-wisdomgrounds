@@ -111,11 +111,30 @@
     tick();
   });
 
+  // === BRICK CONSTRUCTION STATE ===
+  // Each placement = +1 brick. We track per-team brick counts so the wall
+  // foundation fills in and the roof gets new decorations at milestones.
+  const FM_WALL_CAPACITY = 30;           // bricks per row at full house
+  const FM_ROOF_MILESTONES = [
+    { at: 4,  emoji: '🪟', label: 'ventana' },
+    { at: 8,  emoji: '🚪', label: 'puerta' },
+    { at: 12, emoji: '🪴', label: 'planta' },
+    { at: 16, emoji: '🌳', label: 'árbol' },
+    { at: 20, emoji: '🏮', label: 'lámpara' },
+    { at: 24, emoji: '🐦', label: 'pájaro' },
+    { at: 28, emoji: '☀️', label: 'sol' },
+  ];
+  let bricksRed = 0;
+  let bricksGold = 0;
+
   socket.on('fm:init', (data) => {
     scores = data.teamScores || { red: 0, gold: 0 };
     gameOver = false;
+    bricksRed = bricksGold = 0;
     clearHouses();
+    resetBrickWalls();
     updateScores();
+    startAmbientCritters();
   });
 
   // A player placed a token into a room — animate it landing + show +1 pop
@@ -142,6 +161,9 @@
       // Each room type spawns its own ambient particle on placement
       spawnRoomAmbient(roomEl, room);
     }
+    // === Lay a brick === Each placement adds one brick to the team's wall +
+    // bumps the counter. At milestones, the house roof grows a new decoration.
+    layBrick(team);
     MochiSounds.populate && MochiSounds.populate(team);
     // Combo celebration — bigger pop, banner across the host + full-screen
     // flash for big-bonus combos (≥10) so the moment feels earned.
@@ -191,6 +213,99 @@
     banner.innerHTML = `<span class="fm-combo-emoji">${combo.emoji}</span><span class="fm-combo-name">${combo.name}</span><span class="fm-combo-bonus">+${combo.bonus}</span>`;
     houseEl.appendChild(banner);
     setTimeout(() => banner.remove(), 2200);
+  }
+
+  // === BRICK CONSTRUCTION HELPERS ===
+  // Each placement lays one visible brick on the team's foundation wall +
+  // bumps the brick counter. At milestone counts, the house gets a new
+  // roof decoration (window, door, plant, tree, lantern, bird, sun).
+  function resetBrickWalls() {
+    ['red', 'gold'].forEach((team) => {
+      const wall = $('fm-brick-wall-' + team);
+      if (wall) wall.innerHTML = '';
+      const decor = $('fm-roof-decor-' + team);
+      if (decor) decor.innerHTML = '';
+      const num = $('fm-bricks-num-' + team);
+      if (num) num.textContent = '0';
+    });
+  }
+
+  function layBrick(team) {
+    const count = team === 'red' ? (bricksRed = bricksRed + 1) : (bricksGold = bricksGold + 1);
+    const wall = $('fm-brick-wall-' + team);
+    const num  = $('fm-bricks-num-' + team);
+    if (num) num.textContent = count;
+    if (wall && count <= FM_WALL_CAPACITY) {
+      const brick = document.createElement('div');
+      brick.className = 'fm-brick';
+      brick.style.left = ((count - 1) * (100 / FM_WALL_CAPACITY)) + '%';
+      // Slight offset so bricks read like a real wall pattern, not a flat strip
+      brick.style.bottom = ((count % 2 === 0) ? '0px' : '10px');
+      wall.appendChild(brick);
+    }
+    // Roof decoration unlocked? Add it to the roof decor strip
+    const milestone = FM_ROOF_MILESTONES.find((m) => m.at === count);
+    if (milestone) {
+      const decor = $('fm-roof-decor-' + team);
+      if (decor) {
+        const d = document.createElement('div');
+        d.className = 'fm-roof-decor-item';
+        d.textContent = milestone.emoji;
+        d.title = milestone.label;
+        decor.appendChild(d);
+      }
+      // Big celebration toast for the unlock
+      const houseEl = $('fm-house-' + team);
+      if (houseEl) {
+        const t = document.createElement('div');
+        t.className = 'fm-milestone-toast';
+        t.innerHTML = `<span>${milestone.emoji}</span><span>¡${count} ladrillos! Nueva ${milestone.label}</span>`;
+        houseEl.appendChild(t);
+        setTimeout(() => t.remove(), 2000);
+      }
+      MochiSounds.winFanfare && MochiSounds.winFanfare();
+    }
+    // Brick-lay "drop in" particle right under the room that received the
+    // placement — feels physical, like a brick was actually laid.
+    spawnBrickLayFx(team);
+  }
+
+  function spawnBrickLayFx(team) {
+    const houseEl = $('fm-house-' + team);
+    if (!houseEl) return;
+    const fx = document.createElement('div');
+    fx.className = 'fm-brick-lay-fx';
+    fx.textContent = '🧱';
+    fx.style.left = (15 + Math.random() * 70) + '%';
+    houseEl.appendChild(fx);
+    setTimeout(() => fx.remove(), 900);
+  }
+
+  // === AMBIENT CRITTERS — birds, butterflies, doorbell guests ===
+  // Adds cozy "alive house" vibes without distracting from gameplay.
+  let ambientTimer = null;
+  function startAmbientCritters() {
+    if (ambientTimer) clearInterval(ambientTimer);
+    ambientTimer = setInterval(() => {
+      if (Math.random() < 0.5) spawnCritter();
+    }, 4500);
+  }
+  function spawnCritter() {
+    const layer = $('fm-critters');
+    if (!layer) return;
+    const kinds = [
+      { icon: '🐦', cls: 'bird',      duration: 5500 },
+      { icon: '🦋', cls: 'butterfly', duration: 6500 },
+      { icon: '🐝', cls: 'butterfly', duration: 6000 },
+      { icon: '🪁', cls: 'bird',      duration: 6500 },
+    ];
+    const k = kinds[Math.floor(Math.random() * kinds.length)];
+    const c = document.createElement('div');
+    c.className = 'fm-critter ' + k.cls;
+    c.textContent = k.icon;
+    c.style.top = (15 + Math.random() * 35) + '%';
+    layer.appendChild(c);
+    setTimeout(() => c.remove(), k.duration);
   }
 
   // Big combo (≥10 bonus) — full-screen flash + confetti, like the

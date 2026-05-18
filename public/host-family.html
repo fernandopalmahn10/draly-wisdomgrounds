@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Long+Cang&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/family.css?v=20260517e">
+  <link rel="stylesheet" href="/css/family.css?v=20260517f">
 </head>
 <body class="family-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -111,26 +111,49 @@
       </div>
     </div>
 
+    <!-- Ambient sky layer behind both houses: drifting clouds, sun/moon,
+         occasional birds and butterflies flying across. Gives the round a
+         cozy "alive" feeling without distracting from the placement task. -->
+    <div class="fm-sky" id="fm-sky">
+      <div class="fm-sky-cloud c1">☁️</div>
+      <div class="fm-sky-cloud c2">⛅</div>
+      <div class="fm-sky-cloud c3">☁️</div>
+      <div class="fm-sky-sun">☀️</div>
+    </div>
+
     <div class="fm-houses">
       <!-- RED house -->
       <div class="fm-house red" id="fm-house-red">
         <div class="fm-house-tag">🏡 Familia Roja</div>
+        <!-- Construction progress: how many bricks have been laid (= items placed).
+             Visual bricks fill in below the rooms as the team builds the house. -->
+        <div class="fm-bricks-counter" id="fm-bricks-counter-red">🧱 <span id="fm-bricks-num-red">0</span> ladrillos</div>
         <div class="fm-roof"></div>
+        <!-- Roof decorations unlocked at brick milestones -->
+        <div class="fm-roof-decor" id="fm-roof-decor-red"></div>
         <div class="fm-room sala"      data-room="sala"><div class="fm-room-label">Sala</div><div class="fm-room-items" id="fm-red-sala"></div></div>
         <div class="fm-room cocina"    data-room="cocina"><div class="fm-room-label">Cocina</div><div class="fm-room-items" id="fm-red-cocina"></div></div>
         <div class="fm-room dormitorio" data-room="dormitorio"><div class="fm-room-label">Dormitorio</div><div class="fm-room-items" id="fm-red-dormitorio"></div></div>
         <div class="fm-room jardin"    data-room="jardin"><div class="fm-room-label">Jardín</div><div class="fm-room-items" id="fm-red-jardin"></div></div>
+        <!-- Brick wall foundation that fills in left-to-right with each placement -->
+        <div class="fm-brick-wall" id="fm-brick-wall-red"></div>
       </div>
       <!-- GOLD house -->
       <div class="fm-house gold" id="fm-house-gold">
         <div class="fm-house-tag">🏠 Familia Dorada</div>
+        <div class="fm-bricks-counter" id="fm-bricks-counter-gold">🧱 <span id="fm-bricks-num-gold">0</span> ladrillos</div>
         <div class="fm-roof"></div>
+        <div class="fm-roof-decor" id="fm-roof-decor-gold"></div>
         <div class="fm-room sala"      data-room="sala"><div class="fm-room-label">Sala</div><div class="fm-room-items" id="fm-gold-sala"></div></div>
         <div class="fm-room cocina"    data-room="cocina"><div class="fm-room-label">Cocina</div><div class="fm-room-items" id="fm-gold-cocina"></div></div>
         <div class="fm-room dormitorio" data-room="dormitorio"><div class="fm-room-label">Dormitorio</div><div class="fm-room-items" id="fm-gold-dormitorio"></div></div>
         <div class="fm-room jardin"    data-room="jardin"><div class="fm-room-label">Jardín</div><div class="fm-room-items" id="fm-gold-jardin"></div></div>
+        <div class="fm-brick-wall" id="fm-brick-wall-gold"></div>
       </div>
     </div>
+
+    <!-- Ambient critters layer (birds, butterflies, doorbell guests) -->
+    <div class="fm-critters" id="fm-critters"></div>
 
     <!-- Calm hovering dragon mascot in the corner -->
     <div class="fm-mascot">🐲</div>
@@ -160,8 +183,8 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260517e"></script>
+  <script src="/js/sounds.js?v=20260517f"></script>
   <script src="/js/enter.js"></script>
-  <script src="/js/host-family.js?v=20260517e"></script>
+  <script src="/js/host-family.js?v=20260517f"></script>
 </body>
 </html>
