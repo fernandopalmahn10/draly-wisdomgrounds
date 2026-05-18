@@ -1891,36 +1891,106 @@
     if (welcome) showMonopolyWelcome();
   });
 
+  // Personality phrases keyed by character index. Spanish-first with the
+  // character's Chinese-flavored hook below it. Picks at random per intro
+  // so kids see different greetings if they restart.
+  const MP_CHAR_GREETINGS = [
+    // 0 Mei (female adventurer)
+    [
+      { es: '¡Hola, soy Mei! ¡Vamos a la aventura!', cn: '我叫美! 加油!' },
+      { es: '¡Soy Mei, la valiente! ¿Lista para ganar?',   cn: '我是美, 我很勇敢!' },
+      { es: '¡Hola! Mei al ataque. ¡Vamos!',               cn: '我叫美! 我们走吧!' },
+    ],
+    // 1 Liáng (male adventurer)
+    [
+      { es: '¡Yo soy Liáng! ¡A conquistar el tablero!',  cn: '我叫亮! 加油!' },
+      { es: '¡Liáng presente! Vamos a hacer fortuna.',     cn: '我是亮, 一起赚钱!' },
+      { es: '¡Hola amigos! Soy Liáng. ¡Hagamos historia!', cn: '我叫亮! 我们走吧!' },
+    ],
+    // 2 Sara
+    [
+      { es: '¡Hola! Yo soy Sara. ¡Será divertido!',     cn: '我叫莎拉! 你好!' },
+      { es: '¡Sara aquí! ¿Lista para los dados?',        cn: '我是莎拉! 加油!' },
+      { es: '¡Hola jugador! Soy Sara. ¡A jugar!',        cn: '我叫莎拉! 我们走吧!' },
+    ],
+    // 3 Daniel
+    [
+      { es: '¡Soy Daniel! Vamos a ganar mucho dinero.', cn: '我叫丹尼尔! 加油!' },
+      { es: '¡Daniel listo! ¿Tirarás un seis?',          cn: '我是丹尼尔, 加油!' },
+      { es: '¡Hola! Daniel a la orden. ¡Vamos!',         cn: '我叫丹尼尔! 你好!' },
+    ],
+    // 4 Robot-Bao
+    [
+      { es: '*BIP BOOP* Robot-Bao en línea. ¡A ganar!', cn: '机器人 包! 加油!' },
+      { es: 'Detectado: jugador genial. ¡Vamos!',        cn: '我是机器人! 你好!' },
+      { es: 'Cálculos completos. ¡Hora de jugar!',       cn: '机器人 包 准备! 走!' },
+    ],
+    // 5 Zombi
+    [
+      { es: 'Aaargh… ¡digo, hola! Soy Zombi. 🧟',       cn: '我是僵尸! 你好...' },
+      { es: '¡Cerebrooo… digo, vamos a jugar!',           cn: '僵尸 来了! 加油!' },
+      { es: 'Zombi feliz hoy. ¡Vamos a tirar el dado!',   cn: '我叫僵尸! 走吧!' },
+    ],
+  ];
+
   function showMonopolyWelcome() {
     const wc = $('mp-welcome-char');
     const wn = $('mp-welcome-name');
     const btn = $('mp-welcome-btn');
+    const bt = $('mp-welcome-bubble-text');
+    const bc = $('mp-welcome-bubble-cn');
     if (wc) wc.src = '/assets/monopoly/chars/char-' + mpMyChar + '.png';
     if (wn) wn.textContent = mpMyCharName || 'Tu personaje';
+    // Pick a random personality phrase for this character
+    const bank = MP_CHAR_GREETINGS[mpMyChar] || MP_CHAR_GREETINGS[0];
+    const phrase = bank[Math.floor(Math.random() * bank.length)];
+    if (bt) bt.textContent = phrase.es;
+    if (bc) bc.textContent = phrase.cn;
     showScreen('monopoly-welcome');
     MochiSounds.correct && MochiSounds.correct();
-    // Auto-dismiss after 3.5s OR on button tap
+    if (MochiSounds.coinClink) setTimeout(() => MochiSounds.coinClink(), 250);
+    if (window.unlockAudio) window.unlockAudio();
+    // Spawn sparkle particles around the character on entry
+    spawnMpWelcomeSparkles();
+    // Auto-dismiss after 4s OR on button tap
     let dismissed = false;
     const dismiss = () => {
       if (dismissed) return;
       dismissed = true;
-      // After welcome, the player should see whatever they'd see otherwise.
-      // If a question is pending, the question handler will switch back; meanwhile
-      // we go to a holding screen that shows the board so they can see other moves.
-      // Easiest: just go to the question screen if mp-question-text has content,
-      // otherwise to the mini-board view (without dice prompt).
       const qText = $('question-text');
       if (qText && qText.textContent && qText.textContent.length > 1) {
         showScreen('question');
       } else {
-        // Show the mini-board in "view-only" mode (no dice prompt)
         showMiniBoardIdle();
       }
     };
     if (btn) {
-      btn.onpointerdown = btn.onclick = (e) => { if (e) e.preventDefault(); dismiss(); };
+      btn.onpointerdown = btn.onclick = (e) => {
+        if (e) e.preventDefault();
+        MochiSounds.correct && MochiSounds.correct();
+        if (window.Rewards) window.Rewards.show({ tier: 'great', icon: '🎲', text: '¡A jugar!' });
+        dismiss();
+      };
     }
-    setTimeout(dismiss, 3500);
+    setTimeout(dismiss, 4000);
+  }
+
+  // Random gold sparkle particles around the welcome card
+  function spawnMpWelcomeSparkles() {
+    const layer = $('mp-welcome-sparkles');
+    if (!layer) return;
+    layer.innerHTML = '';
+    const icons = ['✨', '⭐', '💫', '🌟', '🎉', '💰', '🧧', '🪙'];
+    for (let i = 0; i < 18; i++) {
+      const s = document.createElement('div');
+      s.className = 'mp-welcome-spark';
+      s.textContent = icons[Math.floor(Math.random() * icons.length)];
+      s.style.left = (Math.random() * 95) + '%';
+      s.style.top  = (40 + Math.random() * 55) + '%';
+      s.style.animationDelay = (Math.random() * 1.6) + 's';
+      layer.appendChild(s);
+      setTimeout(() => s.remove(), 3500);
+    }
   }
 
   // Show the mini-board screen in view-only mode (no dice prompt) so the player
@@ -2132,8 +2202,10 @@
             dice.classList.add('locked');
           }
           mpDiceLocked = true;
-          MochiSounds.correct && MochiSounds.correct();
+          MochiSounds.diceLand && MochiSounds.diceLand();
           if (navigator.vibrate) navigator.vibrate([40, 40, 80]);
+          // Celebrate the value: 6 = crit (epic), 5 = great, 1-4 = standard
+          celebrateRollValue(mpShakeValue);
           if (hint) hint.textContent = `🎲 ¡Sacaste un ${mpShakeValue}! Tu personaje camina...`;
           socket.emit('monopoly:roll', { pin, roll: mpShakeValue });
           return;
@@ -2220,17 +2292,33 @@
       cur = (cur + 1) % total;
       i++;
       const slot = $('mp-mini-tokens-' + cur);
+      const tile = $('mp-mini-tile-' + cur);
       if (slot) {
         slot.appendChild(tok);
         tok.classList.remove('walking');
         void tok.offsetWidth;
         tok.classList.add('walking');
       }
-      MochiSounds.tick && MochiSounds.tick();
+      // Each tile walked over briefly lights up — gives the walk a sense of
+      // PROGRESS instead of feeling like a passive animation. Trail effect.
+      if (tile) {
+        tile.classList.remove('mp-mini-passed');
+        void tile.offsetWidth;
+        tile.classList.add('mp-mini-passed');
+        setTimeout(() => tile.classList.remove('mp-mini-passed'), 600);
+      }
+      // Pop a "step N" counter overlay so kids visually count their walk
+      showStepCount(i, steps);
+      MochiSounds.footstep && MochiSounds.footstep();
       if (navigator.vibrate) navigator.vibrate(10);
       if (i < steps) {
-        setTimeout(step, 280);
+        // Slightly faster cadence so the walk feels lively, not draggy
+        setTimeout(step, 230);
       } else {
+        // Landing emphasis — a final thud + tile highlight
+        MochiSounds.diceLand && MochiSounds.diceLand();
+        if (tile) tile.classList.add('mp-mini-landed');
+        setTimeout(() => tile && tile.classList.remove('mp-mini-landed'), 1200);
         mpWalking = false;
         if (onDone) onDone();
       }
@@ -2238,7 +2326,190 @@
     step();
   }
 
+  // Floating step counter that pops near the dice center as the player walks
+  function showStepCount(i, total) {
+    const center = document.querySelector('.mp-mini-center');
+    if (!center) return;
+    let chip = document.getElementById('mp-step-counter');
+    if (!chip) {
+      chip = document.createElement('div');
+      chip.id = 'mp-step-counter';
+      chip.className = 'mp-step-counter';
+      center.appendChild(chip);
+    }
+    chip.textContent = `${i} / ${total}`;
+    chip.classList.remove('pulse');
+    void chip.offsetWidth;
+    chip.classList.add('pulse');
+    if (i === total) {
+      // Clean up after the final step
+      setTimeout(() => { chip.remove(); }, 900);
+    }
+  }
+
+  // === Roll-value celebration ===
+  // Rolling a 6 is a "crit" — fireworks + epic Rewards. 5 is a "great" tier.
+  // 1-4 still get a small confetti burst so EVERY roll feels rewarded.
+  function celebrateRollValue(n) {
+    const center = document.querySelector('.mp-mini-center');
+    if (!center) return;
+    // Build a value reveal element
+    const reveal = document.createElement('div');
+    reveal.className = 'mp-roll-reveal';
+    if (n === 6) reveal.classList.add('crit');
+    else if (n === 5) reveal.classList.add('great');
+    reveal.innerHTML = `
+      <div class="mp-roll-reveal-burst"></div>
+      <div class="mp-roll-reveal-num">${n}</div>
+      <div class="mp-roll-reveal-tag">${n === 6 ? '¡SEIS PERFECTO!' : n === 5 ? '¡Excelente!' : '¡Tirada!'}</div>
+    `;
+    center.appendChild(reveal);
+    setTimeout(() => reveal.remove(), 1300);
+    // Rewards + audio
+    if (n === 6) {
+      MochiSounds.crit6 && MochiSounds.crit6();
+      if (window.Rewards) window.Rewards.show({ tier: 'epic', icon: '🎲', text: '¡SEIS! ¡Tiro perfecto!', duration: 2000 });
+      if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 120]);
+    } else if (n === 5) {
+      MochiSounds.coinClink && MochiSounds.coinClink();
+      if (window.Rewards) window.Rewards.show({ tier: 'great', icon: '🎲', text: `¡${n}! ¡Buena tirada!` });
+    } else {
+      if (window.Rewards) window.Rewards.show({ icon: '🎲', text: `¡Tiraste ${n}!` });
+    }
+  }
+
+  // Per-tile-type cinematic reaction. Layers a full-screen overlay over the
+  // mini-board for ~1.5s so each landing feels CONSEQUENTIAL, not flat.
+  function playTileReaction(data) {
+    const screen = $('screen-monopoly-roll');
+    if (!screen) return;
+    const layer = document.createElement('div');
+    layer.className = 'mp-tile-fx';
+    let inner = '';
+    let extraClass = '';
+    switch (data.action) {
+      case 'bought':
+        extraClass = 'fx-bought';
+        inner = `
+          <div class="mp-fx-deed">
+            <div class="mp-fx-deed-banner">¡COMPRADO!</div>
+            <div class="mp-fx-deed-name">${escapeHtml(data.tile ? data.tile.name : '')}</div>
+            <div class="mp-fx-deed-stamp">MÍO</div>
+            <div class="mp-fx-deed-cost">-¥${-data.moneyDelta}</div>
+          </div>`;
+        MochiSounds.titleStamp && MochiSounds.titleStamp();
+        setTimeout(() => MochiSounds.cashRegister && MochiSounds.cashRegister(), 300);
+        if (window.Rewards) window.Rewards.show({ tier: 'great', icon: '🏙', text: '¡Compraste una ciudad!', duration: 1700 });
+        break;
+      case 'own-city':
+        extraClass = 'fx-own-city';
+        inner = `<div class="mp-fx-icon">🏙</div><div class="mp-fx-tag">¡Tu ciudad!</div>`;
+        MochiSounds.coinClink && MochiSounds.coinClink();
+        if (window.Rewards) window.Rewards.show({ icon: '🏙', text: '¡Tu propiedad!' });
+        break;
+      case 'paid-rent':
+        extraClass = 'fx-rent';
+        inner = `
+          <div class="mp-fx-icon mp-fx-rent-dragon">🐲</div>
+          <div class="mp-fx-tag">¡Pagaste renta!</div>
+          <div class="mp-fx-money loss">-¥${data.rentAmount}</div>`;
+        MochiSounds.wrong && MochiSounds.wrong();
+        break;
+      case 'cant-afford':
+        extraClass = 'fx-broke';
+        inner = `<div class="mp-fx-icon">😅</div><div class="mp-fx-tag">Sin dinero</div>`;
+        break;
+      case 'card-bonus':
+        extraClass = 'fx-card';
+        inner = `
+          <div class="mp-fx-card-flip">🎴</div>
+          <div class="mp-fx-tag">¡Carta de fortuna!</div>
+          <div class="mp-fx-money gain">+¥${data.moneyDelta}</div>`;
+        MochiSounds.coinClink && MochiSounds.coinClink();
+        setTimeout(() => MochiSounds.cashRegister && MochiSounds.cashRegister(), 220);
+        if (window.Rewards) window.Rewards.show({ tier: 'great', icon: '🎴', text: '¡Carta!' });
+        break;
+      case 'treasure':
+        extraClass = 'fx-treasure';
+        inner = `
+          <div class="mp-fx-icon mp-fx-dragon">🐉</div>
+          <div class="mp-fx-coins" id="mp-fx-coins"></div>
+          <div class="mp-fx-tag">¡TESORO DEL DRAGÓN!</div>
+          <div class="mp-fx-money gain">+¥${data.moneyDelta}</div>`;
+        MochiSounds.dragonRoar && MochiSounds.dragonRoar();
+        setTimeout(() => MochiSounds.cashRegister && MochiSounds.cashRegister(), 500);
+        if (window.Rewards) window.Rewards.epic();
+        if (navigator.vibrate) navigator.vibrate([40, 30, 80, 30, 40]);
+        break;
+      case 'tax':
+        extraClass = 'fx-tax';
+        inner = `
+          <div class="mp-fx-icon">💰</div>
+          <div class="mp-fx-tag">Impuesto</div>
+          <div class="mp-fx-money loss">-¥${-data.moneyDelta}</div>`;
+        MochiSounds.wrong && MochiSounds.wrong();
+        break;
+      case 'festival':
+        extraClass = 'fx-festival';
+        inner = `
+          <div class="mp-fx-lanterns">
+            <span>🏮</span><span>🎊</span><span>🏮</span><span>🎉</span><span>🏮</span>
+          </div>
+          <div class="mp-fx-tag">¡FIESTA! 🎊</div>
+          <div class="mp-fx-money gain">+¥${data.moneyDelta}</div>`;
+        MochiSounds.festival && MochiSounds.festival();
+        if (window.Rewards) window.Rewards.epic();
+        if (navigator.vibrate) navigator.vibrate([30, 30, 30, 30, 60]);
+        break;
+      case 'jail':
+        extraClass = 'fx-jail';
+        inner = `
+          <div class="mp-fx-bars"></div>
+          <div class="mp-fx-icon">🏛</div>
+          <div class="mp-fx-tag">¡A la cárcel!</div>
+          <div class="mp-fx-subtag">Pierdes el próximo turno</div>`;
+        MochiSounds.jailSlam && MochiSounds.jailSlam();
+        if (navigator.vibrate) navigator.vibrate([120, 50, 80]);
+        break;
+      case 'start-bonus':
+        extraClass = 'fx-start';
+        inner = `
+          <div class="mp-fx-icon">🏯</div>
+          <div class="mp-fx-tag">¡Pasaste por 北京!</div>
+          <div class="mp-fx-money gain">+¥${data.moneyDelta}</div>`;
+        MochiSounds.cashRegister && MochiSounds.cashRegister();
+        if (window.Rewards) window.Rewards.show({ tier: 'great', icon: '🏯', text: '¡Bonus de salida!' });
+        break;
+      case 'skipped':
+        extraClass = 'fx-skipped';
+        inner = `<div class="mp-fx-icon">💤</div><div class="mp-fx-tag">Turno perdido…</div>`;
+        break;
+      default:
+        return;
+    }
+    layer.classList.add(extraClass);
+    layer.innerHTML = inner;
+    screen.appendChild(layer);
+    // For treasure tiles, spawn falling-coin particles
+    if (data.action === 'treasure') {
+      const coinHost = layer.querySelector('#mp-fx-coins');
+      if (coinHost) {
+        for (let i = 0; i < 14; i++) {
+          const c = document.createElement('div');
+          c.className = 'mp-fx-coin';
+          c.textContent = ['🪙', '💰', '🧧'][i % 3];
+          c.style.left = (10 + Math.random() * 80) + '%';
+          c.style.animationDelay = (i * 70) + 'ms';
+          coinHost.appendChild(c);
+        }
+      }
+    }
+    setTimeout(() => layer.remove(), 1900);
+  }
+
   function showActionToast(data) {
+    // First: trigger the cinematic per-tile-type reaction overlay
+    playTileReaction(data);
     const toast = $('mp-mini-action');
     if (!toast) return;
     let txt = '';
@@ -2261,12 +2532,6 @@
     toast.classList.remove('pop');
     void toast.offsetWidth;
     toast.classList.add('pop');
-    // Sound flavor
-    if (['bought','card-bonus','treasure','festival','start-bonus'].includes(data.action)) {
-      MochiSounds.correct && MochiSounds.correct();
-    } else if (['paid-rent','tax','jail'].includes(data.action)) {
-      MochiSounds.wrong && MochiSounds.wrong();
-    }
   }
 
   function startMash() {

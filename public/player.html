@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260516e">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260517c">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
   <link rel="stylesheet" href="/css/family.css?v=20260516e">
 </head>
@@ -221,16 +221,22 @@
     </div>
   </div>
 
-  <!-- MONOPOLY WELCOME — first time you join the monopoly game, see your
-       assigned character with a big intro. Auto-dismisses to lobby/question. -->
+  <!-- MONOPOLY WELCOME — first time you join the monopoly game. Cinematic
+       character intro: bounce-in from the wing, animated speech bubble with
+       a personality line, sparkle particles, BIG tap-to-continue button. -->
   <div id="screen-monopoly-welcome" class="hidden player-screen mp-welcome-screen">
+    <div class="mp-welcome-sparkles" id="mp-welcome-sparkles"></div>
     <div class="mp-welcome-card">
-      <div class="mp-welcome-line1">¡Hola, jugador!</div>
+      <div class="mp-welcome-bubble" id="mp-welcome-bubble">
+        <div class="mp-welcome-bubble-text" id="mp-welcome-bubble-text">¡Hola!</div>
+        <div class="mp-welcome-bubble-cn" id="mp-welcome-bubble-cn">你好!</div>
+      </div>
       <img class="mp-welcome-char" id="mp-welcome-char" src="/assets/monopoly/chars/char-0.png" alt="Tu personaje">
-      <div class="mp-welcome-line2">Tu personaje es</div>
-      <div class="mp-welcome-name" id="mp-welcome-name">…</div>
-      <div class="mp-welcome-line3">Responde bien para tirar el dado 🎲 y caminar por el tablero</div>
-      <button class="mp-welcome-btn" id="mp-welcome-btn">¡A jugar!</button>
+      <div class="mp-welcome-meta">
+        <div class="mp-welcome-line2">Soy tu personaje</div>
+        <div class="mp-welcome-name" id="mp-welcome-name">…</div>
+      </div>
+      <button class="mp-welcome-btn" id="mp-welcome-btn">🎲 ¡VAMOS! 🚀</button>
     </div>
   </div>
 
@@ -417,10 +423,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260517b"></script>
+  <script src="/js/sounds.js?v=20260517c"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/rewards.js?v=20260517b"></script>
-  <script src="/js/player.js?v=20260517b"></script>
+  <script src="/js/rewards.js?v=20260517c"></script>
+  <script src="/js/player.js?v=20260517c"></script>
 </body>
 </html>

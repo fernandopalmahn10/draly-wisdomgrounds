@@ -382,6 +382,68 @@
       tone({ freq: 65, dur: 0.22, type: 'sine', vol: 0.46, slideTo: 38, delay: 0.24 });
       noise({ dur: 0.15, vol: 0.18, delay: 0.02 });
     },
+    coinClink() {
+      // Bright metallic ting for money gain — high triangle + bell
+      tone({ freq: 1760, dur: 0.10, type: 'triangle', vol: 0.35, slideTo: 2640 });
+      tone({ freq: 2200, dur: 0.18, type: 'sine',     vol: 0.22, slideTo: 3520, delay: 0.04 });
+      tone({ freq: 1320, dur: 0.12, type: 'triangle', vol: 0.18, delay: 0.08 });
+    },
+    cashRegister() {
+      // Cha-ching! For property purchase / big bonus
+      tone({ freq: 880,  dur: 0.10, type: 'triangle', vol: 0.30 });
+      tone({ freq: 1320, dur: 0.18, type: 'triangle', vol: 0.30, delay: 0.08 });
+      tone({ freq: 1760, dur: 0.22, type: 'triangle', vol: 0.28, delay: 0.18 });
+      tone({ freq: 2200, dur: 0.28, type: 'sine',     vol: 0.22, delay: 0.30 });
+      noise({ dur: 0.10, vol: 0.10, delay: 0.05 });
+    },
+    dragonRoar() {
+      // Low menacing roar — for treasure tile reveal
+      tone({ freq: 90,  dur: 0.7, type: 'sawtooth', vol: 0.40, slideTo: 55 });
+      tone({ freq: 130, dur: 0.6, type: 'square',   vol: 0.30, slideTo: 70, delay: 0.05 });
+      tone({ freq: 60,  dur: 0.9, type: 'sine',     vol: 0.45, slideTo: 38, delay: 0.10 });
+      noise({ dur: 0.55, vol: 0.30, delay: 0.04 });
+    },
+    festival() {
+      // Joyful pentatonic burst for festival tiles
+      [523, 659, 784, 988, 1175, 1318].forEach((f, i) =>
+        tone({ freq: f, dur: 0.18, type: 'triangle', vol: 0.28, delay: i * 0.07 })
+      );
+      tone({ freq: 80, dur: 0.4, type: 'sine', vol: 0.35, delay: 0.1 });
+      noise({ dur: 0.4, vol: 0.10, delay: 0.05 });
+    },
+    jailSlam() {
+      // Heavy iron clang + low boom
+      noise({ dur: 0.25, vol: 0.45 });
+      tone({ freq: 320, dur: 0.10, type: 'square',   vol: 0.35, slideTo: 90 });
+      tone({ freq: 60,  dur: 0.5,  type: 'sine',     vol: 0.40, slideTo: 35, delay: 0.08 });
+      tone({ freq: 180, dur: 0.20, type: 'sawtooth', vol: 0.25, slideTo: 60, delay: 0.05 });
+    },
+    titleStamp() {
+      // Wet "thunk" of a rubber stamp + paper rustle
+      noise({ dur: 0.08, vol: 0.30 });
+      tone({ freq: 220, dur: 0.10, type: 'square', vol: 0.40, slideTo: 80 });
+      tone({ freq: 880, dur: 0.06, type: 'triangle', vol: 0.20, delay: 0.06 });
+    },
+    diceLand() {
+      // Wooden clatter for dice settling
+      noise({ dur: 0.15, vol: 0.22 });
+      tone({ freq: 480, dur: 0.06, type: 'square', vol: 0.18 });
+      tone({ freq: 320, dur: 0.08, type: 'square', vol: 0.16, delay: 0.05 });
+      tone({ freq: 220, dur: 0.10, type: 'square', vol: 0.12, delay: 0.10 });
+    },
+    crit6() {
+      // Triumphant "you rolled a six" jingle
+      tone({ freq: 523,  dur: 0.10, type: 'triangle', vol: 0.30 });
+      tone({ freq: 659,  dur: 0.10, type: 'triangle', vol: 0.30, delay: 0.08 });
+      tone({ freq: 784,  dur: 0.10, type: 'triangle', vol: 0.30, delay: 0.16 });
+      tone({ freq: 1047, dur: 0.30, type: 'triangle', vol: 0.35, delay: 0.24 });
+      tone({ freq: 1568, dur: 0.30, type: 'sine',     vol: 0.30, delay: 0.30 });
+    },
+    footstep() {
+      // Soft padded step for board walking
+      tone({ freq: 180 + Math.random() * 60, dur: 0.05, type: 'sine', vol: 0.18, slideTo: 90 });
+      noise({ dur: 0.04, vol: 0.10 });
+    },
     candySpill() {
       // Cheerful confetti-y cascade for when the piñata bursts
       [880, 1320, 1760, 2200, 1760, 1320].forEach((f, i) =>
