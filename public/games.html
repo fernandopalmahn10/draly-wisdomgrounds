@@ -103,6 +103,27 @@
         <button class="btn btn-red btn-xl game-card-play">▶ ¡A girar el dado!</button>
       </div>
 
+      <div class="game-card" id="card-conquest">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🏯</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Reinos en Guerra</div>
+            <div class="game-tile-badge new">¡Nuevo!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🐎 战国 — Dos ejércitos de jinetes dragón conquistan la antigua China.
+          Cada respuesta correcta toma un territorio: 北京, 长城, 上海, 西安… Si
+          es del enemigo, ¡lo conquistas! Equipo con más tierra al final, gana.
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">VS · Conquista</span>
+          <span class="tag">Estrategia</span>
+          <span class="tag">2-30 players</span>
+        </div>
+        <button class="btn btn-red btn-xl game-card-play">▶ ¡A la guerra!</button>
+      </div>
+
       <div class="game-card" id="card-family">
         <div class="game-card-header">
           <div class="game-card-emoji">🏡</div>
@@ -237,6 +258,9 @@
       document.querySelector('#card-family .game-card-play').onclick = () => {
         location.href = '/host-family.html?setId=' + encodeURIComponent(setId);
       };
+      document.querySelector('#card-conquest .game-card-play').onclick = () => {
+        location.href = '/host-conquest.html?setId=' + encodeURIComponent(setId);
+      };
     } else {
       document.getElementById('set-name').textContent = 'elige un juego, luego una serie';
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
@@ -266,6 +290,9 @@
       };
       document.querySelector('#card-family .game-card-play').onclick = () => {
         location.href = '/sets.html?game=family';
+      };
+      document.querySelector('#card-conquest .game-card-play').onclick = () => {
+        location.href = '/sets.html?game=conquest';
       };
     }
 
