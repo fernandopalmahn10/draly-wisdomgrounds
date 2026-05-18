@@ -596,6 +596,9 @@
     } else if (gameType === 'family') {
       teamLabel = isRed ? 'Familia Roja 紅家' : 'Familia Dorada 金家';
       teamMascot = isRed ? '🏡' : '🏠';
+    } else if (gameType === 'conquest') {
+      teamLabel = isRed ? 'Caballería Roja 紅龍' : 'Caballería Dorada 金龍';
+      teamMascot = isRed ? '🐉' : '🐲';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
@@ -812,7 +815,7 @@
   }
   function resetStreak() { correctStreak = 0; }
 
-  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly, familyToken }) => {
+  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly, familyToken, conquest }) => {
     markActivity();
     clearAnswerHeartbeat();
     hideSendingOverlay();
@@ -862,6 +865,39 @@
       } else if (gameType === 'monopoly') {
         happyMascot = '🎲';
         sub = '¡A lanzar el dado!';
+      } else if (gameType === 'conquest') {
+        // Show the captured tile right on the result feedback so kids
+        // can immediately see "I just took 北京". Tier the message + sound
+        // by what KIND of capture happened.
+        happyMascot = conquest && conquest.tile ? conquest.tile.icon : '🏯';
+        if (conquest && conquest.action === 'conquered') {
+          sub = `¡Conquistaste ${conquest.tile.name} (${conquest.tile.pinyin}) al enemigo! 🚩`;
+          if (window.Rewards) window.Rewards.show({
+            tier: 'epic', icon: '⚔️',
+            text: `¡${conquest.tile.es} conquistado!`,
+            duration: 1900,
+          });
+        } else if (conquest && conquest.action === 'expanded') {
+          sub = `¡Tomaste ${conquest.tile.name} ${conquest.tile.pinyin}! +1 🏯`;
+          if (window.Rewards) window.Rewards.show({
+            tier: 'great', icon: conquest.tile.icon || '🏯',
+            text: `¡${conquest.tile.es}!`,
+          });
+        } else if (conquest && conquest.action === 'jumped') {
+          sub = `¡Salto sorpresa a ${conquest.tile.name}!`;
+          if (window.Rewards) window.Rewards.show({
+            tier: 'great', icon: '🐎', text: '¡Salto sorpresa!',
+          });
+        } else {
+          sub = `¡${conquest && conquest.tile ? conquest.tile.es : 'Territorio'} reforzado!`;
+        }
+        if (conquest && conquest.capturedEnemyCapital && window.Rewards) {
+          window.Rewards.show({
+            tier: 'epic', icon: '🏯',
+            text: '¡TOMASTE LA CAPITAL ENEMIGA! 🎺',
+            duration: 2400,
+          });
+        }
       } else {
         happyMascot = team === 'red' ? '🐼' : '🦊';
         sub = '¡Alimenta a tu equipo! ⚡';

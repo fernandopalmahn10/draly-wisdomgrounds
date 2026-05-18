@@ -242,6 +242,143 @@ const FM_TOKENS = [
 ];
 const FM_PLACE_WINDOW_MS = 8000; // player has 8s to drag
 
+// === REINOS EN GUERRA · 战国 (Warring States) — territory conquest game ===
+// A 6x4 grid of territories on a stylized map of ancient China. Two teams
+// (Red Dragon Cavalry vs Gold Dragon Cavalry) start in opposite corners
+// and expand outward. Each correct vocab answer captures one adjacent tile;
+// preference order: enemy-held → unclaimed → grow from the team's own.
+// Themed around HSK1 EXP5 travel/direction vocab (北京, 中国, 去, 来, 飞机,
+// 出租车, 上, 下, 前面, 后面, etc).
+//
+// Territory data: id, place name (Chinese + pinyin + Spanish), x/y grid pos,
+// icon. The board renders these in a 6x4 grid with adjacency (4-neighbor).
+const CQ_COLS = 6;
+const CQ_ROWS = 4;
+const CQ_TERRITORIES = [
+  // Row 0 (north) — towards Beijing / Great Wall
+  { id: 0,  name: '北京',  pinyin: 'Běijīng',     es: 'Beijing',     icon: '🏯', isCapital: true,  capitalOf: 'red'  },
+  { id: 1,  name: '长城',  pinyin: 'Chángchéng',  es: 'Gran Muralla',icon: '🧱' },
+  { id: 2,  name: '哈尔滨',pinyin: 'Hā\'ěrbīn',   es: 'Harbin',      icon: '❄️' },
+  { id: 3,  name: '草原',  pinyin: 'Cǎoyuán',     es: 'Estepa',      icon: '🌾' },
+  { id: 4,  name: '沙漠',  pinyin: 'Shāmò',       es: 'Desierto',    icon: '🏜' },
+  { id: 5,  name: '蒙古',  pinyin: 'Měnggǔ',      es: 'Mongolia',    icon: '⛺' },
+  // Row 1
+  { id: 6,  name: '西安',  pinyin: 'Xī\'ān',      es: 'Xi\'an',      icon: '🕌' },
+  { id: 7,  name: '黄河',  pinyin: 'Huánghé',     es: 'Río Amarillo',icon: '🌊' },
+  { id: 8,  name: '少林',  pinyin: 'Shàolín',     es: 'Templo Shaolin', icon: '⛩' },
+  { id: 9,  name: '泰山',  pinyin: 'Tàishān',     es: 'Monte Tai',   icon: '⛰' },
+  { id: 10, name: '青岛',  pinyin: 'Qīngdǎo',     es: 'Qingdao',     icon: '🏝' },
+  { id: 11, name: '森林',  pinyin: 'Sēnlín',      es: 'Bosque',      icon: '🌲' },
+  // Row 2
+  { id: 12, name: '成都',  pinyin: 'Chéngdū',     es: 'Chengdu',     icon: '🐼' },
+  { id: 13, name: '长江',  pinyin: 'Chángjiāng',  es: 'Río Yangtsé', icon: '🚣' },
+  { id: 14, name: '洛阳',  pinyin: 'Luòyáng',     es: 'Luoyang',     icon: '🪷' },
+  { id: 15, name: '武当',  pinyin: 'Wǔdāng',      es: 'Monte Wudang',icon: '🗡' },
+  { id: 16, name: '上海',  pinyin: 'Shànghǎi',    es: 'Shanghái',    icon: '🌃' },
+  { id: 17, name: '钱塘',  pinyin: 'Qiántáng',    es: 'Qiantang',    icon: '🌉' },
+  // Row 3 (south) — towards Guangzhou
+  { id: 18, name: '云南',  pinyin: 'Yúnnán',      es: 'Yunnan',      icon: '🌺' },
+  { id: 19, name: '桂林',  pinyin: 'Guìlín',      es: 'Guilin',      icon: '🗿' },
+  { id: 20, name: '香港',  pinyin: 'Xiānggǎng',   es: 'Hong Kong',   icon: '🌆' },
+  { id: 21, name: '台湾',  pinyin: 'Táiwān',      es: 'Taiwán',      icon: '🏖' },
+  { id: 22, name: '海南',  pinyin: 'Hǎinán',      es: 'Hainan',      icon: '🌴' },
+  { id: 23, name: '广州',  pinyin: 'Guǎngzhōu',   es: 'Guangzhou',   icon: '🏮', isCapital: true, capitalOf: 'gold' },
+];
+// Position each territory in the grid (row * COLS + col convention)
+CQ_TERRITORIES.forEach((t, i) => {
+  t.x = i % CQ_COLS;
+  t.y = Math.floor(i / CQ_COLS);
+});
+
+// 4-neighbor adjacency for the grid (up/down/left/right). Returns ids.
+function cqAdjacent(tileId) {
+  const t = CQ_TERRITORIES[tileId];
+  if (!t) return [];
+  const adj = [];
+  CQ_TERRITORIES.forEach((other) => {
+    if (other.id === tileId) return;
+    const dx = Math.abs(other.x - t.x);
+    const dy = Math.abs(other.y - t.y);
+    if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) adj.push(other.id);
+  });
+  return adj;
+}
+
+// Pick the best capture target for `team` on a correct answer.
+// Priority:
+//   1. An ENEMY tile adjacent to any of our tiles (= conquer enemy ground)
+//   2. An UNCLAIMED tile adjacent to ours (= expand outward)
+//   3. An unclaimed tile adjacent to any tile (= jump start if isolated)
+//   4. Our own capital (no-op but keeps the score moving)
+// Returns { tileId, action } where action is 'conquered'|'expanded'|'jumped'|'reinforce'
+function cqPickTarget(g, team) {
+  const ownTiles = [];
+  const enemyTeam = team === 'red' ? 'gold' : 'red';
+  CQ_TERRITORIES.forEach((t) => {
+    if (g.conquest.ownership[t.id] === team) ownTiles.push(t.id);
+  });
+  // Priority 1 + 2: scan neighbors of our tiles
+  const candidatesEnemy = new Set();
+  const candidatesEmpty = new Set();
+  ownTiles.forEach((tid) => {
+    cqAdjacent(tid).forEach((nid) => {
+      const owner = g.conquest.ownership[nid];
+      if (owner === enemyTeam) candidatesEnemy.add(nid);
+      else if (!owner) candidatesEmpty.add(nid);
+    });
+  });
+  if (candidatesEnemy.size > 0) {
+    return { tileId: pickRandom([...candidatesEnemy]), action: 'conquered' };
+  }
+  if (candidatesEmpty.size > 0) {
+    return { tileId: pickRandom([...candidatesEmpty]), action: 'expanded' };
+  }
+  // Priority 3: any unclaimed tile in the world (rare — we got blocked in)
+  const anyEmpty = CQ_TERRITORIES.filter((t) => !g.conquest.ownership[t.id]).map((t) => t.id);
+  if (anyEmpty.length) {
+    return { tileId: pickRandom(anyEmpty), action: 'jumped' };
+  }
+  // Priority 4: reinforce our capital (visual "stack" — no actual change)
+  const cap = CQ_TERRITORIES.find((t) => t.capitalOf === team);
+  return { tileId: cap ? cap.id : (ownTiles[0] || 0), action: 'reinforce' };
+}
+function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// Score a team — 1 point per owned tile, +5 bonus per capital owned
+function cqTeamScore(g, team) {
+  let s = 0;
+  CQ_TERRITORIES.forEach((t) => {
+    if (g.conquest.ownership[t.id] === team) {
+      s += 1;
+      if (t.isCapital) s += 5;
+    }
+  });
+  return s;
+}
+
+// Apply a capture: mark ownership + update scores. Returns the captureInfo
+// for broadcast: { tileId, fromTeam, toTeam, action, isCapital, capturedCapital }
+function cqApplyCapture(g, team, target) {
+  const t = CQ_TERRITORIES[target.tileId];
+  if (!t) return null;
+  const fromTeam = g.conquest.ownership[t.id] || null;
+  // If reinforcing our own land, return a no-op event
+  if (target.action === 'reinforce') {
+    return { tileId: t.id, fromTeam: team, toTeam: team, action: 'reinforce', isCapital: !!t.isCapital };
+  }
+  g.conquest.ownership[t.id] = team;
+  g.conquest.capturedCount = (g.conquest.capturedCount || 0) + 1;
+  const capturedEnemyCapital = (target.action === 'conquered' && t.isCapital && t.capitalOf !== team);
+  return {
+    tileId: t.id,
+    fromTeam,
+    toTeam: team,
+    action: target.action,
+    isCapital: !!t.isCapital,
+    capturedEnemyCapital,
+  };
+}
+
 // === Combos === Each combo defines a condition over a team's house and a
 // bonus to award when first met. Combos only trigger ONCE per house (tracked
 // via team.combosAchieved set). The check runs after every placement.
@@ -852,7 +989,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -864,6 +1001,7 @@ io.on('connection', (socket) => {
       type === 'monopoly'     ? 300 :
       type === 'zombie'       ? 240 :
       type === 'family'       ? 300 :
+      type === 'conquest'     ? 300 :
       60;
     let grid = null;
     let vendors = null;
@@ -1186,6 +1324,28 @@ io.on('connection', (socket) => {
             Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team, avatar: p.avatar }])
           ),
           teamScores: g.teamScores
+        });
+      }
+      if (g.gameType === 'conquest') {
+        // Each team owns its capital from the start; everywhere else is wilderness.
+        const ownership = {};
+        CQ_TERRITORIES.forEach((t) => {
+          if (t.capitalOf) ownership[t.id] = t.capitalOf;
+        });
+        g.conquest = {
+          ownership,
+          capturedCount: 0,
+          battleLog: [],
+        };
+        g.teamScores = { red: cqTeamScore(g, 'red'), gold: cqTeamScore(g, 'gold') };
+        io.to(pin).emit('cq:init', {
+          territories: CQ_TERRITORIES,
+          ownership,
+          cols: CQ_COLS, rows: CQ_ROWS,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team, avatar: p.avatar }])
+          ),
+          teamScores: g.teamScores,
         });
       }
       if (g.gameType === 'zombie') {
@@ -1695,6 +1855,40 @@ io.on('connection', (socket) => {
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
+    } else if (g.gameType === 'conquest') {
+      // Reinos en Guerra — correct answer captures one tile for the player's
+      // team. Wrong answer = no capture, next question normally. The server
+      // picks the target (smart adjacency-aware) so kids stay in the language-
+      // learning loop and don't have to fiddle with tile selection.
+      if (correct) {
+        const team = p.team;
+        const target = cqPickTarget(g, team);
+        const captureInfo = cqApplyCapture(g, team, target);
+        g.teamScores = { red: cqTeamScore(g, 'red'), gold: cqTeamScore(g, 'gold') };
+        p.score = (p.score || 0) + 1;
+        io.to(socket.id).emit('answer-result', {
+          correct: true,
+          correctText,
+          conquest: {
+            tile: CQ_TERRITORIES[captureInfo.tileId],
+            action: captureInfo.action,
+            fromTeam: captureInfo.fromTeam,
+            toTeam: captureInfo.toTeam,
+            capturedEnemyCapital: !!captureInfo.capturedEnemyCapital,
+          },
+        });
+        io.to(pin).emit('cq:capture', {
+          ...captureInfo,
+          playerName: p.name,
+          teamScores: g.teamScores,
+        });
+        // Tycoon-style celebration if a capital fell — but respect the timer
+        if (captureInfo.capturedEnemyCapital) {
+          io.to(pin).emit('cq:capital-fallen', { team, teamScores: g.teamScores });
+        }
+      } else {
+        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+      }
     } else if (g.gameType === 'family') {
       // Mi Familia: correct → award a random token; the player will tap a room
       // on their phone to place it. Wrong → no reward, next question normally.
@@ -1782,6 +1976,9 @@ io.on('connection', (socket) => {
     } else if (g.gameType === 'family') {
       // Correct → wait for placement; placement handler queues next question.
       nextDelay = correct ? -1 : 1500;
+    } else if (g.gameType === 'conquest') {
+      // Brief celebration window so the capture animation has time to play
+      nextDelay = correct ? 1800 : 1400;
     } else {
       nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
     }
