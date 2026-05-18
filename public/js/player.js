@@ -2117,7 +2117,23 @@
     });
   }
 
+  // === Global guard against the browser's long-press save-image / context
+  // menu showing up over the monopoly roll screen. Fires once per page; the
+  // dice mechanic relies on rapid touches that otherwise trigger iOS Safari's
+  // "Save Image to Photos" callout or Chrome's right-click menu.
+  let _mpContextGuardBound = false;
+  function bindMpContextGuard() {
+    if (_mpContextGuardBound) return;
+    _mpContextGuardBound = true;
+    const screen = $('screen-monopoly-roll');
+    if (screen) {
+      screen.addEventListener('contextmenu', (e) => { e.preventDefault(); return false; }, { passive: false });
+      screen.addEventListener('dragstart',   (e) => { e.preventDefault(); return false; }, { passive: false });
+    }
+  }
+
   function startMonopolyRoll(currentCash) {
+    bindMpContextGuard();
     if (!mpTiles.length) {
       // Board state never arrived — request a resync so the server re-sends
       // mp:init + we can retry the roll. Without this, the player would be
@@ -2153,49 +2169,73 @@
       dice.classList.remove('shaking', 'tumbling', 'locked');
       dice.style.display = '';
     }
-    if (hint) hint.textContent = '👆 Mantén el dedo en el dado y suelta para lanzar';
+    if (hint) hint.textContent = '👆 ¡TAP TAP TAP! Toca el dado rápido';
 
     // Highlight my own token by re-placing it (so it gets the .me class glow)
     const myTok = document.getElementById('mp-mini-token-' + myPlayerId);
     if (myTok) myTok.classList.add('me');
 
-    // === Hold-to-shake / release-to-throw ===
-    const onPress = (e) => {
-      if (e) e.preventDefault();
+    // === RAPID-TAP DICE MECHANIC ===
+    // Old hold-to-shake was triggering mobile browsers' long-press "save image"
+    // context menu. New flow: each tap shakes the dice + rolls a fresh value.
+    // Stop tapping for 700ms (or hit "¡LANZAR!") → die locks on the last value.
+    // Counts taps so we can show a Mario-Party-style "x5 taps!" pump-up.
+    let tapCount = 0;
+    let lastTapAt = 0;
+    let settleTimer = null;
+    let autoLockTimer = null;
+
+    function rollTapShake(e) {
+      if (e) {
+        // CRITICAL: kill the browser long-press save-image / context menu
+        // by both preventDefault on the touch event AND preventing the
+        // contextmenu event (handled separately below).
+        e.preventDefault();
+      }
       if (mpDiceLocked) return;
-      mpIsHolding = true;
-      mpHoldStartTime = Date.now();
+      tapCount++;
+      lastTapAt = Date.now();
+      mpShakeValue = 1 + Math.floor(Math.random() * 6);
       if (dice) {
-        dice.classList.remove('tumbling', 'locked');
-        dice.classList.add('shaking');
+        dice.src = '/assets/monopoly/dice/dice-' + mpShakeValue + '.png';
+        // Snap pop on each tap for visual juice
+        dice.classList.remove('tapped');
+        void dice.offsetWidth;
+        dice.classList.add('tapped');
       }
-      if (hint) hint.textContent = '✊ ¡Sigue sacudiendo! Suelta para lanzar';
-      if (mpShakeInterval) clearInterval(mpShakeInterval);
-      mpShakeInterval = setInterval(() => {
-        if (!mpIsHolding || mpDiceLocked) return;
+      MochiSounds.tick && MochiSounds.tick();
+      if (navigator.vibrate) navigator.vibrate(15);
+      if (hint) {
+        hint.textContent = tapCount < 3
+          ? `🎲 ¡Tap tap tap! ${tapCount}`
+          : tapCount < 6
+            ? `🔥 ¡Sigue! x${tapCount}`
+            : `💥 ¡Para que se asiente! x${tapCount}`;
+      }
+      // Reset the "you stopped tapping" timer — die locks 700ms after the
+      // last tap so the player has full control over when to commit.
+      if (settleTimer) clearTimeout(settleTimer);
+      settleTimer = setTimeout(() => settleDice(), 700);
+    }
+
+    function settleDice() {
+      if (mpDiceLocked) return;
+      if (tapCount === 0) {
+        // They never tapped — pick a fair random value so the round moves on.
         mpShakeValue = 1 + Math.floor(Math.random() * 6);
-        if (dice) dice.src = '/assets/monopoly/dice/dice-' + mpShakeValue + '.png';
-        MochiSounds.tick && MochiSounds.tick();
-        if (navigator.vibrate) navigator.vibrate(8);
-      }, 80);
-    };
-    const onRelease = (e) => {
-      if (e) e.preventDefault();
-      if (mpDiceLocked || !mpIsHolding) return;
-      mpIsHolding = false;
-      if (mpShakeInterval) { clearInterval(mpShakeInterval); mpShakeInterval = null; }
-      const heldMs = Date.now() - mpHoldStartTime;
-      if (heldMs < 150) {
-        if (hint) hint.textContent = '👆 Mantén PRESIONADO más tiempo';
-        return;
       }
-      if (dice) { dice.classList.remove('shaking'); dice.classList.add('tumbling'); }
+      if (dice) {
+        dice.classList.remove('tapped', 'shaking');
+        dice.classList.add('tumbling');
+      }
       MochiSounds.whoosh && MochiSounds.whoosh();
       if (navigator.vibrate) navigator.vibrate([30, 30, 60]);
-      let tumbleTicks = 6;
+      // Short tumble then lock
+      let tumbleTicks = 5;
       function tumbleStep() {
         if (tumbleTicks-- <= 0) {
-          mpShakeValue = 1 + Math.floor(Math.random() * 6);
+          // Final value — we use the LAST shake value the player saw, which
+          // feels deterministic (no "the game lied to me" moment).
           if (dice) {
             dice.src = '/assets/monopoly/dice/dice-' + mpShakeValue + '.png';
             dice.classList.remove('tumbling');
@@ -2204,43 +2244,46 @@
           mpDiceLocked = true;
           MochiSounds.diceLand && MochiSounds.diceLand();
           if (navigator.vibrate) navigator.vibrate([40, 40, 80]);
-          // Celebrate the value: 6 = crit (epic), 5 = great, 1-4 = standard
           celebrateRollValue(mpShakeValue);
           if (hint) hint.textContent = `🎲 ¡Sacaste un ${mpShakeValue}! Tu personaje camina...`;
           socket.emit('monopoly:roll', { pin, roll: mpShakeValue });
           return;
         }
-        mpShakeValue = 1 + Math.floor(Math.random() * 6);
-        if (dice) dice.src = '/assets/monopoly/dice/dice-' + mpShakeValue + '.png';
+        const v = 1 + Math.floor(Math.random() * 6);
+        if (dice) dice.src = '/assets/monopoly/dice/dice-' + v + '.png';
         setTimeout(tumbleStep, 90);
       }
       tumbleStep();
-    };
+    }
 
-    // Bind interaction. Use the dice itself + the center plate as the press area.
+    // Bind tap to BOTH the dice and the center plate, so the whole area
+    // catches the input — kid-friendly hitbox.
     const center = dice && dice.closest('.mp-mini-center');
     [dice, center].filter(Boolean).forEach((el) => {
-      el.onpointerdown = onPress;
-      el.onpointerup = onRelease;
-      el.onpointercancel = onRelease;
-      el.onpointerleave = (e) => { if (mpIsHolding) onRelease(e); };
+      el.onpointerdown = rollTapShake;
+      // Belt-and-suspenders: block the browser context menu / save-image popup
+      el.oncontextmenu = (e) => { e.preventDefault(); return false; };
+      el.ondragstart  = (e) => { e.preventDefault(); return false; };
+      el.onpointerup   = null;
+      el.onpointercancel = null;
+      el.onpointerleave  = null;
     });
+    // Block iOS callout on the dice image itself
+    if (dice) {
+      dice.style.webkitTouchCallout = 'none';
+      dice.draggable = false;
+    }
 
-    // Timer: auto-throw at the 8-second deadline
-    const totalMs = 8000;
+    // Hard auto-lock after 8s in case the player never taps OR forgets to stop
+    if (autoLockTimer) clearTimeout(autoLockTimer);
+    autoLockTimer = setTimeout(() => { if (!mpDiceLocked) settleDice(); }, 8000);
+
+    // Timer fill bar reflects the 8s deadline
     function tickTimer() {
       if (mpDiceLocked) return;
-      const remaining = Math.max(0, (mpRollStartTime + totalMs) - Date.now());
-      if (fill) fill.style.width = ((remaining / totalMs) * 100) + '%';
-      if (remaining <= 0) {
-        if (!mpIsHolding) {
-          mpIsHolding = true;
-          mpHoldStartTime = Date.now() - 500;
-        }
-        onRelease();
-        return;
-      }
-      requestAnimationFrame(tickTimer);
+      const remaining = Math.max(0, (mpRollStartTime + 8000) - Date.now());
+      if (fill) fill.style.width = ((remaining / 8000) * 100) + '%';
+      if (remaining > 0) requestAnimationFrame(tickTimer);
     }
     requestAnimationFrame(tickTimer);
   }
@@ -2285,9 +2328,19 @@
       if (onDone) onDone();
       return;
     }
+    // === CAMERA MODE ===
+    // Activate the cinematic camera: board scales up + pans to keep the
+    // active tile near screen-center. Each step updates --cam-x / --cam-y
+    // so CSS transitions handle the smooth glide between tiles.
+    const board = $('mp-mini-board');
+    if (board) board.classList.add('mp-camera-on');
     const total = mpTiles.length || 16;
     const steps = ((toPos - fromPos) + total) % total;
     let cur = fromPos, i = 0;
+
+    // Pan camera to the starting tile right away
+    panCameraToTile(fromPos);
+
     function step() {
       cur = (cur + 1) % total;
       i++;
@@ -2299,31 +2352,95 @@
         void tok.offsetWidth;
         tok.classList.add('walking');
       }
-      // Each tile walked over briefly lights up — gives the walk a sense of
-      // PROGRESS instead of feeling like a passive animation. Trail effect.
+      // Camera FOLLOW — pan board so the current tile sits near center
+      panCameraToTile(cur);
+      // Tile trail flash
       if (tile) {
         tile.classList.remove('mp-mini-passed');
         void tile.offsetWidth;
         tile.classList.add('mp-mini-passed');
         setTimeout(() => tile.classList.remove('mp-mini-passed'), 600);
       }
-      // Pop a "step N" counter overlay so kids visually count their walk
+      // Step counter chip
       showStepCount(i, steps);
+      // Tile-name flyout — show what tile we're passing through (icon + name)
+      // so the kid actually KNOWS where they are. This is the "professional
+      // game studio camera reveal" feel.
+      const tdef = mpTiles[cur];
+      if (tdef) showTilePassBy(tdef);
       MochiSounds.footstep && MochiSounds.footstep();
       if (navigator.vibrate) navigator.vibrate(10);
       if (i < steps) {
-        // Slightly faster cadence so the walk feels lively, not draggy
-        setTimeout(step, 230);
+        setTimeout(step, 360);  // slower so the camera reveal lands per tile
       } else {
         // Landing emphasis — a final thud + tile highlight
         MochiSounds.diceLand && MochiSounds.diceLand();
         if (tile) tile.classList.add('mp-mini-landed');
         setTimeout(() => tile && tile.classList.remove('mp-mini-landed'), 1200);
+        // Camera holds on the landing tile briefly, then zooms back out
+        setTimeout(() => {
+          if (board) board.classList.remove('mp-camera-on');
+          board && board.style.setProperty('--cam-x', '0px');
+          board && board.style.setProperty('--cam-y', '0px');
+        }, 1700);
         mpWalking = false;
         if (onDone) onDone();
       }
     }
     step();
+  }
+
+  // Pan the mini-board so that the given tile id sits near the visual center.
+  // Math: each tile's grid (col, row) determines its position on a 5x5 grid.
+  // Center of the board is (col=3, row=3). We translate the board by
+  // (3 - col) * cellSize horizontally, (3 - row) * cellSize vertically,
+  // scaled by the active --cam-scale (e.g. 1.6).
+  function panCameraToTile(tileId) {
+    const board = $('mp-mini-board');
+    if (!board) return;
+    const { col, row } = miniTileGridPos(tileId);
+    // Each cell takes 1/5 of the board's content width. Pan distance is
+    // computed in CSS by multiplying offsetFromCenter * cellPercent.
+    // We pass the offset as a percentage so the same math works on any size.
+    const offsetX = (3 - col) * 20; // %
+    const offsetY = (3 - row) * 20; // %
+    board.style.setProperty('--cam-x', offsetX + '%');
+    board.style.setProperty('--cam-y', offsetY + '%');
+  }
+
+  // Tile pass-by reveal card — pops near the top of the screen as the
+  // character walks across each tile so kids can read the name + icon.
+  function showTilePassBy(tdef) {
+    let card = document.getElementById('mp-passby-card');
+    if (!card) {
+      card = document.createElement('div');
+      card.id = 'mp-passby-card';
+      card.className = 'mp-passby-card';
+      const screen = $('screen-monopoly-roll');
+      if (screen) screen.appendChild(card);
+    }
+    card.className = 'mp-passby-card show tile-' + (tdef.type || 'city');
+    card.innerHTML = `
+      <div class="mp-passby-icon">${tdef.icon || '🏙'}</div>
+      <div class="mp-passby-name">${escapeHtml(tdef.name || '')}</div>
+      <div class="mp-passby-type">${tileTypeLabel(tdef.type)}</div>
+    `;
+    // auto-clear after the step interval so they don't pile up
+    clearTimeout(card._timer);
+    card._timer = setTimeout(() => card.classList.remove('show'), 420);
+  }
+
+  function tileTypeLabel(t) {
+    switch (t) {
+      case 'start':    return '🏯 SALIDA';
+      case 'city':     return '🏙 CIUDAD';
+      case 'festival': return '🏮 FIESTA';
+      case 'jail':     return '🏛 CÁRCEL';
+      case 'tax':      return '💰 IMPUESTO';
+      case 'card':     return '🎴 CARTA';
+      case 'treasure': return '🐉 TESORO';
+      default:         return '';
+    }
   }
 
   // Floating step counter that pops near the dice center as the player walks
