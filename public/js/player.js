@@ -1607,16 +1607,73 @@
     const obsLayer = $('zb-sprint-obstacles');
     if (obsLayer) obsLayer.innerHTML = '';
 
-    // Bind jump button
+    // === ROBUST JUMP BINDING ===
+    // Old code used `btn.onpointerdown = ...` + preventDefault which silently
+    // fails on some desktop browsers (the click event gets suppressed and the
+    // pointerdown handler's preventDefault chains weirdly with passive listeners).
+    // Now: addEventListener for BOTH pointerdown AND click, NO preventDefault on
+    // click (preventDefault only on touchstart to stop scroll), plus a global
+    // Space / ArrowUp / W key fallback so desktop users have a guaranteed input.
     const btn = $('zb-jump-btn');
+    const stage = $('zb-sprint-stage');
     if (btn) {
-      const onJump = (e) => {
-        if (e) e.preventDefault();
+      // Bookkeeping so subsequent startZombieSprint calls don't multi-bind
+      if (btn._jumpHandlersBound) {
+        // Already bound — the inner handler reads zbSprintActive/zbJumping,
+        // so we don't need to re-bind on each sprint start.
+      } else {
+        const tryJump = () => {
+          if (!zbSprintActive || zbJumping) return;
+          doJump();
+        };
+        // pointerdown is the fastest input — fires on touch start AND mouse down
+        btn.addEventListener('pointerdown', (e) => {
+          // Only prevent default for touch-derived events (stops scroll/zoom).
+          // For mouse on desktop, preventDefault CAN block the synthetic click,
+          // which then prevents focus + may cause silent failures.
+          if (e && e.pointerType !== 'mouse') {
+            try { e.preventDefault(); } catch (_) {}
+          }
+          tryJump();
+        }, { passive: false });
+        // click as a guaranteed fallback (some desktop browsers / a11y tools)
+        btn.addEventListener('click', tryJump);
+        // touchstart for very old mobile browsers that don't fire pointerevents
+        btn.addEventListener('touchstart', (e) => {
+          if (e && e.cancelable) try { e.preventDefault(); } catch (_) {}
+          tryJump();
+        }, { passive: false });
+        btn._jumpHandlersBound = true;
+      }
+    }
+    // Tap-anywhere on the stage = jump (so kids on tablet/desktop don't have
+    // to aim for the button precisely). Bound once per sprint start.
+    if (stage && !stage._jumpStageBound) {
+      const stageTry = () => {
         if (!zbSprintActive || zbJumping) return;
         doJump();
       };
-      btn.onpointerdown = onJump;
-      btn.onclick = onJump;
+      stage.addEventListener('pointerdown', (e) => {
+        if (e && e.pointerType !== 'mouse') {
+          try { e.preventDefault(); } catch (_) {}
+        }
+        stageTry();
+      }, { passive: false });
+      stage.addEventListener('click', stageTry);
+      stage._jumpStageBound = true;
+    }
+    // Keyboard fallback for desktop — Space, ArrowUp, W, or Enter all jump.
+    // Bound on the window once; only fires while the sprint screen is active.
+    if (!window._zbKeyBound) {
+      window.addEventListener('keydown', (e) => {
+        if (!zbSprintActive || zbJumping) return;
+        const k = e.key;
+        if (k === ' ' || k === 'Spacebar' || k === 'ArrowUp' || k === 'w' || k === 'W' || k === 'Enter') {
+          e.preventDefault();
+          doJump();
+        }
+      });
+      window._zbKeyBound = true;
     }
 
     // Obstacle spawner — interval shrinks over time (difficulty ramp).
@@ -2316,12 +2373,20 @@
     let settleTimer = null;
     let autoLockTimer = null;
 
+    let _lastTapMs = 0;
     function rollTapShake(e) {
+      // Dedupe — pointerdown + click + touchstart can all fire for one tap
+      // depending on browser/device. 80ms window catches synthetic clicks
+      // but allows legitimate fast tap-mashing (≥12Hz).
+      const now = Date.now();
+      if (now - _lastTapMs < 80) return;
+      _lastTapMs = now;
       if (e) {
-        // CRITICAL: kill the browser long-press save-image / context menu
-        // by both preventDefault on the touch event AND preventing the
-        // contextmenu event (handled separately below).
-        e.preventDefault();
+        // Only preventDefault on touch/pen — on mouse it kills the synthetic
+        // click which other browser features need.
+        if (e.pointerType !== 'mouse' && e.cancelable) {
+          try { e.preventDefault(); } catch (_) {}
+        }
       }
       if (mpDiceLocked) return;
       tapCount++;
@@ -2387,17 +2452,33 @@
       tumbleStep();
     }
 
-    // Bind tap to BOTH the dice and the center plate, so the whole area
-    // catches the input — kid-friendly hitbox.
+    // Bind tap to BOTH the dice and the center plate. Use addEventListener
+    // (with `{ passive: false }`) for cross-browser robustness — the older
+    // `el.onpointerdown = fn` pattern silently fails on some desktop browsers
+    // when chained with preventDefault, AND clearing old listeners by
+    // reassignment is unreliable. addEventListener gives us a clean contract.
     const center = dice && dice.closest('.mp-mini-center');
     [dice, center].filter(Boolean).forEach((el) => {
-      el.onpointerdown = rollTapShake;
+      // Detach any prior bindings from old sprint sessions
+      if (el._mpTapHandler) {
+        el.removeEventListener('pointerdown', el._mpTapHandler);
+        el.removeEventListener('click',       el._mpTapHandler);
+        el.removeEventListener('touchstart',  el._mpTapHandler);
+      }
+      const tap = (e) => {
+        // Don't preventDefault for mouse — kills the synthetic click on desktop
+        if (e && e.pointerType !== 'mouse' && e.cancelable) {
+          try { e.preventDefault(); } catch (_) {}
+        }
+        rollTapShake(e);
+      };
+      el._mpTapHandler = tap;
+      el.addEventListener('pointerdown', tap, { passive: false });
+      el.addEventListener('click',       tap);
+      el.addEventListener('touchstart',  tap, { passive: false });
       // Belt-and-suspenders: block the browser context menu / save-image popup
       el.oncontextmenu = (e) => { e.preventDefault(); return false; };
       el.ondragstart  = (e) => { e.preventDefault(); return false; };
-      el.onpointerup   = null;
-      el.onpointercancel = null;
-      el.onpointerleave  = null;
     });
     // Block iOS callout on the dice image itself
     if (dice) {

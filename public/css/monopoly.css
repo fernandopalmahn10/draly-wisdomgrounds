@@ -655,10 +655,22 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   --cam-scale: 1;
   --cam-x: 0%;
   --cam-y: 0%;
-  transform: scale(var(--cam-scale)) translate(var(--cam-x), var(--cam-y));
+  /* translate3d forces a GPU compositor layer for the camera pan.
+     Critical: on desktop the prior `transform: scale() translate()` was
+     re-laying-out every tile child each step, producing visible jank. */
+  transform: scale(var(--cam-scale)) translate3d(var(--cam-x), var(--cam-y), 0);
   transform-origin: center center;
   transition: transform 320ms cubic-bezier(.4, 0, .25, 1);
   will-change: transform;
+  backface-visibility: hidden;
+  /* Hint the browser to keep the next paint cached */
+  contain: layout paint;
+}
+/* Desktop: simpler / faster pan so the camera doesn't lag */
+@media (min-width: 1024px) and (hover: hover) {
+  .mp-mini-board {
+    transition: transform 260ms ease-out;
+  }
 }
 .mp-mini-board.mp-camera-on {
   --cam-scale: 1.55;
@@ -726,9 +738,10 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   max-width: 160px;
   max-height: 160px;
   object-fit: contain;
-  filter:
-    drop-shadow(0 0 20px rgba(255, 200, 80, 0.7))
-    drop-shadow(0 8px 14px rgba(0, 0, 0, 0.7));
+  /* Single drop-shadow on desktop (cheaper). Tablet+ media query simplifies
+     further. Double drop-shadow filter was a major paint-cost contributor. */
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.7));
+  will-change: transform, filter;
   /* HARD-block long-press save-image popup on mobile browsers + Safari
      callout menus. user-select, drag, callout, and tap-highlight all need
      to be disabled or the rapid-tap mechanic feels broken. */
@@ -871,6 +884,10 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   align-items: center;
   justify-content: center;
   background: rgba(255, 255, 255, 0.4);
+  /* GPU layer so the walk-animation translateY doesn't reflow the tile */
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 .mp-mini-token.red  { box-shadow: 0 0 0 1.5px #ff5a66; }
 .mp-mini-token.gold { box-shadow: 0 0 0 1.5px #ffd57a; }
@@ -1649,6 +1666,14 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   .mp-mini-tokens { min-height: 22px; }
   .mp-mini-token { width: 26px; height: 26px; }
   .mp-mini-token img { width: 24px; height: 24px; }
+  /* On bigger viewports, the dice + shadow filters get expensive — trim
+     to a single soft shadow so the camera-pan stays buttery-smooth. */
+  .mp-mini-dice {
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55));
+  }
+  .mp-mini-dice.shaking { filter: drop-shadow(0 0 18px gold); }
+  .mp-mini-dice.tumbling { filter: drop-shadow(0 0 18px gold); }
+  .mp-mini-dice.locked { filter: drop-shadow(0 0 28px gold); }
 }
 @media (min-width: 1200px) {
   .mp-mini-icon { font-size: 2rem; }
