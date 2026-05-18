@@ -866,35 +866,40 @@
         happyMascot = '🎲';
         sub = '¡A lanzar el dado!';
       } else if (gameType === 'conquest') {
-        // Show the captured tile right on the result feedback so kids
-        // can immediately see "I just took 北京". Tier the message + sound
-        // by what KIND of capture happened.
-        happyMascot = conquest && conquest.tile ? conquest.tile.icon : '🏯';
+        // Battle-themed feedback — no city names, no landmarks. Just the
+        // soldier that joined the battle + what happened (clash / advance /
+        // ambush / fortress fell). Kids see the SOLDIER, not a place name.
+        const unit = conquest && conquest.unit ? conquest.unit : '🐎';
+        happyMascot = unit;
+        const unitName = unit === '🏹' ? 'arquero'
+                       : unit === '🗡' ? 'espadachín'
+                       : unit === '🛡' ? 'lancero'
+                       : unit === '👑' ? 'general'
+                       : 'caballero';
         if (conquest && conquest.action === 'conquered') {
-          sub = `¡Conquistaste ${conquest.tile.name} (${conquest.tile.pinyin}) al enemigo! 🚩`;
+          sub = `⚔️ ¡Tu ${unitName} venció al enemigo!`;
           if (window.Rewards) window.Rewards.show({
             tier: 'epic', icon: '⚔️',
-            text: `¡${conquest.tile.es} conquistado!`,
+            text: '¡Choque de espadas! ¡Terreno conquistado!',
             duration: 1900,
           });
         } else if (conquest && conquest.action === 'expanded') {
-          sub = `¡Tomaste ${conquest.tile.name} ${conquest.tile.pinyin}! +1 🏯`;
+          sub = `🐎 ¡Tu ${unitName} avanza en el campo!`;
           if (window.Rewards) window.Rewards.show({
-            tier: 'great', icon: conquest.tile.icon || '🏯',
-            text: `¡${conquest.tile.es}!`,
+            tier: 'great', icon: unit, text: '¡La caballería avanza!',
           });
         } else if (conquest && conquest.action === 'jumped') {
-          sub = `¡Salto sorpresa a ${conquest.tile.name}!`;
+          sub = `🏹 ¡Flecha sorpresa al frente!`;
           if (window.Rewards) window.Rewards.show({
-            tier: 'great', icon: '🐎', text: '¡Salto sorpresa!',
+            tier: 'great', icon: '🏹', text: '¡Salto sorpresa!',
           });
         } else {
-          sub = `¡${conquest && conquest.tile ? conquest.tile.es : 'Territorio'} reforzado!`;
+          sub = `🛡 ¡Refuerzos en la fortaleza!`;
         }
         if (conquest && conquest.capturedEnemyCapital && window.Rewards) {
           window.Rewards.show({
             tier: 'epic', icon: '🏯',
-            text: '¡TOMASTE LA CAPITAL ENEMIGA! 🎺',
+            text: '¡LA FORTALEZA ENEMIGA HA CAÍDO! 🎺',
             duration: 2400,
           });
         }

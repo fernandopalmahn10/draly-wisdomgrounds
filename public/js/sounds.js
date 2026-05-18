@@ -444,6 +444,41 @@
       tone({ freq: 180 + Math.random() * 60, dur: 0.05, type: 'sine', vol: 0.18, slideTo: 90 });
       noise({ dur: 0.04, vol: 0.10 });
     },
+    swordClash() {
+      // Two metallic squarewave pings + bright noise burst — classic clang
+      noise({ dur: 0.08, vol: 0.32 });
+      tone({ freq: 2200, dur: 0.10, type: 'square', vol: 0.32, slideTo: 880 });
+      tone({ freq: 3300, dur: 0.08, type: 'triangle', vol: 0.22, delay: 0.04 });
+      tone({ freq: 660, dur: 0.18, type: 'sawtooth', vol: 0.18, slideTo: 220, delay: 0.06 });
+      noise({ dur: 0.12, vol: 0.15, delay: 0.06 });
+    },
+    horseGallop() {
+      // Quad-clop rhythm — 4 short low thuds, slightly accelerating
+      [0, 0.08, 0.18, 0.26].forEach((d, i) => {
+        tone({ freq: 110 - i * 5, dur: 0.05, type: 'sine', vol: 0.30, slideTo: 60, delay: d });
+        noise({ dur: 0.03, vol: 0.18, delay: d + 0.01 });
+      });
+    },
+    warDrum() {
+      // Deep low boom-boom (announcement) — for major events / round start
+      tone({ freq: 70, dur: 0.30, type: 'sine', vol: 0.55, slideTo: 38 });
+      noise({ dur: 0.12, vol: 0.20 });
+      tone({ freq: 75, dur: 0.28, type: 'sine', vol: 0.50, slideTo: 40, delay: 0.32 });
+      noise({ dur: 0.10, vol: 0.18, delay: 0.32 });
+    },
+    archerTwang() {
+      // Tense bow release: rising-then-falling tone + sharp twang
+      tone({ freq: 880, dur: 0.06, type: 'triangle', vol: 0.28, slideTo: 1760 });
+      tone({ freq: 1320, dur: 0.10, type: 'triangle', vol: 0.22, slideTo: 660, delay: 0.04 });
+      noise({ dur: 0.05, vol: 0.10, delay: 0.02 });
+    },
+    fortressFall() {
+      // Crashing stone — for when an enemy fortress is captured
+      noise({ dur: 0.4, vol: 0.45 });
+      tone({ freq: 180, dur: 0.5, type: 'sawtooth', vol: 0.45, slideTo: 50 });
+      tone({ freq: 50, dur: 0.8, type: 'sine', vol: 0.55, slideTo: 28, delay: 0.05 });
+      tone({ freq: 90, dur: 0.4, type: 'square', vol: 0.30, slideTo: 40, delay: 0.20 });
+    },
     candySpill() {
       // Cheerful confetti-y cascade for when the piñata bursts
       [880, 1320, 1760, 2200, 1760, 1320].forEach((f, i) =>

@@ -12,9 +12,11 @@
 
   let territories = [];
   let ownership = {};
+  let unitsByTile = {};   // tileId → soldier emoji (🐎 / 🏹 / 🗡 / 🛡 / 👑)
   let scores = { red: 0, gold: 0 };
   let gameOver = false;
   let warriorTimer = null;
+  let drumTimer = null;
 
   const $ = (id) => document.getElementById(id);
 
@@ -68,9 +70,11 @@
     showScreen('lobby');
     territories = [];
     ownership = {};
+    unitsByTile = {};
     scores = { red: 0, gold: 0 };
     gameOver = false;
     if (warriorTimer) { clearInterval(warriorTimer); warriorTimer = null; }
+    if (drumTimer)    { clearInterval(drumTimer);    drumTimer    = null; }
     updateScores();
   });
 
@@ -124,61 +128,70 @@
   socket.on('cq:init', (data) => {
     territories = data.territories || [];
     ownership = data.ownership || {};
+    unitsByTile = data.units || {};
     scores = data.teamScores || { red: 0, gold: 0 };
     gameOver = false;
     renderMap();
     updateScores();
-    setBanner('¡战国 La guerra empieza!');
+    setBanner('⚔️ ¡La batalla empieza!');
+    MochiSounds.warDrum && MochiSounds.warDrum();
     startAmbientWarriors();
+    startAmbientDrums();
   });
 
-  // === Capture event from server — animate the conquest ===
+  // === Capture event — animate the soldier taking the position ===
   socket.on('cq:capture', (cap) => {
     if (cap.teamScores) { scores = cap.teamScores; updateScores(); }
     if (cap.action === 'reinforce') {
-      // Visual: pulse our capital, no ownership change
       const cap2 = territories.find((t) => t.capitalOf === cap.toTeam);
       const el = cap2 && $('cq-tile-' + cap2.id);
       if (el) flashTile(el, cap.toTeam, true);
       return;
     }
     ownership[cap.tileId] = cap.toTeam;
+    if (cap.unit) unitsByTile[cap.tileId] = cap.unit;
     const tile = territories[cap.tileId];
     const tileEl = $('cq-tile-' + cap.tileId);
     if (!tileEl) return;
-    // Flag planting + flash + horse charge from a same-team neighbor
-    spawnHorseCharge(tileEl, cap.toTeam);
+    // Charge animation: a horse 🐎 / archer 🏹 from off-screen
+    spawnHorseCharge(tileEl, cap.toTeam, cap.unit);
+    // Toggle ownership class
     tileEl.classList.remove('owned-red', 'owned-gold', 'conquering');
     void tileEl.offsetWidth;
     tileEl.classList.add('owned-' + cap.toTeam, 'conquering');
     setTimeout(() => tileEl && tileEl.classList.remove('conquering'), 1400);
-    // Replace the flag indicator
-    const flag = tileEl.querySelector('.cq-flag');
-    if (flag) {
-      flag.textContent = cap.toTeam === 'red' ? '🚩' : '🏳';
-      flag.classList.remove('plant');
-      void flag.offsetWidth;
-      flag.classList.add('plant');
+    // Replace the tile icon with the soldier emoji
+    const iconEl = tileEl.querySelector('.cq-tile-icon');
+    if (iconEl) {
+      iconEl.textContent = cap.unit || '🐎';
+      iconEl.classList.remove('cq-unit-arrive');
+      void iconEl.offsetWidth;
+      iconEl.classList.add('cq-unit-arrive');
     }
-    // Banner — different message per action
-    const teamEmoji = cap.toTeam === 'red' ? '🐉' : '🐲';
+    // Banner + sound flavor depends on action
+    const teamName = cap.toTeam === 'red' ? 'Roja' : 'Dorada';
     if (cap.action === 'conquered') {
-      setBanner(`${teamEmoji} ¡${cap.toTeam === 'red' ? 'Rojo' : 'Dorado'} conquistó ${tile.name} ${tile.pinyin}!`);
-      MochiSounds.wrong && MochiSounds.wrong();   // a sharp clash for stealing
-      MochiSounds.cashRegister && setTimeout(() => MochiSounds.cashRegister(), 200);
+      // Conquering enemy ground = SWORD CLASH
+      setBanner(`⚔️ ¡La caballería ${teamName} venció al enemigo!`);
+      MochiSounds.swordClash && MochiSounds.swordClash();
+      if (navigator.vibrate) navigator.vibrate([40, 30, 80]);
+      // Sword-spark burst on the tile
+      spawnSwordClashFx(tileEl);
     } else if (cap.action === 'expanded') {
-      setBanner(`${teamEmoji} ${cap.toTeam === 'red' ? 'Rojo' : 'Dorado'} tomó ${tile.name} (${tile.es})`);
-      MochiSounds.coinClink && MochiSounds.coinClink();
+      // Expanding into empty ground = HORSE GALLOP
+      const verb = cap.unit === '🏹' ? 'Los arqueros toman' : 'La caballería avanza a';
+      setBanner(`🐎 ¡${verb} nuevo terreno!`);
+      MochiSounds.horseGallop && MochiSounds.horseGallop();
     } else if (cap.action === 'jumped') {
-      setBanner(`${teamEmoji} ¡Salto a ${tile.name}!`);
-      MochiSounds.whoosh && MochiSounds.whoosh();
+      setBanner(`🏹 ¡Flecha sorpresa! Tropa ${teamName} salta al frente.`);
+      MochiSounds.archerTwang && MochiSounds.archerTwang();
     }
   });
 
   socket.on('cq:capital-fallen', ({ team }) => {
-    const emoji = team === 'red' ? '🐉' : '🐲';
-    setBanner(`🏯 ¡${emoji} ${team === 'red' ? 'ROJOS' : 'DORADOS'} TOMARON LA CAPITAL ENEMIGA! 🎺`);
-    MochiSounds.winFanfare && MochiSounds.winFanfare();
+    setBanner(`🏯 ¡La fortaleza enemiga ha caído! ⚔️`);
+    MochiSounds.fortressFall && MochiSounds.fortressFall();
+    setTimeout(() => MochiSounds.winFanfare && MochiSounds.winFanfare(), 600);
     burstStars(team);
   });
 
@@ -186,6 +199,7 @@
   socket.on('game-end', (data) => {
     if (timerInterval) clearInterval(timerInterval);
     if (warriorTimer) { clearInterval(warriorTimer); warriorTimer = null; }
+    if (drumTimer)    { clearInterval(drumTimer);    drumTimer    = null; }
     gameOver = true;
     MochiSounds.stopMusic && MochiSounds.stopMusic();
     showScreen('win');
@@ -220,7 +234,7 @@
     renderLeaderboard(data);
   });
 
-  // === Map rendering ===
+  // === Map rendering — battlefield squares, no place names ===
   function renderMap() {
     const map = $('cq-map');
     if (!map) return;
@@ -229,20 +243,16 @@
     map.style.gridTemplateRows = `repeat(4, 1fr)`;
     territories.forEach((t) => {
       const el = document.createElement('div');
-      el.className = 'cq-tile';
+      el.className = 'cq-tile terrain-' + (t.terrain || 'sand');
       el.id = 'cq-tile-' + t.id;
       el.dataset.tileId = t.id;
       const owner = ownership[t.id];
       if (owner) el.classList.add('owned-' + owner);
       if (t.isCapital) el.classList.add('capital');
-      el.innerHTML = `
-        <div class="cq-tile-icon">${t.icon}</div>
-        <div class="cq-tile-cn">${t.name}</div>
-        <div class="cq-tile-pinyin">${t.pinyin}</div>
-        <div class="cq-tile-es">${t.es}</div>
-        <div class="cq-flag">${owner === 'red' ? '🚩' : owner === 'gold' ? '🏳' : ''}</div>
-        ${t.isCapital ? '<div class="cq-capital-star">★</div>' : ''}
-      `;
+      // Icon: if a unit is stationed here (captured tile), show the soldier;
+      // else show the terrain feature emoji (hill/river/fortress); sand = empty
+      const iconChar = unitsByTile[t.id] || t.icon || '';
+      el.innerHTML = `<div class="cq-tile-icon">${iconChar}</div>`;
       el.style.gridColumn = (t.x + 1);
       el.style.gridRow = (t.y + 1);
       map.appendChild(el);
@@ -250,8 +260,8 @@
   }
 
   // === Capture animations ===
-  function spawnHorseCharge(tileEl, team) {
-    // A horse emoji charges in from off-screen, then plants the flag.
+  function spawnHorseCharge(tileEl, team, unit) {
+    // A horseman / archer / swordsman charges in from off-screen to the tile.
     const map = $('cq-map');
     if (!map || !tileEl) return;
     const r = tileEl.getBoundingClientRect();
@@ -260,11 +270,42 @@
     const cy = r.top  + r.height / 2 - mr.top;
     const horse = document.createElement('div');
     horse.className = 'cq-horse ' + team;
-    horse.textContent = '🐎';
+    horse.textContent = unit || '🐎';
     horse.style.left = cx + 'px';
     horse.style.top  = cy + 'px';
     map.appendChild(horse);
     setTimeout(() => horse.remove(), 1200);
+  }
+  // Spark burst over a tile when steel meets steel
+  function spawnSwordClashFx(tileEl) {
+    if (!tileEl) return;
+    const map = $('cq-map');
+    if (!map) return;
+    const r = tileEl.getBoundingClientRect();
+    const mr = map.getBoundingClientRect();
+    const cx = r.left + r.width / 2 - mr.left;
+    const cy = r.top  + r.height / 2 - mr.top;
+    for (let i = 0; i < 8; i++) {
+      const s = document.createElement('div');
+      s.className = 'cq-clash-spark';
+      s.textContent = ['⚔️', '✨', '💥'][i % 3];
+      s.style.left = cx + 'px';
+      s.style.top  = cy + 'px';
+      const ang = (i / 8) * Math.PI * 2;
+      s.style.setProperty('--dx', Math.cos(ang) * 60 + 'px');
+      s.style.setProperty('--dy', Math.sin(ang) * 60 + 'px');
+      s.style.animationDelay = (i * 25) + 'ms';
+      map.appendChild(s);
+      setTimeout(() => s.remove(), 900);
+    }
+  }
+  // Distant war drum every ~15-25s — keeps the battlefield ominous
+  function startAmbientDrums() {
+    if (drumTimer) clearInterval(drumTimer);
+    drumTimer = setInterval(() => {
+      if (gameOver) return;
+      if (Math.random() < 0.55 && MochiSounds.warDrum) MochiSounds.warDrum();
+    }, 16000);
   }
 
   function flashTile(el, team, reinforce) {

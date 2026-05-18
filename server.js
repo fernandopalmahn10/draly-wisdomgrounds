@@ -242,53 +242,63 @@ const FM_TOKENS = [
 ];
 const FM_PLACE_WINDOW_MS = 8000; // player has 8s to drag
 
-// === REINOS EN GUERRA · 战国 (Warring States) — territory conquest game ===
-// A 6x4 grid of territories on a stylized map of ancient China. Two teams
-// (Red Dragon Cavalry vs Gold Dragon Cavalry) start in opposite corners
-// and expand outward. Each correct vocab answer captures one adjacent tile;
-// preference order: enemy-held → unclaimed → grow from the team's own.
-// Themed around HSK1 EXP5 travel/direction vocab (北京, 中国, 去, 来, 飞机,
-// 出租车, 上, 下, 前面, 后面, etc).
+// === REINOS EN GUERRA · 战国 (Warring States) — battlefield conquest game ===
+// A 6x4 BATTLEFIELD grid (NOT named landmarks — kids don't know Beijing/Xi'an).
+// Each square is just a battlefield position with terrain (sand / hill / river).
+// Two armies (Red Knights 紅龍 vs Gold Knights 金龍) start at their fortress
+// rows on opposite sides. Each correct vocab answer advances a knight into
+// adjacent ground — empty squares get an outpost, enemy squares get conquered
+// in a sword clash (like checkers eating). The two centermost squares are
+// FORTRESSES (capital equivalent — worth +5 if conquered).
 //
-// Territory data: id, place name (Chinese + pinyin + Spanish), x/y grid pos,
-// icon. The board renders these in a 6x4 grid with adjacency (4-neighbor).
+// Tile content is THE UNIT holding it, not a place name:
+//   🐎 Caballero (knight)   🏹 Arquero (archer)
+//   🗡 Espadachín           🛡 Lancero (shield/spear)
+// + 👑 (general) for the back-row fortresses.
 const CQ_COLS = 6;
 const CQ_ROWS = 4;
-const CQ_TERRITORIES = [
-  // Row 0 (north) — towards Beijing / Great Wall
-  { id: 0,  name: '北京',  pinyin: 'Běijīng',     es: 'Beijing',     icon: '🏯', isCapital: true,  capitalOf: 'red'  },
-  { id: 1,  name: '长城',  pinyin: 'Chángchéng',  es: 'Gran Muralla',icon: '🧱' },
-  { id: 2,  name: '哈尔滨',pinyin: 'Hā\'ěrbīn',   es: 'Harbin',      icon: '❄️' },
-  { id: 3,  name: '草原',  pinyin: 'Cǎoyuán',     es: 'Estepa',      icon: '🌾' },
-  { id: 4,  name: '沙漠',  pinyin: 'Shāmò',       es: 'Desierto',    icon: '🏜' },
-  { id: 5,  name: '蒙古',  pinyin: 'Měnggǔ',      es: 'Mongolia',    icon: '⛺' },
-  // Row 1
-  { id: 6,  name: '西安',  pinyin: 'Xī\'ān',      es: 'Xi\'an',      icon: '🕌' },
-  { id: 7,  name: '黄河',  pinyin: 'Huánghé',     es: 'Río Amarillo',icon: '🌊' },
-  { id: 8,  name: '少林',  pinyin: 'Shàolín',     es: 'Templo Shaolin', icon: '⛩' },
-  { id: 9,  name: '泰山',  pinyin: 'Tàishān',     es: 'Monte Tai',   icon: '⛰' },
-  { id: 10, name: '青岛',  pinyin: 'Qīngdǎo',     es: 'Qingdao',     icon: '🏝' },
-  { id: 11, name: '森林',  pinyin: 'Sēnlín',      es: 'Bosque',      icon: '🌲' },
-  // Row 2
-  { id: 12, name: '成都',  pinyin: 'Chéngdū',     es: 'Chengdu',     icon: '🐼' },
-  { id: 13, name: '长江',  pinyin: 'Chángjiāng',  es: 'Río Yangtsé', icon: '🚣' },
-  { id: 14, name: '洛阳',  pinyin: 'Luòyáng',     es: 'Luoyang',     icon: '🪷' },
-  { id: 15, name: '武当',  pinyin: 'Wǔdāng',      es: 'Monte Wudang',icon: '🗡' },
-  { id: 16, name: '上海',  pinyin: 'Shànghǎi',    es: 'Shanghái',    icon: '🌃' },
-  { id: 17, name: '钱塘',  pinyin: 'Qiántáng',    es: 'Qiantang',    icon: '🌉' },
-  // Row 3 (south) — towards Guangzhou
-  { id: 18, name: '云南',  pinyin: 'Yúnnán',      es: 'Yunnan',      icon: '🌺' },
-  { id: 19, name: '桂林',  pinyin: 'Guìlín',      es: 'Guilin',      icon: '🗿' },
-  { id: 20, name: '香港',  pinyin: 'Xiānggǎng',   es: 'Hong Kong',   icon: '🌆' },
-  { id: 21, name: '台湾',  pinyin: 'Táiwān',      es: 'Taiwán',      icon: '🏖' },
-  { id: 22, name: '海南',  pinyin: 'Hǎinán',      es: 'Hainan',      icon: '🌴' },
-  { id: 23, name: '广州',  pinyin: 'Guǎngzhōu',   es: 'Guangzhou',   icon: '🏮', isCapital: true, capitalOf: 'gold' },
-];
-// Position each territory in the grid (row * COLS + col convention)
-CQ_TERRITORIES.forEach((t, i) => {
-  t.x = i % CQ_COLS;
-  t.y = Math.floor(i / CQ_COLS);
-});
+// Terrain types control the tile background sprite (sand/hill/river/fortress)
+// but DON'T have place-name labels. Numbered positions instead.
+function _cqTerrain(id) {
+  // Row 0 (red fortress wall) and Row 3 (gold fortress wall) get harder terrain.
+  // The center has a couple of strategic features (hill, river) for variety.
+  const r = Math.floor(id / CQ_COLS);
+  if ((r === 0 && (id % CQ_COLS) === 2) || (r === 3 && (id % CQ_COLS) === 3)) return 'fortress';
+  if (r === 1 && (id % CQ_COLS) === 4) return 'hill';
+  if (r === 2 && (id % CQ_COLS) === 1) return 'river';
+  if (r === 1 && (id % CQ_COLS) === 1) return 'hill';
+  if (r === 2 && (id % CQ_COLS) === 4) return 'river';
+  return 'sand';
+}
+const CQ_TERRAIN_ICON = {
+  sand:     '',        // default — no icon, just sand texture
+  hill:     '⛰',
+  river:    '🌊',
+  fortress: '🏯',
+};
+const CQ_TERRITORIES = [];
+for (let i = 0; i < CQ_COLS * CQ_ROWS; i++) {
+  const terrain = _cqTerrain(i);
+  const t = {
+    id: i,
+    x: i % CQ_COLS,
+    y: Math.floor(i / CQ_COLS),
+    terrain,
+    icon: CQ_TERRAIN_ICON[terrain] || '',
+  };
+  // Two FORTRESS squares — one per team's back row — are the capital equivalents.
+  if (i === 2) { t.isCapital = true; t.capitalOf = 'red';  } // Red fortress on row 0 col 2
+  if (i === 21) { t.isCapital = true; t.capitalOf = 'gold'; } // Gold fortress on row 3 col 3
+  CQ_TERRITORIES.push(t);
+}
+
+// Unit pool — when a tile gets captured, it shows one of these emojis to
+// represent the soldier holding it. Picked randomly per capture so the
+// battlefield reads like a real mixed army, not a row of identical icons.
+const CQ_UNITS = ['🐎', '🏹', '🗡', '🛡', '🐎', '🐎']; // bias toward cavalry
+function cqPickUnit() {
+  return CQ_UNITS[Math.floor(Math.random() * CQ_UNITS.length)];
+}
 
 // 4-neighbor adjacency for the grid (up/down/left/right). Returns ids.
 function cqAdjacent(tileId) {
@@ -356,17 +366,24 @@ function cqTeamScore(g, team) {
   return s;
 }
 
-// Apply a capture: mark ownership + update scores. Returns the captureInfo
-// for broadcast: { tileId, fromTeam, toTeam, action, isCapital, capturedCapital }
+// Apply a capture: mark ownership + assign a unit emoji + update scores.
+// Each captured tile remembers which kind of soldier holds it (knight, archer,
+// swordsman, shield) so the battlefield reads visually as a mixed army.
 function cqApplyCapture(g, team, target) {
   const t = CQ_TERRITORIES[target.tileId];
   if (!t) return null;
   const fromTeam = g.conquest.ownership[t.id] || null;
-  // If reinforcing our own land, return a no-op event
+  // Reinforcing own land: bump that tile's unit (visual stacking, no real change)
   if (target.action === 'reinforce') {
-    return { tileId: t.id, fromTeam: team, toTeam: team, action: 'reinforce', isCapital: !!t.isCapital };
+    return {
+      tileId: t.id, fromTeam: team, toTeam: team, action: 'reinforce',
+      isCapital: !!t.isCapital, unit: g.conquest.units[t.id] || cqPickUnit(),
+    };
   }
+  // Fortresses (capitals) keep the 🏯 / 👑 emblem; other tiles get a unit
+  const unit = t.isCapital ? '👑' : cqPickUnit();
   g.conquest.ownership[t.id] = team;
+  g.conquest.units[t.id] = unit;
   g.conquest.capturedCount = (g.conquest.capturedCount || 0) + 1;
   const capturedEnemyCapital = (target.action === 'conquered' && t.isCapital && t.capitalOf !== team);
   return {
@@ -376,6 +393,8 @@ function cqApplyCapture(g, team, target) {
     action: target.action,
     isCapital: !!t.isCapital,
     capturedEnemyCapital,
+    unit,
+    terrain: t.terrain,
   };
 }
 
@@ -1327,13 +1346,20 @@ io.on('connection', (socket) => {
         });
       }
       if (g.gameType === 'conquest') {
-        // Each team owns its capital from the start; everywhere else is wilderness.
+        // Each team owns its fortress capital from the start (with a 👑 general).
+        // Everywhere else is no-man's land. units[id] tracks which soldier
+        // emoji is holding that tile.
         const ownership = {};
+        const units = {};
         CQ_TERRITORIES.forEach((t) => {
-          if (t.capitalOf) ownership[t.id] = t.capitalOf;
+          if (t.capitalOf) {
+            ownership[t.id] = t.capitalOf;
+            units[t.id] = '👑';
+          }
         });
         g.conquest = {
           ownership,
+          units,
           capturedCount: 0,
           battleLog: [],
         };
@@ -1341,6 +1367,7 @@ io.on('connection', (socket) => {
         io.to(pin).emit('cq:init', {
           territories: CQ_TERRITORIES,
           ownership,
+          units,
           cols: CQ_COLS, rows: CQ_ROWS,
           players: Object.fromEntries(
             Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team, avatar: p.avatar }])
@@ -1874,6 +1901,7 @@ io.on('connection', (socket) => {
             action: captureInfo.action,
             fromTeam: captureInfo.fromTeam,
             toTeam: captureInfo.toTeam,
+            unit: captureInfo.unit,
             capturedEnemyCapital: !!captureInfo.capturedEnemyCapital,
           },
         });

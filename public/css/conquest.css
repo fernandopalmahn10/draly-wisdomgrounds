@@ -2,10 +2,12 @@
    Parchment map, dark imperial reds, gold brush calligraphy, horse warriors. */
 
 body.conquest-bg {
+  /* Dusty battlefield sky — sunset over the steppe, war smoke rising */
   background:
-    radial-gradient(ellipse at 20% 0%,  rgba(255,210,90,0.35), transparent 55%),
-    radial-gradient(ellipse at 80% 100%,rgba(80, 12, 12, 0.65), transparent 55%),
-    linear-gradient(160deg, #2c0808 0%, #4a1606 30%, #6e2010 60%, #2c0808 100%);
+    radial-gradient(ellipse at 20% 0%,  rgba(255, 170, 80, 0.32), transparent 50%),
+    radial-gradient(ellipse at 80% 0%,  rgba(255, 90, 50, 0.25), transparent 50%),
+    radial-gradient(ellipse at 50% 100%,rgba(60, 30, 12, 0.85), transparent 60%),
+    linear-gradient(180deg, #6e3a18 0%, #4a2406 35%, #2c1408 70%, #1a0c04 100%);
   background-attachment: fixed;
   color: #fff8e0;
 }
@@ -118,21 +120,28 @@ body.conquest-bg .win-screen { color: #3a1505; }
 
 .cq-map {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   width: min(98%, 1100px);
   height: 100%;
   max-height: 720px;
-  padding: 20px;
-  border-radius: 18px;
-  /* Parchment look with worn edges */
+  padding: 14px;
+  border-radius: 14px;
+  /* SAND BATTLEFIELD — desert/steppe with footprints, cracked earth, and
+     a darker outer frame (dirt rampart). No parchment, no map borders. */
   background:
-    radial-gradient(ellipse at 50% 50%, rgba(255, 220, 160, 0.95), rgba(220, 175, 105, 0.92) 70%, rgba(160, 110, 60, 0.92) 100%),
-    repeating-linear-gradient(45deg, rgba(120, 60, 20, 0.04) 0 4px, transparent 4px 12px);
-  border: 6px solid #4a1606;
+    /* darker dirt edges */
+    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(40, 20, 8, 0.55) 90%),
+    /* sand-grain texture */
+    repeating-radial-gradient(circle at 30% 30%, rgba(120, 80, 40, 0.18) 0 1px, transparent 1px 6px),
+    repeating-radial-gradient(circle at 70% 70%, rgba(80, 50, 24, 0.22) 0 1px, transparent 1px 5px),
+    /* main sand gradient */
+    linear-gradient(160deg, #c89554 0%, #a87236 40%, #8a5a26 75%, #6e3e16 100%);
+  border: 5px solid #2c1408;
   box-shadow:
-    0 30px 60px rgba(0, 0, 0, 0.7),
-    0 8px 14px rgba(0, 0, 0, 0.5),
-    inset 0 0 60px rgba(140, 80, 30, 0.45);
+    0 30px 60px rgba(0, 0, 0, 0.75),
+    0 8px 14px rgba(0, 0, 0, 0.55),
+    inset 0 0 80px rgba(40, 20, 8, 0.6),
+    inset 0 -12px 30px rgba(20, 10, 4, 0.7);
   transform: rotateX(8deg);
   transform-style: preserve-3d;
   will-change: transform;
@@ -140,42 +149,49 @@ body.conquest-bg .win-screen { color: #3a1505; }
   position: relative;
 }
 
-/* Brush-stroke borders on the map corners */
-.cq-map::before, .cq-map::after {
+/* Cracked-earth overlay across the battlefield */
+.cq-map::before {
   content: '';
   position: absolute;
+  inset: 6px;
   pointer-events: none;
-  border-radius: 14px;
-}
-.cq-map::before {
-  inset: -2px;
-  border: 2px dashed rgba(74, 22, 6, 0.3);
+  background:
+    repeating-linear-gradient(33deg,  transparent 0 60px, rgba(40, 20, 8, 0.12) 60px 62px),
+    repeating-linear-gradient(-25deg, transparent 0 80px, rgba(40, 20, 8, 0.08) 80px 82px);
+  border-radius: 10px;
+  z-index: 0;
 }
 .cq-map::after {
-  inset: 8px;
-  border: 1px solid rgba(74, 22, 6, 0.2);
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* battlefield vignette so the action draws the eye to center */
+  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.35) 100%);
+  border-radius: 14px;
 }
 
-/* === Individual territory tiles === */
+/* === Individual battlefield tiles ===
+   Each tile is a battlefield SQUARE — sand by default, with terrain
+   variants (hill / river / fortress). Captured tiles show a soldier emoji
+   (knight 🐎 / archer 🏹 / etc) instead of any name/label. */
 .cq-tile {
   position: relative;
+  /* Default sand square — light dirt color, looks like a packed earth tile */
   background:
-    linear-gradient(180deg, rgba(255, 245, 215, 0.94) 0%, rgba(220, 175, 110, 0.92) 100%);
-  border: 2px solid #4a1606;
-  border-radius: 10px;
-  padding: 8px 4px 6px;
+    radial-gradient(ellipse at 30% 30%, rgba(255, 220, 160, 0.4) 0%, transparent 60%),
+    linear-gradient(160deg, #d4a566 0%, #b07e3a 60%, #8a5a26 100%);
+  border: 2px solid #2c1408;
+  border-radius: 6px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: 2px;
+  justify-content: center;
   text-align: center;
-  font-family: 'Nunito', sans-serif;
   color: #3a1505;
   box-shadow:
-    0 4px 8px rgba(0,0,0,0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    inset 0 -4px 8px rgba(74, 22, 6, 0.25);
+    0 4px 8px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 220, 160, 0.45),
+    inset 0 -4px 8px rgba(40, 20, 8, 0.35);
   overflow: hidden;
   min-height: 0;
   min-width: 0;
@@ -183,54 +199,70 @@ body.conquest-bg .win-screen { color: #3a1505; }
   transform: translateZ(8px);
   will-change: transform;
 }
-.cq-tile-icon {
-  font-size: clamp(1.6rem, 3vw, 2.4rem);
-  line-height: 1;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
+
+/* Terrain variants */
+.cq-tile.terrain-hill {
+  background:
+    radial-gradient(ellipse at 50% 70%, #6e9a4a 0%, #4a6e2a 60%, #2c4a18 100%);
 }
-.cq-tile-cn {
-  font-family: 'ZCOOL XiaoWei', 'Cinzel', serif;
-  font-weight: 900;
-  font-size: clamp(0.95rem, 1.4vw, 1.2rem);
-  color: #4a1606;
-  line-height: 1;
-  letter-spacing: 0.02em;
+.cq-tile.terrain-river {
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0 4px, transparent 4px 8px),
+    linear-gradient(180deg, #2e6e9a 0%, #1c4a6e 100%);
 }
-.cq-tile-pinyin {
-  font-family: 'Cinzel', serif;
-  font-weight: 700;
-  font-size: clamp(0.6rem, 0.85vw, 0.78rem);
-  color: #6e3a18;
-  font-style: italic;
-}
-.cq-tile-es {
-  font-size: clamp(0.55rem, 0.78vw, 0.7rem);
-  color: #5a2e10;
-  opacity: 0.78;
-  font-weight: 700;
+.cq-tile.terrain-fortress {
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(255, 220, 130, 0.45), transparent 65%),
+    repeating-linear-gradient(90deg, #6e2010 0 6px, #4a1606 6px 12px);
+  border-color: #1a0c04;
 }
 
-/* Ownership states — colored overlay + flag */
+/* Single big icon centered in each tile — either the soldier emoji
+   (captured tile) OR the terrain feature (hill/river/fortress).
+   Replaces the previous Chinese-text / pinyin / Spanish triplet. */
+.cq-tile-icon {
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.6));
+  user-select: none;
+}
+
+/* Hide the old name/pinyin/es labels — JS may still emit them harmlessly */
+.cq-tile-cn, .cq-tile-pinyin, .cq-tile-es { display: none; }
+
+/* Owned tiles — sand is "stained" with the team's blood/standard color
+   PLUS a flag pole emerging from the corner. The soldier emoji (knight/
+   archer) is rendered by JS inside .cq-tile-icon. */
 .cq-tile.owned-red {
   background:
-    linear-gradient(180deg, rgba(255, 180, 180, 0.92) 0%, rgba(220, 70, 80, 0.88) 100%);
-  border-color: #c11d2a;
+    radial-gradient(ellipse at 30% 30%, rgba(255, 100, 100, 0.45) 0%, transparent 65%),
+    linear-gradient(160deg, #a83838 0%, #7a1818 60%, #4a0c0c 100%);
+  border-color: #1a0404;
   box-shadow:
-    0 0 0 2px rgba(255, 138, 145, 0.6),
-    0 4px 14px rgba(217, 46, 58, 0.65),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    0 0 0 2px rgba(255, 138, 145, 0.65),
+    0 6px 14px rgba(120, 12, 12, 0.7),
+    inset 0 1px 0 rgba(255, 200, 200, 0.45),
+    inset 0 -4px 8px rgba(20, 4, 4, 0.6);
 }
-.cq-tile.owned-red .cq-tile-cn { color: #4a0c0c; }
+.cq-tile.owned-red .cq-tile-icon {
+  filter: drop-shadow(0 0 8px rgba(255, 138, 145, 0.7))
+          drop-shadow(0 3px 5px rgba(0, 0, 0, 0.7));
+}
 .cq-tile.owned-gold {
   background:
-    linear-gradient(180deg, rgba(255, 230, 170, 0.95) 0%, rgba(232, 145, 52, 0.92) 100%);
-  border-color: #c0671c;
+    radial-gradient(ellipse at 30% 30%, rgba(255, 230, 130, 0.5) 0%, transparent 65%),
+    linear-gradient(160deg, #c89534 0%, #a06614 60%, #6e3e08 100%);
+  border-color: #2c1404;
   box-shadow:
-    0 0 0 2px rgba(255, 213, 122, 0.7),
-    0 4px 14px rgba(232, 145, 52, 0.65),
-    inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    0 0 0 2px rgba(255, 213, 122, 0.75),
+    0 6px 14px rgba(232, 145, 52, 0.7),
+    inset 0 1px 0 rgba(255, 230, 160, 0.45),
+    inset 0 -4px 8px rgba(40, 24, 4, 0.6);
 }
-.cq-tile.owned-gold .cq-tile-cn { color: #4a2806; }
+.cq-tile.owned-gold .cq-tile-icon {
+  filter: drop-shadow(0 0 8px rgba(255, 213, 122, 0.7))
+          drop-shadow(0 3px 5px rgba(0, 0, 0, 0.7));
+}
 
 /* Capital tile: bigger crown ring + star */
 .cq-tile.capital {
@@ -285,6 +317,33 @@ body.conquest-bg .win-screen { color: #3a1505; }
 @keyframes cq-flash {
   0%, 100% { box-shadow: inherit; }
   50%      { box-shadow: 0 0 0 4px gold, 0 0 30px gold; }
+}
+
+/* Unit emoji arriving on a captured tile — pop-in with rotation */
+.cq-tile-icon.cq-unit-arrive {
+  animation: cq-unit-arrive 0.55s cubic-bezier(.22, 1.6, .36, 1);
+}
+@keyframes cq-unit-arrive {
+  0%   { transform: scale(0.2) rotate(-25deg); opacity: 0; }
+  60%  { transform: scale(1.4) rotate(8deg);   opacity: 1; }
+  100% { transform: scale(1)   rotate(0);      opacity: 1; }
+}
+
+/* Sword-clash spark — fires when a tile is taken from the enemy */
+.cq-clash-spark {
+  position: absolute;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  pointer-events: none;
+  z-index: 14;
+  filter: drop-shadow(0 0 8px gold);
+  animation: cq-clash-spark 0.9s ease-out forwards;
+  transform: translate(-50%, -50%);
+}
+@keyframes cq-clash-spark {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.2); }
+  30%  { opacity: 1; transform: translate(-50%, -50%) scale(1.4); }
+  100% { opacity: 0;
+         transform: translate(calc(-50% + var(--dx, 0)), calc(-50% + var(--dy, 0))) scale(0.7); }
 }
 
 /* === Horse warrior charging across the map === */
