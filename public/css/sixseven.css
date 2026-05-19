@@ -607,6 +607,21 @@ body.ss-bg .win-screen { color: #1a3a5a; }
   overflow: hidden;
 }
 
+/* === HIDE DECORATIVE LANTERNS while the sixseven screen is visible ===
+   The two .lantern.l1/.l2 elements sit at the top of every player.html and
+   were blocking the math question bubble on phones. They're decorative only;
+   we hide them whenever the sixseven game is active. Same scoped fix on
+   the body class so other games keep their lanterns. */
+body:has(#screen-sixseven:not(.hidden)) .lantern { display: none !important; }
+/* Safari fallback (no :has() pre-16.4) — use the body class set elsewhere */
+body.sixseven-active .lantern { display: none !important; }
+
+/* And bump the question bubble z-index so nothing decorative can ever
+   sit on top of it — fixes the "balloons on top of my question" report. */
+.ss-problem { position: relative; z-index: 20; }
+.ss-buttons { position: relative; z-index: 20; }
+.ss-player-top { position: relative; z-index: 20; }
+
 /* ============================================================ */
 /* === ENGAGEMENT LAYER — dance moments, ambient peeks, shake  */
 /* === Inspired by the zombie game's spooky-pop-in system, but */

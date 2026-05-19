@@ -374,14 +374,53 @@
       b.disabled = false;
       b.classList.remove('tapped');
     });
-    // First-time setup: bind buttons + start ambient loops
+    // First-time setup: bind buttons + start ambient loops + load asset
     if (!ssButtonsBound) {
       bindSixSevenButtons();
       startSixSevenSwayLoop();
       startSixSevenFloats();
+      loadSixSevenPlayerAsset();
       ssButtonsBound = true;
     }
     showScreen('sixseven');
+  }
+
+  // Multi-path loader for the 6-7 character image. Mirrors host-sixseven.js
+  // — tries png/jpg/jpeg/webp + a few filename variants. First success wins.
+  function loadSixSevenPlayerAsset() {
+    const imgEl = $('ss-player-character-img');
+    if (!imgEl) return;
+    const cssFallbackEl = imgEl.parentElement &&
+      imgEl.parentElement.querySelector('.ss-character');
+    const candidates = [
+      '/assets/sixseven-character.png',
+      '/assets/sixseven-character.jpg',
+      '/assets/sixseven-character.jpeg',
+      '/assets/sixseven-character.webp',
+      '/assets/sixseven.png',
+      '/assets/sixseven.jpg',
+      '/assets/six-seven.png',
+      '/assets/six-seven.jpg',
+      '/assets/67.png',
+      '/assets/67.jpg',
+    ];
+    let idx = 0;
+    function tryNext() {
+      if (idx >= candidates.length) {
+        imgEl.classList.add('ss-img-missing');
+        if (cssFallbackEl) cssFallbackEl.classList.add('ss-fallback-on');
+        console.warn('[6-7] No character image in /assets/. Save your art as ANY of: ' + candidates.join(', '));
+        return;
+      }
+      const url = candidates[idx++];
+      imgEl.onload = () => {
+        imgEl.dataset.loaded = 'true';
+        console.log('[6-7] Loaded character image: ' + url);
+      };
+      imgEl.onerror = () => tryNext();
+      imgEl.src = url;
+    }
+    tryNext();
   }
 
   function bindSixSevenButtons() {
@@ -411,14 +450,35 @@
         else MochiSounds.tap6 && MochiSounds.tap6();
         // Disable both buttons until we get a response
         document.querySelectorAll('.ss-btn').forEach((b) => b.disabled = true);
-        // Fire the answer via the standard bulletproof pipeline
-        sendAnswerBulletproof(ssCurrentQid, idx);
+        // Fire-and-forget — NO heartbeat overlay, NO retry layer.
+        // Sixseven runs at 600-800ms cadence so the next question always
+        // bails out the player if anything went wrong.
+        sendSixSevenAnswer(ssCurrentQid, idx);
       };
       btn.addEventListener('pointerdown', onTap, { passive: false });
       btn.addEventListener('click', onTap);
       btn.addEventListener('touchstart', onTap, { passive: false });
       btn.oncontextmenu = (e) => { e.preventDefault(); return false; };
     });
+  }
+
+  // Direct, no-overlay, no-heartbeat send for sixseven. The standard
+  // sendAnswerBulletproof() shows an "Enviando respuesta…" overlay + uses
+  // a 1Hz heartbeat that retries the answer if no ack — overkill for the
+  // 600-800ms cadence sixseven runs at, and the user reported the overlay
+  // getting stuck visually. Fire-and-forget: if the answer is dropped, the
+  // next question arrives in <1s anyway and resets everything.
+  function sendSixSevenAnswer(qid, choiceIdx) {
+    try {
+      socket.emit('player:answer', { pin, qid, choiceIdx });
+    } catch (_) {}
+    // Safety net: if no answer-result arrives in 1.5s, re-enable buttons
+    // so the player isn't stuck (e.g., they tapped during a disconnect).
+    setTimeout(() => {
+      document.querySelectorAll('.ss-btn').forEach((b) => {
+        if (b.disabled) b.disabled = false;
+      });
+    }, 1500);
   }
 
   function startSixSevenSwayLoop() {
@@ -881,6 +941,8 @@
     // 6-7 SWING engagement layer — ambient peeks + periodic dance moments
     if (gameType === 'sixseven') {
       if (window.unlockAudio) window.unlockAudio();
+      // Mark body so the decorative lanterns hide site-wide on Safari (no :has())
+      document.body.classList.add('sixseven-active');
       startSixSevenAmbience();
     }
     // Color Clash: after the countdown ends, drop straight into the play screen
@@ -4539,6 +4601,7 @@
     Dralingo.stopRandom();
     stopZombieAmbience();
     stopSixSevenAmbience();
+    document.body.classList.remove('sixseven-active');
     stopLobbyFlappy();
     if (mashTimerInterval) clearInterval(mashTimerInterval);
     if (csWalkTimerInterval) clearInterval(csWalkTimerInterval);
