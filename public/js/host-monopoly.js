@@ -501,17 +501,24 @@
     if ($('wealth-gold')) $('wealth-gold').textContent = scores.gold || 0;
   }
 
-  // Top-5 live leaderboard inside the board center — Monopoly-style ranking
-  // that updates every time a player completes a move. Sorted by wealth.
+  // === LIVE LEADERBOARD === Shows EVERY player (up to ~16) sorted by wealth.
+  // The container auto-densifies: 1-5 players = comfortable rows, 6-9 = compact,
+  // 10+ = micro. A subtle inner scroll kicks in past 12 players so the dice +
+  // event text always stay visible. Never crops players off-screen at the end —
+  // the cap was the original 5-row .slice() that the teacher just flagged.
   function renderLiveLeaderboard() {
     const lb = $('mp-leaderboard');
     if (!lb) return;
     const ranked = Object.entries(players)
       .map(([id, p]) => ({ id, name: p.name, team: p.team, money: p.money || 0 }))
-      .sort((a, b) => b.money - a.money)
-      .slice(0, 5);
+      .sort((a, b) => b.money - a.money);
+    // Apply a density class based on player count so the layout shrinks
+    // automatically instead of overflowing the board-center plate.
+    lb.classList.remove('density-compact', 'density-micro');
+    if (ranked.length >= 10)      lb.classList.add('density-micro');
+    else if (ranked.length >= 6)  lb.classList.add('density-compact');
     lb.innerHTML = ranked.map((p, i) => {
-      const medal = ['🥇', '🥈', '🥉'][i] || `#${i + 1}`;
+      const medal = ['🥇', '🥈', '🥉'][i] || `${i + 1}.`;
       const teamEmoji = p.team === 'red' ? '🐉' : '🐲';
       return `<div class="mp-lb-row ${p.team}">
         <span class="mp-lb-rank">${medal}</span>
