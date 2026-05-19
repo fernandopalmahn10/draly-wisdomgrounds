@@ -392,7 +392,10 @@
     if (!imgEl) return;
     const cssFallbackEl = imgEl.parentElement &&
       imgEl.parentElement.querySelector('.ss-character');
+    // Ordered most-likely-first so the first request hits disk on success.
     const candidates = [
+      '/assets/67.png',
+      '/assets/67.jpg',
       '/assets/sixseven-character.png',
       '/assets/sixseven-character.jpg',
       '/assets/sixseven-character.jpeg',
@@ -401,8 +404,6 @@
       '/assets/sixseven.jpg',
       '/assets/six-seven.png',
       '/assets/six-seven.jpg',
-      '/assets/67.png',
-      '/assets/67.jpg',
     ];
     let idx = 0;
     function tryNext() {
