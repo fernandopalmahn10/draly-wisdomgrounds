@@ -458,6 +458,97 @@
     el.classList.add('fire');
   }
 
+  // === ENGAGEMENT LAYER (like zombie's spooky ambience, but cheerful) ===
+  // Ambient "67!" peeks from the screen edges every 4-8s, periodic dance
+  // moments (10-16s) where the character breaks out + the screen flashes
+  // gold/cyan/purple with a giant "67!" centerpiece, and screen shake on
+  // big combos. Critical: gives the math grind real emotional beats.
+  let ssAmbiencePeekTimer = null;
+  let ssDanceTimer = null;
+  function startSixSevenAmbience() {
+    const layer = $('ss-ambience');
+    if (layer) layer.classList.remove('hidden');
+    schedulePeek();
+    scheduleDance();
+  }
+  function stopSixSevenAmbience() {
+    const layer = $('ss-ambience');
+    if (layer) { layer.classList.add('hidden'); layer.innerHTML = ''; }
+    if (ssAmbiencePeekTimer) { clearTimeout(ssAmbiencePeekTimer); ssAmbiencePeekTimer = null; }
+    if (ssDanceTimer) { clearTimeout(ssDanceTimer); ssDanceTimer = null; }
+  }
+  function schedulePeek() {
+    const wait = 4000 + Math.random() * 4000;
+    ssAmbiencePeekTimer = setTimeout(() => {
+      spawnSixSevenPeek();
+      schedulePeek();
+    }, wait);
+  }
+  function spawnSixSevenPeek() {
+    if (gameType !== 'sixseven') return;
+    if (document.hidden) return;
+    const layer = $('ss-ambience');
+    if (!layer) return;
+    const sides = ['top', 'bottom', 'left', 'right'];
+    const side = sides[Math.floor(Math.random() * sides.length)];
+    const isSeven = Math.random() < 0.5;
+    const peek = document.createElement('div');
+    peek.className = `ss-peek ${side}${isSeven ? ' seven' : ''}`;
+    peek.textContent = isSeven ? '7!' : '6!';
+    const pos = 15 + Math.random() * 70;
+    if (side === 'top' || side === 'bottom') peek.style.left = pos + '%';
+    if (side === 'left' || side === 'right') peek.style.top = pos + '%';
+    layer.appendChild(peek);
+    // Audio cue — alternate 6 and 7 tones for variety
+    if (isSeven) MochiSounds.tap7 && MochiSounds.tap7();
+    else MochiSounds.tap6 && MochiSounds.tap6();
+    if (navigator.vibrate) navigator.vibrate(20);
+    setTimeout(() => peek.remove(), 2000);
+  }
+  function scheduleDance() {
+    const wait = 10000 + Math.random() * 6000;
+    ssDanceTimer = setTimeout(() => {
+      triggerSixSevenDance();
+      scheduleDance();
+    }, wait);
+  }
+  function triggerSixSevenDance() {
+    if (gameType !== 'sixseven') return;
+    if (document.hidden) return;
+    // 1) Make the character DANCE for ~2.5s
+    document.querySelectorAll('.ss-character').forEach((c) => {
+      c.classList.remove('dancing');
+      void c.offsetWidth;
+      c.classList.add('dancing');
+      setTimeout(() => c.classList.remove('dancing'), 2500);
+    });
+    // 2) Full-screen colored flash + centerpiece
+    const flash = document.createElement('div');
+    flash.className = 'ss-dance-flash';
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 1900);
+    const center = document.createElement('div');
+    center.className = 'ss-dance-centerpiece';
+    center.textContent = '67!';
+    document.body.appendChild(center);
+    setTimeout(() => center.remove(), 1900);
+    // 3) Audio fanfare: 67 chant + drum + swing whoosh
+    MochiSounds.sixSevenChant && MochiSounds.sixSevenChant();
+    setTimeout(() => MochiSounds.swingWhoosh && MochiSounds.swingWhoosh(), 200);
+    // 4) Vibrate
+    if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 100]);
+    // 5) Burst of edge peeks for spectacle
+    for (let i = 0; i < 4; i++) {
+      setTimeout(spawnSixSevenPeek, i * 200);
+    }
+  }
+  function shakeSixSevenScreen() {
+    document.body.classList.remove('ss-shake');
+    void document.body.offsetWidth;
+    document.body.classList.add('ss-shake');
+    setTimeout(() => document.body.classList.remove('ss-shake'), 550);
+  }
+
   function updateSixSevenHud(score, streak) {
     if (typeof score === 'number') {
       ssMyScore = score;
@@ -787,6 +878,11 @@
     // question/result screens with peeks + groans (separate from the in-sprint
     // jumpscares — this one runs the WHOLE game)
     if (gameType === 'zombie') startZombieAmbience();
+    // 6-7 SWING engagement layer — ambient peeks + periodic dance moments
+    if (gameType === 'sixseven') {
+      if (window.unlockAudio) window.unlockAudio();
+      startSixSevenAmbience();
+    }
     // Color Clash: after the countdown ends, drop straight into the play screen
     if (gameType === 'color-clash') {
       setTimeout(() => {
@@ -961,8 +1057,12 @@
         }
         if (correct && sixseven.streak === 6 && window.Rewards) {
           window.Rewards.show({ tier: 'epic', icon: '⚡', text: '¡Combo x3!', duration: 1800 });
+          shakeSixSevenScreen();
+          // Trigger a dance moment on the x3 combo unlock
+          triggerSixSevenDance();
         } else if (correct && sixseven.streak >= 3 && window.Rewards && sixseven.streak % 3 === 0) {
           window.Rewards.combo(sixseven.streak);
+          if (sixseven.streak >= 9) shakeSixSevenScreen();
         }
       }
       // Re-enable buttons so the next question arrives clean
@@ -4438,6 +4538,7 @@
     MochiSounds.stopMusic();
     Dralingo.stopRandom();
     stopZombieAmbience();
+    stopSixSevenAmbience();
     stopLobbyFlappy();
     if (mashTimerInterval) clearInterval(mashTimerInterval);
     if (csWalkTimerInterval) clearInterval(csWalkTimerInterval);

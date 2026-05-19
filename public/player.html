@@ -13,11 +13,11 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260518c">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260518d">
   <link rel="stylesheet" href="/css/conquest.css?v=20260518b">
-  <link rel="stylesheet" href="/css/sixseven.css?v=20260518c">
+  <link rel="stylesheet" href="/css/sixseven.css?v=20260518d">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
-  <link rel="stylesheet" href="/css/family.css?v=20260518c">
+  <link rel="stylesheet" href="/css/family.css?v=20260518d">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -28,6 +28,9 @@
   <!-- Zombie-game ambience layer: hovers above EVERY screen during zombie mode.
        Spooky peeks, edge glows, occasional shadow hands. Hidden by default. -->
   <div id="zombie-ambience" class="zombie-ambience hidden"></div>
+  <!-- 6-7 SWING ambient peek layer (covers the whole viewport like the
+       zombie ambience but with cheerful "67!" pop-ins from the edges). -->
+  <div id="ss-ambience" class="ss-ambience hidden"></div>
 
   <!-- JOIN -->
   <div id="screen-join" class="container" style="justify-content:center; align-items:center;">
@@ -443,6 +446,8 @@
           <div class="ss-c-eye right"></div>
           <div class="ss-c-six">6</div>
           <div class="ss-c-seven">7</div>
+          <div class="ss-c-arm left">🤙</div>
+          <div class="ss-c-arm right">🤙</div>
           <div class="ss-c-foot left"></div>
           <div class="ss-c-foot right"></div>
         </div>
@@ -468,10 +473,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260518c"></script>
+  <script src="/js/sounds.js?v=20260518d"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/rewards.js?v=20260518c"></script>
-  <script src="/js/player.js?v=20260518c"></script>
+  <script src="/js/rewards.js?v=20260518d"></script>
+  <script src="/js/player.js?v=20260518d"></script>
 </body>
 </html>
