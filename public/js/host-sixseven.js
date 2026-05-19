@@ -27,48 +27,72 @@
   });
   document.addEventListener('click', () => window.unlockAudio && window.unlockAudio(), { once: true });
 
-  // === ASSET LOADER === Tries multiple paths for the user-supplied 6-7
-  // character image so any common filename works. First one that loads wins;
-  // if all fail, the CSS-built fallback character shows automatically.
-  // Console-logs the result so you can see WHY the image isn't appearing.
-  function loadSixSevenAsset(imgEl, cssFallbackEl) {
-    if (!imgEl) return;
-    // Ordered most-likely-first so the first request hits the file on disk.
-    // Confirmed in git: /assets/67.png is what the teacher saved.
+  // === 67 JUMPSCARE LOADER === The user's PNG character art is no longer
+  // the central icon — it now appears RARELY as a full-screen dance moment.
+  // Detect which file is available on the server, then spawn a big dramatic
+  // overlay every ~30s and on combo x3+ moments. Background-removed PNG
+  // (67-transparent.png) takes priority over the original so the dancing
+  // character isn't trapped in a rectangle.
+  let ssJumpscareUrl = null;
+  function detectSixSevenAsset() {
     const candidates = [
+      '/assets/67-transparent.png',  // bg-removed version — preferred
       '/assets/67.png',
       '/assets/67.jpg',
       '/assets/sixseven-character.png',
       '/assets/sixseven-character.jpg',
-      '/assets/sixseven-character.jpeg',
-      '/assets/sixseven-character.webp',
       '/assets/sixseven.png',
-      '/assets/sixseven.jpg',
       '/assets/six-seven.png',
-      '/assets/six-seven.jpg',
     ];
     let idx = 0;
     function tryNext() {
       if (idx >= candidates.length) {
-        // All paths exhausted — show the CSS fallback
-        imgEl.classList.add('ss-img-missing');
-        if (cssFallbackEl) cssFallbackEl.classList.add('ss-fallback-on');
-        console.warn('[6-7] No character image found in /assets/. ' +
-          'To use your own art, save it as ANY of: ' + candidates.join(', '));
+        console.warn('[6-7] No jumpscare image in /assets/. Tried: ' + candidates.join(', '));
         return;
       }
       const url = candidates[idx++];
-      imgEl.onload = () => {
-        imgEl.dataset.loaded = 'true';
-        console.log('[6-7] Loaded character image: ' + url);
+      const img = new Image();
+      img.onload = () => {
+        ssJumpscareUrl = url;
+        console.log('[6-7] Jumpscare image ready: ' + url);
       };
-      imgEl.onerror = () => tryNext();
-      imgEl.src = url;
+      img.onerror = () => tryNext();
+      img.src = url;
     }
     tryNext();
   }
-  loadSixSevenAsset(document.getElementById('ss-character-img'),
-                    document.getElementById('ss-character'));
+  detectSixSevenAsset();
+
+  // Spawn the full-screen 67 dance jumpscare. Lives ~2.2s, then auto-removes.
+  // Never stacks — if a previous one is still on screen, we skip.
+  function spawnSixSevenJumpscare() {
+    if (!ssJumpscareUrl) return;
+    if (document.querySelector('.ss-jumpscare')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'ss-jumpscare';
+    const img = document.createElement('img');
+    img.src = ssJumpscareUrl;
+    img.alt = '67';
+    img.draggable = false;
+    wrap.appendChild(img);
+    document.body.appendChild(wrap);
+    MochiSounds.sixSevenChant && MochiSounds.sixSevenChant();
+    setTimeout(() => MochiSounds.swingWhoosh && MochiSounds.swingWhoosh(), 80);
+    setTimeout(() => wrap.remove(), 2300);
+  }
+  // Periodic surprise: 25-45s between jumpscares — rare enough to feel
+  // special, frequent enough to keep energy high.
+  let ssHostJumpscareTimer = null;
+  function startHostJumpscareLoop() {
+    if (ssHostJumpscareTimer) clearTimeout(ssHostJumpscareTimer);
+    const tick = () => {
+      ssHostJumpscareTimer = setTimeout(() => {
+        if (!gameOver) spawnSixSevenJumpscare();
+        tick();
+      }, 25000 + Math.random() * 20000);
+    };
+    tick();
+  }
 
   socket.emit('host:create', { gameType: 'sixseven' }, ({ pin: p }) => {
     pin = p;
@@ -151,6 +175,7 @@
           startFloatLoop();
           startSwayLoop();
           startHostAmbientDance();
+          startHostJumpscareLoop();
           setBanner('🤙 ¡SIX SEVEN! 🤙');
         }, 1000);
       }
@@ -179,10 +204,12 @@
       if (streak === 3)  setBanner('🔥 ¡COMBO x2!');
       if (streak === 6)  setBanner('💥 ¡COMBO x3!');
       if (streak === 10) setBanner('⚡ ¡RACHA LEGENDARIA!');
-      // Host fanfare on x3+ combos — dance + flash + shake
+      // Host fanfare on x3+ combos — dance + flash + shake. On x3 combo
+      // (streak=6) the 67 character jumpscare also fires for max impact.
       if (streak >= 6) {
         triggerHostDance();
         shakeHostScreen();
+        spawnSixSevenJumpscare();
       } else if (streak === 3) {
         shakeHostScreen();
       }
@@ -236,6 +263,7 @@
     if (timerInterval) clearInterval(timerInterval);
     if (floatTimer) { clearInterval(floatTimer); floatTimer = null; }
     if (hostDanceTimer) { clearTimeout(hostDanceTimer); hostDanceTimer = null; }
+    if (ssHostJumpscareTimer) { clearTimeout(ssHostJumpscareTimer); ssHostJumpscareTimer = null; }
     gameOver = true;
     MochiSounds.stopMusic && MochiSounds.stopMusic();
     showScreen('win');
