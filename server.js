@@ -713,28 +713,30 @@ function broadcast(pin) {
 }
 
 // 6-7 SWING math generator — returns a problem whose answer is always 6 or 7.
-// Variety: addition, subtraction, "how many" visual counts, "which is bigger".
-// Difficulty creeps up with queueIdx so kids don't get bored.
+// 8 question flavors, including HSK1 Chinese numerals (一二三...十) and pinyin
+// recognition so kids practice the language alongside the math.
+const CQ_NUM_ZH    = ['零','一','二','三','四','五','六','七','八','九','十'];
+const CQ_NUM_PINYIN = ['líng','yī','èr','sān','sì','wǔ','liù','qī','bā','jiǔ','shí'];
 function generateSixSevenProblem(queueIdx) {
   const ans = Math.random() < 0.5 ? 6 : 7;
-  const kind = Math.floor(Math.random() * 5);
+  const kind = Math.floor(Math.random() * 8);
   let text = '';
   if (kind === 0) {
-    // Addition (small operands)
+    // Addition (Arabic numerals)
     const b = Math.floor(Math.random() * (ans + 1));
     const a = ans - b;
     text = `${a} + ${b} = ?`;
   } else if (kind === 1) {
-    // Subtraction
-    const big = ans + 1 + Math.floor(Math.random() * 8);   // 7..14
+    // Subtraction (Arabic)
+    const big = ans + 1 + Math.floor(Math.random() * 8);
     text = `${big} − ${big - ans} = ?`;
   } else if (kind === 2) {
-    // Visual count — emojis the player must count
-    const choices = ['⭐', '🍎', '🐱', '🐶', '🍦', '🎈', '🏀', '🐟'];
+    // Visual count
+    const choices = ['⭐', '🍎', '🐱', '🐶', '🍦', '🎈', '🏀', '🐟', '🐲', '🤙'];
     const icon = choices[Math.floor(Math.random() * choices.length)];
     text = `¿Cuántos? ${icon.repeat(ans)}`;
   } else if (kind === 3) {
-    // Doubles / halves around 6 and 7
+    // Doubles / halves
     if (ans === 6) {
       const variants = ['3 + 3 = ?', '12 ÷ 2 = ?', '2 × 3 = ?', '1 + 5 = ?'];
       text = variants[Math.floor(Math.random() * variants.length)];
@@ -742,15 +744,29 @@ function generateSixSevenProblem(queueIdx) {
       const variants = ['3 + 4 = ?', '14 ÷ 2 = ?', '1 + 6 = ?', '5 + 2 = ?'];
       text = variants[Math.floor(Math.random() * variants.length)];
     }
-  } else {
-    // "Which is bigger" — answer represented as the bigger of (ans, other)
+  } else if (kind === 4) {
+    // Mayor / menor
     const other = ans === 6 ? (Math.random() < 0.5 ? 5 : 4) : (Math.random() < 0.5 ? 6 : 8);
-    if (ans > other) {
-      text = `¿Cuál es mayor: ${ans} o ${other}?`;
+    if (ans > other)  text = `¿Cuál es mayor: ${ans} o ${other}?`;
+    else              text = `¿Cuál es menor: ${other} o ${ans}?`;
+  } else if (kind === 5) {
+    // CHINESE: "¿Qué número es 六/七?" — recognize the Chinese character
+    text = `¿Qué número es ${CQ_NUM_ZH[ans]}?`;
+  } else if (kind === 6) {
+    // CHINESE: pinyin recognition — "liù" / "qī" / "sān+sān"
+    const flip = Math.random() < 0.5;
+    if (flip) {
+      text = `${CQ_NUM_PINYIN[ans]} = ?`;
     } else {
-      // make sure the displayed answer is still 6 or 7 — swap the framing
-      text = `¿Cuál es menor: ${other} o ${ans}?`;
+      // Simple Chinese addition using characters
+      const b = Math.floor(Math.random() * (ans + 1));
+      const a = ans - b;
+      text = `${CQ_NUM_ZH[a]} + ${CQ_NUM_ZH[b]} = ?`;
     }
+  } else {
+    // CHINESE subtraction: 十 − 三 = 七
+    const big = ans + 1 + Math.floor(Math.random() * 4);  // 7..10
+    text = `${CQ_NUM_ZH[big]} − ${CQ_NUM_ZH[big - ans]} = ?`;
   }
   return { text, ans };
 }

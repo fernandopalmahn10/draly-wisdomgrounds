@@ -107,6 +107,7 @@
           startTimer();
           startFloatLoop();
           startSwayLoop();
+          startHostAmbientDance();
           setBanner('🤙 ¡SIX SEVEN! 🤙');
         }, 1000);
       }
@@ -135,12 +136,62 @@
       if (streak === 3)  setBanner('🔥 ¡COMBO x2!');
       if (streak === 6)  setBanner('💥 ¡COMBO x3!');
       if (streak === 10) setBanner('⚡ ¡RACHA LEGENDARIA!');
+      // Host fanfare on x3+ combos — dance + flash + shake
+      if (streak >= 6) {
+        triggerHostDance();
+        shakeHostScreen();
+      } else if (streak === 3) {
+        shakeHostScreen();
+      }
     }
   });
+
+  // === Host engagement: same dance / shake as the player but on the big screen ===
+  function triggerHostDance() {
+    const ch = $('ss-character');
+    if (ch) {
+      ch.classList.remove('dancing');
+      void ch.offsetWidth;
+      ch.classList.add('dancing');
+      setTimeout(() => ch.classList.remove('dancing'), 2500);
+    }
+    const flash = document.createElement('div');
+    flash.className = 'ss-dance-flash';
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 1900);
+    const center = document.createElement('div');
+    center.className = 'ss-dance-centerpiece';
+    center.textContent = '67!';
+    document.body.appendChild(center);
+    setTimeout(() => center.remove(), 1900);
+    MochiSounds.sixSevenChant && MochiSounds.sixSevenChant();
+  }
+  function shakeHostScreen() {
+    document.body.classList.remove('ss-shake');
+    void document.body.offsetWidth;
+    document.body.classList.add('ss-shake');
+    setTimeout(() => document.body.classList.remove('ss-shake'), 550);
+  }
+  // Also run periodic ambient dance bursts on the host every 12-20s so the
+  // arena always feels alive even if no one is comboing.
+  let hostDanceTimer = null;
+  function startHostAmbientDance() {
+    if (hostDanceTimer) clearTimeout(hostDanceTimer);
+    const tick = () => {
+      hostDanceTimer = setTimeout(() => {
+        if (!gameOver) {
+          if (Math.random() < 0.55) triggerHostDance();
+        }
+        tick();
+      }, 12000 + Math.random() * 8000);
+    };
+    tick();
+  }
 
   socket.on('game-end', (data) => {
     if (timerInterval) clearInterval(timerInterval);
     if (floatTimer) { clearInterval(floatTimer); floatTimer = null; }
+    if (hostDanceTimer) { clearTimeout(hostDanceTimer); hostDanceTimer = null; }
     gameOver = true;
     MochiSounds.stopMusic && MochiSounds.stopMusic();
     showScreen('win');
