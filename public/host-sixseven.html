@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>6-7 SWING 🤙 · Host</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Press+Start+2P&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+  <link rel="stylesheet" href="/css/sixseven.css?v=20260518c">
+</head>
+<body class="ss-bg">
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+
+  <!-- LOBBY -->
+  <div id="screen-lobby" class="container ss-lobby">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div class="ss-title-pixel">6 — 7 SWING 🤙</div>
+      <div style="color:#1a3a5a; font-weight:900; letter-spacing:0.1em; margin-top:8px;">PIN</div>
+      <div class="pin-display ss-pin" id="pin-display">····</div>
+      <div style="color:#1a3a5a; font-size:0.9rem;">
+        Tus jugadores entran en <span id="join-url" style="color:#0a4a6a; font-weight:800;">esta URL</span>
+      </div>
+    </div>
+
+    <div class="card ss-card" style="margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div style="font-size:2rem;">🧮</div>
+        <div style="flex:1;">
+          <div style="font-size:0.75rem; color:#1a3a5a; letter-spacing:0.15em; text-transform:uppercase;">Modo</div>
+          <div style="font-weight:800; font-size:1.15rem;">Matemáticas 6 vs 7</div>
+          <div style="color:#1a3a5a; font-size:0.85rem;">Problemas auto-generados · sin set necesario</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="location.href='/'">← Inicio</button>
+      </div>
+      <div class="duration-control">
+        <span>⏱ Duración</span>
+        <input type="range" id="duration-slider" min="60" max="300" step="30" value="120">
+        <span class="duration-value" id="duration-value">2m</span>
+      </div>
+    </div>
+
+    <div class="host-grid">
+      <div class="team-panel team-red ss-team-red">
+        <div class="team-header">
+          <div class="team-mascot ss-six">6</div>
+          <div>
+            <div class="team-name">Equipo 6</div>
+            <div style="color:#1a3a5a; font-size:0.85rem;">¡SIX!</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-red"></div>
+      </div>
+      <div class="team-panel team-gold ss-team-gold">
+        <div class="team-header">
+          <div class="team-mascot ss-seven">7</div>
+          <div>
+            <div class="team-name">Equipo 7</div>
+            <div style="color:#1a3a5a; font-size:0.85rem;">¡SEVEN!</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-gold"></div>
+      </div>
+    </div>
+
+    <p style="text-align:center; color:#1a3a5a; font-size:0.85rem; margin-top:12px;">
+      Toca el chip de un jugador para cambiar de equipo
+    </p>
+
+    <div class="controls-panel">
+      <div class="controls-row" style="justify-content:center;">
+        <button class="btn btn-ghost" id="balance-btn">⚖️ Equilibrar</button>
+        <button class="btn btn-jade" id="start-btn" disabled>▶️ ¡A swingear!</button>
+      </div>
+    </div>
+
+    <div class="card ss-card" style="margin-top:18px;">
+      <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se juega</div>
+      <ol style="color:#1a3a5a; font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
+        <li>Cada respuesta tiene como resultado <strong>6 o 7</strong>.</li>
+        <li>En el teléfono, dos botones: <strong>6</strong> 🟦 y <strong>7</strong> 🟪. Toca el correcto.</li>
+        <li>Cuanto más rápido respondes, más puntos. ¡Combos x2, x3 con racha!</li>
+        <li>El personaje 6-7 <strong>se balancea</strong> hacia el lado que va ganando.</li>
+        <li>Equipo con más puntos al final gana 🏆.</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="screen-countdown" class="hidden countdown-overlay">
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <!-- ACTIVE — the swinging arena -->
+  <div id="screen-active" class="hidden ss-container">
+    <div class="sticky-pin">
+      <span class="sticky-pin-label">PIN</span>
+      <span class="sticky-pin-value" id="active-pin-display">····</span>
+    </div>
+
+    <div class="ss-topbar">
+      <div class="ss-team six">
+        <span class="ss-team-num">6</span>
+        <span class="ss-team-label">SIX</span>
+        <span class="ss-team-score" id="score-red">0</span>
+      </div>
+      <div class="ss-time"><span id="timer-display">2:00</span></div>
+      <div class="ss-team seven">
+        <span class="ss-team-score" id="score-gold">0</span>
+        <span class="ss-team-label">SEVEN</span>
+        <span class="ss-team-num">7</span>
+      </div>
+    </div>
+
+    <!-- The arena — giant swinging 6-7 character + floating numbers everywhere -->
+    <div class="ss-arena" id="ss-arena">
+      <!-- Floating ambient 6s and 7s -->
+      <div class="ss-float-layer" id="ss-float-layer"></div>
+
+      <!-- The big swinging character -->
+      <div class="ss-character-wrap" id="ss-character-wrap">
+        <div class="ss-character" id="ss-character">
+          <div class="ss-c-eye left"></div>
+          <div class="ss-c-eye right"></div>
+          <div class="ss-c-six">6</div>
+          <div class="ss-c-seven">7</div>
+          <div class="ss-c-arm left">🤙</div>
+          <div class="ss-c-arm right">🤙</div>
+          <div class="ss-c-foot left"></div>
+          <div class="ss-c-foot right"></div>
+        </div>
+        <div class="ss-character-shadow"></div>
+      </div>
+
+      <!-- Tap-bursts that fly up when players score -->
+      <div class="ss-tap-burst-layer" id="ss-tap-burst-layer"></div>
+
+      <!-- Banner for events -->
+      <div class="ss-banner" id="ss-banner">¡SIX SEVEN!</div>
+    </div>
+
+    <div style="text-align:center; padding:6px;">
+      <button class="btn btn-ghost btn-sm" id="end-now-btn">🛑 Terminar</button>
+    </div>
+  </div>
+
+  <!-- WIN -->
+  <div id="screen-win" class="hidden container">
+    <div class="win-screen">
+      <div id="win-emoji" style="font-size:7rem;">🤙</div>
+      <div class="winner-banner" id="win-banner">¡Ganador!</div>
+      <div class="final-scores">
+        <div><span class="red"><span id="final-red">0</span> pts</span></div>
+        <div style="color:var(--ink-dim);">vs</div>
+        <div><span class="gold"><span id="final-gold">0</span> pts</span></div>
+      </div>
+      <div class="win-narration" id="win-narration"></div>
+      <div class="leaderboard" id="leaderboard"></div>
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Inicio</button>
+        <button class="btn btn-jade" id="play-again-btn">🔄 Otra ronda</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js?v=20260518c"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/dralingo.js"></script>
+  <script src="/js/host-sixseven.js?v=20260518c"></script>
+</body>
+</html>

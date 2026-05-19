@@ -103,6 +103,28 @@
         <button class="btn btn-red btn-xl game-card-play">▶ ¡A girar el dado!</button>
       </div>
 
+      <div class="game-card" id="card-sixseven">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🤙</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">6-7 Swing</div>
+            <div class="game-tile-badge new">¡Nuevo!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🤙 ¡SIX SEVEN! — Mini-juego viral de matemáticas. Cada respuesta es
+          6 o 7. Toca el botón correcto rápido. El personaje gigante se
+          balancea con tu respuesta. ¡Combos x2, x3 con racha! Sin set
+          necesario — problemas generados automáticamente.
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Math</span>
+          <span class="tag">VS</span>
+          <span class="tag">Speed</span>
+        </div>
+        <button class="btn btn-red btn-xl game-card-play">▶ ¡A swingear!</button>
+      </div>
+
       <div class="game-card" id="card-conquest">
         <div class="game-card-header">
           <div class="game-card-emoji">🏯</div>
@@ -262,6 +284,10 @@
       document.querySelector('#card-conquest .game-card-play').onclick = () => {
         location.href = '/host-conquest.html?setId=' + encodeURIComponent(setId);
       };
+      // 6-7 SWING needs no set — its math problems are generated server-side
+      document.querySelector('#card-sixseven .game-card-play').onclick = () => {
+        location.href = '/host-sixseven.html';
+      };
     } else {
       document.getElementById('set-name').textContent = 'elige un juego, luego una serie';
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
@@ -294,6 +320,10 @@
       };
       document.querySelector('#card-conquest .game-card-play').onclick = () => {
         location.href = '/sets.html?game=conquest';
+      };
+      // 6-7 SWING — skip sets entirely, jump straight to host
+      document.querySelector('#card-sixseven .game-card-play').onclick = () => {
+        location.href = '/host-sixseven.html';
       };
     }
 

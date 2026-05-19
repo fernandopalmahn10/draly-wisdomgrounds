@@ -712,9 +712,66 @@ function broadcast(pin) {
   }, Math.max(20, wait));
 }
 
+// 6-7 SWING math generator — returns a problem whose answer is always 6 or 7.
+// Variety: addition, subtraction, "how many" visual counts, "which is bigger".
+// Difficulty creeps up with queueIdx so kids don't get bored.
+function generateSixSevenProblem(queueIdx) {
+  const ans = Math.random() < 0.5 ? 6 : 7;
+  const kind = Math.floor(Math.random() * 5);
+  let text = '';
+  if (kind === 0) {
+    // Addition (small operands)
+    const b = Math.floor(Math.random() * (ans + 1));
+    const a = ans - b;
+    text = `${a} + ${b} = ?`;
+  } else if (kind === 1) {
+    // Subtraction
+    const big = ans + 1 + Math.floor(Math.random() * 8);   // 7..14
+    text = `${big} − ${big - ans} = ?`;
+  } else if (kind === 2) {
+    // Visual count — emojis the player must count
+    const choices = ['⭐', '🍎', '🐱', '🐶', '🍦', '🎈', '🏀', '🐟'];
+    const icon = choices[Math.floor(Math.random() * choices.length)];
+    text = `¿Cuántos? ${icon.repeat(ans)}`;
+  } else if (kind === 3) {
+    // Doubles / halves around 6 and 7
+    if (ans === 6) {
+      const variants = ['3 + 3 = ?', '12 ÷ 2 = ?', '2 × 3 = ?', '1 + 5 = ?'];
+      text = variants[Math.floor(Math.random() * variants.length)];
+    } else {
+      const variants = ['3 + 4 = ?', '14 ÷ 2 = ?', '1 + 6 = ?', '5 + 2 = ?'];
+      text = variants[Math.floor(Math.random() * variants.length)];
+    }
+  } else {
+    // "Which is bigger" — answer represented as the bigger of (ans, other)
+    const other = ans === 6 ? (Math.random() < 0.5 ? 5 : 4) : (Math.random() < 0.5 ? 6 : 8);
+    if (ans > other) {
+      text = `¿Cuál es mayor: ${ans} o ${other}?`;
+    } else {
+      // make sure the displayed answer is still 6 or 7 — swap the framing
+      text = `¿Cuál es menor: ${other} o ${ans}?`;
+    }
+  }
+  return { text, ans };
+}
+
 function nextQuestionFor(game, playerId) {
   const p = game.players[playerId];
   if (!p || !game.questions.length) return null;
+
+  // 6-7 SWING: generate a fresh math problem each call, never reuse
+  if (game.gameType === 'sixseven') {
+    p.queueIdx = (p.queueIdx || 0) + 1;
+    const { text, ans } = generateSixSevenProblem(p.queueIdx);
+    // Answers are always ["6", "7"] in that order — players tap the matching button
+    const answers = ['6', '7'];
+    const correctIdx = ans === 6 ? 0 : 1;
+    const qid = `q-67-${p.queueIdx}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    p.currentQ = { qid, correctIdx, text, answers };
+    p.lastQuestionAt = Date.now();
+    return { qid, text, answers, gameMode: 'sixseven' };
+  }
+
   const q = game.questions[p.queueIdx % game.questions.length];
   p.queueIdx++;
   const shuffled = [...q.answers];
@@ -1008,7 +1065,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -1021,6 +1078,7 @@ io.on('connection', (socket) => {
       type === 'zombie'       ? 240 :
       type === 'family'       ? 300 :
       type === 'conquest'     ? 300 :
+      type === 'sixseven'     ? 120 :
       60;
     let grid = null;
     let vendors = null;
@@ -1046,6 +1104,18 @@ io.on('connection', (socket) => {
       grid,
       vendors
     };
+    // 6-7 SWING — math game with server-generated questions. No vocab set
+    // needed. We seed questions with a single stub so questionsLoaded > 0
+    // passes the start-button check; nextQuestionFor() returns a freshly
+    // generated math problem on every call (answer is always 6 or 7).
+    if (type === 'sixseven') {
+      games[pin].questions = [{
+        text: '__sixseven_stub__',
+        correct: '6',
+        answers: ['6', '7'],
+      }];
+      games[pin].setTitle = '6-7 Swing 🤙';
+    }
     currentPin = pin;
     role = 'host';
     socket.join(pin);
@@ -1712,6 +1782,9 @@ io.on('connection', (socket) => {
     const cqData = p.currentQ;
     const correct = cqData.correctIdx === choiceIdx;
     const correctText = cqData.answers[cqData.correctIdx];
+    // Stash the player's actual TAP (6 or 7 for sixseven) for the per-game
+    // branches below — currentQ is nulled before those branches run.
+    p._lastChoice = cqData.answers ? cqData.answers[choiceIdx] : null;
     p.currentQ = null;
 
     if (g.gameType === 'flappy') {
@@ -1882,6 +1955,44 @@ io.on('connection', (socket) => {
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
+    } else if (g.gameType === 'sixseven') {
+      // 6-7 SWING — math game with combo + speed bonus. Correct answer:
+      // +1 base, +1 if their TAP was within 2.5s of question arrival (speed).
+      // Combo multiplier scales the per-tap bump from streaks of 3+.
+      if (correct) {
+        const reactionMs = Date.now() - (p.lastQuestionAt || 0);
+        p.ssStreak = (p.ssStreak || 0) + 1;
+        const speedBonus = reactionMs < 2500 ? 1 : 0;
+        // Combo multiplier: 1× under 3, 2× at 3-5, 3× at 6+
+        const mult = p.ssStreak >= 6 ? 3 : p.ssStreak >= 3 ? 2 : 1;
+        const gained = (1 + speedBonus) * mult;
+        p.score = (p.score || 0) + gained;
+        g.teamScores[p.team] = (g.teamScores[p.team] || 0) + gained;
+        const chosen = p._lastChoice || '6';
+        io.to(socket.id).emit('answer-result', {
+          correct: true,
+          correctText,
+          sixseven: {
+            chosen, streak: p.ssStreak, mult, gained, speedBonus,
+          },
+        });
+        io.to(pin).emit('ss:tap', {
+          team: p.team, choice: chosen, gained,
+          streak: p.ssStreak, teamScores: g.teamScores,
+        });
+      } else {
+        p.ssStreak = 0;
+        const chosen = p._lastChoice || '6';
+        io.to(socket.id).emit('answer-result', {
+          correct: false,
+          correctText,
+          sixseven: { chosen, streak: 0, mult: 1, gained: 0 },
+        });
+        io.to(pin).emit('ss:tap', {
+          team: p.team, choice: chosen, gained: 0, streak: 0,
+          teamScores: g.teamScores,
+        });
+      }
     } else if (g.gameType === 'conquest') {
       // Reinos en Guerra — correct answer captures one tile for the player's
       // team. Wrong answer = no capture, next question normally. The server
@@ -2007,6 +2118,9 @@ io.on('connection', (socket) => {
     } else if (g.gameType === 'conquest') {
       // Brief celebration window so the capture animation has time to play
       nextDelay = correct ? 1800 : 1400;
+    } else if (g.gameType === 'sixseven') {
+      // Snappy rhythm — fast cadence so the swing feels continuous
+      nextDelay = correct ? 600 : 800;
     } else {
       nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
     }
