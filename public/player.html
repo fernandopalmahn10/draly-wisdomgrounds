@@ -13,11 +13,11 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260518e">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260518f">
   <link rel="stylesheet" href="/css/conquest.css?v=20260518b">
-  <link rel="stylesheet" href="/css/sixseven.css?v=20260518e">
+  <link rel="stylesheet" href="/css/sixseven.css?v=20260518f">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
-  <link rel="stylesheet" href="/css/family.css?v=20260518e">
+  <link rel="stylesheet" href="/css/family.css?v=20260518f">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -441,15 +441,9 @@
     <div class="ss-problem" id="ss-problem">3 + 3 = ?</div>
     <div class="ss-player-character">
       <div class="ss-character-wrap" id="ss-player-character-wrap">
-        <!-- PRIMARY: user-supplied PNG at /assets/sixseven-character.png.
-             FALLBACK: CSS-built character below if the PNG isn't there yet. -->
-        <img
-          class="ss-character-img"
-          id="ss-player-character-img"
-          src="/assets/sixseven-character.png"
-          alt="6-7"
-          onerror="this.classList.add('ss-img-missing'); this.parentElement.querySelector('.ss-character').classList.add('ss-fallback-on');"
-        >
+        <!-- JS multi-format loader (see player.js → loadSixSevenAsset) tries
+             multiple paths in sequence; CSS character below is the fallback. -->
+        <img class="ss-character-img" id="ss-player-character-img" alt="6-7" data-loaded="false">
         <div class="ss-character ss-character-css">
           <div class="ss-c-eye left"></div>
           <div class="ss-c-eye right"></div>
@@ -482,10 +476,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260518e"></script>
+  <script src="/js/sounds.js?v=20260518f"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/rewards.js?v=20260518e"></script>
-  <script src="/js/player.js?v=20260518e"></script>
+  <script src="/js/rewards.js?v=20260518f"></script>
+  <script src="/js/player.js?v=20260518f"></script>
 </body>
 </html>

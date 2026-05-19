@@ -27,6 +27,47 @@
   });
   document.addEventListener('click', () => window.unlockAudio && window.unlockAudio(), { once: true });
 
+  // === ASSET LOADER === Tries multiple paths for the user-supplied 6-7
+  // character image so any common filename works. First one that loads wins;
+  // if all fail, the CSS-built fallback character shows automatically.
+  // Console-logs the result so you can see WHY the image isn't appearing.
+  function loadSixSevenAsset(imgEl, cssFallbackEl) {
+    if (!imgEl) return;
+    const candidates = [
+      '/assets/sixseven-character.png',
+      '/assets/sixseven-character.jpg',
+      '/assets/sixseven-character.jpeg',
+      '/assets/sixseven-character.webp',
+      '/assets/sixseven.png',
+      '/assets/sixseven.jpg',
+      '/assets/six-seven.png',
+      '/assets/six-seven.jpg',
+      '/assets/67.png',
+      '/assets/67.jpg',
+    ];
+    let idx = 0;
+    function tryNext() {
+      if (idx >= candidates.length) {
+        // All paths exhausted — show the CSS fallback
+        imgEl.classList.add('ss-img-missing');
+        if (cssFallbackEl) cssFallbackEl.classList.add('ss-fallback-on');
+        console.warn('[6-7] No character image found in /assets/. ' +
+          'To use your own art, save it as ANY of: ' + candidates.join(', '));
+        return;
+      }
+      const url = candidates[idx++];
+      imgEl.onload = () => {
+        imgEl.dataset.loaded = 'true';
+        console.log('[6-7] Loaded character image: ' + url);
+      };
+      imgEl.onerror = () => tryNext();
+      imgEl.src = url;
+    }
+    tryNext();
+  }
+  loadSixSevenAsset(document.getElementById('ss-character-img'),
+                    document.getElementById('ss-character'));
+
   socket.emit('host:create', { gameType: 'sixseven' }, ({ pin: p }) => {
     pin = p;
     $('pin-display').textContent = p;

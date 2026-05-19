@@ -716,7 +716,10 @@ function broadcast(pin) {
 // PINYIN-ONLY for the Chinese variants (no characters per user request).
 // 7 problem flavors with addition, subtraction, visual counting, comparisons,
 // pinyin number recognition, and pinyin-word addition/subtraction.
-const SS_NUM_PINYIN = ['líng','yī','èr','sān','sì','wǔ','liù','qī','bā','jiǔ','shí'];
+// PLAIN-ASCII pinyin (no tone marks). Tone marks can render as ?/box on some
+// Android keyboards / older browsers + are confusing for kids who can't type
+// or pronounce the tones yet at this level.
+const SS_NUM_PINYIN = ['ling','yi','er','san','si','wu','liu','qi','ba','jiu','shi'];
 function generateSixSevenProblem(queueIdx) {
   const ans = Math.random() < 0.5 ? 6 : 7;
   const kind = Math.floor(Math.random() * 7);
