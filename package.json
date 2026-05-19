@@ -19,6 +19,7 @@
     "@gltf-transform/cli": "^4.3.0",
     "@gltf-transform/core": "^4.3.0",
     "@gltf-transform/extensions": "^4.3.0",
-    "@gltf-transform/functions": "^4.3.0"
+    "@gltf-transform/functions": "^4.3.0",
+    "jimp": "^1.6.1"
   }
 }

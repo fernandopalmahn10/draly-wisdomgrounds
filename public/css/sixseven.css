@@ -163,53 +163,62 @@ body.ss-bg .win-screen { color: #1a3a5a; }
   100% { opacity: 0; transform: translateY(-100vh) rotate(-8deg); }
 }
 
-/* === USER-SUPPLIED PNG CHARACTER ===
-   Primary visual. Lives at /assets/sixseven-character.png. If that file
-   exists, this <img> shows and the CSS fallback (.ss-character-css) is
-   hidden via .ss-fallback-on (toggled on the CSS character only when img
-   fails to load). The img inherits the same swing/dance transforms as the
-   wrap, so all animations carry over. */
-.ss-character-img {
-  position: relative;
-  z-index: 5;
-  width: clamp(220px, 36vmin, 460px);
-  height: auto;
-  max-height: clamp(260px, 42vmin, 540px);
-  object-fit: contain;
-  /* The PNG character art has its own meme-style numbers floating around it,
-     so we let the wrap handle the sway and the img just rides along. */
-  animation: ss-character-bob 1.4s ease-in-out infinite alternate;
-  transform-origin: 50% 100%;
+/* === 67 JUMPSCARE — RARE FULL-SCREEN DANCE EVENT ===
+   The user's 67.png character art (with transparent background) takes over
+   the WHOLE screen as a dramatic, dancing surprise every 25-45 seconds
+   and on big combos. It's big, scaled, dances diagonally across the
+   viewport for ~2 seconds, then disappears. This is the "rare and powerful"
+   moment the teacher asked for — NOT a small rectangular icon. */
+.ss-jumpscare {
+  position: fixed;
+  inset: 0;
+  z-index: 9997;          /* Above ambience peeks (9990), below dance flash (9994) */
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.ss-jumpscare img {
+  width: min(80vw, 80vh);
+  height: auto;
+  filter: drop-shadow(0 20px 40px rgba(20, 50, 80, 0.65))
+          drop-shadow(0 0 60px rgba(46, 179, 212, 0.55));
   user-select: none;
   -webkit-user-drag: none;
-  filter: drop-shadow(0 14px 18px rgba(20, 50, 80, 0.55));
-  will-change: transform;
+  pointer-events: none;
+  will-change: transform, opacity;
   backface-visibility: hidden;
+  /* Cinematic dance trajectory: blast in from bottom-right, wobble around
+     center, spin out top-left. 2-second total beat. */
+  animation: ss-jumpscare-dance 2.1s cubic-bezier(.22, 1.0, .36, 1) forwards;
 }
-/* When the PNG is missing, .ss-img-missing hides it and the CSS fallback
-   takes over (default state: CSS character SHOWN, only hidden when img loads OK). */
-.ss-character-img.ss-img-missing { display: none; }
-
-/* Default: CSS character is HIDDEN. Shows only when the PNG fails to load
-   (the onerror handler adds .ss-fallback-on to the CSS character). This way
-   the PNG wins by default whenever it exists. */
-.ss-character-css { display: none; }
-.ss-character-css.ss-fallback-on { display: block; }
-
-/* Player-side image — smaller */
-.ss-player-character .ss-character-img {
-  width: clamp(180px, 40vw, 260px);
-  height: auto;
-  max-height: clamp(220px, 50vw, 320px);
+@keyframes ss-jumpscare-dance {
+  0%   { opacity: 0; transform: translate3d(50vw, 40vh, 0) scale(0.2) rotate(-25deg); }
+  15%  { opacity: 1; transform: translate3d(0, 0, 0) scale(1.15) rotate(8deg); }
+  30%  { transform: translate3d(-20px, -10px, 0) scale(1.0) rotate(-12deg); }
+  45%  { transform: translate3d(25px, 5px, 0) scale(1.1) rotate(10deg); }
+  60%  { transform: translate3d(-15px, -15px, 0) scale(1.05) rotate(-8deg); }
+  75%  { transform: translate3d(20px, 0, 0) scale(1.1) rotate(12deg); }
+  85%  { opacity: 1; transform: translate3d(0, -20px, 0) scale(1.05) rotate(0); }
+  100% { opacity: 0; transform: translate3d(-40vw, -60vh, 0) scale(1.4) rotate(35deg); }
+}
+/* Faint dance flash backdrop so the jumpscare feels like the screen
+   acknowledges it — radial color burst behind the figure. */
+.ss-jumpscare::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(46, 179, 212, 0.35) 0%, rgba(122, 78, 176, 0.25) 45%, transparent 75%);
+  opacity: 0;
+  animation: ss-jumpscare-bg 2.1s ease-out forwards;
+}
+@keyframes ss-jumpscare-bg {
+  0%, 100% { opacity: 0; }
+  15%, 85% { opacity: 1; }
 }
 
-/* DANCE applies to the PNG too — same animation, just scaled smaller */
-.ss-character-img.dancing {
-  animation: ss-dance 0.45s cubic-bezier(.4, 0, .25, 1) infinite alternate;
-}
-
-/* === THE CSS-BUILT FALLBACK CHARACTER === */
+/* === THE CSS-BUILT CENTRAL CHARACTER === */
 /* GPU-promoted with translate3d so the swing is buttery-smooth on tablet
    and desktop (no main-thread paints per frame). */
 .ss-character-wrap {

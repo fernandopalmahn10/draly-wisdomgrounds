@@ -380,48 +380,75 @@
       startSixSevenSwayLoop();
       startSixSevenFloats();
       loadSixSevenPlayerAsset();
+      startPlayerJumpscareLoop();
       ssButtonsBound = true;
     }
     showScreen('sixseven');
   }
 
-  // Multi-path loader for the 6-7 character image. Mirrors host-sixseven.js
-  // — tries png/jpg/jpeg/webp + a few filename variants. First success wins.
+  // 67 JUMPSCARE — the user's PNG art now appears RARELY as a full-screen
+  // dance, NOT as the central icon. Detect which file is available, then
+  // spawn the big dancing overlay on combo x3 + every 30-50s ambient.
+  // CSS character stays as the calm central figure.
+  let ssPlayerJumpscareUrl = null;
   function loadSixSevenPlayerAsset() {
-    const imgEl = $('ss-player-character-img');
-    if (!imgEl) return;
-    const cssFallbackEl = imgEl.parentElement &&
-      imgEl.parentElement.querySelector('.ss-character');
-    // Ordered most-likely-first so the first request hits disk on success.
     const candidates = [
+      '/assets/67-transparent.png',  // bg-removed version — preferred
       '/assets/67.png',
       '/assets/67.jpg',
       '/assets/sixseven-character.png',
       '/assets/sixseven-character.jpg',
-      '/assets/sixseven-character.jpeg',
-      '/assets/sixseven-character.webp',
       '/assets/sixseven.png',
-      '/assets/sixseven.jpg',
-      '/assets/six-seven.png',
-      '/assets/six-seven.jpg',
     ];
     let idx = 0;
     function tryNext() {
       if (idx >= candidates.length) {
-        imgEl.classList.add('ss-img-missing');
-        if (cssFallbackEl) cssFallbackEl.classList.add('ss-fallback-on');
-        console.warn('[6-7] No character image in /assets/. Save your art as ANY of: ' + candidates.join(', '));
+        console.warn('[6-7] No jumpscare image in /assets/.');
         return;
       }
       const url = candidates[idx++];
-      imgEl.onload = () => {
-        imgEl.dataset.loaded = 'true';
-        console.log('[6-7] Loaded character image: ' + url);
+      const probe = new Image();
+      probe.onload = () => {
+        ssPlayerJumpscareUrl = url;
+        console.log('[6-7] Player jumpscare ready: ' + url);
       };
-      imgEl.onerror = () => tryNext();
-      imgEl.src = url;
+      probe.onerror = () => tryNext();
+      probe.src = url;
     }
     tryNext();
+  }
+  function spawnPlayerSixSevenJumpscare() {
+    if (!ssPlayerJumpscareUrl) return;
+    if (document.querySelector('.ss-jumpscare')) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'ss-jumpscare';
+    const img = document.createElement('img');
+    img.src = ssPlayerJumpscareUrl;
+    img.alt = '67';
+    img.draggable = false;
+    wrap.appendChild(img);
+    document.body.appendChild(wrap);
+    MochiSounds.sixSevenChant && MochiSounds.sixSevenChant();
+    setTimeout(() => MochiSounds.swingWhoosh && MochiSounds.swingWhoosh(), 80);
+    if (navigator.vibrate) navigator.vibrate([40, 20, 60, 20, 40]);
+    setTimeout(() => wrap.remove(), 2300);
+  }
+  // Periodic player jumpscare every 30-50s
+  let ssPlayerJumpscareTimer = null;
+  function startPlayerJumpscareLoop() {
+    if (ssPlayerJumpscareTimer) clearTimeout(ssPlayerJumpscareTimer);
+    const tick = () => {
+      ssPlayerJumpscareTimer = setTimeout(() => {
+        if (gameType === 'sixseven' && !document.hidden) {
+          spawnPlayerSixSevenJumpscare();
+        }
+        tick();
+      }, 30000 + Math.random() * 20000);
+    };
+    tick();
+  }
+  function stopPlayerJumpscareLoop() {
+    if (ssPlayerJumpscareTimer) { clearTimeout(ssPlayerJumpscareTimer); ssPlayerJumpscareTimer = null; }
   }
 
   function bindSixSevenButtons() {
@@ -1121,8 +1148,10 @@
         if (correct && sixseven.streak === 6 && window.Rewards) {
           window.Rewards.show({ tier: 'epic', icon: '⚡', text: '¡Combo x3!', duration: 1800 });
           shakeSixSevenScreen();
-          // Trigger a dance moment on the x3 combo unlock
+          // Combo x3 unlock — the FULL 67-character jumpscare takes over
+          // the player's whole screen, dances, then disappears. Rare moment.
           triggerSixSevenDance();
+          spawnPlayerSixSevenJumpscare();
         } else if (correct && sixseven.streak >= 3 && window.Rewards && sixseven.streak % 3 === 0) {
           window.Rewards.combo(sixseven.streak);
           if (sixseven.streak >= 9) shakeSixSevenScreen();
@@ -4602,6 +4631,7 @@
     Dralingo.stopRandom();
     stopZombieAmbience();
     stopSixSevenAmbience();
+    stopPlayerJumpscareLoop();
     document.body.classList.remove('sixseven-active');
     stopLobbyFlappy();
     if (mashTimerInterval) clearInterval(mashTimerInterval);
