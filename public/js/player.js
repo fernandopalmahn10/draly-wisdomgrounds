@@ -353,6 +353,123 @@
     if ($('pn-smash-name'))   $('pn-smash-name').textContent   = nameWithAv;
     // Lobby mascot: avatar · team-mascot combo. Re-build via updateTeamUI.
   }
+
+  // === 6-7 SWING (sixseven) PLAYER LOGIC =====================================
+  // Math problem + two giant 6/7 buttons. The mini character sways toward the
+  // button last tapped. Streak counter + speed bonus + Rewards toasts on combos.
+  let ssMyScore = 0;
+  let ssMyStreak = 0;
+  let ssCurrentQid = null;
+  let ssSwayTarget = 0;
+  let ssSwayLerp = 0;
+  let ssSwayRaf = null;
+  let ssFloatTimer = null;
+  let ssButtonsBound = false;
+
+  function renderSixSevenQuestion(q) {
+    ssCurrentQid = q.qid;
+    // Show the math problem; reset button states
+    if ($('ss-problem')) $('ss-problem').textContent = q.text;
+    document.querySelectorAll('.ss-btn').forEach((b) => {
+      b.disabled = false;
+      b.classList.remove('tapped');
+    });
+    // First-time setup: bind buttons + start ambient loops
+    if (!ssButtonsBound) {
+      bindSixSevenButtons();
+      startSixSevenSwayLoop();
+      startSixSevenFloats();
+      ssButtonsBound = true;
+    }
+    showScreen('sixseven');
+  }
+
+  function bindSixSevenButtons() {
+    const btn6 = $('ss-btn-6');
+    const btn7 = $('ss-btn-7');
+    [{ btn: btn6, idx: 0, choice: '6' },
+     { btn: btn7, idx: 1, choice: '7' }].forEach(({ btn, idx, choice }) => {
+      if (!btn) return;
+      // Belt-and-suspenders: pointerdown + click + touchstart, dedupe, no
+      // preventDefault on mouse so synthetic click survives.
+      let lastTap = 0;
+      const onTap = (e) => {
+        const now = Date.now();
+        if (now - lastTap < 120) return;     // dedupe pointer + click
+        lastTap = now;
+        if (e && e.pointerType !== 'mouse' && e.cancelable) {
+          try { e.preventDefault(); } catch (_) {}
+        }
+        if (btn.disabled) return;
+        // Tap pop + sway nudge — IMMEDIATE local feedback before server reply
+        btn.classList.remove('tapped');
+        void btn.offsetWidth;
+        btn.classList.add('tapped');
+        ssSwayTarget = Math.max(-1, Math.min(1, ssSwayTarget * 0.4 + (choice === '7' ? 1 : -1) * 0.6));
+        if (navigator.vibrate) navigator.vibrate(20);
+        if (choice === '7') MochiSounds.tap7 && MochiSounds.tap7();
+        else MochiSounds.tap6 && MochiSounds.tap6();
+        // Disable both buttons until we get a response
+        document.querySelectorAll('.ss-btn').forEach((b) => b.disabled = true);
+        // Fire the answer via the standard bulletproof pipeline
+        sendAnswerBulletproof(ssCurrentQid, idx);
+      };
+      btn.addEventListener('pointerdown', onTap, { passive: false });
+      btn.addEventListener('click', onTap);
+      btn.addEventListener('touchstart', onTap, { passive: false });
+      btn.oncontextmenu = (e) => { e.preventDefault(); return false; };
+    });
+  }
+
+  function startSixSevenSwayLoop() {
+    if (ssSwayRaf) cancelAnimationFrame(ssSwayRaf);
+    const frame = () => {
+      ssSwayLerp += (ssSwayTarget - ssSwayLerp) * 0.12;
+      ssSwayTarget *= 0.985;
+      const wrap = $('ss-player-character-wrap');
+      if (wrap) wrap.style.setProperty('--sway', ssSwayLerp.toFixed(3));
+      ssSwayRaf = requestAnimationFrame(frame);
+    };
+    frame();
+  }
+
+  function startSixSevenFloats() {
+    if (ssFloatTimer) clearInterval(ssFloatTimer);
+    ssFloatTimer = setInterval(() => {
+      const layer = $('ss-player-float-layer');
+      if (!layer || gameType !== 'sixseven') return;
+      // Light density on phones — 1 floater every 1.4s
+      const f = document.createElement('div');
+      f.className = 'ss-floater ' + (Math.random() < 0.5 ? 'six' : 'seven');
+      f.textContent = Math.random() < 0.5 ? '6' : '7';
+      f.style.left = (Math.random() * 100) + '%';
+      f.style.fontSize = (1.2 + Math.random() * 2.5) + 'rem';
+      f.style.animationDuration = (5 + Math.random() * 4) + 's';
+      layer.appendChild(f);
+      setTimeout(() => f.remove(), 11000);
+    }, 1400);
+  }
+
+  function flashSixSevenFeedback(correct) {
+    const el = $(correct ? 'ss-flash-correct' : 'ss-flash-wrong');
+    if (!el) return;
+    el.classList.remove('fire');
+    void el.offsetWidth;
+    el.classList.add('fire');
+  }
+
+  function updateSixSevenHud(score, streak) {
+    if (typeof score === 'number') {
+      ssMyScore = score;
+      if ($('ss-player-score')) $('ss-player-score').textContent = ssMyScore;
+    }
+    if (typeof streak === 'number') {
+      ssMyStreak = streak;
+      if ($('ss-player-streak')) $('ss-player-streak').textContent = ssMyStreak;
+      const pill = $('ss-player-streak-pill');
+      if (pill) pill.classList.toggle('hot', ssMyStreak >= 3);
+    }
+  }
   function renderAvatarPicker() {
     const grid = $('avatar-grid');
     if (!grid) return;
@@ -599,6 +716,9 @@
     } else if (gameType === 'conquest') {
       teamLabel = isRed ? 'Caballería Roja 紅龍' : 'Caballería Dorada 金龍';
       teamMascot = isRed ? '🐉' : '🐲';
+    } else if (gameType === 'sixseven') {
+      teamLabel = isRed ? 'Equipo 6 🟦' : 'Equipo 7 🟪';
+      teamMascot = isRed ? '6' : '7';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
@@ -725,6 +845,12 @@
   socket.on('question', (q) => {
     markActivity();
     currentQid = q.qid;
+    // 6-7 SWING — completely different question UI: skip the standard
+    // multi-choice answer grid, show the math problem + two giant buttons.
+    if (q.gameMode === 'sixseven' || gameType === 'sixseven') {
+      renderSixSevenQuestion(q);
+      return;
+    }
     $('question-text').textContent = q.text;
     // Show image (or placeholder while loading)
     const imgWrap = $('question-image-wrap');
@@ -815,11 +941,36 @@
   }
   function resetStreak() { correctStreak = 0; }
 
-  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly, familyToken, conquest }) => {
+  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly, familyToken, conquest, sixseven }) => {
     markActivity();
     clearAnswerHeartbeat();
     hideSendingOverlay();
     if (!correct) resetStreak();
+
+    // 6-7 SWING fast-path — keep the player on the swing screen, just flash
+    // feedback + update HUD + bump the sway. Server will send the next
+    // question almost immediately (600-800ms).
+    if (gameType === 'sixseven') {
+      flashSixSevenFeedback(correct);
+      if (sixseven) {
+        const newScore = ssMyScore + (sixseven.gained || 0);
+        updateSixSevenHud(newScore, sixseven.streak || 0);
+        // Combo bell on streak milestones
+        if (correct && sixseven.streak >= 3 && MochiSounds.comboBell) {
+          MochiSounds.comboBell(sixseven.streak);
+        }
+        if (correct && sixseven.streak === 6 && window.Rewards) {
+          window.Rewards.show({ tier: 'epic', icon: '⚡', text: '¡Combo x3!', duration: 1800 });
+        } else if (correct && sixseven.streak >= 3 && window.Rewards && sixseven.streak % 3 === 0) {
+          window.Rewards.combo(sixseven.streak);
+        }
+      }
+      // Re-enable buttons so the next question arrives clean
+      setTimeout(() => {
+        document.querySelectorAll('.ss-btn').forEach((b) => b.classList.remove('tapped'));
+      }, 250);
+      return;  // skip the standard result-feedback screen flow
+    }
     // === FAMILY fast path === Skip the 900ms result-feedback screen entirely
     // for Mi Familia — go DIRECTLY to the drag-and-drop placement screen so
     // the cadence stays snappy and kids never see a mismatched mascot.
@@ -4369,7 +4520,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

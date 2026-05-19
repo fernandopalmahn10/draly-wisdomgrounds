@@ -13,10 +13,11 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260517j">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260518c">
   <link rel="stylesheet" href="/css/conquest.css?v=20260518b">
+  <link rel="stylesheet" href="/css/sixseven.css?v=20260518c">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
-  <link rel="stylesheet" href="/css/family.css?v=20260517j">
+  <link rel="stylesheet" href="/css/family.css?v=20260518c">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -425,6 +426,37 @@
     <div class="zb-sprint-hint">Toca SALTAR justo cuando el obstáculo llega 🤚</div>
   </div>
 
+  <!-- 6-7 SWING — math problems with two giant 6/7 buttons. The mini
+       character on the player's phone sways toward whichever button they
+       last tapped. Floating 6s and 7s drift up in the background. -->
+  <div id="screen-sixseven" class="hidden player-screen ss-player-screen">
+    <div class="ss-player-float-layer" id="ss-player-float-layer"></div>
+    <div class="ss-player-top">
+      <div class="ss-player-score-pill">💯 <span id="ss-player-score">0</span></div>
+      <div class="ss-player-streak-pill" id="ss-player-streak-pill">🔥 <span id="ss-player-streak">0</span></div>
+    </div>
+    <div class="ss-problem" id="ss-problem">3 + 3 = ?</div>
+    <div class="ss-player-character">
+      <div class="ss-character-wrap" id="ss-player-character-wrap">
+        <div class="ss-character">
+          <div class="ss-c-eye left"></div>
+          <div class="ss-c-eye right"></div>
+          <div class="ss-c-six">6</div>
+          <div class="ss-c-seven">7</div>
+          <div class="ss-c-foot left"></div>
+          <div class="ss-c-foot right"></div>
+        </div>
+        <div class="ss-character-shadow"></div>
+      </div>
+    </div>
+    <div class="ss-buttons">
+      <button class="ss-btn ss-btn-6" id="ss-btn-6">6</button>
+      <button class="ss-btn ss-btn-7" id="ss-btn-7">7</button>
+    </div>
+    <div class="ss-flash-correct" id="ss-flash-correct"></div>
+    <div class="ss-flash-wrong"   id="ss-flash-wrong"></div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -436,10 +468,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260517j"></script>
+  <script src="/js/sounds.js?v=20260518c"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/rewards.js?v=20260517j"></script>
-  <script src="/js/player.js?v=20260517j"></script>
+  <script src="/js/rewards.js?v=20260518c"></script>
+  <script src="/js/player.js?v=20260518c"></script>
 </body>
 </html>
