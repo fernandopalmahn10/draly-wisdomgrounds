@@ -33,7 +33,11 @@
   // Console-logs the result so you can see WHY the image isn't appearing.
   function loadSixSevenAsset(imgEl, cssFallbackEl) {
     if (!imgEl) return;
+    // Ordered most-likely-first so the first request hits the file on disk.
+    // Confirmed in git: /assets/67.png is what the teacher saved.
     const candidates = [
+      '/assets/67.png',
+      '/assets/67.jpg',
       '/assets/sixseven-character.png',
       '/assets/sixseven-character.jpg',
       '/assets/sixseven-character.jpeg',
@@ -42,8 +46,6 @@
       '/assets/sixseven.jpg',
       '/assets/six-seven.png',
       '/assets/six-seven.jpg',
-      '/assets/67.png',
-      '/assets/67.jpg',
     ];
     let idx = 0;
     function tryNext() {
