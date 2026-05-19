@@ -515,8 +515,8 @@
   function triggerSixSevenDance() {
     if (gameType !== 'sixseven') return;
     if (document.hidden) return;
-    // 1) Make the character DANCE for ~2.5s
-    document.querySelectorAll('.ss-character').forEach((c) => {
+    // 1) Make BOTH the PNG image and the CSS-fallback character DANCE for ~2.5s
+    document.querySelectorAll('.ss-character, .ss-character-img').forEach((c) => {
       c.classList.remove('dancing');
       void c.offsetWidth;
       c.classList.add('dancing');

@@ -163,7 +163,53 @@ body.ss-bg .win-screen { color: #1a3a5a; }
   100% { opacity: 0; transform: translateY(-100vh) rotate(-8deg); }
 }
 
-/* === THE BIG SWINGING 6-7 CHARACTER === */
+/* === USER-SUPPLIED PNG CHARACTER ===
+   Primary visual. Lives at /assets/sixseven-character.png. If that file
+   exists, this <img> shows and the CSS fallback (.ss-character-css) is
+   hidden via .ss-fallback-on (toggled on the CSS character only when img
+   fails to load). The img inherits the same swing/dance transforms as the
+   wrap, so all animations carry over. */
+.ss-character-img {
+  position: relative;
+  z-index: 5;
+  width: clamp(220px, 36vmin, 460px);
+  height: auto;
+  max-height: clamp(260px, 42vmin, 540px);
+  object-fit: contain;
+  /* The PNG character art has its own meme-style numbers floating around it,
+     so we let the wrap handle the sway and the img just rides along. */
+  animation: ss-character-bob 1.4s ease-in-out infinite alternate;
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 14px 18px rgba(20, 50, 80, 0.55));
+  will-change: transform;
+  backface-visibility: hidden;
+}
+/* When the PNG is missing, .ss-img-missing hides it and the CSS fallback
+   takes over (default state: CSS character SHOWN, only hidden when img loads OK). */
+.ss-character-img.ss-img-missing { display: none; }
+
+/* Default: CSS character is HIDDEN. Shows only when the PNG fails to load
+   (the onerror handler adds .ss-fallback-on to the CSS character). This way
+   the PNG wins by default whenever it exists. */
+.ss-character-css { display: none; }
+.ss-character-css.ss-fallback-on { display: block; }
+
+/* Player-side image — smaller */
+.ss-player-character .ss-character-img {
+  width: clamp(180px, 40vw, 260px);
+  height: auto;
+  max-height: clamp(220px, 50vw, 320px);
+}
+
+/* DANCE applies to the PNG too — same animation, just scaled smaller */
+.ss-character-img.dancing {
+  animation: ss-dance 0.45s cubic-bezier(.4, 0, .25, 1) infinite alternate;
+}
+
+/* === THE CSS-BUILT FALLBACK CHARACTER === */
 /* GPU-promoted with translate3d so the swing is buttery-smooth on tablet
    and desktop (no main-thread paints per frame). */
 .ss-character-wrap {
