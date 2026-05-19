@@ -713,13 +713,13 @@ function broadcast(pin) {
 }
 
 // 6-7 SWING math generator — returns a problem whose answer is always 6 or 7.
-// 8 question flavors, including HSK1 Chinese numerals (一二三...十) and pinyin
-// recognition so kids practice the language alongside the math.
-const CQ_NUM_ZH    = ['零','一','二','三','四','五','六','七','八','九','十'];
-const CQ_NUM_PINYIN = ['líng','yī','èr','sān','sì','wǔ','liù','qī','bā','jiǔ','shí'];
+// PINYIN-ONLY for the Chinese variants (no characters per user request).
+// 7 problem flavors with addition, subtraction, visual counting, comparisons,
+// pinyin number recognition, and pinyin-word addition/subtraction.
+const SS_NUM_PINYIN = ['líng','yī','èr','sān','sì','wǔ','liù','qī','bā','jiǔ','shí'];
 function generateSixSevenProblem(queueIdx) {
   const ans = Math.random() < 0.5 ? 6 : 7;
-  const kind = Math.floor(Math.random() * 8);
+  const kind = Math.floor(Math.random() * 7);
   let text = '';
   if (kind === 0) {
     // Addition (Arabic numerals)
@@ -750,23 +750,18 @@ function generateSixSevenProblem(queueIdx) {
     if (ans > other)  text = `¿Cuál es mayor: ${ans} o ${other}?`;
     else              text = `¿Cuál es menor: ${other} o ${ans}?`;
   } else if (kind === 5) {
-    // CHINESE: "¿Qué número es 六/七?" — recognize the Chinese character
-    text = `¿Qué número es ${CQ_NUM_ZH[ans]}?`;
-  } else if (kind === 6) {
-    // CHINESE: pinyin recognition — "liù" / "qī" / "sān+sān"
-    const flip = Math.random() < 0.5;
-    if (flip) {
-      text = `${CQ_NUM_PINYIN[ans]} = ?`;
-    } else {
-      // Simple Chinese addition using characters
+    // PINYIN: pure recognition — "liù = ?" / "qī = ?"
+    text = `${SS_NUM_PINYIN[ans]} = ?`;
+  } else {
+    // PINYIN addition or subtraction — mixes pinyin operands with the answer
+    if (Math.random() < 0.5) {
       const b = Math.floor(Math.random() * (ans + 1));
       const a = ans - b;
-      text = `${CQ_NUM_ZH[a]} + ${CQ_NUM_ZH[b]} = ?`;
+      text = `${SS_NUM_PINYIN[a]} + ${SS_NUM_PINYIN[b]} = ?`;
+    } else {
+      const big = ans + 1 + Math.floor(Math.random() * 4);   // 7..10
+      text = `${SS_NUM_PINYIN[big]} − ${SS_NUM_PINYIN[big - ans]} = ?`;
     }
-  } else {
-    // CHINESE subtraction: 十 − 三 = 七
-    const big = ans + 1 + Math.floor(Math.random() * 4);  // 7..10
-    text = `${CQ_NUM_ZH[big]} − ${CQ_NUM_ZH[big - ans]} = ?`;
   }
   return { text, ans };
 }

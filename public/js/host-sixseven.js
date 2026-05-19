@@ -148,13 +148,14 @@
 
   // === Host engagement: same dance / shake as the player but on the big screen ===
   function triggerHostDance() {
-    const ch = $('ss-character');
-    if (ch) {
+    // Dance BOTH the PNG image and the CSS fallback (whichever is visible)
+    [$('ss-character'), $('ss-character-img')].forEach((ch) => {
+      if (!ch) return;
       ch.classList.remove('dancing');
       void ch.offsetWidth;
       ch.classList.add('dancing');
       setTimeout(() => ch.classList.remove('dancing'), 2500);
-    }
+    });
     const flash = document.createElement('div');
     flash.className = 'ss-dance-flash';
     document.body.appendChild(flash);
