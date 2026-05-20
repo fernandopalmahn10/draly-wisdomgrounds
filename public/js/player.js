@@ -1380,6 +1380,16 @@
           startZombieSprint();
         } else if (gameType === 'family') {
           if (familyToken) startFamilyPlace(familyToken);
+        } else if (gameType === 'conquest') {
+          // BUG FIX: previously the conquest else-fallthrough hit startMash()
+          // which displayed the panda/kitsune mochi-mash screen on conquest
+          // players' devices. Now we explicitly stay on the question screen
+          // (the order picker, if needed, was already shown above via the
+          // early return; otherwise the next question event will arrive).
+          showScreen('question');
+        } else if (gameType === 'sixseven') {
+          // Sixseven handles its own screen via the dedicated handler.
+          showScreen('sixseven');
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -1406,6 +1416,12 @@
         setTimeout(() => {
           showScreen('mq-play');
         }, 1400);
+      }
+      if (gameType === 'conquest') {
+        // Wrong-answer in conquest — go back to question screen, next q
+        // is already queued by the server's nextDelay logic. Without this
+        // explicit branch, the player got stuck on the result screen.
+        setTimeout(() => showScreen('question'), 1400);
       }
       // Flappy: stays dead; server will auto-send next revive question via setTimeout
       // (no screen change needed — the question screen will re-appear automatically)

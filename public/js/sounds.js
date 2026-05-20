@@ -472,6 +472,38 @@
       tone({ freq: 1320, dur: 0.10, type: 'triangle', vol: 0.22, slideTo: 660, delay: 0.04 });
       noise({ dur: 0.05, vol: 0.10, delay: 0.02 });
     },
+    arrowVolley() {
+      // Whoosh of arrows in flight then a sharp impact. Each "arrow" is a
+      // brief upward-then-down pitch slide via triangle wave + noise tail.
+      [0, 0.04, 0.08].forEach((d, i) => {
+        tone({ freq: 1400 + i * 100, dur: 0.08, type: 'triangle',
+               vol: 0.22, slideTo: 600, delay: d });
+      });
+      noise({ dur: 0.08, vol: 0.18, delay: 0.16 });   // impact
+      tone({ freq: 220, dur: 0.10, type: 'square', vol: 0.18, slideTo: 80, delay: 0.16 });
+    },
+    fortressBuild() {
+      // Three sharp hammer-on-stone clinks at slightly varying pitch — the
+      // sound of soldiers raising walls. Used on DEFEND orders.
+      tone({ freq: 480, dur: 0.06, type: 'square', vol: 0.32, slideTo: 240 });
+      noise({ dur: 0.04, vol: 0.18 });
+      tone({ freq: 520, dur: 0.06, type: 'square', vol: 0.30, slideTo: 260, delay: 0.18 });
+      noise({ dur: 0.04, vol: 0.16, delay: 0.18 });
+      tone({ freq: 440, dur: 0.08, type: 'square', vol: 0.32, slideTo: 220, delay: 0.36 });
+      noise({ dur: 0.05, vol: 0.18, delay: 0.36 });
+    },
+    sandKick() {
+      // Soft rustling burst — feet on dry earth as soldiers march
+      noise({ dur: 0.14, vol: 0.10 });
+      tone({ freq: 90, dur: 0.10, type: 'triangle', vol: 0.08, slideTo: 55 });
+    },
+    battleHorn() {
+      // Deep brassy horn call — for big captures / capital falls
+      tone({ freq: 175, dur: 0.30, type: 'sawtooth', vol: 0.35, slideTo: 220 });
+      tone({ freq: 220, dur: 0.50, type: 'sawtooth', vol: 0.32, delay: 0.10 });
+      tone({ freq: 110, dur: 0.60, type: 'square',   vol: 0.22, delay: 0.05 });
+      tone({ freq: 330, dur: 0.35, type: 'triangle', vol: 0.20, delay: 0.30 });
+    },
     fortressFall() {
       // Crashing stone — for when an enemy fortress is captured
       noise({ dur: 0.4, vol: 0.45 });
