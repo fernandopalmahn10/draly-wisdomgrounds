@@ -163,20 +163,20 @@
     tileEl.classList.add('owned-' + cap.toTeam, 'conquering');
     setTimeout(() => tileEl && tileEl.classList.remove('conquering'), 1400);
 
-    // If conquering an enemy: dislodge the old soldier visibly (sword clash)
-    const oldSoldier = document.getElementById('cq-soldier-' + cap.tileId);
-    if (oldSoldier && prevOwner && prevOwner !== cap.toTeam) {
-      // Swap to fall pose, fade out, remove
-      const img = oldSoldier.querySelector('img');
-      if (img) img.src = prevOwner === 'red'
+    // If conquering an enemy: dislodge the old formation with a fall animation
+    const oldFormation = document.getElementById('cq-soldier-' + cap.tileId);
+    if (oldFormation && prevOwner && prevOwner !== cap.toTeam) {
+      // Swap each unit in the falling formation to its fall pose
+      const fallSrc = prevOwner === 'red'
         ? '/assets/conquest/soldier-fall.png'
         : '/assets/conquest/cavalry-fall.png';
-      oldSoldier.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
-      oldSoldier.style.opacity = '0';
-      oldSoldier.style.transform = 'translate3d(-50%, -120%, 0) rotate(-20deg)';
-      setTimeout(() => oldSoldier.remove(), 550);
-    } else if (oldSoldier) {
-      oldSoldier.remove();
+      oldFormation.querySelectorAll('img').forEach((img) => { img.src = fallSrc; });
+      oldFormation.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      oldFormation.style.opacity = '0';
+      oldFormation.style.transform = 'translate3d(-50%, -120%, 0) rotate(-15deg)';
+      setTimeout(() => oldFormation.remove(), 550);
+    } else if (oldFormation) {
+      oldFormation.remove();
     }
 
     // Find a friendly neighbor (or use the team's capital) as the soldier's
@@ -213,9 +213,10 @@
     return territories.find((t) => t.capitalOf === team);
   }
 
-  // Spawn a soldier sprite at `from` that visibly slides to `to`, with an
-  // attack-pose middle frame on enemy conquests. Settles as the permanent
-  // garrison on `to` afterward.
+  // Spawn a SOLO marching soldier that visibly slides from a source tile
+  // to the target tile, swaps to attack pose on enemy conquests, then
+  // disappears (the target's FORMATION will be spawned separately by the
+  // capture handler, which represents the new garrison).
   function spawnMarchingSoldier(from, to, team, action) {
     const army = $('cq-army-layer');
     if (!army) return;
@@ -223,8 +224,8 @@
     const toPos = tilePos(to);
     const wrap = document.createElement('div');
     wrap.className = 'cq-soldier ' + team + ' marching';
-    wrap.id = 'cq-soldier-' + to.id;
-    wrap.dataset.tileId = to.id;
+    // Use a temp id so it doesn't collide with the permanent formation
+    wrap.id = 'cq-march-' + to.id + '-' + Date.now();
     const src = team === 'red'
       ? '/assets/conquest/soldier-idle.png'
       : '/assets/conquest/cavalry-idle.png';
@@ -236,26 +237,24 @@
     wrap.style.top  = (fromPos.top  + fromPos.height * 0.85) + '%';
     wrap.innerHTML = `<img src="${src}" alt="${team}">`;
     army.appendChild(wrap);
-    // Step 1: tick → CSS transitions slide to the target tile
+    // Slide to target via CSS transition
     requestAnimationFrame(() => {
       wrap.style.left = (toPos.left + toPos.width / 2) + '%';
       wrap.style.top  = (toPos.top  + toPos.height * 0.85) + '%';
     });
-    // Step 2: half-way through, swap to attack sprite if this is a battle
+    // Mid-march: attack pose on enemy conquests
     if (action === 'conquered') {
       setTimeout(() => {
         const img = wrap.querySelector('img');
         if (img) img.src = attackSrc;
-        wrap.classList.add('attacking');
-      }, 350);
-      setTimeout(() => {
-        const img = wrap.querySelector('img');
-        if (img) img.src = src;       // back to idle
-        wrap.classList.remove('attacking');
-      }, 900);
+      }, 400);
     }
-    // Step 3: settle — remove the marching class so the bob resumes
-    setTimeout(() => wrap.classList.remove('marching'), 800);
+    // After arrival: spawn the permanent formation on the target tile,
+    // then remove the solo marcher.
+    setTimeout(() => {
+      spawnSoldierSprite(to, team);
+      wrap.remove();
+    }, 750);
   }
 
   socket.on('cq:capital-fallen', ({ team }) => {
@@ -355,25 +354,38 @@
     });
   }
 
-  // Spawn a sprite-based soldier on the given tile.
+  // Spawn a FORMATION of soldiers (2-3 stacked) on a given tile. Capitals
+  // get a bigger formation (4 soldiers in a row) so the team's home camp
+  // always reads as an army. Regular owned tiles get a smaller garrison.
   function spawnSoldierSprite(tile, team) {
     const army = $('cq-army-layer');
     if (!army) return;
-    const { left, top } = tilePos(tile);
+    const pos = tilePos(tile);
+    // Remove any existing formation on this tile
     const existing = document.getElementById('cq-soldier-' + tile.id);
     if (existing) existing.remove();
-    const wrap = document.createElement('div');
-    wrap.className = 'cq-soldier ' + team;
-    wrap.id = 'cq-soldier-' + tile.id;
-    wrap.dataset.tileId = tile.id;
-    wrap.style.left = (left + tilePos(tile).width / 2) + '%';
-    // anchor near the tile's lower-middle so the soldier "stands" on the hex
-    wrap.style.top  = (top + tilePos(tile).height * 0.85) + '%';
-    // Red Army = foot soldier; Gold Army = mounted cavalry
+    const formationCount = tile.isCapital ? 4 : 2;
     const src = team === 'red'
       ? '/assets/conquest/soldier-idle.png'
       : '/assets/conquest/cavalry-idle.png';
-    wrap.innerHTML = `<img src="${src}" alt="${team}">`;
+    const wrap = document.createElement('div');
+    wrap.className = 'cq-soldier-formation ' + team;
+    wrap.id = 'cq-soldier-' + tile.id;
+    wrap.dataset.tileId = tile.id;
+    wrap.style.left = (pos.left + pos.width / 2) + '%';
+    wrap.style.top  = (pos.top + pos.height * 0.85) + '%';
+    // Build N soldiers offset side-by-side so they read as a formation,
+    // not as one lone unit. Slight overlap = ranks of infantry.
+    let inner = '';
+    for (let i = 0; i < formationCount; i++) {
+      const offsetX = (i - (formationCount - 1) / 2) * 18;   // horizontal spread
+      const offsetY = (i % 2 === 1) ? -4 : 0;                // back-rank slightly up
+      const scale = tile.isCapital ? 1 : 0.85;
+      inner += `<img class="cq-formation-unit" data-unit="${i}"
+                     src="${src}"
+                     style="left: ${offsetX}px; bottom: ${offsetY}px; transform: scale(${scale});">`;
+    }
+    wrap.innerHTML = inner;
     army.appendChild(wrap);
   }
 
@@ -434,6 +446,16 @@
     if (reinforce) {
       el.classList.add('reinforced');
       setTimeout(() => el.classList.remove('reinforced'), 800);
+      // Also pulse the formation on this tile so the "reinforcements" feel
+      // physically visible
+      const tileId = el.dataset.tileId;
+      const formation = tileId != null && document.getElementById('cq-soldier-' + tileId);
+      if (formation) {
+        formation.classList.remove('reinforcing');
+        void formation.offsetWidth;
+        formation.classList.add('reinforcing');
+        setTimeout(() => formation.classList.remove('reinforcing'), 850);
+      }
     }
     setTimeout(() => el.classList.remove('flash-' + team), 900);
   }

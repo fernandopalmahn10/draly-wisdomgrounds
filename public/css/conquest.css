@@ -190,63 +190,80 @@ body.conquest-bg .win-screen { color: #3a1505; }
     0 0 18px rgba(50, 100, 200, 0.55);
 }
 
-/* === Soldier sprite — sits ON a tile via percent positioning ===
-   Foot soldier for Red, mounted cavalry for Gold. Sprites are positioned
-   absolutely inside .cq-army-layer by JS (left%, top%). */
+/* === Soldier FORMATION — 2-4 sprites stacked on one tile so it reads
+   as an army, not a lone unit. The wrap is positioned by JS via percent;
+   each .cq-formation-unit inside sits at a small offset so they form
+   a real line (front rank + back rank). */
+.cq-soldier-formation {
+  position: absolute;
+  width: clamp(120px, 16vw, 220px);
+  height: clamp(56px, 8vw, 110px);
+  pointer-events: none;
+  transform: translate3d(-50%, -85%, 0);
+  user-select: none;
+  -webkit-user-drag: none;
+  /* Subtle idle bob on the whole formation */
+  animation: cq-formation-bob 1.6s ease-in-out infinite alternate;
+  will-change: transform, left, top;
+  transition: left 0.7s cubic-bezier(.4, 0, .25, 1),
+              top  0.7s cubic-bezier(.4, 0, .25, 1);
+}
+@keyframes cq-formation-bob {
+  from { transform: translate3d(-50%, -85%, 0); }
+  to   { transform: translate3d(-50%, -88%, 0); }
+}
+.cq-formation-unit {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  height: 100%;
+  width: auto;
+  /* Each unit inside the formation offsets via inline style (left/bottom) */
+  margin-left: -22px;   /* center each unit on its computed left% */
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55));
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+/* Team color — Gold Army gets a hue shift to read as a different army */
+.cq-soldier-formation.gold .cq-formation-unit {
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55)) hue-rotate(180deg) saturate(0.85);
+}
+
+/* Subtle team flag/banner halo on the ground */
+.cq-soldier-formation::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  transform: translateX(-50%);
+  width: 90%;
+  height: 12px;
+  border-radius: 50%;
+  filter: blur(5px);
+  z-index: -1;
+}
+.cq-soldier-formation.red::before  { background: radial-gradient(ellipse at center, rgba(217, 46, 58, 0.6), transparent 70%); }
+.cq-soldier-formation.gold::before { background: radial-gradient(ellipse at center, rgba(50, 100, 200, 0.6), transparent 70%); }
+
+/* === Single marching soldier (used during a capture march) ===
+   A solo unit that visibly slides from a source formation to a target tile.
+   Distinct from formation so we can animate it independently. */
 .cq-soldier {
   position: absolute;
   width: clamp(56px, 8vw, 110px);
   height: auto;
   pointer-events: none;
-  /* GPU layer for the march animation */
-  will-change: transform, left, top;
-  transform: translate3d(-50%, -85%, 0);  /* center horizontally, anchor near feet */
+  transform: translate3d(-50%, -85%, 0);
   user-select: none;
   -webkit-user-drag: none;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55));
   transition: left 0.7s cubic-bezier(.4, 0, .25, 1),
-              top  0.7s cubic-bezier(.4, 0, .25, 1),
-              transform 0.4s ease;
-  /* Subtle bob animation so the soldier doesn't feel static */
-  animation: cq-soldier-bob 1.6s ease-in-out infinite alternate;
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
+              top  0.7s cubic-bezier(.4, 0, .25, 1);
+  will-change: transform, left, top;
+  z-index: 4;
 }
-@keyframes cq-soldier-bob {
-  from { transform: translate3d(-50%, -85%, 0); }
-  to   { transform: translate3d(-50%, -90%, 0); }
-}
-/* Team-color hue rotation — Red Army keeps natural red tunic; Gold Army
-   gets a hue shift toward blue/cyan to look like a different army. */
-.cq-soldier.gold { filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55)) hue-rotate(180deg); }
-
-/* Subtle team-flag halo behind the sprite — confirms ownership */
-.cq-soldier::before {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -6px;
-  transform: translateX(-50%);
-  width: 75%;
-  height: 8px;
-  border-radius: 50%;
-  filter: blur(4px);
-  z-index: -1;
-}
-.cq-soldier.red::before  { background: radial-gradient(ellipse at center, rgba(217, 46, 58, 0.65), transparent 70%); }
-.cq-soldier.gold::before { background: radial-gradient(ellipse at center, rgba(50, 100, 200, 0.65), transparent 70%); }
-
-/* Marching/charge — when a tile is captured, the soldier visibly slides
-   from its origin to the new tile + briefly switches to the attack sprite. */
-.cq-soldier.marching { animation: none; }   /* pause the bob during march */
-.cq-soldier.attacking img,
-.cq-soldier img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-/* Attack pose swap: when .attacking is added, the IMG src is swapped to
-   soldier-attack.png by JS, then back to idle on completion. */
+.cq-soldier img { width: 100%; height: auto; display: block; }
+.cq-soldier.gold { filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55)) hue-rotate(180deg) saturate(0.85); }
 
 /* SWORD-CLASH spark — fires on a tile when an enemy is dislodged */
 .cq-sword-clash {
@@ -327,6 +344,17 @@ body.conquest-bg .win-screen { color: #3a1505; }
 @keyframes cq-flash {
   0%, 100% { box-shadow: inherit; }
   50%      { box-shadow: 0 0 0 4px gold, 0 0 30px gold; }
+}
+
+/* Reinforcement pulse — fired when a "reinforce" capture happens (capital
+   filling up with new soldiers). The whole formation does a quick scale. */
+.cq-soldier-formation.reinforcing {
+  animation: cq-formation-bob 1.6s ease-in-out infinite alternate,
+             cq-reinforce-pulse 0.8s cubic-bezier(.22, 1.6, .36, 1);
+}
+@keyframes cq-reinforce-pulse {
+  0%, 100% { filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55)); }
+  50%      { filter: drop-shadow(0 0 18px gold) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55)); transform: translate3d(-50%, -90%, 0) scale(1.08); }
 }
 
 /* Unit emoji arriving on a captured tile — pop-in with rotation */
