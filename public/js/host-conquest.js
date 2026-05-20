@@ -169,7 +169,7 @@
       // Swap each unit in the falling formation to its fall pose
       const fallSrc = prevOwner === 'red'
         ? '/assets/conquest/soldier-fall.png'
-        : '/assets/conquest/cavalry-fall.png';
+        : '/assets/conquest/cavalry-gold-fall.png';
       oldFormation.querySelectorAll('img').forEach((img) => { img.src = fallSrc; });
       oldFormation.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
       oldFormation.style.opacity = '0';
@@ -228,10 +228,10 @@
     wrap.id = 'cq-march-' + to.id + '-' + Date.now();
     const src = team === 'red'
       ? '/assets/conquest/soldier-idle.png'
-      : '/assets/conquest/cavalry-idle.png';
+      : '/assets/conquest/cavalry-gold-idle.png';
     const attackSrc = team === 'red'
       ? '/assets/conquest/soldier-attack.png'
-      : '/assets/conquest/cavalry-attack.png';
+      : '/assets/conquest/cavalry-gold-attack.png';
     // Start at the source tile
     wrap.style.left = (fromPos.left + fromPos.width / 2) + '%';
     wrap.style.top  = (fromPos.top  + fromPos.height * 0.85) + '%';
@@ -365,9 +365,12 @@
     const existing = document.getElementById('cq-soldier-' + tile.id);
     if (existing) existing.remove();
     const formationCount = tile.isCapital ? 4 : 2;
+    // Use the baked blue-team sprites for Gold (the CSS hue-rotate approach
+    // turned the horse blue too which looked wrong; the Jimp recolor only
+    // changes the tunic).
     const src = team === 'red'
       ? '/assets/conquest/soldier-idle.png'
-      : '/assets/conquest/cavalry-idle.png';
+      : '/assets/conquest/cavalry-gold-idle.png';
     const wrap = document.createElement('div');
     wrap.className = 'cq-soldier-formation ' + team;
     wrap.id = 'cq-soldier-' + tile.id;

@@ -1127,6 +1127,89 @@
   }
   function resetStreak() { correctStreak = 0; }
 
+  // === REINOS EN GUERRA v5 — STRATEGIC MARCH-ORDER PICKER ===
+  // Shown after a correct vocab answer. Three big buttons + 5s auto-resolve.
+  // Whatever the player taps becomes the team's next move on the host board.
+  let cqOrderTimer = null;
+  function showConquestOrderPicker(availability) {
+    const tag = $('cq-order-team-tag');
+    if (tag) {
+      tag.textContent = (team === 'red' ? '🐉 Caballería Roja' : '🐲 Caballería Dorada');
+      tag.className = 'cq-order-team-tag ' + team;
+    }
+    // Apply availability — greyed-out buttons aren't tappable but stay visible
+    document.querySelectorAll('.cq-order-btn').forEach((b) => {
+      const ord = b.dataset.order;
+      const ok = availability[ord] !== false;
+      b.disabled = !ok;
+      b.classList.toggle('cq-order-disabled', !ok);
+    });
+    showScreen('cq-order');
+    if (window.unlockAudio) window.unlockAudio();
+    if (MochiSounds.warDrum) MochiSounds.warDrum();
+    // Bind buttons (one-shot — first tap wins, then disable all)
+    let chosen = false;
+    function emitOrder(order) {
+      if (chosen) return;
+      chosen = true;
+      if (cqOrderTimer) { clearInterval(cqOrderTimer); cqOrderTimer = null; }
+      document.querySelectorAll('.cq-order-btn').forEach((b) => b.disabled = true);
+      // Visual feedback on the tapped button
+      const btn = document.querySelector(`.cq-order-btn[data-order="${order}"]`);
+      if (btn) btn.classList.add('cq-order-chosen');
+      // Sound by order type
+      if (order === 'attack' && MochiSounds.swordClash) MochiSounds.swordClash();
+      else if (order === 'advance' && MochiSounds.horseGallop) MochiSounds.horseGallop();
+      else if (order === 'defend' && MochiSounds.archerTwang) MochiSounds.archerTwang();
+      if (navigator.vibrate) navigator.vibrate(30);
+      try { socket.emit('player:cq-order', { pin, order }); } catch (_) {}
+    }
+    document.querySelectorAll('.cq-order-btn').forEach((b) => {
+      const ord = b.dataset.order;
+      b.onpointerdown = (e) => { if (e) e.preventDefault(); if (!b.disabled) emitOrder(ord); };
+      b.onclick = (e) => { if (e) e.preventDefault(); if (!b.disabled) emitOrder(ord); };
+    });
+    // 5-second countdown. If they don't pick, auto-fire the first available.
+    const totalMs = 5000;
+    const startedAt = Date.now();
+    if ($('cq-order-timer-num')) $('cq-order-timer-num').textContent = '5';
+    if ($('cq-order-timer-fill')) $('cq-order-timer-fill').style.width = '100%';
+    if (cqOrderTimer) clearInterval(cqOrderTimer);
+    cqOrderTimer = setInterval(() => {
+      const remaining = Math.max(0, (startedAt + totalMs) - Date.now());
+      if ($('cq-order-timer-num')) $('cq-order-timer-num').textContent = Math.ceil(remaining / 1000);
+      if ($('cq-order-timer-fill')) $('cq-order-timer-fill').style.width = ((remaining / totalMs) * 100) + '%';
+      if (remaining <= 0) {
+        clearInterval(cqOrderTimer); cqOrderTimer = null;
+        if (!chosen) {
+          // Auto-resolve to the first available option
+          const order = availability.attack ? 'attack'
+                      : availability.advance ? 'advance' : 'defend';
+          emitOrder(order);
+        }
+      }
+    }, 100);
+  }
+  // Server confirmation that the order was processed — show a brief tier-
+  // matched Rewards toast + Spanish-themed sub.
+  socket.on('cq:order-resolved', (data) => {
+    if (gameType !== 'conquest') return;
+    if (!window.Rewards) return;
+    const action = data.action;
+    if (action === 'conquered') {
+      window.Rewards.show({ tier: 'epic', icon: '⚔️', text: '¡Asalto exitoso!', duration: 1800 });
+    } else if (action === 'expanded') {
+      window.Rewards.show({ tier: 'great', icon: '🚩', text: '¡Terreno conquistado!' });
+    } else if (action === 'jumped') {
+      window.Rewards.show({ tier: 'great', icon: '🐎', text: '¡Salto sorpresa!' });
+    } else if (action === 'reinforce') {
+      window.Rewards.show({ icon: '🛡', text: '¡Posición fortificada!' });
+    }
+    if (data.capturedEnemyCapital) {
+      window.Rewards.show({ tier: 'epic', icon: '🏯', text: '¡TOMASTE LA CAPITAL ENEMIGA! 🎺', duration: 2400 });
+    }
+  });
+
   socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly, familyToken, conquest, sixseven }) => {
     markActivity();
     clearAnswerHeartbeat();
@@ -1208,10 +1291,17 @@
       } else if (gameType === 'monopoly') {
         happyMascot = '🎲';
         sub = '¡A lanzar el dado!';
+      } else if (gameType === 'conquest' && conquest && conquest.needsOrder) {
+        // === STRATEGIC MARCH-ORDER PICKER ===
+        // The server says we have a soldier to deploy. Open the 3-button
+        // picker INSTEAD of showing the standard result feedback. The
+        // player's tap on ATTACK/ADVANCE/DEFEND will fire the actual
+        // capture on the server.
+        showConquestOrderPicker(conquest.availability || { attack: true, advance: true, defend: true });
+        return;   // skip the standard result-feedback flow + next-question wait
       } else if (gameType === 'conquest') {
-        // Battle-themed feedback — no city names, no landmarks. Just the
-        // soldier that joined the battle + what happened (clash / advance /
-        // ambush / fortress fell). Kids see the SOLDIER, not a place name.
+        // Battle-themed feedback — fallback if needsOrder wasn't set
+        // (shouldn't normally happen, but keeps the screen clean if it does).
         const unit = conquest && conquest.unit ? conquest.unit : '🐎';
         happyMascot = unit;
         const unitName = unit === '🏹' ? 'arquero'
@@ -4715,7 +4805,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

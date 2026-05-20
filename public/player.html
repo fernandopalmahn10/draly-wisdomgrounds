@@ -13,11 +13,11 @@
   <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260519a">
-  <link rel="stylesheet" href="/css/conquest.css?v=20260518b">
-  <link rel="stylesheet" href="/css/sixseven.css?v=20260519a">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260520b">
+  <link rel="stylesheet" href="/css/conquest.css?v=20260520b">
+  <link rel="stylesheet" href="/css/sixseven.css?v=20260520b">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
-  <link rel="stylesheet" href="/css/family.css?v=20260519a">
+  <link rel="stylesheet" href="/css/family.css?v=20260520b">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -465,6 +465,36 @@
     <div class="ss-flash-wrong"   id="ss-flash-wrong"></div>
   </div>
 
+  <!-- REINOS EN GUERRA v5 — STRATEGIC MARCH-ORDER PICKER
+       After a correct vocab answer, the player must DECIDE what their
+       team's soldier does. Three big tap-targets, 5s auto-resolve. -->
+  <div id="screen-cq-order" class="hidden player-screen cq-order-screen">
+    <div class="cq-order-header">
+      <div class="cq-order-team-tag" id="cq-order-team-tag">🐉 Caballería Roja</div>
+      <div class="cq-order-timer-num" id="cq-order-timer-num">5</div>
+    </div>
+    <div class="cq-order-headline">⚔️ ¡Da la orden de marcha!</div>
+    <p class="cq-order-sub">Tu respuesta correcta gana un soldado. ¿Adónde lo envías?</p>
+    <div class="cq-order-buttons">
+      <button class="cq-order-btn cq-order-attack" data-order="attack">
+        <span class="cq-order-icon">⚔️</span>
+        <span class="cq-order-title">ATACAR</span>
+        <span class="cq-order-desc">Conquista un territorio enemigo</span>
+      </button>
+      <button class="cq-order-btn cq-order-advance" data-order="advance">
+        <span class="cq-order-icon">🚩</span>
+        <span class="cq-order-title">AVANZAR</span>
+        <span class="cq-order-desc">Toma un territorio libre</span>
+      </button>
+      <button class="cq-order-btn cq-order-defend" data-order="defend">
+        <span class="cq-order-icon">🛡</span>
+        <span class="cq-order-title">DEFENDER</span>
+        <span class="cq-order-desc">Refuerza tu zona más débil</span>
+      </button>
+    </div>
+    <div class="cq-order-timer-bar"><div class="cq-order-timer-fill" id="cq-order-timer-fill"></div></div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -476,10 +506,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260519a"></script>
+  <script src="/js/sounds.js?v=20260520b"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/rewards.js?v=20260519a"></script>
-  <script src="/js/player.js?v=20260519a"></script>
+  <script src="/js/rewards.js?v=20260520b"></script>
+  <script src="/js/player.js?v=20260520b"></script>
 </body>
 </html>

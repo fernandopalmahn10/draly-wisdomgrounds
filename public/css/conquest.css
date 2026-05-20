@@ -224,9 +224,11 @@ body.conquest-bg .win-screen { color: #3a1505; }
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
 }
-/* Team color — Gold Army gets a hue shift to read as a different army */
+/* Team color — Gold Army uses the BAKED blue sprites (recolor done in
+   scripts/recolor-gold-team.js so the horse stays brown, only the tunic
+   turns blue). No CSS hue-rotate needed any more. */
 .cq-soldier-formation.gold .cq-formation-unit {
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55)) hue-rotate(180deg) saturate(0.85);
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55));
 }
 
 /* Subtle team flag/banner halo on the ground */
@@ -548,3 +550,179 @@ body.conquest-bg .win-screen { color: #3a1505; }
 .cq-feedback-action.expanded  { background: #2fa14b; color: #fff; }
 .cq-feedback-action.jumped    { background: #6e3a18; color: #fff8e0; }
 .cq-feedback-action.reinforce { background: rgba(0,0,0,0.5); color: #ffd57a; }
+
+/* ============================================================ */
+/* === STRATEGIC MARCH-ORDER PICKER (v5) ===
+   Player gets a 3-button choice after every correct vocab answer.
+   This is THE strategic decision the game was missing — players are
+   no longer just smashing buttons hoping for random captures. */
+/* ============================================================ */
+.cq-order-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 14px;
+  gap: 12px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 170, 80, 0.30), transparent 55%),
+    linear-gradient(180deg, #6e3a18 0%, #4a2406 45%, #2c1408 100%);
+  color: #fff8e0;
+  position: relative;
+  overflow: hidden;
+  /* Battle-scroll parchment texture overlay */
+}
+.cq-order-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(33deg, transparent 0 80px, rgba(40, 20, 8, 0.07) 80px 82px),
+    repeating-linear-gradient(-25deg, transparent 0 100px, rgba(40, 20, 8, 0.05) 100px 102px);
+  pointer-events: none;
+}
+.cq-order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  z-index: 2;
+}
+.cq-order-team-tag {
+  background: rgba(0, 0, 0, 0.65);
+  border: 2px solid #ffd57a;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(0.95rem, 3vw, 1.2rem);
+  color: #ffd57a;
+  letter-spacing: 0.05em;
+}
+.cq-order-team-tag.red  { border-color: #ff5a66; color: #ff8a91; }
+.cq-order-team-tag.gold { border-color: #ffd57a; color: #ffd57a; }
+.cq-order-timer-num {
+  background: rgba(0, 0, 0, 0.65);
+  border: 3px solid #ffd57a;
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.7rem;
+  color: #fff8e0;
+}
+.cq-order-headline {
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(1.4rem, 5vw, 2rem);
+  letter-spacing: 0.04em;
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.8);
+  z-index: 2;
+}
+.cq-order-sub {
+  text-align: center;
+  color: #f3d8a8;
+  margin: 0;
+  font-size: clamp(0.85rem, 2.6vw, 1rem);
+  z-index: 2;
+}
+
+/* The three big tap-targets — stacked vertically for thumb-friendly tap */
+.cq-order-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  flex: 1;
+  z-index: 2;
+  align-content: center;
+  padding: 0 4px;
+}
+.cq-order-btn {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 4px solid #1a0c04;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  box-shadow: 0 6px 0 #1a0c04, 0 10px 24px rgba(0, 0, 0, 0.55);
+  transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.2s ease;
+  color: #fff8e0;
+  position: relative;
+}
+.cq-order-btn:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #1a0c04, 0 4px 12px rgba(0, 0, 0, 0.55);
+}
+.cq-order-icon {
+  font-size: clamp(2.4rem, 7vw, 3.4rem);
+  line-height: 1;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.7));
+}
+.cq-order-title {
+  font-size: clamp(1.2rem, 4vw, 1.6rem);
+  letter-spacing: 0.08em;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.7);
+  display: block;
+}
+.cq-order-desc {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: clamp(0.78rem, 2.4vw, 0.95rem);
+  opacity: 0.85;
+  display: block;
+  margin-top: 2px;
+}
+.cq-order-attack {
+  background: linear-gradient(135deg, #c11d2a 0%, #7a0e16 100%);
+}
+.cq-order-advance {
+  background: linear-gradient(135deg, #2fa14b 0%, #1a5a2c 100%);
+}
+.cq-order-defend {
+  background: linear-gradient(135deg, #2a5a8e 0%, #14304a 100%);
+}
+.cq-order-btn.cq-order-disabled {
+  filter: grayscale(0.7) brightness(0.6);
+  cursor: not-allowed;
+}
+.cq-order-btn.cq-order-chosen {
+  animation: cq-order-chosen 0.5s cubic-bezier(.22, 1.6, .36, 1);
+  filter: brightness(1.3) drop-shadow(0 0 18px gold);
+}
+@keyframes cq-order-chosen {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.08); filter: brightness(1.5) drop-shadow(0 0 28px gold); }
+  100% { transform: scale(1); }
+}
+
+/* The 5-second countdown bar at the bottom */
+.cq-order-timer-bar {
+  height: 12px;
+  border: 2px solid rgba(255, 213, 122, 0.6);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  margin: 6px 4px 0;
+  z-index: 2;
+}
+.cq-order-timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ffd57a, #ff8a91, #ff5a66);
+  width: 100%;
+  transition: width 0.1s linear;
+}
