@@ -726,3 +726,137 @@ body.conquest-bg .win-screen { color: #3a1505; }
   width: 100%;
   transition: width 0.1s linear;
 }
+
+/* ============================================================ */
+/* === BATTLE VFX (sand burst, arrow volley, fortress walls) === */
+/* ============================================================ */
+
+/* Sand dust kicked up at the source tile when a soldier marches off */
+.cq-sand-dust {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(220, 180, 120, 0.85), rgba(160, 110, 60, 0));
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: cq-sand-dust 0.7s ease-out forwards;
+  z-index: 5;
+}
+@keyframes cq-sand-dust {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  30%  { opacity: 0.95; transform: translate(calc(-50% + var(--dx, 0)), calc(-50% + var(--dy, 0))) scale(1.2); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0)), calc(-50% + var(--dy, -20px))) scale(1.6); }
+}
+
+/* Arrow volley — arrows arc from off-screen to the target tile */
+.cq-arrow {
+  position: absolute;
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+  pointer-events: none;
+  z-index: 6;
+  filter: drop-shadow(0 0 6px rgba(80, 40, 16, 0.7));
+  left: var(--start-x, 0);
+  top: var(--start-y, 0);
+  animation: cq-arrow-arc 0.9s cubic-bezier(.4, 0, .8, 0.6) forwards;
+}
+@keyframes cq-arrow-arc {
+  0%   { opacity: 0; transform: rotate(45deg) scale(0.5); }
+  15%  { opacity: 1; }
+  100% { opacity: 1;
+         left: var(--target-x, 0);
+         top:  var(--target-y, 0);
+         transform: rotate(-15deg) scale(0.9); }
+}
+
+/* Fortress build — bricks rising into place + hammer-spark icons */
+.cq-build-brick {
+  position: absolute;
+  width: 22px;
+  height: 14px;
+  background: linear-gradient(180deg, #c25a2c 0%, #8b3a16 60%, #6e2c0e 100%);
+  border: 1.5px solid #4a1e0a;
+  border-radius: 2px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: cq-build-brick 0.85s cubic-bezier(.22, 1.6, .36, 1) forwards;
+  z-index: 5;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+.cq-build-brick.red  { box-shadow: 0 0 8px rgba(217, 46, 58, 0.55), 0 2px 4px rgba(0, 0, 0, 0.5); }
+.cq-build-brick.gold { box-shadow: 0 0 8px rgba(50, 100, 200, 0.55), 0 2px 4px rgba(0, 0, 0, 0.5); }
+@keyframes cq-build-brick {
+  0%   { transform: translate(-50%, -10%) scale(0.6) rotate(-12deg); opacity: 0; }
+  60%  { transform: translate(-50%, -100%) scale(1) rotate(2deg); opacity: 1; }
+  100% { transform: translate(-50%, -80%) scale(1) rotate(0); opacity: 1; }
+}
+
+.cq-build-spark {
+  position: absolute;
+  font-size: clamp(1.2rem, 2.4vw, 1.8rem);
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px gold);
+  transform: translate(-50%, -50%);
+  animation: cq-build-spark 0.8s ease-out forwards;
+  z-index: 6;
+}
+@keyframes cq-build-spark {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.3); }
+  30%  { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0)), calc(-50% + var(--dy, 0))) scale(0.7); }
+}
+
+/* ============================================================ */
+/* === FORTIFIED TILE / FORMATION VISUAL — shows defense HP === */
+/* ============================================================ */
+/* Each level of HP adds a more pronounced fortification halo around
+   the formation, so you can SEE which positions are heavily defended. */
+.cq-soldier-formation.fortified-2::after,
+.cq-soldier-formation.fortified-3::after,
+.cq-soldier-formation.fortified-4::after {
+  content: '';
+  position: absolute;
+  inset: -8px -8px -4px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 213, 122, 0.7);
+  box-shadow: 0 0 12px rgba(255, 213, 122, 0.55);
+  pointer-events: none;
+  z-index: -1;
+  animation: cq-fortified-pulse 1.4s ease-in-out infinite alternate;
+}
+.cq-soldier-formation.fortified-3::after {
+  inset: -12px -12px -6px;
+  border-width: 3px;
+  box-shadow: 0 0 18px rgba(255, 213, 122, 0.7);
+}
+.cq-soldier-formation.fortified-4::after {
+  inset: -16px -16px -8px;
+  border-width: 4px;
+  border-color: gold;
+  box-shadow: 0 0 28px gold, 0 0 50px rgba(255, 200, 80, 0.55);
+}
+@keyframes cq-fortified-pulse {
+  from { filter: brightness(1); }
+  to   { filter: brightness(1.3); }
+}
+
+/* HP badge above the formation showing the actual number */
+.cq-soldier-formation.fortified-2::before,
+.cq-soldier-formation.fortified-3::before,
+.cq-soldier-formation.fortified-4::before {
+  content: attr(data-hp);
+  position: absolute;
+  top: -10px;
+  right: -8px;
+  background: linear-gradient(135deg, #ffd57a, #c0671c);
+  color: #2c1404;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 0.85rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 2px solid #2c1404;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  z-index: 7;
+  pointer-events: none;
+}

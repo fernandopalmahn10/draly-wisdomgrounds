@@ -12,7 +12,8 @@
 
   let territories = [];
   let ownership = {};
-  let unitsByTile = {};   // tileId → soldier emoji (🐎 / 🏹 / 🗡 / 🛡 / 👑)
+  let unitsByTile = {};   // tileId → soldier emoji
+  let defenseHp = {};     // tileId → fortification level (1..4)
   let scores = { red: 0, gold: 0 };
   let gameOver = false;
   let warriorTimer = null;
@@ -129,6 +130,7 @@
     territories = data.territories || [];
     ownership = data.ownership || {};
     unitsByTile = data.units || {};
+    defenseHp = data.defenseHp || {};
     scores = data.teamScores || { red: 0, gold: 0 };
     gameOver = false;
     renderMap();
@@ -139,15 +141,58 @@
     startAmbientDrums();
   });
 
-  // === Capture event — soldier MARCHES from a friendly neighbor onto the tile
-  // (visible animation, not instant snap). On enemy ground a sword-clash
-  // sprite + attack pose plays before the new soldier settles in. ===
+  // === Capture event — soldier MARCHES from a friendly neighbor onto the tile.
+  // Actions now include: reinforce (DEFEND), conquered (ATTACK that broke HP),
+  // attack-repelled (ATTACK that hit a fortified tile and didn't flip),
+  // expanded (ADVANCE), jumped, and the rare cases. ===
   socket.on('cq:capture', (cap) => {
     if (cap.teamScores) { scores = cap.teamScores; updateScores(); }
+    // Update local HP tracking
+    if (typeof cap.defenseHp === 'number') defenseHp[cap.tileId] = cap.defenseHp;
+
+    // === DEFEND (reinforce) — fortress walls go up ===
     if (cap.action === 'reinforce') {
-      const cap2 = territories.find((t) => t.capitalOf === cap.toTeam);
-      const el = cap2 && $('cq-tile-' + cap2.id);
-      if (el) flashTile(el, cap.toTeam, true);
+      const tile = territories[cap.tileId];
+      const tileEl = $('cq-tile-' + cap.tileId);
+      if (tileEl) {
+        flashTile(tileEl, cap.toTeam, true);
+        spawnFortressBuildFx(tileEl, cap.toTeam);
+      }
+      // Update the formation visual to show the new HP via fortification class
+      const formation = document.getElementById('cq-soldier-' + cap.tileId);
+      if (formation) {
+        const newHp = defenseHp[cap.tileId] || 1;
+        formation.classList.remove('fortified-1', 'fortified-2', 'fortified-3', 'fortified-4');
+        if (newHp > 1) formation.classList.add('fortified-' + Math.min(4, newHp));
+        formation.dataset.hp = newHp;
+      }
+      MochiSounds.fortressBuild && MochiSounds.fortressBuild();
+      const teamName = cap.toTeam === 'red' ? 'Roja' : 'Dorada';
+      setBanner(`🛡 ¡La fortaleza ${teamName} se hace más fuerte! (HP ${defenseHp[cap.tileId]})`);
+      return;
+    }
+
+    // === ATTACK that hit a fortified wall — defender held, HP reduced ===
+    if (cap.action === 'attack-repelled') {
+      const tileEl = $('cq-tile-' + cap.tileId);
+      if (tileEl) {
+        spawnSwordClashFx(tileEl);
+        spawnArrowVolleyFx(tileEl, cap.toTeam);
+        flashTile(tileEl, cap.toTeam, false);
+      }
+      // Update formation HP indicator
+      const formation = document.getElementById('cq-soldier-' + cap.tileId);
+      if (formation) {
+        const newHp = defenseHp[cap.tileId] || 1;
+        formation.classList.remove('fortified-1', 'fortified-2', 'fortified-3', 'fortified-4');
+        if (newHp > 1) formation.classList.add('fortified-' + Math.min(4, newHp));
+        formation.dataset.hp = newHp;
+      }
+      MochiSounds.arrowVolley && MochiSounds.arrowVolley();
+      MochiSounds.swordClash && setTimeout(() => MochiSounds.swordClash(), 200);
+      const teamName = cap.toTeam === 'red' ? 'Roja' : 'Dorada';
+      setBanner(`⚔️ ¡La tropa ${teamName} atacó pero la fortaleza resistió! (HP ${defenseHp[cap.tileId]})`);
+      if (navigator.vibrate) navigator.vibrate([30, 20, 50]);
       return;
     }
     const prevOwner = ownership[cap.tileId];
@@ -182,17 +227,24 @@
     // Find a friendly neighbor (or use the team's capital) as the soldier's
     // starting position — the new soldier visibly MARCHES from there.
     const sourceTile = findFriendlyNeighbor(tile, cap.toTeam);
+    if (sourceTile) {
+      const srcEl = $('cq-tile-' + sourceTile.id);
+      if (srcEl) spawnSandBurstFx(srcEl);     // dust kick at the source
+      MochiSounds.sandKick && MochiSounds.sandKick();
+    }
     spawnMarchingSoldier(sourceTile || tile, tile, cap.toTeam, cap.action);
 
-    // Banner + sound
+    // Banner + sound + per-action VFX
     const teamName = cap.toTeam === 'red' ? 'Roja' : 'Dorada';
     if (cap.action === 'conquered') {
-      setBanner(`⚔️ ¡El ejército ${teamName} conquistó la posición enemiga!`);
+      setBanner(`⚔️ ¡El ejército ${teamName} rompió la fortaleza enemiga!`);
       MochiSounds.swordClash && MochiSounds.swordClash();
+      setTimeout(() => MochiSounds.arrowVolley && MochiSounds.arrowVolley(), 100);
       spawnSwordClashFx(tileEl);
+      spawnArrowVolleyFx(tileEl, cap.toTeam);
       if (navigator.vibrate) navigator.vibrate([40, 30, 80]);
     } else if (cap.action === 'expanded') {
-      setBanner(`🐎 ¡La caballería ${teamName} avanza al frente!`);
+      setBanner(`🐎 ¡La caballería ${teamName} avanza a terreno libre!`);
       MochiSounds.horseGallop && MochiSounds.horseGallop();
     } else if (cap.action === 'jumped') {
       setBanner(`🏹 ¡Salto sorpresa de la tropa ${teamName}!`);
@@ -259,8 +311,9 @@
 
   socket.on('cq:capital-fallen', ({ team }) => {
     setBanner(`🏯 ¡La fortaleza enemiga ha caído! ⚔️`);
-    MochiSounds.fortressFall && MochiSounds.fortressFall();
-    setTimeout(() => MochiSounds.winFanfare && MochiSounds.winFanfare(), 600);
+    MochiSounds.battleHorn && MochiSounds.battleHorn();
+    setTimeout(() => MochiSounds.fortressFall && MochiSounds.fortressFall(), 250);
+    setTimeout(() => MochiSounds.winFanfare && MochiSounds.winFanfare(), 800);
     burstStars(team);
   });
 
@@ -371,10 +424,13 @@
     const src = team === 'red'
       ? '/assets/conquest/soldier-idle.png'
       : '/assets/conquest/cavalry-gold-idle.png';
+    const hp = defenseHp[tile.id] || 1;
     const wrap = document.createElement('div');
     wrap.className = 'cq-soldier-formation ' + team;
+    if (hp > 1) wrap.classList.add('fortified-' + Math.min(4, hp));
     wrap.id = 'cq-soldier-' + tile.id;
     wrap.dataset.tileId = tile.id;
+    wrap.dataset.hp = hp;
     wrap.style.left = (pos.left + pos.width / 2) + '%';
     wrap.style.top  = (pos.top + pos.height * 0.85) + '%';
     // Build N soldiers offset side-by-side so they read as a formation,
@@ -409,6 +465,88 @@
     map.appendChild(horse);
     setTimeout(() => horse.remove(), 1200);
   }
+  // FORTRESS BUILD FX — hammers + rising wall on the tile (DEFEND action)
+  function spawnFortressBuildFx(tileEl, team) {
+    if (!tileEl) return;
+    const map = $('cq-map');
+    if (!map) return;
+    const r = tileEl.getBoundingClientRect();
+    const mr = map.getBoundingClientRect();
+    const cx = r.left + r.width / 2 - mr.left;
+    const cy = r.top  + r.height / 2 - mr.top;
+    // Spawn 3 brick particles rising into place
+    for (let i = 0; i < 3; i++) {
+      const brick = document.createElement('div');
+      brick.className = 'cq-build-brick ' + team;
+      brick.style.left = (cx + (i - 1) * 22) + 'px';
+      brick.style.top  = cy + 'px';
+      brick.style.animationDelay = (i * 80) + 'ms';
+      map.appendChild(brick);
+      setTimeout(() => brick.remove(), 900);
+    }
+    // Hammer-spark particles
+    for (let i = 0; i < 4; i++) {
+      const s = document.createElement('div');
+      s.className = 'cq-build-spark';
+      s.textContent = ['🔨', '⚒️', '✨', '🛠'][i % 4];
+      s.style.left = cx + 'px';
+      s.style.top  = cy + 'px';
+      const ang = (i / 4) * Math.PI * 2;
+      s.style.setProperty('--dx', Math.cos(ang) * 36 + 'px');
+      s.style.setProperty('--dy', Math.sin(ang) * 36 + 'px');
+      s.style.animationDelay = (i * 30) + 'ms';
+      map.appendChild(s);
+      setTimeout(() => s.remove(), 800);
+    }
+  }
+
+  // ARROW VOLLEY FX — arrows arc from off-screen to land on the target tile
+  function spawnArrowVolleyFx(tileEl, team) {
+    if (!tileEl) return;
+    const map = $('cq-map');
+    if (!map) return;
+    const r = tileEl.getBoundingClientRect();
+    const mr = map.getBoundingClientRect();
+    const cx = r.left + r.width / 2 - mr.left;
+    const cy = r.top  + r.height / 2 - mr.top;
+    // 5 arrows flying in from different angles
+    for (let i = 0; i < 5; i++) {
+      const arrow = document.createElement('div');
+      arrow.className = 'cq-arrow ' + team;
+      arrow.textContent = '🏹';
+      arrow.style.setProperty('--target-x', cx + 'px');
+      arrow.style.setProperty('--target-y', cy + 'px');
+      arrow.style.setProperty('--start-x', (cx + (Math.random() - 0.5) * 400) + 'px');
+      arrow.style.setProperty('--start-y', (cy - 240 - Math.random() * 100) + 'px');
+      arrow.style.animationDelay = (i * 70) + 'ms';
+      map.appendChild(arrow);
+      setTimeout(() => arrow.remove(), 900);
+    }
+  }
+
+  // SAND BURST FX — kicked-up dirt where a soldier marches off a tile
+  function spawnSandBurstFx(tileEl) {
+    if (!tileEl) return;
+    const map = $('cq-map');
+    if (!map) return;
+    const r = tileEl.getBoundingClientRect();
+    const mr = map.getBoundingClientRect();
+    const cx = r.left + r.width / 2 - mr.left;
+    const cy = r.top  + r.height * 0.95 - mr.top;
+    for (let i = 0; i < 4; i++) {
+      const dust = document.createElement('div');
+      dust.className = 'cq-sand-dust';
+      dust.style.left = cx + 'px';
+      dust.style.top  = cy + 'px';
+      const ang = -Math.PI + (i / 3) * Math.PI;   // upward fan
+      dust.style.setProperty('--dx', Math.cos(ang) * 30 + 'px');
+      dust.style.setProperty('--dy', Math.sin(ang) * 28 + 'px');
+      dust.style.animationDelay = (i * 30) + 'ms';
+      map.appendChild(dust);
+      setTimeout(() => dust.remove(), 700);
+    }
+  }
+
   // Spark burst over a tile when steel meets steel
   function spawnSwordClashFx(tileEl) {
     if (!tileEl) return;

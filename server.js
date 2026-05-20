@@ -437,35 +437,62 @@ function cqTeamScore(g, team) {
   return s;
 }
 
-// Apply a capture: mark ownership + assign a unit emoji + update scores.
-// Each captured tile remembers which kind of soldier holds it (knight, archer,
-// swordsman, shield) so the battlefield reads visually as a mixed army.
+// Apply a capture / defense / attack action. The HP mechanic means:
+//   reinforce (DEFEND): +1 HP on the chosen own tile (capped at 4)
+//   conquered (ATTACK): -1 HP on enemy tile. ONLY flips ownership when HP=0.
+//   expanded (ADVANCE): claim empty tile with HP=1
 function cqApplyCapture(g, team, target) {
   const t = CQ_TERRITORIES[target.tileId];
   if (!t) return null;
   const fromTeam = g.conquest.ownership[t.id] || null;
-  // Reinforcing own land: bump that tile's unit (visual stacking, no real change)
+
+  // DEFEND — fortify an own tile. No ownership change.
   if (target.action === 'reinforce') {
+    const curHp = g.conquest.defenseHp[t.id] || 1;
+    g.conquest.defenseHp[t.id] = Math.min(4, curHp + 1);
     return {
       tileId: t.id, fromTeam: team, toTeam: team, action: 'reinforce',
       isCapital: !!t.isCapital, unit: g.conquest.units[t.id] || cqPickUnit(),
+      defenseHp: g.conquest.defenseHp[t.id],
     };
   }
-  // Fortresses (capitals) keep the 🏯 / 👑 emblem; other tiles get a unit
+
+  // ATTACK — try to capture an enemy tile. Reduce HP first.
+  if (target.action === 'conquered') {
+    const curHp = g.conquest.defenseHp[t.id] || 1;
+    if (curHp > 1) {
+      // Tile holds — HP reduces but ownership stays the same
+      g.conquest.defenseHp[t.id] = curHp - 1;
+      return {
+        tileId: t.id, fromTeam, toTeam: fromTeam, action: 'attack-repelled',
+        isCapital: !!t.isCapital, unit: g.conquest.units[t.id] || cqPickUnit(),
+        defenseHp: g.conquest.defenseHp[t.id],
+      };
+    }
+    // HP was 1 → tile FLIPS to attacking team
+    const unit = t.isCapital ? '👑' : cqPickUnit();
+    g.conquest.ownership[t.id] = team;
+    g.conquest.units[t.id] = unit;
+    g.conquest.defenseHp[t.id] = 1;
+    g.conquest.capturedCount = (g.conquest.capturedCount || 0) + 1;
+    const capturedEnemyCapital = (t.isCapital && t.capitalOf !== team);
+    return {
+      tileId: t.id, fromTeam, toTeam: team, action: 'conquered',
+      isCapital: !!t.isCapital, capturedEnemyCapital, unit,
+      terrain: t.terrain, defenseHp: 1,
+    };
+  }
+
+  // ADVANCE / JUMPED — claim empty tile
   const unit = t.isCapital ? '👑' : cqPickUnit();
   g.conquest.ownership[t.id] = team;
   g.conquest.units[t.id] = unit;
+  g.conquest.defenseHp[t.id] = 1;
   g.conquest.capturedCount = (g.conquest.capturedCount || 0) + 1;
-  const capturedEnemyCapital = (target.action === 'conquered' && t.isCapital && t.capitalOf !== team);
   return {
-    tileId: t.id,
-    fromTeam,
-    toTeam: team,
-    action: target.action,
-    isCapital: !!t.isCapital,
-    capturedEnemyCapital,
-    unit,
-    terrain: t.terrain,
+    tileId: t.id, fromTeam, toTeam: team, action: target.action,
+    isCapital: !!t.isCapital, capturedEnemyCapital: false,
+    unit, terrain: t.terrain, defenseHp: 1,
   };
 }
 
@@ -1502,19 +1529,27 @@ io.on('connection', (socket) => {
       }
       if (g.gameType === 'conquest') {
         // Each team owns its fortress capital from the start (with a 👑 general).
-        // Everywhere else is no-man's land. units[id] tracks which soldier
-        // emoji is holding that tile.
+        // Everywhere else is no-man's land. units[id] tracks soldier emoji.
+        // defenseHp[id] tracks the tile's defensive strength:
+        //   1 = baseline (single attack flips it)
+        //   2-4 = fortified (more attacks needed)
+        // DEFEND orders bump HP +1. ATTACK reduces enemy HP by 1; only flips
+        // when HP=0. This is the strategic heart of v6 — players have to
+        // COORDINATE attacks to break a heavily fortified position.
         const ownership = {};
         const units = {};
+        const defenseHp = {};
         CQ_TERRITORIES.forEach((t) => {
           if (t.capitalOf) {
             ownership[t.id] = t.capitalOf;
             units[t.id] = '👑';
+            defenseHp[t.id] = 3;     // capitals start fortified
           }
         });
         g.conquest = {
           ownership,
           units,
+          defenseHp,
           capturedCount: 0,
           battleLog: [],
         };
@@ -1523,6 +1558,7 @@ io.on('connection', (socket) => {
           territories: CQ_TERRITORIES,
           ownership,
           units,
+          defenseHp,
           cols: CQ_COLS, rows: CQ_ROWS,
           players: Object.fromEntries(
             Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team, avatar: p.avatar }])
