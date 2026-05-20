@@ -354,6 +354,77 @@ function cqPickTarget(g, team) {
 }
 function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
+// Per-team availability check: do we have ENEMY-adjacent, EMPTY-adjacent,
+// or OWN-adjacent tiles for each march-order option? Drives the player's
+// 3-button picker — greyed-out options aren't tappable.
+function cqOrderAvailability(g, team) {
+  const enemyTeam = team === 'red' ? 'gold' : 'red';
+  const own = [];
+  CQ_TERRITORIES.forEach((t) => {
+    if (g.conquest.ownership[t.id] === team) own.push(t.id);
+  });
+  let hasEnemyNeighbor = false;
+  let hasEmptyNeighbor = false;
+  own.forEach((tid) => {
+    cqAdjacent(tid).forEach((nid) => {
+      const owner = g.conquest.ownership[nid];
+      if (owner === enemyTeam) hasEnemyNeighbor = true;
+      else if (!owner) hasEmptyNeighbor = true;
+    });
+  });
+  return {
+    attack:  hasEnemyNeighbor,
+    advance: hasEmptyNeighbor,
+    defend:  own.length > 0,    // can always defend if you own anything
+  };
+}
+
+// Pick a capture target based on the player's CHOSEN order.
+//   attack  → enemy-adjacent tile (sword clash)
+//   advance → empty-adjacent tile (peaceful expansion)
+//   defend  → reinforce most-threatened own tile (no territory change)
+// Falls back to other priorities if the requested option isn't actually
+// available (e.g. player tapped Attack but enemies aren't adjacent yet).
+function cqPickTargetForOrder(g, team, order) {
+  const enemyTeam = team === 'red' ? 'gold' : 'red';
+  const own = [];
+  CQ_TERRITORIES.forEach((t) => {
+    if (g.conquest.ownership[t.id] === team) own.push(t.id);
+  });
+  const enemyCands = new Set();
+  const emptyCands = new Set();
+  own.forEach((tid) => {
+    cqAdjacent(tid).forEach((nid) => {
+      const owner = g.conquest.ownership[nid];
+      if (owner === enemyTeam) enemyCands.add(nid);
+      else if (!owner) emptyCands.add(nid);
+    });
+  });
+  if (order === 'attack' && enemyCands.size) {
+    return { tileId: pickRandom([...enemyCands]), action: 'conquered' };
+  }
+  if (order === 'advance' && emptyCands.size) {
+    return { tileId: pickRandom([...emptyCands]), action: 'expanded' };
+  }
+  if (order === 'defend' && own.length) {
+    // Find the OWN tile with the most enemy neighbors — that's our weak point
+    let best = own[0], bestEnemyCount = -1;
+    own.forEach((tid) => {
+      const enemyN = cqAdjacent(tid).filter((nid) =>
+        g.conquest.ownership[nid] === enemyTeam).length;
+      if (enemyN > bestEnemyCount) { best = tid; bestEnemyCount = enemyN; }
+    });
+    return { tileId: best, action: 'reinforce' };
+  }
+  // Fallback chain if requested order had no valid target
+  if (enemyCands.size) return { tileId: pickRandom([...enemyCands]), action: 'conquered' };
+  if (emptyCands.size) return { tileId: pickRandom([...emptyCands]), action: 'expanded' };
+  const anyEmpty = CQ_TERRITORIES.filter((t) => !g.conquest.ownership[t.id]).map((t) => t.id);
+  if (anyEmpty.length) return { tileId: pickRandom(anyEmpty), action: 'jumped' };
+  const cap = CQ_TERRITORIES.find((t) => t.capitalOf === team);
+  return { tileId: cap ? cap.id : (own[0] || 0), action: 'reinforce' };
+}
+
 // Score a team — 1 point per owned tile, +5 bonus per capital owned
 function cqTeamScore(g, team) {
   let s = 0;
@@ -2008,37 +2079,28 @@ io.on('connection', (socket) => {
         });
       }
     } else if (g.gameType === 'conquest') {
-      // Reinos en Guerra — correct answer captures one tile for the player's
-      // team. Wrong answer = no capture, next question normally. The server
-      // picks the target (smart adjacency-aware) so kids stay in the language-
-      // learning loop and don't have to fiddle with tile selection.
+      // Reinos en Guerra v5 — TWO-STAGE STRATEGIC FLOW:
+      //   1) Correct answer → server tells the player to pick a march order
+      //      (ATTACK / ADVANCE / DEFEND). The capture does NOT happen yet.
+      //   2) Player taps one of three buttons → emits `player:cq-order`.
+      //      Server resolves the chosen action and broadcasts the capture.
+      // This gives every player a real strategic decision — they're no
+      // longer just answering questions to trigger random captures.
       if (correct) {
-        const team = p.team;
-        const target = cqPickTarget(g, team);
-        const captureInfo = cqApplyCapture(g, team, target);
-        g.teamScores = { red: cqTeamScore(g, 'red'), gold: cqTeamScore(g, 'gold') };
-        p.score = (p.score || 0) + 1;
+        // Stage 1: tell the client to show the march-order picker. Mark the
+        // player as having an open order so a stale answer can't re-trigger.
+        p.cqOrderPending = true;
+        // Compute which actions are AVAILABLE right now (so the picker can
+        // disable greyed-out options if e.g. no enemy is adjacent).
+        const availability = cqOrderAvailability(g, p.team);
         io.to(socket.id).emit('answer-result', {
           correct: true,
           correctText,
           conquest: {
-            tile: CQ_TERRITORIES[captureInfo.tileId],
-            action: captureInfo.action,
-            fromTeam: captureInfo.fromTeam,
-            toTeam: captureInfo.toTeam,
-            unit: captureInfo.unit,
-            capturedEnemyCapital: !!captureInfo.capturedEnemyCapital,
+            needsOrder: true,
+            availability,           // { attack: bool, advance: bool, defend: bool }
           },
         });
-        io.to(pin).emit('cq:capture', {
-          ...captureInfo,
-          playerName: p.name,
-          teamScores: g.teamScores,
-        });
-        // Tycoon-style celebration if a capital fell — but respect the timer
-        if (captureInfo.capturedEnemyCapital) {
-          io.to(pin).emit('cq:capital-fallen', { team, teamScores: g.teamScores });
-        }
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
@@ -2130,8 +2192,9 @@ io.on('connection', (socket) => {
       // Correct → wait for placement; placement handler queues next question.
       nextDelay = correct ? -1 : 1500;
     } else if (g.gameType === 'conquest') {
-      // Brief celebration window so the capture animation has time to play
-      nextDelay = correct ? 1800 : 1400;
+      // Correct → wait for the player's march order (handler queues next q).
+      // Wrong → quick next question.
+      nextDelay = correct ? -1 : 1400;
     } else if (g.gameType === 'sixseven') {
       // Snappy rhythm — fast cadence so the swing feels continuous
       nextDelay = correct ? 600 : 800;
@@ -2256,6 +2319,47 @@ io.on('connection', (socket) => {
   // Mi Familia: player tapped a room to place their awarded token.
   socket.on('family:place', ({ pin, room }) => {
     fmPlace(pin, socket.id, room);
+  });
+
+  // Reinos en Guerra v5: player committed a march order (attack/advance/defend).
+  // Resolves the capture they chose and broadcasts it. ONLY accepts the
+  // order if the player actually has a pending order (set when they got
+  // a question right) — prevents stale order injection.
+  socket.on('player:cq-order', ({ pin, order }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'conquest' || g.state !== 'active') return;
+    const p = g.players[socket.id];
+    if (!p || !p.cqOrderPending) return;
+    p.cqOrderPending = false;
+    const team = p.team;
+    const validOrder = ['attack', 'advance', 'defend'].includes(order) ? order : 'advance';
+    const target = cqPickTargetForOrder(g, team, validOrder);
+    const captureInfo = cqApplyCapture(g, team, target);
+    g.teamScores = { red: cqTeamScore(g, 'red'), gold: cqTeamScore(g, 'gold') };
+    p.score = (p.score || 0) + 1;
+    io.to(socket.id).emit('cq:order-resolved', {
+      action: captureInfo.action,
+      tile: CQ_TERRITORIES[captureInfo.tileId],
+      unit: captureInfo.unit,
+      capturedEnemyCapital: !!captureInfo.capturedEnemyCapital,
+      order: validOrder,
+    });
+    io.to(pin).emit('cq:capture', {
+      ...captureInfo,
+      playerName: p.name,
+      order: validOrder,
+      teamScores: g.teamScores,
+    });
+    if (captureInfo.capturedEnemyCapital) {
+      io.to(pin).emit('cq:capital-fallen', { team, teamScores: g.teamScores });
+    }
+    // Push next question after a short celebration window so the player
+    // sees the result of their order before the next round.
+    setTimeout(() => {
+      if (!games[pin] || games[pin].state !== 'active') return;
+      const q = nextQuestionFor(g, socket.id);
+      if (q) io.to(socket.id).emit('question', q);
+    }, 1800);
   });
 
   // Chinese Monopoly: player committed their tap-stopped dice value (1..6).
