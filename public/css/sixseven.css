@@ -66,6 +66,98 @@ body.ss-bg .win-screen { color: #1a3a5a; }
   gap: 10px;
   height: calc(100vh - 24px);
 }
+
+/* === Team roster sidebars (LEFT = Team 6, RIGHT = Team 7) ===
+   Pinned to the edges of the arena via absolute positioning so the central
+   character + buttons stay perfectly centered. Hidden on phones. */
+.ss-roster-sidebar {
+  position: absolute;
+  top: 78px;
+  bottom: 60px;
+  width: clamp(120px, 14vw, 200px);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(232, 244, 250, 0.92));
+  border: 3px solid #1a3a5a;
+  border-radius: 14px;
+  padding: 8px 4px;
+  box-shadow: 0 4px 0 #1a3a5a, 0 8px 18px rgba(20, 50, 80, 0.4);
+  overflow: hidden;
+  z-index: 9;
+  pointer-events: none;
+}
+.ss-roster-six   { left: 14px;  border-color: #1d6e9a; box-shadow: 0 4px 0 #1d6e9a, 0 8px 18px rgba(46, 179, 212, 0.4); }
+.ss-roster-seven { right: 14px; border-color: #5a3a8e; box-shadow: 0 4px 0 #5a3a8e, 0 8px 18px rgba(122, 78, 176, 0.4); }
+.ss-roster-header {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(0.65rem, 1.2vw, 0.85rem);
+  text-align: center;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(26, 58, 90, 0.35);
+  margin-bottom: 6px;
+  color: #1a3a5a;
+  letter-spacing: 0.04em;
+}
+.ss-roster-mascot {
+  font-size: 1.6em;
+  display: inline-block;
+  margin-right: 4px;
+  text-shadow: -2px 0 #1a3a5a, 2px 0 #1a3a5a, 0 -2px #1a3a5a, 0 2px #1a3a5a;
+}
+.ss-roster-six   .ss-roster-mascot { color: #2eb3d4; }
+.ss-roster-seven .ss-roster-mascot { color: #7a4eb0; }
+.ss-roster-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(26, 58, 90, 0.5) transparent;
+}
+.ss-roster-list::-webkit-scrollbar { width: 5px; }
+.ss-roster-list::-webkit-scrollbar-thumb { background: rgba(26, 58, 90, 0.5); border-radius: 3px; }
+.ss-roster-row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: rgba(46, 179, 212, 0.10);
+  border: 1px solid rgba(26, 58, 90, 0.25);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #1a3a5a;
+}
+.ss-roster-seven .ss-roster-row { background: rgba(122, 78, 176, 0.10); }
+.ss-roster-avatar { font-size: 1.2em; line-height: 1; text-align: center; }
+.ss-roster-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ss-roster-score {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.7rem;
+  color: #1a3a5a;
+}
+/* Density scaling for 7+ / 12+ */
+.ss-roster-sidebar.density-compact .ss-roster-row {
+  font-size: 0.72rem; padding: 2px 4px;
+  grid-template-columns: 18px 1fr auto;
+}
+.ss-roster-sidebar.density-micro .ss-roster-row {
+  font-size: 0.65rem; padding: 1px 3px;
+  grid-template-columns: 14px 1fr auto;
+  gap: 3px;
+}
+/* Hide on phones where the central interaction is the priority */
+@media (max-width: 720px) {
+  .ss-roster-sidebar { display: none; }
+}
 .ss-topbar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;

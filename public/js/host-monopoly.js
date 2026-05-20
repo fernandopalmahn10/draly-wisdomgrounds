@@ -128,6 +128,7 @@
     placeTokensInitial();
     updateWealthDisplay();
     renderLiveLeaderboard();
+    renderSideRosters();
     setRecentEvent('¡Que rueden los dados! 🎲');
   });
 
@@ -151,6 +152,7 @@
     refreshOwnership();
     updateWealthDisplay();
     renderLiveLeaderboard();
+    renderSideRosters();
   });
 
   socket.on('mp:tycoon', ({ team, teamScores }) => {
@@ -499,6 +501,42 @@
   function updateWealthDisplay() {
     if ($('wealth-red'))  $('wealth-red').textContent  = scores.red  || 0;
     if ($('wealth-gold')) $('wealth-gold').textContent = scores.gold || 0;
+  }
+
+  // === SIDE ROSTERS === Show every team member's name + wealth on the
+  // left/right edges of the host stage so the host can see participants
+  // at a glance regardless of count. Auto-densifies (font shrinks) past 8
+  // members per team. Updates on every mp:move broadcast.
+  function renderSideRosters() {
+    const redList = $('mp-roster-list-red');
+    const goldList = $('mp-roster-list-gold');
+    if (!redList || !goldList) return;
+    const red = [], gold = [];
+    Object.entries(players).forEach(([id, p]) => {
+      (p.team === 'red' ? red : gold).push({ id, ...p });
+    });
+    // Sort each team by wealth descending so the top contributor is at the top
+    red.sort((a, b) => (b.money || 0) - (a.money || 0));
+    gold.sort((a, b) => (b.money || 0) - (a.money || 0));
+    // Density classes
+    [['mp-roster-red', red.length], ['mp-roster-gold', gold.length]].forEach(([id, n]) => {
+      const el = $(id);
+      if (!el) return;
+      el.classList.remove('density-compact', 'density-micro');
+      if (n >= 12) el.classList.add('density-micro');
+      else if (n >= 7) el.classList.add('density-compact');
+    });
+    function rowHtml(p) {
+      const charIdx = (typeof p.char === 'number') ? p.char : 0;
+      const avatar = `<img class="mp-roster-avatar" src="/assets/monopoly/chars/char-${charIdx}.png" alt="">`;
+      return `<div class="mp-roster-row">
+        ${avatar}
+        <span class="mp-roster-name">${escapeHtml(p.name || '')}</span>
+        <span class="mp-roster-cash">¥${p.money || 0}</span>
+      </div>`;
+    }
+    redList.innerHTML  = red.map(rowHtml).join('');
+    goldList.innerHTML = gold.map(rowHtml).join('');
   }
 
   // === LIVE LEADERBOARD === Shows EVERY player (up to ~16) sorted by wealth.
