@@ -104,164 +104,174 @@ body.conquest-bg .win-screen { color: #3a1505; }
   to   { transform: scale(1.08); }
 }
 
-/* === The map of ancient China === */
-/* Parchment background + perspective tilt + scroll-edge styling. */
-.cq-map-wrap {
+/* === Painted board stage ===
+   The BOARD CONQUER.png painting is the full backdrop. Our logical hex
+   grid + soldier sprites sit on top as percent-positioned layers. The
+   board art handles the parchment / mountains / rivers / wood-frame look
+   so we don't need to fake any of that in CSS. */
+.cq-board-stage {
   position: relative;
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  perspective: 1600px;
-  perspective-origin: 50% 35%;
   overflow: hidden;
-  padding: 20px;
-}
-
-.cq-map {
-  display: grid;
-  gap: 4px;
-  width: min(98%, 1100px);
-  height: 100%;
-  max-height: 720px;
-  padding: 14px;
   border-radius: 14px;
-  /* SAND BATTLEFIELD — desert/steppe with footprints, cracked earth, and
-     a darker outer frame (dirt rampart). No parchment, no map borders. */
-  background:
-    /* darker dirt edges */
-    radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(40, 20, 8, 0.55) 90%),
-    /* sand-grain texture */
-    repeating-radial-gradient(circle at 30% 30%, rgba(120, 80, 40, 0.18) 0 1px, transparent 1px 6px),
-    repeating-radial-gradient(circle at 70% 70%, rgba(80, 50, 24, 0.22) 0 1px, transparent 1px 5px),
-    /* main sand gradient */
-    linear-gradient(160deg, #c89554 0%, #a87236 40%, #8a5a26 75%, #6e3e16 100%);
-  border: 5px solid #2c1408;
-  box-shadow:
-    0 30px 60px rgba(0, 0, 0, 0.75),
-    0 8px 14px rgba(0, 0, 0, 0.55),
-    inset 0 0 80px rgba(40, 20, 8, 0.6),
-    inset 0 -12px 30px rgba(20, 10, 4, 0.7);
-  transform: rotateX(8deg);
-  transform-style: preserve-3d;
-  will-change: transform;
-  backface-visibility: hidden;
-  position: relative;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.75), 0 8px 14px rgba(0, 0, 0, 0.55);
 }
-
-/* Cracked-earth overlay across the battlefield */
-.cq-map::before {
-  content: '';
-  position: absolute;
-  inset: 6px;
-  pointer-events: none;
-  background:
-    repeating-linear-gradient(33deg,  transparent 0 60px, rgba(40, 20, 8, 0.12) 60px 62px),
-    repeating-linear-gradient(-25deg, transparent 0 80px, rgba(40, 20, 8, 0.08) 80px 82px);
-  border-radius: 10px;
-  z-index: 0;
-}
-.cq-map::after {
-  content: '';
+.cq-board-bg {
   position: absolute;
   inset: 0;
+  background-image: url('/assets/BOARD CONQUER.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 0;
+}
+/* Hex-grid logical layer (overlays our 6x4 logical grid on top of the
+   painted hexes). Percent-positioned so the grid scales with the board. */
+.cq-hex-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   pointer-events: none;
-  /* battlefield vignette so the action draws the eye to center */
-  background: radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.35) 100%);
-  border-radius: 14px;
+}
+/* Army layer — soldier sprites sit on owned tiles + march on capture */
+.cq-army-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
 }
 
-/* === Individual battlefield tiles ===
-   Each tile is a battlefield SQUARE — sand by default, with terrain
-   variants (hill / river / fortress). Captured tiles show a soldier emoji
-   (knight 🐎 / archer 🏹 / etc) instead of any name/label. */
+/* === Percent-positioned hex tile — sits ON TOP of the painted board ===
+   Each tile is a logical "territory" outline. Default: invisible.
+   When owned, the outline glows in the team color. The actual painted
+   hex of the board art shows through (we don't paint a sand square anymore). */
 .cq-tile {
-  position: relative;
-  /* Default sand square — light dirt color, looks like a packed earth tile */
-  background:
-    radial-gradient(ellipse at 30% 30%, rgba(255, 220, 160, 0.4) 0%, transparent 60%),
-    linear-gradient(160deg, #d4a566 0%, #b07e3a 60%, #8a5a26 100%);
-  border: 2px solid #2c1408;
-  border-radius: 6px;
+  position: absolute;
+  /* width/height set by JS to ~12% x 18% based on board layout */
+  border-radius: 12px;
+  border: 2px solid transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
   color: #3a1505;
-  box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 220, 160, 0.45),
-    inset 0 -4px 8px rgba(40, 20, 8, 0.35);
-  overflow: hidden;
-  min-height: 0;
-  min-width: 0;
-  transition: transform 0.2s ease, box-shadow 0.3s ease, background 0.5s ease;
-  transform: translateZ(8px);
+  pointer-events: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
   will-change: transform;
+  /* Tiles are positioned by JS via percent left/top */
 }
 
-/* Terrain variants */
-.cq-tile.terrain-hill {
-  background:
-    radial-gradient(ellipse at 50% 70%, #6e9a4a 0%, #4a6e2a 60%, #2c4a18 100%);
-}
-.cq-tile.terrain-river {
-  background:
-    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0 4px, transparent 4px 8px),
-    linear-gradient(180deg, #2e6e9a 0%, #1c4a6e 100%);
-}
-.cq-tile.terrain-fortress {
-  background:
-    radial-gradient(ellipse at 50% 40%, rgba(255, 220, 130, 0.45), transparent 65%),
-    repeating-linear-gradient(90deg, #6e2010 0 6px, #4a1606 6px 12px);
-  border-color: #1a0c04;
-}
+/* Terrain variants — subtle inner shading only (the painted board shows
+   the actual terrain art beneath). */
+.cq-tile.terrain-hill     { background: rgba(110, 154, 74, 0.18); }
+.cq-tile.terrain-river    { background: rgba(46, 110, 154, 0.18); }
+.cq-tile.terrain-fortress { background: rgba(255, 220, 130, 0.20); border-color: rgba(255, 213, 122, 0.5); }
+.cq-tile.terrain-sand     { background: transparent; }
 
-/* Single big icon centered in each tile — either the soldier emoji
-   (captured tile) OR the terrain feature (hill/river/fortress).
-   Replaces the previous Chinese-text / pinyin / Spanish triplet. */
-.cq-tile-icon {
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: 1;
-  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.6));
-  user-select: none;
-}
-
-/* Hide the old name/pinyin/es labels — JS may still emit them harmlessly */
+/* The single icon centered in each tile — kept as a sprite holder, but
+   we hide the emoji-style icon and replace with the sprite-based soldier
+   in .cq-soldier (below). */
+.cq-tile-icon { display: none; }
 .cq-tile-cn, .cq-tile-pinyin, .cq-tile-es { display: none; }
 
-/* Owned tiles — sand is "stained" with the team's blood/standard color
-   PLUS a flag pole emerging from the corner. The soldier emoji (knight/
-   archer) is rendered by JS inside .cq-tile-icon. */
+/* Owned tile — colored glow ring around the painted hex. Subtle, so the
+   board art stays readable; the soldier sprite on top does the heavy
+   visual lifting for "this is our territory now". */
 .cq-tile.owned-red {
-  background:
-    radial-gradient(ellipse at 30% 30%, rgba(255, 100, 100, 0.45) 0%, transparent 65%),
-    linear-gradient(160deg, #a83838 0%, #7a1818 60%, #4a0c0c 100%);
-  border-color: #1a0404;
+  border-color: rgba(217, 46, 58, 0.85);
   box-shadow:
-    0 0 0 2px rgba(255, 138, 145, 0.65),
-    0 6px 14px rgba(120, 12, 12, 0.7),
-    inset 0 1px 0 rgba(255, 200, 200, 0.45),
-    inset 0 -4px 8px rgba(20, 4, 4, 0.6);
-}
-.cq-tile.owned-red .cq-tile-icon {
-  filter: drop-shadow(0 0 8px rgba(255, 138, 145, 0.7))
-          drop-shadow(0 3px 5px rgba(0, 0, 0, 0.7));
+    0 0 0 2px rgba(255, 138, 145, 0.4),
+    0 0 18px rgba(217, 46, 58, 0.55);
 }
 .cq-tile.owned-gold {
-  background:
-    radial-gradient(ellipse at 30% 30%, rgba(255, 230, 130, 0.5) 0%, transparent 65%),
-    linear-gradient(160deg, #c89534 0%, #a06614 60%, #6e3e08 100%);
-  border-color: #2c1404;
+  border-color: rgba(50, 100, 200, 0.85);
   box-shadow:
-    0 0 0 2px rgba(255, 213, 122, 0.75),
-    0 6px 14px rgba(232, 145, 52, 0.7),
-    inset 0 1px 0 rgba(255, 230, 160, 0.45),
-    inset 0 -4px 8px rgba(40, 24, 4, 0.6);
+    0 0 0 2px rgba(120, 160, 230, 0.5),
+    0 0 18px rgba(50, 100, 200, 0.55);
 }
-.cq-tile.owned-gold .cq-tile-icon {
-  filter: drop-shadow(0 0 8px rgba(255, 213, 122, 0.7))
-          drop-shadow(0 3px 5px rgba(0, 0, 0, 0.7));
+
+/* === Soldier sprite — sits ON a tile via percent positioning ===
+   Foot soldier for Red, mounted cavalry for Gold. Sprites are positioned
+   absolutely inside .cq-army-layer by JS (left%, top%). */
+.cq-soldier {
+  position: absolute;
+  width: clamp(56px, 8vw, 110px);
+  height: auto;
+  pointer-events: none;
+  /* GPU layer for the march animation */
+  will-change: transform, left, top;
+  transform: translate3d(-50%, -85%, 0);  /* center horizontally, anchor near feet */
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55));
+  transition: left 0.7s cubic-bezier(.4, 0, .25, 1),
+              top  0.7s cubic-bezier(.4, 0, .25, 1),
+              transform 0.4s ease;
+  /* Subtle bob animation so the soldier doesn't feel static */
+  animation: cq-soldier-bob 1.6s ease-in-out infinite alternate;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+@keyframes cq-soldier-bob {
+  from { transform: translate3d(-50%, -85%, 0); }
+  to   { transform: translate3d(-50%, -90%, 0); }
+}
+/* Team-color hue rotation — Red Army keeps natural red tunic; Gold Army
+   gets a hue shift toward blue/cyan to look like a different army. */
+.cq-soldier.gold { filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55)) hue-rotate(180deg); }
+
+/* Subtle team-flag halo behind the sprite — confirms ownership */
+.cq-soldier::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  width: 75%;
+  height: 8px;
+  border-radius: 50%;
+  filter: blur(4px);
+  z-index: -1;
+}
+.cq-soldier.red::before  { background: radial-gradient(ellipse at center, rgba(217, 46, 58, 0.65), transparent 70%); }
+.cq-soldier.gold::before { background: radial-gradient(ellipse at center, rgba(50, 100, 200, 0.65), transparent 70%); }
+
+/* Marching/charge — when a tile is captured, the soldier visibly slides
+   from its origin to the new tile + briefly switches to the attack sprite. */
+.cq-soldier.marching { animation: none; }   /* pause the bob during march */
+.cq-soldier.attacking img,
+.cq-soldier img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+/* Attack pose swap: when .attacking is added, the IMG src is swapped to
+   soldier-attack.png by JS, then back to idle on completion. */
+
+/* SWORD-CLASH spark — fires on a tile when an enemy is dislodged */
+.cq-sword-clash {
+  position: absolute;
+  width: clamp(60px, 9vw, 120px);
+  height: clamp(60px, 9vw, 120px);
+  pointer-events: none;
+  transform: translate3d(-50%, -50%, 0);
+  z-index: 6;
+}
+.cq-sword-clash::before {
+  content: '⚔️';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  filter: drop-shadow(0 0 14px gold) drop-shadow(0 0 28px #ff5a66);
+  animation: cq-sword-clash-pop 0.9s cubic-bezier(.22, 1.4, .36, 1) forwards;
+}
+@keyframes cq-sword-clash-pop {
+  0%   { opacity: 0; transform: scale(0.3) rotate(-30deg); }
+  35%  { opacity: 1; transform: scale(1.4) rotate(15deg); }
+  100% { opacity: 0; transform: scale(0.8) rotate(0deg); }
 }
 
 /* Capital tile: bigger crown ring + star */
@@ -404,11 +414,27 @@ body.conquest-bg .win-screen { color: #3a1505; }
 }
 .cq-warrior {
   position: absolute;
-  left: -10%;
-  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  left: -12%;
+  width: clamp(60px, 8vw, 110px);
+  height: auto;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.55));
   animation: cq-warrior-gallop 6.5s linear forwards;
   will-change: transform, left;
+  pointer-events: none;
+}
+.cq-warrior img { width: 100%; height: auto; display: block; }
+.cq-warrior.rtl {
+  left: auto;
+  right: -12%;
+  animation: cq-warrior-gallop-rtl 6.5s linear forwards;
+}
+.cq-warrior.rtl img { transform: scaleX(-1); }
+@keyframes cq-warrior-gallop-rtl {
+  0%   { right: -12%; transform: translateY(0)    rotate(2deg); }
+  25%  { transform: translateY(-8px) rotate(-4deg); }
+  50%  { transform: translateY(4px)  rotate(3deg); }
+  75%  { transform: translateY(-6px) rotate(-3deg); }
+  100% { right: 108%;  transform: translateY(0)    rotate(0); }
 }
 @keyframes cq-warrior-gallop {
   0%   { left: -10%; transform: translateY(0)    rotate(-2deg); }

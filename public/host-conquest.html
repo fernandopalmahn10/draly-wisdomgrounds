@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Long+Cang&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/conquest.css?v=20260518b">
+  <link rel="stylesheet" href="/css/conquest.css?v=20260520a">
 </head>
 <body class="conquest-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -112,16 +112,21 @@
       </div>
     </div>
 
-    <!-- The map of ancient China — parchment-style, tilted for that
-         war-room table feel. 6x4 grid of territories. -->
-    <div class="cq-map-wrap">
-      <div class="cq-map" id="cq-map">
-        <!-- Tiles rendered by JS -->
-      </div>
-      <!-- Ambient horse warriors gallop across the bottom occasionally -->
+    <!-- The painted ancient-China board is the FULL backdrop of the active
+         screen now. Our hex grid + soldier sprites sit on top as percent-
+         positioned layers, so each soldier visibly stands on a hex of the
+         painted map. The grid is logical (we own state) and lightly
+         outlined so kids see clearly where the territories are. -->
+    <div class="cq-board-stage" id="cq-board-stage">
+      <div class="cq-board-bg"></div>
+      <!-- Logical hex grid overlay (semi-transparent rings on owned tiles) -->
+      <div class="cq-hex-grid" id="cq-map"></div>
+      <!-- Soldiers — one per owned tile, sprite art from soldier-spritesheet -->
+      <div class="cq-army-layer" id="cq-army-layer"></div>
+      <!-- Ambient cavalry galloping across (uses the cavalry sprite) -->
       <div class="cq-warriors" id="cq-warriors"></div>
       <!-- Banner for major events: capital conquered, big push, etc. -->
-      <div class="cq-banner" id="cq-banner">¡战国 La guerra empieza!</div>
+      <div class="cq-banner" id="cq-banner">⚔️ ¡La batalla empieza!</div>
     </div>
 
     <div style="text-align:center; padding:6px;">
@@ -152,6 +157,6 @@
   <script src="/js/sounds.js?v=20260517j"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/host-conquest.js?v=20260518b"></script>
+  <script src="/js/host-conquest.js?v=20260520a"></script>
 </body>
 </html>

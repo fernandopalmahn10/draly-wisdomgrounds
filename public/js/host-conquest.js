@@ -139,7 +139,9 @@
     startAmbientDrums();
   });
 
-  // === Capture event — animate the soldier taking the position ===
+  // === Capture event — soldier MARCHES from a friendly neighbor onto the tile
+  // (visible animation, not instant snap). On enemy ground a sword-clash
+  // sprite + attack pose plays before the new soldier settles in. ===
   socket.on('cq:capture', (cap) => {
     if (cap.teamScores) { scores = cap.teamScores; updateScores(); }
     if (cap.action === 'reinforce') {
@@ -148,45 +150,113 @@
       if (el) flashTile(el, cap.toTeam, true);
       return;
     }
+    const prevOwner = ownership[cap.tileId];
     ownership[cap.tileId] = cap.toTeam;
     if (cap.unit) unitsByTile[cap.tileId] = cap.unit;
     const tile = territories[cap.tileId];
     const tileEl = $('cq-tile-' + cap.tileId);
     if (!tileEl) return;
-    // Charge animation: a horse 🐎 / archer 🏹 from off-screen
-    spawnHorseCharge(tileEl, cap.toTeam, cap.unit);
-    // Toggle ownership class
+
+    // Visual ownership update
     tileEl.classList.remove('owned-red', 'owned-gold', 'conquering');
     void tileEl.offsetWidth;
     tileEl.classList.add('owned-' + cap.toTeam, 'conquering');
     setTimeout(() => tileEl && tileEl.classList.remove('conquering'), 1400);
-    // Replace the tile icon with the soldier emoji
-    const iconEl = tileEl.querySelector('.cq-tile-icon');
-    if (iconEl) {
-      iconEl.textContent = cap.unit || '🐎';
-      iconEl.classList.remove('cq-unit-arrive');
-      void iconEl.offsetWidth;
-      iconEl.classList.add('cq-unit-arrive');
+
+    // If conquering an enemy: dislodge the old soldier visibly (sword clash)
+    const oldSoldier = document.getElementById('cq-soldier-' + cap.tileId);
+    if (oldSoldier && prevOwner && prevOwner !== cap.toTeam) {
+      // Swap to fall pose, fade out, remove
+      const img = oldSoldier.querySelector('img');
+      if (img) img.src = prevOwner === 'red'
+        ? '/assets/conquest/soldier-fall.png'
+        : '/assets/conquest/cavalry-fall.png';
+      oldSoldier.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+      oldSoldier.style.opacity = '0';
+      oldSoldier.style.transform = 'translate3d(-50%, -120%, 0) rotate(-20deg)';
+      setTimeout(() => oldSoldier.remove(), 550);
+    } else if (oldSoldier) {
+      oldSoldier.remove();
     }
-    // Banner + sound flavor depends on action
+
+    // Find a friendly neighbor (or use the team's capital) as the soldier's
+    // starting position — the new soldier visibly MARCHES from there.
+    const sourceTile = findFriendlyNeighbor(tile, cap.toTeam);
+    spawnMarchingSoldier(sourceTile || tile, tile, cap.toTeam, cap.action);
+
+    // Banner + sound
     const teamName = cap.toTeam === 'red' ? 'Roja' : 'Dorada';
     if (cap.action === 'conquered') {
-      // Conquering enemy ground = SWORD CLASH
-      setBanner(`⚔️ ¡La caballería ${teamName} venció al enemigo!`);
+      setBanner(`⚔️ ¡El ejército ${teamName} conquistó la posición enemiga!`);
       MochiSounds.swordClash && MochiSounds.swordClash();
-      if (navigator.vibrate) navigator.vibrate([40, 30, 80]);
-      // Sword-spark burst on the tile
       spawnSwordClashFx(tileEl);
+      if (navigator.vibrate) navigator.vibrate([40, 30, 80]);
     } else if (cap.action === 'expanded') {
-      // Expanding into empty ground = HORSE GALLOP
-      const verb = cap.unit === '🏹' ? 'Los arqueros toman' : 'La caballería avanza a';
-      setBanner(`🐎 ¡${verb} nuevo terreno!`);
+      setBanner(`🐎 ¡La caballería ${teamName} avanza al frente!`);
       MochiSounds.horseGallop && MochiSounds.horseGallop();
     } else if (cap.action === 'jumped') {
-      setBanner(`🏹 ¡Flecha sorpresa! Tropa ${teamName} salta al frente.`);
+      setBanner(`🏹 ¡Salto sorpresa de la tropa ${teamName}!`);
       MochiSounds.archerTwang && MochiSounds.archerTwang();
     }
   });
+
+  // Find any tile our team owns that's adjacent to the captured tile, so
+  // we can march from there. Falls back to the team's capital.
+  function findFriendlyNeighbor(targetTile, team) {
+    const adj = territories.filter((t) => {
+      const dx = Math.abs(t.x - targetTile.x);
+      const dy = Math.abs(t.y - targetTile.y);
+      return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+    });
+    const friendly = adj.filter((t) => ownership[t.id] === team);
+    if (friendly.length) return friendly[0];
+    return territories.find((t) => t.capitalOf === team);
+  }
+
+  // Spawn a soldier sprite at `from` that visibly slides to `to`, with an
+  // attack-pose middle frame on enemy conquests. Settles as the permanent
+  // garrison on `to` afterward.
+  function spawnMarchingSoldier(from, to, team, action) {
+    const army = $('cq-army-layer');
+    if (!army) return;
+    const fromPos = tilePos(from);
+    const toPos = tilePos(to);
+    const wrap = document.createElement('div');
+    wrap.className = 'cq-soldier ' + team + ' marching';
+    wrap.id = 'cq-soldier-' + to.id;
+    wrap.dataset.tileId = to.id;
+    const src = team === 'red'
+      ? '/assets/conquest/soldier-idle.png'
+      : '/assets/conquest/cavalry-idle.png';
+    const attackSrc = team === 'red'
+      ? '/assets/conquest/soldier-attack.png'
+      : '/assets/conquest/cavalry-attack.png';
+    // Start at the source tile
+    wrap.style.left = (fromPos.left + fromPos.width / 2) + '%';
+    wrap.style.top  = (fromPos.top  + fromPos.height * 0.85) + '%';
+    wrap.innerHTML = `<img src="${src}" alt="${team}">`;
+    army.appendChild(wrap);
+    // Step 1: tick → CSS transitions slide to the target tile
+    requestAnimationFrame(() => {
+      wrap.style.left = (toPos.left + toPos.width / 2) + '%';
+      wrap.style.top  = (toPos.top  + toPos.height * 0.85) + '%';
+    });
+    // Step 2: half-way through, swap to attack sprite if this is a battle
+    if (action === 'conquered') {
+      setTimeout(() => {
+        const img = wrap.querySelector('img');
+        if (img) img.src = attackSrc;
+        wrap.classList.add('attacking');
+      }, 350);
+      setTimeout(() => {
+        const img = wrap.querySelector('img');
+        if (img) img.src = src;       // back to idle
+        wrap.classList.remove('attacking');
+      }, 900);
+    }
+    // Step 3: settle — remove the marching class so the bob resumes
+    setTimeout(() => wrap.classList.remove('marching'), 800);
+  }
 
   socket.on('cq:capital-fallen', ({ team }) => {
     setBanner(`🏯 ¡La fortaleza enemiga ha caído! ⚔️`);
@@ -234,14 +304,38 @@
     renderLeaderboard(data);
   });
 
-  // === Map rendering — battlefield squares, no place names ===
+  // === Percent positions for the 6x4 logical grid overlaid on BOARD CONQUER.png
+  // The painted board's hex grid spans roughly:
+  //   x: 15% to 85% of the board image (left edge of leftmost hex to right edge)
+  //   y: 18% to 75%
+  // We lay out a 6-col × 4-row grid in that area with a half-column horizontal
+  // stagger on alternating rows (classic hex layout). Each cell ~12% × 18%.
+  function tilePos(t) {
+    const colCount = 6;
+    const rowCount = 4;
+    const xL = 14, xR = 86;     // % of board
+    const yT = 17, yB = 76;
+    const colStep = (xR - xL) / (colCount - 1);
+    const rowStep = (yB - yT) / (rowCount - 1);
+    const staggerX = (t.y % 2 === 1) ? colStep * 0.5 : 0;
+    return {
+      left: xL + t.x * colStep + staggerX,
+      top:  yT + t.y * rowStep,
+      width: colStep * 0.95,   // tile width as % of board
+      height: rowStep * 0.95,
+    };
+  }
+
+  // === Map rendering — invisible hex overlay + sprite-based soldiers ===
   function renderMap() {
-    const map = $('cq-map');
-    if (!map) return;
-    map.innerHTML = '';
-    map.style.gridTemplateColumns = `repeat(6, 1fr)`;
-    map.style.gridTemplateRows = `repeat(4, 1fr)`;
+    const grid = $('cq-map');
+    const army = $('cq-army-layer');
+    if (!grid || !army) return;
+    grid.innerHTML = '';
+    army.innerHTML = '';
     territories.forEach((t) => {
+      const { left, top, width, height } = tilePos(t);
+      // Logical hex outline (semi-transparent ring on owned)
       const el = document.createElement('div');
       el.className = 'cq-tile terrain-' + (t.terrain || 'sand');
       el.id = 'cq-tile-' + t.id;
@@ -249,14 +343,38 @@
       const owner = ownership[t.id];
       if (owner) el.classList.add('owned-' + owner);
       if (t.isCapital) el.classList.add('capital');
-      // Icon: if a unit is stationed here (captured tile), show the soldier;
-      // else show the terrain feature emoji (hill/river/fortress); sand = empty
-      const iconChar = unitsByTile[t.id] || t.icon || '';
-      el.innerHTML = `<div class="cq-tile-icon">${iconChar}</div>`;
-      el.style.gridColumn = (t.x + 1);
-      el.style.gridRow = (t.y + 1);
-      map.appendChild(el);
+      el.style.left   = left + '%';
+      el.style.top    = top + '%';
+      el.style.width  = width + '%';
+      el.style.height = height + '%';
+      grid.appendChild(el);
+      // Soldier sprite for owned tiles
+      if (owner) {
+        spawnSoldierSprite(t, owner);
+      }
     });
+  }
+
+  // Spawn a sprite-based soldier on the given tile.
+  function spawnSoldierSprite(tile, team) {
+    const army = $('cq-army-layer');
+    if (!army) return;
+    const { left, top } = tilePos(tile);
+    const existing = document.getElementById('cq-soldier-' + tile.id);
+    if (existing) existing.remove();
+    const wrap = document.createElement('div');
+    wrap.className = 'cq-soldier ' + team;
+    wrap.id = 'cq-soldier-' + tile.id;
+    wrap.dataset.tileId = tile.id;
+    wrap.style.left = (left + tilePos(tile).width / 2) + '%';
+    // anchor near the tile's lower-middle so the soldier "stands" on the hex
+    wrap.style.top  = (top + tilePos(tile).height * 0.85) + '%';
+    // Red Army = foot soldier; Gold Army = mounted cavalry
+    const src = team === 'red'
+      ? '/assets/conquest/soldier-idle.png'
+      : '/assets/conquest/cavalry-idle.png';
+    wrap.innerHTML = `<img src="${src}" alt="${team}">`;
+    army.appendChild(wrap);
   }
 
   // === Capture animations ===
@@ -363,8 +481,12 @@
     if (!layer) return;
     const w = document.createElement('div');
     w.className = 'cq-warrior';
-    w.textContent = ['🐎', '🏇', '🐉', '🏯', '⚔️'][Math.floor(Math.random() * 5)];
-    w.style.top = (10 + Math.random() * 60) + '%';
+    // Use the actual cavalry sprite — a horseman gallops across the map.
+    // Random direction: 50% left→right, 50% right→left (sprite mirrored).
+    const rtl = Math.random() < 0.5;
+    if (rtl) w.classList.add('rtl');
+    w.innerHTML = '<img src="/assets/conquest/cavalry-idle.png" alt="">';
+    w.style.top = (15 + Math.random() * 55) + '%';
     layer.appendChild(w);
     setTimeout(() => w.remove(), 6500);
   }
