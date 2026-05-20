@@ -86,6 +86,20 @@
         return;
       }
       const age = Date.now() - pendingAnswer.startedAt;
+      // 4-SECOND CLIENT-SIDE SAFETY: re-enable buttons + hide overlay so the
+      // player can RETAP if the server's answer-result never arrived. Without
+      // this, a network hiccup left them stuck on a "Enviando…" screen with
+      // disabled buttons. The bulletproof retry KEEPS firing in the
+      // background — but the UI no longer blocks them.
+      if (age > 4000 && pendingAnswer._uiRescued !== true) {
+        pendingAnswer._uiRescued = true;
+        hideSendingOverlay();
+        document.querySelectorAll('.answer-btn').forEach((b) => {
+          b.disabled = false;
+          b.style.outline = '';
+          b.style.transform = '';
+        });
+      }
       if (age > 8000) {
         // Give up. Force-reconnect the socket; show an error; let player retry.
         clearAnswerHeartbeat();

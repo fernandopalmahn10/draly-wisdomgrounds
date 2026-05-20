@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Long+Cang&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260518g">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20260521a">
 </head>
 <body class="monopoly-bg">
   <div class="lantern l1"></div>
@@ -116,6 +116,12 @@
     </div>
 
     <div class="mp-stage">
+      <!-- LEFT SIDEBAR — Team Red roster (all members, ¥ wealth, ranked) -->
+      <aside class="mp-roster-sidebar mp-roster-red" id="mp-roster-red">
+        <div class="mp-roster-header"><span class="mp-roster-mascot">🐉</span> Equipo Rojo</div>
+        <div class="mp-roster-list" id="mp-roster-list-red"></div>
+      </aside>
+
       <!-- 3D-tilted board container -->
       <div class="mp-board-perspective">
         <div class="mp-board" id="mp-board">
@@ -131,6 +137,12 @@
           </div>
         </div>
       </div>
+
+      <!-- RIGHT SIDEBAR — Team Gold roster -->
+      <aside class="mp-roster-sidebar mp-roster-gold" id="mp-roster-gold">
+        <div class="mp-roster-header"><span class="mp-roster-mascot">🐲</span> Equipo Dorado</div>
+        <div class="mp-roster-list" id="mp-roster-list-gold"></div>
+      </aside>
 
       <!-- Flying money + event toasts spawn here -->
       <div class="mp-fx-layer" id="mp-fx-layer"></div>
@@ -161,9 +173,9 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260518g"></script>
+  <script src="/js/sounds.js?v=20260521a"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/host-monopoly.js?v=20260518g"></script>
+  <script src="/js/host-monopoly.js?v=20260521a"></script>
 </body>
 </html>

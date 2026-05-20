@@ -12,6 +12,9 @@
 
   let scores = { red: 0, gold: 0 };
   let gameOver = false;
+  // Per-player roster state — accumulated from state events + ss:tap events
+  // so the side rosters always show every member regardless of join order.
+  let rosterPlayers = {};   // id → { name, team, avatar, taps }
   let floatTimer = null;
   // Visual sway state: -1 = full left (team 6), +1 = full right (team 7), 0 = center.
   // Each tap nudges the sway smoothly via CSS variable.
@@ -142,6 +145,21 @@
 
   socket.on('state', (s) => {
     state = s;
+    // Always update the roster map so it reflects late joiners + team swaps
+    if (s.players) {
+      Object.entries(s.players).forEach(([id, p]) => {
+        const prev = rosterPlayers[id] || { taps: 0, score: 0 };
+        rosterPlayers[id] = {
+          name: p.name, team: p.team, avatar: p.avatar || '🐱',
+          taps: prev.taps, score: (typeof p.score === 'number') ? p.score : prev.score,
+        };
+      });
+      // Remove players that left
+      Object.keys(rosterPlayers).forEach((id) => {
+        if (!s.players[id]) delete rosterPlayers[id];
+      });
+      renderSideRosters();
+    }
     if (s.state === 'lobby') {
       renderLobbyPlayers(s.players);
       updateStartBtn();
@@ -184,8 +202,15 @@
   });
 
   // === Tap event from a player — animate the character + swing toward team ===
-  socket.on('ss:tap', ({ team, choice, gained, streak, teamScores }) => {
+  socket.on('ss:tap', ({ playerId, playerName, playerScore, team, choice, gained, streak, teamScores }) => {
     if (teamScores) { scores = teamScores; updateScores(); }
+    // Update per-player score in roster
+    if (playerId && rosterPlayers[playerId]) {
+      if (typeof playerScore === 'number') rosterPlayers[playerId].score = playerScore;
+      rosterPlayers[playerId].taps = (rosterPlayers[playerId].taps || 0) + 1;
+      rosterPlayers[playerId].team = team;     // in case they swapped teams
+      renderSideRosters();
+    }
     if (gained > 0) {
       // Push the sway toward the matching team's side
       // Team 6 = LEFT  (sway target -1)
@@ -368,6 +393,35 @@
   function updateScores() {
     if ($('score-red'))  $('score-red').textContent  = scores.red  || 0;
     if ($('score-gold')) $('score-gold').textContent = scores.gold || 0;
+  }
+
+  // === SIDE ROSTERS === Left = Team 6 (red), Right = Team 7 (gold).
+  // Shows every player's avatar + name + score, scaled with team size.
+  function renderSideRosters() {
+    const redList  = $('ss-roster-list-red');
+    const goldList = $('ss-roster-list-gold');
+    if (!redList || !goldList) return;
+    const red = [], gold = [];
+    Object.entries(rosterPlayers).forEach(([id, p]) => {
+      (p.team === 'red' ? red : gold).push({ id, ...p });
+    });
+    red.sort((a, b) => (b.score || 0) - (a.score || 0));
+    gold.sort((a, b) => (b.score || 0) - (a.score || 0));
+    [['ss-roster-red', red.length], ['ss-roster-gold', gold.length]].forEach(([id, n]) => {
+      const el = $(id);
+      if (!el) return;
+      el.classList.remove('density-compact', 'density-micro');
+      if (n >= 12) el.classList.add('density-micro');
+      else if (n >= 7) el.classList.add('density-compact');
+    });
+    const rowHtml = (p) => `
+      <div class="ss-roster-row">
+        <span class="ss-roster-avatar">${p.avatar || '🐱'}</span>
+        <span class="ss-roster-name">${escapeHtml(p.name || '')}</span>
+        <span class="ss-roster-score">${p.score || 0}</span>
+      </div>`;
+    redList.innerHTML  = red.map(rowHtml).join('');
+    goldList.innerHTML = gold.map(rowHtml).join('');
   }
 
   function startTimer() {

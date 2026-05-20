@@ -98,14 +98,121 @@ body.monopoly-bg .win-screen { color: #3a1505; }
   to   { transform: scale(1.08); }
 }
 
-/* === Stage with the 3D-tilted board === */
+/* === Stage with the 3D-tilted board ===
+   3-column layout: left roster sidebar + perspective board + right roster.
+   Sidebars are flexible-width so the board still claims the most space. */
 .mp-stage {
   position: relative;
   flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: minmax(150px, 14%) 1fr minmax(150px, 14%);
+  gap: 10px;
+  align-items: stretch;
+  justify-content: stretch;
   overflow: hidden;
+  min-height: 0;
+}
+
+/* === Team Roster Sidebars (LEFT = Red, RIGHT = Gold) === */
+/* Always-visible list of every team member with their wealth. Scales the
+   row size with team count so even a 16-player team fits. Pinned to the
+   left/right edges of the stage. */
+.mp-roster-sidebar {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(40, 12, 8, 0.92), rgba(20, 4, 2, 0.92));
+  border: 2px solid rgba(255, 220, 130, 0.45);
+  border-radius: 12px;
+  padding: 8px 4px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+  min-height: 0;
+  color: #fff8e0;
+}
+.mp-roster-red  { border-color: rgba(255, 138, 145, 0.7); }
+.mp-roster-gold { border-color: rgba(255, 213, 122, 0.7); }
+.mp-roster-header {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(0.85rem, 1.4vw, 1.1rem);
+  letter-spacing: 0.04em;
+  text-align: center;
+  padding: 6px 4px;
+  border-bottom: 1px solid rgba(255, 220, 130, 0.35);
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+.mp-roster-mascot { font-size: 1.4em; vertical-align: middle; margin-right: 4px; }
+.mp-roster-red  .mp-roster-header { color: #ff8a91; }
+.mp-roster-gold .mp-roster-header { color: #ffd57a; }
+
+.mp-roster-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 220, 130, 0.5) transparent;
+}
+.mp-roster-list::-webkit-scrollbar { width: 5px; }
+.mp-roster-list::-webkit-scrollbar-thumb { background: rgba(255, 220, 130, 0.5); border-radius: 3px; }
+
+.mp-roster-row {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 220, 130, 0.25);
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.mp-roster-red  .mp-roster-row { border-color: rgba(255, 138, 145, 0.4); }
+.mp-roster-gold .mp-roster-row { border-color: rgba(255, 213, 122, 0.4); }
+.mp-roster-avatar {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+.mp-roster-name {
+  color: #fff8e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+}
+.mp-roster-cash {
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  color: #ffd57a;
+}
+.mp-roster-red  .mp-roster-cash { color: #ff8a91; }
+
+/* Density: ≥7 members shrinks rows; ≥12 even tighter */
+.mp-roster-sidebar.density-compact .mp-roster-row {
+  font-size: 0.72rem;
+  padding: 2px 4px;
+  grid-template-columns: 22px 1fr auto;
+}
+.mp-roster-sidebar.density-compact .mp-roster-avatar { width: 20px; height: 20px; }
+.mp-roster-sidebar.density-micro .mp-roster-row {
+  font-size: 0.65rem;
+  padding: 1px 3px;
+  grid-template-columns: 16px 1fr auto;
+  gap: 3px;
+}
+.mp-roster-sidebar.density-micro .mp-roster-avatar { width: 14px; height: 14px; }
+
+/* Hide rosters on phones (host page used on tablet/desktop primarily) */
+@media (max-width: 720px) {
+  .mp-stage { grid-template-columns: 1fr; }
+  .mp-roster-sidebar { display: none; }
 }
 
 /* Pseudo-3D — perspective + slight rotateX gives the table-top feel.

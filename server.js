@@ -2098,6 +2098,7 @@ io.on('connection', (socket) => {
           },
         });
         io.to(pin).emit('ss:tap', {
+          playerId: socket.id, playerName: p.name, playerScore: p.score,
           team: p.team, choice: chosen, gained,
           streak: p.ssStreak, teamScores: g.teamScores,
         });
@@ -2110,6 +2111,7 @@ io.on('connection', (socket) => {
           sixseven: { chosen, streak: 0, mult: 1, gained: 0 },
         });
         io.to(pin).emit('ss:tap', {
+          playerId: socket.id, playerName: p.name, playerScore: p.score,
           team: p.team, choice: chosen, gained: 0, streak: 0,
           teamScores: g.teamScores,
         });
