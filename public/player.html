@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="/css/sixseven.css?v=20260520c">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
+  <link rel="stylesheet" href="/css/triage.css?v=20260523a">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -495,6 +496,23 @@
     <div class="cq-order-timer-bar"><div class="cq-order-timer-fill" id="cq-order-timer-fill"></div></div>
   </div>
 
+  <!-- TRIAGE ER — PATIENT-PICK SCREEN
+       After a correct vocab answer the doctor (player) picks WHICH PATIENT to
+       treat. The picker shows up to 4 urgency-sorted cards. Critical patients
+       are flagged with a 🚨 alarm halo and pulse red. 5s auto-resolve. -->
+  <div id="screen-tri-pick" class="hidden player-screen tri-pick-screen">
+    <div class="tri-pick-header">
+      <div class="tri-pick-team-tag" id="tri-pick-team-tag">🩺 Doctor</div>
+      <div class="tri-pick-timer-num" id="tri-pick-timer-num">5</div>
+    </div>
+    <div class="tri-pick-headline">🚑 ¿A quién atiendes primero?</div>
+    <p class="tri-pick-sub">Toca al paciente más urgente. Los <span class="tri-critical-word">🚨 críticos</span> dan más puntos.</p>
+    <div class="tri-pick-cards" id="tri-pick-cards">
+      <!-- patient cards rendered by JS -->
+    </div>
+    <div class="tri-pick-timer-bar"><div class="tri-pick-timer-fill" id="tri-pick-timer-fill"></div></div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -506,10 +524,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260520c"></script>
+  <script src="/js/sounds.js?v=20260523a"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260523a"></script>
+  <script src="/js/player.js?v=20260523b"></script>
 </body>
 </html>

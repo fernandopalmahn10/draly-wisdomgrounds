@@ -242,6 +242,93 @@ const FM_TOKENS = [
 ];
 const FM_PLACE_WINDOW_MS = 8000; // player has 8s to drag
 
+// === TRIAGE ER · 急诊室 — hospital "save the patients" game ===
+// 6 hospital beds across the host's ER screen. Patients with ailments arrive
+// (some critical 🚨), each with a life-timer bar that ticks down. A correct
+// vocab answer earns the player a "treatment turn" — they pick WHICH PATIENT
+// to treat on their phone (strategic decision, mirrors conquest's picker UX).
+// Treating a critical patient gives more points but their life decays faster.
+// Random events: 🚑 ambulance multi-spawn, ⚡ code blue (mass-critical),
+// 🩸 transfusion bonus (mass-heal). Win = team with most lives saved.
+const TR_BEDS = 6;                          // bedIdx 0..5
+const TR_TICK_MS = 250;                     // life-decay cadence
+const TR_LIFE_MAX = 100;                    // every patient's full bar = 100
+const TR_SPAWN_TRY_MS = 3200;               // try-spawn new patient cadence
+const TR_SPAWN_PROB_PER_TRY = 0.85;         // chance an empty bed gets filled
+const TR_AMBULANCE_INTERVAL_MS = 22000;     // multi-spawn event cadence
+const TR_CODE_BLUE_INTERVAL_MS = 28000;     // turn a random patient critical
+const TR_TRANSFUSION_INTERVAL_MS = 38000;   // heal everyone by 30%
+const TR_PICK_COUNT = 4;                    // patient cards shown on player picker
+const TR_NORMAL_POINTS = 10;                // points for treating a normal patient
+const TR_CRITICAL_POINTS = 25;              // points for treating a critical patient
+const TR_DEATH_PENALTY_POINTS = 0;          // no penalty — softer feel for kids
+// Ailment pool — each defines life capacity (effective max), decay-per-tick,
+// emoji, Spanish name, optional critical flag. Decay tuned so a normal
+// patient lives ~30-60 seconds untreated, a critical one ~12-18 seconds.
+const TR_AILMENTS = [
+  { ailment: 'fever',     icon: '🤒', name: 'Fiebre',     decay: 1.1, critical: false },
+  { ailment: 'injury',    icon: '🤕', name: 'Lesión',     decay: 1.3, critical: false },
+  { ailment: 'nausea',    icon: '🤢', name: 'Náusea',     decay: 0.9, critical: false },
+  { ailment: 'cold',      icon: '🤧', name: 'Resfriado',  decay: 0.7, critical: false },
+  { ailment: 'heat',      icon: '🥵', name: 'Sofocado',   decay: 1.4, critical: false },
+  { ailment: 'cold-flu',  icon: '🥶', name: 'Hipotermia', decay: 1.4, critical: false },
+  { ailment: 'dizzy',     icon: '🥴', name: 'Mareo',      decay: 0.9, critical: false },
+  { ailment: 'vomit',     icon: '🤮', name: 'Vómito',     decay: 1.2, critical: false },
+  { ailment: 'infection', icon: '😷', name: 'Infección',  decay: 1.2, critical: false },
+  // Critical ailments — pre-rolled with critical:true. Decay much faster.
+  { ailment: 'cardiac',   icon: '🚨', name: 'Cardíaco',   decay: 2.4, critical: true  },
+  { ailment: 'severe',    icon: '⚡', name: 'Crítico',    decay: 2.4, critical: true  },
+];
+
+function trPickAilment(forceCritical) {
+  const pool = forceCritical
+    ? TR_AILMENTS.filter((a) => a.critical)
+    : TR_AILMENTS.filter((a) => !a.critical);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function trMakePatient(g, bedIdx, opts) {
+  const forceCritical = !!(opts && opts.critical);
+  const a = trPickAilment(forceCritical);
+  const id = ++g.triage.nextPatientId;
+  return {
+    id,
+    bedIdx,
+    ailment: a.ailment,
+    icon: a.icon,
+    name: a.name,
+    critical: a.critical,
+    lifeMax: TR_LIFE_MAX,
+    lifeHp: TR_LIFE_MAX,
+    decay: a.decay,
+    spawnedAt: Date.now(),
+  };
+}
+// Find every alive patient sorted by urgency (lowest life-HP ratio first,
+// critical bumped to top). Used to build the player's "which patient" card list.
+function trUrgentPatients(g, limit) {
+  const all = Object.values(g.triage.patients);
+  all.sort((a, b) => {
+    if (a.critical && !b.critical) return -1;
+    if (b.critical && !a.critical) return 1;
+    return (a.lifeHp / a.lifeMax) - (b.lifeHp / b.lifeMax);
+  });
+  return all.slice(0, limit || TR_PICK_COUNT);
+}
+// Spawn into a single empty bed. Returns the new patient or null if all full.
+function trTrySpawn(g, opts) {
+  const occupied = new Set(
+    Object.values(g.triage.patients).map((p) => p.bedIdx)
+  );
+  const empty = [];
+  for (let i = 0; i < TR_BEDS; i++) if (!occupied.has(i)) empty.push(i);
+  if (!empty.length) return null;
+  const bedIdx = empty[Math.floor(Math.random() * empty.length)];
+  const patient = trMakePatient(g, bedIdx, opts || {});
+  g.triage.patients[patient.id] = patient;
+  g.triage.totalArrived++;
+  return patient;
+}
+
 // === REINOS EN GUERRA · 战国 (Warring States) — battlefield conquest game ===
 // A 6x4 BATTLEFIELD grid (NOT named landmarks — kids don't know Beijing/Xi'an).
 // Each square is just a battlefield position with terrain (sand / hill / river).
@@ -1177,7 +1264,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -1191,6 +1278,7 @@ io.on('connection', (socket) => {
       type === 'family'       ? 300 :
       type === 'conquest'     ? 300 :
       type === 'sixseven'     ? 120 :
+      type === 'triage'       ? 240 :
       60;
     let grid = null;
     let vendors = null;
@@ -1560,6 +1648,37 @@ io.on('connection', (socket) => {
           units,
           defenseHp,
           cols: CQ_COLS, rows: CQ_ROWS,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team, avatar: p.avatar }])
+          ),
+          teamScores: g.teamScores,
+        });
+      }
+      if (g.gameType === 'triage') {
+        // ER ward init — start with 3 patients already in beds so the screen
+        // is never empty when the round begins (early-engagement pattern).
+        g.triage = {
+          patients: {},
+          nextPatientId: 0,
+          livesSavedRed: 0,
+          livesSavedGold: 0,
+          patientsDied: 0,
+          totalArrived: 0,
+          lastSpawnTry: Date.now(),
+          lastAmbulanceAt: Date.now(),
+          lastCodeBlueAt: Date.now() + 6000,    // first code blue ~6s after start
+          lastTransfusionAt: Date.now() + 14000, // first transfusion ~14s
+          eventLog: [],
+        };
+        // Seed with 3 starter patients (none critical — guaranteed early wins).
+        for (let k = 0; k < 3; k++) trTrySpawn(g, { critical: false });
+        g.teamScores = { red: 0, gold: 0 };
+        io.to(pin).emit('tri:init', {
+          beds: TR_BEDS,
+          lifeMax: TR_LIFE_MAX,
+          patients: Object.values(g.triage.patients),
+          livesSavedRed: 0,
+          livesSavedGold: 0,
           players: Object.fromEntries(
             Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team, avatar: p.avatar }])
           ),
@@ -2166,6 +2285,34 @@ io.on('connection', (socket) => {
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
+    } else if (g.gameType === 'triage') {
+      // Triage ER — TWO-STAGE STRATEGIC FLOW (mirrors conquest):
+      //   1) Correct vocab answer → server tells the player to pick WHICH
+      //      patient to treat. Server attaches the current urgency-sorted
+      //      patient list so the picker can render cards immediately.
+      //   2) Player taps a card → emits `player:tri-treat { patientId }`.
+      //      Server applies the treatment and broadcasts to host.
+      // No-correct-answer path stays simple — just next question, no penalty
+      // (kids' health stakes are emotional; punishing wrong answers feels mean).
+      if (correct) {
+        p.triTreatPending = true;
+        const urgent = trUrgentPatients(g);
+        const patients = urgent.map((pat) => ({
+          id: pat.id,
+          bedIdx: pat.bedIdx,
+          icon: pat.icon,
+          name: pat.name,
+          critical: pat.critical,
+          lifeHpRatio: Math.max(0, pat.lifeHp / pat.lifeMax),
+        }));
+        io.to(socket.id).emit('answer-result', {
+          correct: true,
+          correctText,
+          triage: { needsPick: true, patients },
+        });
+      } else {
+        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+      }
     } else if (g.gameType === 'zombie') {
       // Zombie Escape: correct → sprint window. Wrong → SURVIVOR steps back
       // (jump-back penalty) but the game never auto-ends from a wrong answer.
@@ -2236,6 +2383,10 @@ io.on('connection', (socket) => {
     } else if (g.gameType === 'sixseven') {
       // Snappy rhythm — fast cadence so the swing feels continuous
       nextDelay = correct ? 600 : 800;
+    } else if (g.gameType === 'triage') {
+      // Correct → wait for the player's "which patient" tap (handler queues
+      // the next question). Wrong → quick follow-up so they re-engage fast.
+      nextDelay = correct ? -1 : 1400;
     } else {
       nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
     }
@@ -2398,6 +2549,75 @@ io.on('connection', (socket) => {
       const q = nextQuestionFor(g, socket.id);
       if (q) io.to(socket.id).emit('question', q);
     }, 1800);
+  });
+
+  // Triage ER: player tapped which patient to treat. Resolves the heal,
+  // awards points (2.5x for critical), and broadcasts the rescue so the host
+  // can play the defib zap / life-saved chime / EKG stabilize animation.
+  socket.on('player:tri-treat', ({ pin, patientId }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'triage' || g.state !== 'active') return;
+    const p = g.players[socket.id];
+    if (!p || !p.triTreatPending) return;
+    p.triTreatPending = false;
+    // Resolve target — fall back to the most-urgent alive patient if the
+    // tapped patient already died between picker-open and the player's tap.
+    let patient = g.triage.patients[patientId];
+    if (!patient) {
+      const urgent = trUrgentPatients(g, 1);
+      patient = urgent[0];
+    }
+    if (!patient) {
+      // No one alive to treat (rare — happens if every patient died during
+      // the picker window). Award a small consolation point so the player
+      // isn't penalized for the empty ward, then queue the next question.
+      p.score = (p.score || 0) + 1;
+      io.to(socket.id).emit('tri:treat-resolved', {
+        action: 'empty-ward',
+        points: 1,
+      });
+      setTimeout(() => {
+        if (!games[pin] || games[pin].state !== 'active') return;
+        const q = nextQuestionFor(g, socket.id);
+        if (q) io.to(socket.id).emit('question', q);
+      }, 1000);
+      return;
+    }
+    const points = patient.critical ? TR_CRITICAL_POINTS : TR_NORMAL_POINTS;
+    const team = p.team;
+    if (team === 'red') g.triage.livesSavedRed++;
+    else g.triage.livesSavedGold++;
+    g.teamScores[team] = (g.teamScores[team] || 0) + points;
+    p.score = (p.score || 0) + points;
+    // Remove the patient (their bed empties — next spawn cycle will refill it)
+    delete g.triage.patients[patient.id];
+    io.to(socket.id).emit('tri:treat-resolved', {
+      action: patient.critical ? 'critical-saved' : 'saved',
+      patientId: patient.id,
+      bedIdx: patient.bedIdx,
+      points,
+    });
+    io.to(pin).emit('tri:patient-treated', {
+      patientId: patient.id,
+      bedIdx: patient.bedIdx,
+      ailment: patient.ailment,
+      icon: patient.icon,
+      critical: patient.critical,
+      team,
+      playerName: p.name,
+      playerAvatar: p.avatar || '',
+      points,
+      livesSavedRed: g.triage.livesSavedRed,
+      livesSavedGold: g.triage.livesSavedGold,
+      teamScores: g.teamScores,
+    });
+    // Queue next question after a short rescue-celebration window so the
+    // player sees the result of THEIR save before being pushed forward.
+    setTimeout(() => {
+      if (!games[pin] || games[pin].state !== 'active') return;
+      const q = nextQuestionFor(g, socket.id);
+      if (q) io.to(socket.id).emit('question', q);
+    }, 1500);
   });
 
   // Chinese Monopoly: player committed their tap-stopped dice value (1..6).
@@ -2682,6 +2902,116 @@ io.on('connection', (socket) => {
   });
 });
 
+// === TRIAGE ER tick loop ===
+// Drives the patient life-timer decay, periodic auto-spawns into empty beds,
+// and randomized hospital events (ambulance arrival, code blue, transfusion).
+// Broadcasts a compact `tri:tick` so the host can animate the bed life-bars
+// smoothly without spamming per-patient events.
+setInterval(() => {
+  const now = Date.now();
+  Object.entries(games).forEach(([pin, g]) => {
+    if (g.gameType !== 'triage' || g.state !== 'active') return;
+    const t = g.triage;
+    if (!t) return;
+    // Decay each patient. If lifeHp hits 0 → patient dies and bed empties.
+    const dead = [];
+    Object.values(t.patients).forEach((pat) => {
+      pat.lifeHp -= pat.decay;
+      if (pat.lifeHp <= 0) {
+        pat.lifeHp = 0;
+        dead.push(pat);
+      }
+    });
+    dead.forEach((pat) => {
+      delete t.patients[pat.id];
+      t.patientsDied++;
+      io.to(pin).emit('tri:patient-died', {
+        patientId: pat.id,
+        bedIdx: pat.bedIdx,
+        icon: pat.icon,
+        ailment: pat.ailment,
+        critical: pat.critical,
+        patientsDied: t.patientsDied,
+      });
+    });
+    // Try-spawn a new patient cadence (only if not all beds are full)
+    if (now - t.lastSpawnTry > TR_SPAWN_TRY_MS) {
+      t.lastSpawnTry = now;
+      if (Math.random() < TR_SPAWN_PROB_PER_TRY) {
+        // Difficulty ramp: late-game spawns have a 25% chance of being critical
+        const elapsedSec = (now - (g.startedAt || now)) / 1000;
+        const critChance = Math.min(0.25, elapsedSec / 240 * 0.25);
+        const forceCrit = Math.random() < critChance;
+        const newPatient = trTrySpawn(g, { critical: forceCrit });
+        if (newPatient) {
+          io.to(pin).emit('tri:patient-arrived', {
+            patient: newPatient,
+            kind: 'walk-in',
+          });
+        }
+      }
+    }
+    // === Ambulance arrival event ===
+    // Adds 2 patients into empty beds at once (one of them critical). Big
+    // visual spectacle on host (ambulance drives in from off-screen + siren).
+    if (now - t.lastAmbulanceAt > TR_AMBULANCE_INTERVAL_MS) {
+      t.lastAmbulanceAt = now;
+      const a = trTrySpawn(g, { critical: false });
+      const b = trTrySpawn(g, { critical: true });
+      const arrivals = [a, b].filter(Boolean);
+      if (arrivals.length) {
+        io.to(pin).emit('tri:event', {
+          kind: 'ambulance',
+          arrivals,
+        });
+      }
+    }
+    // === Code blue event ===
+    // Picks a random existing non-critical patient and bumps them to critical.
+    // Host plays the siren + flashing-red alarm; player picker should now show
+    // this patient as 🚨 critical urgency.
+    if (now - t.lastCodeBlueAt > TR_CODE_BLUE_INTERVAL_MS) {
+      t.lastCodeBlueAt = now;
+      const candidates = Object.values(t.patients).filter((p) => !p.critical);
+      if (candidates.length) {
+        const victim = candidates[Math.floor(Math.random() * candidates.length)];
+        victim.critical = true;
+        victim.decay = 2.4;
+        // Don't let them flatline instantly — give them a fighting chance
+        victim.lifeHp = Math.max(victim.lifeHp, TR_LIFE_MAX * 0.55);
+        io.to(pin).emit('tri:event', {
+          kind: 'code-blue',
+          patientId: victim.id,
+          bedIdx: victim.bedIdx,
+        });
+      }
+    }
+    // === Transfusion event (mass-heal bonus) ===
+    // Every patient regains a chunk of life. Gives a moment of breathing
+    // room and a satisfying simultaneous heart-rate-stabilize visual.
+    if (now - t.lastTransfusionAt > TR_TRANSFUSION_INTERVAL_MS) {
+      t.lastTransfusionAt = now;
+      Object.values(t.patients).forEach((pat) => {
+        pat.lifeHp = Math.min(pat.lifeMax, pat.lifeHp + pat.lifeMax * 0.30);
+      });
+      io.to(pin).emit('tri:event', {
+        kind: 'transfusion',
+        snapshot: Object.values(t.patients).map((p) => ({ id: p.id, lifeHp: p.lifeHp })),
+      });
+    }
+    // Compact tick — host uses this to smoothly animate the life bars
+    io.to(pin).emit('tri:tick', {
+      patients: Object.values(t.patients).map((p) => ({
+        id: p.id, bedIdx: p.bedIdx, lifeHp: p.lifeHp,
+        lifeMax: p.lifeMax, critical: p.critical,
+      })),
+      livesSavedRed: t.livesSavedRed,
+      livesSavedGold: t.livesSavedGold,
+      patientsDied: t.patientsDied,
+    });
+  });
+}, TR_TICK_MS);
+
 // === Single global watchdog ===
 // (Skips market-quest — that game uses vendor collision triggers, not auto-push)
 setInterval(() => {
@@ -2691,7 +3021,10 @@ setInterval(() => {
     if (g.gameType === 'market-quest') return; // vendor-driven, no watchdog needed
     if (g.gameType === 'flappy') return;       // revive-driven, no watchdog
     Object.entries(g.players).forEach(([pid, p]) => {
-      const inAction = p.mashUntil > now || p.walkUntil > now || p.currentQ;
+      // Conquest/triage have multi-stage flows — if the player has a pending
+      // strategic pick, don't shove a new question on top of their picker.
+      const inAction = p.mashUntil > now || p.walkUntil > now || p.currentQ
+                      || p.cqOrderPending || p.triTreatPending;
       if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {
         const q = nextQuestionFor(g, pid);
         if (q) {

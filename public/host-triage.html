@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>🚑 Triage ER · Salva a los Pacientes · Host</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+  <link rel="stylesheet" href="/css/triage.css?v=20260523a">
+</head>
+<body class="triage-bg">
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+
+  <!-- LOBBY -->
+  <div id="screen-lobby" class="container">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div class="market-banner">🚑 Triage ER · 急诊室 🏥</div>
+      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
+      <div class="pin-display" id="pin-display">····</div>
+      <div style="color:var(--ink-dim); font-size:0.9rem;">
+        Tus jugadores entran en <span id="join-url" style="color:var(--gold-glow); font-weight:800;">esta URL</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div style="font-size:2rem;">📚</div>
+        <div style="flex:1;">
+          <div style="font-size:0.75rem; color:var(--ink-dim); letter-spacing:0.15em; text-transform:uppercase;">Set cargado</div>
+          <div id="set-title-display" style="font-weight:800; font-size:1.15rem;">…</div>
+          <div id="set-count-display" style="color:var(--ink-dim); font-size:0.85rem;">…</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="location.href='/games.html?setId=' + new URLSearchParams(location.search).get('setId')">Cambiar juego</button>
+      </div>
+      <div class="duration-control">
+        <span>⏱ Duración</span>
+        <input type="range" id="duration-slider" min="120" max="480" step="30" value="240">
+        <span class="duration-value" id="duration-value">4m</span>
+      </div>
+    </div>
+
+    <div class="host-grid">
+      <div class="team-panel team-red">
+        <div class="team-header">
+          <div class="team-mascot">🩺</div>
+          <div>
+            <div class="team-name">Doctores Rojos</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">紅医生</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-red"></div>
+      </div>
+      <div class="team-panel team-gold">
+        <div class="team-header">
+          <div class="team-mascot">💉</div>
+          <div>
+            <div class="team-name">Doctores Dorados</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">金医生</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-gold"></div>
+      </div>
+    </div>
+
+    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:12px;">
+      Toca el chip de un jugador para cambiar de equipo
+    </p>
+
+    <div class="controls-panel">
+      <div class="controls-row" style="justify-content:center;">
+        <button class="btn btn-ghost" id="balance-btn">⚖️ Equilibrar</button>
+        <button class="btn btn-jade" id="start-btn" disabled>▶️ ¡Abrir la Sala de Emergencias!</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se juega</div>
+      <ol style="color:var(--ink-dim); font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
+        <li>Pacientes llegan a las 6 camas con diferentes dolencias (🤒🤕🤢🥵🥶🤮…).</li>
+        <li>Cada paciente tiene una <strong>barra de vida ⚠️</strong> que se agota.</li>
+        <li>Responde bien una pregunta → eliges <strong>QUÉ PACIENTE</strong> atender.</li>
+        <li><strong>🚨 Críticos</strong> dan +25 puntos, normales +10. ¡Pero los críticos se agotan más rápido!</li>
+        <li>🚑 ambulancias traen más pacientes · ⚡ código azul = paciente vuelve crítico · 🩸 transfusión sana a todos.</li>
+        <li>Equipo con <strong>más vidas salvadas</strong> al final del tiempo gana 🏆.</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="screen-countdown" class="hidden countdown-overlay">
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <!-- ACTIVE — the ER ward -->
+  <div id="screen-active" class="hidden tri-container">
+    <div class="sticky-pin">
+      <span class="sticky-pin-label">PIN</span>
+      <span class="sticky-pin-value" id="active-pin-display">····</span>
+    </div>
+
+    <div class="tri-topbar">
+      <div class="tri-team red">
+        <span class="tri-team-emoji">🩺</span>
+        <span class="tri-team-label">Rojos</span>
+        <span class="tri-team-saved"><span id="saved-red">0</span> vidas</span>
+      </div>
+      <div class="tri-time">
+        <span class="tri-time-icon">⏱</span>
+        <span id="timer-display">4:00</span>
+        <span class="tri-deaths">💔 <span id="deaths-display">0</span></span>
+      </div>
+      <div class="tri-team gold">
+        <span class="tri-team-saved"><span id="saved-gold">0</span> vidas</span>
+        <span class="tri-team-label">Dorados</span>
+        <span class="tri-team-emoji">💉</span>
+      </div>
+    </div>
+
+    <div class="tri-stage">
+      <!-- LEFT roster — Team Red doctors -->
+      <aside class="tri-roster-sidebar tri-roster-red" id="tri-roster-red">
+        <div class="tri-roster-header"><span class="tri-roster-mascot">🩺</span> Doctores Rojos</div>
+        <div class="tri-roster-list" id="tri-roster-list-red"></div>
+      </aside>
+
+      <!-- The ER ward — 6 hospital beds in a 3x2 grid -->
+      <div class="tri-ward" id="tri-ward">
+        <div class="tri-ward-bg">
+          <div class="tri-ward-floor"></div>
+          <div class="tri-ward-curtain left"></div>
+          <div class="tri-ward-curtain right"></div>
+          <div class="tri-ward-overhead-light l1"></div>
+          <div class="tri-ward-overhead-light l2"></div>
+          <div class="tri-ward-overhead-light l3"></div>
+        </div>
+        <div class="tri-bed-grid" id="tri-bed-grid">
+          <!-- 6 beds rendered by JS -->
+        </div>
+        <!-- Ambulance arrival lane (slides in from the right edge) -->
+        <div class="tri-ambulance" id="tri-ambulance">🚑</div>
+        <!-- VFX layer for defib zaps, life-saved sparkles, flatline ghosts -->
+        <div class="tri-fx-layer" id="tri-fx-layer"></div>
+        <!-- Event banner (CODE BLUE, AMBULANCE, TRANSFUSION) -->
+        <div class="tri-event-banner" id="tri-event-banner"></div>
+      </div>
+
+      <!-- RIGHT roster — Team Gold doctors -->
+      <aside class="tri-roster-sidebar tri-roster-gold" id="tri-roster-gold">
+        <div class="tri-roster-header"><span class="tri-roster-mascot">💉</span> Doctores Dorados</div>
+        <div class="tri-roster-list" id="tri-roster-list-gold"></div>
+      </aside>
+    </div>
+
+    <div style="text-align:center; padding:6px;">
+      <button class="end-now-floating" id="end-now-btn">🛑 Terminar ronda</button>
+    </div>
+  </div>
+
+  <!-- WIN -->
+  <div id="screen-win" class="hidden container">
+    <div class="win-screen">
+      <div id="win-emoji" style="font-size:7rem;">🏥</div>
+      <div class="winner-banner" id="win-banner">¡Ganador!</div>
+      <div class="final-scores">
+        <div><span class="red"><span id="final-red">0</span> vidas</span></div>
+        <div style="color:var(--ink-dim);">vs</div>
+        <div><span class="gold"><span id="final-gold">0</span> vidas</span></div>
+      </div>
+      <div class="win-narration" id="win-narration"></div>
+      <div class="leaderboard" id="leaderboard"></div>
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Inicio</button>
+        <button class="btn btn-jade" id="play-again-btn">🔄 Nuevo turno</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js?v=20260523a"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/dralingo.js"></script>
+  <script src="/js/host-triage.js?v=20260523a"></script>
+</body>
+</html>
