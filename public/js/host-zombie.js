@@ -97,6 +97,7 @@
   socket.on('countdown', () => {
     showScreen('countdown');
     MochiSounds.startMusic();
+    MochiSounds.startGameTheme && MochiSounds.startGameTheme('zombie');
     let n = 3;
     const numEl = $('countdown-num');
     const tick = () => {

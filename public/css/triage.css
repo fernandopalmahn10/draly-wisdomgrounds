@@ -679,3 +679,308 @@ body.triage-bg .market-banner {
   box-shadow: 0 0 10px rgba(45, 212, 191, 0.7);
   transition: width 100ms linear;
 }
+
+/* ============================ CPR / DEFIB MINI-GAME ============================ */
+.tri-cpr-screen {
+  display: flex !important;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255, 90, 102, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(45, 212, 191, 0.12) 0%, transparent 60%),
+    linear-gradient(180deg, #0e1c2c 0%, #0a1320 50%, #060c14 100%);
+  color: #d6e6f2;
+  padding: 14px;
+  gap: 12px;
+  overflow: hidden;
+  user-select: none;
+  touch-action: manipulation;
+}
+.tri-cpr-screen.hidden { display: none !important; }
+
+.tri-cpr-header {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px;
+}
+.tri-cpr-patient {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 2px solid rgba(120, 220, 220, 0.45);
+}
+.tri-cpr-patient-icon { font-size: 1.8rem; }
+.tri-cpr-patient-name { font-weight: 900; letter-spacing: 0.04em; }
+.tri-cpr-bedlabel {
+  font-size: 0.75rem; letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(180, 215, 230, 0.65);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 4px 10px; border-radius: 8px;
+}
+
+.tri-cpr-stage {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 12px;
+  position: relative;
+}
+.tri-cpr-stage.critical {
+  /* Pulsing red halo around the whole stage when patient is critical */
+  animation: tri-cpr-crit-bg 1.1s ease-in-out infinite;
+}
+@keyframes tri-cpr-crit-bg {
+  0%, 100% { background: radial-gradient(ellipse 80% 50% at 50% 50%, rgba(255, 90, 102, 0.06) 0%, transparent 70%); }
+  50%      { background: radial-gradient(ellipse 80% 50% at 50% 50%, rgba(255, 90, 102, 0.22) 0%, transparent 70%); }
+}
+
+/* Live EKG strip — drawn in real time as the player taps */
+.tri-cpr-ekg {
+  width: 95%;
+  height: 60px;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid rgba(45, 212, 191, 0.4);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.5);
+}
+.tri-cpr-ekg svg { width: 100%; height: 100%; }
+.tri-cpr-ekg-base {
+  fill: none;
+  stroke: rgba(45, 212, 191, 0.25);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+.tri-cpr-ekg-live {
+  fill: none;
+  stroke: #2dd4bf;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px rgba(45, 212, 191, 0.95));
+  transition: stroke 0.3s;
+}
+.tri-cpr-stage.critical .tri-cpr-ekg-live {
+  stroke: #ff6677;
+  filter: drop-shadow(0 0 8px rgba(255, 90, 102, 0.95));
+}
+
+/* The giant heart tap-target */
+.tri-cpr-heart {
+  position: relative;
+  width: 220px; height: 220px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: inherit;
+  display: flex; align-items: center; justify-content: center;
+  outline: none;
+}
+.tri-cpr-heart::before {
+  content: '';
+  position: absolute; inset: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 90, 102, 0.4) 0%, rgba(255, 90, 102, 0.08) 60%, transparent 80%);
+  filter: blur(8px);
+  animation: tri-heart-ambient 1.4s ease-in-out infinite;
+}
+@keyframes tri-heart-ambient {
+  0%, 100% { transform: scale(0.95); opacity: 0.7; }
+  50%      { transform: scale(1.08); opacity: 1; }
+}
+.tri-cpr-heart-icon {
+  position: relative;
+  font-size: 8rem;
+  filter: drop-shadow(0 6px 16px rgba(255, 90, 102, 0.6));
+  transition: transform 0.12s ease-out;
+  line-height: 1;
+}
+.tri-cpr-heart-ring {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  border: 4px solid rgba(45, 212, 191, 0.6);
+  box-shadow: 0 0 18px rgba(45, 212, 191, 0.4) inset, 0 0 18px rgba(45, 212, 191, 0.3);
+  pointer-events: none;
+}
+.tri-cpr-heart-label {
+  position: absolute;
+  bottom: -8px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 900;
+  color: #e7faff;
+  background: rgba(8, 22, 36, 0.85);
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(45, 212, 191, 0.5);
+  white-space: nowrap;
+}
+.tri-cpr-heart.pulse .tri-cpr-heart-icon {
+  animation: tri-heart-thump 0.34s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.tri-cpr-heart.pulse .tri-cpr-heart-ring {
+  animation: tri-heart-ring-pulse 0.5s ease-out;
+}
+@keyframes tri-heart-thump {
+  0%   { transform: scale(1); }
+  25%  { transform: scale(1.25); }
+  60%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+@keyframes tri-heart-ring-pulse {
+  0%   { transform: scale(0.95); opacity: 1;   border-color: #5be8d1; }
+  60%  { transform: scale(1.15); opacity: 0.4; }
+  100% { transform: scale(1);    opacity: 1;   border-color: rgba(45, 212, 191, 0.6); }
+}
+.tri-cpr-heart.flash .tri-cpr-heart-icon {
+  animation: tri-heart-flash 0.5s ease-out;
+}
+@keyframes tri-heart-flash {
+  0%   { transform: scale(1.4); filter: drop-shadow(0 0 30px #ffe66a); }
+  100% { transform: scale(1);   filter: drop-shadow(0 6px 16px rgba(255, 90, 102, 0.6)); }
+}
+.tri-cpr-rhythm-star {
+  position: absolute;
+  top: 10px; right: 14px;
+  font-size: 1.6rem;
+  animation: tri-cpr-star-fly 0.7s ease-out forwards;
+  pointer-events: none;
+}
+@keyframes tri-cpr-star-fly {
+  0%   { transform: translateY(0) scale(0.5); opacity: 0; }
+  30%  { transform: translateY(-12px) scale(1.4); opacity: 1; }
+  100% { transform: translateY(-40px) scale(1); opacity: 0; }
+}
+
+/* The progress tick row — fills tick-by-tick */
+.tri-cpr-ticks {
+  display: flex; gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.tri-cpr-tick {
+  width: 24px; height: 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(120, 220, 220, 0.35);
+  transition: all 0.25s ease;
+}
+.tri-cpr-tick.on {
+  background: linear-gradient(90deg, #2dd4bf, #5be8d1);
+  border-color: #2dd4bf;
+  box-shadow: 0 0 10px rgba(45, 212, 191, 0.7);
+  animation: tri-cpr-tick-pop 0.4s ease-out;
+}
+.tri-cpr-stage.critical .tri-cpr-tick.on {
+  background: linear-gradient(90deg, #ff5a66, #ff8a96);
+  border-color: #ff5a66;
+  box-shadow: 0 0 10px rgba(255, 90, 102, 0.7);
+}
+@keyframes tri-cpr-tick-pop {
+  0%   { transform: scale(0.5); }
+  50%  { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.tri-cpr-hint {
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #d6e6f2;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(45, 212, 191, 0.3);
+  max-width: 92%;
+}
+
+/* DEFIB PANEL — only shown for critical patients */
+.tri-cpr-defib {
+  margin-top: 8px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid #ff5a66;
+  border-radius: 14px;
+  padding: 12px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+  animation: tri-cpr-defib-appear 0.3s ease-out;
+}
+.tri-cpr-defib.hidden { display: none !important; }
+@keyframes tri-cpr-defib-appear {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.tri-cpr-defib-label {
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: #ff8a96;
+  text-shadow: 0 0 8px rgba(255, 90, 102, 0.5);
+}
+.tri-cpr-defib-track {
+  position: relative;
+  width: 92%;
+  height: 30px;
+  background: linear-gradient(90deg,
+    rgba(255, 90, 102, 0.7) 0%,    rgba(255, 90, 102, 0.7) 22%,
+    rgba(255, 213, 122, 0.7) 22%,  rgba(255, 213, 122, 0.7) 38%,
+    rgba(45, 212, 191, 0.7) 38%,   rgba(45, 212, 191, 0.7) 62%,
+    rgba(255, 213, 122, 0.7) 62%,  rgba(255, 213, 122, 0.7) 78%,
+    rgba(255, 90, 102, 0.7) 78%,   rgba(255, 90, 102, 0.7) 100%);
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  overflow: visible;
+}
+.tri-cpr-defib-zone-green,
+.tri-cpr-defib-zone-yellow-l,
+.tri-cpr-defib-zone-yellow-r { display: none; } /* visual already in gradient */
+.tri-cpr-defib-needle {
+  position: absolute;
+  top: -6px; bottom: -6px;
+  left: 0%;
+  width: 6px;
+  background: #e7faff;
+  border-radius: 3px;
+  box-shadow: 0 0 12px #e7faff;
+  transform: translateX(-50%);
+  transition: left 30ms linear;
+}
+.tri-cpr-defib-needle[data-zone="green"]  { background: #5be8d1; box-shadow: 0 0 16px #5be8d1; }
+.tri-cpr-defib-needle[data-zone="yellow"] { background: #ffd57a; box-shadow: 0 0 14px #ffd57a; }
+.tri-cpr-defib-needle[data-zone="red"]    { background: #ff6677; box-shadow: 0 0 14px #ff6677; }
+.tri-cpr-defib-btn {
+  font-size: 1.1rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffe66a, #f5b14a);
+  color: #381900;
+  border: 2px solid #ffd57a;
+  box-shadow: 0 0 20px rgba(255, 213, 122, 0.5);
+  cursor: pointer;
+  text-transform: uppercase;
+}
+.tri-cpr-defib-btn:disabled { opacity: 0.5; cursor: default; }
+.tri-cpr-defib-btn:active { transform: scale(0.96); }
+
+.tri-cpr-timer-bar {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 90, 102, 0.4);
+}
+.tri-cpr-timer-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #ff5a66, #ff8a96);
+  box-shadow: 0 0 10px rgba(255, 90, 102, 0.7);
+  transition: width 80ms linear;
+}

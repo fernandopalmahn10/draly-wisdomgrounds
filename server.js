@@ -2554,12 +2554,14 @@ io.on('connection', (socket) => {
   // Triage ER: player tapped which patient to treat. Resolves the heal,
   // awards points (2.5x for critical), and broadcasts the rescue so the host
   // can play the defib zap / life-saved chime / EKG stabilize animation.
-  socket.on('player:tri-treat', ({ pin, patientId }) => {
+  socket.on('player:tri-treat', ({ pin, patientId, bonus, completed }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'triage' || g.state !== 'active') return;
     const p = g.players[socket.id];
     if (!p || !p.triTreatPending) return;
     p.triTreatPending = false;
+    // Clamp bonus to a sane range (CPR rhythm 0-5, defib 0-8, total max 15)
+    const cprBonus = Math.max(0, Math.min(15, Number(bonus) || 0));
     // Resolve target — fall back to the most-urgent alive patient if the
     // tapped patient already died between picker-open and the player's tap.
     let patient = g.triage.patients[patientId];
@@ -2583,7 +2585,8 @@ io.on('connection', (socket) => {
       }, 1000);
       return;
     }
-    const points = patient.critical ? TR_CRITICAL_POINTS : TR_NORMAL_POINTS;
+    const basePoints = patient.critical ? TR_CRITICAL_POINTS : TR_NORMAL_POINTS;
+    const points = basePoints + cprBonus;
     const team = p.team;
     if (team === 'red') g.triage.livesSavedRed++;
     else g.triage.livesSavedGold++;
@@ -2596,6 +2599,8 @@ io.on('connection', (socket) => {
       patientId: patient.id,
       bedIdx: patient.bedIdx,
       points,
+      basePoints,
+      cprBonus,
     });
     io.to(pin).emit('tri:patient-treated', {
       patientId: patient.id,

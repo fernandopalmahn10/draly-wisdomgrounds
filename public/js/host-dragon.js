@@ -89,6 +89,7 @@
   socket.on('countdown', () => {
     showScreen('countdown');
     MochiSounds.startMusic();
+    MochiSounds.startGameTheme && MochiSounds.startGameTheme('dragon-eye');
     let n = 3;
     const numEl = $('countdown-num');
     const tick = () => {

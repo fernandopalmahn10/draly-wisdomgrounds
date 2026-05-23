@@ -139,6 +139,7 @@
   socket.on('countdown', () => {
     showScreen('countdown');
     MochiSounds.startMusic();
+    /* Flappy keeps the default startMusic — no themed entry yet. */
     let n = 3;
     const numEl = $('countdown-num');
     const tick = () => {

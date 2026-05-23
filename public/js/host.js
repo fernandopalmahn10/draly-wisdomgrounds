@@ -231,6 +231,7 @@
     initTerritory('red');
     initTerritory('gold');
     MochiSounds.startMusic();
+    MochiSounds.startGameTheme && MochiSounds.startGameTheme('mochi-mash');
     // (Dralingo's legendary appearances only happen on player phones — keeps host's big screen uninterrupted)
     let n = 3;
     const overlay = $('screen-countdown');
