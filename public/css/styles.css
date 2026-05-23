@@ -480,6 +480,21 @@ body::before {
   flex-direction: column;
   gap: 12px;
   margin-top: 16px;
+  /* Sticky on tablet/desktop so the Start Game / End Now button is ALWAYS
+     in the viewport, even when the page is taller than the screen. Fixes
+     the "I can't find the start/end buttons on tablet" bug. */
+  position: sticky;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 30;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(13, 14, 26, 0.92) 30%, rgba(13, 14, 26, 0.96) 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 12px 8px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(244, 232, 208, 0.15);
+  margin-bottom: max(0px, env(safe-area-inset-bottom));
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
 }
 
 .controls-row {
@@ -488,6 +503,31 @@ body::before {
   flex-wrap: wrap;
   align-items: center;
 }
+
+/* A "ghost" floating end-now button — used during active rounds so the
+   host can ALWAYS terminate the round without scrolling. Pinned to the
+   bottom-right corner with safe-area padding. */
+.end-now-floating {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 40;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.85rem;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(80, 12, 12, 0.92);
+  color: #fff;
+  border: 2px solid rgba(255, 138, 145, 0.7);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55), 0 0 16px rgba(217, 46, 58, 0.35);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  letter-spacing: 0.05em;
+}
+.end-now-floating:hover { filter: brightness(1.15); }
+.end-now-floating:active { transform: translateY(1px); }
 
 .duration-control {
   display: flex;
