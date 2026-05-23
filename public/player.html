@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="/css/sixseven.css?v=20260520c">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
-  <link rel="stylesheet" href="/css/triage.css?v=20260523a">
+  <link rel="stylesheet" href="/css/triage.css?v=20260523b">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -513,6 +513,51 @@
     <div class="tri-pick-timer-bar"><div class="tri-pick-timer-fill" id="tri-pick-timer-fill"></div></div>
   </div>
 
+  <!-- TRIAGE ER — CPR / DEFIB MINI-GAME
+       After picking a patient, the doctor (player) performs CPR — tap the
+       heart rhythmically to fill the rescue ring. Normal patients need 5
+       taps, criticals need 8 taps PLUS a defib power-meter for bonus.
+       Each tap pulses the heart + beeps the monitor + draws on the EKG. -->
+  <div id="screen-tri-cpr" class="hidden player-screen tri-cpr-screen">
+    <div class="tri-cpr-header">
+      <div class="tri-cpr-patient" id="tri-cpr-patient">
+        <span class="tri-cpr-patient-icon" id="tri-cpr-patient-icon">🤒</span>
+        <span class="tri-cpr-patient-name" id="tri-cpr-patient-name">Paciente</span>
+      </div>
+      <div class="tri-cpr-bedlabel" id="tri-cpr-bedlabel">Cama —</div>
+    </div>
+    <div class="tri-cpr-stage" id="tri-cpr-stage">
+      <!-- Animated EKG line that draws live as the player taps -->
+      <div class="tri-cpr-ekg" id="tri-cpr-ekg">
+        <svg viewBox="0 0 200 60" preserveAspectRatio="none">
+          <polyline class="tri-cpr-ekg-base" points="0,30 200,30"/>
+          <polyline id="tri-cpr-ekg-live" class="tri-cpr-ekg-live" points="0,30"/>
+        </svg>
+      </div>
+      <!-- The giant tappable heart -->
+      <button class="tri-cpr-heart" id="tri-cpr-heart" type="button" aria-label="CPR tap">
+        <div class="tri-cpr-heart-icon">❤️</div>
+        <div class="tri-cpr-heart-ring" id="tri-cpr-heart-ring"></div>
+        <div class="tri-cpr-heart-label">TOCA AL RITMO</div>
+      </button>
+      <!-- Tap-progress ticks (5 for normal, 8 for critical) -->
+      <div class="tri-cpr-ticks" id="tri-cpr-ticks"></div>
+      <div class="tri-cpr-hint" id="tri-cpr-hint">¡Compresiones torácicas!</div>
+    </div>
+    <!-- DEFIB POWER METER (only shown for critical patients after CPR) -->
+    <div class="tri-cpr-defib hidden" id="tri-cpr-defib">
+      <div class="tri-cpr-defib-label">⚡ ¡DESCARGA! Toca cuando el indicador esté en VERDE</div>
+      <div class="tri-cpr-defib-track">
+        <div class="tri-cpr-defib-zone-green"></div>
+        <div class="tri-cpr-defib-zone-yellow-l"></div>
+        <div class="tri-cpr-defib-zone-yellow-r"></div>
+        <div class="tri-cpr-defib-needle" id="tri-cpr-defib-needle"></div>
+      </div>
+      <button class="tri-cpr-defib-btn" id="tri-cpr-defib-btn" type="button">⚡ DESCARGAR</button>
+    </div>
+    <div class="tri-cpr-timer-bar"><div class="tri-cpr-timer-fill" id="tri-cpr-timer-fill"></div></div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -524,10 +569,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260523a"></script>
+  <script src="/js/sounds.js?v=20260523b"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260523b"></script>
+  <script src="/js/player.js?v=20260523c"></script>
 </body>
 </html>

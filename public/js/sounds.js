@@ -284,6 +284,547 @@
     stopCustomMusic();
     if (musicTimer) clearInterval(musicTimer);
     musicTimer = null;
+    // Also kill any procedural theme — keeps the win/lose handoff clean
+    if (themeTimer) {
+      clearInterval(themeTimer);
+      themeTimer = null;
+      themePatternFn = null;
+      themeKey = null;
+    }
+    if (musicGain && audioCtx) {
+      musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      musicGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+    }
+  }
+
+  // ===========================================================================
+  // PER-GAME THEMED MUSIC ENGINE
+  //
+  // Each game gets a distinctive musical identity — different key/tempo/timbre.
+  // Themes are scheduled procedurally on a beat grid (no external audio assets,
+  // no licensing risk, works offline). All voices are synthesized via WebAudio.
+  //
+  // The user starts a game's theme with `MochiSounds.startGameTheme('triage')`,
+  // and stops with `MochiSounds.stopGameTheme()` (or any of the win/lose/tie
+  // music helpers, which fade the theme out first).
+  // ===========================================================================
+  let themeTimer = null;
+  let themeStartCt = 0;     // ctx.currentTime when the theme started
+  let themeBarIdx = 0;      // monotonic bar counter
+  let themeKey = null;      // string identifier of running theme
+  let themeBPM = 120;
+  let themeBeatsPerBar = 4;
+  let themeBarDur = 2.0;    // seconds per bar at current tempo
+  let themeBeatDur = 0.5;
+  let themePatternFn = null;
+  let themeNextBarAt = 0;
+
+  // Note name → frequency (Hz). Supports A0..C8 with sharps (e.g. "F#4", "Bb3").
+  function n2f(name) {
+    if (typeof name === 'number') return name;
+    const m = String(name).match(/^([A-Ga-g])([#bB]?)(-?\d)$/);
+    if (!m) return 440;
+    const semis = { C: -9, D: -7, E: -5, F: -4, G: -2, A: 0, B: 2 };
+    const base = semis[m[1].toUpperCase()];
+    const acc = m[2] === '#' ? 1 : (m[2].toLowerCase() === 'b' ? -1 : 0);
+    const oct = parseInt(m[3], 10);
+    const n = base + acc + (oct - 4) * 12; // semitones from A4
+    return 440 * Math.pow(2, n / 12);
+  }
+
+  // ---- Synth voices used by the theme patterns ----
+  function vBassPluck(time, freqOrName, dur, vol) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const f = n2f(freqOrName);
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(f, time);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol || 0.16, time + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + (dur || 0.4));
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(900, time);
+    osc.connect(lp).connect(gain).connect(musicGain);
+    osc.start(time);
+    osc.stop(time + (dur || 0.4) + 0.05);
+  }
+  function vSubBass(time, freqOrName, dur, vol) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const f = n2f(freqOrName);
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(f, time);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol || 0.22, time + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + (dur || 0.5));
+    osc.connect(gain).connect(musicGain);
+    osc.start(time);
+    osc.stop(time + (dur || 0.5) + 0.05);
+  }
+  function vLeadSquare(time, freqOrName, dur, vol) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const f = n2f(freqOrName);
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'square';
+    osc1.frequency.setValueAtTime(f, time);
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(f * 2, time);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol || 0.10, time + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + (dur || 0.25));
+    osc1.connect(gain);
+    osc2.connect(gain).connect(musicGain);
+    osc1.start(time); osc2.start(time);
+    osc1.stop(time + (dur || 0.25) + 0.05);
+    osc2.stop(time + (dur || 0.25) + 0.05);
+  }
+  function vBell(time, freqOrName, dur, vol) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const f = n2f(freqOrName);
+    [1, 2.01, 3.99].forEach((partial, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f * partial, time);
+      const g = ctx.createGain();
+      const v = (vol || 0.14) / (i + 1);
+      g.gain.setValueAtTime(0, time);
+      g.gain.linearRampToValueAtTime(v, time + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.001, time + (dur || 0.9));
+      osc.connect(g).connect(musicGain);
+      osc.start(time);
+      osc.stop(time + (dur || 0.9) + 0.05);
+    });
+  }
+  function vBrass(time, freqOrName, dur, vol) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const f = n2f(freqOrName);
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    osc1.type = 'sawtooth'; osc2.type = 'sawtooth';
+    osc1.frequency.setValueAtTime(f, time);
+    osc2.frequency.setValueAtTime(f * 1.005, time);    // chorused detune
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol || 0.16, time + 0.05);
+    gain.gain.linearRampToValueAtTime(vol * 0.6 || 0.10, time + (dur || 0.4) * 0.7);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + (dur || 0.4));
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(Math.max(800, f * 1.5), time);
+    bp.Q.setValueAtTime(2, time);
+    osc1.connect(bp); osc2.connect(bp);
+    bp.connect(gain).connect(musicGain);
+    osc1.start(time); osc2.start(time);
+    osc1.stop(time + (dur || 0.4) + 0.05);
+    osc2.stop(time + (dur || 0.4) + 0.05);
+  }
+  function vPad(time, freqOrName, dur, vol) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const f = n2f(freqOrName);
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(f, time);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(vol || 0.07, time + 0.4);
+    gain.gain.linearRampToValueAtTime(vol * 0.5 || 0.04, time + (dur || 1.5) - 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + (dur || 1.5));
+    osc.connect(gain).connect(musicGain);
+    osc.start(time);
+    osc.stop(time + (dur || 1.5) + 0.1);
+  }
+  function vKick(time, vol) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(120, time);
+    osc.frequency.exponentialRampToValueAtTime(40, time + 0.12);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol || 0.32, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+    osc.connect(g).connect(musicGain);
+    osc.start(time);
+    osc.stop(time + 0.2);
+  }
+  function vSnare(time, vol) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.setValueAtTime(1200, time);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol || 0.18, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
+    src.connect(hp).connect(g).connect(musicGain);
+    src.start(time);
+  }
+  function vHat(time, vol, len) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const dur = len || 0.05;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.setValueAtTime(7000, time);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol || 0.10, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + dur);
+    src.connect(hp).connect(g).connect(musicGain);
+    src.start(time);
+  }
+  function vShaker(time, vol) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const hp = ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.setValueAtTime(3500, time);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(vol || 0.10, time);
+    g.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    src.connect(hp).connect(g).connect(musicGain);
+    src.start(time);
+  }
+  // Heart-monitor pulse used as a percussion element in triage theme
+  function vMonitorBeep(time, vol) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, time);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, time);
+    g.gain.linearRampToValueAtTime(vol || 0.10, time + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    osc.connect(g).connect(musicGain);
+    osc.start(time);
+    osc.stop(time + 0.1);
+  }
+  // Spooky scrape used for zombie theme atmosphere
+  function vScrape(time, dur, vol) {
+    if (!audioCtx) return;
+    const ctx = audioCtx;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * (dur || 0.7), ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(300, time);
+    bp.frequency.linearRampToValueAtTime(140, time + (dur || 0.7));
+    bp.Q.setValueAtTime(8, time);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0, time);
+    g.gain.linearRampToValueAtTime(vol || 0.08, time + 0.2);
+    g.gain.linearRampToValueAtTime(0, time + (dur || 0.7));
+    src.connect(bp).connect(g).connect(musicGain);
+    src.start(time);
+  }
+
+  // ---- THEME PATTERNS ----
+  // Each pattern function receives (barIdx, t0, BD) where:
+  //   barIdx — running bar counter (0,1,2,…). Use modulo to phrase changes.
+  //   t0     — ctx.currentTime at the start of this bar
+  //   BD     — beat duration (BAR_DUR = BD * beatsPerBar)
+  // Schedule notes at t0 + offsets. Keep volumes low (≤ 0.25) so SFX cut through.
+
+  // 🚑 TRIAGE ER — urgent medical pulse in D minor, 132bpm, with a heart-
+  // monitor beep on every quarter and a tense rising lead motif.
+  function themeTriage(barIdx, t0, BD) {
+    const phase = barIdx % 4;
+    // Pulsing sub bass on every quarter
+    for (let b = 0; b < 4; b++) {
+      vSubBass(t0 + b * BD, phase < 2 ? 'D2' : 'F2', BD * 0.9, 0.16);
+    }
+    // Heart-monitor beep as percussion on each quarter (the signature sound)
+    for (let b = 0; b < 4; b++) vMonitorBeep(t0 + b * BD, 0.10);
+    // Kick on 1+3 — adrenaline pulse
+    vKick(t0 + 0 * BD, 0.26);
+    vKick(t0 + 2 * BD, 0.22);
+    // Snappy hihat on every 8th
+    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.06);
+    // Tense lead — rising minor 2nd then falling 4th, varies per phase
+    const motif = phase === 3
+      ? [['A4', 0.5], ['Bb4', 0.5], ['A4', 0.5], ['F4', 0.5], ['G4', 0.5], ['E4', 0.5], ['D4', 1.0]]
+      : [['A4', 0.5], ['Bb4', 0.5], ['A4', 1.0],                ['G4', 0.5], ['A4', 0.5], ['F4', 1.0]];
+    let cursor = 0;
+    motif.forEach(([n, len]) => {
+      vLeadSquare(t0 + cursor * BD, n, len * BD * 0.9, 0.07);
+      cursor += len;
+    });
+  }
+
+  // ⚔️ CONQUEST · REINOS EN GUERRA — epic battle, D minor war drums + brass
+  // stabs, 100bpm. Taiko-style accents on 1, 2.5, 3, 4 plus a horn motif.
+  function themeConquest(barIdx, t0, BD) {
+    // Driving war-drum bed
+    taiko(t0 + 0 * BD,    0.32);
+    taiko(t0 + 1.5 * BD,  0.18);
+    taiko(t0 + 2 * BD,    0.28);
+    taiko(t0 + 3 * BD,    0.22);
+    // Low brass pedal
+    vSubBass(t0,           'D2', BD * 3.5, 0.18);
+    vSubBass(t0 + 2 * BD,  'A2', BD * 1.5, 0.14);
+    // Brass stabs — D, F, C, D motif (Dorian-ish), shifts every 4 bars
+    const phase = barIdx % 4;
+    const stabs = phase < 2
+      ? [['D4', 0], ['F4', 0.5], ['A4', 1], ['G4', 2], ['F4', 3]]
+      : [['D4', 0], ['F4', 0.5], ['G4', 1], ['Bb4', 2], ['A4', 3]];
+    stabs.forEach(([n, beat]) => vBrass(t0 + beat * BD, n, BD * 0.5, 0.13));
+    // Shaker on 8ths
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.04);
+  }
+
+  // 🧟 ZOMBIE ESCAPE — tense horror chase, E minor, 92bpm. Heart-pounding
+  // kick on 1+3, low pedal, dissonant minor 2nd lead, distant scrape FX.
+  function themeZombie(barIdx, t0, BD) {
+    // Heartbeat kick
+    vKick(t0 + 0 * BD, 0.30);
+    vKick(t0 + 0.4 * BD, 0.22);   // double-thump for that anxious feel
+    vKick(t0 + 2 * BD, 0.30);
+    vKick(t0 + 2.4 * BD, 0.22);
+    // Low pedal
+    vSubBass(t0, 'E2', BD * 4, 0.18);
+    // Pad cluster — minor 2nd dissonance every 2 bars
+    if (barIdx % 2 === 0) {
+      vPad(t0,           'E3', BD * 4, 0.06);
+      vPad(t0,           'F3', BD * 4, 0.05);
+      vPad(t0 + 2 * BD,  'G3', BD * 2, 0.06);
+    }
+    // Distant scrape SFX every 4 bars (creepy ambience)
+    if (barIdx % 4 === 3) vScrape(t0 + 1.5 * BD, BD * 1.5, 0.07);
+    // Slow eerie lead on bar 1 of every 4
+    if (barIdx % 4 === 0) {
+      vLeadSquare(t0 + 0.5 * BD, 'E4', BD * 0.7, 0.06);
+      vLeadSquare(t0 + 1.5 * BD, 'F4', BD * 0.7, 0.06);
+      vLeadSquare(t0 + 2.5 * BD, 'D4', BD * 1.2, 0.06);
+    }
+  }
+
+  // 🏡 MI FAMILIA — cozy warm, C major, 110bpm. Pop progression I-V-vi-IV
+  // (C-G-Am-F), gentle mallet bells, soft brush snare.
+  function themeFamily(barIdx, t0, BD) {
+    const prog = [['C', 'C2', 'E4', 'G4'], ['G', 'G2', 'D4', 'B4'], ['Am', 'A2', 'C4', 'E4'], ['F', 'F2', 'A4', 'C5']];
+    const [, bassN, mid, hi] = prog[barIdx % 4];
+    // Walking bass
+    vBassPluck(t0, bassN, BD * 1.6, 0.14);
+    vBassPluck(t0 + 2 * BD, bassN, BD * 1.6, 0.13);
+    // Soft mallet chord bell on beat 1
+    vBell(t0 + 0 * BD, mid, BD * 2, 0.10);
+    vBell(t0 + 0 * BD, hi,  BD * 2, 0.08);
+    // Brush snare on 2+4
+    vSnare(t0 + 1 * BD, 0.10);
+    vSnare(t0 + 3 * BD, 0.10);
+    // Gentle hihat on 8ths
+    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.04);
+  }
+
+  // 🏯 MONOPOLY — plucky boardgame, G major, 124bpm. Walking bass +
+  // arpeggios + bells. Cheerful, "watching the dice roll" vibe.
+  function themeMonopoly(barIdx, t0, BD) {
+    const phase = barIdx % 4;
+    const bassLine = ['G2', 'B2', 'D3', 'G3'];
+    bassLine.forEach((n, b) => vBassPluck(t0 + b * BD, n, BD * 0.8, 0.12));
+    // Arp pattern — G, B, D, B (G major triad twinkle)
+    const arpNotes = phase < 2 ? ['G4', 'B4', 'D5', 'B4'] : ['G4', 'D5', 'B4', 'D5'];
+    for (let i = 0; i < 8; i++) {
+      vLeadSquare(t0 + i * (BD / 2), arpNotes[i % 4], BD * 0.4, 0.06);
+    }
+    // Ding bell on bar starts
+    if (phase === 0) vBell(t0, 'G5', BD * 2, 0.10);
+    if (phase === 2) vBell(t0, 'D5', BD * 2, 0.08);
+    // Light kick on 1+3, hat on offbeats
+    vKick(t0 + 0 * BD, 0.20);
+    vKick(t0 + 2 * BD, 0.20);
+    for (let i = 0; i < 4; i++) vHat(t0 + i * BD + BD / 2, 0.05);
+  }
+
+  // 🤙 6-7 SWING — funky trap, A minor, 100bpm. Slappy bass riff + offbeat
+  // synth stabs + ratcheting hihats.
+  function themeSixseven(barIdx, t0, BD) {
+    // Slappy bass riff
+    const bass = [['A1', 0, 0.5], ['A1', 1, 0.25], ['C2', 1.5, 0.5], ['D2', 2.5, 0.5], ['A1', 3, 0.5], ['G1', 3.5, 0.5]];
+    bass.forEach(([n, b, len]) => vBassPluck(t0 + b * BD, n, len * BD * 0.9, 0.18));
+    // Offbeat synth stabs
+    [0.5, 1.5, 2.5, 3.5].forEach((b) => vLeadSquare(t0 + b * BD, 'E5', BD * 0.2, 0.10));
+    // Trap hihats — 16ths
+    for (let i = 0; i < 16; i++) {
+      const vol = (i % 2 === 1) ? 0.04 : 0.07;
+      vHat(t0 + i * (BD / 4), vol);
+    }
+    // Kick on 1, 2.75, 3
+    vKick(t0 + 0 * BD,    0.28);
+    vKick(t0 + 2.75 * BD, 0.20);
+    vKick(t0 + 3 * BD,    0.22);
+    // Snare on 2+4
+    vSnare(t0 + 1 * BD, 0.16);
+    vSnare(t0 + 3 * BD, 0.16);
+  }
+
+  // 🥮 MOCHI MASH — Chinese pentatonic (G-A-B-D-E), 105bpm. Light bamboo
+  // koto-ish lead over a soft taiko bed.
+  function themeMochi(barIdx, t0, BD) {
+    const phase = barIdx % 4;
+    const motif = phase < 2
+      ? [['G4', 0], ['B4', 0.5], ['D5', 1], ['E5', 1.5], ['D5', 2], ['B4', 2.5], ['A4', 3], ['G4', 3.5]]
+      : [['E5', 0], ['D5', 0.5], ['B4', 1], ['D5', 1.5], ['A4', 2], ['G4', 2.5], ['A4', 3], ['B4', 3.5]];
+    motif.forEach(([n, b]) => vLeadSquare(t0 + b * BD, n, BD * 0.45, 0.08));
+    // Soft taiko bed
+    taiko(t0 + 0 * BD,   0.22);
+    taiko(t0 + 2 * BD,   0.18);
+    taiko(t0 + 1 * BD,   0.10);
+    taiko(t0 + 3 * BD,   0.10);
+    vSubBass(t0, 'G2', BD * 4, 0.13);
+  }
+
+  // 🐉 DRAGON EYE / VUELO — soaring flight, F# minor, 96bpm. Wide-interval
+  // bass + airy pad + ascending arpeggio bells.
+  function themeDragon(barIdx, t0, BD) {
+    vSubBass(t0, 'F#2', BD * 2, 0.16);
+    vSubBass(t0 + 2 * BD, 'C#3', BD * 2, 0.14);
+    vPad(t0, 'A3', BD * 4, 0.07);
+    vPad(t0, 'C#4', BD * 4, 0.06);
+    // Ascending arp every bar
+    const arp = ['F#4', 'A4', 'C#5', 'F#5', 'A5', 'F#5', 'C#5', 'A4'];
+    for (let i = 0; i < 8; i++) vBell(t0 + i * (BD / 2), arp[i], BD * 0.4, 0.06);
+    // Light shaker on 8ths
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.03);
+  }
+
+  // 🛍 MARKET QUEST — Chinese marketplace, F major-ish, 110bpm. Plucky
+  // bamboo lead over a soft hand-drum + shaker bed.
+  function themeMarket(barIdx, t0, BD) {
+    const motif = [['F4', 0], ['A4', 0.5], ['C5', 1], ['A4', 1.5], ['G4', 2], ['F4', 2.5], ['A4', 3], ['F4', 3.5]];
+    motif.forEach(([n, b]) => vLeadSquare(t0 + b * BD, n, BD * 0.4, 0.07));
+    vBassPluck(t0,           'F2', BD * 1.5, 0.13);
+    vBassPluck(t0 + 2 * BD,  'C3', BD * 1.5, 0.12);
+    taiko(t0 + 0 * BD, 0.16);
+    taiko(t0 + 2 * BD, 0.14);
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.06);
+  }
+
+  // 🐯 PIÑATA — mariachi fiesta, D major, 130bpm. Walking bass + brass triad
+  // stabs + maracas. Should feel celebratory.
+  function themePinata(barIdx, t0, BD) {
+    // Walking bass D-A-D-A
+    [['D2', 0], ['A2', 1], ['D3', 2], ['A2', 3]].forEach(([n, b]) =>
+      vBassPluck(t0 + b * BD, n, BD * 0.8, 0.16)
+    );
+    // Brass triad stab on beats 2 and 4 — classic mariachi
+    ['F#4', 'A4', 'D5'].forEach((n) => vBrass(t0 + 1 * BD, n, BD * 0.4, 0.12));
+    ['F#4', 'A4', 'D5'].forEach((n) => vBrass(t0 + 3 * BD, n, BD * 0.4, 0.12));
+    // Maracas on every 8th
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.07);
+    vSnare(t0 + 1 * BD, 0.10);
+    vSnare(t0 + 3 * BD, 0.10);
+  }
+
+  // 🏮 MARKET CLASH / COLOR CLASH — energetic territory paint, C minor,
+  // 118bpm. Driving bass + bright lead loop.
+  function themeClash(barIdx, t0, BD) {
+    const bass = ['C2', 'C2', 'Eb2', 'F2'];
+    bass.forEach((n, b) => vBassPluck(t0 + b * BD, n, BD * 0.85, 0.14));
+    const lead = ['G4', 'Bb4', 'C5', 'Bb4', 'G4', 'F4', 'G4', 'C5'];
+    lead.forEach((n, i) => vLeadSquare(t0 + i * (BD / 2), n, BD * 0.4, 0.08));
+    vKick(t0 + 0 * BD, 0.24);
+    vKick(t0 + 2 * BD, 0.22);
+    vSnare(t0 + 1 * BD, 0.12);
+    vSnare(t0 + 3 * BD, 0.12);
+    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.05);
+  }
+
+  // 🎓 COLOR SPLASH — light learning calligraphy, A major, 105bpm.
+  // Gentle bells + soft shaker. Less urgent than clash.
+  function themeColorSplash(barIdx, t0, BD) {
+    vBell(t0,           'A4', BD * 2, 0.09);
+    vBell(t0 + 0.5 * BD, 'C#5', BD * 1.5, 0.08);
+    vBell(t0 + 2 * BD,  'E5', BD * 1.5, 0.07);
+    vBassPluck(t0, 'A2', BD * 2, 0.10);
+    vBassPluck(t0 + 2 * BD, 'E2', BD * 2, 0.09);
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.05);
+  }
+
+  // === Registry ===
+  const GAME_THEMES = {
+    'triage':        { bpm: 132, beatsPerBar: 4, fn: themeTriage },
+    'conquest':      { bpm: 100, beatsPerBar: 4, fn: themeConquest },
+    'zombie':        { bpm:  92, beatsPerBar: 4, fn: themeZombie },
+    'family':        { bpm: 110, beatsPerBar: 4, fn: themeFamily },
+    'monopoly':      { bpm: 124, beatsPerBar: 4, fn: themeMonopoly },
+    'sixseven':      { bpm: 100, beatsPerBar: 4, fn: themeSixseven },
+    'mochi-mash':    { bpm: 105, beatsPerBar: 4, fn: themeMochi },
+    'dragon-eye':    { bpm:  96, beatsPerBar: 4, fn: themeDragon },
+    'market-quest':  { bpm: 110, beatsPerBar: 4, fn: themeMarket },
+    'pinata':        { bpm: 130, beatsPerBar: 4, fn: themePinata },
+    'color-clash':   { bpm: 118, beatsPerBar: 4, fn: themeClash },
+    'color-splash':  { bpm: 105, beatsPerBar: 4, fn: themeColorSplash },
+  };
+
+  function scheduleThemeAhead() {
+    if (!audioCtx || !themePatternFn) return;
+    const lookAhead = audioCtx.currentTime + 2.5;
+    while (themeNextBarAt < lookAhead) {
+      themePatternFn(themeBarIdx, themeNextBarAt, themeBeatDur);
+      themeBarIdx++;
+      themeNextBarAt += themeBarDur;
+    }
+  }
+
+  async function startGameTheme(gameType) {
+    // Stop anything else playing — we want a clean single-music-source feel.
+    stopMusic();
+    stopGameTheme();
+    const spec = GAME_THEMES[gameType];
+    if (!spec) return;
+    const ctx = ensureCtx();
+    if (!ctx) return;
+    themeKey = gameType;
+    themeBPM = spec.bpm;
+    themeBeatsPerBar = spec.beatsPerBar;
+    themeBeatDur = 60 / themeBPM;
+    themeBarDur = themeBeatDur * themeBeatsPerBar;
+    themePatternFn = spec.fn;
+    themeBarIdx = 0;
+    themeStartCt = ctx.currentTime;
+    themeNextBarAt = ctx.currentTime + 0.25;
+    // Gentle fade in
+    musicGain.gain.cancelScheduledValues(ctx.currentTime);
+    musicGain.gain.setValueAtTime(0, ctx.currentTime);
+    musicGain.gain.linearRampToValueAtTime(muted ? 0 : 0.45, ctx.currentTime + 1.2);
+    scheduleThemeAhead();
+    themeTimer = setInterval(scheduleThemeAhead, 700);
+  }
+  function stopGameTheme() {
+    if (themeTimer) clearInterval(themeTimer);
+    themeTimer = null;
+    themePatternFn = null;
+    themeKey = null;
     if (musicGain && audioCtx) {
       musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
       musicGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
@@ -594,6 +1135,12 @@
     },
     startMusic,
     stopMusic,
+    // Per-game themed background music (procedural). Each game gets its own
+    // key/tempo/timbre — call startGameTheme('triage'), startGameTheme('conquest'),
+    // etc. after the countdown. Stop with stopGameTheme() — or any of the
+    // win/lose/tie helpers, which also stop the theme via stopMusic().
+    startGameTheme,
+    stopGameTheme,
     // Win/Lose celebration music (Kenney Music Loops, ~30s each, loops)
     winMusic() {
       stopMusic(); // kill battle theme first

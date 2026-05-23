@@ -1254,9 +1254,21 @@
       cardsEl.querySelectorAll('.tri-pick-card').forEach((c) => c.disabled = true);
       const card = cardsEl.querySelector(`.tri-pick-card[data-patient-id="${patientId}"]`);
       if (card) card.classList.add('chosen');
-      if (MochiSounds.defibZap) MochiSounds.defibZap();
       if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
-      try { socket.emit('player:tri-treat', { pin, patientId }); } catch (_) {}
+      // Resolve the picked patient from the snapshot list we already have so
+      // the CPR screen can display the right icon + name + critical flag.
+      const picked = (patients || []).find((pp) => pp.id === patientId);
+      // If they timed out with an empty ward, skip CPR and emit directly so
+      // the server falls back to its empty-ward branch.
+      if (!picked) {
+        try { socket.emit('player:tri-treat', { pin, patientId }); } catch (_) {}
+        return;
+      }
+      // === Launch the CPR mini-game ===
+      // Player still has to actually DO the rescue — taps drive a power ring
+      // that fills with each compression. Critical patients also get a defib
+      // power-meter at the end for bonus points.
+      startCprMiniGame(picked);
     }
     // Bind cards (one-shot — first tap wins)
     cardsEl.querySelectorAll('.tri-pick-card').forEach((card) => {
@@ -1289,21 +1301,229 @@
       }
     }, 100);
   }
+  // === TRIAGE ER — CPR / DEFIB MINI-GAME ===
+  // Drives the screen-tri-cpr interactive rescue. The player must actually
+  // TAP the heart enough times within a window to revive the patient. Each
+  // tap pulses the heart, beeps the monitor, fills the rescue ring, and
+  // draws another spike on the live EKG. Critical patients also get a
+  // defibrillator power-meter where timing-the-needle on the green zone
+  // adds bonus points. Result is sent to the server via player:tri-treat
+  // with an extra `bonus` field (small integer).
+  let cprState = null;
+  function startCprMiniGame(picked) {
+    // Reset state
+    if (cprState && cprState.timerInt) clearInterval(cprState.timerInt);
+    if (cprState && cprState.defibInt) clearInterval(cprState.defibInt);
+    cprState = {
+      patientId: picked.id,
+      isCritical: !!picked.critical,
+      tapsNeeded: picked.critical ? 8 : 5,
+      tapsDone: 0,
+      ekgPoints: ['0,30'],
+      ekgX: 0,
+      startedAt: Date.now(),
+      windowMs: picked.critical ? 6500 : 5000,
+      timerInt: null,
+      defibInt: null,
+      defibActive: false,
+      defibAngle: 0,
+      bonus: 0,
+      completed: false,
+    };
+    // Populate the screen
+    document.getElementById('tri-cpr-patient-icon').textContent = picked.icon || '🤒';
+    document.getElementById('tri-cpr-patient-name').textContent = picked.name || 'Paciente';
+    document.getElementById('tri-cpr-bedlabel').textContent = 'Cama ' + ((picked.bedIdx != null ? picked.bedIdx : 0) + 1);
+    const stage = document.getElementById('tri-cpr-stage');
+    if (stage) stage.classList.toggle('critical', cprState.isCritical);
+    document.getElementById('tri-cpr-hint').textContent = cprState.isCritical
+      ? `¡PACIENTE CRÍTICO! ${cprState.tapsNeeded} compresiones + descarga`
+      : `${cprState.tapsNeeded} compresiones torácicas`;
+    // Render the ticks
+    const ticksEl = document.getElementById('tri-cpr-ticks');
+    ticksEl.innerHTML = '';
+    for (let i = 0; i < cprState.tapsNeeded; i++) {
+      const t = document.createElement('div');
+      t.className = 'tri-cpr-tick';
+      t.dataset.idx = i;
+      ticksEl.appendChild(t);
+    }
+    // Reset live EKG
+    const ekgLive = document.getElementById('tri-cpr-ekg-live');
+    if (ekgLive) ekgLive.setAttribute('points', '0,30');
+    // Reset defib panel
+    document.getElementById('tri-cpr-defib').classList.add('hidden');
+    document.getElementById('tri-cpr-defib-btn').disabled = false;
+    // Show the screen
+    showScreen('tri-cpr');
+    if (MochiSounds.heartMonitorBeep) MochiSounds.heartMonitorBeep();
+    if (window.unlockAudio) window.unlockAudio();
+    // Bind the heart button — pointerdown for snappy taps
+    const heart = document.getElementById('tri-cpr-heart');
+    const heartHandler = (e) => {
+      if (e) e.preventDefault();
+      cprHandleCompression();
+    };
+    heart.onpointerdown = heartHandler;
+    heart.onclick = heartHandler;
+    // Bind the defib release button (only used for critical step)
+    const defibBtn = document.getElementById('tri-cpr-defib-btn');
+    const defibHandler = (e) => {
+      if (e) e.preventDefault();
+      cprReleaseDefib();
+    };
+    defibBtn.onpointerdown = defibHandler;
+    defibBtn.onclick = defibHandler;
+    // Start the timer countdown
+    const fill = document.getElementById('tri-cpr-timer-fill');
+    if (fill) fill.style.width = '100%';
+    cprState.timerInt = setInterval(() => {
+      if (!cprState) return;
+      const remaining = Math.max(0, cprState.startedAt + cprState.windowMs - Date.now());
+      if (fill) fill.style.width = ((remaining / cprState.windowMs) * 100) + '%';
+      if (remaining <= 0) {
+        clearInterval(cprState.timerInt); cprState.timerInt = null;
+        // Time's up — auto-commit whatever progress they made
+        cprCommit('timeout');
+      }
+    }, 80);
+  }
+  function cprHandleCompression() {
+    if (!cprState || cprState.completed) return;
+    if (cprState.defibActive) return;   // defib step ignores heart taps
+    if (cprState.tapsDone >= cprState.tapsNeeded) return;
+    cprState.tapsDone++;
+    // Tick UI fill
+    const ticks = document.querySelectorAll('.tri-cpr-tick');
+    const tick = ticks[cprState.tapsDone - 1];
+    if (tick) tick.classList.add('on');
+    // Heart pulse
+    const heart = document.getElementById('tri-cpr-heart');
+    if (heart) {
+      heart.classList.remove('pulse');
+      void heart.offsetWidth;
+      heart.classList.add('pulse');
+    }
+    // Live EKG: add a sharp spike
+    const live = document.getElementById('tri-cpr-ekg-live');
+    if (live) {
+      const baseX = 5 + (cprState.tapsDone - 1) * (190 / cprState.tapsNeeded);
+      cprState.ekgPoints.push(`${baseX - 2},30`);
+      cprState.ekgPoints.push(`${baseX - 1},10`);
+      cprState.ekgPoints.push(`${baseX + 1},50`);
+      cprState.ekgPoints.push(`${baseX + 2},30`);
+      live.setAttribute('points', cprState.ekgPoints.join(' '));
+    }
+    // Sound + haptic
+    if (MochiSounds.heartMonitorBeep) MochiSounds.heartMonitorBeep();
+    if (navigator.vibrate) navigator.vibrate(18);
+    // Rhythm bonus: aim for a steady 0.5s cadence. If between 350-650ms, +1.
+    if (cprState.lastTapAt) {
+      const dt = Date.now() - cprState.lastTapAt;
+      if (dt >= 350 && dt <= 650) {
+        cprState.bonus = (cprState.bonus || 0) + 1;
+        if (heart) {
+          const star = document.createElement('div');
+          star.className = 'tri-cpr-rhythm-star';
+          star.textContent = '✨';
+          heart.appendChild(star);
+          setTimeout(() => star.remove(), 700);
+        }
+      }
+    }
+    cprState.lastTapAt = Date.now();
+    if (cprState.tapsDone >= cprState.tapsNeeded) {
+      // CPR complete!
+      if (cprState.isCritical) {
+        // Critical patient — proceed to defibrillator power meter
+        cprStartDefib();
+      } else {
+        // Normal patient — commit the rescue
+        cprCommit('cpr-complete');
+      }
+    }
+  }
+  function cprStartDefib() {
+    cprState.defibActive = true;
+    document.getElementById('tri-cpr-hint').textContent = '¡Carga lista! Toca DESCARGAR en VERDE';
+    const panel = document.getElementById('tri-cpr-defib');
+    panel.classList.remove('hidden');
+    // Needle sweeps back-and-forth across the track at ~1.5Hz
+    const needle = document.getElementById('tri-cpr-defib-needle');
+    cprState.defibT0 = Date.now();
+    cprState.defibInt = setInterval(() => {
+      if (!cprState || !cprState.defibActive) return;
+      const t = (Date.now() - cprState.defibT0) / 1000;
+      // sweep -1..1..-1 via sin, then normalize to 0..100
+      const v = (Math.sin(t * Math.PI * 2 * 1.6) + 1) * 50;
+      needle.style.left = v + '%';
+    }, 30);
+  }
+  function cprReleaseDefib() {
+    if (!cprState || !cprState.defibActive) return;
+    cprState.defibActive = false;
+    if (cprState.defibInt) { clearInterval(cprState.defibInt); cprState.defibInt = null; }
+    const needle = document.getElementById('tri-cpr-defib-needle');
+    const pos = parseFloat(needle.style.left) || 0;
+    // Zones: green 38-62 (perfect), yellow 22-38 / 62-78 (good), red elsewhere
+    let zone, addBonus;
+    if (pos >= 38 && pos <= 62)      { zone = 'green'; addBonus = 8; }
+    else if (pos >= 22 && pos <= 78) { zone = 'yellow'; addBonus = 4; }
+    else                             { zone = 'red'; addBonus = 0; }
+    cprState.bonus = (cprState.bonus || 0) + addBonus;
+    needle.dataset.zone = zone;
+    document.getElementById('tri-cpr-defib-btn').disabled = true;
+    document.getElementById('tri-cpr-hint').textContent = zone === 'green'
+      ? '⚡ ¡DESCARGA PERFECTA! +' + addBonus
+      : (zone === 'yellow' ? '⚡ Descarga aceptable · +' + addBonus : '⚡ Descarga débil');
+    if (MochiSounds.defibZap) MochiSounds.defibZap();
+    if (navigator.vibrate) navigator.vibrate([20, 30, 80]);
+    setTimeout(() => cprCommit('defib-done'), 700);
+  }
+  function cprCommit(reason) {
+    if (!cprState || cprState.completed) return;
+    cprState.completed = true;
+    if (cprState.timerInt) { clearInterval(cprState.timerInt); cprState.timerInt = null; }
+    if (cprState.defibInt) { clearInterval(cprState.defibInt); cprState.defibInt = null; }
+    // Penalty: if they timed out without enough compressions, bonus capped to 0
+    // (the base rescue still goes through — softer-than-conquest feel)
+    if (cprState.tapsDone < cprState.tapsNeeded) {
+      cprState.bonus = 0;
+    }
+    // Show a final defib flash on the heart
+    const heart = document.getElementById('tri-cpr-heart');
+    if (heart) {
+      heart.classList.add('flash');
+      setTimeout(() => heart && heart.classList.remove('flash'), 500);
+    }
+    if (MochiSounds.lifeSaved) MochiSounds.lifeSaved();
+    try {
+      socket.emit('player:tri-treat', {
+        pin,
+        patientId: cprState.patientId,
+        bonus: cprState.bonus || 0,
+        completed: cprState.tapsDone >= cprState.tapsNeeded,
+      });
+    } catch (_) {}
+    cprState = null;
+  }
+
   // Server confirmation that the patient was treated. Show a tier-matched
   // Rewards toast and return to the question screen — the next question is
   // already queued by the server (1.5s window).
   socket.on('tri:treat-resolved', (data) => {
     if (gameType !== 'triage') return;
+    const bonus = data.cprBonus || 0;
+    const bonusTxt = bonus > 0 ? ` (+${bonus} bonus)` : '';
     if (window.Rewards) {
       if (data.action === 'critical-saved') {
-        window.Rewards.show({ tier: 'epic', icon: '⚡', text: `¡VIDA CRÍTICA SALVADA! +${data.points || 25}`, duration: 1900 });
+        window.Rewards.show({ tier: 'epic', icon: '⚡', text: `¡VIDA CRÍTICA SALVADA! +${data.points || 25}${bonusTxt}`, duration: 2000 });
       } else if (data.action === 'saved') {
-        window.Rewards.show({ tier: 'great', icon: '🩺', text: `¡Paciente salvado! +${data.points || 10}` });
+        window.Rewards.show({ tier: 'great', icon: '🩺', text: `¡Paciente salvado! +${data.points || 10}${bonusTxt}` });
       } else if (data.action === 'empty-ward') {
         window.Rewards.show({ icon: '✅', text: 'Ward despejado · +1' });
       }
     }
-    if (MochiSounds.lifeSaved) MochiSounds.lifeSaved();
     // Drop back to question screen so we're ready for the next prompt.
     setTimeout(() => showScreen('question'), 600);
   });
@@ -4957,7 +5177,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });
