@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="/css/sixseven.css?v=20260520c">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
-  <link rel="stylesheet" href="/css/triage.css?v=20260523b">
+  <link rel="stylesheet" href="/css/triage.css?v=20260523c">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -505,6 +505,11 @@
       <div class="tri-pick-team-tag" id="tri-pick-team-tag">🩺 Doctor</div>
       <div class="tri-pick-timer-num" id="tri-pick-timer-num">5</div>
     </div>
+    <!-- INTRUSIVE VOCAB BANNER (player) — same content as host -->
+    <div class="tri-vocab-banner mini">
+      <span class="tri-vocab-q-icon">🩺</span>
+      <span class="tri-vocab-q-pinyin">Yīshēng zài <strong>yīyuàn</strong> 🏥 gōngzuò</span>
+    </div>
     <div class="tri-pick-headline">🚑 ¿A quién atiendes primero?</div>
     <p class="tri-pick-sub">Toca al paciente más urgente. Los <span class="tri-critical-word">🚨 críticos</span> dan más puntos.</p>
     <div class="tri-pick-cards" id="tri-pick-cards">
@@ -526,6 +531,13 @@
       </div>
       <div class="tri-cpr-bedlabel" id="tri-cpr-bedlabel">Cama —</div>
     </div>
+    <!-- INTRUSIVE VOCAB BANNER (CPR) — primes the answer mid-rescue -->
+    <div class="tri-vocab-banner mini">
+      <span class="tri-vocab-q-icon">🏥</span>
+      <span class="tri-vocab-q-pinyin"><strong>yīyuàn</strong> = hospital — ¡salva al paciente!</span>
+    </div>
+    <!-- Floating tap-bonus vocab words — tap them mid-CPR for +1 each -->
+    <div class="tri-cpr-vocab-float" id="tri-cpr-vocab-float"></div>
     <div class="tri-cpr-stage" id="tri-cpr-stage">
       <!-- Animated EKG line that draws live as the player taps -->
       <div class="tri-cpr-ekg" id="tri-cpr-ekg">
@@ -569,10 +581,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260523b"></script>
+  <script src="/js/sounds.js?v=20260523c"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260523c"></script>
+  <script src="/js/player.js?v=20260523d"></script>
 </body>
 </html>

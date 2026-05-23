@@ -1387,6 +1387,77 @@
         cprCommit('timeout');
       }
     }, 80);
+    // Clear any previous tap-bonus words + start the floating-vocab spawner
+    cprClearVocabFloats();
+    cprState.vocabBonus = 0;     // +1 per tapped vocab word, capped at 3
+    cprState.vocabSpawnInt = setInterval(() => {
+      if (!cprState || cprState.completed) return;
+      cprSpawnVocabTap();
+    }, 900);
+    // Seed one immediately
+    setTimeout(cprSpawnVocabTap, 300);
+  }
+  // Vocabulary pool used by the CPR tap-bonus + picker floats
+  const TRI_VOCAB_POOL = [
+    { pinyin: 'yīshēng',  es: 'doctor',   icon: '🩺', key: true,  bonus: 1 },
+    { pinyin: 'yīyuàn',   es: 'hospital', icon: '🏥', key: true,  bonus: 2 },
+    { pinyin: 'zài',      es: 'en',       icon: '📍', key: false, bonus: 1 },
+    { pinyin: 'nǎ’er',    es: '¿dónde?',  icon: '❓', key: false, bonus: 1 },
+    { pinyin: 'gōngzuò',  es: 'trabajar', icon: '🧑‍⚕️', key: false, bonus: 1 },
+  ];
+  function cprClearVocabFloats() {
+    if (cprState && cprState.vocabSpawnInt) {
+      clearInterval(cprState.vocabSpawnInt);
+      cprState.vocabSpawnInt = null;
+    }
+    const layer = document.getElementById('tri-cpr-vocab-float');
+    if (layer) layer.innerHTML = '';
+  }
+  function cprSpawnVocabTap() {
+    const layer = document.getElementById('tri-cpr-vocab-float');
+    if (!layer || !cprState) return;
+    // Cap: only one floater on screen at a time so they don't dogpile the heart
+    if (layer.querySelectorAll('.tri-cpr-vocab-tap:not(.popped)').length > 0) return;
+    const v = TRI_VOCAB_POOL[Math.floor(Math.random() * TRI_VOCAB_POOL.length)];
+    const tap = document.createElement('div');
+    tap.className = 'tri-cpr-vocab-tap';
+    tap.innerHTML = `
+      <span>${v.icon} ${v.pinyin}</span>
+      <span class="es">${v.es}</span>`;
+    // Random horizontal position avoiding the center heart (avoid 35-65%)
+    const sideLeft = Math.random() < 0.5;
+    const leftPct = sideLeft ? (4 + Math.random() * 25) : (66 + Math.random() * 25);
+    tap.style.left = leftPct + '%';
+    tap.style.bottom = '20%';
+    const onTap = (e) => {
+      if (e) e.preventDefault();
+      if (!cprState || tap.classList.contains('popped')) return;
+      // Cap the bonus at 3 to prevent spam-farming
+      if ((cprState.vocabBonus || 0) >= 3) {
+        tap.classList.add('popped');
+        setTimeout(() => tap.remove(), 400);
+        return;
+      }
+      cprState.vocabBonus = (cprState.vocabBonus || 0) + 1;
+      cprState.bonus = (cprState.bonus || 0) + (v.bonus || 1);
+      tap.classList.add('popped');
+      // Spawn a Spanish-translation toast at the tap point
+      const toast = document.createElement('div');
+      toast.className = 'tri-cpr-tap-toast';
+      toast.textContent = '+' + (v.bonus || 1) + ' ' + v.es;
+      toast.style.left = leftPct + '%';
+      toast.style.bottom = '24%';
+      layer.appendChild(toast);
+      setTimeout(() => toast.remove(), 1100);
+      if (MochiSounds.combo) MochiSounds.combo();
+      if (navigator.vibrate) navigator.vibrate(12);
+      setTimeout(() => tap.remove(), 400);
+    };
+    tap.addEventListener('pointerdown', onTap);
+    tap.addEventListener('click', onTap);
+    layer.appendChild(tap);
+    // Auto-remove if not tapped within 5.5s
+    setTimeout(() => { if (tap && tap.parentNode) tap.remove(); }, 5500);
   }
   function cprHandleCompression() {
     if (!cprState || cprState.completed) return;
@@ -1485,6 +1556,7 @@
     cprState.completed = true;
     if (cprState.timerInt) { clearInterval(cprState.timerInt); cprState.timerInt = null; }
     if (cprState.defibInt) { clearInterval(cprState.defibInt); cprState.defibInt = null; }
+    if (cprState.vocabSpawnInt) { clearInterval(cprState.vocabSpawnInt); cprState.vocabSpawnInt = null; }
     // Penalty: if they timed out without enough compressions, bonus capped to 0
     // (the base rescue still goes through — softer-than-conquest feel)
     if (cprState.tapsDone < cprState.tapsNeeded) {

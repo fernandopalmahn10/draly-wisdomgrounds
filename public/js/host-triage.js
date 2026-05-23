@@ -28,7 +28,25 @@
   let scores = { red: 0, gold: 0 };
   let gameOver = false;
   let ambienceTimer = null;
+  let vocabFloatTimer = null;
   let lastEventBannerAt = 0;
+
+  // === INTRUSIVE VOCABULARY POOL ===
+  // The target words to drill repeatedly. The KEY ones (yīshēng, yīyuàn) get
+  // a higher spawn weight + a golden tile so they dominate the screen.
+  const TRI_VOCAB = [
+    { pinyin: 'yīshēng',  es: 'doctor',   weight: 4, key: true,  icon: '🩺' },
+    { pinyin: 'yīyuàn',   es: 'hospital', weight: 5, key: true,  icon: '🏥' },
+    { pinyin: 'zài',       es: 'en/está',  weight: 2, key: false, icon: '📍' },
+    { pinyin: 'nǎ’er',es: '¿dónde?',  weight: 2, key: false, icon: '❓' },
+    { pinyin: 'gōngzuò',  es: 'trabajar', weight: 3, key: false, icon: '🧑‍⚕️' },
+  ];
+  function pickVocab() {
+    const total = TRI_VOCAB.reduce((s, v) => s + v.weight, 0);
+    let r = Math.random() * total;
+    for (const v of TRI_VOCAB) { r -= v.weight; if (r <= 0) return v; }
+    return TRI_VOCAB[0];
+  }
 
   const $ = (id) => document.getElementById(id);
 
@@ -87,6 +105,7 @@
     scores = { red: 0, gold: 0 };
     gameOver = false;
     if (ambienceTimer) { clearInterval(ambienceTimer); ambienceTimer = null; }
+    if (vocabFloatTimer) { clearInterval(vocabFloatTimer); vocabFloatTimer = null; }
     updateHud();
   });
 
@@ -149,9 +168,10 @@
     renderRosterSidebars(data.players);
     renderBedGrid();
     updateHud();
-    setEventBanner('🏥 ¡Sala de Emergencias ABIERTA!', 'open');
+    setEventBanner('🏥 ¡Sala de Emergencias ABIERTA! · yīshēng en yīyuàn', 'open');
     MochiSounds.battleHorn && MochiSounds.battleHorn();
     startAmbientHeartbeat();
+    startVocabFloat();
   });
 
   socket.on('tri:patient-arrived', (data) => {
@@ -282,6 +302,7 @@
   socket.on('game-end', (data) => {
     if (timerInterval) clearInterval(timerInterval);
     if (ambienceTimer) { clearInterval(ambienceTimer); ambienceTimer = null; }
+    if (vocabFloatTimer) { clearInterval(vocabFloatTimer); vocabFloatTimer = null; }
     gameOver = true;
     MochiSounds.stopMusic && MochiSounds.stopMusic();
     showScreen('win');
@@ -426,6 +447,37 @@
         MochiSounds.heartMonitorBeep();
       }
     }, 5200);
+  }
+
+  // === Floating vocabulary tiles ===
+  // Drifts pinyin words across the ward background so the target words are
+  // ALWAYS on screen somewhere — passive repetition for kids who otherwise
+  // forget the vocabulary between questions.
+  function startVocabFloat() {
+    if (vocabFloatTimer) clearInterval(vocabFloatTimer);
+    // Seed a few immediately
+    for (let i = 0; i < 3; i++) setTimeout(spawnVocabTile, i * 700);
+    vocabFloatTimer = setInterval(() => {
+      if (gameOver) return;
+      spawnVocabTile();
+    }, 2400);
+  }
+  function spawnVocabTile() {
+    const layer = $('tri-ward-vocab-float');
+    if (!layer) return;
+    const v = pickVocab();
+    const tile = document.createElement('div');
+    tile.className = 'tri-ward-vocab-tile' + (v.key ? ' key' : '');
+    tile.innerHTML = `
+      <span class="pinyin">${v.icon} ${v.pinyin}</span>
+      <span class="es">${v.es}</span>`;
+    // Random spawn position along the left/bottom — drifts up + right
+    const top = 25 + Math.random() * 55;   // 25-80% from top
+    const left = -8 + Math.random() * 25;  // start near left edge
+    tile.style.top = top + '%';
+    tile.style.left = left + '%';
+    layer.appendChild(tile);
+    setTimeout(() => tile.remove(), 14500);
   }
 
   // === Side rosters ===

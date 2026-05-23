@@ -560,22 +560,22 @@
     const phase = barIdx % 4;
     // Pulsing sub bass on every quarter
     for (let b = 0; b < 4; b++) {
-      vSubBass(t0 + b * BD, phase < 2 ? 'D2' : 'F2', BD * 0.9, 0.16);
+      vSubBass(t0 + b * BD, phase < 2 ? 'D2' : 'F2', BD * 0.9, 0.24);
     }
     // Heart-monitor beep as percussion on each quarter (the signature sound)
-    for (let b = 0; b < 4; b++) vMonitorBeep(t0 + b * BD, 0.10);
+    for (let b = 0; b < 4; b++) vMonitorBeep(t0 + b * BD, 0.18);
     // Kick on 1+3 — adrenaline pulse
-    vKick(t0 + 0 * BD, 0.26);
-    vKick(t0 + 2 * BD, 0.22);
+    vKick(t0 + 0 * BD, 0.36);
+    vKick(t0 + 2 * BD, 0.30);
     // Snappy hihat on every 8th
-    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.06);
+    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.10);
     // Tense lead — rising minor 2nd then falling 4th, varies per phase
     const motif = phase === 3
       ? [['A4', 0.5], ['Bb4', 0.5], ['A4', 0.5], ['F4', 0.5], ['G4', 0.5], ['E4', 0.5], ['D4', 1.0]]
       : [['A4', 0.5], ['Bb4', 0.5], ['A4', 1.0],                ['G4', 0.5], ['A4', 0.5], ['F4', 1.0]];
     let cursor = 0;
     motif.forEach(([n, len]) => {
-      vLeadSquare(t0 + cursor * BD, n, len * BD * 0.9, 0.07);
+      vLeadSquare(t0 + cursor * BD, n, len * BD * 0.9, 0.13);
       cursor += len;
     });
   }
@@ -584,46 +584,46 @@
   // stabs, 100bpm. Taiko-style accents on 1, 2.5, 3, 4 plus a horn motif.
   function themeConquest(barIdx, t0, BD) {
     // Driving war-drum bed
-    taiko(t0 + 0 * BD,    0.32);
-    taiko(t0 + 1.5 * BD,  0.18);
-    taiko(t0 + 2 * BD,    0.28);
-    taiko(t0 + 3 * BD,    0.22);
+    taiko(t0 + 0 * BD,    0.50);
+    taiko(t0 + 1.5 * BD,  0.30);
+    taiko(t0 + 2 * BD,    0.44);
+    taiko(t0 + 3 * BD,    0.34);
     // Low brass pedal
-    vSubBass(t0,           'D2', BD * 3.5, 0.18);
-    vSubBass(t0 + 2 * BD,  'A2', BD * 1.5, 0.14);
+    vSubBass(t0,           'D2', BD * 3.5, 0.28);
+    vSubBass(t0 + 2 * BD,  'A2', BD * 1.5, 0.22);
     // Brass stabs — D, F, C, D motif (Dorian-ish), shifts every 4 bars
     const phase = barIdx % 4;
     const stabs = phase < 2
       ? [['D4', 0], ['F4', 0.5], ['A4', 1], ['G4', 2], ['F4', 3]]
       : [['D4', 0], ['F4', 0.5], ['G4', 1], ['Bb4', 2], ['A4', 3]];
-    stabs.forEach(([n, beat]) => vBrass(t0 + beat * BD, n, BD * 0.5, 0.13));
+    stabs.forEach(([n, beat]) => vBrass(t0 + beat * BD, n, BD * 0.5, 0.20));
     // Shaker on 8ths
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.04);
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.06);
   }
 
   // 🧟 ZOMBIE ESCAPE — tense horror chase, E minor, 92bpm. Heart-pounding
   // kick on 1+3, low pedal, dissonant minor 2nd lead, distant scrape FX.
   function themeZombie(barIdx, t0, BD) {
     // Heartbeat kick
-    vKick(t0 + 0 * BD, 0.30);
-    vKick(t0 + 0.4 * BD, 0.22);   // double-thump for that anxious feel
-    vKick(t0 + 2 * BD, 0.30);
-    vKick(t0 + 2.4 * BD, 0.22);
+    vKick(t0 + 0 * BD, 0.44);
+    vKick(t0 + 0.4 * BD, 0.32);   // double-thump for that anxious feel
+    vKick(t0 + 2 * BD, 0.44);
+    vKick(t0 + 2.4 * BD, 0.32);
     // Low pedal
-    vSubBass(t0, 'E2', BD * 4, 0.18);
+    vSubBass(t0, 'E2', BD * 4, 0.28);
     // Pad cluster — minor 2nd dissonance every 2 bars
     if (barIdx % 2 === 0) {
-      vPad(t0,           'E3', BD * 4, 0.06);
-      vPad(t0,           'F3', BD * 4, 0.05);
-      vPad(t0 + 2 * BD,  'G3', BD * 2, 0.06);
+      vPad(t0,           'E3', BD * 4, 0.10);
+      vPad(t0,           'F3', BD * 4, 0.08);
+      vPad(t0 + 2 * BD,  'G3', BD * 2, 0.10);
     }
     // Distant scrape SFX every 4 bars (creepy ambience)
-    if (barIdx % 4 === 3) vScrape(t0 + 1.5 * BD, BD * 1.5, 0.07);
+    if (barIdx % 4 === 3) vScrape(t0 + 1.5 * BD, BD * 1.5, 0.11);
     // Slow eerie lead on bar 1 of every 4
     if (barIdx % 4 === 0) {
-      vLeadSquare(t0 + 0.5 * BD, 'E4', BD * 0.7, 0.06);
-      vLeadSquare(t0 + 1.5 * BD, 'F4', BD * 0.7, 0.06);
-      vLeadSquare(t0 + 2.5 * BD, 'D4', BD * 1.2, 0.06);
+      vLeadSquare(t0 + 0.5 * BD, 'E4', BD * 0.7, 0.11);
+      vLeadSquare(t0 + 1.5 * BD, 'F4', BD * 0.7, 0.11);
+      vLeadSquare(t0 + 2.5 * BD, 'D4', BD * 1.2, 0.11);
     }
   }
 
@@ -633,16 +633,16 @@
     const prog = [['C', 'C2', 'E4', 'G4'], ['G', 'G2', 'D4', 'B4'], ['Am', 'A2', 'C4', 'E4'], ['F', 'F2', 'A4', 'C5']];
     const [, bassN, mid, hi] = prog[barIdx % 4];
     // Walking bass
-    vBassPluck(t0, bassN, BD * 1.6, 0.14);
-    vBassPluck(t0 + 2 * BD, bassN, BD * 1.6, 0.13);
+    vBassPluck(t0, bassN, BD * 1.6, 0.22);
+    vBassPluck(t0 + 2 * BD, bassN, BD * 1.6, 0.21);
     // Soft mallet chord bell on beat 1
-    vBell(t0 + 0 * BD, mid, BD * 2, 0.10);
-    vBell(t0 + 0 * BD, hi,  BD * 2, 0.08);
+    vBell(t0 + 0 * BD, mid, BD * 2, 0.16);
+    vBell(t0 + 0 * BD, hi,  BD * 2, 0.14);
     // Brush snare on 2+4
-    vSnare(t0 + 1 * BD, 0.10);
-    vSnare(t0 + 3 * BD, 0.10);
+    vSnare(t0 + 1 * BD, 0.16);
+    vSnare(t0 + 3 * BD, 0.16);
     // Gentle hihat on 8ths
-    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.04);
+    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.07);
   }
 
   // 🏯 MONOPOLY — plucky boardgame, G major, 124bpm. Walking bass +
@@ -650,19 +650,19 @@
   function themeMonopoly(barIdx, t0, BD) {
     const phase = barIdx % 4;
     const bassLine = ['G2', 'B2', 'D3', 'G3'];
-    bassLine.forEach((n, b) => vBassPluck(t0 + b * BD, n, BD * 0.8, 0.12));
+    bassLine.forEach((n, b) => vBassPluck(t0 + b * BD, n, BD * 0.8, 0.20));
     // Arp pattern — G, B, D, B (G major triad twinkle)
     const arpNotes = phase < 2 ? ['G4', 'B4', 'D5', 'B4'] : ['G4', 'D5', 'B4', 'D5'];
     for (let i = 0; i < 8; i++) {
-      vLeadSquare(t0 + i * (BD / 2), arpNotes[i % 4], BD * 0.4, 0.06);
+      vLeadSquare(t0 + i * (BD / 2), arpNotes[i % 4], BD * 0.4, 0.11);
     }
     // Ding bell on bar starts
-    if (phase === 0) vBell(t0, 'G5', BD * 2, 0.10);
-    if (phase === 2) vBell(t0, 'D5', BD * 2, 0.08);
+    if (phase === 0) vBell(t0, 'G5', BD * 2, 0.16);
+    if (phase === 2) vBell(t0, 'D5', BD * 2, 0.14);
     // Light kick on 1+3, hat on offbeats
-    vKick(t0 + 0 * BD, 0.20);
-    vKick(t0 + 2 * BD, 0.20);
-    for (let i = 0; i < 4; i++) vHat(t0 + i * BD + BD / 2, 0.05);
+    vKick(t0 + 0 * BD, 0.30);
+    vKick(t0 + 2 * BD, 0.30);
+    for (let i = 0; i < 4; i++) vHat(t0 + i * BD + BD / 2, 0.08);
   }
 
   // 🤙 6-7 SWING — funky trap, A minor, 100bpm. Slappy bass riff + offbeat
@@ -670,21 +670,21 @@
   function themeSixseven(barIdx, t0, BD) {
     // Slappy bass riff
     const bass = [['A1', 0, 0.5], ['A1', 1, 0.25], ['C2', 1.5, 0.5], ['D2', 2.5, 0.5], ['A1', 3, 0.5], ['G1', 3.5, 0.5]];
-    bass.forEach(([n, b, len]) => vBassPluck(t0 + b * BD, n, len * BD * 0.9, 0.18));
+    bass.forEach(([n, b, len]) => vBassPluck(t0 + b * BD, n, len * BD * 0.9, 0.28));
     // Offbeat synth stabs
-    [0.5, 1.5, 2.5, 3.5].forEach((b) => vLeadSquare(t0 + b * BD, 'E5', BD * 0.2, 0.10));
+    [0.5, 1.5, 2.5, 3.5].forEach((b) => vLeadSquare(t0 + b * BD, 'E5', BD * 0.2, 0.16));
     // Trap hihats — 16ths
     for (let i = 0; i < 16; i++) {
-      const vol = (i % 2 === 1) ? 0.04 : 0.07;
+      const vol = (i % 2 === 1) ? 0.07 : 0.11;
       vHat(t0 + i * (BD / 4), vol);
     }
     // Kick on 1, 2.75, 3
-    vKick(t0 + 0 * BD,    0.28);
-    vKick(t0 + 2.75 * BD, 0.20);
-    vKick(t0 + 3 * BD,    0.22);
+    vKick(t0 + 0 * BD,    0.42);
+    vKick(t0 + 2.75 * BD, 0.32);
+    vKick(t0 + 3 * BD,    0.34);
     // Snare on 2+4
-    vSnare(t0 + 1 * BD, 0.16);
-    vSnare(t0 + 3 * BD, 0.16);
+    vSnare(t0 + 1 * BD, 0.24);
+    vSnare(t0 + 3 * BD, 0.24);
   }
 
   // 🥮 MOCHI MASH — Chinese pentatonic (G-A-B-D-E), 105bpm. Light bamboo
@@ -694,39 +694,39 @@
     const motif = phase < 2
       ? [['G4', 0], ['B4', 0.5], ['D5', 1], ['E5', 1.5], ['D5', 2], ['B4', 2.5], ['A4', 3], ['G4', 3.5]]
       : [['E5', 0], ['D5', 0.5], ['B4', 1], ['D5', 1.5], ['A4', 2], ['G4', 2.5], ['A4', 3], ['B4', 3.5]];
-    motif.forEach(([n, b]) => vLeadSquare(t0 + b * BD, n, BD * 0.45, 0.08));
+    motif.forEach(([n, b]) => vLeadSquare(t0 + b * BD, n, BD * 0.45, 0.14));
     // Soft taiko bed
-    taiko(t0 + 0 * BD,   0.22);
-    taiko(t0 + 2 * BD,   0.18);
-    taiko(t0 + 1 * BD,   0.10);
-    taiko(t0 + 3 * BD,   0.10);
-    vSubBass(t0, 'G2', BD * 4, 0.13);
+    taiko(t0 + 0 * BD,   0.34);
+    taiko(t0 + 2 * BD,   0.28);
+    taiko(t0 + 1 * BD,   0.16);
+    taiko(t0 + 3 * BD,   0.16);
+    vSubBass(t0, 'G2', BD * 4, 0.22);
   }
 
   // 🐉 DRAGON EYE / VUELO — soaring flight, F# minor, 96bpm. Wide-interval
   // bass + airy pad + ascending arpeggio bells.
   function themeDragon(barIdx, t0, BD) {
-    vSubBass(t0, 'F#2', BD * 2, 0.16);
-    vSubBass(t0 + 2 * BD, 'C#3', BD * 2, 0.14);
-    vPad(t0, 'A3', BD * 4, 0.07);
-    vPad(t0, 'C#4', BD * 4, 0.06);
+    vSubBass(t0, 'F#2', BD * 2, 0.26);
+    vSubBass(t0 + 2 * BD, 'C#3', BD * 2, 0.22);
+    vPad(t0, 'A3', BD * 4, 0.12);
+    vPad(t0, 'C#4', BD * 4, 0.10);
     // Ascending arp every bar
     const arp = ['F#4', 'A4', 'C#5', 'F#5', 'A5', 'F#5', 'C#5', 'A4'];
-    for (let i = 0; i < 8; i++) vBell(t0 + i * (BD / 2), arp[i], BD * 0.4, 0.06);
+    for (let i = 0; i < 8; i++) vBell(t0 + i * (BD / 2), arp[i], BD * 0.4, 0.12);
     // Light shaker on 8ths
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.03);
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.05);
   }
 
   // 🛍 MARKET QUEST — Chinese marketplace, F major-ish, 110bpm. Plucky
   // bamboo lead over a soft hand-drum + shaker bed.
   function themeMarket(barIdx, t0, BD) {
     const motif = [['F4', 0], ['A4', 0.5], ['C5', 1], ['A4', 1.5], ['G4', 2], ['F4', 2.5], ['A4', 3], ['F4', 3.5]];
-    motif.forEach(([n, b]) => vLeadSquare(t0 + b * BD, n, BD * 0.4, 0.07));
-    vBassPluck(t0,           'F2', BD * 1.5, 0.13);
-    vBassPluck(t0 + 2 * BD,  'C3', BD * 1.5, 0.12);
-    taiko(t0 + 0 * BD, 0.16);
-    taiko(t0 + 2 * BD, 0.14);
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.06);
+    motif.forEach(([n, b]) => vLeadSquare(t0 + b * BD, n, BD * 0.4, 0.12));
+    vBassPluck(t0,           'F2', BD * 1.5, 0.20);
+    vBassPluck(t0 + 2 * BD,  'C3', BD * 1.5, 0.18);
+    taiko(t0 + 0 * BD, 0.26);
+    taiko(t0 + 2 * BD, 0.22);
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.10);
   }
 
   // 🐯 PIÑATA — mariachi fiesta, D major, 130bpm. Walking bass + brass triad
@@ -734,40 +734,40 @@
   function themePinata(barIdx, t0, BD) {
     // Walking bass D-A-D-A
     [['D2', 0], ['A2', 1], ['D3', 2], ['A2', 3]].forEach(([n, b]) =>
-      vBassPluck(t0 + b * BD, n, BD * 0.8, 0.16)
+      vBassPluck(t0 + b * BD, n, BD * 0.8, 0.24)
     );
     // Brass triad stab on beats 2 and 4 — classic mariachi
-    ['F#4', 'A4', 'D5'].forEach((n) => vBrass(t0 + 1 * BD, n, BD * 0.4, 0.12));
-    ['F#4', 'A4', 'D5'].forEach((n) => vBrass(t0 + 3 * BD, n, BD * 0.4, 0.12));
+    ['F#4', 'A4', 'D5'].forEach((n) => vBrass(t0 + 1 * BD, n, BD * 0.4, 0.20));
+    ['F#4', 'A4', 'D5'].forEach((n) => vBrass(t0 + 3 * BD, n, BD * 0.4, 0.20));
     // Maracas on every 8th
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.07);
-    vSnare(t0 + 1 * BD, 0.10);
-    vSnare(t0 + 3 * BD, 0.10);
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.11);
+    vSnare(t0 + 1 * BD, 0.16);
+    vSnare(t0 + 3 * BD, 0.16);
   }
 
   // 🏮 MARKET CLASH / COLOR CLASH — energetic territory paint, C minor,
   // 118bpm. Driving bass + bright lead loop.
   function themeClash(barIdx, t0, BD) {
     const bass = ['C2', 'C2', 'Eb2', 'F2'];
-    bass.forEach((n, b) => vBassPluck(t0 + b * BD, n, BD * 0.85, 0.14));
+    bass.forEach((n, b) => vBassPluck(t0 + b * BD, n, BD * 0.85, 0.22));
     const lead = ['G4', 'Bb4', 'C5', 'Bb4', 'G4', 'F4', 'G4', 'C5'];
-    lead.forEach((n, i) => vLeadSquare(t0 + i * (BD / 2), n, BD * 0.4, 0.08));
-    vKick(t0 + 0 * BD, 0.24);
-    vKick(t0 + 2 * BD, 0.22);
-    vSnare(t0 + 1 * BD, 0.12);
-    vSnare(t0 + 3 * BD, 0.12);
-    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.05);
+    lead.forEach((n, i) => vLeadSquare(t0 + i * (BD / 2), n, BD * 0.4, 0.13));
+    vKick(t0 + 0 * BD, 0.36);
+    vKick(t0 + 2 * BD, 0.32);
+    vSnare(t0 + 1 * BD, 0.18);
+    vSnare(t0 + 3 * BD, 0.18);
+    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.08);
   }
 
   // 🎓 COLOR SPLASH — light learning calligraphy, A major, 105bpm.
   // Gentle bells + soft shaker. Less urgent than clash.
   function themeColorSplash(barIdx, t0, BD) {
-    vBell(t0,           'A4', BD * 2, 0.09);
-    vBell(t0 + 0.5 * BD, 'C#5', BD * 1.5, 0.08);
-    vBell(t0 + 2 * BD,  'E5', BD * 1.5, 0.07);
-    vBassPluck(t0, 'A2', BD * 2, 0.10);
-    vBassPluck(t0 + 2 * BD, 'E2', BD * 2, 0.09);
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.05);
+    vBell(t0,           'A4', BD * 2, 0.16);
+    vBell(t0 + 0.5 * BD, 'C#5', BD * 1.5, 0.14);
+    vBell(t0 + 2 * BD,  'E5', BD * 1.5, 0.12);
+    vBassPluck(t0, 'A2', BD * 2, 0.16);
+    vBassPluck(t0 + 2 * BD, 'E2', BD * 2, 0.14);
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.08);
   }
 
   // === Registry ===
@@ -816,7 +816,10 @@
     // Gentle fade in
     musicGain.gain.cancelScheduledValues(ctx.currentTime);
     musicGain.gain.setValueAtTime(0, ctx.currentTime);
-    musicGain.gain.linearRampToValueAtTime(muted ? 0 : 0.45, ctx.currentTime + 1.2);
+    // 0.75 — boosted so the procedural themes are actually audible at
+    // classroom playback volumes. Each per-game pattern leaves headroom
+    // (note volumes ≤ 0.30) so the master can run hotter.
+    musicGain.gain.linearRampToValueAtTime(muted ? 0 : 0.75, ctx.currentTime + 1.2);
     scheduleThemeAhead();
     themeTimer = setInterval(scheduleThemeAhead, 700);
   }
