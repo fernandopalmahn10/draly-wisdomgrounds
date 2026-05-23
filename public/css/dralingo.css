@@ -39,9 +39,48 @@
 
 .hub-tagline {
   color: var(--ink-dim);
-  font-size: 1rem;
-  letter-spacing: 0.1em;
+  font-size: clamp(0.9rem, 2vw, 1.05rem);
+  letter-spacing: 0.18em;
   font-style: italic;
+  text-transform: uppercase;
+  opacity: 0.85;
+  margin-top: 6px;
+}
+
+/* Ornamental divider between brand title and tagline — gold filigree line
+   on each side of a small dragon emblem. Adds a polished "logo lockup"
+   feel instead of the title-floating-alone look. */
+.hub-ornament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 10px auto 0;
+  max-width: 420px;
+  opacity: 0.85;
+}
+.hub-ornament-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 213, 122, 0.55) 50%, transparent 100%);
+}
+.hub-ornament-icon {
+  font-size: 1.1rem;
+  filter: drop-shadow(0 0 6px rgba(255, 213, 122, 0.7));
+}
+
+/* Tablet — give the layout a touch more breathing room (8.4" tablets in
+   portrait sit around 768-820px wide). The home-paths card is centered;
+   on tablet we widen the max-width slightly so PIN+name fields read big. */
+@media (min-width: 768px) {
+  .hub-home { padding: 48px 32px; }
+  .hub-hero { margin-bottom: 36px; }
+  .home-paths { max-width: 460px; }
+  .dralingo-stage { width: min(38vw, 320px); height: min(38vw, 320px); }
+}
+@media (min-width: 1024px) {
+  .home-paths { max-width: 500px; }
+  .dralingo-stage { width: 320px; height: 320px; }
 }
 
 .hub-actions {
@@ -187,62 +226,85 @@
   margin-bottom: 24px;
 }
 
-/* === DRALINGO STAGE (home page hero) === */
+/* === DRALINGO STAGE (home page hero) ===
+   Cinematic gold-medallion frame around the mascot: double ring (outer
+   thin gold, inner thicker dark-red), soft inner glow, slow rotating
+   light-sweep. Much more polished than the previous blurry orb + rays. */
 .dralingo-stage {
   position: relative;
-  width: min(70vw, 320px);
-  height: min(70vw, 320px);
-  margin: 0 auto 16px;
+  width: min(70vw, 280px);
+  height: min(70vw, 280px);
+  margin: 0 auto 18px;
   display: flex;
   align-items: center;
   justify-content: center;
+  isolation: isolate;
 }
 
-.dralingo-orb {
+/* Outer thin gold ring */
+.dralingo-stage::before {
+  content: '';
   position: absolute;
-  inset: 12%;
+  inset: 0;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 35% 35%, rgba(255, 213, 122, 0.5) 0%, rgba(255, 213, 122, 0.2) 30%, transparent 70%);
-  filter: blur(8px);
-  animation: orbPulse 3s ease-in-out infinite;
+    conic-gradient(
+      from 220deg,
+      #b8860b 0%, #ffd57a 25%, #fff8e0 50%, #ffd57a 75%, #b8860b 100%);
+  box-shadow:
+    0 0 32px rgba(255, 213, 122, 0.55),
+    0 12px 28px rgba(0, 0, 0, 0.55);
+  z-index: 0;
 }
-@keyframes orbPulse {
-  0%, 100% { opacity: 0.7; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.1); }
+/* Inner medallion well — dark imperial red with carved edge */
+.dralingo-stage::after {
+  content: '';
+  position: absolute;
+  inset: 6%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 40% 30%, rgba(255, 213, 122, 0.45) 0%, transparent 45%),
+    radial-gradient(circle at 50% 60%, rgba(120, 12, 12, 0.7) 0%, rgba(50, 6, 6, 0.85) 100%);
+  border: 3px solid #4a1606;
+  box-shadow:
+    inset 0 0 28px rgba(0, 0, 0, 0.7),
+    inset 0 2px 0 rgba(255, 213, 122, 0.3);
+  z-index: 1;
 }
 
+/* Subtle rotating light-sweep (kept ONE animated element, no more conic
+   rays). Sits between the gold rim and the dragon. */
 .dralingo-rays {
   position: absolute;
-  inset: -20%;
-  background: conic-gradient(
-    from 0deg,
-    rgba(255, 213, 122, 0.6) 0deg, transparent 25deg,
-    transparent 55deg, rgba(255, 213, 122, 0.4) 80deg, transparent 105deg,
-    transparent 145deg, rgba(255, 213, 122, 0.5) 170deg, transparent 195deg,
-    transparent 235deg, rgba(255, 213, 122, 0.4) 260deg, transparent 285deg,
-    transparent 325deg, rgba(255, 213, 122, 0.6) 350deg, transparent 360deg
-  );
+  inset: 6%;
   border-radius: 50%;
-  filter: blur(2px);
-  opacity: 0.5;
-  animation: spinSlow 12s linear infinite;
+  background:
+    conic-gradient(from 0deg,
+      transparent 0deg, rgba(255, 213, 122, 0.25) 60deg,
+      transparent 120deg, transparent 360deg);
+  filter: blur(6px);
+  opacity: 0.85;
+  z-index: 2;
+  animation: dralingoSweep 8s linear infinite;
 }
-.dralingo-rays.static { animation-duration: 30s; }
-@keyframes spinSlow {
+.dralingo-rays.static { animation-duration: 18s; }
+@keyframes dralingoSweep {
   to { transform: rotate(360deg); }
 }
 
+/* The orb element is now retired in favor of the medallion. Keep the
+   class so existing HTML doesn't break, but hide it. */
+.dralingo-orb { display: none; }
+
 .dralingo-floating {
-  width: 100%;
-  height: 100%;
+  width: 80%;
+  height: 80%;
   object-fit: contain;
   position: relative;
-  z-index: 2;
+  z-index: 3;
   filter:
-    drop-shadow(0 0 30px rgba(255, 213, 122, 0.6))
-    drop-shadow(0 0 60px rgba(255, 213, 122, 0.4))
-    drop-shadow(0 8px 20px rgba(0, 0, 0, 0.6));
+    drop-shadow(0 0 18px rgba(255, 213, 122, 0.7))
+    drop-shadow(0 6px 14px rgba(0, 0, 0, 0.7));
   animation: hover 4s ease-in-out infinite;
 }
 
