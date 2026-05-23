@@ -912,6 +912,9 @@
     } else if (gameType === 'sixseven') {
       teamLabel = isRed ? 'Equipo 6 🟦' : 'Equipo 7 🟪';
       teamMascot = isRed ? '6' : '7';
+    } else if (gameType === 'triage') {
+      teamLabel = isRed ? 'Doctores Rojos 🩺' : 'Doctores Dorados 💉';
+      teamMascot = isRed ? '🩺' : '💉';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
@@ -1204,6 +1207,107 @@
       }
     }, 100);
   }
+  // === TRIAGE ER — PATIENT-PICK SCREEN LOGIC ===
+  // Shown after a correct vocab answer in Triage. Cards = up to 4 patients
+  // sorted by urgency. Tap a card → emit player:tri-treat. 5s auto-resolve.
+  let triPickTimer = null;
+  function showTriagePatientPicker(patients) {
+    const tag = document.getElementById('tri-pick-team-tag');
+    if (tag) {
+      tag.textContent = (team === 'red' ? '🩺 Doctor Rojo' : '💉 Doctor Dorado');
+      tag.className = 'tri-pick-team-tag ' + team;
+    }
+    const cardsEl = document.getElementById('tri-pick-cards');
+    if (!cardsEl) return;
+    cardsEl.innerHTML = '';
+    // Build a card per patient. Critical ones get a 🚨 halo + alarm class.
+    // Empty cards (when fewer than 4 alive) are shown grayed out as "all clear".
+    if (!patients.length) {
+      const empty = document.createElement('div');
+      empty.className = 'tri-pick-empty';
+      empty.innerHTML = '<div class="tri-pick-empty-icon">✅</div><div>Ward despejado — ¡todos a salvo!</div>';
+      cardsEl.appendChild(empty);
+    }
+    patients.forEach((pat) => {
+      const card = document.createElement('button');
+      card.className = 'tri-pick-card' + (pat.critical ? ' critical' : '');
+      card.dataset.patientId = pat.id;
+      const lifePct = Math.round((pat.lifeHpRatio || 0) * 100);
+      const lifeBarClass = lifePct < 30 ? 'danger' : (lifePct < 60 ? 'warn' : 'ok');
+      card.innerHTML = `
+        <div class="tri-pick-card-bed">Cama ${pat.bedIdx + 1}</div>
+        <div class="tri-pick-card-icon">${pat.icon}${pat.critical ? '<span class="tri-pick-crit-badge">🚨</span>' : ''}</div>
+        <div class="tri-pick-card-name">${escapeHtml(pat.name || '')}</div>
+        <div class="tri-pick-card-life ${lifeBarClass}"><div class="tri-pick-card-life-fill" style="width:${lifePct}%;"></div></div>
+        <div class="tri-pick-card-pts">${pat.critical ? '+25 pts' : '+10 pts'}</div>
+      `;
+      cardsEl.appendChild(card);
+    });
+    showScreen('tri-pick');
+    if (window.unlockAudio) window.unlockAudio();
+    if (MochiSounds.heartMonitorBeep) MochiSounds.heartMonitorBeep();
+    let chosen = false;
+    function emitTreat(patientId) {
+      if (chosen) return;
+      chosen = true;
+      if (triPickTimer) { clearInterval(triPickTimer); triPickTimer = null; }
+      cardsEl.querySelectorAll('.tri-pick-card').forEach((c) => c.disabled = true);
+      const card = cardsEl.querySelector(`.tri-pick-card[data-patient-id="${patientId}"]`);
+      if (card) card.classList.add('chosen');
+      if (MochiSounds.defibZap) MochiSounds.defibZap();
+      if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+      try { socket.emit('player:tri-treat', { pin, patientId }); } catch (_) {}
+    }
+    // Bind cards (one-shot — first tap wins)
+    cardsEl.querySelectorAll('.tri-pick-card').forEach((card) => {
+      const pid = Number(card.dataset.patientId);
+      const onTap = (e) => { if (e) e.preventDefault(); if (!card.disabled) emitTreat(pid); };
+      card.addEventListener('pointerdown', onTap);
+      card.addEventListener('click', onTap);
+    });
+    // 5-second countdown
+    const totalMs = 5000;
+    const startedAt = Date.now();
+    if (document.getElementById('tri-pick-timer-num')) document.getElementById('tri-pick-timer-num').textContent = '5';
+    if (document.getElementById('tri-pick-timer-fill')) document.getElementById('tri-pick-timer-fill').style.width = '100%';
+    if (triPickTimer) clearInterval(triPickTimer);
+    triPickTimer = setInterval(() => {
+      const remaining = Math.max(0, (startedAt + totalMs) - Date.now());
+      const numEl = document.getElementById('tri-pick-timer-num');
+      const fillEl = document.getElementById('tri-pick-timer-fill');
+      if (numEl) numEl.textContent = Math.ceil(remaining / 1000);
+      if (fillEl) fillEl.style.width = ((remaining / totalMs) * 100) + '%';
+      if (remaining <= 0) {
+        clearInterval(triPickTimer); triPickTimer = null;
+        if (!chosen) {
+          // Auto-pick: most-urgent (first card). If no patients at all, emit -1
+          // so server falls back to its empty-ward branch.
+          const firstCard = cardsEl.querySelector('.tri-pick-card');
+          const pid = firstCard ? Number(firstCard.dataset.patientId) : -1;
+          emitTreat(pid);
+        }
+      }
+    }, 100);
+  }
+  // Server confirmation that the patient was treated. Show a tier-matched
+  // Rewards toast and return to the question screen — the next question is
+  // already queued by the server (1.5s window).
+  socket.on('tri:treat-resolved', (data) => {
+    if (gameType !== 'triage') return;
+    if (window.Rewards) {
+      if (data.action === 'critical-saved') {
+        window.Rewards.show({ tier: 'epic', icon: '⚡', text: `¡VIDA CRÍTICA SALVADA! +${data.points || 25}`, duration: 1900 });
+      } else if (data.action === 'saved') {
+        window.Rewards.show({ tier: 'great', icon: '🩺', text: `¡Paciente salvado! +${data.points || 10}` });
+      } else if (data.action === 'empty-ward') {
+        window.Rewards.show({ icon: '✅', text: 'Ward despejado · +1' });
+      }
+    }
+    if (MochiSounds.lifeSaved) MochiSounds.lifeSaved();
+    // Drop back to question screen so we're ready for the next prompt.
+    setTimeout(() => showScreen('question'), 600);
+  });
+
   // Server confirmation that the order was processed — show a brief tier-
   // matched Rewards toast + Spanish-themed sub.
   socket.on('cq:order-resolved', (data) => {
@@ -1224,7 +1328,7 @@
     }
   });
 
-  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly, familyToken, conquest, sixseven }) => {
+  socket.on('answer-result', ({ correct, mashUntil, walkUntil, energy, correctText, vendorId, playerScore, itemIcon, itemChinese, dragonDot, dragonAim, dragonAimMs, points, monopoly, familyToken, conquest, sixseven, triage }) => {
     markActivity();
     clearAnswerHeartbeat();
     hideSendingOverlay();
@@ -1305,6 +1409,13 @@
       } else if (gameType === 'monopoly') {
         happyMascot = '🎲';
         sub = '¡A lanzar el dado!';
+      } else if (gameType === 'triage' && triage && triage.needsPick) {
+        // === TRIAGE ER PATIENT PICKER ===
+        // Server gave us a current snapshot of urgent patients — show the
+        // "which patient do you treat?" cards. The picker handles its own
+        // result feedback + queues the next question via tri:treat-resolved.
+        showTriagePatientPicker(triage.patients || []);
+        return;   // skip the standard result feedback + next-question wait
       } else if (gameType === 'conquest' && conquest && conquest.needsOrder) {
         // === STRATEGIC MARCH-ORDER PICKER ===
         // The server says we have a soldier to deploy. Open the 3-button
@@ -1394,6 +1505,12 @@
           startZombieSprint();
         } else if (gameType === 'family') {
           if (familyToken) startFamilyPlace(familyToken);
+        } else if (gameType === 'triage') {
+          // Triage ER: the picker took over via early-return above. This
+          // branch only fires for an edge case where needsPick wasn't set —
+          // stay on the question screen so we never fall through to the
+          // panda/kitsune mash screen.
+          showScreen('question');
         } else if (gameType === 'conquest') {
           // BUG FIX: previously the conquest else-fallthrough hit startMash()
           // which displayed the panda/kitsune mochi-mash screen on conquest
@@ -1435,6 +1552,11 @@
         // Wrong-answer in conquest — go back to question screen, next q
         // is already queued by the server's nextDelay logic. Without this
         // explicit branch, the player got stuck on the result screen.
+        setTimeout(() => showScreen('question'), 1400);
+      }
+      if (gameType === 'triage') {
+        // Wrong-answer in triage — encourage them, no penalty, next q
+        // is already queued. Mirror conquest's screen restore.
         setTimeout(() => showScreen('question'), 1400);
       }
       // Flappy: stays dead; server will auto-send next revive question via setTimeout

@@ -614,7 +614,63 @@
     stopEndMusic() {
       ['/assets/music/win-theme.ogg', '/assets/music/lose-theme.ogg', '/assets/music/tie-theme.ogg']
         .forEach((u) => stopExtraTrack(u, 0.5));
-    }
+    },
+
+    // ============================ TRIAGE ER sounds ============================
+    // All synthesized (WebAudio) — keeps the asset footprint zero while giving
+    // the ER ward a distinctive hospital-tech sound palette.
+    heartMonitorBeep() {
+      // Classic short pulsox beep — sine ping at ~880Hz
+      tone({ freq: 880, dur: 0.08, type: 'sine', vol: 0.18 });
+      tone({ freq: 1320, dur: 0.04, type: 'sine', vol: 0.06, delay: 0.01 });
+    },
+    flatlineAlarm() {
+      // Long sustained low tone + harsh sawtooth — the ECG flatline buzz
+      tone({ freq: 1000, dur: 1.4, type: 'sawtooth', vol: 0.22 });
+      tone({ freq: 500, dur: 1.4, type: 'sine', vol: 0.18 });
+      // A small "thunk" at the end to mark patient lost
+      tone({ freq: 90, dur: 0.4, type: 'sine', vol: 0.22, delay: 1.4 });
+    },
+    ambulanceSiren() {
+      // Two-tone European siren — alternating high/low blasts
+      const seq = [880, 660, 880, 660, 880, 660];
+      seq.forEach((f, i) => {
+        tone({ freq: f, dur: 0.28, type: 'sawtooth', vol: 0.20, delay: i * 0.30 });
+      });
+    },
+    defibZap() {
+      // "Clear!" — capacitor whine + crisp electric crack
+      tone({ freq: 200, dur: 0.35, type: 'sawtooth', vol: 0.12, slideTo: 1200 });
+      noise({ dur: 0.15, vol: 0.25, delay: 0.30 });
+      tone({ freq: 1800, dur: 0.10, type: 'square', vol: 0.20, delay: 0.32 });
+      // Resolving ping after the shock — patient stabilized feel
+      tone({ freq: 1320, dur: 0.10, type: 'sine', vol: 0.18, delay: 0.50 });
+      tone({ freq: 1760, dur: 0.18, type: 'sine', vol: 0.16, delay: 0.62 });
+    },
+    lifeSaved() {
+      // Bright ascending bell — payoff for a treatment
+      [880, 1175, 1568, 2093].forEach((f, i) =>
+        tone({ freq: f, dur: 0.18, type: 'triangle', vol: 0.22, delay: i * 0.07 })
+      );
+    },
+    codeBlue() {
+      // Alarm warble — dropping squarewave + a flatter follow-up
+      tone({ freq: 1200, dur: 0.18, type: 'square', vol: 0.20, slideTo: 600 });
+      tone({ freq: 600, dur: 0.18, type: 'square', vol: 0.20, delay: 0.20, slideTo: 1200 });
+      tone({ freq: 1200, dur: 0.25, type: 'square', vol: 0.18, delay: 0.40 });
+    },
+    patientArrive() {
+      // Soft "ding" — like an elevator chime
+      tone({ freq: 880, dur: 0.16, type: 'sine', vol: 0.18 });
+      tone({ freq: 1175, dur: 0.20, type: 'sine', vol: 0.14, delay: 0.08 });
+    },
+    transfusion() {
+      // Warm choral wash + a single mid bell — heal moment
+      [392, 523, 659, 784].forEach((f, i) =>
+        tone({ freq: f, dur: 0.45, type: 'sine', vol: 0.16, delay: i * 0.04 })
+      );
+      tone({ freq: 1175, dur: 0.30, type: 'triangle', vol: 0.16, delay: 0.25 });
+    },
   };
 
   window.MochiSounds = Sounds;
