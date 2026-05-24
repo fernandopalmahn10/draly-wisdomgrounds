@@ -10,6 +10,7 @@
   let activeExp = 'all';
   let currentViewMode = 'text';
   let currentSentence = [];
+  let currentCurious = false;
   const PRESET_KEY = 'dralyWarmupPresets';
 
   // === ADMIN GATE ===
@@ -101,6 +102,11 @@
       }
       e.target.value = '';   // reset so re-selecting the same preset works
     };
+    // Modo Curioso toggle
+    $('wu-curious-btn').onclick = () => {
+      const next = !currentCurious;
+      socket.emit('wu:set-curious', { pin, password: adminPw, curious: next });
+    };
     // Preset delete
     $('wu-delete-preset').onclick = () => {
       const presets = loadPresets();
@@ -118,13 +124,25 @@
   }
 
   // === Server sync ===
-  socket.on('wu:state', ({ sentence, viewMode }) => {
+  socket.on('wu:state', ({ sentence, viewMode, curious }) => {
     currentSentence = sentence || [];
     if (viewMode) {
       currentViewMode = viewMode;
       document.querySelectorAll('.wu-vm-btn').forEach((b) => {
         b.classList.toggle('active', b.dataset.mode === viewMode);
       });
+    }
+    currentCurious = !!curious;
+    const btn = $('wu-curious-btn');
+    if (btn) {
+      btn.classList.toggle('active', currentCurious);
+      btn.textContent = currentCurious ? '🔍 Desactivar Modo Curioso' : '🔍 Activar Modo Curioso';
+    }
+    const hint = $('wu-curious-hint');
+    if (hint) {
+      hint.textContent = currentCurious
+        ? '✅ Activo — los alumnos pueden tocar palabras y ver tarjetas tipo Pokédex.'
+        : 'Cuando esté activo, los alumnos podrán tocar cualquier palabra para ver detalles.';
     }
     renderStage(currentSentence);
   });

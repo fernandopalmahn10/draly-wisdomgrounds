@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
   <link rel="stylesheet" href="/css/triage.css?v=20260524d">
   <link rel="stylesheet" href="/css/laiquhui.css?v=20260524d">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260524b">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260524c">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -667,8 +667,17 @@
         Esperando a que el maestro construya una oración…
       </div>
     </div>
-    <div class="wu-player-hint">
+    <div class="wu-player-hint" id="wu-player-hint">
       Los colores que coinciden te ayudan a ver la estructura.
+    </div>
+    <!-- 🔍 POKÉDEX overlay — only used in Modo Curioso. Hidden by default.
+         Player taps a word in the sentence; this full-card pops with the
+         word's emoji, pinyin, hanzi, Spanish, category, and EXP origin. -->
+    <div class="wu-pokedex hidden" id="wu-pokedex">
+      <button class="wu-pokedex-close" id="wu-pokedex-close" type="button" aria-label="Cerrar">✕</button>
+      <div class="wu-pokedex-card" id="wu-pokedex-card">
+        <!-- contents filled by JS -->
+      </div>
     </div>
   </div>
 
@@ -684,10 +693,10 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524d"></script>
-  <script src="/js/warmup-vocab.js?v=20260524b"></script>
+  <script src="/js/warmup-vocab.js?v=20260524c"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260524j"></script>
+  <script src="/js/player.js?v=20260524k"></script>
 </body>
 </html>
