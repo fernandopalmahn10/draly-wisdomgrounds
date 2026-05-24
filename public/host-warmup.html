@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260524a">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260524b">
 </head>
 <body class="wu-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -96,17 +96,34 @@
       <button class="btn btn-red wu-clear-btn" id="wu-clear-btn">🧹 Limpiar</button>
     </div>
 
-    <!-- Filter chips per category — tap to focus, "Todos" shows everything -->
-    <div class="wu-cat-filters" id="wu-cat-filters"></div>
+    <!-- View-mode toggle (text / picture / both) — broadcasts to player phones -->
+    <div class="wu-toolbar">
+      <div class="wu-vm-group">
+        <span class="wu-vm-label">Mostrar:</span>
+        <button class="wu-vm-btn active" data-mode="text" type="button">📝 Texto</button>
+        <button class="wu-vm-btn" data-mode="picture" type="button">🖼 Imágenes</button>
+        <button class="wu-vm-btn" data-mode="both" type="button">📝🖼 Ambos</button>
+      </div>
+      <div class="wu-preset-group">
+        <button class="btn btn-ghost btn-sm" id="wu-save-preset">💾 Guardar</button>
+        <select class="wu-preset-select" id="wu-preset-select" aria-label="Cargar preset">
+          <option value="">Cargar preset…</option>
+        </select>
+        <button class="btn btn-ghost btn-sm" id="wu-delete-preset" title="Borrar preset seleccionado">🗑</button>
+      </div>
+    </div>
 
-    <!-- Word library — all words grouped by category -->
+    <!-- Experience-tab filter strip — pick which HSK1 experience to show -->
+    <div class="wu-exp-tabs" id="wu-exp-tabs"></div>
+
+    <!-- Word library — grouped by experience section, color-coded per word -->
     <div class="wu-library" id="wu-library"></div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524h"></script>
   <script src="/js/enter.js"></script>
-  <script src="/js/warmup-vocab.js?v=20260524a"></script>
-  <script src="/js/host-warmup.js?v=20260524a"></script>
+  <script src="/js/warmup-vocab.js?v=20260524b"></script>
+  <script src="/js/host-warmup.js?v=20260524b"></script>
 </body>
 </html>

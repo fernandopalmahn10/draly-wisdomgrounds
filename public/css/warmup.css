@@ -158,31 +158,88 @@ body.wu-bg .market-banner {
   text-shadow: 0 0 6px currentColor;
 }
 
-/* === Category filter pills === */
-.wu-cat-filters {
+/* === Toolbar — view-mode toggle + preset save/load === */
+.wu-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 6px;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: rgba(15, 22, 38, 0.65);
+  border: 2px solid rgba(91, 232, 209, 0.3);
+  border-radius: 12px;
+  padding: 8px 12px;
 }
-.wu-cat-pill {
+.wu-vm-group, .wu-preset-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.wu-vm-label {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: rgba(220, 235, 245, 0.7);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-right: 4px;
+}
+.wu-vm-btn {
   background: rgba(255, 255, 255, 0.06);
-  border: 2px solid var(--cat-color, rgba(255, 255, 255, 0.3));
-  color: var(--cat-color, #d6e6f2);
-  padding: 5px 12px;
+  border: 2px solid rgba(91, 232, 209, 0.4);
+  color: #d6e6f2;
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+  transition: background 0.15s, color 0.15s;
+}
+.wu-vm-btn:hover { background: rgba(91, 232, 209, 0.15); }
+.wu-vm-btn.active {
+  background: #5be8d1;
+  color: #0a1320;
+  border-color: #5be8d1;
+  box-shadow: 0 0 12px rgba(91, 232, 209, 0.45);
+}
+.wu-preset-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(91, 232, 209, 0.4);
+  color: #d6e6f2;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-family: inherit;
+  font-size: 0.85rem;
+  max-width: 200px;
+}
+
+/* === Experience tab strip === */
+.wu-exp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 6px;
+  margin-top: 2px;
+}
+.wu-exp-tab {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(91, 232, 209, 0.35);
+  color: #5be8d1;
+  padding: 5px 10px;
   border-radius: 999px;
   font-weight: 800;
   font-size: 0.85rem;
   cursor: pointer;
-  letter-spacing: 0.03em;
   font-family: inherit;
+  letter-spacing: 0.02em;
 }
-.wu-cat-pill.active {
-  background: var(--cat-color, #5be8d1);
+.wu-exp-tab.active {
+  background: #5be8d1;
   color: #0a1320;
-}
-.wu-cat-pill[data-cat="all"] {
-  --cat-color: #5be8d1;
+  box-shadow: 0 0 12px rgba(91, 232, 209, 0.5);
 }
 
 /* === Word library === */
@@ -226,9 +283,33 @@ body.wu-bg .market-banner {
 }
 .wu-lib-card:active { transform: scale(0.95); }
 .wu-lib-icon  { font-size: 1.4rem; line-height: 1; }
+.wu-lib-pic {
+  width: 48px; height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+.wu-lib-pic.missing { display: none; }
 .wu-lib-pinyin { font-size: 1.1rem; font-weight: 900; color: var(--cat-color, #fff); text-shadow: 0 0 8px var(--cat-color, transparent); }
 .wu-lib-hanzi { font-size: 0.95rem; font-weight: 700; color: #fff; opacity: 0.85; }
 .wu-lib-es { font-size: 0.75rem; font-style: italic; opacity: 0.75; }
+
+/* Picture in the stage word card */
+.wu-sw-pic {
+  width: 60px; height: 60px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6));
+}
+.wu-sw-pic.missing { display: none; }
+.wu-stage-word.picture-only .wu-sw-pic { width: 92px; height: 92px; }
+
+/* Picture in the player phone word */
+.wu-pw-pic {
+  width: 50px; height: 50px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+.wu-pw-pic.missing { display: none; }
+.wu-player-word.picture-only .wu-pw-pic { width: 80px; height: 80px; }
 
 /* ============================ PLAYER PHONE ============================ */
 .wu-player-screen {

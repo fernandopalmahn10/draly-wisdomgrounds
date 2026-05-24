@@ -1819,10 +1819,14 @@ io.on('connection', (socket) => {
       }
       if (g.gameType === 'warmup') {
         g.warmup = {
-          sentence: [],            // array of word ids in order
-          adminSocketId: g.hostId, // only this socket can mutate the sentence
+          sentence: [],
+          viewMode: 'text',        // 'text' | 'picture' | 'both'
+          adminSocketId: g.hostId,
         };
-        io.to(pin).emit('wu:state', { sentence: g.warmup.sentence });
+        io.to(pin).emit('wu:state', {
+          sentence: g.warmup.sentence,
+          viewMode: g.warmup.viewMode,
+        });
       }
       if (g.gameType === 'laiquhui') {
         // Each player spawns at the home tile and gets their first mission.
@@ -2783,12 +2787,18 @@ io.on('connection', (socket) => {
     const ok = wuRequireAdmin(g, socket, password);
     if (typeof cb === 'function') cb({ ok });
   });
+  function wuEmitState(g, pin) {
+    io.to(pin).emit('wu:state', {
+      sentence: g.warmup.sentence,
+      viewMode: g.warmup.viewMode || 'text',
+    });
+  }
   socket.on('wu:add-word', ({ pin, password, wordId }) => {
     const g = games[pin];
     if (!wuRequireAdmin(g, socket, password)) return;
-    if (!g.warmup) g.warmup = { sentence: [] };
+    if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text' };
     g.warmup.sentence.push(wordId);
-    io.to(pin).emit('wu:state', { sentence: g.warmup.sentence });
+    wuEmitState(g, pin);
   });
   socket.on('wu:remove-word', ({ pin, password, index }) => {
     const g = games[pin];
@@ -2797,7 +2807,7 @@ io.on('connection', (socket) => {
     const i = Number(index);
     if (Number.isFinite(i) && i >= 0 && i < g.warmup.sentence.length) {
       g.warmup.sentence.splice(i, 1);
-      io.to(pin).emit('wu:state', { sentence: g.warmup.sentence });
+      wuEmitState(g, pin);
     }
   });
   socket.on('wu:clear', ({ pin, password }) => {
@@ -2805,7 +2815,26 @@ io.on('connection', (socket) => {
     if (!wuRequireAdmin(g, socket, password)) return;
     if (!g.warmup) return;
     g.warmup.sentence = [];
-    io.to(pin).emit('wu:state', { sentence: g.warmup.sentence });
+    wuEmitState(g, pin);
+  });
+  // Teacher pushes a full sentence at once (used by preset-load)
+  socket.on('wu:set-sentence', ({ pin, password, sentence }) => {
+    const g = games[pin];
+    if (!wuRequireAdmin(g, socket, password)) return;
+    if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text' };
+    if (!Array.isArray(sentence)) return;
+    // Sanity cap so nothing pathological gets pushed
+    g.warmup.sentence = sentence.slice(0, 40).map(String);
+    wuEmitState(g, pin);
+  });
+  // Teacher switches text / picture / both view mode
+  socket.on('wu:set-view-mode', ({ pin, password, mode }) => {
+    const g = games[pin];
+    if (!wuRequireAdmin(g, socket, password)) return;
+    if (!g.warmup) return;
+    const valid = ['text', 'picture', 'both'];
+    g.warmup.viewMode = valid.includes(mode) ? mode : 'text';
+    wuEmitState(g, pin);
   });
 
   // === LÁI-QÙ-HUÍ Dragon Courier ===
