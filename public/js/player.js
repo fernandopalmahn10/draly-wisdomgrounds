@@ -1344,27 +1344,61 @@
   // defibrillator power-meter where timing-the-needle on the green zone
   // adds bonus points. Result is sent to the server via player:tri-treat
   // with an extra `bonus` field (small integer).
+  // === SENTENCE POOL — cycled per CPR rescue ===
+  // Five HSK1 sentences using the target hospital/doctor vocabulary. The
+  // server doesn't pick the sentence; the client just rotates locally so
+  // every rescue introduces a new linguistic angle on the same set of words.
+  const TRI_SENTENCES = [
+    { pinyin: 'Yīshēng zài <strong>yīyuàn</strong> 🏥 gōngzuò', es: 'El doctor trabaja en el hospital' },
+    { pinyin: 'Yīshēng zài <strong>nǎ’er</strong>?',            es: '¿Dónde está el doctor?' },
+    { pinyin: 'Wǒ qù <strong>yīyuàn</strong> 🏥',               es: 'Voy al hospital' },
+    { pinyin: '<strong>Yīyuàn</strong> hěn dà',                 es: 'El hospital es grande' },
+    { pinyin: 'Bìngrén zài <strong>yīyuàn</strong> 🏥',         es: 'El paciente está en el hospital' },
+    { pinyin: 'Wǒ shì <strong>yīshēng</strong> 🩺',             es: 'Soy doctor' },
+  ];
+  let triSentenceIdx = 0;
+  function currentSentence() { return TRI_SENTENCES[triSentenceIdx % TRI_SENTENCES.length]; }
+  function advanceSentence() { triSentenceIdx = (triSentenceIdx + 1) % TRI_SENTENCES.length; }
+
   let cprState = null;
   function startCprMiniGame(picked) {
     // Reset state
     if (cprState && cprState.timerInt) clearInterval(cprState.timerInt);
     if (cprState && cprState.defibInt) clearInterval(cprState.defibInt);
+    if (cprState && cprState.rhythmInt) clearInterval(cprState.rhythmInt);
     cprState = {
       patientId: picked.id,
       isCritical: !!picked.critical,
-      tapsNeeded: picked.critical ? 8 : 5,
+      // === NEW MECHANIC: 3 RHYTHMIC compressions (was 5-8 spam taps) ===
+      // The user wanted LESS tapping and MORE timing/precision. Now you have
+      // to tap the heart in sync with a metronome dot crossing a green zone.
+      // Mistimed taps don't advance progress; the rhythm bar shakes red.
+      tapsNeeded: 3,
       tapsDone: 0,
       ekgPoints: ['0,30'],
       ekgX: 0,
       startedAt: Date.now(),
-      windowMs: picked.critical ? 6500 : 5000,
+      // Tighter time window — forces real focus, no spamming through
+      windowMs: picked.critical ? 8500 : 7500,
       timerInt: null,
       defibInt: null,
+      rhythmInt: null,
       defibActive: false,
       defibAngle: 0,
       bonus: 0,
       completed: false,
+      failed: false,
+      // Rhythm metronome state
+      rhythmT0: Date.now(),
+      rhythmPeriodMs: 1100,        // dot completes one sweep every 1.1s
+      rhythmPos: 0,                // 0..1, sin-wave position
+      // The "stop the bar" mechanic now runs for EVERY patient, not just critical.
+      // Critical = defib power-meter. Normal = single "stop the bar at center".
+      wantsDefib: true,
+      // Pick & advance the sentence shown on this CPR screen
+      sentence: currentSentence(),
     };
+    advanceSentence();
     // Populate the screen
     document.getElementById('tri-cpr-patient-icon').textContent = picked.icon || '🤒';
     document.getElementById('tri-cpr-patient-name').textContent = picked.name || 'Paciente';
@@ -1372,8 +1406,36 @@
     const stage = document.getElementById('tri-cpr-stage');
     if (stage) stage.classList.toggle('critical', cprState.isCritical);
     document.getElementById('tri-cpr-hint').textContent = cprState.isCritical
-      ? `¡PACIENTE CRÍTICO! ${cprState.tapsNeeded} compresiones + descarga`
-      : `${cprState.tapsNeeded} compresiones torácicas`;
+      ? `¡CRÍTICO! Toca al ritmo → DESCARGA en VERDE`
+      : `Toca al ritmo → DESCARGA en VERDE`;
+    // === Inject the current sentence onto the screen as the level header ===
+    let levelEl = document.getElementById('tri-cpr-level');
+    if (!levelEl) {
+      levelEl = document.createElement('div');
+      levelEl.id = 'tri-cpr-level';
+      levelEl.className = 'tri-cpr-level';
+      const stageEl = document.getElementById('tri-cpr-stage');
+      if (stageEl && stageEl.parentNode) stageEl.parentNode.insertBefore(levelEl, stageEl);
+    }
+    levelEl.innerHTML = `
+      <div class="tri-cpr-level-pinyin">${cprState.sentence.pinyin}</div>
+      <div class="tri-cpr-level-es">${cprState.sentence.es}</div>`;
+    // === Inject the rhythm metronome bar above the heart ===
+    let rhythmEl = document.getElementById('tri-cpr-rhythm');
+    if (!rhythmEl) {
+      rhythmEl = document.createElement('div');
+      rhythmEl.id = 'tri-cpr-rhythm';
+      rhythmEl.className = 'tri-cpr-rhythm';
+      rhythmEl.innerHTML = `
+        <div class="tri-rh-track">
+          <div class="tri-rh-zone"></div>
+          <div class="tri-rh-dot" id="tri-rh-dot"></div>
+        </div>
+        <div class="tri-rh-label">TOCA cuando el punto entre en VERDE</div>`;
+      const stageEl = document.getElementById('tri-cpr-stage');
+      if (stageEl) stageEl.insertBefore(rhythmEl, stageEl.firstChild);
+    }
+    rhythmEl.classList.remove('shake');
     // Render the ticks
     const ticksEl = document.getElementById('tri-cpr-ticks');
     ticksEl.innerHTML = '';
@@ -1431,6 +1493,20 @@
     }, 900);
     // Seed one immediately
     setTimeout(cprSpawnVocabTap, 300);
+    // === Drive the rhythm-metronome dot ===
+    // 60Hz update of the dot's horizontal position. The dot sweeps a
+    // sin-wave: 0% → 100% → 0%. "Green zone" is 38-62%, "yellow" 22-38 +
+    // 62-78%, "red" elsewhere. cprHandleCompression checks the current
+    // position at tap time to decide if the tap counts.
+    cprState.rhythmInt = setInterval(() => {
+      if (!cprState || cprState.completed) return;
+      const t = (Date.now() - cprState.rhythmT0) / cprState.rhythmPeriodMs;
+      // sin gives -1..1; we want 0..100
+      const pos = (Math.sin(t * Math.PI * 2) + 1) * 50;
+      cprState.rhythmPos = pos;
+      const dot = document.getElementById('tri-rh-dot');
+      if (dot) dot.style.left = pos + '%';
+    }, 16);
   }
   // === Player-side TRIAGE BG floating vocab ===
   // Tiles drift up behind the question/result/picker screens for the entire
@@ -1535,11 +1611,36 @@
     if (!cprState || cprState.completed) return;
     if (cprState.defibActive) return;   // defib step ignores heart taps
     if (cprState.tapsDone >= cprState.tapsNeeded) return;
+    // === RHYTHM GATE ===
+    // The tap only counts if the metronome dot is currently in the GREEN
+    // zone (38-62%). Otherwise we shake the rhythm bar red and play a
+    // "wrong" beep — no progress made. This is the timing/precision the
+    // user asked for instead of pure spam.
+    const pos = cprState.rhythmPos || 0;
+    const inGreen  = pos >= 36 && pos <= 64;
+    const inYellow = pos >= 22 && pos <= 78;
+    const rhythmEl = document.getElementById('tri-cpr-rhythm');
+    if (!inGreen && !inYellow) {
+      // Bad tap — shake + small penalty (rhythm bar shakes red, no progress)
+      if (rhythmEl) {
+        rhythmEl.classList.remove('shake');
+        void rhythmEl.offsetWidth;
+        rhythmEl.classList.add('shake');
+      }
+      if (MochiSounds.wrong) MochiSounds.wrong();
+      if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
+      return;
+    }
     cprState.tapsDone++;
     // Tick UI fill
     const ticks = document.querySelectorAll('.tri-cpr-tick');
     const tick = ticks[cprState.tapsDone - 1];
-    if (tick) tick.classList.add('on');
+    if (tick) {
+      tick.classList.add('on');
+      if (inGreen) tick.classList.add('perfect');
+    }
+    // Bonus: +1 per green tap (perfect rhythm)
+    if (inGreen) cprState.bonus = (cprState.bonus || 0) + 1;
     // Heart pulse
     const heart = document.getElementById('tri-cpr-heart');
     if (heart) {
@@ -1560,30 +1661,20 @@
     // Sound + haptic
     if (MochiSounds.heartMonitorBeep) MochiSounds.heartMonitorBeep();
     if (navigator.vibrate) navigator.vibrate(18);
-    // Rhythm bonus: aim for a steady 0.5s cadence. If between 350-650ms, +1.
-    if (cprState.lastTapAt) {
-      const dt = Date.now() - cprState.lastTapAt;
-      if (dt >= 350 && dt <= 650) {
-        cprState.bonus = (cprState.bonus || 0) + 1;
-        if (heart) {
-          const star = document.createElement('div');
-          star.className = 'tri-cpr-rhythm-star';
-          star.textContent = '✨';
-          heart.appendChild(star);
-          setTimeout(() => star.remove(), 700);
-        }
-      }
+    // Perfect-green visual star
+    if (inGreen && heart) {
+      const star = document.createElement('div');
+      star.className = 'tri-cpr-rhythm-star';
+      star.textContent = '✨';
+      heart.appendChild(star);
+      setTimeout(() => star.remove(), 700);
     }
     cprState.lastTapAt = Date.now();
     if (cprState.tapsDone >= cprState.tapsNeeded) {
-      // CPR complete!
-      if (cprState.isCritical) {
-        // Critical patient — proceed to defibrillator power meter
-        cprStartDefib();
-      } else {
-        // Normal patient — commit the rescue
-        cprCommit('cpr-complete');
-      }
+      // CPR rhythm complete — ALWAYS go to defib for every patient now.
+      // The user wanted MORE timing emphasis, not less, so defib applies
+      // universally instead of being a critical-only bonus phase.
+      cprStartDefib();
     }
   }
   function cprStartDefib() {
@@ -1616,37 +1707,78 @@
     cprState.bonus = (cprState.bonus || 0) + addBonus;
     needle.dataset.zone = zone;
     document.getElementById('tri-cpr-defib-btn').disabled = true;
-    document.getElementById('tri-cpr-hint').textContent = zone === 'green'
-      ? '⚡ ¡DESCARGA PERFECTA! +' + addBonus
-      : (zone === 'yellow' ? '⚡ Descarga aceptable · +' + addBonus : '⚡ Descarga débil');
     if (MochiSounds.defibZap) MochiSounds.defibZap();
     if (navigator.vibrate) navigator.vibrate([20, 30, 80]);
+    // === FAIL ON RED ===
+    // Hitting the red zone now KILLS the patient. This is the game integrity
+    // the user wanted — failing has real consequences, not just lower bonus.
+    if (zone === 'red') {
+      cprState.failed = true;
+      document.getElementById('tri-cpr-hint').textContent = '💔 ¡DESCARGA FALLIDA! Paciente perdido';
+      cprShowFailScreen('descarga-fallida');
+      setTimeout(() => cprCommit('defib-failed'), 1400);
+      return;
+    }
+    document.getElementById('tri-cpr-hint').textContent = zone === 'green'
+      ? '⚡ ¡DESCARGA PERFECTA! +' + addBonus
+      : '⚡ Descarga aceptable · +' + addBonus;
     setTimeout(() => cprCommit('defib-done'), 700);
+  }
+  // Big visible fail feedback — flatline sound + red flash + sad doctor
+  function cprShowFailScreen(reason) {
+    if (MochiSounds.flatlineAlarm) MochiSounds.flatlineAlarm();
+    if (navigator.vibrate) navigator.vibrate([200, 50, 200, 50, 200]);
+    const heart = document.getElementById('tri-cpr-heart');
+    if (heart) heart.classList.add('cpr-fail-flatline');
+    const stage = document.getElementById('tri-cpr-stage');
+    if (stage) {
+      stage.classList.add('cpr-failed');
+      // Big "FALLASTE" banner
+      const banner = document.createElement('div');
+      banner.className = 'tri-cpr-fail-banner';
+      banner.innerHTML = `
+        <div class="tri-cpr-fail-emoji">💔</div>
+        <div class="tri-cpr-fail-title">¡FALLASTE!</div>
+        <div class="tri-cpr-fail-sub">El paciente no sobrevivió.</div>`;
+      stage.appendChild(banner);
+      setTimeout(() => { banner.remove(); stage.classList.remove('cpr-failed'); }, 1600);
+    }
   }
   function cprCommit(reason) {
     if (!cprState || cprState.completed) return;
     cprState.completed = true;
     if (cprState.timerInt) { clearInterval(cprState.timerInt); cprState.timerInt = null; }
     if (cprState.defibInt) { clearInterval(cprState.defibInt); cprState.defibInt = null; }
+    if (cprState.rhythmInt) { clearInterval(cprState.rhythmInt); cprState.rhythmInt = null; }
     if (cprState.vocabSpawnInt) { clearInterval(cprState.vocabSpawnInt); cprState.vocabSpawnInt = null; }
-    // Penalty: if they timed out without enough compressions, bonus capped to 0
-    // (the base rescue still goes through — softer-than-conquest feel)
-    if (cprState.tapsDone < cprState.tapsNeeded) {
+    // === FAILURE DETECTION ===
+    // Two distinct fail paths:
+    //   1. Timeout — didn't complete enough rhythm taps in the window
+    //   2. Defib hit RED — bad timing on the power-meter (set in releaseDefib)
+    let failed = !!cprState.failed;
+    if (!failed && cprState.tapsDone < cprState.tapsNeeded) {
+      failed = true;
+      // Show the fail screen if we haven't already
+      cprShowFailScreen('timeout');
+    }
+    if (failed) {
       cprState.bonus = 0;
+    } else {
+      // Successful rescue — flash + chime
+      const heart = document.getElementById('tri-cpr-heart');
+      if (heart) {
+        heart.classList.add('flash');
+        setTimeout(() => heart && heart.classList.remove('flash'), 500);
+      }
+      if (MochiSounds.lifeSaved) MochiSounds.lifeSaved();
     }
-    // Show a final defib flash on the heart
-    const heart = document.getElementById('tri-cpr-heart');
-    if (heart) {
-      heart.classList.add('flash');
-      setTimeout(() => heart && heart.classList.remove('flash'), 500);
-    }
-    if (MochiSounds.lifeSaved) MochiSounds.lifeSaved();
     try {
       socket.emit('player:tri-treat', {
         pin,
         patientId: cprState.patientId,
         bonus: cprState.bonus || 0,
-        completed: cprState.tapsDone >= cprState.tapsNeeded,
+        completed: cprState.tapsDone >= cprState.tapsNeeded && !cprState.failed,
+        failed,
       });
     } catch (_) {}
     cprState = null;
@@ -1664,12 +1796,15 @@
         window.Rewards.show({ tier: 'epic', icon: '⚡', text: `¡VIDA CRÍTICA SALVADA! +${data.points || 25}${bonusTxt}`, duration: 2000 });
       } else if (data.action === 'saved') {
         window.Rewards.show({ tier: 'great', icon: '🩺', text: `¡Paciente salvado! +${data.points || 10}${bonusTxt}` });
+      } else if (data.action === 'failed') {
+        // FAIL — explicit user-facing message; no points awarded
+        window.Rewards.show({ tier: 'bad', icon: '💔', text: '¡FALLASTE! El paciente no sobrevivió · 0 puntos', duration: 2200 });
       } else if (data.action === 'empty-ward') {
         window.Rewards.show({ icon: '✅', text: 'Ward despejado · +1' });
       }
     }
     // Drop back to question screen so we're ready for the next prompt.
-    setTimeout(() => showScreen('question'), 600);
+    setTimeout(() => showScreen('question'), data.action === 'failed' ? 1200 : 600);
   });
 
   // Server confirmation that the order was processed — show a brief tier-

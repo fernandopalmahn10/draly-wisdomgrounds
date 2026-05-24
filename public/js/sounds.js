@@ -15,12 +15,49 @@
       sfxGain.gain.value = muted ? 0 : 0.7;
       sfxGain.connect(audioCtx.destination);
       musicGain = audioCtx.createGain();
-      musicGain.gain.value = muted ? 0 : 0.45;
+      musicGain.gain.value = muted ? 0 : 0.85;
       musicGain.connect(audioCtx.destination);
     }
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted') {
+      audioCtx.resume().catch(() => { /* ignore */ });
+    }
     return audioCtx;
   }
+
+  // === BULLETPROOF AUDIO UNLOCK ===
+  // The user reported music works on tablet but not phone/computer. Common
+  // root causes across iOS Safari, Android Chrome, and desktop browsers:
+  //   1. AudioContext stays "suspended" because resume() wasn't called from
+  //      inside a real user-gesture handler.
+  //   2. The context gets put into "interrupted" state by other audio (e.g.
+  //      a notification, headphone switch) and never recovers.
+  //   3. The first user click happens but resume() returns a Promise that
+  //      isn't awaited, so the next-microtask schedule still runs while the
+  //      context is suspended → silently swallowed.
+  // Fix: attach unlock listeners to EVERY pointer/touch/key event (not just
+  // the first), and a watchdog that auto-resumes if the state slips.
+  function aggressiveUnlock() {
+    const events = ['pointerdown', 'touchstart', 'mousedown', 'keydown', 'click'];
+    const handler = () => {
+      const ctx = ensureCtx();
+      if (ctx && (ctx.state === 'suspended' || ctx.state === 'interrupted')) {
+        ctx.resume().catch(() => {});
+      }
+    };
+    events.forEach((e) => {
+      document.addEventListener(e, handler, { capture: true, passive: true });
+    });
+    // Re-check every 2s — if the ctx slipped to suspended (e.g. user got a
+    // notification), force resume on next interaction.
+    setInterval(() => {
+      if (audioCtx && (audioCtx.state === 'suspended' || audioCtx.state === 'interrupted')) {
+        audioCtx.resume().catch(() => {});
+      }
+    }, 2000);
+  }
+  // Run it now — script load is before any user gesture but the listeners
+  // will fire on every subsequent gesture and the watchdog runs forever.
+  if (typeof document !== 'undefined') aggressiveUnlock();
 
   function tone({ freq = 440, dur = 0.1, type = 'sine', vol = 0.25, slideTo = null, delay = 0 }) {
     const ctx = ensureCtx();
@@ -833,7 +870,16 @@
     // old fade-in masked the music for ~1.2s which felt like "no music".
     musicGain.gain.cancelScheduledValues(ctx.currentTime);
     musicGain.gain.setValueAtTime(muted ? 0 : 0.85, ctx.currentTime);
-    console.log('[music] 🎵 theme started:', gameType, '@', spec.bpm, 'bpm — gain', muted ? 0 : 0.85);
+    console.log('[music] 🎵 theme started:', gameType, '@', spec.bpm, 'bpm — gain', muted ? 0 : 0.85, 'ctx.state =', ctx.state);
+    // === GUARANTEED-AUDIBLE START CHIME ===
+    // Loud short pentatonic burst played via sfxGain (which has its own gain
+    // path) so even if musicGain is somehow muted on this device, the user
+    // hears a clear "music is starting" cue. If they don't hear THIS, their
+    // device is genuinely silent (system mute, Bluetooth, etc.).
+    const chimeNotes = [523, 659, 784, 1047];   // C5 E5 G5 C6
+    chimeNotes.forEach((f, i) => {
+      tone({ freq: f, dur: 0.16, type: 'triangle', vol: 0.35, delay: i * 0.07 });
+    });
     scheduleThemeAhead();
     themeTimer = setInterval(scheduleThemeAhead, 600);
     // Notify any host page that wants to show a "🎵 Music: …" chip
