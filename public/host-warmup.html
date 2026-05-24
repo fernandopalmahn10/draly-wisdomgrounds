@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260524b">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260524c">
 </head>
 <body class="wu-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -112,6 +112,17 @@
         <button class="btn btn-ghost btn-sm" id="wu-delete-preset" title="Borrar preset seleccionado">🗑</button>
       </div>
     </div>
+    <!-- 🔍 MODO CURIOSO — toggle button. When ON, every player's words
+         become tappable (Pokédex-style detail card). When OFF, players
+         return to the sentence view. -->
+    <div class="wu-curious-row">
+      <button class="wu-curious-btn" id="wu-curious-btn" type="button">
+        🔍 Activar Modo Curioso
+      </button>
+      <span class="wu-curious-hint" id="wu-curious-hint">
+        Cuando esté activo, los alumnos podrán tocar cualquier palabra para ver detalles.
+      </span>
+    </div>
 
     <!-- Experience-tab filter strip — pick which HSK1 experience to show -->
     <div class="wu-exp-tabs" id="wu-exp-tabs"></div>
@@ -123,7 +134,7 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524h"></script>
   <script src="/js/enter.js"></script>
-  <script src="/js/warmup-vocab.js?v=20260524b"></script>
-  <script src="/js/host-warmup.js?v=20260524b"></script>
+  <script src="/js/warmup-vocab.js?v=20260524c"></script>
+  <script src="/js/host-warmup.js?v=20260524c"></script>
 </body>
 </html>

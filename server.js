@@ -1820,12 +1820,14 @@ io.on('connection', (socket) => {
       if (g.gameType === 'warmup') {
         g.warmup = {
           sentence: [],
-          viewMode: 'text',        // 'text' | 'picture' | 'both'
+          viewMode: 'text',
+          curious: false,
           adminSocketId: g.hostId,
         };
         io.to(pin).emit('wu:state', {
           sentence: g.warmup.sentence,
           viewMode: g.warmup.viewMode,
+          curious: g.warmup.curious,
         });
       }
       if (g.gameType === 'laiquhui') {
@@ -2071,6 +2073,16 @@ io.on('connection', (socket) => {
 
     // If joining/rejoining mid-game, sync them up
     if (g.state === 'active') {
+      // === WARM-UP: send the current sentence + view mode + curious flag
+      // to the joining socket so they immediately see the teacher's
+      // current state (instead of a stale game screen from before). ===
+      if (g.gameType === 'warmup' && g.warmup) {
+        io.to(socket.id).emit('wu:state', {
+          sentence: g.warmup.sentence || [],
+          viewMode: g.warmup.viewMode || 'text',
+          curious: !!g.warmup.curious,
+        });
+      }
       // Market Quest: send the world state
       if (g.gameType === 'market-quest') {
         io.to(socket.id).emit('mq:init', {
@@ -2791,6 +2803,7 @@ io.on('connection', (socket) => {
     io.to(pin).emit('wu:state', {
       sentence: g.warmup.sentence,
       viewMode: g.warmup.viewMode || 'text',
+      curious: !!g.warmup.curious,
     });
   }
   socket.on('wu:add-word', ({ pin, password, wordId }) => {
@@ -2834,6 +2847,17 @@ io.on('connection', (socket) => {
     if (!g.warmup) return;
     const valid = ['text', 'picture', 'both'];
     g.warmup.viewMode = valid.includes(mode) ? mode : 'text';
+    wuEmitState(g, pin);
+  });
+  // === MODO CURIOSO === Teacher toggles a global "curious" flag. When on,
+  // every player can tap words in the sentence to open a Pokédex-style
+  // deep-dive card. When off, those cards close + everyone returns to the
+  // teacher's current sentence view.
+  socket.on('wu:set-curious', ({ pin, password, curious }) => {
+    const g = games[pin];
+    if (!wuRequireAdmin(g, socket, password)) return;
+    if (!g.warmup) return;
+    g.warmup.curious = !!curious;
     wuEmitState(g, pin);
   });
 

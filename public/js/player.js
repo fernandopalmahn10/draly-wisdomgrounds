@@ -1528,9 +1528,26 @@
   // WARM-UP · read-only sentence mirror (teacher drives, player phone watches)
   // ===========================================================================
   let wuPlayerViewMode = 'text';
+  let wuPlayerCurious = false;
   socket.on('wu:state', (data) => {
     if (gameType !== 'warmup') return;
     if (data.viewMode) wuPlayerViewMode = data.viewMode;
+    wuPlayerCurious = !!data.curious;
+    // If curious mode was just turned OFF, close any open Pokédex card
+    if (!wuPlayerCurious) hideWuPokedex();
+    // === Late-join safety: when wu:state arrives, ensure we're ON the
+    // warmup screen. If we're on a leftover game screen from before
+    // (e.g. a triage CPR card from a prior round), jump out. ===
+    const onWu = document.getElementById('screen-wu') &&
+      !document.getElementById('screen-wu').classList.contains('hidden');
+    if (!onWu) showScreen('wu');
+    // Update the curious-mode hint text on the player phone
+    const hint = document.getElementById('wu-player-hint');
+    if (hint) {
+      hint.innerHTML = wuPlayerCurious
+        ? '🔍 <strong>¡Modo Curioso!</strong> Toca una palabra para explorar.'
+        : 'Los colores que coinciden te ayudan a ver la estructura.';
+    }
     renderWuStage(data.sentence || []);
   });
   function renderWuStage(sentence) {
@@ -1552,8 +1569,13 @@
       if (!w) return;
       const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
       const color = cat ? cat.color : '#fff';
-      const p = document.createElement('div');
-      p.className = 'wu-player-word' + (wuPlayerViewMode === 'picture' ? ' picture-only' : '');
+      // === When curious mode is ON, words become buttons → tap opens
+      // the Pokédex card. Otherwise they're plain non-interactive divs. ===
+      const tag = wuPlayerCurious ? 'button' : 'div';
+      const p = document.createElement(tag);
+      p.className = 'wu-player-word'
+        + (wuPlayerViewMode === 'picture' ? ' picture-only' : '')
+        + (wuPlayerCurious ? ' curious-tappable' : '');
       p.style.setProperty('--cat-color', color);
       const pic = showPic
         ? `<img class="wu-pw-pic" src="/assets/warmup/${w.id}.png" alt="${w.pinyin}"
@@ -1563,6 +1585,11 @@
       p.innerHTML = `${pic}${ic}
         <span class="wu-pw-pinyin">${w.pinyin}</span>
         <span class="wu-pw-hanzi">${w.hanzi}</span>`;
+      if (wuPlayerCurious) {
+        p.type = 'button';
+        p.addEventListener('click', () => showWuPokedex(w));
+        p.addEventListener('pointerdown', (e) => { e.preventDefault(); showWuPokedex(w); });
+      }
       pinyinRow.appendChild(p);
       const e = document.createElement('div');
       e.className = 'wu-player-es-word';
@@ -1571,6 +1598,47 @@
       esRow.appendChild(e);
     });
   }
+  // === 🔍 POKÉDEX OVERLAY ===
+  // Pops a big card with the tapped word's full details. Card layout
+  // borrows from the Mi Familia engagement pattern — big icon, big
+  // text, gradient background per category color, "Tap to close" hint.
+  function showWuPokedex(w) {
+    const overlay = document.getElementById('wu-pokedex');
+    const card    = document.getElementById('wu-pokedex-card');
+    if (!overlay || !card) return;
+    const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+    const exp = window.WU_EXPERIENCES && window.WU_EXPERIENCES[w.exp];
+    const color = cat ? cat.color : '#fff';
+    card.style.setProperty('--cat-color', color);
+    card.innerHTML = `
+      <div class="wu-pk-icon">${w.icon || '✨'}</div>
+      <div class="wu-pk-pinyin">${w.pinyin}</div>
+      <div class="wu-pk-hanzi">${w.hanzi}</div>
+      <div class="wu-pk-es">${w.es}</div>
+      <div class="wu-pk-meta">
+        <div class="wu-pk-chip cat" style="background:${color}; color:#0a1320;">${(cat && cat.label) || w.cat}</div>
+        <div class="wu-pk-chip exp">${(exp && exp.short) || w.exp}</div>
+      </div>
+      <div class="wu-pk-hint">Toca fuera para cerrar</div>`;
+    overlay.classList.remove('hidden');
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    if (MochiSounds.correct) MochiSounds.correct();
+  }
+  function hideWuPokedex() {
+    const overlay = document.getElementById('wu-pokedex');
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.classList.add('hidden'), 250);
+  }
+  // Bind close handlers once
+  document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('wu-pokedex');
+    const close   = document.getElementById('wu-pokedex-close');
+    if (close) close.addEventListener('click', hideWuPokedex);
+    if (overlay) overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) hideWuPokedex();
+    });
+  });
 
   // ===========================================================================
   // LÁI-QÙ-HUÍ · Dragon Courier — player phone is the whole game
