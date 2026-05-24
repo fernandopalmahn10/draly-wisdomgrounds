@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>🎓 Calentamiento · Warm-up · Host</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260524a">
+</head>
+<body class="wu-bg">
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+
+  <!-- ADMIN GATE — password required before the teacher tools unlock -->
+  <div id="screen-admin-gate" class="container wu-gate">
+    <div class="wu-gate-card">
+      <div class="wu-gate-icon">🔒</div>
+      <h1 class="wu-gate-title">Modo Maestro</h1>
+      <p class="wu-gate-sub">Ingresa la contraseña para construir oraciones.</p>
+      <input class="input wu-gate-input" id="admin-pw" type="password" placeholder="contraseña" autocomplete="off">
+      <button class="btn btn-jade btn-xl" id="admin-ok">Entrar →</button>
+      <p id="admin-err" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em;"></p>
+    </div>
+  </div>
+
+  <!-- LOBBY (PIN + join URL) — shown after admin auth but before students join -->
+  <div id="screen-lobby" class="container hidden">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div class="market-banner">🎓 Calentamiento · 热身 · Warm-up</div>
+      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
+      <div class="pin-display" id="pin-display">····</div>
+      <div style="color:var(--ink-dim); font-size:0.9rem;">
+        Tus alumnos entran en <span id="join-url" style="color:var(--gold-glow); font-weight:800;">esta URL</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se usa</div>
+      <ol style="color:var(--ink-dim); font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
+        <li>Espera a que los alumnos se unan con el PIN.</li>
+        <li>Pulsa <strong>Empezar</strong> — entras al modo construcción de oraciones.</li>
+        <li>Toca palabras del catálogo abajo → aparecen en el escenario arriba.</li>
+        <li>Cada categoría tiene <strong>su color</strong> · el pinyin y el español comparten color → los alumnos ven cómo se estructura la oración.</li>
+        <li>Toca una palabra del escenario para quitarla. <strong>Limpiar</strong> empieza de nuevo.</li>
+      </ol>
+    </div>
+
+    <div class="host-grid">
+      <div class="team-panel team-red">
+        <div class="team-header">
+          <div class="team-mascot">📚</div>
+          <div>
+            <div class="team-name">Estudiantes</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">学生</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-red"></div>
+      </div>
+      <div class="team-panel team-gold" style="opacity:0.5;">
+        <div class="team-header">
+          <div class="team-mascot">🎓</div>
+          <div>
+            <div class="team-name">(equipos no aplican aquí)</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">solo estudiantes</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-gold"></div>
+      </div>
+    </div>
+
+    <div class="controls-panel">
+      <div class="controls-row" style="justify-content:center;">
+        <button class="btn btn-jade btn-xl" id="start-btn">▶️ Empezar calentamiento</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVE: word library + sentence stage -->
+  <div id="screen-active" class="hidden wu-active">
+    <div class="wu-active-top">
+      <div class="wu-active-meta">
+        <span class="wu-active-label">🎓 Calentamiento</span>
+        <span class="wu-active-pin">PIN <strong id="active-pin">····</strong></span>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="exit-btn">🛑 Salir</button>
+    </div>
+
+    <!-- Sentence stage — the BIG construction area -->
+    <div class="wu-stage">
+      <div class="wu-stage-row wu-stage-pinyin" id="wu-stage-pinyin"></div>
+      <div class="wu-stage-row wu-stage-es" id="wu-stage-es"></div>
+      <div class="wu-stage-empty" id="wu-stage-empty">
+        ☝️ Toca palabras del catálogo abajo para empezar a construir una oración
+      </div>
+      <button class="btn btn-red wu-clear-btn" id="wu-clear-btn">🧹 Limpiar</button>
+    </div>
+
+    <!-- Filter chips per category — tap to focus, "Todos" shows everything -->
+    <div class="wu-cat-filters" id="wu-cat-filters"></div>
+
+    <!-- Word library — all words grouped by category -->
+    <div class="wu-library" id="wu-library"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js?v=20260524h"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/warmup-vocab.js?v=20260524a"></script>
+  <script src="/js/host-warmup.js?v=20260524a"></script>
+</body>
+</html>
