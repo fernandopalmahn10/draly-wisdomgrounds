@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
   <link rel="stylesheet" href="/css/triage.css?v=20260524d">
   <link rel="stylesheet" href="/css/laiquhui.css?v=20260524d">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260524d">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260524e">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -659,6 +659,10 @@
     <div class="wu-player-header">
       <span class="wu-player-tag">🎓 Calentamiento</span>
       <span class="wu-player-sub">学习 · Practica las oraciones</span>
+      <div class="wu-player-id-row">
+        <span class="wu-player-code-chip" id="wu-player-code-chip" title="Tu código de estudiante">📇 <span id="wu-player-code">····</span></span>
+        <button class="wu-player-history-btn" id="wu-player-history-btn" type="button">📜 Mis oraciones</button>
+      </div>
     </div>
     <div class="wu-player-stage">
       <div class="wu-player-stage-row wu-player-stage-pinyin" id="wu-player-stage-pinyin"></div>
@@ -681,6 +685,20 @@
       <div class="wu-player-exp-tabs" id="wu-player-exp-tabs"></div>
       <div class="wu-player-library" id="wu-player-library"></div>
     </div>
+    <!-- 📜 SENTENCE HISTORY MODAL — opens when "Mis oraciones" tapped -->
+    <div class="wu-history-modal hidden" id="wu-history-modal">
+      <div class="wu-history-card">
+        <div class="wu-history-header">
+          <span class="wu-history-title">📜 Mis oraciones</span>
+          <button class="wu-history-close" id="wu-history-close" type="button" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="wu-history-sub" id="wu-history-sub">Código: ···· · 0 oraciones</div>
+        <div class="wu-history-list" id="wu-history-list">
+          <div class="wu-history-empty">Cargando…</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 🔍 POKÉDEX overlay — only used in Modo Curioso. Hidden by default.
          Player taps a word in the sentence; this full-card pops with the
          word's emoji, pinyin, hanzi, Spanish, category, and EXP origin. -->
@@ -708,6 +726,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260524l"></script>
+  <script src="/js/player.js?v=20260524m"></script>
 </body>
 </html>

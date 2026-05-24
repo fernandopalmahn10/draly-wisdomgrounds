@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 const Sets = require('./core/sets');
 const Images = require('./core/images');
+const Students = require('./core/student-records');
 
 const app = express();
 const server = http.createServer(app);
@@ -1385,6 +1386,13 @@ function monopolyTeamWealth(g, team) {
 function endGame(pin) {
   const g = games[pin];
   if (!g) return;
+  // Flush any pending warmup sentence to contributors' histories before
+  // the game ends — otherwise a final un-cleared sentence is lost.
+  if (g.gameType === 'warmup' && g.warmup && g.warmup.sentence && g.warmup.sentence.length) {
+    if (g.warmup.contributors && g.warmup.contributors.size) {
+      Students.logSentence(Array.from(g.warmup.contributors), g.warmup.sentence, pin);
+    }
+  }
   g.state = 'ended';
   const winner =
     g.teamScores.red > g.teamScores.gold
@@ -1823,6 +1831,10 @@ io.on('connection', (socket) => {
           viewMode: 'text',
           curious: false,
           delegates: new Set(),
+          // Codes of every student who contributed to the CURRENT sentence.
+          // Flushed to student histories whenever the sentence is cleared,
+          // replaced via preset-load, or the game ends.
+          contributors: new Set(),
           adminSocketId: g.hostId,
         };
         io.to(pin).emit('wu:state', {
@@ -1968,7 +1980,7 @@ io.on('connection', (socket) => {
     broadcast(pin);
   });
 
-  socket.on('player:join', ({ pin, name, avatar }, cb) => {
+  socket.on('player:join', ({ pin, name, avatar, studentCode }, cb) => {
     const g = games[pin];
     if (!g) return cb({ ok: false, error: 'No game with that PIN' });
     if (g.state === 'ended') return cb({ ok: false, error: 'Game has ended' });
@@ -2052,6 +2064,13 @@ io.on('connection', (socket) => {
       g.feed.push({ type: 'join', name: cleanName, team: player.team, t: Date.now() });
     }
 
+    // === STUDENT CODE === Identify this player across sessions. If the
+    // client sent a known code, link to that record. Otherwise generate
+    // a fresh code. The code lives in the kid's localStorage so the
+    // same phone = same record = same sentence history forever.
+    const studentRec = Students.getOrCreate(studentCode, cleanName);
+    player.studentCode = studentRec.code;
+
     currentPin = pin;
     role = 'player';
     socket.join(pin);
@@ -2069,7 +2088,8 @@ io.on('connection', (socket) => {
       y: player.y,
       energy: player.energy,
       rejoined: isRejoin,
-      gameState: g.state
+      gameState: g.state,
+      studentCode: player.studentCode,
     });
     broadcast(pin);
 
@@ -2823,11 +2843,35 @@ io.on('connection', (socket) => {
       delegates: Array.from(g.warmup.delegates || []),
     });
   }
+  // Flush the current sentence to the history of every contributor, then
+  // reset the contributors set. Called on clear / replace / game end.
+  function wuFlushSentence(g, pin) {
+    if (!g || !g.warmup) return;
+    if (!g.warmup.sentence.length) {
+      g.warmup.contributors = new Set();
+      return;
+    }
+    const contributors = Array.from(g.warmup.contributors || []);
+    if (contributors.length) {
+      Students.logSentence(contributors, g.warmup.sentence, pin);
+      // Notify each contributor's socket(s) that their history grew —
+      // they can re-fetch if their history modal is open.
+      Object.entries(g.players).forEach(([sid, p]) => {
+        if (p.studentCode && contributors.includes(p.studentCode)) {
+          io.to(sid).emit('wu:history-updated');
+        }
+      });
+    }
+    g.warmup.contributors = new Set();
+  }
   socket.on('wu:add-word', ({ pin, password, wordId }) => {
     const g = games[pin];
     if (!wuRequireAdmin(g, socket, password)) return;
-    if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text' };
+    if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text', contributors: new Set() };
     g.warmup.sentence.push(wordId);
+    // Track which student code contributed this word
+    const p = g.players[socket.id];
+    if (p && p.studentCode) g.warmup.contributors.add(p.studentCode);
     wuEmitState(g, pin);
   });
   socket.on('wu:remove-word', ({ pin, password, index }) => {
@@ -2837,6 +2881,9 @@ io.on('connection', (socket) => {
     const i = Number(index);
     if (Number.isFinite(i) && i >= 0 && i < g.warmup.sentence.length) {
       g.warmup.sentence.splice(i, 1);
+      // Removing a word still counts as "engagement" — credit the remover
+      const p = g.players[socket.id];
+      if (p && p.studentCode) g.warmup.contributors.add(p.studentCode);
       wuEmitState(g, pin);
     }
   });
@@ -2844,15 +2891,28 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!wuRequireAdmin(g, socket, password)) return;
     if (!g.warmup) return;
+    // Flush the about-to-be-cleared sentence to contributors' histories
+    wuFlushSentence(g, pin);
     g.warmup.sentence = [];
     wuEmitState(g, pin);
+  });
+  // Student requests their own history. They identify by code (which lives
+  // in their phone's localStorage). Server doesn't trust the socket — it
+  // looks up the stored record by code so an attacker can't easily probe
+  // other kids' sentences without their code.
+  socket.on('wu:request-history', ({ studentCode }, cb) => {
+    if (typeof cb !== 'function') return;
+    const list = Students.getHistory(studentCode, 50);
+    cb({ ok: true, sentences: list });
   });
   // Teacher pushes a full sentence at once (used by preset-load) — HOST ONLY
   socket.on('wu:set-sentence', ({ pin, password, sentence }) => {
     const g = games[pin];
     if (!wuRequireHost(g, socket, password)) return;
-    if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text', delegates: new Set() };
+    if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text', delegates: new Set(), contributors: new Set() };
     if (!Array.isArray(sentence)) return;
+    // Flush the old sentence first (it's being replaced by a preset)
+    wuFlushSentence(g, pin);
     g.warmup.sentence = sentence.slice(0, 40).map(String);
     wuEmitState(g, pin);
   });
