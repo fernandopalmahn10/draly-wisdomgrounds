@@ -1527,8 +1527,10 @@
   // ===========================================================================
   // WARM-UP · read-only sentence mirror (teacher drives, player phone watches)
   // ===========================================================================
+  let wuPlayerViewMode = 'text';
   socket.on('wu:state', (data) => {
     if (gameType !== 'warmup') return;
+    if (data.viewMode) wuPlayerViewMode = data.viewMode;
     renderWuStage(data.sentence || []);
   });
   function renderWuStage(sentence) {
@@ -1543,16 +1545,22 @@
       return;
     }
     if (empty) empty.style.display = 'none';
+    const showPic = (wuPlayerViewMode === 'picture' || wuPlayerViewMode === 'both');
+    const showEmoji = (wuPlayerViewMode === 'text' || wuPlayerViewMode === 'both');
     sentence.forEach((wid) => {
       const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
       if (!w) return;
       const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
       const color = cat ? cat.color : '#fff';
       const p = document.createElement('div');
-      p.className = 'wu-player-word';
+      p.className = 'wu-player-word' + (wuPlayerViewMode === 'picture' ? ' picture-only' : '');
       p.style.setProperty('--cat-color', color);
-      p.innerHTML = `
-        <span class="wu-pw-icon">${w.icon || ''}</span>
+      const pic = showPic
+        ? `<img class="wu-pw-pic" src="/assets/warmup/${w.id}.png" alt="${w.pinyin}"
+              onerror="this.classList.add('missing')">`
+        : '';
+      const ic = showEmoji ? `<span class="wu-pw-icon">${w.icon || ''}</span>` : '';
+      p.innerHTML = `${pic}${ic}
         <span class="wu-pw-pinyin">${w.pinyin}</span>
         <span class="wu-pw-hanzi">${w.hanzi}</span>`;
       pinyinRow.appendChild(p);

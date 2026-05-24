@@ -1,28 +1,24 @@
 // Warm-up · sentence-builder teacher tool — host page driver.
-// The teacher authenticates with an admin password, then sees a word
-// library + sentence stage. Every word tap mutates the live sentence on
-// the server, which broadcasts to all player phones.
+// v2: organized by HSK1 experience (EXP1-EXP8), view-mode toggle (text/
+// picture/both), and preset save/load via localStorage.
 (function () {
   const socket = io();
   const $ = (id) => document.getElementById(id);
   let pin = null;
   let state = null;
   let adminPw = null;
-  let activeCategory = 'all';
+  let activeExp = 'all';
+  let currentViewMode = 'text';
+  let currentSentence = [];
+  const PRESET_KEY = 'dralyWarmupPresets';
 
   // === ADMIN GATE ===
   $('admin-ok').addEventListener('click', tryAdmin);
   $('admin-pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryAdmin(); });
   function tryAdmin() {
     const pw = $('admin-pw').value.trim();
-    if (!pw) {
-      $('admin-err').textContent = 'Escribe la contraseña';
-      return;
-    }
+    if (!pw) { $('admin-err').textContent = 'Escribe la contraseña'; return; }
     adminPw = pw;
-    // Defer real verification until the game is created — server checks pw
-    // on every mutation. For UI flow, we accept the password locally and
-    // let the first wu:auth callback confirm.
     $('admin-err').textContent = '';
     socket.emit('host:create', { gameType: 'warmup' }, ({ pin: p }) => {
       pin = p;
@@ -45,90 +41,136 @@
   });
   document.addEventListener('click', () => window.unlockAudio && window.unlockAudio(), { once: true });
 
-  // === LOBBY ===
-  $('start-btn').addEventListener('click', () => {
-    socket.emit('host:start', { pin });
-  });
+  $('start-btn').addEventListener('click', () => socket.emit('host:start', { pin }));
 
-  // The countdown for warmup is brief — we go straight to the active sentence
-  // builder UI as soon as host:start succeeds.
   socket.on('countdown', () => {
     setTimeout(() => {
       $('active-pin').textContent = pin;
       showScreen('active');
+      renderExpTabs();
       renderLibrary();
-      renderCatFilters();
-      renderStage([]);   // empty stage to start
-    }, 800);
+      renderStage([]);
+      renderPresetSelect();
+      bindToolbar();
+    }, 600);
   });
 
   // === ACTIVE controls ===
   $('exit-btn').addEventListener('click', () => {
-    if (!confirm('¿Salir del calentamiento? Los alumnos volverán al lobby.')) return;
+    if (!confirm('¿Salir del calentamiento?')) return;
     socket.emit('host:end-now', { pin });
   });
   $('wu-clear-btn').addEventListener('click', () => {
     socket.emit('wu:clear', { pin, password: adminPw });
   });
 
-  // === Sentence state synced from server ===
-  socket.on('wu:state', ({ sentence }) => {
-    renderStage(sentence || []);
-  });
+  function bindToolbar() {
+    // View-mode buttons
+    document.querySelectorAll('.wu-vm-btn').forEach((btn) => {
+      btn.onclick = () => {
+        const mode = btn.dataset.mode;
+        currentViewMode = mode;
+        document.querySelectorAll('.wu-vm-btn').forEach((b) => b.classList.toggle('active', b === btn));
+        socket.emit('wu:set-view-mode', { pin, password: adminPw, mode });
+        // Re-render locally so the host sees the change instantly
+        renderStage(currentSentence);
+      };
+    });
+    // Preset save
+    $('wu-save-preset').onclick = () => {
+      if (!currentSentence.length) {
+        alert('La oración está vacía. Construye algo antes de guardar.');
+        return;
+      }
+      const name = prompt('Nombre para este preset:');
+      if (!name || !name.trim()) return;
+      const presets = loadPresets();
+      presets.push({ name: name.trim(), sentence: currentSentence.slice(), ts: Date.now() });
+      savePresets(presets);
+      renderPresetSelect();
+    };
+    // Preset load (on change)
+    $('wu-preset-select').onchange = (e) => {
+      const i = Number(e.target.value);
+      if (Number.isFinite(i) && i >= 0) {
+        const presets = loadPresets();
+        const p = presets[i];
+        if (p && p.sentence) {
+          socket.emit('wu:set-sentence', { pin, password: adminPw, sentence: p.sentence });
+        }
+      }
+      e.target.value = '';   // reset so re-selecting the same preset works
+    };
+    // Preset delete
+    $('wu-delete-preset').onclick = () => {
+      const presets = loadPresets();
+      if (!presets.length) return;
+      // Use a simple prompt to pick by index
+      const list = presets.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
+      const idx = prompt('¿Cuál borrar? Escribe el número:\n' + list);
+      const i = Number(idx) - 1;
+      if (Number.isFinite(i) && i >= 0 && i < presets.length) {
+        presets.splice(i, 1);
+        savePresets(presets);
+        renderPresetSelect();
+      }
+    };
+  }
 
+  // === Server sync ===
+  socket.on('wu:state', ({ sentence, viewMode }) => {
+    currentSentence = sentence || [];
+    if (viewMode) {
+      currentViewMode = viewMode;
+      document.querySelectorAll('.wu-vm-btn').forEach((b) => {
+        b.classList.toggle('active', b.dataset.mode === viewMode);
+      });
+    }
+    renderStage(currentSentence);
+  });
   socket.on('state', (s) => {
     state = s;
-    if (s.state === 'lobby' && pin) {
-      renderLobbyPlayers(s.players);
-      // No "questions loaded" check — set-less
-    }
+    if (s.state === 'lobby' && pin) renderLobbyPlayers(s.players);
   });
-
-  socket.on('game-end', () => {
-    showScreen('lobby');
-  });
+  socket.on('game-end', () => showScreen('lobby'));
 
   // === Renderers ===
   function renderLobbyPlayers(playersMap) {
     const red = $('players-red');
-    const gold = $('players-gold');
-    if (!red || !gold) return;
+    if (!red) return;
     red.innerHTML = '';
-    gold.innerHTML = '';
     Object.entries(playersMap || {}).forEach(([id, p]) => {
       const chip = document.createElement('div');
       chip.className = 'player-chip';
       chip.innerHTML = `${p.avatar ? `<span class="chip-avatar">${p.avatar}</span>` : ''}<span>${escapeHtml(p.name)}</span>`;
-      // Everyone goes into the red column for warmup (single class)
       red.appendChild(chip);
     });
   }
 
-  function renderCatFilters() {
-    const wrap = $('wu-cat-filters');
+  function renderExpTabs() {
+    const wrap = $('wu-exp-tabs');
     if (!wrap) return;
     wrap.innerHTML = '';
-    // "All" pill
+    // "Todos" + each EXP
     const all = document.createElement('button');
-    all.className = 'wu-cat-pill active';
-    all.dataset.cat = 'all';
+    all.className = 'wu-exp-tab active';
+    all.dataset.exp = 'all';
     all.textContent = 'Todos';
-    all.addEventListener('click', () => setActiveCat('all'));
+    all.onclick = () => setActiveExp('all');
     wrap.appendChild(all);
-    Object.values(window.WU_CATEGORIES).forEach((c) => {
-      const pill = document.createElement('button');
-      pill.className = 'wu-cat-pill';
-      pill.dataset.cat = c.id;
-      pill.style.setProperty('--cat-color', c.color);
-      pill.textContent = c.label;
-      pill.addEventListener('click', () => setActiveCat(c.id));
-      wrap.appendChild(pill);
+    Object.values(window.WU_EXPERIENCES).forEach((e) => {
+      const tab = document.createElement('button');
+      tab.className = 'wu-exp-tab';
+      tab.dataset.exp = e.id;
+      tab.textContent = e.short;
+      tab.onclick = () => setActiveExp(e.id);
+      wrap.appendChild(tab);
     });
   }
-  function setActiveCat(id) {
-    activeCategory = id;
-    document.querySelectorAll('.wu-cat-pill').forEach((p) => {
-      p.classList.toggle('active', p.dataset.cat === id);
+  function setActiveExp(id) {
+    activeExp = id;
+    document.querySelectorAll('.wu-exp-tab').forEach((t) => {
+      t.classList.toggle('active', t.dataset.exp === id);
     });
     renderLibrary();
   }
@@ -137,37 +179,52 @@
     const lib = $('wu-library');
     if (!lib) return;
     lib.innerHTML = '';
-    // Group words by category for nice section headers
-    const byCat = {};
+    const byExp = {};
     window.WU_WORDS.forEach((w) => {
-      if (activeCategory !== 'all' && w.cat !== activeCategory) return;
-      (byCat[w.cat] = byCat[w.cat] || []).push(w);
+      if (activeExp !== 'all' && w.exp !== activeExp) return;
+      (byExp[w.exp] = byExp[w.exp] || []).push(w);
     });
-    Object.keys(byCat).forEach((cat) => {
-      const c = window.WU_CATEGORIES[cat];
+    Object.keys(byExp).forEach((expId) => {
+      const exp = window.WU_EXPERIENCES[expId];
       const section = document.createElement('div');
       section.className = 'wu-lib-section';
-      section.innerHTML = `<div class="wu-lib-section-title" style="color:${c.color}; border-color:${c.color};">${c.label}</div>`;
+      section.innerHTML = `<div class="wu-lib-section-title">${exp ? exp.label : expId}</div>`;
       const grid = document.createElement('div');
       grid.className = 'wu-lib-grid';
-      byCat[cat].forEach((w) => {
+      byExp[expId].forEach((w) => {
+        const cat = window.WU_CATEGORIES[w.cat] || { color: '#aaa' };
         const card = document.createElement('button');
         card.className = 'wu-lib-card';
-        card.style.setProperty('--cat-color', c.color);
-        card.innerHTML = `
-          <span class="wu-lib-icon">${w.icon || ''}</span>
-          <span class="wu-lib-pinyin">${w.pinyin}</span>
-          <span class="wu-lib-hanzi">${w.hanzi}</span>
-          <span class="wu-lib-es">${w.es}</span>`;
-        card.addEventListener('click', () => {
+        card.style.setProperty('--cat-color', cat.color);
+        card.innerHTML = renderLibCardContent(w, cat);
+        card.onclick = () => {
           socket.emit('wu:add-word', { pin, password: adminPw, wordId: w.id });
           if (MochiSounds.tap) MochiSounds.tap();
-        });
+        };
         grid.appendChild(card);
       });
       section.appendChild(grid);
       lib.appendChild(section);
     });
+  }
+
+  // Each library card always shows: pinyin + hanzi + Spanish. Icon depends
+  // on view-mode setting (so the teacher previews how it'll appear).
+  function renderLibCardContent(w, cat) {
+    // Picture mode: try to load /assets/warmup/<id>.png. onerror falls back to emoji.
+    const showPic = (currentViewMode === 'picture' || currentViewMode === 'both');
+    const showEmoji = (currentViewMode === 'text' || currentViewMode === 'both');
+    const pic = showPic
+      ? `<img class="wu-lib-pic" src="/assets/warmup/${w.id}.png" alt="${w.pinyin}"
+            onerror="this.classList.add('missing')">`
+      : '';
+    const ic = showEmoji
+      ? `<span class="wu-lib-icon">${w.icon || ''}</span>`
+      : '';
+    return `${pic}${ic}
+      <span class="wu-lib-pinyin">${w.pinyin}</span>
+      <span class="wu-lib-hanzi">${w.hanzi}</span>
+      <span class="wu-lib-es">${w.es}</span>`;
   }
 
   function renderStage(sentence) {
@@ -185,30 +242,57 @@
     sentence.forEach((wid, i) => {
       const w = window.WU_WORD_BY_ID[wid];
       if (!w) return;
-      const cat = window.WU_CATEGORIES[w.cat];
-      const color = cat ? cat.color : '#fff';
-
-      // Pinyin word card (tap to remove)
+      const cat = window.WU_CATEGORIES[w.cat] || { color: '#fff' };
+      const color = cat.color;
+      const showPic = (currentViewMode === 'picture' || currentViewMode === 'both');
+      const showEmoji = (currentViewMode === 'text' || currentViewMode === 'both');
+      // Pinyin word (tap to remove)
       const p = document.createElement('button');
-      p.className = 'wu-stage-word';
+      p.className = 'wu-stage-word' + (currentViewMode === 'picture' ? ' picture-only' : '');
       p.style.setProperty('--cat-color', color);
-      p.innerHTML = `
-        <span class="wu-sw-icon">${w.icon || ''}</span>
+      const pic = showPic
+        ? `<img class="wu-sw-pic" src="/assets/warmup/${w.id}.png" alt="${w.pinyin}"
+              onerror="this.classList.add('missing')">`
+        : '';
+      const ic = showEmoji ? `<span class="wu-sw-icon">${w.icon || ''}</span>` : '';
+      p.innerHTML = `${pic}${ic}
         <span class="wu-sw-pinyin">${w.pinyin}</span>
         <span class="wu-sw-hanzi">${w.hanzi}</span>`;
       p.title = 'Toca para quitar';
-      p.addEventListener('click', () => {
+      p.onclick = () => {
         socket.emit('wu:remove-word', { pin, password: adminPw, index: i });
         if (MochiSounds.tap) MochiSounds.tap();
-      });
+      };
       pinyinRow.appendChild(p);
 
-      // Spanish word card — same color, locked aspect
+      // Spanish word — same color, matches order
       const e = document.createElement('div');
       e.className = 'wu-stage-es-word';
       e.style.setProperty('--cat-color', color);
       e.textContent = w.es;
       esRow.appendChild(e);
+    });
+  }
+
+  // === Presets (localStorage) ===
+  function loadPresets() {
+    try { return JSON.parse(localStorage.getItem(PRESET_KEY) || '[]'); }
+    catch { return []; }
+  }
+  function savePresets(presets) {
+    try { localStorage.setItem(PRESET_KEY, JSON.stringify(presets)); }
+    catch (e) { console.warn('Failed to save presets', e); }
+  }
+  function renderPresetSelect() {
+    const sel = $('wu-preset-select');
+    if (!sel) return;
+    const presets = loadPresets();
+    sel.innerHTML = `<option value="">Cargar preset… (${presets.length})</option>`;
+    presets.forEach((p, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `${i + 1}. ${p.name}`;
+      sel.appendChild(opt);
     });
   }
 
