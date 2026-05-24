@@ -19,7 +19,7 @@
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
   <link rel="stylesheet" href="/css/triage.css?v=20260524d">
-  <link rel="stylesheet" href="/css/laiquhui.css?v=20260524c">
+  <link rel="stylesheet" href="/css/laiquhui.css?v=20260524d">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -613,37 +613,44 @@
     <div class="lqh-map-wrap">
       <div class="lqh-map" id="lqh-map"></div>
     </div>
-    <!-- 4-button D-pad labeled with Chinese direction words -->
-    <div class="lqh-dpad">
+    <!-- Compact 4-direction D-pad — full HSK1 directional words in pinyin
+         (shàngmiàn / xiàmiàn / qiánmiàn / hòumiàn) so kids learn the way
+         these words actually appear in real sentences. 3-row cross layout
+         designed to fit in ~180px height max so the d-pad is NEVER lost
+         off the bottom of the screen on any phone. -->
+    <div class="lqh-dpad" id="lqh-dpad">
       <div class="lqh-dpad-row">
-        <button class="lqh-dir-btn" data-dir="shang" type="button">
+        <button class="lqh-dir-btn lqh-dir-up" data-dir="shang" type="button" aria-label="shàngmiàn (arriba)">
           <span class="lqh-dir-arrow">▲</span>
-          <span class="lqh-dir-pinyin">shàng</span>
-          <span class="lqh-dir-hanzi">上</span>
+          <span class="lqh-dir-pinyin">shàngmiàn</span>
+          <span class="lqh-dir-hanzi">上面</span>
         </button>
       </div>
       <div class="lqh-dpad-row">
-        <button class="lqh-dir-btn" data-dir="hou" type="button">
+        <button class="lqh-dir-btn lqh-dir-left" data-dir="hou" type="button" aria-label="hòumiàn (atrás)">
           <span class="lqh-dir-arrow">◀</span>
-          <span class="lqh-dir-pinyin">hòu</span>
-          <span class="lqh-dir-hanzi">后</span>
+          <span class="lqh-dir-pinyin">hòumiàn</span>
+          <span class="lqh-dir-hanzi">后面</span>
         </button>
-        <button class="lqh-dir-btn" data-dir="qian" type="button">
+        <button class="lqh-dir-btn lqh-dir-right" data-dir="qian" type="button" aria-label="qiánmiàn (al frente)">
           <span class="lqh-dir-arrow">▶</span>
-          <span class="lqh-dir-pinyin">qián</span>
-          <span class="lqh-dir-hanzi">前</span>
+          <span class="lqh-dir-pinyin">qiánmiàn</span>
+          <span class="lqh-dir-hanzi">前面</span>
         </button>
       </div>
       <div class="lqh-dpad-row">
-        <button class="lqh-dir-btn" data-dir="xia" type="button">
+        <button class="lqh-dir-btn lqh-dir-down" data-dir="xia" type="button" aria-label="xiàmiàn (abajo)">
           <span class="lqh-dir-arrow">▼</span>
-          <span class="lqh-dir-pinyin">xià</span>
-          <span class="lqh-dir-hanzi">下</span>
+          <span class="lqh-dir-pinyin">xiàmiàn</span>
+          <span class="lqh-dir-hanzi">下面</span>
         </button>
       </div>
     </div>
     <!-- Feedback overlay (success/fail) -->
     <div class="lqh-feedback hidden" id="lqh-feedback"></div>
+    <!-- Weather banner + visual overlay -->
+    <div class="lqh-weather-banner hidden" id="lqh-weather-banner"></div>
+    <div class="lqh-weather-fx" id="lqh-weather-fx"></div>
   </div>
 
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
@@ -661,6 +668,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260524g"></script>
+  <script src="/js/player.js?v=20260524h"></script>
 </body>
 </html>

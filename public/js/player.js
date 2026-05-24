@@ -1731,6 +1731,62 @@
       setTimeout(() => lqhShowAchievement(ach), i * 600);
     });
   });
+  // === WEATHER EVENTS ===
+  // Server-driven, every ~22s. Show a Chinese banner with the sentence +
+  // a visual overlay (raindrops / sun rays / snowflakes / wind streaks).
+  // Movement is NEVER affected — this is decorative + pedagogical.
+  socket.on('lqh:weather', (w) => {
+    const banner = document.getElementById('lqh-weather-banner');
+    const fx = document.getElementById('lqh-weather-fx');
+    if (!banner || !fx) return;
+    banner.innerHTML = `
+      <span class="lqh-w-icon">${w.icon}</span>
+      <span class="lqh-w-pinyin">${w.pinyin}</span>
+      <span class="lqh-w-es">${w.es}</span>`;
+    banner.className = 'lqh-weather-banner weather-' + w.kind;
+    banner.classList.remove('hidden');
+    requestAnimationFrame(() => banner.classList.add('show'));
+    // Visual particle layer
+    fx.innerHTML = '';
+    fx.className = 'lqh-weather-fx active fx-' + w.kind;
+    if (w.kind === 'rain' || w.kind === 'snow') {
+      const count = 28;
+      for (let i = 0; i < count; i++) {
+        const d = document.createElement('div');
+        d.className = 'lqh-w-drop ' + w.kind;
+        d.textContent = w.kind === 'rain' ? '💧' : '❄️';
+        d.style.left = (Math.random() * 100) + '%';
+        d.style.animationDelay = (Math.random() * 2) + 's';
+        d.style.animationDuration = (1.2 + Math.random() * 1.4) + 's';
+        fx.appendChild(d);
+      }
+    } else if (w.kind === 'wind') {
+      const count = 12;
+      for (let i = 0; i < count; i++) {
+        const d = document.createElement('div');
+        d.className = 'lqh-w-streak';
+        d.textContent = '〰';
+        d.style.top = (Math.random() * 100) + '%';
+        d.style.animationDelay = (Math.random() * 1.5) + 's';
+        d.style.animationDuration = (1.4 + Math.random() * 0.8) + 's';
+        fx.appendChild(d);
+      }
+    } else if (w.kind === 'sun') {
+      // Soft golden glow tint via class only — no particles needed
+    } else if (w.kind === 'cloud') {
+      // Subtle darken tint via class only
+    }
+    // Auto-hide after duration
+    setTimeout(() => {
+      banner.classList.remove('show');
+      fx.classList.remove('active');
+      setTimeout(() => {
+        banner.classList.add('hidden');
+        fx.innerHTML = '';
+        fx.className = 'lqh-weather-fx';
+      }, 600);
+    }, w.durationMs || 8000);
+  });
   function lqhShowAchievement(ach) {
     const banner = document.createElement('div');
     banner.className = 'lqh-achievement';
