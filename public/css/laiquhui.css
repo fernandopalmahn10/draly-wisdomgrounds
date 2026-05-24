@@ -181,7 +181,14 @@ body.lqh-bg .market-banner {
 .lqh-mini-map .lqh-dot.red  { background: #ff5a66; color: #ff5a66; }
 .lqh-mini-map .lqh-dot.gold { background: #ffd57a; color: #ffd57a; }
 
-/* ============================ PLAYER PHONE ============================ */
+/* ============================ PLAYER PHONE ============================
+   Scale architecture: the player screen is built as a vertical flexbox that
+   fills 100dvh. HUD on top (fixed), mission card (compact), MAP (flex-grow
+   so it absorbs whatever's available), D-pad locked to bottom with safe-
+   area-inset. Map size is clamped against BOTH vmin AND dvh so on a short
+   phone (iPhone SE) it shrinks down to leave room for the d-pad — never
+   pushes anything off-screen. Whole thing scrolls as a safety net.
+   ====================================================================== */
 .lqh-screen {
   display: flex !important;
   flex-direction: column;
@@ -190,11 +197,12 @@ body.lqh-bg .market-banner {
     radial-gradient(ellipse 90% 80% at 50% 60%, rgba(120, 200, 120, 0.18) 0%, transparent 70%),
     linear-gradient(180deg, #2a1f14 0%, #1a1810 40%, #14110b 100%);
   color: #f3e9d0;
-  padding: 10px 12px;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  gap: 8px;
+  padding: 8px 10px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  gap: 6px;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
+  max-height: 100dvh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   user-select: none;
@@ -202,9 +210,18 @@ body.lqh-bg .market-banner {
   position: relative;
   font-family: 'Nunito', sans-serif;
 }
+/* On tablet+ desktop, give the layout more breathing room and center it */
+@media (min-width: 768px) {
+  .lqh-screen {
+    padding: 14px 16px;
+    gap: 10px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+}
 .lqh-screen.hidden { display: none !important; }
 
-/* HUD bar */
+/* HUD bar — compact on short screens */
 .lqh-hud {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -213,21 +230,23 @@ body.lqh-bg .market-banner {
   background: rgba(28, 22, 14, 0.85);
   border: 2px solid rgba(255, 213, 122, 0.45);
   border-radius: 12px;
-  padding: 6px 10px;
+  padding: 5px 10px;
   font-weight: 900;
+  flex: 0 0 auto;
 }
-.lqh-hud-score { color: #ffe1a8; text-align: left; font-size: 1rem; }
-.lqh-hud-mission { color: rgba(243, 233, 208, 0.85); text-align: center; font-size: 0.85rem; }
-.lqh-hud-timer { color: #5be8d1; text-align: right; font-size: 1.1rem; text-shadow: 0 0 10px rgba(91, 232, 209, 0.5); }
+.lqh-hud-score   { color: #ffe1a8; text-align: left; font-size: clamp(0.85rem, 3.4vmin, 1.05rem); }
+.lqh-hud-mission { color: rgba(243, 233, 208, 0.85); text-align: center; font-size: clamp(0.72rem, 2.8vmin, 0.9rem); }
+.lqh-hud-timer   { color: #5be8d1; text-align: right; font-size: clamp(0.95rem, 3.8vmin, 1.15rem); text-shadow: 0 0 10px rgba(91, 232, 209, 0.5); }
 
 /* Mission card — the active sentence */
 .lqh-mission-card {
   background: linear-gradient(135deg, rgba(80, 40, 20, 0.85), rgba(40, 20, 10, 0.92));
   border: 3px solid #ffd57a;
   border-radius: 14px;
-  padding: 12px 14px;
+  padding: 10px 14px 12px;
   position: relative;
   box-shadow: 0 0 22px rgba(255, 213, 122, 0.3);
+  flex: 0 0 auto;
 }
 .lqh-mission-verb-tag {
   position: absolute;
@@ -245,26 +264,26 @@ body.lqh-bg .market-banner {
 .lqh-mission-verb-tag.verb-lai { background: #5be8d1; color: #003028; }
 .lqh-mission-verb-tag.verb-hui { background: #ff8a96; color: #320012; }
 .lqh-mission-pinyin {
-  font-size: 1.4rem;
+  font-size: clamp(1.1rem, 4.6vmin, 1.5rem);
   font-weight: 900;
   color: #fff5d8;
   text-align: center;
   letter-spacing: 0.02em;
-  line-height: 1.25;
+  line-height: 1.2;
   margin-top: 2px;
 }
 .lqh-mission-pinyin strong {
   color: #ffe66a;
-  font-size: 1.65rem;
+  font-size: clamp(1.3rem, 5.4vmin, 1.75rem);
   text-shadow: 0 0 14px #ffe66a;
   border-bottom: 2px dashed #ffe66a;
 }
 .lqh-mission-es {
   text-align: center;
-  font-size: 0.88rem;
+  font-size: clamp(0.78rem, 2.8vmin, 0.92rem);
   font-style: italic;
   color: rgba(243, 233, 208, 0.78);
-  margin-top: 4px;
+  margin-top: 3px;
 }
 .lqh-mission-bar {
   margin-top: 8px;
@@ -282,17 +301,22 @@ body.lqh-bg .market-banner {
   transition: width 100ms linear;
 }
 
-/* The actual map — square, fills available width */
+/* The actual map — fills available space, never crowds D-pad off screen.
+   Width clamped by min(vmin, dvh, max-pixel) so on a TALL phone it scales
+   by width, on a SHORT phone (landscape, iPad small) it scales by height. */
 .lqh-map-wrap {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 200px;
+  min-height: 0;          /* allow shrinking inside flex column */
 }
 .lqh-map {
   width: 100%;
-  max-width: min(90vmin, 460px);
+  /* Map height never exceeds 45dvh on short screens so D-pad has room.
+     On taller screens it uses vmin (square against width). 460px ceiling. */
+  max-width: min(86vmin, 45dvh * 2, 460px);
+  max-height: 45dvh;
   aspect-ratio: 1;
   display: grid;
   gap: 2px;
@@ -301,6 +325,12 @@ body.lqh-bg .market-banner {
   border-radius: 14px;
   padding: 5px;
   box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.6);
+}
+@media (min-height: 700px) {
+  .lqh-map { max-height: 52dvh; max-width: min(82vmin, 52dvh * 2, 520px); }
+}
+@media (min-width: 768px) {
+  .lqh-map { max-width: min(70vmin, 600px); }
 }
 .lqh-tile {
   background: linear-gradient(135deg, rgba(120, 100, 80, 0.20), rgba(80, 70, 60, 0.20));
@@ -367,16 +397,25 @@ body.lqh-bg .market-banner {
   100% { transform: scale(1);    opacity: 1; }
 }
 
-/* === D-PAD === */
+/* === D-PAD ===
+   Locked to the bottom of the viewport with sticky positioning + safe-area
+   padding so the thumb-reach buttons NEVER get cut off on iPhone notch /
+   home indicator. Sizes clamp against vmin AND dvh so a short phone
+   shrinks them while a tall phone gets generous big buttons. */
 .lqh-dpad {
   display: flex; flex-direction: column;
-  align-items: center; gap: 6px;
-  padding: 8px 0;
+  align-items: center; gap: 4px;
+  padding: 4px 0;
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 20;
 }
 .lqh-dpad-row { display: flex; gap: 8px; }
 .lqh-dir-btn {
-  width: clamp(70px, 22vmin, 96px);
-  height: clamp(70px, 22vmin, 96px);
+  /* Buttons shrink on short phones via clamp on BOTH vmin and dvh */
+  width: clamp(58px, min(18vmin, 11dvh), 96px);
+  height: clamp(58px, min(18vmin, 11dvh), 96px);
   background: linear-gradient(180deg, #ffd57a, #f5b14a);
   color: #381900;
   border: 3px solid #ffe66a;
@@ -508,6 +547,92 @@ body.lqh-bg .market-banner {
   0%   { opacity: 0.9; transform: scale(0.4); }
   30%  { opacity: 0.75; transform: scale(1); }
   100% { opacity: 0;   transform: scale(0.5); }
+}
+
+/* === BONUS PICKUPS (lanterns, cookies, coins, etc.) === */
+.lqh-pickup {
+  position: absolute;
+  inset: 18%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(0.9rem, 3.6vmin, 1.5rem);
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
+  animation: lqh-pickup-bob 1.4s ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes lqh-pickup-bob {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%      { transform: translateY(-3px) rotate(4deg); }
+}
+.lqh-pickup-toast {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(80, 50, 0, 0.92);
+  color: #ffe66a;
+  border: 2px solid #ffd57a;
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-size: 0.85rem;
+  font-weight: 900;
+  white-space: nowrap;
+  z-index: 30;
+  pointer-events: none;
+  box-shadow: 0 0 14px rgba(255, 213, 122, 0.7);
+  animation: lqh-pickup-toast-fly 1.1s ease-out forwards;
+}
+@keyframes lqh-pickup-toast-fly {
+  0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  20%  { transform: translate(-50%, -90%) scale(1.2); opacity: 1; }
+  100% { transform: translate(-50%, -180%) scale(1); opacity: 0; }
+}
+
+/* === ACHIEVEMENT BANNER (Mi-Familia-style milestone pop) === */
+.lqh-achievement {
+  position: fixed;
+  top: 22%; left: 50%;
+  transform: translate(-50%, -20px) scale(0.7);
+  background: linear-gradient(135deg, #ffe66a, #ffd57a 50%, #f5b14a);
+  color: #381900;
+  border: 4px solid #fff5d8;
+  border-radius: 18px;
+  padding: 14px 28px;
+  text-align: center;
+  z-index: 999;
+  pointer-events: none;
+  box-shadow: 0 0 50px rgba(255, 213, 122, 0.95), 0 12px 32px rgba(0, 0, 0, 0.6);
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: min(90%, 480px);
+  font-family: 'Nunito', sans-serif;
+}
+.lqh-achievement.show {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+.lqh-ach-icon {
+  font-size: 3rem;
+  line-height: 1;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
+  animation: lqh-ach-icon-spin 0.6s ease-out;
+}
+@keyframes lqh-ach-icon-spin {
+  from { transform: rotate(-180deg) scale(0.4); }
+  to   { transform: rotate(0) scale(1); }
+}
+.lqh-ach-title {
+  font-size: clamp(1.1rem, 4.4vmin, 1.5rem);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-shadow: 0 1px 0 #fff5d8, 0 2px 6px rgba(0, 0, 0, 0.3);
+  margin-top: 4px;
+}
+.lqh-ach-sub {
+  font-size: clamp(0.78rem, 3vmin, 0.95rem);
+  font-style: italic;
+  margin-top: 3px;
+  color: rgba(56, 25, 0, 0.85);
 }
 
 /* === Confetti burst on mission complete === */
