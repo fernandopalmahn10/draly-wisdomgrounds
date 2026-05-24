@@ -18,13 +18,15 @@
   <link rel="stylesheet" href="/css/sixseven.css?v=20260520c">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
-  <link rel="stylesheet" href="/css/triage.css?v=20260524a">
+  <link rel="stylesheet" href="/css/triage.css?v=20260524b">
 </head>
 <body>
   <div class="lantern l1"></div>
   <div class="lantern l2"></div>
 
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
+  <!-- Music indicator pops bottom-left for ~3.5s when the theme starts -->
+  <div class="music-chip hidden" id="music-chip">🎵 <span id="music-chip-name">…</span></div>
 
   <!-- Zombie-game ambience layer: hovers above EVERY screen during zombie mode.
        Spooky peeks, edge glows, occasional shadow hands. Hidden by default. -->
@@ -87,6 +89,18 @@
       <span id="player-name-tag">You</span>
       <span>Score: <span id="player-score">0</span></span>
     </div>
+    <!-- TRIAGE-ONLY: doctor + vocab banner ABOVE the question. Only visible
+         when body has .gametype-triage. Hidden on every other game. -->
+    <div class="tri-q-vocab triage-only">
+      <img class="tri-q-doctor" src="/assets/yisheng.png" alt="yīshēng"
+           onerror="this.style.display='none'">
+      <div class="tri-q-sentence">
+        <div class="tri-q-pinyin">Yīshēng zài <strong>yīyuàn</strong> 🏥 gōngzuò</div>
+        <div class="tri-q-es">El doctor trabaja en el hospital</div>
+      </div>
+    </div>
+    <!-- TRIAGE-ONLY: floating background vocab tiles, drifting up the screen -->
+    <div class="tri-q-float-bg triage-only" id="tri-q-float-bg"></div>
     <div class="question-image-wrap" id="question-image-wrap">
       <div class="img-loading">🐉</div>
       <img id="question-image" alt="" style="display:none;">
@@ -583,10 +597,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260524a"></script>
+  <script src="/js/sounds.js?v=20260524b"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260524a"></script>
+  <script src="/js/player.js?v=20260524b"></script>
 </body>
 </html>

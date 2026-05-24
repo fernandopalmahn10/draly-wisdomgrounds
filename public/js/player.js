@@ -255,6 +255,16 @@
   // Unlock audio on first tap
   document.addEventListener('click', () => window.unlockAudio && window.unlockAudio(), { once: true });
   document.addEventListener('touchstart', () => window.unlockAudio && window.unlockAudio(), { once: true });
+  // Show a visible 🎵 chip when the theme starts so the kid (and us) can
+  // tell music actually fired. Auto-hides after ~3.5s.
+  window.addEventListener('music-started', (e) => {
+    const chip = document.getElementById('music-chip');
+    const name = document.getElementById('music-chip-name');
+    if (!chip) return;
+    if (name) name.textContent = ((e.detail && e.detail.gameType) || 'theme') + ' · ' + ((e.detail && e.detail.bpm) || '') + 'bpm';
+    chip.classList.remove('hidden');
+    setTimeout(() => chip.classList.add('hidden'), 3500);
+  });
 
   // Pre-fill PIN + name from URL (e.g., from home page or rematch link)
   const params = new URLSearchParams(location.search);
@@ -281,6 +291,11 @@
       $('join-error').textContent = 'Enter PIN and name';
       return;
     }
+    // Unlock audio at the FIRST user tap (join) so iOS Safari has its
+    // AudioContext primed long before music tries to start. Otherwise the
+    // ctx is created lazily on the much-later countdown event when the
+    // gesture is already gone.
+    if (window.unlockAudio) window.unlockAudio();
     socket.emit('player:join', { pin: p, name, avatar: getMyAvatar() }, (resp) => {
       if (!resp.ok) {
         $('join-error').textContent = resp.error || 'Could not join';
@@ -292,6 +307,12 @@
       myName = name;
       myPlayerId = resp.playerId;
       gameType = resp.gameType || 'mochi-mash';
+      // Tag <body> with the gameType so per-game UI (e.g. triage-only blocks)
+      // becomes visible. Removing all gametype-* classes first ensures the
+      // tag is exclusive — no leakage when a player rejoins a different round.
+      document.body.className = (document.body.className || '')
+        .split(/\s+/).filter((c) => !c.startsWith('gametype-')).join(' ');
+      document.body.classList.add('gametype-' + gameType);
       // Remember this game for the Rematch button on the home page
       try {
         localStorage.setItem('dralyLastJoin', JSON.stringify({ pin: p, name, ts: Date.now() }));
@@ -975,7 +996,16 @@
   socket.on('countdown', () => {
     stopLobbyFlappy();
     showScreen('countdown');
-    MochiSounds.startMusic();
+    // === CRITICAL: each player phone runs its own audio. The host's music
+    // never reaches the player's device — they have to start it locally.
+    // Without this, kids playing on phones hear no music while the teacher's
+    // laptop plays the theme nicely. ===
+    if (window.unlockAudio) window.unlockAudio();
+    if (MochiSounds.startGameTheme) {
+      MochiSounds.startGameTheme(gameType);
+    } else {
+      MochiSounds.startMusic();
+    }
     // (Random Dralingo pop-ins were here — disabled per user feedback;
     // they were too intrusive during active gameplay.)
     if (Dralingo && Dralingo.stopRandom) Dralingo.stopRandom();
@@ -983,6 +1013,11 @@
     // question/result screens with peeks + groans (separate from the in-sprint
     // jumpscares — this one runs the WHOLE game)
     if (gameType === 'zombie') startZombieAmbience();
+    // === TRIAGE: omnipresent floating-vocab background on the player phone.
+    // This is the "intrusive vocab" the user asked for, on the screen kids
+    // actually look at. Spawns a new pinyin tile every ~2.4s for the entire
+    // round; tiles drift up the screen and fade. ===
+    if (gameType === 'triage') startTriageVocabBg();
     // 6-7 SWING engagement layer — ambient peeks + periodic dance moments
     if (gameType === 'sixseven') {
       if (window.unlockAudio) window.unlockAudio();
@@ -1397,6 +1432,43 @@
     // Seed one immediately
     setTimeout(cprSpawnVocabTap, 300);
   }
+  // === Player-side TRIAGE BG floating vocab ===
+  // Tiles drift up behind the question/result/picker screens for the entire
+  // active round. Capped at MAX_FLOATERS so the DOM stays cheap.
+  let triBgTimer = null;
+  function startTriageVocabBg() {
+    if (triBgTimer) clearInterval(triBgTimer);
+    // Seed a few staggered tiles
+    for (let i = 0; i < 2; i++) setTimeout(spawnTriBgFloater, i * 1100);
+    // Throttle on low-end devices
+    const lowEnd = (navigator.hardwareConcurrency || 4) < 4;
+    triBgTimer = setInterval(spawnTriBgFloater, lowEnd ? 3000 : 2400);
+  }
+  function stopTriageVocabBg() {
+    if (triBgTimer) clearInterval(triBgTimer);
+    triBgTimer = null;
+    const layer = document.getElementById('tri-q-float-bg');
+    if (layer) layer.innerHTML = '';
+  }
+  function spawnTriBgFloater() {
+    const layer = document.getElementById('tri-q-float-bg');
+    if (!layer) return;
+    // Hard cap concurrent floaters
+    if (layer.children.length >= 4) return;
+    const v = TRI_VOCAB_POOL[Math.floor(Math.random() * TRI_VOCAB_POOL.length)];
+    const el = document.createElement('div');
+    el.className = 'tri-q-floater' + (v.key ? ' key' : '');
+    el.innerHTML = `<span>${v.icon || ''} ${v.pinyin}</span><span class="es">${v.es}</span>`;
+    // Random horizontal position avoiding the very center (where the
+    // question card sits) — bias to the edges.
+    const sideLeft = Math.random() < 0.5;
+    el.style.left = sideLeft
+      ? (3 + Math.random() * 22) + '%'
+      : (75 + Math.random() * 22) + '%';
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), 9200);
+  }
+
   // Vocabulary pool used by the CPR tap-bonus + picker floats
   const TRI_VOCAB_POOL = [
     { pinyin: 'yīshēng',  es: 'doctor',   icon: '🩺', key: true,  bonus: 1 },
@@ -5162,10 +5234,12 @@
 
   socket.on('game-end', (data) => {
     MochiSounds.stopMusic();
+    if (MochiSounds.stopGameTheme) MochiSounds.stopGameTheme();
     Dralingo.stopRandom();
     stopZombieAmbience();
     stopSixSevenAmbience();
     stopPlayerJumpscareLoop();
+    stopTriageVocabBg();
     document.body.classList.remove('sixseven-active');
     stopLobbyFlappy();
     if (mashTimerInterval) clearInterval(mashTimerInterval);
