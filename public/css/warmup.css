@@ -454,6 +454,186 @@ body.wu-bg .market-banner {
   font-style: italic;
 }
 
+/* === HOST ROSTER (active screen) — grant/revoke asistente buttons === */
+.wu-roster-section {
+  background: rgba(15, 22, 38, 0.55);
+  border: 2px dashed rgba(255, 213, 122, 0.4);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.wu-roster-title {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #ffe66a;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+  display: flex; align-items: baseline; gap: 10px;
+  flex-wrap: wrap;
+}
+.wu-roster-sub {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: rgba(220, 235, 245, 0.7);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.wu-roster-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+.wu-roster-empty {
+  font-style: italic;
+  color: rgba(220, 235, 245, 0.55);
+  padding: 8px;
+}
+.wu-roster-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 6px 10px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.wu-roster-row.is-delegate {
+  background: rgba(255, 230, 106, 0.18);
+  border-color: #ffe66a;
+  box-shadow: 0 0 12px rgba(255, 230, 106, 0.4);
+}
+.wu-roster-avatar { font-size: 1.4rem; line-height: 1; }
+.wu-roster-name {
+  flex: 1;
+  font-weight: 800;
+  color: #fff5d8;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wu-roster-btn {
+  background: rgba(91, 232, 209, 0.18);
+  border: 2px solid #5be8d1;
+  color: #5be8d1;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 0.8rem;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.wu-roster-btn.revoke {
+  background: rgba(255, 90, 102, 0.18);
+  border-color: #ff5a66;
+  color: #ff8a96;
+}
+.wu-roster-btn:active { transform: scale(0.95); }
+
+/* === PLAYER ADMIN TOOLS (only when delegated) === */
+.wu-player-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  background: rgba(255, 230, 106, 0.10);
+  border: 2px dashed #ffe66a;
+  border-radius: 14px;
+  padding: 10px;
+  animation: wu-player-admin-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.wu-player-admin.hidden { display: none; }
+@keyframes wu-player-admin-in {
+  0%   { transform: scale(0.85); opacity: 0; }
+  60%  { transform: scale(1.04); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.wu-player-admin-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+}
+.wu-player-admin-tag {
+  background: linear-gradient(135deg, #ffe66a, #f5b14a);
+  color: #381900;
+  font-weight: 900;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 12px rgba(255, 230, 106, 0.55);
+}
+.wu-player-admin-clear {
+  background: rgba(255, 90, 102, 0.18);
+  border: 2px solid #ff5a66;
+  color: #ff8a96;
+  font-family: inherit;
+  font-weight: 900;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.wu-player-exp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+.wu-pl-exp-tab {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(91, 232, 209, 0.35);
+  color: #5be8d1;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.78rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.wu-pl-exp-tab.active {
+  background: #5be8d1;
+  color: #0a1320;
+}
+.wu-player-library {
+  max-height: 50vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column;
+  gap: 10px;
+  padding: 4px;
+}
+.wu-pl-lib-title {
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffe66a;
+  border-bottom: 2px solid #ffe66a;
+  padding-bottom: 2px;
+  margin-bottom: 4px;
+}
+.wu-pl-lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 6px;
+}
+.wu-pl-lib-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--cat-color, #aaa);
+  border-radius: 10px;
+  padding: 8px 6px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 1px;
+  font-family: inherit;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.wu-pl-lib-card:active { transform: scale(0.94); }
+.wu-pl-icon { font-size: 1.2rem; line-height: 1; }
+.wu-pl-pinyin { font-size: 0.92rem; font-weight: 900; color: var(--cat-color, #fff); text-shadow: 0 0 6px var(--cat-color, transparent); }
+.wu-pl-hanzi  { font-size: 0.85rem; font-weight: 700; color: #fff; opacity: 0.85; }
+.wu-pl-es     { font-size: 0.66rem; font-style: italic; opacity: 0.75; }
+
 /* Tappable word styling — only when curious mode is on */
 .wu-player-word.curious-tappable {
   cursor: pointer;

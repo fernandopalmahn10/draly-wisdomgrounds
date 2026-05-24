@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
   <link rel="stylesheet" href="/css/triage.css?v=20260524d">
   <link rel="stylesheet" href="/css/laiquhui.css?v=20260524d">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260524c">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260524d">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -670,6 +670,17 @@
     <div class="wu-player-hint" id="wu-player-hint">
       Los colores que coinciden te ayudan a ver la estructura.
     </div>
+    <!-- 🎓 ASISTENTE TOOLS — only visible when the teacher has granted
+         admin rights to this student. Identical-shape catalog to the
+         teacher's; tapping a card emits wu:add-word (no password). -->
+    <div class="wu-player-admin hidden" id="wu-player-admin">
+      <div class="wu-player-admin-bar">
+        <span class="wu-player-admin-tag">🎓 Eres asistente</span>
+        <button class="wu-player-admin-clear" id="wu-player-admin-clear" type="button">🧹 Limpiar</button>
+      </div>
+      <div class="wu-player-exp-tabs" id="wu-player-exp-tabs"></div>
+      <div class="wu-player-library" id="wu-player-library"></div>
+    </div>
     <!-- 🔍 POKÉDEX overlay — only used in Modo Curioso. Hidden by default.
          Player taps a word in the sentence; this full-card pops with the
          word's emoji, pinyin, hanzi, Spanish, category, and EXP origin. -->
@@ -697,6 +708,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260524k"></script>
+  <script src="/js/player.js?v=20260524l"></script>
 </body>
 </html>

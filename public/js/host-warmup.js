@@ -11,6 +11,8 @@
   let currentViewMode = 'text';
   let currentSentence = [];
   let currentCurious = false;
+  let currentDelegates = [];   // array of player names
+  let currentPlayers = {};     // id -> { name, team, avatar }
   const PRESET_KEY = 'dralyWarmupPresets';
 
   // === ADMIN GATE ===
@@ -124,7 +126,7 @@
   }
 
   // === Server sync ===
-  socket.on('wu:state', ({ sentence, viewMode, curious }) => {
+  socket.on('wu:state', ({ sentence, viewMode, curious, delegates }) => {
     currentSentence = sentence || [];
     if (viewMode) {
       currentViewMode = viewMode;
@@ -133,6 +135,7 @@
       });
     }
     currentCurious = !!curious;
+    currentDelegates = Array.isArray(delegates) ? delegates : [];
     const btn = $('wu-curious-btn');
     if (btn) {
       btn.classList.toggle('active', currentCurious);
@@ -145,10 +148,13 @@
         : 'Cuando esté activo, los alumnos podrán tocar cualquier palabra para ver detalles.';
     }
     renderStage(currentSentence);
+    renderRoster();
   });
   socket.on('state', (s) => {
     state = s;
+    if (s.players) currentPlayers = s.players;
     if (s.state === 'lobby' && pin) renderLobbyPlayers(s.players);
+    if (s.state === 'active' && pin) renderRoster();
   });
   socket.on('game-end', () => showScreen('lobby'));
 
@@ -290,6 +296,51 @@
       e.textContent = w.es;
       esRow.appendChild(e);
     });
+  }
+
+  // === Live student roster — only renders during the active screen.
+  // Each row shows the student's avatar + name + a 👑/🚫 button to
+  // grant or revoke "asistente" admin powers. Current delegates are
+  // visually highlighted.
+  function renderRoster() {
+    const list = $('wu-roster-list');
+    if (!list) return;
+    const ids = Object.keys(currentPlayers || {});
+    if (!ids.length) {
+      list.innerHTML = '<div class="wu-roster-empty">Esperando alumnos…</div>';
+      return;
+    }
+    list.innerHTML = '';
+    ids.forEach((id) => {
+      const p = currentPlayers[id];
+      if (!p || !p.name) return;
+      const isDelegate = currentDelegates.indexOf(p.name) >= 0;
+      const row = document.createElement('div');
+      row.className = 'wu-roster-row' + (isDelegate ? ' is-delegate' : '');
+      row.innerHTML = `
+        <span class="wu-roster-avatar">${p.avatar || '🎓'}</span>
+        <span class="wu-roster-name">${escapeHtml(p.name)}</span>
+        <button class="wu-roster-btn ${isDelegate ? 'revoke' : 'grant'}" type="button">
+          ${isDelegate ? '🚫 Quitar' : '👑 Asistente'}
+        </button>`;
+      const btn = row.querySelector('.wu-roster-btn');
+      btn.onclick = () => {
+        if (isDelegate) {
+          socket.emit('wu:delegate-revoke', { pin, password: adminPw, playerName: p.name });
+        } else {
+          socket.emit('wu:delegate-grant',  { pin, password: adminPw, playerName: p.name });
+        }
+        if (MochiSounds.swap) MochiSounds.swap();
+      };
+      list.appendChild(row);
+    });
+    // Update the sub-hint
+    const sub = $('wu-roster-sub');
+    if (sub) {
+      sub.textContent = currentDelegates.length
+        ? `${currentDelegates.length} asistente${currentDelegates.length > 1 ? 's' : ''} activo${currentDelegates.length > 1 ? 's' : ''}: ${currentDelegates.join(', ')}`
+        : 'Toca un alumno para darle el control del catálogo';
+    }
   }
 
   // === Presets (localStorage) ===
