@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="/css/sixseven.css?v=20260520c">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
-  <link rel="stylesheet" href="/css/triage.css?v=20260523c">
+  <link rel="stylesheet" href="/css/triage.css?v=20260524a">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -505,9 +505,10 @@
       <div class="tri-pick-team-tag" id="tri-pick-team-tag">🩺 Doctor</div>
       <div class="tri-pick-timer-num" id="tri-pick-timer-num">5</div>
     </div>
-    <!-- INTRUSIVE VOCAB BANNER (player) — same content as host -->
-    <div class="tri-vocab-banner mini">
-      <span class="tri-vocab-q-icon">🩺</span>
+    <!-- INTRUSIVE VOCAB BANNER (player) — doctor + sentence -->
+    <div class="tri-vocab-banner mini with-doctor">
+      <img class="tri-doctor-mini" src="/assets/yisheng.png" alt="yīshēng"
+           onerror="this.style.display='none'">
       <span class="tri-vocab-q-pinyin">Yīshēng zài <strong>yīyuàn</strong> 🏥 gōngzuò</span>
     </div>
     <div class="tri-pick-headline">🚑 ¿A quién atiendes primero?</div>
@@ -531,10 +532,11 @@
       </div>
       <div class="tri-cpr-bedlabel" id="tri-cpr-bedlabel">Cama —</div>
     </div>
-    <!-- INTRUSIVE VOCAB BANNER (CPR) — primes the answer mid-rescue -->
-    <div class="tri-vocab-banner mini">
-      <span class="tri-vocab-q-icon">🏥</span>
-      <span class="tri-vocab-q-pinyin"><strong>yīyuàn</strong> = hospital — ¡salva al paciente!</span>
+    <!-- INTRUSIVE VOCAB BANNER (CPR) — doctor cheers you on -->
+    <div class="tri-vocab-banner mini with-doctor cheering">
+      <img class="tri-doctor-mini" src="/assets/yisheng.png" alt="yīshēng"
+           onerror="this.style.display='none'">
+      <span class="tri-vocab-q-pinyin"><strong>yīyuàn</strong> 🏥 — ¡salva al paciente!</span>
     </div>
     <!-- Floating tap-bonus vocab words — tap them mid-CPR for +1 each -->
     <div class="tri-cpr-vocab-float" id="tri-cpr-vocab-float"></div>
@@ -581,10 +583,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260523c"></script>
+  <script src="/js/sounds.js?v=20260524a"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260523d"></script>
+  <script src="/js/player.js?v=20260524a"></script>
 </body>
 </html>
