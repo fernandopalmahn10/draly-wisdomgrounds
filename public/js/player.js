@@ -1521,19 +1521,20 @@
   // LÁI-QÙ-HUÍ · Dragon Courier — player phone is the whole game
   // ===========================================================================
   let lqhState = {
-    gridW: 8, gridH: 8,
+    gridW: 10, gridH: 8,
     locations: [],
+    pickups: {},         // pickupId -> {x, y, icon, ...}
     myPos: { x: 1, y: 6 },
     lastPos: { x: 1, y: 6 },
     mission: null,
     score: 0,
     missionsDone: 0,
     missionsFailed: 0,
-    streak: 0,           // consecutive successful missions
+    streak: 0,
     bestStreak: 0,
     missionTimerInt: null,
     boundDpad: false,
-    footstepTrail: [],   // recent positions for the breadcrumb trail
+    footstepTrail: [],
   };
   // Verb → emoji + colour helper for the mission verb tag
   const LQH_VERB_META = {
@@ -1576,9 +1577,19 @@
         }
       }
     }
-    // Clear any prior dragon / destination markers
-    map.querySelectorAll('.lqh-me, .lqh-target-ring').forEach((el) => el.remove());
+    // Clear any prior dragon / destination markers / pickups
+    map.querySelectorAll('.lqh-me, .lqh-target-ring, .lqh-pickup').forEach((el) => el.remove());
     map.querySelectorAll('.lqh-tile.target').forEach((el) => el.classList.remove('target'));
+    // Render every active pickup on its tile
+    Object.values(lqhState.pickups || {}).forEach((pk) => {
+      const tile = document.getElementById(`lqh-tile-${pk.x}-${pk.y}`);
+      if (!tile) return;
+      const el = document.createElement('div');
+      el.className = 'lqh-pickup';
+      el.textContent = pk.icon || '⭐';
+      el.dataset.pickupId = pk.id;
+      tile.appendChild(el);
+    });
     // Mark destination
     if (lqhState.mission) {
       const dest = lqhState.locations.find((l) => l.id === lqhState.mission.destId);
@@ -1675,6 +1686,8 @@
     lqhState.gridW = data.gridW;
     lqhState.gridH = data.gridH;
     lqhState.locations = data.locations || [];
+    lqhState.pickups = {};
+    (data.pickups || []).forEach((pk) => { lqhState.pickups[pk.id] = pk; });
     lqhState.score = 0;
     lqhState.missionsDone = 0;
     lqhState.missionsFailed = 0;
@@ -1683,6 +1696,57 @@
     if (map) map.innerHTML = '';
     document.body.classList.add('gametype-laiquhui');
   });
+  // Pickup picked up by THIS player — flash + score bump
+  socket.on('lqh:pickup', (data) => {
+    delete lqhState.pickups[data.pickupId];
+    lqhState.score = data.score != null ? data.score : lqhState.score;
+    document.getElementById('lqh-score').textContent = lqhState.score;
+    // Spawn a quick "+5 ⭐" toast at the pickup tile
+    const tile = document.getElementById(`lqh-tile-${data.x}-${data.y}`);
+    if (tile) {
+      const toast = document.createElement('div');
+      toast.className = 'lqh-pickup-toast';
+      toast.innerHTML = `${data.icon} +${data.pts}`;
+      tile.appendChild(toast);
+      setTimeout(() => toast.remove(), 1100);
+    }
+    if (MochiSounds.combo) MochiSounds.combo();
+    if (window.Rewards) window.Rewards.show({ icon: data.icon, text: `+${data.pts} ${data.es || ''}`, duration: 1300 });
+    lqhRenderMap();
+  });
+  // Pickup removed (collected by ANY player, so other phones also clear it)
+  socket.on('lqh:pickup-removed', (data) => {
+    delete lqhState.pickups[data.pickupId];
+    // Pickup may have been rendered already; remove its DOM node
+    document.querySelectorAll(`.lqh-pickup[data-pickup-id="${data.pickupId}"]`).forEach((el) => el.remove());
+  });
+  // A new pickup spawned somewhere on the map
+  socket.on('lqh:pickup-spawned', (data) => {
+    lqhState.pickups[data.id] = data;
+    lqhRenderMap();
+  });
+  // Achievement banner pops
+  socket.on('lqh:achievements', (data) => {
+    (data.achievements || []).forEach((ach, i) => {
+      setTimeout(() => lqhShowAchievement(ach), i * 600);
+    });
+  });
+  function lqhShowAchievement(ach) {
+    const banner = document.createElement('div');
+    banner.className = 'lqh-achievement';
+    banner.innerHTML = `
+      <div class="lqh-ach-icon">${ach.icon || '🏆'}</div>
+      <div class="lqh-ach-title">${ach.title}</div>
+      <div class="lqh-ach-sub">${ach.sub || ''}</div>`;
+    document.body.appendChild(banner);
+    requestAnimationFrame(() => banner.classList.add('show'));
+    setTimeout(() => {
+      banner.classList.remove('show');
+      setTimeout(() => banner.remove(), 400);
+    }, 2400);
+    if (MochiSounds.winFanfare) MochiSounds.winFanfare();
+    if (navigator.vibrate) navigator.vibrate([60, 30, 60]);
+  }
   socket.on('lqh:mission', (data) => {
     lqhShowMission(data.mission, data.x, data.y, data.score, data.missionsDone, data.missionsFailed);
   });

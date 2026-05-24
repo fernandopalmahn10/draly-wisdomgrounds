@@ -337,15 +337,31 @@ function trTrySpawn(g, opts) {
 //   - lái [place]: come TO that place (different framing, same gameplay)
 //   - huí jiā: return HOME
 // Difficulty ramps: tighter deadlines as missions succeed.
-const LQH_GRID_W = 8;
+const LQH_GRID_W = 10;
 const LQH_GRID_H = 8;
 const LQH_LOCATIONS = [
-  { id: 'jia',       pinyin: 'jiā',       hanzi: '家',   es: 'casa',     icon: '🏠', x: 1, y: 6, isHome: true },
-  { id: 'xuexiao',   pinyin: 'xuéxiào',   hanzi: '学校', es: 'escuela',  icon: '🏫', x: 6, y: 1 },
-  { id: 'yiyuan',    pinyin: 'yīyuàn',    hanzi: '医院', es: 'hospital', icon: '🏥', x: 1, y: 1 },
-  { id: 'shangdian', pinyin: 'shāngdiàn', hanzi: '商店', es: 'tienda',   icon: '🏪', x: 6, y: 4 },
-  { id: 'gongyuan',  pinyin: 'gōngyuán',  hanzi: '公园', es: 'parque',   icon: '🌳', x: 3, y: 5 },
+  { id: 'jia',       pinyin: 'jiā',       hanzi: '家',   es: 'casa',       icon: '🏠', x: 1, y: 6, isHome: true },
+  { id: 'xuexiao',   pinyin: 'xuéxiào',   hanzi: '学校', es: 'escuela',    icon: '🏫', x: 8, y: 1 },
+  { id: 'yiyuan',    pinyin: 'yīyuàn',    hanzi: '医院', es: 'hospital',   icon: '🏥', x: 1, y: 1 },
+  { id: 'shangdian', pinyin: 'shāngdiàn', hanzi: '商店', es: 'tienda',     icon: '🏪', x: 8, y: 4 },
+  { id: 'gongyuan',  pinyin: 'gōngyuán',  hanzi: '公园', es: 'parque',     icon: '🌳', x: 4, y: 6 },
+  { id: 'miao',      pinyin: 'miào',      hanzi: '庙',   es: 'templo',     icon: '🏯', x: 5, y: 0 },
+  { id: 'canting',   pinyin: 'cāntīng',   hanzi: '餐厅', es: 'restaurante', icon: '🍜', x: 4, y: 3 },
 ];
+// === Bonus pickup catalog — scattered randomly on empty tiles ===
+// Stepping on a pickup tile collects it, awards bonus points, and a fresh
+// pickup respawns after a delay. Variety of icons = visual interest like
+// the Mi Familia game's object variety.
+const LQH_PICKUPS = [
+  { kind: 'lantern',  icon: '🏮', es: 'farolillo',   pts: 5 },
+  { kind: 'cookie',   icon: '🥠', es: 'galleta',     pts: 5 },
+  { kind: 'tea',      icon: '🍵', es: 'té',          pts: 4 },
+  { kind: 'coin',     icon: '💰', es: 'moneda',      pts: 8 },
+  { kind: 'star',     icon: '⭐', es: 'estrella',    pts: 6 },
+  { kind: 'dumpling', icon: '🥟', es: 'dumpling',    pts: 5 },
+];
+const LQH_PICKUP_COUNT = 6;            // number of pickups alive at any time
+const LQH_PICKUP_RESPAWN_MS = 4500;    // delay before a collected slot refills
 const LQH_VERBS = [
   // weighted: qù most common (60%), huí (25%), lái (15%)
   ...Array(6).fill('qu'),
@@ -362,6 +378,32 @@ function lqhDeadlineMs(distance, missionsDone) {
 function lqhPickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function lqhFindLocation(id) { return LQH_LOCATIONS.find((l) => l.id === id); }
 function lqhDistance(ax, ay, bx, by) { return Math.abs(ax - bx) + Math.abs(ay - by); }
+// Get a list of tiles that are EMPTY (no location, no existing pickup, no player).
+function lqhEmptyTiles(g) {
+  const taken = new Set();
+  LQH_LOCATIONS.forEach((l) => taken.add(`${l.x},${l.y}`));
+  (g.laiquhui.pickups || []).forEach((p) => taken.add(`${p.x},${p.y}`));
+  const tiles = [];
+  for (let y = 0; y < LQH_GRID_H; y++) {
+    for (let x = 0; x < LQH_GRID_W; x++) {
+      if (!taken.has(`${x},${y}`)) tiles.push({ x, y });
+    }
+  }
+  return tiles;
+}
+function lqhSpawnPickup(g) {
+  const empties = lqhEmptyTiles(g);
+  if (!empties.length) return null;
+  const tile = empties[Math.floor(Math.random() * empties.length)];
+  const def = lqhPickRandom(LQH_PICKUPS);
+  const pickup = {
+    id: 'pk_' + (++g.laiquhui.nextPickupId),
+    x: tile.x, y: tile.y,
+    kind: def.kind, icon: def.icon, es: def.es, pts: def.pts,
+  };
+  g.laiquhui.pickups.push(pickup);
+  return pickup;
+}
 // Pick a NEW mission for this player based on current position + recent history.
 function lqhGenerateMission(player) {
   const verb = lqhPickRandom(LQH_VERBS);
@@ -1766,12 +1808,17 @@ io.on('connection', (socket) => {
           gridW: LQH_GRID_W,
           gridH: LQH_GRID_H,
           locations: LQH_LOCATIONS,
+          pickups: [],
+          nextPickupId: 0,
         };
+        // Seed initial pickups
+        for (let k = 0; k < LQH_PICKUP_COUNT; k++) lqhSpawnPickup(g);
         g.teamScores = { red: 0, gold: 0 };
         io.to(pin).emit('lqh:init', {
           gridW: LQH_GRID_W,
           gridH: LQH_GRID_H,
           locations: LQH_LOCATIONS,
+          pickups: g.laiquhui.pickups,
           players: Object.fromEntries(
             Object.entries(g.players).map(([id, p]) => [id, {
               name: p.name, team: p.team, avatar: p.avatar,
@@ -2710,6 +2757,27 @@ io.on('connection', (socket) => {
     }
     p.x = nx;
     p.y = ny;
+    // === Pickup collection ===
+    // Stepping on a tile holding a pickup awards bonus pts immediately.
+    // Removed pickup gets respawned elsewhere after LQH_PICKUP_RESPAWN_MS.
+    const pickupIdx = g.laiquhui.pickups.findIndex((pk) => pk.x === p.x && pk.y === p.y);
+    if (pickupIdx >= 0) {
+      const pk = g.laiquhui.pickups[pickupIdx];
+      g.laiquhui.pickups.splice(pickupIdx, 1);
+      p.score = (p.score || 0) + pk.pts;
+      g.teamScores[p.team] = (g.teamScores[p.team] || 0) + pk.pts;
+      io.to(socket.id).emit('lqh:pickup', {
+        pickupId: pk.id, kind: pk.kind, icon: pk.icon, es: pk.es, pts: pk.pts,
+        x: pk.x, y: pk.y, score: p.score,
+      });
+      io.to(pin).emit('lqh:pickup-removed', { pickupId: pk.id });
+      // Respawn another pickup after a delay
+      setTimeout(() => {
+        if (!games[pin] || games[pin].state !== 'active') return;
+        const fresh = lqhSpawnPickup(games[pin]);
+        if (fresh) io.to(pin).emit('lqh:pickup-spawned', fresh);
+      }, LQH_PICKUP_RESPAWN_MS);
+    }
     // Check arrival
     const dest = lqhFindLocation(p.lqhMission.destId);
     const arrived = (dest && p.x === dest.x && p.y === dest.y);
@@ -2723,12 +2791,28 @@ io.on('connection', (socket) => {
       const points = base + bonus;
       p.score = (p.score || 0) + points;
       p.missionsDone = (p.missionsDone || 0) + 1;
+      p.lqhStreak = (p.lqhStreak || 0) + 1;
+      if (!p.lqhBestStreak || p.lqhStreak > p.lqhBestStreak) p.lqhBestStreak = p.lqhStreak;
       g.teamScores[p.team] = (g.teamScores[p.team] || 0) + points;
       p.lastDestId = p.lqhMission.destId;
       const completedVerb = p.lqhMission.verb;
       const completedSentence = p.lqhMission.pinyin;
+      const completionMs = Date.now() - p.lqhMission.startedAt;
+      // === ACHIEVEMENTS — fire milestone banners on the player phone ===
+      const achievements = [];
+      if (p.missionsDone === 1) achievements.push({ id: 'first', icon: '🎉', title: '¡PRIMERA ENTREGA!', sub: 'Wǒ qù le! · ¡Tu primer mensaje!' });
+      if (p.missionsDone === 5) achievements.push({ id: 'starter', icon: '📜', title: '¡5 ENTREGAS!', sub: 'Buen comienzo, mensajero' });
+      if (p.missionsDone === 10) achievements.push({ id: 'marathon', icon: '🏃', title: '¡MARATHON x10!', sub: 'Diez entregas seguidas' });
+      if (p.missionsDone === 20) achievements.push({ id: 'legend', icon: '🐉', title: '¡LEYENDA DE LA ALDEA!', sub: '20 entregas — eres famoso' });
+      if (p.lqhStreak === 3) achievements.push({ id: 'streak3', icon: '🔥', title: '¡RACHA x3!', sub: 'Sigue así' });
+      if (p.lqhStreak === 5) achievements.push({ id: 'streak5', icon: '⚡', title: '¡RACHA PERFECTA x5!', sub: 'Imparable' });
+      if (p.lqhStreak === 10) achievements.push({ id: 'streak10', icon: '💎', title: '¡RACHA LEGENDARIA x10!', sub: 'Mensajero invicto' });
+      if (completionMs < 4000 && p.lqhMission.distance >= 4) achievements.push({ id: 'speed', icon: '💨', title: '¡SPEED DEMON!', sub: 'Entrega ultrarrápida' });
       // Generate next mission immediately
       p.lqhMission = lqhGenerateMission(p);
+      if (achievements.length) {
+        io.to(socket.id).emit('lqh:achievements', { achievements });
+      }
       io.to(socket.id).emit('lqh:complete', {
         verb: completedVerb,
         sentence: completedSentence,
@@ -3167,6 +3251,7 @@ setInterval(() => {
       if (!p.lqhMission) return;
       if (now > p.lqhMission.deadline) {
         p.missionsFailed = (p.missionsFailed || 0) + 1;
+        p.lqhStreak = 0;       // reset streak — real consequence
         const failed = p.lqhMission;
         p.lqhMission = lqhGenerateMission(p);
         io.to(pid).emit('lqh:fail', {
