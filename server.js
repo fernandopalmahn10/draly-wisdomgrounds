@@ -329,6 +329,96 @@ function trTrySpawn(g, opts) {
   return patient;
 }
 
+// === LÁI-QÙ-HUÍ · 来去回 Dragon Courier — directional vocab game ===
+// Self-contained (no question set required). Each player is a dragon
+// courier on an 8x8 top-down village map. Missions use the three target
+// verbs (qù/lái/huí) plus four direction words (上下前后) for navigation:
+//   - qù [place]: walk TO that place
+//   - lái [place]: come TO that place (different framing, same gameplay)
+//   - huí jiā: return HOME
+// Difficulty ramps: tighter deadlines as missions succeed.
+const LQH_GRID_W = 8;
+const LQH_GRID_H = 8;
+const LQH_LOCATIONS = [
+  { id: 'jia',       pinyin: 'jiā',       hanzi: '家',   es: 'casa',     icon: '🏠', x: 1, y: 6, isHome: true },
+  { id: 'xuexiao',   pinyin: 'xuéxiào',   hanzi: '学校', es: 'escuela',  icon: '🏫', x: 6, y: 1 },
+  { id: 'yiyuan',    pinyin: 'yīyuàn',    hanzi: '医院', es: 'hospital', icon: '🏥', x: 1, y: 1 },
+  { id: 'shangdian', pinyin: 'shāngdiàn', hanzi: '商店', es: 'tienda',   icon: '🏪', x: 6, y: 4 },
+  { id: 'gongyuan',  pinyin: 'gōngyuán',  hanzi: '公园', es: 'parque',   icon: '🌳', x: 3, y: 5 },
+];
+const LQH_VERBS = [
+  // weighted: qù most common (60%), huí (25%), lái (15%)
+  ...Array(6).fill('qu'),
+  ...Array(3).fill('hui'),
+  ...Array(2).fill('lai'),
+];
+// Manhattan-distance-based deadline so all missions feel reachable but
+// tight. Ramps DOWN as the player's mission counter increases.
+function lqhDeadlineMs(distance, missionsDone) {
+  // 2.0s per tile baseline, minus 0.05s per completed mission, floored
+  const perTile = Math.max(0.9, 2.0 - missionsDone * 0.05);
+  return Math.round((distance * perTile + 1.8) * 1000);
+}
+function lqhPickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function lqhFindLocation(id) { return LQH_LOCATIONS.find((l) => l.id === id); }
+function lqhDistance(ax, ay, bx, by) { return Math.abs(ax - bx) + Math.abs(ay - by); }
+// Pick a NEW mission for this player based on current position + recent history.
+function lqhGenerateMission(player) {
+  const verb = lqhPickRandom(LQH_VERBS);
+  let destId;
+  if (verb === 'hui') {
+    destId = 'jia';
+  } else {
+    // qù / lái can target anywhere EXCEPT the player's current location
+    const playerAtId = LQH_LOCATIONS.find((l) => l.x === player.x && l.y === player.y);
+    let candidates = LQH_LOCATIONS.filter((l) => !playerAtId || l.id !== playerAtId.id);
+    // Avoid repeating the immediately-previous destination
+    if (player.lastDestId) {
+      const filtered = candidates.filter((l) => l.id !== player.lastDestId);
+      if (filtered.length) candidates = filtered;
+    }
+    destId = lqhPickRandom(candidates).id;
+  }
+  const dest = lqhFindLocation(destId);
+  const distance = lqhDistance(player.x, player.y, dest.x, dest.y);
+  const deadlineMs = lqhDeadlineMs(distance, player.missionsDone || 0);
+  return {
+    verb,
+    destId,
+    pinyin: lqhBuildSentence(verb, dest),
+    es: lqhBuildSpanish(verb, dest),
+    deadline: Date.now() + deadlineMs,
+    startedAt: Date.now(),
+    distance,
+  };
+}
+function lqhBuildSentence(verb, dest) {
+  // Sentence shown to the player. Key word styled bold via <strong>.
+  if (verb === 'qu')  return `Wǒ <strong>qù</strong> ${dest.pinyin} ${dest.icon}`;
+  if (verb === 'lai') return `<strong>Lái</strong> ${dest.pinyin} ${dest.icon}`;
+  if (verb === 'hui') return `Wǒ <strong>huí jiā</strong> 🏠`;
+  return '';
+}
+function lqhBuildSpanish(verb, dest) {
+  if (verb === 'qu')  return `Voy a la ${dest.es}`;
+  if (verb === 'lai') return `Ven a la ${dest.es}`;
+  if (verb === 'hui') return 'Vuelvo a casa';
+  return '';
+}
+// Convert a direction tap to a (dx,dy) delta. The D-pad uses the four
+// HSK1 direction words; clients send the lowercase pinyin.
+//   上 shang = up    → (0, -1)
+//   下 xia   = down  → (0, +1)
+//   前 qian  = forward = right (the +x direction)  → (+1, 0)
+//   后 hou   = back  = left  (the -x direction)    → (-1, 0)
+function lqhDirToDelta(dir) {
+  if (dir === 'shang') return [ 0, -1];
+  if (dir === 'xia')   return [ 0,  1];
+  if (dir === 'qian')  return [ 1,  0];
+  if (dir === 'hou')   return [-1,  0];
+  return [0, 0];
+}
+
 // === REINOS EN GUERRA · 战国 (Warring States) — battlefield conquest game ===
 // A 6x4 BATTLEFIELD grid (NOT named landmarks — kids don't know Beijing/Xi'an).
 // Each square is just a battlefield position with terrain (sand / hill / river).
@@ -1264,7 +1354,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage', 'laiquhui'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -1279,6 +1369,7 @@ io.on('connection', (socket) => {
       type === 'conquest'     ? 300 :
       type === 'sixseven'     ? 120 :
       type === 'triage'       ? 240 :
+      type === 'laiquhui'     ? 180 :
       60;
     let grid = null;
     let vendors = null;
@@ -1654,6 +1745,47 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores,
         });
       }
+      if (g.gameType === 'laiquhui') {
+        // Each player spawns at the home tile and gets their first mission.
+        const home = LQH_LOCATIONS.find((l) => l.isHome);
+        Object.values(g.players).forEach((p) => {
+          p.x = home.x;
+          p.y = home.y;
+          p.missionsDone = 0;
+          p.missionsFailed = 0;
+          p.lqhMission = lqhGenerateMission(p);
+          p.lastDestId = null;
+          p.score = 0;
+        });
+        g.laiquhui = {
+          gridW: LQH_GRID_W,
+          gridH: LQH_GRID_H,
+          locations: LQH_LOCATIONS,
+        };
+        g.teamScores = { red: 0, gold: 0 };
+        io.to(pin).emit('lqh:init', {
+          gridW: LQH_GRID_W,
+          gridH: LQH_GRID_H,
+          locations: LQH_LOCATIONS,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, p]) => [id, {
+              name: p.name, team: p.team, avatar: p.avatar,
+              x: p.x, y: p.y,
+            }])
+          ),
+          teamScores: g.teamScores,
+        });
+        // Push each player their initial mission privately
+        Object.entries(g.players).forEach(([pid, p]) => {
+          io.to(pid).emit('lqh:mission', {
+            mission: p.lqhMission,
+            x: p.x, y: p.y,
+            score: p.score,
+            missionsDone: p.missionsDone,
+            missionsFailed: p.missionsFailed,
+          });
+        });
+      }
       if (g.gameType === 'triage') {
         // ER ward init — start with 3 patients already in beds so the screen
         // is never empty when the round begins (early-engagement pattern).
@@ -1705,7 +1837,8 @@ io.on('connection', (socket) => {
       broadcast(pin);
       // Mochi Mash + Color Splash + Piñata auto-deal first question.
       // Color Clash → button-driven; Market Quest → vendor-driven; Flappy → death-driven.
-      const skipAutoPush = ['color-clash', 'market-quest', 'flappy'].includes(g.gameType);
+      // Laiquhui — no questions at all (movement-driven, like sixseven for missions)
+      const skipAutoPush = ['color-clash', 'market-quest', 'flappy', 'laiquhui'].includes(g.gameType);
       if (!skipAutoPush) {
         Object.keys(g.players).forEach((pid) => {
           const q = nextQuestionFor(g, pid);
@@ -2551,6 +2684,81 @@ io.on('connection', (socket) => {
     }, 1800);
   });
 
+  // === LÁI-QÙ-HUÍ Dragon Courier ===
+  // Player tapped one of the 4 direction buttons. Validate the move,
+  // update position, check arrival, fire next mission if completed.
+  socket.on('player:lqh-move', ({ pin, dir }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'laiquhui' || g.state !== 'active') return;
+    const p = g.players[socket.id];
+    if (!p || !p.lqhMission) return;
+    const [dx, dy] = lqhDirToDelta(dir);
+    if (dx === 0 && dy === 0) return;
+    const nx = Math.max(0, Math.min(LQH_GRID_W - 1, p.x + dx));
+    const ny = Math.max(0, Math.min(LQH_GRID_H - 1, p.y + dy));
+    if (nx === p.x && ny === p.y) {
+      // Bumped a wall — emit a "bump" so the client can shake the d-pad
+      io.to(socket.id).emit('lqh:move', {
+        x: p.x, y: p.y, bump: true, dir,
+      });
+      return;
+    }
+    p.x = nx;
+    p.y = ny;
+    // Check arrival
+    const dest = lqhFindLocation(p.lqhMission.destId);
+    const arrived = (dest && p.x === dest.x && p.y === dest.y);
+    if (arrived) {
+      // Award points based on remaining time (tighter finish = more pts)
+      const totalMs = p.lqhMission.deadline - p.lqhMission.startedAt;
+      const remainingMs = Math.max(0, p.lqhMission.deadline - Date.now());
+      const bonusFraction = Math.min(1, remainingMs / totalMs);
+      const base = 10;
+      const bonus = Math.round(base * bonusFraction);
+      const points = base + bonus;
+      p.score = (p.score || 0) + points;
+      p.missionsDone = (p.missionsDone || 0) + 1;
+      g.teamScores[p.team] = (g.teamScores[p.team] || 0) + points;
+      p.lastDestId = p.lqhMission.destId;
+      const completedVerb = p.lqhMission.verb;
+      const completedSentence = p.lqhMission.pinyin;
+      // Generate next mission immediately
+      p.lqhMission = lqhGenerateMission(p);
+      io.to(socket.id).emit('lqh:complete', {
+        verb: completedVerb,
+        sentence: completedSentence,
+        points,
+        x: p.x, y: p.y,
+        score: p.score,
+        missionsDone: p.missionsDone,
+        missionsFailed: p.missionsFailed,
+      });
+      // Pause briefly so the kid sees the success feedback, then deal next
+      setTimeout(() => {
+        if (!games[pin] || games[pin].state !== 'active') return;
+        const stillP = games[pin].players[socket.id];
+        if (!stillP) return;
+        io.to(socket.id).emit('lqh:mission', {
+          mission: stillP.lqhMission,
+          x: stillP.x, y: stillP.y,
+          score: stillP.score,
+          missionsDone: stillP.missionsDone,
+          missionsFailed: stillP.missionsFailed,
+        });
+      }, 1100);
+      io.to(pin).emit('lqh:player-move', {
+        playerId: socket.id, x: p.x, y: p.y, name: p.name, team: p.team,
+        teamScores: g.teamScores,
+      });
+      broadcast(pin);
+    } else {
+      io.to(socket.id).emit('lqh:move', { x: p.x, y: p.y, dir });
+      io.to(pin).emit('lqh:player-move', {
+        playerId: socket.id, x: p.x, y: p.y, name: p.name, team: p.team,
+      });
+    }
+  });
+
   // Triage ER: player tapped which patient to treat. Resolves the heal,
   // awards points (2.5x for critical), and broadcasts the rescue so the host
   // can play the defib zap / life-saved chime / EKG stabilize animation.
@@ -2942,6 +3150,45 @@ io.on('connection', (socket) => {
   });
 });
 
+// === LÁI-QÙ-HUÍ tick loop ===
+// Watches each player's mission deadline. If expired without arrival,
+// the mission FAILS — no points, increment fail counter, immediately
+// hand out a fresh mission.
+setInterval(() => {
+  const now = Date.now();
+  Object.entries(games).forEach(([pin, g]) => {
+    if (g.gameType !== 'laiquhui' || g.state !== 'active') return;
+    Object.entries(g.players).forEach(([pid, p]) => {
+      if (!p.lqhMission) return;
+      if (now > p.lqhMission.deadline) {
+        p.missionsFailed = (p.missionsFailed || 0) + 1;
+        const failed = p.lqhMission;
+        p.lqhMission = lqhGenerateMission(p);
+        io.to(pid).emit('lqh:fail', {
+          verb: failed.verb,
+          sentence: failed.pinyin,
+          x: p.x, y: p.y,
+          score: p.score,
+          missionsDone: p.missionsDone,
+          missionsFailed: p.missionsFailed,
+        });
+        setTimeout(() => {
+          if (!games[pin] || games[pin].state !== 'active') return;
+          const stillP = games[pin].players[pid];
+          if (!stillP) return;
+          io.to(pid).emit('lqh:mission', {
+            mission: stillP.lqhMission,
+            x: stillP.x, y: stillP.y,
+            score: stillP.score,
+            missionsDone: stillP.missionsDone,
+            missionsFailed: stillP.missionsFailed,
+          });
+        }, 1100);
+      }
+    });
+  });
+}, 250);
+
 // === TRIAGE ER tick loop ===
 // Drives the patient life-timer decay, periodic auto-spawns into empty beds,
 // and randomized hospital events (ambulance arrival, code blue, transfusion).
@@ -3060,6 +3307,7 @@ setInterval(() => {
     if (g.state !== 'active') return;
     if (g.gameType === 'market-quest') return; // vendor-driven, no watchdog needed
     if (g.gameType === 'flappy') return;       // revive-driven, no watchdog
+    if (g.gameType === 'laiquhui') return;     // movement-driven, no questions at all
     Object.entries(g.players).forEach(([pid, p]) => {
       // Conquest/triage have multi-stage flows — if the player has a pending
       // strategic pick, don't shove a new question on top of their picker.

@@ -936,6 +936,9 @@
     } else if (gameType === 'triage') {
       teamLabel = isRed ? 'Doctores Rojos 🩺' : 'Doctores Dorados 💉';
       teamMascot = isRed ? '🩺' : '💉';
+    } else if (gameType === 'laiquhui') {
+      teamLabel = isRed ? 'Mensajeros Rojos 紅信使' : 'Mensajeros Dorados 金信使';
+      teamMascot = isRed ? '🐲' : '🐉';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
@@ -1013,6 +1016,12 @@
     // question/result screens with peeks + groans (separate from the in-sprint
     // jumpscares — this one runs the WHOLE game)
     if (gameType === 'zombie') startZombieAmbience();
+    // === LÁI-QÙ-HUÍ: jump straight into the courier screen after countdown.
+    // The first `lqh:mission` event will land on us almost immediately and
+    // call lqhShowMission() which calls showScreen('lqh').
+    if (gameType === 'laiquhui') {
+      setTimeout(() => showScreen('lqh'), 3500);
+    }
     // === TRIAGE: omnipresent floating-vocab background on the player phone.
     // This is the "intrusive vocab" the user asked for, on the screen kids
     // actually look at. Spawns a new pinyin tile every ~2.4s for the entire
@@ -1508,6 +1517,197 @@
       if (dot) dot.style.left = pos + '%';
     }, 16);
   }
+  // ===========================================================================
+  // LÁI-QÙ-HUÍ · Dragon Courier — player phone is the whole game
+  // ===========================================================================
+  let lqhState = {
+    gridW: 8, gridH: 8,
+    locations: [],
+    myPos: { x: 1, y: 6 },
+    mission: null,
+    score: 0,
+    missionsDone: 0,
+    missionsFailed: 0,
+    missionTimerInt: null,
+    boundDpad: false,
+  };
+  // Verb → emoji + colour helper for the mission verb tag
+  const LQH_VERB_META = {
+    qu:  { tag: 'qù 去',  cls: 'verb-qu',  icon: '🐲' },
+    lai: { tag: 'lái 来', cls: 'verb-lai', icon: '🐉' },
+    hui: { tag: 'huí 回', cls: 'verb-hui', icon: '🏠' },
+  };
+  function lqhRenderMap() {
+    const map = document.getElementById('lqh-map');
+    if (!map) return;
+    // Initialise tiles once
+    if (map.children.length === 0) {
+      map.style.gridTemplateColumns = `repeat(${lqhState.gridW}, 1fr)`;
+      map.style.gridTemplateRows    = `repeat(${lqhState.gridH}, 1fr)`;
+      for (let y = 0; y < lqhState.gridH; y++) {
+        for (let x = 0; x < lqhState.gridW; x++) {
+          const tile = document.createElement('div');
+          tile.className = 'lqh-tile';
+          tile.id = `lqh-tile-${x}-${y}`;
+          const loc = lqhState.locations.find((l) => l.x === x && l.y === y);
+          if (loc) {
+            tile.classList.add('location', 'loc-' + loc.id);
+            tile.innerHTML = `
+              <span class="lqh-loc-icon">${loc.icon}</span>
+              <span class="lqh-loc-pinyin">${loc.pinyin}</span>`;
+          }
+          map.appendChild(tile);
+        }
+      }
+    }
+    // Clear any prior dragon / destination markers
+    map.querySelectorAll('.lqh-me, .lqh-target-ring').forEach((el) => el.remove());
+    map.querySelectorAll('.lqh-tile.target').forEach((el) => el.classList.remove('target'));
+    // Mark destination
+    if (lqhState.mission) {
+      const dest = lqhState.locations.find((l) => l.id === lqhState.mission.destId);
+      if (dest) {
+        const destTile = document.getElementById(`lqh-tile-${dest.x}-${dest.y}`);
+        if (destTile) {
+          destTile.classList.add('target');
+          const ring = document.createElement('div');
+          ring.className = 'lqh-target-ring';
+          ring.textContent = '🎯';
+          destTile.appendChild(ring);
+        }
+      }
+    }
+    // Place the player's dragon on its current tile
+    const me = document.getElementById(`lqh-tile-${lqhState.myPos.x}-${lqhState.myPos.y}`);
+    if (me) {
+      const dragon = document.createElement('div');
+      dragon.className = 'lqh-me ' + (team || 'red');
+      // Fallback emoji + try to load the team-specific dragon PNG if it exists
+      dragon.innerHTML = `<img src="/assets/laiquhui/dragon-courier.png"
+        onerror="this.style.display='none'; this.parentNode.classList.add('emoji-fallback');"
+        alt="me"><span class="lqh-me-emoji">🐲</span>`;
+      me.appendChild(dragon);
+    }
+  }
+  function lqhShowMission(mission, x, y, score, done, failed) {
+    lqhState.mission = mission;
+    lqhState.myPos = { x, y };
+    lqhState.score = score != null ? score : lqhState.score;
+    if (done != null) lqhState.missionsDone = done;
+    if (failed != null) lqhState.missionsFailed = failed;
+    // HUD
+    document.getElementById('lqh-score').textContent = lqhState.score || 0;
+    document.getElementById('lqh-done').textContent = lqhState.missionsDone || 0;
+    document.getElementById('lqh-failed').textContent = lqhState.missionsFailed || 0;
+    // Mission card
+    const meta = LQH_VERB_META[mission.verb] || LQH_VERB_META.qu;
+    const tagEl = document.getElementById('lqh-mission-verb-tag');
+    tagEl.textContent = meta.tag;
+    tagEl.className = 'lqh-mission-verb-tag ' + meta.cls;
+    document.getElementById('lqh-mission-pinyin').innerHTML = mission.pinyin;
+    document.getElementById('lqh-mission-es').textContent = mission.es;
+    // Reset + drive the mission timer bar
+    const fill = document.getElementById('lqh-mission-bar-fill');
+    if (fill) fill.style.width = '100%';
+    const timerEl = document.getElementById('lqh-mission-timer');
+    if (lqhState.missionTimerInt) clearInterval(lqhState.missionTimerInt);
+    const total = mission.deadline - mission.startedAt;
+    lqhState.missionTimerInt = setInterval(() => {
+      const remaining = Math.max(0, mission.deadline - Date.now());
+      if (timerEl) timerEl.textContent = Math.ceil(remaining / 1000) + 's';
+      if (fill) fill.style.width = ((remaining / total) * 100) + '%';
+      if (remaining <= 0) {
+        clearInterval(lqhState.missionTimerInt);
+        lqhState.missionTimerInt = null;
+      }
+    }, 100);
+    // Re-render the map
+    lqhRenderMap();
+    // Bind the D-pad once
+    if (!lqhState.boundDpad) {
+      document.querySelectorAll('#screen-lqh .lqh-dir-btn').forEach((btn) => {
+        const onTap = (e) => {
+          if (e) e.preventDefault();
+          const dir = btn.dataset.dir;
+          btn.classList.remove('press');
+          void btn.offsetWidth;
+          btn.classList.add('press');
+          if (MochiSounds.tap) MochiSounds.tap();
+          if (navigator.vibrate) navigator.vibrate(10);
+          try { socket.emit('player:lqh-move', { pin, dir }); } catch (_) {}
+        };
+        btn.addEventListener('pointerdown', onTap);
+        btn.addEventListener('click', onTap);
+      });
+      lqhState.boundDpad = true;
+    }
+    showScreen('lqh');
+  }
+  function lqhShowFeedback(kind, text) {
+    const fb = document.getElementById('lqh-feedback');
+    if (!fb) return;
+    fb.className = 'lqh-feedback ' + kind;
+    fb.innerHTML = text;
+    fb.classList.remove('hidden');
+    void fb.offsetWidth;
+    fb.classList.add('show');
+    setTimeout(() => fb.classList.remove('show'), 900);
+    setTimeout(() => fb.classList.add('hidden'), 1100);
+  }
+  socket.on('lqh:init', (data) => {
+    lqhState.gridW = data.gridW;
+    lqhState.gridH = data.gridH;
+    lqhState.locations = data.locations || [];
+    lqhState.score = 0;
+    lqhState.missionsDone = 0;
+    lqhState.missionsFailed = 0;
+    // Reset map
+    const map = document.getElementById('lqh-map');
+    if (map) map.innerHTML = '';
+    document.body.classList.add('gametype-laiquhui');
+  });
+  socket.on('lqh:mission', (data) => {
+    lqhShowMission(data.mission, data.x, data.y, data.score, data.missionsDone, data.missionsFailed);
+  });
+  socket.on('lqh:move', (data) => {
+    lqhState.myPos = { x: data.x, y: data.y };
+    if (data.bump) {
+      // Shake the corresponding D-pad button — visual wall feedback
+      const btn = document.querySelector(`.lqh-dir-btn[data-dir="${data.dir}"]`);
+      if (btn) {
+        btn.classList.remove('bump');
+        void btn.offsetWidth;
+        btn.classList.add('bump');
+      }
+      if (MochiSounds.wrong) MochiSounds.wrong();
+      if (navigator.vibrate) navigator.vibrate([60, 20, 60]);
+      return;
+    }
+    lqhRenderMap();
+  });
+  socket.on('lqh:complete', (data) => {
+    lqhState.score = data.score != null ? data.score : lqhState.score;
+    lqhState.missionsDone = data.missionsDone != null ? data.missionsDone : lqhState.missionsDone;
+    lqhState.myPos = { x: data.x, y: data.y };
+    document.getElementById('lqh-score').textContent = lqhState.score;
+    document.getElementById('lqh-done').textContent = lqhState.missionsDone;
+    lqhShowFeedback('success', `
+      <div class="lqh-fb-emoji">✅</div>
+      <div class="lqh-fb-title">¡${data.sentence}!</div>
+      <div class="lqh-fb-pts">+${data.points} pts</div>`);
+    if (MochiSounds.correct) MochiSounds.correct();
+    if (window.Rewards) window.Rewards.show({ tier: 'great', icon: '🐲', text: '¡Entregado! +' + data.points });
+  });
+  socket.on('lqh:fail', (data) => {
+    lqhState.missionsFailed = data.missionsFailed != null ? data.missionsFailed : lqhState.missionsFailed;
+    document.getElementById('lqh-failed').textContent = lqhState.missionsFailed;
+    lqhShowFeedback('fail', `
+      <div class="lqh-fb-emoji">💔</div>
+      <div class="lqh-fb-title">¡Tiempo!</div>
+      <div class="lqh-fb-pts">${data.sentence}</div>`);
+    if (MochiSounds.wrong) MochiSounds.wrong();
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+  });
   // === Player-side TRIAGE BG layer ===
   // Three overlapping layers on the question screen during active round:
   //   1. Floating pinyin tiles drift up the edges (cap 4 concurrent)
@@ -5590,7 +5790,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'lqh', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

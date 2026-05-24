@@ -103,6 +103,28 @@
         <button class="btn btn-red btn-xl game-card-play">▶ ¡A girar el dado!</button>
       </div>
 
+      <div class="game-card" id="card-laiquhui">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🐉</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Lái-Qù-Huí · Dragon Courier</div>
+            <div class="game-tile-badge new">¡Nuevo!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🐲 来去回 — Cada jugador es un dragoncito mensajero en un mapa
+          de aldea china. Misiones tipo "Wǒ qù 学校" o "Huí jiā" — usa los
+          botones <strong>上 下 前 后</strong> para navegar al destino. Llega
+          a tiempo para puntos, ¡cuidado con el reloj! Sin set necesario.
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Navegación</span>
+          <span class="tag">Top-down</span>
+          <span class="tag">来去回 + 上下前后</span>
+        </div>
+        <button class="btn btn-red btn-xl game-card-play">▶ ¡A repartir!</button>
+      </div>
+
       <div class="game-card" id="card-sixseven">
         <div class="game-card-header">
           <div class="game-card-emoji">🤙</div>
@@ -315,6 +337,10 @@
       document.querySelector('#card-sixseven .game-card-play').onclick = () => {
         location.href = '/host-sixseven.html';
       };
+      // Lái-Qù-Huí needs no set — missions are generated server-side
+      document.querySelector('#card-laiquhui .game-card-play').onclick = () => {
+        location.href = '/host-laiquhui.html';
+      };
     } else {
       document.getElementById('set-name').textContent = 'elige un juego, luego una serie';
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
@@ -354,6 +380,10 @@
       // 6-7 SWING — skip sets entirely, jump straight to host
       document.querySelector('#card-sixseven .game-card-play').onclick = () => {
         location.href = '/host-sixseven.html';
+      };
+      // Lái-Qù-Huí also skips sets entirely
+      document.querySelector('#card-laiquhui .game-card-play').onclick = () => {
+        location.href = '/host-laiquhui.html';
       };
     }
 
