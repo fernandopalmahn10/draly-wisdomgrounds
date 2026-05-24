@@ -1,0 +1,329 @@
+/* =========================================================================
+   WARM-UP · 热身 · Sentence-builder teacher tool
+   Teacher host page has the full library + sentence stage. Player phone
+   has a read-only mirror of the current sentence. Every word card carries
+   its category color (--cat-color) so pinyin + Spanish translation share
+   colors and reveal sentence structure at a glance.
+   ========================================================================= */
+
+/* ============================ HOST PAGE ============================ */
+body.wu-bg {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(91, 232, 209, 0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 70% at 50% 100%, rgba(91, 141, 239, 0.16) 0%, transparent 60%),
+    linear-gradient(180deg, #1a2238 0%, #0f1626 50%, #080d18 100%);
+  color: #e7faff;
+}
+body.wu-bg::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(45deg,
+    rgba(255, 255, 255, 0) 0px,
+    rgba(255, 255, 255, 0) 28px,
+    rgba(91, 232, 209, 0.02) 28px,
+    rgba(91, 232, 209, 0.02) 30px);
+  pointer-events: none;
+  z-index: 1;
+}
+body.wu-bg .container { position: relative; z-index: 2; }
+body.wu-bg .market-banner {
+  background: linear-gradient(90deg, #1a3a4a, #1f4a5a, #1a3a4a);
+  border: 2px solid #5be8d1;
+  color: #e7faff;
+  text-shadow: 0 0 12px rgba(91, 232, 209, 0.6);
+  box-shadow: 0 0 28px rgba(91, 232, 209, 0.4);
+}
+
+/* === Admin gate === */
+.wu-gate {
+  min-height: 100dvh;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+.wu-gate-card {
+  background: rgba(15, 22, 38, 0.92);
+  border: 3px solid #5be8d1;
+  border-radius: 18px;
+  padding: 32px;
+  text-align: center;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 0 38px rgba(91, 232, 209, 0.4);
+}
+.wu-gate-icon { font-size: 4rem; margin-bottom: 6px; }
+.wu-gate-title { font-size: 1.6rem; font-weight: 900; margin: 6px 0; color: #5be8d1; text-shadow: 0 0 14px rgba(91, 232, 209, 0.6); }
+.wu-gate-sub { color: rgba(220, 235, 245, 0.7); font-size: 0.95rem; margin-bottom: 16px; }
+.wu-gate-input {
+  width: 100%;
+  margin-bottom: 14px;
+  text-align: center;
+  font-size: 1.2rem;
+  letter-spacing: 0.1em;
+}
+
+/* === Active sentence-builder layout === */
+.wu-active {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: 100dvh;
+}
+.wu-active-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 8px;
+}
+.wu-active-meta {
+  display: flex; align-items: center; gap: 14px;
+  font-weight: 900;
+}
+.wu-active-label { color: #5be8d1; font-size: 1.1rem; text-shadow: 0 0 10px rgba(91, 232, 209, 0.5); }
+.wu-active-pin { color: rgba(220, 235, 245, 0.85); font-size: 0.9rem; letter-spacing: 0.05em; }
+.wu-active-pin strong { color: #ffe66a; font-size: 1.1rem; }
+
+/* === SENTENCE STAGE — the big construction area === */
+.wu-stage {
+  background:
+    linear-gradient(135deg, rgba(40, 60, 90, 0.55), rgba(20, 30, 50, 0.65)),
+    radial-gradient(ellipse at 50% 0%, rgba(91, 232, 209, 0.10), transparent 70%);
+  border: 3px solid rgba(91, 232, 209, 0.55);
+  border-radius: 18px;
+  padding: 22px 18px 18px;
+  position: relative;
+  min-height: 220px;
+  box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.45), 0 0 26px rgba(91, 232, 209, 0.2);
+}
+.wu-stage-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  min-height: 84px;
+}
+.wu-stage-empty {
+  text-align: center;
+  color: rgba(220, 235, 245, 0.55);
+  font-style: italic;
+  font-size: 1.1rem;
+  margin-top: 30px;
+}
+.wu-clear-btn {
+  position: absolute;
+  top: 10px; right: 10px;
+  font-size: 0.85rem !important;
+  padding: 6px 12px !important;
+}
+
+/* Each placed pinyin word — gets the category color */
+.wu-stage-word {
+  background: rgba(0, 0, 0, 0.4);
+  border: 3px solid var(--cat-color, #fff);
+  color: var(--cat-color, #fff);
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 2px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.15s ease, filter 0.15s;
+  box-shadow: 0 0 16px rgba(91, 232, 209, 0.15);
+}
+.wu-stage-word:hover { transform: translateY(-2px); filter: brightness(1.2); }
+.wu-stage-word:active { transform: scale(0.95); }
+.wu-sw-icon { font-size: 1.5rem; line-height: 1; }
+.wu-sw-pinyin { font-size: 1.45rem; font-weight: 900; letter-spacing: 0.02em; text-shadow: 0 0 10px currentColor; }
+.wu-sw-hanzi { font-size: 1.1rem; font-weight: 700; opacity: 0.85; }
+/* Spanish translation row — same color, smaller pill */
+.wu-stage-es {
+  margin-top: 6px;
+}
+.wu-stage-es-word {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid var(--cat-color, #fff);
+  color: var(--cat-color, #fff);
+  border-radius: 10px;
+  padding: 4px 12px;
+  font-weight: 800;
+  font-size: 1rem;
+  min-height: 32px;
+  display: flex; align-items: center;
+  text-shadow: 0 0 6px currentColor;
+}
+
+/* === Category filter pills === */
+.wu-cat-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 6px;
+}
+.wu-cat-pill {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid var(--cat-color, rgba(255, 255, 255, 0.3));
+  color: var(--cat-color, #d6e6f2);
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  font-family: inherit;
+}
+.wu-cat-pill.active {
+  background: var(--cat-color, #5be8d1);
+  color: #0a1320;
+}
+.wu-cat-pill[data-cat="all"] {
+  --cat-color: #5be8d1;
+}
+
+/* === Word library === */
+.wu-library {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 40px;
+}
+.wu-lib-section-title {
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 0;
+  margin-bottom: 6px;
+  border-bottom: 2px solid;
+}
+.wu-lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+.wu-lib-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--cat-color, #aaa);
+  border-radius: 12px;
+  padding: 10px 8px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 2px;
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  transition: transform 0.12s ease, background 0.15s, box-shadow 0.15s;
+  text-align: center;
+}
+.wu-lib-card:hover {
+  background: rgba(255, 255, 255, 0.10);
+  box-shadow: 0 0 14px var(--cat-color, #aaa);
+  transform: translateY(-2px);
+}
+.wu-lib-card:active { transform: scale(0.95); }
+.wu-lib-icon  { font-size: 1.4rem; line-height: 1; }
+.wu-lib-pinyin { font-size: 1.1rem; font-weight: 900; color: var(--cat-color, #fff); text-shadow: 0 0 8px var(--cat-color, transparent); }
+.wu-lib-hanzi { font-size: 0.95rem; font-weight: 700; color: #fff; opacity: 0.85; }
+.wu-lib-es { font-size: 0.75rem; font-style: italic; opacity: 0.75; }
+
+/* ============================ PLAYER PHONE ============================ */
+.wu-player-screen {
+  display: flex !important;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(91, 232, 209, 0.20) 0%, transparent 60%),
+    radial-gradient(ellipse 90% 80% at 50% 100%, rgba(91, 141, 239, 0.18) 0%, transparent 60%),
+    linear-gradient(180deg, #1a2238 0%, #0f1626 50%, #080d18 100%);
+  color: #e7faff;
+  padding: 16px 14px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  gap: 14px;
+  min-height: 100dvh;
+  user-select: none;
+  font-family: 'Nunito', sans-serif;
+  text-align: center;
+}
+.wu-player-screen.hidden { display: none !important; }
+.wu-player-header {
+  display: flex; flex-direction: column;
+  gap: 4px;
+}
+.wu-player-tag {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #5be8d1;
+  text-shadow: 0 0 14px rgba(91, 232, 209, 0.6);
+  letter-spacing: 0.05em;
+}
+.wu-player-sub {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: rgba(220, 235, 245, 0.7);
+}
+.wu-player-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(40, 60, 90, 0.55), rgba(20, 30, 50, 0.65));
+  border: 3px solid rgba(91, 232, 209, 0.55);
+  border-radius: 18px;
+  padding: 18px 14px;
+  box-shadow: inset 0 0 28px rgba(0, 0, 0, 0.45);
+  min-height: 240px;
+}
+.wu-player-stage-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+.wu-player-stage-empty {
+  text-align: center;
+  color: rgba(220, 235, 245, 0.55);
+  font-style: italic;
+  font-size: 1rem;
+}
+.wu-player-word {
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid var(--cat-color, #fff);
+  color: var(--cat-color, #fff);
+  border-radius: 12px;
+  padding: 8px 12px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 0;
+  animation: wu-word-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes wu-word-pop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  60%  { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.wu-pw-icon { font-size: clamp(1rem, 4vmin, 1.3rem); line-height: 1; }
+.wu-pw-pinyin { font-size: clamp(1.1rem, 4.6vmin, 1.4rem); font-weight: 900; text-shadow: 0 0 10px currentColor; }
+.wu-pw-hanzi  { font-size: clamp(0.85rem, 3.4vmin, 1.05rem); font-weight: 700; opacity: 0.85; }
+
+.wu-player-es-word {
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid var(--cat-color, #fff);
+  color: var(--cat-color, #fff);
+  border-radius: 10px;
+  padding: 4px 10px;
+  font-weight: 800;
+  font-size: clamp(0.85rem, 3.4vmin, 1.05rem);
+  text-shadow: 0 0 6px currentColor;
+}
+.wu-player-hint {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: rgba(220, 235, 245, 0.65);
+  text-align: center;
+  margin-top: 4px;
+}

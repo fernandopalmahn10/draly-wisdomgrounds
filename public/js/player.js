@@ -1022,6 +1022,13 @@
     if (gameType === 'laiquhui') {
       setTimeout(() => showScreen('lqh'), 3500);
     }
+    // === WARM-UP: jump to the read-only sentence-mirror screen ===
+    if (gameType === 'warmup') {
+      setTimeout(() => {
+        showScreen('wu');
+        renderWuStage([]);
+      }, 1000);
+    }
     // === TRIAGE: omnipresent floating-vocab background on the player phone.
     // This is the "intrusive vocab" the user asked for, on the screen kids
     // actually look at. Spawns a new pinyin tile every ~2.4s for the entire
@@ -1517,6 +1524,46 @@
       if (dot) dot.style.left = pos + '%';
     }, 16);
   }
+  // ===========================================================================
+  // WARM-UP · read-only sentence mirror (teacher drives, player phone watches)
+  // ===========================================================================
+  socket.on('wu:state', (data) => {
+    if (gameType !== 'warmup') return;
+    renderWuStage(data.sentence || []);
+  });
+  function renderWuStage(sentence) {
+    const pinyinRow = document.getElementById('wu-player-stage-pinyin');
+    const esRow     = document.getElementById('wu-player-stage-es');
+    const empty     = document.getElementById('wu-player-stage-empty');
+    if (!pinyinRow || !esRow) return;
+    pinyinRow.innerHTML = '';
+    esRow.innerHTML = '';
+    if (!sentence.length) {
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+    if (empty) empty.style.display = 'none';
+    sentence.forEach((wid) => {
+      const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
+      if (!w) return;
+      const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+      const color = cat ? cat.color : '#fff';
+      const p = document.createElement('div');
+      p.className = 'wu-player-word';
+      p.style.setProperty('--cat-color', color);
+      p.innerHTML = `
+        <span class="wu-pw-icon">${w.icon || ''}</span>
+        <span class="wu-pw-pinyin">${w.pinyin}</span>
+        <span class="wu-pw-hanzi">${w.hanzi}</span>`;
+      pinyinRow.appendChild(p);
+      const e = document.createElement('div');
+      e.className = 'wu-player-es-word';
+      e.style.setProperty('--cat-color', color);
+      e.textContent = w.es;
+      esRow.appendChild(e);
+    });
+  }
+
   // ===========================================================================
   // LÁI-QÙ-HUÍ · Dragon Courier — player phone is the whole game
   // ===========================================================================
@@ -5978,7 +6025,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'lqh', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'lqh', 'wu', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

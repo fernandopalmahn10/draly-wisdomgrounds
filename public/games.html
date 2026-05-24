@@ -103,6 +103,31 @@
         <button class="btn btn-red btn-xl game-card-play">▶ ¡A girar el dado!</button>
       </div>
 
+      <div class="game-card" id="card-warmup">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🎓</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Calentamiento · Warm-up</div>
+            <div class="game-tile-badge new">¡Nuevo!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🎓 热身 — Modo maestro. Construye oraciones en vivo eligiendo
+          palabras de un catálogo de 90+ palabras HSK1 organizadas por
+          categoría. Cada categoría tiene su <strong>color propio</strong>
+          — el pinyin y el español comparten color para mostrar cómo se
+          estructura la oración. Sin tiempo, sin puntos · ideal antes de
+          empezar los minijuegos. <em>Requiere contraseña.</em>
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Maestro</span>
+          <span class="tag">Construir oraciones</span>
+          <span class="tag">Colores</span>
+          <span class="tag">90+ palabras</span>
+        </div>
+        <button class="btn btn-jade btn-xl game-card-play">🔒 Modo Maestro</button>
+      </div>
+
       <div class="game-card" id="card-laiquhui">
         <div class="game-card-header">
           <div class="game-card-emoji">🐉</div>
@@ -341,6 +366,10 @@
       document.querySelector('#card-laiquhui .game-card-play').onclick = () => {
         location.href = '/host-laiquhui.html';
       };
+      // Warm-up needs no set — teacher-driven sentence builder
+      document.querySelector('#card-warmup .game-card-play').onclick = () => {
+        location.href = '/host-warmup.html';
+      };
     } else {
       document.getElementById('set-name').textContent = 'elige un juego, luego una serie';
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
@@ -384,6 +413,10 @@
       // Lái-Qù-Huí also skips sets entirely
       document.querySelector('#card-laiquhui .game-card-play').onclick = () => {
         location.href = '/host-laiquhui.html';
+      };
+      // Warm-up skips sets entirely
+      document.querySelector('#card-warmup .game-card-play').onclick = () => {
+        location.href = '/host-warmup.html';
       };
     }
 

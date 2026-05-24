@@ -329,6 +329,14 @@ function trTrySpawn(g, opts) {
   return patient;
 }
 
+// === WARM-UP MODE · sentence-builder broadcast tool ===
+// Teacher-driven flashcard mode. The teacher picks Chinese words from a
+// library on the host page, and the constructed sentence broadcasts live
+// to every player phone. Color-coded by category so kids can see how the
+// pinyin words map to Spanish word-for-word.
+// No timer, no scoring, no game loop — teacher exits when ready.
+const WU_ADMIN_PASSWORD = process.env.WU_ADMIN_PASSWORD || 'draly2026';
+
 // === LÁI-QÙ-HUÍ · 来去回 Dragon Courier — directional vocab game ===
 // Self-contained (no question set required). Each player is a dragon
 // courier on an 8x8 top-down village map. Missions use the three target
@@ -1412,7 +1420,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage', 'laiquhui'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage', 'laiquhui', 'warmup'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -1428,6 +1436,7 @@ io.on('connection', (socket) => {
       type === 'sixseven'     ? 120 :
       type === 'triage'       ? 240 :
       type === 'laiquhui'     ? 180 :
+      type === 'warmup'       ? 3600 :   // 1 hour ceiling; teacher exits manually
       60;
     let grid = null;
     let vendors = null;
@@ -1564,7 +1573,7 @@ io.on('connection', (socket) => {
     // generated server-side — sixseven, laiquhui). Don't gate them on
     // questions.length, otherwise Start silently does nothing and the
     // host has no idea why.
-    const setlessGameTypes = ['sixseven', 'laiquhui'];
+    const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup'];
     if (!setlessGameTypes.includes(g.gameType) && !g.questions.length) return;
     if (Object.keys(g.players).length === 0) return;
     g.state = 'countdown';
@@ -1807,6 +1816,13 @@ io.on('connection', (socket) => {
           ),
           teamScores: g.teamScores,
         });
+      }
+      if (g.gameType === 'warmup') {
+        g.warmup = {
+          sentence: [],            // array of word ids in order
+          adminSocketId: g.hostId, // only this socket can mutate the sentence
+        };
+        io.to(pin).emit('wu:state', { sentence: g.warmup.sentence });
       }
       if (g.gameType === 'laiquhui') {
         // Each player spawns at the home tile and gets their first mission.
@@ -2753,6 +2769,45 @@ io.on('connection', (socket) => {
     }, 1800);
   });
 
+  // === WARM-UP sentence-builder ===
+  // Teacher (host) is the only socket allowed to mutate the live sentence.
+  // Every mutation broadcasts wu:state to all players in the room.
+  function wuRequireAdmin(g, socket, password) {
+    if (!g || g.gameType !== 'warmup') return false;
+    if (g.hostId !== socket.id) return false;
+    if (password !== WU_ADMIN_PASSWORD) return false;
+    return true;
+  }
+  socket.on('wu:auth', ({ pin, password }, cb) => {
+    const g = games[pin];
+    const ok = wuRequireAdmin(g, socket, password);
+    if (typeof cb === 'function') cb({ ok });
+  });
+  socket.on('wu:add-word', ({ pin, password, wordId }) => {
+    const g = games[pin];
+    if (!wuRequireAdmin(g, socket, password)) return;
+    if (!g.warmup) g.warmup = { sentence: [] };
+    g.warmup.sentence.push(wordId);
+    io.to(pin).emit('wu:state', { sentence: g.warmup.sentence });
+  });
+  socket.on('wu:remove-word', ({ pin, password, index }) => {
+    const g = games[pin];
+    if (!wuRequireAdmin(g, socket, password)) return;
+    if (!g.warmup) return;
+    const i = Number(index);
+    if (Number.isFinite(i) && i >= 0 && i < g.warmup.sentence.length) {
+      g.warmup.sentence.splice(i, 1);
+      io.to(pin).emit('wu:state', { sentence: g.warmup.sentence });
+    }
+  });
+  socket.on('wu:clear', ({ pin, password }) => {
+    const g = games[pin];
+    if (!wuRequireAdmin(g, socket, password)) return;
+    if (!g.warmup) return;
+    g.warmup.sentence = [];
+    io.to(pin).emit('wu:state', { sentence: g.warmup.sentence });
+  });
+
   // === LÁI-QÙ-HUÍ Dragon Courier ===
   // Player tapped one of the 4 direction buttons. Validate the move,
   // update position, check arrival, fire next mission if completed.
@@ -3432,6 +3487,7 @@ setInterval(() => {
     if (g.gameType === 'market-quest') return; // vendor-driven, no watchdog needed
     if (g.gameType === 'flappy') return;       // revive-driven, no watchdog
     if (g.gameType === 'laiquhui') return;     // movement-driven, no questions at all
+    if (g.gameType === 'warmup') return;       // teacher-driven flashcards, no questions
     Object.entries(g.players).forEach(([pid, p]) => {
       // Conquest/triage have multi-stage flows — if the player has a pending
       // strategic pick, don't shove a new question on top of their picker.
