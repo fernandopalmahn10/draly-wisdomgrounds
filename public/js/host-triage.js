@@ -29,7 +29,15 @@
   let gameOver = false;
   let ambienceTimer = null;
   let vocabFloatTimer = null;
+  let doctorBubbleTimer = null;
   let lastEventBannerAt = 0;
+
+  // Performance: hard cap on the number of floating vocab tiles + CPR floats
+  // alive at any moment. Keeps DOM cheap on lower-end Android.
+  const MAX_FLOATING_TILES = 4;
+  // Detect very-low-end devices so we can degrade visual density gracefully.
+  const IS_LOW_END = (navigator.hardwareConcurrency || 4) < 4
+                  || /Android.*; (SM-J|SM-A0|SM-A1|SM-G53|SM-G55).*Mobile/.test(navigator.userAgent || '');
 
   // === INTRUSIVE VOCABULARY POOL ===
   // The target words to drill repeatedly. The KEY ones (yīshēng, yīyuàn) get
@@ -55,6 +63,16 @@
     $('mute-btn').textContent = muted ? '🔇 Off' : '🔊 On';
   });
   document.addEventListener('click', () => window.unlockAudio && window.unlockAudio(), { once: true });
+  // Listen for the music-started event so the host can show a visible chip
+  window.addEventListener('music-started', (e) => {
+    const chip = $('music-chip');
+    const name = $('music-chip-name');
+    if (!chip) return;
+    if (name) name.textContent = 'Triage ER · ' + (e.detail.bpm || '') + 'bpm';
+    chip.classList.remove('hidden');
+    // Auto-hide after ~3.5s so it doesn't clutter the active screen
+    setTimeout(() => chip.classList.add('hidden'), 3500);
+  });
 
   const params = new URLSearchParams(location.search);
   const chosenSetId = params.get('setId');
@@ -106,6 +124,7 @@
     gameOver = false;
     if (ambienceTimer) { clearInterval(ambienceTimer); ambienceTimer = null; }
     if (vocabFloatTimer) { clearInterval(vocabFloatTimer); vocabFloatTimer = null; }
+    if (doctorBubbleTimer) { clearInterval(doctorBubbleTimer); doctorBubbleTimer = null; }
     updateHud();
   });
 
@@ -126,7 +145,9 @@
 
   socket.on('countdown', () => {
     showScreen('countdown');
-    MochiSounds.startMusic && MochiSounds.startMusic();
+    // Procedural triage theme only — no double-start with the legacy MP3
+    // music that was racing the theme to silence.
+    if (window.unlockAudio) window.unlockAudio();
     MochiSounds.startGameTheme && MochiSounds.startGameTheme('triage');
     let n = 3;
     const numEl = $('countdown-num');
@@ -172,6 +193,7 @@
     MochiSounds.battleHorn && MochiSounds.battleHorn();
     startAmbientHeartbeat();
     startVocabFloat();
+    startDoctorBubbleRotation();
   });
 
   socket.on('tri:patient-arrived', (data) => {
@@ -303,6 +325,7 @@
     if (timerInterval) clearInterval(timerInterval);
     if (ambienceTimer) { clearInterval(ambienceTimer); ambienceTimer = null; }
     if (vocabFloatTimer) { clearInterval(vocabFloatTimer); vocabFloatTimer = null; }
+    if (doctorBubbleTimer) { clearInterval(doctorBubbleTimer); doctorBubbleTimer = null; }
     gameOver = true;
     MochiSounds.stopMusic && MochiSounds.stopMusic();
     showScreen('win');
@@ -455,19 +478,24 @@
   // forget the vocabulary between questions.
   function startVocabFloat() {
     if (vocabFloatTimer) clearInterval(vocabFloatTimer);
-    // Seed a few immediately
-    for (let i = 0; i < 3; i++) setTimeout(spawnVocabTile, i * 700);
+    // Seed a few immediately, but stagger them
+    for (let i = 0; i < 2; i++) setTimeout(spawnVocabTile, i * 900);
+    // 3.2s cadence on low-end devices, 2.6s on others — keeps DOM cheap
+    const spawnMs = IS_LOW_END ? 3200 : 2600;
     vocabFloatTimer = setInterval(() => {
       if (gameOver) return;
       spawnVocabTile();
-    }, 2400);
+    }, spawnMs);
   }
   function spawnVocabTile() {
     const layer = $('tri-ward-vocab-float');
     if (!layer) return;
+    // Cap concurrent floaters — keeps DOM cheap on low-end Android.
+    if (layer.querySelectorAll('.tri-ward-vocab-tile').length >= MAX_FLOATING_TILES) return;
     const v = pickVocab();
     const tile = document.createElement('div');
     tile.className = 'tri-ward-vocab-tile' + (v.key ? ' key' : '');
+    tile.style.willChange = 'transform, opacity';
     tile.innerHTML = `
       <span class="pinyin">${v.icon} ${v.pinyin}</span>
       <span class="es">${v.es}</span>`;
@@ -478,6 +506,37 @@
     tile.style.left = left + '%';
     layer.appendChild(tile);
     setTimeout(() => tile.remove(), 14500);
+  }
+
+  // === Doctor speech-bubble rotation ===
+  // Every ~7s the bottom-corner doctor cutout pops a different pinyin
+  // bubble so the kid sees the target words from another angle.
+  const DOCTOR_LINES = [
+    'Yīshēng zài <strong>yīyuàn</strong> 🏥 gōngzuò',
+    '¡Soy yīshēng 🩺! Trabajo en <strong>yīyuàn</strong>',
+    '<strong>yīyuàn</strong> = hospital 🏥',
+    '¿Nǎ’er? → <strong>yīyuàn</strong> 🏥',
+    'Gōngzuò = trabajar 🧑‍⚕️',
+  ];
+  function startDoctorBubbleRotation() {
+    const bubble = $('tri-ward-doctor-bubble');
+    if (!bubble) return;
+    let idx = 0;
+    function pop() {
+      if (gameOver) return;
+      bubble.innerHTML = DOCTOR_LINES[idx % DOCTOR_LINES.length];
+      bubble.classList.remove('show');
+      void bubble.offsetWidth;
+      bubble.classList.add('show');
+      idx++;
+      // Hide after 3.6s, next pop in 7s
+      setTimeout(() => bubble.classList.remove('show'), 3600);
+    }
+    // First pop ~1.5s after round start so it doesn't compete with the
+    // entry banner.
+    setTimeout(pop, 1500);
+    if (doctorBubbleTimer) clearInterval(doctorBubbleTimer);
+    doctorBubbleTimer = setInterval(pop, 7000);
   }
 
   // === Side rosters ===

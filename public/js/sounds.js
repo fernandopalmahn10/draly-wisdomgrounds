@@ -797,13 +797,29 @@
   }
 
   async function startGameTheme(gameType) {
-    // Stop anything else playing — we want a clean single-music-source feel.
-    stopMusic();
-    stopGameTheme();
     const spec = GAME_THEMES[gameType];
-    if (!spec) return;
+    if (!spec) {
+      console.warn('[music] no theme registered for', gameType);
+      return;
+    }
+    // === CRITICAL: kill ALL previous music sources first, including the
+    // legacy MP3 battle theme. Skipping this caused the audible "no music"
+    // bug — the MP3 ramped musicGain to 0.6 then my theme ramp to 0.75 was
+    // fighting the toggleMute reset to 0.6 + the legacy fade-out. Single
+    // source of truth from now on: just the procedural theme. ===
+    stopMusic();          // clears musicTimer + bgSource + themeTimer
+    stopCustomMusic();    // belt-and-suspenders kill of any MP3 source
     const ctx = ensureCtx();
-    if (!ctx) return;
+    if (!ctx) {
+      console.warn('[music] no AudioContext available');
+      return;
+    }
+    // iOS / mobile-Safari can leave the context suspended even after a
+    // gesture. Force-resume and AWAIT it so the schedule below actually
+    // produces audible output.
+    if (ctx.state === 'suspended') {
+      try { await ctx.resume(); } catch (e) { /* ignore */ }
+    }
     themeKey = gameType;
     themeBPM = spec.bpm;
     themeBeatsPerBar = spec.beatsPerBar;
@@ -812,16 +828,16 @@
     themePatternFn = spec.fn;
     themeBarIdx = 0;
     themeStartCt = ctx.currentTime;
-    themeNextBarAt = ctx.currentTime + 0.25;
-    // Gentle fade in
+    themeNextBarAt = ctx.currentTime + 0.1;     // start almost immediately
+    // === Set music volume INSTANTLY to the target — no ramp-from-0. The
+    // old fade-in masked the music for ~1.2s which felt like "no music".
     musicGain.gain.cancelScheduledValues(ctx.currentTime);
-    musicGain.gain.setValueAtTime(0, ctx.currentTime);
-    // 0.75 — boosted so the procedural themes are actually audible at
-    // classroom playback volumes. Each per-game pattern leaves headroom
-    // (note volumes ≤ 0.30) so the master can run hotter.
-    musicGain.gain.linearRampToValueAtTime(muted ? 0 : 0.75, ctx.currentTime + 1.2);
+    musicGain.gain.setValueAtTime(muted ? 0 : 0.85, ctx.currentTime);
+    console.log('[music] 🎵 theme started:', gameType, '@', spec.bpm, 'bpm — gain', muted ? 0 : 0.85);
     scheduleThemeAhead();
-    themeTimer = setInterval(scheduleThemeAhead, 700);
+    themeTimer = setInterval(scheduleThemeAhead, 600);
+    // Notify any host page that wants to show a "🎵 Music: …" chip
+    try { window.dispatchEvent(new CustomEvent('music-started', { detail: { gameType, bpm: spec.bpm } })); } catch (_) {}
   }
   function stopGameTheme() {
     if (themeTimer) clearInterval(themeTimer);
@@ -1227,8 +1243,12 @@
   window.toggleMute = function () {
     muted = !muted;
     if (audioCtx && sfxGain && musicGain) {
+      sfxGain.gain.cancelScheduledValues(audioCtx.currentTime);
+      musicGain.gain.cancelScheduledValues(audioCtx.currentTime);
       sfxGain.gain.linearRampToValueAtTime(muted ? 0 : 0.7, audioCtx.currentTime + 0.2);
-      musicGain.gain.linearRampToValueAtTime(muted ? 0 : 0.6, audioCtx.currentTime + 0.2);
+      // Match the level startGameTheme uses (0.85) so toggling mute doesn't
+      // silently halve the music volume.
+      musicGain.gain.linearRampToValueAtTime(muted ? 0 : 0.85, audioCtx.currentTime + 0.2);
     }
     return muted;
   };

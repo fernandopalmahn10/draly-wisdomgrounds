@@ -7,10 +7,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/triage.css?v=20260523c">
+  <link rel="stylesheet" href="/css/triage.css?v=20260524a">
 </head>
 <body class="triage-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
+  <div class="music-chip hidden" id="music-chip">🎵 <span id="music-chip-name">…</span></div>
 
   <!-- LOBBY -->
   <div id="screen-lobby" class="container">
@@ -20,6 +21,18 @@
       <div class="pin-display" id="pin-display">····</div>
       <div style="color:var(--ink-dim); font-size:0.9rem;">
         Tus jugadores entran en <span id="join-url" style="color:var(--gold-glow); font-weight:800;">esta URL</span>
+      </div>
+    </div>
+
+    <!-- LOBBY HERO — the doctor + key sentence so kids see it before round starts -->
+    <div class="tri-lobby-hero">
+      <img class="tri-lobby-doctor" src="/assets/yisheng.png" alt="yīshēng"
+           onerror="this.style.display='none'">
+      <div class="tri-lobby-hero-text">
+        <div class="tri-lobby-question">Yīshēng zài nǎ'er gōngzuò?</div>
+        <div class="tri-lobby-es">¿Dónde trabaja el doctor?</div>
+        <div class="tri-lobby-arrow">↓</div>
+        <div class="tri-lobby-answer">🏥 <strong>yīyuàn</strong> — hospital</div>
       </div>
     </div>
 
@@ -119,10 +132,15 @@
 
     <!-- INTRUSIVE VOCABULARY BANNER
          Glued to the top of the active screen during the whole round so the
-         target sentence + key word are physically impossible to miss. -->
+         target sentence + key word are physically impossible to miss.
+         Doctor cutout on the left "presents" the sentence with a speech bubble. -->
     <div class="tri-vocab-banner" id="tri-vocab-banner">
+      <div class="tri-vocab-doctor-presenter">
+        <img class="tri-doctor-img" src="/assets/yisheng.png" alt="yīshēng doctor"
+             onerror="this.style.display='none'">
+        <div class="tri-doctor-label">yīshēng 🩺</div>
+      </div>
       <div class="tri-vocab-question">
-        <span class="tri-vocab-q-icon">🩺</span>
         <span class="tri-vocab-q-pinyin">Yīshēng zài nǎ'er gōngzuò?</span>
         <span class="tri-vocab-q-es">¿Dónde trabaja el doctor?</span>
       </div>
@@ -154,6 +172,14 @@
           <div class="tri-ward-hospital-mascot">🏥</div>
           <!-- Floating vocab tile layer — drifts pinyin words across the bg -->
           <div class="tri-ward-vocab-float" id="tri-ward-vocab-float"></div>
+          <!-- Doctor cutout in the ward corner with a periodic speech bubble -->
+          <div class="tri-ward-doctor" id="tri-ward-doctor">
+            <img class="tri-ward-doctor-img" src="/assets/yisheng.png" alt="yīshēng"
+                 onerror="this.style.display='none'">
+            <div class="tri-ward-doctor-bubble" id="tri-ward-doctor-bubble">
+              Yīshēng zài <strong>yīyuàn</strong> 🏥 gōngzuò
+            </div>
+          </div>
         </div>
         <div class="tri-bed-grid" id="tri-bed-grid">
           <!-- 6 beds rendered by JS -->
@@ -198,9 +224,9 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260523c"></script>
+  <script src="/js/sounds.js?v=20260524a"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/host-triage.js?v=20260523c"></script>
+  <script src="/js/host-triage.js?v=20260524a"></script>
 </body>
 </html>
