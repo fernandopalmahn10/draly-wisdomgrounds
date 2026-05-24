@@ -1524,12 +1524,16 @@
     gridW: 8, gridH: 8,
     locations: [],
     myPos: { x: 1, y: 6 },
+    lastPos: { x: 1, y: 6 },
     mission: null,
     score: 0,
     missionsDone: 0,
     missionsFailed: 0,
+    streak: 0,           // consecutive successful missions
+    bestStreak: 0,
     missionTimerInt: null,
     boundDpad: false,
+    footstepTrail: [],   // recent positions for the breadcrumb trail
   };
   // Verb → emoji + colour helper for the mission verb tag
   const LQH_VERB_META = {
@@ -1537,6 +1541,18 @@
     lai: { tag: 'lái 来', cls: 'verb-lai', icon: '🐉' },
     hui: { tag: 'huí 回', cls: 'verb-hui', icon: '🏠' },
   };
+  // Drop a fading footstep trail behind the courier so movement reads as
+  // progress, not random tapping. Each step leaves a small dot on the
+  // tile the courier just left; dots fade after a short window.
+  function lqhDropFootstep(x, y) {
+    const tile = document.getElementById(`lqh-tile-${x}-${y}`);
+    if (!tile) return;
+    const dot = document.createElement('div');
+    dot.className = 'lqh-footstep ' + (team || 'red');
+    tile.appendChild(dot);
+    setTimeout(() => dot.remove(), 1400);
+  }
+
   function lqhRenderMap() {
     const map = document.getElementById('lqh-map');
     if (!map) return;
@@ -1577,13 +1593,14 @@
         }
       }
     }
-    // Place the player's dragon on its current tile
+    // Place the player's character on its current tile — use the platform's
+    // existing Dralingo dragon mascot (already in /assets/dralingo.png). No
+    // new asset needed; just reuse what's there.
     const me = document.getElementById(`lqh-tile-${lqhState.myPos.x}-${lqhState.myPos.y}`);
     if (me) {
       const dragon = document.createElement('div');
       dragon.className = 'lqh-me ' + (team || 'red');
-      // Fallback emoji + try to load the team-specific dragon PNG if it exists
-      dragon.innerHTML = `<img src="/assets/laiquhui/dragon-courier.png"
+      dragon.innerHTML = `<img src="/assets/dralingo.png"
         onerror="this.style.display='none'; this.parentNode.classList.add('emoji-fallback');"
         alt="me"><span class="lqh-me-emoji">🐲</span>`;
       me.appendChild(dragon);
@@ -1670,7 +1687,6 @@
     lqhShowMission(data.mission, data.x, data.y, data.score, data.missionsDone, data.missionsFailed);
   });
   socket.on('lqh:move', (data) => {
-    lqhState.myPos = { x: data.x, y: data.y };
     if (data.bump) {
       // Shake the corresponding D-pad button — visual wall feedback
       const btn = document.querySelector(`.lqh-dir-btn[data-dir="${data.dir}"]`);
@@ -1683,31 +1699,83 @@
       if (navigator.vibrate) navigator.vibrate([60, 20, 60]);
       return;
     }
+    // Drop a footstep on the tile we're LEAVING (not entering)
+    lqhDropFootstep(lqhState.myPos.x, lqhState.myPos.y);
+    lqhState.lastPos = { ...lqhState.myPos };
+    lqhState.myPos = { x: data.x, y: data.y };
+    if (MochiSounds.tap) MochiSounds.tap();
     lqhRenderMap();
   });
   socket.on('lqh:complete', (data) => {
     lqhState.score = data.score != null ? data.score : lqhState.score;
     lqhState.missionsDone = data.missionsDone != null ? data.missionsDone : lqhState.missionsDone;
     lqhState.myPos = { x: data.x, y: data.y };
+    lqhState.streak = (lqhState.streak || 0) + 1;
+    if (lqhState.streak > lqhState.bestStreak) lqhState.bestStreak = lqhState.streak;
     document.getElementById('lqh-score').textContent = lqhState.score;
     document.getElementById('lqh-done').textContent = lqhState.missionsDone;
+    // === BIG CELEBRATION (engagement-checklist) ===
+    // Confetti burst from the destination tile, sentence-stamp pop, per-verb
+    // sound. Streak ladder escalates the toast tier.
+    lqhBurstConfetti();
+    const verb = data.verb || 'qu';
+    // Verb-specific feedback emoji
+    const verbEmoji = verb === 'lai' ? '🌟' : verb === 'hui' ? '🏠' : '✅';
     lqhShowFeedback('success', `
-      <div class="lqh-fb-emoji">✅</div>
+      <div class="lqh-fb-emoji">${verbEmoji}</div>
       <div class="lqh-fb-title">¡${data.sentence}!</div>
-      <div class="lqh-fb-pts">+${data.points} pts</div>`);
+      <div class="lqh-fb-pts">+${data.points} pts</div>
+      ${lqhState.streak >= 3 ? `<div class="lqh-fb-streak">🔥 Racha x${lqhState.streak}</div>` : ''}`);
     if (MochiSounds.correct) MochiSounds.correct();
-    if (window.Rewards) window.Rewards.show({ tier: 'great', icon: '🐲', text: '¡Entregado! +' + data.points });
+    // Streak ladder rewards
+    if (window.Rewards) {
+      if (lqhState.streak >= 6) {
+        window.Rewards.show({ tier: 'epic', icon: '🐉', text: `¡Mensajero LEGENDARIO! x${lqhState.streak} · +${data.points}`, duration: 2000 });
+      } else if (lqhState.streak >= 3) {
+        window.Rewards.show({ tier: 'great', icon: '🔥', text: `¡Racha x${lqhState.streak}! +${data.points}` });
+      } else {
+        window.Rewards.show({ icon: '🐲', text: '¡Entregado! +' + data.points });
+      }
+    }
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
+    // Clear the trail so each mission gets a fresh "fresh start" feel
+    setTimeout(() => {
+      document.querySelectorAll('.lqh-footstep').forEach((el) => el.remove());
+    }, 1200);
   });
   socket.on('lqh:fail', (data) => {
     lqhState.missionsFailed = data.missionsFailed != null ? data.missionsFailed : lqhState.missionsFailed;
+    // === STREAK BREAKER — failing zeroes out the streak (real consequence)
+    const brokeStreak = lqhState.streak;
+    lqhState.streak = 0;
     document.getElementById('lqh-failed').textContent = lqhState.missionsFailed;
     lqhShowFeedback('fail', `
       <div class="lqh-fb-emoji">💔</div>
-      <div class="lqh-fb-title">¡Tiempo!</div>
-      <div class="lqh-fb-pts">${data.sentence}</div>`);
+      <div class="lqh-fb-title">¡Tiempo agotado!</div>
+      <div class="lqh-fb-pts">${data.sentence}</div>
+      ${brokeStreak >= 3 ? `<div class="lqh-fb-streak-broken">Racha x${brokeStreak} rota</div>` : ''}`);
     if (MochiSounds.wrong) MochiSounds.wrong();
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
   });
+  // Confetti burst inside the map area when a mission completes
+  function lqhBurstConfetti() {
+    const map = document.getElementById('lqh-map');
+    if (!map) return;
+    const icons = ['🎉', '⭐', '✨', '🐲', '🐉', '📜', '💌'];
+    for (let i = 0; i < 14; i++) {
+      const c = document.createElement('div');
+      c.className = 'lqh-confetti';
+      c.textContent = icons[i % icons.length];
+      c.style.left = (10 + Math.random() * 80) + '%';
+      c.style.top = (10 + Math.random() * 80) + '%';
+      c.style.animationDelay = (i * 30) + 'ms';
+      c.style.setProperty('--dx', (Math.random() * 200 - 100) + 'px');
+      c.style.setProperty('--dy', (-100 - Math.random() * 150) + 'px');
+      c.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+      map.appendChild(c);
+      setTimeout(() => c.remove(), 1400);
+    }
+  }
   // === Player-side TRIAGE BG layer ===
   // Three overlapping layers on the question screen during active round:
   //   1. Floating pinyin tiles drift up the edges (cap 4 concurrent)
