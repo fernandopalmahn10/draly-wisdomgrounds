@@ -1822,12 +1822,14 @@ io.on('connection', (socket) => {
           sentence: [],
           viewMode: 'text',
           curious: false,
+          delegates: new Set(),
           adminSocketId: g.hostId,
         };
         io.to(pin).emit('wu:state', {
           sentence: g.warmup.sentence,
           viewMode: g.warmup.viewMode,
           curious: g.warmup.curious,
+          delegates: [],
         });
       }
       if (g.gameType === 'laiquhui') {
@@ -2081,6 +2083,7 @@ io.on('connection', (socket) => {
           sentence: g.warmup.sentence || [],
           viewMode: g.warmup.viewMode || 'text',
           curious: !!g.warmup.curious,
+          delegates: Array.from(g.warmup.delegates || []),
         });
       }
       // Market Quest: send the world state
@@ -2786,13 +2789,26 @@ io.on('connection', (socket) => {
   });
 
   // === WARM-UP sentence-builder ===
-  // Teacher (host) is the only socket allowed to mutate the live sentence.
-  // Every mutation broadcasts wu:state to all players in the room.
+  // Two permission tiers:
+  //   - wuRequireHost: ONLY the original teacher socket + correct password
+  //     (used for view-mode, curious mode, preset load, delegate grant/revoke).
+  //   - wuRequireAdmin: host OR a delegated student "asistente"
+  //     (used for add-word, remove-word, clear — the day-to-day sentence ops).
+  // Delegates are tracked by PLAYER NAME so they survive reconnects (socket.id
+  // changes on rejoin but the name stays).
+  function wuRequireHost(g, socket, password) {
+    if (!g || g.gameType !== 'warmup') return false;
+    return g.hostId === socket.id && password === WU_ADMIN_PASSWORD;
+  }
   function wuRequireAdmin(g, socket, password) {
     if (!g || g.gameType !== 'warmup') return false;
-    if (g.hostId !== socket.id) return false;
-    if (password !== WU_ADMIN_PASSWORD) return false;
-    return true;
+    // Host path
+    if (g.hostId === socket.id && password === WU_ADMIN_PASSWORD) return true;
+    // Delegate path — no password needed, identity comes from the player name
+    const p = g.players[socket.id];
+    if (!p) return false;
+    const delegates = g.warmup && g.warmup.delegates;
+    return !!(delegates && delegates.has(p.name));
   }
   socket.on('wu:auth', ({ pin, password }, cb) => {
     const g = games[pin];
@@ -2804,6 +2820,7 @@ io.on('connection', (socket) => {
       sentence: g.warmup.sentence,
       viewMode: g.warmup.viewMode || 'text',
       curious: !!g.warmup.curious,
+      delegates: Array.from(g.warmup.delegates || []),
     });
   }
   socket.on('wu:add-word', ({ pin, password, wordId }) => {
@@ -2830,34 +2847,50 @@ io.on('connection', (socket) => {
     g.warmup.sentence = [];
     wuEmitState(g, pin);
   });
-  // Teacher pushes a full sentence at once (used by preset-load)
+  // Teacher pushes a full sentence at once (used by preset-load) — HOST ONLY
   socket.on('wu:set-sentence', ({ pin, password, sentence }) => {
     const g = games[pin];
-    if (!wuRequireAdmin(g, socket, password)) return;
-    if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text' };
+    if (!wuRequireHost(g, socket, password)) return;
+    if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text', delegates: new Set() };
     if (!Array.isArray(sentence)) return;
-    // Sanity cap so nothing pathological gets pushed
     g.warmup.sentence = sentence.slice(0, 40).map(String);
     wuEmitState(g, pin);
   });
-  // Teacher switches text / picture / both view mode
+  // Teacher switches text / picture / both view mode — HOST ONLY
   socket.on('wu:set-view-mode', ({ pin, password, mode }) => {
     const g = games[pin];
-    if (!wuRequireAdmin(g, socket, password)) return;
+    if (!wuRequireHost(g, socket, password)) return;
     if (!g.warmup) return;
     const valid = ['text', 'picture', 'both'];
     g.warmup.viewMode = valid.includes(mode) ? mode : 'text';
     wuEmitState(g, pin);
   });
-  // === MODO CURIOSO === Teacher toggles a global "curious" flag. When on,
-  // every player can tap words in the sentence to open a Pokédex-style
-  // deep-dive card. When off, those cards close + everyone returns to the
-  // teacher's current sentence view.
+  // === MODO CURIOSO === Teacher toggles global "curious" flag. HOST ONLY —
+  // delegates can build sentences but only the original teacher decides when
+  // to open the Pokédex layer for the whole class.
   socket.on('wu:set-curious', ({ pin, password, curious }) => {
     const g = games[pin];
-    if (!wuRequireAdmin(g, socket, password)) return;
+    if (!wuRequireHost(g, socket, password)) return;
     if (!g.warmup) return;
     g.warmup.curious = !!curious;
+    wuEmitState(g, pin);
+  });
+  // === ASISTENTE (delegate admin) === Teacher grants/revokes word-building
+  // power to a named student. The student's phone instantly switches from
+  // read-only mirror to full builder. HOST ONLY.
+  socket.on('wu:delegate-grant', ({ pin, password, playerName }) => {
+    const g = games[pin];
+    if (!wuRequireHost(g, socket, password)) return;
+    if (!g.warmup) return;
+    if (!playerName) return;
+    g.warmup.delegates.add(String(playerName));
+    wuEmitState(g, pin);
+  });
+  socket.on('wu:delegate-revoke', ({ pin, password, playerName }) => {
+    const g = games[pin];
+    if (!wuRequireHost(g, socket, password)) return;
+    if (!g.warmup) return;
+    g.warmup.delegates.delete(String(playerName));
     wuEmitState(g, pin);
   });
 

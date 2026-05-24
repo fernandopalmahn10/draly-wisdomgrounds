@@ -1529,27 +1529,123 @@
   // ===========================================================================
   let wuPlayerViewMode = 'text';
   let wuPlayerCurious = false;
+  let wuPlayerIsDelegate = false;
+  let wuPlayerActiveExp = 'all';   // EXP filter on the player's own library
+
   socket.on('wu:state', (data) => {
     if (gameType !== 'warmup') return;
     if (data.viewMode) wuPlayerViewMode = data.viewMode;
     wuPlayerCurious = !!data.curious;
-    // If curious mode was just turned OFF, close any open Pokédex card
     if (!wuPlayerCurious) hideWuPokedex();
-    // === Late-join safety: when wu:state arrives, ensure we're ON the
-    // warmup screen. If we're on a leftover game screen from before
-    // (e.g. a triage CPR card from a prior round), jump out. ===
+    // === Late-join safety: ensure we're on screen-wu ===
     const onWu = document.getElementById('screen-wu') &&
       !document.getElementById('screen-wu').classList.contains('hidden');
     if (!onWu) showScreen('wu');
-    // Update the curious-mode hint text on the player phone
+    // === DELEGATE CHECK === Are WE in the delegates list?
+    const delegates = Array.isArray(data.delegates) ? data.delegates : [];
+    const wasDelegate = wuPlayerIsDelegate;
+    wuPlayerIsDelegate = delegates.indexOf(myName) >= 0;
+    const adminWrap = document.getElementById('wu-player-admin');
+    if (adminWrap) adminWrap.classList.toggle('hidden', !wuPlayerIsDelegate);
+    // Just promoted? Render the library + bind controls
+    if (wuPlayerIsDelegate && !wasDelegate) {
+      renderPlayerExpTabs();
+      renderPlayerLibrary();
+      bindPlayerAdminControls();
+      if (MochiSounds.winFanfare) MochiSounds.winFanfare();
+    }
+    // Update hint
     const hint = document.getElementById('wu-player-hint');
     if (hint) {
-      hint.innerHTML = wuPlayerCurious
-        ? '🔍 <strong>¡Modo Curioso!</strong> Toca una palabra para explorar.'
-        : 'Los colores que coinciden te ayudan a ver la estructura.';
+      if (wuPlayerIsDelegate) {
+        hint.innerHTML = '🎓 <strong>¡Eres asistente!</strong> Toca palabras abajo para construir.';
+      } else if (wuPlayerCurious) {
+        hint.innerHTML = '🔍 <strong>¡Modo Curioso!</strong> Toca una palabra para explorar.';
+      } else {
+        hint.innerHTML = 'Los colores que coinciden te ayudan a ver la estructura.';
+      }
     }
     renderWuStage(data.sentence || []);
   });
+
+  // Player-side admin library — same word data + EXP tabs, but emits
+  // wu:add-word without a password (server validates via delegates set).
+  function renderPlayerExpTabs() {
+    const wrap = document.getElementById('wu-player-exp-tabs');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    const all = document.createElement('button');
+    all.className = 'wu-pl-exp-tab active';
+    all.dataset.exp = 'all';
+    all.type = 'button';
+    all.textContent = 'Todos';
+    all.onclick = () => setPlayerExp('all');
+    wrap.appendChild(all);
+    Object.values(window.WU_EXPERIENCES || {}).forEach((e) => {
+      const tab = document.createElement('button');
+      tab.className = 'wu-pl-exp-tab';
+      tab.dataset.exp = e.id;
+      tab.type = 'button';
+      tab.textContent = e.short;
+      tab.onclick = () => setPlayerExp(e.id);
+      wrap.appendChild(tab);
+    });
+  }
+  function setPlayerExp(id) {
+    wuPlayerActiveExp = id;
+    document.querySelectorAll('.wu-pl-exp-tab').forEach((t) => {
+      t.classList.toggle('active', t.dataset.exp === id);
+    });
+    renderPlayerLibrary();
+  }
+  function renderPlayerLibrary() {
+    const lib = document.getElementById('wu-player-library');
+    if (!lib) return;
+    lib.innerHTML = '';
+    const byExp = {};
+    (window.WU_WORDS || []).forEach((w) => {
+      if (wuPlayerActiveExp !== 'all' && w.exp !== wuPlayerActiveExp) return;
+      (byExp[w.exp] = byExp[w.exp] || []).push(w);
+    });
+    Object.keys(byExp).forEach((expId) => {
+      const exp = window.WU_EXPERIENCES[expId];
+      const section = document.createElement('div');
+      section.className = 'wu-pl-lib-section';
+      section.innerHTML = `<div class="wu-pl-lib-title">${exp ? exp.label : expId}</div>`;
+      const grid = document.createElement('div');
+      grid.className = 'wu-pl-lib-grid';
+      byExp[expId].forEach((w) => {
+        const cat = window.WU_CATEGORIES[w.cat] || { color: '#aaa' };
+        const card = document.createElement('button');
+        card.className = 'wu-pl-lib-card';
+        card.type = 'button';
+        card.style.setProperty('--cat-color', cat.color);
+        card.innerHTML = `
+          <span class="wu-pl-icon">${w.icon || ''}</span>
+          <span class="wu-pl-pinyin">${w.pinyin}</span>
+          <span class="wu-pl-hanzi">${w.hanzi}</span>
+          <span class="wu-pl-es">${w.es}</span>`;
+        card.onclick = () => {
+          // No password — server validates via delegates set
+          try { socket.emit('wu:add-word', { pin, wordId: w.id }); } catch (_) {}
+          if (MochiSounds.tap) MochiSounds.tap();
+        };
+        grid.appendChild(card);
+      });
+      section.appendChild(grid);
+      lib.appendChild(section);
+    });
+  }
+  function bindPlayerAdminControls() {
+    const clear = document.getElementById('wu-player-admin-clear');
+    if (clear && !clear._wuBound) {
+      clear._wuBound = true;
+      clear.onclick = () => {
+        try { socket.emit('wu:clear', { pin }); } catch (_) {}
+        if (MochiSounds.tap) MochiSounds.tap();
+      };
+    }
+  }
   function renderWuStage(sentence) {
     const pinyinRow = document.getElementById('wu-player-stage-pinyin');
     const esRow     = document.getElementById('wu-player-stage-es');

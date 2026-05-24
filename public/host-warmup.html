@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260524c">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260524d">
 </head>
 <body class="wu-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -124,6 +124,17 @@
       </span>
     </div>
 
+    <!-- 🎓 ASISTENTES — live student roster. Tap a student row to make
+         them co-admin; tap their 👑 again to revoke. They can then build
+         sentences alongside you, visible to everyone. -->
+    <div class="wu-roster-section">
+      <div class="wu-roster-title">
+        🎓 Asistentes
+        <span class="wu-roster-sub" id="wu-roster-sub">Toca un alumno para darle el control del catálogo</span>
+      </div>
+      <div class="wu-roster-list" id="wu-roster-list"></div>
+    </div>
+
     <!-- Experience-tab filter strip — pick which HSK1 experience to show -->
     <div class="wu-exp-tabs" id="wu-exp-tabs"></div>
 
@@ -135,6 +146,6 @@
   <script src="/js/sounds.js?v=20260524h"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/warmup-vocab.js?v=20260524c"></script>
-  <script src="/js/host-warmup.js?v=20260524c"></script>
+  <script src="/js/host-warmup.js?v=20260524d"></script>
 </body>
 </html>
