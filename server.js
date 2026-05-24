@@ -1502,7 +1502,12 @@ io.on('connection', (socket) => {
   socket.on('host:start', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
-    if (!g.questions.length) return;
+    // Some game types don't use question sets at all (their content is
+    // generated server-side — sixseven, laiquhui). Don't gate them on
+    // questions.length, otherwise Start silently does nothing and the
+    // host has no idea why.
+    const setlessGameTypes = ['sixseven', 'laiquhui'];
+    if (!setlessGameTypes.includes(g.gameType) && !g.questions.length) return;
     if (Object.keys(g.players).length === 0) return;
     g.state = 'countdown';
     broadcast(pin);
