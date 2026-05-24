@@ -2554,7 +2554,7 @@ io.on('connection', (socket) => {
   // Triage ER: player tapped which patient to treat. Resolves the heal,
   // awards points (2.5x for critical), and broadcasts the rescue so the host
   // can play the defib zap / life-saved chime / EKG stabilize animation.
-  socket.on('player:tri-treat', ({ pin, patientId, bonus, completed }) => {
+  socket.on('player:tri-treat', ({ pin, patientId, bonus, completed, failed }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'triage' || g.state !== 'active') return;
     const p = g.players[socket.id];
@@ -2562,6 +2562,7 @@ io.on('connection', (socket) => {
     p.triTreatPending = false;
     // Clamp bonus to a sane range (CPR rhythm 0-5, defib 0-8, total max 15)
     const cprBonus = Math.max(0, Math.min(15, Number(bonus) || 0));
+    const wasFailed = !!failed;
     // Resolve target — fall back to the most-urgent alive patient if the
     // tapped patient already died between picker-open and the player's tap.
     let patient = g.triage.patients[patientId];
@@ -2586,8 +2587,42 @@ io.on('connection', (socket) => {
       return;
     }
     const basePoints = patient.critical ? TR_CRITICAL_POINTS : TR_NORMAL_POINTS;
-    const points = basePoints + cprBonus;
     const team = p.team;
+    // === FAILURE PATH ===
+    // If the player failed the CPR/defib (didn't complete in time, or hit
+    // red zone), the patient DIES. No points, increment death counter.
+    // This is the "game integrity" the user asked for — failing has real
+    // consequences instead of always rewarding the answer.
+    if (wasFailed) {
+      g.triage.patientsDied++;
+      delete g.triage.patients[patient.id];
+      io.to(socket.id).emit('tri:treat-resolved', {
+        action: 'failed',
+        patientId: patient.id,
+        bedIdx: patient.bedIdx,
+        points: 0,
+        basePoints,
+        cprBonus: 0,
+      });
+      io.to(pin).emit('tri:patient-died', {
+        patientId: patient.id,
+        bedIdx: patient.bedIdx,
+        icon: patient.icon,
+        ailment: patient.ailment,
+        critical: patient.critical,
+        patientsDied: g.triage.patientsDied,
+        causedByPlayer: p.name,
+        causedByTeam: team,
+      });
+      setTimeout(() => {
+        if (!games[pin] || games[pin].state !== 'active') return;
+        const q = nextQuestionFor(g, socket.id);
+        if (q) io.to(socket.id).emit('question', q);
+      }, 1800);
+      return;
+    }
+    // === SUCCESS PATH ===
+    const points = basePoints + cprBonus;
     if (team === 'red') g.triage.livesSavedRed++;
     else g.triage.livesSavedGold++;
     g.teamScores[team] = (g.teamScores[team] || 0) + points;
