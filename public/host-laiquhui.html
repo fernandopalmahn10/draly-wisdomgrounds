@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>🐉 Lái-Qù-Huí · Dragon Courier · Host</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+  <link rel="stylesheet" href="/css/laiquhui.css?v=20260524a">
+</head>
+<body class="lqh-bg">
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+  <div class="music-chip hidden" id="music-chip">🎵 <span id="music-chip-name">…</span></div>
+
+  <!-- LOBBY -->
+  <div id="screen-lobby" class="container">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div class="market-banner">🐉 Lái-Qù-Huí · 来去回 · Dragon Courier 🏯</div>
+      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
+      <div class="pin-display" id="pin-display">····</div>
+      <div style="color:var(--ink-dim); font-size:0.9rem;">
+        Tus jugadores entran en <span id="join-url" style="color:var(--gold-glow); font-weight:800;">esta URL</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div style="font-size:2rem;">🐲</div>
+        <div style="flex:1;">
+          <div style="font-size:0.75rem; color:var(--ink-dim); letter-spacing:0.15em; text-transform:uppercase;">Modo</div>
+          <div style="font-weight:800; font-size:1.15rem;">Dragon Courier 🐉</div>
+          <div style="color:var(--ink-dim); font-size:0.85rem;">Sin set · 来去回 + 上下前后</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="location.href='/'">← Inicio</button>
+      </div>
+      <div class="duration-control">
+        <span>⏱ Duración</span>
+        <input type="range" id="duration-slider" min="120" max="360" step="30" value="180">
+        <span class="duration-value" id="duration-value">3m</span>
+      </div>
+    </div>
+
+    <div class="host-grid">
+      <div class="team-panel team-red">
+        <div class="team-header">
+          <div class="team-mascot">🐲</div>
+          <div>
+            <div class="team-name">Mensajeros Rojos</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">紅信使</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-red"></div>
+      </div>
+      <div class="team-panel team-gold">
+        <div class="team-header">
+          <div class="team-mascot">🐉</div>
+          <div>
+            <div class="team-name">Mensajeros Dorados</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">金信使</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-gold"></div>
+      </div>
+    </div>
+
+    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:12px;">
+      Toca el chip de un jugador para cambiar de equipo
+    </p>
+
+    <div class="controls-panel">
+      <div class="controls-row" style="justify-content:center;">
+        <button class="btn btn-ghost" id="balance-btn">⚖️ Equilibrar</button>
+        <button class="btn btn-jade" id="start-btn" disabled>▶️ ¡A repartir!</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+      <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se juega</div>
+      <ol style="color:var(--ink-dim); font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
+        <li>Cada jugador es un <strong>dragoncito mensajero 🐲</strong> en un mapa de aldea china.</li>
+        <li>Recibe una misión en el teléfono: "<strong>Wǒ qù 学校</strong>" — ¡camina hacia la escuela!</li>
+        <li>Usa los botones <strong>上 下 前 后</strong> para navegar por el mapa.</li>
+        <li>Llega a tiempo → puntos. Si se acaba el tiempo → misión fallida 💔.</li>
+        <li>Tres verbos: <strong>qù 去</strong> (ir) · <strong>lái 来</strong> (venir) · <strong>huí 回</strong> (regresar a casa).</li>
+        <li>Equipo con más puntos al final gana 🏆.</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- COUNTDOWN -->
+  <div id="screen-countdown" class="hidden countdown-overlay">
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <!-- ACTIVE — minimal scoreboard since players play on their phones -->
+  <div id="screen-active" class="hidden lqh-container">
+    <div class="sticky-pin">
+      <span class="sticky-pin-label">PIN</span>
+      <span class="sticky-pin-value" id="active-pin-display">····</span>
+    </div>
+
+    <div class="lqh-topbar">
+      <div class="lqh-team red">
+        <span class="lqh-team-emoji">🐲</span>
+        <span class="lqh-team-label">Rojos</span>
+        <span class="lqh-team-score" id="score-red">0</span>
+      </div>
+      <div class="lqh-time">
+        <span class="lqh-time-icon">⏱</span>
+        <span id="timer-display">3:00</span>
+      </div>
+      <div class="lqh-team gold">
+        <span class="lqh-team-score" id="score-gold">0</span>
+        <span class="lqh-team-label">Dorados</span>
+        <span class="lqh-team-emoji">🐉</span>
+      </div>
+    </div>
+
+    <div class="lqh-stage">
+      <aside class="lqh-roster-sidebar lqh-roster-red" id="lqh-roster-red">
+        <div class="lqh-roster-header"><span class="lqh-roster-mascot">🐲</span> Mensajeros Rojos</div>
+        <div class="lqh-roster-list" id="lqh-roster-list-red"></div>
+      </aside>
+
+      <div class="lqh-map-display" id="lqh-map-display">
+        <div class="lqh-map-title">🏯 La Aldea</div>
+        <div class="lqh-map-subtitle">来 lái · 去 qù · 回 huí</div>
+        <div class="lqh-mini-map" id="lqh-mini-map"></div>
+        <div class="lqh-recent-event" id="lqh-recent-event"></div>
+      </div>
+
+      <aside class="lqh-roster-sidebar lqh-roster-gold" id="lqh-roster-gold">
+        <div class="lqh-roster-header"><span class="lqh-roster-mascot">🐉</span> Mensajeros Dorados</div>
+        <div class="lqh-roster-list" id="lqh-roster-list-gold"></div>
+      </aside>
+    </div>
+
+    <div style="text-align:center; padding:6px;">
+      <button class="end-now-floating" id="end-now-btn">🛑 Terminar</button>
+    </div>
+  </div>
+
+  <!-- WIN -->
+  <div id="screen-win" class="hidden container">
+    <div class="win-screen">
+      <div id="win-emoji" style="font-size:7rem;">🐉</div>
+      <div class="winner-banner" id="win-banner">¡Ganador!</div>
+      <div class="final-scores">
+        <div><span class="red"><span id="final-red">0</span> pts</span></div>
+        <div style="color:var(--ink-dim);">vs</div>
+        <div><span class="gold"><span id="final-gold">0</span> pts</span></div>
+      </div>
+      <div class="win-narration" id="win-narration"></div>
+      <div class="leaderboard" id="leaderboard"></div>
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Inicio</button>
+        <button class="btn btn-jade" id="play-again-btn">🔄 Otra vuelta</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js?v=20260524d"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/dralingo.js"></script>
+  <script src="/js/host-laiquhui.js?v=20260524a"></script>
+</body>
+</html>

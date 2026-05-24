@@ -807,9 +807,38 @@
     for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.08);
   }
 
+  // 🐉 LÁI-QÙ-HUÍ — bouncy Chinese pentatonic adventure, 120bpm. Two-bar
+  // motif with stomping bass on quarters (=footsteps) + an erhu-like
+  // pentatonic lead that loops between G-A-D-E. Adventure-vibe.
+  function themeLaiquhui(barIdx, t0, BD) {
+    const phase = barIdx % 4;
+    // Walking-step bass on every quarter (the "courier marching" pulse)
+    for (let b = 0; b < 4; b++) {
+      vSubBass(t0 + b * BD, b % 2 === 0 ? 'G2' : 'D3', BD * 0.7, 0.22);
+    }
+    // Light kick on 1+3 — actual footstep sound
+    vKick(t0 + 0 * BD, 0.30);
+    vKick(t0 + 2 * BD, 0.28);
+    // Bouncy pentatonic erhu-ish lead — different motif each phase
+    let motif;
+    if (phase === 0) motif = [['D5', 0], ['E5', 0.5], ['G5', 1], ['A5', 1.5], ['G5', 2], ['E5', 2.5], ['D5', 3], ['E5', 3.5]];
+    else if (phase === 1) motif = [['G5', 0], ['A5', 0.5], ['B5', 1], ['D6', 2], ['A5', 3]];
+    else if (phase === 2) motif = [['E5', 0], ['G5', 0.5], ['A5', 1], ['E5', 1.5], ['G5', 2], ['D5', 2.5], ['E5', 3], ['G5', 3.5]];
+    else motif = [['D5', 0], ['G5', 1], ['A5', 2], ['B5', 3]];
+    motif.forEach(([n, beat]) => vLeadSquare(t0 + beat * BD, n, BD * 0.4, 0.14));
+    // Light shaker on 8ths for that travel-rhythm feel
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.05);
+    // Snare on 2+4 — light backbeat
+    vSnare(t0 + 1 * BD, 0.12);
+    vSnare(t0 + 3 * BD, 0.12);
+    // Bell ping on bar starts of even phases — Chinese accent
+    if (phase % 2 === 0) vBell(t0, 'G5', BD * 2, 0.10);
+  }
+
   // === Registry ===
   const GAME_THEMES = {
     'triage':        { bpm: 132, beatsPerBar: 4, fn: themeTriage },
+    'laiquhui':      { bpm: 120, beatsPerBar: 4, fn: themeLaiquhui },
     'conquest':      { bpm: 100, beatsPerBar: 4, fn: themeConquest },
     'zombie':        { bpm:  92, beatsPerBar: 4, fn: themeZombie },
     'family':        { bpm: 110, beatsPerBar: 4, fn: themeFamily },

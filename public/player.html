@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
   <link rel="stylesheet" href="/css/triage.css?v=20260524d">
+  <link rel="stylesheet" href="/css/laiquhui.css?v=20260524a">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -593,6 +594,58 @@
     <div class="tri-cpr-timer-bar"><div class="tri-cpr-timer-fill" id="tri-cpr-timer-fill"></div></div>
   </div>
 
+  <!-- LÁI-QÙ-HUÍ · Dragon Courier — the entire game lives on the player phone -->
+  <div id="screen-lqh" class="hidden player-screen lqh-screen">
+    <!-- HUD: score + mission count + timer -->
+    <div class="lqh-hud">
+      <div class="lqh-hud-score">🏆 <span id="lqh-score">0</span></div>
+      <div class="lqh-hud-mission">✅ <span id="lqh-done">0</span> · 💔 <span id="lqh-failed">0</span></div>
+      <div class="lqh-hud-timer" id="lqh-mission-timer">10s</div>
+    </div>
+    <!-- Mission card — the big sentence the player must complete -->
+    <div class="lqh-mission-card" id="lqh-mission-card">
+      <div class="lqh-mission-verb-tag" id="lqh-mission-verb-tag">qù 去</div>
+      <div class="lqh-mission-pinyin" id="lqh-mission-pinyin">Wǒ <strong>qù</strong> 学校 🏫</div>
+      <div class="lqh-mission-es" id="lqh-mission-es">Voy a la escuela</div>
+      <div class="lqh-mission-bar"><div class="lqh-mission-bar-fill" id="lqh-mission-bar-fill"></div></div>
+    </div>
+    <!-- The map — 8x8 top-down grid showing locations + player dragon -->
+    <div class="lqh-map-wrap">
+      <div class="lqh-map" id="lqh-map"></div>
+    </div>
+    <!-- 4-button D-pad labeled with Chinese direction words -->
+    <div class="lqh-dpad">
+      <div class="lqh-dpad-row">
+        <button class="lqh-dir-btn" data-dir="shang" type="button">
+          <span class="lqh-dir-arrow">▲</span>
+          <span class="lqh-dir-pinyin">shàng</span>
+          <span class="lqh-dir-hanzi">上</span>
+        </button>
+      </div>
+      <div class="lqh-dpad-row">
+        <button class="lqh-dir-btn" data-dir="hou" type="button">
+          <span class="lqh-dir-arrow">◀</span>
+          <span class="lqh-dir-pinyin">hòu</span>
+          <span class="lqh-dir-hanzi">后</span>
+        </button>
+        <button class="lqh-dir-btn" data-dir="qian" type="button">
+          <span class="lqh-dir-arrow">▶</span>
+          <span class="lqh-dir-pinyin">qián</span>
+          <span class="lqh-dir-hanzi">前</span>
+        </button>
+      </div>
+      <div class="lqh-dpad-row">
+        <button class="lqh-dir-btn" data-dir="xia" type="button">
+          <span class="lqh-dir-arrow">▼</span>
+          <span class="lqh-dir-pinyin">xià</span>
+          <span class="lqh-dir-hanzi">下</span>
+        </button>
+      </div>
+    </div>
+    <!-- Feedback overlay (success/fail) -->
+    <div class="lqh-feedback hidden" id="lqh-feedback"></div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -604,10 +657,10 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260524c"></script>
+  <script src="/js/sounds.js?v=20260524d"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260524d"></script>
+  <script src="/js/player.js?v=20260524e"></script>
 </body>
 </html>
