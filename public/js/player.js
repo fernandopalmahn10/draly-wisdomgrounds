@@ -161,6 +161,7 @@
   let mashTapHandler = null;
   let myScore = 0;
   let myPlayerId = null;
+  let myStudentCode = null;     // stable code persisted across sessions
   let gameType = 'mochi-mash';
   // Color Splash state
   let csGridW = 24;
@@ -234,11 +235,21 @@
   socket.on('connect', () => {
     // On any reconnect (after the first), re-emit player:join with stored credentials
     if (pin && myName) {
-      socket.emit('player:join', { pin, name: myName, avatar: getMyAvatar() }, (resp) => {
+      const savedCode = (function () {
+        try { return localStorage.getItem('dralyStudentCode') || null; }
+        catch (_) { return null; }
+      })();
+      socket.emit('player:join', { pin, name: myName, avatar: getMyAvatar(), studentCode: savedCode }, (resp) => {
         if (resp.ok) {
           myPlayerId = resp.playerId; // new socket id after reconnect
           team = resp.team;
           if (resp.gameType) gameType = resp.gameType;
+          if (resp.studentCode) {
+            myStudentCode = resp.studentCode;
+            try { localStorage.setItem('dralyStudentCode', resp.studentCode); } catch (_) {}
+            const chip = document.getElementById('wu-player-code');
+            if (chip) chip.textContent = resp.studentCode;
+          }
           hideReconnectOverlay();
           // If they were re-attached during an active game, server will send them
           // their cs:init / question event automatically. Player UI catches up.
@@ -296,7 +307,14 @@
     // ctx is created lazily on the much-later countdown event when the
     // gesture is already gone.
     if (window.unlockAudio) window.unlockAudio();
-    socket.emit('player:join', { pin: p, name, avatar: getMyAvatar() }, (resp) => {
+    // Send the persistent student code (if any) so the server links the
+    // same physical phone to the same sentence-history record across
+    // sessions / server restarts / class days.
+    const savedCode = (function () {
+      try { return localStorage.getItem('dralyStudentCode') || null; }
+      catch (_) { return null; }
+    })();
+    socket.emit('player:join', { pin: p, name, avatar: getMyAvatar(), studentCode: savedCode }, (resp) => {
       if (!resp.ok) {
         $('join-error').textContent = resp.error || 'Could not join';
         MochiSounds.wrong();
@@ -307,6 +325,15 @@
       myName = name;
       myPlayerId = resp.playerId;
       gameType = resp.gameType || 'mochi-mash';
+      // Persist the canonical code the server returned (may be the same
+      // as savedCode, or a freshly-generated one if savedCode was null).
+      if (resp.studentCode) {
+        myStudentCode = resp.studentCode;
+        try { localStorage.setItem('dralyStudentCode', resp.studentCode); }
+        catch (_) { /* ignore */ }
+        const chip = document.getElementById('wu-player-code');
+        if (chip) chip.textContent = resp.studentCode;
+      }
       // Tag <body> with the gameType so per-game UI (e.g. triage-only blocks)
       // becomes visible. Removing all gametype-* classes first ensures the
       // tag is exclusive — no leakage when a player rejoins a different round.
@@ -1636,6 +1663,82 @@
       lib.appendChild(section);
     });
   }
+  // === SENTENCE HISTORY MODAL ===
+  // Tap "📜 Mis oraciones" → fetch this student's history from the server
+  // (keyed by their stable student code) and render it.
+  function openWuHistory() {
+    const modal = document.getElementById('wu-history-modal');
+    const list = document.getElementById('wu-history-list');
+    const sub = document.getElementById('wu-history-sub');
+    if (!modal || !list) return;
+    modal.classList.remove('hidden');
+    requestAnimationFrame(() => modal.classList.add('show'));
+    list.innerHTML = '<div class="wu-history-empty">Cargando…</div>';
+    if (!myStudentCode) {
+      list.innerHTML = '<div class="wu-history-empty">Aún no tienes un código de estudiante.</div>';
+      return;
+    }
+    socket.emit('wu:request-history', { studentCode: myStudentCode }, (resp) => {
+      if (!resp || !resp.ok) {
+        list.innerHTML = '<div class="wu-history-empty">No se pudo cargar el historial.</div>';
+        return;
+      }
+      const sentences = resp.sentences || [];
+      if (sub) sub.textContent = `Código: ${myStudentCode} · ${sentences.length} oración${sentences.length === 1 ? '' : 'es'}`;
+      if (!sentences.length) {
+        list.innerHTML = '<div class="wu-history-empty">Aún no has construido ninguna oración. ¡Sé asistente y empieza!</div>';
+        return;
+      }
+      list.innerHTML = '';
+      sentences.forEach((s) => {
+        const item = document.createElement('div');
+        item.className = 'wu-history-item';
+        const date = new Date(s.ts);
+        const dateStr = date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+        const timeStr = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        const wordsHtml = (s.words || []).map((wid) => {
+          const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
+          if (!w) return '';
+          const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+          const color = cat ? cat.color : '#fff';
+          return `<span class="wu-hist-word" style="--cat-color:${color};">
+            <span class="wu-hist-icon">${w.icon || ''}</span>
+            <span class="wu-hist-pinyin">${w.pinyin}</span>
+          </span>`;
+        }).join('');
+        item.innerHTML = `
+          <div class="wu-history-item-meta">${dateStr} · ${timeStr} · PIN ${s.pin || '—'}</div>
+          <div class="wu-history-item-words">${wordsHtml}</div>`;
+        list.appendChild(item);
+      });
+    });
+  }
+  function closeWuHistory() {
+    const modal = document.getElementById('wu-history-modal');
+    if (!modal) return;
+    modal.classList.remove('show');
+    setTimeout(() => modal.classList.add('hidden'), 250);
+  }
+  // Bind history button + modal close once
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn   = document.getElementById('wu-player-history-btn');
+    const close = document.getElementById('wu-history-close');
+    const modal = document.getElementById('wu-history-modal');
+    if (btn)   btn.addEventListener('click', openWuHistory);
+    if (close) close.addEventListener('click', closeWuHistory);
+    if (modal) modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeWuHistory();
+    });
+  });
+  // Server notifies us our history grew (a sentence we contributed to was
+  // cleared / replaced). If the modal is open right now, refresh it.
+  socket.on('wu:history-updated', () => {
+    const modal = document.getElementById('wu-history-modal');
+    if (modal && !modal.classList.contains('hidden')) {
+      openWuHistory();
+    }
+  });
+
   function bindPlayerAdminControls() {
     const clear = document.getElementById('wu-player-admin-clear');
     if (clear && !clear._wuBound) {
