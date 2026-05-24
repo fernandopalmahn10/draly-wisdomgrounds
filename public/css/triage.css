@@ -40,46 +40,193 @@ body.triage-bg .market-banner {
 .triage-only { display: none; }
 body.gametype-triage .triage-only { display: block; }
 
+/* Sentence banner — NOW SITS BETWEEN the question card and the answers,
+   so the kid reads the target sentence with both context AND right next to
+   the choice they're about to tap. Compact, no doctor (he's walking
+   separately across the screen now). */
 .tri-q-vocab {
   display: flex !important;
   align-items: center;
-  gap: 12px;
-  margin: 8px 0 14px;
-  padding: 10px 14px;
+  justify-content: center;
+  gap: 10px;
+  margin: 10px 0;
+  padding: 10px 16px;
   border-radius: 14px;
-  background: linear-gradient(90deg, rgba(45, 212, 191, 0.18), rgba(255, 90, 102, 0.16));
+  background: linear-gradient(90deg, rgba(45, 212, 191, 0.20), rgba(255, 90, 102, 0.18));
   border: 2px solid #5be8d1;
-  box-shadow: 0 0 18px rgba(45, 212, 191, 0.30);
+  box-shadow: 0 0 22px rgba(45, 212, 191, 0.35);
   position: relative;
   z-index: 5;
+  text-align: center;
 }
-.tri-q-doctor {
-  width: 84px; height: 84px;
-  object-fit: contain;
-  filter: drop-shadow(0 4px 12px rgba(45, 212, 191, 0.6));
-  animation: tri-doctor-bob 2.2s ease-in-out infinite;
-  flex-shrink: 0;
-}
-.tri-q-sentence { flex: 1; text-align: left; }
+.tri-q-sentence { flex: 1; }
 .tri-q-pinyin {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 900;
   letter-spacing: 0.02em;
   color: #e7faff;
   text-shadow: 0 0 10px rgba(125, 220, 255, 0.5);
-  line-height: 1.2;
+  line-height: 1.25;
 }
 .tri-q-pinyin strong {
   color: #ffe66a;
   text-shadow: 0 0 14px #ffe66a;
   border-bottom: 2px dashed #ffe66a;
-  font-size: 1.4rem;
+  font-size: 1.5rem;
 }
 .tri-q-es {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-style: italic;
-  color: rgba(220, 235, 245, 0.78);
-  margin-top: 2px;
+  color: rgba(220, 235, 245, 0.85);
+  margin-top: 3px;
+}
+
+/* ===== Ambulance driving across the player screen ===== */
+.tri-q-ambulance {
+  position: fixed;
+  top: 18%;
+  left: -120px;
+  font-size: 3.6rem;
+  z-index: 2;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.55));
+  will-change: transform;
+  display: none;          /* hidden until .triage-only enables it */
+}
+body.gametype-triage .tri-q-ambulance { display: block; }
+.tri-q-ambulance.driving-l2r {
+  animation: tri-amb-drive-l2r 4.5s linear forwards;
+}
+.tri-q-ambulance.driving-r2l {
+  animation: tri-amb-drive-r2l 4.5s linear forwards;
+}
+@keyframes tri-amb-drive-l2r {
+  0%   { left: -120px; transform: scaleX(1) translateY(0); }
+  10%  { transform: scaleX(1) translateY(-4px); }
+  90%  { left: 105vw;  transform: scaleX(1) translateY(0); }
+  100% { left: 105vw; }
+}
+@keyframes tri-amb-drive-r2l {
+  0%   { left: 105vw;  transform: scaleX(-1) translateY(0); }
+  10%  { transform: scaleX(-1) translateY(-4px); }
+  90%  { left: -120px; transform: scaleX(-1) translateY(0); }
+  100% { left: -120px; }
+}
+
+/* ===== Walking doctor — strolls back and forth across the bottom edge ===== */
+.tri-q-walking-doctor {
+  position: fixed;
+  bottom: 16px;
+  left: -10%;
+  width: 96px;
+  height: 96px;
+  z-index: 3;
+  pointer-events: none;
+  display: none;
+  will-change: transform, left;
+}
+body.gametype-triage .tri-q-walking-doctor { display: block; }
+.tri-q-walking-doctor img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(45, 212, 191, 0.55));
+  animation: tri-walk-bob 0.55s ease-in-out infinite;
+}
+@keyframes tri-walk-bob {
+  0%, 100% { transform: translateY(0)    rotate(-3deg); }
+  50%      { transform: translateY(-6px) rotate(3deg); }
+}
+.tri-q-walking-doctor.walking-l2r {
+  animation: tri-walk-l2r 8s linear forwards;
+}
+.tri-q-walking-doctor.walking-r2l {
+  animation: tri-walk-r2l 8s linear forwards;
+}
+.tri-q-walking-doctor.walking-r2l img { transform: scaleX(-1); }
+.tri-q-walking-doctor.walking-r2l img { animation-name: tri-walk-bob-mirrored; }
+@keyframes tri-walk-bob-mirrored {
+  0%, 100% { transform: scaleX(-1) translateY(0)    rotate(3deg); }
+  50%      { transform: scaleX(-1) translateY(-6px) rotate(-3deg); }
+}
+@keyframes tri-walk-l2r {
+  from { left: -12%; } to { left: 100%; }
+}
+@keyframes tri-walk-r2l {
+  from { left: 100%; } to { left: -12%; }
+}
+.tri-q-walking-bubble {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.5);
+  background: #e7faff;
+  color: #0a1320;
+  font-weight: 900;
+  font-size: 0.82rem;
+  padding: 6px 12px;
+  border-radius: 10px;
+  white-space: nowrap;
+  border: 2px solid #5be8d1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  margin-bottom: 6px;
+}
+.tri-q-walking-bubble strong {
+  color: #d92e3a;
+  border-bottom: 1.5px dashed #d92e3a;
+}
+.tri-q-walking-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px; left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #5be8d1;
+}
+.tri-q-walking-bubble.show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* ===== Random Chinese-pinyin sentence pop-ups at random positions ===== */
+.tri-q-sentence-pop {
+  position: absolute;
+  background: rgba(80, 30, 30, 0.86);
+  border: 2px solid #ffe66a;
+  border-radius: 12px;
+  padding: 8px 14px;
+  color: #ffe66a;
+  font-weight: 900;
+  font-size: 0.95rem;
+  text-align: center;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: 0 0 18px rgba(255, 230, 106, 0.55);
+  animation: tri-sentence-pop-anim 4s ease-in-out forwards;
+  will-change: transform, opacity;
+  max-width: 36%;
+}
+.tri-q-sentence-pop .pin {
+  font-size: 1rem;
+}
+.tri-q-sentence-pop .pin strong {
+  color: #ffffff;
+  font-size: 1.15rem;
+  text-shadow: 0 0 10px #ffe66a;
+}
+.tri-q-sentence-pop .es {
+  font-size: 0.7rem;
+  font-style: italic;
+  color: rgba(255, 230, 106, 0.85);
+  font-weight: 700;
+  margin-top: 1px;
+}
+@keyframes tri-sentence-pop-anim {
+  0%   { transform: scale(0.6) rotate(-4deg); opacity: 0; }
+  18%  { transform: scale(1.08) rotate(2deg); opacity: 1; }
+  80%  { transform: scale(1) rotate(0);       opacity: 1; }
+  100% { transform: scale(0.92) translateY(-30px); opacity: 0; }
 }
 
 /* Floating background vocab tiles on the question screen — drift up
@@ -1236,9 +1383,19 @@ body.gametype-triage .tri-q-float-bg { display: block; }
     radial-gradient(ellipse 60% 50% at 50% 100%, rgba(20, 80, 100, 0.30) 0%, transparent 70%),
     linear-gradient(180deg, #1a2c40 0%, #0d2336 40%, #0a1828 75%, #060e18 100%);
   color: #e7faff;
-  padding: 14px;
-  gap: 12px;
-  overflow: hidden;
+  padding: 10px 12px;
+  /* Pad the bottom for iOS notch + extra room so the defib button is never
+     under the system home indicator. */
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px) + 8px);
+  gap: 8px;
+  /* === SCALING FIX: 100dvh accounts for mobile address bar + use
+     -webkit-fill-available for iOS Safari fallback. Vertical scroll is
+     enabled so even on iPhone SE (568px tall), the defib button is
+     reachable by scrolling — no element ever cut off. === */
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   user-select: none;
   touch-action: manipulation;
   position: relative;
@@ -1489,7 +1646,11 @@ body.gametype-triage .tri-q-float-bg { display: block; }
 /* The giant heart tap-target */
 .tri-cpr-heart {
   position: relative;
-  width: 220px; height: 220px;
+  /* clamp(min, fluid, max) — scales the heart from 140px on tiny phones up
+     to 220px on tablets so the rest of the CPR UI (rhythm bar, ticks,
+     hint, defib panel) always fits in the 100dvh window. */
+  width: clamp(140px, 36vw, 220px);
+  height: clamp(140px, 36vw, 220px);
   background: transparent;
   border: none;
   border-radius: 50%;
@@ -1514,7 +1675,7 @@ body.gametype-triage .tri-q-float-bg { display: block; }
 }
 .tri-cpr-heart-icon {
   position: relative;
-  font-size: 8rem;
+  font-size: clamp(4.5rem, 18vw, 8rem);
   filter: drop-shadow(0 6px 16px rgba(255, 90, 102, 0.6));
   transition: transform 0.12s ease-out;
   line-height: 1;
@@ -1622,16 +1783,22 @@ body.gametype-triage .tri-q-float-bg { display: block; }
   max-width: 92%;
 }
 
-/* DEFIB PANEL — only shown for critical patients */
+/* DEFIB PANEL — shown after rhythm CPR. Scrolled into view via JS on appear.
+   On small phones the panel sits at the natural bottom of the page and the
+   safe-area + page padding keep the DESCARGAR button always reachable. */
 .tri-cpr-defib {
   margin-top: 8px;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.85);
   border: 2px solid #ff5a66;
   border-radius: 14px;
   padding: 12px;
   display: flex; flex-direction: column;
   align-items: center; gap: 10px;
   animation: tri-cpr-defib-appear 0.3s ease-out;
+  position: sticky;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
+  z-index: 30;
+  box-shadow: 0 -6px 22px rgba(255, 90, 102, 0.35);
 }
 .tri-cpr-defib.hidden { display: none !important; }
 @keyframes tri-cpr-defib-appear {
