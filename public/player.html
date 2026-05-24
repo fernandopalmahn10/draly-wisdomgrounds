@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="/css/sixseven.css?v=20260520c">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
-  <link rel="stylesheet" href="/css/triage.css?v=20260524c">
+  <link rel="stylesheet" href="/css/triage.css?v=20260524d">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -89,24 +89,31 @@
       <span id="player-name-tag">You</span>
       <span>Score: <span id="player-score">0</span></span>
     </div>
-    <!-- TRIAGE-ONLY: doctor + vocab banner ABOVE the question. Only visible
-         when body has .gametype-triage. Hidden on every other game. -->
-    <div class="tri-q-vocab triage-only">
-      <img class="tri-q-doctor" src="/assets/yisheng.png" alt="yīshēng"
-           onerror="this.style.display='none'">
-      <div class="tri-q-sentence">
-        <div class="tri-q-pinyin">Yīshēng zài <strong>yīyuàn</strong> 🏥 gōngzuò</div>
-        <div class="tri-q-es">El doctor trabaja en el hospital</div>
-      </div>
-    </div>
-    <!-- TRIAGE-ONLY: floating background vocab tiles, drifting up the screen -->
+    <!-- TRIAGE-ONLY: floating background vocab tiles + ambulance + walking
+         doctor. Span the entire question screen behind everything else.
+         Hidden unless body has .gametype-triage. -->
     <div class="tri-q-float-bg triage-only" id="tri-q-float-bg"></div>
+    <div class="tri-q-ambulance triage-only" id="tri-q-ambulance">🚑</div>
+    <div class="tri-q-walking-doctor triage-only" id="tri-q-walking-doctor">
+      <img src="/assets/yisheng.png" alt="yīshēng"
+           onerror="this.style.display='none'">
+      <div class="tri-q-walking-bubble" id="tri-q-walking-bubble"></div>
+    </div>
     <div class="question-image-wrap" id="question-image-wrap">
       <div class="img-loading">🐉</div>
       <img id="question-image" alt="" style="display:none;">
     </div>
     <div class="question-card">
       <div class="question-text" id="question-text"></div>
+    </div>
+    <!-- TRIAGE-ONLY: sentence banner SITS BETWEEN question + answers so kids
+         read the target sentence right next to the question they're solving
+         AND right next to the choice they're about to tap. -->
+    <div class="tri-q-vocab triage-only" id="tri-q-vocab-banner">
+      <div class="tri-q-sentence">
+        <div class="tri-q-pinyin" id="tri-q-pinyin">Yīshēng zài <strong>yīyuàn</strong> 🏥 gōngzuò</div>
+        <div class="tri-q-es" id="tri-q-es">El doctor trabaja en el hospital</div>
+      </div>
     </div>
     <div class="answers" id="answers"></div>
   </div>
@@ -601,6 +608,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260524c"></script>
+  <script src="/js/player.js?v=20260524d"></script>
 </body>
 </html>

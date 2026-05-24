@@ -1508,10 +1508,19 @@
       if (dot) dot.style.left = pos + '%';
     }, 16);
   }
-  // === Player-side TRIAGE BG floating vocab ===
-  // Tiles drift up behind the question/result/picker screens for the entire
-  // active round. Capped at MAX_FLOATERS so the DOM stays cheap.
+  // === Player-side TRIAGE BG layer ===
+  // Three overlapping layers on the question screen during active round:
+  //   1. Floating pinyin tiles drift up the edges (cap 4 concurrent)
+  //   2. Random short Chinese-mandarin sentence pop-ups appear at random
+  //      positions every ~5s and fade out (3-second visibility)
+  //   3. An ambulance drives across the screen every ~14s
+  //   4. The walking doctor strolls left↔right with a speech bubble
+  //   5. The sentence-between-question-and-answers cycles every few questions
   let triBgTimer = null;
+  let triSentencePopupTimer = null;
+  let triAmbulanceTimer = null;
+  let triWalkingDoctorTimer = null;
+  let triBannerCycleTimer = null;
   function startTriageVocabBg() {
     if (triBgTimer) clearInterval(triBgTimer);
     // Seed a few staggered tiles
@@ -1519,12 +1528,130 @@
     // Throttle on low-end devices
     const lowEnd = (navigator.hardwareConcurrency || 4) < 4;
     triBgTimer = setInterval(spawnTriBgFloater, lowEnd ? 3000 : 2400);
+    // Random Chinese-mandarin sentence pop-ups
+    if (triSentencePopupTimer) clearInterval(triSentencePopupTimer);
+    triSentencePopupTimer = setInterval(spawnTriSentencePopup, lowEnd ? 6500 : 5000);
+    setTimeout(spawnTriSentencePopup, 800);
+    // Ambulance drives across the screen periodically
+    if (triAmbulanceTimer) clearInterval(triAmbulanceTimer);
+    triAmbulanceTimer = setInterval(driveAmbulance, 14000);
+    setTimeout(driveAmbulance, 3500);
+    // Walking doctor starts strolling
+    startWalkingDoctor();
+    // Banner sentence cycles every 18s — kids see different sentences
+    if (triBannerCycleTimer) clearInterval(triBannerCycleTimer);
+    cycleBannerSentence();           // set initial
+    triBannerCycleTimer = setInterval(cycleBannerSentence, 18000);
   }
   function stopTriageVocabBg() {
     if (triBgTimer) clearInterval(triBgTimer);
+    if (triSentencePopupTimer) clearInterval(triSentencePopupTimer);
+    if (triAmbulanceTimer) clearInterval(triAmbulanceTimer);
+    if (triWalkingDoctorTimer) clearInterval(triWalkingDoctorTimer);
+    if (triBannerCycleTimer) clearInterval(triBannerCycleTimer);
     triBgTimer = null;
+    triSentencePopupTimer = null;
+    triAmbulanceTimer = null;
+    triWalkingDoctorTimer = null;
+    triBannerCycleTimer = null;
+    ['tri-q-float-bg', 'tri-q-ambulance', 'tri-q-walking-doctor'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.remove('driving', 'walking-l', 'walking-r');
+        el.style.transform = '';
+      }
+    });
     const layer = document.getElementById('tri-q-float-bg');
     if (layer) layer.innerHTML = '';
+  }
+  // Drive the ambulance across the player screen — slides in from one edge,
+  // crosses, exits the other. CSS handles the actual animation.
+  function driveAmbulance() {
+    const amb = document.getElementById('tri-q-ambulance');
+    if (!amb) return;
+    // Alternate direction each pass
+    amb.classList.remove('driving-l2r', 'driving-r2l');
+    void amb.offsetWidth;
+    const ltr = Math.random() < 0.5;
+    amb.classList.add(ltr ? 'driving-l2r' : 'driving-r2l');
+    amb.textContent = ltr ? '🚑' : '🚑';   // siren-style icon
+    // Faint siren sound when it appears
+    if (MochiSounds.ambulanceSiren) MochiSounds.ambulanceSiren();
+  }
+  // Walking doctor — slides side-to-side across the bottom edge of the
+  // question screen, mirrors when turning. Periodic speech bubble.
+  function startWalkingDoctor() {
+    const doc = document.getElementById('tri-q-walking-doctor');
+    if (!doc) return;
+    doc.classList.remove('walking-l2r', 'walking-r2l');
+    void doc.offsetWidth;
+    doc.classList.add('walking-l2r');
+    // Bubble pop cycle
+    const bubble = document.getElementById('tri-q-walking-bubble');
+    if (!bubble) return;
+    const lines = [
+      'Wǒ shì <strong>yīshēng</strong> 🩺',
+      'Vamos a la <strong>yīyuàn</strong> 🏥',
+      'Nǐ qù <strong>yīyuàn</strong>?',
+      'Bìngrén zài <strong>yīyuàn</strong>',
+      '¡Salva al paciente!',
+    ];
+    let i = 0;
+    function pop() {
+      bubble.innerHTML = lines[i % lines.length];
+      bubble.classList.remove('show');
+      void bubble.offsetWidth;
+      bubble.classList.add('show');
+      i++;
+      setTimeout(() => bubble.classList.remove('show'), 3200);
+    }
+    setTimeout(pop, 1200);
+    if (triWalkingDoctorTimer) clearInterval(triWalkingDoctorTimer);
+    triWalkingDoctorTimer = setInterval(() => {
+      // Toggle walking direction every cycle
+      const isL2R = doc.classList.contains('walking-l2r');
+      doc.classList.remove('walking-l2r', 'walking-r2l');
+      void doc.offsetWidth;
+      doc.classList.add(isL2R ? 'walking-r2l' : 'walking-l2r');
+      pop();
+    }, 8000);
+  }
+  // Cycle the sentence shown in the between-question-and-answers banner.
+  // Uses the same pool as the CPR sentence-levels.
+  let triBannerIdx = 0;
+  function cycleBannerSentence() {
+    const pinEl = document.getElementById('tri-q-pinyin');
+    const esEl  = document.getElementById('tri-q-es');
+    if (!pinEl || !esEl) return;
+    const pool = (typeof TRI_SENTENCES !== 'undefined' && TRI_SENTENCES) ? TRI_SENTENCES : null;
+    if (!pool) return;
+    const s = pool[triBannerIdx % pool.length];
+    pinEl.innerHTML = s.pinyin;
+    esEl.textContent = s.es;
+    triBannerIdx++;
+  }
+  // Random Chinese-mandarin sentence pop-ups at random screen positions
+  function spawnTriSentencePopup() {
+    if (document.body.classList.contains('gametype-triage') === false) return;
+    const pool = (typeof TRI_SENTENCES !== 'undefined' && TRI_SENTENCES) ? TRI_SENTENCES : null;
+    if (!pool) return;
+    const s = pool[Math.floor(Math.random() * pool.length)];
+    // Layer container — use the float-bg layer so it pins under the question
+    const layer = document.getElementById('tri-q-float-bg');
+    if (!layer) return;
+    // Cap concurrent pop-ups
+    if (layer.querySelectorAll('.tri-q-sentence-pop').length >= 2) return;
+    const pop = document.createElement('div');
+    pop.className = 'tri-q-sentence-pop';
+    pop.innerHTML = `<div class="pin">${s.pinyin}</div><div class="es">${s.es}</div>`;
+    // Random position: avoid the center where the question card sits
+    const sideLeft = Math.random() < 0.5;
+    pop.style.left = sideLeft
+      ? (2 + Math.random() * 18) + '%'
+      : (62 + Math.random() * 24) + '%';
+    pop.style.top = (20 + Math.random() * 50) + '%';
+    layer.appendChild(pop);
+    setTimeout(() => pop.remove(), 4200);
   }
   function spawnTriBgFloater() {
     const layer = document.getElementById('tri-q-float-bg');
@@ -1682,6 +1809,11 @@
     document.getElementById('tri-cpr-hint').textContent = '¡Carga lista! Toca DESCARGAR en VERDE';
     const panel = document.getElementById('tri-cpr-defib');
     panel.classList.remove('hidden');
+    // Scroll the panel into view in case the page overflowed on small phones —
+    // belt-and-suspenders to the sticky CSS positioning. Always reachable.
+    setTimeout(() => {
+      try { panel.scrollIntoView({ behavior: 'smooth', block: 'end' }); } catch (_) {}
+    }, 50);
     // Needle sweeps back-and-forth across the track at ~1.5Hz
     const needle = document.getElementById('tri-cpr-defib-needle');
     cprState.defibT0 = Date.now();
