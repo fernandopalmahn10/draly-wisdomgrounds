@@ -1594,14 +1594,20 @@
   socket.on('id:result', (data) => {
     if (gameType !== 'identity') return;
     if (idTimerInt) { clearInterval(idTimerInt); idTimerInt = null; }
+    if (idShuffleHandle) { clearTimeout(idShuffleHandle); idShuffleHandle = null; }
     if ($('id-score')) $('id-score').textContent = data.score || 0;
     if ($('id-streak')) $('id-streak').textContent = data.streak || 0;
     if ($('id-wrong')) $('id-wrong').textContent = data.wrong || 0;
-    // Highlight correct + (if wrong) the player's pick
-    document.querySelectorAll('.id-suspect-card').forEach((card, i) => {
-      if (i === data.targetIdx) card.classList.add('reveal-correct');
-      if (!data.correct && i === data.picked) card.classList.add('reveal-wrong');
+    // Reveal: flip EVERY card face-up. Match by dataset.suspectIdx (the real
+    // identity that travels with the card through the shuffle), NOT by the
+    // card's DOM position.
+    document.querySelectorAll('.id-suspect-card').forEach((card) => {
+      card.classList.remove('flipped');
+      const realIdx = +card.dataset.suspectIdx;
+      if (realIdx === data.targetIdx) card.classList.add('reveal-correct');
+      if (!data.correct && realIdx === data.picked) card.classList.add('reveal-wrong');
     });
+    idSetPhaseText(data.correct ? '🎯 ¡Lo encontraste!' : '🔎 ¡Mira de nuevo!');
     showIdFeedback(data);
     if (data.correct) {
       if (MochiSounds.correct) MochiSounds.correct();
@@ -1616,43 +1622,147 @@
       }
     }
   });
+  // === MAGIC-CARD / 3-CARD-MONTE MECHANIC =====================================
+  // Card lifecycle in a round:
+  //   PHASE A (memorize)  — all cards face UP for ~2.2s so player can scan
+  //                          which one matches the clue.
+  //   PHASE B (flip)      — all cards rotateY(180) face DOWN simultaneously.
+  //   PHASE C (shuffle)   — N pair-swaps. Each swap visibly translates two
+  //                          face-down cards to each other's slot. The card's
+  //                          IDENTITY (dataset.suspectIdx) follows the card,
+  //                          so when the player taps a slot, the server still
+  //                          gets the correct suspect index.
+  //   PHASE D (pick)      — cards re-enabled, player taps. The tapped card
+  //                          flips back face-up immediately so they see what
+  //                          they actually chose.
+  //   PHASE E (result)    — every card flips face-up, correct + wrong are
+  //                          highlighted via reveal-correct / reveal-wrong.
   function renderIdSuspects(suspects) {
     const wrap = $('id-suspects');
     if (!wrap) return;
     wrap.innerHTML = '';
-    // Choose grid columns based on suspect count
+    wrap.classList.add('id-suspects-shuffleable');
+    // Cancel any prior shuffle still running
+    if (idShuffleHandle) { clearTimeout(idShuffleHandle); idShuffleHandle = null; }
     const n = suspects.length;
     const cols = n <= 4 ? 2 : (n <= 6 ? 2 : 4);
     wrap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    const cardEls = [];
     suspects.forEach((s, i) => {
       const card = document.createElement('button');
-      card.className = 'id-suspect-card deal-in';
+      card.className = 'id-suspect-card id-flipper';
       card.type = 'button';
-      // Stagger entry — each card flips in 80ms after the previous,
-      // making the round feel like a dealer dealing a hand.
-      card.style.animationDelay = (i * 90) + 'ms';
+      card.dataset.suspectIdx = i;
+      card.disabled = true; // re-enabled after shuffle ends
       card.innerHTML = `
-        <div class="id-sc-inner">
-          <div class="id-sc-avatar">${s.avatar}</div>
-          <div class="id-sc-row"><span class="id-sc-label">名字</span> <span class="id-sc-name">${s.name}</span></div>
-          <div class="id-sc-row"><span class="id-sc-label">岁</span> <span class="id-sc-age">${s.age}</span></div>
-          <div class="id-sc-row"><span class="id-sc-label">${s.rel.hanzi}</span> <span class="id-sc-rel">${s.rel.pinyin}</span></div>
+        <div class="id-card-3d">
+          <div class="id-card-face id-card-front">
+            <div class="id-sc-avatar">${s.avatar}</div>
+            <div class="id-sc-row"><span class="id-sc-label">名字</span> <span class="id-sc-name">${s.name}</span></div>
+            <div class="id-sc-row"><span class="id-sc-label">岁</span> <span class="id-sc-age">${s.age}</span></div>
+            <div class="id-sc-row"><span class="id-sc-label">${s.rel.hanzi}</span> <span class="id-sc-rel">${s.rel.pinyin}</span></div>
+          </div>
+          <div class="id-card-face id-card-back">
+            <div class="id-card-back-rune">🕵️</div>
+            <div class="id-card-back-mark">?</div>
+          </div>
         </div>`;
-      card.onclick = () => {
-        if (!idCurrentRound) return;
-        try { socket.emit('player:id-pick', { pin, suspectIdx: i }); } catch (_) {}
-        document.querySelectorAll('.id-suspect-card').forEach((c) => c.disabled = true);
-        card.classList.add('chosen');
-        if (MochiSounds.tap) MochiSounds.tap();
-      };
+      cardEls.push(card);
       wrap.appendChild(card);
     });
-    // Narrator detective also pops in with a little wave when the clue arrives
+    // Phase banner inside the narrator bubble — tells the kid what to do.
+    idSetPhaseText('🔍 Memoriza al sospechoso…');
+    // Narrator detective pops in with a little wave when the clue arrives
     const narrator = document.getElementById('id-narrator');
     if (narrator) {
       narrator.classList.remove('speak');
       void narrator.offsetWidth;
       narrator.classList.add('speak');
+    }
+    // ── Phase timing ──
+    const MEMORIZE_MS = 2200;
+    const FLIP_MS     = 480;
+    const SWAPS       = Math.min(5, Math.max(3, n - 1));
+    const SWAP_MS     = 380;
+    // Phase B: flip face-down
+    idShuffleHandle = setTimeout(() => {
+      idSetPhaseText('🌀 ¡Mezclando!');
+      cardEls.forEach((card) => card.classList.add('flipped'));
+      if (MochiSounds.swing) MochiSounds.swing();
+      // Phase C: shuffle
+      idShuffleHandle = setTimeout(() => {
+        idShuffleCards(cardEls, SWAPS, SWAP_MS, () => {
+          // Phase D: enable picking
+          idSetPhaseText('👉 ¡Toca al sospechoso!');
+          cardEls.forEach((card) => {
+            card.disabled = false;
+            card.onclick = () => {
+              if (!idCurrentRound) return;
+              const realIdx = +card.dataset.suspectIdx;
+              try { socket.emit('player:id-pick', { pin, suspectIdx: realIdx }); } catch (_) {}
+              cardEls.forEach((c) => { c.disabled = true; });
+              // Flip the picked card face-up so player sees their choice
+              card.classList.remove('flipped');
+              card.classList.add('chosen');
+              if (MochiSounds.tap) MochiSounds.tap();
+            };
+          });
+        });
+      }, FLIP_MS);
+    }, MEMORIZE_MS);
+  }
+  // Translate-based pair-swap shuffle. We do N random swaps, each animating
+  // both involved cards into each other's slot via translate3d. The card's
+  // suspectIdx travels with it (dataset) so the server still sees the right
+  // identity when the player taps a slot.
+  let idShuffleHandle = null;
+  function idShuffleCards(cardEls, swaps, swapMs, done) {
+    if (!cardEls.length) { done && done(); return; }
+    const wrap = cardEls[0].parentNode;
+    const colsMatch = wrap.style.gridTemplateColumns.match(/repeat\((\d+)/);
+    const cols = colsMatch ? parseInt(colsMatch[1], 10) : 2;
+    const rect = wrap.getBoundingClientRect();
+    const rows = Math.ceil(cardEls.length / cols);
+    const cellW = rect.width / cols;
+    const cellH = rect.height / rows;
+    const slots = cardEls.map((_, i) => i);
+    cardEls.forEach((card) => {
+      card.style.transition = `transform ${Math.round(swapMs * 0.9)}ms cubic-bezier(0.4, 1.2, 0.5, 1)`;
+    });
+    function applyPositions() {
+      cardEls.forEach((card, idx) => {
+        const cur = slots[idx];
+        const naturalRow = Math.floor(idx / cols);
+        const naturalCol = idx % cols;
+        const curRow = Math.floor(cur / cols);
+        const curCol = cur % cols;
+        const dx = (curCol - naturalCol) * cellW;
+        const dy = (curRow - naturalRow) * cellH;
+        card.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      });
+    }
+    let step = 0;
+    function nextSwap() {
+      if (step >= swaps) { done && done(); return; }
+      const a = Math.floor(Math.random() * cardEls.length);
+      let b = Math.floor(Math.random() * cardEls.length);
+      while (b === a) b = Math.floor(Math.random() * cardEls.length);
+      const tmp = slots[a]; slots[a] = slots[b]; slots[b] = tmp;
+      applyPositions();
+      if (MochiSounds.tap) MochiSounds.tap();
+      step++;
+      idShuffleHandle = setTimeout(nextSwap, swapMs);
+    }
+    idShuffleHandle = setTimeout(nextSwap, 60);
+  }
+  // Helper to set the phase-of-round indicator under the narrator bubble.
+  function idSetPhaseText(text) {
+    const phaseEl = document.getElementById('id-phase-banner');
+    if (phaseEl) {
+      phaseEl.textContent = text;
+      phaseEl.classList.remove('show');
+      void phaseEl.offsetWidth;
+      phaseEl.classList.add('show');
     }
   }
   function idHighlightStruggleWords(pinyin) {
@@ -2090,12 +2200,20 @@
     missionTimerInt: null,
     boundDpad: false,
     footstepTrail: [],
+    lastMoveAt: 0,        // for tile-by-tile cadence
+    lastDir: null,        // 'shang' | 'xia' | 'qian' | 'hou' — used for hop animation
   };
-  // Verb → emoji + colour helper for the mission verb tag
+  // Tap-to-step cooldown. Each tile press locks the d-pad for this many ms
+  // so the dragon moves "start by start" (the user's words) instead of
+  // blurring across tiles when you mash buttons.
+  const LQH_STEP_COOLDOWN_MS = 220;
+  // Verb → asset/emoji helper for the mission verb tag + dragon sprite.
+  // We have qu.png / lai.png / hui.png in /assets — swap the dragon sprite
+  // to match the current mission verb so each delivery feels distinct.
   const LQH_VERB_META = {
-    qu:  { tag: 'qù 去',  cls: 'verb-qu',  icon: '🐲' },
-    lai: { tag: 'lái 来', cls: 'verb-lai', icon: '🐉' },
-    hui: { tag: 'huí 回', cls: 'verb-hui', icon: '🏠' },
+    qu:  { tag: 'qù 去',  cls: 'verb-qu',  icon: '🐲', asset: '/assets/qu.png'  },
+    lai: { tag: 'lái 来', cls: 'verb-lai', icon: '🐉', asset: '/assets/lai.png' },
+    hui: { tag: 'huí 回', cls: 'verb-hui', icon: '🏠', asset: '/assets/hui.png' },
   };
   // Drop a fading footstep trail behind the courier so movement reads as
   // progress, not random tapping. Each step leaves a small dot on the
@@ -2159,16 +2277,25 @@
         }
       }
     }
-    // Place the player's character on its current tile — use the platform's
-    // existing Dralingo dragon mascot (already in /assets/dralingo.png). No
-    // new asset needed; just reuse what's there.
+    // Place the player's character on its current tile. We swap the sprite
+    // per mission verb: qu.png / lai.png / hui.png — gives each delivery a
+    // distinct visual identity ("you're being lái right now"). The asset
+    // path is read off LQH_VERB_META; if a PNG is missing we fall back to
+    // the platform dragon, then to an emoji.
     const me = document.getElementById(`lqh-tile-${lqhState.myPos.x}-${lqhState.myPos.y}`);
     if (me) {
       const dragon = document.createElement('div');
       dragon.className = 'lqh-me ' + (team || 'red');
-      dragon.innerHTML = `<img src="/assets/dralingo.png"
-        onerror="this.style.display='none'; this.parentNode.classList.add('emoji-fallback');"
-        alt="me"><span class="lqh-me-emoji">🐲</span>`;
+      // Direction-aware hop animation — applies a small slide-in from the
+      // direction the player just came from. Makes the move read as
+      // "stepped from there to here" rather than teleport.
+      if (lqhState.lastDir) dragon.classList.add('hop-' + lqhState.lastDir);
+      const verb = (lqhState.mission && lqhState.mission.verb) || 'qu';
+      const meta = LQH_VERB_META[verb] || LQH_VERB_META.qu;
+      dragon.innerHTML = `<img src="${meta.asset}"
+        data-fallback="/assets/dralingo.png"
+        onerror="if(this.dataset.fallback&&this.src.indexOf(this.dataset.fallback)===-1){this.src=this.dataset.fallback;}else{this.style.display='none';this.parentNode.classList.add('emoji-fallback');}"
+        alt="me"><span class="lqh-me-emoji">${meta.icon}</span>`;
       me.appendChild(dragon);
     }
   }
@@ -2189,6 +2316,20 @@
     tagEl.className = 'lqh-mission-verb-tag ' + meta.cls;
     document.getElementById('lqh-mission-pinyin').innerHTML = mission.pinyin;
     document.getElementById('lqh-mission-es').textContent = mission.es;
+    // Swap the verb mascot PNG so the user's qu/lai/hui artwork is visible
+    // on every round. Fallback to dralingo.png then to hidden if missing.
+    const mascotEl = document.getElementById('lqh-mission-mascot');
+    if (mascotEl) {
+      mascotEl.src = meta.asset;
+      mascotEl.onerror = () => {
+        if (mascotEl.dataset.fallbackTried) { mascotEl.style.display = 'none'; return; }
+        mascotEl.dataset.fallbackTried = '1';
+        mascotEl.src = '/assets/dralingo.png';
+      };
+      mascotEl.classList.remove('lqh-mascot-pop');
+      void mascotEl.offsetWidth;
+      mascotEl.classList.add('lqh-mascot-pop');
+    }
     // Reset + drive the mission timer bar
     const fill = document.getElementById('lqh-mission-bar-fill');
     if (fill) fill.style.width = '100%';
@@ -2206,12 +2347,25 @@
     }, 100);
     // Re-render the map
     lqhRenderMap();
-    // Bind the D-pad once
+    // Bind the D-pad once. Enforce a per-step COOLDOWN — taps that arrive
+    // inside the cooldown window are dropped on the client (we never even
+    // tell the server). This is what gives the dragon a discrete tile-by-
+    // tile cadence: each press = exactly one step, with a felt rhythm.
     if (!lqhState.boundDpad) {
       document.querySelectorAll('#screen-lqh .lqh-dir-btn').forEach((btn) => {
         const onTap = (e) => {
           if (e) e.preventDefault();
+          const now = Date.now();
+          if (now - (lqhState.lastMoveAt || 0) < LQH_STEP_COOLDOWN_MS) {
+            // Too soon — give a soft no-op press feedback instead of sending
+            btn.classList.remove('press');
+            void btn.offsetWidth;
+            btn.classList.add('press');
+            return;
+          }
+          lqhState.lastMoveAt = now;
           const dir = btn.dataset.dir;
+          lqhState.lastDir = dir;
           btn.classList.remove('press');
           void btn.offsetWidth;
           btn.classList.add('press');

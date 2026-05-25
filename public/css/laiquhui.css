@@ -198,7 +198,9 @@ body.lqh-bg .market-banner {
     linear-gradient(180deg, #2a1f14 0%, #1a1810 40%, #14110b 100%);
   color: #f3e9d0;
   padding: 8px 10px;
-  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  /* Reserve room at the bottom for the FIXED single-row d-pad — only
+     ~90px total now since the d-pad is horizontal (was 3-row cross). */
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   gap: 6px;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
@@ -263,6 +265,29 @@ body.lqh-bg .market-banner {
 }
 .lqh-mission-verb-tag.verb-lai { background: #5be8d1; color: #003028; }
 .lqh-mission-verb-tag.verb-hui { background: #ff8a96; color: #320012; }
+/* The verb mascot (qu.png / lai.png / hui.png) lives on the left of the
+   mission card. Big, eye-catching, pops on every new round. */
+.lqh-mission-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lqh-mission-mascot {
+  width: clamp(56px, 16vmin, 92px);
+  height: clamp(56px, 16vmin, 92px);
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 14px rgba(255, 213, 122, 0.5));
+}
+.lqh-mission-mascot.lqh-mascot-pop {
+  animation: lqh-mascot-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes lqh-mascot-pop {
+  0%   { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(6deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.lqh-mission-text { flex: 1 1 auto; min-width: 0; }
 .lqh-mission-pinyin {
   font-size: clamp(1.1rem, 4.6vmin, 1.5rem);
   font-weight: 900;
@@ -318,7 +343,7 @@ body.lqh-bg .market-banner {
   width: 100%;
   /* 10×8 aspect (1.25:1). Width still clamped to fit short phones. */
   max-width: min(94vw, 80vmin, 460px);
-  max-height: 42dvh;
+  max-height: 38dvh;
   aspect-ratio: 10 / 8;
   display: grid;
   grid-template-columns: repeat(10, 1fr) !important;
@@ -424,12 +449,13 @@ body.lqh-bg .market-banner {
 }
 .lqh-me {
   position: absolute;
-  inset: 6%;
+  /* Bigger than the tile so the qu/lai/hui PNG actually reads at this scale */
+  inset: -10%;
   display: flex; align-items: center; justify-content: center;
   z-index: 5;
   pointer-events: none;
   animation: lqh-me-arrive 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 12px rgba(255, 213, 122, 0.55));
 }
 .lqh-me img { width: 100%; height: 100%; object-fit: contain; }
 .lqh-me.emoji-fallback img { display: none; }
@@ -445,32 +471,64 @@ body.lqh-bg .market-banner {
   60%  { transform: scale(1.18); }
   100% { transform: scale(1);    opacity: 1; }
 }
+/* Direction-aware HOP animations — apply to .lqh-me when the dragon moves
+   in that direction. Each hop slides from the OUT-OF tile (so the dragon
+   reads as "jumped from the previous tile to this one") with a small
+   vertical lift in the middle of the arc. Tile-by-tile cadence cue. */
+.lqh-me.hop-shang { animation: lqh-hop-from-down 0.22s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.lqh-me.hop-xia   { animation: lqh-hop-from-up   0.22s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.lqh-me.hop-qian  { animation: lqh-hop-from-left 0.22s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.lqh-me.hop-hou   { animation: lqh-hop-from-right 0.22s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes lqh-hop-from-down {
+  0%   { transform: translateY(80%)  scale(0.92); opacity: 0.4; }
+  50%  { transform: translateY(-8%)  scale(1.10); opacity: 1; }
+  100% { transform: translateY(0)    scale(1); opacity: 1; }
+}
+@keyframes lqh-hop-from-up {
+  0%   { transform: translateY(-80%) scale(0.92); opacity: 0.4; }
+  50%  { transform: translateY(8%)   scale(1.10); opacity: 1; }
+  100% { transform: translateY(0)    scale(1); opacity: 1; }
+}
+@keyframes lqh-hop-from-left {
+  0%   { transform: translateX(-80%) scale(0.92); opacity: 0.4; }
+  50%  { transform: translateX(8%)   scale(1.10); opacity: 1; }
+  100% { transform: translateX(0)    scale(1); opacity: 1; }
+}
+@keyframes lqh-hop-from-right {
+  0%   { transform: translateX(80%)  scale(0.92); opacity: 0.4; }
+  50%  { transform: translateX(-8%)  scale(1.10); opacity: 1; }
+  100% { transform: translateX(0)    scale(1); opacity: 1; }
+}
 
 /* === D-PAD ===
-   Compact 3-row cross arrangement. Total max height ~180px so the buttons
-   are ALWAYS reachable in the bottom safe-area, never lost off-screen even
-   on iPhone SE. Sticky-positioned to viewport bottom with safe-area
-   padding. Buttons clamp against vmin, dvh, AND vh for triple safety. */
+   SINGLE-ROW horizontal strip pinned to the viewport bottom. Four buttons
+   side-by-side. Total height ~78px including safe-area + gradient bg.
+   This shape makes it physically impossible to lose any button below the
+   fold — the strip is one row tall and fixed-positioned. */
 .lqh-dpad {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 3px;
-  padding: 4px 0;
-  flex: 0 0 auto;
-  position: sticky;
-  bottom: env(safe-area-inset-bottom, 0px);
-  z-index: 20;
+  display: flex; flex-direction: row;
+  align-items: stretch;
+  gap: 6px;
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  position: fixed;
+  left: 0; right: 0;
+  bottom: 0;
+  z-index: 30;
   width: 100%;
+  background: linear-gradient(180deg, rgba(20, 17, 11, 0) 0%, rgba(20, 17, 11, 0.75) 30%, rgba(20, 17, 11, 0.95) 100%);
+  justify-content: space-around;
 }
-.lqh-dpad-row {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
+@media (min-width: 768px) {
+  .lqh-dpad { max-width: 720px; left: 50%; right: auto; transform: translateX(-50%); }
 }
 .lqh-dir-btn {
-  /* Capped at min(vmin, dvh) so a short landscape phone shrinks them.
-     Floor of 54px so the button is always tappable by a kid's thumb. */
-  width: clamp(54px, min(16vmin, 9dvh, 12vh), 92px);
-  height: clamp(54px, min(16vmin, 9dvh, 12vh), 92px);
+  /* Buttons share the row equally — each is ~22% of viewport width with
+     a sensible cap. Height is small and fixed so even tiny phones show
+     the whole strip. */
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 140px;
+  height: clamp(52px, 8.5dvh, 68px);
   background: linear-gradient(180deg, #ffd57a, #f5b14a);
   color: #381900;
   border: 3px solid #ffe66a;
@@ -500,42 +558,57 @@ body.lqh-bg .market-banner {
   25%      { transform: translateX(-4px) rotate(-3deg); }
   75%      { transform: translateX(4px) rotate(3deg); }
 }
+.lqh-dir-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 6px;
+}
 .lqh-dir-arrow {
-  font-size: clamp(1.3rem, 5vmin, 1.8rem);
+  font-size: clamp(0.95rem, 3.2vmin, 1.3rem);
   font-weight: 900;
   line-height: 1;
 }
 .lqh-dir-pinyin {
-  font-size: clamp(0.7rem, 2.4vmin, 0.95rem);
+  font-size: clamp(0.58rem, 2.0vmin, 0.82rem);
   font-weight: 900;
-  letter-spacing: 0.04em;
-}
-.lqh-dir-hanzi {
-  font-size: clamp(0.9rem, 3.2vmin, 1.2rem);
-  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-/* === Feedback overlay (success / fail) === */
+/* === Feedback chip (success / fail) — now a small top-right chip,
+   never a big center-screen balloon. User asked us to stop blocking
+   the play area with yellow/red popups. */
 .lqh-feedback {
   position: fixed;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%) scale(0.6);
-  background: rgba(28, 22, 14, 0.96);
-  border: 4px solid #ffd57a;
-  border-radius: 22px;
-  padding: 22px 28px;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  right: 8px;
+  left: auto;
+  transform: translateY(-12px) scale(0.9);
+  background: rgba(28, 22, 14, 0.85);
+  border: 2px solid rgba(255, 213, 122, 0.5);
+  border-radius: 12px;
+  padding: 6px 10px;
   text-align: center;
   z-index: 99;
   pointer-events: none;
   opacity: 0;
-  transition: transform 0.25s, opacity 0.25s;
-  box-shadow: 0 0 36px rgba(255, 213, 122, 0.55);
-  max-width: 80%;
+  transition: transform 0.18s, opacity 0.18s;
+  box-shadow: none;
+  max-width: 60%;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
 }
 .lqh-feedback.hidden { display: none; }
 .lqh-feedback.show {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
+  transform: translateY(0) scale(1);
 }
 .lqh-feedback.success { border-color: #5be8d1; box-shadow: 0 0 36px rgba(91, 232, 209, 0.6); }
 .lqh-feedback.fail { border-color: #ff5a66; box-shadow: 0 0 36px rgba(255, 90, 102, 0.6); }
@@ -740,24 +813,14 @@ body.lqh-bg .market-banner {
   100% { transform: translate(-50%, -180%) scale(1); opacity: 0; }
 }
 
-/* === ACHIEVEMENT BANNER (Mi-Familia-style milestone pop) === */
+/* === ACHIEVEMENT BANNER — HIDDEN (user request 2026-05-25)
+   Yellow/red pop-up balloons blocked the play area. Achievements are
+   still tracked server-side, just no longer announced visually. */
 .lqh-achievement {
-  position: fixed;
-  top: 22%; left: 50%;
-  transform: translate(-50%, -20px) scale(0.7);
-  background: linear-gradient(135deg, #ffe66a, #ffd57a 50%, #f5b14a);
-  color: #381900;
-  border: 4px solid #fff5d8;
-  border-radius: 18px;
-  padding: 14px 28px;
-  text-align: center;
-  z-index: 999;
-  pointer-events: none;
-  box-shadow: 0 0 50px rgba(255, 213, 122, 0.95), 0 12px 32px rgba(0, 0, 0, 0.6);
-  opacity: 0;
-  transition: opacity 0.3s, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  max-width: min(90%, 480px);
-  font-family: 'Nunito', sans-serif;
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 .lqh-achievement.show {
   opacity: 1;

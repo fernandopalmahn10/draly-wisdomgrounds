@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <title>Mochi Mash · Play</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20260517b">
+  <link rel="stylesheet" href="/css/styles.css?v=20260525b">
   <link rel="stylesheet" href="/css/dralingo.css">
   <link rel="stylesheet" href="/css/color-splash.css">
   <link rel="stylesheet" href="/css/color-clash.css">
@@ -19,13 +19,13 @@
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
   <link rel="stylesheet" href="/css/triage.css?v=20260524d">
-  <link rel="stylesheet" href="/css/laiquhui.css?v=20260524d">
+  <link rel="stylesheet" href="/css/laiquhui.css?v=20260525b">
   <link rel="stylesheet" href="/css/warmup.css?v=20260524f">
-  <link rel="stylesheet" href="/css/identity.css?v=20260524b">
+  <link rel="stylesheet" href="/css/identity.css?v=20260525a">
 </head>
 <body>
-  <div class="lantern l1"></div>
-  <div class="lantern l2"></div>
+  <!-- Lantern balloons (red + gold) removed per user request 2026-05-25 —
+       they were the "two balloons at the top" blocking the screen. -->
 
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
   <!-- Music indicator pops bottom-left for ~3.5s when the theme starts -->
@@ -604,49 +604,46 @@
       <div class="lqh-hud-mission">✅ <span id="lqh-done">0</span> · 💔 <span id="lqh-failed">0</span></div>
       <div class="lqh-hud-timer" id="lqh-mission-timer">10s</div>
     </div>
-    <!-- Mission card — the big sentence the player must complete -->
+    <!-- Mission card — the big sentence the player must complete. The
+         verb mascot on the left is one of qu.png / lai.png / hui.png so
+         the kid sees the specific character on every round. -->
     <div class="lqh-mission-card" id="lqh-mission-card">
       <div class="lqh-mission-verb-tag" id="lqh-mission-verb-tag">qù 去</div>
-      <div class="lqh-mission-pinyin" id="lqh-mission-pinyin">Wǒ <strong>qù</strong> 学校 🏫</div>
-      <div class="lqh-mission-es" id="lqh-mission-es">Voy a la escuela</div>
+      <div class="lqh-mission-body">
+        <img class="lqh-mission-mascot" id="lqh-mission-mascot" src="/assets/qu.png" alt="verb mascot">
+        <div class="lqh-mission-text">
+          <div class="lqh-mission-pinyin" id="lqh-mission-pinyin">Wǒ <strong>qù</strong> 学校 🏫</div>
+          <div class="lqh-mission-es" id="lqh-mission-es">Voy a la escuela</div>
+        </div>
+      </div>
       <div class="lqh-mission-bar"><div class="lqh-mission-bar-fill" id="lqh-mission-bar-fill"></div></div>
     </div>
     <!-- The map — 8x8 top-down grid showing locations + player dragon -->
     <div class="lqh-map-wrap">
       <div class="lqh-map" id="lqh-map"></div>
     </div>
-    <!-- Compact 4-direction D-pad — full HSK1 directional words in pinyin
-         (shàngmiàn / xiàmiàn / qiánmiàn / hòumiàn) so kids learn the way
-         these words actually appear in real sentences. 3-row cross layout
-         designed to fit in ~180px height max so the d-pad is NEVER lost
-         off the bottom of the screen on any phone. -->
+    <!-- Single-ROW 4-direction d-pad fixed to viewport bottom. Horizontal
+         strip → never gets cut off vertically; all four buttons (shàng /
+         xià / qiánmiàn / hòumiàn) visible on every phone. Each button
+         shows the qu/lai/hui PNG mascot on the relevant verb so the
+         icons the user shipped are actually visible in-game. -->
     <div class="lqh-dpad" id="lqh-dpad">
-      <div class="lqh-dpad-row">
-        <button class="lqh-dir-btn lqh-dir-up" data-dir="shang" type="button" aria-label="shàngmiàn (arriba)">
-          <span class="lqh-dir-arrow">▲</span>
-          <span class="lqh-dir-pinyin">shàngmiàn</span>
-          <span class="lqh-dir-hanzi">上面</span>
-        </button>
-      </div>
-      <div class="lqh-dpad-row">
-        <button class="lqh-dir-btn lqh-dir-left" data-dir="hou" type="button" aria-label="hòumiàn (atrás)">
-          <span class="lqh-dir-arrow">◀</span>
-          <span class="lqh-dir-pinyin">hòumiàn</span>
-          <span class="lqh-dir-hanzi">后面</span>
-        </button>
-        <button class="lqh-dir-btn lqh-dir-right" data-dir="qian" type="button" aria-label="qiánmiàn (al frente)">
-          <span class="lqh-dir-arrow">▶</span>
-          <span class="lqh-dir-pinyin">qiánmiàn</span>
-          <span class="lqh-dir-hanzi">前面</span>
-        </button>
-      </div>
-      <div class="lqh-dpad-row">
-        <button class="lqh-dir-btn lqh-dir-down" data-dir="xia" type="button" aria-label="xiàmiàn (abajo)">
-          <span class="lqh-dir-arrow">▼</span>
-          <span class="lqh-dir-pinyin">xiàmiàn</span>
-          <span class="lqh-dir-hanzi">下面</span>
-        </button>
-      </div>
+      <button class="lqh-dir-btn" data-dir="shang" type="button" aria-label="shàng (arriba)">
+        <span class="lqh-dir-arrow">▲</span>
+        <span class="lqh-dir-pinyin">shàng</span>
+      </button>
+      <button class="lqh-dir-btn" data-dir="hou" type="button" aria-label="hòumiàn (atrás)">
+        <span class="lqh-dir-arrow">◀</span>
+        <span class="lqh-dir-pinyin">hòumiàn</span>
+      </button>
+      <button class="lqh-dir-btn" data-dir="qian" type="button" aria-label="qiánmiàn (al frente)">
+        <span class="lqh-dir-arrow">▶</span>
+        <span class="lqh-dir-pinyin">qiánmiàn</span>
+      </button>
+      <button class="lqh-dir-btn" data-dir="xia" type="button" aria-label="xià (abajo)">
+        <span class="lqh-dir-arrow">▼</span>
+        <span class="lqh-dir-pinyin">xià</span>
+      </button>
     </div>
     <!-- Feedback overlay (success/fail) -->
     <div class="lqh-feedback hidden" id="lqh-feedback"></div>
@@ -674,6 +671,9 @@
       </div>
       <div class="id-clue-bar"><div class="id-clue-bar-fill" id="id-clue-bar-fill"></div></div>
     </div>
+    <!-- Phase banner — tells the kid which beat of the magic-card flow we're in.
+         Memoriza → Mezclando → Toca al sospechoso → Reveal. -->
+    <div class="id-phase-banner" id="id-phase-banner">🔍 Memoriza al sospechoso…</div>
     <div class="id-suspects" id="id-suspects"></div>
     <div class="id-feedback hidden" id="id-feedback"></div>
   </div>
@@ -754,7 +754,7 @@
   <script src="/js/warmup-vocab.js?v=20260524c"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
-  <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260524p"></script>
+  <script src="/js/rewards.js?v=20260525c"></script>
+  <script src="/js/player.js?v=20260525b"></script>
 </body>
 </html>

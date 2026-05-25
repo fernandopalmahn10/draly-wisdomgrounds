@@ -496,12 +496,17 @@ const LQH_GRID_H = 8;
 // FIVE essential locations only — park + temple removed per user feedback
 // ("they don't fit the courier theme"). These are the high-frequency
 // HSK1 places kids will actually use in everyday sentences.
+// User request 2026-05-25: drop the restaurant (cāntīng), keep hospital
+// (yīyuàn). The four remaining locations are spread to four corners +
+// near-corners of the 10×8 grid so every pair has a clear straight-line
+// or single-turn path. Home (jiā) bottom-left; hospital top-left;
+// school top-right; store bottom-right. Always a way to walk between
+// any two with shàng/xià/qián/hòu only.
 const LQH_LOCATIONS = [
-  { id: 'jia',       pinyin: 'jiā',       hanzi: '家',   es: 'casa',       icon: '🏠', x: 1, y: 6, isHome: true },
-  { id: 'xuexiao',   pinyin: 'xuéxiào',   hanzi: '学校', es: 'escuela',    icon: '🏫', x: 8, y: 1 },
-  { id: 'yiyuan',    pinyin: 'yīyuàn',    hanzi: '医院', es: 'hospital',   icon: '🏥', x: 1, y: 1 },
-  { id: 'shangdian', pinyin: 'shāngdiàn', hanzi: '商店', es: 'tienda',     icon: '🏪', x: 8, y: 5 },
-  { id: 'canting',   pinyin: 'cāntīng',   hanzi: '餐厅', es: 'restaurante', icon: '🍜', x: 4, y: 3 },
+  { id: 'jia',       pinyin: 'jiā',       hanzi: '家',   es: 'casa',     icon: '🏠', x: 1, y: 6, isHome: true },
+  { id: 'yiyuan',    pinyin: 'yīyuàn',    hanzi: '医院', es: 'hospital', icon: '🏥', x: 1, y: 1 },
+  { id: 'xuexiao',   pinyin: 'xuéxiào',   hanzi: '学校', es: 'escuela',  icon: '🏫', x: 8, y: 1 },
+  { id: 'shangdian', pinyin: 'shāngdiàn', hanzi: '商店', es: 'tienda',   icon: '🏪', x: 8, y: 6 },
 ];
 // === WEATHER EVENT POOL ===
 // Periodically (every ~22s) the server picks a random weather event and
@@ -509,12 +514,12 @@ const LQH_LOCATIONS = [
 // see/hear briefly + a visual effect overlay. Pedagogically: teaches a 6th
 // vocabulary axis (weather) while breaking the rhythm of pure navigation.
 // Movement is NEVER blocked — weather is decorative + reinforces vocab.
+// Only RAIN — other weather vocab (sun / snow / wind / cloud) isn't yet in
+// the students' covered vocabulary, so we don't surface it. User request
+// 2026-05-25: "only rain because we haven't seen any other thing in the
+// vocabulary yet." Easy to expand later by re-adding entries here.
 const LQH_WEATHERS = [
   { kind: 'rain',  icon: '🌧',  pinyin: 'Xià yǔ le!',  hanzi: '下雨了!', es: '¡Está lloviendo!' },
-  { kind: 'sun',   icon: '☀️',  pinyin: 'Chū tài yáng!', hanzi: '出太阳!', es: '¡Salió el sol!' },
-  { kind: 'snow',  icon: '❄️',  pinyin: 'Xià xuě le!', hanzi: '下雪了!', es: '¡Está nevando!' },
-  { kind: 'wind',  icon: '💨',  pinyin: 'Guā fēng le!', hanzi: '刮风了!', es: '¡Hace viento!' },
-  { kind: 'cloud', icon: '☁️',  pinyin: 'Duō yún!',    hanzi: '多云!',    es: '¡Está nublado!' },
 ];
 const LQH_WEATHER_INTERVAL_MS = 22000;
 const LQH_WEATHER_DURATION_MS = 8000;

@@ -50,7 +50,12 @@ body::before {
   z-index: 0;
 }
 
-.lantern {
+/* Lantern balloons disabled platform-wide (user request 2026-05-25).
+   They were visually intrusive on every screen. */
+.lantern,
+.lantern::before,
+.lantern::after { display: none !important; visibility: hidden !important; opacity: 0 !important; }
+.lantern--legacy-disabled {
   position: fixed;
   width: 60px;
   height: 80px;
@@ -1157,12 +1162,13 @@ body::before {
 }
 
 /* ============================================================ */
-/* === Global Reward Toast (Rewards.show / .combo / .epic) === */
-/* Lightweight, NON-intrusive positive-feedback chip. Sits at the
-   bottom-center, slides up, never blocks the play area. Stackable —
-   multiple toasts queue upward in column-reverse order. */
+/* === Global Reward Toast — DISABLED (user request 2026-05-25) === */
+/* Yellow/red balloon pills were too visually intrusive. JS is now a
+   no-op (see rewards.js); CSS hides anything that slips through. */
 /* ============================================================ */
-.reward-toast-layer {
+.reward-toast-layer,
+.reward-toast { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+.reward-toast-layer--legacy-disabled {
   position: fixed;
   left: 50%;
   bottom: clamp(64px, 12vh, 120px);
