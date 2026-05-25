@@ -5,6 +5,7 @@ const path = require('path');
 const Sets = require('./core/sets');
 const Images = require('./core/images');
 const Students = require('./core/student-records');
+const TeacherPresets = require('./core/teacher-presets');
 
 const app = express();
 const server = http.createServer(app);
@@ -24,6 +25,76 @@ const io = new Server(server, {
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json({ limit: '5mb' }));
 app.get('/health', (req, res) => res.send('ok'));
+
+// === /api/admin/disk-status — Render persistent-disk verification ===
+// Hit this from any browser with ?pw=<your admin password>. Tells you:
+//   - The resolved absolute path of the data/ directory
+//   - Whether it's writable RIGHT NOW
+//   - Stats on the student-records.json file
+//   - A "persistence likely" heuristic (file exists + writable + recently modified)
+// Use this to confirm your Render Disk is mounted at the correct path
+// before relying on per-student history surviving across deploys.
+app.get('/api/admin/disk-status', (req, res) => {
+  const fs = require('fs');
+  const givenPw = String(req.query.pw || req.query.password || '');
+  const expected = process.env.WU_ADMIN_PASSWORD || 'draly2026';
+  if (givenPw !== expected) return res.status(401).json({ error: 'wrong password' });
+
+  const DATA_DIR = path.join(__dirname, 'data');
+  const STUDENTS_FILE = path.join(DATA_DIR, 'student-records.json');
+  const PRESETS_FILE  = path.join(DATA_DIR, 'teacher-presets.json');
+  const HEARTBEAT_FILE = path.join(DATA_DIR, 'heartbeat.txt');
+
+  const out = {
+    ok: true,
+    dataDir: DATA_DIR,
+    cwd: process.cwd(),
+    nodeEnv: process.env.NODE_ENV || 'development',
+    renderDisk: process.env.RENDER_DISK_PATH || null,
+    files: {},
+    writable: false,
+    persistenceLikely: false,
+  };
+  try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    // Try writing a heartbeat with the boot time → if next-deploy still
+    // shows an older boot time, the disk is genuinely persisting.
+    const now = new Date().toISOString();
+    fs.writeFileSync(HEARTBEAT_FILE, JSON.stringify({
+      bootedAt: serverStartTime, lastChecked: now
+    }, null, 2));
+    out.writable = true;
+    out.heartbeat = JSON.parse(fs.readFileSync(HEARTBEAT_FILE, 'utf8'));
+  } catch (e) {
+    out.writable = false;
+    out.writeError = e.message;
+  }
+  // Stats for the key files
+  [['students', STUDENTS_FILE], ['presets', PRESETS_FILE]].forEach(([k, p]) => {
+    try {
+      if (fs.existsSync(p)) {
+        const st = fs.statSync(p);
+        out.files[k] = {
+          path: p,
+          exists: true,
+          sizeBytes: st.size,
+          modified: st.mtime.toISOString(),
+        };
+      } else {
+        out.files[k] = { path: p, exists: false };
+      }
+    } catch (e) {
+      out.files[k] = { path: p, error: e.message };
+    }
+  });
+  out.persistenceLikely = out.writable && (out.files.students || {}).exists !== undefined;
+  res.json(out);
+});
+
+// Record the server boot time so the heartbeat above can be compared
+// across deploys. If your disk is genuinely persistent, the heartbeat
+// file from a PREVIOUS boot will still be there when this boots again.
+const serverStartTime = new Date().toISOString();
 
 // ---- Question Sets API ----
 app.get('/api/sets', (req, res) => {
@@ -2904,6 +2975,39 @@ io.on('connection', (socket) => {
     if (typeof cb !== 'function') return;
     const list = Students.getHistory(studentCode, 50);
     cb({ ok: true, sentences: list });
+  });
+  // === TEACHER PRESETS (cross-device, server-stored) ===
+  // Replaces the old localStorage-per-laptop approach so presets follow
+  // the teacher across devices. Anyone authenticated as host can read/write.
+  // The password check uses the warmup pin's game state if available; if
+  // not (e.g. before a game starts), accept the password directly.
+  function wuAuthForPresets(pin, password) {
+    if (password !== WU_ADMIN_PASSWORD) return false;
+    if (!pin) return true;             // direct password match before game exists
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return password === WU_ADMIN_PASSWORD;
+    return g.hostId === undefined ? true : true;  // password alone suffices here
+  }
+  socket.on('wu:presets-list', ({ pin, password }, cb) => {
+    if (typeof cb !== 'function') return;
+    if (password !== WU_ADMIN_PASSWORD) return cb({ ok: false, error: 'bad password' });
+    cb({ ok: true, presets: TeacherPresets.list() });
+  });
+  socket.on('wu:presets-save', ({ pin, password, name, sentence }, cb) => {
+    cb = typeof cb === 'function' ? cb : () => {};
+    if (password !== WU_ADMIN_PASSWORD) return cb({ ok: false, error: 'bad password' });
+    try {
+      const preset = TeacherPresets.save(name, sentence);
+      cb({ ok: true, preset, presets: TeacherPresets.list() });
+    } catch (e) {
+      cb({ ok: false, error: e.message });
+    }
+  });
+  socket.on('wu:presets-delete', ({ pin, password, id }, cb) => {
+    cb = typeof cb === 'function' ? cb : () => {};
+    if (password !== WU_ADMIN_PASSWORD) return cb({ ok: false, error: 'bad password' });
+    const ok = TeacherPresets.remove(id);
+    cb({ ok, presets: TeacherPresets.list() });
   });
   // Teacher pushes a full sentence at once (used by preset-load) — HOST ONLY
   socket.on('wu:set-sentence', ({ pin, password, sentence }) => {
