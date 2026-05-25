@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
   <link rel="stylesheet" href="/css/triage.css?v=20260524d">
   <link rel="stylesheet" href="/css/laiquhui.css?v=20260524d">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260524e">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260524f">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -680,7 +680,11 @@
     <div class="wu-player-admin hidden" id="wu-player-admin">
       <div class="wu-player-admin-bar">
         <span class="wu-player-admin-tag">🎓 Eres asistente</span>
-        <button class="wu-player-admin-clear" id="wu-player-admin-clear" type="button">🧹 Limpiar</button>
+        <div class="wu-player-admin-actions">
+          <button class="wu-player-admin-undo" id="wu-player-admin-undo" type="button">↩️ Deshacer</button>
+          <button class="wu-player-admin-rearrange" id="wu-player-admin-rearrange" type="button">🔀 Rearreglar</button>
+          <button class="wu-player-admin-clear" id="wu-player-admin-clear" type="button">🧹 Limpiar</button>
+        </div>
       </div>
       <div class="wu-player-exp-tabs" id="wu-player-exp-tabs"></div>
       <div class="wu-player-library" id="wu-player-library"></div>
@@ -726,6 +730,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260524m"></script>
+  <script src="/js/player.js?v=20260524n"></script>
 </body>
 </html>

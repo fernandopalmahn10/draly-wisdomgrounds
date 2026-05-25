@@ -14,6 +14,8 @@
   let currentDelegates = [];   // array of player names
   let currentPlayers = {};     // id -> { name, team, avatar }
   let serverPresets = [];      // canonical server-side preset list
+  let rearrangeMode = false;   // when true, word-tap swaps instead of deletes
+  let selectedSwapIdx = null;  // index of word selected for swapping
   const LEGACY_PRESET_KEY = 'dralyWarmupPresets';
   const MIGRATION_KEY = 'dralyWarmupPresetsMigrated';
 
@@ -71,6 +73,20 @@
   });
   $('wu-clear-btn').addEventListener('click', () => {
     socket.emit('wu:clear', { pin, password: adminPw });
+  });
+  $('wu-undo-btn').addEventListener('click', () => {
+    socket.emit('wu:undo', { pin, password: adminPw });
+    if (MochiSounds.tap) MochiSounds.tap();
+  });
+  $('wu-rearrange-btn').addEventListener('click', () => {
+    rearrangeMode = !rearrangeMode;
+    selectedSwapIdx = null;
+    const btn = $('wu-rearrange-btn');
+    if (btn) {
+      btn.classList.toggle('active', rearrangeMode);
+      btn.textContent = rearrangeMode ? '✏️ Salir' : '🔀 Rearreglar';
+    }
+    renderStage(currentSentence);
   });
 
   function bindToolbar() {
@@ -283,9 +299,14 @@
       const color = cat.color;
       const showPic = (currentViewMode === 'picture' || currentViewMode === 'both');
       const showEmoji = (currentViewMode === 'text' || currentViewMode === 'both');
-      // Pinyin word (tap to remove)
+      // Pinyin word — tap behavior depends on rearrangeMode:
+      //   normal:    tap → remove
+      //   rearrange: tap → select; second tap → swap with selected
       const p = document.createElement('button');
-      p.className = 'wu-stage-word' + (currentViewMode === 'picture' ? ' picture-only' : '');
+      p.className = 'wu-stage-word'
+        + (currentViewMode === 'picture' ? ' picture-only' : '')
+        + (rearrangeMode ? ' rearrange-mode' : '')
+        + (selectedSwapIdx === i ? ' swap-selected' : '');
       p.style.setProperty('--cat-color', color);
       const pic = showPic
         ? `<img class="wu-sw-pic" src="/assets/warmup/${w.id}.png" alt="${w.pinyin}"
@@ -295,10 +316,28 @@
       p.innerHTML = `${pic}${ic}
         <span class="wu-sw-pinyin">${w.pinyin}</span>
         <span class="wu-sw-hanzi">${w.hanzi}</span>`;
-      p.title = 'Toca para quitar';
+      p.title = rearrangeMode ? 'Toca dos palabras para intercambiar' : 'Toca para quitar';
       p.onclick = () => {
-        socket.emit('wu:remove-word', { pin, password: adminPw, index: i });
-        if (MochiSounds.tap) MochiSounds.tap();
+        if (rearrangeMode) {
+          if (selectedSwapIdx === null) {
+            selectedSwapIdx = i;
+            renderStage(currentSentence);
+            if (MochiSounds.tap) MochiSounds.tap();
+          } else if (selectedSwapIdx === i) {
+            selectedSwapIdx = null;
+            renderStage(currentSentence);
+          } else {
+            socket.emit('wu:swap-words', {
+              pin, password: adminPw,
+              fromIndex: selectedSwapIdx, toIndex: i,
+            });
+            selectedSwapIdx = null;
+            if (MochiSounds.swap) MochiSounds.swap();
+          }
+        } else {
+          socket.emit('wu:remove-word', { pin, password: adminPw, index: i });
+          if (MochiSounds.tap) MochiSounds.tap();
+        }
       };
       pinyinRow.appendChild(p);
 

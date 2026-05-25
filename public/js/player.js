@@ -1558,6 +1558,9 @@
   let wuPlayerCurious = false;
   let wuPlayerIsDelegate = false;
   let wuPlayerActiveExp = 'all';   // EXP filter on the player's own library
+  let wuPlayerRearrange = false;   // local toggle — tap swaps instead of removes
+  let wuPlayerSwapIdx = null;      // index of the first-selected word in swap
+  let wuPlayerLastSentence = [];   // remember most recent sentence for re-renders
 
   socket.on('wu:state', (data) => {
     if (gameType !== 'warmup') return;
@@ -1694,8 +1697,8 @@
         const item = document.createElement('div');
         item.className = 'wu-history-item';
         const date = new Date(s.ts);
-        const dateStr = date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-        const timeStr = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        // Simpler display — just date (drop time + PIN per user request)
+        const dateStr = date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
         const wordsHtml = (s.words || []).map((wid) => {
           const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
           if (!w) return '';
@@ -1707,8 +1710,28 @@
           </span>`;
         }).join('');
         item.innerHTML = `
-          <div class="wu-history-item-meta">${dateStr} · ${timeStr} · PIN ${s.pin || '—'}</div>
+          <div class="wu-history-item-row">
+            <div class="wu-history-item-meta">📅 ${dateStr}</div>
+            <button class="wu-history-item-delete" type="button" aria-label="Borrar">🗑</button>
+          </div>
           <div class="wu-history-item-words">${wordsHtml}</div>`;
+        // Wire delete button — confirms then calls server
+        const delBtn = item.querySelector('.wu-history-item-delete');
+        if (delBtn) {
+          delBtn.onclick = () => {
+            if (!confirm('¿Borrar esta oración del historial?')) return;
+            socket.emit('wu:delete-history-entry', {
+              studentCode: myStudentCode, ts: s.ts,
+            }, (resp) => {
+              if (resp && resp.ok) {
+                // Refresh the modal with the updated list
+                openWuHistory();
+              } else {
+                alert('No se pudo borrar.');
+              }
+            });
+          };
+        }
         list.appendChild(item);
       });
     });
@@ -1741,6 +1764,8 @@
 
   function bindPlayerAdminControls() {
     const clear = document.getElementById('wu-player-admin-clear');
+    const undo  = document.getElementById('wu-player-admin-undo');
+    const rear  = document.getElementById('wu-player-admin-rearrange');
     if (clear && !clear._wuBound) {
       clear._wuBound = true;
       clear.onclick = () => {
@@ -1748,8 +1773,26 @@
         if (MochiSounds.tap) MochiSounds.tap();
       };
     }
+    if (undo && !undo._wuBound) {
+      undo._wuBound = true;
+      undo.onclick = () => {
+        try { socket.emit('wu:undo', { pin }); } catch (_) {}
+        if (MochiSounds.tap) MochiSounds.tap();
+      };
+    }
+    if (rear && !rear._wuBound) {
+      rear._wuBound = true;
+      rear.onclick = () => {
+        wuPlayerRearrange = !wuPlayerRearrange;
+        wuPlayerSwapIdx = null;
+        rear.classList.toggle('active', wuPlayerRearrange);
+        rear.textContent = wuPlayerRearrange ? '✏️ Salir' : '🔀 Rearreglar';
+        renderWuStage(wuPlayerLastSentence);
+      };
+    }
   }
   function renderWuStage(sentence) {
+    wuPlayerLastSentence = sentence || [];
     const pinyinRow = document.getElementById('wu-player-stage-pinyin');
     const esRow     = document.getElementById('wu-player-stage-es');
     const empty     = document.getElementById('wu-player-stage-empty');
@@ -1763,18 +1806,26 @@
     if (empty) empty.style.display = 'none';
     const showPic = (wuPlayerViewMode === 'picture' || wuPlayerViewMode === 'both');
     const showEmoji = (wuPlayerViewMode === 'text' || wuPlayerViewMode === 'both');
-    sentence.forEach((wid) => {
+    sentence.forEach((wid, idx) => {
       const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
       if (!w) return;
       const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
       const color = cat ? cat.color : '#fff';
-      // === When curious mode is ON, words become buttons → tap opens
-      // the Pokédex card. Otherwise they're plain non-interactive divs. ===
-      const tag = wuPlayerCurious ? 'button' : 'div';
+      // Three tap-modes (in priority order):
+      //   1. Curious mode ON  → tap opens Pokédex card
+      //   2. Delegate + rearrange ON → tap selects, second tap swaps
+      //   3. Delegate (no rearrange) → tap removes
+      //   4. Read-only spectator → tap does nothing
+      const isInteractive = wuPlayerCurious
+        || (wuPlayerIsDelegate && wuPlayerRearrange)
+        || wuPlayerIsDelegate;
+      const tag = isInteractive ? 'button' : 'div';
       const p = document.createElement(tag);
       p.className = 'wu-player-word'
         + (wuPlayerViewMode === 'picture' ? ' picture-only' : '')
-        + (wuPlayerCurious ? ' curious-tappable' : '');
+        + (wuPlayerCurious ? ' curious-tappable' : '')
+        + (wuPlayerIsDelegate && wuPlayerRearrange ? ' rearrange-mode' : '')
+        + (wuPlayerSwapIdx === idx ? ' swap-selected' : '');
       p.style.setProperty('--cat-color', color);
       const pic = showPic
         ? `<img class="wu-pw-pic" src="/assets/warmup/${w.id}.png" alt="${w.pinyin}"
@@ -1784,10 +1835,40 @@
       p.innerHTML = `${pic}${ic}
         <span class="wu-pw-pinyin">${w.pinyin}</span>
         <span class="wu-pw-hanzi">${w.hanzi}</span>`;
-      if (wuPlayerCurious) {
+      if (isInteractive) {
         p.type = 'button';
-        p.addEventListener('click', () => showWuPokedex(w));
-        p.addEventListener('pointerdown', (e) => { e.preventDefault(); showWuPokedex(w); });
+        const handle = (ev) => {
+          if (ev) ev.preventDefault();
+          if (wuPlayerCurious) {
+            showWuPokedex(w);
+            return;
+          }
+          if (wuPlayerIsDelegate && wuPlayerRearrange) {
+            if (wuPlayerSwapIdx === null) {
+              wuPlayerSwapIdx = idx;
+              renderWuStage(sentence);
+              if (MochiSounds.tap) MochiSounds.tap();
+            } else if (wuPlayerSwapIdx === idx) {
+              wuPlayerSwapIdx = null;
+              renderWuStage(sentence);
+            } else {
+              try {
+                socket.emit('wu:swap-words', {
+                  pin, fromIndex: wuPlayerSwapIdx, toIndex: idx,
+                });
+              } catch (_) {}
+              wuPlayerSwapIdx = null;
+              if (MochiSounds.swap) MochiSounds.swap();
+            }
+            return;
+          }
+          if (wuPlayerIsDelegate) {
+            // Plain delegate tap = remove this word
+            try { socket.emit('wu:remove-word', { pin, index: idx }); } catch (_) {}
+            if (MochiSounds.tap) MochiSounds.tap();
+          }
+        };
+        p.addEventListener('click', handle);
       }
       pinyinRow.appendChild(p);
       const e = document.createElement('div');

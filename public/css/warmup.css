@@ -115,12 +115,121 @@ body.wu-bg .market-banner {
   font-size: 1.1rem;
   margin-top: 30px;
 }
-.wu-clear-btn {
+/* === Stage action row — Undo / Rearrange / Clear === */
+.wu-stage-actions {
   position: absolute;
-  top: 10px; right: 10px;
-  font-size: 0.85rem !important;
-  padding: 6px 12px !important;
+  top: 8px; right: 8px;
+  display: flex; gap: 6px;
+  flex-wrap: wrap;
 }
+.wu-stage-actions .btn {
+  font-size: 0.78rem !important;
+  padding: 5px 10px !important;
+}
+.wu-undo-btn, .wu-rearrange-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(91, 232, 209, 0.5) !important;
+  color: #5be8d1 !important;
+}
+.wu-rearrange-btn.active {
+  background: #5be8d1 !important;
+  color: #0a1320 !important;
+  box-shadow: 0 0 14px rgba(91, 232, 209, 0.55) !important;
+}
+
+/* === Swap-selected highlight on the staged word === */
+.wu-stage-word.rearrange-mode {
+  cursor: pointer;
+  position: relative;
+}
+.wu-stage-word.rearrange-mode::before {
+  content: '🔀';
+  position: absolute;
+  top: -6px; right: -6px;
+  font-size: 0.9rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+.wu-stage-word.swap-selected {
+  background: rgba(91, 232, 209, 0.25) !important;
+  border-color: #5be8d1 !important;
+  box-shadow: 0 0 22px rgba(91, 232, 209, 0.9) !important;
+  animation: wu-swap-pulse 0.9s ease-in-out infinite;
+}
+@keyframes wu-swap-pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+
+/* Player phone admin tools — additional buttons */
+.wu-player-admin-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.wu-player-admin-undo,
+.wu-player-admin-rearrange {
+  background: rgba(91, 232, 209, 0.15);
+  border: 2px solid #5be8d1;
+  color: #5be8d1;
+  font-family: inherit;
+  font-weight: 900;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+.wu-player-admin-rearrange.active {
+  background: #5be8d1;
+  color: #0a1320;
+  box-shadow: 0 0 12px rgba(91, 232, 209, 0.55);
+}
+
+/* Same swap visuals on player-side word */
+.wu-player-word.rearrange-mode {
+  cursor: pointer;
+  position: relative;
+}
+.wu-player-word.rearrange-mode::before {
+  content: '🔀';
+  position: absolute;
+  top: -6px; right: -6px;
+  font-size: 0.85rem;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6));
+}
+.wu-player-word.swap-selected {
+  background: rgba(91, 232, 209, 0.25);
+  border-color: #5be8d1 !important;
+  box-shadow: 0 0 22px rgba(91, 232, 209, 0.9);
+  animation: wu-swap-pulse 0.9s ease-in-out infinite;
+}
+
+/* === History item polish — date + delete button === */
+.wu-history-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  gap: 8px;
+}
+.wu-history-item-meta {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: rgba(220, 235, 245, 0.75);
+  font-weight: 800;
+  margin-bottom: 0;
+}
+.wu-history-item-delete {
+  background: rgba(255, 90, 102, 0.15);
+  border: 2px solid rgba(255, 90, 102, 0.55);
+  color: #ff8a96;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+.wu-history-item-delete:active { transform: scale(0.9); }
 
 /* Each placed pinyin word — gets the category color */
 .wu-stage-word {
