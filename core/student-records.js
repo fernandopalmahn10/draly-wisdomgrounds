@@ -146,6 +146,22 @@ function getHistory(code, limit) {
   return typeof limit === 'number' ? arr.slice(0, limit) : arr;
 }
 
+// Delete a single history entry for the given student, identified by its
+// timestamp (which is unique within their record). Returns true if removed.
+function deleteHistoryEntry(code, ts) {
+  const rec = get(code);
+  if (!rec) return false;
+  const target = Number(ts);
+  if (!Number.isFinite(target)) return false;
+  const before = rec.sentencesBuilt.length;
+  rec.sentencesBuilt = rec.sentencesBuilt.filter((e) => e.ts !== target);
+  if (rec.sentencesBuilt.length < before) {
+    scheduleSave();
+    return true;
+  }
+  return false;
+}
+
 // Initial load on require()
 load();
 
@@ -154,5 +170,6 @@ module.exports = {
   get,
   logSentence,
   getHistory,
+  deleteHistoryEntry,
   normalizeCode,
 };

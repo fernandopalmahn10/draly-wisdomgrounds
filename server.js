@@ -1902,10 +1902,10 @@ io.on('connection', (socket) => {
           viewMode: 'text',
           curious: false,
           delegates: new Set(),
-          // Codes of every student who contributed to the CURRENT sentence.
-          // Flushed to student histories whenever the sentence is cleared,
-          // replaced via preset-load, or the game ends.
           contributors: new Set(),
+          // Shared undo stack — anyone (host or asistente) can press
+          // undo to pop the last sentence state. Capped at 30 entries.
+          undoStack: [],
           adminSocketId: g.hostId,
         };
         io.to(pin).emit('wu:state', {
@@ -2914,6 +2914,18 @@ io.on('connection', (socket) => {
       delegates: Array.from(g.warmup.delegates || []),
     });
   }
+  // Push the CURRENT sentence state onto the undo stack BEFORE mutating it.
+  // Called by every mutation handler. Stack capped to keep memory bounded.
+  const WU_UNDO_MAX = 30;
+  function wuPushUndo(g) {
+    if (!g || !g.warmup) return;
+    if (!g.warmup.undoStack) g.warmup.undoStack = [];
+    g.warmup.undoStack.push(g.warmup.sentence.slice());
+    if (g.warmup.undoStack.length > WU_UNDO_MAX) {
+      g.warmup.undoStack.shift();
+    }
+  }
+
   // Flush the current sentence to the history of every contributor, then
   // reset the contributors set. Called on clear / replace / game end.
   function wuFlushSentence(g, pin) {
@@ -2938,9 +2950,9 @@ io.on('connection', (socket) => {
   socket.on('wu:add-word', ({ pin, password, wordId }) => {
     const g = games[pin];
     if (!wuRequireAdmin(g, socket, password)) return;
-    if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text', contributors: new Set() };
+    if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text', contributors: new Set(), undoStack: [] };
+    wuPushUndo(g);
     g.warmup.sentence.push(wordId);
-    // Track which student code contributed this word
     const p = g.players[socket.id];
     if (p && p.studentCode) g.warmup.contributors.add(p.studentCode);
     wuEmitState(g, pin);
@@ -2951,8 +2963,8 @@ io.on('connection', (socket) => {
     if (!g.warmup) return;
     const i = Number(index);
     if (Number.isFinite(i) && i >= 0 && i < g.warmup.sentence.length) {
+      wuPushUndo(g);
       g.warmup.sentence.splice(i, 1);
-      // Removing a word still counts as "engagement" — credit the remover
       const p = g.players[socket.id];
       if (p && p.studentCode) g.warmup.contributors.add(p.studentCode);
       wuEmitState(g, pin);
@@ -2962,9 +2974,41 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!wuRequireAdmin(g, socket, password)) return;
     if (!g.warmup) return;
+    wuPushUndo(g);
     // Flush the about-to-be-cleared sentence to contributors' histories
     wuFlushSentence(g, pin);
     g.warmup.sentence = [];
+    wuEmitState(g, pin);
+  });
+  // === UNDO === Pops the last sentence state off the stack. Host or
+  // delegate can undo. Note: undo does NOT bring back contributors that
+  // were flushed by a clear — once a sentence is logged to histories,
+  // undoing the visible state is fine but the history entries stay.
+  socket.on('wu:undo', ({ pin, password }) => {
+    const g = games[pin];
+    if (!wuRequireAdmin(g, socket, password)) return;
+    if (!g.warmup) return;
+    if (!g.warmup.undoStack || !g.warmup.undoStack.length) return;
+    const prev = g.warmup.undoStack.pop();
+    g.warmup.sentence = prev;
+    wuEmitState(g, pin);
+  });
+  // === SWAP WORDS === Used by Modo Rearreglar (rearrange). Swaps the
+  // word at fromIndex with the word at toIndex. Tracks contributor.
+  socket.on('wu:swap-words', ({ pin, password, fromIndex, toIndex }) => {
+    const g = games[pin];
+    if (!wuRequireAdmin(g, socket, password)) return;
+    if (!g.warmup) return;
+    const i = Number(fromIndex), j = Number(toIndex);
+    if (!Number.isFinite(i) || !Number.isFinite(j) || i === j) return;
+    const len = g.warmup.sentence.length;
+    if (i < 0 || j < 0 || i >= len || j >= len) return;
+    wuPushUndo(g);
+    const tmp = g.warmup.sentence[i];
+    g.warmup.sentence[i] = g.warmup.sentence[j];
+    g.warmup.sentence[j] = tmp;
+    const p = g.players[socket.id];
+    if (p && p.studentCode) g.warmup.contributors.add(p.studentCode);
     wuEmitState(g, pin);
   });
   // Student requests their own history. They identify by code (which lives
@@ -2975,6 +3019,13 @@ io.on('connection', (socket) => {
     if (typeof cb !== 'function') return;
     const list = Students.getHistory(studentCode, 50);
     cb({ ok: true, sentences: list });
+  });
+  // Student deletes one of their own history entries (by timestamp,
+  // which is unique within their record). Returns the fresh list.
+  socket.on('wu:delete-history-entry', ({ studentCode, ts }, cb) => {
+    cb = typeof cb === 'function' ? cb : () => {};
+    const ok = Students.deleteHistoryEntry(studentCode, ts);
+    cb({ ok, sentences: Students.getHistory(studentCode, 50) });
   });
   // === TEACHER PRESETS (cross-device, server-stored) ===
   // Replaces the old localStorage-per-laptop approach so presets follow
@@ -3015,6 +3066,7 @@ io.on('connection', (socket) => {
     if (!wuRequireHost(g, socket, password)) return;
     if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text', delegates: new Set(), contributors: new Set() };
     if (!Array.isArray(sentence)) return;
+    wuPushUndo(g);
     // Flush the old sentence first (it's being replaced by a preset)
     wuFlushSentence(g, pin);
     g.warmup.sentence = sentence.slice(0, 40).map(String);
