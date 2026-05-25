@@ -381,6 +381,9 @@
       document.querySelector('#card-conquest .game-card-play').onclick = () => {
         location.href = '/host-conquest.html?setId=' + encodeURIComponent(setId);
       };
+      // Triage runs with built-in HSK1 medical vocab. We still forward the
+      // ?setId so the host page can choose to load the teacher's custom set
+      // if they want — but the game runs fine without it.
       document.querySelector('#card-triage .game-card-play').onclick = () => {
         location.href = '/host-triage.html?setId=' + encodeURIComponent(setId);
       };
@@ -433,8 +436,10 @@
       document.querySelector('#card-conquest .game-card-play').onclick = () => {
         location.href = '/sets.html?game=conquest';
       };
+      // Triage now also skips sets entirely — built-in HSK1 medical vocab
+      // is seeded server-side on host:create.
       document.querySelector('#card-triage .game-card-play').onclick = () => {
-        location.href = '/sets.html?game=triage';
+        location.href = '/host-triage.html';
       };
       // 6-7 SWING — skip sets entirely, jump straight to host
       document.querySelector('#card-sixseven .game-card-play').onclick = () => {
