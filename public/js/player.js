@@ -1671,7 +1671,7 @@
       wrap.appendChild(card);
     });
     // Phase banner inside the narrator bubble — tells the kid what to do.
-    idSetPhaseText('🔍 Memoriza al sospechoso…');
+    idSetPhaseText('🔍 Lee la pista y memoriza…');
     // Narrator detective pops in with a little wave when the clue arrives
     const narrator = document.getElementById('id-narrator');
     if (narrator) {
@@ -1679,11 +1679,16 @@
       void narrator.offsetWidth;
       narrator.classList.add('speak');
     }
-    // ── Phase timing ──
-    const MEMORIZE_MS = 2200;
-    const FLIP_MS     = 480;
-    const SWAPS       = Math.min(5, Math.max(3, n - 1));
-    const SWAP_MS     = 380;
+    // ── Phase timing ── Memorize is now LONG (5.0s) so students have real
+    // time to read the pinyin clue, parse it, and identify the suspect
+    // before cards flip. User feedback: "give students a little bit more
+    // of time before you start shuffling."
+    const MEMORIZE_MS = 5000;
+    const FLIP_MS     = 520;
+    const SWAPS       = Math.min(6, Math.max(4, n));
+    // Per-swap duration is now RANDOMIZED per swap (see idShuffleCards) so
+    // the shuffle is unpredictable. This is just the baseline we pass in.
+    const SWAP_MS     = 420;
     // Phase B: flip face-down
     idShuffleHandle = setTimeout(() => {
       idSetPhaseText('🌀 ¡Mezclando!');
@@ -1711,12 +1716,16 @@
       }, FLIP_MS);
     }, MEMORIZE_MS);
   }
-  // Translate-based pair-swap shuffle. We do N random swaps, each animating
-  // both involved cards into each other's slot via translate3d. The card's
-  // suspectIdx travels with it (dataset) so the server still sees the right
-  // identity when the player taps a slot.
+  // === MAGIC-CARD SHUFFLE with RANDOMIZED ANIMATION FEEL ============
+  // Each swap step picks a fresh random shuffle "flavor" so the player
+  // never knows what's coming next:
+  //   • pair-swap (classic)              — two cards trade places
+  //   • triple-rotate (every 3rd swap)   — three cards rotate slots
+  //   • arc-style                        — cards take a curved path
+  //                                          (via a momentary rotation/scale)
+  // Easing curves + per-swap durations are also randomized within bounds.
   let idShuffleHandle = null;
-  function idShuffleCards(cardEls, swaps, swapMs, done) {
+  function idShuffleCards(cardEls, swaps, baseSwapMs, done) {
     if (!cardEls.length) { done && done(); return; }
     const wrap = cardEls[0].parentNode;
     const colsMatch = wrap.style.gridTemplateColumns.match(/repeat\((\d+)/);
@@ -1725,11 +1734,18 @@
     const rows = Math.ceil(cardEls.length / cols);
     const cellW = rect.width / cols;
     const cellH = rect.height / rows;
+    // slots[i] = the visual slot occupied by card i (natural slot is i).
     const slots = cardEls.map((_, i) => i);
-    cardEls.forEach((card) => {
-      card.style.transition = `transform ${Math.round(swapMs * 0.9)}ms cubic-bezier(0.4, 1.2, 0.5, 1)`;
-    });
-    function applyPositions() {
+    // Random extras per step — stored on the card so we can clear them.
+    const easings = [
+      'cubic-bezier(0.4, 1.2, 0.5, 1)',     // overshoot
+      'cubic-bezier(0.34, 1.56, 0.64, 1)',  // big overshoot
+      'cubic-bezier(0.65, 0.05, 0.36, 1)',  // smooth
+      'cubic-bezier(0.86, 0, 0.07, 1)',     // snappy
+      'cubic-bezier(0.25, 0.8, 0.25, 1)',   // ease-out-quart
+    ];
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+    function applyPositions(extras) {
       cardEls.forEach((card, idx) => {
         const cur = slots[idx];
         const naturalRow = Math.floor(idx / cols);
@@ -1738,22 +1754,77 @@
         const curCol = cur % cols;
         const dx = (curCol - naturalCol) * cellW;
         const dy = (curRow - naturalRow) * cellH;
-        card.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+        const extra = (extras && extras[idx]) || '';
+        card.style.transform = `translate3d(${dx}px, ${dy}px, 0) ${extra}`;
       });
     }
     let step = 0;
     function nextSwap() {
-      if (step >= swaps) { done && done(); return; }
-      const a = Math.floor(Math.random() * cardEls.length);
-      let b = Math.floor(Math.random() * cardEls.length);
-      while (b === a) b = Math.floor(Math.random() * cardEls.length);
-      const tmp = slots[a]; slots[a] = slots[b]; slots[b] = tmp;
-      applyPositions();
+      if (step >= swaps) {
+        // Clear any leftover rotation/scale extras so the final state is clean
+        applyPositions(null);
+        // And settle one frame later so the easing finishes before pick phase
+        idShuffleHandle = setTimeout(() => done && done(), 320);
+        return;
+      }
+      // Randomize per-step duration + easing — fresh animation feel each swap
+      const swapMs = baseSwapMs + Math.floor((Math.random() - 0.5) * 220);
+      const easing = pick(easings);
+      cardEls.forEach((card) => {
+        card.style.transition = `transform ${Math.max(220, swapMs)}ms ${easing}`;
+      });
+      // 25% chance of a triple-rotation (three cards rotate slots) for
+      // extra unpredictability. Otherwise a normal pair-swap.
+      const doTriple = cardEls.length >= 3 && Math.random() < 0.25;
+      const extras = {};
+      if (doTriple) {
+        // Pick 3 distinct cards a → b → c → a
+        const indices = [];
+        while (indices.length < 3) {
+          const pickedI = Math.floor(Math.random() * cardEls.length);
+          if (!indices.includes(pickedI)) indices.push(pickedI);
+        }
+        const [a, b, c] = indices;
+        const tmp = slots[a]; slots[a] = slots[b]; slots[b] = slots[c]; slots[c] = tmp;
+      } else {
+        const a = Math.floor(Math.random() * cardEls.length);
+        let b = Math.floor(Math.random() * cardEls.length);
+        while (b === a) b = Math.floor(Math.random() * cardEls.length);
+        const tmp = slots[a]; slots[a] = slots[b]; slots[b] = tmp;
+      }
+      // Random per-step flair: occasionally rotate or scale a few cards
+      // mid-swap to make the motion feel like a real card trick. We add
+      // these extras for THIS step only; next step we either keep or
+      // reset them. Visual signature changes constantly.
+      const flairKind = Math.random();
+      if (flairKind < 0.3) {
+        // Light rotation on all cards — gives the whole shuffle a "spin"
+        const rot = (Math.random() - 0.5) * 14; // ±7deg
+        cardEls.forEach((_, idx) => { extras[idx] = `rotate(${rot}deg)`; });
+      } else if (flairKind < 0.55) {
+        // Subtle scale pulse on a random subset
+        cardEls.forEach((_, idx) => {
+          const s = 0.92 + Math.random() * 0.16;
+          extras[idx] = `scale(${s})`;
+        });
+      } else if (flairKind < 0.75) {
+        // Mixed counter-rotation: even cards rotate one way, odd the other
+        cardEls.forEach((_, idx) => {
+          const dir = idx % 2 === 0 ? 1 : -1;
+          extras[idx] = `rotate(${dir * 8}deg)`;
+        });
+      }
+      // (else 25%: no extra flair, pure pair-swap)
+      applyPositions(extras);
       if (MochiSounds.tap) MochiSounds.tap();
       step++;
-      idShuffleHandle = setTimeout(nextSwap, swapMs);
+      // Inter-swap delay also varies so the cadence isn't metronomic
+      const interStep = swapMs + 60 + Math.floor(Math.random() * 140);
+      idShuffleHandle = setTimeout(nextSwap, interStep);
     }
-    idShuffleHandle = setTimeout(nextSwap, 60);
+    // Small initial pause before first swap — kid sees all cards face-down
+    // for a beat first.
+    idShuffleHandle = setTimeout(nextSwap, 220);
   }
   // Helper to set the phase-of-round indicator under the narrator bubble.
   function idSetPhaseText(text) {

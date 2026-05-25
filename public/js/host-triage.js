@@ -74,9 +74,12 @@
     setTimeout(() => chip.classList.add('hidden'), 3500);
   });
 
+  // Triage runs SET-LESS as of 2026-05-25 — the server seeds a built-in
+  // HSK1 medical/family vocab bank on host:create, so we no longer redirect
+  // to /sets.html. The setId query param is honoured if present (teacher
+  // wants their own set) but never required.
   const params = new URLSearchParams(location.search);
   const chosenSetId = params.get('setId');
-  if (!chosenSetId) location.href = '/sets.html?game=triage';
 
   socket.emit('host:create', { gameType: 'triage' }, ({ pin: p }) => {
     pin = p;
@@ -84,17 +87,27 @@
     if ($('active-pin-display')) $('active-pin-display').textContent = p;
     $('join-url').textContent = `${location.origin}/?pin=${p}`;
     document.title = `🚑 Triage ER · ${p}`;
-    socket.emit('host:load-set', { pin, setId: chosenSetId }, (resp) => {
-      if (!resp.ok) {
-        alert('No se pudo cargar el set: ' + (resp.error || 'desconocido'));
-        location.href = '/sets.html?game=triage';
-        return;
-      }
-      $('set-title-display').textContent = resp.title;
-      $('set-count-display').textContent = `${resp.count} preguntas`;
+    if (chosenSetId) {
+      // Teacher explicitly picked a custom set — load it. If load fails we
+      // fall back to the server's built-in default questions.
+      socket.emit('host:load-set', { pin, setId: chosenSetId }, (resp) => {
+        if (resp.ok) {
+          $('set-title-display').textContent = resp.title;
+          $('set-count-display').textContent = `${resp.count} preguntas`;
+        } else {
+          $('set-title-display').textContent = '🚑 Sala de emergencia · HSK1 médico';
+          $('set-count-display').textContent = 'Vocabulario incluido';
+        }
+        MochiSounds.correct && MochiSounds.correct();
+        updateStartBtn();
+      });
+    } else {
+      // Use built-in default seeded by the server
+      $('set-title-display').textContent = '🚑 Sala de emergencia · HSK1 médico';
+      $('set-count-display').textContent = 'Vocabulario incluido';
       MochiSounds.correct && MochiSounds.correct();
       updateStartBtn();
-    });
+    }
   });
 
   $('duration-slider').addEventListener('input', (e) => {
