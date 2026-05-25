@@ -244,6 +244,13 @@
           myPlayerId = resp.playerId; // new socket id after reconnect
           team = resp.team;
           if (resp.gameType) gameType = resp.gameType;
+          // === Reset body gametype-* class on reconnect ===
+          // Otherwise stale CSS from a previous gameType leaks through —
+          // caused the "different interface on different devices" bug
+          // when reconnecting between warmup and identity sessions.
+          document.body.className = (document.body.className || '')
+            .split(/\s+/).filter((c) => !c.startsWith('gametype-')).join(' ');
+          document.body.classList.add('gametype-' + gameType);
           if (resp.studentCode) {
             myStudentCode = resp.studentCode;
             try { localStorage.setItem('dralyStudentCode', resp.studentCode); } catch (_) {}
@@ -1619,13 +1626,18 @@
     wrap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     suspects.forEach((s, i) => {
       const card = document.createElement('button');
-      card.className = 'id-suspect-card';
+      card.className = 'id-suspect-card deal-in';
       card.type = 'button';
+      // Stagger entry — each card flips in 80ms after the previous,
+      // making the round feel like a dealer dealing a hand.
+      card.style.animationDelay = (i * 90) + 'ms';
       card.innerHTML = `
-        <div class="id-sc-avatar">${s.avatar}</div>
-        <div class="id-sc-row"><span class="id-sc-label">名字</span> <span class="id-sc-name">${s.name}</span></div>
-        <div class="id-sc-row"><span class="id-sc-label">岁</span> <span class="id-sc-age">${s.age}</span></div>
-        <div class="id-sc-row"><span class="id-sc-label">${s.rel.hanzi}</span> <span class="id-sc-rel">${s.rel.pinyin}</span></div>`;
+        <div class="id-sc-inner">
+          <div class="id-sc-avatar">${s.avatar}</div>
+          <div class="id-sc-row"><span class="id-sc-label">名字</span> <span class="id-sc-name">${s.name}</span></div>
+          <div class="id-sc-row"><span class="id-sc-label">岁</span> <span class="id-sc-age">${s.age}</span></div>
+          <div class="id-sc-row"><span class="id-sc-label">${s.rel.hanzi}</span> <span class="id-sc-rel">${s.rel.pinyin}</span></div>
+        </div>`;
       card.onclick = () => {
         if (!idCurrentRound) return;
         try { socket.emit('player:id-pick', { pin, suspectIdx: i }); } catch (_) {}
@@ -1635,6 +1647,13 @@
       };
       wrap.appendChild(card);
     });
+    // Narrator detective also pops in with a little wave when the clue arrives
+    const narrator = document.getElementById('id-narrator');
+    if (narrator) {
+      narrator.classList.remove('speak');
+      void narrator.offsetWidth;
+      narrator.classList.add('speak');
+    }
   }
   function idHighlightStruggleWords(pinyin) {
     // Bold the four struggle words in the clue for visual reinforcement
@@ -1890,6 +1909,15 @@
     const clear = document.getElementById('wu-player-admin-clear');
     const undo  = document.getElementById('wu-player-admin-undo');
     const rear  = document.getElementById('wu-player-admin-rearrange');
+    const save  = document.getElementById('wu-player-admin-save');
+    if (save && !save._wuBound) {
+      save._wuBound = true;
+      save.onclick = () => {
+        try { socket.emit('wu:save-current', { pin }); } catch (_) {}
+        if (MochiSounds.correct) MochiSounds.correct();
+        if (window.Rewards) window.Rewards.show({ icon: '💾', text: '¡Oración guardada en tu historial!' });
+      };
+    }
     if (clear && !clear._wuBound) {
       clear._wuBound = true;
       clear.onclick = () => {

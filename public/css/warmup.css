@@ -126,10 +126,15 @@ body.wu-bg .market-banner {
   font-size: 0.78rem !important;
   padding: 5px 10px !important;
 }
-.wu-undo-btn, .wu-rearrange-btn {
+.wu-undo-btn, .wu-rearrange-btn, .wu-save-current-btn {
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(91, 232, 209, 0.5) !important;
   color: #5be8d1 !important;
+}
+.wu-save-current-btn {
+  border-color: #ffd57a !important;
+  color: #ffe66a !important;
+  background: rgba(255, 213, 122, 0.12) !important;
 }
 .wu-rearrange-btn.active {
   background: #5be8d1 !important;
@@ -167,7 +172,8 @@ body.wu-bg .market-banner {
   flex-wrap: wrap;
 }
 .wu-player-admin-undo,
-.wu-player-admin-rearrange {
+.wu-player-admin-rearrange,
+.wu-player-admin-save {
   background: rgba(91, 232, 209, 0.15);
   border: 2px solid #5be8d1;
   color: #5be8d1;
@@ -177,6 +183,11 @@ body.wu-bg .market-banner {
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.78rem;
+}
+.wu-player-admin-save {
+  background: rgba(255, 213, 122, 0.18);
+  border-color: #ffd57a;
+  color: #ffe66a;
 }
 .wu-player-admin-rearrange.active {
   background: #5be8d1;

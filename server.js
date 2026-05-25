@@ -2025,6 +2025,27 @@ io.on('connection', (socket) => {
           });
         });
       }
+      if (g.gameType === 'identity') {
+        // Seed the FIRST round for every connected player so id:round
+        // actually fires once the countdown finishes. (Was missing — players
+        // landed on a blank screen-id with no clue.)
+        Object.entries(g.players).forEach(([pid, p]) => {
+          p.idRound = 1;
+          p.idRoundData = idGenerateRound(1);
+          p.idRoundResolved = false;
+          p.idCorrect = 0;
+          p.idWrong = 0;
+          p.idStreak = 0;
+          p.score = 0;
+          io.to(pid).emit('id:round', {
+            roundNum: 1,
+            suspects: p.idRoundData.suspects,
+            clue: p.idRoundData.clue,
+            deadline: p.idRoundData.deadline,
+            score: 0, streak: 0, correct: 0, wrong: 0,
+          });
+        });
+      }
       if (g.gameType === 'laiquhui') {
         // Each player spawns at the home tile and gets their first mission.
         const home = LQH_LOCATIONS.find((l) => l.isHome);
@@ -2285,6 +2306,29 @@ io.on('connection', (socket) => {
           viewMode: g.warmup.viewMode || 'text',
           curious: !!g.warmup.curious,
           delegates: Array.from(g.warmup.delegates || []),
+        });
+      }
+      // === Identity: late-joiner gets their current round (if any). If
+      // they're a fresh joiner mid-game and don't yet have round data,
+      // seed one so they jump straight in. ===
+      if (g.gameType === 'identity') {
+        if (!player.idRoundData) {
+          player.idRound = 1;
+          player.idRoundData = idGenerateRound(1);
+          player.idRoundResolved = false;
+          player.idCorrect = player.idCorrect || 0;
+          player.idWrong = player.idWrong || 0;
+          player.idStreak = player.idStreak || 0;
+        }
+        io.to(socket.id).emit('id:round', {
+          roundNum: player.idRound || 1,
+          suspects: player.idRoundData.suspects,
+          clue: player.idRoundData.clue,
+          deadline: player.idRoundData.deadline,
+          score: player.score || 0,
+          streak: player.idStreak || 0,
+          correct: player.idCorrect || 0,
+          wrong: player.idWrong || 0,
         });
       }
       // Market Quest: send the world state
@@ -3079,6 +3123,21 @@ io.on('connection', (socket) => {
       if (p && p.studentCode) g.warmup.contributors.add(p.studentCode);
       wuEmitState(g, pin);
     }
+  });
+  // === SAVE CURRENT === Flush the current sentence to every contributor's
+  // history WITHOUT clearing the stage. Anyone with admin rights (host or
+  // asistente) can save. Resets the contributors set so the next clear
+  // doesn't double-log. Also credits the caller even if they didn't add
+  // any words this round — "I want this in MY history".
+  socket.on('wu:save-current', ({ pin, password }) => {
+    const g = games[pin];
+    if (!wuRequireAdmin(g, socket, password)) return;
+    if (!g.warmup || !g.warmup.sentence.length) return;
+    // Make sure the caller is credited
+    const p = g.players[socket.id];
+    if (p && p.studentCode) g.warmup.contributors.add(p.studentCode);
+    wuFlushSentence(g, pin);
+    // (sentence stays visible; contributors set reset by wuFlushSentence)
   });
   socket.on('wu:clear', ({ pin, password }) => {
     const g = games[pin];
