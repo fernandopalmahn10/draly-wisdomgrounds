@@ -1744,7 +1744,11 @@ io.on('connection', (socket) => {
     // generated server-side — sixseven, laiquhui). Don't gate them on
     // questions.length, otherwise Start silently does nothing and the
     // host has no idea why.
-    const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup', 'identity'];
+    // Games that run their own self-contained mini-game logic and don't need
+    // a question set picked from the lobby. Triage spawns its own patients,
+    // LQH generates missions, Identity rolls suspects, Warmup is a teacher
+    // tool, SixSeven generates math on the fly.
+    const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup', 'identity', 'triage'];
     if (!setlessGameTypes.includes(g.gameType) && !g.questions.length) return;
     if (Object.keys(g.players).length === 0) return;
     g.state = 'countdown';
