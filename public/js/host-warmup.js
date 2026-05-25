@@ -78,6 +78,15 @@
     socket.emit('wu:undo', { pin, password: adminPw });
     if (MochiSounds.tap) MochiSounds.tap();
   });
+  $('wu-save-current-btn').addEventListener('click', () => {
+    if (!currentSentence.length) {
+      alert('La oración está vacía.');
+      return;
+    }
+    socket.emit('wu:save-current', { pin, password: adminPw });
+    if (MochiSounds.correct) MochiSounds.correct();
+    if (window.Rewards) window.Rewards.show({ icon: '💾', text: 'Oración guardada en el historial' });
+  });
   $('wu-rearrange-btn').addEventListener('click', () => {
     rearrangeMode = !rearrangeMode;
     selectedSwapIdx = null;

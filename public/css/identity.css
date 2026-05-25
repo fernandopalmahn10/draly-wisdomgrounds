@@ -151,14 +151,58 @@ body.id-bg .market-banner {
 .id-hud-stats   { color: rgba(255, 245, 216, 0.78); font-size: clamp(0.7rem, 2.8vmin, 0.85rem); text-align: center; }
 .id-hud-timer   { color: #5be8d1; font-size: clamp(0.95rem, 3.8vmin, 1.15rem); text-align: right; text-shadow: 0 0 10px rgba(91, 232, 209, 0.5); }
 
-/* Clue card */
+/* Clue card with narrator detective */
 .id-clue-card {
   background: linear-gradient(135deg, rgba(255, 200, 60, 0.18), rgba(180, 60, 200, 0.15));
   border: 3px solid #ffc83c;
   border-radius: 16px;
-  padding: 12px 14px;
+  padding: 14px;
   position: relative;
   box-shadow: 0 0 22px rgba(255, 200, 60, 0.3);
+}
+.id-clue-narrator-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+.id-narrator {
+  font-size: clamp(2.4rem, 9vmin, 3.4rem);
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  animation: id-narrator-idle 2.4s ease-in-out infinite;
+}
+.id-narrator.speak {
+  animation: id-narrator-speak 0.7s cubic-bezier(0.34, 1.56, 0.64, 1),
+             id-narrator-idle 2.4s ease-in-out 0.7s infinite;
+}
+@keyframes id-narrator-idle {
+  0%, 100% { transform: translateY(0) rotate(-4deg); }
+  50%      { transform: translateY(-3px) rotate(4deg); }
+}
+@keyframes id-narrator-speak {
+  0%   { transform: scale(0.4) rotate(-20deg); opacity: 0; }
+  60%  { transform: scale(1.18) rotate(8deg); opacity: 1; }
+  100% { transform: scale(1) rotate(-4deg); }
+}
+.id-clue-bubble {
+  flex: 1;
+  background: rgba(20, 18, 30, 0.7);
+  border: 2px solid rgba(255, 200, 60, 0.5);
+  border-radius: 14px;
+  padding: 8px 12px;
+  position: relative;
+}
+.id-clue-bubble::before {
+  /* Speech-bubble tail pointing at the narrator */
+  content: '';
+  position: absolute;
+  left: -10px; top: 50%;
+  width: 0; height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 10px solid rgba(255, 200, 60, 0.5);
+  transform: translateY(-50%);
 }
 .id-clue-tag {
   position: absolute;
@@ -234,6 +278,28 @@ body.id-bg .market-banner {
   transition: transform 0.12s ease, box-shadow 0.2s, border-color 0.2s;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
   min-height: 140px;
+  /* 3D card flip is GPU-promoted so it stays smooth on every device */
+  will-change: transform;
+  transform-style: preserve-3d;
+  perspective: 800px;
+}
+.id-suspect-card.deal-in {
+  /* Each card flips in from rotated/scaled-down state. The stagger
+     on animation-delay (set per-card from JS) makes the cards arrive
+     one-by-one like a dealer dealing — that's the "magician shuffle"
+     feel the user asked for. */
+  animation: id-card-deal-in 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes id-card-deal-in {
+  0%   { transform: translateY(60px) rotateY(180deg) rotate(-12deg) scale(0.5); opacity: 0; }
+  40%  { opacity: 1; }
+  70%  { transform: translateY(-4px) rotateY(0deg) rotate(2deg) scale(1.05); }
+  100% { transform: translateY(0) rotateY(0deg) rotate(0) scale(1); opacity: 1; }
+}
+.id-sc-inner {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+  width: 100%;
 }
 .id-suspect-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(255, 200, 60, 0.4); }
 .id-suspect-card:active { transform: scale(0.96); }

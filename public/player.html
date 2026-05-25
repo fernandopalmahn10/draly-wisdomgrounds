@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="/css/triage.css?v=20260524d">
   <link rel="stylesheet" href="/css/laiquhui.css?v=20260524d">
   <link rel="stylesheet" href="/css/warmup.css?v=20260524f">
-  <link rel="stylesheet" href="/css/identity.css?v=20260524a">
+  <link rel="stylesheet" href="/css/identity.css?v=20260524b">
 </head>
 <body>
   <div class="lantern l1"></div>
@@ -665,8 +665,13 @@
     </div>
     <div class="id-clue-card">
       <div class="id-clue-tag">🕵️ ¿Quién dice esto?</div>
-      <div class="id-clue-pinyin" id="id-clue-pinyin">…</div>
-      <div class="id-clue-es" id="id-clue-es">…</div>
+      <div class="id-clue-narrator-row">
+        <div class="id-narrator" id="id-narrator">🕵️</div>
+        <div class="id-clue-bubble">
+          <div class="id-clue-pinyin" id="id-clue-pinyin">…</div>
+          <div class="id-clue-es" id="id-clue-es">…</div>
+        </div>
+      </div>
       <div class="id-clue-bar"><div class="id-clue-bar-fill" id="id-clue-bar-fill"></div></div>
     </div>
     <div class="id-suspects" id="id-suspects"></div>
@@ -702,6 +707,7 @@
         <div class="wu-player-admin-actions">
           <button class="wu-player-admin-undo" id="wu-player-admin-undo" type="button">↩️ Deshacer</button>
           <button class="wu-player-admin-rearrange" id="wu-player-admin-rearrange" type="button">🔀 Rearreglar</button>
+          <button class="wu-player-admin-save" id="wu-player-admin-save" type="button">💾 Guardar</button>
           <button class="wu-player-admin-clear" id="wu-player-admin-clear" type="button">🧹 Limpiar</button>
         </div>
       </div>
@@ -749,6 +755,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260520c"></script>
-  <script src="/js/player.js?v=20260524o"></script>
+  <script src="/js/player.js?v=20260524p"></script>
 </body>
 </html>
