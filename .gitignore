@@ -5,6 +5,11 @@ node_modules/
 .env.local
 .render-token
 cloudflared.exe
+# Persistent runtime data (lives on Render's persistent disk, NOT in git).
+# Includes student PII (sentence histories) + teacher presets.
+data/student-records.json
+data/teacher-presets.json
+data/heartbeat.txt
 # Original (uncompressed) 3D models — only the compressed dralingo-*.glb + john-monk.glb ship to git
 public/assets/Arab Dralingo flying with white ghutra.glb
 public/assets/Arab Dralingo in Red F8.glb

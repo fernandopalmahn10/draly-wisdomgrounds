@@ -13,7 +13,9 @@
   let currentCurious = false;
   let currentDelegates = [];   // array of player names
   let currentPlayers = {};     // id -> { name, team, avatar }
-  const PRESET_KEY = 'dralyWarmupPresets';
+  let serverPresets = [];      // canonical server-side preset list
+  const LEGACY_PRESET_KEY = 'dralyWarmupPresets';
+  const MIGRATION_KEY = 'dralyWarmupPresetsMigrated';
 
   // === ADMIN GATE ===
   $('admin-ok').addEventListener('click', tryAdmin);
@@ -30,6 +32,10 @@
       socket.emit('wu:auth', { pin, password: adminPw }, (resp) => {
         if (resp && resp.ok) {
           showScreen('lobby');
+          // Fetch server-side presets so the dropdown is ready immediately.
+          // One-shot migration: if this laptop has presets in localStorage
+          // that haven't been uploaded yet, push them all to the server.
+          fetchServerPresets(() => migrateLegacyPresetsOnce());
         } else {
           $('admin-err').textContent = 'Contraseña incorrecta';
           adminPw = null;
@@ -79,7 +85,7 @@
         renderStage(currentSentence);
       };
     });
-    // Preset save
+    // Preset save (server-side now — follows the teacher across devices)
     $('wu-save-preset').onclick = () => {
       if (!currentSentence.length) {
         alert('La oración está vacía. Construye algo antes de guardar.');
@@ -87,40 +93,47 @@
       }
       const name = prompt('Nombre para este preset:');
       if (!name || !name.trim()) return;
-      const presets = loadPresets();
-      presets.push({ name: name.trim(), sentence: currentSentence.slice(), ts: Date.now() });
-      savePresets(presets);
-      renderPresetSelect();
+      socket.emit('wu:presets-save', {
+        pin, password: adminPw, name: name.trim(), sentence: currentSentence.slice(),
+      }, (resp) => {
+        if (resp && resp.ok) {
+          serverPresets = resp.presets || [];
+          renderPresetSelect();
+        } else {
+          alert('No se pudo guardar: ' + ((resp && resp.error) || 'error'));
+        }
+      });
     };
-    // Preset load (on change)
+    // Preset load (on change) — server-side lookup by id
     $('wu-preset-select').onchange = (e) => {
-      const i = Number(e.target.value);
-      if (Number.isFinite(i) && i >= 0) {
-        const presets = loadPresets();
-        const p = presets[i];
+      const id = String(e.target.value || '');
+      if (id) {
+        const p = serverPresets.find((x) => String(x.id) === id);
         if (p && p.sentence) {
           socket.emit('wu:set-sentence', { pin, password: adminPw, sentence: p.sentence });
         }
       }
-      e.target.value = '';   // reset so re-selecting the same preset works
+      e.target.value = '';
     };
     // Modo Curioso toggle
     $('wu-curious-btn').onclick = () => {
       const next = !currentCurious;
       socket.emit('wu:set-curious', { pin, password: adminPw, curious: next });
     };
-    // Preset delete
+    // Preset delete — server-side by id
     $('wu-delete-preset').onclick = () => {
-      const presets = loadPresets();
-      if (!presets.length) return;
-      // Use a simple prompt to pick by index
-      const list = presets.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
+      if (!serverPresets.length) return;
+      const list = serverPresets.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
       const idx = prompt('¿Cuál borrar? Escribe el número:\n' + list);
       const i = Number(idx) - 1;
-      if (Number.isFinite(i) && i >= 0 && i < presets.length) {
-        presets.splice(i, 1);
-        savePresets(presets);
-        renderPresetSelect();
+      if (Number.isFinite(i) && i >= 0 && i < serverPresets.length) {
+        const id = serverPresets[i].id;
+        socket.emit('wu:presets-delete', { pin, password: adminPw, id }, (resp) => {
+          if (resp && resp.ok) {
+            serverPresets = resp.presets || [];
+            renderPresetSelect();
+          }
+        });
       }
     };
   }
@@ -343,23 +356,53 @@
     }
   }
 
-  // === Presets (localStorage) ===
-  function loadPresets() {
-    try { return JSON.parse(localStorage.getItem(PRESET_KEY) || '[]'); }
-    catch { return []; }
+  // === Presets (server-side; cross-device) ===
+  function fetchServerPresets(cb) {
+    socket.emit('wu:presets-list', { pin, password: adminPw }, (resp) => {
+      if (resp && resp.ok) serverPresets = resp.presets || [];
+      renderPresetSelect();
+      if (typeof cb === 'function') cb();
+    });
   }
-  function savePresets(presets) {
-    try { localStorage.setItem(PRESET_KEY, JSON.stringify(presets)); }
-    catch (e) { console.warn('Failed to save presets', e); }
+  // One-shot localStorage → server migration. Runs ONCE per laptop so
+  // teachers who already saved presets locally don't lose them when we
+  // move storage server-side.
+  function migrateLegacyPresetsOnce() {
+    try {
+      if (localStorage.getItem(MIGRATION_KEY) === '1') return;
+      const legacy = JSON.parse(localStorage.getItem(LEGACY_PRESET_KEY) || '[]');
+      if (!Array.isArray(legacy) || legacy.length === 0) {
+        localStorage.setItem(MIGRATION_KEY, '1');
+        return;
+      }
+      console.log('[presets] migrating', legacy.length, 'legacy presets to server');
+      let remaining = legacy.length;
+      legacy.forEach((p) => {
+        if (!p || !p.name || !Array.isArray(p.sentence)) {
+          if (--remaining === 0) finalize();
+          return;
+        }
+        socket.emit('wu:presets-save', {
+          pin, password: adminPw, name: '[mig] ' + p.name, sentence: p.sentence,
+        }, () => {
+          if (--remaining === 0) finalize();
+        });
+      });
+      function finalize() {
+        localStorage.setItem(MIGRATION_KEY, '1');
+        fetchServerPresets();
+      }
+    } catch (e) {
+      console.warn('[presets] migration failed:', e);
+    }
   }
   function renderPresetSelect() {
     const sel = $('wu-preset-select');
     if (!sel) return;
-    const presets = loadPresets();
-    sel.innerHTML = `<option value="">Cargar preset… (${presets.length})</option>`;
-    presets.forEach((p, i) => {
+    sel.innerHTML = `<option value="">Cargar preset… (${serverPresets.length})</option>`;
+    serverPresets.forEach((p, i) => {
       const opt = document.createElement('option');
-      opt.value = i;
+      opt.value = p.id;
       opt.textContent = `${i + 1}. ${p.name}`;
       sel.appendChild(opt);
     });
