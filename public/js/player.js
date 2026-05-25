@@ -2085,6 +2085,40 @@
       openWuHistory();
     }
   });
+  // Server confirms save landed (or failed) — flash the player's Save
+  // button + pop a small chip with word count. This replaces the
+  // disabled Rewards.show toast so the asistente actually SEES the save.
+  socket.on('wu:saved', (data) => {
+    if (data && data.ok) {
+      flashWuPlayerSave(true, `✓ Guardada · ${data.words || 0} palabra${(data.words || 0) === 1 ? '' : 's'}`);
+    } else {
+      flashWuPlayerSave(false, '✕ Vacía — no guardada');
+    }
+  });
+  function flashWuPlayerSave(ok, text) {
+    const btn = document.getElementById('wu-player-admin-save');
+    if (btn) {
+      btn.classList.remove('wu-save-flash-ok', 'wu-save-flash-err');
+      void btn.offsetWidth;
+      btn.classList.add(ok ? 'wu-save-flash-ok' : 'wu-save-flash-err');
+      setTimeout(() => btn.classList.remove('wu-save-flash-ok', 'wu-save-flash-err'), 1700);
+    }
+    let chip = document.getElementById('wu-player-save-chip');
+    if (!chip) {
+      chip = document.createElement('div');
+      chip.id = 'wu-player-save-chip';
+      chip.className = 'wu-save-chip';
+      const parent = btn && btn.parentNode ? btn.parentNode : document.body;
+      parent.appendChild(chip);
+    }
+    chip.textContent = text;
+    chip.classList.remove('wu-save-chip-ok', 'wu-save-chip-err', 'show');
+    chip.classList.add(ok ? 'wu-save-chip-ok' : 'wu-save-chip-err');
+    void chip.offsetWidth;
+    chip.classList.add('show');
+    clearTimeout(chip._hideT);
+    chip._hideT = setTimeout(() => { chip.classList.remove('show'); }, 1800);
+  }
 
   function bindPlayerAdminControls() {
     const clear = document.getElementById('wu-player-admin-clear');
@@ -2096,7 +2130,8 @@
       save.onclick = () => {
         try { socket.emit('wu:save-current', { pin }); } catch (_) {}
         if (MochiSounds.correct) MochiSounds.correct();
-        if (window.Rewards) window.Rewards.show({ icon: '💾', text: '¡Oración guardada en tu historial!' });
+        // Confirmation lands via the `wu:saved` socket event below — that's
+        // what flashes the button + shows the chip.
       };
     }
     if (clear && !clear._wuBound) {

@@ -3221,11 +3221,29 @@ io.on('connection', (socket) => {
   socket.on('wu:save-current', ({ pin, password }) => {
     const g = games[pin];
     if (!wuRequireAdmin(g, socket, password)) return;
-    if (!g.warmup || !g.warmup.sentence.length) return;
+    if (!g.warmup || !g.warmup.sentence.length) {
+      // Tell the caller the save was a no-op (empty stage) so they get
+      // explicit feedback instead of silence.
+      io.to(socket.id).emit('wu:saved', { ok: false, reason: 'empty' });
+      return;
+    }
     // Make sure the caller is credited
     const p = g.players[socket.id];
     if (p && p.studentCode) g.warmup.contributors.add(p.studentCode);
+    // Snapshot what's about to be logged BEFORE flushing — wuFlushSentence
+    // resets the contributors set, so we capture counts up front.
+    const savedWordCount = g.warmup.sentence.length;
+    const savedContributorCount = g.warmup.contributors.size;
     wuFlushSentence(g, pin);
+    // Explicit confirmation to the caller — host or asistente. Used by the
+    // client to flash the Save button + show a "✓ Guardada" chip so the
+    // user has VISIBLE feedback that the save landed (Rewards.show is
+    // disabled platform-wide, so we can't lean on toast for this).
+    io.to(socket.id).emit('wu:saved', {
+      ok: true,
+      words: savedWordCount,
+      contributors: savedContributorCount,
+    });
     // (sentence stays visible; contributors set reset by wuFlushSentence)
   });
   socket.on('wu:clear', ({ pin, password }) => {
