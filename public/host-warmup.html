@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260524f">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260525f">
 </head>
 <body class="wu-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -140,6 +140,34 @@
       <div class="wu-roster-list" id="wu-roster-list"></div>
     </div>
 
+    <!-- 📓 CUADERNO DE ALUMNOS — admin-only window into EVERY student's
+         saved sentence history. Shows all codes that have ever saved a
+         sentence on this Render instance. Tap a code to see that kid's
+         sentences. -->
+    <div class="wu-notebook-row">
+      <button class="btn btn-jade btn-sm wu-notebook-btn" id="wu-notebook-btn" type="button">
+        📓 Cuaderno de Alumnos
+      </button>
+      <span class="wu-notebook-hint">Ver todas las oraciones guardadas por tus estudiantes.</span>
+    </div>
+    <div class="wu-notebook-overlay hidden" id="wu-notebook-overlay">
+      <div class="wu-notebook-card">
+        <div class="wu-notebook-header">
+          <span class="wu-notebook-title" id="wu-notebook-title">📓 Cuaderno de Alumnos</span>
+          <button class="wu-notebook-close" id="wu-notebook-close" type="button" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="wu-notebook-sub" id="wu-notebook-sub">Carga…</div>
+        <!-- Roster view: list of student rows. Hidden once you drill into one. -->
+        <div class="wu-notebook-roster" id="wu-notebook-roster"></div>
+        <!-- Detail view: one student's sentences. Hidden until a row is tapped. -->
+        <div class="wu-notebook-detail hidden" id="wu-notebook-detail">
+          <button class="wu-notebook-back btn btn-ghost btn-sm" id="wu-notebook-back" type="button">← Volver a la lista</button>
+          <div class="wu-notebook-detail-head" id="wu-notebook-detail-head"></div>
+          <div class="wu-notebook-detail-list" id="wu-notebook-detail-list"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Experience-tab filter strip — pick which HSK1 experience to show -->
     <div class="wu-exp-tabs" id="wu-exp-tabs"></div>
 
@@ -151,6 +179,6 @@
   <script src="/js/sounds.js?v=20260524h"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/warmup-vocab.js?v=20260524c"></script>
-  <script src="/js/host-warmup.js?v=20260524g"></script>
+  <script src="/js/host-warmup.js?v=20260525f"></script>
 </body>
 </html>

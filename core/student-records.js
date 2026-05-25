@@ -162,6 +162,23 @@ function deleteHistoryEntry(code, ts) {
   return false;
 }
 
+// Teacher-side roster summary. Returns one row per student with code,
+// displayName, sentence count, firstSeen, lastSeen. Sorted by most-recent
+// activity so the kids who just played show at the top of the teacher's
+// "Cuaderno de Alumnos" list. NEVER includes the actual sentence words —
+// the teacher has to drill into a specific student to see those.
+function listAll() {
+  return Object.values(records)
+    .map((r) => ({
+      code: r.code,
+      displayName: r.displayName || 'Anon',
+      firstSeen: r.firstSeen || 0,
+      lastSeen: r.lastSeen || 0,
+      sentenceCount: Array.isArray(r.sentencesBuilt) ? r.sentencesBuilt.length : 0,
+    }))
+    .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+}
+
 // Initial load on require()
 load();
 
@@ -172,4 +189,5 @@ module.exports = {
   getHistory,
   deleteHistoryEntry,
   normalizeCode,
+  listAll,
 };
