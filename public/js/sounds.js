@@ -807,6 +807,39 @@
     for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.08);
   }
 
+  // 🕵️ SHÉI SHÌ? — playful noir-detective, 110bpm. Walking pizzicato
+  // bass + brushed snare + occasional jazzy organ stab — Pink-Panther
+  // light noir, NOT gritty dark noir (it's a kids' game). Minor key
+  // for mystery but ascending lead motifs keep it cheery.
+  function themeIdentity(barIdx, t0, BD) {
+    const phase = barIdx % 4;
+    // Walking pizzicato bass (quarter-note staccato — pluck feel)
+    const bassLine = phase < 2
+      ? ['D2', 'F2', 'G2', 'A2']
+      : ['D2', 'F2', 'C2', 'D2'];
+    bassLine.forEach((n, b) => vBassPluck(t0 + b * BD, n, BD * 0.5, 0.22));
+    // Brushed snare on 2 and 4 — gives the detective walk
+    vSnare(t0 + 1 * BD, 0.12);
+    vSnare(t0 + 3 * BD, 0.12);
+    // Soft kick on 1
+    vKick(t0 + 0 * BD, 0.22);
+    // Hihat sizzle on offbeat 8ths for that smoky-club feel
+    for (let i = 0; i < 8; i++) {
+      if (i % 2 === 1) vHat(t0 + i * (BD / 2), 0.05);
+    }
+    // Lead motif — descending then resolving up, every 2 bars
+    if (phase === 0 || phase === 2) {
+      const motif = phase === 0
+        ? [['A4', 0], ['F4', 0.5], ['D4', 1], ['F4', 1.5], ['A4', 2], ['G4', 2.5], ['F4', 3], ['A4', 3.5]]
+        : [['D5', 0], ['A4', 0.5], ['F4', 1], ['D4', 1.5], ['C4', 2], ['D4', 2.5], ['F4', 3], ['A4', 3.5]];
+      motif.forEach(([n, b]) => vLeadSquare(t0 + b * BD, n, BD * 0.35, 0.10));
+    }
+    // Brass-organ stab on bar 4 of cycle — punctuation
+    if (phase === 3) {
+      ['D4', 'F4', 'A4'].forEach((n) => vBrass(t0 + 3 * BD, n, BD * 0.5, 0.13));
+    }
+  }
+
   // 🐉 LÁI-QÙ-HUÍ — bouncy Chinese pentatonic adventure, 120bpm. Two-bar
   // motif with stomping bass on quarters (=footsteps) + an erhu-like
   // pentatonic lead that loops between G-A-D-E. Adventure-vibe.
@@ -839,6 +872,7 @@
   const GAME_THEMES = {
     'triage':        { bpm: 132, beatsPerBar: 4, fn: themeTriage },
     'laiquhui':      { bpm: 120, beatsPerBar: 4, fn: themeLaiquhui },
+    'identity':      { bpm: 110, beatsPerBar: 4, fn: themeIdentity },
     'conquest':      { bpm: 100, beatsPerBar: 4, fn: themeConquest },
     'zombie':        { bpm:  92, beatsPerBar: 4, fn: themeZombie },
     'family':        { bpm: 110, beatsPerBar: 4, fn: themeFamily },

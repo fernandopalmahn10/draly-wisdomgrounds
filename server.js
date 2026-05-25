@@ -401,6 +401,80 @@ function trTrySpawn(g, opts) {
   return patient;
 }
 
+// === SHÉI SHÌ? · ¿Quién Es? — Identity Detective game ===
+// Theme-focused mini-game targeting the HSK1 identity vocab the user
+// reports kids struggling with: jiào (to be called), suì (years old),
+// péngyou (friend), jiā (family). Each round shows a clue using these
+// EXACT words and the player picks the matching suspect from a grid.
+// Decoys deliberately share 1-2 attributes to force kids to read the
+// whole clue, not just match on one keyword.
+const ID_NAMES = ['Míng', 'Lì', 'Měi', 'Jiā', 'Hóng', 'Yǔ', 'Tiān', 'Wén', 'Ān', 'Lóng', 'Yuè', 'Yáng', 'Lín', 'Hǎi'];
+const ID_AVATARS = ['👦', '👧', '🧒', '🧑', '👨', '👩', '👴', '👵', '🧓', '👨‍🦱', '👩‍🦱', '👨‍🦰', '👩‍🦰', '👱', '👱‍♀️'];
+const ID_RELATIONSHIPS = [
+  { pinyin: 'péngyou', hanzi: '朋友', es: 'amigo/a',  icon: '🤝' },
+  { pinyin: 'gēge',    hanzi: '哥哥', es: 'h. mayor',  icon: '🧒' },
+  { pinyin: 'dìdi',    hanzi: '弟弟', es: 'h. menor',  icon: '👦' },
+  { pinyin: 'jiějie',  hanzi: '姐姐', es: 'h. mayor', icon: '👧' },
+  { pinyin: 'mèimei',  hanzi: '妹妹', es: 'h. menor', icon: '👧' },
+  { pinyin: 'érzi',    hanzi: '儿子', es: 'hijo',     icon: '👶' },
+  { pinyin: 'nǚʼér', hanzi: '女儿', es: 'hija', icon: '👶' },
+  { pinyin: 'bàba',    hanzi: '爸爸', es: 'papá',     icon: '👨' },
+  { pinyin: 'māma',    hanzi: '妈妈', es: 'mamá',     icon: '👩' },
+];
+const ID_AGES = [6, 7, 8, 9, 10, 11, 12, 13];
+const ID_ROUND_MS = 16000;     // 16s per round — generous for reading time
+
+function idPickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function idMakeSuspect() {
+  return {
+    name: idPickRandom(ID_NAMES),
+    avatar: idPickRandom(ID_AVATARS),
+    age: idPickRandom(ID_AGES),
+    rel: idPickRandom(ID_RELATIONSHIPS),
+  };
+}
+// Two suspects are FULLY identical if all three identifying attributes match.
+function idSameSuspect(a, b) {
+  return a.name === b.name && a.age === b.age && a.rel.pinyin === b.rel.pinyin;
+}
+// Generate a round for a single player. Difficulty ramps with `roundNum`.
+function idGenerateRound(roundNum) {
+  const suspectCount = roundNum < 3 ? 4 : roundNum < 6 ? 6 : 8;
+  const target = idMakeSuspect();
+  const suspects = [target];
+  let attempts = 0;
+  while (suspects.length < suspectCount && attempts < 200) {
+    attempts++;
+    const s = idMakeSuspect();
+    // Decoy bias: 35% share NAME, 25% share AGE, 25% share REL, 15% random.
+    // This forces kids to read all three attributes to disambiguate.
+    const r = Math.random();
+    if (r < 0.35) s.name = target.name;
+    else if (r < 0.60) s.age = target.age;
+    else if (r < 0.85) s.rel = target.rel;
+    // Reject if accidentally identical to target on ALL three attrs
+    if (idSameSuspect(s, target)) continue;
+    // Reject if duplicates an existing decoy
+    if (suspects.some((x) => idSameSuspect(x, s))) continue;
+    suspects.push(s);
+  }
+  // Shuffle so target isn't always first
+  for (let i = suspects.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [suspects[i], suspects[j]] = [suspects[j], suspects[i]];
+  }
+  const targetIdx = suspects.indexOf(target);
+  return {
+    suspects, targetIdx,
+    clue: {
+      pinyin: `Wǒ jiào ${target.name}. Wǒ shì ${target.age} suì. Wǒ shì nǐde ${target.rel.pinyin}.`,
+      es:     `Me llamo ${target.name}. Tengo ${target.age} años. Soy tu ${target.rel.es}.`,
+    },
+    startedAt: Date.now(),
+    deadline: Date.now() + ID_ROUND_MS,
+  };
+}
+
 // === WARM-UP MODE · sentence-builder broadcast tool ===
 // Teacher-driven flashcard mode. The teacher picks Chinese words from a
 // library on the host page, and the constructed sentence broadcasts live
@@ -1499,7 +1573,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage', 'laiquhui', 'warmup'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage', 'laiquhui', 'warmup', 'identity'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -1516,6 +1590,7 @@ io.on('connection', (socket) => {
       type === 'triage'       ? 240 :
       type === 'laiquhui'     ? 180 :
       type === 'warmup'       ? 3600 :   // 1 hour ceiling; teacher exits manually
+      type === 'identity'     ? 180 :    // 3 minutes of detective rounds
       60;
     let grid = null;
     let vendors = null;
@@ -1652,7 +1727,7 @@ io.on('connection', (socket) => {
     // generated server-side — sixseven, laiquhui). Don't gate them on
     // questions.length, otherwise Start silently does nothing and the
     // host has no idea why.
-    const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup'];
+    const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup', 'identity'];
     if (!setlessGameTypes.includes(g.gameType) && !g.questions.length) return;
     if (Object.keys(g.players).length === 0) return;
     g.state = 'countdown';
@@ -1913,6 +1988,41 @@ io.on('connection', (socket) => {
           viewMode: g.warmup.viewMode,
           curious: g.warmup.curious,
           delegates: [],
+        });
+      }
+      if (g.gameType === 'identity') {
+        // Each player runs independent rounds (like sixseven). Server
+        // generates the first round for each player + pushes it.
+        Object.keys(g.players).forEach((pid) => {
+          const p = g.players[pid];
+          p.idRound = 0;
+          p.idStreak = 0;
+          p.idCorrect = 0;
+          p.idWrong = 0;
+          p.idRoundData = idGenerateRound(p.idRound);
+          p.idRoundResolved = false;
+        });
+        g.teamScores = { red: 0, gold: 0 };
+        io.to(pin).emit('id:init', {
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, p]) => [id, {
+              name: p.name, team: p.team, avatar: p.avatar,
+            }])
+          ),
+          teamScores: g.teamScores,
+        });
+        // Push each player's first round privately
+        Object.entries(g.players).forEach(([pid, p]) => {
+          io.to(pid).emit('id:round', {
+            roundNum: p.idRound,
+            suspects: p.idRoundData.suspects,
+            clue: p.idRoundData.clue,
+            deadline: p.idRoundData.deadline,
+            score: p.score || 0,
+            streak: p.idStreak,
+            correct: p.idCorrect,
+            wrong: p.idWrong,
+          });
         });
       }
       if (g.gameType === 'laiquhui') {
@@ -3110,6 +3220,66 @@ io.on('connection', (socket) => {
     wuEmitState(g, pin);
   });
 
+  // === SHÉI SHÌ? Identity Detective — per-player round picks ===
+  socket.on('player:id-pick', ({ pin, suspectIdx }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'identity' || g.state !== 'active') return;
+    const p = g.players[socket.id];
+    if (!p || !p.idRoundData || p.idRoundResolved) return;
+    const round = p.idRoundData;
+    const picked = Number(suspectIdx);
+    if (!Number.isFinite(picked) || picked < 0 || picked >= round.suspects.length) return;
+    p.idRoundResolved = true;
+    const correct = picked === round.targetIdx;
+    // Scoring: base + time bonus + streak multiplier
+    let points = 0;
+    if (correct) {
+      p.idCorrect = (p.idCorrect || 0) + 1;
+      p.idStreak = (p.idStreak || 0) + 1;
+      const timeLeftMs = Math.max(0, round.deadline - Date.now());
+      const timeBonus = Math.round((timeLeftMs / ID_ROUND_MS) * 10);
+      const streakMult = p.idStreak >= 5 ? 2 : p.idStreak >= 3 ? 1.5 : 1;
+      points = Math.round((10 + timeBonus) * streakMult);
+      p.score = (p.score || 0) + points;
+      g.teamScores[p.team] = (g.teamScores[p.team] || 0) + points;
+    } else {
+      p.idWrong = (p.idWrong || 0) + 1;
+      p.idStreak = 0;
+    }
+    io.to(socket.id).emit('id:result', {
+      correct,
+      picked,
+      targetIdx: round.targetIdx,
+      target: round.suspects[round.targetIdx],
+      points,
+      score: p.score || 0,
+      streak: p.idStreak,
+      correct: p.idCorrect,
+      wrong: p.idWrong,
+    });
+    // Brief celebration window, then next round
+    setTimeout(() => {
+      if (!games[pin] || games[pin].state !== 'active') return;
+      const stillP = games[pin].players[socket.id];
+      if (!stillP) return;
+      stillP.idRound = (stillP.idRound || 0) + 1;
+      stillP.idRoundData = idGenerateRound(stillP.idRound);
+      stillP.idRoundResolved = false;
+      io.to(socket.id).emit('id:round', {
+        roundNum: stillP.idRound,
+        suspects: stillP.idRoundData.suspects,
+        clue: stillP.idRoundData.clue,
+        deadline: stillP.idRoundData.deadline,
+        score: stillP.score || 0,
+        streak: stillP.idStreak,
+        correct: stillP.idCorrect,
+        wrong: stillP.idWrong,
+      });
+      broadcast(pin);
+    }, correct ? 1500 : 2000);
+    broadcast(pin);
+  });
+
   // === LÁI-QÙ-HUÍ Dragon Courier ===
   // Player tapped one of the 4 direction buttons. Validate the move,
   // update position, check arrival, fire next mission if completed.
@@ -3630,6 +3800,54 @@ setInterval(() => {
   });
 }, 1000);
 
+// === SHÉI SHÌ? tick loop — round-timeout handling
+// If a player's round deadline expires without a pick, mark wrong and
+// queue the next round. Same per-player cadence as Lái-Qù-Huí. ===
+setInterval(() => {
+  const now = Date.now();
+  Object.entries(games).forEach(([pin, g]) => {
+    if (g.gameType !== 'identity' || g.state !== 'active') return;
+    Object.entries(g.players).forEach(([pid, p]) => {
+      if (!p.idRoundData || p.idRoundResolved) return;
+      if (now > p.idRoundData.deadline) {
+        p.idRoundResolved = true;
+        p.idWrong = (p.idWrong || 0) + 1;
+        p.idStreak = 0;
+        io.to(pid).emit('id:result', {
+          correct: false,
+          picked: -1,
+          targetIdx: p.idRoundData.targetIdx,
+          target: p.idRoundData.suspects[p.idRoundData.targetIdx],
+          points: 0,
+          score: p.score || 0,
+          streak: 0,
+          timeout: true,
+          correct: p.idCorrect,
+          wrong: p.idWrong,
+        });
+        setTimeout(() => {
+          if (!games[pin] || games[pin].state !== 'active') return;
+          const stillP = games[pin].players[pid];
+          if (!stillP) return;
+          stillP.idRound = (stillP.idRound || 0) + 1;
+          stillP.idRoundData = idGenerateRound(stillP.idRound);
+          stillP.idRoundResolved = false;
+          io.to(pid).emit('id:round', {
+            roundNum: stillP.idRound,
+            suspects: stillP.idRoundData.suspects,
+            clue: stillP.idRoundData.clue,
+            deadline: stillP.idRoundData.deadline,
+            score: stillP.score || 0,
+            streak: stillP.idStreak,
+            correct: stillP.idCorrect,
+            wrong: stillP.idWrong,
+          });
+        }, 1800);
+      }
+    });
+  });
+}, 500);
+
 // === LÁI-QÙ-HUÍ tick loop ===
 // Watches each player's mission deadline. If expired without arrival,
 // the mission FAILS — no points, increment fail counter, immediately
@@ -3790,6 +4008,7 @@ setInterval(() => {
     if (g.gameType === 'flappy') return;       // revive-driven, no watchdog
     if (g.gameType === 'laiquhui') return;     // movement-driven, no questions at all
     if (g.gameType === 'warmup') return;       // teacher-driven flashcards, no questions
+    if (g.gameType === 'identity') return;     // detective rounds, server-driven
     Object.entries(g.players).forEach(([pid, p]) => {
       // Conquest/triage have multi-stage flows — if the player has a pending
       // strategic pick, don't shove a new question on top of their picker.

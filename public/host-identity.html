@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>🕵️ Shéi Shì? · ¿Quién Es? · Host</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+  <link rel="stylesheet" href="/css/identity.css?v=20260524a">
+</head>
+<body class="id-bg">
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+  <div class="music-chip hidden" id="music-chip">🎵 <span id="music-chip-name">…</span></div>
+
+  <div id="screen-lobby" class="container">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div class="market-banner">🕵️ Shéi Shì? · 谁是 · ¿Quién Es?</div>
+      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
+      <div class="pin-display" id="pin-display">····</div>
+      <div style="color:var(--ink-dim); font-size:0.9rem;">
+        Tus alumnos entran en <span id="join-url" style="color:var(--gold-glow); font-weight:800;">esta URL</span>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div style="font-size:2rem;">🕵️</div>
+        <div style="flex:1;">
+          <div style="font-size:0.75rem; color:var(--ink-dim); letter-spacing:0.15em; text-transform:uppercase;">Modo</div>
+          <div style="font-weight:800; font-size:1.15rem;">Detective de Identidad</div>
+          <div style="color:var(--ink-dim); font-size:0.85rem;">Vocabulario: jiào · suì · péngyou · jiā · familia</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="location.href='/'">← Inicio</button>
+      </div>
+      <div class="duration-control">
+        <span>⏱ Duración</span>
+        <input type="range" id="duration-slider" min="120" max="360" step="30" value="180">
+        <span class="duration-value" id="duration-value">3m</span>
+      </div>
+    </div>
+    <div class="host-grid">
+      <div class="team-panel team-red">
+        <div class="team-header">
+          <div class="team-mascot">🕵️</div>
+          <div>
+            <div class="team-name">Detectives Rojos</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">紅侦探</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-red"></div>
+      </div>
+      <div class="team-panel team-gold">
+        <div class="team-header">
+          <div class="team-mascot">🕵️‍♀️</div>
+          <div>
+            <div class="team-name">Detectives Dorados</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">金侦探</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-gold"></div>
+      </div>
+    </div>
+    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:12px;">
+      Toca el chip de un jugador para cambiar de equipo
+    </p>
+    <div class="controls-panel">
+      <div class="controls-row" style="justify-content:center;">
+        <button class="btn btn-ghost" id="balance-btn">⚖️ Equilibrar</button>
+        <button class="btn btn-jade" id="start-btn" disabled>▶️ ¡A investigar!</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:18px;">
+      <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se juega</div>
+      <ol style="color:var(--ink-dim); font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
+        <li>Cada ronda aparece una pista en pinyin: "<strong>Wǒ jiào X. Wǒ shì N suì. Wǒ shì nǐde Y.</strong>"</li>
+        <li>En el teléfono ves 4-8 personajes con nombre + edad + relación.</li>
+        <li>Toca el personaje que CORRESPONDE a la pista. Las pistas falsas comparten 1-2 atributos.</li>
+        <li>Correcto rápido = más puntos · Racha x3, x5 multiplica los puntos.</li>
+        <li>Las palabras clave (jiào, suì, péngyou, familia) están destacadas.</li>
+        <li>Equipo con más puntos al final gana 🏆.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div id="screen-countdown" class="hidden countdown-overlay">
+    <div class="countdown-num" id="countdown-num">3</div>
+  </div>
+
+  <div id="screen-active" class="hidden id-container">
+    <div class="sticky-pin">
+      <span class="sticky-pin-label">PIN</span>
+      <span class="sticky-pin-value" id="active-pin-display">····</span>
+    </div>
+    <div class="id-topbar">
+      <div class="id-team red">
+        <span class="id-team-emoji">🕵️</span>
+        <span class="id-team-label">Rojos</span>
+        <span class="id-team-score" id="score-red">0</span>
+      </div>
+      <div class="id-time">
+        <span id="timer-display">3:00</span>
+      </div>
+      <div class="id-team gold">
+        <span class="id-team-score" id="score-gold">0</span>
+        <span class="id-team-label">Dorados</span>
+        <span class="id-team-emoji">🕵️‍♀️</span>
+      </div>
+    </div>
+    <div class="id-active-hero">
+      <div class="id-active-icon">🔍</div>
+      <div class="id-active-title">Investigación en curso</div>
+      <div class="id-active-sub">Cada detective resuelve sus pistas en su teléfono</div>
+    </div>
+    <div style="text-align:center; padding:6px;">
+      <button class="end-now-floating" id="end-now-btn">🛑 Terminar</button>
+    </div>
+  </div>
+
+  <div id="screen-win" class="hidden container">
+    <div class="win-screen">
+      <div id="win-emoji" style="font-size:7rem;">🕵️</div>
+      <div class="winner-banner" id="win-banner">¡Ganador!</div>
+      <div class="final-scores">
+        <div><span class="red"><span id="final-red">0</span> pts</span></div>
+        <div style="color:var(--ink-dim);">vs</div>
+        <div><span class="gold"><span id="final-gold">0</span> pts</span></div>
+      </div>
+      <div class="win-narration" id="win-narration"></div>
+      <div class="leaderboard" id="leaderboard"></div>
+      <div style="display:flex; gap:12px; margin-top:24px;">
+        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Inicio</button>
+        <button class="btn btn-jade" id="play-again-btn">🔄 Otra ronda</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js?v=20260524n"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/host-identity.js?v=20260524a"></script>
+</body>
+</html>
