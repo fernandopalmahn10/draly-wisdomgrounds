@@ -1012,3 +1012,202 @@ body.wu-bg .market-banner {
   color: rgba(220, 235, 245, 0.55);
   margin-top: 14px;
 }
+
+/* ====================================================================
+   CUADERNO DE ALUMNOS — teacher-only window into every saved sentence
+   Triggered by the 📓 button below the asistentes roster on the
+   warmup host page. Auth-gated by the admin password the teacher
+   already entered to unlock maestro mode. Two phases of the modal:
+     1) Roster: scroll list of every student code with sentence count
+     2) Detail: one student's full sentence history
+   ==================================================================== */
+.wu-notebook-row {
+  display: flex; align-items: center; gap: 10px; margin: 16px 0 6px;
+  flex-wrap: wrap;
+}
+.wu-notebook-btn {
+  white-space: nowrap;
+}
+.wu-notebook-hint {
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+.wu-notebook-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 6, 18, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9000;
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 24px 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.wu-notebook-overlay.hidden { display: none; }
+.wu-notebook-card {
+  width: 100%;
+  max-width: 720px;
+  background: linear-gradient(160deg, rgba(38, 28, 58, 0.96), rgba(20, 14, 32, 0.98));
+  border: 3px solid rgba(255, 213, 122, 0.55);
+  border-radius: 18px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 24px rgba(255, 213, 122, 0.18);
+  padding: 18px 18px 24px;
+  color: #f0e4c8;
+  font-family: 'Nunito', sans-serif;
+  display: flex; flex-direction: column; gap: 12px;
+  max-height: calc(100dvh - 48px);
+}
+.wu-notebook-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+.wu-notebook-title {
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: #ffe082;
+}
+.wu-notebook-close {
+  background: rgba(255, 90, 102, 0.18);
+  border: 2px solid rgba(255, 90, 102, 0.6);
+  color: #ffd1d6;
+  border-radius: 999px;
+  width: 36px; height: 36px;
+  font-size: 1rem; font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.wu-notebook-close:hover { transform: scale(1.08); background: rgba(255, 90, 102, 0.35); }
+.wu-notebook-sub {
+  color: var(--ink-dim, rgba(220, 235, 245, 0.65));
+  font-size: 0.95rem;
+  min-height: 1.2em;
+}
+.wu-notebook-roster {
+  display: flex; flex-direction: column; gap: 8px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(100dvh - 220px);
+  padding-right: 4px;
+}
+.wu-notebook-roster.hidden { display: none; }
+.wu-notebook-row-btn {
+  display: grid;
+  grid-template-columns: 80px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(60, 45, 90, 0.6);
+  border: 2px solid rgba(255, 213, 122, 0.25);
+  border-radius: 12px;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.wu-notebook-row-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(80, 60, 120, 0.75);
+  border-color: rgba(255, 213, 122, 0.55);
+}
+.wu-nb-code {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: 0.12em;
+  color: #ffe082;
+}
+.wu-nb-name {
+  font-weight: 800;
+  color: #fff5d8;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wu-nb-count {
+  font-weight: 800;
+  color: #5be8d1;
+  white-space: nowrap;
+}
+.wu-nb-date {
+  font-size: 0.85rem;
+  color: var(--ink-dim, rgba(220, 235, 245, 0.6));
+  white-space: nowrap;
+}
+.wu-notebook-empty {
+  padding: 24px;
+  text-align: center;
+  font-style: italic;
+  color: var(--ink-dim, rgba(220, 235, 245, 0.6));
+  background: rgba(40, 30, 60, 0.4);
+  border-radius: 12px;
+}
+.wu-notebook-detail {
+  display: flex; flex-direction: column; gap: 10px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: calc(100dvh - 220px);
+  padding-right: 4px;
+}
+.wu-notebook-detail.hidden { display: none; }
+.wu-notebook-back {
+  align-self: flex-start;
+}
+.wu-notebook-detail-head {
+  background: rgba(60, 45, 90, 0.55);
+  border: 2px solid rgba(255, 213, 122, 0.4);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.wu-nb-head-row {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+}
+.wu-nb-head-code {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.3rem;
+  color: #ffe082;
+  letter-spacing: 0.1em;
+}
+.wu-nb-head-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+.wu-nb-head-meta {
+  font-size: 0.85rem;
+  color: var(--ink-dim, rgba(220, 235, 245, 0.6));
+  margin-top: 4px;
+}
+.wu-notebook-sentence {
+  background: rgba(38, 28, 58, 0.75);
+  border: 1px solid rgba(255, 213, 122, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.wu-nb-sentence-meta {
+  font-size: 0.8rem;
+  color: var(--ink-dim, rgba(220, 235, 245, 0.6));
+  margin-bottom: 6px;
+}
+.wu-nb-sentence-words {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.wu-nb-word {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  border-left: 3px solid var(--cat-color, #fff);
+  font-size: 0.85rem;
+}
+.wu-nb-icon { font-size: 1.05em; }
+.wu-nb-pinyin {
+  font-weight: 800;
+  color: var(--cat-color, #fff);
+}
+.wu-nb-es {
+  font-size: 0.78em;
+  color: rgba(220, 235, 245, 0.7);
+  font-style: italic;
+}

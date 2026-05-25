@@ -466,4 +466,133 @@
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
+
+  // === CUADERNO DE ALUMNOS ============================================
+  // Teacher-only window into every student's saved-sentence history.
+  // Hits the admin REST endpoints with the password the teacher unlocked
+  // the maestro mode with (adminPw). Two views: roster (list of all
+  // students with their code + name + sentence count) and detail (one
+  // student's full sentence history).
+  const notebookBtn   = $('wu-notebook-btn');
+  const notebookOL    = $('wu-notebook-overlay');
+  const notebookClose = $('wu-notebook-close');
+  const notebookBack  = $('wu-notebook-back');
+  const notebookRoster = $('wu-notebook-roster');
+  const notebookDetail = $('wu-notebook-detail');
+  const notebookSub   = $('wu-notebook-sub');
+  if (notebookBtn) notebookBtn.addEventListener('click', openNotebook);
+  if (notebookClose) notebookClose.addEventListener('click', closeNotebook);
+  if (notebookBack) notebookBack.addEventListener('click', showRosterView);
+  // Click on the overlay backdrop (but not the card) closes the panel.
+  if (notebookOL) notebookOL.addEventListener('click', (e) => {
+    if (e.target === notebookOL) closeNotebook();
+  });
+
+  function openNotebook() {
+    if (!notebookOL) return;
+    notebookOL.classList.remove('hidden');
+    showRosterView();
+    fetchRoster();
+  }
+  function closeNotebook() {
+    if (!notebookOL) return;
+    notebookOL.classList.add('hidden');
+  }
+  function showRosterView() {
+    if (notebookRoster) notebookRoster.classList.remove('hidden');
+    if (notebookDetail) notebookDetail.classList.add('hidden');
+  }
+  function showDetailView() {
+    if (notebookRoster) notebookRoster.classList.add('hidden');
+    if (notebookDetail) notebookDetail.classList.remove('hidden');
+  }
+  function fetchRoster() {
+    if (!adminPw) {
+      notebookSub.textContent = 'Sesión sin contraseña — vuelve a iniciar.';
+      return;
+    }
+    notebookSub.textContent = 'Cargando…';
+    notebookRoster.innerHTML = '';
+    fetch('/api/admin/students?pw=' + encodeURIComponent(adminPw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) {
+          notebookSub.textContent = 'No se pudo cargar la lista.';
+          return;
+        }
+        const students = (data.students || []).filter((s) => s.sentenceCount > 0);
+        notebookSub.textContent = `${students.length} alumno${students.length === 1 ? '' : 's'} con oraciones guardadas`;
+        if (!students.length) {
+          notebookRoster.innerHTML = '<div class="wu-notebook-empty">Aún nadie ha guardado oraciones. Cuando un alumno (o tú) presione 💾 Guardar, aparecerá aquí con su código.</div>';
+          return;
+        }
+        students.forEach((s) => {
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'wu-notebook-row-btn';
+          const since = s.lastSeen ? new Date(s.lastSeen).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '—';
+          row.innerHTML = `
+            <span class="wu-nb-code">${escapeHtml(s.code)}</span>
+            <span class="wu-nb-name">${escapeHtml(s.displayName || 'Anon')}</span>
+            <span class="wu-nb-count">📝 ${s.sentenceCount}</span>
+            <span class="wu-nb-date">${since}</span>`;
+          row.addEventListener('click', () => fetchStudent(s.code));
+          notebookRoster.appendChild(row);
+        });
+      })
+      .catch((e) => {
+        notebookSub.textContent = 'Error: ' + e.message;
+      });
+  }
+  function fetchStudent(code) {
+    if (!adminPw) return;
+    notebookSub.textContent = 'Cargando ' + code + '…';
+    fetch('/api/admin/students/' + encodeURIComponent(code) + '?pw=' + encodeURIComponent(adminPw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) {
+          notebookSub.textContent = 'No se encontró ese alumno.';
+          return;
+        }
+        showDetailView();
+        const head = $('wu-notebook-detail-head');
+        const list = $('wu-notebook-detail-list');
+        const since = data.firstSeen ? new Date(data.firstSeen).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+        head.innerHTML = `
+          <div class="wu-nb-head-row">
+            <span class="wu-nb-head-code">📇 ${escapeHtml(data.code)}</span>
+            <span class="wu-nb-head-name">${escapeHtml(data.displayName || 'Anon')}</span>
+          </div>
+          <div class="wu-nb-head-meta">Desde ${since} · ${data.sentences.length} oración${data.sentences.length === 1 ? '' : 'es'}</div>`;
+        notebookSub.textContent = '';
+        list.innerHTML = '';
+        if (!data.sentences.length) {
+          list.innerHTML = '<div class="wu-notebook-empty">Este alumno no tiene oraciones guardadas.</div>';
+          return;
+        }
+        data.sentences.forEach((s) => {
+          const item = document.createElement('div');
+          item.className = 'wu-notebook-sentence';
+          const dateStr = new Date(s.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+          const wordsHtml = (s.words || []).map((wid) => {
+            const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
+            if (!w) return '';
+            const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+            const color = cat ? cat.color : '#fff';
+            return `<span class="wu-nb-word" style="--cat-color:${color};">
+              <span class="wu-nb-icon">${w.icon || ''}</span>
+              <span class="wu-nb-pinyin">${escapeHtml(w.pinyin || '')}</span>
+              <span class="wu-nb-es">${escapeHtml(w.es || '')}</span>
+            </span>`;
+          }).join('');
+          item.innerHTML = `
+            <div class="wu-nb-sentence-meta">📅 ${dateStr}</div>
+            <div class="wu-nb-sentence-words">${wordsHtml}</div>`;
+          list.appendChild(item);
+        });
+      })
+      .catch((e) => {
+        notebookSub.textContent = 'Error: ' + e.message;
+      });
+  }
 })();

@@ -103,6 +103,40 @@ app.get('/api/admin/disk-status', (req, res) => {
   res.json(out);
 });
 
+// === TEACHER NOTEBOOK — Cuaderno de Alumnos ============================
+// Two admin-gated endpoints powering the warm-up host's "Cuaderno de
+// Alumnos" panel. The teacher unlocks with WU_ADMIN_PASSWORD then can
+// see every student code that has ever saved a sentence on this Render
+// instance, along with their displayName + sentence count. Drilling into
+// a specific code returns the full sentence history for that kid.
+function _adminAuth(req, res) {
+  const givenPw = String(req.query.pw || req.query.password || '');
+  const expected = process.env.WU_ADMIN_PASSWORD || 'draly2026';
+  if (givenPw !== expected) {
+    res.status(401).json({ ok: false, error: 'wrong password' });
+    return false;
+  }
+  return true;
+}
+app.get('/api/admin/students', (req, res) => {
+  if (!_adminAuth(req, res)) return;
+  res.json({ ok: true, students: Students.listAll() });
+});
+app.get('/api/admin/students/:code', (req, res) => {
+  if (!_adminAuth(req, res)) return;
+  const code = req.params.code;
+  const rec = Students.get(code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  res.json({
+    ok: true,
+    code: rec.code,
+    displayName: rec.displayName || 'Anon',
+    firstSeen: rec.firstSeen || 0,
+    lastSeen: rec.lastSeen || 0,
+    sentences: Students.getHistory(rec.code), // newest-first
+  });
+});
+
 // Record the server boot time so the heartbeat above can be compared
 // across deploys. If your disk is genuinely persistent, the heartbeat
 // file from a PREVIOUS boot will still be there when this boots again.
