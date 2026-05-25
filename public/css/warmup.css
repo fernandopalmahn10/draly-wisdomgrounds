@@ -1211,3 +1211,70 @@ body.wu-bg .market-banner {
   color: rgba(220, 235, 245, 0.7);
   font-style: italic;
 }
+
+/* ====================================================================
+   SAVE FEEDBACK — flash + confirmation chip for 💾 Guardar (host + asistente)
+   Rewards.show is disabled platform-wide, so we provide a dedicated
+   green flash on the button + a small floating chip with word/contributor
+   count. Both auto-clean after ~1.8s.
+   ==================================================================== */
+.wu-save-flash-ok {
+  animation: wu-save-pulse-ok 0.55s ease-out !important;
+  background: linear-gradient(180deg, rgba(91, 232, 209, 0.95), rgba(45, 212, 191, 0.95)) !important;
+  border-color: #5be8d1 !important;
+  color: #003028 !important;
+  box-shadow: 0 0 22px rgba(91, 232, 209, 0.85) !important;
+}
+.wu-save-flash-err {
+  animation: wu-save-shake 0.4s ease-in-out !important;
+  background: linear-gradient(180deg, rgba(255, 90, 102, 0.92), rgba(220, 60, 80, 0.92)) !important;
+  border-color: #ff5a66 !important;
+  color: #fff5d8 !important;
+  box-shadow: 0 0 22px rgba(255, 90, 102, 0.7) !important;
+}
+@keyframes wu-save-pulse-ok {
+  0%   { transform: scale(1);    }
+  40%  { transform: scale(1.18); }
+  100% { transform: scale(1);    }
+}
+@keyframes wu-save-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-5px); }
+  75%      { transform: translateX(5px); }
+}
+.wu-save-chip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translate(-50%, 6px) scale(0.86);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.18s ease;
+  z-index: 50;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+  font-family: 'Nunito', sans-serif;
+}
+.wu-save-chip.show {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+.wu-save-chip-ok {
+  background: linear-gradient(135deg, rgba(91, 232, 209, 0.95), rgba(45, 212, 191, 0.95));
+  border: 2px solid #5be8d1;
+  color: #003028;
+}
+.wu-save-chip-err {
+  background: linear-gradient(135deg, rgba(255, 90, 102, 0.92), rgba(200, 50, 70, 0.92));
+  border: 2px solid #ff5a66;
+  color: #fff5d8;
+}
+/* The save buttons live inside a flex row — make sure they're positioned
+   so the absolute-positioned chip anchors above them correctly. */
+.wu-stage-actions, .wu-player-admin-actions {
+  position: relative;
+}

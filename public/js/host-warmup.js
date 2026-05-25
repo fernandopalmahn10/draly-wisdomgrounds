@@ -80,13 +80,53 @@
   });
   $('wu-save-current-btn').addEventListener('click', () => {
     if (!currentSentence.length) {
-      alert('La oración está vacía.');
+      flashSaveFeedback(false, 'Oración vacía');
       return;
     }
     socket.emit('wu:save-current', { pin, password: adminPw });
     if (MochiSounds.correct) MochiSounds.correct();
-    if (window.Rewards) window.Rewards.show({ icon: '💾', text: 'Oración guardada en el historial' });
   });
+  // Server fires this after a save lands (or fails). Provides the visible
+  // confirmation chip + button-green-flash that Rewards.show used to
+  // provide before Rewards was disabled platform-wide.
+  socket.on('wu:saved', (data) => {
+    if (data && data.ok) {
+      const c = data.contributors || 1;
+      const w = data.words || 0;
+      const noun = c === 1 ? 'historial' : `${c} historiales`;
+      flashSaveFeedback(true, `Guardada · ${w} palabra${w === 1 ? '' : 's'} en ${noun}`);
+    } else {
+      flashSaveFeedback(false, 'No se pudo guardar — oración vacía');
+    }
+  });
+  // Tiny inline feedback helper: flashes the Save button green/red and
+  // pops a chip next to it with text for ~1.6s. Auto-cleans up.
+  function flashSaveFeedback(ok, text) {
+    const btn = $('wu-save-current-btn');
+    if (btn) {
+      btn.classList.remove('wu-save-flash-ok', 'wu-save-flash-err');
+      void btn.offsetWidth;
+      btn.classList.add(ok ? 'wu-save-flash-ok' : 'wu-save-flash-err');
+      setTimeout(() => btn.classList.remove('wu-save-flash-ok', 'wu-save-flash-err'), 1700);
+    }
+    // Show or update the chip
+    let chip = document.getElementById('wu-save-chip');
+    if (!chip) {
+      chip = document.createElement('div');
+      chip.id = 'wu-save-chip';
+      chip.className = 'wu-save-chip';
+      // Attach near the save button so it floats above it
+      const parent = btn && btn.parentNode ? btn.parentNode : document.body;
+      parent.appendChild(chip);
+    }
+    chip.textContent = (ok ? '✓ ' : '✕ ') + text;
+    chip.classList.remove('wu-save-chip-ok', 'wu-save-chip-err', 'show');
+    chip.classList.add(ok ? 'wu-save-chip-ok' : 'wu-save-chip-err');
+    void chip.offsetWidth;
+    chip.classList.add('show');
+    clearTimeout(chip._hideT);
+    chip._hideT = setTimeout(() => { chip.classList.remove('show'); }, 1800);
+  }
   $('wu-rearrange-btn').addEventListener('click', () => {
     rearrangeMode = !rearrangeMode;
     selectedSwapIdx = null;
