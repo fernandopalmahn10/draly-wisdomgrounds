@@ -266,18 +266,23 @@ body.lqh-bg .market-banner {
 .lqh-mission-verb-tag.verb-lai { background: #5be8d1; color: #003028; }
 .lqh-mission-verb-tag.verb-hui { background: #ff8a96; color: #320012; }
 /* The verb mascot (qu.png / lai.png / hui.png) lives on the left of the
-   mission card. Big, eye-catching, pops on every new round. */
+   mission card. BIG and eye-catching — these are transparent PNGs, so no
+   white box behind them. Scaled up dramatically per user request. */
 .lqh-mission-body {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 .lqh-mission-mascot {
-  width: clamp(56px, 16vmin, 92px);
-  height: clamp(56px, 16vmin, 92px);
+  width: clamp(110px, 30vmin, 180px);
+  height: clamp(110px, 30vmin, 180px);
   object-fit: contain;
   flex: 0 0 auto;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 14px rgba(255, 213, 122, 0.5));
+  /* Glow without a background — transparent PNGs let the dark card show
+     through, so the character feels like it's standing in the scene. */
+  filter:
+    drop-shadow(0 6px 14px rgba(0, 0, 0, 0.65))
+    drop-shadow(0 0 22px rgba(255, 213, 122, 0.55));
 }
 .lqh-mission-mascot.lqh-mascot-pop {
   animation: lqh-mascot-pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -289,26 +294,26 @@ body.lqh-bg .market-banner {
 }
 .lqh-mission-text { flex: 1 1 auto; min-width: 0; }
 .lqh-mission-pinyin {
-  font-size: clamp(1.1rem, 4.6vmin, 1.5rem);
+  font-size: clamp(1.4rem, 5.8vmin, 1.9rem);
   font-weight: 900;
   color: #fff5d8;
-  text-align: center;
+  text-align: left;
   letter-spacing: 0.02em;
   line-height: 1.2;
   margin-top: 2px;
 }
 .lqh-mission-pinyin strong {
   color: #ffe66a;
-  font-size: clamp(1.3rem, 5.4vmin, 1.75rem);
-  text-shadow: 0 0 14px #ffe66a;
+  font-size: clamp(1.7rem, 6.8vmin, 2.2rem);
+  text-shadow: 0 0 16px #ffe66a;
   border-bottom: 2px dashed #ffe66a;
 }
 .lqh-mission-es {
-  text-align: center;
-  font-size: clamp(0.78rem, 2.8vmin, 0.92rem);
+  text-align: left;
+  font-size: clamp(0.95rem, 3.4vmin, 1.15rem);
   font-style: italic;
-  color: rgba(243, 233, 208, 0.78);
-  margin-top: 3px;
+  color: rgba(243, 233, 208, 0.85);
+  margin-top: 5px;
 }
 .lqh-mission-bar {
   margin-top: 8px;
@@ -341,9 +346,11 @@ body.lqh-bg .market-banner {
 }
 .lqh-map {
   width: 100%;
-  /* 10×8 aspect (1.25:1). Width still clamped to fit short phones. */
-  max-width: min(94vw, 80vmin, 460px);
-  max-height: 38dvh;
+  /* 10×8 aspect (1.25:1). Bigger now that the d-pad is a small single-row
+     strip + 4 locations only (was 5). Wider + taller for a beautiful
+     hero-sized board on every device. */
+  max-width: min(98vw, 92vmin, 560px);
+  max-height: 52dvh;
   aspect-ratio: 10 / 8;
   display: grid;
   grid-template-columns: repeat(10, 1fr) !important;
@@ -416,17 +423,17 @@ body.lqh-bg .market-banner {
   z-index: -1;
 }
 .lqh-loc-icon {
-  font-size: clamp(1rem, 4.4vmin, 1.7rem);
+  font-size: clamp(1.6rem, 6.5vmin, 2.5rem);
   line-height: 1;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.65));
 }
 .lqh-loc-pinyin {
-  font-size: clamp(0.45rem, 1.7vmin, 0.72rem);
+  font-size: clamp(0.62rem, 2.2vmin, 0.95rem);
   font-weight: 900;
   color: #3a1f00;
-  text-shadow: 0 1px 0 #ffe66a;
+  text-shadow: 0 1px 0 #ffe66a, 0 0 6px rgba(255, 230, 106, 0.6);
   white-space: nowrap;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 .lqh-tile.target {
   animation: lqh-target-pulse 0.8s ease-in-out infinite alternate;
@@ -449,13 +456,16 @@ body.lqh-bg .market-banner {
 }
 .lqh-me {
   position: absolute;
-  /* Bigger than the tile so the qu/lai/hui PNG actually reads at this scale */
-  inset: -10%;
+  /* WAY bigger than the tile so the character actually reads as a hero in
+     the world. Transparent PNGs mean no white box even at this scale. */
+  inset: -35%;
   display: flex; align-items: center; justify-content: center;
   z-index: 5;
   pointer-events: none;
   animation: lqh-me-arrive 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.85)) drop-shadow(0 0 12px rgba(255, 213, 122, 0.55));
+  filter:
+    drop-shadow(0 6px 14px rgba(0, 0, 0, 0.9))
+    drop-shadow(0 0 18px rgba(255, 213, 122, 0.6));
 }
 .lqh-me img { width: 100%; height: 100%; object-fit: contain; }
 .lqh-me.emoji-fallback img { display: none; }
