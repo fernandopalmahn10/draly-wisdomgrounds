@@ -22,7 +22,19 @@ const io = new Server(server, {
   transports: ['websocket', 'polling']
 });
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static assets. HTML pages get no-cache headers so phones always pull
+// the latest markup (otherwise stale cached HTML keeps referencing old
+// rewards.js / player.js versions and users see "nothing changed" after a
+// deploy). Versioned CSS/JS via ?v=... are still cached aggressively.
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  },
+}));
 app.use(express.json({ limit: '5mb' }));
 app.get('/health', (req, res) => res.send('ok'));
 
