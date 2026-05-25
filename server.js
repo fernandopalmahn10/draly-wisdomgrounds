@@ -346,6 +346,32 @@ const TR_PICK_COUNT = 4;                    // patient cards shown on player pic
 const TR_NORMAL_POINTS = 10;                // points for treating a normal patient
 const TR_CRITICAL_POINTS = 25;              // points for treating a critical patient
 const TR_DEATH_PENALTY_POINTS = 0;          // no penalty — softer feel for kids
+// Built-in HSK1 medical/family vocab so triage runs without a teacher-
+// uploaded set. Each entry is the shape g.questions expects: { text,
+// correct, answers }. Mix: location words (yīyuàn, yīshēng), family
+// (māma, bàba), where-questions (zài nǎr), states (téng, bù shūfu).
+const TRIAGE_DEFAULT_QUESTIONS = [
+  { text: '¿Cómo se dice "hospital" en pinyin?',     correct: 'yīyuàn',    answers: ['yīyuàn', 'xuéxiào', 'shāngdiàn', 'jiā'] },
+  { text: '¿Cómo se dice "doctor / médico"?',         correct: 'yīshēng',   answers: ['yīshēng', 'lǎoshī', 'péngyou', 'bàba'] },
+  { text: '¿Qué significa "téng"?',                   correct: 'duele',     answers: ['duele', 'come', 'corre', 'mira'] },
+  { text: '¿Cómo se dice "mamá"?',                    correct: 'māma',      answers: ['māma', 'bàba', 'gēge', 'mèimei'] },
+  { text: '¿Cómo se dice "papá"?',                    correct: 'bàba',      answers: ['bàba', 'māma', 'jiějie', 'dìdi'] },
+  { text: '¿Qué significa "bù shūfu"?',               correct: 'no me siento bien', answers: ['no me siento bien', 'tengo hambre', 'tengo sueño', 'estoy feliz'] },
+  { text: '"Wǒ zài yīyuàn" significa…',               correct: 'estoy en el hospital', answers: ['estoy en el hospital', 'voy a casa', 'tengo frío', 'soy doctor'] },
+  { text: '¿Cómo se pregunta "dónde"?',               correct: 'nǎr',       answers: ['nǎr', 'shéi', 'shénme', 'duōshao'] },
+  { text: '"Wǒ jiào…" se usa para decir tu…',         correct: 'nombre',    answers: ['nombre', 'edad', 'casa', 'comida'] },
+  { text: '"Wǒ … suì" — la palabra que falta es:',    correct: 'shì',       answers: ['shì', 'qù', 'hěn', 'yǒu'] },
+  { text: '¿Cómo se dice "hermano mayor"?',           correct: 'gēge',      answers: ['gēge', 'dìdi', 'jiějie', 'mèimei'] },
+  { text: '¿Cómo se dice "hermana mayor"?',           correct: 'jiějie',    answers: ['jiějie', 'mèimei', 'gēge', 'māma'] },
+  { text: '¿Qué significa "péngyou"?',                correct: 'amigo',     answers: ['amigo', 'maestro', 'padre', 'hermano'] },
+  { text: '"Xièxie" significa…',                      correct: 'gracias',   answers: ['gracias', 'hola', 'adiós', 'perdón'] },
+  { text: '"Nǐ hǎo" significa…',                      correct: 'hola',      answers: ['hola', 'adiós', 'gracias', 'sí'] },
+  { text: '¿Cómo se dice "agua"?',                    correct: 'shuǐ',      answers: ['shuǐ', 'chá', 'mǐfàn', 'cài'] },
+  { text: '¿Qué significa "kàn yīshēng"?',            correct: 'ver al médico', answers: ['ver al médico', 'comer arroz', 'ir a casa', 'ver TV'] },
+  { text: 'El número "1" en pinyin:',                 correct: 'yī',        answers: ['yī', 'èr', 'sān', 'sì'] },
+  { text: 'El número "3" en pinyin:',                 correct: 'sān',       answers: ['sān', 'liù', 'qī', 'jiǔ'] },
+  { text: '¿Qué significa "hěn téng"?',               correct: 'duele mucho', answers: ['duele mucho', 'mucha hambre', 'muy alto', 'muy bonito'] },
+];
 // Ailment pool — each defines life capacity (effective max), decay-per-tick,
 // emoji, Spanish name, optional critical flag. Decay tuned so a normal
 // patient lives ~30-60 seconds untreated, a critical one ~12-18 seconds.
@@ -1644,6 +1670,14 @@ io.on('connection', (socket) => {
         answers: ['6', '7'],
       }];
       games[pin].setTitle = '6-7 Swing 🤙';
+    }
+    // TRIAGE — self-contained medical mini-game. Seed a built-in HSK1
+    // medical/family vocab bank so the host page never has to pick a set.
+    // The patient-pick flow still drives off g.questions, so we need real
+    // entries (not stubs). Keep them tight to HSK1 + medical context.
+    if (type === 'triage') {
+      games[pin].questions = TRIAGE_DEFAULT_QUESTIONS.slice();
+      games[pin].setTitle = '🚑 Sala de emergencia · HSK1 médico';
     }
     currentPin = pin;
     role = 'host';
