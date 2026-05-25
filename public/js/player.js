@@ -1060,6 +1060,10 @@
     if (gameType === 'identity') {
       setTimeout(() => showScreen('id'), 1000);
     }
+    // === HÓNGBĀO RUN: jump to the partyrun board screen ===
+    if (gameType === 'partyrun') {
+      setTimeout(() => showScreen('pr'), 1000);
+    }
     // === WARM-UP: jump to the read-only sentence-mirror screen ===
     if (gameType === 'warmup') {
       setTimeout(() => {
@@ -1873,6 +1877,184 @@
     requestAnimationFrame(() => fb.classList.add('show'));
     setTimeout(() => { fb.classList.remove('show'); }, 1400);
     setTimeout(() => { fb.classList.add('hidden'); }, 1700);
+  }
+
+  // ===========================================================================
+  // 🧧 HÓNGBĀO RUN — per-player vocab + dice + minimap on the phone
+  // ===========================================================================
+  // Per-game state captured from pr:init and updated each round.
+  let prState = {
+    board: [],         // [{kind, idx}, ...]
+    starGoal: 3,
+    myTile: 0,
+    myStars: 0,
+    myCoins: 0,
+    pickedThisRound: -1,
+    questionTimerInt: null,
+  };
+  const PR_TILE_ICON = { star: '⭐', hongbao: '🧧', trap: '🐉', blank: '·' };
+  socket.on('pr:init', (data) => {
+    prState.board = data.board || [];
+    prState.starGoal = data.starGoal || 3;
+    // Find my own player object in the init's players map
+    const me = data.players && data.players[socket.id];
+    if (me) {
+      prState.myTile  = me.tile  || 0;
+      prState.myStars = me.stars || 0;
+      prState.myCoins = me.coins || 0;
+    }
+    prRenderHud();
+    prRenderMiniBoard();
+    document.body.classList.add('gametype-partyrun');
+  });
+  socket.on('pr:question', (q) => {
+    prState.pickedThisRound = -1;
+    if ($('pr-hud-round')) $('pr-hud-round').textContent = `Ronda ${q.round}/${q.maxRounds}`;
+    if ($('pr-q-tag-player')) $('pr-q-tag-player').textContent = `Ronda ${q.round}`;
+    if ($('pr-q-text-player')) $('pr-q-text-player').textContent = q.text || '…';
+    // Hide reveal area, show question + choices
+    const rev = document.getElementById('pr-reveal');
+    if (rev) rev.classList.add('hidden');
+    prRenderChoices(q.choices || []);
+    prStartQuestionTimer(q.deadline);
+  });
+  socket.on('pr:answer-ack', (data) => {
+    prState.pickedThisRound = data.answerIdx;
+    document.querySelectorAll('#pr-choices .pr-choice').forEach((btn, i) => {
+      btn.classList.toggle('locked', i === data.answerIdx);
+      btn.disabled = true; // locked in until reveal
+    });
+    if (MochiSounds.tap) MochiSounds.tap();
+  });
+  socket.on('pr:reveal', (data) => {
+    if (prState.questionTimerInt) clearInterval(prState.questionTimerInt);
+    // Find my own result entry
+    const me = (data.results || []).find((r) => r.id === socket.id);
+    if (!me) return;
+    // Update state
+    prState.myTile  = me.newTile;
+    prState.myStars = me.stars;
+    prState.myCoins = me.coins;
+    prRenderHud();
+    prRenderMiniBoard();
+    // Show reveal area: dice + tile-effect chip
+    const rev = $('pr-reveal');
+    const dice = $('pr-dice');
+    const msg = $('pr-reveal-msg');
+    const tile = $('pr-tile-landed');
+    if (rev) rev.classList.remove('hidden');
+    // Briefly show ? then animate dice through a few faces before settling
+    if (dice) {
+      dice.textContent = '?';
+      dice.classList.remove('pr-dice-roll');
+      void dice.offsetWidth;
+      dice.classList.add('pr-dice-roll');
+      let ticks = 0;
+      const faces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+      const tickInt = setInterval(() => {
+        dice.textContent = faces[Math.floor(Math.random() * faces.length)];
+        ticks++;
+        if (ticks >= 7) {
+          clearInterval(tickInt);
+          dice.textContent = faces[me.roll - 1] || me.roll;
+        }
+      }, 90);
+    }
+    if (msg) {
+      const verdict = me.correct
+        ? '<span class="pr-rev-ok">✓ Correcto</span>'
+        : (me.hadAnswer ? '<span class="pr-rev-no">✕ Incorrecto</span>' : '<span class="pr-rev-no">⏰ No respondiste</span>');
+      msg.innerHTML = `${verdict} · <strong>+${me.roll}</strong> casillas`;
+    }
+    if (tile && me.effect) {
+      tile.innerHTML = `
+        <span class="pr-eff-icon kind-${me.effect.kind}">${me.effect.icon}</span>
+        <span class="pr-eff-label">${me.effect.es}</span>`;
+      tile.className = 'pr-tile-landed kind-' + me.effect.kind;
+    }
+    // Per-effect sound
+    if (me.effect) {
+      if (me.effect.kind === 'star')         MochiSounds.winFanfare && MochiSounds.winFanfare();
+      else if (me.effect.kind === 'hongbao') MochiSounds.combo && MochiSounds.combo();
+      else if (me.effect.kind === 'trap')    MochiSounds.wrong && MochiSounds.wrong();
+      else                                    MochiSounds.tap && MochiSounds.tap();
+    }
+  });
+  socket.on('pr:game-over', () => {
+    if (prState.questionTimerInt) clearInterval(prState.questionTimerInt);
+    // Host page handles the win screen; phone just shows a calm "ya termina"
+    const rev = $('pr-reveal');
+    if (rev) {
+      rev.classList.remove('hidden');
+      const msg = $('pr-reveal-msg');
+      if (msg) msg.innerHTML = '🏁 ¡Carrera terminada! Mira el tablero del maestro.';
+    }
+  });
+  function prStartQuestionTimer(deadline) {
+    if (prState.questionTimerInt) clearInterval(prState.questionTimerInt);
+    const total = deadline - Date.now();
+    prState.questionTimerInt = setInterval(() => {
+      const remaining = Math.max(0, deadline - Date.now());
+      if ($('pr-q-bar-fill-player')) {
+        $('pr-q-bar-fill-player').style.width = (remaining / total * 100) + '%';
+      }
+      if (remaining <= 0) clearInterval(prState.questionTimerInt);
+    }, 100);
+  }
+  function prRenderHud() {
+    if ($('pr-stars')) $('pr-stars').textContent = prState.myStars;
+    if ($('pr-coins')) $('pr-coins').textContent = prState.myCoins;
+  }
+  function prRenderChoices(choices) {
+    const wrap = $('pr-choices');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    choices.forEach((c, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'pr-choice';
+      btn.type = 'button';
+      btn.textContent = c;
+      btn.onclick = () => {
+        if (prState.pickedThisRound >= 0) return;
+        try { socket.emit('player:pr-answer', { pin, answerIdx: i }); } catch (_) {}
+      };
+      wrap.appendChild(btn);
+    });
+  }
+  // Mini-board: 4 rows × 5 cols snake layout. Same shape as the host's,
+  // sized to fit on the phone above the question card. Your dragon marker
+  // sits on whichever tile you're on; surrounding tiles glow softly so
+  // you can see "what's nearby".
+  function prMiniRowCol(idx) {
+    const cols = 5;
+    const row = Math.floor(idx / cols);
+    const isReverseRow = row % 2 === 1;
+    const col = isReverseRow ? (cols - 1 - (idx % cols)) : (idx % cols);
+    return { row, col };
+  }
+  function prRenderMiniBoard() {
+    const wrap = $('pr-mini-board');
+    if (!wrap) return;
+    if (!prState.board.length) { wrap.innerHTML = ''; return; }
+    wrap.innerHTML = '';
+    wrap.style.gridTemplateColumns = `repeat(5, 1fr)`;
+    wrap.style.gridTemplateRows    = `repeat(4, 1fr)`;
+    prState.board.forEach((t, i) => {
+      const { row, col } = prMiniRowCol(i);
+      const cell = document.createElement('div');
+      cell.className = 'pr-mini-tile kind-' + t.kind;
+      cell.style.gridRow = (row + 1);
+      cell.style.gridColumn = (col + 1);
+      if (i === prState.myTile) cell.classList.add('me');
+      cell.innerHTML = `<span class="pr-mini-icon">${PR_TILE_ICON[t.kind] || '·'}</span>`;
+      if (i === prState.myTile) {
+        const dragon = document.createElement('span');
+        dragon.className = 'pr-mini-me';
+        dragon.textContent = (team === 'red' ? '🐉' : '🦁');
+        cell.appendChild(dragon);
+      }
+      wrap.appendChild(cell);
+    });
   }
 
   // ===========================================================================
@@ -6793,7 +6975,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'lqh', 'wu', 'id', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'lqh', 'wu', 'id', 'pr', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

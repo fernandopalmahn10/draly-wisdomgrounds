@@ -198,6 +198,30 @@
         <button class="btn btn-red btn-xl game-card-play">▶ ¡A swingear!</button>
       </div>
 
+      <div class="game-card" id="card-partyrun">
+        <div class="game-card-header">
+          <div class="game-card-emoji">🧧</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Hóngbāo Run · 红包跑</div>
+            <div class="game-tile-badge new">¡Nuevo!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          🎲 ¡Estilo Mario Party! Cada ronda respondes vocabulario HSK1 — números
+          (yī-shí) + Año Nuevo Chino (hóngbāo, lóng, nián). Correcto tiras dado
+          grande (1-6), incorrecto dado pequeño. Tu dragoncito avanza por un
+          tablero de 20 casillas: ⭐ estrellas · 🧧 +5 monedas · 🐉 trampa. ¡El
+          primero en llegar a 3 estrellas gana!
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Año Nuevo</span>
+          <span class="tag">Mario Party</span>
+          <span class="tag">Números HSK1</span>
+          <span class="tag">2-16 players</span>
+        </div>
+        <button class="btn btn-red btn-xl game-card-play">▶ ¡A correr!</button>
+      </div>
+
       <div class="game-card" id="card-triage">
         <div class="game-card-header">
           <div class="game-card-emoji">🚑</div>
@@ -403,6 +427,10 @@
       document.querySelector('#card-warmup .game-card-play').onclick = () => {
         location.href = '/host-warmup.html';
       };
+      // Hóngbāo Run also skips sets entirely — built-in HSK1 vocab
+      document.querySelector('#card-partyrun .game-card-play').onclick = () => {
+        location.href = '/host-partyrun.html';
+      };
     } else {
       document.getElementById('set-name').textContent = 'elige un juego, luego una serie';
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
@@ -456,6 +484,10 @@
       // Warm-up skips sets entirely
       document.querySelector('#card-warmup .game-card-play').onclick = () => {
         location.href = '/host-warmup.html';
+      };
+      // Hóngbāo Run also skips sets entirely
+      document.querySelector('#card-partyrun .game-card-play').onclick = () => {
+        location.href = '/host-partyrun.html';
       };
     }
 

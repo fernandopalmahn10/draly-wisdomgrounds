@@ -563,6 +563,193 @@ const WU_ADMIN_PASSWORD = process.env.WU_ADMIN_PASSWORD || 'draly2026';
 //   - lái [place]: come TO that place (different framing, same gameplay)
 //   - huí jiā: return HOME
 // Difficulty ramps: tighter deadlines as missions succeed.
+// === 🧧 HÓNGBĀO RUN · La Carrera de los Sobres Rojos ============
+// Chinese New Year-themed Mario-Party-style board game. Setless. All
+// players play in PARALLEL each round (no waiting your turn):
+//   1. Server pushes the same HSK1 question to every player.
+//   2. 12s window. Each player picks an answer.
+//   3. Server resolves: correct → roll 1-6, wrong → roll 1-3.
+//   4. Each player advances N tiles around the loop.
+//   5. Whatever tile they land on fires an effect (star, hóngbāo,
+//      trap, blank).
+//   6. Next round.
+// Win: first to PR_STAR_GOAL stars, or most stars after PR_MAX_ROUNDS.
+// Vocab focus: HSK1 numbers (yī–shí) + Chinese New Year terms.
+const PR_BOARD_SIZE     = 20;       // tiles in the loop
+const PR_MAX_ROUNDS     = 12;       // hard cap before end-of-game
+const PR_STAR_GOAL      = 3;        // first to this many stars wins
+const PR_QUESTION_MS    = 12000;    // question phase window
+const PR_REVEAL_MS      = 4200;     // dice + tile-effect display window
+// Tile pattern around the 20-tile loop. Repeats every game so the board
+// is predictable. Star tiles are placed at the "corners" of the loop for
+// dramatic positioning on the visual board.
+const PR_TILE_PATTERN = [
+  'blank', 'hongbao', 'blank',  'star',
+  'hongbao', 'blank', 'trap',   'hongbao',
+  'blank', 'star',    'hongbao','blank',
+  'trap',  'hongbao', 'blank',  'star',
+  'hongbao','blank',  'trap',   'hongbao',
+];
+const PR_TILE_META = {
+  star:    { icon: '⭐', es: '¡Estrella!',    label: 'Star',    stars: 1, coins: 0 },
+  hongbao: { icon: '🧧', es: '¡Sobre rojo!',  label: 'Hóngbāo', stars: 0, coins: 5 },
+  trap:    { icon: '🐉', es: '¡Dragón!',      label: 'Trampa',  stars: 0, coins: -3 },
+  blank:   { icon: '·',  es: 'Camino libre',  label: 'Camino',  stars: 0, coins: 0 },
+};
+// Built-in HSK1 question bank focused on numbers + Chinese New Year
+// vocabulary. Each question has { text (Spanish prompt), correct (pinyin),
+// answers (4 choices including correct), tag (optional category hint). }
+const PR_QUESTIONS = [
+  { text: '¿Cómo se dice "1" en chino?',  correct: 'yī',   answers: ['yī','èr','sān','sì'] },
+  { text: '¿Cómo se dice "2"?',           correct: 'èr',   answers: ['èr','sān','yī','wǔ'] },
+  { text: '¿Cómo se dice "3"?',           correct: 'sān',  answers: ['sān','sì','èr','liù'] },
+  { text: '¿Cómo se dice "5"?',           correct: 'wǔ',   answers: ['wǔ','sì','liù','qī'] },
+  { text: '¿Cómo se dice "8"?',           correct: 'bā',   answers: ['bā','jiǔ','qī','shí'] },
+  { text: '¿Cómo se dice "10"?',          correct: 'shí',  answers: ['shí','jiǔ','bā','sì'] },
+  { text: '¿Qué significa "hóngbāo"?',    correct: 'sobre rojo', answers: ['sobre rojo','dragón','año nuevo','dumpling'] },
+  { text: '¿Qué significa "nián"?',       correct: 'año',  answers: ['año','sobre','dragón','feliz'] },
+  { text: '¿Qué significa "lóng"?',       correct: 'dragón', answers: ['dragón','sobre rojo','año','rojo'] },
+  { text: '¿Cómo se dice "Feliz" (en gōngxǐ)?', correct: 'gōngxǐ', answers: ['gōngxǐ','xièxie','nǐ hǎo','zàijiàn'] },
+  { text: '"Dàjiā" significa…',           correct: 'todos', answers: ['todos','familia','año','rojo'] },
+  { text: '"Xīnnián" significa…',         correct: 'año nuevo', answers: ['año nuevo','feliz año','año viejo','fiesta'] },
+  { text: '¿Qué número es "qī"?',         correct: '7',    answers: ['7','6','8','9'] },
+  { text: '¿Qué número es "jiǔ"?',        correct: '9',    answers: ['9','7','8','10'] },
+  { text: '¿Qué número es "liù"?',        correct: '6',    answers: ['6','5','7','8'] },
+  { text: '¿Cómo se dice "rojo"?',        correct: 'hóng', answers: ['hóng','jīn','bái','hēi'] },
+  { text: '¿Cómo se dice "oro"?',         correct: 'jīn',  answers: ['jīn','hóng','huáng','lǜ'] },
+  { text: '"Cài" significa…',             correct: 'comida', answers: ['comida','año','rojo','feliz'] },
+  { text: '"Mǐfàn" significa…',           correct: 'arroz', answers: ['arroz','sopa','té','dumpling'] },
+  { text: '¿Cómo se dice "amigo"?',       correct: 'péngyou', answers: ['péngyou','māma','lǎoshī','gēge'] },
+];
+function prGenerateBoard() {
+  return PR_TILE_PATTERN.slice(0, PR_BOARD_SIZE).map((kind, idx) => ({ kind, idx }));
+}
+function prPickQuestion(roundIdx) {
+  // Walk the question bank so a single game doesn't repeat (12 rounds, 20 questions)
+  const q = PR_QUESTIONS[roundIdx % PR_QUESTIONS.length];
+  // Shuffle answer order so the correct one isn't always at index 0
+  const choices = q.answers.slice().sort(() => Math.random() - 0.5);
+  const correctIdx = choices.indexOf(q.correct);
+  return {
+    text: q.text,
+    choices,
+    correctIdx,
+  };
+}
+function prRoll(correct) {
+  // Correct answer → 1-6 fair die. Wrong → 1-3 only.
+  const sides = correct ? 6 : 3;
+  return 1 + Math.floor(Math.random() * sides);
+}
+function prApplyTileEffect(player, tile) {
+  const meta = PR_TILE_META[tile.kind] || PR_TILE_META.blank;
+  player.pr.stars = Math.max(0, (player.pr.stars || 0) + (meta.stars || 0));
+  player.pr.coins = Math.max(0, (player.pr.coins || 0) + (meta.coins || 0));
+  return { kind: tile.kind, ...meta };
+}
+function prCheckWin(g) {
+  // Win if anyone reached PR_STAR_GOAL stars
+  const winner = Object.values(g.players).find((p) => p.pr && (p.pr.stars || 0) >= PR_STAR_GOAL);
+  return !!winner;
+}
+// Compute the final per-team ranking and end the game with a winner.
+function prFinishGame(g, pin) {
+  // Score: stars × 100 + coins (coins as tiebreaker). Per-team total.
+  let redScore = 0, goldScore = 0;
+  Object.values(g.players).forEach((p) => {
+    const s = (p.pr && p.pr.stars || 0) * 100 + (p.pr && p.pr.coins || 0);
+    p.score = s;
+    if (p.team === 'red') redScore += s; else goldScore += s;
+  });
+  g.teamScores = { red: redScore, gold: goldScore };
+  io.to(pin).emit('pr:game-over', {
+    teamScores: g.teamScores,
+    players: Object.entries(g.players).map(([pid, p]) => ({
+      id: pid, name: p.name, team: p.team, avatar: p.avatar,
+      stars: (p.pr && p.pr.stars) || 0,
+      coins: (p.pr && p.pr.coins) || 0,
+      tile:  (p.pr && p.pr.tile)  || 0,
+      score: p.score,
+    })),
+  });
+  // Flip server-side game state to ended so the existing end handlers run
+  g.state = 'ended';
+}
+// Push round N's question to every player + start the answer-collection window.
+function prStartRound(g, pin) {
+  if (!g.partyrun || g.state !== 'active') return;
+  g.partyrun.round += 1;
+  if (g.partyrun.round > g.partyrun.maxRounds) {
+    prFinishGame(g, pin);
+    return;
+  }
+  g.partyrun.phase = 'question';
+  g.partyrun.picks = {};
+  g.partyrun.currentQuestion = prPickQuestion(g.partyrun.round - 1);
+  g.partyrun.questionDeadline = Date.now() + PR_QUESTION_MS;
+  // Send the question to ALL players (parallel — no "your turn" wait)
+  io.to(pin).emit('pr:question', {
+    round: g.partyrun.round,
+    maxRounds: g.partyrun.maxRounds,
+    text: g.partyrun.currentQuestion.text,
+    choices: g.partyrun.currentQuestion.choices,
+    deadline: g.partyrun.questionDeadline,
+  });
+  // Schedule the resolve phase
+  if (g.partyrun.phaseTimer) clearTimeout(g.partyrun.phaseTimer);
+  g.partyrun.phaseTimer = setTimeout(() => prResolveRound(g, pin), PR_QUESTION_MS);
+}
+// Collect all picks, roll dice, advance tiles, fire tile effects, broadcast.
+function prResolveRound(g, pin) {
+  if (!g.partyrun || g.state !== 'active') return;
+  g.partyrun.phase = 'reveal';
+  const q = g.partyrun.currentQuestion;
+  const board = g.partyrun.board;
+  const results = [];
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (!p.pr) p.pr = { tile: 0, stars: 0, coins: 0, lastRoll: 0, lastDelta: 0, lastTile: 0 };
+    const pickIdx = g.partyrun.picks[pid];
+    const hasAnswer = typeof pickIdx === 'number';
+    const correct = hasAnswer && pickIdx === q.correctIdx;
+    const roll = prRoll(correct);
+    const oldTile = p.pr.tile;
+    const newTile = (oldTile + roll) % PR_BOARD_SIZE;
+    p.pr.tile = newTile;
+    p.pr.lastRoll = roll;
+    p.pr.lastDelta = roll;
+    const landed = board[newTile];
+    const effect = prApplyTileEffect(p, landed);
+    results.push({
+      id: pid,
+      name: p.name,
+      team: p.team,
+      correct,
+      hadAnswer: hasAnswer,
+      pickIdx: hasAnswer ? pickIdx : -1,
+      roll,
+      oldTile,
+      newTile,
+      effect,           // { kind, icon, es, stars, coins }
+      stars: p.pr.stars,
+      coins: p.pr.coins,
+    });
+  });
+  io.to(pin).emit('pr:reveal', {
+    round: g.partyrun.round,
+    correctIdx: q.correctIdx,
+    correctText: q.choices[q.correctIdx],
+    results,
+  });
+  // Check for end of game (someone hit star goal or round cap)
+  if (prCheckWin(g)) {
+    setTimeout(() => prFinishGame(g, pin), PR_REVEAL_MS + 800);
+    return;
+  }
+  // Schedule the next round
+  if (g.partyrun.phaseTimer) clearTimeout(g.partyrun.phaseTimer);
+  g.partyrun.phaseTimer = setTimeout(() => prStartRound(g, pin), PR_REVEAL_MS);
+}
+
 const LQH_GRID_W = 10;
 const LQH_GRID_H = 8;
 // FIVE essential locations only — park + temple removed per user feedback
@@ -1650,7 +1837,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage', 'laiquhui', 'warmup', 'identity'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage', 'laiquhui', 'warmup', 'identity', 'partyrun'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -1668,6 +1855,7 @@ io.on('connection', (socket) => {
       type === 'laiquhui'     ? 180 :
       type === 'warmup'       ? 3600 :   // 1 hour ceiling; teacher exits manually
       type === 'identity'     ? 180 :    // 3 minutes of detective rounds
+      type === 'partyrun'     ? 480 :    // 8 min ceiling; round-cap usually ends sooner
       60;
     let grid = null;
     let vendors = null;
@@ -1816,7 +2004,7 @@ io.on('connection', (socket) => {
     // a question set picked from the lobby. Triage spawns its own patients,
     // LQH generates missions, Identity rolls suspects, Warmup is a teacher
     // tool, SixSeven generates math on the fly.
-    const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup', 'identity', 'triage'];
+    const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup', 'identity', 'triage', 'partyrun'];
     if (!setlessGameTypes.includes(g.gameType) && !g.questions.length) return;
     if (Object.keys(g.players).length === 0) return;
     g.state = 'countdown';
@@ -2135,6 +2323,43 @@ io.on('connection', (socket) => {
           });
         });
       }
+      if (g.gameType === 'partyrun') {
+        // 🧧 HÓNGBĀO RUN start: build a fresh board, seed every player at
+        // tile 0 with 0 stars / 0 coins, then immediately push round 1's
+        // question to everyone. Round-state machine is driven by
+        // setTimeout from inside the prAdvanceRound helper.
+        const board = prGenerateBoard();
+        Object.values(g.players).forEach((p) => {
+          p.pr = { tile: 0, stars: 0, coins: 0, lastRoll: 0, lastDelta: 0, lastTile: 0 };
+          p.score = 0;
+        });
+        g.partyrun = {
+          board,
+          round: 0,
+          maxRounds: PR_MAX_ROUNDS,
+          starGoal: PR_STAR_GOAL,
+          phase: 'idle',
+          questionDeadline: 0,
+          currentQuestion: null,
+          picks: {},          // playerId -> answerIdx
+          phaseTimer: null,
+        };
+        g.teamScores = { red: 0, gold: 0 };
+        io.to(pin).emit('pr:init', {
+          board,
+          starGoal: PR_STAR_GOAL,
+          maxRounds: PR_MAX_ROUNDS,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, p]) => [id, {
+              name: p.name, team: p.team, avatar: p.avatar,
+              tile: 0, stars: 0, coins: 0,
+            }])
+          ),
+        });
+        // Kick off round 1 after a short beat so the countdown overlay
+        // doesn't compete with the first question.
+        setTimeout(() => prStartRound(g, pin), 600);
+      }
       if (g.gameType === 'laiquhui') {
         // Each player spawns at the home tile and gets their first mission.
         const home = LQH_LOCATIONS.find((l) => l.isHome);
@@ -2252,6 +2477,12 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
     if (g.endTimer) clearTimeout(g.endTimer);
+    // Clean up partyrun's round-state machine timer so it doesn't fire
+    // a pr:question after the game has been ended.
+    if (g.partyrun && g.partyrun.phaseTimer) {
+      clearTimeout(g.partyrun.phaseTimer);
+      g.partyrun.phaseTimer = null;
+    }
     endGame(pin);
   });
 
@@ -3444,6 +3675,28 @@ io.on('connection', (socket) => {
       broadcast(pin);
     }, correct ? 1500 : 2000);
     broadcast(pin);
+  });
+
+  // === 🧧 HÓNGBĀO RUN — player locks in their answer for this round ===
+  // Multiple submissions are allowed during the question phase (last one
+  // wins), so a kid who second-guesses can change before the timer ends.
+  socket.on('player:pr-answer', ({ pin, answerIdx }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'partyrun' || g.state !== 'active') return;
+    if (!g.partyrun || g.partyrun.phase !== 'question') return;
+    const idx = Number(answerIdx);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= 4) return;
+    g.partyrun.picks[socket.id] = idx;
+    // Privately ack so the player UI can lock in the chosen card
+    io.to(socket.id).emit('pr:answer-ack', { answerIdx: idx });
+    // If everyone connected has answered, short-circuit and resolve now
+    const connectedIds = Object.keys(g.players);
+    const answeredCount = connectedIds.filter((id) => typeof g.partyrun.picks[id] === 'number').length;
+    if (answeredCount >= connectedIds.length && connectedIds.length > 0) {
+      if (g.partyrun.phaseTimer) clearTimeout(g.partyrun.phaseTimer);
+      // Tiny delay so the last person sees their own selection confirm
+      g.partyrun.phaseTimer = setTimeout(() => prResolveRound(g, pin), 400);
+    }
   });
 
   // === LÁI-QÙ-HUÍ Dragon Courier ===
