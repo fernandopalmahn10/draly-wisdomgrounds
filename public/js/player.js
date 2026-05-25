@@ -1049,6 +1049,10 @@
     if (gameType === 'laiquhui') {
       setTimeout(() => showScreen('lqh'), 3500);
     }
+    // === SHÉI SHÌ?: jump to the identity detective screen ===
+    if (gameType === 'identity') {
+      setTimeout(() => showScreen('id'), 1000);
+    }
     // === WARM-UP: jump to the read-only sentence-mirror screen ===
     if (gameType === 'warmup') {
       setTimeout(() => {
@@ -1551,6 +1555,126 @@
       if (dot) dot.style.left = pos + '%';
     }, 16);
   }
+  // ===========================================================================
+  // SHÉI SHÌ? · Identity Detective — per-player round picker
+  // ===========================================================================
+  let idCurrentRound = null;
+  let idTimerInt = null;
+  socket.on('id:init', () => {
+    if (gameType !== 'identity') return;
+    showScreen('id');
+  });
+  socket.on('id:round', (data) => {
+    if (gameType !== 'identity') return;
+    idCurrentRound = data;
+    // HUD update
+    if ($('id-score')) $('id-score').textContent = data.score || 0;
+    if ($('id-streak')) $('id-streak').textContent = data.streak || 0;
+    if ($('id-correct')) $('id-correct').textContent = data.correct || 0;
+    if ($('id-wrong')) $('id-wrong').textContent = data.wrong || 0;
+    // Clue
+    $('id-clue-pinyin').innerHTML = idHighlightStruggleWords(data.clue.pinyin);
+    $('id-clue-es').textContent = data.clue.es;
+    // Suspects grid
+    renderIdSuspects(data.suspects);
+    // Timer bar
+    if ($('id-clue-bar-fill')) $('id-clue-bar-fill').style.width = '100%';
+    startIdTimer(data.deadline);
+    // Hide any leftover feedback
+    const fb = $('id-feedback');
+    if (fb) { fb.classList.add('hidden'); fb.classList.remove('show'); }
+  });
+  socket.on('id:result', (data) => {
+    if (gameType !== 'identity') return;
+    if (idTimerInt) { clearInterval(idTimerInt); idTimerInt = null; }
+    if ($('id-score')) $('id-score').textContent = data.score || 0;
+    if ($('id-streak')) $('id-streak').textContent = data.streak || 0;
+    if ($('id-wrong')) $('id-wrong').textContent = data.wrong || 0;
+    // Highlight correct + (if wrong) the player's pick
+    document.querySelectorAll('.id-suspect-card').forEach((card, i) => {
+      if (i === data.targetIdx) card.classList.add('reveal-correct');
+      if (!data.correct && i === data.picked) card.classList.add('reveal-wrong');
+    });
+    showIdFeedback(data);
+    if (data.correct) {
+      if (MochiSounds.correct) MochiSounds.correct();
+      if (window.Rewards) {
+        const tier = data.streak >= 5 ? 'epic' : data.streak >= 3 ? 'great' : 'common';
+        window.Rewards.show({ tier, icon: '🕵️', text: `¡Correcto! +${data.points}` });
+      }
+    } else {
+      if (MochiSounds.wrong) MochiSounds.wrong();
+      if (window.Rewards) {
+        window.Rewards.show({ icon: data.timeout ? '⏰' : '💔', text: data.timeout ? '¡Tiempo!' : 'Mira la pista de nuevo', duration: 1600 });
+      }
+    }
+  });
+  function renderIdSuspects(suspects) {
+    const wrap = $('id-suspects');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    // Choose grid columns based on suspect count
+    const n = suspects.length;
+    const cols = n <= 4 ? 2 : (n <= 6 ? 2 : 4);
+    wrap.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    suspects.forEach((s, i) => {
+      const card = document.createElement('button');
+      card.className = 'id-suspect-card';
+      card.type = 'button';
+      card.innerHTML = `
+        <div class="id-sc-avatar">${s.avatar}</div>
+        <div class="id-sc-row"><span class="id-sc-label">名字</span> <span class="id-sc-name">${s.name}</span></div>
+        <div class="id-sc-row"><span class="id-sc-label">岁</span> <span class="id-sc-age">${s.age}</span></div>
+        <div class="id-sc-row"><span class="id-sc-label">${s.rel.hanzi}</span> <span class="id-sc-rel">${s.rel.pinyin}</span></div>`;
+      card.onclick = () => {
+        if (!idCurrentRound) return;
+        try { socket.emit('player:id-pick', { pin, suspectIdx: i }); } catch (_) {}
+        document.querySelectorAll('.id-suspect-card').forEach((c) => c.disabled = true);
+        card.classList.add('chosen');
+        if (MochiSounds.tap) MochiSounds.tap();
+      };
+      wrap.appendChild(card);
+    });
+  }
+  function idHighlightStruggleWords(pinyin) {
+    // Bold the four struggle words in the clue for visual reinforcement
+    return pinyin
+      .replace(/\b(jiào)\b/g, '<strong class="id-hw">$1</strong>')
+      .replace(/(\d+)\s+(suì)\b/g, '<strong class="id-hw">$1 $2</strong>')
+      .replace(/\b(péngyou|jiā|gēge|dìdi|jiějie|mèimei|érzi|nǚʼér|bàba|māma)\b/g, '<strong class="id-hw-rel">$1</strong>');
+  }
+  function startIdTimer(deadline) {
+    if (idTimerInt) clearInterval(idTimerInt);
+    const total = deadline - Date.now();
+    idTimerInt = setInterval(() => {
+      const remaining = Math.max(0, deadline - Date.now());
+      if ($('id-timer')) $('id-timer').textContent = Math.ceil(remaining / 1000) + 's';
+      if ($('id-clue-bar-fill')) $('id-clue-bar-fill').style.width = (remaining / total * 100) + '%';
+      if (remaining <= 0) {
+        clearInterval(idTimerInt);
+        idTimerInt = null;
+      }
+    }, 100);
+  }
+  function showIdFeedback(data) {
+    const fb = $('id-feedback');
+    if (!fb) return;
+    if (data.correct) {
+      fb.className = 'id-feedback success';
+      fb.innerHTML = `<div class="id-fb-emoji">🎯</div><div class="id-fb-title">¡Correcto!</div><div class="id-fb-pts">+${data.points} pts</div>`;
+    } else if (data.timeout) {
+      fb.className = 'id-feedback fail';
+      fb.innerHTML = `<div class="id-fb-emoji">⏰</div><div class="id-fb-title">¡Tiempo agotado!</div><div class="id-fb-pts">Era ${data.target.name}</div>`;
+    } else {
+      fb.className = 'id-feedback fail';
+      fb.innerHTML = `<div class="id-fb-emoji">🤔</div><div class="id-fb-title">No era ése</div><div class="id-fb-pts">Era ${data.target.name}, ${data.target.age} suì, ${data.target.rel.pinyin}</div>`;
+    }
+    fb.classList.remove('hidden');
+    requestAnimationFrame(() => fb.classList.add('show'));
+    setTimeout(() => { fb.classList.remove('show'); }, 1400);
+    setTimeout(() => { fb.classList.add('hidden'); }, 1700);
+  }
+
   // ===========================================================================
   // WARM-UP · read-only sentence mirror (teacher drives, player phone watches)
   // ===========================================================================
@@ -6381,7 +6505,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'lqh', 'wu', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'lqh', 'wu', 'id', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });
