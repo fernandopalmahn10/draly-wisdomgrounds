@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="/css/laiquhui.css?v=20260525d">
   <link rel="stylesheet" href="/css/warmup.css?v=20260525g">
   <link rel="stylesheet" href="/css/identity.css?v=20260525a">
+  <link rel="stylesheet" href="/css/partyrun.css?v=20260525a">
 </head>
 <body>
   <!-- Lantern balloons (red + gold) removed per user request 2026-05-25 —
@@ -678,6 +679,33 @@
     <div class="id-feedback hidden" id="id-feedback"></div>
   </div>
 
+  <!-- 🧧 HÓNGBĀO RUN · per-player vocab + dice + minimap of YOUR position -->
+  <div id="screen-pr" class="hidden player-screen pr-screen">
+    <div class="pr-hud">
+      <span class="pr-hud-stars">⭐ <span id="pr-stars">0</span></span>
+      <span class="pr-hud-coins">🧧 <span id="pr-coins">0</span></span>
+      <span class="pr-hud-round" id="pr-hud-round">Ronda 1/12</span>
+    </div>
+    <!-- Mini-board: 20-tile loop with YOUR dragon marker. Small enough to
+         fit above the question, so the kid sees "where am I going" while
+         they answer. Host has the giant board for the class. -->
+    <div class="pr-mini-board" id="pr-mini-board"></div>
+    <!-- Question + 4 answer cards. Parallel turn: every player answers at
+         the same time. -->
+    <div class="pr-q-card">
+      <div class="pr-q-tag" id="pr-q-tag-player">Ronda 1</div>
+      <div class="pr-q-text" id="pr-q-text-player">…</div>
+      <div class="pr-q-bar"><div class="pr-q-bar-fill" id="pr-q-bar-fill-player"></div></div>
+    </div>
+    <div class="pr-choices" id="pr-choices"></div>
+    <!-- Reveal phase: dice + tile-effect chip. Hidden during question. -->
+    <div class="pr-reveal hidden" id="pr-reveal">
+      <div class="pr-dice" id="pr-dice">?</div>
+      <div class="pr-reveal-msg" id="pr-reveal-msg">…</div>
+      <div class="pr-tile-landed" id="pr-tile-landed"></div>
+    </div>
+  </div>
+
   <!-- WARM-UP · sentence-builder read-only view (player phone mirrors teacher) -->
   <div id="screen-wu" class="hidden player-screen wu-player-screen">
     <div class="wu-player-header">
@@ -755,6 +783,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260525c"></script>
-  <script src="/js/player.js?v=20260525g"></script>
+  <script src="/js/player.js?v=20260525h"></script>
 </body>
 </html>

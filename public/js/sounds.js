@@ -868,6 +868,41 @@
     if (phase % 2 === 0) vBell(t0, 'G5', BD * 2, 0.10);
   }
 
+  // === Hóngbāo Run theme — bouncy festive Chinese New Year party beat ===
+  // Driving kick on every quarter (a parade march), bright pentatonic
+  // melody, lion-dance cymbals on accents, sparkly bells on bar starts.
+  // Channels a Mario-Party board theme through a CNY filter.
+  function themePartyrun(barIdx, t0, BD) {
+    const phase = barIdx % 4;
+    // Stomping bass — kick every beat, sub-bass marching pattern
+    for (let b = 0; b < 4; b++) {
+      vKick(t0 + b * BD, b === 0 ? 0.40 : 0.30);
+      vSubBass(t0 + b * BD, b % 2 === 0 ? 'A2' : 'E3', BD * 0.55, 0.24);
+    }
+    // Snare on 2 + 4, with a ghost-tap on 4-and for swing
+    vSnare(t0 + 1 * BD, 0.16);
+    vSnare(t0 + 3 * BD, 0.16);
+    vSnare(t0 + 3.5 * BD, 0.08);
+    // Shaker on every 8th — that party-energy texture
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.06);
+    // Bouncy pentatonic lead — different motif per phase so 16 bars
+    // before repetition. Major-pentatonic in A (A, B, C#/Db, E, F#)
+    // but we lean into the "C major + relative minor" feel for festivity.
+    let motif;
+    if (phase === 0) motif = [['E5', 0], ['G5', 0.5], ['A5', 1], ['B5', 1.5], ['A5', 2], ['G5', 2.5], ['E5', 3], ['D5', 3.5]];
+    else if (phase === 1) motif = [['A5', 0], ['B5', 0.5], ['D6', 1], ['B5', 2], ['A5', 2.5], ['G5', 3]];
+    else if (phase === 2) motif = [['G5', 0], ['A5', 0.5], ['B5', 1], ['E6', 1.5], ['B5', 2], ['G5', 2.5], ['A5', 3]];
+    else motif = [['D5', 0], ['E5', 0.5], ['G5', 1], ['A5', 1.5], ['B5', 2], ['A5', 2.5], ['G5', 3], ['E5', 3.5]];
+    motif.forEach(([n, beat]) => vLeadSquare(t0 + beat * BD, n, BD * 0.35, 0.16));
+    // Bell sparkle on bar 1 of phase 0 — feels like a CNY chime / lion's eye
+    if (phase === 0) {
+      vBell(t0, 'E6', BD * 2.5, 0.13);
+      vBell(t0 + 0.5 * BD, 'A6', BD * 1.5, 0.10);
+    }
+    // Lion-dance "cymbal crash" on phase 2's downbeat — adds drama
+    if (phase === 2) vSnare(t0, 0.28);
+  }
+
   // === Registry ===
   const GAME_THEMES = {
     'triage':        { bpm: 132, beatsPerBar: 4, fn: themeTriage },
@@ -884,6 +919,7 @@
     'pinata':        { bpm: 130, beatsPerBar: 4, fn: themePinata },
     'color-clash':   { bpm: 118, beatsPerBar: 4, fn: themeClash },
     'color-splash':  { bpm: 105, beatsPerBar: 4, fn: themeColorSplash },
+    'partyrun':      { bpm: 128, beatsPerBar: 4, fn: themePartyrun },
   };
 
   function scheduleThemeAhead() {
