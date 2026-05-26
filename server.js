@@ -2258,24 +2258,30 @@ io.on('connection', (socket) => {
         // === 📖 READING MODE ===
         // Teacher-driven story session. Server holds the master playback
         // state; all student phones mirror in real time. PINYIN ONLY (no
-        // hanzi). Audio + image files live in public/assets/reading/ and
-        // are referenced by URL in the story payload.
-        const payload = ReadingStory.buildStoryPayload();
+        // hanzi). Audio + image files live in public/assets/reading/
+        // and are referenced by URL in the story payload.
+        const startId = ReadingStory.DEFAULT_STORY_ID;
+        const payload = ReadingStory.buildStoryPayload(startId);
         g.reading = {
+          storyId: payload.id,
           title: payload.title,
           subtitle: payload.subtitle,
           pages: payload.pages,
+          // List of available stories so the host can switch between them
+          // without reloading the page.
+          storyList: ReadingStory.listStories(),
           currentPage: 0,            // index into pages
           // 'pinyin' (HSK1 chinese) or 'es' (Spanish translation). The
           // image + audio NEVER change with language — only the on-screen
           // text. So kids hear Chinese narration and read Spanish text =
           // bilingual comprehension boost without doubling audio assets.
           language: 'pinyin',
+          // 🔍 Modo Curioso — when ON, students can tap any pinyin word
+          // to open a dictionary card (Pokédex-style). The dictionary
+          // itself lives client-side in warmup-vocab.js (WU_WORD_BY_PINYIN
+          // lookup). Server just gates the visibility.
+          curious: false,
           isPlaying: false,
-          // Audio position in milliseconds at the time isPlaying was last
-          // flipped. When playing, the live position is
-          // audioPosMs + (Date.now() - playStartedAt). When paused, the
-          // live position is just audioPosMs.
           audioPosMs: 0,
           playStartedAt: 0,
           adminSocketId: g.hostId,
@@ -3486,17 +3492,17 @@ io.on('connection', (socket) => {
   function readingBuildStateMsg(g) {
     if (!g || !g.reading) return null;
     return {
+      storyId: g.reading.storyId,
+      storyList: g.reading.storyList || [],
       title: g.reading.title,
       subtitle: g.reading.subtitle,
       pages: g.reading.pages,
       currentPage: g.reading.currentPage || 0,
       language: g.reading.language || 'pinyin',   // 'pinyin' | 'es'
+      curious: !!g.reading.curious,
       isPlaying: !!g.reading.isPlaying,
       audioPosMs: g.reading.audioPosMs || 0,
-      // Server timestamp at which playback started so clients can compute
-      // the live audio position. Sent as wall-clock millis since epoch.
       playStartedAt: g.reading.playStartedAt || 0,
-      // Server's current wall clock so clients can correct for tx latency.
       serverNow: Date.now(),
     };
   }
@@ -3519,6 +3525,36 @@ io.on('connection', (socket) => {
     const lang = (language === 'es') ? 'es' : 'pinyin';
     if (g.reading.language === lang) return;
     g.reading.language = lang;
+    io.to(pin).emit('rd:state', readingBuildStateMsg(g));
+  });
+  // Teacher switches to a different built-in story. Server re-loads the
+  // selected story's pages + asset URLs, resets playback to page 0.
+  socket.on('rd:setStory', ({ pin, password, storyId }) => {
+    const g = games[pin];
+    if (!readingRequireHost(g, socket, password)) return;
+    if (!g.reading) return;
+    if (!ReadingStory.STORIES[storyId]) return;  // unknown id, ignore
+    if (g.reading.storyId === storyId) return;
+    const payload = ReadingStory.buildStoryPayload(storyId);
+    g.reading.storyId  = payload.id;
+    g.reading.title    = payload.title;
+    g.reading.subtitle = payload.subtitle;
+    g.reading.pages    = payload.pages;
+    g.reading.currentPage = 0;
+    g.reading.audioPosMs = 0;
+    g.reading.isPlaying = false;
+    g.reading.playStartedAt = 0;
+    io.to(pin).emit('rd:state', readingBuildStateMsg(g));
+  });
+  // Teacher toggles 🔍 Modo Curioso. When ON, students can tap any pinyin
+  // word in the reading screen to open a dictionary card. Same UX as the
+  // warmup-mode curious toggle; the dictionary is the same WU_WORD_BY_PINYIN
+  // map served from warmup-vocab.js.
+  socket.on('rd:setCurious', ({ pin, password, curious }) => {
+    const g = games[pin];
+    if (!readingRequireHost(g, socket, password)) return;
+    if (!g.reading) return;
+    g.reading.curious = !!curious;
     io.to(pin).emit('rd:state', readingBuildStateMsg(g));
   });
   // Teacher navigates to a specific page (relative or absolute). Resets

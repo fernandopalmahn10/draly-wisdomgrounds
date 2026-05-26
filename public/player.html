@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="/css/warmup.css?v=20260525g">
   <link rel="stylesheet" href="/css/identity.css?v=20260525a">
   <link rel="stylesheet" href="/css/partyrun.css?v=20260525a">
-  <link rel="stylesheet" href="/css/reading.css?v=20260525b">
+  <link rel="stylesheet" href="/css/reading.css?v=20260525c">
 </head>
 <body>
   <!-- Lantern balloons (red + gold) removed per user request 2026-05-25 —
@@ -777,14 +777,17 @@
       </div>
     </div>
 
-    <!-- 🔍 POKÉDEX overlay — only used in Modo Curioso. Hidden by default.
-         Player taps a word in the sentence; this full-card pops with the
-         word's emoji, pinyin, hanzi, Spanish, category, and EXP origin. -->
-    <div class="wu-pokedex hidden" id="wu-pokedex">
-      <button class="wu-pokedex-close" id="wu-pokedex-close" type="button" aria-label="Cerrar">✕</button>
-      <div class="wu-pokedex-card" id="wu-pokedex-card">
-        <!-- contents filled by JS -->
-      </div>
+  </div>
+
+  <!-- 🔍 POKÉDEX overlay — used by BOTH Modo Curioso modes (warmup AND
+       reading). Hidden by default. Moved out of screen-wu so it's
+       reachable when any screen is showing. Player taps a word →
+       this full-card pops with the word's emoji, pinyin, hanzi,
+       Spanish, category, and EXP origin. -->
+  <div class="wu-pokedex hidden" id="wu-pokedex">
+    <button class="wu-pokedex-close" id="wu-pokedex-close" type="button" aria-label="Cerrar">✕</button>
+    <div class="wu-pokedex-card" id="wu-pokedex-card">
+      <!-- contents filled by JS -->
     </div>
   </div>
 
@@ -800,10 +803,10 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524d"></script>
-  <script src="/js/warmup-vocab.js?v=20260524c"></script>
+  <script src="/js/warmup-vocab.js?v=20260525a"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260525c"></script>
-  <script src="/js/player.js?v=20260525k"></script>
+  <script src="/js/player.js?v=20260525l"></script>
 </body>
 </html>

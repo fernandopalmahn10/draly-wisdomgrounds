@@ -230,6 +230,29 @@
   window.WU_EXPERIENCES = WU_EXPERIENCES;
   window.WU_WORDS = WU_WORDS;
   window.WU_WORD_BY_ID = WU_WORDS.reduce((m, w) => { m[w.id] = w; return m; }, {});
+  // Reading-mode Modo Curioso uses this map to look up a word by the
+  // pinyin string itself (since reading-story uses raw pinyin tokens
+  // with no id). We normalize by lowercasing the first char so
+  // "Jīntiān" (sentence-start) matches "jīntiān" in the dictionary.
+  // ALSO build an apostrophe-aware variant — "shi'er" should match
+  // "shíèr" if the dictionary has it under "shí'èr" or "shièr".
+  window.WU_WORD_BY_PINYIN = WU_WORDS.reduce((m, w) => {
+    const key = String(w.pinyin || '').toLowerCase();
+    if (key) m[key] = w;
+    return m;
+  }, {});
+  // Helper: normalize a tapped pinyin token (lowercase, strip leading
+  // capital + trailing punctuation) and look it up.
+  window.lookupWuPinyin = function (raw) {
+    if (!raw) return null;
+    const cleaned = String(raw)
+      .toLowerCase()
+      .replace(/^["'¡¿]+/, '')          // strip opening punctuation
+      .replace(/[.,!?:;"')\]}]+$/, '')   // strip trailing punctuation
+      .trim();
+    if (!cleaned) return null;
+    return window.WU_WORD_BY_PINYIN[cleaned] || null;
+  };
   console.log('[warmup-vocab] loaded', WU_WORDS.length, 'HSK1 words across',
     Object.keys(WU_EXPERIENCES).length, 'experiences');
 })();
