@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/reading.css?v=20260525a">
+  <link rel="stylesheet" href="/css/reading.css?v=20260525b">
 </head>
 <body class="rd-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -108,6 +108,11 @@
       <div class="rd-audio-bar"><div class="rd-audio-bar-fill" id="rd-audio-bar-fill"></div></div>
       <span class="rd-audio-time"><span id="rd-audio-now">0:00</span> / <span id="rd-audio-total">0:00</span></span>
     </div>
+    <!-- Language toggle — switches text on ALL phones (image + Chinese audio stay) -->
+    <div class="rd-lang-row">
+      <button class="rd-lang-btn" id="rd-lang-btn" type="button">🌐 Cambiar a Español</button>
+      <span class="rd-lang-hint">El audio y la imagen no cambian — solo el texto.</span>
+    </div>
     <!-- Master audio element — host plays this. Sync to clients via state. -->
     <audio id="rd-audio" preload="auto" style="display:none"></audio>
     <p class="rd-audio-missing hidden" id="rd-audio-missing">
@@ -118,6 +123,6 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524n"></script>
   <script src="/js/enter.js"></script>
-  <script src="/js/host-reading.js?v=20260525a"></script>
+  <script src="/js/host-reading.js?v=20260525b"></script>
 </body>
 </html>

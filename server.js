@@ -512,7 +512,11 @@ function idSameSuspect(a, b) {
 }
 // Generate a round for a single player. Difficulty ramps with `roundNum`.
 function idGenerateRound(roundNum) {
-  const suspectCount = roundNum < 3 ? 4 : roundNum < 6 ? 6 : 8;
+  // User feedback 2026-05-25: "too many options". Capped at 4 suspects
+  // throughout the game (was scaling up to 6 then 8). 4 is enough decoy
+  // pressure to make kids read all three attributes (name/age/rel) without
+  // overwhelming the working-memory window during the 7-second memorize.
+  const suspectCount = 4;
   const target = idMakeSuspect();
   const suspects = [target];
   let attempts = 0;
@@ -2262,6 +2266,11 @@ io.on('connection', (socket) => {
           subtitle: payload.subtitle,
           pages: payload.pages,
           currentPage: 0,            // index into pages
+          // 'pinyin' (HSK1 chinese) or 'es' (Spanish translation). The
+          // image + audio NEVER change with language — only the on-screen
+          // text. So kids hear Chinese narration and read Spanish text =
+          // bilingual comprehension boost without doubling audio assets.
+          language: 'pinyin',
           isPlaying: false,
           // Audio position in milliseconds at the time isPlaying was last
           // flipped. When playing, the live position is
@@ -3481,6 +3490,7 @@ io.on('connection', (socket) => {
       subtitle: g.reading.subtitle,
       pages: g.reading.pages,
       currentPage: g.reading.currentPage || 0,
+      language: g.reading.language || 'pinyin',   // 'pinyin' | 'es'
       isPlaying: !!g.reading.isPlaying,
       audioPosMs: g.reading.audioPosMs || 0,
       // Server timestamp at which playback started so clients can compute
@@ -3498,6 +3508,18 @@ io.on('connection', (socket) => {
     const g = games[pin];
     const ok = readingRequireHost(g, socket, password);
     if (typeof cb === 'function') cb({ ok });
+  });
+  // Teacher flips the on-screen language between pinyin (HSK1 Chinese) and
+  // Spanish translation. Image + audio (Chinese narration) stay the same.
+  // Broadcast so every student phone updates simultaneously.
+  socket.on('rd:setLanguage', ({ pin, password, language }) => {
+    const g = games[pin];
+    if (!readingRequireHost(g, socket, password)) return;
+    if (!g.reading) return;
+    const lang = (language === 'es') ? 'es' : 'pinyin';
+    if (g.reading.language === lang) return;
+    g.reading.language = lang;
+    io.to(pin).emit('rd:state', readingBuildStateMsg(g));
   });
   // Teacher navigates to a specific page (relative or absolute). Resets
   // audio position + pauses playback so the new page starts fresh.

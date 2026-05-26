@@ -13,6 +13,7 @@
   let serverAudioPosMs    = 0;  // snapshot audio position at that wall clock
   let serverOffsetMs      = 0;  // (clientNow - serverNow) — drift adjustment
   let highlightRafId      = null;
+  let currentLanguage     = 'pinyin';   // 'pinyin' | 'es'
 
   const $ = (id) => document.getElementById(id);
   $('mute-btn').addEventListener('click', () => {
@@ -72,6 +73,13 @@
       socket.emit('rd:play', { pin, password: adminPw });
     }
   });
+  // Language toggle — switch text between pinyin and Spanish. Audio stays
+  // Chinese (only the text changes), so kids hear narration in Chinese
+  // while reading the Spanish translation = bilingual comprehension.
+  $('rd-lang-btn').addEventListener('click', () => {
+    const nextLang = currentLanguage === 'pinyin' ? 'es' : 'pinyin';
+    socket.emit('rd:setLanguage', { pin, password: adminPw, language: nextLang });
+  });
 
   // === Roster ===
   socket.on('state', (s) => {
@@ -106,6 +114,21 @@
     } else if (!$('rd-sentences').firstChild) {
       // First render
       renderPage();
+    }
+    // Language change?
+    const newLang = state.language || 'pinyin';
+    if (newLang !== currentLanguage) {
+      currentLanguage = newLang;
+      // Re-render the sentences in the new language
+      renderSentences(story.pages[currentPageIdx]);
+      // Update the toggle button label
+      const langBtn = $('rd-lang-btn');
+      if (langBtn) {
+        langBtn.textContent = (currentLanguage === 'pinyin')
+          ? '🌐 Cambiar a Español'
+          : '🌐 Volver al Pinyin';
+        langBtn.classList.toggle('rd-lang-btn-es', currentLanguage === 'es');
+      }
     }
     // Apply play/pause + audio position
     serverPlayStartedAt = state.playStartedAt || 0;
@@ -154,26 +177,46 @@
   function renderSentences(page) {
     const wrap = $('rd-sentences');
     wrap.innerHTML = '';
-    // Group words by sentenceIdx
-    const sentences = {};
-    (page.words || []).forEach((w, idx) => {
-      if (!sentences[w.sentenceIdx]) sentences[w.sentenceIdx] = [];
-      sentences[w.sentenceIdx].push({ ...w, idx });
-    });
-    Object.keys(sentences).sort((a, b) => +a - +b).forEach((sIdx) => {
-      const line = document.createElement('div');
-      line.className = 'rd-sentence';
-      sentences[sIdx].forEach((w) => {
-        const span = document.createElement('span');
-        span.className = 'rd-word';
-        span.dataset.start = w.startMs;
-        span.dataset.end = w.endMs;
-        span.dataset.idx = w.idx;
-        span.textContent = w.pinyin + ' ';
-        line.appendChild(span);
+    wrap.dataset.lang = currentLanguage;
+    if (currentLanguage === 'es') {
+      // Spanish mode: render each Spanish sentence as a single block. The
+      // word-by-word karaoke can't map cross-language (different word
+      // order), so we do SENTENCE-LEVEL highlight — the whole Spanish
+      // line glows when the corresponding pinyin sentence is playing.
+      const ranges = page.sentenceRanges || [];
+      const sentencesEs = page.sentencesEs || [];
+      sentencesEs.forEach((esText, i) => {
+        const range = ranges[i] || { startMs: 0, endMs: 0 };
+        const line = document.createElement('div');
+        line.className = 'rd-sentence rd-sentence-es';
+        line.dataset.start = range.startMs;
+        line.dataset.end = range.endMs;
+        line.dataset.idx = i;
+        line.textContent = esText;
+        wrap.appendChild(line);
       });
-      wrap.appendChild(line);
-    });
+    } else {
+      // Pinyin mode: word-by-word karaoke (original behaviour)
+      const sentences = {};
+      (page.words || []).forEach((w, idx) => {
+        if (!sentences[w.sentenceIdx]) sentences[w.sentenceIdx] = [];
+        sentences[w.sentenceIdx].push({ ...w, idx });
+      });
+      Object.keys(sentences).sort((a, b) => +a - +b).forEach((sIdx) => {
+        const line = document.createElement('div');
+        line.className = 'rd-sentence';
+        sentences[sIdx].forEach((w) => {
+          const span = document.createElement('span');
+          span.className = 'rd-word';
+          span.dataset.start = w.startMs;
+          span.dataset.end = w.endMs;
+          span.dataset.idx = w.idx;
+          span.textContent = w.pinyin + ' ';
+          line.appendChild(span);
+        });
+        wrap.appendChild(line);
+      });
+    }
   }
 
   // === Audio sync: align the host's <audio> element to the server state ===
@@ -216,19 +259,31 @@
       if (!audio) return;
       const tSec = audio.currentTime || 0;
       const tMs = tSec * 1000;
-      // Highlight whichever word's range contains tMs
-      const spans = document.querySelectorAll('#rd-sentences .rd-word');
-      let activeIdx = -1;
-      spans.forEach((s) => {
-        const start = +s.dataset.start;
-        const end = +s.dataset.end;
-        if (tMs >= start && tMs < end) {
-          activeIdx = +s.dataset.idx;
-        }
-      });
-      spans.forEach((s) => {
-        s.classList.toggle('active', +s.dataset.idx === activeIdx);
-      });
+      if (currentLanguage === 'es') {
+        // Spanish mode: highlight whichever SENTENCE range contains tMs
+        const lines = document.querySelectorAll('#rd-sentences .rd-sentence-es');
+        let activeIdx = -1;
+        lines.forEach((line) => {
+          const start = +line.dataset.start;
+          const end = +line.dataset.end;
+          if (tMs >= start && tMs < end) activeIdx = +line.dataset.idx;
+        });
+        lines.forEach((line) => {
+          line.classList.toggle('active', +line.dataset.idx === activeIdx);
+        });
+      } else {
+        // Pinyin mode: word-level karaoke
+        const spans = document.querySelectorAll('#rd-sentences .rd-word');
+        let activeIdx = -1;
+        spans.forEach((s) => {
+          const start = +s.dataset.start;
+          const end = +s.dataset.end;
+          if (tMs >= start && tMs < end) activeIdx = +s.dataset.idx;
+        });
+        spans.forEach((s) => {
+          s.classList.toggle('active', +s.dataset.idx === activeIdx);
+        });
+      }
       // Progress bar
       const total = audio.duration || 1;
       if (bar) bar.style.width = Math.min(100, (tSec / total) * 100) + '%';
@@ -245,7 +300,7 @@
   function stopHighlightLoop() {
     if (highlightRafId) cancelAnimationFrame(highlightRafId);
     highlightRafId = null;
-    document.querySelectorAll('#rd-sentences .rd-word.active').forEach((s) => s.classList.remove('active'));
+    document.querySelectorAll('#rd-sentences .active').forEach((s) => s.classList.remove('active'));
   }
 
   function renderLobbyPlayers(playersMap) {

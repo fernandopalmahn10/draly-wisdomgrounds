@@ -39,6 +39,16 @@ const STORY = {
         'Wǒ jiā yǒu sì gè rén: bàba, māma, jiějie hé wǒ.',
         'Wǒ ài wǒ de jiā.',
       ],
+      // Spanish translation — same number of sentences in the same order
+      // so the sentence-level highlight stays in sync (when sentence #2's
+      // pinyin is being read, sentence #2's Spanish line is the one that
+      // glows). NOT word-for-word; word order differs between languages.
+      sentencesEs: [
+        'Hoy es lunes.',
+        'Me llamo Xiǎo Míng. Soy estudiante.',
+        'En mi casa somos cuatro personas: papá, mamá, mi hermana y yo.',
+        'Amo a mi familia.',
+      ],
       // Auto-distribute timestamps for now; teacher can override later
       audioDurationMs: 10000,
     },
@@ -51,6 +61,12 @@ const STORY = {
         'Bàba kàn diànshì. Māma hěn gāoxìng.',
         'Jiějie zài kàn shū.',
       ],
+      sentencesEs: [
+        'A las siete de la mañana, me levanto.',
+        'Como arroz y tomo agua.',
+        'Papá ve la televisión. Mamá está muy contenta.',
+        'Mi hermana está leyendo un libro.',
+      ],
       audioDurationMs: 9000,
     },
     {
@@ -60,6 +76,11 @@ const STORY = {
         'Wǒ qù xuéxiào.',
         'Xuéxiào zài qiánmiàn. Wǒ bù zuò chūzūchē.',
         'Wǒ kàn yī gè gǒu. Gǒu hěn xiǎo, hěn piàoliang.',
+      ],
+      sentencesEs: [
+        'Voy a la escuela.',
+        'La escuela está al frente. No tomo taxi.',
+        'Veo un perrito. Es muy pequeño y muy bonito.',
       ],
       audioDurationMs: 8500,
     },
@@ -72,6 +93,12 @@ const STORY = {
         'Wǒmen xuéxí Hànyǔ. Wǒ rènshi wǒ de tóngxué.',
         'Tā shì wǒ de péngyou.',
       ],
+      sentencesEs: [
+        'La maestra dice: "¡Hola!"',
+        'Yo digo: "¡Hola, maestra!"',
+        'Estudiamos chino. Conozco a mis compañeros.',
+        'Él es mi amigo.',
+      ],
       audioDurationMs: 10000,
     },
     {
@@ -83,6 +110,12 @@ const STORY = {
         'Yī gè píngguǒ duōshǎo qián?',
         'Wǔ kuài. Wǒ mǎi yī gè.',
       ],
+      sentencesEs: [
+        'Es mediodía, las doce. Como comida y tomo té.',
+        'La comida está muy rica.',
+        '¿Cuánto cuesta una manzana?',
+        'Cinco yuanes. Compro una.',
+      ],
       audioDurationMs: 10000,
     },
     {
@@ -92,6 +125,11 @@ const STORY = {
         'Xiànzài xiàwǔ. Tiānqì hěn rè.',
         'Bù lěng. Xiàyǔ ma? Bù xiàyǔ.',
         'Tài hǎo le! Wǒ hé péngyou qù shāngdiàn.',
+      ],
+      sentencesEs: [
+        'Es la tarde. El clima está muy caluroso.',
+        'No hace frío. ¿Está lloviendo? No, no llueve.',
+        '¡Qué bueno! Mi amigo y yo vamos a la tienda.',
       ],
       audioDurationMs: 9000,
     },
@@ -103,6 +141,12 @@ const STORY = {
         'Wǒ hěn xǐhuan zhège diànyǐng.',
         'Wǒ ài wǒ de jiā. Wǒ shuìjiào.',
         "Wǎn'ān!",
+      ],
+      sentencesEs: [
+        'En la noche, regreso a casa. Veo una película.',
+        'Me gusta mucho esta película.',
+        'Amo a mi familia. Me voy a dormir.',
+        '¡Buenas noches!',
       ],
       audioDurationMs: 10000,
     },
@@ -133,24 +177,51 @@ function tokenizePage(page) {
   return tokens;
 }
 
+// Compute the start/end timing range of each SENTENCE on a page by
+// scanning the tokenized words. Used for sentence-level highlighting
+// in Spanish mode (where per-word karaoke can't map cross-language —
+// Chinese and Spanish have different word orders).
+function sentenceRanges(words) {
+  const ranges = {};
+  words.forEach((w) => {
+    const sIdx = w.sentenceIdx;
+    if (!ranges[sIdx]) ranges[sIdx] = { startMs: w.startMs, endMs: w.endMs };
+    else {
+      ranges[sIdx].startMs = Math.min(ranges[sIdx].startMs, w.startMs);
+      ranges[sIdx].endMs   = Math.max(ranges[sIdx].endMs,   w.endMs);
+    }
+  });
+  // Materialize as array indexed by sentence position
+  const arr = [];
+  Object.keys(ranges).sort((a, b) => +a - +b).forEach((k) => {
+    arr.push({ sentenceIdx: +k, startMs: ranges[k].startMs, endMs: ranges[k].endMs });
+  });
+  return arr;
+}
+
 // Build the wire-ready story payload: every page has its tokenized words,
-// caption, image path, audio path, and total duration. The client uses
-// imageUrl + audioUrl directly via <img> / <audio>; if the file is missing
-// the browser shows a graceful broken-image / no-audio state which the
-// CSS dresses up with a placeholder.
+// caption, image path, audio path, total duration, AND a parallel Spanish
+// sentences array. The client uses imageUrl + audioUrl directly via
+// <img> / <audio>; if the file is missing the browser shows a graceful
+// broken-image / no-audio state which the CSS dresses up with a placeholder.
 function buildStoryPayload() {
   return {
     title: STORY.title,
     subtitle: STORY.subtitle,
-    pages: STORY.pages.map((page) => ({
-      pageNum: page.pageNum,
-      caption: page.caption,
-      sentences: page.sentences,
-      words: tokenizePage(page),
-      imageUrl: `/assets/reading/page-${page.pageNum}.png`,
-      audioUrl: `/assets/reading/page-${page.pageNum}.mp3`,
-      audioDurationMs: page.audioDurationMs || DEFAULT_PAGE_AUDIO_MS,
-    })),
+    pages: STORY.pages.map((page) => {
+      const words = tokenizePage(page);
+      return {
+        pageNum: page.pageNum,
+        caption: page.caption,
+        sentences: page.sentences,
+        sentencesEs: page.sentencesEs || [],  // parallel Spanish array
+        words,
+        sentenceRanges: sentenceRanges(words),
+        imageUrl: `/assets/reading/page-${page.pageNum}.png`,
+        audioUrl: `/assets/reading/page-${page.pageNum}.mp3`,
+        audioDurationMs: page.audioDurationMs || DEFAULT_PAGE_AUDIO_MS,
+      };
+    }),
   };
 }
 

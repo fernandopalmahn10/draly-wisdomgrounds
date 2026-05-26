@@ -1734,11 +1734,12 @@
       void narrator.offsetWidth;
       narrator.classList.add('speak');
     }
-    // ── Phase timing ── Memorize is now LONG (5.0s) so students have real
-    // time to read the pinyin clue, parse it, and identify the suspect
-    // before cards flip. User feedback: "give students a little bit more
-    // of time before you start shuffling."
-    const MEMORIZE_MS = 5000;
+    // ── Phase timing ── Memorize bumped to 7s (was 5s) per user feedback
+    // 2026-05-25: "give them like two more seconds before you start to
+    // shuffle things." Combined with the cap of 4 suspects on the server
+    // side, students have plenty of time to read all three attributes
+    // before cards flip face-down.
+    const MEMORIZE_MS = 7000;
     const FLIP_MS     = 520;
     const SWAPS       = Math.min(6, Math.max(4, n));
     // Per-swap duration is now RANDOMIZED per swap (see idShuffleCards) so
@@ -2122,6 +2123,7 @@
   let rdServerAudioPosMs = 0;
   let rdServerOffsetMs = 0;
   let rdHighlightRafId = null;
+  let rdLanguage = 'pinyin';
   socket.on('rd:state', (state) => {
     if (gameType !== 'reading' || !state) return;
     if (state.pages && !rdStory) {
@@ -2140,6 +2142,15 @@
       rdRenderPage();
     } else if (!$('rd-player-sentences') || !$('rd-player-sentences').firstChild) {
       rdRenderPage();
+    }
+    // Language changed? Re-render sentences in the new language without
+    // touching the audio / playback state.
+    const newLang = state.language || 'pinyin';
+    if (newLang !== rdLanguage) {
+      rdLanguage = newLang;
+      if (rdStory && rdStory.pages[rdCurrentPageIdx]) {
+        rdRenderSentences(rdStory.pages[rdCurrentPageIdx]);
+      }
     }
     rdServerPlayStartedAt = state.playStartedAt || 0;
     rdServerAudioPosMs = state.audioPosMs || 0;
@@ -2183,25 +2194,44 @@
     const wrap = $('rd-player-sentences');
     if (!wrap) return;
     wrap.innerHTML = '';
-    const sentences = {};
-    (page.words || []).forEach((w, idx) => {
-      if (!sentences[w.sentenceIdx]) sentences[w.sentenceIdx] = [];
-      sentences[w.sentenceIdx].push({ ...w, idx });
-    });
-    Object.keys(sentences).sort((a, b) => +a - +b).forEach((sIdx) => {
-      const line = document.createElement('div');
-      line.className = 'rd-player-sentence';
-      sentences[sIdx].forEach((w) => {
-        const span = document.createElement('span');
-        span.className = 'rd-player-word';
-        span.dataset.start = w.startMs;
-        span.dataset.end = w.endMs;
-        span.dataset.idx = w.idx;
-        span.textContent = w.pinyin + ' ';
-        line.appendChild(span);
+    wrap.dataset.lang = rdLanguage;
+    if (rdLanguage === 'es') {
+      // Spanish mode: sentence-level highlight, since cross-language
+      // word order doesn't match.
+      const ranges = page.sentenceRanges || [];
+      const sentencesEs = page.sentencesEs || [];
+      sentencesEs.forEach((esText, i) => {
+        const range = ranges[i] || { startMs: 0, endMs: 0 };
+        const line = document.createElement('div');
+        line.className = 'rd-player-sentence rd-player-sentence-es';
+        line.dataset.start = range.startMs;
+        line.dataset.end = range.endMs;
+        line.dataset.idx = i;
+        line.textContent = esText;
+        wrap.appendChild(line);
       });
-      wrap.appendChild(line);
-    });
+    } else {
+      // Pinyin: word-level karaoke
+      const sentences = {};
+      (page.words || []).forEach((w, idx) => {
+        if (!sentences[w.sentenceIdx]) sentences[w.sentenceIdx] = [];
+        sentences[w.sentenceIdx].push({ ...w, idx });
+      });
+      Object.keys(sentences).sort((a, b) => +a - +b).forEach((sIdx) => {
+        const line = document.createElement('div');
+        line.className = 'rd-player-sentence';
+        sentences[sIdx].forEach((w) => {
+          const span = document.createElement('span');
+          span.className = 'rd-player-word';
+          span.dataset.start = w.startMs;
+          span.dataset.end = w.endMs;
+          span.dataset.idx = w.idx;
+          span.textContent = w.pinyin + ' ';
+          line.appendChild(span);
+        });
+        wrap.appendChild(line);
+      });
+    }
   }
   function rdComputeTargetPosMs() {
     if (!rdServerPlayStartedAt) return rdServerAudioPosMs;
@@ -2237,16 +2267,31 @@
     const tick = () => {
       if (!audio) return;
       const tMs = (audio.currentTime || 0) * 1000;
-      const spans = document.querySelectorAll('#rd-player-sentences .rd-player-word');
-      let activeIdx = -1;
-      spans.forEach((s) => {
-        const start = +s.dataset.start;
-        const end = +s.dataset.end;
-        if (tMs >= start && tMs < end) activeIdx = +s.dataset.idx;
-      });
-      spans.forEach((s) => {
-        s.classList.toggle('active', +s.dataset.idx === activeIdx);
-      });
+      if (rdLanguage === 'es') {
+        // Sentence-level highlight in Spanish mode
+        const lines = document.querySelectorAll('#rd-player-sentences .rd-player-sentence-es');
+        let activeIdx = -1;
+        lines.forEach((line) => {
+          const start = +line.dataset.start;
+          const end = +line.dataset.end;
+          if (tMs >= start && tMs < end) activeIdx = +line.dataset.idx;
+        });
+        lines.forEach((line) => {
+          line.classList.toggle('active', +line.dataset.idx === activeIdx);
+        });
+      } else {
+        // Word-level karaoke in pinyin mode
+        const spans = document.querySelectorAll('#rd-player-sentences .rd-player-word');
+        let activeIdx = -1;
+        spans.forEach((s) => {
+          const start = +s.dataset.start;
+          const end = +s.dataset.end;
+          if (tMs >= start && tMs < end) activeIdx = +s.dataset.idx;
+        });
+        spans.forEach((s) => {
+          s.classList.toggle('active', +s.dataset.idx === activeIdx);
+        });
+      }
       if (audio.ended || audio.paused) {
         rdStopHighlight();
         return;
