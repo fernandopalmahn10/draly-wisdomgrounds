@@ -119,7 +119,7 @@ body.conquest-bg .win-screen { color: #3a1505; }
 .cq-board-bg {
   position: absolute;
   inset: 0;
-  background-image: url('/assets/BOARD CONQUER.png');
+  background-image: url('/assets/png-library/board-conquer.png');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

@@ -503,8 +503,8 @@
   let ssPlayerJumpscareUrl = null;
   function loadSixSevenPlayerAsset() {
     const candidates = [
-      '/assets/67-transparent.png',  // bg-removed version — preferred
-      '/assets/67.png',
+      '/assets/png-library/67-transparent.png',  // bg-removed version — preferred
+      '/assets/png-library/67.png',
       '/assets/67.jpg',
       '/assets/sixseven-character.png',
       '/assets/sixseven-character.jpg',
@@ -2794,9 +2794,9 @@
   // We have qu.png / lai.png / hui.png in /assets — swap the dragon sprite
   // to match the current mission verb so each delivery feels distinct.
   const LQH_VERB_META = {
-    qu:  { tag: 'qù 去',  cls: 'verb-qu',  icon: '🐲', asset: '/assets/qu.png'  },
-    lai: { tag: 'lái 来', cls: 'verb-lai', icon: '🐉', asset: '/assets/lai.png' },
-    hui: { tag: 'huí 回', cls: 'verb-hui', icon: '🏠', asset: '/assets/hui.png' },
+    qu:  { tag: 'qù 去',  cls: 'verb-qu',  icon: '🐲', asset: '/assets/png-library/qu.png'  },
+    lai: { tag: 'lái 来', cls: 'verb-lai', icon: '🐉', asset: '/assets/png-library/lai.png' },
+    hui: { tag: 'huí 回', cls: 'verb-hui', icon: '🏠', asset: '/assets/png-library/hui.png' },
   };
   // Drop a fading footstep trail behind the courier so movement reads as
   // progress, not random tapping. Each step leaves a small dot on the
