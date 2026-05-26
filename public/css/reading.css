@@ -219,6 +219,58 @@ body.rd-bg {
   color: #ffe082;
 }
 
+/* Language toggle (host) */
+.rd-lang-row {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: 4px;
+}
+.rd-lang-btn {
+  background: linear-gradient(180deg, rgba(80, 50, 22, 0.95), rgba(40, 25, 10, 0.95));
+  border: 2px solid rgba(255, 213, 122, 0.6);
+  color: #ffe082;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-family: inherit;
+  font-weight: 900;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: transform 0.1s, box-shadow 0.15s, background 0.2s;
+}
+.rd-lang-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(255, 213, 122, 0.4); }
+.rd-lang-btn.rd-lang-btn-es {
+  background: linear-gradient(180deg, rgba(91, 232, 209, 0.5), rgba(45, 212, 191, 0.5));
+  border-color: #5be8d1;
+  color: #003028;
+}
+.rd-lang-hint {
+  color: rgba(243, 230, 194, 0.6);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* Spanish sentence-level active highlight (host + player share style) */
+.rd-sentence.rd-sentence-es,
+.rd-player-sentence.rd-player-sentence-es {
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-style: italic;
+  color: rgba(243, 230, 194, 0.78);
+  font-weight: 700;
+  margin: 4px 0;
+  transition: background 0.25s, color 0.25s, transform 0.25s, box-shadow 0.25s;
+  border-left: 3px solid transparent;
+}
+.rd-sentence.rd-sentence-es.active,
+.rd-player-sentence.rd-player-sentence-es.active {
+  background: linear-gradient(135deg, rgba(255, 230, 106, 0.45), rgba(255, 180, 60, 0.45));
+  color: #2a1a06;
+  font-weight: 900;
+  font-style: normal;
+  transform: translateX(4px);
+  box-shadow: 0 4px 14px rgba(255, 230, 106, 0.5);
+  border-left-color: #ffe66a;
+}
+
 /* ============================================================================
    PLAYER PHONE — read-only mirror of the teacher's reader.
    Kids hear their own audio playing locally (so they hear it) but the play/
