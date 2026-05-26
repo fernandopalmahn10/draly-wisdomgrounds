@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/reading.css?v=20260525c">
+  <link rel="stylesheet" href="/css/reading.css?v=20260526b">
 </head>
 <body class="rd-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -112,13 +112,39 @@
     <div class="rd-lang-row">
       <button class="rd-lang-btn" id="rd-lang-btn" type="button">🌐 Cambiar a Español</button>
       <button class="rd-curious-btn" id="rd-curious-btn" type="button">🔍 Activar Modo Curioso</button>
+      <button class="rd-test-btn" id="rd-test-btn" type="button">📝 Iniciar examen</button>
       <select class="rd-story-select" id="rd-story-select" aria-label="Cambiar cuento"></select>
     </div>
     <p class="rd-options-hint">
       🌐 Cambia el texto a Español (audio y imagen siguen igual) ·
       🔍 Modo Curioso = los alumnos pueden tocar una palabra para ver su definición ·
+      📝 Examen = manda 5 preguntas (20 pts cada una) a todos los teléfonos ·
       📚 Cambia el cuento desde el desplegable.
     </p>
+
+    <!-- Test overlay (host view) — shows live during a test in progress -->
+    <div class="rd-test-host hidden" id="rd-test-host">
+      <div class="rd-test-host-head">
+        <span class="rd-test-host-title">📝 Examen en curso</span>
+        <span class="rd-test-host-prog">Pregunta <strong id="rd-test-host-qnow">1</strong>/<strong id="rd-test-host-qtotal">5</strong></span>
+        <span class="rd-test-host-timer" id="rd-test-host-timer">22s</span>
+        <button class="btn btn-ghost btn-sm" id="rd-test-host-end" type="button">⏹ Terminar ya</button>
+      </div>
+      <div class="rd-test-host-q" id="rd-test-host-q">…</div>
+      <div class="rd-test-host-choices" id="rd-test-host-choices"></div>
+      <div class="rd-test-host-livehud" id="rd-test-host-livehud"></div>
+    </div>
+
+    <!-- Test results modal (host view) — shows after test finishes -->
+    <div class="rd-test-results-overlay hidden" id="rd-test-results-overlay">
+      <div class="rd-test-results-card">
+        <div class="rd-test-results-head">
+          <span class="rd-test-results-title">🏆 Resultados del examen</span>
+          <button class="rd-test-results-close" id="rd-test-results-close" type="button">✕</button>
+        </div>
+        <div class="rd-test-results-list" id="rd-test-results-list"></div>
+      </div>
+    </div>
     <!-- Master audio element — host plays this. Sync to clients via state. -->
     <audio id="rd-audio" preload="auto" style="display:none"></audio>
     <p class="rd-audio-missing hidden" id="rd-audio-missing">
@@ -129,6 +155,6 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524n"></script>
   <script src="/js/enter.js"></script>
-  <script src="/js/host-reading.js?v=20260525c"></script>
+  <script src="/js/host-reading.js?v=20260526b"></script>
 </body>
 </html>

@@ -41,6 +41,38 @@ const STORIES = {
     id: 'xiaomingday',
     title: 'Xiǎo Míng de yī tiān',
     subtitle: 'Un día con Xiǎo Míng',
+    // === Test bank ===
+    // Exactly 5 multiple-choice questions, each worth 20 points (100 total).
+    // Pulled from vocabulary that appears in this story so kids are tested
+    // on what they just read + heard. Teacher can edit freely. `correctIdx`
+    // is the index (0-3) of the right answer in `choices`.
+    questions: [
+      {
+        q: '¿Qué significa "lǎoshī"?',
+        choices: ['maestra', 'amiga', 'mamá', 'hermana'],
+        correctIdx: 0,
+      },
+      {
+        q: '¿Qué significa "mǐfàn"?',
+        choices: ['arroz', 'agua', 'té', 'manzana'],
+        correctIdx: 0,
+      },
+      {
+        q: '¿Qué número es "sì"?',
+        choices: ['4', '3', '5', '6'],
+        correctIdx: 0,
+      },
+      {
+        q: '¿Qué significa "xuéxiào"?',
+        choices: ['escuela', 'hospital', 'tienda', 'casa'],
+        correctIdx: 0,
+      },
+      {
+        q: '¿Qué significa "péngyou"?',
+        choices: ['amigo', 'hermano', 'maestro', 'papá'],
+        correctIdx: 0,
+      },
+    ],
     pages: [
       {
         pageNum: 1,
@@ -219,6 +251,7 @@ function buildStoryPayload(storyId) {
     id,
     title: story.title,
     subtitle: story.subtitle,
+    questionCount: (story.questions || []).length,
     pages: story.pages.map((page) => {
       const words = tokenizePage(page);
       return {
@@ -247,10 +280,18 @@ function listStories() {
   }));
 }
 
+// Server-only: returns the test bank for a story (with correct answers).
+// The host needs this to grade; the player payload strips correctIdx.
+function getStoryQuestions(storyId) {
+  const s = STORIES[storyId] || STORIES[DEFAULT_STORY_ID];
+  return Array.isArray(s.questions) ? s.questions : [];
+}
+
 module.exports = {
   STORIES,
   DEFAULT_STORY_ID,
   buildStoryPayload,
   listStories,
   tokenizePage,
+  getStoryQuestions,
 };

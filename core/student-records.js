@@ -175,8 +175,41 @@ function listAll() {
       firstSeen: r.firstSeen || 0,
       lastSeen: r.lastSeen || 0,
       sentenceCount: Array.isArray(r.sentencesBuilt) ? r.sentencesBuilt.length : 0,
+      testCount:     Array.isArray(r.testResults)   ? r.testResults.length   : 0,
     }))
     .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+}
+
+// === TEST RESULTS ===
+// Persist a graded test attempt for a student. One entry per attempt;
+// capped to last 100 so the JSON doesn't grow unbounded. The teacher's
+// Cuaderno de Alumnos drills into this list per student.
+function logTestResult(code, payload) {
+  const rec = get(code);
+  if (!rec) return false;
+  if (!Array.isArray(rec.testResults)) rec.testResults = [];
+  const entry = {
+    ts:        Date.now(),
+    storyId:   String(payload.storyId || ''),
+    storyTitle: String(payload.storyTitle || ''),
+    score:     Number(payload.score || 0),       // 0–100
+    pointsPerQ: Number(payload.pointsPerQ || 20),
+    breakdown: Array.isArray(payload.breakdown) ? payload.breakdown.slice() : [],
+    pin:       String(payload.pin || ''),
+  };
+  rec.testResults.push(entry);
+  if (rec.testResults.length > 100) {
+    rec.testResults = rec.testResults.slice(-100);
+  }
+  rec.lastSeen = Date.now();
+  scheduleSave();
+  return true;
+}
+function getTestResults(code, limit) {
+  const rec = get(code);
+  if (!rec) return [];
+  const arr = (rec.testResults || []).slice().reverse();    // newest first
+  return typeof limit === 'number' ? arr.slice(0, limit) : arr;
 }
 
 // Initial load on require()
@@ -190,4 +223,6 @@ module.exports = {
   deleteHistoryEntry,
   normalizeCode,
   listAll,
+  logTestResult,
+  getTestResults,
 };

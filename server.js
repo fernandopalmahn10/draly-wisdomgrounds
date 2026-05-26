@@ -135,6 +135,7 @@ app.get('/api/admin/students/:code', (req, res) => {
     firstSeen: rec.firstSeen || 0,
     lastSeen: rec.lastSeen || 0,
     sentences: Students.getHistory(rec.code), // newest-first
+    tests:     Students.getTestResults(rec.code, 50), // newest-first
   });
 });
 
@@ -3503,8 +3504,121 @@ io.on('connection', (socket) => {
       isPlaying: !!g.reading.isPlaying,
       audioPosMs: g.reading.audioPosMs || 0,
       playStartedAt: g.reading.playStartedAt || 0,
+      // Test snapshot — null when no test is running. When active includes
+      // current question index (without correct answer) so a late-join
+      // student still gets the current question.
+      test: g.reading.test ? {
+        active:     g.reading.test.active,
+        qIdx:       g.reading.test.qIdx,
+        total:      g.reading.test.total,
+        question:   g.reading.test.active && g.reading.test.qIdx < g.reading.test.questions.length
+                      ? { q: g.reading.test.questions[g.reading.test.qIdx].q,
+                          choices: g.reading.test.questions[g.reading.test.qIdx].choices }
+                      : null,
+        deadline:   g.reading.test.deadline || 0,
+      } : null,
       serverNow: Date.now(),
     };
+  }
+  // Per-question window (auto-advance even if not all kids have answered).
+  const RD_TEST_Q_MS = 22000;
+  // Start a fresh test for the current story. Per-student answers stored
+  // in g.reading.test.answers[playerId] = [pickIdx, pickIdx, ...].
+  function readingStartTest(g, pin) {
+    if (!g || !g.reading) return;
+    const story = ReadingStory.STORIES[g.reading.storyId];
+    const qs = ReadingStory.getStoryQuestions(g.reading.storyId);
+    if (!qs.length) return;
+    g.reading.test = {
+      active: true,
+      storyId: g.reading.storyId,
+      storyTitle: (story && story.title) || g.reading.storyId,
+      questions: qs,
+      total: qs.length,
+      pointsPerQ: 100 / qs.length,
+      qIdx: 0,
+      deadline: Date.now() + RD_TEST_Q_MS,
+      answers: {},          // playerId -> [pickIdx per question]
+      logged: false,        // becomes true once results saved to records
+      phaseTimer: null,
+    };
+    // Pause reading playback so the test isn't competing with narration
+    if (g.reading.isPlaying) {
+      const elapsed = Date.now() - (g.reading.playStartedAt || Date.now());
+      g.reading.audioPosMs = (g.reading.audioPosMs || 0) + elapsed;
+    }
+    g.reading.isPlaying = false;
+    g.reading.playStartedAt = 0;
+    io.to(pin).emit('rd:state', readingBuildStateMsg(g));
+    g.reading.test.phaseTimer = setTimeout(() => readingAdvanceTest(g, pin), RD_TEST_Q_MS);
+  }
+  function readingAdvanceTest(g, pin) {
+    if (!g || !g.reading || !g.reading.test || !g.reading.test.active) return;
+    const t = g.reading.test;
+    if (t.phaseTimer) { clearTimeout(t.phaseTimer); t.phaseTimer = null; }
+    t.qIdx += 1;
+    if (t.qIdx >= t.total) {
+      // End of test — grade everyone, save records, broadcast.
+      readingFinishTest(g, pin);
+      return;
+    }
+    t.deadline = Date.now() + RD_TEST_Q_MS;
+    io.to(pin).emit('rd:state', readingBuildStateMsg(g));
+    t.phaseTimer = setTimeout(() => readingAdvanceTest(g, pin), RD_TEST_Q_MS);
+  }
+  function readingFinishTest(g, pin) {
+    if (!g || !g.reading || !g.reading.test) return;
+    const t = g.reading.test;
+    if (t.phaseTimer) { clearTimeout(t.phaseTimer); t.phaseTimer = null; }
+    t.active = false;
+    // Grade every player who participated. Score = correct * pointsPerQ.
+    const studentResults = [];      // sorted, returned to host for dashboard
+    Object.entries(g.players).forEach(([pid, p]) => {
+      const picks = t.answers[pid] || [];
+      const breakdown = t.questions.map((qq, i) => {
+        const picked = typeof picks[i] === 'number' ? picks[i] : -1;
+        const gotRight = picked === qq.correctIdx;
+        return {
+          q: qq.q,
+          picked,
+          correct: qq.correctIdx,
+          correctText: qq.choices[qq.correctIdx],
+          pickedText: picked >= 0 ? qq.choices[picked] : '—',
+          gotRight,
+        };
+      });
+      const correctCount = breakdown.filter((b) => b.gotRight).length;
+      const score = Math.round(correctCount * t.pointsPerQ);
+      // Persist to student-records under their code
+      if (p.studentCode && !t.logged) {
+        try {
+          Students.logTestResult(p.studentCode, {
+            storyId: t.storyId,
+            storyTitle: t.storyTitle,
+            score,
+            pointsPerQ: t.pointsPerQ,
+            breakdown,
+            pin,
+          });
+        } catch (e) { /* ignore */ }
+      }
+      studentResults.push({
+        id: pid,
+        name: p.name,
+        team: p.team,
+        avatar: p.avatar || '',
+        code: p.studentCode || null,
+        score,
+        correctCount,
+        total: t.total,
+        breakdown,
+      });
+    });
+    t.logged = true;
+    studentResults.sort((a, b) => b.score - a.score);
+    io.to(pin).emit('rd:test-results', { results: studentResults });
+    // Also push the cleared state (test.active = false)
+    io.to(pin).emit('rd:state', readingBuildStateMsg(g));
   }
   function readingRequireHost(g, socket, password) {
     if (!g || g.gameType !== 'reading') return false;
@@ -3556,6 +3670,51 @@ io.on('connection', (socket) => {
     if (!g.reading) return;
     g.reading.curious = !!curious;
     io.to(pin).emit('rd:state', readingBuildStateMsg(g));
+  });
+  // === 📝 TEST MODE ===
+  // Teacher kicks off a 5-question multiple-choice test on the current
+  // story. Server runs the state machine (auto-advance per question),
+  // collects answers, grades on finish, persists per-student results.
+  socket.on('rd:startTest', ({ pin, password }) => {
+    const g = games[pin];
+    if (!readingRequireHost(g, socket, password)) return;
+    if (!g.reading) return;
+    if (g.reading.test && g.reading.test.active) return;   // already running
+    readingStartTest(g, pin);
+  });
+  // Student submits an answer for the current question. Late submissions
+  // are silently dropped (the qIdx will have advanced).
+  socket.on('player:rd-test-answer', ({ pin, qIdx, answerIdx }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'reading' || g.state !== 'active') return;
+    if (!g.reading || !g.reading.test || !g.reading.test.active) return;
+    if (Number(qIdx) !== g.reading.test.qIdx) return;       // stale
+    const idx = Number(answerIdx);
+    if (!Number.isFinite(idx) || idx < 0 || idx > 3) return;
+    if (!g.reading.test.answers[socket.id]) g.reading.test.answers[socket.id] = [];
+    g.reading.test.answers[socket.id][g.reading.test.qIdx] = idx;
+    // Ack so the player's UI can lock the picked choice
+    io.to(socket.id).emit('rd:test-ack', { qIdx: g.reading.test.qIdx, answerIdx: idx });
+    // If every connected player has answered the current question, jump
+    // ahead instead of waiting for the timer.
+    const playerIds = Object.keys(g.players);
+    const allDone = playerIds.length > 0 && playerIds.every((pid) => {
+      const arr = g.reading.test.answers[pid];
+      return arr && typeof arr[g.reading.test.qIdx] === 'number';
+    });
+    if (allDone) {
+      // small grace delay so the last student sees their lock-in animation
+      if (g.reading.test.phaseTimer) clearTimeout(g.reading.test.phaseTimer);
+      g.reading.test.phaseTimer = setTimeout(() => readingAdvanceTest(g, pin), 500);
+    }
+  });
+  // Teacher manually ends a test in progress (skips remaining questions
+  // and shows results immediately). Useful when class runs out of time.
+  socket.on('rd:endTest', ({ pin, password }) => {
+    const g = games[pin];
+    if (!readingRequireHost(g, socket, password)) return;
+    if (!g.reading || !g.reading.test || !g.reading.test.active) return;
+    readingFinishTest(g, pin);
   });
   // Teacher navigates to a specific page (relative or absolute). Resets
   // audio position + pauses playback so the new page starts fresh.
