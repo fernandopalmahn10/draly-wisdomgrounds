@@ -257,9 +257,14 @@
             const chip = document.getElementById('wu-player-code');
             if (chip) chip.textContent = resp.studentCode;
           }
+          // === Pre-emptively route to the right SCREEN based on gameState +
+          //     gameType. Otherwise the kid's old screen (e.g. screen-tri-pick
+          //     from a previous triage game) stays visible until a per-game
+          //     init event arrives — and for some games, no such event ever
+          //     fires unless they actively participate. This guarantees a
+          //     correct landing screen on every reconnect. ===
+          routePlayerForGameState(resp.gameState, gameType);
           hideReconnectOverlay();
-          // If they were re-attached during an active game, server will send them
-          // their cs:init / question event automatically. Player UI catches up.
         } else {
           showReconnectOverlay(resp.error || 'Could not rejoin');
         }
@@ -363,7 +368,42 @@
       $('join-error').textContent = '';
       MochiSounds.join();
       enterLobby();
+      // If the game is already active when the kid joins (late-join),
+      // immediately swap to the right active screen for this game type
+      // instead of leaving them on the lobby + lantern. The per-game
+      // init events from the server arrive shortly and populate content.
+      if (resp.gameState === 'active') {
+        routePlayerForGameState('active', gameType);
+      }
     });
+  }
+  // Best-effort routing helper called on join + reconnect. Picks the
+  // canonical "main" screen for each gameType in the active phase.
+  // The server's per-game init events that follow can override this if
+  // they have a more specific target (e.g. tri-pick vs tri-cpr in triage).
+  function routePlayerForGameState(gameState, gt) {
+    if (gameState !== 'active') return;
+    const screenForType = {
+      'laiquhui':    'lqh',
+      'identity':    'id',
+      'warmup':      'wu',
+      'partyrun':    'pr',
+      'triage':      'question',
+      'sixseven':    'sixseven',
+      'mochi-mash':  'question',
+      'color-splash':'cs-walk',
+      'color-clash': 'cc-play',
+      'market-quest':'mq-play',
+      'flappy':      'fl-play',
+      'pinata':      'pinata-smash',
+      'dragon-eye':  'dragon-flap',
+      'monopoly':    'monopoly-roll',
+      'zombie':      'zombie-sprint',
+      'family':      'family-place',
+      'conquest':    'cq-order',
+    };
+    const target = screenForType[gt];
+    if (target) showScreen(target);
   }
 
   function enterLobby() {
@@ -1577,6 +1617,12 @@
   });
   socket.on('id:round', (data) => {
     if (gameType !== 'identity') return;
+    // Force-route to the identity screen — handles late-join where the
+    // player was previously stuck on (e.g.) the triage doctor banner.
+    if (document.getElementById('screen-id') &&
+        document.getElementById('screen-id').classList.contains('hidden')) {
+      showScreen('id');
+    }
     idCurrentRound = data;
     // HUD update
     if ($('id-score')) $('id-score').textContent = data.score || 0;
@@ -1906,6 +1952,9 @@
     prRenderHud();
     prRenderMiniBoard();
     document.body.classList.add('gametype-partyrun');
+    // Force the partyrun screen — handles late-join where the kid was
+    // previously parked on a different game's screen (e.g. triage doctor).
+    showScreen('pr');
   });
   socket.on('pr:question', (q) => {
     prState.pickedThisRound = -1;
@@ -2692,6 +2741,9 @@
     const map = document.getElementById('lqh-map');
     if (map) map.innerHTML = '';
     document.body.classList.add('gametype-laiquhui');
+    // Force-route to LQH screen — fixes late-join leak where the kid was
+    // parked on the previous game's screen (commonly the triage doctor).
+    showScreen('lqh');
   });
   // Pickup picked up by THIS player — flash + score bump
   socket.on('lqh:pickup', (data) => {
@@ -3300,6 +3352,20 @@
     } catch (_) {}
     cprState = null;
   }
+
+  // Server fires this on every late-join to a triage game so the client
+  // can route the kid to the question screen. Avoids them being stuck on
+  // a previous game's screen when they reconnect mid-round.
+  socket.on('tri:late-join', () => {
+    if (gameType !== 'triage') return;
+    // The server will follow up with a `question` event which renders the
+    // question. We just make sure they're on screen-question, not on
+    // some stale screen from a previous game.
+    const qScreen = document.getElementById('screen-question');
+    if (qScreen && qScreen.classList.contains('hidden')) {
+      showScreen('question');
+    }
+  });
 
   // Server confirmation that the patient was treated. Show a tier-matched
   // Rewards toast and return to the question screen — the next question is
