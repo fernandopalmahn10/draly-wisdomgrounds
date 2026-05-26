@@ -2628,6 +2628,85 @@ io.on('connection', (socket) => {
           delegates: Array.from(g.warmup.delegates || []),
         });
       }
+      // === LÁI-QÙ-HUÍ: late-joiner gets the map + their own mission ===
+      // Without this, kids joining a running LQH game stay stuck on the
+      // previous gameType's screen (commonly the triage doctor banner)
+      // because no event ever routes them to screen-lqh.
+      if (g.gameType === 'laiquhui') {
+        if (!g.laiquhui) {
+          // Shouldn't happen since LQH state is created on host:start, but
+          // be defensive.
+          io.to(socket.id).emit('lqh:init', { gridW: LQH_GRID_W, gridH: LQH_GRID_H, locations: LQH_LOCATIONS, pickups: [] });
+        } else {
+          // Seed the player if they're a brand-new joiner
+          if (typeof player.x !== 'number' || typeof player.y !== 'number') {
+            const home = LQH_LOCATIONS.find((l) => l.isHome);
+            player.x = home ? home.x : 1;
+            player.y = home ? home.y : 6;
+            player.missionsDone = 0;
+            player.missionsFailed = 0;
+            player.lqhMission = lqhGenerateMission(player);
+            player.lastDestId = null;
+            player.score = 0;
+          }
+          io.to(socket.id).emit('lqh:init', {
+            gridW: LQH_GRID_W,
+            gridH: LQH_GRID_H,
+            locations: LQH_LOCATIONS,
+            pickups: g.laiquhui.pickups || [],
+          });
+          if (player.lqhMission) {
+            io.to(socket.id).emit('lqh:mission', {
+              mission: player.lqhMission,
+              x: player.x, y: player.y,
+              score: player.score || 0,
+              missionsDone: player.missionsDone || 0,
+              missionsFailed: player.missionsFailed || 0,
+            });
+          }
+        }
+      }
+      // === HÓNGBĀO RUN: late-joiner gets the board + a fresh player slot.
+      // If a question is currently being asked, send that too so they
+      // can participate in the in-progress round instead of waiting. ===
+      if (g.gameType === 'partyrun' && g.partyrun) {
+        // Seed pr state on the new player if needed
+        if (!player.pr) {
+          player.pr = { tile: 0, stars: 0, coins: 0, lastRoll: 0, lastDelta: 0, lastTile: 0 };
+          player.score = 0;
+        }
+        io.to(socket.id).emit('pr:init', {
+          board: g.partyrun.board,
+          starGoal: g.partyrun.starGoal,
+          maxRounds: g.partyrun.maxRounds,
+          players: Object.fromEntries(
+            Object.entries(g.players).map(([id, p]) => [id, {
+              name: p.name, team: p.team, avatar: p.avatar,
+              tile:  (p.pr && p.pr.tile)  || 0,
+              stars: (p.pr && p.pr.stars) || 0,
+              coins: (p.pr && p.pr.coins) || 0,
+            }])
+          ),
+        });
+        // If we're currently in the question phase, also push that question
+        if (g.partyrun.phase === 'question' && g.partyrun.currentQuestion) {
+          io.to(socket.id).emit('pr:question', {
+            round: g.partyrun.round,
+            maxRounds: g.partyrun.maxRounds,
+            text: g.partyrun.currentQuestion.text,
+            choices: g.partyrun.currentQuestion.choices,
+            deadline: g.partyrun.questionDeadline,
+          });
+        }
+      }
+      // === TRIAGE: explicit late-join event so the client can force the
+      // right screen even before a `question` event arrives. ===
+      if (g.gameType === 'triage') {
+        io.to(socket.id).emit('tri:late-join', {
+          // No payload needed — the existence of the event is enough for
+          // the client to call showScreen('question') and clean up.
+        });
+      }
       // === Identity: late-joiner gets their current round (if any). If
       // they're a fresh joiner mid-game and don't yet have round data,
       // seed one so they jump straight in. ===
