@@ -2126,6 +2126,10 @@
   let rdLanguage = 'pinyin';
   let rdCurious = false;
   let rdStoryId = null;
+  let rdTestQIdx = -1;          // current qIdx, -1 when no test
+  let rdTestLockedQIdx = -1;    // qIdx the player has already locked an answer for
+  let rdTestTimerInt = null;
+  let rdTestDeadline = 0;
   socket.on('rd:state', (state) => {
     if (gameType !== 'reading' || !state) return;
     // Story changed? Replace the local story snapshot and re-render.
@@ -2170,6 +2174,8 @@
       if (wrap) wrap.classList.toggle('curious-on', rdCurious);
       if (!rdCurious && typeof hideWuPokedex === 'function') hideWuPokedex();
     }
+    // 📝 Test mode — show/hide the overlay + render the current question.
+    rdHandleTestState(state.test);
     rdServerPlayStartedAt = state.playStartedAt || 0;
     rdServerAudioPosMs = state.audioPosMs || 0;
     const wantPlay = !!state.isPlaying;
@@ -2349,6 +2355,131 @@
     if (audio && rdIsPlaying && audio.paused) {
       audio.play().catch(() => {});
       rdStartHighlight();
+    }
+  });
+
+  // === 📝 TEST MODE (player) ===
+  // Driven by the state.test field on rd:state. Open the overlay when a
+  // test is running; render the current question's choices; on tap emit
+  // player:rd-test-answer with the picked index. Server fires rd:test-ack
+  // back so we can lock in the chosen choice.
+  function rdHandleTestState(test) {
+    const overlay = $('rd-test-player');
+    if (!test || !test.active) {
+      // No active test
+      if (overlay) overlay.classList.add('hidden');
+      rdTestQIdx = -1;
+      if (rdTestTimerInt) { clearInterval(rdTestTimerInt); rdTestTimerInt = null; }
+      // Pause audio so it doesn't fight the (now hidden) test
+      // (handled by server — it pauses on startTest)
+      return;
+    }
+    // Active test — show overlay, render question
+    if (overlay) overlay.classList.remove('hidden');
+    // Hide any leftover result reveal
+    const resWrap = $('rd-test-result');
+    if (resWrap) resWrap.classList.add('hidden');
+    // If qIdx changed, re-render choices and clear "locked"
+    if (test.qIdx !== rdTestQIdx) {
+      rdTestQIdx = test.qIdx;
+      $('rd-test-qnow').textContent = (test.qIdx + 1);
+      $('rd-test-qtotal').textContent = test.total;
+      if (test.question) {
+        $('rd-test-q').textContent = test.question.q;
+        const wrap = $('rd-test-choices');
+        wrap.innerHTML = '';
+        (test.question.choices || []).forEach((c, i) => {
+          const btn = document.createElement('button');
+          btn.className = 'rd-test-choice';
+          btn.type = 'button';
+          btn.innerHTML = `<span class="rd-test-choice-letter">${String.fromCharCode(65 + i)}</span> ${rdEscapeHtml(c)}`;
+          btn.onclick = () => {
+            if (rdTestLockedQIdx === rdTestQIdx) return;   // already answered
+            try { socket.emit('player:rd-test-answer', { pin, qIdx: rdTestQIdx, answerIdx: i }); } catch (_) {}
+          };
+          wrap.appendChild(btn);
+        });
+      }
+      const locked = $('rd-test-locked');
+      if (locked) locked.classList.add('hidden');
+    }
+    // Per-question countdown
+    rdTestDeadline = test.deadline || 0;
+    if (rdTestTimerInt) clearInterval(rdTestTimerInt);
+    rdTestTimerInt = setInterval(() => {
+      const remaining = Math.max(0, rdTestDeadline - Date.now());
+      const t = $('rd-test-timer');
+      if (t) t.textContent = Math.ceil(remaining / 1000) + 's';
+      if (remaining <= 0) clearInterval(rdTestTimerInt);
+    }, 200);
+  }
+  function rdEscapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  socket.on('rd:test-ack', (data) => {
+    if (typeof data.qIdx !== 'number') return;
+    rdTestLockedQIdx = data.qIdx;
+    document.querySelectorAll('#rd-test-choices .rd-test-choice').forEach((b, i) => {
+      b.classList.toggle('locked', i === data.answerIdx);
+      b.disabled = true;
+    });
+    const locked = $('rd-test-locked');
+    if (locked) locked.classList.remove('hidden');
+    if (MochiSounds.tap) MochiSounds.tap();
+  });
+  socket.on('rd:test-results', (data) => {
+    // Find MY entry and show the score reveal
+    const me = (data.results || []).find((r) => r.id === socket.id);
+    if (!me) return;
+    // Hide the test-in-progress overlay
+    const overlay = $('rd-test-player');
+    if (overlay) overlay.classList.add('hidden');
+    rdTestQIdx = -1;
+    rdTestLockedQIdx = -1;
+    if (rdTestTimerInt) { clearInterval(rdTestTimerInt); rdTestTimerInt = null; }
+    // Show the result-reveal screen
+    const resWrap = $('rd-test-result');
+    if (!resWrap) return;
+    resWrap.classList.remove('hidden');
+    const score = me.score || 0;
+    const cert = score === 100 ? { emoji: '🏅', text: '¡PERFECTO!' }
+              : score >=  80 ? { emoji: '⭐', text: '¡Excelente!' }
+              : score >=  60 ? { emoji: '👍', text: '¡Bien hecho!' }
+              : score >=  40 ? { emoji: '📚', text: 'Sigue practicando' }
+              :                { emoji: '💪', text: '¡A repasar el cuento!' };
+    $('rd-test-result-emoji').textContent = cert.emoji;
+    $('rd-test-result-cert').textContent = cert.text;
+    // Animate the score number counting up
+    const numEl = $('rd-test-result-num');
+    let cur = 0;
+    const step = Math.max(1, Math.round(score / 30));
+    const tick = () => {
+      cur += step;
+      if (cur >= score) { cur = score; numEl.textContent = cur; if (MochiSounds.winFanfare) MochiSounds.winFanfare(); return; }
+      numEl.textContent = cur;
+      setTimeout(tick, 30);
+    };
+    numEl.textContent = '0';
+    setTimeout(tick, 200);
+    // Per-question breakdown
+    const bk = $('rd-test-result-breakdown');
+    bk.innerHTML = '';
+    (me.breakdown || []).forEach((b, i) => {
+      const row = document.createElement('div');
+      row.className = 'rd-test-bk-row ' + (b.gotRight ? 'ok' : 'no');
+      row.innerHTML = `
+        <span class="rd-test-bk-num">${i + 1}.</span>
+        <span class="rd-test-bk-q">${rdEscapeHtml(b.q)}</span>
+        <span class="rd-test-bk-verdict">${b.gotRight ? '✓' : '✕'}</span>
+        <span class="rd-test-bk-ans">${rdEscapeHtml(b.correctText)}</span>`;
+      bk.appendChild(row);
+    });
+  });
+  // Close button on the result reveal
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'rd-test-result-close') {
+      const resWrap = $('rd-test-result');
+      if (resWrap) resWrap.classList.add('hidden');
     }
   });
 
