@@ -388,6 +388,7 @@
       'identity':    'id',
       'warmup':      'wu',
       'partyrun':    'pr',
+      'reading':     'rd',
       'triage':      'question',
       'sixseven':    'sixseven',
       'mochi-mash':  'question',
@@ -1103,6 +1104,10 @@
     // === HÓNGBĀO RUN: jump to the partyrun board screen ===
     if (gameType === 'partyrun') {
       setTimeout(() => showScreen('pr'), 1000);
+    }
+    // === READING: jump to the reading-mirror screen ===
+    if (gameType === 'reading') {
+      setTimeout(() => showScreen('rd'), 800);
     }
     // === WARM-UP: jump to the read-only sentence-mirror screen ===
     if (gameType === 'warmup') {
@@ -2105,6 +2110,163 @@
       wrap.appendChild(cell);
     });
   }
+
+  // ===========================================================================
+  // 📖 READING · cuento HSK1 sincronizado, audio + karaoke highlight
+  // ===========================================================================
+  // Per-game state. Server drives, this client mirrors.
+  let rdStory = null;        // { title, subtitle, pages[] }
+  let rdCurrentPageIdx = -1;
+  let rdIsPlaying = false;
+  let rdServerPlayStartedAt = 0;
+  let rdServerAudioPosMs = 0;
+  let rdServerOffsetMs = 0;
+  let rdHighlightRafId = null;
+  socket.on('rd:state', (state) => {
+    if (gameType !== 'reading' || !state) return;
+    if (state.pages && !rdStory) {
+      rdStory = { title: state.title, subtitle: state.subtitle, pages: state.pages };
+      if ($('rd-player-page-max')) $('rd-player-page-max').textContent = rdStory.pages.length;
+    }
+    // Force the reading screen — late-join safety
+    if ($('screen-rd') && $('screen-rd').classList.contains('hidden')) {
+      showScreen('rd');
+    }
+    if (typeof state.serverNow === 'number') {
+      rdServerOffsetMs = Date.now() - state.serverNow;
+    }
+    if (typeof state.currentPage === 'number' && state.currentPage !== rdCurrentPageIdx) {
+      rdCurrentPageIdx = state.currentPage;
+      rdRenderPage();
+    } else if (!$('rd-player-sentences') || !$('rd-player-sentences').firstChild) {
+      rdRenderPage();
+    }
+    rdServerPlayStartedAt = state.playStartedAt || 0;
+    rdServerAudioPosMs = state.audioPosMs || 0;
+    const wantPlay = !!state.isPlaying;
+    rdSyncAudio(wantPlay);
+    rdIsPlaying = wantPlay;
+    const lbl = $('rd-pulse-label');
+    if (lbl) lbl.textContent = wantPlay ? 'Escuchando…' : 'En pausa';
+  });
+
+  function rdRenderPage() {
+    if (!rdStory) return;
+    const page = rdStory.pages[rdCurrentPageIdx];
+    if (!page) return;
+    if ($('rd-player-page-now')) $('rd-player-page-now').textContent = (rdCurrentPageIdx + 1);
+    // Image
+    const imgWrap = $('rd-player-page-image');
+    if (imgWrap) {
+      imgWrap.innerHTML = `
+        <img class="rd-player-img" src="${page.imageUrl}" alt="Página ${page.pageNum}"
+             onerror="this.style.display='none'; this.parentNode.classList.add('no-image');">
+        <span class="rd-player-image-placeholder">📷 Esperando imagen</span>`;
+      imgWrap.classList.remove('no-image');
+    }
+    // Caption
+    if ($('rd-player-caption')) $('rd-player-caption').textContent = page.caption || '';
+    // Sentences
+    rdRenderSentences(page);
+    // Audio src
+    const audio = $('rd-player-audio');
+    if (audio) {
+      audio.src = page.audioUrl;
+      audio.currentTime = 0;
+      audio.onerror = () => {
+        const lbl = $('rd-pulse-label');
+        if (lbl) lbl.textContent = '🎵 Audio no disponible';
+      };
+    }
+  }
+  function rdRenderSentences(page) {
+    const wrap = $('rd-player-sentences');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    const sentences = {};
+    (page.words || []).forEach((w, idx) => {
+      if (!sentences[w.sentenceIdx]) sentences[w.sentenceIdx] = [];
+      sentences[w.sentenceIdx].push({ ...w, idx });
+    });
+    Object.keys(sentences).sort((a, b) => +a - +b).forEach((sIdx) => {
+      const line = document.createElement('div');
+      line.className = 'rd-player-sentence';
+      sentences[sIdx].forEach((w) => {
+        const span = document.createElement('span');
+        span.className = 'rd-player-word';
+        span.dataset.start = w.startMs;
+        span.dataset.end = w.endMs;
+        span.dataset.idx = w.idx;
+        span.textContent = w.pinyin + ' ';
+        line.appendChild(span);
+      });
+      wrap.appendChild(line);
+    });
+  }
+  function rdComputeTargetPosMs() {
+    if (!rdServerPlayStartedAt) return rdServerAudioPosMs;
+    const nowOnServer = Date.now() - rdServerOffsetMs;
+    return rdServerAudioPosMs + Math.max(0, nowOnServer - rdServerPlayStartedAt);
+  }
+  function rdSyncAudio(wantPlay) {
+    const audio = $('rd-player-audio');
+    if (!audio) return;
+    const targetSec = rdComputeTargetPosMs() / 1000;
+    if (Math.abs((audio.currentTime || 0) - targetSec) > 0.4) {
+      try { audio.currentTime = targetSec; } catch (_) {}
+    }
+    if (wantPlay && audio.paused) {
+      const p = audio.play();
+      if (p && p.catch) p.catch(() => {
+        // Autoplay blocked — show a hint banner. iOS Safari needs the
+        // first user gesture before audio can fire.
+        const lbl = $('rd-pulse-label');
+        if (lbl) lbl.textContent = '👆 Toca la pantalla para escuchar';
+      });
+      rdStartHighlight();
+    } else if (!wantPlay && !audio.paused) {
+      audio.pause();
+      rdStopHighlight();
+    } else if (wantPlay) {
+      rdStartHighlight();
+    }
+  }
+  function rdStartHighlight() {
+    if (rdHighlightRafId) return;
+    const audio = $('rd-player-audio');
+    const tick = () => {
+      if (!audio) return;
+      const tMs = (audio.currentTime || 0) * 1000;
+      const spans = document.querySelectorAll('#rd-player-sentences .rd-player-word');
+      let activeIdx = -1;
+      spans.forEach((s) => {
+        const start = +s.dataset.start;
+        const end = +s.dataset.end;
+        if (tMs >= start && tMs < end) activeIdx = +s.dataset.idx;
+      });
+      spans.forEach((s) => {
+        s.classList.toggle('active', +s.dataset.idx === activeIdx);
+      });
+      if (audio.ended || audio.paused) {
+        rdStopHighlight();
+        return;
+      }
+      rdHighlightRafId = requestAnimationFrame(tick);
+    };
+    rdHighlightRafId = requestAnimationFrame(tick);
+  }
+  function rdStopHighlight() {
+    if (rdHighlightRafId) cancelAnimationFrame(rdHighlightRafId);
+    rdHighlightRafId = null;
+  }
+  // Tap-to-unlock-audio fallback for iOS Safari autoplay blocking
+  document.addEventListener('click', () => {
+    const audio = document.getElementById('rd-player-audio');
+    if (audio && rdIsPlaying && audio.paused) {
+      audio.play().catch(() => {});
+      rdStartHighlight();
+    }
+  });
 
   // ===========================================================================
   // WARM-UP · read-only sentence mirror (teacher drives, player phone watches)
@@ -7041,7 +7203,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'lqh', 'wu', 'id', 'pr', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'lqh', 'wu', 'id', 'pr', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

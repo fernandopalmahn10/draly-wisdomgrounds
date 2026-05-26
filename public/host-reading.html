@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>📖 Lectura · Cuento HSK1 · Host</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/dralingo.css">
+  <link rel="stylesheet" href="/css/reading.css?v=20260525a">
+</head>
+<body class="rd-bg">
+  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+
+  <!-- ADMIN GATE — same maestro password as warmup -->
+  <div id="screen-admin-gate" class="container rd-gate">
+    <div class="rd-gate-card">
+      <div class="rd-gate-icon">📖</div>
+      <h1 class="rd-gate-title">Modo Lectura</h1>
+      <p class="rd-gate-sub">Ingresa la contraseña para abrir el libro.</p>
+      <input class="input rd-gate-input" id="admin-pw" type="password" placeholder="contraseña" autocomplete="off">
+      <button class="btn btn-jade btn-xl" id="admin-ok">Entrar →</button>
+      <p id="admin-err" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em;"></p>
+    </div>
+  </div>
+
+  <!-- LOBBY: PIN + join URL + roster -->
+  <div id="screen-lobby" class="container hidden">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div class="market-banner">📖 Lectura · 阅读 · Cuento HSK1</div>
+      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
+      <div class="pin-display" id="pin-display">····</div>
+      <div style="color:var(--ink-dim); font-size:0.9rem;">
+        Tus alumnos entran en <span id="join-url" style="color:var(--gold-glow); font-weight:800;">esta URL</span>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">📖 Cómo se usa</div>
+      <ol style="color:var(--ink-dim); font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
+        <li>Espera a que tus alumnos se unan con el PIN.</li>
+        <li>Pulsa <strong>Abrir libro</strong> — todos verán la primera página.</li>
+        <li>Pulsa <strong>▶ Reproducir</strong> para iniciar el audio y la lectura sincronizada.</li>
+        <li>Cada palabra se ilumina cuando el narrador la dice. Solo pinyin — sin caracteres chinos.</li>
+        <li><strong>← Atrás</strong> / <strong>Siguiente →</strong> cambian la página para todos.</li>
+        <li>Si pausas, los teléfonos también pausan al instante.</li>
+      </ol>
+    </div>
+    <div class="host-grid">
+      <div class="team-panel team-red" style="grid-column: 1 / -1;">
+        <div class="team-header">
+          <div class="team-mascot">📚</div>
+          <div>
+            <div class="team-name">Estudiantes</div>
+            <div style="color:var(--ink-dim); font-size:0.85rem;">学生</div>
+          </div>
+        </div>
+        <div class="player-chips" id="players-red"></div>
+      </div>
+    </div>
+    <div class="controls-panel">
+      <div class="controls-row" style="justify-content:center;">
+        <button class="btn btn-jade btn-xl" id="start-btn">📖 Abrir libro</button>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px; font-size:0.9rem; line-height:1.5;">
+      <div style="font-weight:800; margin-bottom:6px;">📂 Cómo poner tus imágenes y audios</div>
+      <p style="color:var(--ink-dim); margin:0;">
+        Copia los archivos a <code style="background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:4px;">public/assets/reading/</code> con estos nombres exactos:
+      </p>
+      <ul style="color:var(--ink-dim); padding-left:20px; margin:8px 0 0; line-height:1.7;">
+        <li><code>page-1.png</code> · <code>page-1.mp3</code></li>
+        <li><code>page-2.png</code> · <code>page-2.mp3</code></li>
+        <li>… hasta <code>page-7</code></li>
+      </ul>
+      <p style="color:var(--ink-dim); margin:10px 0 0;">
+        Si falta algún archivo, la página sigue funcionando — solo verás un marcador en lugar de la imagen, y los controles de audio quedarán deshabilitados.
+      </p>
+    </div>
+  </div>
+
+  <!-- ACTIVE: the actual reader -->
+  <div id="screen-active" class="hidden rd-active">
+    <div class="rd-active-top">
+      <div class="rd-active-meta">
+        <span class="rd-active-label">📖 Lectura</span>
+        <span class="rd-active-pin">PIN <strong id="active-pin">····</strong></span>
+        <span class="rd-active-page">Página <strong id="rd-page-now">1</strong> / <span id="rd-page-max">7</span></span>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="exit-btn">🛑 Salir</button>
+    </div>
+
+    <!-- Page hero — big image + caption -->
+    <div class="rd-page">
+      <div class="rd-page-image" id="rd-page-image">
+        <span class="rd-image-placeholder" id="rd-image-placeholder">📷 Coloca <code>page-1.png</code></span>
+      </div>
+      <div class="rd-page-caption" id="rd-page-caption">…</div>
+      <!-- Sentences with word-by-word karaoke spans -->
+      <div class="rd-sentences" id="rd-sentences"></div>
+    </div>
+
+    <!-- Audio + transport controls -->
+    <div class="rd-transport">
+      <button class="rd-btn-prev" id="rd-btn-prev" type="button" aria-label="Página anterior">⬅</button>
+      <button class="rd-btn-playpause" id="rd-btn-playpause" type="button">▶ Reproducir</button>
+      <button class="rd-btn-restart" id="rd-btn-restart" type="button" aria-label="Reiniciar audio">⟲</button>
+      <button class="rd-btn-next" id="rd-btn-next" type="button" aria-label="Página siguiente">➡</button>
+      <div class="rd-audio-bar"><div class="rd-audio-bar-fill" id="rd-audio-bar-fill"></div></div>
+      <span class="rd-audio-time"><span id="rd-audio-now">0:00</span> / <span id="rd-audio-total">0:00</span></span>
+    </div>
+    <!-- Master audio element — host plays this. Sync to clients via state. -->
+    <audio id="rd-audio" preload="auto" style="display:none"></audio>
+    <p class="rd-audio-missing hidden" id="rd-audio-missing">
+      🎵 No se encontró el audio de esta página. Coloca <code id="rd-audio-missing-name">page-1.mp3</code> en <code>public/assets/reading/</code>.
+    </p>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js?v=20260524n"></script>
+  <script src="/js/enter.js"></script>
+  <script src="/js/host-reading.js?v=20260525a"></script>
+</body>
+</html>
