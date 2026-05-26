@@ -2212,6 +2212,29 @@
         const lbl = $('rd-pulse-label');
         if (lbl) lbl.textContent = '🎵 Audio no disponible';
       };
+      // === Auto-time karaoke ===
+      // The story file declares audioDurationMs as a best-guess. When the
+      // actual MP3 loads, we know the REAL duration from audio.duration.
+      // If they differ by more than 200ms, scale every word's start/end
+      // timestamp so the highlight matches the real narration pace. The
+      // teacher doesn't have to manually tune audioDurationMs per page.
+      audio.onloadedmetadata = () => {
+        const realMs = (audio.duration || 0) * 1000;
+        const declaredMs = page.audioDurationMs || realMs;
+        if (realMs > 200 && declaredMs > 0 && Math.abs(realMs - declaredMs) > 200) {
+          const scale = realMs / declaredMs;
+          (page.words || []).forEach((w) => {
+            w.startMs = Math.round(w.startMs * scale);
+            w.endMs   = Math.round(w.endMs   * scale);
+          });
+          (page.sentenceRanges || []).forEach((r) => {
+            r.startMs = Math.round(r.startMs * scale);
+            r.endMs   = Math.round(r.endMs   * scale);
+          });
+          // Re-render so the new data-start/data-end attributes apply
+          rdRenderSentences(page);
+        }
+      };
     }
   }
   function rdRenderSentences(page) {

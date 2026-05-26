@@ -42,34 +42,41 @@ const STORIES = {
     title: 'Xiǎo Míng de yī tiān',
     subtitle: 'Un día con Xiǎo Míng',
     // === Test bank ===
-    // Exactly 5 multiple-choice questions, each worth 20 points (100 total).
-    // Pulled from vocabulary that appears in this story so kids are tested
-    // on what they just read + heard. Teacher can edit freely. `correctIdx`
-    // is the index (0-3) of the right answer in `choices`.
+    // 5 multiple-choice questions, each worth 20 points (100 total).
+    // Questions are tied to EVENTS in the story — kids who actually
+    // read/listened can answer; kids who didn't can't guess. Pinyin and
+    // Spanish are intentionally mixed: some questions use pinyin in the
+    // stem with Spanish choices, some use Spanish stems with pinyin
+    // choices, so the test trains BOTH directions. HSK1 vocab only.
     questions: [
       {
-        q: '¿Qué significa "lǎoshī"?',
-        choices: ['maestra', 'amiga', 'mamá', 'hermana'],
+        // Story fact: "Wǒ jiā yǒu sì gè rén" (page 1)
+        q: '¿Cuántas personas viven en la casa de Xiǎo Míng?',
+        choices: ['Sì (4)', 'Sān (3)', 'Wǔ (5)', 'Liù (6)'],
         correctIdx: 0,
       },
       {
-        q: '¿Qué significa "mǐfàn"?',
-        choices: ['arroz', 'agua', 'té', 'manzana'],
+        // Story fact: "Bàba kàn diànshì" (page 2)
+        q: 'En la mañana, ¿qué hace bàba?',
+        choices: ['kàn diànshì', 'chī mǐfàn', 'qù xuéxiào', 'shuìjiào'],
         correctIdx: 0,
       },
       {
-        q: '¿Qué número es "sì"?',
-        choices: ['4', '3', '5', '6'],
+        // Story fact: "Wǒ qù xuéxiào" (page 3) — completion in pinyin
+        q: '"Wǒ qù ___" — completa como en el cuento:',
+        choices: ['xuéxiào (escuela)', 'shāngdiàn (tienda)', 'yīyuàn (hospital)', 'jiā (casa)'],
         correctIdx: 0,
       },
       {
-        q: '¿Qué significa "xuéxiào"?',
-        choices: ['escuela', 'hospital', 'tienda', 'casa'],
+        // Story fact: "Wǒ chī fàn, hē chá" (page 5)
+        q: 'En el almuerzo, Xiǎo Míng bebe…',
+        choices: ['chá (té)', 'shuǐ (agua)', 'kāfēi (café)', 'niúnǎi (leche)'],
         correctIdx: 0,
       },
       {
-        q: '¿Qué significa "péngyou"?',
-        choices: ['amigo', 'hermano', 'maestro', 'papá'],
+        // Story fact: "Tiānqì hěn rè" (page 6) — Spanish question, pinyin answer
+        q: 'Por la tarde, ¿cómo está el tiempo?',
+        choices: ['Hěn rè (caluroso)', 'Hěn lěng (frío)', 'Xiàyǔ (lluvia)', 'Xià xuě (nieve)'],
         correctIdx: 0,
       },
     ],
