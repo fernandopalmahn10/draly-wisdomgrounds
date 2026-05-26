@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/reading.css?v=20260525b">
+  <link rel="stylesheet" href="/css/reading.css?v=20260525c">
 </head>
 <body class="rd-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -111,8 +111,14 @@
     <!-- Language toggle — switches text on ALL phones (image + Chinese audio stay) -->
     <div class="rd-lang-row">
       <button class="rd-lang-btn" id="rd-lang-btn" type="button">🌐 Cambiar a Español</button>
-      <span class="rd-lang-hint">El audio y la imagen no cambian — solo el texto.</span>
+      <button class="rd-curious-btn" id="rd-curious-btn" type="button">🔍 Activar Modo Curioso</button>
+      <select class="rd-story-select" id="rd-story-select" aria-label="Cambiar cuento"></select>
     </div>
+    <p class="rd-options-hint">
+      🌐 Cambia el texto a Español (audio y imagen siguen igual) ·
+      🔍 Modo Curioso = los alumnos pueden tocar una palabra para ver su definición ·
+      📚 Cambia el cuento desde el desplegable.
+    </p>
     <!-- Master audio element — host plays this. Sync to clients via state. -->
     <audio id="rd-audio" preload="auto" style="display:none"></audio>
     <p class="rd-audio-missing hidden" id="rd-audio-missing">
@@ -123,6 +129,6 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524n"></script>
   <script src="/js/enter.js"></script>
-  <script src="/js/host-reading.js?v=20260525b"></script>
+  <script src="/js/host-reading.js?v=20260525c"></script>
 </body>
 </html>

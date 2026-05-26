@@ -14,6 +14,9 @@
   let serverOffsetMs      = 0;  // (clientNow - serverNow) — drift adjustment
   let highlightRafId      = null;
   let currentLanguage     = 'pinyin';   // 'pinyin' | 'es'
+  let currentCurious      = false;
+  let currentStoryId      = null;
+  let storyListRendered   = false;
 
   const $ = (id) => document.getElementById(id);
   $('mute-btn').addEventListener('click', () => {
@@ -80,6 +83,19 @@
     const nextLang = currentLanguage === 'pinyin' ? 'es' : 'pinyin';
     socket.emit('rd:setLanguage', { pin, password: adminPw, language: nextLang });
   });
+  // Modo Curioso toggle — kids can tap a word to see its dictionary card.
+  // Same admin gate as the warmup version; data comes from warmup-vocab.js.
+  $('rd-curious-btn').addEventListener('click', () => {
+    socket.emit('rd:setCurious', { pin, password: adminPw, curious: !currentCurious });
+  });
+  // Story picker — switch to a different built-in story. Audio + image
+  // paths re-derive automatically from /assets/reading/<storyId>/...
+  $('rd-story-select').addEventListener('change', (e) => {
+    const newId = e.target.value;
+    if (newId && newId !== currentStoryId) {
+      socket.emit('rd:setStory', { pin, password: adminPw, storyId: newId });
+    }
+  });
 
   // === Roster ===
   socket.on('state', (s) => {
@@ -98,11 +114,32 @@
     if (!state) return;
     // Show active screen if not already
     if ($('screen-active').classList.contains('hidden')) showScreen('active');
-    // First-time setup of the story payload
-    if (state.pages && !story) {
+    // Story changed (different storyId)? Replace local copy + re-render
+    if (state.storyId && state.storyId !== currentStoryId) {
+      currentStoryId = state.storyId;
+      story = { title: state.title, subtitle: state.subtitle, pages: state.pages };
+      currentPageIdx = -1;  // force render below
+      $('rd-page-max').textContent = story.pages.length;
+    } else if (state.pages && !story) {
       story = { title: state.title, subtitle: state.subtitle, pages: state.pages };
       $('rd-page-max').textContent = story.pages.length;
+      currentStoryId = state.storyId;
     }
+    // Populate the story dropdown once
+    if (!storyListRendered && state.storyList) {
+      const sel = $('rd-story-select');
+      sel.innerHTML = '';
+      (state.storyList || []).forEach((s) => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = `📚 ${s.title} (${s.pageCount}p)`;
+        sel.appendChild(opt);
+      });
+      sel.value = currentStoryId || state.storyId || '';
+      storyListRendered = true;
+    }
+    // Keep the dropdown in sync if story switched via another route
+    if (state.storyId) $('rd-story-select').value = state.storyId;
     // Compute server-vs-client drift so playback math survives latency
     if (typeof state.serverNow === 'number') {
       serverOffsetMs = Date.now() - state.serverNow;
@@ -128,6 +165,19 @@
           ? '🌐 Cambiar a Español'
           : '🌐 Volver al Pinyin';
         langBtn.classList.toggle('rd-lang-btn-es', currentLanguage === 'es');
+      }
+    }
+    // Curious mode UI on host — just update the button label/style.
+    // (The actual taps happen on the students' phones.)
+    const newCurious = !!state.curious;
+    if (newCurious !== currentCurious) {
+      currentCurious = newCurious;
+      const cBtn = $('rd-curious-btn');
+      if (cBtn) {
+        cBtn.textContent = currentCurious
+          ? '🔍 Apagar Modo Curioso'
+          : '🔍 Activar Modo Curioso';
+        cBtn.classList.toggle('rd-curious-btn-on', currentCurious);
       }
     }
     // Apply play/pause + audio position

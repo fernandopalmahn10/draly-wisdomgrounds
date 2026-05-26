@@ -2124,9 +2124,17 @@
   let rdServerOffsetMs = 0;
   let rdHighlightRafId = null;
   let rdLanguage = 'pinyin';
+  let rdCurious = false;
+  let rdStoryId = null;
   socket.on('rd:state', (state) => {
     if (gameType !== 'reading' || !state) return;
-    if (state.pages && !rdStory) {
+    // Story changed? Replace the local story snapshot and re-render.
+    if (state.storyId && state.storyId !== rdStoryId) {
+      rdStoryId = state.storyId;
+      rdStory = { title: state.title, subtitle: state.subtitle, pages: state.pages };
+      rdCurrentPageIdx = -1;  // force re-render below
+      if ($('rd-player-page-max')) $('rd-player-page-max').textContent = rdStory.pages.length;
+    } else if (state.pages && !rdStory) {
       rdStory = { title: state.title, subtitle: state.subtitle, pages: state.pages };
       if ($('rd-player-page-max')) $('rd-player-page-max').textContent = rdStory.pages.length;
     }
@@ -2151,6 +2159,16 @@
       if (rdStory && rdStory.pages[rdCurrentPageIdx]) {
         rdRenderSentences(rdStory.pages[rdCurrentPageIdx]);
       }
+    }
+    // Modo Curioso toggle. When ON, every pinyin word becomes tappable
+    // to open the dictionary card. When OFF, taps do nothing and any
+    // open Pokédex closes immediately.
+    const newCurious = !!state.curious;
+    if (newCurious !== rdCurious) {
+      rdCurious = newCurious;
+      const wrap = $('rd-player-sentences');
+      if (wrap) wrap.classList.toggle('curious-on', rdCurious);
+      if (!rdCurious && typeof hideWuPokedex === 'function') hideWuPokedex();
     }
     rdServerPlayStartedAt = state.playStartedAt || 0;
     rdServerAudioPosMs = state.audioPosMs || 0;
@@ -2226,7 +2244,28 @@
           span.dataset.start = w.startMs;
           span.dataset.end = w.endMs;
           span.dataset.idx = w.idx;
+          span.dataset.pinyin = w.pinyin;
           span.textContent = w.pinyin + ' ';
+          // Modo Curioso: tap to open the dictionary card. Lookup
+          // normalizes the pinyin string (lowercase + strip leading/
+          // trailing punctuation) and finds it in WU_WORD_BY_PINYIN.
+          span.addEventListener('click', () => {
+            if (!rdCurious) return;
+            const dict = window.lookupWuPinyin && window.lookupWuPinyin(w.pinyin);
+            if (dict) {
+              showWuPokedex(dict);
+            } else {
+              // Word isn't in the HSK1 dictionary — show a friendly fallback
+              showWuPokedex({
+                pinyin: w.pinyin,
+                hanzi: '—',
+                es: 'Esta palabra no está en el diccionario HSK1.',
+                icon: '🔍',
+                cat: 'pronoun',
+                exp: 'exp1',
+              });
+            }
+          });
           line.appendChild(span);
         });
         wrap.appendChild(line);
