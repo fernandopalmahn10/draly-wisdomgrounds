@@ -302,6 +302,23 @@
       $('rd-audio-missing').classList.add('hidden');
       const total = audio.duration || (page.audioDurationMs / 1000);
       $('rd-audio-total').textContent = formatTime(total);
+      // Auto-time the karaoke: scale word timestamps to match REAL audio
+      // duration. Keeps the highlight in sync without the teacher having
+      // to hand-tune audioDurationMs in the story file.
+      const realMs = (audio.duration || 0) * 1000;
+      const declaredMs = page.audioDurationMs || realMs;
+      if (realMs > 200 && declaredMs > 0 && Math.abs(realMs - declaredMs) > 200) {
+        const scale = realMs / declaredMs;
+        (page.words || []).forEach((w) => {
+          w.startMs = Math.round(w.startMs * scale);
+          w.endMs   = Math.round(w.endMs   * scale);
+        });
+        (page.sentenceRanges || []).forEach((r) => {
+          r.startMs = Math.round(r.startMs * scale);
+          r.endMs   = Math.round(r.endMs   * scale);
+        });
+        renderSentences(page);
+      }
     };
     $('rd-audio-now').textContent = '0:00';
     $('rd-audio-total').textContent = formatTime(page.audioDurationMs / 1000);

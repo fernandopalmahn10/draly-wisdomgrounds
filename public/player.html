@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="/css/warmup.css?v=20260525g">
   <link rel="stylesheet" href="/css/identity.css?v=20260525a">
   <link rel="stylesheet" href="/css/partyrun.css?v=20260525a">
-  <link rel="stylesheet" href="/css/reading.css?v=20260526b">
+  <link rel="stylesheet" href="/css/reading.css?v=20260526c">
 </head>
 <body>
   <!-- Lantern balloons (red + gold) removed per user request 2026-05-25 —
@@ -698,35 +698,34 @@
       <span class="rd-pulse-dot"></span>
       <span class="rd-pulse-label" id="rd-pulse-label">Esperando…</span>
     </div>
+  </div>
 
-    <!-- 📝 TEST overlay (player) — full-screen takeover while the
-         teacher's test is in progress. Multiple-choice cards, per-question
-         timer, "lock in" feedback, score reveal at the end. -->
-    <div class="rd-test-player hidden" id="rd-test-player">
-      <div class="rd-test-head">
-        <span class="rd-test-tag">📝 Examen</span>
-        <span class="rd-test-prog">Pregunta <strong id="rd-test-qnow">1</strong>/<strong id="rd-test-qtotal">5</strong></span>
-        <span class="rd-test-timer" id="rd-test-timer">22s</span>
-      </div>
-      <div class="rd-test-q" id="rd-test-q">…</div>
-      <div class="rd-test-choices" id="rd-test-choices"></div>
-      <div class="rd-test-locked hidden" id="rd-test-locked">
-        ✓ ¡Respuesta guardada! Esperando la siguiente pregunta…
-      </div>
+  <!-- 📝 TEST overlays — MOVED OUT of #screen-rd so they show even if the
+       player isn't on the reading screen (e.g. lobby on late-join). Both
+       are position:fixed at body level. -->
+  <div class="rd-test-player hidden" id="rd-test-player">
+    <div class="rd-test-head">
+      <span class="rd-test-tag">📝 Examen</span>
+      <span class="rd-test-prog">Pregunta <strong id="rd-test-qnow">1</strong>/<strong id="rd-test-qtotal">5</strong></span>
+      <span class="rd-test-timer" id="rd-test-timer">22s</span>
     </div>
+    <div class="rd-test-q" id="rd-test-q">…</div>
+    <div class="rd-test-choices" id="rd-test-choices"></div>
+    <div class="rd-test-locked hidden" id="rd-test-locked">
+      ✓ ¡Respuesta guardada! Esperando la siguiente pregunta…
+    </div>
+  </div>
 
-    <!-- 📝 TEST result reveal (player) — appears after final question -->
-    <div class="rd-test-result hidden" id="rd-test-result">
-      <div class="rd-test-result-emoji" id="rd-test-result-emoji">🏆</div>
-      <div class="rd-test-result-headline" id="rd-test-result-headline">¡Examen terminado!</div>
-      <div class="rd-test-result-score">
-        <span class="rd-test-result-num" id="rd-test-result-num">0</span>
-        <span class="rd-test-result-of">/ 100 pts</span>
-      </div>
-      <div class="rd-test-result-cert" id="rd-test-result-cert">…</div>
-      <div class="rd-test-result-breakdown" id="rd-test-result-breakdown"></div>
-      <button class="btn btn-jade btn-sm" id="rd-test-result-close" type="button">Volver al cuento</button>
+  <div class="rd-test-result hidden" id="rd-test-result">
+    <div class="rd-test-result-emoji" id="rd-test-result-emoji">🏆</div>
+    <div class="rd-test-result-headline" id="rd-test-result-headline">¡Examen terminado!</div>
+    <div class="rd-test-result-score">
+      <span class="rd-test-result-num" id="rd-test-result-num">0</span>
+      <span class="rd-test-result-of">/ 100 pts</span>
     </div>
+    <div class="rd-test-result-cert" id="rd-test-result-cert">…</div>
+    <div class="rd-test-result-breakdown" id="rd-test-result-breakdown"></div>
+    <button class="btn btn-jade btn-sm" id="rd-test-result-close" type="button">Volver al cuento</button>
   </div>
 
   <!-- 🧧 HÓNGBĀO RUN · per-player vocab + dice + minimap of YOUR position -->
@@ -836,6 +835,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260525c"></script>
-  <script src="/js/player.js?v=20260526b"></script>
+  <script src="/js/player.js?v=20260526c"></script>
 </body>
 </html>
