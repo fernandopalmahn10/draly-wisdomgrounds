@@ -39,8 +39,8 @@
   let ssJumpscareUrl = null;
   function detectSixSevenAsset() {
     const candidates = [
-      '/assets/67-transparent.png',  // bg-removed version — preferred
-      '/assets/67.png',
+      '/assets/png-library/67-transparent.png',  // bg-removed version — preferred
+      '/assets/png-library/67.png',
       '/assets/67.jpg',
       '/assets/sixseven-character.png',
       '/assets/sixseven-character.jpg',
