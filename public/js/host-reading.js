@@ -17,6 +17,7 @@
   let currentCurious      = false;
   let currentStoryId      = null;
   let storyListRendered   = false;
+  let currentPlaybackRate = 1.0;
   let testTimerInt        = null;     // ticks the per-question countdown
   let currentTestQIdx     = -1;       // 0-based; -1 when no test active
 
@@ -77,6 +78,13 @@
       if (window.unlockAudio) window.unlockAudio();
       socket.emit('rd:play', { pin, password: adminPw });
     }
+  });
+  // 🐢 Slow-mo toggle — broadcasts to ALL devices so every phone slows
+  // down together. Karaoke highlight slows automatically because it's
+  // driven by audio.currentTime which respects playbackRate.
+  $('rd-btn-slow').addEventListener('click', () => {
+    const nextRate = currentPlaybackRate === 1.0 ? 0.5 : 1.0;
+    socket.emit('rd:setPlaybackRate', { pin, password: adminPw, rate: nextRate });
   });
   // Language toggle — switch text between pinyin and Spanish. Audio stays
   // Chinese (only the text changes), so kids hear narration in Chinese
@@ -226,6 +234,19 @@
     // Apply play/pause + audio position
     serverPlayStartedAt = state.playStartedAt || 0;
     serverAudioPosMs = state.audioPosMs || 0;
+    // Playback rate (slow-mo) — applied BEFORE syncAudioToServer so the
+    // audio element is set to the right rate before we seek/play it.
+    const newRate = state.playbackRate || 1.0;
+    if (newRate !== currentPlaybackRate) {
+      currentPlaybackRate = newRate;
+      const audio = $('rd-audio');
+      if (audio) audio.playbackRate = newRate;
+      const slowBtn = $('rd-btn-slow');
+      if (slowBtn) {
+        slowBtn.textContent = (newRate === 0.5) ? '🐰 Normal' : '🐢 Slow-mo';
+        slowBtn.classList.toggle('rd-btn-slow-on', newRate === 0.5);
+      }
+    }
     const wantPlay = !!state.isPlaying;
     syncAudioToServer(wantPlay);
     isPlaying = wantPlay;
@@ -392,9 +413,11 @@
   }
   function computeTargetPosMs() {
     if (!isPlayingNow()) return serverAudioPosMs;
-    // Live position = snapshot + elapsed wall time since play started
+    // Audio time advances at playbackRate. So elapsed wall-clock time
+    // * rate = audio time elapsed.
     const nowOnServer = Date.now() - serverOffsetMs;
-    return serverAudioPosMs + Math.max(0, nowOnServer - serverPlayStartedAt);
+    const elapsed = Math.max(0, nowOnServer - serverPlayStartedAt);
+    return serverAudioPosMs + elapsed * (currentPlaybackRate || 1.0);
   }
   function isPlayingNow() {
     return !!(serverPlayStartedAt && serverPlayStartedAt > 0);

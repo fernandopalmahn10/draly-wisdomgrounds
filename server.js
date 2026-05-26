@@ -2285,6 +2285,11 @@ io.on('connection', (socket) => {
           isPlaying: false,
           audioPosMs: 0,
           playStartedAt: 0,
+          // 🐢 Slow-mo. 1.0 = normal speed, 0.5 = half-speed for kids who
+          // need extra time to catch each pinyin word. Per-page audio +
+          // karaoke highlight both slow down together since the highlight
+          // is driven by audio.currentTime which respects playbackRate.
+          playbackRate: 1.0,
           adminSocketId: g.hostId,
         };
         io.to(pin).emit('rd:state', readingBuildStateMsg(g));
@@ -3504,6 +3509,7 @@ io.on('connection', (socket) => {
       isPlaying: !!g.reading.isPlaying,
       audioPosMs: g.reading.audioPosMs || 0,
       playStartedAt: g.reading.playStartedAt || 0,
+      playbackRate: g.reading.playbackRate || 1.0,
       // Test snapshot — null when no test is running. When active includes
       // current question index (without correct answer) so a late-join
       // student still gets the current question.
@@ -3741,17 +3747,37 @@ io.on('connection', (socket) => {
     io.to(pin).emit('rd:state', readingBuildStateMsg(g));
   });
   // Teacher hits pause. Server snapshots the live audio position so the
-  // next play resumes where we left off.
+  // next play resumes where we left off. Audio time advances at
+  // playbackRate, so wall-clock elapsed * rate = real audio elapsed.
   socket.on('rd:pause', ({ pin, password }) => {
     const g = games[pin];
     if (!readingRequireHost(g, socket, password)) return;
     if (!g.reading) return;
     if (g.reading.isPlaying) {
       const elapsed = Date.now() - (g.reading.playStartedAt || Date.now());
-      g.reading.audioPosMs = (g.reading.audioPosMs || 0) + elapsed;
+      const rate = g.reading.playbackRate || 1.0;
+      g.reading.audioPosMs = (g.reading.audioPosMs || 0) + elapsed * rate;
     }
     g.reading.isPlaying = false;
     g.reading.playStartedAt = 0;
+    io.to(pin).emit('rd:state', readingBuildStateMsg(g));
+  });
+  // 🐢 Teacher toggles slow-mo (0.5x) ↔ normal (1.0x). If audio is
+  // currently playing, snapshot position first so the change is seamless.
+  socket.on('rd:setPlaybackRate', ({ pin, password, rate }) => {
+    const g = games[pin];
+    if (!readingRequireHost(g, socket, password)) return;
+    if (!g.reading) return;
+    const newRate = (Number(rate) === 0.5) ? 0.5 : 1.0;
+    if (g.reading.playbackRate === newRate) return;
+    // If playing, snapshot current position using OLD rate, then switch
+    if (g.reading.isPlaying) {
+      const elapsed = Date.now() - (g.reading.playStartedAt || Date.now());
+      const oldRate = g.reading.playbackRate || 1.0;
+      g.reading.audioPosMs = (g.reading.audioPosMs || 0) + elapsed * oldRate;
+      g.reading.playStartedAt = Date.now();   // restart "from now" with new rate
+    }
+    g.reading.playbackRate = newRate;
     io.to(pin).emit('rd:state', readingBuildStateMsg(g));
   });
   // Teacher scrubs the timeline. Pauses if necessary so the seek is exact.

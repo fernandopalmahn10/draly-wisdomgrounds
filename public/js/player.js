@@ -2126,6 +2126,10 @@
   let rdLanguage = 'pinyin';
   let rdCurious = false;
   let rdStoryId = null;
+  let rdPlaybackRate = 1.0;
+  // Track if the student has triggered their personal local replay so we
+  // don't fight the server's pause state — local replay is a one-shot.
+  let rdLocalReplayActive = false;
   let rdTestQIdx = -1;          // current qIdx, -1 when no test
   let rdTestLockedQIdx = -1;    // qIdx the player has already locked an answer for
   let rdTestTimerInt = null;
@@ -2178,6 +2182,17 @@
     rdHandleTestState(state.test);
     rdServerPlayStartedAt = state.playStartedAt || 0;
     rdServerAudioPosMs = state.audioPosMs || 0;
+    // Playback rate (slow-mo). Apply to local audio + reset any local-
+    // replay state so server state stays authoritative.
+    const newRate = state.playbackRate || 1.0;
+    if (newRate !== rdPlaybackRate) {
+      rdPlaybackRate = newRate;
+      const audio = $('rd-player-audio');
+      if (audio) audio.playbackRate = newRate;
+    }
+    // If teacher takes any action (play/pause/seek), cancel any in-progress
+    // local-replay so the kid snaps back to class.
+    rdLocalReplayActive = false;
     const wantPlay = !!state.isPlaying;
     rdSyncAudio(wantPlay);
     rdIsPlaying = wantPlay;
@@ -2208,6 +2223,9 @@
     if (audio) {
       audio.src = page.audioUrl;
       audio.currentTime = 0;
+      // Apply the current playback rate so slow-mo carries over to the
+      // newly loaded page.
+      audio.playbackRate = rdPlaybackRate || 1.0;
       audio.onerror = () => {
         const lbl = $('rd-pulse-label');
         if (lbl) lbl.textContent = '🎵 Audio no disponible';
@@ -2304,11 +2322,16 @@
   function rdComputeTargetPosMs() {
     if (!rdServerPlayStartedAt) return rdServerAudioPosMs;
     const nowOnServer = Date.now() - rdServerOffsetMs;
-    return rdServerAudioPosMs + Math.max(0, nowOnServer - rdServerPlayStartedAt);
+    const elapsed = Math.max(0, nowOnServer - rdServerPlayStartedAt);
+    return rdServerAudioPosMs + elapsed * (rdPlaybackRate || 1.0);
   }
   function rdSyncAudio(wantPlay) {
     const audio = $('rd-player-audio');
     if (!audio) return;
+    // While the student is on a personal local replay, ignore server sync
+    // so we don't snap them out of it. The next server-driven event will
+    // clear rdLocalReplayActive and they snap back to class playback.
+    if (rdLocalReplayActive) return;
     const targetSec = rdComputeTargetPosMs() / 1000;
     if (Math.abs((audio.currentTime || 0) - targetSec) > 0.4) {
       try { audio.currentTime = targetSec; } catch (_) {}
@@ -2380,6 +2403,30 @@
       rdStartHighlight();
     }
   });
+  // 🔁 Local replay — student's personal "play this page again" button.
+  // Doesn't broadcast to the class. Plays the current page audio from
+  // start at the current playback rate. If the teacher hits play/pause/
+  // seek, the local replay is cancelled and the server state wins again.
+  document.addEventListener('click', (e) => {
+    if (!e.target || e.target.id !== 'rd-player-replay-btn') return;
+    const audio = $('rd-player-audio');
+    if (!audio) return;
+    rdLocalReplayActive = true;
+    audio.currentTime = 0;
+    audio.playbackRate = rdPlaybackRate || 1.0;
+    audio.play().catch(() => {
+      // iOS audio unlock: user just tapped, so this should work
+    });
+    rdStartHighlight();
+    const lbl = $('rd-pulse-label');
+    if (lbl) lbl.textContent = '🔁 Tu reproducción';
+    // When the audio finishes naturally, drop the local flag so the next
+    // server sync (or teacher action) can run normally.
+    audio.onended = () => {
+      rdLocalReplayActive = false;
+      if (lbl) lbl.textContent = rdIsPlaying ? 'Escuchando…' : 'En pausa';
+    };
+  });
 
   // === 📝 TEST MODE (player) ===
   // Driven by the state.test field on rd:state. Open the overlay when a
@@ -2416,8 +2463,10 @@
           btn.className = 'rd-test-choice';
           btn.type = 'button';
           btn.innerHTML = `<span class="rd-test-choice-letter">${String.fromCharCode(65 + i)}</span> ${rdEscapeHtml(c)}`;
+          // Always allow re-tapping — students can change their mind any
+          // time until the question advances. Server uses last-write-wins,
+          // and resending the same answerIdx is a no-op.
           btn.onclick = () => {
-            if (rdTestLockedQIdx === rdTestQIdx) return;   // already answered
             try { socket.emit('player:rd-test-answer', { pin, qIdx: rdTestQIdx, answerIdx: i }); } catch (_) {}
           };
           wrap.appendChild(btn);
@@ -2442,12 +2491,19 @@
   socket.on('rd:test-ack', (data) => {
     if (typeof data.qIdx !== 'number') return;
     rdTestLockedQIdx = data.qIdx;
+    // Highlight the picked choice — BUT keep all buttons clickable so
+    // the student can change their mind before the question advances.
     document.querySelectorAll('#rd-test-choices .rd-test-choice').forEach((b, i) => {
       b.classList.toggle('locked', i === data.answerIdx);
-      b.disabled = true;
+      // Don't disable — re-tap to change is allowed
+      b.disabled = false;
     });
     const locked = $('rd-test-locked');
-    if (locked) locked.classList.remove('hidden');
+    if (locked) {
+      locked.classList.remove('hidden');
+      // Reword to reflect the "can change" behavior
+      locked.innerHTML = '✓ Respuesta guardada. <strong>Puedes cambiarla</strong> antes de que pase la siguiente pregunta.';
+    }
     if (MochiSounds.tap) MochiSounds.tap();
   });
   socket.on('rd:test-results', (data) => {
