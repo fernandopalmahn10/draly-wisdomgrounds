@@ -1,0 +1,329 @@
+/* =========================================================================
+   📖 READING — Cuento HSK1 con audio karaoke
+   Cozy book-page vibes: warm cream parchment + jade gold accents.
+   Word highlight glides as the audio plays so the kids hear AND see
+   the pinyin lighting up like karaoke.
+   ========================================================================= */
+body.rd-bg {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 220, 130, 0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 70% at 50% 100%, rgba(120, 80, 40, 0.18) 0%, transparent 70%),
+    linear-gradient(180deg, #1d150a 0%, #14100a 60%, #0a0805 100%);
+  color: #f3e6c2;
+}
+
+/* === Admin gate (same vibes as warmup) === */
+.rd-gate {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100dvh;
+  padding: 24px 12px;
+}
+.rd-gate-card {
+  background: linear-gradient(160deg, rgba(50, 35, 18, 0.95), rgba(28, 20, 10, 0.97));
+  border: 3px solid rgba(255, 213, 122, 0.6);
+  border-radius: 22px;
+  padding: 28px 30px 30px;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 28px rgba(255, 213, 122, 0.18);
+}
+.rd-gate-icon { font-size: 4rem; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5)); }
+.rd-gate-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.8rem;
+  color: #ffe082;
+  margin: 8px 0 4px;
+  letter-spacing: 0.06em;
+}
+.rd-gate-sub { color: rgba(243, 230, 194, 0.7); font-size: 0.95rem; margin-bottom: 16px; }
+.rd-gate-input { width: 100%; margin-bottom: 12px; }
+
+/* === Active reader (host) === */
+.rd-active {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  gap: 12px;
+  max-width: 1000px;
+  margin: 0 auto;
+  font-family: 'Nunito', sans-serif;
+}
+.rd-active-top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  background: rgba(38, 26, 12, 0.85);
+  border: 2px solid rgba(255, 213, 122, 0.45);
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-weight: 900;
+}
+.rd-active-meta { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.rd-active-label { color: #ffe082; }
+.rd-active-pin   { color: rgba(243, 230, 194, 0.75); font-size: 0.9rem; }
+.rd-active-page  { color: #5be8d1; }
+
+.rd-page {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 220, 130, 0.08), transparent 60%),
+    linear-gradient(180deg, rgba(50, 35, 18, 0.9), rgba(28, 20, 10, 0.95));
+  border: 3px solid rgba(255, 213, 122, 0.55);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 28px rgba(255, 213, 122, 0.15);
+}
+.rd-page-image {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(135deg, rgba(255, 213, 122, 0.12), rgba(80, 50, 24, 0.25));
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(255, 213, 122, 0.3);
+}
+.rd-image-img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.rd-image-placeholder {
+  display: none;
+  color: rgba(243, 230, 194, 0.55);
+  font-size: 1rem;
+  font-style: italic;
+  text-align: center;
+  padding: 0 16px;
+}
+.rd-image-placeholder.show { display: block; }
+.rd-image-placeholder code {
+  background: rgba(255, 213, 122, 0.12);
+  border: 1px solid rgba(255, 213, 122, 0.35);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  color: #ffe082;
+}
+.rd-page-caption {
+  margin: 12px 0 6px;
+  color: #ffe082;
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+.rd-sentences {
+  font-size: clamp(1.05rem, 3.4vmin, 1.4rem);
+  line-height: 1.7;
+}
+.rd-sentence {
+  margin: 6px 0;
+  font-weight: 700;
+}
+.rd-word {
+  display: inline-block;
+  padding: 2px 4px;
+  border-radius: 6px;
+  color: rgba(243, 230, 194, 0.78);
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+  will-change: transform;
+}
+.rd-word.active {
+  background: linear-gradient(135deg, rgba(255, 230, 106, 0.85), rgba(255, 180, 60, 0.85));
+  color: #2a1a06;
+  font-weight: 900;
+  transform: translateY(-2px) scale(1.06);
+  box-shadow: 0 4px 14px rgba(255, 230, 106, 0.55);
+  text-shadow: 0 0 8px rgba(255, 230, 106, 0.7);
+}
+
+/* Transport controls */
+.rd-transport {
+  display: grid;
+  grid-template-columns: auto auto auto auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: rgba(38, 26, 12, 0.85);
+  border: 2px solid rgba(255, 213, 122, 0.45);
+  border-radius: 14px;
+  padding: 10px 14px;
+}
+.rd-btn-prev, .rd-btn-next, .rd-btn-restart {
+  background: linear-gradient(180deg, rgba(80, 50, 22, 0.95), rgba(40, 25, 10, 0.95));
+  border: 2px solid rgba(255, 213, 122, 0.5);
+  color: #ffe082;
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 1.1rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.1s, background 0.15s, box-shadow 0.15s;
+}
+.rd-btn-prev:hover, .rd-btn-next:hover, .rd-btn-restart:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(255, 213, 122, 0.35);
+}
+.rd-btn-prev:active, .rd-btn-next:active, .rd-btn-restart:active { transform: scale(0.94); }
+.rd-btn-playpause {
+  background: linear-gradient(180deg, #5be8d1, #2dd4bf);
+  border: 2px solid #5be8d1;
+  color: #003028;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 1.05rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.1s;
+  box-shadow: 0 0 18px rgba(91, 232, 209, 0.55);
+}
+.rd-btn-playpause:hover { transform: translateY(-2px); }
+.rd-btn-playpause:active { transform: scale(0.96); }
+.rd-audio-bar {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 213, 122, 0.4);
+  min-width: 100px;
+}
+.rd-audio-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5be8d1, #ffd57a);
+  transition: width 0.1s linear;
+}
+.rd-audio-time {
+  font-family: 'Cinzel', serif;
+  font-weight: 800;
+  color: rgba(243, 230, 194, 0.85);
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+.rd-audio-missing {
+  margin: 0;
+  padding: 8px 12px;
+  background: rgba(255, 90, 102, 0.15);
+  border: 1px solid rgba(255, 90, 102, 0.5);
+  border-radius: 10px;
+  color: #ffd1d6;
+  font-size: 0.88rem;
+}
+.rd-audio-missing.hidden { display: none; }
+.rd-audio-missing code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  color: #ffe082;
+}
+
+/* ============================================================================
+   PLAYER PHONE — read-only mirror of the teacher's reader.
+   Kids hear their own audio playing locally (so they hear it) but the play/
+   pause/seek is server-driven from the teacher's controls.
+   ============================================================================ */
+.rd-player-screen {
+  display: flex !important;
+  flex-direction: column;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 220, 130, 0.15) 0%, transparent 60%),
+    linear-gradient(180deg, #1d150a 0%, #14100a 60%, #0a0805 100%);
+  color: #f3e6c2;
+  padding: 12px 14px;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  gap: 10px;
+  min-height: 100dvh;
+  font-family: 'Nunito', sans-serif;
+}
+.rd-player-screen.hidden { display: none !important; }
+.rd-player-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 14px;
+  background: rgba(38, 26, 12, 0.85);
+  border: 2px solid rgba(255, 213, 122, 0.45);
+  border-radius: 12px;
+  font-weight: 900;
+}
+.rd-player-tag { color: #ffe082; }
+.rd-player-page { color: #5be8d1; }
+.rd-player-page-image {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 2px dashed rgba(255, 213, 122, 0.4);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(255, 213, 122, 0.10), rgba(80, 50, 24, 0.22));
+}
+.rd-player-img {
+  width: 100%; height: 100%; object-fit: contain; display: block;
+}
+.rd-player-image-placeholder {
+  position: absolute;
+  color: rgba(243, 230, 194, 0.55);
+  font-style: italic;
+  font-size: 0.95rem;
+  display: none;
+}
+.rd-player-page-image.no-image .rd-player-image-placeholder { display: inline; }
+.rd-player-caption {
+  text-align: center;
+  font-weight: 900;
+  color: #ffe082;
+  font-size: 1rem;
+  margin: 2px 0;
+  letter-spacing: 0.03em;
+}
+.rd-player-sentences {
+  background: rgba(38, 26, 12, 0.7);
+  border: 2px solid rgba(255, 213, 122, 0.4);
+  border-radius: 14px;
+  padding: 14px 14px 16px;
+  font-size: clamp(1.05rem, 4.4vmin, 1.4rem);
+  line-height: 1.75;
+}
+.rd-player-sentence { margin: 4px 0; font-weight: 700; }
+.rd-player-word {
+  display: inline-block;
+  padding: 2px 4px;
+  border-radius: 6px;
+  color: rgba(243, 230, 194, 0.75);
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+  will-change: transform;
+}
+.rd-player-word.active {
+  background: linear-gradient(135deg, rgba(255, 230, 106, 0.92), rgba(255, 180, 60, 0.92));
+  color: #2a1a06;
+  font-weight: 900;
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: 0 5px 16px rgba(255, 230, 106, 0.7);
+  text-shadow: 0 0 10px rgba(255, 230, 106, 0.8);
+}
+.rd-player-pulse {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: rgba(38, 26, 12, 0.8);
+  border: 1.5px solid rgba(255, 213, 122, 0.4);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  color: rgba(243, 230, 194, 0.85);
+}
+.rd-pulse-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #5be8d1;
+  box-shadow: 0 0 10px #5be8d1;
+  animation: rd-pulse-blink 1.5s ease-in-out infinite;
+}
+@keyframes rd-pulse-blink {
+  0%, 100% { opacity: 0.3; transform: scale(0.9); }
+  50%      { opacity: 1; transform: scale(1.1); }
+}

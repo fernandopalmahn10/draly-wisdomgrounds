@@ -6,6 +6,7 @@ const Sets = require('./core/sets');
 const Images = require('./core/images');
 const Students = require('./core/student-records');
 const TeacherPresets = require('./core/teacher-presets');
+const ReadingStory = require('./core/reading-story');
 
 const app = express();
 const server = http.createServer(app);
@@ -1837,7 +1838,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage', 'laiquhui', 'warmup', 'identity', 'partyrun'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage', 'laiquhui', 'warmup', 'identity', 'partyrun', 'reading'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -1856,6 +1857,7 @@ io.on('connection', (socket) => {
       type === 'warmup'       ? 3600 :   // 1 hour ceiling; teacher exits manually
       type === 'identity'     ? 180 :    // 3 minutes of detective rounds
       type === 'partyrun'     ? 480 :    // 8 min ceiling; round-cap usually ends sooner
+      type === 'reading'      ? 3600 :   // 1 hour ceiling; teacher controls flow
       60;
     let grid = null;
     let vendors = null;
@@ -2004,7 +2006,7 @@ io.on('connection', (socket) => {
     // a question set picked from the lobby. Triage spawns its own patients,
     // LQH generates missions, Identity rolls suspects, Warmup is a teacher
     // tool, SixSeven generates math on the fly.
-    const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup', 'identity', 'triage', 'partyrun'];
+    const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup', 'identity', 'triage', 'partyrun', 'reading'];
     if (!setlessGameTypes.includes(g.gameType) && !g.questions.length) return;
     if (Object.keys(g.players).length === 0) return;
     g.state = 'countdown';
@@ -2247,6 +2249,29 @@ io.on('connection', (socket) => {
           ),
           teamScores: g.teamScores,
         });
+      }
+      if (g.gameType === 'reading') {
+        // === 📖 READING MODE ===
+        // Teacher-driven story session. Server holds the master playback
+        // state; all student phones mirror in real time. PINYIN ONLY (no
+        // hanzi). Audio + image files live in public/assets/reading/ and
+        // are referenced by URL in the story payload.
+        const payload = ReadingStory.buildStoryPayload();
+        g.reading = {
+          title: payload.title,
+          subtitle: payload.subtitle,
+          pages: payload.pages,
+          currentPage: 0,            // index into pages
+          isPlaying: false,
+          // Audio position in milliseconds at the time isPlaying was last
+          // flipped. When playing, the live position is
+          // audioPosMs + (Date.now() - playStartedAt). When paused, the
+          // live position is just audioPosMs.
+          audioPosMs: 0,
+          playStartedAt: 0,
+          adminSocketId: g.hostId,
+        };
+        io.to(pin).emit('rd:state', readingBuildStateMsg(g));
       }
       if (g.gameType === 'warmup') {
         g.warmup = {
@@ -2617,6 +2642,11 @@ io.on('connection', (socket) => {
 
     // If joining/rejoining mid-game, sync them up
     if (g.state === 'active') {
+      // === READING: send the current page + audio play state so the
+      // late-joining student lands on the correct page with audio in sync. ===
+      if (g.gameType === 'reading' && g.reading) {
+        io.to(socket.id).emit('rd:state', readingBuildStateMsg(g));
+      }
       // === WARM-UP: send the current sentence + view mode + curious flag
       // to the joining socket so they immediately see the teacher's
       // current state (instead of a stale game screen from before). ===
@@ -3440,6 +3470,86 @@ io.on('connection', (socket) => {
   //     (used for add-word, remove-word, clear — the day-to-day sentence ops).
   // Delegates are tracked by PLAYER NAME so they survive reconnects (socket.id
   // changes on rejoin but the name stays).
+  // === 📖 READING MODE — Cuento HSK1 ===
+  // Same admin password as warmup. Teacher = master playback; students
+  // mirror in real time. State message includes everything the client
+  // needs to render the current page + decide whether to play audio.
+  function readingBuildStateMsg(g) {
+    if (!g || !g.reading) return null;
+    return {
+      title: g.reading.title,
+      subtitle: g.reading.subtitle,
+      pages: g.reading.pages,
+      currentPage: g.reading.currentPage || 0,
+      isPlaying: !!g.reading.isPlaying,
+      audioPosMs: g.reading.audioPosMs || 0,
+      // Server timestamp at which playback started so clients can compute
+      // the live audio position. Sent as wall-clock millis since epoch.
+      playStartedAt: g.reading.playStartedAt || 0,
+      // Server's current wall clock so clients can correct for tx latency.
+      serverNow: Date.now(),
+    };
+  }
+  function readingRequireHost(g, socket, password) {
+    if (!g || g.gameType !== 'reading') return false;
+    return g.hostId === socket.id && password === WU_ADMIN_PASSWORD;
+  }
+  socket.on('rd:auth', ({ pin, password }, cb) => {
+    const g = games[pin];
+    const ok = readingRequireHost(g, socket, password);
+    if (typeof cb === 'function') cb({ ok });
+  });
+  // Teacher navigates to a specific page (relative or absolute). Resets
+  // audio position + pauses playback so the new page starts fresh.
+  socket.on('rd:goto', ({ pin, password, page }) => {
+    const g = games[pin];
+    if (!readingRequireHost(g, socket, password)) return;
+    if (!g.reading) return;
+    const max = (g.reading.pages || []).length;
+    const targetPage = Math.max(0, Math.min(max - 1, Number(page) || 0));
+    g.reading.currentPage = targetPage;
+    g.reading.audioPosMs = 0;
+    g.reading.isPlaying = false;
+    g.reading.playStartedAt = 0;
+    io.to(pin).emit('rd:state', readingBuildStateMsg(g));
+  });
+  // Teacher hits play. Server records the wall clock so clients can
+  // align their local audio elements.
+  socket.on('rd:play', ({ pin, password }) => {
+    const g = games[pin];
+    if (!readingRequireHost(g, socket, password)) return;
+    if (!g.reading || g.reading.isPlaying) return;
+    g.reading.isPlaying = true;
+    g.reading.playStartedAt = Date.now();
+    io.to(pin).emit('rd:state', readingBuildStateMsg(g));
+  });
+  // Teacher hits pause. Server snapshots the live audio position so the
+  // next play resumes where we left off.
+  socket.on('rd:pause', ({ pin, password }) => {
+    const g = games[pin];
+    if (!readingRequireHost(g, socket, password)) return;
+    if (!g.reading) return;
+    if (g.reading.isPlaying) {
+      const elapsed = Date.now() - (g.reading.playStartedAt || Date.now());
+      g.reading.audioPosMs = (g.reading.audioPosMs || 0) + elapsed;
+    }
+    g.reading.isPlaying = false;
+    g.reading.playStartedAt = 0;
+    io.to(pin).emit('rd:state', readingBuildStateMsg(g));
+  });
+  // Teacher scrubs the timeline. Pauses if necessary so the seek is exact.
+  socket.on('rd:seek', ({ pin, password, posMs }) => {
+    const g = games[pin];
+    if (!readingRequireHost(g, socket, password)) return;
+    if (!g.reading) return;
+    const max = (g.reading.pages[g.reading.currentPage] || {}).audioDurationMs || 10000;
+    const newPos = Math.max(0, Math.min(max, Number(posMs) || 0));
+    g.reading.audioPosMs = newPos;
+    g.reading.isPlaying = false;
+    g.reading.playStartedAt = 0;
+    io.to(pin).emit('rd:state', readingBuildStateMsg(g));
+  });
+
   function wuRequireHost(g, socket, password) {
     if (!g || g.gameType !== 'warmup') return false;
     return g.hostId === socket.id && password === WU_ADMIN_PASSWORD;

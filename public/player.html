@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="/css/warmup.css?v=20260525g">
   <link rel="stylesheet" href="/css/identity.css?v=20260525a">
   <link rel="stylesheet" href="/css/partyrun.css?v=20260525a">
+  <link rel="stylesheet" href="/css/reading.css?v=20260525a">
 </head>
 <body>
   <!-- Lantern balloons (red + gold) removed per user request 2026-05-25 —
@@ -679,6 +680,26 @@
     <div class="id-feedback hidden" id="id-feedback"></div>
   </div>
 
+  <!-- 📖 READING · cuento HSK1 con audio sincronizado y resaltado de palabras -->
+  <div id="screen-rd" class="hidden player-screen rd-player-screen">
+    <div class="rd-player-top">
+      <span class="rd-player-tag">📖 Lectura</span>
+      <span class="rd-player-page">Pág. <strong id="rd-player-page-now">1</strong>/<span id="rd-player-page-max">7</span></span>
+    </div>
+    <div class="rd-player-page-image" id="rd-player-page-image">
+      <span class="rd-player-image-placeholder">📷 Imagen…</span>
+    </div>
+    <div class="rd-player-caption" id="rd-player-caption">…</div>
+    <div class="rd-player-sentences" id="rd-player-sentences"></div>
+    <!-- Each kid plays their own audio so they actually HEAR it. Audio is
+         driven by the server's play/pause state — they're passive. -->
+    <audio id="rd-player-audio" preload="auto" style="display:none"></audio>
+    <div class="rd-player-pulse" id="rd-player-pulse">
+      <span class="rd-pulse-dot"></span>
+      <span class="rd-pulse-label" id="rd-pulse-label">Esperando…</span>
+    </div>
+  </div>
+
   <!-- 🧧 HÓNGBĀO RUN · per-player vocab + dice + minimap of YOUR position -->
   <div id="screen-pr" class="hidden player-screen pr-screen">
     <div class="pr-hud">
@@ -783,6 +804,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260525c"></script>
-  <script src="/js/player.js?v=20260525i"></script>
+  <script src="/js/player.js?v=20260525j"></script>
 </body>
 </html>

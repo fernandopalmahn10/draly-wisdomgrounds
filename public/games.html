@@ -198,6 +198,30 @@
         <button class="btn btn-red btn-xl game-card-play">▶ ¡A swingear!</button>
       </div>
 
+      <div class="game-card" id="card-reading">
+        <div class="game-card-header">
+          <div class="game-card-emoji">📖</div>
+          <div class="game-card-title-row">
+            <div class="game-card-title">Lectura · Cuento HSK1</div>
+            <div class="game-tile-badge new">¡Nuevo!</div>
+          </div>
+        </div>
+        <div class="game-card-desc">
+          📚 Un libro infantil sincronizado en cada teléfono. El maestro
+          controla la página y el audio; las palabras del pinyin se
+          iluminan como karaoke mientras el narrador lee. Solo pinyin
+          (sin caracteres chinos). Imagen + audio por página — tú los
+          subes a la carpeta. Cuento de 7 páginas con los 150 vocablos HSK1.
+        </div>
+        <div class="game-card-tags">
+          <span class="tag">Lectura</span>
+          <span class="tag">Audio sincronizado</span>
+          <span class="tag">HSK1</span>
+          <span class="tag">Pinyin</span>
+        </div>
+        <button class="btn btn-red btn-xl game-card-play">▶ Abrir libro</button>
+      </div>
+
       <div class="game-card" id="card-partyrun">
         <div class="game-card-header">
           <div class="game-card-emoji">🧧</div>
@@ -431,6 +455,10 @@
       document.querySelector('#card-partyrun .game-card-play').onclick = () => {
         location.href = '/host-partyrun.html';
       };
+      // Reading mode — teacher-driven, no set needed
+      document.querySelector('#card-reading .game-card-play').onclick = () => {
+        location.href = '/host-reading.html';
+      };
     } else {
       document.getElementById('set-name').textContent = 'elige un juego, luego una serie';
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
@@ -488,6 +516,10 @@
       // Hóngbāo Run also skips sets entirely
       document.querySelector('#card-partyrun .game-card-play').onclick = () => {
         location.href = '/host-partyrun.html';
+      };
+      // Reading mode — teacher-driven, no set
+      document.querySelector('#card-reading .game-card-play').onclick = () => {
+        location.href = '/host-reading.html';
       };
     }
 
