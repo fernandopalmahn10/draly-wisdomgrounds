@@ -23,7 +23,7 @@
   <link rel="stylesheet" href="/css/warmup.css?v=20260525g">
   <link rel="stylesheet" href="/css/identity.css?v=20260525a">
   <link rel="stylesheet" href="/css/partyrun.css?v=20260525a">
-  <link rel="stylesheet" href="/css/reading.css?v=20260526c">
+  <link rel="stylesheet" href="/css/reading.css?v=20260526d">
 </head>
 <body>
   <!-- Lantern balloons (red + gold) removed per user request 2026-05-25 —
@@ -694,9 +694,12 @@
     <!-- Each kid plays their own audio so they actually HEAR it. Audio is
          driven by the server's play/pause state — they're passive. -->
     <audio id="rd-player-audio" preload="auto" style="display:none"></audio>
-    <div class="rd-player-pulse" id="rd-player-pulse">
-      <span class="rd-pulse-dot"></span>
-      <span class="rd-pulse-label" id="rd-pulse-label">Esperando…</span>
+    <div class="rd-player-controls">
+      <button class="rd-player-replay-btn" id="rd-player-replay-btn" type="button">🔁 Escuchar de nuevo</button>
+      <div class="rd-player-pulse" id="rd-player-pulse">
+        <span class="rd-pulse-dot"></span>
+        <span class="rd-pulse-label" id="rd-pulse-label">Esperando…</span>
+      </div>
     </div>
   </div>
 
@@ -835,6 +838,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260525c"></script>
-  <script src="/js/player.js?v=20260526c"></script>
+  <script src="/js/player.js?v=20260526d"></script>
 </body>
 </html>
