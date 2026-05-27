@@ -170,6 +170,98 @@ function setDisplayName(code, displayName) {
   scheduleSave();
   return true;
 }
+// === INBOX / NOTIFICATIONS ============================================
+// 2026-05-27: lets a teacher send a message to one student (or broadcast
+// to a whole classroom). Each student record carries an `inbox` array
+// of message objects. Kids poll /api/homework/inbox; the teacher
+// posts via /api/admin/student/:code/message or /api/admin/broadcast.
+//
+// Message shape:
+//   { id, from, fromName, text, actionType, actionUrl, actionLabel,
+//     ts, readAt }
+//   - actionType 'link' means actionUrl + actionLabel render a button
+//   - actionType 'broadcast-warmup' is a special live-session invite
+//
+// Capped at 50 per student so the JSON doesn't grow unbounded.
+function sendMessage(code, payload) {
+  const rec = get(code);
+  if (!rec) return null;
+  if (!Array.isArray(rec.inbox)) rec.inbox = [];
+  const msg = {
+    id:           'm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
+    from:         String(payload.from || ''),
+    fromName:     String(payload.fromName || 'Maestro/a'),
+    text:         String(payload.text || '').slice(0, 500),
+    actionType:   payload.actionType || null,
+    actionUrl:    payload.actionUrl || null,
+    actionLabel:  payload.actionLabel || null,
+    ts:           Date.now(),
+    readAt:       null,
+  };
+  if (!msg.text && !msg.actionUrl) return null;
+  rec.inbox.unshift(msg);                          // newest first
+  if (rec.inbox.length > 50) rec.inbox = rec.inbox.slice(0, 50);
+  rec.lastSeen = Date.now();
+  scheduleSave();
+  return msg;
+}
+// Get a student's inbox (newest first).
+function getInbox(code, limit) {
+  const rec = get(code);
+  if (!rec) return [];
+  const arr = Array.isArray(rec.inbox) ? rec.inbox.slice() : [];
+  return typeof limit === 'number' ? arr.slice(0, limit) : arr;
+}
+// Mark one message as read (by message id). Returns true on success.
+function markMessageRead(code, msgId) {
+  const rec = get(code);
+  if (!rec || !Array.isArray(rec.inbox)) return false;
+  const msg = rec.inbox.find((m) => m.id === msgId);
+  if (!msg) return false;
+  if (msg.readAt) return true;
+  msg.readAt = Date.now();
+  scheduleSave();
+  return true;
+}
+// Mark every message as read in one shot (used when the kid opens the inbox).
+function markAllMessagesRead(code) {
+  const rec = get(code);
+  if (!rec || !Array.isArray(rec.inbox)) return 0;
+  let changed = 0;
+  rec.inbox.forEach((m) => { if (!m.readAt) { m.readAt = Date.now(); changed++; } });
+  if (changed) scheduleSave();
+  return changed;
+}
+// Broadcast a message to every student whose classroomCode matches.
+// Returns the count of students who received it.
+function broadcastToClassroom(classroomCode, payload) {
+  const cc = String(classroomCode || '').trim().toUpperCase();
+  if (!cc) return 0;
+  let count = 0;
+  Object.values(records).forEach((rec) => {
+    if (rec.classroomCode === cc) {
+      if (!Array.isArray(rec.inbox)) rec.inbox = [];
+      const msg = {
+        id:           'm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7) + '-' + count,
+        from:         String(payload.from || ''),
+        fromName:     String(payload.fromName || 'Maestro/a'),
+        text:         String(payload.text || '').slice(0, 500),
+        actionType:   payload.actionType || null,
+        actionUrl:    payload.actionUrl || null,
+        actionLabel:  payload.actionLabel || null,
+        ts:           Date.now(),
+        readAt:       null,
+        broadcast:    true,
+      };
+      rec.inbox.unshift(msg);
+      if (rec.inbox.length > 50) rec.inbox = rec.inbox.slice(0, 50);
+      count++;
+    }
+  });
+  if (count) scheduleSave();
+  return count;
+}
+
 // Wipe all assignment submissions for a given assignment id under a
 // student. Used by the "Reset score" button so a kid can attempt the
 // assignment with a fresh slate (best score then comes from the new try).
@@ -344,5 +436,10 @@ module.exports = {
   setDisplayName,
   setClassroomCode,
   resetAssignmentSubmissions,
+  sendMessage,
+  getInbox,
+  markMessageRead,
+  markAllMessagesRead,
+  broadcastToClassroom,
   AVATAR_OPTIONS,
 };
