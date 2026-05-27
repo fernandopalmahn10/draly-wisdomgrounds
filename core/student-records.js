@@ -115,10 +115,21 @@ function getOrCreate(code, displayName) {
 //
 // Legacy emoji avatars (from before 2026-05-27) are still accepted as
 // fallback display values but new picks always use the SVG set.
+// 24 avatars across multiple DiceBear styles so kids can pick something
+// that feels like *them*. Mix of cartoon kids (adventurer), robots
+// (bottts), aliens/doodles (croodles), emoji-style (fun-emoji), pixel
+// art, fantasy (lorelei), and stylized (micah, thumbs, big-ears).
+// All SVGs live in public/assets/avatars/<name>.svg.
 const AVATAR_OPTIONS = [
+  // Cartoon kids (adventurer)
   'mochi', 'dragon', 'stella', 'felix',
   'luna',  'atlas',  'zara',   'kai',
   'mei',   'theo',   'iris',   'nova',
+  // Crazy variations — user feedback 2026-05-27: "monkeys, aliens,
+  // funny hair, alien — like emojis but cooler."
+  'robo',   'cyborg', 'alien',  'blob',
+  'monkey', 'ghost',  'pixie',  'wizard',
+  'pixel',  'punky',  'panda',  'ninja',
 ];
 function setAvatar(code, avatar) {
   const rec = get(code);

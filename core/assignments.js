@@ -68,27 +68,30 @@ const ASSIGNMENTS = [
     instructions: 'Lee la oración en español. Construye la oración en pinyin tocando las palabras del catálogo. 🗣️ DI CADA ORACIÓN EN VOZ ALTA antes de entregar — hablar es la mejor forma de aprender.',
     type: 'sentence-building',
     items: [
-      // All expected answers use ONLY words present in the warmup catalog
-      // (warmup-vocab.js) so kids can build them from the available chips.
-      { es: 'Hola, mucho gusto.',           expected: 'nǐ hǎo' },
-      { es: 'Tengo 8 años.',                expected: 'wǒ bā suì' },
-      { es: 'Mi mamá es maestra.',          expected: 'wǒ māma shì lǎoshī' },
-      { es: 'Tengo un hijo.',               expected: 'wǒ yǒu yī gè érzi' },
-      { es: 'Amo a mi familia.',            expected: 'wǒ ài wǒ de jiā' },
+      // STRICT EXP1 ONLY (per user feedback 2026-05-27). The 20 EXP1 words
+      // available are: wǒ, nǐ, tā(他), tā(她), wǒmen, bàba, māma, érzi,
+      // nǚ'ér, péngyou, jiā, ài, gǒu, māo, jiào, míngzi, shì, de, rènshi, suì.
+      // No numbers, no laoshi, no greetings — those are EXP2/EXP8.
+      // Every word below must be findable in public/js/warmup-vocab.js EXP1.
+      { es: 'Yo amo a mi mamá.',            expected: 'wǒ ài māma' },
+      { es: 'Tú eres mi amigo.',            expected: 'nǐ shì wǒ péngyou' },
+      { es: 'Yo conozco a tu papá.',        expected: 'wǒ rènshi nǐ bàba' },
+      { es: 'Mi gato ama mi casa.',         expected: 'wǒ de māo ài wǒ de jiā' },
+      { es: 'Nosotros amamos a la familia.', expected: 'wǒmen ài jiā' },
     ],
     pointsPerItem: 20,
     // Parent-facing summary in Spanish — surfaced on the parent view of
     // the homework portal when this assignment is completed (score≥60).
     parentInsight: {
-      title: 'Tu hijo/a sabe saludar y hablar de su familia en chino',
+      title: 'Tu hijo/a sabe hablar de su familia y amigos en chino',
       bullets: [
-        'Saludar: "Nǐ hǎo" (Hola)',
-        'Decir su edad: "Wǒ bā suì" (Tengo 8 años)',
-        'Hablar de su mamá: "Wǒ māma shì lǎoshī"',
-        'Decir que tiene un hijo o un familiar (wǒ yǒu yī gè …)',
-        'Expresar amor por su familia: "Wǒ ài wǒ de jiā"',
+        'Decir que ama a su mamá: "Wǒ ài māma"',
+        'Identificar a un amigo: "Nǐ shì wǒ péngyou" (tú eres mi amigo)',
+        'Hablar de su papá: "Wǒ rènshi nǐ bàba" (yo conozco a tu papá)',
+        'Hablar de su mascota: "Wǒ de māo ài wǒ de jiā"',
+        'Hablar de la familia: "Wǒmen ài jiā"',
       ],
-      encouragement: '¡Pídele que te salude en chino y te diga cuántos años tiene! Verás que ya lo sabe.',
+      encouragement: 'Pídele que te diga "Wǒ ài māma" mientras te abraza — verás que ya sabe expresar cariño en chino.',
     },
   },
   // Add more here. See instructions at the top of this file.
