@@ -237,8 +237,35 @@ body.hw-bg {
 .hw-stage-pinyin { color: var(--cat-color, #ffe082); }
 .hw-stage-x { color: rgba(255, 90, 102, 0.7); font-size: 0.85em; }
 .hw-item-actions {
-  display: flex; justify-content: flex-end;
+  display: flex;
+  flex-wrap: wrap;            /* let the buttons wrap on narrow phones */
+  justify-content: flex-end;
+  gap: 6px;
   margin-top: 8px;
+  /* Don't let action buttons overflow the parent — was cutting off the
+     leftmost button on iPhone SE / smaller Androids (user feedback
+     2026-05-27 with screenshot). */
+  max-width: 100%;
+}
+.hw-item-actions .btn {
+  /* Shrink to content on small screens; never stretch past 100% */
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+/* On narrow phones, swap to icon-only labels for the action buttons
+   so all three fit on one row inside the parent. */
+@media (max-width: 480px) {
+  .hw-item-actions .btn {
+    padding: 6px 10px !important;
+    font-size: 0.82rem;
+  }
+  .hw-item-speak .label-full,
+  .hw-item-undo .label-full,
+  .hw-item-clear .label-full { display: none; }
+  .hw-item-speak::after  { content: ' Audio'; }
+  .hw-item-undo::after   { content: ''; }
+  .hw-item-clear::after  { content: ''; }
 }
 
 .hw-asg-library-section {
@@ -968,9 +995,110 @@ body.hw-bg {
 .hw-reading-line.show-es .hw-reading-line-es { display: block; }
 .hw-reading-line.show-both .hw-reading-line-pinyin,
 .hw-reading-line.show-both .hw-reading-line-es { display: block; }
-.hw-reading-line-speak {
-  flex: 0 0 auto;
-  padding: 4px 10px !important;
+/* Modo Curioso — tappable pinyin words in the reading mode story.
+   Each token is wrapped in .hw-curious-word; tapping opens an overlay
+   with the word's full info from warmup-vocab.js. */
+.hw-curious-word {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 0 1px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.08s;
+}
+.hw-curious-word:hover {
+  background: rgba(91, 232, 209, 0.22);
+  transform: translateY(-1px);
+}
+.hw-curious-word:active {
+  background: rgba(91, 232, 209, 0.4);
+  transform: scale(0.96);
+}
+
+/* Curioso overlay (created lazily by JS) */
+.hw-curious-overlay {
+  position: fixed; inset: 0;
+  z-index: 9999;
+  background: rgba(10, 12, 22, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.hw-curious-overlay.show { opacity: 1; }
+.hw-curious-overlay.hidden { display: none; }
+.hw-curious-close {
+  position: absolute; top: 16px; right: 18px;
+  background: rgba(40, 45, 70, 0.95);
+  border: 2px solid rgba(91, 232, 209, 0.6);
+  color: #fff5d8;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.hw-curious-card {
+  width: 100%; max-width: 360px;
+  background: linear-gradient(160deg, rgba(40, 50, 80, 0.97), rgba(20, 25, 45, 0.98));
+  border: 3px solid var(--cat-color, #5be8d1);
+  border-radius: 20px;
+  padding: 24px 22px;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 32px var(--cat-color, rgba(91, 232, 209, 0.4));
+  transform: scale(0.92);
+  transition: transform 0.25s;
+}
+.hw-curious-overlay.show .hw-curious-card { transform: scale(1); }
+.hw-curious-icon {
+  font-size: 3.6rem;
+  line-height: 1;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+.hw-curious-pinyin {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: var(--cat-color, #5be8d1);
+  font-size: 1.8rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.hw-curious-hanzi {
+  font-family: 'ZCOOL XiaoWei', 'Cinzel', serif;
+  color: #fff5d8;
+  font-size: 2.4rem;
+  line-height: 1;
+  margin-bottom: 10px;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+.hw-curious-es {
+  color: #ffe082;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-style: italic;
+  margin-bottom: 14px;
+}
+.hw-curious-meta {
+  display: flex; gap: 8px; justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.hw-curious-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.82rem;
+  background: rgba(255, 224, 130, 0.18);
+  color: #ffe082;
+  border: 1px solid rgba(255, 224, 130, 0.4);
+}
+.hw-curious-hint {
+  font-size: 0.78rem;
+  color: rgba(243, 230, 194, 0.55);
+  font-style: italic;
 }
 
 .hw-reading-cta {

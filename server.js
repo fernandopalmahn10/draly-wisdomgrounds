@@ -343,7 +343,13 @@ app.post('/api/homework/submit', (req, res) => {
 //     Switch UNLOCKED_FOR_ALL → false once teachers start using the
 //     in-class flow for registration.
 // NOTE: ReadingStory is already required at the top of the file.
-const READING_UNLOCKED_FOR_ALL = true;
+// 2026-05-27: user explicitly requested gating: "if the professor didn't
+// introduce it to you, it should not appear to you as available test."
+// So we LOCK by default — only kids with at least one prior testResult
+// for a story see it as available. Teacher introduces it in class (live
+// test or just having kids load the page during the lesson) and the kid
+// becomes "registered" via the testResult entry.
+const READING_UNLOCKED_FOR_ALL = false;
 
 function _hwReadingListFor(code) {
   const rec = Students.get(code);

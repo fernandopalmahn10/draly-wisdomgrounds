@@ -506,6 +506,17 @@
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
+  // Avatars in the Cuaderno can be stored as either:
+  //  - new SVG name ('mochi', 'robo', 'alien', etc.) — use <img>
+  //  - legacy emoji ('🧒🏼') — render the emoji
+  //  - null/undefined — fallback emoji
+  // This helper picks the right rendering.
+  function renderAvatarChip(value) {
+    if (typeof value === 'string' && /^[a-z]+$/.test(value)) {
+      return `<img class="wu-nb-avatar-img" src="/assets/avatars/${value}.svg" alt="${escapeHtml(value)}" draggable="false">`;
+    }
+    return `<span class="wu-nb-avatar-emoji">${escapeHtml(value || '🧒🏼')}</span>`;
+  }
 
   // === CUADERNO DE ALUMNOS ============================================
   // Teacher-only window into every student's saved-sentence history.
@@ -570,20 +581,55 @@
           notebookRoster.innerHTML = '<div class="wu-notebook-empty">Aún nadie tiene actividad registrada. Cuando un alumno guarde una oración, haga un examen o entregue una tarea, aparecerá aquí.</div>';
           return;
         }
+        // Class summary header — quick glance: how many kids did X, Y, Z
+        // (user feedback 2026-05-27: "give me a UI in which I can see
+        // how everybody is doing on the lecture and on the assignments")
+        const totals = students.reduce((acc, s) => {
+          acc.sent  += s.sentenceCount    || 0;
+          acc.asg   += s.assignmentCount  || 0;
+          acc.tests += s.testCount        || 0;
+          if (s.sentenceCount > 0)   acc.activeSent++;
+          if (s.assignmentCount > 0) acc.activeAsg++;
+          if (s.testCount > 0)       acc.activeTests++;
+          return acc;
+        }, { sent: 0, asg: 0, tests: 0, activeSent: 0, activeAsg: 0, activeTests: 0 });
+        const summary = document.createElement('div');
+        summary.className = 'wu-nb-class-summary';
+        summary.innerHTML = `
+          <div class="wu-nb-class-summary-title">📊 Resumen de la clase</div>
+          <div class="wu-nb-class-summary-grid">
+            <div class="wu-nb-class-stat">
+              <div class="wu-nb-class-stat-num">${totals.activeAsg}/${students.length}</div>
+              <div class="wu-nb-class-stat-label">📚 Han entregado tareas</div>
+              <div class="wu-nb-class-stat-detail">${totals.asg} entregas en total</div>
+            </div>
+            <div class="wu-nb-class-stat">
+              <div class="wu-nb-class-stat-num">${totals.activeTests}/${students.length}</div>
+              <div class="wu-nb-class-stat-label">🏆 Han hecho exámenes</div>
+              <div class="wu-nb-class-stat-detail">${totals.tests} intentos en total</div>
+            </div>
+            <div class="wu-nb-class-stat">
+              <div class="wu-nb-class-stat-num">${totals.activeSent}/${students.length}</div>
+              <div class="wu-nb-class-stat-label">📝 Han escrito oraciones</div>
+              <div class="wu-nb-class-stat-detail">${totals.sent} oraciones en total</div>
+            </div>
+          </div>`;
+        notebookRoster.appendChild(summary);
+
         students.forEach((s) => {
           const row = document.createElement('button');
           row.type = 'button';
           row.className = 'wu-notebook-row-btn';
           const since = s.lastSeen ? new Date(s.lastSeen).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '—';
-          const avatar = s.avatar || '🧒🏼';
+          const avatarHtml = renderAvatarChip(s.avatar);
           row.innerHTML = `
-            <span class="wu-nb-row-avatar">${avatar}</span>
+            <span class="wu-nb-row-avatar">${avatarHtml}</span>
             <span class="wu-nb-code">${escapeHtml(s.code)}</span>
             <span class="wu-nb-name">${escapeHtml(s.displayName || 'Anon')}</span>
             <span class="wu-nb-row-counts">
-              <span class="wu-nb-row-c">📝${s.sentenceCount}</span>
-              <span class="wu-nb-row-c">📚${s.assignmentCount}</span>
-              <span class="wu-nb-row-c">🏆${s.testCount}</span>
+              <span class="wu-nb-row-c" title="Oraciones">📝${s.sentenceCount}</span>
+              <span class="wu-nb-row-c" title="Tareas entregadas">📚${s.assignmentCount}</span>
+              <span class="wu-nb-row-c" title="Exámenes de lectura">🏆${s.testCount}</span>
             </span>
             <span class="wu-nb-date">${since}</span>`;
           row.addEventListener('click', () => fetchStudent(s.code));
@@ -608,12 +654,11 @@
         const head = $('wu-notebook-detail-head');
         const list = $('wu-notebook-detail-list');
         const since = data.firstSeen ? new Date(data.firstSeen).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-        const avatar = data.avatar || '🧒🏼';
         const tests = data.tests || [];
         const assigns = data.assignments || [];
         head.innerHTML = `
           <div class="wu-nb-head-row">
-            <span class="wu-nb-head-avatar">${avatar}</span>
+            <span class="wu-nb-head-avatar">${renderAvatarChip(data.avatar)}</span>
             <span class="wu-nb-head-code">📇 ${escapeHtml(data.code)}</span>
             <span class="wu-nb-head-name">${escapeHtml(data.displayName || 'Anon')}</span>
           </div>
