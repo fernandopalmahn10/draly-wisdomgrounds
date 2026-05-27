@@ -343,17 +343,21 @@
     $('hw-parents-name').textContent = data.displayName || 'Anon';
     $('hw-parents-code').textContent = data.code;
     const t = data.totals || {};
-    // Friendlier nomenclature (user feedback 2026-05-27: "exámenes
-    // distintos no me gusta"). Now reads "📖 1 historia leída" with the
-    // attempt count tucked into a softer secondary line.
+    // Stats row — user feedback 2026-05-27 asked for word count
+    // ("palabras aprendidas, oraciones, estimated according to records").
+    // Added wordsLearned (unique pinyin tokens from correct answers) and
+    // sentencesCorrect alongside the existing tareas/historias stats.
     const stories = t.readingTestsTaken || 0;
     const attempts = t.readingTestAttempts || 0;
-    const storiesExtra = (attempts > stories)
-      ? ` <small>(${attempts} veces)</small>`
-      : '';
+    const storiesExtra = (attempts > stories) ? ` <small>(${attempts} veces)</small>` : '';
+    const wordsLearned = t.wordsLearned || 0;
+    const wordsTotal   = t.wordsTotalHsk1 || 150;
+    const sentCorrect  = t.sentencesCorrect || 0;
     $('hw-parents-stats').innerHTML = `
       <span class="hw-parents-stat">📚 <strong>${t.assignmentsMastered || 0}</strong>/${t.assignmentsAvailable || 0} tareas dominadas</span>
-      <span class="hw-parents-stat">📖 <strong>${stories}</strong> historia${stories === 1 ? '' : 's'} leída${stories === 1 ? '' : 's'}${storiesExtra}</span>`;
+      <span class="hw-parents-stat">📖 <strong>${stories}</strong> historia${stories === 1 ? '' : 's'} leída${stories === 1 ? '' : 's'}${storiesExtra}</span>
+      <span class="hw-parents-stat hw-parents-stat-pill">🌱 <strong>${wordsLearned}</strong>/${wordsTotal} palabras aprendidas <small>(estimado)</small></span>
+      <span class="hw-parents-stat hw-parents-stat-pill">✏️ <strong>${sentCorrect}</strong> oraciones correctas</span>`;
     const insightsWrap = $('hw-parents-insights');
     // Merge: assignment-based insights (from server) + reading-test
     // insights (synthesized client-side from passed stories). User
@@ -1234,9 +1238,6 @@
   // Shared <audio> element so we can cancel an in-flight playback when
   // the kid taps a new button (avoids overlap).
   let _ttsAudio = null;
-  // Sticky flag: if the server returns 503 once, skip the network roundtrip
-  // for the rest of the session and go straight to Web Speech.
-  let _ttsDisabled = false;
   function speakChinese(text, btn) {
     const clean = String(text || '').trim();
     if (!clean) return;
@@ -1246,9 +1247,10 @@
 
     // UI feedback while loading/playing
     let restoreBtn = null;
+    let origText = '';
     if (btn) {
       btn.classList.add('speaking');
-      const origText = btn.textContent;
+      origText = btn.textContent;
       btn.textContent = '🔊 …';
       restoreBtn = () => {
         btn.classList.remove('speaking');
@@ -1256,34 +1258,51 @@
       };
     }
 
-    // Try Google TTS first (sounds human, cached, free at this volume)
-    if (!_ttsDisabled) {
-      const url = '/api/tts?text=' + encodeURIComponent(clean);
-      const audio = new Audio(url);
-      audio.preload = 'auto';
-      _ttsAudio = audio;
-      let started = false;
-      audio.addEventListener('canplay', () => { started = true; });
-      audio.addEventListener('ended',   () => { if (restoreBtn) restoreBtn(); });
-      audio.addEventListener('error',   () => {
-        // Network failure or 503 — fall back to Web Speech. Don't keep
-        // trying the server this session.
-        if (!started) {
-          _ttsDisabled = true;
-          if (restoreBtn) restoreBtn();
-          _speakWebSpeech(clean, btn);
-        }
-      });
-      audio.play().catch(() => {
-        // Autoplay blocked? Fall back. Most browsers allow it after a
-        // user gesture (which is exactly what triggered this), so this
-        // shouldn't fire on a tap. Belt-and-suspenders.
-        if (restoreBtn) restoreBtn();
-        _speakWebSpeech(clean, btn);
-      });
-      return;
-    }
-    _speakWebSpeech(clean, btn);
+    // Try Google TTS via /api/tts. Wait for canplay before play() — this
+    // is the critical fix (2026-05-27): previously play() was called
+    // before the audio was ready, causing the promise to reject, which
+    // triggered an immediate Web Speech fallback EVERY time. As a result
+    // the server-side cache stayed empty and the user only ever heard
+    // the bad TTS.
+    const url = '/api/tts?text=' + encodeURIComponent(clean);
+    const audio = new Audio();
+    _ttsAudio = audio;
+    let playedOnce = false;
+    let fellBack = false;
+
+    const fallback = (reason) => {
+      if (fellBack) return;
+      fellBack = true;
+      console.warn('[tts] fallback to Web Speech:', reason);
+      if (restoreBtn) restoreBtn();
+      _speakWebSpeech(clean, btn);
+    };
+
+    audio.addEventListener('canplay', () => {
+      // Audio is ready — now safe to call play(). On modern browsers
+      // play() returns a Promise that resolves once playback actually
+      // begins, or rejects on hard failures (e.g. autoplay block).
+      audio.play()
+        .then(() => { playedOnce = true; })
+        .catch((e) => { if (!playedOnce) fallback('play(): ' + e.message); });
+    });
+    audio.addEventListener('playing', () => { playedOnce = true; });
+    audio.addEventListener('ended', () => { if (restoreBtn) restoreBtn(); });
+    audio.addEventListener('error', () => {
+      const msg = audio.error ? `code ${audio.error.code}: ${audio.error.message || ''}` : 'unknown';
+      fallback('audio error (' + msg + ')');
+    });
+
+    // Overall timeout — if NOTHING has played within 10s, give up.
+    // First call to a brand-new sentence takes ~1-2s for Google to
+    // synthesize + network round-trip, but should never hit 10s.
+    const timeoutId = setTimeout(() => {
+      if (!playedOnce) fallback('timeout 10s');
+    }, 10000);
+    audio.addEventListener('playing', () => clearTimeout(timeoutId));
+
+    audio.src = url;
+    audio.load();
   }
 
   function _speakWebSpeech(text, btn) {

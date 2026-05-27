@@ -139,6 +139,78 @@ const ASSIGNMENTS = [
       encouragement: 'Pregúntale: "¿Cómo se dice leer libros en chino?" — debería responder "dú shū" rápidamente.',
     },
   },
+  // === ASSIGNMENT 3 ===
+  // Strict EXP3-only — Comprar / Comer. User feedback 2026-05-27:
+  // "experience 2, just like buying things, buying food, buying
+  // vegetables, it only should make usage of the words of experience 2"
+  // — applied here too: phrases, not sentences, no EXP1 contamination.
+  {
+    id: 'comprar-comer',
+    title: '🛒 EXP3 · Comprar y comer',
+    subtitle: '10 frases · SOLO palabras de Experience 3',
+    expLabel: 'exp3',
+    instructions: 'Cada frase usa SOLO palabras de Experience 3 (Comprar / Comer). Filtra el catálogo con la pestaña 🍴 EXP3. 🗣️ DI CADA FRASE EN VOZ ALTA.',
+    type: 'sentence-building',
+    items: [
+      // Every word here is from EXP3. Verified.
+      { es: 'Comer arroz',           expected: 'chī mǐfàn' },
+      { es: 'Beber té',              expected: 'hē chá' },
+      { es: 'Comprar fruta',         expected: 'mǎi shuǐguǒ' },
+      { es: 'Comer una manzana',     expected: 'chī píngguǒ' },
+      { es: 'Beber agua',            expected: 'hē shuǐ' },
+      { es: 'Me gusta la comida',    expected: 'xǐhuan cài' },
+      { es: 'Quiero agua',           expected: 'xiǎng shuǐ' },
+      { es: '¿Cuánto dinero?',       expected: 'duōshǎo qián' },
+      { es: 'Comprar arroz',         expected: 'mǎi mǐfàn' },
+      { es: 'Gracias, de nada',      expected: 'xièxie búkèqi' },
+    ],
+    pointsPerItem: 10,
+    parentInsight: {
+      title: 'Tu hijo/a puede pedir comida y bebida en chino',
+      bullets: [
+        'Acciones de mesa: "chī mǐfàn" (comer arroz), "hē chá" (beber té)',
+        'Compras: "mǎi shuǐguǒ" (comprar fruta), "mǎi mǐfàn" (comprar arroz)',
+        'Preguntar precio: "duōshǎo qián" (¿cuánto dinero?)',
+        'Cortesía: "xièxie" (gracias), "búkèqi" (de nada)',
+        'Preferencias: "xǐhuan cài" (me gusta la comida), "xiǎng shuǐ" (quiero agua)',
+      ],
+      encouragement: 'Cuando coman juntos, pídele que pida la comida en chino. "Yo quiero agua" → "wǒ xiǎng shuǐ".',
+    },
+  },
+  // === ASSIGNMENT 4 ===
+  // Strict EXP4-only — Tiempo / Clima. Same pattern: short phrases.
+  {
+    id: 'tiempo-clima',
+    title: '⏰ EXP4 · Tiempo y clima',
+    subtitle: '10 frases · SOLO palabras de Experience 4',
+    expLabel: 'exp4',
+    instructions: 'Cada frase usa SOLO palabras de Experience 4 (Tiempo / Clima). Filtra el catálogo con la pestaña ⏰ EXP4. 🗣️ DI CADA FRASE EN VOZ ALTA.',
+    type: 'sentence-building',
+    items: [
+      { es: 'Hoy',                   expected: 'jīntiān' },
+      { es: 'Mañana',                expected: 'míngtiān' },
+      { es: 'Ayer',                  expected: 'zuótiān' },
+      { es: 'El clima',              expected: 'tiānqì' },
+      { es: 'Muy caliente',          expected: 'hěn rè' },
+      { es: 'Muy frío',              expected: 'hěn lěng' },
+      { es: 'Demasiado caliente',    expected: 'tài rè' },
+      { es: 'Hoy llueve',            expected: 'jīntiān xiàyǔ' },
+      { es: 'Ayer llovió',           expected: 'zuótiān xiàyǔ' },
+      { es: 'Mañana por la tarde',   expected: 'míngtiān xiàwǔ' },
+    ],
+    pointsPerItem: 10,
+    parentInsight: {
+      title: 'Tu hijo/a puede hablar del tiempo y el clima en chino',
+      bullets: [
+        'Días: "jīntiān" (hoy), "míngtiān" (mañana), "zuótiān" (ayer)',
+        'Clima: "tiānqì" (el clima), "xiàyǔ" (llover)',
+        'Sensaciones: "hěn rè" (muy caliente), "hěn lěng" (muy frío)',
+        'Énfasis: "tài rè" (demasiado caliente)',
+        'Frases del día: "jīntiān xiàyǔ" (hoy llueve)',
+      ],
+      encouragement: 'Cada mañana, pregúntale en chino: "¿Cómo está el tiempo hoy?" — debería responder "jīntiān hěn rè" o "jīntiān hěn lěng".',
+    },
+  },
   // Add more here. See instructions at the top of this file.
 ];
 
