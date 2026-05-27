@@ -83,6 +83,48 @@ body.hw-bg {
   font-weight: 700;
   margin: 4px 0 0;
 }
+/* Pill in the sub-header showing live-active count */
+.m-online-pill {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 10px;
+  background: rgba(91, 232, 209, 0.22);
+  border: 1px solid #5be8d1;
+  border-radius: 999px;
+  color: #5be8d1;
+  font-weight: 800;
+  font-size: 0.82rem;
+  animation: m-pulse 2s ease-in-out infinite;
+}
+@keyframes m-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(91, 232, 209, 0); }
+  50%      { box-shadow: 0 0 12px 2px rgba(91, 232, 209, 0.45); }
+}
+/* Live-online row treatment — soft green border + pulsing dot on the avatar */
+.m-row.is-online {
+  border-color: #5be8d1;
+  background:
+    linear-gradient(160deg, rgba(91, 232, 209, 0.12), rgba(38, 40, 60, 0.7));
+  box-shadow: 0 0 14px rgba(91, 232, 209, 0.2);
+}
+.m-row.is-online .m-row-date {
+  color: #5be8d1;
+  font-weight: 800;
+}
+.m-row-avatar { position: relative; }
+.m-online-dot {
+  position: absolute;
+  top: -2px; right: -2px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #34d399;
+  border: 2px solid #14121e;
+  animation: m-dot-pulse 1.6s ease-in-out infinite;
+}
+@keyframes m-dot-pulse {
+  0%, 100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
+  50%      { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+}
 
 /* === Tabs (super admin) === */
 .m-tabs {

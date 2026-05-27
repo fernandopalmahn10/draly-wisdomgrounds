@@ -1108,9 +1108,14 @@
         refreshUndoButtons();
         // tap feedback — flash the chip green for a beat
         chip.classList.remove('flash');
-        // force reflow so the animation re-triggers if same chip is tapped twice fast
         void chip.offsetWidth;
         chip.classList.add('flash');
+        // Modo Curioso feedback: brief floating bubble showing the word's
+        // meaning, plus a soft chime, plus a flying animation toward the
+        // active stage. Makes each tap feel like a tiny lesson.
+        _showWordMeaningBubble(chip, w);
+        _playTapChime();
+        _flyToStage(chip, activeItemIdx);
       });
       wrap.appendChild(chip);
     });
@@ -1406,6 +1411,91 @@
       if (btn) btn.classList.remove('speaking');
     }
   }
+  // === MODO CURIOSO FEEDBACK on chip taps ===
+  // User feedback 2026-05-27: when kids build sentences in homework,
+  // each tap should activate the meaning + animation + sound — make
+  // every tap feel like a little discovery.
+
+  // Floating bubble above the chip showing hanzi + Spanish for ~1.4s.
+  function _showWordMeaningBubble(chip, w) {
+    if (!chip || !w) return;
+    const bubble = document.createElement('div');
+    bubble.className = 'hw-meaning-bubble';
+    const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+    const color = cat ? cat.color : '#5be8d1';
+    bubble.style.setProperty('--cat-color', color);
+    bubble.innerHTML = `
+      <span class="hw-mb-icon">${escapeHtml(w.icon || '✨')}</span>
+      <span class="hw-mb-hanzi">${escapeHtml(w.hanzi || '')}</span>
+      <span class="hw-mb-pinyin">${escapeHtml(w.pinyin || '')}</span>
+      <span class="hw-mb-arrow">→</span>
+      <span class="hw-mb-es">${escapeHtml(w.es || '')}</span>`;
+    // Position it just above the chip
+    const rect = chip.getBoundingClientRect();
+    bubble.style.left = (rect.left + rect.width / 2) + 'px';
+    bubble.style.top  = (rect.top + window.scrollY - 4) + 'px';
+    document.body.appendChild(bubble);
+    // Animate in, then fade out
+    requestAnimationFrame(() => bubble.classList.add('show'));
+    setTimeout(() => bubble.classList.add('fade'), 900);
+    setTimeout(() => { if (bubble.parentNode) bubble.parentNode.removeChild(bubble); }, 1500);
+  }
+
+  // Visual "fly-to-stage" — clones the chip's pinyin and animates it
+  // arcing toward the active sentence stage. Pure CSS keyframe spawned
+  // on demand, cleaned up after the animation.
+  function _flyToStage(chip, itemIdx) {
+    const stage = document.getElementById('hw-stage-' + itemIdx);
+    if (!stage || !chip) return;
+    const src = chip.getBoundingClientRect();
+    const dst = stage.getBoundingClientRect();
+    const fly = document.createElement('div');
+    fly.className = 'hw-fly';
+    const pinyinEl = chip.querySelector('.hw-lib-pinyin');
+    fly.textContent = pinyinEl ? pinyinEl.textContent : '✨';
+    fly.style.left = (src.left + src.width / 2) + 'px';
+    fly.style.top  = (src.top + window.scrollY + src.height / 2) + 'px';
+    // Compute deltas for the animation custom properties
+    const dx = (dst.left + dst.width / 2) - (src.left + src.width / 2);
+    const dy = (dst.top + window.scrollY + 30) - (src.top + window.scrollY + src.height / 2);
+    fly.style.setProperty('--dx', dx + 'px');
+    fly.style.setProperty('--dy', dy + 'px');
+    document.body.appendChild(fly);
+    setTimeout(() => { if (fly.parentNode) fly.parentNode.removeChild(fly); }, 650);
+    // Briefly pulse the stage when it receives the word
+    setTimeout(() => {
+      stage.classList.add('hw-stage-receive');
+      setTimeout(() => stage.classList.remove('hw-stage-receive'), 350);
+    }, 500);
+  }
+
+  // Lightweight WebAudio chime — soft "blip" on every chip tap. No
+  // external audio file needed; ~5ms synthesized on demand.
+  let _tapAudioCtx = null;
+  function _playTapChime() {
+    try {
+      if (!_tapAudioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        _tapAudioCtx = new AC();
+      }
+      const ctx = _tapAudioCtx;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      // Pleasant high-pitched blip; varies slightly so repeats feel alive
+      osc.frequency.value = 880 + Math.random() * 220;   // 880-1100 Hz
+      gain.gain.value = 0;
+      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.2);
+    } catch (e) { /* silent */ }
+  }
+
   // Pre-warm the Web Speech voice list (iOS quirk) for the fallback path.
   if ('speechSynthesis' in window) {
     window.speechSynthesis.getVoices();
