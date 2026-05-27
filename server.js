@@ -552,7 +552,9 @@ try { fs.mkdirSync(TTS_CACHE_DIR, { recursive: true }); } catch (_) {}
 // working. Returns JSON describing each precondition (env var set?
 // JSON parseable? client init? package present?). User-friendly so it
 // can be debugged without server logs.
-app.get('/api/tts/health', (req, res) => {
+// Pass ?live=1 to ALSO do a real synthesizeSpeech() call so we can
+// see if the credentials actually authorize the API.
+app.get('/api/tts/health', async (req, res) => {
   const out = {
     envVarSet: !!process.env.GOOGLE_TTS_CREDENTIALS_JSON,
     envVarLength: (process.env.GOOGLE_TTS_CREDENTIALS_JSON || '').length,
@@ -596,6 +598,24 @@ app.get('/api/tts/health', (req, res) => {
       out.cachedFiles = fs.readdirSync(TTS_CACHE_DIR).filter((f) => f.endsWith('.mp3')).length;
     }
   } catch (_) {}
+  // Live synthesize test — only if ?live=1, otherwise skipped to avoid
+  // burning Google quota on every health check.
+  if (req.query.live === '1' && out.clientInit) {
+    try {
+      const client = _getTtsClient();
+      const [r] = await client.synthesizeSpeech({
+        input: { text: 'ni hao' },
+        voice: { languageCode: 'zh-CN', name: TTS_DEFAULT_VOICE },
+        audioConfig: { audioEncoding: 'MP3' },
+      });
+      out.liveTest = {
+        success: !!(r && r.audioContent),
+        audioBytes: r && r.audioContent ? r.audioContent.length : 0,
+      };
+    } catch (e) {
+      out.liveTest = { success: false, error: e.message, code: e.code || null };
+    }
+  }
   res.json(out);
 });
 

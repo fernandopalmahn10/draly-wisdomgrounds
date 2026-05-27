@@ -356,8 +356,25 @@
     $('hw-parents-stats').innerHTML = `
       <span class="hw-parents-stat">📚 <strong>${t.assignmentsMastered || 0}</strong>/${t.assignmentsAvailable || 0} tareas dominadas</span>
       <span class="hw-parents-stat">📖 <strong>${stories}</strong> historia${stories === 1 ? '' : 's'} leída${stories === 1 ? '' : 's'}${storiesExtra}</span>
-      <span class="hw-parents-stat hw-parents-stat-pill">🌱 <strong>${wordsLearned}</strong>/${wordsTotal} palabras aprendidas <small>(estimado)</small></span>
+      <span class="hw-parents-stat hw-parents-stat-pill is-clickable" id="hw-parents-pill-words" role="button">🌱 <strong>${wordsLearned}</strong>/${wordsTotal} palabras aprendidas <small>(estimado · toca para ver)</small></span>
       <span class="hw-parents-stat hw-parents-stat-pill">✏️ <strong>${sentCorrect}</strong> oraciones correctas</span>`;
+    // User feedback 2026-05-27: "once you click on the green bar, then
+    // it's when you should display what the kid already knows."
+    // → Tapping the palabras-aprendidas pill scrolls to + opens the
+    // HSK dropdown so the parent sees the full word list on demand.
+    const wordsPill = $('hw-parents-pill-words');
+    if (wordsPill) {
+      wordsPill.addEventListener('click', () => {
+        const wrap = document.querySelector('.hw-parents-levels-wrap');
+        if (wrap) {
+          wrap.open = true;
+          // Also open the HSK1 sub-section
+          const hsk1 = wrap.querySelector('.hw-parents-hsk-section');
+          if (hsk1) hsk1.open = true;
+          wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    }
     const insightsWrap = $('hw-parents-insights');
     // Merge: assignment-based insights (from server) + reading-test
     // insights (synthesized client-side from passed stories). User
@@ -1274,9 +1291,16 @@
       if (fellBack) return;
       fellBack = true;
       console.warn('[tts] fallback to Web Speech:', reason);
+      // Visible toast so the user can SEE why TTS fell back, without
+      // having to dig through dev tools on a phone. Auto-hides in 4s.
+      _showTtsToast('⚠️ Voz mala (' + reason + ')');
       if (restoreBtn) restoreBtn();
       _speakWebSpeech(clean, btn);
     };
+    // Success indicator on first play
+    audio.addEventListener('playing', () => {
+      if (!playedOnce) _showTtsToast('🔊 Voz Google ✓', 'good');
+    });
 
     audio.addEventListener('canplay', () => {
       // Audio is ready — now safe to call play(). On modern browsers
@@ -1303,6 +1327,28 @@
 
     audio.src = url;
     audio.load();
+  }
+
+  // Visible TTS state toast — appears top-center for 4s. Used to surface
+  // success/failure of the audio system to the user without forcing
+  // them into a desktop dev-tools workflow. User can see "Google ✓" or
+  // "fallback (reason)" directly on the phone screen.
+  let _ttsToastEl = null;
+  let _ttsToastTimer = null;
+  function _showTtsToast(message, kind) {
+    if (!_ttsToastEl) {
+      _ttsToastEl = document.createElement('div');
+      _ttsToastEl.id = 'hw-tts-toast';
+      _ttsToastEl.className = 'hw-tts-toast';
+      document.body.appendChild(_ttsToastEl);
+    }
+    _ttsToastEl.textContent = message;
+    _ttsToastEl.classList.remove('good', 'bad', 'show');
+    _ttsToastEl.classList.add(kind === 'good' ? 'good' : 'bad', 'show');
+    if (_ttsToastTimer) clearTimeout(_ttsToastTimer);
+    _ttsToastTimer = setTimeout(() => {
+      if (_ttsToastEl) _ttsToastEl.classList.remove('show');
+    }, 4000);
   }
 
   function _speakWebSpeech(text, btn) {
