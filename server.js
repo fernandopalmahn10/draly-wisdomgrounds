@@ -267,14 +267,43 @@ app.get('/api/homework/insights/:code', (req, res) => {
       subtitle:     a.subtitle,
       totalPoints:  a.totalPoints,
     }));
-  // CONVERSATION PROMPTS — pulled from each insight so parents have
-  // concrete questions to ask their kid. Encourages SPEAKING the
-  // language out loud, per user feedback 2026-05-27.
+  // CONVERSATION PROMPTS — concrete questions parents can ask. Pulled
+  // from each mastered assignment's encouragement string PLUS each
+  // passed reading test (≥60%). User feedback 2026-05-27: prompts
+  // should "be linked with the amount of tests and lectures the kid
+  // has done according to the system."
   const conversationPrompts = insights.map((row) => ({
     assignmentTitle: row.assignmentTitle,
     prompt: row.insight.encouragement
          || `Pregúntale: "${row.assignmentTitle}" — pídele que te lo diga en voz alta.`,
   }));
+  uniqueTests.filter((t) => t.score >= 60).forEach((t) => {
+    conversationPrompts.push({
+      assignmentTitle: t.storyTitle || t.storyId,
+      prompt: `Pídele que te cuente la historia de "${t.storyTitle || t.storyId}" — los personajes, qué pasó, su parte favorita.`,
+    });
+  });
+  // WORD COUNT — estimate vocab the kid has demonstrated. We count
+  // unique normalized pinyin tokens that appeared in CORRECT graded
+  // breakdowns. Conservative: only words the kid actually used right.
+  const learnedWords = new Set();
+  let sentencesAttempted = 0;
+  let sentencesCorrect = 0;
+  subs.forEach((s) => {
+    (s.breakdown || []).forEach((b) => {
+      sentencesAttempted++;
+      if (b.correct) {
+        sentencesCorrect++;
+        if (b.student) {
+          String(b.student).toLowerCase()
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/[.,!?;:'"()¿¡]/g, '')
+            .split(/\s+/).filter(Boolean)
+            .forEach((w) => learnedWords.add(w));
+        }
+      }
+    });
+  });
   res.json({
     ok: true,
     code: rec.code,
@@ -291,6 +320,12 @@ app.get('/api/homework/insights/:code', (req, res) => {
       assignmentsRemaining:  remaining.length,
       readingTestsTaken:     uniqueTests.length,     // unique stories, NOT total attempts
       readingTestAttempts:   tests.length,
+      // Estimated vocab (user feedback 2026-05-27: "make a word count
+      // — palabras aprendidas, oraciones, estimated").
+      wordsLearned:          learnedWords.size,
+      wordsTotalHsk1:        150,
+      sentencesCorrect,
+      sentencesAttempted,
     },
   });
 });
