@@ -1811,6 +1811,57 @@ body.hw-bg {
 #hw-settings-avatar-grid .hw-avatar-option { padding: 6px 4px 4px; }
 #hw-settings-avatar-grid .hw-avatar-option-label { font-size: 0.72rem; }
 
+/* TTS state toast — visible diagnostic. Top-center, fades in/out. */
+.hw-tts-toast {
+  position: fixed;
+  top: max(14px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  z-index: 10000;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  font-family: 'Nunito', sans-serif;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+  max-width: 90vw;
+  text-align: center;
+}
+.hw-tts-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.hw-tts-toast.good {
+  background: rgba(40, 60, 50, 0.95);
+  color: #5be8d1;
+  border: 2px solid #5be8d1;
+}
+.hw-tts-toast.bad {
+  background: rgba(60, 30, 30, 0.95);
+  color: #ffb35a;
+  border: 2px solid rgba(255, 179, 90, 0.7);
+}
+
+/* Word-count pill — clickable, expands the HSK1 dropdown when tapped */
+.hw-parents-stat-pill.is-clickable {
+  cursor: pointer;
+  transition: transform 0.1s, background 0.15s, border-color 0.15s;
+}
+.hw-parents-stat-pill.is-clickable:hover {
+  background: rgba(91, 232, 209, 0.22);
+  border-color: #5be8d1;
+  transform: translateY(-1px);
+}
+.hw-parents-stat-pill.is-clickable::after {
+  content: ' →';
+  opacity: 0.6;
+  font-weight: 900;
+}
+
 /* Homework portal entry button on index.html. Promoted to TOP of paths
    list (above the PIN card) on 2026-05-27 — most kids open the site after
    school for tareas, not for live games, so this is the primary CTA.
