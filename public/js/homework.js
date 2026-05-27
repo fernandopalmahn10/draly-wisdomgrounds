@@ -34,7 +34,7 @@
   $('hw-student-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryEnter(); });
 
   function tryEnter() {
-    const ac = $('hw-access-code').value.trim().toUpperCase();
+    const ac = $('hw-access-code').value.trim();
     const sc = $('hw-student-code').value.trim();
     if (!ac) { $('hw-entry-err').textContent = 'Ingresa el código de acceso'; return; }
     $('hw-entry-err').textContent = 'Entrando…';
