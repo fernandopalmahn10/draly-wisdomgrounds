@@ -107,12 +107,18 @@ function getOrCreate(code, displayName) {
   scheduleSave();
   return rec;
 }
-// Persist the chosen avatar emoji for a student. Validates against
-// AVATAR_OPTIONS so kids can't inject arbitrary unicode.
+// Persist the chosen avatar for a student. Avatars are now full-body
+// SVG illustrations served from /assets/avatars/<name>.svg. The stored
+// value is just the lowercase name (e.g. 'mochi'), which the client
+// turns into an URL. Validates against AVATAR_OPTIONS so kids can't
+// inject arbitrary paths.
+//
+// Legacy emoji avatars (from before 2026-05-27) are still accepted as
+// fallback display values but new picks always use the SVG set.
 const AVATAR_OPTIONS = [
-  '👦🏻', '👦🏼', '👦🏽', '👦🏾', '👦🏿',
-  '👧🏻', '👧🏼', '👧🏽', '👧🏾', '👧🏿',
-  '🧒🏻', '🧒🏿',
+  'mochi', 'dragon', 'stella', 'felix',
+  'luna',  'atlas',  'zara',   'kai',
+  'mei',   'theo',   'iris',   'nova',
 ];
 function setAvatar(code, avatar) {
   const rec = get(code);
@@ -122,6 +128,32 @@ function setAvatar(code, avatar) {
   rec.lastSeen = Date.now();
   scheduleSave();
   return true;
+}
+// Allow renaming. Kids can change their display name from their
+// settings page in the homework portal.
+function setDisplayName(code, displayName) {
+  const rec = get(code);
+  if (!rec) return false;
+  const clean = String(displayName || '').trim().slice(0, 24);
+  if (!clean) return false;
+  rec.displayName = clean;
+  rec.lastSeen = Date.now();
+  scheduleSave();
+  return true;
+}
+// Wipe all assignment submissions for a given assignment id under a
+// student. Used by the "Reset score" button so a kid can attempt the
+// assignment with a fresh slate (best score then comes from the new try).
+function resetAssignmentSubmissions(code, assignmentId) {
+  const rec = get(code);
+  if (!rec || !Array.isArray(rec.assignmentSubmissions)) return 0;
+  const before = rec.assignmentSubmissions.length;
+  rec.assignmentSubmissions = rec.assignmentSubmissions.filter(
+    (s) => s.assignmentId !== assignmentId
+  );
+  const removed = before - rec.assignmentSubmissions.length;
+  if (removed) scheduleSave();
+  return removed;
 }
 
 function get(code) {
@@ -279,5 +311,7 @@ module.exports = {
   logAssignmentSubmission,
   getAssignmentSubmissions,
   setAvatar,
+  setDisplayName,
+  resetAssignmentSubmissions,
   AVATAR_OPTIONS,
 };

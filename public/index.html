@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260522a">
   <link rel="stylesheet" href="/css/dralingo.css?v=20260522a">
-  <link rel="stylesheet" href="/css/homework.css?v=20260526b">
+  <link rel="stylesheet" href="/css/homework.css?v=20260527a">
 </head>
 <body class="hub-bg">
   <div class="lantern l1"></div>
@@ -32,10 +32,26 @@
       <p class="hub-tagline">Where wisdom takes flight</p>
     </div>
 
-    <!-- TWO clear paths: JOIN (with inline PIN+name form) + REMATCH (if available).
+    <!-- THREE clear paths in priority order:
+         1) Homework (async, no PIN) — top, big, teal. Most kids land here
+            in the evening to do their tareas at home without the teacher
+            running a live game.
+         2) Rematch (only if a recent live session is remembered)
+         3) Live-game JOIN — needs PIN from the teacher
          Everything else (host, audio hint) lives in the corners. -->
     <div class="home-paths">
-      <!-- REMATCH lives ABOVE join so returning players see it first -->
+      <!-- TOP: Homework portal — most common after-school use case, so
+           it's the first thing students see when they open the site. -->
+      <a href="/homework.html" class="home-hw-link home-hw-link-hero">
+        <span class="home-hw-icon">📚</span>
+        <span class="home-hw-text">
+          <span class="home-hw-title">Hacer mis tareas</span>
+          <span class="home-hw-sub">Sin PIN · en casa</span>
+        </span>
+        <span class="home-hw-arrow">→</span>
+      </a>
+
+      <!-- REMATCH lives above join so returning players see it first -->
       <div id="rematch-wrap" class="home-rematch" style="display:none;">
         <button class="btn btn-gold btn-xl" id="rematch-btn">
           🔄 &nbsp; REVANCHA<span id="rematch-name-suffix"></span>
@@ -44,7 +60,7 @@
       </div>
 
       <div class="card home-join-card">
-        <div class="home-join-label">🎮 Entra a una batalla</div>
+        <div class="home-join-label">🎮 Entra a una batalla en clase</div>
         <input class="input home-input-big" id="home-pin" type="tel" maxlength="4" placeholder="PIN" inputmode="numeric" autocomplete="off">
         <input class="input" id="home-name" type="text" maxlength="20" placeholder="Tu nombre" autocomplete="given-name">
         <button class="btn btn-jade btn-xl" id="home-join-btn" style="width:100%;">
@@ -52,12 +68,6 @@
         </button>
         <p id="home-error" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em; margin:0;"></p>
       </div>
-
-      <!-- Async homework portal — separate path that doesn't need a PIN.
-           Students enter on their own time with a code their teacher gave them. -->
-      <a href="/homework.html" class="home-hw-link">
-        📚 &nbsp;Hacer mis tareas (sin PIN)
-      </a>
     </div>
 
     <!-- Host link stays floating in the corner via .hub-host-link CSS -->
