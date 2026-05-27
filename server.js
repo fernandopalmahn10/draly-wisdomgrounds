@@ -40,7 +40,14 @@ app.use(express.static(path.join(__dirname, 'public'), {
   },
 }));
 app.use(express.json({ limit: '5mb' }));
-app.get('/health', (req, res) => res.send('ok'));
+// Health endpoints — Render hits one of these to verify the server is
+// alive after each deploy. Three paths covered because different
+// platforms look for different names. All return plain "ok" in <1ms
+// with no DB / disk access, so they pass the strictest timeout.
+app.get(['/health', '/healthz', '/_render-health'], (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.type('text/plain').send('ok');
+});
 
 // === /api/admin/disk-status — Render persistent-disk verification ===
 // Hit this from any browser with ?pw=<your admin password>. Tells you:
