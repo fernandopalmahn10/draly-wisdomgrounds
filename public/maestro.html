@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>👩‍🏫 Modo Maestro · Draly Wisdomgrounds</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=20260527a">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260527a">
+  <link rel="stylesheet" href="/css/maestro.css?v=20260527a">
+</head>
+<body class="hw-bg">
+
+  <!-- LOGIN PANEL -->
+  <div id="m-login" class="container m-login">
+    <div class="m-login-card">
+      <div class="m-login-icon">👩‍🏫</div>
+      <h1 class="m-login-title">Modo Maestro</h1>
+      <p class="m-login-sub">Cuaderno de Alumnos — sin necesidad de iniciar una sesión de juego.</p>
+      <label class="m-login-label">
+        <span>Contraseña de maestro/a:</span>
+        <input class="input m-login-input" id="m-pw" type="password" placeholder="EMAAR2026" autocomplete="off">
+      </label>
+      <button class="btn btn-jade btn-xl" id="m-enter-btn">Entrar →</button>
+      <p id="m-login-err" style="color:var(--red-glow); text-align:center; min-height:1em;"></p>
+      <p class="m-login-hint">💡 Esta contraseña te da acceso únicamente a ti. Tus alumnos no la necesitan.</p>
+    </div>
+  </div>
+
+  <!-- ROSTER + DETAIL — same UX as the in-game Cuaderno -->
+  <div id="m-dash" class="container m-dash hidden">
+    <div class="m-dash-header">
+      <div>
+        <h1 class="m-dash-title">📓 Cuaderno de Alumnos</h1>
+        <p class="m-dash-sub" id="m-dash-sub">Cargando…</p>
+      </div>
+      <div class="m-dash-actions">
+        <button class="btn btn-ghost btn-sm" id="m-refresh">🔄 Refrescar</button>
+        <button class="btn btn-ghost btn-sm" id="m-logout">Salir</button>
+      </div>
+    </div>
+
+    <!-- Class summary -->
+    <div id="m-summary"></div>
+
+    <!-- Roster list -->
+    <div id="m-roster" class="m-roster"></div>
+
+    <!-- Student detail (slides up over the roster) -->
+    <div id="m-detail" class="m-detail hidden">
+      <div class="m-detail-header">
+        <button class="btn btn-ghost btn-sm" id="m-detail-back">← Volver</button>
+        <div id="m-detail-head" class="m-detail-head"></div>
+      </div>
+      <div id="m-detail-body" class="m-detail-body"></div>
+    </div>
+  </div>
+
+  <script src="/js/warmup-vocab.js?v=20260525a"></script>
+  <script src="/js/maestro.js?v=20260527a"></script>
+</body>
+</html>

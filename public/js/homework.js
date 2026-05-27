@@ -422,6 +422,12 @@
         });
       }
     }
+    // === HSK1 LEVELS — what your kid should know by now ===
+    // For each experience (EXP1..EXP8): show total word count, list all
+    // words with hanzi+pinyin+Spanish, and (if we can infer it) the kid's
+    // evidence of having used the word in a graded submission.
+    renderHsk1Levels();
+
     // === CONVERSATION PROMPTS — what to ask the kid ===
     // Concrete questions parents can ask, drawn from each mastered
     // assignment's encouragement string. Reinforces SPEAKING the
@@ -455,6 +461,49 @@
       });
     });
   });
+  // === HSK1 Levels render ===
+  // Shows EXP1..EXP8 with word counts + expandable word lists. The
+  // parent can pop open any level and quiz their kid on those words.
+  function renderHsk1Levels() {
+    const wrap = $('hw-parents-levels');
+    if (!wrap || !window.WU_WORDS || !window.WU_EXPERIENCES) return;
+    // Group words by exp
+    const byExp = {};
+    window.WU_WORDS.forEach((w) => {
+      if (!byExp[w.exp]) byExp[w.exp] = [];
+      byExp[w.exp].push(w);
+    });
+    wrap.innerHTML = '';
+    Object.keys(window.WU_EXPERIENCES).forEach((expKey, idx) => {
+      const meta = window.WU_EXPERIENCES[expKey];
+      const words = byExp[expKey] || [];
+      const card = document.createElement('details');
+      card.className = 'hw-level-card';
+      // Auto-open the first 2 levels so parents see the format immediately
+      if (idx < 2) card.open = true;
+      card.innerHTML = `
+        <summary class="hw-level-summary">
+          <span class="hw-level-num">${escapeHtml(meta.short || expKey.toUpperCase())}</span>
+          <span class="hw-level-label">${escapeHtml(meta.label || expKey)}</span>
+          <span class="hw-level-count">${words.length} palabras</span>
+          <span class="hw-level-toggle">▼</span>
+        </summary>
+        <div class="hw-level-body">
+          <p class="hw-level-tip">💡 Practica con tu hijo/a: pídele que traduzca cada palabra al chino EN VOZ ALTA. Si no la sabe, dile la pinyin tres veces y que la repita.</p>
+          <div class="hw-level-words">
+            ${words.map((w) => `
+              <div class="hw-level-word">
+                <span class="hw-level-icon">${escapeHtml(w.icon || '·')}</span>
+                <span class="hw-level-word-hanzi">${escapeHtml(w.hanzi || '')}</span>
+                <span class="hw-level-word-pinyin">${escapeHtml(w.pinyin || '')}</span>
+                <span class="hw-level-word-es">${escapeHtml(w.es || '')}</span>
+              </div>`).join('')}
+          </div>
+        </div>`;
+      wrap.appendChild(card);
+    });
+  }
+
   $('hw-parents-back').addEventListener('click', () => {
     renderList();
     showScreen('list');
@@ -476,11 +525,17 @@
       const statusBadge = bestScore == null
         ? '<span class="hw-card-badge new">Nueva</span>'
         : `<span class="hw-card-badge done">${bestScore}/${a.totalPoints} pts</span>`;
+      // EXP chip — comes from a.expLabel ('exp1', 'exp2', etc.). Always
+      // shown so kids/parents know what HSK1 experience the tarea covers.
+      const expChip = a.expLabel && window.WU_EXPERIENCES && window.WU_EXPERIENCES[a.expLabel]
+        ? `<span class="hw-card-exp">${escapeHtml(window.WU_EXPERIENCES[a.expLabel].short || a.expLabel.toUpperCase())}</span>`
+        : '';
       card.innerHTML = `
         <div class="hw-card-head">
           ${statusBadge}
           <span class="hw-card-points">${a.totalPoints} pts</span>
         </div>
+        ${expChip}
         <div class="hw-card-title">${escapeHtml(a.title)}</div>
         <div class="hw-card-sub">${escapeHtml(a.subtitle)}</div>
         <div class="hw-card-meta">${a.itemCount} oraciones</div>`;
@@ -1008,13 +1063,13 @@
     }
   });
 
-  // ── Submit + results
-  $('hw-asg-submit').addEventListener('click', () => {
+  // ── Submit + results — both buttons (top + bottom) trigger the same flow
+  function submitAssignment() {
     if (!currentAssignment) return;
     const emptyCount = currentAnswers.filter((a) => !a.trim()).length;
     if (emptyCount > 0 && !confirm(`Tienes ${emptyCount} oraciones vacías. ¿Entregar de todas formas?`)) return;
-    $('hw-asg-submit').disabled = true;
-    $('hw-asg-submit').textContent = 'Enviando…';
+    const btns = [$('hw-asg-submit'), $('hw-asg-submit-top')].filter(Boolean);
+    btns.forEach((b) => { b.disabled = true; b.textContent = 'Enviando…'; });
     fetch('/api/homework/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1027,8 +1082,7 @@
     })
       .then((r) => r.json())
       .then((data) => {
-        $('hw-asg-submit').disabled = false;
-        $('hw-asg-submit').textContent = '📤 Entregar tarea';
+        btns.forEach((b) => { b.disabled = false; b.textContent = '📤 Entregar tarea'; });
         if (!data || !data.ok) {
           alert('Error al entregar: ' + (data && data.error || ''));
           return;
@@ -1042,11 +1096,12 @@
         });
       })
       .catch((e) => {
-        $('hw-asg-submit').disabled = false;
-        $('hw-asg-submit').textContent = '📤 Entregar tarea';
+        btns.forEach((b) => { b.disabled = false; b.textContent = '📤 Entregar tarea'; });
         alert('Error de conexión: ' + e.message);
       });
-  });
+  }
+  $('hw-asg-submit').addEventListener('click', submitAssignment);
+  if ($('hw-asg-submit-top')) $('hw-asg-submit-top').addEventListener('click', submitAssignment);
 
   function showResults(data) {
     showScreen('results');
