@@ -98,6 +98,7 @@ function getOrCreate(code, displayName) {
   const rec = {
     code: newCode,
     displayName: displayName ? String(displayName).slice(0, 24) : 'Anon',
+    avatar: null,                 // chosen on first homework-portal entry
     firstSeen: Date.now(),
     lastSeen: Date.now(),
     sentencesBuilt: [],
@@ -105,6 +106,22 @@ function getOrCreate(code, displayName) {
   records[newCode] = rec;
   scheduleSave();
   return rec;
+}
+// Persist the chosen avatar emoji for a student. Validates against
+// AVATAR_OPTIONS so kids can't inject arbitrary unicode.
+const AVATAR_OPTIONS = [
+  '👦🏻', '👦🏼', '👦🏽', '👦🏾', '👦🏿',
+  '👧🏻', '👧🏼', '👧🏽', '👧🏾', '👧🏿',
+  '🧒🏻', '🧒🏿',
+];
+function setAvatar(code, avatar) {
+  const rec = get(code);
+  if (!rec) return false;
+  if (!AVATAR_OPTIONS.includes(avatar)) return false;
+  rec.avatar = avatar;
+  rec.lastSeen = Date.now();
+  scheduleSave();
+  return true;
 }
 
 function get(code) {
@@ -172,10 +189,12 @@ function listAll() {
     .map((r) => ({
       code: r.code,
       displayName: r.displayName || 'Anon',
+      avatar: r.avatar || null,
       firstSeen: r.firstSeen || 0,
       lastSeen: r.lastSeen || 0,
-      sentenceCount: Array.isArray(r.sentencesBuilt) ? r.sentencesBuilt.length : 0,
-      testCount:     Array.isArray(r.testResults)   ? r.testResults.length   : 0,
+      sentenceCount:   Array.isArray(r.sentencesBuilt)         ? r.sentencesBuilt.length         : 0,
+      testCount:       Array.isArray(r.testResults)            ? r.testResults.length            : 0,
+      assignmentCount: Array.isArray(r.assignmentSubmissions)  ? r.assignmentSubmissions.length  : 0,
     }))
     .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
 }
@@ -259,4 +278,6 @@ module.exports = {
   getTestResults,
   logAssignmentSubmission,
   getAssignmentSubmissions,
+  setAvatar,
+  AVATAR_OPTIONS,
 };

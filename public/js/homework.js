@@ -13,6 +13,8 @@
   let accessCode = '';
   let studentCode = '';
   let displayName = '';
+  let avatar = null;
+  let avatarOptions = [];
   let assignments = [];        // summary list
   let submissions = [];        // student's prior submissions
   let currentAssignment = null;  // full body when an item is open
@@ -60,14 +62,21 @@
         accessCode = ac;
         studentCode = data.studentCode;
         displayName = data.displayName;
+        avatar = data.avatar || null;
+        avatarOptions = data.avatarOptions || [];
         assignments = data.assignments || [];
         submissions = data.submissions || [];
         try {
           localStorage.setItem(STORAGE_ACCESS_KEY, ac);
           localStorage.setItem(STORAGE_CODE_KEY, studentCode);
         } catch (_) {}
-        renderList();
-        showScreen('list');
+        // First-time joiners pick an avatar before seeing the list
+        if (!avatar) {
+          showAvatarPicker();
+        } else {
+          renderList();
+          showScreen('list');
+        }
       })
       .catch((e) => {
         $('hw-entry-err').textContent = 'Error de conexión: ' + e.message;
@@ -79,11 +88,117 @@
     studentCode = '';
     showScreen('entry');
   });
+  $('hw-list-parents').addEventListener('click', openParentView);
+
+  // === Avatar picker ===
+  function showAvatarPicker() {
+    $('hw-avatar-pick-name').textContent = displayName || 'amigo';
+    const grid = $('hw-avatar-grid');
+    grid.innerHTML = '';
+    avatarOptions.forEach((emoji) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'hw-avatar-option';
+      btn.innerHTML = `<span class="hw-avatar-option-emoji">${emoji}</span>`;
+      btn.addEventListener('click', () => chooseAvatar(emoji));
+      grid.appendChild(btn);
+    });
+    showScreen('avatar');
+  }
+  function chooseAvatar(emoji) {
+    $('hw-avatar-err').textContent = 'Guardando…';
+    fetch('/api/homework/avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode, studentCode, avatar: emoji }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) {
+          $('hw-avatar-err').textContent = data && data.error ? data.error : 'No se pudo guardar';
+          return;
+        }
+        avatar = emoji;
+        renderList();
+        showScreen('list');
+      })
+      .catch((e) => {
+        $('hw-avatar-err').textContent = 'Error de conexión: ' + e.message;
+      });
+  }
+
+  // === Parent view ===
+  function openParentView() {
+    fetch('/api/homework/insights/' + encodeURIComponent(studentCode) + '?accessCode=' + encodeURIComponent(accessCode))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) {
+          alert('No se pudo cargar: ' + (data && data.error || ''));
+          return;
+        }
+        renderParentView(data);
+        showScreen('parents');
+      });
+  }
+  function renderParentView(data) {
+    $('hw-parents-avatar').textContent = data.avatar || '🧒🏼';
+    $('hw-parents-name').textContent = data.displayName || 'Anon';
+    $('hw-parents-code').textContent = data.code;
+    // Stats row
+    const t = data.totals || {};
+    $('hw-parents-stats').innerHTML = `
+      <span class="hw-parents-stat">📚 <strong>${t.assignmentsMastered || 0}</strong>/${t.assignmentsAvailable || 0} tareas dominadas</span>
+      <span class="hw-parents-stat">📝 <strong>${t.readingTestsTaken || 0}</strong> exámenes de lectura</span>`;
+    // Insights
+    const insightsWrap = $('hw-parents-insights');
+    if (!data.insights || !data.insights.length) {
+      insightsWrap.innerHTML = '<div class="hw-parents-empty">Todavía no ha completado tareas con puntaje suficiente. ¡Anímalo/a a practicar más!</div>';
+    } else {
+      insightsWrap.innerHTML = '';
+      data.insights.forEach((row) => {
+        const card = document.createElement('div');
+        card.className = 'hw-parents-insight-card';
+        const dateStr = row.lastAttemptAt ? new Date(row.lastAttemptAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+        card.innerHTML = `
+          <div class="hw-parents-insight-head">
+            <span class="hw-parents-insight-title">${escapeHtml(row.insight.title)}</span>
+            <span class="hw-parents-insight-score">${row.score}/${row.total} <small>pts · ${dateStr}</small></span>
+          </div>
+          <ul class="hw-parents-insight-bullets">
+            ${row.insight.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join('')}
+          </ul>
+          ${row.insight.encouragement ? `<div class="hw-parents-insight-tip">💡 ${escapeHtml(row.insight.encouragement)}</div>` : ''}`;
+        insightsWrap.appendChild(card);
+      });
+    }
+    // Tests
+    const testsWrap = $('hw-parents-tests');
+    if (!data.tests || !data.tests.length) {
+      testsWrap.innerHTML = '<div class="hw-parents-empty">Aún no ha hecho exámenes de lectura en clase.</div>';
+    } else {
+      testsWrap.innerHTML = '';
+      data.tests.forEach((t) => {
+        const row = document.createElement('div');
+        row.className = 'hw-parents-test-row';
+        const dateStr = new Date(t.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+        row.innerHTML = `
+          <span class="hw-parents-test-title">📖 ${escapeHtml(t.storyTitle || t.storyId)}</span>
+          <span class="hw-parents-test-score">${t.score}/100 pts</span>
+          <span class="hw-parents-test-date">${dateStr}</span>`;
+        testsWrap.appendChild(row);
+      });
+    }
+  }
+  $('hw-parents-back').addEventListener('click', () => {
+    renderList();
+    showScreen('list');
+  });
 
   // ── Assignment-list screen
   function renderList() {
     $('hw-list-name').textContent = displayName || 'Anon';
     $('hw-list-code').textContent = studentCode;
+    if ($('hw-list-avatar')) $('hw-list-avatar').textContent = avatar || '🧒🏼';
     const grid = $('hw-list-grid');
     grid.innerHTML = '';
     assignments.forEach((a) => {
@@ -327,7 +442,7 @@
   });
 
   function showScreen(name) {
-    ['entry', 'list', 'assignment', 'results'].forEach((n) => {
+    ['entry', 'avatar', 'list', 'assignment', 'results', 'parents'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

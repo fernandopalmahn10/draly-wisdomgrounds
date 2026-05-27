@@ -6,8 +6,8 @@
   <title>📚 Tareas · Draly Wisdomgrounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260525g">
-  <link rel="stylesheet" href="/css/homework.css?v=20260526a">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260526a">
+  <link rel="stylesheet" href="/css/homework.css?v=20260526b">
 </head>
 <body class="hw-bg">
 
@@ -31,20 +31,73 @@
     </div>
   </div>
 
+  <!-- SCREEN: AVATAR PICKER — shown on first entry only -->
+  <div id="screen-avatar" class="container hw-avatar-pick hidden">
+    <div class="hw-avatar-pick-card">
+      <h1 class="hw-avatar-pick-title">¡Hola, <span id="hw-avatar-pick-name">amigo</span>!</h1>
+      <p class="hw-avatar-pick-sub">Elige tu avatar. Será el que verán tus papás cuando vean tu progreso.</p>
+      <div class="hw-avatar-grid" id="hw-avatar-grid"></div>
+      <p id="hw-avatar-err" style="color:var(--red-glow); text-align:center; font-size:0.85rem; min-height:1em;"></p>
+    </div>
+  </div>
+
   <!-- SCREEN: ASSIGNMENT LIST — student's home -->
   <div id="screen-list" class="container hw-list hidden">
     <div class="hw-list-header">
-      <div>
-        <h1 class="hw-list-title">📚 Mis Tareas</h1>
-        <p class="hw-list-sub">
-          Hola <strong id="hw-list-name">…</strong> ·
-          Código <strong id="hw-list-code">····</strong>
-        </p>
+      <div class="hw-list-header-id">
+        <div class="hw-list-avatar" id="hw-list-avatar">🧒🏼</div>
+        <div>
+          <h1 class="hw-list-title">📚 Mis Tareas</h1>
+          <p class="hw-list-sub">
+            Hola <strong id="hw-list-name">…</strong> ·
+            Código <strong id="hw-list-code">····</strong>
+          </p>
+        </div>
       </div>
-      <button class="btn btn-ghost btn-sm" id="hw-list-logout">Salir</button>
+      <div class="hw-list-header-actions">
+        <button class="btn btn-ghost btn-sm" id="hw-list-parents">👨‍👩‍👧 Vista para papás</button>
+        <button class="btn btn-ghost btn-sm" id="hw-list-logout">Salir</button>
+      </div>
     </div>
     <div class="hw-list-grid" id="hw-list-grid">
       <!-- assignment cards rendered by JS -->
+    </div>
+  </div>
+
+  <!-- SCREEN: PARENT VIEW — Spanish digest of what the kid has learned -->
+  <div id="screen-parents" class="container hw-parents hidden">
+    <div class="hw-parents-card">
+      <div class="hw-parents-header">
+        <button class="btn btn-ghost btn-sm" id="hw-parents-back">← Volver</button>
+        <div class="hw-parents-titlebar">
+          <h1 class="hw-parents-title">Progreso de tu hijo/a</h1>
+          <p class="hw-parents-sub">Resumen para padres y madres</p>
+        </div>
+      </div>
+      <div class="hw-parents-hero">
+        <div class="hw-parents-avatar-frame">
+          <div class="hw-parents-avatar" id="hw-parents-avatar">🧒🏼</div>
+        </div>
+        <div class="hw-parents-hero-info">
+          <div class="hw-parents-hero-name" id="hw-parents-name">—</div>
+          <div class="hw-parents-hero-code">Código: <strong id="hw-parents-code">····</strong></div>
+          <div class="hw-parents-stats" id="hw-parents-stats"></div>
+        </div>
+      </div>
+      <div class="hw-parents-encouragement" id="hw-parents-encouragement">
+        Aquí verás todo lo que tu hijo/a ha aprendido en clase. Anímalo/a a practicar todos los días — incluso 5 minutos hacen mucha diferencia. 🌱
+      </div>
+      <div class="hw-parents-section-title">🌟 Lo que tu hijo/a ya sabe hacer</div>
+      <div class="hw-parents-insights" id="hw-parents-insights">
+        <div class="hw-parents-empty">Todavía no ha completado ninguna tarea. ¡Anímalo/a a hacer la primera!</div>
+      </div>
+      <div class="hw-parents-section-title">📝 Exámenes de lectura</div>
+      <div class="hw-parents-tests" id="hw-parents-tests">
+        <div class="hw-parents-empty">Aún no ha hecho exámenes de lectura.</div>
+      </div>
+      <div class="hw-parents-tips">
+        💡 <strong>Consejo:</strong> Pídele a tu hijo/a que te enseñe lo que sabe. Cuando los niños son maestros, aprenden el doble.
+      </div>
     </div>
   </div>
 
@@ -90,6 +143,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/homework.js?v=20260526a"></script>
+  <script src="/js/homework.js?v=20260526b"></script>
 </body>
 </html>
