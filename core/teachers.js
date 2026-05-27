@@ -208,8 +208,13 @@ function listAll() {
     .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
 }
 
-// Initial load on require()
-load();
+// Initial load on require() — wrapped so a disk-permission issue or
+// corrupt JSON can never crash server boot. Worst case: teachers is
+// an empty object (no super admin) until the first successful save.
+try { load(); } catch (e) {
+  console.error('[teachers] load() crashed at boot:', e.message);
+  teachers = {};
+}
 
 module.exports = {
   load,
