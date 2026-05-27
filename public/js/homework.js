@@ -710,9 +710,18 @@
         <div class="hw-curious-chip" style="background:${color}; color:#0a1320;">${escapeHtml((cat && cat.label) || w.cat || '')}</div>
         ${exp ? `<div class="hw-curious-chip exp">${escapeHtml(exp.short || exp.label)}</div>` : ''}
       </div>
+      ${w.pinyin ? `<button class="btn btn-jade hw-curious-speak" type="button">🔊 Escuchar y repetir</button>` : ''}
       <div class="hw-curious-hint">Toca fuera para cerrar</div>`;
     overlay.classList.remove('hidden');
     requestAnimationFrame(() => overlay.classList.add('show'));
+    // Wire the speak button on the card. Auto-play the word once so the
+    // kid hears it the moment the card opens.
+    const speakBtn = card.querySelector('.hw-curious-speak');
+    if (speakBtn) {
+      speakBtn.addEventListener('click', () => speakChinese(w.pinyin, speakBtn));
+      // Small delay so the overlay slide-in finishes before audio starts
+      setTimeout(() => speakChinese(w.pinyin, speakBtn), 250);
+    }
   }
   function hideCuriousCard() {
     const overlay = document.getElementById('hw-curious-overlay');
@@ -1183,26 +1192,80 @@
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
-  // Web Speech API in zh-CN. Highlights the triggering button while
-  // speaking and restores it on end. Gracefully fails if the platform
-  // has no Chinese voice — falls back to alerting the kid.
+  // Premium TTS via Google Cloud (zh-CN Wavenet voice). Falls back to
+  // the browser's Web Speech API if the server-side TTS isn't configured.
+  // The MP3 is cached server-side so the second playback of the same
+  // sentence is instant + free.
+  //
+  // Shared <audio> element so we can cancel an in-flight playback when
+  // the kid taps a new button (avoids overlap).
+  let _ttsAudio = null;
+  // Sticky flag: if the server returns 503 once, skip the network roundtrip
+  // for the rest of the session and go straight to Web Speech.
+  let _ttsDisabled = false;
   function speakChinese(text, btn) {
+    const clean = String(text || '').trim();
+    if (!clean) return;
+    // Cancel anything already playing
+    if (_ttsAudio) { try { _ttsAudio.pause(); _ttsAudio.src = ''; } catch (_) {} _ttsAudio = null; }
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+    // UI feedback while loading/playing
+    let restoreBtn = null;
+    if (btn) {
+      btn.classList.add('speaking');
+      const origText = btn.textContent;
+      btn.textContent = '🔊 …';
+      restoreBtn = () => {
+        btn.classList.remove('speaking');
+        btn.textContent = origText;
+      };
+    }
+
+    // Try Google TTS first (sounds human, cached, free at this volume)
+    if (!_ttsDisabled) {
+      const url = '/api/tts?text=' + encodeURIComponent(clean);
+      const audio = new Audio(url);
+      audio.preload = 'auto';
+      _ttsAudio = audio;
+      let started = false;
+      audio.addEventListener('canplay', () => { started = true; });
+      audio.addEventListener('ended',   () => { if (restoreBtn) restoreBtn(); });
+      audio.addEventListener('error',   () => {
+        // Network failure or 503 — fall back to Web Speech. Don't keep
+        // trying the server this session.
+        if (!started) {
+          _ttsDisabled = true;
+          if (restoreBtn) restoreBtn();
+          _speakWebSpeech(clean, btn);
+        }
+      });
+      audio.play().catch(() => {
+        // Autoplay blocked? Fall back. Most browsers allow it after a
+        // user gesture (which is exactly what triggered this), so this
+        // shouldn't fire on a tap. Belt-and-suspenders.
+        if (restoreBtn) restoreBtn();
+        _speakWebSpeech(clean, btn);
+      });
+      return;
+    }
+    _speakWebSpeech(clean, btn);
+  }
+
+  function _speakWebSpeech(text, btn) {
     if (!('speechSynthesis' in window)) {
-      alert('Tu navegador no soporta voz. Léelo en voz alta tú mismo — ¡es la mejor forma de aprender!');
+      if (btn) { btn.classList.remove('speaking'); }
       return;
     }
     try {
-      window.speechSynthesis.cancel();   // stop anything currently speaking
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'zh-CN';
-      u.rate = 0.85;          // slightly slow so kids can mimic
+      u.rate = 0.85;
       u.pitch = 1.0;
-      // Prefer a zh-CN voice if available — iOS bundles multiple voices.
       const voices = window.speechSynthesis.getVoices();
       const zh = voices.find((v) => /^zh(-CN)?/i.test(v.lang));
       if (zh) u.voice = zh;
       if (btn) {
-        btn.classList.add('speaking');
         const origText = btn.textContent;
         btn.textContent = '🔊 Hablando…';
         u.onend = u.onerror = () => {
@@ -1213,12 +1276,14 @@
       window.speechSynthesis.speak(u);
     } catch (e) {
       console.warn('speech synthesis failed:', e);
+      if (btn) btn.classList.remove('speaking');
     }
   }
-  // Voices on iOS load asynchronously — pre-warm so the first tap doesn't
-  // miss the zh-CN voice on the first call.
+  // Pre-warm the Web Speech voice list (iOS quirk) for the fallback path.
   if ('speechSynthesis' in window) {
     window.speechSynthesis.getVoices();
-    window.speechSynthesis.addEventListener && window.speechSynthesis.addEventListener('voiceschanged', () => {});
+    if (window.speechSynthesis.addEventListener) {
+      window.speechSynthesis.addEventListener('voiceschanged', () => {});
+    }
   }
 })();
