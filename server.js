@@ -170,9 +170,73 @@ app.post('/api/homework/enter', (req, res) => {
     ok: true,
     studentCode: rec.code,
     displayName: rec.displayName,
+    avatar: rec.avatar || null,
+    avatarOptions: Students.AVATAR_OPTIONS,
     assignments: Assignments.listAssignments(),
     // Also send the student's prior submissions so we can mark "done"
     submissions: Students.getAssignmentSubmissions(rec.code, 100),
+  });
+});
+// Set the kid's avatar (one of the 12 allowed emoji).
+app.post('/api/homework/avatar', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, avatar } = req.body || {};
+  const ok = Students.setAvatar(studentCode, avatar);
+  if (!ok) return res.status(400).json({ ok: false, error: 'avatar inválido o estudiante no encontrado' });
+  res.json({ ok: true });
+});
+// 👨‍👩‍👧 Parent view — returns a digest of what the kid has learned, in
+// Spanish, derived from their completed assignments + reading-mode tests.
+// No password, just access code + student code (parent uses same as kid).
+app.get('/api/homework/insights/:code', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'Estudiante no encontrado' });
+  const subs = Students.getAssignmentSubmissions(rec.code, 100);
+  // Map each submission to its assignment definition + insight. Take the
+  // BEST attempt per assignment, then keep only those with score ≥ 60%.
+  const bestByAssignment = {};
+  subs.forEach((s) => {
+    const cur = bestByAssignment[s.assignmentId];
+    if (!cur || s.score > cur.score) bestByAssignment[s.assignmentId] = s;
+  });
+  const insights = [];
+  Object.values(bestByAssignment).forEach((sub) => {
+    const a = Assignments.getAssignment(sub.assignmentId);
+    if (!a || !a.parentInsight) return;
+    const pct = (sub.score / sub.total) * 100;
+    if (pct < 60) return;  // not mastered yet
+    insights.push({
+      assignmentId:    a.id,
+      assignmentTitle: a.title,
+      score:           sub.score,
+      total:           sub.total,
+      pct:             Math.round(pct),
+      insight:         a.parentInsight,
+      lastAttemptAt:   sub.ts,
+    });
+  });
+  // Tests done (any reading-mode test attempt counts as "they engaged")
+  const tests = Students.getTestResults(rec.code, 50);
+  const testsByStory = {};
+  tests.forEach((t) => {
+    if (!testsByStory[t.storyId] || t.score > testsByStory[t.storyId].score) {
+      testsByStory[t.storyId] = t;
+    }
+  });
+  res.json({
+    ok: true,
+    code: rec.code,
+    displayName: rec.displayName,
+    avatar: rec.avatar || '🧒🏼',
+    insights,
+    tests: Object.values(testsByStory),
+    totals: {
+      assignmentAttempts:  subs.length,
+      assignmentsMastered: insights.length,
+      assignmentsAvailable: Assignments.listAssignments().length,
+      readingTestsTaken:   tests.length,
+    },
   });
 });
 

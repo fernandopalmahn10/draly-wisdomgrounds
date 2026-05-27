@@ -560,10 +560,14 @@
           notebookSub.textContent = 'No se pudo cargar la lista.';
           return;
         }
-        const students = (data.students || []).filter((s) => s.sentenceCount > 0);
-        notebookSub.textContent = `${students.length} alumno${students.length === 1 ? '' : 's'} con oraciones guardadas`;
+        // Show every student that has ANY activity (sentences, tests, or
+        // assignments). Filter is union of the three counters.
+        const students = (data.students || []).filter((s) =>
+          (s.sentenceCount > 0) || (s.testCount > 0) || (s.assignmentCount > 0)
+        );
+        notebookSub.textContent = `${students.length} alumno${students.length === 1 ? '' : 's'} con actividad`;
         if (!students.length) {
-          notebookRoster.innerHTML = '<div class="wu-notebook-empty">Aún nadie ha guardado oraciones. Cuando un alumno (o tú) presione 💾 Guardar, aparecerá aquí con su código.</div>';
+          notebookRoster.innerHTML = '<div class="wu-notebook-empty">Aún nadie tiene actividad registrada. Cuando un alumno guarde una oración, haga un examen o entregue una tarea, aparecerá aquí.</div>';
           return;
         }
         students.forEach((s) => {
@@ -571,10 +575,16 @@
           row.type = 'button';
           row.className = 'wu-notebook-row-btn';
           const since = s.lastSeen ? new Date(s.lastSeen).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '—';
+          const avatar = s.avatar || '🧒🏼';
           row.innerHTML = `
+            <span class="wu-nb-row-avatar">${avatar}</span>
             <span class="wu-nb-code">${escapeHtml(s.code)}</span>
             <span class="wu-nb-name">${escapeHtml(s.displayName || 'Anon')}</span>
-            <span class="wu-nb-count">📝 ${s.sentenceCount}</span>
+            <span class="wu-nb-row-counts">
+              <span class="wu-nb-row-c">📝${s.sentenceCount}</span>
+              <span class="wu-nb-row-c">📚${s.assignmentCount}</span>
+              <span class="wu-nb-row-c">🏆${s.testCount}</span>
+            </span>
             <span class="wu-nb-date">${since}</span>`;
           row.addEventListener('click', () => fetchStudent(s.code));
           notebookRoster.appendChild(row);
@@ -598,38 +608,93 @@
         const head = $('wu-notebook-detail-head');
         const list = $('wu-notebook-detail-list');
         const since = data.firstSeen ? new Date(data.firstSeen).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+        const avatar = data.avatar || '🧒🏼';
+        const tests = data.tests || [];
+        const assigns = data.assignments || [];
         head.innerHTML = `
           <div class="wu-nb-head-row">
+            <span class="wu-nb-head-avatar">${avatar}</span>
             <span class="wu-nb-head-code">📇 ${escapeHtml(data.code)}</span>
             <span class="wu-nb-head-name">${escapeHtml(data.displayName || 'Anon')}</span>
           </div>
-          <div class="wu-nb-head-meta">Desde ${since} · ${data.sentences.length} oración${data.sentences.length === 1 ? '' : 'es'}</div>`;
+          <div class="wu-nb-head-meta">
+            Desde ${since} ·
+            📝 ${data.sentences.length} oración${data.sentences.length === 1 ? '' : 'es'} ·
+            📚 ${assigns.length} tarea${assigns.length === 1 ? '' : 's'} ·
+            🏆 ${tests.length} examen${tests.length === 1 ? '' : 'es'}
+          </div>`;
         notebookSub.textContent = '';
         list.innerHTML = '';
-        if (!data.sentences.length) {
-          list.innerHTML = '<div class="wu-notebook-empty">Este alumno no tiene oraciones guardadas.</div>';
-          return;
+
+        // === ASSIGNMENTS section ===
+        if (assigns.length) {
+          const h = document.createElement('div');
+          h.className = 'wu-nb-section-title';
+          h.textContent = '📚 Tareas entregadas';
+          list.appendChild(h);
+          assigns.slice(0, 20).forEach((s) => {
+            const row = document.createElement('div');
+            const pct = s.total ? Math.round((s.score / s.total) * 100) : 0;
+            row.className = 'wu-nb-asg-row ' + (pct >= 80 ? 'great' : pct >= 60 ? 'ok' : 'low');
+            const dateStr = new Date(s.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+            row.innerHTML = `
+              <span class="wu-nb-asg-title">${escapeHtml(s.assignmentTitle || s.assignmentId)}</span>
+              <span class="wu-nb-asg-score">${s.score}/${s.total} <small>(${pct}%)</small></span>
+              <span class="wu-nb-asg-date">${dateStr}</span>`;
+            list.appendChild(row);
+          });
         }
-        data.sentences.forEach((s) => {
-          const item = document.createElement('div');
-          item.className = 'wu-notebook-sentence';
-          const dateStr = new Date(s.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
-          const wordsHtml = (s.words || []).map((wid) => {
-            const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
-            if (!w) return '';
-            const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
-            const color = cat ? cat.color : '#fff';
-            return `<span class="wu-nb-word" style="--cat-color:${color};">
-              <span class="wu-nb-icon">${w.icon || ''}</span>
-              <span class="wu-nb-pinyin">${escapeHtml(w.pinyin || '')}</span>
-              <span class="wu-nb-es">${escapeHtml(w.es || '')}</span>
-            </span>`;
-          }).join('');
-          item.innerHTML = `
-            <div class="wu-nb-sentence-meta">📅 ${dateStr}</div>
-            <div class="wu-nb-sentence-words">${wordsHtml}</div>`;
-          list.appendChild(item);
-        });
+
+        // === READING-MODE TESTS section ===
+        if (tests.length) {
+          const h = document.createElement('div');
+          h.className = 'wu-nb-section-title';
+          h.textContent = '🏆 Exámenes de lectura';
+          list.appendChild(h);
+          tests.slice(0, 20).forEach((t) => {
+            const row = document.createElement('div');
+            const pct = Math.round((t.score / 100) * 100);
+            row.className = 'wu-nb-test-row ' + (pct >= 80 ? 'great' : pct >= 60 ? 'ok' : 'low');
+            const dateStr = new Date(t.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+            row.innerHTML = `
+              <span class="wu-nb-test-story">📖 ${escapeHtml(t.storyTitle || t.storyId)}</span>
+              <span class="wu-nb-test-score">${t.score}/100</span>
+              <span class="wu-nb-test-date">${dateStr}</span>`;
+            list.appendChild(row);
+          });
+        }
+
+        // === SENTENCES (warmup) section ===
+        if (data.sentences.length) {
+          const h = document.createElement('div');
+          h.className = 'wu-nb-section-title';
+          h.textContent = '✏️ Oraciones construidas';
+          list.appendChild(h);
+          data.sentences.forEach((s) => {
+            const item = document.createElement('div');
+            item.className = 'wu-notebook-sentence';
+            const dateStr = new Date(s.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+            const wordsHtml = (s.words || []).map((wid) => {
+              const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
+              if (!w) return '';
+              const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+              const color = cat ? cat.color : '#fff';
+              return `<span class="wu-nb-word" style="--cat-color:${color};">
+                <span class="wu-nb-icon">${w.icon || ''}</span>
+                <span class="wu-nb-pinyin">${escapeHtml(w.pinyin || '')}</span>
+                <span class="wu-nb-es">${escapeHtml(w.es || '')}</span>
+              </span>`;
+            }).join('');
+            item.innerHTML = `
+              <div class="wu-nb-sentence-meta">📅 ${dateStr}</div>
+              <div class="wu-nb-sentence-words">${wordsHtml}</div>`;
+            list.appendChild(item);
+          });
+        }
+
+        if (!assigns.length && !tests.length && !data.sentences.length) {
+          list.innerHTML = '<div class="wu-notebook-empty">Este alumno aún no tiene actividad registrada.</div>';
+        }
       })
       .catch((e) => {
         notebookSub.textContent = 'Error: ' + e.message;

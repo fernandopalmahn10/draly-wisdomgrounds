@@ -46,6 +46,18 @@ const ASSIGNMENTS = [
       { es: 'Amo a mi familia.',            expected: 'wǒ ài wǒ de jiā' },
     ],
     pointsPerItem: 20,
+    // Parent-facing summary in Spanish — surfaced on the parent view of
+    // the homework portal when this assignment is completed (score≥60).
+    parentInsight: {
+      title: 'Tu hijo/a sabe presentarse y hablar de su familia en chino',
+      bullets: [
+        'Decir su nombre en chino: "Wǒ jiào …" (Me llamo …)',
+        'Decir su edad: "Wǒ bā suì" (Tengo 8 años)',
+        'Hablar de su mamá, papá y hermanos en chino',
+        'Expresar amor por su familia: "Wǒ ài wǒ de jiā"',
+      ],
+      encouragement: '¡Pídele que te diga cómo se llama y cuántos años tiene en chino! Verás que ya lo sabe.',
+    },
   },
   // Add more here. See instructions at the top of this file.
 ];

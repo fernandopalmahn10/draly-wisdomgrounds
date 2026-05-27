@@ -390,6 +390,278 @@ body.hw-bg {
   flex-wrap: wrap;
 }
 
+/* === Avatar picker (first-time entry) === */
+.hw-avatar-pick {
+  min-height: 100dvh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px 14px;
+}
+.hw-avatar-pick-card {
+  width: 100%; max-width: 540px;
+  background: linear-gradient(160deg, rgba(40, 50, 80, 0.95), rgba(20, 25, 45, 0.97));
+  border: 3px solid rgba(180, 100, 255, 0.6);
+  border-radius: 22px;
+  padding: 28px 28px 24px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 28px rgba(180, 100, 255, 0.25);
+  text-align: center;
+}
+.hw-avatar-pick-title {
+  font-family: 'Cinzel', serif; font-weight: 900;
+  color: #c5a3ff;
+  font-size: 1.6rem;
+  margin: 0 0 6px;
+}
+.hw-avatar-pick-title span { color: #ffe082; }
+.hw-avatar-pick-sub {
+  color: rgba(243, 230, 194, 0.75);
+  margin-bottom: 18px;
+}
+.hw-avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 14px 0 6px;
+}
+.hw-avatar-option {
+  background: linear-gradient(135deg, rgba(91, 232, 209, 0.18), rgba(180, 100, 255, 0.18));
+  border: 3px solid rgba(91, 232, 209, 0.5);
+  border-radius: 16px;
+  padding: 14px 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+}
+.hw-avatar-option:hover {
+  transform: translateY(-3px) scale(1.05);
+  border-color: #c5a3ff;
+  box-shadow: 0 6px 20px rgba(180, 100, 255, 0.5), 0 0 16px rgba(91, 232, 209, 0.3);
+}
+.hw-avatar-option:active { transform: scale(0.95); }
+.hw-avatar-option-emoji {
+  font-size: 3rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+
+/* === Avatar shown in the list header === */
+.hw-list-header-id {
+  display: flex; align-items: center; gap: 14px;
+}
+.hw-list-header-actions {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.hw-list-avatar {
+  font-size: 3rem;
+  line-height: 1;
+  background: linear-gradient(135deg, rgba(91, 232, 209, 0.25), rgba(180, 100, 255, 0.25));
+  border: 3px solid rgba(91, 232, 209, 0.6);
+  border-radius: 16px;
+  padding: 4px 10px;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+  box-shadow: 0 0 18px rgba(91, 232, 209, 0.3);
+}
+
+/* === Parent view === */
+.hw-parents {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 18px 14px calc(28px + env(safe-area-inset-bottom, 0px));
+}
+.hw-parents-card {
+  background: linear-gradient(160deg, rgba(40, 50, 80, 0.95), rgba(20, 25, 45, 0.97));
+  border: 3px solid #c5a3ff;
+  border-radius: 22px;
+  padding: 22px 24px 26px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 28px rgba(180, 100, 255, 0.2);
+}
+.hw-parents-header {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 14px;
+}
+.hw-parents-titlebar { flex: 1; }
+.hw-parents-title {
+  font-family: 'Cinzel', serif; font-weight: 900;
+  color: #c5a3ff; margin: 0;
+  font-size: 1.4rem;
+}
+.hw-parents-sub {
+  color: rgba(243, 230, 194, 0.7); margin: 2px 0 0;
+  font-size: 0.92rem;
+}
+.hw-parents-hero {
+  display: flex; align-items: center; gap: 18px;
+  padding: 18px 16px;
+  background: rgba(30, 35, 60, 0.55);
+  border-radius: 18px;
+  margin-bottom: 14px;
+}
+.hw-parents-avatar-frame {
+  position: relative;
+  flex: 0 0 auto;
+  width: 130px; height: 130px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(91, 232, 209, 0.3), transparent 60%),
+    linear-gradient(135deg, rgba(180, 100, 255, 0.35), rgba(91, 232, 209, 0.35));
+  border: 4px solid #5be8d1;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow:
+    0 0 32px rgba(91, 232, 209, 0.5),
+    0 0 60px rgba(180, 100, 255, 0.3),
+    inset 0 0 28px rgba(180, 100, 255, 0.3);
+}
+.hw-parents-avatar-frame::before {
+  /* Cyber-frame accent — corner notches */
+  content: '';
+  position: absolute; inset: -6px;
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, #c5a3ff, transparent 30%) border-box,
+    linear-gradient(315deg, #5be8d1, transparent 30%) border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.85;
+}
+.hw-parents-avatar {
+  font-size: 5rem;
+  line-height: 1;
+  filter:
+    drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 0 18px rgba(255, 255, 255, 0.3));
+}
+.hw-parents-hero-info { flex: 1; min-width: 0; }
+.hw-parents-hero-name {
+  font-size: 1.5rem; font-weight: 900;
+  color: #fff5d8;
+  text-shadow: 0 0 12px rgba(91, 232, 209, 0.4);
+}
+.hw-parents-hero-code {
+  color: rgba(243, 230, 194, 0.75);
+  font-size: 0.92rem;
+  margin: 2px 0 8px;
+}
+.hw-parents-hero-code strong {
+  font-family: 'Cinzel', serif;
+  color: #ffe082;
+  letter-spacing: 0.1em;
+}
+.hw-parents-stats {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-top: 8px;
+}
+.hw-parents-stat {
+  font-size: 0.9rem;
+  color: rgba(243, 230, 194, 0.85);
+}
+.hw-parents-stat strong {
+  color: #5be8d1;
+  font-size: 1.1em;
+}
+.hw-parents-encouragement {
+  background: linear-gradient(135deg, rgba(91, 232, 209, 0.12), rgba(180, 100, 255, 0.12));
+  border-left: 4px solid #c5a3ff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  font-size: 0.95rem;
+  color: rgba(243, 230, 194, 0.95);
+  line-height: 1.5;
+}
+.hw-parents-section-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #ffe082;
+  font-size: 1.1rem;
+  margin: 18px 0 10px;
+  letter-spacing: 0.04em;
+}
+.hw-parents-empty {
+  padding: 20px;
+  text-align: center;
+  background: rgba(30, 35, 60, 0.4);
+  border: 1px dashed rgba(255, 213, 122, 0.3);
+  border-radius: 12px;
+  color: rgba(243, 230, 194, 0.6);
+  font-style: italic;
+}
+.hw-parents-insights {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.hw-parents-insight-card {
+  background: linear-gradient(160deg, rgba(50, 55, 90, 0.7), rgba(28, 30, 50, 0.85));
+  border: 2px solid rgba(91, 232, 209, 0.55);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.hw-parents-insight-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 12px; flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.hw-parents-insight-title {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #5be8d1;
+}
+.hw-parents-insight-score {
+  font-weight: 900;
+  color: #ffe082;
+  white-space: nowrap;
+}
+.hw-parents-insight-score small {
+  color: rgba(255, 245, 216, 0.55);
+  font-weight: 700;
+  font-size: 0.78em;
+  margin-left: 4px;
+}
+.hw-parents-insight-bullets {
+  margin: 6px 0 0;
+  padding-left: 22px;
+  color: rgba(243, 230, 194, 0.92);
+  line-height: 1.6;
+}
+.hw-parents-insight-bullets li { margin-bottom: 3px; }
+.hw-parents-insight-tip {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 213, 122, 0.12);
+  border-left: 3px solid #ffd57a;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: rgba(255, 245, 216, 0.85);
+  font-style: italic;
+}
+.hw-parents-tests {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.hw-parents-test-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 14px;
+  background: rgba(30, 35, 60, 0.55);
+  border-left: 3px solid #ffe082;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.hw-parents-test-title { color: #fff5d8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hw-parents-test-score { color: #ffe082; }
+.hw-parents-test-date  { color: rgba(243, 230, 194, 0.55); font-size: 0.85rem; }
+.hw-parents-tips {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: rgba(180, 100, 255, 0.12);
+  border-left: 4px solid #c5a3ff;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  color: rgba(243, 230, 194, 0.92);
+  line-height: 1.5;
+}
+
 /* Homework portal entry button on index.html — async path next to the
    live-PIN join card. Different color (teal) so kids can tell it's a
    different mode. */
