@@ -1255,12 +1255,32 @@
   // Shared <audio> element so we can cancel an in-flight playback when
   // the kid taps a new button (avoids overlap).
   let _ttsAudio = null;
+  // Aggressive stop — kills both Google audio AND Web Speech. Called
+  // before every new tap so we never get two voices overlapping
+  // (user feedback 2026-05-27: "both voices are playing at the same
+  // time, the old one plus the Google one").
+  function _stopAllSpeech() {
+    if (_ttsAudio) {
+      try {
+        _ttsAudio.pause();
+        _ttsAudio.removeAttribute('src');
+        _ttsAudio.load();
+      } catch (_) {}
+      _ttsAudio = null;
+    }
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        // Some browsers (iOS Safari) ignore the first cancel — fire
+        // twice with a tiny delay so we're sure the queue clears.
+        setTimeout(() => { try { window.speechSynthesis.cancel(); } catch (_) {} }, 50);
+      } catch (_) {}
+    }
+  }
   function speakChinese(text, btn) {
     const clean = String(text || '').trim();
     if (!clean) return;
-    // Cancel anything already playing
-    if (_ttsAudio) { try { _ttsAudio.pause(); _ttsAudio.src = ''; } catch (_) {} _ttsAudio = null; }
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    _stopAllSpeech();
 
     // UI feedback while loading/playing
     let restoreBtn = null;
@@ -1288,31 +1308,40 @@
     let fellBack = false;
 
     const fallback = (reason) => {
-      if (fellBack) return;
+      // Never fall back if Google already started playing (success!)
+      if (fellBack || playedOnce) return;
       fellBack = true;
+      // Kill the audio element so a late-arriving response can't
+      // start playing while Web Speech is going
+      try {
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+      } catch (_) {}
       console.warn('[tts] fallback to Web Speech:', reason);
-      // Visible toast so the user can SEE why TTS fell back, without
-      // having to dig through dev tools on a phone. Auto-hides in 4s.
       _showTtsToast('⚠️ Voz mala (' + reason + ')');
       if (restoreBtn) restoreBtn();
       _speakWebSpeech(clean, btn);
     };
-    // Success indicator on first play
-    audio.addEventListener('playing', () => {
-      if (!playedOnce) _showTtsToast('🔊 Voz Google ✓', 'good');
-    });
 
     audio.addEventListener('canplay', () => {
-      // Audio is ready — now safe to call play(). On modern browsers
-      // play() returns a Promise that resolves once playback actually
-      // begins, or rejects on hard failures (e.g. autoplay block).
+      if (fellBack) return;     // already gave up — don't play
       audio.play()
         .then(() => { playedOnce = true; })
         .catch((e) => { if (!playedOnce) fallback('play(): ' + e.message); });
     });
-    audio.addEventListener('playing', () => { playedOnce = true; });
+    audio.addEventListener('playing', () => {
+      playedOnce = true;
+      // Hard kill any Web Speech that might have been queued
+      if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.cancel(); } catch (_) {}
+      }
+      _showTtsToast('🔊 Voz Google ✓', 'good');
+      if (timeoutId) clearTimeout(timeoutId);
+    });
     audio.addEventListener('ended', () => { if (restoreBtn) restoreBtn(); });
     audio.addEventListener('error', () => {
+      if (playedOnce) return;  // ignore errors after successful play
       const msg = audio.error ? `code ${audio.error.code}: ${audio.error.message || ''}` : 'unknown';
       fallback('audio error (' + msg + ')');
     });
@@ -1323,7 +1352,6 @@
     const timeoutId = setTimeout(() => {
       if (!playedOnce) fallback('timeout 10s');
     }, 10000);
-    audio.addEventListener('playing', () => clearTimeout(timeoutId));
 
     audio.src = url;
     audio.load();
