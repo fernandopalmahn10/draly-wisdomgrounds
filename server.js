@@ -189,6 +189,105 @@ app.get('/api/admin/students/:code', (req, res) => {
   });
 });
 
+// === MESSAGING (teacher → student[s]) =================================
+// Teachers can send a message to one student in their classroom, or
+// broadcast to every student in their classroom. Students poll their
+// inbox from /api/homework/inbox and see notifications.
+
+// Authorization helper — can THIS session touch THIS student?
+function _canSessionTouchStudent(session, rec) {
+  if (!session || !rec) return false;
+  if (session.isSuperAdmin) return true;       // super admin / legacy → all
+  if (!session.teacher) return false;
+  const codes = new Set(session.teacher.accessCodes || []);
+  return !!(rec.classroomCode && codes.has(rec.classroomCode));
+}
+
+// Send a message to a single student. POST { text, actionType?, actionUrl?, actionLabel? }
+app.post('/api/admin/student/:code/message', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) {
+    return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  }
+  const { text, actionType, actionUrl, actionLabel } = req.body || {};
+  if (!text && !actionUrl) {
+    return res.status(400).json({ ok: false, error: 'text or actionUrl required' });
+  }
+  const fromName = session.teacher ? session.teacher.displayName : 'Maestro/a';
+  const fromId   = session.teacher ? session.teacher.teacherId   : 'super';
+  const msg = Students.sendMessage(rec.code, { from: fromId, fromName, text, actionType, actionUrl, actionLabel });
+  if (!msg) return res.status(400).json({ ok: false, error: 'message rejected' });
+  res.json({ ok: true, message: msg });
+});
+
+// Rename a student (super-admin or owning teacher).
+app.post('/api/admin/student/:code/rename', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) {
+    return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  }
+  const { displayName } = req.body || {};
+  const ok = Students.setDisplayName(rec.code, displayName);
+  if (!ok) return res.status(400).json({ ok: false, error: 'invalid name' });
+  res.json({ ok: true, displayName: Students.get(rec.code).displayName });
+});
+
+// Broadcast to all students in a classroom. POST { classroomCode, text, ... }
+// Super admin can target any classroom; regular teacher only their own.
+app.post('/api/admin/broadcast', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const { classroomCode, text, actionType, actionUrl, actionLabel } = req.body || {};
+  const cc = String(classroomCode || '').trim().toUpperCase();
+  if (!cc) return res.status(400).json({ ok: false, error: 'classroomCode required' });
+  // Authorization: regular teachers can only broadcast to their own
+  // classroom codes. Super admin can target any.
+  if (!session.isSuperAdmin && session.teacher) {
+    const codes = new Set(session.teacher.accessCodes || []);
+    if (!codes.has(cc)) return res.status(403).json({ ok: false, error: 'not your classroom' });
+  }
+  if (!text && !actionUrl) {
+    return res.status(400).json({ ok: false, error: 'text or actionUrl required' });
+  }
+  const fromName = session.teacher ? session.teacher.displayName : 'Maestro/a';
+  const fromId   = session.teacher ? session.teacher.teacherId   : 'super';
+  const count = Students.broadcastToClassroom(cc, { from: fromId, fromName, text, actionType, actionUrl, actionLabel });
+  res.json({ ok: true, sent: count });
+});
+
+// Student inbox — gated by access code (same as the rest of /homework/*)
+app.get('/api/homework/inbox', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const code = req.query.studentCode;
+  const rec = Students.get(code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  const inbox = Students.getInbox(rec.code, 30);
+  const unread = inbox.filter((m) => !m.readAt).length;
+  res.json({ ok: true, inbox, unread });
+});
+
+// Mark a single message read
+app.post('/api/homework/inbox/:msgId/read', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode } = req.body || {};
+  const ok = Students.markMessageRead(studentCode, req.params.msgId);
+  res.json({ ok });
+});
+
+// Mark all messages read (when the kid opens the inbox modal)
+app.post('/api/homework/inbox/read-all', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode } = req.body || {};
+  const count = Students.markAllMessagesRead(studentCode);
+  res.json({ ok: true, marked: count });
+});
+
 // === TEACHER MANAGEMENT (super-admin only) ===
 // List all teachers. Used by /maestro super-admin panel.
 app.get('/api/admin/teachers', (req, res) => {

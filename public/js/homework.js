@@ -145,11 +145,133 @@
           renderList();
           showScreen('list');
         }
+        // Start inbox polling — every 20s while the kid is logged in.
+        // Pulls down any messages the teacher sent.
+        fetchInbox();
+        if (!window._inboxTimer) {
+          window._inboxTimer = setInterval(() => {
+            if (document.hidden) return;
+            fetchInbox();
+          }, 20000);
+        }
       })
       .catch((e) => {
         $('hw-entry-err').textContent = 'Error de conexión: ' + e.message;
       });
   }
+
+  // === INBOX (messages from teacher) ===
+  // Poll every 20s while on the list screen. Updates the 🔔 badge.
+  // Opens a modal showing message history when the bell is tapped.
+  let _inbox = [];
+  let _inboxUnread = 0;
+  function fetchInbox() {
+    if (!studentCode || !accessCode) return;
+    fetch('/api/homework/inbox?accessCode=' + encodeURIComponent(accessCode)
+        + '&studentCode=' + encodeURIComponent(studentCode))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) return;
+        const prevUnread = _inboxUnread;
+        _inbox = data.inbox || [];
+        _inboxUnread = data.unread || 0;
+        renderBellBadge();
+        // If unread went up while we weren't looking, surface a toast
+        if (_inboxUnread > prevUnread && prevUnread >= 0) {
+          showInboxToast(_inbox[0]);
+        }
+      }).catch(() => {});
+  }
+  function renderBellBadge() {
+    const badge = $('hw-bell-badge');
+    if (!badge) return;
+    if (_inboxUnread > 0) {
+      badge.textContent = _inboxUnread > 9 ? '9+' : String(_inboxUnread);
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+  function showInboxToast(msg) {
+    if (!msg) return;
+    const toast = document.createElement('div');
+    toast.className = 'hw-inbox-toast';
+    toast.innerHTML = `
+      <span class="hw-inbox-toast-icon">📩</span>
+      <div class="hw-inbox-toast-body">
+        <div class="hw-inbox-toast-from">${escapeHtml(msg.fromName || 'Maestra')}</div>
+        <div class="hw-inbox-toast-text">${escapeHtml(msg.text || '').slice(0, 80)}</div>
+      </div>`;
+    toast.addEventListener('click', () => {
+      openInbox();
+      toast.remove();
+    });
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 5000);
+  }
+  function openInbox() {
+    let overlay = document.getElementById('hw-inbox-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'hw-inbox-overlay';
+      overlay.className = 'hw-inbox-overlay';
+      overlay.innerHTML = `
+        <div class="hw-inbox-card">
+          <button class="hw-inbox-close" id="hw-inbox-close" aria-label="Cerrar">✕</button>
+          <h2 class="hw-inbox-title">📩 Mensajes de mi maestra</h2>
+          <div class="hw-inbox-list" id="hw-inbox-list"></div>
+        </div>`;
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) closeInbox(); });
+      overlay.querySelector('#hw-inbox-close').addEventListener('click', closeInbox);
+    }
+    renderInboxList();
+    requestAnimationFrame(() => overlay.classList.add('show'));
+    // Mark everything read on the server
+    fetch('/api/homework/inbox/read-all?accessCode=' + encodeURIComponent(accessCode), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentCode }),
+    }).then(() => {
+      _inboxUnread = 0;
+      renderBellBadge();
+    });
+  }
+  function closeInbox() {
+    const overlay = document.getElementById('hw-inbox-overlay');
+    if (overlay) overlay.classList.remove('show');
+  }
+  function renderInboxList() {
+    const list = $('hw-inbox-list');
+    if (!list) return;
+    if (!_inbox.length) {
+      list.innerHTML = '<div class="hw-inbox-empty">Aún no tienes mensajes. Cuando tu maestra te envíe uno, aparecerá aquí.</div>';
+      return;
+    }
+    list.innerHTML = '';
+    _inbox.forEach((m) => {
+      const row = document.createElement('div');
+      row.className = 'hw-inbox-msg' + (m.readAt ? '' : ' unread');
+      const when = new Date(m.ts).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+      const actionHtml = m.actionUrl
+        ? `<a class="btn btn-jade hw-inbox-action" href="${escapeHtml(m.actionUrl)}">${escapeHtml(m.actionLabel || 'Abrir')}</a>`
+        : '';
+      row.innerHTML = `
+        <div class="hw-inbox-msg-head">
+          <span class="hw-inbox-msg-from">👩‍🏫 ${escapeHtml(m.fromName || 'Maestra')}</span>
+          <span class="hw-inbox-msg-time">${escapeHtml(when)}</span>
+        </div>
+        <div class="hw-inbox-msg-text">${escapeHtml(m.text || '')}</div>
+        ${actionHtml}
+        ${m.broadcast ? '<span class="hw-inbox-msg-tag">📢 a toda la clase</span>' : ''}`;
+      list.appendChild(row);
+    });
+  }
+  $('hw-list-inbox').addEventListener('click', openInbox);
 
   $('hw-list-logout').addEventListener('click', () => {
     accessCode = '';

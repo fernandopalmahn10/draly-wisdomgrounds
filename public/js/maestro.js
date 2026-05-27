@@ -54,6 +54,46 @@
   $('m-refresh').addEventListener('click', () => {
     fetchRoster();
   });
+  // 📢 Broadcast — sends a message to every student in the teacher's
+  // classroom. Super admin gets prompted for the classroomCode (defaults
+  // to "1001" — your own); regular teachers auto-target their own.
+  $('m-broadcast-btn').addEventListener('click', () => {
+    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        const self = data && data.self;
+        let classroomCode = self && self.accessCodes && self.accessCodes[0];
+        if (self && self.isSuperAdmin) {
+          // Super admin can target any classroom — default to first own code
+          classroomCode = prompt('Código de aula a la que enviar (deja vacío para 1001):', classroomCode || '1001') || '1001';
+        }
+        if (!classroomCode) { alert('No tienes un código de aula configurado.'); return; }
+        const text = prompt(`Mensaje para todos los alumnos del aula ${classroomCode}:\n\n(Aparecerá como notificación en su portal de tareas)`, '');
+        if (!text || !text.trim()) return;
+        const wantLink = confirm('¿Adjuntar un enlace de acción? (ej. "Únete a mi sesión en vivo")\n\nOK = sí, Cancelar = solo texto');
+        let actionUrl = null, actionLabel = null;
+        if (wantLink) {
+          actionUrl = prompt('URL del enlace (ej. /player.html?pin=1234):', '/player.html?pin=');
+          actionLabel = actionUrl ? prompt('Texto del botón (ej. "Únete ahora"):', 'Únete ahora') : null;
+        }
+        fetch('/api/admin/broadcast?pw=' + encodeURIComponent(pw), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            classroomCode,
+            text: text.trim(),
+            actionType: actionUrl ? 'link' : null,
+            actionUrl,
+            actionLabel,
+          }),
+        })
+          .then((r) => r.json())
+          .then((r) => {
+            if (!r.ok) { alert('Error: ' + (r.error || 'no se pudo')); return; }
+            alert(`✓ Mensaje enviado a ${r.sent} alumno${r.sent === 1 ? '' : 's'} del aula ${classroomCode}.`);
+          });
+      });
+  });
 
   // Auto-refresh every 15 seconds so the teacher sees who's joining in
   // real time. Only refreshes when the dashboard is visible (not while
@@ -303,13 +343,48 @@
     $('m-detail-head').innerHTML = `
       <span class="m-detail-avatar">${renderAvatar(data.avatar, 'large')}</span>
       <div class="m-detail-id">
-        <div class="m-detail-name">${escapeHtml(data.displayName || 'Anon')}</div>
+        <div class="m-detail-name-row">
+          <span class="m-detail-name" id="m-detail-name">${escapeHtml(data.displayName || 'Anon')}</span>
+          <button class="btn btn-ghost btn-sm" id="m-detail-rename-btn" title="Editar nombre">✏️</button>
+        </div>
         <div class="m-detail-code">📇 ${escapeHtml(data.code)}</div>
         <div class="m-detail-meta">Desde ${since} ·
           📝 ${data.sentences.length} oraciones ·
           📚 ${assigns.length} tareas ·
           🏆 ${tests.length} exámenes</div>
+        <button class="btn btn-jade btn-sm" id="m-detail-send-btn" style="margin-top:8px;">💬 Enviar mensaje</button>
       </div>`;
+    // Wire rename
+    $('m-detail-rename-btn').addEventListener('click', () => {
+      const cur = $('m-detail-name').textContent;
+      const next = prompt('Nuevo nombre para este alumno/a:', cur);
+      if (!next || next.trim() === '' || next === cur) return;
+      fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/rename?pw=' + encodeURIComponent(pw), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName: next.trim() }),
+      })
+        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) { alert('Error: ' + (r.error || 'no se pudo')); return; }
+          $('m-detail-name').textContent = r.displayName;
+        });
+    });
+    // Wire send-message
+    $('m-detail-send-btn').addEventListener('click', () => {
+      const text = prompt(`Mensaje para ${data.displayName}:`, '');
+      if (!text || !text.trim()) return;
+      fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/message?pw=' + encodeURIComponent(pw), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim() }),
+      })
+        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) { alert('Error: ' + (r.error || 'no se pudo')); return; }
+          alert('✓ Mensaje enviado a ' + data.displayName);
+        });
+    });
     const body = $('m-detail-body');
     body.innerHTML = '';
     // Assignments
