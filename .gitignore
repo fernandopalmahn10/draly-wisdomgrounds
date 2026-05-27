@@ -5,6 +5,17 @@ node_modules/
 .env.local
 .render-token
 cloudflared.exe
+# Cloud credentials — NEVER commit. Contents live in Render env vars
+# (e.g. GOOGLE_TTS_CREDENTIALS_JSON), not on disk in the repo.
+*-credentials.json
+*service-account*.json
+*draly-wisdomgrounds-*.json
+google-tts-*.json
+# Belt-and-suspenders: any JSON in public/ that smells like creds
+public/**/*credentials*.json
+public/**/*service-account*.json
+# TTS cache lives on the Render persistent disk, regenerated on demand
+data/tts-cache/
 # Persistent runtime data (lives on Render's persistent disk, NOT in git).
 # Includes student PII (sentence histories) + teacher presets.
 data/student-records.json

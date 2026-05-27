@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 const Sets = require('./core/sets');
 const Images = require('./core/images');
 const Students = require('./core/student-records');
@@ -463,6 +464,101 @@ app.post('/api/homework/reading-test/submit', (req, res) => {
     pin:        'homework',
   });
   res.json({ ok: true, score, total: 100, breakdown });
+});
+
+// === 🔊 GOOGLE CLOUD TTS — premium-quality zh-CN audio ================
+// Wired 2026-05-27 per user request (Web Speech sounded terrible, GCP
+// TTS sounds human). Caches every synthesized MP3 to disk so the second
+// playback of the same phrase is instant + free.
+//
+// Lazy-loads the client only when the credentials env var is set, so the
+// server still boots fine on dev machines without GCP set up.
+let _ttsClient = null;
+function _getTtsClient() {
+  if (_ttsClient) return _ttsClient;
+  const raw = process.env.GOOGLE_TTS_CREDENTIALS_JSON;
+  if (!raw) {
+    console.warn('[tts] GOOGLE_TTS_CREDENTIALS_JSON not set — TTS disabled');
+    return null;
+  }
+  let creds;
+  try {
+    creds = JSON.parse(raw);
+  } catch (e) {
+    console.error('[tts] failed to parse GOOGLE_TTS_CREDENTIALS_JSON:', e.message);
+    return null;
+  }
+  try {
+    const { TextToSpeechClient } = require('@google-cloud/text-to-speech');
+    _ttsClient = new TextToSpeechClient({ credentials: creds, projectId: creds.project_id });
+    console.log('[tts] Google Cloud TTS client initialized for project', creds.project_id);
+    return _ttsClient;
+  } catch (e) {
+    console.error('[tts] failed to init Google TTS client:', e.message);
+    return null;
+  }
+}
+
+const TTS_CACHE_DIR = path.join(__dirname, 'data', 'tts-cache');
+const TTS_DEFAULT_VOICE = process.env.TTS_VOICE || 'zh-CN-Wavenet-A';
+// Hash a (text, voice) pair so different voices don't collide and the
+// same text re-uses the same file forever.
+function _ttsCacheKey(text, voice) {
+  return require('crypto').createHash('sha1')
+    .update(voice + '|' + String(text || '').trim().normalize('NFC'))
+    .digest('hex');
+}
+function _ttsCachePath(text, voice) {
+  return path.join(TTS_CACHE_DIR, _ttsCacheKey(text, voice) + '.mp3');
+}
+try { fs.mkdirSync(TTS_CACHE_DIR, { recursive: true }); } catch (_) {}
+
+// GET /api/tts?text=...&voice=zh-CN-Wavenet-A
+// Returns audio/mpeg. Cache-first: hits Google only on miss.
+// Status: 200 with audio, 404 if no client, 400 if bad input.
+app.get('/api/tts', async (req, res) => {
+  const text = String(req.query.text || '').trim();
+  const voice = String(req.query.voice || TTS_DEFAULT_VOICE);
+  if (!text) return res.status(400).json({ ok: false, error: 'missing text' });
+  if (text.length > 200) return res.status(400).json({ ok: false, error: 'text too long' });
+  // Whitelist voice names to prevent abuse (and typos that 404 at Google)
+  if (!/^zh-CN-[A-Za-z0-9-]+$/.test(voice)) {
+    return res.status(400).json({ ok: false, error: 'invalid voice' });
+  }
+  const cachePath = _ttsCachePath(text, voice);
+  // Cache hit → stream from disk, ~5ms
+  if (fs.existsSync(cachePath)) {
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Cache-Control', 'public, max-age=2592000');  // 30 days
+    return fs.createReadStream(cachePath).pipe(res);
+  }
+  // Cache miss → synthesize via Google Cloud TTS
+  const client = _getTtsClient();
+  if (!client) return res.status(503).json({ ok: false, error: 'TTS not configured' });
+  try {
+    const [out] = await client.synthesizeSpeech({
+      input: { text },
+      voice: { languageCode: 'zh-CN', name: voice },
+      audioConfig: {
+        audioEncoding: 'MP3',
+        speakingRate: 0.85,    // ~15% slower so kids can mimic
+        pitch: 0.0,
+      },
+    });
+    if (!out || !out.audioContent) {
+      return res.status(502).json({ ok: false, error: 'no audio returned' });
+    }
+    // Persist for next time, then stream this response
+    fs.writeFile(cachePath, out.audioContent, (err) => {
+      if (err) console.warn('[tts] failed to cache', cachePath, err.message);
+    });
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Cache-Control', 'public, max-age=2592000');
+    res.end(out.audioContent);
+  } catch (e) {
+    console.error('[tts] synthesize failed for', JSON.stringify(text), ':', e.message);
+    res.status(502).json({ ok: false, error: 'tts failed: ' + e.message });
+  }
 });
 
 // Friendly redirect: students can type /homework or /tarea — both work.
