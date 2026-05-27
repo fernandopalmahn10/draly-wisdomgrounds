@@ -241,24 +241,29 @@ function _hwCheckAccess(req, res) {
 
 app.post('/api/homework/enter', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const { studentCode, displayName, accessCode } = req.body || {};
-  const rec = Students.getOrCreate(studentCode, displayName);
-  // Tag this student with the teacher's classroom code they just typed.
-  // This binds the student to that teacher's roster permanently (until
-  // they switch classes by entering a different teacher's code).
-  if (accessCode) {
-    Students.setClassroomCode(rec.code, accessCode);
+  try {
+    const { studentCode, displayName, accessCode } = req.body || {};
+    const rec = Students.getOrCreate(studentCode, displayName);
+    // Tag with their teacher's classroom code. Guard so a failure here
+    // never blocks the kid from entering — they can still do tareas.
+    if (accessCode) {
+      try { Students.setClassroomCode(rec.code, accessCode); }
+      catch (e) { console.warn('[hw:enter] setClassroomCode failed:', e.message); }
+    }
+    res.json({
+      ok: true,
+      studentCode: rec.code,
+      displayName: rec.displayName,
+      avatar: rec.avatar || null,
+      avatarOptions: Students.AVATAR_OPTIONS,
+      classroomCode: rec.classroomCode || null,
+      assignments: Assignments.listAssignments(),
+      submissions: Students.getAssignmentSubmissions(rec.code, 100),
+    });
+  } catch (e) {
+    console.error('[hw:enter] FAILED:', e.message, e.stack);
+    res.status(500).json({ ok: false, error: 'server error: ' + e.message });
   }
-  res.json({
-    ok: true,
-    studentCode: rec.code,
-    displayName: rec.displayName,
-    avatar: rec.avatar || null,
-    avatarOptions: Students.AVATAR_OPTIONS,
-    classroomCode: rec.classroomCode || null,
-    assignments: Assignments.listAssignments(),
-    submissions: Students.getAssignmentSubmissions(rec.code, 100),
-  });
 });
 // Set the kid's avatar (one of the 12 allowed SVG names).
 app.post('/api/homework/avatar', (req, res) => {
@@ -2638,22 +2643,25 @@ io.on('connection', (socket) => {
   socket.on('host:load-set', ({ pin, setId }, cb) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) {
+      console.warn('[host:load-set] BLOCKED pin=' + pin + ' setId=' + setId + ' — not host or no game');
       if (cb) cb({ ok: false, error: 'Not authorized' });
       return;
     }
     try {
       const set = Sets.loadSet(setId);
       if (!set) {
-        if (cb) cb({ ok: false, error: 'Set not found' });
+        console.warn('[host:load-set] FAILED pin=' + pin + ' setId=' + setId + ' — Sets.loadSet returned null');
+        if (cb) cb({ ok: false, error: 'Set not found: ' + setId });
         return;
       }
       g.questions = set.questions;
       g.setTitle = set.title;
       broadcast(pin);
+      console.log('[host:load-set] OK pin=' + pin + ' setId=' + setId + ' title=' + set.title + ' questions=' + set.questions.length);
       if (cb) cb({ ok: true, title: set.title, count: set.questions.length });
-      // Background pre-warm of all question images
       warmImagesForGame(pin, set.questions);
     } catch (e) {
+      console.error('[host:load-set] EXCEPTION pin=' + pin + ' setId=' + setId + ' →', e.message, e.stack);
       if (cb) cb({ ok: false, error: e.message });
     }
   });
