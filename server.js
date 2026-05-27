@@ -545,6 +545,78 @@ function _languageCodeFromVoice(voice) {
   const m = /^([a-z]{2,3}-[A-Z]{2})/.exec(String(voice || ''));
   return m ? m[1] : 'cmn-CN';
 }
+
+// PINYIN → HANZI conversion. Critical insight 2026-05-27: Google's
+// cmn-CN voices interpret pinyin tokens as romanized text and pronounce
+// them with mediocre tones (user reported "doesn't sound multilingual,
+// not with tones"). Feeding hanzi (Chinese characters) instead produces
+// true native Mandarin pronunciation.
+//
+// We parse warmup-vocab.js at boot to build the lookup map. The pinyin
+// keys are toneless+lowercase so they match the kid's typed answers
+// after normalization (the same way grading works).
+let _pinyinToHanzi = null;
+function _loadPinyinHanziMap() {
+  if (_pinyinToHanzi) return _pinyinToHanzi;
+  _pinyinToHanzi = { withTone: new Map(), toneless: new Map() };
+  try {
+    const src = fs.readFileSync(path.join(__dirname, 'public/js/warmup-vocab.js'), 'utf8');
+    // Match the w() factory lines: w('exp1', 'pronoun', 'wǒ', '我', 'yo', '👤'),
+    // The 3rd capture is pinyin, the 4th is hanzi.
+    const re = /w\('exp\d+',\s*'[^']+',\s*'([^']+)',\s*'([^']+)'/g;
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      const pinyinTone = m[1].toLowerCase().replace(/['ʼ]/g, '');
+      const pinyinFlat = pinyinTone.normalize('NFD').replace(/[̀-ͯ]/g, '');
+      const hanzi = m[2];
+      if (pinyinTone && hanzi) {
+        // Tone-marked keys: always set (no real collisions when tones present)
+        _pinyinToHanzi.withTone.set(pinyinTone, hanzi);
+        // Toneless: FIRST-WINS so foundational words (earlier EXP) beat
+        // homonyms (e.g. shi=是 wins over shi=十; he=喝 wins over hé=和)
+        if (!_pinyinToHanzi.toneless.has(pinyinFlat)) {
+          _pinyinToHanzi.toneless.set(pinyinFlat, hanzi);
+        }
+      }
+    }
+    console.log('[tts] pinyin→hanzi map loaded:',
+      _pinyinToHanzi.withTone.size, 'tone-marked,',
+      _pinyinToHanzi.toneless.size, 'toneless');
+  } catch (e) {
+    console.warn('[tts] failed to load pinyin→hanzi map:', e.message);
+  }
+  return _pinyinToHanzi;
+}
+// Returns true if the text already contains CJK chars — skip conversion.
+function _looksLikeChinese(text) {
+  return /[一-鿿]/.test(String(text || ''));
+}
+// Tokenize pinyin, look up each token. Try tone-marked FIRST (precise),
+// fall back to toneless (best-effort). Words not in either map pass
+// through as-is. Joined without spaces — that's how Chinese is written.
+function _convertPinyinToHanzi(text) {
+  if (_looksLikeChinese(text)) return text;
+  const maps = _loadPinyinHanziMap();
+  // Tokenize on whitespace, lowercase, strip punctuation but KEEP tones
+  const tokens = String(text || '').toLowerCase()
+    .replace(/[.,!?;:"()¿¡]/g, '')
+    .split(/\s+/)
+    .filter(Boolean);
+  let hits = 0;
+  const out = tokens.map((tok) => {
+    const stripped = tok.replace(/['ʼ]/g, '');
+    // First, exact tone-marked match
+    let h = maps.withTone.get(stripped);
+    if (h) { hits++; return h; }
+    // Fallback: toneless match
+    const flat = stripped.normalize('NFD').replace(/[̀-ͯ]/g, '');
+    h = maps.toneless.get(flat);
+    if (h) { hits++; return h; }
+    return tok;
+  }).join('');
+  if (hits === 0) return text;  // nothing matched, pass through
+  return out;
+}
 // Hash a (text, voice) pair so different voices don't collide and the
 // same text re-uses the same file forever.
 function _ttsCacheKey(text, voice) {
@@ -653,8 +725,13 @@ app.get('/api/tts', async (req, res) => {
   const client = _getTtsClient();
   if (!client) return res.status(503).json({ ok: false, error: 'TTS not configured' });
   try {
+    // Convert pinyin → hanzi for true Mandarin pronunciation. Sending
+    // "wo ai mama" to a cmn-CN voice produces a confused tone-deaf
+    // reading. Sending "我爱妈妈" produces native pronunciation.
+    const chineseText = _convertPinyinToHanzi(text);
+    console.log('[tts] synth voice=' + voice + ' text=' + JSON.stringify(text) + ' → ' + JSON.stringify(chineseText));
     const [out] = await client.synthesizeSpeech({
-      input: { text },
+      input: { text: chineseText },
       voice: { languageCode: _languageCodeFromVoice(voice), name: voice },
       audioConfig: {
         audioEncoding: 'MP3',
