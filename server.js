@@ -535,7 +535,16 @@ function _getTtsClient() {
 }
 
 const TTS_CACHE_DIR = path.join(__dirname, 'data', 'tts-cache');
-const TTS_DEFAULT_VOICE = process.env.TTS_VOICE || 'zh-CN-Wavenet-A';
+// Google's Mandarin voices use the cmn-CN locale prefix (Mandarin is
+// ISO 639-3 "cmn", not "zh"). Previously was zh-CN-Wavenet-A which
+// returns "voice does not exist" from the API (2026-05-27).
+const TTS_DEFAULT_VOICE = process.env.TTS_VOICE || 'cmn-CN-Wavenet-A';
+// Pull language code from the voice prefix so both cmn-CN-* and zh-CN-*
+// requests work without further config changes.
+function _languageCodeFromVoice(voice) {
+  const m = /^([a-z]{2,3}-[A-Z]{2})/.exec(String(voice || ''));
+  return m ? m[1] : 'cmn-CN';
+}
 // Hash a (text, voice) pair so different voices don't collide and the
 // same text re-uses the same file forever.
 function _ttsCacheKey(text, voice) {
@@ -605,7 +614,7 @@ app.get('/api/tts/health', async (req, res) => {
       const client = _getTtsClient();
       const [r] = await client.synthesizeSpeech({
         input: { text: 'ni hao' },
-        voice: { languageCode: 'zh-CN', name: TTS_DEFAULT_VOICE },
+        voice: { languageCode: _languageCodeFromVoice(TTS_DEFAULT_VOICE), name: TTS_DEFAULT_VOICE },
         audioConfig: { audioEncoding: 'MP3' },
       });
       out.liveTest = {
@@ -627,8 +636,10 @@ app.get('/api/tts', async (req, res) => {
   const voice = String(req.query.voice || TTS_DEFAULT_VOICE);
   if (!text) return res.status(400).json({ ok: false, error: 'missing text' });
   if (text.length > 200) return res.status(400).json({ ok: false, error: 'text too long' });
-  // Whitelist voice names to prevent abuse (and typos that 404 at Google)
-  if (!/^zh-CN-[A-Za-z0-9-]+$/.test(voice)) {
+  // Whitelist voice names to prevent abuse (and typos that 404 at Google).
+  // Accepts both cmn-CN-* (Mandarin, current Google naming) and the
+  // legacy zh-CN-* form, plus cmn-TW-* (Taiwanese Mandarin).
+  if (!/^(cmn|zh)-(CN|TW)-[A-Za-z0-9-]+$/.test(voice)) {
     return res.status(400).json({ ok: false, error: 'invalid voice' });
   }
   const cachePath = _ttsCachePath(text, voice);
@@ -644,7 +655,7 @@ app.get('/api/tts', async (req, res) => {
   try {
     const [out] = await client.synthesizeSpeech({
       input: { text },
-      voice: { languageCode: 'zh-CN', name: voice },
+      voice: { languageCode: _languageCodeFromVoice(voice), name: voice },
       audioConfig: {
         audioEncoding: 'MP3',
         speakingRate: 0.85,    // ~15% slower so kids can mimic
