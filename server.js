@@ -111,10 +111,16 @@ app.get('/api/admin/disk-status', (req, res) => {
 // see every student code that has ever saved a sentence on this Render
 // instance, along with their displayName + sentence count. Drilling into
 // a specific code returns the full sentence history for that kid.
+// Accepts EITHER the warmup-admin password OR the dedicated teacher
+// password EMAAR2026 (user feedback 2026-05-27: "give a new password for
+// modo maestro so I can be alone, without hosting a session").
+// Adding it as an OR alongside the existing pw means we don't break
+// any old workflows.
 function _adminAuth(req, res) {
   const givenPw = String(req.query.pw || req.query.password || '');
-  const expected = process.env.WU_ADMIN_PASSWORD || 'draly2026';
-  if (givenPw !== expected) {
+  const wuPw      = process.env.WU_ADMIN_PASSWORD || 'draly2026';
+  const teacherPw = process.env.TEACHER_PASSWORD  || 'EMAAR2026';
+  if (givenPw !== wuPw && givenPw !== teacherPw) {
     res.status(401).json({ ok: false, error: 'wrong password' });
     return false;
   }
@@ -133,8 +139,9 @@ app.get('/api/admin/students/:code', (req, res) => {
     ok: true,
     code: rec.code,
     displayName: rec.displayName || 'Anon',
+    avatar:    rec.avatar || null,
     firstSeen: rec.firstSeen || 0,
-    lastSeen: rec.lastSeen || 0,
+    lastSeen:  rec.lastSeen || 0,
     sentences: Students.getHistory(rec.code), // newest-first
     tests:     Students.getTestResults(rec.code, 50), // newest-first
     assignments: Students.getAssignmentSubmissions(rec.code, 50),

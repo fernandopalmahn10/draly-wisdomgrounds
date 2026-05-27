@@ -63,9 +63,10 @@ const ASSIGNMENTS = [
   // === ASSIGNMENT 1 ===
   {
     id: 'familia-introduce',
-    title: '👨‍👩‍👧 Mi familia',
-    subtitle: '5 oraciones para presentar a tu familia',
-    instructions: 'Lee la oración en español. Construye la oración en pinyin tocando las palabras del catálogo. 🗣️ DI CADA ORACIÓN EN VOZ ALTA antes de entregar — hablar es la mejor forma de aprender.',
+    title: '👨‍👩‍👧 EXP1 · Mi familia',
+    subtitle: '5 oraciones · solo palabras de Experience 1 (Yo / Familia)',
+    expLabel: 'exp1',  // surfaced in UI so kids/parents know the level
+    instructions: 'Construye cada oración en pinyin usando SOLO palabras de Experience 1 (Yo / Familia). Filtra el catálogo con la pestaña 👋 EXP1 para verlas. 🗣️ DI CADA ORACIÓN EN VOZ ALTA antes de entregar.',
     type: 'sentence-building',
     items: [
       // STRICT EXP1 ONLY (per user feedback 2026-05-27). The 20 EXP1 words
@@ -99,6 +100,41 @@ const ASSIGNMENTS = [
       encouragement: 'Pídele que te diga "Wǒ ài wǒ de māma" mientras te abraza — verás que ya sabe expresar cariño en chino.',
     },
   },
+  // === ASSIGNMENT 2 ===
+  {
+    id: 'escuela-idioma',
+    title: '🏫 EXP2 · Escuela e idioma',
+    subtitle: '10 oraciones · palabras de Experience 2 (+ pronombres básicos)',
+    expLabel: 'exp2',
+    instructions: 'Construye cada oración en pinyin usando palabras de Experience 2 (Escuela / Idioma). Puedes usar pronombres básicos (wǒ, nǐ) de Experience 1. Filtra el catálogo con la pestaña 🎓 EXP2. 🗣️ DI CADA ORACIÓN EN VOZ ALTA.',
+    type: 'sentence-building',
+    items: [
+      // STRICT: EXP2 verbs + nouns + EXP1 pronouns/de/shì/ài only.
+      // All possessives use the wǒ de / nǐ de standard (user feedback 2026-05-27).
+      { es: 'Yo soy estudiante.',           expected: 'wǒ shì xuésheng' },
+      { es: 'Tú eres mi maestra.',          expected: 'nǐ shì wǒ de lǎoshī' },
+      { es: 'Yo estudio chino.',            expected: 'wǒ xuéxí hànyǔ' },
+      { es: 'Yo leo libros.',               expected: 'wǒ dú shū' },
+      { es: 'Yo escribo caracteres.',       expected: 'wǒ xiě zì' },
+      { es: 'Mi maestra habla chino.',      expected: 'wǒ de lǎoshī shuō hànyǔ' },
+      { es: 'Yo escucho a mi maestra.',     expected: 'wǒ tīng wǒ de lǎoshī' },
+      { es: 'Yo veo a mi compañero.',       expected: 'wǒ kànjiàn wǒ de tóngxué' },
+      { es: 'Yo sé hablar chino.',          expected: 'wǒ huì shuō hànyǔ' },
+      { es: 'Yo amo mi escuela.',           expected: 'wǒ ài wǒ de xuéxiào' },
+    ],
+    pointsPerItem: 10,  // 10 × 10 = 100
+    parentInsight: {
+      title: 'Tu hijo/a puede hablar de la escuela y el idioma chino',
+      bullets: [
+        'Presentarse como estudiante: "Wǒ shì xuésheng"',
+        'Identificar a su maestra: "Nǐ shì wǒ de lǎoshī"',
+        'Decir qué estudia: "Wǒ xuéxí hànyǔ"',
+        'Hablar de leer y escribir: "Wǒ dú shū", "Wǒ xiě zì"',
+        'Expresar habilidad: "Wǒ huì shuō hànyǔ" (yo sé hablar chino)',
+      ],
+      encouragement: 'Pregúntale: "¿Qué estás aprendiendo en chino?" — pídele que te enseñe a decir "yo estudio chino" en voz alta.',
+    },
+  },
   // Add more here. See instructions at the top of this file.
 ];
 
@@ -125,6 +161,7 @@ function listAssignments() {
     id: a.id,
     title: a.title,
     subtitle: a.subtitle,
+    expLabel: a.expLabel || null,
     itemCount: a.items.length,
     pointsPerItem: a.pointsPerItem,
     totalPoints: a.items.length * a.pointsPerItem,

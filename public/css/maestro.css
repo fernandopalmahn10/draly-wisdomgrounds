@@ -1,0 +1,297 @@
+/* =========================================================================
+   maestro.css — standalone teacher Cuaderno
+   Reuses the cream/teal palette from homework.css for consistency.
+   ========================================================================= */
+body.hw-bg {
+  font-family: 'Nunito', sans-serif;
+}
+.hidden { display: none !important; }
+
+/* ── Login screen ───────────────────────────────────────────────── */
+.m-login {
+  min-height: 100dvh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px 14px;
+}
+.m-login-card {
+  width: 100%; max-width: 460px;
+  background: linear-gradient(160deg, rgba(40, 50, 80, 0.95), rgba(20, 25, 45, 0.97));
+  border: 3px solid rgba(255, 213, 122, 0.6);
+  border-radius: 22px;
+  padding: 28px 28px 24px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 28px rgba(255, 213, 122, 0.18);
+  text-align: center;
+}
+.m-login-icon { font-size: 4rem; line-height: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.5)); }
+.m-login-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.8rem;
+  color: #ffe082;
+  margin: 8px 0 4px;
+}
+.m-login-sub { color: rgba(243, 230, 194, 0.7); font-size: 0.95rem; margin-bottom: 18px; }
+.m-login-label {
+  display: block; text-align: left;
+  font-size: 0.88rem; color: rgba(243, 230, 194, 0.85);
+  font-weight: 700;
+  margin: 12px 0 6px;
+}
+.m-login-input { width: 100%; margin-top: 4px; }
+.m-login-hint {
+  font-size: 0.78rem;
+  color: rgba(243, 230, 194, 0.55);
+  font-style: italic;
+  margin-top: 16px;
+  text-align: left;
+}
+
+/* ── Dashboard ──────────────────────────────────────────────────── */
+.m-dash {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px 14px calc(28px + env(safe-area-inset-bottom, 0px));
+}
+.m-dash-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  padding: 14px 18px;
+  background: rgba(38, 40, 60, 0.85);
+  border: 2px solid rgba(91, 232, 209, 0.45);
+  border-radius: 14px;
+  margin-bottom: 14px;
+}
+.m-dash-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #5be8d1;
+  margin: 0 0 4px;
+  font-size: 1.4rem;
+}
+.m-dash-sub {
+  color: rgba(243, 230, 194, 0.8);
+  margin: 0;
+  font-size: 0.92rem;
+}
+.m-dash-actions {
+  display: flex; gap: 6px;
+  flex-wrap: wrap;
+}
+
+.m-empty {
+  padding: 40px;
+  text-align: center;
+  color: rgba(243, 230, 194, 0.6);
+  font-style: italic;
+  background: rgba(40, 45, 70, 0.5);
+  border-radius: 14px;
+}
+
+/* ── Summary header ─────────────────────────────────────────────── */
+.m-summary-card {
+  background: linear-gradient(160deg, rgba(91, 232, 209, 0.14), rgba(180, 100, 255, 0.12));
+  border: 2px solid rgba(91, 232, 209, 0.45);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.m-summary-title {
+  font-family: 'Cinzel', serif; font-weight: 900;
+  color: #5be8d1;
+  font-size: 1.0rem;
+  margin-bottom: 10px;
+}
+.m-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.m-summary-stat {
+  padding: 10px;
+  background: rgba(20, 22, 36, 0.55);
+  border-radius: 10px;
+  text-align: center;
+}
+.m-summary-num {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #ffe082;
+  font-size: 1.5rem;
+}
+.m-summary-lbl {
+  font-size: 0.82rem;
+  color: rgba(243, 230, 194, 0.9);
+  font-weight: 700;
+  margin: 4px 0 2px;
+}
+.m-summary-det {
+  font-size: 0.72rem;
+  color: rgba(243, 230, 194, 0.55);
+  font-style: italic;
+}
+
+/* ── Roster ─────────────────────────────────────────────────────── */
+.m-roster {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.m-row {
+  display: grid;
+  grid-template-columns: 56px auto 1fr auto auto;
+  gap: 10px;
+  padding: 8px 12px;
+  background: rgba(38, 40, 60, 0.7);
+  border: 2px solid rgba(255, 213, 122, 0.25);
+  border-radius: 10px;
+  align-items: center;
+  font-family: inherit;
+  color: #fff5d8;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.08s;
+}
+.m-row:hover {
+  background: rgba(60, 65, 100, 0.85);
+  border-color: rgba(255, 224, 130, 0.6);
+  transform: translateY(-1px);
+}
+.m-row-avatar {
+  width: 48px; height: 48px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(91, 232, 209, 0.18);
+  border-radius: 10px;
+}
+.m-avatar-img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+.m-avatar-img-large { width: 90px !important; height: 90px !important; }
+.m-avatar-emoji { font-size: 1.8rem; }
+.m-row-code {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #ffe082;
+  letter-spacing: 0.06em;
+}
+.m-row-name {
+  color: #fff5d8;
+  font-weight: 700;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.m-row-counts { display: flex; gap: 6px; font-size: 0.82rem; }
+.m-row-c {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-weight: 700;
+}
+.m-row-date { color: rgba(243, 230, 194, 0.55); font-size: 0.82rem; }
+
+@media (max-width: 640px) {
+  .m-row {
+    grid-template-columns: 48px 1fr;
+    grid-template-areas:
+      'avatar name'
+      'avatar counts';
+    row-gap: 4px;
+  }
+  .m-row-avatar { grid-area: avatar; }
+  .m-row-code   { display: none; }
+  .m-row-name   { grid-area: name; }
+  .m-row-counts { grid-area: counts; flex-wrap: wrap; }
+  .m-row-date   { display: none; }
+}
+
+/* ── Detail ─────────────────────────────────────────────────────── */
+.m-detail {
+  background: rgba(38, 40, 60, 0.85);
+  border: 2px solid rgba(91, 232, 209, 0.45);
+  border-radius: 14px;
+  padding: 16px;
+}
+.m-detail-header {
+  display: flex; gap: 12px; align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 224, 130, 0.18);
+}
+.m-detail-head {
+  display: flex; gap: 14px; flex: 1;
+  align-items: center;
+}
+.m-detail-avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 96px; height: 96px;
+  background: rgba(91, 232, 209, 0.18);
+  border-radius: 14px;
+  flex: 0 0 auto;
+}
+.m-detail-id { flex: 1; min-width: 0; }
+.m-detail-name {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #fff5d8;
+}
+.m-detail-code {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #ffe082;
+  letter-spacing: 0.08em;
+  margin: 2px 0 4px;
+}
+.m-detail-meta {
+  color: rgba(243, 230, 194, 0.7);
+  font-size: 0.85rem;
+}
+
+.m-section-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #5be8d1;
+  font-size: 1.0rem;
+  margin: 16px 0 8px;
+}
+
+.m-asg-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(20, 22, 36, 0.55);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  border-left: 3px solid;
+  font-size: 0.92rem;
+}
+.m-asg-row.great { border-color: #5be8d1; }
+.m-asg-row.ok    { border-color: #ffe082; }
+.m-asg-row.low   { border-color: #ff5a66; }
+.m-asg-title  { font-weight: 800; color: #fff5d8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.m-asg-score  { font-weight: 900; color: #ffe082; white-space: nowrap; }
+.m-asg-score small { color: rgba(243, 230, 194, 0.55); font-weight: 700; }
+.m-asg-date   { color: rgba(243, 230, 194, 0.55); font-size: 0.82rem; white-space: nowrap; }
+
+.m-sent-row {
+  padding: 10px 12px;
+  background: rgba(20, 22, 36, 0.55);
+  border-left: 3px solid #c5a3ff;
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+.m-sent-date { color: rgba(243, 230, 194, 0.55); font-size: 0.82rem; margin-bottom: 4px; }
+.m-sent-words { display: flex; flex-wrap: wrap; gap: 4px; }
+.m-sent-word {
+  display: inline-flex; flex-direction: column; align-items: center;
+  background: rgba(50, 55, 90, 0.85);
+  border-left: 3px solid var(--cat-color, #ffe082);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.78rem;
+}
+.m-sent-icon { font-size: 0.95rem; }
+.m-sent-pin  { font-weight: 900; color: var(--cat-color, #ffe082); }
+.m-sent-es   { font-style: italic; color: rgba(243, 230, 194, 0.7); font-size: 0.68rem; }

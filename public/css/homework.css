@@ -318,6 +318,146 @@ body.hw-bg {
   display: flex; justify-content: center;
   padding: 4px 0;
 }
+/* Sticky top submit — duplicate of the bottom Entregar button so kids on
+   tablets can submit without scrolling. User feedback 2026-05-27: bottom
+   button was sometimes hidden behind the on-screen keyboard. */
+.hw-asg-actions-top {
+  position: sticky;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  z-index: 10;
+  padding: 8px;
+  background: rgba(20, 22, 36, 0.85);
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  border: 2px solid rgba(91, 232, 209, 0.4);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  margin-top: 4px;
+}
+.hw-asg-actions-top .btn {
+  width: 100%;
+}
+
+/* EXP chip — shown on each homework card so kids know what level the
+   tarea targets (user feedback 2026-05-27: "always include experience 1,
+   experience whatever — that's the way we teach"). */
+.hw-card-exp {
+  display: inline-block;
+  padding: 3px 10px;
+  background: linear-gradient(135deg, rgba(91, 232, 209, 0.3), rgba(255, 224, 130, 0.18));
+  border: 1px solid #5be8d1;
+  color: #5be8d1;
+  font-weight: 900;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  border-radius: 999px;
+  margin-bottom: 6px;
+}
+
+/* === HSK1 Levels (parent view) === */
+.hw-parents-levels-intro {
+  font-size: 0.88rem;
+  color: rgba(243, 230, 194, 0.8);
+  line-height: 1.5;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: rgba(91, 232, 209, 0.1);
+  border-left: 3px solid #5be8d1;
+  border-radius: 8px;
+}
+.hw-parents-levels {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.hw-level-card {
+  background: linear-gradient(160deg, rgba(50, 55, 90, 0.75), rgba(28, 30, 50, 0.9));
+  border: 2px solid rgba(255, 213, 122, 0.4);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.hw-level-card[open] {
+  border-color: #5be8d1;
+  box-shadow: 0 0 16px rgba(91, 232, 209, 0.18);
+}
+.hw-level-summary {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-weight: 800;
+  list-style: none;
+}
+.hw-level-summary::-webkit-details-marker { display: none; }
+.hw-level-num {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #ffe082;
+  font-size: 0.92rem;
+  background: rgba(255, 224, 130, 0.18);
+  padding: 4px 10px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+.hw-level-label {
+  flex: 1;
+  color: #fff5d8;
+  font-size: 0.92rem;
+}
+.hw-level-count {
+  color: #5be8d1;
+  font-size: 0.85rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.hw-level-toggle {
+  color: rgba(243, 230, 194, 0.45);
+  transition: transform 0.2s;
+  flex: 0 0 auto;
+}
+.hw-level-card[open] .hw-level-toggle {
+  transform: rotate(180deg);
+}
+.hw-level-body {
+  padding: 0 14px 14px;
+}
+.hw-level-tip {
+  margin: 4px 0 12px;
+  padding: 8px 12px;
+  background: rgba(180, 100, 255, 0.12);
+  border-left: 3px solid #c5a3ff;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: rgba(243, 230, 194, 0.9);
+  line-height: 1.45;
+  font-style: italic;
+}
+.hw-level-words {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.hw-level-word {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px 6px;
+  background: rgba(20, 22, 36, 0.55);
+  border: 1px solid rgba(255, 224, 130, 0.18);
+  border-radius: 8px;
+  text-align: center;
+}
+.hw-level-icon { font-size: 1.4rem; line-height: 1; margin-bottom: 2px; }
+.hw-level-word-hanzi {
+  font-family: 'ZCOOL XiaoWei', serif;
+  font-size: 1.3rem;
+  color: #fff5d8;
+  line-height: 1.1;
+}
+.hw-level-word-pinyin {
+  color: #ffe082;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+.hw-level-word-es {
+  color: rgba(243, 230, 194, 0.7);
+  font-style: italic;
+  font-size: 0.75rem;
+}
 
 /* ── Results screen ──────────────────────────────────────────────── */
 .hw-results {
