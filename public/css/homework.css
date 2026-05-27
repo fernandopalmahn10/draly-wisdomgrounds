@@ -353,7 +353,62 @@ body.hw-bg {
   margin-bottom: 6px;
 }
 
-/* === HSK1 Levels (parent view) === */
+/* === HSK levels dropdown (parent view) === */
+/* User feedback 2026-05-27: collapsed by default, two-tier (Nivel HSK →
+   HSK1 / HSK2 …). Doesn't dump 150 words on the parent at once. */
+.hw-parents-levels-wrap {
+  background: linear-gradient(160deg, rgba(50, 55, 90, 0.75), rgba(28, 30, 50, 0.9));
+  border: 2px solid rgba(180, 100, 255, 0.45);
+  border-radius: 14px;
+  margin: 14px 0;
+  overflow: hidden;
+}
+.hw-parents-levels-summary {
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.95rem;
+  color: rgba(243, 230, 194, 0.95);
+}
+.hw-parents-levels-summary::-webkit-details-marker { display: none; }
+.hw-parents-levels-summary strong { color: #c5a3ff; font-family: 'Cinzel', serif; }
+.hw-parents-levels-arrow {
+  margin-left: auto;
+  color: rgba(243, 230, 194, 0.5);
+  transition: transform 0.2s;
+}
+.hw-parents-levels-wrap[open] .hw-parents-levels-arrow { transform: rotate(180deg); }
+.hw-parents-levels-inner {
+  padding: 0 14px 14px;
+  border-top: 1px solid rgba(180, 100, 255, 0.18);
+}
+.hw-parents-hsk-section {
+  margin-top: 10px;
+}
+.hw-parents-hsk-summary {
+  padding: 10px 14px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: #ffe082;
+  background: rgba(20, 22, 36, 0.55);
+  border: 1px solid rgba(255, 224, 130, 0.3);
+  border-radius: 10px;
+}
+.hw-parents-hsk-summary::-webkit-details-marker { display: none; }
+.hw-parents-hsk-summary.hw-parents-hsk-locked {
+  color: rgba(243, 230, 194, 0.5);
+  cursor: default;
+  font-style: italic;
+}
+.hw-parents-hsk-section[open] .hw-parents-hsk-summary {
+  background: rgba(91, 232, 209, 0.12);
+  border-color: #5be8d1;
+  color: #5be8d1;
+}
+
 .hw-parents-levels-intro {
   font-size: 0.88rem;
   color: rgba(243, 230, 194, 0.8);
@@ -810,15 +865,43 @@ body.hw-bg {
   color: rgba(243, 230, 194, 0.6);
   font-style: italic;
 }
+/* Horizontal-scroll layout — user feedback 2026-05-27: "Lo que tu hijo
+   ya sabe hacer should scroll to the right." Saves vertical space when
+   the kid has multiple insights, and gives a tactile swipe feel on phones. */
 .hw-parents-insights {
-  display: flex; flex-direction: column; gap: 10px;
+  display: flex; flex-direction: row;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;       /* room for the scrollbar */
+  margin: 0 -4px;            /* bleed a tiny bit so cards touch edges */
+  padding-left: 4px; padding-right: 4px;
 }
+.hw-parents-insights::-webkit-scrollbar { height: 6px; }
+.hw-parents-insights::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 999px; }
+.hw-parents-insights::-webkit-scrollbar-thumb { background: rgba(91, 232, 209, 0.5); border-radius: 999px; }
 .hw-parents-insight-card {
+  flex: 0 0 88%;           /* one card visible at a time on phones */
+  max-width: 360px;
+  scroll-snap-align: start;
   background: linear-gradient(160deg, rgba(50, 55, 90, 0.7), rgba(28, 30, 50, 0.85));
   border: 2px solid rgba(91, 232, 209, 0.55);
   border-radius: 14px;
   padding: 14px 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+@media (min-width: 720px) {
+  .hw-parents-insight-card { flex: 0 0 52%; }
+}
+/* Subtle visual hint that there's more to the right */
+.hw-parents-insights[data-has-more="true"]::after {
+  content: '→';
+  flex: 0 0 30px;
+  color: rgba(91, 232, 209, 0.6);
+  font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
 }
 .hw-parents-insight-head {
   display: flex; justify-content: space-between; align-items: baseline;

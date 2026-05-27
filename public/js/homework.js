@@ -355,13 +355,38 @@
       <span class="hw-parents-stat">📚 <strong>${t.assignmentsMastered || 0}</strong>/${t.assignmentsAvailable || 0} tareas dominadas</span>
       <span class="hw-parents-stat">📖 <strong>${stories}</strong> historia${stories === 1 ? '' : 's'} leída${stories === 1 ? '' : 's'}${storiesExtra}</span>`;
     const insightsWrap = $('hw-parents-insights');
-    if (!data.insights || !data.insights.length) {
-      insightsWrap.innerHTML = '<div class="hw-parents-empty">Todavía no ha completado tareas con puntaje suficiente. ¡Anímalo/a a practicar más!</div>';
+    // Merge: assignment-based insights (from server) + reading-test
+    // insights (synthesized client-side from passed stories). User
+    // feedback 2026-05-27: "Lo que tu hijo ya sabe hacer should also
+    // trigger progress according to records of tests and stories."
+    const allInsights = (data.insights || []).slice();
+    (data.tests || []).forEach((t) => {
+      if (t.score >= 60) {  // mastered if ≥60%
+        allInsights.push({
+          insight: {
+            title: `Tu hijo/a entendió la historia "${t.storyTitle || t.storyId}"`,
+            bullets: [
+              `Sacó ${t.score}/100 en el examen de lectura`,
+              'Identificó eventos y personajes de la historia',
+              'Practicó vocabulario HSK1 en contexto real',
+            ],
+            encouragement: `Pídele que te cuente la historia de "${t.storyTitle || t.storyId}" con sus propias palabras.`,
+          },
+          score: t.score,
+          total: 100,
+          lastAttemptAt: t.ts,
+          fromTest: true,
+        });
+      }
+    });
+    if (!allInsights.length) {
+      insightsWrap.innerHTML = '<div class="hw-parents-empty">Todavía no tiene logros con 60% o más. ¡Anímalo/a a practicar más!</div>';
+      insightsWrap.dataset.hasMore = 'false';
     } else {
       insightsWrap.innerHTML = '';
-      data.insights.forEach((row) => {
+      allInsights.forEach((row) => {
         const card = document.createElement('div');
-        card.className = 'hw-parents-insight-card';
+        card.className = 'hw-parents-insight-card' + (row.fromTest ? ' from-test' : '');
         const dateStr = row.lastAttemptAt ? new Date(row.lastAttemptAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
         card.innerHTML = `
           <div class="hw-parents-insight-head">
@@ -374,6 +399,7 @@
           ${row.insight.encouragement ? `<div class="hw-parents-insight-tip">💡 ${escapeHtml(row.insight.encouragement)}</div>` : ''}`;
         insightsWrap.appendChild(card);
       });
+      insightsWrap.dataset.hasMore = allInsights.length > 1 ? 'true' : 'false';
     }
     const testsWrap = $('hw-parents-tests');
     if (!data.tests || !data.tests.length) {
@@ -913,6 +939,10 @@
     renderLibraryTabs();
     renderLibrary();
     setActiveItem(0);
+    // Repaint each stage so previously-entered answers re-appear (e.g.
+    // after pressing "Volver a intentar"). Without this, the stage divs
+    // would show the empty placeholder even though currentAnswers has data.
+    currentAssignment.items.forEach((_, i) => renderStage(i));
     refreshUndoButtons();
     // Wire the search box (idempotent — replace listeners on each render
     // by reading the current input value each time).
@@ -1175,9 +1205,13 @@
     renderList();
     showScreen('list');
   });
+  // "🔁 Volver a intentar" — keep the kid's previous answers instead of
+  // resetting to empty (user feedback 2026-05-27: "save everything so
+  // progress doesn't start from zero — frustrating otherwise"). They can
+  // edit the wrong ones and resubmit, building on what they had.
   $('hw-results-retry').addEventListener('click', () => {
     if (!currentAssignment) { showScreen('list'); return; }
-    currentAnswers = currentAssignment.items.map(() => '');
+    // currentAnswers stays as-is from the last submit
     undoStacks = currentAssignment.items.map(() => []);
     renderAssignment();
     showScreen('assignment');

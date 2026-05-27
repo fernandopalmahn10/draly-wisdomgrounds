@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260526a">
-  <link rel="stylesheet" href="/css/homework.css?v=20260527f">
+  <link rel="stylesheet" href="/css/homework.css?v=20260527g">
 </head>
 <body class="hw-bg">
 
@@ -202,12 +202,28 @@
           <div class="hw-parents-empty">Aún no ha leído ninguna historia en clase. Pregúntale a la maestra.</div>
         </div>
 
-        <!-- HSK1 Niveles — what your kid should know by now -->
-        <div class="hw-parents-section-title">🎯 Niveles HSK1 · Lo que debería saber</div>
-        <p class="hw-parents-levels-intro">HSK1 es el examen oficial de chino para principiantes. Tiene 150 palabras divididas en 8 experiencias. Aquí ves cuántas palabras hay en cada nivel y cuáles son — para que practiques con tu hijo/a cuando quieras.</p>
-        <div class="hw-parents-levels" id="hw-parents-levels">
-          <div class="hw-parents-empty">Cargando niveles…</div>
-        </div>
+        <!-- HSK1 Niveles — collapsed by default. User feedback 2026-05-27:
+             "don't display all word lists at once. It should be a dropdown
+             Nivel de HSK1 → HSK1 (later HSK2 etc)." -->
+        <details class="hw-parents-levels-wrap">
+          <summary class="hw-parents-levels-summary">
+            🎯 <strong>Nivel de HSK</strong> · Palabras que tu hijo/a está aprendiendo
+            <span class="hw-parents-levels-arrow">▼</span>
+          </summary>
+          <div class="hw-parents-levels-inner">
+            <details class="hw-parents-hsk-section" open>
+              <summary class="hw-parents-hsk-summary">📘 HSK1 — 150 palabras (nivel actual)</summary>
+              <p class="hw-parents-levels-intro">HSK1 es el primer nivel del examen oficial de chino. Las palabras están divididas en 8 experiencias temáticas. Practica las que ya estudió en clase.</p>
+              <div class="hw-parents-levels" id="hw-parents-levels">
+                <div class="hw-parents-empty">Cargando…</div>
+              </div>
+            </details>
+            <details class="hw-parents-hsk-section">
+              <summary class="hw-parents-hsk-summary hw-parents-hsk-locked">🔒 HSK2 — próximamente</summary>
+              <p class="hw-parents-levels-intro">Cuando termine HSK1, desbloqueará HSK2 (300 palabras más).</p>
+            </details>
+          </div>
+        </details>
       </div>
 
       <!-- ============ TAB: TIPS ============ -->
@@ -341,6 +357,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/homework.js?v=20260527f"></script>
+  <script src="/js/homework.js?v=20260527g"></script>
 </body>
 </html>
