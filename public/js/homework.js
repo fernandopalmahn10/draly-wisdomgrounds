@@ -64,6 +64,19 @@
   let currentAssignment = null;  // full body when an item is open
   let currentAnswers = [];     // string per item — arrays of word IDs joined by space, or freeform
   let activeExpTab = 'all';    // catalog filter: 'all' or 'exp1'..'exp8'
+  let librarySearch = '';      // catalog search string (already normalized)
+  // Tone-stripping normalizer — matches server-side grading semantics.
+  // Lowercase + NFD decompose + drop combining diacritics + trim.
+  // So "ni hao" matches both "nǐ hǎo" and "Nǐ Hǎo".
+  function normalize(s) {
+    return String(s == null ? '' : s)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[.,!?;:'"()¿¡]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
   // Per-item undo stack: undoStacks[itemIdx] = [snapshot1, snapshot2, …]
   // Each snapshot is the answer string BEFORE the change. So pressing
   // Deshacer once restores the previous state.
@@ -320,9 +333,14 @@
     $('hw-parents-name').textContent = data.displayName || 'Anon';
     $('hw-parents-code').textContent = data.code;
     const t = data.totals || {};
+    // Show UNIQUE stories tested, not total attempts. If the kid retook
+    // the same test 5 times that should still read "1 examen distinto".
+    const attemptsExtra = (t.readingTestAttempts && t.readingTestAttempts > (t.readingTestsTaken || 0))
+      ? ` <small>(${t.readingTestAttempts} intentos)</small>`
+      : '';
     $('hw-parents-stats').innerHTML = `
       <span class="hw-parents-stat">📚 <strong>${t.assignmentsMastered || 0}</strong>/${t.assignmentsAvailable || 0} tareas dominadas</span>
-      <span class="hw-parents-stat">📝 <strong>${t.readingTestsTaken || 0}</strong> exámenes de lectura</span>`;
+      <span class="hw-parents-stat">📝 <strong>${t.readingTestsTaken || 0}</strong> exámenes distintos${attemptsExtra}</span>`;
     const insightsWrap = $('hw-parents-insights');
     if (!data.insights || !data.insights.length) {
       insightsWrap.innerHTML = '<div class="hw-parents-empty">Todavía no ha completado tareas con puntaje suficiente. ¡Anímalo/a a practicar más!</div>';
@@ -346,19 +364,70 @@
     }
     const testsWrap = $('hw-parents-tests');
     if (!data.tests || !data.tests.length) {
-      testsWrap.innerHTML = '<div class="hw-parents-empty">Aún no ha hecho exámenes de lectura en clase.</div>';
+      testsWrap.innerHTML = '<div class="hw-parents-empty">Aún no ha hecho exámenes de lectura en clase. Pregúntale a la maestra cuándo serán.</div>';
     } else {
       testsWrap.innerHTML = '';
       data.tests.forEach((t) => {
         const row = document.createElement('div');
         row.className = 'hw-parents-test-row';
         const dateStr = new Date(t.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+        // Suggested question: prompt the parent to bring up the story
+        const question = `Pregúntale: "¿Qué pasó en la historia de ${escapeHtml(t.storyTitle || t.storyId)}? Cuéntamela en chino o en español."`;
         row.innerHTML = `
-          <span class="hw-parents-test-title">📖 ${escapeHtml(t.storyTitle || t.storyId)}</span>
-          <span class="hw-parents-test-score">${t.score}/100 pts</span>
-          <span class="hw-parents-test-date">${dateStr}</span>`;
+          <div class="hw-parents-test-main">
+            <span class="hw-parents-test-title">📖 ${escapeHtml(t.storyTitle || t.storyId)}</span>
+            <span class="hw-parents-test-score">${t.score}/100 pts</span>
+            <span class="hw-parents-test-date">${dateStr}</span>
+          </div>
+          <div class="hw-parents-test-question">💬 ${question}</div>`;
         testsWrap.appendChild(row);
       });
+    }
+    // === REMAINING / NOT-YET-DONE TAREAS ===
+    // User feedback 2026-05-27: parents need to nudge kids on tareas
+    // they haven't started. Show each remaining tarea as a row with a
+    // direct button that closes the parent view and opens the assignment.
+    const remainingWrap = $('hw-parents-remaining');
+    if (remainingWrap) {
+      if (!data.remaining || !data.remaining.length) {
+        remainingWrap.innerHTML = '<div class="hw-parents-empty">¡Felicidades! Ya intentó todas las tareas disponibles.</div>';
+      } else {
+        remainingWrap.innerHTML = '';
+        data.remaining.forEach((r) => {
+          const row = document.createElement('div');
+          row.className = 'hw-parents-remaining-row';
+          row.innerHTML = `
+            <div class="hw-parents-remaining-info">
+              <div class="hw-parents-remaining-title">${escapeHtml(r.title)}</div>
+              <div class="hw-parents-remaining-sub">${escapeHtml(r.subtitle)} · ${r.totalPoints} pts</div>
+            </div>
+            <button class="btn btn-jade btn-sm" data-id="${escapeHtml(r.assignmentId)}">🎯 Hacerla ahora</button>`;
+          row.querySelector('button').addEventListener('click', () => {
+            openAssignment(r.assignmentId);
+          });
+          remainingWrap.appendChild(row);
+        });
+      }
+    }
+    // === CONVERSATION PROMPTS — what to ask the kid ===
+    // Concrete questions parents can ask, drawn from each mastered
+    // assignment's encouragement string. Reinforces SPEAKING the
+    // language, not just typing it.
+    const convWrap = $('hw-parents-conversations');
+    if (convWrap) {
+      if (!data.conversationPrompts || !data.conversationPrompts.length) {
+        convWrap.innerHTML = '<div class="hw-parents-empty">Aún no hay temas — cuando complete una tarea aparecerán aquí.</div>';
+      } else {
+        convWrap.innerHTML = '';
+        data.conversationPrompts.forEach((c) => {
+          const row = document.createElement('div');
+          row.className = 'hw-parents-conv-row';
+          row.innerHTML = `
+            <div class="hw-parents-conv-title">${escapeHtml(c.assignmentTitle)}</div>
+            <div class="hw-parents-conv-prompt">💬 ${escapeHtml(c.prompt)}</div>`;
+          convWrap.appendChild(row);
+        });
+      }
     }
   }
   $('hw-parents-back').addEventListener('click', () => {
@@ -464,6 +533,33 @@
     renderLibrary();
     setActiveItem(0);
     refreshUndoButtons();
+    // Wire the search box (idempotent — replace listeners on each render
+    // by reading the current input value each time).
+    const searchEl = $('hw-asg-library-search');
+    const clearEl = $('hw-asg-library-search-clear');
+    if (searchEl) {
+      searchEl.value = '';        // fresh assignment → clear search
+      librarySearch = '';
+      // Replace listener (clone trick) so re-renders don't pile up handlers
+      const fresh = searchEl.cloneNode(true);
+      searchEl.parentNode.replaceChild(fresh, searchEl);
+      fresh.addEventListener('input', () => {
+        librarySearch = normalize(fresh.value);
+        renderLibrary();
+      });
+    }
+    if (clearEl) {
+      const fresh = clearEl.cloneNode(true);
+      clearEl.parentNode.replaceChild(fresh, clearEl);
+      fresh.addEventListener('click', () => {
+        const s = $('hw-asg-library-search');
+        if (s) s.value = '';
+        librarySearch = '';
+        renderLibrary();
+        const back = $('hw-asg-library-search');
+        if (back) back.focus();
+      });
+    }
   }
   let activeItemIdx = 0;
   function setActiveItem(i) {
@@ -539,11 +635,26 @@
     const wrap = $('hw-asg-library');
     if (!window.WU_WORDS) { wrap.innerHTML = '<em>Cargando catálogo…</em>'; return; }
     wrap.innerHTML = '';
-    const words = activeExpTab === 'all'
+    // Filter by EXP tab AND by normalized search string (tones stripped).
+    // The search matches against pinyin, hanzi, and Spanish translation
+    // — so a kid can type "hola", "nihao", or even "你好" and still find
+    // the chip. User feedback 2026-05-27: "sometimes you can't find a
+    // word like Ni hao, give us a search bar."
+    const q = librarySearch;
+    let words = activeExpTab === 'all'
       ? window.WU_WORDS
       : window.WU_WORDS.filter((w) => w.exp === activeExpTab);
+    if (q) {
+      words = words.filter((w) =>
+        normalize(w.pinyin).includes(q) ||
+        normalize(w.es).includes(q) ||
+        (w.hanzi && w.hanzi.includes(q))
+      );
+    }
     if (!words.length) {
-      wrap.innerHTML = '<div class="hw-lib-empty">No hay palabras en esta categoría.</div>';
+      wrap.innerHTML = q
+        ? `<div class="hw-lib-empty">No encontré "${escapeHtml(q)}". Prueba escribir sin tonos, o cambia de pestaña.</div>`
+        : '<div class="hw-lib-empty">No hay palabras en esta categoría.</div>';
       return;
     }
     words.forEach((w) => {
@@ -644,6 +755,19 @@
     setTimeout(tick, 250);
     const bk = $('hw-results-breakdown');
     bk.innerHTML = '';
+    // Lead the breakdown with a SPEAK-OUT-LOUD reminder. The kid just
+    // finished the tarea, brain is engaged, this is the moment to push
+    // pronunciation. User said this is "very important — not just count
+    // how many words they know, but that they can pronounce them."
+    const speakRow = document.createElement('div');
+    speakRow.className = 'hw-results-speak-row';
+    speakRow.innerHTML = `
+      <span class="hw-results-speak-icon">🗣️</span>
+      <div>
+        <strong>Antes de salir:</strong> di cada respuesta correcta en voz alta tres veces.
+        Hablar es la mejor forma de que se quede en tu cabeza.
+      </div>`;
+    bk.appendChild(speakRow);
     (data.breakdown || []).forEach((b) => {
       const row = document.createElement('div');
       row.className = 'hw-results-bk-row ' + (b.correct ? 'ok' : 'no');
