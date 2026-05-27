@@ -77,6 +77,222 @@ body.hw-bg {
   display: flex; gap: 6px;
   flex-wrap: wrap;
 }
+.m-dash-self {
+  color: rgba(91, 232, 209, 0.85);
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin: 4px 0 0;
+}
+
+/* === Tabs (super admin) === */
+.m-tabs {
+  display: flex; gap: 6px;
+  padding: 6px;
+  margin-bottom: 14px;
+  background: rgba(20, 22, 36, 0.55);
+  border-radius: 12px;
+}
+.m-tab {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  font-family: inherit;
+  background: rgba(50, 55, 90, 0.55);
+  border: 2px solid rgba(180, 100, 255, 0.25);
+  border-radius: 999px;
+  color: rgba(243, 230, 194, 0.85);
+  cursor: pointer;
+}
+.m-tab.active {
+  background: linear-gradient(135deg, rgba(180, 100, 255, 0.35), rgba(91, 232, 209, 0.25));
+  border-color: #c5a3ff;
+  color: #fff5d8;
+}
+
+/* === Teachers panel === */
+.m-teachers-header {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.m-teachers-title {
+  font-family: 'Cinzel', serif; font-weight: 900;
+  color: #c5a3ff; margin: 0;
+  font-size: 1.2rem;
+}
+.m-teachers-help {
+  font-size: 0.85rem;
+  color: rgba(243, 230, 194, 0.7);
+  font-style: italic;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  background: rgba(180, 100, 255, 0.1);
+  border-left: 3px solid #c5a3ff;
+  border-radius: 8px;
+}
+.m-teachers-list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.m-teacher-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  background: rgba(38, 40, 60, 0.7);
+  border: 2px solid rgba(255, 213, 122, 0.3);
+  border-radius: 10px;
+}
+.m-teacher-row.is-super {
+  border-color: #ffe082;
+  background: linear-gradient(160deg, rgba(255, 224, 130, 0.12), rgba(38, 40, 60, 0.7));
+}
+.m-teacher-main { min-width: 0; }
+.m-teacher-name {
+  font-weight: 900;
+  color: #fff5d8;
+  font-size: 1rem;
+}
+.m-teacher-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  background: rgba(255, 224, 130, 0.22);
+  color: #ffe082;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.m-teacher-meta {
+  color: rgba(243, 230, 194, 0.6);
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+.m-teacher-codes {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.m-teacher-code-row {
+  display: flex; gap: 6px; align-items: center;
+  font-size: 0.82rem;
+}
+.m-teacher-code-label {
+  color: rgba(243, 230, 194, 0.55);
+}
+.m-teacher-code {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #ffe082;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px dashed rgba(255, 224, 130, 0.45);
+  border-radius: 6px;
+  padding: 2px 8px;
+  letter-spacing: 0.08em;
+}
+@media (max-width: 640px) {
+  .m-teacher-row {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'main'
+      'codes'
+      'del';
+  }
+  .m-teacher-main  { grid-area: main; }
+  .m-teacher-codes { grid-area: codes; }
+  .m-teacher-del   { grid-area: del; justify-self: end; }
+}
+
+/* === Modal (create teacher) === */
+.m-modal {
+  position: fixed; inset: 0;
+  background: rgba(10, 12, 22, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px;
+  z-index: 9999;
+}
+.m-modal.hidden { display: none; }
+.m-modal-card {
+  position: relative;
+  width: 100%; max-width: 480px;
+  background: linear-gradient(160deg, rgba(40, 50, 80, 0.97), rgba(20, 25, 45, 0.98));
+  border: 3px solid #c5a3ff;
+  border-radius: 20px;
+  padding: 24px 22px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+  max-height: 90dvh;
+  overflow-y: auto;
+}
+.m-modal-card h2 {
+  font-family: 'Cinzel', serif; font-weight: 900;
+  color: #c5a3ff;
+  margin: 0 0 14px;
+  font-size: 1.2rem;
+}
+.m-modal-close {
+  position: absolute; top: 12px; right: 14px;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(40, 45, 70, 0.9);
+  border: 2px solid rgba(180, 100, 255, 0.6);
+  color: #fff5d8;
+  font-size: 1.1rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.m-form-label {
+  display: block;
+  font-size: 0.88rem;
+  color: rgba(243, 230, 194, 0.85);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.m-form-label span { display: block; margin-bottom: 4px; }
+.m-form-label .input { width: 100%; }
+.m-modal-msg { min-height: 1em; font-size: 0.85rem; color: #5be8d1; margin: 8px 0 0; }
+
+.m-teacher-result {
+  margin-top: 16px;
+  padding: 14px;
+  background: rgba(91, 232, 209, 0.12);
+  border: 2px solid #5be8d1;
+  border-radius: 12px;
+}
+.m-teacher-result-title {
+  font-weight: 900;
+  color: #5be8d1;
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+.m-teacher-result-row {
+  margin: 8px 0;
+}
+.m-teacher-result-label {
+  display: block;
+  font-size: 0.78rem;
+  color: rgba(243, 230, 194, 0.7);
+  margin-bottom: 2px;
+}
+.m-teacher-result-code {
+  display: inline-block;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #ffe082;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 14px;
+  border-radius: 8px;
+  letter-spacing: 0.12em;
+  font-size: 1.05rem;
+  user-select: all;
+}
+.m-teacher-result-hint {
+  font-size: 0.78rem;
+  color: rgba(243, 230, 194, 0.7);
+  font-style: italic;
+  margin: 10px 0 0;
+}
+.m-teacher-result-hint strong { color: #c5a3ff; }
 
 .m-empty {
   padding: 40px;

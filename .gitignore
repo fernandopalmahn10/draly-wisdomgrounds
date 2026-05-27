@@ -20,6 +20,7 @@ data/tts-cache/
 # Includes student PII (sentence histories) + teacher presets.
 data/student-records.json
 data/teacher-presets.json
+data/teachers.json
 data/heartbeat.txt
 # Original (uncompressed) 3D models — only the compressed dralingo-*.glb + john-monk.glb ship to git
 public/assets/Arab Dralingo flying with white ghutra.glb

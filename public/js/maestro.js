@@ -39,7 +39,7 @@
         try { localStorage.setItem(STORAGE_PW, pw); } catch (_) {}
         $('m-login').classList.add('hidden');
         $('m-dash').classList.remove('hidden');
-        renderRoster(data.students || []);
+        renderRoster(data.students || [], data.self || null);
       })
       .catch((e) => { $('m-login-err').textContent = 'Error: ' + e.message; });
   }
@@ -66,11 +66,117 @@
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { $('m-dash-sub').textContent = 'Error: ' + (data && data.error || ''); return; }
-        renderRoster(data.students || []);
+        renderRoster(data.students || [], data.self || null);
       });
   }
+  // === Tab switcher: students ↔ teachers (super-admin only) ===
+  document.querySelectorAll('.m-tab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.tab;
+      document.querySelectorAll('.m-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === target));
+      document.querySelectorAll('.m-tabpanel').forEach((p) => p.classList.toggle('hidden', p.id !== 'm-tabpanel-' + target));
+      if (target === 'teachers') fetchTeachers();
+    });
+  });
+  // === Teacher management (super-admin) ===
+  function fetchTeachers() {
+    const list = $('m-teachers-list');
+    list.innerHTML = '<div class="m-empty">Cargando maestros…</div>';
+    fetch('/api/admin/teachers?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { list.innerHTML = '<div class="m-empty">Error: ' + (data && data.error || '') + '</div>'; return; }
+        renderTeachers(data.teachers || []);
+      });
+  }
+  function renderTeachers(teachers) {
+    const list = $('m-teachers-list');
+    list.innerHTML = '';
+    if (!teachers.length) {
+      list.innerHTML = '<div class="m-empty">Aún no hay maestros. Crea el primero ↑</div>';
+      return;
+    }
+    teachers.forEach((t) => {
+      const row = document.createElement('div');
+      row.className = 'm-teacher-row' + (t.isSuperAdmin ? ' is-super' : '');
+      const since = t.createdAt ? new Date(t.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+      row.innerHTML = `
+        <div class="m-teacher-main">
+          <div class="m-teacher-name">${escapeHtml(t.displayName || 'Anon')}${t.isSuperAdmin ? ' <span class="m-teacher-badge">👑 Super admin</span>' : ''}</div>
+          <div class="m-teacher-meta">${escapeHtml(t.email || 'sin email')}${t.country ? ' · ' + escapeHtml(t.country) : ''} · desde ${since}</div>
+        </div>
+        <div class="m-teacher-codes">
+          <div class="m-teacher-code-row">
+            <span class="m-teacher-code-label">🔑 Maestro/a:</span>
+            <code class="m-teacher-code">${escapeHtml(t.teacherId)}</code>
+          </div>
+          <div class="m-teacher-code-row">
+            <span class="m-teacher-code-label">📚 Aula:</span>
+            <code class="m-teacher-code">${(t.accessCodes || []).map(escapeHtml).join(', ')}</code>
+          </div>
+        </div>
+        ${t.isSuperAdmin ? '' : `<button class="btn btn-ghost btn-sm m-teacher-del" data-id="${escapeHtml(t.teacherId)}" type="button">🗑️ Eliminar</button>`}`;
+      const del = row.querySelector('.m-teacher-del');
+      if (del) del.addEventListener('click', () => deleteTeacher(t.teacherId, t.displayName));
+      list.appendChild(row);
+    });
+  }
+  function deleteTeacher(teacherId, displayName) {
+    if (!confirm(`¿Eliminar al maestro/a "${displayName}" (${teacherId})?\n\nSus estudiantes quedarán huérfanos (puedes reasignarlos más tarde).`)) return;
+    fetch('/api/admin/teachers/' + encodeURIComponent(teacherId) + '?pw=' + encodeURIComponent(pw), { method: 'DELETE' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { alert('Error: ' + (data && data.error || '')); return; }
+        fetchTeachers();
+      });
+  }
+  // Create-teacher modal
+  $('m-new-teacher-btn').addEventListener('click', () => {
+    $('m-new-teacher-modal').classList.remove('hidden');
+    $('m-new-teacher-name').value = '';
+    $('m-new-teacher-email').value = '';
+    $('m-new-teacher-country').value = '';
+    $('m-new-teacher-msg').textContent = '';
+    $('m-new-teacher-result').classList.add('hidden');
+  });
+  $('m-new-teacher-close').addEventListener('click', () => $('m-new-teacher-modal').classList.add('hidden'));
+  $('m-new-teacher-submit').addEventListener('click', () => {
+    const displayName = $('m-new-teacher-name').value.trim();
+    const email = $('m-new-teacher-email').value.trim();
+    const country = $('m-new-teacher-country').value.trim();
+    if (!displayName) { $('m-new-teacher-msg').textContent = 'Escribe un nombre'; return; }
+    $('m-new-teacher-msg').textContent = 'Creando…';
+    fetch('/api/admin/teachers?pw=' + encodeURIComponent(pw), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ displayName, email: email || null, country: country || null }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { $('m-new-teacher-msg').textContent = 'Error: ' + (data && data.error || ''); return; }
+        $('m-new-teacher-msg').textContent = '';
+        $('m-result-teacher-id').textContent = data.teacher.teacherId;
+        $('m-result-access-code').textContent = (data.teacher.accessCodes || []).join(', ');
+        $('m-new-teacher-result').classList.remove('hidden');
+        fetchTeachers();   // refresh list in background
+      });
+  });
 
-  function renderRoster(students) {
+  function renderRoster(students, self) {
+    // Surface "who am I" line and (if super admin) the Teachers tab.
+    if (self) {
+      const isSuper = !!self.isSuperAdmin;
+      const youLine = self.legacy
+        ? '👑 Super admin (sesión legacy)'
+        : `👩‍🏫 ${self.displayName || self.teacherId} — ${isSuper ? '👑 Super admin' : 'Maestro/a'}` +
+          (self.accessCodes && self.accessCodes.length
+            ? ` · Código de aula: ${self.accessCodes.join(', ')}`
+            : '');
+      $('m-dash-self').textContent = youLine;
+      // Show tabs only for super admin
+      const tabs = $('m-tabs');
+      if (tabs) tabs.classList.toggle('hidden', !isSuper);
+    }
     // Show only students with ANY activity
     students = students.filter((s) =>
       (s.sentenceCount > 0) || (s.testCount > 0) || (s.assignmentCount > 0)

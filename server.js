@@ -9,6 +9,7 @@ const Students = require('./core/student-records');
 const TeacherPresets = require('./core/teacher-presets');
 const ReadingStory = require('./core/reading-story');
 const Assignments = require('./core/assignments');
+const Teachers = require('./core/teachers');
 
 const app = express();
 const server = http.createServer(app);
@@ -112,41 +113,109 @@ app.get('/api/admin/disk-status', (req, res) => {
 // see every student code that has ever saved a sentence on this Render
 // instance, along with their displayName + sentence count. Drilling into
 // a specific code returns the full sentence history for that kid.
-// Accepts EITHER the warmup-admin password OR the dedicated teacher
-// password EMAAR2026 (user feedback 2026-05-27: "give a new password for
-// modo maestro so I can be alone, without hosting a session").
-// Adding it as an OR alongside the existing pw means we don't break
-// any old workflows.
+// Multi-teacher auth (2026-05-27 rewrite). The query param `pw` is now
+// a TEACHER ID (a code) which we look up in teachers.json. Falls back
+// to the legacy super-admin passwords for backwards compatibility with
+// existing host pages (warmup admin gate etc.).
+//
+// Returns null on failure (and writes 401), or a "session" object on
+// success:
+//   { teacher: <teacher record or null for legacy>, isSuperAdmin: bool }
+// The session is used downstream to filter results by the teacher's
+// classroom access codes.
 function _adminAuth(req, res) {
-  const givenPw = String(req.query.pw || req.query.password || '');
-  const wuPw      = process.env.WU_ADMIN_PASSWORD || 'draly2026';
-  const teacherPw = process.env.TEACHER_PASSWORD  || 'EMAAR2026';
-  if (givenPw !== wuPw && givenPw !== teacherPw) {
-    res.status(401).json({ ok: false, error: 'wrong password' });
-    return false;
+  const givenPw = String(req.query.pw || req.query.password || '').trim();
+  // Legacy super-admin passwords still grant full access for the live
+  // warmup-host flow (host-warmup.html unlock). These bypass the
+  // teachers table entirely.
+  const wuPw = process.env.WU_ADMIN_PASSWORD || 'draly2026';
+  if (givenPw === wuPw) {
+    return { teacher: null, isSuperAdmin: true, legacy: true };
   }
-  return true;
+  // Otherwise look up as a teacher code
+  const teacher = Teachers.getByTeacherId(givenPw);
+  if (!teacher) {
+    res.status(401).json({ ok: false, error: 'wrong password' });
+    return null;
+  }
+  Teachers.touchLastSeen(teacher.teacherId);
+  return { teacher, isSuperAdmin: !!teacher.isSuperAdmin, legacy: false };
 }
 app.get('/api/admin/students', (req, res) => {
-  if (!_adminAuth(req, res)) return;
-  res.json({ ok: true, students: Students.listAll() });
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  let students = Students.listAll();
+  // Filter by the teacher's classroom access codes. Super admin sees
+  // everyone (including legacy students without a classroomCode).
+  if (!session.isSuperAdmin && session.teacher) {
+    const codes = new Set((session.teacher.accessCodes || []));
+    students = students.filter((s) => s.classroomCode && codes.has(s.classroomCode));
+  }
+  res.json({
+    ok: true,
+    students,
+    self: session.teacher ? {
+      teacherId: session.teacher.teacherId,
+      displayName: session.teacher.displayName,
+      isSuperAdmin: session.isSuperAdmin,
+      accessCodes: session.teacher.accessCodes,
+    } : { isSuperAdmin: true, legacy: true },
+  });
 });
 app.get('/api/admin/students/:code', (req, res) => {
-  if (!_adminAuth(req, res)) return;
+  const session = _adminAuth(req, res);
+  if (!session) return;
   const code = req.params.code;
   const rec = Students.get(code);
   if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  // Authorization: teacher can only view students in their classrooms.
+  if (!session.isSuperAdmin && session.teacher) {
+    const codes = new Set((session.teacher.accessCodes || []));
+    if (!rec.classroomCode || !codes.has(rec.classroomCode)) {
+      return res.status(403).json({ ok: false, error: 'this student is not in your classroom' });
+    }
+  }
   res.json({
     ok: true,
     code: rec.code,
     displayName: rec.displayName || 'Anon',
     avatar:    rec.avatar || null,
+    classroomCode: rec.classroomCode || null,
     firstSeen: rec.firstSeen || 0,
     lastSeen:  rec.lastSeen || 0,
     sentences: Students.getHistory(rec.code), // newest-first
     tests:     Students.getTestResults(rec.code, 50), // newest-first
     assignments: Students.getAssignmentSubmissions(rec.code, 50),
   });
+});
+
+// === TEACHER MANAGEMENT (super-admin only) ===
+// List all teachers. Used by /maestro super-admin panel.
+app.get('/api/admin/teachers', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  res.json({ ok: true, teachers: Teachers.listAll() });
+});
+// Create a new teacher. Returns the new teacherId + access code so the
+// super admin can hand them over.
+app.post('/api/admin/teachers', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const { displayName, email, country } = req.body || {};
+  if (!displayName) return res.status(400).json({ ok: false, error: 'displayName required' });
+  const t = Teachers.createTeacher({ displayName, email, country });
+  res.json({ ok: true, teacher: t });
+});
+// Delete a teacher (super-admin only; cannot delete a super admin)
+app.delete('/api/admin/teachers/:teacherId', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const ok = Teachers.deleteTeacher(req.params.teacherId);
+  if (!ok) return res.status(400).json({ ok: false, error: 'cannot delete (not found or is super admin)' });
+  res.json({ ok: true });
 });
 
 // === 📚 HOMEWORK PORTAL — async assignments, no PIN/host needed =========
@@ -172,16 +241,22 @@ function _hwCheckAccess(req, res) {
 
 app.post('/api/homework/enter', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const { studentCode, displayName } = req.body || {};
+  const { studentCode, displayName, accessCode } = req.body || {};
   const rec = Students.getOrCreate(studentCode, displayName);
+  // Tag this student with the teacher's classroom code they just typed.
+  // This binds the student to that teacher's roster permanently (until
+  // they switch classes by entering a different teacher's code).
+  if (accessCode) {
+    Students.setClassroomCode(rec.code, accessCode);
+  }
   res.json({
     ok: true,
     studentCode: rec.code,
     displayName: rec.displayName,
     avatar: rec.avatar || null,
     avatarOptions: Students.AVATAR_OPTIONS,
+    classroomCode: rec.classroomCode || null,
     assignments: Assignments.listAssignments(),
-    // Also send the student's prior submissions so we can mark "done"
     submissions: Students.getAssignmentSubmissions(rec.code, 100),
   });
 });

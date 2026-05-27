@@ -99,6 +99,8 @@ function getOrCreate(code, displayName) {
     code: newCode,
     displayName: displayName ? String(displayName).slice(0, 24) : 'Anon',
     avatar: null,                 // chosen on first homework-portal entry
+    classroomCode: null,          // assigned when they enter a teacher's
+                                  // access code (set via setClassroomCode)
     firstSeen: Date.now(),
     lastSeen: Date.now(),
     sentencesBuilt: [],
@@ -106,6 +108,22 @@ function getOrCreate(code, displayName) {
   records[newCode] = rec;
   scheduleSave();
   return rec;
+}
+// Tag a student with the classroom (teacher's access code) they joined
+// under. Called every time a kid enters via /homework — the access code
+// they typed becomes their classroom of record. If a kid switches classes
+// (types a different teacher's code), this will update accordingly.
+function setClassroomCode(code, classroomCode) {
+  const rec = get(code);
+  if (!rec) return false;
+  const clean = String(classroomCode || '').trim().toUpperCase();
+  if (!clean) return false;
+  if (rec.classroomCode !== clean) {
+    rec.classroomCode = clean;
+    rec.lastSeen = Date.now();
+    scheduleSave();
+  }
+  return true;
 }
 // Persist the chosen avatar for a student. Avatars are now full-body
 // SVG illustrations served from /assets/avatars/<name>.svg. The stored
@@ -233,6 +251,7 @@ function listAll() {
       code: r.code,
       displayName: r.displayName || 'Anon',
       avatar: r.avatar || null,
+      classroomCode: r.classroomCode || null,
       firstSeen: r.firstSeen || 0,
       lastSeen: r.lastSeen || 0,
       sentenceCount:   Array.isArray(r.sentencesBuilt)         ? r.sentencesBuilt.length         : 0,
@@ -323,6 +342,7 @@ module.exports = {
   getAssignmentSubmissions,
   setAvatar,
   setDisplayName,
+  setClassroomCode,
   resetAssignmentSubmissions,
   AVATAR_OPTIONS,
 };
