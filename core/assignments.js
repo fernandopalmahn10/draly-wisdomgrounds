@@ -27,8 +27,14 @@
 'use strict';
 
 // Access codes — any of these grants entry to the homework portal.
+// Numeric 4-digit codes (changed 2026-05-26) so the input can use the
+// same numeric keypad UX as the live-game PIN field — easier for kids
+// who can't comfortably type letters on phone keyboards.
+//
 // Teacher hands these out (e.g. one per class section, or just one).
-const ACCESS_CODES = ['HSK1A', 'HSK1B', 'HSK1C', 'HSK1D', 'HSK1E'];
+// Easy-to-remember sequences so kids can recall them without writing
+// them down. Change here to rotate (e.g. start of new school year).
+const ACCESS_CODES = ['1001', '2002', '3003', '4004', '5005'];
 
 const ASSIGNMENTS = [
   // === ASSIGNMENT 1 ===
