@@ -233,7 +233,11 @@ app.get('/api/homework/insights/:code', (req, res) => {
       lastAttemptAt:   sub.ts,
     });
   });
-  // Tests done (any reading-mode test attempt counts as "they engaged")
+  // Tests done (any reading-mode test attempt counts as "they engaged").
+  // We dedupe by storyId so the parent sees "1 story tested" if the kid
+  // retook the same test 5 times — user feedback 2026-05-27: "it says
+  // five exámenes de lectura but we only did one and they took it
+  // multiple times".
   const tests = Students.getTestResults(rec.code, 50);
   const testsByStory = {};
   tests.forEach((t) => {
@@ -241,18 +245,44 @@ app.get('/api/homework/insights/:code', (req, res) => {
       testsByStory[t.storyId] = t;
     }
   });
+  const uniqueTests = Object.values(testsByStory);
+  // ASSIGNMENTS THE KID HASN'T TRIED YET — surfaced so the parent can
+  // nudge them ("¡Aún no has hecho la tarea de la familia! Hazla ahora.")
+  // Listed in the parent view with a redirect CTA into the homework portal.
+  const allAssignments = Assignments.listAssignments();
+  const triedIds = new Set(subs.map((s) => s.assignmentId));
+  const remaining = allAssignments
+    .filter((a) => !triedIds.has(a.id))
+    .map((a) => ({
+      assignmentId: a.id,
+      title:        a.title,
+      subtitle:     a.subtitle,
+      totalPoints:  a.totalPoints,
+    }));
+  // CONVERSATION PROMPTS — pulled from each insight so parents have
+  // concrete questions to ask their kid. Encourages SPEAKING the
+  // language out loud, per user feedback 2026-05-27.
+  const conversationPrompts = insights.map((row) => ({
+    assignmentTitle: row.assignmentTitle,
+    prompt: row.insight.encouragement
+         || `Pregúntale: "${row.assignmentTitle}" — pídele que te lo diga en voz alta.`,
+  }));
   res.json({
     ok: true,
     code: rec.code,
     displayName: rec.displayName,
     avatar: rec.avatar || '🧒🏼',
     insights,
-    tests: Object.values(testsByStory),
+    tests: uniqueTests,
+    remaining,
+    conversationPrompts,
     totals: {
-      assignmentAttempts:  subs.length,
-      assignmentsMastered: insights.length,
-      assignmentsAvailable: Assignments.listAssignments().length,
-      readingTestsTaken:   tests.length,
+      assignmentAttempts:    subs.length,
+      assignmentsMastered:   insights.length,
+      assignmentsAvailable:  allAssignments.length,
+      assignmentsRemaining:  remaining.length,
+      readingTestsTaken:     uniqueTests.length,     // unique stories, NOT total attempts
+      readingTestAttempts:   tests.length,
     },
   });
 });

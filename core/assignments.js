@@ -1,28 +1,51 @@
 // =========================================================================
 // assignments.js — Homework portal data + grading
-//
-// Async, no-PIN-needed homework. Students enter an access code (5 valid
-// codes — teacher hands them out to her class) plus their student code
-// (the same 4-char code the warmup mode generates), and gets a list of
-// assignments to complete on their own time.
-//
-// Submissions auto-graded by normalizing pinyin (lowercase, strip tone
-// marks, strip punctuation) and comparing to teacher's expected answer.
-//
-// HOW TO ADD A NEW ASSIGNMENT
 // =========================================================================
-// 1. Add an entry to ASSIGNMENTS below.
-// 2. Pick a short `id` (lowercase, no spaces).
-// 3. type currently only supports 'sentence-building' (student builds
-//    pinyin sentences with word chips, compared to expected pinyin).
-// 4. items: array of { es: 'Spanish prompt', expected: 'pinyin answer' }.
-//    Tone marks in `expected` are optional — grading strips them anyway.
-// 5. pointsPerItem: usually 100 / items.length so the assignment totals 100.
+//
+//  ╔══════════════════════════════════════════════════════════════════════╗
+//  ║                                                                      ║
+//  ║   👇 EDIT THE HOMEWORK QUESTIONS HERE 👇                             ║
+//  ║                                                                      ║
+//  ║   Every assignment lives in the ASSIGNMENTS array below.             ║
+//  ║   Each entry has:                                                    ║
+//  ║      id            — short slug used in URLs (lowercase, no spaces)  ║
+//  ║      title         — heading on the kid's card (emoji OK)            ║
+//  ║      subtitle      — one-line description below the title            ║
+//  ║      instructions  — help text on the assignment screen              ║
+//  ║      items         — the actual questions (es + expected pinyin)     ║
+//  ║      pointsPerItem — usually 100 / items.length (total = 100)        ║
+//  ║      parentInsight — bullets shown to parents when score ≥ 60%       ║
+//  ║                                                                      ║
+//  ║   TO EDIT A QUESTION → find the item and rewrite es + expected.      ║
+//  ║   TO ADD A QUESTION  → append { es: '…', expected: '…' } to items    ║
+//  ║                        and update pointsPerItem so total stays ~100. ║
+//  ║   TO REMOVE          → delete the line, bump pointsPerItem back up.  ║
+//  ║   TO ADD A NEW TAREA → copy the whole { id, title, … } block, give   ║
+//  ║                        it a unique id, and edit.                     ║
+//  ║                                                                      ║
+//  ║   ⚠️  CATALOG RULE: every word in `expected` MUST exist in           ║
+//  ║      public/js/warmup-vocab.js — otherwise kids can't build it       ║
+//  ║      from the word chips. To check: ctrl-F that file for the pinyin. ║
+//  ║                                                                      ║
+//  ║   Tone marks in `expected` are optional. Grading strips them.        ║
+//  ║   So "wǒ" and "wo" and "WO" are all equivalent.                      ║
+//  ║                                                                      ║
+//  ╚══════════════════════════════════════════════════════════════════════╝
+//
+// HOW GRADING WORKS
+// =========================================================================
+// normalize(s) lowercases the answer, strips tone marks (NFD + remove
+// combining diacritics), removes punctuation, collapses whitespace.
+// So all of these compare equal:
+//     "Wǒ jiào Sofia."  ==  "wo jiao sofia"  ==  "wǒ jiào sofía"
+// Then student-normalized is compared to expected-normalized as strings.
+// All-or-nothing per item: kid gets `pointsPerItem` if matched, 0 else.
 //
 // HOW TO CHANGE ACCESS CODES
 // =========================================================================
 // Edit ACCESS_CODES below. The teacher gives one to her students; anyone
-// with any of the 5 codes can enter. Codes are case-insensitive.
+// with any of the 5 codes can enter. Numeric so kids can type them on a
+// phone numeric keypad.
 // =========================================================================
 'use strict';
 
@@ -42,7 +65,7 @@ const ASSIGNMENTS = [
     id: 'familia-introduce',
     title: '👨‍👩‍👧 Mi familia',
     subtitle: '5 oraciones para presentar a tu familia',
-    instructions: 'Lee la oración en español. Construye la oración en pinyin tocando las palabras del catálogo. Cuando termines las 5 oraciones, presiona Entregar.',
+    instructions: 'Lee la oración en español. Construye la oración en pinyin tocando las palabras del catálogo. 🗣️ DI CADA ORACIÓN EN VOZ ALTA antes de entregar — hablar es la mejor forma de aprender.',
     type: 'sentence-building',
     items: [
       // All expected answers use ONLY words present in the warmup catalog
