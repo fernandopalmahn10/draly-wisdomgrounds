@@ -101,38 +101,42 @@ const ASSIGNMENTS = [
     },
   },
   // === ASSIGNMENT 2 ===
+  // User feedback 2026-05-27: "Experience 2 should ONLY use words of
+  // Experience 2, no combinations with EXP1 pronouns." So this assignment
+  // is phrase-based (verb + noun) rather than full sentences. The kid
+  // practices the EXP2 vocab purely.
   {
     id: 'escuela-idioma',
     title: '🏫 EXP2 · Escuela e idioma',
-    subtitle: '10 oraciones · palabras de Experience 2 (+ pronombres básicos)',
+    subtitle: '10 frases · SOLO palabras de Experience 2',
     expLabel: 'exp2',
-    instructions: 'Construye cada oración en pinyin usando palabras de Experience 2 (Escuela / Idioma). Puedes usar pronombres básicos (wǒ, nǐ) de Experience 1. Filtra el catálogo con la pestaña 🎓 EXP2. 🗣️ DI CADA ORACIÓN EN VOZ ALTA.',
+    instructions: 'Cada frase usa SOLO palabras de Experience 2 (Escuela / Idioma). No mezcles con palabras de otras experiencias. Filtra el catálogo con la pestaña 🎓 EXP2. 🗣️ DI CADA FRASE EN VOZ ALTA.',
     type: 'sentence-building',
     items: [
-      // STRICT: EXP2 verbs + nouns + EXP1 pronouns/de/shì/ài only.
-      // All possessives use the wǒ de / nǐ de standard (user feedback 2026-05-27).
-      { es: 'Yo soy estudiante.',           expected: 'wǒ shì xuésheng' },
-      { es: 'Tú eres mi maestra.',          expected: 'nǐ shì wǒ de lǎoshī' },
-      { es: 'Yo estudio chino.',            expected: 'wǒ xuéxí hànyǔ' },
-      { es: 'Yo leo libros.',               expected: 'wǒ dú shū' },
-      { es: 'Yo escribo caracteres.',       expected: 'wǒ xiě zì' },
-      { es: 'Mi maestra habla chino.',      expected: 'wǒ de lǎoshī shuō hànyǔ' },
-      { es: 'Yo escucho a mi maestra.',     expected: 'wǒ tīng wǒ de lǎoshī' },
-      { es: 'Yo veo a mi compañero.',       expected: 'wǒ kànjiàn wǒ de tóngxué' },
-      { es: 'Yo sé hablar chino.',          expected: 'wǒ huì shuō hànyǔ' },
-      { es: 'Yo amo mi escuela.',           expected: 'wǒ ài wǒ de xuéxiào' },
+      // STRICT: every pinyin word below is from EXP2 only. Verified
+      // against public/js/warmup-vocab.js EXP2 block (18 words).
+      { es: 'Leer libros',          expected: 'dú shū' },
+      { es: 'Escribir caracteres',  expected: 'xiě zì' },
+      { es: 'Estudiar chino',       expected: 'xuéxí hànyǔ' },
+      { es: 'Hablar chino',         expected: 'shuō hànyǔ' },
+      { es: 'Escuchar a la maestra', expected: 'tīng lǎoshī' },
+      { es: 'Mirar libros',         expected: 'kàn shū' },
+      { es: 'Ver al compañero',     expected: 'kànjiàn tóngxué' },
+      { es: 'Maestro de chino',     expected: 'hànyǔ lǎoshī' },
+      { es: 'Saber escribir',       expected: 'huì xiě' },
+      { es: 'Poder leer',           expected: 'néng dú' },
     ],
     pointsPerItem: 10,  // 10 × 10 = 100
     parentInsight: {
-      title: 'Tu hijo/a puede hablar de la escuela y el idioma chino',
+      title: 'Tu hijo/a domina vocabulario de escuela y el idioma chino',
       bullets: [
-        'Presentarse como estudiante: "Wǒ shì xuésheng"',
-        'Identificar a su maestra: "Nǐ shì wǒ de lǎoshī"',
-        'Decir qué estudia: "Wǒ xuéxí hànyǔ"',
-        'Hablar de leer y escribir: "Wǒ dú shū", "Wǒ xiě zì"',
-        'Expresar habilidad: "Wǒ huì shuō hànyǔ" (yo sé hablar chino)',
+        'Acciones: "dú shū" (leer libros), "xiě zì" (escribir caracteres)',
+        'Idioma: "xuéxí hànyǔ" (estudiar chino), "shuō hànyǔ" (hablar chino)',
+        'Sentidos: "tīng lǎoshī" (escuchar a la maestra), "kàn shū" (mirar libros)',
+        'Habilidad: "huì xiě" (saber escribir), "néng dú" (poder leer)',
+        'Personas: "lǎoshī" (maestra), "tóngxué" (compañero), "xuésheng" (estudiante)',
       ],
-      encouragement: 'Pregúntale: "¿Qué estás aprendiendo en chino?" — pídele que te enseñe a decir "yo estudio chino" en voz alta.',
+      encouragement: 'Pregúntale: "¿Cómo se dice leer libros en chino?" — debería responder "dú shū" rápidamente.',
     },
   },
   // Add more here. See instructions at the top of this file.

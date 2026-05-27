@@ -513,6 +513,57 @@ function _ttsCachePath(text, voice) {
 }
 try { fs.mkdirSync(TTS_CACHE_DIR, { recursive: true }); } catch (_) {}
 
+// Health check — hit this from a browser to see exactly why TTS isn't
+// working. Returns JSON describing each precondition (env var set?
+// JSON parseable? client init? package present?). User-friendly so it
+// can be debugged without server logs.
+app.get('/api/tts/health', (req, res) => {
+  const out = {
+    envVarSet: !!process.env.GOOGLE_TTS_CREDENTIALS_JSON,
+    envVarLength: (process.env.GOOGLE_TTS_CREDENTIALS_JSON || '').length,
+    parseable: false,
+    projectId: null,
+    sdkLoaded: false,
+    clientInit: false,
+    voice: TTS_DEFAULT_VOICE,
+    cacheDir: TTS_CACHE_DIR,
+    cacheExists: false,
+    cachedFiles: 0,
+  };
+  if (out.envVarSet) {
+    try {
+      const j = JSON.parse(process.env.GOOGLE_TTS_CREDENTIALS_JSON);
+      out.parseable = true;
+      out.projectId = j.project_id || null;
+      out.hasPrivateKey = !!j.private_key;
+      out.clientEmail = j.client_email ? j.client_email.replace(/^([^@]{4}).+(@.+)$/, '$1***$2') : null;
+    } catch (e) {
+      out.parseError = e.message;
+    }
+  }
+  try {
+    require.resolve('@google-cloud/text-to-speech');
+    out.sdkLoaded = true;
+  } catch (_) {
+    out.sdkLoaded = false;
+  }
+  // Try to init the client and report any error
+  try {
+    const client = _getTtsClient();
+    out.clientInit = !!client;
+  } catch (e) {
+    out.clientInitError = e.message;
+  }
+  // Cache state
+  try {
+    if (fs.existsSync(TTS_CACHE_DIR)) {
+      out.cacheExists = true;
+      out.cachedFiles = fs.readdirSync(TTS_CACHE_DIR).filter((f) => f.endsWith('.mp3')).length;
+    }
+  } catch (_) {}
+  res.json(out);
+});
+
 // GET /api/tts?text=...&voice=zh-CN-Wavenet-A
 // Returns audio/mpeg. Cache-first: hits Google only on miss.
 // Status: 200 with audio, 404 if no client, 400 if bad input.
