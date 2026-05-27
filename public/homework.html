@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <title>📚 Tareas · Draly Wisdomgrounds</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=20260526a">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260525g">
+  <link rel="stylesheet" href="/css/homework.css?v=20260526a">
+</head>
+<body class="hw-bg">
+
+  <!-- SCREEN: ENTRY — access code + student code -->
+  <div id="screen-entry" class="container hw-entry">
+    <div class="hw-entry-card">
+      <div class="hw-entry-icon">📚</div>
+      <h1 class="hw-entry-title">Mis Tareas</h1>
+      <p class="hw-entry-sub">Para hacer las tareas en tu casa, sin código PIN.</p>
+      <label class="hw-entry-label">
+        <span>Código de acceso:</span>
+        <input class="input hw-entry-input" id="hw-access-code" type="text" placeholder="HSK1A" autocomplete="off" maxlength="8">
+      </label>
+      <label class="hw-entry-label">
+        <span>Tu código de estudiante <em>(o tu nombre si es la primera vez)</em>:</span>
+        <input class="input hw-entry-input" id="hw-student-code" type="text" placeholder="XYZN o tu nombre" autocomplete="off" maxlength="20">
+      </label>
+      <button class="btn btn-jade btn-xl" id="hw-enter-btn">Entrar →</button>
+      <p id="hw-entry-err" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em;"></p>
+      <p class="hw-entry-hint">💡 Tu maestra te dio el código de acceso. Tu código de estudiante (4 letras) lo recibiste cuando jugaste antes — guárdalo, sirve para que la maestra vea tu trabajo.</p>
+    </div>
+  </div>
+
+  <!-- SCREEN: ASSIGNMENT LIST — student's home -->
+  <div id="screen-list" class="container hw-list hidden">
+    <div class="hw-list-header">
+      <div>
+        <h1 class="hw-list-title">📚 Mis Tareas</h1>
+        <p class="hw-list-sub">
+          Hola <strong id="hw-list-name">…</strong> ·
+          Código <strong id="hw-list-code">····</strong>
+        </p>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="hw-list-logout">Salir</button>
+    </div>
+    <div class="hw-list-grid" id="hw-list-grid">
+      <!-- assignment cards rendered by JS -->
+    </div>
+  </div>
+
+  <!-- SCREEN: ASSIGNMENT — the actual sentence-building UI -->
+  <div id="screen-assignment" class="container hw-assignment hidden">
+    <div class="hw-assignment-header">
+      <button class="btn btn-ghost btn-sm" id="hw-asg-back">← Volver</button>
+      <div class="hw-asg-titles">
+        <h1 class="hw-asg-title" id="hw-asg-title">…</h1>
+        <p class="hw-asg-sub" id="hw-asg-sub">…</p>
+      </div>
+    </div>
+    <p class="hw-asg-instructions" id="hw-asg-instructions">…</p>
+    <div class="hw-asg-items" id="hw-asg-items"></div>
+
+    <!-- Word library — shared from warmup-vocab.js -->
+    <div class="hw-asg-library-section">
+      <div class="hw-asg-library-title">📖 Catálogo de palabras (toca para añadir a la oración activa)</div>
+      <div class="hw-asg-library" id="hw-asg-library"></div>
+    </div>
+
+    <div class="hw-asg-actions">
+      <button class="btn btn-jade btn-xl" id="hw-asg-submit">📤 Entregar tarea</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: RESULTS -->
+  <div id="screen-results" class="container hw-results hidden">
+    <div class="hw-results-card">
+      <div class="hw-results-emoji" id="hw-results-emoji">🎉</div>
+      <h1 class="hw-results-title" id="hw-results-title">¡Tarea entregada!</h1>
+      <div class="hw-results-score">
+        <span class="hw-results-num" id="hw-results-num">0</span>
+        <span class="hw-results-of">/ <span id="hw-results-total">100</span> pts</span>
+      </div>
+      <div class="hw-results-cert" id="hw-results-cert">…</div>
+      <div class="hw-results-breakdown" id="hw-results-breakdown"></div>
+      <div class="hw-results-actions">
+        <button class="btn btn-ghost" id="hw-results-retry">🔁 Volver a intentarlo</button>
+        <button class="btn btn-jade" id="hw-results-done">📚 Volver a mis tareas</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/warmup-vocab.js?v=20260525a"></script>
+  <script src="/js/homework.js?v=20260526a"></script>
+</body>
+</html>

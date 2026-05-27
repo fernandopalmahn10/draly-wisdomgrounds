@@ -7,6 +7,7 @@ const Images = require('./core/images');
 const Students = require('./core/student-records');
 const TeacherPresets = require('./core/teacher-presets');
 const ReadingStory = require('./core/reading-story');
+const Assignments = require('./core/assignments');
 
 const app = express();
 const server = http.createServer(app);
@@ -136,8 +137,91 @@ app.get('/api/admin/students/:code', (req, res) => {
     lastSeen: rec.lastSeen || 0,
     sentences: Students.getHistory(rec.code), // newest-first
     tests:     Students.getTestResults(rec.code, 50), // newest-first
+    assignments: Students.getAssignmentSubmissions(rec.code, 50),
   });
 });
+
+// === 📚 HOMEWORK PORTAL — async assignments, no PIN/host needed =========
+// Student flow:
+//   1) POST /api/homework/enter  { accessCode, studentCode?, displayName? }
+//      → returns { ok, studentCode, assignments: [...] }
+//   2) GET  /api/homework/assignment/:id?accessCode=XYZ
+//      → returns the assignment body (items, instructions)
+//   3) POST /api/homework/submit  { accessCode, studentCode, assignmentId, answers[] }
+//      → grades, persists to student-records, returns { score, breakdown }
+// All endpoints gate on isAccessCodeValid() — no admin password needed
+// for students. The teacher hands out one of the 5 codes to her class.
+function _hwCheckAccess(req, res) {
+  const code = req.body && req.body.accessCode
+            || req.query && req.query.accessCode
+            || '';
+  if (!Assignments.isAccessCodeValid(code)) {
+    res.status(401).json({ ok: false, error: 'Código de acceso incorrecto' });
+    return false;
+  }
+  return true;
+}
+
+app.post('/api/homework/enter', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, displayName } = req.body || {};
+  const rec = Students.getOrCreate(studentCode, displayName);
+  res.json({
+    ok: true,
+    studentCode: rec.code,
+    displayName: rec.displayName,
+    assignments: Assignments.listAssignments(),
+    // Also send the student's prior submissions so we can mark "done"
+    submissions: Students.getAssignmentSubmissions(rec.code, 100),
+  });
+});
+
+app.get('/api/homework/assignment/:id', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const a = Assignments.getAssignment(req.params.id);
+  if (!a) return res.status(404).json({ ok: false, error: 'Asignación no encontrada' });
+  // Don't send the `expected` answers — the student would see them in
+  // dev tools. Send the prompts only; grading happens server-side.
+  res.json({
+    ok: true,
+    id: a.id,
+    title: a.title,
+    subtitle: a.subtitle,
+    instructions: a.instructions,
+    type: a.type,
+    pointsPerItem: a.pointsPerItem,
+    items: a.items.map((it) => ({ es: it.es })),  // NO expected
+  });
+});
+
+app.post('/api/homework/submit', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, assignmentId, answers, accessCode } = req.body || {};
+  const a = Assignments.getAssignment(assignmentId);
+  if (!a) return res.status(404).json({ ok: false, error: 'Asignación no encontrada' });
+  const rec = Students.get(studentCode);
+  if (!rec) return res.status(401).json({ ok: false, error: 'Código de estudiante inválido — vuelve a entrar' });
+  const result = Assignments.gradeSubmission(a, answers);
+  Students.logAssignmentSubmission(rec.code, {
+    assignmentId: a.id,
+    assignmentTitle: a.title,
+    accessCode: String(accessCode || ''),
+    score: result.score,
+    total: result.total,
+    breakdown: result.breakdown,
+  });
+  res.json({
+    ok: true,
+    score: result.score,
+    total: result.total,
+    breakdown: result.breakdown,
+    studentCode: rec.code,
+    displayName: rec.displayName,
+  });
+});
+
+// Friendly redirect: students can type /homework or /tarea — both work.
+app.get(['/tarea', '/tareas'], (req, res) => res.redirect('/homework.html'));
 
 // Record the server boot time so the heartbeat above can be compared
 // across deploys. If your disk is genuinely persistent, the heartbeat
