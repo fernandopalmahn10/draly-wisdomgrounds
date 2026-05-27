@@ -1255,6 +1255,23 @@ function idGenerateRound(roundNum) {
 // No timer, no scoring, no game loop — teacher exits when ready.
 const WU_ADMIN_PASSWORD = process.env.WU_ADMIN_PASSWORD || 'draly2026';
 
+// 2026-05-27: unified admin password gate. ANY of the following grants
+// admin powers in the live-game socket handlers below:
+//   - WU_ADMIN_PASSWORD (legacy default 'draly2026')
+//   - Any teacherId from teachers.json (so the super admin EMAAR2026 +
+//     every regular teacher can host their own warmup sessions, save
+//     presets, see the Cuaderno, etc., using ONE code — same one they
+//     use to log into /maestro)
+//
+// This solves user feedback 2026-05-27: "I should be super admin and
+// have that privilege everywhere — don't make me re-enter passwords."
+function isAdminPassword(password) {
+  if (!password) return false;
+  const p = String(password).trim();
+  if (p === WU_ADMIN_PASSWORD) return true;
+  return !!Teachers.getByTeacherId(p);
+}
+
 // === LÁI-QÙ-HUÍ · 来去回 Dragon Courier — directional vocab game ===
 // Self-contained (no question set required). Each player is a dragon
 // courier on an 8x8 top-down village map. Missions use the three target
@@ -2706,8 +2723,22 @@ io.on('connection', (socket) => {
     // LQH generates missions, Identity rolls suspects, Warmup is a teacher
     // tool, SixSeven generates math on the fly.
     const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup', 'identity', 'triage', 'partyrun', 'reading'];
-    if (!setlessGameTypes.includes(g.gameType) && !g.questions.length) return;
-    if (Object.keys(g.players).length === 0) return;
+    if (!setlessGameTypes.includes(g.gameType) && !g.questions.length) {
+      console.warn('[host:start] BLOCKED pin=' + pin + ' gameType=' + g.gameType + ' — no questions loaded. Pick a set first.');
+      io.to(socket.id).emit('host:start-error', {
+        reason: 'no-set',
+        message: 'Este juego necesita una serie de preguntas. Vuelve a /sets.html y elige una serie primero.',
+      });
+      return;
+    }
+    if (Object.keys(g.players).length === 0) {
+      console.warn('[host:start] BLOCKED pin=' + pin + ' — no players joined yet.');
+      io.to(socket.id).emit('host:start-error', {
+        reason: 'no-players',
+        message: 'Aún no hay jugadores. Comparte el PIN antes de empezar.',
+      });
+      return;
+    }
     g.state = 'countdown';
     broadcast(pin);
     io.to(pin).emit('countdown', { ms: COUNTDOWN_MS });
@@ -4322,7 +4353,7 @@ io.on('connection', (socket) => {
   }
   function readingRequireHost(g, socket, password) {
     if (!g || g.gameType !== 'reading') return false;
-    return g.hostId === socket.id && password === WU_ADMIN_PASSWORD;
+    return g.hostId === socket.id && isAdminPassword(password);
   }
   socket.on('rd:auth', ({ pin, password }, cb) => {
     const g = games[pin];
@@ -4489,12 +4520,12 @@ io.on('connection', (socket) => {
 
   function wuRequireHost(g, socket, password) {
     if (!g || g.gameType !== 'warmup') return false;
-    return g.hostId === socket.id && password === WU_ADMIN_PASSWORD;
+    return g.hostId === socket.id && isAdminPassword(password);
   }
   function wuRequireAdmin(g, socket, password) {
     if (!g || g.gameType !== 'warmup') return false;
     // Host path
-    if (g.hostId === socket.id && password === WU_ADMIN_PASSWORD) return true;
+    if (g.hostId === socket.id && isAdminPassword(password)) return true;
     // Delegate path — no password needed, identity comes from the player name
     const p = g.players[socket.id];
     if (!p) return false;
@@ -4666,20 +4697,20 @@ io.on('connection', (socket) => {
   // The password check uses the warmup pin's game state if available; if
   // not (e.g. before a game starts), accept the password directly.
   function wuAuthForPresets(pin, password) {
-    if (password !== WU_ADMIN_PASSWORD) return false;
+    if (!isAdminPassword(password)) return false;
     if (!pin) return true;             // direct password match before game exists
     const g = games[pin];
-    if (!g || g.gameType !== 'warmup') return password === WU_ADMIN_PASSWORD;
+    if (!g || g.gameType !== 'warmup') return isAdminPassword(password);
     return g.hostId === undefined ? true : true;  // password alone suffices here
   }
   socket.on('wu:presets-list', ({ pin, password }, cb) => {
     if (typeof cb !== 'function') return;
-    if (password !== WU_ADMIN_PASSWORD) return cb({ ok: false, error: 'bad password' });
+    if (!isAdminPassword(password)) return cb({ ok: false, error: 'bad password' });
     cb({ ok: true, presets: TeacherPresets.list() });
   });
   socket.on('wu:presets-save', ({ pin, password, name, sentence }, cb) => {
     cb = typeof cb === 'function' ? cb : () => {};
-    if (password !== WU_ADMIN_PASSWORD) return cb({ ok: false, error: 'bad password' });
+    if (!isAdminPassword(password)) return cb({ ok: false, error: 'bad password' });
     try {
       const preset = TeacherPresets.save(name, sentence);
       cb({ ok: true, preset, presets: TeacherPresets.list() });
@@ -4689,7 +4720,7 @@ io.on('connection', (socket) => {
   });
   socket.on('wu:presets-delete', ({ pin, password, id }, cb) => {
     cb = typeof cb === 'function' ? cb : () => {};
-    if (password !== WU_ADMIN_PASSWORD) return cb({ ok: false, error: 'bad password' });
+    if (!isAdminPassword(password)) return cb({ ok: false, error: 'bad password' });
     const ok = TeacherPresets.remove(id);
     cb({ ok, presets: TeacherPresets.list() });
   });
