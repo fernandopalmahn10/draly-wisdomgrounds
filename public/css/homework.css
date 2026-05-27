@@ -397,68 +397,122 @@ body.hw-bg {
   padding: 24px 14px;
 }
 .hw-avatar-pick-card {
-  width: 100%; max-width: 540px;
+  width: 100%; max-width: 560px;
   background: linear-gradient(160deg, rgba(40, 50, 80, 0.95), rgba(20, 25, 45, 0.97));
   border: 3px solid rgba(180, 100, 255, 0.6);
   border-radius: 22px;
-  padding: 28px 28px 24px;
+  padding: 24px 22px 22px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 28px rgba(180, 100, 255, 0.25);
   text-align: center;
 }
 .hw-avatar-pick-title {
   font-family: 'Cinzel', serif; font-weight: 900;
   color: #c5a3ff;
-  font-size: 1.6rem;
+  font-size: clamp(1.3rem, 5vmin, 1.6rem);
   margin: 0 0 6px;
 }
 .hw-avatar-pick-title span { color: #ffe082; }
 .hw-avatar-pick-sub {
   color: rgba(243, 230, 194, 0.75);
-  margin-bottom: 18px;
+  margin-bottom: 14px;
+  font-size: 0.95rem;
 }
+/* Avatar grid — 3-up on phone, 4-up tablet+. Each tile shows the full SVG
+   kid (about 100x100 on phone). Generous tap targets matter for 7-yr-olds. */
 .hw-avatar-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  margin: 14px 0 6px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 10px 0 6px;
+}
+@media (min-width: 520px) {
+  .hw-avatar-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; }
 }
 .hw-avatar-option {
   background: linear-gradient(135deg, rgba(91, 232, 209, 0.18), rgba(180, 100, 255, 0.18));
   border: 3px solid rgba(91, 232, 209, 0.5);
   border-radius: 16px;
-  padding: 14px 8px;
+  padding: 8px 6px 6px;
   cursor: pointer;
   font-family: inherit;
   transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px;
 }
 .hw-avatar-option:hover {
-  transform: translateY(-3px) scale(1.05);
+  transform: translateY(-3px) scale(1.04);
   border-color: #c5a3ff;
   box-shadow: 0 6px 20px rgba(180, 100, 255, 0.5), 0 0 16px rgba(91, 232, 209, 0.3);
 }
 .hw-avatar-option:active { transform: scale(0.95); }
-.hw-avatar-option-emoji {
-  font-size: 3rem;
-  line-height: 1;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+.hw-avatar-option.selected {
+  border-color: #ffe082;
+  background: linear-gradient(135deg, rgba(255, 224, 130, 0.28), rgba(180, 100, 255, 0.25));
+  box-shadow: 0 0 22px rgba(255, 224, 130, 0.55);
 }
+.hw-avatar-option-img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 50% 100%, rgba(91, 232, 209, 0.25), transparent 70%),
+    rgba(255, 255, 255, 0.04);
+  display: flex; align-items: flex-end; justify-content: center;
+  overflow: hidden;
+}
+.hw-avatar-option-img img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}
+.hw-avatar-option-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #fff5d8;
+  letter-spacing: 0.02em;
+}
+
+/* === Generic avatar slot (renders an SVG kid full-body) === */
+/* Used in: list header (.hw-list-avatar-wrap), settings (.hw-settings-avatar),
+   parents view (.hw-parents-avatar). The element has class is-svg or is-emoji
+   set by JS depending on what the student picked. */
+.hw-list-avatar-wrap,
+.hw-settings-avatar,
+.hw-parents-avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 100%, rgba(91, 232, 209, 0.3), transparent 70%),
+    linear-gradient(135deg, rgba(91, 232, 209, 0.25), rgba(180, 100, 255, 0.25));
+  border-radius: 16px;
+}
+.hw-list-avatar-wrap img,
+.hw-settings-avatar img,
+.hw-parents-avatar img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.5));
+}
+.hw-avatar-emoji-fallback { font-size: 2.4em; line-height: 1; }
 
 /* === Avatar shown in the list header === */
 .hw-list-header-id {
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: center; gap: 12px;
+  min-width: 0;
 }
 .hw-list-header-actions {
-  display: flex; gap: 8px; flex-wrap: wrap;
+  display: flex; gap: 6px; flex-wrap: wrap;
 }
-.hw-list-avatar {
-  font-size: 3rem;
-  line-height: 1;
-  background: linear-gradient(135deg, rgba(91, 232, 209, 0.25), rgba(180, 100, 255, 0.25));
+.hw-list-avatar-wrap {
+  width: 72px; height: 72px;
   border: 3px solid rgba(91, 232, 209, 0.6);
-  border-radius: 16px;
-  padding: 4px 10px;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
   box-shadow: 0 0 18px rgba(91, 232, 209, 0.3);
+  flex: 0 0 auto;
+}
+@media (min-width: 520px) {
+  .hw-list-avatar-wrap { width: 92px; height: 92px; }
 }
 
 /* === Parent view === */
@@ -525,12 +579,15 @@ body.hw-bg {
   opacity: 0.85;
 }
 .hw-parents-avatar {
-  font-size: 5rem;
-  line-height: 1;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border-radius: 22px;
   filter:
     drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55))
     drop-shadow(0 0 18px rgba(255, 255, 255, 0.3));
 }
+.hw-parents-avatar .hw-avatar-emoji-fallback { font-size: 5rem; }
 .hw-parents-hero-info { flex: 1; min-width: 0; }
 .hw-parents-hero-name {
   font-size: 1.5rem; font-weight: 900;
@@ -662,9 +719,207 @@ body.hw-bg {
   line-height: 1.5;
 }
 
-/* Homework portal entry button on index.html — async path next to the
-   live-PIN join card. Different color (teal) so kids can tell it's a
-   different mode. */
+/* === EXP filter tabs on the assignment catalog === */
+/* Replaces the old "wall of 150 chips" with a per-experience filter, so
+   kids pick the chapter they're in and only see those words. Matches the
+   warmup mode's mental model. */
+.hw-asg-library-hint {
+  display: block;
+  font-weight: 600;
+  color: rgba(243, 230, 194, 0.65);
+  font-size: 0.78rem;
+  font-style: italic;
+  margin-top: 2px;
+}
+.hw-asg-library-tabs {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin: 4px 0 8px;
+  padding: 6px;
+  background: rgba(20, 22, 36, 0.55);
+  border-radius: 10px;
+}
+.hw-lib-tab {
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-family: inherit;
+  background: rgba(50, 55, 90, 0.65);
+  border: 2px solid rgba(255, 213, 122, 0.25);
+  border-radius: 999px;
+  color: rgba(243, 230, 194, 0.85);
+  cursor: pointer;
+  transition: transform 0.1s, background 0.15s, border-color 0.15s;
+}
+.hw-lib-tab:hover {
+  background: rgba(70, 75, 120, 0.85);
+  border-color: rgba(255, 224, 130, 0.55);
+}
+.hw-lib-tab.active {
+  background: linear-gradient(135deg, rgba(91, 232, 209, 0.35), rgba(255, 224, 130, 0.25));
+  border-color: #5be8d1;
+  color: #fff5d8;
+  box-shadow: 0 0 12px rgba(91, 232, 209, 0.35);
+}
+.hw-lib-empty {
+  width: 100%;
+  text-align: center;
+  padding: 20px;
+  color: rgba(243, 230, 194, 0.55);
+  font-style: italic;
+}
+
+/* Chip tap feedback — green flash on pickup so kids feel the action.
+   Triggered by JS removing/adding the .flash class. */
+@keyframes hw-lib-chip-flash {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(91, 232, 209, 0); }
+  35%  { transform: scale(1.18); box-shadow: 0 0 22px 6px rgba(91, 232, 209, 0.7); background: rgba(91, 232, 209, 0.45); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(91, 232, 209, 0); }
+}
+.hw-lib-chip.flash {
+  animation: hw-lib-chip-flash 0.45s ease-out;
+}
+
+/* === Settings screen === */
+.hw-settings {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 18px 14px calc(28px + env(safe-area-inset-bottom, 0px));
+}
+.hw-settings-card {
+  background: linear-gradient(160deg, rgba(40, 50, 80, 0.95), rgba(20, 25, 45, 0.97));
+  border: 3px solid #ffe082;
+  border-radius: 22px;
+  padding: 20px 20px 24px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 28px rgba(255, 224, 130, 0.18);
+}
+.hw-settings-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 14px;
+}
+.hw-settings-title {
+  font-family: 'Cinzel', serif; font-weight: 900;
+  color: #ffe082; margin: 0;
+  font-size: 1.3rem;
+}
+.hw-settings-profile {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 14px;
+  background: rgba(30, 35, 60, 0.55);
+  border-radius: 16px;
+  margin-bottom: 16px;
+}
+.hw-settings-avatar {
+  flex: 0 0 auto;
+  width: 96px; height: 96px;
+  border: 3px solid #5be8d1;
+  border-radius: 18px;
+  box-shadow: 0 0 18px rgba(91, 232, 209, 0.4);
+}
+.hw-settings-profile-info { flex: 1; min-width: 0; }
+.hw-settings-name {
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #fff5d8;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+.hw-settings-code-wrap {
+  display: flex; align-items: center; gap: 6px;
+  flex-wrap: wrap;
+}
+.hw-settings-code-label {
+  color: rgba(243, 230, 194, 0.65);
+  font-size: 0.82rem;
+}
+.hw-settings-code {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #ffe082;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px dashed rgba(255, 224, 130, 0.45);
+  border-radius: 6px;
+  padding: 2px 8px;
+  letter-spacing: 0.12em;
+  font-size: 0.95rem;
+}
+.hw-settings-code-hint {
+  font-size: 0.75rem;
+  color: rgba(243, 230, 194, 0.55);
+  font-style: italic;
+  margin: 6px 0 0;
+}
+
+.hw-settings-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 224, 130, 0.18);
+}
+.hw-settings-section-title {
+  font-weight: 900;
+  color: #5be8d1;
+  font-size: 1.0rem;
+  margin-bottom: 10px;
+}
+.hw-settings-help {
+  font-size: 0.85rem;
+  color: rgba(243, 230, 194, 0.7);
+  font-style: italic;
+  margin: 0 0 10px;
+}
+.hw-settings-row {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.hw-settings-row .input { flex: 1; min-width: 160px; }
+.hw-settings-msg {
+  min-height: 1.1em;
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: #5be8d1;
+}
+.hw-settings-reset-list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.hw-settings-reset-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  background: rgba(30, 35, 60, 0.55);
+  border: 1px solid rgba(255, 213, 122, 0.25);
+  border-radius: 10px;
+}
+.hw-settings-reset-info { flex: 1; min-width: 0; }
+.hw-settings-reset-title {
+  font-weight: 800;
+  color: #fff5d8;
+  font-size: 0.92rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hw-settings-reset-best {
+  color: rgba(243, 230, 194, 0.7);
+  font-size: 0.82rem;
+}
+.hw-settings-reset-best strong { color: #ffe082; }
+.hw-settings-reset-empty {
+  text-align: center;
+  padding: 16px;
+  background: rgba(30, 35, 60, 0.4);
+  border: 1px dashed rgba(255, 213, 122, 0.25);
+  border-radius: 10px;
+  color: rgba(243, 230, 194, 0.6);
+  font-style: italic;
+  font-size: 0.9rem;
+}
+/* Settings: same avatar grid, but tighter so the page doesn't get tall */
+#hw-settings-avatar-grid { gap: 8px; }
+#hw-settings-avatar-grid .hw-avatar-option { padding: 6px 4px 4px; }
+#hw-settings-avatar-grid .hw-avatar-option-label { font-size: 0.72rem; }
+
+/* Homework portal entry button on index.html. Promoted to TOP of paths
+   list (above the PIN card) on 2026-05-27 — most kids open the site after
+   school for tareas, not for live games, so this is the primary CTA.
+   Big tap target, teal so it's clearly distinct from the jade "join live"
+   button. Safe-area padding so it never lands under iOS notches. */
 .home-hw-link {
   display: block;
   margin-top: 10px;
@@ -682,4 +937,71 @@ body.hw-bg {
 .home-hw-link:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(91, 232, 209, 0.4);
+}
+/* Hero variant — promoted button at the TOP of paths. Big, gradient,
+   chunky icon + double-line text so it's the first thing kids tap. */
+.home-hw-link-hero {
+  display: flex; align-items: center;
+  gap: 14px;
+  margin-top: max(8px, env(safe-area-inset-top, 0px));
+  padding: 16px 18px;
+  background:
+    radial-gradient(circle at 12% 50%, rgba(255, 224, 130, 0.25), transparent 55%),
+    linear-gradient(135deg, rgba(91, 232, 209, 0.32), rgba(45, 180, 220, 0.28));
+  border: 3px solid #5be8d1;
+  border-radius: 18px;
+  color: #fff5d8;
+  text-align: left;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.45), 0 0 24px rgba(91, 232, 209, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+.home-hw-link-hero::before {
+  /* shimmering sheen so kids' eyes catch it */
+  content: '';
+  position: absolute; top: 0; left: -40%;
+  width: 30%; height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+  animation: home-hw-shine 4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes home-hw-shine {
+  0%   { left: -40%; }
+  60%  { left: 110%; }
+  100% { left: 110%; }
+}
+.home-hw-link-hero:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(91, 232, 209, 0.55), 0 0 28px rgba(255, 224, 130, 0.35);
+}
+.home-hw-icon {
+  font-size: 2.4rem;
+  line-height: 1;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+.home-hw-text {
+  display: flex; flex-direction: column;
+  flex: 1; min-width: 0;
+}
+.home-hw-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(1.05rem, 4.2vmin, 1.35rem);
+  color: #fff5d8;
+  letter-spacing: 0.02em;
+}
+.home-hw-sub {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: rgba(91, 232, 209, 0.95);
+  margin-top: 2px;
+  letter-spacing: 0.04em;
+}
+.home-hw-arrow {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #5be8d1;
+  flex: 0 0 auto;
+  text-shadow: 0 0 8px rgba(91, 232, 209, 0.6);
 }

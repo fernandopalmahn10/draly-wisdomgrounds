@@ -3,12 +3,56 @@
 // student code (4 chars, persists in localStorage). All submissions
 // auto-graded server-side; results saved to their student record so the
 // teacher sees who did what via the existing Cuaderno de Alumnos.
+//
+// 2026-05-27 overhaul:
+//   - Full-body SVG avatars (12 kids, DiceBear adventurer set, local)
+//   - Settings screen: rename, swap avatar, reset assignment scores
+//   - Catalog organized by EXP1-EXP8 tabs (matches warmup UI)
+//   - Tap feedback + Undo button on the assignment stage
+//   - Student code hidden from main list — only revealed inside Settings
+//     (it's a "secret" the kid shares with parents, not main UI noise)
 (function () {
   'use strict';
 
   const $ = (id) => document.getElementById(id);
   const STORAGE_CODE_KEY = 'dralyStudentCode';
   const STORAGE_ACCESS_KEY = 'dralyHwAccessCode';
+
+  // Returns the URL for a stored avatar value. Avatars are stored as a
+  // simple lowercase filename ('mochi', 'dragon', etc.). Legacy emoji
+  // values fall back gracefully — we just show the emoji in a span.
+  const AVATAR_LABELS = {
+    mochi:  'Mochi',  dragon: 'Drago',  stella: 'Stella', felix:  'Félix',
+    luna:   'Luna',   atlas:  'Atlas',  zara:   'Zara',   kai:    'Kai',
+    mei:    'Méi',    theo:   'Teo',    iris:   'Iris',   nova:   'Nova',
+  };
+  function avatarSrc(name) {
+    return '/assets/avatars/' + encodeURIComponent(name) + '.svg';
+  }
+  function isSvgAvatar(v) {
+    return typeof v === 'string' && /^[a-z]+$/.test(v) && AVATAR_LABELS[v];
+  }
+  // Drop avatar visuals into a host element. Accepts either an SVG name
+  // ('mochi') or a legacy emoji string ('🧒🏼'). For SVGs we use <img>.
+  function renderAvatarInto(el, value, opts) {
+    if (!el) return;
+    el.innerHTML = '';
+    el.classList.remove('is-emoji', 'is-svg');
+    if (isSvgAvatar(value)) {
+      el.classList.add('is-svg');
+      const img = document.createElement('img');
+      img.src = avatarSrc(value);
+      img.alt = AVATAR_LABELS[value] || value;
+      img.draggable = false;
+      el.appendChild(img);
+    } else {
+      el.classList.add('is-emoji');
+      const span = document.createElement('span');
+      span.className = 'hw-avatar-emoji-fallback';
+      span.textContent = value || '🧒🏼';
+      el.appendChild(span);
+    }
+  }
 
   let accessCode = '';
   let studentCode = '';
@@ -19,6 +63,11 @@
   let submissions = [];        // student's prior submissions
   let currentAssignment = null;  // full body when an item is open
   let currentAnswers = [];     // string per item — arrays of word IDs joined by space, or freeform
+  let activeExpTab = 'all';    // catalog filter: 'all' or 'exp1'..'exp8'
+  // Per-item undo stack: undoStacks[itemIdx] = [snapshot1, snapshot2, …]
+  // Each snapshot is the answer string BEFORE the change. So pressing
+  // Deshacer once restores the previous state.
+  let undoStacks = [];
 
   // ── Pre-fill remembered values
   try {
@@ -38,10 +87,6 @@
     const sc = $('hw-student-code').value.trim();
     if (!ac) { $('hw-entry-err').textContent = 'Ingresa el código de acceso'; return; }
     $('hw-entry-err').textContent = 'Entrando…';
-    // The student-code field may be a 4-char code OR a name (first-time
-    // joiner). We send it as both — the server's getOrCreate() figures
-    // it out: if it matches an existing code, returns that record;
-    // otherwise creates a new one with the value as displayName.
     const looksLikeCode = /^[A-Z2-9]{4,5}$/i.test(sc);
     const payload = {
       accessCode: ac,
@@ -89,42 +134,172 @@
     showScreen('entry');
   });
   $('hw-list-parents').addEventListener('click', openParentView);
+  $('hw-list-settings').addEventListener('click', openSettings);
 
-  // === Avatar picker ===
+  // === Avatar picker (first-time entry) ===
   function showAvatarPicker() {
     $('hw-avatar-pick-name').textContent = displayName || 'amigo';
     const grid = $('hw-avatar-grid');
     grid.innerHTML = '';
-    avatarOptions.forEach((emoji) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'hw-avatar-option';
-      btn.innerHTML = `<span class="hw-avatar-option-emoji">${emoji}</span>`;
-      btn.addEventListener('click', () => chooseAvatar(emoji));
-      grid.appendChild(btn);
+    avatarOptions.forEach((name) => {
+      grid.appendChild(buildAvatarOption(name, (picked) => {
+        $('hw-avatar-err').textContent = 'Guardando…';
+        saveAvatar(picked).then((ok) => {
+          if (!ok) return;
+          $('hw-avatar-err').textContent = '';
+          renderList();
+          showScreen('list');
+        }).catch((e) => {
+          $('hw-avatar-err').textContent = 'Error: ' + e.message;
+        });
+      }));
     });
     showScreen('avatar');
   }
-  function chooseAvatar(emoji) {
-    $('hw-avatar-err').textContent = 'Guardando…';
-    fetch('/api/homework/avatar', {
+  function buildAvatarOption(name, onPick) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'hw-avatar-option';
+    btn.dataset.name = name;
+    btn.innerHTML = `
+      <div class="hw-avatar-option-img"><img src="${avatarSrc(name)}" alt="${AVATAR_LABELS[name] || name}" draggable="false"></div>
+      <div class="hw-avatar-option-label">${AVATAR_LABELS[name] || name}</div>`;
+    btn.addEventListener('click', () => onPick(name));
+    return btn;
+  }
+  // Promise-returning helper used by both first-time picker + settings.
+  function saveAvatar(name) {
+    return fetch('/api/homework/avatar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ accessCode, studentCode, avatar: emoji }),
+      body: JSON.stringify({ accessCode, studentCode, avatar: name }),
     })
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) {
-          $('hw-avatar-err').textContent = data && data.error ? data.error : 'No se pudo guardar';
+          alert('No se pudo guardar el avatar: ' + (data && data.error || ''));
+          return false;
+        }
+        avatar = name;
+        return true;
+      });
+  }
+
+  // === Settings screen ===
+  $('hw-settings-back').addEventListener('click', () => {
+    renderList();
+    showScreen('list');
+  });
+  function openSettings() {
+    renderSettings();
+    showScreen('settings');
+  }
+  function renderSettings() {
+    $('hw-settings-name').textContent = displayName || 'Anon';
+    $('hw-settings-code').textContent = studentCode;
+    renderAvatarInto($('hw-settings-avatar'), avatar);
+    $('hw-settings-name-input').value = displayName || '';
+    $('hw-settings-name-msg').textContent = '';
+    $('hw-settings-avatar-msg').textContent = '';
+    $('hw-settings-reset-msg').textContent = '';
+    // Build the change-avatar grid
+    const grid = $('hw-settings-avatar-grid');
+    grid.innerHTML = '';
+    avatarOptions.forEach((name) => {
+      const opt = buildAvatarOption(name, (picked) => {
+        $('hw-settings-avatar-msg').textContent = 'Guardando…';
+        saveAvatar(picked).then((ok) => {
+          if (!ok) { $('hw-settings-avatar-msg').textContent = ''; return; }
+          renderAvatarInto($('hw-settings-avatar'), avatar);
+          // Mark the picked one as selected in the grid
+          grid.querySelectorAll('.hw-avatar-option').forEach((b) => {
+            b.classList.toggle('selected', b.dataset.name === picked);
+          });
+          $('hw-settings-avatar-msg').textContent = '✓ Avatar cambiado';
+        });
+      });
+      if (name === avatar) opt.classList.add('selected');
+      grid.appendChild(opt);
+    });
+    // Build the reset-score list
+    const resetList = $('hw-settings-reset-list');
+    resetList.innerHTML = '';
+    if (!submissions.length) {
+      resetList.innerHTML = '<div class="hw-settings-reset-empty">Aún no has entregado ninguna tarea.</div>';
+    } else {
+      // One row per UNIQUE assignment in submissions, showing best score
+      const byId = {};
+      submissions.forEach((s) => {
+        if (!byId[s.assignmentId] || s.score > byId[s.assignmentId].score) byId[s.assignmentId] = s;
+      });
+      Object.keys(byId).forEach((id) => {
+        const sub = byId[id];
+        const a = assignments.find((x) => x.id === id);
+        const row = document.createElement('div');
+        row.className = 'hw-settings-reset-row';
+        row.innerHTML = `
+          <div class="hw-settings-reset-info">
+            <div class="hw-settings-reset-title">${escapeHtml(a ? a.title : id)}</div>
+            <div class="hw-settings-reset-best">Mejor: <strong>${sub.score}/${sub.total} pts</strong></div>
+          </div>
+          <button class="btn btn-ghost btn-sm" data-id="${escapeHtml(id)}">🔄 Borrar</button>`;
+        row.querySelector('button').addEventListener('click', () => doResetAssignment(id, a ? a.title : id));
+        resetList.appendChild(row);
+      });
+    }
+  }
+  $('hw-settings-name-save').addEventListener('click', () => {
+    const newName = $('hw-settings-name-input').value.trim();
+    if (!newName) { $('hw-settings-name-msg').textContent = 'Escribe un nombre'; return; }
+    if (newName === displayName) { $('hw-settings-name-msg').textContent = 'Ese ya es tu nombre'; return; }
+    $('hw-settings-name-msg').textContent = 'Guardando…';
+    fetch('/api/homework/rename', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode, studentCode, displayName: newName }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) {
+          $('hw-settings-name-msg').textContent = 'Error: ' + (data && data.error || 'no se pudo');
           return;
         }
-        avatar = emoji;
-        renderList();
-        showScreen('list');
+        displayName = data.displayName || newName;
+        $('hw-settings-name').textContent = displayName;
+        $('hw-settings-name-msg').textContent = '✓ Nombre cambiado';
       })
-      .catch((e) => {
-        $('hw-avatar-err').textContent = 'Error de conexión: ' + e.message;
-      });
+      .catch((e) => { $('hw-settings-name-msg').textContent = 'Error: ' + e.message; });
+  });
+  $('hw-settings-code-copy').addEventListener('click', () => {
+    if (!studentCode) return;
+    try {
+      navigator.clipboard.writeText(studentCode);
+      const btn = $('hw-settings-code-copy');
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copiado';
+      setTimeout(() => { btn.textContent = orig; }, 1500);
+    } catch (_) { /* ignore */ }
+  });
+  function doResetAssignment(id, title) {
+    if (!confirm(`¿Borrar tus puntajes de "${title}"?\n\nEmpezarás esta tarea desde cero. Esto NO se puede deshacer.`)) return;
+    $('hw-settings-reset-msg').textContent = 'Borrando…';
+    fetch('/api/homework/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode, studentCode, assignmentId: id }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) {
+          $('hw-settings-reset-msg').textContent = 'Error: ' + (data && data.error || 'no se pudo');
+          return;
+        }
+        // Drop the cleared submissions from local state and re-render
+        submissions = submissions.filter((s) => s.assignmentId !== id);
+        $('hw-settings-reset-msg').textContent = `✓ Borrados ${data.removed} intentos de "${title}"`;
+        renderSettings();
+      })
+      .catch((e) => { $('hw-settings-reset-msg').textContent = 'Error: ' + e.message; });
   }
 
   // === Parent view ===
@@ -141,15 +316,13 @@
       });
   }
   function renderParentView(data) {
-    $('hw-parents-avatar').textContent = data.avatar || '🧒🏼';
+    renderAvatarInto($('hw-parents-avatar'), data.avatar);
     $('hw-parents-name').textContent = data.displayName || 'Anon';
     $('hw-parents-code').textContent = data.code;
-    // Stats row
     const t = data.totals || {};
     $('hw-parents-stats').innerHTML = `
       <span class="hw-parents-stat">📚 <strong>${t.assignmentsMastered || 0}</strong>/${t.assignmentsAvailable || 0} tareas dominadas</span>
       <span class="hw-parents-stat">📝 <strong>${t.readingTestsTaken || 0}</strong> exámenes de lectura</span>`;
-    // Insights
     const insightsWrap = $('hw-parents-insights');
     if (!data.insights || !data.insights.length) {
       insightsWrap.innerHTML = '<div class="hw-parents-empty">Todavía no ha completado tareas con puntaje suficiente. ¡Anímalo/a a practicar más!</div>';
@@ -171,7 +344,6 @@
         insightsWrap.appendChild(card);
       });
     }
-    // Tests
     const testsWrap = $('hw-parents-tests');
     if (!data.tests || !data.tests.length) {
       testsWrap.innerHTML = '<div class="hw-parents-empty">Aún no ha hecho exámenes de lectura en clase.</div>';
@@ -197,12 +369,10 @@
   // ── Assignment-list screen
   function renderList() {
     $('hw-list-name').textContent = displayName || 'Anon';
-    $('hw-list-code').textContent = studentCode;
-    if ($('hw-list-avatar')) $('hw-list-avatar').textContent = avatar || '🧒🏼';
+    renderAvatarInto($('hw-list-avatar'), avatar);
     const grid = $('hw-list-grid');
     grid.innerHTML = '';
     assignments.forEach((a) => {
-      // Find best (highest) prior score for this assignment
       const myAttempts = submissions.filter((s) => s.assignmentId === a.id);
       const bestScore = myAttempts.length ? Math.max(...myAttempts.map((s) => s.score)) : null;
       const card = document.createElement('button');
@@ -239,6 +409,8 @@
         }
         currentAssignment = data;
         currentAnswers = data.items.map(() => '');
+        undoStacks = data.items.map(() => []);
+        activeExpTab = 'all';
         renderAssignment();
         showScreen('assignment');
       });
@@ -262,29 +434,53 @@
           <span class="hw-stage-empty">Toca palabras del catálogo abajo…</span>
         </div>
         <div class="hw-item-actions">
+          <button class="btn btn-ghost btn-sm hw-item-undo" data-idx="${i}" type="button" disabled>↩️ Deshacer</button>
           <button class="btn btn-ghost btn-sm hw-item-clear" data-idx="${i}" type="button">🧹 Limpiar</button>
         </div>`;
       itemsWrap.appendChild(row);
-      // Clicking the stage marks it as the active target for new words
       const stage = row.querySelector('.hw-item-stage');
       stage.addEventListener('click', () => setActiveItem(i));
     });
-    // Bind clear buttons
     itemsWrap.querySelectorAll('.hw-item-clear').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', () => {
         const i = +btn.dataset.idx;
+        if (!currentAnswers[i]) return;
+        pushUndo(i);
         currentAnswers[i] = '';
         renderStage(i);
+        refreshUndoButtons();
       });
     });
+    itemsWrap.querySelectorAll('.hw-item-undo').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const i = +btn.dataset.idx;
+        if (!undoStacks[i] || !undoStacks[i].length) return;
+        currentAnswers[i] = undoStacks[i].pop();
+        renderStage(i);
+        refreshUndoButtons();
+      });
+    });
+    renderLibraryTabs();
     renderLibrary();
     setActiveItem(0);
+    refreshUndoButtons();
   }
   let activeItemIdx = 0;
   function setActiveItem(i) {
     activeItemIdx = i;
     document.querySelectorAll('.hw-item-stage').forEach((s) => {
       s.classList.toggle('active', +s.dataset.idx === i);
+    });
+  }
+  function pushUndo(i) {
+    if (!undoStacks[i]) undoStacks[i] = [];
+    undoStacks[i].push(currentAnswers[i] || '');
+    if (undoStacks[i].length > 20) undoStacks[i] = undoStacks[i].slice(-20);
+  }
+  function refreshUndoButtons() {
+    document.querySelectorAll('.hw-item-undo').forEach((btn) => {
+      const i = +btn.dataset.idx;
+      btn.disabled = !undoStacks[i] || !undoStacks[i].length;
     });
   }
   function renderStage(i) {
@@ -306,22 +502,51 @@
       chip.innerHTML = `<span class="hw-stage-pinyin">${escapeHtml(w)}</span> <span class="hw-stage-x">✕</span>`;
       chip.addEventListener('click', (e) => {
         e.stopPropagation();
-        // Remove this word from the stage
+        pushUndo(i);
         const arr = (currentAnswers[i] || '').trim().split(/\s+/).filter(Boolean);
         arr.splice(idx, 1);
         currentAnswers[i] = arr.join(' ');
         renderStage(i);
+        refreshUndoButtons();
       });
       stage.appendChild(chip);
+    });
+  }
+  // EXP tab bar above the library — match warmup mode's experience filter.
+  function renderLibraryTabs() {
+    const tabsWrap = $('hw-asg-library-tabs');
+    if (!tabsWrap) return;
+    tabsWrap.innerHTML = '';
+    const exps = window.WU_EXPERIENCES || {};
+    const tabs = [{ id: 'all', label: '✨ Todas' }].concat(
+      Object.keys(exps).map((k) => ({ id: k, label: exps[k].short || exps[k].label || k }))
+    );
+    tabs.forEach((t) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'hw-lib-tab' + (t.id === activeExpTab ? ' active' : '');
+      btn.dataset.exp = t.id;
+      btn.textContent = t.label;
+      btn.addEventListener('click', () => {
+        activeExpTab = t.id;
+        renderLibraryTabs();
+        renderLibrary();
+      });
+      tabsWrap.appendChild(btn);
     });
   }
   function renderLibrary() {
     const wrap = $('hw-asg-library');
     if (!window.WU_WORDS) { wrap.innerHTML = '<em>Cargando catálogo…</em>'; return; }
     wrap.innerHTML = '';
-    // Show words grouped lightly by category; just render all 150 as
-    // tappable chips. They're searchable visually by pinyin/Spanish.
-    window.WU_WORDS.forEach((w) => {
+    const words = activeExpTab === 'all'
+      ? window.WU_WORDS
+      : window.WU_WORDS.filter((w) => w.exp === activeExpTab);
+    if (!words.length) {
+      wrap.innerHTML = '<div class="hw-lib-empty">No hay palabras en esta categoría.</div>';
+      return;
+    }
+    words.forEach((w) => {
       const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
       const color = cat ? cat.color : '#fff';
       const chip = document.createElement('button');
@@ -333,9 +558,16 @@
         <span class="hw-lib-pinyin">${escapeHtml(w.pinyin)}</span>
         <span class="hw-lib-es">${escapeHtml(w.es)}</span>`;
       chip.addEventListener('click', () => {
+        pushUndo(activeItemIdx);
         const cur = currentAnswers[activeItemIdx] || '';
         currentAnswers[activeItemIdx] = (cur ? cur + ' ' : '') + w.pinyin;
         renderStage(activeItemIdx);
+        refreshUndoButtons();
+        // tap feedback — flash the chip green for a beat
+        chip.classList.remove('flash');
+        // force reflow so the animation re-triggers if same chip is tapped twice fast
+        void chip.offsetWidth;
+        chip.classList.add('flash');
       });
       wrap.appendChild(chip);
     });
@@ -351,7 +583,6 @@
   // ── Submit + results
   $('hw-asg-submit').addEventListener('click', () => {
     if (!currentAssignment) return;
-    // Confirm if any item is empty
     const emptyCount = currentAnswers.filter((a) => !a.trim()).length;
     if (emptyCount > 0 && !confirm(`Tienes ${emptyCount} oraciones vacías. ¿Entregar de todas formas?`)) return;
     $('hw-asg-submit').disabled = true;
@@ -375,11 +606,11 @@
           return;
         }
         showResults(data);
-        // Refresh local submission cache so the list shows the new best score
         submissions.push({
           assignmentId: currentAssignment.id,
           score: data.score,
           total: data.total,
+          ts: Date.now(),
         });
       })
       .catch((e) => {
@@ -400,7 +631,6 @@
               :              { emoji: '💪', text: '¡A repasar!' };
     $('hw-results-emoji').textContent = cert.emoji;
     $('hw-results-cert').textContent = cert.text;
-    // Animate score counting up
     const numEl = $('hw-results-num');
     let cur = 0;
     const step = Math.max(1, Math.round(data.score / 30));
@@ -412,7 +642,6 @@
     };
     numEl.textContent = '0';
     setTimeout(tick, 250);
-    // Per-item breakdown
     const bk = $('hw-results-breakdown');
     bk.innerHTML = '';
     (data.breakdown || []).forEach((b) => {
@@ -437,12 +666,13 @@
   $('hw-results-retry').addEventListener('click', () => {
     if (!currentAssignment) { showScreen('list'); return; }
     currentAnswers = currentAssignment.items.map(() => '');
+    undoStacks = currentAssignment.items.map(() => []);
     renderAssignment();
     showScreen('assignment');
   });
 
   function showScreen(name) {
-    ['entry', 'avatar', 'list', 'assignment', 'results', 'parents'].forEach((n) => {
+    ['entry', 'avatar', 'list', 'settings', 'assignment', 'results', 'parents'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260526a">
-  <link rel="stylesheet" href="/css/homework.css?v=20260526b">
+  <link rel="stylesheet" href="/css/homework.css?v=20260527a">
 </head>
 <body class="hw-bg">
 
@@ -27,7 +27,7 @@
       </label>
       <button class="btn btn-jade btn-xl" id="hw-enter-btn">Entrar →</button>
       <p id="hw-entry-err" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em;"></p>
-      <p class="hw-entry-hint">💡 Tu maestra te dio el código de acceso. Tu código de estudiante (4 letras) lo recibiste cuando jugaste antes — guárdalo, sirve para que la maestra vea tu trabajo.</p>
+      <p class="hw-entry-hint">💡 Tu maestra te dio el código de acceso. Tu código de estudiante es secreto y se genera la primera vez — luego se guarda en este teléfono.</p>
     </div>
   </div>
 
@@ -45,22 +45,68 @@
   <div id="screen-list" class="container hw-list hidden">
     <div class="hw-list-header">
       <div class="hw-list-header-id">
-        <div class="hw-list-avatar" id="hw-list-avatar">🧒🏼</div>
+        <div class="hw-list-avatar-wrap" id="hw-list-avatar"></div>
         <div>
           <h1 class="hw-list-title">📚 Mis Tareas</h1>
-          <p class="hw-list-sub">
-            Hola <strong id="hw-list-name">…</strong> ·
-            Código <strong id="hw-list-code">····</strong>
-          </p>
+          <p class="hw-list-sub">Hola <strong id="hw-list-name">…</strong></p>
         </div>
       </div>
       <div class="hw-list-header-actions">
-        <button class="btn btn-ghost btn-sm" id="hw-list-parents">👨‍👩‍👧 Vista para papás</button>
+        <button class="btn btn-ghost btn-sm" id="hw-list-settings">⚙️ Ajustes</button>
+        <button class="btn btn-ghost btn-sm" id="hw-list-parents">👨‍👩‍👧 Papás</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-logout">Salir</button>
       </div>
     </div>
     <div class="hw-list-grid" id="hw-list-grid">
       <!-- assignment cards rendered by JS -->
+    </div>
+  </div>
+
+  <!-- SCREEN: SETTINGS — rename, change avatar, reset score, see code -->
+  <div id="screen-settings" class="container hw-settings hidden">
+    <div class="hw-settings-card">
+      <div class="hw-settings-header">
+        <button class="btn btn-ghost btn-sm" id="hw-settings-back">← Volver</button>
+        <h1 class="hw-settings-title">⚙️ Mis ajustes</h1>
+      </div>
+
+      <div class="hw-settings-profile">
+        <div class="hw-settings-avatar" id="hw-settings-avatar"></div>
+        <div class="hw-settings-profile-info">
+          <div class="hw-settings-name" id="hw-settings-name">—</div>
+          <div class="hw-settings-code-wrap">
+            <span class="hw-settings-code-label">Tu código secreto:</span>
+            <code class="hw-settings-code" id="hw-settings-code">····</code>
+            <button class="btn btn-ghost btn-sm" id="hw-settings-code-copy">📋 Copiar</button>
+          </div>
+          <p class="hw-settings-code-hint">Guárdalo en secreto. Si cambias de teléfono, escríbelo para no perder tu progreso.</p>
+        </div>
+      </div>
+
+      <!-- Change name -->
+      <div class="hw-settings-section">
+        <div class="hw-settings-section-title">✏️ Cambiar mi nombre</div>
+        <div class="hw-settings-row">
+          <input class="input" id="hw-settings-name-input" type="text" maxlength="20" placeholder="Nombre nuevo">
+          <button class="btn btn-jade" id="hw-settings-name-save">Guardar</button>
+        </div>
+        <p class="hw-settings-msg" id="hw-settings-name-msg"></p>
+      </div>
+
+      <!-- Change avatar -->
+      <div class="hw-settings-section">
+        <div class="hw-settings-section-title">🎨 Cambiar mi avatar</div>
+        <div class="hw-avatar-grid" id="hw-settings-avatar-grid"></div>
+        <p class="hw-settings-msg" id="hw-settings-avatar-msg"></p>
+      </div>
+
+      <!-- Reset score per assignment -->
+      <div class="hw-settings-section">
+        <div class="hw-settings-section-title">🔄 Borrar puntajes</div>
+        <p class="hw-settings-help">Empieza una tarea desde cero. Útil si quieres mejorar tu nota.</p>
+        <div class="hw-settings-reset-list" id="hw-settings-reset-list"></div>
+        <p class="hw-settings-msg" id="hw-settings-reset-msg"></p>
+      </div>
     </div>
   </div>
 
@@ -76,7 +122,7 @@
       </div>
       <div class="hw-parents-hero">
         <div class="hw-parents-avatar-frame">
-          <div class="hw-parents-avatar" id="hw-parents-avatar">🧒🏼</div>
+          <div class="hw-parents-avatar" id="hw-parents-avatar"></div>
         </div>
         <div class="hw-parents-hero-info">
           <div class="hw-parents-hero-name" id="hw-parents-name">—</div>
@@ -115,7 +161,11 @@
 
     <!-- Word library — shared from warmup-vocab.js -->
     <div class="hw-asg-library-section">
-      <div class="hw-asg-library-title">📖 Catálogo de palabras (toca para añadir a la oración activa)</div>
+      <div class="hw-asg-library-title">
+        📖 Catálogo de palabras
+        <span class="hw-asg-library-hint">Toca una palabra para añadirla a la oración activa</span>
+      </div>
+      <div class="hw-asg-library-tabs" id="hw-asg-library-tabs"></div>
       <div class="hw-asg-library" id="hw-asg-library"></div>
     </div>
 
@@ -143,6 +193,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/homework.js?v=20260526c"></script>
+  <script src="/js/homework.js?v=20260527a"></script>
 </body>
 </html>

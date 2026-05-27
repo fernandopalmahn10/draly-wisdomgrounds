@@ -177,13 +177,30 @@ app.post('/api/homework/enter', (req, res) => {
     submissions: Students.getAssignmentSubmissions(rec.code, 100),
   });
 });
-// Set the kid's avatar (one of the 12 allowed emoji).
+// Set the kid's avatar (one of the 12 allowed SVG names).
 app.post('/api/homework/avatar', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, avatar } = req.body || {};
   const ok = Students.setAvatar(studentCode, avatar);
   if (!ok) return res.status(400).json({ ok: false, error: 'avatar inválido o estudiante no encontrado' });
   res.json({ ok: true });
+});
+// Let a kid rename themselves from the portal settings.
+app.post('/api/homework/rename', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, displayName } = req.body || {};
+  const ok = Students.setDisplayName(studentCode, displayName);
+  if (!ok) return res.status(400).json({ ok: false, error: 'nombre inválido o estudiante no encontrado' });
+  const rec = Students.get(studentCode);
+  res.json({ ok: true, displayName: rec ? rec.displayName : null });
+});
+// Reset a kid's submissions for a specific assignment (clean slate).
+app.post('/api/homework/reset', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, assignmentId } = req.body || {};
+  if (!assignmentId) return res.status(400).json({ ok: false, error: 'assignmentId requerido' });
+  const removed = Students.resetAssignmentSubmissions(studentCode, assignmentId);
+  res.json({ ok: true, removed });
 });
 // 👨‍👩‍👧 Parent view — returns a digest of what the kid has learned, in
 // Spanish, derived from their completed assignments + reading-mode tests.

@@ -45,24 +45,27 @@ const ASSIGNMENTS = [
     instructions: 'Lee la oración en español. Construye la oración en pinyin tocando las palabras del catálogo. Cuando termines las 5 oraciones, presiona Entregar.',
     type: 'sentence-building',
     items: [
-      { es: 'Me llamo Xiǎo Míng.',          expected: 'wǒ jiào xiǎo míng' },
+      // All expected answers use ONLY words present in the warmup catalog
+      // (warmup-vocab.js) so kids can build them from the available chips.
+      { es: 'Hola, mucho gusto.',           expected: 'nǐ hǎo' },
       { es: 'Tengo 8 años.',                expected: 'wǒ bā suì' },
       { es: 'Mi mamá es maestra.',          expected: 'wǒ māma shì lǎoshī' },
-      { es: 'Tengo un hermano.',            expected: 'wǒ yǒu yī gè gēge' },
+      { es: 'Tengo un hijo.',               expected: 'wǒ yǒu yī gè érzi' },
       { es: 'Amo a mi familia.',            expected: 'wǒ ài wǒ de jiā' },
     ],
     pointsPerItem: 20,
     // Parent-facing summary in Spanish — surfaced on the parent view of
     // the homework portal when this assignment is completed (score≥60).
     parentInsight: {
-      title: 'Tu hijo/a sabe presentarse y hablar de su familia en chino',
+      title: 'Tu hijo/a sabe saludar y hablar de su familia en chino',
       bullets: [
-        'Decir su nombre en chino: "Wǒ jiào …" (Me llamo …)',
+        'Saludar: "Nǐ hǎo" (Hola)',
         'Decir su edad: "Wǒ bā suì" (Tengo 8 años)',
-        'Hablar de su mamá, papá y hermanos en chino',
+        'Hablar de su mamá: "Wǒ māma shì lǎoshī"',
+        'Decir que tiene un hijo o un familiar (wǒ yǒu yī gè …)',
         'Expresar amor por su familia: "Wǒ ài wǒ de jiā"',
       ],
-      encouragement: '¡Pídele que te diga cómo se llama y cuántos años tiene en chino! Verás que ya lo sabe.',
+      encouragement: '¡Pídele que te salude en chino y te diga cuántos años tiene! Verás que ya lo sabe.',
     },
   },
   // Add more here. See instructions at the top of this file.
