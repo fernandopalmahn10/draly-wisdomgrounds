@@ -72,12 +72,17 @@ const ASSIGNMENTS = [
       // available are: wǒ, nǐ, tā(他), tā(她), wǒmen, bàba, māma, érzi,
       // nǚ'ér, péngyou, jiā, ài, gǒu, māo, jiào, míngzi, shì, de, rènshi, suì.
       // No numbers, no laoshi, no greetings — those are EXP2/EXP8.
-      // Every word below must be findable in public/js/warmup-vocab.js EXP1.
-      { es: 'Yo amo a mi mamá.',            expected: 'wǒ ài māma' },
-      { es: 'Tú eres mi amigo.',            expected: 'nǐ shì wǒ péngyou' },
-      { es: 'Yo conozco a tu papá.',        expected: 'wǒ rènshi nǐ bàba' },
+      //
+      // POSSESSIVE STANDARD (user feedback 2026-05-27): ALWAYS use "wǒ de"
+      // or "nǐ de" for "mi" / "tu" possessives — never omit the de
+      // particle, even when it's grammatically optional in real Mandarin
+      // (family terms). Consistency > naturalness while kids are learning
+      // the pattern.
+      { es: 'Yo amo a mi mamá.',            expected: 'wǒ ài wǒ de māma' },
+      { es: 'Tú eres mi amigo.',            expected: 'nǐ shì wǒ de péngyou' },
+      { es: 'Yo conozco a tu papá.',        expected: 'wǒ rènshi nǐ de bàba' },
       { es: 'Mi gato ama mi casa.',         expected: 'wǒ de māo ài wǒ de jiā' },
-      { es: 'Nosotros amamos a la familia.', expected: 'wǒmen ài jiā' },
+      { es: 'Nosotros amamos nuestra casa.', expected: 'wǒmen ài wǒmen de jiā' },
     ],
     pointsPerItem: 20,
     // Parent-facing summary in Spanish — surfaced on the parent view of
@@ -85,13 +90,13 @@ const ASSIGNMENTS = [
     parentInsight: {
       title: 'Tu hijo/a sabe hablar de su familia y amigos en chino',
       bullets: [
-        'Decir que ama a su mamá: "Wǒ ài māma"',
-        'Identificar a un amigo: "Nǐ shì wǒ péngyou" (tú eres mi amigo)',
-        'Hablar de su papá: "Wǒ rènshi nǐ bàba" (yo conozco a tu papá)',
+        'Decir que ama a su mamá: "Wǒ ài wǒ de māma"',
+        'Identificar a un amigo: "Nǐ shì wǒ de péngyou"',
+        'Hablar de su papá: "Wǒ rènshi nǐ de bàba"',
         'Hablar de su mascota: "Wǒ de māo ài wǒ de jiā"',
-        'Hablar de la familia: "Wǒmen ài jiā"',
+        'Hablar de la familia: "Wǒmen ài wǒmen de jiā"',
       ],
-      encouragement: 'Pídele que te diga "Wǒ ài māma" mientras te abraza — verás que ya sabe expresar cariño en chino.',
+      encouragement: 'Pídele que te diga "Wǒ ài wǒ de māma" mientras te abraza — verás que ya sabe expresar cariño en chino.',
     },
   },
   // Add more here. See instructions at the top of this file.

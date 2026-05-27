@@ -577,21 +577,93 @@
         <div class="hw-reading-page-text">
           ${(p.sentences || []).map((sent, idx) => {
             const es = (p.sentencesEs || [])[idx] || '';
+            // Tokenize so each pinyin word becomes tappable for Modo
+            // Curioso. We DON'T add a 🔊 button here — the page mp3
+            // already plays the audio, so an extra TTS button would be
+            // redundant + (per user feedback 2026-05-27) the Web Speech
+            // quality is too rough to be useful when real audio exists.
+            const pinyinHtml = tokenizePinyinForCurious(sent);
             return `
               <div class="hw-reading-line">
-                <span class="hw-reading-line-pinyin">${escapeHtml(sent)}</span>
+                <span class="hw-reading-line-pinyin">${pinyinHtml}</span>
                 <span class="hw-reading-line-es">${escapeHtml(es)}</span>
-                <button class="btn btn-ghost btn-sm hw-reading-line-speak" type="button" data-text="${escapeHtml(sent)}">🔊</button>
               </div>`;
           }).join('')}
         </div>`;
       pagesWrap.appendChild(pageEl);
     });
-    // Wire per-line Web Speech buttons
-    pagesWrap.querySelectorAll('.hw-reading-line-speak').forEach((btn) => {
-      btn.addEventListener('click', () => speakChinese(btn.dataset.text, btn));
+    // Wire Modo Curioso taps on every clickable word in the reading text.
+    // Reuses the wu-pokedex overlay markup from player.html — but since
+    // homework.html doesn't include it, we create one on demand below.
+    pagesWrap.querySelectorAll('.hw-curious-word').forEach((el) => {
+      el.addEventListener('click', () => {
+        const dict = window.lookupWuPinyin && window.lookupWuPinyin(el.dataset.token);
+        if (dict) {
+          showCuriousCard(dict);
+        } else {
+          showCuriousCard({
+            pinyin: el.dataset.token,
+            hanzi:  '',
+            es:     '(no encontrado en el catálogo)',
+            cat:    'noun',
+            icon:   '❓',
+            exp:    '',
+          });
+        }
+      });
     });
     applyReadingLangMode();
+  }
+  // Splits a pinyin sentence into space-delimited tokens and wraps each
+  // in a tappable span. Preserves punctuation attached to tokens.
+  function tokenizePinyinForCurious(sent) {
+    return String(sent || '').split(/\s+/).filter(Boolean).map((tok) => {
+      // Strip surrounding punctuation for the lookup token, but keep it
+      // visible. The cleaned form goes into data-token; display keeps original.
+      const clean = tok.toLowerCase().replace(/[".,!?:;"'¡¿()]+/g, '');
+      return `<span class="hw-curious-word" data-token="${escapeHtml(clean)}">${escapeHtml(tok)}</span>`;
+    }).join(' ');
+  }
+  // Modo Curioso card — creates the overlay lazily so we don't need to
+  // include the wu-pokedex markup in homework.html.
+  function showCuriousCard(w) {
+    let overlay = document.getElementById('hw-curious-overlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'hw-curious-overlay';
+      overlay.className = 'hw-curious-overlay hidden';
+      overlay.innerHTML = `
+        <button class="hw-curious-close" type="button" aria-label="Cerrar">✕</button>
+        <div class="hw-curious-card" id="hw-curious-card"></div>`;
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) hideCuriousCard();
+      });
+      overlay.querySelector('.hw-curious-close').addEventListener('click', hideCuriousCard);
+    }
+    const card = document.getElementById('hw-curious-card');
+    const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+    const exp = window.WU_EXPERIENCES && window.WU_EXPERIENCES[w.exp];
+    const color = cat ? cat.color : '#ffe082';
+    card.style.setProperty('--cat-color', color);
+    card.innerHTML = `
+      <div class="hw-curious-icon">${escapeHtml(w.icon || '✨')}</div>
+      <div class="hw-curious-pinyin">${escapeHtml(w.pinyin || '')}</div>
+      <div class="hw-curious-hanzi">${escapeHtml(w.hanzi || '')}</div>
+      <div class="hw-curious-es">${escapeHtml(w.es || '')}</div>
+      <div class="hw-curious-meta">
+        <div class="hw-curious-chip" style="background:${color}; color:#0a1320;">${escapeHtml((cat && cat.label) || w.cat || '')}</div>
+        ${exp ? `<div class="hw-curious-chip exp">${escapeHtml(exp.short || exp.label)}</div>` : ''}
+      </div>
+      <div class="hw-curious-hint">Toca fuera para cerrar</div>`;
+    overlay.classList.remove('hidden');
+    requestAnimationFrame(() => overlay.classList.add('show'));
+  }
+  function hideCuriousCard() {
+    const overlay = document.getElementById('hw-curious-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.classList.add('hidden'), 250);
   }
   function applyReadingLangMode() {
     document.querySelectorAll('.hw-reading-lang-btn').forEach((b) => {
@@ -731,9 +803,9 @@
           <span class="hw-stage-empty">Toca palabras del catálogo abajo…</span>
         </div>
         <div class="hw-item-actions">
-          <button class="btn btn-ghost btn-sm hw-item-speak" data-idx="${i}" type="button" title="Escucha tu oración en chino">🔊 Escuchar</button>
-          <button class="btn btn-ghost btn-sm hw-item-undo" data-idx="${i}" type="button" disabled>↩️ Deshacer</button>
-          <button class="btn btn-ghost btn-sm hw-item-clear" data-idx="${i}" type="button">🧹 Limpiar</button>
+          <button class="btn btn-ghost btn-sm hw-item-speak" data-idx="${i}" type="button" title="Escucha tu oración en chino" aria-label="Escuchar">🔊 Oír</button>
+          <button class="btn btn-ghost btn-sm hw-item-undo" data-idx="${i}" type="button" title="Deshacer" aria-label="Deshacer" disabled>↩️</button>
+          <button class="btn btn-ghost btn-sm hw-item-clear" data-idx="${i}" type="button" title="Limpiar" aria-label="Limpiar">🧹 Borrar</button>
         </div>`;
       itemsWrap.appendChild(row);
       const stage = row.querySelector('.hw-item-stage');
