@@ -54,6 +54,19 @@
   $('m-refresh').addEventListener('click', () => {
     fetchRoster();
   });
+
+  // Auto-refresh every 15 seconds so the teacher sees who's joining in
+  // real time. Only refreshes when the dashboard is visible (not while
+  // looking at a student detail page or when the tab is in background).
+  // User feedback 2026-05-27: "I should know who has joined right now —
+  // don't make me keep asking 'who has joined?'"
+  setInterval(() => {
+    if (document.hidden) return;
+    if ($('m-dash').classList.contains('hidden')) return;
+    if (!$('m-detail').classList.contains('hidden')) return;
+    if (!pw) return;
+    fetchRoster();
+  }, 15000);
   $('m-detail-back').addEventListener('click', () => {
     $('m-detail').classList.add('hidden');
     $('m-roster').classList.remove('hidden');
@@ -181,7 +194,25 @@
     students = students.filter((s) =>
       (s.sentenceCount > 0) || (s.testCount > 0) || (s.assignmentCount > 0)
     );
-    $('m-dash-sub').textContent = `${students.length} alumno${students.length === 1 ? '' : 's'} con actividad`;
+    // Classify by recent activity — used both for the "online now" pill
+    // at the top and to sort the roster (active first).
+    const ONLINE_MS  = 5 * 60 * 1000;    // active within last 5 min
+    const RECENT_MS  = 60 * 60 * 1000;   // last hour
+    const now = Date.now();
+    students.forEach((s) => {
+      const age = now - (s.lastSeen || 0);
+      s._onlineNow = age <= ONLINE_MS;
+      s._recent   = age <= RECENT_MS;
+      s._secsAgo  = Math.floor(age / 1000);
+    });
+    // Sort: online first (most recent), then recent, then everyone else
+    students.sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+    const onlineCount = students.filter((s) => s._onlineNow).length;
+    $('m-dash-sub').innerHTML =
+      `${students.length} alumno${students.length === 1 ? '' : 's'} con actividad` +
+      (onlineCount > 0
+        ? ` · <span class="m-online-pill">🟢 ${onlineCount} en línea ahora</span>`
+        : '');
 
     // Summary
     const totals = students.reduce((acc, s) => {
@@ -225,10 +256,13 @@
     students.forEach((s) => {
       const row = document.createElement('button');
       row.type = 'button';
-      row.className = 'm-row';
-      const since = s.lastSeen ? new Date(s.lastSeen).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '—';
+      row.className = 'm-row' + (s._onlineNow ? ' is-online' : '');
+      // Friendly "5 min ago" / "2h ago" / "May 27" timestamp
+      const sinceTxt = s._onlineNow
+        ? formatRelative(s._secsAgo)
+        : (s.lastSeen ? new Date(s.lastSeen).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '—');
       row.innerHTML = `
-        <span class="m-row-avatar">${renderAvatar(s.avatar)}</span>
+        <span class="m-row-avatar">${renderAvatar(s.avatar)}${s._onlineNow ? '<span class="m-online-dot" title="En línea ahora"></span>' : ''}</span>
         <span class="m-row-code">${escapeHtml(s.code)}</span>
         <span class="m-row-name">${escapeHtml(s.displayName || 'Anon')}</span>
         <span class="m-row-counts">
@@ -236,10 +270,18 @@
           <span class="m-row-c" title="Tareas entregadas">📚 ${s.assignmentCount}</span>
           <span class="m-row-c" title="Exámenes de lectura">🏆 ${s.testCount}</span>
         </span>
-        <span class="m-row-date">${since}</span>`;
+        <span class="m-row-date">${sinceTxt}</span>`;
       row.addEventListener('click', () => openDetail(s.code));
       roster.appendChild(row);
     });
+  }
+
+  // "hace 5s" / "hace 2 min" / "hace 1h"
+  function formatRelative(secs) {
+    if (secs < 60)   return 'hace ' + secs + 's';
+    if (secs < 3600) return 'hace ' + Math.floor(secs / 60) + ' min';
+    if (secs < 86400) return 'hace ' + Math.floor(secs / 3600) + ' h';
+    return 'hace ' + Math.floor(secs / 86400) + ' días';
   }
 
   function openDetail(code) {
