@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260527a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260527a">
-  <link rel="stylesheet" href="/css/maestro.css?v=20260527a">
+  <link rel="stylesheet" href="/css/maestro.css?v=20260527b">
 </head>
 <body class="hw-bg">
 
@@ -30,9 +30,10 @@
   <!-- ROSTER + DETAIL — same UX as the in-game Cuaderno -->
   <div id="m-dash" class="container m-dash hidden">
     <div class="m-dash-header">
-      <div>
+      <div class="m-dash-titles">
         <h1 class="m-dash-title">📓 Cuaderno de Alumnos</h1>
         <p class="m-dash-sub" id="m-dash-sub">Cargando…</p>
+        <p class="m-dash-self" id="m-dash-self"></p>
       </div>
       <div class="m-dash-actions">
         <button class="btn btn-ghost btn-sm" id="m-refresh">🔄 Refrescar</button>
@@ -40,23 +41,72 @@
       </div>
     </div>
 
-    <!-- Class summary -->
-    <div id="m-summary"></div>
+    <!-- Tab switcher (only shows if super admin) -->
+    <div class="m-tabs hidden" id="m-tabs">
+      <button class="m-tab active" data-tab="students" type="button">📓 Alumnos</button>
+      <button class="m-tab" data-tab="teachers" type="button">👩‍🏫 Maestros</button>
+    </div>
 
-    <!-- Roster list -->
-    <div id="m-roster" class="m-roster"></div>
-
-    <!-- Student detail (slides up over the roster) -->
-    <div id="m-detail" class="m-detail hidden">
-      <div class="m-detail-header">
-        <button class="btn btn-ghost btn-sm" id="m-detail-back">← Volver</button>
-        <div id="m-detail-head" class="m-detail-head"></div>
+    <!-- STUDENTS TAB -->
+    <div class="m-tabpanel" id="m-tabpanel-students">
+      <div id="m-summary"></div>
+      <div id="m-roster" class="m-roster"></div>
+      <!-- Student detail (slides up over the roster) -->
+      <div id="m-detail" class="m-detail hidden">
+        <div class="m-detail-header">
+          <button class="btn btn-ghost btn-sm" id="m-detail-back">← Volver</button>
+          <div id="m-detail-head" class="m-detail-head"></div>
+        </div>
+        <div id="m-detail-body" class="m-detail-body"></div>
       </div>
-      <div id="m-detail-body" class="m-detail-body"></div>
+    </div>
+
+    <!-- TEACHERS TAB (super admin only) -->
+    <div class="m-tabpanel hidden" id="m-tabpanel-teachers">
+      <div class="m-teachers-header">
+        <h2 class="m-teachers-title">👩‍🏫 Maestros registrados</h2>
+        <button class="btn btn-jade btn-sm" id="m-new-teacher-btn">➕ Crear maestro/a</button>
+      </div>
+      <p class="m-teachers-help">Crea una cuenta para otro/a maestro/a. Recibirás un código de maestro (privado — solo para iniciar sesión en /maestro) y un código de aula (público — los estudiantes lo tipean para entrar a su clase).</p>
+      <div id="m-teachers-list" class="m-teachers-list"></div>
+
+      <!-- Create-teacher modal -->
+      <div id="m-new-teacher-modal" class="m-modal hidden">
+        <div class="m-modal-card">
+          <button class="m-modal-close" id="m-new-teacher-close" type="button" aria-label="Cerrar">✕</button>
+          <h2>➕ Nuevo maestro/a</h2>
+          <label class="m-form-label">
+            <span>Nombre del maestro/a:</span>
+            <input class="input" id="m-new-teacher-name" type="text" placeholder="Sra. Chen" maxlength="60">
+          </label>
+          <label class="m-form-label">
+            <span>Email (opcional, para recuperación):</span>
+            <input class="input" id="m-new-teacher-email" type="email" placeholder="maria@escuela.cn" maxlength="120">
+          </label>
+          <label class="m-form-label">
+            <span>País (opcional, 2-3 letras):</span>
+            <input class="input" id="m-new-teacher-country" type="text" placeholder="MX, CN, TW…" maxlength="3">
+          </label>
+          <button class="btn btn-jade btn-xl" id="m-new-teacher-submit">Crear cuenta</button>
+          <p class="m-modal-msg" id="m-new-teacher-msg"></p>
+          <div id="m-new-teacher-result" class="m-teacher-result hidden">
+            <div class="m-teacher-result-title">✓ Cuenta creada — comparte estos códigos:</div>
+            <div class="m-teacher-result-row">
+              <span class="m-teacher-result-label">🔑 Código de maestro/a (PRIVADO):</span>
+              <code class="m-teacher-result-code" id="m-result-teacher-id"></code>
+            </div>
+            <div class="m-teacher-result-row">
+              <span class="m-teacher-result-label">📚 Código de aula (para estudiantes):</span>
+              <code class="m-teacher-result-code" id="m-result-access-code"></code>
+            </div>
+            <p class="m-teacher-result-hint">El/la maestro/a entra a <strong>/maestro</strong> con su código privado. Los estudiantes tipean el código de aula en <strong>/homework</strong>.</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/maestro.js?v=20260527a"></script>
+  <script src="/js/maestro.js?v=20260527b"></script>
 </body>
 </html>

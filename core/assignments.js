@@ -49,15 +49,14 @@
 // =========================================================================
 'use strict';
 
-// Access codes — any of these grants entry to the homework portal.
-// Numeric 4-digit codes (changed 2026-05-26) so the input can use the
-// same numeric keypad UX as the live-game PIN field — easier for kids
-// who can't comfortably type letters on phone keyboards.
-//
-// Teacher hands these out (e.g. one per class section, or just one).
-// Easy-to-remember sequences so kids can recall them without writing
-// them down. Change here to rotate (e.g. start of new school year).
-const ACCESS_CODES = ['1001', '2002', '3003', '4004', '5005'];
+// 2026-05-27: access codes are now stored in core/teachers.js, one per
+// teacher. The list below is kept only as documentation of the OLD shape
+// — actual validation goes through Teachers.isAccessCodeValid() which
+// reads from data/teachers.json. The super-admin teacher (EMAAR2026) is
+// seeded with code "1001" for backwards compatibility with existing
+// students. Other 1001-5005 codes are dropped (user feedback: "I only
+// use one anyway").
+const LEGACY_ACCESS_CODES = ['1001'];   // for reference only — see teachers.js
 
 const ASSIGNMENTS = [
   // === ASSIGNMENT 1 ===
@@ -228,8 +227,15 @@ function normalize(s) {
     .trim();
 }
 
+// Validation now routes through the teachers module — any access code
+// belonging to any teacher's classroom is valid.
+let _Teachers = null;
+function _getTeachers() {
+  if (!_Teachers) _Teachers = require('./teachers');
+  return _Teachers;
+}
 function isAccessCodeValid(code) {
-  return ACCESS_CODES.includes(String(code || '').trim().toUpperCase());
+  return _getTeachers().isAccessCodeValid(code);
 }
 
 function listAssignments() {
@@ -274,7 +280,7 @@ function gradeSubmission(assignment, answers) {
 }
 
 module.exports = {
-  ACCESS_CODES,
+  LEGACY_ACCESS_CODES,
   ASSIGNMENTS,
   isAccessCodeValid,
   listAssignments,
