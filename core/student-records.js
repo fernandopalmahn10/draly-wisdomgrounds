@@ -212,6 +212,38 @@ function getTestResults(code, limit) {
   return typeof limit === 'number' ? arr.slice(0, limit) : arr;
 }
 
+// === ASSIGNMENT SUBMISSIONS ===
+// Records homework submissions per student. One entry per submission;
+// students CAN resubmit but each attempt is logged so we see progress.
+// Capped at last 100 attempts so the JSON doesn't grow without bound.
+function logAssignmentSubmission(code, payload) {
+  const rec = get(code);
+  if (!rec) return false;
+  if (!Array.isArray(rec.assignmentSubmissions)) rec.assignmentSubmissions = [];
+  const entry = {
+    ts:         Date.now(),
+    assignmentId:    String(payload.assignmentId || ''),
+    assignmentTitle: String(payload.assignmentTitle || ''),
+    accessCode:      String(payload.accessCode || ''),
+    score:           Number(payload.score || 0),
+    total:           Number(payload.total || 100),
+    breakdown:       Array.isArray(payload.breakdown) ? payload.breakdown.slice() : [],
+  };
+  rec.assignmentSubmissions.push(entry);
+  if (rec.assignmentSubmissions.length > 100) {
+    rec.assignmentSubmissions = rec.assignmentSubmissions.slice(-100);
+  }
+  rec.lastSeen = Date.now();
+  scheduleSave();
+  return true;
+}
+function getAssignmentSubmissions(code, limit) {
+  const rec = get(code);
+  if (!rec) return [];
+  const arr = (rec.assignmentSubmissions || []).slice().reverse();
+  return typeof limit === 'number' ? arr.slice(0, limit) : arr;
+}
+
 // Initial load on require()
 load();
 
@@ -225,4 +257,6 @@ module.exports = {
   listAll,
   logTestResult,
   getTestResults,
+  logAssignmentSubmission,
+  getAssignmentSubmissions,
 };
