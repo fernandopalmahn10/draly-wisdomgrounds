@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260526a">
-  <link rel="stylesheet" href="/css/homework.css?v=20260527b">
+  <link rel="stylesheet" href="/css/homework.css?v=20260527c">
 </head>
 <body class="hw-bg">
 
@@ -57,8 +57,48 @@
         <button class="btn btn-ghost btn-sm" id="hw-list-logout">Salir</button>
       </div>
     </div>
+    <div class="hw-list-section-title">📚 Tareas para armar oraciones</div>
     <div class="hw-list-grid" id="hw-list-grid">
       <!-- assignment cards rendered by JS -->
+    </div>
+
+    <!-- READING TESTS — separate section. Show stories the kid has done
+         in class (or any story while bootstrapping). -->
+    <div class="hw-list-section-title">📖 Exámenes de lectura</div>
+    <div class="hw-list-grid" id="hw-list-readings">
+      <div class="hw-empty">Cargando…</div>
+    </div>
+  </div>
+
+  <!-- SCREEN: READING-TEST — story reader + 5 questions, self-serve -->
+  <div id="screen-reading" class="container hw-reading hidden">
+    <div class="hw-reading-header">
+      <button class="btn btn-ghost btn-sm" id="hw-reading-back">← Volver</button>
+      <div class="hw-reading-titles">
+        <h1 class="hw-reading-title" id="hw-reading-title">…</h1>
+        <p class="hw-reading-sub" id="hw-reading-sub">…</p>
+      </div>
+    </div>
+    <div class="hw-reading-instructions">
+      📖 Lee la historia con calma. Escucha el audio de cada página y di la oración EN VOZ ALTA. Cuando termines, presiona <strong>Empezar examen</strong>.
+    </div>
+    <div class="hw-reading-lang-toggle">
+      <button class="hw-reading-lang-btn active" data-lang="pinyin" type="button">中 Pinyin</button>
+      <button class="hw-reading-lang-btn" data-lang="both" type="button">中 + ES</button>
+      <button class="hw-reading-lang-btn" data-lang="es" type="button">ES Español</button>
+    </div>
+    <div class="hw-reading-pages" id="hw-reading-pages"></div>
+    <div class="hw-reading-cta">
+      <button class="btn btn-jade btn-xl" id="hw-reading-start-test">📝 Empezar examen →</button>
+    </div>
+
+    <!-- Embedded test panel — hidden until "Empezar examen" -->
+    <div class="hw-reading-test hidden" id="hw-reading-test">
+      <div class="hw-reading-test-banner">📝 5 preguntas · 20 puntos cada una</div>
+      <div class="hw-reading-qs" id="hw-reading-qs"></div>
+      <div class="hw-reading-cta">
+        <button class="btn btn-jade btn-xl" id="hw-reading-submit">📤 Entregar examen</button>
+      </div>
     </div>
   </div>
 
@@ -130,36 +170,103 @@
           <div class="hw-parents-stats" id="hw-parents-stats"></div>
         </div>
       </div>
-      <div class="hw-parents-encouragement" id="hw-parents-encouragement">
-        Aquí verás todo lo que tu hijo/a ha aprendido en clase. Anímalo/a a practicar todos los días — incluso 5 minutos hacen mucha diferencia. 🌱
+      <!-- TAB SWITCHER — progreso | tips -->
+      <div class="hw-parents-tabs">
+        <button class="hw-parents-tab active" data-tab="progress" type="button">📊 Progreso</button>
+        <button class="hw-parents-tab" data-tab="tips" type="button">💡 Tips para mí</button>
       </div>
 
-      <div class="hw-parents-speak-banner">
-        🗣️ <strong>Lo más importante:</strong> que diga las palabras EN VOZ ALTA. No basta con saberlas — tienen que poder pronunciarlas. Pídele que repita cada respuesta tres veces.
+      <!-- ============ TAB: PROGRESO ============ -->
+      <div class="hw-parents-tabpanel" id="hw-parents-tabpanel-progress">
+        <div class="hw-parents-encouragement" id="hw-parents-encouragement">
+          Aquí verás todo lo que tu hijo/a ha aprendido. Anímalo/a a practicar todos los días — incluso 5 minutos hacen mucha diferencia. 🌱
+        </div>
+
+        <div class="hw-parents-section-title">🌟 Lo que tu hijo/a ya sabe hacer</div>
+        <div class="hw-parents-insights" id="hw-parents-insights">
+          <div class="hw-parents-empty">Todavía no ha completado ninguna tarea. ¡Anímalo/a a hacer la primera!</div>
+        </div>
+
+        <div class="hw-parents-section-title">💬 Conversaciones que puedes tener hoy</div>
+        <div class="hw-parents-conversations" id="hw-parents-conversations">
+          <div class="hw-parents-empty">Cuando complete una tarea, aquí aparecerán preguntas que puedes hacerle.</div>
+        </div>
+
+        <div class="hw-parents-section-title">🎯 Tareas pendientes</div>
+        <div class="hw-parents-remaining" id="hw-parents-remaining">
+          <div class="hw-parents-empty">¡Ha intentado todas las tareas! Bien hecho.</div>
+        </div>
+
+        <div class="hw-parents-section-title">📖 Historias leídas</div>
+        <div class="hw-parents-tests" id="hw-parents-tests">
+          <div class="hw-parents-empty">Aún no ha leído ninguna historia en clase. Pregúntale a la maestra.</div>
+        </div>
       </div>
 
-      <div class="hw-parents-section-title">🌟 Lo que tu hijo/a ya sabe hacer</div>
-      <div class="hw-parents-insights" id="hw-parents-insights">
-        <div class="hw-parents-empty">Todavía no ha completado ninguna tarea. ¡Anímalo/a a hacer la primera!</div>
-      </div>
+      <!-- ============ TAB: TIPS ============ -->
+      <!-- Consolidated parenting advice — the user said: "make a tab
+           button that says tips and condense everything. Tell parents to
+           practice randomly, read out loud, write it down, encourage." -->
+      <div class="hw-parents-tabpanel hidden" id="hw-parents-tabpanel-tips">
+        <div class="hw-parents-speak-banner">
+          🗣️ <strong>Lo más importante:</strong> que diga las palabras EN VOZ ALTA. No basta con saberlas — tienen que poder pronunciarlas.
+        </div>
 
-      <div class="hw-parents-section-title">💬 Conversaciones que puedes tener hoy</div>
-      <div class="hw-parents-conversations" id="hw-parents-conversations">
-        <div class="hw-parents-empty">Cuando complete una tarea, aquí aparecerán preguntas que puedes hacerle.</div>
-      </div>
+        <div class="hw-tip-card">
+          <div class="hw-tip-icon">🎲</div>
+          <div class="hw-tip-body">
+            <div class="hw-tip-title">Práctica aleatoria, cualquier día</div>
+            <p>Los recordatorios sorpresa funcionan mejor que sesiones largas. En el carro, en la cena, antes de dormir: pídele que diga una oración que ya aprendió. 30 segundos basta.</p>
+          </div>
+        </div>
 
-      <div class="hw-parents-section-title">🎯 Tareas pendientes</div>
-      <div class="hw-parents-remaining" id="hw-parents-remaining">
-        <div class="hw-parents-empty">¡Ha intentado todas las tareas! Bien hecho.</div>
-      </div>
+        <div class="hw-tip-card">
+          <div class="hw-tip-icon">🗣️</div>
+          <div class="hw-tip-body">
+            <div class="hw-tip-title">EN VOZ ALTA, siempre</div>
+            <p>Leer en silencio no construye memoria muscular. Pídele que repita cada respuesta tres veces en voz alta — fuerte, claro, con expresión.</p>
+          </div>
+        </div>
 
-      <div class="hw-parents-section-title">📝 Exámenes de lectura</div>
-      <div class="hw-parents-tests" id="hw-parents-tests">
-        <div class="hw-parents-empty">Aún no ha hecho exámenes de lectura en clase. Pregúntale a la maestra cuándo serán.</div>
-      </div>
+        <div class="hw-tip-card">
+          <div class="hw-tip-icon">✍️</div>
+          <div class="hw-tip-body">
+            <div class="hw-tip-title">Escribir también ayuda</div>
+            <p>Después de hacer una tarea, dale papel y pídele que escriba las 5 oraciones a mano. Ver-decir-escribir es lo que sella el aprendizaje.</p>
+          </div>
+        </div>
 
-      <div class="hw-parents-tips">
-        💡 <strong>Consejo:</strong> Pídele a tu hijo/a que te enseñe lo que sabe. Cuando los niños son maestros, aprenden el doble.
+        <div class="hw-tip-card">
+          <div class="hw-tip-icon">👨‍🏫</div>
+          <div class="hw-tip-body">
+            <div class="hw-tip-title">Que él/ella te enseñe a ti</div>
+            <p>Cuando los niños son maestros, aprenden el doble. Hazte el que no sabe nada y pídele que te enseñe cómo decir "amo a mi mamá" en chino.</p>
+          </div>
+        </div>
+
+        <div class="hw-tip-card">
+          <div class="hw-tip-icon">🌟</div>
+          <div class="hw-tip-body">
+            <div class="hw-tip-title">Celebra los pequeños logros</div>
+            <p>"¡Bien dicho!" o "¡me encantó cómo lo pronunciaste!" valen oro. Los kids de 7-10 años aprenden con elogio específico, no con presión.</p>
+          </div>
+        </div>
+
+        <div class="hw-tip-card">
+          <div class="hw-tip-icon">⏱️</div>
+          <div class="hw-tip-body">
+            <div class="hw-tip-title">5 minutos por día &gt; 1 hora a la semana</div>
+            <p>El cerebro consolida con repetición espaciada. Es mejor practicar 5 minutos al día durante 6 días que 30 minutos un solo día.</p>
+          </div>
+        </div>
+
+        <div class="hw-tip-card">
+          <div class="hw-tip-icon">🚫</div>
+          <div class="hw-tip-body">
+            <div class="hw-tip-title">No corrijas demasiado</div>
+            <p>Si dice algo incorrecto, repite la versión correcta con calma — no lo regañes. Los errores son parte del aprendizaje, no fallas.</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -218,6 +325,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/homework.js?v=20260527b"></script>
+  <script src="/js/homework.js?v=20260527c"></script>
 </body>
 </html>

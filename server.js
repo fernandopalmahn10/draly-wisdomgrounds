@@ -331,6 +331,127 @@ app.post('/api/homework/submit', (req, res) => {
   });
 });
 
+// === 📖 READING-TEST HOMEWORK INTEGRATION ===========================
+// Students can revisit a reading test on their own time. Per user
+// feedback 2026-05-27: kids need self-serve access to the test of a
+// story the teacher already covered in class. Gating rules:
+//   - A test is AVAILABLE to a kid if they have AT LEAST one prior
+//     testResult entry for that story (proves they took the live test
+//     in class, so they're "registered" for it).
+//   - For now, while we bootstrap, we also expose all stories with
+//     `unlockedForAll: true` so anyone with an access code can try.
+//     Switch UNLOCKED_FOR_ALL → false once teachers start using the
+//     in-class flow for registration.
+// NOTE: ReadingStory is already required at the top of the file.
+const READING_UNLOCKED_FOR_ALL = true;
+
+function _hwReadingListFor(code) {
+  const rec = Students.get(code);
+  const priorAttempts = rec && Array.isArray(rec.testResults) ? rec.testResults : [];
+  const bestByStory = {};
+  priorAttempts.forEach((t) => {
+    if (!bestByStory[t.storyId] || t.score > bestByStory[t.storyId].score) {
+      bestByStory[t.storyId] = t;
+    }
+  });
+  return ReadingStory.listStories().map((s) => {
+    const story = (ReadingStory.STORIES || {})[s.id];
+    const best = bestByStory[s.id];
+    const triedInClass = !!best;
+    return {
+      storyId:   s.id,
+      title:     story.title,
+      subtitle:  story.subtitle,
+      pageCount: story.pages.length,
+      coverImage:  '/assets/reading/' + s.id + '/page-1.png',
+      available: triedInClass || READING_UNLOCKED_FOR_ALL,
+      triedInClass,
+      bestScore: best ? best.score : null,
+      attempts:  priorAttempts.filter((t) => t.storyId === s.id).length,
+    };
+  });
+}
+
+// List available reading tests for the kid.
+app.get('/api/homework/reading-tests', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const code = req.query.studentCode;
+  res.json({ ok: true, stories: _hwReadingListFor(code) });
+});
+
+// Full story content (pages + questions, NO correctIdx in the choices).
+app.get('/api/homework/reading-test/:storyId', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const story = (ReadingStory.STORIES || {})[req.params.storyId];
+  if (!story) return res.status(404).json({ ok: false, error: 'Historia no encontrada' });
+  // Gate: if the kid hasn't been in class for this test, deny — UNLESS
+  // we're in bootstrap "unlocked for all" mode.
+  const studentCode = req.query.studentCode;
+  if (!READING_UNLOCKED_FOR_ALL) {
+    const rec = Students.get(studentCode);
+    const hasAttempted = rec && Array.isArray(rec.testResults)
+      && rec.testResults.some((t) => t.storyId === story.id);
+    if (!hasAttempted) {
+      return res.status(403).json({ ok: false, error: 'Aún no has hecho este examen en clase. Pídele a tu maestra que lo abra.' });
+    }
+  }
+  res.json({
+    ok: true,
+    id: story.id,
+    title: story.title,
+    subtitle: story.subtitle,
+    pages: story.pages.map((p) => ({
+      pageNum:    p.pageNum,
+      caption:    p.caption,
+      sentences:  p.sentences,
+      sentencesEs: p.sentencesEs,
+      audioUrl:   '/assets/reading/' + story.id + '/page-' + p.pageNum + '.mp3',
+      imageUrl:   '/assets/reading/' + story.id + '/page-' + p.pageNum + '.png',
+    })),
+    questions: story.questions.map((q) => ({
+      q: q.q,
+      choices: q.choices,
+      // NEVER send correctIdx to the client
+    })),
+  });
+});
+
+// Submit & grade a reading test taken from the homework portal.
+app.post('/api/homework/reading-test/submit', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, storyId, answers, accessCode } = req.body || {};
+  const story = (ReadingStory.STORIES || {})[storyId];
+  if (!story) return res.status(404).json({ ok: false, error: 'Historia no encontrada' });
+  const rec = Students.get(studentCode);
+  if (!rec) return res.status(401).json({ ok: false, error: 'Código de estudiante inválido' });
+  const arr = Array.isArray(answers) ? answers : [];
+  const pointsPerQ = 20;
+  let score = 0;
+  const breakdown = story.questions.map((q, i) => {
+    const picked = Number(arr[i]);
+    const correct = Number.isFinite(picked) && picked === q.correctIdx;
+    if (correct) score += pointsPerQ;
+    return {
+      i,
+      q:         q.q,
+      choices:   q.choices,
+      picked:    Number.isFinite(picked) ? picked : null,
+      correctIdx: q.correctIdx,
+      correct,
+      pointsEarned: correct ? pointsPerQ : 0,
+    };
+  });
+  Students.logTestResult(rec.code, {
+    storyId:    story.id,
+    storyTitle: story.title,
+    score,
+    pointsPerQ,
+    breakdown,
+    pin:        'homework',
+  });
+  res.json({ ok: true, score, total: 100, breakdown });
+});
+
 // Friendly redirect: students can type /homework or /tarea — both work.
 app.get(['/tarea', '/tareas'], (req, res) => res.redirect('/homework.html'));
 

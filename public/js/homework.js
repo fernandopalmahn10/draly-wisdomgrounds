@@ -22,9 +22,15 @@
   // simple lowercase filename ('mochi', 'dragon', etc.). Legacy emoji
   // values fall back gracefully — we just show the emoji in a span.
   const AVATAR_LABELS = {
+    // Cartoon kids (adventurer style)
     mochi:  'Mochi',  dragon: 'Drago',  stella: 'Stella', felix:  'Félix',
     luna:   'Luna',   atlas:  'Atlas',  zara:   'Zara',   kai:    'Kai',
     mei:    'Méi',    theo:   'Teo',    iris:   'Iris',   nova:   'Nova',
+    // Crazy variations — user feedback 2026-05-27 "like the emojis you
+    // had before, but cooler. Monkeys, aliens, funny hair."
+    robo:   '🤖 Robo',   cyborg: '🦾 Ciborg',  alien:  '👽 Alien',  blob:   '🟢 Blob',
+    monkey: '🐵 Mono',   ghost:  '👻 Fantasma', pixie:  '🧚 Hada',   wizard: '🧙 Mago',
+    pixel:  '👾 Pixel',  punky:  '🎸 Punky',    panda:  '🐼 Panda',  ninja:  '🥷 Ninja',
   };
   function avatarSrc(name) {
     return '/assets/avatars/' + encodeURIComponent(name) + '.svg';
@@ -61,6 +67,10 @@
   let avatarOptions = [];
   let assignments = [];        // summary list
   let submissions = [];        // student's prior submissions
+  let readingTests = [];       // [{ storyId, title, subtitle, coverImage, available, bestScore, attempts }]
+  let currentReadingStory = null;  // loaded story when on the reading screen
+  let currentReadingAnswers = []; // [questionIdx → choiceIdx]
+  let readingLangMode = 'pinyin';  // 'pinyin' | 'both' | 'es'
   let currentAssignment = null;  // full body when an item is open
   let currentAnswers = [];     // string per item — arrays of word IDs joined by space, or freeform
   let activeExpTab = 'all';    // catalog filter: 'all' or 'exp1'..'exp8'
@@ -333,14 +343,17 @@
     $('hw-parents-name').textContent = data.displayName || 'Anon';
     $('hw-parents-code').textContent = data.code;
     const t = data.totals || {};
-    // Show UNIQUE stories tested, not total attempts. If the kid retook
-    // the same test 5 times that should still read "1 examen distinto".
-    const attemptsExtra = (t.readingTestAttempts && t.readingTestAttempts > (t.readingTestsTaken || 0))
-      ? ` <small>(${t.readingTestAttempts} intentos)</small>`
+    // Friendlier nomenclature (user feedback 2026-05-27: "exámenes
+    // distintos no me gusta"). Now reads "📖 1 historia leída" with the
+    // attempt count tucked into a softer secondary line.
+    const stories = t.readingTestsTaken || 0;
+    const attempts = t.readingTestAttempts || 0;
+    const storiesExtra = (attempts > stories)
+      ? ` <small>(${attempts} veces)</small>`
       : '';
     $('hw-parents-stats').innerHTML = `
       <span class="hw-parents-stat">📚 <strong>${t.assignmentsMastered || 0}</strong>/${t.assignmentsAvailable || 0} tareas dominadas</span>
-      <span class="hw-parents-stat">📝 <strong>${t.readingTestsTaken || 0}</strong> exámenes distintos${attemptsExtra}</span>`;
+      <span class="hw-parents-stat">📖 <strong>${stories}</strong> historia${stories === 1 ? '' : 's'} leída${stories === 1 ? '' : 's'}${storiesExtra}</span>`;
     const insightsWrap = $('hw-parents-insights');
     if (!data.insights || !data.insights.length) {
       insightsWrap.innerHTML = '<div class="hw-parents-empty">Todavía no ha completado tareas con puntaje suficiente. ¡Anímalo/a a practicar más!</div>';
@@ -430,6 +443,18 @@
       }
     }
   }
+  // Parent-view tab switcher: progreso ↔ tips
+  document.querySelectorAll('.hw-parents-tab').forEach((tabBtn) => {
+    tabBtn.addEventListener('click', () => {
+      const target = tabBtn.dataset.tab;
+      document.querySelectorAll('.hw-parents-tab').forEach((b) => {
+        b.classList.toggle('active', b.dataset.tab === target);
+      });
+      document.querySelectorAll('.hw-parents-tabpanel').forEach((p) => {
+        p.classList.toggle('hidden', p.id !== ('hw-parents-tabpanel-' + target));
+      });
+    });
+  });
   $('hw-parents-back').addEventListener('click', () => {
     renderList();
     showScreen('list');
@@ -465,7 +490,210 @@
     if (!assignments.length) {
       grid.innerHTML = '<div class="hw-empty">No hay tareas aún. Pregúntale a tu maestra.</div>';
     }
+    // Also render reading-test cards in a separate section
+    renderReadingsList();
+    // Fetch latest reading-tests state on every list render (lightweight)
+    fetchReadingTests();
   }
+
+  // ── Reading-test list (fetched from server)
+  function fetchReadingTests() {
+    if (!studentCode || !accessCode) return;
+    fetch('/api/homework/reading-tests?accessCode=' + encodeURIComponent(accessCode)
+       + '&studentCode=' + encodeURIComponent(studentCode))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) return;
+        readingTests = data.stories || [];
+        renderReadingsList();
+      }).catch(() => {});
+  }
+  function renderReadingsList() {
+    const wrap = $('hw-list-readings');
+    if (!wrap) return;
+    if (!readingTests.length) {
+      wrap.innerHTML = '<div class="hw-empty">Cargando exámenes de lectura…</div>';
+      return;
+    }
+    wrap.innerHTML = '';
+    readingTests.forEach((r) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'hw-card hw-card-reading' + (r.available ? '' : ' hw-card-locked');
+      const status = r.bestScore != null
+        ? `<span class="hw-card-badge done">${r.bestScore}/100 pts</span>`
+        : (r.available ? '<span class="hw-card-badge new">Disponible</span>'
+                       : '<span class="hw-card-badge locked">🔒 Hazlo en clase primero</span>');
+      card.innerHTML = `
+        <div class="hw-card-reading-img" style="background-image:url('${r.coverImage}');"></div>
+        <div class="hw-card-reading-body">
+          <div class="hw-card-head">
+            ${status}
+            <span class="hw-card-points">100 pts</span>
+          </div>
+          <div class="hw-card-title">📖 ${escapeHtml(r.title)}</div>
+          <div class="hw-card-sub">${escapeHtml(r.subtitle || '')}</div>
+          <div class="hw-card-meta">${r.pageCount} páginas · ${r.attempts || 0} intento${r.attempts === 1 ? '' : 's'}</div>
+        </div>`;
+      if (r.available) {
+        card.addEventListener('click', () => openReadingTest(r.storyId));
+      } else {
+        card.addEventListener('click', () => alert('Aún no puedes hacer este examen. Tu maestra debe abrirlo en clase primero.'));
+      }
+      wrap.appendChild(card);
+    });
+  }
+  function openReadingTest(storyId) {
+    fetch('/api/homework/reading-test/' + encodeURIComponent(storyId)
+        + '?accessCode=' + encodeURIComponent(accessCode)
+        + '&studentCode=' + encodeURIComponent(studentCode))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) {
+          alert('No se pudo abrir: ' + (data && data.error || ''));
+          return;
+        }
+        currentReadingStory = data;
+        currentReadingAnswers = data.questions.map(() => null);
+        renderReadingScreen();
+        showScreen('reading');
+        // Reset the test panel
+        $('hw-reading-test').classList.add('hidden');
+      });
+  }
+  function renderReadingScreen() {
+    $('hw-reading-title').textContent = currentReadingStory.title;
+    $('hw-reading-sub').textContent = currentReadingStory.subtitle || '';
+    const pagesWrap = $('hw-reading-pages');
+    pagesWrap.innerHTML = '';
+    currentReadingStory.pages.forEach((p, i) => {
+      const pageEl = document.createElement('div');
+      pageEl.className = 'hw-reading-page';
+      pageEl.innerHTML = `
+        <div class="hw-reading-page-num">Página ${p.pageNum}</div>
+        <img class="hw-reading-page-img" src="${escapeHtml(p.imageUrl)}" alt="página ${p.pageNum}">
+        <div class="hw-reading-page-caption">${escapeHtml(p.caption || '')}</div>
+        <audio class="hw-reading-page-audio" controls preload="none" src="${escapeHtml(p.audioUrl)}"></audio>
+        <div class="hw-reading-page-text">
+          ${(p.sentences || []).map((sent, idx) => {
+            const es = (p.sentencesEs || [])[idx] || '';
+            return `
+              <div class="hw-reading-line">
+                <span class="hw-reading-line-pinyin">${escapeHtml(sent)}</span>
+                <span class="hw-reading-line-es">${escapeHtml(es)}</span>
+                <button class="btn btn-ghost btn-sm hw-reading-line-speak" type="button" data-text="${escapeHtml(sent)}">🔊</button>
+              </div>`;
+          }).join('')}
+        </div>`;
+      pagesWrap.appendChild(pageEl);
+    });
+    // Wire per-line Web Speech buttons
+    pagesWrap.querySelectorAll('.hw-reading-line-speak').forEach((btn) => {
+      btn.addEventListener('click', () => speakChinese(btn.dataset.text, btn));
+    });
+    applyReadingLangMode();
+  }
+  function applyReadingLangMode() {
+    document.querySelectorAll('.hw-reading-lang-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.lang === readingLangMode);
+    });
+    document.querySelectorAll('.hw-reading-line').forEach((line) => {
+      line.classList.remove('show-pinyin', 'show-es', 'show-both');
+      line.classList.add('show-' + (readingLangMode === 'both' ? 'both' : readingLangMode));
+    });
+  }
+  document.querySelectorAll('.hw-reading-lang-btn').forEach((b) => {
+    b.addEventListener('click', () => {
+      readingLangMode = b.dataset.lang;
+      applyReadingLangMode();
+    });
+  });
+  $('hw-reading-back').addEventListener('click', () => {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    currentReadingStory = null;
+    renderList();
+    showScreen('list');
+  });
+  $('hw-reading-start-test').addEventListener('click', () => {
+    const panel = $('hw-reading-test');
+    panel.classList.remove('hidden');
+    renderReadingQuestions();
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  function renderReadingQuestions() {
+    const wrap = $('hw-reading-qs');
+    wrap.innerHTML = '';
+    (currentReadingStory.questions || []).forEach((q, i) => {
+      const row = document.createElement('div');
+      row.className = 'hw-reading-q';
+      row.innerHTML = `
+        <div class="hw-reading-q-head">
+          <span class="hw-reading-q-num">${i + 1}.</span>
+          <span class="hw-reading-q-text">${escapeHtml(q.q)}</span>
+        </div>
+        <div class="hw-reading-q-choices">
+          ${q.choices.map((c, ci) => `
+            <button class="hw-reading-choice" type="button" data-q="${i}" data-c="${ci}">
+              <span class="hw-reading-choice-letter">${String.fromCharCode(65 + ci)}</span>
+              <span class="hw-reading-choice-text">${escapeHtml(c)}</span>
+            </button>`).join('')}
+        </div>`;
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll('.hw-reading-choice').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const qi = +btn.dataset.q;
+        const ci = +btn.dataset.c;
+        currentReadingAnswers[qi] = ci;
+        // Highlight the selected choice
+        wrap.querySelectorAll(`.hw-reading-choice[data-q="${qi}"]`).forEach((b) => {
+          b.classList.toggle('selected', +b.dataset.c === ci);
+        });
+      });
+    });
+  }
+  $('hw-reading-submit').addEventListener('click', () => {
+    if (!currentReadingStory) return;
+    const unanswered = currentReadingAnswers.filter((a) => a == null).length;
+    if (unanswered > 0 && !confirm(`Te faltan ${unanswered} preguntas. ¿Entregar igual?`)) return;
+    const btn = $('hw-reading-submit');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    fetch('/api/homework/reading-test/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accessCode,
+        studentCode,
+        storyId: currentReadingStory.id,
+        answers: currentReadingAnswers,
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        btn.disabled = false; btn.textContent = '📤 Entregar examen';
+        if (!data || !data.ok) {
+          alert('Error: ' + (data && data.error || ''));
+          return;
+        }
+        // Reuse the assignment-results screen for a consistent look
+        showResults({
+          score: data.score,
+          total: data.total,
+          breakdown: (data.breakdown || []).map((b) => ({
+            es:           b.q,
+            student:      b.picked != null ? b.choices[b.picked] : '—',
+            expected:     b.choices[b.correctIdx],
+            correct:      b.correct,
+            pointsEarned: b.pointsEarned,
+          })),
+        });
+        fetchReadingTests();
+      })
+      .catch((e) => {
+        btn.disabled = false; btn.textContent = '📤 Entregar examen';
+        alert('Error de conexión: ' + e.message);
+      });
+  });
 
   // ── Assignment screen
   function openAssignment(id) {
@@ -503,6 +731,7 @@
           <span class="hw-stage-empty">Toca palabras del catálogo abajo…</span>
         </div>
         <div class="hw-item-actions">
+          <button class="btn btn-ghost btn-sm hw-item-speak" data-idx="${i}" type="button" title="Escucha tu oración en chino">🔊 Escuchar</button>
           <button class="btn btn-ghost btn-sm hw-item-undo" data-idx="${i}" type="button" disabled>↩️ Deshacer</button>
           <button class="btn btn-ghost btn-sm hw-item-clear" data-idx="${i}" type="button">🧹 Limpiar</button>
         </div>`;
@@ -518,6 +747,22 @@
         currentAnswers[i] = '';
         renderStage(i);
         refreshUndoButtons();
+      });
+    });
+    // 🔊 Web Speech API — pronounces the kid's current pinyin sentence in
+    // Mandarin. ZERO API cost, ZERO loading time, works offline. Built
+    // into every modern browser. Per user feedback 2026-05-27: "can you
+    // load an audio file from somewhere?" — this is the cheapest possible
+    // version. Quality on desktop is OK; on iOS Safari it's quite good.
+    itemsWrap.querySelectorAll('.hw-item-speak').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const i = +btn.dataset.idx;
+        const text = (currentAnswers[i] || '').trim();
+        if (!text) {
+          alert('Primero arma la oración tocando palabras.');
+          return;
+        }
+        speakChinese(text, btn);
       });
     });
     itemsWrap.querySelectorAll('.hw-item-undo').forEach((btn) => {
@@ -772,15 +1017,22 @@
       const row = document.createElement('div');
       row.className = 'hw-results-bk-row ' + (b.correct ? 'ok' : 'no');
       const verdict = b.correct ? '✓' : '✕';
+      // What the kid should listen to: their answer if right, the correct
+      // answer if wrong. Lets them hear the right pronunciation either way.
+      const speakable = b.correct ? (b.student || b.expected) : b.expected;
       row.innerHTML = `
         <span class="hw-bk-verdict">${verdict}</span>
         <div class="hw-bk-content">
           <div class="hw-bk-es">${escapeHtml(b.es)}</div>
           <div class="hw-bk-line"><span class="hw-bk-label">Tu respuesta:</span> <span class="hw-bk-student">${escapeHtml(b.student || '—')}</span></div>
           ${b.correct ? '' : `<div class="hw-bk-line"><span class="hw-bk-label">Respuesta:</span> <span class="hw-bk-expected">${escapeHtml(b.expected)}</span></div>`}
+          <button class="btn btn-ghost btn-sm hw-bk-speak" type="button" data-text="${escapeHtml(speakable)}">🔊 Escucha y repite</button>
         </div>
         <span class="hw-bk-points">+${b.pointsEarned}</span>`;
       bk.appendChild(row);
+    });
+    bk.querySelectorAll('.hw-bk-speak').forEach((btn) => {
+      btn.addEventListener('click', () => speakChinese(btn.dataset.text, btn));
     });
   }
   $('hw-results-done').addEventListener('click', () => {
@@ -796,12 +1048,50 @@
   });
 
   function showScreen(name) {
-    ['entry', 'avatar', 'list', 'settings', 'assignment', 'results', 'parents'].forEach((n) => {
+    ['entry', 'avatar', 'list', 'settings', 'assignment', 'results', 'parents', 'reading'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });
   }
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  // Web Speech API in zh-CN. Highlights the triggering button while
+  // speaking and restores it on end. Gracefully fails if the platform
+  // has no Chinese voice — falls back to alerting the kid.
+  function speakChinese(text, btn) {
+    if (!('speechSynthesis' in window)) {
+      alert('Tu navegador no soporta voz. Léelo en voz alta tú mismo — ¡es la mejor forma de aprender!');
+      return;
+    }
+    try {
+      window.speechSynthesis.cancel();   // stop anything currently speaking
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'zh-CN';
+      u.rate = 0.85;          // slightly slow so kids can mimic
+      u.pitch = 1.0;
+      // Prefer a zh-CN voice if available — iOS bundles multiple voices.
+      const voices = window.speechSynthesis.getVoices();
+      const zh = voices.find((v) => /^zh(-CN)?/i.test(v.lang));
+      if (zh) u.voice = zh;
+      if (btn) {
+        btn.classList.add('speaking');
+        const origText = btn.textContent;
+        btn.textContent = '🔊 Hablando…';
+        u.onend = u.onerror = () => {
+          btn.classList.remove('speaking');
+          btn.textContent = origText;
+        };
+      }
+      window.speechSynthesis.speak(u);
+    } catch (e) {
+      console.warn('speech synthesis failed:', e);
+    }
+  }
+  // Voices on iOS load asynchronously — pre-warm so the first tap doesn't
+  // miss the zh-CN voice on the first call.
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.addEventListener && window.speechSynthesis.addEventListener('voiceschanged', () => {});
   }
 })();
