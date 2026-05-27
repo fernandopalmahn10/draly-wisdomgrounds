@@ -12,9 +12,6 @@
     "socket.io": "^4.7.5",
     "xlsx": "^0.18.5"
   },
-  "optionalDependencies": {
-    "@google-cloud/text-to-speech": "^6.4.1"
-  },
   "engines": {
     "node": ">=18"
   },
