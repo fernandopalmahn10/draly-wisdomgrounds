@@ -8,10 +8,12 @@
     "dev": "node server.js"
   },
   "dependencies": {
-    "@google-cloud/text-to-speech": "^6.4.1",
     "express": "^4.19.2",
     "socket.io": "^4.7.5",
     "xlsx": "^0.18.5"
+  },
+  "optionalDependencies": {
+    "@google-cloud/text-to-speech": "^6.4.1"
   },
   "engines": {
     "node": ">=18"
