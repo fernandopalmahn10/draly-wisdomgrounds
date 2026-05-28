@@ -2585,6 +2585,12 @@
   let wuPlayerFrozen = false;      // teacher paused assistance
   let wuPlayerActiveExp = 'all';   // EXP filter on the player's own library
   let wuPlayerSearch = '';         // tone-stripped catalog search (asistente)
+  let wuPlayerVisibleExps = null;  // null = all banks; else teacher-chosen ids
+  let wuPlayerCustomWords = [];    // live teacher-created words
+  function wuPlWord(wid) {
+    return (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid])
+        || wuPlayerCustomWords.find((w) => w.id === wid) || null;
+  }
   // Tone-stripping normalizer (same forgiving semantics as /homework):
   // "ni hao" matches "nǐ hǎo". Lowercase → NFD → drop diacritics.
   function _wuNormalize(s) {
@@ -2602,6 +2608,9 @@
     if (gameType !== 'warmup') return;
     if (data.viewMode) wuPlayerViewMode = data.viewMode;
     wuPlayerCurious = !!data.curious;
+    wuPlayerVisibleExps = Array.isArray(data.visibleExps) ? data.visibleExps : null;
+    wuPlayerCustomWords = Array.isArray(data.customWords) ? data.customWords : [];
+    if (wuPlayerIsDelegate) renderPlayerLibrary();   // refresh if banks changed
     if (!wuPlayerCurious) hideWuPokedex();
     // === Late-join safety: ensure we're on screen-wu ===
     const onWu = document.getElementById('screen-wu') &&
@@ -2940,7 +2949,10 @@
     lib.innerHTML = '';
     const byExp = {};
     const q = wuPlayerSearch;   // already normalized
+    // Teacher-chosen visible banks (null = all). Students only see these.
+    const allowed = wuPlayerVisibleExps;
     (window.WU_WORDS || []).forEach((w) => {
+      if (allowed && allowed.indexOf(w.exp) < 0) return;   // bank hidden by teacher
       if (wuPlayerActiveExp !== 'all' && w.exp !== wuPlayerActiveExp) return;
       // Tone-stripped search across pinyin, español AND hanzi.
       if (q && !(
@@ -2950,6 +2962,9 @@
       )) return;
       (byExp[w.exp] = byExp[w.exp] || []).push(w);
     });
+    // Append live custom words (always visible regardless of bank filter).
+    const customMatches = (wuPlayerCustomWords || []).filter((w) =>
+      !q || _wuNormalize(w.pinyin).includes(q) || _wuNormalize(w.es).includes(q));
     if (q && Object.keys(byExp).length === 0) {
       lib.innerHTML = `<div class="wu-pl-lib-empty">🔍 Sin resultados para “${escapeHtmlP(wuPlayerSearch)}”. Prueba sin tonos.</div>`;
       return;
@@ -2982,6 +2997,32 @@
       section.appendChild(grid);
       lib.appendChild(section);
     });
+    // Custom (teacher-created) words — names etc., always available.
+    if (customMatches.length) {
+      const section = document.createElement('div');
+      section.className = 'wu-pl-lib-section';
+      section.innerHTML = '<div class="wu-pl-lib-title">⭐ Personalizadas</div>';
+      const grid = document.createElement('div');
+      grid.className = 'wu-pl-lib-grid';
+      customMatches.forEach((w) => {
+        const card = document.createElement('button');
+        card.className = 'wu-pl-lib-card';
+        card.type = 'button';
+        card.style.setProperty('--cat-color', '#ffd86b');
+        card.innerHTML = `
+          <span class="wu-pl-icon">${w.icon || '⭐'}</span>
+          <span class="wu-pl-pinyin">${escapeHtmlP(w.pinyin)}</span>
+          <span class="wu-pl-hanzi">${escapeHtmlP(w.hanzi || '')}</span>
+          <span class="wu-pl-es">${escapeHtmlP(w.es || '')}</span>`;
+        card.onclick = () => {
+          try { socket.emit('wu:add-word', { pin, wordId: w.id }); } catch (_) {}
+          if (MochiSounds.tap) MochiSounds.tap();
+        };
+        grid.appendChild(card);
+      });
+      section.appendChild(grid);
+      lib.appendChild(section);
+    }
   }
   // === SENTENCE HISTORY MODAL ===
   // Tap "📜 Mis oraciones" → fetch this student's history from the server
@@ -3168,10 +3209,10 @@
     const showPic = (wuPlayerViewMode === 'picture' || wuPlayerViewMode === 'both');
     const showEmoji = (wuPlayerViewMode === 'text' || wuPlayerViewMode === 'both');
     sentence.forEach((wid, idx) => {
-      const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
+      const w = wuPlWord(wid);
       if (!w) return;
       const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
-      const color = cat ? cat.color : '#fff';
+      const color = cat ? cat.color : '#ffd86b';
       // Three tap-modes (in priority order):
       //   1. Curious mode ON  → tap opens Pokédex card
       //   2. Delegate + rearrange ON → tap selects, second tap swaps

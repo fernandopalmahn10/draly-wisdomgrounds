@@ -2954,6 +2954,8 @@ io.on('connection', (socket) => {
         judges: Array.from(g.warmup.judges || []),
         frozen: !!g.warmup.frozen,
         prompt: g.warmup.prompt || '',
+        visibleExps: g.warmup.visibleExps || null,
+        customWords: g.warmup.customWords || [],
       });
     }
     cb({ ok: true, gameType: g.gameType, state: g.state });
@@ -3368,6 +3370,8 @@ io.on('connection', (socket) => {
           delegates: new Set(),
           judges: new Set(),
           frozen: false,
+          visibleExps: null,      // null = all 8 banks visible
+          customWords: [],        // live teacher-created words
           contributors: new Set(),
           // Shared undo stack — anyone (host or asistente) can press
           // undo to pop the last sentence state. Capped at 30 entries.
@@ -3381,6 +3385,8 @@ io.on('connection', (socket) => {
           delegates: [],
           judges: [],
           frozen: false,
+          visibleExps: null,
+          customWords: [],
         });
       }
       if (g.gameType === 'identity') {
@@ -3759,6 +3765,8 @@ io.on('connection', (socket) => {
             judges: Array.from(g.warmup.judges || []),
             frozen: !!g.warmup.frozen,
             prompt: g.warmup.prompt || '',
+            visibleExps: g.warmup.visibleExps || null,
+            customWords: g.warmup.customWords || [],
           });
         }
         io.to(socket.id).emit('wu:state', {
@@ -3769,6 +3777,8 @@ io.on('connection', (socket) => {
           judges: Array.from(g.warmup.judges || []),
           frozen: !!g.warmup.frozen,
           prompt: g.warmup.prompt || '',
+          visibleExps: g.warmup.visibleExps || null,
+          customWords: g.warmup.customWords || [],
         });
       }
       // === LÁI-QÙ-HUÍ: late-joiner gets the map + their own mission ===
@@ -4912,8 +4922,8 @@ io.on('connection', (socket) => {
     const isSuper = ok && g && g.hostId === socket.id && isSuperAdminPassword(password);
     if (typeof cb === 'function') cb({ ok, isSuperAdmin: !!isSuper });
   });
-  function wuEmitState(g, pin) {
-    io.to(pin).emit('wu:state', {
+  function wuStatePayload(g) {
+    return {
       sentence: g.warmup.sentence,
       viewMode: g.warmup.viewMode || 'text',
       curious: !!g.warmup.curious,
@@ -4921,8 +4931,56 @@ io.on('connection', (socket) => {
       judges: Array.from(g.warmup.judges || []),
       frozen: !!g.warmup.frozen,
       prompt: (g.warmup && g.warmup.prompt) || '',
-    });
+      // null = show ALL experience banks; otherwise only these exp ids.
+      visibleExps: g.warmup.visibleExps || null,
+      // Live teacher-created words (names, custom vocab). [{id,pinyin,hanzi,es,icon}]
+      customWords: g.warmup.customWords || [],
+    };
   }
+  function wuEmitState(g, pin) {
+    io.to(pin).emit('wu:state', wuStatePayload(g));
+  }
+  // === WORD-BANK VISIBILITY === host picks which EXP banks students see in
+  // the builder catalog. Super easy live enable/disable. null/empty = all.
+  socket.on('wu:set-visible-exps', ({ pin, password, exps }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!g.warmup) return;
+    g.warmup.visibleExps = (Array.isArray(exps) && exps.length) ? exps.slice(0, 12) : null;
+    wuEmitState(g, pin);
+  });
+  // === LIVE CUSTOM WORD === teacher creates a word on the fly (e.g. a name
+  // "Jonathan"). It appears in everyone's catalog in a special "custom" bank
+  // and can be tapped into the sentence like any other word.
+  socket.on('wu:add-custom-word', ({ pin, password, pinyin, es, hanzi, icon }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!g.warmup) return;
+    if (!g.warmup.customWords) g.warmup.customWords = [];
+    const p = String(pinyin || '').trim().slice(0, 40);
+    if (!p) return;
+    const id = 'cw' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    g.warmup.customWords.push({
+      id,
+      pinyin: p,
+      hanzi: String(hanzi || '').trim().slice(0, 20),
+      es: String(es || '').trim().slice(0, 60),
+      icon: String(icon || '⭐').slice(0, 4),
+      cat: 'custom', exp: 'custom',
+    });
+    if (g.warmup.customWords.length > 60) g.warmup.customWords = g.warmup.customWords.slice(-60);
+    wuEmitState(g, pin);
+  });
+  socket.on('wu:remove-custom-word', ({ pin, password, id }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!g.warmup || !g.warmup.customWords) return;
+    g.warmup.customWords = g.warmup.customWords.filter((w) => w.id !== id);
+    wuEmitState(g, pin);
+  });
   // === FREEZE / UNFREEZE assistance === host-only. While frozen, delegates
   // can't mutate the sentence (wuRequireAdmin denies them). They stay in the
   // builder UI but can't touch — teacher regains exclusive control.

@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260528h">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260528i">
 </head>
 <body class="wu-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -203,6 +203,25 @@
       <button class="wu-search-clear hidden" id="wu-search-clear" type="button" aria-label="Limpiar">✕</button>
     </div>
 
+    <!-- 🎛 BANCOS — control which EXP word banks the STUDENTS see. Toggle
+         each on/off live; tap "Todos" to show all. Instant + super easy. -->
+    <div class="wu-banks-panel">
+      <div class="wu-banks-head">
+        <span class="wu-banks-title">🎛 Bancos visibles para alumnos</span>
+        <span class="wu-banks-hint" id="wu-banks-hint">Toca para mostrar/ocultar cada banco.</span>
+      </div>
+      <div class="wu-banks-chips" id="wu-banks-chips"></div>
+    </div>
+
+    <!-- ➕ CREAR PALABRA — live custom word (e.g. a name: "Jonathan"). Appears
+         in everyone's catalog in a "Personalizadas" bank instantly. -->
+    <div class="wu-newword-row">
+      <span class="wu-newword-icon">➕</span>
+      <input class="input wu-newword-pinyin" id="wu-newword-pinyin" type="text" placeholder="Pinyin/Palabra (ej. Jonathan)" maxlength="40">
+      <input class="input wu-newword-es" id="wu-newword-es" type="text" placeholder="Español (opcional)" maxlength="60">
+      <button class="btn btn-jade btn-sm" id="wu-newword-add" type="button">Crear</button>
+    </div>
+
     <!-- Experience-tab filter strip — pick which HSK1 experience to show -->
     <div class="wu-exp-tabs" id="wu-exp-tabs"></div>
 
@@ -232,6 +251,6 @@
   <script src="/js/sounds.js?v=20260524h"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/warmup-vocab.js?v=20260524c"></script>
-  <script src="/js/host-warmup.js?v=20260528i"></script>
+  <script src="/js/host-warmup.js?v=20260528j"></script>
 </body>
 </html>

@@ -30,6 +30,14 @@
   let currentDelegates = [];   // array of player names
   let currentJudges = [];      // array of player names with judge powers
   let currentFrozen = false;   // assistance frozen? (only teacher edits)
+  let currentVisibleExps = null;   // null = all banks; else array of exp ids
+  let currentCustomWords = [];     // live teacher-created words
+  // Resolve a word id from the static catalog OR the live custom words.
+  function wuWord(wid) {
+    return (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid])
+        || currentCustomWords.find((w) => w.id === wid)
+        || null;
+  }
   let currentPlayers = {};     // id -> { name, team, avatar }
   let serverPresets = [];      // canonical server-side preset list
   let rearrangeMode = false;   // when true, word-tap swaps instead of deletes
@@ -287,7 +295,7 @@
   }
 
   // === Server sync ===
-  socket.on('wu:state', ({ sentence, viewMode, curious, delegates, judges, frozen }) => {
+  socket.on('wu:state', ({ sentence, viewMode, curious, delegates, judges, frozen, visibleExps, customWords }) => {
     currentSentence = sentence || [];
     if (viewMode) {
       currentViewMode = viewMode;
@@ -299,6 +307,10 @@
     currentDelegates = Array.isArray(delegates) ? delegates : [];
     currentJudges = Array.isArray(judges) ? judges : [];
     currentFrozen = !!frozen;
+    currentVisibleExps = Array.isArray(visibleExps) ? visibleExps : null;
+    currentCustomWords = Array.isArray(customWords) ? customWords : [];
+    renderBanks();
+    renderLibrary();
     // Reflect freeze state on the toggle button.
     const fb = $('wu-freeze-btn');
     if (fb) {
@@ -368,6 +380,48 @@
     renderLibrary();
   }
 
+  // 🎛 Render the bank-visibility chips. currentVisibleExps === null means
+  // ALL banks are shown to students. Tapping a chip toggles that bank for
+  // the STUDENTS' catalog (broadcast via wu:set-visible-exps).
+  function renderBanks() {
+    const wrap = $('wu-banks-chips');
+    if (!wrap || !window.WU_EXPERIENCES) return;
+    const all = currentVisibleExps === null;
+    wrap.innerHTML = '';
+    // "Todos" chip
+    const allChip = document.createElement('button');
+    allChip.type = 'button';
+    allChip.className = 'wu-bank-chip' + (all ? ' on' : '');
+    allChip.textContent = '✨ Todos';
+    allChip.onclick = () => socket.emit('wu:set-visible-exps', { pin, password: adminPw, exps: null });
+    wrap.appendChild(allChip);
+    Object.values(window.WU_EXPERIENCES).forEach((e) => {
+      const on = all || (currentVisibleExps || []).indexOf(e.id) >= 0;
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'wu-bank-chip' + (on ? ' on' : '');
+      chip.textContent = e.short || e.id;
+      chip.onclick = () => {
+        let next = all ? [] : (currentVisibleExps || []).slice();
+        if (all) {
+          // From "all" → tapping one bank means "only this bank"
+          next = [e.id];
+        } else if (next.indexOf(e.id) >= 0) {
+          next = next.filter((x) => x !== e.id);
+        } else {
+          next.push(e.id);
+        }
+        socket.emit('wu:set-visible-exps', { pin, password: adminPw, exps: next.length ? next : null });
+        if (MochiSounds.tap) MochiSounds.tap();
+      };
+      wrap.appendChild(chip);
+    });
+    const hint = $('wu-banks-hint');
+    if (hint) hint.textContent = all
+      ? 'Los alumnos ven los 8 bancos. Toca uno para mostrar SOLO ese.'
+      : 'Alumnos ven: ' + (currentVisibleExps || []).map((x) => (window.WU_EXPERIENCES[x] || {}).short || x).join(', ');
+  }
+
   function renderLibrary() {
     const lib = $('wu-library');
     if (!lib) return;
@@ -411,6 +465,34 @@
       section.appendChild(grid);
       lib.appendChild(section);
     });
+    // Custom (teacher-created) words section — names etc.
+    const customMatches = currentCustomWords.filter((w) =>
+      !q || normalize(w.pinyin).includes(q) || normalize(w.es).includes(q));
+    if (customMatches.length && (activeExp === 'all' || activeExp === 'custom')) {
+      const section = document.createElement('div');
+      section.className = 'wu-lib-section';
+      section.innerHTML = '<div class="wu-lib-section-title">⭐ Personalizadas (creadas por ti)</div>';
+      const grid = document.createElement('div');
+      grid.className = 'wu-lib-grid';
+      customMatches.forEach((w) => {
+        const card = document.createElement('button');
+        card.className = 'wu-lib-card';
+        card.style.setProperty('--cat-color', '#ffd86b');
+        card.innerHTML = `<span class="wu-lib-icon">${w.icon || '⭐'}</span>
+          <span class="wu-lib-pinyin">${escapeHtml(w.pinyin)}</span>
+          <span class="wu-lib-hanzi">${escapeHtml(w.hanzi || '')}</span>
+          <span class="wu-lib-es">${escapeHtml(w.es || '')}</span>`;
+        card.onclick = () => {
+          socket.emit('wu:add-word', { pin, password: adminPw, wordId: w.id });
+          if (MochiSounds.tap) MochiSounds.tap();
+        };
+        // long-press / right-click to delete
+        card.oncontextmenu = (e) => { e.preventDefault(); socket.emit('wu:remove-custom-word', { pin, password: adminPw, id: w.id }); };
+        grid.appendChild(card);
+      });
+      section.appendChild(grid);
+      lib.appendChild(section);
+    }
   }
 
   // Each library card always shows: pinyin + hanzi + Spanish. Icon depends
@@ -445,7 +527,7 @@
     }
     if (empty) empty.style.display = 'none';
     sentence.forEach((wid, i) => {
-      const w = window.WU_WORD_BY_ID[wid];
+      const w = wuWord(wid);
       if (!w) return;
       const cat = window.WU_CATEGORIES[w.cat] || { color: '#fff' };
       const color = cat.color;
@@ -952,6 +1034,23 @@
     });
     // Kick off the random anti-monotony fun loop.
     startRandomFun();
+
+    // --- ➕ Create a live custom word (e.g. a name) ---
+    const addWordBtn = $('wu-newword-add');
+    if (addWordBtn) {
+      const doAdd = () => {
+        const pinyin = ($('wu-newword-pinyin').value || '').trim();
+        const es = ($('wu-newword-es').value || '').trim();
+        if (!pinyin) return;
+        socket.emit('wu:add-custom-word', { pin, password: adminPw, pinyin, es });
+        $('wu-newword-pinyin').value = '';
+        $('wu-newword-es').value = '';
+        if (MochiSounds.correct) MochiSounds.correct();
+      };
+      addWordBtn.addEventListener('click', doAdd);
+      $('wu-newword-pinyin').addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
+      $('wu-newword-es').addEventListener('keydown', (e) => { if (e.key === 'Enter') doAdd(); });
+    }
 
     // --- 🧊 Detener/Reanudar asistencia (freeze toggle) ---
     const freezeBtn = $('wu-freeze-btn');
