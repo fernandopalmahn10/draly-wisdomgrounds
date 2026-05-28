@@ -36,9 +36,37 @@
         <p class="m-dash-self" id="m-dash-self"></p>
       </div>
       <div class="m-dash-actions">
+        <button class="btn btn-gold btn-sm" id="m-live-master-btn" title="Invitar a estudiantes en línea a una sesión en vivo">🎯 Modo Maestro en vivo</button>
         <button class="btn btn-jade btn-sm" id="m-broadcast-btn">📢 Mensaje a toda la clase</button>
         <button class="btn btn-ghost btn-sm" id="m-refresh">🔄 Refrescar</button>
         <button class="btn btn-ghost btn-sm" id="m-logout">Salir</button>
+      </div>
+
+      <!-- LIVE MASTER MODAL — select online students + send invite to PIN -->
+      <div id="m-live-master-modal" class="m-modal hidden">
+        <div class="m-modal-card">
+          <button class="m-modal-close" id="m-live-master-close" type="button" aria-label="Cerrar">✕</button>
+          <h2>🎯 Modo Maestro en vivo</h2>
+          <p class="m-live-master-help">
+            Selecciona los estudiantes en línea ahora a quienes quieres invitar a tu sesión de vocabulario en vivo. Luego escribe el <strong>PIN</strong> que te dio <code>/host-warmup.html</code> y enviarán un botón "Únete ahora" en su pantalla.
+          </p>
+          <label class="m-form-label">
+            <span>PIN de la sesión en vivo (de <code>/host-warmup</code>):</span>
+            <input class="input" id="m-live-master-pin" type="text" placeholder="1234" maxlength="6" inputmode="numeric">
+          </label>
+          <label class="m-form-label">
+            <span>Mensaje (opcional):</span>
+            <input class="input" id="m-live-master-text" type="text" placeholder="¡Ven a mi sesión!" maxlength="200">
+          </label>
+          <div class="m-live-master-list-head">
+            <span id="m-live-master-count">0 en línea</span>
+            <button class="btn btn-ghost btn-sm" id="m-live-master-all" type="button">Marcar todos</button>
+            <button class="btn btn-ghost btn-sm" id="m-live-master-none" type="button">Desmarcar</button>
+          </div>
+          <div id="m-live-master-list" class="m-live-master-list"></div>
+          <button class="btn btn-gold btn-xl" id="m-live-master-send">📚 Enviar invitación</button>
+          <p class="m-modal-msg" id="m-live-master-msg"></p>
+        </div>
       </div>
     </div>
 
