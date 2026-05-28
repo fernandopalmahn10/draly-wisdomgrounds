@@ -2829,6 +2829,9 @@
   const _wuCharCache = {};
   function _wuTransparentChar(kind, cb) {
     const raw = '/assets/png-library/' + kind + '.png';
+    // Gojo's white hair sits on a light background — flood-key eats his hair.
+    // He looks better untouched, so skip chroma-key for him.
+    if (kind === 'gojo') { cb(raw); return; }
     if (_wuCharCache[kind]) { cb(_wuCharCache[kind]); return; }
     const img = new Image();
     img.onload = () => {
