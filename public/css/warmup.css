@@ -1721,3 +1721,94 @@ body.wu-shake { animation: wuShake 0.6s cubic-bezier(.36,.07,.19,.97); }
 .wu-newword-icon { font-size: 1.1rem; }
 .wu-newword-pinyin { flex: 1 1 140px; min-width: 0; }
 .wu-newword-es { flex: 1 1 120px; min-width: 0; }
+
+/* =====================================================================
+   🦸 CHARACTER SUMMONS + bigger 6-7 + pinned FX tray (2026-05-28)
+   ===================================================================== */
+/* Bigger 6-7 jumpscare */
+.wu-fx-67 img { width: min(62vw, 380px) !important; }
+
+/* Full-screen anime/comic character summon */
+.wu-fx-char {
+  position: fixed; inset: 0; z-index: 56; pointer-events: none;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.wu-fx-char-aura {
+  position: absolute; width: 90vmin; height: 90vmin; border-radius: 50%;
+  background: radial-gradient(circle, var(--char-glow, #fff) 0%, var(--char-color, #6cf) 35%, transparent 68%);
+  opacity: 0; filter: blur(6px);
+  animation: wuCharAura 3s ease-out forwards;
+}
+@keyframes wuCharAura {
+  0% { opacity: 0; transform: scale(0.3); }
+  18% { opacity: 0.85; transform: scale(1.05); }
+  45% { opacity: 0.4; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+/* Comic speed-lines bursting from center */
+.wu-fx-char-lines {
+  position: absolute; inset: -25%;
+  background: repeating-conic-gradient(from 0deg,
+    rgba(255,255,255,0.0) 0deg 5deg,
+    var(--char-color, #fff) 5deg 6deg,
+    rgba(255,255,255,0.0) 6deg 11deg);
+  opacity: 0; mix-blend-mode: screen;
+  animation: wuCharLines 3s ease-out forwards;
+}
+@keyframes wuCharLines {
+  0% { opacity: 0; transform: scale(0.6) rotate(0deg); }
+  15% { opacity: 0.55; }
+  35% { opacity: 0.25; }
+  100% { opacity: 0; transform: scale(1.4) rotate(22deg); }
+}
+.wu-fx-char-img {
+  position: relative; z-index: 2;
+  width: min(78vw, 520px); max-height: 82vh; object-fit: contain;
+  filter: drop-shadow(0 12px 34px rgba(0,0,0,0.6)) drop-shadow(0 0 26px var(--char-glow, #fff));
+  animation: wuCharSlam 3.2s cubic-bezier(.18,.9,.3,1.2) forwards;
+}
+@keyframes wuCharSlam {
+  0%   { transform: translateY(60%) scale(0.4) rotate(-8deg); opacity: 0; }
+  16%  { transform: translateY(0) scale(1.12) rotate(3deg); opacity: 1; }
+  26%  { transform: translateY(0) scale(1) rotate(0deg); }
+  72%  { transform: translateY(0) scale(1.02); opacity: 1; }
+  100% { transform: translateY(-8%) scale(1.06); opacity: 0; }
+}
+.wu-fx-char-cry {
+  position: absolute; z-index: 3; bottom: 14%;
+  font-family: 'Cinzel', serif; font-weight: 900; font-size: clamp(1.6rem, 7vw, 3.4rem);
+  color: #fff; text-shadow: 0 0 14px var(--char-color, #fff), 0 4px 10px rgba(0,0,0,0.6);
+  -webkit-text-stroke: 2px rgba(0,0,0,0.4); letter-spacing: 0.04em; text-align: center;
+  animation: wuCharCry 3s ease-out forwards;
+}
+@keyframes wuCharCry {
+  0% { opacity: 0; transform: scale(0.5); }
+  20% { opacity: 1; transform: scale(1.15); }
+  35% { transform: scale(1); }
+  82% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+/* 🎮 Pinned FAB + scrollable tray */
+.wu-fx-fab {
+  position: fixed; right: 14px; bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 9990; width: 60px; height: 60px; border-radius: 50%;
+  border: 3px solid rgba(255,216,107,0.8); background: linear-gradient(135deg, #7b5bef, #ef5b95);
+  color: #fff; font-size: 1.7rem; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center; touch-action: manipulation;
+  animation: wuFabPulse 2.6s ease-in-out infinite;
+}
+@keyframes wuFabPulse { 0%,100% { box-shadow: 0 8px 24px rgba(0,0,0,0.5); } 50% { box-shadow: 0 8px 30px rgba(180,100,255,0.7); } }
+.wu-fx-tray {
+  position: fixed; right: 12px; bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  z-index: 9991; width: min(340px, 88vw); max-height: 60vh; overflow-y: auto;
+  background: linear-gradient(160deg, rgba(30,34,54,0.98), rgba(18,20,34,0.99));
+  border: 2px solid rgba(180,100,255,0.5); border-radius: 18px; padding: 12px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+}
+.wu-fx-tray.hidden { display: none; }
+.wu-fx-tray-head { display: flex; justify-content: space-between; align-items: center; font-weight: 900; color: #cfe0ff; margin-bottom: 8px; }
+.wu-fx-tray-close { border: none; background: rgba(255,255,255,0.12); color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; }
+.wu-fx-tray-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.wu-fx-tray-section { width: 100%; font-size: 0.8rem; font-weight: 800; color: rgba(200,215,240,0.6); margin-top: 6px; }
+.wu-fx-char-btn { background: linear-gradient(135deg, rgba(180,100,255,0.35), rgba(91,232,209,0.25)); border-color: #c5a3ff; }

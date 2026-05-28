@@ -5021,7 +5021,8 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
     if (!(g.hostId === socket.id && isAdminPassword(password))) return;
-    const ok = ['rain', 'confetti', 'zombies', 'moto', 'shake', 'sixseven', 'flash', 'stars', 'tiger'];
+    const ok = ['rain', 'confetti', 'zombies', 'moto', 'shake', 'sixseven', 'flash', 'stars', 'tiger',
+                'gojo', 'yuji', 'fnaf', 'shelly', 'dandy'];
     if (!ok.includes(kind)) return;
     io.to(pin).emit('wu:fx', { kind });
   });

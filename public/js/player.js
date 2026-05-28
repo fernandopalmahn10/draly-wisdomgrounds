@@ -2790,8 +2790,34 @@
     }
     return layer;
   }
+  const WU_CHARS_PL = {
+    gojo:   { color: '#5ab0ff', glow: '#a98bff', label: '無量空処 ∞' },
+    yuji:   { color: '#ff5a5a', glow: '#ff2d2d', label: '黒閃 BLACK FLASH' },
+    fnaf:   { color: '#ff3b3b', glow: '#7a0000', label: "IT'S ME" },
+    shelly: { color: '#ffd23b', glow: '#ff9f1c', label: '¡SUPER!' },
+    dandy:  { color: '#5be8d1', glow: '#7bdf7b', label: '¡HOLA!' },
+  };
   function playerFireFx(kind) {
     const layer = _wuFxLayer();
+    if (WU_CHARS_PL[kind]) {
+      const c = WU_CHARS_PL[kind];
+      document.body.classList.remove('wu-shake'); void document.body.offsetWidth;
+      document.body.classList.add('wu-shake');
+      setTimeout(() => document.body.classList.remove('wu-shake'), 700);
+      const el = document.createElement('div');
+      el.className = 'wu-fx-char';
+      el.style.setProperty('--char-color', c.color);
+      el.style.setProperty('--char-glow', c.glow);
+      el.innerHTML = `
+        <div class="wu-fx-char-lines"></div>
+        <div class="wu-fx-char-aura"></div>
+        <img class="wu-fx-char-img" src="/assets/png-library/${kind}.png" alt="${kind}" onerror="this.style.display='none'">
+        <div class="wu-fx-char-cry">${c.label}</div>`;
+      layer.appendChild(el);
+      if (MochiSounds && MochiSounds.combo) MochiSounds.combo();
+      setTimeout(() => el.remove(), 3200);
+      return;
+    }
     if (kind === 'shake') {
       document.body.classList.remove('wu-shake'); void document.body.offsetWidth;
       document.body.classList.add('wu-shake');
