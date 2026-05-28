@@ -2407,3 +2407,14 @@ button, a, .hw-card, .hw-folder-card, .hw-lib-chip, .hw-stage-word,
 .hw-mistake-given { font-size: 0.88rem; color: rgba(243,230,194,0.85); }
 .hw-mistake-correct { font-size: 0.88rem; color: #5be88a; }
 .hw-mistakes-tip { margin-top: 12px; font-size: 0.85rem; color: rgba(255,213,122,0.85); background: rgba(255,213,122,0.1); border-radius: 10px; padding: 8px 10px; }
+
+/* 📋 Report-card month picker (parent) */
+.hw-report-months { display: flex; flex-direction: column; gap: 10px; }
+.hw-report-month-btn {
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(135deg, rgba(200,30,30,0.18), rgba(255,160,60,0.14));
+  border: 2px solid rgba(239,91,91,0.5); border-radius: 14px; padding: 14px 16px;
+  color: #fff5d8; font-weight: 800; font-size: 1.05rem; cursor: pointer; touch-action: manipulation;
+}
+.hw-report-month-btn:active { transform: scale(0.98); }
+.hw-report-go { color: #ffb46b; font-weight: 900; }

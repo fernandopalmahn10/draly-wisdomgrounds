@@ -288,6 +288,42 @@ function get(code) {
   return records[normalized] || null;
 }
 
+// === TEACHER NOTES (for report cards) ===
+// The teacher jots short notes/keywords per student per month. The parent
+// report card composes prose + a grade from these. Stored on the record.
+function addNote(code, { text, grade, month }) {
+  const rec = get(code);
+  if (!rec) return false;
+  if (!Array.isArray(rec.notes)) rec.notes = [];
+  const t = String(text || '').trim().slice(0, 400);
+  if (!t) return false;
+  // month like "2026-05"; default to current month.
+  const m = /^\d{4}-\d{2}$/.test(String(month || '')) ? month
+          : new Date().toISOString().slice(0, 7);
+  rec.notes.push({
+    ts: Date.now(),
+    text: t,
+    grade: (grade != null && grade !== '') ? String(grade).slice(0, 12) : null,
+    month: m,
+  });
+  if (rec.notes.length > 300) rec.notes = rec.notes.slice(-300);
+  rec.lastSeen = Date.now();
+  scheduleSave();
+  return true;
+}
+function getNotes(code) {
+  const rec = get(code);
+  return (rec && Array.isArray(rec.notes)) ? rec.notes.slice() : [];
+}
+function deleteNote(code, ts) {
+  const rec = get(code);
+  if (!rec || !Array.isArray(rec.notes)) return false;
+  const before = rec.notes.length;
+  rec.notes = rec.notes.filter((n) => n.ts !== Number(ts));
+  if (rec.notes.length < before) { scheduleSave(); return true; }
+  return false;
+}
+
 // Permanently remove a student record (teacher's Cuaderno). Used to clean
 // up duplicates or ban a user. Irreversible — wipes their whole history.
 function deleteStudent(code) {
@@ -460,6 +496,9 @@ module.exports = {
   get,
   deleteStudent,
   setMeta,
+  addNote,
+  getNotes,
+  deleteNote,
   logSentence,
   getHistory,
   deleteHistoryEntry,

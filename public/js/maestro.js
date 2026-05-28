@@ -495,6 +495,25 @@
       });
   }
 
+  function renderNotes(code, notes) {
+    const list = $('m-notes-list');
+    if (!list) return;
+    if (!notes.length) { list.innerHTML = '<div class="m-notes-empty">Sin notas todavía.</div>'; return; }
+    list.innerHTML = '';
+    notes.slice().reverse().forEach((n) => {
+      const row = document.createElement('div');
+      row.className = 'm-note-item';
+      row.innerHTML = `
+        <span class="m-note-month-tag">${escapeHtml(n.month || '')}${n.grade ? ' · ' + escapeHtml(n.grade) : ''}</span>
+        <span class="m-note-item-text">${escapeHtml(n.text)}</span>
+        <button class="m-note-del" type="button" aria-label="Borrar">🗑</button>`;
+      row.querySelector('.m-note-del').addEventListener('click', () => {
+        fetch('/api/admin/student/' + encodeURIComponent(code) + '/note/' + n.ts + '?pw=' + encodeURIComponent(pw), { method: 'DELETE' })
+          .then((r) => r.json()).then((r) => renderNotes(code, r.notes || []));
+      });
+      list.appendChild(row);
+    });
+  }
   function renderDetail(data) {
     $('m-roster').classList.add('hidden');
     $('m-summary').classList.add('hidden');
@@ -523,7 +542,37 @@
           <button class="btn btn-jade btn-sm" id="m-detail-send-btn">💬 Enviar mensaje</button>
           <button class="btn btn-red btn-sm" id="m-detail-delete-btn" title="Borrar este alumno permanentemente">🗑 Borrar alumno</button>
         </div>
+        <!-- 📋 Notas para el reporte mensual -->
+        <div class="m-notes-box">
+          <div class="m-notes-title">📋 Notas para el reporte (las verán los papás)</div>
+          <div class="m-notes-row">
+            <input class="input m-note-grade" id="m-note-grade" type="text" placeholder="Cal. (A, 95…)" maxlength="12">
+            <input class="input m-note-month" id="m-note-month" type="month">
+          </div>
+          <textarea class="input m-note-text" id="m-note-text" rows="2" placeholder="Palabras clave: pronunciación excelente, tímido al hablar, dominó la familia…" maxlength="400"></textarea>
+          <button class="btn btn-jade btn-sm" id="m-note-add">➕ Guardar nota</button>
+          <div class="m-notes-list" id="m-notes-list"></div>
+        </div>
       </div>`;
+    // Notes: default month = current, render existing, wire add/delete.
+    (function wireNotes() {
+      const monthEl = $('m-note-month');
+      if (monthEl) monthEl.value = new Date().toISOString().slice(0, 7);
+      renderNotes(data.code, data.notes || []);
+      const addBtn = $('m-note-add');
+      if (addBtn) addBtn.addEventListener('click', () => {
+        const text = ($('m-note-text').value || '').trim();
+        if (!text) return;
+        fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/note?pw=' + encodeURIComponent(pw), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, grade: $('m-note-grade').value.trim(), month: $('m-note-month').value }),
+        }).then((r) => r.json()).then((r) => {
+          if (!r.ok) { alert('Error: ' + (r.error || '')); return; }
+          $('m-note-text').value = '';
+          renderNotes(data.code, r.notes || []);
+        });
+      });
+    })();
     // Wire delete — irreversible; double-confirm.
     $('m-detail-delete-btn').addEventListener('click', () => {
       if (!confirm(`¿Borrar PERMANENTEMENTE a "${data.displayName || data.code}" (${data.code})?\n\nSe elimina su historial completo. Esto NO se puede deshacer.`)) return;

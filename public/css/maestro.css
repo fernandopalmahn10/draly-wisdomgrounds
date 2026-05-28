@@ -690,3 +690,17 @@ body.hw-bg {
 }
 .m-guide-title { font-weight: 800; color: #fff5d8; flex: 1; min-width: 120px; }
 .m-guide-meta { font-size: 0.78rem; color: rgba(243,230,194,0.6); }
+
+/* 📋 Report-card notes (teacher detail) */
+.m-notes-box { margin-top: 12px; padding: 10px 12px; background: rgba(255,213,122,0.08); border: 1.5px dashed rgba(255,213,122,0.4); border-radius: 12px; }
+.m-notes-title { font-weight: 800; color: #ffe082; font-size: 0.9rem; margin-bottom: 8px; }
+.m-notes-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.m-note-grade { flex: 0 0 110px; }
+.m-note-month { flex: 1; }
+.m-note-text { width: 100%; resize: vertical; margin-bottom: 6px; }
+.m-notes-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.m-note-item { display: flex; gap: 8px; align-items: flex-start; background: rgba(20,22,36,0.5); border-radius: 8px; padding: 6px 8px; }
+.m-note-month-tag { font-size: 0.72rem; font-weight: 800; color: #ffe082; flex: 0 0 auto; white-space: nowrap; }
+.m-note-item-text { flex: 1; font-size: 0.85rem; color: #f3e6c2; }
+.m-note-del { border: none; background: none; cursor: pointer; font-size: 0.9rem; }
+.m-notes-empty { font-size: 0.82rem; color: rgba(243,230,194,0.5); }
