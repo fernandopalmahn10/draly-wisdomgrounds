@@ -2834,6 +2834,49 @@ io.on('connection', (socket) => {
     broadcast(pin);
   });
 
+  // === HOST RECLAIM === STABILITY FIX (2026-05-28). When the teacher's
+  // socket drops (phone lock, network blip, tab switch) socket.io makes a
+  // BRAND-NEW socket on reconnect — but the game still points hostId at the
+  // dead socket, so the 60s cleanup timer eventually destroys the room and
+  // every kid sees "room no longer exists". This lets the host page
+  // re-claim its existing game on reconnect: we move hostId to the new
+  // socket, cancel the pending cleanup, and re-join the room. No new PIN,
+  // so the kids never get kicked.
+  socket.on('host:reclaim', ({ pin, password }, cb) => {
+    cb = (typeof cb === 'function') ? cb : () => {};
+    const g = games[pin];
+    if (!g) return cb({ ok: false, error: 'no-game' });
+    // Auth: warmup/reading teacher tools validate via the admin password.
+    // Other game types: allow reclaim if the game has no live host right now
+    // (host was disconnected) — the password gate already protects warmup.
+    const isWarmupTool = (g.gameType === 'warmup' || g.gameType === 'reading');
+    if (isWarmupTool && !isAdminPassword(password)) {
+      return cb({ ok: false, error: 'bad-password' });
+    }
+    // Move host identity to this socket; cancel any pending teardown.
+    g.hostId = socket.id;
+    g.hostDisconnectedAt = null;
+    if (g.hostCleanupTimer) { clearTimeout(g.hostCleanupTimer); g.hostCleanupTimer = null; }
+    currentPin = pin;
+    role = 'host';
+    socket.join(pin);
+    broadcast(pin);
+    // Re-sync the warmup builder state to the reclaiming host so its UI
+    // repaints exactly where it left off (sentence, delegates, frozen…).
+    if (g.gameType === 'warmup' && g.warmup) {
+      io.to(socket.id).emit('wu:state', {
+        sentence: g.warmup.sentence || [],
+        viewMode: g.warmup.viewMode || 'text',
+        curious: !!g.warmup.curious,
+        delegates: Array.from(g.warmup.delegates || []),
+        judges: Array.from(g.warmup.judges || []),
+        frozen: !!g.warmup.frozen,
+        prompt: g.warmup.prompt || '',
+      });
+    }
+    cb({ ok: true, gameType: g.gameType, state: g.state });
+  });
+
   socket.on('host:upload-questions', ({ pin, questions }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
@@ -5684,7 +5727,13 @@ io.on('connection', (socket) => {
     const g = games[currentPin];
 
     if (role === 'host') {
-      // Soft disconnect: give the host 60 seconds to reconnect (mobile lock screens, network blips)
+      // Soft disconnect: give the host time to reconnect (mobile lock
+      // screens, network blips). Teacher TOOLS (warmup/reading) get a much
+      // longer grace — the teacher routinely locks their phone mid-session
+      // and we must NOT tear the room down under the kids. The host page
+      // also actively re-claims via host:reclaim on socket reconnect, so
+      // this timer is just the last-resort cleanup.
+      const graceMs = (g.gameType === 'warmup' || g.gameType === 'reading') ? 10 * 60 * 1000 : 60000;
       g.hostDisconnectedAt = Date.now();
       g.feed.push({ type: 'host-disconnect', t: Date.now() });
       broadcast(currentPin);
@@ -5698,7 +5747,7 @@ io.on('connection', (socket) => {
           io.to(currentPin).emit('host-left');
           delete games[currentPin];
         }
-      }, 60000);
+      }, graceMs);
     } else if (role === 'player') {
       const p = g.players[socket.id];
       if (p) {

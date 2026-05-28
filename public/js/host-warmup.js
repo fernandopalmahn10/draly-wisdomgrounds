@@ -4,6 +4,22 @@
 (function () {
   const socket = io();
   const $ = (id) => document.getElementById(id);
+  // STABILITY: when our socket drops and reconnects (phone lock, network
+  // blip), re-claim our existing game so the room — and every kid in it —
+  // survives instead of being torn down. No new PIN, no kicks.
+  let _everConnected = false;
+  socket.on('connect', () => {
+    if (!_everConnected) { _everConnected = true; return; }
+    if (!pin || !adminPw) return;
+    socket.emit('host:reclaim', { pin, password: adminPw }, (resp) => {
+      // If the game truly vanished (very long outage past the grace window),
+      // we can't silently recreate with the same PIN — surface a gentle note.
+      if (!resp || !resp.ok) {
+        if ($('admin-err')) $('admin-err').textContent = '';
+        console.warn('[host] reclaim failed:', resp && resp.error);
+      }
+    });
+  });
   let pin = null;
   let state = null;
   let adminPw = null;
