@@ -1444,6 +1444,16 @@ function isAdminPassword(password) {
   if (p === WU_ADMIN_PASSWORD) return true;
   return !!Teachers.getByTeacherId(p);
 }
+// True ONLY for super-admin credentials: the legacy WU_ADMIN_PASSWORD, OR a
+// teacher code whose record has isSuperAdmin:true. Used to gate super-only
+// live tools (e.g. the random-Spanish prompt broadcast in Modo Maestro).
+function isSuperAdminPassword(password) {
+  if (!password) return false;
+  const p = String(password).trim();
+  if (p === WU_ADMIN_PASSWORD) return true;
+  const t = Teachers.getByTeacherId(p);
+  return !!(t && t.isSuperAdmin);
+}
 
 // === LÁI-QÙ-HUÍ · 来去回 Dragon Courier — directional vocab game ===
 // Self-contained (no question set required). Each player is a dragon
@@ -4711,7 +4721,11 @@ io.on('connection', (socket) => {
   socket.on('wu:auth', ({ pin, password }, cb) => {
     const g = games[pin];
     const ok = wuRequireAdmin(g, socket, password);
-    if (typeof cb === 'function') cb({ ok });
+    // Surface super-admin status so the host page can reveal super-only
+    // tools (the random-Spanish prompt bar). Host path only — delegates
+    // are never super admins.
+    const isSuper = ok && g && g.hostId === socket.id && isSuperAdminPassword(password);
+    if (typeof cb === 'function') cb({ ok, isSuperAdmin: !!isSuper });
   });
   function wuEmitState(g, pin) {
     io.to(pin).emit('wu:state', {
@@ -4719,6 +4733,43 @@ io.on('connection', (socket) => {
       viewMode: g.warmup.viewMode || 'text',
       curious: !!g.warmup.curious,
       delegates: Array.from(g.warmup.delegates || []),
+      prompt: (g.warmup && g.warmup.prompt) || '',
+    });
+  }
+  // === SUPER-MAESTRO PROMPT === broadcast a free-text Spanish challenge to
+  // every student phone. Super-admin only. Stored on the game so late-
+  // joiners receive it via wu:state. Empty string clears it everywhere.
+  socket.on('wu:prompt-set', ({ pin, password, text }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isSuperAdminPassword(password))) return;
+    if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text', contributors: new Set(), undoStack: [] };
+    g.warmup.prompt = String(text || '').slice(0, 160);
+    io.to(pin).emit('wu:prompt', { text: g.warmup.prompt });
+    wuEmitState(g, pin);
+  });
+  socket.on('wu:prompt-clear', ({ pin, password }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isSuperAdminPassword(password))) return;
+    if (g.warmup) g.warmup.prompt = '';
+    io.to(pin).emit('wu:prompt', { text: '' });
+    wuEmitState(g, pin);
+  });
+  // === ASSISTANT ACTIVITY === when a DELEGATE (not the host) mutates the
+  // sentence, broadcast who-did-what to the host so the super maestro can
+  // supervise. Fired from the add/remove handlers below.
+  function wuEmitActivity(g, pin, socketId, action, wordId) {
+    const p = g.players[socketId];
+    if (!p) return;                       // host has no player record → skip
+    const delegates = g.warmup && g.warmup.delegates;
+    if (!(delegates && delegates.has(p.name))) return;  // only delegates
+    io.to(pin).emit('wu:activity', {
+      name: p.name,
+      avatar: p.avatar || '',
+      action,                              // 'add' | 'remove'
+      wordId: wordId || null,
+      t: Date.now(),
     });
   }
   // Push the CURRENT sentence state onto the undo stack BEFORE mutating it.
@@ -4762,6 +4813,7 @@ io.on('connection', (socket) => {
     g.warmup.sentence.push(wordId);
     const p = g.players[socket.id];
     if (p && p.studentCode) g.warmup.contributors.add(p.studentCode);
+    wuEmitActivity(g, pin, socket.id, 'add', wordId);
     wuEmitState(g, pin);
   });
   socket.on('wu:remove-word', ({ pin, password, index }) => {
@@ -4770,10 +4822,12 @@ io.on('connection', (socket) => {
     if (!g.warmup) return;
     const i = Number(index);
     if (Number.isFinite(i) && i >= 0 && i < g.warmup.sentence.length) {
+      const removedWid = g.warmup.sentence[i];
       wuPushUndo(g);
       g.warmup.sentence.splice(i, 1);
       const p = g.players[socket.id];
       if (p && p.studentCode) g.warmup.contributors.add(p.studentCode);
+      wuEmitActivity(g, pin, socket.id, 'remove', removedWid);
       wuEmitState(g, pin);
     }
   });

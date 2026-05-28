@@ -18,9 +18,9 @@
   <link rel="stylesheet" href="/css/sixseven.css?v=20260520c">
   <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
-  <link rel="stylesheet" href="/css/triage.css?v=20260524d">
+  <link rel="stylesheet" href="/css/triage.css?v=20260528d">
   <link rel="stylesheet" href="/css/laiquhui.css?v=20260525d">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260526a">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260528d">
   <link rel="stylesheet" href="/css/identity.css?v=20260525a">
   <link rel="stylesheet" href="/css/partyrun.css?v=20260525a">
   <link rel="stylesheet" href="/css/reading.css?v=20260526d">
@@ -114,10 +114,14 @@
     <!-- TRIAGE-ONLY: sentence banner SITS BETWEEN question + answers so kids
          read the target sentence right next to the question they're solving
          AND right next to the choice they're about to tap. -->
+    <!-- NO hardcoded default content: the triage game fills these divs live
+         via cycleBannerSentence(). Leaving them EMPTY means that even if the
+         body.gametype-triage class ever goes stale on a late-join to a
+         restarted non-triage game, there is no hospital text to leak. -->
     <div class="tri-q-vocab triage-only" id="tri-q-vocab-banner">
       <div class="tri-q-sentence">
-        <div class="tri-q-pinyin" id="tri-q-pinyin">Yīshēng zài <strong>yīyuàn</strong> 🏥 gōngzuò</div>
-        <div class="tri-q-es" id="tri-q-es">El doctor trabaja en el hospital</div>
+        <div class="tri-q-pinyin" id="tri-q-pinyin"></div>
+        <div class="tri-q-es" id="tri-q-es"></div>
       </div>
     </div>
     <div class="answers" id="answers"></div>
@@ -768,6 +772,12 @@
         <button class="wu-player-history-btn" id="wu-player-history-btn" type="button">📜 Mis oraciones</button>
       </div>
     </div>
+    <!-- ✍️ Super-maestro challenge banner — appears when the teacher
+         broadcasts a Spanish prompt. Empty/cleared → hidden. -->
+    <div class="wu-player-prompt hidden" id="wu-player-prompt">
+      <span class="wu-player-prompt-label">✍️ Reto del maestro</span>
+      <span class="wu-player-prompt-text" id="wu-player-prompt-text"></span>
+    </div>
     <div class="wu-player-stage">
       <div class="wu-player-stage-row wu-player-stage-pinyin" id="wu-player-stage-pinyin"></div>
       <div class="wu-player-stage-row wu-player-stage-es" id="wu-player-stage-es"></div>
@@ -838,6 +848,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260525c"></script>
-  <script src="/js/player.js?v=20260528b"></script>
+  <script src="/js/player.js?v=20260528d"></script>
 </body>
 </html>

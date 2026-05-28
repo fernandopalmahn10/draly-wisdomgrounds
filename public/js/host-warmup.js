@@ -16,8 +16,22 @@
   let serverPresets = [];      // canonical server-side preset list
   let rearrangeMode = false;   // when true, word-tap swaps instead of deletes
   let selectedSwapIdx = null;  // index of word selected for swapping
+  let isSuperAdmin = false;    // true when unlocked with a super-admin code
+  let librarySearch = '';      // tone-stripped catalog search string
   const LEGACY_PRESET_KEY = 'dralyWarmupPresets';
   const MIGRATION_KEY = 'dralyWarmupPresetsMigrated';
+
+  // Tone-stripping normalizer — identical semantics to /homework so "ni hao"
+  // matches "nǐ hǎo". Lowercase → NFD decompose → drop diacritics → trim.
+  function normalize(s) {
+    return String(s == null ? '' : s)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[.,!?;:'"()¿¡]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
 
   // === ADMIN GATE ===
   $('admin-ok').addEventListener('click', tryAdmin);
@@ -33,6 +47,7 @@
       $('join-url').textContent = `${location.origin}/?pin=${p}`;
       socket.emit('wu:auth', { pin, password: adminPw }, (resp) => {
         if (resp && resp.ok) {
+          isSuperAdmin = !!(resp && resp.isSuperAdmin);
           showScreen('lobby');
           // Fetch server-side presets so the dropdown is ready immediately.
           // One-shot migration: if this laptop has presets in localStorage
@@ -63,6 +78,7 @@
       renderStage([]);
       renderPresetSelect();
       bindToolbar();
+      bindExtras();
     }, 600);
   });
 
@@ -282,10 +298,22 @@
     if (!lib) return;
     lib.innerHTML = '';
     const byExp = {};
+    const q = librarySearch;   // already normalized
     window.WU_WORDS.forEach((w) => {
       if (activeExp !== 'all' && w.exp !== activeExp) return;
+      // Tone-stripped search across pinyin, español AND hanzi.
+      if (q && !(
+        normalize(w.pinyin).includes(q) ||
+        normalize(w.es).includes(q) ||
+        (w.hanzi && w.hanzi.includes(librarySearch.trim()))
+      )) return;
       (byExp[w.exp] = byExp[w.exp] || []).push(w);
     });
+    // Empty-state when a search matches nothing
+    if (q && Object.keys(byExp).length === 0) {
+      lib.innerHTML = `<div class="wu-lib-empty">🔍 Sin resultados para “${escapeHtml(librarySearch)}”. Prueba sin tonos (ej. <em>ni hao</em>, <em>comer</em>, <em>casa</em>).</div>`;
+      return;
+    }
     Object.keys(byExp).forEach((expId) => {
       const exp = window.WU_EXPERIENCES[expId];
       const section = document.createElement('div');
@@ -744,5 +772,203 @@
       .catch((e) => {
         notebookSub.textContent = 'Error: ' + e.message;
       });
+  }
+
+  // =====================================================================
+  // EXTRAS (2026-05-28 batch): catalog search · speak sentence · super-
+  // maestro Spanish prompt · assistant activity ticker · interactive VFX.
+  // Bound once when the active screen first appears.
+  // =====================================================================
+  let extrasBound = false;
+  function bindExtras() {
+    if (extrasBound) return;
+    extrasBound = true;
+
+    // --- 🔍 Catalog search (tone-stripped) ---
+    const searchInput = $('wu-search-input');
+    const searchClear = $('wu-search-clear');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        librarySearch = normalize(searchInput.value);
+        if (searchClear) searchClear.classList.toggle('hidden', !searchInput.value);
+        renderLibrary();
+      });
+    }
+    if (searchClear) {
+      searchClear.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        librarySearch = '';
+        searchClear.classList.add('hidden');
+        renderLibrary();
+        if (searchInput) searchInput.focus();
+      });
+    }
+
+    // --- 🔊 Escuchar — speak the constructed sentence aloud ---
+    const speakBtn = $('wu-speak-btn');
+    if (speakBtn) {
+      speakBtn.addEventListener('click', () => {
+        if (!currentSentence.length) { flashSaveFeedback(false, 'Oración vacía'); return; }
+        const pinyin = currentSentence
+          .map((wid) => (window.WU_WORD_BY_ID[wid] || {}).pinyin || '')
+          .filter(Boolean)
+          .join(' ');
+        speakChinese(pinyin, speakBtn);
+      });
+    }
+
+    // --- ✍️ Super-maestro Spanish prompt bar ---
+    const promptRow = $('wu-prompt-row');
+    if (promptRow) promptRow.classList.toggle('hidden', !isSuperAdmin);
+    const promptInput = $('wu-prompt-input');
+    const promptSend  = $('wu-prompt-send');
+    const promptClear = $('wu-prompt-clear');
+    if (promptSend) {
+      promptSend.addEventListener('click', () => {
+        const text = (promptInput && promptInput.value || '').trim();
+        if (!text) return;
+        socket.emit('wu:prompt-set', { pin, password: adminPw, text });
+        if (MochiSounds.correct) MochiSounds.correct();
+      });
+    }
+    if (promptClear) {
+      promptClear.addEventListener('click', () => {
+        if (promptInput) promptInput.value = '';
+        socket.emit('wu:prompt-clear', { pin, password: adminPw });
+        if (MochiSounds.tap) MochiSounds.tap();
+      });
+    }
+
+    // --- 🎮 Interactive VFX buttons ---
+    const fx = { 'wu-fx-rain': 'rain', 'wu-fx-confetti': 'confetti',
+                 'wu-fx-zombies': 'zombies', 'wu-fx-moto': 'moto', 'wu-fx-shake': 'shake' };
+    Object.keys(fx).forEach((id) => {
+      const b = $(id);
+      if (b) b.addEventListener('click', () => fireFx(fx[id]));
+    });
+  }
+
+  // === ASSISTANT ACTIVITY TICKER ===
+  // Server emits wu:activity whenever a DELEGATE touches a word. Append a
+  // line to the feed (most recent on top), capped to ~12 entries.
+  socket.on('wu:activity', (a) => {
+    const feed = $('wu-activity-feed');
+    if (!feed || !a) return;
+    const empty = feed.querySelector('.wu-activity-empty');
+    if (empty) empty.remove();
+    const w = (window.WU_WORD_BY_ID && a.wordId) ? window.WU_WORD_BY_ID[a.wordId] : null;
+    const wordLabel = w ? `${w.pinyin} · ${w.es}` : '—';
+    const verb = a.action === 'remove' ? '🗑 quitó' : '➕ agregó';
+    const time = new Date(a.t || Date.now()).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const row = document.createElement('div');
+    row.className = 'wu-activity-row ' + (a.action === 'remove' ? 'is-remove' : 'is-add');
+    row.innerHTML = `
+      <span class="wu-activity-who">${a.avatar || '🎓'} ${escapeHtml(a.name || 'Asistente')}</span>
+      <span class="wu-activity-verb">${verb}</span>
+      <span class="wu-activity-word">${escapeHtml(wordLabel)}</span>
+      <span class="wu-activity-time">${time}</span>`;
+    feed.insertBefore(row, feed.firstChild);
+    while (feed.children.length > 12) feed.removeChild(feed.lastChild);
+  });
+
+  // === SPEAK (Google TTS via /api/tts → Web Speech fallback) ===
+  let _ttsAudio = null;
+  function _stopAllSpeech() {
+    if (_ttsAudio) { try { _ttsAudio.pause(); _ttsAudio.removeAttribute('src'); _ttsAudio.load(); } catch (_) {} _ttsAudio = null; }
+    if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); window.speechSynthesis.cancel(); } catch (_) {} }
+  }
+  function speakChinese(text, btn) {
+    const clean = String(text || '').trim();
+    if (!clean) return;
+    _stopAllSpeech();
+    let origText = '';
+    const restore = () => { if (btn) { btn.classList.remove('speaking'); btn.textContent = origText; } };
+    if (btn) { btn.classList.add('speaking'); origText = btn.textContent; btn.textContent = '🔊 …'; }
+    const audio = new Audio();
+    _ttsAudio = audio;
+    let playedOnce = false, fellBack = false;
+    const fallback = (reason) => {
+      if (fellBack || playedOnce) return;
+      fellBack = true;
+      try { audio.pause(); audio.removeAttribute('src'); audio.load(); } catch (_) {}
+      restore();
+      if ('speechSynthesis' in window) {
+        try {
+          const u = new SpeechSynthesisUtterance(clean);
+          u.lang = 'zh-CN'; u.rate = 0.85;
+          u.onend = restore;
+          window.speechSynthesis.speak(u);
+        } catch (_) {}
+      }
+    };
+    audio.addEventListener('canplay', () => { if (!fellBack) audio.play().then(() => { playedOnce = true; }).catch((e) => { if (!playedOnce) fallback(e.message); }); });
+    audio.addEventListener('playing', () => { playedOnce = true; if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch (_) {} } });
+    audio.addEventListener('ended', restore);
+    audio.addEventListener('error', () => { if (!playedOnce) fallback('audio error'); });
+    const timeoutId = setTimeout(() => { if (!playedOnce) fallback('timeout'); }, 10000);
+    audio.addEventListener('playing', () => clearTimeout(timeoutId));
+    audio.src = '/api/tts?text=' + encodeURIComponent(clean);
+    audio.load();
+  }
+
+  // === INTERACTIVE VFX === reuse lightweight DOM animations to gamify the
+  // teacher's projected screen. All effects are pure CSS-animated emoji
+  // elements appended to #wu-fx-layer (pointer-events:none), auto-cleaned.
+  function fireFx(kind) {
+    const layer = $('wu-fx-layer');
+    if (!layer) return;
+    if (MochiSounds.tap) MochiSounds.tap();
+    if (kind === 'shake') {
+      document.body.classList.remove('wu-shake');
+      void document.body.offsetWidth;
+      document.body.classList.add('wu-shake');
+      setTimeout(() => document.body.classList.remove('wu-shake'), 700);
+      return;
+    }
+    if (kind === 'confetti') {
+      const emojis = ['🎉', '✨', '🎊', '⭐', '🧧', '🐉'];
+      for (let i = 0; i < 36; i++) {
+        const el = document.createElement('div');
+        el.className = 'wu-fx-confetti-bit';
+        el.textContent = emojis[i % emojis.length];
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.animationDelay = (Math.random() * 0.4) + 's';
+        el.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+        el.style.fontSize = (18 + Math.random() * 22) + 'px';
+        layer.appendChild(el);
+        setTimeout(() => el.remove(), 3200);
+      }
+      return;
+    }
+    if (kind === 'rain') {
+      for (let i = 0; i < 40; i++) {
+        const el = document.createElement('div');
+        el.className = 'wu-fx-rain-drop';
+        el.textContent = Math.random() < 0.5 ? '💧' : '🌧';
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.animationDelay = (Math.random() * 0.8) + 's';
+        el.style.animationDuration = (0.8 + Math.random() * 0.8) + 's';
+        layer.appendChild(el);
+        setTimeout(() => el.remove(), 2400);
+      }
+      return;
+    }
+    // 'zombies' and 'moto' both stampede across the screen from one side
+    const isZombie = (kind === 'zombies');
+    const glyphs = isZombie ? ['🧟', '🧟‍♂️', '🧟‍♀️'] : ['🏍', '🏍️', '🛵'];
+    const count = isZombie ? 7 : 6;
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement('div');
+      el.className = 'wu-fx-runner ' + (isZombie ? 'is-zombie' : 'is-moto');
+      el.textContent = glyphs[i % glyphs.length];
+      const r2l = Math.random() < 0.5;
+      el.classList.add(r2l ? 'from-right' : 'from-left');
+      el.style.top = (15 + Math.random() * 65) + 'vh';
+      el.style.animationDelay = (Math.random() * 0.6) + 's';
+      el.style.animationDuration = ((isZombie ? 3.2 : 1.8) + Math.random() * 1.2) + 's';
+      el.style.fontSize = (34 + Math.random() * 22) + 'px';
+      layer.appendChild(el);
+      setTimeout(() => el.remove(), 5000);
+    }
   }
 })();

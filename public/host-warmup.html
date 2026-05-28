@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260527a">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260528d">
 </head>
 <body class="wu-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -94,10 +94,25 @@
         ☝️ Toca palabras del catálogo abajo para empezar a construir una oración
       </div>
       <div class="wu-stage-actions">
+        <button class="btn btn-gold btn-sm wu-speak-btn" id="wu-speak-btn" type="button">🔊 Escuchar</button>
         <button class="btn btn-ghost btn-sm wu-undo-btn" id="wu-undo-btn" type="button">↩️ Deshacer</button>
         <button class="btn btn-ghost btn-sm wu-rearrange-btn" id="wu-rearrange-btn" type="button">🔀 Rearreglar</button>
         <button class="btn btn-ghost btn-sm wu-save-current-btn" id="wu-save-current-btn" type="button">💾 Guardar</button>
         <button class="btn btn-red btn-sm" id="wu-clear-btn" type="button">🧹 Limpiar</button>
+      </div>
+    </div>
+
+    <!-- ✍️ SUPER-MAESTRO ONLY — type a Spanish prompt that broadcasts to every
+         student's phone as a "target sentence" challenge. Hidden for normal
+         teachers; only revealed when the unlock code is a super-admin code.
+         The 🗑 button clears it from every phone. -->
+    <div class="wu-prompt-row hidden" id="wu-prompt-row">
+      <span class="wu-prompt-label">✍️ Reto en español <small>(solo super maestro)</small></span>
+      <div class="wu-prompt-inputwrap">
+        <input class="input wu-prompt-input" id="wu-prompt-input" type="text"
+               maxlength="120" placeholder="Ej: tú ser mi amigo → 你是我的朋友">
+        <button class="btn btn-gold btn-sm" id="wu-prompt-send" type="button">📡 Enviar a todos</button>
+        <button class="btn btn-ghost btn-sm" id="wu-prompt-clear" type="button" title="Borrar de todas las pantallas">🗑</button>
       </div>
     </div>
 
@@ -138,6 +153,14 @@
         <span class="wu-roster-sub" id="wu-roster-sub">Toca un alumno para darle el control del catálogo</span>
       </div>
       <div class="wu-roster-list" id="wu-roster-list"></div>
+      <!-- 👀 Live activity ticker — shows which asistente just touched which
+           word, so the super maestro can supervise delegated control. -->
+      <div class="wu-activity" id="wu-activity">
+        <div class="wu-activity-title">👀 Actividad de asistentes</div>
+        <div class="wu-activity-feed" id="wu-activity-feed">
+          <div class="wu-activity-empty">Cuando un asistente toque una palabra, aparecerá aquí.</div>
+        </div>
+      </div>
     </div>
 
     <!-- 📓 CUADERNO DE ALUMNOS — admin-only window into EVERY student's
@@ -168,17 +191,41 @@
       </div>
     </div>
 
+    <!-- 🔍 Catalog search — tone-stripped (like /homework). "ni hao" finds
+         "nǐ hǎo". Filters across pinyin, español AND hanzi. -->
+    <div class="wu-search-row">
+      <span class="wu-search-icon">🔍</span>
+      <input class="input wu-search-input" id="wu-search-input" type="text"
+             placeholder="Buscar palabra (sin tonos: ni hao, comer, casa…)"
+             autocomplete="off" inputmode="text">
+      <button class="wu-search-clear hidden" id="wu-search-clear" type="button" aria-label="Limpiar">✕</button>
+    </div>
+
     <!-- Experience-tab filter strip — pick which HSK1 experience to show -->
     <div class="wu-exp-tabs" id="wu-exp-tabs"></div>
 
     <!-- Word library — grouped by experience section, color-coded per word -->
     <div class="wu-library" id="wu-library"></div>
+
+    <!-- 🎮 Capa interactiva — reuse game VFX to gamify the warm-up. Each
+         button fires a burst of effects on the teacher's screen so the
+         classroom projection feels alive. -->
+    <div class="wu-fx-row">
+      <span class="wu-fx-label">🎮 Efectos</span>
+      <button class="wu-fx-btn" id="wu-fx-rain" type="button">🌧 Lluvia</button>
+      <button class="wu-fx-btn" id="wu-fx-confetti" type="button">🎉 Confeti</button>
+      <button class="wu-fx-btn" id="wu-fx-zombies" type="button">🧟 Zombis</button>
+      <button class="wu-fx-btn" id="wu-fx-moto" type="button">🏍 Motos</button>
+      <button class="wu-fx-btn" id="wu-fx-shake" type="button">📳 Sacudir</button>
+    </div>
+    <!-- VFX canvas layer (fixed, behind UI, pointer-events:none) -->
+    <div class="wu-fx-layer" id="wu-fx-layer" aria-hidden="true"></div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524h"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/warmup-vocab.js?v=20260524c"></script>
-  <script src="/js/host-warmup.js?v=20260527a"></script>
+  <script src="/js/host-warmup.js?v=20260528d"></script>
 </body>
 </html>
