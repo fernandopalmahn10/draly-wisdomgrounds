@@ -7510,6 +7510,22 @@
   });
 
   function showScreen(name) {
+    // === TRIAGE-LEAK GUARD (bug fix 2026-05-27, hardened) ===
+    // The hospital vocab banner + floating tiles live in the shared
+    // question-screen markup, gated by body.gametype-triage. That class
+    // can go stale (kid played triage earlier, then late-joins a
+    // restarted Mochi Mash in the same tab) and the banner bleeds in —
+    // even on the lobby / countdown, BEFORE any question fires. Since
+    // this runs on EVERY screen switch, we strip the triage class +
+    // stop the vocab background whenever the current game is NOT triage.
+    // (Triage's own screens are tri-pick / tri-cpr — it re-asserts the
+    // class itself when it starts.)
+    if (gameType !== 'triage') {
+      if (document.body.classList.contains('gametype-triage')) {
+        document.body.classList.remove('gametype-triage');
+      }
+      if (typeof stopTriageVocabBg === 'function') stopTriageVocabBg();
+    }
     ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'lqh', 'wu', 'id', 'pr', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
