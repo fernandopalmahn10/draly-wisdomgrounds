@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260526a">
-  <link rel="stylesheet" href="/css/homework.css?v=20260528d">
+  <link rel="stylesheet" href="/css/homework.css?v=20260528f">
 </head>
 <body class="hw-bg">
 
@@ -60,15 +60,20 @@
         <button class="btn btn-ghost btn-sm" id="hw-list-logout">Salir</button>
       </div>
     </div>
-    <div class="hw-list-section-title">📚 Tareas para armar oraciones</div>
-    <div class="hw-list-grid" id="hw-list-grid">
-      <!-- assignment cards rendered by JS -->
+    <!-- 📁 FOLDER BREADCRUMB — appears once you open an experience folder -->
+    <div class="hw-folder-bar hidden" id="hw-folder-bar">
+      <button class="btn btn-ghost btn-sm" id="hw-folder-back">← HSK1</button>
+      <span class="hw-folder-crumb" id="hw-folder-crumb"></span>
     </div>
 
-    <!-- READING TESTS — separate section. Show stories the kid has done
-         in class (or any story while bootstrapping). -->
-    <div class="hw-list-section-title">📖 Exámenes de lectura</div>
-    <div class="hw-list-grid" id="hw-list-readings">
+    <div class="hw-list-section-title hidden" id="hw-sec-tareas">📚 Tareas para armar oraciones</div>
+    <div class="hw-list-grid" id="hw-list-grid">
+      <!-- folder cards (root) OR assignment cards (inside a folder) -->
+    </div>
+
+    <!-- READING TESTS — only shown inside an experience folder. -->
+    <div class="hw-list-section-title hidden" id="hw-sec-lecturas">📖 Exámenes de lectura</div>
+    <div class="hw-list-grid hidden" id="hw-list-readings">
       <div class="hw-empty">Cargando…</div>
     </div>
   </div>
@@ -361,7 +366,7 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/homework.js?v=20260528e"></script>
+  <script src="/js/homework.js?v=20260528f"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>

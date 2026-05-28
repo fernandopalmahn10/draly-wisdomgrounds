@@ -767,45 +767,100 @@
   });
 
   // ── Assignment-list screen
+  // 📁 FOLDER NAVIGATION — login → HSK1 → 8 experiences → assignments.
+  // Pure presentation over the SAME assignment IDs, so every saved score /
+  // parent-card result is untouched. null = root (folders); else 'exp1'…
+  let hwFolder = null;
+  // Best-effort story→experience grouping for the reading folders.
+  const READING_EXP = { xiaomingday: 'exp1' };
+  function readingExpOf(r) { return (r && (READING_EXP[r.storyId] || r.exp)) || 'exp1'; }
+  (function bindFolderBack() {
+    const b = $('hw-folder-back');
+    if (b) b.addEventListener('click', () => { hwFolder = null; renderList(); });
+  })();
+
   function renderList() {
     $('hw-list-name').textContent = displayName || 'Anon';
     renderAvatarInto($('hw-list-avatar'), avatar);
+    if (hwFolder) renderFolderContents(hwFolder);
+    else renderFolderRoot();
+    // Refresh reading state once; its callback re-renders (no fetch loop).
+    fetchReadingTests();
+  }
+
+  // ROOT — HSK1 with its eight experience folders.
+  function renderFolderRoot() {
+    $('hw-folder-bar').classList.add('hidden');
+    $('hw-sec-tareas').classList.add('hidden');
+    $('hw-sec-lecturas').classList.add('hidden');
+    $('hw-list-readings').classList.add('hidden');
+    const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 HSK1';
     const grid = $('hw-list-grid');
+    grid.classList.remove('hidden');
     grid.innerHTML = '';
-    assignments.forEach((a) => {
-      const myAttempts = submissions.filter((s) => s.assignmentId === a.id);
-      const bestScore = myAttempts.length ? Math.max(...myAttempts.map((s) => s.score)) : null;
+    const exps = window.WU_EXPERIENCES || {};
+    ['exp1','exp2','exp3','exp4','exp5','exp6','exp7','exp8'].forEach((expId) => {
+      const exp = exps[expId];
+      if (!exp) return;
+      const eAssigns = assignments.filter((a) => a.expLabel === expId);
+      const eReads = (readingTests || []).filter((r) => readingExpOf(r) === expId);
+      const total = eAssigns.length + eReads.length;
+      const done = eAssigns.filter((a) => submissions.some((s) => s.assignmentId === a.id)).length
+                 + eReads.filter((r) => r.bestScore != null).length;
+      const emoji = (exp.short || '📁').split(' ')[0] || '📁';
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = 'hw-card';
-      if (bestScore != null) card.classList.add('hw-card-done');
-      const statusBadge = bestScore == null
-        ? '<span class="hw-card-badge new">Nueva</span>'
-        : `<span class="hw-card-badge done">${bestScore}/${a.totalPoints} pts</span>`;
-      // EXP chip — comes from a.expLabel ('exp1', 'exp2', etc.). Always
-      // shown so kids/parents know what HSK1 experience the tarea covers.
-      const expChip = a.expLabel && window.WU_EXPERIENCES && window.WU_EXPERIENCES[a.expLabel]
-        ? `<span class="hw-card-exp">${escapeHtml(window.WU_EXPERIENCES[a.expLabel].short || a.expLabel.toUpperCase())}</span>`
-        : '';
+      card.className = 'hw-folder-card' + (total ? '' : ' hw-folder-empty');
       card.innerHTML = `
-        <div class="hw-card-head">
-          ${statusBadge}
-          <span class="hw-card-points">${a.totalPoints} pts</span>
-        </div>
-        ${expChip}
-        <div class="hw-card-title">${escapeHtml(a.title)}</div>
-        <div class="hw-card-sub">${escapeHtml(a.subtitle)}</div>
-        <div class="hw-card-meta">${a.itemCount} oraciones</div>`;
-      card.addEventListener('click', () => openAssignment(a.id));
+        <div class="hw-folder-emoji">${emoji}</div>
+        <div class="hw-folder-name">${escapeHtml(exp.label || expId)}</div>
+        <div class="hw-folder-meta">${total ? (total + ' actividad' + (total === 1 ? '' : 'es')) : 'Próximamente'}</div>
+        ${total ? `<div class="hw-folder-progress">${done}/${total} ✓</div>` : ''}`;
+      if (total) card.addEventListener('click', () => { hwFolder = expId; renderList(); });
+      else card.disabled = true;
       grid.appendChild(card);
     });
-    if (!assignments.length) {
-      grid.innerHTML = '<div class="hw-empty">No hay tareas aún. Pregúntale a tu maestra.</div>';
-    }
-    // Also render reading-test cards in a separate section
+  }
+
+  // FOLDER — assignments (+ readings) inside one experience.
+  function renderFolderContents(expId) {
+    const exp = (window.WU_EXPERIENCES || {})[expId];
+    $('hw-folder-bar').classList.remove('hidden');
+    $('hw-folder-crumb').textContent = exp ? exp.label : expId;
+    const grid = $('hw-list-grid');
+    grid.classList.remove('hidden');
+    grid.innerHTML = '';
+    const list = assignments.filter((a) => a.expLabel === expId);
+    $('hw-sec-tareas').classList.toggle('hidden', list.length === 0);
+    list.forEach((a) => grid.appendChild(buildAssignmentCard(a)));
     renderReadingsList();
-    // Fetch latest reading-tests state on every list render (lightweight)
-    fetchReadingTests();
+  }
+
+  // One assignment card — shared by both views.
+  function buildAssignmentCard(a) {
+    const myAttempts = submissions.filter((s) => s.assignmentId === a.id);
+    const bestScore = myAttempts.length ? Math.max(...myAttempts.map((s) => s.score)) : null;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'hw-card';
+    if (bestScore != null) card.classList.add('hw-card-done');
+    const statusBadge = bestScore == null
+      ? '<span class="hw-card-badge new">Nueva</span>'
+      : `<span class="hw-card-badge done">${bestScore}/${a.totalPoints} pts</span>`;
+    const expChip = a.expLabel && window.WU_EXPERIENCES && window.WU_EXPERIENCES[a.expLabel]
+      ? `<span class="hw-card-exp">${escapeHtml(window.WU_EXPERIENCES[a.expLabel].short || a.expLabel.toUpperCase())}</span>`
+      : '';
+    card.innerHTML = `
+      <div class="hw-card-head">
+        ${statusBadge}
+        <span class="hw-card-points">${a.totalPoints} pts</span>
+      </div>
+      ${expChip}
+      <div class="hw-card-title">${escapeHtml(a.title)}</div>
+      <div class="hw-card-sub">${escapeHtml(a.subtitle)}</div>
+      <div class="hw-card-meta">${a.itemCount} oraciones</div>`;
+    card.addEventListener('click', () => openAssignment(a.id));
+    return card;
   }
 
   // ── Reading-test list (fetched from server)
@@ -817,18 +872,27 @@
       .then((data) => {
         if (!data || !data.ok) return;
         readingTests = data.stories || [];
-        renderReadingsList();
+        // Re-render so folder counts (root) or the readings list (in-folder)
+        // reflect the freshly-fetched data — WITHOUT re-fetching (no loop).
+        if (hwFolder) renderReadingsList();
+        else renderFolderRoot();
       }).catch(() => {});
   }
   function renderReadingsList() {
     const wrap = $('hw-list-readings');
     if (!wrap) return;
-    if (!readingTests.length) {
-      wrap.innerHTML = '<div class="hw-empty">Cargando exámenes de lectura…</div>';
+    // Reading tests only show INSIDE an experience folder.
+    if (!hwFolder) {
+      wrap.classList.add('hidden');
+      $('hw-sec-lecturas').classList.add('hidden');
       return;
     }
+    const mine = (readingTests || []).filter((r) => readingExpOf(r) === hwFolder);
+    $('hw-sec-lecturas').classList.toggle('hidden', mine.length === 0);
+    wrap.classList.toggle('hidden', mine.length === 0);
+    if (!mine.length) { wrap.innerHTML = ''; return; }
     wrap.innerHTML = '';
-    readingTests.forEach((r) => {
+    mine.forEach((r) => {
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'hw-card hw-card-reading' + (r.available ? '' : ' hw-card-locked');
