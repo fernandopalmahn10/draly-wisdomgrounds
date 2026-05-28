@@ -585,7 +585,7 @@ app.get('/api/homework/insights/:code', (req, res) => {
     const a = Assignments.getAssignment(sub.assignmentId);
     if (!a || !a.parentInsight) return;
     const pct = (sub.score / sub.total) * 100;
-    if (pct < 60) return;  // not mastered yet
+    if (pct < 80) return;  // PASS threshold is 80% (user 2026-05-28)
     insights.push({
       assignmentId:    a.id,
       assignmentTitle: a.title,
@@ -613,14 +613,19 @@ app.get('/api/homework/insights/:code', (req, res) => {
   // nudge them ("¡Aún no has hecho la tarea de la familia! Hazla ahora.")
   // Listed in the parent view with a redirect CTA into the homework portal.
   const allAssignments = Assignments.listAssignments();
-  const triedIds = new Set(subs.map((s) => s.assignmentId));
+  // PENDING = never tried OR best attempt < 80% (can't pass below 80).
+  const bestPctById = {};
+  Object.values(bestByAssignment).forEach((s) => {
+    bestPctById[s.assignmentId] = (s.score / (s.total || 100)) * 100;
+  });
   const remaining = allAssignments
-    .filter((a) => !triedIds.has(a.id))
+    .filter((a) => (bestPctById[a.id] == null) || (bestPctById[a.id] < 80))
     .map((a) => ({
       assignmentId: a.id,
       title:        a.title,
       subtitle:     a.subtitle,
       totalPoints:  a.totalPoints,
+      bestPct:      bestPctById[a.id] != null ? Math.round(bestPctById[a.id]) : null,
     }));
   // CONVERSATION PROMPTS — concrete questions parents can ask. Pulled
   // from each mastered assignment's encouragement string PLUS each
@@ -957,6 +962,18 @@ app.get('/api/homework/reading-review/:storyId', (req, res) => {
       breakdown: best.breakdown || [],
     },
   });
+});
+
+// Review a PAST assignment attempt — best submission's breakdown so the kid
+// sees which sentences they got wrong + the correct answer.
+app.get('/api/homework/assignment-review/:id', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = Students.get(req.query.studentCode);
+  if (!rec) return res.json({ ok: true, attempt: null });
+  const subs = Students.getAssignmentSubmissions(rec.code, 100).filter((s) => s.assignmentId === req.params.id);
+  if (!subs.length) return res.json({ ok: true, attempt: null });
+  const best = subs.slice().sort((a, b) => (b.score - a.score) || (b.ts - a.ts))[0];
+  res.json({ ok: true, attempt: { score: best.score, total: best.total, breakdown: best.breakdown || [] } });
 });
 
 // === 🔊 GOOGLE CLOUD TTS — premium-quality zh-CN audio ================

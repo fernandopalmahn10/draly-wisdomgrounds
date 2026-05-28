@@ -1230,13 +1230,52 @@
     el.innerHTML = `
       <div class="wu-fx-char-lines"></div>
       <div class="wu-fx-char-aura"></div>
-      <img class="wu-fx-char-img" src="/assets/png-library/${kind}.png" alt="${kind}"
-           onerror="this.style.display='none'">
+      <img class="wu-fx-char-img" alt="${kind}">
       <div class="wu-fx-char-cry">${c.label}</div>`;
+    const img = el.querySelector('.wu-fx-char-img');
+    _wuTransparentChar(kind, (url) => { img.src = url; });
     layer.appendChild(el);
     if (MochiSounds.combo) MochiSounds.combo();
     else if (MochiSounds.correct) MochiSounds.correct();
     setTimeout(() => el.remove(), 3200);
+  }
+  // Edge-flood chroma-key (downscaled + cached) — strips a solid background
+  // matte from character PNGs so they're truly transparent. Falls back to raw.
+  const _wuCharCache = {};
+  function _wuTransparentChar(kind, cb) {
+    const raw = '/assets/png-library/' + kind + '.png';
+    if (_wuCharCache[kind]) { cb(_wuCharCache[kind]); return; }
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, 680 / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale));
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+        const id = ctx.getImageData(0, 0, w, h); const px = id.data;
+        const at = (x, y) => (y * w + x) * 4;
+        let br = 0, bg = 0, bb = 0, n = 0;
+        for (let x = 0; x < w; x += Math.max(1, (w / 60) | 0)) { [0, h - 1].forEach((y) => { const o = at(x, y); if (px[o + 3] > 10) { br += px[o]; bg += px[o + 1]; bb += px[o + 2]; n++; } }); }
+        if (!n) { _wuCharCache[kind] = raw; cb(raw); return; }
+        br /= n; bg /= n; bb /= n;
+        const T = 46 * 46 * 3;
+        const close = (o) => { const dr = px[o] - br, dg = px[o + 1] - bg, db = px[o + 2] - bb; return (dr * dr + dg * dg + db * db) <= T; };
+        const stack = []; const seen = new Uint8Array(w * h);
+        for (let x = 0; x < w; x++) { stack.push(x, 0, x, h - 1); }
+        for (let y = 0; y < h; y++) { stack.push(0, y, w - 1, y); }
+        while (stack.length) {
+          const y = stack.pop(), x = stack.pop(); const i = y * w + x;
+          if (x < 0 || y < 0 || x >= w || y >= h || seen[i]) continue;
+          const o = i * 4;
+          if (px[o + 3] === 0 || close(o)) { seen[i] = 1; px[o + 3] = 0; stack.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1); }
+        }
+        ctx.putImageData(id, 0, 0);
+        const url = cv.toDataURL('image/png');
+        _wuCharCache[kind] = url; cb(url);
+      } catch (e) { _wuCharCache[kind] = raw; cb(raw); }
+    };
+    img.onerror = () => { _wuCharCache[kind] = raw; cb(raw); };
+    img.src = raw;
   }
 
   function fireFx(kind) {
