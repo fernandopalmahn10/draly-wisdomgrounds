@@ -964,6 +964,15 @@ app.get('/api/homework/reading-review/:storyId', (req, res) => {
   });
 });
 
+// 📜 The kid's own saved warmup sentences (for the homework-portal profile).
+// Same data the in-game "Mis oraciones" shows, exposed via REST.
+app.get('/api/homework/sentences/:code', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.json({ ok: true, sentences: [] });
+  res.json({ ok: true, sentences: Students.getHistory(rec.code, 100) });  // newest-first
+});
+
 // Review a PAST assignment attempt — best submission's breakdown so the kid
 // sees which sentences they got wrong + the correct answer.
 app.get('/api/homework/assignment-review/:id', (req, res) => {

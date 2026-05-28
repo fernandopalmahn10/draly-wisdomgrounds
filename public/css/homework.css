@@ -2421,3 +2421,53 @@ button, a, .hw-card, .hw-folder-card, .hw-lib-chip, .hw-stage-word,
 
 /* ⏳ Pending badge — assignment attempted but <80% (must retry to pass) */
 .hw-card-badge.pending { background: rgba(255,170,40,0.22); color: #ffb000; border: 1px solid rgba(255,170,40,0.6); font-size: 0.72rem; }
+
+/* ── 📜 Mis oraciones — sentence history in the kid's own profile ──── */
+.hw-sentences-overlay {
+  position: fixed; inset: 0; z-index: 9998; display: flex; align-items: center;
+  justify-content: center; padding: 14px; background: rgba(10,12,22,0.80);
+}
+.hw-sentences-overlay.hidden { display: none; }
+.hw-sentences-card {
+  position: relative; width: 100%; max-width: 520px; max-height: 88dvh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: linear-gradient(160deg, rgba(44,54,86,0.99), rgba(20,25,45,0.99));
+  border: 3px solid #ffd166; border-radius: 22px; padding: 22px 18px 18px;
+  box-shadow: 0 18px 52px rgba(0,0,0,0.72);
+}
+.hw-sentences-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hw-sentences-title { font-family: 'Cinzel', serif; font-weight: 900; color: #ffd166; font-size: 1.3rem; }
+.hw-sentences-close {
+  border: none; background: rgba(255,255,255,0.12); color: #fff; width: 34px; height: 34px;
+  border-radius: 50%; font-size: 1.05rem; cursor: pointer; flex: 0 0 auto;
+  touch-action: manipulation;
+}
+.hw-sentences-close:active { background: rgba(255,255,255,0.26); }
+.hw-sentences-sub { color: rgba(243,230,194,0.78); font-size: 0.9rem; margin: 6px 0 14px; line-height: 1.4; }
+.hw-sentences-list { display: flex; flex-direction: column; gap: 12px; }
+
+.hw-sentence-item {
+  background: rgba(20,24,40,0.6); border: 1px solid rgba(255,209,102,0.22);
+  border-radius: 16px; padding: 12px 12px 14px;
+}
+.hw-sentence-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.hw-sentence-date { color: rgba(243,230,194,0.62); font-size: 0.82rem; font-weight: 700; }
+.hw-sentence-speak {
+  border: none; background: linear-gradient(135deg, #ffb46b, #ff7e5f); color: #2a1500;
+  font-weight: 900; font-size: 0.9rem; padding: 8px 14px; border-radius: 999px;
+  cursor: pointer; touch-action: manipulation; flex: 0 0 auto;
+  box-shadow: 0 4px 12px rgba(255,126,95,0.35);
+}
+.hw-sentence-speak:active { transform: scale(0.95); }
+.hw-sentence-speak.speaking { animation: hwSentPulse 0.7s ease-in-out infinite; }
+@keyframes hwSentPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+.hw-sentence-words { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.hw-sent-chip {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 12px; border-radius: 12px; min-width: 54px;
+  background: var(--cat-color, #ffe082); color: #1a1a2a;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.28);
+}
+.hw-sent-chip-py { font-weight: 900; font-size: 1rem; line-height: 1.1; }
+.hw-sent-chip-es { font-size: 0.72rem; opacity: 0.78; line-height: 1.1; }

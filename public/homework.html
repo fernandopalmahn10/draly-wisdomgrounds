@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260526a">
-  <link rel="stylesheet" href="/css/homework.css?v=20260528l">
+  <link rel="stylesheet" href="/css/homework.css?v=20260528m">
 </head>
 <body class="hw-bg">
 
@@ -55,6 +55,7 @@
         <button class="btn btn-ghost btn-sm hw-bell-btn" id="hw-list-inbox" title="Mensajes de mi maestra">
           🔔 <span class="hw-bell-badge" id="hw-bell-badge" style="display:none;">0</span>
         </button>
+        <button class="btn btn-ghost btn-sm" id="hw-list-sentences">📜 Mis oraciones</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-settings">⚙️ Ajustes</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-parents">👨‍👩‍👧 Papás</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-logout">Salir</button>
@@ -75,6 +76,19 @@
     <div class="hw-list-section-title hidden" id="hw-sec-lecturas">📖 Exámenes de lectura</div>
     <div class="hw-list-grid hidden" id="hw-list-readings">
       <div class="hw-empty">Cargando…</div>
+    </div>
+
+    <!-- 📜 MIS ORACIONES — the kid's saved warmup sentences, with a 🔊 to
+         hear each one in the Google voice. -->
+    <div class="hw-sentences-overlay hidden" id="hw-sentences-overlay">
+      <div class="hw-sentences-card">
+        <div class="hw-sentences-header">
+          <span class="hw-sentences-title">📜 Mis oraciones</span>
+          <button class="hw-sentences-close" id="hw-sentences-close" type="button" aria-label="Cerrar">✕</button>
+        </div>
+        <p class="hw-sentences-sub" id="hw-sentences-sub">Las oraciones que construiste en clase. 🗣️ Toca 🔊 para escucharlas.</p>
+        <div class="hw-sentences-list" id="hw-sentences-list"></div>
+      </div>
     </div>
   </div>
 
@@ -394,7 +408,7 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/homework.js?v=20260528l"></script>
+  <script src="/js/homework.js?v=20260528m"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>

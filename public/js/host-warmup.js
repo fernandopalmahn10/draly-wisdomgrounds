@@ -1244,6 +1244,8 @@
   const _wuCharCache = {};
   function _wuTransparentChar(kind, cb) {
     const raw = '/assets/png-library/' + kind + '.png';
+    // Gojo's white hair gets eaten by the chroma-key flood; leave him untouched.
+    if (kind === 'gojo') { cb(raw); return; }
     if (_wuCharCache[kind]) { cb(_wuCharCache[kind]); return; }
     const img = new Image();
     img.onload = () => {

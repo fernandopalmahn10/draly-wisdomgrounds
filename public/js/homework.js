@@ -130,17 +130,29 @@
   // Coarse country guess from locale region or timezone city. Best-effort,
   // never authoritative — just a hint for the teacher.
   function guessCountry(locale, tz) {
-    const m = /[-_]([A-Za-z]{2})$/.exec(locale || '');
-    if (m) return m[1].toUpperCase();
+    // Timezone first — the phone's clock region is far more reliable than the
+    // UI language. A child in Mexico with an English (en-US) phone must not be
+    // reported as "US"; their timezone (America/Mexico_City) gives the truth.
     const TZ_COUNTRY = {
-      'Mexico_City': 'MX', 'Tijuana': 'MX', 'Monterrey': 'MX',
+      'Mexico_City': 'MX', 'Tijuana': 'MX', 'Monterrey': 'MX', 'Cancun': 'MX',
+      'Merida': 'MX', 'Hermosillo': 'MX', 'Mazatlan': 'MX', 'Matamoros': 'MX',
       'Shanghai': 'CN', 'Chongqing': 'CN', 'Urumqi': 'CN', 'Hong_Kong': 'HK',
       'Taipei': 'TW', 'Macau': 'MO', 'Singapore': 'SG',
       'Bogota': 'CO', 'Lima': 'PE', 'Buenos_Aires': 'AR', 'Santiago': 'CL',
-      'Madrid': 'ES', 'New_York': 'US', 'Los_Angeles': 'US', 'Chicago': 'US',
+      'Guayaquil': 'EC', 'Caracas': 'VE', 'La_Paz': 'BO', 'Asuncion': 'PY',
+      'Montevideo': 'UY', 'Guatemala': 'GT', 'Tegucigalpa': 'HN',
+      'San_Salvador': 'SV', 'Managua': 'NI', 'Costa_Rica': 'CR', 'Panama': 'PA',
+      'Santo_Domingo': 'DO', 'Havana': 'CU', 'Puerto_Rico': 'PR',
+      'Madrid': 'ES', 'Ceuta': 'ES', 'Canary': 'ES',
+      'New_York': 'US', 'Los_Angeles': 'US', 'Chicago': 'US', 'Denver': 'US',
+      'Phoenix': 'US', 'Anchorage': 'US', 'Honolulu': 'US',
     };
     const city = String(tz || '').split('/').pop();
-    return TZ_COUNTRY[city] || (city ? city.replace(/_/g, ' ') : null);
+    if (city && TZ_COUNTRY[city]) return TZ_COUNTRY[city];
+    // Fall back to the locale region only when the timezone is unknown.
+    const m = /[-_]([A-Za-z]{2})(?:[-_]|$)/.exec(locale || '');
+    if (m) return m[1].toUpperCase();
+    return city ? city.replace(/_/g, ' ') : null;
   }
 
   // ── Pre-fill remembered values
@@ -377,6 +389,46 @@
   });
   $('hw-list-parents').addEventListener('click', openParentView);
   $('hw-list-settings').addEventListener('click', openSettings);
+  // 📜 Mis oraciones — kid's saved warmup sentences + 🔊 listen.
+  $('hw-list-sentences').addEventListener('click', openMySentences);
+  $('hw-sentences-close').addEventListener('click', () => $('hw-sentences-overlay').classList.add('hidden'));
+  $('hw-sentences-overlay').addEventListener('click', (e) => { if (e.target === $('hw-sentences-overlay')) $('hw-sentences-overlay').classList.add('hidden'); });
+  function openMySentences() {
+    const ov = $('hw-sentences-overlay'); const list = $('hw-sentences-list');
+    ov.classList.remove('hidden');
+    list.innerHTML = '<div class="hw-empty">Cargando…</div>';
+    fetch('/api/homework/sentences/' + encodeURIComponent(studentCode)
+        + '?accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode))
+      .then((r) => r.json())
+      .then((data) => {
+        const arr = (data && data.sentences) || [];
+        if (!arr.length) { list.innerHTML = '<div class="hw-empty">Aún no has guardado oraciones en clase. Cuando tu maestra las guarde, aparecerán aquí. 🌱</div>'; return; }
+        list.innerHTML = '';
+        arr.forEach((s) => {
+          const words = (s.words || []).map((wid) => (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]) || null).filter(Boolean);
+          if (!words.length) return;
+          const pinyin = words.map((w) => w.pinyin).join(' ');
+          const dateStr = s.ts ? new Date(s.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+          const chips = words.map((w) => {
+            const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+            const color = cat ? cat.color : '#ffe082';
+            return `<span class="hw-sent-chip" style="--cat-color:${color}"><span class="hw-sent-chip-py">${escapeHtml(w.pinyin)}</span><span class="hw-sent-chip-es">${escapeHtml(w.es || '')}</span></span>`;
+          }).join('');
+          const item = document.createElement('div');
+          item.className = 'hw-sentence-item';
+          item.innerHTML = `
+            <div class="hw-sentence-row">
+              <span class="hw-sentence-date">📅 ${dateStr}</span>
+              <button class="hw-sentence-speak" type="button" title="Escuchar">🔊 Oír</button>
+            </div>
+            <div class="hw-sentence-words">${chips}</div>`;
+          item.querySelector('.hw-sentence-speak').addEventListener('click', (e) => speakChinese(pinyin, e.currentTarget));
+          list.appendChild(item);
+        });
+        if (!list.children.length) list.innerHTML = '<div class="hw-empty">Aún no hay oraciones guardadas.</div>';
+      })
+      .catch((e) => { list.innerHTML = '<div class="hw-empty">Error: ' + e.message + '</div>'; });
+  }
 
   // === Avatar picker (first-time entry) ===
   function showAvatarPicker() {
