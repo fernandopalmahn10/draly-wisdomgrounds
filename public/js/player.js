@@ -2794,16 +2794,38 @@
       }
       return;
     }
-    // zombies | moto — stampede across
+    if (kind === 'flash') {
+      const f = document.createElement('div');
+      f.className = 'wu-fx-flash';
+      layer.appendChild(f);
+      if (MochiSounds && MochiSounds.combo) MochiSounds.combo();
+      setTimeout(() => f.remove(), 900);
+      return;
+    }
+    if (kind === 'stars') {
+      const em = ['⭐', '🌟', '✨', '💫'];
+      for (let i = 0; i < 26; i++) {
+        const el = document.createElement('div');
+        el.className = 'wu-fx-confetti-bit'; el.textContent = em[i % em.length];
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.animationDelay = (Math.random() * 0.4) + 's';
+        el.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+        el.style.fontSize = (16 + Math.random() * 20) + 'px';
+        layer.appendChild(el); setTimeout(() => el.remove(), 3200);
+      }
+      return;
+    }
+    // zombies | moto | tiger — stampede across
     const isZombie = (kind === 'zombies');
-    const glyphs = isZombie ? ['🧟', '🧟‍♂️', '🧟‍♀️'] : ['🏍', '🏍️', '🛵'];
+    const isTiger = (kind === 'tiger');
+    const glyphs = isZombie ? ['🧟', '🧟‍♂️', '🧟‍♀️'] : isTiger ? ['🐯', '🐅', '🐯'] : ['🏍', '🏍️', '🛵'];
     for (let i = 0; i < (isZombie ? 6 : 5); i++) {
       const el = document.createElement('div');
-      el.className = 'wu-fx-runner ' + (isZombie ? 'is-zombie ' : 'is-moto ') + (Math.random() < 0.5 ? 'from-right' : 'from-left');
+      el.className = 'wu-fx-runner ' + (isZombie ? 'is-zombie ' : isTiger ? 'is-tiger ' : 'is-moto ') + (Math.random() < 0.5 ? 'from-right' : 'from-left');
       el.textContent = glyphs[i % glyphs.length];
       el.style.top = (15 + Math.random() * 65) + 'vh';
       el.style.animationDelay = (Math.random() * 0.6) + 's';
-      el.style.animationDuration = ((isZombie ? 3.2 : 1.8) + Math.random() * 1.2) + 's';
+      el.style.animationDuration = ((isZombie ? 3.2 : isTiger ? 2.4 : 1.8) + Math.random() * 1.2) + 's';
       el.style.fontSize = (32 + Math.random() * 20) + 'px';
       layer.appendChild(el); setTimeout(() => el.remove(), 5000);
     }

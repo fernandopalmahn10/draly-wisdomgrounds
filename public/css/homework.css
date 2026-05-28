@@ -699,16 +699,19 @@ body.hw-bg {
 }
 @keyframes hwStarSpin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
 .hw-avatar-option { position: relative; }
-/* Subtle idle float on the avatar art so the grid feels alive. */
-.hw-avatar-option-img img { animation: hwAvatarFloat 3.5s ease-in-out infinite; }
-.hw-avatar-option:nth-child(2n) .hw-avatar-option-img img { animation-delay: 0.6s; }
-.hw-avatar-option:nth-child(3n) .hw-avatar-option-img img { animation-delay: 1.2s; }
-@keyframes hwAvatarFloat {
-  0%,100% { transform: translateY(0); }
-  50%     { transform: translateY(-4px); }
-}
+/* NOTE: the previous infinite idle-float on EVERY avatar image caused
+   constant compositing on phones and made taps feel laggy/unresponsive.
+   Removed — only the selected avatar animates now (one element). */
 @media (prefers-reduced-motion: reduce) {
-  .hw-avatar-option.selected, .hw-avatar-option.selected::after, .hw-avatar-option-img img { animation: none; }
+  .hw-avatar-option.selected, .hw-avatar-option.selected::after { animation: none; }
+}
+
+/* === TOUCH RESPONSIVENESS (2026-05-28) === kill the 300ms tap delay and
+   ghost/double taps on mobile; every tappable control responds instantly. */
+button, a, .hw-card, .hw-folder-card, .hw-lib-chip, .hw-stage-word,
+.hw-avatar-option, .hw-item-stage, [role="button"], input, select, textarea {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 .hw-avatar-option-img {
   width: 100%;

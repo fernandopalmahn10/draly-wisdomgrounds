@@ -943,7 +943,9 @@
 
     // --- 🎮 Interactive VFX buttons ---
     const fx = { 'wu-fx-rain': 'rain', 'wu-fx-confetti': 'confetti',
-                 'wu-fx-zombies': 'zombies', 'wu-fx-moto': 'moto', 'wu-fx-shake': 'shake' };
+                 'wu-fx-zombies': 'zombies', 'wu-fx-moto': 'moto', 'wu-fx-shake': 'shake',
+                 'wu-fx-sixseven': 'sixseven', 'wu-fx-stars': 'stars',
+                 'wu-fx-flash': 'flash', 'wu-fx-tiger': 'tiger' };
     Object.keys(fx).forEach((id) => {
       const b = $(id);
       if (b) b.addEventListener('click', () => broadcastFx(fx[id]));
@@ -1040,15 +1042,18 @@
   let _funTimer = null;
   function startRandomFun() {
     if (_funTimer) return;
-    const FUN = ['confetti', 'confetti', 'sixseven', 'rain', 'zombies', 'moto'];
+    // NOTE: 'shake' is intentionally NOT in the auto pool — it transforms the
+    // whole page for ~0.7s and made taps land off-target. Teachers can still
+    // fire shake manually from the FX row.
+    const FUN = ['confetti', 'confetti', 'sixseven', 'rain', 'stars', 'confetti'];
     const tick = () => {
       const onActive = $('screen-active') && !$('screen-active').classList.contains('hidden');
       if (onActive && document.visibilityState !== 'hidden') {
         broadcastFx(FUN[Math.floor(Math.random() * FUN.length)]);
       }
-      _funTimer = setTimeout(tick, 25000 + Math.random() * 30000);
+      _funTimer = setTimeout(tick, 45000 + Math.random() * 45000);
     };
-    _funTimer = setTimeout(tick, 25000 + Math.random() * 30000);
+    _funTimer = setTimeout(tick, 45000 + Math.random() * 45000);
   }
 
   // === SPEAK (Google TTS via /api/tts → Web Speech fallback) ===
@@ -1149,19 +1154,48 @@
       setTimeout(() => el.remove(), 2600);
       return;
     }
-    // 'zombies' and 'moto' both stampede across the screen from one side
+    if (kind === 'flash') {
+      // 💥 Full-screen color flash (a few quick strobes). Brief; never blocks
+      // taps (pointer-events:none on the layer).
+      const f = document.createElement('div');
+      f.className = 'wu-fx-flash';
+      layer.appendChild(f);
+      if (MochiSounds.combo) MochiSounds.combo();
+      setTimeout(() => f.remove(), 900);
+      return;
+    }
+    if (kind === 'stars') {
+      const em = ['⭐', '🌟', '✨', '💫'];
+      for (let i = 0; i < 30; i++) {
+        const el = document.createElement('div');
+        el.className = 'wu-fx-confetti-bit';
+        el.textContent = em[i % em.length];
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.animationDelay = (Math.random() * 0.4) + 's';
+        el.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+        el.style.fontSize = (16 + Math.random() * 22) + 'px';
+        layer.appendChild(el);
+        setTimeout(() => el.remove(), 3200);
+      }
+      if (MochiSounds.correct) MochiSounds.correct();
+      return;
+    }
+    // 'zombies' | 'moto' | 'tiger' all stampede across the screen.
     const isZombie = (kind === 'zombies');
-    const glyphs = isZombie ? ['🧟', '🧟‍♂️', '🧟‍♀️'] : ['🏍', '🏍️', '🛵'];
-    const count = isZombie ? 7 : 6;
+    const isTiger = (kind === 'tiger');
+    const glyphs = isZombie ? ['🧟', '🧟‍♂️', '🧟‍♀️']
+                 : isTiger  ? ['🐯', '🐅', '🐯']
+                 : ['🏍', '🏍️', '🛵'];
+    const count = isTiger ? 5 : (isZombie ? 7 : 6);
     for (let i = 0; i < count; i++) {
       const el = document.createElement('div');
-      el.className = 'wu-fx-runner ' + (isZombie ? 'is-zombie' : 'is-moto');
+      el.className = 'wu-fx-runner ' + (isZombie ? 'is-zombie' : isTiger ? 'is-tiger' : 'is-moto');
       el.textContent = glyphs[i % glyphs.length];
       const r2l = Math.random() < 0.5;
       el.classList.add(r2l ? 'from-right' : 'from-left');
       el.style.top = (15 + Math.random() * 65) + 'vh';
       el.style.animationDelay = (Math.random() * 0.6) + 's';
-      el.style.animationDuration = ((isZombie ? 3.2 : 1.8) + Math.random() * 1.2) + 's';
+      el.style.animationDuration = ((isZombie ? 3.2 : isTiger ? 2.4 : 1.8) + Math.random() * 1.2) + 's';
       el.style.fontSize = (34 + Math.random() * 22) + 'px';
       layer.appendChild(el);
       setTimeout(() => el.remove(), 5000);

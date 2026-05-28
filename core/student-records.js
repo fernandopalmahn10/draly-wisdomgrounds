@@ -148,6 +148,11 @@ const AVATAR_OPTIONS = [
   'robo',   'cyborg', 'alien',  'blob',
   'monkey', 'ghost',  'pixie',  'wizard',
   'pixel',  'punky',  'panda',  'ninja',
+  // 2026-05-28 — wider variety: more heroes, beasts & robots.
+  'tiger',  'phoenix', 'knight', 'mecha',
+  'yeti',   'fox',     'owl',    'shark',
+  'viking', 'galaxy',  'comet',  'boba',
+  'lotus',  'ramen',   'koala',  'raptor',
 ];
 function setAvatar(code, avatar) {
   const rec = get(code);

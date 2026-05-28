@@ -616,6 +616,7 @@ app.get('/api/homework/assignment/:id', (req, res) => {
     subtitle: a.subtitle,
     instructions: a.instructions,
     type: a.type,
+    expLabel: a.expLabel || null,   // lets the client lock the word bank
     pointsPerItem: a.pointsPerItem,
     items: a.items.map((it) => ({ es: it.es })),  // NO expected
   });
@@ -4859,7 +4860,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
     if (!(g.hostId === socket.id && isAdminPassword(password))) return;
-    const ok = ['rain', 'confetti', 'zombies', 'moto', 'shake', 'sixseven'];
+    const ok = ['rain', 'confetti', 'zombies', 'moto', 'shake', 'sixseven', 'flash', 'stars', 'tiger'];
     if (!ok.includes(kind)) return;
     io.to(pin).emit('wu:fx', { kind });
   });

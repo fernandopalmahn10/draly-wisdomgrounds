@@ -31,6 +31,11 @@
     robo:   '🤖 Robo',   cyborg: '🦾 Ciborg',  alien:  '👽 Alien',  blob:   '🟢 Blob',
     monkey: '🐵 Mono',   ghost:  '👻 Fantasma', pixie:  '🧚 Hada',   wizard: '🧙 Mago',
     pixel:  '👾 Pixel',  punky:  '🎸 Punky',    panda:  '🐼 Panda',  ninja:  '🥷 Ninja',
+    // 2026-05-28 — wider variety (more heroes, beasts & robots).
+    tiger:  '🐯 Tigre',  phoenix:'🔥 Fénix',   knight: '🛡 Caballero', mecha: '🤖 Mecha',
+    yeti:   '❄️ Yeti',   fox:    '🦊 Zorro',   owl:    '🦉 Búho',    shark:  '🦈 Tiburón',
+    viking: '⚔️ Vikingo', galaxy: '🌌 Galaxia', comet:  '☄️ Cometa',  boba:   '🧋 Boba',
+    lotus:  '🪷 Loto',   ramen:  '🍜 Ramen',   koala:  '🐨 Koala',   raptor: '🦖 Raptor',
   };
   // ?v bumped whenever the avatar ART is regenerated (same filenames, new
   // look) so browsers don't serve the stale cached SVG. 2026-05-28: fresh
@@ -776,7 +781,7 @@
   // parent-card result is untouched. null = root (folders); else 'exp1'…
   let hwFolder = null;
   // Best-effort story→experience grouping for the reading folders.
-  const READING_EXP = { xiaomingday: 'exp1' };
+  const READING_EXP = { xiaomingday: 'exp8' };
   function readingExpOf(r) { return (r && (READING_EXP[r.storyId] || r.exp)) || 'exp1'; }
   (function bindFolderBack() {
     const b = $('hw-folder-back');
@@ -851,15 +856,19 @@
     const statusBadge = bestScore == null
       ? '<span class="hw-card-badge new">Nueva</span>'
       : `<span class="hw-card-badge done">${bestScore}/${a.totalPoints} pts</span>`;
-    const expChip = a.expLabel && window.WU_EXPERIENCES && window.WU_EXPERIENCES[a.expLabel]
-      ? `<span class="hw-card-exp">${escapeHtml(window.WU_EXPERIENCES[a.expLabel].short || a.expLabel.toUpperCase())}</span>`
+    // Lesson label "EXP1 / 1" — numbered within its own experience (week).
+    const expNum = (a.expLabel || '').replace('exp', '');
+    const sameExp = assignments.filter((x) => x.expLabel === a.expLabel);
+    const lessonNo = Math.max(1, sameExp.indexOf(a) + 1);
+    const lessonChip = expNum
+      ? `<span class="hw-card-exp">EXP${expNum} / ${lessonNo}</span>`
       : '';
     card.innerHTML = `
       <div class="hw-card-head">
         ${statusBadge}
         <span class="hw-card-points">${a.totalPoints} pts</span>
       </div>
-      ${expChip}
+      ${lessonChip}
       <div class="hw-card-title">${escapeHtml(a.title)}</div>
       <div class="hw-card-sub">${escapeHtml(a.subtitle)}</div>
       <div class="hw-card-meta">${a.itemCount} oraciones</div>`;
@@ -876,12 +885,15 @@
       .then((data) => {
         if (!data || !data.ok) return;
         readingTests = data.stories || [];
-        // Re-render so folder counts (root) or the readings list (in-folder)
-        // reflect the freshly-fetched data — WITHOUT re-fetching (no loop).
+        // Re-render so folder counts / readings reflect fresh data — but
+        // NEVER rebuild the root grid on a repeat fetch, or a tap landing
+        // mid-rebuild gets lost or double-fires (the touch regression).
         if (hwFolder) renderReadingsList();
-        else renderFolderRoot();
+        else if (!_readingsLoadedOnce) renderFolderRoot();
+        _readingsLoadedOnce = true;
       }).catch(() => {});
   }
+  let _readingsLoadedOnce = false;
   function renderReadingsList() {
     const wrap = $('hw-list-readings');
     if (!wrap) return;
@@ -1168,7 +1180,10 @@
         currentAssignment = data;
         currentAnswers = data.items.map(() => '');
         undoStacks = data.items.map(() => []);
-        activeExpTab = 'all';
+        // Lock the word bank to THIS assignment's experience so kids only
+        // see the relevant words (no confusion). Falls back to 'all' if the
+        // assignment has no experience tag.
+        activeExpTab = data.expLabel || 'all';
         renderAssignment();
         showScreen('assignment');
       });
@@ -1324,6 +1339,18 @@
     if (!tabsWrap) return;
     tabsWrap.innerHTML = '';
     const exps = window.WU_EXPERIENCES || {};
+    // LOCKED MODE: when the assignment is tied to one experience, show ONLY
+    // that experience's words — no tab bar, no "Todas" — so kids aren't
+    // confused by the full 150-word catalog.
+    const lockedExp = currentAssignment && currentAssignment.expLabel;
+    if (lockedExp && exps[lockedExp]) {
+      activeExpTab = lockedExp;
+      const chip = document.createElement('div');
+      chip.className = 'hw-lib-locked-chip';
+      chip.textContent = '🔒 Solo palabras de ' + (exps[lockedExp].short || lockedExp);
+      tabsWrap.appendChild(chip);
+      return;
+    }
     const tabs = [{ id: 'all', label: '✨ Todas' }].concat(
       Object.keys(exps).map((k) => ({ id: k, label: exps[k].short || exps[k].label || k }))
     );
