@@ -2584,6 +2584,16 @@
   let wuPlayerIsJudge = false;     // can approve raise-hand requests
   let wuPlayerFrozen = false;      // teacher paused assistance
   let wuPlayerActiveExp = 'all';   // EXP filter on the player's own library
+  let wuPlayerSearch = '';         // tone-stripped catalog search (asistente)
+  // Tone-stripping normalizer (same forgiving semantics as /homework):
+  // "ni hao" matches "nǐ hǎo". Lowercase → NFD → drop diacritics.
+  function _wuNormalize(s) {
+    return String(s == null ? '' : s)
+      .toLowerCase().normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[.,!?;:'"()¿¡]/g, '')
+      .replace(/\s+/g, ' ').trim();
+  }
   let wuPlayerRearrange = false;   // local toggle — tap swaps instead of removes
   let wuPlayerSwapIdx = null;      // index of the first-selected word in swap
   let wuPlayerLastSentence = [];   // remember most recent sentence for re-renders
@@ -2717,6 +2727,27 @@
       }
       speakChineseWU(pinyin, btn);
     });
+  })();
+  // 🔍 Asistente catalog search — tone-forgiving, like the teacher's.
+  (function bindWuPlayerSearch() {
+    const input = document.getElementById('wu-player-search');
+    const clear = document.getElementById('wu-player-search-clear');
+    if (input) {
+      input.addEventListener('input', () => {
+        wuPlayerSearch = _wuNormalize(input.value);
+        if (clear) clear.classList.toggle('hidden', !input.value);
+        renderPlayerLibrary();
+      });
+    }
+    if (clear) {
+      clear.addEventListener('click', () => {
+        if (input) input.value = '';
+        wuPlayerSearch = '';
+        clear.classList.add('hidden');
+        renderPlayerLibrary();
+        if (input) input.focus();
+      });
+    }
   })();
   // ✋ Raise hand to become an asistente (gamified request to the teacher).
   (function bindWuPlayerHand() {
@@ -2908,10 +2939,21 @@
     if (!lib) return;
     lib.innerHTML = '';
     const byExp = {};
+    const q = wuPlayerSearch;   // already normalized
     (window.WU_WORDS || []).forEach((w) => {
       if (wuPlayerActiveExp !== 'all' && w.exp !== wuPlayerActiveExp) return;
+      // Tone-stripped search across pinyin, español AND hanzi.
+      if (q && !(
+        _wuNormalize(w.pinyin).includes(q) ||
+        _wuNormalize(w.es).includes(q) ||
+        (w.hanzi && w.hanzi.includes(wuPlayerSearch.trim()))
+      )) return;
       (byExp[w.exp] = byExp[w.exp] || []).push(w);
     });
+    if (q && Object.keys(byExp).length === 0) {
+      lib.innerHTML = `<div class="wu-pl-lib-empty">🔍 Sin resultados para “${escapeHtmlP(wuPlayerSearch)}”. Prueba sin tonos.</div>`;
+      return;
+    }
     Object.keys(byExp).forEach((expId) => {
       const exp = window.WU_EXPERIENCES[expId];
       const section = document.createElement('div');

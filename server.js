@@ -10,6 +10,7 @@ const TeacherPresets = require('./core/teacher-presets');
 const ReadingStory = require('./core/reading-story');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
+const Guides = require('./core/guides');
 
 const app = express();
 const server = http.createServer(app);
@@ -577,6 +578,24 @@ app.get('/api/homework/insights/:code', (req, res) => {
       }
     });
   });
+  // PER-SENTENCE DETAIL for the expandable "oraciones correctas" panel in
+  // the parent view — what each kid wrote vs the right answer, per lesson.
+  // Built from the BEST attempt per assignment so parents see their latest
+  // best work, not every retry.
+  const sentenceDetail = [];
+  Object.values(bestByAssignment).forEach((sub) => {
+    const rows = (sub.breakdown || []).map((b) => ({
+      es: b.es, expected: b.expected, student: b.student || '', correct: !!b.correct,
+    }));
+    if (!rows.length) return;
+    sentenceDetail.push({
+      assignmentId: sub.assignmentId,
+      assignmentTitle: sub.assignmentTitle || sub.assignmentId,
+      score: sub.score, total: sub.total,
+      correct: rows.filter((r) => r.correct).length,
+      rows,
+    });
+  });
   res.json({
     ok: true,
     code: rec.code,
@@ -586,6 +605,7 @@ app.get('/api/homework/insights/:code', (req, res) => {
     tests: uniqueTests,
     remaining,
     conversationPrompts,
+    sentenceDetail,
     totals: {
       assignmentAttempts:    subs.length,
       assignmentsMastered:   insights.length,
@@ -620,6 +640,67 @@ app.get('/api/homework/assignment/:id', (req, res) => {
     pointsPerItem: a.pointsPerItem,
     items: a.items.map((it) => ({ es: it.es })),  // NO expected
   });
+});
+
+// === 📘 STUDY-GUIDE PDFs ============================================
+// Stored on the persistent disk (see core/guides.js). Families list + open
+// them from the parent view's "Guías" tab; teachers upload from /maestro.
+
+// List guides for a family (filtered to their classroom + shared guides).
+app.get('/api/guides', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  let cc = null;
+  try {
+    const rec = Students.get(req.query.studentCode);
+    cc = rec && rec.classroomCode ? rec.classroomCode : null;
+  } catch (_) {}
+  res.json({ ok: true, guides: Guides.list(cc) });
+});
+// Stream a guide PDF inline (opens in the phone's PDF viewer / new tab).
+app.get('/api/guides/:id', (req, res) => {
+  const fp = Guides.filePath(req.params.id);
+  if (!fp || !fs.existsSync(fp)) return res.status(404).json({ ok: false, error: 'guía no encontrada' });
+  const g = Guides.get(req.params.id);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename="' + ((g && g.title) || 'guia').replace(/[^a-z0-9 _-]/gi, '') + '.pdf"');
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  fs.createReadStream(fp).pipe(res);
+});
+// Teacher list (admin) — shows all guides with size, for management.
+app.get('/api/admin/guides', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  res.json({ ok: true, guides: Guides.list(null) });
+});
+// Upload a guide PDF (admin). Body: { title, exp, classroomCode, dataBase64 }.
+// 20mb JSON parser on THIS route only (a 2-3 MB PDF is ~4 MB base64).
+app.post('/api/admin/guides', express.json({ limit: '20mb' }), (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const { title, exp, classroomCode, dataBase64 } = req.body || {};
+  if (!dataBase64 || typeof dataBase64 !== 'string') {
+    return res.status(400).json({ ok: false, error: 'falta el PDF' });
+  }
+  // Strip a data: URL prefix if present.
+  const b64 = dataBase64.replace(/^data:application\/pdf;base64,/, '');
+  let buffer;
+  try { buffer = Buffer.from(b64, 'base64'); }
+  catch (_) { return res.status(400).json({ ok: false, error: 'PDF inválido' }); }
+  if (!buffer.length || buffer.length > 18 * 1024 * 1024) {
+    return res.status(400).json({ ok: false, error: 'PDF vacío o demasiado grande (máx 18 MB)' });
+  }
+  // Sanity: PDFs start with "%PDF".
+  if (buffer.slice(0, 4).toString('latin1') !== '%PDF') {
+    return res.status(400).json({ ok: false, error: 'El archivo no es un PDF válido' });
+  }
+  const rec = Guides.addGuide({ title, exp, classroomCode, buffer });
+  res.json({ ok: true, guide: { id: rec.id, title: rec.title, exp: rec.exp, size: rec.size } });
+});
+app.delete('/api/admin/guides/:id', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const ok = Guides.deleteGuide(req.params.id);
+  res.json({ ok: !!ok });
 });
 
 app.post('/api/homework/submit', (req, res) => {

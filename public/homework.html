@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260526a">
-  <link rel="stylesheet" href="/css/homework.css?v=20260528h">
+  <link rel="stylesheet" href="/css/homework.css?v=20260528i">
 </head>
 <body class="hw-bg">
 
@@ -178,10 +178,15 @@
           <div class="hw-parents-stats" id="hw-parents-stats"></div>
         </div>
       </div>
-      <!-- TAB SWITCHER — progreso | tips -->
+      <!-- Expandable per-sentence detail (toggled by the "oraciones
+           correctas" pill) — what the kid wrote vs the right answer. -->
+      <div class="hw-parents-sentences-panel hidden" id="hw-parents-sentences-panel"></div>
+
+      <!-- TAB SWITCHER — progreso | tips | guías (scrollable on phones) -->
       <div class="hw-parents-tabs">
         <button class="hw-parents-tab active" data-tab="progress" type="button">📊 Progreso</button>
         <button class="hw-parents-tab" data-tab="tips" type="button">💡 Tips para mí</button>
+        <button class="hw-parents-tab" data-tab="guias" type="button">📘 Guías</button>
       </div>
 
       <!-- ============ TAB: PROGRESO ============ -->
@@ -300,6 +305,18 @@
           </div>
         </div>
       </div>
+
+      <!-- ============ TAB: GUÍAS ============ -->
+      <!-- Downloadable study guides (PDF) per lesson, grouped by experience.
+           Populated from /api/guides. -->
+      <div class="hw-parents-tabpanel hidden" id="hw-parents-tabpanel-guias">
+        <div class="hw-parents-encouragement">
+          📘 Aquí están las <strong>guías de estudio</strong> para repasar en casa con tu hijo/a. Cada guía cubre una lección. Descárgala o ábrela en tu teléfono. 🗣️ Practiquen las frases EN VOZ ALTA juntos.
+        </div>
+        <div class="hw-guias-list" id="hw-guias-list">
+          <div class="hw-parents-empty">Cargando guías…</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -366,7 +383,7 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/homework.js?v=20260528h"></script>
+  <script src="/js/homework.js?v=20260528i"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>

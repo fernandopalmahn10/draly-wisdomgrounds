@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260527a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260527a">
-  <link rel="stylesheet" href="/css/maestro.css?v=20260528e">
+  <link rel="stylesheet" href="/css/maestro.css?v=20260528f">
 </head>
 <body class="hw-bg">
 
@@ -38,8 +38,42 @@
       <div class="m-dash-actions">
         <button class="btn btn-gold btn-sm" id="m-live-master-btn" title="Invitar a estudiantes en línea a una sesión en vivo">🎯 Modo Maestro en vivo</button>
         <button class="btn btn-jade btn-sm" id="m-broadcast-btn">📢 Mensaje a toda la clase</button>
+        <button class="btn btn-jade btn-sm" id="m-guides-btn" title="Subir guías de estudio en PDF para los papás">📘 Guías (PDF)</button>
         <button class="btn btn-ghost btn-sm" id="m-refresh">🔄 Refrescar</button>
         <button class="btn btn-ghost btn-sm" id="m-logout">Salir</button>
+      </div>
+
+      <!-- GUÍAS MODAL — upload + manage study-guide PDFs -->
+      <div id="m-guides-modal" class="m-modal hidden">
+        <div class="m-modal-card">
+          <button class="m-modal-close" id="m-guides-close" type="button" aria-label="Cerrar">✕</button>
+          <h2>📘 Guías de estudio (PDF)</h2>
+          <p class="m-live-master-help">Sube las guías que verán los papás en la pestaña <strong>Guías</strong> de su portal. Elige a qué experiencia pertenece cada una.</p>
+          <label class="m-form-label">
+            <span>Título de la guía:</span>
+            <input class="input" id="m-guide-title" type="text" placeholder="Lección 1 · Semana 1" maxlength="120">
+          </label>
+          <label class="m-form-label">
+            <span>Experiencia (lección):</span>
+            <select class="input" id="m-guide-exp">
+              <option value="exp1">EXP1 · Yo / Familia</option>
+              <option value="exp2">EXP2 · Escuela / Idioma</option>
+              <option value="exp3">EXP3 · Comprar / Comer</option>
+              <option value="exp4">EXP4 · Tiempo / Clima</option>
+              <option value="exp5">EXP5 · Viajes / Lugares</option>
+              <option value="exp6">EXP6 · Casa / Actividades</option>
+              <option value="exp7">EXP7 · Personas / ¿?</option>
+              <option value="exp8">EXP8 · Números / Partículas</option>
+            </select>
+          </label>
+          <label class="m-form-label">
+            <span>Archivo PDF (máx 18 MB):</span>
+            <input class="input" id="m-guide-file" type="file" accept="application/pdf">
+          </label>
+          <button class="btn btn-jade btn-xl" id="m-guide-upload">⬆️ Subir guía</button>
+          <p class="m-modal-msg" id="m-guide-msg"></p>
+          <div class="m-guides-list" id="m-guides-list"></div>
+        </div>
       </div>
 
       <!-- LIVE MASTER MODAL — select online students + send invite to PIN -->
@@ -135,6 +169,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/maestro.js?v=20260528f"></script>
+  <script src="/js/maestro.js?v=20260528g"></script>
 </body>
 </html>
