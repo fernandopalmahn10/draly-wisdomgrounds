@@ -141,6 +141,78 @@
     location.href = '/host-warmup.html?livemaster=1';
   });
 
+  // === 📘 GUÍAS (PDF upload + manage) ===
+  const guidesBtn   = $('m-guides-btn');
+  const guidesModal = $('m-guides-modal');
+  if (guidesBtn) guidesBtn.addEventListener('click', () => {
+    guidesModal.classList.remove('hidden');
+    $('m-guide-msg').textContent = '';
+    loadGuidesList();
+  });
+  if ($('m-guides-close')) $('m-guides-close').addEventListener('click', () => guidesModal.classList.add('hidden'));
+  if (guidesModal) guidesModal.addEventListener('click', (e) => { if (e.target === guidesModal) guidesModal.classList.add('hidden'); });
+
+  function loadGuidesList() {
+    const list = $('m-guides-list');
+    if (!list) return;
+    list.innerHTML = '<div class="m-empty">Cargando…</div>';
+    fetch('/api/admin/guides?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { list.innerHTML = '<div class="m-empty">No se pudo cargar.</div>'; return; }
+        if (!data.guides.length) { list.innerHTML = '<div class="m-empty">Aún no hay guías subidas.</div>'; return; }
+        list.innerHTML = '';
+        data.guides.forEach((g) => {
+          const mb = g.size ? (g.size / (1024 * 1024)).toFixed(1) + ' MB' : '';
+          const row = document.createElement('div');
+          row.className = 'm-guide-row';
+          row.innerHTML = `
+            <span class="m-guide-title">📘 ${escapeHtml(g.title)}</span>
+            <span class="m-guide-meta">${escapeHtml((g.exp || '').toUpperCase())} · ${mb}</span>
+            <a class="btn btn-ghost btn-sm" href="/api/guides/${encodeURIComponent(g.id)}" target="_blank" rel="noopener">Ver</a>
+            <button class="btn btn-red btn-sm" data-id="${escapeHtml(g.id)}" type="button">🗑</button>`;
+          row.querySelector('button[data-id]').addEventListener('click', () => {
+            if (!confirm('¿Borrar esta guía?')) return;
+            fetch('/api/admin/guides/' + encodeURIComponent(g.id) + '?pw=' + encodeURIComponent(pw), { method: 'DELETE' })
+              .then((r) => r.json()).then(() => loadGuidesList());
+          });
+          list.appendChild(row);
+        });
+      })
+      .catch((e) => { list.innerHTML = '<div class="m-empty">Error: ' + e.message + '</div>'; });
+  }
+
+  if ($('m-guide-upload')) $('m-guide-upload').addEventListener('click', () => {
+    const title = $('m-guide-title').value.trim();
+    const exp   = $('m-guide-exp').value;
+    const fileEl = $('m-guide-file');
+    const msg = $('m-guide-msg');
+    const file = fileEl && fileEl.files && fileEl.files[0];
+    if (!title) { msg.textContent = 'Escribe un título.'; return; }
+    if (!file) { msg.textContent = 'Elige un archivo PDF.'; return; }
+    if (file.size > 18 * 1024 * 1024) { msg.textContent = 'El PDF es muy grande (máx 18 MB).'; return; }
+    msg.textContent = 'Subiendo…';
+    const reader = new FileReader();
+    reader.onload = () => {
+      fetch('/api/admin/guides?pw=' + encodeURIComponent(pw), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, exp, dataBase64: String(reader.result || '') }),
+      })
+        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) { msg.textContent = 'Error: ' + (r.error || ''); return; }
+          msg.textContent = '✓ Guía subida.';
+          $('m-guide-title').value = '';
+          if (fileEl) fileEl.value = '';
+          loadGuidesList();
+        })
+        .catch((e) => { msg.textContent = 'Error: ' + e.message; });
+    };
+    reader.onerror = () => { msg.textContent = 'No se pudo leer el archivo.'; };
+    reader.readAsDataURL(file);   // → data:application/pdf;base64,...
+  });
+
   // 📢 Broadcast — sends a message to every student in the teacher's
   // classroom. Super admin gets prompted for the classroomCode (defaults
   // to "1001" — your own); regular teachers auto-target their own.

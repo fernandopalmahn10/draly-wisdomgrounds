@@ -576,7 +576,21 @@
       <span class="hw-parents-stat">📚 <strong>${t.assignmentsMastered || 0}</strong>/${t.assignmentsAvailable || 0} tareas dominadas</span>
       <span class="hw-parents-stat">📖 <strong>${stories}</strong> historia${stories === 1 ? '' : 's'} leída${stories === 1 ? '' : 's'}${storiesExtra}</span>
       <span class="hw-parents-stat hw-parents-stat-pill is-clickable" id="hw-parents-pill-words" role="button">🌱 <strong>${wordsLearned}</strong>/${wordsTotal} palabras aprendidas <small>(estimado · toca para ver)</small></span>
-      <span class="hw-parents-stat hw-parents-stat-pill">✏️ <strong>${sentCorrect}</strong> oraciones correctas</span>`;
+      <span class="hw-parents-stat hw-parents-stat-pill is-clickable" id="hw-parents-pill-sentences" role="button">✏️ <strong>${sentCorrect}</strong> oraciones correctas <small>(toca para ver)</small></span>`;
+    // Expandable per-sentence panel: shows exactly what the kid wrote vs the
+    // right answer, marked ✓ / ✗, grouped by lesson. User feedback: "oraciones
+    // correctas should expand to see what is correct and what is incorrect."
+    renderSentenceDetail(data.sentenceDetail || []);
+    const sentPill = $('hw-parents-pill-sentences');
+    if (sentPill) {
+      sentPill.addEventListener('click', () => {
+        const panel = $('hw-parents-sentences-panel');
+        if (!panel) return;
+        const show = panel.classList.contains('hidden');
+        panel.classList.toggle('hidden', !show);
+        if (show) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    }
     // User feedback 2026-05-27: "once you click on the green bar, then
     // it's when you should display what the kid already knows."
     // → Tapping the palabras-aprendidas pill scrolls to + opens the
@@ -715,7 +729,7 @@
       }
     }
   }
-  // Parent-view tab switcher: progreso ↔ tips
+  // Parent-view tab switcher: progreso ↔ tips ↔ guías
   document.querySelectorAll('.hw-parents-tab').forEach((tabBtn) => {
     tabBtn.addEventListener('click', () => {
       const target = tabBtn.dataset.tab;
@@ -725,8 +739,71 @@
       document.querySelectorAll('.hw-parents-tabpanel').forEach((p) => {
         p.classList.toggle('hidden', p.id !== ('hw-parents-tabpanel-' + target));
       });
+      if (target === 'guias') fetchGuides();
     });
   });
+
+  // Render the expandable per-sentence detail (correct ✓ / incorrect ✗).
+  function renderSentenceDetail(detail) {
+    const panel = $('hw-parents-sentences-panel');
+    if (!panel) return;
+    if (!detail || !detail.length) {
+      panel.innerHTML = '<div class="hw-parents-empty">Aún no hay oraciones entregadas. Cuando tu hijo/a haga una tarea, aquí verás qué escribió.</div>';
+      return;
+    }
+    panel.innerHTML = detail.map((d) => `
+      <div class="hw-sent-group">
+        <div class="hw-sent-group-head">${escapeHtml(d.assignmentTitle)} <span class="hw-sent-group-score">${d.correct}/${d.rows.length} ✓</span></div>
+        ${d.rows.map((r) => `
+          <div class="hw-sent-row ${r.correct ? 'ok' : 'bad'}">
+            <span class="hw-sent-mark">${r.correct ? '✓' : '✗'}</span>
+            <span class="hw-sent-body">
+              <span class="hw-sent-es">${escapeHtml(r.es)}</span>
+              <span class="hw-sent-given">Escribió: <strong>${escapeHtml(r.student || '—')}</strong></span>
+              ${r.correct ? '' : `<span class="hw-sent-expected">Correcto: <strong>${escapeHtml(r.expected)}</strong></span>`}
+            </span>
+          </div>`).join('')}
+      </div>`).join('');
+  }
+
+  // === 📘 GUÍAS (study-guide PDFs) ===
+  let _guidesLoaded = false;
+  function fetchGuides() {
+    const wrap = $('hw-guias-list');
+    if (!wrap) return;
+    if (_guidesLoaded) return;     // load once per session
+    fetch('/api/guides?accessCode=' + encodeURIComponent(accessCode)
+        + '&studentCode=' + encodeURIComponent(studentCode))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { wrap.innerHTML = '<div class="hw-parents-empty">No se pudieron cargar las guías.</div>'; return; }
+        _guidesLoaded = true;
+        renderGuias(data.guides || []);
+      })
+      .catch(() => { wrap.innerHTML = '<div class="hw-parents-empty">Error al cargar las guías.</div>'; });
+  }
+  function renderGuias(guides) {
+    const wrap = $('hw-guias-list');
+    if (!wrap) return;
+    if (!guides.length) {
+      wrap.innerHTML = '<div class="hw-parents-empty">Todavía no hay guías. Tu maestra las subirá pronto. 📘</div>';
+      return;
+    }
+    const exps = window.WU_EXPERIENCES || {};
+    wrap.innerHTML = guides.map((g) => {
+      const expLabel = g.exp && exps[g.exp] ? (exps[g.exp].short || g.exp) : '';
+      const mb = g.size ? (g.size / (1024 * 1024)).toFixed(1) + ' MB' : '';
+      return `
+        <a class="hw-guia-card" href="/api/guides/${encodeURIComponent(g.id)}" target="_blank" rel="noopener">
+          <span class="hw-guia-icon">📘</span>
+          <span class="hw-guia-body">
+            <span class="hw-guia-title">${escapeHtml(g.title)}</span>
+            <span class="hw-guia-meta">${expLabel ? escapeHtml(expLabel) + ' · ' : ''}PDF${mb ? ' · ' + mb : ''}</span>
+          </span>
+          <span class="hw-guia-open">Abrir →</span>
+        </a>`;
+    }).join('');
+  }
   // === HSK1 Levels render ===
   // Shows EXP1..EXP8 with word counts + expandable word lists. The
   // parent can pop open any level and quiz their kid on those words.
