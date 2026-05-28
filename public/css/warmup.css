@@ -1406,3 +1406,140 @@ body.wu-bg .market-banner {
 .wu-stage-actions, .wu-player-admin-actions {
   position: relative;
 }
+
+/* =====================================================================
+   2026-05-28 BATCH: search · speak · super-prompt · activity · VFX
+   ===================================================================== */
+
+/* 🔍 Catalog search bar */
+.wu-search-row {
+  display: flex; align-items: center; gap: 8px;
+  margin: 10px auto 6px; max-width: 680px;
+  padding: 4px 10px;
+  background: rgba(20, 28, 44, 0.55);
+  border: 1.5px solid rgba(120, 160, 220, 0.35);
+  border-radius: 14px;
+}
+.wu-search-icon { font-size: 1.1rem; opacity: 0.8; }
+.wu-search-input {
+  flex: 1; border: none; background: transparent; color: #f3f7ff;
+  font-size: 1rem; padding: 8px 4px; outline: none;
+}
+.wu-search-input::placeholder { color: rgba(200, 215, 240, 0.5); }
+.wu-search-clear {
+  border: none; background: rgba(255, 255, 255, 0.12); color: #fff;
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  font-size: 0.85rem; line-height: 1;
+}
+.wu-search-clear.hidden { display: none; }
+.wu-lib-empty {
+  text-align: center; padding: 26px 18px; color: rgba(220, 230, 250, 0.7);
+  font-size: 0.98rem; line-height: 1.5;
+}
+.wu-lib-empty em { color: var(--gold-glow, #ffd86b); font-style: normal; font-weight: 800; }
+
+/* 🔊 Escuchar button feedback */
+.wu-speak-btn.speaking { animation: wuSpeakPulse 0.8s ease-in-out infinite; }
+@keyframes wuSpeakPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+
+/* ✍️ Super-maestro Spanish prompt bar (host) */
+.wu-prompt-row {
+  max-width: 720px; margin: 0 auto 10px; padding: 10px 12px;
+  background: linear-gradient(135deg, rgba(90, 60, 140, 0.5), rgba(140, 70, 120, 0.45));
+  border: 1.5px solid rgba(200, 150, 240, 0.45);
+  border-radius: 14px;
+}
+.wu-prompt-row.hidden { display: none; }
+.wu-prompt-label {
+  display: block; font-weight: 800; color: #f3e3ff; margin-bottom: 6px; font-size: 0.95rem;
+}
+.wu-prompt-label small { font-weight: 600; opacity: 0.7; }
+.wu-prompt-inputwrap { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.wu-prompt-input { flex: 1; min-width: 180px; }
+
+/* 👀 Assistant activity ticker */
+.wu-activity {
+  margin-top: 10px; padding: 8px 10px;
+  background: rgba(16, 24, 38, 0.5);
+  border: 1px solid rgba(120, 160, 220, 0.25); border-radius: 12px;
+}
+.wu-activity-title { font-weight: 800; color: #cfe0ff; font-size: 0.9rem; margin-bottom: 6px; }
+.wu-activity-feed { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
+.wu-activity-empty { color: rgba(200, 215, 240, 0.5); font-size: 0.85rem; padding: 4px 2px; }
+.wu-activity-row {
+  display: flex; gap: 8px; align-items: center; font-size: 0.85rem;
+  padding: 5px 8px; border-radius: 8px; background: rgba(255, 255, 255, 0.04);
+  animation: wuActIn 0.3s ease;
+}
+@keyframes wuActIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.wu-activity-row.is-add { border-left: 3px solid #5bef8a; }
+.wu-activity-row.is-remove { border-left: 3px solid #ef5b5b; }
+.wu-activity-who { font-weight: 800; color: #fff; }
+.wu-activity-verb { opacity: 0.85; }
+.wu-activity-word { color: var(--gold-glow, #ffd86b); font-weight: 700; }
+.wu-activity-time { margin-left: auto; opacity: 0.5; font-size: 0.75rem; }
+
+/* 🎮 Interactive VFX controls */
+.wu-fx-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  justify-content: center; margin: 12px auto; max-width: 720px;
+}
+.wu-fx-label { font-weight: 800; color: #cfe0ff; font-size: 0.9rem; }
+.wu-fx-btn {
+  border: 1.5px solid rgba(120, 160, 220, 0.4); border-radius: 12px;
+  background: rgba(30, 40, 60, 0.6); color: #eaf2ff; cursor: pointer;
+  font-size: 0.92rem; font-weight: 700; padding: 8px 12px; transition: transform 0.1s, background 0.15s;
+}
+.wu-fx-btn:hover { background: rgba(60, 80, 120, 0.7); }
+.wu-fx-btn:active { transform: scale(0.93); }
+
+/* VFX layer + animated bits */
+.wu-fx-layer {
+  position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 40;
+}
+.wu-fx-confetti-bit { position: absolute; top: -8vh; will-change: transform, opacity; animation: wuConfettiFall linear forwards; }
+@keyframes wuConfettiFall {
+  0% { transform: translateY(0) rotate(0); opacity: 1; }
+  100% { transform: translateY(112vh) rotate(720deg); opacity: 0.2; }
+}
+.wu-fx-rain-drop { position: absolute; top: -6vh; will-change: transform; animation: wuRainFall linear forwards; font-size: 22px; }
+@keyframes wuRainFall { 0% { transform: translateY(0); opacity: 0.9; } 100% { transform: translateY(110vh); opacity: 0.4; } }
+.wu-fx-runner { position: absolute; will-change: transform; }
+.wu-fx-runner.from-left { left: -12vw; animation: wuRunL2R linear forwards; }
+.wu-fx-runner.from-right { right: -12vw; animation: wuRunR2L linear forwards; }
+@keyframes wuRunL2R { from { transform: translateX(0); } to { transform: translateX(124vw); } }
+@keyframes wuRunR2L { from { transform: translateX(0); } to { transform: translateX(-124vw); } }
+.wu-fx-runner.is-zombie.from-left { animation-timing-function: steps(8); }
+.wu-fx-runner.is-zombie.from-right { animation-timing-function: steps(8); }
+
+/* 📳 Screen shake */
+body.wu-shake { animation: wuShake 0.6s cubic-bezier(.36,.07,.19,.97); }
+@keyframes wuShake {
+  10%,90% { transform: translate3d(-2px,0,0); }
+  20%,80% { transform: translate3d(4px,0,0); }
+  30%,50%,70% { transform: translate3d(-8px,0,0); }
+  40%,60% { transform: translate3d(8px,0,0); }
+}
+
+/* ✍️ Player-side challenge prompt banner */
+.wu-player-prompt {
+  display: flex; flex-direction: column; gap: 2px;
+  margin: 8px auto 10px; max-width: 560px; padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(120, 70, 180, 0.92), rgba(170, 80, 140, 0.92));
+  border: 2px solid rgba(230, 180, 255, 0.6); border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(120, 60, 160, 0.4);
+  animation: wuActIn 0.35s ease;
+}
+.wu-player-prompt.hidden { display: none; }
+.wu-player-prompt-label { font-weight: 800; color: #ffe6ff; font-size: 0.8rem; letter-spacing: 0.04em; }
+.wu-player-prompt-text { font-weight: 900; color: #fff; font-size: 1.25rem; line-height: 1.3; }
+
+/* Phone scaling for the new host controls */
+@media (max-width: 560px) {
+  .wu-search-row { margin: 8px 6px 4px; }
+  .wu-fx-row { gap: 6px; }
+  .wu-fx-btn { font-size: 0.82rem; padding: 7px 9px; }
+  .wu-prompt-inputwrap { flex-direction: column; align-items: stretch; }
+  .wu-prompt-input { min-width: 0; }
+  .wu-player-prompt-text { font-size: 1.1rem; }
+}

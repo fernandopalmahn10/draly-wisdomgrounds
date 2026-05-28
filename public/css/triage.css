@@ -40,6 +40,12 @@ body.triage-bg .market-banner {
 .triage-only { display: none; }
 body.gametype-triage .triage-only { display: block; }
 
+/* BELT-AND-SUSPENDERS leak guard (2026-05-28): even if body.gametype-triage
+   ever goes stale on a late-join to a restarted non-triage game, an EMPTY
+   vocab banner must never render its padded/background box. The triage game
+   fills .tri-q-pinyin via cycleBannerSentence(); until then it stays hidden. */
+.tri-q-vocab:has(.tri-q-pinyin:empty) { display: none !important; }
+
 /* Sentence banner — NOW SITS BETWEEN the question card and the answers,
    so the kid reads the target sentence with both context AND right next to
    the choice they're about to tap. Compact, no doctor (he's walking

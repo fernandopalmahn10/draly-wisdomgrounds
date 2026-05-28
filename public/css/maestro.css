@@ -630,3 +630,46 @@ body.hw-bg {
 .m-sent-icon { font-size: 0.95rem; }
 .m-sent-pin  { font-weight: 900; color: var(--cat-color, #ffe082); }
 .m-sent-es   { font-style: italic; color: rgba(243, 230, 194, 0.7); font-size: 0.68rem; }
+
+/* =====================================================================
+   PHONE SCALING POLISH (2026-05-28) — the Cuaderno header, action bar,
+   tabs, modals and detail view were overflowing / cramped on phones.
+   ===================================================================== */
+@media (max-width: 560px) {
+  .m-dash { padding: 10px 8px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .m-dash-header {
+    flex-direction: column; align-items: stretch;
+    padding: 12px 12px; gap: 10px;
+  }
+  .m-dash-title { font-size: 1.15rem; }
+  .m-dash-sub { font-size: 0.85rem; }
+  /* Action buttons: full-width grid so they never spill off-screen */
+  .m-dash-actions {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%;
+  }
+  .m-dash-actions .btn { width: 100%; font-size: 0.82rem; padding: 9px 6px; }
+  /* The two primary actions span the full row */
+  #m-live-master-btn, #m-broadcast-btn { grid-column: 1 / -1; }
+
+  /* Tabs full width */
+  .m-tabs { display: flex; }
+  .m-tab { flex: 1; font-size: 0.85rem; padding: 8px 4px; }
+
+  /* Live-master + create-teacher modals: roomier on small screens */
+  .m-modal { padding: 10px; }
+  .m-modal-card { padding: 18px 14px; max-height: 92dvh; }
+  .m-modal-card h2 { font-size: 1.05rem; }
+  .m-live-master-list { max-height: 40dvh; }
+
+  /* Student detail header stacks; avatar shrinks */
+  .m-detail { padding: 12px; }
+  .m-detail-header { flex-direction: column; gap: 8px; }
+  .m-detail-head { gap: 10px; }
+  .m-detail-avatar { width: 64px; height: 64px; }
+  .m-detail-name { font-size: 1.15rem; }
+
+  /* Assignment rows: let the title wrap instead of clipping */
+  .m-asg-row { grid-template-columns: 1fr auto; gap: 6px 10px; font-size: 0.85rem; }
+  .m-asg-title { white-space: normal; }
+  .m-asg-date { grid-column: 1 / -1; }
+}

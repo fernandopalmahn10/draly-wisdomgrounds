@@ -2620,7 +2620,31 @@
       }
     }
     renderWuStage(data.sentence || []);
+    // Super-maestro challenge prompt (carried in state for late-joiners)
+    applyWuPrompt(typeof data.prompt === 'string' ? data.prompt : null);
   });
+
+  // Live prompt push (super maestro typed/cleared a Spanish challenge)
+  socket.on('wu:prompt', (data) => {
+    if (gameType !== 'warmup') return;
+    applyWuPrompt(data && typeof data.text === 'string' ? data.text : '');
+  });
+  // Show/hide the challenge banner on the player's warmup screen.
+  function applyWuPrompt(text) {
+    if (text === null || text === undefined) return;  // state didn't carry it
+    const wrap = document.getElementById('wu-player-prompt');
+    const t    = document.getElementById('wu-player-prompt-text');
+    if (!wrap || !t) return;
+    const clean = String(text).trim();
+    if (!clean) {
+      wrap.classList.add('hidden');
+      t.textContent = '';
+      return;
+    }
+    t.textContent = clean;
+    wrap.classList.remove('hidden');
+    if (MochiSounds && MochiSounds.tap) MochiSounds.tap();
+  }
 
   // Player-side admin library — same word data + EXP tabs, but emits
   // wu:add-word without a password (server validates via delegates set).
@@ -7525,6 +7549,14 @@
         document.body.classList.remove('gametype-triage');
       }
       if (typeof stopTriageVocabBg === 'function') stopTriageVocabBg();
+      // Also wipe any banner text the triage game may have populated, so a
+      // stale-but-filled banner can't survive into a non-triage game even if
+      // the body class somehow lingers. The :empty CSS rule then keeps the
+      // box hidden as well.
+      const _pin = document.getElementById('tri-q-pinyin');
+      const _es  = document.getElementById('tri-q-es');
+      if (_pin) _pin.innerHTML = '';
+      if (_es)  _es.textContent = '';
     }
     ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'zombie-sprint', 'family-place', 'cs-walk', 'cc-play', 'mq-play', 'fl-play', 'sixseven', 'cq-order', 'tri-pick', 'tri-cpr', 'lqh', 'wu', 'id', 'pr', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
