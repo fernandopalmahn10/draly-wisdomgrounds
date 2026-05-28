@@ -1186,6 +1186,19 @@
   socket.on('question', (q) => {
     markActivity();
     currentQid = q.qid;
+    // === TRIAGE-LEAK GUARD (bug fix 2026-05-27) ===
+    // A standard quiz `question` event is ONLY ever sent by set-based
+    // games (Mochi Mash, Market Quest, Color Clash, Monopoly, etc.) —
+    // NEVER by Triage (which uses tri-patient / tri-treat events). So if
+    // we're receiving one, we are definitively NOT in triage. Strip any
+    // leftover hospital vocab banner / floating tiles / ambulance / walking
+    // doctor that leaked from a stale `gametype-triage` body class on a
+    // previous session in this browser tab. This is what put the
+    // "El doctor trabaja en el hospital" banner on top of Mochi Mash.
+    if (document.body.classList.contains('gametype-triage')) {
+      document.body.classList.remove('gametype-triage');
+    }
+    if (typeof stopTriageVocabBg === 'function') stopTriageVocabBg();
     // 6-7 SWING — completely different question UI: skip the standard
     // multi-choice answer grid, show the math problem + two giant buttons.
     if (q.gameMode === 'sixseven' || gameType === 'sixseven') {
