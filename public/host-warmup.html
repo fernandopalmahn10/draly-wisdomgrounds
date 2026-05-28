@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260528i">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260528j">
 </head>
 <body class="wu-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -228,29 +228,42 @@
     <!-- Word library — grouped by experience section, color-coded per word -->
     <div class="wu-library" id="wu-library"></div>
 
-    <!-- 🎮 Capa interactiva — reuse game VFX to gamify the warm-up. Each
-         button fires a burst of effects on the teacher's screen so the
-         classroom projection feels alive. -->
-    <div class="wu-fx-row">
-      <span class="wu-fx-label">🎮 Efectos</span>
+    <!-- VFX canvas layer (fixed, behind UI, pointer-events:none) -->
+    <div class="wu-fx-layer" id="wu-fx-layer" aria-hidden="true"></div>
+  </div>
+
+  <!-- 🎮 EFECTOS — PINNED button (always visible, never scrolls away) that
+       opens a scrollable tray of ALL effects. Fires on every player screen. -->
+  <button class="wu-fx-fab" id="wu-fx-fab" type="button" aria-label="Efectos">🎮</button>
+  <div class="wu-fx-tray hidden" id="wu-fx-tray">
+    <div class="wu-fx-tray-head">
+      <span>🎮 Efectos</span>
+      <button class="wu-fx-tray-close" id="wu-fx-tray-close" type="button" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="wu-fx-tray-grid">
+      <div class="wu-fx-tray-section">⭐ Personajes</div>
+      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-gojo" type="button">🌀 Gojo</button>
+      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-yuji" type="button">👊 Yuji</button>
+      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-fnaf" type="button">🐻 FNAF</button>
+      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-shelly" type="button">💥 Shelly</button>
+      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-dandy" type="button">🎩 Dandy</button>
+      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-sixseven" type="button">🤙 6-7 GRANDE</button>
+      <div class="wu-fx-tray-section">✨ Ambiente</div>
       <button class="wu-fx-btn" id="wu-fx-confetti" type="button">🎉 Confeti</button>
       <button class="wu-fx-btn" id="wu-fx-rain" type="button">🌧 Lluvia</button>
       <button class="wu-fx-btn" id="wu-fx-stars" type="button">⭐ Estrellas</button>
-      <button class="wu-fx-btn" id="wu-fx-sixseven" type="button">🤙 6-7</button>
       <button class="wu-fx-btn" id="wu-fx-tiger" type="button">🐯 Tigre</button>
       <button class="wu-fx-btn" id="wu-fx-zombies" type="button">🧟 Zombis</button>
       <button class="wu-fx-btn" id="wu-fx-moto" type="button">🏍 Motos</button>
       <button class="wu-fx-btn" id="wu-fx-flash" type="button">💥 Destello</button>
       <button class="wu-fx-btn" id="wu-fx-shake" type="button">📳 Sacudir</button>
     </div>
-    <!-- VFX canvas layer (fixed, behind UI, pointer-events:none) -->
-    <div class="wu-fx-layer" id="wu-fx-layer" aria-hidden="true"></div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524h"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/warmup-vocab.js?v=20260524c"></script>
-  <script src="/js/host-warmup.js?v=20260528j"></script>
+  <script src="/js/host-warmup.js?v=20260528k"></script>
 </body>
 </html>

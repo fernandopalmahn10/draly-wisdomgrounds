@@ -1027,11 +1027,21 @@
     const fx = { 'wu-fx-rain': 'rain', 'wu-fx-confetti': 'confetti',
                  'wu-fx-zombies': 'zombies', 'wu-fx-moto': 'moto', 'wu-fx-shake': 'shake',
                  'wu-fx-sixseven': 'sixseven', 'wu-fx-stars': 'stars',
-                 'wu-fx-flash': 'flash', 'wu-fx-tiger': 'tiger' };
+                 'wu-fx-flash': 'flash', 'wu-fx-tiger': 'tiger',
+                 'wu-fx-gojo': 'gojo', 'wu-fx-yuji': 'yuji', 'wu-fx-fnaf': 'fnaf',
+                 'wu-fx-shelly': 'shelly', 'wu-fx-dandy': 'dandy' };
     Object.keys(fx).forEach((id) => {
       const b = $(id);
       if (b) b.addEventListener('click', () => broadcastFx(fx[id]));
     });
+    // 🎮 Pinned FAB toggles the scrollable effects tray.
+    const fab = $('wu-fx-fab');
+    const tray = $('wu-fx-tray');
+    const trayClose = $('wu-fx-tray-close');
+    if (fab && tray) {
+      fab.addEventListener('click', () => tray.classList.toggle('hidden'));
+      if (trayClose) trayClose.addEventListener('click', () => tray.classList.add('hidden'));
+    }
     // Kick off the random anti-monotony fun loop.
     startRandomFun();
 
@@ -1198,10 +1208,42 @@
   // === INTERACTIVE VFX === reuse lightweight DOM animations to gamify the
   // teacher's projected screen. All effects are pure CSS-animated emoji
   // elements appended to #wu-fx-layer (pointer-events:none), auto-cleaned.
+  // 🦸 Character summons — anime/comic-style full-screen "ult" entrances.
+  // Each: themed aura color + comic speed-lines + screen shake + the
+  // transparent PNG slamming in. label = the battle-cry shown.
+  const WU_CHARS = {
+    gojo:   { color: '#5ab0ff', glow: '#a98bff', label: '無量空処 ∞', cry: '¡GOJO!' },
+    yuji:   { color: '#ff5a5a', glow: '#ff2d2d', label: '黒閃 BLACK FLASH', cry: '¡YUJI!' },
+    fnaf:   { color: '#ff3b3b', glow: '#7a0000', label: 'IT\'S ME', cry: '¡FNAF!' },
+    shelly: { color: '#ffd23b', glow: '#ff9f1c', label: '¡SUPER!', cry: '¡SHELLY!' },
+    dandy:  { color: '#5be8d1', glow: '#7bdf7b', label: '¡HOLA!', cry: '¡DANDY!' },
+  };
+  function wuCharFx(layer, kind) {
+    const c = WU_CHARS[kind];
+    document.body.classList.remove('wu-shake'); void document.body.offsetWidth;
+    document.body.classList.add('wu-shake');
+    setTimeout(() => document.body.classList.remove('wu-shake'), 700);
+    const el = document.createElement('div');
+    el.className = 'wu-fx-char';
+    el.style.setProperty('--char-color', c.color);
+    el.style.setProperty('--char-glow', c.glow);
+    el.innerHTML = `
+      <div class="wu-fx-char-lines"></div>
+      <div class="wu-fx-char-aura"></div>
+      <img class="wu-fx-char-img" src="/assets/png-library/${kind}.png" alt="${kind}"
+           onerror="this.style.display='none'">
+      <div class="wu-fx-char-cry">${c.label}</div>`;
+    layer.appendChild(el);
+    if (MochiSounds.combo) MochiSounds.combo();
+    else if (MochiSounds.correct) MochiSounds.correct();
+    setTimeout(() => el.remove(), 3200);
+  }
+
   function fireFx(kind) {
     const layer = $('wu-fx-layer');
     if (!layer) return;
     if (MochiSounds.tap) MochiSounds.tap();
+    if (WU_CHARS[kind]) { wuCharFx(layer, kind); return; }
     if (kind === 'shake') {
       document.body.classList.remove('wu-shake');
       void document.body.offsetWidth;
