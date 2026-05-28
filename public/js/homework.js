@@ -32,8 +32,12 @@
     monkey: '🐵 Mono',   ghost:  '👻 Fantasma', pixie:  '🧚 Hada',   wizard: '🧙 Mago',
     pixel:  '👾 Pixel',  punky:  '🎸 Punky',    panda:  '🐼 Panda',  ninja:  '🥷 Ninja',
   };
+  // ?v bumped whenever the avatar ART is regenerated (same filenames, new
+  // look) so browsers don't serve the stale cached SVG. 2026-05-28: fresh
+  // cooler DiceBear set.
+  const AVATAR_ASSET_VER = '20260528b';
   function avatarSrc(name) {
-    return '/assets/avatars/' + encodeURIComponent(name) + '.svg';
+    return '/assets/avatars/' + encodeURIComponent(name) + '.svg?v=' + AVATAR_ASSET_VER;
   }
   function isSvgAvatar(v) {
     return typeof v === 'string' && /^[a-z]+$/.test(v) && AVATAR_LABELS[v];

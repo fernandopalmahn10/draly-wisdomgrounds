@@ -575,7 +575,7 @@
   function renderAvatar(value, size) {
     if (typeof value === 'string' && /^[a-z]+$/.test(value)) {
       const cls = size === 'large' ? ' m-avatar-img-large' : '';
-      return `<img class="m-avatar-img${cls}" src="/assets/avatars/${value}.svg" alt="">`;
+      return `<img class="m-avatar-img${cls}" src="/assets/avatars/${value}.svg?v=20260528b" alt="">`;
     }
     return `<span class="m-avatar-emoji">${escapeHtml(value || '🧒🏼')}</span>`;
   }

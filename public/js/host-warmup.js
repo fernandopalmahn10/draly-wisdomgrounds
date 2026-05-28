@@ -625,7 +625,7 @@
   // This helper picks the right rendering.
   function renderAvatarChip(value) {
     if (typeof value === 'string' && /^[a-z]+$/.test(value)) {
-      return `<img class="wu-nb-avatar-img" src="/assets/avatars/${value}.svg" alt="${escapeHtml(value)}" draggable="false">`;
+      return `<img class="wu-nb-avatar-img" src="/assets/avatars/${value}.svg?v=20260528b" alt="${escapeHtml(value)}" draggable="false">`;
     }
     return `<span class="wu-nb-avatar-emoji">${escapeHtml(value || '🧒🏼')}</span>`;
   }
