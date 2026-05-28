@@ -268,15 +268,32 @@ app.post('/api/admin/broadcast', (req, res) => {
   res.json({ ok: true, sent: count });
 });
 
-// Student inbox — gated by access code (same as the rest of /homework/*)
+// Student inbox — gated by access code. ALSO touches lastSeen, which
+// is how the /maestro live-presence indicator works. The /homework
+// page polls this every 20s while open, so every poll re-marks the
+// kid as "online now" for the teacher's Cuaderno view.
+// User feedback 2026-05-27: "kids said they're online but I don't see
+// them" — the inbox poll wasn't touching lastSeen before.
 app.get('/api/homework/inbox', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const code = req.query.studentCode;
   const rec = Students.get(code);
   if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  rec.lastSeen = Date.now();   // ← presence heartbeat
   const inbox = Students.getInbox(rec.code, 30);
   const unread = inbox.filter((m) => !m.readAt).length;
   res.json({ ok: true, inbox, unread });
+});
+
+// Dedicated presence ping — homework page can hit this even when it
+// doesn't need anything from the inbox. Just bumps lastSeen.
+app.post('/api/homework/ping', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode } = req.body || {};
+  const rec = Students.get(studentCode);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  rec.lastSeen = Date.now();
+  res.json({ ok: true, lastSeen: rec.lastSeen });
 });
 
 // Mark a single message read

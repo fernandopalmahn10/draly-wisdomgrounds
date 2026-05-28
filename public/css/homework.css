@@ -1295,9 +1295,13 @@ body.hw-bg {
   display: flex; align-items: center; justify-content: center;
   padding: 18px;
   opacity: 0;
+  pointer-events: none;           /* don't eat taps when invisible */
   transition: opacity 0.25s;
 }
-.hw-curious-overlay.show { opacity: 1; }
+.hw-curious-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
 .hw-curious-overlay.hidden { display: none; }
 .hw-curious-close {
   position: absolute; top: 16px; right: 18px;
@@ -1664,49 +1668,88 @@ body.hw-bg {
   font-style: italic;
 }
 
-/* === Modo Curioso bubble — appears briefly above the tapped chip with
-   hanzi + pinyin + Spanish so the kid sees the meaning every time. */
+/* === Modo Curioso mini-card on chip tap ===
+   User feedback 2026-05-27: "make the animation match the curious mode
+   exactly — bigger, same style, same sounds." So this bubble now mirrors
+   the full Pokédex card's structure (big icon, big hanzi, big pinyin,
+   category chip) but stays inline + auto-dismisses so it doesn't block
+   sentence building. Same glow + border-color treatment as the overlay. */
 .hw-meaning-bubble {
   position: absolute;
   z-index: 9000;
-  transform: translate(-50%, calc(-100% - 8px)) scale(0.7);
-  padding: 8px 14px;
-  background: linear-gradient(160deg, rgba(40, 50, 80, 0.97), rgba(20, 25, 45, 0.98));
-  border: 2px solid var(--cat-color, #5be8d1);
-  border-radius: 12px;
+  transform: translate(-50%, calc(-100% - 8px)) scale(0.5);
+  padding: 14px 20px 12px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08), transparent 70%),
+    linear-gradient(160deg, rgba(40, 50, 80, 0.98), rgba(20, 25, 45, 0.99));
+  border: 3px solid var(--cat-color, #5be8d1);
+  border-radius: 18px;
   color: #fff5d8;
-  font-size: 0.9rem;
-  font-weight: 800;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 18px var(--cat-color, rgba(91, 232, 209, 0.4));
+  text-align: center;
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.6),
+    0 0 32px var(--cat-color, rgba(91, 232, 209, 0.55)),
+    inset 0 0 16px rgba(255, 255, 255, 0.05);
   opacity: 0;
-  transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition:
+    opacity 0.18s ease,
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   pointer-events: none;
   white-space: nowrap;
-  display: flex; align-items: center; gap: 6px;
+  min-width: 160px;
 }
 .hw-meaning-bubble.show {
   opacity: 1;
-  transform: translate(-50%, calc(-100% - 12px)) scale(1);
+  transform: translate(-50%, calc(-100% - 14px)) scale(1);
 }
 .hw-meaning-bubble.fade {
   opacity: 0;
-  transform: translate(-50%, calc(-100% - 24px)) scale(0.9);
+  transform: translate(-50%, calc(-100% - 36px)) scale(0.92);
 }
 .hw-meaning-bubble::after {
+  /* Pointer arrow below the card */
   content: '';
   position: absolute;
-  bottom: -6px; left: 50%;
+  bottom: -8px; left: 50%;
   transform: translateX(-50%) rotate(45deg);
-  width: 10px; height: 10px;
-  background: rgba(20, 25, 45, 0.98);
-  border-right: 2px solid var(--cat-color, #5be8d1);
-  border-bottom: 2px solid var(--cat-color, #5be8d1);
+  width: 14px; height: 14px;
+  background: rgba(20, 25, 45, 0.99);
+  border-right: 3px solid var(--cat-color, #5be8d1);
+  border-bottom: 3px solid var(--cat-color, #5be8d1);
 }
-.hw-mb-icon   { font-size: 1.1rem; }
-.hw-mb-hanzi  { font-family: 'ZCOOL XiaoWei', serif; font-size: 1.1rem; color: #fff5d8; }
-.hw-mb-pinyin { color: var(--cat-color, #5be8d1); font-weight: 900; }
-.hw-mb-arrow  { color: rgba(243, 230, 194, 0.4); margin: 0 2px; }
-.hw-mb-es     { color: #ffe082; font-style: italic; }
+.hw-mb-icon {
+  display: block;
+  font-size: 2.4rem;
+  line-height: 1;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4));
+}
+.hw-mb-hanzi {
+  display: block;
+  font-family: 'ZCOOL XiaoWei', 'Cinzel', serif;
+  font-size: 1.9rem;
+  line-height: 1;
+  color: #fff5d8;
+  margin-bottom: 4px;
+  text-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+.hw-mb-pinyin {
+  display: block;
+  color: var(--cat-color, #5be8d1);
+  font-weight: 900;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  font-family: 'Cinzel', serif;
+}
+.hw-mb-arrow { display: none; }   /* old inline arrow — hidden in card layout */
+.hw-mb-es {
+  display: block;
+  margin-top: 6px;
+  color: #ffe082;
+  font-style: italic;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
 
 /* === Fly-to-stage animation — the tapped word visually arcs from the
    catalog chip into the active sentence stage. */
@@ -1938,7 +1981,10 @@ body.hw-bg {
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 
-/* === Inbox modal === */
+/* === Inbox modal ===
+   2026-05-27 CRITICAL FIX: was leaving the overlay in the DOM at opacity:0
+   after close, which still ate every tap and froze the kid's screen.
+   Now pointer-events is none when not .show, so taps pass through. */
 .hw-inbox-overlay {
   position: fixed; inset: 0;
   z-index: 9999;
@@ -1947,9 +1993,13 @@ body.hw-bg {
   display: flex; align-items: center; justify-content: center;
   padding: 18px;
   opacity: 0;
+  pointer-events: none;          /* invisible AND non-blocking when closed */
   transition: opacity 0.25s;
 }
-.hw-inbox-overlay.show { opacity: 1; }
+.hw-inbox-overlay.show {
+  opacity: 1;
+  pointer-events: auto;          /* only blocks touches when actually shown */
+}
 .hw-inbox-card {
   position: relative;
   width: 100%; max-width: 520px;
