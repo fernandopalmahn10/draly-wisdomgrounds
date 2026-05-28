@@ -581,6 +581,14 @@ body.hw-bg {
   color: rgba(243, 230, 194, 0.7);
   font-size: 0.85rem;
 }
+.m-detail-device {
+  margin-top: 3px;
+  color: rgba(150, 200, 255, 0.85);
+  font-size: 0.8rem;
+}
+.m-detail-actions-row {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+}
 
 .m-section-title {
   font-family: 'Cinzel', serif;

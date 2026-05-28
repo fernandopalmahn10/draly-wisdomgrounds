@@ -198,12 +198,31 @@ app.get('/api/admin/students/:code', (req, res) => {
     displayName: rec.displayName || 'Anon',
     avatar:    rec.avatar || null,
     classroomCode: rec.classroomCode || null,
+    country:   rec.country || null,
+    device:    rec.device || null,
+    locale:    rec.locale || null,
+    tz:        rec.tz || null,
     firstSeen: rec.firstSeen || 0,
     lastSeen:  rec.lastSeen || 0,
     sentences: Students.getHistory(rec.code), // newest-first
     tests:     Students.getTestResults(rec.code, 50), // newest-first
     assignments: Students.getAssignmentSubmissions(rec.code, 50),
   });
+});
+
+// Permanently DELETE a student record (super-admin or owning teacher).
+// Used to remove duplicate / banned accounts from the Cuaderno. Wipes the
+// whole record + all their history. Irreversible.
+app.delete('/api/admin/students/:code', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) {
+    return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  }
+  const ok = Students.deleteStudent(rec.code);
+  res.json({ ok: !!ok });
 });
 
 // === MESSAGING (teacher → student[s]) =================================
@@ -410,7 +429,7 @@ function _hwCheckAccess(req, res) {
 app.post('/api/homework/enter', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   try {
-    const { studentCode, displayName, accessCode } = req.body || {};
+    const { studentCode, displayName, accessCode, meta } = req.body || {};
     const rec = Students.getOrCreate(studentCode, displayName);
     // Tag with their teacher's classroom code. Guard so a failure here
     // never blocks the kid from entering — they can still do tareas.
@@ -418,6 +437,12 @@ app.post('/api/homework/enter', (req, res) => {
       try { Students.setClassroomCode(rec.code, accessCode); }
       catch (e) { console.warn('[hw:enter] setClassroomCode failed:', e.message); }
     }
+    // Best-effort device / country / locale capture (client-supplied, since
+    // we can't read the real IP behind Render's proxy). Lets the teacher
+    // spot duplicates + ban a device from the Cuaderno. Never blocks entry.
+    try {
+      if (meta && typeof meta === 'object') Students.setMeta(rec.code, meta);
+    } catch (e) { console.warn('[hw:enter] setMeta failed:', e.message); }
     res.json({
       ok: true,
       studentCode: rec.code,
@@ -2917,7 +2942,12 @@ io.on('connection', (socket) => {
       });
       return;
     }
-    if (Object.keys(g.players).length === 0) {
+    // Teacher TOOLS can open with zero players — the teacher drives the
+    // screen and students stream in afterward (e.g. live-master force-join
+    // from /maestro creates the builder, THEN pushes the kids in). Gating
+    // these on player count caused the "Preparando… (stuck)" bug.
+    const soloOkGameTypes = ['warmup', 'reading'];
+    if (!soloOkGameTypes.includes(g.gameType) && Object.keys(g.players).length === 0) {
       console.warn('[host:start] BLOCKED pin=' + pin + ' — no players joined yet.');
       io.to(socket.id).emit('host:start-error', {
         reason: 'no-players',
@@ -4773,6 +4803,17 @@ io.on('connection', (socket) => {
     if (g.warmup) g.warmup.prompt = '';
     io.to(pin).emit('wu:prompt', { text: '' });
     wuEmitState(g, pin);
+  });
+  // === RAISE HAND === a kid in the builder who is NOT yet an asistente
+  // taps "✋ Quiero ser asistente". We notify the host (and the room) so the
+  // teacher sees who wants in — gamified request-to-join. No auth needed
+  // (it's just a request; the teacher still decides via 👑).
+  socket.on('wu:raise-hand', ({ pin }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    const p = g.players[socket.id];
+    if (!p || !p.name) return;
+    io.to(pin).emit('wu:hand', { name: p.name, avatar: p.avatar || '', t: Date.now() });
   });
   // === LIVE-MASTER auto-delegate toggle === when ON, every kid who joins
   // this warmup game is auto-promoted to asistente. Set by the host-warmup

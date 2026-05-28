@@ -283,6 +283,32 @@ function get(code) {
   return records[normalized] || null;
 }
 
+// Permanently remove a student record (teacher's Cuaderno). Used to clean
+// up duplicates or ban a user. Irreversible — wipes their whole history.
+function deleteStudent(code) {
+  const normalized = normalizeCode(code);
+  if (!normalized || !records[normalized]) return false;
+  delete records[normalized];
+  scheduleSave();
+  return true;
+}
+
+// Store best-effort device / country / locale metadata. Sent by the client
+// (homework portal) on identify — derived from navigator + timezone since
+// we can't read the IP reliably behind Render's proxy. Used by the teacher
+// to spot duplicate accounts and, if needed, ban a device.
+function setMeta(code, meta) {
+  const rec = get(code);
+  if (!rec || !meta || typeof meta !== 'object') return false;
+  if (meta.country) rec.country = String(meta.country).slice(0, 40);
+  if (meta.device)  rec.device  = String(meta.device).slice(0, 60);
+  if (meta.locale)  rec.locale  = String(meta.locale).slice(0, 20);
+  if (meta.tz)      rec.tz      = String(meta.tz).slice(0, 48);
+  rec.lastSeen = Date.now();
+  scheduleSave();
+  return true;
+}
+
 // Append a built sentence to a student's history.
 // `sentence` is an array of word IDs.
 // `contributors` is an array of student CODES who contributed to it.
@@ -344,6 +370,10 @@ function listAll() {
       displayName: r.displayName || 'Anon',
       avatar: r.avatar || null,
       classroomCode: r.classroomCode || null,
+      country: r.country || null,
+      device: r.device || null,
+      locale: r.locale || null,
+      tz: r.tz || null,
       firstSeen: r.firstSeen || 0,
       lastSeen: r.lastSeen || 0,
       sentenceCount:   Array.isArray(r.sentencesBuilt)         ? r.sentencesBuilt.length         : 0,
@@ -423,6 +453,8 @@ load();
 module.exports = {
   getOrCreate,
   get,
+  deleteStudent,
+  setMeta,
   logSentence,
   getHistory,
   deleteHistoryEntry,
