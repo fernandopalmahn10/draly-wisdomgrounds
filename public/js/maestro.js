@@ -236,7 +236,10 @@
     );
     // Classify by recent activity — used both for the "online now" pill
     // at the top and to sort the roster (active first).
-    const ONLINE_MS  = 5 * 60 * 1000;    // active within last 5 min
+    // Kids poll inbox every 20s while their homework page is open. So
+    // "online right now" = lastSeen within the last 45 seconds. That
+    // window covers a single missed poll without flickering the dot off.
+    const ONLINE_MS  = 45 * 1000;        // active within last 45 sec
     const RECENT_MS  = 60 * 60 * 1000;   // last hour
     const now = Date.now();
     students.forEach((s) => {

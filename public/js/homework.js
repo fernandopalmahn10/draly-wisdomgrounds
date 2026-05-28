@@ -1557,10 +1557,11 @@
     bubble.style.left = (rect.left + rect.width / 2) + 'px';
     bubble.style.top  = (rect.top + window.scrollY - 4) + 'px';
     document.body.appendChild(bubble);
-    // Animate in, then fade out
+    // Animate in, then fade out. Longer linger so the kid actually reads
+    // the meaning (user wanted this to feel like the full curious card).
     requestAnimationFrame(() => bubble.classList.add('show'));
-    setTimeout(() => bubble.classList.add('fade'), 900);
-    setTimeout(() => { if (bubble.parentNode) bubble.parentNode.removeChild(bubble); }, 1500);
+    setTimeout(() => bubble.classList.add('fade'), 1500);
+    setTimeout(() => { if (bubble.parentNode) bubble.parentNode.removeChild(bubble); }, 2100);
   }
 
   // Visual "fly-to-stage" — clones the chip's pinyin and animates it
@@ -1591,8 +1592,9 @@
     }, 500);
   }
 
-  // Lightweight WebAudio chime — soft "blip" on every chip tap. No
-  // external audio file needed; ~5ms synthesized on demand.
+  // Two-note "discovery" chime — synthesized via WebAudio. Sounds
+  // bigger/more curious-mode-like than the old single-blip. Free, no
+  // audio files, ~10ms to synthesize.
   let _tapAudioCtx = null;
   function _playTapChime() {
     try {
@@ -1603,18 +1605,25 @@
       }
       const ctx = _tapAudioCtx;
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      // Pleasant high-pitched blip; varies slightly so repeats feel alive
-      osc.frequency.value = 880 + Math.random() * 220;   // 880-1100 Hz
-      gain.gain.value = 0;
-      gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.18);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.2);
+      const t = ctx.currentTime;
+      // Two stacked notes — a perfect 5th, classic "discovery" chime
+      const playNote = (freq, startOffset, dur, peak) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        gain.gain.value = 0;
+        gain.gain.linearRampToValueAtTime(peak, t + startOffset + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + startOffset + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(t + startOffset);
+        osc.stop(t + startOffset + dur + 0.05);
+      };
+      // Slight random pitch so repeats don't feel mechanical
+      const base = 660 + Math.random() * 60;   // E5-ish, slight wobble
+      playNote(base,        0.00, 0.25, 0.18);
+      playNote(base * 1.5,  0.08, 0.30, 0.15);  // a fifth above
     } catch (e) { /* silent */ }
   }
 
