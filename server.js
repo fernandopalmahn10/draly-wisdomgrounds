@@ -3583,11 +3583,29 @@ io.on('connection', (socket) => {
       // to the joining socket so they immediately see the teacher's
       // current state (instead of a stale game screen from before). ===
       if (g.gameType === 'warmup' && g.warmup) {
+        // LIVE-MASTER auto-delegate: in a session the teacher launched from
+        // /maestro, every kid who is force-joined becomes an asistente
+        // automatically — no manual 👑 tap needed. "Everybody becomes
+        // assistant" (user 2026-05-28).
+        if (g.warmup.autoDelegateAll && player && player.name) {
+          if (!g.warmup.delegates) g.warmup.delegates = new Set();
+          g.warmup.delegates.add(player.name);
+          // Broadcast to the whole room so the host roster + every phone
+          // reflects the new asistente immediately.
+          io.to(pin).emit('wu:state', {
+            sentence: g.warmup.sentence || [],
+            viewMode: g.warmup.viewMode || 'text',
+            curious: !!g.warmup.curious,
+            delegates: Array.from(g.warmup.delegates || []),
+            prompt: g.warmup.prompt || '',
+          });
+        }
         io.to(socket.id).emit('wu:state', {
           sentence: g.warmup.sentence || [],
           viewMode: g.warmup.viewMode || 'text',
           curious: !!g.warmup.curious,
           delegates: Array.from(g.warmup.delegates || []),
+          prompt: g.warmup.prompt || '',
         });
       }
       // === LÁI-QÙ-HUÍ: late-joiner gets the map + their own mission ===
@@ -4755,6 +4773,22 @@ io.on('connection', (socket) => {
     if (g.warmup) g.warmup.prompt = '';
     io.to(pin).emit('wu:prompt', { text: '' });
     wuEmitState(g, pin);
+  });
+  // === LIVE-MASTER auto-delegate toggle === when ON, every kid who joins
+  // this warmup game is auto-promoted to asistente. Set by the host-warmup
+  // page when it was launched in live-master mode from /maestro. Host only.
+  socket.on('wu:auto-delegate', ({ pin, password, on }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!g.warmup) return;
+    g.warmup.autoDelegateAll = !!on;
+    // Retroactively promote everyone already in the room.
+    if (g.warmup.autoDelegateAll) {
+      if (!g.warmup.delegates) g.warmup.delegates = new Set();
+      Object.values(g.players).forEach((p) => { if (p && p.name) g.warmup.delegates.add(p.name); });
+      wuEmitState(g, pin);
+    }
   });
   // === ASSISTANT ACTIVITY === when a DELEGATE (not the host) mutates the
   // sentence, broadcast who-did-what to the host so the super maestro can

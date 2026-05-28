@@ -115,33 +115,30 @@
       list.appendChild(row);
     });
   }
+  // ⚡ ONE-CLICK FORCE (2026-05-28): no PIN, no invitation. The teacher is
+  // ALREADY logged in here — clicking "Activar" stashes the selected kids +
+  // the teacher's code in sessionStorage, then jumps straight to the
+  // sentence-builder host page in "live-master" mode. That page silently
+  // creates the warmup game, starts it, flips on auto-delegate (every kid
+  // = asistente), and force-redirects the selected kids onto the builder.
+  // The teacher lands directly on the construction screen. "It's magic."
   $('m-live-master-send').addEventListener('click', () => {
-    const pin = $('m-live-master-pin').value.trim();
-    const text = $('m-live-master-text').value.trim() || '¡Únete a mi sesión de vocabulario en vivo!';
-    if (!pin) { $('m-live-master-msg').textContent = 'Falta el PIN — ábrelo en /host-warmup.html primero.'; return; }
-    if (!/^\d{4,6}$/.test(pin)) { $('m-live-master-msg').textContent = 'El PIN debe ser numérico (4-6 dígitos).'; return; }
+    const text = $('m-live-master-text').value.trim() || '¡Entra a Modo Maestro ahora!';
     if (!_liveMasterSelected.size) { $('m-live-master-msg').textContent = 'Selecciona al menos un estudiante.'; return; }
-    $('m-live-master-msg').textContent = 'Enviando…';
-    fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        studentCodes: Array.from(_liveMasterSelected),
+    $('m-live-master-msg').textContent = 'Activando Modo Maestro en vivo…';
+    try {
+      sessionStorage.setItem('dralyLiveMaster', JSON.stringify({
+        codes: Array.from(_liveMasterSelected),
+        pw,                 // teacher's login code — same-origin, ephemeral
         text,
-        // 'force' = the kid's homework page auto-redirects to the live
-        // session the instant they poll. No button, no choice — this is
-        // an obligation, not an invitation (user feedback 2026-05-27).
-        actionType:  'force',
-        actionUrl:   '/player.html?pin=' + encodeURIComponent(pin) + '&autojoin=1',
-        actionLabel: '📚 Únete ahora',
-      }),
-    })
-      .then((r) => r.json())
-      .then((r) => {
-        if (!r.ok) { $('m-live-master-msg').textContent = 'Error: ' + (r.error || ''); return; }
-        $('m-live-master-msg').textContent = `✓ Invitación enviada a ${r.sent} estudiante${r.sent === 1 ? '' : 's'}. Revisa /host-warmup para ver quién se une.`;
-        setTimeout(() => $('m-live-master-modal').classList.add('hidden'), 2000);
-      });
+        ts: Date.now(),
+      }));
+    } catch (e) {
+      $('m-live-master-msg').textContent = 'No se pudo iniciar (almacenamiento bloqueado).';
+      return;
+    }
+    // Jump to the builder in live-master mode. It does the rest.
+    location.href = '/host-warmup.html?livemaster=1';
   });
 
   // 📢 Broadcast — sends a message to every student in the teacher's

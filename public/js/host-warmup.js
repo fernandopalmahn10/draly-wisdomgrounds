@@ -33,6 +33,47 @@
       .trim();
   }
 
+  // === LIVE-MASTER auto-flow (launched from /maestro with ?livemaster=1) ===
+  // The teacher already authenticated on /maestro and picked the kids.
+  // We silently: create the warmup game → auth with their code → start it →
+  // flip on auto-delegate (every kid = asistente) → force-redirect the
+  // selected kids onto the builder. No PIN, no invitation, no gate.
+  let _pendingLiveMaster = null;   // { codes, text } applied once active
+  (function maybeLiveMaster() {
+    const sp = new URLSearchParams(location.search);
+    if (sp.get('livemaster') !== '1') return;
+    let payload = null;
+    try { payload = JSON.parse(sessionStorage.getItem('dralyLiveMaster') || 'null'); } catch (_) {}
+    try { sessionStorage.removeItem('dralyLiveMaster'); } catch (_) {}
+    if (!payload || !payload.pw) return;   // no payload → fall back to normal gate
+    adminPw = payload.pw;
+    // Hide the gate; show a tiny "preparing" note in its place.
+    const gate = $('screen-admin-gate');
+    if (gate) {
+      const sub = gate.querySelector('.wu-gate-sub');
+      if (sub) sub.textContent = '⚡ Preparando Modo Maestro en vivo…';
+      const inp = $('admin-pw'); if (inp) inp.style.display = 'none';
+      const ok = $('admin-ok'); if (ok) ok.style.display = 'none';
+    }
+    socket.emit('host:create', { gameType: 'warmup' }, ({ pin: p }) => {
+      pin = p;
+      $('pin-display').textContent = p;
+      $('join-url').textContent = `${location.origin}/?pin=${p}`;
+      socket.emit('wu:auth', { pin, password: adminPw }, (resp) => {
+        if (!resp || !resp.ok) {
+          if ($('admin-err')) $('admin-err').textContent = 'No se pudo iniciar la sesión.';
+          return;
+        }
+        isSuperAdmin = !!resp.isSuperAdmin;
+        fetchServerPresets(() => migrateLegacyPresetsOnce());
+        // Stash the kids to force-in; the countdown handler fires them once
+        // the builder is live (so g.warmup exists server-side).
+        _pendingLiveMaster = { codes: payload.codes || [], text: payload.text || '' };
+        socket.emit('host:start', { pin });   // → countdown → active
+      });
+    });
+  })();
+
   // === ADMIN GATE ===
   $('admin-ok').addEventListener('click', tryAdmin);
   $('admin-pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryAdmin(); });
@@ -79,6 +120,14 @@
       renderPresetSelect();
       bindToolbar();
       bindExtras();
+      // LIVE-MASTER: now that the builder is live, flip on auto-delegate and
+      // force the pre-selected kids straight in as asistentes.
+      if (_pendingLiveMaster) {
+        const lm = _pendingLiveMaster;
+        _pendingLiveMaster = null;
+        socket.emit('wu:auto-delegate', { pin, password: adminPw, on: true });
+        forceLiveMasterStudents(lm.codes, lm.text);
+      }
     }, 600);
   });
 
@@ -779,6 +828,24 @@
   // maestro Spanish prompt · assistant activity ticker · interactive VFX.
   // Bound once when the active screen first appears.
   // =====================================================================
+  // POST the force-redirect to every selected kid's inbox. Their /homework
+  // page polls, sees actionType:'force', and hard-redirects to the builder
+  // (their name gets spliced in client-side so autojoin needs no typing).
+  function forceLiveMasterStudents(codes, text) {
+    if (!Array.isArray(codes) || !codes.length || !pin) return;
+    fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(adminPw), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentCodes: codes,
+        text: text || '¡Entra a Modo Maestro ahora!',
+        actionType:  'force',
+        actionUrl:   '/player.html?pin=' + encodeURIComponent(pin) + '&autojoin=1',
+        actionLabel: '📚 Modo Maestro',
+      }),
+    }).then((r) => r.json()).catch(() => {});
+  }
+
   let extrasBound = false;
   function bindExtras() {
     if (extrasBound) return;
