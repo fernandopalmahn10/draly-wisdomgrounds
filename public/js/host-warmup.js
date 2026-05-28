@@ -12,6 +12,8 @@
   let currentSentence = [];
   let currentCurious = false;
   let currentDelegates = [];   // array of player names
+  let currentJudges = [];      // array of player names with judge powers
+  let currentFrozen = false;   // assistance frozen? (only teacher edits)
   let currentPlayers = {};     // id -> { name, team, avatar }
   let serverPresets = [];      // canonical server-side preset list
   let rearrangeMode = false;   // when true, word-tap swaps instead of deletes
@@ -269,7 +271,7 @@
   }
 
   // === Server sync ===
-  socket.on('wu:state', ({ sentence, viewMode, curious, delegates }) => {
+  socket.on('wu:state', ({ sentence, viewMode, curious, delegates, judges, frozen }) => {
     currentSentence = sentence || [];
     if (viewMode) {
       currentViewMode = viewMode;
@@ -279,6 +281,14 @@
     }
     currentCurious = !!curious;
     currentDelegates = Array.isArray(delegates) ? delegates : [];
+    currentJudges = Array.isArray(judges) ? judges : [];
+    currentFrozen = !!frozen;
+    // Reflect freeze state on the toggle button.
+    const fb = $('wu-freeze-btn');
+    if (fb) {
+      fb.classList.toggle('active', currentFrozen);
+      fb.textContent = currentFrozen ? '▶️ Reanudar asistencia' : '⏸ Detener asistencia';
+    }
     const btn = $('wu-curious-btn');
     if (btn) {
       btn.classList.toggle('active', currentCurious);
@@ -493,13 +503,17 @@
       const p = currentPlayers[id];
       if (!p || !p.name) return;
       const isDelegate = currentDelegates.indexOf(p.name) >= 0;
+      const isJudge = currentJudges.indexOf(p.name) >= 0;
       const row = document.createElement('div');
-      row.className = 'wu-roster-row' + (isDelegate ? ' is-delegate' : '');
+      row.className = 'wu-roster-row' + (isDelegate ? ' is-delegate' : '') + (isJudge ? ' is-judge' : '');
       row.innerHTML = `
         <span class="wu-roster-avatar">${p.avatar || '🎓'}</span>
-        <span class="wu-roster-name">${escapeHtml(p.name)}</span>
+        <span class="wu-roster-name">${escapeHtml(p.name)}${isJudge ? ' <span class="wu-judge-tag">⚖️ juez</span>' : ''}</span>
         <button class="wu-roster-btn ${isDelegate ? 'revoke' : 'grant'}" type="button">
           ${isDelegate ? '🚫 Quitar' : '👑 Asistente'}
+        </button>
+        <button class="wu-roster-judge-btn ${isJudge ? 'on' : ''}" type="button" title="Nombrar/quitar juez">
+          ${isJudge ? '⚖️ Quitar juez' : '⚖️ Juez'}
         </button>`;
       const btn = row.querySelector('.wu-roster-btn');
       btn.onclick = () => {
@@ -508,6 +522,11 @@
         } else {
           socket.emit('wu:delegate-grant',  { pin, password: adminPw, playerName: p.name });
         }
+        if (MochiSounds.swap) MochiSounds.swap();
+      };
+      const jbtn = row.querySelector('.wu-roster-judge-btn');
+      jbtn.onclick = () => {
+        socket.emit('wu:set-judge', { pin, password: adminPw, playerName: p.name, on: !isJudge });
         if (MochiSounds.swap) MochiSounds.swap();
       };
       list.appendChild(row);
@@ -911,11 +930,28 @@
                  'wu-fx-zombies': 'zombies', 'wu-fx-moto': 'moto', 'wu-fx-shake': 'shake' };
     Object.keys(fx).forEach((id) => {
       const b = $(id);
-      if (b) b.addEventListener('click', () => fireFx(fx[id]));
+      if (b) b.addEventListener('click', () => broadcastFx(fx[id]));
     });
     // Kick off the random anti-monotony fun loop.
     startRandomFun();
+
+    // --- 🧊 Detener/Reanudar asistencia (freeze toggle) ---
+    const freezeBtn = $('wu-freeze-btn');
+    if (freezeBtn) {
+      freezeBtn.addEventListener('click', () => {
+        const next = !currentFrozen;
+        socket.emit('wu:set-frozen', { pin, password: adminPw, frozen: next });
+      });
+    }
   }
+
+  // Broadcast an effect to EVERY phone (server relays wu:fx to the room) so
+  // the fun happens uniformly on player screens, not just the host.
+  function broadcastFx(kind) {
+    socket.emit('wu:fx', { pin, password: adminPw, kind });
+  }
+  // Host renders effects it receives from the relay (incl. its own).
+  socket.on('wu:fx', (d) => { if (d && d.kind) fireFx(d.kind); });
 
   // === ASSISTANT ACTIVITY TICKER ===
   // Server emits wu:activity whenever a DELEGATE touches a word. Append a
@@ -992,7 +1028,7 @@
     const tick = () => {
       const onActive = $('screen-active') && !$('screen-active').classList.contains('hidden');
       if (onActive && document.visibilityState !== 'hidden') {
-        fireFx(FUN[Math.floor(Math.random() * FUN.length)]);
+        broadcastFx(FUN[Math.floor(Math.random() * FUN.length)]);
       }
       _funTimer = setTimeout(tick, 25000 + Math.random() * 30000);
     };

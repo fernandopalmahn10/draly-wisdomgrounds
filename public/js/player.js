@@ -2581,6 +2581,8 @@
   let wuPlayerViewMode = 'text';
   let wuPlayerCurious = false;
   let wuPlayerIsDelegate = false;
+  let wuPlayerIsJudge = false;     // can approve raise-hand requests
+  let wuPlayerFrozen = false;      // teacher paused assistance
   let wuPlayerActiveExp = 'all';   // EXP filter on the player's own library
   let wuPlayerRearrange = false;   // local toggle — tap swaps instead of removes
   let wuPlayerSwapIdx = null;      // index of the first-selected word in swap
@@ -2604,6 +2606,12 @@
     // Hide the "raise hand" button once they ARE an asistente.
     const handBtn = document.getElementById('wu-player-hand-btn');
     if (handBtn) handBtn.classList.toggle('hidden', wuPlayerIsDelegate);
+    // === JUDGE CHECK === are WE a juez (can approve raise-hands)?
+    const judges = Array.isArray(data.judges) ? data.judges : [];
+    wuPlayerIsJudge = judges.indexOf(myName) >= 0;
+    // === FREEZE === teacher paused assistance. Delegates stay in the UI but
+    // can't touch — disable their builder + show a paused note.
+    wuPlayerFrozen = !!data.frozen;
     // Just promoted? Render the library + bind controls
     if (wuPlayerIsDelegate && !wasDelegate) {
       renderPlayerExpTabs();
@@ -2611,11 +2619,23 @@
       bindPlayerAdminControls();
       if (MochiSounds.winFanfare) MochiSounds.winFanfare();
     }
+    // Apply freeze visual: dim + disable the builder for delegates.
+    if (adminWrap) {
+      adminWrap.classList.toggle('wu-frozen', wuPlayerIsDelegate && wuPlayerFrozen);
+      adminWrap.querySelectorAll('button').forEach((b) => {
+        if (wuPlayerIsDelegate && wuPlayerFrozen) b.setAttribute('disabled', 'disabled');
+        else b.removeAttribute('disabled');
+      });
+    }
     // Update hint
     const hint = document.getElementById('wu-player-hint');
     if (hint) {
-      if (wuPlayerIsDelegate) {
+      if (wuPlayerIsDelegate && wuPlayerFrozen) {
+        hint.innerHTML = '⏸ <strong>El maestro pausó la asistencia.</strong> Espera tu turno…';
+      } else if (wuPlayerIsDelegate) {
         hint.innerHTML = '🎓 <strong>¡Eres asistente!</strong> Toca palabras abajo para construir.';
+      } else if (wuPlayerIsJudge) {
+        hint.innerHTML = '⚖️ <strong>¡Eres juez!</strong> Aprueba a quién puede ser asistente.';
       } else if (wuPlayerCurious) {
         hint.innerHTML = '🔍 <strong>¡Modo Curioso!</strong> Toca una palabra para explorar.';
       } else {
@@ -2711,6 +2731,125 @@
       setTimeout(() => { btn.textContent = o; btn.classList.remove('raised'); }, 2500);
     });
   })();
+
+  // === VFX ON PLAYER SCREENS === the host broadcasts wu:fx; every phone
+  // renders the same effect so the fun is uniform everywhere (spectators AND
+  // asistentes). Self-contained — creates its own fixed overlay layer.
+  socket.on('wu:fx', (d) => {
+    if (gameType !== 'warmup' || !d || !d.kind) return;
+    playerFireFx(d.kind);
+  });
+  function _wuFxLayer() {
+    let layer = document.getElementById('wu-player-fx-layer');
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.id = 'wu-player-fx-layer';
+      layer.className = 'wu-fx-layer';
+      layer.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(layer);
+    }
+    return layer;
+  }
+  function playerFireFx(kind) {
+    const layer = _wuFxLayer();
+    if (kind === 'shake') {
+      document.body.classList.remove('wu-shake'); void document.body.offsetWidth;
+      document.body.classList.add('wu-shake');
+      setTimeout(() => document.body.classList.remove('wu-shake'), 700);
+      return;
+    }
+    if (kind === 'sixseven') {
+      document.body.classList.remove('wu-shake'); void document.body.offsetWidth;
+      document.body.classList.add('wu-shake');
+      setTimeout(() => document.body.classList.remove('wu-shake'), 700);
+      const el = document.createElement('div');
+      el.className = 'wu-fx-67';
+      el.innerHTML = '<img src="/assets/png-library/67-transparent.png" alt="6-7" onerror="this.replaceWith(document.createTextNode(\'6️⃣7️⃣\'))">';
+      layer.appendChild(el);
+      if (MochiSounds && MochiSounds.combo) MochiSounds.combo();
+      setTimeout(() => el.remove(), 2600);
+      return;
+    }
+    if (kind === 'confetti') {
+      const em = ['🎉', '✨', '🎊', '⭐', '🧧', '🐉'];
+      for (let i = 0; i < 30; i++) {
+        const el = document.createElement('div');
+        el.className = 'wu-fx-confetti-bit'; el.textContent = em[i % em.length];
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.animationDelay = (Math.random() * 0.4) + 's';
+        el.style.animationDuration = (1.6 + Math.random() * 1.4) + 's';
+        el.style.fontSize = (18 + Math.random() * 20) + 'px';
+        layer.appendChild(el); setTimeout(() => el.remove(), 3200);
+      }
+      return;
+    }
+    if (kind === 'rain') {
+      for (let i = 0; i < 32; i++) {
+        const el = document.createElement('div');
+        el.className = 'wu-fx-rain-drop'; el.textContent = Math.random() < 0.5 ? '💧' : '🌧';
+        el.style.left = Math.random() * 100 + 'vw';
+        el.style.animationDelay = (Math.random() * 0.8) + 's';
+        el.style.animationDuration = (0.8 + Math.random() * 0.8) + 's';
+        layer.appendChild(el); setTimeout(() => el.remove(), 2400);
+      }
+      return;
+    }
+    // zombies | moto — stampede across
+    const isZombie = (kind === 'zombies');
+    const glyphs = isZombie ? ['🧟', '🧟‍♂️', '🧟‍♀️'] : ['🏍', '🏍️', '🛵'];
+    for (let i = 0; i < (isZombie ? 6 : 5); i++) {
+      const el = document.createElement('div');
+      el.className = 'wu-fx-runner ' + (isZombie ? 'is-zombie ' : 'is-moto ') + (Math.random() < 0.5 ? 'from-right' : 'from-left');
+      el.textContent = glyphs[i % glyphs.length];
+      el.style.top = (15 + Math.random() * 65) + 'vh';
+      el.style.animationDelay = (Math.random() * 0.6) + 's';
+      el.style.animationDuration = ((isZombie ? 3.2 : 1.8) + Math.random() * 1.2) + 's';
+      el.style.fontSize = (32 + Math.random() * 20) + 'px';
+      layer.appendChild(el); setTimeout(() => el.remove(), 5000);
+    }
+  }
+
+  // === JUDGE === when a kid raises their hand, a juez sees an approve card.
+  socket.on('wu:hand', (h) => {
+    if (gameType !== 'warmup' || !wuPlayerIsJudge || !h || !h.name) return;
+    if (h.name === myName) return;   // don't judge yourself
+    showJudgeCard(h);
+  });
+  function showJudgeCard(h) {
+    let wrap = document.getElementById('wu-judge-tray');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      wrap.id = 'wu-judge-tray';
+      wrap.className = 'wu-judge-tray';
+      document.body.appendChild(wrap);
+    }
+    // Avoid duplicate cards for the same kid
+    if (wrap.querySelector('[data-name="' + CSS.escape(h.name) + '"]')) return;
+    const card = document.createElement('div');
+    card.className = 'wu-judge-card';
+    card.setAttribute('data-name', h.name);
+    card.innerHTML = `
+      <span class="wu-judge-who">${h.avatar || '🙋'} ${escapeHtmlP(h.name)}</span>
+      <span class="wu-judge-q">¿Puede ser asistente?</span>
+      <span class="wu-judge-actions">
+        <button class="wu-judge-yes" type="button">✅ Sí</button>
+        <button class="wu-judge-no" type="button">❌ No</button>
+      </span>`;
+    card.querySelector('.wu-judge-yes').onclick = () => {
+      socket.emit('wu:judge-grant', { pin, playerName: h.name });
+      if (MochiSounds && MochiSounds.correct) MochiSounds.correct();
+      card.remove();
+    };
+    card.querySelector('.wu-judge-no').onclick = () => {
+      if (MochiSounds && MochiSounds.tap) MochiSounds.tap();
+      card.remove();
+    };
+    wrap.appendChild(card);
+    setTimeout(() => card.remove(), 15000);
+  }
+  function escapeHtmlP(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
 
   // Player-side admin library — same word data + EXP tabs, but emits
   // wu:add-word without a password (server validates via delegates set).

@@ -3241,6 +3241,8 @@ io.on('connection', (socket) => {
           viewMode: 'text',
           curious: false,
           delegates: new Set(),
+          judges: new Set(),
+          frozen: false,
           contributors: new Set(),
           // Shared undo stack — anyone (host or asistente) can press
           // undo to pop the last sentence state. Capped at 30 entries.
@@ -3252,6 +3254,8 @@ io.on('connection', (socket) => {
           viewMode: g.warmup.viewMode,
           curious: g.warmup.curious,
           delegates: [],
+          judges: [],
+          frozen: false,
         });
       }
       if (g.gameType === 'identity') {
@@ -3627,6 +3631,8 @@ io.on('connection', (socket) => {
             viewMode: g.warmup.viewMode || 'text',
             curious: !!g.warmup.curious,
             delegates: Array.from(g.warmup.delegates || []),
+            judges: Array.from(g.warmup.judges || []),
+            frozen: !!g.warmup.frozen,
             prompt: g.warmup.prompt || '',
           });
         }
@@ -3635,6 +3641,8 @@ io.on('connection', (socket) => {
           viewMode: g.warmup.viewMode || 'text',
           curious: !!g.warmup.curious,
           delegates: Array.from(g.warmup.delegates || []),
+          judges: Array.from(g.warmup.judges || []),
+          frozen: !!g.warmup.frozen,
           prompt: g.warmup.prompt || '',
         });
       }
@@ -4758,13 +4766,17 @@ io.on('connection', (socket) => {
   }
   function wuRequireAdmin(g, socket, password) {
     if (!g || g.gameType !== 'warmup') return false;
-    // Host path
+    // Host path — the teacher can ALWAYS edit, even while frozen.
     if (g.hostId === socket.id && isAdminPassword(password)) return true;
     // Delegate path — no password needed, identity comes from the player name
     const p = g.players[socket.id];
     if (!p) return false;
     const delegates = g.warmup && g.warmup.delegates;
-    return !!(delegates && delegates.has(p.name));
+    if (!(delegates && delegates.has(p.name))) return false;
+    // FREEZE: while the teacher has paused assistance, delegates stay in the
+    // builder but cannot mutate anything — only the teacher can.
+    if (g.warmup && g.warmup.frozen) return false;
+    return true;
   }
   socket.on('wu:auth', ({ pin, password }, cb) => {
     const g = games[pin];
@@ -4781,9 +4793,57 @@ io.on('connection', (socket) => {
       viewMode: g.warmup.viewMode || 'text',
       curious: !!g.warmup.curious,
       delegates: Array.from(g.warmup.delegates || []),
+      judges: Array.from(g.warmup.judges || []),
+      frozen: !!g.warmup.frozen,
       prompt: (g.warmup && g.warmup.prompt) || '',
     });
   }
+  // === FREEZE / UNFREEZE assistance === host-only. While frozen, delegates
+  // can't mutate the sentence (wuRequireAdmin denies them). They stay in the
+  // builder UI but can't touch — teacher regains exclusive control.
+  socket.on('wu:set-frozen', ({ pin, password, frozen }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!g.warmup) return;
+    g.warmup.frozen = !!frozen;
+    wuEmitState(g, pin);
+  });
+  // === VFX BROADCAST === host fires a visual effect; the server relays it to
+  // EVERY phone in the room so the fun happens uniformly on player screens
+  // (and the host). kind ∈ rain|confetti|zombies|moto|shake|sixseven.
+  socket.on('wu:fx', ({ pin, password, kind }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    const ok = ['rain', 'confetti', 'zombies', 'moto', 'shake', 'sixseven'];
+    if (!ok.includes(kind)) return;
+    io.to(pin).emit('wu:fx', { kind });
+  });
+  // === JUDGE role === host designates a kid as a "juez" who can approve or
+  // deny raise-hand requests. Two categories: asistente (builds) and juez
+  // (approves). Host only.
+  socket.on('wu:set-judge', ({ pin, password, playerName, on }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!g.warmup) return;
+    if (!g.warmup.judges) g.warmup.judges = new Set();
+    const nm = String(playerName || '');
+    if (on) g.warmup.judges.add(nm); else g.warmup.judges.delete(nm);
+    wuEmitState(g, pin);
+  });
+  // A judge approves a pending raise-hand → promote that kid to asistente.
+  socket.on('wu:judge-grant', ({ pin, playerName }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup' || !g.warmup) return;
+    const me = g.players[socket.id];
+    const judges = g.warmup.judges;
+    if (!me || !judges || !judges.has(me.name)) return;   // caller must be a judge
+    if (!g.warmup.delegates) g.warmup.delegates = new Set();
+    g.warmup.delegates.add(String(playerName || ''));
+    wuEmitState(g, pin);
+  });
   // === SUPER-MAESTRO PROMPT === broadcast a free-text Spanish challenge to
   // every student phone. Super-admin only. Stored on the game so late-
   // joiners receive it via wu:state. Empty string clears it everywhere.
