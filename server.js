@@ -48,6 +48,16 @@ app.get(['/health', '/healthz', '/_render-health'], (req, res) => {
   res.set('Cache-Control', 'no-store');
   res.type('text/plain').send('ok');
 });
+// Diagnostic: confirms every game module + sets + teachers are loaded.
+// Visit /api/_diag to verify deploy is fully wired after a release.
+app.get('/api/_diag', (req, res) => {
+  const out = { ok: true, ts: Date.now(), commit: process.env.RENDER_GIT_COMMIT || 'local' };
+  try { out.sets = Sets.listSets().length; } catch (e) { out.setsErr = e.message; }
+  try { out.assignments = Assignments.listAssignments().length; } catch (e) { out.asgErr = e.message; }
+  try { out.teachers = Teachers.listAll().length; } catch (e) { out.teachersErr = e.message; }
+  try { out.stories = Object.keys(ReadingStory.STORIES || {}).length; } catch (e) { out.storiesErr = e.message; }
+  res.json(out);
+});
 
 // === /api/admin/disk-status — Render persistent-disk verification ===
 // Hit this from any browser with ?pw=<your admin password>. Tells you:
@@ -243,6 +253,41 @@ app.post('/api/admin/student/:code/rename', (req, res) => {
   const ok = Students.setDisplayName(rec.code, displayName);
   if (!ok) return res.status(400).json({ ok: false, error: 'invalid name' });
   res.json({ ok: true, displayName: Students.get(rec.code).displayName });
+});
+
+// Broadcast to a SPECIFIC LIST of student codes (e.g. all currently
+// online). POST { studentCodes: ["XYZN", ...], text, actionType?, ... }
+// User feedback 2026-05-27: "I want to enable Modo Maestro for everyone
+// I select that's online — not the whole classroom necessarily."
+app.post('/api/admin/broadcast-selected', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const { studentCodes, text, actionType, actionUrl, actionLabel } = req.body || {};
+  if (!Array.isArray(studentCodes) || !studentCodes.length) {
+    return res.status(400).json({ ok: false, error: 'studentCodes array required' });
+  }
+  if (!text && !actionUrl) {
+    return res.status(400).json({ ok: false, error: 'text or actionUrl required' });
+  }
+  const fromName = session.teacher ? session.teacher.displayName : 'Maestro/a';
+  const fromId   = session.teacher ? session.teacher.teacherId   : 'super';
+  // Authorization: regular teachers can only message students in their
+  // own classrooms. Super admin can message anyone.
+  const ownCodes = session.teacher ? new Set(session.teacher.accessCodes || []) : null;
+  let sent = 0, skipped = 0;
+  studentCodes.forEach((code) => {
+    const rec = Students.get(code);
+    if (!rec) { skipped++; return; }
+    if (!session.isSuperAdmin && ownCodes && !ownCodes.has(rec.classroomCode)) {
+      skipped++;
+      return;
+    }
+    const msg = Students.sendMessage(rec.code, {
+      from: fromId, fromName, text, actionType, actionUrl, actionLabel,
+    });
+    if (msg) sent++;
+  });
+  res.json({ ok: true, sent, skipped });
 });
 
 // Broadcast to all students in a classroom. POST { classroomCode, text, ... }

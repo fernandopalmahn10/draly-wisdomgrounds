@@ -54,6 +54,93 @@
   $('m-refresh').addEventListener('click', () => {
     fetchRoster();
   });
+  // 🎯 Modo Maestro en vivo — invite only currently-ONLINE students to a
+  // live warmup session. User feedback 2026-05-27: "select from the list
+  // of people that are online and enable that for everybody I select."
+  let _liveMasterStudents = [];   // populated when modal opens
+  let _liveMasterSelected = new Set();
+  $('m-live-master-btn').addEventListener('click', () => {
+    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { alert('Error: ' + (data && data.error || '')); return; }
+        const now = Date.now();
+        const ONLINE_MS = 45 * 1000;
+        // Filter: only students online RIGHT NOW (lastSeen within 45s)
+        _liveMasterStudents = (data.students || [])
+          .filter((s) => s.lastSeen && (now - s.lastSeen) <= ONLINE_MS)
+          .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+        _liveMasterSelected = new Set(_liveMasterStudents.map((s) => s.code));  // all checked by default
+        renderLiveMasterList();
+        $('m-live-master-pin').value = '';
+        $('m-live-master-text').value = '';
+        $('m-live-master-msg').textContent = '';
+        $('m-live-master-modal').classList.remove('hidden');
+      });
+  });
+  $('m-live-master-close').addEventListener('click', () => $('m-live-master-modal').classList.add('hidden'));
+  $('m-live-master-all').addEventListener('click', () => {
+    _liveMasterStudents.forEach((s) => _liveMasterSelected.add(s.code));
+    renderLiveMasterList();
+  });
+  $('m-live-master-none').addEventListener('click', () => {
+    _liveMasterSelected.clear();
+    renderLiveMasterList();
+  });
+  function renderLiveMasterList() {
+    const list = $('m-live-master-list');
+    $('m-live-master-count').textContent =
+      `${_liveMasterStudents.length} en línea · ${_liveMasterSelected.size} seleccionados`;
+    if (!_liveMasterStudents.length) {
+      list.innerHTML = '<div class="m-empty">No hay estudiantes en línea ahora. Pídeles que abran /homework primero.</div>';
+      return;
+    }
+    list.innerHTML = '';
+    _liveMasterStudents.forEach((s) => {
+      const row = document.createElement('label');
+      row.className = 'm-live-master-row' + (_liveMasterSelected.has(s.code) ? ' selected' : '');
+      const checked = _liveMasterSelected.has(s.code) ? 'checked' : '';
+      row.innerHTML = `
+        <input type="checkbox" class="m-live-master-check" data-code="${escapeHtml(s.code)}" ${checked}>
+        <span class="m-live-master-avatar">${renderAvatar(s.avatar)}</span>
+        <span class="m-live-master-name">${escapeHtml(s.displayName || 'Anon')}</span>
+        <span class="m-live-master-code">${escapeHtml(s.code)}</span>`;
+      row.querySelector('input').addEventListener('change', (e) => {
+        if (e.target.checked) _liveMasterSelected.add(s.code);
+        else _liveMasterSelected.delete(s.code);
+        $('m-live-master-count').textContent =
+          `${_liveMasterStudents.length} en línea · ${_liveMasterSelected.size} seleccionados`;
+        row.classList.toggle('selected', e.target.checked);
+      });
+      list.appendChild(row);
+    });
+  }
+  $('m-live-master-send').addEventListener('click', () => {
+    const pin = $('m-live-master-pin').value.trim();
+    const text = $('m-live-master-text').value.trim() || '¡Únete a mi sesión de vocabulario en vivo!';
+    if (!pin) { $('m-live-master-msg').textContent = 'Falta el PIN — ábrelo en /host-warmup.html primero.'; return; }
+    if (!/^\d{4,6}$/.test(pin)) { $('m-live-master-msg').textContent = 'El PIN debe ser numérico (4-6 dígitos).'; return; }
+    if (!_liveMasterSelected.size) { $('m-live-master-msg').textContent = 'Selecciona al menos un estudiante.'; return; }
+    $('m-live-master-msg').textContent = 'Enviando…';
+    fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentCodes: Array.from(_liveMasterSelected),
+        text,
+        actionType:  'link',
+        actionUrl:   '/player.html?pin=' + encodeURIComponent(pin) + '&autojoin=1',
+        actionLabel: '📚 Únete ahora',
+      }),
+    })
+      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) { $('m-live-master-msg').textContent = 'Error: ' + (r.error || ''); return; }
+        $('m-live-master-msg').textContent = `✓ Invitación enviada a ${r.sent} estudiante${r.sent === 1 ? '' : 's'}. Revisa /host-warmup para ver quién se une.`;
+        setTimeout(() => $('m-live-master-modal').classList.add('hidden'), 2000);
+      });
+  });
+
   // 📢 Broadcast — sends a message to every student in the teacher's
   // classroom. Super admin gets prompted for the classroomCode (defaults
   // to "1001" — your own); regular teachers auto-target their own.
