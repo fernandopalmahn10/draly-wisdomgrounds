@@ -3,10 +3,42 @@ const path = require('path');
 const { parseFile } = require('./parsers');
 
 const SETS_DIR = path.join(__dirname, '..', 'data', 'sets');
+// Seed copy lives OUTSIDE the data/ folder. On Render, data/ is a
+// mounted persistent disk that SHADOWS the git-committed data/sets/
+// files — so the committed sets never appear, and if the disk is ever
+// wiped (service recreation) the sets vanish entirely. We keep a
+// pristine copy in repo-root/seed-sets/ (NOT under data/) and restore
+// it on boot whenever data/sets/ is empty. This fixes the "no sets to
+// choose from" bug reported 2026-05-27.
+const SEED_SETS_DIR = path.join(__dirname, '..', 'seed-sets');
 
 function ensureDir() {
   if (!fs.existsSync(SETS_DIR)) fs.mkdirSync(SETS_DIR, { recursive: true });
 }
+
+// Restore seed sets if the live sets dir is empty (e.g. fresh persistent
+// disk). Runs once at module load. Never overwrites existing files —
+// only fills an empty directory, so teacher-uploaded sets stay safe.
+function seedSetsIfEmpty() {
+  try {
+    ensureDir();
+    const existing = fs.readdirSync(SETS_DIR).filter((f) => /\.(csv|xlsx|xls)$/i.test(f));
+    if (existing.length > 0) return;
+    if (!fs.existsSync(SEED_SETS_DIR)) return;
+    const seeds = fs.readdirSync(SEED_SETS_DIR).filter((f) => /\.(csv|xlsx|xls)$/i.test(f));
+    let copied = 0;
+    seeds.forEach((f) => {
+      try {
+        fs.copyFileSync(path.join(SEED_SETS_DIR, f), path.join(SETS_DIR, f));
+        copied++;
+      } catch (e) { /* skip one bad file, keep going */ }
+    });
+    if (copied) console.log('[sets] restored', copied, 'seed sets into empty data/sets/');
+  } catch (e) {
+    console.warn('[sets] seed restore failed:', e.message);
+  }
+}
+seedSetsIfEmpty();
 
 function slugify(s) {
   return String(s)
