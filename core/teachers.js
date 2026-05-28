@@ -66,7 +66,7 @@ function seedIfEmpty() {
   const now = Date.now();
   teachers['EMAAR2026'] = {
     teacherId:    'EMAAR2026',
-    displayName:  'Sra. Emaar',
+    displayName:  '🐉 Dralingo 老师',
     email:        null,
     country:      'MX',
     accessCodes:  ['1001'],
@@ -90,6 +90,14 @@ function load() {
     teachers = JSON.parse(raw) || {};
     console.log('[teachers] loaded', Object.keys(teachers).length, 'teacher accounts');
     seedIfEmpty();
+    // One-time migration: rename the old default "Sra. Emaar" to the
+    // new "🐉 Dralingo 老师" on the existing persistent-disk record.
+    // (The disk already has the old name from the first seed.)
+    if (teachers['EMAAR2026'] && teachers['EMAAR2026'].displayName === 'Sra. Emaar') {
+      teachers['EMAAR2026'].displayName = '🐉 Dralingo 老师';
+      persistNow();
+      console.log('[teachers] migrated EMAAR2026 displayName → 🐉 Dralingo 老师');
+    }
   } catch (e) {
     console.warn('[teachers] failed to load, starting fresh:', e.message);
     teachers = {};

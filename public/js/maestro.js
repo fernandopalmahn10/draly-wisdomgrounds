@@ -128,7 +128,10 @@
       body: JSON.stringify({
         studentCodes: Array.from(_liveMasterSelected),
         text,
-        actionType:  'link',
+        // 'force' = the kid's homework page auto-redirects to the live
+        // session the instant they poll. No button, no choice — this is
+        // an obligation, not an invitation (user feedback 2026-05-27).
+        actionType:  'force',
         actionUrl:   '/player.html?pin=' + encodeURIComponent(pin) + '&autojoin=1',
         actionLabel: '📚 Únete ahora',
       }),

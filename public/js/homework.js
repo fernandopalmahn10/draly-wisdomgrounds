@@ -176,12 +176,47 @@
         _inbox = data.inbox || [];
         _inboxUnread = data.unread || 0;
         renderBellBadge();
-        // If unread went up while we weren't looking, surface a toast
+        // FORCE messages: the teacher pushed everyone into a live session.
+        // Find the newest unread 'force' message and obey it immediately —
+        // no toast, no button, just redirect. Mark it read first so we
+        // don't loop if the kid navigates back.
+        const force = _inbox.find((m) => !m.readAt && m.actionType === 'force' && m.actionUrl);
+        if (force) {
+          fetch('/api/homework/inbox/' + encodeURIComponent(force.id) + '/read?accessCode=' + encodeURIComponent(accessCode), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentCode }),
+          }).finally(() => {
+            // Brief on-screen notice so the kid isn't startled, then go
+            _showForceTakeover(force);
+          });
+          return;
+        }
+        // Normal unread → surface a toast
         if (_inboxUnread > prevUnread && prevUnread >= 0) {
           showInboxToast(_inbox[0]);
         }
       }).catch(() => {});
   }
+  // Full-screen takeover when the teacher force-pushes a live session.
+  // Shows a 2-second "tu maestra te llama" splash, then hard-redirects.
+  // The kid cannot dismiss it — it's an obligation.
+  function _showForceTakeover(msg) {
+    if (document.getElementById('hw-force-takeover')) return;  // already going
+    const ov = document.createElement('div');
+    ov.id = 'hw-force-takeover';
+    ov.className = 'hw-force-takeover';
+    ov.innerHTML = `
+      <div class="hw-force-card">
+        <div class="hw-force-dragon">🐉</div>
+        <div class="hw-force-title">¡Tu maestra te llama!</div>
+        <div class="hw-force-text">${escapeHtml(msg.text || '¡Únete a la sesión en vivo ahora!')}</div>
+        <div class="hw-force-spinner">Entrando…</div>
+      </div>`;
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => ov.classList.add('show'));
+    setTimeout(() => { window.location.href = msg.actionUrl; }, 2200);
+  }
+
   function renderBellBadge() {
     const badge = $('hw-bell-badge');
     if (!badge) return;
