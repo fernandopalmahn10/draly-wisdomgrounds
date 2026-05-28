@@ -2610,7 +2610,7 @@
     wuPlayerCurious = !!data.curious;
     wuPlayerVisibleExps = Array.isArray(data.visibleExps) ? data.visibleExps : null;
     wuPlayerCustomWords = Array.isArray(data.customWords) ? data.customWords : [];
-    if (wuPlayerIsDelegate) renderPlayerLibrary();   // refresh if banks changed
+    if (wuPlayerIsDelegate) { renderPlayerExpTabs(); renderPlayerLibrary(); }  // refresh if banks changed
     if (!wuPlayerCurious) hideWuPokedex();
     // === Late-join safety: ensure we're on screen-wu ===
     const onWu = document.getElementById('screen-wu') &&
@@ -2798,8 +2798,8 @@
     dandy:  { color: '#5be8d1', glow: '#7bdf7b', label: '¡HOLA!' },
   };
   function playerFireFx(kind) {
-    const layer = _wuFxLayer();
     if (WU_CHARS_PL[kind]) {
+      const layer = _wuFxLayer();
       const c = WU_CHARS_PL[kind];
       document.body.classList.remove('wu-shake'); void document.body.offsetWidth;
       document.body.classList.add('wu-shake');
@@ -2811,13 +2811,61 @@
       el.innerHTML = `
         <div class="wu-fx-char-lines"></div>
         <div class="wu-fx-char-aura"></div>
-        <img class="wu-fx-char-img" src="/assets/png-library/${kind}.png" alt="${kind}" onerror="this.style.display='none'">
+        <img class="wu-fx-char-img" alt="${kind}">
         <div class="wu-fx-char-cry">${c.label}</div>`;
+      const img = el.querySelector('.wu-fx-char-img');
+      _wuTransparentChar(kind, (url) => { img.src = url; });
       layer.appendChild(el);
       if (MochiSounds && MochiSounds.combo) MochiSounds.combo();
       setTimeout(() => el.remove(), 3200);
       return;
     }
+    return _playerFireFxStd(kind);
+  }
+  // Edge-flood chroma-key: removes a solid background matte from the
+  // character PNGs at load time (downscaled + cached), so they're truly
+  // transparent regardless of any baked-in background. Falls back to the
+  // raw PNG on any failure.
+  const _wuCharCache = {};
+  function _wuTransparentChar(kind, cb) {
+    const raw = '/assets/png-library/' + kind + '.png';
+    if (_wuCharCache[kind]) { cb(_wuCharCache[kind]); return; }
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const scale = Math.min(1, 680 / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale));
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+        const id = ctx.getImageData(0, 0, w, h); const px = id.data;
+        const at = (x, y) => (y * w + x) * 4;
+        // Sample border-average as background color.
+        let br = 0, bg = 0, bb = 0, n = 0;
+        for (let x = 0; x < w; x += Math.max(1, (w / 60) | 0)) { [0, h - 1].forEach((y) => { const o = at(x, y); if (px[o + 3] > 10) { br += px[o]; bg += px[o + 1]; bb += px[o + 2]; n++; } }); }
+        if (!n) { _wuCharCache[kind] = raw; cb(raw); return; }
+        br /= n; bg /= n; bb /= n;
+        const T = 46 * 46 * 3;
+        const close = (o) => { const dr = px[o] - br, dg = px[o + 1] - bg, db = px[o + 2] - bb; return (dr * dr + dg * dg + db * db) <= T; };
+        // Flood from every border pixel.
+        const stack = []; const seen = new Uint8Array(w * h);
+        for (let x = 0; x < w; x++) { stack.push(x, 0, x, h - 1); }
+        for (let y = 0; y < h; y++) { stack.push(0, y, w - 1, y); }
+        while (stack.length) {
+          const y = stack.pop(), x = stack.pop(); const i = y * w + x;
+          if (x < 0 || y < 0 || x >= w || y >= h || seen[i]) continue;
+          const o = i * 4;
+          if (px[o + 3] === 0 || close(o)) { seen[i] = 1; px[o + 3] = 0; stack.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1); }
+        }
+        ctx.putImageData(id, 0, 0);
+        const url = cv.toDataURL('image/png');
+        _wuCharCache[kind] = url; cb(url);
+      } catch (e) { _wuCharCache[kind] = raw; cb(raw); }
+    };
+    img.onerror = () => { _wuCharCache[kind] = raw; cb(raw); };
+    img.src = raw;
+  }
+  function _playerFireFxStd(kind) {
+    const layer = _wuFxLayer();
     if (kind === 'shake') {
       document.body.classList.remove('wu-shake'); void document.body.offsetWidth;
       document.body.classList.add('wu-shake');
@@ -2945,16 +2993,30 @@
     const wrap = document.getElementById('wu-player-exp-tabs');
     if (!wrap) return;
     wrap.innerHTML = '';
-    const all = document.createElement('button');
-    all.className = 'wu-pl-exp-tab active';
-    all.dataset.exp = 'all';
-    all.type = 'button';
-    all.textContent = 'Todos';
-    all.onclick = () => setPlayerExp('all');
-    wrap.appendChild(all);
-    Object.values(window.WU_EXPERIENCES || {}).forEach((e) => {
+    // Only show the banks the teacher made visible (null = all). Kids must
+    // NOT see EXP tabs the teacher didn't enable.
+    const allowed = wuPlayerVisibleExps;
+    const visible = Object.values(window.WU_EXPERIENCES || {})
+      .filter((e) => !allowed || allowed.indexOf(e.id) >= 0);
+    // If the active filter points at a now-hidden bank, reset to 'all'.
+    if (wuPlayerActiveExp !== 'all' && allowed && allowed.indexOf(wuPlayerActiveExp) < 0) {
+      wuPlayerActiveExp = 'all';
+    }
+    // "Todos" only makes sense when >1 bank is visible.
+    if (visible.length !== 1) {
+      const all = document.createElement('button');
+      all.className = 'wu-pl-exp-tab' + (wuPlayerActiveExp === 'all' ? ' active' : '');
+      all.dataset.exp = 'all';
+      all.type = 'button';
+      all.textContent = 'Todos';
+      all.onclick = () => setPlayerExp('all');
+      wrap.appendChild(all);
+    } else {
+      wuPlayerActiveExp = visible[0].id;   // single bank → lock to it
+    }
+    visible.forEach((e) => {
       const tab = document.createElement('button');
-      tab.className = 'wu-pl-exp-tab';
+      tab.className = 'wu-pl-exp-tab' + (wuPlayerActiveExp === e.id ? ' active' : '');
       tab.dataset.exp = e.id;
       tab.type = 'button';
       tab.textContent = e.short;

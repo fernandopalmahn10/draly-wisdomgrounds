@@ -791,57 +791,85 @@
       ? d.notes.map((n) => `<li>${escapeHtml(n.text)}</li>`).join('')
       : '<li>¡Sigue practicando en voz alta cada día! 🌱</li>';
     const grade = escapeHtml(d.grade || '—');
+    const gColor = ({ A: '#1f9d55', B: '#2b7fd1', C: '#d18a00', D: '#d15a00', E: '#c81e1e' })[String(grade).toUpperCase()] || '#c81e1e';
     const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Boleta · ${escapeHtml(d.displayName)} · ${escapeHtml(prettyMonth(d.month))}</title>
+<title>Diploma · ${escapeHtml(d.displayName)} · ${escapeHtml(prettyMonth(d.month))}</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@600;800;900&family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&display=swap');
   * { box-sizing: border-box; margin: 0; }
-  body { font-family: 'Nunito', sans-serif; background: #0e1322; padding: 18px; color: #1a1f33; }
-  .card { max-width: 620px; margin: 0 auto; background:
-      radial-gradient(circle at 100% 0%, rgba(239,91,91,0.12), transparent 45%),
-      linear-gradient(160deg, #fff8ee, #fdeede);
-    border: 10px solid #c81e1e; border-radius: 22px; padding: 0 0 26px; overflow: hidden;
-    box-shadow: 0 16px 48px rgba(0,0,0,0.5); position: relative; }
-  .topbar { background: linear-gradient(135deg, #c81e1e, #e23b3b); color: #ffe9c7;
-    padding: 16px 22px; display: flex; align-items: center; gap: 12px; }
-  .topbar .dragon { font-size: 2.4rem; }
-  .brand { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.5rem; letter-spacing: 0.04em; }
-  .brand small { display:block; font-family:'Nunito'; font-weight:800; font-size:0.7rem; letter-spacing:0.22em; opacity:0.85; }
-  .hanzi { margin-left: auto; font-family: 'ZCOOL XiaoWei', serif; font-size: 1.8rem; opacity: 0.9; }
-  .body { padding: 22px 26px 0; }
-  .kid { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
-  .kid .avatar { width: 86px; height: 86px; border-radius: 16px; background: #fff; border: 3px solid #c81e1e; object-fit: contain; }
-  .kid .name { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.7rem; color: #8a1414; }
-  .kid .month { font-weight: 800; color: #b06a2a; }
-  .gradewrap { margin-left: auto; text-align: center; }
-  .grade { font-family: 'Cinzel', serif; font-weight: 900; font-size: 3.4rem; color: #c81e1e; line-height: 1; }
-  .gradelbl { font-weight: 800; font-size: 0.7rem; letter-spacing: 0.18em; color: #b06a2a; }
-  .sect { font-family: 'Cinzel', serif; font-weight: 900; color: #8a1414; margin: 16px 0 6px; font-size: 1.1rem; }
-  ul { padding-left: 22px; line-height: 1.7; font-weight: 700; color: #3a2b1a; }
-  .stats { display: flex; gap: 10px; margin-top: 14px; }
-  .stat { flex: 1; background: rgba(200,30,30,0.08); border-radius: 12px; padding: 10px; text-align: center; }
+  body { font-family: 'Nunito', sans-serif; min-height: 100vh;
+    background: radial-gradient(circle at 50% 0%, #3a0d0d, #160707 70%); padding: 20px 12px; color: #3a2410; }
+  .cert { max-width: 640px; margin: 0 auto; position: relative;
+    background:
+      repeating-linear-gradient(45deg, rgba(200,30,30,0.025) 0 14px, transparent 14px 28px),
+      radial-gradient(circle at 50% 18%, #fffdf6, #f7ead2);
+    border-radius: 14px; padding: 10px;
+    box-shadow: 0 22px 60px rgba(0,0,0,0.6); }
+  /* triple ornamental border */
+  .frame { border: 3px solid #d4af37; border-radius: 10px; padding: 5px; }
+  .frame2 { border: 1.5px solid #c81e1e; border-radius: 7px; padding: 4px; }
+  .inner { border: 1px solid #d4af37; border-radius: 5px; padding: 26px 26px 30px; position: relative; overflow: hidden; }
+  /* corner flourishes */
+  .corner { position: absolute; font-size: 1.5rem; color: #d4af37; }
+  .corner.tl { top: 8px; left: 10px; } .corner.tr { top: 8px; right: 10px; }
+  .corner.bl { bottom: 8px; left: 10px; } .corner.br { bottom: 8px; right: 10px; }
+  /* faint watermark hanzi */
+  .wm { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', serif; font-size: 18rem; color: rgba(200,30,30,0.05);
+    pointer-events: none; user-select: none; }
+  .head { text-align: center; position: relative; z-index: 1; }
+  .dragon { font-size: 3rem; line-height: 1; }
+  .brand { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.55rem; color: #8a1414; letter-spacing: 0.06em; margin-top: 2px; }
+  .brand small { display:block; font-family:'Nunito'; font-weight:800; font-size:0.66rem; letter-spacing:0.34em; color:#b06a2a; }
+  .rule { height: 2px; width: 70%; margin: 12px auto; background: linear-gradient(90deg, transparent, #d4af37, transparent); }
+  .title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.25rem; color: #c81e1e; letter-spacing: 0.12em; }
+  .titlehz { font-family: 'Ma Shan Zheng','ZCOOL XiaoWei', serif; font-size: 1.5rem; color: #8a1414; margin-top: 2px; }
+  .awarded { margin-top: 14px; font-weight: 700; color: #6b4a2a; font-size: 0.9rem; }
+  .name { font-family: 'Ma Shan Zheng', 'Cinzel', serif; font-weight: 900; font-size: 2.5rem; color: #8a1414; margin: 4px 0; line-height: 1.1; }
+  .namebar { height: 1.5px; width: 60%; margin: 0 auto 6px; background: #d4af37; }
+  .avatar { width: 92px; height: 92px; border-radius: 50%; background: #fff; border: 4px solid #d4af37; object-fit: contain; margin: 8px auto 0; box-shadow: 0 4px 12px rgba(0,0,0,0.25); display:block; }
+  .gradeseal { position: relative; width: 132px; height: 132px; margin: 16px auto 6px; }
+  .gradeseal .ring { position:absolute; inset:0; border-radius:50%; border: 4px solid ${gColor};
+    box-shadow: 0 0 0 5px rgba(255,255,255,0.6), 0 0 0 7px ${gColor}; display:flex; flex-direction:column; align-items:center; justify-content:center; background: radial-gradient(circle, #fff, #fff6e6); }
+  .gradeseal .g { font-family: 'Cinzel', serif; font-weight: 900; font-size: 3.4rem; color: ${gColor}; line-height: 1; }
+  .gradeseal .lbl { font-size: 0.62rem; font-weight: 900; letter-spacing: 0.22em; color: #b06a2a; }
+  .gradeseal .star { position:absolute; top:-8px; left:50%; transform:translateX(-50%); font-size:1.4rem; }
+  .month { text-align: center; font-weight: 800; color: #b06a2a; margin-bottom: 6px; }
+  .sect { font-family: 'Cinzel', serif; font-weight: 900; color: #8a1414; margin: 16px 0 6px; font-size: 1.05rem; text-align:center; }
+  ul { padding-left: 22px; line-height: 1.7; font-weight: 700; color: #3a2b1a; max-width: 460px; margin: 0 auto; }
+  .stats { display: flex; gap: 10px; margin: 16px auto 0; max-width: 440px; }
+  .stat { flex: 1; background: rgba(212,175,55,0.14); border: 1px solid rgba(212,175,55,0.5); border-radius: 12px; padding: 10px; text-align: center; }
   .stat b { display: block; font-size: 1.5rem; color: #c81e1e; font-family: 'Cinzel', serif; }
-  .stat span { font-size: 0.78rem; font-weight: 800; color: #b06a2a; }
-  .foot { text-align: center; margin-top: 18px; font-weight: 800; color: #8a1414; }
-  .seal { position: absolute; bottom: 16px; right: 18px; font-size: 2.6rem; opacity: 0.85; }
-  .pbtn { display:block; margin: 16px auto 0; background:#c81e1e; color:#fff; border:none; border-radius:999px; padding:12px 26px; font-weight:900; font-size:1rem; cursor:pointer; }
-  @media print { body { background:#fff; padding:0; } .pbtn { display:none; } .card { box-shadow:none; border-width:8px; } }
+  .stat span { font-size: 0.72rem; font-weight: 800; color: #b06a2a; }
+  .foot { text-align: center; margin-top: 16px; font-weight: 800; color: #8a1414; }
+  .sig { display:flex; justify-content: space-between; align-items: flex-end; margin-top: 22px; padding: 0 10px; }
+  .sigblk { text-align:center; flex:1; }
+  .sigline { border-top: 1.5px solid #8a1414; margin: 0 8px 4px; }
+  .sigblk small { font-size: 0.7rem; color: #6b4a2a; font-weight: 800; }
+  .signame { font-family:'Ma Shan Zheng', serif; color:#8a1414; font-size:1.1rem; }
+  .goldseal { font-size: 2.8rem; }
+  .pbtn { display:block; margin: 18px auto 0; background: linear-gradient(135deg, #c81e1e, #e23b3b); color:#fff; border:none; border-radius:999px; padding:13px 28px; font-weight:900; font-size:1rem; cursor:pointer; box-shadow: 0 6px 18px rgba(200,30,30,0.4); }
+  @media print { body { background:#fff; padding:0; } .pbtn { display:none; } .cert { box-shadow:none; } }
 </style></head><body>
-  <div class="card">
-    <div class="topbar">
-      <span class="dragon">🐉</span>
-      <span class="brand">Dralingo<small>EDUTECH · HSK1</small></span>
-      <span class="hanzi">成绩单</span>
-    </div>
-    <div class="body">
-      <div class="kid">
-        ${avatarUrl ? `<img class="avatar" src="${avatarUrl}" alt="">` : '<div class="avatar" style="display:flex;align-items:center;justify-content:center;font-size:2.6rem;">🧒</div>'}
-        <div>
-          <div class="name">${escapeHtml(d.displayName)}</div>
-          <div class="month">📅 ${escapeHtml(prettyMonth(d.month))}</div>
-        </div>
-        <div class="gradewrap"><div class="grade">${grade}</div><div class="gradelbl">CALIFICACIÓN</div></div>
+  <div class="cert"><div class="frame"><div class="frame2"><div class="inner">
+    <span class="corner tl">❖</span><span class="corner tr">❖</span>
+    <span class="corner bl">❖</span><span class="corner br">❖</span>
+    <div class="wm">龙</div>
+    <div class="head">
+      <div class="dragon">🐉</div>
+      <div class="brand">DRALINGO<small>EDUTECH · 中文 HSK1</small></div>
+      <div class="rule"></div>
+      <div class="title">CERTIFICADO DE LOGRO</div>
+      <div class="titlehz">学习证书</div>
+      ${avatarUrl ? `<img class="avatar" src="${avatarUrl}" alt="">` : '<div class="avatar" style="display:flex;align-items:center;justify-content:center;font-size:2.8rem;">🧒</div>'}
+      <div class="awarded">Otorgado con orgullo a</div>
+      <div class="name">${escapeHtml(d.displayName)}</div>
+      <div class="namebar"></div>
+      <div class="month">📅 ${escapeHtml(prettyMonth(d.month))}</div>
+      <div class="gradeseal">
+        <span class="star">⭐</span>
+        <div class="ring"><div class="g">${grade}</div><div class="lbl">CALIFICACIÓN</div></div>
       </div>
       <div class="sect">🌟 Observaciones del maestro</div>
       <ul>${notesHtml}</ul>
@@ -849,11 +877,15 @@
         <div class="stat"><b>${d.stats ? d.stats.assignments : 0}</b><span>TAREAS</span></div>
         <div class="stat"><b>${d.stats ? d.stats.tests : 0}</b><span>EXÁMENES</span></div>
       </div>
-      <div class="foot">¡Sigue practicando en chino en voz alta! 加油 🎉</div>
+      <div class="foot">¡Sigue practicando en voz alta! 加油 🎉</div>
+      <div class="sig">
+        <div class="sigblk"><div class="signame">🐉 Dralingo 老师</div><div class="sigline"></div><small>MAESTRO/A</small></div>
+        <div class="goldseal">🏅</div>
+        <div class="sigblk"><div class="signame">${escapeHtml(prettyMonth(d.month))}</div><div class="sigline"></div><small>FECHA</small></div>
+      </div>
     </div>
-    <div class="seal">🏅</div>
-    <button class="pbtn" onclick="window.print()">📄 Guardar como PDF / Imprimir</button>
-  </div>
+    <button class="pbtn" onclick="window.print()">📄 Guardar como PDF / Compartir</button>
+  </div></div></div></div>
   <script>setTimeout(function(){ try { window.focus(); } catch(e){} }, 200);<\/script>
 </body></html>`;
     const w = window.open('', '_blank');
@@ -975,6 +1007,16 @@
   // Pure presentation over the SAME assignment IDs, so every saved score /
   // parent-card result is untouched. null = root (folders); else 'exp1'…
   let hwFolder = null;
+  // 🎯 PASS RULE: a tarea is only "done/passed" at ≥80%. Below that it stays
+  // PENDING and the kid must retry (user 2026-05-28: "cannot pass <80").
+  const HW_PASS_PCT = 80;
+  function assignmentBestPct(a) {
+    const att = submissions.filter((s) => s.assignmentId === a.id);
+    if (!att.length) return null;
+    const totals = a.totalPoints || (a.itemCount ? a.itemCount * 20 : 100);
+    return Math.max(...att.map((s) => (s.score / (s.total || totals)) * 100));
+  }
+  function assignmentPassed(a) { const p = assignmentBestPct(a); return p != null && p >= HW_PASS_PCT; }
   // Best-effort story→experience grouping for the reading folders.
   const READING_EXP = { xiaomingday: 'exp8' };
   function readingExpOf(r) { return (r && (READING_EXP[r.storyId] || r.exp)) || 'exp1'; }
@@ -1009,8 +1051,8 @@
       const eAssigns = assignments.filter((a) => a.expLabel === expId);
       const eReads = (readingTests || []).filter((r) => readingExpOf(r) === expId);
       const total = eAssigns.length + eReads.length;
-      const done = eAssigns.filter((a) => submissions.some((s) => s.assignmentId === a.id)).length
-                 + eReads.filter((r) => r.bestScore != null).length;
+      const done = eAssigns.filter((a) => assignmentPassed(a)).length
+                 + eReads.filter((r) => r.bestScore != null && r.bestScore >= 80).length;
       const emoji = (exp.short || '📁').split(' ')[0] || '📁';
       const card = document.createElement('button');
       card.type = 'button';
@@ -1040,24 +1082,27 @@
     renderReadingsList();
   }
 
-  // One assignment card — shared by both views.
+  // One assignment card (+ a review button once attempted) — shared by both
+  // views. Returns a fragment so we can append the card AND a "ver errores".
   function buildAssignmentCard(a) {
+    const frag = document.createDocumentFragment();
     const myAttempts = submissions.filter((s) => s.assignmentId === a.id);
     const bestScore = myAttempts.length ? Math.max(...myAttempts.map((s) => s.score)) : null;
+    const pct = assignmentBestPct(a);
+    const passed = pct != null && pct >= HW_PASS_PCT;
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = 'hw-card';
-    if (bestScore != null) card.classList.add('hw-card-done');
+    card.className = 'hw-card' + (passed ? ' hw-card-done' : '');
+    // <80% → still PENDING (must retry). Show the score but mark it pending.
     const statusBadge = bestScore == null
       ? '<span class="hw-card-badge new">Nueva</span>'
-      : `<span class="hw-card-badge done">${bestScore}/${a.totalPoints} pts</span>`;
-    // Lesson label "EXP1 / 1" — numbered within its own experience (week).
+      : (passed
+          ? `<span class="hw-card-badge done">✓ ${bestScore}/${a.totalPoints} pts</span>`
+          : `<span class="hw-card-badge pending">⏳ ${bestScore}/${a.totalPoints} · reintenta (necesitas 80%)</span>`);
     const expNum = (a.expLabel || '').replace('exp', '');
     const sameExp = assignments.filter((x) => x.expLabel === a.expLabel);
     const lessonNo = Math.max(1, sameExp.indexOf(a) + 1);
-    const lessonChip = expNum
-      ? `<span class="hw-card-exp">EXP${expNum} / ${lessonNo}</span>`
-      : '';
+    const lessonChip = expNum ? `<span class="hw-card-exp">EXP${expNum} / ${lessonNo}</span>` : '';
     card.innerHTML = `
       <div class="hw-card-head">
         ${statusBadge}
@@ -1068,7 +1113,31 @@
       <div class="hw-card-sub">${escapeHtml(a.subtitle)}</div>
       <div class="hw-card-meta">${a.itemCount} oraciones</div>`;
     card.addEventListener('click', () => openAssignment(a.id));
-    return card;
+    frag.appendChild(card);
+    // 🔎 Once attempted, let the kid review exactly what they missed.
+    if (bestScore != null) {
+      const rev = document.createElement('button');
+      rev.type = 'button';
+      rev.className = 'hw-review-btn';
+      rev.textContent = '🔎 Ver mis errores';
+      rev.addEventListener('click', () => openAssignmentReview(a.id, a.title));
+      frag.appendChild(rev);
+    }
+    return frag;
+  }
+  // Fetch the kid's best assignment submission breakdown → mistakes modal.
+  function openAssignmentReview(id, title) {
+    fetch('/api/homework/assignment-review/' + encodeURIComponent(id)
+        + '?accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok || !data.attempt) { alert('Aún no hay intento para revisar.'); return; }
+        showMistakesModal(title, data.attempt.score, data.attempt.total,
+          (data.attempt.breakdown || []).map((b) => ({
+            q: b.es, picked: b.student || '—', correctAns: b.expected, correct: !!b.correct,
+          })));
+      })
+      .catch((e) => alert('Error: ' + e.message));
   }
 
   // ── Reading-test list (fetched from server)

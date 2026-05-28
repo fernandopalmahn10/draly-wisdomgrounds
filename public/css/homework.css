@@ -2418,3 +2418,6 @@ button, a, .hw-card, .hw-folder-card, .hw-lib-chip, .hw-stage-word,
 }
 .hw-report-month-btn:active { transform: scale(0.98); }
 .hw-report-go { color: #ffb46b; font-weight: 900; }
+
+/* ⏳ Pending badge — assignment attempted but <80% (must retry to pass) */
+.hw-card-badge.pending { background: rgba(255,170,40,0.22); color: #ffb000; border: 1px solid rgba(255,170,40,0.6); font-size: 0.72rem; }
