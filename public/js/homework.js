@@ -1010,7 +1010,67 @@
         card.addEventListener('click', () => alert('Aún no puedes hacer este examen. Tu maestra debe abrirlo en clase primero.'));
       }
       wrap.appendChild(card);
+      // 🔎 Review past mistakes — only once they've attempted it.
+      if (r.bestScore != null) {
+        const rev = document.createElement('button');
+        rev.type = 'button';
+        rev.className = 'hw-review-btn';
+        rev.textContent = '🔎 Ver mis errores';
+        rev.addEventListener('click', () => openReadingReview(r.storyId, r.title));
+        wrap.appendChild(rev);
+      }
     });
+  }
+  // Fetch + show which reading-test questions the kid missed (best attempt).
+  function openReadingReview(storyId, title) {
+    fetch('/api/homework/reading-review/' + encodeURIComponent(storyId)
+        + '?accessCode=' + encodeURIComponent(accessCode)
+        + '&studentCode=' + encodeURIComponent(studentCode))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok || !data.attempt) { alert('Aún no hay intento para revisar.'); return; }
+        showMistakesModal(title || data.attempt.storyTitle, data.attempt.score, 100,
+          (data.attempt.breakdown || []).map((b) => ({
+            q: b.q,
+            picked: (b.picked != null && b.choices) ? b.choices[b.picked] : '—',
+            correctAns: b.choices ? b.choices[b.correctIdx] : '',
+            correct: !!b.correct,
+          })));
+      })
+      .catch((e) => alert('Error: ' + e.message));
+  }
+  // Generic mistakes modal — lists each question, the kid's pick (red if
+  // wrong) and the right answer (green). Reused for tests.
+  function showMistakesModal(title, score, total, rows) {
+    let ov = document.getElementById('hw-mistakes-overlay');
+    if (!ov) {
+      ov = document.createElement('div');
+      ov.id = 'hw-mistakes-overlay';
+      ov.className = 'hw-mistakes-overlay';
+      document.body.appendChild(ov);
+      ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('show'); });
+    }
+    const wrong = rows.filter((r) => !r.correct).length;
+    ov.innerHTML = `
+      <div class="hw-mistakes-card">
+        <button class="hw-mistakes-close" type="button" aria-label="Cerrar">✕</button>
+        <div class="hw-mistakes-title">📖 ${escapeHtml(title || '')}</div>
+        <div class="hw-mistakes-score">${score}/${total} pts · ${wrong === 0 ? '¡Todo correcto! 🎉' : (wrong + ' por corregir')}</div>
+        <div class="hw-mistakes-list">
+          ${rows.map((r) => `
+            <div class="hw-mistake-row ${r.correct ? 'ok' : 'bad'}">
+              <span class="hw-mistake-mark">${r.correct ? '✓' : '✗'}</span>
+              <span class="hw-mistake-body">
+                <span class="hw-mistake-q">${escapeHtml(r.q || '')}</span>
+                <span class="hw-mistake-given">Tu respuesta: <strong>${escapeHtml(r.picked || '—')}</strong></span>
+                ${r.correct ? '' : `<span class="hw-mistake-correct">Correcto: <strong>${escapeHtml(r.correctAns || '')}</strong></span>`}
+              </span>
+            </div>`).join('')}
+        </div>
+        <div class="hw-mistakes-tip">🗣️ Lee EN VOZ ALTA las respuestas correctas para recordarlas la próxima vez.</div>
+      </div>`;
+    ov.querySelector('.hw-mistakes-close').addEventListener('click', () => ov.classList.remove('show'));
+    requestAnimationFrame(() => ov.classList.add('show'));
   }
   function openReadingTest(storyId) {
     fetch('/api/homework/reading-test/' + encodeURIComponent(storyId)

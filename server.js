@@ -856,6 +856,28 @@ app.post('/api/homework/reading-test/submit', (req, res) => {
   res.json({ ok: true, score, total: 100, breakdown });
 });
 
+// Review a PAST reading-test attempt — returns the best attempt's full
+// breakdown so the student can SEE which questions they missed + the right
+// answer (so they can fix it next time). User 2026-05-28: "they cannot see
+// why they got it wrong."
+app.get('/api/homework/reading-review/:storyId', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = Students.get(req.query.studentCode);
+  if (!rec || !Array.isArray(rec.testResults)) return res.json({ ok: true, attempt: null });
+  const attempts = rec.testResults.filter((t) => t.storyId === req.params.storyId);
+  if (!attempts.length) return res.json({ ok: true, attempt: null });
+  // Best score, tie → most recent.
+  const best = attempts.slice().sort((a, b) => (b.score - a.score) || (b.ts - a.ts))[0];
+  res.json({
+    ok: true,
+    attempt: {
+      storyId: best.storyId, storyTitle: best.storyTitle,
+      score: best.score, ts: best.ts,
+      breakdown: best.breakdown || [],
+    },
+  });
+});
+
 // === 🔊 GOOGLE CLOUD TTS — premium-quality zh-CN audio ================
 // Wired 2026-05-27 per user request (Web Speech sounded terrible, GCP
 // TTS sounds human). Caches every synthesized MP3 to disk so the second
