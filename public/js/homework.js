@@ -92,6 +92,48 @@
   // Deshacer once restores the previous state.
   let undoStacks = [];
 
+  // Best-effort device + country fingerprint, sent on entry. We can't read
+  // the IP behind Render's proxy, so we derive from the browser: a coarse
+  // device label (phone / tablet / computer + OS), the locale, and the IANA
+  // timezone — from which we guess a country code. Lets the teacher spot
+  // duplicate accounts and ban a device from the Cuaderno.
+  function collectDeviceMeta() {
+    const ua = navigator.userAgent || '';
+    let device = 'Computadora';
+    if (/iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) device = 'Tablet';
+    else if (/Mobi|iPhone|Android.*Mobile|Windows Phone/i.test(ua)) device = 'Teléfono';
+    let os = '';
+    if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS';
+    else if (/Android/i.test(ua)) os = 'Android';
+    else if (/Windows/i.test(ua)) os = 'Windows';
+    else if (/Mac OS X/i.test(ua)) os = 'Mac';
+    else if (/Linux/i.test(ua)) os = 'Linux';
+    const locale = (navigator.language || (navigator.languages && navigator.languages[0]) || '').slice(0, 12);
+    let tz = '';
+    try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (_) {}
+    return {
+      device: (device + (os ? ' · ' + os : '')).slice(0, 60),
+      locale,
+      tz: tz.slice(0, 48),
+      country: guessCountry(locale, tz),
+    };
+  }
+  // Coarse country guess from locale region or timezone city. Best-effort,
+  // never authoritative — just a hint for the teacher.
+  function guessCountry(locale, tz) {
+    const m = /[-_]([A-Za-z]{2})$/.exec(locale || '');
+    if (m) return m[1].toUpperCase();
+    const TZ_COUNTRY = {
+      'Mexico_City': 'MX', 'Tijuana': 'MX', 'Monterrey': 'MX',
+      'Shanghai': 'CN', 'Chongqing': 'CN', 'Urumqi': 'CN', 'Hong_Kong': 'HK',
+      'Taipei': 'TW', 'Macau': 'MO', 'Singapore': 'SG',
+      'Bogota': 'CO', 'Lima': 'PE', 'Buenos_Aires': 'AR', 'Santiago': 'CL',
+      'Madrid': 'ES', 'New_York': 'US', 'Los_Angeles': 'US', 'Chicago': 'US',
+    };
+    const city = String(tz || '').split('/').pop();
+    return TZ_COUNTRY[city] || (city ? city.replace(/_/g, ' ') : null);
+  }
+
   // ── Pre-fill remembered values
   try {
     const savedAccess = localStorage.getItem(STORAGE_ACCESS_KEY) || '';
@@ -115,6 +157,7 @@
       accessCode: ac,
       studentCode: looksLikeCode ? sc.toUpperCase() : null,
       displayName: looksLikeCode ? null : (sc || 'Anon'),
+      meta: collectDeviceMeta(),
     };
     fetch('/api/homework/enter', {
       method: 'POST',

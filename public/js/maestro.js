@@ -442,8 +442,33 @@
           📝 ${data.sentences.length} oraciones ·
           📚 ${assigns.length} tareas ·
           🏆 ${tests.length} exámenes</div>
-        <button class="btn btn-jade btn-sm" id="m-detail-send-btn" style="margin-top:8px;">💬 Enviar mensaje</button>
+        <div class="m-detail-meta m-detail-device">
+          ${data.country ? '🌍 ' + escapeHtml(data.country) : '🌍 —'}
+          ${data.device ? ' · 📱 ' + escapeHtml(data.device) : ''}
+          ${data.locale ? ' · 🗣 ' + escapeHtml(data.locale) : ''}
+        </div>
+        <div class="m-detail-actions-row">
+          <button class="btn btn-jade btn-sm" id="m-detail-send-btn">💬 Enviar mensaje</button>
+          <button class="btn btn-red btn-sm" id="m-detail-delete-btn" title="Borrar este alumno permanentemente">🗑 Borrar alumno</button>
+        </div>
       </div>`;
+    // Wire delete — irreversible; double-confirm.
+    $('m-detail-delete-btn').addEventListener('click', () => {
+      if (!confirm(`¿Borrar PERMANENTEMENTE a "${data.displayName || data.code}" (${data.code})?\n\nSe elimina su historial completo. Esto NO se puede deshacer.`)) return;
+      if (!confirm('Última confirmación: ¿seguro que quieres borrar a este alumno?')) return;
+      fetch('/api/admin/students/' + encodeURIComponent(data.code) + '?pw=' + encodeURIComponent(pw), {
+        method: 'DELETE',
+      })
+        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) { alert('Error: ' + (r.error || 'no se pudo borrar')); return; }
+          $('m-detail').classList.add('hidden');
+          $('m-roster').classList.remove('hidden');
+          $('m-summary').classList.remove('hidden');
+          fetchRoster();
+        })
+        .catch((e) => alert('Error: ' + e.message));
+    });
     // Wire rename
     $('m-detail-rename-btn').addEventListener('click', () => {
       const cur = $('m-detail-name').textContent;

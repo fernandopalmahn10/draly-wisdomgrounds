@@ -2601,6 +2601,9 @@
     wuPlayerIsDelegate = delegates.indexOf(myName) >= 0;
     const adminWrap = document.getElementById('wu-player-admin');
     if (adminWrap) adminWrap.classList.toggle('hidden', !wuPlayerIsDelegate);
+    // Hide the "raise hand" button once they ARE an asistente.
+    const handBtn = document.getElementById('wu-player-hand-btn');
+    if (handBtn) handBtn.classList.toggle('hidden', wuPlayerIsDelegate);
     // Just promoted? Render the library + bind controls
     if (wuPlayerIsDelegate && !wasDelegate) {
       renderPlayerExpTabs();
@@ -2645,6 +2648,69 @@
     wrap.classList.remove('hidden');
     if (MochiSounds && MochiSounds.tap) MochiSounds.tap();
   }
+
+  // 🔊 GLOBAL AUDIO — every student can play the current warmup sentence in
+  // a native (Google) voice, not just the teacher. Wired once at load.
+  let _wuTtsAudio = null;
+  function speakChineseWU(text, btn) {
+    const clean = String(text || '').trim();
+    if (!clean) return;
+    // Stop any prior playback
+    if (_wuTtsAudio) { try { _wuTtsAudio.pause(); _wuTtsAudio.removeAttribute('src'); _wuTtsAudio.load(); } catch (_) {} _wuTtsAudio = null; }
+    if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch (_) {} }
+    let orig = '';
+    const restore = () => { if (btn) { btn.classList.remove('speaking'); btn.textContent = orig; } };
+    if (btn) { btn.classList.add('speaking'); orig = btn.textContent; btn.textContent = '🔊 …'; }
+    const audio = new Audio();
+    _wuTtsAudio = audio;
+    let played = false, fell = false;
+    const fallback = () => {
+      if (fell || played) return;
+      fell = true;
+      try { audio.pause(); audio.removeAttribute('src'); audio.load(); } catch (_) {}
+      restore();
+      if ('speechSynthesis' in window) {
+        try { const u = new SpeechSynthesisUtterance(clean); u.lang = 'zh-CN'; u.rate = 0.85; u.onend = restore; window.speechSynthesis.speak(u); } catch (_) {}
+      }
+    };
+    audio.addEventListener('canplay', () => { if (!fell) audio.play().then(() => { played = true; }).catch(() => { if (!played) fallback(); }); });
+    audio.addEventListener('playing', () => { played = true; if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch (_) {} } });
+    audio.addEventListener('ended', restore);
+    audio.addEventListener('error', () => { if (!played) fallback(); });
+    const to = setTimeout(() => { if (!played) fallback(); }, 10000);
+    audio.addEventListener('playing', () => clearTimeout(to));
+    audio.src = '/api/tts?text=' + encodeURIComponent(clean);
+    audio.load();
+  }
+  (function bindWuPlayerSpeak() {
+    const btn = document.getElementById('wu-player-speak-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      if (window.unlockAudio) window.unlockAudio();
+      const pinyin = (wuPlayerLastSentence || [])
+        .map((wid) => ((window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]) || {}).pinyin || '')
+        .filter(Boolean).join(' ');
+      if (!pinyin) {
+        const o = btn.textContent; btn.textContent = '🔇 (vacío)';
+        setTimeout(() => { btn.textContent = o; }, 1200);
+        return;
+      }
+      speakChineseWU(pinyin, btn);
+    });
+  })();
+  // ✋ Raise hand to become an asistente (gamified request to the teacher).
+  (function bindWuPlayerHand() {
+    const btn = document.getElementById('wu-player-hand-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      socket.emit('wu:raise-hand', { pin });
+      if (MochiSounds && MochiSounds.tap) MochiSounds.tap();
+      const o = btn.textContent;
+      btn.textContent = '✋ ¡Mano levantada!';
+      btn.classList.add('raised');
+      setTimeout(() => { btn.textContent = o; btn.classList.remove('raised'); }, 2500);
+    });
+  })();
 
   // Player-side admin library — same word data + EXP tabs, but emits
   // wu:add-word without a password (server validates via delegates set).

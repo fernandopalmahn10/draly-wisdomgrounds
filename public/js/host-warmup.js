@@ -913,6 +913,8 @@
       const b = $(id);
       if (b) b.addEventListener('click', () => fireFx(fx[id]));
     });
+    // Kick off the random anti-monotony fun loop.
+    startRandomFun();
   }
 
   // === ASSISTANT ACTIVITY TICKER ===
@@ -937,6 +939,65 @@
     feed.insertBefore(row, feed.firstChild);
     while (feed.children.length > 12) feed.removeChild(feed.lastChild);
   });
+
+  // === RAISE HAND === a kid wants to become an asistente. Flash a banner +
+  // highlight their roster row + log it to the activity feed, so the teacher
+  // notices and can tap 👑. Gamified request-to-join.
+  socket.on('wu:hand', (h) => {
+    if (!h || !h.name) return;
+    if (MochiSounds.winFanfare) MochiSounds.winFanfare();
+    else if (MochiSounds.correct) MochiSounds.correct();
+    // Activity feed entry
+    const feed = $('wu-activity-feed');
+    if (feed) {
+      const empty = feed.querySelector('.wu-activity-empty');
+      if (empty) empty.remove();
+      const row = document.createElement('div');
+      row.className = 'wu-activity-row is-hand';
+      const time = new Date(h.t || Date.now()).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      row.innerHTML = `
+        <span class="wu-activity-who">${h.avatar || '🙋'} ${escapeHtml(h.name)}</span>
+        <span class="wu-activity-verb">✋ quiere ser asistente</span>
+        <span class="wu-activity-time">${time}</span>`;
+      feed.insertBefore(row, feed.firstChild);
+      while (feed.children.length > 12) feed.removeChild(feed.lastChild);
+    }
+    // Flash a floating banner
+    const banner = document.createElement('div');
+    banner.className = 'wu-hand-banner';
+    banner.textContent = `✋ ${h.name} quiere ser asistente`;
+    document.body.appendChild(banner);
+    requestAnimationFrame(() => banner.classList.add('show'));
+    setTimeout(() => { banner.classList.remove('show'); setTimeout(() => banner.remove(), 400); }, 3200);
+    // Highlight their roster row if present
+    const list = $('wu-roster-list');
+    if (list) {
+      list.querySelectorAll('.wu-roster-row').forEach((r) => {
+        const nm = r.querySelector('.wu-roster-name');
+        if (nm && nm.textContent === h.name) {
+          r.classList.add('hand-raised');
+          setTimeout(() => r.classList.remove('hand-raised'), 6000);
+        }
+      });
+    }
+  });
+
+  // === RANDOM FUN === every 25–55s while the builder is live, auto-fire a
+  // random delightful event so the room never feels monotonous. Heavily
+  // weighted toward gentle confetti, occasionally the 6-7 swing jumpscare.
+  let _funTimer = null;
+  function startRandomFun() {
+    if (_funTimer) return;
+    const FUN = ['confetti', 'confetti', 'sixseven', 'rain', 'zombies', 'moto'];
+    const tick = () => {
+      const onActive = $('screen-active') && !$('screen-active').classList.contains('hidden');
+      if (onActive && document.visibilityState !== 'hidden') {
+        fireFx(FUN[Math.floor(Math.random() * FUN.length)]);
+      }
+      _funTimer = setTimeout(tick, 25000 + Math.random() * 30000);
+    };
+    _funTimer = setTimeout(tick, 25000 + Math.random() * 30000);
+  }
 
   // === SPEAK (Google TTS via /api/tts → Web Speech fallback) ===
   let _ttsAudio = null;
@@ -1018,6 +1079,22 @@
         layer.appendChild(el);
         setTimeout(() => el.remove(), 2400);
       }
+      return;
+    }
+    if (kind === 'sixseven') {
+      // 6-7 swing jumpscare — the same mascot from the 6-7 game crashes
+      // across the screen with a little dance + screen shake. Anti-monotony.
+      document.body.classList.remove('wu-shake');
+      void document.body.offsetWidth;
+      document.body.classList.add('wu-shake');
+      setTimeout(() => document.body.classList.remove('wu-shake'), 700);
+      const el = document.createElement('div');
+      el.className = 'wu-fx-67';
+      el.innerHTML = '<img src="/assets/png-library/67-transparent.png" alt="6-7" onerror="this.replaceWith(document.createTextNode(\'6️⃣7️⃣\'))">';
+      layer.appendChild(el);
+      if (MochiSounds.combo) MochiSounds.combo();
+      else if (MochiSounds.correct) MochiSounds.correct();
+      setTimeout(() => el.remove(), 2600);
       return;
     }
     // 'zombies' and 'moto' both stampede across the screen from one side

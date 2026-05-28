@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
   <link rel="stylesheet" href="/css/triage.css?v=20260528d">
   <link rel="stylesheet" href="/css/laiquhui.css?v=20260525d">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260528d">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260528e">
   <link rel="stylesheet" href="/css/identity.css?v=20260525a">
   <link rel="stylesheet" href="/css/partyrun.css?v=20260525a">
   <link rel="stylesheet" href="/css/reading.css?v=20260526d">
@@ -785,6 +785,16 @@
         Esperando a que el maestro construya una oración…
       </div>
     </div>
+    <!-- 🔊 EVERYONE can hear the sentence — not just the teacher. The point
+         is for kids to hear a NATIVE pronunciation (Google), not the
+         teacher's. Visible to every student in the builder. -->
+    <div class="wu-player-speak-row">
+      <button class="wu-player-speak-btn" id="wu-player-speak-btn" type="button">🔊 Escuchar la oración</button>
+      <!-- ✋ Gamified request: a kid who isn't an asistente yet can raise
+           their hand. The teacher sees it and can grant 👑. Hidden once
+           they ARE an asistente. -->
+      <button class="wu-player-hand-btn" id="wu-player-hand-btn" type="button">✋ Quiero ser asistente</button>
+    </div>
     <div class="wu-player-hint" id="wu-player-hint">
       Los colores que coinciden te ayudan a ver la estructura.
     </div>
@@ -848,6 +858,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260525c"></script>
-  <script src="/js/player.js?v=20260528d"></script>
+  <script src="/js/player.js?v=20260528e"></script>
 </body>
 </html>
