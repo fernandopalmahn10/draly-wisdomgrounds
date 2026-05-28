@@ -208,6 +208,7 @@ app.get('/api/admin/students/:code', (req, res) => {
     sentences: Students.getHistory(rec.code), // newest-first
     tests:     Students.getTestResults(rec.code, 50), // newest-first
     assignments: Students.getAssignmentSubmissions(rec.code, 50),
+    notes:     Students.getNotes(rec.code),
   });
 });
 
@@ -258,6 +259,86 @@ app.post('/api/admin/student/:code/message', (req, res) => {
   const msg = Students.sendMessage(rec.code, { from: fromId, fromName, text, actionType, actionUrl, actionLabel });
   if (!msg) return res.status(400).json({ ok: false, error: 'message rejected' });
   res.json({ ok: true, message: msg });
+});
+
+// === 📋 REPORT-CARD NOTES (teacher) ===
+// Teacher adds short notes/keywords + an optional grade per month. The
+// parent's "Generar reporte" tab composes a branded report card from these.
+app.post('/api/admin/student/:code/note', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) {
+    return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  }
+  const { text, grade, month } = req.body || {};
+  const ok = Students.addNote(rec.code, { text, grade, month });
+  if (!ok) return res.status(400).json({ ok: false, error: 'empty note' });
+  res.json({ ok: true, notes: Students.getNotes(rec.code) });
+});
+app.delete('/api/admin/student/:code/note/:ts', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec || !_canSessionTouchStudent(session, rec)) {
+    return res.status(403).json({ ok: false, error: 'not allowed' });
+  }
+  Students.deleteNote(rec.code, req.params.ts);
+  res.json({ ok: true, notes: Students.getNotes(rec.code) });
+});
+
+// === 📋 REPORT CARDS (parent, read-only via access code) ===
+// List the months that have a report (notes). Always includes the current
+// month so a fresh card can be generated even before any notes exist.
+app.get('/api/homework/reports/:code', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'no student' });
+  const notes = Students.getNotes(rec.code);
+  const months = Array.from(new Set(notes.map((n) => n.month))).sort().reverse();
+  const cur = new Date().toISOString().slice(0, 7);
+  if (!months.includes(cur)) months.unshift(cur);
+  res.json({ ok: true, months });
+});
+// Full report-card payload for one month: notes, computed grade, stats.
+app.get('/api/homework/report/:code', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'no student' });
+  const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? req.query.month
+              : new Date().toISOString().slice(0, 7);
+  const notes = Students.getNotes(rec.code).filter((n) => n.month === month);
+  // Grade: the teacher's most-recent explicit grade for the month wins;
+  // otherwise derive a letter from assignment+test performance.
+  let grade = null;
+  for (let i = notes.length - 1; i >= 0; i--) { if (notes[i].grade) { grade = notes[i].grade; break; } }
+  const subs = Students.getAssignmentSubmissions(rec.code, 100);
+  const tests = Students.getTestResults(rec.code, 100);
+  if (!grade) {
+    const best = {};
+    subs.forEach((s) => { if (!best[s.assignmentId] || s.score > best[s.assignmentId]) best[s.assignmentId] = s.score / (s.total || 100) * 100; });
+    const tBest = {};
+    tests.forEach((t) => { if (!tBest[t.storyId] || t.score > tBest[t.storyId]) tBest[t.storyId] = t.score; });
+    const pcts = Object.values(best).concat(Object.values(tBest));
+    if (pcts.length) {
+      const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
+      grade = avg >= 90 ? 'A' : avg >= 80 ? 'B' : avg >= 70 ? 'C' : avg >= 60 ? 'D' : 'E';
+    } else grade = '—';
+  }
+  res.json({
+    ok: true,
+    month,
+    code: rec.code,
+    displayName: rec.displayName || 'Anon',
+    avatar: rec.avatar || null,
+    grade,
+    notes: notes.map((n) => ({ ts: n.ts, text: n.text, grade: n.grade })),
+    stats: {
+      assignments: subs.length,
+      tests: tests.length,
+    },
+  });
 });
 
 // Rename a student (super-admin or owning teacher).

@@ -740,8 +740,126 @@
         p.classList.toggle('hidden', p.id !== ('hw-parents-tabpanel-' + target));
       });
       if (target === 'guias') fetchGuides();
+      if (target === 'reporte') fetchReportMonths();
     });
   });
+
+  // === 📋 REPORT CARDS ===
+  function fetchReportMonths() {
+    const wrap = $('hw-report-months');
+    if (!wrap) return;
+    fetch('/api/homework/reports/' + encodeURIComponent(studentCode)
+        + '?accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { wrap.innerHTML = '<div class="hw-parents-empty">No se pudo cargar.</div>'; return; }
+        wrap.innerHTML = '';
+        (data.months || []).forEach((m) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'hw-report-month-btn';
+          btn.innerHTML = `<span>📅 ${prettyMonth(m)}</span><span class="hw-report-go">Generar →</span>`;
+          btn.addEventListener('click', () => generateReport(m));
+          wrap.appendChild(btn);
+        });
+      })
+      .catch(() => { wrap.innerHTML = '<div class="hw-parents-empty">Error al cargar.</div>'; });
+  }
+  function prettyMonth(m) {
+    const [y, mo] = String(m).split('-');
+    const names = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    return (names[Number(mo)] || m) + ' ' + y;
+  }
+  function generateReport(month) {
+    fetch('/api/homework/report/' + encodeURIComponent(studentCode)
+        + '?month=' + encodeURIComponent(month)
+        + '&accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { alert('No se pudo generar.'); return; }
+        openReportCardWindow(data);
+      })
+      .catch((e) => alert('Error: ' + e.message));
+  }
+  // Opens a standalone, beautifully-branded report card in a new tab and
+  // auto-triggers print (→ "Save as PDF"). Dralingo EduTech branding is
+  // prominent so it looks great shared on WhatsApp / stories.
+  function openReportCardWindow(d) {
+    const avatarUrl = (typeof d.avatar === 'string' && /^[a-z]+$/.test(d.avatar))
+      ? '/assets/avatars/' + d.avatar + '.svg?v=20260528b' : '';
+    const notesHtml = (d.notes || []).length
+      ? d.notes.map((n) => `<li>${escapeHtml(n.text)}</li>`).join('')
+      : '<li>¡Sigue practicando en voz alta cada día! 🌱</li>';
+    const grade = escapeHtml(d.grade || '—');
+    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boleta · ${escapeHtml(d.displayName)} · ${escapeHtml(prettyMonth(d.month))}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap');
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: 'Nunito', sans-serif; background: #0e1322; padding: 18px; color: #1a1f33; }
+  .card { max-width: 620px; margin: 0 auto; background:
+      radial-gradient(circle at 100% 0%, rgba(239,91,91,0.12), transparent 45%),
+      linear-gradient(160deg, #fff8ee, #fdeede);
+    border: 10px solid #c81e1e; border-radius: 22px; padding: 0 0 26px; overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5); position: relative; }
+  .topbar { background: linear-gradient(135deg, #c81e1e, #e23b3b); color: #ffe9c7;
+    padding: 16px 22px; display: flex; align-items: center; gap: 12px; }
+  .topbar .dragon { font-size: 2.4rem; }
+  .brand { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.5rem; letter-spacing: 0.04em; }
+  .brand small { display:block; font-family:'Nunito'; font-weight:800; font-size:0.7rem; letter-spacing:0.22em; opacity:0.85; }
+  .hanzi { margin-left: auto; font-family: 'ZCOOL XiaoWei', serif; font-size: 1.8rem; opacity: 0.9; }
+  .body { padding: 22px 26px 0; }
+  .kid { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+  .kid .avatar { width: 86px; height: 86px; border-radius: 16px; background: #fff; border: 3px solid #c81e1e; object-fit: contain; }
+  .kid .name { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.7rem; color: #8a1414; }
+  .kid .month { font-weight: 800; color: #b06a2a; }
+  .gradewrap { margin-left: auto; text-align: center; }
+  .grade { font-family: 'Cinzel', serif; font-weight: 900; font-size: 3.4rem; color: #c81e1e; line-height: 1; }
+  .gradelbl { font-weight: 800; font-size: 0.7rem; letter-spacing: 0.18em; color: #b06a2a; }
+  .sect { font-family: 'Cinzel', serif; font-weight: 900; color: #8a1414; margin: 16px 0 6px; font-size: 1.1rem; }
+  ul { padding-left: 22px; line-height: 1.7; font-weight: 700; color: #3a2b1a; }
+  .stats { display: flex; gap: 10px; margin-top: 14px; }
+  .stat { flex: 1; background: rgba(200,30,30,0.08); border-radius: 12px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 1.5rem; color: #c81e1e; font-family: 'Cinzel', serif; }
+  .stat span { font-size: 0.78rem; font-weight: 800; color: #b06a2a; }
+  .foot { text-align: center; margin-top: 18px; font-weight: 800; color: #8a1414; }
+  .seal { position: absolute; bottom: 16px; right: 18px; font-size: 2.6rem; opacity: 0.85; }
+  .pbtn { display:block; margin: 16px auto 0; background:#c81e1e; color:#fff; border:none; border-radius:999px; padding:12px 26px; font-weight:900; font-size:1rem; cursor:pointer; }
+  @media print { body { background:#fff; padding:0; } .pbtn { display:none; } .card { box-shadow:none; border-width:8px; } }
+</style></head><body>
+  <div class="card">
+    <div class="topbar">
+      <span class="dragon">🐉</span>
+      <span class="brand">Dralingo<small>EDUTECH · HSK1</small></span>
+      <span class="hanzi">成绩单</span>
+    </div>
+    <div class="body">
+      <div class="kid">
+        ${avatarUrl ? `<img class="avatar" src="${avatarUrl}" alt="">` : '<div class="avatar" style="display:flex;align-items:center;justify-content:center;font-size:2.6rem;">🧒</div>'}
+        <div>
+          <div class="name">${escapeHtml(d.displayName)}</div>
+          <div class="month">📅 ${escapeHtml(prettyMonth(d.month))}</div>
+        </div>
+        <div class="gradewrap"><div class="grade">${grade}</div><div class="gradelbl">CALIFICACIÓN</div></div>
+      </div>
+      <div class="sect">🌟 Observaciones del maestro</div>
+      <ul>${notesHtml}</ul>
+      <div class="stats">
+        <div class="stat"><b>${d.stats ? d.stats.assignments : 0}</b><span>TAREAS</span></div>
+        <div class="stat"><b>${d.stats ? d.stats.tests : 0}</b><span>EXÁMENES</span></div>
+      </div>
+      <div class="foot">¡Sigue practicando en chino en voz alta! 加油 🎉</div>
+    </div>
+    <div class="seal">🏅</div>
+    <button class="pbtn" onclick="window.print()">📄 Guardar como PDF / Imprimir</button>
+  </div>
+  <script>setTimeout(function(){ try { window.focus(); } catch(e){} }, 200);<\/script>
+</body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) { alert('Permite ventanas emergentes para ver la boleta.'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+  }
 
   // Render the expandable per-sentence detail (correct ✓ / incorrect ✗).
   function renderSentenceDetail(detail) {
