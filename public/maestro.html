@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260527a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260527a">
-  <link rel="stylesheet" href="/css/maestro.css?v=20260528d">
+  <link rel="stylesheet" href="/css/maestro.css?v=20260528e">
 </head>
 <body class="hw-bg">
 
@@ -48,15 +48,14 @@
           <button class="m-modal-close" id="m-live-master-close" type="button" aria-label="Cerrar">✕</button>
           <h2>🎯 Modo Maestro en vivo</h2>
           <p class="m-live-master-help">
-            Selecciona los estudiantes en línea ahora a quienes quieres invitar a tu sesión de vocabulario en vivo. Luego escribe el <strong>PIN</strong> que te dio <code>/host-warmup.html</code> y enviarán un botón "Únete ahora" en su pantalla.
+            Marca los estudiantes en línea ahora. Al pulsar <strong>Activar</strong>, sus teléfonos entran <strong>automáticamente</strong> al constructor de oraciones como asistentes — sin PIN, sin invitación. Tú aterrizas directamente en la pantalla de construcción. ✨
           </p>
+          <!-- PIN no longer needed: the builder is created automatically.
+               Kept hidden so older code referencing it still resolves. -->
+          <input type="hidden" id="m-live-master-pin" value="">
           <label class="m-form-label">
-            <span>PIN de la sesión en vivo (de <code>/host-warmup</code>):</span>
-            <input class="input" id="m-live-master-pin" type="text" placeholder="1234" maxlength="6" inputmode="numeric">
-          </label>
-          <label class="m-form-label">
-            <span>Mensaje (opcional):</span>
-            <input class="input" id="m-live-master-text" type="text" placeholder="¡Ven a mi sesión!" maxlength="200">
+            <span>Mensaje que verán al entrar (opcional):</span>
+            <input class="input" id="m-live-master-text" type="text" placeholder="¡Entra a Modo Maestro ahora!" maxlength="200">
           </label>
           <div class="m-live-master-list-head">
             <span id="m-live-master-count">0 en línea</span>
@@ -64,7 +63,7 @@
             <button class="btn btn-ghost btn-sm" id="m-live-master-none" type="button">Desmarcar</button>
           </div>
           <div id="m-live-master-list" class="m-live-master-list"></div>
-          <button class="btn btn-gold btn-xl" id="m-live-master-send">📚 Enviar invitación</button>
+          <button class="btn btn-gold btn-xl" id="m-live-master-send">⚡ Activar Modo Maestro ahora</button>
           <p class="m-modal-msg" id="m-live-master-msg"></p>
         </div>
       </div>
@@ -136,6 +135,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/maestro.js?v=20260528d"></script>
+  <script src="/js/maestro.js?v=20260528e"></script>
 </body>
 </html>

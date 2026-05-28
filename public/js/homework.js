@@ -214,7 +214,17 @@
       </div>`;
     document.body.appendChild(ov);
     requestAnimationFrame(() => ov.classList.add('show'));
-    setTimeout(() => { window.location.href = msg.actionUrl; }, 2200);
+    // Personalize the redirect: the live-master force URL only carries the
+    // PIN (the teacher doesn't know each kid's name). We splice in THIS
+    // kid's name (+ avatar) so /player.html auto-joins without making them
+    // type anything — that's the whole point of "force, no PIN".
+    let dest = msg.actionUrl;
+    try {
+      const u = new URL(msg.actionUrl, location.origin);
+      if (!u.searchParams.get('name') && displayName) u.searchParams.set('name', displayName);
+      dest = u.pathname + u.search;
+    } catch (_) { /* keep original */ }
+    setTimeout(() => { window.location.href = dest; }, 2200);
   }
 
   function renderBellBadge() {
