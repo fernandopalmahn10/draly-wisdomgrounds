@@ -643,92 +643,217 @@
     const ch = $('hw-daily-challenge');
     if (ch) {
       if (d.doneToday) {
-        ch.innerHTML = '<div class="hw-dc-done">✅ <strong>¡Reto de hoy completado!</strong><br><span>Vuelve mañana para mantener tu racha 🔥</span></div>';
+        // Already earned today's rewards — but they can REPLAY for fun/practice
+        // (no double prizes). Keeps them coming back without farming.
+        ch.innerHTML = '<div class="hw-dc-done">✅ <strong>¡Desafío de hoy completado!</strong><br>'
+          + '<span>Ya ganaste tus premios de hoy. ¡Vuelve mañana para tu racha 🔥!</span></div>'
+          + '<button class="hw-dc-play hw-dc-practice" id="hw-dc-play" type="button">🔁 Jugar otra vez (práctica)</button>';
+        const pb = $('hw-dc-play'); if (pb) pb.addEventListener('click', () => startDailyGame(true));
       } else {
-        ch.innerHTML = '<div class="hw-dc-head">⚔️ Reto de hoy</div>'
+        ch.innerHTML = '<div class="hw-dc-head">⚔️ Desafío de hoy</div>'
           + '<div class="hw-dc-theme">' + escapeHtml(expLabel) + '</div>'
-          + '<div class="hw-dc-goal">Corta, toca y descubre <strong>' + d.theme.goal + '</strong> palabras</div>'
+          + '<div class="hw-dc-goal">Corta 🍉, acaricia 🐶 y lanza 🏃 — descubre <strong>' + d.theme.goal + '</strong> palabras</div>'
           + '<button class="hw-dc-play" id="hw-dc-play" type="button">⚔️ ¡Jugar!</button>';
-        const pb = $('hw-dc-play'); if (pb) pb.addEventListener('click', startDailyGame);
+        const pb = $('hw-dc-play'); if (pb) pb.addEventListener('click', () => startDailyGame(false));
       }
     }
     renderLadder(d.milestones || [], p.swords);
   }
+  // Clear prize ladder: explains DralySwords, marks unlocked ones with ✓, and
+  // shows a progress bar with "Te faltan X ⚔️" on the NEXT locked prize.
   function renderLadder(milestones, swords) {
     const lad = $('hw-daily-ladder'); if (!lad) return;
     lad.innerHTML = '';
-    milestones.forEach((m) => {
+    let nextShown = false;
+    milestones.forEach((m, i) => {
       const reached = swords >= m;
+      const prev = i === 0 ? 0 : milestones[i - 1];
+      const isNext = !reached && !nextShown;
+      if (isNext) nextShown = true;
       const el = document.createElement('div');
-      el.className = 'hw-ladder-item' + (reached ? ' reached' : '');
-      el.innerHTML = '<div class="hw-ladder-box">' + (reached ? '🎁' : '🔒') + '</div>'
-        + '<div class="hw-ladder-info"><div class="hw-ladder-amt">⚔️ ' + m + '</div>'
-        + '<div class="hw-ladder-lbl">' + (reached ? '¡Premio secreto desbloqueado! Pídeselo a tu maestra 🤫' : 'Premio secreto') + '</div></div>';
+      el.className = 'hw-ladder-item' + (reached ? ' reached' : '') + (isNext ? ' next' : '');
+      let body = '<div class="hw-ladder-box">' + (reached ? '🎁' : '🔒') + '</div>'
+        + '<div class="hw-ladder-info">'
+        + '<div class="hw-ladder-amt">Cofre ' + (i + 1) + ' · ⚔️ ' + m + ' DralySwords</div>';
+      if (reached) {
+        body += '<div class="hw-ladder-lbl">✓ ¡Desbloqueado! Pídele tu premio sorpresa a tu maestra 🤫</div>';
+      } else if (isNext) {
+        const have = Math.max(0, swords - prev);
+        const need = m - prev;
+        const pct = Math.max(0, Math.min(100, Math.round((have / need) * 100)));
+        body += '<div class="hw-ladder-prog"><span class="hw-ladder-progfill" style="width:' + pct + '%"></span></div>'
+          + '<div class="hw-ladder-lbl">Te faltan <strong>' + (m - swords) + ' ⚔️</strong> para este premio</div>';
+      } else {
+        body += '<div class="hw-ladder-lbl">Premio sorpresa bloqueado</div>';
+      }
+      body += '</div>';
+      el.innerHTML = body;
       lad.appendChild(el);
     });
   }
+  // ── 🔊 Mini-game sound effects (self-contained WebAudio; homework page has
+  // no sound engine). Slash whoosh, splat pop, launch zoom, combo ding, win.
+  let _dailyAC = null;
+  function dailyAC() {
+    if (!_dailyAC) { try { _dailyAC = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) { _dailyAC = null; } }
+    if (_dailyAC && _dailyAC.state === 'suspended') { try { _dailyAC.resume(); } catch (_) {} }
+    return _dailyAC;
+  }
+  function sfxTone(freq, dur, type, gain, slideTo) {
+    const ac = dailyAC(); if (!ac) return;
+    const t = ac.currentTime;
+    const o = ac.createOscillator(); const g = ac.createGain();
+    o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(40, slideTo), t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain || 0.18, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  function sfxNoise(dur, gain) {
+    const ac = dailyAC(); if (!ac) return;
+    const n = Math.floor(ac.sampleRate * dur);
+    const buf = ac.createBuffer(1, n, ac.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const g = ac.createGain(); g.gain.value = gain || 0.12;
+    const hp = ac.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1200;
+    src.connect(hp); hp.connect(g); g.connect(ac.destination);
+    src.start();
+  }
+  const dailySfx = {
+    slash() { sfxNoise(0.18, 0.16); sfxTone(900, 0.16, 'sawtooth', 0.10, 300); },
+    pet()   { sfxTone(523, 0.12, 'sine', 0.16, 784); sfxTone(784, 0.16, 'sine', 0.12); },
+    launch(){ sfxTone(300, 0.28, 'square', 0.12, 1400); },
+    combo(n){ sfxTone(660 + n * 90, 0.14, 'triangle', 0.18, 990 + n * 90); },
+    win()   { [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => sfxTone(f, 0.22, 'triangle', 0.2), i * 110)); },
+  };
   // Map an HSK1 category to one of three 3D mini-game actions.
   function dailyActionFor(cat) {
     if (cat === 'food' || cat === 'noun') return 'slash';     // 🍉 cut
     if (cat === 'family' || cat === 'pronoun' || cat === 'greet') return 'pet';  // 🐶 gentle
     return 'launch';                                          // 🏃 verbs/abstract
   }
-  const DAILY_GAME = { active: false, goal: 8, done: 0, correct: 0, pool: [], spawnT: null, slashing: false };
+  const DAILY_GAME = { active: false, practice: false, goal: 8, done: 0, correct: 0, pool: [], spawnT: null, slashing: false, combo: 0, comboT: null };
   let _arenaBound = false;
-  function startDailyGame() {
+  function startDailyGame(practice) {
     const d = dailyData; if (!d) return;
     const all = window.WU_WORDS || [];
     const pool = all.filter((w) => w.exp === d.theme.exp && w.icon);
     DAILY_GAME.pool = (pool.length ? pool : all.filter((w) => w.icon)).slice();
     DAILY_GAME.goal = d.theme.goal || 8;
     DAILY_GAME.done = 0; DAILY_GAME.correct = 0; DAILY_GAME.active = true;
+    DAILY_GAME.practice = !!practice; DAILY_GAME.combo = 0;
+    dailyAC();  // unlock audio on this user gesture
     $('hw-game').classList.remove('hidden');
-    if ($('hw-game-theme')) $('hw-game-theme').textContent = ((window.WU_EXPERIENCES || {})[d.theme.exp] || {}).short || '';
+    $('hw-game').classList.toggle('is-practice', !!practice);
+    if ($('hw-game-theme')) $('hw-game-theme').textContent = (practice ? '🔁 Práctica · ' : '') + (((window.WU_EXPERIENCES || {})[d.theme.exp] || {}).short || '');
     updateGameHud();
     const arena = $('hw-game-arena');
     if (arena) {
       arena.innerHTML = '';
       if (!_arenaBound) {
         _arenaBound = true;
-        arena.addEventListener('pointerdown', () => { DAILY_GAME.slashing = true; });
+        // Slash trail: while a finger/mouse is down, drop fading streak dots
+        // and let the swipe "cut" objects it passes over (pointerenter).
+        arena.addEventListener('pointerdown', (e) => { DAILY_GAME.slashing = true; dailyTrail(e); });
+        arena.addEventListener('pointermove', (e) => { if (DAILY_GAME.slashing) dailyTrail(e); });
         window.addEventListener('pointerup', () => { DAILY_GAME.slashing = false; });
         window.addEventListener('pointercancel', () => { DAILY_GAME.slashing = false; });
       }
     }
     scheduleSpawn();
   }
-  function updateGameHud() { if ($('hw-game-progress')) $('hw-game-progress').textContent = DAILY_GAME.done + '/' + DAILY_GAME.goal; }
+  function dailyTrail(e) {
+    const arena = $('hw-game-arena'); if (!arena) return;
+    const r = arena.getBoundingClientRect();
+    const dot = document.createElement('div');
+    dot.className = 'hw-trail';
+    dot.style.left = (e.clientX - r.left) + 'px';
+    dot.style.top = (e.clientY - r.top) + 'px';
+    arena.appendChild(dot);
+    setTimeout(() => dot.remove(), 360);
+  }
+  function dailyBurst(x, y, color, emoji) {
+    const arena = $('hw-game-arena'); if (!arena) return;
+    for (let i = 0; i < 7; i++) {
+      const p = document.createElement('div');
+      p.className = 'hw-particle';
+      p.textContent = (i % 2 && emoji) ? emoji : '';
+      const ang = (Math.PI * 2 * i) / 7 + Math.random();
+      const dist = 50 + Math.random() * 60;
+      p.style.left = x + 'px'; p.style.top = y + 'px';
+      p.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+      p.style.setProperty('--dy', Math.sin(ang) * dist + 'px');
+      p.style.background = emoji ? 'transparent' : (color || '#ffe082');
+      arena.appendChild(p);
+      setTimeout(() => p.remove(), 620);
+    }
+  }
+  function bumpCombo() {
+    DAILY_GAME.combo++;
+    clearTimeout(DAILY_GAME.comboT);
+    DAILY_GAME.comboT = setTimeout(() => { DAILY_GAME.combo = 0; }, 1100);
+    if (DAILY_GAME.combo >= 2) {
+      dailySfx.combo(DAILY_GAME.combo);
+      const arena = $('hw-game-arena'); if (!arena) return;
+      const c = document.createElement('div');
+      c.className = 'hw-combo';
+      c.textContent = '¡Combo x' + DAILY_GAME.combo + '!';
+      arena.appendChild(c);
+      setTimeout(() => c.remove(), 800);
+    }
+  }
+  function updateGameHud() {
+    if ($('hw-game-progress')) $('hw-game-progress').textContent = DAILY_GAME.done + '/' + DAILY_GAME.goal;
+  }
   function scheduleSpawn() {
     if (!DAILY_GAME.active || DAILY_GAME.done >= DAILY_GAME.goal) return;
     spawnDailyObject();
-    DAILY_GAME.spawnT = setTimeout(scheduleSpawn, 820 + Math.random() * 520);
+    DAILY_GAME.spawnT = setTimeout(scheduleSpawn, 780 + Math.random() * 520);
   }
   function spawnDailyObject() {
     const arena = $('hw-game-arena'); if (!arena || !DAILY_GAME.pool.length) return;
     const w = DAILY_GAME.pool[Math.floor(Math.random() * DAILY_GAME.pool.length)];
     const action = dailyActionFor(w.cat);
     const cat = (window.WU_CATEGORIES || {})[w.cat];
+    const color = cat ? cat.color : '#ffe082';
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'hw-obj hw-obj-' + action;
-    el.style.setProperty('--cat-color', cat ? cat.color : '#ffe082');
+    el.style.setProperty('--cat-color', color);
     el.style.left = (6 + Math.random() * 78) + 'vw';
     const dur = 2.7 + Math.random() * 1.3;
     el.style.animationDuration = dur + 's';
-    el.innerHTML = '<span class="hw-obj-emoji">' + (w.icon || '⭐') + '</span>';
+    // A little hint badge so kids learn the gesture: ✂️ swipe / 👆 tap.
+    const hint = action === 'slash' ? '✂️' : '👆';
+    el.innerHTML = '<span class="hw-obj-emoji">' + (w.icon || '⭐') + '</span><span class="hw-obj-hint">' + hint + '</span>';
     let hit = false;
-    const doHit = () => {
+    const doHit = (viaSwipe) => {
       if (hit || !DAILY_GAME.active) return;
+      // Food wants a real SWIPE (slash); people/verbs want a TAP. Be gentle:
+      // a tap still works on food, but a swipe is the satisfying way.
       hit = true;
+      const r = arena.getBoundingClientRect();
+      const ob = el.getBoundingClientRect();
+      const cx = ob.left - r.left + ob.width / 2;
+      const cy = ob.top - r.top + ob.height / 2;
       el.classList.add('hw-obj-hit', 'fx-' + action);
+      dailyBurst(cx, cy, color, action === 'slash' ? '' : (w.icon || ''));
+      if (action === 'slash') dailySfx.slash();
+      else if (action === 'pet') dailySfx.pet();
+      else dailySfx.launch();
+      if (viaSwipe) bumpCombo(); else { DAILY_GAME.combo = 0; }
       revealDailyWord(w, action);
       DAILY_GAME.done++; DAILY_GAME.correct++;
       updateGameHud();
       setTimeout(() => el.remove(), 520);
       if (DAILY_GAME.done >= DAILY_GAME.goal) endDailyGame();
     };
-    el.addEventListener('pointerdown', (e) => { e.preventDefault(); doHit(); });
-    el.addEventListener('pointerenter', () => { if (DAILY_GAME.slashing) doHit(); });
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); doHit(false); });
+    el.addEventListener('pointerenter', () => { if (DAILY_GAME.slashing) doHit(true); });
     arena.appendChild(el);
     setTimeout(() => { if (!hit && el.parentNode) el.remove(); }, dur * 1000 + 250);
   }
@@ -753,6 +878,13 @@
     DAILY_GAME.active = false;
     if (DAILY_GAME.spawnT) { clearTimeout(DAILY_GAME.spawnT); DAILY_GAME.spawnT = null; }
     setTimeout(() => { const a = $('hw-game-arena'); if (a) a.innerHTML = ''; }, 420);
+    try { dailySfx.win(); } catch (_) {}
+    // Practice replay (already done today) → NO double rewards, just celebrate.
+    if (DAILY_GAME.practice) {
+      $('hw-game').classList.add('hidden');
+      showDailyReward({ ok: false, reason: 'practice' });
+      return;
+    }
     fetch('/api/homework/daily/complete', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ studentCode, accessCode, date: localDateStr(), correct: DAILY_GAME.correct }),
@@ -776,13 +908,21 @@
         + (res.leveledUp ? '<div class="hw-reward-row hw-reward-levelup">🆙 ¡Subiste a Nivel ' + res.newLevel + '!</div>' : '')
         + '</div><button class="hw-reward-ok" id="hw-reward-ok" type="button">¡Genial!</button></div>';
       try { if (MochiSounds && MochiSounds.winFanfare) MochiSounds.winFanfare(); } catch (_) {}
+    } else if (res && res.reason === 'practice') {
+      // Replay for fun — no double rewards, just a happy "well practiced".
+      rw.innerHTML = '<div class="hw-reward-card">'
+        + '<div class="hw-reward-burst">💪</div>'
+        + '<div class="hw-reward-title">¡Buen repaso!</div>'
+        + '<div class="hw-reward-rows"><div class="hw-reward-row">Ya ganaste tus premios de hoy ✅</div>'
+        + '<div class="hw-reward-row">Practicaste <strong>' + DAILY_GAME.correct + '</strong> palabras más 🧠</div></div>'
+        + '<button class="hw-reward-ok" id="hw-reward-ok" type="button">¡Genial!</button></div>';
     } else {
       if (dailyData) dailyData.doneToday = true;
       const already = res && res.reason === 'already';
       rw.innerHTML = '<div class="hw-reward-card">'
         + '<div class="hw-reward-burst">📅</div>'
-        + '<div class="hw-reward-title">' + (already ? 'Ya completaste el reto de hoy' : '¡Buen intento!') + '</div>'
-        + '<div class="hw-reward-rows"><div class="hw-reward-row">Vuelve mañana para tu próximo reto 🔥</div></div>'
+        + '<div class="hw-reward-title">' + (already ? 'Ya completaste el desafío de hoy' : '¡Buen intento!') + '</div>'
+        + '<div class="hw-reward-rows"><div class="hw-reward-row">Vuelve mañana para tu próximo desafío 🔥</div></div>'
         + '<button class="hw-reward-ok" id="hw-reward-ok" type="button">OK</button></div>';
     }
     rw.classList.remove('hidden');
