@@ -972,6 +972,27 @@ app.get('/api/homework/sentences/:code', (req, res) => {
   if (!rec) return res.json({ ok: true, sentences: [] });
   res.json({ ok: true, sentences: Students.getHistory(rec.code, 100) });  // newest-first
 });
+// Kid deletes ONE of their own saved sentences (junk / accidental save).
+app.post('/api/homework/sentences/delete', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, ts } = req.body || {};
+  const rec = Students.get(studentCode);
+  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  const ok = Students.deleteHistoryEntry(rec.code, ts);
+  res.json({ ok, sentences: Students.getHistory(rec.code, 100) });
+});
+// Kid saves an EDITED copy of one of their sentences. Per user intent the
+// original is preserved — this appends a brand-new entry with the reordered/
+// trimmed word list ("save as a copy of the sentence they started with").
+app.post('/api/homework/sentences/save', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, words } = req.body || {};
+  const rec = Students.get(studentCode);
+  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  if (!Array.isArray(words) || !words.length) return res.status(400).json({ ok: false, error: 'oración vacía' });
+  Students.appendSentence(rec.code, words.slice(0, 24), '');
+  res.json({ ok: true, sentences: Students.getHistory(rec.code, 100) });
+});
 
 // Review a PAST assignment attempt — best submission's breakdown so the kid
 // sees which sentences they got wrong + the correct answer.
@@ -5312,6 +5333,28 @@ io.on('connection', (socket) => {
     });
     // (sentence stays visible; contributors set reset by wuFlushSentence)
   });
+  // === SAVE MINE === ANY player (delegate or not, even while frozen) can
+  // save the CURRENT stage sentence to their OWN history. This is the
+  // "save is everywhere" rule — a kid can always keep whatever they're
+  // looking at, regardless of whether the teacher made them an asistente.
+  // Unlike wu:save-current, this credits ONLY the caller, and never clears.
+  socket.on('wu:save-mine', ({ pin }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup' || !g.warmup) return;
+    const p = g.players[socket.id];
+    if (!p || !p.studentCode) {
+      io.to(socket.id).emit('wu:saved', { ok: false, reason: 'nocode' });
+      return;
+    }
+    if (!g.warmup.sentence.length) {
+      io.to(socket.id).emit('wu:saved', { ok: false, reason: 'empty' });
+      return;
+    }
+    // Append a private copy to THIS student only.
+    Students.appendSentence(p.studentCode, g.warmup.sentence, pin);
+    io.to(socket.id).emit('wu:history-updated');
+    io.to(socket.id).emit('wu:saved', { ok: true, words: g.warmup.sentence.length, mine: true });
+  });
   socket.on('wu:clear', ({ pin, password }) => {
     const g = games[pin];
     if (!wuRequireAdmin(g, socket, password)) return;
@@ -5320,6 +5363,9 @@ io.on('connection', (socket) => {
     // Flush the about-to-be-cleared sentence to contributors' histories
     wuFlushSentence(g, pin);
     g.warmup.sentence = [];
+    // Log WHO wiped the stage — the teacher wants the activity feed to show
+    // not just additions/removals but full clears too ("borró todo").
+    wuEmitActivity(g, pin, socket.id, 'clear', null);
     wuEmitState(g, pin);
   });
   // === UNDO === Pops the last sentence state off the stack. Host or

@@ -1584,13 +1584,14 @@ body.wu-shake { animation: wuShake 0.6s cubic-bezier(.36,.07,.19,.97); }
   display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
   margin: 8px auto 6px; max-width: 560px;
 }
-.wu-player-speak-btn, .wu-player-hand-btn {
+.wu-player-speak-btn, .wu-player-hand-btn, .wu-player-savemine-btn {
   border: 2px solid rgba(255, 213, 122, 0.6); border-radius: 14px;
   background: linear-gradient(135deg, rgba(255,200,90,0.22), rgba(255,160,60,0.18));
   color: #fff5d8; font-weight: 800; font-size: 0.98rem; padding: 10px 16px;
   cursor: pointer; transition: transform 0.1s;
+  touch-action: manipulation;
 }
-.wu-player-speak-btn:active, .wu-player-hand-btn:active { transform: scale(0.94); }
+.wu-player-speak-btn:active, .wu-player-hand-btn:active, .wu-player-savemine-btn:active { transform: scale(0.94); }
 .wu-player-speak-btn.speaking { animation: wuSpeakPulse 0.8s ease-in-out infinite; }
 .wu-player-hand-btn {
   border-color: rgba(150, 220, 255, 0.6);
@@ -1598,6 +1599,15 @@ body.wu-shake { animation: wuShake 0.6s cubic-bezier(.36,.07,.19,.97); }
 }
 .wu-player-hand-btn.raised { animation: wuSpeakPulse 0.5s ease-in-out 3; }
 .wu-player-hand-btn.hidden { display: none; }
+/* 💾 Save-is-everywhere button — every kid, always visible (green tint). */
+.wu-player-savemine-btn {
+  border-color: rgba(120, 235, 180, 0.6);
+  background: linear-gradient(135deg, rgba(70,210,150,0.26), rgba(40,180,170,0.2));
+}
+.wu-player-savemine-btn.wu-save-flash-ok { animation: wuSpeakPulse 0.4s ease-in-out 2; border-color: #5be88a; }
+.wu-player-savemine-btn.wu-save-flash-err { border-color: #ef6b6b; }
+.wu-hist-word.curious-tappable { cursor: pointer; }
+.wu-hist-word.curious-tappable:active { transform: scale(0.93); }
 
 /* 6-7 swing jumpscare on the host builder */
 .wu-fx-67 {

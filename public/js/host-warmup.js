@@ -1089,11 +1089,13 @@
     const empty = feed.querySelector('.wu-activity-empty');
     if (empty) empty.remove();
     const w = (window.WU_WORD_BY_ID && a.wordId) ? window.WU_WORD_BY_ID[a.wordId] : null;
-    const wordLabel = w ? `${w.pinyin} · ${w.es}` : '—';
-    const verb = a.action === 'remove' ? '🗑 quitó' : '➕ agregó';
+    const wordLabel = a.action === 'clear' ? 'toda la oración' : (w ? `${w.pinyin} · ${w.es}` : '—');
+    const verb = a.action === 'clear' ? '🧹 borró todo'
+               : a.action === 'remove' ? '🗑 quitó'
+               : '➕ agregó';
     const time = new Date(a.t || Date.now()).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const row = document.createElement('div');
-    row.className = 'wu-activity-row ' + (a.action === 'remove' ? 'is-remove' : 'is-add');
+    row.className = 'wu-activity-row ' + (a.action === 'clear' ? 'is-clear' : a.action === 'remove' ? 'is-remove' : 'is-add');
     row.innerHTML = `
       <span class="wu-activity-who">${a.avatar || '🎓'} ${escapeHtml(a.name || 'Asistente')}</span>
       <span class="wu-activity-verb">${verb}</span>

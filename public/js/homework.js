@@ -163,6 +163,24 @@
     if (savedCode) $('hw-student-code').value = savedCode;
   } catch (_) {}
 
+  // ── Arriving from Modo Maestro? The player page sends ?code=ABCD&from=maestro
+  // so the kid lands in their portal without logging in again. Pre-fill their
+  // student code, and if their teacher's access code is remembered on this
+  // device, enter automatically.
+  try {
+    const params = new URLSearchParams(location.search);
+    const fromCode = (params.get('code') || '').trim().toUpperCase();
+    if (fromCode && /^[A-Z2-9]{4,5}$/.test(fromCode)) {
+      $('hw-student-code').value = fromCode;
+      const remembered = (localStorage.getItem(STORAGE_ACCESS_KEY) || '').trim();
+      if (params.get('from') === 'maestro' && remembered) {
+        $('hw-access-code').value = remembered;
+        // Defer one tick so the entry screen + DOM are fully ready.
+        setTimeout(() => { try { tryEnter(); } catch (_) {} }, 60);
+      }
+    }
+  } catch (_) {}
+
   // ── Entry screen
   $('hw-enter-btn').addEventListener('click', tryEnter);
   $('hw-access-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('hw-student-code').focus(); });
@@ -394,41 +412,168 @@
   $('hw-sentences-close').addEventListener('click', () => $('hw-sentences-overlay').classList.add('hidden'));
   $('hw-sentences-overlay').addEventListener('click', (e) => { if (e.target === $('hw-sentences-overlay')) $('hw-sentences-overlay').classList.add('hidden'); });
   function openMySentences() {
-    const ov = $('hw-sentences-overlay'); const list = $('hw-sentences-list');
+    const ov = $('hw-sentences-overlay');
     ov.classList.remove('hidden');
+    loadMySentences();
+  }
+  function loadMySentences() {
+    const list = $('hw-sentences-list');
     list.innerHTML = '<div class="hw-empty">Cargando…</div>';
     fetch('/api/homework/sentences/' + encodeURIComponent(studentCode)
         + '?accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode))
       .then((r) => r.json())
-      .then((data) => {
-        const arr = (data && data.sentences) || [];
-        if (!arr.length) { list.innerHTML = '<div class="hw-empty">Aún no has guardado oraciones en clase. Cuando tu maestra las guarde, aparecerán aquí. 🌱</div>'; return; }
-        list.innerHTML = '';
-        arr.forEach((s) => {
-          const words = (s.words || []).map((wid) => (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]) || null).filter(Boolean);
-          if (!words.length) return;
-          const pinyin = words.map((w) => w.pinyin).join(' ');
-          const dateStr = s.ts ? new Date(s.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-          const chips = words.map((w) => {
-            const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
-            const color = cat ? cat.color : '#ffe082';
-            return `<span class="hw-sent-chip" style="--cat-color:${color}"><span class="hw-sent-chip-py">${escapeHtml(w.pinyin)}</span><span class="hw-sent-chip-es">${escapeHtml(w.es || '')}</span></span>`;
-          }).join('');
-          const item = document.createElement('div');
-          item.className = 'hw-sentence-item';
-          item.innerHTML = `
-            <div class="hw-sentence-row">
-              <span class="hw-sentence-date">📅 ${dateStr}</span>
-              <button class="hw-sentence-speak" type="button" title="Escuchar">🔊 Oír</button>
-            </div>
-            <div class="hw-sentence-words">${chips}</div>`;
-          item.querySelector('.hw-sentence-speak').addEventListener('click', (e) => speakChinese(pinyin, e.currentTarget));
-          list.appendChild(item);
-        });
-        if (!list.children.length) list.innerHTML = '<div class="hw-empty">Aún no hay oraciones guardadas.</div>';
-      })
+      .then((data) => renderMySentences((data && data.sentences) || []))
       .catch((e) => { list.innerHTML = '<div class="hw-empty">Error: ' + e.message + '</div>'; });
   }
+  function renderMySentences(arr) {
+    const list = $('hw-sentences-list');
+    if (!arr.length) { list.innerHTML = '<div class="hw-empty">Aún no has guardado oraciones. Toca 💾 en clase para guardar una. 🌱</div>'; return; }
+    list.innerHTML = '';
+    arr.forEach((s) => {
+      const words = (s.words || []).map((wid) => (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]) || null).filter(Boolean);
+      if (!words.length) return;
+      const pinyin = words.map((w) => w.pinyin).join(' ');
+      const dateStr = s.ts ? new Date(s.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+      const item = document.createElement('div');
+      item.className = 'hw-sentence-item';
+      const wordsWrap = document.createElement('div');
+      wordsWrap.className = 'hw-sentence-words';
+      words.forEach((w) => wordsWrap.appendChild(makeSentChip(w)));
+      const head = document.createElement('div');
+      head.className = 'hw-sentence-row';
+      head.innerHTML = `
+        <span class="hw-sentence-date">📅 ${dateStr}</span>
+        <div class="hw-sentence-actions">
+          <button class="hw-sentence-speak" type="button" title="Escuchar">🔊 Oír</button>
+          <button class="hw-sentence-edit" type="button" title="Editar y guardar copia">✏️ Editar</button>
+          <button class="hw-sentence-del" type="button" title="Borrar">🗑</button>
+        </div>`;
+      head.querySelector('.hw-sentence-speak').addEventListener('click', (e) => speakChinese(pinyin, e.currentTarget));
+      head.querySelector('.hw-sentence-edit').addEventListener('click', () => openSentenceEditor(s.words.slice()));
+      head.querySelector('.hw-sentence-del').addEventListener('click', () => {
+        if (!confirm('¿Borrar esta oración guardada?')) return;
+        fetch('/api/homework/sentences/delete', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentCode, accessCode, ts: s.ts }),
+        }).then((r) => r.json()).then((d) => { if (d && d.ok) renderMySentences(d.sentences || []); else alert('No se pudo borrar.'); })
+          .catch(() => alert('No se pudo borrar.'));
+      });
+      item.appendChild(head);
+      item.appendChild(wordsWrap);
+      list.appendChild(item);
+    });
+    if (!list.children.length) list.innerHTML = '<div class="hw-empty">Aún no hay oraciones guardadas.</div>';
+  }
+  // One word chip — curious-tappable (tap → big animated card, like everywhere).
+  function makeSentChip(w) {
+    const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+    const color = cat ? cat.color : '#ffe082';
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'hw-sent-chip curious-tappable';
+    chip.style.setProperty('--cat-color', color);
+    chip.innerHTML = `<span class="hw-sent-chip-py">${escapeHtml(w.pinyin)}</span><span class="hw-sent-chip-es">${escapeHtml(w.es || '')}</span>`;
+    chip.addEventListener('click', () => hwShowPokedex(w));
+    return chip;
+  }
+  // ── Editor: rearrange / remove words, then "Guardar copia" (original kept).
+  let _editWords = [];
+  function openSentenceEditor(wids) {
+    _editWords = (wids || []).filter((wid) => window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]);
+    _editSwapIdx = null;
+    renderSentenceEditor();
+  }
+  let _editSwapIdx = null;
+  function renderSentenceEditor() {
+    const list = $('hw-sentences-list');
+    const ed = document.createElement('div');
+    ed.className = 'hw-sent-editor';
+    ed.innerHTML = `
+      <div class="hw-sent-editor-tip">Toca una palabra y luego otra para <strong>cambiarlas de lugar</strong>. Toca ✕ para quitarla.</div>
+      <div class="hw-sent-editor-words" id="hw-sent-editor-words"></div>
+      <div class="hw-sent-editor-bar">
+        <button class="hw-sent-editor-cancel" type="button">← Volver</button>
+        <button class="hw-sent-editor-listen" type="button">🔊 Oír</button>
+        <button class="hw-sent-editor-save" type="button">💾 Guardar copia</button>
+      </div>`;
+    list.innerHTML = '';
+    list.appendChild(ed);
+    const wrap = ed.querySelector('#hw-sent-editor-words');
+    _editWords.forEach((wid, idx) => {
+      const w = window.WU_WORD_BY_ID[wid];
+      const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+      const color = cat ? cat.color : '#ffe082';
+      const chip = document.createElement('div');
+      chip.className = 'hw-sent-edit-chip' + (_editSwapIdx === idx ? ' selected' : '');
+      chip.style.setProperty('--cat-color', color);
+      chip.innerHTML = `<button class="hw-sent-edit-x" type="button" title="Quitar">✕</button>
+        <span class="hw-sent-chip-py">${escapeHtml(w.pinyin)}</span>
+        <span class="hw-sent-chip-es">${escapeHtml(w.es || '')}</span>`;
+      chip.querySelector('.hw-sent-edit-x').addEventListener('click', (e) => {
+        e.stopPropagation();
+        _editWords.splice(idx, 1); _editSwapIdx = null; renderSentenceEditor();
+      });
+      chip.addEventListener('click', () => {
+        if (_editSwapIdx === null) { _editSwapIdx = idx; }
+        else if (_editSwapIdx === idx) { _editSwapIdx = null; }
+        else {
+          const tmp = _editWords[_editSwapIdx]; _editWords[_editSwapIdx] = _editWords[idx]; _editWords[idx] = tmp;
+          _editSwapIdx = null;
+        }
+        renderSentenceEditor();
+      });
+      wrap.appendChild(chip);
+    });
+    if (!_editWords.length) wrap.innerHTML = '<div class="hw-empty">Oración vacía — agrega palabras en clase.</div>';
+    ed.querySelector('.hw-sent-editor-cancel').addEventListener('click', loadMySentences);
+    ed.querySelector('.hw-sent-editor-listen').addEventListener('click', (e) => {
+      const py = _editWords.map((wid) => window.WU_WORD_BY_ID[wid].pinyin).join(' ');
+      if (py) speakChinese(py, e.currentTarget);
+    });
+    ed.querySelector('.hw-sent-editor-save').addEventListener('click', () => {
+      if (!_editWords.length) { alert('La oración está vacía.'); return; }
+      fetch('/api/homework/sentences/save', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentCode, accessCode, words: _editWords }),
+      }).then((r) => r.json()).then((d) => { if (d && d.ok) renderMySentences(d.sentences || []); else alert('No se pudo guardar.'); })
+        .catch(() => alert('No se pudo guardar.'));
+    });
+  }
+  // 🔍 Modo Curioso card — same big animated overlay used everywhere.
+  function hwShowPokedex(w) {
+    const overlay = $('wu-pokedex'); const card = $('wu-pokedex-card');
+    if (!overlay || !card) return;
+    const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+    const exp = window.WU_EXPERIENCES && window.WU_EXPERIENCES[w.exp];
+    const color = cat ? cat.color : '#fff';
+    card.style.setProperty('--cat-color', color);
+    card.innerHTML = `
+      <div class="wu-pk-icon">${w.icon || '✨'}</div>
+      <div class="wu-pk-pinyin">${escapeHtml(w.pinyin)}</div>
+      <div class="wu-pk-hanzi">${escapeHtml(w.hanzi || '')}</div>
+      <div class="wu-pk-es">${escapeHtml(w.es || '')}</div>
+      <div class="wu-pk-meta">
+        <div class="wu-pk-chip cat" style="background:${color}; color:#0a1320;">${escapeHtml((cat && cat.label) || w.cat || '')}</div>
+        <div class="wu-pk-chip exp">${escapeHtml((exp && exp.short) || w.exp || '')}</div>
+      </div>
+      <div class="wu-pk-actions"><button class="wu-pk-speak" type="button">🔊 Escuchar</button></div>
+      <div class="wu-pk-hint">Toca fuera para cerrar</div>`;
+    const sp = card.querySelector('.wu-pk-speak');
+    if (sp) sp.addEventListener('click', (e) => { e.stopPropagation(); speakChinese(w.pinyin, e.currentTarget); });
+    overlay.classList.remove('hidden');
+    requestAnimationFrame(() => overlay.classList.add('show'));
+  }
+  function hwHidePokedex() {
+    const overlay = $('wu-pokedex');
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    setTimeout(() => overlay.classList.add('hidden'), 250);
+  }
+  (function bindHwPokedex() {
+    const overlay = $('wu-pokedex'); const close = $('wu-pokedex-close');
+    if (close) close.addEventListener('click', hwHidePokedex);
+    if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) hwHidePokedex(); });
+  })();
 
   // === Avatar picker (first-time entry) ===
   function showAvatarPicker() {

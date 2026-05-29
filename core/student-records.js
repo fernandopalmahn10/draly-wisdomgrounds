@@ -399,6 +399,26 @@ function deleteHistoryEntry(code, ts) {
   return false;
 }
 
+// Append a single sentence to ONE student's history (their own private
+// save / edited copy). Mirrors logSentence but for a lone student, and is
+// used by wu:save-mine and the homework "save copy" endpoint.
+function appendSentence(code, words, pin) {
+  const rec = get(code);
+  if (!rec) return false;
+  if (!Array.isArray(words) || !words.length) return false;
+  rec.sentencesBuilt.push({
+    ts: Date.now(),
+    pin: pin || '',
+    words: words.slice(),
+    contributors: [rec.code],
+  });
+  if (rec.sentencesBuilt.length > 200) {
+    rec.sentencesBuilt = rec.sentencesBuilt.slice(-200);
+  }
+  scheduleSave();
+  return true;
+}
+
 // Teacher-side roster summary. Returns one row per student with code,
 // displayName, sentence count, firstSeen, lastSeen. Sorted by most-recent
 // activity so the kids who just played show at the top of the teacher's
@@ -500,6 +520,7 @@ module.exports = {
   getNotes,
   deleteNote,
   logSentence,
+  appendSentence,
   getHistory,
   deleteHistoryEntry,
   normalizeCode,
