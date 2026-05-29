@@ -3153,7 +3153,8 @@
           if (!w) return '';
           const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
           const color = cat ? cat.color : '#fff';
-          return `<span class="wu-hist-word" style="--cat-color:${color};">
+          // Curious-tappable: tap a saved word → big animated card.
+          return `<span class="wu-hist-word curious-tappable" data-wid="${wid}" style="--cat-color:${color};">
             <span class="wu-hist-icon">${w.icon || ''}</span>
             <span class="wu-hist-pinyin">${w.pinyin}</span>
           </span>`;
@@ -3181,6 +3182,14 @@
             });
           };
         }
+        // 🔍 Curious Mode on saved words — tap any word → big animated card,
+        // exactly like the live builder. Works on the kid's own history too.
+        item.querySelectorAll('.wu-hist-word').forEach((el) => {
+          el.addEventListener('click', () => {
+            const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[el.dataset.wid];
+            if (w) showWuPokedex(w);
+          });
+        });
         list.appendChild(item);
       });
     });
@@ -3200,6 +3209,13 @@
     if (close) close.addEventListener('click', closeWuHistory);
     if (modal) modal.addEventListener('click', (e) => {
       if (e.target === modal) closeWuHistory();
+    });
+    // 💾 Save-is-everywhere button — any kid keeps the current sentence into
+    // THEIR OWN history via wu:save-mine (no admin needed, works while frozen).
+    const saveMine = document.getElementById('wu-player-save-mine');
+    if (saveMine) saveMine.addEventListener('click', () => {
+      try { socket.emit('wu:save-mine', { pin }); } catch (_) {}
+      if (MochiSounds.correct) MochiSounds.correct();
     });
   });
   // Server notifies us our history grew (a sentence we contributed to was
@@ -3221,7 +3237,10 @@
     }
   });
   function flashWuPlayerSave(ok, text) {
-    const btn = document.getElementById('wu-player-admin-save');
+    // Flash whichever save button exists — the asistente's panel one OR the
+    // always-visible "Guardar mi oración" button every kid has.
+    const btn = document.getElementById('wu-player-save-mine')
+             || document.getElementById('wu-player-admin-save');
     if (btn) {
       btn.classList.remove('wu-save-flash-ok', 'wu-save-flash-err');
       void btn.offsetWidth;
@@ -7890,6 +7909,17 @@
   });
 
   socket.on('host-left', () => {
+    // After Modo Maestro (warmup), send kids straight to THEIR portal instead
+    // of the public login — they shouldn't have to log in again. We pass their
+    // student code so /homework can pre-fill (and auto-enter if their access
+    // code is remembered on this device). Other game types still go to inicio.
+    if (gameType === 'warmup' && myStudentCode) {
+      showReconnectOverlay('Clase terminada. Llevándote a tu portal…');
+      setTimeout(() => {
+        location.href = '/homework?code=' + encodeURIComponent(myStudentCode) + '&from=maestro';
+      }, 2600);
+      return;
+    }
     // Gentler than an alert — show a friendly card so kids don't panic
     showReconnectOverlay('El anfitrión terminó la ronda. Volviendo al inicio…');
     setTimeout(() => { location.href = '/'; }, 3500);

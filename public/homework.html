@@ -6,8 +6,8 @@
   <title>📚 Tareas · Draly Wisdomgrounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260526a">
-  <link rel="stylesheet" href="/css/homework.css?v=20260528m">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260528l">
+  <link rel="stylesheet" href="/css/homework.css?v=20260528n">
 </head>
 <body class="hw-bg">
 
@@ -86,9 +86,16 @@
           <span class="hw-sentences-title">📜 Mis oraciones</span>
           <button class="hw-sentences-close" id="hw-sentences-close" type="button" aria-label="Cerrar">✕</button>
         </div>
-        <p class="hw-sentences-sub" id="hw-sentences-sub">Las oraciones que construiste en clase. 🗣️ Toca 🔊 para escucharlas.</p>
+        <p class="hw-sentences-sub" id="hw-sentences-sub">Tus oraciones guardadas. 🔊 Óyelas · ✏️ Edita y guarda una copia · 🗑 Borra · 🔍 Toca una palabra para explorarla.</p>
         <div class="hw-sentences-list" id="hw-sentences-list"></div>
       </div>
+    </div>
+
+    <!-- 🔍 MODO CURIOSO card — the same big animated word card shown across
+         the platform. Reused here for tapping words in "Mis oraciones". -->
+    <div class="wu-pokedex hidden" id="wu-pokedex">
+      <button class="wu-pokedex-close" id="wu-pokedex-close" type="button" aria-label="Cerrar">✕</button>
+      <div class="wu-pokedex-card" id="wu-pokedex-card"></div>
     </div>
   </div>
 
@@ -408,7 +415,7 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/homework.js?v=20260528m"></script>
+  <script src="/js/homework.js?v=20260528n"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>
