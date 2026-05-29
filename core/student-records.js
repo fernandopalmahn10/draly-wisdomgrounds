@@ -399,6 +399,85 @@ function deleteHistoryEntry(code, ts) {
   return false;
 }
 
+// =====================================================================
+// 🏆 DAILY PROGRESSION — XP, levels, tiers, DralySwords ⚔️ + streak.
+// Drives the "Diario" tab: a daily mini-game that awards XP + DralySwords,
+// a streak that rewards returning every day, and tiers from Bronce up to
+// Dragón Dorado. The actual PRIZE at the top is a real-world secret the
+// teacher arranges — the app only ever shows a locked mystery box.
+// =====================================================================
+const XP_PER_LEVEL = 250;
+const MAX_LEVEL = 20;
+function levelFromXp(xp) {
+  return Math.min(MAX_LEVEL, Math.floor((Number(xp) || 0) / XP_PER_LEVEL) + 1);
+}
+function tierForLevel(level) {
+  if (level >= 18) return { id: 'dragon', label: 'Dragón Dorado', emoji: '🐉', color: '#ffd24a' };
+  if (level >= 13) return { id: 'ruby',   label: 'Rubí',          emoji: '💎', color: '#ff5b7f' };
+  if (level >= 8)  return { id: 'gold',   label: 'Oro',           emoji: '🥇', color: '#ffcf5b' };
+  if (level >= 4)  return { id: 'jade',   label: 'Jade',          emoji: '🟢', color: '#5bef8a' };
+  return { id: 'bronze', label: 'Bronce', emoji: '🥉', color: '#cd8a52' };
+}
+// Read-only progression snapshot for a student (defaults for old records).
+function getProgress(code) {
+  const rec = get(code);
+  if (!rec) return null;
+  const xp = Number(rec.xp) || 0;
+  const level = levelFromXp(xp);
+  return {
+    xp,
+    level,
+    xpIntoLevel: xp - (level - 1) * XP_PER_LEVEL,
+    xpForLevel: XP_PER_LEVEL,
+    swords: Number(rec.swords) || 0,
+    streak: Number(rec.streak) || 0,
+    dailyDate: rec.dailyDate || null,
+    tier: tierForLevel(level),
+  };
+}
+// Add 1 day to a YYYY-MM-DD string (returns YYYY-MM-DD). Used for streaks.
+function _addDay(dateStr, delta) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ''));
+  if (!m) return null;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  d.setUTCDate(d.getUTCDate() + delta);
+  return d.toISOString().slice(0, 10);
+}
+// Award today's daily challenge. Idempotent per local date (one claim/day).
+// `correct` is how many words the kid cleared in the mini-game (capped).
+function awardDaily(code, localDate, correct) {
+  const rec = get(code);
+  if (!rec) return { ok: false, reason: 'nocode' };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(localDate || ''))) {
+    return { ok: false, reason: 'baddate' };
+  }
+  if (rec.dailyDate === localDate) {
+    return { ok: false, reason: 'already', progress: getProgress(code) };
+  }
+  // Streak: +1 if they played yesterday, else reset to 1.
+  const yesterday = _addDay(localDate, -1);
+  const prev = rec.dailyDate;
+  rec.streak = (prev && prev === yesterday) ? (Number(rec.streak) || 0) + 1 : 1;
+  rec.dailyDate = localDate;
+  // Rewards — server-computed so the client can't inflate them.
+  const c = Math.max(0, Math.min(12, Number(correct) || 0));
+  const streakBonus = Math.min(10, rec.streak);
+  const xpGain = 40 + c * 8 + streakBonus * 5;
+  const swordGain = 15 + c * 3 + streakBonus * 2;
+  const beforeLevel = levelFromXp(Number(rec.xp) || 0);
+  rec.xp = (Number(rec.xp) || 0) + xpGain;
+  rec.swords = (Number(rec.swords) || 0) + swordGain;
+  const afterLevel = levelFromXp(rec.xp);
+  scheduleSave();
+  return {
+    ok: true,
+    gained: { xp: xpGain, swords: swordGain },
+    leveledUp: afterLevel > beforeLevel,
+    newLevel: afterLevel,
+    progress: getProgress(code),
+  };
+}
+
 // Append a single sentence to ONE student's history (their own private
 // save / edited copy). Mirrors logSentence but for a lone student, and is
 // used by wu:save-mine and the homework "save copy" endpoint.
@@ -523,6 +602,8 @@ module.exports = {
   appendSentence,
   getHistory,
   deleteHistoryEntry,
+  getProgress,
+  awardDaily,
   normalizeCode,
   listAll,
   logTestResult,

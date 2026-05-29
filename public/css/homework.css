@@ -2506,6 +2506,9 @@ button.hw-sent-chip:active { transform: scale(0.94); }
 .hw-sent-editor-bar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between; }
 .hw-sent-editor-bar button { border: none; border-radius: 999px; font-weight: 900; font-size: 0.9rem; padding: 11px 16px; cursor: pointer; touch-action: manipulation; }
 .hw-sent-editor-cancel { background: rgba(255,255,255,0.12); color: #fff; }
+.hw-sent-editor-move { background: rgba(120,160,255,0.2); color: #bcd0ff; border: 1px solid rgba(120,160,255,0.5); }
+.hw-sent-editor-move.active { background: linear-gradient(135deg, #6f9cff, #5b6cff); color: #fff; }
+.hw-sent-edit-chip.moving { outline: 2px dashed rgba(255,255,255,0.4); }
 .hw-sent-editor-listen { background: linear-gradient(135deg, #ffb46b, #ff7e5f); color: #2a1500; }
 .hw-sent-editor-save   { background: linear-gradient(135deg, #5be8d1, #36b9c7); color: #07232a; }
 .hw-sent-editor-bar button:active { transform: scale(0.95); }
@@ -2532,3 +2535,110 @@ button.hw-sent-chip:active { transform: scale(0.94); }
 .wu-pk-chip { padding: 4px 12px; border-radius: 999px; font-weight: 900; font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase; }
 .wu-pk-chip.exp { background: rgba(91,232,209,0.18); border: 2px solid #5be8d1; color: #5be8d1; }
 .wu-pk-hint { font-size: 0.78rem; font-style: italic; color: rgba(220,235,245,0.55); margin-top: 14px; }
+
+/* =====================================================================
+   ⚔️ DIARIO — daily challenge · XP / tiers / DralySwords · mini-game
+   ===================================================================== */
+.hw-daily-cta { background: linear-gradient(135deg, #ffd24a, #ff9a3c) !important; color: #3a2400 !important; font-weight: 900 !important; }
+
+/* HUD strip on the list screen */
+.hw-hud {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  margin: 0 auto 12px; max-width: 980px; padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(60,40,90,0.6), rgba(30,30,60,0.7));
+  border: 2px solid rgba(255,210,74,0.45); border-radius: 16px;
+  cursor: pointer; color: #fff5d8; font-family: inherit; touch-action: manipulation;
+}
+.hw-hud:active { transform: scale(0.99); }
+.hw-hud-tier { font-size: 1.5rem; }
+.hw-hud-xp { flex: 1; min-width: 0; }
+.hw-hud-lvl { font-weight: 900; font-size: 0.85rem; color: #ffe082; }
+.hw-hud-bar { display: block; height: 8px; border-radius: 999px; background: rgba(0,0,0,0.35); overflow: hidden; margin-top: 3px; }
+.hw-hud-fill { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffd24a, #ff9a3c); transition: width 0.5s; }
+.hw-hud-stat { font-weight: 900; font-size: 0.95rem; white-space: nowrap; }
+
+/* Daily screen */
+.hw-daily { max-width: 980px; margin: 0 auto; padding: 16px 14px calc(24px + env(safe-area-inset-bottom,0px)); }
+.hw-daily-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.hw-daily-tierbig { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.2rem; color: #ffd24a; }
+.hw-daily-hud { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; background: linear-gradient(135deg, rgba(60,40,90,0.55), rgba(25,28,55,0.7)); border: 2px solid rgba(255,210,74,0.4); border-radius: 18px; padding: 16px; margin-bottom: 16px; }
+.hw-daily-xp { flex: 1; min-width: 180px; }
+.hw-daily-lvl { font-weight: 900; color: #ffe082; font-size: 1rem; }
+.hw-daily-xpbar { height: 14px; border-radius: 999px; background: rgba(0,0,0,0.4); overflow: hidden; margin: 6px 0 4px; }
+.hw-daily-xpfill { height: 100%; width: 0; background: linear-gradient(90deg, #ffd24a, #ff9a3c); transition: width 0.6s cubic-bezier(.2,.8,.3,1); }
+.hw-daily-xptext { font-size: 0.78rem; color: rgba(243,230,194,0.7); }
+.hw-daily-stats { display: flex; gap: 12px; }
+.hw-daily-stat { display: flex; flex-direction: column; align-items: center; font-weight: 900; font-size: 1.3rem; color: #fff5d8; }
+.hw-daily-stat span { font-size: 0.62rem; font-weight: 700; opacity: 0.7; }
+
+.hw-daily-challenge { background: linear-gradient(160deg, rgba(40,50,80,0.9), rgba(20,25,45,0.95)); border: 3px solid #5be8d1; border-radius: 20px; padding: 20px; text-align: center; margin-bottom: 18px; box-shadow: 0 0 28px rgba(91,232,209,0.2); }
+.hw-dc-head { font-weight: 900; color: #5be8d1; letter-spacing: 0.05em; }
+.hw-dc-theme { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.3rem; color: #fff5d8; margin: 6px 0; }
+.hw-dc-goal { color: rgba(243,230,194,0.85); margin-bottom: 14px; }
+.hw-dc-play { border: none; border-radius: 999px; font-weight: 900; font-size: 1.2rem; padding: 14px 32px; cursor: pointer; background: linear-gradient(135deg, #ffd24a, #ff7e3c); color: #3a1800; box-shadow: 0 8px 22px rgba(255,126,60,0.4); touch-action: manipulation; animation: hwDcPulse 1.6s ease-in-out infinite; }
+.hw-dc-play:active { transform: scale(0.95); }
+@keyframes hwDcPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.hw-dc-done { color: #5be88a; font-size: 1.05rem; line-height: 1.5; }
+.hw-dc-done span { color: rgba(243,230,194,0.7); font-size: 0.9rem; }
+
+.hw-daily-ladder-title { font-weight: 900; color: #ffd24a; margin-bottom: 10px; }
+.hw-daily-ladder { display: flex; flex-direction: column; gap: 8px; }
+.hw-ladder-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: rgba(20,24,40,0.6); border: 1px solid rgba(255,255,255,0.08); opacity: 0.7; }
+.hw-ladder-item.reached { opacity: 1; border-color: #ffd24a; background: rgba(80,60,20,0.4); box-shadow: 0 0 18px rgba(255,210,74,0.25); }
+.hw-ladder-box { font-size: 1.8rem; }
+.hw-ladder-amt { font-weight: 900; color: #ffd24a; }
+.hw-ladder-lbl { font-size: 0.82rem; color: rgba(243,230,194,0.75); }
+
+/* 🎮 Mini-game arena */
+.hw-game { position: fixed; inset: 0; z-index: 10005; background: radial-gradient(circle at 50% 30%, rgba(40,60,110,0.98), rgba(10,12,28,0.99)); overflow: hidden; }
+.hw-game.hidden { display: none !important; }
+.hw-game-hud { position: absolute; top: calc(env(safe-area-inset-top,0px) + 10px); left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; z-index: 4; }
+.hw-game-goal { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; color: #ffd24a; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+.hw-game-theme { font-weight: 800; color: #bfe9ff; }
+.hw-game-quit { width: 42px; height: 42px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.12); color: #fff; font-size: 1.1rem; font-weight: 900; cursor: pointer; touch-action: manipulation; }
+.hw-game-arena { position: absolute; inset: 0; touch-action: none; }
+
+/* Floating 3D object (emoji); big drop shadow + bob/rotate while it rises */
+.hw-obj {
+  position: absolute; bottom: -14vh; width: 18vmin; height: 18vmin; max-width: 130px; max-height: 130px;
+  border: none; background: none; padding: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  animation-name: hwObjRise; animation-timing-function: cubic-bezier(.3,.1,.5,1); animation-fill-mode: forwards;
+  will-change: transform; touch-action: none;
+}
+.hw-obj-emoji { font-size: 14vmin; line-height: 1; filter: drop-shadow(0 10px 14px rgba(0,0,0,0.5)); pointer-events: none; transition: transform 0.25s; }
+.hw-obj-slash .hw-obj-emoji { animation: hwObjSpinFood 2.4s linear infinite; }
+.hw-obj-pet .hw-obj-emoji { animation: hwObjBob 1.1s ease-in-out infinite; }
+.hw-obj-launch .hw-obj-emoji { animation: hwObjWobble 1s ease-in-out infinite; }
+@keyframes hwObjRise { 0% { bottom: -16vh; } 100% { bottom: 110vh; } }
+@keyframes hwObjSpinFood { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+@keyframes hwObjBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes hwObjWobble { 0%,100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
+/* hit feedback per type */
+.hw-obj-hit { animation: none !important; pointer-events: none; }
+.hw-obj-hit.fx-slash .hw-obj-emoji { animation: hwHitSlash 0.5s forwards; }
+.hw-obj-hit.fx-pet .hw-obj-emoji { animation: hwHitPet 0.5s forwards; }
+.hw-obj-hit.fx-launch .hw-obj-emoji { animation: hwHitLaunch 0.5s forwards; }
+@keyframes hwHitSlash { 0% { transform: scale(1) rotate(0); } 40% { transform: scale(1.5) rotate(25deg); } 100% { transform: scale(0) rotate(120deg); opacity: 0; } }
+@keyframes hwHitPet { 0% { transform: scale(1); } 35% { transform: scale(1.4); } 100% { transform: scale(0.2) translateY(-40px); opacity: 0; } }
+@keyframes hwHitLaunch { 0% { transform: translateX(0) scale(1); } 100% { transform: translateX(60vw) scale(0.3) rotate(40deg); opacity: 0; } }
+
+/* Word reveal after a hit */
+.hw-game-reveal { position: absolute; left: 50%; top: 38%; transform: translate(-50%,-50%) scale(0.6); z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 2px; background: linear-gradient(160deg, rgba(40,60,100,0.96), rgba(20,30,60,0.98)); border: 4px solid var(--cat-color, #5be8d1); border-radius: 22px; padding: 18px 28px; box-shadow: 0 0 34px rgba(91,232,209,0.5); opacity: 0; pointer-events: none; transition: opacity 0.18s, transform 0.18s; }
+.hw-game-reveal.hidden { display: none; }
+.hw-game-reveal.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+.hw-rv-emoji { font-size: 4rem; line-height: 1; }
+.hw-rv-py { font-weight: 900; font-size: 2rem; color: #fff; text-shadow: 0 0 12px rgba(255,255,255,0.3); }
+.hw-rv-es { font-weight: 800; font-style: italic; color: #ffe66a; }
+
+/* 🏆 Reward summary */
+.hw-reward { position: fixed; inset: 0; z-index: 10010; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(8,10,22,0.82); }
+.hw-reward.hidden { display: none !important; }
+.hw-reward-card { width: 100%; max-width: 380px; text-align: center; background: linear-gradient(160deg, rgba(50,60,100,0.99), rgba(22,28,52,0.99)); border: 3px solid #ffd24a; border-radius: 24px; padding: 26px 22px; box-shadow: 0 18px 50px rgba(0,0,0,0.7); }
+.hw-reward-burst { font-size: 4rem; animation: hwObjBob 1s ease-in-out infinite; }
+.hw-reward-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; color: #ffd24a; margin: 6px 0 14px; }
+.hw-reward-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.hw-reward-row { font-weight: 900; font-size: 1.1rem; color: #fff5d8; }
+.hw-reward-levelup { color: #5be8d1; }
+.hw-reward-ok { border: none; border-radius: 999px; font-weight: 900; font-size: 1.1rem; padding: 12px 30px; cursor: pointer; background: linear-gradient(135deg, #ffd24a, #ff7e3c); color: #3a1800; touch-action: manipulation; }
+.hw-reward-ok:active { transform: scale(0.95); }

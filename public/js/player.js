@@ -2603,6 +2603,38 @@
   let wuPlayerRearrange = false;   // local toggle — tap swaps instead of removes
   let wuPlayerSwapIdx = null;      // index of the first-selected word in swap
   let wuPlayerLastSentence = [];   // remember most recent sentence for re-renders
+  // ⏱ Player-side time-machine countdown (driven by server timer.endsAt).
+  let _wuPlTimerInt = null;
+  function applyWuPlayerTimer(timer) {
+    const badge = document.getElementById('wu-player-countdown');
+    const num = document.getElementById('wu-player-countdown-num');
+    if (_wuPlTimerInt) { clearInterval(_wuPlTimerInt); _wuPlTimerInt = null; }
+    if (!timer || !timer.endsAt) {
+      if (badge) badge.classList.add('hidden');
+      document.body.classList.remove('wu-timemachine');
+      return;
+    }
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((timer.endsAt - Date.now()) / 1000));
+      if (num) num.textContent = left;
+      if (badge) {
+        badge.classList.remove('hidden');
+        badge.classList.toggle('wu-countdown-low', left <= 5);
+      }
+      document.body.classList.add('wu-timemachine');
+      if (left <= 0) {
+        clearInterval(_wuPlTimerInt); _wuPlTimerInt = null;
+        if (badge) badge.classList.add('wu-countdown-done');
+        try { if (MochiSounds.flatlineAlarm) MochiSounds.flatlineAlarm(); } catch (_) {}
+        setTimeout(() => {
+          if (badge) { badge.classList.add('hidden'); badge.classList.remove('wu-countdown-done', 'wu-countdown-low'); }
+          document.body.classList.remove('wu-timemachine');
+        }, 2000);
+      }
+    };
+    tick();
+    _wuPlTimerInt = setInterval(tick, 250);
+  }
 
   socket.on('wu:state', (data) => {
     if (gameType !== 'warmup') return;
@@ -2629,8 +2661,12 @@
     const judges = Array.isArray(data.judges) ? data.judges : [];
     wuPlayerIsJudge = judges.indexOf(myName) >= 0;
     // === FREEZE === teacher paused assistance. Delegates stay in the UI but
-    // can't touch — disable their builder + show a paused note.
-    wuPlayerFrozen = !!data.frozen;
+    // can't touch — disable their builder + show a paused note. Either a
+    // global freeze OR this kid's name in the selective freeze list.
+    const frozenNames = Array.isArray(data.frozenNames) ? data.frozenNames : [];
+    wuPlayerFrozen = !!data.frozen || frozenNames.indexOf(myName) >= 0;
+    // === ⏱ TIME MACHINE === teacher's countdown, shown to everyone.
+    applyWuPlayerTimer(data.timer);
     // Just promoted? Render the library + bind controls
     if (wuPlayerIsDelegate && !wasDelegate) {
       renderPlayerExpTabs();
