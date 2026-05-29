@@ -994,6 +994,46 @@ app.post('/api/homework/sentences/save', (req, res) => {
   res.json({ ok: true, sentences: Students.getHistory(rec.code, 100) });
 });
 
+// === 🏆 DAILY CHALLENGE (the "Diario" tab) ===========================
+// The theme rotates by date so it "changes" each day. The client builds the
+// actual word objects from warmup-vocab (it has the dictionary); the server
+// only decides WHICH experience bank + the goal, and owns the rewards.
+const DAILY_EXPS = ['exp1', 'exp2', 'exp3', 'exp4', 'exp5', 'exp6', 'exp7', 'exp8'];
+const DAILY_GOAL = 8;
+function _dailyThemeFor(dateStr) {
+  // Deterministic hash of the date → pick an experience bank.
+  let h = 0;
+  for (let i = 0; i < String(dateStr).length; i++) h = (h * 31 + dateStr.charCodeAt(i)) >>> 0;
+  return { exp: DAILY_EXPS[h % DAILY_EXPS.length], goal: DAILY_GOAL };
+}
+function _todayServer() { return new Date().toISOString().slice(0, 10); }
+// Sword milestones — locked SECRET prizes (real reward arranged by teacher).
+const DAILY_MILESTONES = [300, 800, 1600, 3000, 5000];
+app.get('/api/homework/daily', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = Students.get(req.query.studentCode);
+  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : _todayServer();
+  const prog = Students.getProgress(rec.code);
+  res.json({
+    ok: true,
+    date,
+    theme: _dailyThemeFor(date),
+    doneToday: prog && prog.dailyDate === date,
+    progress: prog,
+    milestones: DAILY_MILESTONES,
+  });
+});
+app.post('/api/homework/daily/complete', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, date, correct } = req.body || {};
+  const rec = Students.get(studentCode);
+  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date : _todayServer();
+  const result = Students.awardDaily(rec.code, d, correct);
+  res.json(Object.assign({ ok: result.ok, reason: result.reason }, result));
+});
+
 // Review a PAST assignment attempt — best submission's breakdown so the kid
 // sees which sentences they got wrong + the correct answer.
 app.get('/api/homework/assignment-review/:id', (req, res) => {
@@ -3103,6 +3143,8 @@ io.on('connection', (socket) => {
         delegates: Array.from(g.warmup.delegates || []),
         judges: Array.from(g.warmup.judges || []),
         frozen: !!g.warmup.frozen,
+        frozenNames: g.warmup.frozenNames || [],
+        timer: g.warmup.timer || null,
         prompt: g.warmup.prompt || '',
         visibleExps: g.warmup.visibleExps || null,
         customWords: g.warmup.customWords || [],
@@ -3520,6 +3562,8 @@ io.on('connection', (socket) => {
           delegates: new Set(),
           judges: new Set(),
           frozen: false,
+          frozenNames: [],        // selective freeze — specific kids paused
+          timer: null,            // { endsAt, duration } countdown or null
           visibleExps: null,      // null = all 8 banks visible
           customWords: [],        // live teacher-created words
           contributors: new Set(),
@@ -5059,8 +5103,10 @@ io.on('connection', (socket) => {
     const delegates = g.warmup && g.warmup.delegates;
     if (!(delegates && delegates.has(p.name))) return false;
     // FREEZE: while the teacher has paused assistance, delegates stay in the
-    // builder but cannot mutate anything — only the teacher can.
+    // builder but cannot mutate anything — only the teacher can. Either a
+    // global freeze OR this kid's name being in the selective freeze list.
     if (g.warmup && g.warmup.frozen) return false;
+    if (g.warmup && Array.isArray(g.warmup.frozenNames) && g.warmup.frozenNames.indexOf(p.name) >= 0) return false;
     return true;
   }
   socket.on('wu:auth', ({ pin, password }, cb) => {
@@ -5080,6 +5126,8 @@ io.on('connection', (socket) => {
       delegates: Array.from(g.warmup.delegates || []),
       judges: Array.from(g.warmup.judges || []),
       frozen: !!g.warmup.frozen,
+      frozenNames: g.warmup.frozenNames || [],
+      timer: g.warmup.timer || null,
       prompt: (g.warmup && g.warmup.prompt) || '',
       // null = show ALL experience banks; otherwise only these exp ids.
       visibleExps: g.warmup.visibleExps || null,
@@ -5134,12 +5182,37 @@ io.on('connection', (socket) => {
   // === FREEZE / UNFREEZE assistance === host-only. While frozen, delegates
   // can't mutate the sentence (wuRequireAdmin denies them). They stay in the
   // builder UI but can't touch — teacher regains exclusive control.
-  socket.on('wu:set-frozen', ({ pin, password, frozen }) => {
+  socket.on('wu:set-frozen', ({ pin, password, frozen, names }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
     if (!(g.hostId === socket.id && isAdminPassword(password))) return;
     if (!g.warmup) return;
-    g.warmup.frozen = !!frozen;
+    // Two modes:
+    //  • Global freeze  → { frozen:true }  pauses ALL asistentes at once.
+    //  • Selective freeze → { names:[...] } pauses ONLY those kids by name;
+    //    everyone else keeps building. Frozen kids stay on the builder
+    //    screen (they still SEE everything) — they just can't edit.
+    if (Array.isArray(names)) {
+      g.warmup.frozenNames = names.filter((n) => typeof n === 'string');
+    } else {
+      g.warmup.frozen = !!frozen;
+    }
+    wuEmitState(g, pin);
+  });
+  // === COUNTDOWN TIMER === Teacher-only. Sets an intense "time machine"
+  // countdown on the board + every phone. Everyone sees the seconds left to
+  // finish the sentence. Pass seconds=0 / null to clear.
+  socket.on('wu:set-timer', ({ pin, password, seconds }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!g.warmup) return;
+    const s = Number(seconds);
+    if (Number.isFinite(s) && s > 0) {
+      g.warmup.timer = { endsAt: Date.now() + Math.min(s, 600) * 1000, duration: Math.min(s, 600) };
+    } else {
+      g.warmup.timer = null;
+    }
     wuEmitState(g, pin);
   });
   // === VFX BROADCAST === host fires a visual effect; the server relays it to

@@ -227,6 +227,8 @@
           renderList();
           showScreen('list');
         }
+        // Pull the daily progression HUD (XP / swords / streak) right away.
+        try { refreshDailyHud(); } catch (_) {}
         // Start inbox polling — every 20s while the kid is logged in.
         // Pulls down any messages the teacher sent.
         fetchInbox();
@@ -481,18 +483,24 @@
   function openSentenceEditor(wids) {
     _editWords = (wids || []).filter((wid) => window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]);
     _editSwapIdx = null;
+    _editReorder = false;
     renderSentenceEditor();
   }
   let _editSwapIdx = null;
+  let _editReorder = false;   // false = tap removes · true = tap-swap to reorder
   function renderSentenceEditor() {
     const list = $('hw-sentences-list');
     const ed = document.createElement('div');
     ed.className = 'hw-sent-editor';
+    const tip = _editReorder
+      ? 'Toca una palabra y luego otra para <strong>cambiarlas de lugar</strong>.'
+      : 'Toca una palabra para <strong>quitarla</strong>. Activa 🔀 Mover para reordenar.';
     ed.innerHTML = `
-      <div class="hw-sent-editor-tip">Toca una palabra y luego otra para <strong>cambiarlas de lugar</strong>. Toca ✕ para quitarla.</div>
+      <div class="hw-sent-editor-tip">${tip}</div>
       <div class="hw-sent-editor-words" id="hw-sent-editor-words"></div>
       <div class="hw-sent-editor-bar">
         <button class="hw-sent-editor-cancel" type="button">← Volver</button>
+        <button class="hw-sent-editor-move${_editReorder ? ' active' : ''}" type="button">${_editReorder ? '✅ Moviendo' : '🔀 Mover'}</button>
         <button class="hw-sent-editor-listen" type="button">🔊 Oír</button>
         <button class="hw-sent-editor-save" type="button">💾 Guardar copia</button>
       </div>`;
@@ -504,16 +512,19 @@
       const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
       const color = cat ? cat.color : '#ffe082';
       const chip = document.createElement('div');
-      chip.className = 'hw-sent-edit-chip' + (_editSwapIdx === idx ? ' selected' : '');
+      chip.className = 'hw-sent-edit-chip' + (_editSwapIdx === idx ? ' selected' : '') + (_editReorder ? ' moving' : '');
       chip.style.setProperty('--cat-color', color);
-      chip.innerHTML = `<button class="hw-sent-edit-x" type="button" title="Quitar">✕</button>
+      chip.title = _editReorder ? 'Toca para mover' : 'Toca para quitar';
+      chip.innerHTML = `
         <span class="hw-sent-chip-py">${escapeHtml(w.pinyin)}</span>
         <span class="hw-sent-chip-es">${escapeHtml(w.es || '')}</span>`;
-      chip.querySelector('.hw-sent-edit-x').addEventListener('click', (e) => {
-        e.stopPropagation();
-        _editWords.splice(idx, 1); _editSwapIdx = null; renderSentenceEditor();
-      });
       chip.addEventListener('click', () => {
+        if (!_editReorder) {
+          // Default: tap removes (no scary ✕).
+          _editWords.splice(idx, 1); _editSwapIdx = null; renderSentenceEditor();
+          return;
+        }
+        // Reorder mode: tap-select then tap-target swaps.
         if (_editSwapIdx === null) { _editSwapIdx = idx; }
         else if (_editSwapIdx === idx) { _editSwapIdx = null; }
         else {
@@ -525,6 +536,8 @@
       wrap.appendChild(chip);
     });
     if (!_editWords.length) wrap.innerHTML = '<div class="hw-empty">Oración vacía — agrega palabras en clase.</div>';
+    const moveBtn = ed.querySelector('.hw-sent-editor-move');
+    if (moveBtn) moveBtn.addEventListener('click', () => { _editReorder = !_editReorder; _editSwapIdx = null; renderSentenceEditor(); });
     ed.querySelector('.hw-sent-editor-cancel').addEventListener('click', loadMySentences);
     ed.querySelector('.hw-sent-editor-listen').addEventListener('click', (e) => {
       const py = _editWords.map((wid) => window.WU_WORD_BY_ID[wid].pinyin).join(' ');
@@ -573,6 +586,214 @@
     const overlay = $('wu-pokedex'); const close = $('wu-pokedex-close');
     if (close) close.addEventListener('click', hwHidePokedex);
     if (overlay) overlay.addEventListener('click', (e) => { if (e.target === overlay) hwHidePokedex(); });
+  })();
+
+  // =====================================================================
+  // ⚔️ DIARIO — daily challenge · XP · tiers · DralySwords ⚔️ · streak 🔥
+  // A daily 3D mini-game: slash food 🍉, pet animals/people 🐶, launch
+  // verbs/abstract 🏃 — the HSK1 word reveals after each. Awards XP +
+  // DralySwords; a streak rewards returning daily; tiers Bronce→Dragón
+  // Dorado. The top prizes are real-world SECRETS the teacher arranges.
+  // =====================================================================
+  let dailyData = null;
+  function localDateStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function fetchDaily(cb) {
+    if (!studentCode || !accessCode) { if (cb) cb(null); return; }
+    fetch('/api/homework/daily?studentCode=' + encodeURIComponent(studentCode)
+        + '&accessCode=' + encodeURIComponent(accessCode) + '&date=' + localDateStr())
+      .then((r) => r.json())
+      .then((d) => { if (d && d.ok) dailyData = d; if (cb) cb(d); })
+      .catch(() => { if (cb) cb(null); });
+  }
+  function refreshDailyHud() {
+    const hud = $('hw-hud'); if (hud) hud.style.display = '';
+    fetchDaily((d) => { if (d && d.ok) applyHud(d.progress); });
+  }
+  function applyHud(p) {
+    if (!p) return;
+    const pct = Math.max(0, Math.min(100, Math.round((p.xpIntoLevel / p.xpForLevel) * 100)));
+    if ($('hw-hud-fill')) $('hw-hud-fill').style.width = pct + '%';
+    if ($('hw-hud-lvl')) $('hw-hud-lvl').textContent = 'Nivel ' + p.level;
+    if ($('hw-hud-tier')) $('hw-hud-tier').textContent = (p.tier && p.tier.emoji) || '🥉';
+    if ($('hw-hud-swords')) $('hw-hud-swords').textContent = p.swords;
+    if ($('hw-hud-streak')) $('hw-hud-streak').textContent = p.streak;
+  }
+  function openDaily() {
+    showScreen('daily');
+    $('hw-game').classList.add('hidden');
+    $('hw-reward').classList.add('hidden');
+    fetchDaily(() => renderDailyHome());
+  }
+  function renderDailyHome() {
+    const d = dailyData; if (!d || !d.progress) return;
+    const p = d.progress;
+    applyHud(p);
+    if ($('hw-daily-tierbig')) $('hw-daily-tierbig').textContent = (p.tier.emoji || '') + ' ' + (p.tier.label || '');
+    if ($('hw-daily-lvl')) $('hw-daily-lvl').textContent = 'Nivel ' + p.level;
+    const pct = Math.max(0, Math.min(100, Math.round((p.xpIntoLevel / p.xpForLevel) * 100)));
+    if ($('hw-daily-xpfill')) $('hw-daily-xpfill').style.width = pct + '%';
+    if ($('hw-daily-xptext')) $('hw-daily-xptext').textContent = p.xpIntoLevel + ' / ' + p.xpForLevel + ' XP';
+    if ($('hw-daily-swords')) $('hw-daily-swords').textContent = p.swords;
+    if ($('hw-daily-streak')) $('hw-daily-streak').textContent = p.streak;
+    const exp = (window.WU_EXPERIENCES || {})[d.theme.exp];
+    const expLabel = exp ? exp.label : d.theme.exp;
+    const ch = $('hw-daily-challenge');
+    if (ch) {
+      if (d.doneToday) {
+        ch.innerHTML = '<div class="hw-dc-done">✅ <strong>¡Reto de hoy completado!</strong><br><span>Vuelve mañana para mantener tu racha 🔥</span></div>';
+      } else {
+        ch.innerHTML = '<div class="hw-dc-head">⚔️ Reto de hoy</div>'
+          + '<div class="hw-dc-theme">' + escapeHtml(expLabel) + '</div>'
+          + '<div class="hw-dc-goal">Corta, toca y descubre <strong>' + d.theme.goal + '</strong> palabras</div>'
+          + '<button class="hw-dc-play" id="hw-dc-play" type="button">⚔️ ¡Jugar!</button>';
+        const pb = $('hw-dc-play'); if (pb) pb.addEventListener('click', startDailyGame);
+      }
+    }
+    renderLadder(d.milestones || [], p.swords);
+  }
+  function renderLadder(milestones, swords) {
+    const lad = $('hw-daily-ladder'); if (!lad) return;
+    lad.innerHTML = '';
+    milestones.forEach((m) => {
+      const reached = swords >= m;
+      const el = document.createElement('div');
+      el.className = 'hw-ladder-item' + (reached ? ' reached' : '');
+      el.innerHTML = '<div class="hw-ladder-box">' + (reached ? '🎁' : '🔒') + '</div>'
+        + '<div class="hw-ladder-info"><div class="hw-ladder-amt">⚔️ ' + m + '</div>'
+        + '<div class="hw-ladder-lbl">' + (reached ? '¡Premio secreto desbloqueado! Pídeselo a tu maestra 🤫' : 'Premio secreto') + '</div></div>';
+      lad.appendChild(el);
+    });
+  }
+  // Map an HSK1 category to one of three 3D mini-game actions.
+  function dailyActionFor(cat) {
+    if (cat === 'food' || cat === 'noun') return 'slash';     // 🍉 cut
+    if (cat === 'family' || cat === 'pronoun' || cat === 'greet') return 'pet';  // 🐶 gentle
+    return 'launch';                                          // 🏃 verbs/abstract
+  }
+  const DAILY_GAME = { active: false, goal: 8, done: 0, correct: 0, pool: [], spawnT: null, slashing: false };
+  let _arenaBound = false;
+  function startDailyGame() {
+    const d = dailyData; if (!d) return;
+    const all = window.WU_WORDS || [];
+    const pool = all.filter((w) => w.exp === d.theme.exp && w.icon);
+    DAILY_GAME.pool = (pool.length ? pool : all.filter((w) => w.icon)).slice();
+    DAILY_GAME.goal = d.theme.goal || 8;
+    DAILY_GAME.done = 0; DAILY_GAME.correct = 0; DAILY_GAME.active = true;
+    $('hw-game').classList.remove('hidden');
+    if ($('hw-game-theme')) $('hw-game-theme').textContent = ((window.WU_EXPERIENCES || {})[d.theme.exp] || {}).short || '';
+    updateGameHud();
+    const arena = $('hw-game-arena');
+    if (arena) {
+      arena.innerHTML = '';
+      if (!_arenaBound) {
+        _arenaBound = true;
+        arena.addEventListener('pointerdown', () => { DAILY_GAME.slashing = true; });
+        window.addEventListener('pointerup', () => { DAILY_GAME.slashing = false; });
+        window.addEventListener('pointercancel', () => { DAILY_GAME.slashing = false; });
+      }
+    }
+    scheduleSpawn();
+  }
+  function updateGameHud() { if ($('hw-game-progress')) $('hw-game-progress').textContent = DAILY_GAME.done + '/' + DAILY_GAME.goal; }
+  function scheduleSpawn() {
+    if (!DAILY_GAME.active || DAILY_GAME.done >= DAILY_GAME.goal) return;
+    spawnDailyObject();
+    DAILY_GAME.spawnT = setTimeout(scheduleSpawn, 820 + Math.random() * 520);
+  }
+  function spawnDailyObject() {
+    const arena = $('hw-game-arena'); if (!arena || !DAILY_GAME.pool.length) return;
+    const w = DAILY_GAME.pool[Math.floor(Math.random() * DAILY_GAME.pool.length)];
+    const action = dailyActionFor(w.cat);
+    const cat = (window.WU_CATEGORIES || {})[w.cat];
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'hw-obj hw-obj-' + action;
+    el.style.setProperty('--cat-color', cat ? cat.color : '#ffe082');
+    el.style.left = (6 + Math.random() * 78) + 'vw';
+    const dur = 2.7 + Math.random() * 1.3;
+    el.style.animationDuration = dur + 's';
+    el.innerHTML = '<span class="hw-obj-emoji">' + (w.icon || '⭐') + '</span>';
+    let hit = false;
+    const doHit = () => {
+      if (hit || !DAILY_GAME.active) return;
+      hit = true;
+      el.classList.add('hw-obj-hit', 'fx-' + action);
+      revealDailyWord(w, action);
+      DAILY_GAME.done++; DAILY_GAME.correct++;
+      updateGameHud();
+      setTimeout(() => el.remove(), 520);
+      if (DAILY_GAME.done >= DAILY_GAME.goal) endDailyGame();
+    };
+    el.addEventListener('pointerdown', (e) => { e.preventDefault(); doHit(); });
+    el.addEventListener('pointerenter', () => { if (DAILY_GAME.slashing) doHit(); });
+    arena.appendChild(el);
+    setTimeout(() => { if (!hit && el.parentNode) el.remove(); }, dur * 1000 + 250);
+  }
+  function revealDailyWord(w, action) {
+    const rv = $('hw-game-reveal'); if (!rv) return;
+    rv.className = 'hw-game-reveal show fx-' + action;
+    rv.innerHTML = '<span class="hw-rv-emoji">' + (w.icon || '⭐') + '</span>'
+      + '<span class="hw-rv-py">' + escapeHtml(w.pinyin) + '</span>'
+      + '<span class="hw-rv-es">' + escapeHtml(w.es || '') + '</span>';
+    try { speakChinese(w.pinyin, null); } catch (_) {}
+    clearTimeout(rv._t);
+    rv._t = setTimeout(() => { rv.classList.remove('show'); rv.classList.add('hidden'); }, 900);
+  }
+  function stopDailyGame() {
+    DAILY_GAME.active = false;
+    if (DAILY_GAME.spawnT) { clearTimeout(DAILY_GAME.spawnT); DAILY_GAME.spawnT = null; }
+    const g = $('hw-game'); if (g) g.classList.add('hidden');
+    const a = $('hw-game-arena'); if (a) a.innerHTML = '';
+  }
+  function endDailyGame() {
+    if (!DAILY_GAME.active) return;
+    DAILY_GAME.active = false;
+    if (DAILY_GAME.spawnT) { clearTimeout(DAILY_GAME.spawnT); DAILY_GAME.spawnT = null; }
+    setTimeout(() => { const a = $('hw-game-arena'); if (a) a.innerHTML = ''; }, 420);
+    fetch('/api/homework/daily/complete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentCode, accessCode, date: localDateStr(), correct: DAILY_GAME.correct }),
+    }).then((r) => r.json()).then((res) => {
+      $('hw-game').classList.add('hidden');
+      showDailyReward(res);
+    }).catch(() => { $('hw-game').classList.add('hidden'); renderDailyHome(); });
+  }
+  function showDailyReward(res) {
+    const rw = $('hw-reward'); if (!rw) return;
+    if (res && res.ok) {
+      const g = res.gained || {}; const p = res.progress || {};
+      if (dailyData) { dailyData.progress = p; dailyData.doneToday = true; }
+      rw.innerHTML = '<div class="hw-reward-card">'
+        + '<div class="hw-reward-burst">🎉</div>'
+        + '<div class="hw-reward-title">¡Reto completado!</div>'
+        + '<div class="hw-reward-rows">'
+        + '<div class="hw-reward-row">⭐ +' + (g.xp || 0) + ' XP</div>'
+        + '<div class="hw-reward-row">⚔️ +' + (g.swords || 0) + ' DralySwords</div>'
+        + '<div class="hw-reward-row">🔥 Racha: ' + (p.streak || 0) + ' día' + ((p.streak || 0) === 1 ? '' : 's') + '</div>'
+        + (res.leveledUp ? '<div class="hw-reward-row hw-reward-levelup">🆙 ¡Subiste a Nivel ' + res.newLevel + '!</div>' : '')
+        + '</div><button class="hw-reward-ok" id="hw-reward-ok" type="button">¡Genial!</button></div>';
+      try { if (MochiSounds && MochiSounds.winFanfare) MochiSounds.winFanfare(); } catch (_) {}
+    } else {
+      if (dailyData) dailyData.doneToday = true;
+      const already = res && res.reason === 'already';
+      rw.innerHTML = '<div class="hw-reward-card">'
+        + '<div class="hw-reward-burst">📅</div>'
+        + '<div class="hw-reward-title">' + (already ? 'Ya completaste el reto de hoy' : '¡Buen intento!') + '</div>'
+        + '<div class="hw-reward-rows"><div class="hw-reward-row">Vuelve mañana para tu próximo reto 🔥</div></div>'
+        + '<button class="hw-reward-ok" id="hw-reward-ok" type="button">OK</button></div>';
+    }
+    rw.classList.remove('hidden');
+    const ok = $('hw-reward-ok');
+    if (ok) ok.addEventListener('click', () => { rw.classList.add('hidden'); renderDailyHome(); });
+  }
+  (function bindDaily() {
+    const cta = $('hw-list-daily'); if (cta) cta.addEventListener('click', openDaily);
+    const hud = $('hw-hud'); if (hud) hud.addEventListener('click', openDaily);
+    const back = $('hw-daily-back'); if (back) back.addEventListener('click', () => { stopDailyGame(); showScreen('list'); refreshDailyHud(); });
+    const quit = $('hw-game-quit'); if (quit) quit.addEventListener('click', () => { stopDailyGame(); renderDailyHome(); });
   })();
 
   // === Avatar picker (first-time entry) ===
@@ -1841,7 +2062,10 @@
       const chip = document.createElement('span');
       chip.className = 'hw-stage-word';
       chip.style.setProperty('--cat-color', color);
-      chip.innerHTML = `<span class="hw-stage-pinyin">${escapeHtml(w)}</span> <span class="hw-stage-x">✕</span>`;
+      // No ✕ — kids read the X as "this word is wrong". Tapping the word
+      // itself removes it (title hint explains it on long-press/hover).
+      chip.title = 'Toca para quitar';
+      chip.innerHTML = `<span class="hw-stage-pinyin">${escapeHtml(w)}</span>`;
       chip.addEventListener('click', (e) => {
         e.stopPropagation();
         pushUndo(i);
@@ -2070,7 +2294,7 @@
   });
 
   function showScreen(name) {
-    ['entry', 'avatar', 'list', 'settings', 'assignment', 'results', 'parents', 'reading'].forEach((n) => {
+    ['entry', 'avatar', 'list', 'settings', 'assignment', 'results', 'parents', 'reading', 'daily'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

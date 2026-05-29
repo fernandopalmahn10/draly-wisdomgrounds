@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260528l">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260528o">
 </head>
 <body class="wu-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -154,6 +154,16 @@
         <button class="btn btn-gold btn-sm wu-freeze-btn" id="wu-freeze-btn" type="button"
                 title="Congelar: solo tú puedes editar; los asistentes quedan en pausa">⏸ Detener asistencia</button>
       </div>
+      <!-- ⏱ TIME MACHINE — teacher-only countdown. Everyone sees it; the
+           board goes intense. Tap a duration to start, ✕ to clear. -->
+      <div class="wu-timer-row">
+        <span class="wu-timer-label">⏱ Reloj:</span>
+        <button class="wu-timer-btn" data-sec="20" type="button">20s</button>
+        <button class="wu-timer-btn" data-sec="30" type="button">30s</button>
+        <button class="wu-timer-btn" data-sec="60" type="button">60s</button>
+        <button class="wu-timer-btn" data-sec="90" type="button">90s</button>
+        <button class="wu-timer-btn wu-timer-clear" data-sec="0" type="button">✕ Quitar</button>
+      </div>
       <div class="wu-roster-list" id="wu-roster-list"></div>
       <!-- 👀 Live activity ticker — shows which asistente just touched which
            word, so the super maestro can supervise delegated control. -->
@@ -232,6 +242,13 @@
     <div class="wu-fx-layer" id="wu-fx-layer" aria-hidden="true"></div>
   </div>
 
+  <!-- ⏱ COUNTDOWN BADGE — big timer overlay shown on the board for everyone
+       while the teacher's time machine is running. Hidden otherwise. -->
+  <div class="wu-countdown hidden" id="wu-countdown" aria-hidden="true">
+    <span class="wu-countdown-num" id="wu-countdown-num">0</span>
+    <span class="wu-countdown-cap">⏱ ¡Apúrense!</span>
+  </div>
+
   <!-- 🎮 EFECTOS — PINNED button (always visible, never scrolls away) that
        opens a scrollable tray of ALL effects. Fires on every player screen. -->
   <button class="wu-fx-fab" id="wu-fx-fab" type="button" aria-label="Efectos">🎮</button>
@@ -264,6 +281,6 @@
   <script src="/js/sounds.js?v=20260524h"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/warmup-vocab.js?v=20260524c"></script>
-  <script src="/js/host-warmup.js?v=20260528n"></script>
+  <script src="/js/host-warmup.js?v=20260528o"></script>
 </body>
 </html>

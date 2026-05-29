@@ -30,8 +30,41 @@
   let currentDelegates = [];   // array of player names
   let currentJudges = [];      // array of player names with judge powers
   let currentFrozen = false;   // assistance frozen? (only teacher edits)
+  let currentFrozenNames = []; // selective freeze — specific kids paused
   let currentVisibleExps = null;   // null = all banks; else array of exp ids
   let currentCustomWords = [];     // live teacher-created words
+  // ⏱ Time-machine countdown — driven by the server's timer.endsAt.
+  let _wuTimerRaf = null;
+  function applyWuTimer(timer) {
+    const badge = $('wu-countdown');
+    const num = $('wu-countdown-num');
+    if (_wuTimerRaf) { clearInterval(_wuTimerRaf); _wuTimerRaf = null; }
+    if (!timer || !timer.endsAt) {
+      if (badge) badge.classList.add('hidden');
+      document.body.classList.remove('wu-timemachine');
+      return;
+    }
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((timer.endsAt - Date.now()) / 1000));
+      if (num) num.textContent = left;
+      if (badge) {
+        badge.classList.remove('hidden');
+        badge.classList.toggle('wu-countdown-low', left <= 5);
+      }
+      document.body.classList.add('wu-timemachine');
+      if (left <= 0) {
+        clearInterval(_wuTimerRaf); _wuTimerRaf = null;
+        if (badge) { num.textContent = '0'; badge.classList.add('wu-countdown-done'); }
+        try { if (MochiSounds && MochiSounds.flatlineAlarm) MochiSounds.flatlineAlarm(); } catch (_) {}
+        setTimeout(() => {
+          if (badge) { badge.classList.add('hidden'); badge.classList.remove('wu-countdown-done', 'wu-countdown-low'); }
+          document.body.classList.remove('wu-timemachine');
+        }, 2200);
+      }
+    };
+    tick();
+    _wuTimerRaf = setInterval(tick, 250);
+  }
   // Resolve a word id from the static catalog OR the live custom words.
   function wuWord(wid) {
     return (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid])
@@ -295,8 +328,10 @@
   }
 
   // === Server sync ===
-  socket.on('wu:state', ({ sentence, viewMode, curious, delegates, judges, frozen, visibleExps, customWords }) => {
+  socket.on('wu:state', ({ sentence, viewMode, curious, delegates, judges, frozen, frozenNames, timer, visibleExps, customWords }) => {
     currentSentence = sentence || [];
+    currentFrozenNames = Array.isArray(frozenNames) ? frozenNames : [];
+    applyWuTimer(timer);
     if (viewMode) {
       currentViewMode = viewMode;
       document.querySelectorAll('.wu-vm-btn').forEach((b) => {
@@ -602,14 +637,16 @@
       if (!p || !p.name) return;
       const isDelegate = currentDelegates.indexOf(p.name) >= 0;
       const isJudge = currentJudges.indexOf(p.name) >= 0;
+      const isPaused = currentFrozenNames.indexOf(p.name) >= 0;
       const row = document.createElement('div');
-      row.className = 'wu-roster-row' + (isDelegate ? ' is-delegate' : '') + (isJudge ? ' is-judge' : '');
+      row.className = 'wu-roster-row' + (isDelegate ? ' is-delegate' : '') + (isJudge ? ' is-judge' : '') + (isPaused ? ' is-paused' : '');
       row.innerHTML = `
         <span class="wu-roster-avatar">${p.avatar || '🎓'}</span>
-        <span class="wu-roster-name">${escapeHtml(p.name)}${isJudge ? ' <span class="wu-judge-tag">⚖️ juez</span>' : ''}</span>
+        <span class="wu-roster-name">${escapeHtml(p.name)}${isJudge ? ' <span class="wu-judge-tag">⚖️ juez</span>' : ''}${isPaused ? ' <span class="wu-paused-tag">⏸ pausado</span>' : ''}</span>
         <button class="wu-roster-btn ${isDelegate ? 'revoke' : 'grant'}" type="button">
           ${isDelegate ? '🚫 Quitar' : '👑 Asistente'}
         </button>
+        ${isDelegate ? `<button class="wu-roster-pause-btn ${isPaused ? 'on' : ''}" type="button" title="Pausar solo a este alumno">${isPaused ? '▶️ Reanudar' : '⏸ Pausar'}</button>` : ''}
         <button class="wu-roster-judge-btn ${isJudge ? 'on' : ''}" type="button" title="Nombrar/quitar juez">
           ${isJudge ? '⚖️ Quitar juez' : '⚖️ Juez'}
         </button>`;
@@ -621,6 +658,14 @@
           socket.emit('wu:delegate-grant',  { pin, password: adminPw, playerName: p.name });
         }
         if (MochiSounds.swap) MochiSounds.swap();
+      };
+      const pbtn = row.querySelector('.wu-roster-pause-btn');
+      if (pbtn) pbtn.onclick = () => {
+        // Selective freeze: toggle this kid in/out of the frozenNames list.
+        const set = new Set(currentFrozenNames);
+        if (set.has(p.name)) set.delete(p.name); else set.add(p.name);
+        socket.emit('wu:set-frozen', { pin, password: adminPw, names: Array.from(set) });
+        if (MochiSounds.tap) MochiSounds.tap();
       };
       const jbtn = row.querySelector('.wu-roster-judge-btn');
       jbtn.onclick = () => {
@@ -1070,6 +1115,15 @@
         socket.emit('wu:set-frozen', { pin, password: adminPw, frozen: next });
       });
     }
+    // ⏱ Time-machine buttons — start/clear the shared countdown.
+    document.querySelectorAll('.wu-timer-btn').forEach((b) => {
+      if (b._wuBound) return; b._wuBound = true;
+      b.addEventListener('click', () => {
+        const sec = Number(b.dataset.sec) || 0;
+        socket.emit('wu:set-timer', { pin, password: adminPw, seconds: sec });
+        if (sec > 0 && MochiSounds && MochiSounds.tap) try { MochiSounds.tap(); } catch (_) {}
+      });
+    });
   }
 
   // Broadcast an effect to EVERY phone (server relays wu:fx to the room) so

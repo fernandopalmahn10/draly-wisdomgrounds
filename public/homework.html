@@ -6,8 +6,8 @@
   <title>📚 Tareas · Draly Wisdomgrounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260528l">
-  <link rel="stylesheet" href="/css/homework.css?v=20260528n">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260528o">
+  <link rel="stylesheet" href="/css/homework.css?v=20260528o">
 </head>
 <body class="hw-bg">
 
@@ -55,12 +55,24 @@
         <button class="btn btn-ghost btn-sm hw-bell-btn" id="hw-list-inbox" title="Mensajes de mi maestra">
           🔔 <span class="hw-bell-badge" id="hw-bell-badge" style="display:none;">0</span>
         </button>
+        <button class="btn btn-gold btn-sm hw-daily-cta" id="hw-list-daily">⚔️ Diario</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-sentences">📜 Mis oraciones</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-settings">⚙️ Ajustes</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-parents">👨‍👩‍👧 Papás</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-logout">Salir</button>
       </div>
     </div>
+    <!-- ⚔️ PROGRESSION HUD — level, XP, DralySwords, streak. Tap → Diario. -->
+    <button class="hw-hud" id="hw-hud" type="button" title="Abre tu Diario">
+      <span class="hw-hud-tier" id="hw-hud-tier">🥉</span>
+      <span class="hw-hud-xp">
+        <span class="hw-hud-lvl" id="hw-hud-lvl">Nivel 1</span>
+        <span class="hw-hud-bar"><span class="hw-hud-fill" id="hw-hud-fill"></span></span>
+      </span>
+      <span class="hw-hud-stat">⚔️ <strong id="hw-hud-swords">0</strong></span>
+      <span class="hw-hud-stat">🔥 <strong id="hw-hud-streak">0</strong></span>
+    </button>
+
     <!-- 📁 FOLDER BREADCRUMB — appears once you open an experience folder -->
     <div class="hw-folder-bar hidden" id="hw-folder-bar">
       <button class="btn btn-ghost btn-sm" id="hw-folder-back">← HSK1</button>
@@ -97,6 +109,44 @@
       <button class="wu-pokedex-close" id="wu-pokedex-close" type="button" aria-label="Cerrar">✕</button>
       <div class="wu-pokedex-card" id="wu-pokedex-card"></div>
     </div>
+  </div>
+
+  <!-- SCREEN: DIARIO — daily challenge, XP/tiers/DralySwords, mini-game -->
+  <div id="screen-daily" class="container hw-daily hidden">
+    <div class="hw-daily-top">
+      <button class="btn btn-ghost btn-sm" id="hw-daily-back">← Volver</button>
+      <div class="hw-daily-tierbig" id="hw-daily-tierbig">🥉 Bronce</div>
+    </div>
+    <div class="hw-daily-hud">
+      <div class="hw-daily-xp">
+        <div class="hw-daily-lvl" id="hw-daily-lvl">Nivel 1</div>
+        <div class="hw-daily-xpbar"><div class="hw-daily-xpfill" id="hw-daily-xpfill"></div></div>
+        <div class="hw-daily-xptext" id="hw-daily-xptext">0 / 250 XP</div>
+      </div>
+      <div class="hw-daily-stats">
+        <div class="hw-daily-stat hw-daily-swords">⚔️ <strong id="hw-daily-swords">0</strong><span>DralySwords</span></div>
+        <div class="hw-daily-stat hw-daily-streak">🔥 <strong id="hw-daily-streak">0</strong><span>días seguidos</span></div>
+      </div>
+    </div>
+
+    <div class="hw-daily-challenge" id="hw-daily-challenge"></div>
+
+    <div class="hw-daily-ladder-title">🎁 Premios secretos — ¡síguelos para descubrir!</div>
+    <div class="hw-daily-ladder" id="hw-daily-ladder"></div>
+
+    <!-- 🎮 MINI-GAME ARENA — full-screen, spawns 3D objects to slash/tap -->
+    <div class="hw-game hidden" id="hw-game">
+      <div class="hw-game-hud">
+        <div class="hw-game-goal">⚔️ <span id="hw-game-progress">0/8</span></div>
+        <div class="hw-game-theme" id="hw-game-theme"></div>
+        <button class="hw-game-quit" id="hw-game-quit" type="button" aria-label="Salir">✕</button>
+      </div>
+      <div class="hw-game-arena" id="hw-game-arena"></div>
+      <div class="hw-game-reveal hidden" id="hw-game-reveal"></div>
+    </div>
+
+    <!-- 🏆 REWARD SUMMARY -->
+    <div class="hw-reward hidden" id="hw-reward"></div>
   </div>
 
   <!-- SCREEN: READING-TEST — story reader + 5 questions, self-serve -->
@@ -415,7 +465,7 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/homework.js?v=20260528n"></script>
+  <script src="/js/homework.js?v=20260528o"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>
