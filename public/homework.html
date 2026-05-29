@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260528o">
-  <link rel="stylesheet" href="/css/homework.css?v=20260528o">
+  <link rel="stylesheet" href="/css/homework.css?v=20260528p">
 </head>
 <body class="hw-bg">
 
@@ -55,7 +55,7 @@
         <button class="btn btn-ghost btn-sm hw-bell-btn" id="hw-list-inbox" title="Mensajes de mi maestra">
           🔔 <span class="hw-bell-badge" id="hw-bell-badge" style="display:none;">0</span>
         </button>
-        <button class="btn btn-gold btn-sm hw-daily-cta" id="hw-list-daily">⚔️ Diario</button>
+        <button class="btn btn-gold btn-sm hw-daily-cta" id="hw-list-daily">⚔️ Desafíos</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-sentences">📜 Mis oraciones</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-settings">⚙️ Ajustes</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-parents">👨‍👩‍👧 Papás</button>
@@ -115,6 +115,7 @@
   <div id="screen-daily" class="container hw-daily hidden">
     <div class="hw-daily-top">
       <button class="btn btn-ghost btn-sm" id="hw-daily-back">← Volver</button>
+      <h1 class="hw-daily-h1">⚔️ Desafíos del Día</h1>
       <div class="hw-daily-tierbig" id="hw-daily-tierbig">🥉 Bronce</div>
     </div>
     <div class="hw-daily-hud">
@@ -131,7 +132,8 @@
 
     <div class="hw-daily-challenge" id="hw-daily-challenge"></div>
 
-    <div class="hw-daily-ladder-title">🎁 Premios secretos — ¡síguelos para descubrir!</div>
+    <div class="hw-daily-ladder-title">🎁 Premios secretos</div>
+    <div class="hw-daily-ladder-sub">Junta <strong>⚔️ DralySwords</strong> jugando cada día. Cada cofre es un <strong>premio sorpresa</strong> que tu maestra te dará en la vida real. 🤫</div>
     <div class="hw-daily-ladder" id="hw-daily-ladder"></div>
 
     <!-- 🎮 MINI-GAME ARENA — full-screen, spawns 3D objects to slash/tap -->
@@ -465,7 +467,7 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/homework.js?v=20260528o"></script>
+  <script src="/js/homework.js?v=20260528p"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>

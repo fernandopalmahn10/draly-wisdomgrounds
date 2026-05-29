@@ -2642,3 +2642,29 @@ button.hw-sent-chip:active { transform: scale(0.94); }
 .hw-reward-levelup { color: #5be8d1; }
 .hw-reward-ok { border: none; border-radius: 999px; font-weight: 900; font-size: 1.1rem; padding: 12px 30px; cursor: pointer; background: linear-gradient(135deg, #ffd24a, #ff7e3c); color: #3a1800; touch-action: manipulation; }
 .hw-reward-ok:active { transform: scale(0.95); }
+
+/* ── Desafíos del Día — refinements (title, sounds, slash trail, combos,
+      clearer prize ladder, practice replay) ──────────────────────────── */
+.hw-daily-top { position: relative; }
+.hw-daily-h1 { flex: 1; text-align: center; font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.15rem; color: #ffd24a; margin: 0; }
+.hw-daily-ladder-sub { font-size: 0.85rem; color: rgba(243,230,194,0.78); line-height: 1.45; margin: -4px 0 10px; }
+.hw-ladder-item.next { border-color: #5be8d1; box-shadow: 0 0 16px rgba(91,232,209,0.25); opacity: 1; }
+.hw-ladder-prog { height: 9px; border-radius: 999px; background: rgba(0,0,0,0.4); overflow: hidden; margin: 5px 0 4px; }
+.hw-ladder-progfill { display: block; height: 100%; background: linear-gradient(90deg, #5be8d1, #36b9c7); }
+.hw-dc-practice { background: linear-gradient(135deg, #8a7bff, #5b6cff) !important; color: #fff !important; font-size: 1rem !important; margin-top: 10px; }
+
+/* hint badge on each falling object (✂️ swipe / 👆 tap) */
+.hw-obj-hint { position: absolute; top: -6px; right: -2px; font-size: 1.4rem; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); pointer-events: none; }
+.hw-obj-hit .hw-obj-hint { display: none; }
+
+/* slash trail dots that follow the finger */
+.hw-trail { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.95), rgba(120,220,255,0.4)); transform: translate(-50%,-50%); pointer-events: none; animation: hwTrailFade 0.36s linear forwards; will-change: opacity, transform; }
+@keyframes hwTrailFade { 0% { opacity: 0.9; } 100% { opacity: 0; transform: translate(-50%,-50%) scale(0.4); } }
+
+/* burst particles on a hit */
+.hw-particle { position: absolute; width: 12px; height: 12px; border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; font-size: 1.2rem; line-height: 1; display: flex; align-items: center; justify-content: center; animation: hwParticle 0.6s ease-out forwards; will-change: transform, opacity; }
+@keyframes hwParticle { 0% { opacity: 1; transform: translate(-50%,-50%); } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.4); } }
+
+/* combo callout */
+.hw-combo { position: absolute; left: 50%; top: 28%; transform: translateX(-50%); font-family: 'Cinzel', serif; font-weight: 900; font-size: 2rem; color: #ffd24a; text-shadow: 0 0 16px rgba(255,160,60,0.9), 0 3px 6px rgba(0,0,0,0.6); pointer-events: none; animation: hwComboPop 0.8s ease-out forwards; z-index: 6; }
+@keyframes hwComboPop { 0% { opacity: 0; transform: translateX(-50%) scale(0.5); } 25% { opacity: 1; transform: translateX(-50%) scale(1.2); } 100% { opacity: 0; transform: translateX(-50%) scale(1) translateY(-40px); } }
