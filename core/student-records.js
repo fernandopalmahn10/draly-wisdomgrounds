@@ -411,12 +411,15 @@ const MAX_LEVEL = 20;
 function levelFromXp(xp) {
   return Math.min(MAX_LEVEL, Math.floor((Number(xp) || 0) / XP_PER_LEVEL) + 1);
 }
+// Mystical, brand-distinctive tier names — no generic bronze/silver. The
+// progression honors the Dralingo dragon arc (seed → bamboo → lotus → phoenix
+// → dragon) so kids feel like they're awakening something each level up.
 function tierForLevel(level) {
-  if (level >= 18) return { id: 'dragon', label: 'Dragón Dorado', emoji: '🐉', color: '#ffd24a' };
-  if (level >= 13) return { id: 'ruby',   label: 'Rubí',          emoji: '💎', color: '#ff5b7f' };
-  if (level >= 8)  return { id: 'gold',   label: 'Oro',           emoji: '🥇', color: '#ffcf5b' };
-  if (level >= 4)  return { id: 'jade',   label: 'Jade',          emoji: '🟢', color: '#5bef8a' };
-  return { id: 'bronze', label: 'Bronce', emoji: '🥉', color: '#cd8a52' };
+  if (level >= 18) return { id: 'dragon',  label: 'Dragón Despierto', emoji: '🐉', color: '#ffd24a' };
+  if (level >= 13) return { id: 'phoenix', label: 'Llama del Fénix',  emoji: '🔥', color: '#ff7a45' };
+  if (level >= 8)  return { id: 'lotus',   label: 'Sabio del Loto',   emoji: '🪷', color: '#ff5b9f' };
+  if (level >= 4)  return { id: 'bamboo',  label: 'Guardián del Bambú', emoji: '🎋', color: '#5be88a' };
+  return { id: 'seed', label: 'Semilla del Saber', emoji: '🌱', color: '#9be36b' };
 }
 // Read-only progression snapshot for a student (defaults for old records).
 function getProgress(code) {
@@ -519,6 +522,11 @@ function listAll() {
       sentenceCount:   Array.isArray(r.sentencesBuilt)         ? r.sentencesBuilt.length         : 0,
       testCount:       Array.isArray(r.testResults)            ? r.testResults.length            : 0,
       assignmentCount: Array.isArray(r.assignmentSubmissions)  ? r.assignmentSubmissions.length  : 0,
+      // Progression snapshot for the teacher's "Hoy ✅" Cuaderno column.
+      xp: Number(r.xp) || 0,
+      swords: Number(r.swords) || 0,
+      streak: Number(r.streak) || 0,
+      dailyDate: r.dailyDate || null,
     }))
     .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
 }

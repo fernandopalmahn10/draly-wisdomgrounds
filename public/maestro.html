@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260527a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260527a">
-  <link rel="stylesheet" href="/css/maestro.css?v=20260528g">
+  <link rel="stylesheet" href="/css/maestro.css?v=20260529a">
 </head>
 <body class="hw-bg">
 
@@ -39,6 +39,7 @@
         <button class="btn btn-gold btn-sm" id="m-live-master-btn" title="Invitar a estudiantes en línea a una sesión en vivo">🎯 Modo Maestro en vivo</button>
         <button class="btn btn-jade btn-sm" id="m-broadcast-btn">📢 Mensaje a toda la clase</button>
         <button class="btn btn-jade btn-sm" id="m-guides-btn" title="Subir guías de estudio en PDF para los papás">📘 Guías (PDF)</button>
+        <button class="btn btn-jade btn-sm hidden" id="m-emirati-btn" title="Tu gateway personal de idiomas">🌐 Mi Gateway · العربية</button>
         <button class="btn btn-ghost btn-sm" id="m-refresh">🔄 Refrescar</button>
         <button class="btn btn-ghost btn-sm" id="m-logout">Salir</button>
       </div>
@@ -73,6 +74,26 @@
           <button class="btn btn-jade btn-xl" id="m-guide-upload">⬆️ Subir guía</button>
           <p class="m-modal-msg" id="m-guide-msg"></p>
           <div class="m-guides-list" id="m-guides-list"></div>
+        </div>
+      </div>
+
+      <!-- 🌐 EMIRATI ARABIC GATEWAY — super-admin only personal language sidecar -->
+      <div id="m-emirati-modal" class="m-modal hidden">
+        <div class="m-modal-card m-emirati-card">
+          <button class="m-modal-close" id="m-emirati-close" type="button" aria-label="Cerrar">✕</button>
+          <div class="m-emirati-head">
+            <div class="m-emirati-title">🌐 Mi Gateway · العربية الإماراتية</div>
+            <div class="m-emirati-sub">5 palabras nuevas cada día — voz Google (MSA, lo más cercano al emiratí)</div>
+          </div>
+          <div class="m-emirati-hud">
+            <div class="m-emirati-stat"><strong id="m-em-seen">0</strong><span>/ <em id="m-em-total">0</em> palabras vistas</span></div>
+            <div class="m-emirati-stat">🔥 <strong id="m-em-streak">0</strong><span>días seguidos</span></div>
+          </div>
+          <div class="m-emirati-list" id="m-emirati-list">Cargando…</div>
+          <div class="m-emirati-actions">
+            <button class="btn btn-jade btn-sm" id="m-em-mark-all">✅ Marcar las 5 como vistas</button>
+            <button class="btn btn-ghost btn-sm" id="m-em-shuffle">🔁 Otras 5</button>
+          </div>
         </div>
       </div>
 
@@ -168,7 +189,7 @@
     </div>
   </div>
 
-  <script src="/js/warmup-vocab.js?v=20260525a"></script>
-  <script src="/js/maestro.js?v=20260528h"></script>
+  <script src="/js/warmup-vocab.js?v=20260529a"></script>
+  <script src="/js/maestro.js?v=20260529a"></script>
 </body>
 </html>

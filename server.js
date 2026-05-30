@@ -11,6 +11,31 @@ const ReadingStory = require('./core/reading-story');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
 const Guides = require('./core/guides');
+const Emirati = require('./core/emirati-vocab');
+// Tiny persistence for the owner's Emirati Arabic gateway (single global
+// profile, since this is a super-admin-only personal feature). Lives on the
+// same data disk as the rest of the JSON state.
+const _emFs = require('fs');
+const _emPath = require('path');
+const EMIRATI_FILE = _emPath.join(__dirname, 'data', 'emirati-progress.json');
+function _emiratiRead() {
+  try { return JSON.parse(_emFs.readFileSync(EMIRATI_FILE, 'utf8')); }
+  catch (_) { return { seen: [], streak: 0, lastDate: null }; }
+}
+function _emiratiWrite(state) {
+  try {
+    const dir = _emPath.dirname(EMIRATI_FILE);
+    if (!_emFs.existsSync(dir)) _emFs.mkdirSync(dir, { recursive: true });
+    _emFs.writeFileSync(EMIRATI_FILE, JSON.stringify(state, null, 2));
+  } catch (e) { console.warn('[emirati] write failed:', e.message); }
+}
+function _emiratiYesterday(dateStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ''));
+  if (!m) return null;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -159,6 +184,55 @@ function _adminAuth(req, res) {
   Teachers.touchLastSeen(teacher.teacherId);
   return { teacher, isSuperAdmin: !!teacher.isSuperAdmin, legacy: false };
 }
+// === 🌐 EMIRATI ARABIC GATEWAY (super-admin only) =====================
+// The platform owner's personal language-learning sidecar. Returns today's
+// 5 words deterministically by date, prioritizing words not yet seen. The
+// /api/tts endpoint already supports any Google Cloud voice via ?voice=,
+// so the client speaks Arabic by passing voice=ar-XA-Wavenet-A (MSA — the
+// closest standard voice to Emirati; an actual Khaleeji custom voice would
+// need a paid trained model).
+app.get('/api/maestro/emirati/today', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '')
+    ? req.query.date : new Date().toISOString().slice(0, 10);
+  const state = _emiratiRead();
+  const words = Emirati.todaysWords(date, state.seen || []);
+  res.json({
+    ok: true,
+    date,
+    words,
+    sections: Emirati.EMIRATI_SECTIONS,
+    progress: {
+      seenCount: (state.seen || []).length,
+      total: Emirati.EMIRATI_WORDS.length,
+      streak: state.streak || 0,
+      lastDate: state.lastDate || null,
+    },
+  });
+});
+app.post('/api/maestro/emirati/mark', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const { wordIds, date } = req.body || {};
+  if (!Array.isArray(wordIds)) return res.status(400).json({ ok: false, error: 'wordIds required' });
+  const state = _emiratiRead();
+  const seen = new Set(state.seen || []);
+  wordIds.forEach((id) => { if (typeof id === 'string') seen.add(id); });
+  state.seen = Array.from(seen);
+  const today = /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date : new Date().toISOString().slice(0, 10);
+  if (state.lastDate !== today) {
+    state.streak = (state.lastDate && state.lastDate === _emiratiYesterday(today))
+      ? (Number(state.streak) || 0) + 1
+      : 1;
+    state.lastDate = today;
+  }
+  _emiratiWrite(state);
+  res.json({ ok: true, progress: { seenCount: state.seen.length, total: Emirati.EMIRATI_WORDS.length, streak: state.streak, lastDate: state.lastDate } });
+});
+
 app.get('/api/admin/students', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
@@ -1008,7 +1082,9 @@ function _dailyThemeFor(dateStr) {
 }
 function _todayServer() { return new Date().toISOString().slice(0, 10); }
 // Sword milestones — locked SECRET prizes (real reward arranged by teacher).
-const DAILY_MILESTONES = [300, 800, 1600, 3000, 5000];
+// Smaller / quicker milestones so the FIRST prize feels reachable. Kids hit
+// chest #1 in about 1 day, #2 in ~2-3 days, #3 in ~1 week. Tunable here.
+const DAILY_MILESTONES = [30, 50, 100];
 app.get('/api/homework/daily', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.query.studentCode);

@@ -704,3 +704,34 @@ body.hw-bg {
 .m-note-item-text { flex: 1; font-size: 0.85rem; color: #f3e6c2; }
 .m-note-del { border: none; background: none; cursor: pointer; font-size: 0.9rem; }
 .m-notes-empty { font-size: 0.82rem; color: rgba(243,230,194,0.5); }
+
+/* ─── Daily-completion chip in Cuaderno ──────────────────────────── */
+.m-row-daily { background: rgba(255,170,40,0.16); color: #ffb46b; border: 1px solid rgba(255,170,40,0.45); }
+.m-row-daily.is-done { background: rgba(91,232,138,0.18); color: #5be88a; border-color: rgba(91,232,138,0.55); }
+
+/* ─── 🌐 Emirati Arabic Gateway modal ────────────────────────────── */
+.m-emirati-card { max-width: 720px; max-height: 90dvh; overflow-y: auto; background: linear-gradient(160deg, rgba(40,55,90,0.99), rgba(20,28,52,0.99)); border: 3px solid #ffd24a; }
+.m-emirati-head { text-align: center; margin-bottom: 14px; }
+.m-emirati-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; color: #ffd24a; }
+.m-emirati-sub { color: rgba(243,230,194,0.78); font-size: 0.86rem; margin-top: 4px; }
+.m-emirati-hud { display: flex; gap: 18px; justify-content: center; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 14px; margin-bottom: 16px; }
+.m-emirati-stat { display: flex; flex-direction: column; align-items: center; color: #fff5d8; font-weight: 900; font-size: 1.2rem; }
+.m-emirati-stat span { font-size: 0.7rem; font-weight: 700; opacity: 0.7; }
+.m-emirati-list { display: flex; flex-direction: column; gap: 12px; }
+.m-em-card { background: rgba(20,28,50,0.6); border: 1px solid rgba(255,210,74,0.3); border-radius: 14px; padding: 14px; }
+.m-em-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.m-em-section { font-size: 0.82rem; color: rgba(243,230,194,0.7); font-weight: 800; }
+.m-em-speak { border: 2px solid rgba(255,210,74,0.55); background: rgba(255,210,74,0.16); color: #ffd24a; font-weight: 900; padding: 6px 12px; border-radius: 999px; cursor: pointer; touch-action: manipulation; }
+.m-em-speak:active { transform: scale(0.94); }
+.m-em-ar { font-family: 'Noto Sans Arabic', serif; font-size: 2.2rem; font-weight: 900; color: #fff; text-align: right; direction: rtl; margin: 4px 0; text-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+.m-em-tr { font-weight: 800; color: #ffd24a; font-size: 1.05rem; }
+.m-em-en { color: rgba(243,230,194,0.85); font-style: italic; font-size: 0.92rem; margin-bottom: 8px; }
+.m-em-sentences { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; padding-left: 10px; border-left: 3px solid rgba(255,210,74,0.4); }
+.m-em-s { display: flex; flex-direction: column; }
+.m-em-s .m-em-tr { font-size: 0.92rem; color: #fff5d8; }
+.m-em-s .m-em-en { font-size: 0.78rem; opacity: 0.75; margin: 0; }
+.m-em-mark { width: 100%; margin-top: 8px; border: none; border-radius: 12px; background: rgba(91,232,138,0.18); color: #5be88a; font-weight: 900; padding: 10px; cursor: pointer; touch-action: manipulation; }
+.m-em-mark:active { transform: scale(0.97); }
+.m-em-mark.done { background: rgba(91,232,138,0.42); color: #0a3a1e; }
+.m-emirati-actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
+.m-empty { text-align: center; padding: 24px; color: rgba(243,230,194,0.65); font-style: italic; }

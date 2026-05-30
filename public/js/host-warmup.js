@@ -537,7 +537,7 @@
     const showPic = (currentViewMode === 'picture' || currentViewMode === 'both');
     const showEmoji = (currentViewMode === 'text' || currentViewMode === 'both');
     const pic = showPic
-      ? `<img class="wu-lib-pic" src="/assets/warmup/${w.id}.png" alt="${w.pinyin}"
+      ? `<img class="wu-lib-pic" src="${(window.wuPicSrc ? window.wuPicSrc(w) : '/assets/warmup/' + w.id + '.png')}" alt="${w.pinyin}"
             onerror="this.classList.add('missing')">`
       : '';
     const ic = showEmoji
@@ -578,7 +578,7 @@
         + (selectedSwapIdx === i ? ' swap-selected' : '');
       p.style.setProperty('--cat-color', color);
       const pic = showPic
-        ? `<img class="wu-sw-pic" src="/assets/warmup/${w.id}.png" alt="${w.pinyin}"
+        ? `<img class="wu-sw-pic" src="${(window.wuPicSrc ? window.wuPicSrc(w) : '/assets/warmup/' + w.id + '.png')}" alt="${w.pinyin}"
               onerror="this.classList.add('missing')">`
         : '';
       const ic = showEmoji ? `<span class="wu-sw-icon">${w.icon || ''}</span>` : '';

@@ -152,6 +152,91 @@
   if ($('m-guides-close')) $('m-guides-close').addEventListener('click', () => guidesModal.classList.add('hidden'));
   if (guidesModal) guidesModal.addEventListener('click', (e) => { if (e.target === guidesModal) guidesModal.classList.add('hidden'); });
 
+  // ── 🌐 EMIRATI ARABIC GATEWAY (super-admin only) ──────────────────
+  const emBtn = $('m-emirati-btn');
+  const emModal = $('m-emirati-modal');
+  if (emBtn) emBtn.addEventListener('click', () => { emModal.classList.remove('hidden'); loadEmirati(); });
+  if ($('m-emirati-close')) $('m-emirati-close').addEventListener('click', () => emModal.classList.add('hidden'));
+  if (emModal) emModal.addEventListener('click', (e) => { if (e.target === emModal) emModal.classList.add('hidden'); });
+  if ($('m-em-shuffle')) $('m-em-shuffle').addEventListener('click', loadEmirati);
+  if ($('m-em-mark-all')) $('m-em-mark-all').addEventListener('click', () => {
+    if (!_emToday.length) return;
+    fetch('/api/maestro/emirati/mark?pw=' + encodeURIComponent(pw), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wordIds: _emToday.map((w) => w.id), date: new Date().toISOString().slice(0, 10) }),
+    }).then((r) => r.json()).then((d) => { if (d && d.ok) { applyEmiratiHud(d.progress); loadEmirati(true); } });
+  });
+  let _emToday = [];
+  function loadEmirati(reshuffle) {
+    const list = $('m-emirati-list');
+    if (list) list.textContent = 'Cargando…';
+    // Cache-bust the GET when re-shuffling so we re-pick from the unseen pool.
+    const date = new Date().toISOString().slice(0, 10) + (reshuffle ? '#' + Date.now() : '');
+    fetch('/api/maestro/emirati/today?pw=' + encodeURIComponent(pw) + '&date=' + encodeURIComponent(date.slice(0, 10)))
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d || !d.ok) { if (list) list.textContent = 'Error: ' + (d && d.error || 'no se pudo cargar'); return; }
+        _emToday = d.words || [];
+        applyEmiratiHud(d.progress);
+        renderEmiratiWords(_emToday, d.sections);
+      })
+      .catch((e) => { if (list) list.textContent = 'Error: ' + e.message; });
+  }
+  function applyEmiratiHud(p) {
+    if (!p) return;
+    if ($('m-em-seen'))   $('m-em-seen').textContent   = p.seenCount;
+    if ($('m-em-total'))  $('m-em-total').textContent  = p.total;
+    if ($('m-em-streak')) $('m-em-streak').textContent = p.streak;
+  }
+  function renderEmiratiWords(words, sections) {
+    const list = $('m-emirati-list'); if (!list) return;
+    if (!words.length) { list.innerHTML = '<div class="m-empty">¡Has visto todas las palabras disponibles! 🎉</div>'; return; }
+    list.innerHTML = '';
+    words.forEach((w) => {
+      const sec = sections && sections[w.section];
+      const card = document.createElement('div');
+      card.className = 'm-em-card';
+      let ses = '';
+      if (Array.isArray(w.ses) && w.ses.length) {
+        ses = '<div class="m-em-sentences">'
+          + w.ses.map((s) => `<div class="m-em-s"><span class="m-em-tr">${escapeHtml(s.tr)}</span><span class="m-em-en">${escapeHtml(s.en)}</span></div>`).join('')
+          + '</div>';
+      }
+      card.innerHTML = `
+        <div class="m-em-row">
+          <div class="m-em-section">${sec ? (sec.icon + ' ' + escapeHtml(sec.label)) : ''}</div>
+          <button class="m-em-speak" type="button" data-ar="${escapeHtml(w.ar)}" title="Escuchar (Google MSA)">🔊</button>
+        </div>
+        <div class="m-em-ar" lang="ar" dir="rtl">${escapeHtml(w.ar)}</div>
+        <div class="m-em-tr">${escapeHtml(w.tr)}</div>
+        <div class="m-em-en">${escapeHtml(w.en)}</div>
+        ${ses}
+        <button class="m-em-mark" type="button" data-id="${escapeHtml(w.id)}">✓ Marcar como vista</button>`;
+      list.appendChild(card);
+    });
+    list.querySelectorAll('.m-em-speak').forEach((b) => b.addEventListener('click', (e) => {
+      speakEmirati(b.dataset.ar, b);
+    }));
+    list.querySelectorAll('.m-em-mark').forEach((b) => b.addEventListener('click', () => {
+      fetch('/api/maestro/emirati/mark?pw=' + encodeURIComponent(pw), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wordIds: [b.dataset.id], date: new Date().toISOString().slice(0, 10) }),
+      }).then((r) => r.json()).then((d) => {
+        if (d && d.ok) { applyEmiratiHud(d.progress); b.textContent = '✓ Vista'; b.disabled = true; b.classList.add('done'); }
+      });
+    }));
+  }
+  let _emAudio = null;
+  function speakEmirati(arText, btn) {
+    try { if (_emAudio) { _emAudio.pause(); _emAudio = null; } } catch (_) {}
+    const url = '/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText);
+    _emAudio = new Audio(url);
+    if (btn) { btn.textContent = '🔊 …'; }
+    _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
+    _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
+    _emAudio.addEventListener('error', () => { if (btn) btn.textContent = '⚠️'; });
+  }
+
   function loadGuidesList() {
     const list = $('m-guides-list');
     if (!list) return;
@@ -388,6 +473,9 @@
       // Show tabs only for super admin
       const tabs = $('m-tabs');
       if (tabs) tabs.classList.toggle('hidden', !isSuper);
+      // Reveal the personal Emirati gateway only for the super admin (owner).
+      const emBtn = $('m-emirati-btn');
+      if (emBtn) emBtn.classList.toggle('hidden', !isSuper);
     }
     // Show only students with ANY activity
     students = students.filter((s) =>
@@ -468,6 +556,10 @@
         <span class="m-row-code">${escapeHtml(s.code)}</span>
         <span class="m-row-name">${escapeHtml(s.displayName || 'Anon')}</span>
         <span class="m-row-counts">
+          <span class="m-row-c m-row-daily ${s.dailyDate === (new Date().toISOString().slice(0,10)) ? 'is-done' : ''}" title="Desafío del día"
+            >${s.dailyDate === (new Date().toISOString().slice(0,10)) ? '✅' : '⌛'} Hoy</span>
+          <span class="m-row-c" title="DralySwords ⚔️">⚔️ ${s.swords || 0}</span>
+          <span class="m-row-c" title="Racha de días">🔥 ${s.streak || 0}</span>
           <span class="m-row-c" title="Oraciones escritas">📝 ${s.sentenceCount}</span>
           <span class="m-row-c" title="Tareas entregadas">📚 ${s.assignmentCount}</span>
           <span class="m-row-c" title="Exámenes de lectura">🏆 ${s.testCount}</span>
