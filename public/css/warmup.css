@@ -404,32 +404,33 @@ body.wu-bg .market-banner {
 .wu-lib-card:active { transform: scale(0.95); }
 .wu-lib-icon  { font-size: 1.4rem; line-height: 1; }
 .wu-lib-pic {
-  width: 48px; height: 48px;
+  width: 84px; height: 84px;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
 }
 .wu-lib-pic.missing { display: none; }
 .wu-lib-pinyin { font-size: 1.1rem; font-weight: 900; color: var(--cat-color, #fff); text-shadow: 0 0 8px var(--cat-color, transparent); }
 .wu-lib-hanzi { font-size: 0.95rem; font-weight: 700; color: #fff; opacity: 0.85; }
 .wu-lib-es { font-size: 0.75rem; font-style: italic; opacity: 0.75; }
 
-/* Picture in the stage word card */
+/* Picture in the stage word card — BIGGER so a 5-8 word sentence stays
+   the centerpiece of the board (user feedback: "they're too freaking small"). */
 .wu-sw-pic {
-  width: 60px; height: 60px;
+  width: clamp(110px, 14vmin, 160px); height: clamp(110px, 14vmin, 160px);
   object-fit: contain;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
 }
 .wu-sw-pic.missing { display: none; }
-.wu-stage-word.picture-only .wu-sw-pic { width: 92px; height: 92px; }
+.wu-stage-word.picture-only .wu-sw-pic { width: clamp(160px, 22vmin, 240px); height: clamp(160px, 22vmin, 240px); }
 
 /* Picture in the player phone word */
 .wu-pw-pic {
-  width: 50px; height: 50px;
+  width: clamp(78px, 18vmin, 130px); height: clamp(78px, 18vmin, 130px);
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.55));
 }
 .wu-pw-pic.missing { display: none; }
-.wu-player-word.picture-only .wu-pw-pic { width: 80px; height: 80px; }
+.wu-player-word.picture-only .wu-pw-pic { width: clamp(130px, 26vmin, 200px); height: clamp(130px, 26vmin, 200px); }
 
 /* ============================ PLAYER PHONE ============================ */
 .wu-player-screen {

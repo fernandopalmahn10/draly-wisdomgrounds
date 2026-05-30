@@ -736,7 +736,34 @@
     if (cat === 'family' || cat === 'pronoun' || cat === 'greet') return 'pet';  // 🐶 gentle
     return 'launch';                                          // 🏃 verbs/abstract
   }
-  const DAILY_GAME = { active: false, practice: false, goal: 8, done: 0, correct: 0, pool: [], spawnT: null, slashing: false, combo: 0, comboT: null };
+  const DAILY_GAME = { active: false, practice: false, goal: 8, done: 0, correct: 0, pool: [], spawnT: null, slashing: false, combo: 0, comboT: null, discovered: [] };
+  // ── Story characters — the daily picks one each day so it FEELS like a
+  // game beat, not just tapping. Reuses the FX-summon PNGs already on disk.
+  const DAILY_CHARS = [
+    { id: 'gojo',     img: '/assets/png-library/gojo.png',     intros: ['¡Hola! Hoy: {theme}. Limit Break 🌀', 'Soy Gojo. Te traje palabras secretas.'], outros: ['¡Limit Break perfecto!', '¡Volveré mañana, futuro maestro!'] },
+    { id: 'yuji',     img: '/assets/png-library/yuji.png',     intros: ['¡Vamos! 👊 Hoy: {theme}.', '¡A entrenar sin miedo!'], outros: ['¡Buen combo, amigo! 💪', '¡Más fuerte cada día!'] },
+    { id: 'fnaf',     img: '/assets/png-library/fnaf.png',     intros: ['Bienvenido a la noche. 🌙 Tema: {theme}.', '¿Sobrevives 5 palabras?'], outros: ['Sobreviviste… por hoy. 😈', 'Vuelve mañana o despertaré.'] },
+    { id: 'shelly',   img: '/assets/png-library/shelly.png',   intros: ['¡BOOM! 💥 Hoy: {theme}.', '¡Vamos a reventarlo!'], outros: ['¡BOOM! Perfecto.', '¡Otra ronda mañana!'] },
+    { id: 'dandy',    img: '/assets/png-library/dandy.png',    intros: ['Welcome 🎩 al tema {theme}.', 'Hoy seré tu guía.'], outros: ['¡Eres un buen amigo!', 'Nos vemos en el siguiente mundo.'] },
+    { id: 'dralingo', img: '/assets/dralingo.png',              intros: ['¡Hola dragón! 🐉 Hoy: {theme}.', 'Vamos a aprender juntos.'], outros: ['¡Estoy orgulloso de ti! 🐉', 'Volveremos al amanecer.'] },
+  ];
+  function dailyCharFor(dateStr) {
+    let h = 0; for (let i = 0; i < dateStr.length; i++) h = (h * 31 + dateStr.charCodeAt(i)) >>> 0;
+    return DAILY_CHARS[h % DAILY_CHARS.length];
+  }
+  function showDailyStory(char, line, kind, onDone) {
+    const game = $('hw-game'); if (!game) { if (onDone) onDone(); return; }
+    const wrap = document.createElement('div');
+    wrap.className = 'hw-story hw-story-' + kind;
+    wrap.innerHTML = '<img class="hw-story-char" src="' + char.img + '" alt="' + char.id + '" onerror="this.style.display=\'none\'">'
+      + '<div class="hw-story-bubble">' + escapeHtml(line) + '</div>';
+    game.appendChild(wrap);
+    requestAnimationFrame(() => wrap.classList.add('show'));
+    setTimeout(() => {
+      wrap.classList.remove('show');
+      setTimeout(() => { wrap.remove(); if (onDone) onDone(); }, 250);
+    }, kind === 'outro' ? 1500 : 1800);
+  }
   let _arenaBound = false;
   function startDailyGame(practice) {
     const d = dailyData; if (!d) return;
@@ -746,10 +773,13 @@
     DAILY_GAME.goal = d.theme.goal || 8;
     DAILY_GAME.done = 0; DAILY_GAME.correct = 0; DAILY_GAME.active = true;
     DAILY_GAME.practice = !!practice; DAILY_GAME.combo = 0;
+    DAILY_GAME.discovered = [];
     dailyAC();  // unlock audio on this user gesture
     $('hw-game').classList.remove('hidden');
     $('hw-game').classList.toggle('is-practice', !!practice);
-    if ($('hw-game-theme')) $('hw-game-theme').textContent = (practice ? '🔁 Práctica · ' : '') + (((window.WU_EXPERIENCES || {})[d.theme.exp] || {}).short || '');
+    const expShort = ((window.WU_EXPERIENCES || {})[d.theme.exp] || {}).short || '';
+    const expLabel = ((window.WU_EXPERIENCES || {})[d.theme.exp] || {}).label || expShort;
+    if ($('hw-game-theme')) $('hw-game-theme').textContent = (practice ? '🔁 Práctica · ' : '') + expShort;
     updateGameHud();
     const arena = $('hw-game-arena');
     if (arena) {
@@ -764,7 +794,11 @@
         window.addEventListener('pointercancel', () => { DAILY_GAME.slashing = false; });
       }
     }
-    scheduleSpawn();
+    // Character intro: a daily story beat so it feels like a game, not just
+    // tapping. Same character all day; rotates with the date.
+    DAILY_GAME.char = dailyCharFor(localDateStr());
+    const intro = DAILY_GAME.char.intros[Math.floor(Math.random() * DAILY_GAME.char.intros.length)].replace('{theme}', expLabel);
+    showDailyStory(DAILY_GAME.char, intro, 'intro', () => scheduleSpawn());
   }
   function dailyTrail(e) {
     const arena = $('hw-game-arena'); if (!arena) return;
@@ -848,6 +882,8 @@
       if (viaSwipe) bumpCombo(); else { DAILY_GAME.combo = 0; }
       revealDailyWord(w, action);
       DAILY_GAME.done++; DAILY_GAME.correct++;
+      // Keep the wordlist they'll use in the Sentence Bonus afterwards.
+      if (DAILY_GAME.discovered.indexOf(w.id) < 0) DAILY_GAME.discovered.push(w.id);
       updateGameHud();
       setTimeout(() => el.remove(), 520);
       if (DAILY_GAME.done >= DAILY_GAME.goal) endDailyGame();
@@ -879,31 +915,130 @@
     if (DAILY_GAME.spawnT) { clearTimeout(DAILY_GAME.spawnT); DAILY_GAME.spawnT = null; }
     setTimeout(() => { const a = $('hw-game-arena'); if (a) a.innerHTML = ''; }, 420);
     try { dailySfx.win(); } catch (_) {}
-    // Practice replay (already done today) → NO double rewards, just celebrate.
-    if (DAILY_GAME.practice) {
-      $('hw-game').classList.add('hidden');
-      showDailyReward({ ok: false, reason: 'practice' });
-      return;
+    // Outro story beat → THEN sentence bonus → THEN reward.
+    const char = DAILY_GAME.char || dailyCharFor(localDateStr());
+    const outro = char.outros[Math.floor(Math.random() * char.outros.length)];
+    showDailyStory(char, outro, 'outro', () => {
+      // Practice replay → no rewards, no bonus, straight to celebration.
+      if (DAILY_GAME.practice) {
+        $('hw-game').classList.add('hidden');
+        showDailyReward({ ok: false, reason: 'practice' });
+        return;
+      }
+      fetch('/api/homework/daily/complete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentCode, accessCode, date: localDateStr(), correct: DAILY_GAME.correct }),
+      }).then((r) => r.json()).then((res) => {
+        // If they discovered enough words, offer the Sentence Bonus.
+        if (DAILY_GAME.discovered.length >= 2 && (!res || res.ok || res.reason === 'already')) {
+          openSentenceBonus(DAILY_GAME.discovered.slice(), res);
+        } else {
+          $('hw-game').classList.add('hidden');
+          showDailyReward(res);
+        }
+      }).catch(() => { $('hw-game').classList.add('hidden'); renderDailyHome(); });
+    });
+  }
+  // ── 🎁 SENTENCE BONUS — arrange today's discovered words into a sentence
+  // (free-form, expressive). +1 ⚔️ + saved to Mis oraciones. Once per day.
+  let _bonusWords = [];      // pool the kid can still drop into the sentence
+  let _bonusBuilt = [];      // words the kid has picked, in order
+  function openSentenceBonus(wordIds, completeRes) {
+    _bonusWords = wordIds.slice();
+    _bonusBuilt = [];
+    const game = $('hw-game'); if (!game) return;
+    // Re-use the game overlay as the bonus stage so we keep the focus.
+    const arena = $('hw-game-arena'); if (arena) arena.innerHTML = '';
+    let panel = document.getElementById('hw-bonus');
+    if (!panel) {
+      panel = document.createElement('div'); panel.id = 'hw-bonus'; panel.className = 'hw-bonus';
+      game.appendChild(panel);
     }
-    fetch('/api/homework/daily/complete', {
+    game.classList.add('is-bonus');
+    panel.innerHTML = `
+      <div class="hw-bonus-head">🎁 Bono · Arma una oración con tus palabras</div>
+      <div class="hw-bonus-stage" id="hw-bonus-stage"></div>
+      <div class="hw-bonus-pool" id="hw-bonus-pool"></div>
+      <div class="hw-bonus-bar">
+        <button class="hw-bonus-skip" id="hw-bonus-skip" type="button">Saltar</button>
+        <button class="hw-bonus-listen" id="hw-bonus-listen" type="button">🔊 Oír</button>
+        <button class="hw-bonus-save" id="hw-bonus-save" type="button">💾 Guardar oración +1 ⚔️</button>
+      </div>`;
+    renderBonus(completeRes);
+    $('hw-bonus-skip').addEventListener('click', () => closeBonus(completeRes));
+    $('hw-bonus-listen').addEventListener('click', (e) => {
+      const py = _bonusBuilt.map((wid) => (window.WU_WORD_BY_ID[wid] || {}).pinyin).filter(Boolean).join(' ');
+      if (py) speakChinese(py, e.currentTarget);
+    });
+    $('hw-bonus-save').addEventListener('click', () => submitBonus(completeRes));
+  }
+  function renderBonus(completeRes) {
+    const stage = $('hw-bonus-stage'); const pool = $('hw-bonus-pool');
+    if (!stage || !pool) return;
+    stage.innerHTML = '';
+    _bonusBuilt.forEach((wid, idx) => {
+      const w = (window.WU_WORD_BY_ID || {})[wid]; if (!w) return;
+      const cat = (window.WU_CATEGORIES || {})[w.cat];
+      const chip = document.createElement('button');
+      chip.type = 'button'; chip.className = 'hw-bonus-chip on-stage';
+      chip.style.setProperty('--cat-color', cat ? cat.color : '#ffe082');
+      chip.innerHTML = '<span class="hw-bonus-py">' + escapeHtml(w.pinyin) + '</span><span class="hw-bonus-es">' + escapeHtml(w.es || '') + '</span>';
+      chip.addEventListener('click', () => {
+        _bonusBuilt.splice(idx, 1); _bonusWords.push(wid); renderBonus(completeRes);
+      });
+      stage.appendChild(chip);
+    });
+    if (!_bonusBuilt.length) stage.innerHTML = '<span class="hw-bonus-empty">Toca palabras abajo para armar tu oración ↓</span>';
+    pool.innerHTML = '';
+    _bonusWords.forEach((wid, idx) => {
+      const w = (window.WU_WORD_BY_ID || {})[wid]; if (!w) return;
+      const cat = (window.WU_CATEGORIES || {})[w.cat];
+      const chip = document.createElement('button');
+      chip.type = 'button'; chip.className = 'hw-bonus-chip in-pool';
+      chip.style.setProperty('--cat-color', cat ? cat.color : '#ffe082');
+      chip.innerHTML = '<span class="hw-bonus-py">' + escapeHtml(w.pinyin) + '</span><span class="hw-bonus-es">' + escapeHtml(w.es || '') + '</span>';
+      chip.addEventListener('click', () => {
+        _bonusBuilt.push(wid); _bonusWords.splice(idx, 1); renderBonus(completeRes);
+      });
+      pool.appendChild(chip);
+    });
+  }
+  function submitBonus(completeRes) {
+    if (_bonusBuilt.length < 2) { alert('Usa al menos 2 palabras.'); return; }
+    fetch('/api/homework/daily/sentence-bonus', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentCode, accessCode, date: localDateStr(), correct: DAILY_GAME.correct }),
-    }).then((r) => r.json()).then((res) => {
-      $('hw-game').classList.add('hidden');
-      showDailyReward(res);
-    }).catch(() => { $('hw-game').classList.add('hidden'); renderDailyHome(); });
+      body: JSON.stringify({ studentCode, accessCode, date: localDateStr(), wordIds: _bonusBuilt }),
+    }).then((r) => r.json()).then((bonus) => {
+      // Merge bonus into the rewardResult so the final overlay shows the +1.
+      const merged = Object.assign({}, completeRes || { ok: true, gained: {}, progress: null });
+      if (bonus && bonus.ok) {
+        merged.bonusGained = bonus.gained;
+        if (bonus.progress) merged.progress = bonus.progress;
+      } else if (bonus && bonus.reason === 'already') {
+        merged.bonusAlready = true;
+      }
+      closeBonus(merged);
+    }).catch(() => closeBonus(completeRes));
+  }
+  function closeBonus(rewardResult) {
+    const game = $('hw-game'); if (game) { game.classList.remove('is-bonus'); game.classList.add('hidden'); }
+    const panel = document.getElementById('hw-bonus'); if (panel) panel.remove();
+    showDailyReward(rewardResult);
   }
   function showDailyReward(res) {
     const rw = $('hw-reward'); if (!rw) return;
     if (res && res.ok) {
       const g = res.gained || {}; const p = res.progress || {};
       if (dailyData) { dailyData.progress = p; dailyData.doneToday = true; }
+      const bonus = res.bonusGained || {};
+      const totalSwords = (g.swords || 0) + (bonus.swords || 0);
       rw.innerHTML = '<div class="hw-reward-card">'
         + '<div class="hw-reward-burst">🎉</div>'
         + '<div class="hw-reward-title">¡Reto completado!</div>'
         + '<div class="hw-reward-rows">'
         + '<div class="hw-reward-row">⭐ +' + (g.xp || 0) + ' XP</div>'
-        + '<div class="hw-reward-row">⚔️ +' + (g.swords || 0) + ' DralySwords</div>'
+        + '<div class="hw-reward-row">⚔️ +' + totalSwords + ' DralySword' + (totalSwords === 1 ? '' : 's')
+          + (bonus.swords ? ' <span class="hw-reward-bonus">(+' + bonus.swords + ' bono oración 🎁)</span>' : '') + '</div>'
         + '<div class="hw-reward-row">🔥 Racha: ' + (p.streak || 0) + ' día' + ((p.streak || 0) === 1 ? '' : 's') + '</div>'
         + (res.leveledUp ? '<div class="hw-reward-row hw-reward-levelup">🆙 ¡Subiste a Nivel ' + res.newLevel + '!</div>' : '')
         + '</div><button class="hw-reward-ok" id="hw-reward-ok" type="button">¡Genial!</button></div>';

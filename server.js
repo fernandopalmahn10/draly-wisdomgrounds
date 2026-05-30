@@ -1109,6 +1109,29 @@ app.post('/api/homework/daily/complete', (req, res) => {
   const result = Students.awardDaily(rec.code, d, correct);
   res.json(Object.assign({ ok: result.ok, reason: result.reason }, result));
 });
+// Sentence-bonus: after the slash game, the kid arranges the words they
+// discovered into a sentence. +1 ⚔️ and the sentence is saved to their
+// Mis oraciones. Idempotent per day so they can't farm it.
+app.post('/api/homework/daily/sentence-bonus', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, date, wordIds } = req.body || {};
+  const rec = Students.get(studentCode);
+  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  if (!Array.isArray(wordIds) || wordIds.length < 2) {
+    return res.json({ ok: false, reason: 'short' });
+  }
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date : _todayServer();
+  if (rec.bonusDate === d) {
+    return res.json({ ok: false, reason: 'already', progress: Students.getProgress(rec.code) });
+  }
+  // Save the sentence + award +1 sword. appendSentence calls scheduleSave
+  // internally, which will persist the rec.swords and rec.bonusDate edits
+  // below on the same in-memory record.
+  rec.swords = (Number(rec.swords) || 0) + 1;
+  rec.bonusDate = d;
+  Students.appendSentence(rec.code, wordIds.slice(0, 12), 'daily-bonus');
+  res.json({ ok: true, gained: { swords: 1 }, progress: Students.getProgress(rec.code) });
+});
 
 // Review a PAST assignment attempt — best submission's breakdown so the kid
 // sees which sentences they got wrong + the correct answer.
@@ -1330,9 +1353,10 @@ app.get('/api/tts', async (req, res) => {
   if (!text) return res.status(400).json({ ok: false, error: 'missing text' });
   if (text.length > 200) return res.status(400).json({ ok: false, error: 'text too long' });
   // Whitelist voice names to prevent abuse (and typos that 404 at Google).
-  // Accepts both cmn-CN-* (Mandarin, current Google naming) and the
-  // legacy zh-CN-* form, plus cmn-TW-* (Taiwanese Mandarin).
-  if (!/^(cmn|zh)-(CN|TW)-[A-Za-z0-9-]+$/.test(voice)) {
+  // Mandarin (cmn-CN / cmn-TW / legacy zh-CN) is the primary use case;
+  // we also allow ar-XA (Arabic — MSA) for the owner's Emirati gateway.
+  if (!/^(cmn|zh)-(CN|TW)-[A-Za-z0-9-]+$/.test(voice)
+      && !/^ar-XA-[A-Za-z0-9-]+$/.test(voice)) {
     return res.status(400).json({ ok: false, error: 'invalid voice' });
   }
   const cachePath = _ttsCachePath(text, voice);
@@ -1348,11 +1372,14 @@ app.get('/api/tts', async (req, res) => {
   try {
     // Convert pinyin → hanzi for true Mandarin pronunciation. Sending
     // "wo ai mama" to a cmn-CN voice produces a confused tone-deaf
-    // reading. Sending "我爱妈妈" produces native pronunciation.
-    const chineseText = _convertPinyinToHanzi(text);
-    console.log('[tts] synth voice=' + voice + ' text=' + JSON.stringify(text) + ' → ' + JSON.stringify(chineseText));
+    // reading. Sending "我爱妈妈" produces native pronunciation. SKIP this
+    // conversion for non-Mandarin voices (Arabic etc.) — the conversion
+    // would mangle the native script.
+    const isMandarin = /^(cmn|zh)-/.test(voice);
+    const synthText = isMandarin ? _convertPinyinToHanzi(text) : text;
+    console.log('[tts] synth voice=' + voice + ' text=' + JSON.stringify(text) + ' → ' + JSON.stringify(synthText));
     const [out] = await client.synthesizeSpeech({
-      input: { text: chineseText },
+      input: { text: synthText },
       voice: { languageCode: _languageCodeFromVoice(voice), name: voice },
       audioConfig: {
         audioEncoding: 'MP3',

@@ -463,10 +463,14 @@ function awardDaily(code, localDate, correct) {
   rec.streak = (prev && prev === yesterday) ? (Number(rec.streak) || 0) + 1 : 1;
   rec.dailyDate = localDate;
   // Rewards — server-computed so the client can't inflate them.
+  // XP still scales with effort + streak (drives level progression), but the
+  // PRIZE currency is intentionally tiny — exactly 1 ⚔️ per completed daily.
+  // Milestones [30,50,100] then mean ~30 / ~50 / ~100 days of practice, so the
+  // secret prizes the teacher gives out really are hard-earned.
   const c = Math.max(0, Math.min(12, Number(correct) || 0));
   const streakBonus = Math.min(10, rec.streak);
   const xpGain = 40 + c * 8 + streakBonus * 5;
-  const swordGain = 15 + c * 3 + streakBonus * 2;
+  const swordGain = 1;
   const beforeLevel = levelFromXp(Number(rec.xp) || 0);
   rec.xp = (Number(rec.xp) || 0) + xpGain;
   rec.swords = (Number(rec.swords) || 0) + swordGain;

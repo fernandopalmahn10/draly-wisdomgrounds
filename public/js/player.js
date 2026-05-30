@@ -7902,6 +7902,16 @@
   socket.on('game-end', (data) => {
     MochiSounds.stopMusic();
     if (MochiSounds.stopGameTheme) MochiSounds.stopGameTheme();
+    // After Modo Maestro (warmup), kids skip the "Empate épico / Inicio"
+    // screen entirely and land straight in their /homework portal — no
+    // logout, no extra tap. (Other game types keep the celebration screen.)
+    if (gameType === 'warmup' && myStudentCode) {
+      try { showReconnectOverlay('Clase terminada. Llevándote a tu portal…'); } catch (_) {}
+      setTimeout(() => {
+        location.href = '/homework?code=' + encodeURIComponent(myStudentCode) + '&from=maestro';
+      }, 1800);
+      return;
+    }
     Dralingo.stopRandom();
     stopZombieAmbience();
     stopSixSevenAmbience();
