@@ -727,6 +727,32 @@ body.hw-bg {
    override yet). When you drop an MP3 in data/emirati-audio/{wordId}.mp3
    the badge disappears and the button plays your real Khaleeji audio. */
 .m-em-speak.m-em-speak-msa::after { content: 'MSA'; position: absolute; top: -8px; right: -10px; background: #ff7a45; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 2px 6px; border-radius: 999px; }
+
+/* ─── 🎯 Custom Assignments modal ─────────────────────────────────── */
+.m-custom-card { max-width: 760px; max-height: 92dvh; overflow-y: auto; }
+.m-cu-items-head, .m-cu-students-head, .m-cu-existing-head { font-weight: 900; color: #ffd24a; margin: 14px 0 8px; font-size: 0.95rem; }
+.m-cu-items { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.m-cu-item { display: grid; grid-template-columns: auto 1fr 1fr auto; gap: 8px; align-items: center; background: rgba(20,24,40,0.55); padding: 8px; border-radius: 12px; }
+.m-cu-item-num { color: #ffd24a; font-weight: 900; min-width: 22px; text-align: right; }
+.m-cu-item-es, .m-cu-item-px { font-size: 0.9rem; padding: 8px 10px; }
+.m-cu-item-del { border: none; background: rgba(239,107,107,0.22); color: #ff9a9a; width: 32px; height: 32px; border-radius: 50%; font-weight: 900; cursor: pointer; touch-action: manipulation; }
+.m-cu-item-del:active { transform: scale(0.92); }
+
+.m-cu-students-bar { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.m-cu-students-search { flex: 1; padding: 8px 10px; font-size: 0.9rem; }
+.m-cu-students { display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto; background: rgba(20,24,40,0.5); padding: 8px; border-radius: 12px; }
+.m-cu-student { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; touch-action: manipulation; }
+.m-cu-student:hover { background: rgba(255,255,255,0.06); }
+.m-cu-student.on { background: rgba(91,232,138,0.16); border-left: 3px solid #5be88a; }
+.m-cu-stu-code { font-family: 'Cinzel', serif; font-weight: 900; color: #ffd24a; font-size: 0.85rem; min-width: 60px; }
+.m-cu-stu-name { color: #fff5d8; font-size: 0.9rem; }
+
+.m-cu-existing { display: flex; flex-direction: column; gap: 6px; }
+.m-cu-ex { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: rgba(20,24,40,0.55); border-radius: 12px; border-left: 3px solid #ffd24a; }
+.m-cu-ex-info { flex: 1; min-width: 0; }
+.m-cu-ex-title { font-weight: 900; color: #fff5d8; }
+.m-cu-ex-meta { font-size: 0.78rem; color: rgba(243,230,194,0.65); }
+.m-cu-ex-del { color: #ff9a9a !important; }
 .m-em-ar { font-family: 'Noto Sans Arabic', serif; font-size: 2.2rem; font-weight: 900; color: #fff; text-align: right; direction: rtl; margin: 4px 0; text-shadow: 0 2px 6px rgba(0,0,0,0.5); }
 .m-em-tr { font-weight: 800; color: #ffd24a; font-size: 1.05rem; }
 .m-em-en { color: rgba(243,230,194,0.85); font-style: italic; font-size: 0.92rem; margin-bottom: 8px; }

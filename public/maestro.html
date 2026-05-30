@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260527a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260527a">
-  <link rel="stylesheet" href="/css/maestro.css?v=20260529d">
+  <link rel="stylesheet" href="/css/maestro.css?v=20260529e">
 </head>
 <body class="hw-bg">
 
@@ -39,6 +39,7 @@
         <button class="btn btn-gold btn-sm" id="m-live-master-btn" title="Invitar a estudiantes en línea a una sesión en vivo">🎯 Modo Maestro en vivo</button>
         <button class="btn btn-jade btn-sm" id="m-broadcast-btn">📢 Mensaje a toda la clase</button>
         <button class="btn btn-jade btn-sm" id="m-guides-btn" title="Subir guías de estudio en PDF para los papás">📘 Guías (PDF)</button>
+        <button class="btn btn-gold btn-sm" id="m-custom-btn" title="Mandar tareas personalizadas a alumnos específicos">🎯 Tarea especial</button>
         <button class="btn btn-jade btn-sm hidden" id="m-emirati-btn" title="Tu gateway personal de idiomas">🌐 Mi Gateway · العربية</button>
         <button class="btn btn-ghost btn-sm" id="m-refresh">🔄 Refrescar</button>
         <button class="btn btn-ghost btn-sm" id="m-logout">Salir</button>
@@ -94,6 +95,42 @@
             <button class="btn btn-jade btn-sm" id="m-em-mark-all">✅ Marcar las 5 como vistas</button>
             <button class="btn btn-ghost btn-sm" id="m-em-shuffle">🔁 Otras 5</button>
           </div>
+        </div>
+      </div>
+
+      <!-- 🎯 CUSTOM ASSIGNMENT MODAL — author + send a personalized tarea -->
+      <div id="m-custom-modal" class="m-modal hidden">
+        <div class="m-modal-card m-custom-card">
+          <button class="m-modal-close" id="m-custom-close" type="button" aria-label="Cerrar">✕</button>
+          <h2>🎯 Tarea especial</h2>
+          <p class="m-live-master-help">
+            Crea una tarea con tus propias oraciones y mándala a estudiantes específicos.
+            La aparecen arriba de las tareas HSK1 en su portal. <strong>Multi-banco</strong> —
+            pueden usar palabras de cualquier experiencia (no se bloquea el catálogo).
+          </p>
+          <label class="m-form-label">
+            <span>Título:</span>
+            <input class="input" id="m-cu-title" type="text" placeholder="Ej. Tarea de Lunes — saludos" maxlength="120">
+          </label>
+          <label class="m-form-label">
+            <span>Instrucciones (opcional):</span>
+            <input class="input" id="m-cu-instr" type="text" placeholder="Ej. Lee cada oración en voz alta y luego arma la traducción." maxlength="400">
+          </label>
+          <div class="m-cu-items-head">📝 Oraciones (mínimo 1, máximo 24)</div>
+          <div class="m-cu-items" id="m-cu-items"></div>
+          <button class="btn btn-ghost btn-sm" id="m-cu-add-item" type="button">➕ Agregar oración</button>
+          <div class="m-cu-students-head">👥 Estudiantes (marca a quién enviar)</div>
+          <div class="m-cu-students-bar">
+            <input class="input m-cu-students-search" id="m-cu-students-search" type="text" placeholder="Buscar por nombre o código…">
+            <button class="btn btn-ghost btn-sm" id="m-cu-students-all" type="button">Todos</button>
+            <button class="btn btn-ghost btn-sm" id="m-cu-students-none" type="button">Ninguno</button>
+          </div>
+          <div class="m-cu-students" id="m-cu-students"></div>
+          <p class="m-modal-msg" id="m-cu-msg"></p>
+          <button class="btn btn-jade btn-xl" id="m-cu-send" type="button">📤 Enviar tarea</button>
+
+          <div class="m-cu-existing-head">📂 Tus tareas activas</div>
+          <div class="m-cu-existing" id="m-cu-existing">Cargando…</div>
         </div>
       </div>
 
@@ -190,6 +227,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/maestro.js?v=20260529d"></script>
+  <script src="/js/maestro.js?v=20260529e"></script>
 </body>
 </html>

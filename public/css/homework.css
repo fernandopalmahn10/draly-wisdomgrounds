@@ -285,6 +285,16 @@ body.hw-bg {
 .hw-anchor-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .hw-anchor-btn:active:not(:disabled) { transform: scale(0.95); }
 .hw-anchor-btn.hw-anchor-next { background: linear-gradient(135deg, #5be8d1, #36b9c7); color: #07232a; border-color: #5be8d1; }
+
+/* ── 🎯 Tareas especiales (custom assignments) ────────────────────── */
+.hw-sec-custom { color: #ffd24a; }
+.hw-list-custom { margin-bottom: 14px; }
+.hw-custom-card { background: linear-gradient(160deg, rgba(80,60,30,0.65), rgba(40,30,20,0.85)) !important; border-color: #ffd24a !important; box-shadow: 0 0 20px rgba(255,210,74,0.25); }
+.hw-custom-card.is-passed { opacity: 0.85; }
+.hw-custom-card.is-pending .hw-folder-progress { color: #ffb46b; font-weight: 900; }
+.hw-custom-card .hw-folder-progress { color: #5be8d1; }
+.hw-custom-card:not(.is-passed):not(.is-pending) { animation: hwCustomPulse 2.2s ease-in-out infinite; }
+@keyframes hwCustomPulse { 0%,100% { box-shadow: 0 0 20px rgba(255,210,74,0.25); } 50% { box-shadow: 0 0 30px rgba(255,210,74,0.55); } }
 .hw-asg-library-title {
   font-weight: 800;
   color: #ffe082;
