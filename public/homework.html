@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260529b">
-  <link rel="stylesheet" href="/css/homework.css?v=20260529b">
+  <link rel="stylesheet" href="/css/homework.css?v=20260529c">
 </head>
 <body class="hw-bg">
 
@@ -428,11 +428,21 @@
 
     <div class="hw-asg-items" id="hw-asg-items"></div>
 
-    <!-- Word library — shared from warmup-vocab.js -->
-    <div class="hw-asg-library-section">
+    <!-- Word library — shared from warmup-vocab.js. JS moves this section
+         into the currently-active sentence item so kids see the catalog
+         right next to the slot they're filling. -->
+    <div class="hw-asg-library-section" id="hw-asg-library-section">
       <div class="hw-asg-library-title">
         📖 Catálogo de palabras
-        <span class="hw-asg-library-hint">Toca una palabra para añadirla a la oración activa</span>
+        <span class="hw-asg-library-hint">Toca una palabra para añadirla a esta oración</span>
+      </div>
+      <!-- 📌 Anchored navigation: stays with the catalog as it follows the
+           active item, so kids can advance through the sentences without
+           scrolling to find the next slot. -->
+      <div class="hw-anchor-nav">
+        <button class="hw-anchor-btn" id="hw-anchor-prev" type="button">← Anterior</button>
+        <span class="hw-anchor-pos" id="hw-anchor-pos">Oración 1 / 1</span>
+        <button class="hw-anchor-btn hw-anchor-next" id="hw-anchor-next" type="button">Siguiente →</button>
       </div>
       <div class="hw-asg-library-search">
         <span class="hw-asg-library-search-icon">🔍</span>
@@ -467,7 +477,7 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/homework.js?v=20260529b"></script>
+  <script src="/js/homework.js?v=20260529c"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>
