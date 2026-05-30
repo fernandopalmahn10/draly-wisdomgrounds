@@ -2221,7 +2221,7 @@
           <span class="hw-item-es">${escapeHtml(it.es)}</span>
         </div>
         <div class="hw-item-stage" id="hw-stage-${i}" data-idx="${i}">
-          <span class="hw-stage-empty">Toca palabras del catálogo abajo…</span>
+          <span class="hw-stage-empty">Toca palabras del catálogo…</span>
         </div>
         <div class="hw-item-actions">
           <button class="btn btn-ghost btn-sm hw-item-speak" data-idx="${i}" type="button" title="Escucha tu oración en chino" aria-label="Escuchar">🔊 Oír</button>
@@ -2302,13 +2302,55 @@
         if (back) back.focus();
       });
     }
+    // Bind the anchored prev/next nav once. Clone-trick to be idempotent
+    // across re-renders of the assignment screen.
+    ['hw-anchor-prev', 'hw-anchor-next'].forEach((id) => {
+      const el = $(id); if (!el) return;
+      const fresh = el.cloneNode(true);
+      el.parentNode.replaceChild(fresh, el);
+      fresh.addEventListener('click', () => {
+        setActiveItem(activeItemIdx + (id === 'hw-anchor-next' ? 1 : -1));
+      });
+    });
   }
   let activeItemIdx = 0;
   function setActiveItem(i) {
+    if (!currentAssignment || !Array.isArray(currentAssignment.items)) { activeItemIdx = i; return; }
+    // Clamp so the prev/next nav can't run off the ends.
+    i = Math.max(0, Math.min(currentAssignment.items.length - 1, i));
     activeItemIdx = i;
     document.querySelectorAll('.hw-item-stage').forEach((s) => {
       s.classList.toggle('active', +s.dataset.idx === i);
     });
+    document.querySelectorAll('.hw-item').forEach((r) => {
+      r.classList.toggle('is-active-item', +r.dataset.idx === i);
+    });
+    // 📌 ANCHORED CATALOG — move the whole word library into the active
+    // item so kids see it RIGHT THERE instead of scrolling to the bottom.
+    // Re-uses existing renderLibrary/search/tabs logic by simply relocating
+    // the element. The library follows the active item as it changes.
+    const lib = $('hw-asg-library-section');
+    const activeRow = document.querySelector('.hw-item[data-idx="' + i + '"]');
+    if (lib && activeRow && lib.parentNode !== activeRow) {
+      activeRow.appendChild(lib);
+    }
+    // Update prev/next nav labels + state.
+    updateAnchorNav();
+    // Smooth-scroll so the active stage stays visible above the catalog.
+    if (activeRow) {
+      try { activeRow.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+    }
+  }
+  // Re-target the prev/next navigation buttons in the anchored library.
+  function updateAnchorNav() {
+    if (!currentAssignment) return;
+    const total = currentAssignment.items.length;
+    const label = $('hw-anchor-pos');
+    const prev = $('hw-anchor-prev');
+    const next = $('hw-anchor-next');
+    if (label) label.textContent = 'Oración ' + (activeItemIdx + 1) + ' / ' + total;
+    if (prev) prev.disabled = activeItemIdx <= 0;
+    if (next) next.disabled = activeItemIdx >= total - 1;
   }
   function pushUndo(i) {
     if (!undoStacks[i]) undoStacks[i] = [];
@@ -2326,7 +2368,7 @@
     if (!stage) return;
     const words = (currentAnswers[i] || '').trim().split(/\s+/).filter(Boolean);
     if (!words.length) {
-      stage.innerHTML = '<span class="hw-stage-empty">Toca palabras del catálogo abajo…</span>';
+      stage.innerHTML = '<span class="hw-stage-empty">Toca palabras del catálogo…</span>';
       return;
     }
     stage.innerHTML = '';

@@ -271,6 +271,20 @@ body.hw-bg {
 .hw-asg-library-section {
   margin-top: 6px;
 }
+/* 📌 When the catalog is anchored inside an active sentence item, give it a
+   distinct nested look so the kid sees it as "this slot's word picker"
+   rather than "the whole-page catalog." */
+.hw-item.is-active-item { background: rgba(50, 60, 100, 0.18); border-radius: 14px; padding-bottom: 6px; }
+.hw-item.is-active-item .hw-asg-library-section { margin-top: 10px; padding: 8px 6px 6px; background: rgba(20, 22, 36, 0.55); border: 1px dashed rgba(255, 213, 122, 0.35); border-radius: 12px; }
+.hw-item.is-active-item .hw-asg-library { max-height: 36dvh; }
+.hw-item.is-active-item .hw-asg-library-title { font-size: 0.85rem; }
+/* Anchored prev/next nav row */
+.hw-anchor-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 6px 0 8px; }
+.hw-anchor-pos { font-weight: 800; color: #ffd24a; font-size: 0.9rem; }
+.hw-anchor-btn { border: 2px solid rgba(91,232,209,0.45); background: rgba(91,232,209,0.12); color: #aff3e7; font-weight: 900; font-size: 0.9rem; padding: 8px 14px; border-radius: 999px; cursor: pointer; touch-action: manipulation; }
+.hw-anchor-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.hw-anchor-btn:active:not(:disabled) { transform: scale(0.95); }
+.hw-anchor-btn.hw-anchor-next { background: linear-gradient(135deg, #5be8d1, #36b9c7); color: #07232a; border-color: #5be8d1; }
 .hw-asg-library-title {
   font-weight: 800;
   color: #ffe082;
