@@ -477,9 +477,11 @@
       const emBtn = $('m-emirati-btn');
       if (emBtn) emBtn.classList.toggle('hidden', !isSuper);
     }
-    // Show only students with ANY activity
+    // Show only students with ANY activity — including daily-challenge play
+    // so a kid who only does Desafíos del Día also appears in Cuaderno.
     students = students.filter((s) =>
       (s.sentenceCount > 0) || (s.testCount > 0) || (s.assignmentCount > 0)
+      || (s.xp || 0) > 0 || !!s.dailyDate
     );
     // Classify by recent activity — used both for the "online now" pill
     // at the top and to sort the roster (active first).
