@@ -739,7 +739,9 @@ body.wu-bg .market-banner {
 }
 .wu-roster-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  /* Bumped from 220px → 300px so the 3 action buttons + name all fit. With
+     the old minimum the name flex-shrunk down to a single letter. */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 6px;
   margin-top: 8px;
 }
@@ -751,6 +753,9 @@ body.wu-bg .market-banner {
 .wu-roster-row {
   display: flex;
   align-items: center;
+  /* flex-wrap so the 3 buttons (grant + pause + judge) drop to a second
+     line when the row is narrow, instead of squishing the name to 1 letter. */
+  flex-wrap: wrap;
   gap: 8px;
   background: rgba(255, 255, 255, 0.05);
   border: 2px solid rgba(255, 255, 255, 0.1);
@@ -765,11 +770,15 @@ body.wu-bg .market-banner {
 }
 .wu-roster-avatar { font-size: 1.4rem; line-height: 1; }
 .wu-roster-name {
-  flex: 1;
+  flex: 1 1 140px;       /* shrink down to ~140px before wrapping buttons */
+  min-width: 140px;       /* keep enough space to show a full name */
   font-weight: 800;
   color: #fff5d8;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 0.95rem;
 }
+/* Buttons stay their natural width — never shrink to a single letter. */
+.wu-roster-btn, .wu-roster-pause-btn, .wu-roster-judge-btn { flex: 0 0 auto; }
 .wu-roster-btn {
   background: rgba(91, 232, 209, 0.18);
   border: 2px solid #5be8d1;

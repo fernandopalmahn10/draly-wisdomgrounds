@@ -76,6 +76,12 @@
   let avatarOptions = [];
   let assignments = [];        // summary list
   let customAssignments = [];  // 🎯 teacher-sent tareas especiales for me
+  let customFilter = 'all';    // pill filter: all | new | pending | done
+  function makeCuPill(id, label, count) {
+    return '<button class="hw-cf-pill' + (customFilter === id ? ' is-active' : '')
+      + (count === 0 ? ' is-empty' : '') + '" data-f="' + id + '" type="button">'
+      + label + ' <span class="hw-cf-count">' + count + '</span></button>';
+  }
   let submissions = [];        // student's prior submissions
   let readingTests = [];       // [{ storyId, title, subtitle, coverImage, available, bestScore, attempts }]
   let currentReadingStory = null;  // loaded story when on the reading screen
@@ -646,11 +652,39 @@
     if (ch) {
       if (d.doneToday) {
         // Already earned today's rewards — but they can REPLAY for fun/practice
-        // (no double prizes). Keeps them coming back without farming.
+        // (no double prizes). Also surface the words they discovered today so
+        // they can re-listen / re-read them.
+        let learnedHtml = '';
+        try {
+          const key = 'hwDailyLearned_' + studentCode + '_' + localDateStr();
+          const learned = JSON.parse(localStorage.getItem(key) || '[]');
+          const wbi = window.WU_WORD_BY_ID || {};
+          const words = learned.map((id) => wbi[id]).filter(Boolean);
+          if (words.length) {
+            learnedHtml = '<div class="hw-dc-learned"><div class="hw-dc-learned-head">📖 Lo que aprendí hoy</div>'
+              + '<div class="hw-dc-learned-chips">'
+              + words.map((w) => {
+                  const cat = (window.WU_CATEGORIES || {})[w.cat];
+                  const color = cat ? cat.color : '#ffe082';
+                  return '<button class="hw-dc-learned-chip" data-py="' + escapeHtml(w.pinyin) + '" style="--cat-color:' + color + '">'
+                    + '<span class="hw-dc-lc-icon">' + (w.icon || '⭐') + '</span>'
+                    + '<span class="hw-dc-lc-py">' + escapeHtml(w.pinyin) + '</span>'
+                    + '<span class="hw-dc-lc-es">' + escapeHtml(w.es || '') + '</span>'
+                    + '<span class="hw-dc-lc-speak">🔊</span>'
+                    + '</button>';
+                }).join('')
+              + '</div></div>';
+          }
+        } catch (_) {}
         ch.innerHTML = '<div class="hw-dc-done">✅ <strong>¡Desafío de hoy completado!</strong><br>'
           + '<span>Ya ganaste tus premios de hoy. ¡Vuelve mañana para tu racha 🔥!</span></div>'
+          + learnedHtml
           + '<button class="hw-dc-play hw-dc-practice" id="hw-dc-play" type="button">🔁 Jugar otra vez (práctica)</button>';
         const pb = $('hw-dc-play'); if (pb) pb.addEventListener('click', () => startDailyGame(true));
+        // Wire 🔊 on the learned chips → speak the pinyin.
+        ch.querySelectorAll('.hw-dc-learned-chip').forEach((b) => {
+          b.addEventListener('click', (e) => speakChinese(b.dataset.py, e.currentTarget));
+        });
       } else {
         const modeMeta = ({
           slash:  { label: '🍉 Corte rápido',       goal: 'Corta 🍉, acaricia 🐶 y lanza 🏃 — descubre <strong>' + d.theme.goal + '</strong> palabras' },
@@ -758,18 +792,44 @@
     let h = 0; for (let i = 0; i < dateStr.length; i++) h = (h * 31 + dateStr.charCodeAt(i)) >>> 0;
     return DAILY_CHARS[h % DAILY_CHARS.length];
   }
+  // 🎬 ANIME CUTSCENE — replaces the old plain "img + bubble" intro/outro
+  // with a manga-style cut-in: halftone dot background, comic impact lines
+  // radiating from center, BIG character entrance with dramatic angle, and
+  // a manga speech bubble. Tap anywhere to skip; auto-advances after a beat.
   function showDailyStory(char, line, kind, onDone) {
     const game = $('hw-game'); if (!game) { if (onDone) onDone(); return; }
     const wrap = document.createElement('div');
-    wrap.className = 'hw-story hw-story-' + kind;
-    wrap.innerHTML = '<img class="hw-story-char" src="' + char.img + '" alt="' + char.id + '" onerror="this.style.display=\'none\'">'
-      + '<div class="hw-story-bubble">' + escapeHtml(line) + '</div>';
+    wrap.className = 'hw-cutscene hw-cutscene-' + kind;
+    // Tint the lines + halftone per character mood so the scene FEELS right.
+    const tint = (char.id === 'fnaf') ? 'crimson'
+              : (char.id === 'shelly') ? 'crimson'
+              : (char.id === 'gojo') ? 'indigo'
+              : (char.id === 'yuji') ? 'crimson'
+              : (char.id === 'dandy') ? 'violet'
+              : 'amber';
+    wrap.classList.add('tint-' + tint);
+    const impact = kind === 'intro'
+      ? ['¡PREPÁRATE!', '¡VAMOS!', '¡AQUÍ VAMOS!', '¡A POR ELLOS!'][Math.floor(Math.random() * 4)]
+      : ['¡EXCELENTE!', '¡INCREÍBLE!', '¡VICTORIA!', '¡GENIAL!'][Math.floor(Math.random() * 4)];
+    wrap.innerHTML = ''
+      + '<div class="hw-cs-halftone"></div>'
+      + '<div class="hw-cs-lines"></div>'
+      + '<div class="hw-cs-impact">' + impact + '</div>'
+      + '<img class="hw-cs-char" src="' + char.img + '" alt="' + char.id + '" onerror="this.style.display=\'none\'">'
+      + '<div class="hw-cs-bubble"><span class="hw-cs-bubble-text">' + escapeHtml(line) + '</span></div>'
+      + '<div class="hw-cs-tap">▶ toca para continuar</div>';
     game.appendChild(wrap);
     requestAnimationFrame(() => wrap.classList.add('show'));
-    setTimeout(() => {
+    try { if (kind === 'intro') dailySfx.launch(); else dailySfx.win(); } catch (_) {}
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) return; dismissed = true;
       wrap.classList.remove('show');
-      setTimeout(() => { wrap.remove(); if (onDone) onDone(); }, 250);
-    }, kind === 'outro' ? 1500 : 1800);
+      setTimeout(() => { wrap.remove(); if (onDone) onDone(); }, 280);
+    };
+    wrap.addEventListener('click', dismiss);
+    // Auto-advance after a beat so kids who don't tap still move forward.
+    setTimeout(dismiss, kind === 'outro' ? 2400 : 2800);
   }
   let _arenaBound = false;
   function startDailyGame(practice) {
@@ -1037,6 +1097,12 @@
     if (DAILY_GAME.spawnT) { clearTimeout(DAILY_GAME.spawnT); DAILY_GAME.spawnT = null; }
     setTimeout(() => { const a = $('hw-game-arena'); if (a) a.innerHTML = ''; }, 420);
     try { dailySfx.win(); } catch (_) {}
+    // Persist today's discovered words locally so the daily home can show
+    // "📖 Lo que aprendí hoy" even after the kid leaves and comes back.
+    try {
+      const key = 'hwDailyLearned_' + studentCode + '_' + localDateStr();
+      localStorage.setItem(key, JSON.stringify(DAILY_GAME.discovered));
+    } catch (_) {}
     // Outro story beat → THEN sentence bonus → THEN reward.
     const char = DAILY_GAME.char || dailyCharFor(localDateStr());
     const outro = char.outros[Math.floor(Math.random() * char.outros.length)];
@@ -1870,28 +1936,67 @@
     $('hw-list-readings').classList.add('hidden');
     const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 HSK1';
     // 🎯 Custom assignments section — shown ABOVE HSK1 so they catch the
-    // kid's eye. Hidden if no targeted assignment exists for me.
+    // kid's eye. Hidden if no targeted assignment exists for me. Adds
+    // status filters so 100+ historical tareas stay manageable.
     const cuSec = $('hw-sec-custom'); const cuGrid = $('hw-list-custom');
+    const cuFilters = $('hw-custom-filters');
     if (cuSec && cuGrid) {
-      const list = customAssignments || [];
+      const list = (customAssignments || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       cuSec.classList.toggle('hidden', list.length === 0);
       cuGrid.classList.toggle('hidden', list.length === 0);
+      if (cuFilters) cuFilters.classList.toggle('hidden', list.length === 0);
       cuGrid.innerHTML = '';
-      list.forEach((a) => {
-        const passed = submissions.some((s) => s.assignmentId === a.id && s.score >= (a.itemCount * 8)); // 80%
-        const tried = submissions.some((s) => s.assignmentId === a.id);
-        const card = document.createElement('button');
-        card.type = 'button';
-        card.className = 'hw-folder-card hw-custom-card' + (passed ? ' is-passed' : tried ? ' is-pending' : '');
-        const when = a.createdAt ? new Date(a.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '';
-        card.innerHTML = `
-          <div class="hw-folder-emoji">🎯</div>
-          <div class="hw-folder-name">${escapeHtml(a.title || 'Tarea especial')}</div>
-          <div class="hw-folder-meta">📝 ${a.itemCount} oración${a.itemCount === 1 ? '' : 'es'} · ${when}</div>
-          ${passed ? '<div class="hw-folder-progress">✓ Completada</div>' : tried ? '<div class="hw-folder-progress">⏳ Reintenta para pasar</div>' : '<div class="hw-folder-progress">🆕 ¡Para ti!</div>'}`;
-        card.addEventListener('click', () => openAssignment(a.id));
-        cuGrid.appendChild(card);
+      // Tag each assignment with its status for the filter.
+      const tagged = list.map((a) => {
+        const ptsForPass = (a.itemCount || 0) * 8;  // 80% of 10pts/item
+        const subs = submissions.filter((s) => s.assignmentId === a.id);
+        const best = subs.reduce((m, s) => (s.score > (m && m.score || -1) ? s : m), null);
+        let status = 'new';
+        if (best && best.score >= ptsForPass) status = 'done';
+        else if (best) status = 'pending';
+        return { a, status, best };
       });
+      // Build / refresh filter pill counts.
+      if (cuFilters) {
+        const counts = { all: tagged.length, new: 0, pending: 0, done: 0 };
+        tagged.forEach((t) => { counts[t.status]++; });
+        cuFilters.innerHTML = ''
+          + makeCuPill('new',     '🆕 Para mí',   counts.new)
+          + makeCuPill('pending', '⏳ Pendientes', counts.pending)
+          + makeCuPill('done',    '✓ Completadas', counts.done)
+          + makeCuPill('all',     '📂 Todo',      counts.all);
+        cuFilters.querySelectorAll('.hw-cf-pill').forEach((p) => p.addEventListener('click', () => {
+          customFilter = p.dataset.f;
+          renderFolderRoot();
+        }));
+      }
+      // Filter + render.
+      const filtered = customFilter === 'all'
+        ? tagged
+        : tagged.filter((t) => t.status === customFilter);
+      if (!filtered.length) {
+        cuGrid.innerHTML = '<div class="hw-empty">No hay tareas en esta categoría.</div>';
+      } else {
+        filtered.forEach(({ a, status, best }) => {
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'hw-folder-card hw-custom-card'
+            + (status === 'done' ? ' is-passed' : status === 'pending' ? ' is-pending' : '');
+          const when = a.createdAt ? new Date(a.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: '2-digit' }) : '';
+          const tag = status === 'done'
+              ? '<div class="hw-folder-progress">✓ Completada · ' + (best ? best.score + '/' + best.total : '') + '</div>'
+            : status === 'pending'
+              ? '<div class="hw-folder-progress">⏳ Reintenta · mejor ' + (best ? best.score + '/' + best.total : '0') + '</div>'
+              : '<div class="hw-folder-progress">🆕 ¡Para ti!</div>';
+          card.innerHTML = `
+            <div class="hw-folder-emoji">🎯</div>
+            <div class="hw-folder-name">${escapeHtml(a.title || 'Tarea especial')}</div>
+            <div class="hw-folder-meta">📝 ${a.itemCount} oración${a.itemCount === 1 ? '' : 'es'} · ${when}</div>
+            ${tag}`;
+          card.addEventListener('click', () => openAssignment(a.id));
+          cuGrid.appendChild(card);
+        });
+      }
     }
     const grid = $('hw-list-grid');
     grid.classList.remove('hidden');

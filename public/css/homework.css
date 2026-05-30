@@ -295,6 +295,88 @@ body.hw-bg {
 .hw-custom-card .hw-folder-progress { color: #5be8d1; }
 .hw-custom-card:not(.is-passed):not(.is-pending) { animation: hwCustomPulse 2.2s ease-in-out infinite; }
 @keyframes hwCustomPulse { 0%,100% { box-shadow: 0 0 20px rgba(255,210,74,0.25); } 50% { box-shadow: 0 0 30px rgba(255,210,74,0.55); } }
+
+/* ── 🎯 Custom-assignment status filter pills ─────────────────────── */
+.hw-custom-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.hw-cf-pill { border: 2px solid rgba(255,210,74,0.4); background: rgba(20,24,40,0.55); color: #fff5d8; font-weight: 800; font-size: 0.82rem; padding: 6px 12px; border-radius: 999px; cursor: pointer; touch-action: manipulation; font-family: inherit; }
+.hw-cf-pill:active { transform: scale(0.95); }
+.hw-cf-pill.is-active { background: linear-gradient(135deg, #ffd24a, #ff9a3c); color: #3a2400; border-color: #ffd24a; }
+.hw-cf-pill.is-empty { opacity: 0.45; }
+.hw-cf-count { display: inline-block; background: rgba(0,0,0,0.35); color: inherit; border-radius: 999px; padding: 1px 7px; font-size: 0.74rem; margin-left: 4px; }
+.hw-cf-pill.is-active .hw-cf-count { background: rgba(0,0,0,0.25); }
+
+/* ── 📖 "Lo que aprendí hoy" panel on the daily home (after completion) ─ */
+.hw-dc-learned { margin: 10px 0 4px; padding: 12px; background: rgba(20,24,40,0.55); border: 1px solid rgba(91,232,209,0.35); border-radius: 14px; }
+.hw-dc-learned-head { font-weight: 900; color: #5be8d1; margin-bottom: 8px; font-size: 0.92rem; }
+.hw-dc-learned-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.hw-dc-learned-chip { display: inline-flex; align-items: center; gap: 5px; padding: 8px 10px; background: var(--cat-color, #ffe082); color: #1a1a2a; border: none; border-radius: 12px; font-weight: 900; cursor: pointer; touch-action: manipulation; font-family: inherit; box-shadow: 0 3px 8px rgba(0,0,0,0.3); }
+.hw-dc-learned-chip:active { transform: scale(0.94); }
+.hw-dc-lc-icon { font-size: 1rem; line-height: 1; }
+.hw-dc-lc-py { font-size: 0.85rem; }
+.hw-dc-lc-es { font-size: 0.7rem; font-style: italic; opacity: 0.78; }
+.hw-dc-lc-speak { font-size: 0.85rem; opacity: 0.8; }
+
+/* ===================================================================
+   🎬 ANIME CUTSCENE — manga-style intro/outro for daily challenges
+   =================================================================== */
+.hw-cutscene { position: absolute; inset: 0; z-index: 9; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #1a0008; opacity: 0; transition: opacity 0.25s; pointer-events: none; cursor: pointer; }
+.hw-cutscene.show { opacity: 1; pointer-events: auto; }
+/* Halftone dot pattern background — the manga signature */
+.hw-cs-halftone { position: absolute; inset: 0;
+  background-image: radial-gradient(circle at center, transparent 0, transparent 4px, currentColor 4px, currentColor 5px, transparent 5px);
+  background-size: 14px 14px; color: rgba(0,0,0,0.9);
+  mix-blend-mode: multiply; opacity: 0.4;
+  animation: hwCsHalftonePulse 0.6s ease-in-out infinite alternate;
+}
+@keyframes hwCsHalftonePulse { from { transform: scale(1); } to { transform: scale(1.06); } }
+/* Comic impact lines — radial spokes from the center */
+.hw-cs-lines { position: absolute; left: 50%; top: 50%; width: 200vmax; height: 200vmax; transform: translate(-50%,-50%);
+  background:
+    conic-gradient(from 0deg,
+      currentColor 0deg 1.5deg, transparent 1.5deg 12deg,
+      currentColor 12deg 13deg, transparent 13deg 24deg,
+      currentColor 24deg 25.5deg, transparent 25.5deg 36deg,
+      currentColor 36deg 37deg, transparent 37deg 48deg,
+      currentColor 48deg 49.5deg, transparent 49.5deg 60deg,
+      currentColor 60deg 61deg, transparent 61deg 72deg,
+      currentColor 72deg 73.5deg, transparent 73.5deg 84deg,
+      currentColor 84deg 85deg, transparent 85deg 96deg);
+  color: rgba(255,255,255,0.06);
+  -webkit-mask: radial-gradient(circle, transparent 80px, black 200px);
+          mask: radial-gradient(circle, transparent 80px, black 200px);
+  animation: hwCsLinesSpin 8s linear infinite;
+}
+@keyframes hwCsLinesSpin { to { transform: translate(-50%,-50%) rotate(45deg); } }
+/* Tint per character mood */
+.hw-cutscene.tint-crimson { background: linear-gradient(160deg, #380008, #1a0008); }
+.hw-cutscene.tint-crimson .hw-cs-lines { color: rgba(255,40,40,0.18); }
+.hw-cutscene.tint-crimson .hw-cs-halftone { color: rgba(60,0,0,0.95); }
+.hw-cutscene.tint-indigo  { background: linear-gradient(160deg, #0a0838, #1a1a3a); }
+.hw-cutscene.tint-indigo .hw-cs-lines { color: rgba(120,140,255,0.16); }
+.hw-cutscene.tint-violet  { background: linear-gradient(160deg, #2a0a3a, #160a26); }
+.hw-cutscene.tint-violet .hw-cs-lines { color: rgba(200,120,255,0.14); }
+.hw-cutscene.tint-amber   { background: linear-gradient(160deg, #3a2400, #1a1200); }
+.hw-cutscene.tint-amber .hw-cs-lines { color: rgba(255,210,74,0.18); }
+
+/* The character — slides in from one side with rotation, big drop shadow */
+.hw-cs-char { position: relative; z-index: 3; max-width: 70vmin; max-height: 70vmin; width: auto; height: auto; filter: drop-shadow(0 14px 28px rgba(0,0,0,0.85)) drop-shadow(0 0 20px rgba(255,80,80,0.4)); transform: translateX(-40vw) rotate(-12deg) scale(0.6); opacity: 0; transition: transform 0.55s cubic-bezier(0.2,1.4,0.3,1), opacity 0.35s; }
+.hw-cutscene.show .hw-cs-char { transform: translateX(0) rotate(-3deg) scale(1); opacity: 1; }
+.hw-cutscene-outro .hw-cs-char { transform: translateX(40vw) rotate(8deg) scale(0.6); }
+.hw-cutscene-outro.show .hw-cs-char { transform: translateX(0) rotate(2deg) scale(1); }
+
+/* Big BOOM impact word */
+.hw-cs-impact { position: absolute; top: 8%; left: 50%; z-index: 5; transform: translateX(-50%) scale(0); font-family: 'Cinzel', serif; font-weight: 900; font-size: clamp(2.4rem, 9vmin, 4rem); color: #fff; text-shadow: 0 0 14px rgba(255,80,80,0.8), 0 4px 0 #000, 4px 4px 0 #000, -4px 4px 0 #000, 4px -4px 0 #000, -4px -4px 0 #000; letter-spacing: 0.06em; transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+.hw-cutscene.show .hw-cs-impact { transform: translateX(-50%) scale(1) rotate(-4deg); }
+
+/* Manga speech bubble — white background with a tail, bold text */
+.hw-cs-bubble { position: absolute; bottom: 14%; right: 6%; max-width: 60%; z-index: 4; background: #fff8e8; color: #14101a; padding: 14px 18px; border-radius: 18px; border: 4px solid #1a1a1a; transform: scale(0); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1) 0.2s; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+.hw-cs-bubble::before { content: ''; position: absolute; left: -22px; bottom: 32px; width: 0; height: 0; border-top: 16px solid transparent; border-bottom: 16px solid transparent; border-right: 24px solid #1a1a1a; }
+.hw-cs-bubble::after  { content: ''; position: absolute; left: -14px; bottom: 36px; width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 16px solid #fff8e8; }
+.hw-cutscene.show .hw-cs-bubble { transform: scale(1) rotate(-2deg); }
+.hw-cs-bubble-text { font-weight: 900; font-size: clamp(1rem, 3.6vmin, 1.4rem); line-height: 1.25; }
+/* Tap-to-continue hint at the bottom */
+.hw-cs-tap { position: absolute; bottom: 4%; left: 50%; transform: translateX(-50%); z-index: 5; color: rgba(255,255,255,0.6); font-weight: 800; font-size: 0.85rem; letter-spacing: 0.06em; animation: hwCsTapBlink 1.2s ease-in-out infinite; }
+@keyframes hwCsTapBlink { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
 .hw-asg-library-title {
   font-weight: 800;
   color: #ffe082;
