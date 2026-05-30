@@ -650,9 +650,14 @@
           + '<button class="hw-dc-play hw-dc-practice" id="hw-dc-play" type="button">🔁 Jugar otra vez (práctica)</button>';
         const pb = $('hw-dc-play'); if (pb) pb.addEventListener('click', () => startDailyGame(true));
       } else {
-        ch.innerHTML = '<div class="hw-dc-head">⚔️ Desafío de hoy</div>'
+        const modeMeta = ({
+          slash:  { label: '🍉 Corte rápido',       goal: 'Corta 🍉, acaricia 🐶 y lanza 🏃 — descubre <strong>' + d.theme.goal + '</strong> palabras' },
+          memory: { label: '🧠 Memoria',            goal: 'Encuentra las <strong>4 parejas</strong> de palabras 🃏' },
+          speak:  { label: '🗣️ Escucha y repite', goal: 'Escucha cada palabra y dila en voz alta 🗣️' },
+        })[d.mode || 'slash'] || { label: '🍉 Corte rápido', goal: 'Descubre <strong>' + d.theme.goal + '</strong> palabras' };
+        ch.innerHTML = '<div class="hw-dc-head">⚔️ Desafío de hoy · ' + modeMeta.label + '</div>'
           + '<div class="hw-dc-theme">' + escapeHtml(expLabel) + '</div>'
-          + '<div class="hw-dc-goal">Corta 🍉, acaricia 🐶 y lanza 🏃 — descubre <strong>' + d.theme.goal + '</strong> palabras</div>'
+          + '<div class="hw-dc-goal">' + modeMeta.goal + '</div>'
           + '<button class="hw-dc-play" id="hw-dc-play" type="button">⚔️ ¡Jugar!</button>';
         const pb = $('hw-dc-play'); if (pb) pb.addEventListener('click', () => startDailyGame(false));
       }
@@ -784,6 +789,8 @@
     const arena = $('hw-game-arena');
     if (arena) {
       arena.innerHTML = '';
+      // Reset mode-specific classes so memory/speak don't leak into slash.
+      arena.classList.remove('hw-memory', 'hw-speak');
       if (!_arenaBound) {
         _arenaBound = true;
         // Slash trail: while a finger/mouse is down, drop fading streak dots
@@ -798,7 +805,120 @@
     // tapping. Same character all day; rotates with the date.
     DAILY_GAME.char = dailyCharFor(localDateStr());
     const intro = DAILY_GAME.char.intros[Math.floor(Math.random() * DAILY_GAME.char.intros.length)].replace('{theme}', expLabel);
-    showDailyStory(DAILY_GAME.char, intro, 'intro', () => scheduleSpawn());
+    showDailyStory(DAILY_GAME.char, intro, 'intro', () => dispatchDailyMode());
+  }
+  // Today's mode rotates by weekday — see _dailyModeFor on the server.
+  // Each branch runs its own mini-game flow but all converge on endDailyGame()
+  // for the shared outro → sentence-bonus → reward chain.
+  function dispatchDailyMode() {
+    const mode = (dailyData && dailyData.mode) || 'slash';
+    if (mode === 'memory') return runMemoryMode();
+    if (mode === 'speak')  return runSpeakMode();
+    return scheduleSpawn();  // 🍉 slash (default / Sun/Mon/Sat)
+  }
+  // 🧠 MEMORY MATCH — 2×4 grid of word cards. Flip two; if pinyin matches,
+  // they lock and reveal the word. Match all 4 pairs to complete the daily.
+  function runMemoryMode() {
+    const arena = $('hw-game-arena'); if (!arena) return;
+    arena.innerHTML = ''; arena.classList.add('hw-memory');
+    const pool = DAILY_GAME.pool.slice();
+    const words = [];
+    for (let i = 0; i < 4 && pool.length; i++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      words.push(pool.splice(idx, 1)[0]);
+    }
+    DAILY_GAME.goal = words.length;
+    const cards = []; words.forEach((w) => { cards.push(w, w); });
+    for (let i = cards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = cards[i]; cards[i] = cards[j]; cards[j] = tmp;
+    }
+    const grid = document.createElement('div'); grid.className = 'hw-memory-grid';
+    arena.appendChild(grid);
+    const state = { flipped: [], matched: new Set() };
+    cards.forEach((w, idx) => {
+      const card = document.createElement('button');
+      card.type = 'button'; card.className = 'hw-memory-card';
+      card.dataset.wid = w.id;
+      const cat = (window.WU_CATEGORIES || {})[w.cat];
+      card.style.setProperty('--cat-color', cat ? cat.color : '#ffe082');
+      card.innerHTML = '<div class="hw-mem-inner">'
+        + '<div class="hw-mem-back">?</div>'
+        + '<div class="hw-mem-front">'
+        + '<span class="hw-mem-icon">' + (w.icon || '⭐') + '</span>'
+        + '<span class="hw-mem-py">' + escapeHtml(w.pinyin) + '</span>'
+        + '<span class="hw-mem-es">' + escapeHtml(w.es || '') + '</span>'
+        + '</div></div>';
+      card.addEventListener('click', () => {
+        if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+        if (state.flipped.length >= 2) return;
+        card.classList.add('flipped');
+        state.flipped.push(card);
+        try { dailySfx.pet(); } catch (_) {}
+        if (state.flipped.length === 2) {
+          const a = state.flipped[0], b = state.flipped[1];
+          if (a.dataset.wid === b.dataset.wid) {
+            setTimeout(() => {
+              a.classList.add('matched'); b.classList.add('matched');
+              state.matched.add(a.dataset.wid);
+              const word = (window.WU_WORD_BY_ID || {})[a.dataset.wid];
+              if (word) {
+                revealDailyWord(word, 'pet');
+                if (DAILY_GAME.discovered.indexOf(word.id) < 0) DAILY_GAME.discovered.push(word.id);
+              }
+              try { dailySfx.combo(state.matched.size); } catch (_) {}
+              DAILY_GAME.done = state.matched.size; DAILY_GAME.correct = state.matched.size;
+              updateGameHud();
+              state.flipped = [];
+              if (state.matched.size >= DAILY_GAME.goal) endDailyGame();
+            }, 380);
+          } else {
+            setTimeout(() => {
+              a.classList.remove('flipped'); b.classList.remove('flipped');
+              state.flipped = [];
+            }, 900);
+          }
+        }
+      });
+      grid.appendChild(card);
+    });
+  }
+  // 🗣️ SPEAK & LISTEN — show each word as a big card with 🔊 (Google voice)
+  // + "✓ Lo dije" to advance. Auto-plays each word once on display.
+  function runSpeakMode() {
+    const arena = $('hw-game-arena'); if (!arena) return;
+    arena.innerHTML = ''; arena.classList.add('hw-speak');
+    const words = DAILY_GAME.pool.slice(0, 8);
+    DAILY_GAME.goal = words.length;
+    let idx = 0;
+    function showOne() {
+      if (!DAILY_GAME.active) return;
+      if (idx >= words.length) { endDailyGame(); return; }
+      const w = words[idx];
+      const cat = (window.WU_CATEGORIES || {})[w.cat];
+      arena.innerHTML = '';
+      const card = document.createElement('div');
+      card.className = 'hw-speak-card';
+      card.style.setProperty('--cat-color', cat ? cat.color : '#ffe082');
+      card.innerHTML = '<div class="hw-speak-num">' + (idx + 1) + ' / ' + words.length + '</div>'
+        + '<div class="hw-speak-icon">' + (w.icon || '⭐') + '</div>'
+        + '<div class="hw-speak-py">' + escapeHtml(w.pinyin) + '</div>'
+        + '<div class="hw-speak-es">' + escapeHtml(w.es || '') + '</div>'
+        + '<button class="hw-speak-listen" type="button">🔊 Escuchar otra vez</button>'
+        + '<button class="hw-speak-next" type="button">✓ Lo dije →</button>';
+      arena.appendChild(card);
+      card.querySelector('.hw-speak-listen').addEventListener('click', (e) => speakChinese(w.pinyin, e.currentTarget));
+      card.querySelector('.hw-speak-next').addEventListener('click', () => {
+        DAILY_GAME.done = ++idx; DAILY_GAME.correct = idx;
+        if (DAILY_GAME.discovered.indexOf(w.id) < 0) DAILY_GAME.discovered.push(w.id);
+        updateGameHud();
+        try { dailySfx.combo(idx); } catch (_) {}
+        showOne();
+      });
+      // Auto-play the word once on display.
+      setTimeout(() => { try { speakChinese(w.pinyin, null); } catch (_) {} }, 350);
+    }
+    showOne();
   }
   function dailyTrail(e) {
     const arena = $('hw-game-arena'); if (!arena) return;

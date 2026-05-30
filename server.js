@@ -212,6 +212,27 @@ app.get('/api/maestro/emirati/today', (req, res) => {
     },
   });
 });
+// 🎙️ EMIRATI AUDIO OVERRIDE
+// Looks for a pre-recorded MP3 at data/emirati-audio/<wordId>.mp3 (or .m4a /
+// .wav). If present, we serve it instead of falling back to Google MSA. This
+// is THE path to a real Khaleeji voice: drop your own recordings on the disk
+// (record yourself, paste Azure ar-AE clips, etc.) and they take precedence.
+// 404 means "no override, use TTS"; the client falls back to Google MSA.
+const EMIRATI_AUDIO_DIR = _emPath.join(__dirname, 'data', 'emirati-audio');
+const EMIRATI_AUDIO_EXTS = ['.mp3', '.m4a', '.wav', '.ogg'];
+app.get('/api/emirati/audio/:wordId', (req, res) => {
+  const id = String(req.params.wordId || '').replace(/[^A-Za-z0-9_-]/g, '');
+  if (!id) return res.status(400).end();
+  for (let i = 0; i < EMIRATI_AUDIO_EXTS.length; i++) {
+    const p = _emPath.join(EMIRATI_AUDIO_DIR, id + EMIRATI_AUDIO_EXTS[i]);
+    if (_emFs.existsSync(p)) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000');  // 30 days
+      return res.sendFile(p);
+    }
+  }
+  res.status(404).end();  // client falls back to /api/tts
+});
+
 app.post('/api/maestro/emirati/mark', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
@@ -1080,6 +1101,16 @@ function _dailyThemeFor(dateStr) {
   for (let i = 0; i < String(dateStr).length; i++) h = (h * 31 + dateStr.charCodeAt(i)) >>> 0;
   return { exp: DAILY_EXPS[h % DAILY_EXPS.length], goal: DAILY_GOAL };
 }
+// The mechanic rotates by weekday so it never feels like "the same game".
+// Sun/Mon/Sat → 🍉 Slash (fruit-ninja). Tue/Thu → 🧠 Memory pairs.
+// Wed/Fri → 🗣️ Speak & Listen (Google voice front and centre).
+const DAILY_MODE_BY_DOW = ['slash', 'slash', 'memory', 'speak', 'memory', 'speak', 'slash'];
+function _dailyModeFor(dateStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ''));
+  if (!m) return 'slash';
+  const dow = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDay();
+  return DAILY_MODE_BY_DOW[dow] || 'slash';
+}
 function _todayServer() { return new Date().toISOString().slice(0, 10); }
 // Sword milestones — locked SECRET prizes (real reward arranged by teacher).
 // Smaller / quicker milestones so the FIRST prize feels reachable. Kids hit
@@ -1095,6 +1126,7 @@ app.get('/api/homework/daily', (req, res) => {
     ok: true,
     date,
     theme: _dailyThemeFor(date),
+    mode: _dailyModeFor(date),
     doneToday: prog && prog.dailyDate === date,
     progress: prog,
     milestones: DAILY_MILESTONES,
