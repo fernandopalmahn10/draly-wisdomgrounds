@@ -253,6 +253,26 @@
     if (!cleaned) return null;
     return window.WU_WORD_BY_PINYIN[cleaned] || null;
   };
+  // ── Picture-mode source resolver. Maps a word to its illustration URL.
+  // EXP1 uses the LA FAMILIA E-1 folder where files are named by tone-stripped
+  // pinyin (e.g. nǚ'ér → "nu er.png"). Other EXPs fall back to the legacy
+  // /assets/warmup/{id}.png convention.
+  function _stripPinyin(s) {
+    return String(s || '').toLowerCase()
+      .replace(/[āáǎà]/g, 'a').replace(/[ēéěè]/g, 'e').replace(/[īíǐì]/g, 'i')
+      .replace(/[ōóǒò]/g, 'o').replace(/[ūúǔùǖǘǚǜü]/g, 'u').replace(/[ńň]/g, 'n')
+      .replace(/['ʼ]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  const EXP_PIC_DIR = {
+    exp1: '/assets/png-library/LA FAMILIA E-1',
+    // Add other EXP folders here as the user drops them in.
+  };
+  window.wuPicSrc = function (w) {
+    if (!w) return '';
+    const dir = EXP_PIC_DIR[w.exp];
+    if (dir) return dir + '/' + encodeURIComponent(_stripPinyin(w.pinyin)) + '.png';
+    return '/assets/warmup/' + w.id + '.png';
+  };
   console.log('[warmup-vocab] loaded', WU_WORDS.length, 'HSK1 words across',
     Object.keys(WU_EXPERIENCES).length, 'experiences');
 })();

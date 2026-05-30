@@ -3376,7 +3376,7 @@
         + (wuPlayerSwapIdx === idx ? ' swap-selected' : '');
       p.style.setProperty('--cat-color', color);
       const pic = showPic
-        ? `<img class="wu-pw-pic" src="/assets/warmup/${w.id}.png" alt="${w.pinyin}"
+        ? `<img class="wu-pw-pic" src="${(window.wuPicSrc ? window.wuPicSrc(w) : '/assets/warmup/' + w.id + '.png')}" alt="${w.pinyin}"
               onerror="this.classList.add('missing')">`
         : '';
       const ic = showEmoji ? `<span class="wu-pw-icon">${w.icon || ''}</span>` : '';
