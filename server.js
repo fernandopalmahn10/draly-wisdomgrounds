@@ -1526,7 +1526,13 @@ app.get('/api/tts', async (req, res) => {
 });
 
 // Friendly redirect: students can type /homework or /tarea — both work.
+// The Modo-Maestro auto-exit redirect lands on /homework?code=...&from=maestro,
+// so this route MUST exist (and preserve the query string). Without it the
+// kid hits a 502/404 on exit.
 app.get(['/tarea', '/tareas'], (req, res) => res.redirect('/homework.html'));
+app.get('/homework', (req, res) => {
+  res.sendFile(_emPath.join(__dirname, 'public', 'homework.html'));
+});
 
 // Record the server boot time so the heartbeat above can be compared
 // across deploys. If your disk is genuinely persistent, the heartbeat
