@@ -1192,9 +1192,9 @@ function _dailyThemeFor(dateStr) {
   return { exp: DAILY_EXPS[h % DAILY_EXPS.length], goal: DAILY_GOAL };
 }
 // The mechanic rotates by weekday so it never feels like "the same game".
-// Sun/Mon/Sat → 🍉 Slash (fruit-ninja). Tue/Thu → 🧠 Memory pairs.
-// Wed/Fri → 🗣️ Speak & Listen (Google voice front and centre).
-const DAILY_MODE_BY_DOW = ['slash', 'slash', 'memory', 'speak', 'memory', 'speak', 'slash'];
+// Sun/Mon/Sat → 📖 Story mode (cutscene-driven, Pokémon-style dialogue).
+// Tue/Thu → 🧠 Memory pairs. Wed/Fri → 🗣️ Speak & Listen.
+const DAILY_MODE_BY_DOW = ['story', 'story', 'memory', 'speak', 'memory', 'speak', 'story'];
 function _dailyModeFor(dateStr) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ''));
   if (!m) return 'slash';

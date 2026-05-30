@@ -76,7 +76,10 @@
   let avatarOptions = [];
   let assignments = [];        // summary list
   let customAssignments = [];  // 🎯 teacher-sent tareas especiales for me
-  let customFilter = 'all';    // pill filter: all | new | pending | done
+  // Default lands on ⏳ Pendientes — kid's TODO list. "pending" includes both
+  // brand-new tareas AND ones tried below 80%. Per user: "by default it
+  // should enter in pending and only show the pending."
+  let customFilter = 'pending';    // pill filter: pending | done | all
   function makeCuPill(id, label, count) {
     return '<button class="hw-cf-pill' + (customFilter === id ? ' is-active' : '')
       + (count === 0 ? ' is-empty' : '') + '" data-f="' + id + '" type="button">'
@@ -673,7 +676,9 @@
                     + '<span class="hw-dc-lc-speak">🔊</span>'
                     + '</button>';
                 }).join('')
-              + '</div></div>';
+              + '</div>'
+              + '<button class="hw-dc-learned-build" id="hw-dc-learned-build" type="button">✍️ Armar una oración con estas palabras</button>'
+              + '</div>';
           }
         } catch (_) {}
         ch.innerHTML = '<div class="hw-dc-done">✅ <strong>¡Desafío de hoy completado!</strong><br>'
@@ -685,12 +690,27 @@
         ch.querySelectorAll('.hw-dc-learned-chip').forEach((b) => {
           b.addEventListener('click', (e) => speakChinese(b.dataset.py, e.currentTarget));
         });
+        // ✍️ "Practica una oración" — opens the sentence-bonus flow seeded
+        // with today's learned words. Bonus already claimed → API returns
+        // 'already' (no double prize) but the kid still gets to PRACTICE
+        // and save the sentence to Mis oraciones.
+        const buildBtn = $('hw-dc-learned-build');
+        if (buildBtn) buildBtn.addEventListener('click', () => {
+          try {
+            const key = 'hwDailyLearned_' + studentCode + '_' + localDateStr();
+            const learned = JSON.parse(localStorage.getItem(key) || '[]');
+            if (!learned.length) return;
+            $('hw-game').classList.remove('hidden');
+            openSentenceBonus(learned, null);
+          } catch (_) {}
+        });
       } else {
         const modeMeta = ({
-          slash:  { label: '🍉 Corte rápido',       goal: 'Corta 🍉, acaricia 🐶 y lanza 🏃 — descubre <strong>' + d.theme.goal + '</strong> palabras' },
+          story:  { label: '📖 Historia',           goal: 'Un personaje te enseñará <strong>' + d.theme.goal + '</strong> palabras nuevas 🎌' },
           memory: { label: '🧠 Memoria',            goal: 'Encuentra las <strong>4 parejas</strong> de palabras 🃏' },
           speak:  { label: '🗣️ Escucha y repite', goal: 'Escucha cada palabra y dila en voz alta 🗣️' },
-        })[d.mode || 'slash'] || { label: '🍉 Corte rápido', goal: 'Descubre <strong>' + d.theme.goal + '</strong> palabras' };
+          slash:  { label: '🍉 Corte rápido',       goal: 'Corta 🍉, acaricia 🐶 y lanza 🏃 — descubre <strong>' + d.theme.goal + '</strong> palabras' },
+        })[d.mode || 'story'] || { label: '📖 Historia', goal: 'Descubre <strong>' + d.theme.goal + '</strong> palabras' };
         ch.innerHTML = '<div class="hw-dc-head">⚔️ Desafío de hoy · ' + modeMeta.label + '</div>'
           + '<div class="hw-dc-theme">' + escapeHtml(expLabel) + '</div>'
           + '<div class="hw-dc-goal">' + modeMeta.goal + '</div>'
@@ -781,12 +801,45 @@
   // ── Story characters — the daily picks one each day so it FEELS like a
   // game beat, not just tapping. Reuses the FX-summon PNGs already on disk.
   const DAILY_CHARS = [
-    { id: 'gojo',     img: '/assets/png-library/gojo.png',     intros: ['¡Hola! Hoy: {theme}. Limit Break 🌀', 'Soy Gojo. Te traje palabras secretas.'], outros: ['¡Limit Break perfecto!', '¡Volveré mañana, futuro maestro!'] },
-    { id: 'yuji',     img: '/assets/png-library/yuji.png',     intros: ['¡Vamos! 👊 Hoy: {theme}.', '¡A entrenar sin miedo!'], outros: ['¡Buen combo, amigo! 💪', '¡Más fuerte cada día!'] },
-    { id: 'fnaf',     img: '/assets/png-library/fnaf.png',     intros: ['Bienvenido a la noche. 🌙 Tema: {theme}.', '¿Sobrevives 5 palabras?'], outros: ['Sobreviviste… por hoy. 😈', 'Vuelve mañana o despertaré.'] },
-    { id: 'shelly',   img: '/assets/png-library/shelly.png',   intros: ['¡BOOM! 💥 Hoy: {theme}.', '¡Vamos a reventarlo!'], outros: ['¡BOOM! Perfecto.', '¡Otra ronda mañana!'] },
-    { id: 'dandy',    img: '/assets/png-library/dandy.png',    intros: ['Welcome 🎩 al tema {theme}.', 'Hoy seré tu guía.'], outros: ['¡Eres un buen amigo!', 'Nos vemos en el siguiente mundo.'] },
-    { id: 'dralingo', img: '/assets/dralingo.png',              intros: ['¡Hola dragón! 🐉 Hoy: {theme}.', 'Vamos a aprender juntos.'], outros: ['¡Estoy orgulloso de ti! 🐉', 'Volveremos al amanecer.'] },
+    { id: 'gojo',     img: '/assets/png-library/gojo.png',
+      name: 'Gojo',
+      intros: ['Te he estado esperando. Hoy entrenamos: {theme}.', 'Soy Gojo. Vamos a desbloquear tus límites.', 'Cierra los ojos. Hoy verás más allá del idioma…'],
+      outros: ['Limit Break completado. Pero esto apenas comienza…', 'Has visto el infinito por un segundo. ¿Pudiste sentirlo?', 'Mañana abriremos otra puerta. No faltes.'] },
+    { id: 'yuji',     img: '/assets/png-library/yuji.png',
+      name: 'Yuji',
+      intros: ['¡Vamos juntos! Hoy: {theme}. ¡Sin miedo!', '¡Cada palabra es un golpe! ¡Conéctalos!', '¡A entrenar! Hoy tu corazón decide.'],
+      outros: ['Sentí tu fuerza. Mañana entrenamos más duro.', 'Una sombra te observa. Pero tú ya estás listo…', '¡Eres más fuerte de lo que crees! Hasta mañana.'] },
+    { id: 'fnaf',     img: '/assets/png-library/fnaf.png',
+      name: 'FNAF',
+      intros: ['Bienvenido a la noche. Tema: {theme}…', 'Las luces parpadean. ¿Estás listo?', 'La cámara te observa. Aprende rápido.'],
+      outros: ['Sobreviviste… por esta noche.', 'Algo se mueve en el pasillo. Mejor vuelve mañana.', 'Tus pasos se desvanecen. Hasta la próxima noche.'] },
+    { id: 'shelly',   img: '/assets/png-library/shelly.png',
+      name: 'Shelly',
+      intros: ['¡BOOM! ¿Lista para volar palabras? Hoy: {theme}.', '¡Disparo certero! Apunta y aprende.', '¡Vamos a reventar este nivel!'],
+      outros: ['¡BOOM! ¡Combo perfecto! 💥', 'Cargando para mañana… no me hagas esperar.', '¡La próxima ronda será explosiva!'] },
+    { id: 'dandy',    img: '/assets/png-library/dandy.png',
+      name: 'Dandy',
+      intros: ['Welcome 🎩 a {theme}.', 'Hoy seré tu guía en este mundo.', '¿Caminamos juntos en este sueño?'],
+      outros: ['Has sido un buen amigo. Hasta el próximo mundo.', 'El sueño se cierra… pero la puerta seguirá ahí.', 'Volveré con más historias para ti.'] },
+    { id: 'dralingo', img: '/assets/dralingo.png',
+      name: 'Dralingo',
+      intros: ['¡Hola, dragón! 🐉 Hoy: {theme}.', 'Mi escama brilla cuando aprendes.', 'Vuela conmigo a través de las palabras.'],
+      outros: ['Estoy orgulloso de ti, pequeño dragón.', 'Otra escama dorada se reveló. ¿Cuántas faltan?', 'Mañana al amanecer, te espero.'] },
+    // 🎌 The 3 anime panels the user dropped at /assets/png-library/anime 1-3.png.
+    // Each becomes a "mystery character" with cryptic dialogue — perfect for
+    // story-mode beats.
+    { id: 'anime1', img: '/assets/png-library/anime 1.png',
+      name: 'Samurái Rojo',
+      intros: ['El tigre rojo despierta. Tema: {theme}.', 'Cada palabra es una espada. Empuña la primera.', 'Respira hondo. Hoy cortarás el silencio.'],
+      outros: ['El tigre se duerme… pero su rugido vive en ti.', 'Has cortado bien. La hoja recuerda.', 'Cuando la luna salga, volveré por ti.'] },
+    { id: 'anime2', img: '/assets/png-library/anime 2.png',
+      name: 'Ojos del Trueno',
+      intros: ['¡Mis ojos te ven! Hoy: {theme}.', '¡Despierta! El cielo está roto.', 'Concentración total. Empezamos.'],
+      outros: ['¡Has visto lo que pocos ven!', 'Un trueno suena en la distancia… ya casi.', 'Mantén los ojos abiertos hasta mañana.'] },
+    { id: 'anime3', img: '/assets/png-library/anime 3.png',
+      name: 'Sombra del Templo',
+      intros: ['Las líneas no mienten. Tema: {theme}.', 'En la oscuridad también se aprende.', '¿Listo para descubrir el código secreto?'],
+      outros: ['Has descifrado una línea. Faltan muchas más.', 'La sombra recuerda tu nombre.', 'El templo te esperará mañana.'] },
   ];
   function dailyCharFor(dateStr) {
     let h = 0; for (let i = 0; i < dateStr.length; i++) h = (h * 31 + dateStr.charCodeAt(i)) >>> 0;
@@ -851,8 +904,8 @@
     const arena = $('hw-game-arena');
     if (arena) {
       arena.innerHTML = '';
-      // Reset mode-specific classes so memory/speak don't leak into slash.
-      arena.classList.remove('hw-memory', 'hw-speak');
+      // Reset mode-specific classes so modes don't leak between days.
+      arena.classList.remove('hw-memory', 'hw-speak', 'hw-story-mode');
       if (!_arenaBound) {
         _arenaBound = true;
         // Slash trail: while a finger/mouse is down, drop fading streak dots
@@ -873,10 +926,87 @@
   // Each branch runs its own mini-game flow but all converge on endDailyGame()
   // for the shared outro → sentence-bonus → reward chain.
   function dispatchDailyMode() {
-    const mode = (dailyData && dailyData.mode) || 'slash';
+    const mode = (dailyData && dailyData.mode) || 'story';
     if (mode === 'memory') return runMemoryMode();
     if (mode === 'speak')  return runSpeakMode();
-    return scheduleSpawn();  // 🍉 slash (default / Sun/Mon/Sat)
+    if (mode === 'story')  return runStoryMode();
+    return scheduleSpawn();  // legacy 🍉 slash fallback
+  }
+  // 📖 STORY MODE — replaces the old tapping slash with a Pokémon-style
+  // cutscene. The character is a constant presence and "speaks" each word
+  // through a dialogue bar at the bottom. No spawn-and-tap. Each word reveal
+  // counts as a discovery → still drives the sentence-bonus + reward chain.
+  function runStoryMode() {
+    const arena = $('hw-game-arena'); if (!arena) return;
+    arena.innerHTML = ''; arena.classList.add('hw-story-mode');
+    const words = DAILY_GAME.pool.slice(0, 8);
+    DAILY_GAME.goal = words.length;
+    const char = DAILY_GAME.char || dailyCharFor(localDateStr());
+    let idx = 0;
+    function panel(word, lineHtml, opts) {
+      opts = opts || {};
+      arena.innerHTML = '';
+      const cat = word ? (window.WU_CATEGORIES || {})[word.cat] : null;
+      const color = cat ? cat.color : '#ffd24a';
+      const wrap = document.createElement('div');
+      wrap.className = 'hw-story-panel';
+      wrap.style.setProperty('--cat-color', color);
+      wrap.innerHTML = ''
+        + '<div class="hw-sp-halftone"></div>'
+        + '<img class="hw-sp-char" src="' + char.img + '" alt="' + char.id + '" onerror="this.style.display=\'none\'">'
+        + (word ? ('<div class="hw-sp-word">'
+            + '<span class="hw-sp-word-icon">' + (word.icon || '⭐') + '</span>'
+            + '<span class="hw-sp-word-py">' + escapeHtml(word.pinyin) + '</span>'
+            + '<span class="hw-sp-word-es">' + escapeHtml(word.es || '') + '</span>'
+          + '</div>') : '')
+        + '<div class="hw-sp-dialog">'
+        +   '<div class="hw-sp-dialog-name">' + escapeHtml(char.name || char.id) + '</div>'
+        +   '<div class="hw-sp-dialog-text">' + lineHtml + '</div>'
+        +   '<div class="hw-sp-dialog-actions">'
+        +     (word ? '<button class="hw-sp-listen" type="button">🔊 Escuchar</button>' : '')
+        +     '<button class="hw-sp-next" type="button">' + (opts.last ? '✓ Terminar' : '▶ Siguiente') + '</button>'
+        +   '</div>'
+        + '</div>';
+      arena.appendChild(wrap);
+      requestAnimationFrame(() => wrap.classList.add('show'));
+      const listen = wrap.querySelector('.hw-sp-listen');
+      if (listen && word) listen.addEventListener('click', (e) => speakChinese(word.pinyin, e.currentTarget));
+      wrap.querySelector('.hw-sp-next').addEventListener('click', () => {
+        if (opts.onNext) opts.onNext();
+      });
+    }
+    // Each panel = 1 word revealed with a Pokémon-style line. After each
+    // listen + Siguiente, we count it as a discovery so the sentence-bonus
+    // gets the right wordlist.
+    function showWord() {
+      if (!DAILY_GAME.active) return;
+      if (idx >= words.length) {
+        // No more words — the outro story call is fired by endDailyGame.
+        return endDailyGame();
+      }
+      const w = words[idx];
+      const lines = [
+        '— Esta es <strong>' + escapeHtml(w.pinyin) + '</strong>. Significa <em>' + escapeHtml(w.es || '') + '</em>. ¡Repítela!',
+        '— ¡Escucha! Esta palabra es <strong>' + escapeHtml(w.pinyin) + '</strong>… <em>' + escapeHtml(w.es || '') + '</em>.',
+        '— Mira, <strong>' + escapeHtml(w.pinyin) + '</strong>. La sentirás cuando hables.',
+        '— <strong>' + escapeHtml(w.pinyin) + '</strong>… úsala bien. <em>' + escapeHtml(w.es || '') + '</em>.',
+      ];
+      const line = lines[Math.floor(Math.random() * lines.length)];
+      panel(w, line, {
+        last: idx >= words.length - 1,
+        onNext: () => {
+          idx++;
+          DAILY_GAME.done = idx; DAILY_GAME.correct = idx;
+          if (DAILY_GAME.discovered.indexOf(w.id) < 0) DAILY_GAME.discovered.push(w.id);
+          updateGameHud();
+          try { dailySfx.combo(idx); } catch (_) {}
+          showWord();
+        },
+      });
+      // Auto-play the word so the kid HEARS it the moment the panel appears.
+      setTimeout(() => { try { speakChinese(w.pinyin, null); } catch (_) {} }, 380);
+    }
+    showWord();
   }
   // 🧠 MEMORY MATCH — 2×4 grid of word cards. Flip two; if pinyin matches,
   // they lock and reveal the word. Match all 4 pairs to complete the daily.
@@ -1956,24 +2086,27 @@
         else if (best) status = 'pending';
         return { a, status, best };
       });
-      // Build / refresh filter pill counts.
+      // Build / refresh filter pill counts. "pending" rolls together both
+      // brand-new tareas AND those tried but below 80% — i.e. everything the
+      // kid still needs to do. That's the TODO list they want by default.
+      const pendingCount = tagged.filter((t) => t.status !== 'done').length;
+      const doneCount = tagged.filter((t) => t.status === 'done').length;
       if (cuFilters) {
-        const counts = { all: tagged.length, new: 0, pending: 0, done: 0 };
-        tagged.forEach((t) => { counts[t.status]++; });
         cuFilters.innerHTML = ''
-          + makeCuPill('new',     '🆕 Para mí',   counts.new)
-          + makeCuPill('pending', '⏳ Pendientes', counts.pending)
-          + makeCuPill('done',    '✓ Completadas', counts.done)
-          + makeCuPill('all',     '📂 Todo',      counts.all);
+          + makeCuPill('pending', '⏳ Pendientes', pendingCount)
+          + makeCuPill('done',    '✓ Completadas', doneCount)
+          + makeCuPill('all',     '📂 Todo',       tagged.length);
         cuFilters.querySelectorAll('.hw-cf-pill').forEach((p) => p.addEventListener('click', () => {
           customFilter = p.dataset.f;
           renderFolderRoot();
         }));
       }
-      // Filter + render.
+      // Filter — pending shows new + tried-not-passed combined.
       const filtered = customFilter === 'all'
         ? tagged
-        : tagged.filter((t) => t.status === customFilter);
+        : customFilter === 'pending'
+          ? tagged.filter((t) => t.status !== 'done')
+          : tagged.filter((t) => t.status === 'done');
       if (!filtered.length) {
         cuGrid.innerHTML = '<div class="hw-empty">No hay tareas en esta categoría.</div>';
       } else {
