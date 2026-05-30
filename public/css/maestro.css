@@ -721,8 +721,12 @@ body.hw-bg {
 .m-em-card { background: rgba(20,28,50,0.6); border: 1px solid rgba(255,210,74,0.3); border-radius: 14px; padding: 14px; }
 .m-em-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .m-em-section { font-size: 0.82rem; color: rgba(243,230,194,0.7); font-weight: 800; }
-.m-em-speak { border: 2px solid rgba(255,210,74,0.55); background: rgba(255,210,74,0.16); color: #ffd24a; font-weight: 900; padding: 6px 12px; border-radius: 999px; cursor: pointer; touch-action: manipulation; }
+.m-em-speak { border: 2px solid rgba(255,210,74,0.55); background: rgba(255,210,74,0.16); color: #ffd24a; font-weight: 900; padding: 6px 12px; border-radius: 999px; cursor: pointer; touch-action: manipulation; position: relative; }
 .m-em-speak:active { transform: scale(0.94); }
+/* Subtle "MSA" badge appears when we fall back to Google MSA (no Khaleeji
+   override yet). When you drop an MP3 in data/emirati-audio/{wordId}.mp3
+   the badge disappears and the button plays your real Khaleeji audio. */
+.m-em-speak.m-em-speak-msa::after { content: 'MSA'; position: absolute; top: -8px; right: -10px; background: #ff7a45; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 2px 6px; border-radius: 999px; }
 .m-em-ar { font-family: 'Noto Sans Arabic', serif; font-size: 2.2rem; font-weight: 900; color: #fff; text-align: right; direction: rtl; margin: 4px 0; text-shadow: 0 2px 6px rgba(0,0,0,0.5); }
 .m-em-tr { font-weight: 800; color: #ffd24a; font-size: 1.05rem; }
 .m-em-en { color: rgba(243,230,194,0.85); font-style: italic; font-size: 0.92rem; margin-bottom: 8px; }

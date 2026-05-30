@@ -205,7 +205,7 @@
       card.innerHTML = `
         <div class="m-em-row">
           <div class="m-em-section">${sec ? (sec.icon + ' ' + escapeHtml(sec.label)) : ''}</div>
-          <button class="m-em-speak" type="button" data-ar="${escapeHtml(w.ar)}" title="Escuchar (Google MSA)">🔊</button>
+          <button class="m-em-speak" type="button" data-ar="${escapeHtml(w.ar)}" data-wid="${escapeHtml(w.id)}" title="Escuchar (MP3 emiratí si existe, si no Google MSA)">🔊</button>
         </div>
         <div class="m-em-ar" lang="ar" dir="rtl">${escapeHtml(w.ar)}</div>
         <div class="m-em-tr">${escapeHtml(w.tr)}</div>
@@ -215,7 +215,7 @@
       list.appendChild(card);
     });
     list.querySelectorAll('.m-em-speak').forEach((b) => b.addEventListener('click', (e) => {
-      speakEmirati(b.dataset.ar, b);
+      speakEmirati(b.dataset.ar, b, b.dataset.wid);
     }));
     list.querySelectorAll('.m-em-mark').forEach((b) => b.addEventListener('click', () => {
       fetch('/api/maestro/emirati/mark?pw=' + encodeURIComponent(pw), {
@@ -227,14 +227,38 @@
     }));
   }
   let _emAudio = null;
-  function speakEmirati(arText, btn) {
+  // Play priority:
+  //  1. /api/emirati/audio/{wordId}  — your own MP3 (true Khaleeji)
+  //  2. /api/tts?voice=ar-XA-Wavenet-A — Google MSA (fallback)
+  // To populate (1): drop MP3s into data/emirati-audio/ named by wordId
+  // (e.g. e1.mp3). Record yourself, paste from Azure ar-AE, etc.
+  function speakEmirati(arText, btn, wid) {
     try { if (_emAudio) { _emAudio.pause(); _emAudio = null; } } catch (_) {}
-    const url = '/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText);
-    _emAudio = new Audio(url);
-    if (btn) { btn.textContent = '🔊 …'; }
-    _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
-    _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
-    _emAudio.addEventListener('error', () => { if (btn) btn.textContent = '⚠️'; });
+    if (btn) { btn.textContent = '🔊 …'; btn.classList.remove('m-em-speak-msa'); }
+    const playUrl = (url, onErr) => {
+      _emAudio = new Audio(url);
+      _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
+      _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
+      _emAudio.addEventListener('error', () => { if (onErr) onErr(); else if (btn) btn.textContent = '⚠️'; });
+    };
+    // 1) Try the per-word override first (HEAD-style check via fetch).
+    if (wid) {
+      const overrideUrl = '/api/emirati/audio/' + encodeURIComponent(wid);
+      fetch(overrideUrl, { method: 'HEAD' }).then((r) => {
+        if (r.ok) {
+          playUrl(overrideUrl);
+        } else {
+          // 2) Fallback to Google MSA + visually mark it as the fallback voice.
+          if (btn) btn.classList.add('m-em-speak-msa');
+          playUrl('/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText));
+        }
+      }).catch(() => {
+        if (btn) btn.classList.add('m-em-speak-msa');
+        playUrl('/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText));
+      });
+    } else {
+      playUrl('/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText));
+    }
   }
 
   function loadGuidesList() {
