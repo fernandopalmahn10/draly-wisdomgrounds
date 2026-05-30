@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260529b">
-  <link rel="stylesheet" href="/css/homework.css?v=20260529d">
+  <link rel="stylesheet" href="/css/homework.css?v=20260529e">
 </head>
 <body class="hw-bg">
 
@@ -78,6 +78,11 @@
       <button class="btn btn-ghost btn-sm" id="hw-folder-back">← HSK1</button>
       <span class="hw-folder-crumb" id="hw-folder-crumb"></span>
     </div>
+
+    <!-- 🎯 TAREAS ESPECIALES — teacher-sent, multi-bank. Shown above HSK1
+         on the home view; hidden when the kid has none. -->
+    <div class="hw-list-section-title hw-sec-custom hidden" id="hw-sec-custom">🎯 Tareas especiales de tu maestra</div>
+    <div class="hw-list-grid hw-list-custom hidden" id="hw-list-custom"></div>
 
     <div class="hw-list-section-title hidden" id="hw-sec-tareas">📚 Tareas para armar oraciones</div>
     <div class="hw-list-grid" id="hw-list-grid">
@@ -477,7 +482,7 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/homework.js?v=20260529d"></script>
+  <script src="/js/homework.js?v=20260529e"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>

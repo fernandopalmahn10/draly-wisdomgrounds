@@ -12,6 +12,7 @@ const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
 const Guides = require('./core/guides');
 const Emirati = require('./core/emirati-vocab');
+const CustomAsg = require('./core/custom-assignments');
 // Tiny persistence for the owner's Emirati Arabic gateway (single global
 // profile, since this is a super-admin-only personal feature). Lives on the
 // same data disk as the rest of the JSON state.
@@ -252,6 +253,95 @@ app.post('/api/maestro/emirati/mark', (req, res) => {
   }
   _emiratiWrite(state);
   res.json({ ok: true, progress: { seenCount: state.seen.length, total: Emirati.EMIRATI_WORDS.length, streak: state.streak, lastDate: state.lastDate } });
+});
+
+// === 🎯 CUSTOM ASSIGNMENTS — teacher-authored, per-student, multi-bank ====
+// Teacher creates one or many sentence items + selects target kids by code.
+// Targeted kids see them in their homework portal above HSK1 folders.
+app.post('/api/admin/custom-assignment', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const { title, instructions, items, targetStudents, pointsPerItem } = req.body || {};
+  const rec = CustomAsg.create({
+    teacherId: session.teacher ? session.teacher.teacherId : (session.isSuperAdmin ? 'super' : null),
+    title, instructions, items, targetStudents, pointsPerItem,
+  });
+  if (!rec) return res.status(400).json({ ok: false, error: 'invalid: necesita al menos 1 item + 1 estudiante' });
+  res.json({ ok: true, assignment: rec });
+});
+app.get('/api/admin/custom-assignments', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  // Super admin sees all; regular teachers see only their own.
+  const list = session.isSuperAdmin
+    ? CustomAsg.listAll()
+    : CustomAsg.listForTeacher(session.teacher ? session.teacher.teacherId : null);
+  res.json({ ok: true, assignments: list });
+});
+app.delete('/api/admin/custom-assignment/:id', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const ok = CustomAsg.remove(req.params.id,
+    session.teacher ? session.teacher.teacherId : null,
+    !!session.isSuperAdmin);
+  res.json({ ok });
+});
+app.get('/api/homework/custom-assignments/:code', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.json({ ok: true, assignments: [] });
+  const list = CustomAsg.listForStudent(rec.code).map((a) => ({
+    id: a.id,
+    title: a.title,
+    instructions: a.instructions,
+    itemCount: a.items.length,
+    createdAt: a.createdAt,
+    teacherId: a.teacherId,
+  }));
+  res.json({ ok: true, assignments: list });
+});
+app.get('/api/homework/custom-assignment/:id', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = Students.get(req.query.studentCode);
+  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  const a = CustomAsg.get(req.params.id);
+  if (!a || a.status !== 'active') return res.status(404).json({ ok: false, error: 'no encontrada' });
+  if (a.targetStudents.indexOf(rec.code) < 0) return res.status(403).json({ ok: false, error: 'no es para ti' });
+  // Strip server-only fields. Hand the kid the same shape regular assignments use,
+  // PLUS a `custom: true` flag and `expLabel: null` so the homework UI knows to
+  // unlock the word bank to ALL EXPs (multi-bank intent).
+  res.json({ ok: true, assignment: {
+    id: a.id, custom: true,
+    title: a.title, subtitle: 'Tarea especial de tu maestra',
+    instructions: a.instructions || 'Arma cada oración usando palabras de cualquier experiencia.',
+    items: a.items.map((it) => ({ es: it.es })),  // hide expected from the client
+    pointsPerItem: a.pointsPerItem,
+    expLabel: null,
+    createdAt: a.createdAt,
+  } });
+});
+app.post('/api/homework/custom-assignment/submit', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, assignmentId, answers } = req.body || {};
+  const rec = Students.get(studentCode);
+  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  const a = CustomAsg.get(assignmentId);
+  if (!a || a.status !== 'active') return res.status(404).json({ ok: false, error: 'no encontrada' });
+  if (a.targetStudents.indexOf(rec.code) < 0) return res.status(403).json({ ok: false, error: 'no es para ti' });
+  const result = CustomAsg.grade(a, answers);
+  if (!result) return res.status(400).json({ ok: false, error: 'no se pudo calificar' });
+  // Reuse the existing student submission log so it appears in parent view,
+  // mistake review, etc. The custom flag lets the UI render its tag.
+  Students.logAssignmentSubmission(rec.code, {
+    assignmentId: a.id,
+    custom: true,
+    title: a.title,
+    accessCode: String(req.body.accessCode || ''),
+    score: result.score, total: result.total,
+    answers: Array.isArray(answers) ? answers : [],
+    breakdown: result.breakdown,
+  });
+  res.json({ ok: true, score: result.score, total: result.total, breakdown: result.breakdown });
 });
 
 app.get('/api/admin/students', (req, res) => {

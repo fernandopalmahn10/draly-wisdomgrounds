@@ -226,6 +226,127 @@
       });
     }));
   }
+  // ── 🎯 CUSTOM ASSIGNMENTS — author a tarea + send to specific kids ───
+  const cuBtn = $('m-custom-btn');
+  const cuModal = $('m-custom-modal');
+  let _cuStudents = [];     // [{code,name,checked}]
+  let _cuItems = [];        // [{es,expected}]
+  function openCustomModal() {
+    cuModal.classList.remove('hidden');
+    $('m-cu-msg').textContent = '';
+    $('m-cu-title').value = ''; $('m-cu-instr').value = '';
+    _cuItems = [{ es: '', expected: '' }];
+    renderCustomItems();
+    loadCustomStudents();
+    loadCustomExisting();
+  }
+  if (cuBtn) cuBtn.addEventListener('click', openCustomModal);
+  if ($('m-custom-close')) $('m-custom-close').addEventListener('click', () => cuModal.classList.add('hidden'));
+  if (cuModal) cuModal.addEventListener('click', (e) => { if (e.target === cuModal) cuModal.classList.add('hidden'); });
+  if ($('m-cu-add-item')) $('m-cu-add-item').addEventListener('click', () => {
+    if (_cuItems.length >= 24) return;
+    _cuItems.push({ es: '', expected: '' }); renderCustomItems();
+  });
+  if ($('m-cu-students-search')) $('m-cu-students-search').addEventListener('input', () => renderCustomStudents());
+  if ($('m-cu-students-all')) $('m-cu-students-all').addEventListener('click', () => { _cuStudents.forEach((s) => s.checked = true); renderCustomStudents(); });
+  if ($('m-cu-students-none')) $('m-cu-students-none').addEventListener('click', () => { _cuStudents.forEach((s) => s.checked = false); renderCustomStudents(); });
+  if ($('m-cu-send')) $('m-cu-send').addEventListener('click', sendCustom);
+  function renderCustomItems() {
+    const wrap = $('m-cu-items'); if (!wrap) return;
+    wrap.innerHTML = '';
+    _cuItems.forEach((it, i) => {
+      const row = document.createElement('div'); row.className = 'm-cu-item';
+      row.innerHTML = `
+        <span class="m-cu-item-num">${i + 1}.</span>
+        <input class="input m-cu-item-es" placeholder="Oración en español (ej. Yo soy maestro)" value="${escapeHtml(it.es)}">
+        <input class="input m-cu-item-px" placeholder="Pinyin esperado (ej. wo shi laoshi)" value="${escapeHtml(it.expected)}">
+        <button class="m-cu-item-del" type="button" title="Quitar">✕</button>`;
+      row.querySelector('.m-cu-item-es').addEventListener('input', (e) => { _cuItems[i].es = e.target.value; });
+      row.querySelector('.m-cu-item-px').addEventListener('input', (e) => { _cuItems[i].expected = e.target.value; });
+      row.querySelector('.m-cu-item-del').addEventListener('click', () => { _cuItems.splice(i, 1); if (!_cuItems.length) _cuItems.push({ es: '', expected: '' }); renderCustomItems(); });
+      wrap.appendChild(row);
+    });
+  }
+  function loadCustomStudents() {
+    const list = $('m-cu-students'); if (list) list.textContent = 'Cargando…';
+    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        const students = (data && data.students) || [];
+        _cuStudents = students.map((s) => ({ code: s.code, name: s.displayName || 'Anon', checked: false }));
+        renderCustomStudents();
+      })
+      .catch(() => { if (list) list.textContent = 'Error cargando estudiantes.'; });
+  }
+  function renderCustomStudents() {
+    const list = $('m-cu-students'); if (!list) return;
+    const q = ($('m-cu-students-search') ? $('m-cu-students-search').value : '').toLowerCase().trim();
+    const filtered = _cuStudents.filter((s) => !q || s.code.toLowerCase().indexOf(q) >= 0 || s.name.toLowerCase().indexOf(q) >= 0);
+    if (!filtered.length) { list.innerHTML = '<div class="m-empty">Sin resultados.</div>'; return; }
+    list.innerHTML = '';
+    filtered.forEach((s) => {
+      const row = document.createElement('label'); row.className = 'm-cu-student' + (s.checked ? ' on' : '');
+      row.innerHTML = `<input type="checkbox" ${s.checked ? 'checked' : ''}> <span class="m-cu-stu-code">${escapeHtml(s.code)}</span> <span class="m-cu-stu-name">${escapeHtml(s.name)}</span>`;
+      row.querySelector('input').addEventListener('change', (e) => { s.checked = e.target.checked; row.classList.toggle('on', s.checked); });
+      list.appendChild(row);
+    });
+    const tag = $('m-cu-msg'); const sel = _cuStudents.filter((s) => s.checked).length;
+    if (tag) tag.textContent = sel ? sel + ' alumno' + (sel === 1 ? '' : 's') + ' seleccionado' + (sel === 1 ? '' : 's') : '';
+  }
+  function sendCustom() {
+    const title = $('m-cu-title').value.trim();
+    const instructions = $('m-cu-instr').value.trim();
+    const items = _cuItems.filter((it) => it.es.trim() && it.expected.trim());
+    const targets = _cuStudents.filter((s) => s.checked).map((s) => s.code);
+    const msg = $('m-cu-msg');
+    if (!title) { if (msg) msg.textContent = '✕ Falta el título.'; return; }
+    if (!items.length) { if (msg) msg.textContent = '✕ Necesitas al menos 1 oración completa (español + pinyin).'; return; }
+    if (!targets.length) { if (msg) msg.textContent = '✕ Marca al menos 1 estudiante.'; return; }
+    if (msg) msg.textContent = 'Enviando…';
+    fetch('/api/admin/custom-assignment?pw=' + encodeURIComponent(pw), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, instructions, items, targetStudents: targets, pointsPerItem: 10 }),
+    }).then((r) => r.json()).then((d) => {
+      if (d && d.ok) {
+        if (msg) msg.textContent = '✅ Enviada a ' + targets.length + ' alumno' + (targets.length === 1 ? '' : 's') + '.';
+        _cuItems = [{ es: '', expected: '' }]; renderCustomItems();
+        $('m-cu-title').value = ''; $('m-cu-instr').value = '';
+        _cuStudents.forEach((s) => s.checked = false); renderCustomStudents();
+        loadCustomExisting();
+      } else {
+        if (msg) msg.textContent = '✕ Error: ' + ((d && d.error) || 'no se pudo enviar');
+      }
+    }).catch((e) => { if (msg) msg.textContent = '✕ ' + e.message; });
+  }
+  function loadCustomExisting() {
+    const wrap = $('m-cu-existing'); if (!wrap) return;
+    wrap.textContent = 'Cargando…';
+    fetch('/api/admin/custom-assignments?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((d) => {
+        const list = (d && d.assignments) || [];
+        if (!list.length) { wrap.innerHTML = '<div class="m-empty">Aún no has mandado tareas especiales.</div>'; return; }
+        wrap.innerHTML = '';
+        list.forEach((a) => {
+          const row = document.createElement('div'); row.className = 'm-cu-ex';
+          const when = a.createdAt ? new Date(a.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+          row.innerHTML = `
+            <div class="m-cu-ex-info">
+              <div class="m-cu-ex-title">${escapeHtml(a.title || 'Tarea')}</div>
+              <div class="m-cu-ex-meta">📝 ${a.items.length} oración${a.items.length === 1 ? '' : 'es'} · 👥 ${a.targetStudents.length} alumno${a.targetStudents.length === 1 ? '' : 's'} · ${when}</div>
+            </div>
+            <button class="btn btn-ghost btn-sm m-cu-ex-del" type="button">🗑 Borrar</button>`;
+          row.querySelector('.m-cu-ex-del').addEventListener('click', () => {
+            if (!confirm('¿Borrar "' + a.title + '"? Los alumnos ya no la verán.')) return;
+            fetch('/api/admin/custom-assignment/' + encodeURIComponent(a.id) + '?pw=' + encodeURIComponent(pw), { method: 'DELETE' })
+              .then((r) => r.json()).then(() => loadCustomExisting());
+          });
+          wrap.appendChild(row);
+        });
+      })
+      .catch(() => { wrap.textContent = 'Error.'; });
+  }
+
   let _emAudio = null;
   // Play priority:
   //  1. /api/emirati/audio/{wordId}  — your own MP3 (true Khaleeji)

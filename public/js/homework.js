@@ -75,6 +75,7 @@
   let avatar = null;
   let avatarOptions = [];
   let assignments = [];        // summary list
+  let customAssignments = [];  // 🎯 teacher-sent tareas especiales for me
   let submissions = [];        // student's prior submissions
   let readingTests = [];       // [{ storyId, title, subtitle, coverImage, available, bestScore, attempts }]
   let currentReadingStory = null;  // loaded story when on the reading screen
@@ -229,6 +230,7 @@
         }
         // Pull the daily progression HUD (XP / swords / streak) right away.
         try { refreshDailyHud(); } catch (_) {}
+        try { refreshCustomAssignments(); } catch (_) {}
         // Start inbox polling — every 20s while the kid is logged in.
         // Pulls down any messages the teacher sent.
         fetchInbox();
@@ -1847,6 +1849,19 @@
     fetchReadingTests();
   }
 
+  // 🎯 Pull custom assignments the teacher sent to ME, then re-render so the
+  // home screen shows them above HSK1 as soon as they arrive.
+  function refreshCustomAssignments() {
+    if (!studentCode || !accessCode) return;
+    fetch('/api/homework/custom-assignments/' + encodeURIComponent(studentCode)
+        + '?accessCode=' + encodeURIComponent(accessCode))
+      .then((r) => r.json())
+      .then((d) => {
+        customAssignments = (d && d.assignments) || [];
+        if (!hwFolder) renderFolderRoot();
+      })
+      .catch(() => { customAssignments = []; });
+  }
   // ROOT — HSK1 with its eight experience folders.
   function renderFolderRoot() {
     $('hw-folder-bar').classList.add('hidden');
@@ -1854,6 +1869,30 @@
     $('hw-sec-lecturas').classList.add('hidden');
     $('hw-list-readings').classList.add('hidden');
     const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 HSK1';
+    // 🎯 Custom assignments section — shown ABOVE HSK1 so they catch the
+    // kid's eye. Hidden if no targeted assignment exists for me.
+    const cuSec = $('hw-sec-custom'); const cuGrid = $('hw-list-custom');
+    if (cuSec && cuGrid) {
+      const list = customAssignments || [];
+      cuSec.classList.toggle('hidden', list.length === 0);
+      cuGrid.classList.toggle('hidden', list.length === 0);
+      cuGrid.innerHTML = '';
+      list.forEach((a) => {
+        const passed = submissions.some((s) => s.assignmentId === a.id && s.score >= (a.itemCount * 8)); // 80%
+        const tried = submissions.some((s) => s.assignmentId === a.id);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'hw-folder-card hw-custom-card' + (passed ? ' is-passed' : tried ? ' is-pending' : '');
+        const when = a.createdAt ? new Date(a.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : '';
+        card.innerHTML = `
+          <div class="hw-folder-emoji">🎯</div>
+          <div class="hw-folder-name">${escapeHtml(a.title || 'Tarea especial')}</div>
+          <div class="hw-folder-meta">📝 ${a.itemCount} oración${a.itemCount === 1 ? '' : 'es'} · ${when}</div>
+          ${passed ? '<div class="hw-folder-progress">✓ Completada</div>' : tried ? '<div class="hw-folder-progress">⏳ Reintenta para pasar</div>' : '<div class="hw-folder-progress">🆕 ¡Para ti!</div>'}`;
+        card.addEventListener('click', () => openAssignment(a.id));
+        cuGrid.appendChild(card);
+      });
+    }
     const grid = $('hw-list-grid');
     grid.classList.remove('hidden');
     grid.innerHTML = '';
@@ -1884,6 +1923,9 @@
   // FOLDER — assignments (+ readings) inside one experience.
   function renderFolderContents(expId) {
     const exp = (window.WU_EXPERIENCES || {})[expId];
+    // Hide the custom section while inside a folder — it's only the root view.
+    const cuSec = $('hw-sec-custom'); if (cuSec) cuSec.classList.add('hidden');
+    const cuGrid = $('hw-list-custom'); if (cuGrid) cuGrid.classList.add('hidden');
     $('hw-folder-bar').classList.remove('hidden');
     $('hw-folder-crumb').textContent = exp ? exp.label : expId;
     const grid = $('hw-list-grid');
@@ -2307,20 +2349,27 @@
 
   // ── Assignment screen
   function openAssignment(id) {
-    fetch('/api/homework/assignment/' + encodeURIComponent(id) + '?accessCode=' + encodeURIComponent(accessCode))
+    // Custom assignments start with "ca_" — they go to a different endpoint
+    // and the word bank stays UNLOCKED so kids can pull from any EXP.
+    const isCustom = String(id || '').slice(0, 3) === 'ca_';
+    const url = isCustom
+      ? '/api/homework/custom-assignment/' + encodeURIComponent(id) + '?accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode)
+      : '/api/homework/assignment/' + encodeURIComponent(id) + '?accessCode=' + encodeURIComponent(accessCode);
+    fetch(url)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) {
           alert('No se pudo abrir: ' + (data && data.error || ''));
           return;
         }
-        currentAssignment = data;
-        currentAnswers = data.items.map(() => '');
-        undoStacks = data.items.map(() => []);
-        // Lock the word bank to THIS assignment's experience so kids only
-        // see the relevant words (no confusion). Falls back to 'all' if the
-        // assignment has no experience tag.
-        activeExpTab = data.expLabel || 'all';
+        // Server wraps custom in {assignment: ...}; regular returns flat.
+        currentAssignment = isCustom ? data.assignment : data;
+        if (!currentAssignment) { alert('No se pudo abrir.'); return; }
+        currentAssignment.custom = isCustom || !!currentAssignment.custom;
+        currentAnswers = currentAssignment.items.map(() => '');
+        undoStacks = currentAssignment.items.map(() => []);
+        // Custom = multi-bank → leave catalog on 'all'. Regular = locked.
+        activeExpTab = currentAssignment.custom ? 'all' : (currentAssignment.expLabel || 'all');
         renderAssignment();
         showScreen('assignment');
       });
@@ -2622,7 +2671,12 @@
     if (emptyCount > 0 && !confirm(`Tienes ${emptyCount} oraciones vacías. ¿Entregar de todas formas?`)) return;
     const btns = [$('hw-asg-submit'), $('hw-asg-submit-top')].filter(Boolean);
     btns.forEach((b) => { b.disabled = true; b.textContent = 'Enviando…'; });
-    fetch('/api/homework/submit', {
+    // Custom assignments go to the dedicated endpoint so the server knows to
+    // re-validate the kid is in the target list + use the custom grader.
+    const submitUrl = currentAssignment.custom
+      ? '/api/homework/custom-assignment/submit'
+      : '/api/homework/submit';
+    fetch(submitUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
