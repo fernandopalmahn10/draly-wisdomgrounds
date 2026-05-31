@@ -99,16 +99,12 @@
 .hw-avatar-option img[src*="cutscenes/chars/"],
 .hw-avatar-option-img img[src*="cutscenes/chars/"] {
   width: 100%; height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   background:
     radial-gradient(circle at 50% 35%, rgba(91,232,209,0.42) 0%, transparent 65%),
     linear-gradient(160deg, #2a2545 0%, #1c1f3a 100%);
   border-radius: 14px;
-  /* Clip to the central character body (Higgsfield 9:16 output has
-     character centered, checker in left/right margins + top/bottom edges) */
-  clip-path: inset(8% 22% 8% 22% round 14px);
-  transform: scale(1.55);
-  transform-origin: center 40%;
+  padding: 4px;
 }
 /* Round avatar slots (settings, cuaderno, parents view, daily HUD) —
    use ellipse clip to match the circular frame. */
@@ -121,10 +117,8 @@
     radial-gradient(circle at 50% 35%, rgba(91,232,209,0.5) 0%, transparent 65%),
     linear-gradient(160deg, #2a2545 0%, #1c1f3a 100%);
   border-radius: 50%;
-  object-fit: cover;
-  clip-path: ellipse(28% 42% at 50% 45%);
-  transform: scale(1.55);
-  transform-origin: center 40%;
+  object-fit: contain;
+  padding: 6px;
 }
 
 /* Avatar picker entries for the new characters */

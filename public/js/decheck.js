@@ -31,16 +31,16 @@
       const W = canvas.width;
       const H = canvas.height;
 
-      // Pixel is "background-like" if:
-      //  - already transparent OR
-      //  - has very low saturation (gray) AND is bright enough (>175)
+      // Pixel is "background-like" if it's grayscale in the mid-bright
+      // range (the editor checker pattern). Pure black + pure white are
+      // PRESERVED (could be outlines / character white hair).
       function isBg(idx) {
         if (data[idx + 3] < 16) return true;
         const r = data[idx], g = data[idx + 1], b = data[idx + 2];
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
-        if (max - min > 18) return false;          // colored pixel = not bg
-        return min > 175 && max < 256;             // light gray / white
+        if (max - min > 25) return false;          // colored pixel = not bg
+        return min > 35 && min < 215;              // mid gray range
       }
 
       // Flood fill from edges using iterative stack.

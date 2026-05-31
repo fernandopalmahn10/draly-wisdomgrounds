@@ -26,7 +26,8 @@
              for iOS. PNG fallback if the video file is missing. -->
         <video class="dralingo-video"
                src="/assets/cutscenes/chars/gojo-victory.mp4?v=20260601a"
-               autoplay loop muted playsinline
+               autoplay loop muted playsinline crossorigin="anonymous"
+               data-chroma-key="1"
                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"></video>
         <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-floating" style="display:none;">
       </div>
@@ -86,6 +87,7 @@
   </div>
 
   <script src="/js/decheck.js?v=20260601a"></script>
+  <script src="/js/video-chroma.js?v=20260601a"></script>
   <script src="/js/sounds.js"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
