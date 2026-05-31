@@ -79,7 +79,13 @@
   // Default lands on ⏳ Pendientes — kid's TODO list. "pending" includes both
   // brand-new tareas AND ones tried below 80%. Per user: "by default it
   // should enter in pending and only show the pending."
-  let customFilter = 'pending';    // pill filter: pending | done | all
+  let customFilter = 'pending';    // pill filter: pending | done | all (legacy)
+  // 🗂️ NEW 3-TAB STATE — default to "pending" so the kid sees what they
+  // still owe first. Tabs are MUTUALLY EXCLUSIVE and never mix items.
+  //   pending → HSK1 folders/items NOT done
+  //   done    → HSK1 folders/items DONE
+  //   custom  → tareas the teacher sent ME (flat list, both done + pending)
+  let currentTab = 'pending';
   function makeCuPill(id, label, count) {
     return '<button class="hw-cf-pill' + (customFilter === id ? ' is-active' : '')
       + (count === 0 ? ' is-empty' : '') + '" data-f="' + id + '" type="button">'
@@ -443,7 +449,14 @@
     if (!arr.length) { list.innerHTML = '<div class="hw-empty">Aún no has guardado oraciones. Toca 💾 en clase para guardar una. 🌱</div>'; return; }
     list.innerHTML = '';
     arr.forEach((s) => {
-      const words = (s.words || []).map((wid) => (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]) || null).filter(Boolean);
+      // 🔧 Don't drop sentences whose IDs aren't in the catalog (daily-bonus
+      // saves use the same wordbank, but a stale/renamed ID would silently
+      // vanish before — making the kid think their save "didn't work").
+      // Now we render a stub chip for unknown IDs so the entry still shows.
+      const words = (s.words || []).map((wid) => {
+        const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
+        return w || { id: wid, pinyin: String(wid), es: '', cat: '' };
+      });
       if (!words.length) return;
       const pinyin = words.map((w) => w.pinyin).join(' ');
       const dateStr = s.ts ? new Date(s.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
@@ -1885,8 +1898,9 @@
       <div class="sect">🌟 Observaciones del maestro</div>
       <ul>${notesHtml}</ul>
       <div class="stats">
-        <div class="stat"><b>${d.stats ? d.stats.assignments : 0}</b><span>TAREAS</span></div>
-        <div class="stat"><b>${d.stats ? d.stats.tests : 0}</b><span>EXÁMENES</span></div>
+        <div class="stat"><b>${d.stats ? d.stats.assignments : 0}${d.stats && d.stats.assignmentsAttempted ? '<span style="font-size:0.7rem;color:#b06a2a;">/'+d.stats.assignmentsAttempted+'</span>' : ''}</b><span>TAREAS APROBADAS</span></div>
+        <div class="stat"><b>${d.stats ? d.stats.tests : 0}${d.stats && d.stats.testsAttempted ? '<span style="font-size:0.7rem;color:#b06a2a;">/'+d.stats.testsAttempted+'</span>' : ''}</b><span>EXÁMENES</span></div>
+        <div class="stat"><b>${d.stats ? d.stats.sentences : 0}</b><span>ORACIONES</span></div>
       </div>
       <div class="foot">¡Sigue practicando en voz alta! 加油 🎉</div>
       <div class="sig">
@@ -1899,9 +1913,18 @@
   </div></div></div></div>
   <script>setTimeout(function(){ try { window.focus(); } catch(e){} }, 200);<\/script>
 </body></html>`;
-    const w = window.open('', '_blank');
+    // 🔧 Each generation gets a UNIQUE window name (cert_<month>_<rand>) so
+    // pressing "Generar →" twice doesn't recycle the prior tab with stale
+    // markup — was causing the second report to render broken/lying data.
+    const winName = 'cert_' + (d.month || 'x').replace(/-/g, '') + '_' + Math.random().toString(36).slice(2, 8);
+    const w = window.open('', winName);
     if (!w) { alert('Permite ventanas emergentes para ver la boleta.'); return; }
-    w.document.open(); w.document.write(html); w.document.close();
+    // Wipe any prior content before writing (defensive — some Android browsers
+    // hold the old document.body if you skip this).
+    try { w.document.open('text/html', 'replace'); } catch (_) { w.document.open(); }
+    w.document.write(html);
+    w.document.close();
+    try { w.focus(); } catch (_) {}
   }
 
   // Render the expandable per-sentence detail (correct ✓ / incorrect ✗).
@@ -2035,6 +2058,21 @@
     const b = $('hw-folder-back');
     if (b) b.addEventListener('click', () => { hwFolder = null; renderList(); });
   })();
+  // 🗂️ Three-tab bindings. Tabs are MUTUALLY EXCLUSIVE; switching one only
+  // re-renders the root view, never the folder contents.
+  (function bindTabs() {
+    const ids = ['hw-tab-pending', 'hw-tab-done', 'hw-tab-custom'];
+    ids.forEach((id) => {
+      const t = $(id); if (!t) return;
+      t.addEventListener('click', () => {
+        currentTab = t.dataset.tab || 'pending';
+        ids.forEach((x) => { const e = $(x); if (e) e.classList.toggle('is-active', e.id === id); });
+        // Switching tabs always returns to the root view.
+        hwFolder = null;
+        renderList();
+      });
+    });
+  })();
 
   function renderList() {
     $('hw-list-name').textContent = displayName || 'Anon';
@@ -2057,22 +2095,15 @@
       .then((d) => {
         customAssignments = (d && d.assignments) || [];
         if (!hwFolder) renderCustomSection();
+        updateTabCounts();
       })
       .catch(() => { customAssignments = []; });
   }
-  // Renders ONLY the two custom-assignment sections (Pendientes + Completadas).
-  // Safe to call repeatedly without disturbing the HSK1 folder grid.
-  function renderCustomSection() {
-    const secP = $('hw-sec-custom-pending');
-    const secD = $('hw-sec-custom-done');
-    const gridP = $('hw-list-custom-pending');
-    const gridD = $('hw-list-custom-done');
-    if (!secP || !secD || !gridP || !gridD) return;
-    if (hwFolder) {
-      [secP, secD, gridP].forEach((el) => el.classList.add('hidden'));
-      return;
-    }
-    const tagged = (customAssignments || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+  // Compute the tag for every custom assignment ONCE — used by the tab count
+  // badge AND by the custom-tab list render.
+  function taggedCustomAssignments() {
+    return (customAssignments || []).slice()
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
       .map((a) => {
         const ptsForPass = (a.itemCount || 0) * 8;
         const subs = submissions.filter((s) => s.assignmentId === a.id);
@@ -2082,14 +2113,22 @@
         else if (best) status = 'pending';
         return { a, status, best };
       });
-    const pendingList = tagged.filter((t) => t.status !== 'done');
-    const doneList = tagged.filter((t) => t.status === 'done');
-    secP.classList.toggle('hidden', !pendingList.length);
-    gridP.classList.toggle('hidden', !pendingList.length);
-    secD.classList.toggle('hidden', !doneList.length);
-    const cnt = $('hw-done-count'); if (cnt) cnt.textContent = '(' + doneList.length + ')';
-    renderCustomCards(gridP, pendingList);
-    renderCustomCards(gridD, doneList);
+  }
+  // Renders the FLAT custom-assignment list (all teacher-sent tareas) into
+  // the new dedicated #hw-list-custom-all grid. Only shown when the active
+  // tab is "custom". The Pendientes/Completadas HSK1 tabs never see these.
+  function renderCustomSection() {
+    const wrap = $('hw-list-custom-all');
+    if (!wrap) return;
+    if (hwFolder || currentTab !== 'custom') { wrap.classList.add('hidden'); return; }
+    const tagged = taggedCustomAssignments();
+    wrap.classList.remove('hidden');
+    wrap.innerHTML = '';
+    if (!tagged.length) {
+      wrap.innerHTML = '<div class="hw-empty">Tu maestro/a aún no te ha enviado tareas. ✨</div>';
+      return;
+    }
+    renderCustomCards(wrap, tagged);
   }
   function renderCustomCards(grid, list) {
     grid.innerHTML = '';
@@ -2113,60 +2152,111 @@
       grid.appendChild(card);
     });
   }
-  // ROOT — HSK1 with its eight experience folders.
+  // ROOT — HSK1 folders, filtered by the active tab. The folder card's
+  // count shows only items that match the tab (so "EXP1 · 2/3 ✓" in Done
+  // means 2 of 3 passed, while in Pendientes it would show "3 por hacer").
   function renderFolderRoot() {
     $('hw-folder-bar').classList.add('hidden');
     $('hw-sec-tareas').classList.add('hidden');
     $('hw-sec-lecturas').classList.add('hidden');
     $('hw-list-readings').classList.add('hidden');
+    const tabsBar = $('hw-tabs'); if (tabsBar) tabsBar.classList.remove('hidden');
     const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 HSK1';
-    // 🎯 Custom assignments — split into two top-level sections (pendientes
-    // + completadas). Rendered by renderCustomSection() so the heavy HSK1
-    // grid render below isn't disturbed by async fetches.
+    // Always refresh the custom flat list (visible only on the custom tab).
     renderCustomSection();
     const grid = $('hw-list-grid');
+    updateTabCounts();
+    if (currentTab === 'custom') {
+      // Hide the HSK1 grid; the custom flat list above takes over.
+      grid.classList.add('hidden');
+      grid.innerHTML = '';
+      return;
+    }
     grid.classList.remove('hidden');
     grid.innerHTML = '';
     const exps = window.WU_EXPERIENCES || {};
+    const showDone = currentTab === 'done';
     ['exp1','exp2','exp3','exp4','exp5','exp6','exp7','exp8'].forEach((expId) => {
       const exp = exps[expId];
       if (!exp) return;
       const eAssigns = assignments.filter((a) => a.expLabel === expId);
       const eReads = (readingTests || []).filter((r) => readingExpOf(r) === expId);
       const total = eAssigns.length + eReads.length;
-      const done = eAssigns.filter((a) => assignmentPassed(a)).length
-                 + eReads.filter((r) => r.bestScore != null && r.bestScore >= 80).length;
+      const aDone = eAssigns.filter((a) => assignmentPassed(a)).length;
+      const rDone = eReads.filter((r) => r.bestScore != null && r.bestScore >= 80).length;
+      const done = aDone + rDone;
+      const pending = total - done;
+      // Skip folders that don't contribute to the current tab.
+      if (showDone && done === 0) return;
+      if (!showDone && pending === 0) return;
       const emoji = (exp.short || '📁').split(' ')[0] || '📁';
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = 'hw-folder-card' + (total ? '' : ' hw-folder-empty');
+      card.className = 'hw-folder-card'
+        + (showDone ? ' hw-folder-done' : ' hw-folder-pending');
+      const meta = showDone
+        ? '<div class="hw-folder-progress">✅ ' + done + ' completada' + (done === 1 ? '' : 's') + '</div>'
+        : '<div class="hw-folder-progress">⏳ ' + pending + ' por hacer</div>';
       card.innerHTML = `
         <div class="hw-folder-emoji">${emoji}</div>
         <div class="hw-folder-name">${escapeHtml(exp.label || expId)}</div>
-        <div class="hw-folder-meta">${total ? (total + ' actividad' + (total === 1 ? '' : 'es')) : 'Próximamente'}</div>
-        ${total ? `<div class="hw-folder-progress">${done}/${total} ✓</div>` : ''}`;
-      if (total) card.addEventListener('click', () => { hwFolder = expId; renderList(); });
-      else card.disabled = true;
+        <div class="hw-folder-meta">${total + ' actividad' + (total === 1 ? '' : 'es') + ' en total'}</div>
+        ${meta}`;
+      card.addEventListener('click', () => { hwFolder = expId; renderList(); });
       grid.appendChild(card);
     });
+    if (!grid.children.length) {
+      grid.innerHTML = showDone
+        ? '<div class="hw-empty">Aún no has completado ninguna tarea. ¡Vamos a Pendientes! 💪</div>'
+        : '<div class="hw-empty">🎉 ¡Sin pendientes! Has terminado todo lo disponible.</div>';
+    }
   }
 
-  // FOLDER — assignments (+ readings) inside one experience.
+  // FOLDER — assignments (+ readings) inside one experience, filtered by tab.
   function renderFolderContents(expId) {
     const exp = (window.WU_EXPERIENCES || {})[expId];
-    // Hide the custom sections while inside a folder — they're only the root view.
-    ['hw-sec-custom-pending', 'hw-list-custom-pending', 'hw-sec-custom-done'].forEach((id) => {
-      const el = $(id); if (el) el.classList.add('hidden');
-    });
+    const tabsBar = $('hw-tabs'); if (tabsBar) tabsBar.classList.add('hidden');
+    // Hide the custom flat list while inside a folder.
+    const cu = $('hw-list-custom-all'); if (cu) cu.classList.add('hidden');
     $('hw-folder-bar').classList.remove('hidden');
-    $('hw-folder-crumb').textContent = exp ? exp.label : expId;
+    const tabLabel = currentTab === 'done' ? ' · ✅ Completadas' : ' · ⏳ Pendientes';
+    $('hw-folder-crumb').textContent = (exp ? exp.label : expId) + tabLabel;
     const grid = $('hw-list-grid');
     grid.classList.remove('hidden');
     grid.innerHTML = '';
-    const list = assignments.filter((a) => a.expLabel === expId);
+    const showDone = currentTab === 'done';
+    const list = assignments.filter((a) => {
+      if (a.expLabel !== expId) return false;
+      const passed = assignmentPassed(a);
+      return showDone ? passed : !passed;
+    });
     $('hw-sec-tareas').classList.toggle('hidden', list.length === 0);
     list.forEach((a) => grid.appendChild(buildAssignmentCard(a)));
     renderReadingsList();
+    if (!list.length && !($('hw-list-readings').children.length)) {
+      grid.innerHTML = showDone
+        ? '<div class="hw-empty">Aún no has completado actividades de esta unidad.</div>'
+        : '<div class="hw-empty">¡Sin pendientes en esta unidad! 🎉</div>';
+    }
+  }
+  // 🔢 Update the 3 tab count badges. Called whenever data changes.
+  function updateTabCounts() {
+    const exps = window.WU_EXPERIENCES || {};
+    let pendingCount = 0, doneCount = 0;
+    ['exp1','exp2','exp3','exp4','exp5','exp6','exp7','exp8'].forEach((expId) => {
+      if (!exps[expId]) return;
+      const eA = assignments.filter((a) => a.expLabel === expId);
+      const eR = (readingTests || []).filter((r) => readingExpOf(r) === expId);
+      const aDone = eA.filter((a) => assignmentPassed(a)).length;
+      const rDone = eR.filter((r) => r.bestScore != null && r.bestScore >= 80).length;
+      doneCount += aDone + rDone;
+      pendingCount += (eA.length - aDone) + (eR.length - rDone);
+    });
+    const customCount = (customAssignments || []).length;
+    const setTxt = (id, n) => { const el = $(id); if (el) el.textContent = String(n); };
+    setTxt('hw-tab-count-pending', pendingCount);
+    setTxt('hw-tab-count-done', doneCount);
+    setTxt('hw-tab-count-custom', customCount);
   }
 
   // One assignment card (+ a review button once attempted) — shared by both
@@ -2254,7 +2344,15 @@
       $('hw-sec-lecturas').classList.add('hidden');
       return;
     }
-    const mine = (readingTests || []).filter((r) => readingExpOf(r) === hwFolder);
+    // Filter by the active tab — Pendientes shows unstarted/below-80 lecturas,
+    // Completadas shows ≥80 only. (No tab switch inside folder, but the tab
+    // selected on root determines what enters here.)
+    const showDone = currentTab === 'done';
+    const mine = (readingTests || []).filter((r) => {
+      if (readingExpOf(r) !== hwFolder) return false;
+      const passed = r.bestScore != null && r.bestScore >= 80;
+      return showDone ? passed : !passed;
+    });
     $('hw-sec-lecturas').classList.toggle('hidden', mine.length === 0);
     wrap.classList.toggle('hidden', mine.length === 0);
     if (!mine.length) { wrap.innerHTML = ''; return; }
