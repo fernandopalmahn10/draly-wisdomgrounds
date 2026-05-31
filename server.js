@@ -199,7 +199,11 @@ app.get('/api/maestro/emirati/today', (req, res) => {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '')
     ? req.query.date : new Date().toISOString().slice(0, 10);
   const state = _emiratiRead();
-  const words = Emirati.todaysWords(date, state.seen || []);
+  // 🔁 Otras 5 support — client can pass ?skip=id1,id2,... to exclude
+  // the current 5 from the pool, so the next set really IS different.
+  const skipIds = String(req.query.skip || '').split(',').filter(Boolean);
+  const seenSet = new Set([...(state.seen || []), ...skipIds]);
+  const words = Emirati.todaysWords(date, Array.from(seenSet));
   res.json({
     ok: true,
     date,
@@ -233,16 +237,21 @@ function _azureSpeak(text, voice, outPath, cb) {
   const safeText = String(text || '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
   const ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ar-AE'>"
     + "<voice name='" + voice + "'>" + safeText + '</voice></speak>';
+  // 🔧 EXPLICIT UTF-8 BUFFER — Arabic SSML has multi-byte chars; if we
+  // pass the string straight to req.write, Node sometimes computes
+  // Content-Length as char count, not byte count, and Azure rejects the
+  // request as truncated. Buffering forces the byte count to match.
+  const ssmlBuf = Buffer.from(ssml, 'utf8');
   const req = _https.request({
     method: 'POST',
     hostname: region + '.tts.speech.microsoft.com',
     path: '/cognitiveservices/v1',
     headers: {
       'Ocp-Apim-Subscription-Key': key,
-      'Content-Type': 'application/ssml+xml',
+      'Content-Type': 'application/ssml+xml; charset=utf-8',
       'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
       'User-Agent': 'draly-wisdomgrounds',
-      'Content-Length': Buffer.byteLength(ssml),
+      'Content-Length': ssmlBuf.length,
     },
   }, (resp) => {
     if (resp.statusCode !== 200) {
@@ -264,7 +273,7 @@ function _azureSpeak(text, voice, outPath, cb) {
     });
   });
   req.on('error', (e) => cb(e));
-  req.write(ssml);
+  req.write(ssmlBuf);
   req.end();
 }
 function _emiratiFindCached(id) {
@@ -381,21 +390,25 @@ app.post('/api/maestro/emirati/mark', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
   if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
-  const { wordIds, date } = req.body || {};
+  const { wordIds, date, unmark } = req.body || {};
   if (!Array.isArray(wordIds)) return res.status(400).json({ ok: false, error: 'wordIds required' });
   const state = _emiratiRead();
   const seen = new Set(state.seen || []);
-  wordIds.forEach((id) => { if (typeof id === 'string') seen.add(id); });
+  // 🔄 Now supports unmark — pass { wordIds, unmark: true } to forget them.
+  wordIds.forEach((id) => {
+    if (typeof id !== 'string') return;
+    if (unmark) seen.delete(id); else seen.add(id);
+  });
   state.seen = Array.from(seen);
   const today = /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date : new Date().toISOString().slice(0, 10);
-  if (state.lastDate !== today) {
+  if (!unmark && state.lastDate !== today) {
     state.streak = (state.lastDate && state.lastDate === _emiratiYesterday(today))
       ? (Number(state.streak) || 0) + 1
       : 1;
     state.lastDate = today;
   }
   _emiratiWrite(state);
-  res.json({ ok: true, progress: { seenCount: state.seen.length, total: Emirati.EMIRATI_WORDS.length, streak: state.streak, lastDate: state.lastDate } });
+  res.json({ ok: true, progress: { seenCount: state.seen.length, total: Emirati.EMIRATI_WORDS.length, streak: state.streak, lastDate: state.lastDate, sentencesLearned: (state.learnedSentences || []).length } });
 });
 
 // === 🎯 CUSTOM ASSIGNMENTS — teacher-authored, per-student, multi-bank ====
