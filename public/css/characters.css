@@ -1,0 +1,138 @@
+/* 🎭 Character celebration overlay — fires on daily wins, tarea pass, etc. */
+.char-celebration {
+  position: fixed; inset: 0; z-index: 100000;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.char-celebration.show { opacity: 1; pointer-events: auto; }
+.char-celebration-backdrop {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center,
+    color-mix(in srgb, var(--char-primary) 30%, transparent),
+    rgba(0,0,0,0.85) 75%);
+  backdrop-filter: blur(8px);
+}
+.char-celebration-card {
+  position: relative;
+  width: min(92vw, 480px);
+  background: linear-gradient(160deg,
+    color-mix(in srgb, var(--char-primary) 30%, #1a1d2e),
+    color-mix(in srgb, var(--char-accent) 35%, #1a1d2e));
+  border: 3px solid var(--char-primary);
+  border-radius: 24px;
+  padding: 16px 16px 22px;
+  text-align: center;
+  box-shadow:
+    0 0 0 6px rgba(255,255,255,0.06),
+    0 0 60px var(--char-primary),
+    0 24px 60px rgba(0,0,0,0.55);
+  animation: charCelebPop 0.55s cubic-bezier(.18,1.4,.4,1) both;
+}
+@keyframes charCelebPop {
+  0% { transform: scale(0.5) translateY(40px); opacity: 0; }
+  60% { transform: scale(1.06) translateY(-8px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); }
+}
+.char-celebration-video,
+.char-celebration-fallback {
+  width: 100%; max-height: 360px;
+  object-fit: contain;
+  border-radius: 18px;
+  background: rgba(0,0,0,0.35);
+  display: block;
+}
+.char-celebration-name {
+  margin-top: 12px;
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(1.6rem, 6vmin, 2.2rem);
+  color: var(--char-primary);
+  text-shadow: 0 0 18px var(--char-primary), 0 3px 0 rgba(0,0,0,0.5);
+  letter-spacing: 0.04em;
+}
+.char-celebration-tagline {
+  font-size: 0.95rem;
+  color: rgba(255,255,255,0.78);
+  font-weight: 700;
+  font-style: italic;
+  margin-top: 2px;
+}
+.char-celebration-bubble {
+  margin: 14px 8px 0;
+  padding: 12px 18px;
+  background: rgba(0,0,0,0.45);
+  border: 2px solid color-mix(in srgb, var(--char-primary) 70%, #fff);
+  border-radius: 18px;
+  color: #fff5d8;
+  font-weight: 800;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+.char-celebration-ok {
+  margin-top: 16px;
+  background: linear-gradient(135deg, var(--char-primary), var(--char-accent));
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 32px;
+  font-weight: 900;
+  font-size: 1.05rem;
+  cursor: pointer;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--char-primary) 50%, transparent);
+  touch-action: manipulation;
+}
+.char-celebration-ok:active { transform: scale(0.96); }
+
+/* Avatar picker entries for the new characters */
+.hw-avatar-picker-char {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px;
+  padding: 8px;
+  background: linear-gradient(160deg, rgba(40,60,90,0.55), rgba(20,30,55,0.6));
+  border: 2px solid rgba(91,232,209,0.32);
+  border-radius: 16px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s, border-color 0.15s, box-shadow 0.15s;
+}
+.hw-avatar-picker-char:hover {
+  transform: translateY(-3px);
+  border-color: #5be8d1;
+  box-shadow: 0 10px 24px rgba(91,232,209,0.32);
+}
+.hw-avatar-picker-char.selected {
+  border-color: var(--char-primary, #5be8d1);
+  box-shadow: 0 0 28px var(--char-primary, #5be8d1);
+}
+.hw-avatar-picker-char img {
+  width: 100%; height: 110px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 8px rgba(0,0,0,0.45));
+}
+.hw-avatar-picker-char-name {
+  font-weight: 900;
+  font-size: 0.92rem;
+  color: var(--char-primary, #5be8d1);
+}
+.hw-avatar-picker-char-rarity {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+.hw-avatar-picker-char-rarity.legendary {
+  background: linear-gradient(90deg, #ffd24a, #ff7e5f);
+  color: #2a1500;
+}
+.hw-avatar-picker-char-rarity.rare {
+  background: rgba(180, 100, 255, 0.32);
+  color: #c5a3ff;
+  border: 1px solid #c5a3ff;
+}
+.hw-avatar-picker-char-rarity.common {
+  background: rgba(91,232,209,0.22);
+  color: #5be8d1;
+}
