@@ -1611,8 +1611,17 @@
   function stopDailyGame() {
     DAILY_GAME.active = false;
     if (DAILY_GAME.spawnT) { clearTimeout(DAILY_GAME.spawnT); DAILY_GAME.spawnT = null; }
-    const g = $('hw-game'); if (g) g.classList.add('hidden');
+    const g = $('hw-game'); if (g) { g.classList.add('hidden'); g.style.pointerEvents = 'none'; }
     const a = $('hw-game-arena'); if (a) a.innerHTML = '';
+    // 🩹 NUKE leftover full-screen overlays. Was the source of "after a
+    // daily / test, kid can't tap anything" — stuck cutscene / reward
+    // wrappers stayed in the DOM with high z-index eating touches.
+    document.querySelectorAll('.hw-cutscene, .hw-reward, .char-celebration').forEach((el) => {
+      try { el.remove(); } catch (_) {}
+    });
+    // Reset any body overflow/scroll lock the game may have applied.
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
   }
   function endDailyGame() {
     if (!DAILY_GAME.active) return;
