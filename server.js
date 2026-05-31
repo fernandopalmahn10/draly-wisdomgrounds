@@ -205,11 +205,14 @@ app.get('/api/maestro/emirati/today', (req, res) => {
     date,
     words,
     sections: Emirati.EMIRATI_SECTIONS,
+    sectionOrder: Emirati.EMIRATI_SECTION_ORDER,
+    learnedSentences: state.learnedSentences || [],
     progress: {
       seenCount: (state.seen || []).length,
       total: Emirati.EMIRATI_WORDS.length,
       streak: state.streak || 0,
       lastDate: state.lastDate || null,
+      sentencesLearned: (state.learnedSentences || []).length,
     },
   });
 });
@@ -1406,16 +1409,51 @@ app.post('/api/homework/daily/sentence-bonus', (req, res) => {
     return res.json({ ok: false, reason: 'short' });
   }
   const d = /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date : _todayServer();
-  if (rec.bonusDate === d) {
-    return res.json({ ok: false, reason: 'already', progress: Students.getProgress(rec.code) });
-  }
-  // Save the sentence + award +1 sword. appendSentence calls scheduleSave
-  // internally, which will persist the rec.swords and rec.bonusDate edits
-  // below on the same in-memory record.
-  rec.swords = (Number(rec.swords) || 0) + 1;
-  rec.bonusDate = d;
+  // 🔧 ALWAYS save the sentence (Venn-diagram unlimited saves per day) so
+  // every redo of the daily contributes to Mis oraciones + the parent
+  // 0→2000 progress bar. The +1 ⚔️ sword bonus is the only thing that
+  // caps to once-per-day to avoid sword inflation.
   Students.appendSentence(rec.code, wordIds.slice(0, 12), 'daily-bonus');
-  res.json({ ok: true, gained: { swords: 1 }, progress: Students.getProgress(rec.code) });
+  let gained = { swords: 0 };
+  let alreadyClaimed = false;
+  if (rec.bonusDate === d) {
+    alreadyClaimed = true;
+  } else {
+    rec.swords = (Number(rec.swords) || 0) + 1;
+    rec.bonusDate = d;
+    gained.swords = 1;
+  }
+  res.json({
+    ok: true,
+    gained,
+    alreadyClaimed,
+    sentenceSaved: true,
+    progress: Students.getProgress(rec.code),
+  });
+});
+
+// 🌐 EMIRATI: mark an example sentence as "learned" (per-sentence tracking
+// so the gateway feels like a real progression, not just a word list).
+// Key format: <wordId>:<sentenceIndex>  e.g.  "e7:0"  →  word e7, ses[0].
+app.post('/api/maestro/emirati/sentence/mark', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const { keys, unmark } = req.body || {};
+  if (!Array.isArray(keys) || !keys.length) {
+    return res.status(400).json({ ok: false, error: 'keys[] required' });
+  }
+  const state = _emiratiRead();
+  state.learnedSentences = Array.isArray(state.learnedSentences) ? state.learnedSentences : [];
+  const set = new Set(state.learnedSentences);
+  keys.forEach((k) => {
+    const norm = String(k).replace(/[^A-Za-z0-9:_-]/g, '');
+    if (!norm) return;
+    if (unmark) set.delete(norm); else set.add(norm);
+  });
+  state.learnedSentences = Array.from(set);
+  _emiratiWrite(state);
+  res.json({ ok: true, count: state.learnedSentences.length, learnedSentences: state.learnedSentences });
 });
 
 // Review a PAST assignment attempt — best submission's breakdown so the kid

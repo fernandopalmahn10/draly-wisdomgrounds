@@ -167,6 +167,7 @@
     }).then((r) => r.json()).then((d) => { if (d && d.ok) { applyEmiratiHud(d.progress); loadEmirati(true); } });
   });
   let _emToday = [];
+  let _emLearnedSentences = new Set();
   function loadEmirati(reshuffle) {
     const list = $('m-emirati-list');
     if (list) list.textContent = 'Cargando…';
@@ -177,6 +178,7 @@
       .then((d) => {
         if (!d || !d.ok) { if (list) list.textContent = 'Error: ' + (d && d.error || 'no se pudo cargar'); return; }
         _emToday = d.words || [];
+        _emLearnedSentences = new Set(d.learnedSentences || []);
         applyEmiratiHud(d.progress);
         renderEmiratiWords(_emToday, d.sections);
       })
@@ -187,6 +189,7 @@
     if ($('m-em-seen'))   $('m-em-seen').textContent   = p.seenCount;
     if ($('m-em-total'))  $('m-em-total').textContent  = p.total;
     if ($('m-em-streak')) $('m-em-streak').textContent = p.streak;
+    if ($('m-em-sent-count')) $('m-em-sent-count').textContent = p.sentencesLearned || 0;
   }
   function renderEmiratiWords(words, sections) {
     const list = $('m-emirati-list'); if (!list) return;
@@ -199,12 +202,30 @@
       let ses = '';
       if (Array.isArray(w.ses) && w.ses.length) {
         ses = '<div class="m-em-sentences">'
-          + w.ses.map((s) => `<div class="m-em-s"><span class="m-em-tr">${escapeHtml(s.tr)}</span><span class="m-em-en">${escapeHtml(s.en)}</span></div>`).join('')
+          + w.ses.map((s, si) => {
+              const key = w.id + ':' + si;
+              const learned = _emLearnedSentences.has(key);
+              const isAuto = w.sesAuto ? ' m-em-s-auto' : '';
+              return '<div class="m-em-s' + (learned ? ' is-learned' : '') + isAuto + '" data-sentkey="' + escapeHtml(key) + '">'
+                + '<div class="m-em-s-text">'
+                +   '<span class="m-em-tr">' + escapeHtml(s.tr) + '</span>'
+                +   '<span class="m-em-en">' + escapeHtml(s.en) + '</span>'
+                + '</div>'
+                + '<div class="m-em-s-tools">'
+                +   '<button class="m-em-s-speak" type="button" data-ar="' + escapeHtml(s.tr) + '" title="Escuchar oración">🔊</button>'
+                +   '<button class="m-em-s-learn" type="button" data-key="' + escapeHtml(key) + '" title="' + (learned ? 'Marcar como NO aprendida' : 'Marcar como aprendida') + '">' + (learned ? '✓' : '○') + '</button>'
+                + '</div>'
+              + '</div>';
+            }).join('')
           + '</div>';
       }
+      // Section + priority badge on the first row.
+      const prioBadge = w.priority != null
+        ? '<span class="m-em-prio" title="Orden de importancia">#' + w.priority + '</span>'
+        : '';
       card.innerHTML = `
         <div class="m-em-row">
-          <div class="m-em-section">${sec ? (sec.icon + ' ' + escapeHtml(sec.label)) : ''}</div>
+          <div class="m-em-section">${sec ? (sec.icon + ' ' + escapeHtml(sec.label)) : ''} ${prioBadge}</div>
           <button class="m-em-speak" type="button" data-ar="${escapeHtml(w.ar)}" data-wid="${escapeHtml(w.id)}" title="Escuchar (MP3 emiratí si existe, si no Google MSA)">🔊</button>
         </div>
         <div class="m-em-ar" lang="ar" dir="rtl">${escapeHtml(w.ar)}</div>
@@ -216,6 +237,36 @@
     });
     list.querySelectorAll('.m-em-speak').forEach((b) => b.addEventListener('click', (e) => {
       speakEmirati(b.dataset.ar, b, b.dataset.wid);
+    }));
+    // 🔊 on every sentence row: pass the transliteration (tr) to Azure
+    // ar-AE-Fatima via /api/tts since Khaleeji speech is what we want.
+    // No on-disk cache yet for sentences — first hit goes to Azure live.
+    list.querySelectorAll('.m-em-s-speak').forEach((b) => b.addEventListener('click', () => {
+      const trText = b.dataset.ar;
+      if (!trText) return;
+      // No wordId for sentences → speakEmirati falls through to MSA. Pass
+      // the (tr) string as the ar text; Azure will phonetically render it.
+      // For best quality use the Arabic of the WHOLE sentence — but ses
+      // only ships with tr/en in the dataset. Live with tr-via-Azure for now.
+      speakEmirati(trText, b, '');
+    }));
+    // ✓ Toggle "learned" status on each sentence; persists to server.
+    list.querySelectorAll('.m-em-s-learn').forEach((b) => b.addEventListener('click', () => {
+      const key = b.dataset.key; if (!key) return;
+      const wasLearned = _emLearnedSentences.has(key);
+      fetch('/api/maestro/emirati/sentence/mark?pw=' + encodeURIComponent(pw), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keys: [key], unmark: wasLearned }),
+      }).then((r) => r.json()).then((d) => {
+        if (!d || !d.ok) return;
+        _emLearnedSentences = new Set(d.learnedSentences || []);
+        const row = b.closest('.m-em-s');
+        if (row) row.classList.toggle('is-learned', _emLearnedSentences.has(key));
+        b.textContent = _emLearnedSentences.has(key) ? '✓' : '○';
+        // Update HUD sentencesLearned via the existing emirati progress payload.
+        const tag = document.getElementById('m-em-sent-count');
+        if (tag) tag.textContent = d.count;
+      });
     }));
     list.querySelectorAll('.m-em-mark').forEach((b) => b.addEventListener('click', () => {
       fetch('/api/maestro/emirati/mark?pw=' + encodeURIComponent(pw), {

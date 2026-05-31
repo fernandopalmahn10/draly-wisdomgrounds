@@ -438,22 +438,60 @@ const EMIRATI_WORDS = [
   w('weather', 'هوا', 'hawa', 'air/weather'),
 ];
 
-// Deterministic daily picker: same kid gets same 5 words on a given date,
-// but the set rotates day by day. Words not yet seen are prioritized.
+// 📚 PRIORITY ORDERING — sections sorted by real-world importance for a
+// learner. User feedback: "at the beginning I need the most important
+// words, at the end secondary stuff." Greetings + family + numbers come
+// first; weather + culture come last. Each word's priority = (section
+// index × 1000) + position-within-section, so the natural section/word
+// authoring order IS the priority order.
+const EMIRATI_SECTION_ORDER = [
+  'greet', 'family', 'number', 'time', 'food', 'home',
+  'body',  'work',   'transp', 'emot', 'verb', 'culture', 'weather',
+];
+(function _assignPriority() {
+  const sectionIdx = {};
+  EMIRATI_SECTION_ORDER.forEach((id, i) => { sectionIdx[id] = i; });
+  const perSection = {};
+  EMIRATI_WORDS.forEach((w) => {
+    const k = w.section;
+    perSection[k] = (perSection[k] || 0) + 1;
+    const si = sectionIdx[k] != null ? sectionIdx[k] : 99;
+    w.priority = si * 1000 + perSection[k];
+  });
+})();
+
+// 🗣️ AUTO-FILL DEFAULT SENTENCES — sections 4-13 of the source file ship
+// as bare triples. Rather than leave the gateway empty for 200+ words,
+// every word without `ses` gets two simple template sentences so EVERY
+// 🔊 in the UI has something to read. Replace these with idiomatic
+// Khaleeji sentences over time (drop them in the `w(...)` call).
+(function _autoFillSentences() {
+  EMIRATI_WORDS.forEach((w) => {
+    if (Array.isArray(w.ses) && w.ses.length) return;
+    const en = String(w.en || '').split(' / ')[0].split('(')[0].trim() || 'this';
+    w.ses = [
+      s('hatha ' + w.tr + '.',     'This is ' + en + '.'),
+      s('ana abī ' + w.tr + '.',   'I want ' + en + '.'),
+    ];
+    w.sesAuto = true;  // marker so the UI can flag template-quality lines
+  });
+})();
+
+// Deterministic daily picker, NOW ORDERED BY PRIORITY (greetings first,
+// weather last). The kid sees the most useful words on day 1 and the
+// long tail rolls in as they advance. We pick the next 5 UNSEEN by
+// priority — no shuffling within the unseen pool.
 function todaysWords(dateStr, seenIds) {
   const seen = new Set(seenIds || []);
-  const unseen = EMIRATI_WORDS.filter((w) => !seen.has(w.id));
-  // Seed a tiny RNG by the date string so the order is stable for that day.
+  const unseen = EMIRATI_WORDS.filter((w) => !seen.has(w.id))
+    .sort((a, b) => a.priority - b.priority);
+  if (unseen.length >= 5) return unseen.slice(0, 5);
+  // All caught up → re-roll a deterministic 5 anchored to date for review.
   let h = 0;
   for (let i = 0; i < dateStr.length; i++) h = (h * 31 + dateStr.charCodeAt(i)) >>> 0;
-  function rand() { h = (h * 1103515245 + 12345) >>> 0; return h / 0xffffffff; }
-  const pool = unseen.length >= 5 ? unseen.slice() : EMIRATI_WORDS.slice();
-  // Fisher-Yates with the seeded RNG
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  return pool.slice(0, 5);
+  const pool = EMIRATI_WORDS.slice().sort((a, b) => a.priority - b.priority);
+  const start = h % Math.max(1, pool.length - 5);
+  return pool.slice(start, start + 5);
 }
 
-module.exports = { EMIRATI_WORDS, EMIRATI_SECTIONS, todaysWords };
+module.exports = { EMIRATI_WORDS, EMIRATI_SECTIONS, EMIRATI_SECTION_ORDER, todaysWords };

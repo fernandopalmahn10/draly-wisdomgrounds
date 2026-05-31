@@ -757,9 +757,32 @@ body.hw-bg {
 .m-em-tr { font-weight: 800; color: #ffd24a; font-size: 1.05rem; }
 .m-em-en { color: rgba(243,230,194,0.85); font-style: italic; font-size: 0.92rem; margin-bottom: 8px; }
 .m-em-sentences { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; padding-left: 10px; border-left: 3px solid rgba(255,210,74,0.4); }
-.m-em-s { display: flex; flex-direction: column; }
-.m-em-s .m-em-tr { font-size: 0.92rem; color: #fff5d8; }
-.m-em-s .m-em-en { font-size: 0.78rem; opacity: 0.75; margin: 0; }
+.m-em-s {
+  display: flex; align-items: stretch; gap: 8px;
+  padding: 6px 8px;
+  background: rgba(0,0,0,0.18);
+  border-left: 3px solid rgba(91,232,209,0.3);
+  border-radius: 8px;
+  margin: 4px 0;
+}
+.m-em-s.is-learned { background: rgba(91,232,138,0.16); border-left-color: #5be88a; }
+.m-em-s.m-em-s-auto { opacity: 0.78; }
+.m-em-s.m-em-s-auto::before { content: '◌'; color: #ffb46b; font-weight: 900; margin-right: 4px; }
+.m-em-s-text { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.m-em-s-text .m-em-tr { font-size: 0.92rem; color: #fff5d8; word-break: break-word; }
+.m-em-s-text .m-em-en { font-size: 0.78rem; opacity: 0.75; margin: 0; word-break: break-word; }
+.m-em-s-tools { display: flex; gap: 4px; align-items: center; flex: 0 0 auto; }
+.m-em-s-speak, .m-em-s-learn {
+  width: 32px; height: 32px;
+  border: none; border-radius: 50%;
+  background: rgba(91,232,209,0.18); color: #5be8d1;
+  font-weight: 900; font-size: 0.95rem;
+  cursor: pointer; touch-action: manipulation;
+  display: flex; align-items: center; justify-content: center;
+}
+.m-em-s-speak:active, .m-em-s-learn:active { transform: scale(0.92); }
+.m-em-s.is-learned .m-em-s-learn { background: #5be88a; color: #07232a; }
+.m-em-prio { font-size: 0.7rem; opacity: 0.5; margin-left: 6px; }
 .m-em-mark { width: 100%; margin-top: 8px; border: none; border-radius: 12px; background: rgba(91,232,138,0.18); color: #5be88a; font-weight: 900; padding: 10px; cursor: pointer; touch-action: manipulation; }
 .m-em-mark:active { transform: scale(0.97); }
 .m-em-mark.done { background: rgba(91,232,138,0.42); color: #0a3a1e; }

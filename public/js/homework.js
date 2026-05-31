@@ -1002,6 +1002,47 @@
     DAILY_GAME.goal = words.length;
     const char = DAILY_GAME.char || dailyCharFor(localDateStr());
     let idx = 0;
+    let combo = 1; // multiplies score: 1×, 2×, 3×, …
+    // Mario-style score popup ("+100") floating up from where the word appeared.
+    function popScore(parent, amount) {
+      if (!parent) return;
+      const tag = document.createElement('div');
+      tag.className = 'hw-sp-score-burst';
+      tag.textContent = '+' + amount + (combo > 1 ? '  ×' + combo : '');
+      parent.appendChild(tag);
+      setTimeout(() => { try { tag.remove(); } catch (_) {} }, 1200);
+    }
+    // Confetti burst on word reveal — 12 colored specks fly out radially.
+    function burstParticles(parent) {
+      if (!parent) return;
+      const colors = ['#ffd24a','#ff7e5f','#5be88a','#5be8d1','#ffe082','#ff7a45'];
+      for (let i = 0; i < 12; i++) {
+        const p = document.createElement('div');
+        p.className = 'hw-sp-particle';
+        const a = (i / 12) * Math.PI * 2;
+        p.style.setProperty('--dx', Math.cos(a) * (90 + Math.random() * 60) + 'px');
+        p.style.setProperty('--dy', Math.sin(a) * (90 + Math.random() * 60) + 'px');
+        p.style.background = colors[i % colors.length];
+        parent.appendChild(p);
+        setTimeout(() => { try { p.remove(); } catch (_) {} }, 1000);
+      }
+    }
+    // Combo chip top-right: counts the reveal streak so the kid feels speed.
+    function updateCombo(parent) {
+      if (!parent) return;
+      let chip = parent.querySelector('.hw-sp-combo');
+      if (!chip) {
+        chip = document.createElement('div');
+        chip.className = 'hw-sp-combo';
+        chip.innerHTML = '<span class="hw-sp-combo-num">' + combo + '×</span> COMBO';
+        parent.appendChild(chip);
+      } else {
+        chip.innerHTML = '<span class="hw-sp-combo-num">' + combo + '×</span> COMBO';
+        chip.classList.remove('pulse');
+        void chip.offsetWidth;  // re-trigger
+        chip.classList.add('pulse');
+      }
+    }
     function panel(word, lineHtml, opts) {
       opts = opts || {};
       arena.innerHTML = '';
@@ -1075,11 +1116,17 @@
           if (btn.dataset.id === w.id) {
             btn.classList.add('is-correct');
             try { dailySfx.combo(idx + 2); } catch (_) {}
+            popScore(wrap, 250 * combo);
+            burstParticles(wrap);
+            updateCombo(wrap);
+            combo = Math.min(8, combo + 1);
             setTimeout(() => onPass(), 540);
           } else {
             btn.classList.add('is-wrong');
             try { if (window.MochiSounds && MochiSounds.bad) MochiSounds.bad(); } catch (_) {}
             wrap.classList.add('shake');
+            combo = 1;
+            updateCombo(wrap);
             setTimeout(() => { btn.classList.remove('is-wrong'); wrap.classList.remove('shake'); }, 480);
           }
         });
@@ -1129,6 +1176,12 @@
       gift.addEventListener('click', () => {
         gift.classList.add('pop');
         try { if (window.MochiSounds && MochiSounds.combo) MochiSounds.combo(); } catch (_) {}
+        // 🎮 Game-feel burst: confetti + +score + combo counter, before
+        // the word panel slides in. Combo grows with each consecutive reveal.
+        burstParticles(wrap);
+        popScore(wrap, 100 * combo);
+        updateCombo(wrap);
+        combo = Math.min(8, combo + 1);
         setTimeout(() => {
           // Replace dialog with the actual reveal + listen + next buttons.
           const lines = [
@@ -1439,6 +1492,7 @@
   function openSentenceBonus(wordIds, completeRes) {
     _bonusWords = wordIds.slice();
     _bonusBuilt = [];
+    if (!completeRes || !completeRes._reopened) _bonusSavedCount = 0;
     const game = $('hw-game'); if (!game) return;
     // Re-use the game overlay as the bonus stage so we keep the focus.
     const arena = $('hw-game-arena'); if (arena) arena.innerHTML = '';
@@ -1496,22 +1550,86 @@
       pool.appendChild(chip);
     });
   }
+  let _bonusSavedCount = 0;
   function submitBonus(completeRes) {
     if (_bonusBuilt.length < 2) { alert('Usa al menos 2 palabras.'); return; }
+    const saveBtn = document.getElementById('hw-bonus-save');
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '💾 Guardando…'; }
     fetch('/api/homework/daily/sentence-bonus', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ studentCode, accessCode, date: localDateStr(), wordIds: _bonusBuilt }),
     }).then((r) => r.json()).then((bonus) => {
-      // Merge bonus into the rewardResult so the final overlay shows the +1.
-      const merged = Object.assign({}, completeRes || { ok: true, gained: {}, progress: null });
-      if (bonus && bonus.ok) {
-        merged.bonusGained = bonus.gained;
-        if (bonus.progress) merged.progress = bonus.progress;
-      } else if (bonus && bonus.reason === 'already') {
-        merged.bonusAlready = true;
+      // 🔧 EVERY save now persists to Mis oraciones (server-side fix). We
+      // only "finish" the daily on the FIRST save (so the +1 sword reward
+      // overlay fires once). After that, the panel offers "Guardar otra"
+      // so the kid can build as many sentences as they want and they ALL
+      // land in Mis oraciones + count toward the parent 0→2000 bar.
+      if (bonus && bonus.ok && bonus.sentenceSaved) {
+        _bonusSavedCount++;
+        try { dailySfx.combo(_bonusSavedCount + 4); } catch (_) {}
       }
-      closeBonus(merged);
-    }).catch(() => closeBonus(completeRes));
+      // If this is the FIRST save of the session, close the panel + show
+      // the daily-completed reward overlay (with the +1 sword if eligible).
+      if (_bonusSavedCount === 1) {
+        const merged = Object.assign({}, completeRes || { ok: true, gained: {}, progress: null });
+        if (bonus && bonus.ok) {
+          merged.bonusGained = bonus.gained;
+          if (bonus.progress) merged.progress = bonus.progress;
+          if (bonus.alreadyClaimed) merged.bonusAlready = true;
+        }
+        // Close + show reward — but also queue a follow-up panel offering
+        // another save (kid can save infinite extras after the reward).
+        closeBonusWithReward(merged, completeRes);
+      } else {
+        // Subsequent saves: just re-render the bonus panel with a flash
+        // and a friendly counter, no reward overlay.
+        flashSavedCount();
+        resetBonusPanel();
+      }
+    }).catch(() => {
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Guardar oración'; }
+    });
+  }
+  function flashSavedCount() {
+    const panel = document.getElementById('hw-bonus');
+    if (!panel) return;
+    let tag = panel.querySelector('.hw-bonus-saved');
+    if (!tag) {
+      tag = document.createElement('div'); tag.className = 'hw-bonus-saved';
+      panel.appendChild(tag);
+    }
+    tag.textContent = '✅ ' + _bonusSavedCount + ' oración' + (_bonusSavedCount === 1 ? '' : 'es') + ' guardada' + (_bonusSavedCount === 1 ? '' : 's') + ' hoy';
+    tag.classList.remove('pulse'); void tag.offsetWidth; tag.classList.add('pulse');
+  }
+  function resetBonusPanel() {
+    // Restore the pool (everything available again) and clear the stage.
+    _bonusWords = (DAILY_GAME && DAILY_GAME.discovered) ? DAILY_GAME.discovered.slice() : _bonusWords.concat(_bonusBuilt);
+    _bonusBuilt = [];
+    const saveBtn = document.getElementById('hw-bonus-save');
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = '💾 Guardar otra oración'; }
+    renderBonus();
+  }
+  function closeBonusWithReward(merged, completeRes) {
+    // Show the reward overlay; when the kid dismisses it, re-open the
+    // bonus panel so they can save more sentences (Venn-diagram unlimited).
+    closeBonus(merged);
+    // After the reward overlay shows up, surface a small button that
+    // re-opens the sentence builder for additional saves.
+    setTimeout(() => addExtraSaveCTA(completeRes), 800);
+  }
+  function addExtraSaveCTA(completeRes) {
+    const rw = $('hw-reward'); if (!rw) return;
+    const card = rw.querySelector('.hw-reward-card'); if (!card) return;
+    if (card.querySelector('.hw-extra-save')) return;
+    const extra = document.createElement('button');
+    extra.type = 'button';
+    extra.className = 'hw-extra-save';
+    extra.innerHTML = '✏️ Guardar otra oración (sin límite)';
+    extra.addEventListener('click', () => {
+      rw.classList.add('hidden'); rw.innerHTML = '';
+      openSentenceBonus((DAILY_GAME && DAILY_GAME.discovered) ? DAILY_GAME.discovered.slice() : [], completeRes);
+    });
+    card.appendChild(extra);
   }
   function closeBonus(rewardResult) {
     const game = $('hw-game'); if (game) { game.classList.remove('is-bonus'); game.classList.add('hidden'); }
@@ -2105,18 +2223,32 @@
   </div></div></div></div>
   <script>setTimeout(function(){ try { window.focus(); } catch(e){} }, 200);<\/script>
 </body></html>`;
-    // 🔧 Each generation gets a UNIQUE window name (cert_<month>_<rand>) so
-    // pressing "Generar →" twice doesn't recycle the prior tab with stale
-    // markup — was causing the second report to render broken/lying data.
-    const winName = 'cert_' + (d.month || 'x').replace(/-/g, '') + '_' + Math.random().toString(36).slice(2, 8);
-    const w = window.open('', winName);
-    if (!w) { alert('Permite ventanas emergentes para ver la boleta.'); return; }
-    // Wipe any prior content before writing (defensive — some Android browsers
-    // hold the old document.body if you skip this).
-    try { w.document.open('text/html', 'replace'); } catch (_) { w.document.open(); }
-    w.document.write(html);
-    w.document.close();
+    // 🔧 BLOB URL approach — bullet-proof against the Samsung/Android
+    // about:blank race that was breaking second-generation reports.
+    // document.write into an unfocused new tab on mobile sometimes lost
+    // half the markup; navigating to a fresh blob URL makes the browser
+    // treat it as a real navigation, so layout/print preview behave
+    // identically on the 1st, 5th, 50th generation.
+    let url;
+    try {
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      url = URL.createObjectURL(blob);
+    } catch (e) {
+      // Older browsers without Blob: fall back to the old approach.
+      const w0 = window.open('', '_blank');
+      if (!w0) { alert('Permite ventanas emergentes para ver la boleta.'); return; }
+      w0.document.open(); w0.document.write(html); w0.document.close();
+      return;
+    }
+    const w = window.open(url, '_blank');
+    if (!w) {
+      URL.revokeObjectURL(url);
+      alert('Permite ventanas emergentes para ver la boleta.');
+      return;
+    }
     try { w.focus(); } catch (_) {}
+    // Free the blob URL once the new tab has had time to load.
+    setTimeout(() => { try { URL.revokeObjectURL(url); } catch (_) {} }, 60000);
   }
 
   // Render the expandable per-sentence detail (correct ✓ / incorrect ✗).
