@@ -213,25 +213,134 @@ app.get('/api/maestro/emirati/today', (req, res) => {
     },
   });
 });
-// 🎙️ EMIRATI AUDIO OVERRIDE
-// Looks for a pre-recorded MP3 at data/emirati-audio/<wordId>.mp3 (or .m4a /
-// .wav). If present, we serve it instead of falling back to Google MSA. This
-// is THE path to a real Khaleeji voice: drop your own recordings on the disk
-// (record yourself, paste Azure ar-AE clips, etc.) and they take precedence.
-// 404 means "no override, use TTS"; the client falls back to Google MSA.
+// 🎙️ EMIRATI AUDIO OVERRIDE + AZURE AUTO-GENERATION
+// Priority on each request:
+//  1. Pre-recorded MP3 on disk (data/emirati-audio/<wordId>.mp3 / .m4a / .wav)
+//  2. Azure ar-AE-FatimaNeural / ar-AE-HamdanNeural — auto-fetched + cached
+//     on first play if AZURE_SPEECH_KEY env var is set (Azure Free tier F0
+//     covers 500k chars/month, way more than the 275-word dataset needs)
+//  3. 404 → client falls back to Google MSA
 const EMIRATI_AUDIO_DIR = _emPath.join(__dirname, 'data', 'emirati-audio');
 const EMIRATI_AUDIO_EXTS = ['.mp3', '.m4a', '.wav', '.ogg'];
+const _https = require('https');
+function _azureSpeak(text, voice, outPath, cb) {
+  const key = process.env.AZURE_SPEECH_KEY;
+  const region = process.env.AZURE_SPEECH_REGION || 'eastus';
+  if (!key) return cb(new Error('AZURE_SPEECH_KEY not set'));
+  const safeText = String(text || '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  const ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ar-AE'>"
+    + "<voice name='" + voice + "'>" + safeText + '</voice></speak>';
+  const req = _https.request({
+    method: 'POST',
+    hostname: region + '.tts.speech.microsoft.com',
+    path: '/cognitiveservices/v1',
+    headers: {
+      'Ocp-Apim-Subscription-Key': key,
+      'Content-Type': 'application/ssml+xml',
+      'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
+      'User-Agent': 'draly-wisdomgrounds',
+      'Content-Length': Buffer.byteLength(ssml),
+    },
+  }, (resp) => {
+    if (resp.statusCode !== 200) {
+      let errBuf = '';
+      resp.on('data', (c) => { errBuf += c; });
+      resp.on('end', () => cb(new Error('azure ' + resp.statusCode + ': ' + errBuf.slice(0, 200))));
+      return;
+    }
+    const chunks = [];
+    resp.on('data', (c) => chunks.push(c));
+    resp.on('end', () => {
+      try {
+        const buf = Buffer.concat(chunks);
+        const dir = _emPath.dirname(outPath);
+        if (!_emFs.existsSync(dir)) _emFs.mkdirSync(dir, { recursive: true });
+        _emFs.writeFileSync(outPath, buf);
+        cb(null, buf);
+      } catch (e) { cb(e); }
+    });
+  });
+  req.on('error', (e) => cb(e));
+  req.write(ssml);
+  req.end();
+}
+function _emiratiFindCached(id) {
+  for (let i = 0; i < EMIRATI_AUDIO_EXTS.length; i++) {
+    const p = _emPath.join(EMIRATI_AUDIO_DIR, id + EMIRATI_AUDIO_EXTS[i]);
+    if (_emFs.existsSync(p)) return p;
+  }
+  return null;
+}
 app.get('/api/emirati/audio/:wordId', (req, res) => {
   const id = String(req.params.wordId || '').replace(/[^A-Za-z0-9_-]/g, '');
   if (!id) return res.status(400).end();
-  for (let i = 0; i < EMIRATI_AUDIO_EXTS.length; i++) {
-    const p = _emPath.join(EMIRATI_AUDIO_DIR, id + EMIRATI_AUDIO_EXTS[i]);
-    if (_emFs.existsSync(p)) {
-      res.setHeader('Cache-Control', 'public, max-age=2592000');  // 30 days
-      return res.sendFile(p);
-    }
+  const cached = _emiratiFindCached(id);
+  if (cached) {
+    res.setHeader('Cache-Control', 'public, max-age=2592000');  // 30 days
+    return res.sendFile(cached);
+  }
+  // No cached file → try Azure if configured. First hit pays ~500ms; every
+  // subsequent play serves the cached MP3 in <5ms.
+  if (process.env.AZURE_SPEECH_KEY) {
+    const word = Emirati.EMIRATI_WORDS.find((w) => w.id === id);
+    if (!word) return res.status(404).end();
+    const voice = req.query.voice === 'male' ? 'ar-AE-HamdanNeural' : 'ar-AE-FatimaNeural';
+    const outPath = _emPath.join(EMIRATI_AUDIO_DIR, id + '.mp3');
+    return _azureSpeak(word.ar, voice, outPath, (err, buf) => {
+      if (err) {
+        console.warn('[azure-tts] failed for', id, err.message);
+        return res.status(404).end();  // client falls back to Google MSA
+      }
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Cache-Control', 'public, max-age=2592000');
+      res.send(buf);
+    });
   }
   res.status(404).end();  // client falls back to /api/tts
+});
+// Super-admin status check — used by the Maestro UI to surface "Azure
+// configured / not configured" and the cache progress (X / 275 generated).
+app.get('/api/maestro/emirati/azure-status', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  let cached = 0;
+  Emirati.EMIRATI_WORDS.forEach((w) => { if (_emiratiFindCached(w.id)) cached++; });
+  res.json({
+    ok: true,
+    azureConfigured: !!process.env.AZURE_SPEECH_KEY,
+    region: process.env.AZURE_SPEECH_REGION || 'eastus',
+    voiceFemale: 'ar-AE-FatimaNeural',
+    voiceMale: 'ar-AE-HamdanNeural',
+    total: Emirati.EMIRATI_WORDS.length,
+    cached,
+  });
+});
+// Bulk pre-generate every Emirati word in one go. Runs in the background
+// (returns immediately with the queue size); the UI polls /azure-status to
+// watch progress. Throttled to 4 req/s to be nice to the free tier.
+let _emiratiBulkRunning = false;
+app.post('/api/maestro/emirati/generate-all', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  if (!process.env.AZURE_SPEECH_KEY) {
+    return res.status(400).json({ ok: false, error: 'AZURE_SPEECH_KEY env var not set on this server' });
+  }
+  if (_emiratiBulkRunning) return res.json({ ok: true, alreadyRunning: true });
+  const voice = (req.body && req.body.voice === 'male') ? 'ar-AE-HamdanNeural' : 'ar-AE-FatimaNeural';
+  const queue = Emirati.EMIRATI_WORDS.filter((w) => !_emiratiFindCached(w.id));
+  res.json({ ok: true, queued: queue.length, total: Emirati.EMIRATI_WORDS.length, voice });
+  _emiratiBulkRunning = true;
+  (function next(i) {
+    if (i >= queue.length) { _emiratiBulkRunning = false; return; }
+    const w = queue[i];
+    const outPath = _emPath.join(EMIRATI_AUDIO_DIR, w.id + '.mp3');
+    _azureSpeak(w.ar, voice, outPath, (err) => {
+      if (err) console.warn('[azure-tts bulk] fail', w.id, err.message);
+      setTimeout(() => next(i + 1), 250);  // ~4 req/s
+    });
+  })(0);
 });
 
 app.post('/api/maestro/emirati/mark', (req, res) => {

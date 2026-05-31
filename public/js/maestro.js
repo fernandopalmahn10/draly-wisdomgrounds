@@ -348,39 +348,126 @@
   }
 
   let _emAudio = null;
-  // Play priority:
-  //  1. /api/emirati/audio/{wordId}  — your own MP3 (true Khaleeji)
-  //  2. /api/tts?voice=ar-XA-Wavenet-A — Google MSA (fallback)
-  // To populate (1): drop MP3s into data/emirati-audio/ named by wordId
-  // (e.g. e1.mp3). Record yourself, paste from Azure ar-AE, etc.
+  let _emAzureVoice = 'female';   // 'female' (Fatima) | 'male' (Hamdan)
+  // Play priority on every 🔊 tap:
+  //  1. /api/emirati/audio/{wordId}?voice=<female|male>
+  //     a. served from disk cache if a prior call generated it, OR
+  //     b. server hits Azure ar-AE-FatimaNeural / HamdanNeural live,
+  //        caches the MP3, sends it back (first hit only)
+  //  2. If both fail, fall back to /api/tts?voice=ar-XA-Wavenet-A
+  //     (Google MSA) and visually mark the button so the teacher knows.
+  // The Audio element's `error` event fires on a 404 from (1), which is
+  // how we know to flip to (2). No wasteful HEAD pre-check.
   function speakEmirati(arText, btn, wid) {
     try { if (_emAudio) { _emAudio.pause(); _emAudio = null; } } catch (_) {}
     if (btn) { btn.textContent = '🔊 …'; btn.classList.remove('m-em-speak-msa'); }
-    const playUrl = (url, onErr) => {
-      _emAudio = new Audio(url);
+    const playMsaFallback = () => {
+      if (btn) btn.classList.add('m-em-speak-msa');
+      _emAudio = new Audio('/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText));
       _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
       _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
-      _emAudio.addEventListener('error', () => { if (onErr) onErr(); else if (btn) btn.textContent = '⚠️'; });
+      _emAudio.addEventListener('error', () => { if (btn) btn.textContent = '⚠️'; });
     };
-    // 1) Try the per-word override first (HEAD-style check via fetch).
-    if (wid) {
-      const overrideUrl = '/api/emirati/audio/' + encodeURIComponent(wid);
-      fetch(overrideUrl, { method: 'HEAD' }).then((r) => {
-        if (r.ok) {
-          playUrl(overrideUrl);
-        } else {
-          // 2) Fallback to Google MSA + visually mark it as the fallback voice.
-          if (btn) btn.classList.add('m-em-speak-msa');
-          playUrl('/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText));
-        }
-      }).catch(() => {
-        if (btn) btn.classList.add('m-em-speak-msa');
-        playUrl('/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText));
-      });
-    } else {
-      playUrl('/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText));
-    }
+    if (!wid) return playMsaFallback();
+    const overrideUrl = '/api/emirati/audio/' + encodeURIComponent(wid) + '?voice=' + _emAzureVoice;
+    _emAudio = new Audio(overrideUrl);
+    _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
+    _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
+    _emAudio.addEventListener('error', () => { playMsaFallback(); });
   }
+
+  // ── 🎙️ AZURE: bind the Khaleeji voice generator panel. ──
+  // On modal open we poll /azure-status; the button only appears when the
+  // server actually has AZURE_SPEECH_KEY set. The voice <select> persists
+  // to localStorage and re-fetches re-render so future taps use the chosen
+  // voice (also passed via ?voice= on the audio endpoint).
+  const _emAzureSavedVoice = (function () {
+    try { return localStorage.getItem('em_azure_voice') || 'female'; } catch (_) { return 'female'; }
+  })();
+  _emAzureVoice = _emAzureSavedVoice;
+  const _emAzVoiceSel = $('m-em-azure-voice');
+  if (_emAzVoiceSel) {
+    _emAzVoiceSel.value = _emAzureSavedVoice;
+    _emAzVoiceSel.addEventListener('change', () => {
+      _emAzureVoice = _emAzVoiceSel.value === 'male' ? 'male' : 'female';
+      try { localStorage.setItem('em_azure_voice', _emAzureVoice); } catch (_) {}
+      // Invalidate previously cached MP3s by surfacing a hint — the server
+      // already saved Fatima's renderings under e<id>.mp3, so switching to
+      // Hamdan after generating would still play Fatima. Tell the teacher.
+      const st = $('m-em-azure-status');
+      if (st) st.dataset.dirty = '1';
+    });
+  }
+  let _emAzurePollT = null;
+  function refreshAzureStatus() {
+    const stat = $('m-em-azure-status');
+    const gen = $('m-em-azure-gen');
+    const help = $('m-em-azure-help');
+    if (!stat) return;
+    fetch('/api/maestro/emirati/azure-status?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d || !d.ok) { stat.textContent = 'Error: ' + ((d && d.error) || 'no se pudo verificar'); return; }
+        if (d.azureConfigured) {
+          stat.innerHTML = '✅ <b>Azure activo</b> · región <code>' + escapeHtml(d.region) + '</code> · '
+            + 'voz por defecto <code>' + escapeHtml(d.voiceFemale) + '</code><br>'
+            + '🎵 <b>' + d.cached + ' / ' + d.total + '</b> palabras cacheadas como MP3 real (Khaleeji).'
+            + (d.cached < d.total ? ' Las demás se generan al primer 🔊.' : ' ¡Todas listas!');
+          if (gen) {
+            gen.classList.remove('hidden');
+            gen.disabled = d.cached >= d.total;
+            gen.textContent = d.cached >= d.total
+              ? '✅ Todas generadas (' + d.total + ')'
+              : '🎙️ Generar las que faltan (' + (d.total - d.cached) + ')';
+          }
+          if (help) help.classList.add('hidden');
+        } else {
+          stat.innerHTML = '⚠️ <b>Azure no configurado.</b> Por ahora las palabras suenan en MSA (Google).';
+          if (gen) gen.classList.add('hidden');
+          if (help) help.classList.remove('hidden');
+        }
+      })
+      .catch((e) => { stat.textContent = 'Error: ' + e.message; });
+  }
+  if ($('m-em-azure-gen')) {
+    $('m-em-azure-gen').addEventListener('click', () => {
+      const btn = $('m-em-azure-gen');
+      const stat = $('m-em-azure-status');
+      btn.disabled = true;
+      btn.textContent = '🎙️ Generando…';
+      if (stat) stat.textContent = 'Lanzando trabajo en el servidor…';
+      fetch('/api/maestro/emirati/generate-all?pw=' + encodeURIComponent(pw), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voice: _emAzureVoice }),
+      }).then((r) => r.json()).then((d) => {
+        if (!d || !d.ok) {
+          if (stat) stat.textContent = '✕ Error: ' + ((d && d.error) || 'no se pudo lanzar');
+          btn.disabled = false;
+          return;
+        }
+        if (stat) stat.textContent = '🎙️ Generando ' + (d.queued || 0) + ' palabras… (≈ ' + Math.ceil((d.queued || 0) / 4) + 's)';
+        // Poll every 3s until cached == total
+        if (_emAzurePollT) clearInterval(_emAzurePollT);
+        _emAzurePollT = setInterval(() => {
+          fetch('/api/maestro/emirati/azure-status?pw=' + encodeURIComponent(pw))
+            .then((r) => r.json()).then((s) => {
+              if (s && s.ok) {
+                if (stat) stat.innerHTML = '🎙️ Generando… <b>' + s.cached + ' / ' + s.total + '</b>';
+                if (s.cached >= s.total) {
+                  clearInterval(_emAzurePollT); _emAzurePollT = null;
+                  refreshAzureStatus();
+                }
+              }
+            });
+        }, 3000);
+      }).catch((e) => {
+        if (stat) stat.textContent = '✕ ' + e.message;
+        btn.disabled = false;
+      });
+    });
+  }
+  // Refresh Azure status whenever the modal opens.
+  if (emBtn) emBtn.addEventListener('click', refreshAzureStatus);
 
   function loadGuidesList() {
     const list = $('m-guides-list');

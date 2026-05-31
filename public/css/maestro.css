@@ -765,3 +765,22 @@ body.hw-bg {
 .m-em-mark.done { background: rgba(91,232,138,0.42); color: #0a3a1e; }
 .m-emirati-actions { display: flex; gap: 10px; justify-content: center; margin-top: 16px; }
 .m-empty { text-align: center; padding: 24px; color: rgba(243,230,194,0.65); font-style: italic; }
+
+/* 🎙️ Azure auto-generation panel */
+.m-em-azure { margin: 18px auto 4px; padding: 14px 16px; max-width: 720px;
+  background: linear-gradient(135deg, rgba(40,86,200,0.18), rgba(15,30,60,0.32));
+  border: 1px solid rgba(120,170,255,0.32); border-radius: 16px; color: #e3edff; }
+.m-em-azure-head { font-weight: 900; font-size: 1.05rem; margin-bottom: 6px;
+  color: #b8d4ff; letter-spacing: 0.02em; }
+.m-em-azure-status { font-size: 0.92rem; line-height: 1.45; color: #d6e4ff;
+  margin-bottom: 10px; }
+.m-em-azure-status code { background: rgba(0,0,0,0.32); padding: 1px 6px;
+  border-radius: 6px; font-size: 0.82rem; color: #ffe79a; }
+.m-em-azure-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.m-em-azure-voice { flex: 1 1 200px; min-width: 200px; }
+.m-em-azure-row .btn { flex: 1 1 240px; }
+.m-em-azure-help { margin-top: 12px; padding: 12px; background: rgba(255,221,150,0.08);
+  border: 1px dashed rgba(255,221,150,0.32); border-radius: 12px;
+  font-size: 0.85rem; line-height: 1.55; color: #ffe1a8; }
+.m-em-azure-help code { background: rgba(0,0,0,0.42); padding: 1px 6px;
+  border-radius: 6px; font-size: 0.78rem; color: #fff2c9; }
