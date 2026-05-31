@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260529f">
-  <link rel="stylesheet" href="/css/homework.css?v=20260529g">
+  <link rel="stylesheet" href="/css/homework.css?v=20260529h">
 </head>
 <body class="hw-bg">
 
@@ -79,11 +79,16 @@
       <span class="hw-folder-crumb" id="hw-folder-crumb"></span>
     </div>
 
-    <!-- 🎯 TAREAS ESPECIALES — teacher-sent, multi-bank. Shown above HSK1
-         on the home view; hidden when the kid has none. -->
-    <div class="hw-list-section-title hw-sec-custom hidden" id="hw-sec-custom">🎯 Tareas especiales de tu maestra</div>
-    <div class="hw-custom-filters hidden" id="hw-custom-filters"></div>
-    <div class="hw-list-grid hw-list-custom hidden" id="hw-list-custom"></div>
+    <!-- 🎯 ASIGNACIONES PENDIENTES — teacher-sent custom tareas the kid
+         hasn't completed yet (new + tried <80%). Its OWN top-level section. -->
+    <div class="hw-list-section-title hw-sec-custom hidden" id="hw-sec-custom-pending">⏳ Asignaciones pendientes</div>
+    <div class="hw-list-grid hw-list-custom hidden" id="hw-list-custom-pending"></div>
+
+    <!-- ✓ Tareas completadas — collapsible so they don't crowd the home. -->
+    <details class="hw-custom-done-wrap hidden" id="hw-sec-custom-done">
+      <summary class="hw-list-section-title">✓ Asignaciones completadas <span class="hw-done-count" id="hw-done-count">(0)</span></summary>
+      <div class="hw-list-grid hw-list-custom" id="hw-list-custom-done"></div>
+    </details>
 
     <div class="hw-list-section-title hidden" id="hw-sec-tareas">📚 Tareas para armar oraciones</div>
     <div class="hw-list-grid" id="hw-list-grid">
@@ -483,7 +488,7 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/homework.js?v=20260529g"></script>
+  <script src="/js/homework.js?v=20260529h"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>

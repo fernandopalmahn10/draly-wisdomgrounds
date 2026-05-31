@@ -296,14 +296,22 @@ body.hw-bg {
 .hw-custom-card:not(.is-passed):not(.is-pending) { animation: hwCustomPulse 2.2s ease-in-out infinite; }
 @keyframes hwCustomPulse { 0%,100% { box-shadow: 0 0 20px rgba(255,210,74,0.25); } 50% { box-shadow: 0 0 30px rgba(255,210,74,0.55); } }
 
-/* ── 🎯 Custom-assignment status filter pills ─────────────────────── */
-.hw-custom-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
-.hw-cf-pill { border: 2px solid rgba(255,210,74,0.4); background: rgba(20,24,40,0.55); color: #fff5d8; font-weight: 800; font-size: 0.82rem; padding: 6px 12px; border-radius: 999px; cursor: pointer; touch-action: manipulation; font-family: inherit; }
-.hw-cf-pill:active { transform: scale(0.95); }
-.hw-cf-pill.is-active { background: linear-gradient(135deg, #ffd24a, #ff9a3c); color: #3a2400; border-color: #ffd24a; }
-.hw-cf-pill.is-empty { opacity: 0.45; }
-.hw-cf-count { display: inline-block; background: rgba(0,0,0,0.35); color: inherit; border-radius: 999px; padding: 1px 7px; font-size: 0.74rem; margin-left: 4px; }
-.hw-cf-pill.is-active .hw-cf-count { background: rgba(0,0,0,0.25); }
+/* ── 🎯 Custom assignments — two separate sections ────────────────── */
+.hw-custom-done-wrap { margin: 14px 0 0; }
+.hw-custom-done-wrap > summary { cursor: pointer; list-style: none; user-select: none; padding: 6px 0; touch-action: manipulation; }
+.hw-custom-done-wrap > summary::-webkit-details-marker { display: none; }
+.hw-custom-done-wrap > summary::after { content: '▾'; margin-left: 8px; color: #5be8d1; transition: transform 0.2s; display: inline-block; }
+.hw-custom-done-wrap[open] > summary::after { transform: rotate(180deg); }
+.hw-done-count { color: rgba(243,230,194,0.6); font-weight: 700; font-size: 0.85rem; margin-left: 6px; }
+
+/* Make EVERY folder card have an explicit fast-tap target so iOS doesn't
+   swallow first-touches on the home grid. (Bug report: iPhone + Galaxy S23
+   sometimes ignored taps on assignment cards.) */
+.hw-folder-card { touch-action: manipulation; -webkit-tap-highlight-color: rgba(0,0,0,0); min-height: 88px; }
+
+/* ⬅️ Volver button on the assignment screen — bigger touch target so it's
+   never lost off-screen on small phones. */
+.hw-assignment-header .btn { min-height: 44px; min-width: 84px; font-size: 0.95rem; padding: 10px 16px; }
 
 /* ── 📖 "Lo que aprendí hoy" panel on the daily home (after completion) ─ */
 .hw-dc-learned { margin: 10px 0 4px; padding: 12px; background: rgba(20,24,40,0.55); border: 1px solid rgba(91,232,209,0.35); border-radius: 14px; }

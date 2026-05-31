@@ -2045,8 +2045,10 @@
     fetchReadingTests();
   }
 
-  // 🎯 Pull custom assignments the teacher sent to ME, then re-render so the
-  // home screen shows them above HSK1 as soon as they arrive.
+  // 🎯 Pull custom assignments the teacher sent to ME. ONLY re-renders the
+  // custom section — not the whole folder root. Previously every fetch
+  // re-rendered the entire grid, which could destroy an HSK1 card mid-tap
+  // on iPhone / Galaxy (the click was registered against a stale node).
   function refreshCustomAssignments() {
     if (!studentCode || !accessCode) return;
     fetch('/api/homework/custom-assignments/' + encodeURIComponent(studentCode)
@@ -2054,9 +2056,62 @@
       .then((r) => r.json())
       .then((d) => {
         customAssignments = (d && d.assignments) || [];
-        if (!hwFolder) renderFolderRoot();
+        if (!hwFolder) renderCustomSection();
       })
       .catch(() => { customAssignments = []; });
+  }
+  // Renders ONLY the two custom-assignment sections (Pendientes + Completadas).
+  // Safe to call repeatedly without disturbing the HSK1 folder grid.
+  function renderCustomSection() {
+    const secP = $('hw-sec-custom-pending');
+    const secD = $('hw-sec-custom-done');
+    const gridP = $('hw-list-custom-pending');
+    const gridD = $('hw-list-custom-done');
+    if (!secP || !secD || !gridP || !gridD) return;
+    if (hwFolder) {
+      [secP, secD, gridP].forEach((el) => el.classList.add('hidden'));
+      return;
+    }
+    const tagged = (customAssignments || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      .map((a) => {
+        const ptsForPass = (a.itemCount || 0) * 8;
+        const subs = submissions.filter((s) => s.assignmentId === a.id);
+        const best = subs.reduce((m, s) => (s.score > (m && m.score || -1) ? s : m), null);
+        let status = 'new';
+        if (best && best.score >= ptsForPass) status = 'done';
+        else if (best) status = 'pending';
+        return { a, status, best };
+      });
+    const pendingList = tagged.filter((t) => t.status !== 'done');
+    const doneList = tagged.filter((t) => t.status === 'done');
+    secP.classList.toggle('hidden', !pendingList.length);
+    gridP.classList.toggle('hidden', !pendingList.length);
+    secD.classList.toggle('hidden', !doneList.length);
+    const cnt = $('hw-done-count'); if (cnt) cnt.textContent = '(' + doneList.length + ')';
+    renderCustomCards(gridP, pendingList);
+    renderCustomCards(gridD, doneList);
+  }
+  function renderCustomCards(grid, list) {
+    grid.innerHTML = '';
+    list.forEach(({ a, status, best }) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'hw-folder-card hw-custom-card'
+        + (status === 'done' ? ' is-passed' : status === 'pending' ? ' is-pending' : '');
+      const when = a.createdAt ? new Date(a.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: '2-digit' }) : '';
+      const tag = status === 'done'
+          ? '<div class="hw-folder-progress">✓ Completada · ' + (best ? best.score + '/' + best.total : '') + '</div>'
+        : status === 'pending'
+          ? '<div class="hw-folder-progress">⏳ Reintenta · mejor ' + (best ? best.score + '/' + best.total : '0') + '</div>'
+          : '<div class="hw-folder-progress">🆕 ¡Para ti!</div>';
+      card.innerHTML = `
+        <div class="hw-folder-emoji">🎯</div>
+        <div class="hw-folder-name">${escapeHtml(a.title || 'Tarea especial')}</div>
+        <div class="hw-folder-meta">📝 ${a.itemCount} oración${a.itemCount === 1 ? '' : 'es'} · ${when}</div>
+        ${tag}`;
+      card.addEventListener('click', () => openAssignment(a.id));
+      grid.appendChild(card);
+    });
   }
   // ROOT — HSK1 with its eight experience folders.
   function renderFolderRoot() {
@@ -2065,72 +2120,10 @@
     $('hw-sec-lecturas').classList.add('hidden');
     $('hw-list-readings').classList.add('hidden');
     const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 HSK1';
-    // 🎯 Custom assignments section — shown ABOVE HSK1 so they catch the
-    // kid's eye. Hidden if no targeted assignment exists for me. Adds
-    // status filters so 100+ historical tareas stay manageable.
-    const cuSec = $('hw-sec-custom'); const cuGrid = $('hw-list-custom');
-    const cuFilters = $('hw-custom-filters');
-    if (cuSec && cuGrid) {
-      const list = (customAssignments || []).slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-      cuSec.classList.toggle('hidden', list.length === 0);
-      cuGrid.classList.toggle('hidden', list.length === 0);
-      if (cuFilters) cuFilters.classList.toggle('hidden', list.length === 0);
-      cuGrid.innerHTML = '';
-      // Tag each assignment with its status for the filter.
-      const tagged = list.map((a) => {
-        const ptsForPass = (a.itemCount || 0) * 8;  // 80% of 10pts/item
-        const subs = submissions.filter((s) => s.assignmentId === a.id);
-        const best = subs.reduce((m, s) => (s.score > (m && m.score || -1) ? s : m), null);
-        let status = 'new';
-        if (best && best.score >= ptsForPass) status = 'done';
-        else if (best) status = 'pending';
-        return { a, status, best };
-      });
-      // Build / refresh filter pill counts. "pending" rolls together both
-      // brand-new tareas AND those tried but below 80% — i.e. everything the
-      // kid still needs to do. That's the TODO list they want by default.
-      const pendingCount = tagged.filter((t) => t.status !== 'done').length;
-      const doneCount = tagged.filter((t) => t.status === 'done').length;
-      if (cuFilters) {
-        cuFilters.innerHTML = ''
-          + makeCuPill('pending', '⏳ Pendientes', pendingCount)
-          + makeCuPill('done',    '✓ Completadas', doneCount)
-          + makeCuPill('all',     '📂 Todo',       tagged.length);
-        cuFilters.querySelectorAll('.hw-cf-pill').forEach((p) => p.addEventListener('click', () => {
-          customFilter = p.dataset.f;
-          renderFolderRoot();
-        }));
-      }
-      // Filter — pending shows new + tried-not-passed combined.
-      const filtered = customFilter === 'all'
-        ? tagged
-        : customFilter === 'pending'
-          ? tagged.filter((t) => t.status !== 'done')
-          : tagged.filter((t) => t.status === 'done');
-      if (!filtered.length) {
-        cuGrid.innerHTML = '<div class="hw-empty">No hay tareas en esta categoría.</div>';
-      } else {
-        filtered.forEach(({ a, status, best }) => {
-          const card = document.createElement('button');
-          card.type = 'button';
-          card.className = 'hw-folder-card hw-custom-card'
-            + (status === 'done' ? ' is-passed' : status === 'pending' ? ' is-pending' : '');
-          const when = a.createdAt ? new Date(a.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: '2-digit' }) : '';
-          const tag = status === 'done'
-              ? '<div class="hw-folder-progress">✓ Completada · ' + (best ? best.score + '/' + best.total : '') + '</div>'
-            : status === 'pending'
-              ? '<div class="hw-folder-progress">⏳ Reintenta · mejor ' + (best ? best.score + '/' + best.total : '0') + '</div>'
-              : '<div class="hw-folder-progress">🆕 ¡Para ti!</div>';
-          card.innerHTML = `
-            <div class="hw-folder-emoji">🎯</div>
-            <div class="hw-folder-name">${escapeHtml(a.title || 'Tarea especial')}</div>
-            <div class="hw-folder-meta">📝 ${a.itemCount} oración${a.itemCount === 1 ? '' : 'es'} · ${when}</div>
-            ${tag}`;
-          card.addEventListener('click', () => openAssignment(a.id));
-          cuGrid.appendChild(card);
-        });
-      }
-    }
+    // 🎯 Custom assignments — split into two top-level sections (pendientes
+    // + completadas). Rendered by renderCustomSection() so the heavy HSK1
+    // grid render below isn't disturbed by async fetches.
+    renderCustomSection();
     const grid = $('hw-list-grid');
     grid.classList.remove('hidden');
     grid.innerHTML = '';
@@ -2161,9 +2154,10 @@
   // FOLDER — assignments (+ readings) inside one experience.
   function renderFolderContents(expId) {
     const exp = (window.WU_EXPERIENCES || {})[expId];
-    // Hide the custom section while inside a folder — it's only the root view.
-    const cuSec = $('hw-sec-custom'); if (cuSec) cuSec.classList.add('hidden');
-    const cuGrid = $('hw-list-custom'); if (cuGrid) cuGrid.classList.add('hidden');
+    // Hide the custom sections while inside a folder — they're only the root view.
+    ['hw-sec-custom-pending', 'hw-list-custom-pending', 'hw-sec-custom-done'].forEach((id) => {
+      const el = $(id); if (el) el.classList.add('hidden');
+    });
     $('hw-folder-bar').classList.remove('hidden');
     $('hw-folder-crumb').textContent = exp ? exp.label : expId;
     const grid = $('hw-list-grid');
