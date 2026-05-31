@@ -561,7 +561,10 @@
   }
 
   let _emAudio = null;
-  let _emAzureVoice = 'female';   // 'female' (Fatima) | 'male' (Hamdan)
+  // 🎙️ DEFAULT TO HAMDAN — user explicitly asked for the male Khaleeji
+  // voice as the ONLY voice reading everything. Fatima is still available
+  // via the dropdown but no longer the silent default.
+  let _emAzureVoice = 'male';   // 'female' (Fatima) | 'male' (Hamdan)
   // Play priority on every 🔊 tap:
   //  1. /api/emirati/audio/{wordId}?voice=<female|male>
   //     a. served from disk cache if a prior call generated it, OR
@@ -571,45 +574,46 @@
   //     (Google MSA) and visually mark the button so the teacher knows.
   // The Audio element's `error` event fires on a 404 from (1), which is
   // how we know to flip to (2). No wasteful HEAD pre-check.
-  // 🎙️ Speak arbitrary Arabic text through Azure ar-AE — used for the
-  // per-sentence 🔊 buttons. Falls back to MSA only if the server has
-  // no Azure key configured (404 from /audio/text).
+  // 🎙️ Speak arbitrary Arabic text through Azure ar-AE Khaleeji ONLY.
+  // No MSA fallback — user explicitly asked for Hamdan to read everything.
+  // If Azure fails, surface a clear error on the button so they know the
+  // request didn't reach Azure (silent MSA fallback was confusing them).
   function speakEmiratiText(arText, btn) {
     try { if (_emAudio) { _emAudio.pause(); _emAudio = null; } } catch (_) {}
-    if (btn) { btn.textContent = '🔊…'; btn.classList.remove('m-em-speak-msa'); }
-    const tryAzure = () => {
-      const url = '/api/emirati/audio/text?voice=' + _emAzureVoice
-        + '&ar=' + encodeURIComponent(arText);
-      _emAudio = new Audio(url);
-      _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
-      _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
-      _emAudio.addEventListener('error', () => {
-        // Azure failed → fall back to MSA (mark visually).
-        if (btn) { btn.classList.add('m-em-speak-msa'); }
-        _emAudio = new Audio('/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText));
-        _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
-        _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
-        _emAudio.addEventListener('error', () => { if (btn) btn.textContent = '⚠️'; });
-      });
-    };
-    tryAzure();
+    if (btn) { btn.textContent = '🔊…'; btn.classList.remove('m-em-speak-msa', 'm-em-speak-err'); }
+    const url = '/api/emirati/audio/text?voice=' + _emAzureVoice
+      + '&ar=' + encodeURIComponent(arText);
+    _emAudio = new Audio(url);
+    _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
+    _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
+    _emAudio.addEventListener('error', () => {
+      // Azure could not synthesize — show explicit error, do NOT fall to MSA.
+      if (btn) {
+        btn.classList.add('m-em-speak-err');
+        btn.textContent = '🚫';
+        btn.title = 'Azure no respondió. Revisa AZURE_SPEECH_KEY o el texto árabe.';
+      }
+    });
   }
   function speakEmirati(arText, btn, wid) {
     try { if (_emAudio) { _emAudio.pause(); _emAudio = null; } } catch (_) {}
-    if (btn) { btn.textContent = '🔊 …'; btn.classList.remove('m-em-speak-msa'); }
-    const playMsaFallback = () => {
-      if (btn) btn.classList.add('m-em-speak-msa');
-      _emAudio = new Audio('/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText));
-      _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
-      _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
-      _emAudio.addEventListener('error', () => { if (btn) btn.textContent = '⚠️'; });
-    };
-    if (!wid) return playMsaFallback();
-    const overrideUrl = '/api/emirati/audio/' + encodeURIComponent(wid) + '?voice=' + _emAzureVoice;
-    _emAudio = new Audio(overrideUrl);
+    if (btn) { btn.textContent = '🔊…'; btn.classList.remove('m-em-speak-msa', 'm-em-speak-err'); }
+    // 🎙️ Khaleeji ONLY — no MSA fallback. If there's a wordId, hit the
+    // per-word endpoint (best quality, exact match). If there's just text
+    // (no wid), route through the /text endpoint for Azure synthesis.
+    const url = wid
+      ? '/api/emirati/audio/' + encodeURIComponent(wid) + '?voice=' + _emAzureVoice
+      : '/api/emirati/audio/text?voice=' + _emAzureVoice + '&ar=' + encodeURIComponent(arText);
+    _emAudio = new Audio(url);
     _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
     _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
-    _emAudio.addEventListener('error', () => { playMsaFallback(); });
+    _emAudio.addEventListener('error', () => {
+      if (btn) {
+        btn.classList.add('m-em-speak-err');
+        btn.textContent = '🚫';
+        btn.title = 'Azure no respondió. ¿AZURE_SPEECH_KEY configurada en Render?';
+      }
+    });
   }
 
   // ── 🎙️ AZURE: bind the Khaleeji voice generator panel. ──
@@ -618,7 +622,7 @@
   // to localStorage and re-fetches re-render so future taps use the chosen
   // voice (also passed via ?voice= on the audio endpoint).
   const _emAzureSavedVoice = (function () {
-    try { return localStorage.getItem('em_azure_voice') || 'female'; } catch (_) { return 'female'; }
+    try { return localStorage.getItem('em_azure_voice') || 'male'; } catch (_) { return 'male'; }
   })();
   _emAzureVoice = _emAzureSavedVoice;
   const _emAzVoiceSel = $('m-em-azure-voice');
