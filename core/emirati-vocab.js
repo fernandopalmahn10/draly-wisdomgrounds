@@ -465,14 +465,88 @@ const EMIRATI_SECTION_ORDER = [
 // every word without `ses` gets two simple template sentences so EVERY
 // 🔊 in the UI has something to read. Replace these with idiomatic
 // Khaleeji sentences over time (drop them in the `w(...)` call).
+// 📝 Khaleeji Arabic text for the hand-authored sentences in sections 1-3.
+// Source: the user's emirati_arabic_full_text.txt rendered in Arabic
+// script. Lookup by transliteration so Azure ar-AE-Hamdan / Fatima can
+// actually read them aloud (was falling through to MSA Google = bad
+// pronunciation). Drop more here over time; any tr not in this map
+// falls back to the parent word's `ar` for the audio (better than empty).
+const SECTION_1_3_AR = {
+  // Section 1 — Greetings & basics
+  'as-salaam alaykum, shlonkum?': 'السلام عليكم، شلونكم؟',
+  'as-salaam alaykum, ana Fernando.': 'السلام عليكم، أنا فيرناندو.',
+  'wa alaykum as-salaam, ahlan!': 'وعليكم السلام، أهلا!',
+  'A: as-salaam alaykum. B: wa alaykum as-salaam.': 'أ: السلام عليكم. ب: وعليكم السلام.',
+  'shlōnak il-yōm?': 'شلونك اليوم؟',
+  'hala, shlōnak?': 'هلا، شلونك؟',
+  'shlōnich il-yōm?': 'شلونچ اليوم؟',
+  'hala, shlōnich?': 'هلا، شلونچ؟',
+  'il-ḥamdillah, ana b-khair.': 'الحمد لله، أنا بخير.',
+  'shlōnak? il-ḥamdillah.': 'شلونك؟ الحمد لله.',
+  "ana zain, mashkūr.": 'أنا زين، مشكور.',
+  "il-yōm kān zain.": 'اليوم كان زين.',
+  'marḥaba, tafaḍḍal istariḥ.': 'مرحبا، تفضل استرح.',
+  'marḥaba fīk!': 'مرحبا فيك!',
+  'hala hala! shlōnak?': 'هلا هلا! شلونك؟',
+  "hala walla, shakhbārak?": 'هلا والله، شخبارك؟',
+  'shukran jazīlan.': 'شكراً جزيلاً.',
+  'shukran ya akhī.': 'شكراً يا أخي.',
+  'afwan, ma alaik shay.': 'عفواً، ما عليك شي.',
+  'afwan, wain il-ḥammām?': 'عفواً، وين الحمام؟',
+  "maʿ as-salāma, inshallah ashoofak.": 'مع السلامة، إن شاء الله أشوفك.',
+  'yalla, maʿ as-salāma!': 'يلا، مع السلامة!',
+  "ashoofak bāchir inshallah.": 'أشوفك باچر إن شاء الله.',
+  'inshallah kil shay zain.': 'إن شاء الله كل شي زين.',
+  'māshallah, wāyid ḥilw!': 'ما شاء الله، وايد حلو!',
+  'māshallah alaik!': 'ما شاء الله عليك!',
+  "yalla, namshy!": 'يلا، نمشي!',
+  "yalla yalla, mit'akhirīn.": 'يلا يلا، متأخرين.',
+  'naʿam, ana muwāfig.': 'نعم، أنا موافق.',
+  'naʿam, ṣaḥḥ.': 'نعم، صحّ.',
+  'ēh, tamām.': 'إيه، تمام.',
+  'ēh walla.': 'إيه والله.',
+  'lā, shukran.': 'لا، شكراً.',
+  "lā, ma abī.": 'لا، ما أبي.',
+  'min faḍlak, aʿṭīnī māy.': 'من فضلك، أعطني ماي.',
+  "min faḍlak, wain il-maṭār?": 'من فضلك، وين المطار؟',
+  "āsif, ma gaṣadī.": 'آسف، ما قصدي.',
+  "āsif, ana mit'akhir.": 'آسف، أنا متأخر.',
+  'mā alēh, ʿādī.': 'ما عليه، عادي.',
+  'A: āsif! B: mā alēh!': 'أ: آسف! ب: ما عليه!',
+  "ana min Honduras.": 'أنا من هندوراس.',
+  'ana adris ʿarabī.': 'أنا أدرس عربي.',
+  'inta min wain?': 'إنت من وين؟',
+  "inta shaghlak shū?": 'إنت شغلك شو؟',
+  'hū ṣāḥbī.': 'هو صاحبي.',
+  'hū min Dubay.': 'هو من دبي.',
+  'hī mudarrisa.': 'هي مدرّسة.',
+  'hī tilʿab wāyid.': 'هي تلعب وايد.',
+  'iḥna naby nākil.': 'إحنا نبي ناكل.',
+  'iḥna min il-Imārāt.': 'إحنا من الإمارات.',
+  // Section 2 — Family & people (a sampling; extend over time)
+  'il-bōya rāḥ il-shughl.': 'البويا راح الشغل.',
+  'abūy yiḥibb il-gahwa.': 'أبوي يحب القهوة.',
+  'yumma ṭabkhat akil.': 'يما طبخت أكل.',
+  'ummī aḥla waḥda.': 'أمي أحلى وحدة.',
+};
+
 (function _autoFillSentences() {
   EMIRATI_WORDS.forEach((w) => {
     if (Array.isArray(w.ses) && w.ses.length) {
-      // 🔧 EXISTING manual sentences (sections 1-3) ship without `ar` text.
-      // Without it Azure can't speak them. Fall back to the parent word's
-      // Arabic so the 🔊 always plays *something* in real Khaleeji rather
-      // than silently going to MSA.
-      w.ses.forEach((sent) => { if (!sent.ar) sent.ar = w.ar; });
+      // 🔧 Two-pass enrichment:
+      //   1. If the hand-authored sentence's tr is in SECTION_1_3_AR,
+      //      use the real Khaleeji Arabic from the map.
+      //   2. Otherwise fall back to the parent word's `ar` (so at least
+      //      Hamdan/Fatima reads SOMETHING in Khaleeji, not MSA junk).
+      w.ses.forEach((sent) => {
+        if (sent.ar) return;
+        if (SECTION_1_3_AR[sent.tr]) {
+          sent.ar = SECTION_1_3_AR[sent.tr];
+        } else {
+          sent.ar = w.ar;          // graceful fallback
+          sent.arFallback = true;  // UI can mark these as draft-Arabic
+        }
+      });
       return;
     }
     const en = String(w.en || '').split(' / ')[0].split('(')[0].trim() || 'this';

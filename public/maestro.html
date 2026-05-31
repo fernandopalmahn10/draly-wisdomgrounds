@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260527a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260527a">
-  <link rel="stylesheet" href="/css/maestro.css?v=20260530e">
+  <link rel="stylesheet" href="/css/maestro.css?v=20260530f">
 </head>
 <body class="hw-bg">
 
@@ -87,9 +87,13 @@
             <div class="m-emirati-sub">5 palabras nuevas cada día. 🔊 reproduce <strong>tu MP3 emiratí</strong> si existe en <code>data/emirati-audio/&lt;id&gt;.mp3</code>; si no, cae en Google MSA (etiqueta naranja).</div>
           </div>
           <div class="m-emirati-hud">
-            <div class="m-emirati-stat"><strong id="m-em-seen">0</strong><span>/ <em id="m-em-total">0</em> palabras vistas</span></div>
+            <button type="button" class="m-emirati-stat is-tappable" data-em-stat="words" title="Toca para revisar las palabras que ya viste">
+              <strong id="m-em-seen">0</strong><span>/ <em id="m-em-total">0</em> palabras vistas <small>↗</small></span>
+            </button>
             <div class="m-emirati-stat">🔥 <strong id="m-em-streak">0</strong><span>días seguidos</span></div>
-            <div class="m-emirati-stat">✏️ <strong id="m-em-sent-count">0</strong><span>oraciones aprendidas</span></div>
+            <button type="button" class="m-emirati-stat is-tappable" data-em-stat="sentences" title="Toca para revisar las oraciones que ya aprendiste">
+              ✏️ <strong id="m-em-sent-count">0</strong><span>oraciones aprendidas <small>↗</small></span>
+            </button>
           </div>
           <div class="m-emirati-list" id="m-emirati-list">Cargando…</div>
           <div class="m-emirati-actions">
@@ -264,6 +268,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/maestro.js?v=20260530e"></script>
+  <script src="/js/maestro.js?v=20260530f"></script>
 </body>
 </html>

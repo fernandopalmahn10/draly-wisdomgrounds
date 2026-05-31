@@ -832,6 +832,21 @@ body.hw-bg {
 .m-em-review-tab.is-active .m-em-review-tabn { background: rgba(255,224,130,0.92); color: #2a1d05; }
 .m-em-rs-ar { font-size: 1.05rem; color: #fff; font-weight: 800; margin-bottom: 4px; }
 
+/* Tappable HUD chips — palabras vistas / oraciones aprendidas open Mis
+   aprendidos at the corresponding tab. */
+.m-emirati-stat.is-tappable {
+  cursor: pointer; touch-action: manipulation;
+  border: 1.5px dashed rgba(91,232,209,0.45);
+  transition: transform 0.1s, background 0.15s, border-color 0.15s;
+  font-family: inherit;
+}
+.m-emirati-stat.is-tappable:hover {
+  background: rgba(91,232,209,0.16);
+  border-color: #5be8d1; border-style: solid;
+}
+.m-emirati-stat.is-tappable:active { transform: scale(0.97); }
+.m-emirati-stat small { font-size: 0.78rem; color: #5be8d1; font-weight: 900; margin-left: 4px; }
+
 /* 📜 Mis aprendidos — full-viewport overlay so it ALWAYS shows above the
    modal regardless of parent positioning context. */
 .m-em-review {
