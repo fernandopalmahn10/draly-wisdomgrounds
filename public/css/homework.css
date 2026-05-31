@@ -3002,6 +3002,227 @@ button.hw-sent-chip:active { transform: scale(0.94); }
 }
 .hw-extra-save:active { transform: scale(0.97); }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   🐲 TEMPLO DEL DRAGÓN — themed daily game (replaces gift-tap loop)
+   ═══════════════════════════════════════════════════════════════════════ */
+.hw-temple-mode { position: relative; min-height: 540px; overflow: hidden; }
+.hw-temple-scene {
+  position: relative;
+  width: 100%; height: 100%; min-height: 540px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, #2a1545 0%, #4a1a4a 35%, #8a2433 70%, #c83a2a 100%);
+  overflow: hidden;
+}
+/* Twinkly star/cloud sky band at the top */
+.hw-temple-sky {
+  position: absolute; inset: 0 0 60% 0;
+  background:
+    radial-gradient(2px 2px at 20% 30%, #fff5d8 50%, transparent),
+    radial-gradient(1.5px 1.5px at 65% 18%, #ffd24a 50%, transparent),
+    radial-gradient(2px 2px at 85% 45%, #fff5d8 50%, transparent),
+    radial-gradient(1.5px 1.5px at 35% 55%, #ffe082 50%, transparent),
+    radial-gradient(ellipse at 50% 90%, rgba(255,224,130,0.16), transparent 60%);
+  background-repeat: no-repeat;
+  animation: hwTempleSky 18s linear infinite;
+}
+@keyframes hwTempleSky { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+/* Layered mountain silhouettes */
+.hw-temple-mountains {
+  position: absolute; left: 0; right: 0; bottom: 35%;
+  height: 25%;
+  background:
+    linear-gradient(180deg, transparent 30%, rgba(40,20,55,0.4) 30%, rgba(40,20,55,0.6) 100%),
+    radial-gradient(circle at 18% 100%, rgba(60,30,75,0.85) 0 28%, transparent 28%),
+    radial-gradient(circle at 50% 100%, rgba(70,30,80,0.95) 0 38%, transparent 38%),
+    radial-gradient(circle at 82% 100%, rgba(60,30,75,0.88) 0 32%, transparent 32%);
+  filter: drop-shadow(0 -4px 8px rgba(0,0,0,0.4));
+}
+.hw-temple-pagoda {
+  position: absolute; top: 14%; left: 50%; transform: translateX(-50%);
+  font-size: clamp(3.5rem, 11vmin, 5.5rem);
+  filter: drop-shadow(0 6px 12px rgba(255,200,80,0.4));
+  animation: hwTempleSway 4s ease-in-out infinite alternate;
+  z-index: 2;
+}
+@keyframes hwTempleSway { from { transform: translateX(calc(-50% - 4px)) rotate(-1deg); } to { transform: translateX(calc(-50% + 4px)) rotate(1deg); } }
+/* Falling cherry blossom petals (parallax) */
+.hw-temple-petals { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.hw-temple-petal {
+  position: absolute; top: -10px; left: var(--x);
+  width: 10px; height: 10px;
+  background: radial-gradient(circle at 30% 30%, #ffd5e8, #ff7eb3 70%);
+  border-radius: 50% 50% 50% 0;
+  opacity: 0.85;
+  animation: hwTemplePetalFall 8s linear var(--d) infinite;
+}
+@keyframes hwTemplePetalFall {
+  0%   { transform: translate(0, -20px) rotate(0deg); opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: translate(40px, 110vh) rotate(720deg); opacity: 0.4; }
+}
+/* The stepping-stone path leading up to the dragon */
+.hw-temple-stones {
+  position: absolute; left: 0; right: 0; bottom: 18%;
+  display: flex; justify-content: space-around; align-items: center;
+  padding: 0 6%;
+  z-index: 4;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+}
+.hw-temple-stone {
+  font-size: clamp(1.8rem, 6vmin, 2.6rem);
+  opacity: 0.55;
+  transition: transform 0.25s, opacity 0.25s;
+}
+.hw-temple-stone.lit {
+  opacity: 1;
+  transform: translateY(-4px) scale(1.15);
+  filter: drop-shadow(0 0 18px #ff7e5f) drop-shadow(0 0 6px #ffe082);
+  animation: hwTempleLanternGlow 1.4s ease-in-out infinite alternate;
+}
+@keyframes hwTempleLanternGlow { from { filter: drop-shadow(0 0 12px #ff7e5f); } to { filter: drop-shadow(0 0 24px #ffe082); } }
+/* The character — hops between stones */
+.hw-temple-char {
+  position: absolute; bottom: 22%;
+  left: calc(6% + ((100% - 12%) / 8) * var(--step, 0));
+  transform: translateX(-50%);
+  width: clamp(70px, 16vmin, 110px); height: auto;
+  z-index: 6;
+  transition: left 0.45s cubic-bezier(.2,1.2,.4,1);
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.5));
+}
+.hw-temple-char.hop { animation: hwTempleHop 0.55s ease-out; }
+@keyframes hwTempleHop {
+  0%   { transform: translateX(-50%) translateY(0); }
+  40%  { transform: translateX(-50%) translateY(-30px) scale(1.05); }
+  100% { transform: translateX(-50%) translateY(0); }
+}
+/* The dragon waiting at the top of the path */
+.hw-temple-dragon {
+  position: absolute; top: 8%; right: 6%;
+  font-size: clamp(3rem, 11vmin, 5rem);
+  z-index: 5;
+  filter: drop-shadow(0 0 12px rgba(255,200,80,0.5));
+  animation: hwTempleDragonFloat 3s ease-in-out infinite alternate;
+}
+@keyframes hwTempleDragonFloat { from { transform: translateY(-4px); } to { transform: translateY(6px); } }
+.hw-temple-dragon.roar { animation: hwTempleDragonRoar 0.9s ease-out; }
+@keyframes hwTempleDragonRoar {
+  0%   { transform: scale(1) rotate(0); filter: drop-shadow(0 0 12px gold); }
+  40%  { transform: scale(1.6) rotate(-6deg); filter: drop-shadow(0 0 32px #ff7e5f) drop-shadow(0 0 14px gold); }
+  100% { transform: scale(1) rotate(0); filter: drop-shadow(0 0 12px gold); }
+}
+/* Progress bar across the top of the scene */
+.hw-temple-progress {
+  position: absolute; top: 12px; left: 12px; right: 12px;
+  height: 8px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 999px; overflow: hidden;
+  z-index: 7;
+  border: 1px solid rgba(255,224,130,0.4);
+}
+.hw-temple-fill {
+  height: 100%; width: 0;
+  background: linear-gradient(90deg, #5be88a, #ffe082, #ff7e5f);
+  border-radius: 999px;
+  box-shadow: 0 0 14px rgba(255,224,130,0.6);
+  transition: width 0.5s cubic-bezier(.3,1.2,.4,1);
+}
+/* Combo chip in the scene (override of generic .hw-sp-combo) */
+.hw-temple-mode .hw-temple-combo,
+.hw-temple-combo {
+  position: absolute; top: 28px; right: 14px; z-index: 8;
+  background: rgba(0,0,0,0.55); color: #ffe082;
+  border: 1.5px solid #ffe082; border-radius: 999px;
+  padding: 5px 12px;
+  font-family: 'Cinzel', serif; font-weight: 900; font-size: 0.84rem;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 14px rgba(255,224,130,0.5);
+}
+/* Question banner + Spanish choice chips at the bottom */
+.hw-temple-question {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 14px 12px 18px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,0.6));
+  z-index: 9;
+}
+.hw-temple-q-bubble {
+  display: flex; align-items: center; gap: 8px; justify-content: center;
+  margin-bottom: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(160deg, #fff5d8, #ffe082);
+  border: 2.5px solid #b06a2a;
+  border-radius: 18px;
+  color: #2a1500;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.45);
+}
+.hw-temple-q-prompt { font-weight: 800; font-size: 0.92rem; opacity: 0.78; }
+.hw-temple-q-pinyin { font-weight: 900; font-size: clamp(1.4rem, 5.5vmin, 2.1rem); letter-spacing: -0.01em; }
+.hw-temple-q-listen {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: none; background: #c81e1e; color: #fff;
+  font-size: 1rem; cursor: pointer; touch-action: manipulation;
+  box-shadow: 0 4px 10px rgba(200,30,30,0.4);
+}
+.hw-temple-q-listen:active { transform: scale(0.92); }
+.hw-temple-q-choices {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+}
+@media (max-width: 380px) { .hw-temple-q-choices { grid-template-columns: repeat(3, 1fr); gap: 6px; } }
+.hw-temple-q-choice {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
+  background: rgba(255,255,255,0.96);
+  border: 2.5px solid var(--cat-color, #ffd24a);
+  border-radius: 16px;
+  padding: 14px 8px;
+  font-weight: 900; color: #2a1500;
+  min-height: 84px;
+  cursor: pointer; touch-action: manipulation;
+  transition: transform 0.1s, background 0.15s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.hw-temple-q-choice:active { transform: scale(0.95); }
+.hw-temple-q-choice.is-correct {
+  background: linear-gradient(135deg, #5be88a, #36b9c7);
+  color: #07232a;
+  box-shadow: 0 0 22px rgba(91,232,138,0.7);
+  animation: hwTempleChoicePulse 0.5s;
+}
+.hw-temple-q-choice.is-wrong {
+  background: #ff7a7a; color: #fff;
+  animation: hwTempleChoiceShake 0.4s;
+}
+@keyframes hwTempleChoicePulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.07);} }
+@keyframes hwTempleChoiceShake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+.hw-temple-q-icon { font-size: 1.5rem; line-height: 1; }
+.hw-temple-q-es { font-size: 0.95rem; line-height: 1.15; }
+.hw-temple-scene.shake { animation: hwTempleSceneShake 0.35s; }
+@keyframes hwTempleSceneShake { 0%,100%{transform:translateX(0);} 30%{transform:translateX(-5px);} 70%{transform:translateX(5px);} }
+/* Grammar tip overlay (sits on top of the scene) */
+.hw-temple-tip {
+  position: absolute; inset: 0; z-index: 12;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.55);
+  animation: hwTempleTipFadeIn 0.2s;
+}
+@keyframes hwTempleTipFadeIn { from { opacity: 0; } to { opacity: 1; } }
+.hw-temple-tip-card {
+  width: min(86%, 480px);
+  padding: 18px 18px 14px;
+  background: linear-gradient(160deg, #fff5d8, #ffe082);
+  border: 2.5px solid #b06a2a; border-radius: 18px;
+  color: #2a1500;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+}
+.hw-temple-tip-head { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.05rem; color: #8a4514; margin-bottom: 6px; }
+.hw-temple-tip-body { font-size: 0.98rem; line-height: 1.45; font-weight: 700; }
+.hw-temple-tip-ok {
+  margin-top: 12px; width: 100%;
+  background: linear-gradient(135deg, #c81e1e, #e23b3b); color: #fff;
+  border: none; border-radius: 999px; padding: 12px 18px;
+  font-weight: 900; font-size: 0.98rem; cursor: pointer; touch-action: manipulation;
+}
+
 /* ─── 🗂️ Monthly carpets in Mis oraciones ─────────────────────────────── */
 .hw-sentences-month {
   margin: 0 0 14px;

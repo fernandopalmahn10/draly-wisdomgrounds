@@ -1045,6 +1045,22 @@ app.get('/api/homework/insights/:code', (req, res) => {
   });
 });
 
+// Maestro per-sentence delete — surgical removal. User feedback:
+// "I do not need to delete every single sentence, just one or two,
+// individually." Same access rule as the nuke-all endpoint below.
+app.post('/api/admin/student/:code/sentence/delete', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) {
+    return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  }
+  const { ts } = req.body || {};
+  const ok = Students.deleteHistoryEntry(rec.code, ts);
+  res.json({ ok, sentences: Students.getHistory(rec.code, 200) });
+});
+
 // Maestro cleanup: nuke every saved sentence for this student. Used when
 // the teacher needs a fresh slate (kid was spamming test saves, etc.).
 // Super-admin or the owning teacher only — same access rule as deletion.
@@ -1429,6 +1445,47 @@ app.post('/api/homework/daily/sentence-bonus', (req, res) => {
     alreadyClaimed,
     sentenceSaved: true,
     progress: Students.getProgress(rec.code),
+  });
+});
+
+// 🌐 EMIRATI: full review payload — every word the kid has marked as seen
+// PLUS every example sentence flagged as learned. Drives the "📜 Mis
+// aprendidos" modal in the gateway. Returns the full hydrated word
+// objects (ar, tr, en, section, ses[]) so the client can render them
+// the same way as the daily card, with the same 🔊/✓ tools.
+app.get('/api/maestro/emirati/learned', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const state = _emiratiRead();
+  const seen = new Set(state.seen || []);
+  const learnedSentences = new Set(state.learnedSentences || []);
+  const seenWords = Emirati.EMIRATI_WORDS.filter((w) => seen.has(w.id))
+    .sort((a, b) => a.priority - b.priority);
+  // Group by section so the UI can render carpets.
+  const bySection = {};
+  seenWords.forEach((w) => {
+    const k = w.section;
+    if (!bySection[k]) bySection[k] = [];
+    bySection[k].push(w);
+  });
+  // Also enumerate every individually-learned sentence with its parent word.
+  const learnedSentenceRows = [];
+  Emirati.EMIRATI_WORDS.forEach((w) => {
+    (w.ses || []).forEach((s, si) => {
+      const key = w.id + ':' + si;
+      if (learnedSentences.has(key)) {
+        learnedSentenceRows.push({ key, wordId: w.id, ar: w.ar, tr: w.tr, en: w.en, section: w.section, sentence: s });
+      }
+    });
+  });
+  res.json({
+    ok: true,
+    sections: Emirati.EMIRATI_SECTIONS,
+    bySection,
+    seenWordsCount: seenWords.length,
+    learnedSentenceRows,
+    learnedSentenceCount: learnedSentenceRows.length,
   });
 });
 

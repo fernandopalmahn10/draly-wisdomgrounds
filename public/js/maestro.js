@@ -168,6 +168,91 @@
   });
   let _emToday = [];
   let _emLearnedSentences = new Set();
+  // 📜 "Mis aprendidos" review panel — opens INSIDE the Emirati modal,
+  // listing every word marked seen + every sentence marked learned.
+  if ($('m-em-review')) {
+    $('m-em-review').addEventListener('click', () => {
+      $('m-em-review-panel').classList.remove('hidden');
+      $('m-em-review-body').innerHTML = 'Cargando…';
+      fetch('/api/maestro/emirati/learned?pw=' + encodeURIComponent(pw))
+        .then((r) => r.json()).then((d) => renderEmiratiReview(d))
+        .catch((e) => { $('m-em-review-body').innerHTML = 'Error: ' + e.message; });
+    });
+  }
+  if ($('m-em-review-back')) {
+    $('m-em-review-back').addEventListener('click', () => $('m-em-review-panel').classList.add('hidden'));
+  }
+  function renderEmiratiReview(d) {
+    const body = $('m-em-review-body'); if (!body) return;
+    if (!d || !d.ok) { body.innerHTML = 'Error: ' + ((d && d.error) || ''); return; }
+    const counts = $('m-em-review-counts');
+    if (counts) counts.textContent = '🌱 ' + d.seenWordsCount + ' palabras · ✏️ ' + d.learnedSentenceCount + ' oraciones';
+    if (!d.seenWordsCount && !d.learnedSentenceCount) {
+      body.innerHTML = '<div class="m-empty">Aún no has marcado nada como aprendido. ¡Toca ✓ junto a las palabras y oraciones que ya domines!</div>';
+      return;
+    }
+    body.innerHTML = '';
+    // Words by section (carpets) — newest sections on top via priority order.
+    Object.keys(d.bySection).forEach((sectId) => {
+      const sect = d.sections[sectId];
+      const words = d.bySection[sectId];
+      const wrap = document.createElement('details');
+      wrap.className = 'm-em-review-section'; wrap.open = true;
+      const sum = document.createElement('summary');
+      sum.className = 'm-em-review-summary';
+      sum.innerHTML = (sect ? sect.icon + ' ' + escapeHtml(sect.label) : sectId)
+        + ' <span class="m-em-review-n">' + words.length + '</span>';
+      wrap.appendChild(sum);
+      const grid = document.createElement('div'); grid.className = 'm-em-review-words';
+      words.forEach((w) => {
+        const card = document.createElement('div'); card.className = 'm-em-review-word';
+        card.innerHTML = `
+          <div class="m-em-rw-ar" lang="ar" dir="rtl">${escapeHtml(w.ar)}</div>
+          <div class="m-em-rw-tr">${escapeHtml(w.tr)}</div>
+          <div class="m-em-rw-en">${escapeHtml(w.en)}</div>
+          <button class="m-em-rw-speak" data-ar="${escapeHtml(w.ar)}" data-wid="${escapeHtml(w.id)}" title="Escuchar">🔊</button>`;
+        card.querySelector('.m-em-rw-speak').addEventListener('click', (e) => {
+          speakEmirati(e.currentTarget.dataset.ar, e.currentTarget, e.currentTarget.dataset.wid);
+        });
+        grid.appendChild(card);
+      });
+      wrap.appendChild(grid);
+      body.appendChild(wrap);
+    });
+    // Learned sentences — flat list, every row keeps its 🔊 + ✗ unmark tool.
+    if (d.learnedSentenceRows.length) {
+      const h = document.createElement('div');
+      h.className = 'm-em-review-section-title';
+      h.innerHTML = '✏️ Oraciones que ya domino';
+      body.appendChild(h);
+      d.learnedSentenceRows.forEach((row) => {
+        const s = row.sentence;
+        const tile = document.createElement('div');
+        tile.className = 'm-em-review-sentence';
+        tile.innerHTML = `
+          <div class="m-em-rs-text">
+            <div class="m-em-rs-tr">${escapeHtml(s.tr)}</div>
+            <div class="m-em-rs-en">${escapeHtml(s.en)}</div>
+            <div class="m-em-rs-from">↑ de ${escapeHtml(row.tr)}</div>
+          </div>
+          <div class="m-em-rs-tools">
+            <button class="m-em-rs-speak" data-ar="${escapeHtml(s.tr)}">🔊</button>
+            <button class="m-em-rs-unlearn" data-key="${escapeHtml(row.key)}" title="Olvidar (marcar como no aprendida)">✗</button>
+          </div>`;
+        tile.querySelector('.m-em-rs-speak').addEventListener('click', (e) => {
+          speakEmirati(e.currentTarget.dataset.ar, e.currentTarget, '');
+        });
+        tile.querySelector('.m-em-rs-unlearn').addEventListener('click', (e) => {
+          const key = e.currentTarget.dataset.key;
+          fetch('/api/maestro/emirati/sentence/mark?pw=' + encodeURIComponent(pw), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ keys: [key], unmark: true }),
+          }).then((r) => r.json()).then(() => { tile.remove(); });
+        });
+        body.appendChild(tile);
+      });
+    }
+  }
   function loadEmirati(reshuffle) {
     const list = $('m-emirati-list');
     if (list) list.textContent = 'Cargando…';
@@ -1063,7 +1148,7 @@
         const dateStr = new Date(s.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
         const wordsHtml = (s.words || []).map((wid) => {
           const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
-          if (!w) return '';
+          if (!w) return '<span class="m-sent-word"><span class="m-sent-pin">' + escapeHtml(wid) + '</span></span>';
           const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
           const color = cat ? cat.color : '#fff';
           return `<span class="m-sent-word" style="--cat-color:${color};">
@@ -1075,8 +1160,30 @@
         const item = document.createElement('div');
         item.className = 'm-sent-row';
         item.innerHTML = `
-          <div class="m-sent-date">📅 ${dateStr}</div>
+          <div class="m-sent-head">
+            <span class="m-sent-date">📅 ${dateStr}</span>
+            <button class="m-sent-del" type="button" data-ts="${s.ts}" title="Borrar esta oración">🗑</button>
+          </div>
           <div class="m-sent-words">${wordsHtml}</div>`;
+        // 🗑 Per-row delete — surgical, propagates to kid's Mis oraciones
+        // and the parent 0→2000 progress bar (rec.sentencesBuilt.length).
+        item.querySelector('.m-sent-del').addEventListener('click', () => {
+          if (!confirm('¿Borrar esta oración del ' + dateStr + '?\n\nEl cambio se refleja en Mis oraciones del alumno y en el panel de los papás.')) return;
+          fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/sentence/delete?pw=' + encodeURIComponent(pw), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ts: s.ts }),
+          }).then((r) => r.json()).then((r) => {
+            if (!r.ok) { alert('No se pudo borrar.'); return; }
+            item.remove();
+            // Update the header count + warn if empty.
+            data.sentences = r.sentences || [];
+            const meta = document.querySelector('.m-detail-meta');
+            if (meta) meta.innerHTML = meta.innerHTML.replace(/📝 \d+ oraciones/, '📝 ' + data.sentences.length + ' oraciones');
+            if (!data.sentences.length) {
+              body.querySelector('.m-section-title')?.remove();
+            }
+          }).catch((e) => alert('Error: ' + e.message));
+        });
         body.appendChild(item);
       });
     }
