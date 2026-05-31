@@ -265,6 +265,13 @@ function _azureSpeak(text, voice, outPath, cb) {
     resp.on('end', () => {
       try {
         const buf = Buffer.concat(chunks);
+        // 🔧 Reject empty/tiny responses — Azure occasionally returns 200
+        // with no body when the SSML is malformed (e.g. encoding issue).
+        // Without this guard we'd cache a 0-byte MP3 forever and the
+        // browser Audio would silently fail every time.
+        if (buf.length < 200) {
+          return cb(new Error('azure returned empty audio (' + buf.length + ' bytes) — likely SSML rejected'));
+        }
         const dir = _emPath.dirname(outPath);
         if (!_emFs.existsSync(dir)) _emFs.mkdirSync(dir, { recursive: true });
         _emFs.writeFileSync(outPath, buf);

@@ -727,6 +727,10 @@ body.hw-bg {
    override yet). When you drop an MP3 in data/emirati-audio/{wordId}.mp3
    the badge disappears and the button plays your real Khaleeji audio. */
 .m-em-speak.m-em-speak-msa::after { content: 'MSA'; position: absolute; top: -8px; right: -10px; background: #ff7a45; color: #fff; font-size: 0.6rem; font-weight: 900; padding: 2px 6px; border-radius: 999px; }
+.m-em-speak.m-em-speak-err, .m-em-s-speak.m-em-speak-err, .m-em-rs-speak.m-em-speak-err {
+  background: #ff7a7a !important; color: #fff !important;
+  border: 2px solid #ff3a3a !important;
+}
 
 /* ─── 🎯 Custom Assignments modal ─────────────────────────────────── */
 .m-custom-card { max-width: 760px; max-height: 92dvh; overflow-y: auto; }
@@ -837,19 +841,49 @@ body.hw-bg {
 .m-em-rs-ar { font-size: 1.05rem; color: #fff; font-weight: 800; margin-bottom: 4px; }
 
 /* Tappable HUD chips — palabras vistas / oraciones aprendidas open Mis
-   aprendidos at the corresponding tab. */
-.m-emirati-stat.is-tappable {
+   aprendidos at the corresponding tab. Was rendering as white system
+   buttons before — needed full button-reset. */
+button.m-emirati-stat.is-tappable {
+  /* Hard reset of browser button defaults so it matches the sibling divs */
+  appearance: none; -webkit-appearance: none;
+  background: rgba(91,232,209,0.14);
+  color: inherit;
+  font: inherit;
+  margin: 0;
+  text-align: inherit;
+  /* Match sibling .m-emirati-stat layout */
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 16px;
+  border: 2px solid rgba(91,232,209,0.55);
+  border-radius: 14px;
   cursor: pointer; touch-action: manipulation;
-  border: 1.5px dashed rgba(91,232,209,0.45);
-  transition: transform 0.1s, background 0.15s, border-color 0.15s;
-  font-family: inherit;
+  transition: transform 0.1s, background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  font-family: 'Nunito', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
+  -webkit-tap-highlight-color: rgba(91,232,209,0.3);
 }
-.m-emirati-stat.is-tappable:hover {
-  background: rgba(91,232,209,0.16);
-  border-color: #5be8d1; border-style: solid;
+button.m-emirati-stat.is-tappable strong {
+  font-size: 1.4rem; color: #5be8d1; font-weight: 900;
 }
-.m-emirati-stat.is-tappable:active { transform: scale(0.97); }
-.m-emirati-stat small { font-size: 0.78rem; color: #5be8d1; font-weight: 900; margin-left: 4px; }
+button.m-emirati-stat.is-tappable span {
+  color: #d6f4ff; font-size: 0.85rem; font-weight: 700;
+}
+button.m-emirati-stat.is-tappable em {
+  font-style: normal; color: rgba(243,230,194,0.85); font-weight: 800;
+}
+button.m-emirati-stat.is-tappable small {
+  display: inline-block;
+  font-size: 0.75rem; color: #ffe082; font-weight: 900;
+  margin-left: 4px;
+  padding: 1px 7px;
+  background: rgba(255,224,130,0.15);
+  border-radius: 999px;
+}
+button.m-emirati-stat.is-tappable:hover {
+  background: rgba(91,232,209,0.28);
+  border-color: #5be8d1;
+  box-shadow: 0 0 12px rgba(91,232,209,0.35);
+}
+button.m-emirati-stat.is-tappable:active { transform: scale(0.97); }
 
 /* 📜 Mis aprendidos — full-viewport overlay so it ALWAYS shows above the
    modal regardless of parent positioning context. */
