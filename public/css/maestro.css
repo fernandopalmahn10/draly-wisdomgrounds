@@ -783,6 +783,116 @@ body.hw-bg {
 .m-em-s-speak:active, .m-em-s-learn:active { transform: scale(0.92); }
 .m-em-s.is-learned .m-em-s-learn { background: #5be88a; color: #07232a; }
 .m-em-prio { font-size: 0.7rem; opacity: 0.5; margin-left: 6px; }
+
+/* 📜 Mis aprendidos — slide-over review panel inside the Emirati modal. */
+.m-em-review {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, #1a2540, #0f1830);
+  z-index: 10;
+  overflow-y: auto;
+  padding: 14px 16px 30px;
+  border-radius: 18px;
+}
+.m-em-review-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding-bottom: 12px;
+  border-bottom: 1.5px solid rgba(91,232,209,0.32);
+  margin-bottom: 14px;
+  position: sticky; top: 0;
+  background: linear-gradient(180deg, #1a2540 80%, transparent);
+  z-index: 2;
+}
+.m-em-review-title {
+  font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.05rem;
+  color: #5be8d1;
+}
+.m-em-review-counts {
+  margin-left: auto;
+  padding: 3px 11px; background: rgba(91,232,209,0.18);
+  color: #5be8d1; border-radius: 999px;
+  font-size: 0.82rem; font-weight: 900;
+}
+.m-em-review-section {
+  margin-bottom: 16px;
+  background: rgba(40,60,90,0.42);
+  border: 1.5px solid rgba(91,232,209,0.28);
+  border-radius: 14px; overflow: hidden;
+}
+.m-em-review-summary {
+  list-style: none; cursor: pointer; padding: 12px 14px;
+  font-weight: 900; color: #d6f4ff;
+  display: flex; align-items: center; gap: 8px;
+}
+.m-em-review-summary::-webkit-details-marker { display: none; }
+.m-em-review-summary::after { content: '▾'; margin-left: auto; color: #5be8d1; transition: transform 0.2s; }
+.m-em-review-section:not([open]) .m-em-review-summary::after { transform: rotate(-90deg); }
+.m-em-review-n {
+  background: rgba(91,232,138,0.22); color: #5be88a;
+  padding: 1px 9px; border-radius: 999px;
+  font-size: 0.74rem; font-weight: 900;
+  margin-left: 6px;
+}
+.m-em-review-words {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px; padding: 10px 12px 14px;
+}
+.m-em-review-word {
+  position: relative;
+  background: linear-gradient(160deg, rgba(91,232,209,0.16), rgba(40,60,90,0.5));
+  border: 1.5px solid rgba(91,232,209,0.42);
+  border-radius: 12px;
+  padding: 12px 10px 38px;
+  text-align: center;
+}
+.m-em-rw-ar { font-size: 1.4rem; color: #fff; font-weight: 900; margin-bottom: 3px; }
+.m-em-rw-tr { font-size: 0.92rem; color: #fff5d8; font-weight: 800; }
+.m-em-rw-en { font-size: 0.78rem; color: rgba(243,230,194,0.7); margin-top: 2px; }
+.m-em-rw-speak {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(91,232,209,0.28); color: #5be8d1; border: none;
+  font-weight: 900; cursor: pointer; touch-action: manipulation;
+}
+.m-em-rw-speak:active { transform: translateX(-50%) scale(0.9); }
+.m-em-review-section-title {
+  font-family: 'Cinzel', serif; font-weight: 900;
+  color: #ffe082; font-size: 1rem;
+  margin: 20px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1.5px solid rgba(255,224,130,0.32);
+}
+.m-em-review-sentence {
+  display: flex; gap: 10px; align-items: center;
+  padding: 10px 12px;
+  background: rgba(255,224,130,0.08);
+  border: 1px solid rgba(255,224,130,0.32);
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+.m-em-rs-text { flex: 1; min-width: 0; }
+.m-em-rs-tr { font-weight: 800; color: #fff5d8; font-size: 0.95rem; word-break: break-word; }
+.m-em-rs-en { font-size: 0.82rem; color: rgba(243,230,194,0.72); margin-top: 2px; word-break: break-word; }
+.m-em-rs-from { font-size: 0.74rem; color: #ffe082; margin-top: 3px; opacity: 0.78; }
+.m-em-rs-tools { display: flex; gap: 4px; flex: 0 0 auto; }
+.m-em-rs-speak, .m-em-rs-unlearn {
+  width: 36px; height: 36px; border-radius: 50%; border: none;
+  font-weight: 900; cursor: pointer; touch-action: manipulation;
+}
+.m-em-rs-speak { background: rgba(91,232,209,0.28); color: #5be8d1; }
+.m-em-rs-unlearn { background: rgba(255,122,122,0.3); color: #ff7a7a; }
+.m-em-rs-speak:active, .m-em-rs-unlearn:active { transform: scale(0.9); }
+
+/* 🗑 Per-row delete in the kid's sentence list (Cuaderno detail) */
+.m-sent-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.m-sent-del {
+  margin-left: auto;
+  width: 32px; height: 32px; border-radius: 50%; border: none;
+  background: rgba(255,122,122,0.22); color: #ff7a7a;
+  font-size: 0.92rem; font-weight: 900;
+  cursor: pointer; touch-action: manipulation;
+}
+.m-sent-del:hover { background: rgba(255,122,122,0.42); }
+.m-sent-del:active { transform: scale(0.9); }
 .m-em-mark { width: 100%; margin-top: 8px; border: none; border-radius: 12px; background: rgba(91,232,138,0.18); color: #5be88a; font-weight: 900; padding: 10px; cursor: pointer; touch-action: manipulation; }
 .m-em-mark:active { transform: scale(0.97); }
 .m-em-mark.done { background: rgba(91,232,138,0.42); color: #0a3a1e; }

@@ -995,13 +995,46 @@
     sentir:   '💡 "Gāoxìng" = feliz, "lèi" = cansado. Los sentimientos se dicen como adjetivos.',
     saludo:   '💡 "Nǐ hǎo" literalmente = "tú bien". El saludo más común del mundo.',
   };
+  // 🐲 TEMPLO DEL DRAGÓN — themed path-climbing game replacing the
+  // gift-tap loop. Scene: Chinese mountains + pagoda + cherry-blossom petals
+  // + N stepping stones leading up to a dragon at the top. Each round:
+  //   1. Pinyin word appears in a banner ("回 huí")
+  //   2. 3 Spanish chips at the bottom (correct + 2 distractors)
+  //   3. Tap correct → character HOPS to next stone, lantern lights,
+  //      combo grows, particles, +score. Tap wrong → red flash + shake,
+  //      combo resets, try again. NO penalty.
+  //   4. Reach the last stone → boss dragon roars, victory cutscene,
+  //      sentence-bonus opens with all words discovered.
   function runStoryMode() {
     const arena = $('hw-game-arena'); if (!arena) return;
-    arena.innerHTML = ''; arena.classList.add('hw-story-mode');
+    arena.innerHTML = '';
+    arena.classList.add('hw-story-mode', 'hw-temple-mode');
+    arena.classList.remove('hw-memory', 'hw-slash');
     const words = DAILY_GAME.pool.slice(0, 8);
     DAILY_GAME.goal = words.length;
     const char = DAILY_GAME.char || dailyCharFor(localDateStr());
     let idx = 0;
+    // Build the THEMED scene once. The DOM stays mounted; only the question
+    // overlay re-renders per word so the parallax/petals don't restart.
+    const scene = document.createElement('div');
+    scene.className = 'hw-temple-scene';
+    scene.innerHTML = `
+      <div class="hw-temple-sky"></div>
+      <div class="hw-temple-mountains"></div>
+      <div class="hw-temple-pagoda">⛩️</div>
+      <div class="hw-temple-petals">${Array.from({ length: 14 }).map((_, i) => '<span class="hw-temple-petal" style="--d:' + (i * 0.7) + 's; --x:' + (5 + (i * 11) % 90) + '%"></span>').join('')}</div>
+      <div class="hw-temple-progress"><div class="hw-temple-fill" id="hw-temple-fill"></div></div>
+      <div class="hw-temple-combo" id="hw-temple-combo">1× COMBO</div>
+      <div class="hw-temple-stones" id="hw-temple-stones"></div>
+      <img class="hw-temple-char" id="hw-temple-char" src="${char.img}" alt="${char.id}" onerror="this.style.display='none'">
+      <div class="hw-temple-dragon" id="hw-temple-dragon">🐲</div>
+      <div class="hw-temple-question" id="hw-temple-question"></div>`;
+    arena.appendChild(scene);
+    // Render the path of stepping stones (one per word).
+    const stones = $('hw-temple-stones');
+    if (stones) {
+      stones.innerHTML = words.map((_, i) => '<div class="hw-temple-stone" data-stone="' + i + '">🪨</div>').join('');
+    }
     let combo = 1; // multiplies score: 1×, 2×, 3×, …
     // Mario-style score popup ("+100") floating up from where the word appeared.
     function popScore(parent, amount) {
@@ -1213,28 +1246,116 @@
         }, 360);
       });
     }
-    // Drives the loop: word reveal → mini-challenge every 3rd word → grammar tip
-    // every 2nd word (if the category has a tip) → next word.
-    function showWord() {
-      if (!DAILY_GAME.active) return;
-      if (idx >= words.length) return endDailyGame();
-      const w = words[idx];
-      const isChallenge = idx > 0 && idx % 3 === 0;
-      const advance = () => {
-        idx++;
-        DAILY_GAME.done = idx; DAILY_GAME.correct = idx;
-        if (DAILY_GAME.discovered.indexOf(w.id) < 0) DAILY_GAME.discovered.push(w.id);
-        updateGameHud();
-        try { dailySfx.combo(idx); } catch (_) {}
-        // Inject a grammar fact between certain word reveals (when category has one).
-        const showTip = (idx % 2 === 0) && SPANISH_FACTS[w.cat];
-        if (showTip) return showGrammarTip(w, showWord);
-        showWord();
-      };
-      if (isChallenge) showMiniChallenge(w, advance);
-      else showWordReveal(w, { last: idx >= words.length - 1, onNext: advance });
+    // Pick 2 distractor Spanish meanings from the daily pool.
+    function pickEsDistractors(answer, n) {
+      const out = []; const seen = { [answer.id]: true };
+      const fromPool = words.filter((w) => w.id !== answer.id && (w.es || '').trim());
+      while (out.length < n && fromPool.length) {
+        const pick = fromPool.splice(Math.floor(Math.random() * fromPool.length), 1)[0];
+        if (!seen[pick.id]) { seen[pick.id] = true; out.push(pick); }
+      }
+      return out;
     }
-    showWord();
+    // Render the question overlay for the current word.
+    function renderQuestion() {
+      const w = words[idx]; if (!w) return;
+      const distractors = pickEsDistractors(w, 2);
+      const choices = [w, ...distractors].sort(() => Math.random() - 0.5);
+      const q = $('hw-temple-question');
+      const cat = (window.WU_CATEGORIES || {})[w.cat];
+      q.style.setProperty('--cat-color', cat ? cat.color : '#ffd24a');
+      q.innerHTML = `
+        <div class="hw-temple-q-bubble">
+          <span class="hw-temple-q-prompt">¿Qué significa…</span>
+          <span class="hw-temple-q-pinyin">${escapeHtml(w.pinyin)}</span>
+          <button class="hw-temple-q-listen" type="button" title="Escuchar">🔊</button>
+        </div>
+        <div class="hw-temple-q-choices">
+          ${choices.map((c) => '<button class="hw-temple-q-choice" type="button" data-id="' + c.id + '"><span class="hw-temple-q-icon">' + (c.icon || '⭐') + '</span><span class="hw-temple-q-es">' + escapeHtml(c.es || '') + '</span></button>').join('')}
+        </div>`;
+      q.querySelector('.hw-temple-q-listen').addEventListener('click', () => {
+        try { speakChinese(w.pinyin, null); } catch (_) {}
+      });
+      // Auto-play the pinyin on entry so the kid HEARS it.
+      setTimeout(() => { try { speakChinese(w.pinyin, null); } catch (_) {} }, 320);
+      q.querySelectorAll('.hw-temple-q-choice').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.id === w.id) {
+            btn.classList.add('is-correct');
+            handleCorrect(w);
+          } else {
+            btn.classList.add('is-wrong');
+            handleWrong();
+            setTimeout(() => btn.classList.remove('is-wrong'), 420);
+          }
+        });
+      });
+    }
+    function handleCorrect(w) {
+      // 🎮 Reward loop: light the stone, walk character, particles, combo+
+      const stoneEl = document.querySelector('.hw-temple-stone[data-stone="' + idx + '"]');
+      if (stoneEl) {
+        stoneEl.classList.add('lit');
+        stoneEl.textContent = '🏮';
+      }
+      const charEl = $('hw-temple-char');
+      if (charEl) {
+        // Walk one stone forward: stones array is spread by CSS calc.
+        charEl.style.setProperty('--step', String(idx + 1));
+        charEl.classList.remove('hop');
+        void charEl.offsetWidth;
+        charEl.classList.add('hop');
+      }
+      burstParticles(scene);
+      popScore(scene, 200 * combo);
+      updateCombo(scene);
+      combo = Math.min(8, combo + 1);
+      try { dailySfx.combo(combo); } catch (_) {}
+      idx++;
+      DAILY_GAME.done = idx; DAILY_GAME.correct = idx;
+      if (DAILY_GAME.discovered.indexOf(w.id) < 0) DAILY_GAME.discovered.push(w.id);
+      updateGameHud();
+      // Progress bar
+      const fill = $('hw-temple-fill');
+      if (fill) fill.style.width = (idx / words.length * 100) + '%';
+      // Grammar tip injection every 3 correct (when the category has one)
+      const showTip = idx > 0 && idx % 3 === 0 && SPANISH_FACTS[w.cat] && idx < words.length;
+      setTimeout(() => {
+        if (showTip) return showGrammarTipInScene(w, nextQuestion);
+        nextQuestion();
+      }, 720);
+    }
+    function handleWrong() {
+      combo = 1;
+      updateCombo(scene);
+      scene.classList.remove('shake'); void scene.offsetWidth; scene.classList.add('shake');
+      try { if (window.MochiSounds && MochiSounds.bad) MochiSounds.bad(); } catch (_) {}
+    }
+    function nextQuestion() {
+      if (idx >= words.length) return finishTemple();
+      renderQuestion();
+    }
+    // Inline tip card that overlays the scene (doesn't kill the path).
+    function showGrammarTipInScene(w, onDone) {
+      const tip = SPANISH_FACTS[w.cat];
+      if (!tip) return onDone();
+      const card = document.createElement('div');
+      card.className = 'hw-temple-tip';
+      card.innerHTML = '<div class="hw-temple-tip-card"><div class="hw-temple-tip-head">🧠 Tip de gramática</div><div class="hw-temple-tip-body">' + tip + '</div><button class="hw-temple-tip-ok" type="button">▶ Continuar</button></div>';
+      scene.appendChild(card);
+      card.querySelector('.hw-temple-tip-ok').addEventListener('click', () => {
+        card.remove(); onDone();
+      });
+    }
+    function finishTemple() {
+      // Dragon roars: scale up + glow, then pass to endDailyGame.
+      const dragon = $('hw-temple-dragon');
+      if (dragon) dragon.classList.add('roar');
+      try { if (window.MochiSounds && MochiSounds.winFanfare) MochiSounds.winFanfare(); } catch (_) {}
+      setTimeout(() => endDailyGame(), 1100);
+    }
+    // Kick off the first question.
+    renderQuestion();
   }
   // 🧠 MEMORY MATCH — 2×4 grid of word cards. Flip two; if pinyin matches,
   // they lock and reveal the word. Match all 4 pairs to complete the daily.

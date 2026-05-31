@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260527a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260527a">
-  <link rel="stylesheet" href="/css/maestro.css?v=20260530c">
+  <link rel="stylesheet" href="/css/maestro.css?v=20260530d">
 </head>
 <body class="hw-bg">
 
@@ -95,6 +95,19 @@
           <div class="m-emirati-actions">
             <button class="btn btn-jade btn-sm" id="m-em-mark-all">✅ Marcar las 5 como vistas</button>
             <button class="btn btn-ghost btn-sm" id="m-em-shuffle">🔁 Otras 5</button>
+            <button class="btn btn-ghost btn-sm" id="m-em-review">📜 Mis aprendidos</button>
+          </div>
+          <!-- 📜 REVIEW PANEL — sliding overlay listing every word marked
+               as seen + every example sentence marked as learned, grouped
+               by section. Each item keeps its 🔊 + ✓ tools so the user
+               can hear, re-mark, or unmark right here. -->
+          <div class="m-em-review hidden" id="m-em-review-panel">
+            <div class="m-em-review-head">
+              <button class="btn btn-ghost btn-sm" id="m-em-review-back">← Volver</button>
+              <span class="m-em-review-title">📜 Mis aprendidos</span>
+              <span class="m-em-review-counts" id="m-em-review-counts">—</span>
+            </div>
+            <div class="m-em-review-body" id="m-em-review-body">Cargando…</div>
           </div>
           <!-- 🎙️ AZURE auto-Khaleeji generator. When AZURE_SPEECH_KEY is set
                on the server, the 🔊 buttons play real ar-AE-FatimaNeural /
@@ -251,6 +264,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/maestro.js?v=20260530c"></script>
+  <script src="/js/maestro.js?v=20260530d"></script>
 </body>
 </html>
