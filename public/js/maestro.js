@@ -581,17 +581,43 @@
   function speakEmiratiText(arText, btn) {
     try { if (_emAudio) { _emAudio.pause(); _emAudio = null; } } catch (_) {}
     if (btn) { btn.textContent = '🔊…'; btn.classList.remove('m-em-speak-msa', 'm-em-speak-err'); }
+    if (!arText) {
+      // Nothing to speak — caller had no Arabic text for this sentence.
+      if (btn) {
+        btn.classList.add('m-em-speak-err');
+        btn.textContent = '⊘';
+        btn.title = 'Esta oración no tiene texto en árabe (data-ar vacío). Agrega la traducción al SECTION_1_3_AR.';
+      }
+      return;
+    }
     const url = '/api/emirati/audio/text?voice=' + _emAzureVoice
       + '&ar=' + encodeURIComponent(arText);
     _emAudio = new Audio(url);
     _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
     _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
     _emAudio.addEventListener('error', () => {
-      // Azure could not synthesize — show explicit error, do NOT fall to MSA.
       if (btn) {
         btn.classList.add('m-em-speak-err');
         btn.textContent = '🚫';
-        btn.title = 'Azure no respondió. Revisa AZURE_SPEECH_KEY o el texto árabe.';
+        btn.title = 'Azure rechazó la oración. Toca otra vez para diagnosticar.';
+        // 🧪 On a second click, run the diagnose endpoint and show the
+        // real Azure status code + body so we can fix the root cause.
+        btn.onclick = () => {
+          btn.onclick = null;  // reset
+          fetch('/api/maestro/emirati/azure/diagnose?pw=' + encodeURIComponent(pw)
+              + '&voice=' + _emAzureVoice
+              + '&text=' + encodeURIComponent(arText))
+            .then((r) => r.json()).then((d) => {
+              alert('Azure diag:\n'
+                + 'OK: ' + d.ok + '\n'
+                + 'Status: ' + (d.azureStatus || d.reason || '?') + '\n'
+                + 'Bytes: ' + (d.bytesReceived || 0) + '\n'
+                + 'Voice: ' + d.voice + '\n'
+                + 'Region: ' + d.region + '\n'
+                + 'Text: ' + d.text + '\n\n'
+                + 'Body preview: ' + ((d.bodyAsText || '').slice(0, 400)));
+            }).catch((e) => alert('Diag error: ' + e.message));
+        };
       }
     });
   }
