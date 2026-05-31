@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260527a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260527a">
-  <link rel="stylesheet" href="/css/maestro.css?v=20260529e">
+  <link rel="stylesheet" href="/css/maestro.css?v=20260530a">
 </head>
 <body class="hw-bg">
 
@@ -94,6 +94,29 @@
           <div class="m-emirati-actions">
             <button class="btn btn-jade btn-sm" id="m-em-mark-all">✅ Marcar las 5 como vistas</button>
             <button class="btn btn-ghost btn-sm" id="m-em-shuffle">🔁 Otras 5</button>
+          </div>
+          <!-- 🎙️ AZURE auto-Khaleeji generator. When AZURE_SPEECH_KEY is set
+               on the server, the 🔊 buttons play real ar-AE-FatimaNeural /
+               ar-AE-HamdanNeural voice. First tap generates + caches; every
+               next tap serves from disk. Bulk button pre-generates the whole
+               275-word set in one go (~75 sec, ~4 req/s, free tier safe). -->
+          <div class="m-em-azure" id="m-em-azure">
+            <div class="m-em-azure-head">🎙️ Voz Khaleeji (Azure)</div>
+            <div class="m-em-azure-status" id="m-em-azure-status">Verificando…</div>
+            <div class="m-em-azure-row">
+              <select class="input m-em-azure-voice" id="m-em-azure-voice">
+                <option value="female">👩 Fatima · ar-AE (femenina)</option>
+                <option value="male">👨 Hamdan · ar-AE (masculino)</option>
+              </select>
+              <button class="btn btn-jade btn-sm hidden" id="m-em-azure-gen" type="button">🎙️ Generar todas (275)</button>
+            </div>
+            <div class="m-em-azure-help hidden" id="m-em-azure-help">
+              💡 Para activar la voz real emiratí: en Render, agrega las variables
+              de entorno <code>AZURE_SPEECH_KEY</code> (tu clave de Azure) y
+              opcionalmente <code>AZURE_SPEECH_REGION</code> (por defecto <code>eastus</code>).
+              El servidor genera y cachea los MP3 automáticamente. Plan gratuito
+              cubre 500k caracteres/mes — más que suficiente para el dataset.
+            </div>
           </div>
         </div>
       </div>
@@ -227,6 +250,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/maestro.js?v=20260529e"></script>
+  <script src="/js/maestro.js?v=20260530a"></script>
 </body>
 </html>
