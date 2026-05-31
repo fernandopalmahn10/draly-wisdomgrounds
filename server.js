@@ -263,24 +263,25 @@ function _azureSpeak(text, voice, outPath, cb) {
     const chunks = [];
     resp.on('data', (c) => chunks.push(c));
     resp.on('end', () => {
+      const buf = Buffer.concat(chunks);
+      if (buf.length < 100) {
+        const peek = buf.toString('utf8', 0, Math.min(buf.length, 200));
+        console.warn('[azure-tts] empty response (' + buf.length + ' bytes). Body:', peek);
+        return cb(new Error('azure empty (' + buf.length + 'B): ' + peek));
+      }
+      // 🔧 Disk write is now NON-FATAL — if it fails, we still hand the
+      // buffer back to the caller so the response goes out. The previous
+      // try/catch around BOTH validation AND write meant a disk failure
+      // turned the whole callback into an error → 404 to client. Now
+      // disk failure logs a warning, but the audio still flows.
       try {
-        const buf = Buffer.concat(chunks);
-        // 🔧 Reject empty/tiny responses — Azure occasionally returns 200
-        // with no body when the SSML is malformed (e.g. encoding issue).
-        // Without this guard we'd cache a 0-byte MP3 forever and the
-        // browser Audio would silently fail every time.
-        if (buf.length < 100) {
-          // Truly empty/tiny → reject. Was 200 — might've been false-rejecting
-          // very short clips. 100 bytes is below any real MP3 header set.
-          const peek = buf.toString('utf8', 0, Math.min(buf.length, 200));
-          console.warn('[azure-tts] empty response (' + buf.length + ' bytes). Body:', peek);
-          return cb(new Error('azure empty (' + buf.length + 'B): ' + peek));
-        }
         const dir = _emPath.dirname(outPath);
         if (!_emFs.existsSync(dir)) _emFs.mkdirSync(dir, { recursive: true });
         _emFs.writeFileSync(outPath, buf);
-        cb(null, buf);
-      } catch (e) { cb(e); }
+      } catch (e) {
+        console.warn('[azure-tts] disk write failed (non-fatal):', e.message, 'path:', outPath);
+      }
+      cb(null, buf);
     });
   });
   req.on('error', (e) => cb(e));
@@ -399,19 +400,29 @@ app.get('/api/emirati/audio/text', (req, res) => {
   }
   if (_emFs.existsSync(cachePath)) {
     if (_isValidMp3(cachePath)) {
+      console.log('[azure-text] cache hit:', cachePath, 'size:', _emFs.statSync(cachePath).size);
       return _serveAudioFile(res, cachePath);
     }
     console.warn('[azure-text] evicting corrupt cache:', cachePath);
     try { _emFs.unlinkSync(cachePath); } catch (_) {}
   }
-  if (!process.env.AZURE_SPEECH_KEY) return res.status(404).end();
-  // 🚀 STREAM AZURE → CLIENT directly, bypassing disk write. The user's
-  // diag proves Azure returns 13248 bytes successfully, but the audio
-  // endpoint returns 404 — meaning the disk write between Azure and the
-  // client is failing (maybe Render persistent disk perms / quota).
-  // Streaming makes the disk optional: we TRY to cache for next time,
-  // but the client gets audio either way.
-  _streamAzureToResponse(ar, voice, res, cachePath);
+  if (!process.env.AZURE_SPEECH_KEY) {
+    console.warn('[azure-text] AZURE_SPEECH_KEY not set!');
+    return res.status(404).end();
+  }
+  // 🔧 EXACTLY MIRROR the word endpoint, which works for the user.
+  // Word path: _azureSpeak → on success _serveAudioFile(res, outPath, buf).
+  // Text path: same. If words work and text doesn't with the SAME code,
+  // we know it's environmental, not logic.
+  console.log('[azure-text] calling Azure for:', ar.slice(0, 40), 'voice:', voice);
+  _azureSpeak(ar, voice, cachePath, (err, buf) => {
+    if (err) {
+      console.warn('[azure-text] _azureSpeak failed:', err.message);
+      return res.status(502).json({ ok: false, error: err.message });
+    }
+    console.log('[azure-text] success, bytes:', buf.length, 'cached at:', cachePath);
+    _serveAudioFile(res, cachePath, buf);
+  });
 });
 
 // Streams Azure TTS straight to the HTTP response. Optionally tees the
@@ -533,20 +544,28 @@ app.post('/api/maestro/emirati/audio/clear-cache', (req, res) => {
 // sendFile if the buffer isn't provided (cache-hit path).
 function _serveAudioFile(res, filePath, buf) {
   try {
-    if (!buf && _emFs.existsSync(filePath)) {
+    // Prefer the in-memory buffer if caller provided it (fresh from Azure).
+    // Only fall back to disk read on cache-hit path.
+    if (!buf) {
+      if (!_emFs.existsSync(filePath)) {
+        console.warn('[serve-audio] file does not exist:', filePath);
+        return res.status(404).end();
+      }
       buf = _emFs.readFileSync(filePath);
     }
     if (!buf || buf.length < 100) {
+      console.warn('[serve-audio] invalid buf, length:', buf ? buf.length : 'null');
       return res.status(500).json({ ok: false, error: 'invalid audio buffer' });
     }
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Content-Length', String(buf.length));
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=2592000');
+    console.log('[serve-audio] sending', buf.length, 'bytes');
     res.status(200).end(buf);
   } catch (e) {
-    console.warn('[serve-audio]', e.message);
-    res.status(500).end();
+    console.warn('[serve-audio] threw:', e.message, e.stack);
+    if (!res.headersSent) res.status(500).end();
   }
 }
 

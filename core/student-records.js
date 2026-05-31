@@ -153,6 +153,15 @@ const AVATAR_OPTIONS = [
   'yeti',   'fox',     'owl',    'shark',
   'viking', 'galaxy',  'comet',  'boba',
   'lotus',  'ramen',   'koala',  'raptor',
+  // ⭐ Character roster — uses PNG art from /assets/cutscenes/chars/
+  // Each character has 2 poses + a victory video that triggers on
+  // daily completion (see public/js/characters.js).
+  'gojo',    'yugi',    // generated assets ready
+  'yuji',    'shelly',  'fnaf',    'dandy',
+  'hanzo',   'mei2',    'dralingo',
+  'naruto',  'sasuke',  'luffy',   'goku',
+  'pikachu', 'sonic',   'mario',   'kirby',
+  'spiderman','ironman','elsa',    'moana',
 ];
 function setAvatar(code, avatar) {
   const rec = get(code);
