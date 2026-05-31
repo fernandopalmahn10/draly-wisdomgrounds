@@ -467,13 +467,23 @@ const EMIRATI_SECTION_ORDER = [
 // Khaleeji sentences over time (drop them in the `w(...)` call).
 (function _autoFillSentences() {
   EMIRATI_WORDS.forEach((w) => {
-    if (Array.isArray(w.ses) && w.ses.length) return;
+    if (Array.isArray(w.ses) && w.ses.length) {
+      // 🔧 EXISTING manual sentences (sections 1-3) ship without `ar` text.
+      // Without it Azure can't speak them. Fall back to the parent word's
+      // Arabic so the 🔊 always plays *something* in real Khaleeji rather
+      // than silently going to MSA.
+      w.ses.forEach((sent) => { if (!sent.ar) sent.ar = w.ar; });
+      return;
+    }
     const en = String(w.en || '').split(' / ')[0].split('(')[0].trim() || 'this';
+    // For sections 4-13 (bare entries), build template sentences with
+    // REAL Arabic + transliteration + Spanish-friendly English so the 🔊
+    // buttons play Khaleeji speech. Marked sesAuto so the UI flags them.
     w.ses = [
-      s('hatha ' + w.tr + '.',     'This is ' + en + '.'),
-      s('ana abī ' + w.tr + '.',   'I want ' + en + '.'),
+      { ar: 'هذا ' + w.ar + '.',          tr: 'hatha ' + w.tr + '.',          en: 'This is ' + en + '.' },
+      { ar: 'أنا أحب ' + w.ar + '.',       tr: 'ana aḥibb ' + w.tr + '.',      en: 'I love ' + en + '.' },
     ];
-    w.sesAuto = true;  // marker so the UI can flag template-quality lines
+    w.sesAuto = true;
   });
 })();
 
