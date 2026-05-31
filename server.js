@@ -405,14 +405,80 @@ app.get('/api/emirati/audio/text', (req, res) => {
     try { _emFs.unlinkSync(cachePath); } catch (_) {}
   }
   if (!process.env.AZURE_SPEECH_KEY) return res.status(404).end();
-  _azureSpeak(ar, voice, cachePath, (err, buf) => {
-    if (err) {
-      console.warn('[azure-text]', err.message);
-      return res.status(404).end();
-    }
-    _serveAudioFile(res, cachePath, buf);
-  });
+  // 🚀 STREAM AZURE → CLIENT directly, bypassing disk write. The user's
+  // diag proves Azure returns 13248 bytes successfully, but the audio
+  // endpoint returns 404 — meaning the disk write between Azure and the
+  // client is failing (maybe Render persistent disk perms / quota).
+  // Streaming makes the disk optional: we TRY to cache for next time,
+  // but the client gets audio either way.
+  _streamAzureToResponse(ar, voice, res, cachePath);
 });
+
+// Streams Azure TTS straight to the HTTP response. Optionally tees the
+// bytes into a cache file so future requests are instant. Disk failure
+// is non-fatal — client still gets the audio.
+function _streamAzureToResponse(text, voice, res, optionalCachePath) {
+  const region = process.env.AZURE_SPEECH_REGION || 'eastus';
+  const safeText = String(text || '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  const ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ar-AE'>"
+    + "<voice name='" + voice + "'>" + safeText + '</voice></speak>';
+  const ssmlBuf = Buffer.from(ssml, 'utf8');
+  const azureReq = _https.request({
+    method: 'POST',
+    hostname: region + '.tts.speech.microsoft.com',
+    path: '/cognitiveservices/v1',
+    headers: {
+      'Ocp-Apim-Subscription-Key': process.env.AZURE_SPEECH_KEY,
+      'Content-Type': 'application/ssml+xml; charset=utf-8',
+      'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
+      'User-Agent': 'draly-wisdomgrounds',
+      'Content-Length': ssmlBuf.length,
+    },
+  }, (resp) => {
+    if (resp.statusCode !== 200) {
+      let errBody = '';
+      resp.on('data', (c) => { errBody += c; });
+      resp.on('end', () => {
+        console.warn('[azure-stream] non-200:', resp.statusCode, errBody.slice(0, 200));
+        if (!res.headersSent) res.status(502).end();
+      });
+      return;
+    }
+    // Buffer + relay so we can also cache for next time.
+    const chunks = [];
+    resp.on('data', (c) => chunks.push(c));
+    resp.on('end', () => {
+      const buf = Buffer.concat(chunks);
+      if (buf.length < 100) {
+        console.warn('[azure-stream] empty body:', buf.length);
+        if (!res.headersSent) res.status(502).end();
+        return;
+      }
+      // Try to cache for next time (non-fatal).
+      if (optionalCachePath) {
+        try {
+          const dir = _emPath.dirname(optionalCachePath);
+          if (!_emFs.existsSync(dir)) _emFs.mkdirSync(dir, { recursive: true });
+          _emFs.writeFileSync(optionalCachePath, buf);
+        } catch (e) {
+          console.warn('[azure-stream] disk cache write failed (non-fatal):', e.message);
+        }
+      }
+      // Send to client.
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Content-Length', String(buf.length));
+      res.setHeader('Accept-Ranges', 'bytes');
+      res.setHeader('Cache-Control', 'public, max-age=2592000');
+      res.status(200).end(buf);
+    });
+  });
+  azureReq.on('error', (e) => {
+    console.warn('[azure-stream] req error:', e.message);
+    if (!res.headersSent) res.status(503).end();
+  });
+  azureReq.write(ssmlBuf);
+  azureReq.end();
+}
 
 // Inspect first 4 bytes of a file to verify it's a real MP3.
 // MP3 magic: "ID3" header (0x49 0x44 0x33) OR MPEG sync word (0xFF 0xFx).
