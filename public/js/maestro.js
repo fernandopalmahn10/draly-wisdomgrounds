@@ -244,9 +244,33 @@
             <div class="m-em-rw-ar" lang="ar" dir="rtl">${escapeHtml(w.ar)}</div>
             <div class="m-em-rw-tr">${escapeHtml(w.tr)}</div>
             <div class="m-em-rw-en">${escapeHtml(w.en)}</div>
-            <button class="m-em-rw-speak" data-ar="${escapeHtml(w.ar)}" data-wid="${escapeHtml(w.id)}" title="Escuchar">🔊</button>`;
+            <div class="m-em-rw-tools">
+              <button class="m-em-rw-speak" data-ar="${escapeHtml(w.ar)}" data-wid="${escapeHtml(w.id)}" title="Escuchar">🔊</button>
+              <button class="m-em-rw-forget" data-wid="${escapeHtml(w.id)}" title="Olvidar esta palabra">✗</button>
+            </div>`;
           card.querySelector('.m-em-rw-speak').addEventListener('click', (e) => {
             speakEmirati(e.currentTarget.dataset.ar, e.currentTarget, e.currentTarget.dataset.wid);
+          });
+          // ✗ Forget — sends { wordIds:[id], unmark:true } to /mark, removes from seen.
+          card.querySelector('.m-em-rw-forget').addEventListener('click', (e) => {
+            const wid = e.currentTarget.dataset.wid;
+            if (!confirm('¿Olvidar esta palabra? Volverá a aparecer en el día.')) return;
+            fetch('/api/maestro/emirati/mark?pw=' + encodeURIComponent(pw), {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ wordIds: [wid], unmark: true, date: new Date().toISOString().slice(0, 10) }),
+            }).then((r) => r.json()).then((res) => {
+              if (!res.ok) return;
+              card.remove();
+              applyEmiratiHud(res.progress);
+              // Also remove from the section header count chip if visible.
+              const n = wrap.querySelector('.m-em-review-n');
+              if (n) n.textContent = Math.max(0, (Number(n.textContent) || 0) - 1);
+              d.seenWordsCount = Math.max(0, d.seenWordsCount - 1);
+              const counts = $('m-em-review-counts');
+              if (counts) counts.textContent = '🌱 ' + d.seenWordsCount + ' palabras · ✏️ ' + d.learnedSentenceCount + ' oraciones';
+              // If section is now empty, collapse it.
+              if (!grid.children.length) wrap.remove();
+            });
           });
           grid.appendChild(card);
         });
@@ -293,12 +317,22 @@
       });
     }
   }
+  let _emSkipForToday = new Set();
   function loadEmirati(reshuffle) {
     const list = $('m-emirati-list');
     if (list) list.textContent = 'Cargando…';
-    // Cache-bust the GET when re-shuffling so we re-pick from the unseen pool.
-    const date = new Date().toISOString().slice(0, 10) + (reshuffle ? '#' + Date.now() : '');
-    fetch('/api/maestro/emirati/today?pw=' + encodeURIComponent(pw) + '&date=' + encodeURIComponent(date.slice(0, 10)))
+    // 🔁 OTRAS 5 — when reshuffling, push the current 5 IDs into
+    // _emSkipForToday so the server returns the NEXT 5 unseen instead of
+    // recomputing the same priority slice. Was: same 5 every tap.
+    if (reshuffle && Array.isArray(_emToday)) {
+      _emToday.forEach((w) => _emSkipForToday.add(w.id));
+    }
+    const date = new Date().toISOString().slice(0, 10);
+    const skip = Array.from(_emSkipForToday).join(',');
+    const url = '/api/maestro/emirati/today?pw=' + encodeURIComponent(pw)
+      + '&date=' + encodeURIComponent(date)
+      + (skip ? '&skip=' + encodeURIComponent(skip) : '');
+    fetch(url)
       .then((r) => r.json())
       .then((d) => {
         if (!d || !d.ok) { if (list) list.textContent = 'Error: ' + (d && d.error || 'no se pudo cargar'); return; }

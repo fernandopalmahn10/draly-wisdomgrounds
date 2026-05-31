@@ -818,6 +818,10 @@ body.hw-bg {
   font-weight: 900; font-size: 0.95rem;
   cursor: pointer; touch-action: manipulation;
   display: flex; align-items: center; justify-content: center; gap: 6px;
+  /* 🔧 Explicit emoji font fallback — Samsung's default sans-serif on some
+     Android builds doesn't include 🌱 / ✏️ glyphs, rendering them as
+     empty white tiles. This stack forces a real color-emoji font. */
+  font-family: 'Nunito', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'EmojiOne Color', sans-serif;
 }
 .m-em-review-tab.is-active {
   background: linear-gradient(135deg, rgba(91,232,209,0.4), rgba(91,232,138,0.32));
@@ -905,19 +909,24 @@ body.hw-bg {
   background: linear-gradient(160deg, rgba(91,232,209,0.16), rgba(40,60,90,0.5));
   border: 1.5px solid rgba(91,232,209,0.42);
   border-radius: 12px;
-  padding: 12px 10px 38px;
+  padding: 12px 10px 46px;
   text-align: center;
 }
 .m-em-rw-ar { font-size: 1.4rem; color: #fff; font-weight: 900; margin-bottom: 3px; }
 .m-em-rw-tr { font-size: 0.92rem; color: #fff5d8; font-weight: 800; }
 .m-em-rw-en { font-size: 0.78rem; color: rgba(243,230,194,0.7); margin-top: 2px; }
-.m-em-rw-speak {
+.m-em-rw-tools {
   position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
-  width: 32px; height: 32px; border-radius: 50%;
-  background: rgba(91,232,209,0.28); color: #5be8d1; border: none;
-  font-weight: 900; cursor: pointer; touch-action: manipulation;
+  display: flex; gap: 6px;
 }
-.m-em-rw-speak:active { transform: translateX(-50%) scale(0.9); }
+.m-em-rw-speak, .m-em-rw-forget {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: none; font-weight: 900;
+  cursor: pointer; touch-action: manipulation;
+}
+.m-em-rw-speak { background: rgba(91,232,209,0.28); color: #5be8d1; }
+.m-em-rw-forget { background: rgba(255,122,122,0.3); color: #ff7a7a; }
+.m-em-rw-speak:active, .m-em-rw-forget:active { transform: scale(0.9); }
 .m-em-review-section-title {
   font-family: 'Cinzel', serif; font-weight: 900;
   color: #ffe082; font-size: 1rem;
