@@ -307,22 +307,16 @@
     drop-shadow(0 6px 14px rgba(0, 0, 0, 0.7));
   animation: hover 4s ease-in-out infinite;
 }
-/* 🎬 Landing page Gojo victory video — clipped to the central character
-   region so the baked-in editor checkerboard (in source MP4) is hidden.
-   The clip-path crops left/right and top/bottom of the frame, then
-   transform: scale zooms the visible area to fill the gold ring. */
-.dralingo-video {
+/* 🎬 Landing page Gojo victory video — REAL-TIME CHROMA KEY via JS
+   removes the baked-in checker pattern, leaving true transparency.
+   See public/js/video-chroma.js for the per-frame canvas processing. */
+.dralingo-video,
+.dralingo-video.ck-canvas {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   position: relative;
   z-index: 3;
-  border-radius: 50%;
-  /* Crop the checker corners — character is centered in the frame */
-  clip-path: ellipse(40% 42% at 50% 50%);
-  /* Zoom the visible region 1.4× so the character fills the ring */
-  transform: scale(1.45);
-  transform-origin: center center;
   filter:
     drop-shadow(0 0 26px rgba(91, 232, 209, 0.55))
     drop-shadow(0 8px 18px rgba(0, 0, 0, 0.6));
