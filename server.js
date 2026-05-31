@@ -295,6 +295,14 @@ function _emiratiFindCached(id) {
   }
   return null;
 }
+// Register-text endpoint — client POSTs Arabic text, gets back a stable
+// ID it can use with the proven /:wordId audio endpoint.
+app.post('/api/emirati/audio/register', (req, res) => {
+  const ar = String((req.body && req.body.ar) || '').trim();
+  if (!ar) return res.status(400).json({ ok: false });
+  const id = 's_' + _registerSentenceText(ar);
+  res.json({ ok: true, id });
+});
 app.get('/api/emirati/audio/:wordId', (req, res) => {
   const id = String(req.params.wordId || '').replace(/[^A-Za-z0-9_-]/g, '');
   if (!id) return res.status(400).end();
@@ -316,10 +324,23 @@ app.get('/api/emirati/audio/:wordId', (req, res) => {
     } catch (_) {}
   }
   if (process.env.AZURE_SPEECH_KEY) {
-    const word = Emirati.EMIRATI_WORDS.find((w) => w.id === id);
-    if (!word) return res.status(404).end();
+    // ⭐ Sentence IDs (s_<hash>) → look up the registered Arabic text.
+    // Falls through to the same _azureSpeak → _serveAudioFile path
+    // that words use, which we know works.
+    let textToSpeak;
+    if (id.startsWith('s_')) {
+      textToSpeak = _resolveSentenceText(id.slice(2));
+      if (!textToSpeak) {
+        console.warn('[azure-word] unknown sentence id:', id);
+        return res.status(404).end();
+      }
+    } else {
+      const word = Emirati.EMIRATI_WORDS.find((w) => w.id === id);
+      if (!word) return res.status(404).end();
+      textToSpeak = word.ar;
+    }
     const outPath = _emPath.join(EMIRATI_AUDIO_DIR, cacheBaseName + '.mp3');
-    return _azureSpeak(word.ar, voice, outPath, (err, buf) => {
+    return _azureSpeak(textToSpeak, voice, outPath, (err, buf) => {
       if (err) {
         console.warn('[azure-tts] failed for', id, err.message);
         return res.status(404).end();
@@ -393,6 +414,20 @@ app.get('/api/emirati/audio/test200', (req, res) => {
   });
 });
 
+// 🔧 USER'S INSIGHT: words work, sentences fail. Same Azure call —
+// only difference is the URL path. Let's route sentences through the
+// PROVEN word path by hashing the text as a fake "word ID" and using
+// the same endpoint that already works.
+const _sentenceTextById = {};  // in-memory map: hash → Arabic text
+function _registerSentenceText(text) {
+  const h = require('crypto').createHash('sha1').update(text).digest('hex').slice(0, 12);
+  _sentenceTextById[h] = text;
+  return h;
+}
+// Resolve hash back to original text for synthesis.
+function _resolveSentenceText(id) {
+  return _sentenceTextById[id] || null;
+}
 // 🎙️ EMIRATI SENTENCE AUDIO — arbitrary Arabic text through Azure ar-AE,
 // content-hashed cache so repeat plays are instant. Used by the per-
 // sentence 🔊 buttons. Without this, every sentence fell through to
