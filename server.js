@@ -269,8 +269,12 @@ function _azureSpeak(text, voice, outPath, cb) {
         // with no body when the SSML is malformed (e.g. encoding issue).
         // Without this guard we'd cache a 0-byte MP3 forever and the
         // browser Audio would silently fail every time.
-        if (buf.length < 200) {
-          return cb(new Error('azure returned empty audio (' + buf.length + ' bytes) — likely SSML rejected'));
+        if (buf.length < 100) {
+          // Truly empty/tiny → reject. Was 200 — might've been false-rejecting
+          // very short clips. 100 bytes is below any real MP3 header set.
+          const peek = buf.toString('utf8', 0, Math.min(buf.length, 200));
+          console.warn('[azure-tts] empty response (' + buf.length + ' bytes). Body:', peek);
+          return cb(new Error('azure empty (' + buf.length + 'B): ' + peek));
         }
         const dir = _emPath.dirname(outPath);
         if (!_emFs.existsSync(dir)) _emFs.mkdirSync(dir, { recursive: true });
@@ -321,6 +325,57 @@ app.get('/api/emirati/audio/:wordId', (req, res) => {
   }
   res.status(404).end();  // client falls back to /api/tts
 });
+// 🧪 DIAGNOSTIC — super-admin only. Tests Azure with the exact text the
+// user passes, returns the full Azure result so we can see what's failing.
+// Hit /api/maestro/emirati/azure/diagnose?pw=...&text=<arabic>&voice=male
+app.get('/api/maestro/emirati/azure/diagnose', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const text = String(req.query.text || 'السلام عليكم، شلونكم؟').trim();
+  const voice = req.query.voice === 'male' ? 'ar-AE-HamdanNeural' : 'ar-AE-FatimaNeural';
+  if (!process.env.AZURE_SPEECH_KEY) {
+    return res.json({ ok: false, reason: 'AZURE_SPEECH_KEY not set on server', text, voice });
+  }
+  const region = process.env.AZURE_SPEECH_REGION || 'eastus';
+  const safeText = String(text || '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  const ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ar-AE'>"
+    + "<voice name='" + voice + "'>" + safeText + '</voice></speak>';
+  const ssmlBuf = Buffer.from(ssml, 'utf8');
+  const azureReq = _https.request({
+    method: 'POST',
+    hostname: region + '.tts.speech.microsoft.com',
+    path: '/cognitiveservices/v1',
+    headers: {
+      'Ocp-Apim-Subscription-Key': process.env.AZURE_SPEECH_KEY,
+      'Content-Type': 'application/ssml+xml; charset=utf-8',
+      'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
+      'User-Agent': 'draly-wisdomgrounds',
+      'Content-Length': ssmlBuf.length,
+    },
+  }, (resp) => {
+    const chunks = [];
+    resp.on('data', (c) => chunks.push(c));
+    resp.on('end', () => {
+      const buf = Buffer.concat(chunks);
+      res.json({
+        ok: resp.statusCode === 200 && buf.length >= 100,
+        text, voice, region,
+        azureStatus: resp.statusCode,
+        azureHeaders: resp.headers,
+        bytesReceived: buf.length,
+        firstBytesHex: buf.slice(0, 32).toString('hex'),
+        bodyAsText: buf.length < 500 ? buf.toString('utf8') : '(binary mp3, ' + buf.length + ' bytes)',
+        ssmlSent: ssml,
+        ssmlByteLength: ssmlBuf.length,
+      });
+    });
+  });
+  azureReq.on('error', (e) => res.json({ ok: false, reason: 'network error', error: e.message, text, voice }));
+  azureReq.write(ssmlBuf);
+  azureReq.end();
+});
+
 // 🎙️ EMIRATI SENTENCE AUDIO — arbitrary Arabic text through Azure ar-AE,
 // content-hashed cache so repeat plays are instant. Used by the per-
 // sentence 🔊 buttons. Without this, every sentence fell through to
