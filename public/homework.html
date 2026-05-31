@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260529f">
-  <link rel="stylesheet" href="/css/homework.css?v=20260529h">
+  <link rel="stylesheet" href="/css/homework.css?v=20260530a">
 </head>
 <body class="hw-bg">
 
@@ -73,22 +73,38 @@
       <span class="hw-hud-stat">🔥 <strong id="hw-hud-streak">0</strong></span>
     </button>
 
-    <!-- 📁 FOLDER BREADCRUMB — appears once you open an experience folder -->
+    <!-- 📁 FOLDER BREADCRUMB — appears once you open an experience folder.
+         Sticky (CSS position:fixed) so the Volver button is ALWAYS visible
+         on mobile — no more pinch-zooming to find it. -->
     <div class="hw-folder-bar hidden" id="hw-folder-bar">
-      <button class="btn btn-ghost btn-sm" id="hw-folder-back">← HSK1</button>
+      <button class="btn btn-jade btn-sm hw-volver-btn" id="hw-folder-back">← Volver</button>
       <span class="hw-folder-crumb" id="hw-folder-crumb"></span>
     </div>
 
-    <!-- 🎯 ASIGNACIONES PENDIENTES — teacher-sent custom tareas the kid
-         hasn't completed yet (new + tried <80%). Its OWN top-level section. -->
-    <div class="hw-list-section-title hw-sec-custom hidden" id="hw-sec-custom-pending">⏳ Asignaciones pendientes</div>
-    <div class="hw-list-grid hw-list-custom hidden" id="hw-list-custom-pending"></div>
+    <!-- 🗂️ THREE TABS — Pendientes (default) | Completadas | Tu Maestro/a.
+         They DO NOT mix: each tab is its own filtered view of the kid's work.
+         Hidden inside a folder (the folder bar replaces the tab strip). -->
+    <div class="hw-tabs" id="hw-tabs" role="tablist">
+      <button class="hw-tab is-active" role="tab" data-tab="pending" id="hw-tab-pending" type="button">
+        <span class="hw-tab-icon">⏳</span>
+        <span class="hw-tab-label">Pendientes</span>
+        <span class="hw-tab-count" id="hw-tab-count-pending">0</span>
+      </button>
+      <button class="hw-tab" role="tab" data-tab="done" id="hw-tab-done" type="button">
+        <span class="hw-tab-icon">✅</span>
+        <span class="hw-tab-label">Completadas</span>
+        <span class="hw-tab-count" id="hw-tab-count-done">0</span>
+      </button>
+      <button class="hw-tab" role="tab" data-tab="custom" id="hw-tab-custom" type="button">
+        <span class="hw-tab-icon">🎯</span>
+        <span class="hw-tab-label">Tu Maestro/a</span>
+        <span class="hw-tab-count" id="hw-tab-count-custom">0</span>
+      </button>
+    </div>
 
-    <!-- ✓ Tareas completadas — collapsible so they don't crowd the home. -->
-    <details class="hw-custom-done-wrap hidden" id="hw-sec-custom-done">
-      <summary class="hw-list-section-title">✓ Asignaciones completadas <span class="hw-done-count" id="hw-done-count">(0)</span></summary>
-      <div class="hw-list-grid hw-list-custom" id="hw-list-custom-done"></div>
-    </details>
+    <!-- 🎯 CUSTOM tab content — flat list of teacher-sent tareas. Only
+         visible when the "Tu Maestro/a" tab is active. -->
+    <div class="hw-list-grid hw-list-custom hidden" id="hw-list-custom-all"></div>
 
     <div class="hw-list-section-title hidden" id="hw-sec-tareas">📚 Tareas para armar oraciones</div>
     <div class="hw-list-grid" id="hw-list-grid">
@@ -488,7 +504,7 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/homework.js?v=20260529h"></script>
+  <script src="/js/homework.js?v=20260530a"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>

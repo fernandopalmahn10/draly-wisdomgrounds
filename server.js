@@ -607,14 +607,39 @@ app.get('/api/homework/report/:code', (req, res) => {
   // otherwise derive a letter from assignment+test performance.
   let grade = null;
   for (let i = notes.length - 1; i >= 0; i--) { if (notes[i].grade) { grade = notes[i].grade; break; } }
-  const subs = Students.getAssignmentSubmissions(rec.code, 100);
-  const tests = Students.getTestResults(rec.code, 100);
+  // 🔧 2026-05-30 — accurate, MONTH-SCOPED, PER-UNIQUE-ITEM stats.
+  // Was: subs.length / tests.length counted every retry as a separate
+  // "tarea" so a kid who retried one assignment 5 times showed "5 tareas".
+  // Now: best score per unique assignmentId / storyId within this month,
+  // and the headline numbers count how many distinct items the kid PASSED
+  // (assignment passes at >=80%, test passes at >=80) and total sentences
+  // saved that month (used for the parent-view 0→2000 progress).
+  const allSubs = Students.getAssignmentSubmissions(rec.code, 500);
+  const allTests = Students.getTestResults(rec.code, 500);
+  const monthSubs = allSubs.filter((s) => _tsToMonth(s.ts) === month);
+  const monthTests = allTests.filter((t) => _tsToMonth(t.ts) === month);
+  const bestSubByAsgn = {};
+  monthSubs.forEach((s) => {
+    const pct = (s.score / (s.total || 100)) * 100;
+    if (!(s.assignmentId in bestSubByAsgn) || pct > bestSubByAsgn[s.assignmentId]) {
+      bestSubByAsgn[s.assignmentId] = pct;
+    }
+  });
+  const bestTestByStory = {};
+  monthTests.forEach((t) => {
+    if (!(t.storyId in bestTestByStory) || t.score > bestTestByStory[t.storyId]) {
+      bestTestByStory[t.storyId] = t.score;
+    }
+  });
+  const assignmentsPassed = Object.values(bestSubByAsgn).filter((p) => p >= 80).length;
+  const assignmentsAttempted = Object.keys(bestSubByAsgn).length;
+  const testsPassed = Object.values(bestTestByStory).filter((p) => p >= 80).length;
+  const testsAttempted = Object.keys(bestTestByStory).length;
+  // Sentences saved this month (used by the parent 0→2000 progress).
+  const sentencesThisMonth = (rec.sentencesBuilt || [])
+    .filter((s) => _tsToMonth(s.ts) === month).length;
   if (!grade) {
-    const best = {};
-    subs.forEach((s) => { if (!best[s.assignmentId] || s.score > best[s.assignmentId]) best[s.assignmentId] = s.score / (s.total || 100) * 100; });
-    const tBest = {};
-    tests.forEach((t) => { if (!tBest[t.storyId] || t.score > tBest[t.storyId]) tBest[t.storyId] = t.score; });
-    const pcts = Object.values(best).concat(Object.values(tBest));
+    const pcts = Object.values(bestSubByAsgn).concat(Object.values(bestTestByStory));
     if (pcts.length) {
       const avg = pcts.reduce((a, b) => a + b, 0) / pcts.length;
       grade = avg >= 90 ? 'A' : avg >= 80 ? 'B' : avg >= 70 ? 'C' : avg >= 60 ? 'D' : 'E';
@@ -629,11 +654,21 @@ app.get('/api/homework/report/:code', (req, res) => {
     grade,
     notes: notes.map((n) => ({ ts: n.ts, text: n.text, grade: n.grade })),
     stats: {
-      assignments: subs.length,
-      tests: tests.length,
+      // Headline numbers shown on the certificate. These count UNIQUE items
+      // passed (>=80), not raw retries.
+      assignments: assignmentsPassed,
+      assignmentsAttempted,
+      tests: testsPassed,
+      testsAttempted,
+      sentences: sentencesThisMonth,
     },
   });
 });
+function _tsToMonth(ts) {
+  const t = Number(ts);
+  if (!Number.isFinite(t)) return '';
+  return new Date(t).toISOString().slice(0, 7);
+}
 
 // Rename a student (super-admin or owning teacher).
 app.post('/api/admin/student/:code/rename', (req, res) => {
