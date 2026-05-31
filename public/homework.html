@@ -2,37 +2,58 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <!-- 🔧 ALLOW pinch zoom so the kid can read content that overflows.
+       The aggressive blockers (gesturestart, touchend double-tap blocker)
+       were eating LEGITIMATE second-taps on assignment cards. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <style>
-    /* 🔧 Prevent pinch zoom + reset zoom on focus events (recovers from
-       a stuck zoomed state). touch-action allows scroll but not pinch. */
     html, body {
-      touch-action: pan-x pan-y;
       -webkit-touch-callout: none;
       -webkit-user-select: none; user-select: none;
       overflow-x: hidden;
     }
     input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
-    /* 🩹 Recovery: if a modal overlay gets stuck above content (e.g. after
-       a test that didn't clean up), this catches any leftover hidden
-       blocking overlay so taps go through to the assignment cards below. */
-    .hidden, [aria-hidden="true"][class*="overlay"] { pointer-events: none !important; }
+    /* 🩹 OVERLAYS MUST USE display:none WHEN HIDDEN. Belt-and-suspenders
+       below: any element with .hidden gets display:none AND
+       pointer-events:none, so even if a previous render left an overlay
+       in the DOM with stale styling, it can't block taps. */
+    .hidden { display: none !important; pointer-events: none !important; }
+    /* The full-screen cutscene + reward overlays leave themselves
+       in the DOM after closing. Force pointer-events:none on any
+       hidden full-screen wrapper just in case. */
+    .hw-cutscene[style*="display: none"],
+    .hw-reward-overlay[style*="display: none"],
+    .hw-game[style*="display: none"] {
+      pointer-events: none !important;
+      visibility: hidden !important;
+    }
+    /* 🎯 GUARANTEE folder/assignment cards are tappable. relative
+       positioning + z-index puts them above any leftover background. */
+    .hw-folder-card, .hw-card, .hw-custom-card, .hw-folder-bar .btn {
+      position: relative !important;
+      z-index: 2 !important;
+      pointer-events: auto !important;
+      touch-action: manipulation !important;
+      -webkit-tap-highlight-color: rgba(91,232,209,0.3) !important;
+      cursor: pointer !important;
+    }
   </style>
   <script>
-    // JS-level pinch zoom prevention — works even when meta viewport is ignored.
-    document.addEventListener('gesturestart',  (e) => e.preventDefault());
-    document.addEventListener('gesturechange', (e) => e.preventDefault());
-    document.addEventListener('gestureend',    (e) => e.preventDefault());
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', (e) => {
-      const now = Date.now();
-      if (now - lastTouchEnd < 300) e.preventDefault();  // block double-tap zoom
-      lastTouchEnd = now;
-    }, { passive: false });
-    // Block ctrl+scroll zoom on desktop
-    document.addEventListener('wheel', (e) => {
-      if (e.ctrlKey) e.preventDefault();
-    }, { passive: false });
+    // 🧹 Stuck-overlay garbage collector — runs every 2 seconds. If we find
+    // any full-screen positioned element with display: none OR opacity: 0
+    // OR visibility: hidden that's STILL eating touches (because some
+    // browsers don't update hit-testing on style change), force it to
+    // pointer-events: none. This is a safety net for the bug where kids
+    // tap an assignment card and nothing happens.
+    setInterval(() => {
+      document.querySelectorAll('.hw-cutscene, .hw-reward, .hw-game-overlay, .char-celebration')
+        .forEach((el) => {
+          const cs = getComputedStyle(el);
+          if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') {
+            el.style.pointerEvents = 'none';
+          }
+        });
+    }, 2000);
   </script>
   <title>📚 Tareas · Draly Wisdomgrounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
@@ -542,7 +563,7 @@
   <script src="/js/decheck.js?v=20260601a"></script>
   <script src="/js/characters.js?v=20260601a"></script>
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/homework.js?v=20260601e"></script>
+  <script src="/js/homework.js?v=20260601f"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>
