@@ -601,6 +601,32 @@
   // weirdness, no Accept-Ranges confusion. Just bytes → speaker.
   let _emAudioCtx = null;
   let _emAudioSource = null;
+  // 🎙️ Use the BROWSER'S built-in Arabic TTS if available. Samsung phones
+  // ship with Samsung TTS that includes ar-AE / ar-SA voices; Apple
+  // devices have Maged (ar-EG). This bypasses Azure entirely for
+  // playback if the OS has any Arabic voice installed.
+  function _speakWithWebSpeech(arText, btn, prefer) {
+    if (!window.speechSynthesis) return false;
+    try { window.speechSynthesis.cancel(); } catch (_) {}
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (!voices.length) return false; // not loaded yet, fallback to Azure
+    const arVoices = voices.filter((v) => /^ar/i.test(v.lang));
+    if (!arVoices.length) return false;
+    // Rank: ar-AE > ar-SA > any ar (closest to Khaleeji)
+    arVoices.sort((a, b) => {
+      const score = (v) => v.lang === 'ar-AE' ? 0 : v.lang === 'ar-SA' ? 1 : v.lang === 'ar' ? 2 : 3;
+      return score(a) - score(b);
+    });
+    const ut = new SpeechSynthesisUtterance(arText);
+    ut.voice = arVoices[0];
+    ut.lang = arVoices[0].lang;
+    ut.rate = 0.9;
+    ut.pitch = (prefer === 'male') ? 0.85 : 1.05;
+    ut.onend = () => { if (btn) btn.textContent = '🔊'; };
+    ut.onerror = () => { if (btn) { btn.classList.add('m-em-speak-err'); btn.textContent = '🚫'; } };
+    window.speechSynthesis.speak(ut);
+    return true;
+  }
   async function speakEmiratiText(arText, btn) {
     // Stop any in-flight playback.
     try { if (_emAudioSource) _emAudioSource.stop(); } catch (_) {}
@@ -609,6 +635,9 @@
       if (btn) { btn.textContent = '⊘'; btn.title = 'Sin texto en árabe.'; }
       return;
     }
+    // 🌐 STRATEGY 1: try browser's built-in Arabic TTS (instant, no network).
+    if (_speakWithWebSpeech(arText, btn, _emAzureVoice)) return;
+    // 🚀 STRATEGY 2: fall through to Azure via Web Audio API.
     try {
       // Lazy-init the AudioContext on first user gesture (mobile requirement).
       if (!_emAudioCtx) {
@@ -617,7 +646,6 @@
       if (_emAudioCtx.state === 'suspended') {
         await _emAudioCtx.resume();
       }
-      // Force-fresh fetch (skip browser HTTP cache) — keeps URL unique per call.
       const url = '/api/emirati/audio/text?voice=' + _emAzureVoice
         + '&ar=' + encodeURIComponent(arText)
         + '&t=' + Date.now();
@@ -625,9 +653,6 @@
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const arrayBuf = await resp.arrayBuffer();
       if (arrayBuf.byteLength < 200) throw new Error('audio too small (' + arrayBuf.byteLength + 'B)');
-      // Decode the MP3 to PCM. This step is what really tells us if the
-      // bytes are a valid audio file — if Azure sent garbage, decodeAudioData
-      // throws a clear error here (rather than the <audio> silently failing).
       const audioBuf = await _emAudioCtx.decodeAudioData(arrayBuf);
       _emAudioSource = _emAudioCtx.createBufferSource();
       _emAudioSource.buffer = audioBuf;
@@ -657,6 +682,8 @@
   async function speakEmirati(arText, btn, wid) {
     try { if (_emAudioSource) _emAudioSource.stop(); } catch (_) {}
     if (btn) { btn.textContent = '🔊…'; btn.classList.remove('m-em-speak-msa', 'm-em-speak-err'); }
+    // Try browser native Arabic TTS first — instant, no server roundtrip.
+    if (arText && _speakWithWebSpeech(arText, btn, _emAzureVoice)) return;
     try {
       if (!_emAudioCtx) _emAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (_emAudioCtx.state === 'suspended') await _emAudioCtx.resume();

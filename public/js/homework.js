@@ -1775,6 +1775,15 @@
         + (res.leveledUp ? '<div class="hw-reward-row hw-reward-levelup">🆙 ¡Subiste a Nivel ' + res.newLevel + '!</div>' : '')
         + '</div><button class="hw-reward-ok" id="hw-reward-ok" type="button">¡Genial!</button></div>';
       try { if (MochiSounds && MochiSounds.winFanfare) MochiSounds.winFanfare(); } catch (_) {}
+      // 🎭 CHARACTER CELEBRATION — pick a random rare/legendary character
+      // and play their victory animation + catchphrase. Bigger emotional
+      // payoff than a static reward card alone.
+      try {
+        if (window.showCharacterCelebration && window.pickRandomCharacter) {
+          const char = window.pickRandomCharacter('rare');
+          setTimeout(() => window.showCharacterCelebration(char.id), 1400);
+        }
+      } catch (_) {}
     } else if (res && res.reason === 'practice') {
       // Replay for fun — no double rewards, just a happy "well practiced".
       rw.innerHTML = '<div class="hw-reward-card">'
