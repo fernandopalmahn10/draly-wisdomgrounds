@@ -590,68 +590,97 @@
   // No MSA fallback — user explicitly asked for Hamdan to read everything.
   // If Azure fails, surface a clear error on the button so they know the
   // request didn't reach Azure (silent MSA fallback was confusing them).
-  function speakEmiratiText(arText, btn) {
-    try { if (_emAudio) { _emAudio.pause(); _emAudio = null; } } catch (_) {}
+  // 🚀 NUCLEAR REWRITE — uses Web Audio API directly instead of <audio>.
+  // The <audio> element on mobile Samsung/Android silently rejected the
+  // sentence MP3s even though they were valid 14KB files (your diagnostic
+  // proved Azure was OK). This path:
+  //   1. fetch() the bytes as ArrayBuffer (raw)
+  //   2. ctx.decodeAudioData() → decoded PCM
+  //   3. AudioBufferSourceNode → play immediately
+  // No <audio> element, no Content-Type sniffing, no autoplay policy
+  // weirdness, no Accept-Ranges confusion. Just bytes → speaker.
+  let _emAudioCtx = null;
+  let _emAudioSource = null;
+  async function speakEmiratiText(arText, btn) {
+    // Stop any in-flight playback.
+    try { if (_emAudioSource) _emAudioSource.stop(); } catch (_) {}
     if (btn) { btn.textContent = '🔊…'; btn.classList.remove('m-em-speak-msa', 'm-em-speak-err'); }
     if (!arText) {
-      // Nothing to speak — caller had no Arabic text for this sentence.
-      if (btn) {
-        btn.classList.add('m-em-speak-err');
-        btn.textContent = '⊘';
-        btn.title = 'Esta oración no tiene texto en árabe (data-ar vacío). Agrega la traducción al SECTION_1_3_AR.';
-      }
+      if (btn) { btn.textContent = '⊘'; btn.title = 'Sin texto en árabe.'; }
       return;
     }
-    const url = '/api/emirati/audio/text?voice=' + _emAzureVoice
-      + '&ar=' + encodeURIComponent(arText);
-    _emAudio = new Audio(url);
-    _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
-    _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
-    _emAudio.addEventListener('error', () => {
+    try {
+      // Lazy-init the AudioContext on first user gesture (mobile requirement).
+      if (!_emAudioCtx) {
+        _emAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (_emAudioCtx.state === 'suspended') {
+        await _emAudioCtx.resume();
+      }
+      // Force-fresh fetch (skip browser HTTP cache) — keeps URL unique per call.
+      const url = '/api/emirati/audio/text?voice=' + _emAzureVoice
+        + '&ar=' + encodeURIComponent(arText)
+        + '&t=' + Date.now();
+      const resp = await fetch(url, { cache: 'no-store' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const arrayBuf = await resp.arrayBuffer();
+      if (arrayBuf.byteLength < 200) throw new Error('audio too small (' + arrayBuf.byteLength + 'B)');
+      // Decode the MP3 to PCM. This step is what really tells us if the
+      // bytes are a valid audio file — if Azure sent garbage, decodeAudioData
+      // throws a clear error here (rather than the <audio> silently failing).
+      const audioBuf = await _emAudioCtx.decodeAudioData(arrayBuf);
+      _emAudioSource = _emAudioCtx.createBufferSource();
+      _emAudioSource.buffer = audioBuf;
+      _emAudioSource.connect(_emAudioCtx.destination);
+      _emAudioSource.onended = () => { if (btn) btn.textContent = '🔊'; };
+      _emAudioSource.start(0);
+    } catch (e) {
+      console.warn('[em-text] play failed:', e);
       if (btn) {
         btn.classList.add('m-em-speak-err');
         btn.textContent = '🚫';
-        btn.title = 'Azure rechazó la oración. Toca otra vez para diagnosticar.';
-        // 🧪 On a second click, run the diagnose endpoint and show the
-        // real Azure status code + body so we can fix the root cause.
+        btn.title = 'Error: ' + (e.message || e) + ' — toca otra vez para diagnosticar.';
         btn.onclick = () => {
-          btn.onclick = null;  // reset
+          btn.onclick = null;
           fetch('/api/maestro/emirati/azure/diagnose?pw=' + encodeURIComponent(pw)
               + '&voice=' + _emAzureVoice
               + '&text=' + encodeURIComponent(arText))
             .then((r) => r.json()).then((d) => {
-              alert('Azure diag:\n'
-                + 'OK: ' + d.ok + '\n'
-                + 'Status: ' + (d.azureStatus || d.reason || '?') + '\n'
-                + 'Bytes: ' + (d.bytesReceived || 0) + '\n'
-                + 'Voice: ' + d.voice + '\n'
-                + 'Region: ' + d.region + '\n'
-                + 'Text: ' + d.text + '\n\n'
-                + 'Body preview: ' + ((d.bodyAsText || '').slice(0, 400)));
-            }).catch((e) => alert('Diag error: ' + e.message));
+              alert('Diag:\nOK: ' + d.ok + '\nStatus: ' + (d.azureStatus || d.reason)
+                + '\nBytes: ' + (d.bytesReceived || 0)
+                + '\nClient error: ' + (e.message || e));
+            });
         };
       }
-    });
+    }
   }
-  function speakEmirati(arText, btn, wid) {
-    try { if (_emAudio) { _emAudio.pause(); _emAudio = null; } } catch (_) {}
+  async function speakEmirati(arText, btn, wid) {
+    try { if (_emAudioSource) _emAudioSource.stop(); } catch (_) {}
     if (btn) { btn.textContent = '🔊…'; btn.classList.remove('m-em-speak-msa', 'm-em-speak-err'); }
-    // 🎙️ Khaleeji ONLY — no MSA fallback. If there's a wordId, hit the
-    // per-word endpoint (best quality, exact match). If there's just text
-    // (no wid), route through the /text endpoint for Azure synthesis.
-    const url = wid
-      ? '/api/emirati/audio/' + encodeURIComponent(wid) + '?voice=' + _emAzureVoice
-      : '/api/emirati/audio/text?voice=' + _emAzureVoice + '&ar=' + encodeURIComponent(arText);
-    _emAudio = new Audio(url);
-    _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
-    _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
-    _emAudio.addEventListener('error', () => {
+    try {
+      if (!_emAudioCtx) _emAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (_emAudioCtx.state === 'suspended') await _emAudioCtx.resume();
+      const url = wid
+        ? '/api/emirati/audio/' + encodeURIComponent(wid) + '?voice=' + _emAzureVoice + '&t=' + Date.now()
+        : '/api/emirati/audio/text?voice=' + _emAzureVoice + '&ar=' + encodeURIComponent(arText) + '&t=' + Date.now();
+      const resp = await fetch(url, { cache: 'no-store' });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const arrayBuf = await resp.arrayBuffer();
+      if (arrayBuf.byteLength < 200) throw new Error('audio too small');
+      const audioBuf = await _emAudioCtx.decodeAudioData(arrayBuf);
+      _emAudioSource = _emAudioCtx.createBufferSource();
+      _emAudioSource.buffer = audioBuf;
+      _emAudioSource.connect(_emAudioCtx.destination);
+      _emAudioSource.onended = () => { if (btn) btn.textContent = '🔊'; };
+      _emAudioSource.start(0);
+    } catch (e) {
+      console.warn('[em-word] play failed:', e);
       if (btn) {
         btn.classList.add('m-em-speak-err');
         btn.textContent = '🚫';
-        btn.title = 'Azure no respondió. ¿AZURE_SPEECH_KEY configurada en Render?';
+        btn.title = 'Error: ' + (e.message || e);
       }
-    });
+    }
   }
 
   // ── 🎙️ AZURE: bind the Khaleeji voice generator panel. ──
