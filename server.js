@@ -277,7 +277,12 @@ function _emiratiFindCached(id) {
 app.get('/api/emirati/audio/:wordId', (req, res) => {
   const id = String(req.params.wordId || '').replace(/[^A-Za-z0-9_-]/g, '');
   if (!id) return res.status(400).end();
-  const cached = _emiratiFindCached(id);
+  const voice = req.query.voice === 'male' ? 'ar-AE-HamdanNeural' : 'ar-AE-FatimaNeural';
+  // 🔧 Per-voice cache key so switching Fatima ↔ Hamdan actually changes
+  // what plays. File names: e7.mp3 (Fatima), e7_m.mp3 (Hamdan). Without
+  // this, the first voice "won" forever no matter what UI you toggled.
+  const cacheBaseName = id + (voice === 'ar-AE-HamdanNeural' ? '_m' : '');
+  const cached = _emiratiFindCached(cacheBaseName);
   if (cached) {
     res.setHeader('Cache-Control', 'public, max-age=2592000');  // 30 days
     return res.sendFile(cached);
@@ -287,8 +292,7 @@ app.get('/api/emirati/audio/:wordId', (req, res) => {
   if (process.env.AZURE_SPEECH_KEY) {
     const word = Emirati.EMIRATI_WORDS.find((w) => w.id === id);
     if (!word) return res.status(404).end();
-    const voice = req.query.voice === 'male' ? 'ar-AE-HamdanNeural' : 'ar-AE-FatimaNeural';
-    const outPath = _emPath.join(EMIRATI_AUDIO_DIR, id + '.mp3');
+    const outPath = _emPath.join(EMIRATI_AUDIO_DIR, cacheBaseName + '.mp3');
     return _azureSpeak(word.ar, voice, outPath, (err, buf) => {
       if (err) {
         console.warn('[azure-tts] failed for', id, err.message);
@@ -301,6 +305,33 @@ app.get('/api/emirati/audio/:wordId', (req, res) => {
   }
   res.status(404).end();  // client falls back to /api/tts
 });
+// 🎙️ EMIRATI SENTENCE AUDIO — arbitrary Arabic text through Azure ar-AE,
+// content-hashed cache so repeat plays are instant. Used by the per-
+// sentence 🔊 buttons. Without this, every sentence fell through to
+// Google MSA (the user's "the pronunciation is bad" complaint).
+const _emCrypto = require('crypto');
+app.get('/api/emirati/audio/text', (req, res) => {
+  const ar = String(req.query.ar || '').trim();
+  if (!ar) return res.status(400).end();
+  const voice = req.query.voice === 'male' ? 'ar-AE-HamdanNeural' : 'ar-AE-FatimaNeural';
+  const hash = _emCrypto.createHash('sha1').update(voice + '|' + ar).digest('hex').slice(0, 16);
+  const cachePath = _emPath.join(EMIRATI_AUDIO_DIR, 'txt_' + hash + '.mp3');
+  if (_emFs.existsSync(cachePath)) {
+    res.setHeader('Cache-Control', 'public, max-age=2592000');
+    return res.sendFile(cachePath);
+  }
+  if (!process.env.AZURE_SPEECH_KEY) return res.status(404).end();
+  _azureSpeak(ar, voice, cachePath, (err, buf) => {
+    if (err) {
+      console.warn('[azure-text]', err.message);
+      return res.status(404).end();
+    }
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Cache-Control', 'public, max-age=2592000');
+    res.send(buf);
+  });
+});
+
 // Super-admin status check — used by the Maestro UI to surface "Azure
 // configured / not configured" and the cache progress (X / 275 generated).
 app.get('/api/maestro/emirati/azure-status', (req, res) => {

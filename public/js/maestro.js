@@ -182,74 +182,104 @@
   if ($('m-em-review-back')) {
     $('m-em-review-back').addEventListener('click', () => $('m-em-review-panel').classList.add('hidden'));
   }
+  let _emReviewTab = 'words';  // 'words' | 'sentences'
   function renderEmiratiReview(d) {
     const body = $('m-em-review-body'); if (!body) return;
-    if (!d || !d.ok) { body.innerHTML = 'Error: ' + ((d && d.error) || ''); return; }
+    if (!d || !d.ok) { body.innerHTML = '<div class="m-empty">Error cargando: ' + ((d && d.error) || 'sin respuesta del servidor') + '</div>'; return; }
     const counts = $('m-em-review-counts');
     if (counts) counts.textContent = '🌱 ' + d.seenWordsCount + ' palabras · ✏️ ' + d.learnedSentenceCount + ' oraciones';
-    if (!d.seenWordsCount && !d.learnedSentenceCount) {
-      body.innerHTML = '<div class="m-empty">Aún no has marcado nada como aprendido. ¡Toca ✓ junto a las palabras y oraciones que ya domines!</div>';
-      return;
-    }
-    body.innerHTML = '';
-    // Words by section (carpets) — newest sections on top via priority order.
-    Object.keys(d.bySection).forEach((sectId) => {
-      const sect = d.sections[sectId];
-      const words = d.bySection[sectId];
-      const wrap = document.createElement('details');
-      wrap.className = 'm-em-review-section'; wrap.open = true;
-      const sum = document.createElement('summary');
-      sum.className = 'm-em-review-summary';
-      sum.innerHTML = (sect ? sect.icon + ' ' + escapeHtml(sect.label) : sectId)
-        + ' <span class="m-em-review-n">' + words.length + '</span>';
-      wrap.appendChild(sum);
-      const grid = document.createElement('div'); grid.className = 'm-em-review-words';
-      words.forEach((w) => {
-        const card = document.createElement('div'); card.className = 'm-em-review-word';
-        card.innerHTML = `
-          <div class="m-em-rw-ar" lang="ar" dir="rtl">${escapeHtml(w.ar)}</div>
-          <div class="m-em-rw-tr">${escapeHtml(w.tr)}</div>
-          <div class="m-em-rw-en">${escapeHtml(w.en)}</div>
-          <button class="m-em-rw-speak" data-ar="${escapeHtml(w.ar)}" data-wid="${escapeHtml(w.id)}" title="Escuchar">🔊</button>`;
-        card.querySelector('.m-em-rw-speak').addEventListener('click', (e) => {
-          speakEmirati(e.currentTarget.dataset.ar, e.currentTarget, e.currentTarget.dataset.wid);
-        });
-        grid.appendChild(card);
+    // 🗂️ Two-tab layout — exactly what the user asked for: one tab for
+    // words, one tab for sentences. They never mix.
+    body.innerHTML = `
+      <div class="m-em-review-tabs">
+        <button class="m-em-review-tab ${_emReviewTab === 'words' ? 'is-active' : ''}" data-tab="words" type="button">
+          🌱 Palabras <span class="m-em-review-tabn">${d.seenWordsCount}</span>
+        </button>
+        <button class="m-em-review-tab ${_emReviewTab === 'sentences' ? 'is-active' : ''}" data-tab="sentences" type="button">
+          ✏️ Oraciones <span class="m-em-review-tabn">${d.learnedSentenceCount}</span>
+        </button>
+      </div>
+      <div class="m-em-review-pane" id="m-em-review-pane"></div>`;
+    body.querySelectorAll('.m-em-review-tab').forEach((t) => {
+      t.addEventListener('click', () => {
+        _emReviewTab = t.dataset.tab;
+        body.querySelectorAll('.m-em-review-tab').forEach((x) => x.classList.toggle('is-active', x === t));
+        renderReviewPane(d);
       });
-      wrap.appendChild(grid);
-      body.appendChild(wrap);
     });
-    // Learned sentences — flat list, every row keeps its 🔊 + ✗ unmark tool.
-    if (d.learnedSentenceRows.length) {
-      const h = document.createElement('div');
-      h.className = 'm-em-review-section-title';
-      h.innerHTML = '✏️ Oraciones que ya domino';
-      body.appendChild(h);
+    renderReviewPane(d);
+  }
+  function renderReviewPane(d) {
+    const pane = $('m-em-review-pane'); if (!pane) return;
+    pane.innerHTML = '';
+    if (_emReviewTab === 'words') {
+      if (!d.seenWordsCount) {
+        pane.innerHTML = '<div class="m-empty">Aún no has marcado palabras como vistas. Usa el botón "✓ Marcar como vista" debajo de cada palabra del día.</div>';
+        return;
+      }
+      Object.keys(d.bySection).forEach((sectId) => {
+        const sect = d.sections[sectId];
+        const words = d.bySection[sectId];
+        const wrap = document.createElement('details');
+        wrap.className = 'm-em-review-section'; wrap.open = true;
+        const sum = document.createElement('summary');
+        sum.className = 'm-em-review-summary';
+        sum.innerHTML = (sect ? sect.icon + ' ' + escapeHtml(sect.label) : sectId)
+          + ' <span class="m-em-review-n">' + words.length + '</span>';
+        wrap.appendChild(sum);
+        const grid = document.createElement('div'); grid.className = 'm-em-review-words';
+        words.forEach((w) => {
+          const card = document.createElement('div'); card.className = 'm-em-review-word';
+          card.innerHTML = `
+            <div class="m-em-rw-ar" lang="ar" dir="rtl">${escapeHtml(w.ar)}</div>
+            <div class="m-em-rw-tr">${escapeHtml(w.tr)}</div>
+            <div class="m-em-rw-en">${escapeHtml(w.en)}</div>
+            <button class="m-em-rw-speak" data-ar="${escapeHtml(w.ar)}" data-wid="${escapeHtml(w.id)}" title="Escuchar">🔊</button>`;
+          card.querySelector('.m-em-rw-speak').addEventListener('click', (e) => {
+            speakEmirati(e.currentTarget.dataset.ar, e.currentTarget, e.currentTarget.dataset.wid);
+          });
+          grid.appendChild(card);
+        });
+        wrap.appendChild(grid);
+        pane.appendChild(wrap);
+      });
+    } else {
+      if (!d.learnedSentenceCount) {
+        pane.innerHTML = '<div class="m-empty">Aún no has marcado oraciones. En la lista del día, debajo de cada palabra hay oraciones de ejemplo con un botón <b>☐ Marcar</b>. Tócalo para añadirlas aquí.</div>';
+        return;
+      }
       d.learnedSentenceRows.forEach((row) => {
         const s = row.sentence;
         const tile = document.createElement('div');
         tile.className = 'm-em-review-sentence';
         tile.innerHTML = `
           <div class="m-em-rs-text">
+            <div class="m-em-rs-ar" lang="ar" dir="rtl">${escapeHtml(s.ar || row.ar)}</div>
             <div class="m-em-rs-tr">${escapeHtml(s.tr)}</div>
             <div class="m-em-rs-en">${escapeHtml(s.en)}</div>
-            <div class="m-em-rs-from">↑ de ${escapeHtml(row.tr)}</div>
+            <div class="m-em-rs-from">↑ de la palabra <b>${escapeHtml(row.tr)}</b></div>
           </div>
           <div class="m-em-rs-tools">
-            <button class="m-em-rs-speak" data-ar="${escapeHtml(s.tr)}">🔊</button>
-            <button class="m-em-rs-unlearn" data-key="${escapeHtml(row.key)}" title="Olvidar (marcar como no aprendida)">✗</button>
+            <button class="m-em-rs-speak" data-ar="${escapeHtml(s.ar || row.ar)}">🔊</button>
+            <button class="m-em-rs-unlearn" data-key="${escapeHtml(row.key)}" title="Olvidar">✗</button>
           </div>`;
         tile.querySelector('.m-em-rs-speak').addEventListener('click', (e) => {
-          speakEmirati(e.currentTarget.dataset.ar, e.currentTarget, '');
+          speakEmiratiText(e.currentTarget.dataset.ar, e.currentTarget);
         });
         tile.querySelector('.m-em-rs-unlearn').addEventListener('click', (e) => {
           const key = e.currentTarget.dataset.key;
           fetch('/api/maestro/emirati/sentence/mark?pw=' + encodeURIComponent(pw), {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ keys: [key], unmark: true }),
-          }).then((r) => r.json()).then(() => { tile.remove(); });
+          }).then((r) => r.json()).then(() => {
+            tile.remove();
+            // Refresh counts label too.
+            d.learnedSentenceCount = Math.max(0, d.learnedSentenceCount - 1);
+            const counts = $('m-em-review-counts');
+            if (counts) counts.textContent = '🌱 ' + d.seenWordsCount + ' palabras · ✏️ ' + d.learnedSentenceCount + ' oraciones';
+          });
         });
-        body.appendChild(tile);
+        pane.appendChild(tile);
       });
     }
   }
@@ -291,23 +321,29 @@
               const key = w.id + ':' + si;
               const learned = _emLearnedSentences.has(key);
               const isAuto = w.sesAuto ? ' m-em-s-auto' : '';
+              // 🔧 Sentence now renders the actual ARABIC line (RTL) + tr + en,
+              // so Azure has real text to speak. The 🔊 sends s.ar to the new
+              // /api/emirati/audio/text endpoint (cached by content hash).
               return '<div class="m-em-s' + (learned ? ' is-learned' : '') + isAuto + '" data-sentkey="' + escapeHtml(key) + '">'
                 + '<div class="m-em-s-text">'
-                +   '<span class="m-em-tr">' + escapeHtml(s.tr) + '</span>'
-                +   '<span class="m-em-en">' + escapeHtml(s.en) + '</span>'
+                +   '<div class="m-em-s-ar" lang="ar" dir="rtl">' + escapeHtml(s.ar || w.ar) + '</div>'
+                +   '<div class="m-em-s-tr">' + escapeHtml(s.tr) + '</div>'
+                +   '<div class="m-em-s-en">' + escapeHtml(s.en) + '</div>'
                 + '</div>'
                 + '<div class="m-em-s-tools">'
-                +   '<button class="m-em-s-speak" type="button" data-ar="' + escapeHtml(s.tr) + '" title="Escuchar oración">🔊</button>'
-                +   '<button class="m-em-s-learn" type="button" data-key="' + escapeHtml(key) + '" title="' + (learned ? 'Marcar como NO aprendida' : 'Marcar como aprendida') + '">' + (learned ? '✓' : '○') + '</button>'
+                +   '<button class="m-em-s-speak" type="button" data-ar="' + escapeHtml(s.ar || w.ar) + '" title="Escuchar en Khaleeji">🔊</button>'
+                +   '<button class="m-em-s-learn ' + (learned ? 'is-on' : '') + '" type="button" data-key="' + escapeHtml(key) + '">'
+                +     '<span class="m-em-s-learn-icon">' + (learned ? '✅' : '☐') + '</span>'
+                +     '<span class="m-em-s-learn-label">' + (learned ? 'Aprendida' : 'Marcar') + '</span>'
+                +   '</button>'
                 + '</div>'
               + '</div>';
             }).join('')
           + '</div>';
       }
-      // Section + priority badge on the first row.
-      const prioBadge = w.priority != null
-        ? '<span class="m-em-prio" title="Orden de importancia">#' + w.priority + '</span>'
-        : '';
+      // No more priority number badge — user found "#383" confusing. The
+      // section name + the natural top-to-bottom order is enough signal.
+      const prioBadge = '';
       card.innerHTML = `
         <div class="m-em-row">
           <div class="m-em-section">${sec ? (sec.icon + ' ' + escapeHtml(sec.label)) : ''} ${prioBadge}</div>
@@ -323,17 +359,14 @@
     list.querySelectorAll('.m-em-speak').forEach((b) => b.addEventListener('click', (e) => {
       speakEmirati(b.dataset.ar, b, b.dataset.wid);
     }));
-    // 🔊 on every sentence row: pass the transliteration (tr) to Azure
-    // ar-AE-Fatima via /api/tts since Khaleeji speech is what we want.
-    // No on-disk cache yet for sentences — first hit goes to Azure live.
+    // 🔊 on every sentence row → /api/emirati/audio/text (real Arabic via
+    // Azure ar-AE-FatimaNeural / HamdanNeural, content-hashed cache).
+    // The transliteration version was sending Roman text to MSA Google,
+    // which is what was making it sound bad. Now it speaks real Khaleeji.
     list.querySelectorAll('.m-em-s-speak').forEach((b) => b.addEventListener('click', () => {
-      const trText = b.dataset.ar;
-      if (!trText) return;
-      // No wordId for sentences → speakEmirati falls through to MSA. Pass
-      // the (tr) string as the ar text; Azure will phonetically render it.
-      // For best quality use the Arabic of the WHOLE sentence — but ses
-      // only ships with tr/en in the dataset. Live with tr-via-Azure for now.
-      speakEmirati(trText, b, '');
+      const arText = b.dataset.ar;
+      if (!arText) return;
+      speakEmiratiText(arText, b);
     }));
     // ✓ Toggle "learned" status on each sentence; persists to server.
     list.querySelectorAll('.m-em-s-learn').forEach((b) => b.addEventListener('click', () => {
@@ -494,6 +527,29 @@
   //     (Google MSA) and visually mark the button so the teacher knows.
   // The Audio element's `error` event fires on a 404 from (1), which is
   // how we know to flip to (2). No wasteful HEAD pre-check.
+  // 🎙️ Speak arbitrary Arabic text through Azure ar-AE — used for the
+  // per-sentence 🔊 buttons. Falls back to MSA only if the server has
+  // no Azure key configured (404 from /audio/text).
+  function speakEmiratiText(arText, btn) {
+    try { if (_emAudio) { _emAudio.pause(); _emAudio = null; } } catch (_) {}
+    if (btn) { btn.textContent = '🔊…'; btn.classList.remove('m-em-speak-msa'); }
+    const tryAzure = () => {
+      const url = '/api/emirati/audio/text?voice=' + _emAzureVoice
+        + '&ar=' + encodeURIComponent(arText);
+      _emAudio = new Audio(url);
+      _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
+      _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
+      _emAudio.addEventListener('error', () => {
+        // Azure failed → fall back to MSA (mark visually).
+        if (btn) { btn.classList.add('m-em-speak-msa'); }
+        _emAudio = new Audio('/api/tts?voice=ar-XA-Wavenet-A&text=' + encodeURIComponent(arText));
+        _emAudio.addEventListener('canplay', () => _emAudio.play().catch(() => {}));
+        _emAudio.addEventListener('ended', () => { if (btn) btn.textContent = '🔊'; });
+        _emAudio.addEventListener('error', () => { if (btn) btn.textContent = '⚠️'; });
+      });
+    };
+    tryAzure();
+  }
   function speakEmirati(arText, btn, wid) {
     try { if (_emAudio) { _emAudio.pause(); _emAudio = null; } } catch (_) {}
     if (btn) { btn.textContent = '🔊 …'; btn.classList.remove('m-em-speak-msa'); }
