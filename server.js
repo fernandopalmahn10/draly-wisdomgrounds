@@ -380,6 +380,19 @@ app.get('/api/maestro/emirati/azure/diagnose', (req, res) => {
   azureReq.end();
 });
 
+// 🧪 SANITY ENDPOINT — confirms the platform's route is alive and the
+// AZURE key is visible. If GET /api/emirati/audio/test200 returns 200
+// but /audio/text returns 404, we know the route is correct and Azure
+// itself is failing.
+app.get('/api/emirati/audio/test200', (req, res) => {
+  res.status(200).json({
+    ok: true,
+    hasKey: !!process.env.AZURE_SPEECH_KEY,
+    region: process.env.AZURE_SPEECH_REGION || 'eastus',
+    timestamp: Date.now(),
+  });
+});
+
 // 🎙️ EMIRATI SENTENCE AUDIO — arbitrary Arabic text through Azure ar-AE,
 // content-hashed cache so repeat plays are instant. Used by the per-
 // sentence 🔊 buttons. Without this, every sentence fell through to

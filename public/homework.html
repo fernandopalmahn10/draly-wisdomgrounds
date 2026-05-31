@@ -2,13 +2,36 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <style>
+    /* 🔧 Prevent pinch zoom — locks the layout so kids never lose buttons
+       after accidental gestures. touch-action allows scroll but not pinch. */
+    html, body { touch-action: pan-x pan-y; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+    /* Allow text selection in inputs/textareas for the few that exist. */
+    input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
+  </style>
+  <script>
+    // JS-level pinch zoom prevention — works even when meta viewport is ignored.
+    document.addEventListener('gesturestart',  (e) => e.preventDefault());
+    document.addEventListener('gesturechange', (e) => e.preventDefault());
+    document.addEventListener('gestureend',    (e) => e.preventDefault());
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 300) e.preventDefault();  // block double-tap zoom
+      lastTouchEnd = now;
+    }, { passive: false });
+    // Block ctrl+scroll zoom on desktop
+    document.addEventListener('wheel', (e) => {
+      if (e.ctrlKey) e.preventDefault();
+    }, { passive: false });
+  </script>
   <title>📚 Tareas · Draly Wisdomgrounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260529f">
   <link rel="stylesheet" href="/css/homework.css?v=20260530e">
-  <link rel="stylesheet" href="/css/characters.css?v=20260601b">
+  <link rel="stylesheet" href="/css/characters.css?v=20260601c">
 </head>
 <body class="hw-bg">
 
@@ -508,9 +531,10 @@
     </div>
   </div>
 
+  <script src="/js/decheck.js?v=20260601a"></script>
   <script src="/js/characters.js?v=20260601a"></script>
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/homework.js?v=20260601c"></script>
+  <script src="/js/homework.js?v=20260601d"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>
