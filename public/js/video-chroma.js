@@ -52,15 +52,15 @@
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const id = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = id.data;
-            // Chroma-key pass: erase grayscale pixels in checker range.
+            // 🟢 GREEN CHROMA-KEY (replaced gray-checker version):
+            // Pixel is "green screen" if green channel dominates by 40+
+            // over BOTH red and blue. Character pixels never satisfy
+            // this — Gojo's white hair has R=G=B (rejected), skin has
+            // R>G>B (rejected), blue clothes have B>G (rejected).
+            // Only the pure green backdrop matches.
             for (let i = 0; i < data.length; i += 4) {
               const r = data[i], g = data[i + 1], b = data[i + 2];
-              const max = Math.max(r, g, b);
-              const min = Math.min(r, g, b);
-              // Checker pattern: low saturation (max ≈ min) AND in the
-              // mid-gray brightness range (skip pure black/outlines and
-              // pure white/highlights).
-              if (max - min < 28 && min > 35 && min < 215) {
+              if (g > r + 40 && g > b + 40 && g > 80) {
                 data[i + 3] = 0; // transparent
               }
             }

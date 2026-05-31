@@ -23,10 +23,8 @@
 // =====================================================================
 
 (function () {
-  // 🛑 DISABLED — algorithm was eating Gojo's hair / face shadows because
-  // they share gray tones with the editor checker pattern. Will re-enable
-  // once we have clean assets generated against a SOLID GREEN background.
-  return;
+  // 🟢 RE-ENABLED with GREEN chroma-key — assets now ship with pure
+  // green backgrounds that don't conflict with character pixels.
   function chromaKey(img) {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
@@ -39,16 +37,13 @@
       const W = canvas.width;
       const H = canvas.height;
 
-      // Pixel is "background-like" if it's grayscale in the mid-bright
-      // range (the editor checker pattern). Pure black + pure white are
-      // PRESERVED (could be outlines / character white hair).
+      // 🟢 GREEN SCREEN — pixel is green if G dominates R and B by 40+.
+      // Pure green has no overlap with any character pixel (Gojo's hair
+      // is gray/white = R=G=B, skin is R>G>B, blue clothes are B>G>R).
       function isBg(idx) {
         if (data[idx + 3] < 16) return true;
         const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        if (max - min > 25) return false;          // colored pixel = not bg
-        return min > 35 && min < 215;              // mid gray range
+        return g > r + 40 && g > b + 40 && g > 80;
       }
 
       // Flood fill from edges using iterative stack.

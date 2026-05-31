@@ -4,11 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <style>
-    /* 🔧 Prevent pinch zoom — locks the layout so kids never lose buttons
-       after accidental gestures. touch-action allows scroll but not pinch. */
-    html, body { touch-action: pan-x pan-y; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
-    /* Allow text selection in inputs/textareas for the few that exist. */
+    /* 🔧 Prevent pinch zoom + reset zoom on focus events (recovers from
+       a stuck zoomed state). touch-action allows scroll but not pinch. */
+    html, body {
+      touch-action: pan-x pan-y;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none; user-select: none;
+      overflow-x: hidden;
+    }
     input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
+    /* 🩹 Recovery: if a modal overlay gets stuck above content (e.g. after
+       a test that didn't clean up), this catches any leftover hidden
+       blocking overlay so taps go through to the assignment cards below. */
+    .hidden, [aria-hidden="true"][class*="overlay"] { pointer-events: none !important; }
   </style>
   <script>
     // JS-level pinch zoom prevention — works even when meta viewport is ignored.
@@ -534,7 +542,7 @@
   <script src="/js/decheck.js?v=20260601a"></script>
   <script src="/js/characters.js?v=20260601a"></script>
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/homework.js?v=20260601d"></script>
+  <script src="/js/homework.js?v=20260601e"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>
