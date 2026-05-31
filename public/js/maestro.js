@@ -170,15 +170,25 @@
   let _emLearnedSentences = new Set();
   // 📜 "Mis aprendidos" review panel — opens INSIDE the Emirati modal,
   // listing every word marked seen + every sentence marked learned.
-  if ($('m-em-review')) {
-    $('m-em-review').addEventListener('click', () => {
-      $('m-em-review-panel').classList.remove('hidden');
-      $('m-em-review-body').innerHTML = 'Cargando…';
-      fetch('/api/maestro/emirati/learned?pw=' + encodeURIComponent(pw))
-        .then((r) => r.json()).then((d) => renderEmiratiReview(d))
-        .catch((e) => { $('m-em-review-body').innerHTML = 'Error: ' + e.message; });
-    });
+  function openEmiratiReview(initialTab) {
+    if (initialTab === 'words' || initialTab === 'sentences') _emReviewTab = initialTab;
+    $('m-em-review-panel').classList.remove('hidden');
+    $('m-em-review-body').innerHTML = '<div class="m-empty">Cargando…</div>';
+    fetch('/api/maestro/emirati/learned?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json()).then((d) => renderEmiratiReview(d))
+      .catch((e) => { $('m-em-review-body').innerHTML = '<div class="m-empty">Error: ' + e.message + '</div>'; });
   }
+  if ($('m-em-review')) {
+    $('m-em-review').addEventListener('click', () => openEmiratiReview());
+  }
+  // 🎯 Tap-to-review on the HUD stats — tap "palabras vistas" → opens
+  // Mis aprendidos at the Words tab; tap "oraciones aprendidas" → opens
+  // at the Sentences tab. Lets the user unmark anything via that panel.
+  document.querySelectorAll('.m-emirati-stat.is-tappable').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      openEmiratiReview(btn.dataset.emStat === 'sentences' ? 'sentences' : 'words');
+    });
+  });
   if ($('m-em-review-back')) {
     $('m-em-review-back').addEventListener('click', () => $('m-em-review-panel').classList.add('hidden'));
   }
