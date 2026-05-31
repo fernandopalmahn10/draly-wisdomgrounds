@@ -866,6 +866,7 @@
         </div>
         <div class="m-detail-actions-row">
           <button class="btn btn-jade btn-sm" id="m-detail-send-btn">💬 Enviar mensaje</button>
+          <button class="btn btn-ghost btn-sm" id="m-detail-clear-sent-btn" title="Borra solo las oraciones guardadas — el alumno permanece">🧹 Limpiar oraciones</button>
           <button class="btn btn-red btn-sm" id="m-detail-delete-btn" title="Borrar este alumno permanentemente">🗑 Borrar alumno</button>
         </div>
         <!-- 📋 Notas para el reporte mensual -->
@@ -899,6 +900,20 @@
         });
       });
     })();
+    // Wire "limpiar oraciones" — wipes saved sentences ONLY (kid record stays).
+    // Useful when a class spammed test saves and the teacher wants a clean slate.
+    $('m-detail-clear-sent-btn').addEventListener('click', () => {
+      const n = (data.sentences || []).length;
+      if (!n) { alert('Este alumno no tiene oraciones guardadas.'); return; }
+      if (!confirm('¿Borrar las ' + n + ' oraciones guardadas de "' + (data.displayName || data.code) + '"?\n\nEl historial de tareas y exámenes NO se toca. Solo las oraciones del builder.')) return;
+      fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/sentences/clear?pw=' + encodeURIComponent(pw), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      }).then((r) => r.json()).then((r) => {
+        if (!r.ok) { alert('Error: ' + (r.error || '')); return; }
+        alert('✅ ' + r.removed + ' oraciones eliminadas. Recargando…');
+        openDetail(data.code);
+      }).catch((e) => alert('Error: ' + e.message));
+    });
     // Wire delete — irreversible; double-confirm.
     $('m-detail-delete-btn').addEventListener('click', () => {
       if (!confirm(`¿Borrar PERMANENTEMENTE a "${data.displayName || data.code}" (${data.code})?\n\nSe elimina su historial completo. Esto NO se puede deshacer.`)) return;

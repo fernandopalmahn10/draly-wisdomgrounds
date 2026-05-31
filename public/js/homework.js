@@ -448,6 +448,36 @@
     const list = $('hw-sentences-list');
     if (!arr.length) { list.innerHTML = '<div class="hw-empty">Aún no has guardado oraciones. Toca 💾 en clase para guardar una. 🌱</div>'; return; }
     list.innerHTML = '';
+    // 🗂️ Group by month — newest month on top, expanded by default. Each
+    // older month is collapsed so the kid can browse without overwhelm.
+    const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const buckets = {};
+    arr.forEach((s) => {
+      const d = s.ts ? new Date(s.ts) : new Date();
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      if (!buckets[key]) buckets[key] = [];
+      buckets[key].push(s);
+    });
+    const keys = Object.keys(buckets).sort().reverse();
+    keys.forEach((key, kIdx) => {
+      const [y, mo] = key.split('-');
+      const folder = document.createElement('details');
+      folder.className = 'hw-sentences-month';
+      if (kIdx === 0) folder.open = true;
+      const summary = document.createElement('summary');
+      summary.className = 'hw-sentences-month-head';
+      summary.innerHTML = '<span class="hw-sm-icon">📅</span>'
+        + '<span class="hw-sm-name">' + (monthNames[Number(mo) - 1] || mo) + ' ' + y + '</span>'
+        + '<span class="hw-sm-count">' + buckets[key].length + ' oración' + (buckets[key].length === 1 ? '' : 'es') + '</span>';
+      folder.appendChild(summary);
+      const body = document.createElement('div');
+      body.className = 'hw-sentences-month-body';
+      folder.appendChild(body);
+      list.appendChild(folder);
+      renderMonthBucket(buckets[key], body);
+    });
+  }
+  function renderMonthBucket(arr, list) {
     arr.forEach((s) => {
       // 🔧 Don't drop sentences whose IDs aren't in the catalog (daily-bonus
       // saves use the same wordbank, but a stale/renamed ID would silently
@@ -945,10 +975,26 @@
     if (mode === 'story')  return runStoryMode();
     return scheduleSpawn();  // legacy 🍉 slash fallback
   }
-  // 📖 STORY MODE — replaces the old tapping slash with a Pokémon-style
-  // cutscene. The character is a constant presence and "speaks" each word
-  // through a dialogue bar at the bottom. No spawn-and-tap. Each word reveal
-  // counts as a discovery → still drives the sentence-bonus + reward chain.
+  // 📖 STORY MODE — Pokémon-style cutscene with REAL interactivity:
+  //   1. Each word starts hidden behind a 🎁 box — kid TAPS to reveal it.
+  //   2. After reveal, the dialogue bar shows the word + Spanish.
+  //   3. Every 3rd word, instead of advancing straight, the kid sees a
+  //      mini-challenge: "¿Cuál palabra significa <español>?" with 3 chips.
+  //   4. After certain categories (verbs, family, time), a brief 💡 grammar
+  //      tip in Spanish appears so the kid learns the GRAMMAR not just words.
+  // Each successful reveal counts as a discovery → sentence-bonus chain.
+  const SPANISH_FACTS = {
+    verbo:    '💡 En chino, los verbos NO cambian con persona ni tiempo. "Wǒ qù" = "yo voy", "Tā qù" = "él va". ¡Igualito siempre!',
+    familia:  '💡 Los chinos llaman al hermano mayor (gēge) distinto del hermano menor (dìdi). ¡La edad importa!',
+    persona:  '💡 Para preguntar "quién", usas "shéi". No hay diferencia entre él/ella en chino hablado.',
+    objeto:   '💡 En chino no existe "el / la / los". Solo dices el nombre del objeto. ¡Más fácil!',
+    lugar:    '💡 "Zài" significa "estar en / en". Es una palabra mágica para decir dónde estás.',
+    tiempo:   '💡 La fecha en chino va de grande a chico: año, mes, día. Al revés que en español.',
+    numero:   '💡 Para contar cosas en chino casi siempre necesitas un "clasificador". "Yī gè rén" = una persona.',
+    color:    '💡 Los colores en chino terminan con "-sè" (sè = color). Ej: "hóngsè" = rojo.',
+    sentir:   '💡 "Gāoxìng" = feliz, "lèi" = cansado. Los sentimientos se dicen como adjetivos.',
+    saludo:   '💡 "Nǐ hǎo" literalmente = "tú bien". El saludo más común del mundo.',
+  };
   function runStoryMode() {
     const arena = $('hw-game-arena'); if (!arena) return;
     arena.innerHTML = ''; arena.classList.add('hw-story-mode');
@@ -988,36 +1034,152 @@
         if (opts.onNext) opts.onNext();
       });
     }
-    // Each panel = 1 word revealed with a Pokémon-style line. After each
-    // listen + Siguiente, we count it as a discovery so the sentence-bonus
-    // gets the right wordlist.
+    // Pick 3 distractor words for a mini-challenge from the daily pool +
+    // the kid's broader catalog. Always different from the answer.
+    function pickDistractors(answer, n) {
+      const out = []; const seen = { [answer.id]: true };
+      const fromPool = words.filter((w) => w.id !== answer.id);
+      while (out.length < n && fromPool.length) {
+        const pick = fromPool.splice(Math.floor(Math.random() * fromPool.length), 1)[0];
+        if (!seen[pick.id]) { seen[pick.id] = true; out.push(pick); }
+      }
+      return out;
+    }
+    // Mini-challenge panel: "¿Cuál palabra significa <español>?" with 3 chips.
+    // Correct → discovery + advance. Wrong → shake + try again (no penalty).
+    function showMiniChallenge(w, onPass) {
+      arena.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'hw-story-panel hw-sp-challenge';
+      const cat = (window.WU_CATEGORIES || {})[w.cat];
+      wrap.style.setProperty('--cat-color', cat ? cat.color : '#ffd24a');
+      const distractors = pickDistractors(w, 2);
+      const choices = [w].concat(distractors).sort(() => Math.random() - 0.5);
+      wrap.innerHTML = ''
+        + '<div class="hw-sp-halftone"></div>'
+        + '<img class="hw-sp-char" src="' + char.img + '" alt="' + char.id + '" onerror="this.style.display=\'none\'">'
+        + '<div class="hw-sp-dialog">'
+        +   '<div class="hw-sp-dialog-name">' + escapeHtml(char.name || char.id) + ' · 🎯 Reto</div>'
+        +   '<div class="hw-sp-dialog-text">— ¿Cuál palabra significa <strong>' + escapeHtml(w.es || '') + '</strong>?</div>'
+        +   '<div class="hw-sp-choices">'
+        +     choices.map((c) => '<button class="hw-sp-choice" type="button" data-id="' + c.id + '">'
+                                  + '<span class="hw-sp-choice-icon">' + (c.icon || '⭐') + '</span>'
+                                  + '<span class="hw-sp-choice-py">' + escapeHtml(c.pinyin) + '</span>'
+                                + '</button>').join('')
+        +   '</div>'
+        + '</div>';
+      arena.appendChild(wrap);
+      requestAnimationFrame(() => wrap.classList.add('show'));
+      wrap.querySelectorAll('.hw-sp-choice').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.id === w.id) {
+            btn.classList.add('is-correct');
+            try { dailySfx.combo(idx + 2); } catch (_) {}
+            setTimeout(() => onPass(), 540);
+          } else {
+            btn.classList.add('is-wrong');
+            try { if (window.MochiSounds && MochiSounds.bad) MochiSounds.bad(); } catch (_) {}
+            wrap.classList.add('shake');
+            setTimeout(() => { btn.classList.remove('is-wrong'); wrap.classList.remove('shake'); }, 480);
+          }
+        });
+      });
+    }
+    // Grammar-tip panel: 2-second Spanish fact, then auto-advance.
+    function showGrammarTip(w, onDone) {
+      const tip = SPANISH_FACTS[w.cat] || SPANISH_FACTS.verbo;
+      arena.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'hw-story-panel hw-sp-tip';
+      wrap.innerHTML = ''
+        + '<div class="hw-sp-halftone"></div>'
+        + '<div class="hw-sp-tip-card">'
+        +   '<div class="hw-sp-tip-head">🧠 Tip de gramática</div>'
+        +   '<div class="hw-sp-tip-body">' + tip + '</div>'
+        +   '<button class="hw-sp-next" type="button">▶ Continuar</button>'
+        + '</div>';
+      arena.appendChild(wrap);
+      requestAnimationFrame(() => wrap.classList.add('show'));
+      wrap.querySelector('.hw-sp-next').addEventListener('click', onDone);
+    }
+    // Tap-to-reveal: the word panel starts hidden behind a 🎁 box. Kid taps
+    // it to "open" the gift — the word slides in, dialog speaks, options unfold.
+    function showWordReveal(w, opts) {
+      opts = opts || {};
+      const cat = (window.WU_CATEGORIES || {})[w.cat];
+      const color = cat ? cat.color : '#ffd24a';
+      arena.innerHTML = '';
+      const wrap = document.createElement('div');
+      wrap.className = 'hw-story-panel hw-sp-locked';
+      wrap.style.setProperty('--cat-color', color);
+      wrap.innerHTML = ''
+        + '<div class="hw-sp-halftone"></div>'
+        + '<img class="hw-sp-char" src="' + char.img + '" alt="' + char.id + '" onerror="this.style.display=\'none\'">'
+        + '<button class="hw-sp-gift" type="button" aria-label="Abrir palabra">'
+        +   '<span class="hw-sp-gift-emoji">🎁</span>'
+        +   '<span class="hw-sp-gift-cta">¡Toca para descubrir!</span>'
+        + '</button>'
+        + '<div class="hw-sp-dialog">'
+        +   '<div class="hw-sp-dialog-name">' + escapeHtml(char.name || char.id) + '</div>'
+        +   '<div class="hw-sp-dialog-text">— ¿Listo/a para una palabra nueva? Toca el regalo 🎁</div>'
+        + '</div>';
+      arena.appendChild(wrap);
+      requestAnimationFrame(() => wrap.classList.add('show'));
+      const gift = wrap.querySelector('.hw-sp-gift');
+      gift.addEventListener('click', () => {
+        gift.classList.add('pop');
+        try { if (window.MochiSounds && MochiSounds.combo) MochiSounds.combo(); } catch (_) {}
+        setTimeout(() => {
+          // Replace dialog with the actual reveal + listen + next buttons.
+          const lines = [
+            '— ¡Es <strong>' + escapeHtml(w.pinyin) + '</strong>! Significa <em>' + escapeHtml(w.es || '') + '</em>.',
+            '— Mira: <strong>' + escapeHtml(w.pinyin) + '</strong> = <em>' + escapeHtml(w.es || '') + '</em>. ¡Tu turno de decirla!',
+            '— ¡Apareció <strong>' + escapeHtml(w.pinyin) + '</strong>! Quiere decir <em>' + escapeHtml(w.es || '') + '</em>.',
+          ];
+          const line = lines[Math.floor(Math.random() * lines.length)];
+          gift.remove();
+          // Inject the word badge.
+          const wordEl = document.createElement('div');
+          wordEl.className = 'hw-sp-word';
+          wordEl.innerHTML = '<span class="hw-sp-word-icon">' + (w.icon || '⭐') + '</span>'
+            + '<span class="hw-sp-word-py">' + escapeHtml(w.pinyin) + '</span>'
+            + '<span class="hw-sp-word-es">' + escapeHtml(w.es || '') + '</span>';
+          wrap.appendChild(wordEl);
+          // Swap dialog content.
+          const dlg = wrap.querySelector('.hw-sp-dialog-text');
+          dlg.innerHTML = line;
+          const actions = document.createElement('div');
+          actions.className = 'hw-sp-dialog-actions';
+          actions.innerHTML = '<button class="hw-sp-listen" type="button">🔊 Escuchar</button>'
+            + '<button class="hw-sp-next" type="button">' + (opts.last ? '✓ Terminar' : '▶ Siguiente') + '</button>';
+          wrap.querySelector('.hw-sp-dialog').appendChild(actions);
+          actions.querySelector('.hw-sp-listen').addEventListener('click', (e) => speakChinese(w.pinyin, e.currentTarget));
+          actions.querySelector('.hw-sp-next').addEventListener('click', opts.onNext);
+          // Auto-play the word so the kid HEARS it the moment it's revealed.
+          setTimeout(() => { try { speakChinese(w.pinyin, null); } catch (_) {} }, 220);
+        }, 360);
+      });
+    }
+    // Drives the loop: word reveal → mini-challenge every 3rd word → grammar tip
+    // every 2nd word (if the category has a tip) → next word.
     function showWord() {
       if (!DAILY_GAME.active) return;
-      if (idx >= words.length) {
-        // No more words — the outro story call is fired by endDailyGame.
-        return endDailyGame();
-      }
+      if (idx >= words.length) return endDailyGame();
       const w = words[idx];
-      const lines = [
-        '— Esta es <strong>' + escapeHtml(w.pinyin) + '</strong>. Significa <em>' + escapeHtml(w.es || '') + '</em>. ¡Repítela!',
-        '— ¡Escucha! Esta palabra es <strong>' + escapeHtml(w.pinyin) + '</strong>… <em>' + escapeHtml(w.es || '') + '</em>.',
-        '— Mira, <strong>' + escapeHtml(w.pinyin) + '</strong>. La sentirás cuando hables.',
-        '— <strong>' + escapeHtml(w.pinyin) + '</strong>… úsala bien. <em>' + escapeHtml(w.es || '') + '</em>.',
-      ];
-      const line = lines[Math.floor(Math.random() * lines.length)];
-      panel(w, line, {
-        last: idx >= words.length - 1,
-        onNext: () => {
-          idx++;
-          DAILY_GAME.done = idx; DAILY_GAME.correct = idx;
-          if (DAILY_GAME.discovered.indexOf(w.id) < 0) DAILY_GAME.discovered.push(w.id);
-          updateGameHud();
-          try { dailySfx.combo(idx); } catch (_) {}
-          showWord();
-        },
-      });
-      // Auto-play the word so the kid HEARS it the moment the panel appears.
-      setTimeout(() => { try { speakChinese(w.pinyin, null); } catch (_) {} }, 380);
+      const isChallenge = idx > 0 && idx % 3 === 0;
+      const advance = () => {
+        idx++;
+        DAILY_GAME.done = idx; DAILY_GAME.correct = idx;
+        if (DAILY_GAME.discovered.indexOf(w.id) < 0) DAILY_GAME.discovered.push(w.id);
+        updateGameHud();
+        try { dailySfx.combo(idx); } catch (_) {}
+        // Inject a grammar fact between certain word reveals (when category has one).
+        const showTip = (idx % 2 === 0) && SPANISH_FACTS[w.cat];
+        if (showTip) return showGrammarTip(w, showWord);
+        showWord();
+      };
+      if (isChallenge) showMiniChallenge(w, advance);
+      else showWordReveal(w, { last: idx >= words.length - 1, onNext: advance });
     }
     showWord();
   }
@@ -1601,6 +1763,32 @@
       <span class="hw-parents-stat">📖 <strong>${stories}</strong> historia${stories === 1 ? '' : 's'} leída${stories === 1 ? '' : 's'}${storiesExtra}</span>
       <span class="hw-parents-stat hw-parents-stat-pill is-clickable" id="hw-parents-pill-words" role="button">🌱 <strong>${wordsLearned}</strong>/${wordsTotal} palabras aprendidas <small>(estimado · toca para ver)</small></span>
       <span class="hw-parents-stat hw-parents-stat-pill is-clickable" id="hw-parents-pill-sentences" role="button">✏️ <strong>${sentCorrect}</strong> oraciones correctas <small>(toca para ver)</small></span>`;
+    // 🌱 0→2000 lifetime progress bar — counts every sentence the kid has
+    // saved (warmup, daily-bonus, edits). User asked for "papas section
+    // count flawless"; this is the source of truth, computed server-side
+    // from rec.sentencesBuilt.length so retries can't game it.
+    const saved = t.sentencesSavedTotal || 0;
+    const goal  = t.sentencesSavedGoal  || 2000;
+    const pct = Math.min(100, Math.round((saved / goal) * 100));
+    // Tiered milestone label so the bar feels like a journey, not a number.
+    const milestone =
+        saved >= 2000 ? '🐲 ¡Dragón Despierto!'
+      : saved >= 1000 ? '🔥 Fénix'
+      : saved >=  500 ? '🪷 Loto'
+      : saved >=  200 ? '🎋 Bambú'
+      : '🌱 Semilla';
+    const bar = $('hw-parents-progress');
+    if (bar) {
+      bar.innerHTML = `
+        <div class="hw-pp-head">
+          <span class="hw-pp-icon">🌱</span>
+          <span class="hw-pp-title">Camino del idioma</span>
+          <span class="hw-pp-tier">${milestone}</span>
+        </div>
+        <div class="hw-pp-bar"><div class="hw-pp-fill" style="width:${pct}%"></div></div>
+        <div class="hw-pp-meta"><strong>${saved.toLocaleString('es-ES')}</strong> / ${goal.toLocaleString('es-ES')} oraciones guardadas · ${pct}%</div>
+        <div class="hw-pp-note">Cada oración que ${escapeHtml((data.displayName || 'tu hijo/a').split(' ')[0])} guarda en clase suma 1. Meta: 2 000 oraciones (fluidez HSK1+).</div>`;
+    }
     // Expandable per-sentence panel: shows exactly what the kid wrote vs the
     // right answer, marked ✓ / ✗, grouped by lesson. User feedback: "oraciones
     // correctas should expand to see what is correct and what is incorrect."
@@ -1822,18 +2010,22 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Nunito:wght@600;800;900&family=ZCOOL+XiaoWei&family=Ma+Shan+Zheng&display=swap');
   * { box-sizing: border-box; margin: 0; }
-  body { font-family: 'Nunito', sans-serif; min-height: 100vh;
-    background: radial-gradient(circle at 50% 0%, #3a0d0d, #160707 70%); padding: 20px 12px; color: #3a2410; }
-  .cert { max-width: 640px; margin: 0 auto; position: relative;
+  html, body { overflow-x: hidden; }
+  body { font-family: 'Nunito', sans-serif; min-height: 100vh; width: 100%;
+    background: radial-gradient(circle at 50% 0%, #3a0d0d, #160707 70%);
+    padding: clamp(10px, 3vw, 24px); color: #3a2410; }
+  /* 🔧 width:100% + max-width so the diploma ALWAYS fills the phone screen
+     (was rendering narrow on mobile before). Inner padding scales fluidly. */
+  .cert { width: 100%; max-width: 680px; margin: 0 auto; position: relative;
     background:
       repeating-linear-gradient(45deg, rgba(200,30,30,0.025) 0 14px, transparent 14px 28px),
       radial-gradient(circle at 50% 18%, #fffdf6, #f7ead2);
-    border-radius: 14px; padding: 10px;
+    border-radius: 14px; padding: clamp(6px, 2vw, 14px);
     box-shadow: 0 22px 60px rgba(0,0,0,0.6); }
   /* triple ornamental border */
   .frame { border: 3px solid #d4af37; border-radius: 10px; padding: 5px; }
   .frame2 { border: 1.5px solid #c81e1e; border-radius: 7px; padding: 4px; }
-  .inner { border: 1px solid #d4af37; border-radius: 5px; padding: 26px 26px 30px; position: relative; overflow: hidden; }
+  .inner { border: 1px solid #d4af37; border-radius: 5px; padding: clamp(18px, 4vw, 30px) clamp(14px, 4vw, 30px) clamp(22px, 4vw, 32px); position: relative; overflow: hidden; }
   /* corner flourishes */
   .corner { position: absolute; font-size: 1.5rem; color: #d4af37; }
   .corner.tl { top: 8px; left: 10px; } .corner.tr { top: 8px; right: 10px; }

@@ -399,6 +399,19 @@ function deleteHistoryEntry(code, ts) {
   return false;
 }
 
+// Clear EVERY saved sentence for this student. Used by Maestro's cleanup
+// tool ("limpiar oraciones guardadas") when a kid has a lot of junk/test
+// saves and the teacher wants a fresh slate. Irreversible from the UI.
+function clearAllSentences(code) {
+  const rec = get(code);
+  if (!rec) return 0;
+  const n = rec.sentencesBuilt.length;
+  if (!n) return 0;
+  rec.sentencesBuilt = [];
+  scheduleSave();
+  return n;
+}
+
 // =====================================================================
 // 🏆 DAILY PROGRESSION — XP, levels, tiers, DralySwords ⚔️ + streak.
 // Drives the "Diario" tab: a daily mini-game that awards XP + DralySwords,
@@ -612,6 +625,7 @@ module.exports = {
   deleteNote,
   logSentence,
   appendSentence,
+  clearAllSentences,
   getHistory,
   deleteHistoryEntry,
   getProgress,

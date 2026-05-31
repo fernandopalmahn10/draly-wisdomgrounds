@@ -2952,3 +2952,141 @@ button.hw-sent-chip:active { transform: scale(0.94); }
 .hw-bonus-save { background: linear-gradient(135deg, #5be8d1, #36b9c7); color: #07232a; flex: 1; min-width: 180px; }
 .hw-bonus-bar button:active { transform: scale(0.96); }
 .hw-reward-bonus { color: #5be8d1; font-weight: 800; font-size: 0.82rem; }
+
+/* ─── 🗂️ Monthly carpets in Mis oraciones ─────────────────────────────── */
+.hw-sentences-month {
+  margin: 0 0 14px;
+  border: 1.5px solid rgba(91,232,209,0.32);
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(40,60,90,0.5), rgba(20,30,55,0.55));
+  overflow: hidden;
+}
+.hw-sentences-month[open] { border-color: rgba(91,232,209,0.55); }
+.hw-sentences-month-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; cursor: pointer; list-style: none;
+  font-weight: 900; color: #d6f4ff; font-size: 1.02rem;
+  touch-action: manipulation;
+}
+.hw-sentences-month-head::-webkit-details-marker { display: none; }
+.hw-sentences-month-head::after {
+  content: '▾'; margin-left: auto; color: #5be8d1; font-weight: 900;
+  transition: transform 0.2s;
+}
+.hw-sentences-month:not([open]) .hw-sentences-month-head::after { transform: rotate(-90deg); }
+.hw-sm-icon { font-size: 1.2rem; }
+.hw-sm-name { font-family: 'Cinzel', serif; letter-spacing: 0.02em; }
+.hw-sm-count {
+  margin-left: auto; padding: 2px 10px;
+  background: rgba(91,232,209,0.18); color: #5be8d1;
+  border-radius: 999px; font-size: 0.78rem; font-weight: 900;
+}
+.hw-sentences-month-body { padding: 6px 12px 14px; }
+
+/* ─── 🌱 Parent 0→2000 progress bar ────────────────────────────────────── */
+.hw-parents-progress {
+  margin: 14px 0 0;
+  padding: 14px 16px;
+  background: linear-gradient(140deg, rgba(40,180,120,0.18), rgba(255,196,90,0.14));
+  border: 1.5px solid rgba(91,232,138,0.42);
+  border-radius: 18px;
+  color: #f4ffe6;
+}
+.hw-pp-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.hw-pp-icon { font-size: 1.4rem; }
+.hw-pp-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.02rem; color: #ffe082; }
+.hw-pp-tier {
+  margin-left: auto; padding: 3px 11px;
+  background: rgba(255,224,130,0.22); color: #ffe082;
+  border-radius: 999px; font-size: 0.78rem; font-weight: 900;
+  border: 1px solid rgba(255,224,130,0.55);
+}
+.hw-pp-bar {
+  width: 100%; height: 14px;
+  background: rgba(0,0,0,0.32);
+  border-radius: 999px; overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+}
+.hw-pp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5be88a, #ffe082, #ff7e5f);
+  border-radius: 999px;
+  transition: width 1.2s cubic-bezier(.2,.8,.2,1);
+  box-shadow: 0 0 14px rgba(91,232,138,0.55);
+}
+.hw-pp-meta { margin-top: 6px; font-size: 0.92rem; font-weight: 800; color: #fff5d8; }
+.hw-pp-note { margin-top: 4px; font-size: 0.78rem; color: rgba(243,230,194,0.78); line-height: 1.4; }
+
+/* ─── 📖 Story mode interactivity (gift reveal, challenge, grammar tip) ─ */
+.hw-sp-gift {
+  position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%);
+  width: clamp(140px, 38vw, 220px); height: clamp(140px, 38vw, 220px);
+  border: none; border-radius: 28px;
+  background: linear-gradient(140deg, #ffd24a, #ff7e5f);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px;
+  box-shadow: 0 14px 36px rgba(255,126,95,0.5), inset 0 -8px 16px rgba(0,0,0,0.2);
+  cursor: pointer; touch-action: manipulation;
+  animation: hwGiftBounce 0.9s ease-in-out infinite alternate;
+  z-index: 4;
+}
+.hw-sp-gift-emoji { font-size: clamp(3rem, 9vmin, 4.6rem); filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3)); }
+.hw-sp-gift-cta { font-weight: 900; color: #2a1500; font-size: 0.95rem; letter-spacing: 0.02em; }
+.hw-sp-gift.pop { animation: hwGiftPop 0.36s forwards; }
+@keyframes hwGiftBounce { from { transform: translate(-50%, -52%) scale(1); } to { transform: translate(-50%, -48%) scale(1.05); } }
+@keyframes hwGiftPop { to { transform: translate(-50%, -50%) scale(0); opacity: 0; } }
+
+.hw-sp-challenge .hw-sp-dialog,
+.hw-sp-tip .hw-sp-dialog { padding-bottom: 18px; }
+.hw-sp-choices {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px; margin-top: 10px;
+}
+.hw-sp-choice {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: rgba(255,255,255,0.92);
+  border: 2px solid var(--cat-color, #ffd24a);
+  border-radius: 14px;
+  padding: 12px 8px;
+  font-weight: 900; color: #2a1500;
+  cursor: pointer; touch-action: manipulation;
+  transition: transform 0.12s, background 0.15s, box-shadow 0.15s;
+  min-height: 76px;
+}
+.hw-sp-choice:active { transform: scale(0.95); }
+.hw-sp-choice.is-correct {
+  background: linear-gradient(135deg, #5be88a, #36b9c7);
+  color: #07232a;
+  box-shadow: 0 0 22px rgba(91,232,138,0.7);
+  animation: hwChoicePulse 0.5s ease-out;
+}
+.hw-sp-choice.is-wrong {
+  background: #ff7a7a; color: #fff;
+  animation: hwChoiceShake 0.35s;
+}
+@keyframes hwChoicePulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.07);} }
+@keyframes hwChoiceShake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+.hw-sp-choice-icon { font-size: 1.5rem; line-height: 1; }
+.hw-sp-choice-py { font-size: 0.95rem; }
+.hw-story-panel.shake { animation: hwPanelShake 0.4s; }
+@keyframes hwPanelShake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-4px);} 60%{transform:translateX(4px);} }
+
+.hw-sp-tip-card {
+  position: relative; z-index: 3;
+  margin: auto 14px; padding: 18px 18px 14px;
+  background: linear-gradient(160deg, #fff5d8, #ffe082);
+  border: 2px solid #b06a2a;
+  border-radius: 18px;
+  color: #2a1500;
+  max-width: 540px; align-self: center;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+}
+.hw-sp-tip-head { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.05rem; color: #8a4514; margin-bottom: 6px; }
+.hw-sp-tip-body { font-size: 0.98rem; line-height: 1.45; font-weight: 700; }
+.hw-sp-tip-card .hw-sp-next {
+  margin-top: 12px; width: 100%;
+  background: linear-gradient(135deg, #c81e1e, #e23b3b); color: #fff;
+  border: none; border-radius: 999px; padding: 12px 18px;
+  font-weight: 900; font-size: 0.98rem; cursor: pointer;
+  touch-action: manipulation;
+}
