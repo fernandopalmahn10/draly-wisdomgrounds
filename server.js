@@ -410,19 +410,60 @@ app.get('/api/emirati/audio/text', (req, res) => {
     console.warn('[azure-text] AZURE_SPEECH_KEY not set!');
     return res.status(404).end();
   }
-  // 🔧 EXACTLY MIRROR the word endpoint, which works for the user.
-  // Word path: _azureSpeak → on success _serveAudioFile(res, outPath, buf).
-  // Text path: same. If words work and text doesn't with the SAME code,
-  // we know it's environmental, not logic.
-  console.log('[azure-text] calling Azure for:', ar.slice(0, 40), 'voice:', voice);
-  _azureSpeak(ar, voice, cachePath, (err, buf) => {
-    if (err) {
-      console.warn('[azure-text] _azureSpeak failed:', err.message);
-      return res.status(502).json({ ok: false, error: err.message });
+  // 🚀 RAW PIPE — bypasses everything. Stream Azure response → client.
+  // No cache logic, no validation in the middle, no disk write between
+  // Azure and client. The user's been getting 404 for sentences for
+  // days because some step between Azure's success and the client's
+  // receive was failing. Cutting out everything in between.
+  console.log('[azure-text] PIPING Azure for:', ar.slice(0, 60), 'voice:', voice);
+  const region = process.env.AZURE_SPEECH_REGION || 'eastus';
+  const safeText = ar.replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+  const ssml = "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='ar-AE'>"
+    + "<voice name='" + voice + "'>" + safeText + '</voice></speak>';
+  const ssmlBuf = Buffer.from(ssml, 'utf8');
+  const azureReq = _https.request({
+    method: 'POST',
+    hostname: region + '.tts.speech.microsoft.com',
+    path: '/cognitiveservices/v1',
+    headers: {
+      'Ocp-Apim-Subscription-Key': process.env.AZURE_SPEECH_KEY,
+      'Content-Type': 'application/ssml+xml; charset=utf-8',
+      'X-Microsoft-OutputFormat': 'audio-24khz-48kbitrate-mono-mp3',
+      'User-Agent': 'draly-wisdomgrounds',
+      'Content-Length': ssmlBuf.length,
+    },
+  }, (azureResp) => {
+    console.log('[azure-text] Azure status:', azureResp.statusCode);
+    if (azureResp.statusCode !== 200) {
+      let errBody = '';
+      azureResp.on('data', (c) => { errBody += c; });
+      azureResp.on('end', () => {
+        console.warn('[azure-text] Azure error body:', errBody.slice(0, 300));
+        if (!res.headersSent) res.status(502).json({ error: 'azure ' + azureResp.statusCode, body: errBody.slice(0, 300) });
+      });
+      return;
     }
-    console.log('[azure-text] success, bytes:', buf.length, 'cached at:', cachePath);
-    _serveAudioFile(res, cachePath, buf);
+    // Set headers and PIPE the audio bytes directly to the client.
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Cache-Control', 'public, max-age=2592000');
+    azureResp.pipe(res);
+    // ALSO tee the bytes to disk for next time (best effort).
+    try {
+      const dir = _emPath.dirname(cachePath);
+      if (!_emFs.existsSync(dir)) _emFs.mkdirSync(dir, { recursive: true });
+      const writeStream = _emFs.createWriteStream(cachePath);
+      azureResp.pipe(writeStream);
+      writeStream.on('error', (e) => console.warn('[azure-text] tee write failed:', e.message));
+    } catch (e) {
+      console.warn('[azure-text] tee setup failed (non-fatal):', e.message);
+    }
   });
+  azureReq.on('error', (e) => {
+    console.warn('[azure-text] request error:', e.message);
+    if (!res.headersSent) res.status(503).json({ error: e.message });
+  });
+  azureReq.write(ssmlBuf);
+  azureReq.end();
 });
 
 // Streams Azure TTS straight to the HTTP response. Optionally tees the

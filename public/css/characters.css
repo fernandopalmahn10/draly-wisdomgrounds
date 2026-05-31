@@ -85,6 +85,41 @@
 }
 .char-celebration-ok:active { transform: scale(0.96); }
 
+/* 🎬 Cutscene video character — same sizing as the img sibling so
+   layouts don't shift. Object-contain preserves transparency. */
+.hw-cs-video.hw-cs-char {
+  object-fit: contain;
+  background: transparent;
+}
+
+/* 🔧 Avatar tile fix for character PNGs — give the tile a SOLID gradient
+   background so the transparent PNG's checkerboard pattern doesn't show
+   through. Also crop/fit the PNG so the full body is visible, not a
+   zoomed face. */
+.hw-avatar-option img[src*="cutscenes/chars/"],
+.hw-avatar-option-img img[src*="cutscenes/chars/"] {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(91,232,209,0.35) 0%, transparent 60%),
+    linear-gradient(160deg, #2a2545 0%, #1c1f3a 100%);
+  border-radius: 14px;
+  padding: 4px;
+}
+/* Same fix for the settings + cuaderno avatar display when a character is selected. */
+.hw-settings-avatar img[src*="cutscenes/chars/"],
+.m-detail-avatar img[src*="cutscenes/chars/"],
+.hw-avatar-frame img[src*="cutscenes/chars/"],
+.hw-list-avatar img[src*="cutscenes/chars/"],
+.hw-parents-avatar img[src*="cutscenes/chars/"] {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(91,232,209,0.42) 0%, transparent 60%),
+    linear-gradient(160deg, #2a2545 0%, #1c1f3a 100%);
+  border-radius: 50%;
+  object-fit: contain;
+  padding: 6px;
+}
+
 /* Avatar picker entries for the new characters */
 .hw-avatar-picker-char {
   position: relative;
