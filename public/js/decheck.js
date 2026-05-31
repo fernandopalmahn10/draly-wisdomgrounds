@@ -1,3 +1,7 @@
+// 🛑 DISABLED 2026-06-01 — the algorithm eats character pixels because
+// Gojo/Yugi PNGs have gray/white tones that match the checker pattern.
+// Only safe path: regenerate assets with SOLID GREEN background and
+// chroma-key the green out (single pure color, no false positives).
 // =====================================================================
 // 🧹 CHECKERBOARD CHROMA-KEY — strip fake-transparent backgrounds
 // =====================================================================
@@ -19,6 +23,10 @@
 // =====================================================================
 
 (function () {
+  // 🛑 DISABLED — algorithm was eating Gojo's hair / face shadows because
+  // they share gray tones with the editor checker pattern. Will re-enable
+  // once we have clean assets generated against a SOLID GREEN background.
+  return;
   function chromaKey(img) {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
