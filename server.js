@@ -390,21 +390,19 @@ app.get('/api/emirati/audio/text', (req, res) => {
   const voice = req.query.voice === 'male' ? 'ar-AE-HamdanNeural' : 'ar-AE-FatimaNeural';
   const hash = _emCrypto.createHash('sha1').update(voice + '|' + ar).digest('hex').slice(0, 16);
   const cachePath = _emPath.join(EMIRATI_AUDIO_DIR, 'txt_' + hash + '.mp3');
-  // 🔧 STALE-CACHE GUARD — previous broken deploys may have written
-  // 0-byte / corrupt MP3 files. If the cached file is too small to be
-  // a real MP3, delete it and regenerate fresh from Azure.
+  // 🔧 STALE-CACHE GUARD — checks BOTH size AND MP3 magic bytes. A
+  // partial / malformed file from earlier broken deploys could be >1KB
+  // but still not a real MP3, in which case the browser <audio> refuses
+  // to play it. ?force=1 bypasses the cache entirely.
+  if (req.query.force === '1' && _emFs.existsSync(cachePath)) {
+    try { _emFs.unlinkSync(cachePath); console.warn('[azure-text] force-evicted:', cachePath); } catch (_) {}
+  }
   if (_emFs.existsSync(cachePath)) {
-    try {
-      const sz = _emFs.statSync(cachePath).size;
-      if (sz < 1000) {
-        console.warn('[azure-text] evicting stale cache (' + sz + 'B):', cachePath);
-        _emFs.unlinkSync(cachePath);
-      } else {
-        return _serveAudioFile(res, cachePath);
-      }
-    } catch (e) {
-      console.warn('[azure-text] stat failed, will regenerate:', e.message);
+    if (_isValidMp3(cachePath)) {
+      return _serveAudioFile(res, cachePath);
     }
+    console.warn('[azure-text] evicting corrupt cache:', cachePath);
+    try { _emFs.unlinkSync(cachePath); } catch (_) {}
   }
   if (!process.env.AZURE_SPEECH_KEY) return res.status(404).end();
   _azureSpeak(ar, voice, cachePath, (err, buf) => {
@@ -414,6 +412,54 @@ app.get('/api/emirati/audio/text', (req, res) => {
     }
     _serveAudioFile(res, cachePath, buf);
   });
+});
+
+// Inspect first 4 bytes of a file to verify it's a real MP3.
+// MP3 magic: "ID3" header (0x49 0x44 0x33) OR MPEG sync word (0xFF 0xFx).
+// Anything else = corrupt cache → evict and regenerate.
+function _isValidMp3(filePath) {
+  try {
+    const fd = _emFs.openSync(filePath, 'r');
+    const buf = Buffer.alloc(4);
+    _emFs.readSync(fd, buf, 0, 4, 0);
+    _emFs.closeSync(fd);
+    // ID3 tag
+    if (buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33) return true;
+    // MPEG audio sync word (first 11 bits = 1)
+    if (buf[0] === 0xFF && (buf[1] & 0xE0) === 0xE0) return true;
+    return false;
+  } catch (e) {
+    console.warn('[mp3-valid] read failed:', e.message);
+    return false;
+  }
+}
+
+// 🧹 ADMIN-ONLY: wipe every cached audio file. Used when the cache has
+// corruption from previous broken deploys and we want a fresh slate.
+// Hit /api/maestro/emirati/audio/clear-cache?pw=...
+app.post('/api/maestro/emirati/audio/clear-cache', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  let removed = 0, kept = 0;
+  try {
+    if (_emFs.existsSync(EMIRATI_AUDIO_DIR)) {
+      const files = _emFs.readdirSync(EMIRATI_AUDIO_DIR);
+      files.forEach((f) => {
+        if (!/\.(mp3|m4a|wav|ogg)$/i.test(f)) return;
+        const p = _emPath.join(EMIRATI_AUDIO_DIR, f);
+        // Keep user-recorded MP3s (no txt_ prefix, no e\d+ word prefix).
+        if (f.startsWith('txt_') || /^e\d+(_m)?\.mp3$/.test(f)) {
+          try { _emFs.unlinkSync(p); removed++; } catch (_) { kept++; }
+        } else {
+          kept++;
+        }
+      });
+    }
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+  res.json({ ok: true, removed, kept });
 });
 
 // Reliable audio delivery — sets explicit Content-Type + Content-Length +

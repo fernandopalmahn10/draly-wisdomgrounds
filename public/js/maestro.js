@@ -159,6 +159,18 @@
   if ($('m-emirati-close')) $('m-emirati-close').addEventListener('click', () => emModal.classList.add('hidden'));
   if (emModal) emModal.addEventListener('click', (e) => { if (e.target === emModal) emModal.classList.add('hidden'); });
   if ($('m-em-shuffle')) $('m-em-shuffle').addEventListener('click', loadEmirati);
+  // 🧹 Nuke the cached MP3s — useful when bad files from earlier deploys
+  // are still stuck on disk and breaking playback. They'll regenerate on
+  // the next 🔊 tap (fresh from Azure).
+  if ($('m-em-clear-cache')) $('m-em-clear-cache').addEventListener('click', () => {
+    if (!confirm('¿Borrar todos los MP3 cacheados? Se regeneran al siguiente toque.')) return;
+    fetch('/api/maestro/emirati/audio/clear-cache?pw=' + encodeURIComponent(pw), { method: 'POST' })
+      .then((r) => r.json()).then((d) => {
+        if (d.ok) alert('✅ Borrados ' + d.removed + ' archivos.\n\nProbá ahora — la próxima reproducción regenera fresh desde Azure.');
+        else alert('Error: ' + (d.error || 'no se pudo'));
+      })
+      .catch((e) => alert('Error: ' + e.message));
+  });
   if ($('m-em-mark-all')) $('m-em-mark-all').addEventListener('click', () => {
     if (!_emToday.length) return;
     fetch('/api/maestro/emirati/mark?pw=' + encodeURIComponent(pw), {
