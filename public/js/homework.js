@@ -2304,8 +2304,30 @@
   .sigblk small { font-size: 0.7rem; color: #6b4a2a; font-weight: 800; }
   .signame { font-family:'Ma Shan Zheng', serif; color:#8a1414; font-size:1.1rem; }
   .goldseal { font-size: 2.8rem; }
-  .pbtn { display:block; margin: 18px auto 0; background: linear-gradient(135deg, #c81e1e, #e23b3b); color:#fff; border:none; border-radius:999px; padding:13px 28px; font-weight:900; font-size:1rem; cursor:pointer; box-shadow: 0 6px 18px rgba(200,30,30,0.4); }
-  @media print { body { background:#fff; padding:0; } .pbtn { display:none; } .cert { box-shadow:none; } }
+  /* 🔧 FAB-style PDF button — always pinned to the bottom of the viewport
+     on phones so it's never hidden behind the diploma scroll. Adds bottom
+     padding to body so the cert content isn't trapped under the button. */
+  .pbtn {
+    display: block;
+    position: fixed;
+    bottom: max(16px, env(safe-area-inset-bottom, 16px));
+    left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, #c81e1e, #e23b3b); color:#fff;
+    border:none; border-radius:999px; padding:14px 30px;
+    font-weight:900; font-size:1.02rem; cursor:pointer;
+    box-shadow: 0 8px 22px rgba(200,30,30,0.55), 0 0 0 4px rgba(255,255,255,0.85);
+    z-index: 9999;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(200,30,30,0.6);
+    white-space: nowrap;
+  }
+  .pbtn:active { transform: translateX(-50%) scale(0.96); }
+  body { padding-bottom: 90px !important; }
+  @media print {
+    body { background:#fff; padding:0 !important; }
+    .pbtn { display:none; }
+    .cert { box-shadow:none; }
+  }
 </style></head><body>
   <div class="cert"><div class="frame"><div class="frame2"><div class="inner">
     <span class="corner tl">❖</span><span class="corner tr">❖</span>

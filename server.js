@@ -397,9 +397,14 @@ app.get('/api/emirati/audio/text', (req, res) => {
       console.warn('[azure-text]', err.message);
       return res.status(404).end();
     }
-    res.setHeader('Content-Type', 'audio/mpeg');
+    // 🔧 SERVE FROM DISK, not from the in-memory buffer. res.send(buf)
+    // was causing the browser Audio element to fail load on mobile — the
+    // diagnose endpoint showed Azure returning 14KB perfectly, but the
+    // actual playback element fired `error`. Switching to sendFile means
+    // Express sets Content-Length/Type from the file stat and streams
+    // properly, exactly like the per-word endpoint that already works.
     res.setHeader('Cache-Control', 'public, max-age=2592000');
-    res.send(buf);
+    return res.sendFile(cachePath);
   });
 });
 
