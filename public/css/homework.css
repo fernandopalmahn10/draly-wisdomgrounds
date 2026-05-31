@@ -404,11 +404,34 @@ body.hw-bg {
 .hw-sp-char { position: absolute; top: calc(env(safe-area-inset-top,0) + 50px); left: 50%; transform: translateX(-50%); max-width: 80vmin; max-height: 56vh; width: auto; height: auto; object-fit: contain; filter: drop-shadow(0 14px 28px rgba(0,0,0,0.85)) drop-shadow(0 0 20px var(--cat-color, rgba(255,210,74,0.5))); animation: hwSpCharEnter 0.6s cubic-bezier(.2,1.6,.3,1) both; pointer-events: none; z-index: 2; }
 @keyframes hwSpCharEnter { 0% { transform: translateX(-50%) scale(0.6) rotate(-10deg); opacity: 0; } 100% { transform: translateX(-50%) scale(1) rotate(-2deg); opacity: 1; } }
 /* Word card floats over the character, lower-third */
-.hw-sp-word { position: absolute; top: 56%; left: 50%; transform: translate(-50%,-50%); z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 22px; background: var(--cat-color, #ffe082); color: #1a1a2a; border-radius: 18px; box-shadow: 0 8px 22px rgba(0,0,0,0.6); animation: hwSpWordPop 0.45s cubic-bezier(.3,1.6,.5,1) 0.3s both; }
+.hw-sp-word { position: absolute; top: 52%; left: 50%; transform: translate(-50%,-50%); z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: clamp(18px, 4vmin, 28px) clamp(26px, 6vmin, 44px); background: var(--cat-color, #ffe082); color: #1a1a2a; border-radius: 24px; border: 3px solid rgba(255,255,255,0.85); box-shadow: 0 12px 32px rgba(0,0,0,0.65), 0 0 0 6px rgba(255,224,130,0.18), 0 0 28px var(--cat-color, #ffe082); animation: hwSpWordPop 0.55s cubic-bezier(.3,1.6,.5,1) 0.3s both; max-width: 86vw; text-align: center; }
 @keyframes hwSpWordPop { 0% { transform: translate(-50%,-50%) scale(0); opacity: 0; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 1; } }
 .hw-sp-word-icon { font-size: clamp(2.2rem, 8vmin, 3.4rem); line-height: 1; }
-.hw-sp-word-py { font-weight: 900; font-size: clamp(1.4rem, 5vmin, 2rem); }
-.hw-sp-word-es { font-style: italic; font-weight: 800; font-size: clamp(0.85rem, 3vmin, 1.05rem); opacity: 0.78; }
+.hw-sp-word-py { font-weight: 900; font-size: clamp(2rem, 9vmin, 3.6rem); letter-spacing: -0.01em; line-height: 1.05; text-shadow: 0 2px 0 rgba(0,0,0,0.18); }
+.hw-sp-word-es { font-style: italic; font-weight: 900; font-size: clamp(1.05rem, 4.5vmin, 1.5rem); opacity: 0.86; }
+.hw-sp-word-icon { font-size: clamp(2rem, 7vmin, 2.8rem); line-height: 1; }
+/* Score popup that floats up when a word is revealed — Mario-style. */
+.hw-sp-score-burst { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); font-family: 'Cinzel', serif; font-weight: 900; font-size: clamp(1.6rem, 6vmin, 2.4rem); color: #ffe082; text-shadow: 0 0 12px #ff7e5f, 0 3px 0 rgba(0,0,0,0.45); pointer-events: none; z-index: 8; animation: hwScoreFloat 1.1s ease-out forwards; }
+@keyframes hwScoreFloat { 0% { opacity: 0; transform: translate(-50%, 20px) scale(0.6); } 20% { opacity: 1; transform: translate(-50%, 0) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -64px) scale(1); } }
+/* Confetti specks that fly out from the gift box on reveal. */
+.hw-sp-particle { position: absolute; left: 50%; top: 40%; width: 12px; height: 12px; border-radius: 50%; pointer-events: none; z-index: 7; animation: hwParticleFly 0.9s ease-out forwards; }
+@keyframes hwParticleFly {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(0.6); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx, 0px)), calc(-50% + var(--dy, 0px))) scale(0.2); }
+}
+/* Tiny combo counter at the top of the story panel — counts up each word. */
+.hw-sp-combo {
+  position: absolute; top: 12px; right: 14px; z-index: 5;
+  background: rgba(0,0,0,0.55); color: #ffe082;
+  border: 1.5px solid #ffe082; border-radius: 999px;
+  padding: 6px 14px;
+  font-family: 'Cinzel', serif; font-weight: 900; font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  box-shadow: 0 0 14px rgba(255,224,130,0.5);
+}
+.hw-sp-combo-num { font-size: 1.18rem; }
+.hw-sp-combo.pulse { animation: hwComboPulse 0.36s; }
+@keyframes hwComboPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.15);} }
 
 /* Pokémon-style dialogue bar — fixed bottom, white card, thick black border,
    character name plate above the body, action buttons inside the box. */
@@ -2952,6 +2975,32 @@ button.hw-sent-chip:active { transform: scale(0.94); }
 .hw-bonus-save { background: linear-gradient(135deg, #5be8d1, #36b9c7); color: #07232a; flex: 1; min-width: 180px; }
 .hw-bonus-bar button:active { transform: scale(0.96); }
 .hw-reward-bonus { color: #5be8d1; font-weight: 800; font-size: 0.82rem; }
+
+/* ✅ "X oraciones guardadas hoy" flash badge in the bonus panel. */
+.hw-bonus-saved {
+  margin-top: 10px; padding: 8px 14px;
+  background: rgba(91,232,138,0.18); color: #5be88a;
+  border: 1.5px solid #5be88a; border-radius: 999px;
+  font-weight: 900; font-size: 0.92rem;
+  text-align: center;
+  align-self: center;
+}
+.hw-bonus-saved.pulse { animation: hwBonusSavedPulse 0.42s; }
+@keyframes hwBonusSavedPulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.12);} }
+
+/* "Guardar otra oración" CTA on the reward overlay so the kid can stack
+   saves without re-running the whole daily. */
+.hw-extra-save {
+  margin-top: 14px;
+  background: linear-gradient(135deg, #5be88a, #36b9c7);
+  color: #07232a;
+  border: none; border-radius: 999px;
+  padding: 11px 22px;
+  font-weight: 900; font-size: 0.98rem;
+  cursor: pointer; touch-action: manipulation;
+  box-shadow: 0 6px 16px rgba(91,232,138,0.32);
+}
+.hw-extra-save:active { transform: scale(0.97); }
 
 /* ─── 🗂️ Monthly carpets in Mis oraciones ─────────────────────────────── */
 .hw-sentences-month {
