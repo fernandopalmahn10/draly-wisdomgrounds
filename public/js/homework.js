@@ -927,8 +927,15 @@
   // with a manga-style cut-in: halftone dot background, comic impact lines
   // radiating from center, BIG character entrance with dramatic angle, and
   // a manga speech bubble. Tap anywhere to skip; auto-advances after a beat.
+  //
+  // ⭐ NOW USES MP4 VIDEOS if the character has one (Gojo, Yugi) so the
+  // intro is animated, not a static PNG. Falls back to img if video fails.
   function showDailyStory(char, line, kind, onDone) {
     const game = $('hw-game'); if (!game) { if (onDone) onDone(); return; }
+    // Check if this character has a victory mp4 — use it for both intro AND outro
+    // so kids see real animation, not still PNG.
+    const charVideo = (window.DRALY_CHARACTERS && window.DRALY_CHARACTERS[char.id]) ? window.DRALY_CHARACTERS[char.id].victory : null;
+    const useVideo = !!charVideo && (char.id === 'gojo' || char.id === 'yugi');
     const wrap = document.createElement('div');
     wrap.className = 'hw-cutscene hw-cutscene-' + kind;
     // Tint the lines + halftone per character mood so the scene FEELS right.
@@ -946,7 +953,9 @@
       + '<div class="hw-cs-halftone"></div>'
       + '<div class="hw-cs-lines"></div>'
       + '<div class="hw-cs-impact">' + impact + '</div>'
-      + '<img class="hw-cs-char" src="' + char.img + '" alt="' + char.id + '" onerror="this.style.display=\'none\'">'
+      + (useVideo
+          ? '<video class="hw-cs-char hw-cs-video" src="' + charVideo + '" autoplay muted playsinline loop onerror="this.outerHTML=\'<img class=&quot;hw-cs-char&quot; src=&quot;' + char.img + '&quot; alt=&quot;' + char.id + '&quot;>\'"></video>'
+          : '<img class="hw-cs-char" src="' + char.img + '" alt="' + char.id + '" onerror="this.style.display=\'none\'">')
       + '<div class="hw-cs-bubble"><span class="hw-cs-bubble-text">' + escapeHtml(line) + '</span></div>'
       + '<div class="hw-cs-tap">▶ toca para continuar</div>';
     game.appendChild(wrap);
