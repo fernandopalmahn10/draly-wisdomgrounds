@@ -36,16 +36,33 @@
     yeti:   '❄️ Yeti',   fox:    '🦊 Zorro',   owl:    '🦉 Búho',    shark:  '🦈 Tiburón',
     viking: '⚔️ Vikingo', galaxy: '🌌 Galaxia', comet:  '☄️ Cometa',  boba:   '🧋 Boba',
     lotus:  '🪷 Loto',   ramen:  '🍜 Ramen',   koala:  '🐨 Koala',   raptor: '🦖 Raptor',
+    // ⭐ Character roster — uses PNGs from /assets/cutscenes/chars/
+    gojo:   '👁 Gojo',    yugi:   '🃏 Yugi',    yuji:   '👊 Yuji',    shelly: '🔫 Shelly',
+    fnaf:   '🎩 Freddy', dandy:  '🌻 Dandy',   hanzo:  '⚔️ Hanzō',  mei2:   '🧙‍♀️ Méi M.',
+    dralingo:'🐲 Dralingo', naruto:'🍥 Naruto', sasuke: '⚡ Sasuke', luffy:  '🏴‍☠️ Luffy',
+    goku:   '🥋 Goku',   pikachu:'⚡ Pikachu', sonic:  '💨 Sonic',  mario:  '🍄 Mario',
+    kirby:  '🌸 Kirby',  spiderman:'🕷 Spider', ironman:'🤖 Iron Man', elsa: '❄️ Elsa', moana: '🌊 Moana',
   };
+  // Set of names that resolve to PNGs in /assets/cutscenes/chars/ instead
+  // of SVGs in /assets/avatars/. These come from the character system.
+  const CHAR_AVATAR_NAMES = new Set([
+    'gojo','yugi','yuji','shelly','fnaf','dandy','hanzo','mei2','dralingo',
+    'naruto','sasuke','luffy','goku','pikachu','sonic','mario','kirby',
+    'spiderman','ironman','elsa','moana',
+  ]);
   // ?v bumped whenever the avatar ART is regenerated (same filenames, new
   // look) so browsers don't serve the stale cached SVG. 2026-05-28: fresh
   // cooler DiceBear set.
   const AVATAR_ASSET_VER = '20260528b';
   function avatarSrc(name) {
+    // Character roster uses pose-A PNG from cutscenes folder.
+    if (CHAR_AVATAR_NAMES.has(name)) {
+      return '/assets/cutscenes/chars/' + name + '-a.png?v=' + AVATAR_ASSET_VER;
+    }
     return '/assets/avatars/' + encodeURIComponent(name) + '.svg?v=' + AVATAR_ASSET_VER;
   }
   function isSvgAvatar(v) {
-    return typeof v === 'string' && /^[a-z]+$/.test(v) && AVATAR_LABELS[v];
+    return typeof v === 'string' && /^[a-z0-9]+$/.test(v) && AVATAR_LABELS[v];
   }
   // Drop avatar visuals into a host element. Accepts either an SVG name
   // ('mochi') or a legacy emoji string ('🧒🏼'). For SVGs we use <img>.
@@ -842,12 +859,30 @@
   }
   const DAILY_GAME = { active: false, practice: false, goal: 8, done: 0, correct: 0, pool: [], spawnT: null, slashing: false, combo: 0, comboT: null, discovered: [] };
   // ── Story characters — the daily picks one each day so it FEELS like a
-  // game beat, not just tapping. Reuses the FX-summon PNGs already on disk.
+  // game beat. ⭐ NOW using the new high-quality PNGs from the character
+  // system (chars/<id>-b.png is the signature action pose). Characters
+  // whose assets exist are heavily prioritized; legacy PNGs kept as
+  // fallbacks until their new assets land.
   const DAILY_CHARS = [
-    { id: 'gojo',     img: '/assets/png-library/gojo.png',
+    // ⭐ Gojo — new asset ready. Listed TWICE for higher pick odds.
+    { id: 'gojo',     img: '/assets/cutscenes/chars/gojo-b.png',
       name: 'Gojo',
       intros: ['Te he estado esperando. Hoy entrenamos: {theme}.', 'Soy Gojo. Vamos a desbloquear tus límites.', 'Cierra los ojos. Hoy verás más allá del idioma…'],
       outros: ['Limit Break completado. Pero esto apenas comienza…', 'Has visto el infinito por un segundo. ¿Pudiste sentirlo?', 'Mañana abriremos otra puerta. No faltes.'] },
+    { id: 'gojo',     img: '/assets/cutscenes/chars/gojo-b.png',
+      name: 'Gojo',
+      intros: ['Hoy te enseñaré el secreto del {theme}.', 'Snap. Y empezamos.', 'Mi infinito te protege mientras aprendes.'],
+      outros: ['Hueco abierto. Tu mente se expandió.', 'Domain expansion: Idioma Infinito ✨', 'Has dado un paso hacia el lado azul.'] },
+    // ⭐ Yugi — new asset ready. Listed TWICE.
+    { id: 'yugi',     img: '/assets/cutscenes/chars/yugi-b.png',
+      name: 'Yugi',
+      intros: ['¡Es hora del duelo! Tema de hoy: {theme}.', '¡Cree en el corazón de las cartas!', 'Mi deck está listo. ¿Y el tuyo?'],
+      outros: ['¡Ese fue un duelo legendario!', 'Tu mazo crece más fuerte cada día.', 'El Faraón está orgulloso de ti. Mañana otro turno.'] },
+    { id: 'yugi',     img: '/assets/cutscenes/chars/yugi-b.png',
+      name: 'Yugi',
+      intros: ['¡Activé la carta {theme}! Empezamos.', '¡Confía en tu deck!', 'El Rompecabezas del Milenio brilla por ti.'],
+      outros: ['¡Tu turno termina con victoria!', 'Las cartas hablan de ti hoy.', 'Volveré con un duelo aún mejor mañana.'] },
+    // 🔧 Legacy roster (kept as fallbacks until new PNGs land per character)
     { id: 'yuji',     img: '/assets/png-library/yuji.png',
       name: 'Yuji',
       intros: ['¡Vamos juntos! Hoy: {theme}. ¡Sin miedo!', '¡Cada palabra es un golpe! ¡Conéctalos!', '¡A entrenar! Hoy tu corazón decide.'],
