@@ -304,11 +304,16 @@ app.get('/api/emirati/audio/:wordId', (req, res) => {
   const cacheBaseName = id + (voice === 'ar-AE-HamdanNeural' ? '_m' : '');
   const cached = _emiratiFindCached(cacheBaseName);
   if (cached) {
-    res.setHeader('Cache-Control', 'public, max-age=2592000');  // 30 days
-    return res.sendFile(cached);
+    // Stale-cache guard (matches text endpoint).
+    try {
+      if (_emFs.statSync(cached).size < 1000) {
+        console.warn('[azure-word] evicting stale cache:', cached);
+        _emFs.unlinkSync(cached);
+      } else {
+        return _serveAudioFile(res, cached);
+      }
+    } catch (_) {}
   }
-  // No cached file → try Azure if configured. First hit pays ~500ms; every
-  // subsequent play serves the cached MP3 in <5ms.
   if (process.env.AZURE_SPEECH_KEY) {
     const word = Emirati.EMIRATI_WORDS.find((w) => w.id === id);
     if (!word) return res.status(404).end();
@@ -316,14 +321,12 @@ app.get('/api/emirati/audio/:wordId', (req, res) => {
     return _azureSpeak(word.ar, voice, outPath, (err, buf) => {
       if (err) {
         console.warn('[azure-tts] failed for', id, err.message);
-        return res.status(404).end();  // client falls back to Google MSA
+        return res.status(404).end();
       }
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Cache-Control', 'public, max-age=2592000');
-      res.send(buf);
+      _serveAudioFile(res, outPath, buf);
     });
   }
-  res.status(404).end();  // client falls back to /api/tts
+  res.status(404).end();
 });
 // 🧪 DIAGNOSTIC — super-admin only. Tests Azure with the exact text the
 // user passes, returns the full Azure result so we can see what's failing.
@@ -387,9 +390,21 @@ app.get('/api/emirati/audio/text', (req, res) => {
   const voice = req.query.voice === 'male' ? 'ar-AE-HamdanNeural' : 'ar-AE-FatimaNeural';
   const hash = _emCrypto.createHash('sha1').update(voice + '|' + ar).digest('hex').slice(0, 16);
   const cachePath = _emPath.join(EMIRATI_AUDIO_DIR, 'txt_' + hash + '.mp3');
+  // 🔧 STALE-CACHE GUARD — previous broken deploys may have written
+  // 0-byte / corrupt MP3 files. If the cached file is too small to be
+  // a real MP3, delete it and regenerate fresh from Azure.
   if (_emFs.existsSync(cachePath)) {
-    res.setHeader('Cache-Control', 'public, max-age=2592000');
-    return res.sendFile(cachePath);
+    try {
+      const sz = _emFs.statSync(cachePath).size;
+      if (sz < 1000) {
+        console.warn('[azure-text] evicting stale cache (' + sz + 'B):', cachePath);
+        _emFs.unlinkSync(cachePath);
+      } else {
+        return _serveAudioFile(res, cachePath);
+      }
+    } catch (e) {
+      console.warn('[azure-text] stat failed, will regenerate:', e.message);
+    }
   }
   if (!process.env.AZURE_SPEECH_KEY) return res.status(404).end();
   _azureSpeak(ar, voice, cachePath, (err, buf) => {
@@ -397,16 +412,31 @@ app.get('/api/emirati/audio/text', (req, res) => {
       console.warn('[azure-text]', err.message);
       return res.status(404).end();
     }
-    // 🔧 SERVE FROM DISK, not from the in-memory buffer. res.send(buf)
-    // was causing the browser Audio element to fail load on mobile — the
-    // diagnose endpoint showed Azure returning 14KB perfectly, but the
-    // actual playback element fired `error`. Switching to sendFile means
-    // Express sets Content-Length/Type from the file stat and streams
-    // properly, exactly like the per-word endpoint that already works.
-    res.setHeader('Cache-Control', 'public, max-age=2592000');
-    return res.sendFile(cachePath);
+    _serveAudioFile(res, cachePath, buf);
   });
 });
+
+// Reliable audio delivery — sets explicit Content-Type + Content-Length +
+// Accept-Ranges so mobile <audio> elements load cleanly. Falls back to
+// sendFile if the buffer isn't provided (cache-hit path).
+function _serveAudioFile(res, filePath, buf) {
+  try {
+    if (!buf && _emFs.existsSync(filePath)) {
+      buf = _emFs.readFileSync(filePath);
+    }
+    if (!buf || buf.length < 100) {
+      return res.status(500).json({ ok: false, error: 'invalid audio buffer' });
+    }
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Length', String(buf.length));
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=2592000');
+    res.status(200).end(buf);
+  } catch (e) {
+    console.warn('[serve-audio]', e.message);
+    res.status(500).end();
+  }
+}
 
 // Super-admin status check — used by the Maestro UI to surface "Azure
 // configured / not configured" and the cache progress (X / 275 generated).
