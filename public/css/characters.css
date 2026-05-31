@@ -92,32 +92,39 @@
   background: transparent;
 }
 
-/* 🔧 Avatar tile fix for character PNGs — give the tile a SOLID gradient
-   background so the transparent PNG's checkerboard pattern doesn't show
-   through. Also crop/fit the PNG so the full body is visible, not a
-   zoomed face. */
+/* 🔧 Character PNG avatar tile — the source PNGs have a checker pattern
+   BAKED IN as actual pixels (Higgsfield/NanoBanana output). True CSS
+   transparency tricks don't work. So we CLIP to the central character
+   region and zoom in to fill, hiding the checker corners entirely. */
 .hw-avatar-option img[src*="cutscenes/chars/"],
 .hw-avatar-option-img img[src*="cutscenes/chars/"] {
   width: 100%; height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   background:
-    radial-gradient(circle at 50% 30%, rgba(91,232,209,0.35) 0%, transparent 60%),
+    radial-gradient(circle at 50% 35%, rgba(91,232,209,0.42) 0%, transparent 65%),
     linear-gradient(160deg, #2a2545 0%, #1c1f3a 100%);
   border-radius: 14px;
-  padding: 4px;
+  /* Clip to the central character body (Higgsfield 9:16 output has
+     character centered, checker in left/right margins + top/bottom edges) */
+  clip-path: inset(8% 22% 8% 22% round 14px);
+  transform: scale(1.55);
+  transform-origin: center 40%;
 }
-/* Same fix for the settings + cuaderno avatar display when a character is selected. */
+/* Round avatar slots (settings, cuaderno, parents view, daily HUD) —
+   use ellipse clip to match the circular frame. */
 .hw-settings-avatar img[src*="cutscenes/chars/"],
 .m-detail-avatar img[src*="cutscenes/chars/"],
 .hw-avatar-frame img[src*="cutscenes/chars/"],
 .hw-list-avatar img[src*="cutscenes/chars/"],
 .hw-parents-avatar img[src*="cutscenes/chars/"] {
   background:
-    radial-gradient(circle at 50% 30%, rgba(91,232,209,0.42) 0%, transparent 60%),
+    radial-gradient(circle at 50% 35%, rgba(91,232,209,0.5) 0%, transparent 65%),
     linear-gradient(160deg, #2a2545 0%, #1c1f3a 100%);
   border-radius: 50%;
-  object-fit: contain;
-  padding: 6px;
+  object-fit: cover;
+  clip-path: ellipse(28% 42% at 50% 45%);
+  transform: scale(1.55);
+  transform-origin: center 40%;
 }
 
 /* Avatar picker entries for the new characters */
