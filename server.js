@@ -1034,8 +1034,27 @@ app.get('/api/homework/insights/:code', (req, res) => {
       wordsTotalHsk1:        150,
       sentencesCorrect,
       sentencesAttempted,
+      // 🌱 Lifetime saved-sentence count — drives the parent 0→2000 progress
+      // bar. Every save (warmup save, daily-bonus, edited copy) increments it.
+      sentencesSavedTotal:   (rec.sentencesBuilt || []).length,
+      sentencesSavedGoal:    2000,
     },
   });
+});
+
+// Maestro cleanup: nuke every saved sentence for this student. Used when
+// the teacher needs a fresh slate (kid was spamming test saves, etc.).
+// Super-admin or the owning teacher only — same access rule as deletion.
+app.post('/api/admin/student/:code/sentences/clear', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) {
+    return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  }
+  const removed = Students.clearAllSentences(rec.code);
+  res.json({ ok: true, removed });
 });
 
 app.get('/api/homework/assignment/:id', (req, res) => {
