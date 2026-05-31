@@ -24,11 +24,13 @@
         <!-- 🎬 Gojo victory video on the landing — Higgsfield-generated.
              Loops forever; muted (per browser autoplay rules); playsinline
              for iOS. PNG fallback if the video file is missing. -->
-        <!-- Reverted to clean Dralingo PNG until we regenerate the
-             character assets with a solid green chroma-key background.
-             Anything in cutscenes/chars/ has checker baked in and can't
-             be cleanly transparent until regenerated. -->
-        <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-floating">
+        <!-- NEW Gojo (regenerated 2026-05-31 — should have clean
+             transparency now). Falls back to Dralingo PNG if missing. -->
+        <video class="dralingo-video"
+               src="/assets/cutscenes/chars/gojo-victory.mp4?v=20260601e"
+               autoplay loop muted playsinline
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"></video>
+        <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-floating" style="display:none;">
       </div>
       <h1 class="hub-title">Draly Wisdomgrounds</h1>
       <div class="hub-ornament" aria-hidden="true">

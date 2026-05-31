@@ -605,14 +605,30 @@
   // do NOT want built-in OS Arabic voices (Samsung TTS sounds MSA, not
   // Khaleeji). The platform should ONLY play Azure ar-AE Hamdan/Fatima.
   async function speakEmiratiText(arText, btn) {
-    // Stop any in-flight playback.
     try { if (_emAudioSource) _emAudioSource.stop(); } catch (_) {}
     if (btn) { btn.textContent = '🔊…'; btn.classList.remove('m-em-speak-msa', 'm-em-speak-err'); }
     if (!arText) {
       if (btn) { btn.textContent = '⊘'; btn.title = 'Sin texto en árabe.'; }
       return;
     }
-    // 🚀 Azure ar-AE Khaleeji via Web Audio API. Only path.
+    // ⭐ USER'S INSIGHT: words play fine, sentences fail. The DIFFERENCE
+    // was the endpoint URL. Now sentences register the text and get back
+    // a sentence ID (s_<hash>) that goes through the EXACT word endpoint.
+    // Same Azure call, same cache, same response path — proven to work.
+    try {
+      const regResp = await fetch('/api/emirati/audio/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ar: arText }),
+      });
+      const reg = await regResp.json();
+      if (!reg.ok) throw new Error('register failed');
+      // Now play through the WORD endpoint with the sentence ID.
+      return speakEmirati(arText, btn, reg.id);
+    } catch (e) {
+      console.warn('[em-text] register failed, falling back to old text endpoint:', e);
+    }
+    // FALLBACK: old text endpoint (if register failed for any reason).
     try {
       // Lazy-init the AudioContext on first user gesture (mobile requirement).
       if (!_emAudioCtx) {
