@@ -114,6 +114,19 @@ body.hw-bg {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+/* ⏳ Daily-screen loading skeleton — replaces blank screen during the
+   network round-trip so the kid sees the page IS responding. */
+.hw-daily-loading {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 200px;
+  font-size: 1.1rem; font-weight: 800;
+  color: rgba(255, 213, 122, 0.85);
+  animation: hwDailyLoadingPulse 1.2s ease-in-out infinite;
+}
+@keyframes hwDailyLoadingPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
 .hw-list-header {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: 12px; flex-wrap: wrap;

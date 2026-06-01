@@ -696,6 +696,17 @@
     showScreen('daily');
     $('hw-game').classList.add('hidden');
     $('hw-reward').classList.add('hidden');
+    // ⚡ Show the daily screen with cached data INSTANTLY (if we have it
+    // from the HUD refresh on entry), so the kid sees structure rather
+    // than blank. The fetch then updates the live data in the background.
+    // Was: openDaily blocked on the network → "daily challenges take
+    // a lot to load" on Render's cold-start dyno.
+    if (dailyData && dailyData.progress) {
+      try { renderDailyHome(); } catch (_) {}
+    } else {
+      const ch = $('hw-daily-challenge');
+      if (ch) ch.innerHTML = '<div class="hw-daily-loading">⏳ Cargando reto…</div>';
+    }
     fetchDaily(() => renderDailyHome());
   }
   function renderDailyHome() {
@@ -3294,6 +3305,21 @@
     // Cancel any previous open so its eventual response/error can't show
     // a stale alert on top of the kid's new tap.
     _cancelOpenInFlight();
+    // 🩹 NUKE leftover overlays from a previous open (.hw-reward,
+    // .hw-cutscene, .char-celebration). These sit at z-index ~9999 and
+    // were the actual reason the "second tap doesn't open" looked silent
+    // — the assignment screen DID swap underneath, but a stale reward
+    // wrapper from the prior open covered the entire viewport. Nuking
+    // them here makes every open visually fresh.
+    document.querySelectorAll('.hw-cutscene, .char-celebration').forEach((el) => {
+      try { el.remove(); } catch (_) {}
+    });
+    const rwEl = $('hw-reward');
+    if (rwEl) { rwEl.classList.add('hidden'); rwEl.innerHTML = ''; }
+    const gameEl = $('hw-game');
+    if (gameEl) gameEl.classList.add('hidden');
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
     // Visual feedback so the kid knows their tap registered.
     document.querySelectorAll('.hw-card-loading').forEach((el) => el.classList.remove('hw-card-loading'));
     const card = document.querySelector('[data-assignment-id="' + CSS.escape(id) + '"]');
@@ -3615,6 +3641,7 @@
       const fid = folder.dataset.folderId;
       if (fid && hwFolder !== fid) {
         e.preventDefault();
+        e.stopPropagation();   // 🛡️ stop the card's own onclick from also firing
         hwFolder = fid;
         renderList();
         window.scrollTo({ top: 0, behavior: 'instant' });
@@ -3631,7 +3658,15 @@
     // Don't re-fire if we're literally already on the assignment screen.
     const onAsgScreen = $('screen-assignment') && !$('screen-assignment').classList.contains('hidden');
     if (onAsgScreen && currentAssignment && currentAssignment.id === id) return;
+    // 🛡️ stopPropagation here is CRITICAL — without it, the bubble phase
+    // continues to the card's per-instance onClick listener which also
+    // calls openAssignment(id). Two back-to-back calls would race: the
+    // second call cancels the first's fetch via AbortController, leaving
+    // an AbortError that we silently swallow → the kid sees the tap
+    // register (loading ring) but nothing opens. This was the actual
+    // root cause of "second time it just doesn't open, no error".
     e.preventDefault();
+    e.stopPropagation();
     openAssignment(id);
   }, true);  // capture phase so we beat any stuck overlay above the card
 
