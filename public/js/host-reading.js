@@ -20,6 +20,30 @@
   let lastStoryPayload    = null;  // 🎵 holds the latest reading-state payload
                                    // so the Start button can read state.music
                                    // and trigger the right themed track.
+
+  // 🎨 Apply per-story theme — sets CSS variables on the body so the
+  // lobby gradient + accent colors swap to match the story's mood.
+  // Pīnpīn → default teal. Yugi → purple/gold pharaoh. Future stories
+  // each ship their own palette in core/reading-story.js.
+  function applyStoryTheme(theme) {
+    const body = document.body;
+    if (!theme) {
+      // Reset to defaults if a story without a theme loads.
+      body.style.removeProperty('--story-primary');
+      body.style.removeProperty('--story-accent');
+      body.style.removeProperty('--story-bg');
+      body.style.removeProperty('background');
+      return;
+    }
+    if (theme.primary) body.style.setProperty('--story-primary', theme.primary);
+    if (theme.accent)  body.style.setProperty('--story-accent',  theme.accent);
+    if (theme.bgGrad) {
+      body.style.setProperty('--story-bg', theme.bgGrad);
+      // Apply directly to body so the whole page swaps mood.
+      body.style.background = theme.bgGrad;
+      body.style.transition = 'background 0.6s ease';
+    }
+  }
   let currentPlaybackRate = 1.0;
   let testTimerInt        = null;     // ticks the per-question countdown
   let currentTestQIdx     = -1;       // 0-based; -1 when no test active
@@ -230,11 +254,13 @@
       lastStoryPayload = state;   // capture so start-btn can read music
       currentPageIdx = -1;  // force render below
       $('rd-page-max').textContent = story.pages.length;
+      applyStoryTheme(state.theme);    // 🎨 swap colors per story
     } else if (state.pages && !story) {
       story = { title: state.title, subtitle: state.subtitle, pages: state.pages };
       lastStoryPayload = state;
       $('rd-page-max').textContent = story.pages.length;
       currentStoryId = state.storyId;
+      applyStoryTheme(state.theme);
     } else {
       lastStoryPayload = state;   // keep latest in any case
     }
