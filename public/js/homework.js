@@ -3843,18 +3843,18 @@
         <span class="hw-lib-pinyin">${escapeHtml(w.pinyin)}</span>
         <span class="hw-lib-es">${escapeHtml(w.es)}</span>`;
       chip.addEventListener('click', () => {
-        // ⚡ INSTANT TAP — append the chip directly to the stage instead
-        // of triggering a full rebuild. Was O(N²) over a building
-        // sentence; now O(1) per tap.
+        // ⚡ INSTANT TAP + properly-anchored Modo Curioso bubble.
         pushUndo(activeItemIdx);
         const cur = currentAnswers[activeItemIdx] || '';
         currentAnswers[activeItemIdx] = (cur ? cur + ' ' : '') + w.pinyin;
-        appendChipToStage(activeItemIdx, w.pinyin);   // ← fast path
+        appendChipToStage(activeItemIdx, w.pinyin);
         refreshUndoButtons();
         chip.classList.remove('flash');
         void chip.offsetWidth;
         chip.classList.add('flash');
         _playTapChime();
+        // 🐍 Modo Curioso bubble — RIGHT next to the tapped word.
+        _showWordMeaningBubble(chip, w);
       });
       wrap.appendChild(chip);
     });
@@ -4248,29 +4248,47 @@
   // every tap feel like a little discovery.
 
   // Floating bubble above the chip showing hanzi + Spanish for ~1.4s.
+  // 🐍 Modo Curioso bubble — viewport-fixed positioning so it appears
+  // RIGHT next to the tapped word, never offscreen. Auto-flips above the
+  // chip if there's no room below. Single tracked bubble (removes any
+  // previous one first) so rapid taps don't stack pop-ups. Pointer-events
+  // disabled so it never blocks the kid's next tap.
+  let _meaningBubbleTimer = null;
   function _showWordMeaningBubble(chip, w) {
     if (!chip || !w) return;
+    // Clear any previous bubble + its timer so we never stack
+    const prev = document.querySelector('.hw-meaning-bubble');
+    if (prev) { try { prev.remove(); } catch (_) {} }
+    if (_meaningBubbleTimer) clearTimeout(_meaningBubbleTimer);
     const bubble = document.createElement('div');
     bubble.className = 'hw-meaning-bubble';
     const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
     const color = cat ? cat.color : '#5be8d1';
     bubble.style.setProperty('--cat-color', color);
+    bubble.style.position = 'fixed';   // viewport-relative, scroll-proof
+    bubble.style.pointerEvents = 'none';
     bubble.innerHTML = `
       <span class="hw-mb-icon">${escapeHtml(w.icon || '✨')}</span>
-      <span class="hw-mb-hanzi">${escapeHtml(w.hanzi || '')}</span>
       <span class="hw-mb-pinyin">${escapeHtml(w.pinyin || '')}</span>
       <span class="hw-mb-arrow">→</span>
       <span class="hw-mb-es">${escapeHtml(w.es || '')}</span>`;
-    // Position it just above the chip
-    const rect = chip.getBoundingClientRect();
-    bubble.style.left = (rect.left + rect.width / 2) + 'px';
-    bubble.style.top  = (rect.top + window.scrollY - 4) + 'px';
     document.body.appendChild(bubble);
-    // Animate in, then fade out. Longer linger so the kid actually reads
-    // the meaning (user wanted this to feel like the full curious card).
+    // Measure AFTER append so we know the bubble's natural size
+    const cr = chip.getBoundingClientRect();
+    const br = bubble.getBoundingClientRect();
+    // Horizontal: center on the chip, clamp to viewport edges
+    let left = cr.left + (cr.width / 2) - (br.width / 2);
+    left = Math.max(8, Math.min(left, window.innerWidth - br.width - 8));
+    // Vertical: prefer ABOVE the chip; flip BELOW if not enough room above
+    let top = cr.top - br.height - 10;
+    if (top < 8) top = cr.bottom + 10;
+    bubble.style.left = left + 'px';
+    bubble.style.top  = top + 'px';
     requestAnimationFrame(() => bubble.classList.add('show'));
-    setTimeout(() => bubble.classList.add('fade'), 1500);
-    setTimeout(() => { if (bubble.parentNode) bubble.parentNode.removeChild(bubble); }, 2100);
+    _meaningBubbleTimer = setTimeout(() => {
+      bubble.classList.add('fade');
+      setTimeout(() => { try { bubble.remove(); } catch (_) {} }, 220);
+    }, 1300);
   }
 
   // Visual "fly-to-stage" — clones the chip's pinyin and animates it
