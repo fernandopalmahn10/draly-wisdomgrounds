@@ -1025,8 +1025,14 @@
         _arenaBound = true;
         // Slash trail: while a finger/mouse is down, drop fading streak dots
         // and let the swipe "cut" objects it passes over (pointerenter).
-        arena.addEventListener('pointerdown', (e) => { DAILY_GAME.slashing = true; dailyTrail(e); });
-        arena.addEventListener('pointermove', (e) => { if (DAILY_GAME.slashing) dailyTrail(e); });
+        arena.addEventListener('pointerdown', (e) => {
+          if (!DAILY_GAME.active) return;   // ← gate: daily ended? no-op
+          DAILY_GAME.slashing = true; dailyTrail(e);
+        });
+        arena.addEventListener('pointermove', (e) => {
+          if (!DAILY_GAME.active || !DAILY_GAME.slashing) return;
+          dailyTrail(e);
+        });
         window.addEventListener('pointerup', () => { DAILY_GAME.slashing = false; });
         window.addEventListener('pointercancel', () => { DAILY_GAME.slashing = false; });
       }
@@ -1767,7 +1773,15 @@
   }
   function stopDailyGame() {
     DAILY_GAME.active = false;
+    // 🛑 CRITICAL — kill the slashing flag + spawn timer + combo timer so
+    // pointermove handlers stop firing dailyTrail() after the daily ends.
+    // Without this, the kid leaves the daily, goes to do homework, and
+    // every pointer move on the assignment screen runs the daily trail
+    // logic in the background. User reported "daily interferes with
+    // making sentences" — this is the cause.
+    DAILY_GAME.slashing = false;
     if (DAILY_GAME.spawnT) { clearTimeout(DAILY_GAME.spawnT); DAILY_GAME.spawnT = null; }
+    if (DAILY_GAME.comboT) { clearTimeout(DAILY_GAME.comboT); DAILY_GAME.comboT = null; }
     const g = $('hw-game'); if (g) { g.classList.add('hidden'); g.style.pointerEvents = 'none'; }
     const a = $('hw-game-arena'); if (a) a.innerHTML = '';
     // 🩹 NUKE leftover full-screen overlays. Was the source of "after a
@@ -3699,6 +3713,52 @@
       btn.disabled = !undoStacks[i] || !undoStacks[i].length;
     });
   }
+  // 🛠️ Helper — builds a single stage chip with its remove handler.
+  // Extracted so the append-fast-path (appendChipToStage below) can use
+  // the same builder as the full rebuild path (renderStage).
+  function _buildStageChip(i, word) {
+    const dict = window.lookupWuPinyin ? window.lookupWuPinyin(word) : null;
+    const cat = dict && window.WU_CATEGORIES && window.WU_CATEGORIES[dict.cat];
+    const color = cat ? cat.color : '#ffe082';
+    const chip = document.createElement('span');
+    chip.className = 'hw-stage-word';
+    chip.style.setProperty('--cat-color', color);
+    chip.title = 'Toca para quitar';
+    chip.innerHTML = `<span class="hw-stage-pinyin">${escapeHtml(word)}</span>`;
+    chip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pushUndo(i);
+      // Find this chip's index in the current array (not the closure
+      // index — that goes stale if other chips were removed). Use the
+      // chip's DOM position as the source of truth.
+      const stage = document.getElementById('hw-stage-' + i);
+      const idx = stage ? Array.prototype.indexOf.call(stage.querySelectorAll('.hw-stage-word'), chip) : -1;
+      const arr = (currentAnswers[i] || '').trim().split(/\s+/).filter(Boolean);
+      if (idx >= 0 && idx < arr.length) {
+        arr.splice(idx, 1);
+        currentAnswers[i] = arr.join(' ');
+        renderStage(i);          // full rebuild only on REMOVE (rare)
+        refreshUndoButtons();
+      }
+    });
+    return chip;
+  }
+  // ⚡ FAST PATH — append a single chip without rebuilding the entire
+  // stage. CRITICAL FIX (2026-06-01): renderStage was clearing
+  // innerHTML and rebuilding EVERY existing chip on EVERY tap. Cost
+  // grew linearly per chip → quadratic over building a sentence.
+  // Adding the 10th word meant rebuilding 10 chips, redoing 10 dict
+  // lookups + 10 event handler bindings + 10 element creations. The
+  // exact source of "touch then slowly the word appears."
+  // Now: append the new chip directly. Rebuild only happens on remove.
+  function appendChipToStage(i, word) {
+    const stage = document.getElementById('hw-stage-' + i);
+    if (!stage) return;
+    // Drop the empty-placeholder span if it's there
+    const empty = stage.querySelector('.hw-stage-empty');
+    if (empty) stage.innerHTML = '';
+    stage.appendChild(_buildStageChip(i, word));
+  }
   function renderStage(i) {
     const stage = document.getElementById('hw-stage-' + i);
     if (!stage) return;
@@ -3708,28 +3768,7 @@
       return;
     }
     stage.innerHTML = '';
-    words.forEach((w, idx) => {
-      const dict = window.lookupWuPinyin ? window.lookupWuPinyin(w) : null;
-      const cat = dict && window.WU_CATEGORIES && window.WU_CATEGORIES[dict.cat];
-      const color = cat ? cat.color : '#ffe082';
-      const chip = document.createElement('span');
-      chip.className = 'hw-stage-word';
-      chip.style.setProperty('--cat-color', color);
-      // No ✕ — kids read the X as "this word is wrong". Tapping the word
-      // itself removes it (title hint explains it on long-press/hover).
-      chip.title = 'Toca para quitar';
-      chip.innerHTML = `<span class="hw-stage-pinyin">${escapeHtml(w)}</span>`;
-      chip.addEventListener('click', (e) => {
-        e.stopPropagation();
-        pushUndo(i);
-        const arr = (currentAnswers[i] || '').trim().split(/\s+/).filter(Boolean);
-        arr.splice(idx, 1);
-        currentAnswers[i] = arr.join(' ');
-        renderStage(i);
-        refreshUndoButtons();
-      });
-      stage.appendChild(chip);
-    });
+    words.forEach((w) => stage.appendChild(_buildStageChip(i, w)));
   }
   // EXP tab bar above the library — match warmup mode's experience filter.
   function renderLibraryTabs() {
@@ -3804,25 +3843,18 @@
         <span class="hw-lib-pinyin">${escapeHtml(w.pinyin)}</span>
         <span class="hw-lib-es">${escapeHtml(w.es)}</span>`;
       chip.addEventListener('click', () => {
-        // ⚡ MINIMAL TAP — pure-CSS feedback only. User explicitly
-        // demanded "smooth like before". Cosmetic effects removed:
-        //   - bubble: was misplaced ("way ahead of where I'm tapping")
-        //     AND ate ~20-40ms of getBoundingClientRect + appendChild +
-        //     setTimeout chains per tap. Useless if it's offscreen.
-        //   - fly-to-stage: another DOM-create + setTimeout chain.
-        //   - chime: still here but ONLY plays on every 3rd tap so the
-        //     audio context isn't slammed on rapid sequential taps.
-        // The chip flash + the stage updating IS the feedback. Done.
+        // ⚡ INSTANT TAP — append the chip directly to the stage instead
+        // of triggering a full rebuild. Was O(N²) over a building
+        // sentence; now O(1) per tap.
         pushUndo(activeItemIdx);
         const cur = currentAnswers[activeItemIdx] || '';
         currentAnswers[activeItemIdx] = (cur ? cur + ' ' : '') + w.pinyin;
-        renderStage(activeItemIdx);
+        appendChipToStage(activeItemIdx, w.pinyin);   // ← fast path
         refreshUndoButtons();
         chip.classList.remove('flash');
         void chip.offsetWidth;
         chip.classList.add('flash');
-        // Throttled chime — 1 in 3 taps so rapid sequences don't queue audio.
-        if (((Math.random() * 3) | 0) === 0) _playTapChime();
+        _playTapChime();
       });
       wrap.appendChild(chip);
     });
@@ -4058,10 +4090,21 @@
       } catch (_) {}
     }
   }
+  // 💾 In-memory cache of object-URLs for already-fetched TTS clips so the
+  // same word/sentence plays INSTANTLY on the 2nd, 3rd, ... tap (was
+  // re-hitting /api/tts every time, ~500-1500ms per fetch).
+  const _ttsObjectCache = new Map();
   function speakChinese(text, btn) {
     const clean = String(text || '').trim();
     if (!clean) return;
-    _stopAllSpeech();
+    // ⚡ CRITICAL FIX 2026-06-01: SWAP-THEN-STOP. The previous version
+    // called _stopAllSpeech() at the TOP of this function, which aborted
+    // the previous in-flight audio fetch BEFORE the new one was ready.
+    // Result: rapid taps each killed the previous audio mid-load and
+    // none played until the user FINALLY stopped tapping. Exactly the
+    // "doesn't play until the 7th tap" the user reported.
+    // Now: build the new audio locally, wait for it to be ready, THEN
+    // stop the old one and swap. Audio is uninterrupted.
 
     // UI feedback while loading/playing
     let restoreBtn = null;
@@ -4082,9 +4125,13 @@
     // triggered an immediate Web Speech fallback EVERY time. As a result
     // the server-side cache stayed empty and the user only ever heard
     // the bad TTS.
-    const url = '/api/tts?text=' + encodeURIComponent(clean);
+    // ⚡ Object-URL cache short-circuits re-fetches of the same text.
+    const cachedUrl = _ttsObjectCache.get(clean);
+    const url = cachedUrl || ('/api/tts?text=' + encodeURIComponent(clean));
     const audio = new Audio();
-    _ttsAudio = audio;
+    // Stop the previous audio only AFTER our new one starts playing —
+    // see canplay handler below. _ttsAudio remains the old one until then.
+    const prevAudio = _ttsAudio;
     let playedOnce = false;
     let fellBack = false;
 
@@ -4107,12 +4154,20 @@
 
     audio.addEventListener('canplay', () => {
       if (fellBack) return;     // already gave up — don't play
+      // 🔄 Now that THIS audio is ready, kill the previous one and swap.
+      if (prevAudio && prevAudio !== audio) {
+        try { prevAudio.pause(); prevAudio.removeAttribute('src'); prevAudio.load(); } catch (_) {}
+      }
+      _ttsAudio = audio;
       audio.play()
         .then(() => { playedOnce = true; })
         .catch((e) => { if (!playedOnce) fallback('play(): ' + e.message); });
     });
     audio.addEventListener('playing', () => {
       playedOnce = true;
+      // Cache the URL (only the first time we successfully play this text)
+      // so subsequent identical plays skip the network fetch.
+      if (!cachedUrl) _ttsObjectCache.set(clean, url);
       // Hard kill any Web Speech that might have been queued
       if ('speechSynthesis' in window) {
         try { window.speechSynthesis.cancel(); } catch (_) {}
@@ -4258,7 +4313,11 @@
         _tapAudioCtx = new AC();
       }
       const ctx = _tapAudioCtx;
-      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      // ⚡ If the context is still suspended (no user gesture yet), skip
+      // this note silently — _primeAudio will resume it on first tap.
+      // Was: scheduling notes into a suspended ctx, then they all played
+      // at once when the ctx finally woke up = "7 chimes at once" feel.
+      if (ctx.state !== 'running') return;
       const t = ctx.currentTime;
       // Two stacked notes — a perfect 5th, classic "discovery" chime
       const playNote = (freq, startOffset, dur, peak) => {
@@ -4288,4 +4347,39 @@
       window.speechSynthesis.addEventListener('voiceschanged', () => {});
     }
   }
+  // 🔊 PRE-WARM the chime AudioContext on the first user interaction.
+  // Browsers create AudioContexts in 'suspended' state until a real user
+  // gesture. ctx.resume() is async; the previous code fired-and-forgot
+  // it, so the FIRST several oscillator schedules were queued into a
+  // still-suspended context and silently dropped. Result: "first taps
+  // make no sound, then suddenly the 7th tap plays."
+  // Fix: on the first pointerdown ANYWHERE on the page, create the
+  // context and await resume() BEFORE any chime is ever attempted.
+  let _audioReady = false;
+  function _primeAudio() {
+    if (_audioReady) return;
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) { _audioReady = true; return; }
+      if (!_tapAudioCtx) _tapAudioCtx = new AC();
+      const ctx = _tapAudioCtx;
+      const finish = () => {
+        _audioReady = true;
+        // Play a silent tick so iOS counts the context as "user-activated"
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        g.gain.value = 0;
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + 0.01);
+      };
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(finish).catch(() => { _audioReady = true; });
+      } else {
+        finish();
+      }
+    } catch (_) { _audioReady = true; }
+  }
+  document.addEventListener('pointerdown', _primeAudio, { once: true, capture: true });
+  document.addEventListener('touchstart',  _primeAudio, { once: true, capture: true });
+  document.addEventListener('click',       _primeAudio, { once: true, capture: true });
 })();
