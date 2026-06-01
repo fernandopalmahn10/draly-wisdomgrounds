@@ -103,6 +103,15 @@
     requestAnimationFrame(() => overlay.classList.add('show'));
     const close = () => {
       overlay.classList.remove('show');
+      // 🛑 Explicitly kill the chroma-key rAF loop on this video BEFORE
+      // we remove the overlay, so it never leaks even one extra frame.
+      try {
+        const vid = overlay.querySelector('.char-celebration-video');
+        const cv = overlay.querySelector('.char-celebration-media .ck-canvas');
+        if (vid && vid._chromaStop) vid._chromaStop();
+        if (cv && cv._chromaStop) cv._chromaStop();
+        if (vid) { try { vid.pause(); } catch (_) {} }
+      } catch (_) {}
       setTimeout(() => { try { overlay.remove(); } catch (_) {} }, 300);
     };
     overlay.querySelector('.char-celebration-ok').addEventListener('click', close);

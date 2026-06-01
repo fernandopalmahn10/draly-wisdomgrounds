@@ -46,36 +46,47 @@
 
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
+      // 🛑 CRITICAL PERF FIX (2026-06-01) — was leaking one infinite rAF
+      // loop per celebration. Even after the video was removed from DOM,
+      // the loop kept rescheduling itself. After 10 celebrations there
+      // were 10 rAF loops firing every frame, blocking touch events and
+      // making the whole platform feel unresponsive ("phantom touches",
+      // "stuck active states"). Now the loop bails when the video is
+      // detached from the document.
+      let stopped = false;
+      function stop() { stopped = true; }
       function draw() {
+        if (stopped) return;
+        // Self-terminate if the video has been removed from the DOM —
+        // this is the safety net for celebration overlays that get
+        // destroyed mid-playback by overlay.remove() in characters.js.
+        if (!document.contains(video)) { stopped = true; return; }
         if (!video.paused && !video.ended && video.readyState >= 2) {
           try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const id = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const data = id.data;
-            // 🟢 GREEN CHROMA-KEY (replaced gray-checker version):
-            // Pixel is "green screen" if green channel dominates by 40+
-            // over BOTH red and blue. Character pixels never satisfy
-            // this — Gojo's white hair has R=G=B (rejected), skin has
-            // R>G>B (rejected), blue clothes have B>G (rejected).
-            // Only the pure green backdrop matches.
             for (let i = 0; i < data.length; i += 4) {
               const r = data[i], g = data[i + 1], b = data[i + 2];
               if (g > r + 40 && g > b + 40 && g > 80) {
-                data[i + 3] = 0; // transparent
+                data[i + 3] = 0;
               }
             }
             ctx.putImageData(id, 0, 0);
           } catch (e) {
-            // CORS taint or similar — fall back to showing original video.
             console.warn('[chroma] frame draw failed:', e.message);
             video.style.display = '';
             canvas.style.display = 'none';
+            stopped = true;
             return;
           }
         }
         requestAnimationFrame(draw);
       }
       requestAnimationFrame(draw);
+      // Expose the stop function so callers can kill the loop explicitly.
+      video._chromaStop = stop;
+      canvas._chromaStop = stop;
     };
 
     if (video.readyState >= 1) {

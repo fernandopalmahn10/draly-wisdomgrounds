@@ -3097,7 +3097,64 @@ button.hw-sent-chip:active { transform: scale(0.94); }
    itself) hide the reward. A second escape hatch in case the OK button
    ever gets clipped on weird viewports. */
 .hw-reward { cursor: pointer; }
-.hw-reward-card { cursor: default; }
+.hw-reward-card { cursor: default; position: relative; }
+/* 🆘 Always-tappable ✕ in the top-right of the card. position:absolute
+   guarantees it doesn't get pushed by long text. Big tap target (44px)
+   so even fat-finger taps land. Sits above any other card content. */
+.hw-reward-eject {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff5d8;
+  font-size: 1.4rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.hw-reward-eject:active {
+  background: rgba(255, 100, 100, 0.4);
+  transform: scale(0.92);
+}
+
+/* 📱 KILL MOBILE STICKY HOVER — on iOS/Android, :hover stays "on" after
+   a tap, causing the highlighted-but-no-touch ghost states the user
+   reported. Scope all hover/active visual effects to devices that
+   actually have hover (desktops with mice). Mobile uses :active only. */
+@media (hover: none) {
+  .hw-lib-chip:hover,
+  .hw-folder-card:hover,
+  .hw-card:hover,
+  .hw-custom-card:hover,
+  .hw-reward-eject:hover,
+  .hw-reward-ok:hover {
+    background: inherit;
+    transform: none;
+    border-color: inherit;
+  }
+}
+/* Remove the blue tap-flash rectangle iOS draws on tap targets. */
+.hw-lib-chip,
+.hw-folder-card,
+.hw-card,
+.hw-custom-card,
+.hw-reward-ok,
+.hw-reward-eject,
+.hw-item-clear,
+.hw-item-undo,
+.hw-item-speak {
+  -webkit-tap-highlight-color: transparent;
+}
 .hw-reward-burst { font-size: 4rem; animation: hwObjBob 1s ease-in-out infinite; }
 .hw-reward-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; color: #ffd24a; margin: 6px 0 14px; }
 .hw-reward-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
