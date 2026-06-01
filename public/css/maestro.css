@@ -761,6 +761,42 @@ body.hw-bg {
   font-weight: 700;
   white-space: nowrap;
 }
+/* 📖 Reading folder picker — HSK1 experience buckets each containing
+   the stories tagged with that exp (Pīnpīn → EXP1, XiǎoMíng → EXP8). */
+.m-reading-folders { display: flex; flex-direction: column; gap: 18px; padding: 4px 0; }
+.m-reading-folder { background: rgba(20,28,50,0.6); border: 1.5px solid rgba(91,232,209,0.35); border-radius: 14px; padding: 12px 14px; }
+.m-reading-folder-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1rem; color: #5be8d1; margin-bottom: 10px; letter-spacing: 0.04em; }
+.m-reading-folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.m-reading-card {
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  background: linear-gradient(135deg, rgba(40,50,80,0.95), rgba(22,28,52,0.95));
+  border: 2px solid rgba(255,210,74,0.45);
+  border-radius: 12px;
+  color: #fff5d8;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.m-reading-card:active { transform: scale(0.98); }
+.m-reading-card-cover {
+  width: 80px; height: 80px;
+  border-radius: 10px;
+  background-size: cover; background-position: center;
+  background-color: rgba(91,232,209,0.15);
+  border: 1.5px solid rgba(255,210,74,0.4);
+}
+.m-reading-card-body { min-width: 0; }
+.m-reading-card-title { font-weight: 900; font-size: 0.98rem; color: #ffd24a; }
+.m-reading-card-sub { font-size: 0.82rem; opacity: 0.85; margin-top: 2px; }
+.m-reading-card-meta { font-size: 0.74rem; opacity: 0.6; margin-top: 4px; }
+.m-reading-card-cta { font-weight: 900; color: #5be8d1; font-size: 0.95rem; white-space: nowrap; }
+.m-modal-sub { color: rgba(231,250,255,0.7); font-size: 0.9rem; margin: -6px 0 12px; font-style: italic; }
+
 .m-emirati-list { display: flex; flex-direction: column; gap: 12px; }
 /* 🆕 Self-refilling list summary (10 palabras · 17 oraciones por estudiar)
    sits at the top of the list so the user always knows the queue depth

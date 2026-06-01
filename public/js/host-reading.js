@@ -188,6 +188,17 @@
       });
       sel.value = currentStoryId || state.storyId || '';
       storyListRendered = true;
+      // 🆕 If the page was launched via Modo Maestro with ?story=<id> in
+      // the URL, preselect that story automatically — saves the teacher
+      // a manual selection step.
+      try {
+        const preselect = new URLSearchParams(location.search).get('story');
+        if (preselect && state.storyList.some((s) => s.id === preselect)
+            && preselect !== currentStoryId) {
+          sel.value = preselect;
+          socket.emit('rd:setStory', { pin, password: adminPw, storyId: preselect });
+        }
+      } catch (_) {}
     }
     // Keep the dropdown in sync if story switched via another route
     if (state.storyId) $('rd-story-select').value = state.storyId;

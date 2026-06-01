@@ -152,6 +152,94 @@
   if ($('m-guides-close')) $('m-guides-close').addEventListener('click', () => guidesModal.classList.add('hidden'));
   if (guidesModal) guidesModal.addEventListener('click', (e) => { if (e.target === guidesModal) guidesModal.classList.add('hidden'); });
 
+  // ── 📖 LECTURA EN CLASE — folder picker of stories by HSK1 experience.
+  // Teacher clicks a story → host-reading.html opens in a new tab pre-
+  // selected to that story. Kids join via PIN. After they do the test
+  // live, that story unlocks for them to repeat at home.
+  const rdBtn = $('m-reading-btn');
+  const rdModal = $('m-reading-modal');
+  if (rdBtn && rdModal) {
+    rdBtn.addEventListener('click', () => {
+      rdModal.classList.remove('hidden');
+      loadReadingFolders();
+    });
+  }
+  if ($('m-reading-close')) {
+    $('m-reading-close').addEventListener('click', () => rdModal.classList.add('hidden'));
+  }
+  if (rdModal) {
+    rdModal.addEventListener('click', (e) => { if (e.target === rdModal) rdModal.classList.add('hidden'); });
+  }
+  function loadReadingFolders() {
+    const wrap = $('m-reading-folders');
+    if (!wrap) return;
+    wrap.textContent = 'Cargando…';
+    fetch('/api/reading/stories')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d || !d.ok || !Array.isArray(d.stories)) {
+          wrap.textContent = 'No se pudo cargar.';
+          return;
+        }
+        renderReadingFolders(d.stories);
+      })
+      .catch(() => { wrap.textContent = 'Error de red.'; });
+  }
+  function renderReadingFolders(stories) {
+    const wrap = $('m-reading-folders');
+    if (!wrap) return;
+    const exps = (window.WU_EXPERIENCES) || {
+      exp1: { label: 'EXP1 · Yo / Familia',   short: '👋 EXP1' },
+      exp2: { label: 'EXP2',                  short: '📘 EXP2' },
+      exp3: { label: 'EXP3',                  short: '📗 EXP3' },
+      exp4: { label: 'EXP4',                  short: '📕 EXP4' },
+      exp5: { label: 'EXP5',                  short: '📔 EXP5' },
+      exp6: { label: 'EXP6',                  short: '📙 EXP6' },
+      exp7: { label: 'EXP7',                  short: '📓 EXP7' },
+      exp8: { label: 'EXP8',                  short: '🌧️ EXP8' },
+    };
+    // Group by exp tag, then sort experiences exp1 → exp8.
+    const byExp = {};
+    stories.forEach((s) => {
+      const k = s.exp || 'exp1';
+      if (!byExp[k]) byExp[k] = [];
+      byExp[k].push(s);
+    });
+    const order = ['exp1','exp2','exp3','exp4','exp5','exp6','exp7','exp8'];
+    wrap.innerHTML = '';
+    let totalFolders = 0;
+    order.forEach((k) => {
+      if (!byExp[k] || !byExp[k].length) return;
+      totalFolders++;
+      const exp = exps[k] || { label: k, short: k.toUpperCase() };
+      const folder = document.createElement('div');
+      folder.className = 'm-reading-folder';
+      folder.innerHTML = '<div class="m-reading-folder-title">' + escapeHtml(exp.label) + '</div>';
+      const grid = document.createElement('div');
+      grid.className = 'm-reading-folder-grid';
+      byExp[k].forEach((s) => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'm-reading-card';
+        card.innerHTML =
+          '<div class="m-reading-card-cover" style="background-image:url(\'/assets/reading/' + s.id + '/page-1.png\');"></div>' +
+          '<div class="m-reading-card-body">' +
+            '<div class="m-reading-card-title">📖 ' + escapeHtml(s.title || s.id) + '</div>' +
+            '<div class="m-reading-card-sub">' + escapeHtml(s.subtitle || '') + '</div>' +
+            '<div class="m-reading-card-meta">' + (s.pageCount || 0) + ' páginas · ' + (s.questionCount || 0) + ' preguntas</div>' +
+          '</div>' +
+          '<div class="m-reading-card-cta">Lanzar ›</div>';
+        card.addEventListener('click', () => {
+          // host-reading.html accepts ?story=<id> to preselect on load.
+          window.open('/host-reading.html?story=' + encodeURIComponent(s.id), '_blank', 'noopener');
+        });
+        grid.appendChild(card);
+      });
+      folder.appendChild(grid);
+      wrap.appendChild(folder);
+    });
+    if (!totalFolders) wrap.textContent = 'No hay historias todavía.';
+  }
   // ── 🌐 EMIRATI ARABIC GATEWAY (super-admin only) ──────────────────
   const emBtn = $('m-emirati-btn');
   const emModal = $('m-emirati-modal');

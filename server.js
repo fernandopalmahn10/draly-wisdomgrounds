@@ -1609,6 +1609,13 @@ function _hwReadingListFor(code) {
   });
 }
 
+// 📚 Public stories list, grouped by HSK1 experience — used by the
+// Modo Maestro story picker. Returns every story with its `exp` tag
+// so the client can render folders (EXP1 has Pīnpīn, EXP8 has XiǎoMíng).
+app.get('/api/reading/stories', (req, res) => {
+  res.json({ ok: true, stories: ReadingStory.listStories() });
+});
+
 // List available reading tests for the kid.
 app.get('/api/homework/reading-tests', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;

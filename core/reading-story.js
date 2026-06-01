@@ -41,6 +41,7 @@ const STORIES = {
     id: 'xiaomingday',
     title: 'Xiǎo Míng de yī tiān',
     subtitle: 'Un día con Xiǎo Míng',
+    exp: 'exp8',  // late-set vocab (school/weather/shopping) → EXP8
     // === Test bank ===
     // 5 multiple-choice questions, each worth 20 points (100 total).
     // Questions are tied to EVENTS in the story — kids who actually
@@ -209,6 +210,7 @@ const STORIES = {
     id: 'pinpin',
     title: 'Pīnpīn de jiā',
     subtitle: 'La casa mojada de Pīnpīn',
+    exp: 'exp1',  // pure EXP1 vocab (Yo / Familia: wǒ, jiā, gǒu, māo…)
     questions: [
       {
         // Page 1: "Wǒ shì Pīnpīn. Wǒ tài shīle!" (very wet)
@@ -455,6 +457,8 @@ function listStories() {
     title: s.title,
     subtitle: s.subtitle,
     pageCount: s.pages.length,
+    exp: s.exp || 'exp1',   // HSK1 folder bucket for the Modo Maestro picker
+    questionCount: (s.questions || []).length,
   }));
 }
 
