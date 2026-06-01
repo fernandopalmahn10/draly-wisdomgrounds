@@ -2013,7 +2013,17 @@
     }
     rw.classList.remove('hidden');
     const ok = $('hw-reward-ok');
-    if (ok) ok.addEventListener('click', () => { rw.classList.add('hidden'); renderDailyHome(); });
+    const dismiss = () => { rw.classList.add('hidden'); renderDailyHome(); };
+    if (ok) ok.addEventListener('click', dismiss);
+    // 🛟 Backdrop click + ESC dismissal — guarantees the kid is never
+    // stuck if the ¡Genial! button gets clipped on a weird viewport.
+    rw.addEventListener('click', (e) => { if (e.target === rw) dismiss(); });
+    document.addEventListener('keydown', function rwEsc(e) {
+      if (e.key === 'Escape' && !rw.classList.contains('hidden')) {
+        document.removeEventListener('keydown', rwEsc);
+        dismiss();
+      }
+    });
   }
   (function bindDaily() {
     const cta = $('hw-list-daily'); if (cta) cta.addEventListener('click', openDaily);
@@ -3408,21 +3418,24 @@
   function openAssignment(id) {
     if (!id) return;
     // 🩹 NUKE leftover overlays from a previous open — these were the
-    // ACTUAL cause of "second tap, screen doesn't change":
+    // actual cause of "second tap, screen doesn't change":
     //   .hw-reward       → "¡Reto completado!" overlay, z-index 9999
     //   .hw-cutscene     → daily-game intro/outro overlays
     //   .char-celebration → Gojo/Yuji animated wins
-    // The assignment screen swapped fine underneath, but a leftover
-    // overlay covered the whole viewport making it look silent.
-    document.querySelectorAll('.hw-cutscene, .char-celebration').forEach((el) => {
-      try { el.remove(); } catch (_) {}
-    });
+    // ⚡ Optimization: querySelector first (cheap, stops at first match)
+    // before doing the full querySelectorAll + remove loop. 99% of the
+    // time there are no overlays and we skip the iteration entirely.
+    if (document.querySelector('.hw-cutscene, .char-celebration')) {
+      document.querySelectorAll('.hw-cutscene, .char-celebration').forEach((el) => {
+        try { el.remove(); } catch (_) {}
+      });
+    }
     const rwEl = $('hw-reward');
-    if (rwEl) { rwEl.classList.add('hidden'); rwEl.innerHTML = ''; }
+    if (rwEl && !rwEl.classList.contains('hidden')) { rwEl.classList.add('hidden'); rwEl.innerHTML = ''; }
     const gameEl = $('hw-game');
-    if (gameEl) gameEl.classList.add('hidden');
-    document.body.style.overflow = '';
-    document.documentElement.style.overflow = '';
+    if (gameEl && !gameEl.classList.contains('hidden')) gameEl.classList.add('hidden');
+    if (document.body.style.overflow) document.body.style.overflow = '';
+    if (document.documentElement.style.overflow) document.documentElement.style.overflow = '';
     // Visual feedback so the kid knows their tap registered.
     document.querySelectorAll('.hw-card-loading').forEach((el) => el.classList.remove('hw-card-loading'));
     const card = document.querySelector('[data-assignment-id="' + CSS.escape(id) + '"]');
@@ -3814,6 +3827,13 @@
   // User reported "I tap assignment 2/3/4/5/6/7 and it doesn't open" —
   // this guarantees the open always fires.
   document.addEventListener('click', (e) => {
+    // ⚡ FAST PATH — only run the closest() traversal when we're actually
+    // on a screen that has folder/assignment cards. On the assignment or
+    // results screen, the cards are hidden but still in the DOM, and
+    // running closest() on every word-chip tap was a small tax that added
+    // up on slow phones. Bail immediately if we're not on the list screen.
+    const listEl = $('screen-list');
+    if (!listEl || listEl.classList.contains('hidden')) return;
     // ── Folder cards (EXP1-EXP8) — open the folder view
     const folder = e.target && e.target.closest && e.target.closest('[data-folder-id]');
     if (folder && !e.target.closest('button[disabled]')) {

@@ -35,14 +35,36 @@
   60% { transform: scale(1.06) translateY(-8px); opacity: 1; }
   100% { transform: scale(1) translateY(0); }
 }
+/* 🎨 ROUNDED MEDIA WRAPPER — clips both the video AND the canvas that
+   video-chroma.js creates to replace it. Without this wrapper the
+   real-time chroma-key canvas would render its rounded-radius on the
+   bounding box (still visible green corners through transparency).
+   overflow:hidden on the wrapper guarantees rounded corners stick. */
+.char-celebration-media {
+  position: relative;
+  width: 100%;
+  border-radius: 22px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.20);
+  max-height: 360px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .char-celebration-video,
-.char-celebration-fallback {
-  width: 100%; max-height: 360px;
+.char-celebration-fallback,
+.char-celebration-media .ck-canvas {
+  width: 100%;
+  max-height: 360px;
   object-fit: contain;
-  border-radius: 18px;
-  background: rgba(0,0,0,0.35);
+  border-radius: 22px;       /* belt + suspenders */
+  background: transparent;   /* keyed-out areas must show the wrapper */
   display: block;
 }
+/* 🌐 Universal rounding for any chroma-keyed canvas the page mounts
+   (landing video, future cutscenes, etc.) — wherever the green is
+   removed, the visible silhouette gets soft corners. */
+.ck-canvas { border-radius: 18px; }
 .char-celebration-name {
   margin-top: 12px;
   font-family: 'Cinzel', serif;
