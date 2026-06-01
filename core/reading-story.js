@@ -358,7 +358,158 @@ const STORIES = {
       },
     ],
   },
-  // === STORY 3: add here when you have it.
+  // === STORY 3: YUGI — the ancient pharaoh teacher (EXP2: Escuela/Idioma)
+  // Mysterious Egyptian-pyramid vibe. Yugi appears as an ancient lǎoshī
+  // teaching the kid the basics of Hànyǔ. Drills EXP2's school+learning
+  // vocab in a dramatic anime ritual setting.
+  yugipharaoh: {
+    id: 'yugipharaoh',
+    title: 'Lǎoshī Yugi',
+    subtitle: 'El maestro misterioso de la pirámide',
+    exp: 'exp2',                  // Escuela / Idioma
+    music: 'identity',            // mysterious detective theme fits the mood
+    animated: false,              // APNG files use .png extension natively
+    assetVersion: '20260602a',
+    // 🎨 Theme — purple + gold pharaoh palette. host-reading.js applies
+    // these as CSS variables on the body when this story loads.
+    theme: {
+      primary: '#a070ff',
+      accent:  '#ffd24a',
+      bgGrad:  'radial-gradient(ellipse at 50% 25%, rgba(160,112,255,0.30), transparent 60%), linear-gradient(180deg, #1a0a2e 0%, #2d0a4a 50%, #0a0a1a 100%)',
+    },
+    questions: [
+      {
+        q: '"Lǎoshī" — ¿qué significa?',
+        choices: ['Maestro/a', 'Estudiante', 'Libro', 'Escuela'],
+        correctIdx: 0,
+      },
+      {
+        q: '¿Qué hace Yugi con el shū antiguo?',
+        choices: [
+          'Lo lee — kàn shū',
+          'Lo come',
+          'Lo lanza por la pirámide',
+          'Lo vende',
+        ],
+        correctIdx: 0,
+      },
+      {
+        q: '"Wǒ xiě zì" — ¿qué significa?',
+        choices: [
+          'Yo escribo caracteres',
+          'Yo leo libros',
+          'Yo hablo chino',
+          'Yo escucho al maestro',
+        ],
+        correctIdx: 0,
+      },
+      {
+        q: '¿Qué prueba le pone Yugi al estudiante?',
+        choices: [
+          'Hablar chino — shuō Hànyǔ',
+          'Saltar la pirámide',
+          'Pelear con monstruos',
+          'Comer comida egipcia',
+        ],
+        correctIdx: 0,
+      },
+      {
+        q: '"Wǒ huì shuō Hànyǔ" — ¿qué significa?',
+        choices: [
+          'Sé hablar chino',
+          'No sé chino',
+          'Quiero hablar chino',
+          'No me gusta el chino',
+        ],
+        correctIdx: 0,
+      },
+    ],
+    pages: [
+      {
+        pageNum: 1,
+        caption: 'La pirámide misteriosa',
+        sentences: [
+          'Yugi shì lǎoshī.',
+          'Wǒ shì xuésheng.',
+        ],
+        sentencesEs: [
+          'Yugi es un maestro antiguo.',
+          'Yo soy su nuevo estudiante. Estamos dentro de una pirámide enorme — las paredes brillan con jeroglíficos y caracteres chinos flotando en el aire.',
+        ],
+        audioDurationMs: 8000,
+      },
+      {
+        pageNum: 2,
+        caption: 'El libro antiguo',
+        sentences: [
+          'Lǎoshī kàn shū.',
+          'Wǒ dú shū.',
+        ],
+        sentencesEs: [
+          'El maestro abre un libro antiguo que flota en el aire — sus páginas brillan con luz dorada.',
+          'Yo me acerco y empiezo a leerlo.',
+        ],
+        audioDurationMs: 8000,
+      },
+      {
+        pageNum: 3,
+        caption: 'El primer zì',
+        sentences: [
+          'Lǎoshī: kàn zì.',
+          'Wǒ kàn zì.',
+          'Wǒ xiě zì.',
+        ],
+        sentencesEs: [
+          'El maestro: "Mira este carácter."',
+          'Yo lo veo brillar dorado entre sus manos.',
+          'Lo escribo con mi dedo en la arena. ¡Lo logré!',
+        ],
+        audioDurationMs: 10000,
+      },
+      {
+        pageNum: 4,
+        caption: 'La prueba',
+        sentences: [
+          'Lǎoshī shuō: tīng!',
+          'Wǒ tīng.',
+          'Wǒ shuō Hànyǔ.',
+        ],
+        sentencesEs: [
+          'El maestro dice: "¡Escucha!" — su voz retumba en la pirámide.',
+          'Yo escucho con atención.',
+          'Y luego yo hablo en chino — mi voz también suena ancestral.',
+        ],
+        audioDurationMs: 11000,
+      },
+      {
+        pageNum: 5,
+        caption: '¡Nǐ huì!',
+        sentences: [
+          'Lǎoshī: nǐ huì shuō.',
+          'Nǐ huì dú zì.',
+        ],
+        sentencesEs: [
+          'El maestro asiente con orgullo: "Tú SÍ sabes hablar."',
+          'Tú SÍ puedes leer caracteres. Una luz dorada me envuelve — soy un verdadero estudiante de Hànyǔ.',
+        ],
+        audioDurationMs: 10000,
+      },
+      {
+        pageNum: 6,
+        caption: 'El regalo del faraón',
+        sentences: [
+          'Wǒ shì xuésheng de Yugi.',
+          'Wǒ ài xuéxí Hànyǔ.',
+        ],
+        sentencesEs: [
+          'Soy estudiante de Yugi.',
+          'Amo aprender chino. El maestro me da un amuleto dorado — y se desvanece en partículas de luz dorada. Volveré a su pirámide algún día.',
+        ],
+        audioDurationMs: 11000,
+      },
+    ],
+  },
+  // === STORY 4: add here when you have it.
   // Example skeleton (commented out so it doesn't appear in the picker
   // until you flesh it out):
   // marketday: {
@@ -424,6 +575,7 @@ function buildStoryPayload(storyId) {
     title: story.title,
     subtitle: story.subtitle,
     music: story.music || null,     // ← per-story theme name, see sounds.js GAME_THEMES
+    theme: story.theme || null,     // ← per-story color palette { primary, accent, bgGrad }
     questionCount: (story.questions || []).length,
     pages: story.pages.map((page) => {
       const words = tokenizePage(page);
