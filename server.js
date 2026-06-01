@@ -199,15 +199,34 @@ app.get('/api/maestro/emirati/today', (req, res) => {
   const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '')
     ? req.query.date : new Date().toISOString().slice(0, 10);
   const state = _emiratiRead();
-  // 🔁 Otras 5 support — client can pass ?skip=id1,id2,... to exclude
-  // the current 5 from the pool, so the next set really IS different.
+  // 🔁 Otras (rotate) support — client can pass ?skip=id1,id2,... to
+  // exclude the current set from the pool for one fetch so a different
+  // batch shows up.
   const skipIds = String(req.query.skip || '').split(',').filter(Boolean);
-  const seenSet = new Set([...(state.seen || []), ...skipIds]);
-  const words = Emirati.todaysWords(date, Array.from(seenSet));
+  // 🆕 2026-06-01 — self-refilling 10-word / 20-sentence study queue.
+  // Marking a sentence or word removes that single item from the list;
+  // the next priority item slides in on the next fetch to keep the
+  // visible count near 10/20. Sentences and words are independent —
+  // a word stays visible until the kid marks the word itself, even if
+  // all its sentences are individually learned.
+  const wordCap = Math.max(1, Math.min(20, parseInt(req.query.wordCap, 10) || 10));
+  const sentenceCap = Math.max(1, Math.min(40, parseInt(req.query.sentCap, 10) || 20));
+  const words = Emirati.studyList({
+    seenIds: state.seen || [],
+    learnedSentKeys: state.learnedSentences || [],
+    skipIds,
+    wordCap,
+    sentenceCap,
+  });
+  // Count visible sentences so the client HUD can show "10 palabras · 17 oraciones"
+  const visibleSentenceCount = words.reduce((n, w) => n + (w.ses ? w.ses.length : 0), 0);
   res.json({
     ok: true,
     date,
     words,
+    wordCap,
+    sentenceCap,
+    visibleSentenceCount,
     sections: Emirati.EMIRATI_SECTIONS,
     sectionOrder: Emirati.EMIRATI_SECTION_ORDER,
     learnedSentences: state.learnedSentences || [],

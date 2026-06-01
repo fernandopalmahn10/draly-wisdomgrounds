@@ -351,7 +351,11 @@
         _emToday = d.words || [];
         _emLearnedSentences = new Set(d.learnedSentences || []);
         applyEmiratiHud(d.progress);
-        renderEmiratiWords(_emToday, d.sections);
+        renderEmiratiWords(_emToday, d.sections, {
+          visibleSentenceCount: d.visibleSentenceCount || 0,
+          wordCap: d.wordCap || 10,
+          sentenceCap: d.sentenceCap || 20,
+        });
       })
       .catch((e) => { if (list) list.textContent = 'Error: ' + e.message; });
   }
@@ -362,10 +366,26 @@
     if ($('m-em-streak')) $('m-em-streak').textContent = p.streak;
     if ($('m-em-sent-count')) $('m-em-sent-count').textContent = p.sentencesLearned || 0;
   }
-  function renderEmiratiWords(words, sections) {
+  // 🆕 The server now returns a self-refilling list — up to 10 unseen
+  // words, each with ONLY their unlearned sentences attached, capped at
+  // ~20 sentences total. Marking a word or sentence and re-fetching
+  // auto-promotes the next priority item into the list to keep counts
+  // near the 10/20 target.
+  function renderEmiratiWords(words, sections, summary) {
     const list = $('m-emirati-list'); if (!list) return;
     if (!words.length) { list.innerHTML = '<div class="m-empty">¡Has visto todas las palabras disponibles! 🎉</div>'; return; }
     list.innerHTML = '';
+    // Sticky list-summary header: "10 palabras · 17 oraciones por estudiar"
+    if (summary) {
+      const head = document.createElement('div');
+      head.className = 'm-em-list-summary';
+      head.innerHTML = '<span class="m-em-list-count">'
+        + '📚 <strong>' + words.length + '</strong> palabra' + (words.length === 1 ? '' : 's')
+        + ' · 📝 <strong>' + summary.visibleSentenceCount + '</strong> oración' + (summary.visibleSentenceCount === 1 ? '' : 'es')
+        + ' por estudiar</span>'
+        + '<span class="m-em-list-sub">Marca lo que ya sepas y la lista se rellena sola.</span>';
+      list.appendChild(head);
+    }
     words.forEach((w) => {
       const sec = sections && sections[w.section];
       const card = document.createElement('div');
@@ -373,7 +393,11 @@
       let ses = '';
       if (Array.isArray(w.ses) && w.ses.length) {
         ses = '<div class="m-em-sentences">'
-          + w.ses.map((s, si) => {
+          + w.ses.map((s) => {
+              // 🆕 server sends s._idx = original sentence index in the
+              // word's full sentence list. That's the stable key so a
+              // marked sentence's neighbors don't shift indexes.
+              const si = (typeof s._idx === 'number') ? s._idx : 0;
               const key = w.id + ':' + si;
               const learned = _emLearnedSentences.has(key);
               const isAuto = w.sesAuto ? ' m-em-s-auto' : '';
@@ -425,29 +449,56 @@
       speakEmiratiText(arText, b);
     }));
     // ✓ Toggle "learned" status on each sentence; persists to server.
+    // 🆕 Marking a sentence learned no longer just dims the row — it
+    // POSTs, then refetches the whole study list so the next priority
+    // item slides in to keep the list at the 10/20 target. Unmarking
+    // (when toggling back to ☐) also refetches so the sentence returns
+    // to the list if there's room.
     list.querySelectorAll('.m-em-s-learn').forEach((b) => b.addEventListener('click', () => {
       const key = b.dataset.key; if (!key) return;
       const wasLearned = _emLearnedSentences.has(key);
+      // Optimistic visual feedback BEFORE the round-trip — kid sees the
+      // tap register instantly, the fade-out animation runs, then the
+      // refetched list renders fresh.
+      const row = b.closest('.m-em-s');
+      if (row && !wasLearned) row.classList.add('is-leaving');
       fetch('/api/maestro/emirati/sentence/mark?pw=' + encodeURIComponent(pw), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ keys: [key], unmark: wasLearned }),
       }).then((r) => r.json()).then((d) => {
-        if (!d || !d.ok) return;
+        if (!d || !d.ok) {
+          if (row) row.classList.remove('is-leaving');
+          return;
+        }
         _emLearnedSentences = new Set(d.learnedSentences || []);
-        const row = b.closest('.m-em-s');
-        if (row) row.classList.toggle('is-learned', _emLearnedSentences.has(key));
-        b.textContent = _emLearnedSentences.has(key) ? '✓' : '○';
         // Update HUD sentencesLearned via the existing emirati progress payload.
         const tag = document.getElementById('m-em-sent-count');
         if (tag) tag.textContent = d.count;
+        // 🔁 Refetch so the list rebalances around the target counts.
+        loadEmirati(false);
+      }).catch(() => {
+        if (row) row.classList.remove('is-leaving');
       });
     }));
+    // 🆕 Marking a word as "vista" removes the entire card from the list
+    // and pulls in the next priority unseen word — auto-refill behavior
+    // matching the sentence flow above.
     list.querySelectorAll('.m-em-mark').forEach((b) => b.addEventListener('click', () => {
+      const card = b.closest('.m-em-card');
+      if (card) card.classList.add('is-leaving');
       fetch('/api/maestro/emirati/mark?pw=' + encodeURIComponent(pw), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wordIds: [b.dataset.id], date: new Date().toISOString().slice(0, 10) }),
       }).then((r) => r.json()).then((d) => {
-        if (d && d.ok) { applyEmiratiHud(d.progress); b.textContent = '✓ Vista'; b.disabled = true; b.classList.add('done'); }
+        if (!d || !d.ok) {
+          if (card) card.classList.remove('is-leaving');
+          return;
+        }
+        applyEmiratiHud(d.progress);
+        // 🔁 Refetch — the marked word leaves, next priority slides in.
+        loadEmirati(false);
+      }).catch(() => {
+        if (card) card.classList.remove('is-leaving');
       });
     }));
   }

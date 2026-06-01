@@ -578,4 +578,76 @@ function todaysWords(dateStr, seenIds) {
   return pool.slice(start, start + 5);
 }
 
-module.exports = { EMIRATI_WORDS, EMIRATI_SECTIONS, EMIRATI_SECTION_ORDER, todaysWords };
+// =====================================================================
+// 🆕 STUDY LIST — self-refilling 10-word / 20-sentence study queue
+// =====================================================================
+// User-driven redesign (2026-06-01): the kid wants a constantly-fresh
+// list of ~10 unseen words with ~20 unlearned example sentences nested
+// under them. When they mark a sentence OR word as learned, that item
+// vanishes from the list and the next priority item slides in to
+// maintain the target counts.
+//
+// Key principle: marking a sentence ≠ marking the parent word. The kid
+// may know one of a word's sentences but still be working on others.
+// So sentences and words are tracked independently; a word remains in
+// the list (with whatever unlearned sentences it has left) until the
+// kid explicitly marks the word itself as "vista".
+//
+// Inputs:
+//   seenIds          — string[]   word IDs the kid has marked complete
+//   learnedSentKeys  — string[]   sentence keys "wordId:index"
+//   wordCap          — number     hard cap on words returned (default 10)
+//   sentenceCap      — number     soft cap on visible sentences (default 20)
+//
+// Algorithm:
+//   1. Filter words: drop any with id in seenIds
+//   2. Sort by priority
+//   3. Walk through, attaching only UNLEARNED sentences to each word
+//   4. Stop after wordCap words OR when total visible sentences ≥ sentenceCap
+//      (whichever comes first that satisfies BOTH minimums when possible)
+//   5. Returns shape: [{ ...word, ses: filteredSes, sesLearnedCount: n }]
+//
+// "Otras" rotation: skipIds lets the client temporarily exclude a set
+// of words so the next call returns later priorities. Same as before.
+// =====================================================================
+function studyList(opts) {
+  const seenIds = opts && opts.seenIds ? opts.seenIds : [];
+  const learnedSentKeys = opts && opts.learnedSentKeys ? opts.learnedSentKeys : [];
+  const skipIds = opts && opts.skipIds ? opts.skipIds : [];
+  const wordCap = (opts && opts.wordCap) || 10;
+  const sentenceCap = (opts && opts.sentenceCap) || 20;
+  const seen = new Set([...seenIds, ...skipIds]);
+  const learned = new Set(learnedSentKeys);
+
+  const candidates = EMIRATI_WORDS
+    .filter((w) => !seen.has(w.id))
+    .sort((a, b) => a.priority - b.priority);
+
+  const out = [];
+  let totalSentences = 0;
+  for (const w of candidates) {
+    const allSes = Array.isArray(w.ses) ? w.ses : [];
+    // Keep the original index so the "wordId:index" key remains stable —
+    // marking sentence 1 of a word can't shift the index of sentence 2.
+    const visibleSes = allSes
+      .map((s, i) => ({ s, i }))
+      .filter(({ i }) => !learned.has(w.id + ':' + i))
+      .map(({ s, i }) => Object.assign({}, s, { _idx: i }));
+    out.push(Object.assign({}, w, {
+      ses: visibleSes,
+      sesLearnedCount: allSes.length - visibleSes.length,
+      sesTotalCount: allSes.length,
+    }));
+    totalSentences += visibleSes.length;
+    // Stop when we've hit BOTH targets — guarantees the kid sees enough
+    // sentence variety without overrunning if early words are sentence-rich.
+    if (out.length >= wordCap && totalSentences >= sentenceCap) break;
+  }
+  // If we hit the word cap before the sentence target (some words had all
+  // their sentences learned), the list is what it is. Don't overrun the
+  // word cap — keeping the list at "always 10 words max" is the contract.
+  if (out.length > wordCap) out.length = wordCap;
+  return out;
+}
+
+module.exports = { EMIRATI_WORDS, EMIRATI_SECTIONS, EMIRATI_SECTION_ORDER, todaysWords, studyList };

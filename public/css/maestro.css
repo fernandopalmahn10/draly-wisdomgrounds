@@ -718,6 +718,30 @@ body.hw-bg {
 .m-emirati-stat { display: flex; flex-direction: column; align-items: center; color: #fff5d8; font-weight: 900; font-size: 1.2rem; }
 .m-emirati-stat span { font-size: 0.7rem; font-weight: 700; opacity: 0.7; }
 .m-emirati-list { display: flex; flex-direction: column; gap: 12px; }
+/* 🆕 Self-refilling list summary (10 palabras · 17 oraciones por estudiar)
+   sits at the top of the list so the user always knows the queue depth
+   without counting cards. The teal accent matches the rest of the gateway. */
+.m-em-list-summary {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 14px;
+  background: linear-gradient(160deg, rgba(91,232,209,0.16), rgba(91,232,209,0.06));
+  border: 2px dashed rgba(91,232,209,0.45);
+  border-radius: 12px;
+  color: #e7faff;
+}
+.m-em-list-count { font-weight: 900; font-size: 0.98rem; }
+.m-em-list-count strong { color: #5be8d1; }
+.m-em-list-sub { font-size: 0.78rem; opacity: 0.7; font-style: italic; }
+/* 🌬️ Leaving animation — when the kid marks a word or sentence as
+   learned, the card/row gently fades + shrinks before the refetched
+   list replaces the DOM. ~220ms feels snappy but acknowledges the tap. */
+.m-em-card.is-leaving,
+.m-em-s.is-leaving {
+  opacity: 0;
+  transform: translateX(40px) scale(0.96);
+  transition: opacity 0.22s ease-out, transform 0.22s ease-out;
+  pointer-events: none;
+}
 .m-em-card { background: rgba(20,28,50,0.6); border: 1px solid rgba(255,210,74,0.3); border-radius: 14px; padding: 14px; }
 .m-em-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
 .m-em-section { font-size: 0.82rem; color: rgba(243,230,194,0.7); font-weight: 800; }
