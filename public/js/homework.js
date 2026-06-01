@@ -2012,11 +2012,30 @@
         + '<button class="hw-reward-ok" id="hw-reward-ok" type="button">OK</button></div>';
     }
     rw.classList.remove('hidden');
+    // 🆘 EJECTOR — giant always-tappable ✕ in the top-right corner of the
+    // reward card, OUTSIDE any text/layout that could clip it off screen.
+    // User got stuck on the reward overlay because ¡Genial! was clipped;
+    // this is the failsafe escape hatch.
+    const card = rw.querySelector('.hw-reward-card');
+    if (card && !card.querySelector('.hw-reward-eject')) {
+      const eject = document.createElement('button');
+      eject.type = 'button';
+      eject.className = 'hw-reward-eject';
+      eject.setAttribute('aria-label', 'Cerrar');
+      eject.textContent = '✕';
+      card.insertBefore(eject, card.firstChild);
+    }
     const ok = $('hw-reward-ok');
-    const dismiss = () => { rw.classList.add('hidden'); renderDailyHome(); };
+    const eject = rw.querySelector('.hw-reward-eject');
+    const dismiss = () => {
+      rw.classList.add('hidden');
+      rw.innerHTML = '';   // tear down so subsequent shows rebind fresh
+      try { renderDailyHome(); } catch (_) {}
+    };
     if (ok) ok.addEventListener('click', dismiss);
-    // 🛟 Backdrop click + ESC dismissal — guarantees the kid is never
-    // stuck if the ¡Genial! button gets clipped on a weird viewport.
+    if (eject) eject.addEventListener('click', dismiss);
+    // 🛟 Backdrop click + ESC dismissal — TRIPLE escape hatch so the kid
+    // is never trapped even if ¡Genial! and ✕ both get clipped.
     rw.addEventListener('click', (e) => { if (e.target === rw) dismiss(); });
     document.addEventListener('keydown', function rwEsc(e) {
       if (e.key === 'Escape' && !rw.classList.contains('hidden')) {
@@ -3930,13 +3949,24 @@
               :              { emoji: '💪', text: '¡A repasar!' };
     $('hw-results-emoji').textContent = cert.emoji;
     $('hw-results-cert').textContent = cert.text;
-    // ⚡ INSTANT SCORE — was a 30-tick count-up animation totalling ~1.2s
-    // ("1, 2, 3, 4, 5..."). User feedback 2026-06-01: "Before it was like,
-    // boom, right off, you got a score. Now there's latency." Just show
-    // the final number immediately. The cert emoji + the big number is
-    // enough celebration; the kid wants the grade, not theater.
+    // ⚡ FAST COUNT-UP — user wants the count-up animation BACK ("it was
+    // better like that"), just not as long. Old: 30 ticks × 30ms + 250ms
+    // delay ≈ 1.2s. New: 12 ticks × 25ms ≈ 300ms total. Snappy reveal
+    // without the dragged-out "1, 2, 3, 4, 5..." feel.
     const numEl = $('hw-results-num');
-    if (numEl) numEl.textContent = data.score;
+    if (numEl) {
+      const TICKS = 12;
+      const step = Math.max(1, Math.ceil(data.score / TICKS));
+      let cur = 0;
+      numEl.textContent = '0';
+      const tick = () => {
+        cur += step;
+        if (cur >= data.score) { numEl.textContent = data.score; return; }
+        numEl.textContent = cur;
+        setTimeout(tick, 25);
+      };
+      setTimeout(tick, 80);  // tiny lead-in so the kid sees 0 → spring up
+    }
     const bk = $('hw-results-breakdown');
     bk.innerHTML = '';
     // Lead the breakdown with a SPEAK-OUT-LOUD reminder. The kid just
