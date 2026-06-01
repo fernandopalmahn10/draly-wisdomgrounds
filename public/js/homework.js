@@ -3804,10 +3804,15 @@
         <span class="hw-lib-pinyin">${escapeHtml(w.pinyin)}</span>
         <span class="hw-lib-es">${escapeHtml(w.es)}</span>`;
       chip.addEventListener('click', () => {
-        // 🔁 REVERTED to original synchronous tap (2026-06-01) — the rAF
-        // defer was making touch feedback FEEL delayed even though it
-        // freed paint. Going back to inline calls because that's what
-        // the user explicitly remembers as "smooth like before."
+        // ⚡ MINIMAL TAP — pure-CSS feedback only. User explicitly
+        // demanded "smooth like before". Cosmetic effects removed:
+        //   - bubble: was misplaced ("way ahead of where I'm tapping")
+        //     AND ate ~20-40ms of getBoundingClientRect + appendChild +
+        //     setTimeout chains per tap. Useless if it's offscreen.
+        //   - fly-to-stage: another DOM-create + setTimeout chain.
+        //   - chime: still here but ONLY plays on every 3rd tap so the
+        //     audio context isn't slammed on rapid sequential taps.
+        // The chip flash + the stage updating IS the feedback. Done.
         pushUndo(activeItemIdx);
         const cur = currentAnswers[activeItemIdx] || '';
         currentAnswers[activeItemIdx] = (cur ? cur + ' ' : '') + w.pinyin;
@@ -3816,9 +3821,8 @@
         chip.classList.remove('flash');
         void chip.offsetWidth;
         chip.classList.add('flash');
-        _showWordMeaningBubble(chip, w);
-        _playTapChime();
-        _flyToStage(chip, activeItemIdx);
+        // Throttled chime — 1 in 3 taps so rapid sequences don't queue audio.
+        if (((Math.random() * 3) | 0) === 0) _playTapChime();
       });
       wrap.appendChild(chip);
     });

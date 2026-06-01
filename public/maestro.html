@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260527a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260527a">
-  <link rel="stylesheet" href="/css/maestro.css?v=20260601o">
+  <link rel="stylesheet" href="/css/maestro.css?v=20260601r">
 </head>
 <body class="hw-bg">
 
@@ -39,6 +39,7 @@
         <button class="btn btn-gold btn-sm" id="m-live-master-btn" title="Invitar a estudiantes en línea a una sesión en vivo">🎯 Modo Maestro en vivo</button>
         <button class="btn btn-jade btn-sm" id="m-broadcast-btn">📢 Mensaje a toda la clase</button>
         <button class="btn btn-jade btn-sm" id="m-guides-btn" title="Subir guías de estudio en PDF para los papás">📘 Guías (PDF)</button>
+        <button class="btn btn-jade btn-sm" id="m-reading-btn" title="Lanzar una lectura en vivo con la clase">📖 Lectura en clase</button>
         <button class="btn btn-gold btn-sm" id="m-custom-btn" title="Mandar tareas personalizadas a alumnos específicos">🎯 Tarea especial</button>
         <button class="btn btn-jade btn-sm hidden" id="m-emirati-btn" title="Tu gateway personal de idiomas">🌐 Mi Gateway · العربية</button>
         <button class="btn btn-ghost btn-sm" id="m-refresh">🔄 Refrescar</button>
@@ -75,6 +76,19 @@
           <button class="btn btn-jade btn-xl" id="m-guide-upload">⬆️ Subir guía</button>
           <p class="m-modal-msg" id="m-guide-msg"></p>
           <div class="m-guides-list" id="m-guides-list"></div>
+        </div>
+      </div>
+
+      <!-- 📖 LECTURA EN CLASE — folder picker of all reading stories by HSK1
+           experience. Click a story → opens host-reading.html in a new tab
+           with that story pre-selected. Kids join via PIN, do the test live,
+           unlocks the story in their homework portal automatically. -->
+      <div id="m-reading-modal" class="m-modal hidden">
+        <div class="m-modal-card">
+          <button class="m-modal-close" id="m-reading-close" type="button" aria-label="Cerrar">✕</button>
+          <h2>📖 Lectura en clase</h2>
+          <p class="m-modal-sub">Elige una historia. Se abre la sala con PIN. Cuando los niños hagan el test en vivo, se les desbloquea para repetir en casa.</p>
+          <div id="m-reading-folders" class="m-reading-folders">Cargando…</div>
         </div>
       </div>
 
@@ -269,6 +283,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/maestro.js?v=20260601o"></script>
+  <script src="/js/maestro.js?v=20260601r"></script>
 </body>
 </html>
