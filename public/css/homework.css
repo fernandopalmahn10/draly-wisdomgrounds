@@ -59,7 +59,33 @@ body.hw-bg {
 .hw-list {
   max-width: 980px;
   margin: 0 auto;
-  padding: 18px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  /* 📱 Top padding now respects the notch / status bar so the avatar +
+     title never get cut off on iPhones with a dynamic island. The
+     +18px base keeps the layout breathing on devices without a notch. */
+  padding:
+    calc(18px + env(safe-area-inset-top, 0px)) 16px
+    calc(40px + env(safe-area-inset-bottom, 0px));
+}
+/* 🛟 Tap feedback: card flashes a teal ring + dims slightly while
+   the assignment fetch is in flight. Removes any ambiguity about
+   whether the tap registered, and survives slow networks. */
+.hw-card-loading {
+  outline: 3px solid #5be8d1 !important;
+  outline-offset: -3px;
+  opacity: 0.65;
+  transform: scale(0.97);
+  transition: opacity 0.12s, transform 0.12s;
+  position: relative;
+}
+.hw-card-loading::after {
+  content: '⏳';
+  position: absolute;
+  top: 8px; right: 10px;
+  font-size: 1.4rem;
+  animation: hwCardLoadingSpin 0.9s linear infinite;
+}
+@keyframes hwCardLoadingSpin {
+  0% { transform: rotate(0); } 100% { transform: rotate(360deg); }
 }
 .hw-list-header {
   display: flex; align-items: flex-start; justify-content: space-between;
@@ -152,7 +178,9 @@ body.hw-bg {
 .hw-assignment {
   max-width: 980px;
   margin: 0 auto;
-  padding: 16px 14px calc(20px + env(safe-area-inset-bottom, 0px));
+  padding:
+    calc(16px + env(safe-area-inset-top, 0px)) 14px
+    calc(40px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 14px;
