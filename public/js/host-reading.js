@@ -17,6 +17,9 @@
   let currentCurious      = false;
   let currentStoryId      = null;
   let storyListRendered   = false;
+  let lastStoryPayload    = null;  // 🎵 holds the latest reading-state payload
+                                   // so the Start button can read state.music
+                                   // and trigger the right themed track.
   let currentPlaybackRate = 1.0;
   let testTimerInt        = null;     // ticks the per-question countdown
   let currentTestQIdx     = -1;       // 0-based; -1 when no test active
@@ -87,9 +90,32 @@
 
   $('start-btn').addEventListener('click', () => {
     socket.emit('host:start', { pin });
+    // 🎵 Per-story music — each story carries its own theme name in
+    // its payload (e.g. 'family' for Pīnpīn, 'mochi-mash' for XiǎoMíng).
+    // The theme name maps to a GAME_THEMES entry in sounds.js. The same
+    // proven music engine the games use — zero new perf cost.
+    try {
+      if (window.MochiSounds) {
+        if (MochiSounds.startMusic) MochiSounds.startMusic();
+        const themeName = (lastStoryPayload && lastStoryPayload.music) || null;
+        if (themeName && MochiSounds.startGameTheme) {
+          MochiSounds.startGameTheme(themeName);
+        }
+      }
+    } catch (_) {}
   });
   $('exit-btn').addEventListener('click', () => {
-    if (confirm('¿Terminar la lectura?')) socket.emit('host:end-now', { pin });
+    if (confirm('¿Terminar la lectura?')) {
+      socket.emit('host:end-now', { pin });
+      try {
+        if (window.MochiSounds && MochiSounds.stopMusic) MochiSounds.stopMusic();
+      } catch (_) {}
+    }
+  });
+  // Stop music on page unload — belt-and-suspenders so closing the
+  // host tab never leaves background audio playing elsewhere.
+  window.addEventListener('beforeunload', () => {
+    try { if (window.MochiSounds && window.MochiSounds.stopMusic) MochiSounds.stopMusic(); } catch (_) {}
   });
 
   // === Transport: prev / play-pause / next / restart ===
@@ -201,12 +227,16 @@
     if (state.storyId && state.storyId !== currentStoryId) {
       currentStoryId = state.storyId;
       story = { title: state.title, subtitle: state.subtitle, pages: state.pages };
+      lastStoryPayload = state;   // capture so start-btn can read music
       currentPageIdx = -1;  // force render below
       $('rd-page-max').textContent = story.pages.length;
     } else if (state.pages && !story) {
       story = { title: state.title, subtitle: state.subtitle, pages: state.pages };
+      lastStoryPayload = state;
       $('rd-page-max').textContent = story.pages.length;
       currentStoryId = state.storyId;
+    } else {
+      lastStoryPayload = state;   // keep latest in any case
     }
     // Populate the story dropdown once
     if (!storyListRendered && state.storyList) {
