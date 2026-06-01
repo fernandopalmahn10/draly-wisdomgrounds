@@ -114,6 +114,128 @@ body.hw-bg {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+/* 🌙 Daily card — TOMORROW preview chip (build anticipation: kid sees
+   what's coming and is more likely to come back). */
+.hw-dc-tomorrow {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(91, 232, 209, 0.10);
+  border: 1px dashed rgba(91, 232, 209, 0.4);
+  border-radius: 999px;
+  color: rgba(91, 232, 209, 0.9);
+  font-size: 0.84rem;
+  text-align: center;
+  font-weight: 700;
+}
+.hw-dc-tomorrow strong { color: #5be8d1; }
+/* 🌟 Daily card — DÍA DORADO bonus banner. Gold gradient + pulse. */
+.hw-dc-bonus {
+  background: linear-gradient(90deg, #ffd24a, #ffb547, #ffd24a);
+  background-size: 200% 100%;
+  color: #1a1a26;
+  font-weight: 900;
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin: 10px 0 6px;
+  text-align: center;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 18px rgba(255, 210, 74, 0.4);
+  animation: hwDcBonusPulse 1.8s ease-in-out infinite, hwDcBonusShine 3s linear infinite;
+}
+@keyframes hwDcBonusPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+@keyframes hwDcBonusShine { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+
+/* ⚡ REACT MODE — arcade-style 3-sec pinyin-to-emoji quiz */
+.hw-game-arena.hw-react-mode {
+  background: radial-gradient(ellipse at 50% 30%, rgba(91,232,209,0.18), rgba(15,15,30,0.99) 70%);
+  align-items: stretch;
+}
+.hw-react-shell {
+  display: flex; flex-direction: column;
+  width: 100%; max-width: 520px; margin: 0 auto;
+  padding: 16px 14px calc(20px + env(safe-area-inset-bottom, 0));
+  gap: 14px; align-items: center;
+}
+.hw-react-progress {
+  width: 100%; height: 8px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.hw-react-progress-fill {
+  display: block; height: 100%; width: 0%;
+  background: linear-gradient(90deg, #5be8d1, #b6f8ec);
+  transition: width 0.4s ease-out;
+}
+.hw-react-combo {
+  font-weight: 900; color: #ffd24a; font-size: 0.95rem;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.4);
+}
+.hw-react-py {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(2.4rem, 9vw, 3.4rem);
+  color: #fff;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  text-shadow: 0 6px 24px rgba(91,232,209,0.5);
+  text-align: center;
+  margin: 8px 0;
+}
+.hw-react-timer-wrap {
+  position: relative;
+  width: 76px; height: 76px;
+}
+.hw-react-timer { width: 100%; height: 100%; transform: rotate(-90deg); }
+.hw-react-timer-bg {
+  fill: none; stroke: rgba(255,255,255,0.08); stroke-width: 6;
+}
+.hw-react-timer-ring {
+  fill: none; stroke: #5be8d1; stroke-width: 6; stroke-linecap: round;
+}
+.hw-react-timer-num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 1.5rem; color: #fff;
+}
+.hw-react-choices {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%;
+}
+.hw-react-choice {
+  background: rgba(38, 40, 60, 0.95);
+  border: 2px solid rgba(91, 232, 209, 0.35);
+  border-radius: 16px;
+  padding: 14px 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  color: #f3e6c2; font-weight: 800; font-size: 0.95rem;
+  cursor: pointer; touch-action: manipulation;
+  transition: transform 0.15s, background 0.15s, border-color 0.15s;
+}
+.hw-react-choice:active { transform: scale(0.96); background: rgba(91,232,209,0.18); }
+.hw-react-choice-icon { font-size: 2.2rem; line-height: 1; }
+.hw-react-choice-es { font-size: 0.88rem; opacity: 0.9; }
+.hw-react-choice.is-right {
+  background: rgba(91,232,138,0.35);
+  border-color: #5be88a;
+  transform: scale(1.05);
+  box-shadow: 0 8px 28px rgba(91,232,138,0.4);
+}
+.hw-react-choice.is-wrong {
+  background: rgba(255,80,80,0.35);
+  border-color: #ff5a5a;
+  animation: hwReactWrongShake 0.32s ease-out;
+}
+@keyframes hwReactWrongShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+.hw-game-arena.hw-react-shake { animation: hwReactArenaShake 0.32s ease-out; }
+@keyframes hwReactArenaShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
 /* ⏳ Daily-screen loading skeleton — replaces blank screen during the
    network round-trip so the kid sees the page IS responding. */
 .hw-daily-loading {

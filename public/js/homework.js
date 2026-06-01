@@ -776,16 +776,33 @@
           } catch (_) {}
         });
       } else {
+        // 🎲 5-mode rotator — each day cycles through a different game so
+        // "hoy" never feels like "ayer". Server picks mode by days-since-
+        // epoch; client just renders whatever it sent.
         const modeMeta = ({
-          story:  { label: '📖 Historia',           goal: 'Un personaje te enseñará <strong>' + d.theme.goal + '</strong> palabras nuevas 🎌' },
-          memory: { label: '🧠 Memoria',            goal: 'Encuentra las <strong>4 parejas</strong> de palabras 🃏' },
-          speak:  { label: '🗣️ Escucha y repite', goal: 'Escucha cada palabra y dila en voz alta 🗣️' },
-          slash:  { label: '🍉 Corte rápido',       goal: 'Corta 🍉, acaricia 🐶 y lanza 🏃 — descubre <strong>' + d.theme.goal + '</strong> palabras' },
+          story:  { label: '📖 Templo del Dragón', goal: 'Sube los escalones del templo. Descubre <strong>' + d.theme.goal + '</strong> palabras y vence al dragón 🐲' },
+          memory: { label: '🧠 Memoria Flash',      goal: 'Encuentra las <strong>4 parejas</strong> escondidas 🃏' },
+          speak:  { label: '🗣️ Escucha y Repite',  goal: 'Escucha cada palabra y dila en voz alta 🗣️' },
+          slash:  { label: '🍉 Corte Rápido',       goal: 'Corta 🍉, acaricia 🐶 y lanza 🏃 — <strong>' + d.theme.goal + '</strong> palabras' },
+          react:  { label: '⚡ Reacción Pīnyīn',    goal: '<strong>3 segundos</strong> para tocar el emoji correcto. ¡Sube tu combo! ⚡' },
         })[d.mode || 'story'] || { label: '📖 Historia', goal: 'Descubre <strong>' + d.theme.goal + '</strong> palabras' };
+        // Tomorrow preview — builds anticipation, makes the kid come back.
+        let tomorrowChip = '';
+        if (d.tomorrow && d.tomorrow.modeMeta) {
+          tomorrowChip = '<div class="hw-dc-tomorrow">'
+            + '🌙 Mañana: <strong>' + d.tomorrow.modeMeta.emoji + ' ' + escapeHtml(d.tomorrow.modeMeta.short) + '</strong>'
+            + '</div>';
+        }
+        // 🎁 Mystery-bonus visual — pulsing gold banner says "+2x swords"
+        const bonusBanner = d.bonus
+          ? '<div class="hw-dc-bonus">🌟 ¡DÍA DORADO! Hoy ganas <strong>el doble</strong> de ⚔️</div>'
+          : '';
         ch.innerHTML = '<div class="hw-dc-head">⚔️ Desafío de hoy · ' + modeMeta.label + '</div>'
+          + bonusBanner
           + '<div class="hw-dc-theme">' + escapeHtml(expLabel) + '</div>'
           + '<div class="hw-dc-goal">' + modeMeta.goal + '</div>'
-          + '<button class="hw-dc-play" id="hw-dc-play" type="button">⚔️ ¡Jugar!</button>';
+          + '<button class="hw-dc-play" id="hw-dc-play" type="button">⚔️ ¡Jugar!</button>'
+          + tomorrowChip;
         const pb = $('hw-dc-play'); if (pb) pb.addEventListener('click', () => startDailyGame(false));
       }
     }
@@ -1020,15 +1037,144 @@
     const intro = DAILY_GAME.char.intros[Math.floor(Math.random() * DAILY_GAME.char.intros.length)].replace('{theme}', expLabel);
     showDailyStory(DAILY_GAME.char, intro, 'intro', () => dispatchDailyMode());
   }
-  // Today's mode rotates by weekday — see _dailyModeFor on the server.
-  // Each branch runs its own mini-game flow but all converge on endDailyGame()
-  // for the shared outro → sentence-bonus → reward chain.
+  // Today's mode rotates DAILY across 5 modes — see _dailyModeFor on the
+  // server (uses days-since-epoch so no two consecutive days repeat).
+  // Each branch runs its own mini-game flow but all converge on
+  // endDailyGame() for the shared outro → sentence-bonus → reward chain.
   function dispatchDailyMode() {
     const mode = (dailyData && dailyData.mode) || 'story';
     if (mode === 'memory') return runMemoryMode();
     if (mode === 'speak')  return runSpeakMode();
     if (mode === 'story')  return runStoryMode();
+    if (mode === 'react')  return runReactMode();
     return scheduleSpawn();  // legacy 🍉 slash fallback
+  }
+  // ⚡ REACT MODE — new in 2026-06-01. Pinyin pops up huge in the center,
+  // 4 emoji choices below (1 correct + 3 distractors from the same pool).
+  // 3-second countdown ring. Tap correct → +1 discovery, advance. Wrong
+  // tap or timeout → red shake, same word retries (no permanent fail).
+  // Total play time ~30-45s — designed to feel sharp and arcade-y.
+  function runReactMode() {
+    const arena = $('hw-game-arena'); if (!arena) return;
+    arena.innerHTML = '';
+    arena.classList.remove('hw-memory', 'hw-slash', 'hw-story-mode', 'hw-temple-mode', 'hw-speak-mode');
+    arena.classList.add('hw-react-mode');
+    const pool = DAILY_GAME.pool.slice(0, 8);
+    DAILY_GAME.goal = pool.length;
+    DAILY_GAME.discovered = 0;
+    DAILY_GAME.combo = 0;
+    let idx = 0;
+    // Shell — single mount, we just swap inner content per round.
+    arena.innerHTML = `
+      <div class="hw-react-shell">
+        <div class="hw-react-progress"><span class="hw-react-progress-fill" id="hw-react-fill"></span></div>
+        <div class="hw-react-combo" id="hw-react-combo">⚡ Combo: 0</div>
+        <div class="hw-react-py" id="hw-react-py">…</div>
+        <div class="hw-react-timer-wrap">
+          <svg class="hw-react-timer" viewBox="0 0 100 100">
+            <circle class="hw-react-timer-bg" cx="50" cy="50" r="46"/>
+            <circle class="hw-react-timer-ring" id="hw-react-ring" cx="50" cy="50" r="46"/>
+          </svg>
+          <div class="hw-react-timer-num" id="hw-react-num">3</div>
+        </div>
+        <div class="hw-react-choices" id="hw-react-choices"></div>
+      </div>`;
+    const RING_CIRC = 2 * Math.PI * 46;
+    const ringEl = $('hw-react-ring');
+    if (ringEl) ringEl.style.strokeDasharray = RING_CIRC + ' ' + RING_CIRC;
+    let roundTimer = null;
+    let countdownTimer = null;
+    function nextRound() {
+      if (!DAILY_GAME.active) return;
+      if (idx >= pool.length) return endDailyGame();
+      const w = pool[idx];
+      // 3 distractors drawn from the same theme bank so the kid can't
+      // win by elimination based on visual style alone.
+      const distractors = DAILY_GAME.pool
+        .filter((x) => x.id !== w.id)
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 3);
+      const choices = [w, ...distractors].sort(() => Math.random() - 0.5);
+      $('hw-react-py').textContent = w.pinyin;
+      const choicesEl = $('hw-react-choices');
+      choicesEl.innerHTML = '';
+      choices.forEach((c) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'hw-react-choice';
+        btn.innerHTML = '<span class="hw-react-choice-icon">' + (c.icon || '❓') + '</span>'
+          + '<span class="hw-react-choice-es">' + escapeHtml(c.es || '') + '</span>';
+        btn.addEventListener('click', () => onPick(c, w, btn));
+        choicesEl.appendChild(btn);
+      });
+      // 3-sec countdown — ring drains + number ticks down. Wrong/timeout
+      // shakes the screen but doesn't penalize swords (encourages retry).
+      let remaining = 3000;
+      const startedAt = Date.now();
+      if (ringEl) {
+        ringEl.style.transition = 'none';
+        ringEl.style.strokeDashoffset = '0';
+        // Force a reflow so the transition resets cleanly.
+        void ringEl.getBoundingClientRect();
+        ringEl.style.transition = 'stroke-dashoffset 3s linear';
+        ringEl.style.strokeDashoffset = RING_CIRC;
+      }
+      countdownTimer = setInterval(() => {
+        remaining = Math.max(0, 3000 - (Date.now() - startedAt));
+        const num = $('hw-react-num');
+        if (num) num.textContent = Math.ceil(remaining / 1000);
+      }, 100);
+      roundTimer = setTimeout(() => {
+        clearInterval(countdownTimer);
+        DAILY_GAME.combo = 0;
+        const comboEl = $('hw-react-combo');
+        if (comboEl) comboEl.textContent = '⚡ Combo: 0';
+        arena.classList.add('hw-react-shake');
+        setTimeout(() => arena.classList.remove('hw-react-shake'), 320);
+        try { dailySfx.miss(); } catch (_) {}
+        // Same word retries — no penalty beyond the broken combo.
+        nextRound();
+      }, 3100);
+    }
+    function onPick(chosen, correct, btn) {
+      if (chosen.id !== correct.id) {
+        clearTimeout(roundTimer);
+        clearInterval(countdownTimer);
+        DAILY_GAME.combo = 0;
+        const comboEl = $('hw-react-combo');
+        if (comboEl) comboEl.textContent = '⚡ Combo: 0';
+        btn.classList.add('is-wrong');
+        arena.classList.add('hw-react-shake');
+        try { dailySfx.miss(); } catch (_) {}
+        setTimeout(() => {
+          arena.classList.remove('hw-react-shake');
+          btn.classList.remove('is-wrong');
+          nextRound();
+        }, 360);
+        return;
+      }
+      // Correct! +1 discovery + combo + record the word so the bonus
+      // chain at the end pulls it into the kid's sentence-builder.
+      clearTimeout(roundTimer);
+      clearInterval(countdownTimer);
+      btn.classList.add('is-right');
+      DAILY_GAME.combo++;
+      DAILY_GAME.discovered++;
+      try { dailySfx.hit(); } catch (_) {}
+      const comboEl = $('hw-react-combo');
+      if (comboEl) comboEl.textContent = '⚡ Combo: ' + DAILY_GAME.combo;
+      // Record discovered word ID for the sentence-bonus screen.
+      try {
+        if (!Array.isArray(DAILY_GAME.discoveredIds)) DAILY_GAME.discoveredIds = [];
+        DAILY_GAME.discoveredIds.push(correct.id);
+      } catch (_) {}
+      // Update progress bar
+      const pf = $('hw-react-fill');
+      if (pf) pf.style.width = ((DAILY_GAME.discovered / DAILY_GAME.goal) * 100) + '%';
+      idx++;
+      setTimeout(() => { nextRound(); }, 420);
+    }
+    nextRound();
   }
   // 📖 STORY MODE — Pokémon-style cutscene with REAL interactivity:
   //   1. Each word starts hidden behind a 🎁 box — kid TAPS to reveal it.
