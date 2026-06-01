@@ -3287,31 +3287,65 @@
     const url = isCustom
       ? '/api/homework/custom-assignment/' + encodeURIComponent(id) + '?accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode)
       : '/api/homework/assignment/' + encodeURIComponent(id) + '?accessCode=' + encodeURIComponent(accessCode);
+    // 🔬 DIAGNOSTIC FETCH PATH — separates "network failed" from "server
+    // said no" from "render code threw." Previous versions lumped all
+    // three into a single .catch + a generic "Toca otra vez" toast that
+    // hid the real cause. Now each failure mode has its own clear
+    // signal so we can actually FIX the right thing.
+    //
+    // ⚠️ CRITICAL: r.json() failures and renderAssignment() throws
+    // would BOTH land in the outer .catch as "network errors", giving
+    // false "Toca otra vez" toasts even on perfectly successful HTTP
+    // responses. Wrapping renderAssignment in its own try/catch isolates
+    // render errors from network errors.
     fetch(url)
-      .then((r) => r.json())
-      .then((data) => {
+      .then((r) => r.text().then((txt) => ({ r: r, txt: txt })))
+      .then(({ r, txt }) => {
         if (card) card.classList.remove('hw-card-loading');
-        // A newer tap superseded this one — drop silently.
-        if (mySeq !== _openRequestSeq) return;
-        if (!data || !data.ok) {
-          _hwToast('No se pudo abrir: ' + ((data && data.error) || 'intenta de nuevo'));
+        if (mySeq !== _openRequestSeq) return; // newer tap won
+        // Try to parse as JSON; show body preview on failure for debug.
+        let data = null;
+        try { data = JSON.parse(txt); } catch (_) {}
+        if (!data) {
+          console.error('[homework] non-JSON response (status=' + r.status + '):', txt.slice(0, 200));
+          _hwToast('Respuesta inválida (HTTP ' + r.status + ')');
           return;
         }
-        currentAssignment = isCustom ? data.assignment : data;
-        if (!currentAssignment) { _hwToast('No se pudo abrir.'); return; }
-        currentAssignment.custom = isCustom || !!currentAssignment.custom;
-        currentAnswers = currentAssignment.items.map(() => '');
-        undoStacks = currentAssignment.items.map(() => []);
-        activeExpTab = currentAssignment.custom ? 'all' : (currentAssignment.expLabel || 'all');
-        renderAssignment();
-        showScreen('assignment');
-        window.scrollTo({ top: 0, behavior: 'instant' });
+        if (!data.ok) {
+          _hwToast('Servidor: ' + (data.error || 'no autorizado'));
+          return;
+        }
+        // Server returned OK — try to render. Any render error is shown
+        // separately from network errors so we don't false-alarm "Red".
+        try {
+          const asg = isCustom ? data.assignment : data;
+          if (!asg || !Array.isArray(asg.items)) {
+            console.error('[homework] missing items in response:', data);
+            _hwToast('Tarea sin contenido. Avisa a tu maestra.');
+            return;
+          }
+          currentAssignment = asg;
+          currentAssignment.custom = isCustom || !!currentAssignment.custom;
+          currentAnswers = currentAssignment.items.map(() => '');
+          undoStacks = currentAssignment.items.map(() => []);
+          activeExpTab = currentAssignment.custom ? 'all' : (currentAssignment.expLabel || 'all');
+          renderAssignment();
+          showScreen('assignment');
+          window.scrollTo({ top: 0, behavior: 'instant' });
+        } catch (renderErr) {
+          console.error('[homework] render error:', renderErr);
+          _hwToast('Error de pantalla. Recarga la página.');
+          // Best-effort recovery: clear state so the kid can re-tap.
+          currentAssignment = null;
+        }
       })
-      .catch(() => {
+      .catch((e) => {
         if (card) card.classList.remove('hw-card-loading');
-        // Only surface a real error for the LATEST tap.
         if (mySeq !== _openRequestSeq) return;
-        _hwToast('Toca otra vez 🙏');
+        console.error('[homework] fetch error:', e);
+        // Show the actual error name so we can debug what's failing.
+        const m = (e && e.message) ? e.message : (e && e.name) || 'desconocido';
+        _hwToast('Red: ' + String(m).slice(0, 50));
       });
   }
   function renderAssignment() {
@@ -3319,6 +3353,18 @@
     $('hw-asg-sub').textContent = currentAssignment.subtitle;
     $('hw-asg-instructions').textContent = currentAssignment.instructions;
     const itemsWrap = $('hw-asg-items');
+    // 🛟 The library section was MOVED INTO an item row by setActiveItem
+    // on the previous open. If we wipe items with innerHTML='' while the
+    // library is inside one of them, the library DOM node is destroyed
+    // and subsequent setActiveItem calls can't find it. Rescue it back
+    // to its assignment-screen home BEFORE wiping. This was a real
+    // root cause of "second open is broken / weird" — render code was
+    // touching a detached/destroyed library element.
+    const libRescue = $('hw-asg-library-section');
+    const asgRoot = $('screen-assignment');
+    if (libRescue && asgRoot && libRescue.parentNode !== asgRoot) {
+      try { asgRoot.appendChild(libRescue); } catch (_) {}
+    }
     itemsWrap.innerHTML = '';
     currentAssignment.items.forEach((it, i) => {
       const row = document.createElement('div');
