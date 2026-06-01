@@ -3072,9 +3072,32 @@ button.hw-sent-chip:active { transform: scale(0.94); }
 .hw-rv-es { font-weight: 800; font-style: italic; color: #ffe66a; }
 
 /* 🏆 Reward summary */
-.hw-reward { position: fixed; inset: 0; z-index: 10010; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(8,10,22,0.82); }
+.hw-reward { position: fixed; inset: 0; z-index: 10010; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(8,10,22,0.82); overflow-y: auto; }
 .hw-reward.hidden { display: none !important; }
-.hw-reward-card { width: 100%; max-width: 380px; text-align: center; background: linear-gradient(160deg, rgba(50,60,100,0.99), rgba(22,28,52,0.99)); border: 3px solid #ffd24a; border-radius: 24px; padding: 26px 22px; box-shadow: 0 18px 50px rgba(0,0,0,0.7); }
+/* 🔧 The card MUST fit in the visible viewport. Was: max-width 380px
+   with width 100%, which on devices with side notches / lockscreen
+   indicators could exceed the safe area and push the ¡Genial! close
+   button off-screen — kid stuck unable to dismiss. Now clamps to
+   calc(100vw - 36px) so there's always room on both sides for the
+   close button, plus word-wrap so long text never overflows. */
+.hw-reward-card {
+  width: calc(100vw - 36px);
+  max-width: 380px;
+  box-sizing: border-box;
+  text-align: center;
+  background: linear-gradient(160deg, rgba(50,60,100,0.99), rgba(22,28,52,0.99));
+  border: 3px solid #ffd24a;
+  border-radius: 24px;
+  padding: 26px 22px;
+  box-shadow: 0 18px 50px rgba(0,0,0,0.7);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+/* 🛟 Backdrop tap dismissal — taps the dark overlay area (not the card
+   itself) hide the reward. A second escape hatch in case the OK button
+   ever gets clipped on weird viewports. */
+.hw-reward { cursor: pointer; }
+.hw-reward-card { cursor: default; }
 .hw-reward-burst { font-size: 4rem; animation: hwObjBob 1s ease-in-out infinite; }
 .hw-reward-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1.4rem; color: #ffd24a; margin: 6px 0 14px; }
 .hw-reward-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }

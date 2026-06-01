@@ -1151,10 +1151,28 @@
       roster.innerHTML = '<div class="m-empty">Aún nadie tiene actividad registrada.</div>';
       return;
     }
+    // 🔍 SEARCH BAR — when the teacher has many students (esp. multiple
+    // 'Luis' or 'María'), scrolling is painful. This filter narrows the
+    // roster by name OR code in real time. Useful for sharing the secret
+    // code with a specific parent without scrolling-and-guessing.
+    const searchBar = document.createElement('div');
+    searchBar.className = 'm-roster-search';
+    searchBar.innerHTML = `
+      <input class="m-roster-search-input" type="text" inputmode="search"
+             placeholder="🔍 Buscar alumno por nombre o código…"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+      <span class="m-roster-search-count" id="m-roster-search-count">${students.length} alumnos</span>`;
+    roster.appendChild(searchBar);
     students.forEach((s) => {
       const row = document.createElement('button');
       row.type = 'button';
       row.className = 'm-row' + (s._onlineNow ? ' is-online' : '');
+      // Tone-strip + lowercase the searchable haystack so the teacher can
+      // type "luis" and match "Luís", "Luisa", "LUIS_42", etc.
+      const haystack = ((s.displayName || '') + ' ' + (s.code || ''))
+        .toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '');
+      row.dataset.search = haystack;
       // Friendly "5 min ago" / "2h ago" / "May 27" timestamp
       const sinceTxt = s._onlineNow
         ? formatRelative(s._secsAgo)
@@ -1176,6 +1194,28 @@
       row.addEventListener('click', () => openDetail(s.code));
       roster.appendChild(row);
     });
+    // Wire the search filter — runs on every keystroke, no debounce
+    // needed for ~30-100 rows; hides rows whose search-haystack doesn't
+    // contain the query (tone-stripped lowercase substring match).
+    const searchInput = searchBar.querySelector('.m-roster-search-input');
+    const countEl = searchBar.querySelector('#m-roster-search-count');
+    if (searchInput) {
+      searchInput.addEventListener('input', () => {
+        const q = searchInput.value.trim().toLowerCase()
+          .normalize('NFD').replace(/[̀-ͯ]/g, '');
+        let visible = 0;
+        roster.querySelectorAll('.m-row').forEach((r) => {
+          const match = !q || (r.dataset.search || '').includes(q);
+          r.style.display = match ? '' : 'none';
+          if (match) visible++;
+        });
+        if (countEl) {
+          countEl.textContent = q
+            ? (visible + ' de ' + students.length + ' coinciden')
+            : (students.length + ' alumno' + (students.length === 1 ? '' : 's'));
+        }
+      });
+    }
   }
 
   // "hace 5s" / "hace 2 min" / "hace 1h"

@@ -80,14 +80,20 @@
     overlay.className = 'char-celebration';
     overlay.style.setProperty('--char-primary', char.palette.primary);
     overlay.style.setProperty('--char-accent', char.palette.accent);
+    // 🟢 data-chroma-key + data-decheck so video-chroma.js / decheck.js
+    // strip the green background out of the Higgsfield-generated assets.
+    // User feedback: "I have a YUGI that appears... he's still on green."
     overlay.innerHTML = `
       <div class="char-celebration-backdrop"></div>
       <div class="char-celebration-card">
-        <video class="char-celebration-video" autoplay muted playsinline
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-          <source src="${char.victory}" type="video/mp4">
-        </video>
-        <img class="char-celebration-fallback" src="${char.poseB}" alt="${char.name}" style="display:none;">
+        <div class="char-celebration-media">
+          <video class="char-celebration-video" autoplay muted playsinline
+                 data-chroma-key="1"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <source src="${char.victory}" type="video/mp4">
+          </video>
+          <img class="char-celebration-fallback" src="${char.poseB}" alt="${char.name}" data-decheck="1" style="display:none;">
+        </div>
         <div class="char-celebration-name">${char.name}</div>
         <div class="char-celebration-tagline">${char.tagline}</div>
         <div class="char-celebration-bubble">${customText || char.catchphrase}</div>
