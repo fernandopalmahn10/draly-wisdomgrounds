@@ -220,8 +220,14 @@
       byExp[k].forEach((s) => {
         const card = document.createElement('div');
         card.className = 'm-reading-card';
+        // 🎴 yugipharaoh story uses the user's transparent Yugi GIF as
+        // its cover (loads only when this modal opens — lazy). Other
+        // stories fall back to their page-1 art.
+        const coverUrl = (s.id === 'yugipharaoh')
+          ? '/assets/png-library/YUGI%20transparent%20gif.gif'
+          : ('/assets/reading/' + s.id + '/page-1.png');
         card.innerHTML =
-          '<div class="m-reading-card-cover" style="background-image:url(\'/assets/reading/' + s.id + '/page-1.png\');"></div>' +
+          '<div class="m-reading-card-cover" style="background-image:url(\'' + coverUrl + '\');"></div>' +
           '<div class="m-reading-card-body">' +
             '<div class="m-reading-card-title">📖 ' + escapeHtml(s.title || s.id) + '</div>' +
             '<div class="m-reading-card-sub">' + escapeHtml(s.subtitle || '') + '</div>' +

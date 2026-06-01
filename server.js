@@ -4465,6 +4465,8 @@ io.on('connection', (socket) => {
           storyId: payload.id,
           title: payload.title,
           subtitle: payload.subtitle,
+          music: payload.music || null,      // 🎵 per-story theme name
+          theme: payload.theme || null,      // 🎨 per-story color palette
           pages: payload.pages,
           // List of available stories so the host can switch between them
           // without reloading the page.
@@ -5736,6 +5738,8 @@ io.on('connection', (socket) => {
       storyList: g.reading.storyList || [],
       title: g.reading.title,
       subtitle: g.reading.subtitle,
+      music: g.reading.music || null,    // 🎵 per-story theme name
+      theme: g.reading.theme || null,    // 🎨 per-story palette
       pages: g.reading.pages,
       currentPage: g.reading.currentPage || 0,
       language: g.reading.language || 'pinyin',   // 'pinyin' | 'es'
@@ -5893,6 +5897,8 @@ io.on('connection', (socket) => {
     g.reading.storyId  = payload.id;
     g.reading.title    = payload.title;
     g.reading.subtitle = payload.subtitle;
+    g.reading.music    = payload.music || null;   // 🎵 swap music per story
+    g.reading.theme    = payload.theme || null;   // 🎨 swap palette per story
     g.reading.pages    = payload.pages;
     g.reading.currentPage = 0;
     g.reading.audioPosMs = 0;
