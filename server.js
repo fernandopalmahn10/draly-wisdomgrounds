@@ -1753,15 +1753,49 @@ function _dailyThemeFor(dateStr) {
   for (let i = 0; i < String(dateStr).length; i++) h = (h * 31 + dateStr.charCodeAt(i)) >>> 0;
   return { exp: DAILY_EXPS[h % DAILY_EXPS.length], goal: DAILY_GOAL };
 }
-// The mechanic rotates by weekday so it never feels like "the same game".
-// Sun/Mon/Sat → 📖 Story mode (cutscene-driven, Pokémon-style dialogue).
-// Tue/Thu → 🧠 Memory pairs. Wed/Fri → 🗣️ Speak & Listen.
-const DAILY_MODE_BY_DOW = ['story', 'story', 'memory', 'speak', 'memory', 'speak', 'story'];
-function _dailyModeFor(dateStr) {
+// 🎲 The mechanic rotates DAILY across 5 distinct modes so no two
+// consecutive days ever feel the same. Old version cycled by day-of-week
+// → "Tuesday always plays the same" → the kid said "today feels exactly
+// like yesterday." Fixed by rotating on a days-since-epoch counter, which
+// guarantees a fresh mode every day on a 5-day cycle. Period = 5 days.
+//
+// Modes:
+//   slash  — 🍉 cut falling characters (the classic, kept for nostalgia)
+//   story  — 📖 Templo del Dragón cutscene (Pokémon dialogue + boss)
+//   memory — 🧠 Memory pairs (find 4 pinyin/Spanish matches)
+//   speak  — 🗣️ Speak & Listen (TTS prompt + repeat)
+//   react  — ⚡ Reacción Pīnyīn (NEW — 3-sec timer, pick correct emoji)
+const DAILY_MODE_ORDER = ['story', 'react', 'slash', 'memory', 'speak'];
+const DAILY_MODE_META = {
+  slash:  { emoji: '🍉', label: 'Corte rápido',     short: 'Slash' },
+  story:  { emoji: '📖', label: 'Templo del Dragón',short: 'Historia' },
+  memory: { emoji: '🧠', label: 'Memoria Flash',    short: 'Memoria' },
+  speak:  { emoji: '🗣️', label: 'Escucha y Repite', short: 'Speak' },
+  react:  { emoji: '⚡', label: 'Reacción Pīnyīn',  short: 'Reacción' },
+};
+function _daysSinceEpoch(dateStr) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ''));
-  if (!m) return 'slash';
-  const dow = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDay();
-  return DAILY_MODE_BY_DOW[dow] || 'slash';
+  if (!m) return 0;
+  return Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 86400000);
+}
+function _dailyModeFor(dateStr) {
+  const days = _daysSinceEpoch(dateStr);
+  return DAILY_MODE_ORDER[((days % DAILY_MODE_ORDER.length) + DAILY_MODE_ORDER.length) % DAILY_MODE_ORDER.length];
+}
+// 🎁 Mystery bonus — ~1 in 7 days the kid gets DOUBLE sword rewards.
+// Deterministic per date so the kid can plan, but unpredictable enough
+// that opening the daily feels like checking a loot box.
+function _dailyBonusFor(dateStr) {
+  const days = _daysSinceEpoch(dateStr);
+  // Mix the day number with a prime to scatter the bonus days across
+  // the week — avoids always landing on the same DOW.
+  return ((days * 17 + 3) % 7) === 0;
+}
+function _tomorrowStr(dateStr) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr || ''));
+  if (!m) return dateStr;
+  const t = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]) + 86400000);
+  return t.toISOString().slice(0, 10);
 }
 function _todayServer() { return new Date().toISOString().slice(0, 10); }
 // Sword milestones — locked SECRET prizes (real reward arranged by teacher).
@@ -1774,11 +1808,21 @@ app.get('/api/homework/daily', (req, res) => {
   if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
   const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : _todayServer();
   const prog = Students.getProgress(rec.code);
+  // 🆕 Preview tomorrow's mode so the daily card can tease "mañana: 🧠
+  // Memoria" — builds anticipation, the kid checks back the next day.
+  const tomorrow = _tomorrowStr(date);
   res.json({
     ok: true,
     date,
     theme: _dailyThemeFor(date),
     mode: _dailyModeFor(date),
+    modeMeta: DAILY_MODE_META[_dailyModeFor(date)] || null,
+    bonus: _dailyBonusFor(date),  // true = double-sword wildcard day
+    tomorrow: {
+      date: tomorrow,
+      mode: _dailyModeFor(tomorrow),
+      modeMeta: DAILY_MODE_META[_dailyModeFor(tomorrow)] || null,
+    },
     doneToday: prog && prog.dailyDate === date,
     progress: prog,
     milestones: DAILY_MILESTONES,
@@ -1791,7 +1835,25 @@ app.post('/api/homework/daily/complete', (req, res) => {
   if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
   const d = /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date : _todayServer();
   const result = Students.awardDaily(rec.code, d, correct);
-  res.json(Object.assign({ ok: result.ok, reason: result.reason }, result));
+  // 🎁 Mystery-bonus day: double the swords. The base award already
+  // landed on the student record via awardDaily; we top it up here with
+  // a second +N swords and flag the response so the client can render
+  // a "+2x ¡DÍA DORADO!" banner.
+  const isBonus = _dailyBonusFor(d);
+  let bonusSwords = 0;
+  if (result.ok && isBonus && result.gained && result.gained.swords) {
+    bonusSwords = result.gained.swords;
+    rec.swords = (Number(rec.swords) || 0) + bonusSwords;
+    if (result.gained) result.gained.swords += bonusSwords;
+    // Refresh progress snapshot so the client HUD shows the post-bonus total.
+    result.progress = Students.getProgress(rec.code);
+  }
+  res.json(Object.assign({
+    ok: result.ok,
+    reason: result.reason,
+    bonus: isBonus,
+    bonusSwords,
+  }, result));
 });
 // Sentence-bonus: after the slash game, the kid arranges the words they
 // discovered into a sentence. +1 ⚔️ and the sentence is saved to their
