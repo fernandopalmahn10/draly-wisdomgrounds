@@ -347,7 +347,7 @@ const STORIES = {
         sentences: [
           'Wǒ ài wǒ de jiā.',
           'Bàba, māma, gǒu, māo.',
-          'Péngyou de wǒ.',
+          'Wǒ de péngyou.',
         ],
         sentencesEs: [
           'Amo mi casa mojadita.',
@@ -429,11 +429,11 @@ const STORIES = {
         pageNum: 1,
         caption: 'La pirámide misteriosa',
         sentences: [
-          'Yugi shì lǎoshī.',
+          'Yugi lǎoshī.',
           'Wǒ shì xuésheng.',
         ],
         sentencesEs: [
-          'Yugi es un maestro antiguo.',
+          'Teacher Yugi — el maestro antiguo de la pirámide.',
           'Yo soy su nuevo estudiante. Estamos dentro de una pirámide enorme — las paredes brillan con jeroglíficos y caracteres chinos flotando en el aire.',
         ],
         audioDurationMs: 8000,
@@ -442,7 +442,7 @@ const STORIES = {
         pageNum: 2,
         caption: 'El libro antiguo',
         sentences: [
-          'Lǎoshī kàn shū.',
+          'Yugi lǎoshī kàn shū.',
           'Wǒ dú shū.',
         ],
         sentencesEs: [
@@ -455,12 +455,12 @@ const STORIES = {
         pageNum: 3,
         caption: 'El primer zì',
         sentences: [
-          'Lǎoshī: kàn zì.',
+          'Yugi lǎoshī: kàn zì.',
           'Wǒ kàn zì.',
           'Wǒ xiě zì.',
         ],
         sentencesEs: [
-          'El maestro: "Mira este carácter."',
+          'Teacher Yugi: "Mira este carácter."',
           'Yo lo veo brillar dorado entre sus manos.',
           'Lo escribo con mi dedo en la arena. ¡Lo logré!',
         ],
@@ -470,12 +470,12 @@ const STORIES = {
         pageNum: 4,
         caption: 'La prueba',
         sentences: [
-          'Lǎoshī shuō: tīng!',
+          'Yugi lǎoshī shuō: tīng!',
           'Wǒ tīng.',
           'Wǒ shuō Hànyǔ.',
         ],
         sentencesEs: [
-          'El maestro dice: "¡Escucha!" — su voz retumba en la pirámide.',
+          'Teacher Yugi dice: "¡Escucha!" — su voz retumba en la pirámide.',
           'Yo escucho con atención.',
           'Y luego yo hablo en chino — mi voz también suena ancestral.',
         ],
@@ -485,11 +485,11 @@ const STORIES = {
         pageNum: 5,
         caption: '¡Nǐ huì!',
         sentences: [
-          'Lǎoshī: nǐ huì shuō.',
+          'Yugi lǎoshī: nǐ huì shuō.',
           'Nǐ huì dú zì.',
         ],
         sentencesEs: [
-          'El maestro asiente con orgullo: "Tú SÍ sabes hablar."',
+          'Teacher Yugi asiente con orgullo: "Tú SÍ sabes hablar."',
           'Tú SÍ puedes leer caracteres. Una luz dorada me envuelve — soy un verdadero estudiante de Hànyǔ.',
         ],
         audioDurationMs: 10000,
@@ -498,11 +498,11 @@ const STORIES = {
         pageNum: 6,
         caption: 'El regalo del faraón',
         sentences: [
-          'Wǒ shì xuésheng de Yugi.',
+          'Wǒ shì Yugi lǎoshī de xuésheng.',
           'Wǒ ài xuéxí Hànyǔ.',
         ],
         sentencesEs: [
-          'Soy estudiante de Yugi.',
+          'Soy estudiante de Teacher Yugi.',
           'Amo aprender chino. El maestro me da un amuleto dorado — y se desvanece en partículas de luz dorada. Volveré a su pirámide algún día.',
         ],
         audioDurationMs: 11000,
