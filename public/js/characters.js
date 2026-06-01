@@ -80,19 +80,17 @@
     overlay.className = 'char-celebration';
     overlay.style.setProperty('--char-primary', char.palette.primary);
     overlay.style.setProperty('--char-accent', char.palette.accent);
-    // 🟢 data-chroma-key + data-decheck so video-chroma.js / decheck.js
-    // strip the green background out of the Higgsfield-generated assets.
-    // User feedback: "I have a YUGI that appears... he's still on green."
+    // ⚡ PERF FIX 2026-06-01 (#2): Skip the VIDEO entirely on celebrations.
+    // The real-time chroma-key processing on every video frame was eating
+    // significant CPU on phones, even after fixing the rAF leak. Just
+    // show the static PNG fallback (decheck.js keys the green once, very
+    // cheap). User reported platform-wide slowness; removing this fixed
+    // most of it. Bring video back later if perf budget allows.
     overlay.innerHTML = `
       <div class="char-celebration-backdrop"></div>
       <div class="char-celebration-card">
         <div class="char-celebration-media">
-          <video class="char-celebration-video" autoplay muted playsinline
-                 data-chroma-key="1"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <source src="${char.victory}" type="video/mp4">
-          </video>
-          <img class="char-celebration-fallback" src="${char.poseB}" alt="${char.name}" data-decheck="1" style="display:none;">
+          <img class="char-celebration-fallback" src="${char.poseB}" alt="${char.name}" data-decheck="1">
         </div>
         <div class="char-celebration-name">${char.name}</div>
         <div class="char-celebration-tagline">${char.tagline}</div>
@@ -103,23 +101,11 @@
     requestAnimationFrame(() => overlay.classList.add('show'));
     const close = () => {
       overlay.classList.remove('show');
-      // 🛑 Explicitly kill the chroma-key rAF loop on this video BEFORE
-      // we remove the overlay, so it never leaks even one extra frame.
-      try {
-        const vid = overlay.querySelector('.char-celebration-video');
-        const cv = overlay.querySelector('.char-celebration-media .ck-canvas');
-        if (vid && vid._chromaStop) vid._chromaStop();
-        if (cv && cv._chromaStop) cv._chromaStop();
-        if (vid) { try { vid.pause(); } catch (_) {} }
-      } catch (_) {}
       setTimeout(() => { try { overlay.remove(); } catch (_) {} }, 300);
     };
     overlay.querySelector('.char-celebration-ok').addEventListener('click', close);
     overlay.querySelector('.char-celebration-backdrop').addEventListener('click', close);
-    // Auto-close after the video ends + 2s of catchphrase reading time.
-    const video = overlay.querySelector('.char-celebration-video');
-    if (video) video.addEventListener('ended', () => setTimeout(close, 2500));
-    setTimeout(close, 8000);  // safety auto-close
+    setTimeout(close, 5000);  // auto-close at 5s (was 8s — less screen time)
   };
 
   // Random character picker — used for surprise easter eggs.

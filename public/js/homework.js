@@ -2012,24 +2012,27 @@
         + '<button class="hw-reward-ok" id="hw-reward-ok" type="button">OK</button></div>';
     }
     rw.classList.remove('hidden');
-    // 🆘 EJECTOR — giant always-tappable ✕ in the top-right corner of the
-    // reward card, OUTSIDE any text/layout that could clip it off screen.
-    // User got stuck on the reward overlay because ¡Genial! was clipped;
-    // this is the failsafe escape hatch.
-    const card = rw.querySelector('.hw-reward-card');
-    if (card && !card.querySelector('.hw-reward-eject')) {
+    // 🆘 EJECT BAR — full-width red bar at the TOP of the viewport.
+    // Appended to <body> not the card so it CANNOT be clipped by card
+    // sizing. Highest z-index (100002) so it sits above everything,
+    // including character celebrations. Always says "✕ CERRAR" so the
+    // kid never has to guess what it does.
+    if (!document.querySelector('.hw-reward-eject')) {
       const eject = document.createElement('button');
       eject.type = 'button';
       eject.className = 'hw-reward-eject';
       eject.setAttribute('aria-label', 'Cerrar');
-      eject.textContent = '✕';
-      card.insertBefore(eject, card.firstChild);
+      eject.innerHTML = '<span>✕</span><span>CERRAR</span>';
+      document.body.appendChild(eject);
     }
     const ok = $('hw-reward-ok');
-    const eject = rw.querySelector('.hw-reward-eject');
+    const eject = document.querySelector('.hw-reward-eject');
     const dismiss = () => {
       rw.classList.add('hidden');
       rw.innerHTML = '';   // tear down so subsequent shows rebind fresh
+      // Also remove the body-level eject bar so it doesn't linger.
+      const ej = document.querySelector('.hw-reward-eject');
+      if (ej) { try { ej.remove(); } catch (_) {} }
       try { renderDailyHome(); } catch (_) {}
     };
     if (ok) ok.addEventListener('click', dismiss);
@@ -3801,29 +3804,21 @@
         <span class="hw-lib-pinyin">${escapeHtml(w.pinyin)}</span>
         <span class="hw-lib-es">${escapeHtml(w.es)}</span>`;
       chip.addEventListener('click', () => {
-        // ⚡ FAST PATH — the kid's tap MUST feel instant. Run only the
-        // critical "word appears in the answer bar" work synchronously.
-        // Everything cosmetic (bubble, chime, fly animation) is deferred
-        // to the next frame so it doesn't block the main-thread paint of
-        // the new stage state. User feedback 2026-06-01: "the answer bar
-        // feedback is really slow — was better before."
+        // 🔁 REVERTED to original synchronous tap (2026-06-01) — the rAF
+        // defer was making touch feedback FEEL delayed even though it
+        // freed paint. Going back to inline calls because that's what
+        // the user explicitly remembers as "smooth like before."
         pushUndo(activeItemIdx);
         const cur = currentAnswers[activeItemIdx] || '';
         currentAnswers[activeItemIdx] = (cur ? cur + ' ' : '') + w.pinyin;
         renderStage(activeItemIdx);
         refreshUndoButtons();
-        // Lightweight tap flash — pure CSS, instant.
         chip.classList.remove('flash');
         void chip.offsetWidth;
         chip.classList.add('flash');
-        // Defer the cosmetic effects so they happen AFTER the stage has
-        // painted. requestAnimationFrame yields back to the browser, so
-        // the answer-bar update is visible before bubble/chime/fly start.
-        requestAnimationFrame(() => {
-          try { _showWordMeaningBubble(chip, w); } catch (_) {}
-          try { _playTapChime(); } catch (_) {}
-          try { _flyToStage(chip, activeItemIdx); } catch (_) {}
-        });
+        _showWordMeaningBubble(chip, w);
+        _playTapChime();
+        _flyToStage(chip, activeItemIdx);
       });
       wrap.appendChild(chip);
     });
