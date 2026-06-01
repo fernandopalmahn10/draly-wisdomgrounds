@@ -2579,7 +2579,18 @@
     const totals = a.totalPoints || (a.itemCount ? a.itemCount * 20 : 100);
     return Math.max(...att.map((s) => (s.score / (s.total || totals)) * 100));
   }
-  function assignmentPassed(a) { const p = assignmentBestPct(a); return p != null && p >= HW_PASS_PCT; }
+  // 🔧 FIX: use integer multiplication instead of percentage comparison.
+  // 12/15 in floats → 79.9999999%, which fails `>= 80`. But 12 >= 15*0.8
+  // = 12 >= 12 = true. Float-safe. Also accept any submission where the
+  // raw score meets the threshold directly.
+  function assignmentPassed(a) {
+    const att = submissions.filter((s) => s.assignmentId === a.id);
+    if (!att.length) return false;
+    return att.some((s) => {
+      const total = s.total || a.totalPoints || (a.itemCount ? a.itemCount * 20 : 100);
+      return total > 0 && s.score * 100 >= total * HW_PASS_PCT;
+    });
+  }
   // Best-effort story→experience grouping for the reading folders.
   const READING_EXP = { xiaomingday: 'exp8' };
   function readingExpOf(r) { return (r && (READING_EXP[r.storyId] || r.exp)) || 'exp1'; }
@@ -2677,6 +2688,7 @@
         <div class="hw-folder-name">${escapeHtml(a.title || 'Tarea especial')}</div>
         <div class="hw-folder-meta">📝 ${a.itemCount} oración${a.itemCount === 1 ? '' : 'es'} · ${when}</div>
         ${tag}`;
+      card.dataset.assignmentId = a.id;
       card.addEventListener('click', () => openAssignment(a.id));
       grid.appendChild(card);
     });
@@ -2818,6 +2830,7 @@
       <div class="hw-card-title">${escapeHtml(a.title)}</div>
       <div class="hw-card-sub">${escapeHtml(a.subtitle)}</div>
       <div class="hw-card-meta">${a.itemCount} oraciones</div>`;
+    card.dataset.assignmentId = a.id;
     card.addEventListener('click', () => openAssignment(a.id));
     frag.appendChild(card);
     // 🔎 Once attempted, let the kid review exactly what they missed.
@@ -3523,6 +3536,24 @@
     }
   });
 
+  // 🛡️ BULLETPROOF TAP DELEGATION — even if the per-card click handler
+  // doesn't bind (rendering race) or gets removed, this document-level
+  // delegate catches every tap on a card via its data-assignment-id.
+  // User reported "I tap assignment 2/3/4/5/6/7 and it doesn't open" —
+  // this guarantees the open always fires.
+  document.addEventListener('click', (e) => {
+    const card = e.target && e.target.closest && e.target.closest('[data-assignment-id]');
+    if (!card) return;
+    // Skip if the tap was on a child action button (review, edit, etc).
+    if (e.target.closest('.hw-review-btn, .hw-sentence-del, .hw-sentence-edit, .hw-sentence-speak')) return;
+    const id = card.dataset.assignmentId;
+    if (!id) return;
+    // If we're already on the assignment screen, ignore (avoid re-open loops).
+    if (currentAssignment && currentAssignment.id === id) return;
+    e.preventDefault();
+    openAssignment(id);
+  }, true);  // capture phase so we beat any stuck overlay above the card
+
   // ── Submit + results — both buttons (top + bottom) trigger the same flow
   function submitAssignment() {
     if (!currentAssignment) return;
@@ -3559,6 +3590,11 @@
           total: data.total,
           ts: Date.now(),
         });
+        // 🔧 FIX: refresh the tab counts immediately so when the kid hits
+        // Volver, Pendientes count is one lower + Completadas one higher.
+        // Was: submissions array updated but counts only refreshed on full
+        // page reload. Now: live update.
+        try { if (typeof updateTabCounts === 'function') updateTabCounts(); } catch (_) {}
       })
       .catch((e) => {
         btns.forEach((b) => { b.disabled = false; b.textContent = '📤 Entregar tarea'; });
