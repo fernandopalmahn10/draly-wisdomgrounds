@@ -42,6 +42,9 @@ const STORIES = {
     title: 'Xiǎo Míng de yī tiān',
     subtitle: 'Un día con Xiǎo Míng',
     exp: 'exp8',  // late-set vocab (school/weather/shopping) → EXP8
+    music: 'mochi-mash',     // upbeat, warm, daily-life vibes
+    animated: false,         // PNG stills only
+    assetVersion: '20260601a', // bump when you replace the page-N.png files
     // === Test bank ===
     // 5 multiple-choice questions, each worth 20 points (100 total).
     // Questions are tied to EVENTS in the story — kids who actually
@@ -211,6 +214,9 @@ const STORIES = {
     title: 'Pīnpīn de jiā',
     subtitle: 'La casa mojada de Pīnpīn',
     exp: 'exp1',  // pure EXP1 vocab (Yo / Familia: wǒ, jiā, gǒu, māo…)
+    music: 'family',         // gentle warm "home / reunion" theme
+    animated: false,         // set to true if you drop page-N.gif files
+    assetVersion: '20260602a', // bump this when you replace the art
     questions: [
       {
         // Page 1: "Wǒ shì Pīnpīn"
@@ -408,10 +414,16 @@ function sentenceRanges(words) {
 function buildStoryPayload(storyId) {
   const id = storyId && STORIES[storyId] ? storyId : DEFAULT_STORY_ID;
   const story = STORIES[id];
+  // 🎨 Animated stories (page-N.gif instead of page-N.png) opt in via
+  // `animated: true` on the story config. Cache-busting via assetVersion
+  // forces kids to fetch the new art when the teacher replaces it.
+  const ext = story.animated ? 'gif' : 'png';
+  const ver = story.assetVersion ? '?v=' + encodeURIComponent(story.assetVersion) : '';
   return {
     id,
     title: story.title,
     subtitle: story.subtitle,
+    music: story.music || null,     // ← per-story theme name, see sounds.js GAME_THEMES
     questionCount: (story.questions || []).length,
     pages: story.pages.map((page) => {
       const words = tokenizePage(page);
@@ -422,8 +434,8 @@ function buildStoryPayload(storyId) {
         sentencesEs: page.sentencesEs || [],
         words,
         sentenceRanges: sentenceRanges(words),
-        imageUrl: `/assets/reading/${id}/page-${page.pageNum}.png`,
-        audioUrl: `/assets/reading/${id}/page-${page.pageNum}.mp3`,
+        imageUrl: `/assets/reading/${id}/page-${page.pageNum}.${ext}${ver}`,
+        audioUrl:  `/assets/reading/${id}/page-${page.pageNum}.mp3${ver}`,
         audioDurationMs: page.audioDurationMs || DEFAULT_PAGE_AUDIO_MS,
       };
     }),
