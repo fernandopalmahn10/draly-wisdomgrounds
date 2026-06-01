@@ -42,6 +42,11 @@
       catchphrase: '— ¡Confía en tu deck! 🎴',
       palette: { primary: '#ffd24a', accent: '#7a1fa3' },
       rarity: 'legendary',
+      // 🎴 Override the default static PNG with the user-provided
+      // TRANSPARENT GIF. Plays in <img> tag natively, no chroma-key
+      // needed (it's already pre-transparent). The 22 MB file size
+      // is the trade-off — only loads when a Yugi celebration fires.
+      poseB: '/assets/png-library/YUGI%20transparent%20gif.gif',
     }),
     // Pre-declared slots for characters whose assets are coming soon.
     // The UI knows to gracefully fall back to a PNG placeholder if the

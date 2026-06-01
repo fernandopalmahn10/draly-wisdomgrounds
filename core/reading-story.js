@@ -369,7 +369,7 @@ const STORIES = {
     exp: 'exp2',                  // Escuela / Idioma
     music: 'identity',            // mysterious detective theme fits the mood
     animated: false,              // APNG files use .png extension natively
-    assetVersion: '20260602a',
+    assetVersion: '20260603a',    // bumped: user dropped fresh Yugi-pharaoh art
     // 🎨 Theme — purple + gold pharaoh palette. host-reading.js applies
     // these as CSS variables on the body when this story loads.
     theme: {
