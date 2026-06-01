@@ -2743,7 +2743,11 @@
         <div class="hw-folder-name">${escapeHtml(exp.label || expId)}</div>
         <div class="hw-folder-meta">${total + ' actividad' + (total === 1 ? '' : 'es') + ' en total'}</div>
         ${meta}`;
-      card.addEventListener('click', () => { hwFolder = expId; renderList(); });
+      // 🛡️ data-folder-id mirrors the data-assignment-id approach so the
+      // global capture-phase delegate catches folder taps too, even if
+      // this per-card handler ever fails to attach (e.g. re-render race).
+      card.dataset.folderId = expId;
+      card.addEventListener('click', () => { hwFolder = expId; renderList(); window.scrollTo({top:0, behavior:'instant'}); });
       grid.appendChild(card);
     });
     if (!grid.children.length) {
@@ -3220,30 +3224,52 @@
   });
 
   // ── Assignment screen
+  // 🔧 Race-proof open: track the LATEST requested ID so a slow first
+  // fetch can't "win" over a more recent tap. Also clear stale state
+  // up-front so a hung previous open doesn't block the next one.
+  let _openRequestSeq = 0;
   function openAssignment(id) {
-    // Custom assignments start with "ca_" — they go to a different endpoint
-    // and the word bank stays UNLOCKED so kids can pull from any EXP.
+    if (!id) return;
+    // Visual feedback so the kid knows their tap registered.
+    const card = document.querySelector('[data-assignment-id="' + CSS.escape(id) + '"]');
+    if (card) { card.classList.add('hw-card-loading'); }
+    // Cancel any in-flight "owns the screen" claim from previous opens.
+    currentAssignment = null;
+    const mySeq = ++_openRequestSeq;
     const isCustom = String(id || '').slice(0, 3) === 'ca_';
     const url = isCustom
       ? '/api/homework/custom-assignment/' + encodeURIComponent(id) + '?accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode)
       : '/api/homework/assignment/' + encodeURIComponent(id) + '?accessCode=' + encodeURIComponent(accessCode);
-    fetch(url)
+    // 10-second timeout so a hung fetch doesn't lock the kid in limbo.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    fetch(url, { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => {
+        clearTimeout(timer);
+        if (card) card.classList.remove('hw-card-loading');
+        // If user already tapped a newer assignment, drop this stale response.
+        if (mySeq !== _openRequestSeq) return;
         if (!data || !data.ok) {
-          alert('No se pudo abrir: ' + (data && data.error || ''));
+          alert('No se pudo abrir: ' + (data && data.error || 'intenta de nuevo'));
           return;
         }
-        // Server wraps custom in {assignment: ...}; regular returns flat.
         currentAssignment = isCustom ? data.assignment : data;
         if (!currentAssignment) { alert('No se pudo abrir.'); return; }
         currentAssignment.custom = isCustom || !!currentAssignment.custom;
         currentAnswers = currentAssignment.items.map(() => '');
         undoStacks = currentAssignment.items.map(() => []);
-        // Custom = multi-bank → leave catalog on 'all'. Regular = locked.
         activeExpTab = currentAssignment.custom ? 'all' : (currentAssignment.expLabel || 'all');
         renderAssignment();
         showScreen('assignment');
+        // Scroll the assignment screen to top so the kid sees the title.
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      })
+      .catch((e) => {
+        clearTimeout(timer);
+        if (card) card.classList.remove('hw-card-loading');
+        if (mySeq !== _openRequestSeq) return;
+        alert('No se pudo conectar. Intenta de nuevo.');
       });
   }
   function renderAssignment() {
@@ -3542,14 +3568,28 @@
   // User reported "I tap assignment 2/3/4/5/6/7 and it doesn't open" —
   // this guarantees the open always fires.
   document.addEventListener('click', (e) => {
+    // ── Folder cards (EXP1-EXP8) — open the folder view
+    const folder = e.target && e.target.closest && e.target.closest('[data-folder-id]');
+    if (folder && !e.target.closest('button[disabled]')) {
+      const fid = folder.dataset.folderId;
+      if (fid && hwFolder !== fid) {
+        e.preventDefault();
+        hwFolder = fid;
+        renderList();
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        return;
+      }
+    }
+    // ── Assignment cards — open the assignment fetch
     const card = e.target && e.target.closest && e.target.closest('[data-assignment-id]');
     if (!card) return;
     // Skip if the tap was on a child action button (review, edit, etc).
     if (e.target.closest('.hw-review-btn, .hw-sentence-del, .hw-sentence-edit, .hw-sentence-speak')) return;
     const id = card.dataset.assignmentId;
     if (!id) return;
-    // If we're already on the assignment screen, ignore (avoid re-open loops).
-    if (currentAssignment && currentAssignment.id === id) return;
+    // Don't re-fire if we're literally already on the assignment screen.
+    const onAsgScreen = $('screen-assignment') && !$('screen-assignment').classList.contains('hidden');
+    if (onAsgScreen && currentAssignment && currentAssignment.id === id) return;
     e.preventDefault();
     openAssignment(id);
   }, true);  // capture phase so we beat any stuck overlay above the card
