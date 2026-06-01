@@ -2061,9 +2061,11 @@ button, a, .hw-card, .hw-folder-card, .hw-lib-chip, .hw-stage-word,
    category chip) but stays inline + auto-dismisses so it doesn't block
    sentence building. Same glow + border-color treatment as the overlay. */
 .hw-meaning-bubble {
-  position: absolute;
+  /* Position is computed in JS and set inline as position:fixed +
+     explicit left/top. JS clamps to viewport edges + flips above/below
+     the chip based on available room. Don't override here. */
   z-index: 9000;
-  transform: translate(-50%, calc(-100% - 8px)) scale(0.5);
+  transform: scale(0.85);
   padding: 14px 20px 12px;
   background:
     radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08), transparent 70%),
@@ -2086,11 +2088,11 @@ button, a, .hw-card, .hw-folder-card, .hw-lib-chip, .hw-stage-word,
 }
 .hw-meaning-bubble.show {
   opacity: 1;
-  transform: translate(-50%, calc(-100% - 14px)) scale(1);
+  transform: scale(1);
 }
 .hw-meaning-bubble.fade {
   opacity: 0;
-  transform: translate(-50%, calc(-100% - 36px)) scale(0.92);
+  transform: scale(0.94);
 }
 .hw-meaning-bubble::after {
   /* Pointer arrow below the card */
