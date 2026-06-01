@@ -66,26 +66,14 @@ body.hw-bg {
     calc(18px + env(safe-area-inset-top, 0px)) 16px
     calc(40px + env(safe-area-inset-bottom, 0px));
 }
-/* 🛟 Tap feedback: card flashes a teal ring + dims slightly while
-   the assignment fetch is in flight. Removes any ambiguity about
-   whether the tap registered, and survives slow networks. */
+/* 🛟 Tap feedback: card briefly dims while the fetch is in flight.
+   Removed the rotating ⏳ icon + the teal outline because the user
+   explicitly correlated "the loading icon arrival" with platform
+   slowness. The dim-down still confirms the tap registered, without
+   any running animation. */
 .hw-card-loading {
-  outline: 3px solid #5be8d1 !important;
-  outline-offset: -3px;
-  opacity: 0.65;
-  transform: scale(0.97);
-  transition: opacity 0.12s, transform 0.12s;
-  position: relative;
-}
-.hw-card-loading::after {
-  content: '⏳';
-  position: absolute;
-  top: 8px; right: 10px;
-  font-size: 1.4rem;
-  animation: hwCardLoadingSpin 0.9s linear infinite;
-}
-@keyframes hwCardLoadingSpin {
-  0% { transform: rotate(0); } 100% { transform: rotate(360deg); }
+  opacity: 0.7;
+  transition: opacity 0.1s;
 }
 /* 📢 Non-blocking network toast — replaces alert() so the kid never gets
    locked behind an OK button when the connection is flaky. Auto-hides

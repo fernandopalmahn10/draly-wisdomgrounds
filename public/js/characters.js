@@ -98,6 +98,13 @@
         <button class="char-celebration-ok" type="button">¡Genial!</button>
       </div>`;
     document.body.appendChild(overlay);
+    // 🧹 Explicitly chroma-key the character image (decheck observer was
+    // removed for perf reasons — see decheck.js). One-shot processing on
+    // the image after it's in the DOM, no continuous observer cost.
+    try {
+      const img = overlay.querySelector('.char-celebration-fallback');
+      if (img && window.decheckImage) window.decheckImage(img);
+    } catch (_) {}
     requestAnimationFrame(() => overlay.classList.add('show'));
     const close = () => {
       overlay.classList.remove('show');

@@ -95,19 +95,15 @@
     imgs.forEach(processImg);
   }
 
-  // Watch for new imgs added dynamically (avatar picker, etc.)
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((m) => {
-      m.addedNodes.forEach((n) => {
-        if (n.nodeType !== 1) return;
-        if (n.tagName === 'IMG') processImg(n);
-        else if (n.querySelectorAll) processAll(n);
-      });
-    });
-  });
+  // ⚡ PERF (2026-06-01) — MutationObserver REMOVED. It was firing on
+  // every DOM mutation in the page (and the homework page mutates a LOT
+  // during sentence building), each callback doing querySelectorAll
+  // walks. Source of platform-wide latency the user reported.
+  // Now: only the static images present at DOMContentLoaded are processed
+  // automatically. Dynamically added images must opt in by calling
+  // window.decheckImage(imgEl) explicitly (see characters.js).
   document.addEventListener('DOMContentLoaded', () => {
     processAll();
-    observer.observe(document.body, { childList: true, subtree: true });
   });
   window.decheckImage = processImg;
   window.decheckAll = processAll;
