@@ -795,6 +795,30 @@ body.hw-bg {
 .m-reading-card-sub { font-size: 0.82rem; opacity: 0.85; margin-top: 2px; }
 .m-reading-card-meta { font-size: 0.74rem; opacity: 0.6; margin-top: 4px; }
 .m-reading-card-cta { font-weight: 900; color: #5be8d1; font-size: 0.95rem; white-space: nowrap; }
+.m-reading-card-actions { display: flex; flex-direction: column; gap: 6px; }
+.m-reading-launch, .m-reading-force {
+  border: none; border-radius: 999px; padding: 8px 14px;
+  font-weight: 900; font-size: 0.86rem; cursor: pointer;
+  white-space: nowrap; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.m-reading-launch { background: rgba(91,232,209,0.18); color: #5be8d1; border: 1.5px solid rgba(91,232,209,0.55); }
+.m-reading-launch:active { transform: scale(0.96); }
+.m-reading-force { background: linear-gradient(135deg, #ff7e3c, #cc4400); color: #fff; }
+.m-reading-force:active { transform: scale(0.96); }
+/* 🎯 Force-reading picker — online students checklist */
+.m-force-actions { display: flex; gap: 8px; margin: 8px 0 10px; }
+.m-force-students { max-height: 40vh; overflow-y: auto; border: 1.5px solid rgba(91,232,209,0.35); border-radius: 12px; padding: 8px; background: rgba(15,15,30,0.6); }
+.m-force-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px; cursor: pointer;
+  transition: background 0.1s;
+}
+.m-force-row:hover { background: rgba(91,232,209,0.08); }
+.m-force-row input[type=checkbox] { width: 22px; height: 22px; accent-color: #5be8d1; cursor: pointer; }
+.m-force-row-dot { width: 8px; height: 8px; border-radius: 50%; background: #5be88a; box-shadow: 0 0 8px #5be88a; flex-shrink: 0; }
+.m-force-row-name { flex: 1 1 auto; font-weight: 800; color: #fff5d8; }
+.m-force-row-code { font-family: ui-monospace, monospace; font-size: 0.82rem; opacity: 0.6; color: rgba(231,250,255,0.7); }
 .m-modal-sub { color: rgba(231,250,255,0.7); font-size: 0.9rem; margin: -6px 0 12px; font-style: italic; }
 
 .m-emirati-list { display: flex; flex-direction: column; gap: 12px; }
