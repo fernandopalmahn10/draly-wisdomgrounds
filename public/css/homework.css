@@ -3098,33 +3098,39 @@ button.hw-sent-chip:active { transform: scale(0.94); }
    ever gets clipped on weird viewports. */
 .hw-reward { cursor: pointer; }
 .hw-reward-card { cursor: default; position: relative; }
-/* 🆘 Always-tappable ✕ in the top-right of the card. position:absolute
-   guarantees it doesn't get pushed by long text. Big tap target (44px)
-   so even fat-finger taps land. Sits above any other card content. */
+/* 🆘 EJECT BAR — full-width red bar fixed to the top of the viewport
+   while the reward overlay is showing. Impossible to miss, impossible
+   to clip off-screen. Tap target ~60px tall so the kid can't miss it
+   with a fat-finger. User was repeatedly getting stuck — this is the
+   nuclear option. */
 .hw-reward-eject {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  position: fixed;
+  top: max(0px, env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  height: 56px;
   border: none;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff5d8;
-  font-size: 1.4rem;
+  border-radius: 0;
+  background: linear-gradient(180deg, #ff5a5a, #cc2929);
+  color: #fff;
+  font-size: 1.05rem;
   font-weight: 900;
-  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
   touch-action: manipulation;
-  z-index: 5;
+  z-index: 100002;   /* above everything including char-celebration */
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   padding: 0;
+  box-shadow: 0 4px 16px rgba(255, 60, 60, 0.5);
+  -webkit-tap-highlight-color: transparent;
 }
 .hw-reward-eject:active {
-  background: rgba(255, 100, 100, 0.4);
-  transform: scale(0.92);
+  background: linear-gradient(180deg, #cc2929, #991a1a);
+  transform: translateY(2px);
 }
 
 /* 📱 KILL MOBILE STICKY HOVER — on iOS/Android, :hover stays "on" after
