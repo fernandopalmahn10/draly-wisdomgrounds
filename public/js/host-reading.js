@@ -45,6 +45,38 @@
       socket.emit('rd:auth', { pin, password: adminPw }, (resp) => {
         if (resp && resp.ok) {
           showScreen('lobby');
+          // 🎯 FORCE-IMPOSE: if maestro passed ?forceCodes=, push the
+          // PIN into each selected student's inbox as a force-takeover
+          // message. They'll auto-redirect into this room within ~20s.
+          try {
+            const params = new URLSearchParams(location.search);
+            const forceList = (params.get('forceCodes') || '')
+              .split(',').map((s) => s.trim()).filter(Boolean);
+            const storyId = params.get('story') || '';
+            if (forceList.length && pin) {
+              fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(adminPw), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  studentCodes: forceList,
+                  text: '¡Tu maestra te invita a una lectura en vivo!',
+                  actionType: 'force',
+                  actionUrl: '/player.html?pin=' + pin + '&autojoin=1',
+                  actionLabel: '📖 Unirme a la lectura',
+                }),
+              }).then((r) => r.json()).then((d) => {
+                if (d && d.ok) {
+                  console.log('[force-reading] invited ' + d.sent + ' students');
+                  // Surface a small confirmation in the host UI
+                  const note = document.createElement('div');
+                  note.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#5be8d1;color:#1a1a26;padding:10px 18px;border-radius:999px;font-weight:900;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,0.4);';
+                  note.textContent = '🎯 Forzando a ' + d.sent + ' alumno' + (d.sent === 1 ? '' : 's') + ' — entran en ~20 seg';
+                  document.body.appendChild(note);
+                  setTimeout(() => { try { note.remove(); } catch (_) {} }, 6000);
+                }
+              }).catch(() => {});
+            }
+          } catch (_) {}
         } else {
           $('admin-err').textContent = 'Contraseña incorrecta';
           adminPw = null;

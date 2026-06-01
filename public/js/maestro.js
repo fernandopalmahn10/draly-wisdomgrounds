@@ -218,8 +218,7 @@
       const grid = document.createElement('div');
       grid.className = 'm-reading-folder-grid';
       byExp[k].forEach((s) => {
-        const card = document.createElement('button');
-        card.type = 'button';
+        const card = document.createElement('div');
         card.className = 'm-reading-card';
         card.innerHTML =
           '<div class="m-reading-card-cover" style="background-image:url(\'/assets/reading/' + s.id + '/page-1.png\');"></div>' +
@@ -228,10 +227,17 @@
             '<div class="m-reading-card-sub">' + escapeHtml(s.subtitle || '') + '</div>' +
             '<div class="m-reading-card-meta">' + (s.pageCount || 0) + ' páginas · ' + (s.questionCount || 0) + ' preguntas</div>' +
           '</div>' +
-          '<div class="m-reading-card-cta">Lanzar ›</div>';
-        card.addEventListener('click', () => {
-          // host-reading.html accepts ?story=<id> to preselect on load.
+          '<div class="m-reading-card-actions">' +
+            '<button class="m-reading-launch" type="button" data-story="' + escapeHtml(s.id) + '">Lanzar ›</button>' +
+            '<button class="m-reading-force" type="button" data-story="' + escapeHtml(s.id) + '" title="Lanza la lectura Y la fuerza en alumnos en línea">🎯 Forzar</button>' +
+          '</div>';
+        // Regular launch — no force
+        card.querySelector('.m-reading-launch').addEventListener('click', () => {
           window.open('/host-reading.html?story=' + encodeURIComponent(s.id), '_blank', 'noopener');
+        });
+        // 🎯 Force-impose flow — pick online students then launch + invite
+        card.querySelector('.m-reading-force').addEventListener('click', () => {
+          openForceReadingPicker(s);
         });
         grid.appendChild(card);
       });
@@ -240,6 +246,90 @@
     });
     if (!totalFolders) wrap.textContent = 'No hay historias todavía.';
   }
+  // 🎯 Force-reading picker — modal that shows ONLINE students and lets
+  // the teacher tick which ones to force into the story. On confirm,
+  // opens host-reading.html in a new tab with ?story=X&forceCodes=...
+  // The host page then pushes inbox force-messages with its newly
+  // generated PIN, and the kids' homework pages auto-redirect.
+  function openForceReadingPicker(story) {
+    // Pull the latest student list and filter to online-now client-side.
+    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) {
+          alert('No se pudo cargar la lista de alumnos en línea.');
+          return;
+        }
+        const onlineNow = (data.students || []).filter((s) => {
+          // "online" = lastSeen within last 60 seconds
+          return s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000;
+        });
+        if (!onlineNow.length) {
+          alert('No hay alumnos en línea ahora mismo.\n\n(Pídeles que abran /homework primero.)');
+          return;
+        }
+        // Build the modal
+        let overlay = document.getElementById('m-force-reading-modal');
+        if (overlay) overlay.remove();
+        overlay = document.createElement('div');
+        overlay.id = 'm-force-reading-modal';
+        overlay.className = 'm-modal';
+        overlay.innerHTML = `
+          <div class="m-modal-card">
+            <button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>
+            <h2>🎯 Forzar lectura</h2>
+            <p class="m-modal-sub">Lectura: <strong>📖 ${escapeHtml(story.title || story.id)}</strong></p>
+            <p class="m-modal-sub" style="margin-top:6px;">Selecciona los alumnos en línea ahora. Recibirán un aviso y entrarán automáticamente en ~20 segundos.</p>
+            <div class="m-force-actions">
+              <button class="btn btn-ghost btn-sm" id="m-force-all">✅ Todos</button>
+              <button class="btn btn-ghost btn-sm" id="m-force-none">⬜ Ninguno</button>
+            </div>
+            <div class="m-force-students" id="m-force-students"></div>
+            <button class="btn btn-jade btn-xl" id="m-force-launch" style="margin-top:16px;width:100%;">
+              🚀 Lanzar y forzar a alumnos seleccionados
+            </button>
+          </div>`;
+        document.body.appendChild(overlay);
+        // Render student checkboxes
+        const list = overlay.querySelector('#m-force-students');
+        onlineNow.forEach((s) => {
+          const row = document.createElement('label');
+          row.className = 'm-force-row';
+          row.innerHTML =
+            '<input type="checkbox" data-code="' + escapeHtml(s.code) + '" checked>' +
+            '<span class="m-force-row-dot"></span>' +
+            '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+            '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
+          list.appendChild(row);
+        });
+        // Wire close
+        const close = () => { try { overlay.remove(); } catch (_) {} };
+        overlay.querySelector('.m-modal-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        // All / None
+        overlay.querySelector('#m-force-all').addEventListener('click', () => {
+          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = true; });
+        });
+        overlay.querySelector('#m-force-none').addEventListener('click', () => {
+          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
+        });
+        // Launch
+        overlay.querySelector('#m-force-launch').addEventListener('click', () => {
+          const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
+            .map((cb) => cb.dataset.code).filter(Boolean);
+          if (!codes.length) {
+            alert('Selecciona al menos un alumno.');
+            return;
+          }
+          const url = '/host-reading.html?story=' + encodeURIComponent(story.id)
+            + '&forceCodes=' + encodeURIComponent(codes.join(','));
+          window.open(url, '_blank', 'noopener');
+          close();
+        });
+      })
+      .catch((e) => { alert('Error: ' + e.message); });
+  }
+
   // ── 🌐 EMIRATI ARABIC GATEWAY (super-admin only) ──────────────────
   const emBtn = $('m-emirati-btn');
   const emModal = $('m-emirati-modal');
