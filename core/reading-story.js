@@ -198,7 +198,178 @@ const STORIES = {
       },
     ],
   },
-  // === STORY 2: add here when you have it.
+  // === STORY 2: PĪNPĪN — the soaking-wet water turtle =================
+  // Funny Spanglish + pinyin half-and-half story for the kid who's
+  // already wrestled with EXP1 vocab. Hardest HSK1 level (uses the
+  // possessive 'de', the verb-trio shì/jiào/rènshi, and 'suì' for age).
+  // Every page leans on at least one comedic beat — Pīnpīn's water-gun
+  // backfires, dog shakes water on him, cat refuses to come down from
+  // a tree, etc. The kid who reads carefully gets the gag AND learns.
+  pinpin: {
+    id: 'pinpin',
+    title: 'Pīnpīn de jiā',
+    subtitle: 'La casa mojada de Pīnpīn',
+    questions: [
+      {
+        // Page 1: "Wǒ shì Pīnpīn. Wǒ tài shīle!" (very wet)
+        q: '¿Por qué Pīnpīn está MUY mojado al inicio de la historia?',
+        choices: [
+          'Su water gun rompió la nube y le cayó toda el agua encima',
+          'Se cayó en el océano',
+          'Su bàba lo bañó con manguera',
+          'Estaba nadando',
+        ],
+        correctIdx: 0,
+      },
+      {
+        // Page 2: "Gǒu" shakes water on Pīnpīn
+        q: '¿Qué hace el gǒu cuando conoce a Pīnpīn?',
+        choices: [
+          'Le sacude TODA el agua encima',
+          'Le da una toalla',
+          'Se va corriendo',
+          'Se queda dormido',
+        ],
+        correctIdx: 0,
+      },
+      {
+        // Page 3: cat refuses to climb down
+        q: 'La māo dice que rènshi a la māma de Pīnpīn, pero…',
+        choices: [
+          'NO baja del árbol — odia el agua',
+          'Vuela hasta la casa',
+          'Se duerme',
+          'Llama por teléfono',
+        ],
+        correctIdx: 0,
+      },
+      {
+        // Page 4: cat rides on the dog's back
+        q: '¿Cómo viaja la māo con los péngyou?',
+        choices: [
+          'Encima del gǒu como una reina dramática',
+          'Caminando en el agua',
+          'En un taxi',
+          'En bicicleta',
+        ],
+        correctIdx: 0,
+      },
+      {
+        // Page 5: tiny umbrella + new name
+        q: 'Pīnpīn tiene 5 suì. ¿Qué míngzi nuevo le dan?',
+        choices: [
+          '"El Chico de la Sombrilla" — porque su sombrilla es chiquita',
+          '"Mojado para siempre"',
+          '"Súper tortuga 9000"',
+          '"Wǒ Pīnpīn"',
+        ],
+        correctIdx: 0,
+      },
+    ],
+    pages: [
+      {
+        pageNum: 1,
+        caption: 'Pīnpīn perdido en la lluvia',
+        sentences: [
+          'Wǒ shì Pīnpīn. Wǒ shì tortuga.',
+          'Wǒ de water gun… ¡no funcionó!',
+          'Wǒ tài shīle. Wǒ de jiā… ¿en dónde?',
+        ],
+        sentencesEs: [
+          'Soy Pīnpīn. Soy una tortuga.',
+          'Mi pistola de agua… ¡no funcionó!',
+          'Estoy muy mojado. Mi casa… ¿dónde está?',
+        ],
+        audioDurationMs: 9000,
+      },
+      {
+        pageNum: 2,
+        caption: 'Conociendo al gǒu (más mojado)',
+        sentences: [
+          'Nǐ hǎo, gǒu! Wǒ jiào Pīnpīn.',
+          'Nǐ rènshi a mi māma?',
+          'El gǒu sacude… ¡y wǒ más mojado!',
+          'Gracias, gǒu. De verdad.',
+        ],
+        sentencesEs: [
+          '¡Hola, perro! Me llamo Pīnpīn.',
+          '¿Conoces a mi mamá?',
+          'El perro se sacude… ¡y yo MÁS mojado!',
+          'Gracias, perro. De verdad.',
+        ],
+        audioDurationMs: 10000,
+      },
+      {
+        pageNum: 3,
+        caption: 'La māo dramática del árbol',
+        sentences: [
+          'Una māo en el árbol. Wǒ digo: nǐ hǎo!',
+          'La māo: wǒ rènshi a tu māma.',
+          'Pero wǒ NO bajo. El agua… ¡no, gracias!',
+          'Tā ài a su érzi. Pero seca, ¿ok?',
+        ],
+        sentencesEs: [
+          'Una gata en el árbol. Yo digo: ¡hola!',
+          'La gata: yo conozco a tu mamá.',
+          'Pero yo NO bajo. El agua… ¡no, gracias!',
+          'Ella ama a su hijo. Pero seca, ¿ok?',
+        ],
+        audioDurationMs: 11000,
+      },
+      {
+        pageNum: 4,
+        caption: 'Tres péngyou (uno seco, dos mojados)',
+        sentences: [
+          'Wǒmen somos péngyou ahora.',
+          'La māo: wǒ encima del gǒu, seca como reina.',
+          'El gǒu sufre. Wǒ me río. Jajaja.',
+          'Péngyou raros, pero péngyou.',
+        ],
+        sentencesEs: [
+          'Ahora somos amigos.',
+          'La gata: yo encima del perro, seca como reina.',
+          'El perro sufre. Yo me río. Jajaja.',
+          'Amigos raros, pero amigos.',
+        ],
+        audioDurationMs: 11000,
+      },
+      {
+        pageNum: 5,
+        caption: 'Bàba, māma, y la sombrilla chiquita',
+        sentences: [
+          'Bàba! Māma! Wǒ regresé!',
+          'Bàba: tienes 5 suì, érzi.',
+          'Toma — tu sombrilla. (Es CHIQUITA.)',
+          'Tu míngzi nuevo: "El Chico de la Sombrilla."',
+        ],
+        sentencesEs: [
+          '¡Papá! ¡Mamá! ¡Regresé!',
+          'Papá: tienes 5 años, hijo.',
+          'Toma — tu sombrilla. (Es CHIQUITA.)',
+          'Tu nombre nuevo: "El Chico de la Sombrilla."',
+        ],
+        audioDurationMs: 12000,
+      },
+      {
+        pageNum: 6,
+        caption: 'Mi jiā es mojada, pero es mía',
+        sentences: [
+          'Wǒ ài mi jiā. Mi jiā es mojada.',
+          'Bàba, māma, gǒu, māo — todos péngyou.',
+          'De wǒ, para siempre.',
+          'Y la sombrilla… es chiquita. Pero es mía.',
+        ],
+        sentencesEs: [
+          'Amo mi casa. Mi casa está mojada.',
+          'Papá, mamá, perro, gata — todos amigos.',
+          'Míos, para siempre.',
+          'Y la sombrilla… es chiquita. Pero es mía.',
+        ],
+        audioDurationMs: 11000,
+      },
+    ],
+  },
+  // === STORY 3: add here when you have it.
   // Example skeleton (commented out so it doesn't appear in the picker
   // until you flesh it out):
   // marketday: {

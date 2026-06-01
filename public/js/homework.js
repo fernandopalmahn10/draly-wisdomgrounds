@@ -3769,21 +3769,29 @@
         <span class="hw-lib-pinyin">${escapeHtml(w.pinyin)}</span>
         <span class="hw-lib-es">${escapeHtml(w.es)}</span>`;
       chip.addEventListener('click', () => {
+        // ⚡ FAST PATH — the kid's tap MUST feel instant. Run only the
+        // critical "word appears in the answer bar" work synchronously.
+        // Everything cosmetic (bubble, chime, fly animation) is deferred
+        // to the next frame so it doesn't block the main-thread paint of
+        // the new stage state. User feedback 2026-06-01: "the answer bar
+        // feedback is really slow — was better before."
         pushUndo(activeItemIdx);
         const cur = currentAnswers[activeItemIdx] || '';
         currentAnswers[activeItemIdx] = (cur ? cur + ' ' : '') + w.pinyin;
         renderStage(activeItemIdx);
         refreshUndoButtons();
-        // tap feedback — flash the chip green for a beat
+        // Lightweight tap flash — pure CSS, instant.
         chip.classList.remove('flash');
         void chip.offsetWidth;
         chip.classList.add('flash');
-        // Modo Curioso feedback: brief floating bubble showing the word's
-        // meaning, plus a soft chime, plus a flying animation toward the
-        // active stage. Makes each tap feel like a tiny lesson.
-        _showWordMeaningBubble(chip, w);
-        _playTapChime();
-        _flyToStage(chip, activeItemIdx);
+        // Defer the cosmetic effects so they happen AFTER the stage has
+        // painted. requestAnimationFrame yields back to the browser, so
+        // the answer-bar update is visible before bubble/chime/fly start.
+        requestAnimationFrame(() => {
+          try { _showWordMeaningBubble(chip, w); } catch (_) {}
+          try { _playTapChime(); } catch (_) {}
+          try { _flyToStage(chip, activeItemIdx); } catch (_) {}
+        });
       });
       wrap.appendChild(chip);
     });
@@ -3902,17 +3910,13 @@
               :              { emoji: '💪', text: '¡A repasar!' };
     $('hw-results-emoji').textContent = cert.emoji;
     $('hw-results-cert').textContent = cert.text;
+    // ⚡ INSTANT SCORE — was a 30-tick count-up animation totalling ~1.2s
+    // ("1, 2, 3, 4, 5..."). User feedback 2026-06-01: "Before it was like,
+    // boom, right off, you got a score. Now there's latency." Just show
+    // the final number immediately. The cert emoji + the big number is
+    // enough celebration; the kid wants the grade, not theater.
     const numEl = $('hw-results-num');
-    let cur = 0;
-    const step = Math.max(1, Math.round(data.score / 30));
-    const tick = () => {
-      cur += step;
-      if (cur >= data.score) { cur = data.score; numEl.textContent = cur; return; }
-      numEl.textContent = cur;
-      setTimeout(tick, 30);
-    };
-    numEl.textContent = '0';
-    setTimeout(tick, 250);
+    if (numEl) numEl.textContent = data.score;
     const bk = $('hw-results-breakdown');
     bk.innerHTML = '';
     // Lead the breakdown with a SPEAK-OUT-LOUD reminder. The kid just
