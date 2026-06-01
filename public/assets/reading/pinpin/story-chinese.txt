@@ -1,0 +1,60 @@
+═════════════════════════════════════════════════════════════════
+  拼拼的家  PĪNPĪN DE JIĀ — Chinese (Hanzi)
+  EXP1 vocabulary only (HSK1)
+═════════════════════════════════════════════════════════════════
+
+第一页 (PÁGINA 1) — Pīnpīn perdido
+  我是拼拼。
+  我爱我的家。
+  我的家?
+
+第二页 (PÁGINA 2) — El gǒu
+  狗! 我叫拼拼。
+  你认识我妈妈?
+
+第三页 (PÁGINA 3) — La māo del árbol
+  猫, 你认识我妈妈?
+  猫: 是。
+  她爱她的儿子。
+
+第四页 (PÁGINA 4) — Tres péngyou
+  我们是朋友。
+  狗, 猫, 我。
+
+第五页 (PÁGINA 5) — Bàba y Māma
+  爸爸! 妈妈!
+  爸爸爱我。
+  我是爸爸的儿子。
+
+第六页 (PÁGINA 6) — Mi jiā
+  我爱我的家。
+  爸爸, 妈妈, 狗, 猫。
+  我的朋友。
+
+═════════════════════════════════════════════════════════════════
+HANZI ↔ PINYIN ↔ ESPAÑOL — EXP1 vocabulary:
+  我  wǒ      — yo
+  你  nǐ      — tú
+  他  tā      — él
+  她  tā      — ella
+  我们 wǒmen  — nosotros
+  是  shì     — ser
+  爱  ài      — amar
+  叫  jiào    — llamarse
+  认识 rènshi — conocer
+  的  de      — de (posesivo)
+  家  jiā     — casa
+  妈妈 māma   — mamá
+  爸爸 bàba   — papá
+  儿子 érzi   — hijo
+  朋友 péngyou — amigo
+  狗  gǒu     — perro
+  猫  māo     — gato
+═════════════════════════════════════════════════════════════════
+NOTA PARA EL MAESTRO/A:
+  Este archivo es referencia. La app NO carga estos .txt — solo
+  los pages.sentences (pinyin) y pages.sentencesEs (español) que
+  viven en core/reading-story.js. Estos archivos están aquí para
+  que vos puedas ver toda la historia en los 3 formatos sin tener
+  que reconstruirla de la app.
+═════════════════════════════════════════════════════════════════
