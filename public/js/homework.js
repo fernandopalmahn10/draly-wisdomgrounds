@@ -3227,12 +3227,77 @@
   // 🔧 Race-proof open: track the LATEST requested ID so a slow first
   // fetch can't "win" over a more recent tap. Also clear stale state
   // up-front so a hung previous open doesn't block the next one.
+  // 🛟 The previous fetch's AbortController is held in module scope so
+  // a new tap, OR a back-button navigation, can cancel the in-flight
+  // request. Cancelled requests reject with AbortError — we swallow
+  // those silently because they are NOT real failures.
   let _openRequestSeq = 0;
+  let _openAbortController = null;
+  function _cancelOpenInFlight() {
+    if (_openAbortController) {
+      try { _openAbortController.abort(); } catch (_) {}
+      _openAbortController = null;
+    }
+  }
+  // 📢 Non-blocking toast — replaces alert() so a transient network blip
+  // doesn't lock the kid behind an OK button. Auto-dismisses after 2.4s.
+  function _hwToast(msg) {
+    let t = document.querySelector('.hw-net-toast');
+    if (!t) {
+      t = document.createElement('div');
+      t.className = 'hw-net-toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.add('is-show');
+    clearTimeout(_hwToast._timer);
+    _hwToast._timer = setTimeout(() => t.classList.remove('is-show'), 2400);
+  }
+  function _doOpenFetch(id, url, isCustom, mySeq, isRetry) {
+    _openAbortController = new AbortController();
+    const myController = _openAbortController;
+    // 10-second timeout so a hung fetch doesn't lock the kid in limbo.
+    const timer = setTimeout(() => { try { myController.abort(); } catch(_){} }, 10000);
+    return fetch(url, { signal: myController.signal })
+      .then((r) => r.json())
+      .then((data) => {
+        clearTimeout(timer);
+        if (mySeq !== _openRequestSeq) return;  // stale: a newer tap won
+        if (!data || !data.ok) {
+          // Server-level "not allowed" / "not found" — surface, this isn't transient.
+          _hwToast('No se pudo abrir: ' + (data && data.error || 'intenta de nuevo'));
+          return;
+        }
+        currentAssignment = isCustom ? data.assignment : data;
+        if (!currentAssignment) { _hwToast('No se pudo abrir.'); return; }
+        currentAssignment.custom = isCustom || !!currentAssignment.custom;
+        currentAnswers = currentAssignment.items.map(() => '');
+        undoStacks = currentAssignment.items.map(() => []);
+        activeExpTab = currentAssignment.custom ? 'all' : (currentAssignment.expLabel || 'all');
+        renderAssignment();
+        showScreen('assignment');
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      })
+      .catch((e) => {
+        clearTimeout(timer);
+        // Cancelled by a newer tap or by back-button — NOT a failure.
+        if (e && (e.name === 'AbortError' || mySeq !== _openRequestSeq)) return;
+        // Transient network error → silent ONE-shot retry before bothering the kid.
+        if (!isRetry) {
+          return _doOpenFetch(id, url, isCustom, mySeq, true);
+        }
+        _hwToast('Conexión lenta. Toca de nuevo.');
+      });
+  }
   function openAssignment(id) {
     if (!id) return;
+    // Cancel any previous open so its eventual response/error can't show
+    // a stale alert on top of the kid's new tap.
+    _cancelOpenInFlight();
     // Visual feedback so the kid knows their tap registered.
+    document.querySelectorAll('.hw-card-loading').forEach((el) => el.classList.remove('hw-card-loading'));
     const card = document.querySelector('[data-assignment-id="' + CSS.escape(id) + '"]');
-    if (card) { card.classList.add('hw-card-loading'); }
+    if (card) card.classList.add('hw-card-loading');
     // Cancel any in-flight "owns the screen" claim from previous opens.
     currentAssignment = null;
     const mySeq = ++_openRequestSeq;
@@ -3240,37 +3305,9 @@
     const url = isCustom
       ? '/api/homework/custom-assignment/' + encodeURIComponent(id) + '?accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode)
       : '/api/homework/assignment/' + encodeURIComponent(id) + '?accessCode=' + encodeURIComponent(accessCode);
-    // 10-second timeout so a hung fetch doesn't lock the kid in limbo.
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 10000);
-    fetch(url, { signal: controller.signal })
-      .then((r) => r.json())
-      .then((data) => {
-        clearTimeout(timer);
-        if (card) card.classList.remove('hw-card-loading');
-        // If user already tapped a newer assignment, drop this stale response.
-        if (mySeq !== _openRequestSeq) return;
-        if (!data || !data.ok) {
-          alert('No se pudo abrir: ' + (data && data.error || 'intenta de nuevo'));
-          return;
-        }
-        currentAssignment = isCustom ? data.assignment : data;
-        if (!currentAssignment) { alert('No se pudo abrir.'); return; }
-        currentAssignment.custom = isCustom || !!currentAssignment.custom;
-        currentAnswers = currentAssignment.items.map(() => '');
-        undoStacks = currentAssignment.items.map(() => []);
-        activeExpTab = currentAssignment.custom ? 'all' : (currentAssignment.expLabel || 'all');
-        renderAssignment();
-        showScreen('assignment');
-        // Scroll the assignment screen to top so the kid sees the title.
-        window.scrollTo({ top: 0, behavior: 'instant' });
-      })
-      .catch((e) => {
-        clearTimeout(timer);
-        if (card) card.classList.remove('hw-card-loading');
-        if (mySeq !== _openRequestSeq) return;
-        alert('No se pudo conectar. Intenta de nuevo.');
-      });
+    _doOpenFetch(id, url, isCustom, mySeq, false).finally(() => {
+      if (card) card.classList.remove('hw-card-loading');
+    });
   }
   function renderAssignment() {
     $('hw-asg-title').textContent = currentAssignment.title;
@@ -3556,6 +3593,10 @@
   }
   $('hw-asg-back').addEventListener('click', () => {
     if (confirm('¿Volver sin entregar? Perderás lo que has escrito.')) {
+      // 🛟 Kill any in-flight open fetch — without this, a slow first
+      // open's response/error could land on top of the kid's next tap
+      // and trigger a stale "No se pudo conectar" toast on B.
+      _cancelOpenInFlight();
       currentAssignment = null;
       renderList();
       showScreen('list');
