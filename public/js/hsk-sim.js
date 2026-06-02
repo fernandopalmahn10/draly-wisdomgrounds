@@ -75,22 +75,19 @@
   });
 
   // Auto-resolve PIN at page load. If ?pin= was provided, look it up
-  // server-side to learn the simId. Display nice "Sala HSK1 ✓" feedback
-  // so the kid knows they're in the right room before typing their code.
+  // server-side to learn the simId. We DON'T pre-flash a success
+  // message — the user said "you're leaving a link visible. I don't
+  // like that." So the UI just quietly resolves the sim in the
+  // background. If the PIN is invalid, the gate err shows a clean,
+  // friendly message that tells the kid what to do next.
   if (roomPin) {
     fetch('/api/hsk-sim/room/' + encodeURIComponent(roomPin))
       .then((r) => r.json())
       .then((d) => {
         if (d && d.ok) {
           simId = d.simId;
-          const lbl = document.createElement('p');
-          lbl.className = 'hsk-gate-sub';
-          lbl.style.color = '#5be8d1';
-          lbl.style.fontWeight = '800';
-          lbl.innerHTML = '✓ Sala HSK válida · PIN <strong>' + roomPin + '</strong>';
-          $('hsk-gate-err').parentNode.insertBefore(lbl, $('hsk-gate-err'));
         } else {
-          $('hsk-gate-err').textContent = (d && d.error) || 'PIN no válido.';
+          $('hsk-gate-err').textContent = 'Este PIN no está activo. Pídele a tu maestra que abra una sala nueva.';
         }
       })
       .catch(() => {});
@@ -119,7 +116,7 @@
         .then((r) => r.json())
         .then((d) => {
           if (!d || !d.ok) {
-            $('hsk-gate-err').textContent = (d && d.error) || 'PIN no válido.';
+            $('hsk-gate-err').textContent = 'Este PIN no está activo. Pídele a tu maestra que abra una sala nueva.';
             return;
           }
           simId = d.simId;

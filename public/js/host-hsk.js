@@ -181,17 +181,9 @@
       .catch((e) => { $('hh-sub').textContent = 'Red: ' + e.message; });
   }
 
-  // ── Copy direct join link ───────────────────────────────────────────
-  $('hh-copy-link').addEventListener('click', () => {
-    if (!pin) return;
-    const url = location.origin + '/hsk-sim.html?pin=' + pin;
-    try {
-      navigator.clipboard.writeText(url);
-      toast('📋 Liga copiada', 'good');
-    } catch (_) {
-      prompt('Liga directa para tus alumnos:', url);
-    }
-  });
+  // (Direct-link copy button removed per user request — no URL is
+  // visible on screen. Teacher reads the PIN aloud or uses
+  // "🎯 Forzar a alumnos en línea" to push it silently.)
 
   // ── Force-impose to currently-online kids ───────────────────────────
   $('hh-force-online').addEventListener('click', () => {
