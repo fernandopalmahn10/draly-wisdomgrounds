@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/reading.css?v=20260603c">
+  <link rel="stylesheet" href="/css/reading.css?v=20260603d">
 </head>
 <body class="rd-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -114,7 +114,7 @@
       <button class="rd-lang-btn" id="rd-lang-btn" type="button">🌐 Cambiar a Español</button>
       <button class="rd-curious-btn" id="rd-curious-btn" type="button">🔍 Activar Modo Curioso</button>
       <button class="rd-test-btn" id="rd-test-btn" type="button">📝 Iniciar examen</button>
-      <button class="rd-turtle-btn" id="rd-turtle-btn" type="button" title="Muestra a Squirtle bailando en pantalla a todos">🐢 Toggle Turtle</button>
+      <button class="rd-turtle-btn" id="rd-anim-btn" type="button" title="Abre el panel de animaciones para proyectar a toda la clase">🎬 Animaciones</button>
       <select class="rd-story-select" id="rd-story-select" aria-label="Cambiar cuento"></select>
     </div>
     <!-- 👥 Live roster during the lecture — teacher always sees who's in -->
@@ -142,6 +142,20 @@
       <div class="rd-test-host-livehud" id="rd-test-host-livehud"></div>
     </div>
 
+    <!-- 🎬 ANIMACIONES MODAL — searchable list of broadcastable animations.
+         Each one shows a thumbnail; tapping one broadcasts to all kids
+         (and shows on host). Tap again to dismiss. -->
+    <div class="rd-anim-modal hidden" id="rd-anim-modal">
+      <div class="rd-anim-card">
+        <button class="rd-anim-close" id="rd-anim-close" type="button" aria-label="Cerrar">✕</button>
+        <div class="rd-anim-head">🎬 Animaciones — proyecta en todas las pantallas</div>
+        <input class="rd-anim-search" id="rd-anim-search" type="text"
+               placeholder="🔍 Buscar animación…" autocomplete="off" spellcheck="false">
+        <div class="rd-anim-grid" id="rd-anim-grid"></div>
+        <p class="rd-anim-hint">Toca una animación → aparece grande en TODA la clase. Toca otra vez (o ✕) para quitarla.</p>
+      </div>
+    </div>
+
     <!-- Test results modal (host view) — shows after test finishes -->
     <div class="rd-test-results-overlay hidden" id="rd-test-results-overlay">
       <div class="rd-test-results-card">
@@ -162,6 +176,6 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524n"></script>
   <script src="/js/enter.js"></script>
-  <script src="/js/host-reading.js?v=20260603c"></script>
+  <script src="/js/host-reading.js?v=20260603d"></script>
 </body>
 </html>

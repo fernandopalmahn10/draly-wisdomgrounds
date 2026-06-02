@@ -848,3 +848,103 @@ body.rd-bg {
   -webkit-tap-highlight-color: transparent;
 }
 .rd-turtle-btn:active { transform: scale(0.96); }
+
+/* ===================================================================== */
+/* 🎬 ANIMACIONES — searchable broadcast picker (host only)              */
+/* ===================================================================== */
+.rd-anim-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 10, 22, 0.82);
+  backdrop-filter: blur(4px);
+}
+.rd-anim-modal.hidden { display: none !important; }
+.rd-anim-card {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  max-height: 88vh;
+  overflow-y: auto;
+  background: linear-gradient(160deg, rgba(40, 50, 80, 0.98), rgba(20, 25, 45, 0.99));
+  border: 3px solid var(--gold-glow, #ffd24a);
+  border-radius: 24px;
+  padding: 20px 22px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.7);
+}
+.rd-anim-close {
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff5d8;
+  font-size: 1.3rem;
+  font-weight: 900;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.rd-anim-head {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: 1.2rem;
+  color: var(--gold-glow, #ffd24a);
+  margin: 0 50px 14px 0;
+}
+.rd-anim-search {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(91, 232, 209, 0.4);
+  border-radius: 999px;
+  padding: 10px 16px;
+  color: #e7faff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  outline: none;
+  margin-bottom: 14px;
+}
+.rd-anim-search:focus { border-color: #5be8d1; }
+.rd-anim-search::placeholder { color: rgba(231, 250, 255, 0.45); }
+.rd-anim-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.rd-anim-tile {
+  display: flex;
+  flex-direction: column;
+  background: rgba(20, 28, 50, 0.7);
+  border: 2px solid rgba(91, 232, 209, 0.45);
+  border-radius: 14px;
+  padding: 0;
+  cursor: pointer;
+  color: #fff5d8;
+  font-weight: 800;
+  font-size: 0.9rem;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s, border-color 0.12s;
+}
+.rd-anim-tile:hover { border-color: var(--gold-glow, #ffd24a); }
+.rd-anim-tile:active { transform: scale(0.97); }
+.rd-anim-tile-thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: rgba(91, 232, 209, 0.10);
+}
+.rd-anim-tile-name { padding: 8px 10px; text-align: center; }
+.rd-anim-hint {
+  color: rgba(231, 250, 255, 0.5);
+  font-size: 0.78rem;
+  font-style: italic;
+  margin: 12px 0 0;
+  text-align: center;
+}

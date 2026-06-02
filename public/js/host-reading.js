@@ -21,6 +21,25 @@
                                    // so the Start button can read state.music
                                    // and trigger the right themed track.
 
+  // 🎵 Per-story music swap. Tracks the last theme we started so we
+  // don't restart the same theme repeatedly on every state push. User
+  // feedback 2026-06-03: "I'm so sick and tired of that song" — we
+  // were never stopping the lobby music, so the same track played
+  // forever. Now: every story switch swaps theme. First story start
+  // also kills any music that was playing before host-reading loaded.
+  let _currentMusicTheme = null;
+  function maybeSwapMusic(themeName) {
+    if (!window.MochiSounds) return;
+    if (!themeName) return;
+    if (themeName === _currentMusicTheme) return;  // already on it
+    try {
+      if (MochiSounds.startGameTheme) {
+        MochiSounds.startGameTheme(themeName);   // this calls stopMusic() first internally
+        _currentMusicTheme = themeName;
+      }
+    } catch (_) {}
+  }
+
   // 🎨 Apply per-story theme — sets CSS variables on the body so the
   // lobby gradient + accent colors swap to match the story's mood.
   // Pīnpīn → default teal. Yugi → purple/gold pharaoh. Future stories
@@ -112,38 +131,103 @@
     });
   }
 
-  // 🐢 Toggle Turtle — broadcasts the Squirtle dance GIF to every kid
-  // in the room (and to the host itself). Uses the existing socket
-  // 'rd:vfx' channel pattern — small payload, no streaming, no per-frame
-  // processing. The GIF is 1.1 MB; it loads once per device, then cached.
-  let _turtleOn = false;
-  function showTurtleOverlay() {
-    if (document.getElementById('rd-turtle-overlay')) return;
+  // 🎬 ANIMACIONES — searchable library of broadcastable animations.
+  // Each entry { id, name, tags, url } is a transparent GIF (kept small,
+  // ~1 MB target) that can be projected full-screen on host + every kid
+  // phone in the room. Tap to project, tap again to hide. The 'fx' id
+  // becomes the socket payload so player.js renders the right asset.
+  //
+  // To add more: drop the GIF into public/assets/png-library/ and add
+  // an entry to the ANIMATIONS array below.
+  const ANIMATIONS = [
+    {
+      id: 'turtle',
+      name: 'Squirtle dancing',
+      tags: 'squirtle turtle pinpin water dance dancing tortuga',
+      url: '/assets/png-library/Squirtle%20animation.gif',
+    },
+    // 🆕 Add new animations here as the user drops more transparent GIFs.
+    // Keep each under 1.5 MB to respect Render bandwidth.
+  ];
+  let _animCurrentFx = null;   // which animation is currently broadcasting
+  function showAnimOverlay(fxId) {
+    hideAnimOverlay();   // single overlay at a time
+    const anim = ANIMATIONS.find((a) => a.id === fxId);
+    if (!anim) return;
     const ov = document.createElement('div');
     ov.id = 'rd-turtle-overlay';
     ov.className = 'rd-turtle-overlay';
-    ov.innerHTML = '<img src="/assets/png-library/Squirtle%20animation.gif" alt="Squirtle">';
-    ov.addEventListener('click', hideTurtleOverlay);  // tap to dismiss
+    ov.innerHTML = '<img src="' + anim.url + '" alt="' + escapeHtml(anim.name) + '">';
+    ov.addEventListener('click', () => {
+      // Tap overlay → broadcast OFF (everywhere)
+      _animCurrentFx = null;
+      socket.emit('rd:vfx', { pin, password: adminPw, fx: fxId, on: false });
+      hideAnimOverlay();
+    });
     document.body.appendChild(ov);
     requestAnimationFrame(() => ov.classList.add('show'));
   }
-  function hideTurtleOverlay() {
+  function hideAnimOverlay() {
     const ov = document.getElementById('rd-turtle-overlay');
     if (!ov) return;
     ov.classList.remove('show');
     setTimeout(() => { try { ov.remove(); } catch (_) {} }, 250);
   }
-  const turtleBtn = $('rd-turtle-btn');
-  if (turtleBtn) {
-    turtleBtn.addEventListener('click', () => {
-      _turtleOn = !_turtleOn;
-      turtleBtn.textContent = _turtleOn ? '🐢 Quitar Turtle' : '🐢 Toggle Turtle';
-      // Host: show locally
-      if (_turtleOn) showTurtleOverlay(); else hideTurtleOverlay();
-      // Broadcast to all kids in the room via the existing rd:vfx channel
-      socket.emit('rd:vfx', { pin, password: adminPw, fx: 'turtle', on: _turtleOn });
-    });
+  // Build + open the modal (lazy: only renders thumbnails on first open).
+  let _animModalBuilt = false;
+  function openAnimModal() {
+    const modal = $('rd-anim-modal');
+    if (!modal) return;
+    if (!_animModalBuilt) {
+      const grid = $('rd-anim-grid');
+      grid.innerHTML = '';
+      ANIMATIONS.forEach((a) => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'rd-anim-tile';
+        card.dataset.fxId = a.id;
+        card.dataset.searchHaystack = (a.name + ' ' + (a.tags || '')).toLowerCase();
+        card.innerHTML =
+          '<div class="rd-anim-tile-thumb" style="background-image:url(\'' + a.url + '\');"></div>' +
+          '<div class="rd-anim-tile-name">' + escapeHtml(a.name) + '</div>';
+        card.addEventListener('click', () => {
+          // Toggle: if same fx already on → off. Else switch to this one.
+          if (_animCurrentFx === a.id) {
+            _animCurrentFx = null;
+            socket.emit('rd:vfx', { pin, password: adminPw, fx: a.id, on: false });
+            hideAnimOverlay();
+          } else {
+            _animCurrentFx = a.id;
+            socket.emit('rd:vfx', { pin, password: adminPw, fx: a.id, on: true });
+            showAnimOverlay(a.id);
+          }
+          modal.classList.add('hidden');
+        });
+        grid.appendChild(card);
+      });
+      // Search filter
+      const search = $('rd-anim-search');
+      if (search) {
+        search.addEventListener('input', () => {
+          const q = search.value.trim().toLowerCase();
+          grid.querySelectorAll('.rd-anim-tile').forEach((tile) => {
+            const matches = !q || (tile.dataset.searchHaystack || '').includes(q);
+            tile.style.display = matches ? '' : 'none';
+          });
+        });
+      }
+      _animModalBuilt = true;
+    }
+    modal.classList.remove('hidden');
   }
+  const animBtn = $('rd-anim-btn');
+  if (animBtn) animBtn.addEventListener('click', openAnimModal);
+  const animClose = $('rd-anim-close');
+  if (animClose) animClose.addEventListener('click', () => $('rd-anim-modal').classList.add('hidden'));
+  const animModal = $('rd-anim-modal');
+  if (animModal) animModal.addEventListener('click', (e) => {
+    if (e.target === animModal) animModal.classList.add('hidden');
+  });
 
   // 👥 Active-screen roster — mirror the lobby chip list into the
   // active reading screen so the teacher can SEE who's in during the
@@ -152,21 +236,21 @@
     const wrap = $('rd-active-roster-chips');
     if (!wrap) return;
     wrap.innerHTML = '';
-    const list = Array.isArray(players) ? players : Object.values(players || {});
-    if (!list.length) {
+    // The state.players payload is an OBJECT keyed by socket-id, not an
+    // array. Convert to entries and pull name + avatar from each value.
+    const entries = Object.entries(players || {});
+    if (!entries.length) {
       wrap.innerHTML = '<span class="rd-active-roster-empty">esperando alumnos…</span>';
       return;
     }
-    list.forEach((p) => {
+    entries.forEach(([id, p]) => {
       const chip = document.createElement('span');
       chip.className = 'rd-active-roster-chip';
-      chip.textContent = p.name || p.displayName || 'Anon';
+      const avatar = p.avatar ? `<span class="rd-active-roster-avatar">${p.avatar}</span>` : '';
+      chip.innerHTML = avatar + escapeHtml(p.name || 'Anon');
       wrap.appendChild(chip);
     });
   }
-  socket.on('players', (msg) => {
-    try { renderActiveRoster(msg && msg.players); } catch (_) {}
-  });
 
   $('start-btn').addEventListener('click', () => {
     socket.emit('host:start', { pin });
@@ -287,8 +371,16 @@
   });
 
   // === Roster ===
+  // The 'state' event carries s.players ALWAYS (lobby + active). We
+  // render BOTH the lobby chip grid AND the active-screen chip row so
+  // the teacher can see who's in during the lecture too. User feedback:
+  // "I saw En clase tab, but it's not really displaying who's there."
   socket.on('state', (s) => {
+    if (!s) return;
     if (s.state === 'lobby') renderLobbyPlayers(s.players);
+    // Active roster updates regardless of state.state — every state push
+    // includes the latest players map.
+    renderActiveRoster(s.players || {});
   });
   socket.on('countdown', () => {
     // No countdown for reading — just jump to active when host:start fires
@@ -311,12 +403,14 @@
       currentPageIdx = -1;  // force render below
       $('rd-page-max').textContent = story.pages.length;
       applyStoryTheme(state.theme);    // 🎨 swap colors per story
+      maybeSwapMusic(state.music);      // 🎵 swap music per story (auto)
     } else if (state.pages && !story) {
       story = { title: state.title, subtitle: state.subtitle, pages: state.pages };
       lastStoryPayload = state;
       $('rd-page-max').textContent = story.pages.length;
       currentStoryId = state.storyId;
       applyStoryTheme(state.theme);
+      maybeSwapMusic(state.music);
     } else {
       lastStoryPayload = state;   // keep latest in any case
     }
