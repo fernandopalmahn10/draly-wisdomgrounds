@@ -53,17 +53,17 @@ const SIMULATIONS = {
         title: 'Parte 2 · Tres imágenes',
         instruction: 'Escucha el audio y toca la imagen correcta.',
         questions: [
-          { num: 6, audioText: '', options: [
+          { num: 6, audioUrl: `${BASE}/LISTENING%20PART%202/6.mp3`, audioText: '', options: [
               { letter: 'A', image: `${BASE}/LISTENING%20PART%202/6A.png` },
               { letter: 'B', image: `${BASE}/LISTENING%20PART%202/6B.png` },
               { letter: 'C', image: `${BASE}/LISTENING%20PART%202/6C%20(CORRECT).png` },
             ], answer: 'C' },
-          { num: 7, audioText: '', options: [
+          { num: 7, audioUrl: `${BASE}/LISTENING%20PART%202/7.mp3`, audioText: '', options: [
               { letter: 'A', image: `${BASE}/LISTENING%20PART%202/7A%20(CORRECT).png` },
               { letter: 'B', image: `${BASE}/LISTENING%20PART%202/7B.png` },
               { letter: 'C', image: `${BASE}/LISTENING%20PART%202/7C.jpeg` },
             ], answer: 'A' },
-          { num: 8, audioText: '', options: [
+          { num: 8, audioUrl: `${BASE}/LISTENING%20PART%202/8.mp3`, audioText: '', options: [
               { letter: 'A', image: `${BASE}/LISTENING%20PART%202/8A.png` },
               { letter: 'B', image: `${BASE}/LISTENING%20PART%202/8B%20(CORRECT).png` },
               { letter: 'C', image: `${BASE}/LISTENING%20PART%202/8C.png` },
