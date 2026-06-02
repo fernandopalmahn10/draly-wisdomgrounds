@@ -2150,6 +2150,7 @@
   // 🎬 ANIMATION VFX — teacher pushes any animation by fxId.
   // Mirror of the host's ANIMATIONS array — keep in sync.
   const RD_ANIMATIONS_PLAYER = {
+    gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
     turtle: '/assets/png-library/Squirtle%20animation.gif',
     // 🆕 Add the same entries here as in host-reading.js when new
     // animations land. Just url is needed on the player side.
