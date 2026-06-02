@@ -42,19 +42,29 @@
     dralingo:'🐲 Dralingo', naruto:'🍥 Naruto', sasuke: '⚡ Sasuke', luffy:  '🏴‍☠️ Luffy',
     goku:   '🥋 Goku',   pikachu:'⚡ Pikachu', sonic:  '💨 Sonic',  mario:  '🍄 Mario',
     kirby:  '🌸 Kirby',  spiderman:'🕷 Spider', ironman:'🤖 Iron Man', elsa: '❄️ Elsa', moana: '🌊 Moana',
+    squirtle: '🐢 Squirtle',
   };
   // Set of names that resolve to PNGs in /assets/cutscenes/chars/ instead
   // of SVGs in /assets/avatars/. These come from the character system.
   const CHAR_AVATAR_NAMES = new Set([
     'gojo','yugi','yuji','shelly','fnaf','dandy','hanzo','mei2','dralingo',
     'naruto','sasuke','luffy','goku','pikachu','sonic','mario','kirby',
-    'spiderman','ironman','elsa','moana',
+    'spiderman','ironman','elsa','moana','squirtle',
   ]);
+  // 🐢 Squirtle uses the user's transparent dancing GIF directly (in the
+  // /assets/png-library/ folder), not the standard /cutscenes/chars/
+  // path. Mapped here so avatarSrc returns the right URL.
+  const CUSTOM_AVATAR_URLS = {
+    squirtle: '/assets/png-library/Squirtle%20animation.gif',
+  };
   // ?v bumped whenever the avatar ART is regenerated (same filenames, new
   // look) so browsers don't serve the stale cached SVG. 2026-05-28: fresh
   // cooler DiceBear set.
   const AVATAR_ASSET_VER = '20260528b';
   function avatarSrc(name) {
+    // 🐢 Custom-URL avatars (e.g. squirtle → transparent dancing GIF
+    // in /assets/png-library/). Win over everything below.
+    if (CUSTOM_AVATAR_URLS[name]) return CUSTOM_AVATAR_URLS[name];
     // Character roster uses pose-A PNG from cutscenes folder.
     if (CHAR_AVATAR_NAMES.has(name)) {
       return '/assets/cutscenes/chars/' + name + '-a.png?v=' + AVATAR_ASSET_VER;
