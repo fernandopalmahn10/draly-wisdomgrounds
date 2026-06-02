@@ -3877,13 +3877,14 @@ function pickTeam(game) {
 }
 
 function publicState(game) {
-  return {
+  const out = {
     state: game.state,
     duration: game.duration,
     endsAt: game.endsAt,
     teamScores: game.teamScores,
     questionsLoaded: game.questions.length,
     setTitle: game.setTitle || null,
+    gameType: game.gameType || null,
     players: Object.fromEntries(
       Object.entries(game.players).map(([id, p]) => [
         id,
@@ -3892,6 +3893,12 @@ function publicState(game) {
     ),
     feed: game.feed.slice(-12)
   };
+  // HSK rooms expose simId so kid clients know what to load when
+  // state flips to 'active'. fx is the current animation overlay.
+  if (game.gameType === 'hsksim' && game.hsk) {
+    out.hsk = { simId: game.hsk.simId, fx: game.hsk.fx || null };
+  }
+  return out;
 }
 
 // Throttled broadcast — coalesces rapid-fire calls (avatar swap, swap-team,
@@ -4363,6 +4370,35 @@ io.on('connection', (socket) => {
       games[pin].questions = TRIAGE_DEFAULT_QUESTIONS.slice();
       games[pin].setTitle = '🚑 Sala de emergencia · HSK1 médico';
     }
+    // HSKSIM — full mock exam. The host page emits host:create with
+    // a simId (which simulation to run). State stays 'lobby' until
+    // the teacher hits "Empezar examen" → emits 'hsk:start' → state
+    // flips to 'active'. Late joiners after that start from Q1 on
+    // their own pace.
+    if (type === 'hsksim') {
+      const simId = String(opts.simId || 'hsk1-sim1');
+      const payload = HskSim.buildSimPayload(simId);
+      if (!payload) {
+        // Reject room creation with bad simId — host page will show err
+        return cb({ error: 'unknown simId' });
+      }
+      games[pin].hsk = {
+        simId,
+        fx: null,
+        sessions: {},
+        startedAt: null,
+      };
+      games[pin].setTitle = payload.title;
+      // Seed a stub question so questionsLoaded > 0 passes any
+      // start-button gate elsewhere.
+      games[pin].questions = [{ text: '__hsksim_stub__', correct: '_', answers: ['_'] }];
+      // Mirror into the legacy HSK_ROOMS table so disk-persistence
+      // works across dyno restarts.
+      try {
+        HSK_ROOMS.set(pin, { pin, simId, createdAt: Date.now(), fx: null });
+        _hskRoomsSave();
+      } catch (_) {}
+    }
     currentPin = pin;
     role = 'host';
     socket.join(pin);
@@ -4516,7 +4552,7 @@ io.on('connection', (socket) => {
     // a question set picked from the lobby. Triage spawns its own patients,
     // LQH generates missions, Identity rolls suspects, Warmup is a teacher
     // tool, SixSeven generates math on the fly.
-    const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup', 'identity', 'triage', 'partyrun', 'reading'];
+    const setlessGameTypes = ['sixseven', 'laiquhui', 'warmup', 'identity', 'triage', 'partyrun', 'reading', 'hsksim'];
     if (!setlessGameTypes.includes(g.gameType) && !g.questions.length) {
       console.warn('[host:start] BLOCKED pin=' + pin + ' gameType=' + g.gameType + ' — no questions loaded. Pick a set first.');
       io.to(socket.id).emit('host:start-error', {
@@ -4529,7 +4565,7 @@ io.on('connection', (socket) => {
     // screen and students stream in afterward (e.g. live-master force-join
     // from /maestro creates the builder, THEN pushes the kids in). Gating
     // these on player count caused the "Preparando… (stuck)" bug.
-    const soloOkGameTypes = ['warmup', 'reading'];
+    const soloOkGameTypes = ['warmup', 'reading', 'hsksim'];
     if (!soloOkGameTypes.includes(g.gameType) && Object.keys(g.players).length === 0) {
       console.warn('[host:start] BLOCKED pin=' + pin + ' — no players joined yet.');
       io.to(socket.id).emit('host:start-error', {

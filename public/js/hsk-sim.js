@@ -98,34 +98,73 @@
     setTimeout(tryEnter, 80);
   }
 
+  // Socket-based join. Mirrors the lecture player join flow: kid emits
+  // player:join with the PIN; server validates against games[pin]; if
+  // valid, kid joins the socket room. Then we listen for 'state' — if
+  // state==='active' we start the test runner; otherwise we show the
+  // waiting screen until the teacher hits Empezar examen.
+  let _hskSocket = null;
+  let _hskTestStarted = false;
+
   function tryEnter() {
     accessCode  = $('hsk-access').value.trim();
     studentCode = $('hsk-code').value.trim();
-    // If the access field contains a 4-digit PIN, treat it as the room
-    // PIN — server resolves the simId for us.
-    if (/^\d{4}$/.test(accessCode)) roomPin = accessCode;
+    if (/^\d{3,4}$/.test(accessCode)) roomPin = accessCode;
     if (!accessCode || !studentCode) {
-      $('hsk-gate-err').textContent = 'Falta el PIN (o código de aula) y tu código de estudiante.';
+      $('hsk-gate-err').textContent = 'Falta el PIN y tu código de estudiante.';
       return;
     }
-    $('hsk-gate-err').textContent = 'Cargando…';
-    // If we still don't know the simId AND we have a PIN, resolve it
-    // first; otherwise loadSim() directly.
-    if (!simId && roomPin) {
-      fetch('/api/hsk-sim/room/' + encodeURIComponent(roomPin))
-        .then((r) => r.json())
-        .then((d) => {
-          if (!d || !d.ok) {
-            $('hsk-gate-err').textContent = 'Este PIN no está activo. Pídele a tu maestra que abra una sala nueva.';
-            return;
-          }
-          simId = d.simId;
-          loadSim();
-        });
+    if (!roomPin) {
+      $('hsk-gate-err').textContent = 'Tu PIN debe ser de 3 o 4 dígitos.';
       return;
     }
-    if (!simId) simId = 'hsk1-sim1';
-    loadSim();
+    $('hsk-gate-err').textContent = 'Entrando a la sala…';
+
+    // Connect socket and join the room. The server's player:join
+    // validates the PIN against the real games[pin] table — same
+    // reliability as every other PIN-join in the platform.
+    _hskSocket = io();
+    const displayName = studentCode;   // server allows up to 20 chars
+    _hskSocket.emit('player:join', {
+      pin: roomPin,
+      name: displayName,
+      avatar: '',
+      studentCode,
+    }, (resp) => {
+      if (!resp || !resp.ok) {
+        $('hsk-gate-err').textContent = (resp && resp.error) || 'PIN no válido. Pregúntale a tu maestra.';
+        try { _hskSocket.disconnect(); } catch (_) {}
+        _hskSocket = null;
+        return;
+      }
+      // Successfully joined the socket room — show waiting screen and
+      // wait for state===active. The 'state' listener below handles
+      // the transition.
+      $('hsk-gate').classList.add('hidden');
+      $('hsk-waiting').classList.remove('hidden');
+      $('hsk-waiting-pin').textContent = 'PIN: ' + roomPin;
+    });
+
+    _hskSocket.on('state', (s) => {
+      if (!s) return;
+      // Pull simId from the broadcast — authoritative source.
+      if (s.hsk && s.hsk.simId && !simId) simId = s.hsk.simId;
+      // Fx broadcast — apply across the test runner
+      if (s.hsk && s.hsk.fx) applyFx(s.hsk.fx);
+      else applyFx(null);
+      // Transition into the runner when the teacher hits Empezar
+      if ((s.state === 'active' || s.state === 'countdown') && !_hskTestStarted) {
+        _hskTestStarted = true;
+        $('hsk-waiting').classList.add('hidden');
+        loadSim();
+      }
+    });
+
+    _hskSocket.on('disconnect', () => {
+      // Brief notice — the kid stays on whatever screen they were on.
+      // Heartbeat HTTP will fail silently; the room will reconnect on
+      // resume (browser auto-reconnects socket.io).
+    });
   }
 
   function loadSim() {
