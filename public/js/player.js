@@ -1109,19 +1109,9 @@
     if (gameType === 'reading') {
       setTimeout(() => showScreen('rd'), 800);
     }
-    // === HSKSIM: redirect to /hsk-sim.html so the kid runs the full
-    // exam UI. Splice in studentCode from localStorage (saved by the
-    // homework portal) so the gate auto-submits. The PIN is the same
-    // one they just entered here. Mirrors how lecture rooms work, but
-    // each kid takes the exam on their own pace — no synced state. ===
-    if (gameType === 'hsksim') {
-      let sc = '';
-      // The homework portal stores studentCode under 'dralyStudentCode'.
-      try { sc = localStorage.getItem('dralyStudentCode') || ''; } catch (_) {}
-      const url = '/hsk-sim.html?pin=' + encodeURIComponent(pin)
-        + (sc ? '&code=' + encodeURIComponent(sc) : '');
-      setTimeout(() => { window.location.href = url; }, 600);
-    }
+    // === HSKSIM countdown handler intentionally a no-op — the
+    // EARLY-REDIRECT in the state handler already moved this kid to
+    // /hsk-sim.html before countdown ever fired. ===
     // === WARM-UP: jump to the read-only sentence-mirror screen ===
     if (gameType === 'warmup') {
       setTimeout(() => {
@@ -8051,6 +8041,20 @@
   });
 
   socket.on('state', (s) => {
+    // 🏆 HSKSIM EARLY REDIRECT — the moment we learn this room is an
+    // HSK simulation, jump to /hsk-sim.html. Don't wait for countdown;
+    // don't render the player lobby. If the kid joined LATE (room is
+    // already 'active'), they redirect anyway and the test starts on
+    // their device immediately. Uses location.replace() so the back
+    // button doesn't trap them on the wrong page.
+    if (s && s.gameType === 'hsksim' && location.pathname !== '/hsk-sim.html') {
+      let sc = '';
+      try { sc = localStorage.getItem('dralyStudentCode') || ''; } catch (_) {}
+      const url = '/hsk-sim.html?pin=' + encodeURIComponent(pin)
+        + (sc ? '&code=' + encodeURIComponent(sc) : '');
+      location.replace(url);
+      return;
+    }
     if (s.state === 'lobby' && currentQid) {
       // host reset
       currentQid = null;
