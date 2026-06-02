@@ -172,6 +172,36 @@
       .then((d) => {
         if (!d || !d.ok) return;
         const live = d.live || [], stale = d.stale || [], done = d.completed || [], left = d.left || [];
+
+        // 🔥 ROSTER MERGE: kids in the socket room but no heartbeat
+        // yet should still be visible. After "🚀 Empezar examen" hits,
+        // the kid needs ~1-2s to redirect and start the test runner
+        // before their first heartbeat lands. Without this merge, the
+        // host monitor went 0/0/0/0 in that window — exactly what the
+        // user reported. Now we synthesize a "live" row from the
+        // socket-roster for every kid we haven't seen a heartbeat for.
+        const seenCodes = new Set();
+        live.forEach((r) => seenCodes.add((r.displayName || '').toLowerCase()));
+        stale.forEach((r) => seenCodes.add((r.displayName || '').toLowerCase()));
+        done.forEach((r) => seenCodes.add((r.displayName || '').toLowerCase()));
+        left.forEach((r) => seenCodes.add((r.displayName || '').toLowerCase()));
+        const socketPlayers = lastState && lastState.players
+          ? Object.values(lastState.players) : [];
+        socketPlayers.forEach((p) => {
+          if (!seenCodes.has((p.name || '').toLowerCase())) {
+            live.push({
+              displayName: p.name,
+              studentCode: p.name,    // fallback display
+              avatar: p.avatar || null,
+              answered: 0,
+              total: 30,
+              section: 'Cargando examen…',
+              age: 0,
+              fromSocket: true,
+            });
+          }
+        });
+
         $('hh-count-live').textContent  = live.length;
         $('hh-count-stale').textContent = stale.length;
         $('hh-count-done').textContent  = done.length;
@@ -193,7 +223,16 @@
       })
       .catch(() => {});
   }
-  setInterval(pollSessions, 5000);
+  setInterval(pollSessions, 3000);
+  // Also poll immediately when state transitions to active so the
+  // monitor doesn't briefly show 0 before the first scheduled poll.
+  let _wasActive = false;
+  socket.on('state', (s) => {
+    if (s && (s.state === 'active' || s.state === 'countdown') && !_wasActive) {
+      _wasActive = true;
+      setTimeout(pollSessions, 100);
+    }
+  });
 
   // ── 🚀 START button — fire the existing host:start event ───────────
   $('hh-start-btn').addEventListener('click', () => {

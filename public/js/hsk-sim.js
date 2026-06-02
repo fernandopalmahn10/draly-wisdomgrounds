@@ -124,7 +124,17 @@
     // validates the PIN against the real games[pin] table — same
     // reliability as every other PIN-join in the platform.
     _hskSocket = io();
-    const displayName = studentCode;   // server allows up to 20 chars
+    // 🔥 NAME REUSE: if the kid was just on /player.html and got
+    // redirected here, they already have a player slot in g.players
+    // under whatever name player.html used. We MUST join with the
+    // SAME name so the server's case-insensitive name-match treats
+    // it as a rejoin — otherwise the kid appears as TWO players in
+    // the host roster (root cause of "they disappear when I start").
+    let displayName = studentCode;
+    try {
+      const last = JSON.parse(localStorage.getItem('dralyLastJoin') || '{}');
+      if (last && last.name) displayName = last.name;
+    } catch (_) {}
     _hskSocket.emit('player:join', {
       pin: roomPin,
       name: displayName,
