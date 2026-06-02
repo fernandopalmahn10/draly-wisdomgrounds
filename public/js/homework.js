@@ -354,10 +354,11 @@
       const u = new URL(msg.actionUrl, location.origin);
       if (!u.searchParams.get('name') && displayName) u.searchParams.set('name', displayName);
       // 🏆 HSK simulation force-redirect: the maestro launch only
-      // knows the classroom access code, not each kid's studentCode.
-      // We splice it in here so /hsk-sim.html auto-submits the gate
-      // and the live monitor sees the student instantly. Same idea
-      // as Modo Maestro splicing &name=.
+      // knows the PIN, not each kid's studentCode. We splice the
+      // studentCode in here so /hsk-sim.html auto-submits the gate
+      // and the host live monitor sees the student instantly. Same
+      // pattern as Modo Maestro splicing &name=. Works for either
+      // the new PIN convention (?pin=) or the legacy access flow.
       if (!u.searchParams.get('code') && studentCode) u.searchParams.set('code', studentCode);
       dest = u.pathname + u.search;
     } catch (_) { /* keep original */ }

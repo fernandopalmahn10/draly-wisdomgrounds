@@ -364,6 +364,14 @@
     _hskNavStack = ['root'];
     renderHskView();
   });
+  // 🏅 New top-level shortcut into the Resultados HSK view —
+  // user asked for this to be more discoverable.
+  const hskResultsBtn = $('m-hsk-results-btn');
+  if (hskResultsBtn) hskResultsBtn.addEventListener('click', () => {
+    hskModal.classList.remove('hidden');
+    _hskNavStack = ['root', 'results'];
+    renderHskView();
+  });
   if ($('m-hsk-close')) $('m-hsk-close').addEventListener('click', () => hskModal.classList.add('hidden'));
   if (hskModal) hskModal.addEventListener('click', (e) => { if (e.target === hskModal) hskModal.classList.add('hidden'); });
 
@@ -516,10 +524,18 @@
             '<div class="m-reading-card-meta">' + (sim.questionCount || 0) + ' preguntas · ' + (sim.partCount || 0) + ' partes</div>' +
           '</div>' +
           '<div class="m-reading-card-actions">' +
-            '<button class="m-reading-force" type="button" data-sim="' + escapeHtml(sim.id) + '" title="Lanza la simulación a alumnos en línea">🎯 Lanzar a alumnos en línea</button>' +
+            '<button class="m-reading-force" type="button" data-sim="' + escapeHtml(sim.id) + '" title="Abre la sala HSK con PIN — los alumnos se unen escribiendo el PIN">🚀 Abrir sala con PIN ›</button>' +
           '</div>';
+        // 🏆 NEW: launching a sim opens host-hsk.html in a new tab.
+        // That page creates a PIN room on load, then displays it big
+        // so the teacher can read it aloud OR copy a direct join
+        // link. Force-impose to currently-online kids is now a
+        // button INSIDE that page so everything related to the
+        // exam session lives in one place — like host-reading.html.
         card.querySelector('.m-reading-force').addEventListener('click', () => {
-          openForceHskPicker(sim);
+          const url = '/host-hsk.html?sim=' + encodeURIComponent(sim.id)
+            + '&pw=' + encodeURIComponent(pw);
+          window.open(url, '_blank', 'noopener');
         });
         grid.appendChild(card);
       });
