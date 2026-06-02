@@ -185,35 +185,86 @@
   // visible on screen. Teacher reads the PIN aloud or uses
   // "🎯 Forzar a alumnos en línea" to push it silently.)
 
-  // ── Force-impose to currently-online kids ───────────────────────────
+  // ── Force-impose to currently-online kids — manual per-checkbox
+  // picker, mirroring the maestro reading flow the user said worked
+  // very well. Pops a modal listing every kid who's pinged in the
+  // last 60s with checkbox + name + code. Default: all checked.
   $('hh-force-online').addEventListener('click', () => {
     if (!pin) { alert('Esperando PIN…'); return; }
     fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
       .then((r) => r.json())
       .then((data) => {
-        if (!data || !data.ok) { alert('No se pudo cargar la lista.'); return; }
+        if (!data || !data.ok) { alert('No se pudo cargar la lista de alumnos en línea.'); return; }
         const onlineNow = (data.students || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
-        if (!onlineNow.length) { alert('No hay alumnos en línea ahora mismo.'); return; }
-        const checks = onlineNow.map((s) => '✓ ' + (s.displayName || s.code)).join('\n');
-        if (!confirm('Forzar entrada a ' + onlineNow.length + ' alumnos en línea?\n\n' + checks)) return;
-        const codes = onlineNow.map((s) => s.code);
-        fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            studentCodes: codes,
-            text: '🏆 ¡Tu maestra abrió la simulación HSK! Entra ya.',
-            actionType: 'force',
-            actionUrl:   '/hsk-sim.html?pin=' + encodeURIComponent(pin),
-            actionLabel: 'Entrar al examen →',
-          }),
-        })
-          .then((r) => r.json())
-          .then((res) => {
-            if (res && res.ok) toast('🚀 Aviso enviado a ' + codes.length + ' alumnos', 'good');
-            else alert('Error: ' + (res && res.error || 'desconocido'));
+        if (!onlineNow.length) {
+          alert('No hay alumnos en línea ahora mismo.\n\n(Pídeles que abran /homework primero.)');
+          return;
+        }
+        // Build modal
+        let overlay = document.getElementById('hh-force-modal');
+        if (overlay) overlay.remove();
+        overlay = document.createElement('div');
+        overlay.id = 'hh-force-modal';
+        overlay.className = 'm-modal';
+        overlay.innerHTML =
+          '<div class="m-modal-card">' +
+            '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
+            '<h2>🎯 Forzar entrada al examen</h2>' +
+            '<p class="m-modal-sub">PIN <strong>' + pin + '</strong> · Selecciona los alumnos que quieres entrar. Recibirán un aviso y se les abre el examen automáticamente.</p>' +
+            '<div class="m-force-actions">' +
+              '<button class="btn btn-ghost btn-sm" id="hh-fhsk-all">✅ Todos</button>' +
+              '<button class="btn btn-ghost btn-sm" id="hh-fhsk-none">⬜ Ninguno</button>' +
+            '</div>' +
+            '<div class="m-force-students" id="hh-fhsk-students"></div>' +
+            '<button class="btn btn-gold btn-xl" id="hh-fhsk-launch" style="margin-top:16px;width:100%;">🚀 Forzar a los seleccionados</button>' +
+          '</div>';
+        document.body.appendChild(overlay);
+        const list = overlay.querySelector('#hh-fhsk-students');
+        onlineNow.forEach((s) => {
+          const row = document.createElement('label');
+          row.className = 'm-force-row';
+          row.innerHTML =
+            '<input type="checkbox" data-code="' + escapeHtml(s.code) + '" checked>' +
+            '<span class="m-force-row-dot"></span>' +
+            '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+            '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
+          list.appendChild(row);
+        });
+        const close = () => { try { overlay.remove(); } catch (_) {} };
+        overlay.querySelector('.m-modal-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('#hh-fhsk-all').addEventListener('click', () => {
+          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = true; });
+        });
+        overlay.querySelector('#hh-fhsk-none').addEventListener('click', () => {
+          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
+        });
+        overlay.querySelector('#hh-fhsk-launch').addEventListener('click', () => {
+          const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
+            .map((cb) => cb.dataset.code).filter(Boolean);
+          if (!codes.length) { alert('Selecciona al menos un alumno.'); return; }
+          fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              studentCodes: codes,
+              text: '🏆 ¡Tu maestra abrió la simulación HSK! Entra ya.',
+              actionType:  'force',
+              actionUrl:   '/hsk-sim.html?pin=' + encodeURIComponent(pin),
+              actionLabel: 'Entrar al examen →',
+            }),
           })
-          .catch((e) => alert('Error: ' + e.message));
+            .then((r) => r.json())
+            .then((res) => {
+              if (res && res.ok) {
+                toast('🚀 ' + codes.length + ' alumno(s) entrando al examen', 'good');
+                close();
+              } else {
+                alert('Error: ' + (res && res.error || 'desconocido'));
+              }
+            })
+            .catch((e) => alert('Error: ' + e.message));
+        });
       })
       .catch((e) => alert('Error: ' + e.message));
   });
