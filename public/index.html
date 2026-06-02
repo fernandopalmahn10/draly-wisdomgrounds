@@ -21,16 +21,14 @@
     <div class="hub-hero">
       <div class="dralingo-stage">
         <div class="dralingo-rays static"></div>
-        <!-- 🎬 Gojo victory video on the landing — Higgsfield-generated.
-             Loops forever; muted (per browser autoplay rules); playsinline
-             for iOS. PNG fallback if the video file is missing. -->
-        <!-- NEW Gojo (regenerated 2026-05-31 — should have clean
-             transparency now). Falls back to Dralingo PNG if missing. -->
-        <video class="dralingo-video"
-               src="/assets/cutscenes/chars/gojo-victory.mp4?v=20260601f"
-               autoplay loop muted playsinline crossorigin="anonymous"
-               data-chroma-key="1"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"></video>
+        <!-- 👁 Gojo transparent dancing GIF on the landing — user
+             replaced the chroma-keyed MP4 with this clean transparent
+             GIF (no chroma artifacts, real alpha). Loops natively.
+             Falls back to the Dralingo PNG if the asset is missing. -->
+        <img class="dralingo-video"
+             src="/assets/png-library/GOJO%20TRANSPARENT.gif?v=20260603a"
+             alt="Gojo"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
         <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-floating" style="display:none;">
       </div>
       <h1 class="hub-title">Draly Wisdomgrounds</h1>

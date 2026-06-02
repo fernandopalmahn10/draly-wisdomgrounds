@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>🏆 Monitor HSK · Maestra</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=20260603a">
+  <link rel="stylesheet" href="/css/hsk-sim.css?v=20260603b">
+  <link rel="stylesheet" href="/css/maestro.css?v=20260603b">
+</head>
+<body class="hsk-body">
+
+  <!-- Teacher-only live monitor for an in-flight HSK simulation.
+       Opens automatically in a new tab when the teacher hits
+       "🚀 Lanzar examen". Reads ?sim=<simId>&pw=<maestroCode> from
+       the URL and polls /api/hsk-sim/sessions every 5s. Shows four
+       buckets: live, stale (no recent heartbeat → likely aborted),
+       completed, and explicitly left. -->
+  <div class="container hh-wrap">
+    <div class="hh-head">
+      <h1 class="hh-title">🏆 <span id="hh-sim-title">Simulación HSK</span></h1>
+      <p class="hh-sub" id="hh-sub">Monitor en vivo · refresca cada 5 segundos</p>
+      <div class="hh-tally" id="hh-tally"></div>
+    </div>
+
+    <div class="hh-grid">
+      <section class="hh-col hh-col-live">
+        <div class="hh-col-head">
+          <span class="hh-col-icon">🟢</span>
+          <span class="hh-col-name">En el examen</span>
+          <span class="hh-col-count" id="hh-count-live">0</span>
+        </div>
+        <div class="hh-col-body" id="hh-list-live"></div>
+      </section>
+
+      <section class="hh-col hh-col-stale">
+        <div class="hh-col-head">
+          <span class="hh-col-icon">⚠️</span>
+          <span class="hh-col-name">Posible abandono</span>
+          <span class="hh-col-count" id="hh-count-stale">0</span>
+        </div>
+        <div class="hh-col-body" id="hh-list-stale"></div>
+      </section>
+
+      <section class="hh-col hh-col-done">
+        <div class="hh-col-head">
+          <span class="hh-col-icon">🏅</span>
+          <span class="hh-col-name">Terminaron</span>
+          <span class="hh-col-count" id="hh-count-done">0</span>
+        </div>
+        <div class="hh-col-body" id="hh-list-done"></div>
+      </section>
+
+      <section class="hh-col hh-col-left">
+        <div class="hh-col-head">
+          <span class="hh-col-icon">🚪</span>
+          <span class="hh-col-name">Cerraron la pestaña</span>
+          <span class="hh-col-count" id="hh-count-left">0</span>
+        </div>
+        <div class="hh-col-body" id="hh-list-left"></div>
+      </section>
+    </div>
+
+    <p class="hh-foot">
+      💡 <em>Posible abandono</em> = no nos han ping-ueado en más de 30 segundos.
+      Puede ser pérdida momentánea de señal o que cerraron el examen sin terminar.
+    </p>
+  </div>
+
+  <script src="/js/host-hsk.js?v=20260603a"></script>
+</body>
+</html>

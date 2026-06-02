@@ -114,13 +114,17 @@
   font-size: 0.95rem;
   letter-spacing: 0.04em;
 }
+/* Single-question image (L1, R1). User wants the IMAGE to dominate
+   without a grid background showing through. Solid cream fill, no
+   inset checker, bigger max-height so the picture pops on phone. */
 .hsk-q-image {
   width: 100%;
-  max-width: 420px;
-  max-height: 50vh;
+  max-width: 560px;
+  max-height: 62vh;
   object-fit: contain;
-  background: rgba(255, 255, 255, 0.06);
+  background: #fafaf6;
   border-radius: 14px;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
 }
 
 /* ── Audio button ────────────────────────────────────────────────── */
@@ -183,34 +187,46 @@
 }
 
 /* ── Three-picture row (L2) ──────────────────────────────────────── */
+/* User feedback: the ABC option pictures were too small AND the dark
+   inset background made the white-photo subject blend in. Solution:
+   stack the 3 pictures VERTICALLY on phones (huge per-image space),
+   solid cream behind each, big bold letter chip. Desktop keeps the
+   3-column row. */
 .hsk-3pic-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px; width: 100%;
+  grid-template-columns: 1fr;
+  gap: 12px; width: 100%;
+}
+@media (min-width: 720px) {
+  .hsk-3pic-row { grid-template-columns: repeat(3, 1fr); }
 }
 .hsk-3pic {
   position: relative;
-  background: rgba(255, 255, 255, 0.06);
-  border: 2.5px solid rgba(91, 232, 209, 0.4);
-  border-radius: 12px;
-  padding: 8px;
+  background: #fafaf6;
+  border: 3px solid rgba(91, 232, 209, 0.55);
+  border-radius: 14px;
+  padding: 6px;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
 }
+.hsk-3pic:active { transform: scale(0.97); }
 .hsk-3pic img {
-  width: 100%; aspect-ratio: 1 / 1; object-fit: contain;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
+  width: 100%; aspect-ratio: 4 / 3; object-fit: contain;
+  background: #fff;
+  border-radius: 10px;
 }
 .hsk-3pic-letter {
-  position: absolute; bottom: 6px; left: 8px;
-  background: rgba(20, 20, 30, 0.85);
-  border-radius: 4px;
-  padding: 1px 8px;
+  position: absolute; top: 8px; left: 10px;
+  background: rgba(20, 20, 30, 0.92);
+  border-radius: 8px;
+  padding: 4px 14px;
   font-weight: 900;
   color: #ffd24a;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
+  border: 2px solid rgba(255, 210, 74, 0.5);
 }
 .hsk-3pic.is-selected {
   border-color: #5be8d1;
@@ -218,34 +234,46 @@
   box-shadow: 0 0 16px rgba(91, 232, 209, 0.45);
 }
 
-/* ── Gallery (L3 / R2) — 6 tile grid ─────────────────────────────── */
+/* ── Gallery (L3 / R2) — 6 tile match grid ──────────────────────── */
+/* 6 thumbnails kid taps to match the current question. On phones we
+   use 2 columns (3 rows) so each picture is large enough to read; on
+   tablets/desktop, 3 columns. */
 .hsk-gallery {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px; width: 100%;
+}
+@media (min-width: 720px) {
+  .hsk-gallery { grid-template-columns: repeat(3, 1fr); }
 }
 .hsk-gallery-tile {
   position: relative;
-  background: rgba(255, 255, 255, 0.06);
-  border: 2.5px solid rgba(91, 232, 209, 0.4);
-  border-radius: 12px;
+  background: #fafaf6;
+  border: 3px solid rgba(91, 232, 209, 0.55);
+  border-radius: 14px;
   padding: 6px;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
 }
+.hsk-gallery-tile:active { transform: scale(0.97); }
 .hsk-gallery-tile img {
   width: 100%; aspect-ratio: 1 / 1; object-fit: contain;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
+  background: #fff;
+  border-radius: 10px;
 }
 .hsk-gallery-letter {
   display: block;
-  margin-top: 4px;
+  margin-top: 6px;
   text-align: center;
   font-weight: 900;
-  color: #ffd24a;
-  font-size: 0.85rem;
+  color: #1a1a26;
+  background: #ffd24a;
+  border-radius: 6px;
+  padding: 3px 0;
+  font-size: 1rem;
 }
 .hsk-gallery-tile.is-selected {
   border-color: #5be8d1;
@@ -402,3 +430,126 @@
 }
 .hsk-bk-row.ok  { color: #5be88a; }
 .hsk-bk-row.bad { color: #ff7e7e; }
+
+/* ===================================================================== */
+/* 🎓 HOST MONITOR — teacher's live view of who's in the exam            */
+/* ===================================================================== */
+.hh-wrap { max-width: 1200px; margin: 0 auto; padding: 20px 14px 80px; }
+.hh-head { text-align: center; margin-bottom: 18px; }
+.hh-title {
+  font-family: 'Cinzel', serif;
+  color: #ffd24a;
+  font-size: 1.7rem;
+  margin: 0 0 4px;
+}
+.hh-sub { color: rgba(243, 230, 194, 0.7); font-size: 0.95rem; margin-bottom: 10px; }
+.hh-tally {
+  background: rgba(91, 232, 209, 0.10);
+  border: 1.5px solid rgba(91, 232, 209, 0.4);
+  border-radius: 999px;
+  padding: 8px 18px;
+  display: inline-block;
+  color: #f3e6c2;
+  font-weight: 700;
+}
+.hh-tally strong { color: #5be8d1; font-size: 1.1rem; }
+
+.hh-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 760px)  { .hh-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1100px) { .hh-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.hh-col {
+  background: linear-gradient(160deg, rgba(38, 40, 60, 0.85), rgba(20, 25, 40, 0.92));
+  border: 2px solid rgba(91, 232, 209, 0.35);
+  border-radius: 16px;
+  padding: 12px;
+}
+.hh-col-live  { border-color: rgba(91, 232, 138, 0.55); }
+.hh-col-stale { border-color: rgba(255, 200, 80, 0.55); }
+.hh-col-done  { border-color: rgba(255, 210, 74, 0.55); }
+.hh-col-left  { border-color: rgba(255, 126, 126, 0.45); }
+
+.hh-col-head {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 900;
+  color: #ffd24a;
+  padding: 4px 6px 10px;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 10px;
+}
+.hh-col-icon { font-size: 1.2rem; }
+.hh-col-name { flex: 1; }
+.hh-col-count {
+  background: rgba(91, 232, 209, 0.18);
+  color: #5be8d1;
+  border-radius: 999px;
+  padding: 2px 12px;
+  font-size: 0.9rem;
+}
+.hh-col-body {
+  display: flex; flex-direction: column; gap: 8px;
+  min-height: 50px;
+}
+.hh-empty { color: rgba(243, 230, 194, 0.45); font-style: italic; font-size: 0.85rem; text-align: center; padding: 12px 0; }
+
+.hh-row {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 4px;
+  padding: 8px;
+  background: rgba(20, 20, 35, 0.45);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.hh-row-av {
+  grid-row: 1 / span 2;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.hh-row-av img { width: 100%; height: 100%; object-fit: cover; }
+.hh-row-av.is-emoji { font-size: 1.4rem; }
+.hh-row-meta { min-width: 0; }
+.hh-row-name {
+  font-weight: 800;
+  color: #f3e6c2;
+  font-size: 0.95rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.hh-row-section { font-size: 0.78rem; color: #5be8d1; font-weight: 700; }
+.hh-row-stale   { font-size: 0.78rem; color: #ffb44a; font-weight: 700; }
+
+.hh-row-prog {
+  grid-column: 2;
+  position: relative;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.hh-row-prog-fill {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: linear-gradient(90deg, #5be8d1, #5be88a);
+  border-radius: 999px;
+  transition: width 0.4s;
+}
+.hh-row-prog-label {
+  position: absolute; right: 4px; top: -16px;
+  font-size: 0.7rem; font-weight: 800;
+  color: rgba(243, 230, 194, 0.7);
+}
+
+.hh-foot {
+  margin-top: 20px;
+  text-align: center;
+  color: rgba(243, 230, 194, 0.55);
+  font-size: 0.85rem;
+}

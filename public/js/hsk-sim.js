@@ -11,6 +11,42 @@
   const $ = (id) => document.getElementById(id);
   const escapeHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+  // ── 🔊 Touch feedback ─────────────────────────────────────────────
+  // Tiny synthesized click — no asset needed — plus haptic vibrate
+  // on Android/iOS where supported. Wired into every selection tap.
+  let _audioCtx = null;
+  function getAudioCtx() {
+    if (_audioCtx) return _audioCtx;
+    try {
+      const Ctor = window.AudioContext || window.webkitAudioContext;
+      _audioCtx = new Ctor();
+    } catch (_) { _audioCtx = null; }
+    return _audioCtx;
+  }
+  function clickFeedback() {
+    // Haptic
+    try { if (navigator.vibrate) navigator.vibrate(10); } catch (_) {}
+    // Tiny audible tick
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    try {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.14, ctx.currentTime + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
+      o.start();
+      o.stop(ctx.currentTime + 0.09);
+    } catch (_) {}
+  }
+  // Delegate every click on a tappable hsk-* surface through the
+  // feedback function — works for buttons rendered after this hook.
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('.hsk-tf-pick, .hsk-3pic, .hsk-3opt, .hsk-gallery-tile, .hsk-audio-btn, .btn');
+    if (t) clickFeedback();
+  }, true);
+
   let accessCode = '';
   let studentCode = '';
   let sim = null;          // full simulation payload
@@ -18,6 +54,7 @@
   let cursor = 0;          // index into timeline
   const answers = {};      // qid → user's pick (boolean or letter)
   let _ttsAudio = null;    // current playing audio
+  let _heartbeatTimer = null;  // periodic ping to /api/hsk-sim/heartbeat
 
   // Pre-fill from URL: ?sim=hsk1-sim1&ac=ABCD&sc=XYZ
   const params = new URLSearchParams(location.search);
@@ -59,6 +96,7 @@
         $('hsk-gate').classList.add('hidden');
         $('hsk-runner').classList.remove('hidden');
         renderCurrent();
+        startHeartbeat();
       })
       .catch((e) => { $('hsk-gate-err').textContent = 'Red: ' + e.message; });
   }
@@ -180,7 +218,7 @@
       <div class="hsk-q-card">
         <div class="hsk-q-num">${isEx ? 'Ejemplo' : 'Pregunta ' + q.num}</div>
         <img class="hsk-q-image" src="${q.image}" alt="" loading="lazy">
-        ${audioButton(q.audioText)}
+        ${audioButton(q)}
         ${isEx
           ? `<div class="hsk-tf-row hsk-tf-row-locked">
                ${q.answer === true  ? '<span class="hsk-tf-pick hsk-tf-pick-true   is-correct">✓</span>' : '<span class="hsk-tf-pick hsk-tf-pick-true   is-dim">✓</span>'}
@@ -205,7 +243,7 @@
         if (answers[qid] === (btn.dataset.pick === 'true')) btn.classList.add('is-selected');
       });
     }
-    autoPlayAudio(q.audioText);
+    autoPlayAudio(q);
   }
 
   function renderListening2(step) {
@@ -215,7 +253,7 @@
     wrap.innerHTML = `
       <div class="hsk-q-card">
         <div class="hsk-q-num">Pregunta ${q.num}</div>
-        ${audioButton(q.audioText)}
+        ${audioButton(q)}
         <div class="hsk-3pic-row">
           ${q.options.map((o) => `
             <button class="hsk-3pic" type="button" data-pick="${o.letter}">
@@ -233,7 +271,7 @@
       });
       if (answers[qid] === btn.dataset.pick) btn.classList.add('is-selected');
     });
-    autoPlayAudio(q.audioText);
+    autoPlayAudio(q);
   }
 
   function renderListening3(step) {
@@ -243,7 +281,7 @@
     wrap.innerHTML = `
       <div class="hsk-q-card">
         <div class="hsk-q-num">Pregunta ${q.num} — Toca la letra de la imagen que coincide</div>
-        ${audioButton(q.audioText)}
+        ${audioButton(q)}
         <div class="hsk-gallery">
           ${step.gallery.map((g) => `
             <button class="hsk-gallery-tile" type="button" data-pick="${g.letter}">
@@ -261,7 +299,7 @@
       });
       if (answers[qid] === btn.dataset.pick) btn.classList.add('is-selected');
     });
-    autoPlayAudio(q.audioText);
+    autoPlayAudio(q);
   }
 
   function renderListening4(step) {
@@ -271,7 +309,7 @@
     wrap.innerHTML = `
       <div class="hsk-q-card">
         <div class="hsk-q-num">${isEx ? 'Ejemplo' : 'Pregunta ' + q.num}</div>
-        ${audioButton(q.audioText)}
+        ${audioButton(q)}
         <div class="hsk-3opt-row">
           ${(q.options || []).map((o) => `
             <button class="hsk-3opt ${isEx && q.answer === o.letter ? 'is-correct is-locked' : ''}" type="button" data-pick="${o.letter}">
@@ -292,7 +330,7 @@
         if (answers[qid] === btn.dataset.pick) btn.classList.add('is-selected');
       });
     }
-    autoPlayAudio(q.audioText);
+    autoPlayAudio(q);
   }
 
   function renderReading1(step) {
@@ -362,16 +400,24 @@
     }
   }
 
-  // ── Audio: Google Cloud Mandarin TTS via /api/tts (same endpoint the
-  // homework / warmup pages use, with built-in caching by content hash).
-  function audioButton(text) {
-    if (!text) return '<div class="hsk-audio-missing">(audio aún no transcrito)</div>';
+  // ── Audio: prefers a user-uploaded MP3 (q.audioUrl) over Google
+  // Cloud TTS (q.audioText) so the kid hears the teacher's own clear
+  // pronunciation when available. Falls back gracefully when neither
+  // is set.
+  function audioButton(q) {
+    // Back-compat: callers may pass a raw audioText string.
+    if (typeof q === 'string') q = { audioText: q };
+    if (!q || (!q.audioUrl && !q.audioText)) {
+      return '<div class="hsk-audio-missing">(audio aún no disponible)</div>';
+    }
     return '<button class="hsk-audio-btn" type="button" id="hsk-play-audio">🔊 Escuchar (toca para repetir)</button>';
   }
-  function autoPlayAudio(text) {
+  function autoPlayAudio(q) {
+    if (typeof q === 'string') q = { audioText: q };
+    if (!q || (!q.audioUrl && !q.audioText)) return;
     const btn = $('hsk-play-audio');
-    if (btn) btn.addEventListener('click', () => playTts(text));
-    if (text) setTimeout(() => playTts(text), 300);  // first auto-play
+    if (btn) btn.addEventListener('click', () => playAudio(q));
+    setTimeout(() => playAudio(q), 300);   // auto-play on render
   }
   function stopAudio() {
     if (_ttsAudio) {
@@ -379,12 +425,15 @@
       _ttsAudio = null;
     }
   }
-  function playTts(text) {
-    if (!text) return;
+  function playAudio(q) {
+    if (!q) return;
     stopAudio();
     const audio = new Audio();
     _ttsAudio = audio;
-    audio.src = '/api/tts?text=' + encodeURIComponent(text);
+    // MP3 wins. /api/tts is the fallback.
+    audio.src = q.audioUrl
+      ? q.audioUrl
+      : '/api/tts?text=' + encodeURIComponent(q.audioText || '');
     audio.play().catch(() => {});
   }
 
@@ -398,8 +447,45 @@
     cursor--; renderCurrent();
   });
 
+  // Heartbeat — teacher's live monitor polls /api/hsk-sim/sessions to
+  // see who's currently inside the exam, which question they're on,
+  // and how many they've answered. Aborted = stale heartbeat > 30s.
+  function startHeartbeat() {
+    sendHeartbeat();
+    if (_heartbeatTimer) clearInterval(_heartbeatTimer);
+    _heartbeatTimer = setInterval(sendHeartbeat, 8000);
+  }
+  function sendHeartbeat(status) {
+    if (!sim) return;
+    const step = timeline[cursor] || {};
+    fetch('/api/hsk-sim/heartbeat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        simId: sim.id,
+        accessCode, studentCode,
+        cursor, total: timeline.length,
+        answered: Object.keys(answers).length,
+        section: sectionForStep(step),
+        status: status || 'in-progress',
+      }),
+    }).catch(() => {});
+  }
+  // Send a "bye" beat on page unload so the dashboard immediately
+  // shows the student as gone instead of waiting for the stale window.
+  window.addEventListener('beforeunload', () => {
+    try {
+      const blob = new Blob([JSON.stringify({
+        simId: sim && sim.id, accessCode, studentCode, status: 'left',
+      })], { type: 'application/json' });
+      if (navigator.sendBeacon) navigator.sendBeacon('/api/hsk-sim/heartbeat', blob);
+    } catch (_) {}
+  });
+
   function finishTest() {
     stopAudio();
+    if (_heartbeatTimer) { clearInterval(_heartbeatTimer); _heartbeatTimer = null; }
+    sendHeartbeat('completed');
     $('hsk-runner').classList.add('hidden');
     $('hsk-results').classList.remove('hidden');
     // Submit

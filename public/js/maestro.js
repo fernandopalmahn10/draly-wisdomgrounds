@@ -402,7 +402,10 @@
           renderHskView();
         });
       }
-      span.textContent = step === 'root' ? '🏆 Simulación HSK' : ('HSK' + step);
+      span.textContent =
+          step === 'root'    ? '🏆 Simulación HSK'
+        : step === 'results' ? '🏅 Resultados'
+        : ('HSK' + step);
       crumb.appendChild(span);
       if (!isLast) {
         const sep = document.createElement('span');
@@ -411,11 +414,62 @@
         crumb.appendChild(sep);
       }
     });
-    // ─── ROOT view — pick an HSK level ──────────────────────────
+    // ─── RESULTS view — list every student's HSK exam outcomes ──
+    if (_hskNavStack[0] === 'root' && _hskNavStack[1] === 'results') {
+      title.textContent = '🏅 Resultados HSK';
+      sub.textContent = 'Cada examen entregado por tus alumnos. Más recientes primero.';
+      view.textContent = 'Cargando…';
+      fetch('/api/hsk-sim/results?pw=' + encodeURIComponent(pw))
+        .then((r) => r.json())
+        .then((d) => {
+          view.innerHTML = '';
+          const rows = (d && d.results) || [];
+          if (!rows.length) {
+            view.innerHTML = '<p class="m-modal-sub" style="text-align:center;">Aún nadie ha terminado un examen HSK.</p>';
+            return;
+          }
+          const list = document.createElement('div');
+          list.className = 'm-hsk-results-list';
+          rows.forEach((r) => {
+            const when = new Date(r.ts || 0).toLocaleString();
+            const cls = r.percent >= 90 ? 'is-great' : r.percent >= 60 ? 'is-ok' : 'is-low';
+            const item = document.createElement('div');
+            item.className = 'm-hsk-result-row ' + cls;
+            item.innerHTML =
+              '<div class="m-hsk-result-name">' +
+                '<strong>' + escapeHtml(r.displayName || r.code) + '</strong>' +
+                '<span class="m-hsk-result-when">' + escapeHtml(when) + '</span>' +
+              '</div>' +
+              '<div class="m-hsk-result-sim">' + escapeHtml((r.simId || '').toUpperCase()) + '</div>' +
+              '<div class="m-hsk-result-score">' +
+                '<span class="m-hsk-result-pct">' + r.percent + '%</span>' +
+                '<span class="m-hsk-result-pts">' + r.score + ' / ' + r.total + '</span>' +
+              '</div>';
+            list.appendChild(item);
+          });
+          view.appendChild(list);
+        })
+        .catch((e) => { view.textContent = 'Error: ' + e.message; });
+      return;
+    }
+    // ─── ROOT view — pick an HSK level (+ shortcut to results) ──
     if (_hskNavStack.length === 1) {
       title.textContent = '🏆 Simulación HSK';
-      sub.textContent = 'Elige el nivel HSK.';
+      sub.textContent = 'Elige el nivel HSK, o mira los resultados de tus alumnos.';
       view.innerHTML = '';
+      // Quick-access "ver resultados" tile at the top
+      const top = document.createElement('div');
+      top.className = 'm-hsk-results-cta';
+      top.innerHTML =
+        '<button class="btn btn-jade btn-xl" id="m-hsk-results-open" style="width:100%;">' +
+          '🏅 Ver quiénes terminaron + sus notas →' +
+        '</button>';
+      view.appendChild(top);
+      top.querySelector('#m-hsk-results-open').addEventListener('click', () => {
+        _hskNavStack = ['root', 'results'];
+        renderHskView();
+      });
+
       const grid = document.createElement('div');
       grid.className = 'm-reading-folder-grid';
       HSK_LEVELS.forEach((lvl) => {
@@ -565,7 +619,18 @@
           .then((r) => r.json())
           .then((res) => {
             if (res && res.ok) {
-              alert('✅ Examen enviado a ' + codes.length + ' alumno(s). Entrarán automáticamente en ~20s.');
+              // 🎓 Auto-pull the teacher into the LIVE MONITOR in a new
+              // tab. They asked for "complete control" — this is where
+              // they watch who's online, mid-exam, who finished, who
+              // closed the tab.
+              try {
+                const monitorUrl = '/host-hsk.html'
+                  + '?sim='    + encodeURIComponent(sim.id)
+                  + '&access=' + encodeURIComponent(accessCode)
+                  + '&pw='     + encodeURIComponent(pw);
+                window.open(monitorUrl, '_blank', 'noopener');
+              } catch (_) {}
+              alert('✅ Examen enviado a ' + codes.length + ' alumno(s). Entrarán automáticamente en ~20s.\n\nSe abrió el monitor en vivo en otra pestaña.');
               close();
             } else {
               alert('Error: ' + (res && res.error || 'desconocido'));

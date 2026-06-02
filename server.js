@@ -1651,6 +1651,89 @@ app.post('/api/hsk-sim/:simId/submit', (req, res) => {
   res.json({ ok: true, result });
 });
 
+// 🏆 HSK live sessions — teacher's live-monitor heartbeat protocol.
+// The student-side runner pings every ~8s with { simId, accessCode,
+// studentCode, cursor, total, answered, status }. The teacher polls
+// /sessions every ~5s to render who's currently inside, where they
+// are, and who's stale (no ping > 30s = probably aborted/closed tab).
+const HSK_SESSIONS = new Map();   // key: simId|accessCode|studentCode
+function _hskSessionKey(simId, ac, sc) {
+  return String(simId) + '|' + String(ac) + '|' + String(sc);
+}
+app.post('/api/hsk-sim/heartbeat', (req, res) => {
+  const { simId, accessCode, studentCode, cursor, total, answered, section, status } = req.body || {};
+  if (!simId || !accessCode || !studentCode) {
+    return res.status(400).json({ ok: false, error: 'simId, accessCode, studentCode required' });
+  }
+  const key = _hskSessionKey(simId, accessCode, studentCode);
+  const rec = Students.get(studentCode);
+  HSK_SESSIONS.set(key, {
+    simId, accessCode, studentCode,
+    displayName: (rec && rec.displayName) || studentCode,
+    avatar:      (rec && rec.avatar) || null,
+    cursor:   cursor || 0,
+    total:    total  || 0,
+    answered: answered || 0,
+    section:  section || '',
+    status:   status || 'in-progress',
+    lastBeat: Date.now(),
+  });
+  res.json({ ok: true });
+});
+// Teacher polls — returns all heartbeats for a given accessCode + sim,
+// classified by freshness. Admin-auth via ?pw=
+app.get('/api/hsk-sim/sessions', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const wantSimId  = req.query.simId || null;
+  const wantAccess = req.query.accessCode || null;
+  const now = Date.now();
+  const STALE_MS = 30 * 1000;
+  const live = [], stale = [], completed = [], left = [];
+  for (const s of HSK_SESSIONS.values()) {
+    if (wantSimId  && s.simId      !== wantSimId)  continue;
+    if (wantAccess && s.accessCode !== wantAccess) continue;
+    const age = now - s.lastBeat;
+    const row = Object.assign({}, s, { age });
+    if      (s.status === 'completed') completed.push(row);
+    else if (s.status === 'left')      left.push(row);
+    else if (age > STALE_MS)           stale.push(row);
+    else                                live.push(row);
+  }
+  res.json({ ok: true, live, stale, completed, left });
+});
+// Teacher polls completed results across all students who have ever
+// taken any HSK sim (or just one if simId is provided). Drives the
+// "Resultados HSK" panel in the maestro dashboard.
+app.get('/api/hsk-sim/results', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const wantSimId = req.query.simId || null;
+  const all = (typeof Students.listAll === 'function') ? Students.listAll() : [];
+  const ownCodes = session.teacher ? new Set(session.teacher.accessCodes || []) : null;
+  const rows = [];
+  for (const summary of all) {
+    const rec = Students.get(summary.code);
+    if (!rec || !Array.isArray(rec.hskResults) || !rec.hskResults.length) continue;
+    if (ownCodes && rec.accessCode && !ownCodes.has(rec.accessCode)) continue;
+    rec.hskResults.forEach((r) => {
+      if (wantSimId && r.simId !== wantSimId) return;
+      rows.push({
+        code: rec.code,
+        displayName: rec.displayName,
+        avatar: rec.avatar,
+        simId: r.simId,
+        score: r.score,
+        total: r.total,
+        percent: r.percent,
+        ts: r.ts,
+      });
+    });
+  }
+  rows.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  res.json({ ok: true, results: rows });
+});
+
 // List available reading tests for the kid.
 app.get('/api/homework/reading-tests', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
