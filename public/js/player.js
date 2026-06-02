@@ -2147,19 +2147,23 @@
   let rdTestLockedQIdx = -1;    // qIdx the player has already locked an answer for
   let rdTestTimerInt = null;
   let rdTestDeadline = 0;
-  // 🐢 Toggle Turtle VFX — teacher pushes "show turtle" to every kid.
-  // Full-screen GIF overlay of Squirtle dancing. Tap to dismiss locally
-  // (or wait for the teacher to toggle off). Stored as pointer-events
-  // none on the container so the kid's other taps still work.
+  // 🎬 ANIMATION VFX — teacher pushes any animation by fxId.
+  // Mirror of the host's ANIMATIONS array — keep in sync.
+  const RD_ANIMATIONS_PLAYER = {
+    turtle: '/assets/png-library/Squirtle%20animation.gif',
+    // 🆕 Add the same entries here as in host-reading.js when new
+    // animations land. Just url is needed on the player side.
+  };
   socket.on('rd:vfx', (msg) => {
-    if (!msg || msg.fx !== 'turtle') return;
+    if (!msg || !msg.fx) return;
+    const url = RD_ANIMATIONS_PLAYER[msg.fx];
     const existing = document.getElementById('rd-turtle-overlay');
-    if (msg.on) {
-      if (existing) return;
+    if (msg.on && url) {
+      if (existing) existing.remove();
       const ov = document.createElement('div');
       ov.id = 'rd-turtle-overlay';
       ov.className = 'rd-turtle-overlay';
-      ov.innerHTML = '<img src="/assets/png-library/Squirtle%20animation.gif" alt="Squirtle">';
+      ov.innerHTML = '<img src="' + url + '" alt="animation">';
       ov.addEventListener('click', () => {
         ov.classList.remove('show');
         setTimeout(() => { try { ov.remove(); } catch (_) {} }, 250);
@@ -2171,8 +2175,45 @@
       setTimeout(() => { try { existing.remove(); } catch (_) {} }, 250);
     }
   });
+  // 🎵 Per-story music on the KID's phone too. Tracks last-started so
+  // we don't restart the same theme on every state push. The Audio
+  // Context resumes off the user's Join tap (real user gesture), so
+  // music actually plays on iOS/Android.
+  let _rdCurrentMusicTheme = null;
+  function rdMaybeSwapMusic(themeName) {
+    if (!window.MochiSounds || !themeName) return;
+    if (themeName === _rdCurrentMusicTheme) return;
+    try {
+      if (MochiSounds.startGameTheme) {
+        MochiSounds.startGameTheme(themeName);
+        _rdCurrentMusicTheme = themeName;
+      }
+    } catch (_) {}
+  }
+  // 🎨 Apply per-story theme to the kid's body — purple/gold for Yugi,
+  // teal/gold for Pīnpīn defaults, etc. CSS variables + a direct body
+  // background swap so the kid's screen matches the teacher's screen.
+  function rdApplyTheme(theme) {
+    const body = document.body;
+    if (!theme) {
+      body.style.removeProperty('--story-primary');
+      body.style.removeProperty('--story-accent');
+      body.style.removeProperty('--story-bg');
+      return;
+    }
+    if (theme.primary) body.style.setProperty('--story-primary', theme.primary);
+    if (theme.accent)  body.style.setProperty('--story-accent',  theme.accent);
+    if (theme.bgGrad) {
+      body.style.setProperty('--story-bg', theme.bgGrad);
+      body.style.background = theme.bgGrad;
+      body.style.transition = 'background 0.6s ease';
+    }
+  }
   socket.on('rd:state', (state) => {
     if (gameType !== 'reading' || !state) return;
+    // 🎵 Music + 🎨 Theme — propagated from server every state push.
+    rdMaybeSwapMusic(state.music);
+    rdApplyTheme(state.theme);
     // Story changed? Replace the local story snapshot and re-render.
     if (state.storyId && state.storyId !== rdStoryId) {
       rdStoryId = state.storyId;

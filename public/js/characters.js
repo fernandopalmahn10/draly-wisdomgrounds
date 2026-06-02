@@ -46,6 +46,20 @@
       // but it was being served on every Yugi celebration. Back to the
       // static PNG until the compressed 1 MB GIF is ready.
     }),
+    // 🐢 Squirtle (Pīnpīn the water turtle) — selectable avatar.
+    // Uses the user's 1.1 MB transparent dancing GIF as the main pose.
+    // Light blue + water vibes. Common rarity so kids can pick freely.
+    squirtle: C('squirtle', {
+      name: 'Squirtle',
+      tagline: '¡Pīnpīn está listo!',
+      catchphrase: '— ¡Wǒ ài mi jiā! 💧',
+      palette: { primary: '#5eb8ff', accent: '#0a3a5e' },
+      rarity: 'common',
+      avatarable: true,
+      // Override defaults with the transparent dancing GIF.
+      poseA: '/assets/png-library/Squirtle%20animation.gif',
+      poseB: '/assets/png-library/Squirtle%20animation.gif',
+    }),
     // Pre-declared slots for characters whose assets are coming soon.
     // The UI knows to gracefully fall back to a PNG placeholder if the
     // file doesn't exist yet (no broken layouts).
