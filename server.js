@@ -5917,6 +5917,15 @@ io.on('connection', (socket) => {
     g.reading.curious = !!curious;
     io.to(pin).emit('rd:state', readingBuildStateMsg(g));
   });
+  // 🐢 VFX broadcast — teacher pushes a visual effect to every kid in
+  // the room. Currently used by the Toggle Turtle button (Squirtle GIF
+  // overlay). Tiny payload, no per-frame work on the server. Each kid's
+  // player.js handles the actual rendering.
+  socket.on('rd:vfx', ({ pin, password, fx, on }) => {
+    const g = games[pin];
+    if (!readingRequireHost(g, socket, password)) return;
+    io.to(pin).emit('rd:vfx', { fx: String(fx || ''), on: !!on });
+  });
   // === 📝 TEST MODE ===
   // Teacher kicks off a 5-question multiple-choice test on the current
   // story. Server runs the state machine (auto-advance per question),

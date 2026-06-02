@@ -579,14 +579,11 @@ function buildStoryPayload(storyId) {
     questionCount: (story.questions || []).length,
     pages: story.pages.map((page) => {
       const words = tokenizePage(page);
-      // 🧪 TEMP TEST 2026-06-03 — user wants the transparent Yugi GIF
-      // shown on page 5 of EVERY story to validate the workflow. Remove
-      // this override later once we know transparent GIFs render cleanly
-      // as story pages.
-      const isYugiPage5Test = (page.pageNum === 5);
-      const imageUrl = isYugiPage5Test
-        ? '/assets/png-library/YUGI%20transparent%20gif.gif'
-        : `/assets/reading/${id}/page-${page.pageNum}.${ext}${ver}`;
+      // 🩹 REVERTED 2026-06-03 — the page-5 Yugi GIF universal override
+      // was burning bandwidth (22 MB × every kid × every story page-5
+      // load). Stories use their own art again. User confirmed the
+      // transparent-GIF workflow works; we'll re-enable with COMPRESSED
+      // ~1 MB GIFs once they're ready.
       return {
         pageNum: page.pageNum,
         caption: page.caption,
@@ -594,7 +591,7 @@ function buildStoryPayload(storyId) {
         sentencesEs: page.sentencesEs || [],
         words,
         sentenceRanges: sentenceRanges(words),
-        imageUrl,
+        imageUrl: `/assets/reading/${id}/page-${page.pageNum}.${ext}${ver}`,
         audioUrl:  `/assets/reading/${id}/page-${page.pageNum}.mp3${ver}`,
         audioDurationMs: page.audioDurationMs || DEFAULT_PAGE_AUDIO_MS,
       };
