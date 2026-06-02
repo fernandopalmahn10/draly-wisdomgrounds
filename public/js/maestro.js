@@ -1868,6 +1868,58 @@
     });
     const body = $('m-detail-body');
     body.innerHTML = '';
+    // 🏆 HSK simulation history — pinned at the TOP of the detail body
+    // per user feedback: "this is the top, top, top of everything that
+    // I need to see when I click on each profile". Shows count per sim
+    // (best, latest) plus every individual attempt.
+    const hskList = data.hskResults || [];
+    if (hskList.length) {
+      // Group by simId so the teacher sees "HSK1·SIM1 → 3 intentos,
+      // mejor 93%, último 78%" at a glance.
+      const bySim = {};
+      hskList.forEach((r) => {
+        const k = r.simId || '?';
+        if (!bySim[k]) bySim[k] = { simId: k, attempts: 0, best: 0, latest: null, all: [] };
+        bySim[k].attempts++;
+        if ((r.percent || 0) > bySim[k].best) bySim[k].best = r.percent || 0;
+        if (!bySim[k].latest || (r.ts || 0) > (bySim[k].latest.ts || 0)) bySim[k].latest = r;
+        bySim[k].all.push(r);
+      });
+      const h = document.createElement('div');
+      h.className = 'm-section-title';
+      h.textContent = '🏆 Simulaciones HSK';
+      body.appendChild(h);
+      // Per-sim summary cards
+      Object.values(bySim).forEach((g) => {
+        const card = document.createElement('div');
+        card.className = 'm-hsk-detail-card';
+        const cls = g.best >= 80 ? 'great' : g.best >= 60 ? 'ok' : 'low';
+        card.classList.add('is-' + cls);
+        card.innerHTML =
+          '<div class="m-hsk-detail-head">' +
+            '<span class="m-hsk-detail-sim">' + escapeHtml(g.simId.toUpperCase()) + '</span>' +
+            '<span class="m-hsk-detail-attempts">' + g.attempts + ' intento' + (g.attempts === 1 ? '' : 's') + '</span>' +
+          '</div>' +
+          '<div class="m-hsk-detail-stats">' +
+            '<div><span class="m-hsk-detail-label">Mejor nota</span><span class="m-hsk-detail-best">' + g.best + '%</span></div>' +
+            '<div><span class="m-hsk-detail-label">Último intento</span><span class="m-hsk-detail-last">' + g.latest.percent + '% · ' + new Date(g.latest.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) + '</span></div>' +
+          '</div>';
+        body.appendChild(card);
+        // Per-attempt collapsed list
+        g.all.forEach((r) => {
+          const dateStr = new Date(r.ts).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          const pct = r.percent || 0;
+          const cls2 = pct >= 80 ? 'great' : pct >= 60 ? 'ok' : 'low';
+          const row = document.createElement('div');
+          row.className = 'm-asg-row ' + cls2;
+          row.innerHTML =
+            '<span class="m-asg-title">↳ ' + escapeHtml((r.simId || '').toUpperCase()) + '</span>' +
+            '<span class="m-asg-score">' + r.score + '/' + r.total + ' <small>(' + pct + '%)</small></span>' +
+            '<span class="m-asg-date">' + dateStr + '</span>';
+          body.appendChild(row);
+        });
+      });
+    }
     // Assignments
     if (assigns.length) {
       const h = document.createElement('div');

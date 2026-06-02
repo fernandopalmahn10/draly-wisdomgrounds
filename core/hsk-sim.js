@@ -68,12 +68,12 @@ const SIMULATIONS = {
               { letter: 'B', image: `${BASE}/LISTENING%20PART%202/8B%20(CORRECT).png` },
               { letter: 'C', image: `${BASE}/LISTENING%20PART%202/8C.png` },
             ], answer: 'B' },
-          { num: 9, audioText: '', options: [
+          { num: 9, audioUrl: `${BASE}/LISTENING%20PART%202/9.mp3`, audioText: '', options: [
               { letter: 'A', image: `${BASE}/LISTENING%20PART%202/9A.png` },
               { letter: 'B', image: `${BASE}/LISTENING%20PART%202/9B%20(CORRECT).png` },
               { letter: 'C', image: `${BASE}/LISTENING%20PART%202/9C.png` },
             ], answer: 'B' },
-          { num: 10, audioText: '', options: [
+          { num: 10, audioUrl: `${BASE}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
               { letter: 'A', image: `${BASE}/LISTENING%20PART%202/10A.png` },
               { letter: 'B', image: `${BASE}/LISTENING%20PART%202/10B%20(CORRECT).png` },
               { letter: 'C', image: `${BASE}/LISTENING%20PART%202/10C.png` },
@@ -100,11 +100,11 @@ const SIMULATIONS = {
         // Example: the example audio matches picture C.
         exampleAnswer: 'C',
         questions: [
-          { num: 11, audioText: '', answer: 'D' },
-          { num: 12, audioText: '', answer: 'B' },
-          { num: 13, audioText: '', answer: 'A' },
-          { num: 14, audioText: '', answer: 'E' },
-          { num: 15, audioText: '', answer: 'F' },
+          { num: 11, audioUrl: `${BASE}/LISTENING%20PART%203/11.mp3`, audioText: '', answer: 'D' },
+          { num: 12, audioUrl: `${BASE}/LISTENING%20PART%203/12.mp3`, audioText: '', answer: 'B' },
+          { num: 13, audioUrl: `${BASE}/LISTENING%20PART%203/13.mp3`, audioText: '', answer: 'A' },
+          { num: 14, audioUrl: `${BASE}/LISTENING%20PART%203/14.mp3`, audioText: '', answer: 'E' },
+          { num: 15, audioUrl: `${BASE}/LISTENING%20PART%203/15.mp3`, audioText: '', answer: 'F' },
         ],
       },
 
@@ -124,29 +124,29 @@ const SIMULATIONS = {
           answer: 'A',
         },
         questions: [
-          { num: 16, audioText: '', options: [
+          { num: 16, audioUrl: `${BASE}/LISTENING%20PART%204/16/16.mp3`, audioText: '', options: [
               { letter: 'A', text: '14 kuài' },
               { letter: 'B', text: '19 kuài' },
               { letter: 'C', text: '27 kuài' },
             ], answer: 'C' },
           // Q17-20 — text + answer keys extracted from the BMP filenames
           // the user uploaded (the (CORRECT) marker → answer letter).
-          { num: 17, audioText: '', options: [
+          { num: 17, audioUrl: `${BASE}/LISTENING%20PART%204/17/17.mp3`, audioText: '', options: [
               { letter: 'A', text: 'mǎi diànnǎo' },
               { letter: 'B', text: 'hěn piàoliang' },
               { letter: 'C', text: 'xuésheng duō' },
             ], answer: 'B' },
-          { num: 18, audioText: '', options: [
+          { num: 18, audioUrl: `${BASE}/LISTENING%20PART%204/18/18.mp3`, audioText: '', options: [
               { letter: 'A', text: '7 yuè 2 hào' },
               { letter: 'B', text: 'zuótiān shàngwǔ' },
               { letter: 'C', text: 'yí ge duō yuè qián' },
             ], answer: 'C' },
-          { num: 19, audioText: '', options: [
+          { num: 19, audioUrl: `${BASE}/LISTENING%20PART%204/19/19.mp3`, audioText: '', options: [
               { letter: 'A', text: 'kāi chē' },
               { letter: 'B', text: 'zuò fēijī' },
               { letter: 'C', text: 'zuò chūzū chē' },
             ], answer: 'C' },
-          { num: 20, audioText: '', options: [
+          { num: 20, audioUrl: `${BASE}/LISTENING%20PART%204/20/20.mp3`, audioText: '', options: [
               { letter: 'A', text: 'jiā lǐ' },
               { letter: 'B', text: 'fàndiàn' },
               { letter: 'C', text: 'diànyǐngyuàn' },
@@ -170,10 +170,9 @@ const SIMULATIONS = {
           { num: 21, word: 'shuǐguǒ',   image: `${BASE}/READING%20PART%201/21%20(FALSE).png`, answer: false },
           { num: 22, word: 'xiānsheng', image: `${BASE}/READING%20PART%201/22%20(FALSE).png`, answer: false },
           { num: 23, word: 'māo',       image: `${BASE}/READING%20PART%201/23%20(TRUE).png`,  answer: true  },
-          // Q24: filename only says (LENG). User: tell me if image shows cold
-          // or not. Defaulting to TRUE — kid sees cold thing, word is "cold".
-          // To flip: change answer to false.
-          { num: 24, word: 'lěng',      image: `${BASE}/READING%20PART%201/24%20(LENG).png`,  answer: true  },
+          // Q24 — user renamed the file to "24 (TRUE).png" confirming
+          // the answer key. Image: clearly cold thing → matches lěng.
+          { num: 24, word: 'lěng',      image: `${BASE}/READING%20PART%201/24%20(TRUE).png`,  answer: true  },
           { num: 25, word: 'xuéxí',     image: `${BASE}/READING%20PART%201/25%20(FALSE).png`, answer: false },
         ],
       },

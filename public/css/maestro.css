@@ -1190,3 +1190,48 @@ button.m-emirati-stat.is-tappable:active { transform: scale(0.97); }
 .m-hsk-result-score { display: flex; flex-direction: column; align-items: flex-end; }
 .m-hsk-result-pct { font-family: 'Cinzel', serif; font-weight: 900; color: #ffd24a; font-size: 1.4rem; line-height: 1; }
 .m-hsk-result-pts { color: rgba(243, 230, 194, 0.7); font-size: 0.8rem; }
+
+/* 🏆 HSK detail cards inside the per-student Cuaderno view */
+.m-hsk-detail-card {
+  background: linear-gradient(160deg, rgba(50, 60, 100, 0.85), rgba(20, 25, 45, 0.92));
+  border: 2.5px solid rgba(255, 210, 74, 0.5);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin: 8px 0 12px;
+}
+.m-hsk-detail-card.is-great { border-color: #5be88a; }
+.m-hsk-detail-card.is-ok    { border-color: #ffd24a; }
+.m-hsk-detail-card.is-low   { border-color: #ff7e7e; }
+.m-hsk-detail-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px;
+}
+.m-hsk-detail-sim {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  color: #ffd24a;
+  letter-spacing: 0.05em;
+  font-size: 1rem;
+}
+.m-hsk-detail-attempts {
+  background: rgba(91, 232, 209, 0.18);
+  color: #5be8d1;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 0.82rem;
+}
+.m-hsk-detail-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.m-hsk-detail-stats > div {
+  display: flex; flex-direction: column; gap: 2px;
+  background: rgba(20, 25, 45, 0.45);
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.m-hsk-detail-label { color: rgba(243, 230, 194, 0.55); font-size: 0.75rem; font-weight: 700; }
+.m-hsk-detail-best  { font-family: 'Cinzel', serif; font-weight: 900; color: #5be88a; font-size: 1.6rem; line-height: 1; }
+.m-hsk-detail-last  { color: #f3e6c2; font-weight: 800; font-size: 0.95rem; }

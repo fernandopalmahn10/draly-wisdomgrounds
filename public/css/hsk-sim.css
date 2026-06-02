@@ -99,32 +99,41 @@
 }
 
 /* ── Question card ───────────────────────────────────────────────── */
+/* User asked for clean — so the card itself is white-cream (no dark
+   gradient) and the image edges blend seamlessly into the same field.
+   Body text was light-gold on dark; we flip it to dark on cream so
+   it's still readable.  */
 .hsk-q-card {
-  background: linear-gradient(160deg, rgba(38, 40, 60, 0.85), rgba(20, 25, 40, 0.90));
-  border: 2px solid rgba(91, 232, 209, 0.45);
+  background: #fffaf0;
+  border: 2px solid rgba(91, 232, 209, 0.55);
   border-radius: 18px;
   padding: 16px 14px;
   display: flex; flex-direction: column;
   align-items: center;
   gap: 14px;
+  color: #1a1a26;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
+.hsk-q-card .hsk-q-num { color: #b37b00; }
 .hsk-q-num {
   font-weight: 900;
   color: #ffd24a;
   font-size: 0.95rem;
   letter-spacing: 0.04em;
 }
-/* Single-question image (L1, R1). User wants the IMAGE to dominate
-   without a grid background showing through. Solid cream fill, no
-   inset checker, bigger max-height so the picture pops on phone. */
+/* Single-question image (L1, R1). User wants a CLEAN white frame —
+   no grid showing through, no contrasting dark box around the photo.
+   Photos render edge-to-edge on pure white so any paper-grid texture
+   in the source photo blends into the same white field. */
 .hsk-q-image {
   width: 100%;
   max-width: 560px;
   max-height: 62vh;
   object-fit: contain;
-  background: #fafaf6;
-  border-radius: 14px;
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+  background: #ffffff;
+  border-radius: 12px;
+  border: none;
+  box-shadow: none;
 }
 
 /* ── Audio button ────────────────────────────────────────────────── */
@@ -154,17 +163,18 @@
 }
 .hsk-tf-pick {
   flex: 1; max-width: 200px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 2.5px solid rgba(91, 232, 209, 0.45);
+  background: #fff;
+  border: 2.5px solid rgba(91, 232, 209, 0.55);
   border-radius: 14px;
   padding: 16px 12px;
   font-weight: 900;
   font-size: 1.1rem;
-  color: #f3e6c2;
+  color: #1a1a26;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s, background 0.1s, border-color 0.1s;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 .hsk-tf-pick:active { transform: scale(0.96); }
 .hsk-tf-pick.is-selected {
@@ -215,8 +225,9 @@
 .hsk-3pic:active { transform: scale(0.97); }
 .hsk-3pic img {
   width: 100%; aspect-ratio: 4 / 3; object-fit: contain;
-  background: #fff;
+  background: #ffffff;
   border-radius: 10px;
+  border: none;
 }
 .hsk-3pic-letter {
   position: absolute; top: 8px; left: 10px;
