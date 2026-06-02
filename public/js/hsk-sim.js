@@ -129,9 +129,11 @@
   }
 
   function loadSim() {
-    fetch('/api/hsk-sim/' + encodeURIComponent(simId)
-      + '?accessCode=' + encodeURIComponent(accessCode || roomPin)
-      + '&studentCode=' + encodeURIComponent(studentCode))
+    // Auth: prefer PIN, fall back to access code.
+    let q = '?studentCode=' + encodeURIComponent(studentCode);
+    if (roomPin)        q += '&pin=' + encodeURIComponent(roomPin);
+    else if (accessCode) q += '&accessCode=' + encodeURIComponent(accessCode);
+    fetch('/api/hsk-sim/' + encodeURIComponent(simId) + q)
       .then((r) => r.json())
       .then((d) => {
         if (!d || !d.ok) {
@@ -565,13 +567,14 @@
     sendHeartbeat('completed');
     $('hsk-runner').classList.add('hidden');
     $('hsk-results').classList.remove('hidden');
-    // Submit
-    fetch('/api/hsk-sim/' + encodeURIComponent(sim.id) + '/submit'
-      + '?accessCode=' + encodeURIComponent(accessCode)
-      + '&studentCode=' + encodeURIComponent(studentCode), {
+    // Submit (auth: PIN preferred, accessCode legacy)
+    let sq = '?studentCode=' + encodeURIComponent(studentCode);
+    if (roomPin)         sq += '&pin=' + encodeURIComponent(roomPin);
+    else if (accessCode)  sq += '&accessCode=' + encodeURIComponent(accessCode);
+    fetch('/api/hsk-sim/' + encodeURIComponent(sim.id) + '/submit' + sq, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentCode, answers }),
+      body: JSON.stringify({ studentCode, answers, pin: roomPin || undefined }),
     })
       .then((r) => r.json())
       .then((d) => {

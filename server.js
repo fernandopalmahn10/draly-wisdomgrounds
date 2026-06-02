@@ -1626,17 +1626,31 @@ app.get('/api/reading/stories', (req, res) => {
 app.get('/api/hsk-sim/list', (req, res) => {
   res.json({ ok: true, sims: HskSim.listSims() });
 });
+// Auth helper for HSK endpoints — accept EITHER a valid HSK PIN OR a
+// homework access code. PIN flow is now the primary path (kids type
+// the 4-digit PIN to enter the room), and the homework access code
+// remains valid as the legacy fallback for force-impose users who
+// don't go through the PIN gate. This was the root cause of
+// "código de acceso incorrecto" — the kid was passing the PIN as
+// accessCode and the homework validator was rejecting it.
+function _hskAuth(req, res) {
+  const pin = String(req.query.pin || (req.body && req.body.pin) || '').trim();
+  if (pin && HSK_ROOMS.has(pin)) return true;
+  // Fall back to the classroom access-code check (legacy).
+  return _hwCheckAccess(req, res);
+}
+
 // Fetch a simulation's full payload (correct answers stripped client-side).
-// Requires homework access code + student code so we can persist results.
+// Auth: valid PIN OR valid classroom access code.
 app.get('/api/hsk-sim/:simId', (req, res) => {
-  if (!_hwCheckAccess(req, res)) return;
+  if (!_hskAuth(req, res)) return;
   const payload = HskSim.buildSimPayload(req.params.simId);
   if (!payload) return res.status(404).json({ ok: false, error: 'unknown sim' });
   res.json({ ok: true, sim: payload });
 });
 // Submit answers, grade them, persist to student record.
 app.post('/api/hsk-sim/:simId/submit', (req, res) => {
-  if (!_hwCheckAccess(req, res)) return;
+  if (!_hskAuth(req, res)) return;
   const { studentCode, answers } = req.body || {};
   const rec = Students.get(studentCode);
   if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
