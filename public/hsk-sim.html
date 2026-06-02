@@ -7,20 +7,29 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260603a">
-  <link rel="stylesheet" href="/css/hsk-sim.css?v=20260603d">
+  <link rel="stylesheet" href="/css/hsk-sim.css?v=20260603e">
 </head>
 <body class="hsk-body">
 
-  <!-- Gate: kid must supply accessCode + studentCode (passed via URL or
-       prompt). Same auth model as the homework portal. -->
+  <!-- Gate: kid types PIN + studentCode (or both pre-filled from URL) -->
   <div id="hsk-gate" class="hsk-gate">
     <div class="hsk-gate-card">
-      <h1>🏆 HSK1 · Simulación</h1>
-      <p class="hsk-gate-sub">Ingresa tu código de aula y tu código de estudiante para empezar.</p>
-      <input class="input" id="hsk-access" type="text" placeholder="Código de aula" autocomplete="off">
+      <h1>🏆 HSK · Simulación</h1>
+      <p class="hsk-gate-sub">Escribe el PIN que te dio tu maestra.</p>
+      <input class="input" id="hsk-access" type="text" placeholder="PIN de la sala" autocomplete="off" inputmode="numeric">
       <input class="input" id="hsk-code"   type="text" placeholder="Tu código de estudiante" autocomplete="off">
-      <button class="btn btn-jade btn-xl" id="hsk-enter" style="width:100%;">Empezar →</button>
+      <button class="btn btn-jade btn-xl" id="hsk-enter" style="width:100%;">Entrar a la sala →</button>
       <p id="hsk-gate-err" class="hsk-err"></p>
+    </div>
+  </div>
+
+  <!-- Waiting room: kid is in the socket room but teacher hasn't started yet -->
+  <div id="hsk-waiting" class="hsk-gate hidden">
+    <div class="hsk-gate-card">
+      <div style="font-size:3.5rem;line-height:1;margin-bottom:8px;">🐉</div>
+      <h1>¡Estás en la sala!</h1>
+      <p class="hsk-gate-sub">Esperando a tu maestra para empezar el examen…</p>
+      <p id="hsk-waiting-pin" style="color:#5be8d1;font-weight:800;margin-top:10px;"></p>
     </div>
   </div>
 
@@ -54,7 +63,8 @@
     </div>
   </div>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524n"></script>
-  <script src="/js/hsk-sim.js?v=20260603f"></script>
+  <script src="/js/hsk-sim.js?v=20260603g"></script>
 </body>
 </html>

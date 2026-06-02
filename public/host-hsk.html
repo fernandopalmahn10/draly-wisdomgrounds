@@ -6,7 +6,7 @@
   <title>🏆 Sala HSK · Maestra</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260603a">
-  <link rel="stylesheet" href="/css/hsk-sim.css?v=20260603d">
+  <link rel="stylesheet" href="/css/hsk-sim.css?v=20260603e">
   <link rel="stylesheet" href="/css/maestro.css?v=20260603c">
   <link rel="stylesheet" href="/css/reading.css?v=20260603a">
 </head>
@@ -14,71 +14,70 @@
 
   <div class="container hh-wrap">
 
-    <!-- ╔════════════════════════════════════════════════════════════╗ -->
-    <!-- ║  BIG PIN BANNER — what the teacher reads aloud to class    ║ -->
-    <!-- ║  No URL exposed — kids reach the join page via the teacher  ║ -->
-    <!-- ║  saying "abre la simulación HSK" or via force-impose redirect.║-->
-    <!-- ╚════════════════════════════════════════════════════════════╝ -->
-    <div class="hh-pin-banner" id="hh-pin-banner">
-      <div class="hh-pin-label">📣 Diles a tus alumnos su PIN de hoy:</div>
-      <div class="hh-pin-code" id="hh-pin">····</div>
-      <div class="hh-pin-actions">
-        <button class="btn btn-gold btn-sm" id="hh-force-online">🎯 Forzar a alumnos en línea</button>
-        <button class="btn btn-ghost btn-sm" id="hh-anim-btn">🎬 Animaciones</button>
+    <!-- ── LOBBY: pre-start. Big PIN, live roster, START button. ── -->
+    <div id="hh-lobby" class="hh-screen">
+      <div class="hh-pin-banner">
+        <div class="hh-pin-label">📣 Diles a tus alumnos su PIN de hoy:</div>
+        <div class="hh-pin-code" id="hh-pin">····</div>
+        <div class="hh-pin-actions">
+          <button class="btn btn-gold btn-sm" id="hh-force-online">🎯 Forzar a alumnos en línea</button>
+          <button class="btn btn-ghost btn-sm" id="hh-anim-btn">🎬 Animaciones</button>
+        </div>
+      </div>
+
+      <div class="hh-lobby-card">
+        <h2>🐉 Sala de espera</h2>
+        <p class="hh-lobby-sub">Cuando todos hayan entrado, toca <strong>Empezar examen</strong>. Late-joiners pueden entrar después también.</p>
+        <div class="hh-lobby-count">
+          <span id="hh-lobby-count-num">0</span> alumno<span id="hh-lobby-count-s">s</span> en la sala
+        </div>
+        <div class="hh-lobby-roster" id="hh-lobby-roster"></div>
+        <button class="btn btn-gold btn-xl" id="hh-start-btn" style="width:100%;margin-top:14px;">
+          🚀 EMPEZAR EXAMEN
+        </button>
       </div>
     </div>
 
-    <!-- Sim title + sub-banner -->
-    <div class="hh-head">
-      <h1 class="hh-title">🏆 <span id="hh-sim-title">Simulación HSK</span></h1>
-      <p class="hh-sub" id="hh-sub">Monitor en vivo · refresca cada 5 segundos</p>
-      <div class="hh-tally" id="hh-tally"></div>
+    <!-- ── ACTIVE: after start. Four-bucket monitor + animations. ── -->
+    <div id="hh-active" class="hh-screen hidden">
+      <div class="hh-pin-banner hh-pin-banner-small">
+        <div class="hh-pin-label">PIN activo:</div>
+        <div class="hh-pin-code hh-pin-code-small" id="hh-pin-small">····</div>
+        <div class="hh-pin-actions">
+          <button class="btn btn-gold btn-sm" id="hh-force-online-2">🎯 Forzar a alumnos en línea</button>
+          <button class="btn btn-ghost btn-sm" id="hh-anim-btn-2">🎬 Animaciones</button>
+          <button class="btn btn-red btn-sm" id="hh-end-btn">🛑 Terminar sala</button>
+        </div>
+      </div>
+
+      <div class="hh-head">
+        <h1 class="hh-title">🏆 <span id="hh-sim-title">Simulación HSK</span></h1>
+        <p class="hh-sub" id="hh-sub">Monitor en vivo · actualización en tiempo real</p>
+        <div class="hh-tally" id="hh-tally"></div>
+      </div>
+
+      <div class="hh-feed" id="hh-feed" aria-live="polite"></div>
+
+      <div class="hh-grid">
+        <section class="hh-col hh-col-live">
+          <div class="hh-col-head"><span class="hh-col-icon">🟢</span><span class="hh-col-name">En el examen</span><span class="hh-col-count" id="hh-count-live">0</span></div>
+          <div class="hh-col-body" id="hh-list-live"></div>
+        </section>
+        <section class="hh-col hh-col-stale">
+          <div class="hh-col-head"><span class="hh-col-icon">⚠️</span><span class="hh-col-name">Posible abandono</span><span class="hh-col-count" id="hh-count-stale">0</span></div>
+          <div class="hh-col-body" id="hh-list-stale"></div>
+        </section>
+        <section class="hh-col hh-col-done">
+          <div class="hh-col-head"><span class="hh-col-icon">🏅</span><span class="hh-col-name">Terminaron</span><span class="hh-col-count" id="hh-count-done">0</span></div>
+          <div class="hh-col-body" id="hh-list-done"></div>
+        </section>
+        <section class="hh-col hh-col-left">
+          <div class="hh-col-head"><span class="hh-col-icon">🚪</span><span class="hh-col-name">Cerraron</span><span class="hh-col-count" id="hh-count-left">0</span></div>
+          <div class="hh-col-body" id="hh-list-left"></div>
+        </section>
+      </div>
     </div>
 
-    <!-- Live event feed — toasts pop in here when kids join, answer, finish -->
-    <div class="hh-feed" id="hh-feed" aria-live="polite"></div>
-
-    <div class="hh-grid">
-      <section class="hh-col hh-col-live">
-        <div class="hh-col-head">
-          <span class="hh-col-icon">🟢</span>
-          <span class="hh-col-name">En el examen</span>
-          <span class="hh-col-count" id="hh-count-live">0</span>
-        </div>
-        <div class="hh-col-body" id="hh-list-live"></div>
-      </section>
-
-      <section class="hh-col hh-col-stale">
-        <div class="hh-col-head">
-          <span class="hh-col-icon">⚠️</span>
-          <span class="hh-col-name">Posible abandono</span>
-          <span class="hh-col-count" id="hh-count-stale">0</span>
-        </div>
-        <div class="hh-col-body" id="hh-list-stale"></div>
-      </section>
-
-      <section class="hh-col hh-col-done">
-        <div class="hh-col-head">
-          <span class="hh-col-icon">🏅</span>
-          <span class="hh-col-name">Terminaron</span>
-          <span class="hh-col-count" id="hh-count-done">0</span>
-        </div>
-        <div class="hh-col-body" id="hh-list-done"></div>
-      </section>
-
-      <section class="hh-col hh-col-left">
-        <div class="hh-col-head">
-          <span class="hh-col-icon">🚪</span>
-          <span class="hh-col-name">Cerraron</span>
-          <span class="hh-col-count" id="hh-count-left">0</span>
-        </div>
-        <div class="hh-col-body" id="hh-list-left"></div>
-      </section>
-    </div>
-
-    <p class="hh-foot">
-      💡 Late-join soportado: cualquier alumno que escriba el PIN entra y empieza la simulación desde la pregunta 1 en su propia pantalla. No esperan a nadie.
-    </p>
   </div>
 
   <!-- 🎬 ANIMACIONES MODAL — same UX as host-reading -->
@@ -92,6 +91,7 @@
     </div>
   </div>
 
-  <script src="/js/host-hsk.js?v=20260603e"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/host-hsk.js?v=20260603f"></script>
 </body>
 </html>

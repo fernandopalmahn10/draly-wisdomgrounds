@@ -1,12 +1,18 @@
 // =========================================================================
-// host-hsk.js — Teacher's PIN-room host page for an HSK simulation
+// host-hsk.js — Real socket-driven HSK simulation host page
 // =========================================================================
-// Opens with ?sim=<simId>&pw=<maestroCode>. First creates a room (gets a
-// 4-digit PIN), then polls /sessions every 5s. Mirrors host-reading
-// UX: big PIN banner the teacher reads aloud, live roster split into
-// four buckets, Animaciones panel that broadcasts an animation overlay
-// across every kid's screen. Toasts pop above the grid when new
-// students join, answer questions, or submit.
+// Mirrors host-reading.js exactly:
+//   1. opens a socket.io connection
+//   2. emits 'host:create' { gameType: 'hsksim', simId } → server returns PIN
+//   3. PIN goes into the same games[pin] table as every other live game
+//   4. listens for 'state' broadcasts → renders live lobby roster
+//   5. "🚀 EMPEZAR EXAMEN" button emits 'host:start' → state flips to active
+//   6. Kids' /hsk-sim.html, sitting in their own lobby on the SAME socket
+//      room, instantly flip into the test runner.
+//
+// Late joiners after start: they enter the running room normally and the
+// test starts on their device from question 1. Each kid takes the exam
+// on their own pace; the room state stays 'active' the whole time.
 // =========================================================================
 (function () {
   'use strict';
@@ -19,68 +25,124 @@
   try { if (!pw) pw = localStorage.getItem('mochi.maestroPw') || ''; } catch (_) {}
   try { if (pw) localStorage.setItem('mochi.maestroPw', pw); } catch (_) {}
 
-  // Either a PIN was passed in the URL (reused room), or we create one
-  // immediately on load.
-  let pin = params.get('pin') || '';
-
-  $('hh-sim-title').textContent = simId.replace(/-/g, ' · ').toUpperCase();
-
-  // ── State: track who we've already seen so toasts only fire for new
-  // events ─────────────────────────────────────────────────────────────
-  const _seenKeys = new Set();    // 'live:CODE' → already toasted as join
-  const _lastAnswered = new Map();// CODE → last-known answered count
-  const _doneKeys = new Set();    // CODE → already toasted as completed
-
-  // ── Step 1: create or reuse the PIN room ─────────────────────────────
-  function ensureRoom() {
-    if (pin) {
-      $('hh-pin').textContent = pin;
-      poll();
-      setInterval(poll, 5000);
-      return;
-    }
-    fetch('/api/hsk-sim/room/create?pw=' + encodeURIComponent(pw), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ simId }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (!d || !d.ok) {
-          $('hh-pin').textContent = 'ERROR';
-          $('hh-sub').textContent = 'No pude crear la sala: ' + (d && d.error || 'desconocido');
-          return;
-        }
-        pin = d.pin;
-        // Persist into the URL so refresh keeps the same room.
-        try {
-          const u = new URL(location.href);
-          u.searchParams.set('pin', pin);
-          history.replaceState(null, '', u.toString());
-        } catch (_) {}
-        $('hh-pin').textContent = pin;
-        toast('🚀 Sala creada · PIN ' + pin, 'good');
-        poll();
-        setInterval(poll, 5000);
-      })
-      .catch((e) => {
-        $('hh-pin').textContent = 'ERROR';
-        $('hh-sub').textContent = 'Red: ' + e.message;
-      });
+  if (!pw) {
+    document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#ffd24a;font-family:Nunito;"><h2>🔒 Falta tu código de maestra.</h2><p>Entra desde <a href="/maestro" style="color:#5be8d1;">Modo Maestro</a> y vuelve a lanzar la simulación.</p></div>';
+    return;
   }
 
-  // ── Avatar / progress helpers (same as before) ───────────────────────
+  const socket = io();
+  let pin = '';
+  let lastState = null;
+  let lastSimTitle = simId.replace(/-/g, ' · ').toUpperCase();
+
+  // Toast helpers
+  function toast(text, kind) {
+    const t = document.createElement('div');
+    t.className = 'hh-toast hh-toast-' + (kind || 'info');
+    t.textContent = text;
+    const feed = $('hh-feed');
+    if (!feed) return;
+    feed.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    setTimeout(() => {
+      t.classList.remove('show');
+      setTimeout(() => { try { t.remove(); } catch (_) {} }, 350);
+    }, 6000);
+  }
+
+  // ── Step 1: create the socket room ──────────────────────────────────
+  socket.emit('host:create', { gameType: 'hsksim', simId }, (resp) => {
+    if (!resp || !resp.pin) {
+      alert('No pude crear la sala: ' + ((resp && resp.error) || 'error desconocido'));
+      return;
+    }
+    pin = resp.pin;
+    $('hh-pin').textContent = pin;
+    $('hh-pin-small').textContent = pin;
+    document.title = '🏆 HSK · ' + pin;
+    toast('🚀 Sala creada · PIN ' + pin, 'good');
+  });
+
+  // ── Step 2: listen for 'state' updates from the server ─────────────
+  // This is the same event every other game uses. When kids player:join
+  // the room, broadcast() fires and we render the updated roster.
+  const _seenJoins = new Set();   // toast each kid once
+  socket.on('state', (s) => {
+    if (!s) return;
+    lastState = s;
+    // Track new joins for toast feedback
+    const playerNames = new Set();
+    const playerList = Object.values(s.players || {});
+    playerList.forEach((p) => {
+      playerNames.add(p.name);
+      if (!_seenJoins.has(p.name)) {
+        _seenJoins.add(p.name);
+        toast('🟢 ' + p.name + ' entró a la sala', 'good');
+      }
+    });
+    // Prune left players from the seen set (so rejoin re-toasts)
+    Array.from(_seenJoins).forEach((n) => { if (!playerNames.has(n)) _seenJoins.delete(n); });
+
+    // Update sim title
+    if (s.hsk && s.hsk.simId) lastSimTitle = s.setTitle || s.hsk.simId.toUpperCase();
+    if ($('hh-sim-title')) $('hh-sim-title').textContent = lastSimTitle;
+
+    // Render based on current room state
+    if (s.state === 'active' || s.state === 'ended') showActive();
+    else showLobby();
+
+    renderLobby(playerList);
+    renderActive();
+  });
+
+  function showLobby() {
+    $('hh-lobby').classList.remove('hidden');
+    $('hh-active').classList.add('hidden');
+  }
+  function showActive() {
+    $('hh-lobby').classList.add('hidden');
+    $('hh-active').classList.remove('hidden');
+  }
+
+  // ── Lobby roster (pre-start) ───────────────────────────────────────
+  function renderLobby(players) {
+    const n = players.length;
+    $('hh-lobby-count-num').textContent = n;
+    $('hh-lobby-count-s').textContent = n === 1 ? '' : 's';
+    const wrap = $('hh-lobby-roster');
+    if (!wrap) return;
+    if (!n) {
+      wrap.innerHTML = '<p class="hh-empty">Esperando alumnos… diles el PIN.</p>';
+      return;
+    }
+    wrap.innerHTML = players.map((p) => {
+      return '<div class="hh-lobby-row">' +
+               avatarHtml(p.avatar) +
+               '<span class="hh-lobby-name">' + escapeHtml(p.name) + '</span>' +
+             '</div>';
+    }).join('');
+  }
+
   function avatarHtml(a) {
     if (!a) return '<span class="hh-row-av is-emoji">🧒</span>';
     if (/^[a-z0-9_-]+$/i.test(a)) {
       const charSet = new Set(['gojo','yugi','yuji','shelly','fnaf','dandy','hanzo','mei2','dralingo','naruto','sasuke','luffy','goku','pikachu','sonic','mario','kirby','spiderman','ironman','elsa','moana','squirtle']);
-      const url = charSet.has(a)
-        ? '/assets/cutscenes/chars/' + a + '-a.png'
-        : '/assets/avatars/' + encodeURIComponent(a) + '.svg';
+      const url = charSet.has(a) ? '/assets/cutscenes/chars/' + a + '-a.png'
+                                 : '/assets/avatars/' + encodeURIComponent(a) + '.svg';
       return '<span class="hh-row-av"><img src="' + url + '" alt=""></span>';
     }
     return '<span class="hh-row-av is-emoji">' + escapeHtml(a) + '</span>';
   }
+
+  // ── Active monitor (post-start) ─ pulls from HTTP /sessions ────────
+  // Heartbeat polling powers the four-bucket progress monitor (live,
+  // stale, completed, left). This is independent of the socket roster —
+  // the kid client posts heartbeats with progress data every 8s.
+  function renderActive() {
+    if (!lastState || lastState.state === 'lobby') return;
+    // (rendering happens in poll() below)
+  }
+
   function progressBar(answered, total) {
     const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
     return '<div class="hh-row-prog"><div class="hh-row-prog-fill" style="width:' + pct + '%"></div>' +
@@ -102,105 +164,72 @@
              progressBar(r.answered || 0, r.total || 0) +
            '</div>';
   }
-
-  // ── Toast feed: "Lin se unió", "María entregó (87%)" etc ────────────
-  function toast(text, kind) {
-    const t = document.createElement('div');
-    t.className = 'hh-toast hh-toast-' + (kind || 'info');
-    t.textContent = text;
-    const feed = $('hh-feed');
-    feed.appendChild(t);
-    requestAnimationFrame(() => t.classList.add('show'));
-    setTimeout(() => {
-      t.classList.remove('show');
-      setTimeout(() => { try { t.remove(); } catch (_) {} }, 350);
-    }, 6000);
-  }
-
-  // ── Diff incoming roster against last poll to fire toasts ─────────
-  function fireToastsFor(live, done) {
-    live.forEach((r) => {
-      const k = r.studentCode;
-      if (!_seenKeys.has('live:' + k)) {
-        _seenKeys.add('live:' + k);
-        toast('🟢 ' + (r.displayName || k) + ' entró a la sala', 'good');
-      }
-      // Answered-bump toast (every 5 questions, so it's not spammy)
-      const prev = _lastAnswered.get(k) || 0;
-      const cur  = r.answered || 0;
-      if (cur > prev && cur % 5 === 0 && cur > 0) {
-        toast('✏️ ' + (r.displayName || k) + ' lleva ' + cur + '/' + r.total, 'info');
-      }
-      _lastAnswered.set(k, cur);
-    });
-    done.forEach((r) => {
-      const k = r.studentCode;
-      if (!_doneKeys.has(k)) {
-        _doneKeys.add(k);
-        toast('🏅 ' + (r.displayName || k) + ' terminó el examen', 'gold');
-      }
-    });
-  }
-
-  // ── Render the four-bucket grid ─────────────────────────────────────
-  function render(data) {
-    const live  = (data && data.live)      || [];
-    const stale = (data && data.stale)     || [];
-    const done  = (data && data.completed) || [];
-    const left  = (data && data.left)      || [];
-    $('hh-count-live').textContent  = live.length;
-    $('hh-count-stale').textContent = stale.length;
-    $('hh-count-done').textContent  = done.length;
-    $('hh-count-left').textContent  = left.length;
-    $('hh-list-live').innerHTML  = live.length  ? live.map((r)  => rowHtml(r, 'live')).join('')   : '<p class="hh-empty">Nadie ha entrado todavía. Dales el PIN.</p>';
-    $('hh-list-stale').innerHTML = stale.length ? stale.map((r) => rowHtml(r, 'stale')).join('')  : '<p class="hh-empty">Nadie está sin señal.</p>';
-    $('hh-list-done').innerHTML  = done.length  ? done.map((r)  => rowHtml(r, 'done')).join('')   : '<p class="hh-empty">Aún nadie ha terminado.</p>';
-    $('hh-list-left').innerHTML  = left.length  ? left.map((r)  => rowHtml(r, 'left')).join('')   : '<p class="hh-empty">Nadie ha cerrado el examen.</p>';
-
-    const total = live.length + stale.length + done.length + left.length;
-    $('hh-tally').innerHTML = '<strong>' + total + '</strong> alumno' + (total === 1 ? '' : 's') +
-      ' · 🟢 ' + live.length + ' activo' + (live.length === 1 ? '' : 's') +
-      ' · 🏅 ' + done.length + ' terminó' + (done.length === 1 ? '' : 'aron');
-
-    fireToastsFor(live, done);
-  }
-
-  function poll() {
+  const _doneToasted = new Set();
+  function pollSessions() {
     if (!pin) return;
-    let url = '/api/hsk-sim/sessions?pw=' + encodeURIComponent(pw)
-      + '&pin=' + encodeURIComponent(pin);
-    fetch(url)
+    fetch('/api/hsk-sim/sessions?pw=' + encodeURIComponent(pw) + '&pin=' + encodeURIComponent(pin))
       .then((r) => r.json())
       .then((d) => {
-        if (!d || !d.ok) {
-          $('hh-sub').textContent = 'Error: ' + (d && d.error || 'desconocido') + '. Revisa tu código (?pw=).';
-          return;
-        }
-        render(d);
+        if (!d || !d.ok) return;
+        const live = d.live || [], stale = d.stale || [], done = d.completed || [], left = d.left || [];
+        $('hh-count-live').textContent  = live.length;
+        $('hh-count-stale').textContent = stale.length;
+        $('hh-count-done').textContent  = done.length;
+        $('hh-count-left').textContent  = left.length;
+        $('hh-list-live').innerHTML  = live.length  ? live.map((r)  => rowHtml(r, 'live')).join('')   : '<p class="hh-empty">Nadie está activo aún.</p>';
+        $('hh-list-stale').innerHTML = stale.length ? stale.map((r) => rowHtml(r, 'stale')).join('')  : '<p class="hh-empty">Nadie está sin señal.</p>';
+        $('hh-list-done').innerHTML  = done.length  ? done.map((r)  => rowHtml(r, 'done')).join('')   : '<p class="hh-empty">Aún nadie ha terminado.</p>';
+        $('hh-list-left').innerHTML  = left.length  ? left.map((r)  => rowHtml(r, 'left')).join('')   : '<p class="hh-empty">Nadie ha cerrado el examen.</p>';
+        const total = live.length + stale.length + done.length + left.length;
+        $('hh-tally').innerHTML = '<strong>' + total + '</strong> alumno' + (total === 1 ? '' : 's') +
+          ' · 🟢 ' + live.length + ' activo' + (live.length === 1 ? '' : 's') +
+          ' · 🏅 ' + done.length + ' terminó' + (done.length === 1 ? '' : 'aron');
+        done.forEach((r) => {
+          if (!_doneToasted.has(r.studentCode)) {
+            _doneToasted.add(r.studentCode);
+            toast('🏅 ' + (r.displayName || r.studentCode) + ' terminó (' + (r.answered || 0) + '/' + (r.total || '?') + ')', 'gold');
+          }
+        });
       })
-      .catch((e) => { $('hh-sub').textContent = 'Red: ' + e.message; });
+      .catch(() => {});
   }
+  setInterval(pollSessions, 5000);
 
-  // (Direct-link copy button removed per user request — no URL is
-  // visible on screen. Teacher reads the PIN aloud or uses
-  // "🎯 Forzar a alumnos en línea" to push it silently.)
+  // ── 🚀 START button — fire the existing host:start event ───────────
+  $('hh-start-btn').addEventListener('click', () => {
+    if (!pin) { alert('Esperando PIN…'); return; }
+    socket.emit('host:start', { pin });
+  });
+  socket.on('host:start-error', (msg) => {
+    if (msg && msg.reason === 'no-set') {
+      // hsksim shouldn't hit this — but just in case
+      alert((msg && msg.message) || 'No se pudo empezar.');
+    } else if (msg && msg.reason === 'no-players') {
+      if (confirm('No hay alumnos en la sala todavía. ¿Empezar de todas formas? (Los late-joiners entrarán al test directamente.)')) {
+        // For HSK we want to allow no-player start since kids enter
+        // mid-exam. We use a tiny hack: just re-emit — server already
+        // permits hsksim via soloOkGameTypes.
+        socket.emit('host:start', { pin });
+      }
+    }
+  });
 
-  // ── Force-impose to currently-online kids — manual per-checkbox
-  // picker, mirroring the maestro reading flow the user said worked
-  // very well. Pops a modal listing every kid who's pinged in the
-  // last 60s with checkbox + name + code. Default: all checked.
-  $('hh-force-online').addEventListener('click', () => {
+  // ── 🛑 END button — close the room ─────────────────────────────────
+  $('hh-end-btn').addEventListener('click', () => {
+    if (!confirm('¿Cerrar la sala? Los alumnos que aún no terminen perderán su progreso.')) return;
+    socket.emit('host:end', { pin });
+    setTimeout(() => { window.close(); }, 600);
+  });
+
+  // ── 🎯 FORCE-IMPOSE picker (lobby + active) ───────────────────────
+  function openForcePicker() {
     if (!pin) { alert('Esperando PIN…'); return; }
     fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
       .then((r) => r.json())
       .then((data) => {
-        if (!data || !data.ok) { alert('No se pudo cargar la lista de alumnos en línea.'); return; }
+        if (!data || !data.ok) { alert('No se pudo cargar la lista.'); return; }
         const onlineNow = (data.students || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
-        if (!onlineNow.length) {
-          alert('No hay alumnos en línea ahora mismo.\n\n(Pídeles que abran /homework primero.)');
-          return;
-        }
-        // Build modal
+        if (!onlineNow.length) { alert('No hay alumnos en línea ahora mismo.'); return; }
         let overlay = document.getElementById('hh-force-modal');
         if (overlay) overlay.remove();
         overlay = document.createElement('div');
@@ -209,8 +238,8 @@
         overlay.innerHTML =
           '<div class="m-modal-card">' +
             '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
-            '<h2>🎯 Forzar entrada al examen</h2>' +
-            '<p class="m-modal-sub">PIN <strong>' + pin + '</strong> · Selecciona los alumnos que quieres entrar. Recibirán un aviso y se les abre el examen automáticamente.</p>' +
+            '<h2>🎯 Forzar entrada</h2>' +
+            '<p class="m-modal-sub">PIN <strong>' + pin + '</strong> · Selecciona a quién forzar.</p>' +
             '<div class="m-force-actions">' +
               '<button class="btn btn-ghost btn-sm" id="hh-fhsk-all">✅ Todos</button>' +
               '<button class="btn btn-ghost btn-sm" id="hh-fhsk-none">⬜ Ninguno</button>' +
@@ -249,40 +278,28 @@
             body: JSON.stringify({
               studentCodes: codes,
               text: '🏆 ¡Tu maestra abrió la simulación HSK! Entra ya.',
-              actionType:  'force',
-              actionUrl:   '/hsk-sim.html?pin=' + encodeURIComponent(pin),
+              actionType: 'force',
+              actionUrl: '/hsk-sim.html?pin=' + encodeURIComponent(pin),
               actionLabel: 'Entrar al examen →',
             }),
           })
             .then((r) => r.json())
             .then((res) => {
-              if (res && res.ok) {
-                toast('🚀 ' + codes.length + ' alumno(s) entrando al examen', 'good');
-                close();
-              } else {
-                alert('Error: ' + (res && res.error || 'desconocido'));
-              }
+              if (res && res.ok) { toast('🚀 ' + codes.length + ' alumno(s) entrando…', 'good'); close(); }
+              else alert('Error: ' + (res && res.error || 'desconocido'));
             })
             .catch((e) => alert('Error: ' + e.message));
         });
       })
       .catch((e) => alert('Error: ' + e.message));
-  });
+  }
+  $('hh-force-online').addEventListener('click', openForcePicker);
+  $('hh-force-online-2').addEventListener('click', openForcePicker);
 
-  // ── 🎬 ANIMATIONS — same bank as host-reading. Fires fx to room ────
+  // ── 🎬 ANIMATIONS panel ────────────────────────────────────────────
   const ANIMATIONS = [
-    {
-      id: 'gojo',
-      name: 'Gojo (Jujutsu)',
-      tags: 'gojo satoru jjk anime sensei limitless infinity blue purple six eyes',
-      url: '/assets/png-library/GOJO%20TRANSPARENT.gif',
-    },
-    {
-      id: 'turtle',
-      name: 'Squirtle dancing',
-      tags: 'squirtle turtle pinpin water dance dancing tortuga',
-      url: '/assets/png-library/Squirtle%20animation.gif',
-    },
+    { id: 'gojo', name: 'Gojo (Jujutsu)', tags: 'gojo satoru jjk anime sensei limitless infinity blue purple six eyes', url: '/assets/png-library/GOJO%20TRANSPARENT.gif' },
+    { id: 'turtle', name: 'Squirtle dancing', tags: 'squirtle turtle pinpin water dance dancing tortuga', url: '/assets/png-library/Squirtle%20animation.gif' },
   ];
   let _animCurrent = null;
   let _animBuilt = false;
@@ -302,27 +319,20 @@
           '<div class="rd-anim-tile-thumb" style="background-image:url(\'' + a.url + '\');"></div>' +
           '<div class="rd-anim-tile-name">' + escapeHtml(a.name) + '</div>';
         card.addEventListener('click', () => {
-          if (_animCurrent === a.id) {
-            broadcastFx(a.id, false);
-            _animCurrent = null;
-          } else {
-            broadcastFx(a.id, true);
-            _animCurrent = a.id;
-          }
+          if (_animCurrent === a.id) { broadcastFx(a.id, false); _animCurrent = null; }
+          else                       { broadcastFx(a.id, true);  _animCurrent = a.id; }
           modal.classList.add('hidden');
         });
         grid.appendChild(card);
       });
       const search = $('rd-anim-search');
-      if (search) {
-        search.addEventListener('input', () => {
-          const q = search.value.trim().toLowerCase();
-          grid.querySelectorAll('.rd-anim-tile').forEach((tile) => {
-            const matches = !q || (tile.dataset.searchHaystack || '').includes(q);
-            tile.style.display = matches ? '' : 'none';
-          });
+      if (search) search.addEventListener('input', () => {
+        const q = search.value.trim().toLowerCase();
+        grid.querySelectorAll('.rd-anim-tile').forEach((tile) => {
+          const matches = !q || (tile.dataset.searchHaystack || '').includes(q);
+          tile.style.display = matches ? '' : 'none';
         });
-      }
+      });
       _animBuilt = true;
     }
     modal.classList.remove('hidden');
@@ -330,20 +340,14 @@
   function broadcastFx(fxId, on) {
     if (!pin) return;
     fetch('/api/hsk-sim/room/' + encodeURIComponent(pin) + '/fx?pw=' + encodeURIComponent(pw), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fx: fxId, on: !!on }),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d && d.ok) toast(on ? '🎬 Animación activada: ' + fxId : '🎬 Animación apagada', 'info');
-      })
-      .catch(() => {});
+    }).then((r) => r.json()).then((d) => {
+      if (d && d.ok) toast(on ? '🎬 Animación activada: ' + fxId : '🎬 Animación apagada', 'info');
+    }).catch(() => {});
   }
   $('hh-anim-btn').addEventListener('click', openAnimModal);
+  $('hh-anim-btn-2').addEventListener('click', openAnimModal);
   document.querySelector('.rd-anim-close').addEventListener('click', () => $('rd-anim-modal').classList.add('hidden'));
   $('rd-anim-modal').addEventListener('click', (e) => { if (e.target === $('rd-anim-modal')) $('rd-anim-modal').classList.add('hidden'); });
-
-  // GO
-  ensureRoom();
 })();
