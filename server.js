@@ -1671,7 +1671,36 @@ function _hskSessionKey(pin, sc) {
 // there via force-impose) and join. Late joiners simply enter the PIN
 // any time the room is open — they start from question 1 on their own
 // device while everyone else continues where they are.
+//
+// IMPORTANT: rooms are PERSISTED to data/hsk-rooms.json so a Render
+// dyno restart (or new deploy) doesn't wipe the PIN — otherwise the
+// teacher creates a PIN, the server restarts, and kids see "no room
+// with this PIN" forever. This is exactly the bug reported 2026-06-03.
+const HSK_ROOMS_FILE = path.join(__dirname, 'data', 'hsk-rooms.json');
 const HSK_ROOMS = new Map();   // pin → { pin, simId, createdAt, fx, hostHeartbeat }
+
+function _hskRoomsLoad() {
+  try {
+    if (!fs.existsSync(HSK_ROOMS_FILE)) return;
+    const raw = JSON.parse(fs.readFileSync(HSK_ROOMS_FILE, 'utf8'));
+    const cutoff = Date.now() - 6 * 60 * 60 * 1000;   // drop anything > 6h old
+    Object.keys(raw || {}).forEach((pin) => {
+      const r = raw[pin];
+      if (r && (r.createdAt || 0) >= cutoff) HSK_ROOMS.set(pin, r);
+    });
+    console.log('[hsk] loaded', HSK_ROOMS.size, 'rooms from disk');
+  } catch (e) { console.warn('[hsk] load rooms failed:', e.message); }
+}
+function _hskRoomsSave() {
+  try {
+    const dir = path.dirname(HSK_ROOMS_FILE);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const obj = {};
+    HSK_ROOMS.forEach((v, k) => { obj[k] = v; });
+    fs.writeFileSync(HSK_ROOMS_FILE, JSON.stringify(obj), 'utf8');
+  } catch (e) { console.warn('[hsk] save rooms failed:', e.message); }
+}
+_hskRoomsLoad();
 
 function _hskGenPin() {
   // 4-digit numeric PIN, avoid leading-zero ambiguity, avoid collisions.
@@ -1681,12 +1710,14 @@ function _hskGenPin() {
   }
   return String(Date.now()).slice(-4);
 }
-// Sweep rooms older than 2 hours so the map doesn't grow forever.
+// Sweep rooms older than 6 hours so the file doesn't grow forever.
 setInterval(() => {
-  const cutoff = Date.now() - 2 * 60 * 60 * 1000;
+  const cutoff = Date.now() - 6 * 60 * 60 * 1000;
+  let changed = false;
   for (const [pin, room] of HSK_ROOMS) {
-    if ((room.createdAt || 0) < cutoff) HSK_ROOMS.delete(pin);
+    if ((room.createdAt || 0) < cutoff) { HSK_ROOMS.delete(pin); changed = true; }
   }
+  if (changed) _hskRoomsSave();
 }, 10 * 60 * 1000);
 
 // Teacher creates a room — admin-auth via ?pw=
@@ -1704,6 +1735,7 @@ app.post('/api/hsk-sim/room/create', (req, res) => {
     fx: null,            // currently-broadcast animation (or null)
     hostHeartbeat: Date.now(),
   });
+  _hskRoomsSave();
   res.json({ ok: true, pin, simId });
 });
 
@@ -1726,6 +1758,7 @@ app.post('/api/hsk-sim/room/:pin/fx', (req, res) => {
   if (!room) return res.status(404).json({ ok: false, error: 'room not found' });
   const { fx, on } = req.body || {};
   room.fx = on ? { id: String(fx || ''), since: Date.now() } : null;
+  _hskRoomsSave();
   res.json({ ok: true, fx: room.fx });
 });
 app.post('/api/hsk-sim/heartbeat', (req, res) => {
