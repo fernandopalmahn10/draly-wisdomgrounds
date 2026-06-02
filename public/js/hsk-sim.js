@@ -56,44 +56,84 @@
   let _ttsAudio = null;    // current playing audio
   let _heartbeatTimer = null;  // periodic ping to /api/hsk-sim/heartbeat
 
-  // Pre-fill from URL. Accept BOTH the maestro launch convention
-  // (?access=XYZ&code=ABC) AND the older short convention (?ac=&sc=).
-  // The homework portal force-redirect also splices in &name=Foo which
-  // we ignore here.
+  // Read URL params. NEW preferred convention: ?pin=1234 → look up the
+  // sim from the server. Back-compat: ?sim= still works as a fallback,
+  // and ?access=/?code= still pre-fills the legacy fields. The homework
+  // portal force-redirect now passes ?pin=&code=.
   const params = new URLSearchParams(location.search);
-  const simId = params.get('sim') || 'hsk1-sim1';
+  let simId   = params.get('sim') || '';
+  let roomPin = params.get('pin') || '';
   const urlAc = params.get('access') || params.get('ac');
   const urlSc = params.get('code')   || params.get('sc');
   if (urlAc) $('hsk-access').value = urlAc;
   if (urlSc) $('hsk-code').value = urlSc;
+  if (roomPin) $('hsk-access').value = roomPin;   // PIN goes into the "code de aula" field
 
   $('hsk-enter').addEventListener('click', tryEnter);
   ['hsk-access', 'hsk-code'].forEach((id) => {
     $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') tryEnter(); });
   });
 
-  // If BOTH codes came from the URL (e.g. force-impose pre-fills),
-  // auto-submit so the kid doesn't see the gate flicker — and so the
-  // heartbeat starts the moment the page loads. Guarantees the teacher
-  // sees them on the live monitor without delay.
-  if (urlAc && urlSc) {
-    setTimeout(tryEnter, 50);
+  // Auto-resolve PIN at page load. If ?pin= was provided, look it up
+  // server-side to learn the simId. Display nice "Sala HSK1 ✓" feedback
+  // so the kid knows they're in the right room before typing their code.
+  if (roomPin) {
+    fetch('/api/hsk-sim/room/' + encodeURIComponent(roomPin))
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && d.ok) {
+          simId = d.simId;
+          const lbl = document.createElement('p');
+          lbl.className = 'hsk-gate-sub';
+          lbl.style.color = '#5be8d1';
+          lbl.style.fontWeight = '800';
+          lbl.innerHTML = '✓ Sala HSK válida · PIN <strong>' + roomPin + '</strong>';
+          $('hsk-gate-err').parentNode.insertBefore(lbl, $('hsk-gate-err'));
+        } else {
+          $('hsk-gate-err').textContent = (d && d.error) || 'PIN no válido.';
+        }
+      })
+      .catch(() => {});
+  }
+
+  // Auto-submit when we have enough: (pin + code) OR (access + code).
+  if ((roomPin || urlAc) && urlSc) {
+    setTimeout(tryEnter, 80);
   }
 
   function tryEnter() {
     accessCode  = $('hsk-access').value.trim();
     studentCode = $('hsk-code').value.trim();
+    // If the access field contains a 4-digit PIN, treat it as the room
+    // PIN — server resolves the simId for us.
+    if (/^\d{4}$/.test(accessCode)) roomPin = accessCode;
     if (!accessCode || !studentCode) {
-      $('hsk-gate-err').textContent = 'Falta el código de aula o de estudiante.';
+      $('hsk-gate-err').textContent = 'Falta el PIN (o código de aula) y tu código de estudiante.';
       return;
     }
     $('hsk-gate-err').textContent = 'Cargando…';
+    // If we still don't know the simId AND we have a PIN, resolve it
+    // first; otherwise loadSim() directly.
+    if (!simId && roomPin) {
+      fetch('/api/hsk-sim/room/' + encodeURIComponent(roomPin))
+        .then((r) => r.json())
+        .then((d) => {
+          if (!d || !d.ok) {
+            $('hsk-gate-err').textContent = (d && d.error) || 'PIN no válido.';
+            return;
+          }
+          simId = d.simId;
+          loadSim();
+        });
+      return;
+    }
+    if (!simId) simId = 'hsk1-sim1';
     loadSim();
   }
 
   function loadSim() {
     fetch('/api/hsk-sim/' + encodeURIComponent(simId)
-      + '?accessCode=' + encodeURIComponent(accessCode)
+      + '?accessCode=' + encodeURIComponent(accessCode || roomPin)
       + '&studentCode=' + encodeURIComponent(studentCode))
       .then((r) => r.json())
       .then((d) => {
@@ -473,6 +513,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        pin: roomPin || undefined,
         simId: sim.id,
         accessCode, studentCode,
         cursor, total: timeline.length,
@@ -480,7 +521,35 @@
         section: sectionForStep(step),
         status: status || 'in-progress',
       }),
-    }).catch(() => {});
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        // Server returns the current room-wide animation overlay (or
+        // null). Apply it client-side so the teacher's Animaciones
+        // panel propagates to every kid in the PIN room.
+        if (d && d.ok) applyFx(d.fx);
+      })
+      .catch(() => {});
+  }
+
+  // ── 🎬 Animation overlay (teacher-broadcast via PIN room) ─────────
+  const FX_URL = {
+    gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
+    turtle: '/assets/png-library/Squirtle%20animation.gif',
+  };
+  let _curFxId = null;
+  function applyFx(fx) {
+    const wantId = fx && fx.id;
+    if (wantId === _curFxId) return;
+    _curFxId = wantId || null;
+    const old = document.getElementById('hsk-fx-overlay');
+    if (old) old.remove();
+    if (!wantId || !FX_URL[wantId]) return;
+    const ov = document.createElement('div');
+    ov.id = 'hsk-fx-overlay';
+    ov.className = 'hsk-fx-overlay';
+    ov.innerHTML = '<img src="' + FX_URL[wantId] + '" alt="">';
+    document.body.appendChild(ov);
   }
   // Send a "bye" beat on page unload so the dashboard immediately
   // shows the student as gone instead of waiting for the stale window.

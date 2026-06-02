@@ -3,26 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>🏆 Monitor HSK · Maestra</title>
+  <title>🏆 Sala HSK · Maestra</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260603a">
-  <link rel="stylesheet" href="/css/hsk-sim.css?v=20260603c">
+  <link rel="stylesheet" href="/css/hsk-sim.css?v=20260603d">
   <link rel="stylesheet" href="/css/maestro.css?v=20260603c">
+  <link rel="stylesheet" href="/css/reading.css?v=20260603a">
 </head>
 <body class="hsk-body">
 
-  <!-- Teacher-only live monitor for an in-flight HSK simulation.
-       Opens automatically in a new tab when the teacher hits
-       "🚀 Lanzar examen". Reads ?sim=<simId>&pw=<maestroCode> from
-       the URL and polls /api/hsk-sim/sessions every 5s. Shows four
-       buckets: live, stale (no recent heartbeat → likely aborted),
-       completed, and explicitly left. -->
   <div class="container hh-wrap">
+
+    <!-- ╔════════════════════════════════════════════════════════════╗ -->
+    <!-- ║  BIG PIN BANNER — what the teacher reads aloud to class    ║ -->
+    <!-- ╚════════════════════════════════════════════════════════════╝ -->
+    <div class="hh-pin-banner" id="hh-pin-banner">
+      <div class="hh-pin-label">📣 Diles a tus alumnos: entren en</div>
+      <div class="hh-pin-url">draly-wisdomgrounds-2.onrender.com/hsk-sim.html</div>
+      <div class="hh-pin-label" style="margin-top:6px;">y escriban este PIN:</div>
+      <div class="hh-pin-code" id="hh-pin">····</div>
+      <div class="hh-pin-actions">
+        <button class="btn btn-jade btn-sm" id="hh-copy-link">📋 Copiar liga directa</button>
+        <button class="btn btn-gold btn-sm" id="hh-force-online">🎯 Forzar a alumnos en línea</button>
+        <button class="btn btn-ghost btn-sm" id="hh-anim-btn">🎬 Animaciones</button>
+      </div>
+    </div>
+
+    <!-- Sim title + sub-banner -->
     <div class="hh-head">
       <h1 class="hh-title">🏆 <span id="hh-sim-title">Simulación HSK</span></h1>
       <p class="hh-sub" id="hh-sub">Monitor en vivo · refresca cada 5 segundos</p>
       <div class="hh-tally" id="hh-tally"></div>
     </div>
+
+    <!-- Live event feed — toasts pop in here when kids join, answer, finish -->
+    <div class="hh-feed" id="hh-feed" aria-live="polite"></div>
 
     <div class="hh-grid">
       <section class="hh-col hh-col-live">
@@ -55,7 +70,7 @@
       <section class="hh-col hh-col-left">
         <div class="hh-col-head">
           <span class="hh-col-icon">🚪</span>
-          <span class="hh-col-name">Cerraron la pestaña</span>
+          <span class="hh-col-name">Cerraron</span>
           <span class="hh-col-count" id="hh-count-left">0</span>
         </div>
         <div class="hh-col-body" id="hh-list-left"></div>
@@ -63,11 +78,21 @@
     </div>
 
     <p class="hh-foot">
-      💡 <em>Posible abandono</em> = no nos han ping-ueado en más de 30 segundos.
-      Puede ser pérdida momentánea de señal o que cerraron el examen sin terminar.
+      💡 Late-join soportado: cualquier alumno que escriba el PIN entra y empieza la simulación desde la pregunta 1 en su propia pantalla. No esperan a nadie.
     </p>
   </div>
 
-  <script src="/js/host-hsk.js?v=20260603b"></script>
+  <!-- 🎬 ANIMACIONES MODAL — same UX as host-reading -->
+  <div id="rd-anim-modal" class="rd-anim-modal hidden">
+    <div class="rd-anim-modal-card">
+      <button class="rd-anim-close" type="button" aria-label="Cerrar">✕</button>
+      <h2>🎬 Animaciones</h2>
+      <p class="rd-anim-sub">Toca una animación para mostrarla en TODOS los exámenes de tu salón. Toca de nuevo para quitarla.</p>
+      <input class="input rd-anim-search" id="rd-anim-search" type="text" placeholder="Buscar (gojo, squirtle, …)" autocomplete="off">
+      <div class="rd-anim-grid" id="rd-anim-grid"></div>
+    </div>
+  </div>
+
+  <script src="/js/host-hsk.js?v=20260603c"></script>
 </body>
 </html>

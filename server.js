@@ -1660,19 +1660,91 @@ app.post('/api/hsk-sim/:simId/submit', (req, res) => {
 // studentCode, cursor, total, answered, status }. The teacher polls
 // /sessions every ~5s to render who's currently inside, where they
 // are, and who's stale (no ping > 30s = probably aborted/closed tab).
-const HSK_SESSIONS = new Map();   // key: simId|accessCode|studentCode
-function _hskSessionKey(simId, ac, sc) {
-  return String(simId) + '|' + String(ac) + '|' + String(sc);
+const HSK_SESSIONS = new Map();   // key: pin|studentCode
+function _hskSessionKey(pin, sc) {
+  return String(pin) + '|' + String(sc);
 }
-app.post('/api/hsk-sim/heartbeat', (req, res) => {
-  const { simId, accessCode, studentCode, cursor, total, answered, section, status } = req.body || {};
-  if (!simId || !accessCode || !studentCode) {
-    return res.status(400).json({ ok: false, error: 'simId, accessCode, studentCode required' });
+
+// 🎯 PIN-based ROOM model — mirrors the reading-lecture UX. The teacher
+// opens /host-hsk.html, the page creates a room, gets back a 4-digit
+// PIN, displays it big. Kids type the PIN in /hsk-sim.html (or land
+// there via force-impose) and join. Late joiners simply enter the PIN
+// any time the room is open — they start from question 1 on their own
+// device while everyone else continues where they are.
+const HSK_ROOMS = new Map();   // pin → { pin, simId, createdAt, fx, hostHeartbeat }
+
+function _hskGenPin() {
+  // 4-digit numeric PIN, avoid leading-zero ambiguity, avoid collisions.
+  for (let i = 0; i < 30; i++) {
+    const p = String(1000 + Math.floor(Math.random() * 9000));
+    if (!HSK_ROOMS.has(p)) return p;
   }
-  const key = _hskSessionKey(simId, accessCode, studentCode);
+  return String(Date.now()).slice(-4);
+}
+// Sweep rooms older than 2 hours so the map doesn't grow forever.
+setInterval(() => {
+  const cutoff = Date.now() - 2 * 60 * 60 * 1000;
+  for (const [pin, room] of HSK_ROOMS) {
+    if ((room.createdAt || 0) < cutoff) HSK_ROOMS.delete(pin);
+  }
+}, 10 * 60 * 1000);
+
+// Teacher creates a room — admin-auth via ?pw=
+app.post('/api/hsk-sim/room/create', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const simId = (req.body && req.body.simId) || (req.query && req.query.simId);
+  if (!simId || !HskSim.buildSimPayload(simId)) {
+    return res.status(400).json({ ok: false, error: 'unknown simId' });
+  }
+  const pin = _hskGenPin();
+  HSK_ROOMS.set(pin, {
+    pin, simId,
+    createdAt: Date.now(),
+    fx: null,            // currently-broadcast animation (or null)
+    hostHeartbeat: Date.now(),
+  });
+  res.json({ ok: true, pin, simId });
+});
+
+// Look up the simId for a PIN — used by /hsk-sim.html gate to know
+// which simulation to run. No auth: kids only know the PIN, server
+// reveals only { simId }.
+app.get('/api/hsk-sim/room/:pin', (req, res) => {
+  const room = HSK_ROOMS.get(req.params.pin);
+  if (!room) return res.status(404).json({ ok: false, error: 'PIN no válido. Pregúntale a tu maestra.' });
+  res.json({ ok: true, pin: room.pin, simId: room.simId, fx: room.fx || null });
+});
+
+// Teacher fires an animation across every kid in the room (or turns
+// it off). Mirrors the Animaciones panel pattern from host-reading.
+// POST /api/hsk-sim/room/:pin/fx { fx: 'gojo', on: true }
+app.post('/api/hsk-sim/room/:pin/fx', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const room = HSK_ROOMS.get(req.params.pin);
+  if (!room) return res.status(404).json({ ok: false, error: 'room not found' });
+  const { fx, on } = req.body || {};
+  room.fx = on ? { id: String(fx || ''), since: Date.now() } : null;
+  res.json({ ok: true, fx: room.fx });
+});
+app.post('/api/hsk-sim/heartbeat', (req, res) => {
+  const { pin, simId, accessCode, studentCode, cursor, total, answered, section, status } = req.body || {};
+  // PIN is the new room key. accessCode is retained for back-compat
+  // with old force-impose flows. Either path produces a sessionKey
+  // that the teacher can poll on.
+  const roomKey = pin || accessCode || simId;
+  if (!roomKey || !studentCode) {
+    return res.status(400).json({ ok: false, error: 'pin (or accessCode) + studentCode required' });
+  }
+  const key = _hskSessionKey(roomKey, studentCode);
   const rec = Students.get(studentCode);
+  const isJoin = !HSK_SESSIONS.has(key);
   HSK_SESSIONS.set(key, {
-    simId, accessCode, studentCode,
+    pin: pin || null,
+    simId: simId || (HSK_ROOMS.get(pin) && HSK_ROOMS.get(pin).simId) || null,
+    accessCode: accessCode || null,
+    studentCode,
     displayName: (rec && rec.displayName) || studentCode,
     avatar:      (rec && rec.avatar) || null,
     cursor:   cursor || 0,
@@ -1681,20 +1753,26 @@ app.post('/api/hsk-sim/heartbeat', (req, res) => {
     section:  section || '',
     status:   status || 'in-progress',
     lastBeat: Date.now(),
+    isJoin,                      // first-time? — drives host toast
   });
-  res.json({ ok: true });
+  // The response also returns the current room-wide fx (animation
+  // overlay) so the kid client can render it without a separate poll.
+  const room = pin ? HSK_ROOMS.get(pin) : null;
+  res.json({ ok: true, fx: room ? room.fx : null });
 });
 // Teacher polls — returns all heartbeats for a given accessCode + sim,
 // classified by freshness. Admin-auth via ?pw=
 app.get('/api/hsk-sim/sessions', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
+  const wantPin    = req.query.pin || null;
   const wantSimId  = req.query.simId || null;
   const wantAccess = req.query.accessCode || null;
   const now = Date.now();
   const STALE_MS = 30 * 1000;
   const live = [], stale = [], completed = [], left = [];
   for (const s of HSK_SESSIONS.values()) {
+    if (wantPin    && s.pin        !== wantPin)    continue;
     if (wantSimId  && s.simId      !== wantSimId)  continue;
     if (wantAccess && s.accessCode !== wantAccess) continue;
     const age = now - s.lastBeat;
