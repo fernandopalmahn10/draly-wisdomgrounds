@@ -1109,6 +1109,19 @@
     if (gameType === 'reading') {
       setTimeout(() => showScreen('rd'), 800);
     }
+    // === HSKSIM: redirect to /hsk-sim.html so the kid runs the full
+    // exam UI. Splice in studentCode from localStorage (saved by the
+    // homework portal) so the gate auto-submits. The PIN is the same
+    // one they just entered here. Mirrors how lecture rooms work, but
+    // each kid takes the exam on their own pace — no synced state. ===
+    if (gameType === 'hsksim') {
+      let sc = '';
+      // The homework portal stores studentCode under 'dralyStudentCode'.
+      try { sc = localStorage.getItem('dralyStudentCode') || ''; } catch (_) {}
+      const url = '/hsk-sim.html?pin=' + encodeURIComponent(pin)
+        + (sc ? '&code=' + encodeURIComponent(sc) : '');
+      setTimeout(() => { window.location.href = url; }, 600);
+    }
     // === WARM-UP: jump to the read-only sentence-mirror screen ===
     if (gameType === 'warmup') {
       setTimeout(() => {

@@ -1635,8 +1635,15 @@ app.get('/api/hsk-sim/list', (req, res) => {
 // accessCode and the homework validator was rejecting it.
 function _hskAuth(req, res) {
   const pin = String(req.query.pin || (req.body && req.body.pin) || '').trim();
-  if (pin && HSK_ROOMS.has(pin)) return true;
-  // Fall back to the classroom access-code check (legacy).
+  // Authoritative source: real games[] table (same reliability as
+  // every other live game). Falls through to disk-persisted HSK_ROOMS
+  // if the dyno restarted before the kid joined, and finally to the
+  // homework classroom-code check for legacy force-impose URLs.
+  if (pin) {
+    const g = games[pin];
+    if (g && g.gameType === 'hsksim') return true;
+    if (HSK_ROOMS.has(pin)) return true;
+  }
   return _hwCheckAccess(req, res);
 }
 
@@ -1734,6 +1741,39 @@ setInterval(() => {
   if (changed) _hskRoomsSave();
 }, 10 * 60 * 1000);
 
+// ─── Helpers that bridge HSK rooms to the shared `games` Map ────────
+// We register HSK rooms in the same games[pin] table that every other
+// live game uses (reading, warmup, identity, …). This gives HSK the
+// same reliability — host:reclaim, the 60-min grace timer, broadcast,
+// socket-room delivery. PIN can also be entered through /player.html
+// because the kids' framework already validates against games[pin].
+function _hskGameLookup(pin) {
+  let g = games[pin];
+  if (g && g.gameType === 'hsksim') return g;
+  // LAZY HYDRATION: HSK_ROOMS is the disk-persistent table loaded at
+  // boot. games[] is in-memory only. After a dyno restart, the PIN is
+  // in HSK_ROOMS but NOT in games[]. We recreate the games[] entry on
+  // the fly so the room remains "real" to player:join + every other
+  // socket flow — no kid sees "No game with that PIN".
+  const legacy = HSK_ROOMS.get(pin);
+  if (!legacy) return null;
+  games[pin] = {
+    gameType: 'hsksim',
+    state: 'lobby',
+    hostId: null,
+    createdAt: legacy.createdAt || Date.now(),
+    duration: 3600,
+    startedAt: null, endsAt: null,
+    questions: [],
+    players: {},
+    teamScores: { red: 0, gold: 0 },
+    feed: [],
+    grid: null, vendors: null,
+    hsk: { simId: legacy.simId, fx: legacy.fx || null, sessions: {} },
+  };
+  return games[pin];
+}
+
 // Teacher creates a room — admin-auth via ?pw=
 app.post('/api/hsk-sim/room/create', (req, res) => {
   const session = _adminAuth(req, res);
@@ -1742,38 +1782,68 @@ app.post('/api/hsk-sim/room/create', (req, res) => {
   if (!simId || !HskSim.buildSimPayload(simId)) {
     return res.status(400).json({ ok: false, error: 'unknown simId' });
   }
-  const pin = _hskGenPin();
-  HSK_ROOMS.set(pin, {
-    pin, simId,
+  // ⭐ Reliability fix: PIN now lives in the same `games` table as
+  // every working game (lecture, warmup, etc.). Drops the in-memory
+  // HSK_ROOMS map that was getting wiped on dyno restart and that
+  // /player.html couldn't see (root cause of "no game with that PIN"
+  // reported 2026-06-03).
+  const pin = genPin();
+  games[pin] = {
+    gameType: 'hsksim',
+    state: 'lobby',
+    hostId: null,                 // no socket host page right now (HTTP-driven)
     createdAt: Date.now(),
-    fx: null,            // currently-broadcast animation (or null)
-    hostHeartbeat: Date.now(),
-  });
+    duration: 3600,
+    startedAt: null, endsAt: null,
+    questions: [],
+    players: {},                  // kids who join via socket land here
+    teamScores: { red: 0, gold: 0 },
+    feed: [],
+    grid: null, vendors: null,
+    // HSK-specific state, namespaced so it doesn't collide with anything.
+    hsk: {
+      simId,
+      fx: null,                   // current animation broadcast (or null)
+      sessions: {},               // studentCode → heartbeat snapshot
+    },
+  };
+  // Mirror into HSK_ROOMS too so the legacy disk-persistence keeps
+  // working across restarts (and so /api/hsk-sim/room/:pin works for
+  // old clients during the rollout).
+  HSK_ROOMS.set(pin, { pin, simId, createdAt: Date.now(), fx: null });
   _hskRoomsSave();
   res.json({ ok: true, pin, simId });
 });
 
-// Look up the simId for a PIN — used by /hsk-sim.html gate to know
-// which simulation to run. No auth: kids only know the PIN, server
-// reveals only { simId }.
+// Look up the simId for a PIN. Now checks games[] FIRST (the
+// authoritative source), then falls back to HSK_ROOMS for any rooms
+// loaded from disk after a restart.
 app.get('/api/hsk-sim/room/:pin', (req, res) => {
-  const room = HSK_ROOMS.get(req.params.pin);
-  if (!room) return res.status(404).json({ ok: false, error: 'PIN no válido. Pregúntale a tu maestra.' });
-  res.json({ ok: true, pin: room.pin, simId: room.simId, fx: room.fx || null });
+  const pin = req.params.pin;
+  const g = _hskGameLookup(pin);
+  if (g) {
+    return res.json({ ok: true, pin, simId: g.hsk.simId, fx: g.hsk.fx || null });
+  }
+  const legacy = HSK_ROOMS.get(pin);
+  if (legacy) return res.json({ ok: true, pin, simId: legacy.simId, fx: legacy.fx || null });
+  res.status(404).json({ ok: false, error: 'PIN no válido. Pregúntale a tu maestra.' });
 });
 
-// Teacher fires an animation across every kid in the room (or turns
-// it off). Mirrors the Animaciones panel pattern from host-reading.
-// POST /api/hsk-sim/room/:pin/fx { fx: 'gojo', on: true }
+// Teacher fires an animation across every kid in the room. Updates
+// both games[pin].hsk.fx (authoritative) and HSK_ROOMS (legacy mirror).
 app.post('/api/hsk-sim/room/:pin/fx', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
-  const room = HSK_ROOMS.get(req.params.pin);
-  if (!room) return res.status(404).json({ ok: false, error: 'room not found' });
+  const pin = req.params.pin;
+  const g = _hskGameLookup(pin);
+  const legacy = HSK_ROOMS.get(pin);
+  if (!g && !legacy) return res.status(404).json({ ok: false, error: 'room not found' });
   const { fx, on } = req.body || {};
-  room.fx = on ? { id: String(fx || ''), since: Date.now() } : null;
+  const fxState = on ? { id: String(fx || ''), since: Date.now() } : null;
+  if (g)      g.hsk.fx = fxState;
+  if (legacy) legacy.fx = fxState;
   _hskRoomsSave();
-  res.json({ ok: true, fx: room.fx });
+  res.json({ ok: true, fx: fxState });
 });
 app.post('/api/hsk-sim/heartbeat', (req, res) => {
   const { pin, simId, accessCode, studentCode, cursor, total, answered, section, status } = req.body || {};
@@ -1787,9 +1857,13 @@ app.post('/api/hsk-sim/heartbeat', (req, res) => {
   const key = _hskSessionKey(roomKey, studentCode);
   const rec = Students.get(studentCode);
   const isJoin = !HSK_SESSIONS.has(key);
-  HSK_SESSIONS.set(key, {
+  const g = pin ? _hskGameLookup(pin) : null;
+  const session = {
     pin: pin || null,
-    simId: simId || (HSK_ROOMS.get(pin) && HSK_ROOMS.get(pin).simId) || null,
+    simId: simId
+      || (g && g.hsk.simId)
+      || (HSK_ROOMS.get(pin) && HSK_ROOMS.get(pin).simId)
+      || null,
     accessCode: accessCode || null,
     studentCode,
     displayName: (rec && rec.displayName) || studentCode,
@@ -1800,12 +1874,16 @@ app.post('/api/hsk-sim/heartbeat', (req, res) => {
     section:  section || '',
     status:   status || 'in-progress',
     lastBeat: Date.now(),
-    isJoin,                      // first-time? — drives host toast
-  });
-  // The response also returns the current room-wide fx (animation
-  // overlay) so the kid client can render it without a separate poll.
-  const room = pin ? HSK_ROOMS.get(pin) : null;
-  res.json({ ok: true, fx: room ? room.fx : null });
+    isJoin,
+  };
+  HSK_SESSIONS.set(key, session);
+  // Mirror into games[pin].hsk.sessions so the host live view reads
+  // from the authoritative socket-framework table.
+  if (g) g.hsk.sessions[studentCode] = session;
+  // Response includes current room-wide fx so the kid renders it
+  // without a separate poll.
+  const fx = (g && g.hsk.fx) || (HSK_ROOMS.get(pin) && HSK_ROOMS.get(pin).fx) || null;
+  res.json({ ok: true, fx });
 });
 // Teacher polls — returns all heartbeats for a given accessCode + sim,
 // classified by freshness. Admin-auth via ?pw=
@@ -4219,7 +4297,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage', 'laiquhui', 'warmup', 'identity', 'partyrun', 'reading'];
+    const validTypes = ['mochi-mash', 'color-splash', 'color-clash', 'market-quest', 'flappy', 'pinata', 'dragon-eye', 'monopoly', 'zombie', 'family', 'conquest', 'sixseven', 'triage', 'laiquhui', 'warmup', 'identity', 'partyrun', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'flappy'       ? 120 :
@@ -4239,6 +4317,7 @@ io.on('connection', (socket) => {
       type === 'identity'     ? 180 :    // 3 minutes of detective rounds
       type === 'partyrun'     ? 480 :    // 8 min ceiling; round-cap usually ends sooner
       type === 'reading'      ? 3600 :   // 1 hour ceiling; teacher controls flow
+      type === 'hsksim'       ? 3600 :   // 1 hour ceiling; kid takes the exam on their own pace
       60;
     let grid = null;
     let vendors = null;
@@ -7322,7 +7401,7 @@ io.on('connection', (socket) => {
       // and we must NOT tear the room down under the kids. The host page
       // also actively re-claims via host:reclaim on socket reconnect, so
       // this timer is just the last-resort cleanup.
-      const graceMs = (g.gameType === 'warmup' || g.gameType === 'reading') ? 10 * 60 * 1000 : 60000;
+      const graceMs = (g.gameType === 'warmup' || g.gameType === 'reading' || g.gameType === 'hsksim') ? 10 * 60 * 1000 : 60000;
       g.hostDisconnectedAt = Date.now();
       g.feed.push({ type: 'host-disconnect', t: Date.now() });
       broadcast(currentPin);
