@@ -2147,6 +2147,30 @@
   let rdTestLockedQIdx = -1;    // qIdx the player has already locked an answer for
   let rdTestTimerInt = null;
   let rdTestDeadline = 0;
+  // 🐢 Toggle Turtle VFX — teacher pushes "show turtle" to every kid.
+  // Full-screen GIF overlay of Squirtle dancing. Tap to dismiss locally
+  // (or wait for the teacher to toggle off). Stored as pointer-events
+  // none on the container so the kid's other taps still work.
+  socket.on('rd:vfx', (msg) => {
+    if (!msg || msg.fx !== 'turtle') return;
+    const existing = document.getElementById('rd-turtle-overlay');
+    if (msg.on) {
+      if (existing) return;
+      const ov = document.createElement('div');
+      ov.id = 'rd-turtle-overlay';
+      ov.className = 'rd-turtle-overlay';
+      ov.innerHTML = '<img src="/assets/png-library/Squirtle%20animation.gif" alt="Squirtle">';
+      ov.addEventListener('click', () => {
+        ov.classList.remove('show');
+        setTimeout(() => { try { ov.remove(); } catch (_) {} }, 250);
+      });
+      document.body.appendChild(ov);
+      requestAnimationFrame(() => ov.classList.add('show'));
+    } else if (existing) {
+      existing.classList.remove('show');
+      setTimeout(() => { try { existing.remove(); } catch (_) {} }, 250);
+    }
+  });
   socket.on('rd:state', (state) => {
     if (gameType !== 'reading' || !state) return;
     // Story changed? Replace the local story snapshot and re-render.

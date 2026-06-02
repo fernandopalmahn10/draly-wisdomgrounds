@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/reading.css?v=20260526d">
+  <link rel="stylesheet" href="/css/reading.css?v=20260603c">
 </head>
 <body class="rd-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -114,7 +114,13 @@
       <button class="rd-lang-btn" id="rd-lang-btn" type="button">🌐 Cambiar a Español</button>
       <button class="rd-curious-btn" id="rd-curious-btn" type="button">🔍 Activar Modo Curioso</button>
       <button class="rd-test-btn" id="rd-test-btn" type="button">📝 Iniciar examen</button>
+      <button class="rd-turtle-btn" id="rd-turtle-btn" type="button" title="Muestra a Squirtle bailando en pantalla a todos">🐢 Toggle Turtle</button>
       <select class="rd-story-select" id="rd-story-select" aria-label="Cambiar cuento"></select>
+    </div>
+    <!-- 👥 Live roster during the lecture — teacher always sees who's in -->
+    <div class="rd-active-roster" id="rd-active-roster">
+      <span class="rd-active-roster-label">👥 En clase:</span>
+      <span class="rd-active-roster-chips" id="rd-active-roster-chips"></span>
     </div>
     <p class="rd-options-hint">
       🌐 Cambia el texto a Español (audio y imagen siguen igual) ·
@@ -156,6 +162,6 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524n"></script>
   <script src="/js/enter.js"></script>
-  <script src="/js/host-reading.js?v=20260603b"></script>
+  <script src="/js/host-reading.js?v=20260603c"></script>
 </body>
 </html>

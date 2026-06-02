@@ -112,6 +112,62 @@
     });
   }
 
+  // 🐢 Toggle Turtle — broadcasts the Squirtle dance GIF to every kid
+  // in the room (and to the host itself). Uses the existing socket
+  // 'rd:vfx' channel pattern — small payload, no streaming, no per-frame
+  // processing. The GIF is 1.1 MB; it loads once per device, then cached.
+  let _turtleOn = false;
+  function showTurtleOverlay() {
+    if (document.getElementById('rd-turtle-overlay')) return;
+    const ov = document.createElement('div');
+    ov.id = 'rd-turtle-overlay';
+    ov.className = 'rd-turtle-overlay';
+    ov.innerHTML = '<img src="/assets/png-library/Squirtle%20animation.gif" alt="Squirtle">';
+    ov.addEventListener('click', hideTurtleOverlay);  // tap to dismiss
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => ov.classList.add('show'));
+  }
+  function hideTurtleOverlay() {
+    const ov = document.getElementById('rd-turtle-overlay');
+    if (!ov) return;
+    ov.classList.remove('show');
+    setTimeout(() => { try { ov.remove(); } catch (_) {} }, 250);
+  }
+  const turtleBtn = $('rd-turtle-btn');
+  if (turtleBtn) {
+    turtleBtn.addEventListener('click', () => {
+      _turtleOn = !_turtleOn;
+      turtleBtn.textContent = _turtleOn ? '🐢 Quitar Turtle' : '🐢 Toggle Turtle';
+      // Host: show locally
+      if (_turtleOn) showTurtleOverlay(); else hideTurtleOverlay();
+      // Broadcast to all kids in the room via the existing rd:vfx channel
+      socket.emit('rd:vfx', { pin, password: adminPw, fx: 'turtle', on: _turtleOn });
+    });
+  }
+
+  // 👥 Active-screen roster — mirror the lobby chip list into the
+  // active reading screen so the teacher can SEE who's in during the
+  // lecture. Updates whenever socket emits 'players' events.
+  function renderActiveRoster(players) {
+    const wrap = $('rd-active-roster-chips');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    const list = Array.isArray(players) ? players : Object.values(players || {});
+    if (!list.length) {
+      wrap.innerHTML = '<span class="rd-active-roster-empty">esperando alumnos…</span>';
+      return;
+    }
+    list.forEach((p) => {
+      const chip = document.createElement('span');
+      chip.className = 'rd-active-roster-chip';
+      chip.textContent = p.name || p.displayName || 'Anon';
+      wrap.appendChild(chip);
+    });
+  }
+  socket.on('players', (msg) => {
+    try { renderActiveRoster(msg && msg.players); } catch (_) {}
+  });
+
   $('start-btn').addEventListener('click', () => {
     socket.emit('host:start', { pin });
     // 🎵 Per-story music — each story carries its own theme name in

@@ -220,12 +220,11 @@
       byExp[k].forEach((s) => {
         const card = document.createElement('div');
         card.className = 'm-reading-card';
-        // 🎴 yugipharaoh story uses the user's transparent Yugi GIF as
-        // its cover (loads only when this modal opens — lazy). Other
-        // stories fall back to their page-1 art.
-        const coverUrl = (s.id === 'yugipharaoh')
-          ? '/assets/png-library/YUGI%20transparent%20gif.gif'
-          : ('/assets/reading/' + s.id + '/page-1.png');
+        // 🩹 REVERTED 2026-06-03 — using the 22 MB Yugi GIF as a cover
+        // burned bandwidth (loaded for every teacher who opened the
+        // picker). Back to static page-1.png until the compressed
+        // ~1 MB version is ready.
+        const coverUrl = '/assets/reading/' + s.id + '/page-1.png';
         card.innerHTML =
           '<div class="m-reading-card-cover" style="background-image:url(\'' + coverUrl + '\');"></div>' +
           '<div class="m-reading-card-body">' +
