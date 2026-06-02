@@ -887,6 +887,10 @@ app.get('/api/admin/students/:code', (req, res) => {
     tests:     Students.getTestResults(rec.code, 50), // newest-first
     assignments: Students.getAssignmentSubmissions(rec.code, 50),
     notes:     Students.getNotes(rec.code),
+    // 🏆 HSK simulation history — every exam this student has ever
+    // delivered. Sorted newest first so the Cuaderno sees the most
+    // recent attempt at the top, plus a per-sim "best score" summary.
+    hskResults: (Array.isArray(rec.hskResults) ? rec.hskResults : []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)),
   });
 });
 

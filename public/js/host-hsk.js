@@ -85,9 +85,13 @@
   }
 
   function poll() {
+    // We filter ONLY by simId — not accessCode. Case-mismatched
+    // classroom codes between teacher launch URL and student-typed
+    // input were causing live sessions to disappear from the monitor.
+    // The simId filter alone is precise enough (there's only one
+    // active simulation per launch).
     let url = '/api/hsk-sim/sessions?pw=' + encodeURIComponent(pw)
       + '&simId=' + encodeURIComponent(simId);
-    if (accessCode) url += '&accessCode=' + encodeURIComponent(accessCode);
     fetch(url)
       .then((r) => r.json())
       .then((d) => {

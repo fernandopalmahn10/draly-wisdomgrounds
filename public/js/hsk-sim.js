@@ -56,11 +56,14 @@
   let _ttsAudio = null;    // current playing audio
   let _heartbeatTimer = null;  // periodic ping to /api/hsk-sim/heartbeat
 
-  // Pre-fill from URL: ?sim=hsk1-sim1&ac=ABCD&sc=XYZ
+  // Pre-fill from URL. Accept BOTH the maestro launch convention
+  // (?access=XYZ&code=ABC) AND the older short convention (?ac=&sc=).
+  // The homework portal force-redirect also splices in &name=Foo which
+  // we ignore here.
   const params = new URLSearchParams(location.search);
   const simId = params.get('sim') || 'hsk1-sim1';
-  const urlAc = params.get('ac');
-  const urlSc = params.get('sc');
+  const urlAc = params.get('access') || params.get('ac');
+  const urlSc = params.get('code')   || params.get('sc');
   if (urlAc) $('hsk-access').value = urlAc;
   if (urlSc) $('hsk-code').value = urlSc;
 
@@ -68,6 +71,14 @@
   ['hsk-access', 'hsk-code'].forEach((id) => {
     $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') tryEnter(); });
   });
+
+  // If BOTH codes came from the URL (e.g. force-impose pre-fills),
+  // auto-submit so the kid doesn't see the gate flicker — and so the
+  // heartbeat starts the moment the page loads. Guarantees the teacher
+  // sees them on the live monitor without delay.
+  if (urlAc && urlSc) {
+    setTimeout(tryEnter, 50);
+  }
 
   function tryEnter() {
     accessCode  = $('hsk-access').value.trim();
