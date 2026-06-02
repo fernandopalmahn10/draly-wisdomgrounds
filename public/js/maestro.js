@@ -335,6 +335,152 @@
       .catch((e) => { alert('Error: ' + e.message); });
   }
 
+  // ── 🏆 HSK1 SIMULATION launcher ──────────────────────────────────
+  // List available simulations → teacher picks → pick online students →
+  // force-impose via /api/admin/broadcast-selected with actionUrl that
+  // pre-fills the kid's access + studentCode so the gate opens silently.
+  const hskBtn = $('m-hsk-btn');
+  const hskModal = $('m-hsk-modal');
+  if (hskBtn) hskBtn.addEventListener('click', () => {
+    hskModal.classList.remove('hidden');
+    loadHskSims();
+  });
+  if ($('m-hsk-close')) $('m-hsk-close').addEventListener('click', () => hskModal.classList.add('hidden'));
+  if (hskModal) hskModal.addEventListener('click', (e) => { if (e.target === hskModal) hskModal.classList.add('hidden'); });
+
+  function loadHskSims() {
+    const wrap = $('m-hsk-sims');
+    if (!wrap) return;
+    wrap.textContent = 'Cargando…';
+    fetch('/api/hsk-sim/list')
+      .then((r) => r.json())
+      .then((data) => {
+        wrap.innerHTML = '';
+        const sims = (data && data.sims) || [];
+        if (!sims.length) {
+          wrap.textContent = 'No hay simulaciones disponibles.';
+          return;
+        }
+        sims.forEach((sim) => {
+          const card = document.createElement('div');
+          card.className = 'm-reading-card';
+          card.innerHTML =
+            '<div class="m-reading-card-body">' +
+              '<div class="m-reading-card-title">🏆 ' + escapeHtml(sim.title || sim.id) + '</div>' +
+              '<div class="m-reading-card-sub">' + escapeHtml(sim.subtitle || '') + '</div>' +
+              '<div class="m-reading-card-meta">' + (sim.questionCount || 0) + ' preguntas · ' + (sim.partCount || 0) + ' partes</div>' +
+            '</div>' +
+            '<div class="m-reading-card-actions">' +
+              '<button class="m-reading-force" type="button" data-sim="' + escapeHtml(sim.id) + '" title="Lanza la simulación a alumnos en línea">🎯 Lanzar a alumnos en línea</button>' +
+            '</div>';
+          card.querySelector('.m-reading-force').addEventListener('click', () => {
+            openForceHskPicker(sim);
+          });
+          wrap.appendChild(card);
+        });
+      })
+      .catch((e) => { wrap.textContent = 'Error: ' + e.message; });
+  }
+
+  // Mirror openForceReadingPicker(), but the launch URL is /hsk-sim.html
+  // and we push it through inbox force-messages to every selected kid.
+  function openForceHskPicker(sim) {
+    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) {
+          alert('No se pudo cargar la lista de alumnos en línea.');
+          return;
+        }
+        const onlineNow = (data.students || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
+        if (!onlineNow.length) {
+          alert('No hay alumnos en línea ahora mismo.\n\n(Pídeles que abran /homework primero.)');
+          return;
+        }
+        let overlay = document.getElementById('m-force-hsk-modal');
+        if (overlay) overlay.remove();
+        overlay = document.createElement('div');
+        overlay.id = 'm-force-hsk-modal';
+        overlay.className = 'm-modal';
+        overlay.innerHTML = `
+          <div class="m-modal-card">
+            <button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>
+            <h2>🎯 Forzar simulación HSK1</h2>
+            <p class="m-modal-sub">Simulación: <strong>🏆 ${escapeHtml(sim.title || sim.id)}</strong></p>
+            <p class="m-modal-sub" style="margin-top:6px;">Los alumnos seleccionados entrarán automáticamente al examen en ~20 segundos.</p>
+            <div class="m-force-actions">
+              <button class="btn btn-ghost btn-sm" id="m-fhsk-all">✅ Todos</button>
+              <button class="btn btn-ghost btn-sm" id="m-fhsk-none">⬜ Ninguno</button>
+            </div>
+            <div class="m-force-students" id="m-fhsk-students"></div>
+            <button class="btn btn-gold btn-xl" id="m-fhsk-launch" style="margin-top:16px;width:100%;">
+              🚀 Lanzar examen a alumnos seleccionados
+            </button>
+          </div>`;
+        document.body.appendChild(overlay);
+        const list = overlay.querySelector('#m-fhsk-students');
+        onlineNow.forEach((s) => {
+          const row = document.createElement('label');
+          row.className = 'm-force-row';
+          row.innerHTML =
+            '<input type="checkbox" data-code="' + escapeHtml(s.code) + '" checked>' +
+            '<span class="m-force-row-dot"></span>' +
+            '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+            '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
+          list.appendChild(row);
+        });
+        const close = () => { try { overlay.remove(); } catch (_) {} };
+        overlay.querySelector('.m-modal-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('#m-fhsk-all').addEventListener('click', () => {
+          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = true; });
+        });
+        overlay.querySelector('#m-fhsk-none').addEventListener('click', () => {
+          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
+        });
+        overlay.querySelector('#m-fhsk-launch').addEventListener('click', () => {
+          const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
+            .map((cb) => cb.dataset.code).filter(Boolean);
+          if (!codes.length) {
+            alert('Selecciona al menos un alumno.');
+            return;
+          }
+          // Read the access code from URL or storage — same one /maestro
+          // uses for all homework operations.
+          const accessCode = (new URLSearchParams(location.search)).get('access')
+            || localStorage.getItem('mochi.accessCode') || '';
+          // Push a force-impose inbox message — the kids' homework
+          // poll picks it up and auto-redirects to /hsk-sim.html with
+          // their own code already in the URL.
+          fetch('/api/admin/broadcast-selected', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              pw: pw,
+              codes: codes,
+              title: '🏆 Simulación HSK1',
+              body: 'La maestra te está abriendo el examen ahora. Prepárate.',
+              actionType: 'force',
+              actionUrl: '/hsk-sim.html?access=' + encodeURIComponent(accessCode)
+                + '&sim=' + encodeURIComponent(sim.id),
+              actionLabel: 'Entrar al examen →'
+            })
+          })
+          .then((r) => r.json())
+          .then((res) => {
+            if (res && res.ok) {
+              alert('✅ Examen enviado a ' + codes.length + ' alumno(s). Entrarán automáticamente en ~20s.');
+              close();
+            } else {
+              alert('Error: ' + (res && res.error || 'desconocido'));
+            }
+          })
+          .catch((e) => { alert('Error: ' + e.message); });
+        });
+      })
+      .catch((e) => { alert('Error: ' + e.message); });
+  }
+
   // ── 🌐 EMIRATI ARABIC GATEWAY (super-admin only) ──────────────────
   const emBtn = $('m-emirati-btn');
   const emModal = $('m-emirati-modal');
