@@ -140,6 +140,15 @@
   // To add more: drop the GIF into public/assets/png-library/ and add
   // an entry to the ANIMATIONS array below.
   const ANIMATIONS = [
+    // 👁 Gojo (transparent GIF, ~2 MB) — first/featured slot. User
+    // requested this replace the "guy from the beginning" of the
+    // animation bank.
+    {
+      id: 'gojo',
+      name: 'Gojo (Jujutsu)',
+      tags: 'gojo satoru jujutsu kaisen jjk anime sensei limitless infinity blue purple six eyes',
+      url: '/assets/png-library/GOJO%20TRANSPARENT.gif',
+    },
     {
       id: 'turtle',
       name: 'Squirtle dancing',
@@ -147,7 +156,8 @@
       url: '/assets/png-library/Squirtle%20animation.gif',
     },
     // 🆕 Add new animations here as the user drops more transparent GIFs.
-    // Keep each under 1.5 MB to respect Render bandwidth.
+    // Keep each under 1.5 MB to respect Render bandwidth. (Gojo's GIF
+    // is ~2 MB — only ship it when the teacher actively triggers it.)
   ];
   let _animCurrentFx = null;   // which animation is currently broadcasting
   function showAnimOverlay(fxId) {

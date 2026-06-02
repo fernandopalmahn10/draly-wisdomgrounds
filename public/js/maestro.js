@@ -335,51 +335,143 @@
       .catch((e) => { alert('Error: ' + e.message); });
   }
 
-  // ── 🏆 HSK1 SIMULATION launcher ──────────────────────────────────
-  // List available simulations → teacher picks → pick online students →
-  // force-impose via /api/admin/broadcast-selected with actionUrl that
-  // pre-fills the kid's access + studentCode so the gate opens silently.
+  // ── 🏆 HSK SIMULATION launcher (folder → level → variation) ──────
+  // Three-level drill-down so the modal scales as more sims are added:
+  //   🏆 Simulación HSK
+  //     ├ HSK1
+  //     │   ├ Simulación 1
+  //     │   ├ Simulación 2 …
+  //     ├ HSK2 → Simulación 1 …
+  //   …
+  // Sim IDs follow the convention `hsk{level}-sim{n}` (e.g. hsk1-sim1).
+  // The server's /api/hsk-sim/list returns every available sim flat; we
+  // group them client-side by the level prefix.
   const hskBtn = $('m-hsk-btn');
   const hskModal = $('m-hsk-modal');
+  const HSK_LEVELS = [
+    { id: 1, label: 'HSK1', subtitle: '6 partes · 30 preguntas · principiante' },
+    { id: 2, label: 'HSK2', subtitle: 'Próximamente' },
+    { id: 3, label: 'HSK3', subtitle: 'Próximamente' },
+    { id: 4, label: 'HSK4', subtitle: 'Próximamente' },
+    { id: 5, label: 'HSK5', subtitle: 'Próximamente' },
+    { id: 6, label: 'HSK6', subtitle: 'Próximamente' },
+  ];
+  let _hskCachedSims = null;   // memoize the flat sim list (one fetch)
+  let _hskNavStack   = ['root']; // path: ['root'] | ['root', levelId] | …
+
   if (hskBtn) hskBtn.addEventListener('click', () => {
     hskModal.classList.remove('hidden');
-    loadHskSims();
+    _hskNavStack = ['root'];
+    renderHskView();
   });
   if ($('m-hsk-close')) $('m-hsk-close').addEventListener('click', () => hskModal.classList.add('hidden'));
   if (hskModal) hskModal.addEventListener('click', (e) => { if (e.target === hskModal) hskModal.classList.add('hidden'); });
 
-  function loadHskSims() {
-    const wrap = $('m-hsk-sims');
-    if (!wrap) return;
-    wrap.textContent = 'Cargando…';
-    fetch('/api/hsk-sim/list')
+  // Lazy fetch the sim list once; cached for the rest of this session.
+  function ensureHskSims() {
+    if (_hskCachedSims) return Promise.resolve(_hskCachedSims);
+    return fetch('/api/hsk-sim/list')
       .then((r) => r.json())
       .then((data) => {
-        wrap.innerHTML = '';
-        const sims = (data && data.sims) || [];
-        if (!sims.length) {
-          wrap.textContent = 'No hay simulaciones disponibles.';
-          return;
-        }
-        sims.forEach((sim) => {
-          const card = document.createElement('div');
-          card.className = 'm-reading-card';
-          card.innerHTML =
-            '<div class="m-reading-card-body">' +
-              '<div class="m-reading-card-title">🏆 ' + escapeHtml(sim.title || sim.id) + '</div>' +
-              '<div class="m-reading-card-sub">' + escapeHtml(sim.subtitle || '') + '</div>' +
-              '<div class="m-reading-card-meta">' + (sim.questionCount || 0) + ' preguntas · ' + (sim.partCount || 0) + ' partes</div>' +
-            '</div>' +
-            '<div class="m-reading-card-actions">' +
-              '<button class="m-reading-force" type="button" data-sim="' + escapeHtml(sim.id) + '" title="Lanza la simulación a alumnos en línea">🎯 Lanzar a alumnos en línea</button>' +
-            '</div>';
-          card.querySelector('.m-reading-force').addEventListener('click', () => {
-            openForceHskPicker(sim);
-          });
-          wrap.appendChild(card);
+        _hskCachedSims = (data && data.sims) || [];
+        return _hskCachedSims;
+      });
+  }
+  // Group flat sims by the level prefix in their ID (hsk1-sim1 → 1).
+  function _hskParseLevel(simId) {
+    const m = String(simId || '').match(/^hsk(\d+)-/i);
+    return m ? Number(m[1]) : null;
+  }
+
+  function renderHskView() {
+    const view  = $('m-hsk-view');
+    const title = $('m-hsk-title');
+    const sub   = $('m-hsk-sub');
+    const crumb = $('m-hsk-crumb');
+    if (!view) return;
+    // Rebuild the breadcrumb every render.
+    crumb.innerHTML = '';
+    _hskNavStack.forEach((step, idx) => {
+      const isLast = idx === _hskNavStack.length - 1;
+      const span = document.createElement(isLast ? 'span' : 'button');
+      span.className = 'm-hsk-crumb-link' + (isLast ? ' is-current' : '');
+      if (!isLast) {
+        span.type = 'button';
+        span.addEventListener('click', () => {
+          _hskNavStack = _hskNavStack.slice(0, idx + 1);
+          renderHskView();
         });
-      })
-      .catch((e) => { wrap.textContent = 'Error: ' + e.message; });
+      }
+      span.textContent = step === 'root' ? '🏆 Simulación HSK' : ('HSK' + step);
+      crumb.appendChild(span);
+      if (!isLast) {
+        const sep = document.createElement('span');
+        sep.className = 'm-hsk-crumb-sep';
+        sep.textContent = ' › ';
+        crumb.appendChild(sep);
+      }
+    });
+    // ─── ROOT view — pick an HSK level ──────────────────────────
+    if (_hskNavStack.length === 1) {
+      title.textContent = '🏆 Simulación HSK';
+      sub.textContent = 'Elige el nivel HSK.';
+      view.innerHTML = '';
+      const grid = document.createElement('div');
+      grid.className = 'm-reading-folder-grid';
+      HSK_LEVELS.forEach((lvl) => {
+        const card = document.createElement('div');
+        card.className = 'm-reading-card';
+        card.innerHTML =
+          '<div class="m-reading-card-body">' +
+            '<div class="m-reading-card-title">🎓 ' + escapeHtml(lvl.label) + '</div>' +
+            '<div class="m-reading-card-sub">' + escapeHtml(lvl.subtitle) + '</div>' +
+          '</div>' +
+          '<div class="m-reading-card-actions">' +
+            '<button class="m-reading-launch" type="button">Abrir ›</button>' +
+          '</div>';
+        card.querySelector('.m-reading-launch').addEventListener('click', () => {
+          _hskNavStack = ['root', lvl.id];
+          renderHskView();
+        });
+        grid.appendChild(card);
+      });
+      view.appendChild(grid);
+      return;
+    }
+    // ─── LEVEL view — list every Simulación N for that HSK level ─
+    const levelId = _hskNavStack[1];
+    title.textContent = '🎓 HSK' + levelId;
+    sub.textContent = 'Elige una simulación.';
+    view.textContent = 'Cargando…';
+    ensureHskSims().then((all) => {
+      const sims = all.filter((s) => _hskParseLevel(s.id) === levelId);
+      view.innerHTML = '';
+      if (!sims.length) {
+        view.innerHTML = '<p class="m-modal-sub" style="text-align:center;">Aún no hay simulaciones para HSK' + levelId + '. Pronto.</p>';
+        return;
+      }
+      const grid = document.createElement('div');
+      grid.className = 'm-reading-folder-grid';
+      sims.forEach((sim) => {
+        const card = document.createElement('div');
+        card.className = 'm-reading-card';
+        card.innerHTML =
+          '<div class="m-reading-card-body">' +
+            '<div class="m-reading-card-title">🏆 ' + escapeHtml(sim.title || sim.id) + '</div>' +
+            '<div class="m-reading-card-sub">' + escapeHtml(sim.subtitle || '') + '</div>' +
+            '<div class="m-reading-card-meta">' + (sim.questionCount || 0) + ' preguntas · ' + (sim.partCount || 0) + ' partes</div>' +
+          '</div>' +
+          '<div class="m-reading-card-actions">' +
+            '<button class="m-reading-force" type="button" data-sim="' + escapeHtml(sim.id) + '" title="Lanza la simulación a alumnos en línea">🎯 Lanzar a alumnos en línea</button>' +
+          '</div>';
+        card.querySelector('.m-reading-force').addEventListener('click', () => {
+          openForceHskPicker(sim);
+        });
+        grid.appendChild(card);
+      });
+      view.appendChild(grid);
+    })
+    .catch((e) => { view.textContent = 'Error: ' + e.message; });
   }
 
   // Mirror openForceReadingPicker(), but the launch URL is /hsk-sim.html
@@ -452,14 +544,18 @@
           // Push a force-impose inbox message — the kids' homework
           // poll picks it up and auto-redirects to /hsk-sim.html with
           // their own code already in the URL.
-          fetch('/api/admin/broadcast-selected', {
+          //
+          // IMPORTANT: /api/admin/broadcast-selected reads its password
+          // from req.query.pw (NOT req.body.pw) and the body schema is
+          // { studentCodes, text, actionType, actionUrl, actionLabel }
+          // — NOT { codes, body }. Mirroring the working host-warmup +
+          // host-reading force-flow exactly.
+          fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              pw: pw,
-              codes: codes,
-              title: '🏆 Simulación HSK1',
-              body: 'La maestra te está abriendo el examen ahora. Prepárate.',
+              studentCodes: codes,
+              text: '🏆 La maestra te está abriendo la simulación HSK ahora. Prepárate.',
               actionType: 'force',
               actionUrl: '/hsk-sim.html?access=' + encodeURIComponent(accessCode)
                 + '&sim=' + encodeURIComponent(sim.id),

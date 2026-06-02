@@ -767,6 +767,20 @@ body.hw-bg {
 .m-reading-folder { background: rgba(20,28,50,0.6); border: 1.5px solid rgba(91,232,209,0.35); border-radius: 14px; padding: 12px 14px; }
 .m-reading-folder-title { font-family: 'Cinzel', serif; font-weight: 900; font-size: 1rem; color: #5be8d1; margin-bottom: 10px; letter-spacing: 0.04em; }
 .m-reading-folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+/* 🏆 HSK simulation drill-down breadcrumb */
+.m-hsk-crumb {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  font-size: 0.9rem; margin-bottom: 8px;
+  color: rgba(243, 230, 194, 0.85);
+}
+.m-hsk-crumb-link {
+  background: none; border: none; padding: 4px 8px;
+  color: #5be8d1; font-weight: 800;
+  cursor: pointer; border-radius: 6px;
+}
+.m-hsk-crumb-link:hover { background: rgba(91, 232, 209, 0.12); }
+.m-hsk-crumb-link.is-current { color: #ffd24a; cursor: default; }
+.m-hsk-crumb-sep { color: rgba(243, 230, 194, 0.4); font-weight: 700; }
 .m-reading-card {
   display: grid;
   grid-template-columns: 80px 1fr auto;
