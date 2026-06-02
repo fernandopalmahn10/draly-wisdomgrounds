@@ -36,11 +36,14 @@ const SIMULATIONS = {
           { num: 'EJ2', image: `${BASE}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
         ],
         questions: [
-          { num: 1, image: `${BASE}/LISTENING%20PART%201/1%20(FALSE).png`, audioText: '', answer: false },
-          { num: 2, image: `${BASE}/LISTENING%20PART%201/2%20(TRUE).jpeg`, audioText: '', answer: true  },
-          { num: 3, image: `${BASE}/LISTENING%20PART%201/3%20(FALSE).png`, audioText: '', answer: false },
-          { num: 4, image: `${BASE}/LISTENING%20PART%201/4%20(FALSE).png`, audioText: '', answer: false },
-          { num: 5, image: `${BASE}/LISTENING%20PART%201/5%20(TRUE).png`,  audioText: '', answer: true  },
+          // User uploaded real MP3 files for Q1-5 — the renderer
+          // prefers audioUrl over audioText so it streams the user's
+          // own clear pronunciation instead of TTS.
+          { num: 1, image: `${BASE}/LISTENING%20PART%201/1%20(FALSE).png`, audioUrl: `${BASE}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
+          { num: 2, image: `${BASE}/LISTENING%20PART%201/2%20(TRUE).jpeg`, audioUrl: `${BASE}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
+          { num: 3, image: `${BASE}/LISTENING%20PART%201/3%20(FALSE).png`, audioUrl: `${BASE}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: false },
+          { num: 4, image: `${BASE}/LISTENING%20PART%201/4%20(FALSE).png`, audioUrl: `${BASE}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
+          { num: 5, image: `${BASE}/LISTENING%20PART%201/5%20(TRUE).png`,  audioUrl: `${BASE}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
         ],
       },
 
@@ -126,20 +129,28 @@ const SIMULATIONS = {
               { letter: 'B', text: '19 kuài' },
               { letter: 'C', text: '27 kuài' },
             ], answer: 'C' },
-          // Placeholders for Q17-20 — fill in option text + correct answer
-          // when the user provides the spoken transcripts.
+          // Q17-20 — text + answer keys extracted from the BMP filenames
+          // the user uploaded (the (CORRECT) marker → answer letter).
           { num: 17, audioText: '', options: [
-              { letter: 'A', text: '' }, { letter: 'B', text: '' }, { letter: 'C', text: '' },
-            ], answer: 'A' },
+              { letter: 'A', text: 'mǎi diànnǎo' },
+              { letter: 'B', text: 'hěn piàoliang' },
+              { letter: 'C', text: 'xuésheng duō' },
+            ], answer: 'B' },
           { num: 18, audioText: '', options: [
-              { letter: 'A', text: '' }, { letter: 'B', text: '' }, { letter: 'C', text: '' },
-            ], answer: 'A' },
+              { letter: 'A', text: '7 yuè 2 hào' },
+              { letter: 'B', text: 'zuótiān shàngwǔ' },
+              { letter: 'C', text: 'yí ge duō yuè qián' },
+            ], answer: 'C' },
           { num: 19, audioText: '', options: [
-              { letter: 'A', text: '' }, { letter: 'B', text: '' }, { letter: 'C', text: '' },
-            ], answer: 'A' },
+              { letter: 'A', text: 'kāi chē' },
+              { letter: 'B', text: 'zuò fēijī' },
+              { letter: 'C', text: 'zuò chūzū chē' },
+            ], answer: 'C' },
           { num: 20, audioText: '', options: [
-              { letter: 'A', text: '' }, { letter: 'B', text: '' }, { letter: 'C', text: '' },
-            ], answer: 'A' },
+              { letter: 'A', text: 'jiā lǐ' },
+              { letter: 'B', text: 'fàndiàn' },
+              { letter: 'C', text: 'diànyǐngyuàn' },
+            ], answer: 'B' },
         ],
       },
     },
@@ -301,7 +312,13 @@ function gradeSim(simId, answers) {
 
 function listSims() {
   return Object.values(SIMULATIONS).map((s) => ({
-    id: s.id, title: s.title, level: s.level, totalQuestions: s.totalQuestions,
+    id: s.id,
+    title: s.title,
+    subtitle: s.subtitle || '4 partes de audio · 2 partes de lectura',
+    level: s.level,
+    totalQuestions: s.totalQuestions,
+    questionCount: s.totalQuestions,
+    partCount: 6,
   }));
 }
 

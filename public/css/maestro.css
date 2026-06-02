@@ -1166,3 +1166,27 @@ button.m-emirati-stat.is-tappable:active { transform: scale(0.97); }
   font-size: 0.85rem; line-height: 1.55; color: #ffe1a8; }
 .m-em-azure-help code { background: rgba(0,0,0,0.42); padding: 1px 6px;
   border-radius: 6px; font-size: 0.78rem; color: #fff2c9; }
+
+/* 🏅 HSK results — teacher's roll-up of every exam delivered */
+.m-hsk-results-cta { margin-bottom: 12px; }
+.m-hsk-results-list { display: flex; flex-direction: column; gap: 6px; }
+.m-hsk-result-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(20, 28, 50, 0.55);
+  border: 1.5px solid rgba(91, 232, 209, 0.3);
+  border-radius: 12px;
+}
+.m-hsk-result-row.is-great { border-color: rgba(91, 232, 138, 0.6); }
+.m-hsk-result-row.is-ok    { border-color: rgba(255, 210, 74, 0.55); }
+.m-hsk-result-row.is-low   { border-color: rgba(255, 126, 126, 0.55); }
+.m-hsk-result-name { display: flex; flex-direction: column; }
+.m-hsk-result-name strong { color: #f3e6c2; font-size: 1rem; }
+.m-hsk-result-when { color: rgba(243, 230, 194, 0.55); font-size: 0.78rem; margin-top: 2px; }
+.m-hsk-result-sim { font-weight: 800; font-size: 0.85rem; color: #5be8d1; letter-spacing: 0.03em; }
+.m-hsk-result-score { display: flex; flex-direction: column; align-items: flex-end; }
+.m-hsk-result-pct { font-family: 'Cinzel', serif; font-weight: 900; color: #ffd24a; font-size: 1.4rem; line-height: 1; }
+.m-hsk-result-pts { color: rgba(243, 230, 194, 0.7); font-size: 0.8rem; }
