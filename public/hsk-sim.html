@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>HSK1 · Simulación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css?v=20260603a">
+  <link rel="stylesheet" href="/css/hsk-sim.css?v=20260603a">
+</head>
+<body class="hsk-body">
+
+  <!-- Gate: kid must supply accessCode + studentCode (passed via URL or
+       prompt). Same auth model as the homework portal. -->
+  <div id="hsk-gate" class="hsk-gate">
+    <div class="hsk-gate-card">
+      <h1>🏆 HSK1 · Simulación</h1>
+      <p class="hsk-gate-sub">Ingresa tu código de aula y tu código de estudiante para empezar.</p>
+      <input class="input" id="hsk-access" type="text" placeholder="Código de aula" autocomplete="off">
+      <input class="input" id="hsk-code"   type="text" placeholder="Tu código de estudiante" autocomplete="off">
+      <button class="btn btn-jade btn-xl" id="hsk-enter" style="width:100%;">Empezar →</button>
+      <p id="hsk-gate-err" class="hsk-err"></p>
+    </div>
+  </div>
+
+  <!-- Test runner: visible after gate passes. JS owns rendering. -->
+  <div id="hsk-runner" class="hsk-runner hidden">
+    <div class="hsk-topbar">
+      <div class="hsk-topbar-meta">
+        <span class="hsk-topbar-title" id="hsk-title">…</span>
+        <span class="hsk-topbar-progress" id="hsk-progress">0/30</span>
+      </div>
+      <div class="hsk-topbar-section" id="hsk-section-name">…</div>
+    </div>
+    <div class="hsk-question-wrap" id="hsk-question-wrap"></div>
+    <div class="hsk-controls">
+      <button class="btn btn-ghost btn-sm" id="hsk-prev" type="button">← Anterior</button>
+      <button class="btn btn-jade btn-sm"  id="hsk-next" type="button">Siguiente →</button>
+    </div>
+  </div>
+
+  <!-- Results: shown after the kid finishes. -->
+  <div id="hsk-results" class="hsk-results hidden">
+    <div class="hsk-results-card">
+      <div class="hsk-results-emoji" id="hsk-results-emoji">🏅</div>
+      <h2 class="hsk-results-title" id="hsk-results-title">¡Terminaste!</h2>
+      <div class="hsk-results-score">
+        <span class="hsk-results-percent" id="hsk-results-percent">0%</span>
+        <span class="hsk-results-detail" id="hsk-results-detail">0 / 30 puntos</span>
+      </div>
+      <div class="hsk-results-breakdown" id="hsk-results-breakdown"></div>
+      <button class="btn btn-gold btn-xl" id="hsk-results-done" style="width:100%; margin-top:14px;">Cerrar</button>
+    </div>
+  </div>
+
+  <script src="/js/sounds.js?v=20260524n"></script>
+  <script src="/js/hsk-sim.js?v=20260603a"></script>
+</body>
+</html>

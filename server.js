@@ -8,6 +8,7 @@ const Images = require('./core/images');
 const Students = require('./core/student-records');
 const TeacherPresets = require('./core/teacher-presets');
 const ReadingStory = require('./core/reading-story');
+const HskSim = require('./core/hsk-sim');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
 const Guides = require('./core/guides');
@@ -1614,6 +1615,40 @@ function _hwReadingListFor(code) {
 // so the client can render folders (EXP1 has Pīnpīn, EXP8 has XiǎoMíng).
 app.get('/api/reading/stories', (req, res) => {
   res.json({ ok: true, stories: ReadingStory.listStories() });
+});
+
+// 🏆 HSK SIMULATION ENDPOINTS ===========================================
+// List available simulations (just metadata).
+app.get('/api/hsk-sim/list', (req, res) => {
+  res.json({ ok: true, sims: HskSim.listSims() });
+});
+// Fetch a simulation's full payload (correct answers stripped client-side).
+// Requires homework access code + student code so we can persist results.
+app.get('/api/hsk-sim/:simId', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const payload = HskSim.buildSimPayload(req.params.simId);
+  if (!payload) return res.status(404).json({ ok: false, error: 'unknown sim' });
+  res.json({ ok: true, sim: payload });
+});
+// Submit answers, grade them, persist to student record.
+app.post('/api/hsk-sim/:simId/submit', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, answers } = req.body || {};
+  const rec = Students.get(studentCode);
+  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  const result = HskSim.gradeSim(req.params.simId, answers || {});
+  if (!result) return res.status(404).json({ ok: false, error: 'unknown sim' });
+  // Persist into student.hskResults so the Cuaderno can show it later.
+  if (!Array.isArray(rec.hskResults)) rec.hskResults = [];
+  rec.hskResults.push({
+    simId: req.params.simId,
+    score: result.score,
+    total: result.total,
+    percent: result.percent,
+    ts: Date.now(),
+  });
+  try { Students._save && Students._save(); } catch (_) {}
+  res.json({ ok: true, result });
 });
 
 // List available reading tests for the kid.
