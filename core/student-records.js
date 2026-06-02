@@ -156,7 +156,7 @@ const AVATAR_OPTIONS = [
   // ⭐ Character roster — uses PNG art from /assets/cutscenes/chars/
   // Each character has 2 poses + a victory video that triggers on
   // daily completion (see public/js/characters.js).
-  'gojo',    'yugi',    // generated assets ready
+  'gojo',    'yugi',    'squirtle',  // generated assets ready
   'yuji',    'shelly',  'fnaf',    'dandy',
   'hanzo',   'mei2',    'dralingo',
   'naruto',  'sasuke',  'luffy',   'goku',
