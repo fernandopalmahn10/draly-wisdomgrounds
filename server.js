@@ -977,11 +977,23 @@ app.get('/api/homework/reports/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.params.code);
   if (!rec) return res.status(404).json({ ok: false, error: 'no student' });
-  const notes = Students.getNotes(rec.code);
-  const months = Array.from(new Set(notes.map((n) => n.month))).sort().reverse();
-  const cur = new Date().toISOString().slice(0, 7);
-  if (!months.includes(cur)) months.unshift(cur);
-  res.json({ ok: true, months });
+  // 🗓 Build the month list from ANY activity, not just teacher notes.
+  // User reported: in May the option appeared because there were notes;
+  // in June, the May button disappeared because no notes were added to
+  // it that month. Parents need to be able to look back at any month
+  // the kid was active — assignments, tests, HSK exams, or notes.
+  const months = new Set();
+  Students.getNotes(rec.code).forEach((n) => { if (n.month) months.add(n.month); });
+  Students.getAssignmentSubmissions(rec.code, 500).forEach((s) => { if (s.ts) months.add(_tsToMonth(s.ts)); });
+  Students.getTestResults(rec.code, 500).forEach((t) => { if (t.ts) months.add(_tsToMonth(t.ts)); });
+  (rec.hskResults || []).forEach((r) => { if (r.ts) months.add(_tsToMonth(r.ts)); });
+  (Students.getHistory(rec.code) || []).forEach((h) => { if (h.ts) months.add(_tsToMonth(h.ts)); });
+  // Always include the current month so parents can generate "this
+  // month so far" even before the kid has done anything yet.
+  months.add(new Date().toISOString().slice(0, 7));
+  // Newest first — parents typically want the latest report up top.
+  const list = Array.from(months).filter(Boolean).sort().reverse();
+  res.json({ ok: true, months: list });
 });
 // Full report-card payload for one month: notes, computed grade, stats.
 app.get('/api/homework/report/:code', (req, res) => {

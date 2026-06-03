@@ -171,35 +171,60 @@
       .then((r) => r.json())
       .then((d) => {
         if (!d || !d.ok) return;
-        const live = d.live || [], stale = d.stale || [], done = d.completed || [], left = d.left || [];
+        const heartbeatLive  = d.live || [];
+        const heartbeatStale = d.stale || [];
+        const done = d.completed || [];
+        const left = d.left || [];
 
-        // 🔥 ROSTER MERGE: kids in the socket room but no heartbeat
-        // yet should still be visible. After "🚀 Empezar examen" hits,
-        // the kid needs ~1-2s to redirect and start the test runner
-        // before their first heartbeat lands. Without this merge, the
-        // host monitor went 0/0/0/0 in that window — exactly what the
-        // user reported. Now we synthesize a "live" row from the
-        // socket-roster for every kid we haven't seen a heartbeat for.
-        const seenCodes = new Set();
-        live.forEach((r) => seenCodes.add((r.displayName || '').toLowerCase()));
-        stale.forEach((r) => seenCodes.add((r.displayName || '').toLowerCase()));
-        done.forEach((r) => seenCodes.add((r.displayName || '').toLowerCase()));
-        left.forEach((r) => seenCodes.add((r.displayName || '').toLowerCase()));
+        // 🎯 SOURCE OF TRUTH: socket roster (lastState.players). Every
+        // kid currently in the room has an entry. Heartbeat sessions
+        // are a SECONDARY source used only to enrich each row with
+        // progress data (answered/total/section).
+        //
+        // This guarantees "En el examen" === actual joined count, even
+        // before the first heartbeat lands and even if heartbeat fails
+        // for any reason. Root cause of the "0,0,0,0" bug the user
+        // reported was reading heartbeat as primary.
+        //
+        // Build a lookup: displayName-lowercase → heartbeat session.
+        const hbByName = {};
+        const hbByCode = {};
+        [].concat(heartbeatLive, heartbeatStale).forEach((r) => {
+          if (r.displayName) hbByName[r.displayName.toLowerCase()] = r;
+          if (r.studentCode) hbByCode[r.studentCode] = r;
+        });
+        const live = [];
+        const stale = [];
         const socketPlayers = lastState && lastState.players
           ? Object.values(lastState.players) : [];
         socketPlayers.forEach((p) => {
-          if (!seenCodes.has((p.name || '').toLowerCase())) {
-            live.push({
-              displayName: p.name,
-              studentCode: p.name,    // fallback display
-              avatar: p.avatar || null,
-              answered: 0,
-              total: 30,
-              section: 'Cargando examen…',
-              age: 0,
-              fromSocket: true,
-            });
+          // Try to find a matching heartbeat by socket name or studentCode
+          const hb = hbByName[(p.name || '').toLowerCase()] || hbByCode[p.name];
+          const row = hb
+            ? Object.assign({}, hb, { avatar: hb.avatar || p.avatar || null })
+            : {
+                displayName: p.name,
+                studentCode: p.name,
+                avatar: p.avatar || null,
+                answered: 0,
+                total: 30,
+                section: 'Cargando examen…',
+                age: 0,
+              };
+          if (hb && (Date.now() - hb.lastBeat || 0) > 30000) {
+            stale.push(row);
+          } else {
+            live.push(row);
           }
+        });
+        // Also include heartbeat rows that aren't in the socket roster
+        // (e.g. kid temporarily disconnected but still heartbeating).
+        [].concat(heartbeatLive).forEach((r) => {
+          const alreadyShown = socketPlayers.some((p) => {
+            const pn = (p.name || '').toLowerCase();
+            return pn === (r.displayName || '').toLowerCase() || p.name === r.studentCode;
+          });
+          if (!alreadyShown) live.push(r);
         });
 
         $('hh-count-live').textContent  = live.length;
