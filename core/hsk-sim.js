@@ -242,43 +242,41 @@ const SIMULATIONS = {
             { num: 'EJ1', image: `${B2}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
             { num: 'EJ2', image: `${B2}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
           ],
-          // Q1-5 answer keys pulled from the filename markers. User
-          // renamed in commit 3c883a6ad — sim 2 L1 is FFTTF (not the
-          // sim 1 pattern). Paths updated to match new filenames.
+          // Q1-5 answer keys + MP3s now in. Sim 2 L1 pattern: FFTTF.
           questions: [
-            { num: 1, image: `${B2}/LISTENING%20PART%201/1%20(FALSE).png`, audioText: '', answer: false },
-            { num: 2, image: `${B2}/LISTENING%20PART%201/2%20(FALSE).png`, audioText: '', answer: false },
-            { num: 3, image: `${B2}/LISTENING%20PART%201/3%20(TRUE).png`,  audioText: '', answer: true  },
-            { num: 4, image: `${B2}/LISTENING%20PART%201/4%20(TRUE).png`,  audioText: '', answer: true  },
-            { num: 5, image: `${B2}/LISTENING%20PART%201/5%20(FALSE).png`, audioText: '', answer: false },
+            { num: 1, image: `${B2}/LISTENING%20PART%201/1%20(FALSE).png`, audioUrl: `${B2}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
+            { num: 2, image: `${B2}/LISTENING%20PART%201/2%20(FALSE).png`, audioUrl: `${B2}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
+            { num: 3, image: `${B2}/LISTENING%20PART%201/3%20(TRUE).png`,  audioUrl: `${B2}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
+            { num: 4, image: `${B2}/LISTENING%20PART%201/4%20(TRUE).png`,  audioUrl: `${B2}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: true  },
+            { num: 5, image: `${B2}/LISTENING%20PART%201/5%20(FALSE).png`, audioUrl: `${B2}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: false },
           ],
         },
         part2: {
           title: 'Parte 2 · Tres imágenes',
           instruction: 'Escucha el audio y toca la imagen correcta.',
+          // All five MP3s wired + 9A image now in (user re-uploaded).
           questions: [
-            { num: 6,  audioText: '', options: [
+            { num: 6,  audioUrl: `${B2}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
                 { letter: 'A', image: `${B2}/LISTENING%20PART%202/6A.png` },
                 { letter: 'B', image: `${B2}/LISTENING%20PART%202/6B.png` },
                 { letter: 'C', image: `${B2}/LISTENING%20PART%202/6C%20(CORRECT).png` },
               ], answer: 'C' },
-            { num: 7,  audioText: '', options: [
+            { num: 7,  audioUrl: `${B2}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
                 { letter: 'A', image: `${B2}/LISTENING%20PART%202/7A%20(CORRECT).png` },
                 { letter: 'B', image: `${B2}/LISTENING%20PART%202/7B.png` },
                 { letter: 'C', image: `${B2}/LISTENING%20PART%202/7C.png` },
               ], answer: 'A' },
-            { num: 8,  audioText: '', options: [
+            { num: 8,  audioUrl: `${B2}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
                 { letter: 'A', image: `${B2}/LISTENING%20PART%202/8A%20(CORRECT).png` },
                 { letter: 'B', image: `${B2}/LISTENING%20PART%202/8B.png` },
                 { letter: 'C', image: `${B2}/LISTENING%20PART%202/8C.png` },
               ], answer: 'A' },
-            { num: 9,  audioText: '', options: [
-                // 9A.png missing in the asset drop — using B as a fallback display
-                { letter: 'A', image: `${B2}/LISTENING%20PART%202/9B.png` },
+            { num: 9,  audioUrl: `${B2}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
+                { letter: 'A', image: `${B2}/LISTENING%20PART%202/9A.png` },
                 { letter: 'B', image: `${B2}/LISTENING%20PART%202/9B.png` },
                 { letter: 'C', image: `${B2}/LISTENING%20PART%202/9C%20(CORRECT).png` },
               ], answer: 'C' },
-            { num: 10, audioText: '', options: [
+            { num: 10, audioUrl: `${B2}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
                 { letter: 'A', image: `${B2}/LISTENING%20PART%202/10A.png` },
                 { letter: 'B', image: `${B2}/LISTENING%20PART%202/10B.png` },
                 { letter: 'C', image: `${B2}/LISTENING%20PART%202/10C%20(CORRECT).png` },
@@ -299,11 +297,11 @@ const SIMULATIONS = {
           ],
           exampleAnswer: 'C',
           questions: [
-            { num: 11, audioText: '', answer: 'F' },
-            { num: 12, audioText: '', answer: 'D' },
-            { num: 13, audioText: '', answer: 'E' },
-            { num: 14, audioText: '', answer: 'B' },
-            { num: 15, audioText: '', answer: 'A' },
+            { num: 11, audioUrl: `${B2}/LISTENING%20PART%203/11.mp3`, audioText: '', answer: 'F' },
+            { num: 12, audioUrl: `${B2}/LISTENING%20PART%203/12.mp3`, audioText: '', answer: 'D' },
+            { num: 13, audioUrl: `${B2}/LISTENING%20PART%203/13.mp3`, audioText: '', answer: 'E' },
+            { num: 14, audioUrl: `${B2}/LISTENING%20PART%203/14.mp3`, audioText: '', answer: 'B' },
+            { num: 15, audioUrl: `${B2}/LISTENING%20PART%203/15.mp3`, audioText: '', answer: 'A' },
           ],
         },
         part4: {
@@ -321,17 +319,17 @@ const SIMULATIONS = {
           // Answers + option text extracted from sim 2 BMP filenames
           // (the (CORRECT) marker resolves the key).
           questions: [
-            { num: 16, audioText: '', options: [
+            { num: 16, audioUrl: `${B2}/LISTENING%20PART%204/16/16.mp3`, audioText: '', options: [
                 { letter: 'A', text: 'kàn shū' },
                 { letter: 'B', text: 'xuéxí Hànyǔ' },
                 { letter: 'C', text: 'dǎ diànhuà' },
               ], answer: 'B' },
-            { num: 17, audioText: '', options: [
+            { num: 17, audioUrl: `${B2}/LISTENING%20PART%204/17/17.mp3`, audioText: '', options: [
                 { letter: 'A', text: 'Běijīng' },
                 { letter: 'B', text: 'jiā lǐ' },
                 { letter: 'C', text: 'fàndiàn' },
               ], answer: 'A' },
-            { num: 18, audioText: '', options: [
+            { num: 18, audioUrl: `${B2}/LISTENING%20PART%204/18/18.mp3`, audioText: '', options: [
                 { letter: 'A', text: '6 nián' },
                 { letter: 'B', text: '9 nián' },
                 { letter: 'C', text: '16 nián' },
@@ -341,7 +339,7 @@ const SIMULATIONS = {
                 { letter: 'B', text: 'zuò fēijī' },
                 { letter: 'C', text: 'zuò chūzū chē' },
               ], answer: 'C' },
-            { num: 20, audioText: '', options: [
+            { num: 20, audioUrl: `${B2}/LISTENING%20PART%204/20/20.mp3`, audioText: '', options: [
                 { letter: 'A', text: 'tā bàba de' },
                 { letter: 'B', text: 'tā péngyou de' },
                 { letter: 'C', text: 'tā érzi de' },
@@ -356,15 +354,14 @@ const SIMULATIONS = {
           example: {
             num: 'EJ', word: 'diànshì', image: `${B2}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false,
           },
-          // R1 words are TODO for sim 2 — placeholder shown so the kid
-          // sees the structure; teacher can drop in real words after
-          // looking at the images.
+          // R1 words filled from sim 2 READING PART 1/QUESTIONS.txt:
+          //   21 píngguǒ · 22 tīng · 23 duō · 24 shuǐ · 25 zàijiàn
           questions: [
-            { num: 21, word: '(palabra)', image: `${B2}/READING%20PART%201/21%20(FALSE).png`, answer: false },
-            { num: 22, word: '(palabra)', image: `${B2}/READING%20PART%201/22%20(TRUE).png`,  answer: true  },
-            { num: 23, word: '(palabra)', image: `${B2}/READING%20PART%201/23%20(TRUE).png`,  answer: true  },
-            { num: 24, word: '(palabra)', image: `${B2}/READING%20PART%201/24%20(FALSE).png`, answer: false },
-            { num: 25, word: '(palabra)', image: `${B2}/READING%20PART%201/25%20(TRUE).png`,  answer: true  },
+            { num: 21, word: 'píngguǒ', image: `${B2}/READING%20PART%201/21%20(FALSE).png`, answer: false },
+            { num: 22, word: 'tīng',    image: `${B2}/READING%20PART%201/22%20(TRUE).png`,  answer: true  },
+            { num: 23, word: 'duō',     image: `${B2}/READING%20PART%201/23%20(TRUE).png`,  answer: true  },
+            { num: 24, word: 'shuǐ',    image: `${B2}/READING%20PART%201/24%20(FALSE).png`, answer: false },
+            { num: 25, word: 'zàijiàn', image: `${B2}/READING%20PART%201/25%20(TRUE).png`,  answer: true  },
           ],
         },
         part2: {
