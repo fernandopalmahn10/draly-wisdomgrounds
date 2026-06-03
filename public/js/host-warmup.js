@@ -1079,6 +1079,47 @@
       const b = $(id);
       if (b) b.addEventListener('click', () => broadcastFx(fx[id]));
     });
+    // 🎬 ANIMACIONES — persistent transparent-GIF overlays. Toggle
+    // behavior: tap once = on across every kid + host; tap again = off.
+    // Same socket-relay pattern as wu:fx, separate event so the
+    // overlay layer is independent of the burst-effects logic.
+    const _animActive = new Set();
+    document.querySelectorAll('.wu-fx-anim-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.animId;
+        if (!id) return;
+        const turningOn = !_animActive.has(id);
+        if (turningOn) _animActive.add(id); else _animActive.delete(id);
+        socket.emit('wu:anim', { pin, password: adminPw, id, on: turningOn });
+        // Local render for the host's own screen (the relay echo will
+        // also fire but it's idempotent).
+        wuApplyAnim(id, turningOn);
+      });
+    });
+    socket.on('wu:anim', (d) => {
+      if (!d || !d.id) return;
+      wuApplyAnim(d.id, !!d.on);
+    });
+    // Render an animation overlay onto the host's own screen so the
+    // teacher can see what's being projected to the kids.
+    const WU_ANIM_URL = {
+      gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
+      turtle: '/assets/png-library/Squirtle%20animation.gif',
+    };
+    function wuApplyAnim(id, on) {
+      let ov = document.getElementById('wu-anim-overlay-' + id);
+      if (on) {
+        if (ov) return;
+        ov = document.createElement('div');
+        ov.id = 'wu-anim-overlay-' + id;
+        ov.className = 'wu-anim-overlay';
+        ov.innerHTML = '<img src="' + (WU_ANIM_URL[id] || '') + '" alt="">';
+        document.body.appendChild(ov);
+        if (MochiSounds.tap) MochiSounds.tap();
+      } else {
+        if (ov) ov.remove();
+      }
+    }
     // 🎮 Pinned FAB toggles the scrollable effects tray.
     const fab = $('wu-fx-fab');
     const tray = $('wu-fx-tray');

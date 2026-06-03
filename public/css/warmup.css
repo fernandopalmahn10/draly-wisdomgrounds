@@ -1888,3 +1888,37 @@ body.wu-timemachine::after {
 .wu-fx-tray-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 .wu-fx-tray-section { width: 100%; font-size: 0.8rem; font-weight: 800; color: rgba(200,215,240,0.6); margin-top: 6px; }
 .wu-fx-char-btn { background: linear-gradient(135deg, rgba(180,100,255,0.35), rgba(91,232,209,0.25)); border-color: #c5a3ff; }
+
+/* 🎬 ANIMACIONES OVERLAY — persistent transparent-GIF that the teacher
+   toggles from host-warmup's Animaciones tray. Shown on every kid +
+   the host screen. Click-through (pointer-events:none) so it doesn't
+   block any UI underneath. */
+.wu-anim-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.15);
+  animation: wuAnimIn 0.32s ease-out;
+}
+.wu-anim-overlay img {
+  max-width: 72vw;
+  max-height: 72vh;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.55));
+}
+@keyframes wuAnimIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Animaciones-section button styling — distinct from character/efectos
+   buttons so the teacher can tell them apart at a glance. Purple-pink
+   gradient signals "persistent, toggle-on/off". */
+.wu-fx-anim-btn {
+  background: linear-gradient(135deg, #a855f7, #ec4899) !important;
+  color: #fff !important;
+  border: 2px solid #ec4899 !important;
+  box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35) !important;
+}
+.wu-fx-anim-btn:active { transform: scale(0.96); }

@@ -258,14 +258,23 @@
       <button class="wu-fx-tray-close" id="wu-fx-tray-close" type="button" aria-label="Cerrar">✕</button>
     </div>
     <div class="wu-fx-tray-grid">
-      <div class="wu-fx-tray-section">⭐ Personajes</div>
-      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-gojo" type="button">🌀 Gojo</button>
+      <!-- 🎬 ANIMACIONES — full-screen transparent-GIF overlays. Same bank
+           as the host-hsk + host-reading Animaciones panel. Toggling
+           an animation pushes it to EVERY kid's screen and keeps it
+           there until toggled off. Different from "Efectos" (brief
+           particle bursts) — these are persistent animated character
+           takeovers. -->
+      <div class="wu-fx-tray-section">🎬 Animaciones</div>
+      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-gojo"   type="button" data-anim-id="gojo">👁 Gojo</button>
+      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-turtle" type="button" data-anim-id="turtle">🐢 Squirtle</button>
+      <div class="wu-fx-tray-section">⭐ Personajes (efecto rápido)</div>
+      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-gojo" type="button">🌀 Gojo (burst)</button>
       <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-yuji" type="button">👊 Yuji</button>
       <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-fnaf" type="button">🐻 FNAF</button>
       <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-shelly" type="button">💥 Shelly</button>
       <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-dandy" type="button">🎩 Dandy</button>
       <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-sixseven" type="button">🤙 6-7 GRANDE</button>
-      <div class="wu-fx-tray-section">✨ Ambiente</div>
+      <div class="wu-fx-tray-section">✨ Efectos (ambiente)</div>
       <button class="wu-fx-btn" id="wu-fx-confetti" type="button">🎉 Confeti</button>
       <button class="wu-fx-btn" id="wu-fx-rain" type="button">🌧 Lluvia</button>
       <button class="wu-fx-btn" id="wu-fx-stars" type="button">⭐ Estrellas</button>
@@ -281,6 +290,6 @@
   <script src="/js/sounds.js?v=20260524h"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/host-warmup.js?v=20260529a"></script>
+  <script src="/js/host-warmup.js?v=20260603a"></script>
 </body>
 </html>

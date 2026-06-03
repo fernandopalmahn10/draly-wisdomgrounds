@@ -2884,6 +2884,28 @@
     if (gameType !== 'warmup' || !d || !d.kind) return;
     playerFireFx(d.kind);
   });
+  // 🎬 PERSISTENT ANIMATION OVERLAYS — broadcast from the teacher's
+  // Animaciones panel in host-warmup. Different from wu:fx (one-shot
+  // particle bursts) — these are full-screen transparent GIFs that
+  // stay on the kid's screen until the teacher toggles them off.
+  const WU_ANIM_URL_PLAYER = {
+    gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
+    turtle: '/assets/png-library/Squirtle%20animation.gif',
+  };
+  socket.on('wu:anim', (d) => {
+    if (gameType !== 'warmup' || !d || !d.id) return;
+    let ov = document.getElementById('wu-anim-overlay-' + d.id);
+    if (d.on && WU_ANIM_URL_PLAYER[d.id]) {
+      if (ov) return;
+      ov = document.createElement('div');
+      ov.id = 'wu-anim-overlay-' + d.id;
+      ov.className = 'wu-anim-overlay';
+      ov.innerHTML = '<img src="' + WU_ANIM_URL_PLAYER[d.id] + '" alt="">';
+      document.body.appendChild(ov);
+    } else if (ov) {
+      ov.remove();
+    }
+  });
   function _wuFxLayer() {
     let layer = document.getElementById('wu-player-fx-layer');
     if (!layer) {
