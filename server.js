@@ -891,6 +891,11 @@ app.get('/api/admin/students/:code', (req, res) => {
     // delivered. Sorted newest first so the Cuaderno sees the most
     // recent attempt at the top, plus a per-sim "best score" summary.
     hskResults: (Array.isArray(rec.hskResults) ? rec.hskResults : []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)),
+    // 👤 GUEST FLAG — the kid joined via PIN with a typed code that
+    // wasn't in our records. We auto-provisioned a record for them.
+    // The Cuaderno shows a badge so the teacher can decide whether
+    // to keep, rename, or merge into an existing student.
+    isGuestPinJoin: !!rec.isGuestPinJoin,
   });
 });
 
@@ -1679,8 +1684,15 @@ app.get('/api/hsk-sim/:simId', (req, res, next) => {
 app.post('/api/hsk-sim/:simId/submit', (req, res) => {
   if (!_hskAuth(req, res)) return;
   const { studentCode, answers } = req.body || {};
-  const rec = Students.get(studentCode);
-  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  // 🆕 Same guest-provisioning here as in heartbeat — submit must
+  // succeed for PIN-joiners with any typed code, otherwise their
+  // test record disappears at the end. Look up the room (if PIN
+  // auth) so we can stamp the new record with the classroom code.
+  const pin = String(req.query.pin || (req.body && req.body.pin) || '').trim();
+  const g0 = pin ? _hskGameLookup(pin) : null;
+  const classroomFromRoom = (g0 && g0.hsk && g0.hsk.classroomCode) || null;
+  const rec = Students.getOrProvisionForPin(studentCode, studentCode, classroomFromRoom);
+  if (!rec) return res.status(400).json({ ok: false, error: 'no se pudo crear el registro de estudiante' });
   const result = HskSim.gradeSim(req.params.simId, answers || {});
   if (!result) return res.status(404).json({ ok: false, error: 'unknown sim' });
   // Persist into student.hskResults so the Cuaderno can show it later.
@@ -1875,7 +1887,13 @@ app.post('/api/hsk-sim/heartbeat', (req, res) => {
     return res.status(400).json({ ok: false, error: 'pin (or accessCode) + studentCode required' });
   }
   const key = _hskSessionKey(roomKey, studentCode);
-  const rec = Students.get(studentCode);
+  // 🆕 GUEST PROVISIONING — if the kid typed a studentCode that
+  // doesn't exist (PIN-join with a custom name), auto-create a
+  // record so their progress + final result have somewhere to land.
+  // Without this, "I'm in the test" but "nothing in my profile".
+  const g0 = pin ? _hskGameLookup(pin) : null;
+  const classroomFromRoom = (g0 && g0.hsk && g0.hsk.classroomCode) || null;
+  const rec = Students.getOrProvisionForPin(studentCode, studentCode, classroomFromRoom);
   const isJoin = !HSK_SESSIONS.has(key);
   const g = pin ? _hskGameLookup(pin) : null;
   const session = {
