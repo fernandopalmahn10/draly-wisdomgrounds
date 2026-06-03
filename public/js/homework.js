@@ -56,9 +56,14 @@
   // path. Mapped here so avatarSrc returns the right URL.
   const CUSTOM_AVATAR_URLS = {
     squirtle: '/assets/png-library/Squirtle%20animation.gif',
-    // 👁 Gojo — transparent dancing GIF overrides the static PNG so the
-    // avatar actually moves on the homework portal + roster.
+    // Transparent dancing GIFs override the static PNGs so the avatar
+    // moves wherever it appears (homework portal, parent roster,
+    // builder header, force-impose modal).
     gojo:     '/assets/png-library/GOJO%20TRANSPARENT.gif',
+    yugi:     '/assets/png-library/YUGI%20TRANSPARENT.gif',
+    fnaf:     '/assets/png-library/FREDDY%20TRANSPARENT.gif',
+    mario:    '/assets/png-library/MARIO%20TRANSPARENT.gif',
+    sonic:    '/assets/png-library/SONIC%20TRANSPARENT.gif',
   };
   // ?v bumped whenever the avatar ART is regenerated (same filenames, new
   // look) so browsers don't serve the stale cached SVG. 2026-05-28: fresh

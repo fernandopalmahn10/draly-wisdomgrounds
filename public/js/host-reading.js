@@ -153,6 +153,24 @@
       url: '/assets/png-library/YUGI%20TRANSPARENT.gif',
     },
     {
+      id: 'freddy',
+      name: 'Freddy (FNAF)',
+      tags: 'freddy fnaf bear pizzeria hat haunted security animatronic robot',
+      url: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
+    },
+    {
+      id: 'mario',
+      name: 'Mario (Nintendo)',
+      tags: 'mario nintendo jump red plumber mustache mushroom italian princess',
+      url: '/assets/png-library/MARIO%20TRANSPARENT.gif',
+    },
+    {
+      id: 'sonic',
+      name: 'Sonic (Sega)',
+      tags: 'sonic hedgehog blue fast sega run shoes rings spin chaos',
+      url: '/assets/png-library/SONIC%20TRANSPARENT.gif',
+    },
+    {
       id: 'turtle',
       name: 'Squirtle dancing',
       tags: 'squirtle turtle pinpin water dance dancing tortuga',
