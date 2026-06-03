@@ -602,9 +602,15 @@
   }
   // Send a "bye" beat on page unload so the dashboard immediately
   // shows the student as gone instead of waiting for the stale window.
+  // CRITICAL: skip this if the kid already submitted — otherwise the
+  // 'left' status overwrites 'completed' on the host monitor (root
+  // cause of "I finished but it didn't mark me as terminated").
+  let _hasFinished = false;
   window.addEventListener('beforeunload', () => {
+    if (_hasFinished) return;     // don't downgrade completed → left
     try {
       const blob = new Blob([JSON.stringify({
+        pin: roomPin || undefined,
         simId: sim && sim.id, accessCode, studentCode, status: 'left',
       })], { type: 'application/json' });
       if (navigator.sendBeacon) navigator.sendBeacon('/api/hsk-sim/heartbeat', blob);
@@ -613,7 +619,29 @@
 
   function finishTest() {
     stopAudio();
+    _hasFinished = true;            // suppress the 'left' beacon below
     if (_heartbeatTimer) { clearInterval(_heartbeatTimer); _heartbeatTimer = null; }
+    // 🏅 BELT + SUSPENDERS for "I finished but the dashboard didn't
+    // mark me as terminated". Three signals fire so at LEAST one
+    // reaches the server before the kid closes the tab:
+    //   1) sendBeacon — survives page unload, no async race
+    //   2) fetch heartbeat — normal path, logs progress for monitor
+    //   3) submit endpoint — persists rec.hskResults (authoritative)
+    try {
+      if (navigator.sendBeacon) {
+        const step = timeline[cursor] || {};
+        const blob = new Blob([JSON.stringify({
+          pin: roomPin || undefined,
+          simId: sim && sim.id,
+          accessCode, studentCode,
+          cursor, total: timeline.length,
+          answered: Object.keys(answers).length,
+          section: sectionForStep(step),
+          status: 'completed',
+        })], { type: 'application/json' });
+        navigator.sendBeacon('/api/hsk-sim/heartbeat', blob);
+      }
+    } catch (_) {}
     sendHeartbeat('completed');
     $('hsk-runner').classList.add('hidden');
     $('hsk-results').classList.remove('hidden');
