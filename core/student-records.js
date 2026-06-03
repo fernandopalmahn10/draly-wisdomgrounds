@@ -82,6 +82,45 @@ function normalizeCode(code) {
 }
 
 // Get or create a student record. Returns the record (always non-null).
+// 🆕 PIN-JOIN provisioning helper. The HSK PIN-room flow doesn't go
+// through the homework gate, so kids can type ANY studentCode that
+// doesn't yet exist in our records. Without this, their test results
+// would have nowhere to land (root cause of the user's "PIN joiners
+// don't have a profile" complaint).
+//
+// This creates a record using the EXACT typed code as the record key
+// (so the kid's subsequent visits reuse the same record), tags it as
+// a PIN-provisioned guest, and stamps it with the classroom code we
+// can derive from the room. Teacher sees it in the Cuaderno with a
+// 👤 badge and can rename or merge later.
+function getOrProvisionForPin(typedCode, displayName, classroomCode) {
+  const normalized = normalizeCode(typedCode);
+  if (normalized && records[normalized]) {
+    const rec = records[normalized];
+    if (displayName) rec.displayName = String(displayName).slice(0, 24);
+    if (classroomCode && !rec.classroomCode) rec.classroomCode = String(classroomCode).trim().toUpperCase();
+    rec.lastSeen = Date.now();
+    scheduleSave();
+    return rec;
+  }
+  // Create using the typed code AS the record code — so the kid can
+  // come back and join the same record by typing the same thing.
+  const useCode = normalized || generateCode();
+  const rec = {
+    code: useCode,
+    displayName: displayName ? String(displayName).slice(0, 24) : (typedCode || 'Anon'),
+    avatar: null,
+    classroomCode: classroomCode ? String(classroomCode).trim().toUpperCase() : null,
+    firstSeen: Date.now(),
+    lastSeen: Date.now(),
+    sentencesBuilt: [],
+    isGuestPinJoin: true,           // teacher-facing flag: 👤 badge
+  };
+  records[useCode] = rec;
+  scheduleSave();
+  return rec;
+}
+
 // If a known code is passed, returns the existing record. Otherwise
 // creates a new one with the given displayName and a fresh code.
 function getOrCreate(code, displayName) {
@@ -626,6 +665,7 @@ load();
 
 module.exports = {
   getOrCreate,
+  getOrProvisionForPin,
   get,
   deleteStudent,
   setMeta,
