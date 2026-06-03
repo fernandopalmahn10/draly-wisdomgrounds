@@ -1661,7 +1661,15 @@ function _hskAuth(req, res) {
 
 // Fetch a simulation's full payload (correct answers stripped client-side).
 // Auth: valid PIN OR valid classroom access code.
-app.get('/api/hsk-sim/:simId', (req, res) => {
+// ⚠️ ROUTE COLLISION GUARD — this is a wildcard `:simId` route, so it
+// matches ANY single-segment URL after /api/hsk-sim/. That means a path
+// like /api/hsk-sim/results would shadow the more-specific results
+// endpoint registered later. We reject reserved-word simIds here so
+// Express can fall through to the right handler — fixes the "unexpected
+// top type is not valid JSON" the user saw on the Resultados HSK panel.
+const HSK_RESERVED_PATHS = new Set(['results', 'sessions', 'heartbeat', 'list', 'room']);
+app.get('/api/hsk-sim/:simId', (req, res, next) => {
+  if (HSK_RESERVED_PATHS.has(req.params.simId)) return next();
   if (!_hskAuth(req, res)) return;
   const payload = HskSim.buildSimPayload(req.params.simId);
   if (!payload) return res.status(404).json({ ok: false, error: 'unknown sim' });
