@@ -2,10 +2,12 @@
 /* 🏆 HSK SIMULATION — full mock exam runner                            */
 /* Warm exam-room palette: cream + jade + gold, no busy decoration.     */
 /* ===================================================================== */
+/* User asked to drop the grid background — clean dark exam-room
+   feel, no decorative pattern. Pure dark gradient only. */
 .hsk-body {
-  background:
-    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(91, 232, 209, 0.10) 0%, transparent 60%),
-    linear-gradient(180deg, #1a1a26 0%, #14121e 60%, #0c0a14 100%);
+  background: linear-gradient(180deg, #14121e 0%, #0c0a14 100%);
+  background-attachment: fixed;
+  background-image: none;
   color: #f3e6c2;
   font-family: 'Nunito', sans-serif;
   min-height: 100dvh;
@@ -116,10 +118,12 @@
 }
 .hsk-q-card .hsk-q-num { color: #b37b00; }
 .hsk-q-num {
+  font-family: 'Cinzel', serif;
   font-weight: 900;
   color: #ffd24a;
-  font-size: 0.95rem;
-  letter-spacing: 0.04em;
+  font-size: 1.25rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 /* Single-question image (L1, R1). User wants a CLEAN white frame —
    no grid showing through, no contrasting dark box around the photo.
@@ -344,25 +348,33 @@
 }
 
 /* ── Reading 2 sentence display ──────────────────────────────────── */
+/* R2 sentence — THE thing the kid has to match. User feedback:
+   "the main thing is not in bold and big". Now it shouts: big
+   pinyin in dark high-contrast on a gold band, hanzi above as
+   a smaller reading aid. */
 .hsk-r2-sentence {
   text-align: center;
-  background: rgba(91, 232, 209, 0.08);
-  border: 1.5px solid rgba(91, 232, 209, 0.4);
-  border-radius: 12px;
-  padding: 14px;
+  background: linear-gradient(135deg, #ffd24a, #ffb44a);
+  border: 3px solid #ffd24a;
+  border-radius: 14px;
+  padding: 18px 22px;
+  margin-bottom: 4px;
+  box-shadow: 0 6px 22px rgba(255, 180, 74, 0.35);
 }
 .hsk-r2-hanzi {
   font-family: 'ZCOOL XiaoWei', serif;
   font-size: 1.6rem;
-  color: #ffd24a;
+  color: rgba(0, 0, 0, 0.72);
   letter-spacing: 0.03em;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  font-weight: 700;
 }
 .hsk-r2-pinyin {
-  font-size: 1rem;
-  font-weight: 700;
-  color: rgba(243, 230, 194, 0.85);
-  font-style: italic;
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: #1a1a26;
+  font-style: normal;
+  letter-spacing: 0.02em;
 }
 
 /* ── Bottom controls ─────────────────────────────────────────────── */

@@ -195,9 +195,27 @@
         });
         const live = [];
         const stale = [];
+        // Build a quick lookup of who's already in the completed/left
+        // buckets — we DON'T want to re-add them to "live" via the
+        // socket-roster merge (root cause of "I finished but it still
+        // showed me in the test"). Heartbeat status wins.
+        const finishedNames = new Set();
+        const finishedCodes = new Set();
+        done.forEach((r) => {
+          if (r.displayName) finishedNames.add(r.displayName.toLowerCase());
+          if (r.studentCode) finishedCodes.add(r.studentCode);
+        });
+        left.forEach((r) => {
+          if (r.displayName) finishedNames.add(r.displayName.toLowerCase());
+          if (r.studentCode) finishedCodes.add(r.studentCode);
+        });
+
         const socketPlayers = lastState && lastState.players
           ? Object.values(lastState.players) : [];
         socketPlayers.forEach((p) => {
+          // Skip if already in completed/left — they're in the right bucket.
+          if (finishedNames.has((p.name || '').toLowerCase())) return;
+          if (finishedCodes.has(p.name)) return;
           // Try to find a matching heartbeat by socket name or studentCode
           const hb = hbByName[(p.name || '').toLowerCase()] || hbByCode[p.name];
           const row = hb
