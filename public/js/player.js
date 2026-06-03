@@ -2155,9 +2155,10 @@
   const RD_ANIMATIONS_PLAYER = {
     gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
     yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
+    freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
+    mario:  '/assets/png-library/MARIO%20TRANSPARENT.gif',
+    sonic:  '/assets/png-library/SONIC%20TRANSPARENT.gif',
     turtle: '/assets/png-library/Squirtle%20animation.gif',
-    // 🆕 Add the same entries here as in host-reading.js when new
-    // animations land. Just url is needed on the player side.
   };
   socket.on('rd:vfx', (msg) => {
     if (!msg || !msg.fx) return;
@@ -2892,6 +2893,9 @@
   const WU_ANIM_URL_PLAYER = {
     gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
     yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
+    freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
+    mario:  '/assets/png-library/MARIO%20TRANSPARENT.gif',
+    sonic:  '/assets/png-library/SONIC%20TRANSPARENT.gif',
     turtle: '/assets/png-library/Squirtle%20animation.gif',
   };
   socket.on('wu:anim', (d) => {

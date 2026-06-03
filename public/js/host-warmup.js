@@ -1105,6 +1105,9 @@
     const WU_ANIM_URL = {
       gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
       yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
+      freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
+      mario:  '/assets/png-library/MARIO%20TRANSPARENT.gif',
+      sonic:  '/assets/png-library/SONIC%20TRANSPARENT.gif',
       turtle: '/assets/png-library/Squirtle%20animation.gif',
     };
     function wuApplyAnim(id, on) {
