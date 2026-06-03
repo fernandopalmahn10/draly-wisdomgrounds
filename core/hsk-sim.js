@@ -242,12 +242,15 @@ const SIMULATIONS = {
             { num: 'EJ1', image: `${B2}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
             { num: 'EJ2', image: `${B2}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
           ],
+          // Q1-5 answer keys pulled from the filename markers. User
+          // renamed in commit 3c883a6ad — sim 2 L1 is FFTTF (not the
+          // sim 1 pattern). Paths updated to match new filenames.
           questions: [
             { num: 1, image: `${B2}/LISTENING%20PART%201/1%20(FALSE).png`, audioText: '', answer: false },
-            { num: 2, image: `${B2}/LISTENING%20PART%201/2%20(TRUE).jpeg`, audioText: '', answer: true  },
-            { num: 3, image: `${B2}/LISTENING%20PART%201/3%20(FALSE).png`, audioText: '', answer: false },
-            { num: 4, image: `${B2}/LISTENING%20PART%201/4%20(FALSE).png`, audioText: '', answer: false },
-            { num: 5, image: `${B2}/LISTENING%20PART%201/5%20(TRUE).png`,  audioText: '', answer: true  },
+            { num: 2, image: `${B2}/LISTENING%20PART%201/2%20(FALSE).png`, audioText: '', answer: false },
+            { num: 3, image: `${B2}/LISTENING%20PART%201/3%20(TRUE).png`,  audioText: '', answer: true  },
+            { num: 4, image: `${B2}/LISTENING%20PART%201/4%20(TRUE).png`,  audioText: '', answer: true  },
+            { num: 5, image: `${B2}/LISTENING%20PART%201/5%20(FALSE).png`, audioText: '', answer: false },
           ],
         },
         part2: {
