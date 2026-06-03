@@ -286,41 +286,74 @@
   });
 
   // ── 🎯 FORCE-IMPOSE picker (lobby + active) ───────────────────────
+  // Now SIM-AWARE: fetches who has/hasn't already taken THIS sim and
+  // shows a badge per kid, plus two filter buttons to split the class
+  // by completion status. Answer to user: "Tab A for those who didn't
+  // do Sim 1, Tab B for those who did" — now one click per side.
   function openForcePicker() {
     if (!pin) { alert('Esperando PIN…'); return; }
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data || !data.ok) { alert('No se pudo cargar la lista.'); return; }
-        const onlineNow = (data.students || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
+    Promise.all([
+      fetch('/api/admin/students?pw=' + encodeURIComponent(pw)).then((r) => r.json()),
+      fetch('/api/hsk-sim/results?pw=' + encodeURIComponent(pw) + '&simId=' + encodeURIComponent(simId)).then((r) => r.json()),
+    ]).then(([studentData, resultData]) => {
+        if (!studentData || !studentData.ok) { alert('No se pudo cargar la lista.'); return; }
+        const onlineNow = (studentData.students || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
         if (!onlineNow.length) { alert('No hay alumnos en línea ahora mismo.'); return; }
+        // Build a set of codes who have completed THIS sim at least once.
+        const completedCodes = new Set();
+        ((resultData && resultData.results) || []).forEach((r) => {
+          if (r.simId === simId && r.code) completedCodes.add(r.code);
+        });
         let overlay = document.getElementById('hh-force-modal');
         if (overlay) overlay.remove();
         overlay = document.createElement('div');
         overlay.id = 'hh-force-modal';
         overlay.className = 'm-modal';
+        const simShort = (simId || '').toUpperCase();
         overlay.innerHTML =
           '<div class="m-modal-card">' +
             '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
             '<h2>🎯 Forzar entrada</h2>' +
-            '<p class="m-modal-sub">PIN <strong>' + pin + '</strong> · Selecciona a quién forzar.</p>' +
-            '<div class="m-force-actions">' +
+            '<p class="m-modal-sub">PIN <strong>' + pin + '</strong> · ' + escapeHtml(simShort) + '</p>' +
+            '<p class="m-modal-sub" style="font-size:0.82rem;color:rgba(243,230,194,0.7);">' +
+              '<span style="color:#5be88a;">✅ Ya hizo este examen</span> · ' +
+              '<span style="color:#ffd24a;">🆕 No lo hace todavía</span>' +
+            '</p>' +
+            '<div class="m-force-actions" style="flex-wrap:wrap;gap:6px;">' +
               '<button class="btn btn-ghost btn-sm" id="hh-fhsk-all">✅ Todos</button>' +
               '<button class="btn btn-ghost btn-sm" id="hh-fhsk-none">⬜ Ninguno</button>' +
+              '<button class="btn btn-jade btn-sm" id="hh-fhsk-only-new" title="Solo a los que NO han hecho este examen">🆕 Solo nuevos</button>' +
+              '<button class="btn btn-gold btn-sm" id="hh-fhsk-only-repeat" title="Solo a los que YA hicieron este examen">🔁 Solo repetidores</button>' +
             '</div>' +
             '<div class="m-force-students" id="hh-fhsk-students"></div>' +
             '<button class="btn btn-gold btn-xl" id="hh-fhsk-launch" style="margin-top:16px;width:100%;">🚀 Forzar a los seleccionados</button>' +
           '</div>';
         document.body.appendChild(overlay);
         const list = overlay.querySelector('#hh-fhsk-students');
+        // Sort: kids who haven't done it on top (the typical default
+        // when launching a new sim) — easier to scan.
+        onlineNow.sort((a, b) => {
+          const ad = completedCodes.has(a.code) ? 1 : 0;
+          const bd = completedCodes.has(b.code) ? 1 : 0;
+          return ad - bd;
+        });
         onlineNow.forEach((s) => {
+          const did = completedCodes.has(s.code);
           const row = document.createElement('label');
-          row.className = 'm-force-row';
+          row.className = 'm-force-row' + (did ? ' is-already-done' : ' is-new');
+          row.dataset.status = did ? 'done' : 'new';
+          // Default-CHECKED only for "🆕 nuevos" — most common case
+          // when launching a new sim. Teacher can flip with buttons.
+          const checked = did ? '' : 'checked';
+          const badge = did
+            ? '<span class="m-force-badge m-force-badge-done">✅ Ya lo hizo</span>'
+            : '<span class="m-force-badge m-force-badge-new">🆕 Nuevo</span>';
           row.innerHTML =
-            '<input type="checkbox" data-code="' + escapeHtml(s.code) + '" checked>' +
+            '<input type="checkbox" data-code="' + escapeHtml(s.code) + '" ' + checked + '>' +
             '<span class="m-force-row-dot"></span>' +
             '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
-            '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
+            '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>' +
+            badge;
           list.appendChild(row);
         });
         const close = () => { try { overlay.remove(); } catch (_) {} };
@@ -331,6 +364,23 @@
         });
         overlay.querySelector('#hh-fhsk-none').addEventListener('click', () => {
           list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
+        });
+        // 🆕 Smart split — one click ticks only kids who haven't done
+        // this sim yet (typical when launching a new simulation to a
+        // mixed-progress classroom).
+        overlay.querySelector('#hh-fhsk-only-new').addEventListener('click', () => {
+          list.querySelectorAll('.m-force-row').forEach((row) => {
+            const cb = row.querySelector('input[type=checkbox]');
+            if (cb) cb.checked = (row.dataset.status === 'new');
+          });
+        });
+        // 🔁 Inverse — only kids who already did it (e.g. for a retry
+        // session or pushing the NEXT sim to those who finished).
+        overlay.querySelector('#hh-fhsk-only-repeat').addEventListener('click', () => {
+          list.querySelectorAll('.m-force-row').forEach((row) => {
+            const cb = row.querySelector('input[type=checkbox]');
+            if (cb) cb.checked = (row.dataset.status === 'done');
+          });
         });
         overlay.querySelector('#hh-fhsk-launch').addEventListener('click', () => {
           const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))

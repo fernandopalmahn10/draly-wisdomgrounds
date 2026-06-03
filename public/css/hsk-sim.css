@@ -693,3 +693,25 @@
 .hh-pin-code-small { font-size: 2rem !important; margin: 4px 0 !important; }
 
 .hh-screen.hidden { display: none; }
+
+/* 🎯 Force-impose picker badges — completion status per kid for THIS sim */
+.m-force-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+.m-force-badge-done {
+  background: rgba(91, 232, 138, 0.25);
+  color: #5be88a;
+  border: 1px solid rgba(91, 232, 138, 0.5);
+}
+.m-force-badge-new {
+  background: rgba(255, 210, 74, 0.20);
+  color: #ffd24a;
+  border: 1px solid rgba(255, 210, 74, 0.5);
+}
+.m-force-row.is-already-done { opacity: 0.78; }
+.m-force-row.is-new          { box-shadow: 0 0 0 1px rgba(255, 210, 74, 0.18) inset; }
