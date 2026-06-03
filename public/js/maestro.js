@@ -1921,15 +1921,21 @@
             '<div><span class="m-hsk-detail-label">Último intento</span><span class="m-hsk-detail-last">' + g.latest.percent + '% · ' + new Date(g.latest.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) + '</span></div>' +
           '</div>';
         body.appendChild(card);
-        // Per-attempt collapsed list
-        g.all.forEach((r) => {
+        // Per-attempt list — sorted oldest→newest so "Intento 1, 2,
+        // 3…" reads chronologically. The teacher can see if the kid
+        // improved or got worse across attempts.
+        const chrono = g.all.slice().sort((a, b) => (a.ts || 0) - (b.ts || 0));
+        chrono.forEach((r, i) => {
           const dateStr = new Date(r.ts).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
           const pct = r.percent || 0;
           const cls2 = pct >= 80 ? 'great' : pct >= 60 ? 'ok' : 'low';
+          const isLatest = i === chrono.length - 1;
+          const isBest = pct === g.best;
+          const tag = (isBest ? ' 🏅' : '') + (isLatest ? ' ✨' : '');
           const row = document.createElement('div');
           row.className = 'm-asg-row ' + cls2;
           row.innerHTML =
-            '<span class="m-asg-title">↳ ' + escapeHtml((r.simId || '').toUpperCase()) + '</span>' +
+            '<span class="m-asg-title">Intento ' + (i + 1) + tag + '</span>' +
             '<span class="m-asg-score">' + r.score + '/' + r.total + ' <small>(' + pct + '%)</small></span>' +
             '<span class="m-asg-date">' + dateStr + '</span>';
           body.appendChild(row);
