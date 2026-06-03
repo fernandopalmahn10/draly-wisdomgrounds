@@ -2154,6 +2154,7 @@
   // Mirror of the host's ANIMATIONS array — keep in sync.
   const RD_ANIMATIONS_PLAYER = {
     gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
+    yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
     turtle: '/assets/png-library/Squirtle%20animation.gif',
     // 🆕 Add the same entries here as in host-reading.js when new
     // animations land. Just url is needed on the player side.
@@ -2890,6 +2891,7 @@
   // stay on the kid's screen until the teacher toggles them off.
   const WU_ANIM_URL_PLAYER = {
     gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
+    yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
     turtle: '/assets/png-library/Squirtle%20animation.gif',
   };
   socket.on('wu:anim', (d) => {
