@@ -6554,6 +6554,24 @@ io.on('connection', (socket) => {
     if (!ok.includes(kind)) return;
     io.to(pin).emit('wu:fx', { kind });
   });
+  // 🎬 wu:anim — PERSISTENT animation overlay (Gojo dance GIF, Squirtle,
+  // future transparent-GIF additions). Different from wu:fx (one-shot
+  // particle bursts) in that anim stays on every kid's screen until
+  // the teacher toggles it off. Same socket framework, separate event
+  // so the player-side rendering is clean.
+  socket.on('wu:anim', ({ pin, password, id, on }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    const ok = ['gojo', 'turtle'];        // expand as more transparent GIFs land
+    if (!ok.includes(String(id || ''))) return;
+    // Stash the current state on the room so a kid joining late
+    // automatically sees whatever's already on.
+    if (!g.wuAnim) g.wuAnim = {};
+    if (on) g.wuAnim[id] = { since: Date.now() };
+    else    delete g.wuAnim[id];
+    io.to(pin).emit('wu:anim', { id, on: !!on });
+  });
   // === JUDGE role === host designates a kid as a "juez" who can approve or
   // deny raise-hand requests. Two categories: asistente (builds) and juez
   // (approves). Host only.
