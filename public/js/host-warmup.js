@@ -1104,6 +1104,7 @@
     // teacher can see what's being projected to the kids.
     const WU_ANIM_URL = {
       gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
+      yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
       turtle: '/assets/png-library/Squirtle%20animation.gif',
     };
     function wuApplyAnim(id, on) {

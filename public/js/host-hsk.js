@@ -362,7 +362,8 @@
 
   // ── 🎬 ANIMATIONS panel ────────────────────────────────────────────
   const ANIMATIONS = [
-    { id: 'gojo', name: 'Gojo (Jujutsu)', tags: 'gojo satoru jjk anime sensei limitless infinity blue purple six eyes', url: '/assets/png-library/GOJO%20TRANSPARENT.gif' },
+    { id: 'gojo',   name: 'Gojo (Jujutsu)',   tags: 'gojo satoru jjk anime sensei limitless infinity blue purple six eyes', url: '/assets/png-library/GOJO%20TRANSPARENT.gif' },
+    { id: 'yugi',   name: 'Yugi (Yu-Gi-Oh!)', tags: 'yugi pharaoh yugioh egypt millennium puzzle duel card master king games', url: '/assets/png-library/YUGI%20TRANSPARENT.gif' },
     { id: 'turtle', name: 'Squirtle dancing', tags: 'squirtle turtle pinpin water dance dancing tortuga', url: '/assets/png-library/Squirtle%20animation.gif' },
   ];
   let _animCurrent = null;

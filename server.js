@@ -6563,7 +6563,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
     if (!(g.hostId === socket.id && isAdminPassword(password))) return;
-    const ok = ['gojo', 'turtle'];        // expand as more transparent GIFs land
+    const ok = ['gojo', 'yugi', 'turtle'];   // expand as more transparent GIFs land
     if (!ok.includes(String(id || ''))) return;
     // Stash the current state on the room so a kid joining late
     // automatically sees whatever's already on.

@@ -583,6 +583,7 @@
   // ── 🎬 Animation overlay (teacher-broadcast via PIN room) ─────────
   const FX_URL = {
     gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
+    yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
     turtle: '/assets/png-library/Squirtle%20animation.gif',
   };
   let _curFxId = null;
