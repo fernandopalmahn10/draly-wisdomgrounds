@@ -1226,6 +1226,7 @@
       freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
       mario:  '/assets/png-library/MARIO%20TRANSPARENT.gif',
       sonic:  '/assets/png-library/SONIC%20TRANSPARENT.gif',
+      elsa:   '/assets/png-library/ELSA%20TRANSPARENT.gif',
       turtle: '/assets/png-library/Squirtle%20animation.gif',
     };
     function wuApplyAnim(id, on) {

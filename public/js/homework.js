@@ -64,6 +64,7 @@
     fnaf:     '/assets/png-library/FREDDY%20TRANSPARENT.gif',
     mario:    '/assets/png-library/MARIO%20TRANSPARENT.gif',
     sonic:    '/assets/png-library/SONIC%20TRANSPARENT.gif',
+    elsa:     '/assets/png-library/ELSA%20TRANSPARENT.gif',
   };
   // ?v bumped whenever the avatar ART is regenerated (same filenames, new
   // look) so browsers don't serve the stale cached SVG. 2026-05-28: fresh

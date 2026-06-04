@@ -435,6 +435,7 @@
     { id: 'freddy', name: 'Freddy (FNAF)',      tags: 'freddy fnaf bear pizzeria hat haunted security animatronic robot', url: '/assets/png-library/FREDDY%20TRANSPARENT.gif' },
     { id: 'mario',  name: 'Mario (Nintendo)',   tags: 'mario nintendo jump red plumber mustache mushroom italian princess', url: '/assets/png-library/MARIO%20TRANSPARENT.gif' },
     { id: 'sonic',  name: 'Sonic (Sega)',       tags: 'sonic hedgehog blue fast sega run shoes rings spin chaos', url: '/assets/png-library/SONIC%20TRANSPARENT.gif' },
+    { id: 'elsa',   name: 'Elsa (Frozen)',      tags: 'elsa frozen disney ice queen snow princess arendelle', url: '/assets/png-library/ELSA%20TRANSPARENT.gif' },
     { id: 'turtle', name: 'Squirtle dancing',   tags: 'squirtle turtle pinpin water dance dancing tortuga', url: '/assets/png-library/Squirtle%20animation.gif' },
   ];
   let _animCurrent = null;

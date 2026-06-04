@@ -171,6 +171,12 @@
       url: '/assets/png-library/SONIC%20TRANSPARENT.gif',
     },
     {
+      id: 'elsa',
+      name: 'Elsa (Frozen)',
+      tags: 'elsa frozen disney ice queen snow princess arendelle',
+      url: '/assets/png-library/ELSA%20TRANSPARENT.gif',
+    },
+    {
       id: 'turtle',
       name: 'Squirtle dancing',
       tags: 'squirtle turtle pinpin water dance dancing tortuga',
