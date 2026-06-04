@@ -557,6 +557,16 @@
   function sendHeartbeat(status) {
     if (!sim) return;
     const step = timeline[cursor] || {};
+    // 🪪 IMPORTANT: send the kid's REAL displayName from the
+    // /player.html step (stored in dralyLastJoin.name). Without this
+    // the server fell back to using the typed studentCode as the
+    // displayName, which is what the user saw as "I only see codes,
+    // not names" — root cause of this bug.
+    let realName = '';
+    try {
+      const last = JSON.parse(localStorage.getItem('dralyLastJoin') || '{}');
+      if (last && last.name) realName = String(last.name);
+    } catch (_) {}
     fetch('/api/hsk-sim/heartbeat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -564,6 +574,7 @@
         pin: roomPin || undefined,
         simId: sim.id,
         accessCode, studentCode,
+        displayName: realName || undefined,
         cursor, total: timeline.length,
         answered: Object.keys(answers).length,
         section: sectionForStep(step),
@@ -652,10 +663,19 @@
     let sq = '?studentCode=' + encodeURIComponent(studentCode);
     if (roomPin)         sq += '&pin=' + encodeURIComponent(roomPin);
     else if (accessCode)  sq += '&accessCode=' + encodeURIComponent(accessCode);
+    let realName2 = '';
+    try {
+      const last = JSON.parse(localStorage.getItem('dralyLastJoin') || '{}');
+      if (last && last.name) realName2 = String(last.name);
+    } catch (_) {}
     fetch('/api/hsk-sim/' + encodeURIComponent(sim.id) + '/submit' + sq, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentCode, answers, pin: roomPin || undefined }),
+      body: JSON.stringify({
+        studentCode, answers,
+        pin: roomPin || undefined,
+        displayName: realName2 || undefined,
+      }),
     })
       .then((r) => r.json())
       .then((d) => {

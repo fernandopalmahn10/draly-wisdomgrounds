@@ -1683,16 +1683,28 @@ app.get('/api/hsk-sim/:simId', (req, res, next) => {
 // Submit answers, grade them, persist to student record.
 app.post('/api/hsk-sim/:simId/submit', (req, res) => {
   if (!_hskAuth(req, res)) return;
-  const { studentCode, answers } = req.body || {};
-  // 🆕 Same guest-provisioning here as in heartbeat — submit must
-  // succeed for PIN-joiners with any typed code, otherwise their
-  // test record disappears at the end. Look up the room (if PIN
-  // auth) so we can stamp the new record with the classroom code.
+  const { studentCode, answers, displayName } = req.body || {};
+  // 🆕 Same guest-provisioning + name recovery as heartbeat. Without
+  // this, the kid's exam result would land under code-as-name instead
+  // of their actual chosen name. Match the heartbeat logic exactly.
   const pin = String(req.query.pin || (req.body && req.body.pin) || '').trim();
   const g0 = pin ? _hskGameLookup(pin) : null;
   const classroomFromRoom = (g0 && g0.hsk && g0.hsk.classroomCode) || null;
-  const rec = Students.getOrProvisionForPin(studentCode, studentCode, classroomFromRoom);
+  let nameFromSocket = '';
+  if (g0 && g0.players) {
+    for (const p of Object.values(g0.players)) {
+      if ((p.studentCode && p.studentCode === studentCode) || (p.name && p.name.toLowerCase() === String(studentCode || '').toLowerCase())) {
+        nameFromSocket = p.name; break;
+      }
+    }
+  }
+  const resolvedName = (displayName && String(displayName).trim()) || nameFromSocket || studentCode;
+  const rec = Students.getOrProvisionForPin(studentCode, resolvedName, classroomFromRoom);
   if (!rec) return res.status(400).json({ ok: false, error: 'no se pudo crear el registro de estudiante' });
+  // Retroactive upgrade — same as heartbeat.
+  if (resolvedName && rec.displayName === rec.code && resolvedName !== rec.code) {
+    rec.displayName = String(resolvedName).slice(0, 24);
+  }
   const result = HskSim.gradeSim(req.params.simId, answers || {});
   if (!result) return res.status(404).json({ ok: false, error: 'unknown sim' });
   // Persist into student.hskResults so the Cuaderno can show it later.
@@ -1878,7 +1890,7 @@ app.post('/api/hsk-sim/room/:pin/fx', (req, res) => {
   res.json({ ok: true, fx: fxState });
 });
 app.post('/api/hsk-sim/heartbeat', (req, res) => {
-  const { pin, simId, accessCode, studentCode, cursor, total, answered, section, status } = req.body || {};
+  const { pin, simId, accessCode, studentCode, cursor, total, answered, section, status, displayName } = req.body || {};
   // PIN is the new room key. accessCode is retained for back-compat
   // with old force-impose flows. Either path produces a sessionKey
   // that the teacher can poll on.
@@ -1890,10 +1902,33 @@ app.post('/api/hsk-sim/heartbeat', (req, res) => {
   // 🆕 GUEST PROVISIONING — if the kid typed a studentCode that
   // doesn't exist (PIN-join with a custom name), auto-create a
   // record so their progress + final result have somewhere to land.
-  // Without this, "I'm in the test" but "nothing in my profile".
+  // 🪪 NAME RECOVERY: prefer the displayName the client sent (the
+  // REAL name from the /player.html step) over the typed studentCode.
+  // Also backfill existing records whose displayName equals their
+  // code (legacy state from before this fix) — first time a real
+  // name arrives, the record is upgraded.
   const g0 = pin ? _hskGameLookup(pin) : null;
   const classroomFromRoom = (g0 && g0.hsk && g0.hsk.classroomCode) || null;
-  const rec = Students.getOrProvisionForPin(studentCode, studentCode, classroomFromRoom);
+  // Also check the socket roster: when the kid is in g.players, their
+  // socket name is the authoritative display name.
+  let nameFromSocket = '';
+  if (g0 && g0.players) {
+    for (const p of Object.values(g0.players)) {
+      if ((p.studentCode && p.studentCode === studentCode) || (p.name && p.name.toLowerCase() === String(studentCode || '').toLowerCase())) {
+        nameFromSocket = p.name; break;
+      }
+    }
+  }
+  const resolvedName = (displayName && String(displayName).trim()) || nameFromSocket || studentCode;
+  const rec = Students.getOrProvisionForPin(studentCode, resolvedName, classroomFromRoom);
+  // Retroactive upgrade: if the record's displayName is still the
+  // raw code (legacy guest record) and we now have a real name,
+  // upgrade it. Saves the teacher from seeing "ABCD" in the Cuaderno
+  // after we already learned the kid is "Lin".
+  if (rec && resolvedName && rec.displayName === rec.code && resolvedName !== rec.code) {
+    rec.displayName = String(resolvedName).slice(0, 24);
+    try { Students._save && Students._save(); } catch (_) {}
+  }
   const isJoin = !HSK_SESSIONS.has(key);
   const g = pin ? _hskGameLookup(pin) : null;
   const session = {
