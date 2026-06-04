@@ -2003,10 +2003,51 @@
         item.className = 'm-sent-row';
         item.innerHTML = `
           <div class="m-sent-head">
-            <span class="m-sent-date">📅 ${dateStr}</span>
+            <span class="m-sent-date">📅 ${dateStr}${s.editedAt ? ' · ✏️ editada' : ''}</span>
+            <button class="m-sent-edit" type="button" data-ts="${s.ts}" title="Editar esta oración (corregir typos, separar palabras pegadas)">✏️</button>
             <button class="m-sent-del" type="button" data-ts="${s.ts}" title="Borrar esta oración">🗑</button>
           </div>
           <div class="m-sent-words">${wordsHtml}</div>`;
+        // ✏️ Per-row edit — opens an inline editor where the teacher
+        // can fix typos, separate words that got mashed together, or
+        // reorder. Submits in place — keeps the original timestamp so
+        // the entry stays in its chronological slot.
+        item.querySelector('.m-sent-edit').addEventListener('click', () => {
+          const currentText = (s.words || []).map((wid) => {
+            const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
+            return w ? w.pinyin : String(wid);
+          }).join(' ');
+          const next = prompt(
+            'Edita la oración (separa cada palabra con un espacio):\n\n' +
+            'Tip: si dos palabras están pegadas como "wǒshì", sepáralas: "wǒ shì".',
+            currentText
+          );
+          if (next === null) return;            // cancelled
+          const cleaned = String(next).trim();
+          if (!cleaned) { alert('La oración no puede quedar vacía.'); return; }
+          // Tokenize back to wordIDs the same way the homework save does
+          const stripTones = (str) => String(str).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+          const byBare = {};
+          if (window.WU_WORD_BY_ID) {
+            Object.keys(window.WU_WORD_BY_ID).forEach((id) => {
+              const w = window.WU_WORD_BY_ID[id];
+              if (w && w.pinyin) byBare[stripTones(w.pinyin).replace(/\s+/g, '')] = id;
+            });
+          }
+          const newWords = cleaned.split(/\s+/).filter(Boolean).map((chunk) => {
+            const bare = stripTones(chunk).replace(/\s+/g, '');
+            return byBare[bare] || chunk;
+          });
+          fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/sentence/edit?pw=' + encodeURIComponent(pw), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ts: s.ts, words: newWords }),
+          }).then((r) => r.json()).then((r) => {
+            if (!r.ok) { alert('No se pudo editar: ' + (r.error || 'desconocido')); return; }
+            // Refresh — quickest path is just to re-render the detail.
+            data.sentences = r.sentences || data.sentences;
+            renderDetail(data);
+          }).catch((e) => alert('Error: ' + e.message));
+        });
         // 🗑 Per-row delete — surgical, propagates to kid's Mis oraciones
         // and the parent 0→2000 progress bar (rec.sentencesBuilt.length).
         item.querySelector('.m-sent-del').addEventListener('click', () => {
