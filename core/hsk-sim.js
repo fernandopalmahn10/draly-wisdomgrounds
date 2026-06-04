@@ -393,6 +393,176 @@ const SIMULATIONS = {
       },
     };
   })(),
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // HSK1 · SIMULATION 3 — third mock exam. Uploaded 2026-06-04 with
+  // every MP3 and reading word in place from the start.
+  // ═══════════════════════════════════════════════════════════════════════
+  'hsk1-sim3': (() => {
+    const B3 = '/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%203';
+    return {
+      id: 'hsk1-sim3',
+      title: 'HSK1 · Simulación 3',
+      level: 'hsk1',
+      totalQuestions: 30,
+      pointsPerQuestion: 10,
+      listening: {
+        part1: {
+          title: 'Parte 1 · Verdadero / Falso',
+          instruction: 'Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.',
+          examples: [
+            { num: 'EJ1', image: `${B3}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
+            { num: 'EJ2', image: `${B3}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
+          ],
+          // Sim 3 L1 pattern: FTFTF
+          questions: [
+            { num: 1, image: `${B3}/LISTENING%20PART%201/1%20(FALSE).png`, audioUrl: `${B3}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
+            { num: 2, image: `${B3}/LISTENING%20PART%201/2%20(FALSE).png`, audioUrl: `${B3}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
+            { num: 3, image: `${B3}/LISTENING%20PART%201/3%20(TRUE).png`,  audioUrl: `${B3}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
+            { num: 4, image: `${B3}/LISTENING%20PART%201/4%20(TRUE).png`,  audioUrl: `${B3}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: true  },
+            { num: 5, image: `${B3}/LISTENING%20PART%201/5%20(FALSE).png`, audioUrl: `${B3}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: false },
+          ],
+        },
+        part2: {
+          title: 'Parte 2 · Tres imágenes',
+          instruction: 'Escucha el audio y toca la imagen correcta.',
+          questions: [
+            { num: 6,  audioUrl: `${B3}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/6A.png` },
+                { letter: 'B', image: `${B3}/LISTENING%20PART%202/6B.png` },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/6C%20(CORRECT).png` },
+              ], answer: 'C' },
+            { num: 7,  audioUrl: `${B3}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/7A%20(CORRECT).png` },
+                { letter: 'B', image: `${B3}/LISTENING%20PART%202/7B.png` },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/7C.png` },
+              ], answer: 'A' },
+            { num: 8,  audioUrl: `${B3}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/8A%20(CORRECT).png` },
+                { letter: 'B', image: `${B3}/LISTENING%20PART%202/8B.png` },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/8C.png` },
+              ], answer: 'A' },
+            { num: 9,  audioUrl: `${B3}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/9A.png` },
+                { letter: 'B', image: `${B3}/LISTENING%20PART%202/9B.png` },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/9C%20(CORRECT).png` },
+              ], answer: 'C' },
+            { num: 10, audioUrl: `${B3}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/10A.png` },
+                { letter: 'B', image: `${B3}/LISTENING%20PART%202/10B.png` },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/10C%20(CORRECT).png` },
+              ], answer: 'C' },
+          ],
+        },
+        part3: {
+          title: 'Parte 3 · Empareja con la imagen',
+          instruction: 'Escucha cada audio y toca la letra de la imagen correcta.',
+          // Sim 3 layout: A(15) B(14) C(EX) D(11) E(13) F(12)
+          gallery: [
+            { letter: 'A', image: `${B3}/LISTENING%20PART%203/A%20(15).png`, label: 'A' },
+            { letter: 'B', image: `${B3}/LISTENING%20PART%203/B%20(14).png`, label: 'B' },
+            { letter: 'C', image: `${B3}/LISTENING%20PART%203/C%20(EXAMPLE).png`, label: 'C (ejemplo)' },
+            { letter: 'D', image: `${B3}/LISTENING%20PART%203/D%20(11).png`, label: 'D' },
+            { letter: 'E', image: `${B3}/LISTENING%20PART%203/E%20(13).png`, label: 'E' },
+            { letter: 'F', image: `${B3}/LISTENING%20PART%203/F%20(12).png`, label: 'F' },
+          ],
+          exampleAnswer: 'C',
+          questions: [
+            { num: 11, audioUrl: `${B3}/LISTENING%20PART%203/11.mp3`, audioText: '', answer: 'D' },
+            { num: 12, audioUrl: `${B3}/LISTENING%20PART%203/12.mp3`, audioText: '', answer: 'F' },
+            { num: 13, audioUrl: `${B3}/LISTENING%20PART%203/13.mp3`, audioText: '', answer: 'E' },
+            { num: 14, audioUrl: `${B3}/LISTENING%20PART%203/14.mp3`, audioText: '', answer: 'B' },
+            { num: 15, audioUrl: `${B3}/LISTENING%20PART%203/15.mp3`, audioText: '', answer: 'A' },
+          ],
+        },
+        part4: {
+          title: 'Parte 4 · Tres opciones',
+          instruction: 'Escucha el audio y toca la opción correcta.',
+          example: {
+            num: 'EJ', audioText: '',
+            options: [
+              { letter: 'A', text: 'shāngdiàn' },
+              { letter: 'B', text: 'yīyuàn' },
+              { letter: 'C', text: 'xuéxiào' },
+            ],
+            answer: 'A',
+          },
+          // Sim 3 L4 mirrors Sim 2 (same filenames + CORRECT markers).
+          questions: [
+            { num: 16, audioUrl: `${B3}/LISTENING%20PART%204/16/16.mp3`, audioText: '', options: [
+                { letter: 'A', text: 'kàn shū' },
+                { letter: 'B', text: 'xuéxí Hànyǔ' },
+                { letter: 'C', text: 'dǎ diànhuà' },
+              ], answer: 'B' },
+            { num: 17, audioUrl: `${B3}/LISTENING%20PART%204/17/17.mp3`, audioText: '', options: [
+                { letter: 'A', text: 'Běijīng' },
+                { letter: 'B', text: 'jiā lǐ' },
+                { letter: 'C', text: 'fàndiàn' },
+              ], answer: 'A' },
+            { num: 18, audioUrl: `${B3}/LISTENING%20PART%204/18/18.mp3`, audioText: '', options: [
+                { letter: 'A', text: '6 nián' },
+                { letter: 'B', text: '9 nián' },
+                { letter: 'C', text: '16 nián' },
+              ], answer: 'B' },
+            { num: 19, audioUrl: `${B3}/LISTENING%20PART%204/19/19.mp3`, audioText: '', options: [
+                { letter: 'A', text: 'kāi chē' },
+                { letter: 'B', text: 'zuò fēijī' },
+                { letter: 'C', text: 'zuò chūzū chē' },
+              ], answer: 'C' },
+            { num: 20, audioUrl: `${B3}/LISTENING%20PART%204/20/20.mp3`, audioText: '', options: [
+                { letter: 'A', text: 'tā bàba de' },
+                { letter: 'B', text: 'tā péngyou de' },
+                { letter: 'C', text: 'tā érzi de' },
+              ], answer: 'B' },
+          ],
+        },
+      },
+      reading: {
+        part1: {
+          title: 'Parte 5 (Lectura 1) · Verdadero / Falso',
+          instruction: 'Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.',
+          example: {
+            num: 'EJ', word: 'diànshì', image: `${B3}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false,
+          },
+          // Words from sim 3 R1 QUESTIONS.txt:
+          //   21 chá · 22 yīshēng · 23 māma · 24 nǎ'er · 25 chī
+          // Answers from filename markers: F T F T F
+          questions: [
+            { num: 21, word: 'chá',     image: `${B3}/READING%20PART%201/21%20(FALSE).png`, answer: false },
+            { num: 22, word: 'yīshēng', image: `${B3}/READING%20PART%201/22%20(TRUE).png`,  answer: true  },
+            { num: 23, word: 'māma',    image: `${B3}/READING%20PART%201/23%20(FALSE).png`, answer: false },
+            { num: 24, word: "nǎ'er",   image: `${B3}/READING%20PART%201/24%20(TRUE).png`,  answer: true  },
+            { num: 25, word: 'chī',     image: `${B3}/READING%20PART%201/25%20(FALSE).png`, answer: false },
+          ],
+        },
+        part2: {
+          title: 'Parte 6 (Lectura 2) · Empareja con la imagen',
+          instruction: 'Lee cada oración y toca la letra de la imagen que la representa.',
+          // Sim 3 R2 picture-letter map from filenames:
+          //   A → Q26, C → Q27, D → Q28, F → Q29, B → Q30 (E is example)
+          gallery: [
+            { letter: 'A', image: `${B3}/READING%20PART%202/26%20(A).png`,      label: 'A' },
+            { letter: 'B', image: `${B3}/READING%20PART%202/30%20(B).png`,      label: 'B' },
+            { letter: 'C', image: `${B3}/READING%20PART%202/27%20(C).png`,      label: 'C' },
+            { letter: 'D', image: `${B3}/READING%20PART%202/28%20(D).png`,      label: 'D' },
+            { letter: 'E', image: `${B3}/READING%20PART%202/E%20(EXAMPLE).png`, label: 'E (ejemplo)' },
+            { letter: 'F', image: `${B3}/READING%20PART%202/29%20(F).png`,      label: 'F' },
+          ],
+          example: {
+            num: 'EJ', hanzi: '我很喜欢这本书', pinyin: 'Wǒ hěn xǐhuān zhè běn shū', answer: 'E',
+          },
+          // Sentences from sim 3 R2 QUESTIONS.txt:
+          questions: [
+            { num: 26, hanzi: '前面怎么这么多人？',     pinyin: 'Qiánmiàn zěnme zhème duō rén?',          answer: 'A' },
+            { num: 27, hanzi: '那不是我的猫，是我朋友的猫', pinyin: "Nà bùshì wǒ de māo, shì wǒ péngyǒu de", answer: 'C' },
+            { num: 28, hanzi: '现在7点了，40分钟后我们回家', pinyin: 'Xiànzài 7 diǎn le, 40 fēnzhōng hòu wǒmen huí jiā', answer: 'D' },
+            { num: 29, hanzi: '这个字我不会写',         pinyin: 'Zhège zì wǒ bù huì xiě',                 answer: 'F' },
+            { num: 30, hanzi: '和爸爸说再见',           pinyin: 'Hé bàba shuō zàijiàn',                   answer: 'B' },
+          ],
+        },
+      },
+    };
+  })(),
 };
 
 // Strip the correct-answer fields before sending to a student client.
