@@ -3600,7 +3600,7 @@
         </div>
         <div class="hw-item-actions">
           <button class="btn btn-ghost btn-sm hw-item-speak" data-idx="${i}" type="button" title="Escucha tu oración en chino" aria-label="Escuchar">🔊 Oír</button>
-          <button class="btn btn-ghost btn-sm hw-item-undo" data-idx="${i}" type="button" title="Deshacer" aria-label="Deshacer" disabled>↩️</button>
+          <button class="btn btn-gold btn-sm hw-item-savesent" data-idx="${i}" type="button" title="Guardar esta oración en Mis Oraciones" aria-label="Guardar oración">💾 Guardar</button>
           <button class="btn btn-ghost btn-sm hw-item-clear" data-idx="${i}" type="button" title="Limpiar" aria-label="Limpiar">🧹 Borrar</button>
         </div>`;
       itemsWrap.appendChild(row);
@@ -3633,13 +3633,54 @@
         speakChinese(text, btn);
       });
     });
-    itemsWrap.querySelectorAll('.hw-item-undo').forEach((btn) => {
+    // 💾 GUARDAR ORACIÓN — user feedback 2026-06-03: the undo button
+    // wasn't getting used; replaced with a save-this-sentence shortcut
+    // that pipes the current pinyin into /api/homework/sentences/save
+    // → reuses the same logSentence path warmup uses, so the entry
+    // shows up in "Mis oraciones" + the monthly report + the
+    // teacher's Cuaderno automatically.
+    itemsWrap.querySelectorAll('.hw-item-savesent').forEach((btn) => {
       btn.addEventListener('click', () => {
         const i = +btn.dataset.idx;
-        if (!undoStacks[i] || !undoStacks[i].length) return;
-        currentAnswers[i] = undoStacks[i].pop();
-        renderStage(i);
-        refreshUndoButtons();
+        const text = (currentAnswers[i] || '').trim();
+        if (!text) { alert('Primero arma la oración tocando palabras.'); return; }
+        // Tokenize into wordIDs by space — try to match each chunk in
+        // the warmup catalog by tone-stripped pinyin. Unknown chunks
+        // pass through as their raw text (renderMonthBucket already
+        // shows unknown IDs as a stub chip so nothing is lost).
+        const stripTones = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+        const byBare = {};
+        if (window.WU_WORD_BY_ID) {
+          Object.keys(window.WU_WORD_BY_ID).forEach((id) => {
+            const w = window.WU_WORD_BY_ID[id];
+            if (w && w.pinyin) byBare[stripTones(w.pinyin).replace(/\s+/g, '')] = id;
+          });
+        }
+        const chunks = text.split(/\s+/).filter(Boolean);
+        const words = chunks.map((chunk) => {
+          const bare = stripTones(chunk).replace(/\s+/g, '');
+          return byBare[bare] || chunk;
+        });
+        // POST to the existing save endpoint
+        btn.disabled = true;
+        btn.textContent = '⏳ Guardando…';
+        fetch('/api/homework/sentences/save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessCode, studentCode, words }),
+        }).then((r) => r.json()).then((d) => {
+          btn.disabled = false;
+          if (d && d.ok) {
+            btn.textContent = '✓ Guardada';
+            setTimeout(() => { btn.innerHTML = '💾 Guardar'; }, 1500);
+          } else {
+            btn.textContent = '💾 Guardar';
+            alert('No se pudo guardar: ' + ((d && d.error) || 'desconocido'));
+          }
+        }).catch((e) => {
+          btn.disabled = false;
+          btn.textContent = '💾 Guardar';
+          alert('Error: ' + e.message);
+        });
       });
     });
     renderLibraryTabs();

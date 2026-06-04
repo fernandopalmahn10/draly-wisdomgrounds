@@ -1463,6 +1463,34 @@ app.post('/api/admin/student/:code/sentence/delete', (req, res) => {
   res.json({ ok, sentences: Students.getHistory(rec.code, 200) });
 });
 
+// ✏️ Maestro EDIT: replace the words of an existing saved sentence
+// in-place. Used when a kid saves a sentence that has typos or runs
+// two words together — teacher edits without losing the timestamp /
+// position in the history. Accepts a new words array (same shape
+// logSentence uses).
+app.post('/api/admin/student/:code/sentence/edit', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) {
+    return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  }
+  const { ts, words } = req.body || {};
+  if (!Array.isArray(words) || !words.length) {
+    return res.status(400).json({ ok: false, error: 'words required' });
+  }
+  const idx = (rec.sentencesBuilt || []).findIndex((s) => s.ts === ts);
+  if (idx < 0) return res.status(404).json({ ok: false, error: 'sentence not found' });
+  // Mutate in place — preserves ts so the entry stays in the same
+  // chronological slot. Cap word count + length per word.
+  rec.sentencesBuilt[idx].words = words.map((w) => String(w).slice(0, 32)).slice(0, 24);
+  rec.sentencesBuilt[idx].editedBy = session.teacher ? session.teacher.teacherId : 'super';
+  rec.sentencesBuilt[idx].editedAt = Date.now();
+  try { Students._save && Students._save(); } catch (_) {}
+  res.json({ ok: true, sentences: Students.getHistory(rec.code, 200) });
+});
+
 // Maestro cleanup: nuke every saved sentence for this student. Used when
 // the teacher needs a fresh slate (kid was spamming test saves, etc.).
 // Super-admin or the owning teacher only — same access rule as deletion.
