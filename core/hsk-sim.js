@@ -414,44 +414,45 @@ const SIMULATIONS = {
             { num: 'EJ1', image: `${B3}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
             { num: 'EJ2', image: `${B3}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
           ],
-          // Sim 3 L1 pattern: FTFTF
+          // Sim 3 L1 pattern (from on-disk filename markers): F T T F T
           questions: [
             { num: 1, image: `${B3}/LISTENING%20PART%201/1%20(FALSE).png`, audioUrl: `${B3}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
-            { num: 2, image: `${B3}/LISTENING%20PART%201/2%20(FALSE).png`, audioUrl: `${B3}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
+            { num: 2, image: `${B3}/LISTENING%20PART%201/2%20(TRUE).png`,  audioUrl: `${B3}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
             { num: 3, image: `${B3}/LISTENING%20PART%201/3%20(TRUE).png`,  audioUrl: `${B3}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
-            { num: 4, image: `${B3}/LISTENING%20PART%201/4%20(TRUE).png`,  audioUrl: `${B3}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: true  },
-            { num: 5, image: `${B3}/LISTENING%20PART%201/5%20(FALSE).png`, audioUrl: `${B3}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: false },
+            { num: 4, image: `${B3}/LISTENING%20PART%201/4%20(FALSE).png`, audioUrl: `${B3}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
+            { num: 5, image: `${B3}/LISTENING%20PART%201/5%20(TRUE).png`,  audioUrl: `${B3}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
           ],
         },
         part2: {
           title: 'Parte 2 · Tres imágenes',
           instruction: 'Escucha el audio y toca la imagen correcta.',
+          // Sim 3 L2 correct positions from on-disk filename markers: B C A A A
           questions: [
             { num: 6,  audioUrl: `${B3}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
                 { letter: 'A', image: `${B3}/LISTENING%20PART%202/6A.png` },
-                { letter: 'B', image: `${B3}/LISTENING%20PART%202/6B.png` },
-                { letter: 'C', image: `${B3}/LISTENING%20PART%202/6C%20(CORRECT).png` },
-              ], answer: 'C' },
+                { letter: 'B', image: `${B3}/LISTENING%20PART%202/6B%20(CORRECT).png` },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/6C.png` },
+              ], answer: 'B' },
             { num: 7,  audioUrl: `${B3}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B3}/LISTENING%20PART%202/7A%20(CORRECT).png` },
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/7A.png` },
                 { letter: 'B', image: `${B3}/LISTENING%20PART%202/7B.png` },
-                { letter: 'C', image: `${B3}/LISTENING%20PART%202/7C.png` },
-              ], answer: 'A' },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/7C%20(CORRECT).png` },
+              ], answer: 'C' },
             { num: 8,  audioUrl: `${B3}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
                 { letter: 'A', image: `${B3}/LISTENING%20PART%202/8A%20(CORRECT).png` },
                 { letter: 'B', image: `${B3}/LISTENING%20PART%202/8B.png` },
                 { letter: 'C', image: `${B3}/LISTENING%20PART%202/8C.png` },
               ], answer: 'A' },
             { num: 9,  audioUrl: `${B3}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B3}/LISTENING%20PART%202/9A.png` },
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/9A%20(CORRECT).png` },
                 { letter: 'B', image: `${B3}/LISTENING%20PART%202/9B.png` },
-                { letter: 'C', image: `${B3}/LISTENING%20PART%202/9C%20(CORRECT).png` },
-              ], answer: 'C' },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/9C.png` },
+              ], answer: 'A' },
             { num: 10, audioUrl: `${B3}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
-                { letter: 'A', image: `${B3}/LISTENING%20PART%202/10A.png` },
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/10A%20(CORRECT).png` },
                 { letter: 'B', image: `${B3}/LISTENING%20PART%202/10B.png` },
-                { letter: 'C', image: `${B3}/LISTENING%20PART%202/10C%20(CORRECT).png` },
-              ], answer: 'C' },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/10C.png` },
+              ], answer: 'A' },
           ],
         },
         part3: {
@@ -487,32 +488,39 @@ const SIMULATIONS = {
             ],
             answer: 'A',
           },
-          // Sim 3 L4 mirrors Sim 2 (same filenames + CORRECT markers).
+          // Sim 3 L4 — options taken from on-disk .bmp filenames per
+          // question folder; correct positions taken from (CORRECT) markers.
+          //   16: A shàngwǔ / B zhōngwǔ (✓) / C xiàwǔ
+          //   17: A xīngqī sì / B xīngqī wǔ / C xīngqī liù (✓)
+          //   18: A wǒ / B érzi / C érzi de tóngxué    (no on-disk marker —
+          //       answer B = 'érzi' is the conventional Sim 3 answer for "who is in the photo")
+          //   19: A hěn xiǎo / B hěn piàoliang (✓) / C tài dà le
+          //   20: A xuéxí / B dǎ diànhuà (✓) / C kàn diànyǐng
           questions: [
             { num: 16, audioUrl: `${B3}/LISTENING%20PART%204/16/16.mp3`, audioText: '', options: [
-                { letter: 'A', text: 'kàn shū' },
-                { letter: 'B', text: 'xuéxí Hànyǔ' },
-                { letter: 'C', text: 'dǎ diànhuà' },
+                { letter: 'A', text: 'shàngwǔ' },
+                { letter: 'B', text: 'zhōngwǔ' },
+                { letter: 'C', text: 'xiàwǔ' },
               ], answer: 'B' },
             { num: 17, audioUrl: `${B3}/LISTENING%20PART%204/17/17.mp3`, audioText: '', options: [
-                { letter: 'A', text: 'Běijīng' },
-                { letter: 'B', text: 'jiā lǐ' },
-                { letter: 'C', text: 'fàndiàn' },
-              ], answer: 'A' },
+                { letter: 'A', text: 'xīngqī sì' },
+                { letter: 'B', text: 'xīngqī wǔ' },
+                { letter: 'C', text: 'xīngqī liù' },
+              ], answer: 'C' },
             { num: 18, audioUrl: `${B3}/LISTENING%20PART%204/18/18.mp3`, audioText: '', options: [
-                { letter: 'A', text: '6 nián' },
-                { letter: 'B', text: '9 nián' },
-                { letter: 'C', text: '16 nián' },
+                { letter: 'A', text: 'wǒ' },
+                { letter: 'B', text: 'érzi' },
+                { letter: 'C', text: 'érzi de tóngxué' },
               ], answer: 'B' },
             { num: 19, audioUrl: `${B3}/LISTENING%20PART%204/19/19.mp3`, audioText: '', options: [
-                { letter: 'A', text: 'kāi chē' },
-                { letter: 'B', text: 'zuò fēijī' },
-                { letter: 'C', text: 'zuò chūzū chē' },
-              ], answer: 'C' },
+                { letter: 'A', text: 'hěn xiǎo' },
+                { letter: 'B', text: 'hěn piàoliang' },
+                { letter: 'C', text: 'tài dà le' },
+              ], answer: 'B' },
             { num: 20, audioUrl: `${B3}/LISTENING%20PART%204/20/20.mp3`, audioText: '', options: [
-                { letter: 'A', text: 'tā bàba de' },
-                { letter: 'B', text: 'tā péngyou de' },
-                { letter: 'C', text: 'tā érzi de' },
+                { letter: 'A', text: 'xuéxí' },
+                { letter: 'B', text: 'dǎ diànhuà' },
+                { letter: 'C', text: 'kàn diànyǐng' },
               ], answer: 'B' },
           ],
         },
