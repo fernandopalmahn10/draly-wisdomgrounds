@@ -1922,3 +1922,27 @@ body.wu-timemachine::after {
   box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35) !important;
 }
 .wu-fx-anim-btn:active { transform: scale(0.96); }
+
+/* 📤 Push-to-students preview chips inside the wu-push-modal */
+.wu-push-prev {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  background: rgba(91, 232, 209, 0.10);
+  border: 1.5px solid rgba(91, 232, 209, 0.45);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: 8px 0 4px;
+}
+.wu-push-prev-chip {
+  display: inline-flex; flex-direction: column; align-items: center;
+  background: #fff;
+  color: #1a1a26;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-weight: 900;
+  font-size: 0.95rem;
+}
+.wu-push-prev-chip small {
+  font-weight: 700; font-size: 0.74rem;
+  color: rgba(0, 0, 0, 0.55);
+}
+.wu-push-search { width: 100%; }

@@ -2001,9 +2001,12 @@
         }).join('');
         const item = document.createElement('div');
         item.className = 'm-sent-row';
+        const pushedBadge = s.pushedByTeacher
+          ? ' · <span class="m-sent-pushed">📤 enviada por ' + escapeHtml(s.teacherName || 'maestra') + '</span>'
+          : '';
         item.innerHTML = `
           <div class="m-sent-head">
-            <span class="m-sent-date">📅 ${dateStr}${s.editedAt ? ' · ✏️ editada' : ''}</span>
+            <span class="m-sent-date">📅 ${dateStr}${s.editedAt ? ' · ✏️ editada' : ''}${pushedBadge}</span>
             <button class="m-sent-edit" type="button" data-ts="${s.ts}" title="Editar esta oración (corregir typos, separar palabras pegadas)">✏️</button>
             <button class="m-sent-del" type="button" data-ts="${s.ts}" title="Borrar esta oración">🗑</button>
           </div>

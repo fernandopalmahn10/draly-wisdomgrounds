@@ -3691,3 +3691,15 @@ button.hw-sent-chip:active { transform: scale(0.94); }
   .hw-pp-meta { font-size: 0.82rem; }
 }
 
+
+/* 📤 "De tu maestra" tag in Mis Oraciones */
+.hw-sentence-from-teacher {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 10px;
+  background: linear-gradient(135deg, #5be8d1, #2eb8a3);
+  color: #0a2a26;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 0.75rem;
+}

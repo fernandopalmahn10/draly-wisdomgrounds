@@ -210,6 +210,124 @@
     socket.emit('wu:save-current', { pin, password: adminPw });
     if (MochiSounds.correct) MochiSounds.correct();
   });
+
+  // 📤 ENVIAR A ALUMNOS — push the current sentence into the chosen
+  // students' "Mis oraciones" without their own work being involved.
+  // Opens a modal listing every student in the teacher's classroom
+  // with a checkbox + a search box. Marked as pushedByTeacher on
+  // each kid's record so the parent view can credit the teacher.
+  const pushBtn = $('wu-push-btn');
+  if (pushBtn) pushBtn.addEventListener('click', () => {
+    if (!currentSentence.length) {
+      flashSaveFeedback(false, 'Arma una oración primero');
+      return;
+    }
+    openPushToStudentsModal(currentSentence.slice());
+  });
+
+  function openPushToStudentsModal(wordIds) {
+    fetch('/api/admin/students?pw=' + encodeURIComponent(adminPw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { alert('No se pudo cargar la lista de alumnos.'); return; }
+        const students = (data.students || []).slice().sort((a, b) => {
+          const an = (a.displayName || a.code || '').toLowerCase();
+          const bn = (b.displayName || b.code || '').toLowerCase();
+          return an < bn ? -1 : an > bn ? 1 : 0;
+        });
+        let overlay = document.getElementById('wu-push-modal');
+        if (overlay) overlay.remove();
+        overlay = document.createElement('div');
+        overlay.id = 'wu-push-modal';
+        overlay.className = 'm-modal';
+        // Build the sentence preview (word chips like the stage).
+        const previewChips = wordIds.map((id) => {
+          const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[id];
+          if (!w) return '<span class="wu-push-prev-chip">' + escapeHtml(String(id)) + '</span>';
+          return '<span class="wu-push-prev-chip">' +
+                   '<strong>' + escapeHtml(w.pinyin || '') + '</strong>' +
+                   '<small>' + escapeHtml(w.es || '') + '</small>' +
+                 '</span>';
+        }).join('');
+        overlay.innerHTML =
+          '<div class="m-modal-card" style="max-width:560px;">' +
+            '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
+            '<h2>📤 Enviar oración a alumnos</h2>' +
+            '<p class="m-modal-sub">Esta oración se guardará en <strong>Mis oraciones</strong> de cada alumno que selecciones, con la nota <em>📤 Enviada por tu maestra</em>.</p>' +
+            '<div class="wu-push-prev">' + previewChips + '</div>' +
+            '<input class="input wu-push-search" id="wu-push-search" type="text" placeholder="Buscar alumno por nombre o código…" autocomplete="off" style="margin-top:10px;">' +
+            '<div class="m-force-actions" style="margin-top:8px;">' +
+              '<button class="btn btn-ghost btn-sm" id="wu-push-all">✅ Todos</button>' +
+              '<button class="btn btn-ghost btn-sm" id="wu-push-none">⬜ Ninguno</button>' +
+              '<button class="btn btn-ghost btn-sm" id="wu-push-online">🟢 Solo en línea</button>' +
+            '</div>' +
+            '<div class="m-force-students" id="wu-push-list" style="max-height:42vh;overflow-y:auto;"></div>' +
+            '<button class="btn btn-jade btn-xl" id="wu-push-go" style="margin-top:14px;width:100%;">📤 Enviar a los seleccionados</button>' +
+          '</div>';
+        document.body.appendChild(overlay);
+        const list = overlay.querySelector('#wu-push-list');
+        const renderRows = (filter) => {
+          list.innerHTML = '';
+          const q = (filter || '').toLowerCase();
+          const filtered = !q ? students : students.filter((s) => {
+            return (s.displayName || '').toLowerCase().includes(q) || (s.code || '').toLowerCase().includes(q);
+          });
+          if (!filtered.length) {
+            list.innerHTML = '<p class="m-modal-sub" style="text-align:center;">Sin coincidencias.</p>';
+            return;
+          }
+          filtered.forEach((s) => {
+            const isOnline = s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000;
+            const row = document.createElement('label');
+            row.className = 'm-force-row';
+            row.dataset.online = isOnline ? '1' : '0';
+            row.innerHTML =
+              '<input type="checkbox" data-code="' + escapeHtml(s.code) + '">' +
+              '<span class="m-force-row-dot" style="background:' + (isOnline ? '#5be88a' : '#666') + ';"></span>' +
+              '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+              '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
+            list.appendChild(row);
+          });
+        };
+        renderRows('');
+        const close = () => { try { overlay.remove(); } catch (_) {} };
+        overlay.querySelector('.m-modal-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('#wu-push-search').addEventListener('input', (e) => renderRows(e.target.value));
+        overlay.querySelector('#wu-push-all').addEventListener('click', () => {
+          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = true; });
+        });
+        overlay.querySelector('#wu-push-none').addEventListener('click', () => {
+          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
+        });
+        overlay.querySelector('#wu-push-online').addEventListener('click', () => {
+          list.querySelectorAll('.m-force-row').forEach((row) => {
+            const cb = row.querySelector('input[type=checkbox]');
+            if (cb) cb.checked = (row.dataset.online === '1');
+          });
+        });
+        overlay.querySelector('#wu-push-go').addEventListener('click', () => {
+          const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
+            .map((cb) => cb.dataset.code).filter(Boolean);
+          if (!codes.length) { alert('Selecciona al menos un alumno.'); return; }
+          fetch('/api/admin/sentence/push?pw=' + encodeURIComponent(adminPw), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentCodes: codes, words: wordIds }),
+          })
+            .then((r) => r.json())
+            .then((res) => {
+              if (res && res.ok) {
+                flashSaveFeedback(true, '📤 Enviada a ' + res.sent + ' alumno(s)');
+                close();
+              } else {
+                alert('Error: ' + ((res && res.error) || 'desconocido'));
+              }
+            })
+            .catch((e) => alert('Error: ' + e.message));
+        });
+      })
+      .catch((e) => alert('Error: ' + e.message));
+  }
   // Server fires this after a save lands (or fails). Provides the visible
   // confirmation chip + button-green-flash that Rewards.show used to
   // provide before Rewards was disabled platform-wide.
