@@ -930,6 +930,15 @@
       // No more priority number badge — user found "#383" confusing. The
       // section name + the natural top-to-bottom order is enough signal.
       const prioBadge = '';
+      // 🆕 2026-06-04 — words that you already marked seen can now still
+      // appear in the list (because their sentences aren't all marked
+      // yet). When that happens, the bottom button reads as "already
+      // known — tap to undo" so you don't accidentally toggle it off.
+      const isSeen = !!w.seen;
+      if (isSeen) card.classList.add('is-seen-kept');
+      const markBtnHtml = isSeen
+        ? `<button class="m-em-mark is-known" type="button" data-id="${escapeHtml(w.id)}" data-known="1">✅ Conocida · toca para deshacer</button>`
+        : `<button class="m-em-mark" type="button" data-id="${escapeHtml(w.id)}">✓ Marcar como vista</button>`;
       card.innerHTML = `
         <div class="m-em-row">
           <div class="m-em-section">${sec ? (sec.icon + ' ' + escapeHtml(sec.label)) : ''} ${prioBadge}</div>
@@ -939,7 +948,7 @@
         <div class="m-em-tr">${escapeHtml(w.tr)}</div>
         <div class="m-em-en">${escapeHtml(w.en)}</div>
         ${ses}
-        <button class="m-em-mark" type="button" data-id="${escapeHtml(w.id)}">✓ Marcar como vista</button>`;
+        ${markBtnHtml}`;
       list.appendChild(card);
     });
     list.querySelectorAll('.m-em-speak').forEach((b) => b.addEventListener('click', (e) => {
@@ -991,10 +1000,11 @@
     // matching the sentence flow above.
     list.querySelectorAll('.m-em-mark').forEach((b) => b.addEventListener('click', () => {
       const card = b.closest('.m-em-card');
+      const wasKnown = b.dataset.known === '1';
       if (card) card.classList.add('is-leaving');
       fetch('/api/maestro/emirati/mark?pw=' + encodeURIComponent(pw), {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ wordIds: [b.dataset.id], date: new Date().toISOString().slice(0, 10) }),
+        body: JSON.stringify({ wordIds: [b.dataset.id], date: new Date().toISOString().slice(0, 10), unmark: wasKnown }),
       }).then((r) => r.json()).then((d) => {
         if (!d || !d.ok) {
           if (card) card.classList.remove('is-leaving');

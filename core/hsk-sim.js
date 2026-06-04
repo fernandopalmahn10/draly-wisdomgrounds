@@ -511,7 +511,7 @@ const SIMULATIONS = {
                 { letter: 'A', text: 'wǒ' },
                 { letter: 'B', text: 'érzi' },
                 { letter: 'C', text: 'érzi de tóngxué' },
-              ], answer: 'B' },
+              ], answer: 'C' },
             { num: 19, audioUrl: `${B3}/LISTENING%20PART%204/19/19.mp3`, audioText: '', options: [
                 { letter: 'A', text: 'hěn xiǎo' },
                 { letter: 'B', text: 'hěn piàoliang' },

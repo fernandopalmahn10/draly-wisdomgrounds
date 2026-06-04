@@ -210,8 +210,9 @@ app.get('/api/maestro/emirati/today', (req, res) => {
   // visible count near 10/20. Sentences and words are independent —
   // a word stays visible until the kid marks the word itself, even if
   // all its sentences are individually learned.
-  const wordCap = Math.max(1, Math.min(20, parseInt(req.query.wordCap, 10) || 10));
-  const sentenceCap = Math.max(1, Math.min(40, parseInt(req.query.sentCap, 10) || 20));
+  // 🆕 2026-06-04 — bumped to 25 / 50 per Fernando. Old caps 10/20.
+  const wordCap = Math.max(1, Math.min(50, parseInt(req.query.wordCap, 10) || 25));
+  const sentenceCap = Math.max(1, Math.min(100, parseInt(req.query.sentCap, 10) || 50));
   const words = Emirati.studyList({
     seenIds: state.seen || [],
     learnedSentKeys: state.learnedSentences || [],

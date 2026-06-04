@@ -614,13 +614,36 @@ function studyList(opts) {
   const seenIds = opts && opts.seenIds ? opts.seenIds : [];
   const learnedSentKeys = opts && opts.learnedSentKeys ? opts.learnedSentKeys : [];
   const skipIds = opts && opts.skipIds ? opts.skipIds : [];
-  const wordCap = (opts && opts.wordCap) || 10;
-  const sentenceCap = (opts && opts.sentenceCap) || 20;
-  const seen = new Set([...seenIds, ...skipIds]);
+  // 🆕 2026-06-04 — new defaults per Fernando: 25 words / 50 sentences
+  // per page. Caps were 10/20 before.
+  const wordCap = (opts && opts.wordCap) || 25;
+  const sentenceCap = (opts && opts.sentenceCap) || 50;
+  const seenSet = new Set(seenIds);
+  const skipSet = new Set(skipIds);
   const learned = new Set(learnedSentKeys);
 
+  // 🆕 NEW VISIBILITY RULE (Fernando 2026-06-04):
+  //   A word is hidden ONLY when BOTH conditions hold:
+  //     (a) the word itself was marked seen, AND
+  //     (b) every one of its sentences was marked learned.
+  //   In all other cases the word stays in the list — including the
+  //   case "word marked seen but some sentences still unmarked", so
+  //   the user can still work through the remaining sentences under
+  //   their parent word. Unmarking a sentence of a fully-hidden word
+  //   brings the word back automatically (because condition (b) flips
+  //   false again).
+  //   Skipped IDs ("Otras" rotation) are still excluded outright, since
+  //   that's a temporary "show me different ones" filter, not a study
+  //   decision.
   const candidates = EMIRATI_WORDS
-    .filter((w) => !seen.has(w.id))
+    .filter((w) => {
+      if (skipSet.has(w.id)) return false;
+      if (!seenSet.has(w.id)) return true;
+      // word marked seen → only keep if at least one sentence still unlearned
+      const allSes = Array.isArray(w.ses) ? w.ses : [];
+      if (!allSes.length) return false;       // no sentences AND marked → hide
+      return allSes.some((_, i) => !learned.has(w.id + ':' + i));
+    })
     .sort((a, b) => a.priority - b.priority);
 
   const out = [];
@@ -637,6 +660,9 @@ function studyList(opts) {
       ses: visibleSes,
       sesLearnedCount: allSes.length - visibleSes.length,
       sesTotalCount: allSes.length,
+      // 🆕 Tells the client to render the mark button in "already seen,
+      // tap to undo" mode rather than the default "tap to mark seen".
+      seen: seenSet.has(w.id),
     }));
     totalSentences += visibleSes.length;
     // Stop when we've hit BOTH targets — guarantees the kid sees enough
@@ -645,7 +671,7 @@ function studyList(opts) {
   }
   // If we hit the word cap before the sentence target (some words had all
   // their sentences learned), the list is what it is. Don't overrun the
-  // word cap — keeping the list at "always 10 words max" is the contract.
+  // word cap — keeping the list at "always N words max" is the contract.
   if (out.length > wordCap) out.length = wordCap;
   return out;
 }
