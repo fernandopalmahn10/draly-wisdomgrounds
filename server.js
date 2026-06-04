@@ -54,110 +54,6 @@ const io = new Server(server, {
   transports: ['websocket', 'polling']
 });
 
-// ═══════════════════════════════════════════════════════════════════════
-// 🛡 SECURITY PASS (added 2026-06-04)
-//
-// What this middleware block does, top to bottom:
-//   1. Sets defensive HTTP response headers on every response
-//      (XSS, clickjacking, MIME sniffing, referrer leakage, HTTPS).
-//   2. Tracks failed admin-password attempts per IP and locks out
-//      brute-force callers for 5 minutes after 5 fails.
-//   3. Rate-limits the HSK heartbeat endpoint so a runaway client
-//      can't flood the server (max ~12 pings per kid per minute).
-//   4. Blocks any URL containing "/data/" or "/../" so the
-//      persistent disk (student records, HSK rooms, TTS cache) is
-//      never reachable through the static file path.
-// Nothing here changes existing app behavior for legitimate clients.
-// ═══════════════════════════════════════════════════════════════════════
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader('X-XSS-Protection', '0');   // modern browsers ignore; off-prevents bypass
-  // Only set HSTS over HTTPS (Render proxies via x-forwarded-proto).
-  if (req.headers['x-forwarded-proto'] === 'https') {
-    res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
-  }
-  next();
-});
-// 🚫 Block path-traversal probes targeting the persistent disk. The
-// only legitimate `data/` reference comes from our own server code;
-// nothing in the public/ tree (which Express static serves) lives
-// under that name. Defense-in-depth — Express static already wouldn't
-// serve data/ because it's outside public/, but this catches odd
-// URL-decoding tricks before any handler runs.
-app.use((req, res, next) => {
-  const url = decodeURIComponent(req.url || '');
-  if (url.includes('/../') || url.includes('\0') || /\/data\//i.test(url)) {
-    return res.status(403).json({ ok: false, error: 'forbidden' });
-  }
-  next();
-});
-
-// ── Brute-force lockout for admin password endpoints ────────────────
-// Track failures per remote-IP across a sliding 15-min window.
-// 5 fails → lock out for 5 minutes. Resets on next success.
-const _bfFails = new Map();   // ip → { count, firstAt, lockedUntil }
-function _bfKey(req) {
-  return (req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown').split(',')[0].trim();
-}
-function _bfCheck(req, res) {
-  const k = _bfKey(req);
-  const now = Date.now();
-  const e = _bfFails.get(k);
-  if (e && e.lockedUntil && e.lockedUntil > now) {
-    res.status(429).json({ ok: false, error: 'demasiados intentos, intenta de nuevo en unos minutos' });
-    return false;
-  }
-  return true;
-}
-function _bfRecordFail(req) {
-  const k = _bfKey(req);
-  const now = Date.now();
-  const WINDOW = 15 * 60 * 1000;
-  const LOCK   = 5  * 60 * 1000;
-  let e = _bfFails.get(k);
-  if (!e || (now - e.firstAt) > WINDOW) e = { count: 0, firstAt: now };
-  e.count++;
-  if (e.count >= 5) e.lockedUntil = now + LOCK;
-  _bfFails.set(k, e);
-}
-function _bfRecordOk(req) {
-  _bfFails.delete(_bfKey(req));
-}
-// Sweep stale entries every 10 minutes.
-setInterval(() => {
-  const now = Date.now();
-  for (const [k, e] of _bfFails) {
-    if ((!e.lockedUntil || e.lockedUntil < now) && (now - e.firstAt) > 30 * 60 * 1000) {
-      _bfFails.delete(k);
-    }
-  }
-}, 10 * 60 * 1000);
-// Hook the lockout into every admin-authed endpoint. We wrap
-// _adminAuth below so callers don't have to know.
-const _origAdminAuthRef = { fn: null };
-
-// ── HSK heartbeat rate limit — at most one heartbeat every ~4s per
-//    studentCode. The kid's normal interval is 8s, so legit traffic
-//    never trips this; spammers (or a runaway tab) are bounced.
-const _hbLastBeat = new Map();   // key → ts
-app.post('/api/hsk-sim/heartbeat', (req, res, next) => {
-  const k = (req.body && req.body.studentCode) || _bfKey(req);
-  const now = Date.now();
-  const last = _hbLastBeat.get(k) || 0;
-  if (now - last < 4000) return res.status(429).json({ ok: false, error: 'rate limit' });
-  _hbLastBeat.set(k, now);
-  next();
-});
-// Sweep heartbeat keys every 15 min so the map doesn't grow forever.
-setInterval(() => {
-  const cutoff = Date.now() - 30 * 60 * 1000;
-  for (const [k, ts] of _hbLastBeat) {
-    if (ts < cutoff) _hbLastBeat.delete(k);
-  }
-}, 15 * 60 * 1000);
-
 // Serve static assets. HTML pages get no-cache headers so phones always pull
 // the latest markup (otherwise stale cached HTML keeps referencing old
 // rewards.js / player.js versions and users see "nothing changed" after a
@@ -273,26 +169,20 @@ app.get('/api/admin/disk-status', (req, res) => {
 // The session is used downstream to filter results by the teacher's
 // classroom access codes.
 function _adminAuth(req, res) {
-  // 🛡 Brute-force lockout: if the caller already hit the limit, refuse
-  // BEFORE we even peek at the password — saves CPU + can't be probed.
-  if (!_bfCheck(req, res)) return null;
   const givenPw = String(req.query.pw || req.query.password || '').trim();
   // Legacy super-admin passwords still grant full access for the live
   // warmup-host flow (host-warmup.html unlock). These bypass the
   // teachers table entirely.
   const wuPw = process.env.WU_ADMIN_PASSWORD || 'draly2026';
   if (givenPw === wuPw) {
-    _bfRecordOk(req);
     return { teacher: null, isSuperAdmin: true, legacy: true };
   }
   // Otherwise look up as a teacher code
   const teacher = Teachers.getByTeacherId(givenPw);
   if (!teacher) {
-    _bfRecordFail(req);
     res.status(401).json({ ok: false, error: 'wrong password' });
     return null;
   }
-  _bfRecordOk(req);
   Teachers.touchLastSeen(teacher.teacherId);
   return { teacher, isSuperAdmin: !!teacher.isSuperAdmin, legacy: false };
 }
