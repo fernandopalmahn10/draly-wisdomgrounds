@@ -566,6 +566,29 @@ function appendSentence(code, words, pin) {
   return true;
 }
 
+// 📤 Teacher push — appends a sentence to a kid's Mis Oraciones with
+// a "pushedByTeacher" flag so the kid + parent view know it came from
+// the teacher (not the kid's own work). The teacher's name lands on
+// the entry too so the report card can credit the source.
+function pushSentenceFromTeacher(code, words, teacherName) {
+  const rec = get(code);
+  if (!rec) return false;
+  if (!Array.isArray(words) || !words.length) return false;
+  rec.sentencesBuilt.push({
+    ts: Date.now(),
+    pin: '',
+    words: words.slice(),
+    contributors: [rec.code],
+    pushedByTeacher: true,
+    teacherName: String(teacherName || 'Maestro/a').slice(0, 32),
+  });
+  if (rec.sentencesBuilt.length > 200) {
+    rec.sentencesBuilt = rec.sentencesBuilt.slice(-200);
+  }
+  scheduleSave();
+  return true;
+}
+
 // Teacher-side roster summary. Returns one row per student with code,
 // displayName, sentence count, firstSeen, lastSeen. Sorted by most-recent
 // activity so the kids who just played show at the top of the teacher's
@@ -666,6 +689,7 @@ load();
 module.exports = {
   getOrCreate,
   getOrProvisionForPin,
+  pushSentenceFromTeacher,
   get,
   deleteStudent,
   setMeta,

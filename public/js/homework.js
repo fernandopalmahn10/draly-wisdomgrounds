@@ -539,8 +539,13 @@
       words.forEach((w) => wordsWrap.appendChild(makeSentChip(w)));
       const head = document.createElement('div');
       head.className = 'hw-sentence-row';
+      // 📤 Surface the teacher-pushed badge so kid + parent know
+      // this sentence came from the teacher (not the kid's own work).
+      const teacherBadge = s.pushedByTeacher
+        ? '<span class="hw-sentence-from-teacher" title="' + escapeHtml(s.teacherName || 'Maestro/a') + '">📤 De tu maestra</span>'
+        : '';
       head.innerHTML = `
-        <span class="hw-sentence-date">📅 ${dateStr}</span>
+        <span class="hw-sentence-date">📅 ${dateStr}${teacherBadge}</span>
         <div class="hw-sentence-actions">
           <button class="hw-sentence-speak" type="button" title="Escuchar">🔊 Oír</button>
           <button class="hw-sentence-edit" type="button" title="Editar y guardar copia">✏️ Editar</button>

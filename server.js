@@ -1463,6 +1463,44 @@ app.post('/api/admin/student/:code/sentence/delete', (req, res) => {
   res.json({ ok, sentences: Students.getHistory(rec.code, 200) });
 });
 
+// 📤 PUSH a teacher-built sentence to one or more students' Mis
+// Oraciones. The teacher constructs the sentence in host-warmup
+// (or eventually a standalone builder), picks the recipients, and
+// fires this endpoint. Each kid sees the sentence as if they saved
+// it themselves — except it's flagged pushedByTeacher so the kid /
+// parent view can show a "📤 Enviada por tu maestra" badge.
+//
+// POST /api/admin/sentence/push
+// { studentCodes: ["ABCD", ...], words: [...], teacherName?: string }
+app.post('/api/admin/sentence/push', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const { studentCodes, words } = req.body || {};
+  if (!Array.isArray(studentCodes) || !studentCodes.length) {
+    return res.status(400).json({ ok: false, error: 'studentCodes array required' });
+  }
+  if (!Array.isArray(words) || !words.length) {
+    return res.status(400).json({ ok: false, error: 'words array required' });
+  }
+  // Authorization: regular teachers can only push to kids in their
+  // own classrooms. Super-admin pushes to anyone.
+  const ownCodes = session.teacher ? new Set(session.teacher.accessCodes || []) : null;
+  const teacherName = session.teacher
+    ? (session.teacher.displayName || 'Maestro/a')
+    : 'Super maestro';
+  let sent = 0, skipped = 0, notFound = 0;
+  const cleanWords = words.map((w) => String(w).slice(0, 32)).slice(0, 24);
+  studentCodes.forEach((code) => {
+    const rec = Students.get(code);
+    if (!rec) { notFound++; return; }
+    if (ownCodes && rec.classroomCode && !ownCodes.has(rec.classroomCode)) {
+      skipped++; return;
+    }
+    if (Students.pushSentenceFromTeacher(rec.code, cleanWords, teacherName)) sent++;
+  });
+  res.json({ ok: true, sent, skipped, notFound });
+});
+
 // ✏️ Maestro EDIT: replace the words of an existing saved sentence
 // in-place. Used when a kid saves a sentence that has typos or runs
 // two words together — teacher edits without losing the timestamp /

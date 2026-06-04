@@ -1235,3 +1235,10 @@ button.m-emirati-stat.is-tappable:active { transform: scale(0.97); }
 .m-hsk-detail-label { color: rgba(243, 230, 194, 0.55); font-size: 0.75rem; font-weight: 700; }
 .m-hsk-detail-best  { font-family: 'Cinzel', serif; font-weight: 900; color: #5be88a; font-size: 1.6rem; line-height: 1; }
 .m-hsk-detail-last  { color: #f3e6c2; font-weight: 800; font-size: 0.95rem; }
+
+/* 📤 Pushed-by-teacher badge on Cuaderno sentence rows */
+.m-sent-pushed {
+  color: #5be8d1;
+  font-weight: 800;
+  font-size: 0.82rem;
+}
