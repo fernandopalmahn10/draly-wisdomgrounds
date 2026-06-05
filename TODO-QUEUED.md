@@ -71,6 +71,44 @@ the right answer. Older attempts (pre-2026-06-04) show a graceful
 
 ---
 
+## 8. Universal host launcher ✅ SHIPPED 2026-06-04
+
+Fernando 2026-06-04: "I can have a shortcut to all the host the battle
+and then do the same — pick a kid online and host whichever game from
+here to the future we have in that host page."
+
+New 🚀 Lanzar juego button on /maestro opens a modal with 8 game
+cards (Modo Maestro, Lectura, HSK Sim, LQH, Detective, Triage,
+Hóngbāo, 6-7 Swing) + an online-students checklist (auto-checked).
+Teacher picks game + kids, taps launch:
+  - The host page opens in a new tab
+  - A shared /js/auto-host.js script (loaded on every host page now)
+    sees the ?autohost=1 flag, auto-fills the admin password from
+    the sessionStorage payload the launcher stashed, watches for the
+    PIN to appear in the DOM (#pin-display or #hh-pin), then fires
+    /api/admin/broadcast-selected with the right kid URL template
+    (e.g. '/player.html?pin={PIN}' or '/hsk-sim.html?pin={PIN}').
+  - A jade banner on the host page tells the teacher "✅ Auto-host:
+    PIN 1234 · 7 alumno(s) notificados".
+
+Adding a new game later = one line in LAUNCHER_GAMES array in
+maestro.js + adding the auto-host.js script tag to that host page.
+
+## 9. Teacher can delete a sim attempt ✅ SHIPPED 2026-06-04
+
+🗑 button per attempt row in maestro Cuaderno. Confirms with explicit
+"también desaparece del dashboard de los papás y del alumno". Delete
+endpoint POST /api/admin/student/:code/hsk-attempt/delete?ts=...
+propagates because parent + kid views refetch on open.
+
+## 10. Push redesign + Paquete de lección ✅ SHIPPED 2026-06-04
+
+Full-screen sheet with tabs (✏️ Una oración / 📚 Paquete de lección).
+The pack lives in localStorage; sentences auto-grouped by HSK1
+experience (derived from word.exp). Send the whole pack as one POST.
+
+---
+
 ## 6. Classroom analytics on captured mistake data — data layer ready
 
 The heatmap endpoint `/api/admin/hsk-mistakes/heatmap` is live and
