@@ -32,38 +32,28 @@ Curious-tap behavior on both tabs.
 
 ---
 
-## 3. Mis Oraciones — full-screen redesign 🎨 (BIGGER)
+## 3. Mis Oraciones — full-screen redesign ✅ SHIPPED 2026-06-04
 
-**Why:** Fernando — "this is the main language essence. Our main essence.
-Maybe make it bigger, like full screen, and they can just exit, and
-scale perfectly."
+The `wu-history-modal` is now a 100vw × 100dvh sheet with a 1100px
+inner column, a sticky hero header (Cinzel title + counts pill), and
+a responsive card grid (1 col phone → 2 col tablet → 3 col desktop).
+Each card shows the date, every word as a vertical icon + 汉字 +
+pinyin + Spanish chip, a 🔊 Escuchar oración button (Google TTS),
+and a 🗑 delete button. Teacher-pushed cards get a green tint +
+border. Background uses a parchment-under-candlelight gradient.
 
-**Fix shape:** New full-screen `<dialog>` or full-screen modal. Exit
-gesture (swipe down or big X). Cards larger, more breathing room.
-Beautiful typography for the Chinese text. Mobile scaling pass.
+## 4. Mis Oraciones — categories ✅ SHIPPED 2026-06-04
 
-Out of scope for now — this is a real design task, not a small UI tweak.
-Tackle it after we have the simpler tabs (#2) in place so the redesign
-already has the right data shape.
+End-to-end: teacher tags each push with a category (chip row in the
+push modal), server validates against `core/sentence-categories.js`
+and stores `entry.category` on the record. Kid's `De la maestra` tab
+gets a horizontal scrolling category-filter bar with counts, plus a
+small colored pill on each card showing its category.
 
-Status: scoped, **queued — do after #2**.
-
----
-
-## 4. Mis Oraciones — categories (house, school, market, …)
-
-**Why:** Fernando — "the ones sent by me can be assigned by groups, like
-house, market, school. So they should be able to have like categories.
-This is gonna give us really good control of what's being taught."
-
-**Fix shape:**
-- Add `category` field to sentence records (on the push endpoint and on
-  the kid's save)
-- Tagging UI on the teacher side (host-warmup builder, when pushing)
-- Filter chips on the kid side (above the saved/sent tabs from #2)
-
-Status: scoped, **queued — needs #2 + #3 first so we have the right
-container to put chips in**.
+12 starter categories (home, school, store, restaurant, family,
+health, time, weather, transport, chat, study, other). Shared list
+in core/ + mirrored in public/js/sentence-categories.js (kept in
+sync by hand — no bundler).
 
 ---
 

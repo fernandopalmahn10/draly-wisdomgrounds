@@ -249,12 +249,29 @@
                    '<small>' + escapeHtml(w.es || '') + '</small>' +
                  '</span>';
         }).join('');
+        // 🆕 2026-06-04 (Fernando): teacher tags pushed sentences with a
+        // category so the kid can filter "De la maestra" by topic. The
+        // category chips are loaded from the shared SENTENCE_CATEGORIES
+        // list (window global injected by /js/sentence-categories.js).
+        // Default selection is "no category" — chip "🚫 Sin categoría"
+        // appears first and is selected by default; the teacher taps a
+        // colored chip if they want to tag this push.
+        const cats = (window.SENTENCE_CATEGORIES || []);
+        const catChipsHtml =
+          '<button class="wu-push-cat-chip is-active" data-cat="" type="button">🚫 Sin categoría</button>' +
+          cats.map((c) =>
+            '<button class="wu-push-cat-chip" data-cat="' + escapeHtml(c.id) + '" type="button" style="--cat-color:' + c.color + ';">' +
+              c.emoji + ' ' + escapeHtml(c.label) +
+            '</button>'
+          ).join('');
         overlay.innerHTML =
-          '<div class="m-modal-card" style="max-width:560px;">' +
+          '<div class="m-modal-card" style="max-width:580px;">' +
             '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
             '<h2>📤 Enviar oración a alumnos</h2>' +
             '<p class="m-modal-sub">Esta oración se guardará en <strong>Mis oraciones</strong> de cada alumno que selecciones, con la nota <em>📤 Enviada por tu maestra</em>.</p>' +
             '<div class="wu-push-prev">' + previewChips + '</div>' +
+            '<div class="wu-push-cat-label">Categoría (opcional):</div>' +
+            '<div class="wu-push-cats" id="wu-push-cats">' + catChipsHtml + '</div>' +
             '<input class="input wu-push-search" id="wu-push-search" type="text" placeholder="Buscar alumno por nombre o código…" autocomplete="off" style="margin-top:10px;">' +
             '<div class="m-force-actions" style="margin-top:8px;">' +
               '<button class="btn btn-ghost btn-sm" id="wu-push-all">✅ Todos</button>' +
@@ -306,13 +323,23 @@
             if (cb) cb.checked = (row.dataset.online === '1');
           });
         });
+        // Category chip selection — single-select. The currently-active
+        // chip's data-cat is sent on push. Empty string == no category.
+        let _pushCategory = '';
+        overlay.querySelectorAll('.wu-push-cat-chip').forEach((chip) => {
+          chip.addEventListener('click', () => {
+            overlay.querySelectorAll('.wu-push-cat-chip').forEach((c) => c.classList.remove('is-active'));
+            chip.classList.add('is-active');
+            _pushCategory = chip.dataset.cat || '';
+          });
+        });
         overlay.querySelector('#wu-push-go').addEventListener('click', () => {
           const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
             .map((cb) => cb.dataset.code).filter(Boolean);
           if (!codes.length) { alert('Selecciona al menos un alumno.'); return; }
           fetch('/api/admin/sentence/push?pw=' + encodeURIComponent(adminPw), {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentCodes: codes, words: wordIds }),
+            body: JSON.stringify({ studentCodes: codes, words: wordIds, category: _pushCategory || null }),
           })
             .then((r) => r.json())
             .then((res) => {

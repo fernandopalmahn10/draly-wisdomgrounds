@@ -3261,6 +3261,7 @@
   // tab is remembered in-session so flipping the modal closed and open
   // again stays on the same tab.
   let _wuHistoryTab = 'mine';   // 'mine' | 'teacher'
+  let _wuHistoryCatFilter = '';  // category id or '' for "all categories"
   function openWuHistory() {
     const modal = document.getElementById('wu-history-modal');
     const list = document.getElementById('wu-history-list');
@@ -3310,13 +3311,69 @@
     tabs.querySelectorAll('.wu-history-tab').forEach((btn) => {
       btn.addEventListener('click', () => {
         _wuHistoryTab = btn.dataset.tab;
+        // Reset category filter when flipping tabs — categories only
+        // exist on teacher-pushed sentences, so switching back to "Mías"
+        // shouldn't drag an old filter along.
+        if (_wuHistoryTab !== 'teacher') _wuHistoryCatFilter = '';
         _renderWuHistoryTabs(list, sentences, mineCount, teacherCount);
       });
     });
+    // 🆕 Category filter chips — only shown on the teacher tab AND only
+    // if the kid has at least one categorised teacher sentence. Each chip
+    // shows the category emoji + label + count; "Todas" resets the filter.
+    if (_wuHistoryTab === 'teacher' && teacherCount) {
+      const teacherSentences = sentences.filter((s) => s.pushedByTeacher);
+      const countsByCat = {};
+      teacherSentences.forEach((s) => {
+        const k = s.category || '';
+        countsByCat[k] = (countsByCat[k] || 0) + 1;
+      });
+      const presentCats = (window.SENTENCE_CATEGORIES || []).filter((c) => countsByCat[c.id]);
+      const uncategorisedCount = countsByCat[''] || 0;
+      if (presentCats.length || uncategorisedCount) {
+        const catBar = document.createElement('div');
+        catBar.className = 'wu-history-catbar';
+        let chipsHtml =
+          '<button class="wu-history-cat-chip ' + (_wuHistoryCatFilter === '' ? 'is-active' : '') + '" data-cat="" type="button">' +
+            '✨ Todas <span class="wu-history-cat-n">' + teacherSentences.length + '</span>' +
+          '</button>';
+        presentCats.forEach((c) => {
+          chipsHtml +=
+            '<button class="wu-history-cat-chip ' + (_wuHistoryCatFilter === c.id ? 'is-active' : '') + '"' +
+            ' data-cat="' + escapeHtml(c.id) + '" type="button" style="--cat-color:' + c.color + ';">' +
+              c.emoji + ' ' + escapeHtml(c.label) +
+              ' <span class="wu-history-cat-n">' + countsByCat[c.id] + '</span>' +
+            '</button>';
+        });
+        if (uncategorisedCount) {
+          chipsHtml +=
+            '<button class="wu-history-cat-chip ' + (_wuHistoryCatFilter === '__uncat__' ? 'is-active' : '') + '"' +
+            ' data-cat="__uncat__" type="button">' +
+              '🚫 Sin categoría <span class="wu-history-cat-n">' + uncategorisedCount + '</span>' +
+            '</button>';
+        }
+        catBar.innerHTML = chipsHtml;
+        list.appendChild(catBar);
+        catBar.querySelectorAll('.wu-history-cat-chip').forEach((chip) => {
+          chip.addEventListener('click', () => {
+            _wuHistoryCatFilter = chip.dataset.cat;
+            _renderWuHistoryTabs(list, sentences, mineCount, teacherCount);
+          });
+        });
+      }
+    }
     const body = document.createElement('div');
     body.className = 'wu-history-tab-body';
     list.appendChild(body);
-    const filtered = sentences.filter((s) => _wuHistoryTab === 'teacher' ? !!s.pushedByTeacher : !s.pushedByTeacher);
+    let filtered = sentences.filter((s) => _wuHistoryTab === 'teacher' ? !!s.pushedByTeacher : !s.pushedByTeacher);
+    // Apply category filter ONLY on the teacher tab.
+    if (_wuHistoryTab === 'teacher' && _wuHistoryCatFilter) {
+      if (_wuHistoryCatFilter === '__uncat__') {
+        filtered = filtered.filter((s) => !s.category);
+      } else {
+        filtered = filtered.filter((s) => s.category === _wuHistoryCatFilter);
+      }
+    }
     if (!filtered.length) {
       const emptyMsg = (_wuHistoryTab === 'teacher')
         ? 'Aún no te han enviado oraciones. Cuando tu maestra te envíe una, aparecerá aquí. 📤'
@@ -3348,6 +3405,19 @@
       const teacherChip = s.pushedByTeacher
         ? '<span class="wu-history-from-teacher">📤 ' + escapeHtml(s.teacherName || 'Maestra') + '</span>'
         : '';
+      // 🆕 Category badge — only on teacher-pushed sentences that
+      // actually carry a category id. The chip color matches the
+      // category's brand color so the kid recognises Casa vs Escuela
+      // at a glance even before reading the label.
+      let categoryChip = '';
+      if (s.pushedByTeacher && s.category && window.SENTENCE_CATEGORY_BY_ID) {
+        const cat = window.SENTENCE_CATEGORY_BY_ID[s.category];
+        if (cat) {
+          categoryChip = '<span class="wu-history-cat-pill" style="--cat-color:' + cat.color + ';">' +
+            cat.emoji + ' ' + escapeHtml(cat.label) +
+          '</span>';
+        }
+      }
       // Concatenated pinyin used by the Escuchar button. We send the
       // pinyin string straight to /api/tts (Google) — it handles
       // tones and renders quite natural Mandarin. The hanzi would be
@@ -3359,7 +3429,7 @@
       const hanziSentence = wordObjs.map((w) => w.hanzi || '').join('').trim();
       item.innerHTML =
         '<div class="wu-history-item-row">' +
-          '<div class="wu-history-item-meta">📅 <strong>' + dateStr + '</strong> ' + teacherChip + '</div>' +
+          '<div class="wu-history-item-meta">📅 <strong>' + dateStr + '</strong> ' + teacherChip + ' ' + categoryChip + '</div>' +
           '<button class="wu-history-item-delete" type="button" aria-label="Borrar">🗑</button>' +
         '</div>' +
         '<div class="wu-history-item-words">' + wordsHtml + '</div>' +
