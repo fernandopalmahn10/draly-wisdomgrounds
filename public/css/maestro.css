@@ -1239,6 +1239,65 @@ button.m-emirati-stat.is-tappable:active { transform: scale(0.97); }
 }
 .m-hsk-attempt-del:hover  { background: rgba(255, 90, 102, 0.22); }
 .m-hsk-attempt-del:active { transform: scale(0.9); }
+
+/* ═══════════════════════════════════════════════════════════════════
+ * 🚀 UNIVERSAL LAUNCHER — Fernando 2026-06-04
+ *   Game-picker cards inside the launch modal. Tap to select; selected
+ *   card glows with a jade outline + slight scale-up.
+ * ═══════════════════════════════════════════════════════════════════ */
+.m-launch-section-h {
+  font-weight: 900;
+  color: #ffd24a;
+  font-size: 0.92rem;
+  letter-spacing: 0.03em;
+  margin: 12px 0 8px;
+}
+.m-launch-games {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+@media (min-width: 720px) {
+  .m-launch-games { grid-template-columns: 1fr 1fr 1fr 1fr; }
+}
+.m-launch-game {
+  background: linear-gradient(160deg, rgba(40, 50, 80, 0.55), rgba(22, 28, 48, 0.75));
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 12px 10px 10px;
+  display: flex; flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  cursor: pointer;
+  touch-action: manipulation;
+  text-align: left;
+  transition: transform 120ms ease, background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+  font-family: inherit;
+}
+.m-launch-game:active { transform: scale(0.97); }
+.m-launch-game:hover  { background: linear-gradient(160deg, rgba(50, 60, 95, 0.7), rgba(28, 35, 58, 0.85)); }
+.m-launch-game.is-active {
+  border-color: #5be88a;
+  background: linear-gradient(160deg, rgba(91, 232, 138, 0.18), rgba(91, 232, 209, 0.10));
+  box-shadow: 0 0 18px rgba(91, 232, 138, 0.25), 0 4px 14px rgba(0, 0, 0, 0.3);
+  transform: scale(1.02);
+}
+.m-launch-game-emoji {
+  font-size: 1.8rem; line-height: 1;
+}
+.m-launch-game-label {
+  font-weight: 900;
+  color: #fff5d8;
+  font-size: 0.98rem;
+  line-height: 1.15;
+}
+.m-launch-game-blurb {
+  color: rgba(243, 230, 194, 0.65);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
 .m-hsk-attempt-toggle {
   display: inline-block;
   margin-left: 6px;

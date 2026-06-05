@@ -153,6 +153,149 @@
   if (guidesModal) guidesModal.addEventListener('click', (e) => { if (e.target === guidesModal) guidesModal.classList.add('hidden'); });
 
   // ── 📖 LECTURA EN CLASE — folder picker of stories by HSK1 experience.
+  // ════════════════════════════════════════════════════════════════
+  // 🚀 UNIVERSAL LAUNCHER — Fernando 2026-06-04
+  //
+  // Pick any host page, pick online kids, kids get force-imposed when
+  // the host page's PIN appears. Uses sessionStorage + ?autohost=1 +
+  // the shared /js/auto-host.js runner.
+  //
+  // Each game card describes:
+  //   id          — internal slug (for analytics later)
+  //   label       — what the teacher sees on the card
+  //   emoji       — big icon on the card
+  //   hostUrl     — host page to open (no PIN in URL — host creates one)
+  //   kidUrlTpl   — template for the kid's URL, '{PIN}' substituted
+  //                 by auto-host.js when the host page's PIN appears
+  //   blurb       — one-line description shown on the card
+  // ════════════════════════════════════════════════════════════════
+  const LAUNCHER_GAMES = [
+    { id: 'warmup',    label: 'Modo Maestro',        emoji: '✏️',  hostUrl: '/host-warmup.html',  kidUrlTpl: '/player.html?pin={PIN}',  blurb: 'Arma oraciones HSK1 en vivo. Tú o un asistente.' },
+    { id: 'reading',   label: 'Lectura en clase',    emoji: '📖',  hostUrl: '/host-reading.html', kidUrlTpl: '/player.html?pin={PIN}',  blurb: 'Lectura guiada con karaoke + test al final.' },
+    { id: 'hsksim',    label: 'Simulación HSK',      emoji: '🏆',  hostUrl: '/host-hsk.html',     kidUrlTpl: '/hsk-sim.html?pin={PIN}', blurb: 'Examen oficial HSK1 — Sim 1, 2 o 3.' },
+    { id: 'laiquhui',  label: 'Lái-Qù-Huí Dragón',   emoji: '🐉',  hostUrl: '/host-laiquhui.html', kidUrlTpl: '/player.html?pin={PIN}', blurb: 'Reparte paquetes por la ciudad con vocab HSK1.' },
+    { id: 'identity',  label: 'Detective Shéi Shì',  emoji: '🕵️',  hostUrl: '/host-identity.html', kidUrlTpl: '/player.html?pin={PIN}', blurb: 'Adivina el sospechoso con pistas HSK1.' },
+    { id: 'triage',    label: 'Sala de emergencia',  emoji: '🚑',  hostUrl: '/host-triage.html',   kidUrlTpl: '/player.html?pin={PIN}', blurb: 'Cura pacientes con vocab médico HSK1.' },
+    { id: 'partyrun',  label: 'Hóngbāo Run',         emoji: '🎲',  hostUrl: '/host-partyrun.html', kidUrlTpl: '/player.html?pin={PIN}', blurb: 'Mario-Party con preguntas HSK1.' },
+    { id: 'sixseven',  label: '6-7 Swing',           emoji: '🤙',  hostUrl: '/host-sixseven.html', kidUrlTpl: '/player.html?pin={PIN}', blurb: 'Mate rápido + números chinos.' },
+  ];
+  function openUniversalLauncher() {
+    // Pull the most-recent online students. Reuse the existing roster API.
+    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { alert('No se pudo cargar la lista de alumnos.'); return; }
+        const students = (data.students || []).slice().sort((a, b) => {
+          const an = (a.displayName || a.code || '').toLowerCase();
+          const bn = (b.displayName || b.code || '').toLowerCase();
+          return an < bn ? -1 : an > bn ? 1 : 0;
+        });
+        let overlay = document.getElementById('m-launch-modal');
+        if (overlay) overlay.remove();
+        overlay = document.createElement('div');
+        overlay.id = 'm-launch-modal';
+        overlay.className = 'm-modal';
+        const gameCardsHtml = LAUNCHER_GAMES.map((g) =>
+          '<button class="m-launch-game" data-id="' + escapeHtml(g.id) + '" type="button">' +
+            '<span class="m-launch-game-emoji">' + g.emoji + '</span>' +
+            '<span class="m-launch-game-label">' + escapeHtml(g.label) + '</span>' +
+            '<span class="m-launch-game-blurb">' + escapeHtml(g.blurb) + '</span>' +
+          '</button>'
+        ).join('');
+        overlay.innerHTML =
+          '<div class="m-modal-card" style="max-width:760px;">' +
+            '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
+            '<h2>🚀 Lanzar juego</h2>' +
+            '<p class="m-modal-sub">Elige un juego y los alumnos en línea entrarán automáticamente cuando se cree la sala. Tú abres la página del juego en una pestaña nueva.</p>' +
+            '<div class="m-launch-section-h">1) Elige el juego</div>' +
+            '<div class="m-launch-games">' + gameCardsHtml + '</div>' +
+            '<div class="m-launch-section-h">2) Elige los alumnos</div>' +
+            '<div class="m-force-actions">' +
+              '<button class="btn btn-ghost btn-sm" id="m-lc-online" type="button">🟢 Solo en línea</button>' +
+              '<button class="btn btn-ghost btn-sm" id="m-lc-all" type="button">✅ Todos</button>' +
+              '<button class="btn btn-ghost btn-sm" id="m-lc-none" type="button">⬜ Ninguno</button>' +
+            '</div>' +
+            '<div class="m-force-students" id="m-lc-list" style="max-height:30vh;overflow-y:auto;"></div>' +
+            '<button class="btn btn-jade btn-xl" id="m-lc-go" disabled style="margin-top:14px;width:100%;">🚀 Elige un juego primero</button>' +
+          '</div>';
+        document.body.appendChild(overlay);
+        const list = overlay.querySelector('#m-lc-list');
+        students.forEach((s) => {
+          const isOnline = s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000;
+          const row = document.createElement('label');
+          row.className = 'm-force-row';
+          row.dataset.online = isOnline ? '1' : '0';
+          row.innerHTML =
+            '<input type="checkbox" data-code="' + escapeHtml(s.code) + (isOnline ? '" checked>' : '">') +
+            '<span class="m-force-row-dot" style="background:' + (isOnline ? '#5be88a' : '#666') + ';"></span>' +
+            '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+            '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
+          list.appendChild(row);
+        });
+        let chosen = null;
+        const goBtn = overlay.querySelector('#m-lc-go');
+        function updateGo() {
+          if (!chosen) { goBtn.disabled = true; goBtn.textContent = '🚀 Elige un juego primero'; return; }
+          const n = list.querySelectorAll('input[type=checkbox]:checked').length;
+          goBtn.disabled = !n;
+          goBtn.textContent = n
+            ? '🚀 Lanzar ' + chosen.label + ' a ' + n + ' alumno(s)'
+            : '⬜ Elige al menos un alumno';
+        }
+        overlay.querySelectorAll('.m-launch-game').forEach((card) => {
+          card.addEventListener('click', () => {
+            overlay.querySelectorAll('.m-launch-game').forEach((c) => c.classList.remove('is-active'));
+            card.classList.add('is-active');
+            chosen = LAUNCHER_GAMES.find((g) => g.id === card.dataset.id);
+            updateGo();
+          });
+        });
+        list.addEventListener('change', updateGo);
+        const close = () => { try { overlay.remove(); } catch (_) {} };
+        overlay.querySelector('.m-modal-close').addEventListener('click', close);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        overlay.querySelector('#m-lc-all').addEventListener('click', () => {
+          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = true; });
+          updateGo();
+        });
+        overlay.querySelector('#m-lc-none').addEventListener('click', () => {
+          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
+          updateGo();
+        });
+        overlay.querySelector('#m-lc-online').addEventListener('click', () => {
+          list.querySelectorAll('.m-force-row').forEach((row) => {
+            const cb = row.querySelector('input[type=checkbox]');
+            if (cb) cb.checked = (row.dataset.online === '1');
+          });
+          updateGo();
+        });
+        goBtn.addEventListener('click', () => {
+          if (!chosen) return;
+          const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
+            .map((cb) => cb.dataset.code).filter(Boolean);
+          if (!codes.length) return;
+          // Stash payload for auto-host.js running on the host page.
+          const payload = {
+            pw,
+            codes,
+            kidUrlTemplate: chosen.kidUrlTpl,
+            label: chosen.label,
+          };
+          try { sessionStorage.setItem('dralyAutoHost', JSON.stringify(payload)); } catch (_) {}
+          // Open the host page in a new tab. The query param ?autohost=1
+          // signals auto-host.js (loaded on every host page) to do its
+          // thing — auto-fill admin pw, wait for PIN, force-impose kids.
+          const url = chosen.hostUrl + (chosen.hostUrl.includes('?') ? '&' : '?') + 'autohost=1';
+          try { window.open(url, '_blank', 'noopener'); } catch (_) {}
+          alert('🚀 ' + chosen.label + ' se está abriendo en otra pestaña.\n\nCuando aparezca el PIN, los ' + codes.length + ' alumno(s) seleccionado(s) entrarán automáticamente.');
+          close();
+        });
+      })
+      .catch((e) => alert('Error: ' + e.message));
+  }
+  const launchBtn = $('m-launch-btn');
+  if (launchBtn) launchBtn.addEventListener('click', openUniversalLauncher);
+
   // Teacher clicks a story → host-reading.html opens in a new tab pre-
   // selected to that story. Kids join via PIN. After they do the test
   // live, that story unlocks for them to repeat at home.
