@@ -573,6 +573,62 @@ body.wu-bg .market-banner {
   color: rgba(220, 235, 245, 0.55);
   font-style: italic;
 }
+/* 🆕 2026-06-04 — Mis Oraciones tabs: ✍️ Mías vs 📤 De la maestra. */
+.wu-history-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 4px 0;
+  background: linear-gradient(180deg, rgba(15,25,40,0.95) 0%, rgba(15,25,40,0.7) 80%, rgba(15,25,40,0) 100%);
+}
+.wu-history-tab {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(220, 235, 245, 0.7);
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 120ms ease, transform 120ms ease;
+}
+.wu-history-tab:active { transform: scale(0.97); }
+.wu-history-tab.is-active {
+  background: linear-gradient(135deg, rgba(255, 200, 110, 0.22), rgba(255, 90, 102, 0.16));
+  border-color: rgba(255, 200, 110, 0.7);
+  color: #fff5d8;
+  box-shadow: 0 0 12px rgba(255, 200, 110, 0.2);
+}
+.wu-history-tab-n {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.35);
+  color: #ffe082;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+.wu-history-tab-body { display: flex; flex-direction: column; gap: 8px; }
+.wu-history-item.is-from-teacher {
+  border-left-color: #5be88a;
+  background: linear-gradient(135deg, rgba(91, 232, 138, 0.08), rgba(91, 232, 138, 0.02));
+}
+.wu-history-from-teacher {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(91, 232, 138, 0.18);
+  color: #5be88a;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
 .wu-history-item {
   background: rgba(255, 255, 255, 0.04);
   border-radius: 10px;
