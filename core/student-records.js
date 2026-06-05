@@ -570,18 +570,26 @@ function appendSentence(code, words, pin) {
 // a "pushedByTeacher" flag so the kid + parent view know it came from
 // the teacher (not the kid's own work). The teacher's name lands on
 // the entry too so the report card can credit the source.
-function pushSentenceFromTeacher(code, words, teacherName) {
+function pushSentenceFromTeacher(code, words, teacherName, category) {
   const rec = get(code);
   if (!rec) return false;
   if (!Array.isArray(words) || !words.length) return false;
-  rec.sentencesBuilt.push({
+  const entry = {
     ts: Date.now(),
     pin: '',
     words: words.slice(),
     contributors: [rec.code],
     pushedByTeacher: true,
     teacherName: String(teacherName || 'Maestro/a').slice(0, 32),
-  });
+  };
+  // 🆕 2026-06-04 (Fernando): teacher can tag pushed sentences with a
+  // category so the kid can filter "De la maestra" by topic ("Casa",
+  // "Escuela", "Tienda"…). The route validates the id against the
+  // SENTENCE_CATEGORIES list; we just store whatever was handed to us.
+  if (typeof category === 'string' && category) {
+    entry.category = category;
+  }
+  rec.sentencesBuilt.push(entry);
   if (rec.sentencesBuilt.length > 200) {
     rec.sentencesBuilt = rec.sentencesBuilt.slice(-200);
   }

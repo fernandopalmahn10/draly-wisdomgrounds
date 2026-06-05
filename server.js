@@ -9,6 +9,7 @@ const Students = require('./core/student-records');
 const TeacherPresets = require('./core/teacher-presets');
 const ReadingStory = require('./core/reading-story');
 const HskSim = require('./core/hsk-sim');
+const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
 const Guides = require('./core/guides');
@@ -1511,13 +1512,17 @@ app.post('/api/admin/student/:code/sentence/delete', (req, res) => {
 app.post('/api/admin/sentence/push', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
-  const { studentCodes, words } = req.body || {};
+  const { studentCodes, words, category } = req.body || {};
   if (!Array.isArray(studentCodes) || !studentCodes.length) {
     return res.status(400).json({ ok: false, error: 'studentCodes array required' });
   }
   if (!Array.isArray(words) || !words.length) {
     return res.status(400).json({ ok: false, error: 'words array required' });
   }
+  // 🆕 2026-06-04 — validate category against the known list. Unknown
+  // values are silently dropped (treated as "no category"), so a stale
+  // teacher client doesn't fail the push outright.
+  const cleanCategory = SentenceCategories.isValidCategoryId(category) ? category : null;
   // Authorization: regular teachers can only push to kids in their
   // own classrooms. Super-admin pushes to anyone.
   const ownCodes = session.teacher ? new Set(session.teacher.accessCodes || []) : null;
@@ -1532,9 +1537,9 @@ app.post('/api/admin/sentence/push', (req, res) => {
     if (ownCodes && rec.classroomCode && !ownCodes.has(rec.classroomCode)) {
       skipped++; return;
     }
-    if (Students.pushSentenceFromTeacher(rec.code, cleanWords, teacherName)) sent++;
+    if (Students.pushSentenceFromTeacher(rec.code, cleanWords, teacherName, cleanCategory)) sent++;
   });
-  res.json({ ok: true, sent, skipped, notFound });
+  res.json({ ok: true, sent, skipped, notFound, category: cleanCategory });
 });
 
 // ✏️ Maestro EDIT: replace the words of an existing saved sentence

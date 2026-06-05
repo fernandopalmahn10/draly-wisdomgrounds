@@ -805,6 +805,65 @@ body.wu-bg .market-banner {
   0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(255, 126, 95, 0.32); }
   50%      { transform: scale(1.04); box-shadow: 0 6px 20px rgba(255, 126, 95, 0.5); }
 }
+
+/* 🆕 2026-06-04 — Category filter chips on the "De la maestra" tab.
+   Horizontal-scrolling bar so any number of categories fits without
+   wrapping awkwardly on phone width. */
+.wu-history-catbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
+}
+.wu-history-catbar::-webkit-scrollbar { height: 4px; }
+.wu-history-catbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
+.wu-history-cat-chip {
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--cat-color, rgba(255, 255, 255, 0.18));
+  color: var(--cat-color, rgba(243, 230, 194, 0.7));
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  scroll-snap-align: start;
+  white-space: nowrap;
+  transition: background 120ms ease, transform 120ms ease;
+}
+.wu-history-cat-chip:active { transform: scale(0.96); }
+.wu-history-cat-chip.is-active {
+  background: var(--cat-color, rgba(255, 200, 110, 0.3));
+  color: #1a1a1a;
+  box-shadow: 0 0 12px color-mix(in srgb, var(--cat-color, #ffc874) 60%, transparent);
+}
+.wu-history-cat-n {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+/* Category pill on the card meta line — small color-tinted badge */
+.wu-history-cat-pill {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cat-color, #fff) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cat-color, #fff) 60%, transparent);
+  color: var(--cat-color, #fff5d8);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
 .wu-player-stage {
   flex: 1;
   display: flex;
@@ -2146,3 +2205,36 @@ body.wu-timemachine::after {
   color: rgba(0, 0, 0, 0.55);
 }
 .wu-push-search { width: 100%; }
+
+/* 🆕 2026-06-04 — Category chips inside the push-to-students modal.
+   Teacher single-selects one chip; the default "🚫 Sin categoría" is
+   pre-active so leaving it alone just sends an untagged push. */
+.wu-push-cat-label {
+  font-size: 0.82rem;
+  color: rgba(243, 230, 194, 0.7);
+  font-weight: 700;
+  margin: 14px 0 4px;
+}
+.wu-push-cats {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 6px;
+}
+.wu-push-cat-chip {
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--cat-color, rgba(255, 255, 255, 0.18));
+  color: var(--cat-color, rgba(243, 230, 194, 0.75));
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 120ms ease, transform 120ms ease;
+}
+.wu-push-cat-chip:active { transform: scale(0.96); }
+.wu-push-cat-chip.is-active {
+  background: var(--cat-color, rgba(255, 200, 110, 0.28));
+  color: #1a1a1a;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cat-color, #ffc874) 60%, transparent);
+}
+
