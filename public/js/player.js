@@ -3281,7 +3281,16 @@
       const sentences = resp.sentences || [];
       const teacherCount = sentences.filter((s) => s.pushedByTeacher).length;
       const mineCount = sentences.length - teacherCount;
-      if (sub) sub.textContent = `Código: ${myStudentCode} · ✍️ ${mineCount} · 📤 ${teacherCount}`;
+      // Friendlier sub-header that owns the whole-page hero: shows
+      // total, breakdown by source, and the kid's code as a soft chip.
+      if (sub) {
+        sub.innerHTML =
+          'Tu colección de chino · ' +
+          '<strong>' + sentences.length + '</strong> oración' + (sentences.length === 1 ? '' : 'es') +
+          ' &nbsp;·&nbsp; ✍️ <strong>' + mineCount + '</strong> mía' + (mineCount === 1 ? '' : 's') +
+          ' &nbsp;·&nbsp; 📤 <strong>' + teacherCount + '</strong> de tu maestra' +
+          ' <span class="wu-history-code-chip">Código: ' + escapeHtml(myStudentCode) + '</span>';
+      }
       _renderWuHistoryTabs(list, sentences, mineCount, teacherCount);
     });
   }
@@ -3320,30 +3329,47 @@
       item.className = 'wu-history-item' + (s.pushedByTeacher ? ' is-from-teacher' : '');
       const date = new Date(s.ts);
       const dateStr = date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
-      const wordsHtml = (s.words || []).map((wid) => {
-        const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
-        if (!w) return '';
+      // Each word chip — now a vertical stack of icon · hanzi · pinyin
+      // so the kid sees Chinese characters too, not just romanization.
+      // Tap on the chip still pops the Curious Mode pokedex.
+      const wordObjs = (s.words || []).map((wid) => window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]).filter(Boolean);
+      const wordsHtml = wordObjs.map((w) => {
+        const wid = w.id;
         const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
         const color = cat ? cat.color : '#fff';
-        return `<span class="wu-hist-word curious-tappable" data-wid="${wid}" style="--cat-color:${color};">
-          <span class="wu-hist-icon">${w.icon || ''}</span>
-          <span class="wu-hist-pinyin">${w.pinyin}</span>
-        </span>`;
+        return '<button class="wu-hist-word curious-tappable" data-wid="' + escapeHtml(wid) + '"' +
+          ' style="--cat-color:' + color + ';" type="button" aria-label="Explorar palabra ' + escapeHtml(w.pinyin) + '">' +
+            '<span class="wu-hist-icon">' + (w.icon || '') + '</span>' +
+            (w.hanzi ? '<span class="wu-hist-hanzi" lang="zh">' + escapeHtml(w.hanzi) + '</span>' : '') +
+            '<span class="wu-hist-pinyin">' + escapeHtml(w.pinyin) + '</span>' +
+            (w.es ? '<span class="wu-hist-es">' + escapeHtml(w.es) + '</span>' : '') +
+          '</button>';
       }).join('');
-      // Teacher-sent rows get a small attribution chip (sentence may carry
-      // teacherName if the push captured it).
       const teacherChip = s.pushedByTeacher
-        ? `<span class="wu-history-from-teacher">📤 ${escapeHtml(s.teacherName || 'Maestra')}</span>`
+        ? '<span class="wu-history-from-teacher">📤 ' + escapeHtml(s.teacherName || 'Maestra') + '</span>'
         : '';
-      item.innerHTML = `
-        <div class="wu-history-item-row">
-          <div class="wu-history-item-meta">📅 ${dateStr} ${teacherChip}</div>
-          <button class="wu-history-item-delete" type="button" aria-label="Borrar">🗑</button>
-        </div>
-        <div class="wu-history-item-words">${wordsHtml}</div>`;
+      // Concatenated pinyin used by the Escuchar button. We send the
+      // pinyin string straight to /api/tts (Google) — it handles
+      // tones and renders quite natural Mandarin. The hanzi would be
+      // more accurate but the existing builder uses pinyin everywhere
+      // so this stays consistent.
+      const pinyinSentence = wordObjs.map((w) => w.pinyin).join(' ').trim();
+      // The hanzi-concatenated version is a fallback / future improvement;
+      // store it on the button so we can A/B-flip later without a re-render.
+      const hanziSentence = wordObjs.map((w) => w.hanzi || '').join('').trim();
+      item.innerHTML =
+        '<div class="wu-history-item-row">' +
+          '<div class="wu-history-item-meta">📅 <strong>' + dateStr + '</strong> ' + teacherChip + '</div>' +
+          '<button class="wu-history-item-delete" type="button" aria-label="Borrar">🗑</button>' +
+        '</div>' +
+        '<div class="wu-history-item-words">' + wordsHtml + '</div>' +
+        '<div class="wu-history-item-actions">' +
+          '<button class="wu-history-listen" type="button" data-pinyin="' + escapeHtml(pinyinSentence) + '" data-hanzi="' + escapeHtml(hanziSentence) + '">🔊 Escuchar oración</button>' +
+        '</div>';
       const delBtn = item.querySelector('.wu-history-item-delete');
       if (delBtn) {
-        delBtn.onclick = () => {
+        delBtn.onclick = (ev) => {
+          ev.stopPropagation();
           if (!confirm('¿Borrar esta oración del historial?')) return;
           socket.emit('wu:delete-history-entry', {
             studentCode: myStudentCode, ts: s.ts,
@@ -3353,8 +3379,23 @@
           });
         };
       }
+      // Listen — speaks the pinyin (Google TTS). We prefer hanzi for
+      // pronunciation quality WHEN the sentence is at least 3 chars
+      // long (single particles like "le" sound weird in isolation
+      // through the hanzi pipeline).
+      const listenBtn = item.querySelector('.wu-history-listen');
+      if (listenBtn) {
+        listenBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const hanzi = listenBtn.dataset.hanzi || '';
+          const pinyin = listenBtn.dataset.pinyin || '';
+          const toSpeak = (hanzi && hanzi.replace(/\s+/g, '').length >= 2) ? hanzi : pinyin;
+          if (toSpeak) speakChineseWU(toSpeak, listenBtn);
+        });
+      }
       item.querySelectorAll('.wu-hist-word').forEach((el) => {
-        el.addEventListener('click', () => {
+        el.addEventListener('click', (ev) => {
+          ev.stopPropagation();
           const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[el.dataset.wid];
           if (w) showWuPokedex(w);
         });

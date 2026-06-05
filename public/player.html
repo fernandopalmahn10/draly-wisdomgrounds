@@ -20,7 +20,7 @@
   <link rel="stylesheet" href="/css/family.css?v=20260520c">
   <link rel="stylesheet" href="/css/triage.css?v=20260528d">
   <link rel="stylesheet" href="/css/laiquhui.css?v=20260525d">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260604c">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260604e">
   <link rel="stylesheet" href="/css/identity.css?v=20260525a">
   <link rel="stylesheet" href="/css/partyrun.css?v=20260525a">
   <link rel="stylesheet" href="/css/reading.css?v=20260603d">
@@ -831,14 +831,21 @@
       <div class="wu-player-exp-tabs" id="wu-player-exp-tabs"></div>
       <div class="wu-player-library" id="wu-player-library"></div>
     </div>
-    <!-- 📜 SENTENCE HISTORY MODAL — opens when "Mis oraciones" tapped -->
+    <!-- 📜 MIS ORACIONES — full-screen library of the kid's saved
+         warmup sentences. Redesigned 2026-06-04 (Fernando): "this is
+         the main language essence. Make it bigger, full screen,
+         beautiful, scale perfectly." Header is sticky so the back
+         button is always reachable; list is a responsive grid that
+         flows from 1 column on phone to 3 on desktop. -->
     <div class="wu-history-modal hidden" id="wu-history-modal">
-      <div class="wu-history-card">
-        <div class="wu-history-header">
-          <span class="wu-history-title">📜 Mis oraciones</span>
-          <button class="wu-history-close" id="wu-history-close" type="button" aria-label="Cerrar">✕</button>
-        </div>
-        <div class="wu-history-sub" id="wu-history-sub">Código: ···· · 0 oraciones</div>
+      <div class="wu-history-sheet">
+        <header class="wu-history-hero">
+          <button class="wu-history-back" id="wu-history-close" type="button" aria-label="Volver">←</button>
+          <div class="wu-history-hero-text">
+            <h2 class="wu-history-title">📜 Mis oraciones</h2>
+            <div class="wu-history-sub" id="wu-history-sub">Cargando tu colección…</div>
+          </div>
+        </header>
         <div class="wu-history-list" id="wu-history-list">
           <div class="wu-history-empty">Cargando…</div>
         </div>
@@ -875,6 +882,6 @@
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260525c"></script>
-  <script src="/js/player.js?v=20260604c"></script>
+  <script src="/js/player.js?v=20260604e"></script>
 </body>
 </html>

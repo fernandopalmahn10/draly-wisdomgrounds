@@ -502,165 +502,309 @@ body.wu-bg .market-banner {
 }
 .wu-player-history-btn:active { transform: scale(0.94); }
 
-/* === HISTORY MODAL === */
+/* ═══════════════════════════════════════════════════════════════════
+ * 📜 MIS ORACIONES — full-screen sentence library
+ *   Fernando 2026-06-04: "This is the main language essence. Make it
+ *   bigger, full screen, beautiful, scale perfectly."
+ *
+ *   Layout decisions:
+ *   - .wu-history-modal is now a full-viewport sheet, not a modal.
+ *     Background fades over the page; the sheet itself is opaque so
+ *     the kid focuses entirely on their collection.
+ *   - .wu-history-sheet is the scrollable inner column. Max-width
+ *     1100px so it doesn't sprawl on 4K monitors but goes edge-to-edge
+ *     on phones.
+ *   - Sticky hero header with a big ← back chip + title + counts.
+ *   - Tabs are sticky right under the hero so flipping between
+ *     "✍️ Mías" and "📤 De la maestra" doesn't lose your place.
+ *   - Cards are a responsive grid: 1 col on phone, 2 on tablet,
+ *     3 on desktop wide. Each card shows date, words (with hanzi +
+ *     pinyin + icon stacked), 🔊 Escuchar button, 🗑 delete.
+ * ═══════════════════════════════════════════════════════════════════ */
 .wu-history-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.8);
   z-index: 9998;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+  flex-direction: column;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(255, 210, 74, 0.10), transparent 70%),
+    linear-gradient(160deg, #1a2540 0%, #0e1426 100%);
   opacity: 0;
-  transition: opacity 0.25s;
+  transition: opacity 0.25s ease;
+  overflow: hidden;
 }
 .wu-history-modal.hidden { display: none !important; }
-.wu-history-modal.show { opacity: 1; }
-.wu-history-card {
-  background: linear-gradient(160deg, rgba(15, 22, 38, 0.98), rgba(8, 12, 22, 1));
-  border: 3px solid #ffe66a;
-  border-radius: 18px;
-  padding: 18px;
+.wu-history-modal.show   { opacity: 1; }
+.wu-history-sheet {
+  flex: 1;
   width: 100%;
-  max-width: 480px;
-  max-height: 80dvh;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 0 38px rgba(255, 230, 106, 0.4), 0 20px 48px rgba(0, 0, 0, 0.6);
-  transform: scale(0.85);
-  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.wu-history-modal.show .wu-history-card { transform: scale(1); }
-.wu-history-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.wu-history-title {
-  font-size: 1.2rem;
-  font-weight: 900;
-  color: #ffe66a;
-  text-shadow: 0 0 12px rgba(255, 230, 106, 0.55);
-}
-.wu-history-close {
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: #fff;
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-weight: 900;
-}
-.wu-history-sub {
-  font-size: 0.78rem;
-  font-style: italic;
-  color: rgba(220, 235, 245, 0.7);
-  text-align: center;
-}
-.wu-history-list {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px clamp(14px, 4vw, 28px) 32px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
+}
+.wu-history-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 0 14px;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: linear-gradient(180deg, rgba(14, 20, 38, 0.96) 0%, rgba(14, 20, 38, 0.85) 75%, rgba(14, 20, 38, 0) 100%);
+  backdrop-filter: blur(4px);
+}
+.wu-history-back {
+  width: 46px; height: 46px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  color: #fff5d8;
+  font-size: 1.5rem;
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+  flex: 0 0 auto;
+  transition: background 120ms ease, transform 120ms ease;
+}
+.wu-history-back:hover  { background: rgba(255, 255, 255, 0.14); }
+.wu-history-back:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.22); }
+.wu-history-hero-text { min-width: 0; flex: 1; }
+.wu-history-title {
+  font-family: 'Cinzel', serif;
+  font-size: clamp(1.4rem, 4.2vw, 2.1rem);
+  font-weight: 900;
+  color: #ffd166;
+  margin: 0;
+  line-height: 1.1;
+  text-shadow: 0 0 18px rgba(255, 209, 102, 0.35);
+  letter-spacing: 0.02em;
+}
+.wu-history-sub {
+  color: rgba(243, 230, 194, 0.78);
+  font-size: clamp(0.85rem, 2.6vw, 0.95rem);
+  font-weight: 600;
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.wu-history-sub strong { color: #fff5d8; }
+.wu-history-code-chip {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(91, 232, 209, 0.15);
+  color: #5be8d1;
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.03em;
+}
+.wu-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 .wu-history-empty {
   text-align: center;
-  padding: 22px;
-  color: rgba(220, 235, 245, 0.55);
+  padding: 60px 24px;
+  color: rgba(220, 235, 245, 0.65);
   font-style: italic;
+  font-size: 1rem;
+  line-height: 1.5;
 }
-/* 🆕 2026-06-04 — Mis Oraciones tabs: ✍️ Mías vs 📤 De la maestra. */
+
+/* Tabs — sticky, sized for thumbs, count chips for at-a-glance */
 .wu-history-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 14px;
   position: sticky;
-  top: 0;
+  top: 70px;
   z-index: 2;
   padding: 4px 0;
-  background: linear-gradient(180deg, rgba(15,25,40,0.95) 0%, rgba(15,25,40,0.7) 80%, rgba(15,25,40,0) 100%);
+  background: linear-gradient(180deg, rgba(14, 20, 38, 0.96) 0%, rgba(14, 20, 38, 0.6) 80%, rgba(14, 20, 38, 0) 100%);
 }
 .wu-history-tab {
   flex: 1;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
   color: rgba(220, 235, 245, 0.7);
-  border-radius: 10px;
-  padding: 10px 8px;
+  border-radius: 14px;
+  padding: 12px 10px;
   font-weight: 800;
-  font-size: 0.95rem;
+  font-size: 1rem;
   cursor: pointer;
   touch-action: manipulation;
-  transition: background 120ms ease, transform 120ms ease;
+  transition: background 120ms ease, transform 120ms ease, border-color 120ms ease;
 }
 .wu-history-tab:active { transform: scale(0.97); }
 .wu-history-tab.is-active {
   background: linear-gradient(135deg, rgba(255, 200, 110, 0.22), rgba(255, 90, 102, 0.16));
   border-color: rgba(255, 200, 110, 0.7);
   color: #fff5d8;
-  box-shadow: 0 0 12px rgba(255, 200, 110, 0.2);
+  box-shadow: 0 0 16px rgba(255, 200, 110, 0.22);
 }
 .wu-history-tab-n {
   display: inline-block;
-  margin-left: 6px;
-  padding: 1px 8px;
+  margin-left: 8px;
+  padding: 2px 10px;
   border-radius: 999px;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0, 0, 0, 0.35);
   color: #ffe082;
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 900;
 }
-.wu-history-tab-body { display: flex; flex-direction: column; gap: 8px; }
+
+/* The card grid — 1 col phone, 2 col tablet, 3 col big screen.
+   Each card is its own little book page. */
+.wu-history-tab-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 760px) {
+  .wu-history-tab-body { grid-template-columns: 1fr 1fr; gap: 18px; }
+}
+@media (min-width: 1140px) {
+  .wu-history-tab-body { grid-template-columns: 1fr 1fr 1fr; }
+}
+
+.wu-history-item {
+  background: linear-gradient(160deg, rgba(40, 50, 80, 0.78), rgba(22, 28, 48, 0.92));
+  border-radius: 18px;
+  border-left: 6px solid #ffd166;
+  padding: 16px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+.wu-history-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+}
 .wu-history-item.is-from-teacher {
   border-left-color: #5be88a;
-  background: linear-gradient(135deg, rgba(91, 232, 138, 0.08), rgba(91, 232, 138, 0.02));
+  background: linear-gradient(160deg, rgba(40, 75, 55, 0.7), rgba(22, 38, 28, 0.92));
 }
-.wu-history-from-teacher {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: rgba(91, 232, 138, 0.18);
-  color: #5be88a;
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-.wu-history-item {
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
-  padding: 8px 10px;
-  border-left: 4px solid #ffe66a;
+.wu-history-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 .wu-history-item-meta {
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
-  color: rgba(220, 235, 245, 0.55);
-  margin-bottom: 4px;
+  font-size: 0.92rem;
+  color: rgba(243, 230, 194, 0.85);
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+.wu-history-item-meta strong { color: #fff5d8; font-weight: 900; }
+.wu-history-from-teacher {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(91, 232, 138, 0.2);
+  color: #5be88a;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+.wu-history-item-delete {
+  background: rgba(255, 90, 102, 0.12);
+  border: 2px solid rgba(255, 90, 102, 0.4);
+  color: #ff9a8a;
+  width: 38px; height: 38px;
+  border-radius: 12px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+.wu-history-item-delete:active { transform: scale(0.92); background: rgba(255, 90, 102, 0.25); }
+
 .wu-history-item-words {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 8px;
 }
 .wu-hist-word {
-  background: rgba(0, 0, 0, 0.4);
-  border: 1.5px solid var(--cat-color, #fff);
-  color: var(--cat-color, #fff);
-  border-radius: 8px;
-  padding: 3px 8px;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  font-size: 0.85rem;
-  font-weight: 800;
-  text-shadow: 0 0 4px var(--cat-color, transparent);
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid var(--cat-color, rgba(255, 245, 216, 0.4));
+  color: #fff5d8;
+  border-radius: 12px;
+  padding: 8px 10px;
+  min-width: 64px;
+  font-family: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 120ms ease, transform 100ms ease;
 }
-.wu-hist-icon { font-size: 0.95rem; }
+.wu-hist-word:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.14); }
+.wu-hist-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.wu-hist-hanzi {
+  font-family: 'Noto Sans SC', 'Noto Sans CJK SC', 'PingFang SC', 'Microsoft YaHei', system-ui, serif;
+  font-weight: 900;
+  font-size: 1.2rem;
+  line-height: 1.05;
+  color: var(--cat-color, #fff5d8);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+}
+.wu-hist-pinyin {
+  font-weight: 800;
+  font-size: 0.92rem;
+  line-height: 1;
+  color: var(--cat-color, #fff5d8);
+}
+.wu-hist-es {
+  font-size: 0.74rem;
+  font-style: italic;
+  color: rgba(243, 230, 194, 0.6);
+  line-height: 1;
+}
+
+.wu-history-item-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+.wu-history-listen {
+  flex: 1;
+  background: linear-gradient(135deg, #ffb46b, #ff7e5f);
+  color: #2a1500;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 900;
+  font-size: 0.98rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 4px 14px rgba(255, 126, 95, 0.32);
+  transition: transform 100ms ease, box-shadow 150ms ease;
+}
+.wu-history-listen:active { transform: scale(0.97); }
+.wu-history-listen.speaking {
+  animation: wuHistListenPulse 0.75s ease-in-out infinite;
+}
+@keyframes wuHistListenPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 14px rgba(255, 126, 95, 0.32); }
+  50%      { transform: scale(1.04); box-shadow: 0 6px 20px rgba(255, 126, 95, 0.5); }
+}
 .wu-player-stage {
   flex: 1;
   display: flex;
