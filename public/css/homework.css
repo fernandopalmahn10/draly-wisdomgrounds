@@ -1368,6 +1368,34 @@ button, a, .hw-card, .hw-folder-card, .hw-lib-chip, .hw-stage-word,
 .hw-parents-test-title { color: #fff5d8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hw-parents-test-score { color: #ffe082; }
 .hw-parents-test-date  { color: rgba(243, 230, 194, 0.55); font-size: 0.85rem; }
+
+/* 📝 EXÁMENES REALES — HSK simulation attempts (Fernando 2026-06-04).
+   Same visual language as the test rows above so the parent reads
+   them as siblings, but with a jade accent so they're distinguishable
+   from reading-test rows at a glance. */
+.hw-parents-hsk { display: flex; flex-direction: column; gap: 8px; }
+.hw-parents-hsk-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  background: rgba(30, 35, 60, 0.55);
+  border-left: 3px solid #5be88a;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.hw-parents-hsk-main {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+}
+.hw-parents-hsk-title { color: #fff5d8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hw-parents-hsk-score.is-passed { color: #5be88a; }
+.hw-parents-hsk-score.is-low    { color: #ff9a6b; }
+.hw-parents-hsk-score small     { font-weight: 600; opacity: 0.8; }
+.hw-parents-hsk-date  { color: rgba(243, 230, 194, 0.55); font-size: 0.85rem; font-weight: 600; }
+.hw-parents-hsk-note  { color: rgba(243, 230, 194, 0.8); font-size: 0.85rem; font-weight: 500; }
 /* Parent-view: SPEAK-OUT-LOUD callout (prominent, near the top) */
 .hw-parents-speak-banner {
   display: block;

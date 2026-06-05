@@ -59,7 +59,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260529f">
-  <link rel="stylesheet" href="/css/homework.css?v=20260601u">
+  <link rel="stylesheet" href="/css/homework.css?v=20260604b">
   <link rel="stylesheet" href="/css/characters.css?v=20260601o">
 </head>
 <body class="hw-bg">
@@ -374,6 +374,16 @@
           <div class="hw-parents-empty">Aún no ha leído ninguna historia en clase. Pregúntale a la maestra.</div>
         </div>
 
+        <!-- 📝 EXÁMENES REALES — HSK simulation attempts the kid has done.
+             User feedback 2026-06-04 (Fernando): parents need a clear view
+             of every real HSK exam simulation the kid sat, with score,
+             percentage, and date. Empty state explains what these are. -->
+        <div class="hw-parents-section-title">📝 Exámenes reales</div>
+        <p class="hw-parents-section-intro">Estas son las simulaciones del examen oficial HSK que tu hijo/a ya hizo en clase. Verás todos los intentos con la fecha, los puntos y el porcentaje.</p>
+        <div class="hw-parents-hsk" id="hw-parents-hsk">
+          <div class="hw-parents-empty">Aún no ha hecho ninguna simulación del HSK. Estas son los exámenes oficiales que practicamos en clase — cuando tu hijo/a haga su primera, aquí verás el resultado.</div>
+        </div>
+
         <!-- HSK1 Niveles — collapsed by default. User feedback 2026-05-27:
              "don't display all word lists at once. It should be a dropdown
              Nivel de HSK1 → HSK1 (later HSK2 etc)." -->
@@ -566,7 +576,7 @@
        script kills its MutationObserver + rAF loop entirely. Big perf win. -->
   <script src="/js/characters.js?v=20260603a"></script>
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/homework.js?v=20260603k"></script>
+  <script src="/js/homework.js?v=20260604b"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>

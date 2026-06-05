@@ -1417,6 +1417,37 @@ app.get('/api/homework/insights/:code', (req, res) => {
       rows,
     });
   });
+  // 📝 EXÁMENES REALES — HSK simulation attempts the kid has finished.
+  // Stored per-student as rec.hskResults = [{ simId, score, total,
+  // percent, ts }]. We enrich each row with the friendly title from
+  // the HskSim module so the parent sees "HSK1 · Simulación 2"
+  // instead of "hsk1-sim2", and sort newest first so the most recent
+  // attempt is on top. (Fernando 2026-06-04: parents should see real
+  // exam attempts in their Progreso view; existing accounts that
+  // already have data will populate automatically.)
+  const hskRows = (Array.isArray(rec.hskResults) ? rec.hskResults : [])
+    .slice()
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+    .map((r) => {
+      const sim = (HskSim.SIMULATIONS || {})[r.simId];
+      return {
+        simId:   r.simId,
+        title:   (sim && sim.title) || r.simId,
+        level:   (sim && sim.level) || null,
+        score:   r.score,
+        total:   r.total,
+        percent: r.percent,
+        ts:      r.ts,
+      };
+    });
+  // Pick the BEST attempt per simId for the headline counter so a kid
+  // who took Sim 1 four times shows as "1 examen" with their best %, not 4.
+  const bestPercentBySim = {};
+  hskRows.forEach((r) => {
+    if (bestPercentBySim[r.simId] == null || r.percent > bestPercentBySim[r.simId]) {
+      bestPercentBySim[r.simId] = r.percent;
+    }
+  });
   res.json({
     ok: true,
     code: rec.code,
@@ -1427,6 +1458,7 @@ app.get('/api/homework/insights/:code', (req, res) => {
     remaining,
     conversationPrompts,
     sentenceDetail,
+    hskResults: hskRows,
     totals: {
       assignmentAttempts:    subs.length,
       assignmentsMastered:   insights.length,
@@ -1444,6 +1476,9 @@ app.get('/api/homework/insights/:code', (req, res) => {
       // bar. Every save (warmup save, daily-bonus, edited copy) increments it.
       sentencesSavedTotal:   (rec.sentencesBuilt || []).length,
       sentencesSavedGoal:    2000,
+      // 📝 HSK simulation counters for the parent's Progreso view.
+      hskAttempts:           hskRows.length,
+      hskSimsAttempted:      Object.keys(bestPercentBySim).length,
     },
   });
 });
