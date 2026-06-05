@@ -1893,6 +1893,100 @@ app.get('/api/admin/student/:code/hsk-attempt', (req, res) => {
   });
 });
 
+// 👶 KID-FACING — list THIS student's HSK attempts so they can review
+// their own records. Same data as the parent view's section but
+// callable from the kid's homework portal screen. Auth: access code
+// (not admin). Returns wrongQs counts but NOT the wrong-question
+// detail (use my-hsk-attempt below for that).
+app.get('/api/homework/my-hsk-attempts/:code', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'no such student' });
+  const rows = (Array.isArray(rec.hskResults) ? rec.hskResults : [])
+    .slice()
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+    .map((r) => {
+      const sim = (HskSim.SIMULATIONS || {})[r.simId];
+      return {
+        simId: r.simId,
+        title: (sim && sim.title) || r.simId,
+        score: r.score,
+        total: r.total,
+        percent: r.percent,
+        wrongCount: Array.isArray(r.wrongQs) ? r.wrongQs.length : 0,
+        hasBreakdown: Array.isArray(r.wrongQs),    // false for pre-2026-06-04 attempts
+        ts: r.ts,
+      };
+    });
+  res.json({ ok: true, attempts: rows });
+});
+
+// 👶 KID-FACING — wrong-question detail for ONE of THIS student's
+// attempts. Same enrichment as the admin endpoint (question labels
+// pulled from the sim catalog so the kid sees "Lectura 1, pregunta 22
+// · yīshēng" not just "R1-22").
+app.get('/api/homework/my-hsk-attempt/:code', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'no such student' });
+  const ts = parseInt(req.query.ts, 10);
+  if (!ts) return res.status(400).json({ ok: false, error: 'ts required' });
+  const attempt = (rec.hskResults || []).find((r) => r.ts === ts);
+  if (!attempt) return res.status(404).json({ ok: false, error: 'attempt not found' });
+  const sim = (HskSim.SIMULATIONS || {})[attempt.simId];
+  // Same enrichment logic as the admin endpoint — extracted here so we
+  // don't introduce a shared helper for a 20-line function called twice.
+  const partLabels = {
+    L1: 'Parte 1 (audio)',
+    L2: 'Parte 2 (audio)',
+    L3: 'Parte 3 (audio)',
+    L4: 'Parte 4 (audio)',
+    R1: 'Lectura 1',
+    R2: 'Lectura 2',
+  };
+  const fmtBool = (v) => (v === true || v === 'true') ? 'Verdadero (✓)'
+                       : (v === false || v === 'false') ? 'Falso (✕)'
+                       : String(v == null || v === '' ? '(sin responder)' : v);
+  const wrongQs = (attempt.wrongQs || []).map((wq) => {
+    const out = Object.assign({}, wq);
+    out.givenLabel = fmtBool(wq.given);
+    out.expectedLabel = fmtBool(wq.expected);
+    if (sim) {
+      const [part, numStr] = String(wq.qid).split('-');
+      const num = parseInt(numStr, 10);
+      const partMap = {
+        'L1': sim.listening && sim.listening.part1 && sim.listening.part1.questions,
+        'L2': sim.listening && sim.listening.part2 && sim.listening.part2.questions,
+        'L3': sim.listening && sim.listening.part3 && sim.listening.part3.questions,
+        'L4': sim.listening && sim.listening.part4 && sim.listening.part4.questions,
+        'R1': sim.reading && sim.reading.part1 && sim.reading.part1.questions,
+        'R2': sim.reading && sim.reading.part2 && sim.reading.part2.questions,
+      };
+      const q = (partMap[part] || []).find((x) => x.num === num);
+      out.partLabel = partLabels[part] || part;
+      out.qNum = num;
+      if (q) {
+        if (q.word) out.questionLabel = q.word;
+        else if (q.pinyin) out.questionLabel = q.pinyin;
+        else if (q.audioText) out.questionLabel = q.audioText;
+      }
+    }
+    return out;
+  });
+  res.json({
+    ok: true,
+    simId: attempt.simId,
+    simTitle: (sim && sim.title) || attempt.simId,
+    score: attempt.score,
+    total: attempt.total,
+    percent: attempt.percent,
+    ts: attempt.ts,
+    wrongQs,
+    wrongCount: wrongQs.length,
+    hasBreakdown: Array.isArray(attempt.wrongQs),
+  });
+});
+
 // 📊 Classroom mistake heatmap — aggregates wrong-answer counts across
 // ALL students the caller can touch. Output: per-question hit counts
 // + per-part totals so the teacher sees "L2-7 was wrong for 8/12 kids"
