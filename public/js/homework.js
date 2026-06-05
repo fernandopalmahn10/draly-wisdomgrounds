@@ -2423,6 +2423,40 @@
         testsWrap.appendChild(row);
       });
     }
+    // === 📝 EXÁMENES REALES — HSK simulation attempts ===
+    // User feedback 2026-06-04 (Fernando): parents should see every real
+    // HSK exam their kid sat — Sim 1 / Sim 2 / Sim 3 etc — with the date
+    // and percentage. We show ALL attempts (not just the best) so they
+    // can see the kid's progression: "Did 60% on first try, 80% on the
+    // retake". Empty state explains what these are.
+    const hskWrap = $('hw-parents-hsk');
+    if (hskWrap) {
+      const hskRows = Array.isArray(data.hskResults) ? data.hskResults : [];
+      if (!hskRows.length) {
+        hskWrap.innerHTML = '<div class="hw-parents-empty">Aún no ha hecho ninguna simulación del HSK. Estas son los exámenes oficiales que practicamos en clase — cuando tu hijo/a haga su primera, aquí verás el resultado.</div>';
+      } else {
+        hskWrap.innerHTML = '';
+        hskRows.forEach((r) => {
+          const row = document.createElement('div');
+          row.className = 'hw-parents-hsk-row';
+          // Same "passed if ≥ 60%" convention as the rest of the parent
+          // view (HSK official passing line is also 60%).
+          const passed = (r.percent != null) && r.percent >= 60;
+          const dateStr = new Date(r.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+          const pctStr = (r.percent != null) ? Math.round(r.percent) + '%' : '—';
+          row.innerHTML = `
+            <div class="hw-parents-hsk-main">
+              <span class="hw-parents-hsk-title">📝 ${escapeHtml(r.title)}</span>
+              <span class="hw-parents-hsk-score ${passed ? 'is-passed' : 'is-low'}">${r.score}/${r.total} <small>· ${pctStr}</small></span>
+              <span class="hw-parents-hsk-date">${dateStr}</span>
+            </div>
+            <div class="hw-parents-hsk-note">${passed
+              ? '✅ Aprobó — Felicítalo/a y pídele que te cuente qué le gustó del examen.'
+              : '🌱 Aún no aprueba este examen. Anímalo/a a repasar y volverlo a intentar.'}</div>`;
+          hskWrap.appendChild(row);
+        });
+      }
+    }
     // === REMAINING / NOT-YET-DONE TAREAS ===
     // User feedback 2026-05-27: parents need to nudge kids on tareas
     // they haven't started. Show each remaining tarea as a row with a
