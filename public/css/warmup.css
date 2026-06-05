@@ -2206,6 +2206,320 @@ body.wu-timemachine::after {
 }
 .wu-push-search { width: 100%; }
 
+/* ═══════════════════════════════════════════════════════════════════
+ * 📤 PUSH-TO-STUDENTS — full-screen redesign (Fernando 2026-06-04).
+ *   "Super disorganized, something like a box at the very bottom,
+ *    not clean, not beautiful." → Full-screen sheet, sticky hero +
+ *    tabs, breathing room, two modes (Una / Paquete de lección).
+ * ═══════════════════════════════════════════════════════════════════ */
+.wu-push-sheet {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex;
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(91, 232, 138, 0.10), transparent 70%),
+    linear-gradient(160deg, #1a2540 0%, #0e1426 100%);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  overflow: hidden;
+}
+.wu-push-sheet.show { opacity: 1; }
+.wu-push-canvas {
+  flex: 1;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 14px clamp(14px, 4vw, 28px) 96px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.wu-push-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 0 14px;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: linear-gradient(180deg, rgba(14, 20, 38, 0.96) 0%, rgba(14, 20, 38, 0.85) 75%, rgba(14, 20, 38, 0) 100%);
+  backdrop-filter: blur(4px);
+}
+.wu-push-back {
+  width: 46px; height: 46px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  color: #fff5d8;
+  font-size: 1.5rem; font-weight: 900;
+  cursor: pointer; touch-action: manipulation;
+  flex: 0 0 auto;
+}
+.wu-push-back:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.22); }
+.wu-push-hero-text { flex: 1; min-width: 0; }
+.wu-push-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(1.3rem, 4vw, 2rem);
+  color: #5be88a;
+  margin: 0; line-height: 1.1;
+  text-shadow: 0 0 18px rgba(91, 232, 138, 0.3);
+}
+.wu-push-sub {
+  margin: 6px 0 0;
+  font-size: 0.92rem;
+  color: rgba(243, 230, 194, 0.78);
+  line-height: 1.45;
+}
+.wu-push-sub strong { color: #fff5d8; }
+.wu-push-sub em { color: #5be88a; font-style: normal; }
+
+.wu-push-tabs {
+  display: flex;
+  gap: 10px;
+  position: sticky;
+  top: 70px;
+  z-index: 2;
+  padding: 4px 0 14px;
+  background: linear-gradient(180deg, rgba(14, 20, 38, 0.96) 0%, rgba(14, 20, 38, 0.6) 80%, rgba(14, 20, 38, 0) 100%);
+}
+.wu-push-tab {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  color: rgba(220, 235, 245, 0.7);
+  border-radius: 14px;
+  padding: 12px 12px;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer; touch-action: manipulation;
+  transition: background 120ms ease;
+}
+.wu-push-tab:active { transform: scale(0.97); }
+.wu-push-tab.is-active {
+  background: linear-gradient(135deg, rgba(91, 232, 138, 0.22), rgba(91, 232, 209, 0.16));
+  border-color: rgba(91, 232, 138, 0.7);
+  color: #fff5d8;
+  box-shadow: 0 0 16px rgba(91, 232, 138, 0.22);
+}
+.wu-push-tab-n {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffe082;
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+
+.wu-push-pane { display: none; flex-direction: column; gap: 14px; margin-bottom: 14px; }
+.wu-push-pane.is-active { display: flex; }
+
+.wu-push-section {
+  background: linear-gradient(160deg, rgba(40, 50, 80, 0.55), rgba(22, 28, 48, 0.75));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.wu-push-section-h {
+  font-weight: 900;
+  color: #ffd166;
+  font-size: 0.95rem;
+  letter-spacing: 0.03em;
+}
+.wu-push-section-note {
+  font-weight: 600; font-size: 0.78rem;
+  color: rgba(243, 230, 194, 0.55);
+  font-style: italic;
+  margin-left: 6px;
+}
+.wu-push-section-foot {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+
+/* Sentence preview chips — now show pinyin + hanzi + es stacked */
+.wu-push-prev {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  background: rgba(91, 232, 209, 0.06);
+  border: 1.5px solid rgba(91, 232, 209, 0.25);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.wu-push-prev-chip {
+  display: inline-flex; flex-direction: column; align-items: center;
+  background: #fff;
+  color: #1a1a26;
+  border-radius: 10px;
+  padding: 6px 12px;
+  font-weight: 900;
+  font-size: 0.95rem;
+  gap: 1px;
+}
+.wu-push-prev-hz {
+  font-family: 'Noto Sans SC', 'Noto Sans CJK SC', 'PingFang SC', serif;
+  font-style: normal;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #c75a00;
+}
+.wu-push-prev-chip small {
+  font-weight: 700; font-size: 0.72rem;
+  color: rgba(0, 0, 0, 0.55);
+}
+
+/* Pack groups by EXP */
+.wu-push-pack { display: flex; flex-direction: column; gap: 12px; }
+.wu-push-pack-empty {
+  text-align: center;
+  padding: 28px 20px;
+  color: rgba(243, 230, 194, 0.55);
+  font-style: italic;
+  line-height: 1.5;
+  border: 1px dashed rgba(243, 230, 194, 0.18);
+  border-radius: 12px;
+}
+.wu-push-pack-empty strong { color: #5be88a; font-style: normal; }
+.wu-push-pack-group {
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 4px solid #ffd166;
+  border-radius: 0 12px 12px 0;
+  padding: 10px 12px;
+}
+.wu-push-pack-grouph {
+  font-weight: 900;
+  color: #ffd166;
+  font-size: 0.9rem;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+.wu-push-pack-grouph small { font-weight: 600; color: rgba(243, 230, 194, 0.6); }
+.wu-push-pack-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+.wu-push-pack-row:last-child { border-bottom: none; }
+.wu-push-pack-chips { flex: 1; display: flex; flex-wrap: wrap; gap: 4px; }
+.wu-push-pack-row .wu-push-prev-chip { padding: 3px 8px; font-size: 0.82rem; }
+.wu-push-pack-row .wu-push-prev-chip small { font-size: 0.62rem; }
+.wu-push-pack-del {
+  width: 32px; height: 32px;
+  background: rgba(255, 90, 102, 0.12);
+  border: 1.5px solid rgba(255, 90, 102, 0.4);
+  color: #ff9a8a;
+  border-radius: 10px;
+  font-size: 0.85rem; font-weight: 900;
+  cursor: pointer; touch-action: manipulation;
+}
+.wu-push-pack-del:active { transform: scale(0.9); background: rgba(255, 90, 102, 0.25); }
+
+/* Student picker */
+.wu-push-search {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  color: #fff5d8;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.wu-push-search::placeholder { color: rgba(243, 230, 194, 0.45); }
+.wu-push-quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.wu-push-students {
+  max-height: 38vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 4px;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 12px;
+}
+.wu-push-stu {
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  cursor: pointer; touch-action: manipulation;
+}
+.wu-push-stu:hover { background: rgba(255, 255, 255, 0.07); }
+.wu-push-stu input[type=checkbox] {
+  appearance: none;
+  width: 22px; height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  display: grid; place-items: center;
+}
+.wu-push-stu input[type=checkbox]:checked {
+  background: #5be88a;
+  border-color: #5be88a;
+}
+.wu-push-stu input[type=checkbox]:checked::after {
+  content: '✓';
+  color: #0d2a16;
+  font-weight: 900;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.wu-push-stu-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+}
+.wu-push-stu-name {
+  color: #fff5d8;
+  font-weight: 800;
+  font-size: 0.95rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.wu-push-stu-code {
+  font-family: 'Courier New', monospace;
+  color: rgba(243, 230, 194, 0.6);
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+}
+.wu-push-empty {
+  text-align: center;
+  color: rgba(243, 230, 194, 0.55);
+  font-style: italic;
+  padding: 18px;
+}
+
+/* Sticky send footer */
+.wu-push-footer {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: 0;
+  padding: 12px clamp(14px, 4vw, 28px) calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(0deg, rgba(14, 20, 38, 0.98) 0%, rgba(14, 20, 38, 0.78) 70%, rgba(14, 20, 38, 0) 100%);
+  z-index: 4;
+}
+.wu-push-send {
+  display: block;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #5be88a, #5be8d1);
+  color: #0d2a16;
+  border: none;
+  border-radius: 14px;
+  padding: 16px 18px;
+  font-weight: 900;
+  font-size: 1.1rem;
+  cursor: pointer; touch-action: manipulation;
+  box-shadow: 0 4px 18px rgba(91, 232, 138, 0.35);
+  transition: transform 120ms ease, box-shadow 150ms ease;
+}
+.wu-push-send:hover  { box-shadow: 0 6px 24px rgba(91, 232, 138, 0.5); }
+.wu-push-send:active { transform: scale(0.98); }
+.wu-push-send:disabled { background: rgba(255, 255, 255, 0.06); color: rgba(243, 230, 194, 0.4); box-shadow: none; cursor: not-allowed; }
+
 /* 🆕 2026-06-04 — Category chips inside the push-to-students modal.
    Teacher single-selects one chip; the default "🚫 Sin categoría" is
    pre-active so leaving it alone just sends an untagged push. */
