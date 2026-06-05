@@ -303,9 +303,13 @@
             '</button>'
           ).join('');
         overlay.innerHTML = '' +
+          // 🆕 2026-06-04 v2 (Fernando bug fix): floating ✕ button in
+          // the top-right corner, ALWAYS visible regardless of scroll
+          // position. The sticky ← back chip below is a secondary path.
+          '<button class="wu-push-corner-close" id="wu-push-close-corner" type="button" aria-label="Cerrar">✕</button>' +
           '<div class="wu-push-canvas">' +
             '<header class="wu-push-hero">' +
-              '<button class="wu-push-back" id="wu-push-close" type="button" aria-label="Cerrar">←</button>' +
+              '<button class="wu-push-back" id="wu-push-close" type="button" aria-label="Cerrar">← Volver</button>' +
               '<div class="wu-push-hero-text">' +
                 '<h2 class="wu-push-title">📤 Enviar oraciones a alumnos</h2>' +
                 '<p class="wu-push-sub">Cada oración se guarda en <strong>Mis oraciones</strong> del alumno con la nota <em>📤 Enviada por tu maestra</em>.</p>' +
@@ -468,17 +472,45 @@
         });
 
         // ───────── Add-to-pack handlers ─────────
+        // 🆕 2026-06-04 v2 (Fernando bug fix): pull the LIVE current
+        // sentence from the host-warmup builder, NOT the snapshot from
+        // when the modal opened. This way the teacher can build a new
+        // sentence behind the modal (or with the modal half-closed),
+        // tap "Añadir oración actual", and it lands in the pack. Also
+        // surface visible in-modal feedback so the teacher SEES the
+        // sentence land (flashSaveFeedback fires the host page chip,
+        // which is hidden behind the modal — useless).
+        function _modalFlash(text, isOk) {
+          let el = overlay.querySelector('.wu-push-flash');
+          if (!el) {
+            el = document.createElement('div');
+            el.className = 'wu-push-flash';
+            overlay.querySelector('.wu-push-canvas').appendChild(el);
+          }
+          el.textContent = text;
+          el.classList.remove('is-ok', 'is-err');
+          el.classList.add(isOk ? 'is-ok' : 'is-err');
+          el.classList.remove('hidden');
+          clearTimeout(el._hideT);
+          el._hideT = setTimeout(() => { try { el.classList.add('hidden'); } catch (_) {} }, 2400);
+        }
         function addCurrentToPack() {
-          if (!wordIds || !wordIds.length) { alert('No hay oración en escena para añadir.'); return; }
+          // Pull from the live builder closure — currentSentence is the
+          // canonical stage state on host-warmup.js. Falls back to the
+          // snapshot if for some reason the live ref is empty.
+          const live = (typeof currentSentence !== 'undefined' && Array.isArray(currentSentence) && currentSentence.length)
+            ? currentSentence.slice()
+            : (wordIds || []).slice();
+          if (!live.length) { _modalFlash('Arma una oración en la pizarra primero', false); return; }
           pack.push({
             ts: Date.now() + Math.floor(Math.random() * 1000),
-            words: wordIds.slice(),
-            exp: _expLabelForWords(wordIds) || 'OTRO',
+            words: live,
+            exp: _expLabelForWords(live) || 'OTRO',
           });
           _saveLessonPack(pack);
           renderPack();
           updateSendBtn();
-          flashSaveFeedback(true, '➕ Añadida al paquete (' + pack.length + ')');
+          _modalFlash('➕ Añadida al paquete (' + pack.length + ')', true);
           showTab('pack');
         }
         overlay.querySelector('#wu-push-add-current').addEventListener('click', addCurrentToPack);
@@ -495,6 +527,8 @@
         // ───────── Quick-pick student helpers ─────────
         const close = () => { overlay.classList.remove('show'); setTimeout(() => { try { overlay.remove(); } catch (_) {} }, 200); };
         overlay.querySelector('#wu-push-close').addEventListener('click', close);
+        const cornerClose = overlay.querySelector('#wu-push-close-corner');
+        if (cornerClose) cornerClose.addEventListener('click', close);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
         overlay.querySelector('#wu-push-search').addEventListener('input', (e) => renderRows(e.target.value));
         overlay.querySelector('#wu-push-all').addEventListener('click', () => {

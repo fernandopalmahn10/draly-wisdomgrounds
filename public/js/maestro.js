@@ -202,35 +202,70 @@
             '<span class="m-launch-game-blurb">' + escapeHtml(g.blurb) + '</span>' +
           '</button>'
         ).join('');
+        // 🆕 2026-06-04 v2 (Fernando): Default view is "🟢 En línea
+        // ahora" as its OWN tab (not just a button), so the teacher
+        // sees the relevant kids immediately. Toggle to "📋 Todos" to
+        // see the full roster.
+        const onlineCount = students.filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000).length;
         overlay.innerHTML =
           '<div class="m-modal-card" style="max-width:760px;">' +
             '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
             '<h2>🚀 Lanzar juego</h2>' +
-            '<p class="m-modal-sub">Elige un juego y los alumnos en línea entrarán automáticamente cuando se cree la sala. Tú abres la página del juego en una pestaña nueva.</p>' +
+            '<p class="m-modal-sub">Elige un juego y los alumnos seleccionados entrarán automáticamente cuando aparezca el PIN.</p>' +
             '<div class="m-launch-section-h">1) Elige el juego</div>' +
             '<div class="m-launch-games">' + gameCardsHtml + '</div>' +
             '<div class="m-launch-section-h">2) Elige los alumnos</div>' +
+            '<div class="m-launch-stu-tabs" role="tablist">' +
+              '<button class="m-launch-stu-tab is-active" data-stu="online" type="button">🟢 En línea ahora <span class="m-launch-stu-n">' + onlineCount + '</span></button>' +
+              '<button class="m-launch-stu-tab" data-stu="all" type="button">📋 Todos <span class="m-launch-stu-n">' + students.length + '</span></button>' +
+            '</div>' +
             '<div class="m-force-actions">' +
-              '<button class="btn btn-ghost btn-sm" id="m-lc-online" type="button">🟢 Solo en línea</button>' +
-              '<button class="btn btn-ghost btn-sm" id="m-lc-all" type="button">✅ Todos</button>' +
+              '<button class="btn btn-ghost btn-sm" id="m-lc-all" type="button">✅ Todos visibles</button>' +
               '<button class="btn btn-ghost btn-sm" id="m-lc-none" type="button">⬜ Ninguno</button>' +
             '</div>' +
-            '<div class="m-force-students" id="m-lc-list" style="max-height:30vh;overflow-y:auto;"></div>' +
+            '<div class="m-force-students" id="m-lc-list" style="max-height:32vh;overflow-y:auto;"></div>' +
             '<button class="btn btn-jade btn-xl" id="m-lc-go" disabled style="margin-top:14px;width:100%;">🚀 Elige un juego primero</button>' +
           '</div>';
         document.body.appendChild(overlay);
         const list = overlay.querySelector('#m-lc-list');
-        students.forEach((s) => {
-          const isOnline = s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000;
-          const row = document.createElement('label');
-          row.className = 'm-force-row';
-          row.dataset.online = isOnline ? '1' : '0';
-          row.innerHTML =
-            '<input type="checkbox" data-code="' + escapeHtml(s.code) + (isOnline ? '" checked>' : '">') +
-            '<span class="m-force-row-dot" style="background:' + (isOnline ? '#5be88a' : '#666') + ';"></span>' +
-            '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
-            '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
-          list.appendChild(row);
+        let stuFilter = 'online';   // 'online' | 'all'
+        function renderStudents() {
+          list.innerHTML = '';
+          let shown = students;
+          if (stuFilter === 'online') {
+            shown = students.filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
+          }
+          if (!shown.length) {
+            list.innerHTML = '<div class="m-launch-empty">' +
+              (stuFilter === 'online'
+                ? 'Nadie está en línea ahora mismo. Cambia a 📋 Todos para ver al grupo completo.'
+                : 'No hay alumnos.') +
+              '</div>';
+            return;
+          }
+          shown.forEach((s) => {
+            const isOnline = s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000;
+            const row = document.createElement('label');
+            row.className = 'm-force-row';
+            row.dataset.online = isOnline ? '1' : '0';
+            // Default checked = on (when in online tab); off in "all" tab
+            row.innerHTML =
+              '<input type="checkbox" data-code="' + escapeHtml(s.code) + (stuFilter === 'online' ? '" checked>' : '">') +
+              '<span class="m-force-row-dot" style="background:' + (isOnline ? '#5be88a' : '#666') + ';"></span>' +
+              '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+              '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
+            list.appendChild(row);
+          });
+        }
+        renderStudents();
+        overlay.querySelectorAll('.m-launch-stu-tab').forEach((t) => {
+          t.addEventListener('click', () => {
+            overlay.querySelectorAll('.m-launch-stu-tab').forEach((x) => x.classList.remove('is-active'));
+            t.classList.add('is-active');
+            stuFilter = t.dataset.stu;
+            renderStudents();
+            updateGo();
+          });
         });
         let chosen = null;
         const goBtn = overlay.querySelector('#m-lc-go');
@@ -262,13 +297,7 @@
           list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
           updateGo();
         });
-        overlay.querySelector('#m-lc-online').addEventListener('click', () => {
-          list.querySelectorAll('.m-force-row').forEach((row) => {
-            const cb = row.querySelector('input[type=checkbox]');
-            if (cb) cb.checked = (row.dataset.online === '1');
-          });
-          updateGo();
-        });
+        list.addEventListener('change', updateGo);
         goBtn.addEventListener('click', () => {
           if (!chosen) return;
           const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))

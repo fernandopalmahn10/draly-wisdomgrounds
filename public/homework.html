@@ -59,7 +59,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260529f">
-  <link rel="stylesheet" href="/css/homework.css?v=20260604d">
+  <link rel="stylesheet" href="/css/homework.css?v=20260604j">
   <link rel="stylesheet" href="/css/characters.css?v=20260601o">
 </head>
 <body class="hw-bg">
@@ -186,15 +186,27 @@
       </div>
     </div>
 
-    <!-- 📜 MIS ORACIONES — the kid's saved warmup sentences, with a 🔊 to
-         hear each one in the Google voice. -->
+    <!-- 📜 MIS ORACIONES — full-screen sentence library 2026-06-04 v2.
+         Fernando: "Mis oraciones is not redesigned. It's not more clean.
+         It's not redesigned and split into categories like Saved by Me
+         and Teachers Sent." Now full-screen + tabs (✍️ Mías / 📤 De la
+         maestra), with the existing month-grouping preserved inside.
+         The teacher tab also gets a category filter strip. -->
     <div class="hw-sentences-overlay hidden" id="hw-sentences-overlay">
-      <div class="hw-sentences-card">
-        <div class="hw-sentences-header">
-          <span class="hw-sentences-title">📜 Mis oraciones</span>
-          <button class="hw-sentences-close" id="hw-sentences-close" type="button" aria-label="Cerrar">✕</button>
+      <button class="hw-sent-corner-close" id="hw-sentences-corner-close" type="button" aria-label="Cerrar">✕</button>
+      <div class="hw-sentences-sheet">
+        <header class="hw-sent-hero">
+          <button class="hw-sent-back" id="hw-sentences-close" type="button" aria-label="Volver">← Volver</button>
+          <div class="hw-sent-hero-text">
+            <h2 class="hw-sent-title">📜 Mis oraciones</h2>
+            <p class="hw-sent-sub" id="hw-sentences-sub">Tu colección de chino · 🔊 Escucha · ✏️ Edita · 🗑 Borra · 🔍 Toca una palabra para explorarla.</p>
+          </div>
+        </header>
+        <div class="hw-sent-tabs" role="tablist">
+          <button class="hw-sent-tab is-active" data-tab="mine" type="button">✍️ Mías <span class="hw-sent-tab-n" id="hw-sent-tab-n-mine">0</span></button>
+          <button class="hw-sent-tab" data-tab="teacher" type="button">📤 De la maestra <span class="hw-sent-tab-n" id="hw-sent-tab-n-teacher">0</span></button>
         </div>
-        <p class="hw-sentences-sub" id="hw-sentences-sub">Tus oraciones guardadas. 🔊 Óyelas · ✏️ Edita y guarda una copia · 🗑 Borra · 🔍 Toca una palabra para explorarla.</p>
+        <div class="hw-sent-catbar" id="hw-sent-catbar"></div>
         <div class="hw-sentences-list" id="hw-sentences-list"></div>
       </div>
     </div>
@@ -592,7 +604,8 @@
        script kills its MutationObserver + rAF loop entirely. Big perf win. -->
   <script src="/js/characters.js?v=20260603a"></script>
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/homework.js?v=20260604d"></script>
+  <script src="/js/sentence-categories.js?v=20260604j"></script>
+  <script src="/js/homework.js?v=20260604j"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>

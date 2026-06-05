@@ -2881,27 +2881,167 @@ button, a, .hw-card, .hw-folder-card, .hw-lib-chip, .hw-stage-word,
 .hw-card-badge.pending { background: rgba(255,170,40,0.22); color: #ffb000; border: 1px solid rgba(255,170,40,0.6); font-size: 0.72rem; }
 
 /* ── 📜 Mis oraciones — sentence history in the kid's own profile ──── */
+/* ═══════════════════════════════════════════════════════════════════
+ * 📜 MIS ORACIONES — full-screen redesign 2026-06-04 v2
+ *   Fernando: "Mis oraciones is not redesigned. It's not more clean.
+ *    It's not split into Saved by Me / Sent by Teacher."
+ *   Was a 520px centered card; now full-viewport sheet with sticky
+ *   hero + tabs + category filter (on teacher tab). Existing
+ *   month-grouping preserved inside.
+ * ═══════════════════════════════════════════════════════════════════ */
 .hw-sentences-overlay {
-  position: fixed; inset: 0; z-index: 9998; display: flex; align-items: center;
-  justify-content: center; padding: 14px; background: rgba(10,12,22,0.80);
+  position: fixed; inset: 0; z-index: 9998;
+  display: flex;
+  background:
+    radial-gradient(900px 500px at 50% -10%, rgba(255, 209, 102, 0.10), transparent 70%),
+    linear-gradient(160deg, #1a2540 0%, #0e1426 100%);
+  overflow: hidden;
 }
 .hw-sentences-overlay.hidden { display: none; }
-.hw-sentences-card {
-  position: relative; width: 100%; max-width: 520px; max-height: 88dvh; overflow-y: auto;
+.hw-sentences-sheet {
+  flex: 1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px clamp(14px, 4vw, 28px) 28px;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  background: linear-gradient(160deg, rgba(44,54,86,0.99), rgba(20,25,45,0.99));
-  border: 3px solid #ffd166; border-radius: 22px; padding: 22px 18px 18px;
-  box-shadow: 0 18px 52px rgba(0,0,0,0.72);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
-.hw-sentences-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.hw-sentences-title { font-family: 'Cinzel', serif; font-weight: 900; color: #ffd166; font-size: 1.3rem; }
-.hw-sentences-close {
-  border: none; background: rgba(255,255,255,0.12); color: #fff; width: 34px; height: 34px;
-  border-radius: 50%; font-size: 1.05rem; cursor: pointer; flex: 0 0 auto;
-  touch-action: manipulation;
+.hw-sent-corner-close {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 11;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 90, 102, 0.18);
+  border: 2px solid rgba(255, 90, 102, 0.55);
+  color: #ff9a8a;
+  font-size: 1.05rem; font-weight: 900;
+  cursor: pointer; touch-action: manipulation;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
-.hw-sentences-close:active { background: rgba(255,255,255,0.26); }
-.hw-sentences-sub { color: rgba(243,230,194,0.78); font-size: 0.9rem; margin: 6px 0 14px; line-height: 1.4; }
+.hw-sent-corner-close:hover  { background: rgba(255, 90, 102, 0.32); }
+.hw-sent-corner-close:active { transform: scale(0.9); }
+.hw-sent-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 0 14px;
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: linear-gradient(180deg, rgba(14, 20, 38, 0.96) 0%, rgba(14, 20, 38, 0.8) 75%, rgba(14, 20, 38, 0) 100%);
+  backdrop-filter: blur(4px);
+}
+.hw-sent-back {
+  min-width: 100px;
+  height: 46px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  color: #fff5d8;
+  font-size: 1rem; font-weight: 900;
+  cursor: pointer; touch-action: manipulation;
+  flex: 0 0 auto;
+}
+.hw-sent-back:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.22); }
+.hw-sent-hero-text { flex: 1; min-width: 0; }
+.hw-sent-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 900;
+  font-size: clamp(1.3rem, 4vw, 2rem);
+  color: #ffd166;
+  margin: 0; line-height: 1.1;
+  text-shadow: 0 0 18px rgba(255, 209, 102, 0.3);
+}
+.hw-sent-sub {
+  margin: 6px 0 0;
+  color: rgba(243, 230, 194, 0.78);
+  font-size: clamp(0.85rem, 2.6vw, 0.95rem);
+  font-weight: 600;
+  line-height: 1.45;
+}
+.hw-sent-tabs {
+  display: flex;
+  gap: 10px;
+  position: sticky;
+  top: 70px;
+  z-index: 3;
+  padding: 4px 0 14px;
+  background: linear-gradient(180deg, rgba(14, 20, 38, 0.96) 0%, rgba(14, 20, 38, 0.6) 80%, rgba(14, 20, 38, 0) 100%);
+}
+.hw-sent-tab {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  color: rgba(220, 235, 245, 0.7);
+  border-radius: 14px;
+  padding: 12px 10px;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer; touch-action: manipulation;
+  transition: background 120ms ease;
+}
+.hw-sent-tab:active { transform: scale(0.97); }
+.hw-sent-tab.is-active {
+  background: linear-gradient(135deg, rgba(255, 200, 110, 0.22), rgba(255, 90, 102, 0.16));
+  border-color: rgba(255, 200, 110, 0.7);
+  color: #fff5d8;
+  box-shadow: 0 0 14px rgba(255, 200, 110, 0.22);
+}
+.hw-sent-tab-n {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.35);
+  color: #ffe082;
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+.hw-sent-catbar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+.hw-sent-catbar.is-empty { display: none; }
+.hw-sent-cat-chip {
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid var(--cat-color, rgba(255, 255, 255, 0.18));
+  color: var(--cat-color, rgba(243, 230, 194, 0.7));
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer; touch-action: manipulation;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.hw-sent-cat-chip:active { transform: scale(0.96); }
+.hw-sent-cat-chip.is-active {
+  background: var(--cat-color, rgba(255, 200, 110, 0.3));
+  color: #1a1a1a;
+  box-shadow: 0 0 10px color-mix(in srgb, var(--cat-color, #ffc874) 60%, transparent);
+}
+.hw-sent-cat-n {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  color: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
 .hw-sentences-list { display: flex; flex-direction: column; gap: 12px; }
 
 .hw-sentence-item {
