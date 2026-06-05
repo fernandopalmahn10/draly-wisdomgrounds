@@ -1214,8 +1214,31 @@ button.m-emirati-stat.is-tappable:active { transform: scale(0.97); }
 
 /* 🆕 2026-06-04 — clickable per-attempt rows that expand into a
    wrong-answer breakdown. Tap row → fetch mistakes → render below. */
-.m-hsk-attempt-row { cursor: pointer; transition: background 120ms ease; }
+.m-hsk-attempt-row { cursor: pointer; transition: background 120ms ease, opacity 200ms ease, transform 200ms ease; position: relative; }
 .m-hsk-attempt-row:hover { background: rgba(91, 232, 209, 0.08); }
+.m-hsk-attempt-row.is-leaving,
+.m-hsk-attempt-mistakes.is-leaving {
+  opacity: 0;
+  transform: translateX(20px);
+  pointer-events: none;
+}
+/* 🗑 Per-attempt delete button — sits at the right edge of the row. */
+.m-hsk-attempt-del {
+  margin-left: 8px;
+  background: rgba(255, 90, 102, 0.12);
+  border: 2px solid rgba(255, 90, 102, 0.4);
+  color: #ff9a8a;
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  font-family: inherit;
+  flex-shrink: 0;
+  touch-action: manipulation;
+  transition: background 120ms ease, transform 100ms ease;
+}
+.m-hsk-attempt-del:hover  { background: rgba(255, 90, 102, 0.22); }
+.m-hsk-attempt-del:active { transform: scale(0.9); }
 .m-hsk-attempt-toggle {
   display: inline-block;
   margin-left: 6px;
