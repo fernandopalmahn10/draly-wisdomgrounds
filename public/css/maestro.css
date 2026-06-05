@@ -1298,6 +1298,53 @@ button.m-emirati-stat.is-tappable:active { transform: scale(0.97); }
   font-weight: 600;
   line-height: 1.35;
 }
+
+/* 🆕 2026-06-04 v2 — Online-vs-All tabs inside the launcher. */
+.m-launch-stu-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 6px 0 10px;
+}
+.m-launch-stu-tab {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  color: rgba(220, 235, 245, 0.7);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background 120ms ease;
+}
+.m-launch-stu-tab:active { transform: scale(0.97); }
+.m-launch-stu-tab.is-active {
+  background: linear-gradient(135deg, rgba(91, 232, 138, 0.22), rgba(91, 232, 209, 0.16));
+  border-color: rgba(91, 232, 138, 0.7);
+  color: #fff5d8;
+  box-shadow: 0 0 14px rgba(91, 232, 138, 0.22);
+}
+.m-launch-stu-n {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #ffe082;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+.m-launch-empty {
+  text-align: center;
+  padding: 24px 16px;
+  color: rgba(243, 230, 194, 0.6);
+  font-style: italic;
+  border: 1px dashed rgba(243, 230, 194, 0.18);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
 .m-hsk-attempt-toggle {
   display: inline-block;
   margin-left: 6px;

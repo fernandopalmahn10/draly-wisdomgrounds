@@ -2247,16 +2247,63 @@ body.wu-timemachine::after {
   backdrop-filter: blur(4px);
 }
 .wu-push-back {
-  width: 46px; height: 46px;
+  min-width: 100px;
+  height: 46px;
+  padding: 0 14px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.08);
   border: 2px solid rgba(255, 255, 255, 0.18);
   color: #fff5d8;
-  font-size: 1.5rem; font-weight: 900;
+  font-size: 1rem; font-weight: 900;
   cursor: pointer; touch-action: manipulation;
   flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 4px;
 }
 .wu-push-back:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.22); }
+
+/* 🆕 2026-06-04 v2 — floating corner-close button that's ALWAYS
+   visible. Fernando: "there's no back button, so I cannot go back." */
+.wu-push-corner-close {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 10;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 90, 102, 0.18);
+  border: 2px solid rgba(255, 90, 102, 0.55);
+  color: #ff9a8a;
+  font-size: 1.05rem; font-weight: 900;
+  cursor: pointer; touch-action: manipulation;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+.wu-push-corner-close:hover  { background: rgba(255, 90, 102, 0.32); }
+.wu-push-corner-close:active { transform: scale(0.9); }
+
+/* 🆕 2026-06-04 v2 — in-modal feedback chip (the host-page chip is
+   hidden behind the modal, so the teacher needs feedback INSIDE). */
+.wu-push-flash {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 1rem;
+  color: #0d2a16;
+  background: linear-gradient(135deg, #5be88a, #5be8d1);
+  box-shadow: 0 6px 22px rgba(91, 232, 138, 0.5);
+  animation: wuPushFlashIn 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.wu-push-flash.is-err {
+  color: #2a0a0a;
+  background: linear-gradient(135deg, #ffb46b, #ff7e5f);
+  box-shadow: 0 6px 22px rgba(255, 126, 95, 0.5);
+}
+.wu-push-flash.hidden { display: none; }
+@keyframes wuPushFlashIn { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
 .wu-push-hero-text { flex: 1; min-width: 0; }
 .wu-push-title {
   font-family: 'Cinzel', serif;

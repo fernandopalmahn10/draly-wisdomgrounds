@@ -472,6 +472,8 @@
   // 📜 Mis oraciones — kid's saved warmup sentences + 🔊 listen.
   $('hw-list-sentences').addEventListener('click', openMySentences);
   $('hw-sentences-close').addEventListener('click', () => $('hw-sentences-overlay').classList.add('hidden'));
+  const sentCornerClose = $('hw-sentences-corner-close');
+  if (sentCornerClose) sentCornerClose.addEventListener('click', () => $('hw-sentences-overlay').classList.add('hidden'));
   $('hw-sentences-overlay').addEventListener('click', (e) => { if (e.target === $('hw-sentences-overlay')) $('hw-sentences-overlay').classList.add('hidden'); });
 
   // 📝 Mis exámenes — kid's HSK simulation history with per-attempt
@@ -592,15 +594,101 @@
       .then((data) => renderMySentences((data && data.sentences) || []))
       .catch((e) => { list.innerHTML = '<div class="hw-empty">Error: ' + e.message + '</div>'; });
   }
+  // 🆕 2026-06-04 v2 — tab state for Mis Oraciones (Fernando: "split
+  // into Saved by Me and Sent by Teacher"). 'mine' shows kid-saved,
+  // 'teacher' shows pushedByTeacher sentences. Category filter only
+  // applies inside the teacher tab.
+  let _hwSentTab = 'mine';
+  let _hwSentCat = '';   // '' = all categories, '__uncat__' = no category, or a category id
+  let _hwSentLast = [];
   function renderMySentences(arr) {
+    _hwSentLast = Array.isArray(arr) ? arr : [];
     const list = $('hw-sentences-list');
-    if (!arr.length) { list.innerHTML = '<div class="hw-empty">Aún no has guardado oraciones. Toca 💾 en clase para guardar una. 🌱</div>'; return; }
+    const teacherArr = _hwSentLast.filter((s) => s.pushedByTeacher);
+    const mineArr = _hwSentLast.filter((s) => !s.pushedByTeacher);
+    const nMine = $('hw-sent-tab-n-mine');     if (nMine) nMine.textContent = mineArr.length;
+    const nTea  = $('hw-sent-tab-n-teacher');  if (nTea)  nTea.textContent  = teacherArr.length;
+    // Wire tab buttons (once) — uses delegated handler so this stays
+    // safe across re-renders.
+    if (!list.dataset.tabsWired) {
+      list.dataset.tabsWired = '1';
+      document.querySelectorAll('.hw-sent-tab').forEach((t) => {
+        t.addEventListener('click', () => {
+          _hwSentTab = t.dataset.tab;
+          if (_hwSentTab !== 'teacher') _hwSentCat = '';
+          document.querySelectorAll('.hw-sent-tab').forEach((x) => x.classList.toggle('is-active', x.dataset.tab === _hwSentTab));
+          renderMySentences(_hwSentLast);
+        });
+      });
+    }
+    // Category filter chips — only on teacher tab AND only if there's
+    // anything categorized OR uncategorized teacher push.
+    const catbar = $('hw-sent-catbar');
+    if (catbar) {
+      catbar.innerHTML = '';
+      if (_hwSentTab === 'teacher' && teacherArr.length) {
+        const countsByCat = {};
+        teacherArr.forEach((s) => {
+          const k = s.category || '';
+          countsByCat[k] = (countsByCat[k] || 0) + 1;
+        });
+        const presentCats = (window.SENTENCE_CATEGORIES || []).filter((c) => countsByCat[c.id]);
+        const uncategorisedCount = countsByCat[''] || 0;
+        if (presentCats.length || uncategorisedCount) {
+          catbar.classList.remove('is-empty');
+          const allChip = document.createElement('button');
+          allChip.className = 'hw-sent-cat-chip' + (_hwSentCat === '' ? ' is-active' : '');
+          allChip.type = 'button'; allChip.dataset.cat = '';
+          allChip.innerHTML = '✨ Todas <span class="hw-sent-cat-n">' + teacherArr.length + '</span>';
+          catbar.appendChild(allChip);
+          presentCats.forEach((c) => {
+            const chip = document.createElement('button');
+            chip.className = 'hw-sent-cat-chip' + (_hwSentCat === c.id ? ' is-active' : '');
+            chip.type = 'button'; chip.dataset.cat = c.id;
+            chip.style.setProperty('--cat-color', c.color);
+            chip.innerHTML = c.emoji + ' ' + escapeHtml(c.label) + ' <span class="hw-sent-cat-n">' + countsByCat[c.id] + '</span>';
+            catbar.appendChild(chip);
+          });
+          if (uncategorisedCount) {
+            const chip = document.createElement('button');
+            chip.className = 'hw-sent-cat-chip' + (_hwSentCat === '__uncat__' ? ' is-active' : '');
+            chip.type = 'button'; chip.dataset.cat = '__uncat__';
+            chip.innerHTML = '🚫 Sin categoría <span class="hw-sent-cat-n">' + uncategorisedCount + '</span>';
+            catbar.appendChild(chip);
+          }
+          catbar.querySelectorAll('.hw-sent-cat-chip').forEach((chip) => {
+            chip.addEventListener('click', () => {
+              _hwSentCat = chip.dataset.cat;
+              renderMySentences(_hwSentLast);
+            });
+          });
+        } else {
+          catbar.classList.add('is-empty');
+        }
+      } else {
+        catbar.classList.add('is-empty');
+      }
+    }
+    // Filter to current tab + category
+    let shown = (_hwSentTab === 'teacher') ? teacherArr : mineArr;
+    if (_hwSentTab === 'teacher' && _hwSentCat) {
+      shown = (_hwSentCat === '__uncat__')
+        ? shown.filter((s) => !s.category)
+        : shown.filter((s) => s.category === _hwSentCat);
+    }
+    if (!shown.length) {
+      const msg = (_hwSentTab === 'teacher')
+        ? 'Aún no te han enviado oraciones. Cuando tu maestra te envíe una, aparecerá aquí. 📤'
+        : 'Aún no has guardado oraciones. Toca 💾 en clase para guardar una. 🌱';
+      list.innerHTML = '<div class="hw-empty">' + msg + '</div>';
+      return;
+    }
     list.innerHTML = '';
     // 🗂️ Group by month — newest month on top, expanded by default. Each
     // older month is collapsed so the kid can browse without overwhelm.
     const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const buckets = {};
-    arr.forEach((s) => {
+    shown.forEach((s) => {
       const d = s.ts ? new Date(s.ts) : new Date();
       const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
       if (!buckets[key]) buckets[key] = [];
