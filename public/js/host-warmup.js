@@ -225,6 +225,56 @@
     openPushToStudentsModal(currentSentence.slice());
   });
 
+  // ════════════════════════════════════════════════════════════════
+  // 📤 PUSH-TO-STUDENTS — full-screen redesign 2026-06-04 (Fernando):
+  //   "It's super disorganized, something like a box at the very
+  //    bottom, not clean, not beautiful. Also I can group sentences
+  //    by experiences and send the whole group."
+  //
+  //   - Replaces the cramped 580px-wide centered modal with a
+  //     full-screen sheet that has a sticky hero header + tab strip.
+  //   - Two modes via tabs:
+  //       ✏️ Una oración        → send the sentence on stage now
+  //       📚 Paquete de lección → accumulate several sentences (per
+  //         HSK1 EXP), send the whole pack at once
+  //   - The pack persists in localStorage so the teacher can build
+  //     it across sessions without losing progress.
+  //   - EXP label is auto-detected from each sentence's words
+  //     (every word in warmup-vocab carries w.exp). Mixed sentences
+  //     show "Mixto".
+  // ════════════════════════════════════════════════════════════════
+  const _PACK_KEY = 'draly_lesson_pack_v1';
+  function _loadLessonPack() {
+    try {
+      const raw = localStorage.getItem(_PACK_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) { return []; }
+  }
+  function _saveLessonPack(arr) {
+    try { localStorage.setItem(_PACK_KEY, JSON.stringify(arr || [])); } catch (_) {}
+  }
+  function _expLabelForWords(wordIds) {
+    const exps = (wordIds || []).map((id) => {
+      const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[id];
+      return w && w.exp;
+    }).filter(Boolean);
+    if (!exps.length) return null;
+    const first = exps[0];
+    return exps.every((e) => e === first) ? first.toUpperCase() : 'MIXTO';
+  }
+  function _renderSentenceChips(wordIds) {
+    return (wordIds || []).map((id) => {
+      const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[id];
+      if (!w) return '<span class="wu-push-prev-chip">' + escapeHtml(String(id)) + '</span>';
+      return '<span class="wu-push-prev-chip">' +
+               '<strong>' + escapeHtml(w.pinyin || '') + '</strong>' +
+               (w.hanzi ? '<em class="wu-push-prev-hz" lang="zh">' + escapeHtml(w.hanzi) + '</em>' : '') +
+               '<small>' + escapeHtml(w.es || '') + '</small>' +
+             '</span>';
+    }).join('');
+  }
+
   function openPushToStudentsModal(wordIds) {
     fetch('/api/admin/students?pw=' + encodeURIComponent(adminPw))
       .then((r) => r.json())
@@ -239,23 +289,11 @@
         if (overlay) overlay.remove();
         overlay = document.createElement('div');
         overlay.id = 'wu-push-modal';
-        overlay.className = 'm-modal';
-        // Build the sentence preview (word chips like the stage).
-        const previewChips = wordIds.map((id) => {
-          const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[id];
-          if (!w) return '<span class="wu-push-prev-chip">' + escapeHtml(String(id)) + '</span>';
-          return '<span class="wu-push-prev-chip">' +
-                   '<strong>' + escapeHtml(w.pinyin || '') + '</strong>' +
-                   '<small>' + escapeHtml(w.es || '') + '</small>' +
-                 '</span>';
-        }).join('');
-        // 🆕 2026-06-04 (Fernando): teacher tags pushed sentences with a
-        // category so the kid can filter "De la maestra" by topic. The
-        // category chips are loaded from the shared SENTENCE_CATEGORIES
-        // list (window global injected by /js/sentence-categories.js).
-        // Default selection is "no category" — chip "🚫 Sin categoría"
-        // appears first and is selected by default; the teacher taps a
-        // colored chip if they want to tag this push.
+        overlay.className = 'wu-push-sheet';
+        // Tab state — restored from last session for muscle memory.
+        let activeTab = (function () {
+          try { return localStorage.getItem('draly_push_tab') || 'one'; } catch (_) { return 'one'; }
+        })();
         const cats = (window.SENTENCE_CATEGORIES || []);
         const catChipsHtml =
           '<button class="wu-push-cat-chip is-active" data-cat="" type="button">🚫 Sin categoría</button>' +
@@ -264,24 +302,72 @@
               c.emoji + ' ' + escapeHtml(c.label) +
             '</button>'
           ).join('');
-        overlay.innerHTML =
-          '<div class="m-modal-card" style="max-width:580px;">' +
-            '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
-            '<h2>📤 Enviar oración a alumnos</h2>' +
-            '<p class="m-modal-sub">Esta oración se guardará en <strong>Mis oraciones</strong> de cada alumno que selecciones, con la nota <em>📤 Enviada por tu maestra</em>.</p>' +
-            '<div class="wu-push-prev">' + previewChips + '</div>' +
-            '<div class="wu-push-cat-label">Categoría (opcional):</div>' +
-            '<div class="wu-push-cats" id="wu-push-cats">' + catChipsHtml + '</div>' +
-            '<input class="input wu-push-search" id="wu-push-search" type="text" placeholder="Buscar alumno por nombre o código…" autocomplete="off" style="margin-top:10px;">' +
-            '<div class="m-force-actions" style="margin-top:8px;">' +
-              '<button class="btn btn-ghost btn-sm" id="wu-push-all">✅ Todos</button>' +
-              '<button class="btn btn-ghost btn-sm" id="wu-push-none">⬜ Ninguno</button>' +
-              '<button class="btn btn-ghost btn-sm" id="wu-push-online">🟢 Solo en línea</button>' +
+        overlay.innerHTML = '' +
+          '<div class="wu-push-canvas">' +
+            '<header class="wu-push-hero">' +
+              '<button class="wu-push-back" id="wu-push-close" type="button" aria-label="Cerrar">←</button>' +
+              '<div class="wu-push-hero-text">' +
+                '<h2 class="wu-push-title">📤 Enviar oraciones a alumnos</h2>' +
+                '<p class="wu-push-sub">Cada oración se guarda en <strong>Mis oraciones</strong> del alumno con la nota <em>📤 Enviada por tu maestra</em>.</p>' +
+              '</div>' +
+            '</header>' +
+            '<div class="wu-push-tabs" role="tablist">' +
+              '<button class="wu-push-tab' + (activeTab === 'one' ? ' is-active' : '') + '" data-tab="one" type="button">✏️ Una oración</button>' +
+              '<button class="wu-push-tab' + (activeTab === 'pack' ? ' is-active' : '') + '" data-tab="pack" type="button">📚 Paquete de lección <span class="wu-push-tab-n" id="wu-push-pack-n">0</span></button>' +
             '</div>' +
-            '<div class="m-force-students" id="wu-push-list" style="max-height:42vh;overflow-y:auto;"></div>' +
-            '<button class="btn btn-jade btn-xl" id="wu-push-go" style="margin-top:14px;width:100%;">📤 Enviar a los seleccionados</button>' +
+
+            // ── ONE-SENTENCE PANE ────────────────────────────────
+            '<section class="wu-push-pane" id="wu-push-pane-one">' +
+              '<div class="wu-push-section">' +
+                '<div class="wu-push-section-h">Oración actual</div>' +
+                '<div class="wu-push-prev">' + _renderSentenceChips(wordIds) + '</div>' +
+                '<div class="wu-push-section-foot">' +
+                  '<button class="btn btn-jade btn-sm" id="wu-push-add-current" type="button">➕ Añadir al paquete</button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="wu-push-section">' +
+                '<div class="wu-push-section-h">Categoría (opcional)</div>' +
+                '<div class="wu-push-cats">' + catChipsHtml + '</div>' +
+              '</div>' +
+            '</section>' +
+
+            // ── PACK PANE ───────────────────────────────────────
+            '<section class="wu-push-pane" id="wu-push-pane-pack">' +
+              '<div class="wu-push-section">' +
+                '<div class="wu-push-section-h">Paquete de lección <small class="wu-push-section-note">Auto-detecta la experiencia HSK</small></div>' +
+                '<div class="wu-push-pack" id="wu-push-pack"></div>' +
+                '<div class="wu-push-section-foot">' +
+                  '<button class="btn btn-jade btn-sm" id="wu-push-pack-add" type="button">➕ Añadir oración actual</button>' +
+                  '<button class="btn btn-ghost btn-sm" id="wu-push-pack-clear" type="button">🗑 Vaciar paquete</button>' +
+                '</div>' +
+              '</div>' +
+              '<div class="wu-push-section">' +
+                '<div class="wu-push-section-h">Categoría del paquete (opcional)</div>' +
+                '<div class="wu-push-cats" id="wu-push-pack-cats">' + catChipsHtml + '</div>' +
+              '</div>' +
+            '</section>' +
+
+            // ── STUDENT PICKER (shared by both panes) ───────────
+            '<div class="wu-push-section">' +
+              '<div class="wu-push-section-h">Alumnos</div>' +
+              '<input class="input wu-push-search" id="wu-push-search" type="text" placeholder="🔎 Buscar por nombre o código…" autocomplete="off">' +
+              '<div class="wu-push-quick">' +
+                '<button class="btn btn-ghost btn-sm" id="wu-push-all" type="button">✅ Todos</button>' +
+                '<button class="btn btn-ghost btn-sm" id="wu-push-none" type="button">⬜ Ninguno</button>' +
+                '<button class="btn btn-ghost btn-sm" id="wu-push-online" type="button">🟢 Solo en línea</button>' +
+              '</div>' +
+              '<div class="wu-push-students" id="wu-push-list"></div>' +
+            '</div>' +
+
+            // ── STICKY FOOTER — context-aware send button ───────
+            '<footer class="wu-push-footer">' +
+              '<button class="wu-push-send" id="wu-push-go" type="button">📤 Enviar</button>' +
+            '</footer>' +
           '</div>';
         document.body.appendChild(overlay);
+        requestAnimationFrame(() => overlay.classList.add('show'));
+
+        // ───────── Student list rendering ─────────
         const list = overlay.querySelector('#wu-push-list');
         const renderRows = (filter) => {
           list.innerHTML = '';
@@ -290,25 +376,125 @@
             return (s.displayName || '').toLowerCase().includes(q) || (s.code || '').toLowerCase().includes(q);
           });
           if (!filtered.length) {
-            list.innerHTML = '<p class="m-modal-sub" style="text-align:center;">Sin coincidencias.</p>';
+            list.innerHTML = '<p class="wu-push-empty">Sin coincidencias.</p>';
             return;
           }
           filtered.forEach((s) => {
             const isOnline = s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000;
             const row = document.createElement('label');
-            row.className = 'm-force-row';
+            row.className = 'wu-push-stu';
             row.dataset.online = isOnline ? '1' : '0';
             row.innerHTML =
               '<input type="checkbox" data-code="' + escapeHtml(s.code) + '">' +
-              '<span class="m-force-row-dot" style="background:' + (isOnline ? '#5be88a' : '#666') + ';"></span>' +
-              '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
-              '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
+              '<span class="wu-push-stu-dot" style="background:' + (isOnline ? '#5be88a' : '#666') + ';"></span>' +
+              '<span class="wu-push-stu-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+              '<span class="wu-push-stu-code">' + escapeHtml(s.code) + '</span>';
             list.appendChild(row);
           });
         };
         renderRows('');
-        const close = () => { try { overlay.remove(); } catch (_) {} };
-        overlay.querySelector('.m-modal-close').addEventListener('click', close);
+
+        // ───────── Pack rendering ─────────
+        let pack = _loadLessonPack();
+        const packEl = overlay.querySelector('#wu-push-pack');
+        const packCountEl = overlay.querySelector('#wu-push-pack-n');
+        function renderPack() {
+          packCountEl.textContent = pack.length;
+          if (!pack.length) {
+            packEl.innerHTML = '<div class="wu-push-pack-empty">Paquete vacío. Construye una oración en la página principal, luego toca <strong>➕ Añadir oración actual</strong> aquí abajo. Repite para agregar más oraciones de la misma lección.</div>';
+            return;
+          }
+          // Group by EXP for visual grouping
+          const byExp = {};
+          pack.forEach((p, idx) => {
+            const k = p.exp || 'OTRO';
+            if (!byExp[k]) byExp[k] = [];
+            byExp[k].push(Object.assign({}, p, { _idx: idx }));
+          });
+          packEl.innerHTML = '';
+          Object.keys(byExp).sort().forEach((expKey) => {
+            const group = document.createElement('div');
+            group.className = 'wu-push-pack-group';
+            group.innerHTML = '<div class="wu-push-pack-grouph">📚 ' + escapeHtml(expKey) +
+              ' <small>· ' + byExp[expKey].length + ' oración' + (byExp[expKey].length === 1 ? '' : 'es') + '</small></div>';
+            byExp[expKey].forEach((entry) => {
+              const row = document.createElement('div');
+              row.className = 'wu-push-pack-row';
+              row.innerHTML =
+                '<div class="wu-push-pack-chips">' + _renderSentenceChips(entry.words) + '</div>' +
+                '<button class="wu-push-pack-del" type="button" data-idx="' + entry._idx + '" aria-label="Quitar">✕</button>';
+              row.querySelector('.wu-push-pack-del').addEventListener('click', () => {
+                pack.splice(entry._idx, 1);
+                _saveLessonPack(pack);
+                renderPack();
+                updateSendBtn();
+              });
+              group.appendChild(row);
+            });
+            packEl.appendChild(group);
+          });
+        }
+        renderPack();
+
+        // ───────── Tabs ─────────
+        function showTab(which) {
+          activeTab = which;
+          try { localStorage.setItem('draly_push_tab', which); } catch (_) {}
+          overlay.querySelectorAll('.wu-push-tab').forEach((t) => t.classList.toggle('is-active', t.dataset.tab === which));
+          overlay.querySelector('#wu-push-pane-one').classList.toggle('is-active', which === 'one');
+          overlay.querySelector('#wu-push-pane-pack').classList.toggle('is-active', which === 'pack');
+          updateSendBtn();
+        }
+        overlay.querySelectorAll('.wu-push-tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
+        showTab(activeTab);
+
+        // ───────── Category chips (one-sentence pane) ─────────
+        let oneCat = '';
+        overlay.querySelector('#wu-push-pane-one').querySelectorAll('.wu-push-cat-chip').forEach((chip) => {
+          chip.addEventListener('click', () => {
+            overlay.querySelector('#wu-push-pane-one').querySelectorAll('.wu-push-cat-chip').forEach((c) => c.classList.remove('is-active'));
+            chip.classList.add('is-active');
+            oneCat = chip.dataset.cat || '';
+          });
+        });
+        // Pack-level category (applies to all sentences in the pack)
+        let packCat = '';
+        overlay.querySelector('#wu-push-pack-cats').querySelectorAll('.wu-push-cat-chip').forEach((chip) => {
+          chip.addEventListener('click', () => {
+            overlay.querySelector('#wu-push-pack-cats').querySelectorAll('.wu-push-cat-chip').forEach((c) => c.classList.remove('is-active'));
+            chip.classList.add('is-active');
+            packCat = chip.dataset.cat || '';
+          });
+        });
+
+        // ───────── Add-to-pack handlers ─────────
+        function addCurrentToPack() {
+          if (!wordIds || !wordIds.length) { alert('No hay oración en escena para añadir.'); return; }
+          pack.push({
+            ts: Date.now() + Math.floor(Math.random() * 1000),
+            words: wordIds.slice(),
+            exp: _expLabelForWords(wordIds) || 'OTRO',
+          });
+          _saveLessonPack(pack);
+          renderPack();
+          updateSendBtn();
+          flashSaveFeedback(true, '➕ Añadida al paquete (' + pack.length + ')');
+          showTab('pack');
+        }
+        overlay.querySelector('#wu-push-add-current').addEventListener('click', addCurrentToPack);
+        overlay.querySelector('#wu-push-pack-add').addEventListener('click', addCurrentToPack);
+        overlay.querySelector('#wu-push-pack-clear').addEventListener('click', () => {
+          if (!pack.length) return;
+          if (!confirm('¿Vaciar el paquete? Las ' + pack.length + ' oraciones se perderán (los alumnos ya enviadas no se borran).')) return;
+          pack = [];
+          _saveLessonPack(pack);
+          renderPack();
+          updateSendBtn();
+        });
+
+        // ───────── Quick-pick student helpers ─────────
+        const close = () => { overlay.classList.remove('show'); setTimeout(() => { try { overlay.remove(); } catch (_) {} }, 200); };
+        overlay.querySelector('#wu-push-close').addEventListener('click', close);
         overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
         overlay.querySelector('#wu-push-search').addEventListener('input', (e) => renderRows(e.target.value));
         overlay.querySelector('#wu-push-all').addEventListener('click', () => {
@@ -318,33 +504,48 @@
           list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
         });
         overlay.querySelector('#wu-push-online').addEventListener('click', () => {
-          list.querySelectorAll('.m-force-row').forEach((row) => {
+          list.querySelectorAll('.wu-push-stu').forEach((row) => {
             const cb = row.querySelector('input[type=checkbox]');
             if (cb) cb.checked = (row.dataset.online === '1');
           });
         });
-        // Category chip selection — single-select. The currently-active
-        // chip's data-cat is sent on push. Empty string == no category.
-        let _pushCategory = '';
-        overlay.querySelectorAll('.wu-push-cat-chip').forEach((chip) => {
-          chip.addEventListener('click', () => {
-            overlay.querySelectorAll('.wu-push-cat-chip').forEach((c) => c.classList.remove('is-active'));
-            chip.classList.add('is-active');
-            _pushCategory = chip.dataset.cat || '';
-          });
-        });
-        overlay.querySelector('#wu-push-go').addEventListener('click', () => {
+
+        // ───────── Send button — copy reflects current tab ─────
+        const sendBtn = overlay.querySelector('#wu-push-go');
+        function updateSendBtn() {
+          if (activeTab === 'pack') {
+            sendBtn.textContent = pack.length
+              ? ('📚 Enviar paquete (' + pack.length + ' oración' + (pack.length === 1 ? '' : 'es') + ')')
+              : '📚 Paquete vacío';
+            sendBtn.disabled = !pack.length;
+          } else {
+            sendBtn.textContent = '📤 Enviar oración a los seleccionados';
+            sendBtn.disabled = false;
+          }
+        }
+        updateSendBtn();
+        sendBtn.addEventListener('click', () => {
           const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
             .map((cb) => cb.dataset.code).filter(Boolean);
           if (!codes.length) { alert('Selecciona al menos un alumno.'); return; }
+          const body = (activeTab === 'pack')
+            ? { studentCodes: codes, sentences: pack.map((p) => ({ words: p.words })), category: packCat || null }
+            : { studentCodes: codes, words: wordIds, category: oneCat || null };
           fetch('/api/admin/sentence/push?pw=' + encodeURIComponent(adminPw), {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentCodes: codes, words: wordIds, category: _pushCategory || null }),
+            body: JSON.stringify(body),
           })
             .then((r) => r.json())
             .then((res) => {
               if (res && res.ok) {
-                flashSaveFeedback(true, '📤 Enviada a ' + res.sent + ' alumno(s)');
+                if (activeTab === 'pack') {
+                  flashSaveFeedback(true, '📚 ' + res.sentencesSent + ' oraciones enviadas a ' + res.sent + ' alumno(s)');
+                  // Clear the pack after a successful batch send.
+                  pack = [];
+                  _saveLessonPack(pack);
+                } else {
+                  flashSaveFeedback(true, '📤 Enviada a ' + res.sent + ' alumno(s)');
+                }
                 close();
               } else {
                 alert('Error: ' + ((res && res.error) || 'desconocido'));

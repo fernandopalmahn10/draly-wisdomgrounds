@@ -1512,34 +1512,62 @@ app.post('/api/admin/student/:code/sentence/delete', (req, res) => {
 app.post('/api/admin/sentence/push', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
-  const { studentCodes, words, category } = req.body || {};
+  const { studentCodes, words, sentences, category } = req.body || {};
   if (!Array.isArray(studentCodes) || !studentCodes.length) {
     return res.status(400).json({ ok: false, error: 'studentCodes array required' });
   }
-  if (!Array.isArray(words) || !words.length) {
-    return res.status(400).json({ ok: false, error: 'words array required' });
+  // 🆕 2026-06-04 — accept EITHER single-sentence (legacy `words` array)
+  // OR a batch (`sentences: [{ words, category? }, ...]`). The batch
+  // path supports "Paquete de lección" where a teacher accumulates
+  // several sentences for one experience and ships them in one POST.
+  // Per-sentence category overrides the batch-level category.
+  let packs = [];
+  if (Array.isArray(sentences) && sentences.length) {
+    packs = sentences.filter((s) => s && Array.isArray(s.words) && s.words.length).map((s) => ({
+      words: s.words.map((w) => String(w).slice(0, 32)).slice(0, 24),
+      category: SentenceCategories.isValidCategoryId(s.category) ? s.category
+              : SentenceCategories.isValidCategoryId(category)   ? category
+              : null,
+    }));
+    if (!packs.length) return res.status(400).json({ ok: false, error: 'sentences array empty' });
+    if (packs.length > 20) return res.status(400).json({ ok: false, error: 'too many sentences (max 20)' });
+  } else if (Array.isArray(words) && words.length) {
+    packs = [{
+      words: words.map((w) => String(w).slice(0, 32)).slice(0, 24),
+      category: SentenceCategories.isValidCategoryId(category) ? category : null,
+    }];
+  } else {
+    return res.status(400).json({ ok: false, error: 'words array OR sentences array required' });
   }
-  // 🆕 2026-06-04 — validate category against the known list. Unknown
-  // values are silently dropped (treated as "no category"), so a stale
-  // teacher client doesn't fail the push outright.
-  const cleanCategory = SentenceCategories.isValidCategoryId(category) ? category : null;
   // Authorization: regular teachers can only push to kids in their
   // own classrooms. Super-admin pushes to anyone.
   const ownCodes = session.teacher ? new Set(session.teacher.accessCodes || []) : null;
   const teacherName = session.teacher
     ? (session.teacher.displayName || 'Maestro/a')
     : 'Super maestro';
-  let sent = 0, skipped = 0, notFound = 0;
-  const cleanWords = words.map((w) => String(w).slice(0, 32)).slice(0, 24);
+  let sentencesSent = 0, kidsTouched = 0, skipped = 0, notFound = 0;
   studentCodes.forEach((code) => {
     const rec = Students.get(code);
     if (!rec) { notFound++; return; }
     if (ownCodes && rec.classroomCode && !ownCodes.has(rec.classroomCode)) {
       skipped++; return;
     }
-    if (Students.pushSentenceFromTeacher(rec.code, cleanWords, teacherName, cleanCategory)) sent++;
+    let landed = 0;
+    packs.forEach((p) => {
+      if (Students.pushSentenceFromTeacher(rec.code, p.words, teacherName, p.category)) {
+        landed++;
+      }
+    });
+    if (landed) { kidsTouched++; sentencesSent += landed; }
   });
-  res.json({ ok: true, sent, skipped, notFound, category: cleanCategory });
+  res.json({
+    ok: true,
+    sent: kidsTouched,                  // legacy field name (kids reached)
+    sentencesSent,                      // total sentence-rows written
+    packSize: packs.length,
+    skipped,
+    notFound,
+  });
 });
 
 // ✏️ Maestro EDIT: replace the words of an existing saved sentence
