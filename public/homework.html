@@ -59,7 +59,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260526a">
   <link rel="stylesheet" href="/css/warmup.css?v=20260529f">
-  <link rel="stylesheet" href="/css/homework.css?v=20260604b">
+  <link rel="stylesheet" href="/css/homework.css?v=20260604d">
   <link rel="stylesheet" href="/css/characters.css?v=20260601o">
 </head>
 <body class="hw-bg">
@@ -110,6 +110,7 @@
         </button>
         <button class="btn btn-gold btn-sm hw-daily-cta" id="hw-list-daily">⚔️ Desafíos</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-sentences">📜 Mis oraciones</button>
+        <button class="btn btn-ghost btn-sm" id="hw-list-myexams">📝 Mis exámenes</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-settings">⚙️ Ajustes</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-parents">👨‍👩‍👧 Papás</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-logout">Salir</button>
@@ -168,6 +169,21 @@
     <div class="hw-list-section-title hidden" id="hw-sec-lecturas">📖 Exámenes de lectura</div>
     <div class="hw-list-grid hidden" id="hw-list-readings">
       <div class="hw-empty">Cargando…</div>
+    </div>
+
+    <!-- 📝 MIS EXÁMENES — the kid's HSK simulation history with the
+         ability to expand any attempt and see exactly what they got
+         wrong. Fernando 2026-06-04: "What if they want to see what
+         they got wrong? Just exactly as if we did in the homework." -->
+    <div class="hw-myexams-overlay hidden" id="hw-myexams-overlay">
+      <div class="hw-myexams-card">
+        <div class="hw-myexams-header">
+          <span class="hw-myexams-title">📝 Mis exámenes HSK</span>
+          <button class="hw-myexams-close" id="hw-myexams-close" type="button" aria-label="Cerrar">✕</button>
+        </div>
+        <p class="hw-myexams-sub">Todos los exámenes que hiciste. Toca uno para ver qué te equivocaste.</p>
+        <div class="hw-myexams-list" id="hw-myexams-list"></div>
+      </div>
     </div>
 
     <!-- 📜 MIS ORACIONES — the kid's saved warmup sentences, with a 🔊 to
@@ -576,7 +592,7 @@
        script kills its MutationObserver + rAF loop entirely. Big perf win. -->
   <script src="/js/characters.js?v=20260603a"></script>
   <script src="/js/warmup-vocab.js?v=20260529a"></script>
-  <script src="/js/homework.js?v=20260604b"></script>
+  <script src="/js/homework.js?v=20260604d"></script>
   <script src="/js/super-admin-badge.js?v=20260528a"></script>
 </body>
 </html>

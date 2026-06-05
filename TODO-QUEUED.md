@@ -94,6 +94,31 @@ Status: **server side ✅, UI queued**.
 
 ---
 
+## 7. Kids see their own mistakes immediately ✅ SHIPPED 2026-06-04
+
+Fernando 2026-06-04: "the mistakes don't need to be for two weeks…
+right now, one kid can immediately see what they got wrong in the
+records."
+
+Three pieces:
+- **Post-sim screen:** The breakdown card now shows wrong-only rows
+  with pretty pick/correct columns and friendly question labels
+  ("Lectura 1, pregunta 22 · yīshēng — Elegiste: Verdadero · Correcta:
+  Falso"). Booleans formatted as Verdadero/Falso, not true/false.
+- **Homework portal — new "📝 Mis exámenes" button:** Sits next to
+  "📜 Mis oraciones" in the kid's header. Opens an overlay listing
+  every HSK attempt sorted newest-first. Each card is tappable when
+  the attempt has breakdown data → expands inline into the wrong-q
+  detail panel. Pre-2026-06-04 attempts gracefully show "Detalle no
+  guardado (intento anterior)".
+- **Two new kid-facing endpoints:**
+  `/api/homework/my-hsk-attempts/:code` and
+  `/api/homework/my-hsk-attempt/:code?ts=...`
+  Auth via access code (same as the rest of the homework portal),
+  not admin. Same enrichment + label lookup as the teacher's version.
+
+---
+
 ## Done (from this same 2026-06-04 batch — for reference)
 
 - ✅ Parent **Exámenes reales** section in Progreso tab. Lists every

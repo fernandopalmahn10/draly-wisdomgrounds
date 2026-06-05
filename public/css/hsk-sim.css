@@ -487,7 +487,33 @@
   font-weight: 700;
 }
 .hsk-bk-row.ok  { color: #5be88a; }
-.hsk-bk-row.bad { color: #ff7e7e; }
+.hsk-bk-row.bad {
+  color: #ff7e7e;
+  background: rgba(255, 126, 126, 0.08);
+  border-left: 3px solid #ff7e7e;
+  border-radius: 0 8px 8px 0;
+  padding: 8px 12px;
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.hsk-bk-q { font-size: 0.95rem; font-weight: 900; color: #ffd2b3; }
+.hsk-bk-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  font-size: 0.85rem;
+  color: rgba(243, 230, 194, 0.85);
+}
+.hsk-bk-picked strong   { color: #ff9a6b; }
+.hsk-bk-correct strong  { color: #5be88a; }
+.hsk-bk-intro {
+  font-size: 0.85rem;
+  color: rgba(243, 230, 194, 0.75);
+  font-style: italic;
+  margin: 4px 0 8px;
+}
 
 /* ===================================================================== */
 /* 🎓 HOST MONITOR — teacher's live view of who's in the exam            */

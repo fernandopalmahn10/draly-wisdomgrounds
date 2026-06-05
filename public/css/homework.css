@@ -2921,6 +2921,89 @@ button, a, .hw-card, .hw-folder-card, .hw-lib-chip, .hw-stage-word,
 @keyframes hwSentPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 .hw-sentence-words { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* 📝 MIS EXÁMENES — kid's HSK simulation history overlay.
+   Visual language: same modal frame as Mis Oraciones, jade accent on
+   passed attempts (≥60%) and warm accent on low scores. Each attempt
+   card is tappable when it has wrongQs data — taps expand into the
+   wrong-question detail panel. (Fernando 2026-06-04) */
+.hw-myexams-overlay {
+  position: fixed; inset: 0; z-index: 9998; display: flex; align-items: center;
+  justify-content: center; padding: 14px; background: rgba(10,12,22,0.80);
+}
+.hw-myexams-overlay.hidden { display: none; }
+.hw-myexams-card {
+  position: relative; width: 100%; max-width: 560px; max-height: 88dvh; overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: linear-gradient(160deg, rgba(44,54,86,0.99), rgba(20,25,45,0.99));
+  border: 3px solid #5be88a; border-radius: 22px; padding: 22px 18px 18px;
+  box-shadow: 0 18px 52px rgba(0,0,0,0.72);
+}
+.hw-myexams-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hw-myexams-title { font-family: 'Cinzel', serif; font-weight: 900; color: #5be88a; font-size: 1.3rem; }
+.hw-myexams-close {
+  border: none; background: rgba(255,255,255,0.12); color: #fff; width: 34px; height: 34px;
+  border-radius: 50%; font-size: 1.05rem; cursor: pointer; flex: 0 0 auto;
+  touch-action: manipulation;
+}
+.hw-myexams-close:active { background: rgba(255,255,255,0.26); }
+.hw-myexams-sub { color: rgba(243,230,194,0.78); font-size: 0.9rem; margin: 6px 0 14px; line-height: 1.4; }
+.hw-myexams-list { display: flex; flex-direction: column; gap: 12px; }
+.hw-myexams-attempt {
+  background: rgba(20,24,40,0.6); border: 1px solid rgba(91,232,138,0.22);
+  border-left: 4px solid #5be88a;
+  border-radius: 12px; padding: 12px 14px;
+  transition: background 120ms ease, transform 120ms ease;
+}
+.hw-myexams-attempt.is-low { border-left-color: #ff9a6b; border-color: rgba(255,154,107,0.22); }
+.hw-myexams-attempt.is-clickable { cursor: pointer; }
+.hw-myexams-attempt.is-clickable:hover { background: rgba(91,232,138,0.06); }
+.hw-myexams-attempt.is-clickable:active { transform: scale(0.99); }
+.hw-myexams-attempt-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+.hw-myexams-attempt-title { color: #fff5d8; font-weight: 900; font-size: 1.02rem; }
+.hw-myexams-attempt-pct   { color: #5be88a; font-weight: 900; font-size: 1.15rem; }
+.hw-myexams-attempt.is-low .hw-myexams-attempt-pct { color: #ff9a6b; }
+.hw-myexams-attempt-meta {
+  display: flex; flex-wrap: wrap; gap: 4px 14px;
+  color: rgba(243,230,194,0.75); font-size: 0.86rem; font-weight: 600;
+}
+.hw-myexams-attempt-wrong { color: #ff9a6b; font-weight: 800; }
+.hw-myexams-attempt-wrong.is-stale { color: rgba(243,230,194,0.45); font-style: italic; font-weight: 500; }
+.hw-myexams-attempt-hint {
+  margin-top: 6px;
+  color: rgba(91,232,209,0.85);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+.hw-myexams-attempt-detail {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: rgba(18, 24, 40, 0.7);
+  border-radius: 8px;
+}
+.hw-myexams-attempt-detail.hidden { display: none; }
+.hw-myexams-detail-head {
+  color: #ffd24a; font-weight: 800; margin-bottom: 8px;
+  font-size: 0.9rem; font-style: italic;
+}
+.hw-myexams-perfect {
+  color: #5be88a; font-weight: 900; text-align: center;
+  padding: 10px; font-size: 1rem;
+}
+.hw-myexams-wrong-row {
+  padding: 8px 0;
+  border-bottom: 1px dashed rgba(243, 230, 194, 0.12);
+}
+.hw-myexams-wrong-row:last-child { border-bottom: none; }
+.hw-myexams-wrong-q {
+  color: #ffd2b3; font-weight: 800; font-size: 0.95rem; margin-bottom: 4px;
+}
+.hw-myexams-wrong-d {
+  display: flex; flex-wrap: wrap; gap: 4px 18px;
+  font-size: 0.85rem; color: rgba(243, 230, 194, 0.85);
+}
+.hw-myexams-wrong-picked  { color: #ff9a6b; }
+.hw-myexams-wrong-correct { color: #5be88a; }
+
 .hw-sent-chip {
   display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
   padding: 8px 12px; border-radius: 12px; min-width: 54px;

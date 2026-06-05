@@ -473,6 +473,111 @@
   $('hw-list-sentences').addEventListener('click', openMySentences);
   $('hw-sentences-close').addEventListener('click', () => $('hw-sentences-overlay').classList.add('hidden'));
   $('hw-sentences-overlay').addEventListener('click', (e) => { if (e.target === $('hw-sentences-overlay')) $('hw-sentences-overlay').classList.add('hidden'); });
+
+  // 📝 Mis exámenes — kid's HSK simulation history with per-attempt
+  // mistake review. Same access pattern as Mis Oraciones. Fernando
+  // 2026-06-04: "they should immediately see what they got wrong in
+  // the records".
+  const myexamsBtn = $('hw-list-myexams');
+  if (myexamsBtn) myexamsBtn.addEventListener('click', openMyExams);
+  const myexamsClose = $('hw-myexams-close');
+  if (myexamsClose) myexamsClose.addEventListener('click', () => $('hw-myexams-overlay').classList.add('hidden'));
+  const myexamsOv = $('hw-myexams-overlay');
+  if (myexamsOv) myexamsOv.addEventListener('click', (e) => { if (e.target === myexamsOv) myexamsOv.classList.add('hidden'); });
+  function openMyExams() {
+    const ov = $('hw-myexams-overlay');
+    if (!ov) return;
+    ov.classList.remove('hidden');
+    const list = $('hw-myexams-list');
+    list.innerHTML = '<div class="hw-empty">Cargando…</div>';
+    fetch('/api/homework/my-hsk-attempts/' + encodeURIComponent(studentCode)
+        + '?accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode))
+      .then((r) => r.json())
+      .then((data) => renderMyExams((data && data.attempts) || []))
+      .catch((e) => { list.innerHTML = '<div class="hw-empty">Error: ' + e.message + '</div>'; });
+  }
+  function renderMyExams(attempts) {
+    const list = $('hw-myexams-list');
+    if (!attempts.length) {
+      list.innerHTML = '<div class="hw-empty">Aún no has hecho ningún examen HSK. Cuando tu maestra abra una sala de examen, tu primer intento aparecerá aquí. 📝</div>';
+      return;
+    }
+    list.innerHTML = '';
+    attempts.forEach((a) => {
+      const card = document.createElement('div');
+      const passed = (a.percent != null) && a.percent >= 60;
+      card.className = 'hw-myexams-attempt ' + (passed ? 'is-passed' : 'is-low');
+      const dateStr = new Date(a.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+      const pctStr = (a.percent != null) ? Math.round(a.percent) + '%' : '—';
+      const wrongPart = a.hasBreakdown
+        ? '<span class="hw-myexams-attempt-wrong">' + (a.wrongCount === 0 ? '🎉 ¡Sin errores!' : '❌ ' + a.wrongCount + ' incorrecta' + (a.wrongCount === 1 ? '' : 's')) + '</span>'
+        : '<span class="hw-myexams-attempt-wrong is-stale">Detalle no guardado (intento anterior)</span>';
+      card.innerHTML =
+        '<div class="hw-myexams-attempt-head">' +
+          '<span class="hw-myexams-attempt-title">' + escapeHtml(a.title) + '</span>' +
+          '<span class="hw-myexams-attempt-pct">' + pctStr + '</span>' +
+        '</div>' +
+        '<div class="hw-myexams-attempt-meta">' +
+          '<span>📅 ' + dateStr + '</span>' +
+          '<span>' + a.score + '/' + a.total + ' pts</span>' +
+          wrongPart +
+        '</div>';
+      const detail = document.createElement('div');
+      detail.className = 'hw-myexams-attempt-detail hidden';
+      let loaded = false;
+      // Only allow expanding if the attempt has breakdown data.
+      if (a.hasBreakdown) {
+        card.classList.add('is-clickable');
+        const hint = document.createElement('div');
+        hint.className = 'hw-myexams-attempt-hint';
+        hint.textContent = '▶ Toca para ver detalle';
+        card.appendChild(hint);
+        card.addEventListener('click', () => {
+          const open = !detail.classList.contains('hidden');
+          if (open) {
+            detail.classList.add('hidden');
+            hint.textContent = '▶ Toca para ver detalle';
+            return;
+          }
+          detail.classList.remove('hidden');
+          hint.textContent = '▼ Ocultar detalle';
+          if (loaded) return;
+          loaded = true;
+          detail.innerHTML = '<div class="hw-empty">Cargando…</div>';
+          fetch('/api/homework/my-hsk-attempt/' + encodeURIComponent(studentCode)
+              + '?accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode)
+              + '&ts=' + encodeURIComponent(a.ts))
+            .then((r) => r.json())
+            .then((d) => {
+              if (!d || !d.ok) {
+                detail.innerHTML = '<div class="hw-empty">No se pudo cargar: ' + escapeHtml(d && d.error || 'error') + '</div>';
+                return;
+              }
+              if (!d.wrongQs || !d.wrongQs.length) {
+                detail.innerHTML = '<div class="hw-myexams-perfect">🎉 ¡Cero errores en este examen! Eres una estrella.</div>';
+                return;
+              }
+              const rows = d.wrongQs.map((wq) => {
+                const titleParts = [];
+                titleParts.push((wq.partLabel || wq.qid) + (wq.qNum ? ', pregunta ' + wq.qNum : ''));
+                if (wq.questionLabel) titleParts.push('"' + escapeHtml(wq.questionLabel) + '"');
+                return '<div class="hw-myexams-wrong-row">' +
+                  '<div class="hw-myexams-wrong-q">❌ ' + titleParts.join(' · ') + '</div>' +
+                  '<div class="hw-myexams-wrong-d">' +
+                    '<span>Elegiste: <strong class="hw-myexams-wrong-picked">' + escapeHtml(wq.givenLabel) + '</strong></span>' +
+                    '<span>Correcta: <strong class="hw-myexams-wrong-correct">' + escapeHtml(wq.expectedLabel) + '</strong></span>' +
+                  '</div>' +
+                '</div>';
+              }).join('');
+              detail.innerHTML = '<div class="hw-myexams-detail-head">Repasa estas para la próxima vez:</div>' + rows;
+            })
+            .catch((e) => { detail.innerHTML = '<div class="hw-empty">Error: ' + escapeHtml(e.message) + '</div>'; });
+        });
+      }
+      card.appendChild(detail);
+      list.appendChild(card);
+    });
+  }
   function openMySentences() {
     const ov = $('hw-sentences-overlay');
     ov.classList.remove('hidden');

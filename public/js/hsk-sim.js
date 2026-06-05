@@ -56,6 +56,45 @@
   let _ttsAudio = null;    // current playing audio
   let _heartbeatTimer = null;  // periodic ping to /api/hsk-sim/heartbeat
 
+  // 🆕 Helpers for the post-sim wrong-answer breakdown. Look up the
+  // friendly part/question label from the sim payload (already loaded
+  // client-side for the runner). Format booleans as ✓/✕ words so the
+  // kid reads "Verdadero" not "true".
+  function _hskLookupQ(qid) {
+    if (!sim) return null;
+    const m = String(qid).match(/^(L[1-4]|R[12])-(\d+)$/);
+    if (!m) return null;
+    const part = m[1];
+    const num = parseInt(m[2], 10);
+    const partLabels = {
+      L1: 'Parte 1 (audio)', L2: 'Parte 2 (audio)',
+      L3: 'Parte 3 (audio)', L4: 'Parte 4 (audio)',
+      R1: 'Lectura 1',       R2: 'Lectura 2',
+    };
+    const partMap = {
+      L1: sim.listening && sim.listening.part1 && sim.listening.part1.questions,
+      L2: sim.listening && sim.listening.part2 && sim.listening.part2.questions,
+      L3: sim.listening && sim.listening.part3 && sim.listening.part3.questions,
+      L4: sim.listening && sim.listening.part4 && sim.listening.part4.questions,
+      R1: sim.reading   && sim.reading.part1   && sim.reading.part1.questions,
+      R2: sim.reading   && sim.reading.part2   && sim.reading.part2.questions,
+    };
+    const q = (partMap[part] || []).find((x) => x.num === num);
+    let label = null;
+    if (q) {
+      if (q.word) label = q.word;            // R1 vocab word
+      else if (q.pinyin) label = q.pinyin;   // R2 sentence pinyin
+      else if (q.audioText) label = q.audioText;
+    }
+    return { partLabel: partLabels[part] || part, num, label };
+  }
+  function _hskFmtAns(v) {
+    if (v === true || v === 'true') return 'Verdadero ✓';
+    if (v === false || v === 'false') return 'Falso ✕';
+    if (v == null || v === '') return '(sin responder)';
+    return String(v);
+  }
+
   // Read URL params. NEW preferred convention: ?pin=1234 → look up the
   // sim from the server. Back-compat: ?sim= still works as a fallback,
   // and ?access=/?code= still pre-fills the legacy fields. The homework
@@ -689,12 +728,48 @@
         $('hsk-results-detail').textContent = r.score + ' / ' + r.total + ' pts';
         const emoji = r.percent >= 90 ? '🏆' : r.percent >= 75 ? '⭐' : r.percent >= 50 ? '👍' : '📚';
         $('hsk-results-emoji').textContent = emoji;
+        // 🆕 2026-06-04 (Fernando): show the kid their own mistakes
+        // right here, the same way homework shows wrong answers after
+        // submit. We already have the full sim payload client-side
+        // (loaded for the runner), so we look up question labels
+        // locally — no extra round-trip.
         const bk = $('hsk-results-breakdown');
-        bk.innerHTML = '<div class="hsk-bk-head">Detalle por pregunta:</div>';
-        r.breakdown.forEach((b) => {
+        const wrong = (r.breakdown || []).filter((b) => !b.correct);
+        const correctCount = (r.breakdown || []).length - wrong.length;
+        bk.innerHTML = '';
+        const head = document.createElement('div');
+        head.className = 'hsk-bk-head';
+        head.innerHTML = wrong.length
+          ? '❌ <strong>' + wrong.length + '</strong> incorrecta' + (wrong.length === 1 ? '' : 's') +
+            ' &nbsp;·&nbsp; ✅ <strong>' + correctCount + '</strong> correcta' + (correctCount === 1 ? '' : 's')
+          : '🎉 ¡Perfecto! Cero errores.';
+        bk.appendChild(head);
+        if (wrong.length) {
+          const intro = document.createElement('div');
+          intro.className = 'hsk-bk-intro';
+          intro.textContent = 'Estas son las preguntas que fallaste. Repasa para la próxima:';
+          bk.appendChild(intro);
+        }
+        wrong.forEach((b) => {
+          const meta = _hskLookupQ(b.qid);
           const row = document.createElement('div');
-          row.className = 'hsk-bk-row ' + (b.correct ? 'ok' : 'bad');
-          row.textContent = b.qid + ': ' + (b.correct ? '✓ Correcto' : '✕ Incorrecto');
+          row.className = 'hsk-bk-row bad';
+          // Title line: part + qNum + (optional) question text label
+          const titleParts = [];
+          if (meta && meta.partLabel) titleParts.push(meta.partLabel + ', pregunta ' + meta.num);
+          else titleParts.push(b.qid);
+          if (meta && meta.label) titleParts.push('"' + meta.label + '"');
+          const title = document.createElement('div');
+          title.className = 'hsk-bk-q';
+          title.textContent = '❌ ' + titleParts.join(' · ');
+          row.appendChild(title);
+          // Detail line: picked vs correct
+          const detail = document.createElement('div');
+          detail.className = 'hsk-bk-detail';
+          detail.innerHTML =
+            '<span class="hsk-bk-picked">Elegiste: <strong>' + _hskFmtAns(b.given) + '</strong></span>' +
+            '<span class="hsk-bk-correct">Correcta: <strong>' + _hskFmtAns(b.expected) + '</strong></span>';
+          row.appendChild(detail);
           bk.appendChild(row);
         });
       });
