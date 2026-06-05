@@ -1952,14 +1952,48 @@
           row.className = 'm-asg-row m-hsk-attempt-row ' + cls2;
           row.dataset.ts = String(r.ts || 0);
           row.dataset.code = data.code;
+          // 🆕 2026-06-04 (Fernando): each attempt row now has a small
+          // 🗑 button so the teacher can erase a bad attempt. The
+          // delete propagates to the parent view + kid Mis Exámenes
+          // automatically (those surfaces refetch on open).
           row.innerHTML =
             '<span class="m-asg-title">Intento ' + (i + 1) + tag + ' <small class="m-hsk-attempt-toggle">▶ Ver errores</small></span>' +
             '<span class="m-asg-score">' + r.score + '/' + r.total + ' <small>(' + pct + '%)</small></span>' +
-            '<span class="m-asg-date">' + dateStr + '</span>';
+            '<span class="m-asg-date">' + dateStr + '</span>' +
+            '<button class="m-hsk-attempt-del" type="button" title="Borrar este intento (también desaparece del dashboard del padre y del alumno)" data-ts="' + (r.ts || 0) + '" data-code="' + escapeHtml(data.code) + '">🗑</button>';
           const mistakeWrap = document.createElement('div');
           mistakeWrap.className = 'm-hsk-attempt-mistakes hidden';
           let mistakesLoaded = false;
-          row.addEventListener('click', () => {
+          // 🗑 Delete button — needs its own handler that swallows the click
+          // so the row's expand handler doesn't fire underneath. Confirms,
+          // then DELETEs and removes the row + its mistake panel from the
+          // DOM. The Cuaderno header counters above still reflect the old
+          // count until the next Cuaderno open; close + reopen if you want
+          // a totally fresh render.
+          const delBtn = row.querySelector('.m-hsk-attempt-del');
+          if (delBtn) {
+            delBtn.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              ev.preventDefault();
+              if (!confirm('¿Borrar este intento? Desaparecerá también del dashboard de los papás y del alumno.')) return;
+              fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/hsk-attempt/delete?pw=' + encodeURIComponent(pw), {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ts: r.ts }),
+              })
+                .then((rr) => rr.json())
+                .then((d) => {
+                  if (!d || !d.ok) { alert('No se pudo borrar: ' + (d && d.error || 'error')); return; }
+                  row.classList.add('is-leaving');
+                  mistakeWrap.classList.add('is-leaving');
+                  setTimeout(() => { try { row.remove(); mistakeWrap.remove(); } catch (_) {} }, 250);
+                })
+                .catch((e) => alert('Error: ' + e.message));
+            });
+          }
+          row.addEventListener('click', (ev) => {
+            // If the click happened on the delete button (or its child icon),
+            // skip the expand — the delete handler runs in its own listener.
+            if (ev.target.closest('.m-hsk-attempt-del')) return;
             const toggle = row.querySelector('.m-hsk-attempt-toggle');
             const isOpen = !mistakeWrap.classList.contains('hidden');
             if (isOpen) {

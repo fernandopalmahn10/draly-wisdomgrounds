@@ -1585,6 +1585,37 @@ app.post('/api/admin/student/:code/sentences/clear', (req, res) => {
   res.json({ ok: true, removed });
 });
 
+// 🗑 DELETE one HSK simulation attempt from a student's record.
+// (Fernando 2026-06-04: "me as a teacher, can I delete one of the
+// records of the simulation so that their parents don't see that
+// they got a 30, for example? And if I delete it, they get deleted
+// on their own dashboard as well.")
+//
+// Deletion is by timestamp (unique per attempt within a student). The
+// parent view and kid Mis Exámenes both refetch on open so a deletion
+// here disappears from those surfaces automatically — no broadcasts
+// needed.
+//
+// POST /api/admin/student/:code/hsk-attempt/delete?pw=...
+//   body: { ts: <number> }
+app.post('/api/admin/student/:code/hsk-attempt/delete', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) {
+    return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  }
+  const ts = parseInt((req.body && req.body.ts), 10);
+  if (!ts) return res.status(400).json({ ok: false, error: 'ts required' });
+  const before = (rec.hskResults || []).length;
+  rec.hskResults = (rec.hskResults || []).filter((r) => r.ts !== ts);
+  const removed = before - rec.hskResults.length;
+  if (!removed) return res.status(404).json({ ok: false, error: 'attempt not found' });
+  try { Students._save && Students._save(); } catch (_) {}
+  res.json({ ok: true, removed, remaining: rec.hskResults.length });
+});
+
 app.get('/api/homework/assignment/:id', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const a = Assignments.getAssignment(req.params.id);
