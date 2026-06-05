@@ -622,27 +622,37 @@ function studyList(opts) {
   const skipSet = new Set(skipIds);
   const learned = new Set(learnedSentKeys);
 
-  // 🆕 NEW VISIBILITY RULE (Fernando 2026-06-04):
-  //   A word is hidden ONLY when BOTH conditions hold:
-  //     (a) the word itself was marked seen, AND
-  //     (b) every one of its sentences was marked learned.
-  //   In all other cases the word stays in the list — including the
-  //   case "word marked seen but some sentences still unmarked", so
-  //   the user can still work through the remaining sentences under
-  //   their parent word. Unmarking a sentence of a fully-hidden word
-  //   brings the word back automatically (because condition (b) flips
-  //   false again).
-  //   Skipped IDs ("Otras" rotation) are still excluded outright, since
-  //   that's a temporary "show me different ones" filter, not a study
-  //   decision.
+  // 🆕 VISIBILITY RULE (Fernando 2026-06-04, refined 2026-06-04b):
+  //   Rule A — "no empty cards": a word is hidden if all its sentences
+  //     are already marked learned, REGARDLESS of whether the word
+  //     itself is marked seen. Fernando: "everything should have
+  //     sentences. One word, two sentences. After you go to like the
+  //     father, those below the father, they don't contain sentences.
+  //     Totally unacceptable."
+  //   Rule B — "kept-for-sentences": a word that was marked seen but
+  //     still has at least one unlearned sentence remains visible, so
+  //     the kid can finish the remaining sentences under their parent
+  //     word. The mark button switches to "Conocida · toca para
+  //     deshacer" so it's not confusing.
+  //   Unmarking a sentence on a fully-hidden word brings the word back
+  //   automatically (Rule A flips false again).
+  //   Skipped IDs ("Otras" rotation) are excluded outright — temporary
+  //   "show me different ones" filter, not a study decision.
   const candidates = EMIRATI_WORDS
     .filter((w) => {
       if (skipSet.has(w.id)) return false;
-      if (!seenSet.has(w.id)) return true;
-      // word marked seen → only keep if at least one sentence still unlearned
       const allSes = Array.isArray(w.ses) ? w.ses : [];
-      if (!allSes.length) return false;       // no sentences AND marked → hide
-      return allSes.some((_, i) => !learned.has(w.id + ':' + i));
+      // Rule A: every sentence learned → hide (no empty cards).
+      if (allSes.length && allSes.every((_, i) => learned.has(w.id + ':' + i))) {
+        return false;
+      }
+      // Past this point we know at least one sentence is unlearned,
+      // OR the word has no sentences at all (data-quality fallback).
+      if (!seenSet.has(w.id)) return true;
+      // word marked seen → keep only if at least one sentence still unlearned.
+      // (No-sentences-AND-marked → hide, same as before.)
+      if (!allSes.length) return false;
+      return true;
     })
     .sort((a, b) => a.priority - b.priority);
 

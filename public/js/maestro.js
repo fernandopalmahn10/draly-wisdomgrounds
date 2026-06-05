@@ -1942,13 +1942,75 @@
           const isLatest = i === chrono.length - 1;
           const isBest = pct === g.best;
           const tag = (isBest ? ' 🏅' : '') + (isLatest ? ' ✨' : '');
+          // 🆕 2026-06-04 (Fernando): each attempt is now clickable.
+          // Tapping the row fetches the wrong-question breakdown for
+          // that attempt and renders it inline so the teacher sees
+          // which specific questions the kid missed. Older attempts
+          // (recorded before this change) don't have wrongQs saved,
+          // so the expander shows a "datos no guardados" note.
           const row = document.createElement('div');
-          row.className = 'm-asg-row ' + cls2;
+          row.className = 'm-asg-row m-hsk-attempt-row ' + cls2;
+          row.dataset.ts = String(r.ts || 0);
+          row.dataset.code = data.code;
           row.innerHTML =
-            '<span class="m-asg-title">Intento ' + (i + 1) + tag + '</span>' +
+            '<span class="m-asg-title">Intento ' + (i + 1) + tag + ' <small class="m-hsk-attempt-toggle">▶ Ver errores</small></span>' +
             '<span class="m-asg-score">' + r.score + '/' + r.total + ' <small>(' + pct + '%)</small></span>' +
             '<span class="m-asg-date">' + dateStr + '</span>';
+          const mistakeWrap = document.createElement('div');
+          mistakeWrap.className = 'm-hsk-attempt-mistakes hidden';
+          let mistakesLoaded = false;
+          row.addEventListener('click', () => {
+            const toggle = row.querySelector('.m-hsk-attempt-toggle');
+            const isOpen = !mistakeWrap.classList.contains('hidden');
+            if (isOpen) {
+              mistakeWrap.classList.add('hidden');
+              if (toggle) toggle.textContent = '▶ Ver errores';
+              return;
+            }
+            mistakeWrap.classList.remove('hidden');
+            if (toggle) toggle.textContent = '▼ Ocultar errores';
+            if (mistakesLoaded) return;
+            mistakesLoaded = true;
+            mistakeWrap.innerHTML = '<div class="m-hsk-attempt-loading">Cargando…</div>';
+            const ts = encodeURIComponent(row.dataset.ts);
+            fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/hsk-attempt?pw=' + encodeURIComponent(pw) + '&ts=' + ts)
+              .then((rr) => rr.json())
+              .then((d) => {
+                if (!d || !d.ok) {
+                  mistakeWrap.innerHTML = '<div class="m-hsk-attempt-empty">No se pudo cargar: ' + escapeHtml(d && d.error || 'error') + '</div>';
+                  return;
+                }
+                if (!d.wrongQs || !d.wrongQs.length) {
+                  mistakeWrap.innerHTML = '<div class="m-hsk-attempt-perfect">🎉 ¡Sin errores en este intento!</div>';
+                  return;
+                }
+                // Older attempts pre-2026-06-04 won't have wrongQs
+                // stored. We can't tell them apart from a perfect
+                // score by length alone — but we CAN check: if the
+                // kid got 100% AND wrongQs is empty, it's perfect;
+                // otherwise if they got <100% AND wrongQs is empty,
+                // the data just wasn't captured yet.
+                if (d.percent < 100 && !d.wrongQs.length) {
+                  mistakeWrap.innerHTML = '<div class="m-hsk-attempt-empty">⚠️ Datos no guardados para este intento (anterior al 4 jun 2026).</div>';
+                  return;
+                }
+                const heading = '<div class="m-hsk-attempt-heading">❌ ' + d.wrongCount + ' pregunta' + (d.wrongCount === 1 ? '' : 's') + ' incorrecta' + (d.wrongCount === 1 ? '' : 's') + '</div>';
+                const rows = d.wrongQs.map((wq) => {
+                  const ans = (wq.given == null || wq.given === '') ? '<em>(sin responder)</em>' : escapeHtml(String(wq.given));
+                  const exp = escapeHtml(String(wq.expected));
+                  const label = wq.questionLabel ? ' <span class="m-hsk-q-label">· ' + escapeHtml(wq.questionLabel) + '</span>' : '';
+                  return '<div class="m-hsk-wrong-row">' +
+                    '<span class="m-hsk-wrong-qid">' + escapeHtml(wq.qid) + label + '</span>' +
+                    '<span class="m-hsk-wrong-given">Eligió: <strong>' + ans + '</strong></span>' +
+                    '<span class="m-hsk-wrong-expected">Correcto: <strong>' + exp + '</strong></span>' +
+                  '</div>';
+                }).join('');
+                mistakeWrap.innerHTML = heading + rows;
+              })
+              .catch((e) => { mistakeWrap.innerHTML = '<div class="m-hsk-attempt-empty">Error: ' + escapeHtml(e.message) + '</div>'; });
+          });
           body.appendChild(row);
+          body.appendChild(mistakeWrap);
         });
       });
     }

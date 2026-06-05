@@ -8,43 +8,27 @@ sessions don't have to re-discuss why it matters.
 
 ---
 
-## 1. Emirati gateway — no empty word cards
+## 1. Emirati gateway — no empty word cards ✅ SHIPPED 2026-06-04
 
-**Why:** Words whose 2 sentences are both already marked learned can
-currently still appear in the list with no sentences below them. Fernando
-called this "totally unacceptable — everything should have sentences."
-
-**Fix shape:** One-line filter in `core/emirati-vocab.js` `studyList()` —
-skip any word where `visibleSes.length === 0`. The new rule complements
-the existing "kept-because-word-marked-but-sentences-pending" rule (which
-the 2026-06-04 commit added):
+`core/emirati-vocab.js` `studyList()` now hides any word whose every
+sentence is already marked learned, regardless of whether the word
+itself was marked seen. Truth table:
 
 | word marked? | any sentence unlearned? | show? |
 |---|---|---|
-| no | yes | YES (default state) |
-| no | no  | NO — already fully done |
+| no  | yes | YES (default) |
+| no  | no  | NO — fully done |
 | yes | yes | YES (kept for remaining sentences) |
 | yes | no  | NO — fully done |
 
-Status: scoped, **not implemented**.
-
 ---
 
-## 2. Mis Oraciones — saved-by-me vs sent-by-teacher tabs
+## 2. Mis Oraciones — saved-by-me vs sent-by-teacher tabs ✅ SHIPPED 2026-06-04
 
-**Why:** History modal currently mixes the kid's own saves with teacher
-pushes. Fernando wants two tabs.
-
-**Fix shape:** Server already flags `pushedByTeacher: true` on the push
-endpoint. Client just needs:
-- Two `<button class="tab">` toggles above the history list
-- Filter the rendered list by `entry.pushedByTeacher` truthy/falsy
-- Counts in the tab labels
-
-Where: the `_emReviewTab` pattern in `maestro.js` is a good reference for
-the same two-tab UX (it splits words vs. sentences).
-
-Status: scoped, **not implemented**.
+`player.js` `openWuHistory()` now renders two tabs at the top of the
+modal: ✍️ Mías and 📤 De la maestra, with counts. Teacher-pushed
+rows show a green left-border + 📤 attribution chip. Same delete +
+Curious-tap behavior on both tabs.
 
 ---
 
@@ -83,40 +67,30 @@ container to put chips in**.
 
 ---
 
-## 5. HSK simulation — capture per-question mistakes
+## 5. HSK simulation — capture per-question mistakes ✅ SHIPPED 2026-06-04
 
-**Why:** Fernando — "Can you capture the data of what went wrong?
-The data speaks for itself, right? It would give us a really clear
-understanding of what went wrong for each kid."
-
-**What we have now:** `rec.hskResults = [{ simId, score, total, percent,
-ts }]` — summary only, no per-question breakdown.
-
-**Fix shape:**
-- `HskSim.gradeSim()` already returns a `breakdown` per question
-- Persist `breakdown` into the rec.hskResults entry (server.js around
-  line 1779)
-- Add `/api/admin/student/:code/hsk-mistakes` endpoint for teacher
-- Surface in the Cuaderno per-student detail panel
-- Maybe surface in the parent view too (kid's mistakes per exam)
-
-Status: scoped, **queued**. Important data — every day we wait, we lose
-the mistakes from that day's attempts forever.
+`server.js` now persists `wrongQs: [{qid, expected, given}]` on every
+sim submission. New endpoint `/api/admin/student/:code/hsk-attempt?ts=...`
+returns the wrong-question list with question labels (word/pinyin/audioText)
+enriched from the sim catalog. New endpoint `/api/admin/hsk-mistakes/heatmap`
+aggregates across all kids in a teacher's classroom (per-question wrong %).
+Per-attempt rows in the maestro Cuaderno are now clickable → expand into
+inline "❌ N preguntas incorrectas" panel showing what each kid picked vs
+the right answer. Older attempts (pre-2026-06-04) show a graceful
+"datos no guardados" note since they don't have wrongQs in the record.
 
 ---
 
-## 6. Classroom analytics on captured mistake data
+## 6. Classroom analytics on captured mistake data — data layer ready
 
-**Why:** Fernando — "and maybe even you can also run the same data
-through analytics. A lot of data really tells us patterns. What should
-we improve in that classroom? What is the kids don't know?"
+The heatmap endpoint `/api/admin/hsk-mistakes/heatmap` is live and
+returns `{ attempts, rows: [{qid, wrongPct, wrong, attempted}, ...] }`
+sorted hardest-first. **What's missing is the UI** — a maestro
+heatmap view to render the rows visually. Tackle after the data has
+been collecting for a couple of weeks (Fernando's "let it speak for
+itself" plan).
 
-**Fix shape:** Aggregate query across all students in a teacher's
-classroom — which questions/words fail most often. Heatmap or
-ranked list in the maestro view.
-
-Status: **queued — strictly after #5 has been live for a few weeks
-collecting data**.
+Status: **server side ✅, UI queued**.
 
 ---
 

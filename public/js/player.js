@@ -3253,6 +3253,14 @@
   // === SENTENCE HISTORY MODAL ===
   // Tap "📜 Mis oraciones" → fetch this student's history from the server
   // (keyed by their stable student code) and render it.
+  //
+  // 🆕 2026-06-04 (Fernando): the list now splits into TWO tabs —
+  //   "✍️ Mías" (saved by the kid) and "📤 De la maestra" (pushed by
+  //   the teacher via /api/admin/sentence/push).
+  // Both use the same row layout; only the filter differs. Last-viewed
+  // tab is remembered in-session so flipping the modal closed and open
+  // again stays on the same tab.
+  let _wuHistoryTab = 'mine';   // 'mine' | 'teacher'
   function openWuHistory() {
     const modal = document.getElementById('wu-history-modal');
     const list = document.getElementById('wu-history-list');
@@ -3271,62 +3279,87 @@
         return;
       }
       const sentences = resp.sentences || [];
-      if (sub) sub.textContent = `Código: ${myStudentCode} · ${sentences.length} oración${sentences.length === 1 ? '' : 'es'}`;
-      if (!sentences.length) {
-        list.innerHTML = '<div class="wu-history-empty">Aún no has construido ninguna oración. ¡Sé asistente y empieza!</div>';
-        return;
-      }
-      list.innerHTML = '';
-      sentences.forEach((s) => {
-        const item = document.createElement('div');
-        item.className = 'wu-history-item';
-        const date = new Date(s.ts);
-        // Simpler display — just date (drop time + PIN per user request)
-        const dateStr = date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
-        const wordsHtml = (s.words || []).map((wid) => {
-          const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
-          if (!w) return '';
-          const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
-          const color = cat ? cat.color : '#fff';
-          // Curious-tappable: tap a saved word → big animated card.
-          return `<span class="wu-hist-word curious-tappable" data-wid="${wid}" style="--cat-color:${color};">
-            <span class="wu-hist-icon">${w.icon || ''}</span>
-            <span class="wu-hist-pinyin">${w.pinyin}</span>
-          </span>`;
-        }).join('');
-        item.innerHTML = `
-          <div class="wu-history-item-row">
-            <div class="wu-history-item-meta">📅 ${dateStr}</div>
-            <button class="wu-history-item-delete" type="button" aria-label="Borrar">🗑</button>
-          </div>
-          <div class="wu-history-item-words">${wordsHtml}</div>`;
-        // Wire delete button — confirms then calls server
-        const delBtn = item.querySelector('.wu-history-item-delete');
-        if (delBtn) {
-          delBtn.onclick = () => {
-            if (!confirm('¿Borrar esta oración del historial?')) return;
-            socket.emit('wu:delete-history-entry', {
-              studentCode: myStudentCode, ts: s.ts,
-            }, (resp) => {
-              if (resp && resp.ok) {
-                // Refresh the modal with the updated list
-                openWuHistory();
-              } else {
-                alert('No se pudo borrar.');
-              }
-            });
-          };
-        }
-        // 🔍 Curious Mode on saved words — tap any word → big animated card,
-        // exactly like the live builder. Works on the kid's own history too.
-        item.querySelectorAll('.wu-hist-word').forEach((el) => {
-          el.addEventListener('click', () => {
-            const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[el.dataset.wid];
-            if (w) showWuPokedex(w);
-          });
-        });
-        list.appendChild(item);
+      const teacherCount = sentences.filter((s) => s.pushedByTeacher).length;
+      const mineCount = sentences.length - teacherCount;
+      if (sub) sub.textContent = `Código: ${myStudentCode} · ✍️ ${mineCount} · 📤 ${teacherCount}`;
+      _renderWuHistoryTabs(list, sentences, mineCount, teacherCount);
+    });
+  }
+  function _renderWuHistoryTabs(list, sentences, mineCount, teacherCount) {
+    // Tab strip — pinned, lets the kid flip between Mías and De la maestra.
+    list.innerHTML = '';
+    const tabs = document.createElement('div');
+    tabs.className = 'wu-history-tabs';
+    tabs.innerHTML =
+      '<button class="wu-history-tab ' + (_wuHistoryTab === 'mine' ? 'is-active' : '') + '" data-tab="mine" type="button">' +
+        '✍️ Mías <span class="wu-history-tab-n">' + mineCount + '</span>' +
+      '</button>' +
+      '<button class="wu-history-tab ' + (_wuHistoryTab === 'teacher' ? 'is-active' : '') + '" data-tab="teacher" type="button">' +
+        '📤 De la maestra <span class="wu-history-tab-n">' + teacherCount + '</span>' +
+      '</button>';
+    list.appendChild(tabs);
+    tabs.querySelectorAll('.wu-history-tab').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        _wuHistoryTab = btn.dataset.tab;
+        _renderWuHistoryTabs(list, sentences, mineCount, teacherCount);
       });
+    });
+    const body = document.createElement('div');
+    body.className = 'wu-history-tab-body';
+    list.appendChild(body);
+    const filtered = sentences.filter((s) => _wuHistoryTab === 'teacher' ? !!s.pushedByTeacher : !s.pushedByTeacher);
+    if (!filtered.length) {
+      const emptyMsg = (_wuHistoryTab === 'teacher')
+        ? 'Aún no te han enviado oraciones. Cuando tu maestra te envíe una, aparecerá aquí. 📤'
+        : 'Aún no has construido ninguna oración. ¡Sé asistente y empieza! ✍️';
+      body.innerHTML = '<div class="wu-history-empty">' + emptyMsg + '</div>';
+      return;
+    }
+    filtered.forEach((s) => {
+      const item = document.createElement('div');
+      item.className = 'wu-history-item' + (s.pushedByTeacher ? ' is-from-teacher' : '');
+      const date = new Date(s.ts);
+      const dateStr = date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+      const wordsHtml = (s.words || []).map((wid) => {
+        const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
+        if (!w) return '';
+        const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
+        const color = cat ? cat.color : '#fff';
+        return `<span class="wu-hist-word curious-tappable" data-wid="${wid}" style="--cat-color:${color};">
+          <span class="wu-hist-icon">${w.icon || ''}</span>
+          <span class="wu-hist-pinyin">${w.pinyin}</span>
+        </span>`;
+      }).join('');
+      // Teacher-sent rows get a small attribution chip (sentence may carry
+      // teacherName if the push captured it).
+      const teacherChip = s.pushedByTeacher
+        ? `<span class="wu-history-from-teacher">📤 ${escapeHtml(s.teacherName || 'Maestra')}</span>`
+        : '';
+      item.innerHTML = `
+        <div class="wu-history-item-row">
+          <div class="wu-history-item-meta">📅 ${dateStr} ${teacherChip}</div>
+          <button class="wu-history-item-delete" type="button" aria-label="Borrar">🗑</button>
+        </div>
+        <div class="wu-history-item-words">${wordsHtml}</div>`;
+      const delBtn = item.querySelector('.wu-history-item-delete');
+      if (delBtn) {
+        delBtn.onclick = () => {
+          if (!confirm('¿Borrar esta oración del historial?')) return;
+          socket.emit('wu:delete-history-entry', {
+            studentCode: myStudentCode, ts: s.ts,
+          }, (resp) => {
+            if (resp && resp.ok) openWuHistory();
+            else alert('No se pudo borrar.');
+          });
+        };
+      }
+      item.querySelectorAll('.wu-hist-word').forEach((el) => {
+        el.addEventListener('click', () => {
+          const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[el.dataset.wid];
+          if (w) showWuPokedex(w);
+        });
+      });
+      body.appendChild(item);
     });
   }
   function closeWuHistory() {

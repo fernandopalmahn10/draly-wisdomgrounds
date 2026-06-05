@@ -1810,16 +1810,135 @@ app.post('/api/hsk-sim/:simId/submit', (req, res) => {
   const result = HskSim.gradeSim(req.params.simId, answers || {});
   if (!result) return res.status(404).json({ ok: false, error: 'unknown sim' });
   // Persist into student.hskResults so the Cuaderno can show it later.
+  // 🆕 2026-06-04 (Fernando): we now ALSO save the per-question
+  // breakdown so the teacher can drill into "which questions did
+  // this kid get wrong?" From his message: "the data speaks for
+  // itself, right? A lot of data really tells us patterns. What
+  // should we improve in that classroom?" Only `wrong` items are
+  // stored to keep the JSON file small — most kids will get most
+  // questions right so the correct ones add 5-10× the bytes for
+  // zero analytical value. The full count is in `total` already.
   if (!Array.isArray(rec.hskResults)) rec.hskResults = [];
+  const wrongQs = (Array.isArray(result.breakdown) ? result.breakdown : [])
+    .filter((b) => !b.correct)
+    .map((b) => ({ qid: b.qid, expected: b.expected, given: b.given }));
   rec.hskResults.push({
     simId: req.params.simId,
     score: result.score,
     total: result.total,
     percent: result.percent,
+    wrongQs,                                // [{qid:'L1-1', expected:false, given:true}, ...]
+    answeredCount: Object.keys(answers || {}).length,
     ts: Date.now(),
   });
   try { Students._save && Students._save(); } catch (_) {}
   res.json({ ok: true, result });
+});
+
+// 🔍 Per-attempt drill-down — returns the wrong-question list for ONE
+// recorded attempt (identified by ts). Used by the maestro Cuaderno
+// "Ver errores" expander.
+// (Fernando 2026-06-04: "either in my maestro mode and in their maestro
+// mode, and maybe even you can also run the same data through analytics".)
+app.get('/api/admin/student/:code/hsk-attempt', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) {
+    return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  }
+  const ts = parseInt(req.query.ts, 10);
+  if (!ts) return res.status(400).json({ ok: false, error: 'ts required' });
+  const attempt = (rec.hskResults || []).find((r) => r.ts === ts);
+  if (!attempt) return res.status(404).json({ ok: false, error: 'attempt not found' });
+  // Re-attach question text so the teacher sees "L1-3: La oración del
+  // audio es 'wǒ hěn lèi' — el kid contestó verdadero, era falso"
+  // instead of "L1-3: expected false, given true".
+  const sim = (HskSim.SIMULATIONS || {})[attempt.simId];
+  const wrongQs = (attempt.wrongQs || []).map((wq) => {
+    const out = Object.assign({}, wq);
+    if (sim) {
+      const [part, numStr] = String(wq.qid).split('-');
+      const num = parseInt(numStr, 10);
+      const partMap = {
+        'L1': sim.listening && sim.listening.part1 && sim.listening.part1.questions,
+        'L2': sim.listening && sim.listening.part2 && sim.listening.part2.questions,
+        'L3': sim.listening && sim.listening.part3 && sim.listening.part3.questions,
+        'L4': sim.listening && sim.listening.part4 && sim.listening.part4.questions,
+        'R1': sim.reading && sim.reading.part1 && sim.reading.part1.questions,
+        'R2': sim.reading && sim.reading.part2 && sim.reading.part2.questions,
+      };
+      const q = (partMap[part] || []).find((x) => x.num === num);
+      if (q) {
+        if (q.word) out.questionLabel = q.word;             // R1 vocab
+        else if (q.pinyin) out.questionLabel = q.pinyin;    // R2 sentence
+        else if (q.audioText) out.questionLabel = q.audioText;
+      }
+    }
+    return out;
+  });
+  res.json({
+    ok: true,
+    code: rec.code,
+    displayName: rec.displayName,
+    simId: attempt.simId,
+    simTitle: (sim && sim.title) || attempt.simId,
+    score: attempt.score,
+    total: attempt.total,
+    percent: attempt.percent,
+    ts: attempt.ts,
+    wrongQs,
+    wrongCount: wrongQs.length,
+  });
+});
+
+// 📊 Classroom mistake heatmap — aggregates wrong-answer counts across
+// ALL students the caller can touch. Output: per-question hit counts
+// + per-part totals so the teacher sees "L2-7 was wrong for 8/12 kids"
+// at a glance. Stub for now — wire into a UI in a later session
+// (queued analytics item #6 in TODO-QUEUED.md).
+app.get('/api/admin/hsk-mistakes/heatmap', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const simId = req.query.simId || null;
+  const all = (typeof Students.listAll === 'function') ? Students.listAll() : [];
+  const ownCodes = session.teacher ? new Set(session.teacher.accessCodes || []) : null;
+  const wrongCounts = {};   // qid → { wrong, attempted }
+  let attempts = 0;
+  for (const summary of all) {
+    const rec = Students.get(summary.code);
+    if (!rec || !Array.isArray(rec.hskResults)) continue;
+    if (ownCodes && rec.accessCode && !ownCodes.has(rec.accessCode)) continue;
+    rec.hskResults.forEach((r) => {
+      if (simId && r.simId !== simId) return;
+      attempts++;
+      const wrongSet = new Set((r.wrongQs || []).map((w) => w.qid));
+      // For every question in the sim, increment "attempted"; if it was
+      // wrong for this kid, also increment "wrong". This requires the
+      // sim catalog to enumerate all qids.
+      const sim = (HskSim.SIMULATIONS || {})[r.simId];
+      if (!sim) return;
+      const enumerate = (prefix, qs) => {
+        (qs || []).forEach((q) => {
+          const key = prefix + '-' + q.num;
+          if (!wrongCounts[key]) wrongCounts[key] = { qid: key, simId: r.simId, wrong: 0, attempted: 0 };
+          wrongCounts[key].attempted++;
+          if (wrongSet.has(key)) wrongCounts[key].wrong++;
+        });
+      };
+      enumerate('L1', sim.listening && sim.listening.part1 && sim.listening.part1.questions);
+      enumerate('L2', sim.listening && sim.listening.part2 && sim.listening.part2.questions);
+      enumerate('L3', sim.listening && sim.listening.part3 && sim.listening.part3.questions);
+      enumerate('L4', sim.listening && sim.listening.part4 && sim.listening.part4.questions);
+      enumerate('R1', sim.reading && sim.reading.part1 && sim.reading.part1.questions);
+      enumerate('R2', sim.reading && sim.reading.part2 && sim.reading.part2.questions);
+    });
+  }
+  const rows = Object.values(wrongCounts)
+    .map((c) => Object.assign({}, c, { wrongPct: c.attempted ? Math.round((c.wrong / c.attempted) * 100) : 0 }))
+    .sort((a, b) => b.wrongPct - a.wrongPct);
+  res.json({ ok: true, attempts, rows });
 });
 
 // 🏆 HSK live sessions — teacher's live-monitor heartbeat protocol.
