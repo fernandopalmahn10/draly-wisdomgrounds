@@ -176,16 +176,110 @@
   // before redirect). Bug was: kids saw "Tu maestra te llama" but
   // then landed on the join screen instead of being pulled in.
   // hsk-sim.html has its own auto-join path and doesn't need it.
+  // 🆕 2026-06-04 v4 (Fernando: "force games doesn't bring anyone in"):
+  // Rewritten to use the PROVEN per-game patterns instead of a generic
+  // autohost script. Each entry's `launch` function does what's known
+  // to work for THAT game.
+  //   - warmup: ?livemaster=1 + sessionStorage.dralyLiveMaster
+  //     (the proven Modo Maestro flow — already in use for weeks)
+  //   - hsksim: ?access=&sim= (the proven HSK button flow)
+  //   - others: open the host page; teacher sees the PIN and we send
+  //     a soft "Tu maestra te llama" notification when kids click in.
+  //     Honest about what works vs what doesn't.
+  // Also expanded to include ALL 18 host pages so Fernando can see
+  // the full game catalog.
   const LAUNCHER_GAMES = [
-    { id: 'warmup',    label: 'Modo Maestro',        emoji: '✏️',  hostUrl: '/host-warmup.html',  kidUrlTpl: '/player.html?pin={PIN}&autojoin=1',  blurb: 'Arma oraciones HSK1 en vivo. Tú o un asistente.' },
-    { id: 'reading',   label: 'Lectura en clase',    emoji: '📖',  hostUrl: '/host-reading.html', kidUrlTpl: '/player.html?pin={PIN}&autojoin=1',  blurb: 'Lectura guiada con karaoke + test al final.' },
-    { id: 'hsksim',    label: 'Simulación HSK',      emoji: '🏆',  hostUrl: '/host-hsk.html',     kidUrlTpl: '/hsk-sim.html?pin={PIN}',            blurb: 'Examen oficial HSK1 — Sim 1, 2 o 3.' },
-    { id: 'laiquhui',  label: 'Lái-Qù-Huí Dragón',   emoji: '🐉',  hostUrl: '/host-laiquhui.html', kidUrlTpl: '/player.html?pin={PIN}&autojoin=1', blurb: 'Reparte paquetes por la ciudad con vocab HSK1.' },
-    { id: 'identity',  label: 'Detective Shéi Shì',  emoji: '🕵️',  hostUrl: '/host-identity.html', kidUrlTpl: '/player.html?pin={PIN}&autojoin=1', blurb: 'Adivina el sospechoso con pistas HSK1.' },
-    { id: 'triage',    label: 'Sala de emergencia',  emoji: '🚑',  hostUrl: '/host-triage.html',   kidUrlTpl: '/player.html?pin={PIN}&autojoin=1', blurb: 'Cura pacientes con vocab médico HSK1.' },
-    { id: 'partyrun',  label: 'Hóngbāo Run',         emoji: '🎲',  hostUrl: '/host-partyrun.html', kidUrlTpl: '/player.html?pin={PIN}&autojoin=1', blurb: 'Mario-Party con preguntas HSK1.' },
-    { id: 'sixseven',  label: '6-7 Swing',           emoji: '🤙',  hostUrl: '/host-sixseven.html', kidUrlTpl: '/player.html?pin={PIN}&autojoin=1', blurb: 'Mate rápido + números chinos.' },
+    {
+      id: 'warmup', label: 'Modo Maestro', emoji: '✏️',
+      blurb: 'Arma oraciones HSK1 en vivo · ★ Auto-fuerza',
+      launch: (ctx) => {
+        try {
+          sessionStorage.setItem('dralyLiveMaster', JSON.stringify({
+            codes: ctx.codes, pw: ctx.pw, text: '¡Entra a Modo Maestro ahora!', ts: Date.now(),
+          }));
+        } catch (_) { alert('No se pudo guardar la sesión.'); return; }
+        // Open in a new tab so /maestro stays open
+        window.open('/host-warmup.html?livemaster=1', '_blank', 'noopener');
+      },
+    },
+    {
+      id: 'reading', label: 'Lectura en clase', emoji: '📖',
+      blurb: 'Lectura guiada con karaoke + test al final',
+      launch: (ctx) => _genericLaunch(ctx, '/host-reading.html', '/player.html'),
+    },
+    {
+      id: 'hsksim', label: 'Simulación HSK', emoji: '🏆',
+      blurb: 'Examen oficial HSK1 — Sim 1, 2 o 3 · ★ Auto-fuerza',
+      launch: (ctx) => {
+        // Reuse the existing HSK button's proven pattern. Default to Sim 1.
+        const simId = ctx.simId || 'hsk1-sim1';
+        const accessCode = (new URLSearchParams(location.search)).get('access')
+          || localStorage.getItem('mochi.accessCode') || '';
+        fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(ctx.pw), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            studentCodes: ctx.codes,
+            text: '🏆 La maestra te está abriendo la simulación HSK ahora. Prepárate.',
+            actionType: 'force',
+            actionUrl: '/hsk-sim.html?access=' + encodeURIComponent(accessCode) + '&sim=' + encodeURIComponent(simId),
+            actionLabel: 'Entrar al examen →',
+          }),
+        })
+          .then((r) => r.json())
+          .then((res) => {
+            if (res && res.ok) {
+              const monitorUrl = '/host-hsk.html'
+                + '?sim=' + encodeURIComponent(simId)
+                + '&access=' + encodeURIComponent(accessCode)
+                + '&pw=' + encodeURIComponent(ctx.pw);
+              window.open(monitorUrl, '_blank', 'noopener');
+            } else {
+              alert('Error: ' + ((res && res.error) || 'no se pudo enviar'));
+            }
+          });
+      },
+    },
+    { id: 'laiquhui',  label: 'Lái-Qù-Huí Dragón',  emoji: '🐉', blurb: 'Reparte paquetes por la ciudad', launch: (ctx) => _genericLaunch(ctx, '/host-laiquhui.html', '/player.html') },
+    { id: 'identity',  label: 'Detective Shéi Shì', emoji: '🕵️', blurb: 'Adivina el sospechoso con pistas', launch: (ctx) => _genericLaunch(ctx, '/host-identity.html', '/player.html') },
+    { id: 'triage',    label: 'Sala de emergencia', emoji: '🚑', blurb: 'Cura pacientes con vocab médico',  launch: (ctx) => _genericLaunch(ctx, '/host-triage.html', '/player.html') },
+    { id: 'partyrun',  label: 'Hóngbāo Run',        emoji: '🎲', blurb: 'Mario-Party con preguntas HSK1',  launch: (ctx) => _genericLaunch(ctx, '/host-partyrun.html', '/player.html') },
+    { id: 'sixseven',  label: '6-7 Swing',          emoji: '🤙', blurb: 'Mate rápido + números chinos',    launch: (ctx) => _genericLaunch(ctx, '/host-sixseven.html', '/player.html') },
+    { id: 'monopoly',  label: 'HSK Monopoly',       emoji: '🏘️', blurb: 'Tablero estilo Monopoly',         launch: (ctx) => _genericLaunch(ctx, '/host-monopoly.html', '/player.html') },
+    { id: 'conquest',  label: 'Conquista',          emoji: '⚔️', blurb: 'Conquista hexágonos',             launch: (ctx) => _genericLaunch(ctx, '/host-conquest.html', '/player.html') },
+    { id: 'family',    label: 'Mi Familia',         emoji: '👨‍👩‍👧', blurb: 'Familia HSK1',                  launch: (ctx) => _genericLaunch(ctx, '/host-family.html', '/player.html') },
+    { id: 'mochi',     label: 'Mochi Mash',         emoji: '🍡', blurb: 'Mash de vocab clásico',           launch: (ctx) => _genericLaunch(ctx, '/host.html',          '/player.html') },
+    { id: 'pinata',    label: 'Piñata',             emoji: '🪅', blurb: 'Rompe la piñata',                 launch: (ctx) => _genericLaunch(ctx, '/host-pinata.html',   '/player.html') },
+    { id: 'flappy',    label: 'Flappy Dragón',      emoji: '🐲', blurb: 'Flappy Bird HSK1',                launch: (ctx) => _genericLaunch(ctx, '/host-flappy.html',   '/player.html') },
+    { id: 'zombie',    label: 'Zombie Defense',     emoji: '🧟', blurb: 'Defiende con vocab HSK1',         launch: (ctx) => _genericLaunch(ctx, '/host-zombie.html',   '/player.html') },
+    { id: 'dragon',    label: 'Dragon Eye',         emoji: '👁️', blurb: 'Ojo del dragón',                  launch: (ctx) => _genericLaunch(ctx, '/host-dragon.html',   '/player.html') },
+    { id: 'color-clash',   label: 'Color Clash',    emoji: '🎨', blurb: 'Pinta en equipos',                launch: (ctx) => _genericLaunch(ctx, '/host-clash.html',    '/player.html') },
+    { id: 'color-splash',  label: 'Color Splash',   emoji: '💦', blurb: 'Salpicaduras de color',           launch: (ctx) => _genericLaunch(ctx, '/host-color.html',    '/player.html') },
+    { id: 'market',    label: 'Market Quest',       emoji: '🛒', blurb: 'Mercado tradicional',             launch: (ctx) => _genericLaunch(ctx, '/host-market.html',   '/player.html') },
   ];
+  // Generic launch: open the host page in a new tab, send kids a soft
+  // notification with a link they can tap to join. The notification
+  // shows "Tu maestra te llama" — same as the proven HSK + warmup
+  // patterns — and includes the host URL so kids can ask the teacher
+  // for the PIN if needed. Honest: kids may need the teacher to tell
+  // them the PIN since this game-type doesn't have a pre-created room.
+  function _genericLaunch(ctx, hostUrl, kidLandingUrl) {
+    // Open the host page first — teacher will see the PIN immediately.
+    window.open(hostUrl + '?pw=' + encodeURIComponent(ctx.pw), '_blank', 'noopener');
+    // Soft notification — actionType:'message' (not 'force') so kids
+    // see "Tu maestra te llama" with a link, but aren't auto-redirected.
+    // They tap the link, land on /player.html, and the teacher tells
+    // them the PIN that's now visible on the host page.
+    fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(ctx.pw), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentCodes: ctx.codes,
+        text: '🚀 Tu maestra está abriendo ' + (ctx.label || 'un juego') + '. Pídele el PIN y entra.',
+        actionType: 'message',
+        actionUrl: kidLandingUrl,
+        actionLabel: 'Abrir →',
+      }),
+    });
+  }
   function openUniversalLauncher() {
     // Pull the most-recent online students. Reuse the existing roster API.
     fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
@@ -314,20 +408,13 @@
           const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
             .map((cb) => cb.dataset.code).filter(Boolean);
           if (!codes.length) return;
-          // Stash payload for auto-host.js running on the host page.
-          const payload = {
-            pw,
-            codes,
-            kidUrlTemplate: chosen.kidUrlTpl,
-            label: chosen.label,
-          };
-          try { sessionStorage.setItem('dralyAutoHost', JSON.stringify(payload)); } catch (_) {}
-          // Open the host page in a new tab. The query param ?autohost=1
-          // signals auto-host.js (loaded on every host page) to do its
-          // thing — auto-fill admin pw, wait for PIN, force-impose kids.
-          const url = chosen.hostUrl + (chosen.hostUrl.includes('?') ? '&' : '?') + 'autohost=1';
-          try { window.open(url, '_blank', 'noopener'); } catch (_) {}
-          alert('🚀 ' + chosen.label + ' se está abriendo en otra pestaña.\n\nCuando aparezca el PIN, los ' + codes.length + ' alumno(s) seleccionado(s) entrarán automáticamente.');
+          // 🆕 v4: each game's `launch` function does what's known to
+          // work for THAT game. No more generic autohost script.
+          if (typeof chosen.launch !== 'function') {
+            alert('Este juego aún no tiene una vía de lanzamiento.');
+            return;
+          }
+          chosen.launch({ pw, codes, label: chosen.label });
           close();
         });
       })
