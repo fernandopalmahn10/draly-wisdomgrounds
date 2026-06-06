@@ -198,8 +198,10 @@
             codes: ctx.codes, pw: ctx.pw, text: '¡Entra a Modo Maestro ahora!', ts: Date.now(),
           }));
         } catch (_) { alert('No se pudo guardar la sesión.'); return; }
-        // Open in a new tab so /maestro stays open
-        window.open('/host-warmup.html?livemaster=1', '_blank', 'noopener');
+        // 🆕 v4: SAME tab navigation (was window.open). Mobile browsers
+        // throttle background tabs, breaking the force flow. Proven
+        // path matches the existing Modo Maestro button.
+        location.href = '/host-warmup.html?livemaster=1';
       },
     },
     {
@@ -272,7 +274,13 @@
       }));
     } catch (_) { alert('No se pudo guardar la sesión.'); return; }
     const url = hostUrl + (hostUrl.includes('?') ? '&' : '?') + 'livegame=1';
-    window.open(url, '_blank', 'noopener');
+    // 🆕 v4 (Fernando bug — mobile background-tab throttling):
+    // SAME tab navigation, not window.open. Mobile browsers throttle
+    // setInterval in background tabs, so live-game.js's PIN polling
+    // can stall for minutes. Matches the PROVEN Modo Maestro pattern
+    // (location.href = '/host-warmup.html?livemaster=1'). Teacher can
+    // go back to /maestro via browser back button if they need to.
+    location.href = url;
   }
   function openUniversalLauncher() {
     // Pull the most-recent online students. Reuse the existing roster API.
