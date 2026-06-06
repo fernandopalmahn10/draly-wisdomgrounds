@@ -36,6 +36,27 @@ function load() {
     const raw = fs.readFileSync(FILE_PATH, 'utf8');
     records = JSON.parse(raw) || {};
     console.log('[students] loaded', Object.keys(records).length, 'student records');
+    // 🆕 2026-06-04 v4 (Fernando bug): one-shot migration to UN-corrupt
+    // records where displayName === code (the kid's name got clobbered
+    // to their code by the unguarded getOrCreate or HSK heartbeat
+    // fallback before today's fix). We set displayName to an empty
+    // string — that way the next join with a real name will heal the
+    // record (the join's guard treats empty existing displayName as
+    // "ok to update with anything"). If the kid never re-joins, the
+    // Cuaderno UI already falls back to displaying the code, so empty
+    // displayName isn't a visible regression.
+    let migrated = 0;
+    Object.values(records).forEach((rec) => {
+      if (rec && rec.code && rec.displayName
+          && String(rec.displayName).toUpperCase() === String(rec.code).toUpperCase()) {
+        rec.displayName = '';
+        migrated++;
+      }
+    });
+    if (migrated) {
+      console.log('[students] un-corrupted', migrated, 'records whose displayName was the code');
+      scheduleSave();
+    }
   } catch (e) {
     console.warn('[students] failed to load records, starting fresh:', e.message);
     records = {};
@@ -144,8 +165,20 @@ function getOrCreate(code, displayName) {
   const normalized = normalizeCode(code);
   if (normalized && records[normalized]) {
     const rec = records[normalized];
-    // Refresh the display name on each rejoin (kid can pick a new name)
-    if (displayName) rec.displayName = String(displayName).slice(0, 24);
+    // 🆕 2026-06-04 v4 (Fernando bug — same root cause as
+    // getOrProvisionForPin): NEVER overwrite a real name with the
+    // kid's own code. When the kid's localStorage has stale data,
+    // or when the HSK heartbeat falls back to studentCode-as-name,
+    // the join would pass name === code; without this guard, every
+    // subsequent join re-corrupts the displayName.
+    if (displayName) {
+      const clean = String(displayName).slice(0, 24);
+      const isCodePlaceholder = clean.toUpperCase() === rec.code.toUpperCase();
+      const existingIsCode = !rec.displayName || rec.displayName.toUpperCase() === rec.code.toUpperCase();
+      if (!isCodePlaceholder || existingIsCode) {
+        rec.displayName = clean;
+      }
+    }
     rec.lastSeen = Date.now();
     scheduleSave();
     return rec;
