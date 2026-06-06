@@ -169,15 +169,22 @@
   //                 by auto-host.js when the host page's PIN appears
   //   blurb       — one-line description shown on the card
   // ════════════════════════════════════════════════════════════════
+  // 🆕 2026-06-04 v3 (Fernando bug fix): kidUrlTpl MUST include
+  // &autojoin=1 — without it, player.html just fills the PIN input
+  // and shows the join screen. With it, the kid auto-joins as soon
+  // as &name= is also present (the homework client splices that in
+  // before redirect). Bug was: kids saw "Tu maestra te llama" but
+  // then landed on the join screen instead of being pulled in.
+  // hsk-sim.html has its own auto-join path and doesn't need it.
   const LAUNCHER_GAMES = [
-    { id: 'warmup',    label: 'Modo Maestro',        emoji: '✏️',  hostUrl: '/host-warmup.html',  kidUrlTpl: '/player.html?pin={PIN}',  blurb: 'Arma oraciones HSK1 en vivo. Tú o un asistente.' },
-    { id: 'reading',   label: 'Lectura en clase',    emoji: '📖',  hostUrl: '/host-reading.html', kidUrlTpl: '/player.html?pin={PIN}',  blurb: 'Lectura guiada con karaoke + test al final.' },
-    { id: 'hsksim',    label: 'Simulación HSK',      emoji: '🏆',  hostUrl: '/host-hsk.html',     kidUrlTpl: '/hsk-sim.html?pin={PIN}', blurb: 'Examen oficial HSK1 — Sim 1, 2 o 3.' },
-    { id: 'laiquhui',  label: 'Lái-Qù-Huí Dragón',   emoji: '🐉',  hostUrl: '/host-laiquhui.html', kidUrlTpl: '/player.html?pin={PIN}', blurb: 'Reparte paquetes por la ciudad con vocab HSK1.' },
-    { id: 'identity',  label: 'Detective Shéi Shì',  emoji: '🕵️',  hostUrl: '/host-identity.html', kidUrlTpl: '/player.html?pin={PIN}', blurb: 'Adivina el sospechoso con pistas HSK1.' },
-    { id: 'triage',    label: 'Sala de emergencia',  emoji: '🚑',  hostUrl: '/host-triage.html',   kidUrlTpl: '/player.html?pin={PIN}', blurb: 'Cura pacientes con vocab médico HSK1.' },
-    { id: 'partyrun',  label: 'Hóngbāo Run',         emoji: '🎲',  hostUrl: '/host-partyrun.html', kidUrlTpl: '/player.html?pin={PIN}', blurb: 'Mario-Party con preguntas HSK1.' },
-    { id: 'sixseven',  label: '6-7 Swing',           emoji: '🤙',  hostUrl: '/host-sixseven.html', kidUrlTpl: '/player.html?pin={PIN}', blurb: 'Mate rápido + números chinos.' },
+    { id: 'warmup',    label: 'Modo Maestro',        emoji: '✏️',  hostUrl: '/host-warmup.html',  kidUrlTpl: '/player.html?pin={PIN}&autojoin=1',  blurb: 'Arma oraciones HSK1 en vivo. Tú o un asistente.' },
+    { id: 'reading',   label: 'Lectura en clase',    emoji: '📖',  hostUrl: '/host-reading.html', kidUrlTpl: '/player.html?pin={PIN}&autojoin=1',  blurb: 'Lectura guiada con karaoke + test al final.' },
+    { id: 'hsksim',    label: 'Simulación HSK',      emoji: '🏆',  hostUrl: '/host-hsk.html',     kidUrlTpl: '/hsk-sim.html?pin={PIN}',            blurb: 'Examen oficial HSK1 — Sim 1, 2 o 3.' },
+    { id: 'laiquhui',  label: 'Lái-Qù-Huí Dragón',   emoji: '🐉',  hostUrl: '/host-laiquhui.html', kidUrlTpl: '/player.html?pin={PIN}&autojoin=1', blurb: 'Reparte paquetes por la ciudad con vocab HSK1.' },
+    { id: 'identity',  label: 'Detective Shéi Shì',  emoji: '🕵️',  hostUrl: '/host-identity.html', kidUrlTpl: '/player.html?pin={PIN}&autojoin=1', blurb: 'Adivina el sospechoso con pistas HSK1.' },
+    { id: 'triage',    label: 'Sala de emergencia',  emoji: '🚑',  hostUrl: '/host-triage.html',   kidUrlTpl: '/player.html?pin={PIN}&autojoin=1', blurb: 'Cura pacientes con vocab médico HSK1.' },
+    { id: 'partyrun',  label: 'Hóngbāo Run',         emoji: '🎲',  hostUrl: '/host-partyrun.html', kidUrlTpl: '/player.html?pin={PIN}&autojoin=1', blurb: 'Mario-Party con preguntas HSK1.' },
+    { id: 'sixseven',  label: '6-7 Swing',           emoji: '🤙',  hostUrl: '/host-sixseven.html', kidUrlTpl: '/player.html?pin={PIN}&autojoin=1', blurb: 'Mate rápido + números chinos.' },
   ];
   function openUniversalLauncher() {
     // Pull the most-recent online students. Reuse the existing roster API.

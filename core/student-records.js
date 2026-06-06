@@ -97,7 +97,24 @@ function getOrProvisionForPin(typedCode, displayName, classroomCode) {
   const normalized = normalizeCode(typedCode);
   if (normalized && records[normalized]) {
     const rec = records[normalized];
-    if (displayName) rec.displayName = String(displayName).slice(0, 24);
+    // 🆕 2026-06-04 v3 (Fernando bug): do NOT overwrite an existing
+    // good displayName with the studentCode used as fallback. When a
+    // kid joins via PIN and no real name was passed in the URL, the
+    // server resolves displayName ← studentCode as a placeholder.
+    // Without this guard, that placeholder OVERWRITES the kid's real
+    // name on every join, "changing names to codes on the whole
+    // platform." The guard: only update if the new name is a real
+    // name (not equal to the kid's code) OR the existing displayName
+    // is itself the code (i.e., legacy guest record that needs an
+    // upgrade).
+    if (displayName) {
+      const clean = String(displayName).slice(0, 24);
+      const isCodePlaceholder = clean.toUpperCase() === rec.code.toUpperCase();
+      const existingIsCode = !rec.displayName || rec.displayName.toUpperCase() === rec.code.toUpperCase();
+      if (!isCodePlaceholder || existingIsCode) {
+        rec.displayName = clean;
+      }
+    }
     if (classroomCode && !rec.classroomCode) rec.classroomCode = String(classroomCode).trim().toUpperCase();
     rec.lastSeen = Date.now();
     scheduleSave();
