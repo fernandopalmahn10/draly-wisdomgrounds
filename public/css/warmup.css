@@ -2417,6 +2417,103 @@ body.wu-timemachine::after {
   color: rgba(0, 0, 0, 0.55);
 }
 
+/* 🆕 2026-06-04 v3 — 8 fixed EXP packages (Fernando: "there should only
+   be eight, the eight that you have"). Each box is a row with a checkbox
+   for select-to-send, the EXP label, the count, and a ▼ toggle when
+   non-empty. */
+.wu-push-pack-current-hint {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(91, 232, 209, 0.10);
+  border: 1px solid rgba(91, 232, 209, 0.3);
+  color: #5be8d1;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.wu-push-pack-current-hint strong { color: #fff5d8; }
+.wu-push-pack-box {
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.wu-push-pack-box.has-items {
+  background: linear-gradient(160deg, rgba(91, 232, 138, 0.06), rgba(91, 232, 209, 0.03));
+  border-color: rgba(91, 232, 138, 0.25);
+}
+.wu-push-pack-box-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+}
+.wu-push-pack-box-check {
+  display: inline-flex;
+  cursor: pointer;
+}
+.wu-push-pack-box-check input[type=checkbox] {
+  appearance: none;
+  width: 22px; height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+  cursor: pointer;
+  display: grid; place-items: center;
+}
+.wu-push-pack-box-check input[type=checkbox]:checked {
+  background: #5be88a;
+  border-color: #5be88a;
+}
+.wu-push-pack-box-check input[type=checkbox]:checked::after {
+  content: '✓';
+  color: #0d2a16;
+  font-weight: 900;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.wu-push-pack-box-check input[type=checkbox]:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.wu-push-pack-box-label {
+  color: #fff5d8;
+  font-weight: 800;
+  font-size: 0.98rem;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.wu-push-pack-box-count {
+  color: rgba(243, 230, 194, 0.7);
+  font-size: 0.85rem;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 2px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.wu-push-pack-box.has-items .wu-push-pack-box-count {
+  color: #5be88a;
+  background: rgba(91, 232, 138, 0.18);
+}
+.wu-push-pack-box-toggle {
+  width: 32px; height: 32px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  color: #fff5d8;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+.wu-push-pack-box-toggle:active { transform: scale(0.92); }
+.wu-push-pack-box-body {
+  padding: 0 14px 12px;
+  display: flex; flex-direction: column;
+  gap: 4px;
+}
+
 /* Pack groups by EXP */
 .wu-push-pack { display: flex; flex-direction: column; gap: 12px; }
 .wu-push-pack-empty {
