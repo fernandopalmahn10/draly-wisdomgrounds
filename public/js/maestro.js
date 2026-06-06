@@ -256,29 +256,23 @@
     { id: 'color-splash',  label: 'Color Splash',   emoji: '💦', blurb: 'Salpicaduras de color',           launch: (ctx) => _genericLaunch(ctx, '/host-color.html',    '/player.html') },
     { id: 'market',    label: 'Market Quest',       emoji: '🛒', blurb: 'Mercado tradicional',             launch: (ctx) => _genericLaunch(ctx, '/host-market.html',   '/player.html') },
   ];
-  // Generic launch: open the host page in a new tab, send kids a soft
-  // notification with a link they can tap to join. The notification
-  // shows "Tu maestra te llama" — same as the proven HSK + warmup
-  // patterns — and includes the host URL so kids can ask the teacher
-  // for the PIN if needed. Honest: kids may need the teacher to tell
-  // them the PIN since this game-type doesn't have a pre-created room.
-  function _genericLaunch(ctx, hostUrl, kidLandingUrl) {
-    // Open the host page first — teacher will see the PIN immediately.
-    window.open(hostUrl + '?pw=' + encodeURIComponent(ctx.pw), '_blank', 'noopener');
-    // Soft notification — actionType:'message' (not 'force') so kids
-    // see "Tu maestra te llama" with a link, but aren't auto-redirected.
-    // They tap the link, land on /player.html, and the teacher tells
-    // them the PIN that's now visible on the host page.
-    fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(ctx.pw), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        studentCodes: ctx.codes,
-        text: '🚀 Tu maestra está abriendo ' + (ctx.label || 'un juego') + '. Pídele el PIN y entra.',
-        actionType: 'message',
-        actionUrl: kidLandingUrl,
-        actionLabel: 'Abrir →',
-      }),
-    });
+  // 🆕 2026-06-04 v4 — universal force launch using ?livegame=1.
+  // Same pattern as ?livemaster=1 for warmup, generalized for non-gated
+  // host pages. Stashes payload, opens host page with the flag, and
+  // /js/live-game.js (loaded on every host page) monitors for the PIN
+  // and force-imposes the selected kids the moment it appears.
+  // Kid URL is /player.html?pin=PIN&autojoin=1 — player.js auto-joins.
+  function _genericLaunch(ctx, hostUrl /*, kidLandingUrl */) {
+    try {
+      sessionStorage.setItem('dralyLiveGame', JSON.stringify({
+        codes: ctx.codes,
+        pw: ctx.pw,
+        label: ctx.label,
+        ts: Date.now(),
+      }));
+    } catch (_) { alert('No se pudo guardar la sesión.'); return; }
+    const url = hostUrl + (hostUrl.includes('?') ? '&' : '?') + 'livegame=1';
+    window.open(url, '_blank', 'noopener');
   }
   function openUniversalLauncher() {
     // Pull the most-recent online students. Reuse the existing roster API.
