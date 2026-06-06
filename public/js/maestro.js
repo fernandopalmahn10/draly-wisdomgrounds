@@ -240,7 +240,7 @@
           list.innerHTML = '';
           let shown = students;
           if (stuFilter === 'online') {
-            shown = students.filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
+            shown = students.filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 30 * 1000);
           }
           if (!shown.length) {
             list.innerHTML = '<div class="m-launch-empty">' +
@@ -251,7 +251,11 @@
             return;
           }
           shown.forEach((s) => {
-            const isOnline = s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000;
+            // 🆕 2026-06-04 v3 (Fernando: "Solo en línea displays
+            // everything") — tighten window to 30s. lastSeen is touched
+            // by many background events including admin reads; 60s was
+            // letting half-stale records through.
+            const isOnline = s.lastSeen && (Date.now() - s.lastSeen) <= 30 * 1000;
             const row = document.createElement('label');
             row.className = 'm-force-row';
             row.dataset.online = isOnline ? '1' : '0';
