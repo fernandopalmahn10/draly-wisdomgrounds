@@ -6,6 +6,32 @@ If you only have 30 minutes, do **Part 1**. That alone stops 95% of bad stuff.
 
 ---
 
+## ✅ ALREADY DONE IN CODE (no action needed)
+
+Server-side hardening shipped 2026-06-06:
+
+- ✅ **No more `draly2026` fallback password.** Server reads `WU_ADMIN_PASSWORD`
+  from env. If missing or <12 chars in production, the process refuses to
+  start (clear FATAL log line on Render).
+- ✅ **`POST /api/sets` and `DELETE /api/sets/:id` now require admin auth.**
+  Previously anyone on the internet could upload xlsx (which has a known
+  prototype-pollution CVE) or delete teacher sets.
+- ✅ **Rate limiting** on `/api/admin/*` (30 req/min/IP) and uploads
+  (12/min/IP). Belt-and-suspenders for the case where Cloudflare WAF
+  isn't yet deployed or someone hits the `.onrender.com` origin directly.
+- ✅ **`trust proxy`** set so rate limiter sees real client IPs, not
+  Render's internal 10.x.
+- ✅ **`.gitignore` audit passes** — `.render-token`, `cloudflared.exe`,
+  `.env*`, `*-credentials.json`, `*service-account*.json`, and every
+  PII-bearing file in `data/` is gitignored. Nothing secret is tracked.
+- ✅ **Backup script** at `scripts/backup-disk.ps1` — automates the
+  Friday tarball ritual (auto-fetches via render CLI if installed,
+  otherwise prints exact commands to paste).
+
+What still needs YOU to click in dashboards: Parts 1–4 below.
+
+---
+
 ## PART 1 — CLOUDFLARE (do this first, takes 30 min)
 
 ### 1. Buy a domain
