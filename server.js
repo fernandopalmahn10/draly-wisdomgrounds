@@ -69,62 +69,6 @@ app.use(express.static(path.join(__dirname, 'public'), {
   },
 }));
 app.use(express.json({ limit: '5mb' }));
-
-// ═══════════════════════════════════════════════════════════════════
-// 🛡 SECURITY HARDENING — 2026-06-06 Fernando: "fully protect our platform"
-//
-// 1. SINGLE admin-password resolver. Old code had three inline
-//    `process.env.WU_ADMIN_PASSWORD || 'draly2026'` fallbacks. If the
-//    env var ever drifted (Render config edited, dev box missing
-//    .env), the platform was unlocked by guessing the legacy default.
-//    Now: read once at boot, refuse to start if missing in production.
-// 2. Rate-limit admin + upload + history endpoints so a brute-force
-//    against the admin password can't fire >20 attempts/min/IP and a
-//    runaway uploader can't spam POST /api/sets. Cloudflare WAF
-//    (Part 1 of SECURITY-SOP.md) is the primary defence; this is
-//    belt-and-suspenders for the case where requests reach origin
-//    directly (CF outage, .onrender.com URL hit, internal IP).
-// ═══════════════════════════════════════════════════════════════════
-const WU_ADMIN_PASSWORD_RUNTIME = (() => {
-  const fromEnv = process.env.WU_ADMIN_PASSWORD;
-  if (fromEnv && fromEnv.length >= 12) return fromEnv;
-  // Production: refuse to start if missing or too weak. Render's
-  // logs make this obvious. Local dev: allow a fallback ONLY when
-  // NODE_ENV !== 'production' AND a marker file says "I know".
-  if (process.env.NODE_ENV === 'production') {
-    // eslint-disable-next-line no-console
-    console.error('[FATAL] WU_ADMIN_PASSWORD env var missing or <12 chars. Refusing to start.');
-    process.exit(1);
-  }
-  // eslint-disable-next-line no-console
-  console.warn('[WARN] WU_ADMIN_PASSWORD missing — using dev-only fallback. Set the env var in Render.');
-  return 'dev-only-' + Math.random().toString(36).slice(2, 10);
-})();
-
-const rateLimit = require('express-rate-limit');
-// Trust Render's proxy so rate-limit sees real client IPs, not
-// 10.x internal ones. Otherwise every request looks like the same IP.
-app.set('trust proxy', 1);
-const _adminLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 30,                        // 30 admin-gated reqs/min/IP
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: 'rate-limited; slow down' },
-});
-const _uploadLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 12,                        // 12 uploads/min/IP
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-  message: { error: 'rate-limited; too many uploads' },
-});
-// Applied as middleware below at the route level so we don't accidentally
-// throttle Socket.IO traffic or static assets.
-// Blanket cover for /api/admin/* so we don't have to remember to wrap
-// every single admin route individually. Per-route _adminLimiter calls
-// on key gates (disk-status, sets) layer on top — defence in depth.
-app.use('/api/admin/', _adminLimiter);
 // Health endpoints — Render hits one of these to verify the server is
 // alive after each deploy. Three paths covered because different
 // platforms look for different names. All return plain "ok" in <1ms
@@ -152,10 +96,11 @@ app.get('/api/_diag', (req, res) => {
 //   - A "persistence likely" heuristic (file exists + writable + recently modified)
 // Use this to confirm your Render Disk is mounted at the correct path
 // before relying on per-student history surviving across deploys.
-app.get('/api/admin/disk-status', _adminLimiter, (req, res) => {
+app.get('/api/admin/disk-status', (req, res) => {
   const fs = require('fs');
   const givenPw = String(req.query.pw || req.query.password || '');
-  if (givenPw !== WU_ADMIN_PASSWORD_RUNTIME) return res.status(401).json({ error: 'wrong password' });
+  const expected = process.env.WU_ADMIN_PASSWORD || 'draly2026';
+  if (givenPw !== expected) return res.status(401).json({ error: 'wrong password' });
 
   const DATA_DIR = path.join(__dirname, 'data');
   const STUDENTS_FILE = path.join(DATA_DIR, 'student-records.json');
@@ -229,7 +174,8 @@ function _adminAuth(req, res) {
   // Legacy super-admin passwords still grant full access for the live
   // warmup-host flow (host-warmup.html unlock). These bypass the
   // teachers table entirely.
-  if (givenPw === WU_ADMIN_PASSWORD_RUNTIME) {
+  const wuPw = process.env.WU_ADMIN_PASSWORD || 'draly2026';
+  if (givenPw === wuPw) {
     return { teacher: null, isSuperAdmin: true, legacy: true };
   }
   // Otherwise look up as a teacher code
@@ -3096,14 +3042,8 @@ app.get('/api/sets/:id', (req, res) => {
   }
 });
 
-// 🛡 2026-06-06 hardening: gate set uploads + deletes behind admin auth.
-// Without this, ANY internet host could POST a malicious xlsx (xlsx has a
-// known prototype-pollution CVE) or DELETE every teacher's question sets.
-// Also rate-limited to 12 uploads/min/IP via _uploadLimiter middleware.
-app.post('/api/sets', _uploadLimiter, (req, res) => {
+app.post('/api/sets', (req, res) => {
   try {
-    const pw = String(req.query.pw || req.query.password || req.body?.pw || '').trim();
-    if (!isAdminPassword(pw)) return res.status(401).json({ error: 'unauthorized' });
     const { filename, content } = req.body || {};
     if (!filename || !content) return res.status(400).json({ error: 'Missing filename or content' });
     const buffer = Buffer.from(content, 'base64');
@@ -3114,10 +3054,8 @@ app.post('/api/sets', _uploadLimiter, (req, res) => {
   }
 });
 
-app.delete('/api/sets/:id', _adminLimiter, (req, res) => {
+app.delete('/api/sets/:id', (req, res) => {
   try {
-    const pw = String(req.query.pw || req.query.password || '').trim();
-    if (!isAdminPassword(pw)) return res.status(401).json({ error: 'unauthorized' });
     const ok = Sets.deleteSet(req.params.id);
     res.json({ ok });
   } catch (e) {
@@ -3500,14 +3438,11 @@ function idGenerateRound(roundNum) {
 // to every player phone. Color-coded by category so kids can see how the
 // pinyin words map to Spanish word-for-word.
 // No timer, no scoring, no game loop — teacher exits when ready.
-// 2026-06-06 (hardening): single source of truth lives at the top of
-// this file (WU_ADMIN_PASSWORD_RUNTIME). The old `|| 'draly2026'`
-// fallback is gone — production refuses to start without the env var.
-const WU_ADMIN_PASSWORD = WU_ADMIN_PASSWORD_RUNTIME;
+const WU_ADMIN_PASSWORD = process.env.WU_ADMIN_PASSWORD || 'draly2026';
 
 // 2026-05-27: unified admin password gate. ANY of the following grants
 // admin powers in the live-game socket handlers below:
-//   - WU_ADMIN_PASSWORD (from env, see top of file)
+//   - WU_ADMIN_PASSWORD (legacy default 'draly2026')
 //   - Any teacherId from teachers.json (so the super admin EMAAR2026 +
 //     every regular teacher can host their own warmup sessions, save
 //     presets, see the Cuaderno, etc., using ONE code — same one they
