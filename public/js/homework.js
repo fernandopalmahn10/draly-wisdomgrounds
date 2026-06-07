@@ -719,9 +719,18 @@
       // saves use the same wordbank, but a stale/renamed ID would silently
       // vanish before — making the kid think their save "didn't work").
       // Now we render a stub chip for unknown IDs so the entry still shows.
+      // Custom-word snapshot (teacher words typed at runtime, ids
+      // like "cw..."). Falls back BEFORE the wid-as-pinyin stub so
+      // Google TTS reads real pinyin instead of the internal code.
+      const _customMap = {};
+      if (Array.isArray(s.customWords)) {
+        s.customWords.forEach((cw) => { if (cw && cw.id) _customMap[cw.id] = cw; });
+      }
       const words = (s.words || []).map((wid) => {
         const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
-        return w || { id: wid, pinyin: String(wid), es: '', cat: '' };
+        if (w) return w;
+        if (_customMap[wid]) return _customMap[wid];
+        return { id: wid, pinyin: String(wid), es: '', cat: '' };
       });
       if (!words.length) return;
       const pinyin = words.map((w) => w.pinyin).join(' ');

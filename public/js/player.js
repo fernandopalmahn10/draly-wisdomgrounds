@@ -2835,7 +2835,11 @@
     btn.addEventListener('click', () => {
       if (window.unlockAudio) window.unlockAudio();
       const pinyin = (wuPlayerLastSentence || [])
-        .map((wid) => ((window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]) || {}).pinyin || '')
+        .map((wid) => {
+          const w = (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid])
+                 || (wuPlayerCustomWords || []).find((cw) => cw && cw.id === wid);
+          return (w && w.pinyin) || '';
+        })
         .filter(Boolean).join(' ');
       if (!pinyin) {
         const o = btn.textContent; btn.textContent = '🔇 (vacío)';
@@ -3389,7 +3393,19 @@
       // Each word chip — now a vertical stack of icon · hanzi · pinyin
       // so the kid sees Chinese characters too, not just romanization.
       // Tap on the chip still pops the Curious Mode pokedex.
-      const wordObjs = (s.words || []).map((wid) => window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]).filter(Boolean);
+      // History rendering: look up word ids in the static catalog first,
+      // then fall back to this entry's customWords snapshot (teacher words
+      // typed at runtime — they have ephemeral "cw..." ids that aren't in
+      // the catalog, so without the snapshot the kid sees raw codes).
+      const _customMap = {};
+      if (Array.isArray(s.customWords)) {
+        s.customWords.forEach((cw) => { if (cw && cw.id) _customMap[cw.id] = cw; });
+      }
+      const wordObjs = (s.words || []).map((wid) => {
+        return (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid])
+            || _customMap[wid]
+            || null;
+      }).filter(Boolean);
       const wordsHtml = wordObjs.map((w) => {
         const wid = w.id;
         const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];

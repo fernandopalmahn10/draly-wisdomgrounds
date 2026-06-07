@@ -451,15 +451,33 @@ function setMeta(code, meta) {
 // Append a built sentence to a student's history.
 // `sentence` is an array of word IDs.
 // `contributors` is an array of student CODES who contributed to it.
-function logSentence(contributors, sentence, pin) {
+// `customWords` (optional) is the current room's live custom-word list.
+// We snapshot the ones actually referenced by `sentence` into the entry
+// so that — after the room closes — the kid's "Mis oraciones" can still
+// render the teacher-typed pinyin/hanzi/es instead of the raw "cw..."
+// ID. Without this, kids see codes like "cw_mp34578mt" in their history
+// and Google TTS reads the code aloud (Fernando, 2026-06-06).
+function logSentence(contributors, sentence, pin, customWords) {
   if (!Array.isArray(sentence) || !sentence.length) return;
   if (!Array.isArray(contributors) || !contributors.length) return;
+  const referenced = Array.isArray(customWords)
+    ? customWords
+        .filter((w) => w && w.id && sentence.includes(w.id))
+        .map((w) => ({
+          id: w.id,
+          pinyin: String(w.pinyin || ''),
+          hanzi: String(w.hanzi || ''),
+          es: String(w.es || ''),
+          icon: String(w.icon || ''),
+        }))
+    : [];
   const entry = {
     ts: Date.now(),
     pin: pin || '',
     words: sentence.slice(),    // copy to avoid mutation
     contributors: contributors.slice(),
   };
+  if (referenced.length) entry.customWords = referenced;
   contributors.forEach((code) => {
     const rec = records[code];
     if (!rec) return;
@@ -599,16 +617,29 @@ function awardDaily(code, localDate, correct) {
 // Append a single sentence to ONE student's history (their own private
 // save / edited copy). Mirrors logSentence but for a lone student, and is
 // used by wu:save-mine and the homework "save copy" endpoint.
-function appendSentence(code, words, pin) {
+function appendSentence(code, words, pin, customWords) {
   const rec = get(code);
   if (!rec) return false;
   if (!Array.isArray(words) || !words.length) return false;
-  rec.sentencesBuilt.push({
+  const referenced = Array.isArray(customWords)
+    ? customWords
+        .filter((w) => w && w.id && words.includes(w.id))
+        .map((w) => ({
+          id: w.id,
+          pinyin: String(w.pinyin || ''),
+          hanzi: String(w.hanzi || ''),
+          es: String(w.es || ''),
+          icon: String(w.icon || ''),
+        }))
+    : [];
+  const entry = {
     ts: Date.now(),
     pin: pin || '',
     words: words.slice(),
     contributors: [rec.code],
-  });
+  };
+  if (referenced.length) entry.customWords = referenced;
+  rec.sentencesBuilt.push(entry);
   if (rec.sentencesBuilt.length > 200) {
     rec.sentencesBuilt = rec.sentencesBuilt.slice(-200);
   }
