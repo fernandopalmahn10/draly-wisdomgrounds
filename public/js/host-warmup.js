@@ -358,7 +358,7 @@
           '<button class="wu-push-corner-close" id="wu-push-close-corner" type="button" aria-label="Cerrar">✕</button>' +
           '<div class="wu-push-canvas">' +
             '<header class="wu-push-hero">' +
-              '<button class="wu-push-back" id="wu-push-close" type="button" aria-label="Cerrar">← Volver</button>' +
+              '<button class="wu-push-back" id="wu-push-close" type="button" aria-label="Volver al aula">← Volver al aula</button>' +
               '<div class="wu-push-hero-text">' +
                 '<h2 class="wu-push-title">📤 Enviar oraciones a alumnos</h2>' +
                 '<p class="wu-push-sub">Cada oración se guarda en <strong>Mis oraciones</strong> del alumno con la nota <em>📤 Enviada por tu maestra</em>.</p>' +
@@ -370,18 +370,20 @@
             '</div>' +
 
             // ── ONE-SENTENCE PANE ────────────────────────────────
+            // 🆕 2026-06-06 v4 (Fernando): no more free-form "Categoría
+            // (opcional)" row — categories ARE the 8 EXPs of maestro
+            // mode. Tap "➕ Añadir al paquete" → picker pops with the 8
+            // EXPs + "+ Nueva categoría". The teacher picks, the
+            // sentence lands in that package, ready to send.
             '<section class="wu-push-pane" id="wu-push-pane-one">' +
               '<div class="wu-push-section">' +
                 '<div class="wu-push-section-h">Oración actual</div>' +
                 '<div class="wu-push-prev">' + _renderSentenceChips(wordIds) + '</div>' +
                 '<div class="wu-push-section-foot">' +
-                  '<button class="btn btn-jade btn-sm" id="wu-push-add-current" type="button">➕ Añadir al paquete</button>' +
+                  '<button class="btn btn-jade btn-xl" id="wu-push-add-current" type="button" style="width:100%;">➕ Añadir al paquete…</button>' +
                 '</div>' +
               '</div>' +
-              '<div class="wu-push-section">' +
-                '<div class="wu-push-section-h">Categoría (opcional)</div>' +
-                '<div class="wu-push-cats">' + catChipsHtml + '</div>' +
-              '</div>' +
+              '<div class="wu-push-hint">💡 Lo que está en la pizarra se envía a los alumnos seleccionados al pulsar 📤 Enviar.</div>' +
             '</section>' +
 
             // ── PACK PANE — 8 fixed EXP packages ────────────────
@@ -421,31 +423,52 @@
         requestAnimationFrame(() => overlay.classList.add('show'));
 
         // ───────── Student list rendering ─────────
+        // 🆕 2026-06-06 v4 (Fernando): persistent check state survives
+        // search-filtering. Used to be: typing in the search box
+        // re-rendered the rows, losing every checkbox the teacher had
+        // already ticked. Now we track checked codes in a Set so the
+        // teacher can search-then-add to her selection without losing
+        // anyone she'd already picked. Also: real "solo conectados"
+        // toggle that HIDES offline kids rather than mass-checking.
         const list = overlay.querySelector('#wu-push-list');
-        const renderRows = (filter) => {
+        const checkedCodes = new Set();
+        let onlineOnly = false;
+        let searchTerm = '';
+        const renderRows = () => {
           list.innerHTML = '';
-          const q = (filter || '').toLowerCase();
-          const filtered = !q ? students : students.filter((s) => {
-            return (s.displayName || '').toLowerCase().includes(q) || (s.code || '').toLowerCase().includes(q);
-          });
-          if (!filtered.length) {
+          const q = (searchTerm || '').toLowerCase();
+          let pool = q
+            ? students.filter((s) =>
+                (s.displayName || '').toLowerCase().includes(q) ||
+                (s.code || '').toLowerCase().includes(q))
+            : students.slice();
+          if (onlineOnly) {
+            pool = pool.filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
+          }
+          if (!pool.length) {
             list.innerHTML = '<p class="wu-push-empty">Sin coincidencias.</p>';
             return;
           }
-          filtered.forEach((s) => {
+          pool.forEach((s) => {
             const isOnline = s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000;
+            const isChecked = checkedCodes.has(s.code);
             const row = document.createElement('label');
-            row.className = 'wu-push-stu';
+            row.className = 'wu-push-stu' + (isChecked ? ' is-checked' : '');
             row.dataset.online = isOnline ? '1' : '0';
             row.innerHTML =
-              '<input type="checkbox" data-code="' + escapeHtml(s.code) + '">' +
+              '<input type="checkbox" data-code="' + escapeHtml(s.code) + '"' + (isChecked ? ' checked' : '') + '>' +
               '<span class="wu-push-stu-dot" style="background:' + (isOnline ? '#5be88a' : '#666') + ';"></span>' +
               '<span class="wu-push-stu-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
               '<span class="wu-push-stu-code">' + escapeHtml(s.code) + '</span>';
+            row.querySelector('input').addEventListener('change', (e) => {
+              if (e.target.checked) checkedCodes.add(s.code);
+              else checkedCodes.delete(s.code);
+              row.classList.toggle('is-checked', e.target.checked);
+            });
             list.appendChild(row);
           });
         };
-        renderRows('');
+        renderRows();
 
         // ───────── 8-EXP pack rendering ─────────
         let expPacks = _loadExpPacks();
@@ -456,8 +479,22 @@
         const currentEl = overlay.querySelector('#wu-push-pack-current');
         const currentHintEl = overlay.querySelector('#wu-push-pack-current-hint');
 
+        // List of ALL category ids the renderer should show: built-in
+        // EXPs (always visible) + custom user categories the teacher
+        // created (always shown if defined) + any "ghost" custom ids
+        // already in expPacks but no longer in localStorage (orphaned
+        // sentences — still let her send/clear them).
+        function _allCatIds() {
+          const ids = _EXP_IDS.slice();
+          const custom = (window.SentenceCategories && window.SentenceCategories.loadCustom()) || [];
+          custom.forEach((c) => { if (!ids.includes(c.id)) ids.push(c.id); });
+          Object.keys(expPacks).forEach((k) => {
+            if (k && !ids.includes(k) && (expPacks[k] || []).length) ids.push(k);
+          });
+          return ids;
+        }
         function _totalPackCount() {
-          return _EXP_IDS.reduce((n, id) => n + (expPacks[id] || []).length, 0);
+          return _allCatIds().reduce((n, id) => n + (expPacks[id] || []).length, 0);
         }
         function renderCurrentSentence() {
           // Pull from live builder if available.
@@ -477,53 +514,95 @@
             currentHintEl.textContent = '⚠️ No pude detectar la experiencia. Se añadirá a EXP1 por defecto.';
           }
         }
+        // Per-sentence selection inside an expanded package. Map of
+        // catId → Set<ts>. If a category has ANY entry in this map,
+        // the send action treats that subset as the package payload
+        // instead of the full package.
+        const _picked = new Map();
+        function _pickedSetFor(catId) {
+          if (!_picked.has(catId)) _picked.set(catId, new Set());
+          return _picked.get(catId);
+        }
         function renderPack() {
           packCountEl.textContent = _totalPackCount();
           packEl.innerHTML = '';
-          _EXP_IDS.forEach((expId) => {
-            const meta = _expMeta(expId);
-            const sentences = expPacks[expId] || [];
+          _allCatIds().forEach((catId) => {
+            const meta = _catMeta(catId);
+            const sentences = expPacks[catId] || [];
             const box = document.createElement('div');
-            box.className = 'wu-push-pack-box' + (sentences.length ? ' has-items' : '');
-            const isChecked = selectedExps.has(expId);
-            const isOpen = expandedExps.has(expId);
+            box.className = 'wu-push-pack-box' + (sentences.length ? ' has-items' : '') + (catId.startsWith('u_') ? ' is-custom' : '');
+            const isChecked = selectedExps.has(catId);
+            const isOpen = expandedExps.has(catId);
+            const pickedSize = _picked.has(catId) ? _picked.get(catId).size : 0;
+            const sendCount = pickedSize || sentences.length;
+            const sendLabel = pickedSize ? (pickedSize + ' elegida' + (pickedSize === 1 ? '' : 's')) : 'paquete completo';
             box.innerHTML =
-              '<div class="wu-push-pack-box-head" data-exp="' + expId + '">' +
+              '<div class="wu-push-pack-box-head" data-cat="' + escapeHtml(catId) + '">' +
                 '<label class="wu-push-pack-box-check">' +
-                  '<input type="checkbox" data-exp="' + expId + '"' + (isChecked ? ' checked' : '') + (sentences.length ? '' : ' disabled') + '>' +
+                  '<input type="checkbox" data-cat="' + escapeHtml(catId) + '"' + (isChecked ? ' checked' : '') + (sentences.length ? '' : ' disabled') + '>' +
                 '</label>' +
                 '<span class="wu-push-pack-box-label">' + escapeHtml(meta.label) + '</span>' +
-                '<span class="wu-push-pack-box-count">' + sentences.length + ' oración' + (sentences.length === 1 ? '' : 'es') + '</span>' +
+                '<span class="wu-push-pack-box-count">' + sentences.length + ' oración' + (sentences.length === 1 ? '' : 'es') +
+                  (sentences.length && pickedSize ? ' · ' + pickedSize + ' ✓' : '') +
+                '</span>' +
                 (sentences.length ? ('<button class="wu-push-pack-box-toggle" type="button" aria-label="Expandir">' + (isOpen ? '▲' : '▼') + '</button>') : '') +
               '</div>' +
-              (isOpen && sentences.length ? '<div class="wu-push-pack-box-body" id="body-' + expId + '"></div>' : '');
+              (isOpen && sentences.length ? '<div class="wu-push-pack-box-body" id="body-' + escapeHtml(catId) + '"></div>' : '');
             packEl.appendChild(box);
-            // Wire checkbox
+            // Wire package-level checkbox (Send-whole)
             const cb = box.querySelector('input[type=checkbox]');
             if (cb) cb.addEventListener('change', () => {
-              if (cb.checked) selectedExps.add(expId);
-              else selectedExps.delete(expId);
+              if (cb.checked) selectedExps.add(catId);
+              else selectedExps.delete(catId);
               updateSendBtn();
             });
             // Wire toggle (▼/▲)
             const toggle = box.querySelector('.wu-push-pack-box-toggle');
             if (toggle) toggle.addEventListener('click', (e) => {
               e.stopPropagation();
-              if (expandedExps.has(expId)) expandedExps.delete(expId);
-              else expandedExps.add(expId);
+              if (expandedExps.has(catId)) expandedExps.delete(catId);
+              else expandedExps.add(catId);
               renderPack();
             });
             // Fill body if expanded
             if (isOpen && sentences.length) {
-              const body = box.querySelector('#body-' + expId);
+              const body = box.querySelector('#body-' + CSS.escape(catId));
+              // 🆕 2026-06-06 v4 (Fernando): pick-or-send-all bar inside
+              // each expanded package. Two paths:
+              //   ☑ Marca oraciones individuales para enviar SOLO esas
+              //   📤 Send package whole — ignored picks, sends everything
+              const bar = document.createElement('div');
+              bar.className = 'wu-push-pack-bar';
+              bar.innerHTML =
+                '<button class="wu-push-pack-pickall" type="button">' + (pickedSize === sentences.length ? '⬜ Quitar todas' : '✅ Marcar todas') + '</button>' +
+                '<span class="wu-push-pack-bar-info">' + sendLabel + '</span>';
+              body.appendChild(bar);
+              bar.querySelector('.wu-push-pack-pickall').addEventListener('click', () => {
+                const set = _pickedSetFor(catId);
+                if (set.size === sentences.length) set.clear();
+                else { set.clear(); sentences.forEach((e) => set.add(e.ts)); }
+                renderPack();
+                updateSendBtn();
+              });
               sentences.forEach((entry, idx) => {
                 const row = document.createElement('div');
-                row.className = 'wu-push-pack-row';
+                const isPicked = _picked.has(catId) && _picked.get(catId).has(entry.ts);
+                row.className = 'wu-push-pack-row' + (isPicked ? ' is-picked' : '');
                 row.innerHTML =
+                  '<label class="wu-push-pack-row-check"><input type="checkbox"' + (isPicked ? ' checked' : '') + '></label>' +
                   '<div class="wu-push-pack-chips">' + _renderSentenceChips(entry.words) + '</div>' +
                   '<button class="wu-push-pack-del" type="button" aria-label="Quitar">✕</button>';
+                row.querySelector('input[type=checkbox]').addEventListener('change', (e) => {
+                  const set = _pickedSetFor(catId);
+                  if (e.target.checked) set.add(entry.ts);
+                  else set.delete(entry.ts);
+                  // Refresh head count + bar label without re-rendering all
+                  renderPack();
+                  updateSendBtn();
+                });
                 row.querySelector('.wu-push-pack-del').addEventListener('click', () => {
-                  expPacks[expId].splice(idx, 1);
+                  expPacks[catId].splice(idx, 1);
+                  if (_picked.has(catId)) _picked.get(catId).delete(entry.ts);
                   _saveExpPacks(expPacks);
                   renderPack();
                   updateSendBtn();
@@ -548,24 +627,17 @@
         overlay.querySelectorAll('.wu-push-tab').forEach((t) => t.addEventListener('click', () => showTab(t.dataset.tab)));
         showTab(activeTab);
 
-        // ───────── Category chips (one-sentence pane) ─────────
-        let oneCat = '';
-        overlay.querySelector('#wu-push-pane-one').querySelectorAll('.wu-push-cat-chip').forEach((chip) => {
-          chip.addEventListener('click', () => {
-            overlay.querySelector('#wu-push-pane-one').querySelectorAll('.wu-push-cat-chip').forEach((c) => c.classList.remove('is-active'));
-            chip.classList.add('is-active');
-            oneCat = chip.dataset.cat || '';
-          });
-        });
-        // Pack-level category (applies to all sentences in the pack)
-        let packCat = '';
-        overlay.querySelector('#wu-push-pack-cats').querySelectorAll('.wu-push-cat-chip').forEach((chip) => {
-          chip.addEventListener('click', () => {
-            overlay.querySelector('#wu-push-pack-cats').querySelectorAll('.wu-push-cat-chip').forEach((c) => c.classList.remove('is-active'));
-            chip.classList.add('is-active');
-            packCat = chip.dataset.cat || '';
-          });
-        });
+        // 🆕 2026-06-06 v4 — categories ARE the 8 EXPs now (Fernando:
+        // "those categories don't match with the ones we have in maestro
+        // mode... you have the eight categories"). The one-sentence pane
+        // no longer carries its own free-form category chip row — when
+        // the teacher hits "Añadir al paquete" we open a picker that
+        // shows the 8 EXPs + "+ Nueva categoría". The pack-cats block
+        // that used to exist here referenced a non-existent DOM node
+        // (`#wu-push-pack-cats`) and was throwing — wiping the rest of
+        // the modal's event wiring (including the back button).
+        let oneCat = '';   // kept null/empty; the per-sentence category
+                           // now flows through the EXP picker below.
 
         // ───────── Add-to-pack handlers ─────────
         // 🆕 2026-06-04 v2 (Fernando bug fix): pull the LIVE current
@@ -590,27 +662,103 @@
           clearTimeout(el._hideT);
           el._hideT = setTimeout(() => { try { el.classList.add('hidden'); } catch (_) {} }, 2400);
         }
-        function addCurrentToPack() {
-          const live = (typeof currentSentence !== 'undefined' && Array.isArray(currentSentence) && currentSentence.length)
-            ? currentSentence.slice()
-            : (wordIds || []).slice();
-          if (!live.length) { _modalFlash('Arma una oración en la pizarra primero', false); return; }
-          const expId = _expForWords(live) || 'exp1';
-          if (!expPacks[expId]) expPacks[expId] = [];
-          expPacks[expId].push({
+        // 🆕 2026-06-06 v4 (Fernando): explicit picker. Tap Añadir →
+        // teacher SEES the 8 EXPs + her own custom categories + a tile
+        // to create a new one. No more silent auto-routing — she always
+        // chooses where her sentence lands.
+        function _ensureCustomBucket(catId) {
+          if (!expPacks[catId]) expPacks[catId] = [];
+        }
+        function _persistAdd(catId, live) {
+          _ensureCustomBucket(catId);
+          expPacks[catId].push({
             ts: Date.now() + Math.floor(Math.random() * 1000),
             words: live,
           });
           _saveExpPacks(expPacks);
-          expandedExps.add(expId);   // auto-expand the box we just added to
+          expandedExps.add(catId);
           renderPack();
-          renderCurrentSentence();   // refresh in case live sentence changed
+          renderCurrentSentence();
           updateSendBtn();
-          const meta = _expMeta(expId);
-          _modalFlash('➕ Añadida a ' + meta.short + ' · total ' + expPacks[expId].length, true);
+          const meta = _catMeta(catId);
+          _modalFlash('➕ Añadida a ' + (meta.short || meta.label) + ' · total ' + expPacks[catId].length, true);
         }
-        overlay.querySelector('#wu-push-add-current').addEventListener('click', addCurrentToPack);
-        overlay.querySelector('#wu-push-pack-add-auto').addEventListener('click', addCurrentToPack);
+        // Resolve label/emoji for a category id (built-in EXP or custom u_xxx).
+        function _catMeta(catId) {
+          if (catId && catId.startsWith('u_')) {
+            const c = (window.SentenceCategories && window.SentenceCategories.byId(catId)) || null;
+            if (c) return { id: catId, label: c.label, short: (c.emoji || '⭐') + ' ' + c.label };
+          }
+          return _expMeta(catId);
+        }
+        function openAddToPackPicker() {
+          const live = (typeof currentSentence !== 'undefined' && Array.isArray(currentSentence) && currentSentence.length)
+            ? currentSentence.slice()
+            : (wordIds || []).slice();
+          if (!live.length) { _modalFlash('Arma una oración en la pizarra primero', false); return; }
+          const detected = _expForWords(live);
+          const custom = (window.SentenceCategories && window.SentenceCategories.loadCustom()) || [];
+          // Build the picker tiles.
+          const expTilesHtml = _EXP_IDS.map((id) => {
+            const meta = _expMeta(id);
+            const count = (expPacks[id] || []).length;
+            const isAuto = id === detected;
+            return '<button class="wu-pack-pick-tile' + (isAuto ? ' is-auto' : '') + '" data-cat="' + id + '" type="button">' +
+              '<span class="wu-pack-pick-label">' + escapeHtml(meta.label) + '</span>' +
+              '<span class="wu-pack-pick-count">' + count + ' guardada' + (count === 1 ? '' : 's') + '</span>' +
+              (isAuto ? '<span class="wu-pack-pick-auto">📍 sugerida</span>' : '') +
+            '</button>';
+          }).join('');
+          const customTilesHtml = custom.map((c) => {
+            const count = (expPacks[c.id] || []).length;
+            return '<button class="wu-pack-pick-tile is-custom" data-cat="' + escapeHtml(c.id) + '" type="button">' +
+              '<span class="wu-pack-pick-label">' + (c.emoji || '⭐') + ' ' + escapeHtml(c.label) + '</span>' +
+              '<span class="wu-pack-pick-count">' + count + ' guardada' + (count === 1 ? '' : 's') + '</span>' +
+            '</button>';
+          }).join('');
+          const picker = document.createElement('div');
+          picker.className = 'wu-pack-pick-overlay';
+          picker.innerHTML =
+            '<div class="wu-pack-pick-card">' +
+              '<div class="wu-pack-pick-head">' +
+                '<div class="wu-pack-pick-title">📦 ¿En qué paquete la guardo?</div>' +
+                '<button class="wu-pack-pick-close" type="button" aria-label="Cerrar">✕</button>' +
+              '</div>' +
+              '<div class="wu-pack-pick-prev">' + _renderSentenceChips(live) + '</div>' +
+              '<div class="wu-pack-pick-grid">' + expTilesHtml + '</div>' +
+              (customTilesHtml ? '<div class="wu-pack-pick-sep">Tus categorías</div><div class="wu-pack-pick-grid">' + customTilesHtml + '</div>' : '') +
+              '<button class="wu-pack-pick-new" id="wu-pack-pick-new" type="button">➕ Crear nueva categoría</button>' +
+            '</div>';
+          overlay.appendChild(picker);
+          // Wire close
+          const closePicker = () => { try { picker.remove(); } catch (_) {} };
+          picker.querySelector('.wu-pack-pick-close').addEventListener('click', closePicker);
+          picker.addEventListener('click', (e) => { if (e.target === picker) closePicker(); });
+          // Wire tile selection
+          picker.querySelectorAll('.wu-pack-pick-tile').forEach((tile) => {
+            tile.addEventListener('click', () => {
+              const catId = tile.dataset.cat;
+              if (!catId) return;
+              _persistAdd(catId, live);
+              closePicker();
+              // Auto-switch to the Paquete tab so she can SEE it.
+              showTab('pack');
+            });
+          });
+          // Wire "Crear nueva"
+          picker.querySelector('#wu-pack-pick-new').addEventListener('click', () => {
+            const name = prompt('Nombre para la nueva categoría (ej. "Repaso semanal"):');
+            if (!name || !name.trim()) return;
+            const emoji = prompt('Un emoji opcional para esta categoría (deja vacío para ⭐):', '⭐') || '⭐';
+            const cat = window.SentenceCategories && window.SentenceCategories.add(name.trim(), emoji.trim().slice(0, 4));
+            if (!cat) { alert('No se pudo crear la categoría — prueba con otro nombre.'); return; }
+            _persistAdd(cat.id, live);
+            closePicker();
+            showTab('pack');
+          });
+        }
+        overlay.querySelector('#wu-push-add-current').addEventListener('click', openAddToPackPicker);
+        overlay.querySelector('#wu-push-pack-add-auto').addEventListener('click', openAddToPackPicker);
 
         // ───────── Quick-pick student helpers ─────────
         // 🆕 2026-06-04 v3 — defensive close: button click + ESC key +
@@ -619,29 +767,57 @@
         // should still be active. Everything should go back to normal."
         // — by design, since the host-warmup page itself is never
         // navigated, only this overlay is added/removed.
+        // 🆕 2026-06-06 v4 (Fernando bug fix): instant close, no
+        // setTimeout, multiple event types so the back chip ALWAYS
+        // fires the first time on phone+tablet+desktop. Once removed,
+        // the underlying host-warmup screen (sticky stage, players,
+        // toolbar) is intact — no nav, no socket touch.
+        let _closed = false;
         const close = () => {
-          overlay.classList.remove('show');
-          setTimeout(() => { try { overlay.remove(); } catch (_) {} }, 200);
+          if (_closed) return; _closed = true;
           try { document.removeEventListener('keydown', _escHandler); } catch (_) {}
+          try { overlay.classList.remove('show'); } catch (_) {}
+          try { overlay.remove(); } catch (_) {}
         };
-        function _escHandler(e) { if (e.key === 'Escape') close(); }
+        function _escHandler(e) { if (e.key === 'Escape') { e.preventDefault(); close(); } }
         document.addEventListener('keydown', _escHandler);
-        overlay.querySelector('#wu-push-close').addEventListener('click', close);
-        const cornerClose = overlay.querySelector('#wu-push-close-corner');
-        if (cornerClose) cornerClose.addEventListener('click', close);
+        // Bind close to BOTH the back chip and the corner ✕ on the
+        // three reliable touch events. We use pointerdown for the
+        // fastest response on touch hardware and click as a fallback
+        // for non-PointerEvent browsers / desktop. preventDefault on
+        // pointerdown stops the synthesized click from re-firing close.
+        function bindClose(el) {
+          if (!el) return;
+          const handler = (e) => { e.preventDefault(); e.stopPropagation(); close(); };
+          el.addEventListener('pointerdown', handler, { passive: false });
+          el.addEventListener('click', handler);
+        }
+        bindClose(overlay.querySelector('#wu-push-close'));
+        bindClose(overlay.querySelector('#wu-push-close-corner'));
+        // Backdrop click — only if the user taps the dim area, not the canvas.
         overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-        overlay.querySelector('#wu-push-search').addEventListener('input', (e) => renderRows(e.target.value));
+        overlay.querySelector('#wu-push-search').addEventListener('input', (e) => {
+          searchTerm = e.target.value || '';
+          renderRows();
+        });
         overlay.querySelector('#wu-push-all').addEventListener('click', () => {
-          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = true; });
-        });
-        overlay.querySelector('#wu-push-none').addEventListener('click', () => {
-          list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
-        });
-        overlay.querySelector('#wu-push-online').addEventListener('click', () => {
+          // Add EVERY currently-visible row to the checked set.
           list.querySelectorAll('.wu-push-stu').forEach((row) => {
             const cb = row.querySelector('input[type=checkbox]');
-            if (cb) cb.checked = (row.dataset.online === '1');
+            if (cb) { cb.checked = true; checkedCodes.add(cb.dataset.code); }
+            row.classList.add('is-checked');
           });
+        });
+        overlay.querySelector('#wu-push-none').addEventListener('click', () => {
+          checkedCodes.clear();
+          renderRows();
+        });
+        const onlineBtn = overlay.querySelector('#wu-push-online');
+        onlineBtn.addEventListener('click', () => {
+          onlineOnly = !onlineOnly;
+          onlineBtn.classList.toggle('is-active', onlineOnly);
+          onlineBtn.textContent = onlineOnly ? '🟢 Solo en línea ✓' : '🟢 Solo en línea';
+          renderRows();
         });
 
         // ───────── Send button — copy reflects current tab ─────
@@ -649,7 +825,11 @@
         function updateSendBtn() {
           if (activeTab === 'pack') {
             const picked = Array.from(selectedExps);
-            const totalSent = picked.reduce((n, id) => n + (expPacks[id] || []).length, 0);
+            // Count sentences honoring per-package per-sentence picks.
+            const totalSent = picked.reduce((n, id) => {
+              const set = _picked.get(id);
+              return n + (set && set.size ? set.size : (expPacks[id] || []).length);
+            }, 0);
             if (!picked.length) {
               sendBtn.textContent = '📚 Marca al menos un paquete';
               sendBtn.disabled = true;
@@ -668,20 +848,29 @@
         }
         updateSendBtn();
         sendBtn.addEventListener('click', () => {
-          const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
-            .map((cb) => cb.dataset.code).filter(Boolean);
+          // Use the persistent Set (survives search filtering) instead
+          // of just the currently-visible rows. Fernando 2026-06-06:
+          // "send to individual kids... search bar for easier search."
+          const codes = Array.from(checkedCodes);
           if (!codes.length) { alert('Selecciona al menos un alumno.'); return; }
           let body;
           let packsBeingSent = [];   // [{expId, sentences:[]}] for clearing on success
           if (activeTab === 'pack') {
             const allSentences = [];
-            Array.from(selectedExps).forEach((expId) => {
-              (expPacks[expId] || []).forEach((entry) => {
-                // Send the EXP id as the per-sentence category so the
-                // kid's "De la maestra" filter chip is the lesson EXP.
-                allSentences.push({ words: entry.words, category: expId });
+            Array.from(selectedExps).forEach((catId) => {
+              const set = _picked.get(catId);
+              const list = (expPacks[catId] || []).filter((entry) => {
+                // If the teacher checked ANY individual sentence in this
+                // package, send ONLY those. Otherwise send the whole pack.
+                if (!set || !set.size) return true;
+                return set.has(entry.ts);
               });
-              packsBeingSent.push(expId);
+              list.forEach((entry) => {
+                // Send the category id as the per-sentence category so the
+                // kid's "De la maestra" filter chip is the EXP (or custom).
+                allSentences.push({ words: entry.words, category: catId });
+              });
+              packsBeingSent.push(catId);
             });
             if (!allSentences.length) { alert('Los paquetes marcados están vacíos.'); return; }
             body = { studentCodes: codes, sentences: allSentences };
@@ -1543,7 +1732,11 @@
       speakBtn.addEventListener('click', () => {
         if (!currentSentence.length) { flashSaveFeedback(false, 'Oración vacía'); return; }
         const pinyin = currentSentence
-          .map((wid) => (window.WU_WORD_BY_ID[wid] || {}).pinyin || '')
+          .map((wid) => {
+            const w = (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid])
+                   || (currentCustomWords || []).find((cw) => cw && cw.id === wid);
+            return (w && w.pinyin) || '';
+          })
           .filter(Boolean)
           .join(' ');
         speakChinese(pinyin, speakBtn);

@@ -4718,7 +4718,12 @@ function endGame(pin) {
   // the game ends — otherwise a final un-cleared sentence is lost.
   if (g.gameType === 'warmup' && g.warmup && g.warmup.sentence && g.warmup.sentence.length) {
     if (g.warmup.contributors && g.warmup.contributors.size) {
-      Students.logSentence(Array.from(g.warmup.contributors), g.warmup.sentence, pin);
+      Students.logSentence(
+        Array.from(g.warmup.contributors),
+        g.warmup.sentence,
+        pin,
+        g.warmup.customWords || [],
+      );
     }
   }
   g.state = 'ended';
@@ -7121,7 +7126,7 @@ io.on('connection', (socket) => {
     }
     const contributors = Array.from(g.warmup.contributors || []);
     if (contributors.length) {
-      Students.logSentence(contributors, g.warmup.sentence, pin);
+      Students.logSentence(contributors, g.warmup.sentence, pin, g.warmup.customWords || []);
       // Notify each contributor's socket(s) that their history grew —
       // they can re-fetch if their history modal is open.
       Object.entries(g.players).forEach(([sid, p]) => {
@@ -7209,7 +7214,7 @@ io.on('connection', (socket) => {
       return;
     }
     // Append a private copy to THIS student only.
-    Students.appendSentence(p.studentCode, g.warmup.sentence, pin);
+    Students.appendSentence(p.studentCode, g.warmup.sentence, pin, g.warmup.customWords || []);
     io.to(socket.id).emit('wu:history-updated');
     io.to(socket.id).emit('wu:saved', { ok: true, words: g.warmup.sentence.length, mine: true });
   });

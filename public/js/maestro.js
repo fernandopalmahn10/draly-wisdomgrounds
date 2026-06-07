@@ -2366,8 +2366,16 @@
       body.appendChild(h);
       data.sentences.forEach((s) => {
         const dateStr = new Date(s.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+        // Custom-word snapshot — falls back BEFORE rendering the raw
+        // wid so the teacher sees real pinyin/hanzi for ephemeral
+        // teacher-typed words (Fernando 2026-06-06: "the word that
+        // didn't exist appeared as the actual word, not a code").
+        const _customMap = {};
+        if (Array.isArray(s.customWords)) {
+          s.customWords.forEach((cw) => { if (cw && cw.id) _customMap[cw.id] = cw; });
+        }
         const wordsHtml = (s.words || []).map((wid) => {
-          const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
+          const w = (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]) || _customMap[wid];
           if (!w) return '<span class="m-sent-word"><span class="m-sent-pin">' + escapeHtml(wid) + '</span></span>';
           const cat = window.WU_CATEGORIES && window.WU_CATEGORIES[w.cat];
           const color = cat ? cat.color : '#fff';
@@ -2395,7 +2403,7 @@
         // the entry stays in its chronological slot.
         item.querySelector('.m-sent-edit').addEventListener('click', () => {
           const currentText = (s.words || []).map((wid) => {
-            const w = window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid];
+            const w = (window.WU_WORD_BY_ID && window.WU_WORD_BY_ID[wid]) || _customMap[wid];
             return w ? w.pinyin : String(wid);
           }).join(' ');
           const next = prompt(

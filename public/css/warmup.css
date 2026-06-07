@@ -2247,19 +2247,28 @@ body.wu-timemachine::after {
   backdrop-filter: blur(4px);
 }
 .wu-push-back {
-  min-width: 100px;
-  height: 46px;
-  padding: 0 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 2px solid rgba(255, 255, 255, 0.18);
+  min-width: 140px;
+  height: 56px;
+  padding: 0 18px;
+  border-radius: 16px;
+  background: rgba(255, 230, 106, 0.18);
+  border: 2px solid rgba(255, 230, 106, 0.55);
   color: #fff5d8;
-  font-size: 1rem; font-weight: 900;
-  cursor: pointer; touch-action: manipulation;
+  font-size: 1.05rem; font-weight: 900;
+  cursor: pointer;
+  /* 🆕 2026-06-06 v4: force max touch reactivity. Some Safari versions
+     swallow the click on inset-positioned sticky buttons unless we
+     explicitly opt out of double-tap zoom & guarantee pointer events. */
+  touch-action: manipulation;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: rgba(255, 230, 106, 0.32);
   flex: 0 0 auto;
-  display: inline-flex; align-items: center; gap: 4px;
+  display: inline-flex; align-items: center; gap: 6px;
+  position: relative; z-index: 5;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
-.wu-push-back:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.22); }
+.wu-push-back:hover  { background: rgba(255, 230, 106, 0.28); }
+.wu-push-back:active { transform: scale(0.94); background: rgba(255, 230, 106, 0.4); }
 
 /* 🆕 2026-06-04 v2 — floating corner-close button that's ALWAYS
    visible. Fernando: "there's no back button, so I cannot go back." */
@@ -2279,6 +2288,149 @@ body.wu-timemachine::after {
 }
 .wu-push-corner-close:hover  { background: rgba(255, 90, 102, 0.32); }
 .wu-push-corner-close:active { transform: scale(0.9); }
+/* Also bump tap target (was 44; iOS HIG min). 56 makes it impossible to miss. */
+.wu-push-corner-close {
+  width: 56px; height: 56px;
+  font-size: 1.4rem;
+  touch-action: manipulation;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: rgba(255, 90, 102, 0.32);
+}
+
+/* 🆕 2026-06-06 v4 — small "hint" line in the Una oración pane below
+   the Add button, replacing the old free-form category row. */
+.wu-push-hint {
+  font-size: 0.88rem;
+  color: rgba(255, 245, 216, 0.7);
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid rgba(91, 232, 138, 0.55);
+  background: rgba(91, 232, 138, 0.06);
+  border-radius: 6px;
+  line-height: 1.45;
+}
+
+/* 🆕 2026-06-06 v4 — package picker overlay (opens when teacher
+   taps "Añadir al paquete"). Sits inside the push modal so closing
+   it doesn't dismiss the parent modal — only the picker. */
+.wu-pack-pick-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(8, 12, 22, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px;
+  animation: wuPackPickFade 0.18s ease;
+}
+@keyframes wuPackPickFade { from { opacity: 0; } to { opacity: 1; } }
+.wu-pack-pick-card {
+  background: linear-gradient(180deg, #1a2240 0%, #121830 100%);
+  border: 2px solid rgba(255, 230, 106, 0.35);
+  border-radius: 18px;
+  padding: 18px;
+  max-width: 720px; width: 100%;
+  max-height: 88vh; overflow-y: auto;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+}
+.wu-pack-pick-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.wu-pack-pick-title {
+  font-size: 1.15rem; font-weight: 900; color: #ffe66a;
+}
+.wu-pack-pick-close {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  color: #fff; font-size: 1rem; font-weight: 900;
+  cursor: pointer; touch-action: manipulation;
+}
+.wu-pack-pick-prev {
+  padding: 10px; margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.wu-pack-pick-sep {
+  margin: 14px 0 8px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+.wu-pack-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.wu-pack-pick-tile {
+  padding: 12px; min-height: 80px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  color: #fff; cursor: pointer; touch-action: manipulation;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  text-align: left;
+  font-weight: 800;
+  transition: transform 0.08s, background 0.18s, border-color 0.18s;
+}
+.wu-pack-pick-tile:hover  { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 230, 106, 0.4); }
+.wu-pack-pick-tile:active { transform: scale(0.96); }
+.wu-pack-pick-tile.is-auto {
+  border-color: rgba(91, 232, 138, 0.7);
+  background: rgba(91, 232, 138, 0.1);
+}
+.wu-pack-pick-tile.is-custom {
+  border-color: rgba(255, 154, 107, 0.55);
+  background: rgba(255, 154, 107, 0.08);
+}
+.wu-pack-pick-label  { font-size: 0.95rem; font-weight: 900; line-height: 1.2; }
+.wu-pack-pick-count  { font-size: 0.78rem; color: rgba(255, 255, 255, 0.6); font-weight: 700; }
+.wu-pack-pick-auto   { font-size: 0.72rem; color: #5be88a; font-weight: 900; }
+.wu-pack-pick-new {
+  margin-top: 14px; width: 100%;
+  padding: 14px; border-radius: 12px;
+  background: linear-gradient(180deg, rgba(167, 139, 255, 0.18), rgba(167, 139, 255, 0.06));
+  border: 2px dashed rgba(167, 139, 255, 0.55);
+  color: #c4b6ff; font-size: 0.98rem; font-weight: 900;
+  cursor: pointer; touch-action: manipulation;
+}
+.wu-pack-pick-new:hover  { background: rgba(167, 139, 255, 0.28); color: #fff; }
+.wu-pack-pick-new:active { transform: scale(0.98); }
+
+/* 🆕 2026-06-06 v4 — per-package send-mode bar (Marca todas /
+   info chip) and per-sentence checkbox row. */
+.wu-push-pack-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 8px 10px; margin-bottom: 6px;
+  background: rgba(255, 230, 106, 0.06);
+  border-radius: 8px;
+}
+.wu-push-pack-pickall {
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(91, 232, 138, 0.14);
+  border: 2px solid rgba(91, 232, 138, 0.4);
+  color: #d6ffe5; font-size: 0.85rem; font-weight: 800;
+  cursor: pointer; touch-action: manipulation;
+}
+.wu-push-pack-pickall:active { transform: scale(0.95); }
+.wu-push-pack-bar-info {
+  font-size: 0.78rem; color: rgba(255, 230, 106, 0.85);
+  font-weight: 700; letter-spacing: 0.03em;
+}
+.wu-push-pack-row-check {
+  display: inline-flex; align-items: center;
+  padding: 0 6px;
+}
+.wu-push-pack-row-check input { width: 18px; height: 18px; cursor: pointer; }
+.wu-push-pack-row.is-picked {
+  background: rgba(91, 232, 138, 0.08);
+  border-left: 3px solid rgba(91, 232, 138, 0.7);
+}
+.wu-push-pack-box.is-custom .wu-push-pack-box-label {
+  color: #ffd5b8;
+}
 
 /* 🆕 2026-06-04 v2 — in-modal feedback chip (the host-page chip is
    hidden behind the modal, so the teacher needs feedback INSIDE). */
