@@ -18,7 +18,7 @@
 // happened. Console logs every step for DevTools debugging.
 // ════════════════════════════════════════════════════════════════════
 (function () {
-  const LIVE_GAME_VERSION = 'live-game.js v4 · 20260604o';
+  const LIVE_GAME_VERSION = 'live-game.js v5 · 20260604q (3-digit PIN fix)';
   console.log('[live-game] script loaded · ' + LIVE_GAME_VERSION);
   if (!new URLSearchParams(location.search).get('livegame')) {
     console.log('[live-game] no ?livegame=1 flag, exiting');
@@ -60,12 +60,17 @@
   _banner('🚀 ' + LIVE_GAME_VERSION + ' · Preparando ' + (payload.label || 'el juego') + ' · esperando PIN…');
 
   function _extractPin() {
+    // 🆕 v5 FIX: genPin() returns a 3-digit PIN by default (100-999)
+    // and falls back to 4-digit (1000-9999) only on collision. The
+    // previous /^\d{4}$/ regex NEVER matched the common 3-digit case,
+    // which is why every single launch timed out for non-HSK games.
+    // Accept 3 OR 4 digits. (Cuts no PIN format we use.)
     const ids = ['pin-display', 'active-pin-display', 'hh-pin', 'hh-pin-small', 'hr-pin', 'h-pin', 'pin-num'];
     for (const id of ids) {
       const el = document.getElementById(id);
       if (!el) continue;
       const txt = (el.textContent || '').replace(/\D/g, '');
-      if (/^\d{4}$/.test(txt)) return txt;
+      if (/^\d{3,4}$/.test(txt)) return txt;
     }
     return null;
   }
