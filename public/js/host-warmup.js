@@ -821,8 +821,16 @@
         });
 
         // ───────── Send button — copy reflects current tab ─────
-        const sendBtn = overlay.querySelector('#wu-push-go');
+        // 🆕 2026-06-06 v5 (Fernando bug fix): TDZ kill. updateSendBtn
+        // is called early by showTab(activeTab) BEFORE this `const
+        // sendBtn` line executes, and a const referenced before
+        // initialization throws "Cannot access 'sendBtn' before
+        // initialization" — which killed every subsequent event handler
+        // in the modal (Volver, Añadir al paquete, checkboxes, search,
+        // everything). Lazy lookup avoids the TDZ entirely.
         function updateSendBtn() {
+          const sendBtn = overlay.querySelector('#wu-push-go');
+          if (!sendBtn) return;
           if (activeTab === 'pack') {
             const picked = Array.from(selectedExps);
             // Count sentences honoring per-package per-sentence picks.
@@ -847,7 +855,7 @@
           }
         }
         updateSendBtn();
-        sendBtn.addEventListener('click', () => {
+        overlay.querySelector('#wu-push-go').addEventListener('click', () => {
           // Use the persistent Set (survives search filtering) instead
           // of just the currently-visible rows. Fernando 2026-06-06:
           // "send to individual kids... search bar for easier search."
