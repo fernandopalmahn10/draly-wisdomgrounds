@@ -787,4 +787,15 @@
     try { location.hash = ''; } catch (_) {}
     location.reload();
   });
+  // 🆕 2026-06-08 (Fernando): global presence heartbeat. Kid is taking
+  // a sim → they're online but NOT polling the homework inbox, so the
+  // teacher's "Solo en línea" filter would miss them. Ping every 30s
+  // with whatever studentCode we've got (URL ?code= or localStorage).
+  setInterval(() => {
+    let code = studentCode;
+    if (!code) { try { code = localStorage.getItem('dralyStudentCode') || ''; } catch (_) {} }
+    if (!code) return;
+    fetch('/api/heartbeat?code=' + encodeURIComponent(code), { method: 'GET', credentials: 'same-origin' })
+      .catch(() => {});
+  }, 30000);
 })();

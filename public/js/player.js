@@ -8317,4 +8317,18 @@
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
+
+  // 🆕 2026-06-08 (Fernando): global presence heartbeat. Kid is inside
+  // a live game → they're online but NOT polling the homework inbox,
+  // so the teacher's "Solo en línea" filter would miss them and she
+  // couldn't pull them into another room. Ping /api/heartbeat every 30s
+  // with whatever studentCode lives in localStorage. Server side bumps
+  // rec.lastSeen, which is what the picker's 60s online window checks.
+  setInterval(() => {
+    let code = '';
+    try { code = localStorage.getItem('dralyStudentCode') || ''; } catch (_) {}
+    if (!code) return;
+    fetch('/api/heartbeat?code=' + encodeURIComponent(code), { method: 'GET', credentials: 'same-origin' })
+      .catch(() => {});
+  }, 30000);
 })();
