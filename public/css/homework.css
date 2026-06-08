@@ -2390,6 +2390,33 @@ button, a, .hw-card, .hw-folder-card, .hw-lib-chip, .hw-stage-word,
 }
 @keyframes hw-force-pulse { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
 
+/* 🆕 2026-06-08 — Cancelar chip on the force-pull splash. Tiny so it
+   doesn't compete with the "tu maestra te llama" hero, but big enough
+   to be a real tap target. Floats top-right. */
+.hw-force-cancel {
+  position: absolute;
+  top: 16px; right: 16px;
+  padding: 10px 16px;
+  min-height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  color: #fff5d8;
+  font-size: 0.95rem; font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(255, 255, 255, 0.22);
+}
+.hw-force-cancel:hover  { background: rgba(255, 255, 255, 0.16); }
+.hw-force-cancel:active { transform: scale(0.94); }
+.hw-force-hint {
+  margin-top: 14px;
+  font-size: 0.78rem;
+  color: rgba(255, 245, 216, 0.6);
+  max-width: 300px;
+}
+.hw-force-hint strong { color: #fff5d8; }
+
 /* === Inbox bell + badge === */
 .hw-bell-btn { position: relative; }
 .hw-bell-badge {

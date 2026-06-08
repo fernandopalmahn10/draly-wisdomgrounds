@@ -335,6 +335,29 @@ function markAllMessagesRead(code) {
   if (changed) scheduleSave();
   return changed;
 }
+// 🆕 2026-06-08 (Fernando): when a teacher's room ends (Terminar or
+// tab close), sweep EVERY student's inbox for unread force-pulls that
+// pointed at that PIN and auto-mark-read them. Without this, kids
+// poll the inbox 20s later, see the stale force message, get the
+// "¡Tu maestra te llama!" takeover, redirect to /player.html, fail
+// to join a dead room — and feel like their account is broken.
+// Scans all records once (cheap; ~hundreds of students max).
+function expirePinForceMessages(pin) {
+  if (!pin) return 0;
+  const needle = 'pin=' + String(pin);
+  let cleared = 0;
+  Object.values(records).forEach((rec) => {
+    if (!Array.isArray(rec.inbox)) return;
+    rec.inbox.forEach((m) => {
+      if (m.readAt) return;
+      if (m.actionType !== 'force') return;
+      const url = String(m.actionUrl || '');
+      if (url.includes(needle)) { m.readAt = Date.now(); cleared++; }
+    });
+  });
+  if (cleared) scheduleSave();
+  return cleared;
+}
 // Broadcast a message to every student whose classroomCode matches.
 // Returns the count of students who received it.
 function broadcastToClassroom(classroomCode, payload) {
@@ -806,6 +829,7 @@ module.exports = {
   getInbox,
   markMessageRead,
   markAllMessagesRead,
+  expirePinForceMessages,
   broadcastToClassroom,
   AVATAR_OPTIONS,
 };

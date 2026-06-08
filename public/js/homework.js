@@ -335,19 +335,29 @@
       }).catch(() => {});
   }
   // Full-screen takeover when the teacher force-pushes a live session.
-  // Shows a 2-second "tu maestra te llama" splash, then hard-redirects.
-  // The kid cannot dismiss it — it's an obligation.
+  // Shows the "tu maestra te llama" splash, then hard-redirects.
+  //
+  // 🆕 2026-06-08 (Fernando bug fix): a small "✕ Cancelar" chip is now
+  // available so the kid can opt out if the room is dead. Without it,
+  // the kid was being yanked into /player.html?pin=XXX, the join would
+  // fail (room ended, PIN gone), and they'd be permanently stuck on a
+  // useless screen with no way back to their portal — Fernando's words:
+  // "I literally can't... it feels like I'm still being pulled in, but
+  // there's no room." We DO NOT weaken the force-pull mechanic itself
+  // (Fernando: "I like how stable this is"); we just add a safety hatch.
   function _showForceTakeover(msg) {
     if (document.getElementById('hw-force-takeover')) return;  // already going
     const ov = document.createElement('div');
     ov.id = 'hw-force-takeover';
     ov.className = 'hw-force-takeover';
     ov.innerHTML = `
+      <button class="hw-force-cancel" id="hw-force-cancel" type="button" aria-label="Cancelar">✕ Cancelar</button>
       <div class="hw-force-card">
         <div class="hw-force-dragon">🐉</div>
         <div class="hw-force-title">¡Tu maestra te llama!</div>
         <div class="hw-force-text">${escapeHtml(msg.text || '¡Únete a la sesión en vivo ahora!')}</div>
-        <div class="hw-force-spinner">Entrando…</div>
+        <div class="hw-force-spinner">Entrando en <span id="hw-force-count">3</span>…</div>
+        <div class="hw-force-hint">¿No deberías estar aquí? Toca <strong>✕ Cancelar</strong> arriba.</div>
       </div>`;
     document.body.appendChild(ov);
     requestAnimationFrame(() => ov.classList.add('show'));
@@ -359,16 +369,31 @@
     try {
       const u = new URL(msg.actionUrl, location.origin);
       if (!u.searchParams.get('name') && displayName) u.searchParams.set('name', displayName);
-      // 🏆 HSK simulation force-redirect: the maestro launch only
-      // knows the PIN, not each kid's studentCode. We splice the
-      // studentCode in here so /hsk-sim.html auto-submits the gate
-      // and the host live monitor sees the student instantly. Same
-      // pattern as Modo Maestro splicing &name=. Works for either
-      // the new PIN convention (?pin=) or the legacy access flow.
       if (!u.searchParams.get('code') && studentCode) u.searchParams.set('code', studentCode);
       dest = u.pathname + u.search;
     } catch (_) { /* keep original */ }
-    setTimeout(() => { window.location.href = dest; }, 2200);
+    // Visible 3-second countdown so it never feels like a freeze, and
+    // gives the kid 3s of opportunity to cancel.
+    let cancelled = false;
+    let secs = 3;
+    const countEl = document.getElementById('hw-force-count');
+    const tick = setInterval(() => {
+      secs--;
+      if (countEl) countEl.textContent = String(Math.max(0, secs));
+      if (secs <= 0) clearInterval(tick);
+    }, 1000);
+    const redirectT = setTimeout(() => {
+      if (cancelled) return;
+      window.location.href = dest;
+    }, 3200);
+    document.getElementById('hw-force-cancel').addEventListener('click', () => {
+      cancelled = true;
+      clearTimeout(redirectT);
+      clearInterval(tick);
+      try { ov.remove(); } catch (_) {}
+      // The message is already marked-read on the server (we did it
+      // before showing the takeover, line ~322). No re-fire possible.
+    });
   }
 
   function renderBellBadge() {
