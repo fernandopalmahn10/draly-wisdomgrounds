@@ -59,12 +59,19 @@
         <span class="hsk-results-detail" id="hsk-results-detail">0 / 30 puntos</span>
       </div>
       <div class="hsk-results-breakdown" id="hsk-results-breakdown"></div>
-      <button class="btn btn-gold btn-xl" id="hsk-results-done" style="width:100%; margin-top:14px;">Cerrar</button>
+      <!-- 🆕 2026-06-08 (Fernando): two CLEAR navigation buttons instead
+           of just one ambiguous "Cerrar". Kids were getting stuck on
+           the results screen — now they can either repeat the same
+           simulation or go back to their portal home. -->
+      <div class="hsk-results-actions" style="display:flex; gap:10px; margin-top:14px;">
+        <button class="btn btn-jade btn-xl" id="hsk-results-redo" style="flex:1;">🔁 Repetir</button>
+        <button class="btn btn-gold btn-xl" id="hsk-results-done" style="flex:1;">🏠 Inicio</button>
+      </div>
     </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524n"></script>
-  <script src="/js/hsk-sim.js?v=20260604d"></script>
+  <script src="/js/hsk-sim.js?v=20260608a"></script>
 </body>
 </html>

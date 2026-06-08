@@ -777,4 +777,14 @@
   $('hsk-results-done').addEventListener('click', () => {
     window.location.href = '/homework.html';
   });
+  // 🆕 2026-06-08 (Fernando): Repetir reloads the same simulation with
+  // the SAME entry params (pin/access/code) so the kid drops straight
+  // back into question 1 without re-typing anything. We just nuke the
+  // hash + reload — the auto-submit logic at the top of this file
+  // picks the params back up.
+  const redo = document.getElementById('hsk-results-redo');
+  if (redo) redo.addEventListener('click', () => {
+    try { location.hash = ''; } catch (_) {}
+    location.reload();
+  });
 })();

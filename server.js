@@ -4727,6 +4727,21 @@ function endGame(pin) {
     }
   }
   g.state = 'ended';
+  // 🆕 2026-06-08 (Fernando): the moment a room dies, sweep every
+  // student's inbox for unread force-pull messages targeting THIS pin
+  // and mark them read. That stops the "¡Tu maestra te llama!"
+  // takeover from firing on kids who hadn't opened their portal yet —
+  // they'd otherwise be pulled into a dead room and feel stuck.
+  // Also clear frozen state on warmup rooms so a "stuck frozen" kid
+  // on the previous session doesn't get carried forward.
+  try {
+    const cleared = Students.expirePinForceMessages(pin);
+    if (cleared) console.log('[endGame] expired ' + cleared + ' stale force-pulls for pin=' + pin);
+  } catch (e) { console.error('[endGame] expirePinForceMessages failed', e); }
+  if (g.gameType === 'warmup' && g.warmup) {
+    g.warmup.frozen = false;
+    g.warmup.frozenNames = [];
+  }
   const winner =
     g.teamScores.red > g.teamScores.gold
       ? 'red'

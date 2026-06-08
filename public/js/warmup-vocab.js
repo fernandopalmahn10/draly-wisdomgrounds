@@ -254,6 +254,10 @@
     w('exp8', 'particle', 'men',      '们',    '(plural)',            '👥'),
     w('exp8', 'particle', 'zhème',    '这么',  'tan / así de',        '〽️'),
     w('exp8', 'particle', 'nàme',     '那么',  'tan / así',           '〽️'),
+    // 🆕 2026-06-08 (Fernando): 没 méi — the negation for 有 (have).
+    // "I don't have" = 我没有 (wǒ méi yǒu). Distinct from 不 (bù) which
+    // negates verbs/adjectives. Appended at end so id stays new (w162).
+    w('exp8', 'particle', 'méi',      '没',    'no (no tener)',       '🚫'),
   ];
 
   window.WU_CATEGORIES = WU_CATEGORIES;

@@ -1,0 +1,21 @@
+Question,Answer 1,Answer 2,Answer 3,Answer 4,Time Limit,Correct Answer(s)
+"R1 · ¿""shuǐguǒ"" coincide con la imagen?",✅ Sí coincide,❌ No coincide,,,20,2
+"R1 · ¿""xiānsheng"" coincide con la imagen?",✅ Sí coincide,❌ No coincide,,,20,2
+"R1 · ¿""māo"" coincide con la imagen?",✅ Sí coincide,❌ No coincide,,,20,1
+"R1 · ¿""lěng"" coincide con la imagen?",✅ Sí coincide,❌ No coincide,,,20,1
+"R1 · ¿""xuéxí"" coincide con la imagen?",✅ Sí coincide,❌ No coincide,,,20,2
+"R2 · Xiàmiàn nàgè dà, shàngmiàn nàgè xiǎo",Imagen C,Imagen D,Imagen E,Imagen F,25,4
+R2 · Wǒ xiànzài bù xiǎng tīng nǐ shuō,Imagen A,Imagen B,Imagen C,Imagen D,25,1
+R2 · Duìbùqǐ wǒ xiǎng qù shuìjiào,Imagen B,Imagen C,Imagen D,Imagen E,25,3
+R2 · Tā zài jiālǐ kàn diànshì ne,Imagen A,Imagen B,Imagen C,Imagen D,25,3
+R2 · Bàba nǐ zài zuò shénme cài,Imagen A,Imagen B,Imagen C,Imagen D,25,2
+L4 · Escucha el audio y elige la respuesta correcta (pregunta 16),14 kuài,19 kuài,27 kuài,,25,3
+L4 · Escucha el audio y elige la respuesta correcta (pregunta 17),mǎi diànnǎo,hěn piàoliang,xuésheng duō,,25,2
+L4 · Escucha el audio y elige la respuesta correcta (pregunta 18),7 yuè 2 hào,zuótiān shàngwǔ,yí ge duō yuè qián,,25,3
+L4 · Escucha el audio y elige la respuesta correcta (pregunta 19),kāi chē,zuò fēijī,zuò chūzū chē,,25,3
+L4 · Escucha el audio y elige la respuesta correcta (pregunta 20),jiā lǐ,fàndiàn,diànyǐngyuàn,,25,2
+L1 · Audio + imagen pregunta 1 — ¿coinciden?,✅ Sí coinciden,❌ No coinciden,,,20,2
+L1 · Audio + imagen pregunta 2 — ¿coinciden?,✅ Sí coinciden,❌ No coinciden,,,20,1
+L1 · Audio + imagen pregunta 3 — ¿coinciden?,✅ Sí coinciden,❌ No coinciden,,,20,2
+L1 · Audio + imagen pregunta 4 — ¿coinciden?,✅ Sí coinciden,❌ No coinciden,,,20,2
+L1 · Audio + imagen pregunta 5 — ¿coinciden?,✅ Sí coinciden,❌ No coinciden,,,20,1
