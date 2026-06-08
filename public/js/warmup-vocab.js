@@ -224,6 +224,36 @@
     w('exp8', 'particle', 'hé',       '和',    'y',                   '➕'),
     w('exp8', 'greet',    'zàijiàn',  '再见',  'adiós',               '👋'),
     w('exp8', 'greet',    'méiguānxi','没关系','no importa',          '👌'),
+
+    // ============================================
+    // 🆕 2026-06-07 (Fernando): missing HSK1 building blocks. These
+    // single-character / 2-char words appear ALL OVER kid sentences
+    // (jīnnián this year, dàxuéshēng college student, tīngjiàn to hear,
+    // nǎge which one, māmamen mothers, zhème gāoxìng so happy, zhèr/nàr
+    // here/there). They were missing from the curated 150 because they
+    // mostly live inside compound words. Appended at the END so existing
+    // word IDs w1..w150 don't shift — that would break every saved kid
+    // sentence and every preset/pack pointing at those ids.
+    // ============================================
+    // EXP4 · Tiempo — 今 ("current/now", the missing half of 今年/今天)
+    w('exp4', 'time',     'jīn',      '今',    'este / actual',       '📅'),
+    // EXP2 · Escuela — bare 学 (study), 见 (perceive/see, resultative
+    // complement that turns 听 → 听见, 看 → 看见)
+    w('exp2', 'verb',     'xué',      '学',    'estudiar / aprender', '📚'),
+    w('exp2', 'verb',     'jiàn',     '见',    'ver / percibir',      '👀'),
+    // EXP7 · Personas — 生 (born/life/student-suffix), 哪 (which), 哪个 (which one)
+    w('exp7', 'noun',     'shēng',    '生',    'vida / nacer',        '🌱'),
+    w('exp7', 'question', 'nǎ',       '哪',    'cuál / qué',          '❓'),
+    w('exp7', 'question', 'nǎge',     '哪个',  'cuál (uno)',          '❓'),
+    // EXP5 · Lugares — 这儿 (here), 那儿 (there)
+    w('exp5', 'place',    'zhèr',     '这儿',  'aquí',                '📍'),
+    w('exp5', 'place',    'nàr',      '那儿',  'allí',                '📌'),
+    // EXP8 · Partículas — 们 (plural marker: tā→tāmen, māma→māmamen),
+    // 这么 (so/such, degree adverb: 这么高兴 so happy),
+    // 那么 (the distal pair: in that way / so)
+    w('exp8', 'particle', 'men',      '们',    '(plural)',            '👥'),
+    w('exp8', 'particle', 'zhème',    '这么',  'tan / así de',        '〽️'),
+    w('exp8', 'particle', 'nàme',     '那么',  'tan / así',           '〽️'),
   ];
 
   window.WU_CATEGORIES = WU_CATEGORIES;
