@@ -258,6 +258,13 @@
     // "I don't have" = 我没有 (wǒ méi yǒu). Distinct from 不 (bù) which
     // negates verbs/adjectives. Appended at end so id stays new (w162).
     w('exp8', 'particle', 'méi',      '没',    'no (no tener)',       '🚫'),
+    // 🆕 2026-06-08 (Fernando): 面 miàn — the directional/positional
+    // suffix used in lǐmiàn (dentro), shàngmiàn (encima), xiàmiàn
+    // (debajo), qiánmiàn (delante), hòumiàn (detrás), wàimiàn (fuera).
+    // The compounds already exist; the bare tile lets the teacher build
+    // those combinations on the fly when she wants. Appended at end so
+    // id stays new (w163). Lives in EXP5 lugares/dirección.
+    w('exp5', 'place',    'miàn',     '面',    'lado / dirección',    '🧭'),
   ];
 
   window.WU_CATEGORIES = WU_CATEGORIES;
