@@ -1,129 +1,181 @@
 // ═══════════════════════════════════════════════════════════════════
-// 📦 Export HSK1 · Simulación 1 → Blooket-ready CSV
+// 📦 Export HSK1 · Simulación 1 → Blooket-ready CSV + XLSX
 //
-// Blooket import format (per their template at blooket.com/upload):
-//   Column A: Question
-//   Column B: Answer 1
-//   Column C: Answer 2
-//   Column D: Answer 3
-//   Column E: Answer 4
-//   Column F: Time Limit (seconds, 5-60)
-//   Column G: Correct Answer(s)   ← "1" / "2" / "3" / "4" (or comma-separated for multi)
+// Blooket's set-importer at https://www.blooket.com/upload-set accepts
+// EITHER .csv or .xlsx using this exact column schema:
 //
-// What we export from Sim 1:
-//   • Reading Part 1 (5 V/F)   → MCQ with 2 options: ✅ Sí, coincide / ❌ No coincide
-//   • Reading Part 2 (5 match) → MCQ with 6 options A-F
-//   • Listening Part 4 (5 MCQ)→ MCQ with 3 options (pinyin)
-//   • Listening Part 1 V/F     → MCQ with 2 options (audio text becomes the prompt)
+//   A: Question
+//   B: Answer 1
+//   C: Answer 2
+//   D: Answer 3
+//   E: Answer 4
+//   F: Time Limit (seconds — Blooket caps at 5/10/15/20/30/45/60/90/120/240)
+//   G: Correct Answer(s)   ← "1" / "2" / "3" / "4" (comma-separated for multi)
 //
-// We SKIP:
-//   • Listening Part 2 / 3 — they reference images, which Blooket
-//     doesn't support in CSV import. Add those manually after upload
-//     via Blooket's image picker if you want them in the deck.
+// What we export from Sim 1 (ALL 30 questions):
+//
+//   • Reading Part 1 (5 V/F)            → 2 options ✅ Sí / ❌ No
+//   • Reading Part 2 (5 match)          → 4 options trimmed from A-F
+//                                          (Blooket only allows 4 choices)
+//   • Listening Part 1 (5 V/F)          → 2 options ✅ Sí / ❌ No
+//   • Listening Part 2 (5 three-image)  → text-only fallback "Imagen A/B/C"
+//                                          (Blooket can't render images via CSV;
+//                                           the audio + 3 images are still on
+//                                           Render so teacher can swap them in
+//                                           inside Blooket's editor afterwards)
+//   • Listening Part 3 (5 gallery)      → text-only fallback
+//   • Listening Part 4 (5 MCQ pinyin)   → 3 pinyin options as-is
 //
 // Usage:  node scripts/export-sim1-blooket.js
-// Output: blooket-sim1.csv at the repo root
+// Output: blooket-sim1.csv   AND   blooket-sim1.xlsx (Blooket recommends xlsx)
 // ═══════════════════════════════════════════════════════════════════
+
 const fs = require('fs');
 const path = require('path');
+const XLSX = require('xlsx');
 const { SIMULATIONS } = require('../core/hsk-sim.js');
 
 const sim = SIMULATIONS['hsk1-sim1'];
 if (!sim) { console.error('Sim 1 not found'); process.exit(1); }
 
-// Blooket caps cells around 60 chars for Q + 75 for each answer; we
-// stay well within that.
+// ────────────────────────────────────────────────────────────────
+// Build the rows. Each row is an array matching Blooket's columns.
+// ────────────────────────────────────────────────────────────────
+const HEADER = ['Question', 'Answer 1', 'Answer 2', 'Answer 3', 'Answer 4', 'Time Limit', 'Correct Answer(s)'];
+const rows = [HEADER];
+
+function row(question, opts, correctIdx, time) {
+  // Pad opts to 4 entries
+  const padded = (opts || []).slice();
+  while (padded.length < 4) padded.push('');
+  return [question, padded[0], padded[1], padded[2], padded[3], time, correctIdx];
+}
+
+// ── LISTENING PART 1 (V/F — audio + image) ──────────────────────
+// Blooket CSV can't carry audio; the prompt keeps the question
+// number so the teacher can swap audio in via Blooket's editor.
+sim.listening.part1.questions.forEach((q) => {
+  const correctIdx = q.answer === true ? 1 : 2;
+  rows.push(row(
+    `L1 · Pregunta ${q.num} — Escucha y mira la imagen. ¿Coinciden?`,
+    ['✅ Sí coinciden', '❌ No coinciden'],
+    correctIdx,
+    20
+  ));
+});
+
+// ── LISTENING PART 2 (3 images) ─────────────────────────────────
+// Image-heavy. Text fallback so Blooket can store the answer key;
+// teacher swaps in real images after import.
+sim.listening.part2.questions.forEach((q) => {
+  const correctLetter = q.answer;
+  const opts = q.options.map((o) => `Imagen ${o.letter}`);
+  const correctIdx = q.options.findIndex((o) => o.letter === correctLetter) + 1;
+  rows.push(row(
+    `L2 · Pregunta ${q.num} — Escucha y elige la imagen correcta.`,
+    opts,
+    correctIdx,
+    25
+  ));
+});
+
+// ── LISTENING PART 3 (gallery match) ────────────────────────────
+sim.listening.part3.questions.forEach((q) => {
+  // Letters A-F minus the example letter C. Blooket only fits 4.
+  // Keep correct + 3 distractors closest in alphabet.
+  const correct = q.answer;
+  const pool = ['A', 'B', 'C', 'D', 'E', 'F'].filter((l) => l !== correct && l !== sim.listening.part3.exampleAnswer);
+  pool.sort((a, b) => Math.abs(a.charCodeAt(0) - correct.charCodeAt(0)) - Math.abs(b.charCodeAt(0) - correct.charCodeAt(0)));
+  const four = [correct, ...pool.slice(0, 3)].sort();
+  const correctIdx = four.indexOf(correct) + 1;
+  rows.push(row(
+    `L3 · Pregunta ${q.num} — Escucha y elige la imagen de la galería.`,
+    four.map((l) => `Imagen ${l}`),
+    correctIdx,
+    25
+  ));
+});
+
+// ── LISTENING PART 4 (3 pinyin options) ─────────────────────────
+sim.listening.part4.questions.forEach((q) => {
+  const opts = q.options.map((o) => o.text);
+  const correctIdx = q.options.findIndex((o) => o.letter === q.answer) + 1;
+  rows.push(row(
+    `L4 · Pregunta ${q.num} — Escucha y elige la respuesta correcta.`,
+    opts,
+    correctIdx,
+    25
+  ));
+});
+
+// ── READING PART 1 (V/F on a pinyin word) ───────────────────────
+sim.reading.part1.questions.forEach((q) => {
+  const correctIdx = q.answer === true ? 1 : 2;
+  rows.push(row(
+    `R1 · ¿La palabra "${q.word}" coincide con la imagen?`,
+    ['✅ Sí coincide', '❌ No coincide'],
+    correctIdx,
+    20
+  ));
+});
+
+// ── READING PART 2 (match sentence to image, 4 of 6 letters) ────
+sim.reading.part2.questions.forEach((q) => {
+  const correct = q.answer;
+  const pool = ['A', 'B', 'C', 'D', 'E', 'F'].filter((l) => l !== correct);
+  pool.sort((a, b) => Math.abs(a.charCodeAt(0) - correct.charCodeAt(0)) - Math.abs(b.charCodeAt(0) - correct.charCodeAt(0)));
+  const four = [correct, ...pool.slice(0, 3)].sort();
+  const correctIdx = four.indexOf(correct) + 1;
+  rows.push(row(
+    `R2 · ${q.pinyin}`,
+    four.map((l) => `Imagen ${l}`),
+    correctIdx,
+    25
+  ));
+});
+
+// ────────────────────────────────────────────────────────────────
+// Write CSV
+// ────────────────────────────────────────────────────────────────
 function csvEscape(s) {
   const str = String(s == null ? '' : s);
   if (/[",\n]/.test(str)) return '"' + str.replace(/"/g, '""') + '"';
   return str;
 }
-function row(q, a1, a2, a3, a4, time, correct) {
-  return [q, a1, a2, a3, a4, time, correct].map(csvEscape).join(',');
-}
+const csv = rows.map((r) => r.map(csvEscape).join(',')).join('\n') + '\n';
+const csvPath = path.join(__dirname, '..', 'blooket-sim1.csv');
+fs.writeFileSync(csvPath, csv, 'utf8');
 
-const rows = [];
-// Header — Blooket's exact column names
-rows.push(row('Question', 'Answer 1', 'Answer 2', 'Answer 3', 'Answer 4', 'Time Limit', 'Correct Answer(s)'));
+// ────────────────────────────────────────────────────────────────
+// Write XLSX
+// ────────────────────────────────────────────────────────────────
+const wb = XLSX.utils.book_new();
+const ws = XLSX.utils.aoa_to_sheet(rows);
+// Reasonable column widths so the file is readable when opened in Excel
+ws['!cols'] = [
+  { wch: 56 }, // Question
+  { wch: 22 }, // Answer 1
+  { wch: 22 }, // Answer 2
+  { wch: 22 }, // Answer 3
+  { wch: 22 }, // Answer 4
+  { wch: 12 }, // Time Limit
+  { wch: 16 }, // Correct Answer(s)
+];
+XLSX.utils.book_append_sheet(wb, ws, 'Sim 1 — HSK1');
+const xlsxPath = path.join(__dirname, '..', 'blooket-sim1.xlsx');
+XLSX.writeFile(wb, xlsxPath);
 
-// ── READING PART 1 (V/F on a written word) ──────────────────────────
-// Format: kid sees the pinyin word, picks "Sí coincide" / "No coincide"
-sim.reading.part1.questions.forEach((q) => {
-  const correctIdx = q.answer === true ? 1 : 2;
-  rows.push(row(
-    'R1 · ¿"' + q.word + '" coincide con la imagen?',
-    '✅ Sí coincide',
-    '❌ No coincide',
-    '', '',
-    20,
-    correctIdx
-  ));
-});
-
-// ── READING PART 2 (match sentence → letter A-F) ────────────────────
-// Blooket only supports 4 answer choices; the original test has 6
-// (A-F). We DROP the two letters that aren't the correct one and aren't
-// near it alphabetically, keeping the correct letter + 3 closest as
-// distractors. Print a note about this limitation.
-const R2_GALLERY = ['A','B','C','D','E','F'];
-sim.reading.part2.questions.forEach((q) => {
-  const correct = q.answer;
-  // Pick 3 distractors closest in alphabet to keep them as plausible
-  const distractors = R2_GALLERY.filter((l) => l !== correct)
-    .sort((a, b) => Math.abs(a.charCodeAt(0) - correct.charCodeAt(0)) - Math.abs(b.charCodeAt(0) - correct.charCodeAt(0)))
-    .slice(0, 3);
-  const allFour = [correct, ...distractors].sort();
-  const correctIdx = allFour.indexOf(correct) + 1;
-  rows.push(row(
-    'R2 · ' + q.pinyin,
-    'Imagen ' + allFour[0],
-    'Imagen ' + allFour[1],
-    'Imagen ' + allFour[2],
-    'Imagen ' + allFour[3],
-    25,
-    correctIdx
-  ));
-});
-
-// ── LISTENING PART 4 (3 pinyin options) ─────────────────────────────
-// Audio text not available in the JSON, so we use a generic prompt.
-// The kid reads the question stem aloud or you fill it in inside Blooket.
-sim.listening.part4.questions.forEach((q) => {
-  const opts = q.options.map((o) => o.text);
-  const correctIdx = q.options.findIndex((o) => o.letter === q.answer) + 1;
-  rows.push(row(
-    'L4 · Escucha el audio y elige la respuesta correcta (pregunta ' + q.num + ')',
-    opts[0],
-    opts[1],
-    opts[2],
-    '',
-    25,
-    correctIdx
-  ));
-});
-
-// ── LISTENING PART 1 (V/F) ──────────────────────────────────────────
-// Audio reference can't import, but we add the example pinyin text as
-// the prompt for usability.
-sim.listening.part1.questions.forEach((q) => {
-  const correctIdx = q.answer === true ? 1 : 2;
-  rows.push(row(
-    'L1 · Audio + imagen pregunta ' + q.num + ' — ¿coinciden?',
-    '✅ Sí coinciden',
-    '❌ No coinciden',
-    '', '',
-    20,
-    correctIdx
-  ));
-});
-
-const out = rows.join('\n') + '\n';
-const outPath = path.join(__dirname, '..', 'blooket-sim1.csv');
-fs.writeFileSync(outPath, out, 'utf8');
-console.log('✅ Wrote', outPath);
-console.log('   ', rows.length - 1, 'questions across',
-  '5 R1 V/F · 5 R2 match (trimmed to 4 options) · 5 L4 MCQ · 5 L1 V/F');
+// ────────────────────────────────────────────────────────────────
+// Summary
+// ────────────────────────────────────────────────────────────────
+console.log('✅ Wrote', csvPath);
+console.log('✅ Wrote', xlsxPath);
+console.log(`   ${rows.length - 1} questions = 5 L1 + 5 L2 + 5 L3 + 5 L4 + 5 R1 + 5 R2 (full Sim 1)`);
 console.log('');
-console.log('Drag this CSV into Blooket → Discover → Create Set → Import → Choose File.');
-console.log('Audio questions (L1) keep the question number in the prompt so you can');
-console.log('record/upload the matching audio in Blooket\'s editor afterwards.');
+console.log('Upload to Blooket:');
+console.log('  1. Go to https://www.blooket.com/upload-set');
+console.log('  2. Click "Choose File", pick blooket-sim1.xlsx');
+console.log('  3. Name the set "HSK1 · Simulación 1" and click Import');
+console.log('  4. Inside Blooket\'s editor: for L1/L2/L3 questions you can');
+console.log('     swap "Imagen A/B/C" labels for the actual images by adding');
+console.log('     them in the question editor (the answer key stays correct).');

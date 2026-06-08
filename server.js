@@ -1178,6 +1178,48 @@ app.post('/api/homework/ping', (req, res) => {
   res.json({ ok: true, lastSeen: rec.lastSeen });
 });
 
+// 🆕 2026-06-08 (Fernando): global presence heartbeat. Any page that
+// knows a studentCode (player.html in a game, hsk-sim.html taking the
+// exam, host-warmup.html for the asistente kid) pings this every 30s
+// so the teacher's "Solo en línea" filter sees them as online even
+// when they're NOT sitting on the homework portal. Without this, kids
+// in a different room/page looked offline and the teacher couldn't
+// pull them back. Fernando's words: "If they are in different rooms,
+// how do we know that they're still in the platform?"
+//
+// No access code required (works from any platform page). To prevent
+// the endpoint from leaking which codes exist, we return 200 OK
+// regardless and silently no-op on unknown codes. Tiny in-memory
+// rate-limiter (no new dependency) so it can't be spammed to brute-
+// force enumerate codes: max 120 reqs/min per client IP.
+const _hbHits = new Map();   // ip → [timestamp, ...]
+function _hbRateLimit(req) {
+  const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+  const key = String(ip).split(',')[0].trim();
+  const now = Date.now();
+  const window = 60 * 1000;
+  const arr = (_hbHits.get(key) || []).filter((t) => now - t < window);
+  arr.push(now);
+  _hbHits.set(key, arr);
+  // Periodic GC so the map doesn't grow unbounded
+  if (_hbHits.size > 5000) {
+    for (const [k, v] of _hbHits) {
+      if (!v.length || now - v[v.length - 1] > window) _hbHits.delete(k);
+    }
+  }
+  return arr.length <= 120;
+}
+app.get('/api/heartbeat', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!_hbRateLimit(req)) return res.status(429).json({ ok: false, error: 'rate-limited' });
+  const code = String(req.query.code || '').trim();
+  if (code) {
+    const rec = Students.get(code);
+    if (rec) rec.lastSeen = Date.now();
+  }
+  res.json({ ok: true, ts: Date.now() });
+});
+
 // Mark a single message read
 app.post('/api/homework/inbox/:msgId/read', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
