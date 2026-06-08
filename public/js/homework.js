@@ -215,17 +215,23 @@
     if (savedCode) $('hw-student-code').value = savedCode;
   } catch (_) {}
 
-  // ── Arriving from Modo Maestro? The player page sends ?code=ABCD&from=maestro
-  // so the kid lands in their portal without logging in again. Pre-fill their
-  // student code, and if their teacher's access code is remembered on this
-  // device, enter automatically.
+  // ── Arriving with a hand-off from another portal page? Two sources:
+  //   • Modo Maestro player end-screen sends ?code=ABCD&from=maestro
+  //   • HSK simulation Inicio button sends ?code=ABCD&from=hsk-sim
+  // Either way, pre-fill the student code; if the access code is
+  // remembered on this device, fire tryEnter() automatically so the
+  // kid lands on their portal home with zero taps. 2026-06-08 (Fernando):
+  // "Inicio should take you to the homework portal" — was dropping the
+  // kid on the login screen instead of straight into their home.
   try {
     const params = new URLSearchParams(location.search);
     const fromCode = (params.get('code') || '').trim().toUpperCase();
     if (fromCode && /^[A-Z2-9]{4,5}$/.test(fromCode)) {
       $('hw-student-code').value = fromCode;
       const remembered = (localStorage.getItem(STORAGE_ACCESS_KEY) || '').trim();
-      if (params.get('from') === 'maestro' && remembered) {
+      const from = params.get('from');
+      const trustedSources = ['maestro', 'hsk-sim'];
+      if (trustedSources.includes(from) && remembered) {
         $('hw-access-code').value = remembered;
         // Defer one tick so the entry screen + DOM are fully ready.
         setTimeout(() => { try { tryEnter(); } catch (_) {} }, 60);

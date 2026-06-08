@@ -775,7 +775,15 @@
       });
   }
   $('hsk-results-done').addEventListener('click', () => {
-    window.location.href = '/homework.html';
+    // 🆕 2026-06-08 (Fernando): pass studentCode + from=hsk-sim so
+    // homework.js auto-fills both fields and fires tryEnter — the kid
+    // lands directly on their portal home instead of seeing the login
+    // screen again. Fernando: "Inicio should take you to the homework
+    // portal." Falls back to localStorage if studentCode isn't in scope.
+    let code = studentCode;
+    if (!code) { try { code = localStorage.getItem('dralyStudentCode') || ''; } catch (_) {} }
+    const qs = code ? '?code=' + encodeURIComponent(code) + '&from=hsk-sim' : '';
+    window.location.href = '/homework.html' + qs;
   });
   // 🆕 2026-06-08 (Fernando): Repetir reloads the same simulation with
   // the SAME entry params (pin/access/code) so the kid drops straight
