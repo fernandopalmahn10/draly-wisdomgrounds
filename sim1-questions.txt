@@ -1,0 +1,229 @@
+═══════════════════════════════════════════════════════════════════
+  HSK1 · SIMULACIÓN 1 — Lista completa de preguntas
+  30 preguntas total · 10 pts c/u · máx 300 pts
+═══════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════
+LISTENING · PARTE 1 — Verdadero / Falso
+═══════════════════════════════════════════════════════════════════
+
+Instrucción: Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.
+
+EJEMPLOS:
+  EJ1: "hěn gāoxìng" — Respuesta: ✓ VERDADERO
+       (Hěn gāoxìng (muy feliz))
+  EJ2: "kàn diànyǐng" — Respuesta: ✗ FALSO
+       (Kàn diànyǐng (ver película))
+
+PREGUNTAS:
+  1. (audio MP3 + imagen) — Respuesta: ✗ FALSO
+  2. (audio MP3 + imagen) — Respuesta: ✓ VERDADERO
+  3. (audio MP3 + imagen) — Respuesta: ✗ FALSO
+  4. (audio MP3 + imagen) — Respuesta: ✗ FALSO
+  5. (audio MP3 + imagen) — Respuesta: ✓ VERDADERO
+
+═══════════════════════════════════════════════════════════════════
+LISTENING · PARTE 2 — Tres imágenes
+═══════════════════════════════════════════════════════════════════
+
+Instrucción: Escucha el audio y toca la imagen correcta.
+
+PREGUNTAS:
+  6. (audio MP3)
+     A) Imagen A
+     B) Imagen B
+     C) Imagen C ✓
+     Respuesta correcta: C
+
+  7. (audio MP3)
+     A) Imagen A ✓
+     B) Imagen B
+     C) Imagen C
+     Respuesta correcta: A
+
+  8. (audio MP3)
+     A) Imagen A
+     B) Imagen B ✓
+     C) Imagen C
+     Respuesta correcta: B
+
+  9. (audio MP3)
+     A) Imagen A
+     B) Imagen B ✓
+     C) Imagen C
+     Respuesta correcta: B
+
+  10. (audio MP3)
+     A) Imagen A
+     B) Imagen B ✓
+     C) Imagen C
+     Respuesta correcta: B
+
+
+═══════════════════════════════════════════════════════════════════
+LISTENING · PARTE 3 — Empareja con la imagen de la galería
+═══════════════════════════════════════════════════════════════════
+
+Instrucción: Escucha cada audio y toca la letra de la imagen correcta.
+
+GALERÍA (las mismas 6 imágenes para todas las preguntas):
+  A) A
+  B) B
+  C) C (ejemplo)
+  D) D
+  E) E
+  F) F
+  Respuesta del EJEMPLO: C
+
+PREGUNTAS:
+  11. (audio MP3) — Respuesta correcta: D
+  12. (audio MP3) — Respuesta correcta: B
+  13. (audio MP3) — Respuesta correcta: A
+  14. (audio MP3) — Respuesta correcta: E
+  15. (audio MP3) — Respuesta correcta: F
+
+═══════════════════════════════════════════════════════════════════
+LISTENING · PARTE 4 — Tres opciones de texto
+═══════════════════════════════════════════════════════════════════
+
+Instrucción: Escucha el audio y toca la opción correcta.
+
+EJEMPLO:
+  EJ: (audio)
+     A) shāngdiàn ✓
+     B) yīyuàn
+     C) xuéxiào
+
+PREGUNTAS:
+  16. (audio MP3)
+     A) 14 kuài
+     B) 19 kuài
+     C) 27 kuài ✓
+     Respuesta correcta: C
+
+  17. (audio MP3)
+     A) mǎi diànnǎo
+     B) hěn piàoliang ✓
+     C) xuésheng duō
+     Respuesta correcta: B
+
+  18. (audio MP3)
+     A) 7 yuè 2 hào
+     B) zuótiān shàngwǔ
+     C) yí ge duō yuè qián ✓
+     Respuesta correcta: C
+
+  19. (audio MP3)
+     A) kāi chē
+     B) zuò fēijī
+     C) zuò chūzū chē ✓
+     Respuesta correcta: C
+
+  20. (audio MP3)
+     A) jiā lǐ
+     B) fàndiàn ✓
+     C) diànyǐngyuàn
+     Respuesta correcta: B
+
+
+═══════════════════════════════════════════════════════════════════
+READING · PARTE 1 — Palabra ↔ Imagen ✓/✗
+═══════════════════════════════════════════════════════════════════
+
+Instrucción: Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.
+
+EJEMPLO EJ: "diànshì" — Respuesta: ✗ FALSO
+
+PREGUNTAS:
+  21. Palabra: "shuǐguǒ" — Respuesta: ✗ FALSO
+  22. Palabra: "xiānsheng" — Respuesta: ✗ FALSO
+  23. Palabra: "māo" — Respuesta: ✓ VERDADERO
+  24. Palabra: "lěng" — Respuesta: ✓ VERDADERO
+  25. Palabra: "xuéxí" — Respuesta: ✗ FALSO
+
+═══════════════════════════════════════════════════════════════════
+READING · PARTE 2 — Empareja oración con imagen
+═══════════════════════════════════════════════════════════════════
+
+Instrucción: Lee cada frase y toca la letra de la imagen correcta.
+
+GALERÍA (las mismas 6 imágenes para todas las preguntas):
+  A) A
+  B) B
+  C) C
+  D) D
+  E) E (ejemplo)
+  F) F
+
+EJEMPLO EJ:
+  Hanzi:  我很喜欢这本书
+  Pinyin: Wǒ hěn xǐhuan zhè běn shū
+  Respuesta: E
+
+PREGUNTAS:
+  26.
+     Hanzi:  下面那个大，上面那个小
+     Pinyin: Xiàmiàn nàgè dà, shàngmiàn nàgè xiǎo
+     Respuesta correcta: F
+
+  27.
+     Hanzi:  我现在不想听你说
+     Pinyin: Wǒ xiànzài bù xiǎng tīng nǐ shuō
+     Respuesta correcta: A
+
+  28.
+     Hanzi:  对不起我想去睡觉
+     Pinyin: Duìbùqǐ wǒ xiǎng qù shuìjiào
+     Respuesta correcta: D
+
+  29.
+     Hanzi:  他在家里看电视呢
+     Pinyin: Tā zài jiālǐ kàn diànshì ne
+     Respuesta correcta: C
+
+  30.
+     Hanzi:  爸爸你在做什么菜
+     Pinyin: Bàba nǐ zài zuò shénme cài
+     Respuesta correcta: B
+
+
+═══════════════════════════════════════════════════════════════════
+CLAVE DE RESPUESTAS — Resumen
+═══════════════════════════════════════════════════════════════════
+
+Sección              Pregunta  Respuesta
+───────────────────────────────────────────────────────────────────
+L1 (V/F)             1         FALSO
+L1 (V/F)             2         VERDADERO
+L1 (V/F)             3         FALSO
+L1 (V/F)             4         FALSO
+L1 (V/F)             5         VERDADERO
+L2 (3 imágenes)      6         C
+L2 (3 imágenes)      7         A
+L2 (3 imágenes)      8         B
+L2 (3 imágenes)      9         B
+L2 (3 imágenes)      10        B
+L3 (galería)         11        D
+L3 (galería)         12        B
+L3 (galería)         13        A
+L3 (galería)         14        E
+L3 (galería)         15        F
+L4 (3 opciones)      16        C = 27 kuài
+L4 (3 opciones)      17        B = hěn piàoliang
+L4 (3 opciones)      18        C = yí ge duō yuè qián
+L4 (3 opciones)      19        C = zuò chūzū chē
+L4 (3 opciones)      20        B = fàndiàn
+R1 (palabra V/F)     21        "shuǐguǒ" = FALSO
+R1 (palabra V/F)     22        "xiānsheng" = FALSO
+R1 (palabra V/F)     23        "māo" = VERDADERO
+R1 (palabra V/F)     24        "lěng" = VERDADERO
+R1 (palabra V/F)     25        "xuéxí" = FALSO
+R2 (oración→imagen)  26        F
+R2 (oración→imagen)  27        A
+R2 (oración→imagen)  28        D
+R2 (oración→imagen)  29        C
+R2 (oración→imagen)  30        B
+
+═══════════════════════════════════════════════════════════════════
+  FIN — HSK1 · Simulación 1
+═══════════════════════════════════════════════════════════════════
