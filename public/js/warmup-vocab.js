@@ -265,6 +265,16 @@
     // those combinations on the fly when she wants. Appended at end so
     // id stays new (w163). Lives in EXP5 lugares/dirección.
     w('exp5', 'place',    'miàn',     '面',    'lado / dirección',    '🧭'),
+    // 🆕 2026-06-08 b (Fernando): qián 前 + hòu 后 as bare directional
+    // tiles so the teacher can mix-and-match with 面 (qián+miàn,
+    // hòu+miàn) or use them standalone (qián = previous/front,
+    // hòu = next/back). EXP5 / place.
+    w('exp5', 'place',    'qián',     '前',    'delante / antes',     '⬅️'),
+    w('exp5', 'place',    'hòu',      '后',    'detrás / después',    '➡️'),
+    // 🆕 2026-06-08 b — 车 chē (coche/auto). Used a lot in HSK1 sims.
+    // EXP3 (transporte/lugares de viaje) makes the cleanest fit; also
+    // appears alongside 火车 huǒchē (tren) and 出租车 chūzūchē (taxi).
+    w('exp3', 'noun',     'chē',      '车',    'coche / auto',        '🚗'),
   ];
 
   window.WU_CATEGORIES = WU_CATEGORIES;
