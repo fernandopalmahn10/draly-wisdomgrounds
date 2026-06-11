@@ -38,6 +38,7 @@
       <div class="m-dash-actions">
         <button class="btn btn-gold btn-sm" id="m-live-master-btn" title="Invitar a estudiantes en línea a una sesión en vivo">🎯 Modo Maestro en vivo</button>
         <button class="btn btn-jade btn-sm" id="m-broadcast-btn">📢 Mensaje a toda la clase</button>
+        <button class="btn btn-gold btn-sm" id="m-gif-btn" title="Mandar un GIF transparente a los alumnos en línea (CR7, Gojo, Mario…)">🎬 GIF a alumnos</button>
         <button class="btn btn-jade btn-sm" id="m-guides-btn" title="Subir guías de estudio en PDF para los papás">📘 Guías (PDF)</button>
         <button class="btn btn-jade btn-sm" id="m-launch-btn" title="Lanzar cualquier juego — la sala se abre y los alumnos entran solos">🚀 Lanzar juego</button>
         <button class="btn btn-jade btn-sm" id="m-reading-btn" title="Lanzar una lectura en vivo con la clase">📖 Lectura en clase</button>
@@ -110,6 +111,34 @@
           <h2 id="m-hsk-title">🏆 Simulación HSK</h2>
           <p class="m-modal-sub" id="m-hsk-sub">Elige el nivel HSK.</p>
           <div id="m-hsk-view" class="m-reading-folders">Cargando…</div>
+        </div>
+      </div>
+
+      <!-- 🎬 GIF PICKER — push transparent dancing mascots to online kids.
+           Tap a GIF tile, tap which kids (search + online filter), Send.
+           Each kid sees an 8-second full-screen overlay over whatever
+           they were doing in their homework portal. Foundation for the
+           future "mascot of the day / streak reward" auto-rotation. -->
+      <div id="m-gif-modal" class="m-modal hidden">
+        <div class="m-modal-card">
+          <button class="m-modal-close" id="m-gif-close" type="button" aria-label="Cerrar">✕</button>
+          <h2>🎬 Mandar un GIF a alumnos en línea</h2>
+          <p class="m-modal-sub">Elige un personaje y los alumnos que quieras. Aparece en su pantalla por 8 segundos.</p>
+          <div class="m-gif-grid" id="m-gif-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin:14px 0;">
+            <!-- tiles rendered by maestro.js -->
+          </div>
+          <div class="m-gif-students">
+            <div style="font-weight:800;margin:10px 0 6px;">Alumnos</div>
+            <input class="input" id="m-gif-search" type="text" placeholder="🔎 Buscar por nombre o código…" autocomplete="off" style="margin-bottom:8px;">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+              <button class="btn btn-ghost btn-sm" id="m-gif-online" type="button">🟢 Solo en línea</button>
+              <button class="btn btn-ghost btn-sm" id="m-gif-all" type="button">✅ Todos visibles</button>
+              <button class="btn btn-ghost btn-sm" id="m-gif-none" type="button">⬜ Ninguno</button>
+            </div>
+            <div id="m-gif-list" style="max-height:38vh;overflow:auto;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:6px;"></div>
+          </div>
+          <button class="btn btn-jade btn-xl" id="m-gif-send" type="button" style="width:100%;margin-top:12px;">📤 Mandar GIF</button>
+          <p class="m-modal-msg" id="m-gif-msg" style="text-align:center;margin-top:8px;min-height:1.2em;"></p>
         </div>
       </div>
 
@@ -304,6 +333,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260608e"></script>
-  <script src="/js/maestro.js?v=20260606a"></script>
+  <script src="/js/maestro.js?v=20260608g"></script>
 </body>
 </html>

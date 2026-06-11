@@ -65,6 +65,16 @@ app.use(express.static(path.join(__dirname, 'public'), {
       res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.setHeader('Pragma', 'no-cache');
       res.setHeader('Expires', '0');
+    } else if (/[\\/]assets[\\/]png-library[\\/]/.test(filePath)) {
+      // 🆕 2026-06-08 (Fernando) — transparent dancing GIFs (3MB each)
+      // get blasted to every kid's phone for the GIF push feature.
+      // Without long caching, each blast re-downloads 3MB per kid.
+      // With immutable+1yr cache, the kid's browser downloads it ONCE
+      // ever and replays from disk for every future push — that turns
+      // a 90MB-per-30-kids hit into 0 bytes after day 1. The asset
+      // filenames are stable (CR7 TRANSPARENT.gif, etc.) so immutable
+      // is honest; if you ever swap an asset, rename it.
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
   },
 }));
@@ -1218,6 +1228,76 @@ app.get('/api/heartbeat', (req, res) => {
     if (rec) rec.lastSeen = Date.now();
   }
   res.json({ ok: true, ts: Date.now() });
+});
+
+// 🆕 2026-06-08 (Fernando) — GIF picker push. Teacher on /maestro
+// dashboard picks a transparent dancing GIF + which kids → server
+// inserts a special inbox message (actionType:'anim') for each kid.
+// Kid's homework page inbox poll (every 20s) picks it up and shows
+// the GIF overlay for 8s. Pattern is identical to the existing
+// inbox-message-with-action flow; just a new actionType.
+//
+// Future: hook this to "mascot of the day" auto-rotation or HSK
+// streak rewards — same endpoint, just called by a cron instead of
+// by the teacher.
+//
+// Rate-limit: max 6 sends/min per IP so a runaway can't blast hundreds
+// of inbox messages. Uses the same in-memory ip → timestamps map as
+// the heartbeat for cheap-and-cheerful protection (no new dep).
+const _gpHits = new Map();
+function _gpRateLimit(req) {
+  const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+  const key = 'gp-' + String(ip).split(',')[0].trim();
+  const now = Date.now();
+  const window = 60 * 1000;
+  const arr = (_gpHits.get(key) || []).filter((t) => now - t < window);
+  arr.push(now);
+  _gpHits.set(key, arr);
+  return arr.length <= 6;
+}
+// Whitelist of GIF IDs the teacher can broadcast — same set as the
+// warmup Animaciones tray. Keeps server in charge of the URL so the
+// client can't shove an arbitrary URL through the inbox.
+const _GIF_LIBRARY = {
+  gojo:   { url: '/assets/png-library/GOJO%20TRANSPARENT.gif',     label: '👁 Gojo' },
+  yugi:   { url: '/assets/png-library/YUGI%20TRANSPARENT.gif',     label: '🃏 Yugi' },
+  freddy: { url: '/assets/png-library/FREDDY%20TRANSPARENT.gif',   label: '🐻 Freddy' },
+  mario:  { url: '/assets/png-library/MARIO%20TRANSPARENT.gif',    label: '🍄 Mario' },
+  sonic:  { url: '/assets/png-library/SONIC%20TRANSPARENT.gif',    label: '💨 Sonic' },
+  elsa:   { url: '/assets/png-library/ELSA%20TRANSPARENT.gif',     label: '❄️ Elsa' },
+  turtle: { url: '/assets/png-library/Squirtle%20animation.gif',   label: '🐢 Squirtle' },
+  cr7:    { url: '/assets/png-library/CR7%20TRANSPARENT.gif',      label: '⚽ CR7' },
+};
+app.post('/api/admin/gif-push', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!_gpRateLimit(req)) return res.status(429).json({ ok: false, error: 'demasiados envíos; espera un momento' });
+  const { studentCodes, animId } = req.body || {};
+  if (!Array.isArray(studentCodes) || !studentCodes.length) {
+    return res.status(400).json({ ok: false, error: 'studentCodes required' });
+  }
+  const gif = _GIF_LIBRARY[String(animId || '').toLowerCase()];
+  if (!gif) return res.status(400).json({ ok: false, error: 'unknown animId' });
+  const fromName = (session.teacher && session.teacher.displayName) || 'Tu maestra';
+  const fromId = (session.teacher && session.teacher.teacherId) || 'super';
+  let sent = 0;
+  studentCodes.slice(0, 200).forEach((code) => {
+    const rec = Students.get(String(code || '').trim());
+    if (!rec) return;
+    // Permission check — super-admin sees all, classroom teachers only
+    // their own classroom (same pattern as other admin endpoints).
+    if (!_canSessionTouchStudent(session, rec)) return;
+    const msg = Students.sendMessage(rec.code, {
+      from: fromId,
+      fromName,
+      text: gif.label,
+      actionType: 'anim',
+      actionUrl: gif.url,
+      actionLabel: gif.label,
+    });
+    if (msg) sent++;
+  });
+  res.json({ ok: true, sent, animId, label: gif.label });
 });
 
 // Mark a single message read

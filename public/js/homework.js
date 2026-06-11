@@ -334,6 +334,22 @@
           });
           return;
         }
+        // 🆕 2026-06-08 (Fernando) — ANIM messages: the teacher tapped
+        // the GIF picker on /maestro and sent a dancing-mascot to this
+        // kid. Show a full-screen transparent overlay for 8 seconds,
+        // mark read so it doesn't replay on the next poll. Designed
+        // around "fun reward" not "obligation" — no redirect, kid
+        // stays exactly where they are, the mascot just dances over
+        // whatever they were doing then disappears.
+        const anim = _inbox.find((m) => !m.readAt && m.actionType === 'anim' && m.actionUrl);
+        if (anim) {
+          fetch('/api/homework/inbox/' + encodeURIComponent(anim.id) + '/read?accessCode=' + encodeURIComponent(accessCode), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentCode }),
+          }).catch(() => {});
+          _showAnimOverlay(anim);
+          return;
+        }
         // Normal unread → surface a toast
         if (_inboxUnread > prevUnread && prevUnread >= 0) {
           showInboxToast(_inbox[0]);
@@ -400,6 +416,41 @@
       // The message is already marked-read on the server (we did it
       // before showing the takeover, line ~322). No re-fire possible.
     });
+  }
+
+  // 🆕 2026-06-08 (Fernando) — kid-side mascot overlay. 8s, transparent
+  // PNG/GIF over whatever the kid was doing, auto-dismisses. Doesn't
+  // block taps under it (pointer-events: none). The GIF asset has 1yr
+  // immutable cache so after first download it's instant.
+  function _showAnimOverlay(msg) {
+    if (document.getElementById('hw-anim-overlay')) return;
+    const ov = document.createElement('div');
+    ov.id = 'hw-anim-overlay';
+    ov.style.cssText = [
+      'position:fixed', 'inset:0', 'z-index:99999',
+      'display:flex', 'align-items:center', 'justify-content:center',
+      'pointer-events:none',                  // kid can keep tapping under
+      'background:rgba(0,0,0,0)',
+      'animation:hwAnimFade 0.4s ease',
+    ].join(';');
+    const img = document.createElement('img');
+    img.src = msg.actionUrl;
+    img.alt = msg.actionLabel || '';
+    img.style.cssText = 'max-width:78vw;max-height:78vh;object-fit:contain;filter:drop-shadow(0 8px 30px rgba(0,0,0,0.45));';
+    ov.appendChild(img);
+    // Small banner so kid knows it's from their teacher
+    const tag = document.createElement('div');
+    tag.style.cssText = 'position:absolute;top:24px;left:50%;transform:translateX(-50%);background:rgba(91,232,209,0.18);border:2px solid rgba(91,232,209,0.55);padding:8px 18px;border-radius:14px;color:#fff5d8;font-weight:900;font-size:0.95rem;letter-spacing:0.06em;';
+    tag.textContent = '🎁 ¡Te llegó algo de tu maestra! ' + (msg.actionLabel || '');
+    ov.appendChild(tag);
+    if (!document.getElementById('hw-anim-style')) {
+      const s = document.createElement('style');
+      s.id = 'hw-anim-style';
+      s.textContent = '@keyframes hwAnimFade{from{opacity:0;transform:scale(0.7)}to{opacity:1;transform:scale(1)}}';
+      document.head.appendChild(s);
+    }
+    document.body.appendChild(ov);
+    setTimeout(() => { try { ov.remove(); } catch (_) {} }, 8000);
   }
 
   function renderBellBadge() {
