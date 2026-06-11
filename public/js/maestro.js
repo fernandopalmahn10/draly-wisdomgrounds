@@ -1692,6 +1692,143 @@
     reader.readAsDataURL(file);   // → data:application/pdf;base64,...
   });
 
+  // 🎬 GIF PICKER — push transparent dancing mascot to selected kids.
+  // 2026-06-08 (Fernando). Same plumbing as the inbox messaging system;
+  // homework.js's poller picks up the actionType:'anim' message and
+  // shows an 8-second overlay over whatever the kid was doing.
+  // Designed to be the foundation for a future "mascot of the day"
+  // auto-rotation that fires server-side on login streaks etc.
+  const GIF_LIBRARY = [
+    { id: 'cr7',    label: '⚽ CR7',     url: '/assets/png-library/CR7%20TRANSPARENT.gif' },
+    { id: 'gojo',   label: '👁 Gojo',    url: '/assets/png-library/GOJO%20TRANSPARENT.gif' },
+    { id: 'yugi',   label: '🃏 Yugi',    url: '/assets/png-library/YUGI%20TRANSPARENT.gif' },
+    { id: 'freddy', label: '🐻 Freddy',  url: '/assets/png-library/FREDDY%20TRANSPARENT.gif' },
+    { id: 'mario',  label: '🍄 Mario',   url: '/assets/png-library/MARIO%20TRANSPARENT.gif' },
+    { id: 'sonic',  label: '💨 Sonic',   url: '/assets/png-library/SONIC%20TRANSPARENT.gif' },
+    { id: 'elsa',   label: '❄️ Elsa',    url: '/assets/png-library/ELSA%20TRANSPARENT.gif' },
+    { id: 'turtle', label: '🐢 Squirtle',url: '/assets/png-library/Squirtle%20animation.gif' },
+  ];
+  let _gifPick = '';
+  let _gifChecked = new Set();
+  let _gifOnlineOnly = false;
+  let _gifSearch = '';
+  let _gifStudents = [];
+  function _renderGifGrid() {
+    const grid = $('m-gif-grid');
+    if (!grid) return;
+    grid.innerHTML = GIF_LIBRARY.map((g) => {
+      const sel = g.id === _gifPick;
+      return '<button class="m-gif-tile" data-gid="' + g.id + '" type="button" style="' +
+        'padding:8px;border-radius:12px;background:' + (sel ? 'rgba(91,232,209,0.18)' : 'rgba(255,255,255,0.05)') +
+        ';border:2px solid ' + (sel ? 'rgba(91,232,209,0.65)' : 'rgba(255,255,255,0.12)') +
+        ';color:#fff;font-weight:800;cursor:pointer;touch-action:manipulation;text-align:center;">' +
+        '<img src="' + g.url + '" alt="" style="max-width:90px;max-height:90px;display:block;margin:0 auto 6px;">' +
+        '<span>' + g.label + '</span></button>';
+    }).join('');
+    grid.querySelectorAll('.m-gif-tile').forEach((b) => {
+      b.addEventListener('click', () => {
+        _gifPick = b.dataset.gid;
+        _renderGifGrid();
+        _updateGifSendBtn();
+      });
+    });
+  }
+  function _renderGifList() {
+    const list = $('m-gif-list');
+    if (!list) return;
+    const q = (_gifSearch || '').toLowerCase();
+    let pool = _gifStudents.slice();
+    if (q) pool = pool.filter((s) =>
+      (s.displayName || '').toLowerCase().includes(q) ||
+      (s.code || '').toLowerCase().includes(q));
+    if (_gifOnlineOnly) pool = pool.filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
+    if (!pool.length) {
+      list.innerHTML = '<p style="color:rgba(255,255,255,0.6);padding:12px;text-align:center;">Sin coincidencias.</p>';
+      return;
+    }
+    list.innerHTML = '';
+    pool.forEach((s) => {
+      const online = s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000;
+      const checked = _gifChecked.has(s.code);
+      const row = document.createElement('label');
+      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:8px;cursor:pointer;background:' + (checked ? 'rgba(91,232,209,0.1)' : 'transparent');
+      row.innerHTML =
+        '<input type="checkbox" data-code="' + escapeHtml(s.code) + '"' + (checked ? ' checked' : '') + '>' +
+        '<span style="width:8px;height:8px;border-radius:50%;background:' + (online ? '#5be88a' : '#666') + ';"></span>' +
+        '<span style="flex:1;font-weight:700;">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+        '<span style="font-size:0.75rem;color:rgba(255,255,255,0.5);">' + escapeHtml(s.code) + '</span>';
+      row.querySelector('input').addEventListener('change', (e) => {
+        if (e.target.checked) _gifChecked.add(s.code); else _gifChecked.delete(s.code);
+        row.style.background = e.target.checked ? 'rgba(91,232,209,0.1)' : 'transparent';
+        _updateGifSendBtn();
+      });
+      list.appendChild(row);
+    });
+  }
+  function _updateGifSendBtn() {
+    const btn = $('m-gif-send');
+    if (!btn) return;
+    if (!_gifPick) { btn.textContent = '🎬 Elige un GIF'; btn.disabled = true; return; }
+    if (!_gifChecked.size) { btn.textContent = '👥 Elige al menos un alumno'; btn.disabled = true; return; }
+    btn.textContent = '📤 Mandar GIF a ' + _gifChecked.size + ' alumno' + (_gifChecked.size === 1 ? '' : 's');
+    btn.disabled = false;
+  }
+  function _openGifModal() {
+    _gifPick = ''; _gifChecked = new Set(); _gifOnlineOnly = false; _gifSearch = '';
+    $('m-gif-search').value = '';
+    $('m-gif-msg').textContent = '';
+    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { _gifStudents = []; return; }
+        _gifStudents = (data.students || []).slice().sort((a, b) =>
+          (a.displayName || a.code || '').localeCompare(b.displayName || b.code || ''));
+        _renderGifList();
+      });
+    _renderGifGrid();
+    _updateGifSendBtn();
+    $('m-gif-modal').classList.remove('hidden');
+  }
+  function _closeGifModal() { $('m-gif-modal').classList.add('hidden'); }
+  $('m-gif-btn').addEventListener('click', _openGifModal);
+  $('m-gif-close').addEventListener('click', _closeGifModal);
+  $('m-gif-search').addEventListener('input', (e) => { _gifSearch = e.target.value || ''; _renderGifList(); });
+  $('m-gif-online').addEventListener('click', (e) => {
+    _gifOnlineOnly = !_gifOnlineOnly;
+    e.currentTarget.textContent = _gifOnlineOnly ? '🟢 Solo en línea ✓' : '🟢 Solo en línea';
+    _renderGifList();
+  });
+  $('m-gif-all').addEventListener('click', () => {
+    document.querySelectorAll('#m-gif-list input[type=checkbox]').forEach((cb) => {
+      cb.checked = true;
+      _gifChecked.add(cb.dataset.code);
+    });
+    _renderGifList(); _updateGifSendBtn();
+  });
+  $('m-gif-none').addEventListener('click', () => { _gifChecked.clear(); _renderGifList(); _updateGifSendBtn(); });
+  $('m-gif-send').addEventListener('click', () => {
+    if (!_gifPick || !_gifChecked.size) return;
+    const btn = $('m-gif-send');
+    btn.disabled = true;
+    $('m-gif-msg').textContent = 'Enviando…';
+    fetch('/api/admin/gif-push?pw=' + encodeURIComponent(pw), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentCodes: Array.from(_gifChecked), animId: _gifPick }),
+    })
+      .then((r) => r.json())
+      .then((res) => {
+        if (res && res.ok) {
+          $('m-gif-msg').textContent = '✓ ' + res.label + ' enviado a ' + res.sent + ' alumno(s). Aparece en su pantalla en ~20s.';
+          setTimeout(() => { _closeGifModal(); }, 1800);
+        } else {
+          $('m-gif-msg').textContent = '✗ ' + ((res && res.error) || 'no se pudo');
+          _updateGifSendBtn();
+        }
+      })
+      .catch((e) => { $('m-gif-msg').textContent = '✗ ' + e.message; _updateGifSendBtn(); });
+  });
+
   // 📢 Broadcast — sends a message to every student in the teacher's
   // classroom. Super admin gets prompted for the classroomCode (defaults
   // to "1001" — your own); regular teachers auto-target their own.
