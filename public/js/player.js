@@ -2903,6 +2903,10 @@
     sonic:  '/assets/png-library/SONIC%20TRANSPARENT.gif',
     elsa:   '/assets/png-library/ELSA%20TRANSPARENT.gif',
     turtle: '/assets/png-library/Squirtle%20animation.gif',
+    // 🆕 2026-06-08 (Fernando) — CR7 transparent dancing GIF mirrored
+    // on the player side so the host's CR7 button shows the GIF on
+    // every kid's phone the same way Gojo/Yugi/Freddy/Mario do.
+    cr7:    '/assets/png-library/CR7%20TRANSPARENT.gif',
   };
   socket.on('wu:anim', (d) => {
     if (gameType !== 'warmup' || !d || !d.id) return;
