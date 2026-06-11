@@ -1815,6 +1815,8 @@
       sonic:  '/assets/png-library/SONIC%20TRANSPARENT.gif',
       elsa:   '/assets/png-library/ELSA%20TRANSPARENT.gif',
       turtle: '/assets/png-library/Squirtle%20animation.gif',
+      // 🆕 2026-06-08 (Fernando) — CR7 transparent dancing GIF.
+      cr7:    '/assets/png-library/CR7%20TRANSPARENT.gif',
     };
     function wuApplyAnim(id, on) {
       let ov = document.getElementById('wu-anim-overlay-' + id);
