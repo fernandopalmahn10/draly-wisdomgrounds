@@ -2920,11 +2920,38 @@
       if (!ov) {
         ov = document.createElement('div');
         ov.id = 'wu-describe-image';
-        ov.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,12,22,0.96);padding:16px;';
+        // 🆕 2026-06-08 (Fernando): COEXIST with the sentence builder.
+        // This is a top BANNER, not a full-screen takeover — it pins to
+        // the top ~40% and leaves the builder fully visible + usable
+        // below. pointer-events:none so taps pass straight through to
+        // whatever's underneath (the builder, Curious Mode, etc.).
+        // The kid gets a small ✕ to collapse it if it's in their way;
+        // the teacher's "Quitar" still clears it for everyone.
+        ov.style.cssText = [
+          'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:9000',
+          'display:flex', 'flex-direction:column', 'align-items:center',
+          'padding:8px 10px 10px', 'pointer-events:none',
+          'background:linear-gradient(180deg,rgba(8,12,22,0.94) 0%,rgba(8,12,22,0.82) 70%,rgba(8,12,22,0) 100%)',
+        ].join(';');
         ov.innerHTML =
-          '<div style="color:#5be8d1;font-weight:900;font-size:1.05rem;letter-spacing:0.05em;margin-bottom:10px;text-align:center;">🖼 Describe esta imagen en chino 🐉</div>' +
-          '<img style="max-width:94vw;max-height:78vh;object-fit:contain;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,0.6);">';
+          '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;pointer-events:auto;">' +
+            '<span style="color:#5be8d1;font-weight:900;font-size:0.95rem;letter-spacing:0.03em;text-align:center;">🖼 Describe esta imagen en chino 🐉</span>' +
+            '<button id="wu-describe-collapse" type="button" aria-label="Ocultar" style="pointer-events:auto;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;width:30px;height:30px;font-weight:900;cursor:pointer;">▲</button>' +
+          '</div>' +
+          '<img style="max-width:92vw;max-height:38vh;object-fit:contain;border-radius:12px;box-shadow:0 8px 28px rgba(0,0,0,0.55);pointer-events:auto;background:#0d1224;">';
         document.body.appendChild(ov);
+        // Collapse/expand toggle — lets the kid shrink the banner to a
+        // thin strip if they need the full screen to build, then tap to
+        // bring it back. Purely local; doesn't affect other kids.
+        let collapsed = false;
+        ov.addEventListener('click', (e) => {
+          if (e.target.id !== 'wu-describe-collapse') return;
+          collapsed = !collapsed;
+          const img = ov.querySelector('img');
+          const btn = ov.querySelector('#wu-describe-collapse');
+          img.style.display = collapsed ? 'none' : 'block';
+          btn.textContent = collapsed ? '▼' : '▲';
+        });
       }
       ov.querySelector('img').src = d.url;
     } else if (ov) {
