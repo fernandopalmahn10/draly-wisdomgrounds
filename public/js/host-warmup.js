@@ -277,10 +277,12 @@
         cell.innerHTML = '<img src="' + im.url + '" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain;display:block;">';
         cell.addEventListener('click', () => {
           socket.emit('wu:image', { pin, password: adminPw, url: im.url });
-          // Local feedback: highlight the chosen cell.
-          grid.querySelectorAll('button').forEach((b) => { b.style.borderColor = 'rgba(255,255,255,0.14)'; });
-          cell.style.borderColor = '#5be8d1';
           flashSaveFeedback(true, '🖼 Imagen en pantalla de todos');
+          // 🆕 Auto-close the picker so the teacher returns to the
+          // builder and can keep constructing sentences while the
+          // image coexists on the kids' screens. The bottom-right
+          // mirror stays as the always-visible escape.
+          _closeDescribeSheet();
         });
         grid.appendChild(cell);
       });
@@ -306,14 +308,28 @@
   })();
   // Host's own screen mirrors the broadcast so the teacher sees what
   // the kids see (helpful when she's on a laptop, kids on phones).
+  // 🆕 2026-06-08 (Fernando): the mirror is now an ALWAYS-VISIBLE
+  // escape — tap it (or its ✕) to clear the image from every screen
+  // without reopening the picker. It floats over the dashboard so the
+  // teacher keeps building sentences while the image coexists on the
+  // kids' phones.
   socket.on('wu:image', (d) => {
     let ov = document.getElementById('wu-host-image-overlay');
     if (d && d.url) {
       if (!ov) {
         ov = document.createElement('div');
         ov.id = 'wu-host-image-overlay';
-        ov.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:50;width:160px;height:160px;border:3px solid #5be8d1;border-radius:12px;overflow:hidden;background:#0d1224;box-shadow:0 8px 24px rgba(0,0,0,0.5);';
-        ov.innerHTML = '<img style="width:100%;height:100%;object-fit:contain;display:block;"><div style="position:absolute;top:2px;left:6px;font-size:0.65rem;color:#5be8d1;font-weight:900;">EN PANTALLAS</div>';
+        ov.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:50;width:170px;border:3px solid #5be8d1;border-radius:12px;overflow:hidden;background:#0d1224;box-shadow:0 8px 24px rgba(0,0,0,0.5);cursor:pointer;';
+        ov.title = 'Toca para quitar la imagen de las pantallas';
+        ov.innerHTML =
+          '<img style="width:100%;height:140px;object-fit:contain;display:block;">' +
+          '<div style="position:absolute;top:2px;left:6px;font-size:0.65rem;color:#5be8d1;font-weight:900;text-shadow:0 1px 3px #000;">EN PANTALLAS</div>' +
+          '<div style="position:absolute;top:2px;right:6px;font-size:0.8rem;color:#ff9a8a;font-weight:900;text-shadow:0 1px 3px #000;">✕</div>' +
+          '<div style="padding:5px;text-align:center;background:rgba(255,90,102,0.18);color:#ff9a8a;font-weight:800;font-size:0.78rem;">🚫 Quitar de pantallas</div>';
+        ov.addEventListener('click', () => {
+          socket.emit('wu:image', { pin, password: adminPw, url: null });
+          flashSaveFeedback(true, '🚫 Imagen quitada de las pantallas');
+        });
         document.body.appendChild(ov);
       }
       ov.querySelector('img').src = d.url;
