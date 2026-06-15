@@ -9,6 +9,7 @@ const Students = require('./core/student-records');
 const TeacherPresets = require('./core/teacher-presets');
 const ReadingStory = require('./core/reading-story');
 const HskSim = require('./core/hsk-sim');
+const SimImages = require('./core/sim-images');
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
@@ -1930,6 +1931,21 @@ app.get('/api/reading/stories', (req, res) => {
 // List available simulations (just metadata).
 app.get('/api/hsk-sim/list', (req, res) => {
   res.json({ ok: true, sims: HskSim.listSims() });
+});
+// 🖼 Sim-image catalog for the "Describe la imagen" teaching mode in
+// Modo Maestro. Scans the HSK simulation folders and returns every
+// describable picture grouped by simulation. Admin-gated (teacher
+// code). Pass ?maxSim=5 to limit to ready sims; ?refresh=1 to rescan
+// after dropping new sim folders without restarting the server.
+// Fernando 2026-06-08: "pick from a list of all the pictures we have,
+// put it on everyone's screen, then have them describe it together."
+app.get('/api/sim-images', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const maxSim = req.query.maxSim ? parseInt(req.query.maxSim, 10) : 5;  // default: ready sims 1-5
+  const refresh = req.query.refresh === '1';
+  const cat = SimImages.getCatalog({ maxSim, refresh });
+  res.json({ ok: true, groups: cat.groups, total: cat.total });
 });
 // Auth helper for HSK endpoints — accept EITHER a valid HSK PIN OR a
 // homework access code. PIN flow is now the primary path (kids type
@@ -5870,6 +5886,12 @@ io.on('connection', (socket) => {
           visibleExps: g.warmup.visibleExps || null,
           customWords: g.warmup.customWords || [],
         });
+        // 🖼 Late-joiner sees whatever picture is currently being
+        // described to the class, + any active dancing-GIF overlay.
+        if (g.wuImage) io.to(socket.id).emit('wu:image', { url: g.wuImage });
+        if (g.wuAnim) {
+          Object.keys(g.wuAnim).forEach((id) => io.to(socket.id).emit('wu:anim', { id, on: true }));
+        }
       }
       // === LÁI-QÙ-HUÍ: late-joiner gets the map + their own mission ===
       // Without this, kids joining a running LQH game stay stuck on the
@@ -7145,7 +7167,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
     if (!(g.hostId === socket.id && isAdminPassword(password))) return;
-    const ok = ['gojo', 'yugi', 'freddy', 'mario', 'sonic', 'elsa', 'turtle'];   // expand as more transparent GIFs land
+    const ok = ['gojo', 'yugi', 'freddy', 'mario', 'sonic', 'elsa', 'turtle', 'cr7'];   // expand as more transparent GIFs land
     if (!ok.includes(String(id || ''))) return;
     // Stash the current state on the room so a kid joining late
     // automatically sees whatever's already on.
@@ -7153,6 +7175,20 @@ io.on('connection', (socket) => {
     if (on) g.wuAnim[id] = { since: Date.now() };
     else    delete g.wuAnim[id];
     io.to(pin).emit('wu:anim', { id, on: !!on });
+  });
+  // 🖼 wu:image — "Describe la imagen" teaching mode. The teacher picks
+  // a picture from any HSK simulation and it appears full-screen on
+  // every kid's phone so the class describes it together in Chinese.
+  // url is validated against the scanned catalog so a client can't
+  // shove an arbitrary URL onto kids' screens. Stashed on the room so
+  // late-joiners see whatever's currently up; null url clears it.
+  socket.on('wu:image', ({ pin, password, url }) => {
+    const g = games[pin];
+    if (!g || g.gameType !== 'warmup') return;
+    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (url && !SimImages.isValidImageUrl(String(url))) return;   // reject anything not in the catalog
+    g.wuImage = url ? String(url) : null;
+    io.to(pin).emit('wu:image', { url: g.wuImage });
   });
   // === JUDGE role === host designates a kid as a "juez" who can approve or
   // deny raise-hand requests. Two categories: asistente (builds) and juez

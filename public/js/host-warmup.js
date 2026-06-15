@@ -226,6 +226,103 @@
   });
 
   // ════════════════════════════════════════════════════════════════
+  // 🖼 DESCRIBE-THE-IMAGE — 2026-06-08 (Fernando). Teacher picks a
+  // picture from any HSK simulation; it broadcasts full-screen to
+  // EVERY kid's phone so the class describes it together in Chinese.
+  // Server validates the URL against the scanned catalog (anti-inject)
+  // and stashes it on the room so late-joiners see it too.
+  // ════════════════════════════════════════════════════════════════
+  let _describeCatalog = null;   // cached { groups, total }
+  const describeBtn = $('wu-describe-btn');
+  if (describeBtn) describeBtn.addEventListener('click', openDescribeSheet);
+  function openDescribeSheet() {
+    const sheet = $('wu-describe-sheet');
+    if (!sheet) return;
+    sheet.style.display = 'flex';
+    requestAnimationFrame(() => sheet.classList.add('show'));
+    if (_describeCatalog) { _renderDescribeGroups(_describeCatalog); return; }
+    fetch('/api/sim-images?pw=' + encodeURIComponent(adminPw) + '&maxSim=5')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { $('wu-describe-groups').textContent = 'No se pudieron cargar las imágenes.'; return; }
+        _describeCatalog = data;
+        _renderDescribeGroups(data);
+      })
+      .catch((e) => { $('wu-describe-groups').textContent = 'Error: ' + e.message; });
+  }
+  function _closeDescribeSheet() {
+    const sheet = $('wu-describe-sheet');
+    if (!sheet) return;
+    sheet.classList.remove('show');
+    setTimeout(() => { try { sheet.style.display = 'none'; } catch (_) {} }, 200);
+  }
+  function _renderDescribeGroups(data, filter) {
+    const wrap = $('wu-describe-groups');
+    if (!wrap) return;
+    const q = (filter || '').toLowerCase();
+    wrap.innerHTML = '';
+    (data.groups || []).forEach((g) => {
+      const imgs = q ? g.images.filter((im) => (im.label || '').toLowerCase().includes(q)) : g.images;
+      if (!imgs.length) return;
+      const sec = document.createElement('div');
+      sec.style.cssText = 'margin-bottom:18px;';
+      sec.innerHTML = '<div style="font-weight:900;color:#ffe66a;margin:6px 0 8px;font-size:1.05rem;">' +
+        escapeHtml(g.sim) + ' <span style="color:rgba(255,255,255,0.5);font-size:0.85rem;font-weight:700;">' + imgs.length + ' imágenes</span></div>';
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;';
+      imgs.forEach((im) => {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.style.cssText = 'padding:0;border:2px solid rgba(255,255,255,0.14);border-radius:10px;overflow:hidden;background:#0d1224;cursor:pointer;touch-action:manipulation;aspect-ratio:1/1;';
+        cell.innerHTML = '<img src="' + im.url + '" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain;display:block;">';
+        cell.addEventListener('click', () => {
+          socket.emit('wu:image', { pin, password: adminPw, url: im.url });
+          // Local feedback: highlight the chosen cell.
+          grid.querySelectorAll('button').forEach((b) => { b.style.borderColor = 'rgba(255,255,255,0.14)'; });
+          cell.style.borderColor = '#5be8d1';
+          flashSaveFeedback(true, '🖼 Imagen en pantalla de todos');
+        });
+        grid.appendChild(cell);
+      });
+      sec.appendChild(grid);
+      wrap.appendChild(sec);
+    });
+    if (!wrap.children.length) wrap.innerHTML = '<p style="color:rgba(255,255,255,0.6);padding:18px;text-align:center;">Sin coincidencias.</p>';
+  }
+  (function bindDescribeControls() {
+    const back = $('wu-describe-back');
+    const close = $('wu-describe-close');
+    if (back) back.addEventListener('click', _closeDescribeSheet);
+    if (close) close.addEventListener('click', _closeDescribeSheet);
+    const search = $('wu-describe-search');
+    if (search) search.addEventListener('input', (e) => {
+      if (_describeCatalog) _renderDescribeGroups(_describeCatalog, e.target.value);
+    });
+    const hide = $('wu-describe-hide');
+    if (hide) hide.addEventListener('click', () => {
+      socket.emit('wu:image', { pin, password: adminPw, url: null });
+      flashSaveFeedback(true, '🚫 Imagen quitada de las pantallas');
+    });
+  })();
+  // Host's own screen mirrors the broadcast so the teacher sees what
+  // the kids see (helpful when she's on a laptop, kids on phones).
+  socket.on('wu:image', (d) => {
+    let ov = document.getElementById('wu-host-image-overlay');
+    if (d && d.url) {
+      if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'wu-host-image-overlay';
+        ov.style.cssText = 'position:fixed;right:14px;bottom:14px;z-index:50;width:160px;height:160px;border:3px solid #5be8d1;border-radius:12px;overflow:hidden;background:#0d1224;box-shadow:0 8px 24px rgba(0,0,0,0.5);';
+        ov.innerHTML = '<img style="width:100%;height:100%;object-fit:contain;display:block;"><div style="position:absolute;top:2px;left:6px;font-size:0.65rem;color:#5be8d1;font-weight:900;">EN PANTALLAS</div>';
+        document.body.appendChild(ov);
+      }
+      ov.querySelector('img').src = d.url;
+    } else if (ov) {
+      ov.remove();
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════════
   // 📤 PUSH-TO-STUDENTS — full-screen redesign 2026-06-04 (Fernando):
   //   "It's super disorganized, something like a box at the very
   //    bottom, not clean, not beautiful. Also I can group sentences
