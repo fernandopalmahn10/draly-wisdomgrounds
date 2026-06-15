@@ -2908,6 +2908,29 @@
     // every kid's phone the same way Gojo/Yugi/Freddy/Mario do.
     cr7:    '/assets/png-library/CR7%20TRANSPARENT.gif',
   };
+  // 🖼 DESCRIBE-THE-IMAGE — 2026-06-08 (Fernando). Teacher broadcasts a
+  // picture from the HSK sims; show it BIG and centered on the kid's
+  // phone so the class describes it together. Stays until the teacher
+  // sends a null url (clears it) or the game ends. Tap-through allowed
+  // so the kid can still use the builder underneath if delegated.
+  socket.on('wu:image', (d) => {
+    if (gameType !== 'warmup') return;
+    let ov = document.getElementById('wu-describe-image');
+    if (d && d.url) {
+      if (!ov) {
+        ov = document.createElement('div');
+        ov.id = 'wu-describe-image';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(8,12,22,0.96);padding:16px;';
+        ov.innerHTML =
+          '<div style="color:#5be8d1;font-weight:900;font-size:1.05rem;letter-spacing:0.05em;margin-bottom:10px;text-align:center;">🖼 Describe esta imagen en chino 🐉</div>' +
+          '<img style="max-width:94vw;max-height:78vh;object-fit:contain;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,0.6);">';
+        document.body.appendChild(ov);
+      }
+      ov.querySelector('img').src = d.url;
+    } else if (ov) {
+      ov.remove();
+    }
+  });
   socket.on('wu:anim', (d) => {
     if (gameType !== 'warmup' || !d || !d.id) return;
     let ov = document.getElementById('wu-anim-overlay-' + d.id);
