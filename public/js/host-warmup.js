@@ -241,7 +241,7 @@
     sheet.style.display = 'flex';
     requestAnimationFrame(() => sheet.classList.add('show'));
     if (_describeCatalog) { _renderDescribeGroups(_describeCatalog); return; }
-    fetch('/api/sim-images?pw=' + encodeURIComponent(adminPw) + '&maxSim=5')
+    fetch('/api/sim-images?pw=' + encodeURIComponent(adminPw) + '&maxSim=6')
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { $('wu-describe-groups').textContent = 'No se pudieron cargar las imágenes.'; return; }
