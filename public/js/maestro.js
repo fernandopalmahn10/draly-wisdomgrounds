@@ -234,7 +234,8 @@
                 + '?sim=' + encodeURIComponent(simId)
                 + '&access=' + encodeURIComponent(accessCode)
                 + '&pw=' + encodeURIComponent(ctx.pw);
-              window.open(monitorUrl, '_blank', 'noopener');
+              // 🆕 2026-06-16 (Fernando): SAME-TAB nav (mobile popup-block fix).
+              location.href = monitorUrl;
             } else {
               alert('Error: ' + ((res && res.error) || 'no se pudo enviar'));
             }
@@ -848,7 +849,14 @@
         card.querySelector('.m-reading-force').addEventListener('click', () => {
           const url = '/host-hsk.html?sim=' + encodeURIComponent(sim.id)
             + '&pw=' + encodeURIComponent(pw);
-          window.open(url, '_blank', 'noopener');
+          // 🆕 2026-06-16 (Fernando): SAME-TAB nav, not window.open.
+          // On mobile (Samsung Internet / Chrome Android on the S23)
+          // window.open('_blank') is popup-blocked — the teacher tapped
+          // "Abrir sala" and nothing happened. Same fix as Modo Maestro:
+          // navigate the current tab to the host monitor. The teacher
+          // lands on the room with the PIN; they can come back to
+          // /maestro any time.
+          location.href = url;
         });
         grid.appendChild(card);
       });
@@ -948,19 +956,21 @@
           .then((r) => r.json())
           .then((res) => {
             if (res && res.ok) {
-              // 🎓 Auto-pull the teacher into the LIVE MONITOR in a new
-              // tab. They asked for "complete control" — this is where
-              // they watch who's online, mid-exam, who finished, who
-              // closed the tab.
-              try {
-                const monitorUrl = '/host-hsk.html'
-                  + '?sim='    + encodeURIComponent(sim.id)
-                  + '&access=' + encodeURIComponent(accessCode)
-                  + '&pw='     + encodeURIComponent(pw);
-                window.open(monitorUrl, '_blank', 'noopener');
-              } catch (_) {}
-              alert('✅ Examen enviado a ' + codes.length + ' alumno(s). Entrarán automáticamente en ~20s.\n\nSe abrió el monitor en vivo en otra pestaña.');
+              const monitorUrl = '/host-hsk.html'
+                + '?sim='    + encodeURIComponent(sim.id)
+                + '&access=' + encodeURIComponent(accessCode)
+                + '&pw='     + encodeURIComponent(pw);
               close();
+              // 🆕 2026-06-16 (Fernando): SAME-TAB nav, not window.open.
+              // window.open inside this fetch().then() callback is NOT a
+              // user gesture → mobile browsers (S23 / Samsung Internet /
+              // Chrome Android) silently popup-block it, so "start examen"
+              // appeared to do nothing on the phone. Navigating the
+              // current tab to the live monitor always works. The
+              // broadcast already fired above, so the kids are being
+              // pulled in regardless.
+              alert('✅ Examen enviado a ' + codes.length + ' alumno(s). Entrarán en ~20s. Te llevo al monitor en vivo.');
+              location.href = monitorUrl;
             } else {
               alert('Error: ' + (res && res.error || 'desconocido'));
             }
