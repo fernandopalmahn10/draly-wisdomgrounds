@@ -663,6 +663,35 @@
     return m ? Number(m[1]) : null;
   }
 
+  // 🆕 2026-06-16 (Fernando): migrate a misplaced HSK attempt to the
+  // correct student code. Prompts for the target code, confirms, posts
+  // to the migrate endpoint, then re-renders the results list so the
+  // attempt now shows under the right student everywhere.
+  function _migrateHskResult(r) {
+    const label = (r.displayName || 'Anon') + ' (' + r.code + ') · ' + (r.simId || '').toUpperCase() + ' · ' + r.percent + '%';
+    const toCode = prompt(
+      'Migrar este resultado:\n  ' + label + '\n\n' +
+      'Escribe el CÓDIGO de estudiante correcto al que debe pertenecer ' +
+      'este examen (aparecerá en su Cuaderno, Mis Exámenes y sección de Papás):'
+    );
+    if (toCode === null) return;                 // cancelled
+    const clean = String(toCode).trim().toUpperCase();
+    if (!clean) return;
+    if (clean === r.code) { alert('Ese es el mismo código. No hay nada que migrar.'); return; }
+    fetch('/api/admin/hsk-result/migrate?pw=' + encodeURIComponent(pw), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fromCode: r.code, ts: r.ts, toCode: clean }),
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        if (!res || !res.ok) { alert('No se pudo migrar: ' + ((res && res.error) || 'desconocido')); return; }
+        alert('✅ Resultado migrado a ' + res.toName + ' (' + res.toCode + '). Ya aparece en su historial.');
+        renderHskView();                          // refresh the list
+      })
+      .catch((e) => alert('Error: ' + e.message));
+  }
+
   function renderHskView() {
     const view  = $('m-hsk-view');
     const title = $('m-hsk-title');
@@ -708,6 +737,11 @@
             view.innerHTML = '<p class="m-modal-sub" style="text-align:center;">Aún nadie ha terminado un examen HSK.</p>';
             return;
           }
+          const hint = document.createElement('p');
+          hint.className = 'm-modal-sub';
+          hint.style.cssText = 'text-align:center;margin-bottom:8px;';
+          hint.innerHTML = '👆 Toca un resultado para <strong>migrarlo</strong> a otro código (si el alumno lo hizo desde la cuenta equivocada).';
+          view.appendChild(hint);
           const list = document.createElement('div');
           list.className = 'm-hsk-results-list';
           rows.forEach((r) => {
@@ -715,9 +749,15 @@
             const cls = r.percent >= 90 ? 'is-great' : r.percent >= 60 ? 'is-ok' : 'is-low';
             const item = document.createElement('div');
             item.className = 'm-hsk-result-row ' + cls;
+            item.style.cursor = 'pointer';
+            item.title = 'Toca para migrar este resultado a otro código de estudiante';
+            // 🆕 2026-06-16 (Fernando): show BOTH the name AND the student
+            // code so the teacher can tell accounts apart, and tap to
+            // migrate a misplaced attempt to the correct student.
             item.innerHTML =
               '<div class="m-hsk-result-name">' +
-                '<strong>' + escapeHtml(r.displayName || r.code) + '</strong>' +
+                '<strong>' + escapeHtml(r.displayName || 'Anon') + '</strong>' +
+                '<span class="m-hsk-result-code" style="font-size:0.78rem;color:var(--ink-dim);font-weight:700;margin-left:6px;">🔑 ' + escapeHtml(r.code) + '</span>' +
                 '<span class="m-hsk-result-when">' + escapeHtml(when) + '</span>' +
               '</div>' +
               '<div class="m-hsk-result-sim">' + escapeHtml((r.simId || '').toUpperCase()) + '</div>' +
@@ -725,6 +765,7 @@
                 '<span class="m-hsk-result-pct">' + r.percent + '%</span>' +
                 '<span class="m-hsk-result-pts">' + r.score + ' / ' + r.total + '</span>' +
               '</div>';
+            item.addEventListener('click', () => _migrateHskResult(r));
             list.appendChild(item);
           });
           view.appendChild(list);
@@ -1790,6 +1831,21 @@
     $('m-gif-modal').classList.remove('hidden');
   }
   function _closeGifModal() { $('m-gif-modal').classList.add('hidden'); }
+  // 💾 One-click backup (super-admin). Streams data/*.json as one file.
+  const backupBtn = $('m-backup-btn');
+  if (backupBtn) backupBtn.addEventListener('click', () => {
+    // Simplest reliable download: navigate to the gated endpoint with the
+    // password in the query. The Content-Disposition header makes the
+    // browser save it instead of rendering.
+    const url = '/api/admin/backup?pw=' + encodeURIComponent(pw);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { try { a.remove(); } catch (_) {} }, 1000);
+  });
+
   $('m-gif-btn').addEventListener('click', _openGifModal);
   $('m-gif-close').addEventListener('click', _closeGifModal);
   $('m-gif-search').addEventListener('input', (e) => { _gifSearch = e.target.value || ''; _renderGifList(); });

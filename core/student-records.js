@@ -798,9 +798,41 @@ function getAssignmentSubmissions(code, limit) {
 // Initial load on require()
 load();
 
+// 🆕 2026-06-16 (Fernando): migrate a single HSK attempt from one
+// student to another. Used when a kid accidentally took an exam from
+// the wrong account — the teacher moves the result to the correct
+// student code so it shows up in their Cuaderno / Mis Exámenes / Papás
+// everywhere, exactly as if they'd taken it from that account.
+//   fromCode  — the (wrong) student the attempt currently lives on
+//   ts        — the attempt's timestamp (unique within that student)
+//   toCode    — the (correct) student to move it to (must already exist)
+// Returns { ok, error? }. Persists via scheduleSave.
+function migrateHskAttempt(fromCode, ts, toCode) {
+  const from = get(fromCode);
+  const to = get(toCode);
+  if (!from) return { ok: false, error: 'origen no encontrado' };
+  if (!to) return { ok: false, error: 'código destino no existe' };
+  if (from.code === to.code) return { ok: false, error: 'mismo estudiante' };
+  const target = Number(ts);
+  if (!Number.isFinite(target)) return { ok: false, error: 'ts inválido' };
+  if (!Array.isArray(from.hskResults)) from.hskResults = [];
+  const idx = from.hskResults.findIndex((r) => r.ts === target);
+  if (idx === -1) return { ok: false, error: 'intento no encontrado en origen' };
+  const attempt = from.hskResults.splice(idx, 1)[0];
+  if (!Array.isArray(to.hskResults)) to.hskResults = [];
+  // Tag it so we have an audit trail of where it came from.
+  attempt.migratedFrom = from.code;
+  attempt.migratedAt = Date.now();
+  to.hskResults.push(attempt);
+  scheduleSave();
+  return { ok: true, fromRemaining: from.hskResults.length, toTotal: to.hskResults.length };
+}
+
 module.exports = {
   getOrCreate,
   getOrProvisionForPin,
+  migrateHskAttempt,
+  save: scheduleSave,
   pushSentenceFromTeacher,
   get,
   deleteStudent,
