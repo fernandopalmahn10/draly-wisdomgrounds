@@ -145,6 +145,23 @@
   let _hskSocket = null;
   let _hskTestStarted = false;
 
+  // 🆕 2026-06-16 (Fernando): escape hatch on the waiting screen. A kid
+  // who finished a previous exam (or shouldn't be here) can always get
+  // back to their profile instead of being stuck "en la sala" forever.
+  // Disconnect the socket so the server drops them from the room, then
+  // navigate home with the auto-login hand-off (?code=&from=hsk-sim).
+  (function bindWaitingHome() {
+    const btn = document.getElementById('hsk-waiting-home');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      try { if (_hskSocket) _hskSocket.disconnect(); } catch (_) {}
+      let code = studentCode;
+      if (!code) { try { code = localStorage.getItem('dralyStudentCode') || ''; } catch (_) {} }
+      const qs = code ? '?code=' + encodeURIComponent(code) + '&from=hsk-sim' : '';
+      window.location.href = '/homework.html' + qs;
+    });
+  })();
+
   function tryEnter() {
     accessCode  = $('hsk-access').value.trim();
     studentCode = $('hsk-code').value.trim();

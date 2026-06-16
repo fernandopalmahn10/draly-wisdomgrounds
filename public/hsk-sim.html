@@ -30,6 +30,14 @@
       <h1>¡Estás en la sala!</h1>
       <p class="hsk-gate-sub">Esperando a tu maestra para empezar el examen…</p>
       <p id="hsk-waiting-pin" style="color:#5be8d1;font-weight:800;margin-top:10px;"></p>
+      <!-- 🆕 2026-06-16 (Fernando): ESCAPE HATCH. Kids who finished a
+           previous exam (or never got started) were stuck on this screen
+           with no way out — closing the tab left them "in the room"
+           forever. This button always sends them home to their profile.
+           Teacher can only re-pull them once they're back on their main
+           profile, which is exactly the desired control. -->
+      <button class="btn btn-gold btn-xl" id="hsk-waiting-home" type="button" style="width:100%;margin-top:18px;">🏠 Volver a mi perfil</button>
+      <p class="hsk-gate-sub" style="margin-top:8px;font-size:0.82rem;opacity:0.8;">Si ya terminaste o no deberías estar aquí, vuelve a tu perfil. Tu maestra te traerá de nuevo cuando sea tu turno.</p>
     </div>
   </div>
 
@@ -72,6 +80,6 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524n"></script>
-  <script src="/js/hsk-sim.js?v=20260608c"></script>
+  <script src="/js/hsk-sim.js?v=20260616b"></script>
 </body>
 </html>
