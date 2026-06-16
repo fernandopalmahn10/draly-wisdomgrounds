@@ -107,6 +107,47 @@ app.get('/api/_diag', (req, res) => {
 //   - A "persistence likely" heuristic (file exists + writable + recently modified)
 // Use this to confirm your Render Disk is mounted at the correct path
 // before relying on per-student history surviving across deploys.
+// 🆕 2026-06-16 (Fernando) — ONE-CLICK BACKUP (Option B). Streams a
+// JSON snapshot of every runtime data file (student records, presets,
+// teachers, HSK rooms, etc.) as a single downloadable file. The teacher
+// taps "Descargar respaldo" on /maestro → browser saves
+// draly-backup-<date>.json → drag into Google Drive. This is the manual
+// safety net until off-site auto-backup (Option C) lands. Admin-gated.
+//
+// Why JSON not tar: keeps it dependency-free + works from any browser
+// (no shell). Bundles every *.json under data/ plus a manifest. PII
+// stays admin-gated; never cached.
+app.get('/api/admin/backup', (req, res) => {
+  const fs = require('fs');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  // Only the super-admin can pull a full-platform backup (it contains
+  // EVERY classroom's data). Regular teachers are denied.
+  if (!(session.isSuperAdmin)) {
+    return res.status(403).json({ ok: false, error: 'solo super-admin puede descargar el respaldo completo' });
+  }
+  const DATA_DIR = path.join(__dirname, 'data');
+  const bundle = { _meta: { generatedAt: new Date().toISOString(), commit: process.env.RENDER_GIT_COMMIT || 'local' }, files: {} };
+  try {
+    const entries = fs.readdirSync(DATA_DIR, { withFileTypes: true });
+    entries.forEach((e) => {
+      if (!e.isFile() || !e.name.endsWith('.json')) return;   // JSON data files only
+      try {
+        bundle.files[e.name] = JSON.parse(fs.readFileSync(path.join(DATA_DIR, e.name), 'utf8'));
+      } catch (err) {
+        bundle.files[e.name] = { _readError: err.message };
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'no se pudo leer data/: ' + err.message });
+  }
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', 'attachment; filename="draly-backup-' + stamp + '.json"');
+  res.setHeader('Cache-Control', 'no-store');
+  res.send(JSON.stringify(bundle, null, 2));
+});
+
 app.get('/api/admin/disk-status', (req, res) => {
   const fs = require('fs');
   const givenPw = String(req.query.pw || req.query.password || '');
@@ -1763,8 +1804,34 @@ app.post('/api/admin/student/:code/hsk-attempt/delete', (req, res) => {
   rec.hskResults = (rec.hskResults || []).filter((r) => r.ts !== ts);
   const removed = before - rec.hskResults.length;
   if (!removed) return res.status(404).json({ ok: false, error: 'attempt not found' });
-  try { Students._save && Students._save(); } catch (_) {}
+  // 🆕 2026-06-16: was Students._save (never exported → silent no-op, so
+  // deletions didn't survive a restart). Use the real save.
+  try { Students.save(); } catch (_) {}
   res.json({ ok: true, removed, remaining: rec.hskResults.length });
+});
+
+// 🆕 2026-06-16 (Fernando): MIGRATE an HSK attempt to another student.
+// "Sometimes kids take a test from the wrong account — I should touch
+// the result and migrate it to the correct student code, and it appears
+// everywhere (Cuaderno, Mis Exámenes, Papás) as if taken from that
+// account." Both students must be in the teacher's classroom.
+//   POST /api/admin/hsk-result/migrate?pw=...
+//   body: { fromCode, ts, toCode }
+app.post('/api/admin/hsk-result/migrate', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const { fromCode, ts, toCode } = req.body || {};
+  const fromRec = Students.get(String(fromCode || '').trim());
+  const toRec = Students.get(String(toCode || '').trim().toUpperCase());
+  if (!fromRec) return res.status(404).json({ ok: false, error: 'origen no encontrado' });
+  if (!toRec) return res.status(404).json({ ok: false, error: 'el código destino no existe' });
+  // Permission: teacher must own BOTH students (super-admin owns all).
+  if (!_canSessionTouchStudent(session, fromRec) || !_canSessionTouchStudent(session, toRec)) {
+    return res.status(403).json({ ok: false, error: 'fuera de tu salón' });
+  }
+  const result = Students.migrateHskAttempt(fromRec.code, parseInt(ts, 10), toRec.code);
+  if (!result.ok) return res.status(400).json(result);
+  res.json({ ok: true, toName: toRec.displayName || toRec.code, toCode: toRec.code });
 });
 
 app.get('/api/homework/assignment/:id', (req, res) => {
@@ -7366,6 +7433,18 @@ io.on('connection', (socket) => {
       ok: true,
       words: savedWordCount,
       contributors: savedContributorCount,
+    });
+    // 🆕 2026-06-16 (Fernando): broadcast WHO saved to the activity
+    // ticker. Unlike add/remove (delegate-only via wuEmitActivity),
+    // a save can be triggered by the host too — so we emit directly
+    // here with a host fallback name/avatar.
+    const saver = g.players[socket.id];
+    io.to(pin).emit('wu:activity', {
+      name: saver ? saver.name : 'Maestra',
+      avatar: saver ? (saver.avatar || '🎓') : '👑',
+      action: 'save',
+      count: savedWordCount,
+      t: Date.now(),
     });
     // (sentence stays visible; contributors set reset by wuFlushSentence)
   });
