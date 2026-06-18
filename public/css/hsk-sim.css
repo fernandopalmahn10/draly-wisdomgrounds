@@ -307,6 +307,42 @@
 }
 .is-locked { pointer-events: none; }
 
+/* ── 🆕 2026-06-16 Reading Parts 3 & 4 — TEXT answer bank A-F ─────── */
+.hsk-bank {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  width: 100%;
+  margin-top: 14px;
+}
+@media (min-width: 640px) { .hsk-bank { grid-template-columns: repeat(3, 1fr); } }
+.hsk-bank-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 8px;
+  background: #fff;
+  border: 3px solid rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  cursor: pointer; touch-action: manipulation;
+  min-height: 76px;
+  transition: transform 0.08s, border-color 0.18s, background 0.18s;
+}
+.hsk-bank-chip:active { transform: scale(0.96); }
+.hsk-bank-letter {
+  font-weight: 900; color: #1a1a26; background: #ffd24a;
+  border-radius: 6px; padding: 1px 10px; font-size: 0.95rem;
+}
+.hsk-bank-hanzi { font-size: 1.45rem; color: #1a1a26; font-weight: 700; line-height: 1.1; }
+.hsk-bank-pinyin { font-size: 0.85rem; color: #555; }
+.hsk-bank-chip.is-selected {
+  border-color: #5be8d1;
+  background: rgba(91, 232, 209, 0.16);
+  box-shadow: 0 0 14px rgba(91, 232, 209, 0.4);
+}
+.hsk-bank-chip.is-correct.is-locked {
+  border-color: #5be88a;
+  background: rgba(91, 232, 138, 0.28);
+}
+
 /* ── Three-option text picker (L4) ───────────────────────────────── */
 .hsk-3opt-row {
   display: flex; flex-direction: column; gap: 8px; width: 100%;

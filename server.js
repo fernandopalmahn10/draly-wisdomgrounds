@@ -2009,7 +2009,7 @@ app.get('/api/hsk-sim/list', (req, res) => {
 app.get('/api/sim-images', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
-  const maxSim = req.query.maxSim ? parseInt(req.query.maxSim, 10) : 6;  // default: ready sims 1-6
+  const maxSim = req.query.maxSim ? parseInt(req.query.maxSim, 10) : 7;  // default: ready sims 1-6
   const refresh = req.query.refresh === '1';
   const cat = SimImages.getCatalog({ maxSim, refresh });
   res.json({ ok: true, groups: cat.groups, total: cat.total });

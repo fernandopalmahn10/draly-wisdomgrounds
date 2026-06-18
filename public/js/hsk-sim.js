@@ -78,6 +78,8 @@
       L4: sim.listening && sim.listening.part4 && sim.listening.part4.questions,
       R1: sim.reading   && sim.reading.part1   && sim.reading.part1.questions,
       R2: sim.reading   && sim.reading.part2   && sim.reading.part2.questions,
+      R3: sim.reading   && sim.reading.part3   && sim.reading.part3.questions,
+      R4: sim.reading   && sim.reading.part4   && sim.reading.part4.questions,
     };
     const q = (partMap[part] || []).find((x) => x.num === num);
     let label = null;
@@ -290,6 +292,18 @@
       kind: 'R2', q,
       gallery: sim.reading.part2.gallery,
     }));
+    // ── Reading Part 3 — sentence→response text-match (Sim 7+ only)
+    if (sim.reading.part3 && Array.isArray(sim.reading.part3.questions)) {
+      timeline.push({ kind: 'section', title: sim.reading.part3.title, instruction: sim.reading.part3.instruction });
+      timeline.push({ kind: 'R3-ex', q: sim.reading.part3.example, bank: sim.reading.part3.bank });
+      sim.reading.part3.questions.forEach((q) => timeline.push({ kind: 'R3', q, bank: sim.reading.part3.bank }));
+    }
+    // ── Reading Part 4 — gap-fill from word bank (Sim 7+ only)
+    if (sim.reading.part4 && Array.isArray(sim.reading.part4.questions)) {
+      timeline.push({ kind: 'section', title: sim.reading.part4.title, instruction: sim.reading.part4.instruction });
+      timeline.push({ kind: 'R4-ex', q: sim.reading.part4.example, bank: sim.reading.part4.bank });
+      sim.reading.part4.questions.forEach((q) => timeline.push({ kind: 'R4', q, bank: sim.reading.part4.bank }));
+    }
   }
 
   function renderCurrent() {
@@ -319,6 +333,8 @@
     else if (step.kind === 'L4-ex' || step.kind === 'L4') renderListening4(step);
     else if (step.kind === 'R1-ex' || step.kind === 'R1') renderReading1(step);
     else if (step.kind === 'R2-ex' || step.kind === 'R2') renderReading2(step);
+    else if (step.kind === 'R3-ex' || step.kind === 'R3') renderReadingBank(step, 'R3');
+    else if (step.kind === 'R4-ex' || step.kind === 'R4') renderReadingBank(step, 'R4');
 
     updateProgress();
   }
@@ -348,6 +364,8 @@
     if (kind === 'L4') return 'L4-' + num;
     if (kind === 'R1') return 'R1-' + num;
     if (kind === 'R2') return 'R2-' + num;
+    if (kind === 'R3') return 'R3-' + num;
+    if (kind === 'R4') return 'R4-' + num;
     return null;
   }
 
@@ -547,6 +565,46 @@
         btn.addEventListener('click', () => {
           answers[qid] = btn.dataset.pick;
           wrap.querySelectorAll('.hsk-gallery-tile').forEach((b) => b.classList.remove('is-selected'));
+          btn.classList.add('is-selected');
+          updateProgress();
+        });
+        if (answers[qid] === btn.dataset.pick) btn.classList.add('is-selected');
+      });
+    }
+  }
+
+  // 🆕 2026-06-16 — Reading parts 3 & 4 share one renderer: a sentence
+  // (hanzi + pinyin) on top, then a TEXT answer bank A-F as tappable
+  // chips. Part 3 = match question→response; Part 4 = fill the ( ).
+  // Both store the picked letter under R3-/R4-<num>. The same shared
+  // bank shows on every question of the part (like R2's gallery).
+  function renderReadingBank(step, partKey) {
+    const isEx = step.kind === (partKey + '-ex');
+    const q = step.q;
+    const wrap = $('hsk-question-wrap');
+    const qid = !isEx ? partKey + '-' + q.num : null;
+    const heading = partKey === 'R3' ? 'Elige la respuesta' : 'Completa el espacio ( )';
+    wrap.innerHTML = `
+      <div class="hsk-q-card">
+        <div class="hsk-q-num">${isEx ? 'Ejemplo' : 'Pregunta ' + q.num} — ${heading}</div>
+        <div class="hsk-r2-sentence">
+          <div class="hsk-r2-hanzi">${escapeHtml(q.hanzi || '')}</div>
+          <div class="hsk-r2-pinyin">${escapeHtml(q.pinyin || '')}</div>
+        </div>
+        <div class="hsk-bank">
+          ${(step.bank || []).map((b) => `
+            <button class="hsk-bank-chip ${isEx && q.answer === b.letter ? 'is-correct is-locked' : ''}" type="button" data-pick="${b.letter}">
+              <span class="hsk-bank-letter">${b.letter}</span>
+              <span class="hsk-bank-hanzi" lang="zh">${escapeHtml(b.hanzi || '')}</span>
+              <span class="hsk-bank-pinyin">${escapeHtml(b.pinyin || '')}</span>
+            </button>`).join('')}
+        </div>
+      </div>`;
+    if (!isEx) {
+      wrap.querySelectorAll('.hsk-bank-chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          answers[qid] = btn.dataset.pick;
+          wrap.querySelectorAll('.hsk-bank-chip').forEach((b) => b.classList.remove('is-selected'));
           btn.classList.add('is-selected');
           updateProgress();
         });
