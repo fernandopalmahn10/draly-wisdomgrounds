@@ -1946,6 +1946,14 @@
     if ($('m-dash').classList.contains('hidden')) return;
     if (!$('m-detail').classList.contains('hidden')) return;
     if (!pw) return;
+    // 🆕 2026-06-16 (Fernando bug): don't rebuild the roster while the
+    // teacher is actively typing in the search box — the 15s refresh was
+    // wiping the input + filter mid-search ("I type Sophia, then get
+    // kicked back to all students"). If the search input has focus, skip
+    // this tick entirely. (The persisted term below covers refreshes
+    // that DO happen while a filter is applied but unfocused.)
+    const active = document.activeElement;
+    if (active && active.classList && active.classList.contains('m-roster-search-input')) return;
     fetchRoster();
   }, 15000);
   $('m-detail-back').addEventListener('click', () => {
@@ -2056,6 +2064,8 @@
       });
   });
 
+  // 🆕 2026-06-16 — persisted roster search term (survives auto-refresh).
+  let _rosterSearch = '';
   function renderRoster(students, self) {
     // Surface "who am I" line and (if super admin) the Teachers tab.
     if (self) {
@@ -2190,22 +2200,33 @@
     // contain the query (tone-stripped lowercase substring match).
     const searchInput = searchBar.querySelector('.m-roster-search-input');
     const countEl = searchBar.querySelector('#m-roster-search-count');
-    if (searchInput) {
-      searchInput.addEventListener('input', () => {
-        const q = searchInput.value.trim().toLowerCase()
-          .normalize('NFD').replace(/[̀-ͯ]/g, '');
-        let visible = 0;
-        roster.querySelectorAll('.m-row').forEach((r) => {
-          const match = !q || (r.dataset.search || '').includes(q);
-          r.style.display = match ? '' : 'none';
-          if (match) visible++;
-        });
-        if (countEl) {
-          countEl.textContent = q
-            ? (visible + ' de ' + students.length + ' coinciden')
-            : (students.length + ' alumno' + (students.length === 1 ? '' : 's'));
-        }
+    // Apply the current term to the visible rows + update the count.
+    function applyRosterFilter() {
+      const q = (_rosterSearch || '').trim().toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '');
+      let visible = 0;
+      roster.querySelectorAll('.m-row').forEach((r) => {
+        const match = !q || (r.dataset.search || '').includes(q);
+        r.style.display = match ? '' : 'none';
+        if (match) visible++;
       });
+      if (countEl) {
+        countEl.textContent = q
+          ? (visible + ' de ' + students.length + ' coinciden')
+          : (students.length + ' alumno' + (students.length === 1 ? '' : 's'));
+      }
+    }
+    if (searchInput) {
+      // 🆕 2026-06-16 — persist the search term in module state so the
+      // 15s auto-refresh (which rebuilds this whole list) doesn't lose
+      // what the teacher typed. On every render we restore the value +
+      // re-apply the filter.
+      searchInput.value = _rosterSearch || '';
+      searchInput.addEventListener('input', () => {
+        _rosterSearch = searchInput.value;
+        applyRosterFilter();
+      });
+      if (_rosterSearch) applyRosterFilter();
     }
   }
 
