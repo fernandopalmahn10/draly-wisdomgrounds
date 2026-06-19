@@ -765,7 +765,7 @@ const SIMULATIONS = {
       id: 'hsk1-sim5',
       title: 'HSK1 · Simulación 5',
       level: 'hsk1',
-      totalQuestions: 30,
+      totalQuestions: 40,   // 🆕 reading parts 3 & 4 backfilled 2026-06-16
       pointsPerQuestion: 10,
       listening: {
         part1: {
@@ -927,6 +927,47 @@ const SIMULATIONS = {
             { num: 28, hanzi: '小猫在哪儿？看见了吗？', pinyin: "Xiǎo māo zài nǎ'er? Kànjiànle ma?",    answer: 'C' },
             { num: 29, hanzi: '你想吃哪一个？',         pinyin: 'Nǐ xiǎng chī nǎ yīgè?',               answer: 'D' },
             { num: 30, hanzi: '他是医生，在医院工作',   pinyin: 'Tā shì yīshēng, zài yīyuàn gōngzuò',  answer: 'F' },
+          ],
+        },
+        // 🆕 2026-06-16 — Sim 5 Reading Parts 3 & 4 (backfilled).
+        part3: {
+          title: 'Parte 7 (Lectura 3) · Pregunta ↔ Respuesta',
+          instruction: 'Lee cada pregunta y elige la mejor respuesta del banco A-F.',
+          bank: [
+            { letter: 'A', hanzi: '没',       pinyin: 'méi' },
+            { letter: 'B', hanzi: '上个月',   pinyin: 'shàng gè yuè' },
+            { letter: 'C', hanzi: '我',       pinyin: 'wǒ' },
+            { letter: 'D', hanzi: '北京大学', pinyin: 'Běijīng dàxué' },
+            { letter: 'E', hanzi: '中午有雨', pinyin: 'zhōngwǔ yǒu yǔ' },
+            { letter: 'F', hanzi: '好的，谢谢！', pinyin: 'hǎo de, xièxie!' },
+          ],
+          example: { num: 'EJ', hanzi: '你喝水吗？', pinyin: 'Nǐ hē shuǐ ma?', answer: 'F' },
+          questions: [
+            { num: 31, hanzi: '他现在在哪儿读书？',   pinyin: "Tā xiànzài zài nǎ'er dúshū?",        answer: 'D' },
+            { num: 32, hanzi: '你看见张小姐了吗？',   pinyin: 'Nǐ kànjiàn Zhāng xiǎojiě le ma?',    answer: 'A' },
+            { num: 33, hanzi: '你们是什么时候认识的？', pinyin: 'Nǐmen shì shénme shíhòu rènshi de?', answer: 'B' },
+            { num: 34, hanzi: '你们谁会开车？',       pinyin: 'Nǐmen shéi huì kāichē?',             answer: 'C' },
+            { num: 35, hanzi: '明天天气怎么样？',     pinyin: 'Míngtiān tiānqì zěnmeyàng?',         answer: 'E' },
+          ],
+        },
+        part4: {
+          title: 'Parte 8 (Lectura 4) · Completa la oración',
+          instruction: 'Lee cada oración y elige la palabra del banco A-F que completa el ( ).',
+          bank: [
+            { letter: 'A', hanzi: '买',     pinyin: 'mǎi' },
+            { letter: 'B', hanzi: '多',     pinyin: 'duō' },
+            { letter: 'C', hanzi: '对不起', pinyin: 'duìbùqǐ' },
+            { letter: 'D', hanzi: '名字',   pinyin: 'míngzi' },
+            { letter: 'E', hanzi: '明天',   pinyin: 'míngtiān' },
+            { letter: 'F', hanzi: '商店',   pinyin: 'shāngdiàn' },
+          ],
+          example: { num: 'EJ', hanzi: '你叫什么 ( )？', pinyin: 'Nǐ jiào shénme ( )?', answer: 'D' },
+          questions: [
+            { num: 36, hanzi: '现在有很（ ）人来中国学汉语',    pinyin: 'Xiànzài yǒu hěn ( ) rén lái Zhōngguó xué hànyǔ', answer: 'B' },
+            { num: 37, hanzi: '（ ）你说什么？我没听见',        pinyin: '( ) nǐ shuō shénme? Wǒ méi tīngjiàn',            answer: 'C' },
+            { num: 38, hanzi: '再见，（ ）学校见',              pinyin: 'Zàijiàn, ( ) xuéxiào jiàn',                      answer: 'E' },
+            { num: 39, hanzi: '你回来的时候（ ）些水果',        pinyin: 'Nǐ huílái de shíhòu ( ) xiē shuǐguǒ',            answer: 'A' },
+            { num: 40, hanzi: '你现在在哪儿？我在（ ），10分钟后回去', pinyin: "Nǐ xiànzài zài nǎ'er? Wǒ zài ( ), 10 fēnzhōng hòu huíqù", answer: 'F' },
           ],
         },
       },
