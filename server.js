@@ -188,6 +188,10 @@ function _adminNoteFail(ip) {
   const arr = (_adminFailHits.get(ip) || []).filter((t) => now - t < (10 * 60 * 1000));
   arr.push(now);
   _adminFailHits.set(ip, arr);
+  // 📓 Phase 2: security log — surfaces in Render's log stream so a brute-
+  // force shows up as a burst of these. The 10th fail flips the turnstile.
+  console.warn('[security] admin-auth FAIL ip=' + ip + ' fails=' + arr.length + '/10'
+    + (arr.length === 10 ? ' → IP LOCKED for 10 min' : ''));
   if (_adminFailHits.size > 5000) {
     for (const [k, v] of _adminFailHits) {
       if (!v.length || now - v[v.length - 1] > (10 * 60 * 1000)) _adminFailHits.delete(k);
@@ -1516,7 +1520,7 @@ function _enterRateLimit(req) {
 }
 app.post('/api/homework/enter', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  if (!_enterRateLimit(req)) return res.status(429).json({ ok: false, error: 'demasiados intentos, espera un momento' });
+  if (!_enterRateLimit(req)) { console.warn('[security] homework/enter flood ip=' + _clientIp(req)); return res.status(429).json({ ok: false, error: 'demasiados intentos, espera un momento' }); }
   try {
     const { studentCode, displayName, accessCode, meta } = req.body || {};
     const rec = Students.getOrCreate(studentCode, displayName);
@@ -1551,6 +1555,10 @@ app.post('/api/homework/enter', (req, res) => {
 app.post('/api/homework/avatar', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, avatar } = req.body || {};
+  // 🔒 Phase 2: bind the write to ownership — can't edit a kid in another
+  // classroom even with a valid access code. (rec null → setter 400s below.)
+  const rec = Students.get(studentCode);
+  if (rec && !_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const ok = Students.setAvatar(studentCode, avatar);
   if (!ok) return res.status(400).json({ ok: false, error: 'avatar inválido o estudiante no encontrado' });
   res.json({ ok: true });
@@ -1559,6 +1567,8 @@ app.post('/api/homework/avatar', (req, res) => {
 app.post('/api/homework/rename', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, displayName } = req.body || {};
+  const rec0 = Students.get(studentCode);   // 🔒 Phase 2 ownership bind
+  if (rec0 && !_hwOwnsStudent(req, rec0)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const ok = Students.setDisplayName(studentCode, displayName);
   if (!ok) return res.status(400).json({ ok: false, error: 'nombre inválido o estudiante no encontrado' });
   const rec = Students.get(studentCode);
@@ -1569,6 +1579,8 @@ app.post('/api/homework/reset', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, assignmentId } = req.body || {};
   if (!assignmentId) return res.status(400).json({ ok: false, error: 'assignmentId requerido' });
+  const rec = Students.get(studentCode);   // 🔒 Phase 2 ownership bind
+  if (rec && !_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const removed = Students.resetAssignmentSubmissions(studentCode, assignmentId);
   res.json({ ok: true, removed });
 });
@@ -3318,6 +3330,7 @@ app.get('/api/tts', async (req, res) => {
   // loop of unique strings can't run up the Google bill. Returns 429 (and a
   // friendly message) past 20 fresh syntheses/min/IP — well above real use.
   if (!_ttsSynthRateLimit(req)) {
+    console.warn('[security] tts synth rate-limit hit ip=' + _clientIp(req) + ' (possible denial-of-wallet probe)');
     return res.status(429).json({ ok: false, error: 'demasiadas voces nuevas, espera un momento' });
   }
   // Cache miss → synthesize via Google Cloud TTS
