@@ -966,6 +966,12 @@ app.get('/api/admin/students', (req, res) => {
     const codes = new Set((session.teacher.accessCodes || []));
     students = students.filter((s) => s.classroomCode && codes.has(s.classroomCode));
   }
+  // 🆕 Attach the EFFECTIVE classroom (teacher filing, else access-code match)
+  // so the roster + push picker can show + group by class.
+  students = students.map((s) => {
+    const c = _effectiveClassroom(s);
+    return Object.assign({}, s, { classroomId: c ? c.id : null, classroomName: c ? c.name : null });
+  });
   res.json({
     ok: true,
     students,
@@ -977,53 +983,67 @@ app.get('/api/admin/students', (req, res) => {
     } : { isSuperAdmin: true, legacy: true },
   });
 });
-// 🆕 2026-06-21 (Fernando) — CLASSROOM SYSTEM.
-// List every classroom (the access codes kids join with) with its friendly
-// name + how many students / how many online. Super-admin sees all; a regular
-// teacher sees only their own accessCodes. Powers the roster grouping and the
-// "send to whole classroom" picker.
+// 🆕 2026-06-21 (Fernando) — CLASSROOM SYSTEM (teacher-managed groups).
+// A student's EFFECTIVE classroom is the one the teacher filed them into
+// (classroomId), or — if unfiled — the classroom whose access code matches
+// the login code they joined with. Manual filing always wins; classroomCode
+// (the login code) is never reused, so parent-privacy stays intact.
+function _effectiveClassroom(s) {
+  if (s.classroomId) { const c = Classrooms.get(s.classroomId); if (c) return c; }
+  if (s.classroomCode) { const c = Classrooms.findByCode(s.classroomCode); if (c) return c; }
+  return null;
+}
+// List every classroom with live student + online counts.
 app.get('/api/admin/classrooms', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
   const now = Date.now();
   const ONLINE = 60 * 1000;
-  const map = {};
+  const counts = {};
   Students.listAll().forEach((s) => {
-    const cc = s.classroomCode;
-    if (!cc) return;
-    if (!map[cc]) map[cc] = { code: cc, name: Classrooms.getName(cc), studentCount: 0, onlineCount: 0 };
-    map[cc].studentCount++;
-    if (s.lastSeen && (now - s.lastSeen) <= ONLINE) map[cc].onlineCount++;
+    const c = _effectiveClassroom(s);
+    if (!c) return;
+    if (!counts[c.id]) counts[c.id] = { students: 0, online: 0 };
+    counts[c.id].students++;
+    if (s.lastSeen && (now - s.lastSeen) <= ONLINE) counts[c.id].online++;
   });
-  // Surface the teacher's own classroom codes even with 0 students yet, so a
-  // brand-new class can be named before anyone joins.
-  const own = session.teacher ? (session.teacher.accessCodes || []) : [];
-  own.forEach((c0) => {
-    const cc = String(c0).trim().toUpperCase();
-    if (cc && !map[cc]) map[cc] = { code: cc, name: Classrooms.getName(cc), studentCount: 0, onlineCount: 0 };
-  });
-  let list = Object.values(map);
+  let list = Classrooms.list().map((c) => ({
+    id: c.id, name: c.name, code: c.code || null,
+    studentCount: (counts[c.id] || {}).students || 0,
+    onlineCount: (counts[c.id] || {}).online || 0,
+  }));
+  // Regular teachers only see classrooms tied to one of their access codes
+  // (or not yet tied to any). Super-admin sees all.
   if (!session.isSuperAdmin && session.teacher) {
-    const codes = new Set((session.teacher.accessCodes || []).map((c) => String(c).trim().toUpperCase()));
-    list = list.filter((c) => codes.has(c.code));
+    const codes = new Set((session.teacher.accessCodes || []).map((x) => String(x).trim().toUpperCase()));
+    list = list.filter((c) => !c.code || codes.has(c.code));
   }
-  list.sort((a, b) => (b.studentCount - a.studentCount) || a.code.localeCompare(b.code));
   res.json({ ok: true, classrooms: list });
 });
-// Give a classroom code a friendly name (or clear it with an empty name).
-app.post('/api/admin/classroom/name', (req, res) => {
+// Create a classroom. Body: { name, code? }.
+app.post('/api/admin/classrooms', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
-  const cc = String((req.body || {}).code || '').trim().toUpperCase();
-  if (!cc) return res.status(400).json({ ok: false, error: 'code required' });
-  if (!session.isSuperAdmin && session.teacher) {
-    const codes = new Set((session.teacher.accessCodes || []).map((c) => String(c).trim().toUpperCase()));
-    if (!codes.has(cc)) return res.status(403).json({ ok: false, error: 'not your classroom' });
-  }
-  Classrooms.setName(cc, (req.body || {}).name);
-  res.json({ ok: true, code: cc, name: Classrooms.getName(cc) });
+  const { name, code } = req.body || {};
+  const c = Classrooms.create({ name, code });
+  res.json({ ok: true, classroom: c });
 });
-// Move a student into a different classroom (reassign / categorize).
+// Rename / re-code a classroom. Body: { name?, code? }.
+app.post('/api/admin/classroom/:id', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const { name, code } = req.body || {};
+  const c = Classrooms.update(req.params.id, { name, code });
+  if (!c) return res.status(404).json({ ok: false, error: 'classroom not found' });
+  res.json({ ok: true, classroom: c });
+});
+// Delete a classroom. Students filed into it fall back to access-code grouping.
+app.delete('/api/admin/classroom/:id', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  res.json({ ok: Classrooms.remove(req.params.id) });
+});
+// File a student into a classroom (or '' to unfile). Body: { classroomId }.
 app.post('/api/admin/student/:code/classroom', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
@@ -1032,15 +1052,13 @@ app.post('/api/admin/student/:code/classroom', (req, res) => {
   if (!_canSessionTouchStudent(session, rec)) {
     return res.status(403).json({ ok: false, error: 'not in your classroom' });
   }
-  const target = String((req.body || {}).classroomCode || '').trim().toUpperCase();
-  if (!target) return res.status(400).json({ ok: false, error: 'classroomCode required' });
-  // A regular teacher can only move a kid INTO one of their own classrooms.
-  if (!session.isSuperAdmin && session.teacher) {
-    const codes = new Set((session.teacher.accessCodes || []).map((c) => String(c).trim().toUpperCase()));
-    if (!codes.has(target)) return res.status(403).json({ ok: false, error: 'target not your classroom' });
+  const classroomId = String((req.body || {}).classroomId || '').trim();
+  if (classroomId && !Classrooms.get(classroomId)) {
+    return res.status(400).json({ ok: false, error: 'classroom not found' });
   }
-  Students.setClassroomCode(rec.code, target);
-  res.json({ ok: true, code: rec.code, classroomCode: target, classroomName: Classrooms.getName(target) });
+  Students.setClassroomId(rec.code, classroomId);
+  const c = classroomId ? Classrooms.get(classroomId) : null;
+  res.json({ ok: true, code: rec.code, classroomId: classroomId || null, classroomName: c ? c.name : null });
 });
 
 app.get('/api/admin/students/:code', (req, res) => {
@@ -1062,6 +1080,8 @@ app.get('/api/admin/students/:code', (req, res) => {
     displayName: rec.displayName || 'Anon',
     avatar:    rec.avatar || null,
     classroomCode: rec.classroomCode || null,
+    classroomId: (_effectiveClassroom(rec) || {}).id || null,
+    classroomName: (_effectiveClassroom(rec) || {}).name || null,
     country:   rec.country || null,
     device:    rec.device || null,
     locale:    rec.locale || null,

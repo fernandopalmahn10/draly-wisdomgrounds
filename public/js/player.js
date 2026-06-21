@@ -8268,18 +8268,19 @@
   });
 
   socket.on('host-left', () => {
-    // After Modo Maestro (warmup), send kids straight to THEIR portal instead
-    // of the public login — they shouldn't have to log in again. We pass their
-    // student code so /homework can pre-fill (and auto-enter if their access
-    // code is remembered on this device). Other game types still go to inicio.
-    if (gameType === 'warmup' && myStudentCode) {
-      showReconnectOverlay('Clase terminada. Llevándote a tu portal…');
+    // 🆕 2026-06-21 (Fernando) — "if my sala dies, ALWAYS get them home."
+    // ANY game type now sends a kid with a known code straight back to their
+    // homework profile (a clean place I can re-grab them from), instead of
+    // stranding them on a dead room. Only kids with no code fall back to the
+    // public login. This is the auto-version of the 🏠 send-home button.
+    if (myStudentCode) {
+      showReconnectOverlay('Sala terminada. Llevándote a tu perfil…');
       setTimeout(() => {
         location.href = '/homework?code=' + encodeURIComponent(myStudentCode) + '&from=maestro';
-      }, 2600);
+      }, 2200);
       return;
     }
-    // Gentler than an alert — show a friendly card so kids don't panic
+    // No student code (rare) — gentle card, then the public inicio.
     showReconnectOverlay('El anfitrión terminó la ronda. Volviendo al inicio…');
     setTimeout(() => { location.href = '/'; }, 3500);
   });

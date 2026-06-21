@@ -190,6 +190,9 @@ function getOrCreate(code, displayName) {
     avatar: null,                 // chosen on first homework-portal entry
     classroomCode: null,          // assigned when they enter a teacher's
                                   // access code (set via setClassroomCode)
+    classroomId: null,            // 🆕 teacher-managed classroom (classrooms.js).
+                                  // Set ONLY by the teacher; login never touches
+                                  // it. null = grouped by access code by default.
     firstSeen: Date.now(),
     lastSeen: Date.now(),
     sentencesBuilt: [],
@@ -212,6 +215,16 @@ function setClassroomCode(code, classroomCode) {
     rec.lastSeen = Date.now();
     scheduleSave();
   }
+  return true;
+}
+// 🆕 2026-06-21 (Fernando) — teacher-managed classroom. Sets the student's
+// classroomId (a classrooms.js id, or '' to unassign). Unlike setClassroomCode
+// this is NEVER touched by login, so the teacher's filing sticks.
+function setClassroomId(code, classroomId) {
+  const rec = get(code);
+  if (!rec) return false;
+  rec.classroomId = classroomId ? String(classroomId).trim() : null;
+  scheduleSave();
   return true;
 }
 // Persist the chosen avatar for a student. Avatars are now full-body
@@ -737,6 +750,7 @@ function listAll() {
       displayName: r.displayName || 'Anon',
       avatar: r.avatar || null,
       classroomCode: r.classroomCode || null,
+      classroomId: r.classroomId || null,
       country: r.country || null,
       device: r.device || null,
       locale: r.locale || null,
@@ -887,6 +901,7 @@ module.exports = {
   markAllMessagesRead,
   expirePinForceMessages,
   consumeGoHome,
+  setClassroomId,
   broadcastToClassroom,
   AVATAR_OPTIONS,
 };

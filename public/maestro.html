@@ -46,6 +46,7 @@
         <button class="btn btn-gold btn-sm" id="m-hsk-results-btn" title="Quiénes terminaron + sus notas HSK">🏅 Resultados HSK</button>
         <button class="btn btn-gold btn-sm" id="m-custom-btn" title="Mandar tareas personalizadas a alumnos específicos">🎯 Tarea especial</button>
         <button class="btn btn-jade btn-sm hidden" id="m-emirati-btn" title="Tu gateway personal de idiomas">🌐 Mi Gateway · العربية</button>
+        <button class="btn btn-jade btn-sm" id="m-classroom-btn" title="Crear, renombrar o eliminar aulas y asignar alumnos">🎓 Aulas</button>
         <button class="btn btn-gold btn-sm" id="m-backup-btn" title="Descargar un respaldo de todos los datos (alumnos, notas, exámenes). Súper-admin.">💾 Respaldo</button>
         <button class="btn btn-ghost btn-sm" id="m-refresh">🔄 Refrescar</button>
         <button class="btn btn-ghost btn-sm" id="m-logout">Salir</button>
@@ -205,6 +206,22 @@
         </div>
       </div>
 
+      <!-- 🎓 CLASSROOM MANAGER — create / rename / delete classrooms -->
+      <div id="m-classroom-modal" class="m-modal hidden">
+        <div class="m-modal-card">
+          <button class="m-modal-close" id="m-classroom-close" type="button" aria-label="Cerrar">✕</button>
+          <h2>🎓 Mis Aulas</h2>
+          <p class="m-modal-sub">Crea aulas con nombre, asigna alumnos en el Cuaderno y manda oraciones a un aula completa.</p>
+          <div id="m-classroom-list" class="m-classroom-list"></div>
+          <div class="m-classroom-new">
+            <input class="input" id="m-classroom-new-name" type="text" placeholder="Nombre del aula (ej. HSK1 Sábado AM)" maxlength="40" autocomplete="off">
+            <input class="input" id="m-classroom-new-code" type="text" placeholder="Código de acceso (opcional, ej. 1001)" maxlength="12" autocomplete="off" style="max-width:220px;">
+            <button class="btn btn-jade btn-sm" id="m-classroom-add" type="button">➕ Crear aula</button>
+          </div>
+          <p class="m-modal-msg" id="m-classroom-msg" style="text-align:center;margin-top:8px;min-height:1.2em;"></p>
+        </div>
+      </div>
+
       <!-- 🎯 CUSTOM ASSIGNMENT MODAL — author + send a personalized tarea -->
       <div id="m-custom-modal" class="m-modal hidden">
         <div class="m-modal-card m-custom-card">
@@ -334,6 +351,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260608e"></script>
-  <script src="/js/maestro.js?v=20260621a"></script>
+  <script src="/js/maestro.js?v=20260621b"></script>
 </body>
 </html>

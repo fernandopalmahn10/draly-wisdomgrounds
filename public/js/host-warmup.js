@@ -524,6 +524,7 @@
                 '<button class="btn btn-ghost btn-sm" id="wu-push-none" type="button">⬜ Ninguno</button>' +
                 '<button class="btn btn-ghost btn-sm" id="wu-push-online" type="button">🟢 Solo en línea</button>' +
               '</div>' +
+              '<div class="wu-push-classrooms" id="wu-push-classrooms" style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0;"></div>' +
               '<div class="wu-push-students" id="wu-push-list"></div>' +
             '</div>' +
 
@@ -582,6 +583,35 @@
           });
         };
         renderRows();
+
+        // 🆕 2026-06-21 (Fernando) — CLASSROOM CHIPS. Tap an aula to select
+        // EVERY student in it at once, so a sentence/package goes to a whole
+        // class instead of ticking codes one by one. Uses the effective
+        // classroom the server attached to each roster entry.
+        (function _buildClassroomChips() {
+          const box = overlay.querySelector('#wu-push-classrooms');
+          if (!box) return;
+          const seen = new Map();   // classroomId -> { id, name, count }
+          students.forEach((s) => {
+            if (!s.classroomId) return;
+            if (!seen.has(s.classroomId)) seen.set(s.classroomId, { id: s.classroomId, name: s.classroomName || 'Aula', count: 0 });
+            seen.get(s.classroomId).count++;
+          });
+          if (!seen.size) return;
+          box.innerHTML = '<span style="font-size:0.78rem;opacity:0.7;align-self:center;">🎓 Aula:</span>';
+          Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name)).forEach((c) => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'btn btn-ghost btn-sm';
+            chip.textContent = c.name + ' (' + c.count + ')';
+            chip.title = 'Seleccionar a todos en ' + c.name;
+            chip.addEventListener('click', () => {
+              students.forEach((s) => { if (s.classroomId === c.id) checkedCodes.add(s.code); });
+              renderRows();
+            });
+            box.appendChild(chip);
+          });
+        })();
 
         // ───────── 8-EXP pack rendering ─────────
         let expPacks = _loadExpPacks();
