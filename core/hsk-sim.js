@@ -19,7 +19,7 @@ const SIMULATIONS = {
     id: 'hsk1-sim1',
     title: 'HSK1 · Simulación 1',
     level: 'hsk1',
-    totalQuestions: 30,
+    totalQuestions: 40,   // 🆕 reading parts 3 & 4 added 2026-06-21 — Sim 1 complete
     pointsPerQuestion: 10,    // 30 × 10 = 300 max total. We'll normalize to /100 in UI.
 
     // ─── LISTENING SECTION (Q1-20) ───────────────────────────────────────
@@ -207,10 +207,47 @@ const SIMULATIONS = {
         ],
       },
 
-      // PARTS 3 & 4 — not yet defined by the user. Empty placeholders so
-      // the player UI can hide them gracefully until provided.
-      part3: null,
-      part4: null,
+      // 🆕 reading parts 3 & 4 added 2026-06-21 (Fernando — Sim 1 now complete)
+      part3: {
+        title: 'Parte 7 (Lectura 3) · Pregunta ↔ Respuesta',
+        instruction: 'Lee cada pregunta y elige la mejor respuesta del banco A-F.',
+        bank: [
+          { letter: 'A', hanzi: '我妈',   pinyin: 'wǒ mā' },
+          { letter: 'B', hanzi: '学校',   pinyin: 'xuéxiào' },
+          { letter: 'C', hanzi: '没有',   pinyin: 'méiyǒu' },
+          { letter: 'D', hanzi: '星期六', pinyin: 'xīngqīliù' },
+          { letter: 'E', hanzi: '太小了', pinyin: 'tài xiǎo le' },
+          { letter: 'F', hanzi: '好的，谢谢！', pinyin: 'Hǎo de, xièxiè!' },
+        ],
+        example: { num: 'EJ', hanzi: '你喝水吗？', pinyin: 'Nǐ hē shuǐ ma?', answer: 'F' },
+        questions: [
+          { num: 31, hanzi: '这个衣服怎么样？',   pinyin: 'Zhège yīfú zěnmeyàng?',   answer: 'E' },
+          { num: 32, hanzi: '那些苹果是谁买的？', pinyin: 'Nàxiē píngguǒ shì shéi mǎi de?', answer: 'A' },
+          { num: 33, hanzi: '你哪天回家？',       pinyin: 'Nǐ nǎ tiān huí jiā?',     answer: 'D' },
+          { num: 34, hanzi: '你女儿住哪儿？',     pinyin: "Nǐ nǚ'ér zhù nǎ'er?",     answer: 'B' },
+          { num: 35, hanzi: '他儿子工作了吗？',   pinyin: 'Tā érzi gōngzuò le ma?',  answer: 'C' },
+        ],
+      },
+      part4: {
+        title: 'Parte 8 (Lectura 4) · Completa el espacio',
+        instruction: 'Lee cada oración y elige la palabra del banco que completa el espacio ( ).',
+        bank: [
+          { letter: 'A', hanzi: '会',     pinyin: 'huì' },
+          { letter: 'B', hanzi: '学生',   pinyin: 'xuéshēng' },
+          { letter: 'C', hanzi: '几',     pinyin: 'jǐ' },
+          { letter: 'D', hanzi: '名字',   pinyin: 'míngzi' },
+          { letter: 'E', hanzi: '明天',   pinyin: 'míngtiān' },
+          { letter: 'F', hanzi: '杯',     pinyin: 'bēi' },
+        ],
+        example: { num: 'EJ', hanzi: '你叫什么（ ）？', pinyin: 'Nǐ jiào shénme ( )?', answer: 'D' },
+        questions: [
+          { num: 36, hanzi: '那个人是我的（ ）',       pinyin: 'Nàge rén shì wǒ de ( )',       answer: 'B' },
+          { num: 37, hanzi: '桌子上有（ ）茶',         pinyin: 'Zhuōzi shàng yǒu ( ) chá',     answer: 'F' },
+          { num: 38, hanzi: '再见，（ ）学校见',       pinyin: 'Zàijiàn, ( ) xuéxiào jiàn',    answer: 'E' },
+          { num: 39, hanzi: '小朋友，你（ ）岁了？',   pinyin: 'Xiǎopéngyǒu, nǐ ( ) suì le?',  answer: 'C' },
+          { num: 40, hanzi: '谢谢你，我（ ）写这个字了', pinyin: 'Xièxiè nǐ, wǒ ( ) xiě zhège zì le', answer: 'A' },
+        ],
+      },
     },
   },
 
