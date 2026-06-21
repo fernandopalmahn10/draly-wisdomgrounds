@@ -323,7 +323,21 @@
         // Find the newest unread 'force' message and obey it immediately —
         // no toast, no button, just redirect. Mark it read first so we
         // don't loop if the kid navigates back.
-        const force = _inbox.find((m) => !m.readAt && m.actionType === 'force' && m.actionUrl);
+        // 🆕 2026-06-21 (Fernando) — a force call only means "come NOW", so it
+        // goes STALE after 4 min. Without this, a kid opening their portal long
+        // after the teacher called would be yanked into a room that ended ages
+        // ago ("called to old rooms that no longer exist"). Stale forces are
+        // marked read and ignored; only a fresh call redirects.
+        const FORCE_TTL = 4 * 60 * 1000;
+        _inbox
+          .filter((m) => !m.readAt && m.actionType === 'force' && (Date.now() - (m.ts || 0)) >= FORCE_TTL)
+          .forEach((m) => {
+            fetch('/api/homework/inbox/' + encodeURIComponent(m.id) + '/read?accessCode=' + encodeURIComponent(accessCode), {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ studentCode }),
+            }).catch(() => {});
+          });
+        const force = _inbox.find((m) => !m.readAt && m.actionType === 'force' && m.actionUrl && (Date.now() - (m.ts || 0)) < FORCE_TTL);
         if (force) {
           fetch('/api/homework/inbox/' + encodeURIComponent(force.id) + '/read?accessCode=' + encodeURIComponent(accessCode), {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
