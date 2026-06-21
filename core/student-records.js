@@ -302,6 +302,17 @@ function sendMessage(code, payload) {
     readAt:       null,
   };
   if (!msg.text && !msg.actionUrl) return null;
+  // 🆕 2026-06-21 (Fernando) — force-call DEDUP. Tapping the "call to room"
+  // button several times used to stack a separate force message each time;
+  // a kid opening their portal later would get yanked by an OLD one (often
+  // to a room that no longer exists, "called to Maestro many many times").
+  // A force call only ever means "come NOW", so a fresh force supersedes any
+  // earlier unread force — retire the old ones so ONLY the latest can fire.
+  if (msg.actionType === 'force') {
+    rec.inbox.forEach((m) => {
+      if (m.actionType === 'force' && !m.readAt) m.readAt = Date.now();
+    });
+  }
   rec.inbox.unshift(msg);                          // newest first
   if (rec.inbox.length > 50) rec.inbox = rec.inbox.slice(0, 50);
   rec.lastSeen = Date.now();
