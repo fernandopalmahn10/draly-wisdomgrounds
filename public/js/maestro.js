@@ -1918,7 +1918,7 @@
           row.innerHTML =
             '<input class="input m-classroom-name" value="' + escapeHtml(c.name || '') + '" maxlength="40" style="flex:1;min-width:120px;">' +
             '<span class="m-classroom-count" style="font-size:0.8rem;opacity:.8;white-space:nowrap;">👥 ' + (c.studentCount || 0) + ' · 🟢 ' + (c.onlineCount || 0) + '</span>' +
-            '<button class="btn btn-jade btn-sm m-classroom-members" title="Ver y editar quién está en esta aula">👥 Alumnos</button>' +
+            '<button class="btn btn-jade btn-sm m-classroom-members" title="Ver y editar quién está en esta aula">👥 Ver miembros</button>' +
             '<button class="btn btn-ghost btn-sm m-classroom-save" title="Guardar nombre">💾</button>' +
             '<button class="btn btn-red btn-sm m-classroom-del" title="Eliminar aula">🗑</button>';
           row.querySelector('.m-classroom-members').addEventListener('click', () => _openClassroomMembers(c));
@@ -2056,12 +2056,51 @@
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ studentCodes: codes, text: '📚 Tu maestra te envió a tu perfil de tareas.', actionType: 'gohome', actionUrl: '/homework', actionLabel: 'Ir a mis tareas →' }),
           }).then((r) => r.json()).then((res) => {
-            if (res && res.ok) { alert('🏠 ' + (res.sent || codes.length) + ' alumno(s) volverán a su perfil en ~30s.'); close(); }
+            if (res && res.ok) { _mHomeFeedback(ov, codes); }
             else alert('Error: ' + (res && res.error || 'desconocido'));
           }).catch((e) => alert('Error: ' + e.message));
         });
       })
       .catch((e) => alert('Error: ' + e.message));
+  }
+  // Live status board for "Llevar a casa": poll who actually arrived (≤45s).
+  function _mHomeFeedback(ov, codes) {
+    let t = null;
+    const card = ov.querySelector('.m-modal-card');
+    card.innerHTML =
+      '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
+      '<h2>🏠 Yendo a casa…</h2>' +
+      '<p class="m-modal-sub" id="m-home-count">0 / ' + codes.length + ' en casa</p>' +
+      '<div class="m-force-students" id="m-home-status"></div>' +
+      '<button class="btn btn-ghost btn-sm" id="m-home-done" style="margin-top:12px;width:100%;">Cerrar</button>';
+    const stop = () => { if (t) clearInterval(t); try { ov.remove(); } catch (_) {} };
+    card.querySelector('.m-modal-close').addEventListener('click', stop);
+    card.querySelector('#m-home-done').addEventListener('click', stop);
+    const board = card.querySelector('#m-home-status');
+    const started = Date.now();
+    const poll = () => {
+      fetch('/api/admin/gohome-status?pw=' + encodeURIComponent(pw) + '&codes=' + encodeURIComponent(codes.join(',')))
+        .then((r) => r.json())
+        .then((d) => {
+          const sts = (d && d.statuses) || [];
+          let arrived = 0;
+          board.innerHTML = '';
+          sts.forEach((s) => {
+            if (s.arrived) arrived++;
+            const row = document.createElement('div'); row.className = 'm-force-row';
+            row.innerHTML = '<span style="width:1.5em;">' + (s.arrived ? '✅' : '⏳') + '</span>'
+              + '<span class="m-force-row-name">' + escapeHtml(s.name || s.code) + '</span>'
+              + '<span class="m-force-row-code">' + (s.arrived ? 'en casa' : (s.online ? 'yendo…' : 'sin señal')) + '</span>';
+            board.appendChild(row);
+          });
+          const countEl = card.querySelector('#m-home-count');
+          if (countEl) countEl.textContent = arrived + ' / ' + codes.length + ' en casa';
+          if (arrived >= codes.length || (Date.now() - started) > 45000) { if (t) clearInterval(t); }
+        })
+        .catch(() => {});
+    };
+    poll();
+    t = setInterval(poll, 1500);
   }
   if ($('m-home-btn')) $('m-home-btn').addEventListener('click', _openSendHomePicker);
 

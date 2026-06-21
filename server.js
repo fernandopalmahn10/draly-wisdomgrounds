@@ -1063,6 +1063,30 @@ app.post('/api/admin/student/:code/classroom', (req, res) => {
   res.json({ ok: true, code: rec.code, classroomId: classroomId || null, classroomName: c ? c.name : null });
 });
 
+// 🆕 2026-06-21 (Fernando) — LIVE FEEDBACK for "Llevar a casa". For each code,
+// reports whether the most-recent gohome message has been DELIVERED (the
+// kid's page consumed it → marked read) and whether they're still online.
+// The send-home modal polls this so the teacher sees who actually went home.
+app.get('/api/admin/gohome-status', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const codes = String(req.query.codes || '').split(',').map((c) => c.trim()).filter(Boolean).slice(0, 200);
+  const now = Date.now();
+  const statuses = codes.map((code) => {
+    const rec = Students.get(code);
+    if (!rec) return { code, exists: false, arrived: false, online: false };
+    const go = (rec.inbox || []).find((m) => m.actionType === 'gohome');  // inbox is newest-first
+    return {
+      code,
+      name: rec.displayName || 'Anon',
+      exists: true,
+      arrived: !!(go && go.readAt),
+      online: !!(rec.lastSeen && (now - rec.lastSeen) <= 60 * 1000),
+    };
+  });
+  res.json({ ok: true, statuses });
+});
+
 app.get('/api/admin/students/:code', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
