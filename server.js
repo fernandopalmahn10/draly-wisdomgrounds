@@ -1335,7 +1335,17 @@ app.get('/api/heartbeat', (req, res) => {
   const code = String(req.query.code || '').trim();
   if (code) {
     const rec = Students.get(code);
-    if (rec) rec.lastSeen = Date.now();
+    if (rec) {
+      rec.lastSeen = Date.now();
+      // 🆕 2026-06-21 (Fernando) — teacher "send to homework profile". If an
+      // unread 'gohome' message is pending, tell WHATEVER page is heartbeating
+      // (player.html / hsk-sim.html — even a stuck/dead room) to navigate back
+      // to /homework, and retire the message so it fires exactly once.
+      if (Students.consumeGoHome(rec.code)) {
+        return res.json({ ok: true, ts: Date.now(),
+          redirect: '/homework?code=' + encodeURIComponent(rec.code) + '&from=maestro' });
+      }
+    }
   }
   res.json({ ok: true, ts: Date.now() });
 });

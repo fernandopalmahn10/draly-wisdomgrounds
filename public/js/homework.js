@@ -348,6 +348,20 @@
           });
           return;
         }
+        // 🆕 2026-06-21 (Fernando) — GOHOME: the teacher hit "send to homework
+        // profile". The heartbeat path handles kids stuck in a room; this
+        // branch handles a kid who's ALREADY on /homework but maybe stuck on a
+        // sub-screen — mark it read and reload to a clean profile.
+        const gohome = _inbox.find((m) => !m.readAt && m.actionType === 'gohome');
+        if (gohome) {
+          fetch('/api/homework/inbox/' + encodeURIComponent(gohome.id) + '/read?accessCode=' + encodeURIComponent(accessCode), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentCode }),
+          }).finally(() => {
+            location.replace('/homework?code=' + encodeURIComponent(studentCode) + '&from=maestro');
+          });
+          return;
+        }
         // 🆕 2026-06-08 (Fernando) — ANIM messages: the teacher tapped
         // the GIF picker on /maestro and sent a dancing-mascot to this
         // kid. Show a full-screen transparent overlay for 8 seconds,

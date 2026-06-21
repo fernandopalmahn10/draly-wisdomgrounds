@@ -879,6 +879,13 @@
     if (!code) { try { code = localStorage.getItem('dralyStudentCode') || ''; } catch (_) {} }
     if (!code) return;
     fetch('/api/heartbeat?code=' + encodeURIComponent(code), { method: 'GET', credentials: 'same-origin' })
+      .then((r) => r.json())
+      .then((d) => {
+        // 🆕 2026-06-21 (Fernando) — teacher "send to homework profile". If the
+        // heartbeat answers with a redirect, the maestra is pulling this kid
+        // back home (e.g. stuck on the waiting screen). Obey immediately.
+        if (d && d.redirect) window.location.href = d.redirect;
+      })
       .catch(() => {});
   }, 30000);
 })();

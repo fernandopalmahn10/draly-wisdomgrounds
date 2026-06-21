@@ -899,6 +899,12 @@
             <button class="btn btn-gold btn-xl" id="m-fhsk-launch" style="margin-top:16px;width:100%;">
               🚀 Lanzar examen a alumnos seleccionados
             </button>
+            <!-- 🆕 2026-06-21 (Fernando): rescue a stuck kid. Instead of pulling
+                 them INTO the exam, send them back to their homework profile so
+                 you can re-grab them. Reaches them even inside a frozen room. -->
+            <button class="btn btn-jade btn-sm" id="m-fhsk-gohome" style="margin-top:10px;width:100%;">
+              🏠 Enviar seleccionados a su perfil de tareas
+            </button>
           </div>`;
         document.body.appendChild(overlay);
         const list = overlay.querySelector('#m-fhsk-students');
@@ -971,6 +977,36 @@
               // pulled in regardless.
               alert('✅ Examen enviado a ' + codes.length + ' alumno(s). Entrarán en ~20s. Te llevo al monitor en vivo.');
               location.href = monitorUrl;
+            } else {
+              alert('Error: ' + (res && res.error || 'desconocido'));
+            }
+          })
+          .catch((e) => { alert('Error: ' + e.message); });
+        });
+        // 🆕 2026-06-21 (Fernando) — "send to homework profile" rescue button.
+        // Sends a 'gohome' inbox message; the kid's heartbeat (player.html /
+        // hsk-sim.html every 30s) picks it up and navigates them to /homework,
+        // so even a kid frozen inside a room gets pulled out within ~30s.
+        overlay.querySelector('#m-fhsk-gohome').addEventListener('click', () => {
+          const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
+            .map((cb) => cb.dataset.code).filter(Boolean);
+          if (!codes.length) { alert('Selecciona al menos un alumno.'); return; }
+          fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              studentCodes: codes,
+              text: '📚 Tu maestra te envió a tu perfil de tareas.',
+              actionType: 'gohome',
+              actionUrl: '/homework',
+              actionLabel: 'Ir a mis tareas →'
+            })
+          })
+          .then((r) => r.json())
+          .then((res) => {
+            if (res && res.ok) {
+              alert('🏠 ' + (res.sent || codes.length) + ' alumno(s) volverán a su perfil en ~30s.');
+              close();
             } else {
               alert('Error: ' + (res && res.error || 'desconocido'));
             }
