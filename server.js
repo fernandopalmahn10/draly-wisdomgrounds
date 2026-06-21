@@ -148,11 +148,60 @@ app.get('/api/admin/backup', (req, res) => {
   res.send(JSON.stringify(bundle, null, 2));
 });
 
+// 🔒 2026-06-21 (Security Phase 1) — shared admin-auth hardening helpers.
+//   • _adminPw: read the admin secret from the X-Admin-Password HEADER first
+//     (so it stops landing in URLs, server logs and browser history), and
+//     still fall back to the legacy ?pw= query param so nothing breaks.
+//   • _safeEqual: constant-time compare so the super-admin password can't be
+//     recovered one character at a time via response-timing.
+//   • _adminFail*: a per-IP turnstile that counts ONLY failed attempts —
+//     after 10 wrong guesses in 10 min an IP gets 429s, which stops
+//     brute-forcing. Legit teachers (who send the right code) never fail,
+//     so their dashboard polling is never throttled.
+function _clientIp(req) {
+  const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+  return String(ip).split(',')[0].trim();
+}
+function _adminPw(req) {
+  return String(
+    (req.headers && (req.headers['x-admin-password'] || req.headers['x-admin-pw'])) ||
+    (req.query && (req.query.pw || req.query.password)) || ''
+  ).trim();
+}
+function _safeEqual(a, b) {
+  const ba = Buffer.from(String(a == null ? '' : a), 'utf8');
+  const bb = Buffer.from(String(b == null ? '' : b), 'utf8');
+  if (ba.length !== bb.length) return false;
+  try { return require('crypto').timingSafeEqual(ba, bb); }
+  catch (_) { return String(a) === String(b); }
+}
+const _adminFailHits = new Map();   // ip → [timestamps of FAILED admin auths]
+function _adminFailCount(ip) {
+  const now = Date.now();
+  const window = 10 * 60 * 1000;
+  const arr = (_adminFailHits.get(ip) || []).filter((t) => now - t < window);
+  _adminFailHits.set(ip, arr);
+  return arr.length;
+}
+function _adminNoteFail(ip) {
+  const now = Date.now();
+  const arr = (_adminFailHits.get(ip) || []).filter((t) => now - t < (10 * 60 * 1000));
+  arr.push(now);
+  _adminFailHits.set(ip, arr);
+  if (_adminFailHits.size > 5000) {
+    for (const [k, v] of _adminFailHits) {
+      if (!v.length || now - v[v.length - 1] > (10 * 60 * 1000)) _adminFailHits.delete(k);
+    }
+  }
+}
+
 app.get('/api/admin/disk-status', (req, res) => {
   const fs = require('fs');
-  const givenPw = String(req.query.pw || req.query.password || '');
+  const ip = _clientIp(req);
+  if (_adminFailCount(ip) >= 10) return res.status(429).json({ error: 'demasiados intentos, espera unos minutos' });
+  const givenPw = _adminPw(req);
   const expected = process.env.WU_ADMIN_PASSWORD || 'draly2026';
-  if (givenPw !== expected) return res.status(401).json({ error: 'wrong password' });
+  if (!_safeEqual(givenPw, expected)) { _adminNoteFail(ip); return res.status(401).json({ error: 'wrong password' }); }
 
   const DATA_DIR = path.join(__dirname, 'data');
   const STUDENTS_FILE = path.join(DATA_DIR, 'student-records.json');
@@ -222,18 +271,29 @@ app.get('/api/admin/disk-status', (req, res) => {
 // The session is used downstream to filter results by the teacher's
 // classroom access codes.
 function _adminAuth(req, res) {
-  const givenPw = String(req.query.pw || req.query.password || '').trim();
+  // Brute-force turnstile (see helpers above): too many FAILED auths from
+  // one IP → 429. Only failures are counted, so legitimate dashboard
+  // polling with the correct code is never throttled.
+  const ip = _clientIp(req);
+  if (_adminFailCount(ip) >= 10) {
+    if (res) res.status(429).json({ ok: false, error: 'demasiados intentos, espera unos minutos' });
+    return null;
+  }
+  // Read from header first, then legacy ?pw= query param (back-compat).
+  const givenPw = _adminPw(req);
   // Legacy super-admin passwords still grant full access for the live
   // warmup-host flow (host-warmup.html unlock). These bypass the
-  // teachers table entirely.
+  // teachers table entirely. Constant-time compare so the secret can't be
+  // recovered via response timing.
   const wuPw = process.env.WU_ADMIN_PASSWORD || 'draly2026';
-  if (givenPw === wuPw) {
+  if (_safeEqual(givenPw, wuPw)) {
     return { teacher: null, isSuperAdmin: true, legacy: true };
   }
   // Otherwise look up as a teacher code
-  const teacher = Teachers.getByTeacherId(givenPw);
+  const teacher = givenPw ? Teachers.getByTeacherId(givenPw) : null;
   if (!teacher) {
-    res.status(401).json({ ok: false, error: 'wrong password' });
+    _adminNoteFail(ip);
+    if (res) res.status(401).json({ ok: false, error: 'wrong password' });
     return null;
   }
   Teachers.touchLastSeen(teacher.teacherId);
@@ -1036,6 +1096,7 @@ app.get('/api/homework/reports/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.params.code);
   if (!rec) return res.status(404).json({ ok: false, error: 'no student' });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   // 🗓 Build the month list from ANY activity, not just teacher notes.
   // User reported: in May the option appeared because there were notes;
   // in June, the May button disappeared because no notes were added to
@@ -1059,6 +1120,7 @@ app.get('/api/homework/report/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.params.code);
   if (!rec) return res.status(404).json({ ok: false, error: 'no student' });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? req.query.month
               : new Date().toISOString().slice(0, 7);
   const notes = Students.getNotes(rec.code).filter((n) => n.month === month);
@@ -1213,6 +1275,7 @@ app.get('/api/homework/inbox', (req, res) => {
   const code = req.query.studentCode;
   const rec = Students.get(code);
   if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   rec.lastSeen = Date.now();   // ← presence heartbeat
   const inbox = Students.getInbox(rec.code, 30);
   const unread = inbox.filter((m) => !m.readAt).length;
@@ -1226,6 +1289,7 @@ app.post('/api/homework/ping', (req, res) => {
   const { studentCode } = req.body || {};
   const rec = Students.get(studentCode);
   if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   rec.lastSeen = Date.now();
   res.json({ ok: true, lastSeen: rec.lastSeen });
 });
@@ -1408,8 +1472,51 @@ function _hwCheckAccess(req, res) {
   return true;
 }
 
+// 🔒 2026-06-21 (Security Phase 1) — IDOR guard for parent/student reads.
+// _hwCheckAccess only proves the access code is a VALID teacher code; it
+// does NOT prove the requester may see THIS particular child. Without this,
+// anyone holding one valid (often shared, low-entropy) classroom code could
+// read any student's report card / inbox / sentences just by changing the
+// :code in the URL. Here we bind the request: the presented access code
+// must match the student's own classroomCode. Every kid who has entered
+// since classroomCode shipped is tagged and therefore protected; legacy
+// untagged records fall through to the old behavior so no real family is
+// ever locked out. Returns true if the request may touch this student.
+function _hwOwnsStudent(req, rec) {
+  if (!rec) return false;
+  // Legacy record with no classroom tag — can't bind, preserve old access.
+  if (!rec.classroomCode) return true;
+  const presented = String(
+    (req.body && req.body.accessCode) || (req.query && req.query.accessCode) || ''
+  ).trim().toUpperCase();
+  return presented === String(rec.classroomCode).trim().toUpperCase();
+}
+
+// 🔒 2026-06-21 (Security Phase 1) — overload/spam guard for student entry.
+// Generous on purpose: a whole class often shares ONE public IP (school
+// NAT), so 30+ kids may legitimately enter within the same minute. The cap
+// is set high enough that no real classroom ever trips it, but low enough
+// that a bot hammering the endpoint to create junk records / probe codes
+// gets stopped. The real defense against cross-child reads is the IDOR
+// guard above; this is purely an anti-flood backstop. 100 enters/min/IP.
+const _enterHits = new Map();
+function _enterRateLimit(req) {
+  const ip = 'enter-' + _clientIp(req);
+  const now = Date.now();
+  const window = 60 * 1000;
+  const arr = (_enterHits.get(ip) || []).filter((t) => now - t < window);
+  arr.push(now);
+  _enterHits.set(ip, arr);
+  if (_enterHits.size > 5000) {
+    for (const [k, v] of _enterHits) {
+      if (!v.length || now - v[v.length - 1] > window) _enterHits.delete(k);
+    }
+  }
+  return arr.length <= 100;
+}
 app.post('/api/homework/enter', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
+  if (!_enterRateLimit(req)) return res.status(429).json({ ok: false, error: 'demasiados intentos, espera un momento' });
   try {
     const { studentCode, displayName, accessCode, meta } = req.body || {};
     const rec = Students.getOrCreate(studentCode, displayName);
@@ -1472,6 +1579,7 @@ app.get('/api/homework/insights/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.params.code);
   if (!rec) return res.status(404).json({ ok: false, error: 'Estudiante no encontrado' });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const subs = Students.getAssignmentSubmissions(rec.code, 100);
   // Map each submission to its assignment definition + insight. Take the
   // BEST attempt per assignment, then keep only those with score ≥ 60%.
@@ -2706,6 +2814,7 @@ app.get('/api/homework/sentences/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.params.code);
   if (!rec) return res.json({ ok: true, sentences: [] });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   res.json({ ok: true, sentences: Students.getHistory(rec.code, 100) });  // newest-first
 });
 // Kid deletes ONE of their own saved sentences (junk / accidental save).
@@ -2714,6 +2823,7 @@ app.post('/api/homework/sentences/delete', (req, res) => {
   const { studentCode, ts } = req.body || {};
   const rec = Students.get(studentCode);
   if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const ok = Students.deleteHistoryEntry(rec.code, ts);
   res.json({ ok, sentences: Students.getHistory(rec.code, 100) });
 });
@@ -2725,6 +2835,7 @@ app.post('/api/homework/sentences/save', (req, res) => {
   const { studentCode, words } = req.body || {};
   const rec = Students.get(studentCode);
   if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   if (!Array.isArray(words) || !words.length) return res.status(400).json({ ok: false, error: 'oración vacía' });
   Students.appendSentence(rec.code, words.slice(0, 24), '');
   res.json({ ok: true, sentences: Students.getHistory(rec.code, 100) });
@@ -3155,6 +3266,32 @@ app.get('/api/tts/health', async (req, res) => {
   res.json(out);
 });
 
+// 🔒 2026-06-21 (Security Phase 1) — denial-of-wallet guard for TTS.
+// Google Cloud bills per character on every CACHE MISS (a brand-new
+// text+voice combo that has to be synthesized). Cache HITS are free
+// (served from disk), so we throttle ONLY the miss path — real kids
+// replaying already-made audio are never slowed down. Cap: 20 fresh
+// syntheses/min per IP. Normal use synthesizes a handful of NEW phrases
+// a minute (the rest are cached); a billing-attack loop of unique
+// strings gets capped at 20 Google calls/min/IP instead of unlimited.
+// Same cheap in-memory ip→timestamps pattern as _hbRateLimit (no dep).
+const _ttsHits = new Map();
+function _ttsSynthRateLimit(req) {
+  const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+  const key = 'tts-' + String(ip).split(',')[0].trim();
+  const now = Date.now();
+  const window = 60 * 1000;
+  const arr = (_ttsHits.get(key) || []).filter((t) => now - t < window);
+  arr.push(now);
+  _ttsHits.set(key, arr);
+  if (_ttsHits.size > 5000) {
+    for (const [k, v] of _ttsHits) {
+      if (!v.length || now - v[v.length - 1] > window) _ttsHits.delete(k);
+    }
+  }
+  return arr.length <= 20;
+}
+
 // GET /api/tts?text=...&voice=zh-CN-Wavenet-A
 // Returns audio/mpeg. Cache-first: hits Google only on miss.
 // Status: 200 with audio, 404 if no client, 400 if bad input.
@@ -3176,6 +3313,12 @@ app.get('/api/tts', async (req, res) => {
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Cache-Control', 'public, max-age=2592000');  // 30 days
     return fs.createReadStream(cachePath).pipe(res);
+  }
+  // Cache miss → this is the ONLY path that costs money. Throttle it so a
+  // loop of unique strings can't run up the Google bill. Returns 429 (and a
+  // friendly message) past 20 fresh syntheses/min/IP — well above real use.
+  if (!_ttsSynthRateLimit(req)) {
+    return res.status(429).json({ ok: false, error: 'demasiadas voces nuevas, espera un momento' });
   }
   // Cache miss → synthesize via Google Cloud TTS
   const client = _getTtsClient();
@@ -3658,7 +3801,7 @@ const WU_ADMIN_PASSWORD = process.env.WU_ADMIN_PASSWORD || 'draly2026';
 function isAdminPassword(password) {
   if (!password) return false;
   const p = String(password).trim();
-  if (p === WU_ADMIN_PASSWORD) return true;
+  if (_safeEqual(p, WU_ADMIN_PASSWORD)) return true;   // constant-time
   return !!Teachers.getByTeacherId(p);
 }
 // True ONLY for super-admin credentials: the legacy WU_ADMIN_PASSWORD, OR a
@@ -3667,7 +3810,7 @@ function isAdminPassword(password) {
 function isSuperAdminPassword(password) {
   if (!password) return false;
   const p = String(password).trim();
-  if (p === WU_ADMIN_PASSWORD) return true;
+  if (_safeEqual(p, WU_ADMIN_PASSWORD)) return true;   // constant-time
   const t = Teachers.getByTeacherId(p);
   return !!(t && t.isSuperAdmin);
 }
