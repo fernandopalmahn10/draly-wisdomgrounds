@@ -13,6 +13,7 @@ const SimImages = require('./core/sim-images');
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
+const Classrooms = require('./core/classrooms');
 const Guides = require('./core/guides');
 const Emirati = require('./core/emirati-vocab');
 const CustomAsg = require('./core/custom-assignments');
@@ -976,6 +977,72 @@ app.get('/api/admin/students', (req, res) => {
     } : { isSuperAdmin: true, legacy: true },
   });
 });
+// 🆕 2026-06-21 (Fernando) — CLASSROOM SYSTEM.
+// List every classroom (the access codes kids join with) with its friendly
+// name + how many students / how many online. Super-admin sees all; a regular
+// teacher sees only their own accessCodes. Powers the roster grouping and the
+// "send to whole classroom" picker.
+app.get('/api/admin/classrooms', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const now = Date.now();
+  const ONLINE = 60 * 1000;
+  const map = {};
+  Students.listAll().forEach((s) => {
+    const cc = s.classroomCode;
+    if (!cc) return;
+    if (!map[cc]) map[cc] = { code: cc, name: Classrooms.getName(cc), studentCount: 0, onlineCount: 0 };
+    map[cc].studentCount++;
+    if (s.lastSeen && (now - s.lastSeen) <= ONLINE) map[cc].onlineCount++;
+  });
+  // Surface the teacher's own classroom codes even with 0 students yet, so a
+  // brand-new class can be named before anyone joins.
+  const own = session.teacher ? (session.teacher.accessCodes || []) : [];
+  own.forEach((c0) => {
+    const cc = String(c0).trim().toUpperCase();
+    if (cc && !map[cc]) map[cc] = { code: cc, name: Classrooms.getName(cc), studentCount: 0, onlineCount: 0 };
+  });
+  let list = Object.values(map);
+  if (!session.isSuperAdmin && session.teacher) {
+    const codes = new Set((session.teacher.accessCodes || []).map((c) => String(c).trim().toUpperCase()));
+    list = list.filter((c) => codes.has(c.code));
+  }
+  list.sort((a, b) => (b.studentCount - a.studentCount) || a.code.localeCompare(b.code));
+  res.json({ ok: true, classrooms: list });
+});
+// Give a classroom code a friendly name (or clear it with an empty name).
+app.post('/api/admin/classroom/name', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const cc = String((req.body || {}).code || '').trim().toUpperCase();
+  if (!cc) return res.status(400).json({ ok: false, error: 'code required' });
+  if (!session.isSuperAdmin && session.teacher) {
+    const codes = new Set((session.teacher.accessCodes || []).map((c) => String(c).trim().toUpperCase()));
+    if (!codes.has(cc)) return res.status(403).json({ ok: false, error: 'not your classroom' });
+  }
+  Classrooms.setName(cc, (req.body || {}).name);
+  res.json({ ok: true, code: cc, name: Classrooms.getName(cc) });
+});
+// Move a student into a different classroom (reassign / categorize).
+app.post('/api/admin/student/:code/classroom', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) {
+    return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  }
+  const target = String((req.body || {}).classroomCode || '').trim().toUpperCase();
+  if (!target) return res.status(400).json({ ok: false, error: 'classroomCode required' });
+  // A regular teacher can only move a kid INTO one of their own classrooms.
+  if (!session.isSuperAdmin && session.teacher) {
+    const codes = new Set((session.teacher.accessCodes || []).map((c) => String(c).trim().toUpperCase()));
+    if (!codes.has(target)) return res.status(403).json({ ok: false, error: 'target not your classroom' });
+  }
+  Students.setClassroomCode(rec.code, target);
+  res.json({ ok: true, code: rec.code, classroomCode: target, classroomName: Classrooms.getName(target) });
+});
+
 app.get('/api/admin/students/:code', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
