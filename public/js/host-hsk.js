@@ -417,13 +417,54 @@
           })
             .then((r) => r.json())
             .then((res) => {
-              if (res && res.ok) { toast('🚀 ' + codes.length + ' alumno(s) entrando…', 'good'); close(); }
+              if (res && res.ok) { _forceFeedback(overlay, codes); }
               else alert('Error: ' + (res && res.error || 'desconocido'));
             })
             .catch((e) => alert('Error: ' + e.message));
         });
       })
       .catch((e) => alert('Error: ' + e.message));
+  }
+  // 🏆 2026-06-21 (Fernando) — live feedback for "Forzar alumnos", just like the
+  // home board: after forcing, watch who actually enters the exam. ✅ = the
+  // kid's page consumed the force and is going into the sim; ⏳ = still waiting.
+  function _forceFeedback(ov, codes) {
+    let t = null;
+    const card = ov.querySelector('.m-modal-card');
+    card.innerHTML =
+      '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
+      '<h2>🏆 Entrando al examen…</h2>' +
+      '<p class="m-modal-sub" id="hh-force-count">0 / ' + codes.length + ' entraron</p>' +
+      '<div class="m-force-students" id="hh-force-status"></div>' +
+      '<button class="btn btn-ghost btn-sm" id="hh-force-done" style="margin-top:12px;width:100%;">Cerrar</button>';
+    const stop = () => { if (t) clearInterval(t); try { ov.remove(); } catch (_) {} };
+    card.querySelector('.m-modal-close').addEventListener('click', stop);
+    card.querySelector('#hh-force-done').addEventListener('click', stop);
+    const board = card.querySelector('#hh-force-status');
+    const started = Date.now();
+    const poll = () => {
+      fetch('/api/admin/gohome-status?type=force&pw=' + encodeURIComponent(pw) + '&codes=' + encodeURIComponent(codes.join(',')))
+        .then((r) => r.json())
+        .then((d) => {
+          const sts = (d && d.statuses) || [];
+          let inN = 0;
+          board.innerHTML = '';
+          sts.forEach((s) => {
+            if (s.arrived) inN++;
+            const row = document.createElement('div'); row.className = 'm-force-row';
+            row.innerHTML = '<span style="width:1.5em;">' + (s.arrived ? '✅' : '⏳') + '</span>' +
+              '<span class="m-force-row-name">' + escapeHtml(s.name || s.code) + '</span>' +
+              '<span class="m-force-row-code">' + (s.arrived ? 'entró' : (s.online ? 'entrando…' : 'sin señal')) + '</span>';
+            board.appendChild(row);
+          });
+          const countEl = card.querySelector('#hh-force-count');
+          if (countEl) countEl.textContent = inN + ' / ' + codes.length + ' entraron';
+          if (inN >= codes.length || (Date.now() - started) > 45000) { if (t) clearInterval(t); }
+        })
+        .catch(() => {});
+    };
+    poll();
+    t = setInterval(poll, 1500);
   }
   $('hh-force-online').addEventListener('click', openForcePicker);
   $('hh-force-online-2').addEventListener('click', openForcePicker);

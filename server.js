@@ -1071,11 +1071,14 @@ app.get('/api/admin/gohome-status', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
   const codes = String(req.query.codes || '').split(',').map((c) => c.trim()).filter(Boolean).slice(0, 200);
+  // 🆕 reused for "Forzar alumnos" too: ?type=force checks force-message
+  // delivery (kid's page consumed it and is entering the exam). Default gohome.
+  const type = String(req.query.type || 'gohome');
   const now = Date.now();
   const statuses = codes.map((code) => {
     const rec = Students.get(code);
     if (!rec) return { code, exists: false, arrived: false, online: false };
-    const go = (rec.inbox || []).find((m) => m.actionType === 'gohome');  // inbox is newest-first
+    const go = (rec.inbox || []).find((m) => m.actionType === type);  // inbox is newest-first
     return {
       code,
       name: rec.displayName || 'Anon',

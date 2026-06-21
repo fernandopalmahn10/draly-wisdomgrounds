@@ -1918,7 +1918,7 @@
           row.innerHTML =
             '<input class="input m-classroom-name" value="' + escapeHtml(c.name || '') + '" maxlength="40" style="flex:1;min-width:120px;">' +
             '<span class="m-classroom-count" style="font-size:0.8rem;opacity:.8;white-space:nowrap;">👥 ' + (c.studentCount || 0) + ' · 🟢 ' + (c.onlineCount || 0) + '</span>' +
-            '<button class="btn btn-jade btn-sm m-classroom-members" title="Ver y editar quién está en esta aula">👥 Ver miembros</button>' +
+            '<button class="btn btn-jade btn-sm m-classroom-members" title="Abrir esta aula: agregar/quitar alumnos y ver sus perfiles">👁 Ver aula</button>' +
             '<button class="btn btn-ghost btn-sm m-classroom-save" title="Guardar nombre">💾</button>' +
             '<button class="btn btn-red btn-sm m-classroom-del" title="Eliminar aula">🗑</button>';
           row.querySelector('.m-classroom-members').addEventListener('click', () => _openClassroomMembers(c));
@@ -1967,12 +1967,15 @@
       .then((data) => {
         const students = ((data && data.students) || []).slice()
           .sort((a, b) => (a.displayName || a.code || '').localeCompare(b.displayName || b.code || ''));
+        const memberCount = students.filter((s) => s.classroomId === classroom.id).length;
         box.innerHTML =
           '<button class="btn btn-ghost btn-sm" id="m-cls-back">← Volver a aulas</button>' +
-          '<h3 style="margin:10px 0 6px;">👥 ' + escapeHtml(classroom.name) + '</h3>' +
+          '<h3 style="margin:10px 0 6px;">🎓 ' + escapeHtml(classroom.name) + '</h3>' +
+          '<button class="btn btn-jade btn-sm" id="m-cls-view-members" style="width:100%;margin-bottom:10px;">👥 Ver miembros (' + memberCount + ') — abrir sus perfiles</button>' +
           '<p style="font-size:0.8rem;opacity:.7;margin:0 0 8px;">Marca a los alumnos que pertenecen a esta aula. Se guarda al instante.</p>' +
           '<input class="input" id="m-cls-mem-search" placeholder="🔎 Buscar alumno…" style="margin-bottom:8px;">' +
-          '<div id="m-cls-mem-list" style="max-height:46vh;overflow:auto;"></div>';
+          '<div id="m-cls-mem-list" style="max-height:42vh;overflow:auto;"></div>';
+        box.querySelector('#m-cls-view-members').addEventListener('click', () => _openClassroomRoster(classroom));
         const listEl = box.querySelector('#m-cls-mem-list');
         const render = (q) => {
           const qq = (q || '').toLowerCase();
@@ -2004,6 +2007,40 @@
         render('');
         box.querySelector('#m-cls-mem-search').addEventListener('input', (e) => render(e.target.value));
         box.querySelector('#m-cls-back').addEventListener('click', () => { if (newRow) newRow.style.display = ''; _renderClassroomList(); });
+      })
+      .catch((e) => { box.innerHTML = '<div style="color:#ff8a8a;text-align:center;">Error: ' + escapeHtml(e.message) + '</div>'; });
+  }
+  // 👥 VER MIEMBROS — only the students ALREADY in this aula, each tappable to
+  // open their full profile (oraciones, notas, mensajes, cambiar aula…).
+  function _openClassroomRoster(classroom) {
+    const box = $('m-classroom-list');
+    const newRow = document.querySelector('.m-classroom-new');
+    if (newRow) newRow.style.display = 'none';
+    box.innerHTML = '<div style="opacity:.6;text-align:center;padding:10px;">Cargando…</div>';
+    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        const members = ((data && data.students) || []).filter((s) => s.classroomId === classroom.id)
+          .sort((a, b) => (a.displayName || a.code || '').localeCompare(b.displayName || b.code || ''));
+        let html = '<button class="btn btn-ghost btn-sm" id="m-cls-roster-back">← Volver al aula</button>' +
+          '<h3 style="margin:10px 0 6px;">👥 Miembros de ' + escapeHtml(classroom.name) + ' (' + members.length + ')</h3>' +
+          '<p style="font-size:0.8rem;opacity:.7;margin:0 0 8px;">Toca un alumno para abrir su perfil.</p>';
+        if (!members.length) html += '<p style="opacity:.6;text-align:center;padding:10px;">Aún no hay alumnos en esta aula. Usa “Ver aula” para agregarlos.</p>';
+        html += '<div id="m-cls-roster-list" style="max-height:48vh;overflow:auto;"></div>';
+        box.innerHTML = html;
+        const listEl = box.querySelector('#m-cls-roster-list');
+        members.forEach((s) => {
+          const row = document.createElement('button');
+          row.type = 'button';
+          row.className = 'btn btn-ghost btn-sm';
+          row.style.cssText = 'display:flex;gap:10px;align-items:center;width:100%;justify-content:flex-start;margin-bottom:6px;text-align:left;';
+          row.innerHTML = '<span class="m-row-avatar">' + renderAvatar(s.avatar) + '</span>' +
+            '<span>' + escapeHtml(s.displayName || 'Anon') + ' <span style="opacity:.5;">' + escapeHtml(s.code) + '</span></span>' +
+            '<span style="margin-left:auto;opacity:.6;">abrir perfil →</span>';
+          row.addEventListener('click', () => { _closeClassroomModal(); openDetail(s.code); });
+          listEl.appendChild(row);
+        });
+        box.querySelector('#m-cls-roster-back').addEventListener('click', () => _openClassroomMembers(classroom));
       })
       .catch((e) => { box.innerHTML = '<div style="color:#ff8a8a;text-align:center;">Error: ' + escapeHtml(e.message) + '</div>'; });
   }
