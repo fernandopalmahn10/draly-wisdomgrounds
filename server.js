@@ -989,8 +989,10 @@ app.get('/api/admin/students', (req, res) => {
 // the login code they joined with. Manual filing always wins; classroomCode
 // (the login code) is never reused, so parent-privacy stays intact.
 function _effectiveClassroom(s) {
+  // 🆕 2026-06-21 (Fernando) — NO auto-default. A student belongs to a
+  // classroom ONLY if the teacher explicitly filed them there. A brand-new
+  // class starts empty until you add kids in the member editor.
   if (s.classroomId) { const c = Classrooms.get(s.classroomId); if (c) return c; }
-  if (s.classroomCode) { const c = Classrooms.findByCode(s.classroomCode); if (c) return c; }
   return null;
 }
 // List every classroom with live student + online counts.
