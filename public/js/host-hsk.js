@@ -428,6 +428,99 @@
   $('hh-force-online').addEventListener('click', openForcePicker);
   $('hh-force-online-2').addEventListener('click', openForcePicker);
 
+  // 🏠 2026-06-21 (Fernando) — "Llevar a casa" FROM the live sim screen, with
+  // real feedback. Pick online kids → force them out of ANY stuck screen back
+  // to their homework profile (delivered via the 8s heartbeat), then watch a
+  // live board fill in ✅ as each one arrives. Use it before/while forcing the
+  // sim so nobody is trapped on an old "estás en la sala" screen.
+  function openHomePicker() {
+    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        const online = ((data && data.students) || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
+        if (!online.length) { alert('No hay alumnos en línea ahora mismo.'); return; }
+        let ov = document.getElementById('hh-home-modal'); if (ov) ov.remove();
+        ov = document.createElement('div'); ov.id = 'hh-home-modal'; ov.className = 'm-modal';
+        ov.innerHTML =
+          '<div class="m-modal-card">' +
+            '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
+            '<h2>🏠 Llevar a casa</h2>' +
+            '<p class="m-modal-sub">Saca a los seleccionados de cualquier pantalla atascada y mándalos a su perfil. Llegan en ~8s; verás abajo quién llegó.</p>' +
+            '<div class="m-force-actions"><button class="btn btn-ghost btn-sm" id="hh-home-all">✅ Todos</button><button class="btn btn-ghost btn-sm" id="hh-home-none">⬜ Ninguno</button></div>' +
+            '<div class="m-force-students" id="hh-home-students"></div>' +
+            '<button class="btn btn-gold btn-xl" id="hh-home-go" style="margin-top:14px;width:100%;">🏠 Mandar a casa</button>' +
+          '</div>';
+        document.body.appendChild(ov);
+        const listEl = ov.querySelector('#hh-home-students');
+        online.forEach((s) => {
+          const row = document.createElement('label'); row.className = 'm-force-row';
+          row.innerHTML = '<input type="checkbox" data-code="' + escapeHtml(s.code) + '" checked>' +
+            '<span class="m-force-row-dot"></span>' +
+            '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+            '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
+          listEl.appendChild(row);
+        });
+        const close = () => { try { ov.remove(); } catch (_) {} };
+        ov.querySelector('.m-modal-close').addEventListener('click', close);
+        ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+        ov.querySelector('#hh-home-all').addEventListener('click', () => listEl.querySelectorAll('input').forEach((c) => { c.checked = true; }));
+        ov.querySelector('#hh-home-none').addEventListener('click', () => listEl.querySelectorAll('input').forEach((c) => { c.checked = false; }));
+        ov.querySelector('#hh-home-go').addEventListener('click', () => {
+          const codes = Array.from(listEl.querySelectorAll('input:checked')).map((c) => c.dataset.code).filter(Boolean);
+          if (!codes.length) { alert('Selecciona al menos un alumno.'); return; }
+          fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentCodes: codes, text: '📚 Tu maestra te envió a tu perfil de tareas.', actionType: 'gohome', actionUrl: '/homework', actionLabel: 'Ir a mis tareas →' }),
+          }).then((r) => r.json()).then((res) => {
+            if (!res || !res.ok) { alert('Error: ' + (res && res.error || 'desconocido')); return; }
+            _homeFeedback(ov, codes);
+          }).catch((e) => alert('Error: ' + e.message));
+        });
+      })
+      .catch((e) => alert('Error: ' + e.message));
+  }
+  // Live status board: poll who has actually arrived home, until all do (or 45s).
+  function _homeFeedback(ov, codes) {
+    let t = null;
+    const card = ov.querySelector('.m-modal-card');
+    card.innerHTML =
+      '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
+      '<h2>🏠 Yendo a casa…</h2>' +
+      '<p class="m-modal-sub" id="hh-home-count">0 / ' + codes.length + ' en casa</p>' +
+      '<div class="m-force-students" id="hh-home-status"></div>' +
+      '<button class="btn btn-ghost btn-sm" id="hh-home-done" style="margin-top:12px;width:100%;">Cerrar</button>';
+    const stop = () => { if (t) clearInterval(t); try { ov.remove(); } catch (_) {} };
+    card.querySelector('.m-modal-close').addEventListener('click', stop);
+    card.querySelector('#hh-home-done').addEventListener('click', stop);
+    const board = card.querySelector('#hh-home-status');
+    const started = Date.now();
+    const poll = () => {
+      fetch('/api/admin/gohome-status?pw=' + encodeURIComponent(pw) + '&codes=' + encodeURIComponent(codes.join(',')))
+        .then((r) => r.json())
+        .then((d) => {
+          const sts = (d && d.statuses) || [];
+          let arrived = 0;
+          board.innerHTML = '';
+          sts.forEach((s) => {
+            if (s.arrived) arrived++;
+            const row = document.createElement('div'); row.className = 'm-force-row';
+            row.innerHTML = '<span style="width:1.5em;">' + (s.arrived ? '✅' : '⏳') + '</span>' +
+              '<span class="m-force-row-name">' + escapeHtml(s.name || s.code) + '</span>' +
+              '<span class="m-force-row-code">' + (s.arrived ? 'en casa' : (s.online ? 'yendo…' : 'sin señal')) + '</span>';
+            board.appendChild(row);
+          });
+          const countEl = card.querySelector('#hh-home-count');
+          if (countEl) countEl.textContent = arrived + ' / ' + codes.length + ' en casa';
+          if (arrived >= codes.length || (Date.now() - started) > 45000) { if (t) clearInterval(t); }
+        })
+        .catch(() => {});
+    };
+    poll();
+    t = setInterval(poll, 1500);
+  }
+  if ($('hh-home-btn')) $('hh-home-btn').addEventListener('click', openHomePicker);
+  if ($('hh-home-btn-2')) $('hh-home-btn-2').addEventListener('click', openHomePicker);
+
   // ── 🎬 ANIMATIONS panel ────────────────────────────────────────────
   const ANIMATIONS = [
     { id: 'gojo',   name: 'Gojo (Jujutsu)',     tags: 'gojo satoru jjk anime sensei limitless infinity blue purple six eyes', url: '/assets/png-library/GOJO%20TRANSPARENT.gif' },

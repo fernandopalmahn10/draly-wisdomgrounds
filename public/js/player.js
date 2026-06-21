@@ -8392,5 +8392,6 @@
         if (d && d.redirect) window.location.href = d.redirect;
       })
       .catch(() => {});
-  }, 30000);
+  }, 8000);   // 🆕 2026-06-21 (Fernando): 8s (was 30s) so "Llevar a casa" lands
+              // in ~8s; if a beat is lost to bad signal the next one retries.
 })();
