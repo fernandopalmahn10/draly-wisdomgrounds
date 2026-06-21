@@ -319,6 +319,19 @@ function sendMessage(code, payload) {
   scheduleSave();
   return msg;
 }
+// 🆕 2026-06-21 (Fernando) — teacher "send to homework profile". Finds an
+// unread 'gohome' inbox message, marks it read (so it fires exactly once),
+// and reports whether one was pending. The /api/heartbeat endpoint calls this
+// so a kid stuck in any room (which heartbeats every 30s) gets sent back home.
+function consumeGoHome(code) {
+  const rec = get(code);
+  if (!rec || !Array.isArray(rec.inbox)) return false;
+  const go = rec.inbox.find((m) => !m.readAt && m.actionType === 'gohome');
+  if (!go) return false;
+  go.readAt = Date.now();
+  scheduleSave();
+  return true;
+}
 // Get a student's inbox (newest first).
 function getInbox(code, limit) {
   const rec = get(code);
@@ -873,6 +886,7 @@ module.exports = {
   markMessageRead,
   markAllMessagesRead,
   expirePinForceMessages,
+  consumeGoHome,
   broadcastToClassroom,
   AVATAR_OPTIONS,
 };
