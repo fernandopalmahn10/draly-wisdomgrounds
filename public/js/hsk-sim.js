@@ -296,13 +296,15 @@
     if (sim.reading.part3 && Array.isArray(sim.reading.part3.questions)) {
       timeline.push({ kind: 'section', title: sim.reading.part3.title, instruction: sim.reading.part3.instruction });
       timeline.push({ kind: 'R3-ex', q: sim.reading.part3.example, bank: sim.reading.part3.bank });
-      sim.reading.part3.questions.forEach((q) => timeline.push({ kind: 'R3', q, bank: sim.reading.part3.bank }));
+      const r3ExLetter = sim.reading.part3.example && sim.reading.part3.example.answer;
+      sim.reading.part3.questions.forEach((q) => timeline.push({ kind: 'R3', q, bank: sim.reading.part3.bank, exampleAnswer: r3ExLetter }));
     }
     // ── Reading Part 4 — gap-fill from word bank (Sim 7+ only)
     if (sim.reading.part4 && Array.isArray(sim.reading.part4.questions)) {
       timeline.push({ kind: 'section', title: sim.reading.part4.title, instruction: sim.reading.part4.instruction });
       timeline.push({ kind: 'R4-ex', q: sim.reading.part4.example, bank: sim.reading.part4.bank });
-      sim.reading.part4.questions.forEach((q) => timeline.push({ kind: 'R4', q, bank: sim.reading.part4.bank }));
+      const r4ExLetter = sim.reading.part4.example && sim.reading.part4.example.answer;
+      sim.reading.part4.questions.forEach((q) => timeline.push({ kind: 'R4', q, bank: sim.reading.part4.bank, exampleAnswer: r4ExLetter }));
     }
   }
 
@@ -584,24 +586,38 @@
     const wrap = $('hsk-question-wrap');
     const qid = !isEx ? partKey + '-' + q.num : null;
     const heading = partKey === 'R3' ? 'Elige la respuesta' : 'Completa el espacio ( )';
+    // 🆕 2026-06-21 (Fernando) — the EXAMPLE already "uses up" one letter of the
+    // bank; that letter is NOT an option for the real questions. Kids were
+    // picking it by mistake. So on real questions we LOCK the example's letter
+    // (greyed, "ej." tag, not clickable), and the example slide is clearly
+    // marked as a worked example, not a question to answer.
+    const exLetter = !isEx ? (step.exampleAnswer || null) : null;
     wrap.innerHTML = `
-      <div class="hsk-q-card">
-        <div class="hsk-q-num">${isEx ? 'Ejemplo' : 'Pregunta ' + q.num} — ${heading}</div>
+      <div class="hsk-q-card ${isEx ? 'is-example-card' : ''}">
+        <div class="hsk-q-num">${isEx ? '📌 Ejemplo (ya resuelto — no se contesta)' : 'Pregunta ' + q.num + ' — ' + heading}</div>
+        ${isEx ? `<div class="hsk-ex-note">Así se contesta. La letra <strong>${escapeHtml(q.answer || '')}</strong> es la del ejemplo y <strong>no</strong> es opción en las preguntas.</div>` : ''}
         <div class="hsk-r2-sentence">
           <div class="hsk-r2-hanzi">${escapeHtml(q.hanzi || '')}</div>
           <div class="hsk-r2-pinyin">${escapeHtml(q.pinyin || '')}</div>
         </div>
         <div class="hsk-bank">
-          ${(step.bank || []).map((b) => `
-            <button class="hsk-bank-chip ${isEx && q.answer === b.letter ? 'is-correct is-locked' : ''}" type="button" data-pick="${b.letter}">
+          ${(step.bank || []).map((b) => {
+            const isExAnswer = isEx && q.answer === b.letter;
+            const isLockedEx = exLetter && b.letter === exLetter;
+            const cls = (isExAnswer ? 'is-correct is-locked' : '') + (isLockedEx ? ' is-example-locked' : '');
+            return `
+            <button class="hsk-bank-chip ${cls}" type="button" data-pick="${b.letter}"${isLockedEx ? ' disabled aria-disabled="true"' : ''}>
               <span class="hsk-bank-letter">${b.letter}</span>
               <span class="hsk-bank-hanzi" lang="zh">${escapeHtml(b.hanzi || '')}</span>
               <span class="hsk-bank-pinyin">${escapeHtml(b.pinyin || '')}</span>
-            </button>`).join('')}
+              ${isLockedEx ? '<span class="hsk-bank-extag">ejemplo</span>' : ''}
+            </button>`;
+          }).join('')}
         </div>
       </div>`;
     if (!isEx) {
       wrap.querySelectorAll('.hsk-bank-chip').forEach((btn) => {
+        if (btn.classList.contains('is-example-locked')) return;  // example's letter — never selectable
         btn.addEventListener('click', () => {
           answers[qid] = btn.dataset.pick;
           wrap.querySelectorAll('.hsk-bank-chip').forEach((b) => b.classList.remove('is-selected'));
