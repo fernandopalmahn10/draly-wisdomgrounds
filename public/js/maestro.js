@@ -1892,6 +1892,73 @@
     setTimeout(() => { try { a.remove(); } catch (_) {} }, 1000);
   });
 
+  // 🎓 2026-06-21 (Fernando) — CLASSROOM MANAGER. Create / rename / delete
+  // classrooms here; assign students in the Cuaderno; send to a whole class
+  // in the sentence push. Reuses the same admin pw as everything else.
+  function _openClassroomModal() { $('m-classroom-modal').classList.remove('hidden'); _renderClassroomList(); }
+  function _closeClassroomModal() { $('m-classroom-modal').classList.add('hidden'); }
+  function _classroomMsg(t, ok) {
+    const el = $('m-classroom-msg'); if (!el) return;
+    el.textContent = t || ''; el.style.color = ok === false ? '#ff8a8a' : '#5be8a0';
+    if (t) setTimeout(() => { if (el.textContent === t) el.textContent = ''; }, 2500);
+  }
+  function _renderClassroomList() {
+    const box = $('m-classroom-list'); if (!box) return;
+    box.innerHTML = '<div style="opacity:.6;text-align:center;padding:8px;">Cargando…</div>';
+    fetch('/api/admin/classrooms?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        const list = (data && data.classrooms) || [];
+        if (!list.length) { box.innerHTML = '<div style="opacity:.6;text-align:center;padding:12px;">Aún no hay aulas. Crea la primera abajo. 👇</div>'; return; }
+        box.innerHTML = '';
+        list.forEach((c) => {
+          const row = document.createElement('div');
+          row.className = 'm-classroom-row';
+          row.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;';
+          row.innerHTML =
+            '<input class="input m-classroom-name" value="' + escapeHtml(c.name || '') + '" maxlength="40" style="flex:1;min-width:120px;">' +
+            '<input class="input m-classroom-code" value="' + escapeHtml(c.code || '') + '" placeholder="código" maxlength="12" style="max-width:96px;">' +
+            '<span class="m-classroom-count" style="font-size:0.8rem;opacity:.8;white-space:nowrap;">👥 ' + (c.studentCount || 0) + ' · 🟢 ' + (c.onlineCount || 0) + '</span>' +
+            '<button class="btn btn-ghost btn-sm m-classroom-save" title="Guardar">💾</button>' +
+            '<button class="btn btn-red btn-sm m-classroom-del" title="Eliminar">🗑</button>';
+          row.querySelector('.m-classroom-save').addEventListener('click', () => {
+            const name = row.querySelector('.m-classroom-name').value;
+            const code = row.querySelector('.m-classroom-code').value;
+            fetch('/api/admin/classroom/' + encodeURIComponent(c.id) + '?pw=' + encodeURIComponent(pw), {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name, code }),
+            }).then((r) => r.json()).then((res) => {
+              _classroomMsg(res && res.ok ? '✓ Guardado' : ('Error: ' + (res && res.error || '')), !!(res && res.ok));
+              if (res && res.ok) _renderClassroomList();
+            }).catch((e) => _classroomMsg('Error: ' + e.message, false));
+          });
+          row.querySelector('.m-classroom-del').addEventListener('click', () => {
+            if (!confirm('¿Eliminar el aula "' + (c.name || '') + '"? Los alumnos volverán a agruparse por su código de acceso.')) return;
+            fetch('/api/admin/classroom/' + encodeURIComponent(c.id) + '?pw=' + encodeURIComponent(pw), { method: 'DELETE' })
+              .then((r) => r.json()).then((res) => { _classroomMsg(res && res.ok ? '✓ Eliminada' : 'No se pudo eliminar', !!(res && res.ok)); _renderClassroomList(); })
+              .catch((e) => _classroomMsg('Error: ' + e.message, false));
+          });
+          box.appendChild(row);
+        });
+      })
+      .catch((e) => { box.innerHTML = '<div style="color:#ff8a8a;text-align:center;">Error: ' + escapeHtml(e.message) + '</div>'; });
+  }
+  function _createClassroom() {
+    const name = ($('m-classroom-new-name').value || '').trim();
+    const code = ($('m-classroom-new-code').value || '').trim();
+    if (!name) { _classroomMsg('Escribe un nombre primero', false); return; }
+    fetch('/api/admin/classrooms?pw=' + encodeURIComponent(pw), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, code }),
+    }).then((r) => r.json()).then((res) => {
+      if (res && res.ok) { $('m-classroom-new-name').value = ''; $('m-classroom-new-code').value = ''; _classroomMsg('✓ Aula creada', true); _renderClassroomList(); }
+      else _classroomMsg('Error: ' + (res && res.error || ''), false);
+    }).catch((e) => _classroomMsg('Error: ' + e.message, false));
+  }
+  if ($('m-classroom-btn')) $('m-classroom-btn').addEventListener('click', _openClassroomModal);
+  if ($('m-classroom-close')) $('m-classroom-close').addEventListener('click', _closeClassroomModal);
+  if ($('m-classroom-add')) $('m-classroom-add').addEventListener('click', _createClassroom);
+
   $('m-gif-btn').addEventListener('click', _openGifModal);
   $('m-gif-close').addEventListener('click', _closeGifModal);
   $('m-gif-search').addEventListener('input', (e) => { _gifSearch = e.target.value || ''; _renderGifList(); });
@@ -2218,6 +2285,7 @@
         <span class="m-row-avatar">${renderAvatar(s.avatar)}${s._onlineNow ? '<span class="m-online-dot" title="En línea ahora"></span>' : ''}</span>
         <span class="m-row-code">${escapeHtml(s.code)}</span>
         <span class="m-row-name">${escapeHtml(s.displayName || 'Anon')}</span>
+        <span class="m-row-classroom" title="Aula" style="font-size:0.78rem;opacity:0.85;white-space:nowrap;">${s.classroomName ? '🎓 ' + escapeHtml(s.classroomName) : ''}</span>
         <span class="m-row-counts">
           <span class="m-row-c m-row-daily ${s.dailyDate === (new Date().toISOString().slice(0,10)) ? 'is-done' : ''}" title="Desafío del día"
             >${s.dailyDate === (new Date().toISOString().slice(0,10)) ? '✅' : '⌛'} Hoy</span>
@@ -2326,6 +2394,9 @@
           ${data.device ? ' · 📱 ' + escapeHtml(data.device) : ''}
           ${data.locale ? ' · 🗣 ' + escapeHtml(data.locale) : ''}
         </div>
+        <div class="m-detail-meta" style="margin-top:6px;">
+          🎓 Aula: <select class="input" id="m-detail-classroom" style="display:inline-block;width:auto;min-width:150px;"><option value="">Cargando…</option></select>
+        </div>
         <div class="m-detail-actions-row">
           <button class="btn btn-jade btn-sm" id="m-detail-send-btn">💬 Enviar mensaje</button>
           <button class="btn btn-ghost btn-sm" id="m-detail-clear-sent-btn" title="Borra solo las oraciones guardadas — el alumno permanece">🧹 Limpiar oraciones</button>
@@ -2393,6 +2464,33 @@
         })
         .catch((e) => alert('Error: ' + e.message));
     });
+    // 🎓 2026-06-21 (Fernando) — classroom selector: populate with all aulas
+    // and file/un-file this student on change. Uses the teacher-managed
+    // classroomId (sticks across logins, doesn't touch parent-privacy).
+    (function _wireClassroomSelect() {
+      const sel = $('m-detail-classroom');
+      if (!sel) return;
+      fetch('/api/admin/classrooms?pw=' + encodeURIComponent(pw))
+        .then((r) => r.json())
+        .then((cd) => {
+          const list = (cd && cd.classrooms) || [];
+          let html = '<option value="">— Sin asignar —</option>';
+          list.forEach((c) => {
+            html += '<option value="' + escapeHtml(c.id) + '"' + (c.id === data.classroomId ? ' selected' : '') +
+              '>' + escapeHtml(c.name) + (c.code ? ' (' + escapeHtml(c.code) + ')' : '') + '</option>';
+          });
+          sel.innerHTML = html;
+        })
+        .catch(() => { sel.innerHTML = '<option value="">(no se pudieron cargar las aulas)</option>'; });
+      sel.addEventListener('change', () => {
+        fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/classroom?pw=' + encodeURIComponent(pw), {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ classroomId: sel.value }),
+        }).then((r) => r.json()).then((res) => {
+          if (!res || !res.ok) alert('No se pudo cambiar el aula: ' + (res && res.error || ''));
+        }).catch((e) => alert('Error: ' + e.message));
+      });
+    })();
     // Wire rename
     $('m-detail-rename-btn').addEventListener('click', () => {
       const cur = $('m-detail-name').textContent;
