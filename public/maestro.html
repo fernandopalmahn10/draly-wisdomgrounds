@@ -37,6 +37,7 @@
       </div>
       <div class="m-dash-actions">
         <button class="btn btn-gold btn-sm" id="m-live-master-btn" title="Invitar a estudiantes en línea a una sesión en vivo">🎯 Modo Maestro en vivo</button>
+        <button class="btn btn-red btn-sm" id="m-home-btn" title="Sacar a alumnos en línea de cualquier sala/pantalla atascada y mandarlos a su perfil de tareas">🏠 Llevar a casa</button>
         <button class="btn btn-jade btn-sm" id="m-broadcast-btn">📢 Mensaje a toda la clase</button>
         <button class="btn btn-gold btn-sm" id="m-gif-btn" title="Mandar un GIF transparente a los alumnos en línea (CR7, Gojo, Mario…)">🎬 GIF a alumnos</button>
         <button class="btn btn-jade btn-sm" id="m-guides-btn" title="Subir guías de estudio en PDF para los papás">📘 Guías (PDF)</button>
@@ -213,10 +214,9 @@
           <h2>🎓 Mis Aulas</h2>
           <p class="m-modal-sub">Crea aulas con nombre, asigna alumnos en el Cuaderno y manda oraciones a un aula completa.</p>
           <div id="m-classroom-list" class="m-classroom-list"></div>
-          <div class="m-classroom-new">
-            <input class="input" id="m-classroom-new-name" type="text" placeholder="Nombre del aula (ej. HSK1 Sábado AM)" maxlength="40" autocomplete="off">
-            <input class="input" id="m-classroom-new-code" type="text" placeholder="Código de acceso (opcional, ej. 1001)" maxlength="12" autocomplete="off" style="max-width:220px;">
-            <button class="btn btn-jade btn-sm" id="m-classroom-add" type="button">➕ Crear aula</button>
+          <div class="m-classroom-new" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <input class="input" id="m-classroom-new-name" type="text" placeholder="Nombre del aula nueva (ej. HSK1 Sábado AM)" maxlength="40" autocomplete="off" style="flex:1;min-width:160px;">
+            <button class="btn btn-jade btn-sm" id="m-classroom-add" type="button">➕ Crear aula vacía</button>
           </div>
           <p class="m-modal-msg" id="m-classroom-msg" style="text-align:center;margin-top:8px;min-height:1.2em;"></p>
         </div>
@@ -351,6 +351,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260608e"></script>
-  <script src="/js/maestro.js?v=20260621b"></script>
+  <script src="/js/maestro.js?v=20260621c"></script>
 </body>
 </html>

@@ -1917,23 +1917,23 @@
           row.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;';
           row.innerHTML =
             '<input class="input m-classroom-name" value="' + escapeHtml(c.name || '') + '" maxlength="40" style="flex:1;min-width:120px;">' +
-            '<input class="input m-classroom-code" value="' + escapeHtml(c.code || '') + '" placeholder="código" maxlength="12" style="max-width:96px;">' +
             '<span class="m-classroom-count" style="font-size:0.8rem;opacity:.8;white-space:nowrap;">👥 ' + (c.studentCount || 0) + ' · 🟢 ' + (c.onlineCount || 0) + '</span>' +
-            '<button class="btn btn-ghost btn-sm m-classroom-save" title="Guardar">💾</button>' +
-            '<button class="btn btn-red btn-sm m-classroom-del" title="Eliminar">🗑</button>';
+            '<button class="btn btn-jade btn-sm m-classroom-members" title="Ver y editar quién está en esta aula">👥 Alumnos</button>' +
+            '<button class="btn btn-ghost btn-sm m-classroom-save" title="Guardar nombre">💾</button>' +
+            '<button class="btn btn-red btn-sm m-classroom-del" title="Eliminar aula">🗑</button>';
+          row.querySelector('.m-classroom-members').addEventListener('click', () => _openClassroomMembers(c));
           row.querySelector('.m-classroom-save').addEventListener('click', () => {
             const name = row.querySelector('.m-classroom-name').value;
-            const code = row.querySelector('.m-classroom-code').value;
             fetch('/api/admin/classroom/' + encodeURIComponent(c.id) + '?pw=' + encodeURIComponent(pw), {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name, code }),
+              body: JSON.stringify({ name }),
             }).then((r) => r.json()).then((res) => {
               _classroomMsg(res && res.ok ? '✓ Guardado' : ('Error: ' + (res && res.error || '')), !!(res && res.ok));
               if (res && res.ok) _renderClassroomList();
             }).catch((e) => _classroomMsg('Error: ' + e.message, false));
           });
           row.querySelector('.m-classroom-del').addEventListener('click', () => {
-            if (!confirm('¿Eliminar el aula "' + (c.name || '') + '"? Los alumnos volverán a agruparse por su código de acceso.')) return;
+            if (!confirm('¿Eliminar el aula "' + (c.name || '') + '"? Los alumnos quedarán Sin asignar (no se borra ningún alumno).')) return;
             fetch('/api/admin/classroom/' + encodeURIComponent(c.id) + '?pw=' + encodeURIComponent(pw), { method: 'DELETE' })
               .then((r) => r.json()).then((res) => { _classroomMsg(res && res.ok ? '✓ Eliminada' : 'No se pudo eliminar', !!(res && res.ok)); _renderClassroomList(); })
               .catch((e) => _classroomMsg('Error: ' + e.message, false));
@@ -1945,16 +1945,126 @@
   }
   function _createClassroom() {
     const name = ($('m-classroom-new-name').value || '').trim();
-    const code = ($('m-classroom-new-code').value || '').trim();
     if (!name) { _classroomMsg('Escribe un nombre primero', false); return; }
     fetch('/api/admin/classrooms?pw=' + encodeURIComponent(pw), {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, code }),
+      body: JSON.stringify({ name }),
     }).then((r) => r.json()).then((res) => {
-      if (res && res.ok) { $('m-classroom-new-name').value = ''; $('m-classroom-new-code').value = ''; _classroomMsg('✓ Aula creada', true); _renderClassroomList(); }
+      if (res && res.ok) { $('m-classroom-new-name').value = ''; _classroomMsg('✓ Aula vacía creada — ahora añade alumnos con 👥', true); _renderClassroomList(); }
       else _classroomMsg('Error: ' + (res && res.error || ''), false);
     }).catch((e) => _classroomMsg('Error: ' + e.message, false));
   }
+  // 👥 MEMBER EDITOR — see exactly who is in this aula and tick kids in/out.
+  // Checked = belongs to THIS aula. Ticking moves them here; unticking makes
+  // them Sin asignar. Bulk-friendly: search + scroll, changes save instantly.
+  function _openClassroomMembers(classroom) {
+    const box = $('m-classroom-list');
+    const newRow = document.querySelector('.m-classroom-new');
+    if (newRow) newRow.style.display = 'none';
+    box.innerHTML = '<div style="opacity:.6;text-align:center;padding:10px;">Cargando alumnos…</div>';
+    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        const students = ((data && data.students) || []).slice()
+          .sort((a, b) => (a.displayName || a.code || '').localeCompare(b.displayName || b.code || ''));
+        box.innerHTML =
+          '<button class="btn btn-ghost btn-sm" id="m-cls-back">← Volver a aulas</button>' +
+          '<h3 style="margin:10px 0 6px;">👥 ' + escapeHtml(classroom.name) + '</h3>' +
+          '<p style="font-size:0.8rem;opacity:.7;margin:0 0 8px;">Marca a los alumnos que pertenecen a esta aula. Se guarda al instante.</p>' +
+          '<input class="input" id="m-cls-mem-search" placeholder="🔎 Buscar alumno…" style="margin-bottom:8px;">' +
+          '<div id="m-cls-mem-list" style="max-height:46vh;overflow:auto;"></div>';
+        const listEl = box.querySelector('#m-cls-mem-list');
+        const render = (q) => {
+          const qq = (q || '').toLowerCase();
+          listEl.innerHTML = '';
+          const pool = students.filter((s) => !qq
+            || (s.displayName || '').toLowerCase().includes(qq)
+            || (s.code || '').toLowerCase().includes(qq));
+          if (!pool.length) { listEl.innerHTML = '<p style="opacity:.6;text-align:center;padding:8px;">Sin coincidencias.</p>'; return; }
+          pool.forEach((s) => {
+            const inThis = s.classroomId === classroom.id;
+            const elsewhere = (s.classroomName && !inThis) ? ' <span style="opacity:.5;font-size:.78rem;">(' + escapeHtml(s.classroomName) + ')</span>' : '';
+            const rowL = document.createElement('label');
+            rowL.style.cssText = 'display:flex;gap:8px;align-items:center;padding:5px 2px;cursor:pointer;';
+            rowL.innerHTML = '<input type="checkbox"' + (inThis ? ' checked' : '') + '>'
+              + '<span>' + escapeHtml(s.displayName || 'Anon') + ' <span style="opacity:.5;">' + escapeHtml(s.code) + '</span>' + elsewhere + '</span>';
+            rowL.querySelector('input').addEventListener('change', (e) => {
+              const cid = e.target.checked ? classroom.id : '';
+              fetch('/api/admin/student/' + encodeURIComponent(s.code) + '/classroom?pw=' + encodeURIComponent(pw), {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ classroomId: cid }),
+              }).then((r) => r.json()).then((res) => {
+                if (res && res.ok) { s.classroomId = cid || null; s.classroomName = e.target.checked ? classroom.name : null; }
+                else { e.target.checked = !e.target.checked; alert('No se pudo cambiar: ' + (res && res.error || '')); }
+              }).catch(() => { e.target.checked = !e.target.checked; });
+            });
+            listEl.appendChild(rowL);
+          });
+        };
+        render('');
+        box.querySelector('#m-cls-mem-search').addEventListener('input', (e) => render(e.target.value));
+        box.querySelector('#m-cls-back').addEventListener('click', () => { if (newRow) newRow.style.display = ''; _renderClassroomList(); });
+      })
+      .catch((e) => { box.innerHTML = '<div style="color:#ff8a8a;text-align:center;">Error: ' + escapeHtml(e.message) + '</div>'; });
+  }
+  // 🏠 2026-06-21 (Fernando) — TOP-LEVEL "Llevar a casa". Pick online kids and
+  // force them out of ANY room / stuck screen ("estás en la sala", a dead PIN
+  // room, an old classroom screen) back to their homework profile, so you can
+  // re-grab them into a fresh simulation. Reaches them via the 30s heartbeat.
+  function _openSendHomePicker() {
+    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        const online = ((data && data.students) || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
+        if (!online.length) { alert('No hay alumnos en línea ahora mismo.\n\n(Aparecen aquí los que tienen el portal o un juego abierto.)'); return; }
+        let ov = document.getElementById('m-home-modal'); if (ov) ov.remove();
+        ov = document.createElement('div');
+        ov.id = 'm-home-modal'; ov.className = 'm-modal';
+        ov.innerHTML =
+          '<div class="m-modal-card">' +
+            '<button class="m-modal-close" type="button" aria-label="Cerrar">✕</button>' +
+            '<h2>🏠 Llevar a casa</h2>' +
+            '<p class="m-modal-sub">Saca a los seleccionados de cualquier sala o pantalla atascada y mándalos a su perfil de tareas. Vuelven en ~30s. Ideal ANTES de abrir una simulación nueva.</p>' +
+            '<div class="m-force-actions">' +
+              '<button class="btn btn-ghost btn-sm" id="m-home-all">✅ Todos</button>' +
+              '<button class="btn btn-ghost btn-sm" id="m-home-none">⬜ Ninguno</button>' +
+            '</div>' +
+            '<div class="m-force-students" id="m-home-students"></div>' +
+            '<button class="btn btn-gold btn-xl" id="m-home-go" style="margin-top:14px;width:100%;">🏠 Mandar a casa</button>' +
+          '</div>';
+        document.body.appendChild(ov);
+        const listEl = ov.querySelector('#m-home-students');
+        online.forEach((s) => {
+          const row = document.createElement('label');
+          row.className = 'm-force-row';
+          row.innerHTML =
+            '<input type="checkbox" data-code="' + escapeHtml(s.code) + '" checked>' +
+            '<span class="m-force-row-dot"></span>' +
+            '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+            '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
+          listEl.appendChild(row);
+        });
+        const close = () => { try { ov.remove(); } catch (_) {} };
+        ov.querySelector('.m-modal-close').addEventListener('click', close);
+        ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+        ov.querySelector('#m-home-all').addEventListener('click', () => listEl.querySelectorAll('input').forEach((c) => { c.checked = true; }));
+        ov.querySelector('#m-home-none').addEventListener('click', () => listEl.querySelectorAll('input').forEach((c) => { c.checked = false; }));
+        ov.querySelector('#m-home-go').addEventListener('click', () => {
+          const codes = Array.from(listEl.querySelectorAll('input:checked')).map((c) => c.dataset.code).filter(Boolean);
+          if (!codes.length) { alert('Selecciona al menos un alumno.'); return; }
+          fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ studentCodes: codes, text: '📚 Tu maestra te envió a tu perfil de tareas.', actionType: 'gohome', actionUrl: '/homework', actionLabel: 'Ir a mis tareas →' }),
+          }).then((r) => r.json()).then((res) => {
+            if (res && res.ok) { alert('🏠 ' + (res.sent || codes.length) + ' alumno(s) volverán a su perfil en ~30s.'); close(); }
+            else alert('Error: ' + (res && res.error || 'desconocido'));
+          }).catch((e) => alert('Error: ' + e.message));
+        });
+      })
+      .catch((e) => alert('Error: ' + e.message));
+  }
+  if ($('m-home-btn')) $('m-home-btn').addEventListener('click', _openSendHomePicker);
+
   if ($('m-classroom-btn')) $('m-classroom-btn').addEventListener('click', _openClassroomModal);
   if ($('m-classroom-close')) $('m-classroom-close').addEventListener('click', _closeClassroomModal);
   if ($('m-classroom-add')) $('m-classroom-add').addEventListener('click', _createClassroom);
