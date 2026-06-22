@@ -1959,7 +1959,12 @@ app.post('/api/admin/sentence/push', (req, res) => {
   studentCodes.forEach((code) => {
     const rec = Students.get(code);
     if (!rec) { notFound++; return; }
-    if (ownCodes && rec.classroomCode && !ownCodes.has(rec.classroomCode)) {
+    // 🆕 2026-06-21 (Fernando) BUGFIX: super-admin must reach EVERY student.
+    // Was missing the !isSuperAdmin guard (every other endpoint has it), so
+    // pushing to an aula whose members joined with a different access code
+    // silently SKIPPED them — the sentence never landed in Mis Oraciones /
+    // report card / parent view. Now super-admin pushes to anyone.
+    if (!session.isSuperAdmin && ownCodes && rec.classroomCode && !ownCodes.has(rec.classroomCode)) {
       skipped++; return;
     }
     let landed = 0;
@@ -8456,6 +8461,17 @@ io.on('connection', (socket) => {
         if (!stillExists) return;
         // Only end if no new host has reconnected (hostId would have changed)
         if (stillExists.hostId === socket.id) {
+          // 🆕 2026-06-21 (Fernando): an HSK sim room must NEVER die just because
+          // the teacher closed/backgrounded the host tab — kids may be mid-exam
+          // and the teacher needs to keep forcing late-joiners to the same PIN.
+          // The room is also persisted to disk (HSK_ROOMS) and re-hydrates on
+          // demand, so it stays valid forever. We only RELEASE the host slot so
+          // a reopened host-hsk can reclaim it; we do NOT delete it or kick kids.
+          if (stillExists.gameType === 'hsksim') {
+            stillExists.hostId = null;
+            stillExists.hostDisconnectedAt = null;
+            return;
+          }
           if (stillExists.endTimer) clearTimeout(stillExists.endTimer);
           io.to(currentPin).emit('host-left');
           delete games[currentPin];
