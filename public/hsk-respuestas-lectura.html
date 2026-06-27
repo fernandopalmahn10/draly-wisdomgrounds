@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HSK1 · Respuestas Lectura 3 y 4 (oraciones 31–40)</title>
+<title>Dralingo HSK1 · Respuestas Lectura 31-40</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
 <style>
@@ -31,14 +31,21 @@
   .zh { font-family:'ZCOOL XiaoWei','Nunito',serif; font-size:27px; line-height:1.35; }
   .py { font-size:15px; color:#6b7280; margin-top:2px; }
   .ans, .ans b, .zh b { color:var(--red); font-weight:900; }
+  /* Floating download button — hidden in the actual PDF. */
+  .dl-btn { position:fixed; top:16px; right:16px; z-index:50;
+            background:var(--red); color:#fff; border:none; border-radius:999px;
+            font-family:'Nunito',sans-serif; font-weight:900; font-size:17px;
+            padding:13px 22px; box-shadow:0 6px 18px rgba(226,59,59,.45); cursor:pointer; }
+  .dl-btn:active { transform:scale(.96); }
   @media print {
     body { background:#fff; padding:0; }
     .sim { box-shadow:none; border:1px solid #e5d9bd; }
-    .hero p.note { display:none; }
+    .hero p.note, .dl-btn { display:none !important; }
   }
 </style>
 </head>
 <body>
+  <button class="dl-btn" onclick="window.print()">⬇️ Descargar PDF</button>
   <div class="hero">
     <h1>🐉 Dralingo · HSK1 — Hoja de respuestas</h1>
     <p><strong>Lectura 3 y 4 · Oraciones 31 a 40</strong> de cada simulación</p>
