@@ -126,6 +126,9 @@ const html = `<!doctype html>
 </body>
 </html>`;
 
-const out = path.join(__dirname, '..', 'public', 'hsk-respuestas-lectura.html');
+// Standalone file at the repo ROOT (NOT under public/) — it is a private
+// answer key, so it must NOT be a live route on the platform. Open it
+// directly in a browser and use "Descargar PDF".
+const out = path.join(__dirname, '..', 'hsk-respuestas-lectura.html');
 fs.writeFileSync(out, html, 'utf8');
 console.log('Wrote ' + out + ' — ' + total + ' sentences across 9 sims.');
