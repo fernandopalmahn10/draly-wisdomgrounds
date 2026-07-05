@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260606a">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260704a">
 </head>
 <body class="wu-bg">
   <button class="muted-toggle" id="mute-btn">🔊 On</button>
@@ -100,6 +100,7 @@
         <button class="btn btn-ghost btn-sm wu-save-current-btn" id="wu-save-current-btn" type="button">💾 Guardar</button>
         <button class="btn btn-jade btn-sm wu-push-btn" id="wu-push-btn" type="button" title="Manda esta oración a las 'Mis oraciones' de los alumnos que elijas">📤 Enviar a alumnos</button>
         <button class="btn btn-gold btn-sm wu-describe-btn" id="wu-describe-btn" type="button" title="Muestra una imagen de las simulaciones en la pantalla de TODOS para describirla juntos">🖼 Describir imagen</button>
+        <button class="btn btn-gold btn-sm" id="wu-practice-btn" type="button" title="Practica las oraciones 31-40 de cada simulación: analiza el banco A-F real del examen y elimina las opciones equivocadas en clase">🧠 Oraciones 31-40</button>
         <button class="btn btn-red btn-sm" id="wu-clear-btn" type="button">🧹 Limpiar</button>
       </div>
     </div>
@@ -315,12 +316,36 @@
     </div>
   </div>
 
+  <!-- 🧠 PRÁCTICA DE ORACIONES (31-40). Full-screen sheet: pick HSK level
+       → pick Simulación (or all 90) → each question with its REAL A-F
+       bank from the exam. Teacher taps options to eliminate the wrong
+       ones one by one until only the answer makes sense. Includes a
+       vocabulary panel (the 150 HSK1 words) accessible while inside. -->
+  <div id="wu-practice-sheet" class="wu-push-sheet" style="display:none;">
+    <button class="wu-push-corner-close" id="wu-practice-close" type="button" aria-label="Cerrar">✕</button>
+    <div class="wu-push-canvas">
+      <header class="wu-push-hero">
+        <button class="wu-push-back" id="wu-practice-back" type="button">← Volver al aula</button>
+        <div class="wu-push-hero-text">
+          <h2 class="wu-push-title" id="wu-practice-title">🧠 Práctica de oraciones</h2>
+          <p class="wu-push-sub" id="wu-practice-sub">Elige la simulación. Analiza cada pregunta con el banco real del examen: elimina las opciones equivocadas hasta que solo quede la respuesta.</p>
+        </div>
+      </header>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-ghost btn-sm" id="wu-practice-crumb" type="button" style="display:none;">← Simulaciones</button>
+        <button class="btn btn-gold btn-sm" id="wu-practice-vocab-btn" type="button">📚 Vocabulario</button>
+      </div>
+      <div id="wu-practice-vocab" class="wu-practice-vocab" style="display:none;"></div>
+      <div id="wu-practice-body">Cargando…</div>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524h"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/warmup-vocab.js?v=20260608e"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/host-warmup.js?v=20260621b"></script>
+  <script src="/js/host-warmup.js?v=20260704a"></script>
   <script src="/js/auto-host.js?v=20260604i"></script>
 </body>
 </html>

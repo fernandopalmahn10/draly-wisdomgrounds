@@ -2848,3 +2848,142 @@ body.wu-timemachine::after {
   box-shadow: 0 0 10px color-mix(in srgb, var(--cat-color, #ffc874) 60%, transparent);
 }
 
+
+/* ══════════════════════════════════════════════════════════════════
+   🧠 PRÁCTICA DE ORACIONES 31-40 (2026-07-04) — teacher-side analysis
+   of Reading Parts 3 & 4. Sim picker cards, question cards with the
+   real A-F exam bank, tap-to-eliminate interaction, vocab panel.
+   ══════════════════════════════════════════════════════════════════ */
+.wu-prac-simcard {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 16px 10px;
+  background: rgba(20, 22, 36, 0.7);
+  border: 2px solid rgba(255, 230, 106, 0.25);
+  border-radius: 14px;
+  color: #f3e6c2;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 120ms ease, border-color 120ms ease;
+}
+.wu-prac-simcard:hover { transform: translateY(-2px); border-color: #ffe66a; }
+.wu-prac-simcard.is-all { border-color: #5be8d1; background: rgba(30, 60, 60, 0.5); }
+.wu-prac-simemoji { font-size: 1.8rem; }
+.wu-prac-simname { font-weight: 900; font-size: 1rem; text-align: center; }
+.wu-prac-simmeta { font-size: 0.78rem; color: rgba(255, 255, 255, 0.55); }
+.wu-prac-simhead {
+  font-weight: 900; font-size: 1.15rem; color: #ffe66a;
+  margin: 20px 0 6px; padding-top: 10px;
+  border-top: 2px dashed rgba(255, 230, 106, 0.25);
+}
+.wu-prac-part { margin: 12px 0 20px; }
+.wu-prac-parttitle { font-weight: 900; color: #5be8d1; font-size: 1.02rem; margin-bottom: 2px; }
+.wu-prac-instr { color: rgba(255, 255, 255, 0.6); font-size: 0.85rem; margin-bottom: 8px; }
+.wu-prac-example {
+  background: rgba(255, 230, 106, 0.08);
+  border: 1px dashed rgba(255, 230, 106, 0.4);
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 0.88rem;
+  color: rgba(243, 230, 194, 0.85);
+  margin-bottom: 10px;
+}
+.wu-prac-zh { color: #ffe66a; }
+.wu-prac-hanzi { font-family: 'ZCOOL XiaoWei', serif; color: rgba(255, 245, 216, 0.85); }
+.wu-prac-ans { color: #7dffa8; }
+.wu-prac-q {
+  background: rgba(13, 18, 36, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.wu-prac-qrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.wu-prac-qnum {
+  flex-shrink: 0;
+  background: #ffe66a; color: #1a1a1a;
+  font-weight: 900; font-size: 0.9rem;
+  border-radius: 8px; padding: 3px 8px;
+}
+.wu-prac-qtext { flex: 1; min-width: 180px; font-size: 1.05rem; }
+.wu-prac-analysis { margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 10px; }
+.wu-prac-hint { color: rgba(255, 255, 255, 0.65); font-size: 0.85rem; margin-bottom: 8px; font-weight: 700; }
+.wu-prac-bank {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.wu-prac-opt {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  color: #f3e6c2;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 100ms ease, border-color 120ms ease, opacity 150ms ease;
+}
+.wu-prac-opt:active { transform: scale(0.96); }
+.wu-prac-optletter {
+  font-weight: 900; font-size: 1.05rem; color: #5be8d1;
+  background: rgba(91, 232, 209, 0.12);
+  border-radius: 6px; padding: 1px 8px;
+}
+.wu-prac-optpinyin { font-weight: 800; color: #ffe66a; font-size: 0.95rem; text-align: center; }
+.wu-prac-opthanzi { font-family: 'ZCOOL XiaoWei', serif; font-size: 1.05rem; color: rgba(255, 245, 216, 0.85); }
+.wu-prac-opt.is-eliminated {
+  opacity: 0.32;
+  filter: grayscale(0.9);
+  border-color: rgba(255, 90, 102, 0.5);
+}
+.wu-prac-opt.is-eliminated .wu-prac-optpinyin { text-decoration: line-through; }
+.wu-prac-opt.is-correct {
+  opacity: 1 !important;
+  filter: none !important;
+  border-color: #7dffa8;
+  background: rgba(125, 255, 168, 0.14);
+  box-shadow: 0 0 14px rgba(125, 255, 168, 0.35);
+  animation: wu-prac-win 400ms ease;
+}
+@keyframes wu-prac-win { 0% { transform: scale(1); } 40% { transform: scale(1.1); } 100% { transform: scale(1); } }
+.wu-prac-extag {
+  position: absolute; top: 4px; right: 6px;
+  font-size: 0.6rem; font-weight: 900; text-transform: uppercase;
+  color: #ffb26b; letter-spacing: 0.4px;
+}
+/* 📚 Vocabulary panel */
+.wu-practice-vocab {
+  background: rgba(13, 18, 36, 0.8);
+  border: 1px solid rgba(91, 232, 209, 0.35);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  max-height: 46vh;
+  overflow: auto;
+}
+.wu-prac-vocabexp summary {
+  cursor: pointer; font-weight: 900; color: #5be8d1;
+  padding: 6px 0; font-size: 0.95rem;
+}
+.wu-prac-vocabexp summary small { color: rgba(255, 255, 255, 0.45); font-weight: 700; }
+.wu-prac-vocabgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+  padding: 6px 0 10px;
+}
+.wu-prac-vocabchip {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 7px 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: #f3e6c2;
+  cursor: pointer;
+  touch-action: manipulation;
+  font-size: 0.85rem;
+}
+.wu-prac-vocabchip b { color: #ffe66a; }
+.wu-prac-vocabchip small { color: rgba(255, 255, 255, 0.5); font-style: italic; }
+.wu-prac-vocabchip:active { transform: scale(0.95); }
