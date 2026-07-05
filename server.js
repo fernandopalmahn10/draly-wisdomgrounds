@@ -2265,6 +2265,45 @@ app.get('/api/sim-images', (req, res) => {
   const cat = SimImages.getCatalog({ maxSim, refresh });
   res.json({ ok: true, groups: cat.groups, total: cat.total });
 });
+// 🧠 SENTENCE PRACTICE (teacher-only, WITH answers) — feeds the
+// "Práctica de oraciones 31-40" sheet in Modo Maestro. Returns every
+// sim's Reading Parts 3 & 4 (question + full A-F bank + answer key)
+// grouped by HSK level, so the teacher can analyze each question in
+// class: eliminate the wrong options one by one until "nothing else
+// makes sense — only the answer". Fernando 2026-07-04.
+// ⚠️ Answers included on purpose → MUST stay behind _adminAuth. The
+// kid-facing sim payload (buildSimPayload) strips answers; never swap.
+app.get('/api/hsk-sim-practice', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const levels = {};
+  Object.keys(HskSim.SIMULATIONS).forEach((id) => {
+    const sim = HskSim.SIMULATIONS[id];
+    if (!sim || !sim.reading) return;
+    const p3 = sim.reading.part3;
+    const p4 = sim.reading.part4;
+    if (!p3 && !p4) return;  // older sims without R3/R4
+    const lvl = sim.level || 'hsk1';
+    if (!levels[lvl]) levels[lvl] = [];
+    const pick = (p) => p ? {
+      title: p.title || '',
+      instruction: p.instruction || '',
+      bank: (p.bank || []).map((b) => ({ letter: b.letter, hanzi: b.hanzi || '', pinyin: b.pinyin || '' })),
+      example: p.example ? { num: p.example.num, hanzi: p.example.hanzi || '', pinyin: p.example.pinyin || '', answer: p.example.answer } : null,
+      questions: (p.questions || []).map((q) => ({ num: q.num, hanzi: q.hanzi || '', pinyin: q.pinyin || '', answer: q.answer })),
+    } : null;
+    levels[lvl].push({ id, title: sim.title || id, part3: pick(p3), part4: pick(p4) });
+  });
+  // Stable order: sim 1, 2, 3… (ids are 'hsk1-simN')
+  Object.keys(levels).forEach((lvl) => {
+    levels[lvl].sort((a, b) => {
+      const na = parseInt((a.id.match(/sim(\d+)/) || [])[1] || '0', 10);
+      const nb = parseInt((b.id.match(/sim(\d+)/) || [])[1] || '0', 10);
+      return na - nb;
+    });
+  });
+  res.json({ ok: true, levels });
+});
 // Auth helper for HSK endpoints — accept EITHER a valid HSK PIN OR a
 // homework access code. PIN flow is now the primary path (kids type
 // the 4-digit PIN to enter the room), and the homework access code

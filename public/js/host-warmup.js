@@ -339,6 +339,273 @@
   });
 
   // ════════════════════════════════════════════════════════════════
+  // 🧠 PRÁCTICA DE ORACIONES 31-40 — 2026-07-04 (Fernando):
+  //   "Sentence practice: pick HSK1 → simulation → sentences in order.
+  //    While inside I can access the vocabulary, and I can go in depth
+  //    of the question: see the options presented for that part, and
+  //    when we analyze all, they'll see nothing else makes sense —
+  //    only the one that is the answer."
+  //
+  //   - Teacher-only data (WITH answers) from /api/hsk-sim-practice,
+  //     gated by the same admin pw as the rest of Modo Maestro.
+  //   - Each question expands into an ANALYSIS row with the REAL A-F
+  //     bank from the exam. Tap a wrong option → it gets crossed out
+  //     (eliminated). Tap the right one → green ✓. Last one standing
+  //     teaches the "only this makes sense" logic. ↺ resets.
+  //   - 📚 Vocabulario toggle lists the 150 HSK1 words by experience
+  //     (WU_WORDS/WU_EXPERIENCES), each speakable — vocab access
+  //     without leaving the practice screen.
+  //   - Every pinyin (questions, bank options, vocab) plays through
+  //     speakChinese() → Google TTS with disk cache (replays free).
+  // ════════════════════════════════════════════════════════════════
+  let _practiceData = null;      // cached { levels: { hsk1: [ {id,title,part3,part4} ] } }
+  let _practiceLevel = 'hsk1';   // currently the only level; picker appears if more exist
+  const practiceBtn = $('wu-practice-btn');
+  if (practiceBtn) practiceBtn.addEventListener('click', openPracticeSheet);
+  function openPracticeSheet() {
+    const sheet = $('wu-practice-sheet');
+    if (!sheet) return;
+    sheet.style.display = 'flex';
+    requestAnimationFrame(() => sheet.classList.add('show'));
+    if (_practiceData) { _renderPracticeSims(); return; }
+    $('wu-practice-body').textContent = 'Cargando…';
+    fetch('/api/hsk-sim-practice?pw=' + encodeURIComponent(adminPw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { $('wu-practice-body').textContent = 'No se pudieron cargar las oraciones.'; return; }
+        _practiceData = data;
+        const lvls = Object.keys(data.levels || {});
+        if (lvls.length && !data.levels[_practiceLevel]) _practiceLevel = lvls[0];
+        _renderPracticeSims();
+      })
+      .catch((e) => { $('wu-practice-body').textContent = 'Error: ' + e.message; });
+  }
+  function _closePracticeSheet() {
+    const sheet = $('wu-practice-sheet');
+    if (!sheet) return;
+    sheet.classList.remove('show');
+    setTimeout(() => { try { sheet.style.display = 'none'; } catch (_) {} }, 200);
+  }
+  // ── VIEW 1: simulation picker (per level) ──
+  function _renderPracticeSims() {
+    const wrap = $('wu-practice-body');
+    if (!wrap || !_practiceData) return;
+    $('wu-practice-crumb').style.display = 'none';
+    $('wu-practice-title').textContent = '🧠 Práctica de oraciones · ' + _practiceLevel.toUpperCase();
+    $('wu-practice-sub').textContent = 'Elige la simulación. Analiza cada pregunta con el banco real del examen: elimina las opciones equivocadas hasta que solo quede la respuesta.';
+    const levels = _practiceData.levels || {};
+    const sims = levels[_practiceLevel] || [];
+    wrap.innerHTML = '';
+    // Level tabs only if more than one level exists (future HSK2+)
+    const lvlKeys = Object.keys(levels);
+    if (lvlKeys.length > 1) {
+      const tabs = document.createElement('div');
+      tabs.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;';
+      lvlKeys.forEach((lv) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-sm ' + (lv === _practiceLevel ? 'btn-gold' : 'btn-ghost');
+        b.textContent = lv.toUpperCase();
+        b.addEventListener('click', () => { _practiceLevel = lv; _renderPracticeSims(); });
+        tabs.appendChild(b);
+      });
+      wrap.appendChild(tabs);
+    }
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;';
+    const totalQs = sims.reduce((n, s) =>
+      n + ((s.part3 && s.part3.questions.length) || 0) + ((s.part4 && s.part4.questions.length) || 0), 0);
+    // "All 90" card first — the full run in order
+    const allCard = document.createElement('button');
+    allCard.type = 'button';
+    allCard.className = 'wu-prac-simcard is-all';
+    allCard.innerHTML = '<div class="wu-prac-simemoji">🌊</div><div class="wu-prac-simname">Todas en orden</div><div class="wu-prac-simmeta">' + totalQs + ' oraciones · Sim 1 → ' + sims.length + '</div>';
+    allCard.addEventListener('click', () => _renderPracticeDetail(sims, 'Todas las simulaciones'));
+    grid.appendChild(allCard);
+    sims.forEach((s) => {
+      const n = ((s.part3 && s.part3.questions.length) || 0) + ((s.part4 && s.part4.questions.length) || 0);
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'wu-prac-simcard';
+      card.innerHTML = '<div class="wu-prac-simemoji">📖</div><div class="wu-prac-simname">' + escapeHtml(s.title) + '</div><div class="wu-prac-simmeta">' + n + ' oraciones · 31-40</div>';
+      card.addEventListener('click', () => _renderPracticeDetail([s], s.title));
+      grid.appendChild(card);
+    });
+    wrap.appendChild(grid);
+  }
+  // ── VIEW 2: questions with in-depth analysis ──
+  function _renderPracticeDetail(simList, heading) {
+    const wrap = $('wu-practice-body');
+    if (!wrap) return;
+    const crumb = $('wu-practice-crumb');
+    crumb.style.display = '';
+    crumb.onclick = _renderPracticeSims;
+    $('wu-practice-title').textContent = '🧠 ' + heading;
+    $('wu-practice-sub').textContent = 'Toca 🔍 Analizar en una pregunta: elimina las opciones equivocadas una por una — al final solo la respuesta tiene sentido.';
+    wrap.innerHTML = '';
+    simList.forEach((sim) => {
+      if (simList.length > 1) {
+        const h = document.createElement('div');
+        h.className = 'wu-prac-simhead';
+        h.textContent = '📖 ' + sim.title;
+        wrap.appendChild(h);
+      }
+      [sim.part3, sim.part4].forEach((part) => {
+        if (!part) return;
+        wrap.appendChild(_buildPracticePart(part));
+      });
+    });
+  }
+  function _buildPracticePart(part) {
+    const sec = document.createElement('section');
+    sec.className = 'wu-prac-part';
+    const exLetter = part.example ? part.example.answer : null;
+    // Part header + instruction + example (already solved, letter used up)
+    let head = '<div class="wu-prac-parttitle">' + escapeHtml(part.title) + '</div>' +
+      '<div class="wu-prac-instr">' + escapeHtml(part.instruction) + '</div>';
+    if (part.example) {
+      head += '<div class="wu-prac-example">📌 Ejemplo (ya resuelto): <b class="wu-prac-zh">' + escapeHtml(part.example.pinyin) + '</b> <span class="wu-prac-hanzi">' + escapeHtml(part.example.hanzi) + '</span> → <b class="wu-prac-ans">' + escapeHtml(String(exLetter)) + '</b></div>';
+    }
+    sec.innerHTML = head;
+    // Question cards
+    (part.questions || []).forEach((q) => {
+      sec.appendChild(_buildPracticeQuestion(q, part.bank || [], exLetter));
+    });
+    return sec;
+  }
+  function _buildPracticeQuestion(q, bank, exLetter) {
+    const card = document.createElement('div');
+    card.className = 'wu-prac-q';
+    card.innerHTML =
+      '<div class="wu-prac-qrow">' +
+        '<span class="wu-prac-qnum">' + q.num + '</span>' +
+        '<span class="wu-prac-qtext"><b class="wu-prac-zh">' + escapeHtml(q.pinyin) + '</b> <span class="wu-prac-hanzi">' + escapeHtml(q.hanzi) + '</span></span>' +
+        '<button class="btn btn-ghost btn-sm wu-prac-speak" type="button">🔊</button>' +
+        '<button class="btn btn-gold btn-sm wu-prac-toggle" type="button">🔍 Analizar</button>' +
+      '</div>' +
+      '<div class="wu-prac-analysis" style="display:none;"></div>';
+    card.querySelector('.wu-prac-speak').addEventListener('click', (e) => {
+      speakChinese(q.pinyin, e.currentTarget);
+    });
+    const toggle = card.querySelector('.wu-prac-toggle');
+    const panel = card.querySelector('.wu-prac-analysis');
+    let built = false;
+    toggle.addEventListener('click', () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? '' : 'none';
+      toggle.textContent = opening ? '▲ Cerrar' : '🔍 Analizar';
+      if (opening && !built) { built = true; _buildAnalysis(panel, q, bank, exLetter); }
+    });
+    return card;
+  }
+  function _buildAnalysis(panel, q, bank, exLetter) {
+    // The REAL exam bank. Teacher taps options: wrong → crossed out
+    // (stays eliminated), correct → green ✓ and the rest fade. The
+    // example's letter starts pre-eliminated (same rule the kids see).
+    const hint = document.createElement('div');
+    hint.className = 'wu-prac-hint';
+    hint.textContent = '👆 Analicen cada opción: toca las que NO tienen sentido para eliminarlas.';
+    panel.appendChild(hint);
+    const grid = document.createElement('div');
+    grid.className = 'wu-prac-bank';
+    let solved = false;
+    bank.forEach((opt) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'wu-prac-opt';
+      const isExample = exLetter != null && opt.letter === exLetter;
+      chip.innerHTML =
+        '<span class="wu-prac-optletter">' + escapeHtml(opt.letter) + '</span>' +
+        '<span class="wu-prac-optpinyin">' + escapeHtml(opt.pinyin) + '</span>' +
+        '<span class="wu-prac-opthanzi">' + escapeHtml(opt.hanzi) + '</span>' +
+        (isExample ? '<span class="wu-prac-extag">ejemplo</span>' : '');
+      if (isExample) chip.classList.add('is-eliminated', 'is-example');
+      chip.addEventListener('click', (e) => {
+        if (solved || chip.classList.contains('is-eliminated')) {
+          // still speakable after resolution — tap replays the word
+          speakChinese(opt.pinyin, null);
+          return;
+        }
+        // First tap on a live option: hear it, then judge it
+        speakChinese(opt.pinyin, null);
+        if (opt.letter === q.answer) {
+          solved = true;
+          chip.classList.add('is-correct');
+          grid.querySelectorAll('.wu-prac-opt').forEach((c) => {
+            if (c !== chip && !c.classList.contains('is-eliminated')) c.classList.add('is-eliminated');
+          });
+          hint.textContent = '✅ ¡' + q.answer + '! Ninguna otra opción tiene sentido aquí.';
+        } else {
+          chip.classList.add('is-eliminated');
+          const left = grid.querySelectorAll('.wu-prac-opt:not(.is-eliminated)').length;
+          hint.textContent = '❌ Eliminada. Quedan ' + left + ' opciones…';
+        }
+      });
+      grid.appendChild(chip);
+    });
+    panel.appendChild(grid);
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'btn btn-ghost btn-sm';
+    reset.style.marginTop = '8px';
+    reset.textContent = '↺ Reiniciar análisis';
+    reset.addEventListener('click', () => {
+      solved = false;
+      grid.querySelectorAll('.wu-prac-opt').forEach((c) => {
+        c.classList.remove('is-correct');
+        if (!c.classList.contains('is-example')) c.classList.remove('is-eliminated');
+      });
+      hint.textContent = '👆 Analicen cada opción: toca las que NO tienen sentido para eliminarlas.';
+    });
+    panel.appendChild(reset);
+  }
+  // ── 📚 Vocabulary panel: the 150 HSK1 words by experience, speakable ──
+  (function bindPracticeControls() {
+    const back = $('wu-practice-back');
+    const close = $('wu-practice-close');
+    if (back) back.addEventListener('click', _closePracticeSheet);
+    if (close) close.addEventListener('click', _closePracticeSheet);
+    const vb = $('wu-practice-vocab-btn');
+    if (vb) vb.addEventListener('click', () => {
+      const panel = $('wu-practice-vocab');
+      if (!panel) return;
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? '' : 'none';
+      vb.textContent = opening ? '📚 Ocultar vocabulario' : '📚 Vocabulario';
+      if (opening && !panel.dataset.built) {
+        panel.dataset.built = '1';
+        _buildPracticeVocab(panel);
+      }
+    });
+  })();
+  function _buildPracticeVocab(panel) {
+    if (!window.WU_WORDS || !window.WU_EXPERIENCES) { panel.textContent = 'Vocabulario no disponible.'; return; }
+    const byExp = {};
+    window.WU_WORDS.forEach((w) => { (byExp[w.exp] = byExp[w.exp] || []).push(w); });
+    Object.keys(window.WU_EXPERIENCES).forEach((expKey) => {
+      const meta = window.WU_EXPERIENCES[expKey];
+      const words = byExp[expKey] || [];
+      if (!words.length) return;
+      const det = document.createElement('details');
+      det.className = 'wu-prac-vocabexp';
+      det.innerHTML = '<summary>' + escapeHtml(meta.short || expKey.toUpperCase()) + ' · ' + escapeHtml(meta.label || '') + ' <small>' + words.length + '</small></summary>';
+      const grid = document.createElement('div');
+      grid.className = 'wu-prac-vocabgrid';
+      words.forEach((w) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'wu-prac-vocabchip';
+        chip.innerHTML = '<span>' + escapeHtml(w.icon || '·') + '</span><b>' + escapeHtml(w.pinyin) + '</b><span class="wu-prac-hanzi">' + escapeHtml(w.hanzi || '') + '</span><small>' + escapeHtml(w.es || '') + '</small>';
+        chip.title = 'Toca para escuchar';
+        chip.addEventListener('click', (e) => speakChinese(w.pinyin, e.currentTarget));
+        grid.appendChild(chip);
+      });
+      det.appendChild(grid);
+      panel.appendChild(det);
+    });
+  }
+
+  // ════════════════════════════════════════════════════════════════
   // 📤 PUSH-TO-STUDENTS — full-screen redesign 2026-06-04 (Fernando):
   //   "It's super disorganized, something like a box at the very
   //    bottom, not clean, not beautiful. Also I can group sentences
