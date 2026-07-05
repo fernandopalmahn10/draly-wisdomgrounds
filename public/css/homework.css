@@ -874,6 +874,26 @@ body.hw-bg {
   font-style: italic;
   font-size: 0.75rem;
 }
+/* 🔊 Per-word audio (papás list) — play→cache→replay via speakChinese.
+   Big tap target so a parent/kid can hear every word they practice. */
+.hw-level-speak {
+  margin-top: 6px;
+  min-width: 40px;
+  padding: 5px 10px;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #0a1320;
+  background: #ffe082;
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+.hw-level-speak:hover { filter: brightness(1.08); }
+.hw-level-speak:active { transform: translateY(1px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25); }
+.hw-level-speak.speaking { filter: brightness(0.9); animation: hw-speak-pulse 0.7s ease-in-out infinite; }
+@keyframes hw-speak-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
 
 /* ── Results screen ──────────────────────────────────────────────── */
 .hw-results {
