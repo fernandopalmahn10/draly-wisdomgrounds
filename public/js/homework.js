@@ -3133,11 +3133,27 @@
                 <span class="hw-level-word-hanzi">${escapeHtml(w.hanzi || '')}</span>
                 <span class="hw-level-word-pinyin">${escapeHtml(w.pinyin || '')}</span>
                 <span class="hw-level-word-es">${escapeHtml(w.es || '')}</span>
+                <button type="button" class="hw-level-speak" data-pin="${escapeHtml(w.pinyin || '')}" aria-label="Escuchar ${escapeHtml(w.pinyin || '')}">🔊</button>
               </div>`).join('')}
           </div>
         </div>`;
       wrap.appendChild(card);
     });
+    // 🔊 Audio for the papás word list — same play→cache→replay TTS trick
+    // used in Modo Curioso (speakChinese object-URL cache + server disk
+    // cache, so the 2nd tap is instant and never re-synthesizes). Bound
+    // once via delegation because the list is bulk-rendered every open.
+    if (!wrap._speakBound) {
+      wrap._speakBound = true;
+      wrap.addEventListener('click', (e) => {
+        const b = e.target.closest('.hw-level-speak');
+        if (!b) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const pin = b.getAttribute('data-pin') || '';
+        if (pin) speakChinese(pin, b);
+      });
+    }
   }
 
   $('hw-parents-back').addEventListener('click', () => {
