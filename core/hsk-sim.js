@@ -2001,7 +2001,6 @@ const SIMULATIONS = {
   // L3 B E D A F (ej C) · L4 B B A C B (ej A) · R1 F T F T T ·
   // R2 D A C F B (ej E) · R3 A D C B E (ej F) · R4 B A F E C (ej D).
   // ⚠️ Quirks preserved from the upload:
-  //   - L2 q9 has only TWO option images (9A correct, 9C) — no 9B file.
   //   - R2 files 28/29/30 use FULLWIDTH parentheses （）in the filename
   //     → encoded as %EF%BC%88 / %EF%BC%89. Do not "fix" to ASCII.
   //   - L3 q15 and nothing else is .jpeg.
@@ -2035,7 +2034,7 @@ const SIMULATIONS = {
           title: 'Parte 2 · Tres imágenes',
           instruction: 'Escucha el audio y toca la imagen correcta.',
           // Sim 10 L2 correct positions: C B B A B
-          // ⚠️ q9 has only two images in the upload (no 9B) — two options.
+          // (9B.png added by user 2026-07-05 — q9 has all 3 options now.)
           questions: [
             { num: 6,  audioUrl: `${B10}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
                 { letter: 'A', image: `${B10}/LISTENING%20PART%202/6A.png` },
@@ -2054,6 +2053,7 @@ const SIMULATIONS = {
               ], answer: 'B' },
             { num: 9,  audioUrl: `${B10}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
                 { letter: 'A', image: `${B10}/LISTENING%20PART%202/9A%20(CORRECT).png` },
+                { letter: 'B', image: `${B10}/LISTENING%20PART%202/9B.png` },
                 { letter: 'C', image: `${B10}/LISTENING%20PART%202/9C.png` },
               ], answer: 'A' },
             { num: 10, audioUrl: `${B10}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
