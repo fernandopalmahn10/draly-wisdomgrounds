@@ -19,6 +19,19 @@ const EMIRATI_SECTIONS = {
   verb:    { id: 'verb',    label: 'Verbos comunes',         icon: '🏃' },
   culture: { id: 'culture', label: 'Cultura emiratí',        icon: '🇦🇪' },
   weather: { id: 'weather', label: 'Clima y naturaleza',     icon: '☀️' },
+  // 🆕 2026-07-05 (Fernando): "get me more LOCAL — the most locally used
+  // phrases, practical conversation language, so I can find someone in
+  // the street and express myself, my background, my platform, my
+  // business — in a very local Emirati way." 100 new entries, all with
+  // 2 sentences, authored in EMIRATI dialect (shḥālak not shlōnak,
+  // mub not mish, arūm/abā, wāyid, il-ḥīn, ʿugub, yamm, chidhī…).
+  loc_street:  { id: 'loc_street',  label: 'Calle: saludos de verdad',      icon: '🗣️' },
+  loc_me:      { id: 'loc_me',      label: 'Yo y mi historia',              icon: '🧔' },
+  loc_biz:     { id: 'loc_biz',     label: 'Dralingo y negocios',           icon: '🐉' },
+  loc_connect: { id: 'loc_connect', label: 'Conexiones y networking',       icon: '🤝' },
+  loc_express: { id: 'loc_express', label: 'Opinar y sentir como local',    icon: '💬' },
+  loc_power:   { id: 'loc_power',   label: 'Palabras motor (conectores)',   icon: '⚙️' },
+  loc_daily:   { id: 'loc_daily',   label: 'Vida diaria en Dubái',          icon: '🌆' },
 };
 
 let _n = 0;
@@ -438,6 +451,137 @@ const EMIRATI_WORDS = [
   w('weather', 'هوا', 'hawa', 'air/weather'),
 ];
 
+// ═════════════════════════════════════════════════════════════════════
+// 🇦🇪 LOCAL EMIRATI TRACK — 100 entries, 2026-07-05. Own id prefix
+// ('loc1'…'loc100') so the positional 'eN' ids above NEVER shift and
+// Fernando's seen/learned marks stay valid. These sections go FIRST in
+// EMIRATI_SECTION_ORDER, so the study queue starts here.
+// Dialect notes baked in: shḥālak (not shlōnak), mub (not mish/lā),
+// arūm (I can — uniquely Emirati), abā (I want), wāyid (very),
+// il-ḥīn (now), ʿugub (after), yamm (next to), chidhī (like this),
+// sīdā (straight), lēn (until), māl (belongs to), tawnī (I just…).
+// ═════════════════════════════════════════════════════════════════════
+let _ln = 0;
+function lw(section, ar, tr, en, ses) {
+  return { id: 'loc' + (++_ln), section, ar, tr, en, ses: ses || [] };
+}
+const EMIRATI_LOCAL_WORDS = [
+  // === 🗣️ CALLE: SALUDOS DE VERDAD (15) ===
+  lw('loc_street', 'شحالك', 'shḥālak', 'how are you (m) — THE Emirati greeting', [s('hala wallah! shḥālak?', 'Hey! How are you?'), s('shḥālak il-yōm, kil shay tamām?', 'How are you today, everything good?')]),
+  lw('loc_street', 'شحالچ', 'shḥālich', 'how are you (f)', [s('shḥālich il-yōm?', 'How are you today? (to a woman)'), s('marḥaba, shḥālich?', 'Hello, how are you? (f)')]),
+  lw('loc_street', 'شخبارك', 'shakhbārak', "what's your news", [s('shakhbārak? kilshay zēn?', "What's your news? All good?"), s('shakhbārak wiyya il-shughl?', "How's it going with work?")]),
+  lw('loc_street', 'علومك', 'ʿilūmak', 'your news? (super local)', [s('ʿilūmak? shū msawwī?', "What's up? What are you up to?"), s('hala, ʿilūmak il-yōm?', "Hey, what's your news today?")]),
+  lw('loc_street', 'حياك الله', 'ḥayyāk allāh', 'welcome / God greet you', [s('ḥayyāk allāh fi baitna.', 'Welcome to our home.'), s('taʿāl ʿindnā, ḥayyāk allāh.', 'Come over, you are most welcome.')]),
+  lw('loc_street', 'مرحبا الساع', 'marḥabā is-sāʿ', 'grand Emirati welcome', [s('marḥabā is-sāʿ! tfaḍḍal!', 'A big welcome! Come in!'), s('marḥabā is-sāʿ, nawwart!', 'Welcome! You light the place up!')]),
+  lw('loc_street', 'وينك', 'wēnak', 'where have you been!', [s('wēnak yā rayyāl, min zamān!', 'Where have you been man, long time!'), s('wēnak? mā shiftik min asbūʿ!', "Where are you? Haven't seen you in a week!")]),
+  lw('loc_street', 'من زمان', 'min zamān', 'long time (no see)', [s('min zamān mā shiftik!', "Long time I haven't seen you!"), s('min zamān ʿan il-gahwa maʿ baʿaḍ.', "It's been long since we had coffee together.")]),
+  lw('loc_street', 'مشكور', 'mashkūr', 'thank you (Gulf style)', [s('mashkūr ʿalā kil shay.', 'Thanks for everything.'), s('mashkūr yā ṭawīl il-ʿumr.', 'Thank you, kind sir.')]),
+  lw('loc_street', 'تسلم', 'tislam', 'bless you (thanks/reply)', [s('tislam yā ghālī.', 'Bless you, dear.'), s('tislam ʿala hal-musāʿada.', 'Bless you for this help.')]),
+  lw('loc_street', 'يا طويل العمر', 'yā ṭawīl il-ʿumr', 'respectful address ("o long-lived")', [s('shukran yā ṭawīl il-ʿumr.', 'Thank you, respected one.'), s('yā ṭawīl il-ʿumr, mumkin suʾāl?', 'Respected sir, may I ask something?')]),
+  lw('loc_street', 'أبشر', 'abshir', 'consider it done!', [s('tabā musāʿada? abshir!', 'You want help? Consider it done!'), s('abshir, kil shay bikūn jāhiz bāchir.', 'Done deal — everything will be ready tomorrow.')]),
+  lw('loc_street', 'على راسي', 'ʿalā rāsī', 'with pleasure ("on my head")', [s('ʿalā rāsī, mā yiḥtāj tiṭlub.', "With pleasure, you don't even need to ask."), s('ṭalabak ʿalā rāsī.', 'Your request is my honor.')]),
+  lw('loc_street', 'عساك بخير', 'ʿasāk b-khair', 'hope you are well', [s('ʿasāk b-khair dāyman.', 'May you always be well.'), s('shḥālak? ʿasāk b-khair.', 'How are you? Hope all is well.')]),
+  lw('loc_street', 'الله يسلمك', 'allāh yisalmik', 'God keep you (warm reply)', [s('A: maʿ as-salāma! B: allāh yisalmik.', 'A: Goodbye! B: God keep you.'), s('mashkūr! — allāh yisalmik.', 'Thanks! — God keep you safe.')]),
+
+  // === 🧔 YO Y MI HISTORIA (15) ===
+  lw('loc_me', 'أنا من هندوراس', 'ana min Hondūrās', "I'm from Honduras", [s('ana min Hondūrās, min Amrīkā il-wusṭā.', "I'm from Honduras, from Central America."), s('ṣij? ēh wallah, ana min Hondūrās!', 'Really? Yes indeed, I am from Honduras!')]),
+  lw('loc_me', 'عايش في دبي', 'ʿāyish fi Dubay', 'living in Dubai', [s('ana ʿāyish fi Dubay w mistānis wāyid.', 'I live in Dubai and I love it.'), s('ʿāyish fi Dubay min sinīn.', 'I have been living in Dubai for years.')]),
+  lw('loc_me', 'مدرّس', 'mudarris', 'teacher', [s('ana mudarris lughāt.', 'I am a language teacher.'), s('ashtaghil mudarris fi Dubay.', 'I work as a teacher in Dubai.')]),
+  lw('loc_me', 'أدرّس صيني', 'adarris ṣīnī', 'I teach Chinese', [s('adarris ṣīnī lil-ʿyāl.', 'I teach Chinese to kids.'), s('adarris ṣīnī mandarīnī fi il-madāris.', 'I teach Mandarin Chinese in schools.')]),
+  lw('loc_me', 'أتكلم ثلاث لغات', 'atkallam thalāth lughāt', 'I speak three languages', [s('atkallam isbānī w inglīzī w ṣīnī.', 'I speak Spanish, English and Chinese.'), s('w il-ḥīn atʿallam ʿarabī baʿad!', 'And now I am learning Arabic too!')]),
+  lw('loc_me', 'أتعلم عربي', 'atʿallam ʿarabī', 'I am learning Arabic', [s('atʿallam ʿarabī imārātī, mub fuṣḥā bass.', 'I learn Emirati Arabic, not just standard.'), s('atʿallam ʿarabī ʿashān aḥibb hal-balad.', 'I learn Arabic because I love this country.')]),
+  lw('loc_me', 'لغتي الأم', 'lughatī il-umm', 'my mother tongue', [s('lughatī il-umm isbānī.', 'My mother tongue is Spanish.'), s('il-isbānī lughatī il-umm, bass galbī yiḥibb il-lughāt killahā.', 'Spanish is my mother tongue, but my heart loves all languages.')]),
+  lw('loc_me', 'أحب الإمارات', 'aḥibb il-Imārāt', 'I love the Emirates', [s('aḥibb il-Imārāt wāyid.', 'I love the Emirates a lot.'), s('aḥibb il-Imārāt ʿashān in-nās ṭayyibīn.', 'I love the UAE because the people are kind.')]),
+  lw('loc_me', 'ييت دبي', 'yīt Dubay', 'I came to Dubai', [s('yīt Dubay ʿashān il-shughl.', 'I came to Dubai for work.'), s('yīt Dubay w ligēt bait thānī.', 'I came to Dubai and found a second home.')]),
+  lw('loc_me', 'خبرة', 'khibra', 'experience', [s('ʿindī khibra fi taʿlīm il-ʿyāl.', 'I have experience teaching kids.'), s('khibratī fi it-taʿlīm sinīn ṭawīla.', 'My experience in teaching is many years.')]),
+  lw('loc_me', 'حلمي', 'ḥilmī', 'my dream', [s('ḥilmī arbiṭ ith-thaqāfāt bil-lugha.', 'My dream is to connect cultures through language.'), s('ḥilmī minaṣṣatī tūṣal kil bait.', 'My dream is that my platform reaches every home.')]),
+  lw('loc_me', 'أهلي', 'ahlī', 'my family (back home)', [s('ahlī fi Hondūrās.', 'My family is in Honduras.'), s('akallim ahlī kil yōm.', 'I talk to my family every day.')]),
+  lw('loc_me', 'اشتقت لأهلي', 'ishtagt l-ahlī', 'I miss my family', [s('ishtagt l-ahlī wāyid.', 'I miss my family a lot.'), s('ishtagt l-ahlī, bass Dubay bait-ī baʿad.', 'I miss my family, but Dubai is my home too.')]),
+  lw('loc_me', 'مستانس', 'mistānis', 'happy / having a great time (very Emirati)', [s('ana mistānis fi Dubay.', 'I am really happy in Dubai.'), s('mistānis wāyid fi shughlī.', 'I really enjoy my work.')]),
+  lw('loc_me', 'قصتي', 'giṣṣatī', 'my story', [s('giṣṣatī ṭawīla bass ḥilwa.', 'My story is long but beautiful.'), s('abā aḥachīk ʿan giṣṣatī.', 'I want to tell you my story.')]),
+
+  // === 🐉 DRALINGO Y NEGOCIOS (15) ===
+  lw('loc_biz', 'منصة', 'minaṣṣa', 'platform', [s('ʿindī minaṣṣa taʿlīmiyya ismhā Dralingo.', 'I have an educational platform called Dralingo.'), s('il-minaṣṣa mālitī lil-ʿyāl.', 'My platform is for kids.')]),
+  lw('loc_biz', 'مشروع', 'mashrūʿ', 'project / venture', [s('ʿindī mashrūʿ taʿlīmī fi Dubay.', 'I have an educational venture in Dubai.'), s('il-mashrūʿ yikbar shway shway.', 'The project grows little by little.')]),
+  lw('loc_biz', 'تعليم بالألعاب', 'taʿlīm bil-alʿāb', 'learning through games', [s('ṭarīqatnā taʿlīm bil-alʿāb.', 'Our method is learning through games.'), s('il-ʿyāl yiḥibbūn it-taʿlīm bil-alʿāb.', 'Kids love learning through games.')]),
+  lw('loc_biz', 'يتعلمون وهم يلعبون', 'yitʿallamūn w hum yilʿabūn', 'they learn while playing', [s('il-ʿyāl yitʿallamūn w hum yilʿabūn.', 'The kids learn while they play.'), s('ʿindnā, yitʿallamūn w hum mistānsīn.', 'With us, they learn while having fun.')]),
+  lw('loc_biz', 'تنين', 'tinnīn', 'dragon (the mascot!)', [s('shiʿārnā tinnīn azrag ismah Dralingo.', 'Our mascot is a blue dragon called Dralingo.'), s('il-ʿyāl yiḥibbūn it-tinnīn māl il-minaṣṣa.', 'The kids love the platform\'s dragon.')]),
+  lw('loc_biz', 'شركة', 'sharika', 'company', [s('abā afattiḥ sharika fi Dubay.', 'I want to open a company in Dubai.'), s('ish-sharika mālitnā ṣighīra bass ṭamūḥa.', 'Our company is small but ambitious.')]),
+  lw('loc_biz', 'زبون', 'zabūn', 'customer', [s('iz-zabāyin mistānsīn wāyid.', 'The customers are very happy.'), s('kil zabūn ʿindnā mithl il-ʿāyla.', 'Every customer of ours is like family.')]),
+  lw('loc_biz', 'مدارس', 'madāris', 'schools', [s('ashtaghil wiyya madāris fi Dubay.', 'I work with schools in Dubai.'), s('nabā nūṣal l-madāris akthar.', 'We want to reach more schools.')]),
+  lw('loc_biz', 'اجتماع', 'ijtimāʿ', 'meeting', [s('ʿindī ijtimāʿ bāchir iṣ-ṣubḥ.', 'I have a meeting tomorrow morning.'), s('khalna nsawwī ijtimāʿ hal-isbūʿ.', 'Let\'s set a meeting this week.')]),
+  lw('loc_biz', 'شراكة', 'sharāka', 'partnership', [s('nadawwir sharāka wiyya madāris hnīh.', 'We are looking for a partnership with schools here.'), s('ish-sharāka tfīd iṭ-ṭarafēn.', 'The partnership benefits both sides.')]),
+  lw('loc_biz', 'سوّيت', 'sawwait', 'I made / I built (very Emirati)', [s('sawwait barnāmij lil-ʿyāl.', 'I built a program for kids.'), s('sawwait kil shay b-rūḥī.', 'I made everything myself.')]),
+  lw('loc_biz', 'يشتغل عدل', 'yishtaghil ʿadil', 'it works properly', [s('il-barnāmij yishtaghil ʿadil.', 'The program works properly.'), s('kil shay yishtaghil ʿadil, il-ḥamdillah.', 'Everything runs properly, thank God.')]),
+  lw('loc_biz', 'هدفنا', 'hadafnā', 'our goal', [s('hadafnā it-taʿlīm yiṣīr mitʿa.', 'Our goal is that learning becomes fun.'), s('hadafnā nirbiṭ iṣ-Ṣīn wil-Imārāt wil-ʿālam.', 'Our goal is to connect China, the UAE and the world.')]),
+  lw('loc_biz', 'مجاني', 'majjānī', 'free (of charge)', [s('it-tajruba il-ūlā majjāniyya.', 'The first trial is free.'), s('fī juzʾ majjānī ḥagg kil wāḥid.', 'There is a free part for everyone.')]),
+  lw('loc_biz', 'جرّب', 'jarrib', 'try it!', [s('jarrib il-minaṣṣa, btiḥibbhā!', 'Try the platform, you will love it!'), s('jarrib marra waḥda bass.', 'Just try it once.')]),
+
+  // === 🤝 CONEXIONES Y NETWORKING (10) ===
+  lw('loc_connect', 'نتعاون', 'nitʿāwan', "let's collaborate", [s('mumkin nitʿāwan fi hal-mashrūʿ?', 'Could we collaborate on this project?'), s('lō nitʿāwan, kilnā nistafīd.', 'If we collaborate, we all benefit.')]),
+  lw('loc_connect', 'عطني رقمك', 'ʿaṭnī ragmak', 'give me your number', [s('ʿaṭnī ragmak w akallimk bāchir.', "Give me your number and I'll call you tomorrow."), s('ʿaṭnī ragmak ʿala il-wātsāb.', 'Give me your WhatsApp number.')]),
+  lw('loc_connect', 'نتواصل', 'nitwāṣal', "let's keep in touch", [s('khalna nitwāṣal ʿala il-wātsāb.', "Let's keep in touch on WhatsApp."), s('nitwāṣal ʿugub il-ijtimāʿ.', 'We will connect after the meeting.')]),
+  lw('loc_connect', 'أعرفك على', 'aʿarrfik ʿala', 'let me introduce you to', [s('aʿarrfik ʿala ṣāḥbī, ʿindah madrasa.', 'Let me introduce you to my friend, he owns a school.'), s('taʿāl aʿarrfik ʿala il-mudīr.', 'Come, let me introduce you to the director.')]),
+  lw('loc_connect', 'تشرفنا', 'tsharrafnā', 'pleased to meet you', [s('tsharrafnā! ana Fernando.', 'Pleased to meet you! I am Fernando.'), s('tsharrafnā b-maʿriftik.', 'Honored to know you.')]),
+  lw('loc_connect', 'تبا قهوة؟', 'tabā gahwa?', 'want a coffee?', [s('tabā gahwa? ana ʿāzmik.', 'Want a coffee? My treat.'), s('nitgahwā maʿ baʿaḍ ʿugub id-dawām?', 'Shall we grab coffee together after work?')]),
+  lw('loc_connect', 'مجلس', 'majlis', 'majlis (Emirati gathering)', [s('ʿazamnī ʿala il-majlis.', 'He invited me to the majlis.'), s('fi il-majlis titʿallam akthar min il-kutub.', 'In the majlis you learn more than from books.')]),
+  lw('loc_connect', 'عزيمة', 'ʿazīma', 'invitation (to a meal/gathering)', [s('shukran ʿala il-ʿazīma.', 'Thank you for the invitation.'), s('il-ʿazīma ʿalayy il-marra il-yāya.', 'Next time the invitation is on me.')]),
+  lw('loc_connect', 'واسطة', 'wāsṭa', 'connections / who-you-know', [s('fi il-khalīj, il-wāsṭa tsāʿid wāyid.', 'In the Gulf, connections help a lot.'), s('mub wāsṭa bass — shughl zēn baʿad.', 'Not just connections — good work too.')]),
+  lw('loc_connect', 'تفضل', 'tfaḍḍal', 'here you go / please, go ahead', [s('tfaḍḍal, hāda kartī.', 'Here you go, this is my card.'), s('tfaḍḍal istariḥ, il-bait baitik.', 'Please sit, make yourself at home.')]),
+
+  // === 💬 OPINAR Y SENTIR COMO LOCAL (15) ===
+  lw('loc_express', 'بصراحة', 'b-ṣarāḥa', 'honestly / frankly', [s('b-ṣarāḥa, il-fikra wāyid zēna.', 'Honestly, the idea is really good.'), s('b-ṣarāḥa, mā ʿajabnī il-maṭʿam.', "Honestly, I didn't like the restaurant.")]),
+  lw('loc_express', 'أشوف إن', 'ashūf inn', 'I think that ("I see that")', [s('ashūf inn it-taʿlīm lāzim yitghayyar.', 'I think education needs to change.'), s('ashūf inn il-ʿyāl yitʿallamūn asraʿ bil-laʿib.', 'I think kids learn faster through play.')]),
+  lw('loc_express', 'بالنسبة لي', 'bin-nisba lī', 'as for me / in my view', [s('bin-nisba lī, il-ʿāyla awwal shay.', 'For me, family comes first.'), s('bin-nisba lī, Dubay aḥsan makān lil-mashārīʿ.', 'For me, Dubai is the best place for ventures.')]),
+  lw('loc_express', 'والله', 'wallah', 'I swear / really', [s('wallah il-mashrūʿ nājiḥ!', 'I swear the project is succeeding!'), s('wallah mā adrī.', "Honestly, I don't know.")]),
+  lw('loc_express', 'صج', 'ṣij', 'true / really (Emirati)', [s('ṣij? mā ṣaddagt!', "Really? I couldn't believe it!"), s('kalāmik ṣij.', 'What you say is true.')]),
+  lw('loc_express', 'ما صدقت', 'mā ṣaddagt', "I couldn't believe it", [s('mā ṣaddagt lamma shift in-natīja.', "I couldn't believe it when I saw the result."), s('mā ṣaddagt inn il-ʿyāl khallṣaw kil shay.', "I couldn't believe the kids finished everything.")]),
+  lw('loc_express', 'أحس إن', 'aḥiss inn', 'I feel that', [s('aḥiss inn il-ʿarabī il-imārātī aḥlā.', 'I feel Emirati Arabic is more beautiful.'), s('aḥiss inn hal-balad yaʿṭīk furṣa.', 'I feel this country gives you opportunity.')]),
+  lw('loc_express', 'يعجبني', 'yiʿjibnī', 'I like (it pleases me)', [s('yiʿjibnī it-turāth il-imārātī.', 'I like Emirati heritage.'), s('yiʿjibnī shlōn in-nās yistaqbilūnik hnīh.', 'I like how people welcome you here.')]),
+  lw('loc_express', 'ما يخالف', 'mā yikhālif', "no problem / that's fine", [s('mā yikhālif, nsawwīhā bāchir.', "No problem, we'll do it tomorrow."), s('titʾakhkhar shway? mā yikhālif.', "You'll be a bit late? That's fine.")]),
+  lw('loc_express', 'إن شاء الله خير', 'inshallah khair', 'God willing, all will be well', [s('lā tḥātī, inshallah khair.', "Don't worry, it will be fine, God willing."), s('inshallah khair, kil shay b-wagtah.', 'All will be well — everything in its time.')]),
+  lw('loc_express', 'أتمنى', 'atmannā', 'I hope / I wish', [s('atmannā minaṣṣatī tūṣal kil bait.', 'I hope my platform reaches every home.'), s('atmannā azūr Hondūrās wiyyākum yōm.', 'I hope to visit Honduras with you one day.')]),
+  lw('loc_express', 'فخور', 'fakhūr', 'proud', [s('ana fakhūr b-shughlī.', 'I am proud of my work.'), s('fakhūr b-ṭullābī wāyid.', 'I am very proud of my students.')]),
+  lw('loc_express', 'متحمس', 'mitḥammis', 'excited', [s('mitḥammis ḥagg il-mashrūʿ il-yidīd.', 'I am excited about the new project.'), s('il-ʿyāl mitḥammsīn ḥagg il-liʿba.', 'The kids are excited about the game.')]),
+  lw('loc_express', 'صعبة شوي', 'ṣaʿba shway', 'a bit hard', [s('il-lahja ṣaʿba shway bass aḥibbhā.', 'The dialect is a bit hard but I love it.'), s('il-bidāya ṣaʿba shway, ʿugub tiṣīr sahla.', 'The start is a bit hard, later it gets easy.')]),
+  lw('loc_express', 'يستاهل', 'yistāhal', "it's worth it / he deserves it", [s('it-taʿab yistāhal.', 'The effort is worth it.'), s('hal-balad yistāhal kil shay.', 'This country deserves everything.')]),
+
+  // === ⚙️ PALABRAS MOTOR (15) ===
+  lw('loc_power', 'الحين', 'il-ḥīn', 'now (THE Emirati "now")', [s('il-ḥīn afham!', 'NOW I understand!'), s('ana mashghūl il-ḥīn, akallimk ʿugub.', "I'm busy now, I'll call you later.")]),
+  lw('loc_power', 'عقب', 'ʿugub', 'after / later (Emirati)', [s('ʿugub il-ijtimāʿ nitgahwā.', 'After the meeting we get coffee.'), s('khallnā nitkallam ʿugub.', "Let's talk later.")]),
+  lw('loc_power', 'عشان', 'ʿashān', 'because / so that', [s('yīt hnīh ʿashān atʿallam.', 'I came here in order to learn.'), s('atʿallam ʿarabī ʿashān aḥtirim ith-thaqāfa.', 'I learn Arabic because I respect the culture.')]),
+  lw('loc_power', 'لازم', 'lāzim', 'must / have to', [s('lāzim titʿallam il-lahja il-maḥalliyya.', 'You must learn the local dialect.'), s('lāzim arūḥ il-ḥīn.', 'I have to go now.')]),
+  lw('loc_power', 'يمكن', 'yimkin', 'maybe', [s('yimkin ayī bāchir.', 'Maybe I will come tomorrow.'), s('yimkin ʿindik ḥagg.', 'Maybe you are right.')]),
+  lw('loc_power', 'وايد', 'wāyid', 'very / a lot (THE Emirati word)', [s('hāda zēn wāyid!', 'This is very good!'), s('ʿindī shughl wāyid il-yōm.', 'I have a lot of work today.')]),
+  lw('loc_power', 'شوي', 'shway', 'a little / slowly', [s('atkallam ʿarabī shway.', 'I speak a little Arabic.'), s('shway shway, ʿallimnī.', 'Slowly slowly, teach me.')]),
+  lw('loc_power', 'بس', 'bass', 'only / but / enough', [s('abā wāḥid bass.', 'I want just one.'), s('bass! khalāṣ, fahamt.', 'Enough! Okay, I got it.')]),
+  lw('loc_power', 'عاد', 'ʿād', 'so / then / come on (particle)', [s('lā tinsā ʿād!', "Don't forget, alright!"), s('shū ʿād hal-akil il-lathīth?!', 'What is this delicious food then?!')]),
+  lw('loc_power', 'چذي', 'chidhī', 'like this (Emirati "ch")', [s('sawwīhā chidhī.', 'Do it like this.'), s('lēsh chidhī?', 'Why like this?')]),
+  lw('loc_power', 'مب', 'mub', 'not (Emirati negation)', [s('hāda mub ṣaʿb.', 'This is not hard.'), s('ana mub mashghūl il-ḥīn.', 'I am not busy now.')]),
+  lw('loc_power', 'أروم', 'arūm', 'I can (uniquely Emirati)', [s('arūm asāʿdik.', 'I can help you.'), s('mā arūm ayī bāchir.', "I can't come tomorrow.")]),
+  lw('loc_power', 'أبا', 'abā', 'I want (Emirati)', [s('abā atʿallam akthar.', 'I want to learn more.'), s('shū tabā min il-bagāla?', 'What do you want from the store?')]),
+  lw('loc_power', 'مال', 'māl', 'of / belonging to', [s('hāda il-ktāb mālī.', 'This book is mine.'), s('is-sayyāra māl ṣāḥbī.', "The car is my friend's.")]),
+  lw('loc_power', 'توني', 'tawnī', 'I just… (this moment)', [s('tawnī wāṣil.', 'I just arrived.'), s('tawnī mkhalliṣ ish-shughl.', 'I just finished work.')]),
+
+  // === 🌆 VIDA DIARIA EN DUBÁI (15) ===
+  lw('loc_daily', 'كرك', 'karak', 'karak tea (Dubai institution)', [s('chāy karak wāḥid, min faḍlak.', 'One karak tea, please.'), s('mā fī shay aḥsan min karak iṣ-ṣubḥ.', 'Nothing beats a morning karak.')]),
+  lw('loc_daily', 'بقالة', 'bagāla', 'corner store / mini-mart', [s('arūḥ il-bagāla ashtrī māy.', 'I\'m going to the corner store to buy water.'), s('il-bagāla yamm il-bait maftūḥa lēn nuṣṣ il-lail.', 'The corner store next to the house is open until midnight.')]),
+  lw('loc_daily', 'سوق', 'sūg', 'souq / market', [s('rāḥaw is-sūg yishtarūn hadāyā.', 'They went to the souq to buy gifts.'), s('sūg il-dhahab fi Dērā mashhūr.', 'The gold souq in Deira is famous.')]),
+  lw('loc_daily', 'مول', 'mōl', 'mall', [s('nitlāgā fi il-mōl ʿugub il-maghrib.', 'We meet at the mall after sunset prayer.'), s('il-mōl zaḥma yōm il-jumʿa.', 'The mall is crowded on Friday.')]),
+  lw('loc_daily', 'مترو', 'metrō', 'metro', [s('ākhidh il-metrō ḥagg id-dawām.', 'I take the metro to work.'), s('maḥaṭṭat il-metrō yamm il-burj.', 'The metro station is next to the tower.')]),
+  lw('loc_daily', 'سيدا', 'sīdā', 'straight ahead', [s('rūḥ sīdā baʿdēn liff yamīn.', 'Go straight then turn right.'), s('il-maṭʿam sīdā, mub baʿīd.', 'The restaurant is straight ahead, not far.')]),
+  lw('loc_daily', 'يم', 'yamm', 'next to (Emirati)', [s('il-madrasa yamm il-masyid.', 'The school is next to the mosque.'), s('agʿad yammī, khalna nitkallam.', 'Sit next to me, let\'s talk.')]),
+  lw('loc_daily', 'حر', 'ḥarr', 'hot (the famous Gulf heat)', [s('il-yōm ḥarr wāyid, khalna dākhil.', "Today is very hot, let's stay inside."), s('fi iṣ-ṣaif il-ḥarr mā yinḥamal.', 'In summer the heat is unbearable.')]),
+  lw('loc_daily', 'رطوبة', 'ruṭūba', 'humidity', [s('ir-ruṭūba fi aghusṭus shay thānī!', 'The humidity in August is something else!'), s('ḥarr w ruṭūba — yalla lil-mōl!', 'Heat and humidity — off to the mall!')]),
+  lw('loc_daily', 'الويكند', 'il-wīkand', 'the weekend', [s('shū msawwī fi il-wīkand?', 'What are you doing on the weekend?'), s('il-wīkand nirūḥ il-baḥar.', 'On the weekend we go to the beach.')]),
+  lw('loc_daily', 'دوام', 'dawām', 'work hours / shift', [s('dawāmī min thamān lēn arbaʿ.', 'My work hours are from eight to four.'), s('ʿugub id-dawām nitgahwā.', 'After work we grab coffee.')]),
+  lw('loc_daily', 'لين', 'lēn', 'until (Emirati)', [s('ashtaghil lēn il-maghrib.', 'I work until sunset.'), s('intiẓart lēn is-sāʿa ʿashra.', 'I waited until ten o\'clock.')]),
+  lw('loc_daily', 'زحمة', 'zaḥma', 'traffic / crowded', [s('iṭ-ṭarīg zaḥma il-ḥīn.', 'The road is jammed right now.'), s('shēkh Zāyid rōd zaḥma iṣ-ṣubḥ.', 'Sheikh Zayed Road is jammed in the morning.')]),
+  lw('loc_daily', 'ريوق', 'rayūg', 'breakfast (uniquely Emirati)', [s('shū rayūgik il-yōm?', 'What\'s your breakfast today?'), s('rayūgnā chabāb w karak.', 'Our breakfast is chebab pancakes and karak.')]),
+  lw('loc_daily', 'مسيد', 'masyid', 'mosque (Emirati for masjid)', [s('il-masyid yamm baitnā.', 'The mosque is next to our house.'), s('asmaʿ il-adhān min il-masyid.', 'I hear the call to prayer from the mosque.')]),
+];
+EMIRATI_WORDS.push(...EMIRATI_LOCAL_WORDS);
+
 // 📚 PRIORITY ORDERING — sections sorted by real-world importance for a
 // learner. User feedback: "at the beginning I need the most important
 // words, at the end secondary stuff." Greetings + family + numbers come
@@ -445,6 +589,12 @@ const EMIRATI_WORDS = [
 // index × 1000) + position-within-section, so the natural section/word
 // authoring order IS the priority order.
 const EMIRATI_SECTION_ORDER = [
+  // 🆕 2026-07-05 — the LOCAL track comes first: real street Emirati,
+  // then self-expression (his story → Dralingo → networking → opinions),
+  // then the engine words and Dubai daily life. The study queue starts
+  // here; the original 275-word general track follows.
+  'loc_street', 'loc_me', 'loc_biz', 'loc_connect',
+  'loc_express', 'loc_power', 'loc_daily',
   'greet', 'family', 'number', 'time', 'food', 'home',
   'body',  'work',   'transp', 'emot', 'verb', 'culture', 'weather',
 ];
