@@ -3190,6 +3190,51 @@ button, a, .hw-card, .hw-folder-card, .hw-lib-chip, .hw-stage-word,
 }
 .hw-myexams-wrong-picked  { color: #ff9a6b; }
 .hw-myexams-wrong-correct { color: #5be88a; }
+/* 🆕 2026-07-05 — richer mistake context: question sentence/word, real
+   narrator-audio replay, question image, and picture answers for the
+   "tú elegiste vs la correcta" comparison. */
+.hw-myexams-ctx {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin: 4px 0 8px;
+}
+.hw-myexams-ctx-text {
+  color: #ffe082; font-weight: 800; font-size: 0.95rem;
+}
+.hw-myexams-ctx-hanzi {
+  font-family: 'ZCOOL XiaoWei', serif;
+  color: rgba(255, 245, 216, 0.85); font-weight: 400;
+}
+.hw-myexams-ctx-img {
+  width: 74px; height: 74px; object-fit: contain;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+}
+.hw-myexams-replay {
+  border: none; cursor: pointer; touch-action: manipulation;
+  background: rgba(91, 232, 209, 0.16);
+  color: #5be8d1; font-weight: 800; font-size: 0.82rem;
+  border-radius: 999px; padding: 6px 12px;
+}
+.hw-myexams-replay.speaking { animation: hw-speak-pulse 0.7s ease-in-out infinite; }
+.hw-myexams-pick {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 10px;
+  border: 1.5px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+}
+.hw-myexams-pick img {
+  width: 58px; height: 58px; object-fit: contain;
+  background: rgba(255, 255, 255, 0.06); border-radius: 8px;
+}
+.hw-myexams-pick-tag {
+  font-size: 0.72rem; font-weight: 900; text-transform: uppercase;
+  letter-spacing: 0.4px; opacity: 0.75;
+}
+.hw-myexams-pick.is-picked  { border-color: rgba(255, 154, 107, 0.55); }
+.hw-myexams-pick.is-picked strong  { color: #ff9a6b; }
+.hw-myexams-pick.is-correct { border-color: rgba(91, 232, 138, 0.55); }
+.hw-myexams-pick.is-correct strong { color: #5be88a; }
 
 .hw-sent-chip {
   display: inline-flex; flex-direction: column; align-items: center; gap: 2px;

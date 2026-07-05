@@ -2394,6 +2394,91 @@ app.post('/api/hsk-sim/:simId/submit', (req, res) => {
   res.json({ ok: true, result });
 });
 
+// 🔍 Shared wrong-question enrichment — turns a stored {qid, expected,
+// given} into everything a review screen needs. Fernando 2026-07-05:
+// "disregard what part it was — just 'pregunta 15'. And give them more
+// context: what the narrator said, what they chose — not just letters."
+//   - qNum + partLabel (partLabel kept for the teacher view)
+//   - questionLabel/questionHanzi: the word / sentence of the question
+//   - audioUrl: the ACTUAL narrator clip (kid can replay it — better
+//     than a transcript, and most audioText fields are empty anyway)
+//   - image: the question's own image (L1/R1)
+//   - givenLabel/expectedLabel: content, not bare letters — "B · zuò
+//     fēijī" (L4 options), "B · shì de (是的)" (R3/R4 bank)
+//   - givenImage/expectedImage: the tapped vs correct PICTURE for the
+//     image parts (L2 options, L3/R2 gallery)
+// Also fixes a real gap: R3/R4 were missing from the old inline maps,
+// so mistakes there showed raw "R3-33" with no text at all.
+function _enrichHskWrongQs(sim, wrongQs) {
+  const partLabels = {
+    L1: 'Parte 1 (audio)', L2: 'Parte 2 (audio)',
+    L3: 'Parte 3 (audio)', L4: 'Parte 4 (audio)',
+    R1: 'Lectura 1', R2: 'Lectura 2', R3: 'Lectura 3', R4: 'Lectura 4',
+  };
+  const fmtBool = (v) => (v === true || v === 'true') ? 'Verdadero (✓)'
+                       : (v === false || v === 'false') ? 'Falso (✕)'
+                       : String(v == null || v === '' ? '(sin responder)' : v);
+  return (wrongQs || []).map((wq) => {
+    const out = Object.assign({}, wq);
+    out.givenLabel = fmtBool(wq.given);
+    out.expectedLabel = fmtBool(wq.expected);
+    if (!sim) return out;
+    const [part, numStr] = String(wq.qid).split('-');
+    const num = parseInt(numStr, 10);
+    out.partLabel = partLabels[part] || part;
+    out.qNum = num;
+    const parts = {
+      L1: sim.listening && sim.listening.part1,
+      L2: sim.listening && sim.listening.part2,
+      L3: sim.listening && sim.listening.part3,
+      L4: sim.listening && sim.listening.part4,
+      R1: sim.reading && sim.reading.part1,
+      R2: sim.reading && sim.reading.part2,
+      R3: sim.reading && sim.reading.part3,
+      R4: sim.reading && sim.reading.part4,
+    };
+    const p = parts[part];
+    const q = p && Array.isArray(p.questions) ? p.questions.find((x) => x.num === num) : null;
+    if (!q) return out;
+    // Question text + media
+    if (q.word) out.questionLabel = q.word;                 // R1 vocab word
+    else if (q.pinyin) out.questionLabel = q.pinyin;        // R2/R3/R4 sentence
+    else if (q.audioText) out.questionLabel = q.audioText;  // listening transcript when we have it
+    if (q.hanzi) out.questionHanzi = q.hanzi;
+    if (q.audioUrl) out.audioUrl = q.audioUrl;              // replay the narrator
+    if (q.image) out.image = q.image;                       // L1/R1 picture
+    // Letter answers → resolve to CONTENT (text or picture)
+    const resolveLetter = (letter) => {
+      if (letter == null || letter === '' || typeof letter === 'boolean') return null;
+      const L = String(letter);
+      if (Array.isArray(q.options)) {                       // L2 (images) / L4 (texts)
+        const o = q.options.find((x) => x.letter === L);
+        if (o) return { text: o.text || null, image: o.image || null };
+      }
+      if (Array.isArray(p.gallery)) {                       // L3 / R2 picture galleries
+        const g = p.gallery.find((x) => x.letter === L);
+        if (g) return { text: null, image: g.image || null };
+      }
+      if (Array.isArray(p.bank)) {                          // R3/R4 word banks
+        const b = p.bank.find((x) => x.letter === L);
+        if (b) return { text: (b.pinyin || '') + (b.hanzi ? ' (' + b.hanzi + ')' : ''), image: null };
+      }
+      return null;
+    };
+    const gv = resolveLetter(wq.given);
+    const ev = resolveLetter(wq.expected);
+    if (gv) {
+      if (gv.text) out.givenLabel = wq.given + ' · ' + gv.text;
+      if (gv.image) out.givenImage = gv.image;
+    }
+    if (ev) {
+      if (ev.text) out.expectedLabel = wq.expected + ' · ' + ev.text;
+      if (ev.image) out.expectedImage = ev.image;
+    }
+    return out;
+  });
+}
+
 // 🔍 Per-attempt drill-down — returns the wrong-question list for ONE
 // recorded attempt (identified by ts). Used by the maestro Cuaderno
 // "Ver errores" expander.
@@ -2411,32 +2496,10 @@ app.get('/api/admin/student/:code/hsk-attempt', (req, res) => {
   if (!ts) return res.status(400).json({ ok: false, error: 'ts required' });
   const attempt = (rec.hskResults || []).find((r) => r.ts === ts);
   if (!attempt) return res.status(404).json({ ok: false, error: 'attempt not found' });
-  // Re-attach question text so the teacher sees "L1-3: La oración del
-  // audio es 'wǒ hěn lèi' — el kid contestó verdadero, era falso"
-  // instead of "L1-3: expected false, given true".
+  // Re-attach question text/media via the shared enrichment helper so
+  // the teacher sees content, not bare letters (and R3/R4 resolve too).
   const sim = (HskSim.SIMULATIONS || {})[attempt.simId];
-  const wrongQs = (attempt.wrongQs || []).map((wq) => {
-    const out = Object.assign({}, wq);
-    if (sim) {
-      const [part, numStr] = String(wq.qid).split('-');
-      const num = parseInt(numStr, 10);
-      const partMap = {
-        'L1': sim.listening && sim.listening.part1 && sim.listening.part1.questions,
-        'L2': sim.listening && sim.listening.part2 && sim.listening.part2.questions,
-        'L3': sim.listening && sim.listening.part3 && sim.listening.part3.questions,
-        'L4': sim.listening && sim.listening.part4 && sim.listening.part4.questions,
-        'R1': sim.reading && sim.reading.part1 && sim.reading.part1.questions,
-        'R2': sim.reading && sim.reading.part2 && sim.reading.part2.questions,
-      };
-      const q = (partMap[part] || []).find((x) => x.num === num);
-      if (q) {
-        if (q.word) out.questionLabel = q.word;             // R1 vocab
-        else if (q.pinyin) out.questionLabel = q.pinyin;    // R2 sentence
-        else if (q.audioText) out.questionLabel = q.audioText;
-      }
-    }
-    return out;
-  });
+  const wrongQs = _enrichHskWrongQs(sim, attempt.wrongQs);
   res.json({
     ok: true,
     code: rec.code,
@@ -2493,45 +2556,10 @@ app.get('/api/homework/my-hsk-attempt/:code', (req, res) => {
   const attempt = (rec.hskResults || []).find((r) => r.ts === ts);
   if (!attempt) return res.status(404).json({ ok: false, error: 'attempt not found' });
   const sim = (HskSim.SIMULATIONS || {})[attempt.simId];
-  // Same enrichment logic as the admin endpoint — extracted here so we
-  // don't introduce a shared helper for a 20-line function called twice.
-  const partLabels = {
-    L1: 'Parte 1 (audio)',
-    L2: 'Parte 2 (audio)',
-    L3: 'Parte 3 (audio)',
-    L4: 'Parte 4 (audio)',
-    R1: 'Lectura 1',
-    R2: 'Lectura 2',
-  };
-  const fmtBool = (v) => (v === true || v === 'true') ? 'Verdadero (✓)'
-                       : (v === false || v === 'false') ? 'Falso (✕)'
-                       : String(v == null || v === '' ? '(sin responder)' : v);
-  const wrongQs = (attempt.wrongQs || []).map((wq) => {
-    const out = Object.assign({}, wq);
-    out.givenLabel = fmtBool(wq.given);
-    out.expectedLabel = fmtBool(wq.expected);
-    if (sim) {
-      const [part, numStr] = String(wq.qid).split('-');
-      const num = parseInt(numStr, 10);
-      const partMap = {
-        'L1': sim.listening && sim.listening.part1 && sim.listening.part1.questions,
-        'L2': sim.listening && sim.listening.part2 && sim.listening.part2.questions,
-        'L3': sim.listening && sim.listening.part3 && sim.listening.part3.questions,
-        'L4': sim.listening && sim.listening.part4 && sim.listening.part4.questions,
-        'R1': sim.reading && sim.reading.part1 && sim.reading.part1.questions,
-        'R2': sim.reading && sim.reading.part2 && sim.reading.part2.questions,
-      };
-      const q = (partMap[part] || []).find((x) => x.num === num);
-      out.partLabel = partLabels[part] || part;
-      out.qNum = num;
-      if (q) {
-        if (q.word) out.questionLabel = q.word;
-        else if (q.pinyin) out.questionLabel = q.pinyin;
-        else if (q.audioText) out.questionLabel = q.audioText;
-      }
-    }
-    return out;
-  });
+  // Shared enrichment (see _enrichHskWrongQs): question text + hanzi,
+  // narrator audio replay URL, question/option images, and content-rich
+  // "elegiste vs correcta" labels — R3/R4 included.
+  const wrongQs = _enrichHskWrongQs(sim, attempt.wrongQs);
   res.json({
     ok: true,
     simId: attempt.simId,
