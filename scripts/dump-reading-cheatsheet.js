@@ -1,7 +1,7 @@
 // =========================================================================
 // dump-reading-cheatsheet.js  (Fernando, 2026-06-21)
 // Printable, kid-friendly answer sheet for the LAST reading parts
-// (oraciones 31-40 = Lectura 3 + 4) of Sims 1-9 → 90 sentences.
+// (oraciones 31-40 = Lectura 3 + 4) of Sims 1-10 → 100 sentences.
 // LEFT  = sentence in PINYIN only, answer in RED pinyin.
 // RIGHT = Spanish translation.
 // Output: repo-root hsk-respuestas-lectura.html  → open & "Descargar PDF".
@@ -134,11 +134,23 @@ const ES = {
     39: 'Mamá (puede) volver este mes.',
     40: 'Hola, ¿en qué (trabajas)?',
   },
+  10: {
+    31: '¿Por qué no volviste a casa al mediodía? → (fui al restaurante)',
+    32: '¿Qué día va Xiao Wang a aprender a manejar? → (el 1 de febrero)',
+    33: '¿Quiénes son esas personas de adelante? → (mis compañeros)',
+    34: '¿Xiao Yue sabe hablar chino? → (sí)',
+    35: '¿Cuántos años tiene tu hijo? → (4 años)',
+    36: 'Viniste a verme; estoy muy (feliz).',
+    37: '(Perdón), ¿qué dijiste? No te oí.',
+    38: 'No me gusta esta librería; tiene muy (pocos) libros.',
+    39: '¿(Cuándo) vuelves a China? — El próximo año, ¿y tú?',
+    40: '¿Dónde (vive) él? — Detrás de la Universidad de Pekín.',
+  },
 };
 
 let total = 0;
 let simsHtml = '';
-for (let n = 1; n <= 9; n++) {
+for (let n = 1; n <= 10; n++) {
   const sim = SIMULATIONS['hsk1-sim' + n];
   if (!sim || !sim.reading || !sim.reading.part3 || !sim.reading.part4) continue;
   const es = ES[n] || {};
@@ -224,7 +236,7 @@ const html = `<!doctype html>
     <h1>🐉 Dralingo · HSK1 — Hoja de respuestas</h1>
     <p><strong>Lectura 3 y 4 · Oraciones 31 a 40</strong> · pinyin a la izquierda, español a la derecha</p>
     <div class="key">La respuesta correcta va en <b>rojo</b>, entre paréntesis （ <b>así</b> ）</div>
-    <p class="note">${total} oraciones · Simulaciones 1–9 (la Simulación 10 aún no existe).
+    <p class="note">${total} oraciones · Simulaciones 1–10.
        Para imprimir: Ctrl/Cmd + P.</p>
   </div>
   ${simsHtml}
