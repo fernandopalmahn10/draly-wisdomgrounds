@@ -669,19 +669,61 @@
                 detail.innerHTML = '<div class="hw-myexams-perfect">🎉 ¡Cero errores en este examen! Eres una estrella.</div>';
                 return;
               }
+              // 🆕 2026-07-05 (Fernando): "disregard what part it was —
+              // just 'Pregunta 15'. Give them the context: what the
+              // narrator said, what they chose — not just letters."
+              // Layout per mistake: number → the question itself (text /
+              // image / 🔊 replay of the REAL narrator audio) → what you
+              // chose vs the correct one, with pictures when the answer
+              // WAS a picture. Old attempts without enrichment fall back
+              // to the plain labels.
               const rows = d.wrongQs.map((wq) => {
-                const titleParts = [];
-                titleParts.push((wq.partLabel || wq.qid) + (wq.qNum ? ', pregunta ' + wq.qNum : ''));
-                if (wq.questionLabel) titleParts.push('"' + escapeHtml(wq.questionLabel) + '"');
-                return '<div class="hw-myexams-wrong-row">' +
-                  '<div class="hw-myexams-wrong-q">❌ ' + titleParts.join(' · ') + '</div>' +
-                  '<div class="hw-myexams-wrong-d">' +
-                    '<span>Elegiste: <strong class="hw-myexams-wrong-picked">' + escapeHtml(wq.givenLabel) + '</strong></span>' +
-                    '<span>Correcta: <strong class="hw-myexams-wrong-correct">' + escapeHtml(wq.expectedLabel) + '</strong></span>' +
-                  '</div>' +
+                let h = '<div class="hw-myexams-wrong-row">';
+                h += '<div class="hw-myexams-wrong-q">❌ Pregunta ' + (wq.qNum || escapeHtml(String(wq.qid))) + '</div>';
+                // — the question's own context —
+                let ctx = '';
+                if (wq.questionLabel) {
+                  ctx += '<span class="hw-myexams-ctx-text">«' + escapeHtml(wq.questionLabel) + '»' +
+                    (wq.questionHanzi ? ' <span class="hw-myexams-ctx-hanzi">' + escapeHtml(wq.questionHanzi) + '</span>' : '') + '</span>';
+                }
+                if (wq.audioUrl) {
+                  ctx += '<button type="button" class="hw-myexams-replay" data-audio="' + escapeHtml(wq.audioUrl) + '">🔊 Escuchar lo que dijo el narrador</button>';
+                }
+                if (wq.image) {
+                  ctx += '<img class="hw-myexams-ctx-img" src="' + escapeHtml(wq.image) + '" alt="" loading="lazy">';
+                }
+                if (ctx) h += '<div class="hw-myexams-ctx">' + ctx + '</div>';
+                // — what you chose vs the correct one —
+                const side = (label, cls, text, img) =>
+                  '<div class="hw-myexams-pick ' + cls + '">' +
+                    '<span class="hw-myexams-pick-tag">' + label + '</span>' +
+                    (img ? '<img src="' + escapeHtml(img) + '" alt="" loading="lazy">' : '') +
+                    '<strong>' + escapeHtml(text) + '</strong>' +
+                  '</div>';
+                h += '<div class="hw-myexams-wrong-d">' +
+                  side('Tú elegiste', 'is-picked', wq.givenLabel, wq.givenImage) +
+                  side('La correcta', 'is-correct', wq.expectedLabel, wq.expectedImage) +
                 '</div>';
+                h += '</div>';
+                return h;
               }).join('');
               detail.innerHTML = '<div class="hw-myexams-detail-head">Repasa estas para la próxima vez:</div>' + rows;
+              // One delegated handler per detail panel: replay the real
+              // exam mp3 (no TTS — it's the narrator's actual voice).
+              detail.addEventListener('click', (ev) => {
+                const b = ev.target.closest('.hw-myexams-replay');
+                if (!b) return;
+                ev.stopPropagation();   // don't collapse the card
+                try {
+                  if (detail._replayAudio) { detail._replayAudio.pause(); }
+                  const au = new Audio(b.getAttribute('data-audio'));
+                  detail._replayAudio = au;
+                  b.classList.add('speaking');
+                  au.addEventListener('ended', () => b.classList.remove('speaking'));
+                  au.addEventListener('error', () => b.classList.remove('speaking'));
+                  au.play().catch(() => b.classList.remove('speaking'));
+                } catch (_) {}
+              });
             })
             .catch((e) => { detail.innerHTML = '<div class="hw-empty">Error: ' + escapeHtml(e.message) + '</div>'; });
         });

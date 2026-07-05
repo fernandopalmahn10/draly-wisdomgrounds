@@ -3019,6 +3019,259 @@
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   }
 
+  // ════════════════════════════════════════════════════════════════
+  // 🧠 SENTENCE PRACTICE — 2026-07-05 (Fernando): same teaching mode
+  // as Modo Maestro's "Oraciones 31-40", surfaced on the MAIN dashboard
+  // ("I want the simulation sentences explanations to appear here").
+  // Data: /api/hsk-sim-practice (teacher-only, answers included).
+  // Visual classes (wu-prac-*) come from warmup.css, and the vocab
+  // panel reads WU_WORDS/WU_EXPERIENCES from warmup-vocab.js — both
+  // already loaded by maestro.html.
+  // ════════════════════════════════════════════════════════════════
+  let _pracData = null;
+  let _pracLevel = 'hsk1';
+  let _pracAudio = null;
+  // Minimal play→cache→replay TTS (same /api/tts disk cache the kids use;
+  // repeat taps of the same text are served from cache, never re-billed).
+  function _speakZh(text, btn) {
+    const clean = String(text || '').trim();
+    if (!clean) return;
+    try { if (_pracAudio) _pracAudio.pause(); } catch (_) {}
+    const au = new Audio('/api/tts?text=' + encodeURIComponent(clean));
+    _pracAudio = au;
+    if (btn) {
+      btn.classList.add('speaking');
+      const done = () => btn.classList.remove('speaking');
+      au.addEventListener('ended', done);
+      au.addEventListener('error', done);
+    }
+    au.play().catch(() => { if (btn) btn.classList.remove('speaking'); });
+  }
+  const pracBtn = $('m-practice-btn');
+  if (pracBtn) pracBtn.addEventListener('click', () => {
+    $('m-practice-modal').classList.remove('hidden');
+    if (_pracData) { _renderPracSims(); return; }
+    $('m-prac-body').textContent = 'Loading…';
+    fetch('/api/hsk-sim-practice?pw=' + encodeURIComponent(pw))
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.ok) { $('m-prac-body').textContent = 'Could not load the sentences.'; return; }
+        _pracData = data;
+        const lvls = Object.keys(data.levels || {});
+        if (lvls.length && !data.levels[_pracLevel]) _pracLevel = lvls[0];
+        _renderPracSims();
+      })
+      .catch((e) => { $('m-prac-body').textContent = 'Error: ' + e.message; });
+  });
+  (function bindPracticeShell() {
+    const close = $('m-practice-close');
+    if (close) close.addEventListener('click', () => {
+      $('m-practice-modal').classList.add('hidden');
+      try { if (_pracAudio) _pracAudio.pause(); } catch (_) {}
+    });
+    const vb = $('m-prac-vocab-btn');
+    if (vb) vb.addEventListener('click', () => {
+      const panel = $('m-prac-vocab');
+      if (!panel) return;
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? '' : 'none';
+      vb.textContent = opening ? '📚 Hide vocabulary' : '📚 Vocabulary';
+      if (opening && !panel.dataset.built) {
+        panel.dataset.built = '1';
+        _buildPracVocab(panel);
+      }
+    });
+  })();
+  function _renderPracSims() {
+    const wrap = $('m-prac-body');
+    if (!wrap || !_pracData) return;
+    $('m-prac-crumb').style.display = 'none';
+    $('m-prac-title').textContent = '🧠 Sentence practice · ' + _pracLevel.toUpperCase();
+    $('m-prac-sub').textContent = 'Pick a simulation. Analyze each question with the real exam bank: eliminate the wrong options until only the answer makes sense.';
+    const levels = _pracData.levels || {};
+    const sims = levels[_pracLevel] || [];
+    wrap.innerHTML = '';
+    const lvlKeys = Object.keys(levels);
+    if (lvlKeys.length > 1) {
+      const tabs = document.createElement('div');
+      tabs.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;';
+      lvlKeys.forEach((lv) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-sm ' + (lv === _pracLevel ? 'btn-gold' : 'btn-ghost');
+        b.textContent = lv.toUpperCase();
+        b.addEventListener('click', () => { _pracLevel = lv; _renderPracSims(); });
+        tabs.appendChild(b);
+      });
+      wrap.appendChild(tabs);
+    }
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;';
+    const totalQs = sims.reduce((n, s) =>
+      n + ((s.part3 && s.part3.questions.length) || 0) + ((s.part4 && s.part4.questions.length) || 0), 0);
+    const allCard = document.createElement('button');
+    allCard.type = 'button';
+    allCard.className = 'wu-prac-simcard is-all';
+    allCard.innerHTML = '<div class="wu-prac-simemoji">🌊</div><div class="wu-prac-simname">All in order</div><div class="wu-prac-simmeta">' + totalQs + ' sentences · Sim 1 → ' + sims.length + '</div>';
+    allCard.addEventListener('click', () => _renderPracDetail(sims, 'All simulations'));
+    grid.appendChild(allCard);
+    sims.forEach((s) => {
+      const n = ((s.part3 && s.part3.questions.length) || 0) + ((s.part4 && s.part4.questions.length) || 0);
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'wu-prac-simcard';
+      card.innerHTML = '<div class="wu-prac-simemoji">📖</div><div class="wu-prac-simname">' + escapeHtml(s.title) + '</div><div class="wu-prac-simmeta">' + n + ' sentences · 31-40</div>';
+      card.addEventListener('click', () => _renderPracDetail([s], s.title));
+      grid.appendChild(card);
+    });
+    wrap.appendChild(grid);
+  }
+  function _renderPracDetail(simList, heading) {
+    const wrap = $('m-prac-body');
+    if (!wrap) return;
+    const crumb = $('m-prac-crumb');
+    crumb.style.display = '';
+    crumb.onclick = _renderPracSims;
+    $('m-prac-title').textContent = '🧠 ' + heading;
+    $('m-prac-sub').textContent = 'Tap 🔍 Analyze on a question: eliminate the wrong options one by one — in the end only the answer makes sense.';
+    wrap.innerHTML = '';
+    simList.forEach((sim) => {
+      if (simList.length > 1) {
+        const h = document.createElement('div');
+        h.className = 'wu-prac-simhead';
+        h.textContent = '📖 ' + sim.title;
+        wrap.appendChild(h);
+      }
+      [sim.part3, sim.part4].forEach((part) => {
+        if (!part) return;
+        wrap.appendChild(_buildPracPart(part));
+      });
+    });
+  }
+  function _buildPracPart(part) {
+    const sec = document.createElement('section');
+    sec.className = 'wu-prac-part';
+    const exLetter = part.example ? part.example.answer : null;
+    let head = '<div class="wu-prac-parttitle">' + escapeHtml(part.title) + '</div>' +
+      '<div class="wu-prac-instr">' + escapeHtml(part.instruction) + '</div>';
+    if (part.example) {
+      head += '<div class="wu-prac-example">📌 Example (already solved): <b class="wu-prac-zh">' + escapeHtml(part.example.pinyin) + '</b> <span class="wu-prac-hanzi">' + escapeHtml(part.example.hanzi) + '</span> → <b class="wu-prac-ans">' + escapeHtml(String(exLetter)) + '</b></div>';
+    }
+    sec.innerHTML = head;
+    (part.questions || []).forEach((q) => {
+      sec.appendChild(_buildPracQ(q, part.bank || [], exLetter));
+    });
+    return sec;
+  }
+  function _buildPracQ(q, bank, exLetter) {
+    const card = document.createElement('div');
+    card.className = 'wu-prac-q';
+    card.innerHTML =
+      '<div class="wu-prac-qrow">' +
+        '<span class="wu-prac-qnum">' + q.num + '</span>' +
+        '<span class="wu-prac-qtext"><b class="wu-prac-zh">' + escapeHtml(q.pinyin) + '</b> <span class="wu-prac-hanzi">' + escapeHtml(q.hanzi) + '</span></span>' +
+        '<button class="btn btn-ghost btn-sm wu-prac-speak" type="button">🔊</button>' +
+        '<button class="btn btn-gold btn-sm wu-prac-toggle" type="button">🔍 Analyze</button>' +
+      '</div>' +
+      '<div class="wu-prac-analysis" style="display:none;"></div>';
+    card.querySelector('.wu-prac-speak').addEventListener('click', (e) => {
+      _speakZh(q.pinyin, e.currentTarget);
+    });
+    const toggle = card.querySelector('.wu-prac-toggle');
+    const panel = card.querySelector('.wu-prac-analysis');
+    let built = false;
+    toggle.addEventListener('click', () => {
+      const opening = panel.style.display === 'none';
+      panel.style.display = opening ? '' : 'none';
+      toggle.textContent = opening ? '▲ Close' : '🔍 Analyze';
+      if (opening && !built) { built = true; _buildPracAnalysis(panel, q, bank, exLetter); }
+    });
+    return card;
+  }
+  function _buildPracAnalysis(panel, q, bank, exLetter) {
+    const hint = document.createElement('div');
+    hint.className = 'wu-prac-hint';
+    const HINT0 = '👆 Analyze each option: tap the ones that do NOT make sense to eliminate them.';
+    hint.textContent = HINT0;
+    panel.appendChild(hint);
+    const grid = document.createElement('div');
+    grid.className = 'wu-prac-bank';
+    let solved = false;
+    bank.forEach((opt) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'wu-prac-opt';
+      const isExample = exLetter != null && opt.letter === exLetter;
+      chip.innerHTML =
+        '<span class="wu-prac-optletter">' + escapeHtml(opt.letter) + '</span>' +
+        '<span class="wu-prac-optpinyin">' + escapeHtml(opt.pinyin) + '</span>' +
+        '<span class="wu-prac-opthanzi">' + escapeHtml(opt.hanzi) + '</span>' +
+        (isExample ? '<span class="wu-prac-extag">example</span>' : '');
+      if (isExample) chip.classList.add('is-eliminated', 'is-example');
+      chip.addEventListener('click', () => {
+        if (solved || chip.classList.contains('is-eliminated')) {
+          _speakZh(opt.pinyin, null);
+          return;
+        }
+        _speakZh(opt.pinyin, null);
+        if (opt.letter === q.answer) {
+          solved = true;
+          chip.classList.add('is-correct');
+          grid.querySelectorAll('.wu-prac-opt').forEach((c) => {
+            if (c !== chip && !c.classList.contains('is-eliminated')) c.classList.add('is-eliminated');
+          });
+          hint.textContent = '✅ ' + q.answer + '! No other option makes sense here.';
+        } else {
+          chip.classList.add('is-eliminated');
+          const left = grid.querySelectorAll('.wu-prac-opt:not(.is-eliminated)').length;
+          hint.textContent = '❌ Eliminated. ' + left + ' options left…';
+        }
+      });
+      grid.appendChild(chip);
+    });
+    panel.appendChild(grid);
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'btn btn-ghost btn-sm';
+    reset.style.marginTop = '8px';
+    reset.textContent = '↺ Reset analysis';
+    reset.addEventListener('click', () => {
+      solved = false;
+      grid.querySelectorAll('.wu-prac-opt').forEach((c) => {
+        c.classList.remove('is-correct');
+        if (!c.classList.contains('is-example')) c.classList.remove('is-eliminated');
+      });
+      hint.textContent = HINT0;
+    });
+    panel.appendChild(reset);
+  }
+  function _buildPracVocab(panel) {
+    if (!window.WU_WORDS || !window.WU_EXPERIENCES) { panel.textContent = 'Vocabulary not available.'; return; }
+    const byExp = {};
+    window.WU_WORDS.forEach((w) => { (byExp[w.exp] = byExp[w.exp] || []).push(w); });
+    Object.keys(window.WU_EXPERIENCES).forEach((expKey) => {
+      const meta = window.WU_EXPERIENCES[expKey];
+      const words = byExp[expKey] || [];
+      if (!words.length) return;
+      const det = document.createElement('details');
+      det.className = 'wu-prac-vocabexp';
+      det.innerHTML = '<summary>' + escapeHtml(meta.short || expKey.toUpperCase()) + ' · ' + escapeHtml(meta.label || '') + ' <small>' + words.length + '</small></summary>';
+      const grid = document.createElement('div');
+      grid.className = 'wu-prac-vocabgrid';
+      words.forEach((w) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'wu-prac-vocabchip';
+        chip.innerHTML = '<span>' + escapeHtml(w.icon || '·') + '</span><b>' + escapeHtml(w.pinyin) + '</b><span class="wu-prac-hanzi">' + escapeHtml(w.hanzi || '') + '</span><small>' + escapeHtml(w.es || '') + '</small>';
+        chip.title = 'Tap to listen';
+        chip.addEventListener('click', (e) => _speakZh(w.pinyin, e.currentTarget));
+        grid.appendChild(chip);
+      });
+      det.appendChild(grid);
+      panel.appendChild(det);
+    });
+  }
+
   // Auto-login if we have a saved password
   if (pw) {
     // Validate then mount

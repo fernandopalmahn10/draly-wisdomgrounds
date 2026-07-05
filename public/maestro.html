@@ -6,7 +6,7 @@
   <title>👩‍🏫 Teacher Mode · Draly Wisdomgrounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20260527a">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260603a">
+  <link rel="stylesheet" href="/css/warmup.css?v=20260705a">
   <link rel="stylesheet" href="/css/maestro.css?v=20260604j">
 </head>
 <body class="hw-bg">
@@ -48,6 +48,7 @@
         <button class="btn btn-gold btn-sm" id="m-custom-btn" title="Send personalized assignments to specific students">🎯 Special assignment</button>
         <button class="btn btn-jade btn-sm hidden" id="m-emirati-btn" title="Your personal language gateway">🌐 My Gateway · العربية</button>
         <button class="btn btn-jade btn-sm" id="m-classroom-btn" title="Create, rename or delete classrooms and assign students">🎓 Classrooms</button>
+        <button class="btn btn-gold btn-sm" id="m-practice-btn" title="Reading questions 31-40 of every simulation with the real A-F exam bank — eliminate the wrong options in class until only the answer makes sense">🧠 Sentence practice</button>
         <button class="btn btn-gold btn-sm" id="m-backup-btn" title="Download a backup of all data (students, grades, exams). Super-admin.">💾 Backup</button>
         <button class="btn btn-ghost btn-sm" id="m-refresh">🔄 Refresh</button>
         <button class="btn btn-ghost btn-sm" id="m-logout">Log out</button>
@@ -222,6 +223,25 @@
         </div>
       </div>
 
+      <!-- 🧠 SENTENCE PRACTICE — Reading 31-40 of every sim with the real
+           A-F exam bank. Teacher analyzes each question in class: tap the
+           wrong options to eliminate them until only the answer makes
+           sense. Reuses the wu-prac-* styles from warmup.css (loaded on
+           this page) and the WU_WORDS vocab from warmup-vocab.js. -->
+      <div id="m-practice-modal" class="m-modal hidden">
+        <div class="m-modal-card" style="max-width:980px;">
+          <button class="m-modal-close" id="m-practice-close" type="button" aria-label="Close">✕</button>
+          <h2 id="m-prac-title">🧠 Sentence practice</h2>
+          <p class="m-modal-sub" id="m-prac-sub">Pick a simulation. Analyze each question with the real exam bank: eliminate the wrong options until only the answer makes sense.</p>
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+            <button class="btn btn-ghost btn-sm" id="m-prac-crumb" type="button" style="display:none;">← Simulations</button>
+            <button class="btn btn-gold btn-sm" id="m-prac-vocab-btn" type="button">📚 Vocabulary</button>
+          </div>
+          <div id="m-prac-vocab" class="wu-practice-vocab" style="display:none;"></div>
+          <div id="m-prac-body">Loading…</div>
+        </div>
+      </div>
+
       <!-- 🎯 CUSTOM ASSIGNMENT MODAL — author + send a personalized tarea -->
       <div id="m-custom-modal" class="m-modal hidden">
         <div class="m-modal-card m-custom-card">
@@ -351,6 +371,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260608e"></script>
-  <script src="/js/maestro.js?v=20260702a"></script>
+  <script src="/js/maestro.js?v=20260705a"></script>
 </body>
 </html>
