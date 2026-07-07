@@ -433,8 +433,44 @@
     });
     wrap.appendChild(grid);
   }
+  // 🔤 Word-level lookup: map any pinyin token in a sim sentence to its
+  // WU_WORDS entry (tone/diacritic-insensitive) so the teacher can tap
+  // any word → its Curious-mode flashcard. 2026-07-07 (Fernando).
+  let _pracWuIndex = null;
+  function _pracNorm(t) {
+    return String(t || '').toLowerCase().normalize('NFD')
+      .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+  }
+  function _pracFindWuWord(token) {
+    if (!_pracWuIndex) {
+      _pracWuIndex = new Map();
+      (window.WU_WORDS || []).forEach((w) => {
+        const k = _pracNorm(w.pinyin);
+        if (k && !_pracWuIndex.has(k)) _pracWuIndex.set(k, w);
+      });
+    }
+    const k = _pracNorm(token);
+    return k ? (_pracWuIndex.get(k) || null) : null;
+  }
+  function _pracSentenceHtml(pinyin) {
+    return String(pinyin || '').split(/\s+/).map((tok) => {
+      const w = _pracFindWuWord(tok);
+      return w
+        ? '<button type="button" class="wu-prac-w" data-wid="' + escapeHtml(w.id) + '">' + escapeHtml(tok) + '</button>'
+        : '<span>' + escapeHtml(tok) + '</span>';
+    }).join(' ');
+  }
+  function _bindPracWordTaps(root) {
+    root.querySelectorAll('.wu-prac-w').forEach((b) => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const w = (window.WU_WORDS || []).find((x) => x.id === b.dataset.wid);
+      if (w) _pracShowWordCard(w);
+    }));
+  }
   // ── VIEW 2: questions with in-depth analysis ──
+  let _pracView = null;   // remembered so the 🌐 toggle can re-render
   function _renderPracticeDetail(simList, heading) {
+    _pracView = { list: simList, heading };
     const wrap = $('wu-practice-body');
     if (!wrap) return;
     const crumb = $('wu-practice-crumb');
@@ -476,16 +512,24 @@
   function _buildPracticeQuestion(q, bank, exLetter) {
     const card = document.createElement('div');
     card.className = 'wu-prac-q';
+    // Meaning in parentheses under the sentence — ES ↔ EN via the 🌐 toggle
+    // (Fernando 2026-07-07: non-Spanish teachers need English).
+    const meaning = _pracVocabLang === 'en' ? (q.en || q.es) : (q.es || q.en);
     card.innerHTML =
       '<div class="wu-prac-qrow">' +
         '<span class="wu-prac-qnum">' + q.num + '</span>' +
-        '<span class="wu-prac-qtext"><b class="wu-prac-zh">' + escapeHtml(q.pinyin) + '</b> <span class="wu-prac-hanzi">' + escapeHtml(q.hanzi) + '</span></span>' +
+        '<span class="wu-prac-qtext"><b class="wu-prac-zh">' + _pracSentenceHtml(q.pinyin) + '</b> <span class="wu-prac-hanzi">' + escapeHtml(q.hanzi) + '</span></span>' +
         '<button class="btn btn-ghost btn-sm wu-prac-speak" type="button">🔊</button>' +
         '<button class="btn btn-gold btn-sm wu-prac-toggle" type="button">🔍 Analizar</button>' +
       '</div>' +
+      (meaning ? '<div class="wu-prac-qmeaning">（ ' + escapeHtml(meaning) + ' ）</div>' : '') +
       '<div class="wu-prac-analysis" style="display:none;"></div>';
+    _bindPracWordTaps(card);
+    // 🔊 speaks the HANZI, not the pinyin — sending Latin pinyin to the
+    // Mandarin voice made it read unknown words letter-by-letter
+    // (Fernando: "it's reading the pinyin instead of the character").
     card.querySelector('.wu-prac-speak').addEventListener('click', (e) => {
-      speakChinese(q.pinyin, e.currentTarget);
+      speakChinese(q.hanzi || q.pinyin, e.currentTarget);
     });
     const toggle = card.querySelector('.wu-prac-toggle');
     const panel = card.querySelector('.wu-prac-analysis');
@@ -523,11 +567,11 @@
       chip.addEventListener('click', (e) => {
         if (solved || chip.classList.contains('is-eliminated')) {
           // still speakable after resolution — tap replays the word
-          speakChinese(opt.pinyin, null);
+          speakChinese(opt.hanzi || opt.pinyin, null);
           return;
         }
-        // First tap on a live option: hear it, then judge it
-        speakChinese(opt.pinyin, null);
+        // First tap on a live option: hear it (hanzi = native voice), judge it
+        speakChinese(opt.hanzi || opt.pinyin, null);
         if (opt.letter === q.answer) {
           solved = true;
           chip.classList.add('is-correct');
@@ -576,6 +620,16 @@
         panel.dataset.built = '1';
         _buildPracticeVocab(panel);
       }
+    });
+    // 🌐 ES ↔ EN — flips sentence meanings AND vocab cards, re-rendering
+    // whatever is currently open.
+    const lb = $('wu-practice-lang');
+    if (lb) lb.addEventListener('click', () => {
+      _pracVocabLang = _pracVocabLang === 'es' ? 'en' : 'es';
+      lb.textContent = _pracVocabLang === 'es' ? '🌐 Significados: ES' : '🌐 Meanings: EN';
+      const vp = $('wu-practice-vocab');
+      if (vp && vp.dataset.built) _buildPracticeVocab(vp);
+      if (_pracView) _renderPracticeDetail(_pracView.list, _pracView.heading);
     });
   })();
   // 🔍 "Modo Curioso" cards in practice — 2026-07-06 (Fernando): tap a

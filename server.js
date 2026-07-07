@@ -2378,7 +2378,9 @@ app.get('/api/hsk-sim-practice', (req, res) => {
       instruction: p.instruction || '',
       bank: (p.bank || []).map((b) => ({ letter: b.letter, hanzi: b.hanzi || '', pinyin: b.pinyin || '' })),
       example: p.example ? { num: p.example.num, hanzi: p.example.hanzi || '', pinyin: p.example.pinyin || '', answer: p.example.answer } : null,
-      questions: (p.questions || []).map((q) => ({ num: q.num, hanzi: q.hanzi || '', pinyin: q.pinyin || '', answer: q.answer })),
+      // es/en = per-sentence meanings (2026-07-07: shown in parentheses
+      // under each sentence with an ES↔EN toggle for non-Spanish teachers)
+      questions: (p.questions || []).map((q) => ({ num: q.num, hanzi: q.hanzi || '', pinyin: q.pinyin || '', answer: q.answer, es: q.es || '', en: q.en || '' })),
     } : null;
     levels[lvl].push({ id, title: sim.title || id, part3: pick(p3), part4: pick(p4) });
   });
