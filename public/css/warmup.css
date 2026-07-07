@@ -3031,3 +3031,19 @@ body.wu-timemachine::after {
   touch-action: manipulation;
 }
 .wu-prac-card-hint { margin-top: 10px; font-size: 0.8rem; color: rgba(255, 255, 255, 0.45); }
+
+/* 🔤 Practice word-taps + sentence meanings (2026-07-07) */
+.wu-prac-w {
+  display: inline;
+  background: none; border: none; padding: 0;
+  font: inherit; color: inherit; cursor: pointer;
+  border-bottom: 2px dotted rgba(91, 232, 209, 0.55);
+  touch-action: manipulation;
+}
+.wu-prac-w:hover, .wu-prac-w:active { color: #5be8d1; border-bottom-style: solid; }
+.wu-prac-qmeaning {
+  margin: 4px 0 0 42px;
+  font-size: 0.92rem;
+  color: rgba(243, 230, 194, 0.75);
+  font-style: italic;
+}

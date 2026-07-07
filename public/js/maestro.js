@@ -3081,6 +3081,15 @@
         _buildPracVocab(panel);
       }
     });
+    // 🌐 ES ↔ EN — flips sentence meanings AND vocab cards.
+    const lb = $('m-prac-lang');
+    if (lb) lb.addEventListener('click', () => {
+      _pracVocabLang = _pracVocabLang === 'es' ? 'en' : 'es';
+      lb.textContent = _pracVocabLang === 'es' ? '🌐 Meanings: ES' : '🌐 Meanings: EN';
+      const vp = $('m-prac-vocab');
+      if (vp && vp.dataset.built) _buildPracVocab(vp);
+      if (_pracView) _renderPracDetail(_pracView.list, _pracView.heading);
+    });
   })();
   function _renderPracSims() {
     const wrap = $('m-prac-body');
@@ -3126,7 +3135,42 @@
     });
     wrap.appendChild(grid);
   }
+  // 🔤 Word-level lookup: any pinyin token in a sim sentence → its
+  // WU_WORDS entry (tone-insensitive) → tap opens the Curious-mode card.
+  let _pracWuIndex = null;
+  function _pracNorm(t) {
+    return String(t || '').toLowerCase().normalize('NFD')
+      .replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '');
+  }
+  function _pracFindWuWord(token) {
+    if (!_pracWuIndex) {
+      _pracWuIndex = new Map();
+      (window.WU_WORDS || []).forEach((w) => {
+        const k = _pracNorm(w.pinyin);
+        if (k && !_pracWuIndex.has(k)) _pracWuIndex.set(k, w);
+      });
+    }
+    const k = _pracNorm(token);
+    return k ? (_pracWuIndex.get(k) || null) : null;
+  }
+  function _pracSentenceHtml(pinyin) {
+    return String(pinyin || '').split(/\s+/).map((tok) => {
+      const w = _pracFindWuWord(tok);
+      return w
+        ? '<button type="button" class="wu-prac-w" data-wid="' + escapeHtml(w.id) + '">' + escapeHtml(tok) + '</button>'
+        : '<span>' + escapeHtml(tok) + '</span>';
+    }).join(' ');
+  }
+  function _bindPracWordTaps(root) {
+    root.querySelectorAll('.wu-prac-w').forEach((b) => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const w = (window.WU_WORDS || []).find((x) => x.id === b.dataset.wid);
+      if (w) _pracShowWordCard(w);
+    }));
+  }
+  let _pracView = null;   // remembered so the 🌐 toggle can re-render
   function _renderPracDetail(simList, heading) {
+    _pracView = { list: simList, heading };
     const wrap = $('m-prac-body');
     if (!wrap) return;
     const crumb = $('m-prac-crumb');
@@ -3166,16 +3210,22 @@
   function _buildPracQ(q, bank, exLetter) {
     const card = document.createElement('div');
     card.className = 'wu-prac-q';
+    // Meaning in parentheses under the sentence — ES ↔ EN via 🌐 toggle
+    const meaning = _pracVocabLang === 'en' ? (q.en || q.es) : (q.es || q.en);
     card.innerHTML =
       '<div class="wu-prac-qrow">' +
         '<span class="wu-prac-qnum">' + q.num + '</span>' +
-        '<span class="wu-prac-qtext"><b class="wu-prac-zh">' + escapeHtml(q.pinyin) + '</b> <span class="wu-prac-hanzi">' + escapeHtml(q.hanzi) + '</span></span>' +
+        '<span class="wu-prac-qtext"><b class="wu-prac-zh">' + _pracSentenceHtml(q.pinyin) + '</b> <span class="wu-prac-hanzi">' + escapeHtml(q.hanzi) + '</span></span>' +
         '<button class="btn btn-ghost btn-sm wu-prac-speak" type="button">🔊</button>' +
         '<button class="btn btn-gold btn-sm wu-prac-toggle" type="button">🔍 Analyze</button>' +
       '</div>' +
+      (meaning ? '<div class="wu-prac-qmeaning">（ ' + escapeHtml(meaning) + ' ）</div>' : '') +
       '<div class="wu-prac-analysis" style="display:none;"></div>';
+    _bindPracWordTaps(card);
+    // 🔊 speaks HANZI, not pinyin — the Mandarin voice reads Latin pinyin
+    // letter-by-letter for words outside its converter dictionary.
     card.querySelector('.wu-prac-speak').addEventListener('click', (e) => {
-      _speakZh(q.pinyin, e.currentTarget);
+      _speakZh(q.hanzi || q.pinyin, e.currentTarget);
     });
     const toggle = card.querySelector('.wu-prac-toggle');
     const panel = card.querySelector('.wu-prac-analysis');
@@ -3210,10 +3260,10 @@
       if (isExample) chip.classList.add('is-eliminated', 'is-example');
       chip.addEventListener('click', () => {
         if (solved || chip.classList.contains('is-eliminated')) {
-          _speakZh(opt.pinyin, null);
+          _speakZh(opt.hanzi || opt.pinyin, null);
           return;
         }
-        _speakZh(opt.pinyin, null);
+        _speakZh(opt.hanzi || opt.pinyin, null);
         if (opt.letter === q.answer) {
           solved = true;
           chip.classList.add('is-correct');
