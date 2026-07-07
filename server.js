@@ -434,11 +434,49 @@ function _emiratiFindCached(id) {
   }
   return null;
 }
+// 💰 SAFE CAP — 2026-07-06 (Fernando: "put a safe cap on it"). The audio
+// endpoints are public and synthesis costs money, so three fences:
+//   1. ALLOWLIST: only Arabic that exists in the dataset (word.ar or a
+//      sentence's ses.ar) can be synthesized. Total possible cost is
+//      bounded by the dataset (~583 words + ~1,160 sentences × 2 voices,
+//      each rendered ONCE ever, then disk-cached forever).
+//   2. LENGTH: /audio/text rejects anything over 300 chars.
+//   3. RATE: max 40 fresh syntheses/min/IP (cache hits don't count).
+//      Normal studying is a handful per minute; the bulk pre-generator
+//      goes through the pw-gated /generate-all, not these routes.
+const _EMIRATI_KNOWN_AR = (() => {
+  const set = new Set();
+  (Emirati.EMIRATI_WORDS || []).forEach((w) => {
+    if (w.ar) set.add(String(w.ar).trim());
+    (w.ses || []).forEach((sn) => { if (sn && sn.ar) set.add(String(sn.ar).trim()); });
+  });
+  console.log('[emirati] synth allowlist:', set.size, 'known Arabic strings');
+  return set;
+})();
+const _emSynthHits = new Map();   // ip → { n, t }
+function _emiratiSynthRateLimit(req) {
+  const ip = _clientIp(req);
+  const now = Date.now();
+  const rec = _emSynthHits.get(ip) || { n: 0, t: now };
+  if (now - rec.t > 60000) { rec.n = 0; rec.t = now; }
+  rec.n++;
+  _emSynthHits.set(ip, rec);
+  if (rec.n > 40) {
+    console.warn('[security] emirati synth rate-limit hit ip=' + ip + ' (possible denial-of-wallet probe)');
+    return false;
+  }
+  return true;
+}
 // Register-text endpoint — client POSTs Arabic text, gets back a stable
 // ID it can use with the proven /:wordId audio endpoint.
+// 💰 Allowlisted: only dataset sentences can be registered.
 app.post('/api/emirati/audio/register', (req, res) => {
   const ar = String((req.body && req.body.ar) || '').trim();
   if (!ar) return res.status(400).json({ ok: false });
+  if (!_EMIRATI_KNOWN_AR.has(ar)) {
+    console.warn('[security] emirati register rejected (unknown text) ip=' + _clientIp(req));
+    return res.status(403).json({ ok: false, error: 'unknown text' });
+  }
   const id = 's_' + _registerSentenceText(ar);
   res.json({ ok: true, id });
 });
@@ -496,6 +534,8 @@ app.get('/api/emirati/audio/:wordId', (req, res, next) => {
       }
     } catch (_) {}
   }
+  // 💰 Cache miss → this is the only path that costs money. Rate-limit it.
+  if (!_emiratiSynthRateLimit(req)) return res.status(429).end();
   // Resolve the Arabic text FIRST (needed by both Azure and the fallback).
   // ⭐ Sentence IDs (s_<hash>) → look up the registered Arabic text.
   let textToSpeak;
@@ -626,6 +666,14 @@ app.get('/api/emirati/audio/text', (req, res) => {
     console.warn('[azure-text] evicting corrupt cache:', cachePath);
     try { _emFs.unlinkSync(cachePath); } catch (_) {}
   }
+  // 💰 SAFE CAP — cache miss from here on = real synthesis cost.
+  // Only dataset sentences, bounded length, per-IP rate limit.
+  if (ar.length > 300) return res.status(400).end();
+  if (!_EMIRATI_KNOWN_AR.has(ar)) {
+    console.warn('[security] emirati text synth rejected (unknown text) ip=' + _clientIp(req));
+    return res.status(403).end();
+  }
+  if (!_emiratiSynthRateLimit(req)) return res.status(429).end();
   if (!process.env.AZURE_SPEECH_KEY) {
     // 🛟 Same Google ar-XA fallback as the word endpoint (2026-07-06) —
     // sentences must never be silent. Cached under txt_<hash>_g.mp3 so
