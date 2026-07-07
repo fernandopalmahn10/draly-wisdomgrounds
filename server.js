@@ -627,8 +627,11 @@ app.get('/api/emirati/audio/text', (req, res) => {
     try { _emFs.unlinkSync(cachePath); } catch (_) {}
   }
   if (!process.env.AZURE_SPEECH_KEY) {
-    console.warn('[azure-text] AZURE_SPEECH_KEY not set!');
-    return res.status(404).end();
+    // 🛟 Same Google ar-XA fallback as the word endpoint (2026-07-06) —
+    // sentences must never be silent. Cached under txt_<hash>_g.mp3 so
+    // a working Azure key takes over transparently later.
+    console.warn('[azure-text] AZURE_SPEECH_KEY not set → Google fallback');
+    return _emiratiGoogleFallback(res, 'txt_' + hash, ar, voice);
   }
   // 🚀 RAW PIPE — bypasses everything. Stream Azure response → client.
   // No cache logic, no validation in the middle, no disk write between
