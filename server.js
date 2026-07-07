@@ -661,8 +661,12 @@ app.get('/api/emirati/audio/text', (req, res) => {
       let errBody = '';
       azureResp.on('data', (c) => { errBody += c; });
       azureResp.on('end', () => {
-        console.warn('[azure-text] Azure error body:', errBody.slice(0, 300));
-        if (!res.headersSent) res.status(502).json({ error: 'azure ' + azureResp.statusCode, body: errBody.slice(0, 300) });
+        // 🛟 2026-07-06 — Azure 401 (expired/rotated key) was returning a
+        // bare 502 here, so sentence audio died even though the Google
+        // fallback existed. Now: log the Azure error, fall back, never
+        // leave the button silent.
+        console.warn('[azure-text] Azure', azureResp.statusCode, '→ Google fallback. body:', errBody.slice(0, 300));
+        if (!res.headersSent) _emiratiGoogleFallback(res, 'txt_' + hash, ar, voice);
       });
       return;
     }
