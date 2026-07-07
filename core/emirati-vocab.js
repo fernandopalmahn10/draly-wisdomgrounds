@@ -32,6 +32,16 @@ const EMIRATI_SECTIONS = {
   loc_express: { id: 'loc_express', label: 'Opinar y sentir como local',    icon: '💬' },
   loc_power:   { id: 'loc_power',   label: 'Palabras motor (conectores)',   icon: '⚙️' },
   loc_daily:   { id: 'loc_daily',   label: 'Vida diaria en Dubái',          icon: '🌆' },
+  // 🆕 2026-07-06 — second local tranche (loc101-200), Fernando's topics:
+  // asking for correction, Emaar/Alabbar admiration, gratitude to the UAE,
+  // his edtech founder mission, Dubai's wonders for the kids, and deep
+  // majlis-level conversation. Road to 1,000 continues in tranches.
+  loc_correct:  { id: 'loc_correct',  label: 'Corrígeme (aprender hablando)', icon: '🔁' },
+  loc_emaar:    { id: 'loc_emaar',    label: 'Emaar, Alabbar e inspiración',  icon: '🏗️' },
+  loc_grateful: { id: 'loc_grateful', label: 'Gratitud y respeto al UAE',     icon: '🇦🇪' },
+  loc_founder:  { id: 'loc_founder',  label: 'Mi misión edtech',              icon: '🚀' },
+  loc_wonders:  { id: 'loc_wonders',  label: 'Maravillas de Dubái',           icon: '✨' },
+  loc_deep:     { id: 'loc_deep',     label: 'Conversación con alma',         icon: '🫀' },
 };
 
 let _n = 0;
@@ -582,6 +592,130 @@ const EMIRATI_LOCAL_WORDS = [
 ];
 EMIRATI_WORDS.push(...EMIRATI_LOCAL_WORDS);
 
+// ═════════════════════════════════════════════════════════════════════
+// 🇦🇪 LOCAL TRANCHE 2 (loc101-loc200) — 2026-07-06. Fernando's request:
+// "I need 1,000 not 100 — my topics: am I saying it right / correct me;
+// I love Emaar and Mohammed Alabbar and his story, he speaks with so
+// much passion; the respect and gratitude I have for the UAE for the
+// opportunities given; I'm an edtech founder pushing for the kids and
+// bridging worlds and cultures; I want kids to know the wonders of
+// Dubai." The lw() counter continues → ids loc101+ (never collide).
+// ═════════════════════════════════════════════════════════════════════
+const EMIRATI_LOCAL2 = [
+  // === 🔁 CORRÍGEME — aprender hablando (15) ===
+  lw('loc_correct', 'صح چذي؟', 'ṣaḥḥ chidhī?', 'is it right like this?', [s('gilt-hā ṣaḥḥ chidhī?', 'Did I say it right like this?'), s('ṣaḥḥ chidhī, willā ghalaṭ?', 'Right like this, or wrong?')]),
+  lw('loc_correct', 'صلحني لو غلطان', 'ṣalliḥnī lō ghalṭān', 'correct me if I am wrong', [s('ṣalliḥnī lō ghalṭān, tarā abā atʿallam.', 'Correct me if I am wrong — I really want to learn.'), s('lō gilt shay ghalaṭ, ṣalliḥnī ʿalā ṭūl.', 'If I say something wrong, correct me right away.')]),
+  lw('loc_correct', 'شلون أقول', 'shlōn agūl…?', 'how do I say…?', [s('shlōn agūl hāy bil-imārātī?', 'How do I say this in Emirati?'), s('shlōn agūl "thank you" bil-lahja?', 'How do I say "thank you" in the dialect?')]),
+  lw('loc_correct', 'شو معنى', 'shū maʿnā…?', 'what does … mean?', [s('shū maʿnā hal-kilma?', 'What does this word mean?'), s('shū maʿnā "wāyid"?', 'What does "wāyid" mean?')]),
+  lw('loc_correct', 'عيد مرة ثانية', 'ʿīd marra thānya', 'say it again', [s('mumkin tʿīd marra thānya?', 'Could you say it again?'), s('ʿīd-hā shway abṭaʾ, min faḍlak.', 'Say it a bit slower, please.')]),
+  lw('loc_correct', 'ما فهمت', 'mā fihamt', "I didn't understand", [s('āsif, mā fihamt — ʿīd lō samaḥt.', "Sorry, I didn't understand — repeat please."), s('mā fihamt il-kilma il-akhīra.', "I didn't catch the last word.")]),
+  lw('loc_correct', 'فهمت عليك', 'fihamt ʿalaik', 'I got you / understood you', [s('il-ḥīn fihamt ʿalaik!', 'NOW I got you!'), s('fihamt ʿalaik, kalāmik wāḍiḥ.', 'I understood you, your words are clear.')]),
+  lw('loc_correct', 'نطقي زين؟', 'nuṭqī zēn?', 'is my pronunciation good?', [s('nuṭqī zēn willā aḥtāj atmarran?', 'Is my pronunciation good or do I need practice?'), s('gūl lī iṣ-ṣij: nuṭqī zēn?', 'Tell me the truth: is my pronunciation good?')]),
+  lw('loc_correct', 'علمني', 'ʿallimnī', 'teach me', [s('ʿallimnī kilma yidīda kil yōm.', 'Teach me a new word every day.'), s('ʿallimnī shlōn akūn maḥallī akthar.', 'Teach me how to sound more local.')]),
+  lw('loc_correct', 'أتمرن', 'atmarran', 'I practice', [s('atmarran ʿarabī kil yōm nuṣṣ sāʿa.', 'I practice Arabic half an hour every day.'), s('lāzim atmarran wiyya nās maḥalliyīn.', 'I need to practice with local people.')]),
+  lw('loc_correct', 'أستخدمها صح؟', 'astakhdimhā ṣaḥḥ?', 'am I using it right?', [s('astakhdim hal-kilma ṣaḥḥ?', 'Am I using this word correctly?'), s('gūl lī lō astakhdimhā ghalaṭ.', 'Tell me if I use it wrong.')]),
+  lw('loc_correct', 'يعني', 'yaʿnī', 'meaning / that is', [s('yaʿnī shū bil-ḍabṭ?', 'Meaning what exactly?'), s('hal-kilma yaʿnī "happy", ṣaḥḥ?', 'This word means "happy", right?')]),
+  lw('loc_correct', 'بالضبط', 'bil-ḍabṭ', 'exactly', [s('chidhī bil-ḍabṭ!', 'Exactly like this!'), s('shū tagṣid bil-ḍabṭ?', 'What do you mean exactly?')]),
+  lw('loc_correct', 'باقي علي وايد', 'bāgī ʿalayy wāyid', 'I still have a long way to go', [s('mashkūr, bass bāgī ʿalayy wāyid.', 'Thanks, but I still have a long way to go.'), s('ʿarabī yitḥassan, bass bāgī ʿalayy wāyid.', 'My Arabic is improving, but there is still a lot left.')]),
+  lw('loc_correct', 'كلمة كلمة', 'kilma kilma', 'word by word', [s('atʿallam kilma kilma, yōm ʿugub yōm.', 'I learn word by word, day after day.'), s('tarjim lī kilma kilma.', 'Translate it for me word by word.')]),
+
+  // === 🏗️ EMAAR, ALABBAR E INSPIRACIÓN (15) ===
+  lw('loc_emaar', 'إعمار', 'Iʿmār', 'Emaar', [s('aḥibb qiṣṣat Iʿmār min il-bidāya.', 'I love the Emaar story from the beginning.'), s('Iʿmār ghayyarat shakil Dubay.', 'Emaar changed the face of Dubai.')]),
+  lw('loc_emaar', 'محمد العبار', 'Moḥammad il-ʿAbbār', 'Mohamed Alabbar', [s('Moḥammad il-ʿAbbār qudwa lī.', 'Mohamed Alabbar is a role model for me.'), s('il-ʿAbbār yitkallam b-shaghaf ʿajīb.', 'Alabbar speaks with amazing passion.')]),
+  lw('loc_emaar', 'قدوة', 'qudwa', 'role model', [s('il-ʿAbbār qudwa ḥagg kil rāʾid aʿmāl.', 'Alabbar is a role model for every entrepreneur.'), s('adawwir qudwa fi kil majāl.', 'I look for a role model in every field.')]),
+  lw('loc_emaar', 'شغف', 'shaghaf', 'passion', [s('yitkallam b-shaghaf, w hāda illī yifrig.', 'He speaks with passion, and that is what makes the difference.'), s('ish-shaghaf huwa sirr in-najāḥ.', 'Passion is the secret of success.')]),
+  lw('loc_emaar', 'رؤية', 'ruʾya', 'vision', [s('ruʾyat Dubay dāyman lil-mustaqbal.', "Dubai's vision is always toward the future."), s('ʿindī ruʾya wāḍḥa l-minaṣṣatī.', 'I have a clear vision for my platform.')]),
+  lw('loc_emaar', 'برج خليفة', 'Burj Khalīfa', 'Burj Khalifa', [s('Burj Khalīfa mub bass burj — huwa risāla.', 'Burj Khalifa is not just a tower — it is a message.'), s('min fōg Burj Khalīfa, tshūf inn il-mustaḥīl mumkin.', 'From the top of Burj Khalifa you see the impossible is possible.')]),
+  lw('loc_emaar', 'دبي مول', 'Dubay Mōl', 'Dubai Mall', [s('Dubay Mōl akbar mōl fi il-ʿālam.', 'Dubai Mall is the biggest mall in the world.'), s('il-ʿyāl yinbahrūn b-Dubay Mōl.', 'The kids are amazed by Dubai Mall.')]),
+  lw('loc_emaar', 'من الصفر', 'min iṣ-ṣifir', 'from zero', [s('badā min iṣ-ṣifir w waṣal lil-gimma.', 'He started from zero and reached the top.'), s('ana baʿad badait min iṣ-ṣifir.', 'I too started from zero.')]),
+  lw('loc_emaar', 'قصة نجاح', 'qiṣṣat najāḥ', 'success story', [s('qiṣṣat najāḥ il-ʿAbbār tulhimnī.', "Alabbar's success story inspires me."), s('abā asawwī qiṣṣat najāḥ mālitī.', 'I want to make my own success story.')]),
+  lw('loc_emaar', 'طموح', 'ṭumūḥ', 'ambition', [s('iṭ-ṭumūḥ mā lah ḥudūd fi Dubay.', 'Ambition has no limits in Dubai.'), s('ṭumūḥī akbar min it-taḥaddiyāt.', 'My ambition is bigger than the challenges.')]),
+  lw('loc_emaar', 'يلهمني', 'yulhimnī', 'it inspires me', [s('hal-balad yulhimnī kil yōm.', 'This country inspires me every day.'), s('kalām il-ʿAbbār yulhimnī.', "Alabbar's words inspire me.")]),
+  lw('loc_emaar', 'رائد أعمال', 'rāʾid aʿmāl', 'entrepreneur', [s('ana rāʾid aʿmāl fi majāl it-taʿlīm.', 'I am an entrepreneur in education.'), s('Dubay jannat ruwwād il-aʿmāl.', 'Dubai is the paradise of entrepreneurs.')]),
+  lw('loc_emaar', 'المستحيل ممكن', 'il-mustaḥīl mumkin', 'the impossible is possible', [s('fi Dubay, il-mustaḥīl mumkin.', 'In Dubai, the impossible is possible.'), s('ʿallamatnī Dubay inn il-mustaḥīl mumkin.', 'Dubai taught me the impossible is possible.')]),
+  lw('loc_emaar', 'يفكر كبير', 'yfakkir kbīr', 'thinks big', [s('hnīh in-nās tfakkir kbīr.', 'Here people think big.'), s('lāzim tfakkir kbīr mithl il-ʿAbbār.', 'You must think big like Alabbar.')]),
+  lw('loc_emaar', 'إنجاز', 'injāz', 'achievement', [s('kil burj hnīh injāz.', 'Every tower here is an achievement.'), s('aftakhir b-kil injāz ṣghīr.', 'I take pride in every small achievement.')]),
+
+  // === 🇦🇪 GRATITUD Y RESPETO AL UAE (15) ===
+  lw('loc_grateful', 'ممتن', 'mumtann', 'grateful', [s('ana mumtann wāyid l-hal-balad.', 'I am very grateful to this country.'), s('mumtann l-kil furṣa inʿaṭat lī.', 'Grateful for every opportunity given to me.')]),
+  lw('loc_grateful', 'فرصة', 'furṣa', 'opportunity', [s('il-Imārāt ʿaṭatnī furṣat ʿumrī.', 'The Emirates gave me the opportunity of my life.'), s('hnīh il-furaṣ ḥagg illī yishtaghil.', 'Here the opportunities belong to those who work.')]),
+  lw('loc_grateful', 'احترام', 'iḥtirām', 'respect', [s('ʿindī iḥtirām kbīr l-hal-balad w ahlah.', 'I have great respect for this country and its people.'), s('il-iḥtirām mutabādal bainnā.', 'The respect between us is mutual.')]),
+  lw('loc_grateful', 'بيتي الثاني', 'baitī il-thānī', 'my second home', [s('il-Imārāt ṣārat baitī il-thānī.', 'The Emirates became my second home.'), s('Hondūrās baitī il-awwal, w Dubay baitī il-thānī.', 'Honduras is my first home, and Dubai my second.')]),
+  lw('loc_grateful', 'أمان', 'amān', 'safety', [s('il-amān hnīh shay mā tḥaṣṣlah b-kil makān.', 'The safety here is something you do not find everywhere.'), s('ʿyālnā yiʿīshūn b-amān hnīh.', 'Our kids live in safety here.')]),
+  lw('loc_grateful', 'تسامح', 'tasāmuḥ', 'tolerance', [s('il-Imārāt balad it-tasāmuḥ.', 'The Emirates is the country of tolerance.'), s('hnīh kil il-jinsiyyāt tiʿīsh b-tasāmuḥ.', 'Here all nationalities live in tolerance.')]),
+  lw('loc_grateful', 'كرم', 'karam', 'generosity', [s('karam il-imārātiyīn mashhūr.', 'The generosity of Emiratis is famous.'), s('shift il-karam b-ʿainī hnīh.', 'I saw the generosity with my own eyes here.')]),
+  lw('loc_grateful', 'الشيوخ', 'ish-shuyūkh', 'the sheikhs / the leaders', [s('ruʾyat ish-shuyūkh sawwat kil hāda.', "The sheikhs' vision made all of this."), s('ish-shuyūkh yhtammūn bit-taʿlīm wāyid.', 'The sheikhs care a lot about education.')]),
+  lw('loc_grateful', 'زايد', 'Zāyed', 'Sheikh Zayed', [s('ish-Shaikh Zāyed abu il-Imārāt.', 'Sheikh Zayed is the father of the Emirates.'), s('qiṣṣat Zāyed tistāhal tinḥachā lil-ʿyāl.', "Zayed's story deserves to be told to the kids.")]),
+  lw('loc_grateful', 'أرد الجميل', 'arudd il-jamīl', 'repay the kindness', [s('abā arudd il-jamīl l-hal-balad.', 'I want to repay the kindness to this country.'), s('ashtaghil ʿashān arudd il-jamīl.', 'I work in order to repay the kindness.')]),
+  lw('loc_grateful', 'أخدم المجتمع', 'akhdim il-mujtamaʿ', 'serve the community', [s('abā akhdim il-mujtamaʿ b-illī aʿrfah: it-taʿlīm.', 'I want to serve the community with what I know: education.'), s('akhdim il-mujtamaʿ ʿan ṭarīq il-ʿyāl.', 'I serve the community through the kids.')]),
+  lw('loc_grateful', 'ما أنسى', 'mā ansā', 'I will not forget', [s('mā ansā illī sawwatah lī hal-balad.', 'I will not forget what this country did for me.'), s('mā ansā awwal yōm lī fi Dubay.', 'I will never forget my first day in Dubai.')]),
+  lw('loc_grateful', 'توفيق', 'tawfīq', 'success / divine blessing', [s('allāh yaʿṭīkum it-tawfīq.', 'May God grant you success.'), s('b-tawfīq allāh, kil shay ṣār.', "With God's blessing, everything happened.")]),
+  lw('loc_grateful', 'ترحيب', 'tarḥīb', 'welcome (the one you receive)', [s('it-tarḥīb illī ligītah hnīh mā shiftah b-makān thānī.', 'The welcome I found here I never saw anywhere else.'), s('tarḥīb in-nās hnīh min il-galb.', "People's welcome here is from the heart.")]),
+  lw('loc_grateful', 'دار زايد', 'dār Zāyed', "Zayed's home (loving name for UAE)", [s('hāy dār Zāyed — il-khair fīhā dāyim.', "This is Zayed's home — goodness lives here always."), s('fi dār Zāyed, il-gharīb mā yiḥiss gharīb.', "In Zayed's home, the stranger never feels a stranger.")]),
+
+  // === 🚀 MI MISIÓN EDTECH (20) ===
+  lw('loc_founder', 'مؤسس', 'muʾassis', 'founder', [s('ana muʾassis minaṣṣa taʿlīmiyya.', 'I am the founder of an educational platform.'), s('il-muʾassis lāzim yiḥibb illī ysawwīh.', 'A founder must love what he does.')]),
+  lw('loc_founder', 'رسالتي', 'risālatī', 'my mission', [s('risālatī arbiṭ il-ʿawālim bil-lugha.', 'My mission is to connect worlds through language.'), s('risālatī: kil ṭifil yitʿallam w huwa mistānis.', 'My mission: every child learns while having fun.')]),
+  lw('loc_founder', 'أبني جسور', 'abnī jusūr', 'I build bridges', [s('abnī jusūr bain iṣ-Ṣīn wil-Imārāt w Amrīkā il-lātīniyya.', 'I build bridges between China, the Emirates and Latin America.'), s('il-lugha ajmal jisr bain ith-thaqāfāt.', 'Language is the most beautiful bridge between cultures.')]),
+  lw('loc_founder', 'تقنية', 'taqniya', 'technology', [s('astakhdim it-taqniya ʿashān it-taʿlīm yiṣīr laʿba.', 'I use technology so learning becomes a game.'), s('it-taqniya b-dūn tarbiya mā tiswā.', 'Technology without upbringing is worth nothing.')]),
+  lw('loc_founder', 'مستقبل', 'mustaqbal', 'future', [s('il-ʿyāl hum il-mustaqbal.', 'The kids ARE the future.'), s('nabnī il-mustaqbal ṣaff ṣaff.', 'We build the future classroom by classroom.')]),
+  lw('loc_founder', 'جيل', 'yīl', 'generation (Emirati "y")', [s('hal-yīl yitʿallam b-ṭarīqa mukhtalifa.', 'This generation learns in a different way.'), s('abā asāʿid yīl kāmil yiḥibb il-lughāt.', 'I want to help a whole generation love languages.')]),
+  lw('loc_founder', 'أؤمن إن', 'uʾmin inn', 'I believe that', [s('uʾmin inn il-laʿib aqwā muʿallim.', 'I believe play is the strongest teacher.'), s('uʾmin inn kil ṭifil ʿindah mawhiba.', 'I believe every child has a talent.')]),
+  lw('loc_founder', 'قضيتي', 'qaḍiyyatī', 'my cause', [s('qaḍiyyatī it-taʿlīm il-mumtiʿ.', 'My cause is joyful education.'), s('hāy mub tijāra bass — hāy qaḍiyyatī.', 'This is not just business — this is my cause.')]),
+  lw('loc_founder', 'شغلي مب وظيفة', 'shughlī mub waẓīfa', 'my work is not a job', [s('shughlī mub waẓīfa — huwa risāla.', 'My work is not a job — it is a mission.'), s('lamma tḥibb shughlak, mub waẓīfa baʿad.', 'When you love your work, it is no longer a job.')]),
+  lw('loc_founder', 'ثقافات', 'thaqāfāt', 'cultures', [s('arbiṭ thalāth thaqāfāt fi minaṣṣa waḥda.', 'I connect three cultures in one platform.'), s('il-ʿyāl yitʿallamūn iḥtirām ith-thaqāfāt.', 'The kids learn to respect cultures.')]),
+  lw('loc_founder', 'حدود', 'ḥudūd', 'borders / limits', [s('it-taʿlīm mā lah ḥudūd.', 'Education has no borders.'), s('minaṣṣatī tʿabbir il-ḥudūd.', 'My platform crosses borders.')]),
+  lw('loc_founder', 'الماندرين', 'il-māndarīn', 'Mandarin', [s('aʿallim il-māndarīn li-ʿyāl il-khalīj.', 'I teach Mandarin to Gulf kids.'), s('il-māndarīn lughat il-mustaqbal it-tijārī.', 'Mandarin is the language of the commercial future.')]),
+  lw('loc_founder', 'ألعاب تعليمية', 'alʿāb taʿlīmiyya', 'educational games', [s('asawwī alʿāb taʿlīmiyya b-rūḥī.', 'I build educational games myself.'), s('il-alʿāb it-taʿlīmiyya tkhallī iṭ-ṭifil yansā innah yidris.', 'Educational games make the child forget he is studying.')]),
+  lw('loc_founder', 'صف', 'ṣaff', 'classroom', [s('ṣaffī malyān ḍaḥik w taʿallum.', 'My classroom is full of laughter and learning.'), s('kil ṣaff ʿindah rūḥ.', 'Every classroom has a soul.')]),
+  lw('loc_founder', 'طلابي', 'ṭullābī', 'my students', [s('ṭullābī min kil il-ʿālam.', 'My students are from all over the world.'), s('afraḥ lamma ṭullābī yinjaḥūn.', 'I rejoice when my students succeed.')]),
+  lw('loc_founder', 'نتيجة', 'natīja', 'result', [s('in-natāyij titkallam ʿan nafs-hā.', 'The results speak for themselves.'), s('shift natīja ʿajība fi awwal shahar.', 'I saw an amazing result in the first month.')]),
+  lw('loc_founder', 'حل', 'ḥall', 'solution', [s('ʿindī ḥall l-mushkilat il-malal fi iṣ-ṣaff.', 'I have a solution for boredom in the classroom.'), s('kil mushkila l-hā ḥall.', 'Every problem has a solution.')]),
+  lw('loc_founder', 'فريق', 'farīq', 'team', [s('abnī farīq shway shway.', 'I am building a team little by little.'), s('il-farīq ṣghīr bass il-ḥilm kbīr.', 'The team is small but the dream is big.')]),
+  lw('loc_founder', 'أطور', 'aṭawwir', 'I develop / improve', [s('aṭawwir il-minaṣṣa kil yōm.', 'I improve the platform every day.'), s('aṭawwir nafsī gabl kil shay.', 'I develop myself before anything else.')]),
+  lw('loc_founder', 'إرث', 'irth', 'legacy', [s('abā atrik irth yifīd il-ʿyāl.', 'I want to leave a legacy that benefits the kids.'), s('il-irth il-ḥaqīqī huwa illī tizraʿah fi in-nās.', 'The real legacy is what you plant in people.')]),
+
+  // === ✨ MARAVILLAS DE DUBÁI (15) ===
+  lw('loc_wonders', 'عجائب', 'ʿajāyib', 'wonders', [s('Dubay malyāna ʿajāyib.', 'Dubai is full of wonders.'), s('abā il-ʿyāl yiʿarfūn ʿajāyib hal-balad.', 'I want the kids to know the wonders of this country.')]),
+  lw('loc_wonders', 'نافورة دبي', 'nāfūrat Dubay', 'Dubai Fountain', [s('nāfūrat Dubay tirguṣ ʿala il-mūsīqā.', 'The Dubai Fountain dances to the music.'), s('il-ʿyāl yinbahrūn bin-nāfūra.', 'The kids are amazed by the fountain.')]),
+  lw('loc_wonders', 'متحف المستقبل', 'matḥaf il-mustaqbal', 'Museum of the Future', [s('matḥaf il-mustaqbal aḥlā mabnā shiftah.', 'The Museum of the Future is the most beautiful building I have seen.'), s('ākhidh ṭullābī lil-matḥaf yōm, inshallah.', 'I will take my students to the museum one day, God willing.')]),
+  lw('loc_wonders', 'الصحراء', 'iṣ-ṣaḥrā', 'the desert', [s('iṣ-ṣaḥrā ʿindhā sikūn ʿajīb.', 'The desert has an amazing stillness.'), s('riḥlat iṣ-ṣaḥrā tijruba mā tinnasā.', 'A desert trip is an unforgettable experience.')]),
+  lw('loc_wonders', 'كشتة', 'kashta', 'desert outing (Gulf classic)', [s('il-kashta fi il-bard aḥlā shay.', 'A desert outing in the cool season is the best thing.'), s('yalla kashta hal-wīkand?', 'Shall we go camping this weekend?')]),
+  lw('loc_wonders', 'مرسى دبي', 'Marsā Dubay', 'Dubai Marina', [s('Marsā Dubay ḥilwa bil-lail.', 'Dubai Marina is beautiful at night.'), s('nitmashsha fi il-marsā ʿugub il-ʿasha.', 'We stroll in the Marina after dinner.')]),
+  lw('loc_wonders', 'برواز دبي', 'Birwāz Dubay', 'Dubai Frame', [s('min Birwāz Dubay tshūf il-madīna kilhā.', 'From the Dubai Frame you see the whole city.'), s('il-birwāz yirbiṭ il-māḍī bil-mustaqbal.', 'The Frame connects the past with the future.')]),
+  lw('loc_wonders', 'جزيرة النخلة', 'yazīrat in-nakhla', 'Palm Jumeirah', [s('in-nakhla muʿjiza handasiyya.', 'The Palm is an engineering miracle.'), s('shift in-nakhla min iṭ-ṭayyāra?', 'Have you seen the Palm from the plane?')]),
+  lw('loc_wonders', 'عين دبي', 'ʿAin Dubay', 'Ain Dubai (the wheel)', [s('ʿAin Dubay akbar ʿajala fi il-ʿālam.', 'Ain Dubai is the biggest wheel in the world.'), s('min fōg, Dubay tbayyin mithl il-khayāl.', 'From up there, Dubai looks like a dream.')]),
+  lw('loc_wonders', 'تراث', 'turāth', 'heritage', [s('it-turāth hnīh maḥfūẓ w ḥayy.', 'The heritage here is preserved and alive.'), s('aʿallim ṭullābī yiḥtarmūn it-turāth.', 'I teach my students to respect heritage.')]),
+  lw('loc_wonders', 'سوق الذهب', 'sūg il-dhahab', 'the Gold Souq', [s('sūg il-dhahab yilmaʿ mithl il-khayāl.', 'The Gold Souq shines like a dream.'), s('khudh il-ʿyāl lis-sūg il-qadīm.', 'Take the kids to the old souq.')]),
+  lw('loc_wonders', 'العبرة', 'il-ʿabra', 'the abra (creek boat)', [s('irkab il-ʿabra b-dirhamēn bass!', 'Ride the abra for just two dirhams!'), s('il-ʿabra arkhaṣ w aḥlā jawla fi Dubay.', 'The abra is the cheapest and loveliest ride in Dubai.')]),
+  lw('loc_wonders', 'مهرجان', 'mahrajān', 'festival', [s('mahrajānāt Dubay ṭūl is-sana.', 'Dubai has festivals all year long.'), s('il-ʿyāl yiḥibbūn il-mahrajānāt.', 'The kids love the festivals.')]),
+  lw('loc_wonders', 'حديقة الزهور', 'ḥadīqat il-zuhūr', 'Miracle Garden', [s('ḥadīqat il-zuhūr mithl il-aḥlām.', 'The Miracle Garden is like a dream.'), s('ṣawwart il-ʿyāl fi ḥadīqat il-zuhūr.', 'I photographed the kids at the Miracle Garden.')]),
+  lw('loc_wonders', 'تخيل', 'tkhayyal', 'imagine!', [s('tkhayyal: kil hāda kān ṣaḥrā gabl khamsīn sana!', 'Imagine: all this was desert fifty years ago!'), s('tkhayyal shū bysīr baʿad ʿishrīn sana!', 'Imagine what will happen in twenty years!')]),
+
+  // === 🫀 CONVERSACIÓN CON ALMA (20) ===
+  lw('loc_deep', 'خذ راحتك', 'khudh rāḥtak', 'take your time / be at ease', [s('khudh rāḥtak, mā fī ʿajala.', 'Take your time, there is no rush.'), s('tfaḍḍal, khudh rāḥtak fi il-majlis.', 'Please, make yourself at home in the majlis.')]),
+  lw('loc_deep', 'من قلبي', 'min galbī', 'from my heart', [s('agūlhā min galbī: mashkūrīn.', 'I say it from my heart: thank you all.'), s('kalāmī min galbī, mub mujāmala.', 'My words are from my heart, not flattery.')]),
+  lw('loc_deep', 'مجاملة', 'mujāmala', 'flattery / politeness', [s('hāda mub mujāmala, hāda ṣij.', 'This is not flattery, this is the truth.'), s('mā aḥibb il-mujāmalāt il-fāḍya.', 'I do not like empty flattery.')]),
+  lw('loc_deep', 'قصة', 'giṣṣa', 'story', [s('kil wāḥid ʿindah giṣṣa tistāhal tinsimaʿ.', 'Everyone has a story worth hearing.'), s('aḥibb asmaʿ giṣaṣ in-nās.', "I love hearing people's stories.")]),
+  lw('loc_deep', 'حكمة', 'ḥikma', 'wisdom', [s('fi kil majlis ḥikma.', 'In every majlis there is wisdom.'), s('il-ḥikma tiyī min kbār is-sinn.', 'Wisdom comes from the elders.')]),
+  lw('loc_deep', 'صبر', 'ṣabir', 'patience', [s('iṣ-ṣabir miftāḥ il-faraj.', 'Patience is the key to relief.'), s('it-taʿlīm yibā ṣabir.', 'Teaching requires patience.')]),
+  lw('loc_deep', 'نية', 'niyya', 'intention', [s('in-niyya iz-zēna tfattiḥ kil bāb.', 'A good intention opens every door.'), s('niyytī ṣāfya, w hāda illī yhimm.', 'My intention is pure, and that is what matters.')]),
+  lw('loc_deep', 'أمانة', 'amāna', 'trust / integrity', [s('il-amāna rās māl it-tijāra.', 'Integrity is the capital of business.'), s('il-amāna ʿindī khaṭṭ aḥmar.', 'Integrity for me is a red line.')]),
+  lw('loc_deep', 'سمعة', 'sumʿa', 'reputation', [s('is-sumʿa tibnīhā sinīn w tiksirhā laḥẓa.', 'Reputation takes years to build and a moment to break.'), s('sumʿatī ahamm min ribḥī.', 'My reputation matters more than my profit.')]),
+  lw('loc_deep', 'وقتك ثمين', 'wagtak thamīn', 'your time is precious', [s('aʿrf inn wagtak thamīn, bikūn mukhtaṣir.', 'I know your time is precious, I will be brief.'), s('wagtak thamīn — mashkūr innik ʿaṭaitnī minnah.', 'Your time is precious — thank you for giving me some of it.')]),
+  lw('loc_deep', 'على البركة', 'ʿala il-baraka', 'with God\'s blessing (deal!)', [s('ittafagnā? ʿala il-baraka!', 'We agree? Then with God\'s blessing — deal!'), s('ʿala il-baraka, nibdā bāchir.', 'With the blessing, we start tomorrow.')]),
+  lw('loc_deep', 'كلمة رياييل', 'kilmat rayāyīl', "a man's word", [s('kilmatī kilmat rayāyīl.', 'My word is a man\'s word.'), s('ʿindnā, il-kilma kilmat rayāyīl.', 'With us, a word is a word of honor.')]),
+  lw('loc_deep', 'عشرة', 'ʿishra', 'long companionship', [s('il-ʿishra mā tinnasā.', 'Long companionship is never forgotten.'), s('baʿad khams sinīn ʿishra, ṣirnā ahal.', 'After five years together, we became family.')]),
+  lw('loc_deep', 'ود', 'widd', 'affection', [s('bainnā widd qadīm.', 'There is an old affection between us.'), s('il-widd yibnī akthar min il-ʿuqūd.', 'Affection builds more than contracts.')]),
+  lw('loc_deep', 'تواضع', 'tawāḍuʿ', 'humility', [s('it-tawāḍuʿ zēnat il-kbār.', 'Humility is the beauty of the great.'), s('anjaḥ w atwāḍaʿ — hāda mabdaʾī.', 'Succeed and stay humble — that is my principle.')]),
+  lw('loc_deep', 'مبدأ', 'mabdaʾ', 'principle', [s('ʿindī mabādiʾ mā atnāzal ʿanhā.', 'I have principles I will not give up.'), s('il-mabdaʾ gabl il-maṣlaḥa.', 'Principle before profit.')]),
+  lw('loc_deep', 'رزق', 'rizg', 'livelihood / providence', [s('ir-rizg ʿala allāh.', 'Livelihood is in God\'s hands.'), s('ir-rizg magsūm.', 'Providence is already apportioned.')]),
+  lw('loc_deep', 'تجربة', 'tijruba', 'experience / trial', [s('kil tijruba tʿallim.', 'Every experience teaches.'), s('hal-tijruba ghayyaratnī.', 'This experience changed me.')]),
+  lw('loc_deep', 'بركة', 'baraka', 'blessing', [s('il-baraka fi il-bukūr.', 'The blessing is in rising early.'), s('shughl fīh baraka.', 'Work that carries blessing.')]),
+  lw('loc_deep', 'الحمدلله على كل حال', 'il-ḥamdillah ʿala kil ḥāl', 'thank God in every situation', [s('rbiḥt willā khisirt: il-ḥamdillah ʿala kil ḥāl.', 'Whether I win or lose: thank God in every situation.'), s('il-ḥamdillah ʿala kil ḥāl, il-khair yāy.', 'Thank God always — the good is coming.')]),
+];
+EMIRATI_WORDS.push(...EMIRATI_LOCAL2);
+
 // 📚 PRIORITY ORDERING — sections sorted by real-world importance for a
 // learner. User feedback: "at the beginning I need the most important
 // words, at the end secondary stuff." Greetings + family + numbers come
@@ -595,6 +729,8 @@ const EMIRATI_SECTION_ORDER = [
   // here; the original 275-word general track follows.
   'loc_street', 'loc_me', 'loc_biz', 'loc_connect',
   'loc_express', 'loc_power', 'loc_daily',
+  'loc_correct', 'loc_emaar', 'loc_grateful',
+  'loc_founder', 'loc_wonders', 'loc_deep',
   'greet', 'family', 'number', 'time', 'food', 'home',
   'body',  'work',   'transp', 'emot', 'verb', 'culture', 'weather',
 ];

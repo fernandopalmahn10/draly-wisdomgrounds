@@ -442,7 +442,41 @@ app.post('/api/emirati/audio/register', (req, res) => {
   const id = 's_' + _registerSentenceText(ar);
   res.json({ ok: true, id });
 });
-app.get('/api/emirati/audio/:wordId', (req, res) => {
+// 🛟 GOOGLE ar-XA FALLBACK — 2026-07-06 (Fernando: "when I touch the
+// button it's not playing"). Root cause: only pre-cached MP3s played;
+// anything needing FRESH Azure synthesis 404'd (AZURE_SPEECH_KEY missing
+// or failing on Render), so all 100 new loc-words were silent. Now the
+// word endpoint falls back to Google Cloud TTS Arabic (already whitelisted
+// in /api/tts for this gateway). Cached as <id>_g.mp3 — a DIFFERENT name
+// than the Azure cache, so the moment Azure works again the next tap
+// renders + serves the real Khaleeji voice and the fallback stops.
+async function _emiratiGoogleFallback(res, id, arText, azVoice) {
+  try {
+    const gName = id + (azVoice === 'ar-AE-HamdanNeural' ? '_m' : '') + '_g';
+    const gPath = _emPath.join(EMIRATI_AUDIO_DIR, gName + '.mp3');
+    if (_emFs.existsSync(gPath)) return _serveAudioFile(res, gPath);
+    const client = _getTtsClient();
+    if (!client) return res.status(404).end();
+    const gVoice = azVoice === 'ar-AE-HamdanNeural' ? 'ar-XA-Wavenet-B' : 'ar-XA-Wavenet-A';
+    const [out] = await client.synthesizeSpeech({
+      input: { text: arText },
+      voice: { languageCode: 'ar-XA', name: gVoice },
+      audioConfig: { audioEncoding: 'MP3', speakingRate: 0.9, pitch: 0.0 },
+    });
+    if (!out || !out.audioContent) return res.status(404).end();
+    _emFs.writeFile(gPath, out.audioContent, () => {});
+    console.log('[em-google-fallback] served MSA fallback for', id);
+    return _serveAudioFile(res, gPath, out.audioContent);
+  } catch (e) {
+    console.warn('[em-google-fallback] failed for', id, e.message);
+    try { res.status(404).end(); } catch (_) {}
+  }
+}
+app.get('/api/emirati/audio/:wordId', (req, res, next) => {
+  // ⚠️ ROUTE COLLISION GUARD — this wildcard is registered BEFORE the
+  // more-specific /audio/text and /audio/test200 routes, so it was
+  // silently swallowing them (both always 404'd as "unknown word").
+  if (req.params.wordId === 'text' || req.params.wordId === 'test200') return next();
   const id = String(req.params.wordId || '').replace(/[^A-Za-z0-9_-]/g, '');
   if (!id) return res.status(400).end();
   const voice = req.query.voice === 'male' ? 'ar-AE-HamdanNeural' : 'ar-AE-FatimaNeural';
@@ -462,32 +496,31 @@ app.get('/api/emirati/audio/:wordId', (req, res) => {
       }
     } catch (_) {}
   }
-  if (process.env.AZURE_SPEECH_KEY) {
-    // ⭐ Sentence IDs (s_<hash>) → look up the registered Arabic text.
-    // Falls through to the same _azureSpeak → _serveAudioFile path
-    // that words use, which we know works.
-    let textToSpeak;
-    if (id.startsWith('s_')) {
-      textToSpeak = _resolveSentenceText(id.slice(2));
-      if (!textToSpeak) {
-        console.warn('[azure-word] unknown sentence id:', id);
-        return res.status(404).end();
-      }
-    } else {
-      const word = Emirati.EMIRATI_WORDS.find((w) => w.id === id);
-      if (!word) return res.status(404).end();
-      textToSpeak = word.ar;
+  // Resolve the Arabic text FIRST (needed by both Azure and the fallback).
+  // ⭐ Sentence IDs (s_<hash>) → look up the registered Arabic text.
+  let textToSpeak;
+  if (id.startsWith('s_')) {
+    textToSpeak = _resolveSentenceText(id.slice(2));
+    if (!textToSpeak) {
+      console.warn('[azure-word] unknown sentence id:', id);
+      return res.status(404).end();
     }
+  } else {
+    const word = Emirati.EMIRATI_WORDS.find((w) => w.id === id);
+    if (!word) return res.status(404).end();
+    textToSpeak = word.ar;
+  }
+  if (process.env.AZURE_SPEECH_KEY) {
     const outPath = _emPath.join(EMIRATI_AUDIO_DIR, cacheBaseName + '.mp3');
     return _azureSpeak(textToSpeak, voice, outPath, (err, buf) => {
       if (err) {
-        console.warn('[azure-tts] failed for', id, err.message);
-        return res.status(404).end();
+        console.warn('[azure-tts] failed for', id, err.message, '→ trying Google fallback');
+        return _emiratiGoogleFallback(res, id, textToSpeak, voice);
       }
       _serveAudioFile(res, outPath, buf);
     });
   }
-  res.status(404).end();
+  return _emiratiGoogleFallback(res, id, textToSpeak, voice);
 });
 // 🧪 DIAGNOSTIC — super-admin only. Tests Azure with the exact text the
 // user passes, returns the full Azure result so we can see what's failing.

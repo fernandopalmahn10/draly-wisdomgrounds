@@ -2987,3 +2987,47 @@ body.wu-timemachine::after {
 .wu-prac-vocabchip b { color: #ffe66a; }
 .wu-prac-vocabchip small { color: rgba(255, 255, 255, 0.5); font-style: italic; }
 .wu-prac-vocabchip:active { transform: scale(0.95); }
+
+/* ══════════════════════════════════════════════════════════════════
+   🔍 PRACTICE "MODO CURIOSO" CARDS (2026-07-06) — Fernando: "the list
+   of vocabulary can be like the curious mode: touch each word → its
+   little card. Icon BIGGER (pictures teach), meaning in parentheses,
+   NO Chinese characters in the reading practice, toggle ES/EN."
+   ══════════════════════════════════════════════════════════════════ */
+/* No hanzi anywhere inside the practice surfaces */
+#wu-practice-sheet .wu-prac-hanzi,
+#wu-practice-sheet .wu-prac-opthanzi,
+#m-practice-modal .wu-prac-hanzi,
+#m-practice-modal .wu-prac-opthanzi { display: none !important; }
+/* Vocab chips: BIG icon + pinyin + (meaning) */
+.wu-prac-vocabchip .wu-prac-vicon { font-size: 2.1rem; line-height: 1; }
+.wu-prac-vocabchip small { font-style: normal; color: rgba(243, 230, 194, 0.75); }
+/* Full-screen word card */
+.wu-prac-cardwrap {
+  position: fixed; inset: 0; z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5, 8, 18, 0.78);
+  backdrop-filter: blur(3px);
+}
+.wu-prac-card {
+  background: linear-gradient(160deg, #141624, #0d1224);
+  border: 3px solid #ffe66a;
+  border-radius: 22px;
+  padding: 26px 34px;
+  text-align: center;
+  max-width: min(420px, 88vw);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.6);
+  animation: wu-prac-cardin 200ms ease;
+}
+@keyframes wu-prac-cardin { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.wu-prac-card-icon { font-size: 5.2rem; line-height: 1.1; }
+.wu-prac-card-pinyin { font-size: 2rem; font-weight: 900; color: #ffe66a; margin-top: 6px; }
+.wu-prac-card-meaning { font-size: 1.25rem; color: #f3e6c2; margin-top: 4px; }
+.wu-prac-card-speak {
+  margin-top: 16px; border: none; cursor: pointer;
+  background: #ffe66a; color: #1a1a2a;
+  font-weight: 900; font-size: 1.05rem;
+  border-radius: 999px; padding: 12px 26px;
+  touch-action: manipulation;
+}
+.wu-prac-card-hint { margin-top: 10px; font-size: 0.8rem; color: rgba(255, 255, 255, 0.45); }

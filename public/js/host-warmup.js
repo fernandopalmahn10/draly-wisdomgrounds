@@ -578,8 +578,51 @@
       }
     });
   })();
+  // 🔍 "Modo Curioso" cards in practice — 2026-07-06 (Fernando): tap a
+  // word → big card (HUGE icon — pictures teach), pinyin, meaning in
+  // parentheses, 🔊. NO hanzi (hidden via CSS). ES ↔ EN toggle.
+  let _pracVocabLang = 'es';
+  function _pracMeaning(w) {
+    return (_pracVocabLang === 'en' && w.en) ? w.en : (w.es || w.en || '');
+  }
+  function _pracShowWordCard(w) {
+    const old = document.querySelector('.wu-prac-cardwrap');
+    if (old) old.remove();
+    const wrap = document.createElement('div');
+    wrap.className = 'wu-prac-cardwrap';
+    wrap.innerHTML =
+      '<div class="wu-prac-card">' +
+        '<div class="wu-prac-card-icon">' + escapeHtml(w.icon || '✨') + '</div>' +
+        '<div class="wu-prac-card-pinyin">' + escapeHtml(w.pinyin) + '</div>' +
+        '<div class="wu-prac-card-meaning">（ ' + escapeHtml(_pracMeaning(w)) + ' ）</div>' +
+        '<button type="button" class="wu-prac-card-speak">🔊 Escuchar</button>' +
+        '<div class="wu-prac-card-hint">Toca fuera para cerrar</div>' +
+      '</div>';
+    wrap.addEventListener('click', (e) => { if (e.target === wrap) wrap.remove(); });
+    wrap.querySelector('.wu-prac-card-speak').addEventListener('click', (e) => {
+      e.stopPropagation();
+      speakChinese(w.pinyin, e.currentTarget);
+    });
+    document.body.appendChild(wrap);
+    // Hear it immediately — tap-to-open IS the first listen.
+    speakChinese(w.pinyin, wrap.querySelector('.wu-prac-card-speak'));
+  }
   function _buildPracticeVocab(panel) {
     if (!window.WU_WORDS || !window.WU_EXPERIENCES) { panel.textContent = 'Vocabulario no disponible.'; return; }
+    panel.innerHTML = '';
+    // ES ↔ EN meaning toggle (his ask: "either Spanish or English meaning")
+    const langBar = document.createElement('div');
+    langBar.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px;';
+    const langBtn = document.createElement('button');
+    langBtn.type = 'button';
+    langBtn.className = 'btn btn-ghost btn-sm';
+    langBtn.textContent = _pracVocabLang === 'es' ? '🌐 Significado: Español (toca para English)' : '🌐 Meaning: English (tap for Español)';
+    langBtn.addEventListener('click', () => {
+      _pracVocabLang = _pracVocabLang === 'es' ? 'en' : 'es';
+      _buildPracticeVocab(panel);   // re-render with the other language
+    });
+    langBar.appendChild(langBtn);
+    panel.appendChild(langBar);
     const byExp = {};
     window.WU_WORDS.forEach((w) => { (byExp[w.exp] = byExp[w.exp] || []).push(w); });
     Object.keys(window.WU_EXPERIENCES).forEach((expKey) => {
@@ -595,9 +638,9 @@
         const chip = document.createElement('button');
         chip.type = 'button';
         chip.className = 'wu-prac-vocabchip';
-        chip.innerHTML = '<span>' + escapeHtml(w.icon || '·') + '</span><b>' + escapeHtml(w.pinyin) + '</b><span class="wu-prac-hanzi">' + escapeHtml(w.hanzi || '') + '</span><small>' + escapeHtml(w.es || '') + '</small>';
-        chip.title = 'Toca para escuchar';
-        chip.addEventListener('click', (e) => speakChinese(w.pinyin, e.currentTarget));
+        chip.innerHTML = '<span class="wu-prac-vicon">' + escapeHtml(w.icon || '✨') + '</span><b>' + escapeHtml(w.pinyin) + '</b><small>（' + escapeHtml(_pracMeaning(w)) + '）</small>';
+        chip.title = 'Toca para ver la tarjeta';
+        chip.addEventListener('click', () => _pracShowWordCard(w));
         grid.appendChild(chip);
       });
       det.appendChild(grid);

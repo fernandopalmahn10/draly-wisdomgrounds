@@ -277,6 +277,79 @@
     w('exp3', 'noun',     'chē',      '车',    'coche / auto',        '🚗'),
   ];
 
+  // ── English meanings (2026-07-07). Keyed by pinyin; the three pinyin
+  // collisions (tā 他/她, zuò 坐/做, qián 钱/前) are keyed pinyin+'|'+hanzi.
+  // Assigned as w.en AFTER the array so the w() helper, ids and existing
+  // fields stay untouched.
+  const WU_EN = {
+    // EXP1
+    'wǒ': 'I / me', 'nǐ': 'you', 'tā|他': 'he / him', 'tā|她': 'she / her',
+    'wǒmen': 'we / us', 'bàba': 'dad', 'māma': 'mom', 'érzi': 'son',
+    'nǚ’ér': 'daughter', 'péngyou': 'friend', 'jiā': 'home / family',
+    'ài': 'to love', 'gǒu': 'dog', 'māo': 'cat', 'jiào': 'to be called',
+    'míngzi': 'name', 'shì': 'to be', 'de': "'s (possessive)",
+    'rènshi': 'to know (someone)', 'suì': 'years old',
+    // EXP2
+    'xuéxiào': 'school', 'xuésheng': 'student', 'lǎoshī': 'teacher',
+    'tóngxué': 'classmate', 'xuéxí': 'to study', 'dú': 'to read',
+    'xiě': 'to write', 'shū': 'book', 'běn': 'mw (books)',
+    'zì': 'character', 'hànyǔ': 'Chinese (language)', 'shuō': 'to speak',
+    'tīng': 'to listen', 'kàn': 'to look', 'kànjiàn': 'to see',
+    'huì': 'can / know how', 'néng': 'can / be able', 'xiānsheng': 'Mr. / sir',
+    // EXP3
+    'mǎi': 'to buy', 'dōngxi': 'thing', 'shāngdiàn': 'shop / store',
+    'fàndiàn': 'restaurant', 'qián|钱': 'money', 'kuài': 'yuan',
+    'duōshǎo': 'how much', 'cài': 'dish / food', 'mǐfàn': 'rice',
+    'chá': 'tea', 'shuǐ': 'water', 'shuǐguǒ': 'fruit', 'píngguǒ': 'apple',
+    'bēizi': 'cup', 'chī': 'to eat', 'hē': 'to drink', 'xǐhuan': 'to like',
+    'xiǎng': 'to want / think', 'qǐng': 'please', 'xièxie': 'thank you',
+    'búkèqi': "you're welcome", 'hǎo': 'good',
+    // EXP4
+    'diǎn': "o'clock", 'fēnzhōng': 'minute', 'xiànzài': 'now',
+    'shíhou': 'time / moment', 'jīntiān': 'today', 'míngtiān': 'tomorrow',
+    'zuótiān': 'yesterday', 'shàngwǔ': 'morning', 'zhōngwǔ': 'noon',
+    'xiàwǔ': 'afternoon', 'xīngqī': 'week', 'yuè': 'month', 'nián': 'year',
+    'hào': 'day (of month)', 'tiānqì': 'weather', 'rè': 'hot',
+    'lěng': 'cold', 'xiàyǔ': 'to rain', 'tài': 'too (much)', 'hěn': 'very',
+    // EXP5
+    'běijīng': 'Beijing', 'zhōngguó': 'China', 'qù': 'to go',
+    'lái': 'to come', 'huí': 'to return', 'fēijī': 'airplane',
+    'chūzūchē': 'taxi', 'zuò|坐': 'to sit / take', 'zhù': 'to live',
+    'zài': 'at / in', 'nǎ': 'which', 'nǎr': 'where', 'nà': 'that',
+    'zhè': 'this', 'qiánmiàn': 'in front', 'hòumiàn': 'behind',
+    'shàng': 'up / on', 'xià': 'down / under',
+    // EXP6
+    'lǐ': 'inside', 'zhuōzi': 'table', 'yǐzi': 'chair',
+    'diànnǎo': 'computer', 'diànshì': 'TV', 'diànyǐng': 'movie',
+    'yīfu': 'clothes', 'kāi': 'to open / turn on', 'shuìjiào': 'to sleep',
+    'zuò|做': 'to do / make', 'gōngzuò': 'to work',
+    'dǎdiànhuà': 'to phone', 'wèi': 'hello (phone)', 'piàoliang': 'pretty',
+    'dà': 'big', 'xiǎo': 'small', 'yǒu': 'to have',
+    'méiyǒu': 'to not have',
+    // EXP7
+    'rén': 'person', 'yīshēng': 'doctor', 'yīyuàn': 'hospital',
+    'xiǎojiě': 'miss / young lady', 'xiē': 'some', 'duō': 'many',
+    'shǎo': 'few', 'gè': 'mw (general)', 'shéi': 'who', 'shénme': 'what',
+    'zěnme': 'how', 'zěnmeyàng': 'how about it', 'jǐ': 'how many',
+    'dōu': 'all', 'gāoxìng': 'happy', 'duìbuqǐ': 'sorry',
+    // EXP8
+    'yī': 'one', 'èr': 'two', 'sān': 'three', 'sì': 'four', 'wǔ': 'five',
+    'liù': 'six', 'qī': 'seven', 'bā': 'eight', 'jiǔ': 'nine',
+    'shí': 'ten', 'yīdiǎnr': 'a little', 'bù': 'not / no',
+    'ma': '? (yes/no)', 'ne': 'and you?', 'le': '(done)', 'hé': 'and',
+    'zàijiàn': 'goodbye', 'méiguānxi': "it's okay",
+    // Appended building blocks
+    'jīn': 'this / current', 'xué': 'to study / learn',
+    'jiàn': 'to see / perceive', 'shēng': 'life / born',
+    'nǎge': 'which one', 'zhèr': 'here', 'nàr': 'there',
+    'men': '(plural)', 'zhème': 'so / this way', 'nàme': 'so / that way',
+    'méi': 'not (have)', 'miàn': 'side / direction',
+    'qián|前': 'front / before', 'hòu': 'back / after', 'chē': 'car',
+  };
+  WU_WORDS.forEach((wd) => {
+    wd.en = WU_EN[wd.pinyin + '|' + wd.hanzi] || WU_EN[wd.pinyin] || '';
+  });
+
   window.WU_CATEGORIES = WU_CATEGORIES;
   window.WU_EXPERIENCES = WU_EXPERIENCES;
   window.WU_WORDS = WU_WORDS;
