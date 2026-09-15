@@ -519,11 +519,190 @@ const HSK2_ASSIGNMENTS = [
       encouragement: 'En un restaurante, pídele que ordene por ti: «我要牛奶» — ¡déjalo pedir!',
     },
   },
+  {
+    id: 'hsk2-tienda-ropa',
+    level: 'hsk2',
+    type: 'word-sack',
+    title: '👗 EXP4 · La Tienda de Ropa',
+    subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
+    expLabel: 'exp4',
+    instructions: 'Estás en el centro comercial: celulares, relojes y colores HSK2. Combina la bolsa para hablar de tus cosas. Necesitas 6 oraciones. 🗣️ EN VOZ ALTA.',
+    goal: 6,
+    sack: [
+      _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '她', 'ella', 'pronoun'),
+      _sackWord('de', '的', '(posesivo)', 'particle'), _sackWord('hěn', '很', 'muy', 'particle'), _sackWord('shì', '是', 'ser', 'verb'),
+      _sackWord('chuān', '穿', 'vestir / ponerse', 'verb'), _sackWord('mǎi', '买', 'comprar', 'verb'),
+      _sackWord('yǒu', '有', 'tener', 'verb'), _sackWord('zhǎo', '找', 'buscar', 'verb'),
+      _sackWord('shǒujī', '手机', 'celular', 'noun'), _sackWord('shǒubiǎo', '手表', 'reloj', 'noun'), _sackWord('yánsè', '颜色', 'color', 'noun'),
+      _sackWord('bái', '白', 'blanco', 'adj'), _sackWord('hēi', '黑', 'negro', 'adj'), _sackWord('hóng', '红', 'rojo', 'adj'),
+      _sackWord('xīn', '新', 'nuevo', 'adj'), _sackWord('fēicháng', '非常', 'muy / súper', 'particle'),
+    ],
+    valid: [].concat(
+      _expand('{P} yǒu {N}', { P: ['wǒ', 'nǐ', 'tā'], N: ['shǒujī', 'shǒubiǎo'] }),
+      _expand('{P} mǎi {N}', { P: ['wǒ', 'nǐ', 'tā'], N: ['shǒujī', 'shǒubiǎo'] }),
+      _expand('{P} zhǎo {N}', { P: ['wǒ', 'nǐ', 'tā'], N: ['shǒujī', 'shǒubiǎo'] }),
+      _expand('{P} de {N} hěn xīn', { P: ['wǒ', 'nǐ', 'tā'], N: ['shǒujī', 'shǒubiǎo'] }),
+      _expand('{P} de {N} fēicháng xīn', { P: ['wǒ', 'nǐ', 'tā'], N: ['shǒujī', 'shǒubiǎo'] }),
+      _expand('{P} de {N} shì {C} de', { P: ['wǒ', 'nǐ', 'tā'], N: ['shǒujī', 'shǒubiǎo'], C: ['bái', 'hēi', 'hóng'] }),
+      _expand('{P} chuān {C} de', { P: ['wǒ', 'nǐ', 'tā'], C: ['bái', 'hēi', 'hóng'] })
+    ),
+    parentInsight: {
+      title: 'Tu hijo/a habla de sus cosas con adjetivos HSK2',
+      bullets: ['Usa 新 (nuevo), 找 (buscar) y los colores 白/黑/红', 'Combina el posesivo 的 correctamente', 'Habla de celulares y relojes en chino'],
+      encouragement: 'Pregúntale de qué color es su ropa hoy — que responda en chino.',
+    },
+  },
+  {
+    id: 'hsk2-rutina-clima',
+    level: 'hsk2',
+    type: 'word-sack',
+    title: '⏰ EXP5 · Mi Rutina y el Clima',
+    subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
+    expLabel: 'exp5',
+    instructions: 'Un día completo: levantarse, trabajar, descansar… y el clima. Combina la bolsa y cuenta tu día. Necesitas 6 oraciones. 🗣️ EN VOZ ALTA.',
+    goal: 6,
+    sack: [
+      _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '他', 'él', 'pronoun'),
+      _sackWord('bàba', '爸爸', 'papá', 'family'), _sackWord('māma', '妈妈', 'mamá', 'family'),
+      _sackWord('yào', '要', 'querer', 'verb'), _sackWord('yǒu', '有', 'tener / haber', 'verb'),
+      _sackWord('qǐchuáng', '起床', 'levantarse', 'verb'), _sackWord('shàngbān', '上班', 'ir al trabajo', 'verb'), _sackWord('xiūxi', '休息', 'descansar', 'verb'),
+      _sackWord('hěn', '很', 'muy', 'particle'), _sackWord('máng', '忙', 'ocupado', 'adj'), _sackWord('lèi', '累', 'cansado', 'adj'), _sackWord('hǎo', '好', 'bueno', 'adj'),
+      _sackWord('jīntiān', '今天', 'hoy', 'time'), _sackWord('tiānqì', '天气', 'clima', 'noun'), _sackWord('xuě', '雪', 'nieve', 'noun'),
+    ],
+    valid: [].concat(
+      _expand('{P} qǐchuáng', { P: ['wǒ', 'nǐ', 'tā', 'bàba', 'māma'] }),
+      _expand('{P} yào qǐchuáng', { P: ['wǒ', 'nǐ', 'tā', 'bàba', 'māma'] }),
+      _expand('{P} yào xiūxi', { P: ['wǒ', 'nǐ', 'tā', 'bàba', 'māma'] }),
+      _expand('{P} xiūxi', { P: ['wǒ', 'nǐ', 'tā', 'bàba', 'māma'] }),
+      _expand('{P} shàngbān', { P: ['bàba', 'māma', 'tā'] }),
+      _expand('{P} yào shàngbān', { P: ['bàba', 'māma', 'tā'] }),
+      _expand('{P} hěn máng', { P: ['wǒ', 'nǐ', 'tā', 'bàba', 'māma'] }),
+      _expand('{P} hěn lèi', { P: ['wǒ', 'nǐ', 'tā', 'bàba', 'māma'] }),
+      ['jīntiān yǒu xuě', 'jīntiān tiānqì hěn hǎo']
+    ),
+    parentInsight: {
+      title: 'Tu hijo/a narra su rutina diaria en chino',
+      bullets: ['Usa 起床 (levantarse), 上班 (trabajar) y 休息 (descansar)', 'Describe estados: 忙 (ocupado) y 累 (cansado)', 'Habla del clima de hoy: 今天天气…'],
+      encouragement: 'En la mañana pregúntale: «¿qǐchuáng?» — que te cuente su rutina.',
+    },
+  },
+  {
+    id: 'hsk2-deportes-salud',
+    level: 'hsk2',
+    type: 'word-sack',
+    title: '⚽ EXP6 · Deportes y Salud',
+    subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
+    expLabel: 'exp6',
+    instructions: 'La cancha HSK2: cantar, bailar, correr, nadar, fútbol y básquet. Combina con 要 (querer), 爱 (amar) y 会 (saber). Necesitas 6 oraciones. 🗣️ EN VOZ ALTA.',
+    goal: 6,
+    sack: [
+      _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '她', 'ella', 'pronoun'), _sackWord('wǒmen', '我们', 'nosotros', 'pronoun'),
+      _sackWord('yào', '要', 'querer', 'verb'), _sackWord('ài', '爱', 'amar / encantar', 'verb'), _sackWord('huì', '会', 'saber (hacer)', 'verb'),
+      _sackWord('chànggē', '唱歌', 'cantar', 'verb'), _sackWord('tiàowǔ', '跳舞', 'bailar', 'verb'), _sackWord('pǎobù', '跑步', 'correr', 'verb'),
+      _sackWord('yóuyǒng', '游泳', 'nadar', 'verb'), _sackWord('dǎ lánqiú', '打篮球', 'jugar básquet', 'verb'), _sackWord('tī zúqiú', '踢足球', 'jugar fútbol', 'verb'),
+      _sackWord('yùndòng', '运动', 'hacer deporte', 'verb'), _sackWord('wán', '玩', 'jugar', 'verb'),
+      _sackWord('shēntǐ', '身体', 'cuerpo / salud', 'noun'), _sackWord('hěn', '很', 'muy', 'particle'), _sackWord('hǎo', '好', 'bueno', 'adj'),
+    ],
+    valid: [].concat(
+      _expand('{P} yào {V}', { P: ['wǒ', 'nǐ', 'tā', 'wǒmen'], V: ['chànggē', 'tiàowǔ', 'pǎobù', 'yóuyǒng', 'dǎ lánqiú', 'tī zúqiú', 'yùndòng', 'wán'] }),
+      _expand('{P} ài {V}', { P: ['wǒ', 'nǐ', 'tā', 'wǒmen'], V: ['chànggē', 'tiàowǔ', 'pǎobù', 'yóuyǒng', 'dǎ lánqiú', 'tī zúqiú', 'yùndòng'] }),
+      _expand('{P} huì {V}', { P: ['wǒ', 'nǐ', 'tā', 'wǒmen'], V: ['chànggē', 'tiàowǔ', 'yóuyǒng', 'dǎ lánqiú', 'tī zúqiú'] }),
+      _expand('{P} shēntǐ hěn hǎo', { P: ['wǒ', 'nǐ', 'tā'] })
+    ),
+    parentInsight: {
+      title: 'Tu hijo/a habla de deportes con 3 verbos modales',
+      bullets: ['Distingue 要 (querer), 爱 (amar) y 会 (saber hacer)', 'Nombra 8 deportes/actividades de HSK2', 'Puede decir «mi salud es buena»: 我身体很好'],
+      encouragement: 'Pregúntale «nǐ huì yóuyǒng ma?» (¿sabes nadar?) — que responda en chino.',
+    },
+  },
+  {
+    id: 'hsk2-aventura-china',
+    level: 'hsk2',
+    type: 'word-sack',
+    title: '🚄 EXP7 · Aventura por China',
+    subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
+    expLabel: 'exp7',
+    instructions: 'El viaje: hotel, estación de tren, aeropuerto, autobús. Combina 去 (ir), 从…到… (desde…hasta…) y arma tu aventura. Necesitas 6 oraciones. 🗣️ EN VOZ ALTA.',
+    goal: 6,
+    sack: [
+      _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '他', 'él', 'pronoun'), _sackWord('wǒmen', '我们', 'nosotros', 'pronoun'),
+      _sackWord('yào', '要', 'querer', 'verb'), _sackWord('qù', '去', 'ir', 'verb'), _sackWord('zuò', '坐', 'tomar (transporte)', 'verb'),
+      _sackWord('jìn', '进', 'entrar', 'verb'), _sackWord('lǚyóu', '旅游', 'viajar', 'verb'),
+      _sackWord('cóng', '从', 'desde', 'particle'), _sackWord('dào', '到', 'hasta / llegar', 'particle'),
+      _sackWord('bīnguǎn', '宾馆', 'hotel', 'place'), _sackWord('fángjiān', '房间', 'habitación', 'place'),
+      _sackWord('huǒchēzhàn', '火车站', 'estación de tren', 'place'), _sackWord('jīchǎng', '机场', 'aeropuerto', 'place'),
+      _sackWord('gōnggòng qìchē', '公共汽车', 'autobús', 'noun'), _sackWord('Běijīng', '北京', 'Pekín', 'place'),
+    ],
+    valid: [].concat(
+      _expand('{P} qù {L}', { P: ['wǒ', 'nǐ', 'tā', 'wǒmen'], L: ['bīnguǎn', 'huǒchēzhàn', 'jīchǎng', 'Běijīng'] }),
+      _expand('{P} yào qù {L}', { P: ['wǒ', 'nǐ', 'tā', 'wǒmen'], L: ['bīnguǎn', 'huǒchēzhàn', 'jīchǎng', 'Běijīng'] }),
+      _expand('{P} zuò gōnggòng qìchē', { P: ['wǒ', 'nǐ', 'tā', 'wǒmen'] }),
+      _expand('{P} yào zuò gōnggòng qìchē', { P: ['wǒ', 'nǐ', 'tā', 'wǒmen'] }),
+      _expand('{P} yào lǚyóu', { P: ['wǒ', 'nǐ', 'tā', 'wǒmen'] }),
+      _expand('{P} jìn fángjiān', { P: ['wǒ', 'nǐ', 'tā'] }),
+      _expand('wǒ cóng {A} dào {B}', { A: ['jīchǎng', 'huǒchēzhàn'], B: ['bīnguǎn', 'Běijīng'] })
+    ),
+    parentInsight: {
+      title: 'Tu hijo/a arma un viaje por China en chino',
+      bullets: ['Usa los lugares HSK2: 宾馆, 火车站, 机场', 'Domina 坐公共汽车 (tomar el autobús)', 'Construye 从…到… (desde… hasta…)'],
+      encouragement: 'Jueguen a planear un viaje: «wǒmen qù Běijīng!» — que arme la ruta en chino.',
+    },
+  },
+  {
+    id: 'hsk2-palabras-magicas',
+    level: 'hsk2',
+    type: 'word-sack',
+    title: '🪄 EXP8 · Palabras Mágicas II',
+    subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
+    expLabel: 'exp8',
+    instructions: 'La torre del mago: 也 (también), 可以 (poder), 别 (no hagas), 再 (otra vez), 每天 (cada día). Cada conector abre una puerta. Necesitas 6 oraciones. 🗣️ EN VOZ ALTA.',
+    goal: 6,
+    sack: [
+      _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '她', 'ella', 'pronoun'),
+      _sackWord('yě', '也', 'también', 'particle'), _sackWord('kěyǐ', '可以', 'poder', 'verb'), _sackWord('kěnéng', '可能', 'tal vez', 'particle'),
+      _sackWord('bié', '别', 'no (¡no hagas!)', 'particle'), _sackWord('zài', '再', 'otra vez', 'particle'),
+      _sackWord('wèishénme', '为什么', '¿por qué?', 'particle'), _sackWord('měi tiān', '每天', 'cada día', 'time'),
+      _sackWord('qù', '去', 'ir', 'verb'), _sackWord('lái', '来', 'venir', 'verb'), _sackWord('chī', '吃', 'comer', 'verb'),
+      _sackWord('shuō', '说', 'hablar / decir', 'verb'), _sackWord('wán', '玩', 'jugar', 'verb'),
+    ],
+    valid: [].concat(
+      _expand('{P} yě {V}', { P: ['wǒ', 'nǐ', 'tā'], V: ['qù', 'lái', 'chī', 'wán'] }),
+      _expand('{P} kěyǐ {V}', { P: ['wǒ', 'nǐ', 'tā'], V: ['qù', 'lái', 'shuō', 'wán'] }),
+      _expand('{P} kěnéng {V}', { P: ['wǒ', 'nǐ', 'tā'], V: ['qù', 'lái'] }),
+      _expand('bié {V}', { V: ['shuō', 'qù', 'chī', 'wán'] }),
+      _expand('zài {V}', { V: ['lái', 'shuō', 'chī', 'wán'] }),
+      _expand('{P} wèishénme {V}', { P: ['nǐ', 'tā'], V: ['qù', 'lái', 'chī'] }),
+      _expand('{P} měi tiān {V}', { P: ['wǒ', 'nǐ', 'tā'], V: ['qù', 'lái', 'chī', 'wán'] })
+    ),
+    parentInsight: {
+      title: 'Tu hijo/a conecta ideas con las partículas HSK2',
+      bullets: ['Usa 也 (también), 可以 (poder) y 可能 (tal vez)', 'Sabe prohibir con 别 y repetir con 再', 'Pregunta 为什么 (¿por qué?) en oraciones completas'],
+      encouragement: 'Dile «bié wán!» (¡no juegues!) en broma — a ver si responde «wèishénme?»',
+    },
+  },
 ];
-// Pre-compute the normalized valid set + hashes once at load.
+// Pre-compute the normalized valid set + hashes + HINT templates at load.
+// Hints (Fernando 2026-09-15: "give hints if they get stuff wrong"):
+// take each valid sentence, mask the LAST word with ▢, dedupe, and rank
+// by how many valid sentences share that prefix (richest patterns first).
+// Safe to send openly — a template never reveals a full answer.
 HSK2_ASSIGNMENTS.forEach((a) => {
   a.validNorm = new Set(a.valid.map(normalize));
   a.validHashes = a.valid.map(wordSackHash);
+  const freq = new Map();
+  for (const v of a.valid) {
+    const toks = v.trim().split(/\s+/);
+    if (toks.length < 2) continue;
+    const tpl = toks.slice(0, -1).join(' ') + ' ▢';
+    // prefer templates whose visible prefix has ≥2 words ("wǒ yào ▢");
+    // a bare "tā ▢" teaches nothing. Short ones rank behind via penalty.
+    const rich = toks.length >= 3 ? 1000 : 0;
+    freq.set(tpl, (freq.get(tpl) || 0) + 1 + (freq.has(tpl) ? 0 : rich));
+  }
+  a.hintTemplates = [...freq.entries()]
+    .sort((x, y) => y[1] - x[1])
+    .slice(0, 10)
+    .map((e) => e[0]);
 });
 // Tag the classic 8 as HSK1 + merge the HSK2 tareas into the registry.
 ASSIGNMENTS.forEach((a) => { if (!a.level) a.level = 'hsk1'; });

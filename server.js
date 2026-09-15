@@ -2206,6 +2206,7 @@ app.get('/api/homework/assignment/:id', (req, res) => {
       goal: a.goal,
       sack: a.sack,
       validHashes: a.validHashes,
+      hintTemplates: a.hintTemplates || [],   // «wǒ yào ▢» — never a full answer
       items: [],   // legacy clients see an empty classic tarea, not a crash
     });
   }
