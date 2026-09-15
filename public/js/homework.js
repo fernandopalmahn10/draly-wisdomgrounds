@@ -599,6 +599,7 @@
   $('hw-list-logout').addEventListener('click', () => {
     accessCode = '';
     studentCode = '';
+    removePinnedStack();
     showScreen('entry');
   });
   $('hw-list-parents').addEventListener('click', openParentView);
@@ -3276,19 +3277,37 @@
     });
   })();
 
-  // 🏷️ Level chip — LEFT of the header buttons (right side of the bar),
-  // NOT next to the avatar (Fernando: "it reads as if that's my name").
-  function renderLevelChip() {
-    const actions = document.querySelector('.hw-list-header-actions');
-    if (!actions) return;
-    let chip = $('hw-level-chip');
-    if (!chip) {
-      chip = document.createElement('span');
-      chip.id = 'hw-level-chip';
-      actions.insertBefore(chip, actions.firstChild);
+  // 📌 PINNED STACK — top-right, ALWAYS visible (Fernando 2026-09-15:
+  // "pin it or they're gonna forget the code and never see it again").
+  // Two pills: 🔑 student code (tap → re-opens the write-it-down banner)
+  // and, below it, the level chip. The level lives HERE, never next to
+  // the name.
+  function renderPinnedStack() {
+    let stack = document.getElementById('hw-pin-stack');
+    if (!stack) {
+      stack = document.createElement('div');
+      stack.id = 'hw-pin-stack';
+      document.body.appendChild(stack);
     }
-    chip.textContent = '📚 ' + hwLevelName();
-    chip.className = 'hw-level-chip ' + (hwLevel === 'hsk2' ? 'is-hsk2' : 'is-hsk1');
+    stack.innerHTML = '';
+    const codePill = document.createElement('button');
+    codePill.type = 'button';
+    codePill.className = 'hw-pin-code';
+    codePill.innerHTML = '🔑 <b>' + escapeHtml(studentCode || '') + '</b>';
+    codePill.title = 'Tu código de estudiante — tócalo para verlo en grande';
+    codePill.addEventListener('click', () => showStudentCodeBanner(studentCode));
+    stack.appendChild(codePill);
+    const lvl = document.createElement('span');
+    lvl.className = 'hw-pin-level ' + (hwLevel === 'hsk2' ? 'is-hsk2' : 'is-hsk1');
+    lvl.textContent = hwLevelName();
+    stack.appendChild(lvl);
+    // Level theme accent on the whole portal (subtle: borders/tabs shift)
+    document.body.classList.toggle('hw-lv-hsk2', hwLevel === 'hsk2');
+  }
+  function removePinnedStack() {
+    const s = document.getElementById('hw-pin-stack');
+    if (s) s.remove();
+    document.body.classList.remove('hw-lv-hsk2');
   }
   // 🔑 First-login banner: the kid's brand-new student code, BIG, with
   // the instruction to write it in a notebook. Shown once per account
@@ -3313,7 +3332,7 @@
   function renderList() {
     $('hw-list-name').textContent = displayName || 'Anon';
     renderAvatarInto($('hw-list-avatar'), avatar);
-    renderLevelChip();
+    renderPinnedStack();
     if (hwFolder) renderFolderContents(hwFolder);
     else renderFolderRoot();
     // Refresh reading state once; its callback re-renders (no fetch loop).
@@ -3399,7 +3418,9 @@
     $('hw-sec-lecturas').classList.add('hidden');
     $('hw-list-readings').classList.add('hidden');
     const tabsBar = $('hw-tabs'); if (tabsBar) tabsBar.classList.remove('hidden');
-    const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 ' + hwLevelName();
+    // Level lives in the pinned stack (top-right), never in the title —
+    // "HSK2 next to the avatar reads as if that's my name".
+    const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 Mis Tareas';
     // Always refresh the custom flat list (visible only on the custom tab).
     renderCustomSection();
     const grid = $('hw-list-grid');
@@ -3973,47 +3994,60 @@
     const old = document.getElementById('hw-sack-overlay');
     if (old) old.remove();
     const hashes = new Set(asg.validHashes || []);
-    const stage = [];          // chips currently on the stage (indices into sack)
-    const foundRaw = [];       // discovered sentences (display form)
-    const foundHash = new Set();
+    const hints = asg.hintTemplates || [];
+    const stage = [];            // chip indices currently on the stage
+    const found = [];            // [{py, zh}] discovered sentences
+    const foundNorm = new Set();
     let submitted = false;
+    let missStreak = 0;          // 2 misses in a row → auto-hint
+    let hintIdx = 0;
 
     const ov = document.createElement('div');
     ov.id = 'hw-sack-overlay';
+    ov.className = 'hw-sk';
     ov.innerHTML = `
-      <div class="hw-sack-top">
-        <button type="button" class="btn btn-ghost btn-sm" id="hw-sack-back">← Volver</button>
-        <div class="hw-sack-titles">
-          <div class="hw-sack-title">${escapeHtml(asg.title)}</div>
-          <div class="hw-sack-progress"><span id="hw-sack-count">⭐ 0 / ${asg.goal}</span>
-            <span class="hw-sack-bar"><span class="hw-sack-fill" id="hw-sack-fill"></span></span></div>
+      <div class="hw-sk-head">
+        <button type="button" class="hw-sk-back" id="hw-sack-back">←</button>
+        <div class="hw-sk-headmid">
+          <div class="hw-sk-kicker">🎒 BOLSA DE PALABRAS</div>
+          <div class="hw-sk-title">${escapeHtml(asg.title)}</div>
         </div>
+        <button type="button" class="hw-sk-help" id="hw-sack-helpbtn" title="¿Cómo se juega?">?</button>
       </div>
-      <p class="hw-sack-instr">${escapeHtml(asg.instructions || '')}</p>
-      <div class="hw-sack-stage" id="hw-sack-stage"><span class="hw-sack-stage-hint" id="hw-sack-hint">☝️ Toca palabras de la bolsa para armar tu oración</span></div>
-      <div class="hw-sack-actions">
-        <button type="button" class="btn btn-gold btn-sm" id="hw-sack-speak">🔊 Escuchar</button>
-        <button type="button" class="btn btn-ghost btn-sm" id="hw-sack-undo">↩️ Quitar</button>
-        <button type="button" class="btn btn-ghost btn-sm" id="hw-sack-clear">🧹 Limpiar</button>
-        <button type="button" class="btn btn-jade btn-sm" id="hw-sack-try">✓ ¡Probar!</button>
+      <div class="hw-sk-stars" id="hw-sack-stars"></div>
+      <p class="hw-sk-coach" id="hw-sack-coach">${escapeHtml(asg.instructions || '')}</p>
+      <div class="hw-sk-stagewrap">
+        <div class="hw-sk-stage" id="hw-sack-stage"></div>
+        <div class="hw-sk-actionbar">
+          <button type="button" class="hw-sk-ico" id="hw-sack-speak" title="Escuchar">🔊</button>
+          <button type="button" class="hw-sk-ico" id="hw-sack-undo" title="Quitar la última">↩️</button>
+          <button type="button" class="hw-sk-ico" id="hw-sack-clear" title="Limpiar todo">🧹</button>
+          <button type="button" class="hw-sk-ico" id="hw-sack-hintbtn" title="Pista">💡</button>
+          <button type="button" class="hw-sk-try" id="hw-sack-try">✓ PROBAR</button>
+        </div>
+        <div class="hw-sk-hintline" id="hw-sack-hintline"></div>
       </div>
-      <div class="hw-sack-bag" id="hw-sack-bag"></div>
-      <div class="hw-sack-found-head">📜 Oraciones descubiertas</div>
-      <div class="hw-sack-found" id="hw-sack-found"><span class="hw-sack-none">Todavía ninguna — ¡tú puedes! 💪</span></div>
-      <button type="button" class="btn btn-jade btn-xl hw-sack-submit" id="hw-sack-submit" disabled>🏁 Entregar</button>`;
+      <div class="hw-sk-baghead">La bolsa <span class="hw-sk-legend"><i style="--cat:#5b8def"></i>quién <i style="--cat:#ef5b5b"></i>acción <i style="--cat:#ffe082"></i>cosas</span></div>
+      <div class="hw-sk-bag" id="hw-sack-bag"></div>
+      <div class="hw-sk-foundhead">📜 Tus descubrimientos</div>
+      <div class="hw-sk-found" id="hw-sack-found"></div>
+      <div class="hw-sk-bottom">
+        <span class="hw-sk-bottomtxt" id="hw-sack-bottomtxt">Descubre ${asg.goal} oraciones</span>
+        <button type="button" class="hw-sk-submit" id="hw-sack-submit" disabled>🏁 Entregar</button>
+      </div>`;
     document.body.appendChild(ov);
 
     const bag = ov.querySelector('#hw-sack-bag');
     (asg.sack || []).forEach((w, idx) => {
       const chip = document.createElement('button');
       chip.type = 'button';
-      chip.className = 'hw-sack-chip';
+      chip.className = 'hw-sk-chip';
       chip.style.setProperty('--cat', SACK_CAT_COLORS[w.cat] || '#ffe082');
-      chip.innerHTML = '<b>' + escapeHtml(w.py) + '</b><small>' + escapeHtml(w.es) + '</small>';
+      chip.innerHTML = '<b>' + escapeHtml(w.py) + '</b><i>' + escapeHtml(w.zh || '') + '</i><small>' + escapeHtml(w.es) + '</small>';
       chip.addEventListener('click', () => {
         stage.push(idx);
-        // 🔊 speak the HANZI — HSK2 pinyin isn't in the TTS converter
-        // dictionary, so Latin text would be read letter-by-letter.
+        chip.classList.remove('hw-sk-pop'); void chip.offsetWidth; chip.classList.add('hw-sk-pop');
+        // 🔊 hanzi — the TTS converter dictionary doesn't know HSK2 pinyin
         try { speakChinese(w.zh || w.py, null); } catch (_) {}
         drawStage();
       });
@@ -4026,72 +4060,112 @@
       const st = ov.querySelector('#hw-sack-stage');
       st.innerHTML = '';
       if (!stage.length) {
-        st.innerHTML = '<span class="hw-sack-stage-hint">☝️ Toca palabras de la bolsa para armar tu oración</span>';
+        st.innerHTML = '<span class="hw-sk-stagehint">Toca palabras de la bolsa 👇 y arma tu oración aquí</span>';
         return;
       }
       stage.forEach((i, pos) => {
         const w = asg.sack[i];
         const c = document.createElement('button');
         c.type = 'button';
-        c.className = 'hw-sack-stagechip';
+        c.className = 'hw-sk-stagechip';
         c.style.setProperty('--cat', SACK_CAT_COLORS[w.cat] || '#ffe082');
-        c.textContent = w.py;
+        c.innerHTML = escapeHtml(w.py) + '<i>' + escapeHtml(w.zh || '') + '</i>';
         c.title = 'Toca para quitar';
         c.addEventListener('click', () => { stage.splice(pos, 1); drawStage(); });
         st.appendChild(c);
       });
     }
+    function drawStars() {
+      const el = ov.querySelector('#hw-sack-stars');
+      let h = '';
+      for (let i = 0; i < asg.goal; i++) {
+        h += '<span class="hw-sk-star' + (i < found.length ? ' is-on' : '') + '">' + (i < found.length ? '⭐' : '☆') + '</span>';
+      }
+      el.innerHTML = h;
+    }
     function drawFound() {
-      ov.querySelector('#hw-sack-count').textContent = '⭐ ' + Math.min(foundRaw.length, asg.goal) + ' / ' + asg.goal;
-      ov.querySelector('#hw-sack-fill').style.width = Math.min(100, (foundRaw.length / asg.goal) * 100) + '%';
+      drawStars();
       const f = ov.querySelector('#hw-sack-found');
       f.innerHTML = '';
-      if (!foundRaw.length) {
-        f.innerHTML = '<span class="hw-sack-none">Todavía ninguna — ¡tú puedes! 💪</span>';
+      if (!found.length) {
+        f.innerHTML = '<span class="hw-sk-none">Todavía ninguna — combina y descubre 💪</span>';
       } else {
-        foundRaw.forEach((s) => {
-          const row = document.createElement('div');
-          row.className = 'hw-sack-foundrow';
-          row.innerHTML = '✅ <b>' + escapeHtml(s) + '</b>';
-          f.appendChild(row);
+        found.forEach((s) => {
+          const card = document.createElement('div');
+          card.className = 'hw-sk-foundcard';
+          card.innerHTML = '<b>' + escapeHtml(s.zh) + '</b><span>' + escapeHtml(s.py) + '</span>';
+          card.addEventListener('click', () => { try { speakChinese(s.zh, null); } catch (_) {} });
+          f.appendChild(card);
         });
       }
       const sub = ov.querySelector('#hw-sack-submit');
-      sub.disabled = foundRaw.length === 0;
-      sub.textContent = foundRaw.length >= asg.goal ? '🏆 ¡Entregar — lo lograste!' : '🏁 Entregar (' + foundRaw.length + '/' + asg.goal + ')';
+      const txt = ov.querySelector('#hw-sack-bottomtxt');
+      sub.disabled = found.length === 0;
+      if (found.length >= asg.goal) {
+        sub.textContent = '🏆 ¡Entregar!';
+        sub.classList.add('is-ready');
+        txt.textContent = '¡Lo lograste! ' + found.length + ' de ' + asg.goal;
+      } else {
+        sub.textContent = '🏁 Entregar';
+        sub.classList.remove('is-ready');
+        txt.textContent = found.length + ' de ' + asg.goal + ' descubiertas';
+      }
+    }
+    // 💡 Hints — a pattern with the last word hidden («wǒ yào ▢»).
+    // Manual via the bulb, automatic after 2 misses in a row.
+    function showHint(auto) {
+      if (!hints.length) return;
+      const line = ov.querySelector('#hw-sack-hintline');
+      const tpl = hints[hintIdx % hints.length];
+      hintIdx++;
+      line.innerHTML = (auto ? '🤝 Te ayudo — prueba: ' : '💡 Pista: ') + '<b>' + escapeHtml(tpl) + '</b>';
+      line.classList.add('is-show');
+      clearTimeout(line._t);
+      line._t = setTimeout(() => line.classList.remove('is-show'), 7000);
+    }
+    // ⭐ Discovery celebration — the sentence FEEDS you: hanzi big,
+    // pinyin under it, spoken aloud, then it slides to your shelf.
+    function celebrate(zh, py) {
+      const c = document.createElement('div');
+      c.className = 'hw-sk-flash';
+      c.innerHTML = '<div class="hw-sk-flashcard"><div class="hw-sk-flashstar">⭐</div><div class="hw-sk-flashzh">' + escapeHtml(zh) + '</div><div class="hw-sk-flashpy">' + escapeHtml(py) + '</div></div>';
+      ov.appendChild(c);
+      setTimeout(() => c.remove(), 1600);
     }
     function tryCurrent() {
       if (!stage.length) { _hwToast('Primero arma una oración con la bolsa 🎒'); return; }
       const py = sentencePy();
-      const h = sackHash(py);
-      if (foundHash.has(sackNorm(py))) {
-        _hwToast('¡Ya la tienes! 😉 Busca otra combinación');
+      const zh = sentenceZh();
+      const norm = sackNorm(py);
+      if (foundNorm.has(norm)) {
+        _hwToast('¡Ya la tienes! 😉 Busca OTRA combinación');
         return;
       }
-      if (hashes.has(h)) {
-        foundHash.add(sackNorm(py));
-        foundRaw.push(py);
-        try { speakChinese(sentenceZh(), null); } catch (_) {}
-        _hwToast('⭐ ¡«' + py + '» es correcta! +1');
+      if (hashes.has(sackHash(py))) {
+        missStreak = 0;
+        foundNorm.add(norm);
+        found.push({ py: py, zh: zh });
+        try { speakChinese(zh, null); } catch (_) {}
+        celebrate(zh, py);
         stage.length = 0;
         drawStage(); drawFound();
-        if (foundRaw.length === asg.goal) {
-          _hwToast('🏆 ¡' + asg.goal + ' de ' + asg.goal + '! ¡Entrega tu tarea!');
+        if (found.length === asg.goal) {
+          setTimeout(() => _hwToast('🏆 ¡' + asg.goal + ' de ' + asg.goal + '! Toca Entregar'), 1400);
         }
       } else {
+        missStreak++;
         const st = ov.querySelector('#hw-sack-stage');
-        st.classList.remove('hw-sack-shake');
-        void st.offsetWidth;   // restart the animation
-        st.classList.add('hw-sack-shake');
-        _hwToast('🤔 Esa no… todavía. Prueba otro orden u otras palabras');
+        st.classList.remove('hw-sk-shake'); void st.offsetWidth; st.classList.add('hw-sk-shake');
+        if (missStreak >= 2) { showHint(true); missStreak = 0; }
+        else { _hwToast('🤔 Esa no… todavía. Cambia el orden o las palabras'); }
       }
     }
     function submit() {
-      if (submitted || !foundRaw.length) return;
+      if (submitted || !found.length) return;
       submitted = true;
       fetch('/api/homework/submit', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessCode, studentCode, assignmentId: asg.id, answers: foundRaw }),
+        body: JSON.stringify({ accessCode, studentCode, assignmentId: asg.id, answers: found.map((s) => s.py) }),
       }).then((r) => r.json()).then((d) => {
         if (!d || !d.ok) { submitted = false; _hwToast('No se pudo entregar: ' + (d && d.error || 'error')); return; }
         submissions.push({ assignmentId: asg.id, score: d.score, total: d.total, ts: Date.now() });
@@ -4112,11 +4186,15 @@
       }).catch((e) => { submitted = false; _hwToast('Error de conexión: ' + e.message); });
     }
     ov.querySelector('#hw-sack-back').addEventListener('click', () => { ov.remove(); renderList(); showScreen('list'); });
+    ov.querySelector('#hw-sack-helpbtn').addEventListener('click', () => {
+      ov.querySelector('#hw-sack-coach').classList.toggle('is-open');
+    });
     ov.querySelector('#hw-sack-speak').addEventListener('click', (e) => {
       if (stage.length) { try { speakChinese(sentenceZh(), e.currentTarget); } catch (_) {} }
     });
     ov.querySelector('#hw-sack-undo').addEventListener('click', () => { stage.pop(); drawStage(); });
     ov.querySelector('#hw-sack-clear').addEventListener('click', () => { stage.length = 0; drawStage(); });
+    ov.querySelector('#hw-sack-hintbtn').addEventListener('click', () => showHint(false));
     ov.querySelector('#hw-sack-try').addEventListener('click', tryCurrent);
     ov.querySelector('#hw-sack-submit').addEventListener('click', submit);
     drawStage(); drawFound();

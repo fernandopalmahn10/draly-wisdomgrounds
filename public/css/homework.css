@@ -4158,3 +4158,195 @@ button.hw-sent-chip:active { transform: scale(0.94); }
 .hw-sack-result-emoji { font-size: 3.4rem; }
 .hw-sack-result-score { font-size: 2.4rem; font-weight: 900; color: #5be88a; margin: 6px 0; }
 .hw-sack-result-note { color: rgba(243, 230, 194, 0.85); margin-bottom: 16px; line-height: 1.45; }
+
+/* ══════════════════════════════════════════════════════════════════
+   🆕 2026-09-15 v2 — premium pass (Fernando): pinned code+level stack
+   top-right, level OUT of the name area, HSK2 jade theme, and the
+   Bolsa de Palabras redesigned as an actual game (hw-sk-*).
+   ══════════════════════════════════════════════════════════════════ */
+/* 📌 Pinned stack — always visible, top-right */
+#hw-pin-stack {
+  position: fixed; top: 10px; right: 10px; z-index: 800;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+  pointer-events: none;
+}
+#hw-pin-stack > * { pointer-events: auto; }
+.hw-pin-code {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 2px solid rgba(255, 224, 130, 0.75); border-radius: 999px;
+  background: rgba(13, 18, 36, 0.92); color: #fff;
+  padding: 7px 14px; cursor: pointer; touch-action: manipulation;
+  font-size: 0.9rem; box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+}
+.hw-pin-code b { color: #ffe082; letter-spacing: 0.18em; font-size: 1.02rem; }
+.hw-pin-code:active { transform: scale(0.96); }
+.hw-pin-level {
+  display: inline-flex; align-items: center;
+  border-radius: 999px; padding: 4px 14px;
+  font-weight: 900; font-size: 0.82rem; letter-spacing: 0.08em;
+  border: 2px solid; backdrop-filter: blur(4px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+.hw-pin-level.is-hsk1 { color: #ffe082; border-color: rgba(255, 224, 130, 0.8); background: rgba(255, 224, 130, 0.14); }
+.hw-pin-level.is-hsk2 { color: #5be8d1; border-color: rgba(91, 232, 209, 0.8); background: rgba(91, 232, 209, 0.14); }
+/* the old inline chip is gone */
+.hw-level-chip { display: none !important; }
+
+/* 🌊 HSK2 theme — same portal, another level: gold accents turn jade */
+body.hw-lv-hsk2 .hw-list-header { border-color: rgba(91, 232, 209, 0.45); }
+body.hw-lv-hsk2 .hw-list-sub strong { color: #5be8d1; }
+body.hw-lv-hsk2 .hw-tab.is-active { border-color: #5be8d1; color: #5be8d1; }
+body.hw-lv-hsk2 .hw-folder-card { border-color: rgba(91, 232, 209, 0.35); }
+body.hw-lv-hsk2 .hw-folder-card:hover { border-color: #5be8d1; }
+body.hw-lv-hsk2 .hw-hud { border-color: rgba(91, 232, 209, 0.5); }
+
+/* ═══ 🎒 BOLSA DE PALABRAS — the game (hw-sk-*) ═══ */
+#hw-sack-overlay.hw-sk {
+  position: fixed; inset: 0; z-index: 5000;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background:
+    radial-gradient(1100px 500px at 50% -10%, rgba(91, 232, 209, 0.14), transparent 60%),
+    radial-gradient(900px 500px at 90% 110%, rgba(255, 224, 130, 0.08), transparent 55%),
+    #0b0f1e;
+  padding: 14px clamp(14px, 4vw, 40px) 110px;
+}
+.hw-sk-head { display: flex; align-items: center; gap: 12px; max-width: 860px; margin: 0 auto 4px; }
+.hw-sk-back, .hw-sk-help {
+  flex: 0 0 auto; width: 42px; height: 42px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.06);
+  color: #fff; font-size: 1.15rem; font-weight: 900; cursor: pointer; touch-action: manipulation;
+}
+.hw-sk-headmid { flex: 1; text-align: center; min-width: 0; }
+.hw-sk-kicker { font-size: 0.68rem; font-weight: 900; letter-spacing: 0.28em; color: #5be8d1; }
+.hw-sk-title { font-size: 1.08rem; font-weight: 900; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hw-sk-stars { display: flex; justify-content: center; gap: 6px; margin: 8px 0 4px; }
+.hw-sk-star { font-size: 1.7rem; opacity: 0.35; filter: grayscale(1); transition: all 0.25s ease; }
+.hw-sk-star.is-on { opacity: 1; filter: none; text-shadow: 0 0 16px rgba(255, 224, 130, 0.7); transform: scale(1.12); }
+.hw-sk-coach {
+  max-width: 640px; margin: 4px auto 14px; text-align: center;
+  color: rgba(243, 230, 194, 0.6); font-size: 0.84rem; line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.hw-sk-coach.is-open { -webkit-line-clamp: unset; color: rgba(243, 230, 194, 0.9); }
+.hw-sk-stagewrap { max-width: 860px; margin: 0 auto 22px; }
+.hw-sk-stage {
+  min-height: 96px; border-radius: 20px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 2px dashed rgba(91, 232, 209, 0.45);
+  box-shadow: inset 0 0 40px rgba(91, 232, 209, 0.05);
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.hw-sk-stagehint { color: rgba(255, 255, 255, 0.4); font-size: 0.95rem; }
+.hw-sk-stagechip {
+  border: none; cursor: pointer; touch-action: manipulation;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: var(--cat, #ffe082); color: #101426;
+  font-weight: 900; font-size: 1.12rem;
+  border-radius: 14px; padding: 9px 15px;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35), 0 8px 18px rgba(0, 0, 0, 0.3);
+}
+.hw-sk-stagechip i { font-style: normal; font-weight: 400; font-size: 0.95rem; opacity: 0.75; }
+.hw-sk-stagechip:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+.hw-sk-shake { animation: hw-sack-shake 0.4s ease; }
+.hw-sk-actionbar { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; }
+.hw-sk-ico {
+  width: 46px; height: 46px; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.07);
+  font-size: 1.15rem; cursor: pointer; touch-action: manipulation; color: #fff;
+}
+.hw-sk-ico:active { transform: scale(0.92); }
+.hw-sk-try {
+  border: none; cursor: pointer; touch-action: manipulation;
+  background: linear-gradient(180deg, #ffe082, #f0a93a); color: #1a1a2a;
+  font-weight: 900; font-size: 1.05rem; letter-spacing: 0.06em;
+  border-radius: 999px; padding: 13px 30px;
+  box-shadow: 0 5px 0 rgba(160, 100, 20, 0.55), 0 10px 24px rgba(255, 200, 80, 0.25);
+}
+.hw-sk-try:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(160, 100, 20, 0.55); }
+.hw-sk-hintline {
+  text-align: center; margin-top: 10px; min-height: 1.4em;
+  color: #5be8d1; font-size: 0.98rem;
+  opacity: 0; transform: translateY(-4px); transition: all 0.25s ease;
+}
+.hw-sk-hintline.is-show { opacity: 1; transform: none; }
+.hw-sk-hintline b { color: #fff; background: rgba(91, 232, 209, 0.14); border: 1px dashed rgba(91,232,209,0.5); border-radius: 8px; padding: 2px 10px; }
+.hw-sk-baghead {
+  max-width: 860px; margin: 0 auto 8px;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  color: #ffe082; font-weight: 900; font-size: 0.95rem;
+}
+.hw-sk-legend { font-weight: 600; font-size: 0.72rem; color: rgba(255,255,255,0.55); display: flex; gap: 10px; align-items: center; }
+.hw-sk-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--cat); margin-right: 4px; }
+.hw-sk-bag {
+  max-width: 860px; margin: 0 auto 24px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 10px;
+}
+.hw-sk-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border: none; cursor: pointer; touch-action: manipulation;
+  background: linear-gradient(180deg, rgba(255,255,255,0.09), rgba(255,255,255,0.04));
+  border-top: 3px solid var(--cat, #ffe082);
+  border-radius: 14px; padding: 11px 6px 9px;
+  color: #fff; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+}
+.hw-sk-chip b { font-size: 1.02rem; color: var(--cat, #ffe082); }
+.hw-sk-chip i { font-style: normal; font-size: 1rem; color: rgba(255, 255, 255, 0.85); }
+.hw-sk-chip small { font-size: 0.68rem; color: rgba(243, 230, 194, 0.6); }
+.hw-sk-chip:active { transform: scale(0.94); }
+.hw-sk-pop { animation: hw-sk-pop 0.28s ease; }
+@keyframes hw-sk-pop { 40% { transform: scale(1.12); } }
+.hw-sk-foundhead { max-width: 860px; margin: 0 auto 8px; color: #5be8d1; font-weight: 900; font-size: 0.95rem; }
+.hw-sk-found {
+  max-width: 860px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px;
+}
+.hw-sk-none { color: rgba(255, 255, 255, 0.4); font-size: 0.9rem; }
+.hw-sk-foundcard {
+  background: rgba(91, 232, 138, 0.08);
+  border: 1px solid rgba(91, 232, 138, 0.4);
+  border-radius: 14px; padding: 10px 12px; cursor: pointer;
+  display: flex; flex-direction: column; gap: 2px;
+  animation: hw-sk-slidein 0.35s ease;
+}
+@keyframes hw-sk-slidein { from { transform: translateY(10px); opacity: 0; } }
+.hw-sk-foundcard b { color: #fff; font-size: 1.15rem; font-weight: 700; }
+.hw-sk-foundcard span { color: #8fe8b0; font-size: 0.82rem; }
+.hw-sk-bottom {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5100;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 12px clamp(14px, 4vw, 40px);
+  background: rgba(11, 15, 30, 0.92); backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.hw-sk-bottomtxt { color: rgba(243, 230, 194, 0.85); font-weight: 800; font-size: 0.95rem; }
+.hw-sk-submit {
+  border: none; cursor: pointer; touch-action: manipulation;
+  background: rgba(255, 255, 255, 0.12); color: rgba(255, 255, 255, 0.75);
+  font-weight: 900; font-size: 1rem; border-radius: 999px; padding: 12px 26px;
+}
+.hw-sk-submit:disabled { opacity: 0.35; cursor: default; }
+.hw-sk-submit.is-ready {
+  background: linear-gradient(180deg, #7dffa8, #2ecc71); color: #0b1a10;
+  box-shadow: 0 0 22px rgba(91, 232, 138, 0.5);
+  animation: hw-sk-pulse 1.2s ease-in-out infinite;
+}
+@keyframes hw-sk-pulse { 50% { transform: scale(1.05); } }
+.hw-sk-flash {
+  position: fixed; inset: 0; z-index: 5200;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5, 8, 18, 0.55); pointer-events: none;
+}
+.hw-sk-flashcard {
+  background: linear-gradient(160deg, #1a2035, #0d1224);
+  border: 3px solid #ffe082; border-radius: 24px;
+  padding: 26px 40px; text-align: center;
+  box-shadow: 0 0 60px rgba(255, 224, 130, 0.35);
+  animation: hw-sk-flashin 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+@keyframes hw-sk-flashin { from { transform: scale(0.6); opacity: 0; } }
+.hw-sk-flashstar { font-size: 2.6rem; }
+.hw-sk-flashzh { font-size: 2.2rem; font-weight: 700; color: #fff; margin: 4px 0; }
+.hw-sk-flashpy { font-size: 1.15rem; color: #ffe082; font-weight: 800; }
