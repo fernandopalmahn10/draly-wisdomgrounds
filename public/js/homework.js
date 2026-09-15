@@ -111,6 +111,24 @@
   let avatar = null;
   let avatarOptions = [];
   let assignments = [];        // summary list
+  // 🆕 2026-09-15 — HSK level, stamped by the ACCESS CODE at entry
+  // (1001→hsk1, 1002→hsk2). The portal reshapes around it: header chip,
+  // root title, experience folders, and which tareas the server sends.
+  let hwLevel = 'hsk1';
+  const HSK2_EXPS = {
+    exp1: { id: 'exp1', label: 'EXP1 · La Familia Grande',      short: '👨‍👩‍👧 EXP1' },
+    exp2: { id: 'exp2', label: 'EXP2 · Un Día en la Escuela',   short: '🎓 EXP2' },
+    exp3: { id: 'exp3', label: 'EXP3 · El Restaurante Chino',   short: '🥢 EXP3' },
+    exp4: { id: 'exp4', label: 'EXP4 · La Tienda de Ropa',      short: '👗 EXP4' },
+    exp5: { id: 'exp5', label: 'EXP5 · Mi Rutina y el Clima',   short: '⏰ EXP5' },
+    exp6: { id: 'exp6', label: 'EXP6 · Deportes y Salud',       short: '⚽ EXP6' },
+    exp7: { id: 'exp7', label: 'EXP7 · Aventura por China',     short: '🚄 EXP7' },
+    exp8: { id: 'exp8', label: 'EXP8 · Palabras Mágicas II',    short: '🪄 EXP8' },
+  };
+  function hwExps() {
+    return hwLevel === 'hsk2' ? HSK2_EXPS : (window.WU_EXPERIENCES || {});
+  }
+  function hwLevelName() { return hwLevel === 'hsk2' ? 'HSK2' : 'HSK1'; }
   let customAssignments = [];  // 🎯 teacher-sent tareas especiales for me
   // Default lands on ⏳ Pendientes — kid's TODO list. "pending" includes both
   // brand-new tareas AND ones tried below 80%. Per user: "by default it
@@ -274,6 +292,7 @@
         avatarOptions = data.avatarOptions || [];
         assignments = data.assignments || [];
         submissions = data.submissions || [];
+        hwLevel = (data.level === 'hsk2') ? 'hsk2' : 'hsk1';
         try {
           localStorage.setItem(STORAGE_ACCESS_KEY, ac);
           localStorage.setItem(STORAGE_CODE_KEY, studentCode);
@@ -284,6 +303,11 @@
         } else {
           renderList();
           showScreen('list');
+        }
+        // 🔑 Brand-new account → BIG banner with their student code so
+        // they write it down (prevents duplicate accounts).
+        if (data.isNew) {
+          try { showStudentCodeBanner(data.studentCode); } catch (_) {}
         }
         // Pull the daily progression HUD (XP / swords / streak) right away.
         try { refreshDailyHud(); } catch (_) {}
@@ -3252,9 +3276,44 @@
     });
   })();
 
+  // 🏷️ Level chip — LEFT of the header buttons (right side of the bar),
+  // NOT next to the avatar (Fernando: "it reads as if that's my name").
+  function renderLevelChip() {
+    const actions = document.querySelector('.hw-list-header-actions');
+    if (!actions) return;
+    let chip = $('hw-level-chip');
+    if (!chip) {
+      chip = document.createElement('span');
+      chip.id = 'hw-level-chip';
+      actions.insertBefore(chip, actions.firstChild);
+    }
+    chip.textContent = '📚 ' + hwLevelName();
+    chip.className = 'hw-level-chip ' + (hwLevel === 'hsk2' ? 'is-hsk2' : 'is-hsk1');
+  }
+  // 🔑 First-login banner: the kid's brand-new student code, BIG, with
+  // the instruction to write it in a notebook. Shown once per account
+  // creation (server sends isNew) — kills duplicate accounts.
+  function showStudentCodeBanner(code) {
+    const old = document.getElementById('hw-code-banner');
+    if (old) old.remove();
+    const ov = document.createElement('div');
+    ov.id = 'hw-code-banner';
+    ov.innerHTML = `
+      <div class="hw-code-banner-card">
+        <div class="hw-code-banner-icon">🔑</div>
+        <div class="hw-code-banner-title">Tu código de estudiante es:</div>
+        <div class="hw-code-banner-code">${escapeHtml(String(code || ''))}</div>
+        <div class="hw-code-banner-note">📓 <strong>Anótalo en un cuaderno</strong> para que no se te olvide.<br>Lo necesitas para entrar la próxima vez — si lo pierdes, se crea otra cuenta y pierdes tu progreso.</div>
+        <button type="button" class="btn btn-jade btn-xl" id="hw-code-banner-ok">✅ ¡Ya lo anoté!</button>
+      </div>`;
+    document.body.appendChild(ov);
+    const okBtn = document.getElementById('hw-code-banner-ok');
+    if (okBtn) okBtn.addEventListener('click', () => ov.remove());
+  }
   function renderList() {
     $('hw-list-name').textContent = displayName || 'Anon';
     renderAvatarInto($('hw-list-avatar'), avatar);
+    renderLevelChip();
     if (hwFolder) renderFolderContents(hwFolder);
     else renderFolderRoot();
     // Refresh reading state once; its callback re-renders (no fetch loop).
@@ -3340,7 +3399,7 @@
     $('hw-sec-lecturas').classList.add('hidden');
     $('hw-list-readings').classList.add('hidden');
     const tabsBar = $('hw-tabs'); if (tabsBar) tabsBar.classList.remove('hidden');
-    const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 HSK1';
+    const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 ' + hwLevelName();
     // Always refresh the custom flat list (visible only on the custom tab).
     renderCustomSection();
     const grid = $('hw-list-grid');
@@ -3353,7 +3412,7 @@
     }
     grid.classList.remove('hidden');
     grid.innerHTML = '';
-    const exps = window.WU_EXPERIENCES || {};
+    const exps = hwExps();   // HSK1 or HSK2 experiencias by level
     const showDone = currentTab === 'done';
     ['exp1','exp2','exp3','exp4','exp5','exp6','exp7','exp8'].forEach((expId) => {
       const exp = exps[expId];
@@ -3397,7 +3456,7 @@
 
   // FOLDER — assignments (+ readings) inside one experience, filtered by tab.
   function renderFolderContents(expId) {
-    const exp = (window.WU_EXPERIENCES || {})[expId];
+    const exp = hwExps()[expId];
     const tabsBar = $('hw-tabs'); if (tabsBar) tabsBar.classList.add('hidden');
     // Hide the custom flat list while inside a folder.
     const cu = $('hw-list-custom-all'); if (cu) cu.classList.add('hidden');
@@ -3424,7 +3483,7 @@
   }
   // 🔢 Update the 3 tab count badges. Called whenever data changes.
   function updateTabCounts() {
-    const exps = window.WU_EXPERIENCES || {};
+    const exps = hwExps();
     let pendingCount = 0, doneCount = 0;
     ['exp1','exp2','exp3','exp4','exp5','exp6','exp7','exp8'].forEach((expId) => {
       if (!exps[expId]) return;
@@ -3886,6 +3945,182 @@
     clearTimeout(_hwToast._timer);
     _hwToast._timer = setTimeout(() => t.classList.remove('is-show'), 2400);
   }
+  // ═══════════════════════════════════════════════════════════════════
+  // 🎒 BOLSA DE PALABRAS (HSK2 word-sack) — 2026-09-15 (Fernando):
+  // "mix the essential verbs + the words you want to test + everything
+  // needed for the structure. I want buy milk, I want drink water…
+  // how many combinations can you make?" The kid taps chips from the
+  // sack, builds a sentence, hits Probar. Valid + new → ⭐ discovered.
+  // The device only knows HASHES of the answers; the server re-grades.
+  // ═══════════════════════════════════════════════════════════════════
+  function sackNorm(s) {
+    return String(s || '').toLowerCase().normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[.,!?;:'"()¿¡]/g, '')
+      .replace(/\s+/g, ' ').trim();
+  }
+  function sackHash(s) {
+    const n = sackNorm(s);
+    let h = 5381;
+    for (let i = 0; i < n.length; i++) h = ((h * 33) ^ n.charCodeAt(i)) >>> 0;
+    return h.toString(16);
+  }
+  const SACK_CAT_COLORS = {
+    pronoun: '#5b8def', verb: '#ef5b5b', family: '#ef5b95', food: '#a07050',
+    noun: '#7bdf7b', adj: '#5bcfef', particle: '#aaaaaa',
+  };
+  function renderWordSack(asg) {
+    const old = document.getElementById('hw-sack-overlay');
+    if (old) old.remove();
+    const hashes = new Set(asg.validHashes || []);
+    const stage = [];          // chips currently on the stage (indices into sack)
+    const foundRaw = [];       // discovered sentences (display form)
+    const foundHash = new Set();
+    let submitted = false;
+
+    const ov = document.createElement('div');
+    ov.id = 'hw-sack-overlay';
+    ov.innerHTML = `
+      <div class="hw-sack-top">
+        <button type="button" class="btn btn-ghost btn-sm" id="hw-sack-back">← Volver</button>
+        <div class="hw-sack-titles">
+          <div class="hw-sack-title">${escapeHtml(asg.title)}</div>
+          <div class="hw-sack-progress"><span id="hw-sack-count">⭐ 0 / ${asg.goal}</span>
+            <span class="hw-sack-bar"><span class="hw-sack-fill" id="hw-sack-fill"></span></span></div>
+        </div>
+      </div>
+      <p class="hw-sack-instr">${escapeHtml(asg.instructions || '')}</p>
+      <div class="hw-sack-stage" id="hw-sack-stage"><span class="hw-sack-stage-hint" id="hw-sack-hint">☝️ Toca palabras de la bolsa para armar tu oración</span></div>
+      <div class="hw-sack-actions">
+        <button type="button" class="btn btn-gold btn-sm" id="hw-sack-speak">🔊 Escuchar</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="hw-sack-undo">↩️ Quitar</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="hw-sack-clear">🧹 Limpiar</button>
+        <button type="button" class="btn btn-jade btn-sm" id="hw-sack-try">✓ ¡Probar!</button>
+      </div>
+      <div class="hw-sack-bag" id="hw-sack-bag"></div>
+      <div class="hw-sack-found-head">📜 Oraciones descubiertas</div>
+      <div class="hw-sack-found" id="hw-sack-found"><span class="hw-sack-none">Todavía ninguna — ¡tú puedes! 💪</span></div>
+      <button type="button" class="btn btn-jade btn-xl hw-sack-submit" id="hw-sack-submit" disabled>🏁 Entregar</button>`;
+    document.body.appendChild(ov);
+
+    const bag = ov.querySelector('#hw-sack-bag');
+    (asg.sack || []).forEach((w, idx) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'hw-sack-chip';
+      chip.style.setProperty('--cat', SACK_CAT_COLORS[w.cat] || '#ffe082');
+      chip.innerHTML = '<b>' + escapeHtml(w.py) + '</b><small>' + escapeHtml(w.es) + '</small>';
+      chip.addEventListener('click', () => {
+        stage.push(idx);
+        // 🔊 speak the HANZI — HSK2 pinyin isn't in the TTS converter
+        // dictionary, so Latin text would be read letter-by-letter.
+        try { speakChinese(w.zh || w.py, null); } catch (_) {}
+        drawStage();
+      });
+      bag.appendChild(chip);
+    });
+
+    function sentencePy() { return stage.map((i) => asg.sack[i].py).join(' '); }
+    function sentenceZh() { return stage.map((i) => asg.sack[i].zh || asg.sack[i].py).join(''); }
+    function drawStage() {
+      const st = ov.querySelector('#hw-sack-stage');
+      st.innerHTML = '';
+      if (!stage.length) {
+        st.innerHTML = '<span class="hw-sack-stage-hint">☝️ Toca palabras de la bolsa para armar tu oración</span>';
+        return;
+      }
+      stage.forEach((i, pos) => {
+        const w = asg.sack[i];
+        const c = document.createElement('button');
+        c.type = 'button';
+        c.className = 'hw-sack-stagechip';
+        c.style.setProperty('--cat', SACK_CAT_COLORS[w.cat] || '#ffe082');
+        c.textContent = w.py;
+        c.title = 'Toca para quitar';
+        c.addEventListener('click', () => { stage.splice(pos, 1); drawStage(); });
+        st.appendChild(c);
+      });
+    }
+    function drawFound() {
+      ov.querySelector('#hw-sack-count').textContent = '⭐ ' + Math.min(foundRaw.length, asg.goal) + ' / ' + asg.goal;
+      ov.querySelector('#hw-sack-fill').style.width = Math.min(100, (foundRaw.length / asg.goal) * 100) + '%';
+      const f = ov.querySelector('#hw-sack-found');
+      f.innerHTML = '';
+      if (!foundRaw.length) {
+        f.innerHTML = '<span class="hw-sack-none">Todavía ninguna — ¡tú puedes! 💪</span>';
+      } else {
+        foundRaw.forEach((s) => {
+          const row = document.createElement('div');
+          row.className = 'hw-sack-foundrow';
+          row.innerHTML = '✅ <b>' + escapeHtml(s) + '</b>';
+          f.appendChild(row);
+        });
+      }
+      const sub = ov.querySelector('#hw-sack-submit');
+      sub.disabled = foundRaw.length === 0;
+      sub.textContent = foundRaw.length >= asg.goal ? '🏆 ¡Entregar — lo lograste!' : '🏁 Entregar (' + foundRaw.length + '/' + asg.goal + ')';
+    }
+    function tryCurrent() {
+      if (!stage.length) { _hwToast('Primero arma una oración con la bolsa 🎒'); return; }
+      const py = sentencePy();
+      const h = sackHash(py);
+      if (foundHash.has(sackNorm(py))) {
+        _hwToast('¡Ya la tienes! 😉 Busca otra combinación');
+        return;
+      }
+      if (hashes.has(h)) {
+        foundHash.add(sackNorm(py));
+        foundRaw.push(py);
+        try { speakChinese(sentenceZh(), null); } catch (_) {}
+        _hwToast('⭐ ¡«' + py + '» es correcta! +1');
+        stage.length = 0;
+        drawStage(); drawFound();
+        if (foundRaw.length === asg.goal) {
+          _hwToast('🏆 ¡' + asg.goal + ' de ' + asg.goal + '! ¡Entrega tu tarea!');
+        }
+      } else {
+        const st = ov.querySelector('#hw-sack-stage');
+        st.classList.remove('hw-sack-shake');
+        void st.offsetWidth;   // restart the animation
+        st.classList.add('hw-sack-shake');
+        _hwToast('🤔 Esa no… todavía. Prueba otro orden u otras palabras');
+      }
+    }
+    function submit() {
+      if (submitted || !foundRaw.length) return;
+      submitted = true;
+      fetch('/api/homework/submit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessCode, studentCode, assignmentId: asg.id, answers: foundRaw }),
+      }).then((r) => r.json()).then((d) => {
+        if (!d || !d.ok) { submitted = false; _hwToast('No se pudo entregar: ' + (d && d.error || 'error')); return; }
+        submissions.push({ assignmentId: asg.id, score: d.score, total: d.total, ts: Date.now() });
+        const perfect = d.score >= 100;
+        const card = document.createElement('div');
+        card.className = 'hw-sack-result';
+        card.innerHTML = '<div class="hw-sack-result-card">'
+          + '<div class="hw-sack-result-emoji">' + (perfect ? '🏆' : d.score >= 80 ? '🎉' : '💪') + '</div>'
+          + '<div class="hw-sack-result-score">' + d.score + ' / ' + d.total + '</div>'
+          + '<div class="hw-sack-result-note">' + (perfect ? '¡PERFECTO! Descubriste todas las que necesitabas.' : d.score >= 80 ? '¡Muy bien! Tarea completada.' : 'Buen intento — vuelve a entrar y descubre más combinaciones.') + '</div>'
+          + '<button type="button" class="btn btn-jade btn-xl" id="hw-sack-result-ok">Continuar →</button></div>';
+        ov.appendChild(card);
+        card.querySelector('#hw-sack-result-ok').addEventListener('click', () => {
+          ov.remove();
+          renderList();
+          showScreen('list');
+        });
+      }).catch((e) => { submitted = false; _hwToast('Error de conexión: ' + e.message); });
+    }
+    ov.querySelector('#hw-sack-back').addEventListener('click', () => { ov.remove(); renderList(); showScreen('list'); });
+    ov.querySelector('#hw-sack-speak').addEventListener('click', (e) => {
+      if (stage.length) { try { speakChinese(sentenceZh(), e.currentTarget); } catch (_) {} }
+    });
+    ov.querySelector('#hw-sack-undo').addEventListener('click', () => { stage.pop(); drawStage(); });
+    ov.querySelector('#hw-sack-clear').addEventListener('click', () => { stage.length = 0; drawStage(); });
+    ov.querySelector('#hw-sack-try').addEventListener('click', tryCurrent);
+    ov.querySelector('#hw-sack-submit').addEventListener('click', submit);
+    drawStage(); drawFound();
+  }
   function openAssignment(id) {
     if (!id) return;
     // 🩹 NUKE leftover overlays from a previous open — these were the
@@ -3956,6 +4191,13 @@
           }
           currentAssignment = asg;
           currentAssignment.custom = isCustom || !!currentAssignment.custom;
+          // 🎒 HSK2 "Bolsa de Palabras": its own self-contained player —
+          // the chips travel WITH the tarea, no HSK1 catalog involved.
+          if (asg.type === 'word-sack') {
+            renderWordSack(asg);
+            window.scrollTo({ top: 0, behavior: 'instant' });
+            return;
+          }
           currentAnswers = currentAssignment.items.map(() => '');
           undoStacks = currentAssignment.items.map(() => []);
           activeExpTab = currentAssignment.custom ? 'all' : (currentAssignment.expLabel || 'all');

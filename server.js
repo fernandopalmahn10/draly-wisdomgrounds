@@ -1737,7 +1737,17 @@ app.post('/api/homework/enter', (req, res) => {
   if (!_enterRateLimit(req)) { console.warn('[security] homework/enter flood ip=' + _clientIp(req)); return res.status(429).json({ ok: false, error: 'demasiados intentos, espera un momento' }); }
   try {
     const { studentCode, displayName, accessCode, meta } = req.body || {};
+    // 🆕 2026-09-15 — detect brand-new accounts BEFORE getOrCreate so the
+    // client can show the big "anótalo en un cuaderno" student-code banner
+    // exactly once (prevents duplicate accounts from forgotten codes).
+    const isNew = !(studentCode && Students.get(studentCode));
     const rec = Students.getOrCreate(studentCode, displayName);
+    // 🆕 HSK level comes from the ACCESS CODE the kid typed (1001→hsk1,
+    // 1002→hsk2 …). Stamped on the record every entry, so moving a kid
+    // up is just handing them the next code.
+    const level = Teachers.levelForAccessCode(accessCode);
+    try { Students.setLevel(rec.code, level); }
+    catch (e) { console.warn('[hw:enter] setLevel failed:', e.message); }
     // Tag with their teacher's classroom code. Guard so a failure here
     // never blocks the kid from entering — they can still do tareas.
     if (accessCode) {
@@ -1757,7 +1767,9 @@ app.post('/api/homework/enter', (req, res) => {
       avatar: rec.avatar || null,
       avatarOptions: Students.AVATAR_OPTIONS,
       classroomCode: rec.classroomCode || null,
-      assignments: Assignments.listAssignments(),
+      level: level,                                   // 'hsk1' | 'hsk2'
+      isNew: isNew,                                   // show the code banner once
+      assignments: Assignments.listAssignments(level), // portal reshapes by level
       submissions: Students.getAssignmentSubmissions(rec.code, 100),
     });
   } catch (e) {
@@ -2177,6 +2189,26 @@ app.get('/api/homework/assignment/:id', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const a = Assignments.getAssignment(req.params.id);
   if (!a) return res.status(404).json({ ok: false, error: 'Asignación no encontrada' });
+  // 🎒 word-sack (HSK2): send the chip bag + goal + HASHES of the valid
+  // sentences (djb2 of the normalized string). The kid's device can
+  // confirm a discovery instantly, but devtools never shows an answer,
+  // and the server re-validates on submit anyway.
+  if (a.type === 'word-sack') {
+    return res.json({
+      ok: true,
+      id: a.id,
+      title: a.title,
+      subtitle: a.subtitle,
+      instructions: a.instructions,
+      type: a.type,
+      level: a.level || 'hsk2',
+      expLabel: a.expLabel || null,
+      goal: a.goal,
+      sack: a.sack,
+      validHashes: a.validHashes,
+      items: [],   // legacy clients see an empty classic tarea, not a crash
+    });
+  }
   // Don't send the `expected` answers — the student would see them in
   // dev tools. Send the prompts only; grading happens server-side.
   res.json({

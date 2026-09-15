@@ -69,7 +69,8 @@ function seedIfEmpty() {
     displayName:  '🐉 Dralingo 老师',
     email:        null,
     country:      'MX',
-    accessCodes:  ['1001'],
+    accessCodes:  ['1001', '1002'],
+    codeLevels:   { '1002': 'hsk2' },   // 1001 defaults to hsk1
     isSuperAdmin: true,
     createdAt:    now,
     lastSeen:     now,
@@ -97,6 +98,21 @@ function load() {
       teachers['EMAAR2026'].displayName = '🐉 Dralingo 老师';
       persistNow();
       console.log('[teachers] migrated EMAAR2026 displayName → 🐉 Dralingo 老师');
+    }
+    // 🆕 2026-09-15 — HSK2 door: seed access code 1002 (level hsk2) on the
+    // super-admin so teachers can enroll the new HSK2 students today.
+    // One-time on the persistent-disk record; harmless if re-run.
+    if (teachers['EMAAR2026']) {
+      const t = teachers['EMAAR2026'];
+      let dirty = false;
+      t.accessCodes = Array.isArray(t.accessCodes) ? t.accessCodes : [];
+      if (!t.accessCodes.includes('1002')) { t.accessCodes.push('1002'); dirty = true; }
+      t.codeLevels = (t.codeLevels && typeof t.codeLevels === 'object') ? t.codeLevels : {};
+      if (t.codeLevels['1002'] !== 'hsk2') { t.codeLevels['1002'] = 'hsk2'; dirty = true; }
+      if (dirty) {
+        persistNow();
+        console.log('[teachers] seeded HSK2 access code 1002 on EMAAR2026');
+      }
     }
   } catch (e) {
     console.warn('[teachers] failed to load, starting fresh:', e.message);
@@ -132,6 +148,23 @@ function getByAccessCode(code) {
 // Quick boolean — is this a known access code (any teacher's)?
 function isAccessCodeValid(code) {
   return !!getByAccessCode(code);
+}
+// 🆕 2026-09-15 (Fernando) — HSK LEVEL PER ACCESS CODE.
+// "What determines that I am HSK1?" — this. Each access code carries a
+// level via the teacher's optional `codeLevels` map, e.g.
+//   accessCodes: ['1001', '1002'], codeLevels: { '1002': 'hsk2' }
+// Unlisted codes default to 'hsk1', so every existing student and
+// teacher keeps working untouched. The student's level is stamped at
+// /homework entry from the code they typed — new HSK2 kids just get
+// the HSK2 code (1002) and the portal reshapes itself.
+function levelForAccessCode(code) {
+  const norm = String(code || '').trim().toUpperCase();
+  const t = getByAccessCode(norm);
+  if (t && t.codeLevels && typeof t.codeLevels === 'object') {
+    const lvl = String(t.codeLevels[norm] || '').toLowerCase();
+    if (lvl === 'hsk2' || lvl === 'hsk1') return lvl;
+  }
+  return 'hsk1';
 }
 
 // === CODE GENERATION ===
@@ -229,6 +262,7 @@ module.exports = {
   getByTeacherId,
   getByAccessCode,
   isAccessCodeValid,
+  levelForAccessCode,
   createTeacher,
   deleteTeacher,
   touchLastSeen,
