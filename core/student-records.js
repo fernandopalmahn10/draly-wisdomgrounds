@@ -217,6 +217,21 @@ function setClassroomCode(code, classroomCode) {
   }
   return true;
 }
+// 🆕 2026-09-15 — HSK level per student, stamped at every /homework entry
+// from the access code they typed (Teachers.levelForAccessCode). So a kid
+// who moves up just starts using the HSK2 code and their portal reshapes.
+// Absent/legacy records read as 'hsk1'.
+function setLevel(code, level) {
+  const rec = get(code);
+  if (!rec) return false;
+  const clean = String(level || '').toLowerCase();
+  if (clean !== 'hsk1' && clean !== 'hsk2') return false;
+  if (rec.level !== clean) {
+    rec.level = clean;
+    scheduleSave();
+  }
+  return true;
+}
 // 🆕 2026-06-21 (Fernando) — teacher-managed classroom. Sets the student's
 // classroomId (a classrooms.js id, or '' to unassign). Unlike setClassroomCode
 // this is NEVER touched by login, so the teacher's filing sticks.
@@ -894,6 +909,7 @@ module.exports = {
   setAvatar,
   setDisplayName,
   setClassroomCode,
+  setLevel,
   resetAssignmentSubmissions,
   sendMessage,
   getInbox,

@@ -383,16 +383,173 @@ function isAccessCodeValid(code) {
   return _getTeachers().isAccessCodeValid(code);
 }
 
-function listAssignments() {
-  return ASSIGNMENTS.map((a) => ({
-    id: a.id,
-    title: a.title,
-    subtitle: a.subtitle,
-    expLabel: a.expLabel || null,
-    itemCount: a.items.length,
-    pointsPerItem: a.pointsPerItem,
-    totalPoints: a.items.length * a.pointsPerItem,
-  }));
+// ═════════════════════════════════════════════════════════════════════
+// 🎒 HSK2 · "BOLSA DE PALABRAS" (word-sack) — 2026-09-15 (Fernando):
+// "mix the really essential verbs (want/have/think) with the words you
+// want to test + everything needed to finish the sentence. I want buy
+// milk, I want drink this water… how many combinations can you make?"
+//
+// Each word-sack tarea is SELF-CONTAINED: it carries its own chip bag
+// (sack) — so the HSK1 catalog rule does NOT apply here, and HSK1 words
+// may appear as scaffolding (per the HSK2 doc: «El HSK1 sigue siendo el
+// andamiaje; el HSK2 lo pinta»). The kid must DISCOVER `goal` distinct
+// valid combinations. The client only ever sees HASHES of the valid
+// sentences (no answers in devtools); the server re-validates on submit.
+// ═════════════════════════════════════════════════════════════════════
+function wordSackHash(s) {
+  // djb2 over the normalized sentence — same tiny fn is mirrored in
+  // homework.js so the client can check attempts offline.
+  const n = normalize(s);
+  let h = 5381;
+  for (let i = 0; i < n.length; i++) h = ((h * 33) ^ n.charCodeAt(i)) >>> 0;
+  return h.toString(16);
+}
+// Expand 'wǒ yào {F}' × {F:[…]} into concrete sentences.
+function _expand(pattern, slots) {
+  let out = [pattern];
+  for (const key of Object.keys(slots)) {
+    const next = [];
+    for (const p of out) {
+      if (p.includes('{' + key + '}')) {
+        for (const v of slots[key]) next.push(p.split('{' + key + '}').join(v));
+      } else {
+        next.push(p);
+      }
+    }
+    out = next;
+  }
+  return out;
+}
+function _sackWord(py, zh, es, cat) { return { py, zh, es, cat }; }
+
+const HSK2_ASSIGNMENTS = [
+  {
+    id: 'hsk2-familia-grande',
+    level: 'hsk2',
+    type: 'word-sack',
+    title: '👨‍👩‍👧 EXP1 · La Familia Grande',
+    subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
+    expLabel: 'exp1',
+    instructions: 'Tienes una BOLSA de palabras: verbos esenciales + tu familia nueva de HSK2. Combínalas para formar oraciones REALES en chino. ¿Cuántas puedes descubrir? Necesitas 6. 🗣️ Di cada una EN VOZ ALTA.',
+    goal: 6,
+    sack: [
+      _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '他', 'él', 'pronoun'),
+      _sackWord('yǒu', '有', 'tener', 'verb'), _sackWord('shì', '是', 'ser', 'verb'), _sackWord('ài', '爱', 'amar', 'verb'), _sackWord('jièshào', '介绍', 'presentar', 'verb'),
+      _sackWord('gēge', '哥哥', 'hermano mayor', 'family'), _sackWord('dìdi', '弟弟', 'hermano menor', 'family'),
+      _sackWord('jiějie', '姐姐', 'hermana mayor', 'family'), _sackWord('mèimei', '妹妹', 'hermana menor', 'family'), _sackWord('háizi', '孩子', 'niño / hijo', 'family'),
+      _sackWord('hěn', '很', 'muy', 'particle'), _sackWord('gāo', '高', 'alto', 'adj'), _sackWord('de', '的', '(posesivo)', 'particle'),
+    ],
+    valid: [].concat(
+      _expand('{P} yǒu {F}', { P: ['wǒ', 'nǐ', 'tā'], F: ['gēge', 'dìdi', 'jiějie', 'mèimei', 'háizi'] }),
+      _expand('{P} ài {F}', { P: ['wǒ', 'nǐ', 'tā'], F: ['gēge', 'dìdi', 'jiějie', 'mèimei'] }),
+      _expand('{F} hěn gāo', { F: ['gēge', 'dìdi', 'jiějie', 'mèimei', 'tā'] }),
+      _expand('tā shì wǒ de {F}', { F: ['gēge', 'dìdi', 'jiějie', 'mèimei'] }),
+      _expand('wǒ jièshào wǒ de {F}', { F: ['gēge', 'dìdi', 'jiějie', 'mèimei'] })
+    ),
+    parentInsight: {
+      title: 'Tu hijo/a combina la familia extendida de HSK2',
+      bullets: ['Formó oraciones con 有 (tener), 爱 (amar) y 介绍 (presentar)', 'Usa los hermanos de HSK2: 哥哥, 弟弟, 姐姐, 妹妹', 'Descubrió combinaciones por sí mismo/a — no memorizó'],
+      encouragement: 'Pídele que te presente a la familia en chino: «我介绍我的哥哥».',
+    },
+  },
+  {
+    id: 'hsk2-dia-escuela',
+    level: 'hsk2',
+    type: 'word-sack',
+    title: '🎓 EXP2 · Un Día en la Escuela',
+    subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
+    expLabel: 'exp2',
+    instructions: 'La bolsa trae los verbos del aula HSK2: entender, saber, pensar, preguntar. Combínalas para decir qué pasa en un examen. Necesitas 6 oraciones válidas. 🗣️ EN VOZ ALTA.',
+    goal: 6,
+    sack: [
+      _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '她', 'ella', 'pronoun'),
+      _sackWord('lǎoshī', '老师', 'maestro/a', 'family'),
+      _sackWord('dǒng', '懂', 'entender', 'verb'), _sackWord('zhīdào', '知道', 'saber', 'verb'), _sackWord('juéde', '觉得', 'pensar / opinar', 'verb'),
+      _sackWord('wèn', '问', 'preguntar', 'verb'), _sackWord('yǒu', '有', 'tener', 'verb'), _sackWord('kāishǐ', '开始', 'empezar', 'verb'),
+      _sackWord('kǎoshì', '考试', 'examen', 'noun'), _sackWord('wèntí', '问题', 'problema / pregunta', 'noun'), _sackWord('kè', '课', 'clase', 'noun'),
+      _sackWord('duì', '对', 'correcto', 'adj'), _sackWord('cuò', '错', 'incorrecto', 'adj'), _sackWord('bù', '不', 'no', 'particle'),
+    ],
+    valid: [].concat(
+      _expand('{P} dǒng', { P: ['wǒ', 'nǐ', 'tā'] }),
+      _expand('{P} bù dǒng', { P: ['wǒ', 'nǐ', 'tā'] }),
+      _expand('{P} zhīdào', { P: ['wǒ', 'nǐ', 'tā'] }),
+      _expand('{P} bù zhīdào', { P: ['wǒ', 'nǐ', 'tā'] }),
+      _expand('{P} yǒu wèntí', { P: ['wǒ', 'nǐ', 'tā'] }),
+      _expand('{P} juéde duì', { P: ['wǒ', 'nǐ', 'tā'] }),
+      _expand('{P} juéde cuò', { P: ['wǒ', 'nǐ', 'tā'] }),
+      _expand('lǎoshī wèn {P}', { P: ['wǒ', 'nǐ', 'tā'] }),
+      ['wǒ wèn lǎoshī', 'kǎoshì kāishǐ', 'kè kāishǐ', 'lǎoshī yǒu wèntí']
+    ),
+    parentInsight: {
+      title: 'Tu hijo/a habla del aula con verbos HSK2',
+      bullets: ['Usa 懂 (entender), 知道 (saber) y 觉得 (opinar)', 'Puede decir «no entiendo» y «tengo una pregunta» en chino', 'Formó oraciones sobre exámenes y clases'],
+      encouragement: 'Pregúntale «¿dǒng?» cuando le expliques algo — que responda en chino.',
+    },
+  },
+  {
+    id: 'hsk2-restaurante-chino',
+    level: 'hsk2',
+    type: 'word-sack',
+    title: '🥢 EXP3 · El Restaurante Chino',
+    subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
+    expLabel: 'exp3',
+    instructions: 'Como en el restaurante: «我要面条!» La bolsa trae comida HSK2 y los verbos para ordenar. Combina y descubre 6 oraciones válidas. 🗣️ Dilas EN VOZ ALTA como si ordenaras de verdad.',
+    goal: 6,
+    sack: [
+      _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '他', 'él', 'pronoun'),
+      _sackWord('yào', '要', 'querer (pedir)', 'verb'), _sackWord('chī', '吃', 'comer', 'verb'), _sackWord('hē', '喝', 'beber', 'verb'),
+      _sackWord('mǎi', '买', 'comprar', 'verb'), _sackWord('mài', '卖', 'vender', 'verb'), _sackWord('děng', '等', 'esperar', 'verb'), _sackWord('gěi', '给', 'dar', 'verb'),
+      _sackWord('miàntiáo', '面条', 'fideos', 'food'), _sackWord('jīdàn', '鸡蛋', 'huevo', 'food'), _sackWord('kāfēi', '咖啡', 'café', 'food'),
+      _sackWord('niúnǎi', '牛奶', 'leche', 'food'), _sackWord('xīguā', '西瓜', 'sandía', 'food'), _sackWord('yú', '鱼', 'pescado', 'food'),
+      _sackWord('hǎochī', '好吃', 'delicioso', 'adj'), _sackWord('hěn', '很', 'muy', 'particle'),
+    ],
+    valid: [].concat(
+      _expand('{P} yào {F}', { P: ['wǒ', 'nǐ', 'tā'], F: ['miàntiáo', 'jīdàn', 'kāfēi', 'niúnǎi', 'xīguā', 'yú'] }),
+      _expand('wǒ yào chī {F}', { F: ['miàntiáo', 'jīdàn', 'xīguā', 'yú'] }),
+      _expand('wǒ yào hē {D}', { D: ['kāfēi', 'niúnǎi'] }),
+      _expand('wǒ yào mǎi {F}', { F: ['miàntiáo', 'jīdàn', 'kāfēi', 'niúnǎi', 'xīguā', 'yú'] }),
+      _expand('tā mài {F}', { F: ['miàntiáo', 'jīdàn', 'kāfēi', 'niúnǎi', 'xīguā', 'yú'] }),
+      _expand('{F} hěn hǎochī', { F: ['miàntiáo', 'jīdàn', 'xīguā', 'yú'] }),
+      _expand('wǒ gěi nǐ {F}', { F: ['miàntiáo', 'jīdàn', 'kāfēi', 'niúnǎi', 'xīguā', 'yú'] }),
+      ['nǐ děng wǒ', 'wǒ děng nǐ']
+    ),
+    parentInsight: {
+      title: 'Tu hijo/a ordena comida en chino (HSK2)',
+      bullets: ['Domina «我要…» (quiero…) con la comida de HSK2', 'Distingue 吃 (comer) de 喝 (beber) al combinar', 'Usa 给 (dar), 等 (esperar) y 卖 (vender) en contexto real'],
+      encouragement: 'En un restaurante, pídele que ordene por ti: «我要牛奶» — ¡déjalo pedir!',
+    },
+  },
+];
+// Pre-compute the normalized valid set + hashes once at load.
+HSK2_ASSIGNMENTS.forEach((a) => {
+  a.validNorm = new Set(a.valid.map(normalize));
+  a.validHashes = a.valid.map(wordSackHash);
+});
+// Tag the classic 8 as HSK1 + merge the HSK2 tareas into the registry.
+ASSIGNMENTS.forEach((a) => { if (!a.level) a.level = 'hsk1'; });
+HSK2_ASSIGNMENTS.forEach((a) => ASSIGNMENTS.push(a));
+
+// List assignments, optionally filtered by level ('hsk1' | 'hsk2').
+// No argument = ALL (used by health checks and teacher-side reports).
+function listAssignments(level) {
+  return ASSIGNMENTS
+    .filter((a) => !level || (a.level || 'hsk1') === level)
+    .map((a) => {
+      const isSack = a.type === 'word-sack';
+      const itemCount = isSack ? a.goal : a.items.length;
+      const pointsPerItem = isSack ? Math.round(100 / a.goal) : a.pointsPerItem;
+      return {
+        id: a.id,
+        title: a.title,
+        subtitle: a.subtitle,
+        expLabel: a.expLabel || null,
+        level: a.level || 'hsk1',
+        type: a.type || 'sentence-building',
+        itemCount,
+        pointsPerItem,
+        totalPoints: isSack ? 100 : a.items.length * a.pointsPerItem,
+      };
+    });
 }
 
 function getAssignment(id) {
@@ -404,6 +561,35 @@ function getAssignment(id) {
 function gradeSubmission(assignment, answers) {
   if (!assignment) return null;
   if (!Array.isArray(answers)) answers = [];
+  // 🎒 word-sack: answers = the sentences the kid DISCOVERED. Score =
+  // distinct valid combinations, capped at the goal, scaled to 100.
+  // The server re-validates every sentence — client hashes are only a
+  // UX convenience, never trusted.
+  if (assignment.type === 'word-sack') {
+    const seen = new Set();
+    const breakdown = [];
+    for (const raw of answers.slice(0, 40)) {
+      const norm = normalize(raw);
+      const valid = norm.length > 0 && assignment.validNorm.has(norm) && !seen.has(norm);
+      if (valid) seen.add(norm);
+      breakdown.push({
+        i: breakdown.length,
+        es: '🎒 combinación',
+        expected: valid ? String(raw) : '—',
+        student: String(raw || ''),
+        correct: valid,
+        pointsEarned: 0,   // filled below once we know the cap
+      });
+    }
+    const found = Math.min(seen.size, assignment.goal);
+    const score = Math.round((found / assignment.goal) * 100);
+    const per = Math.round(100 / assignment.goal);
+    let credited = 0;
+    for (const b of breakdown) {
+      if (b.correct && credited < assignment.goal) { b.pointsEarned = per; credited++; }
+    }
+    return { score, total: 100, breakdown };
+  }
   let score = 0;
   const breakdown = assignment.items.map((item, i) => {
     const studentRaw = String(answers[i] || '');
