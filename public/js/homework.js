@@ -129,6 +129,27 @@
     return hwLevel === 'hsk2' ? HSK2_EXPS : (window.WU_EXPERIENCES || {});
   }
   function hwLevelName() { return hwLevel === 'hsk2' ? 'HSK2' : 'HSK1'; }
+  // 🎯 SIM TRAINER (HSK1) — 3 tiers · 8 mini-tests built from the REAL
+  // simulation bank (images + audio). Meta fetched once after login.
+  let trainerMeta = null;   // { tiers, trainers, sessionSize, passPct }
+  function fetchTrainerMeta() {
+    if (hwLevel !== 'hsk1' || trainerMeta) return;
+    fetch('/api/homework/trainer/list?accessCode=' + encodeURIComponent(accessCode))
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d || !d.ok) return;
+        trainerMeta = d;
+        if (!hwFolder) renderList();   // repaint the root with the hero
+      })
+      .catch(() => {});
+  }
+  function trainerBest(tid) {
+    let best = null;
+    submissions.forEach((s) => {
+      if (s.assignmentId === tid && (best === null || s.score > best)) best = s.score;
+    });
+    return best;
+  }
   let customAssignments = [];  // 🎯 teacher-sent tareas especiales for me
   // Default lands on ⏳ Pendientes — kid's TODO list. "pending" includes both
   // brand-new tareas AND ones tried below 80%. Per user: "by default it
@@ -309,6 +330,8 @@
         if (data.isNew) {
           try { showStudentCodeBanner(data.studentCode); } catch (_) {}
         }
+        // 🎯 HSK1: load the sim-trainer tiers (redesigned home).
+        try { fetchTrainerMeta(); } catch (_) {}
         // Pull the daily progression HUD (XP / swords / streak) right away.
         try { refreshDailyHud(); } catch (_) {}
         try { refreshCustomAssignments(); } catch (_) {}
@@ -3329,6 +3352,222 @@
     const okBtn = document.getElementById('hw-code-banner-ok');
     if (okBtn) okBtn.addEventListener('click', () => ov.remove());
   }
+  // ═══════════════════════════════════════════════════════════════════
+  // 🎯 SIM TRAINER UI — hero with the 3 tiers on the HSK1 home, a tier
+  // panel with its homeworks, and the mini-test player (real sim
+  // images + audio, instant server-checked feedback).
+  // ═══════════════════════════════════════════════════════════════════
+  function renderTrainerHero() {
+    let hero = document.getElementById('hw-trainer-hero');
+    const tabsBar = $('hw-tabs');
+    if (hwLevel !== 'hsk1' || !trainerMeta || hwFolder) {
+      if (hero) hero.style.display = 'none';
+      return;
+    }
+    if (!hero) {
+      hero = document.createElement('div');
+      hero.id = 'hw-trainer-hero';
+      if (tabsBar && tabsBar.parentNode) tabsBar.parentNode.insertBefore(hero, tabsBar);
+    }
+    hero.style.display = '';
+    const rows = trainerMeta.tiers.map((tier) => {
+      const mine = trainerMeta.trainers.filter((t) => t.tier === tier.tier);
+      const done = mine.filter((t) => (trainerBest(t.id) || 0) >= trainerMeta.passPct).length;
+      return '<button type="button" class="hw-tr-tiercard is-t' + tier.tier + '" data-tier="' + tier.tier + '">'
+        + '<span class="hw-tr-tiericon">' + tier.icon + '</span>'
+        + '<span class="hw-tr-tiertitle">' + escapeHtml(tier.title) + '</span>'
+        + '<span class="hw-tr-tierblurb">' + escapeHtml(tier.blurb) + '</span>'
+        + '<span class="hw-tr-tierprog' + (done === mine.length ? ' is-done' : '') + '">' + done + '/' + mine.length + ' dominadas</span>'
+        + '</button>';
+    }).join('');
+    hero.innerHTML =
+      '<div class="hw-tr-herohead">🎯 Entrenamiento de Simulación'
+      + '<small>Mini-exámenes con las imágenes y audios REALES de las 10 simulaciones</small></div>'
+      + '<div class="hw-tr-tiers">' + rows + '</div>';
+    hero.querySelectorAll('.hw-tr-tiercard').forEach((b) => {
+      b.addEventListener('click', () => openTierPanel(parseInt(b.dataset.tier, 10)));
+    });
+  }
+  function openTierPanel(tierNum) {
+    const old = document.getElementById('hw-tr-tierpanel');
+    if (old) old.remove();
+    const tier = trainerMeta.tiers.find((t) => t.tier === tierNum);
+    const mine = trainerMeta.trainers.filter((t) => t.tier === tierNum);
+    const ov = document.createElement('div');
+    ov.id = 'hw-tr-tierpanel';
+    ov.innerHTML = '<div class="hw-tr-panelcard">'
+      + '<button type="button" class="hw-tr-close" id="hw-tr-tierclose">✕</button>'
+      + '<div class="hw-tr-paneltitle">' + tier.icon + ' ' + escapeHtml(tier.title) + '</div>'
+      + '<div class="hw-tr-panelblurb">' + escapeHtml(tier.blurb) + ' · ' + trainerMeta.sessionSize + ' preguntas por entrenamiento</div>'
+      + '<div class="hw-tr-list">'
+      + mine.map((t) => {
+          const best = trainerBest(t.id);
+          const badge = best === null ? '<span class="hw-tr-new">🆕 Nuevo</span>'
+            : best >= trainerMeta.passPct ? '<span class="hw-tr-pass">✅ ' + best + '</span>'
+            : '<span class="hw-tr-retry">⏳ mejor: ' + best + '</span>';
+          return '<button type="button" class="hw-tr-row" data-tid="' + t.id + '">'
+            + '<span class="hw-tr-rowicon">' + t.icon + '</span>'
+            + '<span class="hw-tr-rowtxt"><b>' + escapeHtml(t.title) + '</b><small>' + escapeHtml(t.instructions) + '</small></span>'
+            + badge + '</button>';
+        }).join('')
+      + '</div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+    ov.querySelector('#hw-tr-tierclose').addEventListener('click', () => ov.remove());
+    ov.querySelectorAll('.hw-tr-row').forEach((b) => {
+      b.addEventListener('click', () => { ov.remove(); openTrainer(b.dataset.tid); });
+    });
+  }
+  let _trAudio = null;
+  function trStopAudio() { try { if (_trAudio) { _trAudio.pause(); _trAudio = null; } } catch (_) {} }
+  function trPlayAudio(url, btn) {
+    trStopAudio();
+    if (!url) return;
+    try {
+      _trAudio = new Audio(url);
+      if (btn) {
+        btn.classList.add('is-playing');
+        _trAudio.addEventListener('ended', () => btn.classList.remove('is-playing'));
+      }
+      _trAudio.play().catch(() => { if (btn) btn.classList.remove('is-playing'); });
+    } catch (_) {}
+  }
+  function openTrainer(tid) {
+    fetch('/api/homework/trainer/session/' + encodeURIComponent(tid) + '?accessCode=' + encodeURIComponent(accessCode))
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d || !d.ok) { _hwToast('No se pudo cargar el entrenamiento'); return; }
+        runTrainer(d);
+      })
+      .catch(() => _hwToast('Error de conexión'));
+  }
+  function runTrainer(sess) {
+    const old = document.getElementById('hw-tr-play');
+    if (old) old.remove();
+    const t = sess.trainer;
+    const qs = sess.questions;
+    const answers = [];
+    let idx = 0;
+    let locked = false;
+    let rightCount = 0;
+
+    const ov = document.createElement('div');
+    ov.id = 'hw-tr-play';
+    ov.innerHTML = '<div class="hw-tr-playhead">'
+      + '<button type="button" class="hw-tr-back" id="hw-tr-back">←</button>'
+      + '<div class="hw-tr-playtitles"><div class="hw-tr-kicker">🎯 ENTRENAMIENTO</div>'
+      + '<div class="hw-tr-playtitle">' + t.icon + ' ' + escapeHtml(t.title) + '</div></div>'
+      + '<div class="hw-tr-dots" id="hw-tr-dots"></div></div>'
+      + '<p class="hw-tr-instr">' + escapeHtml(t.instructions) + '</p>'
+      + '<div class="hw-tr-q" id="hw-tr-q"></div>';
+    document.body.appendChild(ov);
+    ov.querySelector('#hw-tr-back').addEventListener('click', () => { trStopAudio(); ov.remove(); });
+
+    function drawDots() {
+      const el = ov.querySelector('#hw-tr-dots');
+      el.innerHTML = qs.map((_, i) => {
+        const a = answers[i];
+        const cls = i === idx ? ' is-now' : a ? (a.ok ? ' is-ok' : ' is-bad') : '';
+        return '<span class="hw-tr-dot' + cls + '"></span>';
+      }).join('');
+    }
+    function drawQuestion() {
+      trStopAudio();
+      drawDots();
+      const q = qs[idx];
+      const box = ov.querySelector('#hw-tr-q');
+      let h = '';
+      if (q.audio) {
+        h += '<button type="button" class="hw-tr-audio" id="hw-tr-audiobtn">🔊<small>escuchar</small></button>';
+      }
+      if (q.image) {
+        h += '<div class="hw-tr-img"><img src="' + escapeHtml(q.image) + '" alt=""></div>';
+      }
+      if (q.prompt) {
+        h += '<div class="hw-tr-prompt">' + escapeHtml(q.prompt)
+          + (q.promptSub ? '<span>' + escapeHtml(q.promptSub) + '</span>' : '') + '</div>';
+      }
+      if (q.tf) {
+        h += '<div class="hw-tr-tf">'
+          + '<button type="button" class="hw-tr-tfbtn is-yes" data-k="true">✓</button>'
+          + '<button type="button" class="hw-tr-tfbtn is-no" data-k="false">✕</button></div>';
+      } else if (q.options && q.options[0] && q.options[0].image) {
+        h += '<div class="hw-tr-imgopts' + (q.options.length > 3 ? ' is-many' : '') + '">'
+          + q.options.map((o) => '<button type="button" class="hw-tr-imgopt" data-k="' + escapeHtml(o.key) + '">'
+              + '<span class="hw-tr-optkey">' + escapeHtml(o.key) + '</span>'
+              + '<img src="' + escapeHtml(o.image) + '" alt="" loading="lazy"></button>').join('')
+          + '</div>';
+      } else if (q.options) {
+        h += '<div class="hw-tr-txtopts">'
+          + q.options.map((o) => '<button type="button" class="hw-tr-txtopt" data-k="' + escapeHtml(o.key) + '">'
+              + '<span class="hw-tr-optkey">' + escapeHtml(o.key) + '</span>'
+              + '<b>' + escapeHtml(o.text || '') + '</b>'
+              + (o.sub ? '<i>' + escapeHtml(o.sub) + '</i>' : '') + '</button>').join('')
+          + '</div>';
+      }
+      box.innerHTML = h;
+      const ab = box.querySelector('#hw-tr-audiobtn');
+      if (ab) {
+        ab.addEventListener('click', () => trPlayAudio(q.audio, ab));
+        trPlayAudio(q.audio, ab);   // auto-play on show
+      }
+      locked = false;
+      box.querySelectorAll('[data-k]').forEach((btn) => {
+        btn.addEventListener('click', () => answerTap(q, btn, box));
+      });
+    }
+    function answerTap(q, btn, box) {
+      if (locked) return;
+      locked = true;
+      const given = q.tf ? (btn.dataset.k === 'true') : btn.dataset.k;
+      fetch('/api/homework/trainer/check', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessCode, qid: q.qid, answer: given }),
+      }).then((r) => r.json()).then((v) => {
+        if (!v || !v.ok) { locked = false; _hwToast('Error — intenta otra vez'); return; }
+        answers[idx] = { qid: q.qid, answer: given, ok: v.correct };
+        if (v.correct) rightCount++;
+        btn.classList.add(v.correct ? 'is-right' : 'is-wrong');
+        if (!v.correct) {
+          const expKey = q.tf ? String(v.expected) : String(v.expected);
+          box.querySelectorAll('[data-k]').forEach((b) => {
+            if (b.dataset.k === expKey) b.classList.add('is-answer');
+          });
+        }
+        drawDots();
+        setTimeout(() => {
+          idx++;
+          if (idx < qs.length) drawQuestion();
+          else finish();
+        }, v.correct ? 900 : 1700);
+      }).catch(() => { locked = false; _hwToast('Error de conexión'); });
+    }
+    function finish() {
+      trStopAudio();
+      fetch('/api/homework/trainer/submit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessCode, studentCode, trainerId: t.id, answers: answers.map((a) => ({ qid: a.qid, answer: a.answer })) }),
+      }).then((r) => r.json()).then((d) => {
+        const score = d && d.ok ? d.score : Math.round((rightCount / qs.length) * 100);
+        if (d && d.ok) submissions.push({ assignmentId: t.id, score: d.score, total: d.total, ts: Date.now() });
+        const pass = score >= (trainerMeta ? trainerMeta.passPct : 80);
+        const card = document.createElement('div');
+        card.className = 'hw-sack-result';
+        card.innerHTML = '<div class="hw-sack-result-card">'
+          + '<div class="hw-sack-result-emoji">' + (score >= 100 ? '🏆' : pass ? '🎉' : '💪') + '</div>'
+          + '<div class="hw-sack-result-score">' + score + ' / 100</div>'
+          + '<div class="hw-sack-result-note">' + rightCount + ' de ' + qs.length + ' correctas · '
+          + (pass ? '¡Dominado! Así se ve en el examen real.' : 'Entrena otra vez — cada sesión trae preguntas nuevas.') + '</div>'
+          + '<button type="button" class="btn btn-jade btn-xl" id="hw-tr-ok">Continuar →</button></div>';
+        ov.appendChild(card);
+        card.querySelector('#hw-tr-ok').addEventListener('click', () => {
+          ov.remove();
+          renderList();
+        });
+      }).catch(() => { _hwToast('Error al entregar'); });
+    }
+    drawQuestion();
+  }
   function renderList() {
     $('hw-list-name').textContent = displayName || 'Anon';
     renderAvatarInto($('hw-list-avatar'), avatar);
@@ -3421,6 +3660,7 @@
     // Level lives in the pinned stack (top-right), never in the title —
     // "HSK2 next to the avatar reads as if that's my name".
     const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 Mis Tareas';
+    renderTrainerHero();   // 🎯 3 tiers (HSK1 root only; no-op otherwise)
     // Always refresh the custom flat list (visible only on the custom tab).
     renderCustomSection();
     const grid = $('hw-list-grid');
@@ -3477,6 +3717,8 @@
 
   // FOLDER — assignments (+ readings) inside one experience, filtered by tab.
   function renderFolderContents(expId) {
+    const heroEl = document.getElementById('hw-trainer-hero');
+    if (heroEl) heroEl.style.display = 'none';   // hero only at root
     const exp = hwExps()[expId];
     const tabsBar = $('hw-tabs'); if (tabsBar) tabsBar.classList.add('hidden');
     // Hide the custom flat list while inside a folder.

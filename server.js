@@ -9,6 +9,7 @@ const Students = require('./core/student-records');
 const TeacherPresets = require('./core/teacher-presets');
 const ReadingStory = require('./core/reading-story');
 const HskSim = require('./core/hsk-sim');
+const SimTrainer = require('./core/sim-trainer');
 const SimImages = require('./core/sim-images');
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
@@ -2310,6 +2311,54 @@ app.post('/api/homework/submit', (req, res) => {
     studentCode: rec.code,
     displayName: rec.displayName,
   });
+});
+
+// === 🎯 SIM TRAINER — tiered homework built from the simulations =====
+// 2026-09-20 (Fernando): 3 tiers · 8 homeworks = the 8 exam parts,
+// mini-tests with the REAL images/audio from all 10 sims. "So when we
+// get to the simulations they already have a base."
+app.get('/api/homework/trainer/list', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  res.json({
+    ok: true,
+    tiers: SimTrainer.TIERS,
+    trainers: SimTrainer.TRAINERS,
+    sessionSize: SimTrainer.SESSION_SIZE,
+    passPct: SimTrainer.PASS_PCT,
+  });
+});
+app.get('/api/homework/trainer/session/:trainerId', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const s = SimTrainer.getSession(req.params.trainerId);
+  if (!s) return res.status(404).json({ ok: false, error: 'entrenamiento no encontrado' });
+  res.json({ ok: true, trainer: s.trainer, questions: s.questions, total: s.total, poolSize: s.poolSize });
+});
+// Instant per-tap verdict — answers never travel to the client.
+app.post('/api/homework/trainer/check', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { qid, answer } = req.body || {};
+  const v = SimTrainer.check(qid, answer);
+  if (!v) return res.status(404).json({ ok: false, error: 'pregunta no encontrada' });
+  res.json({ ok: true, correct: v.correct, expected: v.expected });
+});
+app.post('/api/homework/trainer/submit', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { studentCode, trainerId, answers, accessCode } = req.body || {};
+  const rec = Students.get(studentCode);
+  if (!rec) return res.status(401).json({ ok: false, error: 'Código de estudiante inválido — vuelve a entrar' });
+  const t = SimTrainer.TRAINERS.find((x) => x.id === trainerId);
+  if (!t) return res.status(404).json({ ok: false, error: 'entrenamiento no encontrado' });
+  const result = SimTrainer.grade(trainerId, answers);
+  // Logged like any tarea → shows in Completadas, report cards, papás.
+  Students.logAssignmentSubmission(rec.code, {
+    assignmentId: t.id,
+    assignmentTitle: '🎯 ' + t.icon + ' ' + t.title,
+    accessCode: String(accessCode || ''),
+    score: result.score,
+    total: result.total,
+    breakdown: [],
+  });
+  res.json({ ok: true, score: result.score, total: result.total, right: result.right, of: result.of });
 });
 
 // === 📖 READING-TEST HOMEWORK INTEGRATION ===========================
