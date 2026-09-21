@@ -3357,6 +3357,10 @@
   // panel with its homeworks, and the mini-test player (real sim
   // images + audio, instant server-checked feedback).
   // ═══════════════════════════════════════════════════════════════════
+  // Root can show either the TRAINER home (default for HSK1) or the
+  // classic tabs/folders view (toggle) — Fernando: "pendientes /
+  // completadas / tu maestro should no longer appear at the beginning".
+  let hwClassicView = false;
   function renderTrainerHero() {
     let hero = document.getElementById('hw-trainer-hero');
     const tabsBar = $('hw-tabs');
@@ -3370,53 +3374,146 @@
       if (tabsBar && tabsBar.parentNode) tabsBar.parentNode.insertBefore(hero, tabsBar);
     }
     hero.style.display = '';
+    if (hwClassicView) {
+      // slim strip: way back to the trainer home
+      hero.innerHTML = '<button type="button" class="hw-tr-backstrip" id="hw-tr-backhome">← 🎯 Volver al Entrenamiento</button>';
+      hero.querySelector('#hw-tr-backhome').addEventListener('click', () => {
+        hwClassicView = false;
+        renderList();
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      });
+      return;
+    }
     const rows = trainerMeta.tiers.map((tier) => {
-      const mine = trainerMeta.trainers.filter((t) => t.tier === tier.tier);
-      const done = mine.filter((t) => (trainerBest(t.id) || 0) >= trainerMeta.passPct).length;
+      const row = (trainerMeta.matrix || {})['t' + tier.tier] || {};
+      const exps = Object.keys(row).filter((e) => row[e] > 0);
+      const done = exps.filter((e) => (trainerBest('trainer-t' + tier.tier + '-' + e) || 0) >= trainerMeta.passPct).length;
       return '<button type="button" class="hw-tr-tiercard is-t' + tier.tier + '" data-tier="' + tier.tier + '">'
         + '<span class="hw-tr-tiericon">' + tier.icon + '</span>'
         + '<span class="hw-tr-tiertitle">' + escapeHtml(tier.title) + '</span>'
         + '<span class="hw-tr-tierblurb">' + escapeHtml(tier.blurb) + '</span>'
-        + '<span class="hw-tr-tierprog' + (done === mine.length ? ' is-done' : '') + '">' + done + '/' + mine.length + ' dominadas</span>'
+        + '<span class="hw-tr-tierprog' + (done === exps.length && exps.length ? ' is-done' : '') + '">' + done + '/' + exps.length + ' experiencias dominadas</span>'
         + '</button>';
     }).join('');
     hero.innerHTML =
       '<div class="hw-tr-herohead">🎯 Entrenamiento de Simulación'
-      + '<small>Mini-exámenes con las imágenes y audios REALES de las 10 simulaciones</small></div>'
-      + '<div class="hw-tr-tiers">' + rows + '</div>';
+      + '<small>Mini-exámenes con las imágenes y audios REALES de las 10 simulaciones · elige tu tier y tu experiencia</small></div>'
+      + '<div class="hw-tr-tiers">' + rows + '</div>'
+      + '<button type="button" class="hw-tr-classiclink" id="hw-tr-classic">📖 Tareas clásicas y de tu maestro/a →</button>';
     hero.querySelectorAll('.hw-tr-tiercard').forEach((b) => {
       b.addEventListener('click', () => openTierPanel(parseInt(b.dataset.tier, 10)));
+    });
+    hero.querySelector('#hw-tr-classic').addEventListener('click', () => {
+      hwClassicView = true;
+      renderList();
+      window.scrollTo({ top: 0, behavior: 'instant' });
     });
   }
   function openTierPanel(tierNum) {
     const old = document.getElementById('hw-tr-tierpanel');
     if (old) old.remove();
     const tier = trainerMeta.tiers.find((t) => t.tier === tierNum);
-    const mine = trainerMeta.trainers.filter((t) => t.tier === tierNum);
+    const row = (trainerMeta.matrix || {})['t' + tierNum] || {};
+    const exps = window.WU_EXPERIENCES || {};
     const ov = document.createElement('div');
     ov.id = 'hw-tr-tierpanel';
     ov.innerHTML = '<div class="hw-tr-panelcard">'
-      + '<button type="button" class="hw-tr-close" id="hw-tr-tierclose">✕</button>'
+      + '<button type="button" class="hw-tr-close" id="hw-tr-tierclose">←</button>'
       + '<div class="hw-tr-paneltitle">' + tier.icon + ' ' + escapeHtml(tier.title) + '</div>'
-      + '<div class="hw-tr-panelblurb">' + escapeHtml(tier.blurb) + ' · ' + trainerMeta.sessionSize + ' preguntas por entrenamiento</div>'
-      + '<div class="hw-tr-list">'
-      + mine.map((t) => {
-          const best = trainerBest(t.id);
-          const badge = best === null ? '<span class="hw-tr-new">🆕 Nuevo</span>'
+      + '<div class="hw-tr-panelblurb">' + escapeHtml(tier.blurb) + ' · elige tu experiencia</div>'
+      + '<div class="hw-tr-expgrid">'
+      + ['exp1','exp2','exp3','exp4','exp5','exp6','exp7','exp8'].map((expId) => {
+          const count = row[expId] || 0;
+          if (!count) return '';
+          const meta = exps[expId] || {};
+          const emoji = (meta.short || '📁').split(' ')[0];
+          const label = (trainerMeta.expLabels || {})[expId] || meta.label || expId;
+          const best = trainerBest('trainer-t' + tierNum + '-' + expId);
+          const badge = best === null ? '<span class="hw-tr-new">🆕</span>'
             : best >= trainerMeta.passPct ? '<span class="hw-tr-pass">✅ ' + best + '</span>'
-            : '<span class="hw-tr-retry">⏳ mejor: ' + best + '</span>';
-          return '<button type="button" class="hw-tr-row" data-tid="' + t.id + '">'
-            + '<span class="hw-tr-rowicon">' + t.icon + '</span>'
-            + '<span class="hw-tr-rowtxt"><b>' + escapeHtml(t.title) + '</b><small>' + escapeHtml(t.instructions) + '</small></span>'
+            : '<span class="hw-tr-retry">⏳ ' + best + '</span>';
+          return '<button type="button" class="hw-tr-expcard" data-exp="' + expId + '">'
+            + '<span class="hw-tr-expemoji">' + emoji + '</span>'
+            + '<span class="hw-tr-explabel">' + escapeHtml(label) + '</span>'
+            + '<span class="hw-tr-expcount">' + count + ' preguntas</span>'
             + badge + '</button>';
         }).join('')
       + '</div></div>';
     document.body.appendChild(ov);
     ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
     ov.querySelector('#hw-tr-tierclose').addEventListener('click', () => ov.remove());
-    ov.querySelectorAll('.hw-tr-row').forEach((b) => {
-      b.addEventListener('click', () => { ov.remove(); openTrainer(b.dataset.tid); });
+    ov.querySelectorAll('.hw-tr-expcard').forEach((b) => {
+      b.addEventListener('click', () => { ov.remove(); openTrainer(tierNum, b.dataset.exp); });
     });
+  }
+  // 🎉 EPIC CELEBRATION — confetti canvas + 3D-rotating emoji + big
+  // COMPLETADO ("go super crazy, Claude style").
+  function epicCelebration(opts) {
+    const wrap = document.createElement('div');
+    wrap.className = 'hw-epic';
+    const emojiSet = opts.pass ? ['🎉', '⭐', '🐉', '🥳', '🏆', '✨'] : ['💪', '🌱', '🔥'];
+    wrap.innerHTML =
+      '<canvas class="hw-epic-canvas"></canvas>'
+      + '<div class="hw-epic-card">'
+      + '<div class="hw-epic-emoji3d">' + (opts.pass ? '🏆' : '💪') + '</div>'
+      + '<div class="hw-epic-title">' + (opts.score >= 100 ? '¡PERFECTO!' : opts.pass ? '¡COMPLETADO!' : '¡CASI!') + '</div>'
+      + '<div class="hw-epic-score">' + opts.score + '<small>/100</small></div>'
+      + '<div class="hw-epic-note">' + opts.right + ' de ' + opts.of + ' correctas' + (opts.pass ? ' · ¡así se ve el examen real!' : ' · cada sesión trae preguntas nuevas') + '</div>'
+      + '<div class="hw-epic-floaters">' + emojiSet.map((e, i) => '<span style="--i:' + i + '">' + e + '</span>').join('') + '</div>'
+      + '<button type="button" class="hw-epic-ok">Continuar →</button>'
+      + '</div>';
+    document.body.appendChild(wrap);
+    // confetti physics (only when passed — a rain of it when perfect)
+    if (opts.pass) {
+      const cv = wrap.querySelector('.hw-epic-canvas');
+      const ctx = cv.getContext('2d');
+      cv.width = window.innerWidth; cv.height = window.innerHeight;
+      const COLORS = ['#ffe082', '#5be8d1', '#ff5b9f', '#5be88a', '#5b8def', '#ff9a45'];
+      const N = opts.score >= 100 ? 160 : 90;
+      const parts = [];
+      for (let i = 0; i < N; i++) {
+        parts.push({
+          x: cv.width / 2 + (Math.random() - 0.5) * 120,
+          y: cv.height * 0.35,
+          vx: (Math.random() - 0.5) * 14,
+          vy: -Math.random() * 13 - 4,
+          w: 6 + Math.random() * 7,
+          h: 4 + Math.random() * 5,
+          rot: Math.random() * Math.PI,
+          vr: (Math.random() - 0.5) * 0.35,
+          color: COLORS[i % COLORS.length],
+        });
+      }
+      let frames = 0;
+      (function tick() {
+        frames++;
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        for (const p of parts) {
+          p.vy += 0.32; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+          ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          ctx.restore();
+        }
+        if (frames < 220 && wrap.parentNode) requestAnimationFrame(tick);
+      })();
+    }
+    wrap.querySelector('.hw-epic-ok').addEventListener('click', () => {
+      wrap.remove();
+      if (opts.onClose) opts.onClose();
+    });
+  }
+  // small burst on every correct tap
+  function miniBurst(x, y) {
+    for (let i = 0; i < 10; i++) {
+      const s = document.createElement('span');
+      s.className = 'hw-miniburst';
+      s.textContent = ['✨', '⭐', '💛'][i % 3];
+      s.style.left = x + 'px'; s.style.top = y + 'px';
+      s.style.setProperty('--dx', ((Math.random() - 0.5) * 160) + 'px');
+      s.style.setProperty('--dy', (-40 - Math.random() * 120) + 'px');
+      document.body.appendChild(s);
+      setTimeout(() => s.remove(), 900);
+    }
   }
   let _trAudio = null;
   function trStopAudio() { try { if (_trAudio) { _trAudio.pause(); _trAudio = null; } } catch (_) {} }
@@ -3432,8 +3529,9 @@
       _trAudio.play().catch(() => { if (btn) btn.classList.remove('is-playing'); });
     } catch (_) {}
   }
-  function openTrainer(tid) {
-    fetch('/api/homework/trainer/session/' + encodeURIComponent(tid) + '?accessCode=' + encodeURIComponent(accessCode))
+  function openTrainer(tierNum, expId) {
+    fetch('/api/homework/trainer/session/' + encodeURIComponent(tierNum) + '/' + encodeURIComponent(expId)
+        + '?accessCode=' + encodeURIComponent(accessCode))
       .then((r) => r.json())
       .then((d) => {
         if (!d || !d.ok) { _hwToast('No se pudo cargar el entrenamiento'); return; }
@@ -3441,10 +3539,20 @@
       })
       .catch(() => _hwToast('Error de conexión'));
   }
+  // Per-question micro-instruction — a tier+experiencia session mixes
+  // mechanics (audio V/F, pick-the-image, banks…), so the coach line
+  // adapts to each question's shape.
+  function trInstrFor(q) {
+    if (q.tf && q.audio) return 'Escucha 🔊 y mira la imagen. ¿Dicen lo mismo? ✓ o ✕';
+    if (q.tf) return 'Lee la palabra. ¿Coincide con la imagen? ✓ o ✕';
+    if (q.audio && q.options && q.options[0] && q.options[0].image) return 'Escucha 🔊 y toca la imagen correcta';
+    if (q.audio) return 'Escucha 🔊 y elige la respuesta correcta';
+    if (q.options && q.options[0] && q.options[0].image) return 'Lee la oración y toca su imagen';
+    return 'Lee y elige la respuesta correcta';
+  }
   function runTrainer(sess) {
     const old = document.getElementById('hw-tr-play');
     if (old) old.remove();
-    const t = sess.trainer;
     const qs = sess.questions;
     const answers = [];
     let idx = 0;
@@ -3455,10 +3563,10 @@
     ov.id = 'hw-tr-play';
     ov.innerHTML = '<div class="hw-tr-playhead">'
       + '<button type="button" class="hw-tr-back" id="hw-tr-back">←</button>'
-      + '<div class="hw-tr-playtitles"><div class="hw-tr-kicker">🎯 ENTRENAMIENTO</div>'
-      + '<div class="hw-tr-playtitle">' + t.icon + ' ' + escapeHtml(t.title) + '</div></div>'
+      + '<div class="hw-tr-playtitles"><div class="hw-tr-kicker">' + sess.tier.icon + ' TIER ' + sess.tier.tier + ' · ENTRENAMIENTO</div>'
+      + '<div class="hw-tr-playtitle">' + escapeHtml(sess.expLabel) + '</div></div>'
       + '<div class="hw-tr-dots" id="hw-tr-dots"></div></div>'
-      + '<p class="hw-tr-instr">' + escapeHtml(t.instructions) + '</p>'
+      + '<p class="hw-tr-instr" id="hw-tr-instr"></p>'
       + '<div class="hw-tr-q" id="hw-tr-q"></div>';
     document.body.appendChild(ov);
     ov.querySelector('#hw-tr-back').addEventListener('click', () => { trStopAudio(); ov.remove(); });
@@ -3475,6 +3583,7 @@
       trStopAudio();
       drawDots();
       const q = qs[idx];
+      ov.querySelector('#hw-tr-instr').textContent = trInstrFor(q);
       const box = ov.querySelector('#hw-tr-q');
       let h = '';
       if (q.audio) {
@@ -3526,7 +3635,11 @@
       }).then((r) => r.json()).then((v) => {
         if (!v || !v.ok) { locked = false; _hwToast('Error — intenta otra vez'); return; }
         answers[idx] = { qid: q.qid, answer: given, ok: v.correct };
-        if (v.correct) rightCount++;
+        if (v.correct) {
+          rightCount++;
+          const r = btn.getBoundingClientRect();
+          miniBurst(r.left + r.width / 2, r.top + r.height / 2);
+        }
         btn.classList.add(v.correct ? 'is-right' : 'is-wrong');
         if (!v.correct) {
           const expKey = q.tf ? String(v.expected) : String(v.expected);
@@ -3546,23 +3659,14 @@
       trStopAudio();
       fetch('/api/homework/trainer/submit', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accessCode, studentCode, trainerId: t.id, answers: answers.map((a) => ({ qid: a.qid, answer: a.answer })) }),
+        body: JSON.stringify({ accessCode, studentCode, tier: sess.tier.tier, exp: sess.exp, answers: answers.map((a) => ({ qid: a.qid, answer: a.answer })) }),
       }).then((r) => r.json()).then((d) => {
         const score = d && d.ok ? d.score : Math.round((rightCount / qs.length) * 100);
-        if (d && d.ok) submissions.push({ assignmentId: t.id, score: d.score, total: d.total, ts: Date.now() });
+        if (d && d.ok) submissions.push({ assignmentId: 'trainer-t' + sess.tier.tier + '-' + sess.exp, score: d.score, total: d.total, ts: Date.now() });
         const pass = score >= (trainerMeta ? trainerMeta.passPct : 80);
-        const card = document.createElement('div');
-        card.className = 'hw-sack-result';
-        card.innerHTML = '<div class="hw-sack-result-card">'
-          + '<div class="hw-sack-result-emoji">' + (score >= 100 ? '🏆' : pass ? '🎉' : '💪') + '</div>'
-          + '<div class="hw-sack-result-score">' + score + ' / 100</div>'
-          + '<div class="hw-sack-result-note">' + rightCount + ' de ' + qs.length + ' correctas · '
-          + (pass ? '¡Dominado! Así se ve en el examen real.' : 'Entrena otra vez — cada sesión trae preguntas nuevas.') + '</div>'
-          + '<button type="button" class="btn btn-jade btn-xl" id="hw-tr-ok">Continuar →</button></div>';
-        ov.appendChild(card);
-        card.querySelector('#hw-tr-ok').addEventListener('click', () => {
-          ov.remove();
-          renderList();
+        epicCelebration({
+          score: score, right: rightCount, of: qs.length, pass: pass,
+          onClose: function () { ov.remove(); renderList(); },
         });
       }).catch(() => { _hwToast('Error al entregar'); });
     }
@@ -3661,6 +3765,15 @@
     // "HSK2 next to the avatar reads as if that's my name".
     const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 Mis Tareas';
     renderTrainerHero();   // 🎯 3 tiers (HSK1 root only; no-op otherwise)
+    // 🧹 HSK1 trainer home: NO tabs, NO classic grid at the root
+    // (Fernando: "pendientes/completadas/tu maestro no longer at the
+    // beginning"). The classic view lives behind the 📖 link.
+    if (hwLevel === 'hsk1' && trainerMeta && !hwClassicView) {
+      const tb = $('hw-tabs'); if (tb) tb.classList.add('hidden');
+      const g = $('hw-list-grid'); g.classList.add('hidden'); g.innerHTML = '';
+      const cu = $('hw-list-custom-all'); if (cu) cu.classList.add('hidden');
+      return;
+    }
     // Always refresh the custom flat list (visible only on the custom tab).
     renderCustomSection();
     const grid = $('hw-list-grid');
