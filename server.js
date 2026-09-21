@@ -2321,17 +2321,18 @@ app.get('/api/homework/trainer/list', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   res.json({
     ok: true,
-    tiers: SimTrainer.TIERS,
-    trainers: SimTrainer.TRAINERS,
+    tiers: SimTrainer.TIERS.map((t) => ({ tier: t.tier, icon: t.icon, title: t.title, blurb: t.blurb })),
+    expLabels: SimTrainer.EXP_LABELS,
+    matrix: SimTrainer.matrix(),      // t1..t3 → exp1..exp8 → question count
     sessionSize: SimTrainer.SESSION_SIZE,
     passPct: SimTrainer.PASS_PCT,
   });
 });
-app.get('/api/homework/trainer/session/:trainerId', (req, res) => {
+app.get('/api/homework/trainer/session/:tier/:exp', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const s = SimTrainer.getSession(req.params.trainerId);
+  const s = SimTrainer.getSession(req.params.tier, req.params.exp);
   if (!s) return res.status(404).json({ ok: false, error: 'entrenamiento no encontrado' });
-  res.json({ ok: true, trainer: s.trainer, questions: s.questions, total: s.total, poolSize: s.poolSize });
+  res.json({ ok: true, tier: s.tier, exp: s.exp, expLabel: s.expLabel, questions: s.questions, total: s.total, poolSize: s.poolSize });
 });
 // Instant per-tap verdict — answers never travel to the client.
 app.post('/api/homework/trainer/check', (req, res) => {
@@ -2343,16 +2344,16 @@ app.post('/api/homework/trainer/check', (req, res) => {
 });
 app.post('/api/homework/trainer/submit', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const { studentCode, trainerId, answers, accessCode } = req.body || {};
+  const { studentCode, tier, exp, answers, accessCode } = req.body || {};
   const rec = Students.get(studentCode);
   if (!rec) return res.status(401).json({ ok: false, error: 'Código de estudiante inválido — vuelve a entrar' });
-  const t = SimTrainer.TRAINERS.find((x) => x.id === trainerId);
-  if (!t) return res.status(404).json({ ok: false, error: 'entrenamiento no encontrado' });
-  const result = SimTrainer.grade(trainerId, answers);
+  const result = SimTrainer.grade(tier, exp, answers);
+  if (!result) return res.status(404).json({ ok: false, error: 'entrenamiento no encontrado' });
+  const tMeta = SimTrainer.TIERS.find((x) => x.tier === Number(tier));
   // Logged like any tarea → shows in Completadas, report cards, papás.
   Students.logAssignmentSubmission(rec.code, {
-    assignmentId: t.id,
-    assignmentTitle: '🎯 ' + t.icon + ' ' + t.title,
+    assignmentId: 'trainer-t' + Number(tier) + '-' + String(exp),
+    assignmentTitle: '🎯 ' + (tMeta ? tMeta.icon : '') + ' Tier ' + Number(tier) + ' · ' + (SimTrainer.EXP_LABELS[exp] || exp),
     accessCode: String(accessCode || ''),
     score: result.score,
     total: result.total,

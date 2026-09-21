@@ -4510,3 +4510,105 @@ body.hw-lv-hsk2 .hw-hud { border-color: rgba(91, 232, 209, 0.5); }
   box-shadow: 0 0 26px rgba(91, 232, 138, 0.75);
   animation: hw-sk-pulse 0.7s ease-in-out 2;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   🎯 2026-09-20 v2 — trainer home limpio, experiencias por tier,
+   y celebración ÉPICA (confeti + emoji 3D).
+   ══════════════════════════════════════════════════════════════════ */
+.hw-tr-classiclink {
+  margin-top: 12px; border: none; cursor: pointer; touch-action: manipulation;
+  background: none; color: rgba(243, 230, 194, 0.55);
+  font-size: 0.85rem; font-weight: 700; text-decoration: underline dotted;
+  padding: 6px 2px;
+}
+.hw-tr-classiclink:hover { color: #ffe082; }
+.hw-tr-backstrip {
+  width: 100%; border: 2px solid rgba(255, 224, 130, 0.5); border-radius: 14px;
+  background: rgba(255, 224, 130, 0.08); color: #ffe082;
+  font-weight: 900; font-size: 0.95rem; padding: 12px; cursor: pointer;
+  touch-action: manipulation; margin-bottom: 4px;
+}
+.hw-tr-expgrid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px;
+}
+.hw-tr-expcard {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05); padding: 14px 8px 10px;
+  cursor: pointer; touch-action: manipulation; color: #fff; text-align: center;
+}
+.hw-tr-expcard:hover { border-color: #ffe082; transform: translateY(-2px); }
+.hw-tr-expemoji { font-size: 1.9rem; }
+.hw-tr-explabel { font-weight: 800; font-size: 0.85rem; }
+.hw-tr-expcount { color: rgba(243, 230, 194, 0.55); font-size: 0.7rem; }
+.hw-tr-expcard .hw-tr-new, .hw-tr-expcard .hw-tr-pass, .hw-tr-expcard .hw-tr-retry {
+  position: absolute; top: 6px; right: 8px; font-size: 0.75rem;
+}
+
+/* ── 🎉 CELEBRACIÓN ÉPICA ── */
+.hw-epic {
+  position: fixed; inset: 0; z-index: 9000;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5, 8, 18, 0.85); backdrop-filter: blur(3px);
+}
+.hw-epic-canvas { position: absolute; inset: 0; pointer-events: none; }
+.hw-epic-card {
+  position: relative; text-align: center; padding: 34px 44px;
+  background: linear-gradient(160deg, #1a2035, #0d1224);
+  border: 3px solid #ffe082; border-radius: 28px;
+  box-shadow: 0 0 80px rgba(255, 224, 130, 0.35);
+  animation: hw-epic-in 0.5s cubic-bezier(0.2, 1.5, 0.4, 1);
+  max-width: min(420px, 90vw);
+}
+@keyframes hw-epic-in { from { transform: scale(0.4) rotate(-6deg); opacity: 0; } }
+.hw-epic-emoji3d {
+  font-size: 4.6rem; display: inline-block;
+  animation: hw-epic-spin 2.4s ease-in-out infinite;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 10px 24px rgba(255, 210, 74, 0.5));
+}
+@keyframes hw-epic-spin {
+  0%   { transform: rotateY(0deg) scale(1); }
+  40%  { transform: rotateY(360deg) scale(1.15); }
+  60%  { transform: rotateY(360deg) scale(1.15); }
+  100% { transform: rotateY(720deg) scale(1); }
+}
+.hw-epic-title {
+  font-size: 2rem; font-weight: 900; letter-spacing: 0.06em;
+  background: linear-gradient(90deg, #ffe082, #ff9a45, #ff5b9f, #5be8d1);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: hw-epic-shine 2s linear infinite; background-size: 300% 100%;
+  margin-top: 4px;
+}
+@keyframes hw-epic-shine { to { background-position: 300% 0; } }
+.hw-epic-score { font-size: 3.2rem; font-weight: 900; color: #fff; line-height: 1; margin: 6px 0 2px; }
+.hw-epic-score small { font-size: 1.4rem; color: rgba(255, 255, 255, 0.5); }
+.hw-epic-note { color: rgba(243, 230, 194, 0.8); font-size: 0.95rem; margin-bottom: 14px; }
+.hw-epic-floaters { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+.hw-epic-floaters span {
+  position: absolute; bottom: -10px; left: calc(8% + var(--i) * 15%);
+  font-size: 1.7rem; opacity: 0;
+  animation: hw-epic-float 2.6s ease-in calc(var(--i) * 0.35s) infinite;
+}
+@keyframes hw-epic-float {
+  0%   { transform: translateY(0) rotate(0deg) scale(0.7); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translateY(-340px) rotate(340deg) scale(1.4); opacity: 0; }
+}
+.hw-epic-ok {
+  border: none; cursor: pointer; touch-action: manipulation;
+  background: linear-gradient(180deg, #7dffa8, #2ecc71); color: #0b1a10;
+  font-weight: 900; font-size: 1.05rem; border-radius: 999px; padding: 13px 34px;
+  box-shadow: 0 5px 0 rgba(20, 90, 45, 0.6);
+}
+.hw-epic-ok:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(20, 90, 45, 0.6); }
+/* mini-burst al acertar */
+.hw-miniburst {
+  position: fixed; z-index: 9500; pointer-events: none;
+  font-size: 1.25rem;
+  animation: hw-miniburst 0.85s ease-out forwards;
+}
+@keyframes hw-miniburst {
+  from { transform: translate(0, 0) scale(1); opacity: 1; }
+  to   { transform: translate(var(--dx), var(--dy)) scale(0.4) rotate(200deg); opacity: 0; }
+}

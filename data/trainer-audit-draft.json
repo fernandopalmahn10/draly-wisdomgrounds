@@ -1,0 +1,1052 @@
+{
+ "hsk1-sim1|R1|21": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%201/READING%20PART%201/21%20(FALSE).png"
+ },
+ "hsk1-sim1|R1|22": {
+  "exp": "exp2",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%201/READING%20PART%201/22%20(FALSE).png"
+ },
+ "hsk1-sim1|R1|23": {
+  "exp": "exp1",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%201/READING%20PART%201/23%20(TRUE).png"
+ },
+ "hsk1-sim1|R1|24": {
+  "exp": "exp4",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%201/READING%20PART%201/24%20(TRUE).png"
+ },
+ "hsk1-sim1|R1|25": {
+  "exp": "exp2",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%201/READING%20PART%201/25%20(FALSE).png"
+ },
+ "hsk1-sim1|R2|26": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim1|R2|27": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim1|R2|28": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim1|R2|29": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim1|R2|30": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim1|R3|31": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim1|R3|32": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim1|R3|33": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim1|R3|34": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim1|R3|35": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim1|R4|36": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim1|R4|37": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim1|R4|38": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim1|R4|39": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim1|R4|40": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim1|L4|16": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim1|L4|17": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim1|L4|18": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim1|L4|19": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim1|L4|20": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim2|R1|21": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%202/READING%20PART%201/21%20(FALSE).png"
+ },
+ "hsk1-sim2|R1|22": {
+  "exp": "exp2",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%202/READING%20PART%201/22%20(TRUE).png"
+ },
+ "hsk1-sim2|R1|23": {
+  "exp": "exp7",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%202/READING%20PART%201/23%20(TRUE).png"
+ },
+ "hsk1-sim2|R1|24": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%202/READING%20PART%201/24%20(FALSE).png"
+ },
+ "hsk1-sim2|R1|25": {
+  "exp": "exp8",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%202/READING%20PART%201/25%20(TRUE).png"
+ },
+ "hsk1-sim2|R2|26": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim2|R2|27": {
+  "exp": "exp5",
+  "how": "text"
+ },
+ "hsk1-sim2|R2|28": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim2|R2|29": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim2|R2|30": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim2|R3|31": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim2|R3|32": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim2|R3|33": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim2|R3|34": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim2|R3|35": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim2|R4|36": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim2|R4|37": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim2|R4|38": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim2|R4|39": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim2|R4|40": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim2|L4|16": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim2|L4|17": {
+  "exp": "exp5",
+  "how": "text"
+ },
+ "hsk1-sim2|L4|18": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim2|L4|19": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim2|L4|20": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim3|R1|21": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%203/READING%20PART%201/21%20(FALSE).png"
+ },
+ "hsk1-sim3|R1|22": {
+  "exp": "exp7",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%203/READING%20PART%201/22%20(TRUE).png"
+ },
+ "hsk1-sim3|R1|23": {
+  "exp": "exp1",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%203/READING%20PART%201/23%20(FALSE).png"
+ },
+ "hsk1-sim3|R1|24": {
+  "exp": "exp7",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%203/READING%20PART%201/24%20(TRUE).png"
+ },
+ "hsk1-sim3|R1|25": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%203/READING%20PART%201/25%20(FALSE).png"
+ },
+ "hsk1-sim3|R2|26": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim3|R2|27": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim3|R2|28": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim3|R2|29": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim3|R2|30": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim3|R3|31": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim3|R3|32": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim3|R3|33": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim3|R3|34": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim3|R3|35": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim3|R4|36": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim3|R4|37": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim3|R4|38": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim3|R4|39": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim3|R4|40": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim3|L4|16": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim3|L4|17": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim3|L4|18": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim3|L4|19": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim3|L4|20": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim4|R1|21": {
+  "exp": "exp7",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%204/READING%20PART%201/21%20(TRUE).png"
+ },
+ "hsk1-sim4|R1|22": {
+  "exp": "exp8",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%204/READING%20PART%201/22%20(FALSE).png"
+ },
+ "hsk1-sim4|R1|23": {
+  "exp": "exp8",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%204/READING%20PART%201/23%20(TRUE).png"
+ },
+ "hsk1-sim4|R1|24": {
+  "exp": "exp7",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%204/READING%20PART%201/24%20(TRUE).png"
+ },
+ "hsk1-sim4|R1|25": {
+  "exp": "exp4",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%204/READING%20PART%201/25%20(FALSE).png"
+ },
+ "hsk1-sim4|R2|26": {
+  "exp": "exp5",
+  "how": "text"
+ },
+ "hsk1-sim4|R2|27": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim4|R2|28": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim4|R2|29": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim4|R2|30": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim4|R3|31": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim4|R3|32": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim4|R3|33": {
+  "exp": "exp5",
+  "how": "text"
+ },
+ "hsk1-sim4|R3|34": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim4|R3|35": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim4|R4|36": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim4|R4|37": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim4|R4|38": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim4|R4|39": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim4|R4|40": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim4|L4|16": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim4|L4|17": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim4|L4|18": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim4|L4|19": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim4|L4|20": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim5|R1|21": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%205/READING%20PART%201/21%20(TRUE).png"
+ },
+ "hsk1-sim5|R1|22": {
+  "exp": "exp2",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%205/READING%20PART%201/22%20(FALSE).png"
+ },
+ "hsk1-sim5|R1|23": {
+  "exp": "exp8",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%205/READING%20PART%201/23%20(FALSE).png"
+ },
+ "hsk1-sim5|R1|24": {
+  "exp": "exp7",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%205/READING%20PART%201/24%20(TRUE).png"
+ },
+ "hsk1-sim5|R1|25": {
+  "exp": "exp6",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%205/READING%20PART%201/25%20(FALSE).png"
+ },
+ "hsk1-sim5|R2|26": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim5|R2|27": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim5|R2|28": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim5|R2|29": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim5|R2|30": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim5|R3|31": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim5|R3|32": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim5|R3|33": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim5|R3|34": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim5|R3|35": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim5|R4|36": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim5|R4|37": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim5|R4|38": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim5|R4|39": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim5|R4|40": {
+  "exp": "exp5",
+  "how": "text"
+ },
+ "hsk1-sim5|L4|16": {
+  "exp": null,
+  "how": "none"
+ },
+ "hsk1-sim5|L4|17": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim5|L4|18": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim5|L4|19": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim5|L4|20": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim6|R1|21": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%206/READING%20PART%201/21%20(TRUE).png"
+ },
+ "hsk1-sim6|R1|22": {
+  "exp": "exp4",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%206/READING%20PART%201/22%20(FALSE).png"
+ },
+ "hsk1-sim6|R1|23": {
+  "exp": null,
+  "how": "none",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%206/READING%20PART%201/23%20(TRUE).png"
+ },
+ "hsk1-sim6|R1|24": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%206/READING%20PART%201/24%20(FALSE).png"
+ },
+ "hsk1-sim6|R1|25": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%206/READING%20PART%201/25%20(TRUE).png"
+ },
+ "hsk1-sim6|R2|26": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim6|R2|27": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim6|R2|28": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim6|R2|29": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim6|R2|30": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim6|R3|31": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim6|R3|32": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim6|R3|33": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim6|R3|34": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim6|R3|35": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim6|R4|36": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim6|R4|37": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim6|R4|38": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim6|R4|39": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim6|R4|40": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim6|L4|16": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim6|L4|17": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim6|L4|18": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim6|L4|19": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim6|L4|20": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim7|R1|21": {
+  "exp": "exp8",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%207/READING%20PART%201/21%20(TRUE).png"
+ },
+ "hsk1-sim7|R1|22": {
+  "exp": null,
+  "how": "none",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%207/READING%20PART%201/22%20(FALSE).png"
+ },
+ "hsk1-sim7|R1|23": {
+  "exp": "exp2",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%207/READING%20PART%201/23%20(FALSE).png"
+ },
+ "hsk1-sim7|R1|24": {
+  "exp": "exp8",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%207/READING%20PART%201/24%20(FALSE).png"
+ },
+ "hsk1-sim7|R1|25": {
+  "exp": "exp2",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%207/READING%20PART%201/25%20(TRUE).png"
+ },
+ "hsk1-sim7|R2|26": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim7|R2|27": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim7|R2|28": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim7|R2|29": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim7|R2|30": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim7|R3|31": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim7|R3|32": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim7|R3|33": {
+  "exp": "exp5",
+  "how": "text"
+ },
+ "hsk1-sim7|R3|34": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim7|R3|35": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim7|R4|36": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim7|R4|37": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim7|R4|38": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim7|R4|39": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim7|R4|40": {
+  "exp": "exp5",
+  "how": "text"
+ },
+ "hsk1-sim7|L4|16": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim7|L4|17": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim7|L4|18": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim7|L4|19": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim7|L4|20": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim8|R1|21": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%208/READING%20PART%201/21%20(TRUE).png"
+ },
+ "hsk1-sim8|R1|22": {
+  "exp": "exp6",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%208/READING%20PART%201/22%20(FALSE).png"
+ },
+ "hsk1-sim8|R1|23": {
+  "exp": "exp2",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%208/READING%20PART%201/23%20(TRUE).jpeg"
+ },
+ "hsk1-sim8|R1|24": {
+  "exp": null,
+  "how": "none",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%208/READING%20PART%201/24%20(FALSE).jpeg"
+ },
+ "hsk1-sim8|R1|25": {
+  "exp": "exp7",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%208/READING%20PART%201/25%20(TRUE).jpeg"
+ },
+ "hsk1-sim8|R2|26": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim8|R2|27": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim8|R2|28": {
+  "exp": "exp5",
+  "how": "text"
+ },
+ "hsk1-sim8|R2|29": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim8|R2|30": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim8|R3|31": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim8|R3|32": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim8|R3|33": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim8|R3|34": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim8|R3|35": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim8|R4|36": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim8|R4|37": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim8|R4|38": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim8|R4|39": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim8|R4|40": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim8|L4|16": {
+  "exp": "exp5",
+  "how": "text"
+ },
+ "hsk1-sim8|L4|17": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim8|L4|18": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim8|L4|19": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim8|L4|20": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim9|R1|21": {
+  "exp": "exp6",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%209/READING%20PART%201/21%20(TRUE).jpeg"
+ },
+ "hsk1-sim9|R1|22": {
+  "exp": "exp4",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%209/READING%20PART%201/22%20(FALSE).png"
+ },
+ "hsk1-sim9|R1|23": {
+  "exp": "exp2",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%209/READING%20PART%201/23%20(FALSE).png"
+ },
+ "hsk1-sim9|R1|24": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%209/READING%20PART%201/24%20(FALSE).png"
+ },
+ "hsk1-sim9|R1|25": {
+  "exp": "exp2",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%209/READING%20PART%201/25%20(TRUE).jpeg"
+ },
+ "hsk1-sim9|R2|26": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim9|R2|27": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim9|R2|28": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim9|R2|29": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim9|R2|30": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim9|R3|31": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim9|R3|32": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim9|R3|33": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim9|R3|34": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim9|R3|35": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim9|R4|36": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim9|R4|37": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim9|R4|38": {
+  "exp": "exp5",
+  "how": "text"
+ },
+ "hsk1-sim9|R4|39": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim9|R4|40": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim9|L4|16": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim9|L4|17": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim9|L4|18": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim9|L4|19": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim9|L4|20": {
+  "exp": "exp4",
+  "how": "text"
+ },
+ "hsk1-sim10|R1|21": {
+  "exp": "exp7",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%2010/READING%20PART%201/21%20(FALSE).png"
+ },
+ "hsk1-sim10|R1|22": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%2010/READING%20PART%201/22%20(TRUE).png"
+ },
+ "hsk1-sim10|R1|23": {
+  "exp": "exp3",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%2010/READING%20PART%201/23%20(FALSE).png"
+ },
+ "hsk1-sim10|R1|24": {
+  "exp": "exp2",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%2010/READING%20PART%201/24%20(TRUE).png"
+ },
+ "hsk1-sim10|R1|25": {
+  "exp": "exp1",
+  "how": "text",
+  "img": "/assets/HSK%20SIMULATIONS/HSK%201/SIMULATION%2010/READING%20PART%201/25%20(TRUE).png"
+ },
+ "hsk1-sim10|R2|26": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim10|R2|27": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim10|R2|28": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim10|R2|29": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim10|R2|30": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim10|R3|31": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim10|R3|32": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim10|R3|33": {
+  "exp": "exp7",
+  "how": "text"
+ },
+ "hsk1-sim10|R3|34": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim10|R3|35": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim10|R4|36": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim10|R4|37": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim10|R4|38": {
+  "exp": "exp8",
+  "how": "text"
+ },
+ "hsk1-sim10|R4|39": {
+  "exp": "exp1",
+  "how": "text"
+ },
+ "hsk1-sim10|R4|40": {
+  "exp": "exp5",
+  "how": "text"
+ },
+ "hsk1-sim10|L4|16": {
+  "exp": "exp6",
+  "how": "text"
+ },
+ "hsk1-sim10|L4|17": {
+  "exp": null,
+  "how": "none"
+ },
+ "hsk1-sim10|L4|18": {
+  "exp": "exp3",
+  "how": "text"
+ },
+ "hsk1-sim10|L4|19": {
+  "exp": "exp2",
+  "how": "text"
+ },
+ "hsk1-sim10|L4|20": {
+  "exp": "exp4",
+  "how": "text"
+ }
+}
