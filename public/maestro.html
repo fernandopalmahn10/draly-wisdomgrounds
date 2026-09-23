@@ -352,6 +352,14 @@
             <span>Country (optional, 2-3 letters):</span>
             <input class="input" id="m-new-teacher-country" type="text" placeholder="MX, CN, TW…" maxlength="3">
           </label>
+          <label class="m-form-label">
+            <span>Class level (one classroom code per level):</span>
+            <select class="input" id="m-new-teacher-levels">
+              <option value="hsk1">HSK1 only</option>
+              <option value="hsk2">HSK2 only</option>
+              <option value="both">HSK1 + HSK2 (two codes)</option>
+            </select>
+          </label>
           <button class="btn btn-jade btn-xl" id="m-new-teacher-submit">Create account</button>
           <p class="m-modal-msg" id="m-new-teacher-msg"></p>
           <div id="m-new-teacher-result" class="m-teacher-result hidden">
@@ -372,6 +380,6 @@
   </div>
 
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
-  <script src="/js/maestro.js?v=20260707a"></script>
+  <script src="/js/maestro.js?v=20260923a"></script>
 </body>
 </html>

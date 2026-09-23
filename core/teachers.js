@@ -84,6 +84,7 @@ function load() {
   if (!fs.existsSync(FILE_PATH)) {
     teachers = {};
     seedIfEmpty();
+    applyNamedSetup20260923();
     return;
   }
   try {
@@ -114,11 +115,42 @@ function load() {
         console.log('[teachers] seeded HSK2 access code 1002 on EMAAR2026');
       }
     }
+    applyNamedSetup20260923();
   } catch (e) {
     console.warn('[teachers] failed to load, starting fresh:', e.message);
     teachers = {};
     seedIfEmpty();
   }
+}
+
+// 🆕 2026-09-23 (Fernando) — one-time named-teacher setup, idempotent
+// by name-match so re-deploys never duplicate:
+//   · Ms Han → her classroom codes default to HSK2
+//   · Ms Enni + Ms Nicole → created with BOTH an HSK1 and an HSK2 code
+// The exact codes land on the persistent disk; read them in the
+// Teachers tab of /maestro (they're also printed to the server log).
+function applyNamedSetup20260923() {
+  let dirty = false;
+  const han = Object.values(teachers).find((t) => !t.isSuperAdmin && /\bhan\b/i.test(t.displayName || ''));
+  if (han) {
+    han.codeLevels = (han.codeLevels && typeof han.codeLevels === 'object') ? han.codeLevels : {};
+    for (const c of (han.accessCodes || [])) {
+      if (han.codeLevels[c] !== 'hsk2') { han.codeLevels[c] = 'hsk2'; dirty = true; }
+    }
+    if (dirty) console.log('[teachers] Ms Han → HSK2 default on classroom code(s):', (han.accessCodes || []).join(', '));
+  }
+  for (const name of ['Ms Enni', 'Ms Nicole']) {
+    const key = name.replace(/^Ms\s+/i, '').toLowerCase();
+    const exists = Object.values(teachers).some((t) => (t.displayName || '').toLowerCase().includes(key));
+    if (!exists) {
+      const rec = createTeacher({ displayName: name, levels: ['hsk1', 'hsk2'] });
+      console.log('[teachers] created', name, '→ teacher code', rec.teacherId,
+        '| HSK1 class:', rec.accessCodes.find((c) => rec.codeLevels[c] !== 'hsk2'),
+        '| HSK2 class:', rec.accessCodes.find((c) => rec.codeLevels[c] === 'hsk2'));
+      dirty = true;
+    }
+  }
+  if (dirty) persistNow();
 }
 
 // === LOOKUPS ===
@@ -200,16 +232,31 @@ function generateAccessCode() {
 
 // === CRUD ===
 // Create a new teacher. Returns the new record (with codes filled in).
-function createTeacher({ displayName, email, country }) {
+// 🆕 2026-09-23 — `levels` picks which classroom codes to mint:
+// ['hsk1'] (default), ['hsk2'], or ['hsk1','hsk2'] → one 4-digit code
+// per level, HSK2 codes registered in codeLevels (hsk1 is the default
+// level so it needs no entry).
+function createTeacher({ displayName, email, country, levels }) {
   const teacherId = generateTeacherId();
-  const accessCode = generateAccessCode();
+  const wanted = (Array.isArray(levels) && levels.length ? levels : ['hsk1'])
+    .map((l) => String(l).toLowerCase())
+    .filter((l) => l === 'hsk1' || l === 'hsk2');
+  if (!wanted.length) wanted.push('hsk1');
+  const accessCodes = [];
+  const codeLevels = {};
+  for (const lvl of wanted) {
+    const code = generateAccessCode();
+    accessCodes.push(code);
+    if (lvl === 'hsk2') codeLevels[code] = 'hsk2';
+  }
   const now = Date.now();
   const rec = {
     teacherId,
     displayName: String(displayName || 'Teacher').slice(0, 60),
     email:       email ? String(email).slice(0, 120) : null,
     country:     country ? String(country).slice(0, 3).toUpperCase() : null,
-    accessCodes: [accessCode],
+    accessCodes,
+    codeLevels,
     isSuperAdmin: false,
     createdAt:   now,
     lastSeen:    now,
@@ -242,6 +289,7 @@ function listAll() {
       email: t.email,
       country: t.country,
       accessCodes: (t.accessCodes || []).slice(),
+      codeLevels: Object.assign({}, t.codeLevels || {}),
       isSuperAdmin: !!t.isSuperAdmin,
       createdAt: t.createdAt,
       lastSeen: t.lastSeen,
