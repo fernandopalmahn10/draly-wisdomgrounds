@@ -1655,9 +1655,10 @@ app.post('/api/admin/teachers', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
   if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
-  const { displayName, email, country } = req.body || {};
+  const { displayName, email, country, levels } = req.body || {};
   if (!displayName) return res.status(400).json({ ok: false, error: 'displayName required' });
-  const t = Teachers.createTeacher({ displayName, email, country });
+  // levels: ['hsk1'] | ['hsk2'] | ['hsk1','hsk2'] — one classroom code per level
+  const t = Teachers.createTeacher({ displayName, email, country, levels });
   res.json({ ok: true, teacher: t });
 });
 // Delete a teacher (super-admin only; cannot delete a super admin)

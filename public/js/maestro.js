@@ -2303,7 +2303,7 @@
           </div>
           <div class="m-teacher-code-row">
             <span class="m-teacher-code-label">📚 Classroom:</span>
-            <code class="m-teacher-code">${(t.accessCodes || []).map(escapeHtml).join(', ')}</code>
+            <code class="m-teacher-code">${(t.accessCodes || []).map((c) => escapeHtml(c) + ' (' + (((t.codeLevels || {})[c] === 'hsk2') ? 'HSK2' : 'HSK1') + ')').join(' · ')}</code>
           </div>
         </div>
         ${t.isSuperAdmin ? '' : `<button class="btn btn-ghost btn-sm m-teacher-del" data-id="${escapeHtml(t.teacherId)}" type="button">🗑️ Delete</button>`}`;
@@ -2336,18 +2336,23 @@
     const email = $('m-new-teacher-email').value.trim();
     const country = $('m-new-teacher-country').value.trim();
     if (!displayName) { $('m-new-teacher-msg').textContent = 'Enter a name'; return; }
+    const lvlSel = $('m-new-teacher-levels');
+    const levels = lvlSel && lvlSel.value === 'both' ? ['hsk1', 'hsk2']
+                 : lvlSel && lvlSel.value === 'hsk2' ? ['hsk2'] : ['hsk1'];
     $('m-new-teacher-msg').textContent = 'Creating…';
     fetch('/api/admin/teachers?pw=' + encodeURIComponent(pw), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ displayName, email: email || null, country: country || null }),
+      body: JSON.stringify({ displayName, email: email || null, country: country || null, levels }),
     })
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { $('m-new-teacher-msg').textContent = 'Error: ' + (data && data.error || ''); return; }
         $('m-new-teacher-msg').textContent = '';
         $('m-result-teacher-id').textContent = data.teacher.teacherId;
-        $('m-result-access-code').textContent = (data.teacher.accessCodes || []).join(', ');
+        const cl = data.teacher.codeLevels || {};
+        $('m-result-access-code').textContent = (data.teacher.accessCodes || [])
+          .map((c) => c + ' (' + (cl[c] === 'hsk2' ? 'HSK2' : 'HSK1') + ')').join(' · ');
         $('m-new-teacher-result').classList.remove('hidden');
         fetchTeachers();   // refresh list in background
       });
