@@ -197,6 +197,8 @@
     const parts = sim.listening.parts;
     const firstIntro = parts[0].introAt != null ? parts[0].introAt : Math.max(0, parts[0].items[0].t[0] - 6);
     segs.push({ from: 0, kind: 'welcome' });
+    // "听力考试现在开始" — the official start line gets its own screen.
+    if (sim.listening.startAt) segs.push({ from: sim.listening.startAt, kind: 'start' });
     parts.forEach((p, pi) => {
       const introAt = pi === 0 ? firstIntro : (p.introAt != null ? p.introAt : p.items[0].t[0] - 8);
       segs.push({ from: introAt, kind: 'intro', part: p });
@@ -249,11 +251,12 @@
     });
     segIdx = -1;
     renderSide();
+    onAudioTime(at);   // draw the right screen now, before the first timeupdate
   }
 
-  function onAudioTime() {
+  function onAudioTime(tNow) {
     if (phase !== 'listening' || !audio) return;
-    const t = audio.currentTime;
+    const t = typeof tNow === 'number' ? tNow : audio.currentTime;
     const end = listenEnd();
     $('y-audio-fill').style.width = Math.min(100, (t / end) * 100) + '%';
     $('y-audio-left').textContent = fmt(end - t);
@@ -261,7 +264,7 @@
     let i = 0;
     while (i + 1 < segs.length && segs[i + 1].from <= t) i++;
     if (i !== segIdx) { segIdx = i; renderSeg(segs[i]); }
-    if (t >= end + 0.5) startReview(false);
+    if (typeof tNow !== 'number' && t >= end + 0.5) startReview(false);
   }
 
   function partLabel(secName, part) { return secName + ' · Parte ' + part.part; }
@@ -271,23 +274,47 @@
     if (seg.kind === 'welcome') {
       $('y-part-label').textContent = 'Escucha';
       $('y-counter').textContent = '0 / ' + totalQ();
-      box.innerHTML = '<div class="y-intro"><img src="/assets/dralingo.png" alt="" class="y-bob">' +
-        '<h2>¡Bienvenido al examen!</h2><div class="zh-big zh">欢迎参加考试</div>' +
-        '<p>Escucha con atención. El examen empieza en unos segundos.</p>' + wave() + '</div>';
+      box.innerHTML = '<div class="y-intro"><img src="/assets/dralingo.png" alt="" class="y-intro-logo">' +
+        '<div class="zh-big zh">欢迎参加考试</div><h2>Bienvenido al examen</h2>' +
+        '<p>Escucha con atención. La prueba de escucha empieza en unos segundos.</p>' + wave() + skipBtn('Saltar intro') + '</div>';
+    } else if (seg.kind === 'start') {
+      $('y-part-label').textContent = 'Escucha';
+      box.innerHTML = '<div class="y-intro y-intro-start"><div class="y-start-zh zh">听力考试现在开始</div>' +
+        '<div class="y-py">tingli kaoshi xianzai kaishi</div>' +
+        '<h2>La prueba de escucha empieza ahora</h2>' + wave() + '</div>';
     } else if (seg.kind === 'intro') {
       const p = seg.part;
       $('y-part-label').textContent = partLabel('Escucha', p);
       box.innerHTML = '<div class="y-intro"><div class="zh-big zh">' + esc(p.zh) + '</div>' +
-        '<h2>Escucha · Parte ' + p.part + '</h2><p>' + esc(introText(p)) + '</p>' + wave() + '</div>';
+        '<h2>Escucha · Parte ' + p.part + '</h2><p>' + esc(introText(p)) + '</p>' + wave() + skipBtn('Saltar instrucciones') + '</div>';
     } else if (seg.kind === 'outro') {
       $('y-part-label').textContent = 'Escucha';
-      box.innerHTML = '<div class="y-intro"><img src="/assets/dralingo.png" alt="">' +
-        '<h2>¡Terminó el audio!</h2><p>En un momento tendrás 2 minutos para revisar tus respuestas.</p></div>';
+      box.innerHTML = '<div class="y-intro"><img src="/assets/dralingo.png" alt="" class="y-intro-logo">' +
+        '<h2>Terminó la prueba de escucha</h2><p>En un momento tendrás 2 minutos para revisar tus respuestas.</p></div>';
     } else {
       renderItem(seg.part, seg.item, { live: true });
     }
+    const skip = $('y-skip');
+    if (skip) skip.addEventListener('click', () => { tick(); skipSeg(); });
     renderSide();
     sendHeartbeat();
+  }
+  // Intros play by default; "Saltar" jumps the audio to where the next
+  // screen starts (welcome → the start line; part instructions → its
+  // example). The resume clock moves with it.
+  function skipBtn(label) {
+    return '<button class="y-btn y-btn-ghost y-skip" id="y-skip" type="button">' + esc(label) + ' ⏭</button>';
+  }
+  function skipSeg() {
+    const next = segs[segIdx + 1];
+    if (!audio || !next) return;
+    const target = next.from + 0.05;
+    const jump = target - audio.currentTime;
+    if (jump <= 0) return;
+    try { audio.currentTime = target; } catch (_) { return; }
+    listenStartedAt -= jump * 1000;
+    save();
+    onAudioTime();
   }
   function wave() { return '<div class="y-listen-wave"><i></i><i></i><i></i><i></i><i></i></div>'; }
   function introText(p) {
@@ -430,7 +457,7 @@
     $('y-nav').classList.add('hidden');
     $('y-part-label').textContent = 'Escucha · Revisión';
     $('y-q').classList.remove('y-locked');
-    $('y-q').innerHTML = '<div class="y-intro"><img src="/assets/dralingo.png" alt=""><h2>Revisa tus respuestas</h2>' +
+    $('y-q').innerHTML = '<div class="y-intro"><img src="/assets/dralingo.png" alt="" class="y-intro-logo"><h2>Revisa tus respuestas</h2>' +
       '<p>Tienes 2 minutos. Toca un número a la izquierda para ver la pregunta y cambiar tu respuesta. ' +
       'Cuando estés listo, toca <b>Pasar a Lectura</b>.</p></div>';
     reviewQ = null;
@@ -591,12 +618,12 @@
     $('y-res-pass').textContent = 'Se aprueba con ' + r.pass;
     const badge = $('y-res-badge');
     badge.className = 'y-res-badge ' + (r.passed ? 'ok' : 'no');
-    badge.textContent = r.passed ? '🏆 ¡Aprobado!' : '📚 ¡Sigue practicando, ya casi!';
+    badge.textContent = r.passed ? 'Aprobado' : 'No aprobado · sigue practicando';
     const fg = $('y-gauge-fg');
     const len = fg.getTotalLength();
     fg.style.strokeDasharray = len;
     fg.style.strokeDashoffset = len;
-    fg.style.stroke = r.passed ? 'var(--jade)' : 'var(--gold)';
+    fg.style.stroke = r.passed ? 'var(--ok)' : 'var(--seal)';
     requestAnimationFrame(() => requestAnimationFrame(() => { fg.style.strokeDashoffset = len * (1 - r.score / r.total); }));
     let h = '';
     [['listening', '🎧 Escucha'], ['reading', '📖 Lectura']].forEach(([sec, name]) => {
