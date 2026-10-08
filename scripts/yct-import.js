@@ -4,6 +4,7 @@
 // =========================================================================
 // Usage:
 //   node scripts/yct-import.js <buildDir> <simNum> [--level yct1] [--offset 55.0]
+//        [--start SEC] [--intros p1,p2,p3,p4] [--end SEC]
 //
 // <buildDir> is a folder shaped like ClaudeCode/YCT1_Sim1_Build:
 //   simulation.json   every item, answer, image path, and for listening items
@@ -39,6 +40,9 @@ const offset = parseFloat(opt('offset', '55.0'));
 // silencedetect of listening.m4a. Before the Part 1 intro = welcome.
 const intros = String(opt('intros', '')).split(',').filter(Boolean).map(Number);
 const endAt = parseFloat(opt('end', '0')) || null;
+// Second where the "listening test starts now" line (听力考试现在开始) begins;
+// before it is the welcome, which kids may skip.
+const startAt = parseFloat(opt('start', '0')) || null;
 if (!buildDir || !simNum) {
   console.error('usage: node scripts/yct-import.js <buildDir> <simNum> [--level yct1] [--offset 55.0]');
   process.exit(1);
@@ -94,6 +98,7 @@ for (const sec of src.sections) {
   if (isL) {
     section.audio = webBase + '/listening.m4a';
     if (endAt) section.endAt = endAt;
+    if (startAt) section.startAt = startAt;
   }
   for (const p of sec.parts) {
     const pre = prefixFor(sec.id, p.part);

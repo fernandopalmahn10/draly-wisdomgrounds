@@ -628,11 +628,28 @@
     { id: 4, label: 'HSK4', subtitle: 'Coming soon' },
     { id: 5, label: 'HSK5', subtitle: 'Coming soon' },
     { id: 6, label: 'HSK6', subtitle: 'Coming soon' },
-    // YCT (kids' exam) — real exam flow: listening follows the original
-    // audio track, 2-min review, timed reading, score /200.
-    { id: 'yct1', label: 'YCT1', subtitle: 'Kids · listening + reading · 35 questions' },
-    { id: 'yct2', label: 'YCT2', subtitle: 'Coming soon' },
   ];
+  // 🆕 2026-10-08 (Fernando): "Official tests" is a folder of exam
+  // families → levels → simulations. YCT = real exam flow (listening on
+  // the original audio track, 2-min review, timed reading, score /200).
+  // New HSK uses the same mechanism once its sims exist (ids newhsk1-…).
+  const EXAM_FAMILIES = [
+    { id: 'oldhsk', label: 'Old HSK', subtitle: 'HSK 1–6 · classic format', levels: HSK_LEVELS },
+    { id: 'yct', label: 'YCT', subtitle: "Kids' test · YCT 1–4", levels: [
+      { id: 'yct1', label: 'YCT1', subtitle: 'Listening + reading · 35 questions' },
+      { id: 'yct2', label: 'YCT2', subtitle: 'Coming soon' },
+      { id: 'yct3', label: 'YCT3', subtitle: 'Coming soon' },
+      { id: 'yct4', label: 'YCT4', subtitle: 'Coming soon' },
+    ] },
+    { id: 'newhsk', label: 'New HSK', subtitle: 'HSK 3.0 · coming soon', levels: [1, 2, 3, 4, 5, 6].map((n) => (
+      { id: 'newhsk' + n, label: 'New HSK' + n, subtitle: 'Coming soon' }
+    )) },
+  ];
+  const _famById = (id) => EXAM_FAMILIES.find((f) => f.id === id);
+  function _levelInfo(levelId) {
+    for (const f of EXAM_FAMILIES) { const l = f.levels.find((x) => x.id === levelId); if (l) return l; }
+    return null;
+  }
   let _hskCachedSims = null;   // memoize the flat sim list (one fetch)
   let _hskNavStack   = ['root']; // path: ['root'] | ['root', levelId] | …
 
@@ -664,7 +681,7 @@
   }
   // Group flat sims by the level prefix in their ID (hsk1-sim1 → 1).
   function _hskParseLevel(simId) {
-    const y = String(simId || '').match(/^(yct\d+)-/i);
+    const y = String(simId || '').match(/^((?:yct|newhsk)\d+)-/i);
     if (y) return y[1].toLowerCase();
     const m = String(simId || '').match(/^hsk(\d+)-/i);
     return m ? Number(m[1]) : null;
@@ -718,9 +735,13 @@
           renderHskView();
         });
       }
+      const fam = _famById(step);
+      const lvl = _levelInfo(step);
       span.textContent =
-          step === 'root'    ? '🏆 HSK Simulation'
+          step === 'root'    ? '🏆 Official Tests'
         : step === 'results' ? '🏅 Results'
+        : fam ? fam.label
+        : lvl ? lvl.label
         : ('HSK' + step);
       crumb.appendChild(span);
       if (!isLast) {
@@ -732,7 +753,7 @@
     });
     // ─── RESULTS view — list every student's HSK exam outcomes ──
     if (_hskNavStack[0] === 'root' && _hskNavStack[1] === 'results') {
-      title.textContent = '🏅 HSK Results';
+      title.textContent = '🏅 Test Results';
       sub.textContent = 'Every exam your students have turned in. Most recent first.';
       view.textContent = 'Loading…';
       fetch('/api/hsk-sim/results?pw=' + encodeURIComponent(pw))
@@ -780,10 +801,38 @@
         .catch((e) => { view.textContent = 'Error: ' + e.message; });
       return;
     }
-    // ─── ROOT view — pick an HSK level (+ shortcut to results) ──
+    // ─── ROOT view — exam families (+ shortcut to results); the
+    // FAMILY view lists that family's levels.
+    const _folderGrid = (items, onOpen, icon) => {
+      const grid = document.createElement('div');
+      grid.className = 'm-reading-folder-grid';
+      items.forEach((it) => {
+        const card = document.createElement('div');
+        card.className = 'm-reading-card';
+        card.innerHTML =
+          '<div class="m-reading-card-body">' +
+            '<div class="m-reading-card-title">' + icon + ' ' + escapeHtml(it.label) + '</div>' +
+            '<div class="m-reading-card-sub">' + escapeHtml(it.subtitle) + '</div>' +
+          '</div>' +
+          '<div class="m-reading-card-actions">' +
+            '<button class="m-reading-launch" type="button">Open ›</button>' +
+          '</div>';
+        card.querySelector('.m-reading-launch').addEventListener('click', () => onOpen(it));
+        grid.appendChild(card);
+      });
+      return grid;
+    };
+    if (_hskNavStack.length === 2 && _famById(_hskNavStack[1])) {
+      const fam = _famById(_hskNavStack[1]);
+      title.textContent = '📁 ' + fam.label;
+      sub.textContent = 'Pick the level.';
+      view.innerHTML = '';
+      view.appendChild(_folderGrid(fam.levels, (lvl) => { _hskNavStack = ['root', fam.id, lvl.id]; renderHskView(); }, '🎓'));
+      return;
+    }
     if (_hskNavStack.length === 1) {
-      title.textContent = '🏆 HSK Simulation';
-      sub.textContent = 'Pick the HSK level, or see your students\' results.';
+      title.textContent = '🏆 Official Tests';
+      sub.textContent = 'Pick the exam, or see your students\' results.';
       view.innerHTML = '';
       // Quick-access "ver resultados" tile at the top
       const top = document.createElement('div');
@@ -798,31 +847,12 @@
         renderHskView();
       });
 
-      const grid = document.createElement('div');
-      grid.className = 'm-reading-folder-grid';
-      HSK_LEVELS.forEach((lvl) => {
-        const card = document.createElement('div');
-        card.className = 'm-reading-card';
-        card.innerHTML =
-          '<div class="m-reading-card-body">' +
-            '<div class="m-reading-card-title">🎓 ' + escapeHtml(lvl.label) + '</div>' +
-            '<div class="m-reading-card-sub">' + escapeHtml(lvl.subtitle) + '</div>' +
-          '</div>' +
-          '<div class="m-reading-card-actions">' +
-            '<button class="m-reading-launch" type="button">Open ›</button>' +
-          '</div>';
-        card.querySelector('.m-reading-launch').addEventListener('click', () => {
-          _hskNavStack = ['root', lvl.id];
-          renderHskView();
-        });
-        grid.appendChild(card);
-      });
-      view.appendChild(grid);
+      view.appendChild(_folderGrid(EXAM_FAMILIES, (fam) => { _hskNavStack = ['root', fam.id]; renderHskView(); }, '📁'));
       return;
     }
-    // ─── LEVEL view — list every Simulación N for that HSK level ─
-    const levelId = _hskNavStack[1];
-    const lvlInfo = HSK_LEVELS.find((l) => l.id === levelId);
+    // ─── LEVEL view — list every Simulación N for that level ─
+    const levelId = _hskNavStack[_hskNavStack.length - 1];
+    const lvlInfo = _levelInfo(levelId);
     const lvlName = lvlInfo ? lvlInfo.label : 'HSK' + levelId;
     title.textContent = '🎓 ' + lvlName;
     sub.textContent = 'Pick a simulation.';
