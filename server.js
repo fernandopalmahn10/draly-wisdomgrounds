@@ -9,6 +9,12 @@ const Students = require('./core/student-records');
 const TeacherPresets = require('./core/teacher-presets');
 const ReadingStory = require('./core/reading-story');
 const HskSim = require('./core/hsk-sim');
+// YCT mock exams (core/yct/*.json) share the HSK room/PIN/submit plumbing;
+// these helpers route a simId to the right engine by its prefix.
+const YctSim = require('./core/yct-sim');
+const _simPayload = (id) => (YctSim.isYct(id) ? YctSim.buildSimPayload(id) : HskSim.buildSimPayload(id));
+const _simGrade = (id, a) => (YctSim.isYct(id) ? YctSim.gradeSim(id, a) : HskSim.gradeSim(id, a));
+const _simMeta = (id) => (HskSim.SIMULATIONS || {})[id] || YctSim.get(id) || null;
 const SimTrainer = require('./core/sim-trainer');
 const SimImages = require('./core/sim-images');
 const SentenceCategories = require('./core/sentence-categories');
@@ -1942,7 +1948,7 @@ app.get('/api/homework/insights/:code', (req, res) => {
     .slice()
     .sort((a, b) => (b.ts || 0) - (a.ts || 0))
     .map((r) => {
-      const sim = (HskSim.SIMULATIONS || {})[r.simId];
+      const sim = _simMeta(r.simId);
       return {
         simId:   r.simId,
         title:   (sim && sim.title) || r.simId,
@@ -2420,7 +2426,7 @@ app.get('/api/reading/stories', (req, res) => {
 // 🏆 HSK SIMULATION ENDPOINTS ===========================================
 // List available simulations (just metadata).
 app.get('/api/hsk-sim/list', (req, res) => {
-  res.json({ ok: true, sims: HskSim.listSims() });
+  res.json({ ok: true, sims: HskSim.listSims().concat(YctSim.listSims()) });
 });
 // 🖼 Sim-image catalog for the "Describe la imagen" teaching mode in
 // Modo Maestro. Scans the HSK simulation folders and returns every
@@ -2511,7 +2517,7 @@ const HSK_RESERVED_PATHS = new Set(['results', 'sessions', 'heartbeat', 'list', 
 app.get('/api/hsk-sim/:simId', (req, res, next) => {
   if (HSK_RESERVED_PATHS.has(req.params.simId)) return next();
   if (!_hskAuth(req, res)) return;
-  const payload = HskSim.buildSimPayload(req.params.simId);
+  const payload = _simPayload(req.params.simId);
   if (!payload) return res.status(404).json({ ok: false, error: 'unknown sim' });
   res.json({ ok: true, sim: payload });
 });
@@ -2540,7 +2546,7 @@ app.post('/api/hsk-sim/:simId/submit', (req, res) => {
   if (resolvedName && rec.displayName === rec.code && resolvedName !== rec.code) {
     rec.displayName = String(resolvedName).slice(0, 24);
   }
-  const result = HskSim.gradeSim(req.params.simId, answers || {});
+  const result = _simGrade(req.params.simId, answers || {});
   if (!result) return res.status(404).json({ ok: false, error: 'unknown sim' });
   // Persist into student.hskResults so the Cuaderno can show it later.
   // 🆕 2026-06-04 (Fernando): we now ALSO save the per-question
@@ -2702,7 +2708,7 @@ app.get('/api/homework/my-hsk-attempts/:code', (req, res) => {
     .slice()
     .sort((a, b) => (b.ts || 0) - (a.ts || 0))
     .map((r) => {
-      const sim = (HskSim.SIMULATIONS || {})[r.simId];
+      const sim = _simMeta(r.simId);
       return {
         simId: r.simId,
         title: (sim && sim.title) || r.simId,
@@ -2899,7 +2905,7 @@ app.post('/api/hsk-sim/room/create', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
   const simId = (req.body && req.body.simId) || (req.query && req.query.simId);
-  if (!simId || !HskSim.buildSimPayload(simId)) {
+  if (!simId || !_simPayload(simId)) {
     return res.status(400).json({ ok: false, error: 'unknown simId' });
   }
   // ⭐ Reliability fix: PIN now lives in the same `games` table as
@@ -5582,7 +5588,7 @@ io.on('connection', (socket) => {
     // their own pace.
     if (type === 'hsksim') {
       const simId = String(opts.simId || 'hsk1-sim1');
-      const payload = HskSim.buildSimPayload(simId);
+      const payload = _simPayload(simId);
       if (!payload) {
         // Reject room creation with bad simId — host page will show err
         return cb({ error: 'unknown simId' });

@@ -628,6 +628,10 @@
     { id: 4, label: 'HSK4', subtitle: 'Coming soon' },
     { id: 5, label: 'HSK5', subtitle: 'Coming soon' },
     { id: 6, label: 'HSK6', subtitle: 'Coming soon' },
+    // YCT (kids' exam) — real exam flow: listening follows the original
+    // audio track, 2-min review, timed reading, score /200.
+    { id: 'yct1', label: 'YCT1', subtitle: 'Kids · listening + reading · 35 questions' },
+    { id: 'yct2', label: 'YCT2', subtitle: 'Coming soon' },
   ];
   let _hskCachedSims = null;   // memoize the flat sim list (one fetch)
   let _hskNavStack   = ['root']; // path: ['root'] | ['root', levelId] | …
@@ -660,6 +664,8 @@
   }
   // Group flat sims by the level prefix in their ID (hsk1-sim1 → 1).
   function _hskParseLevel(simId) {
+    const y = String(simId || '').match(/^(yct\d+)-/i);
+    if (y) return y[1].toLowerCase();
     const m = String(simId || '').match(/^hsk(\d+)-/i);
     return m ? Number(m[1]) : null;
   }
@@ -816,14 +822,16 @@
     }
     // ─── LEVEL view — list every Simulación N for that HSK level ─
     const levelId = _hskNavStack[1];
-    title.textContent = '🎓 HSK' + levelId;
+    const lvlInfo = HSK_LEVELS.find((l) => l.id === levelId);
+    const lvlName = lvlInfo ? lvlInfo.label : 'HSK' + levelId;
+    title.textContent = '🎓 ' + lvlName;
     sub.textContent = 'Pick a simulation.';
     view.textContent = 'Loading…';
     ensureHskSims().then((all) => {
       const sims = all.filter((s) => _hskParseLevel(s.id) === levelId);
       view.innerHTML = '';
       if (!sims.length) {
-        view.innerHTML = '<p class="m-modal-sub" style="text-align:center;">No simulations for HSK' + levelId + ' yet. Coming soon.</p>';
+        view.innerHTML = '<p class="m-modal-sub" style="text-align:center;">No simulations for ' + lvlName + ' yet. Coming soon.</p>';
         return;
       }
       const grid = document.createElement('div');
