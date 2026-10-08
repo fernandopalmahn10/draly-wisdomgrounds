@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>YCT · Simulación</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Noto+Sans+SC:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/yct-sim.css?v=20261008a">
+</head>
+<body class="yct-body">
+
+  <!-- Gate: PIN + student code (pre-filled from ?pin=&code=) -->
+  <div id="y-gate" class="y-center">
+    <div class="y-gate-card">
+      <img src="/assets/dralingo.png" alt="" class="y-gate-mascot">
+      <h1>YCT · Simulación</h1>
+      <p class="y-muted">Escribe el PIN que te dio tu maestra.</p>
+      <input class="y-input" id="y-pin" type="text" placeholder="PIN de la sala" autocomplete="off" inputmode="numeric">
+      <input class="y-input" id="y-code" type="text" placeholder="Tu código de estudiante" autocomplete="off">
+      <button class="y-btn y-btn-jade y-btn-xl" id="y-enter" type="button">Entrar a la sala →</button>
+      <p id="y-gate-err" class="y-err"></p>
+    </div>
+  </div>
+
+  <!-- Waiting room -->
+  <div id="y-waiting" class="y-center hidden">
+    <div class="y-gate-card">
+      <img src="/assets/dralingo.png" alt="" class="y-gate-mascot y-bob">
+      <h1>¡Estás en la sala!</h1>
+      <p class="y-muted">Esperando a tu maestra para empezar el examen…</p>
+      <p id="y-waiting-pin" class="y-pin-chip"></p>
+      <button class="y-btn y-btn-ghost y-btn-xl" id="y-waiting-home" type="button">🏠 Volver a mi perfil</button>
+    </div>
+  </div>
+
+  <!-- Exam shell (cover, listening, review, reading) -->
+  <div id="y-exam" class="hidden">
+    <header class="y-header">
+      <div class="y-brand"><img src="/assets/dralingo.png" alt=""><span>Dralingo</span></div>
+      <div class="y-header-title" id="y-title">YCT</div>
+      <div class="y-header-right">
+        <span class="y-clock hidden" id="y-clock"><span class="y-clock-ico">⏱</span><span id="y-clock-txt">--:--</span></span>
+        <button class="y-mute" id="y-mute" type="button" title="Silenciar">🔊</button>
+      </div>
+    </header>
+
+    <!-- Cover: exam structure, like the official cover page -->
+    <section id="y-cover" class="y-page hidden">
+      <div class="y-cover-card">
+        <div class="y-cover-band">
+          <div class="y-cover-book"><span>YCT</span><small>中小学生汉语考试</small></div>
+          <div>
+            <div class="y-cover-title" id="y-cover-title">YCT1 · Simulación</div>
+            <div class="y-cover-sub">Examen de práctica de Chino Mandarín</div>
+          </div>
+        </div>
+        <table class="y-structure" id="y-structure"></table>
+        <ul class="y-rules">
+          <li>El examen tiene 2 secciones y se hacen en orden: primero <b>Escucha</b>, después <b>Lectura</b>.</li>
+          <li>En Escucha el audio suena solo y cada pregunta se oye <b>dos veces</b>. No se puede pausar ni repetir.</li>
+          <li>Al terminar el audio tienes <b>2 minutos</b> para revisar tus respuestas de Escucha.</li>
+          <li>En Lectura vas a tu ritmo y puedes moverte entre preguntas. Cuando pases a Lectura ya no puedes volver a Escucha.</li>
+          <li>Cada parte empieza con un <b>ejemplo</b> que ya viene contestado.</li>
+        </ul>
+        <div class="y-cover-go">
+          <p class="y-muted">🎧 Ponte los audífonos y sube el volumen.</p>
+          <button class="y-btn y-btn-gold y-btn-xl" id="y-start" type="button">▶ Empezar el examen</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Runner: sidebar grid + question card -->
+    <section id="y-runner" class="y-page y-runner hidden">
+      <aside class="y-side" id="y-side"></aside>
+      <main class="y-main">
+        <div class="y-card">
+          <div class="y-card-head">
+            <div>
+              <div class="y-card-title" id="y-paper">YCT1 · Simulación</div>
+              <div class="y-card-sub" id="y-part-label">Escucha · Parte 1</div>
+            </div>
+            <div class="y-counter" id="y-counter">0 / 35</div>
+          </div>
+          <div class="y-audio-bar hidden" id="y-audio-bar">
+            <span class="y-audio-ico" id="y-audio-ico">🔊</span>
+            <div class="y-audio-track"><div class="y-audio-fill" id="y-audio-fill"></div></div>
+            <span class="y-audio-left" id="y-audio-left"></span>
+          </div>
+          <div class="y-q" id="y-q"></div>
+        </div>
+        <div class="y-nav" id="y-nav">
+          <button class="y-btn y-btn-ghost" id="y-prev" type="button">← Anterior</button>
+          <button class="y-btn y-btn-jade" id="y-next" type="button">Siguiente →</button>
+        </div>
+      </main>
+    </section>
+
+    <!-- Resume after a reload in the middle of Listening (audio needs a tap) -->
+    <div id="y-resume" class="y-overlay hidden">
+      <div class="y-gate-card">
+        <h1>Tu examen sigue en curso</h1>
+        <p class="y-muted">Toca para continuar donde ibas. El audio sigue desde el minuto exacto.</p>
+        <button class="y-btn y-btn-gold y-btn-xl" id="y-resume-go" type="button">▶ Continuar</button>
+      </div>
+    </div>
+
+    <!-- Confirm dialog (move to Reading / submit) -->
+    <div id="y-confirm" class="y-overlay hidden">
+      <div class="y-gate-card">
+        <h1 id="y-confirm-title">¿Seguro?</h1>
+        <p class="y-muted" id="y-confirm-text"></p>
+        <div class="y-row">
+          <button class="y-btn y-btn-ghost y-btn-xl" id="y-confirm-no" type="button">Volver</button>
+          <button class="y-btn y-btn-gold y-btn-xl" id="y-confirm-yes" type="button">Sí</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="y-results" class="y-results hidden">
+    <div class="y-res-card">
+      <h1 class="y-res-title" id="y-res-title">Resultados</h1>
+      <div class="y-gauge">
+        <svg viewBox="0 0 200 120" aria-hidden="true">
+          <path d="M20 110 A80 80 0 0 1 180 110" class="y-gauge-bg"/>
+          <path d="M20 110 A80 80 0 0 1 180 110" class="y-gauge-fg" id="y-gauge-fg"/>
+        </svg>
+        <div class="y-gauge-num"><span id="y-res-score">0</span>/<span id="y-res-total">200</span></div>
+        <div class="y-gauge-pass" id="y-res-pass">Aprobado con 120</div>
+      </div>
+      <div class="y-res-badge" id="y-res-badge"></div>
+      <div class="y-res-saving" id="y-res-saving">Guardando tu nota…</div>
+      <div id="y-res-parts"></div>
+      <p class="y-muted y-res-hint">Toca un número para ver la pregunta, tu respuesta y la correcta.</p>
+      <div class="y-row">
+        <button class="y-btn y-btn-jade y-btn-xl" id="y-res-redo" type="button">🔁 Repetir</button>
+        <button class="y-btn y-btn-gold y-btn-xl" id="y-res-home" type="button">🏠 Inicio</button>
+      </div>
+    </div>
+    <div id="y-review" class="y-overlay hidden">
+      <div class="y-review-card">
+        <button class="y-review-x" id="y-review-x" type="button" aria-label="Cerrar">×</button>
+        <div id="y-review-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/yct-sim.js?v=20261008a"></script>
+</body>
+</html>

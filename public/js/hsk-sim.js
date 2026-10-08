@@ -127,11 +127,23 @@
       .then((d) => {
         if (d && d.ok) {
           simId = d.simId;
+          if (_toYct()) return;
         } else {
           $('hsk-gate-err').textContent = 'Este PIN no está activo. Pídele a tu maestra que abra una sala nueva.';
         }
       })
       .catch(() => {});
+  }
+
+  // YCT rooms run on their own exam page (yct-sim.html) — same PIN, same
+  // student code; the kid rejoins the room there under the same name.
+  function _toYct() {
+    if (!/^yct\d+-/i.test(simId || '')) return false;
+    try { if (_hskSocket) _hskSocket.disconnect(); } catch (_) {}
+    const code = ($('hsk-code').value || '').trim() || urlSc || '';
+    const pin = roomPin || ($('hsk-access').value || '').trim();
+    location.replace('/yct-sim.html?pin=' + encodeURIComponent(pin) + (code ? '&code=' + encodeURIComponent(code) : ''));
+    return true;
   }
 
   // Auto-submit when we have enough: (pin + code) OR (access + code).
@@ -222,6 +234,7 @@
       else applyFx(null);
       // Transition into the runner when the teacher hits Empezar
       if ((s.state === 'active' || s.state === 'countdown') && !_hskTestStarted) {
+        if (_toYct()) return;
         _hskTestStarted = true;
         $('hsk-waiting').classList.add('hidden');
         loadSim();
