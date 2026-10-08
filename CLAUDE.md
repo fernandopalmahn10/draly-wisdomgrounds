@@ -4,7 +4,8 @@ Node web app (`server.js`, `core/`, `public/`), deployed on Render from this rep
 Its own git repo. Teachers use `/maestro`; kids join rooms with a PIN; homework portal at `/homework`.
 Game modes live side by side (`public/host-*.html`, catalogue in `docs/GAME_MODES.md`); "Mochi Mash" is just the first
 game, the platform is Draly Wisdom Grounds with Dralingo as host. Agreed-but-unbuilt features: `TODO-QUEUED.md`.
-Security procedures: `SECURITY-SOP.md`. Engagement patterns that worked: memory `project_engagement_patterns` — use it as
+Security procedures: `SECURITY-SOP.md`. The full plain-language map of the platform and the work method (7-step loop,
+recording → official test pipeline, toolbox, pending work) is `docs/HOW_CLAUDE_WORKS.md`: keep it current when features ship. Engagement patterns that worked: memory `project_engagement_patterns` — use it as
 the checklist for any new game mode.
 
 ## Always
