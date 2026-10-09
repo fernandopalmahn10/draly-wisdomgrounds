@@ -278,3 +278,12 @@ html, body { margin: 0; }
   .y-nav .y-btn { min-width: 0; flex: 1; }
   .y-start-zh { font-size: 2rem; }
 }
+
+/* ── Look back while the audio plays · review list ─────────────────── */
+.y-peek {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  background: #fff8e8; border: 1px solid #ecd9a8; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;
+  color: var(--head); font-weight: 600;
+}
+.y-peek .y-btn { min-height: 40px; padding: 8px 16px; }
+.y-review-miss { font-weight: 700; color: var(--seal) !important; }

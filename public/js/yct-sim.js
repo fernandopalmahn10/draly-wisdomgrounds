@@ -51,6 +51,7 @@
   let readSteps = [];              // reading items incl. examples, in order
   let readCursor = 0;
   let reviewQ = null;              // listening item open during review
+  let peekQ = null;                // earlier listening item opened while the audio plays
   let clockTimer = null;
   let hbTimer = null;
   let finished = false;
@@ -210,7 +211,7 @@
     const lastItem = parts[parts.length - 1].items.slice(-1)[0];
     const end = listenEnd() || (lastItem.t[1] + 8);
     if (!sim.listening.endAt) sim.listening.endAt = end;
-    segs.push({ from: lastItem.t[1] + 9, kind: 'outro' });
+    segs.push({ from: sim.listening.endLineAt ? sim.listening.endLineAt - 0.3 : lastItem.t[1] + 9, kind: 'outro' });
     segs.sort((a, b) => a.from - b.from);
   }
 
@@ -263,7 +264,13 @@
     $('y-audio-ico').classList.toggle('on', !audio.paused);
     let i = 0;
     while (i + 1 < segs.length && segs[i + 1].from <= t) i++;
-    if (i !== segIdx) { segIdx = i; renderSeg(segs[i]); }
+    if (i !== segIdx) {
+      segIdx = i;
+      // A kid looking back at an earlier answer is brought to the new
+      // question as soon as the audio reaches it, so nothing is missed.
+      peekQ = null;
+      renderSeg(segs[i]);
+    }
     if (typeof tNow !== 'number' && t >= end + 0.5) startReview(false);
   }
 
@@ -289,8 +296,9 @@
         '<h2>Escucha · Parte ' + p.part + '</h2><p>' + esc(introText(p)) + '</p>' + wave() + skipBtn('Saltar instrucciones') + '</div>';
     } else if (seg.kind === 'outro') {
       $('y-part-label').textContent = 'Escucha';
-      box.innerHTML = '<div class="y-intro"><img src="/assets/dralingo.png" alt="" class="y-intro-logo">' +
-        '<h2>Terminó la prueba de escucha</h2><p>En un momento tendrás 2 minutos para revisar tus respuestas.</p></div>';
+      box.innerHTML = '<div class="y-intro y-intro-start"><div class="y-start-zh zh">听力考试现在结束</div>' +
+        '<div class="y-py">tingli kaoshi xianzai jieshu</div>' +
+        '<h2>Terminó la prueba de escucha</h2><p>Ahora tendrás 2 minutos para revisar tus respuestas.</p></div>';
     } else {
       renderItem(seg.part, seg.item, { live: true });
     }
@@ -337,8 +345,10 @@
     const secName = it.qid && it.qid[0] === 'R' || (!it.qid && it.id[0] === 'R') ? 'Lectura' : 'Escucha';
     $('y-part-label').textContent = partLabel(secName, part);
     $('y-counter').textContent = (it.example ? 0 : it.num) + ' / ' + totalQ();
-    box.innerHTML = itemHtml(part, it, opts);
+    box.innerHTML = (opts.banner || '') + itemHtml(part, it, opts);
     box.classList.toggle('y-locked', !!it.example || !!opts.readonly);
+    const back = $('y-back-live');
+    if (back) back.addEventListener('click', () => { tick(); backToLive(); });
     if (it.example || opts.readonly) return;
     box.querySelectorAll('[data-v]').forEach((b) => b.addEventListener('click', () => {
       tick();
@@ -404,22 +414,25 @@
   // ── Sidebar: question grid ─────────────────────────────────────────
   function renderSide() {
     const curNum = currentNum();
-    const navL = phase === 'review';
+    const navL = phase === 'review' || phase === 'listening';
     const navR = phase === 'reading';
+    const heard = (i) => phase !== 'listening' || !audio || (i.t && i.t[0] - 2 <= audio.currentTime);
     let h = '';
     [['listening', '🎧 Escucha', navL, phase === 'reading'], ['reading', '📖 Lectura', navR, phase !== 'reading']].forEach(([key, name, nav, locked]) => {
       h += '<div class="y-side-sec' + (locked ? ' locked' : '') + '"><div class="y-side-sec-name">' + name + '</div>';
       sim[key].parts.forEach((p) => {
         h += '<div class="y-side-part">Parte ' + p.part + '</div><div class="y-grid">';
         p.items.filter((i) => !i.example).forEach((i) => {
-          const c = (answers[i.qid] != null ? ' done' : '') + (i.num === curNum && !locked ? ' cur' : '') + (nav ? ' nav' : '');
-          h += '<button class="y-num' + c + '" data-q="' + i.qid + '" type="button"' + (nav ? '' : ' tabindex="-1"') + '>' + i.num + '</button>';
+          const can = nav && heard(i);
+          const c = (answers[i.qid] != null ? ' done' : '') + (i.num === curNum && !locked ? ' cur' : '') + (can ? ' nav' : '');
+          h += '<button class="y-num' + c + '" data-q="' + i.qid + '" type="button"' + (can ? '' : ' tabindex="-1"') + '>' + i.num + '</button>';
         });
         h += '</div>';
       });
       h += '</div>';
     });
-    if (phase === 'review') h += '<button class="y-btn y-btn-gold y-side-btn" id="y-to-reading" type="button">Pasar a Lectura →</button>';
+    if (phase === 'listening') h += '<button class="y-btn y-btn-ghost y-side-btn" id="y-end-listen" type="button">Terminar escucha</button>';
+    if (phase === 'review') h += '<button class="y-btn y-btn-gold y-side-btn" id="y-to-reading" type="button">Terminar revisión →</button>';
     if (phase === 'reading') h += '<button class="y-btn y-btn-gold y-side-btn" id="y-submit" type="button">Entregar examen ✓</button>';
     const side = $('y-side');
     side.innerHTML = h;
@@ -427,18 +440,54 @@
       tick();
       const qid = b.getAttribute('data-q');
       if (phase === 'review') openReviewQ(qid);
+      else if (phase === 'listening') openPeek(qid);
       else if (phase === 'reading') { readCursor = readSteps.findIndex((s) => s.item.qid === qid); renderReading(); }
     }));
     const toR = $('y-to-reading');
-    if (toR) toR.addEventListener('click', () => confirmBox('¿Pasar a Lectura?', 'Ya no podrás volver a Escucha.', () => startReading(false)));
+    if (toR) toR.addEventListener('click', () => confirmBox('¿Terminar la revisión?',
+      missingText(sim.listening) + 'Pasarás a Lectura y ya no podrás volver a Escucha.', () => startReading(false)));
+    const endL = $('y-end-listen');
+    if (endL) endL.addEventListener('click', () => confirmBox('¿Terminar la escucha?',
+      'El audio se detendrá y empezarán tus 2 minutos de revisión. Ya no podrás oír el resto del audio.', () => startReview(false)));
     const sub = $('y-submit');
     if (sub) sub.addEventListener('click', askSubmit);
   }
   function currentNum() {
-    if (phase === 'listening') { const s = segs[segIdx]; return s && s.item && !s.item.example ? s.item.num : null; }
+    if (phase === 'listening') {
+      if (peekQ) return peekQ.item.num;
+      const s = segs[segIdx]; return s && s.item && !s.item.example ? s.item.num : null;
+    }
     if (phase === 'review') return reviewQ ? reviewQ.item.num : null;
     if (phase === 'reading') { const s = readSteps[readCursor]; return s && !s.item.example ? s.item.num : null; }
     return null;
+  }
+
+  // ── LOOK BACK while the audio plays ────────────────────────────────
+  // Like the official platform: a number already heard can be opened and its
+  // answer changed while the audio keeps going. A banner shows where the
+  // audio is; the kid returns with one tap, or automatically when the audio
+  // reaches the next question.
+  function openPeek(qid) {
+    const f = findListening(qid);
+    if (!f) return;
+    const live = segs[segIdx];
+    if (live && live.item === f.item) { backToLive(); return; }
+    peekQ = f;
+    const liveNum = live && live.item && !live.item.example ? live.item.num : null;
+    const banner = '<div class="y-peek"><span>Estás revisando la pregunta <b>' + f.item.num + '</b>' +
+      (liveNum ? ' · el audio va en la <b>' + liveNum + '</b>' : ' · el audio sigue') + '</span>' +
+      '<button class="y-btn y-btn-jade" id="y-back-live" type="button">↩ Volver al audio</button></div>';
+    renderItem(f.part, f.item, { banner });
+    renderSide();
+  }
+  function backToLive() {
+    peekQ = null;
+    if (segs[segIdx]) renderSeg(segs[segIdx]);
+  }
+  function missingText(section) {
+    const miss = [];
+    section.parts.forEach((p) => p.items.forEach((i) => { if (!i.example && answers[i.qid] == null) miss.push(i.num); }));
+    return miss.length ? 'Sin contestar: ' + miss.join(', ') + '. ' : 'Contestaste todas. ';
   }
 
   // ── REVIEW (2 min after the audio) ─────────────────────────────────
@@ -453,23 +502,52 @@
     if (!resumed) reviewStartedAt = Date.now();
     save();
     show('runner');
+    peekQ = null;
     $('y-audio-bar').classList.add('hidden');
-    $('y-nav').classList.add('hidden');
-    $('y-part-label').textContent = 'Escucha · Revisión';
-    $('y-q').classList.remove('y-locked');
-    $('y-q').innerHTML = '<div class="y-intro"><img src="/assets/dralingo.png" alt="" class="y-intro-logo"><h2>Revisa tus respuestas</h2>' +
-      '<p>Tienes 2 minutos. Toca un número a la izquierda para ver la pregunta y cambiar tu respuesta. ' +
-      'Cuando estés listo, toca <b>Pasar a Lectura</b>.</p></div>';
+    $('y-nav').classList.remove('hidden');
     reviewQ = null;
+    renderReviewIntro();
     renderSide();
     runClock(() => sim.listening.review - (Date.now() - reviewStartedAt) / 1000, () => startReading(false));
     sendHeartbeat();
+  }
+  function reviewList() {
+    const out = [];
+    sim.listening.parts.forEach((p) => p.items.forEach((i) => { if (!i.example) out.push(i.qid); }));
+    return out;
+  }
+  function renderReviewIntro() {
+    $('y-part-label').textContent = 'Escucha · Revisión';
+    $('y-counter').textContent = '';
+    $('y-q').classList.remove('y-locked');
+    $('y-q').innerHTML = '<div class="y-intro"><img src="/assets/dralingo.png" alt="" class="y-intro-logo"><h2>Revisa tus respuestas</h2>' +
+      '<p>Tienes 2 minutos. Toca <b>Siguiente</b> para ir pregunta por pregunta, o un número a la izquierda. ' +
+      'Puedes cambiar cualquier respuesta. Cuando estés listo, toca <b>Terminar revisión</b>.</p>' +
+      '<p class="y-review-miss">' + esc(missingText(sim.listening)) + '</p></div>';
+    $('y-prev').disabled = true;
+    $('y-next').textContent = 'Siguiente →';
+    renderSide();
   }
   function openReviewQ(qid) {
     reviewQ = findListening(qid);
     if (!reviewQ) return;
     renderItem(reviewQ.part, reviewQ.item, {});
+    const list = reviewList();
+    const k = list.indexOf(qid);
+    $('y-prev').disabled = false;
+    $('y-next').textContent = k === list.length - 1 ? 'Terminar revisión →' : 'Siguiente →';
     renderSide();
+  }
+  function reviewStep(d) {
+    const list = reviewList();
+    const k = reviewQ ? list.indexOf(reviewQ.item.qid) : -1;
+    const n = k + d;
+    if (n < 0) { reviewQ = null; renderReviewIntro(); return; }
+    if (n >= list.length) {
+      confirmBox('¿Terminar la revisión?', missingText(sim.listening) + 'Pasarás a Lectura y ya no podrás volver a Escucha.', () => startReading(false));
+      return;
+    }
+    openReviewQ(list[n]);
   }
 
   // ── READING (self-paced, 17 min) ───────────────────────────────────
@@ -499,16 +577,25 @@
     save();
     sendHeartbeat();
   }
-  $('y-prev').addEventListener('click', () => { if (phase !== 'reading') return; tick(); readCursor--; renderReading(); });
+  $('y-prev').addEventListener('click', () => {
+    if (phase === 'review') { tick(); reviewStep(-1); return; }
+    if (phase !== 'reading') return; tick(); readCursor--; renderReading();
+  });
   $('y-next').addEventListener('click', () => {
+    if (phase === 'review') { tick(); reviewStep(1); return; }
     if (phase !== 'reading') return;
     tick();
     if (readCursor >= readSteps.length - 1) { askSubmit(); return; }
     readCursor++; renderReading();
   });
   function askSubmit() {
-    const missing = totalQ() - Object.keys(answers).length;
-    confirmBox('¿Entregar el examen?', missing > 0 ? 'Te faltan ' + missing + ' preguntas sin contestar.' : 'Contestaste todas las preguntas. ¡Bien hecho!', () => finish(false));
+    const miss = [];
+    [sim.listening, sim.reading].forEach((sec) => sec.parts.forEach((p) => p.items.forEach((i) => {
+      if (!i.example && answers[i.qid] == null) miss.push(i.num);
+    })));
+    confirmBox('¿Entregar el examen?', miss.length
+      ? 'Te faltan ' + miss.length + ' sin contestar: ' + miss.join(', ') + '. Puedes tocar esos números para contestarlos antes de entregar.'
+      : 'Contestaste todas las preguntas. ¡Bien hecho!', () => finish(false));
   }
 
   // ── Clock, confirm, mute ────────────────────────────────────────────
