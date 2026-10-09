@@ -1,6 +1,6 @@
 {
- "id": "yct1-sim2",
- "title": "YCT1 · Simulación 2",
+ "id": "yct1-sim5",
+ "title": "YCT1 · Simulación 5",
  "level": "yct1",
  "scoring": {
   "total": 200,
@@ -21,14 +21,14 @@
       "num": 0,
       "example": true,
       "answer": "T",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L1_EX_img.jpg",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L1_EX_img.jpg",
       "transcript": {
        "hanzi": "口",
        "pinyin": "kou"
       },
       "t": [
-       44.2,
-       50.3
+       43.4,
+       50
       ]
      },
      {
@@ -37,14 +37,14 @@
       "num": 0,
       "example": true,
       "answer": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L1_EX2_img.jpg",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L1_EX2_img.jpg",
       "transcript": {
        "hanzi": "耳朵",
        "pinyin": "erduo"
       },
       "t": [
-       50.3,
-       60.2
+       50,
+       59.7
       ]
      },
      {
@@ -53,14 +53,14 @@
       "num": 1,
       "example": false,
       "answer": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L1_Q01_img.jpg",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L1_Q01_img.jpg",
       "transcript": {
-       "hanzi": "妈妈",
-       "pinyin": "mama"
+       "hanzi": "人",
+       "pinyin": "ren"
       },
       "t": [
-       72.1,
-       78.1
+       69.5,
+       77.3
       ]
      },
      {
@@ -68,15 +68,15 @@
       "qid": "L1-2",
       "num": 2,
       "example": false,
-      "answer": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L1_Q02_img.jpg",
+      "answer": "T",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L1_Q02_img.jpg",
       "transcript": {
-       "hanzi": "长",
-       "pinyin": "chang"
+       "hanzi": "高兴",
+       "pinyin": "gaoxing"
       },
       "t": [
-       84.2,
-       89.7
+       82.3,
+       89
       ]
      },
      {
@@ -85,14 +85,14 @@
       "num": 3,
       "example": false,
       "answer": "T",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L1_Q03_img.jpg",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L1_Q03_img.jpg",
       "transcript": {
-       "hanzi": "不",
-       "pinyin": "bu"
+       "hanzi": "八",
+       "pinyin": "ba"
       },
       "t": [
-       95.9,
-       101.1
+       94.5,
+       100.7
       ]
      },
      {
@@ -101,14 +101,14 @@
       "num": 4,
       "example": false,
       "answer": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L1_Q04_img.jpg",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L1_Q04_img.jpg",
       "transcript": {
-       "hanzi": "头发",
-       "pinyin": "toufa"
+       "hanzi": "看",
+       "pinyin": "kan"
       },
       "t": [
-       107.3,
-       113.4
+       105.8,
+       112.1
       ]
      },
      {
@@ -116,19 +116,19 @@
       "qid": "L1-5",
       "num": 5,
       "example": false,
-      "answer": "T",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L1_Q05_img.jpg",
+      "answer": "F",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L1_Q05_img.jpg",
       "transcript": {
-       "hanzi": "看",
-       "pinyin": "kan"
+       "hanzi": "苹果",
+       "pinyin": "pingguo"
       },
       "t": [
-       119.6,
-       124.8
+       117.2,
+       124.1
       ]
      }
     ],
-    "introAt": 36
+    "introAt": 34.7
    },
    {
     "part": 2,
@@ -144,15 +144,15 @@
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_EX_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_EX_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_EX_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_EX_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_EX_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_EX_C.jpg"
        }
       ],
       "transcript": {
@@ -160,8 +160,8 @@
        "pinyin": "Zhongguoren"
       },
       "t": [
-       138.2,
-       146.8
+       138.4,
+       147.1
       ]
      },
      {
@@ -173,24 +173,24 @@
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q06_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q06_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q06_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q06_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q06_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q06_C.jpg"
        }
       ],
       "transcript": {
-       "hanzi": "谢谢你",
-       "pinyin": "xiexie ni"
+       "hanzi": "三月",
+       "pinyin": "san yue"
       },
       "t": [
-       159.3,
-       169.3
+       159.6,
+       167.7
       ]
      },
      {
@@ -202,24 +202,24 @@
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q07_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q07_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q07_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q07_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q07_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q07_C.jpg"
        }
       ],
       "transcript": {
-       "hanzi": "十五岁",
-       "pinyin": "shiwu sui"
+       "hanzi": "吃一口",
+       "pinyin": "chi yi kou"
       },
       "t": [
-       180,
-       187.1
+       177.3,
+       184.8
       ]
      },
      {
@@ -231,24 +231,24 @@
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q08_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q08_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q08_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q08_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q08_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q08_C.jpg"
        }
       ],
       "transcript": {
-       "hanzi": "眼睛和鼻子",
-       "pinyin": "yanjing he bizi"
+       "hanzi": "在学校",
+       "pinyin": "zai xuexiao"
       },
       "t": [
-       197.5,
-       207.2
+       194.8,
+       202.3
       ]
      },
      {
@@ -256,28 +256,28 @@
       "qid": "L2-9",
       "num": 9,
       "example": false,
-      "answer": "B",
+      "answer": "A",
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q09_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q09_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q09_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q09_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q09_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q09_C.jpg"
        }
       ],
       "transcript": {
-       "hanzi": "一个苹果",
-       "pinyin": "yi ge pingguo"
+       "hanzi": "我和哥哥",
+       "pinyin": "wo he gege"
       },
       "t": [
-       217.9,
-       226.6
+       212.5,
+       220.5
       ]
      },
      {
@@ -285,32 +285,32 @@
       "qid": "L2-10",
       "num": 10,
       "example": false,
-      "answer": "A",
+      "answer": "B",
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q10_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q10_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q10_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q10_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L2_Q10_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L2_Q10_C.jpg"
        }
       ],
       "transcript": {
-       "hanzi": "我的老师",
-       "pinyin": "wo de laoshi"
+       "hanzi": "高个子",
+       "pinyin": "gao gezi"
       },
       "t": [
-       237.4,
-       245.8
+       231.3,
+       238.4
       ]
      }
     ],
-    "introAt": 131.1
+    "introAt": 125
    },
    {
     "part": 3,
@@ -323,14 +323,14 @@
       "num": 0,
       "example": true,
       "answer": "T",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L3_EX1_img.jpg",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L3_EX1_img.jpg",
       "transcript": {
        "hanzi": "我的眼睛大。",
        "pinyin": "Wo de yanjing da."
       },
       "t": [
-       263.2,
-       274.8
+       256.9,
+       265.4
       ]
      },
      {
@@ -339,14 +339,14 @@
       "num": 0,
       "example": true,
       "answer": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L3_EX2_img.jpg",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L3_EX2_img.jpg",
       "transcript": {
        "hanzi": "现在四点。",
        "pinyin": "Xianzai si dian."
       },
       "t": [
-       274.8,
-       292.2
+       275,
+       283.2
       ]
      },
      {
@@ -354,15 +354,15 @@
       "qid": "L3-11",
       "num": 11,
       "example": false,
-      "answer": "T",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L3_Q11_img.jpg",
+      "answer": "F",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L3_Q11_img.jpg",
       "transcript": {
-       "hanzi": "这是什么鸟？",
-       "pinyin": "Zhe shi shenme niao?"
+       "hanzi": "这儿有面包。",
+       "pinyin": "Zher you mianbao."
       },
       "t": [
-       305.3,
-       317.9
+       299,
+       309
       ]
      },
      {
@@ -371,14 +371,14 @@
       "num": 12,
       "example": false,
       "answer": "T",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L3_Q12_img.jpg",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L3_Q12_img.jpg",
       "transcript": {
-       "hanzi": "我爱吃面条。",
-       "pinyin": "Wo ai chi miantiao."
+       "hanzi": "这是小狗的耳朵。",
+       "pinyin": "Zhe shi xiao gou de erduo."
       },
       "t": [
-       328,
-       338.1
+       320.3,
+       330
       ]
      },
      {
@@ -386,15 +386,15 @@
       "qid": "L3-13",
       "num": 13,
       "example": false,
-      "answer": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L3_Q13_img.jpg",
+      "answer": "T",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L3_Q13_img.jpg",
       "transcript": {
-       "hanzi": "这儿人很多。",
-       "pinyin": "Zher ren hen duo."
+       "hanzi": "妈妈的头发很长。",
+       "pinyin": "Mama de toufa hen chang."
       },
       "t": [
-       348.3,
-       358.7
+       342.1,
+       351.7
       ]
      },
      {
@@ -402,15 +402,15 @@
       "qid": "L3-14",
       "num": 14,
       "example": false,
-      "answer": "T",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L3_Q14_img.jpg",
+      "answer": "F",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L3_Q14_img.jpg",
       "transcript": {
-       "hanzi": "你看，我个子高吗？",
-       "pinyin": "Ni kan, wo gezi gao ma?"
+       "hanzi": "我爱喝这个。",
+       "pinyin": "Wo ai he zhege."
       },
       "t": [
-       368.9,
-       381.8
+       363.8,
+       372.6
       ]
      },
      {
@@ -418,19 +418,19 @@
       "qid": "L3-15",
       "num": 15,
       "example": false,
-      "answer": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L3_Q15_img.jpg",
+      "answer": "T",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L3_Q15_img.jpg",
       "transcript": {
-       "hanzi": "今天星期六，他在家。",
-       "pinyin": "Jintian xingqiliu, ta zai jia."
+       "hanzi": "我家有六口人。",
+       "pinyin": "Wo jia you liu kou ren."
       },
       "t": [
-       392,
-       406.4
+       384.1,
+       393.5
       ]
      }
     ],
-    "introAt": 256
+    "introAt": 239.6
    },
    {
     "part": 4,
@@ -446,15 +446,15 @@
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_EX_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_EX_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_EX_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_EX_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_EX_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_EX_C.jpg"
        }
       ],
       "transcript": {
@@ -474,8 +474,8 @@
        ]
       },
       "t": [
-       424,
-       446.8
+       414.1,
+       436.9
       ]
      },
      {
@@ -487,36 +487,36 @@
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q16_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q16_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q16_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q16_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q16_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q16_C.jpg"
        }
       ],
       "transcript": {
-       "hanzi": "这儿有水和牛奶，你喝什么？我喝水。",
-       "pinyin": "Zher you shui he niunai, ni he shenme? Wo he shui.",
+       "hanzi": "你吃苹果吗？好的，谢谢你。",
+       "pinyin": "Ni chi pingguo ma? Hao de, xiexie ni.",
        "lines": [
         {
          "speaker": "A",
-         "hanzi": "这儿有水和牛奶，你喝什么？",
-         "pinyin": "Zher you shui he niunai, ni he shenme?"
+         "hanzi": "你吃苹果吗？",
+         "pinyin": "Ni chi pingguo ma?"
         },
         {
          "speaker": "B",
-         "hanzi": "我喝水。",
-         "pinyin": "Wo he shui."
+         "hanzi": "好的，谢谢你。",
+         "pinyin": "Hao de, xiexie ni."
         }
        ]
       },
       "t": [
-       461.7,
-       486.6
+       453.5,
+       470.5
       ]
      },
      {
@@ -524,40 +524,40 @@
       "qid": "L4-17",
       "num": 17,
       "example": false,
-      "answer": "B",
+      "answer": "A",
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q17_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q17_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q17_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q17_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q17_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q17_C.jpg"
        }
       ],
       "transcript": {
-       "hanzi": "再见！再见，我们八月见。",
-       "pinyin": "Zaijian! Zaijian, women ba yue jian.",
+       "hanzi": "这是你的猫？是的。",
+       "pinyin": "Zhe shi ni de mao? Shi de.",
        "lines": [
         {
          "speaker": "A",
-         "hanzi": "再见！",
-         "pinyin": "Zaijian!"
+         "hanzi": "这是你的猫？",
+         "pinyin": "Zhe shi ni de mao?"
         },
         {
          "speaker": "B",
-         "hanzi": "再见，我们八月见。",
-         "pinyin": "Zaijian, women ba yue jian."
+         "hanzi": "是的。",
+         "pinyin": "Shi de."
         }
        ]
       },
       "t": [
-       498.8,
-       516.5
+       482.8,
+       493.8
       ]
      },
      {
@@ -565,40 +565,40 @@
       "qid": "L4-18",
       "num": 18,
       "example": false,
-      "answer": "A",
+      "answer": "C",
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q18_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q18_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q18_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q18_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q18_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q18_C.jpg"
        }
       ],
       "transcript": {
-       "hanzi": "去叫哥哥吃饭。好的，爸爸。",
-       "pinyin": "Qu jiao gege chi fan. Hao de, baba.",
+       "hanzi": "你喜欢哪个？我喜欢这个。",
+       "pinyin": "Ni xihuan nage? Wo xihuan zhege.",
        "lines": [
         {
          "speaker": "A",
-         "hanzi": "去叫哥哥吃饭。",
-         "pinyin": "Qu jiao gege chi fan."
+         "hanzi": "你喜欢哪个？",
+         "pinyin": "Ni xihuan nage?"
         },
         {
          "speaker": "B",
-         "hanzi": "好的，爸爸。",
-         "pinyin": "Hao de, baba."
+         "hanzi": "我喜欢这个。",
+         "pinyin": "Wo xihuan zhege."
         }
        ]
       },
       "t": [
-       528.6,
-       546.4
+       506.4,
+       521.2
       ]
      },
      {
@@ -606,40 +606,40 @@
       "qid": "L4-19",
       "num": 19,
       "example": false,
-      "answer": "A",
+      "answer": "B",
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q19_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q19_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q19_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q19_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q19_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q19_C.jpg"
        }
       ],
       "transcript": {
-       "hanzi": "一个大，一个小，你喜欢哪个？小的。",
-       "pinyin": "Yi ge da, yi ge xiao, ni xihuan nage? Xiao de.",
+       "hanzi": "老师，再见。再见，星期一见。",
+       "pinyin": "Laoshi, zaijian. Zaijian, xingqiyi jian.",
        "lines": [
         {
          "speaker": "A",
-         "hanzi": "一个大，一个小，你喜欢哪个？",
-         "pinyin": "Yi ge da, yi ge xiao, ni xihuan nage?"
+         "hanzi": "老师，再见。",
+         "pinyin": "Laoshi, zaijian."
         },
         {
          "speaker": "B",
-         "hanzi": "小的。",
-         "pinyin": "Xiao de."
+         "hanzi": "再见，星期一见。",
+         "pinyin": "Zaijian, xingqiyi jian."
         }
        ]
       },
       "t": [
-       558.5,
-       580.5
+       533,
+       549.3
       ]
      },
      {
@@ -647,50 +647,50 @@
       "qid": "L4-20",
       "num": 20,
       "example": false,
-      "answer": "B",
+      "answer": "A",
       "options": [
        {
         "label": "A",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q20_A.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q20_A.jpg"
        },
        {
         "label": "B",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q20_B.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q20_B.jpg"
        },
        {
         "label": "C",
-        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/L4_Q20_C.jpg"
+        "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/L4_Q20_C.jpg"
        }
       ],
       "transcript": {
-       "hanzi": "你在哪儿？我在这儿。",
-       "pinyin": "Ni zai nar? Wo zai zher.",
+       "hanzi": "这是什么？这是我的大鼻子。",
+       "pinyin": "Zhe shi shenme? Zhe shi wo de da bizi.",
        "lines": [
         {
          "speaker": "A",
-         "hanzi": "你在哪儿？",
-         "pinyin": "Ni zai nar?"
+         "hanzi": "这是什么？",
+         "pinyin": "Zhe shi shenme?"
         },
         {
          "speaker": "B",
-         "hanzi": "我在这儿。",
-         "pinyin": "Wo zai zher."
+         "hanzi": "这是我的大鼻子。",
+         "pinyin": "Zhe shi wo de da bizi."
         }
        ]
       },
       "t": [
-       592.6,
-       607.5
+       561,
+       577.4
       ]
      }
     ],
-    "introAt": 416.5
+    "introAt": 396.4
    }
   ],
-  "audio": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/listening.m4a",
-  "endAt": 624,
-  "startAt": 29.7,
-  "endLineAt": 619.4
+  "audio": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/listening.m4a",
+  "endAt": 594,
+  "startAt": 30.4,
+  "endLineAt": 589.7
  },
  "reading": {
   "timeLimit": 1020,
@@ -707,7 +707,7 @@
       "num": 0,
       "example": true,
       "answer": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R1_EX1_img.jpg",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R1_EX1_img.jpg",
       "word": {
        "hanzi": "狗",
        "pinyin": "gou"
@@ -718,11 +718,11 @@
       "qid": "R1-21",
       "num": 21,
       "example": false,
-      "answer": "T",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R1_Q21_img.jpg",
+      "answer": "F",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R1_Q21_img.jpg",
       "word": {
-       "hanzi": "手",
-       "pinyin": "shou"
+       "hanzi": "牛奶",
+       "pinyin": "niunai"
       }
      },
      {
@@ -730,11 +730,11 @@
       "qid": "R1-22",
       "num": 22,
       "example": false,
-      "answer": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R1_Q22_img.jpg",
+      "answer": "T",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R1_Q22_img.jpg",
       "word": {
-       "hanzi": "九",
-       "pinyin": "jiu"
+       "hanzi": "她",
+       "pinyin": "ta"
       }
      },
      {
@@ -742,11 +742,11 @@
       "qid": "R1-23",
       "num": 23,
       "example": false,
-      "answer": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R1_Q23_img.jpg",
+      "answer": "T",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R1_Q23_img.jpg",
       "word": {
-       "hanzi": "我们",
-       "pinyin": "women"
+       "hanzi": "多",
+       "pinyin": "duo"
       }
      },
      {
@@ -754,11 +754,11 @@
       "qid": "R1-24",
       "num": 24,
       "example": false,
-      "answer": "T",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R1_Q24_img.jpg",
+      "answer": "F",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R1_Q24_img.jpg",
       "word": {
-       "hanzi": "喝",
-       "pinyin": "he"
+       "hanzi": "喜欢",
+       "pinyin": "xihuan"
       }
      },
      {
@@ -766,11 +766,11 @@
       "qid": "R1-25",
       "num": 25,
       "example": false,
-      "answer": "T",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R1_Q25_img.jpg",
+      "answer": "F",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R1_Q25_img.jpg",
       "word": {
-       "hanzi": "好",
-       "pinyin": "hao"
+       "hanzi": "手",
+       "pinyin": "shou"
       }
      }
     ]
@@ -795,8 +795,8 @@
       "num": 26,
       "example": false,
       "answer": "B",
-      "hanzi": "他现在在商店。",
-      "pinyin": "Ta xianzai zai shangdian."
+      "hanzi": "明天是9号。",
+      "pinyin": "Mingtian shi 9 hao."
      },
      {
       "id": "R2_Q27",
@@ -804,61 +804,61 @@
       "num": 27,
       "example": false,
       "answer": "D",
-      "hanzi": "吃一口，好吗？",
-      "pinyin": "Chi yi kou, hao ma?"
+      "hanzi": "小狗你好，你叫什么名字？",
+      "pinyin": "Xiao gou ni hao, ni jiao shenme mingzi?"
      },
      {
       "id": "R2_Q28",
       "qid": "R2-28",
       "num": 28,
       "example": false,
-      "answer": "F",
-      "hanzi": "他们在看什么？",
-      "pinyin": "Tamen zai kan shenme?"
+      "answer": "A",
+      "hanzi": "我这儿有水，你喝吗？",
+      "pinyin": "Wo zher you shui, ni he ma?"
      },
      {
       "id": "R2_Q29",
       "qid": "R2-29",
       "num": 29,
       "example": false,
-      "answer": "A",
-      "hanzi": "我5点去那儿。",
-      "pinyin": "Wo 5 dian qu nar."
+      "answer": "C",
+      "hanzi": "你看，是不是很高？",
+      "pinyin": "Ni kan, shi bu shi hen gao?"
      },
      {
       "id": "R2_Q30",
       "qid": "R2-30",
       "num": 30,
       "example": false,
-      "answer": "C",
-      "hanzi": "哥，这是\"米饭\"的\"米\"吗？",
-      "pinyin": "Ge, zhe shi \"mifan\" de \"mi\" ma?"
+      "answer": "F",
+      "hanzi": "妈妈，中国在哪儿？",
+      "pinyin": "Mama, Zhongguo zai nar?"
      }
     ],
     "gallery": [
      {
       "label": "A",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R2_A.jpg"
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R2_A.jpg"
      },
      {
       "label": "B",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R2_B.jpg"
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R2_B.jpg"
      },
      {
       "label": "C",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R2_C.jpg"
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R2_C.jpg"
      },
      {
       "label": "D",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R2_D.jpg"
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R2_D.jpg"
      },
      {
       "label": "E",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R2_E.jpg"
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R2_E.jpg"
      },
      {
       "label": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R2_F.jpg"
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R2_F.jpg"
      }
     ]
    },
@@ -873,7 +873,7 @@
       "num": 0,
       "example": true,
       "answer": "D",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R3_EX_img.jpg",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R3_EX_img.jpg",
       "dialogue": [
        {
         "speaker": "A",
@@ -892,18 +892,18 @@
       "qid": "R3-31",
       "num": 31,
       "example": false,
-      "answer": "F",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R3_Q31_img.jpg",
+      "answer": "B",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R3_Q31_img.jpg",
       "dialogue": [
        {
         "speaker": "A",
-        "hanzi": "姐，你去___？",
-        "pinyin": "Jie, ni qu ___?"
+        "hanzi": "爸爸，___几点？",
+        "pinyin": "Baba, ___ ji dian?"
        },
        {
         "speaker": "B",
-        "hanzi": "学校。",
-        "pinyin": "Xuexiao."
+        "hanzi": "7:30。",
+        "pinyin": "7:30."
        }
       ]
      },
@@ -912,18 +912,18 @@
       "qid": "R3-32",
       "num": 32,
       "example": false,
-      "answer": "A",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R3_Q32_img.jpg",
+      "answer": "C",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R3_Q32_img.jpg",
       "dialogue": [
        {
         "speaker": "A",
-        "hanzi": "小猫爱吃___？",
-        "pinyin": "Xiao mao ai chi ___?"
+        "hanzi": "我们今天___什么？",
+        "pinyin": "Women jintian ___ shenme?"
        },
        {
         "speaker": "B",
-        "hanzi": "鱼。",
-        "pinyin": "Yu."
+        "hanzi": "米饭。",
+        "pinyin": "Mifan."
        }
       ]
      },
@@ -932,18 +932,18 @@
       "qid": "R3-33",
       "num": 33,
       "example": false,
-      "answer": "B",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R3_Q33_img.jpg",
+      "answer": "F",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R3_Q33_img.jpg",
       "dialogue": [
        {
         "speaker": "A",
-        "hanzi": "你几号去老师___？",
-        "pinyin": "Ni ji hao qu laoshi ___?"
+        "hanzi": "妈妈，你去哪儿？",
+        "pinyin": "Mama, ni qu nar?"
        },
        {
         "speaker": "B",
-        "hanzi": "明天。",
-        "pinyin": "Mingtian."
+        "hanzi": "我去___。",
+        "pinyin": "Wo qu ___."
        }
       ]
      },
@@ -952,18 +952,18 @@
       "qid": "R3-34",
       "num": 34,
       "example": false,
-      "answer": "E",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R3_Q34_img.jpg",
+      "answer": "A",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R3_Q34_img.jpg",
       "dialogue": [
        {
         "speaker": "A",
-        "hanzi": "那个中国人是谁？",
-        "pinyin": "Nage Zhongguoren shi shei?"
+        "hanzi": "你多大？",
+        "pinyin": "Ni duo da?"
        },
        {
         "speaker": "B",
-        "hanzi": "我不___。",
-        "pinyin": "Wo bu ___."
+        "hanzi": "我5___。",
+        "pinyin": "Wo 5 ___."
        }
       ]
      },
@@ -972,18 +972,18 @@
       "qid": "R3-35",
       "num": 35,
       "example": false,
-      "answer": "C",
-      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%202/images/R3_Q35_img.jpg",
+      "answer": "E",
+      "image": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%205/images/R3_Q35_img.jpg",
       "dialogue": [
        {
         "speaker": "A",
-        "hanzi": "哪个是你___狗？",
-        "pinyin": "Nage shi ni ___ gou?"
+        "hanzi": "姐姐，那个人是___？",
+        "pinyin": "Jiejie, nage ren shi ___?"
        },
        {
         "speaker": "B",
-        "hanzi": "长耳朵这个。",
-        "pinyin": "Chang erduo zhege."
+        "hanzi": "我不认识他。",
+        "pinyin": "Wo bu renshi ta."
        }
       ]
      }
@@ -991,18 +991,18 @@
     "bank": [
      {
       "label": "A",
-      "hanzi": "什么",
-      "pinyin": "shenme"
+      "hanzi": "岁",
+      "pinyin": "sui"
      },
      {
       "label": "B",
-      "hanzi": "家",
-      "pinyin": "jia"
+      "hanzi": "现在",
+      "pinyin": "xianzai"
      },
      {
       "label": "C",
-      "hanzi": "的",
-      "pinyin": "de"
+      "hanzi": "吃",
+      "pinyin": "chi"
      },
      {
       "label": "D",
@@ -1011,13 +1011,13 @@
      },
      {
       "label": "E",
-      "hanzi": "认识",
-      "pinyin": "renshi"
+      "hanzi": "谁",
+      "pinyin": "shei"
      },
      {
       "label": "F",
-      "hanzi": "哪儿",
-      "pinyin": "nar"
+      "hanzi": "商店",
+      "pinyin": "shangdian"
      }
     ]
    }

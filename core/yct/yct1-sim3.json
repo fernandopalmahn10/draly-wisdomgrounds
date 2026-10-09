@@ -688,8 +688,9 @@
    }
   ],
   "audio": "/assets/YCT%20SIMULATIONS/YCT%201/SIMULATION%203/listening.m4a",
-  "endAt": 591.2,
-  "startAt": 29.6
+  "endAt": 606.6,
+  "startAt": 29.6,
+  "endLineAt": 601.9
  },
  "reading": {
   "timeLimit": 1020,
