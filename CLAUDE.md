@@ -25,6 +25,10 @@ the checklist for any new game mode.
   --start s --intros a,b,c,d --end e` → `core/yct/…json` + `public/assets/<TEST> SIMULATIONS/…` → commit the asset folder too.
   Picture cropping/transcription tools: `../video_tools/yct_capture/README.md`. Do NOT use Higgsfield for sim pictures —
   crop them from the recording.
+- Every listening track ends with the closing line 听力考试现在结束 (`--endline`). If the recording skipped it (review started
+  early), append the clean clip `YCT1_Sim1_Build/audio/exam/closing_line.m4a` after the same ~11.5 s pause.
+- Exam flow must match the official platform: look back at already-heard questions during listening, "Terminar escucha",
+  2-minute review with Anterior/Siguiente + "Terminar revisión" (no way back), free navigation in Reading, submit confirm.
 - Pinyin without tone marks in tests. Test harness: `yct-sim.html?debug=1&direct=1&sim=…&pin=…&view=…`; headless Edge screenshots.
 - /maestro → "Official Tests" → test family → level → sims. Every new test reuses the YCT interface structure
   (cover, audio-driven listening, review, timed reading, gauge results) with that exam's real flow.
