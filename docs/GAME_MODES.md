@@ -100,22 +100,15 @@ copy belongs on the player's phone.
 
 ---
 
-## Status of the 8 announced modes
+## Status (2026-10-10)
 
-| # | Mode (Spanish) | Concept | Status |
-|---|----------------|---------|--------|
-| 1 | Mi Familia (Family House Tycoon) | Place items in rooms | ✅ Built (this commit) |
-| 2 | La Escuela (Classroom Stationery Rush) | Falling objects, magnet basket | 📐 Designed, not built |
-| 3 | El Mercado (Food Stall Tycoon) | Currency, recipe fulfillment | 📐 Designed, not built |
-| 4 | ¿Qué Hora Es? (Clock Tower Weather Defense) | Time Shards vs weather | 📐 Designed, not built |
-| 5 | Viajando por China (Cross-Country Vehicle Rally) | Fuel + map path | 📐 Designed, not built |
-| 6 | Mi Casa (Spatial Sorting Blitz) | Drag-to-room categorization | 📐 Designed, not built |
-| 7 | La Ciudad (City Emergency Grid Rescue) | Lane nav, bypass blockades | 📐 Designed, not built |
-| 8 | Los Números (Magical Garden Harvest) | Number trees, grammar gates | 📐 Designed, not built |
+Live modes: **Mochi Mash** (`mochi-mash`), **Piñata Tigre** (`pinata`), **Vuelo del Dragón** (`dragon-eye`),
+**Dàfùwēng · Monopolio Chino** (`monopoly`), **6-7 Swing** (`sixseven`) — all queued for an overhaul — plus the class
+tools Warm-up (`warmup`), Lectura (`reading`) and the HSK/YCT sim rooms (`hsksim`).
 
-Plus the previously shipped modes (Mochi Mash, Color Splash/Clash, Market
-Quest, Flappy Dragon, Piñata Tigre, Vuelo del Dragón, Monopolio Dàfùwēng,
-Zombie Escape) — total **9 modes live**, ready to grow to 17+.
+Retired 2026-10-10 by his decision (code removed; recover from git history at commit `5e3743698`, the last one that still has them, if ever
+needed): Market Quest, Market Clash, Clase de Caligrafía, Flappy Dragon, Zombie Escape, Mi Familia, Reinos en Guerra,
+Triage ER, Lái-Qù-Huí, Shéi Shì?, Hóngbāo Run.
 
-Each remaining mode follows the same recipe above and can be slotted in
-incrementally without disturbing the others.
+Next: «Reinos de Colores» (`docs/specs/reinos-de-colores.md`). Build any new or overhauled mode with the
+`new-pin-game` skill and pass `node scripts/playtest-bots.js --game <type> --bots 20` before it ships.

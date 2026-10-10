@@ -242,22 +242,11 @@
           });
       },
     },
-    { id: 'laiquhui',  label: 'Lái-Qù-Huí Dragon',  emoji: '🐉', blurb: 'Deliver packages across the city', launch: (ctx) => _genericLaunch(ctx, '/host-laiquhui.html', '/player.html') },
-    { id: 'identity',  label: 'Detective Shéi Shì', emoji: '🕵️', blurb: 'Guess the suspect from clues', launch: (ctx) => _genericLaunch(ctx, '/host-identity.html', '/player.html') },
-    { id: 'triage',    label: 'Emergency Room',     emoji: '🚑', blurb: 'Treat patients with medical vocab',  launch: (ctx) => _genericLaunch(ctx, '/host-triage.html', '/player.html') },
-    { id: 'partyrun',  label: 'Hóngbāo Run',        emoji: '🎲', blurb: 'Mario-Party with HSK1 questions',  launch: (ctx) => _genericLaunch(ctx, '/host-partyrun.html', '/player.html') },
     { id: 'sixseven',  label: '6-7 Swing',          emoji: '🤙', blurb: 'Fast math + Chinese numbers',    launch: (ctx) => _genericLaunch(ctx, '/host-sixseven.html', '/player.html') },
-    { id: 'monopoly',  label: 'HSK Monopoly',       emoji: '🏘️', blurb: 'Monopoly-style board',         launch: (ctx) => _genericLaunch(ctx, '/host-monopoly.html', '/player.html') },
-    { id: 'conquest',  label: 'Conquest',           emoji: '⚔️', blurb: 'Conquer hexagons',             launch: (ctx) => _genericLaunch(ctx, '/host-conquest.html', '/player.html') },
-    { id: 'family',    label: 'My Family',          emoji: '👨‍👩‍👧', blurb: 'HSK1 family',                  launch: (ctx) => _genericLaunch(ctx, '/host-family.html', '/player.html') },
+    { id: 'monopoly',  label: 'Dàfùwēng · Monopolio Chino', emoji: '🏯', blurb: 'Chinese Monopoly board',         launch: (ctx) => _genericLaunch(ctx, '/host-monopoly.html', '/player.html') },
     { id: 'mochi',     label: 'Mochi Mash',         emoji: '🍡', blurb: 'Classic vocab mash',           launch: (ctx) => _genericLaunch(ctx, '/host.html',          '/player.html') },
-    { id: 'pinata',    label: 'Piñata',             emoji: '🪅', blurb: 'Break the piñata',                 launch: (ctx) => _genericLaunch(ctx, '/host-pinata.html',   '/player.html') },
-    { id: 'flappy',    label: 'Flappy Dragon',      emoji: '🐲', blurb: 'Flappy Bird HSK1',                launch: (ctx) => _genericLaunch(ctx, '/host-flappy.html',   '/player.html') },
-    { id: 'zombie',    label: 'Zombie Defense',     emoji: '🧟', blurb: 'Defend with HSK1 vocab',         launch: (ctx) => _genericLaunch(ctx, '/host-zombie.html',   '/player.html') },
-    { id: 'dragon',    label: 'Dragon Eye',         emoji: '👁️', blurb: 'Eye of the dragon',                  launch: (ctx) => _genericLaunch(ctx, '/host-dragon.html',   '/player.html') },
-    { id: 'color-clash',   label: 'Color Clash',    emoji: '🎨', blurb: 'Paint in teams',                launch: (ctx) => _genericLaunch(ctx, '/host-clash.html',    '/player.html') },
-    { id: 'color-splash',  label: 'Color Splash',   emoji: '💦', blurb: 'Color splashes',           launch: (ctx) => _genericLaunch(ctx, '/host-color.html',    '/player.html') },
-    { id: 'market',    label: 'Market Quest',       emoji: '🛒', blurb: 'Traditional market',             launch: (ctx) => _genericLaunch(ctx, '/host-market.html',   '/player.html') },
+    { id: 'pinata',    label: 'Piñata Tigre',       emoji: '🐯', blurb: 'Break the piñata',                 launch: (ctx) => _genericLaunch(ctx, '/host-pinata.html',   '/player.html') },
+    { id: 'dragon',    label: 'Vuelo del Dragón',   emoji: '🐉', blurb: 'Dragon flight',                  launch: (ctx) => _genericLaunch(ctx, '/host-dragon.html',   '/player.html') },
   ];
   // 🆕 2026-06-04 v4 — universal force launch using ?livegame=1.
   // Same pattern as ?livemaster=1 for warmup, generalized for non-gated

@@ -5,25 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <title>Mochi Mash · Play</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20260525b">
+  <link rel="stylesheet" href="/css/styles.css?v=20261010a">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/color-splash.css">
-  <link rel="stylesheet" href="/css/color-clash.css">
-  <link rel="stylesheet" href="/css/market-quest.css">
-  <link rel="stylesheet" href="/css/flappy.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
   <link rel="stylesheet" href="/css/monopoly.css?v=20260520c">
-  <link rel="stylesheet" href="/css/conquest.css?v=20260526a">
   <link rel="stylesheet" href="/css/sixseven.css?v=20260520c">
-  <link rel="stylesheet" href="/css/zombie.css?v=20260517b">
-  <link rel="stylesheet" href="/css/family.css?v=20260520c">
-  <link rel="stylesheet" href="/css/triage.css?v=20260528d">
-  <link rel="stylesheet" href="/css/laiquhui.css?v=20260525d">
   <link rel="stylesheet" href="/css/warmup.css?v=20260707a">
-  <link rel="stylesheet" href="/css/identity.css?v=20260525a">
-  <link rel="stylesheet" href="/css/partyrun.css?v=20260525a">
   <link rel="stylesheet" href="/css/reading.css?v=20260603d">
+  <!-- Lobby layout + lobby mini-game (the little plane while kids wait).
+       These rules used to live in flappy.css, which was deleted with the
+       retired Flappy Dragon game (2026-10-10); the lobby itself is shared. -->
+  <style>
+    .lobby-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 16px 12px;
+      gap: 8px;
+    }
+    .lobby-header {
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .lobby-flappy-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 8px;
+    }
+    #lobby-flappy-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      max-height: 360px;
+      border-radius: 14px;
+      border: 3px solid rgba(255, 213, 122, 0.4);
+      background: linear-gradient(180deg, #4ec9f5 0%, #82d4f5 60%, #c8e7f5 100%);
+      cursor: pointer;
+      touch-action: none;
+      box-shadow: 0 0 30px rgba(255, 213, 122, 0.2);
+      image-rendering: pixelated;
+    }
+    .lobby-flappy-score {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      background: rgba(13, 14, 26, 0.85);
+      border: 1px solid rgba(255, 213, 122, 0.4);
+      color: var(--gold-glow);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+    .lobby-flappy-hint {
+      text-align: center;
+      color: var(--ink-dim);
+      font-size: 0.85rem;
+      margin: 6px 0 2px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+  </style>
 </head>
 <body>
   <!-- Lantern balloons (red + gold) removed per user request 2026-05-25 —
@@ -33,11 +83,8 @@
   <!-- Music indicator pops bottom-left for ~3.5s when the theme starts -->
   <div class="music-chip hidden" id="music-chip">🎵 <span id="music-chip-name">…</span></div>
 
-  <!-- Zombie-game ambience layer: hovers above EVERY screen during zombie mode.
-       Spooky peeks, edge glows, occasional shadow hands. Hidden by default. -->
-  <div id="zombie-ambience" class="zombie-ambience hidden"></div>
-  <!-- 6-7 SWING ambient peek layer (covers the whole viewport like the
-       zombie ambience but with cheerful "67!" pop-ins from the edges). -->
+  <!-- 6-7 SWING ambient peek layer (covers the whole viewport with
+       cheerful "67!" pop-ins from the edges). Hidden by default. -->
   <div id="ss-ambience" class="ss-ambience hidden"></div>
 
   <!-- JOIN -->
@@ -94,16 +141,6 @@
       <span id="player-name-tag">You</span>
       <span>Score: <span id="player-score">0</span></span>
     </div>
-    <!-- TRIAGE-ONLY: floating background vocab tiles + ambulance + walking
-         doctor. Span the entire question screen behind everything else.
-         Hidden unless body has .gametype-triage. -->
-    <div class="tri-q-float-bg triage-only" id="tri-q-float-bg"></div>
-    <div class="tri-q-ambulance triage-only" id="tri-q-ambulance">🚑</div>
-    <div class="tri-q-walking-doctor triage-only" id="tri-q-walking-doctor">
-      <img src="/assets/png-library/yisheng.png" alt="yīshēng"
-           onerror="this.style.display='none'">
-      <div class="tri-q-walking-bubble" id="tri-q-walking-bubble"></div>
-    </div>
     <div class="question-image-wrap" id="question-image-wrap">
       <div class="img-loading">🐉</div>
       <img id="question-image" alt="" style="display:none;">
@@ -111,131 +148,12 @@
     <div class="question-card">
       <div class="question-text" id="question-text"></div>
     </div>
-    <!-- TRIAGE-ONLY: sentence banner SITS BETWEEN question + answers so kids
-         read the target sentence right next to the question they're solving
-         AND right next to the choice they're about to tap. -->
-    <!-- NO hardcoded default content: the triage game fills these divs live
-         via cycleBannerSentence(). Leaving them EMPTY means that even if the
-         body.gametype-triage class ever goes stale on a late-join to a
-         restarted non-triage game, there is no hospital text to leak. -->
-    <div class="tri-q-vocab triage-only" id="tri-q-vocab-banner">
-      <div class="tri-q-sentence">
-        <div class="tri-q-pinyin" id="tri-q-pinyin"></div>
-        <div class="tri-q-es" id="tri-q-es"></div>
-      </div>
-    </div>
     <div class="answers" id="answers"></div>
   </div>
 
   <!-- RESULT (between question and mash) -->
   <div id="screen-result" class="hidden player-screen">
     <div class="result-feedback" id="result-feedback"></div>
-  </div>
-
-  <!-- FLAPPY DRAGON PLAYER SCREEN — full-canvas tap-to-flap -->
-  <div id="screen-fl-play" class="hidden fl-player-screen">
-    <div class="fl-player-hud">
-      <span class="fl-player-tag" id="fl-player-tag">🐲 Rojo</span>
-      <span class="fl-player-score">🏆 <span id="fl-player-score">0</span></span>
-    </div>
-    <canvas id="fl-canvas" width="800" height="480"></canvas>
-    <div class="fl-tap-hint" id="fl-tap-hint">Toca la pantalla para volar</div>
-  </div>
-
-  <!-- MARKET QUEST PLAYER SCREEN — joystick + mini-map -->
-  <div id="screen-mq-play" class="hidden mq-player-screen">
-    <div class="mq-player-hud">
-      <span class="mq-player-tag" id="mq-player-tag">🐲 Long</span>
-      <div class="mq-team-mini">
-        <span class="mq-team-mini-red">🐲 <span id="mq-team-red">0</span></span>
-        <span class="mq-team-mini-vs">vs</span>
-        <span class="mq-team-mini-gold">🦁 <span id="mq-team-gold">0</span></span>
-      </div>
-      <div class="mq-bag" id="mq-bag">
-        <div class="mq-bag-icon">🛍</div>
-        <div class="mq-bag-count" id="mq-player-items">0</div>
-      </div>
-    </div>
-    <div class="mq-player-stage">
-      <canvas id="mq-player-canvas" width="600" height="450"></canvas>
-    </div>
-    <div class="mq-joystick-area">
-      <div class="mq-joystick-base" id="mq-joystick">
-        <div class="mq-joystick-knob" id="mq-joystick-knob"></div>
-      </div>
-      <div class="mq-hint" id="mq-hint">Camina hacia un puesto del mercado</div>
-    </div>
-    <!-- Big collection toast that pops over everything when you claim an item -->
-    <div class="mq-collect-toast hidden" id="mq-collect-toast">
-      <div class="mq-toast-icon" id="mq-toast-icon">🍎</div>
-      <div class="mq-toast-text">
-        <div class="mq-toast-title">¡Bien!</div>
-        <div class="mq-toast-sub" id="mq-toast-sub">Coleccionaste manzana</div>
-        <div class="mq-toast-chinese" id="mq-toast-chinese">苹果 (píngguǒ)</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- COLOR CLASH PLAYER SCREEN — continuous play, energy-based -->
-  <div id="screen-cc-play" class="hidden cc-player-screen">
-    <div class="cc-hud">
-      <span class="cc-hud-tag" id="cc-team-tag">🏮 Team</span>
-      <div class="cc-energy-wrap">
-        <span class="cc-energy-icon">⚡</span>
-        <div class="cc-energy-bar"><div class="cc-energy-fill" id="cc-energy-fill"></div></div>
-        <span class="cc-energy-num" id="cc-energy-num">50</span>
-      </div>
-    </div>
-
-    <div class="cc-mini-stage">
-      <div class="cc-mini-floor" id="cc-mini-floor">
-        <div class="cs-mini-grid" id="cc-mini-grid"></div>
-        <div class="cs-players" id="cc-mini-players" style="position:absolute; top:8px; left:8px; pointer-events:none;"></div>
-      </div>
-    </div>
-
-    <div class="cc-action-panel">
-      <button class="cc-answer-btn" id="cc-answer-btn">
-        <span class="cc-answer-icon">📜</span>
-        <span class="cc-answer-label">Responder<br>preguntas</span>
-      </button>
-      <div class="cs-dpad cc-dpad-mini" id="cc-dpad">
-        <button class="cs-dpad-btn empty"></button>
-        <button class="cs-dpad-btn cs-dpad-up" data-cc-dir="up">▲</button>
-        <button class="cs-dpad-btn empty"></button>
-        <button class="cs-dpad-btn cs-dpad-left" data-cc-dir="left">◀</button>
-        <button class="cs-dpad-btn empty"></button>
-        <button class="cs-dpad-btn cs-dpad-right" data-cc-dir="right">▶</button>
-        <button class="cs-dpad-btn empty"></button>
-        <button class="cs-dpad-btn cs-dpad-down" data-cc-dir="down">▼</button>
-        <button class="cs-dpad-btn empty"></button>
-      </div>
-    </div>
-  </div>
-
-  <!-- COLOR SPLASH WALK MODE (Tinta y Bambú · school theme) — canvas-rendered -->
-  <div id="screen-cs-walk" class="hidden cs-player-screen">
-    <div class="cs-player-hud">
-      <span class="cs-player-tag" id="cs-walk-name-tag">Tú</span>
-      <span style="font-weight:800;">🖌 <span id="cs-walk-score">0</span></span>
-    </div>
-    <div class="cs-walk-banner">⚡ ¡A PINTAR! ⚡</div>
-    <div class="cs-mini-stage-v2" id="cs-walk-stage">
-      <canvas id="cs-walk-canvas" width="600" height="450"></canvas>
-    </div>
-    <div class="cs-walk-timer"><div class="cs-walk-timer-fill" id="cs-walk-timer-fill"></div></div>
-    <div class="cs-dpad" id="cs-dpad">
-      <button class="cs-dpad-btn empty"></button>
-      <button class="cs-dpad-btn cs-dpad-up" data-dir="up">▲</button>
-      <button class="cs-dpad-btn empty"></button>
-      <button class="cs-dpad-btn cs-dpad-left" data-dir="left">◀</button>
-      <button class="cs-dpad-btn empty"></button>
-      <button class="cs-dpad-btn cs-dpad-right" data-dir="right">▶</button>
-      <button class="cs-dpad-btn empty"></button>
-      <button class="cs-dpad-btn cs-dpad-down" data-dir="down">▼</button>
-      <button class="cs-dpad-btn empty"></button>
-    </div>
-    <p style="text-align:center; color:#d4bc88; font-size:0.85rem; margin: 4px 0;">Cada paso pinta 5 celdas en cruz 🖌</p>
   </div>
 
   <!-- MASH MODE -->
@@ -366,100 +284,6 @@
   </div>
 
   <!-- ENDED -->
-  <!-- MI FAMILIA — DRAG-and-DROP placement. The awarded token is the player's
-       finger-puppet — drag it into one of the 4 room zones laid out like a
-       blueprint of the house. Recommended rooms glow. Drop = placement.
-       Combo banner flashes if the placement unlocks a combo. -->
-  <div id="screen-family-place" class="hidden player-screen fm-place-screen">
-    <div class="fm-place-top">
-      <div class="fm-place-score-pill">💼 <span id="fm-place-score">0</span> pts</div>
-      <!-- Mini house construction widget — mirrors the host's growing-house
-           silhouette so the player can see their TEAM's progress at a glance
-           while they're placing. Updates on every fm:placed event. -->
-      <div class="fm-mini-house" id="fm-mini-house">
-        <span class="fm-mini-house-stage" id="fm-mini-house-stage">🏗</span>
-        <span class="fm-mini-house-count">🧱 <span id="fm-mini-house-bricks">0</span></span>
-      </div>
-      <div class="fm-place-timer-num" id="fm-place-timer-num">8</div>
-    </div>
-    <div class="fm-place-headline">🏡 ¡Arrastra al cuarto correcto!</div>
-    <!-- The blueprint is a 3D-tilted house cross-section with 4 rooms.
-         Each room has a plaque label, a wallpaper background, a perspective
-         floor, and an items area that fills up with everything the player's
-         team places. Drag the token from the center into the right room. -->
-    <div class="fm-blueprint" id="fm-blueprint">
-      <div class="fm-roomzone sala" data-room="sala">
-        <span class="fm-roomzone-plaque">🛋 Sala</span>
-        <div class="fm-roomzone-items" id="fm-roomzone-items-sala"></div>
-      </div>
-      <div class="fm-roomzone cocina" data-room="cocina">
-        <span class="fm-roomzone-plaque">🍳 Cocina</span>
-        <div class="fm-roomzone-items" id="fm-roomzone-items-cocina"></div>
-      </div>
-      <div class="fm-roomzone dormitorio" data-room="dormitorio">
-        <span class="fm-roomzone-plaque">🛏 Dormitorio</span>
-        <div class="fm-roomzone-items" id="fm-roomzone-items-dormitorio"></div>
-      </div>
-      <div class="fm-roomzone jardin" data-room="jardin">
-        <span class="fm-roomzone-plaque">🌳 Jardín</span>
-        <div class="fm-roomzone-items" id="fm-roomzone-items-jardin"></div>
-      </div>
-      <!-- The draggable token sits in the center until grabbed -->
-      <div class="fm-drag-token" id="fm-drag-token">
-        <span class="fm-drag-emoji" id="fm-token-emoji">🛋</span>
-        <span class="fm-drag-name" id="fm-token-name">Sofá</span>
-        <span class="fm-drag-hint" id="fm-token-hint">¡Llévame!</span>
-      </div>
-    </div>
-    <p class="fm-place-hint" id="fm-place-hint">👆 Mantén el dedo y arrastra hacia un cuarto</p>
-    <!-- Combo banner — flashes when this placement unlocks a combo -->
-    <div class="fm-combo-banner hidden" id="fm-combo-banner"></div>
-  </div>
-
-  <!-- ZOMBIE SPRINT — auto-runner with pseudo-3D parallax depth.
-       Layers from far to near:
-         1. Sky (gradient)
-         2. Mountain silhouettes (far)
-         3. Skyline (mid)
-         4. Smoke fog (mid-near)
-         5. Zombie horde (near, behind runner)
-         6. Track + survivor + approaching obstacles (foreground)
-         7. Foreground particles (closest)
-       Each layer scrolls at a different speed = pseudo-3D depth.
-       The render loop is split into modular drawLayer() calls so we can swap
-       in real sprite sheets or WebGL renderers later without touching logic.
-  -->
-  <div id="screen-zombie-sprint" class="hidden player-screen zb-sprint-screen">
-    <div class="zb-sprint-header">
-      <span class="zb-sprint-name" id="zb-sprint-name">🏃 Tú</span>
-      <span class="zb-sprint-clear">👟 <span id="zb-sprint-cleared">0</span></span>
-      <span class="zb-sprint-timer"><span id="zb-sprint-timer-num">5</span>s</span>
-    </div>
-    <div class="zb-sprint-stage" id="zb-sprint-stage">
-      <!-- Layer 1: sky -->
-      <div class="zb-sprint-sky"></div>
-      <!-- Layer 2: distant mountain silhouettes (slowest parallax) -->
-      <div class="zb-layer zb-layer-mountains" id="zb-layer-mountains"></div>
-      <!-- Layer 3: skyline (medium parallax) -->
-      <div class="zb-sprint-skyline" id="zb-sprint-skyline">🏚 🏚 🏢 🏚 🏯 🏚 🏢</div>
-      <!-- Layer 4: smoke fog (drifts gently) -->
-      <div class="zb-layer zb-layer-smoke"></div>
-      <!-- Layer 5: zombie horde shambling behind the runner -->
-      <div class="zb-sprint-horde">🧟‍♂️🧟🧟‍♀️🧟</div>
-      <!-- Layer 6: track + survivor + obstacles (foreground action) -->
-      <div class="zb-sprint-track">
-        <div class="zb-sprint-ground"></div>
-        <div class="zb-sprint-survivor" id="zb-sprint-survivor">🏃</div>
-        <div class="zb-sprint-obstacles" id="zb-sprint-obstacles"></div>
-      </div>
-      <!-- Layer 7: foreground particles + scare-jumpscare flash overlay -->
-      <div class="zb-layer zb-layer-particles" id="zb-layer-particles"></div>
-      <div class="zb-jumpscare" id="zb-jumpscare"></div>
-    </div>
-    <button class="zb-jump-btn" id="zb-jump-btn">🦘 ¡SALTAR! 🦘</button>
-    <div class="zb-sprint-hint">Toca SALTAR justo cuando el obstáculo llega 🤚</div>
-  </div>
-
   <!-- 6-7 SWING — math problems with two giant 6/7 buttons. The mini
        character on the player's phone sways toward whichever button they
        last tapped. Floating 6s and 7s drift up in the background. -->
@@ -494,194 +318,6 @@
     </div>
     <div class="ss-flash-correct" id="ss-flash-correct"></div>
     <div class="ss-flash-wrong"   id="ss-flash-wrong"></div>
-  </div>
-
-  <!-- REINOS EN GUERRA v5 — STRATEGIC MARCH-ORDER PICKER
-       After a correct vocab answer, the player must DECIDE what their
-       team's soldier does. Three big tap-targets, 5s auto-resolve. -->
-  <div id="screen-cq-order" class="hidden player-screen cq-order-screen">
-    <div class="cq-order-header">
-      <div class="cq-order-team-tag" id="cq-order-team-tag">🐉 Caballería Roja</div>
-      <div class="cq-order-timer-num" id="cq-order-timer-num">5</div>
-    </div>
-    <div class="cq-order-headline">⚔️ ¡Da la orden de marcha!</div>
-    <p class="cq-order-sub">Tu respuesta correcta gana un soldado. ¿Adónde lo envías?</p>
-    <div class="cq-order-buttons">
-      <button class="cq-order-btn cq-order-attack" data-order="attack">
-        <span class="cq-order-icon">⚔️</span>
-        <span class="cq-order-title">ATACAR</span>
-        <span class="cq-order-desc">Conquista un territorio enemigo</span>
-      </button>
-      <button class="cq-order-btn cq-order-advance" data-order="advance">
-        <span class="cq-order-icon">🚩</span>
-        <span class="cq-order-title">AVANZAR</span>
-        <span class="cq-order-desc">Toma un territorio libre</span>
-      </button>
-      <button class="cq-order-btn cq-order-defend" data-order="defend">
-        <span class="cq-order-icon">🛡</span>
-        <span class="cq-order-title">DEFENDER</span>
-        <span class="cq-order-desc">Refuerza tu zona más débil</span>
-      </button>
-    </div>
-    <div class="cq-order-timer-bar"><div class="cq-order-timer-fill" id="cq-order-timer-fill"></div></div>
-  </div>
-
-  <!-- TRIAGE ER — PATIENT-PICK SCREEN
-       After a correct vocab answer the doctor (player) picks WHICH PATIENT to
-       treat. The picker shows up to 4 urgency-sorted cards. Critical patients
-       are flagged with a 🚨 alarm halo and pulse red. 5s auto-resolve. -->
-  <div id="screen-tri-pick" class="hidden player-screen tri-pick-screen">
-    <div class="tri-pick-header">
-      <div class="tri-pick-team-tag" id="tri-pick-team-tag">🩺 Doctor</div>
-      <div class="tri-pick-timer-num" id="tri-pick-timer-num">5</div>
-    </div>
-    <!-- INTRUSIVE VOCAB BANNER (player) — doctor + sentence -->
-    <div class="tri-vocab-banner mini with-doctor">
-      <img class="tri-doctor-mini" src="/assets/png-library/yisheng.png" alt="yīshēng"
-           onerror="this.style.display='none'">
-      <span class="tri-vocab-q-pinyin">Yīshēng zài <strong>yīyuàn</strong> 🏥 gōngzuò</span>
-    </div>
-    <div class="tri-pick-headline">🚑 ¿A quién atiendes primero?</div>
-    <p class="tri-pick-sub">Toca al paciente más urgente. Los <span class="tri-critical-word">🚨 críticos</span> dan más puntos.</p>
-    <div class="tri-pick-cards" id="tri-pick-cards">
-      <!-- patient cards rendered by JS -->
-    </div>
-    <div class="tri-pick-timer-bar"><div class="tri-pick-timer-fill" id="tri-pick-timer-fill"></div></div>
-  </div>
-
-  <!-- TRIAGE ER — CPR / DEFIB MINI-GAME
-       After picking a patient, the doctor (player) performs CPR — tap the
-       heart rhythmically to fill the rescue ring. Normal patients need 5
-       taps, criticals need 8 taps PLUS a defib power-meter for bonus.
-       Each tap pulses the heart + beeps the monitor + draws on the EKG. -->
-  <div id="screen-tri-cpr" class="hidden player-screen tri-cpr-screen">
-    <div class="tri-cpr-header">
-      <div class="tri-cpr-patient" id="tri-cpr-patient">
-        <span class="tri-cpr-patient-icon" id="tri-cpr-patient-icon">🤒</span>
-        <span class="tri-cpr-patient-name" id="tri-cpr-patient-name">Paciente</span>
-      </div>
-      <div class="tri-cpr-bedlabel" id="tri-cpr-bedlabel">Cama —</div>
-    </div>
-    <!-- INTRUSIVE VOCAB BANNER (CPR) — doctor cheers you on -->
-    <div class="tri-vocab-banner mini with-doctor cheering">
-      <img class="tri-doctor-mini" src="/assets/png-library/yisheng.png" alt="yīshēng"
-           onerror="this.style.display='none'">
-      <span class="tri-vocab-q-pinyin"><strong>yīyuàn</strong> 🏥 — ¡salva al paciente!</span>
-    </div>
-    <!-- Floating tap-bonus vocab words — tap them mid-CPR for +1 each -->
-    <div class="tri-cpr-vocab-float" id="tri-cpr-vocab-float"></div>
-    <div class="tri-cpr-stage" id="tri-cpr-stage">
-      <!-- Animated EKG line that draws live as the player taps -->
-      <div class="tri-cpr-ekg" id="tri-cpr-ekg">
-        <svg viewBox="0 0 200 60" preserveAspectRatio="none">
-          <polyline class="tri-cpr-ekg-base" points="0,30 200,30"/>
-          <polyline id="tri-cpr-ekg-live" class="tri-cpr-ekg-live" points="0,30"/>
-        </svg>
-      </div>
-      <!-- The giant tappable heart -->
-      <button class="tri-cpr-heart" id="tri-cpr-heart" type="button" aria-label="CPR tap">
-        <div class="tri-cpr-heart-icon">❤️</div>
-        <div class="tri-cpr-heart-ring" id="tri-cpr-heart-ring"></div>
-        <div class="tri-cpr-heart-label">TOCA AL RITMO</div>
-      </button>
-      <!-- Tap-progress ticks (5 for normal, 8 for critical) -->
-      <div class="tri-cpr-ticks" id="tri-cpr-ticks"></div>
-      <div class="tri-cpr-hint" id="tri-cpr-hint">¡Compresiones torácicas!</div>
-    </div>
-    <!-- DEFIB POWER METER (only shown for critical patients after CPR) -->
-    <div class="tri-cpr-defib hidden" id="tri-cpr-defib">
-      <div class="tri-cpr-defib-label">⚡ ¡DESCARGA! Toca cuando el indicador esté en VERDE</div>
-      <div class="tri-cpr-defib-track">
-        <div class="tri-cpr-defib-zone-green"></div>
-        <div class="tri-cpr-defib-zone-yellow-l"></div>
-        <div class="tri-cpr-defib-zone-yellow-r"></div>
-        <div class="tri-cpr-defib-needle" id="tri-cpr-defib-needle"></div>
-      </div>
-      <button class="tri-cpr-defib-btn" id="tri-cpr-defib-btn" type="button">⚡ DESCARGAR</button>
-    </div>
-    <div class="tri-cpr-timer-bar"><div class="tri-cpr-timer-fill" id="tri-cpr-timer-fill"></div></div>
-  </div>
-
-  <!-- LÁI-QÙ-HUÍ · Dragon Courier — the entire game lives on the player phone -->
-  <div id="screen-lqh" class="hidden player-screen lqh-screen">
-    <!-- HUD: score + mission count + timer -->
-    <div class="lqh-hud">
-      <div class="lqh-hud-score">🏆 <span id="lqh-score">0</span></div>
-      <div class="lqh-hud-mission">✅ <span id="lqh-done">0</span> · 💔 <span id="lqh-failed">0</span></div>
-      <div class="lqh-hud-timer" id="lqh-mission-timer">10s</div>
-    </div>
-    <!-- Mission card — the big sentence the player must complete. The
-         verb mascot on the left is one of qu.png / lai.png / hui.png so
-         the kid sees the specific character on every round. -->
-    <div class="lqh-mission-card" id="lqh-mission-card">
-      <div class="lqh-mission-verb-tag" id="lqh-mission-verb-tag">qù 去</div>
-      <div class="lqh-mission-body">
-        <img class="lqh-mission-mascot" id="lqh-mission-mascot" src="/assets/png-library/qu.png" alt="verb mascot">
-        <div class="lqh-mission-text">
-          <div class="lqh-mission-pinyin" id="lqh-mission-pinyin">Wǒ <strong>qù</strong> 学校 🏫</div>
-          <div class="lqh-mission-es" id="lqh-mission-es">Voy a la escuela</div>
-        </div>
-      </div>
-      <div class="lqh-mission-bar"><div class="lqh-mission-bar-fill" id="lqh-mission-bar-fill"></div></div>
-    </div>
-    <!-- The map — 8x8 top-down grid showing locations + player dragon -->
-    <div class="lqh-map-wrap">
-      <div class="lqh-map" id="lqh-map"></div>
-    </div>
-    <!-- Single-ROW 4-direction d-pad fixed to viewport bottom. Horizontal
-         strip → never gets cut off vertically; all four buttons (shàng /
-         xià / qiánmiàn / hòumiàn) visible on every phone. Each button
-         shows the qu/lai/hui PNG mascot on the relevant verb so the
-         icons the user shipped are actually visible in-game. -->
-    <div class="lqh-dpad" id="lqh-dpad">
-      <button class="lqh-dir-btn" data-dir="shang" type="button" aria-label="shàng (arriba)">
-        <span class="lqh-dir-arrow">▲</span>
-        <span class="lqh-dir-pinyin">shàng</span>
-      </button>
-      <button class="lqh-dir-btn" data-dir="hou" type="button" aria-label="hòumiàn (atrás)">
-        <span class="lqh-dir-arrow">◀</span>
-        <span class="lqh-dir-pinyin">hòumiàn</span>
-      </button>
-      <button class="lqh-dir-btn" data-dir="qian" type="button" aria-label="qiánmiàn (al frente)">
-        <span class="lqh-dir-arrow">▶</span>
-        <span class="lqh-dir-pinyin">qiánmiàn</span>
-      </button>
-      <button class="lqh-dir-btn" data-dir="xia" type="button" aria-label="xià (abajo)">
-        <span class="lqh-dir-arrow">▼</span>
-        <span class="lqh-dir-pinyin">xià</span>
-      </button>
-    </div>
-    <!-- Feedback overlay (success/fail) -->
-    <div class="lqh-feedback hidden" id="lqh-feedback"></div>
-    <!-- Weather banner + visual overlay -->
-    <div class="lqh-weather-banner hidden" id="lqh-weather-banner"></div>
-    <div class="lqh-weather-fx" id="lqh-weather-fx"></div>
-  </div>
-
-  <!-- SHÉI SHÌ? · Identity Detective — per-player round picker -->
-  <div id="screen-id" class="hidden player-screen id-screen">
-    <div class="id-hud">
-      <span class="id-hud-score">🏆 <span id="id-score">0</span></span>
-      <span class="id-hud-streak">🔥 <span id="id-streak">0</span></span>
-      <span class="id-hud-stats">✅ <span id="id-correct">0</span> · ❌ <span id="id-wrong">0</span></span>
-      <span class="id-hud-timer" id="id-timer">15s</span>
-    </div>
-    <div class="id-clue-card">
-      <div class="id-clue-tag">🕵️ ¿Quién dice esto?</div>
-      <div class="id-clue-narrator-row">
-        <div class="id-narrator" id="id-narrator">🕵️</div>
-        <div class="id-clue-bubble">
-          <div class="id-clue-pinyin" id="id-clue-pinyin">…</div>
-          <div class="id-clue-es" id="id-clue-es">…</div>
-        </div>
-      </div>
-      <div class="id-clue-bar"><div class="id-clue-bar-fill" id="id-clue-bar-fill"></div></div>
-    </div>
-    <!-- Phase banner — tells the kid which beat of the magic-card flow we're in.
-         Memoriza → Mezclando → Toca al sospechoso → Reveal. -->
-    <div class="id-phase-banner" id="id-phase-banner">🔍 Memoriza al sospechoso…</div>
-    <div class="id-suspects" id="id-suspects"></div>
-    <div class="id-feedback hidden" id="id-feedback"></div>
   </div>
 
   <!-- 📖 READING · cuento HSK1 con audio sincronizado y resaltado de palabras -->
@@ -733,33 +369,6 @@
     <div class="rd-test-result-cert" id="rd-test-result-cert">…</div>
     <div class="rd-test-result-breakdown" id="rd-test-result-breakdown"></div>
     <button class="btn btn-jade btn-sm" id="rd-test-result-close" type="button">Volver al cuento</button>
-  </div>
-
-  <!-- 🧧 HÓNGBĀO RUN · per-player vocab + dice + minimap of YOUR position -->
-  <div id="screen-pr" class="hidden player-screen pr-screen">
-    <div class="pr-hud">
-      <span class="pr-hud-stars">⭐ <span id="pr-stars">0</span></span>
-      <span class="pr-hud-coins">🧧 <span id="pr-coins">0</span></span>
-      <span class="pr-hud-round" id="pr-hud-round">Ronda 1/12</span>
-    </div>
-    <!-- Mini-board: 20-tile loop with YOUR dragon marker. Small enough to
-         fit above the question, so the kid sees "where am I going" while
-         they answer. Host has the giant board for the class. -->
-    <div class="pr-mini-board" id="pr-mini-board"></div>
-    <!-- Question + 4 answer cards. Parallel turn: every player answers at
-         the same time. -->
-    <div class="pr-q-card">
-      <div class="pr-q-tag" id="pr-q-tag-player">Ronda 1</div>
-      <div class="pr-q-text" id="pr-q-text-player">…</div>
-      <div class="pr-q-bar"><div class="pr-q-bar-fill" id="pr-q-bar-fill-player"></div></div>
-    </div>
-    <div class="pr-choices" id="pr-choices"></div>
-    <!-- Reveal phase: dice + tile-effect chip. Hidden during question. -->
-    <div class="pr-reveal hidden" id="pr-reveal">
-      <div class="pr-dice" id="pr-dice">?</div>
-      <div class="pr-reveal-msg" id="pr-reveal-msg">…</div>
-      <div class="pr-tile-landed" id="pr-tile-landed"></div>
-    </div>
   </div>
 
   <!-- WARM-UP · sentence-builder read-only view (player phone mirrors teacher) -->
@@ -883,6 +492,6 @@
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/player.js?v=20260621d"></script>
+  <script src="/js/player.js?v=20261010a"></script>
 </body>
 </html>
