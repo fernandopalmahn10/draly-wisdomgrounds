@@ -341,7 +341,7 @@
   // Themes are scheduled procedurally on a beat grid (no external audio assets,
   // no licensing risk, works offline). All voices are synthesized via WebAudio.
   //
-  // The user starts a game's theme with `MochiSounds.startGameTheme('triage')`,
+  // The user starts a game's theme with `MochiSounds.startGameTheme('pinata')`,
   // and stops with `MochiSounds.stopGameTheme()` (or any of the win/lose/tie
   // music helpers, which fade the theme out first).
   // ===========================================================================
@@ -547,140 +547,12 @@
     src.connect(hp).connect(g).connect(musicGain);
     src.start(time);
   }
-  // Heart-monitor pulse used as a percussion element in triage theme
-  function vMonitorBeep(time, vol) {
-    if (!audioCtx) return;
-    const ctx = audioCtx;
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, time);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0, time);
-    g.gain.linearRampToValueAtTime(vol || 0.10, time + 0.005);
-    g.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
-    osc.connect(g).connect(musicGain);
-    osc.start(time);
-    osc.stop(time + 0.1);
-  }
-  // Spooky scrape used for zombie theme atmosphere
-  function vScrape(time, dur, vol) {
-    if (!audioCtx) return;
-    const ctx = audioCtx;
-    const buf = ctx.createBuffer(1, ctx.sampleRate * (dur || 0.7), ctx.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.5;
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.setValueAtTime(300, time);
-    bp.frequency.linearRampToValueAtTime(140, time + (dur || 0.7));
-    bp.Q.setValueAtTime(8, time);
-    const g = ctx.createGain();
-    g.gain.setValueAtTime(0, time);
-    g.gain.linearRampToValueAtTime(vol || 0.08, time + 0.2);
-    g.gain.linearRampToValueAtTime(0, time + (dur || 0.7));
-    src.connect(bp).connect(g).connect(musicGain);
-    src.start(time);
-  }
-
   // ---- THEME PATTERNS ----
   // Each pattern function receives (barIdx, t0, BD) where:
   //   barIdx — running bar counter (0,1,2,…). Use modulo to phrase changes.
   //   t0     — ctx.currentTime at the start of this bar
   //   BD     — beat duration (BAR_DUR = BD * beatsPerBar)
   // Schedule notes at t0 + offsets. Keep volumes low (≤ 0.25) so SFX cut through.
-
-  // 🚑 TRIAGE ER — urgent medical pulse in D minor, 132bpm, with a heart-
-  // monitor beep on every quarter and a tense rising lead motif.
-  function themeTriage(barIdx, t0, BD) {
-    const phase = barIdx % 4;
-    // Pulsing sub bass on every quarter
-    for (let b = 0; b < 4; b++) {
-      vSubBass(t0 + b * BD, phase < 2 ? 'D2' : 'F2', BD * 0.9, 0.24);
-    }
-    // Heart-monitor beep as percussion on each quarter (the signature sound)
-    for (let b = 0; b < 4; b++) vMonitorBeep(t0 + b * BD, 0.18);
-    // Kick on 1+3 — adrenaline pulse
-    vKick(t0 + 0 * BD, 0.36);
-    vKick(t0 + 2 * BD, 0.30);
-    // Snappy hihat on every 8th
-    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.10);
-    // Tense lead — rising minor 2nd then falling 4th, varies per phase
-    const motif = phase === 3
-      ? [['A4', 0.5], ['Bb4', 0.5], ['A4', 0.5], ['F4', 0.5], ['G4', 0.5], ['E4', 0.5], ['D4', 1.0]]
-      : [['A4', 0.5], ['Bb4', 0.5], ['A4', 1.0],                ['G4', 0.5], ['A4', 0.5], ['F4', 1.0]];
-    let cursor = 0;
-    motif.forEach(([n, len]) => {
-      vLeadSquare(t0 + cursor * BD, n, len * BD * 0.9, 0.13);
-      cursor += len;
-    });
-  }
-
-  // ⚔️ CONQUEST · REINOS EN GUERRA — epic battle, D minor war drums + brass
-  // stabs, 100bpm. Taiko-style accents on 1, 2.5, 3, 4 plus a horn motif.
-  function themeConquest(barIdx, t0, BD) {
-    // Driving war-drum bed
-    taiko(t0 + 0 * BD,    0.50);
-    taiko(t0 + 1.5 * BD,  0.30);
-    taiko(t0 + 2 * BD,    0.44);
-    taiko(t0 + 3 * BD,    0.34);
-    // Low brass pedal
-    vSubBass(t0,           'D2', BD * 3.5, 0.28);
-    vSubBass(t0 + 2 * BD,  'A2', BD * 1.5, 0.22);
-    // Brass stabs — D, F, C, D motif (Dorian-ish), shifts every 4 bars
-    const phase = barIdx % 4;
-    const stabs = phase < 2
-      ? [['D4', 0], ['F4', 0.5], ['A4', 1], ['G4', 2], ['F4', 3]]
-      : [['D4', 0], ['F4', 0.5], ['G4', 1], ['Bb4', 2], ['A4', 3]];
-    stabs.forEach(([n, beat]) => vBrass(t0 + beat * BD, n, BD * 0.5, 0.20));
-    // Shaker on 8ths
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.06);
-  }
-
-  // 🧟 ZOMBIE ESCAPE — tense horror chase, E minor, 92bpm. Heart-pounding
-  // kick on 1+3, low pedal, dissonant minor 2nd lead, distant scrape FX.
-  function themeZombie(barIdx, t0, BD) {
-    // Heartbeat kick
-    vKick(t0 + 0 * BD, 0.44);
-    vKick(t0 + 0.4 * BD, 0.32);   // double-thump for that anxious feel
-    vKick(t0 + 2 * BD, 0.44);
-    vKick(t0 + 2.4 * BD, 0.32);
-    // Low pedal
-    vSubBass(t0, 'E2', BD * 4, 0.28);
-    // Pad cluster — minor 2nd dissonance every 2 bars
-    if (barIdx % 2 === 0) {
-      vPad(t0,           'E3', BD * 4, 0.10);
-      vPad(t0,           'F3', BD * 4, 0.08);
-      vPad(t0 + 2 * BD,  'G3', BD * 2, 0.10);
-    }
-    // Distant scrape SFX every 4 bars (creepy ambience)
-    if (barIdx % 4 === 3) vScrape(t0 + 1.5 * BD, BD * 1.5, 0.11);
-    // Slow eerie lead on bar 1 of every 4
-    if (barIdx % 4 === 0) {
-      vLeadSquare(t0 + 0.5 * BD, 'E4', BD * 0.7, 0.11);
-      vLeadSquare(t0 + 1.5 * BD, 'F4', BD * 0.7, 0.11);
-      vLeadSquare(t0 + 2.5 * BD, 'D4', BD * 1.2, 0.11);
-    }
-  }
-
-  // 🏡 MI FAMILIA — cozy warm, C major, 110bpm. Pop progression I-V-vi-IV
-  // (C-G-Am-F), gentle mallet bells, soft brush snare.
-  function themeFamily(barIdx, t0, BD) {
-    const prog = [['C', 'C2', 'E4', 'G4'], ['G', 'G2', 'D4', 'B4'], ['Am', 'A2', 'C4', 'E4'], ['F', 'F2', 'A4', 'C5']];
-    const [, bassN, mid, hi] = prog[barIdx % 4];
-    // Walking bass
-    vBassPluck(t0, bassN, BD * 1.6, 0.22);
-    vBassPluck(t0 + 2 * BD, bassN, BD * 1.6, 0.21);
-    // Soft mallet chord bell on beat 1
-    vBell(t0 + 0 * BD, mid, BD * 2, 0.16);
-    vBell(t0 + 0 * BD, hi,  BD * 2, 0.14);
-    // Brush snare on 2+4
-    vSnare(t0 + 1 * BD, 0.16);
-    vSnare(t0 + 3 * BD, 0.16);
-    // Gentle hihat on 8ths
-    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.07);
-  }
 
   // 🏯 MONOPOLY — plucky boardgame, G major, 124bpm. Walking bass +
   // arpeggios + bells. Cheerful, "watching the dice roll" vibe.
@@ -754,18 +626,6 @@
     for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.05);
   }
 
-  // 🛍 MARKET QUEST — Chinese marketplace, F major-ish, 110bpm. Plucky
-  // bamboo lead over a soft hand-drum + shaker bed.
-  function themeMarket(barIdx, t0, BD) {
-    const motif = [['F4', 0], ['A4', 0.5], ['C5', 1], ['A4', 1.5], ['G4', 2], ['F4', 2.5], ['A4', 3], ['F4', 3.5]];
-    motif.forEach(([n, b]) => vLeadSquare(t0 + b * BD, n, BD * 0.4, 0.12));
-    vBassPluck(t0,           'F2', BD * 1.5, 0.20);
-    vBassPluck(t0 + 2 * BD,  'C3', BD * 1.5, 0.18);
-    taiko(t0 + 0 * BD, 0.26);
-    taiko(t0 + 2 * BD, 0.22);
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.10);
-  }
-
   // 🐯 PIÑATA — mariachi fiesta, D major, 130bpm. Walking bass + brass triad
   // stabs + maracas. Should feel celebratory.
   function themePinata(barIdx, t0, BD) {
@@ -782,144 +642,13 @@
     vSnare(t0 + 3 * BD, 0.16);
   }
 
-  // 🏮 MARKET CLASH / COLOR CLASH — energetic territory paint, C minor,
-  // 118bpm. Driving bass + bright lead loop.
-  function themeClash(barIdx, t0, BD) {
-    const bass = ['C2', 'C2', 'Eb2', 'F2'];
-    bass.forEach((n, b) => vBassPluck(t0 + b * BD, n, BD * 0.85, 0.22));
-    const lead = ['G4', 'Bb4', 'C5', 'Bb4', 'G4', 'F4', 'G4', 'C5'];
-    lead.forEach((n, i) => vLeadSquare(t0 + i * (BD / 2), n, BD * 0.4, 0.13));
-    vKick(t0 + 0 * BD, 0.36);
-    vKick(t0 + 2 * BD, 0.32);
-    vSnare(t0 + 1 * BD, 0.18);
-    vSnare(t0 + 3 * BD, 0.18);
-    for (let i = 0; i < 8; i++) vHat(t0 + i * (BD / 2), 0.08);
-  }
-
-  // 🎓 COLOR SPLASH — light learning calligraphy, A major, 105bpm.
-  // Gentle bells + soft shaker. Less urgent than clash.
-  function themeColorSplash(barIdx, t0, BD) {
-    vBell(t0,           'A4', BD * 2, 0.16);
-    vBell(t0 + 0.5 * BD, 'C#5', BD * 1.5, 0.14);
-    vBell(t0 + 2 * BD,  'E5', BD * 1.5, 0.12);
-    vBassPluck(t0, 'A2', BD * 2, 0.16);
-    vBassPluck(t0 + 2 * BD, 'E2', BD * 2, 0.14);
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.08);
-  }
-
-  // 🕵️ SHÉI SHÌ? — playful noir-detective, 110bpm. Walking pizzicato
-  // bass + brushed snare + occasional jazzy organ stab — Pink-Panther
-  // light noir, NOT gritty dark noir (it's a kids' game). Minor key
-  // for mystery but ascending lead motifs keep it cheery.
-  function themeIdentity(barIdx, t0, BD) {
-    const phase = barIdx % 4;
-    // Walking pizzicato bass (quarter-note staccato — pluck feel)
-    const bassLine = phase < 2
-      ? ['D2', 'F2', 'G2', 'A2']
-      : ['D2', 'F2', 'C2', 'D2'];
-    bassLine.forEach((n, b) => vBassPluck(t0 + b * BD, n, BD * 0.5, 0.22));
-    // Brushed snare on 2 and 4 — gives the detective walk
-    vSnare(t0 + 1 * BD, 0.12);
-    vSnare(t0 + 3 * BD, 0.12);
-    // Soft kick on 1
-    vKick(t0 + 0 * BD, 0.22);
-    // Hihat sizzle on offbeat 8ths for that smoky-club feel
-    for (let i = 0; i < 8; i++) {
-      if (i % 2 === 1) vHat(t0 + i * (BD / 2), 0.05);
-    }
-    // Lead motif — descending then resolving up, every 2 bars
-    if (phase === 0 || phase === 2) {
-      const motif = phase === 0
-        ? [['A4', 0], ['F4', 0.5], ['D4', 1], ['F4', 1.5], ['A4', 2], ['G4', 2.5], ['F4', 3], ['A4', 3.5]]
-        : [['D5', 0], ['A4', 0.5], ['F4', 1], ['D4', 1.5], ['C4', 2], ['D4', 2.5], ['F4', 3], ['A4', 3.5]];
-      motif.forEach(([n, b]) => vLeadSquare(t0 + b * BD, n, BD * 0.35, 0.10));
-    }
-    // Brass-organ stab on bar 4 of cycle — punctuation
-    if (phase === 3) {
-      ['D4', 'F4', 'A4'].forEach((n) => vBrass(t0 + 3 * BD, n, BD * 0.5, 0.13));
-    }
-  }
-
-  // 🐉 LÁI-QÙ-HUÍ — bouncy Chinese pentatonic adventure, 120bpm. Two-bar
-  // motif with stomping bass on quarters (=footsteps) + an erhu-like
-  // pentatonic lead that loops between G-A-D-E. Adventure-vibe.
-  function themeLaiquhui(barIdx, t0, BD) {
-    const phase = barIdx % 4;
-    // Walking-step bass on every quarter (the "courier marching" pulse)
-    for (let b = 0; b < 4; b++) {
-      vSubBass(t0 + b * BD, b % 2 === 0 ? 'G2' : 'D3', BD * 0.7, 0.22);
-    }
-    // Light kick on 1+3 — actual footstep sound
-    vKick(t0 + 0 * BD, 0.30);
-    vKick(t0 + 2 * BD, 0.28);
-    // Bouncy pentatonic erhu-ish lead — different motif each phase
-    let motif;
-    if (phase === 0) motif = [['D5', 0], ['E5', 0.5], ['G5', 1], ['A5', 1.5], ['G5', 2], ['E5', 2.5], ['D5', 3], ['E5', 3.5]];
-    else if (phase === 1) motif = [['G5', 0], ['A5', 0.5], ['B5', 1], ['D6', 2], ['A5', 3]];
-    else if (phase === 2) motif = [['E5', 0], ['G5', 0.5], ['A5', 1], ['E5', 1.5], ['G5', 2], ['D5', 2.5], ['E5', 3], ['G5', 3.5]];
-    else motif = [['D5', 0], ['G5', 1], ['A5', 2], ['B5', 3]];
-    motif.forEach(([n, beat]) => vLeadSquare(t0 + beat * BD, n, BD * 0.4, 0.14));
-    // Light shaker on 8ths for that travel-rhythm feel
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.05);
-    // Snare on 2+4 — light backbeat
-    vSnare(t0 + 1 * BD, 0.12);
-    vSnare(t0 + 3 * BD, 0.12);
-    // Bell ping on bar starts of even phases — Chinese accent
-    if (phase % 2 === 0) vBell(t0, 'G5', BD * 2, 0.10);
-  }
-
-  // === Hóngbāo Run theme — bouncy festive Chinese New Year party beat ===
-  // Driving kick on every quarter (a parade march), bright pentatonic
-  // melody, lion-dance cymbals on accents, sparkly bells on bar starts.
-  // Channels a Mario-Party board theme through a CNY filter.
-  function themePartyrun(barIdx, t0, BD) {
-    const phase = barIdx % 4;
-    // Stomping bass — kick every beat, sub-bass marching pattern
-    for (let b = 0; b < 4; b++) {
-      vKick(t0 + b * BD, b === 0 ? 0.40 : 0.30);
-      vSubBass(t0 + b * BD, b % 2 === 0 ? 'A2' : 'E3', BD * 0.55, 0.24);
-    }
-    // Snare on 2 + 4, with a ghost-tap on 4-and for swing
-    vSnare(t0 + 1 * BD, 0.16);
-    vSnare(t0 + 3 * BD, 0.16);
-    vSnare(t0 + 3.5 * BD, 0.08);
-    // Shaker on every 8th — that party-energy texture
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.06);
-    // Bouncy pentatonic lead — different motif per phase so 16 bars
-    // before repetition. Major-pentatonic in A (A, B, C#/Db, E, F#)
-    // but we lean into the "C major + relative minor" feel for festivity.
-    let motif;
-    if (phase === 0) motif = [['E5', 0], ['G5', 0.5], ['A5', 1], ['B5', 1.5], ['A5', 2], ['G5', 2.5], ['E5', 3], ['D5', 3.5]];
-    else if (phase === 1) motif = [['A5', 0], ['B5', 0.5], ['D6', 1], ['B5', 2], ['A5', 2.5], ['G5', 3]];
-    else if (phase === 2) motif = [['G5', 0], ['A5', 0.5], ['B5', 1], ['E6', 1.5], ['B5', 2], ['G5', 2.5], ['A5', 3]];
-    else motif = [['D5', 0], ['E5', 0.5], ['G5', 1], ['A5', 1.5], ['B5', 2], ['A5', 2.5], ['G5', 3], ['E5', 3.5]];
-    motif.forEach(([n, beat]) => vLeadSquare(t0 + beat * BD, n, BD * 0.35, 0.16));
-    // Bell sparkle on bar 1 of phase 0 — feels like a CNY chime / lion's eye
-    if (phase === 0) {
-      vBell(t0, 'E6', BD * 2.5, 0.13);
-      vBell(t0 + 0.5 * BD, 'A6', BD * 1.5, 0.10);
-    }
-    // Lion-dance "cymbal crash" on phase 2's downbeat — adds drama
-    if (phase === 2) vSnare(t0, 0.28);
-  }
-
   // === Registry ===
   const GAME_THEMES = {
-    'triage':        { bpm: 132, beatsPerBar: 4, fn: themeTriage },
-    'laiquhui':      { bpm: 120, beatsPerBar: 4, fn: themeLaiquhui },
-    'identity':      { bpm: 110, beatsPerBar: 4, fn: themeIdentity },
-    'conquest':      { bpm: 100, beatsPerBar: 4, fn: themeConquest },
-    'zombie':        { bpm:  92, beatsPerBar: 4, fn: themeZombie },
-    'family':        { bpm: 110, beatsPerBar: 4, fn: themeFamily },
     'monopoly':      { bpm: 124, beatsPerBar: 4, fn: themeMonopoly },
     'sixseven':      { bpm: 100, beatsPerBar: 4, fn: themeSixseven },
     'mochi-mash':    { bpm: 105, beatsPerBar: 4, fn: themeMochi },
     'dragon-eye':    { bpm:  96, beatsPerBar: 4, fn: themeDragon },
-    'market-quest':  { bpm: 110, beatsPerBar: 4, fn: themeMarket },
     'pinata':        { bpm: 130, beatsPerBar: 4, fn: themePinata },
-    'color-clash':   { bpm: 118, beatsPerBar: 4, fn: themeClash },
-    'color-splash':  { bpm: 105, beatsPerBar: 4, fn: themeColorSplash },
-    'partyrun':      { bpm: 128, beatsPerBar: 4, fn: themePartyrun },
   };
 
   function scheduleThemeAhead() {
@@ -1062,31 +791,6 @@
       tone({ freq: 180, dur: 0.18, type: 'sine', vol: 0.16, slideTo: 480 });
       tone({ freq: 90,  dur: 0.12, type: 'triangle', vol: 0.10, delay: 0.04 });
     },
-    zombieGroan(intensity) {
-      // Low, growling groan with downward pitch slide + breathy noise tail.
-      // VOLUME-BOOSTED — earlier mix was inaudible over background music. Now
-      // even the quietest ambient groan is clearly heard.
-      const v = Math.max(0.15, Math.min(1, intensity || 0.4));
-      tone({ freq: 130, dur: 0.7 * v + 0.25, type: 'sawtooth', vol: 0.32 * v, slideTo: 55 });
-      tone({ freq: 85,  dur: 0.55 * v + 0.18, type: 'triangle', vol: 0.26 * v, slideTo: 40, delay: 0.06 });
-      noise({ dur: 0.45 * v, vol: 0.20 * v, delay: 0.05 });
-    },
-    zombieScream() {
-      // Big jumpscare scream — high gnarled screech slamming down into a growl,
-      // followed by a fat low rumble and a noise burst. JARRING by design.
-      tone({ freq: 1100, dur: 0.55, type: 'sawtooth', vol: 0.55, slideTo: 200 });
-      tone({ freq: 820,  dur: 0.5,  type: 'square',   vol: 0.42, slideTo: 130, delay: 0.04 });
-      tone({ freq: 380,  dur: 0.7,  type: 'sawtooth', vol: 0.48, slideTo: 75, delay: 0.18 });
-      tone({ freq: 60,   dur: 1.1,  type: 'sine',     vol: 0.55, slideTo: 38, delay: 0.05 });
-      noise({ dur: 0.75, vol: 0.45 });
-      noise({ dur: 0.5,  vol: 0.30, delay: 0.35 });
-    },
-    heartbeat() {
-      // Quick double-thump — handy for "they're getting close" cues
-      tone({ freq: 75, dur: 0.20, type: 'sine', vol: 0.50, slideTo: 45 });
-      tone({ freq: 65, dur: 0.22, type: 'sine', vol: 0.46, slideTo: 38, delay: 0.24 });
-      noise({ dur: 0.15, vol: 0.18, delay: 0.02 });
-    },
     coinClink() {
       // Bright metallic ting for money gain — high triangle + bell
       tone({ freq: 1760, dur: 0.10, type: 'triangle', vol: 0.35, slideTo: 2640 });
@@ -1149,73 +853,6 @@
       tone({ freq: 180 + Math.random() * 60, dur: 0.05, type: 'sine', vol: 0.18, slideTo: 90 });
       noise({ dur: 0.04, vol: 0.10 });
     },
-    swordClash() {
-      // Two metallic squarewave pings + bright noise burst — classic clang
-      noise({ dur: 0.08, vol: 0.32 });
-      tone({ freq: 2200, dur: 0.10, type: 'square', vol: 0.32, slideTo: 880 });
-      tone({ freq: 3300, dur: 0.08, type: 'triangle', vol: 0.22, delay: 0.04 });
-      tone({ freq: 660, dur: 0.18, type: 'sawtooth', vol: 0.18, slideTo: 220, delay: 0.06 });
-      noise({ dur: 0.12, vol: 0.15, delay: 0.06 });
-    },
-    horseGallop() {
-      // Quad-clop rhythm — 4 short low thuds, slightly accelerating
-      [0, 0.08, 0.18, 0.26].forEach((d, i) => {
-        tone({ freq: 110 - i * 5, dur: 0.05, type: 'sine', vol: 0.30, slideTo: 60, delay: d });
-        noise({ dur: 0.03, vol: 0.18, delay: d + 0.01 });
-      });
-    },
-    warDrum() {
-      // Deep low boom-boom (announcement) — for major events / round start
-      tone({ freq: 70, dur: 0.30, type: 'sine', vol: 0.55, slideTo: 38 });
-      noise({ dur: 0.12, vol: 0.20 });
-      tone({ freq: 75, dur: 0.28, type: 'sine', vol: 0.50, slideTo: 40, delay: 0.32 });
-      noise({ dur: 0.10, vol: 0.18, delay: 0.32 });
-    },
-    archerTwang() {
-      // Tense bow release: rising-then-falling tone + sharp twang
-      tone({ freq: 880, dur: 0.06, type: 'triangle', vol: 0.28, slideTo: 1760 });
-      tone({ freq: 1320, dur: 0.10, type: 'triangle', vol: 0.22, slideTo: 660, delay: 0.04 });
-      noise({ dur: 0.05, vol: 0.10, delay: 0.02 });
-    },
-    arrowVolley() {
-      // Whoosh of arrows in flight then a sharp impact. Each "arrow" is a
-      // brief upward-then-down pitch slide via triangle wave + noise tail.
-      [0, 0.04, 0.08].forEach((d, i) => {
-        tone({ freq: 1400 + i * 100, dur: 0.08, type: 'triangle',
-               vol: 0.22, slideTo: 600, delay: d });
-      });
-      noise({ dur: 0.08, vol: 0.18, delay: 0.16 });   // impact
-      tone({ freq: 220, dur: 0.10, type: 'square', vol: 0.18, slideTo: 80, delay: 0.16 });
-    },
-    fortressBuild() {
-      // Three sharp hammer-on-stone clinks at slightly varying pitch — the
-      // sound of soldiers raising walls. Used on DEFEND orders.
-      tone({ freq: 480, dur: 0.06, type: 'square', vol: 0.32, slideTo: 240 });
-      noise({ dur: 0.04, vol: 0.18 });
-      tone({ freq: 520, dur: 0.06, type: 'square', vol: 0.30, slideTo: 260, delay: 0.18 });
-      noise({ dur: 0.04, vol: 0.16, delay: 0.18 });
-      tone({ freq: 440, dur: 0.08, type: 'square', vol: 0.32, slideTo: 220, delay: 0.36 });
-      noise({ dur: 0.05, vol: 0.18, delay: 0.36 });
-    },
-    sandKick() {
-      // Soft rustling burst — feet on dry earth as soldiers march
-      noise({ dur: 0.14, vol: 0.10 });
-      tone({ freq: 90, dur: 0.10, type: 'triangle', vol: 0.08, slideTo: 55 });
-    },
-    battleHorn() {
-      // Deep brassy horn call — for big captures / capital falls
-      tone({ freq: 175, dur: 0.30, type: 'sawtooth', vol: 0.35, slideTo: 220 });
-      tone({ freq: 220, dur: 0.50, type: 'sawtooth', vol: 0.32, delay: 0.10 });
-      tone({ freq: 110, dur: 0.60, type: 'square',   vol: 0.22, delay: 0.05 });
-      tone({ freq: 330, dur: 0.35, type: 'triangle', vol: 0.20, delay: 0.30 });
-    },
-    fortressFall() {
-      // Crashing stone — for when an enemy fortress is captured
-      noise({ dur: 0.4, vol: 0.45 });
-      tone({ freq: 180, dur: 0.5, type: 'sawtooth', vol: 0.45, slideTo: 50 });
-      tone({ freq: 50, dur: 0.8, type: 'sine', vol: 0.55, slideTo: 28, delay: 0.05 });
-      tone({ freq: 90, dur: 0.4, type: 'square', vol: 0.30, slideTo: 40, delay: 0.20 });
-    },
     // === 6-7 SWING sounds === Two clearly-different bell tones for the
     // 6 button (lower bell) and the 7 button (higher bell). Plus a whoosh
     // for the character swing and an ascending bell ladder for combos.
@@ -1271,14 +908,6 @@
         tone({ freq: f, dur: 0.6, type: 'sine', vol: 0.06, delay: 0.7 + i * 0.1 })
       );
     },
-    paint() {
-      // Painting a tile — quick wet brush sound
-      tone({ freq: 600 + Math.random() * 200, dur: 0.04, type: 'sine', vol: 0.1, slideTo: 300 });
-    },
-    step() {
-      // Step on a tile — tactile click
-      tone({ freq: 200, dur: 0.03, type: 'square', vol: 0.08 });
-    },
     legendary() {
       // Sub-bass dragon rumble
       tone({ freq: 55, dur: 2.2, type: 'sawtooth', vol: 0.28, slideTo: 75 });
@@ -1300,7 +929,7 @@
     startMusic,
     stopMusic,
     // Per-game themed background music (procedural). Each game gets its own
-    // key/tempo/timbre — call startGameTheme('triage'), startGameTheme('conquest'),
+    // key/tempo/timbre — call startGameTheme('pinata'), startGameTheme('monopoly'),
     // etc. after the countdown. Stop with stopGameTheme() — or any of the
     // win/lose/tie helpers, which also stop the theme via stopMusic().
     startGameTheme,
@@ -1330,57 +959,12 @@
     // ============================ TRIAGE ER sounds ============================
     // All synthesized (WebAudio) — keeps the asset footprint zero while giving
     // the ER ward a distinctive hospital-tech sound palette.
-    heartMonitorBeep() {
-      // Classic short pulsox beep — sine ping at ~880Hz
-      tone({ freq: 880, dur: 0.08, type: 'sine', vol: 0.18 });
-      tone({ freq: 1320, dur: 0.04, type: 'sine', vol: 0.06, delay: 0.01 });
-    },
     flatlineAlarm() {
       // Long sustained low tone + harsh sawtooth — the ECG flatline buzz
       tone({ freq: 1000, dur: 1.4, type: 'sawtooth', vol: 0.22 });
       tone({ freq: 500, dur: 1.4, type: 'sine', vol: 0.18 });
       // A small "thunk" at the end to mark patient lost
       tone({ freq: 90, dur: 0.4, type: 'sine', vol: 0.22, delay: 1.4 });
-    },
-    ambulanceSiren() {
-      // Two-tone European siren — alternating high/low blasts
-      const seq = [880, 660, 880, 660, 880, 660];
-      seq.forEach((f, i) => {
-        tone({ freq: f, dur: 0.28, type: 'sawtooth', vol: 0.20, delay: i * 0.30 });
-      });
-    },
-    defibZap() {
-      // "Clear!" — capacitor whine + crisp electric crack
-      tone({ freq: 200, dur: 0.35, type: 'sawtooth', vol: 0.12, slideTo: 1200 });
-      noise({ dur: 0.15, vol: 0.25, delay: 0.30 });
-      tone({ freq: 1800, dur: 0.10, type: 'square', vol: 0.20, delay: 0.32 });
-      // Resolving ping after the shock — patient stabilized feel
-      tone({ freq: 1320, dur: 0.10, type: 'sine', vol: 0.18, delay: 0.50 });
-      tone({ freq: 1760, dur: 0.18, type: 'sine', vol: 0.16, delay: 0.62 });
-    },
-    lifeSaved() {
-      // Bright ascending bell — payoff for a treatment
-      [880, 1175, 1568, 2093].forEach((f, i) =>
-        tone({ freq: f, dur: 0.18, type: 'triangle', vol: 0.22, delay: i * 0.07 })
-      );
-    },
-    codeBlue() {
-      // Alarm warble — dropping squarewave + a flatter follow-up
-      tone({ freq: 1200, dur: 0.18, type: 'square', vol: 0.20, slideTo: 600 });
-      tone({ freq: 600, dur: 0.18, type: 'square', vol: 0.20, delay: 0.20, slideTo: 1200 });
-      tone({ freq: 1200, dur: 0.25, type: 'square', vol: 0.18, delay: 0.40 });
-    },
-    patientArrive() {
-      // Soft "ding" — like an elevator chime
-      tone({ freq: 880, dur: 0.16, type: 'sine', vol: 0.18 });
-      tone({ freq: 1175, dur: 0.20, type: 'sine', vol: 0.14, delay: 0.08 });
-    },
-    transfusion() {
-      // Warm choral wash + a single mid bell — heal moment
-      [392, 523, 659, 784].forEach((f, i) =>
-        tone({ freq: f, dur: 0.45, type: 'sine', vol: 0.16, delay: i * 0.04 })
-      );
-      tone({ freq: 1175, dur: 0.30, type: 'triangle', vol: 0.16, delay: 0.25 });
     },
   };
 

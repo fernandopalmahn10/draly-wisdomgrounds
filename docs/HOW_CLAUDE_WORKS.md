@@ -45,29 +45,20 @@ modes, 12 official test simulations.
 
 ## 2. Everything on the platform
 
-### 2.1 Live PIN games (19 modes)
+### 2.1 Live PIN games (5 games + 3 class tools)
 
 The teacher opens a game on the big screen, kids join with the PIN on phones or tablets, and
-everyone plays at once.
+everyone plays at once. On 2026-10-10 he retired 11 older games to make room for a new generation;
+the 5 he kept are all due for a full overhaul ("second run"). New games follow the `new-pin-game`
+skill and must pass the bot playtest (`scripts/playtest-bots.js`) before shipping.
 
 | Game | What it is |
 |---|---|
 | **Mochi Mash** | The first game: panda vs kitsune teams tap-battle on quiz answers |
-| **Market Clash** (Color Clash) | Teams move around a Chinese market grid, answering to gain energy |
-| **Clase de Caligrafía** (Color Splash) | Ink-and-bamboo painting battle with school pickups |
-| **Market Quest** | A walking RPG: visit vendor stalls, answer, collect food items |
-| **Flappy Dragon** | Everyone flies at the same time through rocks |
 | **Piñata Tigre** | Two-tiger team smash |
 | **Vuelo del Dragón** (Dragon's Eye) | Vertical flight platformer, swipe up |
-| **中国大富翁 Monopoly** | Chinese trivia board game: dice, shared board, leaderboard |
-| **Zombie Escape** | Timing-based jump platformer with jumpscares |
-| **Mi Familia** | Drag family members into a 3D house (family vocabulary) |
-| **Reinos en Guerra** (Conquest) | Warring States territory battle: attack / advance / defend |
+| **Dàfùwēng · Monopolio Chino** | Chinese trivia board game: dice, shared board, leaderboard |
 | **6-7 Swing** | Math game on the viral "six-seven" meme, numbers 一–十 |
-| **Triage ER** | Hospital "save the patients" game, with CPR and defibrillator mini-games |
-| **Lái-Qù-Huí · Dragon Courier** | Map game for the verbs 来/去/回 |
-| **Shéi Shì? ¿Quién Es?** | Identity-detective game |
-| **Hóngbāo Run** | Mario-Party-style Chinese New Year board game |
 | **Warm-up / Modo Maestro** | The teacher's live sentence builder (see 2.2) |
 | **Lectura** | Synced karaoke reading with a reading test (see 2.2) |
 | **HSK / YCT simulation rooms** | Official tests run as PIN rooms (see 2.6) |

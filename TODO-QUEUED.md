@@ -154,3 +154,10 @@ Three pieces:
   state explains the feature. Existing data populates automatically
   because the rows come from `rec.hskResults` which has been collecting
   since the sim runner launched.
+
+---
+
+## Reinos de Colores — new hex-territory pin game (agreed 2026-10-10)
+
+Kahoot «Color Kingdoms»-style mode, built as a NEW game (Reinos en Guerra stays). Full plan, video notes,
+rules, Kenney assets and build recipe: `docs/specs/reinos-de-colores.md`. His improvement list is still pending.

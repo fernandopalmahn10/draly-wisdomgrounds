@@ -1262,3 +1262,10 @@ body::before {
   background: linear-gradient(135deg, rgba(8, 20, 50, 0.92), rgba(15, 45, 100, 0.92));
   color: #c8e4ff;
 }
+
+/* === Avatar chip on host player lists (every host page; moved from the retired zombie.css 2026-10-10) === */
+.chip-avatar {
+  margin-right: 6px;
+  font-size: 1.15rem;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+}

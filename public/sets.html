@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>My Sets · Draly Wisdomgrounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/styles.css?v=20261010a">
   <link rel="stylesheet" href="/css/dralingo.css">
 </head>
 <body class="hub-bg">
@@ -52,16 +52,9 @@
     const chosenGame = urlParams.get('game'); // 'mochi-mash' | 'color-splash' | null
     const GAME_INFO = {
       'mochi-mash':  { emoji: '🥮', name: 'Mochi Mash',     host: '/host.html' },
-      'market-quest':{ emoji: '🛍', name: 'Market Quest',   host: '/host-market.html' },
-      'color-clash': { emoji: '🏮', name: 'Market Clash',   host: '/host-clash.html' },
-      'color-splash':{ emoji: '🎓', name: 'Clase de Caligrafía', host: '/host-color.html' },
       'pinata':      { emoji: '🐯', name: 'Piñata Tigre',   host: '/host-pinata.html' },
       'dragon-eye':  { emoji: '🐉', name: 'Vuelo del Dragón', host: '/host-dragon.html' },
-      'zombie':      { emoji: '🧟', name: 'Zombie Escape',    host: '/host-zombie.html' },
-      'family':      { emoji: '🏡', name: 'Mi Familia',       host: '/host-family.html' },
-      'monopoly':    { emoji: '🏯', name: 'Dàfùwēng · Monopolio', host: '/host-monopoly.html' },
-      'conquest':    { emoji: '⚔️', name: 'Reinos en Guerra',  host: '/host-conquest.html' },
-      'triage':      { emoji: '🚑', name: 'Triage ER',          host: '/host-triage.html' }
+      'monopoly':    { emoji: '🏯', name: 'Dàfùwēng · Monopolio', host: '/host-monopoly.html' }
     };
     if (chosenGame && GAME_INFO[chosenGame]) {
       const info = GAME_INFO[chosenGame];

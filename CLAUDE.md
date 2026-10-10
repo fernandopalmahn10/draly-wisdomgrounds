@@ -15,6 +15,8 @@ the checklist for any new game mode.
 - **i18n**: `/homework` has an ES→EN toggle driven by a dictionary (`public/js/hw-i18n.js`, `var DICT =`). Every new
   student-facing Spanish string must be added there (and bump its `?v=` in homework.html) or it stays Spanish in EN mode.
 - Never commit secrets (`.render-token`, credentials JSON, `data/*` runtime files with student data).
+- Asset packs (Kenney etc.) live in `C:\Users\ferpa\ClaudeCode\assets-library\` (not in git, never served). Copy only
+  the files a game uses into `public/assets/<game>/` and commit those; never commit a whole pack or an installer.
 - Spanish UI first; "Chino Mandarín"; big buttons, kid-friendly feedback; encouragement at the screen edge, never blocking play.
 
 ## Official tests (YCT · HSK · New HSK simulations)
@@ -43,3 +45,10 @@ the checklist for any new game mode.
   once and reuse it for every test family and level. Old CSV exporters (`scripts/export-sim1-blooket.js`) stay as extras.
 - This is a large, multi-feature codebase: before adding a mode, read `docs/GAME_MODES.md` and reuse existing room/PIN/
   heartbeat plumbing instead of building parallel systems.
+- **Game roster (his decision 2026-10-10):** only Mochi Mash, Dàfùwēng · Monopolio Chino, 6-7 Swing, Vuelo del Dragón and
+  Piñata Tigre stay (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older games were retired to free room.
+  The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:
+  retire a game rather than keep a half-optimized one.
+- Build or overhaul any game with the `new-pin-game` skill. Before saying a game works: `node scripts/playtest-bots.js
+  --game <type> --bots 20` must PASS (Monopoly is turn-based: waiting kids are expected there), then the
+  `classroom-playtester` agent for the real-browser check.
