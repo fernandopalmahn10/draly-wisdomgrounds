@@ -647,8 +647,8 @@
       { id: 'yct3', label: 'YCT3', subtitle: 'Coming soon' },
       { id: 'yct4', label: 'YCT4', subtitle: 'Coming soon' },
     ] },
-    { id: 'newhsk', label: 'New HSK', subtitle: 'HSK 3.0 · coming soon', levels: [1, 2, 3, 4, 5, 6].map((n) => (
-      { id: 'newhsk' + n, label: 'New HSK' + n, subtitle: 'Coming soon' }
+    { id: 'newhsk', label: 'New HSK', subtitle: 'HSK 3.0 · New HSK 1 ready', levels: [1, 2, 3, 4, 5, 6].map((n) => (
+      { id: 'newhsk' + n, label: 'New HSK' + n, subtitle: n === 1 ? 'Listening + reading · 40 questions' : 'Coming soon' }
     )) },
   ];
   const _famById = (id) => EXAM_FAMILIES.find((f) => f.id === id);

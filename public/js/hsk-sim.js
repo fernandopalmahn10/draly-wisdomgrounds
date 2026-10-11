@@ -138,7 +138,7 @@
   // YCT rooms run on their own exam page (yct-sim.html) — same PIN, same
   // student code; the kid rejoins the room there under the same name.
   function _toYct() {
-    if (!/^yct\d+-/i.test(simId || '')) return false;
+    if (!/^(yct|newhsk)\d+-/i.test(simId || '')) return false;   // New HSK runs on the same exam page
     try { if (_hskSocket) _hskSocket.disconnect(); } catch (_) {}
     const code = ($('hsk-code').value || '').trim() || urlSc || '';
     const pin = roomPin || ($('hsk-access').value || '').trim();

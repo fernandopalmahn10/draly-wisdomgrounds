@@ -39,7 +39,12 @@ the checklist for any new game mode.
 - Every listening track ends with the closing line 听力考试现在结束 (`--endline`). If the recording skipped it (review started
   early), append the clean clip `YCT1_Sim1_Build/audio/exam/closing_line.m4a` after the same ~11.5 s pause.
 - Exam flow must match the official platform: look back at already-heard questions during listening, "Terminar escucha",
-  2-minute review with Anterior/Siguiente + "Terminar revisión" (no way back), free navigation in Reading, submit confirm.
+  review with Anterior/Siguiente + "Terminar revisión" (no way back; YCT 2 min, New HSK 5 min), free navigation in Reading,
+  submit confirm. Timings come from the sim JSON (`review_seconds`, `time_limit_seconds`): never hardcode minutes in the player.
+- **New HSK** (since 2026-10-11) runs on the same player: ids `newhsk<N>-sim<K>`, import with `--level newhsk<N>` (assets in
+  `NEW HSK SIMULATIONS/NEW HSK <N>/`). Its pictures are whole answer cards (keep them whole: the player's letter tab covers the
+  painted-out original tab), cropped with `../video_tools/yct_capture/newhsk_crop_abc.py` / `newhsk_crop_grid.py` from frames taken BEFORE the answer was clicked
+  (a selected card leaks the answer). A new question layout = a new `part.type` case in `public/js/yct-sim.js` `itemHtml`.
 - Pinyin without tone marks in tests. Test harness: `yct-sim.html?debug=1&direct=1&sim=…&pin=…&view=…`; headless Edge screenshots.
 - /maestro → "Official Tests" → test family → level → sims. Every new test reuses the YCT interface structure
   (cover, audio-driven listening, review, timed reading, gauge results) with that exam's real flow.
