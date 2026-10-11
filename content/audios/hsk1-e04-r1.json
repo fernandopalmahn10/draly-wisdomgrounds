@@ -1,0 +1,164 @@
+{
+ "id": "hsk1-e04-r1",
+ "level": "hsk1",
+ "exp": 4,
+ "round": 1,
+ "title": "¿Qué tal el clima?",
+ "tagline": "La profe pregunta cómo está el clima. Hace calor… ¿o frío? ¿Hoy, ayer o mañana?",
+ "pdf": "DRALINGO_HSK1_E04_R1_ElClima.pdf",
+ "tracks": [
+  {
+   "code": "EXP4.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "tiānqì",
+     "es": "clima",
+     "zh": "天气"
+    },
+    {
+     "py": "zěnmeyàng",
+     "es": "¿qué tal?",
+     "zh": "怎么样"
+    },
+    {
+     "py": "rè",
+     "es": "calor",
+     "zh": "热"
+    },
+    {
+     "py": "lěng",
+     "es": "frío",
+     "zh": "冷"
+    },
+    {
+     "py": "hěn",
+     "es": "muy",
+     "zh": "很"
+    },
+    {
+     "py": "tài … le",
+     "es": "demasiado",
+     "zh": "太……了"
+    },
+    {
+     "py": "jīntiān",
+     "es": "hoy",
+     "zh": "今天"
+    },
+    {
+     "py": "míngtiān",
+     "es": "mañana",
+     "zh": "明天"
+    },
+    {
+     "py": "zuótiān",
+     "es": "ayer",
+     "zh": "昨天"
+    },
+    {
+     "py": "xiàyǔ",
+     "es": "llover",
+     "zh": "下雨"
+    },
+    {
+     "py": "bù",
+     "es": "no",
+     "zh": "不"
+    },
+    {
+     "py": "ma",
+     "es": "¿…?",
+     "zh": "吗"
+    }
+   ]
+  },
+  {
+   "code": "EXP4.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! jīntiān tiānqì zěnmeyàng?",
+     "es": "¡Hola! ¿Qué tal el clima hoy?",
+     "zh": "你好！今天天气怎么样？"
+    },
+    {
+     "who": "tu",
+     "py": "jīntiān tiānqì hěn rè!",
+     "es": "¡Hoy hace mucho calor!",
+     "zh": "今天天气很热！"
+    },
+    {
+     "who": "profe",
+     "py": "hěn rè ma?",
+     "es": "¿Mucho calor?",
+     "zh": "很热吗？"
+    },
+    {
+     "who": "tu",
+     "py": "tài rè le! zuótiān tiānqì hěn lěng.",
+     "es": "¡Demasiado! Ayer hizo mucho frío.",
+     "zh": "太热了！昨天天气很冷。"
+    },
+    {
+     "who": "profe",
+     "py": "míngtiān ne?",
+     "es": "¿Y mañana?",
+     "zh": "明天呢？"
+    },
+    {
+     "who": "tu",
+     "py": "míngtiān xiàyǔ. wǒ bù xǐhuan xiàyǔ!",
+     "es": "Mañana llueve. ¡No me gusta la lluvia!",
+     "zh": "明天下雨。我不喜欢下雨！"
+    },
+    {
+     "who": "profe",
+     "py": "hǎo! xièxie!",
+     "es": "¡Muy bien! ¡Gracias!",
+     "zh": "好！谢谢！"
+    }
+   ]
+  },
+  {
+   "code": "EXP4.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! wǒ jiào ___.",
+     "es": "¡Hola a todos! Me llamo ___.",
+     "zh": [
+      "大家好！我叫",
+      ""
+     ]
+    },
+    {
+     "py": "jīntiān tiānqì zěnmeyàng?",
+     "es": "¿Qué tal el clima hoy?",
+     "zh": "今天天气怎么样？"
+    },
+    {
+     "py": "jīntiān tiānqì hěn rè!",
+     "es": "¡Hoy hace mucho calor!",
+     "zh": "今天天气很热！"
+    },
+    {
+     "py": "zuótiān tiānqì tài lěng le!",
+     "es": "¡Ayer hizo demasiado frío!",
+     "zh": "昨天天气太冷了！"
+    },
+    {
+     "py": "míngtiān xiàyǔ.",
+     "es": "Mañana llueve.",
+     "zh": "明天下雨。"
+    },
+    {
+     "py": "wǒ xǐhuan rè, wǒ bù xǐhuan lěng. zàijiàn!",
+     "es": "Me gusta el calor, no el frío. ¡Adiós!",
+     "zh": "我喜欢热，我不喜欢冷。再见！"
+    }
+   ]
+  }
+ ]
+}

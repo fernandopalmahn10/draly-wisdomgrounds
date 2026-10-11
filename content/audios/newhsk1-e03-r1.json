@@ -1,0 +1,179 @@
+{
+ "id": "newhsk1-e03-r1",
+ "level": "newhsk1",
+ "exp": 3,
+ "round": 1,
+ "title": "El Restaurante Chino",
+ "tagline": "Tienes hambre. El menú está en chino. El mesero te mira con la libreta en la mano. ¿Qué le dices?",
+ "pdf": "DRALINGO_HSK2_E03_R1_ElRestauranteChino.pdf",
+ "tracks": [
+  {
+   "code": "EXP3.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "fúwùyuán",
+     "es": "mesero",
+     "zh": "服务员"
+    },
+    {
+     "py": "yào",
+     "es": "querer / pedir",
+     "zh": "要"
+    },
+    {
+     "py": "miàntiáo",
+     "es": "fideos",
+     "zh": "面条"
+    },
+    {
+     "py": "jīdàn",
+     "es": "huevo",
+     "zh": "鸡蛋"
+    },
+    {
+     "py": "niúnǎi",
+     "es": "leche",
+     "zh": "牛奶"
+    },
+    {
+     "py": "kāfēi",
+     "es": "café",
+     "zh": "咖啡"
+    },
+    {
+     "py": "hǎochī",
+     "es": "delicioso",
+     "zh": "好吃"
+    },
+    {
+     "py": "gěi",
+     "es": "dar",
+     "zh": "给"
+    },
+    {
+     "py": "děng",
+     "es": "esperar",
+     "zh": "等"
+    },
+    {
+     "py": "chī",
+     "es": "comer",
+     "zh": "吃"
+    },
+    {
+     "py": "hē",
+     "es": "beber",
+     "zh": "喝"
+    },
+    {
+     "py": "mǐfàn",
+     "es": "arroz",
+     "zh": "米饭"
+    },
+    {
+     "py": "chá",
+     "es": "té",
+     "zh": "茶"
+    },
+    {
+     "py": "duōshǎo qián",
+     "es": "¿cuánto es?",
+     "zh": "多少钱"
+    },
+    {
+     "py": "xièxie",
+     "es": "gracias",
+     "zh": "谢谢"
+    }
+   ]
+  },
+  {
+   "code": "EXP3.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! nǐ yào chī shénme?",
+     "es": "¡Hola! ¿Qué quieres comer?",
+     "zh": "你好！你要吃什么？"
+    },
+    {
+     "who": "tu",
+     "py": "fúwùyuán, wǒ yào miàntiáo hé jīdàn.",
+     "es": "Mesero, quiero fideos y huevo.",
+     "zh": "服务员，我要面条和鸡蛋。"
+    },
+    {
+     "who": "profe",
+     "py": "hǎo. nǐ yào hē shénme? kāfēi ma?",
+     "es": "Bien. ¿Qué quieres beber? ¿Café?",
+     "zh": "好。你要喝什么？咖啡吗？"
+    },
+    {
+     "who": "tu",
+     "py": "bú yào kāfēi. qǐng gěi wǒ niúnǎi.",
+     "es": "Café no. Por favor, deme leche.",
+     "zh": "不要咖啡。请给我牛奶。"
+    },
+    {
+     "who": "profe",
+     "py": "hǎo de, qǐng děng yíxià.",
+     "es": "Muy bien, espere un momento, por favor.",
+     "zh": "好的，请等一下。"
+    },
+    {
+     "who": "tu",
+     "py": "hǎo, wǒ děng. … hěn hǎochī!",
+     "es": "Bien, espero. … ¡Está delicioso!",
+     "zh": [
+      "好，我等。",
+      "很好吃！"
+     ]
+    },
+    {
+     "who": "profe",
+     "py": "xièxie! èrshí kuài.",
+     "es": "¡Gracias! Son veinte yuanes.",
+     "zh": "谢谢！二十块。"
+    }
+   ]
+  },
+  {
+   "code": "EXP3.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "fúwùyuán!",
+     "es": "¡Mesero!",
+     "zh": "服务员！"
+    },
+    {
+     "py": "wǒ yào miàntiáo hé jīdàn.",
+     "es": "Quiero fideos y huevo.",
+     "zh": "我要面条和鸡蛋。"
+    },
+    {
+     "py": "qǐng gěi wǒ niúnǎi, bú yào kāfēi.",
+     "es": "Por favor, deme leche, café no.",
+     "zh": "请给我牛奶，不要咖啡。"
+    },
+    {
+     "py": "hǎo de, wǒ děng.",
+     "es": "Está bien, yo espero.",
+     "zh": "好的，我等。"
+    },
+    {
+     "py": "hěn hǎochī!",
+     "es": "¡Está delicioso!",
+     "zh": "很好吃！"
+    },
+    {
+     "py": "duōshǎo qián? xièxie!",
+     "es": "¿Cuánto es? ¡Gracias!",
+     "zh": "多少钱？谢谢！"
+    }
+   ]
+  }
+ ]
+}

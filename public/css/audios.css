@@ -1,0 +1,167 @@
+/* ===================================================================== */
+/* AUDIOS DE LAS TAREAS — the audio companion of the storybook homework  */
+/* PDFs. Same paper look as the PDFs (imperial red, gold, cream paper,   */
+/* serif pinyin) so a parent recognises it at once. Phone first, two     */
+/* taps to sound: pick the homework, press play.                         */
+/* ===================================================================== */
+:root {
+  --rojo: #5a1010;
+  --rojo-2: #741a1a;
+  --oro: #b88b2c;
+  --oro-claro: #f3e2b3;
+  --crema: #f7f1e4;
+  --crema-2: #efe4cc;
+  --papel: #fffdf8;
+  --tinta: #1c1a17;
+  --tinta-2: #6b645a;
+  --linea: #e2d4b4;
+  --serif: 'Noto Serif', Georgia, 'Times New Roman', serif;
+  --sans: 'Noto Sans', 'Segoe UI', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--crema);
+  color: var(--tinta);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.45;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--oro); outline-offset: 2px; border-radius: 6px; }
+
+/* ── Header band (the PDF cover in one line) ───────────────────────── */
+.au-top {
+  background: var(--rojo);
+  color: var(--crema);
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 16px 14px;
+  text-align: center;
+  border-bottom: 3px solid var(--oro);
+}
+.au-brand { text-decoration: none; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.au-word { font-family: var(--serif); font-weight: 500; font-size: 1.35rem; letter-spacing: .42em; padding-left: .42em; }
+.au-sub { font-size: .82rem; color: var(--oro-claro); letter-spacing: .04em; }
+
+.au-main { flex: 1; width: 100%; max-width: 680px; margin: 0 auto; padding: 18px 16px 28px; }
+.au-loading, .au-error { text-align: center; color: var(--tinta-2); padding: 40px 0; }
+.au-foot { text-align: center; color: var(--tinta-2); font-size: .8rem; padding: 10px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
+.au-foot p { margin: 0; }
+
+/* ── List: level choice + homework cards ───────────────────────────── */
+.au-intro { font-family: var(--serif); font-size: 1.5rem; line-height: 1.25; margin: 4px 0 6px; color: var(--rojo); }
+.au-intro-sub { margin: 0 0 18px; color: var(--tinta-2); }
+.au-levels { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.au-level {
+  border: 2px solid var(--linea); background: var(--papel); border-radius: 999px;
+  padding: 10px 20px; min-height: 48px; font-weight: 700; cursor: pointer;
+}
+.au-level[aria-pressed="true"] { background: var(--rojo); border-color: var(--rojo); color: var(--crema); }
+.au-cards { display: grid; gap: 16px; }
+.au-card {
+  display: grid; grid-template-columns: 132px 1fr; gap: 14px; align-items: center;
+  background: var(--papel); border: 1px solid var(--linea); border-radius: 14px; padding: 10px;
+  text-decoration: none; transition: border-color .15s ease, transform .15s ease;
+}
+.au-card:hover { border-color: var(--oro); }
+.au-card:active { transform: scale(.985); }
+.au-card img { width: 132px; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 9px; display: block; background: var(--crema-2); }
+.au-card-meta { font-size: .82rem; color: var(--tinta-2); }
+.au-card-title { font-family: var(--serif); font-weight: 700; font-size: 1.25rem; line-height: 1.2; color: var(--rojo); margin: 2px 0 8px; }
+.au-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--oro); color: #fff; font-weight: 700; font-size: .85rem; border-radius: 999px; padding: 5px 12px; }
+.au-pill svg { width: 12px; height: 12px; }
+.au-new { display: inline-block; margin-left: 6px; font-size: .72rem; font-weight: 700; color: var(--rojo); background: var(--oro-claro); border-radius: 4px; padding: 1px 6px; vertical-align: 2px; }
+
+/* ── Detail: one homework ──────────────────────────────────────────── */
+.au-back {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px;
+  font-weight: 700; color: var(--rojo); text-decoration: none; margin-bottom: 8px;
+}
+.au-hero img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 14px; display: block; background: var(--crema-2); }
+.au-hero-meta { margin: 12px 0 0; color: var(--tinta-2); font-size: .88rem; }
+.au-hero h1 { font-family: var(--serif); font-weight: 700; font-size: 2rem; line-height: 1.15; color: var(--rojo); margin: 2px 0 6px; }
+.au-hero p.au-tag { font-family: var(--serif); font-style: italic; color: var(--tinta-2); margin: 0 0 6px; }
+
+.au-track { margin-top: 26px; }
+.au-track-head { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; }
+.au-num {
+  width: 40px; height: 40px; border-radius: 50%; background: var(--rojo); color: var(--crema);
+  font-family: var(--serif); font-size: 1.25rem; display: flex; align-items: center; justify-content: center;
+}
+.au-track h2 { font-family: var(--serif); font-size: 1.35rem; line-height: 1.2; margin: 6px 0 2px; }
+.au-code { font-size: .78rem; font-weight: 700; color: var(--oro); letter-spacing: .06em; }
+.au-how { margin: 2px 0 0; color: var(--tinta-2); font-size: .92rem; }
+
+/* The player: one big round button + progress + time + speed */
+.au-player {
+  display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center;
+  background: var(--papel); border: 1px solid var(--linea); border-radius: 16px; padding: 12px 14px; margin: 12px 0 10px;
+}
+.au-play {
+  width: 64px; height: 64px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--oro); color: #fff; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 16px rgba(184, 139, 44, .35); transition: transform .12s ease, background-color .15s ease;
+}
+.au-play:active { transform: scale(.94); }
+.au-play svg { width: 26px; height: 26px; }
+.au-play[aria-pressed="true"] { background: var(--rojo); box-shadow: 0 6px 16px rgba(90, 16, 16, .3); }
+.au-bar { min-width: 0; }
+.au-part { font-weight: 700; font-size: .92rem; color: var(--tinta); min-height: 1.3em; }
+.au-track-line { position: relative; height: 8px; border-radius: 4px; background: var(--crema-2); margin-top: 8px; cursor: pointer; }
+.au-fill { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: 4px; background: var(--oro); }
+.au-time { font-size: .8rem; color: var(--tinta-2); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.au-slow {
+  border: 2px solid var(--linea); background: transparent; border-radius: 12px; min-height: 48px; padding: 6px 10px;
+  font-weight: 700; font-size: .82rem; cursor: pointer; line-height: 1.1;
+}
+.au-slow[aria-pressed="true"] { border-color: var(--oro); background: var(--oro-claro); }
+
+/* Lines: tap one to hear just that one; the playing one turns gold */
+.au-lines { display: grid; gap: 8px; }
+.au-lines.words { grid-template-columns: 1fr 1fr; }
+.au-line {
+  display: grid; grid-template-columns: auto 1fr 28px; gap: 10px; align-items: center; text-align: left;
+  width: 100%; border: 1px solid var(--linea); background: var(--papel); border-radius: 12px;
+  padding: 10px 12px; min-height: 56px; cursor: pointer; transition: background-color .2s ease, border-color .2s ease;
+}
+.au-lines.words .au-line { grid-template-columns: 1fr 22px; }
+.au-line:hover { border-color: var(--oro); }
+.au-line.now { background: var(--oro-claro); border-color: var(--oro); }
+.au-py { font-family: var(--serif); font-weight: 700; font-size: 1.2rem; line-height: 1.25; color: var(--rojo); }
+.au-lines.words .au-py { font-size: 1.35rem; }
+.au-es { font-size: .9rem; color: var(--tinta-2); }
+.au-ico { color: var(--oro); justify-self: end; }
+.au-ico svg { width: 20px; height: 20px; display: block; }
+.au-who {
+  width: 44px; height: 44px; border-radius: 50%; font-size: .62rem; font-weight: 700; letter-spacing: .04em;
+  display: flex; align-items: center; justify-content: center;
+}
+.au-who.profe { background: var(--oro); color: #fff; }
+.au-who.tu { background: var(--rojo); color: var(--crema); }
+.au-step { width: 32px; height: 32px; border-radius: 50%; background: var(--crema-2); color: var(--rojo); font-family: var(--serif); font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+.au-end {
+  margin-top: 30px; background: var(--rojo); color: var(--crema); border-radius: 14px; padding: 18px 18px 20px;
+  border: 1px solid var(--oro);
+}
+.au-end h3 { font-family: var(--serif); font-size: 1.25rem; margin: 0 0 6px; color: var(--oro-claro); }
+.au-end p { margin: 0; }
+
+@media (max-width: 420px) {
+  .au-card { grid-template-columns: 108px 1fr; gap: 12px; }
+  .au-card img { width: 108px; }
+  .au-hero h1 { font-size: 1.7rem; }
+  .au-player { grid-template-columns: 60px 1fr; }
+  .au-play { width: 60px; height: 60px; }
+  .au-slow { grid-column: 1 / -1; justify-self: start; min-height: 40px; }
+}
+@media (max-width: 360px) {
+  .au-lines.words { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}

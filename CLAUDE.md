@@ -45,12 +45,26 @@ the checklist for any new game mode.
   `NEW HSK SIMULATIONS/NEW HSK <N>/`). Its pictures are whole answer cards (keep them whole: the player's letter tab covers the
   painted-out original tab), cropped with `../video_tools/yct_capture/newhsk_crop_abc.py` / `newhsk_crop_grid.py` from frames taken BEFORE the answer was clicked
   (a selected card leaks the answer). A new question layout = a new `part.type` case in `public/js/yct-sim.js` `itemHtml`.
+- Every answer in a key must be SEEN selected in the recording, never filled in from what the content suggests: when the
+  2-s frames miss it (auto-advance, a look-back, a click during the review) scan at full frame rate
+  (`../video_tools/yct_capture/README.md` § New HSK 1 Sim 2 lessons). His 200/200 runs make his selections the key.
 - Pinyin without tone marks in tests. Test harness: `yct-sim.html?debug=1&direct=1&sim=…&pin=…&view=…`; headless Edge screenshots.
 - /maestro → "Official Tests" → test family → level → sims. Every new test reuses the YCT interface structure
   (cover, audio-driven listening, review, timed reading, gauge results) with that exam's real flow.
 - **Build order (his decision 2026-10-08):** YCT 1 → New HSK 1 → YCT 2 → New HSK 2 → YCT 3 → New HSK 3 → … (alternate,
   one level up each time). Finish all sims of a level before moving on unless he says otherwise. Old HSK sims already exist
   in `hsk-sim.html`.
+
+## Homework audio (/audios, since 2026-10-11)
+- Every homework PDF (storybook guide) has its audio on the public page `/audios/<id>` (id `hsk1-e03-r1` from
+  `DRALINGO_HSK1_E03_R1_…pdf`): no login, two taps, Spanish, pinyin WITH tone marks and Spanish exactly as in the PDF,
+  never hanzi on screen. Same paper look as the PDFs (Rojo Imperial, Oro, Crema, serif pinyin) so parents recognise it.
+- Three tracks per PDF with the PDF's own codes (EXP3.1 words · EXP3.2 dialogue · EXP3.3 the six video lines); built by
+  `scripts/audios-build.js` from `content/audios/<id>.json` with the platform's Google voices (words + PROFE = Wavenet-A,
+  TÚ = Wavenet-D). Fix a wrong reading in the JSON's `zh`, then rebuild that id.
+- New PDFs arrive in `../TAREAS/` (Cowork copies them there); a SessionStart hook lists any without audio. Build them
+  with the `tarea-audio` skill. TAREAS also holds kids' videos: never open, copy, commit or upload them.
+- Commit `content/audios/<id>.json`, `public/assets/audios/<id>/` and `public/assets/audios/catalog.json` together.
 
 ## Pin games (Kahoot-style, inside Draly Wisdom Grounds)
 - Our own live quiz games: teacher hosts, kids join with a PIN, Kahoot-like pacing (question → answer → leaderboard), with

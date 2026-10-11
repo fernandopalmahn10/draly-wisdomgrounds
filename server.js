@@ -3769,6 +3769,12 @@ app.get(['/maestro', '/maestra', '/teacher'], (req, res) => res.redirect('/maest
 app.get('/homework', (req, res) => {
   res.sendFile(_emPath.join(__dirname, 'public', 'homework.html'));
 });
+// 🔊 Homework audio gateway (2026-10-11): public, no login. /audios lists every homework,
+// /audios/<id> (e.g. /audios/hsk1-e03-r1) opens one; the PDFs link straight to it.
+app.get(['/audios', '/audio', '/audios/:id', '/audio/:id'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(_emPath.join(__dirname, 'public', 'audios.html'));
+});
 
 // Record the server boot time so the heartbeat above can be compared
 // across deploys. If your disk is genuinely persistent, the heartbeat

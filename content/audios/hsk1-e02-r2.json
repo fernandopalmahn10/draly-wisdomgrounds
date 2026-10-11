@@ -1,0 +1,179 @@
+{
+ "id": "hsk1-e02-r2",
+ "level": "hsk1",
+ "exp": 2,
+ "round": 2,
+ "title": "La Escuela",
+ "tagline": "Entra el señor director. Quiere saber qué miras, qué escuchas y quién es tu compañera.",
+ "pdf": "DRALINGO_HSK1_E02_R2_LaEscuela.pdf",
+ "tracks": [
+  {
+   "code": "EXP2.4",
+   "kind": "words",
+   "items": [
+    {
+     "py": "kàn",
+     "es": "mirar",
+     "zh": "看"
+    },
+    {
+     "py": "tīng",
+     "es": "escuchar",
+     "zh": "听"
+    },
+    {
+     "py": "kànjiàn",
+     "es": "ver",
+     "zh": "看见"
+    },
+    {
+     "py": "shū",
+     "es": "libro",
+     "zh": "书"
+    },
+    {
+     "py": "běn",
+     "es": "(un) libro",
+     "zh": "本"
+    },
+    {
+     "py": "tóngxué",
+     "es": "compañero",
+     "zh": "同学"
+    },
+    {
+     "py": "xuéxí",
+     "es": "estudiar",
+     "zh": "学习"
+    },
+    {
+     "py": "néng",
+     "es": "poder",
+     "zh": "能"
+    },
+    {
+     "py": "xiānsheng",
+     "es": "señor",
+     "zh": "先生"
+    },
+    {
+     "py": "lǎoshī",
+     "es": "profe",
+     "zh": "老师"
+    },
+    {
+     "py": "xuésheng",
+     "es": "estudiante",
+     "zh": "学生"
+    },
+    {
+     "py": "huì",
+     "es": "saber",
+     "zh": "会"
+    },
+    {
+     "py": "shuō",
+     "es": "hablar",
+     "zh": "说"
+    },
+    {
+     "py": "dú",
+     "es": "leer",
+     "zh": "读"
+    },
+    {
+     "py": "xiě",
+     "es": "escribir",
+     "zh": "写"
+    }
+   ]
+  },
+  {
+   "code": "EXP2.5",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! wǒ shì Wáng xiānsheng.",
+     "es": "¡Hola! Soy el señor Wáng.",
+     "zh": "你好！我是王先生。"
+    },
+    {
+     "who": "tu",
+     "py": "Wáng xiānsheng, nǐ hǎo! zhè shì wǒ tóngxué.",
+     "es": "¡Hola, señor Wáng! Esta es mi compañera.",
+     "zh": "王先生，你好！这是我同学。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐmen zài xuéxiào xuéxí shénme?",
+     "es": "¿Qué estudian en la escuela?",
+     "zh": "你们在学校学习什么？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒmen xuéxí hànyǔ. wǒ tīng lǎoshī, wǒ kàn shū.",
+     "es": "Estudiamos chino. Escucho a la profe, miro el libro.",
+     "zh": "我们学习汉语。我听老师，我看书。"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ kànjiàn shénme? nǐ néng shuō hànyǔ ma?",
+     "es": "¿Qué ves? ¿Puedes hablar chino?",
+     "zh": "你看见什么？你能说汉语吗？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ kànjiàn sān běn shū! wǒ néng shuō yìdiǎnr.",
+     "es": "¡Veo tres libros! Puedo hablar un poquito.",
+     "zh": "我看见三本书！我能说一点儿。"
+    },
+    {
+     "who": "profe",
+     "py": "hěn hǎo! míngtiān jiàn!",
+     "es": "¡Muy bien! ¡Hasta mañana!",
+     "zh": "很好！明天见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP2.6",
+   "kind": "video",
+   "items": [
+    {
+     "py": "nǐ hǎo! wǒ jiào ___. zhè shì wǒ tóngxué.",
+     "es": "¡Hola! Me llamo ___. Este es mi compañero.",
+     "zh": [
+      "你好！我叫",
+      "这是我同学。"
+     ]
+    },
+    {
+     "py": "wǒmen zài xuéxiào xuéxí hànyǔ.",
+     "es": "Estudiamos chino en la escuela.",
+     "zh": "我们在学校学习汉语。"
+    },
+    {
+     "py": "wǒ tīng lǎoshī, wǒ kàn shū.",
+     "es": "Escucho a la profe, miro el libro.",
+     "zh": "我听老师，我看书。"
+    },
+    {
+     "py": "wǒ kànjiàn sān běn shū!",
+     "es": "¡Veo tres libros!",
+     "zh": "我看见三本书！"
+    },
+    {
+     "py": "Wáng xiānsheng, nǐ hǎo! wǒ néng shuō yìdiǎnr hànyǔ.",
+     "es": "¡Hola, señor Wáng! Puedo hablar un poquito de chino.",
+     "zh": "王先生，你好！我能说一点儿汉语。"
+    },
+    {
+     "py": "xièxie! zàijiàn!",
+     "es": "¡Gracias! ¡Adiós!",
+     "zh": "谢谢！再见！"
+    }
+   ]
+  }
+ ]
+}

@@ -122,6 +122,13 @@ their level: 1001 is HSK1, 1002 is HSK2.
 - **🌐 ES→EN toggle**, for teachers teaching from a student account.
 - **Avatars and settings.**
 
+**🔊 Audios de las tareas (`/audios`, 2026-10-11).** Every homework PDF (the storybook guides) has its audio on a
+public page, no login: `/audios` lists the homeworks by level, `/audios/hsk1-e03-r1` opens one. Each has the PDF's
+three tracks (EXP3.1 the words, EXP3.2 the dialogue, EXP3.3 the six video lines) with pauses to repeat, every line
+tappable on its own, the line being read lit in gold. How new ones get there: Cowork saves each final PDF in
+`ClaudeCode/TAREAS/`; when a Claude Code window opens, a check lists PDFs without audio, and I build them
+(`tarea-audio` skill, about 5 minutes each). The voices are the platform's Google voices.
+
 ### 2.4 Parent control
 
 Parents open their child's progress with the same codes. A privacy guard makes sure a code only
@@ -157,7 +164,7 @@ opens the matching child.
 |---|---|---|
 | **Old HSK 1** | Simulations 1–10, 40 questions each, answers and audio from your uploaded files | `hsk-sim.html` |
 | **YCT 1** | Simulations 1–5, the real exam flow on the **original recorded audio** | `yct-sim.html` (new interface) |
-| **New HSK 1** | Simulation 1 (2026-10-11): 40 questions, original audio, 5-minute review, 20-minute reading | `yct-sim.html` (same interface) |
+| **New HSK 1** | Simulations 1–2 (2026-10-11): 40 questions each, original audio, 5-minute review, 20-minute reading | `yct-sim.html` (same interface) |
 
 **The YCT player (the new interface):**
 1. A cover page with the exam structure.
@@ -284,7 +291,7 @@ credits.
 
 **Tools:** ffmpeg (from your CapCut install), Whisper large-v3, Python (Pillow, NumPy, OpenCV),
 headless Edge. Everything is documented in `ClaudeCode/video_tools/yct_capture/README.md`, and each
-test has a build folder (`YCT1_Sim1_Build`, `YCT1_Sim2_Build`, `NEWHSK1_Sim1_Build`).
+test has a build folder (`YCT1_Sim1_Build`, `YCT1_Sim2_Build`, `NEWHSK1_Sim1_Build`, `NEWHSK1_Sim2_Build`).
 
 **Limits:**
 - **Sharpness:** pictures can only be as sharp as they were on your screen, which is why zoom
@@ -372,7 +379,7 @@ intro is long"), and I'll turn it into exact changes.
 ## 10. What's next (pending work)
 
 - **Official tests:**
-  - New HSK 1 Simulation 2 (recording already in Videos/Captures), then YCT 2 per the build order
+  - more New HSK 1 simulations (send the next recording), then YCT 2 per the build order
   - move Old HSK onto the new exam interface, once you're happy with YCT
 - **Pin games:** a Kahoot-style quiz engine inside the platform, built once and fed by the
   simulations and word sets
