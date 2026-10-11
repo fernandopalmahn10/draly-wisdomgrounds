@@ -1,0 +1,179 @@
+{
+ "id": "newhsk1-e01-r1",
+ "level": "newhsk1",
+ "exp": 1,
+ "round": 1,
+ "title": "La Familia Grande",
+ "tagline": "Hoy es tu cumpleaños. Llega toda la familia y la profe pregunta quiénes son. ¿Sabes presentarlos?",
+ "pdf": "DRALINGO_HSK2_E01_R1_LaFamiliaGrande.pdf",
+ "tracks": [
+  {
+   "code": "EXP1.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "dàjiā",
+     "es": "todos",
+     "zh": "大家"
+    },
+    {
+     "py": "shēngrì",
+     "es": "cumpleaños",
+     "zh": "生日"
+    },
+    {
+     "py": "kuàilè",
+     "es": "feliz",
+     "zh": "快乐"
+    },
+    {
+     "py": "jièshào",
+     "es": "presentar",
+     "zh": "介绍"
+    },
+    {
+     "py": "gēge",
+     "es": "hermano mayor",
+     "zh": "哥哥"
+    },
+    {
+     "py": "jiějie",
+     "es": "hermana mayor",
+     "zh": "姐姐"
+    },
+    {
+     "py": "dìdi",
+     "es": "hermano menor",
+     "zh": "弟弟"
+    },
+    {
+     "py": "mèimei",
+     "es": "hermana menor",
+     "zh": "妹妹"
+    },
+    {
+     "py": "nín",
+     "es": "usted",
+     "zh": "您"
+    },
+    {
+     "py": "bàba",
+     "es": "papá",
+     "zh": "爸爸"
+    },
+    {
+     "py": "māma",
+     "es": "mamá",
+     "zh": "妈妈"
+    },
+    {
+     "py": "jiā",
+     "es": "casa / familia",
+     "zh": "家"
+    },
+    {
+     "py": "jīntiān",
+     "es": "hoy",
+     "zh": "今天"
+    },
+    {
+     "py": "zhè shì",
+     "es": "este es",
+     "zh": "这是"
+    },
+    {
+     "py": "lǎoshī",
+     "es": "maestra",
+     "zh": "老师"
+    }
+   ]
+  },
+  {
+   "code": "EXP1.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "dàjiā hǎo! jīntiān shì shéi de shēngrì?",
+     "es": "¡Hola a todos! ¿De quién es el cumpleaños hoy?",
+     "zh": "大家好！今天是谁的生日？"
+    },
+    {
+     "who": "tu",
+     "py": "shì wǒ de shēngrì! wǒ jiào Dani.",
+     "es": "¡Es mi cumpleaños! Me llamo Dani.",
+     "zh": "是我的生日！我叫达妮。"
+    },
+    {
+     "who": "profe",
+     "py": "shēngrì kuàilè, Dani! tāmen shì shéi?",
+     "es": "¡Feliz cumpleaños, Dani! ¿Quiénes son?",
+     "zh": "生日快乐，达妮！他们是谁？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ jièshào wǒ de jiā. zhè shì wǒ gēge, zhè shì wǒ jiějie.",
+     "es": "Les presento a mi familia. Mi hermano mayor y mi hermana mayor.",
+     "zh": "我介绍我的家。这是我哥哥，这是我姐姐。"
+    },
+    {
+     "who": "tu",
+     "py": "zhè shì wǒ dìdi, zhè shì wǒ mèimei.",
+     "es": "Mi hermano menor y mi hermana menor.",
+     "zh": "这是我弟弟，这是我妹妹。"
+    },
+    {
+     "who": "profe",
+     "py": "hǎo! shēngrì kuàilè!",
+     "es": "¡Muy bien! ¡Feliz cumpleaños!",
+     "zh": "好！生日快乐！"
+    },
+    {
+     "who": "tu",
+     "py": "xièxie nín! wǒ hěn kuàilè!",
+     "es": "¡Gracias (usted)! ¡Estoy muy feliz!",
+     "zh": "谢谢您！我很快乐！"
+    }
+   ]
+  },
+  {
+   "code": "EXP1.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "dàjiā hǎo! wǒ jiào ___.",
+     "es": "¡Hola a todos! Me llamo ___.",
+     "zh": [
+      "大家好！我叫",
+      ""
+     ]
+    },
+    {
+     "py": "jīntiān shì wǒ de shēngrì!",
+     "es": "¡Hoy es mi cumpleaños!",
+     "zh": "今天是我的生日！"
+    },
+    {
+     "py": "wǒ jièshào wǒ de jiā.",
+     "es": "Les presento a mi familia.",
+     "zh": "我介绍我的家。"
+    },
+    {
+     "py": "zhè shì wǒ gēge, zhè shì wǒ jiějie.",
+     "es": "Mi hermano mayor, mi hermana mayor.",
+     "zh": "这是我哥哥，这是我姐姐。"
+    },
+    {
+     "py": "zhè shì wǒ dìdi, zhè shì wǒ mèimei.",
+     "es": "Mi hermano menor, mi hermana menor.",
+     "zh": "这是我弟弟，这是我妹妹。"
+    },
+    {
+     "py": "nín hǎo, lǎoshī! xièxie dàjiā!",
+     "es": "¡Buenas, profe! ¡Gracias a todos!",
+     "zh": "您好，老师！谢谢大家！"
+    }
+   ]
+  }
+ ]
+}

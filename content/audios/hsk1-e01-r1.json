@@ -1,0 +1,179 @@
+{
+ "id": "hsk1-e01-r1",
+ "level": "hsk1",
+ "exp": 1,
+ "round": 1,
+ "title": "Mi Familia",
+ "tagline": "Tu primera clase de Chino Mandarín. La profe te pregunta tu nombre y si te gustan los gatos. ¿Qué le dices?",
+ "pdf": "DRALINGO_HSK1_E01_R1_MiFamilia_v1.3-propuesta.pdf",
+ "tracks": [
+  {
+   "code": "EXP1.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "nǐ hǎo",
+     "es": "hola",
+     "zh": "你好"
+    },
+    {
+     "py": "wǒ jiào",
+     "es": "me llamo",
+     "zh": "我叫"
+    },
+    {
+     "py": "hěn gāoxìng",
+     "es": "muy contento",
+     "zh": "很高兴"
+    },
+    {
+     "py": "rènshi nǐ",
+     "es": "conocerte",
+     "zh": "认识你"
+    },
+    {
+     "py": "xǐhuan",
+     "es": "gustar",
+     "zh": "喜欢"
+    },
+    {
+     "py": "bù",
+     "es": "no",
+     "zh": "不"
+    },
+    {
+     "py": "māo",
+     "es": "gato",
+     "zh": "猫"
+    },
+    {
+     "py": "gǒu",
+     "es": "perro",
+     "zh": "狗"
+    },
+    {
+     "py": "zàijiàn",
+     "es": "adiós",
+     "zh": "再见"
+    },
+    {
+     "py": "bàba",
+     "es": "papá",
+     "zh": "爸爸"
+    },
+    {
+     "py": "māma",
+     "es": "mamá",
+     "zh": "妈妈"
+    },
+    {
+     "py": "jiā",
+     "es": "casa / familia",
+     "zh": "家"
+    },
+    {
+     "py": "wǒ",
+     "es": "yo",
+     "zh": "我"
+    },
+    {
+     "py": "nǐ",
+     "es": "tú",
+     "zh": "你"
+    },
+    {
+     "py": "xièxie",
+     "es": "gracias",
+     "zh": "谢谢"
+    }
+   ]
+  },
+  {
+   "code": "EXP1.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! nǐ jiào shénme míngzi?",
+     "es": "¡Hola! ¿Cómo te llamas?",
+     "zh": "你好！你叫什么名字？"
+    },
+    {
+     "who": "tu",
+     "py": "nǐ hǎo! wǒ jiào Dani. hěn gāoxìng rènshi nǐ!",
+     "es": "¡Hola! Me llamo Dani. ¡Mucho gusto!",
+     "zh": "你好！我叫达妮。很高兴认识你！"
+    },
+    {
+     "who": "profe",
+     "py": "wǒ yě hěn gāoxìng rènshi nǐ. nǐ xǐhuan māo ma?",
+     "es": "Yo también. ¿Te gustan los gatos?",
+     "zh": "我也很高兴认识你。你喜欢猫吗？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ xǐhuan māo. wǒ bù xǐhuan gǒu!",
+     "es": "Me gustan los gatos. ¡No me gustan los perros!",
+     "zh": "我喜欢猫。我不喜欢狗！"
+    },
+    {
+     "who": "tu",
+     "py": "zhè shì wǒ bàba, zhè shì wǒ māma.",
+     "es": "Este es mi papá, esta es mi mamá.",
+     "zh": "这是我爸爸，这是我妈妈。"
+    },
+    {
+     "who": "profe",
+     "py": "hǎo! xièxie, Dani. zàijiàn!",
+     "es": "¡Muy bien! Gracias, Dani. ¡Adiós!",
+     "zh": "好！谢谢，达妮。再见！"
+    },
+    {
+     "who": "tu",
+     "py": "xièxie! zàijiàn!",
+     "es": "¡Gracias! ¡Adiós!",
+     "zh": "谢谢！再见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP1.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "nǐ hǎo! wǒ jiào ___.",
+     "es": "¡Hola! Me llamo ___.",
+     "zh": [
+      "你好！我叫",
+      ""
+     ]
+    },
+    {
+     "py": "hěn gāoxìng rènshi nǐ!",
+     "es": "¡Mucho gusto en conocerte!",
+     "zh": "很高兴认识你！"
+    },
+    {
+     "py": "wǒ xǐhuan māo.",
+     "es": "Me gustan los gatos.",
+     "zh": "我喜欢猫。"
+    },
+    {
+     "py": "wǒ bù xǐhuan gǒu!",
+     "es": "¡No me gustan los perros!",
+     "zh": "我不喜欢狗！"
+    },
+    {
+     "py": "zhè shì wǒ bàba, zhè shì wǒ māma.",
+     "es": "Este es mi papá, esta es mi mamá.",
+     "zh": "这是我爸爸，这是我妈妈。"
+    },
+    {
+     "py": "xièxie! zàijiàn!",
+     "es": "¡Gracias! ¡Adiós!",
+     "zh": "谢谢！再见！"
+    }
+   ]
+  }
+ ]
+}

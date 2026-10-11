@@ -35,3 +35,6 @@ public/assets/Chinese Emperor Dralingo with ankh and Qin Dynasty Emperor Hat.glb
 public/assets/Dralingo eating characters.glb
 public/assets/DralySheikh white ghutra.glb
 public/assets/JohnMonkglbforTextures.glb
+
+# Homework audio gateway: raw voice clips cached by scripts/audios-build.js (rebuildable, not served)
+content/audios/.cache/

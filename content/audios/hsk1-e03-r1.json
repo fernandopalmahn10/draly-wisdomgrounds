@@ -1,0 +1,179 @@
+{
+ "id": "hsk1-e03-r1",
+ "level": "hsk1",
+ "exp": 3,
+ "round": 1,
+ "title": "El Mercadito",
+ "tagline": "Quieres comprar manzanas. El vendedor te mira y espera. ¿Cómo preguntas cuánto cuesta?",
+ "pdf": "DRALINGO_HSK1_E03_R1_ElMercadito.pdf",
+ "tracks": [
+  {
+   "code": "EXP3.1",
+   "kind": "words",
+   "items": [
+    {
+     "py": "mǎi",
+     "es": "comprar",
+     "zh": "买"
+    },
+    {
+     "py": "dōngxi",
+     "es": "cosas",
+     "zh": "东西"
+    },
+    {
+     "py": "duōshǎo qián",
+     "es": "¿cuánto cuesta?",
+     "zh": "多少钱"
+    },
+    {
+     "py": "kuài",
+     "es": "yuan (dinero)",
+     "zh": "块"
+    },
+    {
+     "py": "píngguǒ",
+     "es": "manzana",
+     "zh": "苹果"
+    },
+    {
+     "py": "shuǐguǒ",
+     "es": "fruta",
+     "zh": "水果"
+    },
+    {
+     "py": "chī",
+     "es": "comer",
+     "zh": "吃"
+    },
+    {
+     "py": "hē",
+     "es": "beber",
+     "zh": "喝"
+    },
+    {
+     "py": "xǐhuan",
+     "es": "gustar",
+     "zh": "喜欢"
+    },
+    {
+     "py": "xiǎng",
+     "es": "querer",
+     "zh": "想"
+    },
+    {
+     "py": "shuǐ",
+     "es": "agua",
+     "zh": "水"
+    },
+    {
+     "py": "chá",
+     "es": "té",
+     "zh": "茶"
+    },
+    {
+     "py": "mǐfàn",
+     "es": "arroz",
+     "zh": "米饭"
+    },
+    {
+     "py": "xièxie",
+     "es": "gracias",
+     "zh": "谢谢"
+    },
+    {
+     "py": "bú kèqì",
+     "es": "de nada",
+     "zh": "不客气"
+    }
+   ]
+  },
+  {
+   "code": "EXP3.2",
+   "kind": "dialogue",
+   "items": [
+    {
+     "who": "profe",
+     "py": "nǐ hǎo! nǐ xiǎng mǎi shénme?",
+     "es": "¡Hola! ¿Qué quieres comprar?",
+     "zh": "你好！你想买什么？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ xiǎng mǎi píngguǒ. zhèxiē dōngxi duōshǎo qián?",
+     "es": "Quiero comprar manzanas. ¿Cuánto cuestan estas cosas?",
+     "zh": "我想买苹果。这些东西多少钱？"
+    },
+    {
+     "who": "profe",
+     "py": "èrshí kuài.",
+     "es": "Veinte yuanes.",
+     "zh": "二十块。"
+    },
+    {
+     "who": "tu",
+     "py": "hǎo! wǒ hěn xǐhuan chī shuǐguǒ!",
+     "es": "¡Bien! ¡Me encanta comer fruta!",
+     "zh": "好！我很喜欢吃水果！"
+    },
+    {
+     "who": "profe",
+     "py": "nǐ hē shuǐ ma?",
+     "es": "¿Bebes agua?",
+     "zh": "你喝水吗？"
+    },
+    {
+     "who": "tu",
+     "py": "wǒ xiǎng hē chá. xièxie!",
+     "es": "Quiero beber té. ¡Gracias!",
+     "zh": "我想喝茶。谢谢！"
+    },
+    {
+     "who": "profe",
+     "py": "bú kèqì! zàijiàn!",
+     "es": "¡De nada! ¡Adiós!",
+     "zh": "不客气！再见！"
+    }
+   ]
+  },
+  {
+   "code": "EXP3.3",
+   "kind": "video",
+   "items": [
+    {
+     "py": "nǐ hǎo! wǒ jiào ___.",
+     "es": "¡Hola! Me llamo ___.",
+     "zh": [
+      "你好！我叫",
+      ""
+     ]
+    },
+    {
+     "py": "wǒ xiǎng mǎi píngguǒ.",
+     "es": "Quiero comprar manzanas.",
+     "zh": "我想买苹果。"
+    },
+    {
+     "py": "zhèxiē dōngxi duōshǎo qián?",
+     "es": "¿Cuánto cuestan estas cosas?",
+     "zh": "这些东西多少钱？"
+    },
+    {
+     "py": "èrshí kuài? hǎo!",
+     "es": "¿Veinte yuanes? ¡Bien!",
+     "zh": "二十块？好！"
+    },
+    {
+     "py": "wǒ xǐhuan chī shuǐguǒ, wǒ xǐhuan hē chá.",
+     "es": "Me gusta comer fruta, me gusta beber té.",
+     "zh": "我喜欢吃水果，我喜欢喝茶。"
+    },
+    {
+     "py": "xièxie! zàijiàn!",
+     "es": "¡Gracias! ¡Adiós!",
+     "zh": "谢谢！再见！"
+    }
+   ]
+  }
+ ]
+}
