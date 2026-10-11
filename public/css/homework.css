@@ -4612,3 +4612,9 @@ body.hw-lv-hsk2 .hw-hud { border-color: rgba(91, 232, 209, 0.5); }
   from { transform: translate(0, 0) scale(1); opacity: 1; }
   to   { transform: translate(var(--dx), var(--dy)) scale(0.4) rotate(200deg); opacity: 0; }
 }
+
+/* 📺 «Episodio de hoy» badge on the daily story (2026-10-11: every class is an episode) */
+.hw-cs-episode { position: absolute; z-index: 4; top: max(14px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+  padding: 6px 16px; border-radius: 999px; background: #fff7e3; color: #1d2440; border: 3px solid #1d2440; box-shadow: 0 4px 0 #1d2440;
+  font: 800 1rem/1.2 'Baloo 2', 'Nunito', sans-serif; white-space: nowrap; }
+.hw-cs-castchar { max-height: 64vmin; }

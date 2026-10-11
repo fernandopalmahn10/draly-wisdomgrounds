@@ -124,8 +124,9 @@
     fired = true;
     const kidUrl = String(payload.kidUrlTemplate).replace('{PIN}', pin);
     _banner('🚀 PIN ' + pin + ' encontrado · enviando alumnos…');
-    fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(payload.pw), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+    // 🔒 2026-10-11: code in the X-Admin-Pw header (URI-encoded), not the URL.
+    fetch('/api/admin/broadcast-selected', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Pw': encodeURIComponent(payload.pw) },
       body: JSON.stringify({
         studentCodes: payload.codes,
         text: '🚀 La maestra está abriendo ' + (payload.label || 'el juego') + ' ahora. Prepárate.',

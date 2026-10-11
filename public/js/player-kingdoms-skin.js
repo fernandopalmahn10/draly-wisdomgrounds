@@ -6,11 +6,16 @@
 (function () {
   const A = '/assets/kingdoms/';
   const POSE = (n) => A + 'dralingo/' + n + '.webp';
+  // Dragones Pintores: the dragon is the kid's own, so a Fuego kid sees the red Dralingo (his rule 2026-10-11).
+  const RED_POSES = ['jump', 'flag', 'shocked', 'thinking', 'pointing', 'champion', 'countdown'];
+  const TPOSE = (n) => POSE(n + (game === 'paint' && ctx && ctx.getTeam() === 'red' && RED_POSES.includes(n) ? '-red' : ''));
   const Q_MS = 20000;            // time to answer each question
   let ctx = null;
   let on = false;
   let muted = false;
   let scores = { red: 0, gold: 0 };
+  let myPaint = 0;             // Dragones Pintores: clouds this kid owns (from pc:paint / game-end)
+  let curQid = null;           // question on screen (a resync re-sends the same one: keep its countdown)
   let streak = 0;
   let qTimer = null;
   let qStart = 0;
@@ -73,7 +78,11 @@
     };
   }
 
-  function setMode(v) {
+  const SKIN_GAMES = ['kingdoms', 'paint'];
+  let game = null;
+  function setMode(v, gt) {
+    if (gt) game = gt;
+    document.body.classList.toggle('pc-on', !!v && game === 'paint');
     if (v === on) return;
     on = v;
     document.body.classList.toggle('kd-phone', on);
@@ -95,7 +104,7 @@
     const think = document.createElement('div');
     think.className = 'kdp-think';
     think.id = 'kdp-think';
-    think.innerHTML = '<img alt="" src="' + POSE('thinking') + '">';
+    think.innerHTML = '<img alt="" src="' + TPOSE('thinking') + '">';
     q.prepend(bar, timer);
     const img = $('question-image-wrap');
     if (img) img.after(think);
@@ -112,7 +121,7 @@
     const theirs = scores[team === 'red' ? 'gold' : 'red'] || 0;
     const st = $('kdp-status');
     if (mine > theirs) { st.textContent = `¡Ganamos por ${mine - theirs}!`; st.className = 'kdp-status ahead'; }
-    else if (mine < theirs) { st.textContent = `¡Nos faltan ${theirs - mine}!`; st.className = 'kdp-status behind'; }
+    else if (mine < theirs) { st.textContent = theirs - mine === 1 ? '¡Falta 1!' : `¡Faltan ${theirs - mine}!`; st.className = 'kdp-status behind'; }
     else { st.textContent = '¡Empate!'; st.className = 'kdp-status'; }
   }
 
@@ -154,7 +163,7 @@
     const box = document.createElement('div');
     box.className = 'kdp-lobby';
     box.id = 'kdp-lobby';
-    box.innerHTML = '<img alt="" src="' + POSE('pointing') + '"><span class="kdp-team" id="kdp-lobby-team"></span>';
+    box.innerHTML = '<img alt="" id="kdp-lobby-img" src="' + TPOSE('pointing') + '"><span class="kdp-team" id="kdp-lobby-team"></span>';
     head.prepend(box);
     paintLobby();
   }
@@ -163,6 +172,7 @@
     if (!t || !ctx) return;
     const team = ctx.getTeam();
     t.className = 'kdp-team ' + team;
+    if ($('kdp-lobby-img')) $('kdp-lobby-img').src = TPOSE('pointing');
     t.textContent = team === 'red' ? '¡Eres del Reino del Fuego! 🔥' : '¡Eres del Reino del Mar! 🌊';
   }
   function countdownDecor() {
@@ -172,17 +182,21 @@
     img.className = 'kdp-count-img';
     img.id = 'kdp-count-img';
     img.alt = '';
-    img.src = POSE('countdown');
     ov.prepend(img);
   }
-  function resultDecor(correct, correctText) {
+  function countdownPose() {
+    const img = $('kdp-count-img');
+    if (img) img.src = TPOSE('countdown');
+  }
+  function resultDecor(correct, correctText, r) {
+    const paint = r && r.paint;
     const box = $('result-feedback');
     if (!box) return;
     box.innerHTML = '';
     const img = document.createElement('img');
     img.className = 'kdp-sticker';
     img.alt = '';
-    img.src = POSE(correct ? (streak >= 3 ? 'flag' : 'jump') : 'shocked');
+    img.src = TPOSE(correct ? (streak >= 3 ? 'flag' : 'jump') : 'shocked');
     const title = document.createElement('div');
     title.className = 'kdp-res-title ' + (correct ? 'ok' : 'no');
     title.textContent = correct ? '¡Correcto!' : (answered && Date.now() - qStart >= Q_MS ? '¡Se acabó el tiempo!' : '¡Casi!');
@@ -190,7 +204,9 @@
     if (correct) {
       const sub = document.createElement('div');
       sub.className = 'kdp-res-sub';
-      sub.textContent = streak >= 3 && streak % 3 === 0 ? '¡Bandera doble! 🚩🚩' : '¡Ganaste una bandera! 🚩';
+      sub.textContent = paint
+        ? (paint.blaze ? '¡LLAMARADA! 🔥🔥 Pintas más ancho' : '¡+10 s de fuego! 🔥')
+        : (streak >= 3 && streak % 3 === 0 ? '¡Bandera doble! 🚩🚩' : '¡Ganaste una bandera! 🚩');
       box.appendChild(sub);
       if (streak >= 2) {
         const fl = document.createElement('div');
@@ -218,9 +234,19 @@
     const img = document.createElement('img');
     img.className = 'kdp-end-img';
     img.alt = '';
-    img.src = POSE(won ? 'champion' : (data && data.winner === 'tie' ? 'jump' : 'pointing'));
+    // In Dragones Pintores the dragon is the kid's own character, so a Fuego kid sees the red Dralingo.
+    img.src = TPOSE(won ? 'champion' : (data && data.winner === 'tie' ? 'jump' : 'pointing'));
     emoji.appendChild(img);
     if (!won && data && data.winner !== 'tie') $('end-banner').textContent = '¡La próxima es nuestra!';
+    if (game === 'paint') {
+      // player.js fills these with quiz points; in the paint game what counts is clouds.
+      const teamEl = $('end-team-score'), meEl = $('end-personal-score');
+      if (teamEl && teamEl.parentNode.firstChild) teamEl.parentNode.firstChild.nodeValue = 'Cielo de tu reino: ';
+      if (teamEl) teamEl.textContent = ((data && data.teamScores && data.teamScores[team]) || 0) + ' nubes';
+      if (data && data.scores && data.scores[ctx.socket.id] != null) myPaint = data.scores[ctx.socket.id];
+      if (meEl && meEl.parentNode.firstChild) meEl.parentNode.firstChild.nodeValue = 'Tus nubes: ';
+      if (meEl) meEl.textContent = myPaint + ' ☁️';
+    }
   }
 
   function init(c) {
@@ -228,14 +254,19 @@
     const s = c.socket;
     s.on('state', (st) => {
       if (!st) return;
-      setMode(st.gameType === 'kingdoms');
+      setMode(SKIN_GAMES.includes(st.gameType), st.gameType);
       if (on && st.teamScores && st.state !== 'active') { scores = st.teamScores; paintBar(); }
       if (on) paintLobby();
     });
     s.on('team-changed', () => afterRender(() => { paintLobby(); paintBar(); }));
-    s.on('kd:init', (d) => { setMode(true); streak = 0; scores = d.teamScores || scores; paintBar(); });
+    s.on('kd:init', (d) => { setMode(true, 'kingdoms'); scores = d.teamScores || scores; paintBar(); });
+    s.on('pc:init', (d) => { setMode(true, 'paint'); scores = d.teamScores || scores; paintBar(); });
+    s.on('pc:paint', (d) => {
+      if (d.teamScores) { scores = d.teamScores; paintBar(); }
+      if (d.scores && d.scores[s.id] != null) myPaint = d.scores[s.id];
+    });
     s.on('kd:plant', (d) => { if (d.teamScores) { scores = d.teamScores; paintBar(); } if (on && d.playerId !== s.id && (d.flipped || []).length >= 3) sfx('surround', 0.35); });
-    s.on('countdown', () => { if (!on) return; countdownDecor(); });
+    s.on('countdown', () => { streak = 0; myPaint = 0; curQid = null; if (!on) return; countdownDecor(); countdownPose(); });
     s.on('question', (q) => {
       if (!on) return;
       afterRender(() => {
@@ -243,6 +274,8 @@
         const hasImg = $('question-image-wrap') && $('question-image-wrap').style.display !== 'none';
         if ($('kdp-think')) $('kdp-think').style.display = hasImg ? 'none' : 'flex';
         paintBar();
+        if (q && q.qid === curQid && qTimer) return;   // same question re-sent by a resync: keep its countdown
+        curQid = q && q.qid;
         startQuestionTimer(q);
         sfx('whoosh', 0.35);
       });
@@ -255,7 +288,7 @@
       answered = true;
       stopQuestionTimer();
       streak = r.correct ? streak + 1 : 0;
-      afterRender(() => resultDecor(!!r.correct, r.correctText));
+      afterRender(() => resultDecor(!!r.correct, r.correctText, r));
     });
     s.on('game-end', (d) => { if (!on) return; stopQuestionTimer(); afterRender(() => endDecor(d)); });
     s.on('kd:prompt', () => sfx('flag', 0.6));

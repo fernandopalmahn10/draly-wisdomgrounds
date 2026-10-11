@@ -49,12 +49,15 @@
   // Curriculum picker: family → level → world → round → opens the game's host page with that question pack.
   const GAMES = {
     'kingdoms':   { emoji: '🏰', name: 'Reinos de Colores', host: '/host-kingdoms.html' },
+    'paint':      { emoji: '🎨', name: 'Dragones Pintores', host: '/host-paint.html' },
     'mochi-mash': { emoji: '🥮', name: 'Mochi Mash', host: '/host.html' },
     'pinata':     { emoji: '🐯', name: 'Piñata Tigre', host: '/host-pinata.html' },
     'dragon-eye': { emoji: '🐉', name: 'Vuelo del Dragón', host: '/host-dragon.html' },
     'monopoly':   { emoji: '🏯', name: 'Dàfùwēng · Monopolio', host: '/host-monopoly.html' },
   };
   const game = new URLSearchParams(location.search).get('game') || 'kingdoms';
+  // Launched from /maestro: the host page must keep ?livegame=1 so the class is pulled into the game.
+  const LIVE = new URLSearchParams(location.search).get('livegame') === '1' ? '&livegame=1' : '';
   const info = GAMES[game] || GAMES.kingdoms;
   document.getElementById('game-emoji').textContent = info.emoji;
   document.getElementById('game-name').textContent = info.name;
@@ -114,7 +117,7 @@
       $('step-title').textContent = '¿Qué ronda?';
       path[2].rounds.forEach((r) => {
         grid.appendChild(tile({ emoji: '🚀', name: r.name, meta: r.blurb || '', ready: true,
-          onClick: () => { location.href = info.host + '?setId=' + encodeURIComponent(r.setId); } }));
+          onClick: () => { location.href = info.host + '?setId=' + encodeURIComponent(r.setId) + LIVE; } }));
       });
     }
   }

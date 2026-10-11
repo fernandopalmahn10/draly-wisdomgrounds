@@ -1,0 +1,305 @@
+/* Draly Wisdom Grounds · home page (his redesign brief 2026-10-11: pastel, the Reinos de Colores sticker look he liked,
+   Dralingo instead of Gojo, quiet). One loud element: Dralingo himself (animated, tap him for a surprise).
+   Everything else is calm paper-and-ink: cream cards, navy outlines, hard drop shadows, Baloo 2 + Nunito. */
+:root {
+  --sky: #9fdcf7;
+  --sky-2: #c6ecfb;
+  --sea: #4fb2d9;
+  --paper: #fff7e3;
+  --ink: #1d2440;
+  --ink-soft: #55607f;
+  --gold: #ffc93c;
+  --mint: #c8f2dc;
+  --jade: #26a65b;
+  --coral: #f0443a;
+  --blue: #2f7bea;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+[hidden] { display: none !important; }
+
+body.home {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  font-family: 'Nunito', system-ui, sans-serif;
+  /* Dubai skyline at golden hour (his brief: "I love Dubai skyline, I want luxury for the kids"); Higgsfield render,
+     no people, no logos. The photo's sky fades into the page sky at the top. */
+  background-color: #9bc2e3;
+  background-image:
+    linear-gradient(180deg, #9bc2e3 0%, rgba(155, 194, 227, 0) 34%),
+    url('/assets/dubai/skyline-wide.webp');
+  background-repeat: no-repeat;
+  background-size: 100% 100%, cover;
+  background-position: 0 0, center bottom;
+  background-attachment: scroll;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-wrap {
+  flex: 1;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: max(14px, env(safe-area-inset-top)) 16px 12px;
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+/* ---------- hero ---------- */
+.home-hero { text-align: center; position: relative; }
+
+.home-dralingo {
+  position: relative;
+  display: inline-block;
+  padding: 0;
+  margin: 0 auto;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.home-dralingo img {
+  display: block;
+  width: clamp(140px, 40vw, 300px);
+  height: auto;
+  aspect-ratio: 340 / 332;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 0 rgba(29, 36, 64, .18));
+  position: relative;
+  z-index: 1;
+}
+.home-dralingo::after {           /* soft ground shadow so he stands on something */
+  content: '';
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 2px;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(29, 36, 64, .28), rgba(29, 36, 64, 0));
+}
+.home-dralingo:focus-visible { outline: 4px solid var(--blue); outline-offset: 4px; border-radius: 24px; }
+
+/* the gang next to Dralingo (feet on one line) */
+.home-stage { display: flex; align-items: flex-end; justify-content: center; gap: 0; }
+.home-cast { flex: 0 1 30%; max-width: 30%; padding: 0; margin: 0; border: 0; background: none; cursor: pointer;
+  touch-action: manipulation; position: relative; z-index: 0; }
+.home-cast img { display: block; width: 100%; height: auto; max-height: clamp(150px, 44vw, 330px); object-fit: contain;
+  object-position: bottom; filter: drop-shadow(0 8px 0 rgba(29, 36, 64, .16)); }
+.home-stage .home-dralingo { flex: 0 0 auto; }
+.home-cast:focus-visible { outline: 4px solid var(--blue); outline-offset: 4px; border-radius: 18px; }
+.home-cast.boing img { animation: homeBoing .42s cubic-bezier(.3, 1.6, .5, 1); }
+.home-dralingo.boing img { animation: homeBoing .42s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes homeBoing {
+  0% { transform: scale(1, 1); }
+  30% { transform: scale(1.1, .88) translateY(6px); }
+  60% { transform: scale(.94, 1.08) translateY(-8px); }
+  100% { transform: scale(1, 1); }
+}
+
+.home-poke {
+  position: absolute;
+  z-index: 2;
+  top: 6%;
+  right: -34%;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  padding: 4px 12px;
+  font: 800 1rem/1.2 'Baloo 2', 'Nunito', sans-serif;
+  color: var(--ink);
+  box-shadow: 0 4px 0 var(--ink);
+  transform: rotate(6deg) scale(0);
+  transform-origin: 0% 100%;
+  animation: homePoke .5s cubic-bezier(.3, 1.6, .5, 1) 2.2s forwards;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.home-dralingo.poked .home-poke { display: none; }
+@keyframes homePoke { to { transform: rotate(6deg) scale(1); } }
+
+.home-title {
+  margin: 4px auto 0;
+  max-width: 14ch;
+  font: 800 clamp(2.1rem, 9.4vw, 3.9rem)/.98 'Baloo 2', 'Nunito', sans-serif;
+  color: var(--paper);
+  -webkit-text-stroke: 3px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--ink);
+  text-wrap: balance;
+  letter-spacing: .01em;
+}
+.home-tagline {
+  display: inline-block;
+  padding: 2px 14px;
+  border-radius: 999px;
+  background: rgba(255, 247, 227, .78);
+  margin: 10px 0 0;
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- actions ---------- */
+.home-actions {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.home-hw {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 10px 14px;
+  border: 3px solid var(--ink);
+  border-radius: 22px;
+  background: var(--mint);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: 0 6px 0 var(--ink);
+  transition: transform .08s, box-shadow .08s;
+}
+.home-hw:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+.home-hw:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
+.home-hw-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border: 3px solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  font-size: 1.6rem;
+}
+.home-hw-text { flex: 1; display: grid; text-align: left; }
+.home-hw-text b { font: 800 1.35rem/1.1 'Baloo 2', 'Nunito', sans-serif; }
+.home-hw-text small { font-weight: 800; font-size: .92rem; color: var(--ink-soft); }
+.home-hw-go { font: 800 2.2rem/1 'Baloo 2', sans-serif; color: var(--ink); padding-right: 4px; }
+
+.home-rematch { text-align: center; }
+.home-rematch-sub { margin: 8px 0 0; font-weight: 800; color: var(--ink-soft); font-size: .95rem; }
+
+.home-join {
+  display: grid;
+  gap: 10px;
+  padding: 16px 16px 12px;
+  border: 4px solid var(--ink);
+  border-radius: 26px;
+  background: var(--paper);
+  box-shadow: 0 8px 0 var(--ink);
+}
+.home-join-title {
+  margin: 0 0 2px;
+  text-align: center;
+  font: 800 1.45rem/1.1 'Baloo 2', 'Nunito', sans-serif;
+}
+.home-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.home-input {
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 14px;
+  border: 3px solid var(--ink);
+  border-radius: 16px;
+  background: #fff;
+  color: var(--ink);
+  font: 800 1.25rem/1.2 'Nunito', sans-serif;
+  text-align: center;
+  appearance: none;
+}
+.home-input::placeholder { color: #9aa3bd; }
+.home-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px rgba(47, 123, 234, .25); }
+.home-input-pin {
+  min-height: 70px;
+  font: 800 2.4rem/1 'Baloo 2', 'Nunito', sans-serif;
+  letter-spacing: .32em;
+  padding-left: calc(14px + .32em);   /* keeps the digits optically centred despite the tracking */
+}
+
+.home-btn {
+  width: 100%;
+  min-height: 62px;
+  border: 3px solid var(--ink);
+  border-radius: 18px;
+  font: 800 1.6rem/1 'Baloo 2', 'Nunito', sans-serif;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 6px 0 var(--ink);
+  transition: transform .08s, box-shadow .08s;
+  touch-action: manipulation;
+}
+.home-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+.home-btn:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
+.home-btn-go { background: var(--gold); margin-top: 4px; }
+.home-btn-gold { background: var(--gold); font-size: 1.35rem; }
+
+.home-error {
+  min-height: 1.3em;
+  margin: 0;
+  text-align: center;
+  font-weight: 800;
+  color: var(--coral);
+}
+
+/* ---------- footer ---------- */
+.home-foot {
+  text-align: center;
+  padding: 6px 16px max(16px, env(safe-area-inset-bottom));
+}
+.home-teacher {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: .95rem;
+  color: var(--ink);
+  text-decoration: none;
+  background: rgba(255, 247, 227, .7);
+  border: 2px solid rgba(29, 36, 64, .25);
+}
+.home-teacher:hover { background: var(--paper); border-color: var(--ink); }
+.home-teacher:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
+
+/* ---------- wide screens: hero left, actions right ---------- */
+@media (min-width: 860px) {
+  .home-wrap {
+    grid-template-columns: 1fr minmax(360px, 440px);
+    align-items: center;
+    align-content: center;
+    gap: 40px;
+    padding: 32px 28px;
+  }
+  .home-dralingo img { width: clamp(220px, 26vw, 330px); }
+  .home-title { max-width: 12ch; }
+  .home-actions { margin: 0; }
+}
+
+/* short landscape phones: keep the PIN card in view */
+@media (max-height: 560px) and (orientation: landscape) {
+  .home-wrap { grid-template-columns: 1fr 1fr; align-items: center; }
+  .home-dralingo img { width: 120px; }
+  .home-cast img { max-height: 140px; }
+  .home-title { font-size: 2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-poke { animation: none; transform: rotate(6deg) scale(1); }
+  .home-dralingo.boing img { animation: none; }
+  .home-hw, .home-btn { transition: none; }
+}

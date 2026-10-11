@@ -24,6 +24,17 @@
   let pw = params.get('pw') || '';
   try { if (!pw) pw = localStorage.getItem('mochi.maestroPw') || ''; } catch (_) {}
   try { if (pw) localStorage.setItem('mochi.maestroPw', pw); } catch (_) {}
+  // (?pw= is still read above for old /maestro tabs and blocked-storage phones;
+  // /maestro now hands the code over through localStorage instead.)
+
+  // 🔒 2026-10-11 (security): the teacher code travels in the X-Admin-Pw request
+  // header, never in a URL (URLs end up in Render/proxy access logs). URI-encoded
+  // because headers only carry Latin-1; server.js _adminPw() decodes it.
+  function adminFetch(url, code, opts) {
+    const o = Object.assign({}, opts);
+    o.headers = Object.assign({}, o.headers, { 'X-Admin-Pw': encodeURIComponent(code || '') });
+    return fetch(url, o);
+  }
 
   if (!pw) {
     document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#ffd24a;font-family:Nunito;"><h2>🔒 Falta tu código de maestra.</h2><p>Entra desde <a href="/maestro" style="color:#5be8d1;">Modo Maestro</a> y vuelve a lanzar la simulación.</p></div>';
@@ -167,7 +178,7 @@
   const _doneToasted = new Set();
   function pollSessions() {
     if (!pin) return;
-    fetch('/api/hsk-sim/sessions?pw=' + encodeURIComponent(pw) + '&pin=' + encodeURIComponent(pin))
+    adminFetch('/api/hsk-sim/sessions?pin=' + encodeURIComponent(pin), pw)
       .then((r) => r.json())
       .then((d) => {
         if (!d || !d.ok) return;
@@ -311,8 +322,8 @@
   function openForcePicker() {
     if (!pin) { alert('Esperando PIN…'); return; }
     Promise.all([
-      fetch('/api/admin/students?pw=' + encodeURIComponent(pw)).then((r) => r.json()),
-      fetch('/api/hsk-sim/results?pw=' + encodeURIComponent(pw) + '&simId=' + encodeURIComponent(simId)).then((r) => r.json()),
+      adminFetch('/api/admin/students', pw).then((r) => r.json()),
+      adminFetch('/api/hsk-sim/results?simId=' + encodeURIComponent(simId), pw).then((r) => r.json()),
     ]).then(([studentData, resultData]) => {
         if (!studentData || !studentData.ok) { alert('No se pudo cargar la lista.'); return; }
         const onlineNow = (studentData.students || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
@@ -404,7 +415,7 @@
           const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
             .map((cb) => cb.dataset.code).filter(Boolean);
           if (!codes.length) { alert('Selecciona al menos un alumno.'); return; }
-          fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
+          adminFetch('/api/admin/broadcast-selected', pw, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -443,7 +454,7 @@
     const board = card.querySelector('#hh-force-status');
     const started = Date.now();
     const poll = () => {
-      fetch('/api/admin/gohome-status?type=force&pw=' + encodeURIComponent(pw) + '&codes=' + encodeURIComponent(codes.join(',')))
+      adminFetch('/api/admin/gohome-status?type=force&codes=' + encodeURIComponent(codes.join(',')), pw)
         .then((r) => r.json())
         .then((d) => {
           const sts = (d && d.statuses) || [];
@@ -475,7 +486,7 @@
   // live board fill in ✅ as each one arrives. Use it before/while forcing the
   // sim so nobody is trapped on an old "estás en la sala" screen.
   function openHomePicker() {
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         const online = ((data && data.students) || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
@@ -509,7 +520,7 @@
         ov.querySelector('#hh-home-go').addEventListener('click', () => {
           const codes = Array.from(listEl.querySelectorAll('input:checked')).map((c) => c.dataset.code).filter(Boolean);
           if (!codes.length) { alert('Selecciona al menos un alumno.'); return; }
-          fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
+          adminFetch('/api/admin/broadcast-selected', pw, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ studentCodes: codes, text: '📚 Tu maestra te envió a tu perfil de tareas.', actionType: 'gohome', actionUrl: '/homework', actionLabel: 'Ir a mis tareas →' }),
           }).then((r) => r.json()).then((res) => {
@@ -536,7 +547,7 @@
     const board = card.querySelector('#hh-home-status');
     const started = Date.now();
     const poll = () => {
-      fetch('/api/admin/gohome-status?pw=' + encodeURIComponent(pw) + '&codes=' + encodeURIComponent(codes.join(',')))
+      adminFetch('/api/admin/gohome-status?codes=' + encodeURIComponent(codes.join(',')), pw)
         .then((r) => r.json())
         .then((d) => {
           const sts = (d && d.statuses) || [];
@@ -564,6 +575,7 @@
 
   // ── 🎬 ANIMATIONS panel ────────────────────────────────────────────
   const ANIMATIONS = [
+    { id: 'dralingo', name: 'Dralingo (saludo y baile)', tags: 'dralingo dragon dragón mascota emirati keffiyeh baile hola saludo', url: '/assets/kingdoms/dralingo/anim/hello.webp' },
     { id: 'gojo',   name: 'Gojo (Jujutsu)',     tags: 'gojo satoru jjk anime sensei limitless infinity blue purple six eyes', url: '/assets/png-library/GOJO%20TRANSPARENT.gif' },
     { id: 'yugi',   name: 'Yugi (Yu-Gi-Oh!)',   tags: 'yugi pharaoh yugioh egypt millennium puzzle duel card master king games', url: '/assets/png-library/YUGI%20TRANSPARENT.gif' },
     { id: 'freddy', name: 'Freddy (FNAF)',      tags: 'freddy fnaf bear pizzeria hat haunted security animatronic robot', url: '/assets/png-library/FREDDY%20TRANSPARENT.gif' },
@@ -610,7 +622,7 @@
   }
   function broadcastFx(fxId, on) {
     if (!pin) return;
-    fetch('/api/hsk-sim/room/' + encodeURIComponent(pin) + '/fx?pw=' + encodeURIComponent(pw), {
+    adminFetch('/api/hsk-sim/room/' + encodeURIComponent(pin) + '/fx', pw, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fx: fxId, on: !!on }),
     }).then((r) => r.json()).then((d) => {

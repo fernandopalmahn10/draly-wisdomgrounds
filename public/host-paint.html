@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Dragones Pintores · Anfitrión</title>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/kingdoms.css?v=20261011e">
+</head>
+<body class="kd-bg">
+  <button class="kd-mute" id="mute-btn">🔊 Sonido</button>
+
+  <!-- LOBBY -->
+  <main id="screen-lobby" class="kd-lobby pc-lobby">
+    <h1 class="kd-title kd-display">Dragones Pintores</h1>
+    <p class="kd-sub">Vuela tu dragón por el cielo y pinta cada nube con el color de tu reino.</p>
+
+    <div class="kd-pin-card">
+      <img class="kd-pin-pose" src="/assets/kingdoms/dralingo/jump.webp" alt="">
+      <div>
+        <div class="kd-pin-label">PIN</div>
+        <div class="kd-pin" id="pin-display">····</div>
+      </div>
+      <div class="kd-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
+    </div>
+
+    <div class="kd-kingdoms">
+      <section class="kd-king red">
+        <div class="kd-king-head">
+          <img src="/assets/kingdoms/castle.png" alt="">
+          <div>
+            <div class="kd-king-name">Reino del Fuego</div>
+            <div class="kd-king-count" id="count-red">0 jugadores</div>
+          </div>
+        </div>
+        <div class="kd-chips" id="players-red"></div>
+      </section>
+      <div class="kd-vs">VS</div>
+      <section class="kd-king gold">
+        <div class="kd-king-head">
+          <img src="/assets/kingdoms/castle.png" alt="">
+          <div>
+            <div class="kd-king-name">Reino del Mar</div>
+            <div class="kd-king-count" id="count-gold">0 jugadores</div>
+          </div>
+        </div>
+        <div class="kd-chips" id="players-gold"></div>
+      </section>
+    </div>
+    <p class="kd-hint">Toca a un jugador para cambiarlo de reino.</p>
+
+    <div class="kd-lobby-tools">
+      <label class="kd-duration">⏱ Duración
+        <input type="range" id="duration-slider" min="60" max="600" step="30" value="180">
+        <span id="duration-value">3 min</span>
+      </label>
+      <button class="kd-btn" id="balance-btn">⚖️ Equilibrar</button>
+      <button class="kd-btn go" id="start-btn" disabled>¡A pintar el cielo!</button>
+    </div>
+    <div class="kd-set" id="set-display">Cargando preguntas…</div>
+
+    <!-- Same three steps the phones show at the start (kids don't read: big pictures, few words). -->
+    <ol class="pc-howto">
+      <li><span class="pc-howto-ico">◀ ▶ ⬆</span><b>Muévete y salta</b><small>con los botones del teléfono</small></li>
+      <li><span class="pc-howto-ico paint">🎨</span><b>Pisa las nubes</b><small>se pintan del color de tu reino</small></li>
+      <li class="fire"><span class="pc-howto-ico">🔥</span><b>¿Sin fuego? ¡Recarga!</b><small>toca «Recargar» y responde bien: +10&nbsp;s</small></li>
+    </ol>
+    <p class="pc-howto-extra">💎 Los diamantes dan un salto extra · 3 respuestas seguidas = ¡Llamarada! · 👑 Gana el reino con más cielo pintado</p>
+  </main>
+
+  <!-- COUNTDOWN -->
+  <div id="screen-countdown" class="kd-count hidden"><div class="kd-count-num" id="countdown-num">3</div></div>
+
+  <!-- ACTIVE -->
+  <main id="screen-active" class="kd-arena hidden">
+    <div class="kd-top">
+      <div class="kd-pin-mini">PIN <span id="active-pin-display">····</span></div>
+      <div class="kd-tug" aria-label="Cielo pintado por cada reino">
+        <div class="kd-tug-red" id="tug-red" style="flex-basis:6%">0</div>
+        <div class="kd-tug-gold" id="tug-gold" style="flex-basis:6%">0</div>
+        <div class="kd-tug-mid"></div>
+      </div>
+      <div class="kd-timer" id="timer-display">4:00</div>
+    </div>
+    <div class="pc-host-main">
+      <aside class="kd-side red">
+        <div class="kd-side-name">Reino del Fuego</div>
+        <div class="kd-side-tiles"><span id="tiles-red">0</span> <small>nubes</small></div>
+        <ul class="kd-roster" id="roster-red"></ul>
+      </aside>
+      <div class="pc-host-map"><canvas id="pc-host-canvas" aria-label="Mapa del cielo"></canvas></div>
+      <aside class="kd-side gold">
+        <div class="kd-side-name">Reino del Mar</div>
+        <div class="kd-side-tiles"><span id="tiles-gold">0</span> <small>nubes</small></div>
+        <ul class="kd-roster" id="roster-gold"></ul>
+      </aside>
+    </div>
+    <div class="kd-bottom">
+      <button class="kd-btn small" id="add-time-btn">+30 s</button>
+      <button class="kd-btn small" id="end-now-btn">Terminar ronda</button>
+    </div>
+  </main>
+
+  <div class="kd-dralingo" id="dralingo">
+    <img id="dralingo-img" src="/assets/kingdoms/dralingo/flag.webp" alt="Dralingo">
+    <div class="kd-bubble" id="dralingo-say">¡Que empiece la conquista!</div>
+  </div>
+
+  <!-- END -->
+  <main id="screen-win" class="kd-end hidden">
+    <img class="kd-crown" id="win-pose" src="/assets/kingdoms/dralingo/champion.webp" alt="">
+    <div class="kd-winner" id="win-banner">¡Gana el Reino del Fuego!</div>
+    <div class="kd-why" id="win-why">El cielo más pintado</div>
+    <div class="kd-final">
+      <div class="red">Reino del Fuego<b id="final-red">0</b>nubes</div>
+      <div class="gold">Reino del Mar<b id="final-gold">0</b>nubes</div>
+    </div>
+    <div class="kd-lb" id="leaderboard"></div>
+    <div class="kd-end-tools">
+      <button class="kd-btn" onclick="location.href='/'">🏠 Inicio</button>
+      <button class="kd-btn go" id="play-again-btn">🔄 Otra ronda</button>
+    </div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/cast.js?v=20261011b"></script>
+  <script src="/js/dralingo-fx.js?v=20261011d"></script>
+  <script src="/js/paint-render.js?v=20261011a"></script>
+  <script src="/js/host-paint.js?v=20261011f"></script>
+  <script src="/js/live-game.js?v=20261011c"></script>
+</body>
+</html>

@@ -1,144 +1,152 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Draly Wisdomgrounds</title>
+  <title>Draly Wisdom Grounds</title>
+  <meta name="theme-color" content="#9fdcf7">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20261011a">
-  <link rel="stylesheet" href="/css/dralingo.css?v=20260522a">
-  <link rel="stylesheet" href="/css/homework.css?v=20260527a">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/home.css?v=20261011e">
 </head>
-<body class="hub-bg">
-  <div class="lantern l1"></div>
-  <div class="lantern l2"></div>
-  <div class="lantern l3"></div>
-
-  <div class="container hub-home">
-    <!-- Hero — gold-medallion-framed Dralingo + brand mark -->
-    <div class="hub-hero">
-      <div class="dralingo-stage">
-        <div class="dralingo-rays static"></div>
-        <!-- 👁 Gojo transparent dancing GIF on the landing — user
-             replaced the chroma-keyed MP4 with this clean transparent
-             GIF (no chroma artifacts, real alpha). Loops natively.
-             Falls back to the Dralingo PNG if the asset is missing. -->
-        <img class="dralingo-video"
-             src="/assets/png-library/GOJO%20TRANSPARENT.gif?v=20260603a"
-             alt="Gojo"
-             onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-        <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-floating" style="display:none;">
+<!-- Home redesigned 2026-10-11 (his brief): pastel sticker look from Reinos de Colores, Dralingo instead of Gojo,
+     quiet page (no music, no sounds). Tap Dralingo for a random TikTok-style entrance (DralingoFX). -->
+<body class="home" data-dfx-warm="tap">
+  <main class="home-wrap">
+    <section class="home-hero">
+      <!-- The gang (his cast, 2026-10-11): two random members stand with Dralingo, a new pair on every visit. -->
+      <div class="home-stage">
+        <button class="home-cast" id="home-cast-a" type="button" hidden><img alt=""></button>
+        <button class="home-dralingo" id="home-dralingo" type="button" aria-label="Dralingo. Tócalo para una sorpresa">
+          <img id="home-dralingo-img" src="/assets/kingdoms/dralingo/anim/hello-still.webp" alt="" width="340" height="332">
+          <span class="home-poke" aria-hidden="true">¡Tócame!</span>
+        </button>
+        <button class="home-cast" id="home-cast-b" type="button" hidden><img alt=""></button>
       </div>
-      <h1 class="hub-title">Draly Wisdomgrounds</h1>
-      <div class="hub-ornament" aria-hidden="true">
-        <span class="hub-ornament-line"></span>
-        <span class="hub-ornament-icon">🐉</span>
-        <span class="hub-ornament-line"></span>
-      </div>
-      <p class="hub-tagline">Where wisdom takes flight</p>
-    </div>
+      <h1 class="home-title">Draly Wisdom Grounds</h1>
+      <p class="home-tagline">Donde la sabiduría echa a volar</p>
+    </section>
 
-    <!-- THREE clear paths in priority order:
-         1) Homework (async, no PIN) — top, big, teal. Most kids land here
-            in the evening to do their tareas at home without the teacher
-            running a live game.
-         2) Rematch (only if a recent live session is remembered)
-         3) Live-game JOIN — needs PIN from the teacher
-         Everything else (host, audio hint) lives in the corners. -->
-    <div class="home-paths">
-      <!-- TOP: Homework portal — most common after-school use case, so
-           it's the first thing students see when they open the site. -->
-      <a href="/homework.html" class="home-hw-link home-hw-link-hero">
-        <span class="home-hw-icon">📚</span>
-        <span class="home-hw-text">
-          <span class="home-hw-title">Hacer mis tareas</span>
-          <span class="home-hw-sub">Sin PIN · en casa</span>
-        </span>
-        <span class="home-hw-arrow">→</span>
+    <!-- Homework first (most kids open the site at home in the evening), then the class PIN.
+         On a phone both fit without scrolling. -->
+    <section class="home-actions">
+      <a href="/homework.html" class="home-hw">
+        <span class="home-hw-icon" aria-hidden="true">📚</span>
+        <span class="home-hw-text"><b>Hacer mis tareas</b><small>En casa, sin PIN</small></span>
+        <span class="home-hw-go" aria-hidden="true">›</span>
       </a>
 
-      <!-- REMATCH lives above join so returning players see it first -->
-      <div id="rematch-wrap" class="home-rematch" style="display:none;">
-        <button class="btn btn-gold btn-xl" id="rematch-btn">
-          🔄 &nbsp; REVANCHA<span id="rematch-name-suffix"></span>
-        </button>
-        <div class="home-rematch-sub" id="rematch-sub"></div>
+      <div id="rematch-wrap" class="home-rematch" hidden>
+        <button class="home-btn home-btn-gold" id="rematch-btn" type="button">🔄 Volver a la partida</button>
+        <p class="home-rematch-sub" id="rematch-sub"></p>
       </div>
 
-      <div class="card home-join-card">
-        <div class="home-join-label">🎮 Entra a una batalla en clase</div>
-        <input class="input home-input-big" id="home-pin" type="tel" maxlength="4" placeholder="PIN" inputmode="numeric" autocomplete="off">
-        <input class="input" id="home-name" type="text" maxlength="20" placeholder="Tu nombre" autocomplete="given-name">
-        <button class="btn btn-jade btn-xl" id="home-join-btn" style="width:100%;">
-          ENTRAR &nbsp;→
-        </button>
-        <p id="home-error" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em; margin:0;"></p>
-      </div>
-    </div>
+      <form class="home-join" id="home-join" novalidate>
+        <h2 class="home-join-title">🎮 Entrar al juego</h2>
+        <label class="home-sr" for="home-pin">PIN del juego</label>
+        <input class="home-input home-input-pin" id="home-pin" type="tel" maxlength="4" placeholder="PIN"
+               inputmode="numeric" autocomplete="off" enterkeyhint="next">
+        <label class="home-sr" for="home-name">Tu nombre</label>
+        <input class="home-input" id="home-name" type="text" maxlength="20" placeholder="Tu nombre"
+               autocomplete="given-name" enterkeyhint="go">
+        <button class="home-btn home-btn-go" id="home-join-btn" type="submit">¡Entrar!</button>
+        <p class="home-error" id="home-error" role="alert"></p>
+      </form>
+    </section>
+  </main>
 
-    <!-- Host link stays floating in the corner via .hub-host-link CSS -->
-    <a href="/games.html" class="hub-host-link" id="host-link">
-      👑 Hospedar &nbsp;→
-    </a>
+  <footer class="home-foot">
+    <a href="/games.html" class="home-teacher" id="host-link">👑 Maestros: crear un juego</a>
+  </footer>
 
-    <div id="sound-hint" class="sound-hint">🔊 Toca la pantalla para el sonido</div>
-  </div>
-
-  <script src="/js/decheck.js?v=20260601f"></script>
-  <script src="/js/video-chroma.js?v=20260601f"></script>
-  <script src="/js/sounds.js"></script>
-  <script src="/js/enter.js"></script>
-  <script src="/js/super-admin-badge.js?v=20260528a"></script>
+  <script src="/js/cast.js?v=20261011b"></script>
+  <script src="/js/dralingo-fx.js?v=20261011d"></script>
+  <script src="/js/super-admin-badge.js?v=20261011c"></script>
   <script>
-    // If URL contains ?pin=X, jump to player flow
+    // ?pin=X links jump straight into the player flow
     const params = new URLSearchParams(location.search);
-    if (params.get('pin')) {
-      location.href = '/player.html' + location.search;
-    }
+    if (params.get('pin')) location.href = '/player.html' + location.search;
 
-    // Restore the rematch button if we have a recent saved game
+    const $ = (id) => document.getElementById(id);
+    const goPlay = (pin, name) => {
+      location.href = '/player.html?pin=' + encodeURIComponent(pin) + '&name=' + encodeURIComponent(name) + '&autojoin=1';
+    };
+
+    // Rematch: a game joined in the last 4 hours on this device
     const REMATCH_KEY = 'dralyLastJoin';
-    const REMATCH_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4 hours
+    const REMATCH_MAX_AGE_MS = 4 * 60 * 60 * 1000;
     let saved = null;
-    try {
-      const raw = localStorage.getItem(REMATCH_KEY);
-      if (raw) saved = JSON.parse(raw);
-    } catch (e) { /* ignore */ }
-
+    try { const raw = localStorage.getItem(REMATCH_KEY); if (raw) saved = JSON.parse(raw); } catch (e) { /* ignore */ }
     if (saved && saved.pin && saved.name && saved.ts && Date.now() - saved.ts < REMATCH_MAX_AGE_MS) {
-      const wrap = document.getElementById('rematch-wrap');
-      wrap.style.display = 'block';
-      document.getElementById('rematch-name-suffix').textContent = '';
-      const sub = document.getElementById('rematch-sub');
-      if (sub) sub.textContent = `Volver como ${saved.name} · PIN ${saved.pin}`;
-      // Pre-fill the inputs too for convenience
-      document.getElementById('home-pin').value = saved.pin;
-      document.getElementById('home-name').value = saved.name;
-      document.getElementById('rematch-btn').onclick = () => {
-        if (window.MochiSounds) MochiSounds.join();
-        location.href = `/player.html?pin=${encodeURIComponent(saved.pin)}&name=${encodeURIComponent(saved.name)}&autojoin=1`;
-      };
+      $('home-name').value = saved.name;
+      // Only offer the rematch while that game is still open (a finished room would just show an error).
+      fetch('/api/room-alive/' + encodeURIComponent(saved.pin))
+        .then((r) => r.json())
+        .then((d) => {
+          if (!d || !d.alive) return;
+          $('rematch-wrap').hidden = false;
+          $('rematch-sub').textContent = 'Como ' + saved.name + ' · PIN ' + saved.pin;
+          $('home-pin').value = saved.pin;
+          $('rematch-btn').onclick = () => goPlay(saved.pin, saved.name);
+        })
+        .catch(() => { /* offline: no rematch button */ });
     }
 
-    // Join flow — same destination as Rematch but uses the typed inputs
-    document.getElementById('home-join-btn').addEventListener('click', tryJoin);
-    document.getElementById('home-pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('home-name').focus(); });
-    document.getElementById('home-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryJoin(); });
-
-    function tryJoin() {
-      const pin = document.getElementById('home-pin').value.trim();
-      const name = document.getElementById('home-name').value.trim();
-      const err = document.getElementById('home-error');
+    // Join with the typed PIN + name
+    $('home-pin').addEventListener('input', (e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); });
+    $('home-pin').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('home-name').focus(); } });
+    $('home-join').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const pin = $('home-pin').value.trim();
+      const name = $('home-name').value.trim();
       if (!pin || !name) {
-        err.textContent = 'Ingresa el PIN y tu nombre';
+        $('home-error').textContent = !pin ? 'Escribe el PIN que muestra tu maestro' : 'Escribe tu nombre';
+        (!pin ? $('home-pin') : $('home-name')).focus();
         return;
       }
-      err.textContent = '';
-      if (window.MochiSounds) MochiSounds.join();
-      location.href = `/player.html?pin=${encodeURIComponent(pin)}&name=${encodeURIComponent(name)}&autojoin=1`;
+      $('home-error').textContent = '';
+      goPlay(pin, name);
+    });
+
+    // Dralingo: the still pose shows at once; the animated loop (~1 MB, Higgsfield Kling clip keyed on this PC)
+    // swaps in once the page has settled, so 30 phones joining a class at the same time are not slowed down.
+    // A tap brings a random TikTok-style surprise (DralingoFX).
+    const dr = $('home-dralingo');
+    const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduceMotion) {
+      const swapIn = () => setTimeout(() => {
+        const anim = new Image();
+        anim.onload = () => { $('home-dralingo-img').src = anim.src; };
+        anim.src = '/assets/kingdoms/dralingo/anim/hello.webp';
+      }, 1200);
+      if (document.readyState === 'complete') swapIn(); else window.addEventListener('load', swapIn);
     }
+    // Two members of the gang, a new combination each visit; tapping one brings their cameo with a hello line.
+    if (window.DralingoCast) {
+      DralingoCast.pick(2).forEach((id, k) => {
+        const b = $(k ? 'home-cast-b' : 'home-cast-a');
+        b.querySelector('img').onerror = () => { b.hidden = true; };   // a missing sticker never leaves a hole
+        b.querySelector('img').src = DralingoCast.pose(id, 'hello');
+        b.setAttribute('aria-label', DralingoCast.name(id) + ', ' + DralingoCast.role(id));
+        b.hidden = false;
+        b.addEventListener('click', () => {
+          b.classList.remove('boing'); void b.offsetWidth; b.classList.add('boing');
+          if (window.DralingoFX) DralingoFX.play('cameo', { char: id, mood: 'hello' });
+        });
+      });
+    }
+    const lines = ['¡Hola!', '¡A jugar!', '¡Tú puedes!', '¡Qué bueno verte!', '¡Vamos!', '¡Hoy aprendemos jugando!'];
+    let lastLine = '';
+    dr.addEventListener('click', () => {
+      dr.classList.add('poked');
+      dr.classList.remove('boing');
+      void dr.offsetWidth;
+      dr.classList.add('boing');
+      const pool = lines.filter((l) => l !== lastLine);
+      lastLine = pool[Math.floor(Math.random() * pool.length)];
+      if (window.DralingoFX) DralingoFX.celebrate({ text: lastLine, mood: Math.random() < 0.5 ? 'good' : 'win' });
+    });
   </script>
 </body>
 </html>

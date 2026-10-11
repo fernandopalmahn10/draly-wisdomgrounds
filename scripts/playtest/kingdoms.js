@@ -3,7 +3,9 @@
 module.exports = (bot, ctx) => {
   const lazy = Math.random() < 0.2;
   const plant = (payload) => {
-    if (!payload || !payload.needsPlant || lazy) return;
+    if (!payload || !payload.needsPlant) return;
+    ctx.state.graceUntil = Date.now() + 9500;      // plant window (8 s) + server grace (1.5 s): not a freeze
+    if (lazy) return;
     const valid = payload.valid || [];
     const tile = valid.length ? valid[Math.floor(Math.random() * valid.length)] : null;
     setTimeout(() => bot.emit('player:kd-plant', { pin: ctx.pin, tile }), 400 + Math.random() * 2600);

@@ -45,7 +45,15 @@ modes, 12 official test simulations.
 
 ## 2. Everything on the platform
 
-### 2.1 Live PIN games (6 games + 3 class tools)
+### 2.0 The cast (every class is an episode)
+
+His vision (2026-10-11): "like Scooby-Doo", every class feels like a new episode of a show. The gang: Dralingo, Profe
+Fer, Hamdan, Latifa, Aileen, Adric and Adrian (show bible: `claude-setup/cast.md` in the parent repo). On the
+platform they appear as glossy 3D stickers (`public/assets/cast/`, made with Higgsfield from his own character art) via
+`public/js/cast.js`: two random members greet kids on the home page, DralingoFX has «cameo» and «el equipo» effects
+(projector games, phones, Modo Maestro's «🕵️ El equipo» button).
+
+### 2.1 Live PIN games (7 games + 3 class tools)
 
 The teacher opens a game on the big screen, kids join with the PIN on phones or tablets, and
 everyone plays at once. On 2026-10-10 he retired 11 older games to make room for a new generation;
@@ -55,6 +63,7 @@ skill and must pass the bot playtest (`scripts/playtest-bots.js`) before shippin
 | Game | What it is |
 |---|---|
 | **Reinos de Colores** | Kahoot «Color Kingdoms» rebuilt and improved: right answer = a flag the kid plants on a hex map from the phone; surround zones to flip them, steal tiles, besiege the enemy castle; Dralingo announces, territory tug bar on the projector |
+| **Dragones Pintores** | Gimkit «Color Clash» in Dralingo style: each kid flies a red or blue Dralingo over cloud platforms on the phone and paints every cloud it lands on; flying burns fire, «Recargar» + a right answer refills it; the projector shows the whole sky live |
 | **Mochi Mash** | The first game: panda vs kitsune teams tap-battle on quiz answers |
 | **Piñata Tigre** | Two-tiger team smash |
 | **Vuelo del Dragón** (Dragon's Eye) | Vertical flight platformer, swipe up |

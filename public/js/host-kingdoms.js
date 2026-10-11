@@ -55,7 +55,9 @@
   // ---------- room ----------
   const params = new URLSearchParams(location.search);
   const setId = params.get('setId');
-  if (!setId) { location.href = '/packs.html?game=kingdoms'; return; }
+  // From /maestro the page opens with ?livegame=1 (pull the class in): keep that flag through the question picker.
+  const LIVE = new URLSearchParams(location.search).get('livegame') === '1' ? '&livegame=1' : '';
+  if (!setId) { location.href = '/packs.html?game=kingdoms' + LIVE; return; }
 
   socket.emit('host:create', { gameType: 'kingdoms' }, ({ pin: p }) => {
     pin = p;
@@ -67,7 +69,7 @@
     socket.emit('host:load-set', { pin, setId }, (resp) => {
       if (!resp || !resp.ok) {
         alert('No se pudo cargar la serie de preguntas: ' + ((resp && resp.error) || 'desconocido'));
-        location.href = '/packs.html?game=kingdoms';
+        location.href = '/packs.html?game=kingdoms' + LIVE;
         return;
       }
       $('set-display').textContent = `📚 ${resp.title} · ${resp.count} preguntas`;
