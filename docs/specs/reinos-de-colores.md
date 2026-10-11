@@ -1,6 +1,11 @@
 # Reinos de Colores · build plan (new game mode)
 
-Status: **agreed, not built** (2026-10-10). His decision: a NEW mode. (Reinos en Guerra was later retired the same day with 10 other games.)
+Status: **BUILT 2026-10-10** (gameType `kingdoms`). Files: `core/kingdoms.js` (board rules), server.js `kd*` functions,
+`public/host-kingdoms.html` + `js/host-kingdoms.js`, `js/kingdoms-board.js` (shared SVG board), `js/player-kingdoms.js`
+(phone), `css/kingdoms.css`, `assets/kingdoms/` (Kenney grass/castle/sounds + small Dralingo). Bot playtest:
+`node scripts/playtest-bots.js --game kingdoms --bots 30 --stall 11 --handlers scripts/playtest/kingdoms.js`.
+Built differently from the plan below: no pause button (+30 s and end-now instead), castle-ring tiles can be stolen
+(no protection rule), and no QR code in the lobby (the platform has no QR library yet).
 Working name «Reinos de Colores» (he can rename). gameType: `kingdoms`.
 
 ## Source: what we copy and beat

@@ -24,6 +24,7 @@ const Classrooms = require('./core/classrooms');
 const Guides = require('./core/guides');
 const Emirati = require('./core/emirati-vocab');
 const CustomAsg = require('./core/custom-assignments');
+const Kingdoms = require('./core/kingdoms');
 // Tiny persistence for the owner's Emirati Arabic gateway (single global
 // profile, since this is a super-admin-only personal feature). Lives on the
 // same data disk as the rest of the JSON state.
@@ -4278,6 +4279,147 @@ function monopolyTeamWealth(g, team) {
   return total;
 }
 
+// === 🏰 REINOS DE COLORES (gameType 'kingdoms') — hex territory game, Kahoot «Color Kingdoms» style ===
+// Right answer → flag → kid taps a glowing tile on their phone → tile turns their colour; pockets they
+// surround flip too. Board rules live in core/kingdoms.js. Only DIFFS are broadcast (kd:plant), never the
+// whole board, so 30 phones stay light. Every timer captures the round object and does nothing once the
+// round changed (end / reset / restart), so a stale timer can never touch a new round.
+const KD_PLANT_MS = 8000;        // what the phone shows: 8 s to tap a tile
+const KD_GRACE_MS = 1500;        // server waits a bit longer (phone shows the map ~0.9 s after the answer + network)
+const KD_NEXT_Q_MS = 900;        // pause after a plant before the next question
+
+function kdTeamScores(k) {
+  const c = Kingdoms.tileCounts(k.own);
+  return { red: c.red + k.bonus.red, gold: c.gold + k.bonus.gold };
+}
+function kdTop(g) {
+  const top = {};
+  Object.entries(g.players).forEach(([id, p]) => {
+    if (!top[p.team] || (p.score || 0) > top[p.team].score) top[p.team] = { id, name: p.name, score: p.score || 0 };
+  });
+  return top;
+}
+// Phones only need the board; the projector also gets the roster.
+function kdInitPayload(g, forHost) {
+  const k = g.kingdoms;
+  const out = {
+    board: Kingdoms.publicBoard(k.board), own: k.own, teamScores: g.teamScores, top: kdTop(g),
+    pressure: Kingdoms.castlePressure(k.board, k.own), plantMs: KD_PLANT_MS,
+  };
+  if (forHost) {
+    out.players = Object.fromEntries(Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team, avatar: p.avatar || '', score: p.score || 0 }]));
+  }
+  return out;
+}
+function kdEmitInit(pin, g) {
+  io.to(pin).except(g.hostId).emit('kd:init', kdInitPayload(g, false));
+  io.to(g.hostId).emit('kd:init', kdInitPayload(g, true));
+}
+function kdClearTimers(g) {
+  Object.values(g.players || {}).forEach((p) => {
+    if (p.kdTimer) { clearTimeout(p.kdTimer); p.kdTimer = null; }
+    p.kdPending = false; p.kdOpen = false; p.kdFlags = 0;
+  });
+}
+function kdStart(pin, g) {
+  kdClearTimers(g);
+  const R = Kingdoms.radiusFor(Object.keys(g.players).length);
+  const board = Kingdoms.buildBoard(R);
+  g.kingdoms = {
+    board, own: Kingdoms.initialOwnership(board),
+    bonus: { red: 0, gold: 0 }, alerted: { red: false, gold: false }, sieged: { red: false, gold: false },
+    leader: null, plants: 0,
+  };
+  Object.values(g.players).forEach((p) => { p.kdStreak = 0; p.kdCorrect = 0; });
+  g.teamScores = kdTeamScores(g.kingdoms);
+  kdEmitInit(pin, g);
+}
+// Ask a kid to plant one flag. `reprompt` = reconnect/resync: re-show the open prompt without restarting its timer.
+function kdPrompt(pin, pid, opts) {
+  opts = opts || {};
+  const g = games[pin];
+  if (!g || !g.kingdoms || g.state !== 'active') return;
+  const p = g.players[pid];
+  if (!p || !(p.kdFlags > 0)) return;
+  const k = g.kingdoms;
+  p.kdPending = true;
+  p.kdOpen = true;
+  if (!opts.reprompt || !p.kdTimer || p.kdTimerPid !== pid) {   // a rejoin changes the socket id: re-arm
+    if (p.kdTimer) clearTimeout(p.kdTimer);
+    p.kdDeadline = Date.now() + KD_PLANT_MS + KD_GRACE_MS;
+    p.kdTimerPid = pid;
+    p.kdTimer = setTimeout(() => { if (g.kingdoms === k) kdApplyPlant(pin, pid, null, true); }, KD_PLANT_MS + KD_GRACE_MS);
+  }
+  p.mashUntil = p.kdDeadline + 1000;      // keeps the global watchdog from pushing a question meanwhile
+  const payload = {
+    needsPlant: true, flags: p.kdFlags, valid: Kingdoms.validTargets(k.board, k.own, p.team),
+    plantMs: Math.max(1000, Math.min(KD_PLANT_MS, p.kdDeadline - KD_GRACE_MS - Date.now())),
+  };
+  if (opts.correctText !== undefined) {
+    io.to(pid).emit('answer-result', { correct: true, correctText: opts.correctText, kingdoms: payload });
+  } else {
+    io.to(pid).emit('kd:prompt', payload);
+  }
+}
+function kdApplyPlant(pin, pid, tileId, auto) {
+  const g = games[pin];
+  if (!g || !g.kingdoms || g.state !== 'active') return;
+  const p = g.players[pid];
+  if (!p || !p.kdPending) return;
+  if (!auto && !p.kdOpen) return;        // tap with no prompt open (e.g. between the two flags of a double)
+  p.kdOpen = false;
+  const k = g.kingdoms;
+  if (p.kdTimer) { clearTimeout(p.kdTimer); p.kdTimer = null; }
+  const valid = Kingdoms.validTargets(k.board, k.own, p.team);
+  const asked = (typeof tileId === 'number' && Number.isInteger(tileId)) ? tileId : null;
+  const target = asked !== null && valid.includes(asked) ? asked : Kingdoms.bestTarget(k.board, k.own, p.team);
+  const fallback = !auto && asked !== null && target !== asked;   // tapped tile was taken a moment earlier
+  let result = null;
+  if (target !== null && target !== undefined) {
+    result = Kingdoms.plant(k.board, k.own, p.team, target);
+    k.plants++;
+    p.score = (p.score || 0) + 1 + result.flipped.length;
+  }
+  // Castle pressure: banner once when it reaches ALERT_AT, siege bonus once when fully surrounded.
+  const pressure = Kingdoms.castlePressure(k.board, k.own);
+  const events = [];
+  ['red', 'gold'].forEach((team) => {
+    const attacker = team === 'red' ? 'gold' : 'red';
+    if (pressure[team] >= Kingdoms.ALERT_AT && !k.alerted[team]) { k.alerted[team] = true; events.push({ type: 'castle-alert', team }); }
+    if (pressure[team] < Kingdoms.ALERT_AT - 1) k.alerted[team] = false;      // can fire again after a rescue
+    if (pressure[team] === 6 && !k.sieged[team]) {
+      k.sieged[team] = true;
+      k.bonus[attacker] += Kingdoms.SIEGE_BONUS;
+      events.push({ type: 'siege', team, by: attacker, bonus: Kingdoms.SIEGE_BONUS });
+    }
+  });
+  g.teamScores = kdTeamScores(k);
+  const leader = g.teamScores.red > g.teamScores.gold ? 'red' : g.teamScores.gold > g.teamScores.red ? 'gold' : k.leader;
+  if (leader !== k.leader && k.plants > 3) events.push({ type: 'lead', team: leader });
+  k.leader = leader;
+  io.to(pin).emit('kd:plant', {
+    by: p.name, playerId: pid, team: p.team, auto: !!auto, fallback, playerScore: p.score || 0,
+    tile: result ? result.tile : null, from: result ? result.from : null,
+    flipped: result ? result.flipped : [], teamScores: g.teamScores, top: kdTop(g), pressure, events,
+  });
+  p.kdFlags = Math.max(0, (p.kdFlags || 1) - 1);
+  if (p.kdFlags > 0 && result) {
+    // «Bandera doble»: plant again. A kid who let the first flag auto-plant isn't looking, so the
+    // second one is auto-planted right away instead of making them wait another 8 s.
+    if (auto) setTimeout(() => { if (g.kingdoms === k) kdApplyPlant(pin, pid, null, true); }, 700);
+    else setTimeout(() => { if (g.kingdoms === k) kdPrompt(pin, pid); }, 500);
+    return;
+  }
+  p.kdPending = false;
+  p.kdFlags = 0;
+  p.mashUntil = 0;
+  setTimeout(() => {
+    if (g.kingdoms !== k || !games[pin] || games[pin].state !== 'active' || !g.players[pid]) return;
+    const q = nextQuestionFor(g, pid);
+    if (q) io.to(pid).emit('question', q);
+  }, KD_NEXT_Q_MS);
+}
+
 function endGame(pin) {
   const g = games[pin];
   if (!g) return;
@@ -4294,6 +4436,7 @@ function endGame(pin) {
     }
   }
   g.state = 'ended';
+  if (g.gameType === 'kingdoms') kdClearTimers(g);
   // 🆕 2026-06-08 (Fernando): the moment a room dies, sweep every
   // student's inbox for unread force-pull messages targeting THIS pin
   // and mark them read. That stops the "¡Tu maestra te llama!"
@@ -4343,13 +4486,14 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'warmup', 'reading', 'hsksim'];
+    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'warmup', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'pinata'       ? 240 :
       type === 'dragon-eye'   ? 240 :
       type === 'monopoly'     ? 300 :
       type === 'sixseven'     ? 120 :
+      type === 'kingdoms'     ? 180 :
       type === 'warmup'       ? 3600 :   // 1 hour ceiling; teacher exits manually
       type === 'reading'      ? 3600 :   // 1 hour ceiling; teacher controls flow
       type === 'hsksim'       ? 3600 :   // 1 hour ceiling; kid takes the exam on their own pace
@@ -4457,6 +4601,9 @@ io.on('connection', (socket) => {
         visibleExps: g.warmup.visibleExps || null,
         customWords: g.warmup.customWords || [],
       });
+    }
+    if (g.gameType === 'kingdoms' && g.kingdoms && g.state === 'active') {
+      io.to(socket.id).emit('kd:init', kdInitPayload(g, true));
     }
     cb({ ok: true, gameType: g.gameType, state: g.state });
   });
@@ -4671,6 +4818,7 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores
         });
       }
+      if (g.gameType === 'kingdoms') kdStart(pin, g);
       if (g.gameType === 'reading') {
         // === 📖 READING MODE ===
         // Teacher-driven story session. Server holds the master playback
@@ -4765,6 +4913,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
     if (g.endTimer) clearTimeout(g.endTimer);
+    if (g.gameType === 'kingdoms') { kdClearTimers(g); g.kingdoms = null; }
     g.state = 'lobby';
     g.teamScores = { red: 0, gold: 0 };
     g.endsAt = null;
@@ -4934,6 +5083,10 @@ io.on('connection', (socket) => {
           welcome: !isRejoin    // brand-new joiner gets welcome modal; rejoin doesn't
         });
       }
+      if (g.gameType === 'kingdoms' && g.kingdoms) {
+        io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
+        if (player.kdPending) { kdPrompt(pin, socket.id, { reprompt: true }); return; }
+      }
       // Send an active question (preserve their currentQ if rejoining)
       if (player.currentQ) {
         io.to(socket.id).emit('question', {
@@ -5018,6 +5171,23 @@ io.on('connection', (socket) => {
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
+    } else if (g.gameType === 'kingdoms') {
+      // Reinos de Colores: right answer = a flag to plant (3 in a row = 2 flags). The next question waits
+      // until the flag is planted (kid taps a tile, or the server auto-plants after KD_PLANT_MS).
+      if (correct) {
+        p.kdStreak = (p.kdStreak || 0) + 1;
+        p.kdCorrect = (p.kdCorrect || 0) + 1;
+        if (g.kingdoms) {
+          p.kdFlags = (p.kdStreak % 3 === 0) ? 2 : 1;
+          kdPrompt(pin, socket.id, { correctText });
+        } else {
+          io.to(socket.id).emit('answer-result', { correct: true, correctText });
+          setTimeout(() => { const q = games[pin] && nextQuestionFor(g, socket.id); if (q) io.to(socket.id).emit('question', q); }, 1400);
+        }
+      } else {
+        p.kdStreak = 0;
+        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+      }
     } else if (g.gameType === 'sixseven') {
       // 6-7 SWING — math game with combo + speed bonus. Correct answer:
       // +1 base, +1 if their TAP was within 2.5s of question arrival (speed).
@@ -5082,6 +5252,8 @@ io.on('connection', (socket) => {
       nextDelay = correct ? DR_MASH_MS + 600 : 1400;
     } else if (g.gameType === 'monopoly') {
       nextDelay = correct ? -1 : 1500;
+    } else if (g.gameType === 'kingdoms') {
+      nextDelay = correct ? -1 : 1400;
     } else if (g.gameType === 'sixseven') {
       // Snappy rhythm — fast cadence so the swing feels continuous
       nextDelay = correct ? 600 : 800;
@@ -5095,6 +5267,35 @@ io.on('connection', (socket) => {
         if (q) io.to(socket.id).emit('question', q);
       }, nextDelay);
     }
+    // Reinos de Colores sends its own small kd:plant diffs; skipping the full-room 'state' push here
+    // keeps 30 phones from receiving ~5 full state objects per second.
+    if (g.gameType !== 'kingdoms') broadcast(pin);
+  });
+
+  // Reinos de Colores: kid tapped a tile on the phone's mini board.
+  socket.on('player:kd-plant', (data) => {
+    try {
+      const { pin, tile } = data || {};
+      const g = games[pin];
+      if (!g || g.gameType !== 'kingdoms') return;
+      kdApplyPlant(pin, socket.id, typeof tile === 'number' ? tile : null, false);
+    } catch (e) { console.error('[player:kd-plant]', e); }
+  });
+
+  // Teacher "+30 s" (any timed game): pushes the end of the round back.
+  socket.on('host:add-time', (data) => {
+    const { pin, seconds } = data || {};
+    const g = games[pin];
+    if (!g || g.hostId !== socket.id || g.state !== 'active') return;
+    const add = Math.max(10, Math.min(120, Number(seconds) || 30)) * 1000;
+    g.endsAt += add;
+    g.duration += add / 1000;
+    if (g.endTimer) clearTimeout(g.endTimer);
+    g.endTimer = setTimeout(() => {
+      if (!games[pin] || games[pin].state !== 'active') return;
+      endGame(pin);
+    }, Math.max(0, g.endsAt - Date.now()));
+    g._lastBcast = 0;
     broadcast(pin);
   });
 
@@ -5135,6 +5336,10 @@ io.on('connection', (socket) => {
       mpAwaitingRoll: !!p.mpAwaitingRoll,
       inAction
     });
+    if (g.gameType === 'kingdoms' && g.state === 'active' && g.kingdoms) {
+      io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
+      if (p.kdPending) { kdPrompt(pin, socket.id, { reprompt: true }); return; }
+    }
     // Re-emit the active question so the client can re-render the screen
     if (p.currentQ && g.state === 'active') {
       io.to(socket.id).emit('question', {
@@ -6212,6 +6417,10 @@ setInterval(() => {
     });
   });
 }, 4000);
+
+// Safety net: one bad socket message or a bug in any game must never take down every class on the server.
+process.on('uncaughtException', (e) => console.error('[uncaughtException]', e));
+process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', e));
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

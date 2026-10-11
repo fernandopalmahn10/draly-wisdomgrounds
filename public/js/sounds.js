@@ -642,6 +642,25 @@
     vSnare(t0 + 3 * BD, 0.16);
   }
 
+  // 🏰 REINOS DE COLORES — bright marching fanfare, Bb major, 112bpm. Taiko march + brass call-and-answer
+  // (one phrase per kingdom) over a bouncing bass; bells on the bar so it stays cheerful, never tense.
+  function themeKingdoms(barIdx, t0, BD) {
+    const phase = barIdx % 4;
+    taiko(t0 + 0 * BD, 0.36);
+    taiko(t0 + 1 * BD, 0.18);
+    taiko(t0 + 2 * BD, 0.30);
+    taiko(t0 + 2.5 * BD, 0.16);
+    taiko(t0 + 3 * BD, 0.20);
+    const bass = phase % 2 === 0 ? ['Bb1', 'F2', 'Bb2', 'F2'] : ['Eb2', 'Bb2', 'F2', 'C2'];
+    bass.forEach((n, b) => vBassPluck(t0 + b * BD, n, BD * 0.8, 0.20));
+    const call = phase < 2
+      ? [['F4', 0], ['Bb4', 0.5], ['D5', 1], ['F5', 1.5]]
+      : [['Eb5', 0], ['D5', 0.5], ['C5', 1], ['Bb4', 1.5]];
+    call.forEach(([n, b]) => vBrass(t0 + b * BD, n, BD * 0.45, 0.16));
+    vBell(t0 + 2 * BD, phase % 2 ? 'C6' : 'D6', BD * 1.5, 0.10);
+    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.05);
+  }
+
   // === Registry ===
   const GAME_THEMES = {
     'monopoly':      { bpm: 124, beatsPerBar: 4, fn: themeMonopoly },
@@ -649,6 +668,7 @@
     'mochi-mash':    { bpm: 105, beatsPerBar: 4, fn: themeMochi },
     'dragon-eye':    { bpm:  96, beatsPerBar: 4, fn: themeDragon },
     'pinata':        { bpm: 130, beatsPerBar: 4, fn: themePinata },
+    'kingdoms':      { bpm: 112, beatsPerBar: 4, fn: themeKingdoms },
   };
 
   function scheduleThemeAhead() {

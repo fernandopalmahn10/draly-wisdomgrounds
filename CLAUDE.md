@@ -45,8 +45,9 @@ the checklist for any new game mode.
   once and reuse it for every test family and level. Old CSV exporters (`scripts/export-sim1-blooket.js`) stay as extras.
 - This is a large, multi-feature codebase: before adding a mode, read `docs/GAME_MODES.md` and reuse existing room/PIN/
   heartbeat plumbing instead of building parallel systems.
-- **Game roster (his decision 2026-10-10):** only Mochi Mash, Dàfùwēng · Monopolio Chino, 6-7 Swing, Vuelo del Dragón and
-  Piñata Tigre stay (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older games were retired to free room.
+- **Game roster (his decision 2026-10-10):** Reinos de Colores (new, `kingdoms`) + the 5 kept games Mochi Mash, Dàfùwēng ·
+  Monopolio Chino, 6-7 Swing, Vuelo del Dragón, Piñata Tigre (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older
+  games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:
   retire a game rather than keep a half-optimized one.
 - Build or overhaul any game with the `new-pin-game` skill. Before saying a game works: `node scripts/playtest-bots.js

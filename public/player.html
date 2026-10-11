@@ -13,6 +13,8 @@
   <link rel="stylesheet" href="/css/sixseven.css?v=20260520c">
   <link rel="stylesheet" href="/css/warmup.css?v=20260707a">
   <link rel="stylesheet" href="/css/reading.css?v=20260603d">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/kingdoms.css?v=20261010b">
   <!-- Lobby layout + lobby mini-game (the little plane while kids wait).
        These rules used to live in flappy.css, which was deleted with the
        retired Flappy Dragon game (2026-10-10); the lobby itself is shared. -->
@@ -475,6 +477,17 @@
     </div>
   </div>
 
+  <!-- Reinos de Colores: plant your flag -->
+  <div id="screen-kd-plant" class="hidden">
+    <div class="kdp-head">
+      <div class="kdp-flags" id="kdp-flags">🚩</div>
+      <div class="kdp-title" id="kdp-title">¡Planta tu bandera!</div>
+      <div class="kdp-ring" id="kdp-ring"><span>8</span></div>
+    </div>
+    <svg class="kdp-board" id="kdp-board" role="img" aria-label="Mapa: toca una casilla que brille"></svg>
+    <div class="kdp-done" id="kdp-done"></div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -492,6 +505,8 @@
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/player.js?v=20261010a"></script>
+  <script src="/js/kingdoms-board.js?v=20261010b"></script>
+  <script src="/js/player-kingdoms.js?v=20261010b"></script>
+  <script src="/js/player.js?v=20261010d"></script>
 </body>
 </html>
