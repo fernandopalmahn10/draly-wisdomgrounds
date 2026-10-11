@@ -4311,9 +4311,20 @@ const KD_PLANT_MS = 8000;        // what the phone shows: 8 s to tap a tile
 const KD_GRACE_MS = 1500;        // server waits a bit longer (phone shows the map ~0.9 s after the answer + network)
 const KD_NEXT_Q_MS = 900;        // pause after a plant before the next question
 
+const KD_CAPTAINS = ['fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian'];   // the cast (public/js/cast.js)
+function kdShuffle(a) { return a.map((x) => [Math.random(), x]).sort((p, q) => p[0] - q[0]).map((p) => p[1]); }
+// A new pair every round: last round's captains sit this one out (6 in the cast, so 4 are always free).
+function kdPickCaptains(prev) {
+  const used = prev ? [prev.red, prev.gold] : [];
+  const c = kdShuffle(KD_CAPTAINS.filter((id) => !used.includes(id)));
+  return { red: c[0], gold: c[1] };
+}
+
+// Score = tiles + siege bonus + Dubai landmarks held right now.
 function kdTeamScores(k) {
   const c = Kingdoms.tileCounts(k.own);
-  return { red: c.red + k.bonus.red, gold: c.gold + k.bonus.gold };
+  const lm = Kingdoms.landmarkScore(k.board, k.own);
+  return { red: c.red + k.bonus.red + lm.red, gold: c.gold + k.bonus.gold + lm.gold };
 }
 function kdTop(g) {
   const top = {};
@@ -4327,7 +4338,7 @@ function kdInitPayload(g, forHost) {
   const k = g.kingdoms;
   const out = {
     board: Kingdoms.publicBoard(k.board), own: k.own, teamScores: g.teamScores, top: kdTop(g),
-    pressure: Kingdoms.castlePressure(k.board, k.own), plantMs: KD_PLANT_MS,
+    pressure: Kingdoms.castlePressure(k.board, k.own), plantMs: KD_PLANT_MS, captains: k.captains,
   };
   if (forHost) {
     out.players = Object.fromEntries(Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team, avatar: p.avatar || '', score: p.score || 0 }]));
@@ -4347,11 +4358,12 @@ function kdClearTimers(g) {
 function kdStart(pin, g) {
   kdClearTimers(g);
   const R = Kingdoms.radiusFor(Object.keys(g.players).length);
-  const board = Kingdoms.buildBoard(R);
+  const board = Kingdoms.buildBoard(R, kdShuffle(Kingdoms.SIDE_LANDMARKS));
   g.kingdoms = {
     board, own: Kingdoms.initialOwnership(board),
     bonus: { red: 0, gold: 0 }, alerted: { red: false, gold: false }, sieged: { red: false, gold: false },
     leader: null, plants: 0,
+    captains: g.kdCaptains || kdPickCaptains(),     // a new pair of the gang leads the kingdoms every round
   };
   Object.values(g.players).forEach((p) => { p.kdStreak = 0; p.kdCorrect = 0; });
   g.teamScores = kdTeamScores(g.kingdoms);
@@ -4398,14 +4410,20 @@ function kdApplyPlant(pin, pid, tileId, auto) {
   const target = asked !== null && valid.includes(asked) ? asked : Kingdoms.bestTarget(k.board, k.own, p.team);
   const fallback = !auto && asked !== null && target !== asked;   // tapped tile was taken a moment earlier
   let result = null;
+  const events = [];
+  const double = (p.kdFlags || 0) > 1;
   if (target !== null && target !== undefined) {
     result = Kingdoms.plant(k.board, k.own, p.team, target);
     k.plants++;
-    p.score = (p.score || 0) + 1 + result.flipped.length;
+    // Dubai landmarks this plant took (directly or inside a surround): the kingdom always gets them; the kid earns
+    // their bonus only for a flag they planted themselves (an auto-plant must never pay more than tapping).
+    const taken = Kingdoms.landmarksTaken(k.board, result);
+    const lmPoints = auto ? 0 : taken.reduce((s, x) => s + Kingdoms.LANDMARKS[x.lm].bonus, 0);
+    p.score = (p.score || 0) + 1 + result.flipped.length + lmPoints;
+    taken.forEach((x) => events.push({ type: 'landmark', tile: x.tile, lm: x.lm, from: x.from, team: p.team, by: p.name, bonus: Kingdoms.LANDMARKS[x.lm].bonus }));
   }
   // Castle pressure: banner once when it reaches ALERT_AT, siege bonus once when fully surrounded.
   const pressure = Kingdoms.castlePressure(k.board, k.own);
-  const events = [];
   ['red', 'gold'].forEach((team) => {
     const attacker = team === 'red' ? 'gold' : 'red';
     if (pressure[team] >= Kingdoms.ALERT_AT && !k.alerted[team]) { k.alerted[team] = true; events.push({ type: 'castle-alert', team }); }
@@ -4421,7 +4439,7 @@ function kdApplyPlant(pin, pid, tileId, auto) {
   if (leader !== k.leader && k.plants > 3) events.push({ type: 'lead', team: leader });
   k.leader = leader;
   io.to(pin).emit('kd:plant', {
-    by: p.name, playerId: pid, team: p.team, auto: !!auto, fallback, playerScore: p.score || 0,
+    by: p.name, playerId: pid, team: p.team, auto: !!auto, fallback, double, playerScore: p.score || 0,
     tile: result ? result.tile : null, from: result ? result.from : null,
     flipped: result ? result.flipped : [], teamScores: g.teamScores, top: kdTop(g), pressure, events,
   });
@@ -4842,6 +4860,8 @@ io.on('connection', (socket) => {
   socket.on('host:start', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
+    // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
+    if ((g.gameType === 'kingdoms' || g.gameType === 'paint') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
     // generated server-side or teacher-driven). Don't gate them on
     // questions.length, otherwise Start silently does nothing and the
@@ -4869,8 +4889,11 @@ io.on('connection', (socket) => {
       });
       return;
     }
+    if (g.extraSecs) { g.duration = Math.max(15, g.duration - g.extraSecs); g.extraSecs = 0; }   // last round's «+30 s»
     g.state = 'countdown';
     broadcast(pin);
+    // Reinos de Colores: the two captains are revealed during the countdown (projector VS intro, phones).
+    if (g.gameType === 'kingdoms') { g.kdCaptains = kdPickCaptains(g.kdCaptains); io.to(pin).emit('kd:captains', g.kdCaptains); }
     io.to(pin).emit('countdown', { ms: COUNTDOWN_MS });
 
     setTimeout(() => {
@@ -5062,6 +5085,8 @@ io.on('connection', (socket) => {
     g.state = 'lobby';
     g.teamScores = { red: 0, gold: 0 };
     g.endsAt = null;
+    // «+30 s» was for the round that just ended: the next round gets the duration the teacher picked.
+    if (g.extraSecs) { g.duration = Math.max(15, g.duration - g.extraSecs); g.extraSecs = 0; }
     Object.values(g.players).forEach((p) => {
       p.score = 0;
       p.queueIdx = 0;
@@ -5521,6 +5546,7 @@ io.on('connection', (socket) => {
     const add = Math.max(10, Math.min(120, Number(seconds) || 30)) * 1000;
     g.endsAt += add;
     g.duration += add / 1000;
+    g.extraSecs = (g.extraSecs || 0) + add / 1000;   // only for this round: host:reset gives it back (playtest 2026-10-11)
     if (g.endTimer) clearTimeout(g.endTimer);
     g.endTimer = setTimeout(() => {
       if (!games[pin] || games[pin].state !== 'active') return;

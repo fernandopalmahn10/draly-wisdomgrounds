@@ -267,20 +267,24 @@
     },
     gang(l, o) {
       // The whole gang pops up in a row, Scooby-Doo finale style: «¡Caso resuelto!»
+      // o.chars: who must be in it (e.g. the winning captain); o.team 'red': Dralingo in the Fuego colour;
+      // o.stamp false: no stamp (when the page already shows a big headline).
       if (!hasCast()) return EFFECTS.swarm(l, o);
       const C = window.DralingoCast;
-      const ids = C.pick(3).concat('dralingo').sort(() => Math.random() - 0.5);
+      const must = (o.chars || []).filter((id) => C.ids.includes(id)).slice(0, 3);
+      const ids = must.concat(C.pick(3 - must.length, { exclude: must.concat(o.exclude || []) })).concat('dralingo')
+        .sort(() => Math.random() - 0.5);
       ids.forEach((id, k) => {
         setTimeout(() => {
           const i = document.createElement('img');
           i.className = 'dfx-img dfx-member';
           i.alt = '';
-          i.src = C.pose(id, 'cheer');
+          i.src = id === 'dralingo' && o.team === 'red' ? src('champion-red') : C.pose(id, 'cheer');
           i.style.left = (14 + k * 24) + '%';
           l.appendChild(i);
         }, k * 260);
       });
-      setTimeout(() => { stamp(o.stamp || '¡Caso resuelto!', l, '30%'); l.classList.add('dfx-shake'); }, ids.length * 260 + 150);
+      setTimeout(() => { if (o.stamp !== false) stamp(o.stamp || '¡Caso resuelto!', l, '30%'); l.classList.add('dfx-shake'); }, ids.length * 260 + 150);
       bubble(o.text, l, '50%', '8%');
       return 3500;
     },
@@ -307,7 +311,7 @@
       bubble(opts.text, l);
     } else {
       const fx = EFFECTS[kind] || EFFECTS.gift;
-      ms = fx(l, { text: opts.text, poses, mood: opts.mood, char: opts.char, stamp: opts.stamp });
+      ms = fx(l, { text: opts.text, poses, mood: opts.mood, char: opts.char, stamp: opts.stamp, chars: opts.chars, exclude: opts.exclude, team: opts.team });
     }
     setTimeout(() => { l.remove(); busy = false; }, ms + 200);
     return true;

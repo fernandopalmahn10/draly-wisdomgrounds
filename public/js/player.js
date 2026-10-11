@@ -178,7 +178,7 @@
   // Mute toggle
   $('mute-btn').addEventListener('click', () => {
     const muted = window.toggleMute();
-    $('mute-btn').textContent = muted ? '🔇 Off' : '🔊 On';
+    $('mute-btn').textContent = muted ? '🔇 Silencio' : '🔊 Sonido';
   });
 
   // Auto-rejoin on socket reconnect (handles phone sleep, network blips, tab switches)
@@ -1033,7 +1033,7 @@
         n--;
         setTimeout(tick, 900);
       } else {
-        numEl.textContent = 'GO!';
+        numEl.textContent = '¡YA!';      // kid UI is Spanish (was "GO!")
         numEl.style.animation = 'none';
         numEl.offsetHeight;
         numEl.style.animation = '';

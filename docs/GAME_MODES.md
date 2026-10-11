@@ -102,7 +102,8 @@ copy belongs on the player's phone.
 
 ## Status (2026-10-11)
 
-Live modes: **Reinos de Colores** (`kingdoms`, built 2026-10-10, spec `docs/specs/reinos-de-colores.md`), **Dragones
+Live modes: **Reinos de Colores** (`kingdoms`, built 2026-10-10, Dubai upgrade 2026-10-11: landmarks, captains, zoom on
+the phone; spec `docs/specs/reinos-de-colores.md`), **Dragones
 Pintores** (`paint`, Gimkit Color Clash in Dralingo style, built 2026-10-11, spec `docs/specs/dragones-pintores.md`), **Mochi Mash** (`mochi-mash`), **Piñata Tigre** (`pinata`), **Vuelo del Dragón** (`dragon-eye`),
 **Dàfùwēng · Monopolio Chino** (`monopoly`), **6-7 Swing** (`sixseven`) — all queued for an overhaul — plus the class
 tools Warm-up (`warmup`), Lectura (`reading`) and the HSK/YCT sim rooms (`hsksim`).

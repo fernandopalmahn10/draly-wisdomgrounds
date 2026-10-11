@@ -8,6 +8,35 @@ Built differently from the plan below: no pause button (+30 s and end-now instea
 (no protection rule), and no QR code in the lobby (the platform has no QR library yet).
 Working name «Reinos de Colores» (he can rename). gameType: `kingdoms`.
 
+## v2 · Dubai upgrade (2026-10-11, his ask: "super improve it, way more cool")
+- **Landmarks** (`core/kingdoms.js` LANDMARKS): neutral tiles on the board's centre line (q = −r/2), so both castles are
+  exactly as far from each one. Burj Khalifa in the centre (+5); the side spots get a shuffled pick of Burj Al Arab,
+  Museo del Futuro, Marco de Dubái, Atlantis (+3 each): 5 landmarks on radius 5, 3 on radius 4. Score = tiles + siege
+  bonus + landmarks held right now (they can be stolen back). The kid who takes one (plant or surround) also gets its
+  bonus, but only for a flag they tapped themselves: an auto-plant gives the kingdom the landmark and the kid nothing
+  extra, and auto-plant weighs a landmark like one flipped tile (code review 2026-10-11: waiting must never pay more
+  than tapping). Event `{type:'landmark', tile, lm, from, team, by, bonus}` in `kd:plant`.
+  With 30 kids landmarks flip 13–48 times a minute, so the projector's full-screen moment plays only for the first
+  capture of each landmark (or after 25 s), at most one every 8 s, never under another effect; other flips get the
+  board hop + a banner; a queued moment that is out of date is dropped. On the phone the landmark piece itself is the
+  button while it can be taken (the Burj covers ~3 tiles).
+  Pieces: `assets/kingdoms/landmarks/<key>.webp` (board, one common scale) + `landmarks/big/` (440 px, projector
+  moment); one Higgsfield sheet keyed with `greenscreen_to_webp.py --protect --holes`. Sound `landmark.mp3` (Kenney
+  steel-drum jingle).
+- **Captains**: two of the gang (`KD_CAPTAINS` = cast ids) picked at host:start, sent as `kd:captains` right before
+  `countdown` and again in `kd:init`. Projector: red | blue VS screen during the countdown, captain in each side panel,
+  cameo with a battle line on a lead change (at most every 20 s), winning captain on the end screen. Phone: «Tu
+  capitán/capitana» chip at the countdown. Lines in `js/cast.js` mood `battle` (Aileen in voseo).
+- **Projector**: Dubai skyline backdrop; 3 pictured steps in the lobby (fits 1600×900); landmark moment (piece flies to
+  the front, «+5», «¡El Mar le quita el Burj Khalifa al Fuego!»); big effects via DralingoFX, one at a time, ≥ 7 s apart
+  (surround ≥ 5 → zoom, castle alert → cameo, siege → gang «¡ASEDIO!», 30 s left → spotlight); score in «puntos»;
+  side panels show the landmarks each kingdom holds; end: champion Dralingo in the winner's colour + captain, landmarks
+  won, MVP per kingdom, top 6, gang finale.
+- **Phone**: red Dralingo for Fuego kids everywhere (TPOSE); lobby card «Así se juega» (3 pictured steps); the plant
+  screen zooms onto the glowing tiles (bigger targets for small fingers, whole board when they spread out), a tapping
+  hand on the first two plants, landmark targets get a pulsing ring; «¡Conquistaste el Burj Khalifa! +5» with the
+  piece; end screen shows kingdom points and the kid's own points.
+
 ## Source: what we copy and beat
 Kahoot «Color Kingdoms» demo, https://www.youtube.com/watch?v=6yTSdy4v0e8 (watched 2026-10-10):
 - 0:00 mode card: team play, up to 200 players, duration picker (2 min recommended), questions repeat in a loop.

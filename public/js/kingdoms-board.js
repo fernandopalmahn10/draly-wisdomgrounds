@@ -1,6 +1,8 @@
 // Reinos de Colores — shared SVG hex board (projector + phones).
 // KdBoard.create(svg, board, own, opts) draws the board once; .set(id, team, anim) recolours a single tile,
-// so updates stay cheap. board = { R, castles: {red, gold}, tiles: [[id, q, r], …] } from the server.
+// so updates stay cheap. board = { R, castles: {red, gold}, landmarks: {tileId: key}, tiles: [[id, q, r], …] }.
+// Dubai landmarks stand on their tiles like board-game pieces (own layer, drawn over the tiles, never catching taps)
+// with a badge showing their bonus, painted in the colour of the kingdom that holds them.
 (function () {
   const NS = 'http://www.w3.org/2000/svg';
   const S = 40;                      // hex radius in SVG units
@@ -9,6 +11,16 @@
     red:  { fill: '#f0443a', deep: '#b22a22' },
     gold: { fill: '#2f7bea', deep: '#1d52a8' },
   };
+  // Landmark pieces (assets/kingdoms/landmarks/<key>.webp): width in board units + picture aspect (h / w).
+  // Same names/bonuses as core/kingdoms.js LANDMARKS.
+  const LANDMARKS = {
+    burj: { name: 'Burj Khalifa', the: 'el Burj Khalifa', bonus: 5, w: 47, ar: 471 / 158 },
+    arab: { name: 'Burj Al Arab', the: 'el Burj Al Arab', bonus: 3, w: 54, ar: 306 / 158 },
+    museum: { name: 'Museo del Futuro', the: 'el Museo del Futuro', bonus: 3, w: 58, ar: 175 / 164 },
+    frame: { name: 'Marco de Dubái', the: 'el Marco de Dubái', bonus: 3, w: 52, ar: 261 / 158 },
+    atlantis: { name: 'Atlantis', the: 'el Atlantis', bonus: 3, w: 68, ar: 198 / 251 },
+  };
+  const LM_SRC = (k) => '/assets/kingdoms/landmarks/' + k + '.webp';
 
   function el(name, attrs, parent) {
     const e = document.createElementNS(NS, name);
@@ -39,6 +51,8 @@
     castleOf[board.castles.gold] = 'gold';
 
     const tilesLayer = el('g', {}, svg);
+    const lmLayer = el('g', { 'pointer-events': 'none' }, svg);    // landmark pieces: taps fall through to the tile
+    const fxLayer = el('g', { 'pointer-events': 'none' }, svg);
     const tagLayer = el('g', {}, svg);
     const nodes = {};
     board.tiles.forEach(([id, q, r]) => {
@@ -62,9 +76,64 @@
       }
     });
 
+    // Landmarks, back to front so a lower piece stands in front of a higher one.
+    const lms = {};
+    Object.entries(board.landmarks || {})
+      .filter(([id, k]) => nodes[id] && LANDMARKS[k])
+      .sort((a, b) => nodes[a[0]].cy - nodes[b[0]].cy)
+      .forEach(([id, k]) => {
+        const n = nodes[id];
+        const L = LANDMARKS[k];
+        const w = L.w;
+        const h = w * L.ar;
+        const bottom = n.cy + S * 0.62;
+        const g = el('g', { class: 'kd-lm', 'data-lm': k }, lmLayer);
+        const glow = el('ellipse', { class: 'kd-lm-glow', cx: n.cx, cy: bottom - w * 0.16, rx: w * 0.66, ry: w * 0.26 }, g);
+        const img = el('image', { class: 'kd-lm-img', href: LM_SRC(k), x: n.cx - w / 2, y: bottom - h, width: w, height: h }, g);
+        const by = Math.max(bottom - h + 8, n.cy - S * 1.6);
+        const bx = n.cx + Math.max(20, w * 0.42);
+        const badge = el('g', { class: 'kd-lm-badge' }, g);
+        const disc = el('circle', { cx: bx, cy: by, r: 15, 'stroke-width': 3 }, badge);
+        const txt = el('text', { x: bx, y: by + 6, 'text-anchor': 'middle', 'font-size': 17, 'font-weight': 800 }, badge);
+        txt.textContent = '+' + L.bonus;
+        const ring = el('ellipse', { class: 'kdp-lm-ring', cx: n.cx, cy: bottom - w * 0.16, rx: w * 0.78, ry: w * 0.34 }, g);
+        lms[id] = { key: k, g, glow, img, disc, txt, ring, cx: n.cx, cy: bottom - h / 2 };
+      });
+    function paintLm(id, team, anim) {
+      const m = lms[id];
+      if (!m) return;
+      const c = COLORS[team];
+      m.glow.setAttribute('fill', c ? c.fill : 'rgba(255,201,60,.75)');
+      m.glow.setAttribute('opacity', c ? 0.75 : 0.9);
+      m.disc.setAttribute('fill', c ? c.fill : '#ffc93c');
+      m.disc.setAttribute('stroke', c ? '#fff7e3' : '#1d2440');
+      m.txt.setAttribute('fill', c ? '#ffffff' : '#1d2440');
+      m.g.classList.toggle('held', !!c);
+      if (anim) {
+        m.img.classList.remove('hop');
+        void m.img.getBBox();
+        m.img.classList.add('hop');
+        ring(m.cx, m.cy, S * 1.6, c ? c.fill : '#ffc93c');
+      }
+    }
+
+    // An expanding ring (surround / landmark moments).
+    function ring(cx, cy, r, color) {
+      const c = el('circle', { class: 'kd-ring', cx, cy, r, fill: 'none', stroke: color, 'stroke-width': 10 }, fxLayer);
+      setTimeout(() => c.remove(), 900);
+    }
+    function burst(ids, team) {
+      const pts = (ids || []).map((id) => nodes[id]).filter(Boolean);
+      if (!pts.length) return;
+      const cx = pts.reduce((s, n) => s + n.cx, 0) / pts.length;
+      const cy = pts.reduce((s, n) => s + n.cy, 0) / pts.length;
+      ring(cx, cy, S * (1.2 + Math.min(4, Math.sqrt(pts.length))), COLORS[team] ? COLORS[team].fill : '#ffc93c');
+    }
+
     function set(id, team, anim) {
       const n = nodes[id];
       if (!n) return;
+      if (lms[id]) paintLm(id, team, anim && (n.team || null) !== (team || null));
       n.team = team || null;
       if (team && COLORS[team]) {
         n.own.setAttribute('fill', COLORS[team].fill);
@@ -97,26 +166,94 @@
       setTimeout(() => g.remove(), 2500);
     }
 
-    // Phone: glowing tiles the kid may tap.
+    // Phone: glowing tiles the kid may tap. A landmark the kid can take gets a pulsing ring around its piece.
     function targets(ids, onPick) {
-      svg.classList.toggle('kdp-picking', !!(ids && ids.length));
+      const picking = !!(ids && ids.length);
+      svg.classList.toggle('kdp-picking', picking);
       Object.values(nodes).forEach((n) => {
         n.g.classList.remove('kdp-target');
         n.g.querySelectorAll('.kdp-glow').forEach((x) => x.remove());
         n.g.onclick = null;
+      });
+      Object.entries(lms).forEach(([id, m]) => {
+        const on = picking && ids.includes(+id);
+        m.g.classList.toggle('kdp-lm-target', on);
+        m.g.classList.toggle('kdp-lm-dim', picking && !on);
+        // A kid taps the building, not the hex under it (the Burj covers ~3 tiles): while the landmark can be taken
+        // the whole piece is the button; otherwise taps fall through to the tiles behind it.
+        m.g.setAttribute('pointer-events', on ? 'visiblePainted' : 'none');
+        m.g.onclick = on ? () => onPick && onPick(+id) : null;
       });
       (ids || []).forEach((id) => {
         const n = nodes[id];
         if (!n) return;
         n.g.classList.add('kdp-target');
         el('polygon', { class: 'kdp-glow', points: points(n.cx, n.cy, S - 5), fill: '#ffd23f', stroke: '#ffffff', 'stroke-width': 6 }, n.g);
-        el('text', { class: 'kdp-glow', x: n.cx, y: n.cy + 10, 'text-anchor': 'middle', 'font-size': 28, 'pointer-events': 'none' }, n.g).textContent = '🚩';
+        if (!lms[id]) el('text', { class: 'kdp-glow', x: n.cx, y: n.cy + 10, 'text-anchor': 'middle', 'font-size': 28, 'pointer-events': 'none' }, n.g).textContent = '🚩';
         n.g.onclick = () => onPick && onPick(id);
       });
     }
 
-    return { set, tag, targets, nodes };
+    // Phone: zoom onto the tiles the kid can tap (bigger targets for small fingers), keeping the svg's own shape so the
+    // map around them still shows. A short tween keeps the kid oriented. No ids (or a zoom smaller than the whole
+    // board) → the whole board. `done` runs once the view has settled.
+    const full = { x: -w / 2, y: -h / 2, w, h };
+    let vb = Object.assign({}, full);
+    let tweenId = 0;
+    function setVB(b) { vb = b; svg.setAttribute('viewBox', `${b.x} ${b.y} ${b.w} ${b.h}`); }
+    function focus(ids, done) {
+      let target = full;
+      const pts = (ids || []).map((id) => nodes[id]).filter(Boolean);
+      const rect = svg.getBoundingClientRect();
+      if (pts.length && rect.width > 0 && rect.height > 0) {
+        let x0 = Math.min(...pts.map((n) => n.cx)) - S * 2.2;
+        let x1 = Math.max(...pts.map((n) => n.cx)) + S * 2.2;
+        let y0 = Math.min(...pts.map((n) => n.cy)) - S * 2.6;    // room for a landmark piece standing on a tile
+        let y1 = Math.max(...pts.map((n) => n.cy)) + S * 2.2;
+        const minW = S * SQ3 * 6;                               // never closer than ~6 tiles across
+        if (x1 - x0 < minW) { const c = (x0 + x1) / 2; x0 = c - minW / 2; x1 = c + minW / 2; }
+        const ar = rect.width / rect.height;
+        let bw = x1 - x0;
+        let bh = y1 - y0;
+        if (bw / bh < ar) { const nw = bh * ar; x0 -= (nw - bw) / 2; bw = nw; } else { const nh = bw / ar; y0 -= (nh - bh) / 2; bh = nh; }
+        const fullScale = Math.min(rect.width / full.w, rect.height / full.h);
+        if (rect.width / bw > fullScale * 1.08) {
+          // stay over the board instead of showing empty sky past its edge
+          if (bw <= full.w) x0 = Math.min(Math.max(x0, full.x), full.x + full.w - bw);
+          if (bh <= full.h) y0 = Math.min(Math.max(y0, full.y), full.y + full.h - bh);
+          target = { x: x0, y: y0, w: bw, h: bh };
+        }
+      }
+      const from = Object.assign({}, vb);
+      const id = ++tweenId;
+      const t0 = performance.now();
+      const ms = 320;
+      const step = (now) => {
+        if (id !== tweenId) return;
+        const k = Math.min(1, (now - t0) / ms);
+        const e = 1 - Math.pow(1 - k, 3);
+        setVB({ x: from.x + (target.x - from.x) * e, y: from.y + (target.y - from.y) * e, w: from.w + (target.w - from.w) * e, h: from.h + (target.h - from.h) * e });
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+      // background tabs / slow phones may skip frames: always land on the final view
+      setTimeout(() => { if (id === tweenId) { setVB(target); if (done) done(); } }, ms + 40);
+    }
+
+    // Centre of a tile in screen pixels (for the phone's "tap here" hand).
+    function screenPoint(id) {
+      const n = nodes[id];
+      if (!n || !svg.getScreenCTM) return null;
+      const m = svg.getScreenCTM();
+      if (!m) return null;
+      const p = svg.createSVGPoint();
+      p.x = n.cx; p.y = n.cy;
+      const s = p.matrixTransform(m);
+      return { x: s.x, y: s.y };
+    }
+
+    return { set, tag, targets, burst, ring, focus, screenPoint, nodes, lms };
   }
 
-  window.KdBoard = { create, COLORS };
+  window.KdBoard = { create, COLORS, LANDMARKS, LM_SRC };
 })();

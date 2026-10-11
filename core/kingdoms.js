@@ -2,18 +2,37 @@
 // Hex board in axial coords (q, r), pointy-top, radius R. Two castles (red left, gold right), each starting with
 // its castle tile + the 6 tiles around it. A right answer earns a flag; the kid plants it on any tile touching their
 // land (empty or enemy, never a castle). After every plant, any pocket of not-yours tiles that touches neither the
-// board edge nor a castle flips to your team ("¡Rodeado!"). Score = tiles owned + siege bonus.
+// board edge nor a castle flips to your team ("¡Rodeado!"). Score = tiles owned + siege bonus + Dubai landmarks held.
 'use strict';
 
 const DIRS = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
 const SIEGE_BONUS = 5;       // all 6 tiles around the enemy castle are yours
 const ALERT_AT = 4;          // "castle almost surrounded" threshold (of 6 neighbours)
 
+// Dubai landmarks: neutral tiles on the board's centre line, so both castles are exactly as far from each one (fair).
+// Whoever holds a landmark adds its bonus to the kingdom's score; it can be stolen back like any tile.
+// `the` is the Spanish name with its article, for sentences («¡El Fuego conquistó el Burj Khalifa!»).
+const LANDMARKS = {
+  burj: { name: 'Burj Khalifa', the: 'el Burj Khalifa', bonus: 5 },
+  arab: { name: 'Burj Al Arab', the: 'el Burj Al Arab', bonus: 3 },
+  museum: { name: 'Museo del Futuro', the: 'el Museo del Futuro', bonus: 3 },
+  frame: { name: 'Marco de Dubái', the: 'el Marco de Dubái', bonus: 3 },
+  atlantis: { name: 'Atlantis', the: 'el Atlantis', bonus: 3 },
+};
+const SIDE_LANDMARKS = ['arab', 'museum', 'frame', 'atlantis'];
+// Centre-line spots (q = -r/2), nearest first. The Burj Khalifa always takes the centre.
+function landmarkSpots(R) {
+  const spots = [[0, 0], [1, -2], [-1, 2]];
+  if (R >= 5) spots.push([2, -4], [-2, 4]);
+  return spots;
+}
+
 function key(q, r) { return q + ',' + r; }
 
 function radiusFor(playerCount) { return playerCount >= 8 ? 5 : 4; }
 
-function buildBoard(R) {
+// sideOrder: which side landmarks to use, in spot order (the server shuffles it so every round looks different).
+function buildBoard(R, sideOrder) {
   const tiles = [];
   const index = {};
   for (let q = -R; q <= R; q++) {
@@ -31,7 +50,26 @@ function buildBoard(R) {
   const castles = { red: index[key(-cd, 0)], gold: index[key(cd, 0)] };
   tiles[castles.red].castle = 'red';
   tiles[castles.gold].castle = 'gold';
-  return { R, tiles, castles };
+  const side = (sideOrder || SIDE_LANDMARKS).filter((k) => LANDMARKS[k] && k !== 'burj');
+  const landmarks = {};
+  landmarkSpots(R).forEach(([q, r], i) => {
+    const lm = i === 0 ? 'burj' : side[i - 1];
+    const id = index[key(q, r)];
+    if (!lm || id === undefined) return;
+    tiles[id].lm = lm;
+    landmarks[id] = lm;
+  });
+  return { R, tiles, castles, landmarks };
+}
+
+// Bonus points each team earns from the landmarks it holds right now.
+function landmarkScore(board, own) {
+  const out = { red: 0, gold: 0 };
+  Object.entries(board.landmarks || {}).forEach(([id, lm]) => {
+    const t = own[id];
+    if (out[t] !== undefined) out[t] += LANDMARKS[lm].bonus;
+  });
+  return out;
 }
 
 // Fresh ownership map: id → 'red' | 'gold' (absent = empty).
@@ -87,7 +125,8 @@ function plant(board, own, team, tileId) {
   return { tile: tileId, from, flipped };
 }
 
-// Best tile for an automatic plant (kid didn't tap in time): biggest surround first, then stealing,
+// Best tile for an automatic plant (kid didn't tap in time): biggest surround first, a landmark counts like one
+// flipped tile (kept modest on purpose: a kid who waits must not do better than a kid who taps), then stealing,
 // then hugging our own land. Simulates each candidate on a copy.
 function bestTarget(board, own, team) {
   const cands = validTargets(board, own, team);
@@ -97,13 +136,22 @@ function bestTarget(board, own, team) {
   cands.forEach((id) => {
     const sim = Object.assign({}, own);
     sim[id] = team;
-    const flips = enclosedPockets(board, sim, team).length;
+    const flipped = enclosedPockets(board, sim, team);
+    const lms = [id].concat(flipped).filter((x) => board.tiles[x].lm).length;
     const t = board.tiles[id];
     const mine = t.n.filter((n) => own[n] === team).length;
-    const score = flips * 4 + (own[id] ? 2 : 0) + mine + Math.random() * 0.5;
+    const score = flipped.length * 4 + lms * 4 + (own[id] ? 2 : 0) + mine + Math.random() * 0.5;
     if (score > bestScore) { bestScore = score; best = id; }
   });
   return best;
+}
+
+// Landmarks that changed hands in a plant result → [{ tile, lm, from }] (all now belong to the planter's team).
+function landmarksTaken(board, result) {
+  if (!result) return [];
+  return [{ id: result.tile, from: result.from }].concat(result.flipped)
+    .filter((x) => board.tiles[x.id] && board.tiles[x.id].lm)
+    .map((x) => ({ tile: x.id, lm: board.tiles[x.id].lm, from: x.from || null }));
 }
 
 // How many of each castle's neighbours the OTHER team owns (0..6).
@@ -122,16 +170,17 @@ function tileCounts(own) {
   return c;
 }
 
-// Compact board for clients: [id, q, r, castle?] — everything else they can derive.
+// Compact board for clients: [id, q, r] + castles + landmarks { tileId: key } — everything else they can derive.
 function publicBoard(board) {
   return {
     R: board.R,
     castles: board.castles,
+    landmarks: board.landmarks || {},
     tiles: board.tiles.map((t) => [t.id, t.q, t.r]),
   };
 }
 
 module.exports = {
-  SIEGE_BONUS, ALERT_AT, radiusFor, buildBoard, initialOwnership, validTargets,
-  enclosedPockets, plant, bestTarget, castlePressure, tileCounts, publicBoard,
+  SIEGE_BONUS, ALERT_AT, LANDMARKS, SIDE_LANDMARKS, radiusFor, buildBoard, initialOwnership, validTargets,
+  enclosedPockets, plant, bestTarget, castlePressure, tileCounts, landmarkScore, landmarksTaken, publicBoard,
 };
