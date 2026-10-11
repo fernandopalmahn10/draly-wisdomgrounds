@@ -52,9 +52,14 @@ if (!buildDir || !simNum) {
 
 const ROOT = path.join(__dirname, '..');
 const src = JSON.parse(fs.readFileSync(path.join(buildDir, 'simulation.json'), 'utf8'));
-const LEVEL_DIR = level.toUpperCase().replace(/^YCT/, 'YCT ');           // yct1 → "YCT 1"
-const assetDir = path.join(ROOT, 'public', 'assets', 'YCT SIMULATIONS', LEVEL_DIR, 'SIMULATION ' + simNum);
-const webBase = '/assets/' + ['YCT SIMULATIONS', LEVEL_DIR, 'SIMULATION ' + simNum].map(encodeURIComponent).join('/');
+// Exam family from the level id: yct1 → "YCT SIMULATIONS/YCT 1", newhsk1 → "NEW HSK SIMULATIONS/NEW HSK 1".
+const levelNum = level.replace(/\D/g, '');
+const FAMILY = /^newhsk/i.test(level)
+  ? { dir: 'NEW HSK SIMULATIONS', level: 'NEW HSK ' + levelNum, title: 'New HSK ' + levelNum }
+  : { dir: 'YCT SIMULATIONS', level: level.toUpperCase().replace(/^YCT/, 'YCT '), title: level.toUpperCase() };
+const LEVEL_DIR = FAMILY.level;
+const assetDir = path.join(ROOT, 'public', 'assets', FAMILY.dir, LEVEL_DIR, 'SIMULATION ' + simNum);
+const webBase = '/assets/' + [FAMILY.dir, LEVEL_DIR, 'SIMULATION ' + simNum].map(encodeURIComponent).join('/');
 fs.mkdirSync(path.join(assetDir, 'images'), { recursive: true });
 
 const ZH_PART = ['', '第一部分', '第二部分', '第三部分', '第四部分'];
@@ -80,7 +85,7 @@ function prefixFor(sectionId, part) {
 
 const out = {
   id: level + '-sim' + simNum,
-  title: level.toUpperCase() + ' · Simulación ' + simNum,
+  title: FAMILY.title + ' · Simulación ' + simNum,
   level,
   scoring: {
     total: (src.scoring && src.scoring.total_points) || 200,
@@ -117,7 +122,8 @@ for (const sec of src.sections) {
     for (const it of p.items) {
       // An example without a picture is one the recording never showed
       // (e.g. R1_EX2 米饭) — skip it rather than show a blank card.
-      if (it.is_example && !it.image && !it.options && !it.hanzi && !it.dialogue) continue;
+      // (an example in a shared-gallery listening part has only its audio: keep it)
+      if (it.is_example && !it.image && !it.options && !it.hanzi && !it.dialogue && !(p.shared_options && it.reference_audio_video_time)) continue;
       if (it.is_example && it.unverified) continue;
       const item = {
         id: it.id,
@@ -127,9 +133,19 @@ for (const sec of src.sections) {
         answer: it.answer,
       };
       if (it.image) item.image = img(it.image);
-      if (it.options) item.options = it.options.map((o) => ({ label: o.label, image: img(o.image) }));
+      // options are pictures (YCT, New HSK listening part 1) or text with pinyin (New HSK text choices)
+      if (it.options) {
+        item.options = it.options.map((o) => {
+          const out = { label: o.label };
+          if (o.image) out.image = img(o.image);
+          if (o.hanzi != null) { out.hanzi = o.hanzi; out.pinyin = o.pinyin || ''; }
+          return out;
+        });
+      }
       if (it.word) item.word = { hanzi: it.word.hanzi, pinyin: it.word.pinyin };
       if (it.hanzi) { item.hanzi = it.hanzi; item.pinyin = it.pinyin; }
+      if (it.passage) item.passage = { hanzi: it.passage.hanzi, pinyin: it.passage.pinyin };
+      if (it.question) item.question = { hanzi: it.question.hanzi, pinyin: it.question.pinyin };
       if (it.dialogue) item.dialogue = it.dialogue.map((d) => ({ speaker: d.speaker, hanzi: d.hanzi, pinyin: d.pinyin }));
       if (it.transcript) {
         item.transcript = { hanzi: it.transcript.hanzi, pinyin: it.transcript.pinyin };

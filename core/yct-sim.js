@@ -25,7 +25,7 @@ try {
   });
 } catch (_) { /* no YCT sims yet */ }
 
-const isYct = (simId) => /^yct\d+-/i.test(String(simId || ''));
+const isYct = (simId) => /^(yct|newhsk)\d+-/i.test(String(simId || ''));   // New HSK sims (2026-10-11) share this engine
 const get = (simId) => SIMS[simId] || null;
 
 function scoredItems(section) {

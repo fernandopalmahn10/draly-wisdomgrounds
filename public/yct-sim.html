@@ -6,7 +6,7 @@
   <title>YCT · Simulación</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Noto+Sans+SC:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/yct-sim.css?v=20261009a">
+  <link rel="stylesheet" href="/css/yct-sim.css?v=20261011a">
 </head>
 <body class="yct-body">
 
@@ -14,7 +14,7 @@
   <div id="y-gate" class="y-center">
     <div class="y-gate-card">
       <img src="/assets/dralingo.png" alt="" class="y-gate-mascot">
-      <h1>YCT · Simulación</h1>
+      <h1 id="y-gate-title">YCT · Simulación</h1>
       <p class="y-muted">Escribe el PIN que te dio tu maestra.</p>
       <input class="y-input" id="y-pin" type="text" placeholder="PIN de la sala" autocomplete="off" inputmode="numeric">
       <input class="y-input" id="y-code" type="text" placeholder="Tu código de estudiante" autocomplete="off">
@@ -49,7 +49,7 @@
     <section id="y-cover" class="y-page hidden">
       <div class="y-cover-card">
         <div class="y-cover-band">
-          <div class="y-cover-book"><span>YCT</span><small>模拟考试</small></div>
+          <div class="y-cover-book"><span id="y-book">YCT</span><small>模拟考试</small></div>
           <div>
             <div class="y-cover-title" id="y-cover-title">YCT1 · Simulación</div>
             <div class="y-cover-sub">Examen de práctica de Chino Mandarín</div>
@@ -59,9 +59,9 @@
         <ul class="y-rules">
           <li>El examen tiene 2 secciones y se hacen en orden: primero <b>Escucha</b>, después <b>Lectura</b>.</li>
           <li>En Escucha el audio suena solo y cada pregunta se oye <b>dos veces</b>. No se puede pausar ni repetir.</li>
-          <li>Al terminar el audio tienes <b>2 minutos</b> para revisar tus respuestas de Escucha.</li>
+          <li>Al terminar el audio tienes <b id="y-rule-review">2 minutos</b> para revisar tus respuestas de Escucha.</li>
           <li>En Lectura vas a tu ritmo y puedes moverte entre preguntas. Cuando pases a Lectura ya no puedes volver a Escucha.</li>
-          <li>Cada parte empieza con un <b>ejemplo</b> que ya viene contestado.</li>
+          <li id="y-rule-ex">Cada parte empieza con un <b>ejemplo</b> que ya viene contestado.</li>
         </ul>
         <div class="y-cover-go">
           <p class="y-muted">🎧 Ponte los audífonos y sube el volumen.</p>
@@ -148,6 +148,6 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/yct-sim.js?v=20261009a"></script>
+  <script src="/js/yct-sim.js?v=20261011a"></script>
 </body>
 </html>

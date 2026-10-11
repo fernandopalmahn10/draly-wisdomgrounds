@@ -201,7 +201,7 @@ html, body { margin: 0; }
 .y-word .zh { font-size: 2.5rem; font-weight: 700; color: var(--head); line-height: 1.1; }
 .y-py { color: var(--muted); font-weight: 600; font-size: 1.05rem; }
 .y-gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-.y-gallery .y-opt { cursor: default; }
+.y-gallery .y-opt { width: 100%; font: inherit; }
 .y-sentence { text-align: center; background: var(--cell); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 14px; }
 .y-sentence .zh { font-size: 1.75rem; font-weight: 700; color: var(--head); }
 .y-letters { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
@@ -287,3 +287,57 @@ html, body { margin: 0; }
 }
 .y-peek .y-btn { min-height: 40px; padding: 8px 16px; }
 .y-review-miss { font-weight: 700; color: var(--seal) !important; }
+
+/* ── New HSK layouts (2026-10-11): text answers, banks, passages ───── */
+.y-hint { color: var(--muted); font-weight: 600; margin: -4px 0 14px; }
+.y-txt-opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 6px; }
+.y-txt {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 78px; padding: 10px 14px 10px 10px;
+  text-align: left; border: 2px solid var(--line); border-radius: 8px; background: #fff; font: inherit; color: var(--ink);
+}
+.y-txt-letter {
+  flex: none; width: 36px; height: 36px; border-radius: 6px; background: var(--head); color: #fff;
+  font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+}
+.y-txt.sel .y-txt-letter { background: var(--primary); }
+.y-txt.right .y-txt-letter { background: var(--ok); }
+.y-txt.wrong .y-txt-letter { background: var(--bad); }
+.y-txt-body { display: flex; flex-direction: column; min-width: 0; }
+.y-txt .zh { font-size: 1.5rem; font-weight: 700; color: var(--head); line-height: 1.25; }
+.y-txt .y-py { font-size: .95rem; }
+.y-bank { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.y-bank .y-txt { min-height: 70px; }
+.y-bank .y-txt .zh { font-size: 1.3rem; }
+.y-bank-words .y-txt .zh { font-size: 1.6rem; }
+.y-reply { margin-top: 12px; font-size: 1.5rem; font-weight: 700; }
+.y-reply .y-blank { min-width: 140px; padding: 0 8px; font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+.y-dialog-box { text-align: left; }
+.y-dialog-box .y-line { margin: 6px 0; }
+.y-passage { background: var(--cell); border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; margin-bottom: 14px; }
+.y-passage .zh { font-size: 1.6rem; font-weight: 700; color: var(--head); line-height: 1.5; }
+.y-question { display: flex; gap: 10px; align-items: flex-start; margin: 2px 2px 14px; }
+.y-star { color: var(--seal); font-size: 1.35rem; line-height: 1.45; }
+.y-question .zh { font-size: 1.35rem; font-weight: 700; color: var(--head); }
+
+/* New HSK pictures are whole answer cards cropped from the official screen: they keep
+   their own shape, and our letter tab sits exactly over the corner where the original
+   tab was painted out (L1 cards 66x40 of 242x136, gallery cells 66x39 of 300x166). */
+.fam-newhsk .y-opt img { aspect-ratio: auto; height: auto; }
+.fam-newhsk .y-opt-letter {
+  display: flex; align-items: center; justify-content: center; padding: 0;
+  font-size: clamp(.85rem, 1.8vw, 1.4rem); border-bottom-right-radius: 8px;
+}
+.fam-newhsk .y-abc .y-opt-letter { width: 27.3%; height: 29.4%; }
+.fam-newhsk .y-gallery .y-opt-letter { width: 22%; height: 23.5%; }
+
+@media (max-width: 560px) {
+  .y-txt-opts { grid-template-columns: 1fr; gap: 8px; }
+  .y-txt { min-height: 64px; }
+  .y-bank { grid-template-columns: 1fr; gap: 8px; }
+  .y-bank-words { grid-template-columns: 1fr 1fr; }
+  .y-bank .y-txt { min-height: 58px; }
+  .y-txt .zh { font-size: 1.3rem; }
+  .y-passage .zh { font-size: 1.35rem; }
+  .fam-newhsk .y-abc { grid-template-columns: 1fr; max-width: 250px; margin: 0 auto; }
+  .fam-newhsk .y-gallery { grid-template-columns: 1fr 1fr; }
+}

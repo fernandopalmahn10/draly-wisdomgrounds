@@ -34,7 +34,7 @@ Dralingo, the blue dragon in a keffiyeh, is the host character. It brings togeth
 - **live classroom PIN games**: the teacher's screen shows a PIN and the kids play on their phones
 - **homework** that grades itself, with progress tracking
 - **parent control**: parents follow their child, and get report cards
-- **official test simulations**: Old HSK, YCT and soon New HSK, with saved results
+- **official test simulations**: Old HSK, YCT and New HSK, with saved results
 - **teacher modes**: tools for teaching live in class
 - **a teacher dashboard** to manage students, classrooms and everything above
 
@@ -157,7 +157,7 @@ opens the matching child.
 |---|---|---|
 | **Old HSK 1** | Simulations 1–10, 40 questions each, answers and audio from your uploaded files | `hsk-sim.html` |
 | **YCT 1** | Simulations 1–5, the real exam flow on the **original recorded audio** | `yct-sim.html` (new interface) |
-| **New HSK** | Folders ready, simulations next | will use the YCT interface |
+| **New HSK 1** | Simulation 1 (2026-10-11): 40 questions, original audio, 5-minute review, 20-minute reading | `yct-sim.html` (same interface) |
 
 **The YCT player (the new interface):**
 1. A cover page with the exam structure.
@@ -167,9 +167,12 @@ opens the matching child.
    While the audio plays, kids can tap any question already heard to check or change it; "Volver al audio" brings
    them back, and the screen moves on by itself at the next question. "Terminar escucha" ends listening early.
    The listening ends with the original closing line "听力考试现在结束".
-3. **2 minutes to review** listening answers, question by question (Anterior / Siguiente), with the unanswered
+3. **Review time** (YCT 2 minutes, New HSK 5 minutes) for listening answers, question by question (Anterior / Siguiente), with the unanswered
    numbers listed; "Terminar revisión" moves to Reading (no way back).
-4. **Reading** at the kid's own pace with a 17-minute clock.
+4. **Reading** at the kid's own pace on the exam's clock (YCT 17 minutes, New HSK 20 minutes).
+   Each Reading question has a one-line Spanish hint of what to tap.
+   New HSK adds its own layouts: text answers (A/B/C with characters + pinyin), six shared pictures
+   for a dialogue (tap the picture or its letter), a reply bank, a word bank, and short texts with a ★ question.
 5. **Results:** a score out of 200 (120 to pass), % correct per part, and a green/red number for
    each question. Tapping a number shows the picture, the kid's answer, the correct answer, what the
    audio said, and a button to play that clip again.
@@ -281,12 +284,13 @@ credits.
 
 **Tools:** ffmpeg (from your CapCut install), Whisper large-v3, Python (Pillow, NumPy, OpenCV),
 headless Edge. Everything is documented in `ClaudeCode/video_tools/yct_capture/README.md`, and each
-test has a build folder (`YCT1_Sim1_Build`, `YCT1_Sim2_Build`).
+test has a build folder (`YCT1_Sim1_Build`, `YCT1_Sim2_Build`, `NEWHSK1_Sim1_Build`).
 
 **Limits:**
 - **Sharpness:** pictures can only be as sharp as they were on your screen, which is why zoom
   matters.
-- **Letter tabs:** where a gray A/B/C label covered a picture, that corner is blank.
+- **Letter tabs:** where a gray A/B/C label covered a picture, that corner is blank. On New HSK the whole
+  answer card is kept and our own letter tab sits exactly over that corner.
 - **Audio rights:** the audio and pictures belong to the mock-test site. Using them is your decision
   for your own classes.
 
@@ -368,7 +372,7 @@ intro is long"), and I'll turn it into exact changes.
 ## 10. What's next (pending work)
 
 - **Official tests:**
-  - New HSK 1 simulations (next in the build order), then YCT 1 Simulations 3+
+  - New HSK 1 Simulation 2 (recording already in Videos/Captures), then YCT 2 per the build order
   - move Old HSK onto the new exam interface, once you're happy with YCT
 - **Pin games:** a Kahoot-style quiz engine inside the platform, built once and fed by the
   simulations and word sets

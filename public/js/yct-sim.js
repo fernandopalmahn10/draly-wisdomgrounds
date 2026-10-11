@@ -1,13 +1,13 @@
 // =========================================================================
-// yct-sim.js — Student-side YCT mock exam
+// yct-sim.js — Student-side YCT / New HSK mock exam
 // =========================================================================
 // Same room plumbing as hsk-sim.js (PIN → socket player:join → wait for
 // the teacher's Empezar → /api/hsk-sim/:simId payload → heartbeat →
 // /submit), with the real exam flow:
 //   cover → LISTENING driven by one continuous audio track (the screen
 //   follows the audio: welcome, part instructions, examples already
-//   answered, each question while it is read twice) → 2-minute review →
-//   READING, self-paced with a 17-minute clock → results (score /200,
+//   answered, each question while it is read twice) → review (YCT 2 min,
+//   New HSK 5 min) → READING, self-paced on a clock → results (score /200,
 //   per-part %, tap a number to review the question).
 // Progress is kept in sessionStorage so a reload resumes at the same
 // second of the audio instead of restarting the exam.
@@ -57,6 +57,18 @@
   let finished = false;
   let socket = null;
   let started = false;
+
+  // Exam family (YCT / New HSK, 2026-10-11) from the sim id: names on the gate
+  // and cover, and a body class for family layouts (New HSK full-card pictures).
+  const isNewHsk = () => /^newhsk/i.test(simId);
+  function applyFamily() {
+    document.body.classList.toggle('fam-newhsk', isNewHsk());
+    $('y-gate-title').textContent = (isNewHsk() ? 'New HSK' : 'YCT') + ' · Simulación';
+    $('y-book').textContent = isNewHsk() ? '新HSK' : 'YCT';
+  }
+  applyFamily();
+  // "2 minutos" (YCT) / "5 minutos" (New HSK): the listening review length.
+  function reviewMin() { const m = Math.round(((sim && sim.listening.review) || 120) / 60); return m + (m === 1 ? ' minuto' : ' minutos'); }
 
   if (roomPin) $('y-pin').value = roomPin;
   if (studentCode) $('y-code').value = studentCode;
@@ -112,6 +124,8 @@
       .then((d) => {
         if (!d || !d.ok) { $('y-gate').classList.remove('hidden'); $('y-gate-err').textContent = 'No se pudo cargar: ' + ((d && d.error) || ''); return; }
         sim = d.sim;
+        simId = sim.id;
+        applyFamily();
         buildSchedule();
         buildReading();
         $('y-title').textContent = sim.title;
@@ -179,6 +193,9 @@
         (i === 0 ? '<td rowspan="' + R.parts.length + '">' + nR + '</td><td rowspan="' + R.parts.length + '">' + Math.round(R.timeLimit / 60) + ' min</td>' : '') + '</tr>';
     });
     $('y-structure').innerHTML = h;
+    $('y-rule-review').textContent = reviewMin();
+    const allEx = L.parts.concat(R.parts).every((p) => p.items.some((i) => i.example));
+    $('y-rule-ex').innerHTML = (allEx ? 'Cada parte empieza' : 'Casi todas las partes empiezan') + ' con un <b>ejemplo</b> que ya viene contestado.';
   }
   $('y-start').addEventListener('click', () => { tick(); startListening(0); });
 
@@ -298,7 +315,7 @@
       $('y-part-label').textContent = 'Escucha';
       box.innerHTML = '<div class="y-intro y-intro-start"><div class="y-start-zh zh">听力考试现在结束</div>' +
         '<div class="y-py">tingli kaoshi xianzai jieshu</div>' +
-        '<h2>Terminó la prueba de escucha</h2><p>Ahora tendrás 2 minutos para revisar tus respuestas.</p></div>';
+        '<h2>Terminó la prueba de escucha</h2><p>Ahora tendrás ' + reviewMin() + ' para revisar tus respuestas.</p></div>';
     } else {
       renderItem(seg.part, seg.item, { live: true });
     }
@@ -331,8 +348,25 @@
         return p.part === 1 ? 'Vas a oír una palabra. Mira la imagen: ¿es lo mismo? Toca ✓ o ✗.'
                             : 'Vas a oír una oración. Mira la imagen: ¿es lo mismo? Toca ✓ o ✗.';
       case 'listen_choose_picture_abc':
+        if (isNewHsk()) return 'Vas a oír una frase corta. Toca la imagen correcta: A, B o C.';
         return p.part === 2 ? 'Vas a oír una palabra. Toca la imagen correcta: A, B o C.'
                             : 'Vas a oír una pregunta y su respuesta. Toca la imagen correcta: A, B o C.';
+      case 'listen_choose_text_abc':
+        return p.part === 2 ? 'Vas a oír una pregunta. Toca la mejor respuesta: A, B o C.'
+                            : 'Vas a oír una oración y después una pregunta sobre ella. Toca la respuesta correcta: A, B o C.';
+      case 'listen_match_picture_gallery':
+        return 'Vas a oír un diálogo corto. Busca su imagen entre la A y la F y tócala.';
+      default: return '';
+    }
+  }
+  // One line under the number in Reading (Reading has no instruction screen).
+  function hintText(p) {
+    switch (p.type) {
+      case 'read_word_true_false_picture': return 'Mira la palabra y la imagen: ¿es lo mismo? Toca ✓ o ✗.';
+      case 'read_match_sentence_to_picture': return 'Lee la oración y toca la imagen que va con ella.';
+      case 'read_choose_reply_bank': return 'Lee la pregunta y toca la respuesta que le va mejor.';
+      case 'read_fill_blank_word_bank': return 'Toca la palabra que completa el espacio.';
+      case 'read_passage_question_abc': return 'Lee el texto y contesta la pregunta ★.';
       default: return '';
     }
   }
@@ -373,6 +407,21 @@
     let h = '<div class="y-q-tag"><span class="y-q-zh zh">' + esc(part.zh || '') + '</span>' +
       (it.example ? '<span class="y-badge ex">Ejemplo</span><span class="y-ex-note">Ya viene contestado</span>'
                   : '<span class="y-badge">' + it.num + '</span>') + '</div>';
+    const hint = !it.t && hintText(part);
+    if (hint && !mark) h += '<p class="y-hint">' + esc(hint) + '</p>';
+    // Text answers (New HSK): letter + hanzi + pinyin on one big button.
+    const textBtns = (list, extra) => '<div class="' + extra + '">' + list.map((o) =>
+      '<button class="y-txt y-pick' + cls(o.label) + '" data-v="' + o.label + '" type="button"><span class="y-txt-letter">' + o.label + '</span>' +
+      '<span class="y-txt-body"><span class="zh">' + esc(o.hanzi) + '</span>' + (o.pinyin ? '<span class="y-py">' + esc(o.pinyin) + '</span>' : '') + '</span></button>').join('') + '</div>';
+    // Six shared pictures A–F: tap a picture or its letter.
+    const gallery = () => '<div class="y-gallery">' + part.gallery.map((g) =>
+      '<button class="y-opt y-pick' + cls(g.label) + '" data-v="' + g.label + '" type="button"><span class="y-opt-letter">' + g.label + '</span><img src="' + esc(g.image) + '" alt=""></button>').join('') + '</div>';
+    const letters = () => '<div class="y-letters">' + part.gallery.map((g) =>
+      '<button class="y-pick' + cls(g.label) + '" data-v="' + g.label + '" type="button">' + g.label + '</button>').join('') + '</div>';
+    const pickW = part.bank ? part.bank.find((b) => b.label === chosen) : null;
+    const fill = (s) => esc(s).replace('___', '<span class="y-blank">' + (pickW ? esc(pickW.hanzi) : '&nbsp;') + '</span>');
+    const fillPy = (s) => esc(s).replace('___', '<span class="y-blank">' + (pickW ? esc(pickW.pinyin) : '&nbsp;') + '</span>');
+    const line = (d, f1, f2) => '<div class="y-line"><span class="y-spk">' + esc(d.speaker) + '</span><div><div class="zh">' + f1(d.hanzi) + '</div><div class="y-py">' + f2(d.pinyin) + '</div></div></div>';
     switch (part.type) {
       case 'listen_true_false_picture':
       case 'read_word_true_false_picture':
@@ -387,24 +436,41 @@
           '<span class="y-opt-letter">' + o.label + '</span><img src="' + esc(o.image) + '" alt=""></button>').join('') + '</div>';
         break;
       case 'read_match_sentence_to_picture':
-        h += '<div class="y-gallery">' + part.gallery.map((g) =>
-          '<div class="y-opt' + (g.label === chosen && !mark ? ' sel' : '') + (key === g.label ? ' right' : '') + '"><span class="y-opt-letter">' + g.label + '</span><img src="' + esc(g.image) + '" alt=""></div>').join('') + '</div>';
+        h += gallery();
         h += '<div class="y-sentence"><div class="zh">' + esc(it.hanzi) + '</div><div class="y-py">' + esc(it.pinyin) + '</div></div>';
-        h += '<div class="y-letters">' + part.gallery.map((g) =>
-          '<button class="y-pick' + cls(g.label) + '" data-v="' + g.label + '" type="button">' + g.label + '</button>').join('') + '</div>';
+        h += letters();
         break;
-      case 'read_fill_blank_word_bank': {
-        const pickW = part.bank.find((b) => b.label === chosen);
-        const fill = (s) => esc(s).replace('___', '<span class="y-blank">' + (pickW ? esc(pickW.hanzi) : '&nbsp;') + '</span>');
-        const fillPy = (s) => esc(s).replace('___', '<span class="y-blank">' + (pickW ? esc(pickW.pinyin) : '&nbsp;') + '</span>');
-        h += '<div class="y-dialog"><img class="y-pic" src="' + esc(it.image) + '" alt=""><div>' +
-          it.dialogue.map((d) => '<div class="y-line"><span class="y-spk">' + esc(d.speaker) + '</span><div><div class="zh">' + fill(d.hanzi) + '</div><div class="y-py">' + fillPy(d.pinyin) + '</div></div></div>').join('') +
-          '</div></div>';
-        h += '<div class="y-letters y-bank-letters">' + part.bank.map((b) =>
-          '<button class="y-pick' + cls(b.label) + '" data-v="' + b.label + '" type="button">' + b.label +
-          '<small>' + esc(b.hanzi) + ' · ' + esc(b.pinyin) + '</small></button>').join('') + '</div>';
+      case 'listen_match_picture_gallery':      // New HSK listening part 3
+        h += gallery() + letters();
         break;
-      }
+      case 'listen_choose_text_abc':            // New HSK listening parts 2 and 4
+        h += textBtns(it.options, 'y-txt-opts');
+        break;
+      case 'read_choose_reply_bank':            // New HSK reading part 2
+        h += '<div class="y-sentence"><div class="zh">' + esc(it.hanzi) + '</div><div class="y-py">' + esc(it.pinyin) + '</div>' +
+          '<div class="y-reply"><span class="y-blank">' + (pickW ? esc(pickW.hanzi) : '&nbsp;') + '</span></div></div>';
+        h += textBtns(part.bank, 'y-bank');
+        break;
+      case 'read_fill_blank_word_bank':
+        if (it.image) {                         // YCT: picture + dialogue, compact letter bank
+          h += '<div class="y-dialog"><img class="y-pic" src="' + esc(it.image) + '" alt=""><div>' +
+            it.dialogue.map((d) => line(d, fill, fillPy)).join('') + '</div></div>';
+          h += '<div class="y-letters y-bank-letters">' + part.bank.map((b) =>
+            '<button class="y-pick' + cls(b.label) + '" data-v="' + b.label + '" type="button">' + b.label +
+            '<small>' + esc(b.hanzi) + ' · ' + esc(b.pinyin) + '</small></button>').join('') + '</div>';
+          break;
+        }
+        // New HSK: one sentence (or a two-line dialogue) with a blank, big word buttons
+        h += it.dialogue
+          ? '<div class="y-sentence y-dialog-box">' + it.dialogue.map((d) => line(d, fill, fillPy)).join('') + '</div>'
+          : '<div class="y-sentence"><div class="zh">' + fill(it.hanzi) + '</div><div class="y-py">' + fillPy(it.pinyin) + '</div></div>';
+        h += textBtns(part.bank, 'y-bank y-bank-words');
+        break;
+      case 'read_passage_question_abc':         // New HSK reading part 4
+        h += '<div class="y-passage"><div class="zh">' + esc(it.passage.hanzi) + '</div><div class="y-py">' + esc(it.passage.pinyin) + '</div></div>';
+        h += '<div class="y-question"><span class="y-star">★</span><div><div class="zh">' + esc(it.question.hanzi) + '</div><div class="y-py">' + esc(it.question.pinyin) + '</div></div></div>';
+        h += textBtns(it.options, 'y-txt-opts');
+        break;
       default:
         h += '<p>Tipo de pregunta desconocido.</p>';
     }
@@ -448,7 +514,7 @@
       missingText(sim.listening) + 'Pasarás a Lectura y ya no podrás volver a Escucha.', () => startReading(false)));
     const endL = $('y-end-listen');
     if (endL) endL.addEventListener('click', () => confirmBox('¿Terminar la escucha?',
-      'El audio se detendrá y empezarán tus 2 minutos de revisión. Ya no podrás oír el resto del audio.', () => startReview(false)));
+      'El audio se detendrá y empezarán tus ' + reviewMin() + ' de revisión. Ya no podrás oír el resto del audio.', () => startReview(false)));
     const sub = $('y-submit');
     if (sub) sub.addEventListener('click', askSubmit);
   }
@@ -521,7 +587,7 @@
     $('y-counter').textContent = '';
     $('y-q').classList.remove('y-locked');
     $('y-q').innerHTML = '<div class="y-intro"><img src="/assets/dralingo.png" alt="" class="y-intro-logo"><h2>Revisa tus respuestas</h2>' +
-      '<p>Tienes 2 minutos. Toca <b>Siguiente</b> para ir pregunta por pregunta, o un número a la izquierda. ' +
+      '<p>Tienes ' + reviewMin() + '. Toca <b>Siguiente</b> para ir pregunta por pregunta, o un número a la izquierda. ' +
       'Puedes cambiar cualquier respuesta. Cuando estés listo, toca <b>Terminar revisión</b>.</p>' +
       '<p class="y-review-miss">' + esc(missingText(sim.listening)) + '</p></div>';
     $('y-prev').disabled = true;
@@ -735,7 +801,9 @@
     if (!f || !result) return;
     const rv = result.review[qid] || {};
     const b = result.breakdown.find((x) => x.qid === qid) || {};
-    const show = (v) => v == null ? '(sin respuesta)' : v === 'T' ? '✓' : v === 'F' ? '✗' : v;
+    const choices = f.item.options || f.part.bank || [];
+    const word = (v) => { const o = choices.find((x) => x.label === v); return o && o.hanzi ? ' · ' + o.hanzi : ''; };
+    const show = (v) => v == null ? '(sin respuesta)' : v === 'T' ? '✓' : v === 'F' ? '✗' : v + word(v);
     let h = itemHtml(f.part, f.item, { readonly: true, mark: { mine: b.given, key: rv.answer } });
     h += '<div class="y-review-ans"><span class="mine ' + (b.correct ? 'ok' : 'bad') + '">Tu respuesta: ' + esc(show(b.given)) + '</span>' +
       (b.correct ? '' : '<span class="key">Correcta: ' + esc(show(rv.answer)) + '</span>') + '</div>';
@@ -778,7 +846,9 @@
       if (view === 'review') { phase = 'listening'; startReview(false); return true; }
       if (view === 'reading') { readCursor = parseInt(params.get('rc') || '0', 10); startReading(false); return true; }
       if (view === 'results') {
-        const key = { 'L1-1': 'F', 'L1-2': 'F', 'L1-3': 'T', 'L2-9': 'C', 'R2-28': 'C', 'R3-33': 'A' };
+        const key = isNewHsk()
+          ? { 'L1-1': 'B', 'L1-2': 'A', 'L2-6': 'A', 'L3-11': 'C', 'L4-16': 'A', 'R1-21': 'F', 'R2-26': 'C', 'R3-31': 'B', 'R4-36': 'A' }
+          : { 'L1-1': 'F', 'L1-2': 'F', 'L1-3': 'T', 'L2-9': 'C', 'R2-28': 'C', 'R3-33': 'A' };
         answers = key; finish(false); return true;
       }
       return false;
