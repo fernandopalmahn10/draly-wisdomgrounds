@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <title>Mochi Mash · Play</title>
+  <title>Draly Wisdom Grounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20261011a">
   <link rel="stylesheet" href="/css/dralingo.css">
@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/css/warmup.css?v=20260707a">
   <link rel="stylesheet" href="/css/reading.css?v=20260603d">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/kingdoms.css?v=20261011a">
+  <link rel="stylesheet" href="/css/kingdoms.css?v=20261011e">
   <!-- Lobby layout + lobby mini-game (the little plane while kids wait).
        These rules used to live in flappy.css, which was deleted with the
        retired Flappy Dragon game (2026-10-10); the lobby itself is shared. -->
@@ -77,7 +77,7 @@
     }
   </style>
 </head>
-<body>
+<body data-dfx-warm="tap">
   <!-- Lantern balloons (red + gold) removed per user request 2026-05-25 —
        they were the "two balloons at the top" blocking the screen. -->
 
@@ -488,6 +488,41 @@
     <div class="kdp-done" id="kdp-done"></div>
   </div>
 
+  <!-- Dragones Pintores: the phone platformer -->
+  <!-- Dragones Pintores phone. His rule 2026-10-11: kids don't read, so the fire rule explains itself:
+       a 3-step picture card at the start, a big «Recargar» bar, and a full card when the fire runs out. -->
+  <div id="screen-paint" class="hidden">
+    <div class="pc-top">
+      <div class="pc-score" id="pc-score"></div>
+      <div class="pc-energy" aria-label="Fuego"><div class="pc-energy-fill" id="pc-energy-fill"></div><span id="pc-energy-text">🔥 8 s</span></div>
+    </div>
+    <div class="pc-stage">
+      <canvas id="pc-canvas" class="pc-canvas"></canvas>
+      <div class="pc-card hidden" id="pc-help" role="dialog" aria-labelledby="pc-help-title">
+        <img class="pc-card-pose" id="pc-help-pose" alt="">
+        <div class="pc-card-title" id="pc-help-title">¡A pintar el cielo!</div>
+        <ol class="pc-steps">
+          <li><span class="pc-step-ico">◀ ▶ ⬆</span><span>Muévete y salta</span></li>
+          <li><span class="pc-step-ico" id="pc-help-tile">🎨</span><span>Pisa las nubes y se pintan de tu color</span></li>
+          <li><span class="pc-step-ico">🔥</span><span>Volar gasta fuego. ¿Se acabó? Toca <b>Recargar</b> y responde</span></li>
+        </ol>
+        <button class="pc-card-btn" id="pc-help-go" type="button">¡A volar!</button>
+      </div>
+      <div class="pc-card pc-empty hidden" id="pc-empty" role="alertdialog" aria-labelledby="pc-empty-title">
+        <img class="pc-card-pose" src="/assets/kingdoms/dralingo/shocked.webp" alt="">
+        <div class="pc-card-title" id="pc-empty-title">¡Te quedaste sin fuego!</div>
+        <p class="pc-card-text">Responde una pregunta y vuelve a volar</p>
+        <button class="pc-card-btn pc-fire" id="pc-empty-go" type="button">🔥 ¡Recargar ahora!</button>
+      </div>
+    </div>
+    <button class="pc-recharge" id="pc-recharge" type="button"><b>🔥 ¡Recargar fuego!</b><small id="pc-recharge-sub">Responde una pregunta</small></button>
+    <div class="pc-controls">
+      <button class="pc-btn" id="pc-left" aria-label="Izquierda">◀</button>
+      <button class="pc-btn" id="pc-right" aria-label="Derecha">▶</button>
+      <button class="pc-btn pc-jump" id="pc-jump" aria-label="Saltar">⬆</button>
+    </div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -506,8 +541,12 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011a"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261011a"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261011e"></script>
   <script src="/js/player-kingdoms.js?v=20261011a"></script>
-  <script src="/js/player.js?v=20261010d"></script>
+  <script src="/js/paint-render.js?v=20261011a"></script>
+  <script src="/js/player-paint.js?v=20261011e"></script>
+  <script src="/js/cast.js?v=20261011b"></script>
+  <script src="/js/dralingo-fx.js?v=20261011d"></script>
+  <script src="/js/player.js?v=20261011e"></script>
 </body>
 </html>

@@ -1325,60 +1325,48 @@
   // whose assets exist are heavily prioritized; legacy PNGs kept as
   // fallbacks until their new assets land.
   const DAILY_CHARS = [
-    // ⭐ Gojo — new asset ready. Listed TWICE for higher pick odds.
-    { id: 'gojo',     img: '/assets/cutscenes/chars/gojo-b.png',
-      name: 'Gojo',
-      intros: ['Te he estado esperando. Hoy entrenamos: {theme}.', 'Soy Gojo. Vamos a desbloquear tus límites.', 'Cierra los ojos. Hoy verás más allá del idioma…'],
-      outros: ['Limit Break completado. Pero esto apenas comienza…', 'Has visto el infinito por un segundo. ¿Pudiste sentirlo?', 'Mañana abriremos otra puerta. No faltes.'] },
-    { id: 'gojo',     img: '/assets/cutscenes/chars/gojo-b.png',
-      name: 'Gojo',
-      intros: ['Hoy te enseñaré el secreto del {theme}.', 'Snap. Y empezamos.', 'Mi infinito te protege mientras aprendes.'],
-      outros: ['Hueco abierto. Tu mente se expandió.', 'Domain expansion: Idioma Infinito ✨', 'Has dado un paso hacia el lado azul.'] },
-    // ⭐ Yugi — new asset ready. Listed TWICE.
-    { id: 'yugi',     img: '/assets/cutscenes/chars/yugi-b.png',
-      name: 'Yugi',
-      intros: ['¡Es hora del duelo! Tema de hoy: {theme}.', '¡Cree en el corazón de las cartas!', 'Mi deck está listo. ¿Y el tuyo?'],
-      outros: ['¡Ese fue un duelo legendario!', 'Tu mazo crece más fuerte cada día.', 'El Faraón está orgulloso de ti. Mañana otro turno.'] },
-    { id: 'yugi',     img: '/assets/cutscenes/chars/yugi-b.png',
-      name: 'Yugi',
-      intros: ['¡Activé la carta {theme}! Empezamos.', '¡Confía en tu deck!', 'El Rompecabezas del Milenio brilla por ti.'],
-      outros: ['¡Tu turno termina con victoria!', 'Las cartas hablan de ti hoy.', 'Volveré con un duelo aún mejor mañana.'] },
-    // 🔧 Legacy roster (kept as fallbacks until new PNGs land per character)
-    { id: 'yuji',     img: '/assets/png-library/yuji.png',
-      name: 'Yuji',
-      intros: ['¡Vamos juntos! Hoy: {theme}. ¡Sin miedo!', '¡Cada palabra es un golpe! ¡Conéctalos!', '¡A entrenar! Hoy tu corazón decide.'],
-      outros: ['Sentí tu fuerza. Mañana entrenamos más duro.', 'Una sombra te observa. Pero tú ya estás listo…', '¡Eres más fuerte de lo que crees! Hasta mañana.'] },
-    { id: 'fnaf',     img: '/assets/png-library/fnaf.png',
-      name: 'FNAF',
-      intros: ['Bienvenido a la noche. Tema: {theme}…', 'Las luces parpadean. ¿Estás listo?', 'La cámara te observa. Aprende rápido.'],
-      outros: ['Sobreviviste… por esta noche.', 'Algo se mueve en el pasillo. Mejor vuelve mañana.', 'Tus pasos se desvanecen. Hasta la próxima noche.'] },
-    { id: 'shelly',   img: '/assets/png-library/shelly.png',
-      name: 'Shelly',
-      intros: ['¡BOOM! ¿Lista para volar palabras? Hoy: {theme}.', '¡Disparo certero! Apunta y aprende.', '¡Vamos a reventar este nivel!'],
-      outros: ['¡BOOM! ¡Combo perfecto! 💥', 'Cargando para mañana… no me hagas esperar.', '¡La próxima ronda será explosiva!'] },
-    { id: 'dandy',    img: '/assets/png-library/dandy.png',
-      name: 'Dandy',
-      intros: ['Welcome 🎩 a {theme}.', 'Hoy seré tu guía en este mundo.', '¿Caminamos juntos en este sueño?'],
-      outros: ['Has sido un buen amigo. Hasta el próximo mundo.', 'El sueño se cierra… pero la puerta seguirá ahí.', 'Volveré con más historias para ti.'] },
-    { id: 'dralingo', img: '/assets/dralingo.png',
+    // 🐉 2026-10-11 (Fernando): the daily story is always Dralingo (Emirati keffiyeh), a different pose and mood each day.
+    // Poses are Higgsfield stickers (green screen keyed to transparent WebP) in /assets/kingdoms/dralingo/.
+    { id: 'dralingo', img: '/assets/kingdoms/dralingo/pointing.webp', outroImg: '/assets/kingdoms/dralingo/champion.webp',
       name: 'Dralingo',
-      intros: ['¡Hola, dragón! 🐉 Hoy: {theme}.', 'Mi escama brilla cuando aprendes.', 'Vuela conmigo a través de las palabras.'],
-      outros: ['Estoy orgulloso de ti, pequeño dragón.', 'Otra escama dorada se reveló. ¿Cuántas faltan?', 'Mañana al amanecer, te espero.'] },
-    // 🎌 The 3 anime panels the user dropped at /assets/png-library/anime 1-3.png.
-    // Each becomes a "mystery character" with cryptic dialogue — perfect for
-    // story-mode beats.
-    { id: 'anime1', img: '/assets/png-library/anime 1.png',
-      name: 'Samurái Rojo',
-      intros: ['El tigre rojo despierta. Tema: {theme}.', 'Cada palabra es una espada. Empuña la primera.', 'Respira hondo. Hoy cortarás el silencio.'],
-      outros: ['El tigre se duerme… pero su rugido vive en ti.', 'Has cortado bien. La hoja recuerda.', 'Cuando la luna salga, volveré por ti.'] },
-    { id: 'anime2', img: '/assets/png-library/anime 2.png',
-      name: 'Ojos del Trueno',
-      intros: ['¡Mis ojos te ven! Hoy: {theme}.', '¡Despierta! El cielo está roto.', 'Concentración total. Empezamos.'],
-      outros: ['¡Has visto lo que pocos ven!', 'Un trueno suena en la distancia… ya casi.', 'Mantén los ojos abiertos hasta mañana.'] },
-    { id: 'anime3', img: '/assets/png-library/anime 3.png',
-      name: 'Sombra del Templo',
-      intros: ['Las líneas no mienten. Tema: {theme}.', 'En la oscuridad también se aprende.', '¿Listo para descubrir el código secreto?'],
-      outros: ['Has descifrado una línea. Faltan muchas más.', 'La sombra recuerda tu nombre.', 'El templo te esperará mañana.'] },
+      intros: ['¡Tu turno, dragón! Hoy: {theme}. 🐉', '¡Te estaba esperando! Vamos con {theme}.', '¡Ojos abiertos! Hoy aprendemos {theme}.'],
+      outros: ['¡Campeón del día! 🏆', '¡Otra escama dorada para ti!', '¡Mañana volamos más alto!'] },
+    { id: 'dralingo', img: '/assets/kingdoms/dralingo/wave.webp', outroImg: '/assets/kingdoms/dralingo/dance.webp',
+      name: 'Dralingo',
+      intros: ['¡Hola! Hoy toca {theme}. ¿Listo?', '¡Qué bueno verte! Empezamos con {theme}.', '¡Hoy será un gran día de {theme}!'],
+      outros: ['¡Baile de la victoria! 💃', '¡Lo hiciste genial! Hasta mañana.', '¡Así se hace, dragón!'] },
+    { id: 'dralingo', img: '/assets/kingdoms/dralingo/fly.webp', outroImg: '/assets/kingdoms/dralingo/party.webp',
+      name: 'Dralingo',
+      intros: ['¡Vuela conmigo! Destino: {theme}. ✈️', '¡Despegamos! Hoy: {theme}.', '¡Abre las alas! Hoy aprendemos {theme}.'],
+      outros: ['¡Fiesta en el cielo! 🎉', '¡Aterrizaje perfecto!', '¡Mañana otro viaje!'] },
+    { id: 'dralingo', img: '/assets/kingdoms/dralingo/thumbsup.webp', outroImg: '/assets/kingdoms/dralingo/hearts.webp',
+      name: 'Dralingo',
+      intros: ['¡Tú puedes! Hoy: {theme}. 👍', 'Confío en ti. Vamos con {theme}.', '¡Paso a paso! Hoy {theme}.'],
+      outros: ['¡Qué orgullo! 💙', '¡Lo lograste!', '¡Mañana seguimos juntos!'] },
+    { id: 'dralingo', img: '/assets/kingdoms/dralingo/jump.webp', outroImg: '/assets/kingdoms/dralingo/laugh.webp',
+      name: 'Dralingo',
+      intros: ['¡A saltar! Hoy: {theme}.', '¡Energía al máximo! Vamos con {theme}.', '¡Salta conmigo! {theme} nos espera.'],
+      outros: ['¡Jajaja, qué bien lo hiciste! 😂', '¡Imparable!', '¡Mañana más saltos!'] },
+    // 🎬 2026-10-11 (Fernando): "every class is an episode, like Scooby-Doo" — his gang hosts the daily episode too
+    // (show bible: claude-setup/cast.md in the parent repo). Aileen always speaks Argentine Spanish (voseo).
+    { id: 'fer', img: '/assets/cast/fer-hello.webp', outroImg: '/assets/cast/fer-cheer.webp', name: 'Profe Fer', cast: true,
+      intros: ["Bienvenidos a un nuevo episodio. Hoy: {theme}.", "Detectives, la misión de hoy es {theme}."],
+      outros: ["¡Caso resuelto! Excelente trabajo.", "Nos vemos en el próximo episodio."] },
+    { id: 'hamdan', img: '/assets/cast/hamdan-hello.webp', outroImg: '/assets/cast/hamdan-cheer.webp', name: 'Hamdan', cast: true,
+      intros: ["¡Marhaba! Hoy volamos hacia {theme}.", "¡Yalla! La misión de hoy: {theme}."],
+      outros: ["¡Yalla! ¡Lo lograste!", "¡Eso merece un viaje en jet!"] },
+    { id: 'latifa', img: '/assets/cast/latifa-hello.webp', outroImg: '/assets/cast/latifa-cheer.webp', name: 'Latifa', cast: true,
+      intros: ["¡Marhaba! Tengo una pista: {theme}.", "Hoy resolvemos el misterio de {theme}."],
+      outros: ["¡Pista resuelta! Brillante.", "Mañana, otro misterio."] },
+    { id: 'aileen', img: '/assets/cast/aileen-hello.webp', outroImg: '/assets/cast/aileen-cheer.webp', name: 'Aileen', cast: true,
+      intros: ["¡Dale! Hoy toca {theme}. ¿Vos te animás?", "¡Che, mirá! Hoy aprendemos {theme}."],
+      outros: ["¡Vos podés! ¡Lo hiciste!", "¡Qué genial, che! Hasta mañana."] },
+    { id: 'adric', img: '/assets/cast/adric-hello.webp', outroImg: '/assets/cast/adric-cheer.webp', name: 'Adric', cast: true,
+      intros: ["Mi perro encontró una pista: {theme}.", "Sígueme. Hoy: {theme}."],
+      outros: ["Bien hecho. Nada mal.", "Caso cerrado. Hasta mañana."] },
+    { id: 'adrian', img: '/assets/cast/adrian-hello.webp', outroImg: '/assets/cast/adrian-cheer.webp', name: 'Adrian', cast: true,
+      intros: ["¡A la aventura! El mapa dice: {theme}.", "¡Tengo el mapa! Hoy toca {theme}."],
+      outros: ["¡Tesoro encontrado!", "¡Misión cumplida! Mañana, otra aventura."] },
   ];
   function dailyCharFor(dateStr) {
     let h = 0; for (let i = 0; i < dateStr.length; i++) h = (h * 31 + dateStr.charCodeAt(i)) >>> 0;
@@ -1396,7 +1384,8 @@
     // Check if this character has a victory mp4 — use it for both intro AND outro
     // so kids see real animation, not still PNG.
     const charVideo = (window.DRALY_CHARACTERS && window.DRALY_CHARACTERS[char.id]) ? window.DRALY_CHARACTERS[char.id].victory : null;
-    const useVideo = !!charVideo && (char.id === 'gojo' || char.id === 'yugi');
+    const useVideo = false;   // Dralingo poses are animated stickers now (no borrowed-character videos)
+    const poseImg = (kind === 'outro' && char.outroImg) ? char.outroImg : char.img;
     const wrap = document.createElement('div');
     wrap.className = 'hw-cutscene hw-cutscene-' + kind;
     // Tint the lines + halftone per character mood so the scene FEELS right.
@@ -1409,19 +1398,21 @@
     wrap.classList.add('tint-' + tint);
     const impact = kind === 'intro'
       ? ['¡PREPÁRATE!', '¡VAMOS!', '¡AQUÍ VAMOS!', '¡A POR ELLOS!'][Math.floor(Math.random() * 4)]
-      : ['¡EXCELENTE!', '¡INCREÍBLE!', '¡VICTORIA!', '¡GENIAL!'][Math.floor(Math.random() * 4)];
+      : ['¡EXCELENTE!', '¡INCREÍBLE!', '¡VICTORIA!', '¡GENIAL!', '¡CASO RESUELTO!'][Math.floor(Math.random() * 5)];
     wrap.innerHTML = ''
       + '<div class="hw-cs-halftone"></div>'
       + '<div class="hw-cs-lines"></div>'
       + '<div class="hw-cs-impact">' + impact + '</div>'
+      + (kind === 'intro' ? '<div class="hw-cs-episode">📺 Episodio de hoy · ' + escapeHtml(char.name || 'Dralingo') + '</div>' : '')
       + (useVideo
           ? '<video class="hw-cs-char hw-cs-video" src="' + charVideo + '" autoplay muted playsinline loop onerror="this.outerHTML=\'<img class=&quot;hw-cs-char&quot; src=&quot;' + char.img + '&quot; alt=&quot;' + char.id + '&quot;>\'"></video>'
-          : '<img class="hw-cs-char" src="' + char.img + '" alt="' + char.id + '" onerror="this.style.display=\'none\'">')
+          : '<img class="hw-cs-char ' + (char.cast ? 'hw-cs-castchar' : 'hw-cs-dralingo') + '" src="' + poseImg + '" alt="' + escapeHtml(char.name || 'Dralingo') + '" onerror="this.src=\'/assets/kingdoms/dralingo/jump.webp\'">')
       + '<div class="hw-cs-bubble"><span class="hw-cs-bubble-text">' + escapeHtml(line) + '</span></div>'
       + '<div class="hw-cs-tap">▶ toca para continuar</div>';
     game.appendChild(wrap);
     requestAnimationFrame(() => wrap.classList.add('show'));
     try { if (kind === 'intro') dailySfx.launch(); else dailySfx.win(); } catch (_) {}
+    if (kind === 'outro' && window.DralingoFX) setTimeout(() => window.DralingoFX.celebrate({ mood: 'win' }), 2500);
     let dismissed = false;
     const dismiss = () => {
       if (dismissed) return; dismissed = true;

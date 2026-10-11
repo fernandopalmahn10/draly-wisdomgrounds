@@ -100,9 +100,10 @@
               .split(',').map((s) => s.trim()).filter(Boolean);
             const storyId = params.get('story') || '';
             if (forceList.length && pin) {
-              fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(adminPw), {
+              // 🔒 2026-10-11: code in the X-Admin-Pw header (URI-encoded), not the URL.
+              fetch('/api/admin/broadcast-selected', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-Admin-Pw': encodeURIComponent(adminPw) },
                 body: JSON.stringify({
                   studentCodes: forceList,
                   text: '¡Tu maestra te invita a una lectura en vivo!',

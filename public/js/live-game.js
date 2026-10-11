@@ -82,8 +82,9 @@
     console.log('[live-game] PIN found: ' + pin + '. Firing broadcast-selected for ' + payload.codes.length + ' kid(s)');
     _banner('🚀 PIN ' + pin + ' · enviando "¡Tu maestra te llama!" a ' + payload.codes.length + ' alumno(s)…');
     const kidUrl = '/player.html?pin=' + pin + '&autojoin=1';
-    fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(payload.pw), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+    // 🔒 2026-10-11: code in the X-Admin-Pw header (URI-encoded), not the URL.
+    fetch('/api/admin/broadcast-selected', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Pw': encodeURIComponent(payload.pw) },
       body: JSON.stringify({
         studentCodes: payload.codes,
         text: '🚀 La maestra está abriendo ' + (payload.label || 'el juego') + ' ahora. Estás entrando.',

@@ -1,270 +1,132 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Pick a Game · Draly Wisdomgrounds</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20261011a">
-  <link rel="stylesheet" href="/css/dralingo.css">
+  <title>Elige un juego · Draly Wisdom Grounds</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+  <!-- Redesigned 2026-10-11 in the same sticker look as the home page and /packs.html (his brief: taste on the whole
+       platform). Quiet page: no music. Games are a data list below; a new game = one entry in GAMES. -->
+  <style>
+    :root { --ink: #1d2440; --soft: #55607f; --paper: #fff7e3; --gold: #ffc93c; --mint: #c8f2dc; --blue: #2f7bea; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; font-family: 'Nunito', sans-serif; color: var(--ink);
+      background: linear-gradient(180deg, #9fdcf7 0%, #c6ecfb 55%, #ffd6e2 100%); }
+    main { max-width: 1100px; margin: 0 auto; padding: 22px 16px 60px; }
+    .top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .back { font: inherit; font-weight: 800; color: var(--ink); background: var(--paper); border: 3px solid var(--ink);
+      border-radius: 14px; padding: 6px 14px; cursor: pointer; text-decoration: none; }
+    .back:focus-visible, .play:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
+    h1 { font-family: 'Baloo 2', sans-serif; font-weight: 800; margin: 0; font-size: clamp(2rem, 6vw, 2.8rem); line-height: 1; }
+    .set { margin: 10px 0 0; font-weight: 800; color: var(--soft); }
+    .set b { color: var(--ink); }
+    h2 { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 1.5rem; margin: 26px 0 12px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; }
+    .card { display: grid; grid-template-rows: auto 1fr auto auto; gap: 10px; background: var(--paper); border: 4px solid var(--ink);
+      border-radius: 24px; padding: 16px; box-shadow: 0 6px 0 var(--ink); }
+    .head { display: flex; align-items: center; gap: 12px; }
+    .emo { display: grid; place-items: center; width: 58px; height: 58px; flex: 0 0 58px; font-size: 2rem;
+      background: #fff; border: 3px solid var(--ink); border-radius: 16px; }
+    .name { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 1.45rem; line-height: 1.05; }
+    .badge { display: inline-block; margin-top: 4px; font-size: .8rem; font-weight: 800; padding: 1px 9px; border-radius: 999px;
+      background: var(--gold); border: 2px solid var(--ink); }
+    .desc { margin: 0; font-weight: 700; line-height: 1.35; color: var(--ink); }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tags span { font-size: .85rem; font-weight: 800; color: var(--soft); background: #fff; border: 2px solid rgba(29,36,64,.2);
+      border-radius: 999px; padding: 1px 10px; }
+    .play { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 1.3rem; color: var(--ink); min-height: 56px;
+      background: var(--gold); border: 3px solid var(--ink); border-radius: 16px; box-shadow: 0 5px 0 var(--ink); cursor: pointer;
+      transition: transform .08s, box-shadow .08s; }
+    .play:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+    .tool .play { background: var(--mint); }
+    @media (prefers-reduced-motion: reduce) { .play { transition: none; } }
+  </style>
 </head>
-<body class="hub-bg">
-  <div class="lantern l1"></div>
-  <div class="lantern l2"></div>
-
-  <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-corner">
-
-  <div class="container">
-    <div class="hub-back">
-      <button class="btn btn-ghost" onclick="location.href='/sets.html'">← Back to Sets</button>
-    </div>
-
-    <h1 class="hub-title" style="font-size:2.5rem; margin-bottom:8px;">🎮 Choose a Game</h1>
-    <p class="hub-tagline" style="margin-bottom:24px;">
-      Set: <strong id="set-name" style="color:var(--gold-glow);">…</strong>
-    </p>
-
-    <div class="games-picker">
-      <div class="game-card" id="card-mochi">
-        <div class="game-card-header">
-          <div class="game-card-emoji">🥮</div>
-          <div class="game-card-title-row">
-            <div class="game-card-title">Mochi Mash</div>
-            <div class="game-tile-badge">Live</div>
-          </div>
-        </div>
-        <div class="game-card-desc">
-          🐼 Team Panda vs 🦊 Team Kitsune. Answer right to unlock 5 seconds of mash mode — tap to feed dumplings to your team's spirit creature. Most population wins.
-        </div>
-        <div class="game-card-tags">
-          <span class="tag">Team battle</span>
-          <span class="tag">Tap-to-win</span>
-          <span class="tag">2-30 players</span>
-        </div>
-        <button class="btn btn-red btn-xl game-card-play">▶ Play Mochi Mash</button>
-      </div>
-
-      <div class="game-card" id="card-kingdoms">
-        <div class="game-card-header">
-          <div class="game-card-emoji">🏰</div>
-          <div class="game-card-title-row">
-            <div class="game-card-title">Reinos de Colores</div>
-            <div class="game-tile-badge new">¡Nuevo!</div>
-          </div>
-        </div>
-        <div class="game-card-desc">
-          🔥 Reino del Fuego vs 🌊 Reino del Mar. Cada respuesta correcta gana una bandera 🚩: el alumno la planta en el mapa de hexágonos desde su teléfono. Rodea zonas para pintarlas de tu color, quítale casillas al otro reino y encierra su castillo. ¡Gana el imperio más grande!
-        </div>
-        <div class="game-card-tags">
-          <span class="tag">Territorio</span>
-          <span class="tag">Estrategia</span>
-          <span class="tag">2-40 jugadores</span>
-        </div>
-        <button class="btn btn-red btn-xl game-card-play">▶ Play Reinos de Colores</button>
-      </div>
-
-      <div class="game-card" id="card-monopoly">
-        <div class="game-card-header">
-          <div class="game-card-emoji">🏯</div>
-          <div class="game-card-title-row">
-            <div class="game-card-title">Dàfùwēng · Monopolio Chino</div>
-            <div class="game-tile-badge new">¡Nuevo!</div>
-          </div>
-        </div>
-        <div class="game-card-desc">
-          🎲 大富翁 — Tu dragoncito da vueltas por un tablero 3D de ciudades chinas (北京, 上海, 长城, 故宫…). Cada respuesta correcta lanza el dado y avanzas. Compra ciudades, cobra renta, evita los impuestos y la cárcel. ¡Equipo más rico gana!
-        </div>
-        <div class="game-card-tags">
-          <span class="tag">Tablero 3D</span>
-          <span class="tag">Compra ciudades</span>
-          <span class="tag">Dado 🎲</span>
-        </div>
-        <button class="btn btn-red btn-xl game-card-play">▶ ¡A girar el dado!</button>
-      </div>
-
-      <div class="game-card" id="card-warmup">
-        <div class="game-card-header">
-          <div class="game-card-emoji">🎓</div>
-          <div class="game-card-title-row">
-            <div class="game-card-title">Calentamiento · Warm-up</div>
-            <div class="game-tile-badge new">¡Nuevo!</div>
-          </div>
-        </div>
-        <div class="game-card-desc">
-          🎓 热身 — Modo maestro. Construye oraciones en vivo eligiendo
-          palabras de un catálogo de 90+ palabras HSK1 organizadas por
-          categoría. Cada categoría tiene su <strong>color propio</strong>
-          — el pinyin y el español comparten color para mostrar cómo se
-          estructura la oración. Sin tiempo, sin puntos · ideal antes de
-          empezar los minijuegos. <em>Requiere contraseña.</em>
-        </div>
-        <div class="game-card-tags">
-          <span class="tag">Maestro</span>
-          <span class="tag">Construir oraciones</span>
-          <span class="tag">Colores</span>
-          <span class="tag">90+ palabras</span>
-        </div>
-        <button class="btn btn-jade btn-xl game-card-play">🔒 Modo Maestro</button>
-      </div>
-
-      <div class="game-card" id="card-sixseven">
-        <div class="game-card-header">
-          <div class="game-card-emoji">🤙</div>
-          <div class="game-card-title-row">
-            <div class="game-card-title">6-7 Swing</div>
-            <div class="game-tile-badge new">¡Nuevo!</div>
-          </div>
-        </div>
-        <div class="game-card-desc">
-          🤙 ¡SIX SEVEN! — Mini-juego viral de matemáticas. Cada respuesta es
-          6 o 7. Toca el botón correcto rápido. El personaje gigante se
-          balancea con tu respuesta. ¡Combos x2, x3 con racha! Sin set
-          necesario — problemas generados automáticamente.
-        </div>
-        <div class="game-card-tags">
-          <span class="tag">Math</span>
-          <span class="tag">VS</span>
-          <span class="tag">Speed</span>
-        </div>
-        <button class="btn btn-red btn-xl game-card-play">▶ ¡A swingear!</button>
-      </div>
-
-      <div class="game-card" id="card-reading">
-        <div class="game-card-header">
-          <div class="game-card-emoji">📖</div>
-          <div class="game-card-title-row">
-            <div class="game-card-title">Lectura · Cuento HSK1</div>
-            <div class="game-tile-badge new">¡Nuevo!</div>
-          </div>
-        </div>
-        <div class="game-card-desc">
-          📚 Un libro infantil sincronizado en cada teléfono. El maestro
-          controla la página y el audio; las palabras del pinyin se
-          iluminan como karaoke mientras el narrador lee. Solo pinyin
-          (sin caracteres chinos). Imagen + audio por página — tú los
-          subes a la carpeta. Cuento de 7 páginas con los 150 vocablos HSK1.
-        </div>
-        <div class="game-card-tags">
-          <span class="tag">Lectura</span>
-          <span class="tag">Audio sincronizado</span>
-          <span class="tag">HSK1</span>
-          <span class="tag">Pinyin</span>
-        </div>
-        <button class="btn btn-red btn-xl game-card-play">▶ Abrir libro</button>
-      </div>
-
-      <div class="game-card" id="card-dragon">
-        <div class="game-card-header">
-          <div class="game-card-emoji">🐉</div>
-          <div class="game-card-title-row">
-            <div class="game-card-title">Vuelo del Dragón</div>
-            <div class="game-tile-badge new">¡Nuevo!</div>
-          </div>
-        </div>
-        <div class="game-card-desc">
-          🐉 飞龙 — Cada equipo tiene su dragón. Responde bien → 5 segundos de aleteo. ¡Toca rápido para que tu dragón suba por los tejados, el bambú, las montañas, las nubes y llegue al cielo celestial! Primer dragón al cielo gana.
-        </div>
-        <div class="game-card-tags">
-          <span class="tag">Plataformas</span>
-          <span class="tag">Aletear</span>
-          <span class="tag">Escena reveladora</span>
-        </div>
-        <button class="btn btn-red btn-xl game-card-play">▶ ¡Hacer volar al dragón!</button>
-      </div>
-
-      <div class="game-card" id="card-pinata">
-        <div class="game-card-header">
-          <div class="game-card-emoji">🐯</div>
-          <div class="game-card-title-row">
-            <div class="game-card-title">Piñata Tigre</div>
-            <div class="game-tile-badge new">¡Nuevo!</div>
-          </div>
-        </div>
-        <div class="game-card-desc">
-          🐯 ¡Rompe la piñata tigre! Todos los jugadores ven la pregunta — el primero que responde bien se gana un swing. Pulsa el medidor de potencia en el momento justo para un golpe crítico 💥. La piñata suelta premios y ambos equipos compiten por hacer el daño total más grande.
-        </div>
-        <div class="game-card-tags">
-          <span class="tag">Buzzer</span>
-          <span class="tag">Power meter</span>
-          <span class="tag">3-15 jugadores</span>
-        </div>
-        <button class="btn btn-red btn-xl game-card-play">▶ Romper la piñata</button>
-      </div>
-
-    </div>
+<body>
+<main>
+  <div class="top">
+    <a class="back" id="back" href="/">← Inicio</a>
+    <h1>Elige un juego</h1>
   </div>
+  <p class="set" id="set-line">Primero el juego, después las preguntas.</p>
 
-  <script src="/js/sounds.js"></script>
-  <script>
-    const params = new URLSearchParams(location.search);
-    const setId = params.get('setId');
+  <h2>🎮 Juegos con PIN</h2>
+  <div class="grid" id="games"></div>
+  <h2>🧑‍🏫 Herramientas de clase</h2>
+  <div class="grid" id="tools"></div>
+</main>
 
-    if (setId) {
-      // Arrived from Sets page: show set + Play goes straight to host
-      fetch('/api/sets/' + encodeURIComponent(setId)).then(r => r.json()).then(s => {
-        document.getElementById('set-name').textContent = s.title || 'unknown';
-      });
-      document.querySelector('#card-mochi .game-card-play').onclick = () => {
-        location.href = '/host.html?setId=' + encodeURIComponent(setId);
-      };
-      document.querySelector('#card-pinata .game-card-play').onclick = () => {
-        location.href = '/host-pinata.html?setId=' + encodeURIComponent(setId);
-      };
-      document.querySelector('#card-dragon .game-card-play').onclick = () => {
-        location.href = '/host-dragon.html?setId=' + encodeURIComponent(setId);
-      };
-      document.querySelector('#card-monopoly .game-card-play').onclick = () => {
-        location.href = '/host-monopoly.html?setId=' + encodeURIComponent(setId);
-      };
-      document.querySelector('#card-kingdoms .game-card-play').onclick = () => {
-        location.href = '/host-kingdoms.html?setId=' + encodeURIComponent(setId);
-      };
-      // 6-7 SWING needs no set — its math problems are generated server-side
-      document.querySelector('#card-sixseven .game-card-play').onclick = () => {
-        location.href = '/host-sixseven.html';
-      };
-      // Warm-up needs no set — teacher-driven sentence builder
-      document.querySelector('#card-warmup .game-card-play').onclick = () => {
-        location.href = '/host-warmup.html';
-      };
-      // Reading mode — teacher-driven, no set needed
-      document.querySelector('#card-reading .game-card-play').onclick = () => {
-        location.href = '/host-reading.html';
-      };
-    } else {
-      document.getElementById('set-name').textContent = 'elige un juego, luego una serie';
-      document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
-      document.querySelector('#card-mochi .game-card-play').onclick = () => {
-        location.href = '/packs.html?game=mochi-mash';
-      };
-      document.querySelector('#card-pinata .game-card-play').onclick = () => {
-        location.href = '/packs.html?game=pinata';
-      };
-      document.querySelector('#card-dragon .game-card-play').onclick = () => {
-        location.href = '/packs.html?game=dragon-eye';
-      };
-      document.querySelector('#card-monopoly .game-card-play').onclick = () => {
-        location.href = '/packs.html?game=monopoly';
-      };
-      document.querySelector('#card-kingdoms .game-card-play').onclick = () => {
-        location.href = '/packs.html?game=kingdoms';
-      };
-      // 6-7 SWING — skip sets entirely, jump straight to host
-      document.querySelector('#card-sixseven .game-card-play').onclick = () => {
-        location.href = '/host-sixseven.html';
-      };
-      // Warm-up skips sets entirely
-      document.querySelector('#card-warmup .game-card-play').onclick = () => {
-        location.href = '/host-warmup.html';
-      };
-      // Reading mode — teacher-driven, no set
-      document.querySelector('#card-reading .game-card-play').onclick = () => {
-        location.href = '/host-reading.html';
-      };
-    }
+<script>
+  // host: page that runs the game · game: id for /packs.html · noSet: content made by the game itself
+  const GAMES = [
+    { id: 'paint', emo: '🎨', name: 'Dragones Pintores', badge: 'Nuevo', host: '/host-paint.html', game: 'paint',
+      desc: 'Cada alumno vuela su dragón y pinta las nubes del color de su reino. Volar gasta fuego: responder bien lo recarga.',
+      tags: ['Equipos', 'Plataformas', '2–40 jugadores'] },
+    { id: 'kingdoms', emo: '🏰', name: 'Reinos de Colores', badge: 'Nuevo', host: '/host-kingdoms.html', game: 'kingdoms',
+      desc: 'Cada respuesta correcta es una bandera para conquistar el mapa. Rodea zonas y encierra el castillo rival.',
+      tags: ['Equipos', 'Estrategia', '2–40 jugadores'] },
+    { id: 'mochi', emo: '🥮', name: 'Mochi Mash', host: '/host.html', game: 'mochi-mash',
+      desc: 'Panda contra Kitsune: responde bien y gana 5 segundos para alimentar a la criatura de tu equipo.',
+      tags: ['Equipos', 'Tocar rápido', '2–30 jugadores'] },
+    { id: 'monopoly', emo: '🏯', name: 'Dàfùwēng · Monopolio Chino', host: '/host-monopoly.html', game: 'monopoly',
+      desc: 'Un tablero de ciudades chinas: responde bien, tira el dado, compra ciudades y cobra renta.',
+      tags: ['Equipos', 'Tablero', 'Dado'] },
+    { id: 'dragon', emo: '🐉', name: 'Vuelo del Dragón', host: '/host-dragon.html', game: 'dragon-eye',
+      desc: 'Cada respuesta correcta da 5 segundos de aleteo. El primer dragón que llega al cielo gana.',
+      tags: ['Equipos', 'Carrera'] },
+    { id: 'pinata', emo: '🐯', name: 'Piñata Tigre', host: '/host-pinata.html', game: 'pinata',
+      desc: 'El primero que responde bien gana un golpe. Para el medidor en el punto justo: ¡golpe crítico!',
+      tags: ['Equipos', 'Rapidez', '3–15 jugadores'] },
+    { id: 'sixseven', emo: '🤙', name: '6-7 Swing', host: '/host-sixseven.html', noSet: true,
+      desc: 'Matemáticas rápidas: cada respuesta es 6 o 7. Las cuentas se generan solas, no necesita preguntas.',
+      tags: ['Matemáticas', 'Rapidez'] },
+  ];
+  const TOOLS = [
+    { id: 'warmup', emo: '🎓', name: 'Modo Maestro', host: '/host-warmup.html', noSet: true, button: '🔒 Abrir Modo Maestro',
+      desc: 'Construye oraciones en vivo con las palabras de HSK 1, un color por categoría. Pide contraseña.',
+      tags: ['Calentamiento', 'Oraciones'] },
+    { id: 'reading', emo: '📖', name: 'Lectura', host: '/host-reading.html', noSet: true, button: 'Abrir libro',
+      desc: 'Un cuento en cada teléfono: tú pasas las páginas y las palabras se iluminan mientras se lee.',
+      tags: ['Lectura', 'Audio', 'Pinyin'] },
+  ];
 
-  </script>
-  <script src="/js/enter.js"></script>
-  <script src="/js/super-admin-badge.js?v=20260528a"></script>
+  const setId = new URLSearchParams(location.search).get('setId');
+  if (setId) {
+    // Arrived from the uploaded-sets page: show which set, and Play goes straight to the game.
+    document.getElementById('back').textContent = '← Series';
+    document.getElementById('back').href = '/sets.html';
+    fetch('/api/sets/' + encodeURIComponent(setId)).then((r) => r.json()).then((s) => {
+      const line = document.getElementById('set-line');
+      line.textContent = 'Serie: ';
+      const b = document.createElement('b'); b.textContent = (s && s.title) || setId; line.appendChild(b);
+    }).catch(() => {});
+  }
+
+  function card(g, tool) {
+    const c = document.createElement('article');
+    c.className = 'card' + (tool ? ' tool' : '');
+    c.id = 'card-' + g.id;
+    const head = document.createElement('div'); head.className = 'head';
+    const emo = document.createElement('div'); emo.className = 'emo'; emo.textContent = g.emo; emo.setAttribute('aria-hidden', 'true');
+    const nm = document.createElement('div');
+    const name = document.createElement('div'); name.className = 'name'; name.textContent = g.name; nm.appendChild(name);
+    if (g.badge) { const bd = document.createElement('span'); bd.className = 'badge'; bd.textContent = g.badge; nm.appendChild(bd); }
+    head.append(emo, nm);
+    const desc = document.createElement('p'); desc.className = 'desc'; desc.textContent = g.desc;
+    const tags = document.createElement('div'); tags.className = 'tags';
+    g.tags.forEach((t) => { const s = document.createElement('span'); s.textContent = t; tags.appendChild(s); });
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'play';
+    if (g.noSet) { btn.textContent = g.button || '▶ Jugar'; btn.onclick = () => { location.href = g.host; }; }
+    else if (setId) { btn.textContent = '▶ Jugar con esta serie'; btn.onclick = () => { location.href = g.host + '?setId=' + encodeURIComponent(setId); }; }
+    else { btn.textContent = 'Elegir preguntas →'; btn.onclick = () => { location.href = '/packs.html?game=' + encodeURIComponent(g.game); }; }
+    c.append(head, desc, tags, btn);
+    return c;
+  }
+  GAMES.forEach((g) => document.getElementById('games').appendChild(card(g, false)));
+  TOOLS.forEach((g) => document.getElementById('tools').appendChild(card(g, true)));
+</script>
+<script src="/js/super-admin-badge.js?v=20261011c"></script>
 </body>
 </html>

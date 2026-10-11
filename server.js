@@ -25,6 +25,7 @@ const Guides = require('./core/guides');
 const Emirati = require('./core/emirati-vocab');
 const CustomAsg = require('./core/custom-assignments');
 const Kingdoms = require('./core/kingdoms');
+const Paint = require('./core/paint');
 // Tiny persistence for the owner's Emirati Arabic gateway (single global
 // profile, since this is a super-admin-only personal feature). Lives on the
 // same data disk as the rest of the JSON state.
@@ -171,11 +172,21 @@ function _clientIp(req) {
   const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
   return String(ip).split(',')[0].trim();
 }
+// 🔒 2026-10-11 — every browser page now sends the code in the X-Admin-Pw header
+// (URI-encoded so any character fits in a header; decoded here) or a JSON body
+// field `pw`. The ?pw= / ?password= query param is a TRANSITION fallback only, so
+// pages cached before this change keep working: remove it once every teacher has
+// reloaded, because query strings are written to Render/proxy access logs.
 function _adminPw(req) {
-  return String(
-    (req.headers && (req.headers['x-admin-password'] || req.headers['x-admin-pw'])) ||
-    (req.query && (req.query.pw || req.query.password)) || ''
-  ).trim();
+  const h = req.headers || {};
+  let v = h['x-admin-password'] || '';
+  if (!v && h['x-admin-pw']) {
+    v = h['x-admin-pw'];
+    try { v = decodeURIComponent(v); } catch (_) { /* not URI-encoded: use as-is */ }
+  }
+  if (!v && req.body && typeof req.body === 'object' && typeof req.body.pw === 'string') v = req.body.pw;
+  if (!v && req.query) v = req.query.pw || req.query.password || '';
+  return String(v || '').trim();
 }
 function _safeEqual(a, b) {
   const ba = Buffer.from(String(a == null ? '' : a), 'utf8');
@@ -1591,6 +1602,7 @@ function _gpRateLimit(req) {
 // warmup Animaciones tray. Keeps server in charge of the URL so the
 // client can't shove an arbitrary URL through the inbox.
 const _GIF_LIBRARY = {
+  dralingo: { url: '/assets/kingdoms/dralingo/anim/hello.webp',    label: '🐉 Dralingo' },
   gojo:   { url: '/assets/png-library/GOJO%20TRANSPARENT.gif',     label: '👁 Gojo' },
   yugi:   { url: '/assets/png-library/YUGI%20TRANSPARENT.gif',     label: '🃏 Yugi' },
   freddy: { url: '/assets/png-library/FREDDY%20TRANSPARENT.gif',   label: '🐻 Freddy' },
@@ -3752,6 +3764,8 @@ app.get('/api/tts', async (req, res) => {
 // so this route MUST exist (and preserve the query string). Without it the
 // kid hits a 502/404 on exit.
 app.get(['/tarea', '/tareas'], (req, res) => res.redirect('/homework.html'));
+// Teachers type /maestro (CLAUDE.md, host-hsk's "missing code" link): it used to be a 404.
+app.get(['/maestro', '/maestra', '/teacher'], (req, res) => res.redirect('/maestro.html'));
 app.get('/homework', (req, res) => {
   res.sendFile(_emPath.join(__dirname, 'public', 'homework.html'));
 });
@@ -3816,6 +3830,12 @@ app.post('/api/sets/:id/rename', (req, res) => {
 });
 
 const games = {};
+
+// Home page «Volver a la partida»: only offer the rematch while that room is still open (booleans only).
+app.get('/api/room-alive/:pin', (req, res) => {
+  const g = games[String(req.params.pin || '')];
+  res.json({ alive: !!g && g.state !== 'ended' });
+});
 
 const MASH_DURATION_MS = 5000;
 const TAP_MIN_INTERVAL_MS = 70;
@@ -4423,6 +4443,119 @@ function kdApplyPlant(pin, pid, tileId, auto) {
   }, KD_NEXT_Q_MS);
 }
 
+// === 🎨 DRAGONES PINTORES (gameType 'paint') — Dralingo take on Color Clash ===
+// Every phone runs its own little platformer (physics on the phone). The server owns: energy (seconds of flying, refilled
+// by right answers), which surface tiles belong to which kingdom, and a 5 Hz broadcast of everyone's position + the tiles
+// painted since the last tick. Questions are on demand: the kid taps «Recargar» (player:pc-ask).
+const PC_TICK_MS = 200;
+const PC_START_ENERGY = 8;
+const PC_ENERGY_PER_RIGHT = 10;
+const PC_ENERGY_MAX = 30;
+const PC_BLAZE_MS = 6000;           // «Llamarada» after 3 right answers in a row: paints a wider strip
+const PC_MAX_PAINT_PER_MSG = 16;
+const PC_FLIP_COOLDOWN_MS = 1500;    // a cloud can't change colour again for 1.5 s (no farming points by standing still)
+const PC_LEAD_ANNOUNCE_MS = 4000;    // lead-change announcements at most every 4 s (a tied round would spam sounds)
+
+function pcPreparePlayer(p) {
+  if (typeof p.pcEnergy !== 'number') { p.pcEnergy = PC_START_ENERGY; p.pcStreak = 0; p.pcBlazeUntil = 0; p.pcTiles = 0; }
+}
+function pcInitPayload(g, pid) {
+  const k = g.paint;
+  const p = pid ? g.players[pid] : null;
+  return {
+    level: k.level, own: k.own, teamScores: g.teamScores, energy: p ? p.pcEnergy : 0, energyMax: PC_ENERGY_MAX,
+    players: Object.fromEntries(Object.entries(g.players).map(([id, pl]) => [id, { name: pl.name, team: pl.team, avatar: pl.avatar || '' }])),
+  };
+}
+function pcStart(pin, g) {
+  pcStop(g);
+  const level = Paint.buildLevel(1 + Math.floor(Math.random() * 1e6));
+  g.paint = {
+    level, surfaceSet: new Set(level.surfaces), own: {}, pos: {}, posDirty: false,
+    pending: [], leader: null, leadAt: 0, milestones: {}, total: level.surfaces.length, tick: null,
+    by: {},        // tile id -> lower-case name of the kid who painted it last (names survive a rejoin, socket ids don't)
+    flipAt: {},    // tile id -> time of its last colour change
+  };
+  Object.values(g.players).forEach((p) => {
+    p.pcEnergy = PC_START_ENERGY; p.pcStreak = 0; p.pcBlazeUntil = 0; p.pcTiles = 0; p.pcSeen = 0;
+    p.score = 0;
+    p.currentQ = null;   // questions are on demand here: never carry last round's open question into this one
+  });
+  g.teamScores = { red: 0, gold: 0 };
+  Object.keys(g.players).forEach((pid) => io.to(pid).emit('pc:init', pcInitPayload(g, pid)));
+  io.to(g.hostId).emit('pc:init', pcInitPayload(g, null));
+  const tick = setInterval(() => pcTick(pin, tick), PC_TICK_MS);
+  g.paint.tick = tick;
+}
+// A kid's score = clouds they own right now (the last painter of each tile), so the crown goes to who holds the sky.
+function pcScoreByOwner(g) {
+  const c = {};
+  Object.values(g.paint.by).forEach((who) => { c[who] = (c[who] || 0) + 1; });
+  Object.values(g.players).forEach((pl) => { pl.score = c[String(pl.name || '').toLowerCase()] || 0; });
+}
+// Final recount + last batch of tiles, so the winner is decided on every cloud painted (called from endGame).
+function pcFlush(pin, g) {
+  if (!g || !g.paint) return;
+  g.teamScores = Paint.counts(g.paint.own);
+  pcScoreByOwner(g);
+  if (g.paint.pending.length) {
+    const tiles = g.paint.pending;
+    g.paint.pending = [];
+    const scores = Object.fromEntries(Object.entries(g.players).map(([id, pl]) => [id, pl.score || 0]));
+    io.to(pin).emit('pc:paint', { tiles, teamScores: g.teamScores, events: [], scores });
+  }
+}
+function pcStop(g) {
+  if (g && g.paint && g.paint.tick) { clearInterval(g.paint.tick); g.paint.tick = null; }
+}
+function pcTick(pin, id) {
+  const g = games[pin];
+  // A room that vanished (or a newer round) stops its own old interval: no ticking forever after a host leaves.
+  if (!g || !g.paint || (id && g.paint.tick !== id)) { if (id) clearInterval(id); return; }
+  if (g.state !== 'active') return pcStop(g);
+  const k = g.paint;
+  if (k.posDirty) {
+    k.posDirty = false;
+    const arr = [];
+    Object.entries(k.pos).forEach(([id, v]) => { if (g.players[id]) arr.push([id, v[0], v[1], v[2], g.players[id].team === 'red' ? 0 : 1]); });
+    io.to(pin).emit('pc:pos', arr);
+  }
+  if (k.pending.length) {
+    const tiles = k.pending;
+    k.pending = [];
+    g.teamScores = Paint.counts(k.own);
+    pcScoreByOwner(g);
+    const events = [];
+    const now = Date.now();
+    const leader = g.teamScores.red > g.teamScores.gold ? 'red' : g.teamScores.gold > g.teamScores.red ? 'gold' : k.leader;
+    if (leader && leader !== k.leader) {
+      if ((g.teamScores.red + g.teamScores.gold) > 12 && now - (k.leadAt || 0) > PC_LEAD_ANNOUNCE_MS) {
+        events.push({ type: 'lead', team: leader });
+        k.leadAt = now;
+      }
+      k.leader = leader;
+    }
+    const painted = (g.teamScores.red + g.teamScores.gold) / k.total;
+    [0.25, 0.5, 0.75].forEach((m) => { if (painted >= m && !k.milestones[m]) { k.milestones[m] = true; events.push({ type: 'milestone', pct: Math.round(m * 100) }); } });
+    const scores = Object.fromEntries(Object.entries(g.players).map(([id, pl]) => [id, pl.score || 0]));
+    io.to(pin).emit('pc:paint', { tiles, teamScores: g.teamScores, events, scores });
+  }
+}
+function pcAnswer(pin, g, pid, p, correct, correctText) {
+  if (!g.paint) return;
+  pcPreparePlayer(p);
+  if (correct) {
+    p.pcStreak = (p.pcStreak || 0) + 1;
+    p.pcEnergy = Math.min(PC_ENERGY_MAX, p.pcEnergy + PC_ENERGY_PER_RIGHT);
+    const blaze = p.pcStreak % 3 === 0;
+    if (blaze) p.pcBlazeUntil = Date.now() + PC_BLAZE_MS;
+    io.to(pid).emit('answer-result', { correct: true, correctText, paint: { energy: p.pcEnergy, blaze, blazeMs: PC_BLAZE_MS, streak: p.pcStreak } });
+  } else {
+    p.pcStreak = 0;
+    io.to(pid).emit('answer-result', { correct: false, correctText, paint: { energy: p.pcEnergy, streak: 0 } });
+  }
+}
+
 function endGame(pin) {
   const g = games[pin];
   if (!g) return;
@@ -4438,8 +4571,10 @@ function endGame(pin) {
       );
     }
   }
+  if (g.gameType === 'paint') pcFlush(pin, g);
   g.state = 'ended';
   if (g.gameType === 'kingdoms') kdClearTimers(g);
+  if (g.gameType === 'paint') pcStop(g);
   // 🆕 2026-06-08 (Fernando): the moment a room dies, sweep every
   // student's inbox for unread force-pull messages targeting THIS pin
   // and mark them read. That stops the "¡Tu maestra te llama!"
@@ -4469,7 +4604,8 @@ function endGame(pin) {
     winner,
     mvpRed: mvpRed ? { name: mvpRed.name, score: mvpRed.score } : null,
     mvpGold: mvpGold ? { name: mvpGold.name, score: mvpGold.score } : null,
-    leaderboard: sorted.map((p) => ({ name: p.name, score: p.score, team: p.team, avatar: p.avatar || '' }))
+    leaderboard: sorted.map((p) => ({ name: p.name, score: p.score, team: p.team, avatar: p.avatar || '' })),
+    scores: Object.fromEntries(Object.entries(g.players).map(([id, p]) => [id, p.score || 0])),   // each phone finds its own
   });
   broadcast(pin);
 }
@@ -4489,7 +4625,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'warmup', 'reading', 'hsksim'];
+    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'warmup', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'pinata'       ? 240 :
@@ -4497,6 +4633,7 @@ io.on('connection', (socket) => {
       type === 'monopoly'     ? 300 :
       type === 'sixseven'     ? 120 :
       type === 'kingdoms'     ? 180 :
+      type === 'paint'        ? 240 :
       type === 'warmup'       ? 3600 :   // 1 hour ceiling; teacher exits manually
       type === 'reading'      ? 3600 :   // 1 hour ceiling; teacher controls flow
       type === 'hsksim'       ? 3600 :   // 1 hour ceiling; kid takes the exam on their own pace
@@ -4607,6 +4744,9 @@ io.on('connection', (socket) => {
     }
     if (g.gameType === 'kingdoms' && g.kingdoms && g.state === 'active') {
       io.to(socket.id).emit('kd:init', kdInitPayload(g, true));
+    }
+    if (g.gameType === 'paint' && g.paint && g.state === 'active') {
+      io.to(socket.id).emit('pc:init', pcInitPayload(g, null));
     }
     cb({ ok: true, gameType: g.gameType, state: g.state });
   });
@@ -4822,6 +4962,7 @@ io.on('connection', (socket) => {
         });
       }
       if (g.gameType === 'kingdoms') kdStart(pin, g);
+      if (g.gameType === 'paint') pcStart(pin, g);
       if (g.gameType === 'reading') {
         // === 📖 READING MODE ===
         // Teacher-driven story session. Server holds the master playback
@@ -4893,8 +5034,8 @@ io.on('connection', (socket) => {
         });
       }
       broadcast(pin);
-      // Every question-driven game auto-deals the first question.
-      Object.keys(g.players).forEach((pid) => {
+      // Every question-driven game auto-deals the first question (Dragones Pintores: kids ask with «Recargar»).
+      if (g.gameType !== 'paint') Object.keys(g.players).forEach((pid) => {
         const q = nextQuestionFor(g, pid);
         if (q) io.to(pid).emit('question', q);
       });
@@ -4917,6 +5058,7 @@ io.on('connection', (socket) => {
     if (!g || g.hostId !== socket.id) return;
     if (g.endTimer) clearTimeout(g.endTimer);
     if (g.gameType === 'kingdoms') { kdClearTimers(g); g.kingdoms = null; }
+    if (g.gameType === 'paint') { pcStop(g); g.paint = null; }
     g.state = 'lobby';
     g.teamScores = { red: 0, gold: 0 };
     g.endsAt = null;
@@ -4925,16 +5067,17 @@ io.on('connection', (socket) => {
       p.queueIdx = 0;
       p.mashUntil = 0;
       p.recentTaps = [];
+      p.currentQ = null;
     });
     broadcast(pin);
   });
 
   socket.on('player:join', ({ pin, name, avatar, studentCode }, cb) => {
     const g = games[pin];
-    if (!g) return cb({ ok: false, error: 'No game with that PIN' });
-    if (g.state === 'ended') return cb({ ok: false, error: 'Game has ended' });
+    if (!g) return cb({ ok: false, error: 'No hay ningún juego con ese PIN. Revisa el número.' });
+    if (g.state === 'ended') return cb({ ok: false, error: 'Este juego ya terminó. Espera el próximo PIN de tu maestro.' });
     const cleanName = String(name || '').trim().slice(0, 20);
-    if (!cleanName) return cb({ ok: false, error: 'Please enter a name' });
+    if (!cleanName) return cb({ ok: false, error: 'Escribe tu nombre.' });
 
     // Look for existing player by name (case-insensitive). If found, attach to that slot.
     const existingEntry = Object.entries(g.players).find(
@@ -5086,6 +5229,11 @@ io.on('connection', (socket) => {
           welcome: !isRejoin    // brand-new joiner gets welcome modal; rejoin doesn't
         });
       }
+      if (g.gameType === 'paint' && g.paint) {
+        pcPreparePlayer(player);
+        io.to(socket.id).emit('pc:init', pcInitPayload(g, socket.id));
+        return;
+      }
       if (g.gameType === 'kingdoms' && g.kingdoms) {
         io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
         if (player.kdPending) { kdPrompt(pin, socket.id, { reprompt: true }); return; }
@@ -5174,6 +5322,8 @@ io.on('connection', (socket) => {
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
+    } else if (g.gameType === 'paint') {
+      pcAnswer(pin, g, socket.id, p, correct, correctText);
     } else if (g.gameType === 'kingdoms') {
       // Reinos de Colores: right answer = a flag to plant (3 in a row = 2 flags). The next question waits
       // until the flag is planted (kid taps a tile, or the server auto-plants after KD_PLANT_MS).
@@ -5257,6 +5407,8 @@ io.on('connection', (socket) => {
       nextDelay = correct ? -1 : 1500;
     } else if (g.gameType === 'kingdoms') {
       nextDelay = correct ? -1 : 1400;
+    } else if (g.gameType === 'paint') {
+      nextDelay = -1;                       // back to flying; the kid asks for the next question
     } else if (g.gameType === 'sixseven') {
       // Snappy rhythm — fast cadence so the swing feels continuous
       nextDelay = correct ? 600 : 800;
@@ -5272,7 +5424,83 @@ io.on('connection', (socket) => {
     }
     // Reinos de Colores sends its own small kd:plant diffs; skipping the full-room 'state' push here
     // keeps 30 phones from receiving ~5 full state objects per second.
-    if (g.gameType !== 'kingdoms') broadcast(pin);
+    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint') broadcast(pin);
+  });
+
+  // Dragones Pintores: position (8 Hz from each phone), painted tiles, and «Recargar» (ask for a question).
+  socket.on('player:pc-pos', (data) => {
+    try {
+      const { pin, x, y, f, moving, spent } = data || {};
+      const g = games[pin];
+      if (!g || g.gameType !== 'paint' || !g.paint || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      if (!p || !Number.isFinite(x) || !Number.isFinite(y)) return;
+      pcPreparePlayer(p);
+      const now = Date.now();
+      const dt = p.pcSeen ? Math.min(0.4, Math.max(0, (now - p.pcSeen) / 1000)) : 0;
+      p.pcSeen = now;
+      const before = Math.ceil(p.pcEnergy);
+      // Charge the fire the phone actually burnt in its own simulation (a laggy phone runs slower than the clock),
+      // never more than the real time that passed. Older phones without `spent` pay real time while moving.
+      const burn = Number.isFinite(spent) ? Math.max(0, Math.min(spent, dt + 0.05)) : (moving ? dt : 0);
+      // ...and a dragon that clearly moved pays at least half the real time, whatever the phone reports.
+      const prev = g.paint.pos[socket.id];
+      const moved = !!prev && (Math.abs(x - prev[0]) > 3 || Math.abs(y - prev[1]) > 3);
+      const charge = Math.max(burn, moved ? dt * 0.5 : 0);
+      if (charge > 0) p.pcEnergy = Math.max(0, p.pcEnergy - charge);
+      g.paint.pos[socket.id] = [Math.round(x), Math.round(y), f ? 1 : 0];
+      g.paint.posDirty = true;
+      if (Math.ceil(p.pcEnergy) !== before) io.to(socket.id).emit('pc:energy', { energy: p.pcEnergy });
+    } catch (e) { console.error('[player:pc-pos]', e); }
+  });
+  socket.on('player:pc-paint', (data) => {
+    try {
+      const { pin, tiles } = data || {};
+      const g = games[pin];
+      if (!g || g.gameType !== 'paint' || !g.paint || g.state !== 'active' || !Array.isArray(tiles)) return;
+      const p = g.players[socket.id];
+      const pos = g.paint.pos[socket.id];
+      if (!p || !pos || !(p.pcEnergy > 0)) return;
+      const lv = g.paint.level;
+      const px = pos[0] / lv.tile;
+      const py = pos[1] / lv.tile;
+      const now = Date.now();
+      const reach = (p.pcBlazeUntil || 0) > now ? 6 : 3;
+      const who = String(p.name || '').toLowerCase();
+      const refused = [];
+      tiles.slice(0, PC_MAX_PAINT_PER_MSG).forEach((id) => {
+        if (!Number.isInteger(id) || !g.paint.surfaceSet.has(id)) return;
+        const tx = id % lv.cols;
+        const ty = Math.floor(id / lv.cols);
+        if (Math.abs(tx + 0.5 - px) > reach || Math.abs(ty - py) > reach) return;
+        if (g.paint.own[id] === p.team) return;
+        if (now - (g.paint.flipAt[id] || 0) < PC_FLIP_COOLDOWN_MS) {
+          if (g.paint.own[id]) refused.push([id, g.paint.own[id] === 'red' ? 0 : 1]);   // phone painted it early: undo
+          return;
+        }
+        g.paint.flipAt[id] = now;
+        g.paint.own[id] = p.team;
+        g.paint.by[id] = who;
+        g.paint.pending.push([id, p.team === 'red' ? 0 : 1]);
+        p.pcTiles = (p.pcTiles || 0) + 1;   // strokes, for stats; the score is clouds owned (pcScoreByOwner)
+      });
+      if (refused.length) io.to(socket.id).emit('pc:paint', { tiles: refused });
+    } catch (e) { console.error('[player:pc-paint]', e); }
+  });
+  socket.on('player:pc-ask', (data) => {
+    try {
+      const { pin } = data || {};
+      const g = games[pin];
+      if (!g || g.gameType !== 'paint' || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      if (!p) return;
+      if (p.currentQ) {
+        io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
+        return;
+      }
+      const q = nextQuestionFor(g, socket.id);
+      if (q) io.to(socket.id).emit('question', q);
+    } catch (e) { console.error('[player:pc-ask]', e); }
   });
 
   // Reinos de Colores: kid tapped a tile on the phone's mini board.
@@ -5339,6 +5567,11 @@ io.on('connection', (socket) => {
       mpAwaitingRoll: !!p.mpAwaitingRoll,
       inAction
     });
+    if (g.gameType === 'paint' && g.state === 'active' && g.paint) {
+      io.to(socket.id).emit('pc:init', pcInitPayload(g, socket.id));
+      if (p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
+      return;
+    }
     if (g.gameType === 'kingdoms' && g.state === 'active' && g.kingdoms) {
       io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
       if (p.kdPending) { kdPrompt(pin, socket.id, { reprompt: true }); return; }
@@ -5818,7 +6051,7 @@ io.on('connection', (socket) => {
     if (!g || g.gameType !== 'warmup') return;
     if (!(g.hostId === socket.id && isAdminPassword(password))) return;
     const ok = ['rain', 'confetti', 'zombies', 'moto', 'shake', 'sixseven', 'flash', 'stars', 'tiger',
-                'gojo', 'yuji', 'fnaf', 'shelly', 'dandy'];
+                'gojo', 'yuji', 'fnaf', 'shelly', 'dandy', 'dralingo', 'gang'];
     if (!ok.includes(kind)) return;
     io.to(pin).emit('wu:fx', { kind });
   });
@@ -5831,7 +6064,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
     if (!(g.hostId === socket.id && isAdminPassword(password))) return;
-    const ok = ['gojo', 'yugi', 'freddy', 'mario', 'sonic', 'elsa', 'turtle', 'cr7'];   // expand as more transparent GIFs land
+    const ok = ['dralingo', 'gojo', 'yugi', 'freddy', 'mario', 'sonic', 'elsa', 'turtle', 'cr7'];   // expand as more transparent GIFs land
     if (!ok.includes(String(id || ''))) return;
     // Stash the current state on the room so a kid joining late
     // automatically sees whatever's already on.
@@ -6371,6 +6604,8 @@ io.on('connection', (socket) => {
             return;
           }
           if (stillExists.endTimer) clearTimeout(stillExists.endTimer);
+          if (stillExists.gameType === 'paint') pcStop(stillExists);
+          if (stillExists.gameType === 'kingdoms') kdClearTimers(stillExists);
           io.to(currentPin).emit('host-left');
           delete games[currentPin];
         }
@@ -6408,6 +6643,7 @@ setInterval(() => {
   Object.entries(games).forEach(([pin, g]) => {
     if (g.state !== 'active') return;
     if (g.gameType === 'warmup') return;       // teacher-driven flashcards, no questions
+    if (g.gameType === 'paint') return;        // questions are on demand («Recargar»)
     Object.entries(g.players).forEach(([pid, p]) => {
       const inAction = p.mashUntil > now || p.currentQ;
       if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {

@@ -115,7 +115,13 @@ const count = (bag, ev) => { bag[ev] = (bag[ev] || 0) + 1; };
     for (const { st } of bots) {
       // Frozen = answered (or never got a first question) and nothing new arrived within --stall seconds.
       // Timed from the answer, so a game's own reward window (mash/smash ~5 s) is not counted as a freeze.
-      const since = st.waiting ? now - st.lastAnsAt : (st.questions ? 0 : now - startedAt);
+      // On-demand games (handler sets state.onDemand, e.g. Dragones Pintores) play first and ask later: there a freeze
+      // is "asked for a question (state.askedAt) and none came".
+      const asked = st.askedAt && st.askedAt > st.lastQAt ? now - st.askedAt : 0;
+      let since = Math.max(asked, st.waiting ? now - st.lastAnsAt : (st.questions || st.onDemand ? 0 : now - startedAt));
+      // A handler can declare a legitimate wait (e.g. Reinos de Colores' 8 s plant window + auto-plant): the clock then
+      // starts when that window ends.
+      if (st.graceUntil && st.graceUntil > st.lastQAt) since = Math.min(since, Math.max(0, now - st.graceUntil));
       if (since > STALL && !flagged.has(st.name)) {
         flagged.add(st.name);
         report.stalls.push({ name: st.name, secondsWithoutQuestion: Math.round(since / 1000), lastEvent: st.lastEvent, answers: st.answers });

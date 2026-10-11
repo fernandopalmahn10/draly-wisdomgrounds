@@ -19,6 +19,9 @@
   if (window.KingdomsPhone) {
     window.KingdomsPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
   }
+  if (window.PaintPhone) {
+    window.PaintPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
+  }
   // (legacy timer kept for any reference; bulletproof flow below replaces it)
 
   // === Global stuck-watchdog ===
@@ -232,7 +235,7 @@
           routePlayerForGameState(resp.gameState, gameType);
           hideReconnectOverlay();
         } else {
-          showReconnectOverlay(resp.error || 'Could not rejoin');
+          showReconnectOverlay(resp.error || 'No pudimos volver a entrar. Revisa tu conexión.');
         }
       });
     }
@@ -277,7 +280,7 @@
     const p = $('pin-input').value.trim();
     const name = $('name-input').value.trim();
     if (!p || !name) {
-      $('join-error').textContent = 'Enter PIN and name';
+      $('join-error').textContent = 'Escribe el PIN y tu nombre';
       return;
     }
     // Unlock audio at the FIRST user tap (join) so iOS Safari has its
@@ -294,7 +297,7 @@
     })();
     socket.emit('player:join', { pin: p, name, avatar: getMyAvatar(), studentCode: savedCode }, (resp) => {
       if (!resp.ok) {
-        $('join-error').textContent = resp.error || 'Could not join';
+        $('join-error').textContent = resp.error || 'No pudimos entrar. Inténtalo otra vez.';
         MochiSounds.wrong();
         return;
       }
@@ -349,6 +352,7 @@
       'dragon-eye':  'dragon-flap',
       'monopoly':    'monopoly-roll',
       'kingdoms':    'question',
+      'paint':       'paint',
     };
     const target = screenForType[gt];
     if (target) showScreen(target);
@@ -934,7 +938,7 @@
     } else if (gameType === 'sixseven') {
       teamLabel = isRed ? 'Equipo 6 🟦' : 'Equipo 7 🟪';
       teamMascot = isRed ? '6' : '7';
-    } else if (gameType === 'kingdoms') {
+    } else if (gameType === 'kingdoms' || gameType === 'paint') {
       teamLabel = isRed ? 'Reino del Fuego' : 'Reino del Mar';
       teamMascot = isRed ? '🔥' : '🌊';
     } else {
@@ -1907,6 +1911,7 @@
   // particle bursts) — these are full-screen transparent GIFs that
   // stay on the kid's screen until the teacher toggles them off.
   const WU_ANIM_URL_PLAYER = {
+    dralingo: '/assets/kingdoms/dralingo/anim/hello.webp',
     gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
     yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
     freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
@@ -2002,6 +2007,8 @@
     dandy:  { color: '#5be8d1', glow: '#7bdf7b', label: '¡HOLA!' },
   };
   function playerFireFx(kind) {
+    if (kind === 'dralingo') { if (window.DralingoFX) window.DralingoFX.celebrate({ text: '¡Muy bien!', mood: 'win' }); return; }
+    if (kind === 'gang') { if (window.DralingoFX) window.DralingoFX.play('gang', { text: '¡Muy bien!', mood: 'win' }); return; }
     if (WU_CHARS_PL[kind]) {
       const layer = _wuFxLayer();
       const c = WU_CHARS_PL[kind];
@@ -2873,6 +2880,8 @@
           }
         } else if (gameType === 'kingdoms') {
           if (kingdoms && kingdoms.needsPlant && window.KingdomsPhone) window.KingdomsPhone.prompt(kingdoms);
+        } else if (gameType === 'paint') {
+          // Dragones Pintores: player-paint.js returns the kid to the sky after the result screen.
         } else if (gameType === 'sixseven') {
           // Sixseven handles its own screen via the dedicated handler.
           showScreen('sixseven');
@@ -4218,7 +4227,8 @@
       location.replace(url);
       return;
     }
-    if (s.state === 'lobby' && currentQid) {
+    const onEndScreen = $('screen-end') && !$('screen-end').classList.contains('hidden');
+    if (s.state === 'lobby' && (currentQid || onEndScreen)) {
       // host reset
       currentQid = null;
       myScore = 0;
@@ -4240,7 +4250,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'kd-plant', 'wu', 'rd', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'kd-plant', 'paint', 'wu', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

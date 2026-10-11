@@ -51,11 +51,22 @@ the checklist for any new game mode.
   once and reuse it for every test family and level. Old CSV exporters (`scripts/export-sim1-blooket.js`) stay as extras.
 - This is a large, multi-feature codebase: before adding a mode, read `docs/GAME_MODES.md` and reuse existing room/PIN/
   heartbeat plumbing instead of building parallel systems.
-- **Game roster (his decision 2026-10-10):** Reinos de Colores (new, `kingdoms`) + the 5 kept games Mochi Mash, Dàfùwēng ·
+- **Game roster (his decision 2026-10-10):** Reinos de Colores (new, `kingdoms`), Dragones Pintores (new 2026-10-11,
+  `paint`) + the 5 kept games Mochi Mash, Dàfùwēng ·
   Monopolio Chino, 6-7 Swing, Vuelo del Dragón, Piñata Tigre (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older
   games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:
   retire a game rather than keep a half-optimized one.
+- **The kid's phone is the product** (his correction 2026-10-11: "a beautiful projector is useless if everybody else's
+  UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
+  answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /
+  win / lose), recorded music + sound effects (no synthesized beeps), pictures made for each question.
+- **Kids don't read instructions** (his correction 2026-10-11: "kids don't understand, so they start asking questions").
+  Every mechanic must explain itself on the phone: a first-play card with 3 big pictured steps, and whenever a kid is
+  blocked (out of energy/fire, waiting for a turn) a big full-width prompt with Dralingo that says exactly what to tap
+  ("¡Sin fuego! Responde una pregunta para volar"). Bigger buttons, fewer words, the action named on the button.
+- **Team colours on the characters** (his note 2026-10-11): in team games every kid's character wears its team colour
+  (Fuego = red Dralingo, Mar = blue Dralingo) on the phone and on the projector, not only the tiles and scores.
 - Build or overhaul any game with the `new-pin-game` skill. Before saying a game works: `node scripts/playtest-bots.js
   --game <type> --bots 20` must PASS (Monopoly is turn-based: waiting kids are expected there), then the
   `classroom-playtester` agent for the real-browser check.

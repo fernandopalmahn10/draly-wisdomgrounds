@@ -92,6 +92,9 @@
   // their catchphrase. Used by daily completion, tarea pass, milestones.
   //   showCharacterCelebration('gojo', 'Subiste a Nivel 5!');
   window.showCharacterCelebration = function (characterId, customText) {
+    // 🐉 2026-10-11 (Fernando): celebrations are Dralingo now — a random TikTok-style entrance (js/dralingo-fx.js).
+    // If an effect is already playing, skip this one rather than falling back to the old borrowed characters.
+    if (window.DralingoFX) { window.DralingoFX.celebrate({ text: customText || '¡Lo lograste!', mood: 'win' }); return; }
     const char = CHARACTERS[characterId] || CHARACTERS.dralingo;
     const overlay = document.createElement('div');
     overlay.className = 'char-celebration';

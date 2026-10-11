@@ -23,6 +23,14 @@
   let pin = null;
   let state = null;
   let adminPw = null;
+  // 🔒 2026-10-11 (security): the teacher code travels in the X-Admin-Pw request
+  // header, never in a URL (URLs end up in Render/proxy access logs). URI-encoded
+  // because headers only carry Latin-1; server.js _adminPw() decodes it.
+  function adminFetch(url, code, opts) {
+    const o = Object.assign({}, opts);
+    o.headers = Object.assign({}, o.headers, { 'X-Admin-Pw': encodeURIComponent(code || '') });
+    return fetch(url, o);
+  }
   let activeExp = 'all';
   let currentViewMode = 'text';
   let currentSentence = [];
@@ -241,7 +249,7 @@
     sheet.style.display = 'flex';
     requestAnimationFrame(() => sheet.classList.add('show'));
     if (_describeCatalog) { _renderDescribeGroups(_describeCatalog); return; }
-    fetch('/api/sim-images?pw=' + encodeURIComponent(adminPw) + '&maxSim=7')
+    adminFetch('/api/sim-images?maxSim=7', adminPw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { $('wu-describe-groups').textContent = 'No se pudieron cargar las imágenes.'; return; }
@@ -369,7 +377,7 @@
     requestAnimationFrame(() => sheet.classList.add('show'));
     if (_practiceData) { _renderPracticeSims(); return; }
     $('wu-practice-body').textContent = 'Cargando…';
-    fetch('/api/hsk-sim-practice?pw=' + encodeURIComponent(adminPw))
+    adminFetch('/api/hsk-sim-practice', adminPw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { $('wu-practice-body').textContent = 'No se pudieron cargar las oraciones.'; return; }
@@ -802,7 +810,7 @@
   }
 
   function openPushToStudentsModal(wordIds) {
-    fetch('/api/admin/students?pw=' + encodeURIComponent(adminPw))
+    adminFetch('/api/admin/students', adminPw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { alert('No se pudo cargar la lista de alumnos.'); return; }
@@ -1392,7 +1400,7 @@
           } else {
             body = { studentCodes: codes, words: wordIds, category: oneCat || null };
           }
-          fetch('/api/admin/sentence/push?pw=' + encodeURIComponent(adminPw), {
+          adminFetch('/api/admin/sentence/push', adminPw, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
           })
@@ -2011,7 +2019,7 @@
     }
     notebookSub.textContent = 'Cargando…';
     notebookRoster.innerHTML = '';
-    fetch('/api/admin/students?pw=' + encodeURIComponent(adminPw))
+    adminFetch('/api/admin/students', adminPw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) {
@@ -2090,7 +2098,7 @@
   function fetchStudent(code) {
     if (!adminPw) return;
     notebookSub.textContent = 'Cargando ' + code + '…';
-    fetch('/api/admin/students/' + encodeURIComponent(code) + '?pw=' + encodeURIComponent(adminPw))
+    adminFetch('/api/admin/students/' + encodeURIComponent(code), adminPw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) {
@@ -2203,7 +2211,7 @@
   // (their name gets spliced in client-side so autojoin needs no typing).
   function forceLiveMasterStudents(codes, text) {
     if (!Array.isArray(codes) || !codes.length || !pin) return;
-    fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(adminPw), {
+    adminFetch('/api/admin/broadcast-selected', adminPw, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2286,7 +2294,7 @@
                  'wu-fx-sixseven': 'sixseven', 'wu-fx-stars': 'stars',
                  'wu-fx-flash': 'flash', 'wu-fx-tiger': 'tiger',
                  'wu-fx-gojo': 'gojo', 'wu-fx-yuji': 'yuji', 'wu-fx-fnaf': 'fnaf',
-                 'wu-fx-shelly': 'shelly', 'wu-fx-dandy': 'dandy' };
+                 'wu-fx-shelly': 'shelly', 'wu-fx-dandy': 'dandy', 'wu-fx-dralingo': 'dralingo', 'wu-fx-gang': 'gang' };
     Object.keys(fx).forEach((id) => {
       const b = $(id);
       if (b) b.addEventListener('click', () => broadcastFx(fx[id]));
@@ -2315,6 +2323,8 @@
     // Render an animation overlay onto the host's own screen so the
     // teacher can see what's being projected to the kids.
     const WU_ANIM_URL = {
+      // 🐉 2026-10-11: Dralingo's own animated sticker (Higgsfield Kling clip, keyed to transparent WebP on this PC).
+      dralingo: '/assets/kingdoms/dralingo/anim/hello.webp',
       gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
       yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
       freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
@@ -2603,6 +2613,10 @@
     const layer = $('wu-fx-layer');
     if (!layer) return;
     if (MochiSounds.tap) MochiSounds.tap();
+    // 🐉 Dralingo sorpresa: a random TikTok-style entrance (flyby, meteor, combo x3, zoom, rain…) each time.
+    if (kind === 'dralingo') { if (window.DralingoFX) window.DralingoFX.celebrate({ text: '¡Muy bien, clase!', mood: 'win' }); return; }
+    // 🕵️ El equipo: the whole gang (his cast) pops up, Scooby-Doo finale style.
+    if (kind === 'gang') { if (window.DralingoFX) window.DralingoFX.play('gang', { text: '¡Muy bien, clase!', mood: 'win' }); return; }
     if (WU_CHARS[kind]) { wuCharFx(layer, kind); return; }
     if (kind === 'shake') {
       document.body.classList.remove('wu-shake');

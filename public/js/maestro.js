@@ -18,6 +18,22 @@
   let pw = '';
   try { pw = localStorage.getItem(STORAGE_PW) || ''; } catch (_) {}
 
+  // 🔒 2026-10-11 (security): the teacher code travels in the X-Admin-Pw request
+  // header, never in a URL (URLs end up in Render/proxy access logs). URI-encoded
+  // because headers only carry Latin-1; server.js _adminPw() decodes it.
+  function adminFetch(url, code, opts) {
+    const o = Object.assign({}, opts);
+    o.headers = Object.assign({}, o.headers, { 'X-Admin-Pw': encodeURIComponent(code || '') });
+    return fetch(url, o);
+  }
+  // /host-hsk.html gets the code through same-origin storage (host-hsk.js reads
+  // localStorage 'mochi.maestroPw'), not the address bar. If storage is blocked,
+  // fall back to the old &pw= so the teacher is never stuck mid-class.
+  function withHskCode(url, code) {
+    try { localStorage.setItem('mochi.maestroPw', code); return url; }
+    catch (_) { return url + '&pw=' + encodeURIComponent(code); }
+  }
+
   // ── Login
   if (pw) $('m-pw').value = pw;
   $('m-enter-btn').addEventListener('click', tryEnter);
@@ -28,7 +44,7 @@
     if (!v) { $('m-login-err').textContent = 'Enter the password'; return; }
     $('m-login-err').textContent = 'Signing in…';
     // Validate by hitting the roster endpoint
-    fetch('/api/admin/students?pw=' + encodeURIComponent(v))
+    adminFetch('/api/admin/students', v)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) {
@@ -60,7 +76,7 @@
   let _liveMasterStudents = [];   // populated when modal opens
   let _liveMasterSelected = new Set();
   $('m-live-master-btn').addEventListener('click', () => {
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { alert('Error: ' + (data && data.error || '')); return; }
@@ -217,7 +233,7 @@
         const simId = ctx.simId || 'hsk1-sim1';
         const accessCode = (new URLSearchParams(location.search)).get('access')
           || localStorage.getItem('mochi.accessCode') || '';
-        fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(ctx.pw), {
+        adminFetch('/api/admin/broadcast-selected', ctx.pw, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             studentCodes: ctx.codes,
@@ -230,10 +246,9 @@
           .then((r) => r.json())
           .then((res) => {
             if (res && res.ok) {
-              const monitorUrl = '/host-hsk.html'
+              const monitorUrl = withHskCode('/host-hsk.html'
                 + '?sim=' + encodeURIComponent(simId)
-                + '&access=' + encodeURIComponent(accessCode)
-                + '&pw=' + encodeURIComponent(ctx.pw);
+                + '&access=' + encodeURIComponent(accessCode), ctx.pw);
               // 🆕 2026-06-16 (Fernando): SAME-TAB nav (mobile popup-block fix).
               location.href = monitorUrl;
             } else {
@@ -242,6 +257,7 @@
           });
       },
     },
+    { id: 'paint',     label: 'Dragones Pintores',  emoji: '🎨', blurb: 'Fly, paint the sky', launch: (ctx) => _genericLaunch(ctx, '/host-paint.html', '/player.html') },
     { id: 'kingdoms',  label: 'Reinos de Colores',  emoji: '🏰', blurb: 'Plant flags, conquer the map', launch: (ctx) => _genericLaunch(ctx, '/host-kingdoms.html', '/player.html') },
     { id: 'sixseven',  label: '6-7 Swing',          emoji: '🤙', blurb: 'Fast math + Chinese numbers',    launch: (ctx) => _genericLaunch(ctx, '/host-sixseven.html', '/player.html') },
     { id: 'monopoly',  label: 'Dàfùwēng · Monopolio Chino', emoji: '🏯', blurb: 'Chinese Monopoly board',         launch: (ctx) => _genericLaunch(ctx, '/host-monopoly.html', '/player.html') },
@@ -275,7 +291,7 @@
   }
   function openUniversalLauncher() {
     // Pull the most-recent online students. Reuse the existing roster API.
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { alert('Could not load the student list.'); return; }
@@ -521,7 +537,7 @@
   // generated PIN, and the kids' homework pages auto-redirect.
   function openForceReadingPicker(story) {
     // Pull the latest student list and filter to online-now client-side.
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) {
@@ -692,7 +708,7 @@
     const clean = String(toCode).trim().toUpperCase();
     if (!clean) return;
     if (clean === r.code) { alert('That is the same code. Nothing to migrate.'); return; }
-    fetch('/api/admin/hsk-result/migrate?pw=' + encodeURIComponent(pw), {
+    adminFetch('/api/admin/hsk-result/migrate', pw, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fromCode: r.code, ts: r.ts, toCode: clean }),
@@ -746,7 +762,7 @@
       title.textContent = '🏅 Test Results';
       sub.textContent = 'Every exam your students have turned in. Most recent first.';
       view.textContent = 'Loading…';
-      fetch('/api/hsk-sim/results?pw=' + encodeURIComponent(pw))
+      adminFetch('/api/hsk-sim/results', pw)
         .then((r) => r.json())
         .then((d) => {
           view.innerHTML = '';
@@ -875,8 +891,7 @@
         // button INSIDE that page so everything related to the
         // exam session lives in one place — like host-reading.html.
         card.querySelector('.m-reading-force').addEventListener('click', () => {
-          const url = '/host-hsk.html?sim=' + encodeURIComponent(sim.id)
-            + '&pw=' + encodeURIComponent(pw);
+          const url = withHskCode('/host-hsk.html?sim=' + encodeURIComponent(sim.id), pw);
           // 🆕 2026-06-16 (Fernando): SAME-TAB nav, not window.open.
           // On mobile (Samsung Internet / Chrome Android on the S23)
           // window.open('_blank') is popup-blocked — the teacher tapped
@@ -896,7 +911,7 @@
   // Mirror openForceReadingPicker(), but the launch URL is /hsk-sim.html
   // and we push it through inbox force-messages to every selected kid.
   function openForceHskPicker(sim) {
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) {
@@ -971,11 +986,11 @@
           // their own code already in the URL.
           //
           // IMPORTANT: /api/admin/broadcast-selected reads its password
-          // from req.query.pw (NOT req.body.pw) and the body schema is
+          // from the X-Admin-Pw header (adminFetch) and the body schema is
           // { studentCodes, text, actionType, actionUrl, actionLabel }
           // — NOT { codes, body }. Mirroring the working host-warmup +
           // host-reading force-flow exactly.
-          fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
+          adminFetch('/api/admin/broadcast-selected', pw, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -990,10 +1005,9 @@
           .then((r) => r.json())
           .then((res) => {
             if (res && res.ok) {
-              const monitorUrl = '/host-hsk.html'
+              const monitorUrl = withHskCode('/host-hsk.html'
                 + '?sim='    + encodeURIComponent(sim.id)
-                + '&access=' + encodeURIComponent(accessCode)
-                + '&pw='     + encodeURIComponent(pw);
+                + '&access=' + encodeURIComponent(accessCode), pw);
               close();
               // 🆕 2026-06-16 (Fernando): SAME-TAB nav, not window.open.
               // window.open inside this fetch().then() callback is NOT a
@@ -1019,7 +1033,7 @@
           const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
             .map((cb) => cb.dataset.code).filter(Boolean);
           if (!codes.length) { alert('Select at least one student.'); return; }
-          fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
+          adminFetch('/api/admin/broadcast-selected', pw, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1057,7 +1071,7 @@
   // the next 🔊 tap (fresh from Azure).
   if ($('m-em-clear-cache')) $('m-em-clear-cache').addEventListener('click', () => {
     if (!confirm('Delete all cached MP3s? They regenerate on the next tap.')) return;
-    fetch('/api/maestro/emirati/audio/clear-cache?pw=' + encodeURIComponent(pw), { method: 'POST' })
+    adminFetch('/api/maestro/emirati/audio/clear-cache', pw, { method: 'POST' })
       .then((r) => r.json()).then((d) => {
         if (d.ok) alert('✅ Deleted ' + d.removed + ' files.\n\nTry now — the next playback regenerates fresh from Azure.');
         else alert('Error: ' + (d.error || 'could not do it'));
@@ -1066,7 +1080,7 @@
   });
   if ($('m-em-mark-all')) $('m-em-mark-all').addEventListener('click', () => {
     if (!_emToday.length) return;
-    fetch('/api/maestro/emirati/mark?pw=' + encodeURIComponent(pw), {
+    adminFetch('/api/maestro/emirati/mark', pw, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ wordIds: _emToday.map((w) => w.id), date: new Date().toISOString().slice(0, 10) }),
     }).then((r) => r.json()).then((d) => { if (d && d.ok) { applyEmiratiHud(d.progress); loadEmirati(true); } });
@@ -1079,7 +1093,7 @@
     if (initialTab === 'words' || initialTab === 'sentences') _emReviewTab = initialTab;
     $('m-em-review-panel').classList.remove('hidden');
     $('m-em-review-body').innerHTML = '<div class="m-empty">Loading…</div>';
-    fetch('/api/maestro/emirati/learned?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/maestro/emirati/learned', pw)
       .then((r) => r.json()).then((d) => renderEmiratiReview(d))
       .catch((e) => { $('m-em-review-body').innerHTML = '<div class="m-empty">Error: ' + e.message + '</div>'; });
   }
@@ -1160,7 +1174,7 @@
           card.querySelector('.m-em-rw-forget').addEventListener('click', (e) => {
             const wid = e.currentTarget.dataset.wid;
             if (!confirm('Forget this word? It will show up again in the day.')) return;
-            fetch('/api/maestro/emirati/mark?pw=' + encodeURIComponent(pw), {
+            adminFetch('/api/maestro/emirati/mark', pw, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ wordIds: [wid], unmark: true, date: new Date().toISOString().slice(0, 10) }),
             }).then((r) => r.json()).then((res) => {
@@ -1207,7 +1221,7 @@
         });
         tile.querySelector('.m-em-rs-unlearn').addEventListener('click', (e) => {
           const key = e.currentTarget.dataset.key;
-          fetch('/api/maestro/emirati/sentence/mark?pw=' + encodeURIComponent(pw), {
+          adminFetch('/api/maestro/emirati/sentence/mark', pw, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ keys: [key], unmark: true }),
           }).then((r) => r.json()).then(() => {
@@ -1234,10 +1248,10 @@
     }
     const date = new Date().toISOString().slice(0, 10);
     const skip = Array.from(_emSkipForToday).join(',');
-    const url = '/api/maestro/emirati/today?pw=' + encodeURIComponent(pw)
-      + '&date=' + encodeURIComponent(date)
+    const url = '/api/maestro/emirati/today'
+      + '?date=' + encodeURIComponent(date)
       + (skip ? '&skip=' + encodeURIComponent(skip) : '');
-    fetch(url)
+    adminFetch(url, pw)
       .then((r) => r.json())
       .then((d) => {
         if (!d || !d.ok) { if (list) list.textContent = 'Error: ' + (d && d.error || 'could not load'); return; }
@@ -1364,7 +1378,7 @@
       // refetched list renders fresh.
       const row = b.closest('.m-em-s');
       if (row && !wasLearned) row.classList.add('is-leaving');
-      fetch('/api/maestro/emirati/sentence/mark?pw=' + encodeURIComponent(pw), {
+      adminFetch('/api/maestro/emirati/sentence/mark', pw, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ keys: [key], unmark: wasLearned }),
       }).then((r) => r.json()).then((d) => {
@@ -1389,7 +1403,7 @@
       const card = b.closest('.m-em-card');
       const wasKnown = b.dataset.known === '1';
       if (card) card.classList.add('is-leaving');
-      fetch('/api/maestro/emirati/mark?pw=' + encodeURIComponent(pw), {
+      adminFetch('/api/maestro/emirati/mark', pw, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wordIds: [b.dataset.id], date: new Date().toISOString().slice(0, 10), unmark: wasKnown }),
       }).then((r) => r.json()).then((d) => {
@@ -1448,7 +1462,7 @@
   }
   function loadCustomStudents() {
     const list = $('m-cu-students'); if (list) list.textContent = 'Loading…';
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         const students = (data && data.students) || [];
@@ -1482,7 +1496,7 @@
     if (!items.length) { if (msg) msg.textContent = '✕ You need at least 1 complete sentence (English + pinyin).'; return; }
     if (!targets.length) { if (msg) msg.textContent = '✕ Check at least 1 student.'; return; }
     if (msg) msg.textContent = 'Sending…';
-    fetch('/api/admin/custom-assignment?pw=' + encodeURIComponent(pw), {
+    adminFetch('/api/admin/custom-assignment', pw, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, instructions, items, targetStudents: targets, pointsPerItem: 10 }),
     }).then((r) => r.json()).then((d) => {
@@ -1500,7 +1514,7 @@
   function loadCustomExisting() {
     const wrap = $('m-cu-existing'); if (!wrap) return;
     wrap.textContent = 'Loading…';
-    fetch('/api/admin/custom-assignments?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/custom-assignments', pw)
       .then((r) => r.json())
       .then((d) => {
         const list = (d && d.assignments) || [];
@@ -1517,7 +1531,7 @@
             <button class="btn btn-ghost btn-sm m-cu-ex-del" type="button">🗑 Delete</button>`;
           row.querySelector('.m-cu-ex-del').addEventListener('click', () => {
             if (!confirm('Delete "' + a.title + '"? Students will no longer see it.')) return;
-            fetch('/api/admin/custom-assignment/' + encodeURIComponent(a.id) + '?pw=' + encodeURIComponent(pw), { method: 'DELETE' })
+            adminFetch('/api/admin/custom-assignment/' + encodeURIComponent(a.id), pw, { method: 'DELETE' })
               .then((r) => r.json()).then(() => loadCustomExisting());
           });
           wrap.appendChild(row);
@@ -1612,9 +1626,9 @@
         btn.title = 'Error: ' + (e.message || e) + ' — tap again to diagnose.';
         btn.onclick = () => {
           btn.onclick = null;
-          fetch('/api/maestro/emirati/azure/diagnose?pw=' + encodeURIComponent(pw)
-              + '&voice=' + _emAzureVoice
-              + '&text=' + encodeURIComponent(arText))
+          adminFetch('/api/maestro/emirati/azure/diagnose'
+              + '?voice=' + _emAzureVoice
+              + '&text=' + encodeURIComponent(arText), pw)
             .then((r) => r.json()).then((d) => {
               alert('Diag:\nOK: ' + d.ok + '\nStatus: ' + (d.azureStatus || d.reason)
                 + '\nBytes: ' + (d.bytesReceived || 0)
@@ -1681,7 +1695,7 @@
     const gen = $('m-em-azure-gen');
     const help = $('m-em-azure-help');
     if (!stat) return;
-    fetch('/api/maestro/emirati/azure-status?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/maestro/emirati/azure-status', pw)
       .then((r) => r.json())
       .then((d) => {
         if (!d || !d.ok) { stat.textContent = 'Error: ' + ((d && d.error) || 'could not verify'); return; }
@@ -1713,7 +1727,7 @@
       btn.disabled = true;
       btn.textContent = '🎙️ Generating…';
       if (stat) stat.textContent = 'Starting the job on the server…';
-      fetch('/api/maestro/emirati/generate-all?pw=' + encodeURIComponent(pw), {
+      adminFetch('/api/maestro/emirati/generate-all', pw, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ voice: _emAzureVoice }),
       }).then((r) => r.json()).then((d) => {
@@ -1726,7 +1740,7 @@
         // Poll every 3s until cached == total
         if (_emAzurePollT) clearInterval(_emAzurePollT);
         _emAzurePollT = setInterval(() => {
-          fetch('/api/maestro/emirati/azure-status?pw=' + encodeURIComponent(pw))
+          adminFetch('/api/maestro/emirati/azure-status', pw)
             .then((r) => r.json()).then((s) => {
               if (s && s.ok) {
                 if (stat) stat.innerHTML = '🎙️ Generating… <b>' + s.cached + ' / ' + s.total + '</b>';
@@ -1750,7 +1764,7 @@
     const list = $('m-guides-list');
     if (!list) return;
     list.innerHTML = '<div class="m-empty">Loading…</div>';
-    fetch('/api/admin/guides?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/guides', pw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { list.innerHTML = '<div class="m-empty">Could not load.</div>'; return; }
@@ -1767,7 +1781,7 @@
             <button class="btn btn-red btn-sm" data-id="${escapeHtml(g.id)}" type="button">🗑</button>`;
           row.querySelector('button[data-id]').addEventListener('click', () => {
             if (!confirm('Delete this guide?')) return;
-            fetch('/api/admin/guides/' + encodeURIComponent(g.id) + '?pw=' + encodeURIComponent(pw), { method: 'DELETE' })
+            adminFetch('/api/admin/guides/' + encodeURIComponent(g.id), pw, { method: 'DELETE' })
               .then((r) => r.json()).then(() => loadGuidesList());
           });
           list.appendChild(row);
@@ -1788,7 +1802,7 @@
     msg.textContent = 'Uploading…';
     const reader = new FileReader();
     reader.onload = () => {
-      fetch('/api/admin/guides?pw=' + encodeURIComponent(pw), {
+      adminFetch('/api/admin/guides', pw, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, exp, dataBase64: String(reader.result || '') }),
@@ -1814,6 +1828,7 @@
   // Designed to be the foundation for a future "mascot of the day"
   // auto-rotation that fires server-side on login streaks etc.
   const GIF_LIBRARY = [
+    { id: 'dralingo', label: '🐉 Dralingo', url: '/assets/kingdoms/dralingo/anim/hello.webp' },
     { id: 'cr7',    label: '⚽ CR7',     url: '/assets/png-library/CR7%20TRANSPARENT.gif' },
     { id: 'gojo',   label: '👁 Gojo',    url: '/assets/png-library/GOJO%20TRANSPARENT.gif' },
     { id: 'yugi',   label: '🃏 Yugi',    url: '/assets/png-library/YUGI%20TRANSPARENT.gif' },
@@ -1892,7 +1907,7 @@
     _gifPick = ''; _gifChecked = new Set(); _gifOnlineOnly = false; _gifSearch = '';
     $('m-gif-search').value = '';
     $('m-gif-msg').textContent = '';
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { _gifStudents = []; return; }
@@ -1908,16 +1923,26 @@
   // 💾 One-click backup (super-admin). Streams data/*.json as one file.
   const backupBtn = $('m-backup-btn');
   if (backupBtn) backupBtn.addEventListener('click', () => {
-    // Simplest reliable download: navigate to the gated endpoint with the
-    // password in the query. The Content-Disposition header makes the
-    // browser save it instead of rendering.
-    const url = '/api/admin/backup?pw=' + encodeURIComponent(pw);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { try { a.remove(); } catch (_) {} }, 1000);
+    // 🔒 2026-10-11: fetch with the code in the X-Admin-Pw header (a plain link
+    // would have to put it in the URL), then save the file from memory. The
+    // server's Content-Disposition header still names it draly-backup-<date>.json.
+    adminFetch('/api/admin/backup', pw)
+      .then((r) => {
+        if (!r.ok) return r.json().catch(() => ({})).then((d) => { throw new Error((d && d.error) || ('HTTP ' + r.status)); });
+        const m = /filename="?([^";]+)"?/i.exec(r.headers.get('Content-Disposition') || '');
+        return r.blob().then((blob) => ({ blob, name: (m && m[1]) || 'draly-backup.json' }));
+      })
+      .then(({ blob, name }) => {
+        const href = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = href;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { try { a.remove(); } catch (_) {} }, 1000);
+        setTimeout(() => { try { URL.revokeObjectURL(href); } catch (_) {} }, 60000);
+      })
+      .catch((e) => alert('Error: ' + e.message));
   });
 
   // 🎓 2026-06-21 (Fernando) — CLASSROOM MANAGER. Create / rename / delete
@@ -1933,7 +1958,7 @@
   function _renderClassroomList() {
     const box = $('m-classroom-list'); if (!box) return;
     box.innerHTML = '<div style="opacity:.6;text-align:center;padding:8px;">Loading…</div>';
-    fetch('/api/admin/classrooms?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/classrooms', pw)
       .then((r) => r.json())
       .then((data) => {
         const list = (data && data.classrooms) || [];
@@ -1952,7 +1977,7 @@
           row.querySelector('.m-classroom-members').addEventListener('click', () => _openClassroomMembers(c));
           row.querySelector('.m-classroom-save').addEventListener('click', () => {
             const name = row.querySelector('.m-classroom-name').value;
-            fetch('/api/admin/classroom/' + encodeURIComponent(c.id) + '?pw=' + encodeURIComponent(pw), {
+            adminFetch('/api/admin/classroom/' + encodeURIComponent(c.id), pw, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ name }),
             }).then((r) => r.json()).then((res) => {
@@ -1962,7 +1987,7 @@
           });
           row.querySelector('.m-classroom-del').addEventListener('click', () => {
             if (!confirm('Delete the classroom "' + (c.name || '') + '"? The students will become Unassigned (no student is deleted).')) return;
-            fetch('/api/admin/classroom/' + encodeURIComponent(c.id) + '?pw=' + encodeURIComponent(pw), { method: 'DELETE' })
+            adminFetch('/api/admin/classroom/' + encodeURIComponent(c.id), pw, { method: 'DELETE' })
               .then((r) => r.json()).then((res) => { _classroomMsg(res && res.ok ? '✓ Deleted' : 'Could not delete', !!(res && res.ok)); _renderClassroomList(); })
               .catch((e) => _classroomMsg('Error: ' + e.message, false));
           });
@@ -1974,7 +1999,7 @@
   function _createClassroom() {
     const name = ($('m-classroom-new-name').value || '').trim();
     if (!name) { _classroomMsg('Enter a name first', false); return; }
-    fetch('/api/admin/classrooms?pw=' + encodeURIComponent(pw), {
+    adminFetch('/api/admin/classrooms', pw, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     }).then((r) => r.json()).then((res) => {
@@ -1990,7 +2015,7 @@
     const newRow = document.querySelector('.m-classroom-new');
     if (newRow) newRow.style.display = 'none';
     box.innerHTML = '<div style="opacity:.6;text-align:center;padding:10px;">Loading students…</div>';
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         const students = ((data && data.students) || []).slice()
@@ -2021,7 +2046,7 @@
               + '<span>' + escapeHtml(s.displayName || 'Anon') + ' <span style="opacity:.5;">' + escapeHtml(s.code) + '</span>' + elsewhere + '</span>';
             rowL.querySelector('input').addEventListener('change', (e) => {
               const cid = e.target.checked ? classroom.id : '';
-              fetch('/api/admin/student/' + encodeURIComponent(s.code) + '/classroom?pw=' + encodeURIComponent(pw), {
+              adminFetch('/api/admin/student/' + encodeURIComponent(s.code) + '/classroom', pw, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ classroomId: cid }),
               }).then((r) => r.json()).then((res) => {
@@ -2045,7 +2070,7 @@
     const newRow = document.querySelector('.m-classroom-new');
     if (newRow) newRow.style.display = 'none';
     box.innerHTML = '<div style="opacity:.6;text-align:center;padding:10px;">Loading…</div>';
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         const members = ((data && data.students) || []).filter((s) => s.classroomId === classroom.id)
@@ -2077,7 +2102,7 @@
   // room, an old classroom screen) back to their homework profile, so you can
   // re-grab them into a fresh simulation. Reaches them via the 30s heartbeat.
   function _openSendHomePicker() {
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         const online = ((data && data.students) || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
@@ -2117,7 +2142,7 @@
         ov.querySelector('#m-home-go').addEventListener('click', () => {
           const codes = Array.from(listEl.querySelectorAll('input:checked')).map((c) => c.dataset.code).filter(Boolean);
           if (!codes.length) { alert('Select at least one student.'); return; }
-          fetch('/api/admin/broadcast-selected?pw=' + encodeURIComponent(pw), {
+          adminFetch('/api/admin/broadcast-selected', pw, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ studentCodes: codes, text: '📚 Your teacher sent you back to your assignments profile.', actionType: 'gohome', actionUrl: '/homework', actionLabel: 'Go to my assignments →' }),
           }).then((r) => r.json()).then((res) => {
@@ -2144,7 +2169,7 @@
     const board = card.querySelector('#m-home-status');
     const started = Date.now();
     const poll = () => {
-      fetch('/api/admin/gohome-status?pw=' + encodeURIComponent(pw) + '&codes=' + encodeURIComponent(codes.join(',')))
+      adminFetch('/api/admin/gohome-status?codes=' + encodeURIComponent(codes.join(',')), pw)
         .then((r) => r.json())
         .then((d) => {
           const sts = (d && d.statuses) || [];
@@ -2194,7 +2219,7 @@
     const btn = $('m-gif-send');
     btn.disabled = true;
     $('m-gif-msg').textContent = 'Sending…';
-    fetch('/api/admin/gif-push?pw=' + encodeURIComponent(pw), {
+    adminFetch('/api/admin/gif-push', pw, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ studentCodes: Array.from(_gifChecked), animId: _gifPick }),
@@ -2216,7 +2241,7 @@
   // classroom. Super admin gets prompted for the classroomCode (defaults
   // to "1001" — your own); regular teachers auto-target their own.
   $('m-broadcast-btn').addEventListener('click', () => {
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         const self = data && data.self;
@@ -2234,7 +2259,7 @@
           actionUrl = prompt('Link URL (e.g. /player.html?pin=1234):', '/player.html?pin=');
           actionLabel = actionUrl ? prompt('Button text (e.g. "Join now"):', 'Join now') : null;
         }
-        fetch('/api/admin/broadcast?pw=' + encodeURIComponent(pw), {
+        adminFetch('/api/admin/broadcast', pw, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -2281,7 +2306,7 @@
 
   function fetchRoster() {
     $('m-dash-sub').textContent = 'Loading…';
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { $('m-dash-sub').textContent = 'Error: ' + (data && data.error || ''); return; }
@@ -2301,7 +2326,7 @@
   function fetchTeachers() {
     const list = $('m-teachers-list');
     list.innerHTML = '<div class="m-empty">Loading teachers…</div>';
-    fetch('/api/admin/teachers?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/teachers', pw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { list.innerHTML = '<div class="m-empty">Error: ' + (data && data.error || '') + '</div>'; return; }
@@ -2342,7 +2367,7 @@
   }
   function deleteTeacher(teacherId, displayName) {
     if (!confirm(`Delete teacher "${displayName}" (${teacherId})?\n\nTheir students will be orphaned (you can reassign them later).`)) return;
-    fetch('/api/admin/teachers/' + encodeURIComponent(teacherId) + '?pw=' + encodeURIComponent(pw), { method: 'DELETE' })
+    adminFetch('/api/admin/teachers/' + encodeURIComponent(teacherId), pw, { method: 'DELETE' })
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { alert('Error: ' + (data && data.error || '')); return; }
@@ -2368,7 +2393,7 @@
     const levels = lvlSel && lvlSel.value === 'both' ? ['hsk1', 'hsk2']
                  : lvlSel && lvlSel.value === 'hsk2' ? ['hsk2'] : ['hsk1'];
     $('m-new-teacher-msg').textContent = 'Creating…';
-    fetch('/api/admin/teachers?pw=' + encodeURIComponent(pw), {
+    adminFetch('/api/admin/teachers', pw, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ displayName, email: email || null, country: country || null, levels }),
@@ -2562,7 +2587,7 @@
   }
 
   function openDetail(code) {
-    fetch('/api/admin/students/' + encodeURIComponent(code) + '?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students/' + encodeURIComponent(code), pw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { alert('Error: ' + (data && data.error || '')); return; }
@@ -2583,7 +2608,7 @@
         <span class="m-note-item-text">${escapeHtml(n.text)}</span>
         <button class="m-note-del" type="button" aria-label="Delete">🗑</button>`;
       row.querySelector('.m-note-del').addEventListener('click', () => {
-        fetch('/api/admin/student/' + encodeURIComponent(code) + '/note/' + n.ts + '?pw=' + encodeURIComponent(pw), { method: 'DELETE' })
+        adminFetch('/api/admin/student/' + encodeURIComponent(code) + '/note/' + n.ts, pw, { method: 'DELETE' })
           .then((r) => r.json()).then((r) => renderNotes(code, r.notes || []));
       });
       list.appendChild(row);
@@ -2642,7 +2667,7 @@
       if (addBtn) addBtn.addEventListener('click', () => {
         const text = ($('m-note-text').value || '').trim();
         if (!text) return;
-        fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/note?pw=' + encodeURIComponent(pw), {
+        adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/note', pw, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text, grade: $('m-note-grade').value.trim(), month: $('m-note-month').value }),
         }).then((r) => r.json()).then((r) => {
@@ -2658,7 +2683,7 @@
       const n = (data.sentences || []).length;
       if (!n) { alert('This student has no saved sentences.'); return; }
       if (!confirm('Delete the ' + n + ' saved sentences from "' + (data.displayName || data.code) + '"?\n\nThe assignment and exam history is NOT touched. Only the builder sentences.')) return;
-      fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/sentences/clear?pw=' + encodeURIComponent(pw), {
+      adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/sentences/clear', pw, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
       }).then((r) => r.json()).then((r) => {
         if (!r.ok) { alert('Error: ' + (r.error || '')); return; }
@@ -2670,7 +2695,7 @@
     $('m-detail-delete-btn').addEventListener('click', () => {
       if (!confirm(`PERMANENTLY delete "${data.displayName || data.code}" (${data.code})?\n\nTheir entire history is removed. This CANNOT be undone.`)) return;
       if (!confirm('Last confirmation: are you sure you want to delete this student?')) return;
-      fetch('/api/admin/students/' + encodeURIComponent(data.code) + '?pw=' + encodeURIComponent(pw), {
+      adminFetch('/api/admin/students/' + encodeURIComponent(data.code), pw, {
         method: 'DELETE',
       })
         .then((r) => r.json())
@@ -2689,7 +2714,7 @@
     (function _wireClassroomSelect() {
       const sel = $('m-detail-classroom');
       if (!sel) return;
-      fetch('/api/admin/classrooms?pw=' + encodeURIComponent(pw))
+      adminFetch('/api/admin/classrooms', pw)
         .then((r) => r.json())
         .then((cd) => {
           const list = (cd && cd.classrooms) || [];
@@ -2702,7 +2727,7 @@
         })
         .catch(() => { sel.innerHTML = '<option value="">(could not load classrooms)</option>'; });
       sel.addEventListener('change', () => {
-        fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/classroom?pw=' + encodeURIComponent(pw), {
+        adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/classroom', pw, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ classroomId: sel.value }),
         }).then((r) => r.json()).then((res) => {
@@ -2715,7 +2740,7 @@
       const cur = $('m-detail-name').textContent;
       const next = prompt('New name for this student:', cur);
       if (!next || next.trim() === '' || next === cur) return;
-      fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/rename?pw=' + encodeURIComponent(pw), {
+      adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/rename', pw, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName: next.trim() }),
@@ -2730,7 +2755,7 @@
     $('m-detail-send-btn').addEventListener('click', () => {
       const text = prompt(`Message for ${data.displayName}:`, '');
       if (!text || !text.trim()) return;
-      fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/message?pw=' + encodeURIComponent(pw), {
+      adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/message', pw, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text.trim() }),
@@ -2825,7 +2850,7 @@
               ev.stopPropagation();
               ev.preventDefault();
               if (!confirm('Delete this attempt? It will also disappear from the parents\' and student\'s dashboard.')) return;
-              fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/hsk-attempt/delete?pw=' + encodeURIComponent(pw), {
+              adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/hsk-attempt/delete', pw, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ts: r.ts }),
               })
@@ -2856,7 +2881,7 @@
             mistakesLoaded = true;
             mistakeWrap.innerHTML = '<div class="m-hsk-attempt-loading">Loading…</div>';
             const ts = encodeURIComponent(row.dataset.ts);
-            fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/hsk-attempt?pw=' + encodeURIComponent(pw) + '&ts=' + ts)
+            adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/hsk-attempt?ts=' + ts, pw)
               .then((rr) => rr.json())
               .then((d) => {
                 if (!d || !d.ok) {
@@ -3004,7 +3029,7 @@
             const bare = stripTones(chunk).replace(/\s+/g, '');
             return byBare[bare] || chunk;
           });
-          fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/sentence/edit?pw=' + encodeURIComponent(pw), {
+          adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/sentence/edit', pw, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ts: s.ts, words: newWords }),
           }).then((r) => r.json()).then((r) => {
@@ -3018,7 +3043,7 @@
         // and the parent 0→2000 progress bar (rec.sentencesBuilt.length).
         item.querySelector('.m-sent-del').addEventListener('click', () => {
           if (!confirm('Delete this sentence from ' + dateStr + '?\n\nThe change is reflected in the student\'s My Sentences and in the parents\' panel.')) return;
-          fetch('/api/admin/student/' + encodeURIComponent(data.code) + '/sentence/delete?pw=' + encodeURIComponent(pw), {
+          adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/sentence/delete', pw, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ts: s.ts }),
           }).then((r) => r.json()).then((r) => {
@@ -3085,7 +3110,7 @@
     $('m-practice-modal').classList.remove('hidden');
     if (_pracData) { _renderPracSims(); return; }
     $('m-prac-body').textContent = 'Loading…';
-    fetch('/api/hsk-sim-practice?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/hsk-sim-practice', pw)
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { $('m-prac-body').textContent = 'Could not load the sentences.'; return; }
@@ -3401,7 +3426,7 @@
   // Auto-login if we have a saved password
   if (pw) {
     // Validate then mount
-    fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+    adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         if (data && data.ok) {

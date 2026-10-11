@@ -736,6 +736,7 @@
 
   // ── 🎬 Animation overlay (teacher-broadcast via PIN room) ─────────
   const FX_URL = {
+    dralingo: '/assets/kingdoms/dralingo/anim/hello.webp',
     gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
     yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
     freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',

@@ -27,8 +27,9 @@
   if (!pw) return;   // Not logged in — bail silently. Kids see nothing.
 
   // Verify with the server. If the code isn't valid or isn't super admin,
-  // bail silently (no badge).
-  fetch('/api/admin/students?pw=' + encodeURIComponent(pw))
+  // bail silently (no badge). 🔒 2026-10-11: the code goes in the X-Admin-Pw
+  // header (URI-encoded), never in the URL, so it stays out of access logs.
+  fetch('/api/admin/students', { headers: { 'X-Admin-Pw': encodeURIComponent(pw) } })
     .then((r) => r.json())
     .then((data) => {
       if (!data || !data.ok) return;
