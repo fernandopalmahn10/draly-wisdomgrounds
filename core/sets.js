@@ -82,6 +82,8 @@ function listSets() {
 }
 
 function loadSet(id) {
+  // Built-in curriculum packs (core/packs.js): 'pack:yct1-familia-r1'
+  if (typeof id === 'string' && id.startsWith('pack:')) return require('./packs').loadPack(id.slice(5));
   ensureDir();
   // Sanitize id — only allow filename, no traversal
   const safe = path.basename(id);

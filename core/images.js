@@ -26,6 +26,8 @@ function hashSeed(s) {
 }
 
 function urlForQuestion(q) {
+  if (q.image === 'none') return null;                      // pack question with no picture on purpose
+  if (q.image && q.image.startsWith('/assets/')) return q.image;   // our own pictures (Higgsfield packs)
   if (q.image) {
     if (q.image.startsWith('ai:')) {
       return pollinationsUrl(q.image.slice(3));

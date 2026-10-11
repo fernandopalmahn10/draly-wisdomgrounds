@@ -5,10 +5,23 @@
   const $ = (id) => document.getElementById(id);
   const NAMES = { red: 'Reino del Fuego', gold: 'Reino del Mar' };
   const SHORT = { red: 'Fuego', gold: 'Mar' };
+  const A = '/assets/kingdoms/';
   const SFX = {
-    plant: '/assets/kingdoms/plant.ogg', surround: '/assets/kingdoms/surround.ogg',
-    alert: '/assets/kingdoms/castle-alert.ogg', siege: '/assets/kingdoms/siege.ogg', tick: '/assets/kingdoms/tick.ogg',
+    plant: A + 'plant.mp3', surround: A + 'surround.mp3', alert: A + 'castle-alert.mp3', siege: A + 'siege.mp3',
+    tick: A + 'tick.mp3', whoosh: A + 'whoosh.mp3', win: A + 'sting-win.mp3', flag: A + 'flag.mp3',
   };
+  const POSE = (n) => A + 'dralingo/' + n + '.webp';
+  // Recorded music loops (Kenney): lobby → battle → tense final 30 s.
+  let music = null;
+  let musicName = null;
+  function playMusic(name, vol) {
+    if (musicName === name) return;
+    stopMusic();
+    musicName = name;
+    if (muted) return;
+    try { music = new Audio(A + name + '.mp3'); music.loop = true; music.volume = vol || 0.4; music.play().catch(() => {}); } catch (_) {}
+  }
+  function stopMusic() { if (music) { try { music.pause(); } catch (_) {} } music = null; musicName = null; }
 
   let pin = null;
   let state = null;
@@ -31,13 +44,18 @@
   $('mute-btn').addEventListener('click', () => {
     muted = window.toggleMute ? window.toggleMute() : !muted;
     $('mute-btn').textContent = muted ? '🔇 Sin sonido' : '🔊 Sonido';
+    if (muted) stopMusic();
+    else if (!$('screen-lobby').classList.contains('hidden')) playMusic('music-lobby', 0.35);
   });
-  document.addEventListener('click', () => window.unlockAudio && window.unlockAudio(), { once: true });
+  document.addEventListener('click', () => {
+    if (window.unlockAudio) window.unlockAudio();
+    if (!$('screen-lobby').classList.contains('hidden')) playMusic('music-lobby', 0.35);   // browsers need a first click
+  }, { once: true });
 
   // ---------- room ----------
   const params = new URLSearchParams(location.search);
   const setId = params.get('setId');
-  if (!setId) { location.href = '/sets.html?game=kingdoms'; return; }
+  if (!setId) { location.href = '/packs.html?game=kingdoms'; return; }
 
   socket.emit('host:create', { gameType: 'kingdoms' }, ({ pin: p }) => {
     pin = p;
@@ -49,7 +67,7 @@
     socket.emit('host:load-set', { pin, setId }, (resp) => {
       if (!resp || !resp.ok) {
         alert('No se pudo cargar la serie de preguntas: ' + ((resp && resp.error) || 'desconocido'));
-        location.href = '/sets.html?game=kingdoms';
+        location.href = '/packs.html?game=kingdoms';
         return;
       }
       $('set-display').textContent = `📚 ${resp.title} · ${resp.count} preguntas`;
@@ -70,9 +88,9 @@
     if (confirm('¿Terminar la ronda ahora?')) socket.emit('host:end-now', { pin });
   });
   $('play-again-btn').addEventListener('click', () => {
-    MochiSounds.stopEndMusic && MochiSounds.stopEndMusic();
     socket.emit('host:reset', { pin });
     showScreen('lobby');
+    playMusic('music-lobby', 0.35);
   });
   // Wifi blip on the projector: socket.io reconnects with a NEW socket; reclaim the same room so the board,
   // the end of the round and the teacher buttons keep working (the server re-sends kd:init mid-round).
@@ -119,13 +137,13 @@
   // ---------- countdown ----------
   socket.on('countdown', () => {
     showScreen('countdown');
-    MochiSounds.startGameTheme && MochiSounds.startGameTheme('kingdoms');
+    stopMusic();
     let n = 3;
     const num = $('countdown-num');
     const tick = () => {
       num.style.animation = 'none'; void num.offsetWidth; num.style.animation = '';
-      if (n > 0) { num.textContent = n; MochiSounds.countdownNum && MochiSounds.countdownNum(); n--; setTimeout(tick, 900); }
-      else { num.textContent = '¡A conquistar!'; num.style.fontSize = '7rem'; MochiSounds.go && MochiSounds.go(); setTimeout(() => { num.style.fontSize = ''; showScreen('active'); startTimer(); }, 900); }
+      if (n > 0) { num.textContent = n; sfx('tick', 0.9); n--; setTimeout(tick, 900); }
+      else { num.textContent = '¡A conquistar!'; num.style.fontSize = '7rem'; sfx('whoosh', 0.9); setTimeout(() => { num.style.fontSize = ''; showScreen('active'); startTimer(); playMusic('music-battle', 0.32); }, 900); }
     };
     tick();
   });
@@ -138,7 +156,7 @@
     board = KdBoard.create($('board'), boardData, own, { grass: '/assets/kingdoms/grass.png', castle: '/assets/kingdoms/castle.png' });
     updateScores(d.teamScores);
     renderRosters();
-    say('¡Que empiece la conquista! Respondan bien para ganar banderas 🚩');
+    say('¡Que empiece la conquista! Respondan bien para ganar banderas 🚩', 'flag');
   });
 
   socket.on('kd:plant', (d) => {
@@ -158,20 +176,20 @@
     if (nf >= 1) {
       sfx('surround', 0.7);
       banner(`¡${d.by} rodeó ${nf === 1 ? '1 casilla' : nf + ' casillas'}! 🔁`, d.team);
-      if (nf >= 3) say(`¡Increíble, ${d.by}! El ${NAMES[d.team]} encerró ${nf} casillas de golpe.`);
+      if (nf >= 3) say(`¡Increíble, ${d.by}! El ${NAMES[d.team]} encerró ${nf} casillas de golpe.`, 'jump');
     }
     (d.events || []).forEach((ev) => {
       if (ev.type === 'castle-alert') {
         sfx('alert', 0.7);
         banner(`🏰 ¡El castillo del ${SHORT[ev.team]} está casi rodeado!`, ev.team === 'red' ? 'gold' : 'red');
-        say(`¡Cuidado, ${NAMES[ev.team]}! Defiendan su castillo.`);
+        say(`¡Cuidado, ${NAMES[ev.team]}! Defiendan su castillo.`, 'shocked');
       } else if (ev.type === 'siege') {
         sfx('siege', 0.8);
         banner(`⚔️ ¡Asedio! ${NAMES[ev.by]} +${ev.bonus} casillas`, ev.by);
-        say(`¡Asedio total! El ${NAMES[ev.by]} rodeó el castillo enemigo.`);
+        say(`¡Asedio total! El ${NAMES[ev.by]} rodeó el castillo enemigo.`, 'champion');
         bigBurst(ev.by);
       } else if (ev.type === 'lead' && ev.team) {
-        say(`¡El ${NAMES[ev.team]} pasa al frente!`);
+        say(`¡El ${NAMES[ev.team]} pasa al frente!`, 'pointing');
       }
     });
     updateScores(d.teamScores);
@@ -225,7 +243,7 @@
       const sec = Math.ceil(left / 1000);
       $('timer-display').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
       if (sec === 60 && !warned[60]) { warned[60] = 1; banner('⏱ ¡Queda 1 minuto!'); }
-      if (sec === 30 && !warned[30]) { warned[30] = 1; banner('⏱ ¡Quedan 30 segundos!'); say('¡Últimos 30 segundos! Rodeen todo lo que puedan.'); }
+      if (sec === 30 && !warned[30]) { warned[30] = 1; banner('⏱ ¡Quedan 30 segundos!'); say('¡Últimos 30 segundos! Rodeen todo lo que puedan.', 'countdown'); playMusic('music-final', 0.42); }
       if (sec <= 10 && sec > 0 && !warned['t' + sec]) { warned['t' + sec] = 1; sfx('tick', 0.5); $('timer-display').classList.add('urgent'); }
       if (sec > 10) $('timer-display').classList.remove('urgent');
     }, 250);
@@ -234,7 +252,7 @@
   // ---------- end ----------
   socket.on('game-end', (d) => {
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-    MochiSounds.stopMusic && MochiSounds.stopMusic();
+    stopMusic();
     hideDralingo();
     showScreen('win');
     const r = d.teamScores.red || 0;
@@ -247,14 +265,13 @@
       win.className = 'kd-winner ' + d.winner;
       const gap = Math.abs(r - g);
       $('win-why').textContent = gap <= 3 ? `El imperio más grande, por solo ${gap === 1 ? '1 casilla' : gap + ' casillas'}` : `El imperio más grande del mapa: ${Math.max(r, g)} casillas`;
-      MochiSounds.winMusic && MochiSounds.winMusic();
-      setTimeout(() => MochiSounds.winFanfare && MochiSounds.winFanfare(), 400);
+      sfx('win', 0.9);
       confetti(d.winner);
     } else {
       win.textContent = '¡Empate de reinos!';
       win.className = 'kd-winner';
       $('win-why').textContent = `Los dos reinos terminaron con ${r} casillas`;
-      MochiSounds.tieMusic && MochiSounds.tieMusic();
+      sfx('win', 0.6);
     }
     const lb = $('leaderboard');
     lb.innerHTML = '';
@@ -287,11 +304,12 @@
   }
   let sayTimer = null;
   let lastSay = 0;
-  function say(text) {
+  function say(text, pose) {
     const now = Date.now();
     if (now - lastSay < 2500) return;      // one line at a time, never a wall of chatter
     lastSay = now;
     $('dralingo-say').textContent = text;
+    $('dralingo-img').src = POSE(pose || 'pointing');
     $('dralingo').classList.add('show');
     clearTimeout(sayTimer);
     sayTimer = setTimeout(hideDralingo, 4200);

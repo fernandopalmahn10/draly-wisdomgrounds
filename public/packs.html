@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Elegir preguntas · Draly Wisdom Grounds</title>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink: #1d2440; --soft: #55607f; --paper: #fff7e3; --gold: #ffc93c; }
+    body { margin: 0; min-height: 100vh; font-family: 'Nunito', sans-serif; color: var(--ink);
+      background: linear-gradient(180deg, #9fdcf7 0%, #c6ecfb 55%, #ffd6e2 100%); }
+    main { max-width: 980px; margin: 0 auto; padding: 22px 18px 60px; }
+    .top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .game { display: flex; align-items: center; gap: 10px; }
+    .game-emoji { font-size: 2.4rem; }
+    h1 { font-family: 'Baloo 2', sans-serif; margin: 0; font-size: 2.2rem; line-height: 1; }
+    .crumbs { margin: 14px 0 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-weight: 800; }
+    .crumbs button { font: inherit; background: none; border: 0; color: var(--soft); cursor: pointer; padding: 2px 4px; text-decoration: underline; }
+    .crumbs span.sep { color: var(--soft); }
+    h2 { font-family: 'Baloo 2', sans-serif; font-size: 1.6rem; margin: 6px 0 14px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+    .tile { font: inherit; text-align: left; cursor: pointer; background: var(--paper); border: 4px solid var(--ink); border-radius: 22px;
+      padding: 16px; box-shadow: 0 6px 0 var(--ink); transition: transform .08s, box-shadow .08s; min-height: 120px; color: var(--ink); }
+    .tile:hover { transform: translateY(-2px); }
+    .tile:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
+    .tile:focus-visible { outline: 4px solid var(--gold); outline-offset: 3px; }
+    .tile .emo { font-size: 2.6rem; line-height: 1; }
+    .tile .name { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 1.45rem; line-height: 1.1; margin-top: 8px; }
+    .tile .meta { color: var(--soft); font-weight: 700; margin-top: 4px; }
+    .tile.ready { background: var(--gold); }
+    .tile.off { opacity: .55; cursor: not-allowed; box-shadow: 0 3px 0 var(--ink); }
+    .legacy { margin-top: 28px; text-align: center; font-weight: 700; color: var(--soft); }
+    .legacy a { color: var(--ink); }
+    .back { font: inherit; font-weight: 800; background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; padding: 6px 14px; cursor: pointer; }
+  </style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <button class="back" onclick="location.href='/games.html'">← Juegos</button>
+    <div class="game"><span class="game-emoji" id="game-emoji">🎮</span><h1 id="game-name">Elige las preguntas</h1></div>
+  </div>
+  <nav class="crumbs" id="crumbs" aria-label="Dónde estás"></nav>
+  <h2 id="step-title">¿Qué examen?</h2>
+  <div class="grid" id="grid"></div>
+  <p class="legacy">¿Buscas una serie que subiste tú? <a id="legacy-link" href="/sets.html">Ver series subidas</a></p>
+</main>
+<script>
+  // Curriculum picker: family → level → world → round → opens the game's host page with that question pack.
+  const GAMES = {
+    'kingdoms':   { emoji: '🏰', name: 'Reinos de Colores', host: '/host-kingdoms.html' },
+    'mochi-mash': { emoji: '🥮', name: 'Mochi Mash', host: '/host.html' },
+    'pinata':     { emoji: '🐯', name: 'Piñata Tigre', host: '/host-pinata.html' },
+    'dragon-eye': { emoji: '🐉', name: 'Vuelo del Dragón', host: '/host-dragon.html' },
+    'monopoly':   { emoji: '🏯', name: 'Dàfùwēng · Monopolio', host: '/host-monopoly.html' },
+  };
+  const game = new URLSearchParams(location.search).get('game') || 'kingdoms';
+  const info = GAMES[game] || GAMES.kingdoms;
+  document.getElementById('game-emoji').textContent = info.emoji;
+  document.getElementById('game-name').textContent = info.name;
+  document.getElementById('legacy-link').href = '/sets.html?game=' + encodeURIComponent(game);
+
+  let tree = [];
+  const path = [];          // chosen nodes: family, level, world
+  const $ = (id) => document.getElementById(id);
+
+  function tile({ emoji, name, meta, ready, off, onClick }) {
+    const b = document.createElement('button');
+    b.className = 'tile' + (ready ? ' ready' : '') + (off ? ' off' : '');
+    b.disabled = !!off;
+    const e = document.createElement('div'); e.className = 'emo'; e.textContent = emoji || '📚';
+    const n = document.createElement('div'); n.className = 'name'; n.textContent = name;
+    const m = document.createElement('div'); m.className = 'meta'; m.textContent = meta || '';
+    b.append(e, n, m);
+    if (!off) b.addEventListener('click', onClick);
+    return b;
+  }
+  const countRounds = (w) => (w.rounds || []).length;
+  const levelReady = (l) => (l.worlds || []).some(countRounds);
+
+  function render() {
+    const grid = $('grid');
+    grid.innerHTML = '';
+    const crumbs = $('crumbs');
+    crumbs.innerHTML = '';
+    const names = ['Exámenes'].concat(path.map((p) => p.name));
+    names.forEach((n, i) => {
+      if (i) { const s = document.createElement('span'); s.className = 'sep'; s.textContent = '›'; crumbs.appendChild(s); }
+      const b = document.createElement('button');
+      b.textContent = n;
+      b.addEventListener('click', () => { path.length = i; render(); });
+      crumbs.appendChild(b);
+    });
+
+    if (path.length === 0) {
+      $('step-title').textContent = '¿Qué examen?';
+      tree.forEach((f) => {
+        const ready = (f.levels || []).some(levelReady);
+        grid.appendChild(tile({ emoji: f.emoji, name: f.name, meta: ready ? f.blurb : 'Próximamente', off: !ready, onClick: () => { path.push(f); render(); } }));
+      });
+    } else if (path.length === 1) {
+      $('step-title').textContent = '¿Qué nivel?';
+      path[0].levels.forEach((l) => {
+        const ready = levelReady(l);
+        grid.appendChild(tile({ emoji: '⭐', name: l.name, meta: ready ? `${l.worlds.filter(countRounds).length} mundos listos` : 'Próximamente', off: !ready, onClick: () => { path.push(l); render(); } }));
+      });
+    } else if (path.length === 2) {
+      $('step-title').textContent = '¿Qué mundo?';
+      path[1].worlds.forEach((w) => {
+        const n = countRounds(w);
+        grid.appendChild(tile({ emoji: w.emoji, name: w.name, meta: n ? (n === 1 ? '1 ronda' : `${n} rondas`) : 'Próximamente', off: !n, onClick: () => { path.push(w); render(); } }));
+      });
+    } else {
+      $('step-title').textContent = '¿Qué ronda?';
+      path[2].rounds.forEach((r) => {
+        grid.appendChild(tile({ emoji: '🚀', name: r.name, meta: r.blurb || '', ready: true,
+          onClick: () => { location.href = info.host + '?setId=' + encodeURIComponent(r.setId); } }));
+      });
+    }
+  }
+
+  fetch('/api/packs').then((r) => r.json()).then((d) => { tree = d.families || []; render(); })
+    .catch(() => { $('step-title').textContent = 'No se pudo cargar la lista. Recarga la página.'; });
+</script>
+</body>
+</html>

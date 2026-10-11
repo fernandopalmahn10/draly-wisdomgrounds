@@ -15,6 +15,12 @@ the checklist for any new game mode.
 - **i18n**: `/homework` has an ES→EN toggle driven by a dictionary (`public/js/hw-i18n.js`, `var DICT =`). Every new
   student-facing Spanish string must be added there (and bump its `?v=` in homework.html) or it stays Spanish in EN mode.
 - Never commit secrets (`.render-token`, credentials JSON, `data/*` runtime files with student data).
+- **Deleting a CSS/JS file?** First list every class/selector it defines and grep the remaining pages for them; shared
+  rules hide in game files (2026-10-10: the avatar picker, timer pulse and music chip lived in zombie/triage/color-clash
+  css and broke every lobby). Bot playtests can't see styling: also screenshot a lobby + question screen.
+- Question packs follow the curriculum (`core/packs.js` → picker `/packs.html?game=…`): test family → level → world →
+  round. Pictures come from Higgsfield (Nano Banana Pro, Unlimited ON) in his Chrome, saved to `assets-library/higgsfield/`,
+  web copies in `public/assets/packs/<level>/<world>/`. Pinyin without tone marks in games.
 - Asset packs (Kenney etc.) live in `C:\Users\ferpa\ClaudeCode\assets-library\` (not in git, never served). Copy only
   the files a game uses into `public/assets/<game>/` and commit those; never commit a whole pack or an installer.
 - Spanish UI first; "Chino Mandarín"; big buttons, kid-friendly feedback; encouragement at the screen edge, never blocking play.
