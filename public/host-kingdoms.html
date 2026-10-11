@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Reinos de Colores · Anfitrión</title>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/kingdoms.css?v=20261010b">
+  <link rel="stylesheet" href="/css/kingdoms.css?v=20261011a">
 </head>
 <body class="kd-bg">
   <button class="kd-mute" id="mute-btn">🔊 Sonido</button>
@@ -16,6 +16,7 @@
     <p class="kd-sub">Responde bien, gana una bandera y pinta el mapa con el color de tu reino.</p>
 
     <div class="kd-pin-card">
+      <img class="kd-pin-pose" src="/assets/kingdoms/dralingo/jump.webp" alt="">
       <div>
         <div class="kd-pin-label">PIN</div>
         <div class="kd-pin" id="pin-display">····</div>
@@ -102,13 +103,13 @@
   </main>
 
   <div class="kd-dralingo" id="dralingo">
-    <img src="/assets/kingdoms/dralingo.webp" alt="Dralingo">
+    <img id="dralingo-img" src="/assets/kingdoms/dralingo/flag.webp" alt="Dralingo">
     <div class="kd-bubble" id="dralingo-say">¡Que empiece la conquista!</div>
   </div>
 
   <!-- END -->
   <main id="screen-win" class="kd-end hidden">
-    <div class="kd-crown">👑</div>
+    <img class="kd-crown" id="win-pose" src="/assets/kingdoms/dralingo/champion.webp" alt="">
     <div class="kd-winner" id="win-banner">¡Gana el Reino del Fuego!</div>
     <div class="kd-why" id="win-why">El reino más grande del mapa</div>
     <div class="kd-final">
@@ -124,8 +125,8 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js"></script>
-  <script src="/js/kingdoms-board.js?v=20261010b"></script>
-  <script src="/js/host-kingdoms.js?v=20261010b"></script>
+  <script src="/js/kingdoms-board.js?v=20261011a"></script>
+  <script src="/js/host-kingdoms.js?v=20261011a"></script>
   <script src="/js/live-game.js?v=20260604q"></script>
 </body>
 </html>

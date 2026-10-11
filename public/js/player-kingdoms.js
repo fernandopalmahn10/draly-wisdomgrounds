@@ -18,6 +18,7 @@
   function init(c) {
     ctx = c;
     const s = c.socket;
+    if (window.KingdomsSkin) window.KingdomsSkin.init(c);
     s.on('kd:init', (d) => {
       ended = false;
       boardData = d.board;
@@ -66,7 +67,7 @@
       Object.assign(document.createElement('small'), { textContent: 'Toca una casilla con 🚩' }),
       Object.assign(document.createElement('span'), { className: 'kdp-team ' + team, textContent: team === 'red' ? 'Reino del Fuego' : 'Reino del Mar' }),
     );
-    $('kdp-flags').textContent = (p.flags || 1) > 1 ? '🚩🚩' : '🚩';
+    $('kdp-flags').innerHTML = '<img class="kdp-flag-pose" alt="" src="/assets/kingdoms/dralingo/flag.webp">' + ((p.flags || 1) > 1 ? '<b>×2</b>' : '');
     $('kdp-done').textContent = (p.flags || 1) > 1 ? '¡Bandera doble por 3 aciertos seguidos!' : '';
     if (!view) view = KdBoard.create($('kdp-board'), boardData, own, { grass: '/assets/kingdoms/grass.png', castle: '/assets/kingdoms/castle.png' });
     else Object.keys(view.nodes).forEach((id) => view.set(+id, own[id] || null));
@@ -79,7 +80,7 @@
       view.targets([], null);
       view.set(tile, team, 'pop');          // instant feedback; the server's kd:plant confirms or repaints it
       $('kdp-done').textContent = '🚩 …';
-      if (window.MochiSounds && MochiSounds.correct) MochiSounds.correct();
+      if (window.KingdomsSkin) window.KingdomsSkin.sfx('plant', 0.8);
       ctx.socket.emit('player:kd-plant', { pin: ctx.getPin(), tile });
       stopRing();
       active();

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Pick a Game · Draly Wisdomgrounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20261010a">
+  <link rel="stylesheet" href="/css/styles.css?v=20261011a">
   <link rel="stylesheet" href="/css/dralingo.css">
 </head>
 <body class="hub-bg">
@@ -235,19 +235,19 @@
       document.getElementById('set-name').textContent = 'elige un juego, luego una serie';
       document.querySelectorAll('.game-card-play').forEach((b) => b.textContent = b.textContent.replace('▶ Play', '▶ Elegir'));
       document.querySelector('#card-mochi .game-card-play').onclick = () => {
-        location.href = '/sets.html?game=mochi-mash';
+        location.href = '/packs.html?game=mochi-mash';
       };
       document.querySelector('#card-pinata .game-card-play').onclick = () => {
-        location.href = '/sets.html?game=pinata';
+        location.href = '/packs.html?game=pinata';
       };
       document.querySelector('#card-dragon .game-card-play').onclick = () => {
-        location.href = '/sets.html?game=dragon-eye';
+        location.href = '/packs.html?game=dragon-eye';
       };
       document.querySelector('#card-monopoly .game-card-play').onclick = () => {
-        location.href = '/sets.html?game=monopoly';
+        location.href = '/packs.html?game=monopoly';
       };
       document.querySelector('#card-kingdoms .game-card-play').onclick = () => {
-        location.href = '/sets.html?game=kingdoms';
+        location.href = '/packs.html?game=kingdoms';
       };
       // 6-7 SWING — skip sets entirely, jump straight to host
       document.querySelector('#card-sixseven .game-card-play').onclick = () => {

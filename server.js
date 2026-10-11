@@ -3762,6 +3762,9 @@ app.get('/homework', (req, res) => {
 const serverStartTime = new Date().toISOString();
 
 // ---- Question Sets API ----
+// Curriculum picker tree: family → level → world → round (core/packs.js)
+app.get('/api/packs', (req, res) => res.json({ families: require('./core/packs').catalog() }));
+
 app.get('/api/sets', (req, res) => {
   try {
     res.json({ sets: Sets.listSets() });
