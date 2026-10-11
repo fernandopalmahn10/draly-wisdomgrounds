@@ -15,6 +15,10 @@
   let team = null;
   let myName = '';
   let currentQid = null;
+  // Reinos de Colores phone module (public/js/player-kingdoms.js); showScreen is hoisted.
+  if (window.KingdomsPhone) {
+    window.KingdomsPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
+  }
   // (legacy timer kept for any reference; bulletproof flow below replaces it)
 
   // === Global stuck-watchdog ===
@@ -344,6 +348,7 @@
       'pinata':      'pinata-smash',
       'dragon-eye':  'dragon-flap',
       'monopoly':    'monopoly-roll',
+      'kingdoms':    'question',
     };
     const target = screenForType[gt];
     if (target) showScreen(target);
@@ -929,6 +934,9 @@
     } else if (gameType === 'sixseven') {
       teamLabel = isRed ? 'Equipo 6 🟦' : 'Equipo 7 🟪';
       teamMascot = isRed ? '6' : '7';
+    } else if (gameType === 'kingdoms') {
+      teamLabel = isRed ? 'Reino del Fuego' : 'Reino del Mar';
+      teamMascot = isRed ? '🔥' : '🌊';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
@@ -2784,7 +2792,7 @@
     });
   });
 
-  socket.on('answer-result', ({ correct, mashUntil, correctText, dragonDot, dragonAim, dragonAimMs, points, monopoly, sixseven }) => {
+  socket.on('answer-result', ({ correct, mashUntil, correctText, dragonDot, dragonAim, dragonAimMs, points, monopoly, sixseven, kingdoms }) => {
     markActivity();
     clearAnswerHeartbeat();
     hideSendingOverlay();
@@ -2833,6 +2841,9 @@
       } else if (gameType === 'monopoly') {
         happyMascot = '🎲';
         sub = '¡A lanzar el dado!';
+      } else if (gameType === 'kingdoms') {
+        happyMascot = '🚩';
+        sub = kingdoms && kingdoms.flags > 1 ? '¡Bandera doble! Plántalas en el mapa' : '¡Ganaste una bandera!';
       } else {
         happyMascot = team === 'red' ? '🐼' : '🦊';
         sub = '¡Alimenta a tu equipo! ⚡';
@@ -2860,6 +2871,8 @@
           if (monopoly && monopoly.needsRoll) {
             startMonopolyRoll(monopoly.money || 0);
           }
+        } else if (gameType === 'kingdoms') {
+          if (kingdoms && kingdoms.needsPlant && window.KingdomsPhone) window.KingdomsPhone.prompt(kingdoms);
         } else if (gameType === 'sixseven') {
           // Sixseven handles its own screen via the dedicated handler.
           showScreen('sixseven');
@@ -4123,6 +4136,7 @@
   }
 
   socket.on('game-end', (data) => {
+    if (window.KingdomsPhone) window.KingdomsPhone.stop();
     MochiSounds.stopMusic();
     if (MochiSounds.stopGameTheme) MochiSounds.stopGameTheme();
     // After Modo Maestro (warmup), kids skip the "Empate épico / Inicio"
@@ -4157,8 +4171,8 @@
       $('end-banner').className = 'winner-banner tie';
       MochiSounds.tieMusic();
     } else if (won) {
-      $('end-emoji').textContent = team === 'red' ? '🐼' : '🦊';
-      $('end-banner').textContent = '¡Victoria!';
+      $('end-emoji').textContent = gameType === 'kingdoms' ? (team === 'red' ? '🔥👑' : '🌊👑') : (team === 'red' ? '🐼' : '🦊');
+      $('end-banner').textContent = gameType === 'kingdoms' ? '¡Tu reino ganó!' : '¡Victoria!';
       $('end-banner').className = `winner-banner ${team}`;
       MochiSounds.winMusic();
       setTimeout(() => MochiSounds.winFanfare(), 400);
@@ -4226,7 +4240,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'wu', 'rd', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'kd-plant', 'wu', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

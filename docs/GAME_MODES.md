@@ -102,7 +102,7 @@ copy belongs on the player's phone.
 
 ## Status (2026-10-10)
 
-Live modes: **Mochi Mash** (`mochi-mash`), **Piñata Tigre** (`pinata`), **Vuelo del Dragón** (`dragon-eye`),
+Live modes: **Reinos de Colores** (`kingdoms`, built 2026-10-10, spec `docs/specs/reinos-de-colores.md`), **Mochi Mash** (`mochi-mash`), **Piñata Tigre** (`pinata`), **Vuelo del Dragón** (`dragon-eye`),
 **Dàfùwēng · Monopolio Chino** (`monopoly`), **6-7 Swing** (`sixseven`) — all queued for an overhaul — plus the class
 tools Warm-up (`warmup`), Lectura (`reading`) and the HSK/YCT sim rooms (`hsksim`).
 
@@ -110,5 +110,5 @@ Retired 2026-10-10 by his decision (code removed; recover from git history at co
 needed): Market Quest, Market Clash, Clase de Caligrafía, Flappy Dragon, Zombie Escape, Mi Familia, Reinos en Guerra,
 Triage ER, Lái-Qù-Huí, Shéi Shì?, Hóngbāo Run.
 
-Next: «Reinos de Colores» (`docs/specs/reinos-de-colores.md`). Build any new or overhauled mode with the
+Build any new or overhauled mode with the
 `new-pin-game` skill and pass `node scripts/playtest-bots.js --game <type> --bots 20` before it ships.

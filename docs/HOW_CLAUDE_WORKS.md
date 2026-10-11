@@ -45,7 +45,7 @@ modes, 12 official test simulations.
 
 ## 2. Everything on the platform
 
-### 2.1 Live PIN games (5 games + 3 class tools)
+### 2.1 Live PIN games (6 games + 3 class tools)
 
 The teacher opens a game on the big screen, kids join with the PIN on phones or tablets, and
 everyone plays at once. On 2026-10-10 he retired 11 older games to make room for a new generation;
@@ -54,6 +54,7 @@ skill and must pass the bot playtest (`scripts/playtest-bots.js`) before shippin
 
 | Game | What it is |
 |---|---|
+| **Reinos de Colores** | Kahoot «Color Kingdoms» rebuilt and improved: right answer = a flag the kid plants on a hex map from the phone; surround zones to flip them, steal tiles, besiege the enemy castle; Dralingo announces, territory tug bar on the projector |
 | **Mochi Mash** | The first game: panda vs kitsune teams tap-battle on quiz answers |
 | **Piñata Tigre** | Two-tiger team smash |
 | **Vuelo del Dragón** (Dragon's Eye) | Vertical flight platformer, swipe up |

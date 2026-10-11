@@ -242,6 +242,7 @@
           });
       },
     },
+    { id: 'kingdoms',  label: 'Reinos de Colores',  emoji: '🏰', blurb: 'Plant flags, conquer the map', launch: (ctx) => _genericLaunch(ctx, '/host-kingdoms.html', '/player.html') },
     { id: 'sixseven',  label: '6-7 Swing',          emoji: '🤙', blurb: 'Fast math + Chinese numbers',    launch: (ctx) => _genericLaunch(ctx, '/host-sixseven.html', '/player.html') },
     { id: 'monopoly',  label: 'Dàfùwēng · Monopolio Chino', emoji: '🏯', blurb: 'Chinese Monopoly board',         launch: (ctx) => _genericLaunch(ctx, '/host-monopoly.html', '/player.html') },
     { id: 'mochi',     label: 'Mochi Mash',         emoji: '🍡', blurb: 'Classic vocab mash',           launch: (ctx) => _genericLaunch(ctx, '/host.html',          '/player.html') },
