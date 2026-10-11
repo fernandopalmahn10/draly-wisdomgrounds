@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Reinos de Colores · Anfitrión</title>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/kingdoms.css?v=20261011e">
+  <link rel="stylesheet" href="/css/kingdoms.css?v=20261011g">
 </head>
-<body class="kd-bg">
+<body class="kd-bg kd-dubai">
   <button class="kd-mute" id="mute-btn">🔊 Sonido</button>
 
   <!-- LOBBY -->
-  <main id="screen-lobby" class="kd-lobby">
+  <main id="screen-lobby" class="kd-lobby pc-lobby">
     <h1 class="kd-title kd-display">Reinos de Colores</h1>
-    <p class="kd-sub">Responde bien, gana una bandera y pinta el mapa con el color de tu reino.</p>
+    <p class="kd-sub">Responde bien, planta tu bandera y conquista Dubái con tu reino.</p>
 
     <div class="kd-pin-card">
       <img class="kd-pin-pose" src="/assets/kingdoms/dralingo/jump.webp" alt="">
@@ -59,16 +59,23 @@
     </div>
     <div class="kd-set" id="set-display">Cargando preguntas…</div>
 
-    <div class="kd-how">
-      <p>🚩 Cada respuesta correcta te da una bandera. Plántala en una casilla que brille junto a tu reino.</p>
-      <p>🔁 Rodea una zona y todas sus casillas se vuelven de tu color. También puedes quitarle casillas al otro reino.</p>
-      <p>🏰 Encierra el castillo enemigo para ganar 5 casillas extra. Tres aciertos seguidos = bandera doble.</p>
-      <p>👑 Al final gana el reino más grande.</p>
-    </div>
+    <!-- Same three steps the phones show in their lobby (kids don't read: big pictures, few words). -->
+    <ol class="pc-howto">
+      <li><span class="pc-howto-ico">✅ → 🚩</span><b>Responde bien</b><small>y ganas una bandera</small></li>
+      <li><span class="pc-howto-ico kd-hex-ico"><i></i></span><b>Toca una casilla que brilla</b><small>junto a tu reino: ¡ya es tuya!</small></li>
+      <li class="dubai"><span class="pc-howto-ico kd-lm-row">
+        <img src="/assets/kingdoms/landmarks/burj.webp" alt=""><img src="/assets/kingdoms/landmarks/arab.webp" alt=""><img src="/assets/kingdoms/landmarks/museum.webp" alt=""><img src="/assets/kingdoms/landmarks/frame.webp" alt=""><img src="/assets/kingdoms/landmarks/atlantis.webp" alt="">
+      </span><b>Conquista Dubái</b><small>gana los monumentos: +3 · el Burj Khalifa +5</small></li>
+    </ol>
+    <p class="pc-howto-extra">🔁 Rodea una zona y es tuya · 🏰 Rodea el castillo enemigo: +5 · 3 aciertos seguidos = bandera doble · 👑 Gana el reino con más puntos</p>
   </main>
 
-  <!-- COUNTDOWN -->
-  <div id="screen-countdown" class="kd-count hidden"><div class="kd-count-num" id="countdown-num">3</div></div>
+  <!-- COUNTDOWN: the two captains of this round face off, TikTok-battle style -->
+  <div id="screen-countdown" class="kd-count hidden">
+    <div class="kd-cap red" id="cap-red"><img id="cap-red-img" alt=""><div class="kd-cap-tag"><b id="cap-red-name"></b><span>Reino del Fuego</span></div></div>
+    <div class="kd-count-num" id="countdown-num">3</div>
+    <div class="kd-cap gold" id="cap-gold"><img id="cap-gold-img" alt=""><div class="kd-cap-tag"><b id="cap-gold-name"></b><span>Reino del Mar</span></div></div>
+  </div>
 
   <!-- ACTIVE -->
   <main id="screen-active" class="kd-arena hidden">
@@ -84,14 +91,16 @@
 
     <div class="kd-main">
       <aside class="kd-side red">
-        <div class="kd-side-name">Reino del Fuego</div>
-        <div class="kd-side-tiles"><span id="tiles-red">7</span> <small>casillas</small></div>
+        <div class="kd-side-head"><img class="kd-side-cap" id="side-cap-red" alt=""><div><div class="kd-side-name">Reino del Fuego</div><div class="kd-side-capname" id="side-capname-red"></div></div></div>
+        <div class="kd-side-tiles"><span id="tiles-red">7</span> <small>puntos</small></div>
+        <div class="kd-side-lms" id="lms-red"></div>
         <ul class="kd-roster" id="roster-red"></ul>
       </aside>
       <div class="kd-board-wrap"><svg class="kd-board" id="board" role="img" aria-label="Mapa de los reinos"></svg></div>
       <aside class="kd-side gold">
-        <div class="kd-side-name">Reino del Mar</div>
-        <div class="kd-side-tiles"><span id="tiles-gold">7</span> <small>casillas</small></div>
+        <div class="kd-side-head"><img class="kd-side-cap" id="side-cap-gold" alt=""><div><div class="kd-side-name">Reino del Mar</div><div class="kd-side-capname" id="side-capname-gold"></div></div></div>
+        <div class="kd-side-tiles"><span id="tiles-gold">7</span> <small>puntos</small></div>
+        <div class="kd-side-lms" id="lms-gold"></div>
         <ul class="kd-roster" id="roster-gold"></ul>
       </aside>
     </div>
@@ -107,14 +116,25 @@
     <div class="kd-bubble" id="dralingo-say">¡Que empiece la conquista!</div>
   </div>
 
+  <!-- Landmark conquered: the piece flies to the front of the screen -->
+  <div class="kd-lm-moment hidden" id="lm-moment" aria-live="polite">
+    <div class="kd-lm-rays"></div>
+    <img id="lm-moment-img" alt="">
+    <div class="kd-lm-plus" id="lm-moment-plus">+5</div>
+    <div class="kd-lm-text" id="lm-moment-text"></div>
+  </div>
+
   <!-- END -->
   <main id="screen-win" class="kd-end hidden">
-    <img class="kd-crown" id="win-pose" src="/assets/kingdoms/dralingo/champion.webp" alt="">
+    <div class="kd-win-heroes">
+      <img class="kd-crown" id="win-pose" src="/assets/kingdoms/dralingo/champion.webp" alt="">
+      <img class="kd-win-cap" id="win-cap" alt="">
+    </div>
     <div class="kd-winner" id="win-banner">¡Gana el Reino del Fuego!</div>
     <div class="kd-why" id="win-why">El reino más grande del mapa</div>
     <div class="kd-final">
-      <div class="red">Reino del Fuego<b id="final-red">0</b>casillas</div>
-      <div class="gold">Reino del Mar<b id="final-gold">0</b>casillas</div>
+      <div class="red"><span>Reino del Fuego</span><b id="final-red">0</b><span>puntos</span><div class="kd-final-lms" id="final-lms-red"></div><div class="kd-final-mvp" id="mvp-red"></div></div>
+      <div class="gold"><span>Reino del Mar</span><b id="final-gold">0</b><span>puntos</span><div class="kd-final-lms" id="final-lms-gold"></div><div class="kd-final-mvp" id="mvp-gold"></div></div>
     </div>
     <div class="kd-lb" id="leaderboard"></div>
     <div class="kd-end-tools">
@@ -125,8 +145,10 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js"></script>
-  <script src="/js/kingdoms-board.js?v=20261011a"></script>
-  <script src="/js/host-kingdoms.js?v=20261011b"></script>
+  <script src="/js/cast.js?v=20261011c"></script>
+  <script src="/js/dralingo-fx.js?v=20261011e"></script>
+  <script src="/js/kingdoms-board.js?v=20261011d"></script>
+  <script src="/js/host-kingdoms.js?v=20261011f"></script>
   <script src="/js/live-game.js?v=20261011c"></script>
 </body>
 </html>

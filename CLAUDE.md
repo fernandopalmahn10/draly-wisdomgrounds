@@ -14,6 +14,9 @@ the checklist for any new game mode.
   before saying it is live. On-disk ≠ deployed.
 - **i18n**: `/homework` has an ES→EN toggle driven by a dictionary (`public/js/hw-i18n.js`, `var DICT =`). Every new
   student-facing Spanish string must be added there (and bump its `?v=` in homework.html) or it stays Spanish in EN mode.
+  Lines built from a template (e.g. `'Hoy: {theme}.'`) need a regex entry in `DICT.patterns` (2026-10-11: the daily-story
+  lines shipped without one).
+- **Deploy** with the `deploy-platform` skill (tests → exact staging → commit → push → wait until live → live check).
 - Never commit secrets (`.render-token`, credentials JSON, `data/*` runtime files with student data).
 - **Deleting a CSS/JS file?** First list every class/selector it defines and grep the remaining pages for them; shared
   rules hide in game files (2026-10-10: the avatar picker, timer pulse and music chip lived in zombie/triage/color-clash

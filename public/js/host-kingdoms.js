@@ -1,5 +1,7 @@
 // Reinos de Colores — projector view.
-// Lobby (PIN, kingdoms, duration) → countdown → live hex board fed by small kd:plant diffs → winner screen.
+// Lobby (PIN, kingdoms, the 3 steps) → the round's two captains face off during the countdown → live hex board with the
+// Dubai landmarks, fed by small kd:plant diffs → winner screen with the gang. Big moments use DralingoFX
+// (js/dralingo-fx.js, one effect at a time) and the cast (js/cast.js); the Dralingo announcer bubble covers the rest.
 (function () {
   const socket = io();
   const $ = (id) => document.getElementById(id);
@@ -8,9 +10,15 @@
   const A = '/assets/kingdoms/';
   const SFX = {
     plant: A + 'plant.mp3', surround: A + 'surround.mp3', alert: A + 'castle-alert.mp3', siege: A + 'siege.mp3',
-    tick: A + 'tick.mp3', whoosh: A + 'whoosh.mp3', win: A + 'sting-win.mp3', flag: A + 'flag.mp3',
+    tick: A + 'tick.mp3', whoosh: A + 'whoosh.mp3', win: A + 'sting-win.mp3', flag: A + 'flag.mp3', landmark: A + 'landmark.mp3',
   };
-  const POSE = (n) => A + 'dralingo/' + n + '.webp';
+  // Team-coloured Dralingo (his rule 2026-10-11): moments about the Fuego kingdom use the red dragon.
+  const RED_POSES = ['jump', 'flag', 'shocked', 'thinking', 'pointing', 'champion', 'countdown', 'fly'];
+  const POSE = (n, team) => A + 'dralingo/' + n + (team === 'red' && RED_POSES.includes(n) ? '-red' : '') + '.webp';
+  const FX_POSES = { red: ['jump-red', 'flag-red', 'champion-red', 'pointing-red'], gold: ['jump', 'flag', 'champion', 'pointing', 'party', 'clap'] };
+  const LM = KdBoard.LANDMARKS;
+  const LM_BIG = (k) => A + 'landmarks/big/' + k + '.webp';    // 440 px tall, for the full-screen moment
+  const Cast = window.DralingoCast || null;
   // Recorded music loops (Kenney): lobby → battle → tense final 30 s.
   let music = null;
   let musicName = null;
@@ -30,6 +38,7 @@
   let boardData = null;
   let own = {};
   let players = {};          // id → { name, team, score }
+  let captains = null;       // { red: castId, gold: castId } — a new pair every round
   let timerInterval = null;
   let warned = {};
   let lastPlantSfx = 0;
@@ -91,6 +100,7 @@
   });
   $('play-again-btn').addEventListener('click', () => {
     socket.emit('host:reset', { pin });
+    captains = null;
     showScreen('lobby');
     playMusic('music-lobby', 0.35);
   });
@@ -136,16 +146,36 @@
     });
   }
 
+  // ---------- captains (two of the gang lead the kingdoms; revealed during the countdown) ----------
+  socket.on('kd:captains', (c) => { captains = c; paintCaptains(true); });
+  function paintCaptains(intro) {
+    const ok = !!(captains && Cast);
+    ['red', 'gold'].forEach((team) => {
+      $('cap-' + team).classList.toggle('hidden', !ok);
+      $('side-cap-' + team).classList.toggle('hidden', !ok);
+      if (!ok) { $('side-capname-' + team).textContent = ''; return; }
+      const id = captains[team];
+      $('cap-' + team + '-img').src = Cast.pose(id, 'cheer');
+      $('cap-' + team + '-name').textContent = Cast.captain(id);
+      $('side-cap-' + team).src = Cast.pose(id, 'hello');
+      $('side-capname-' + team).textContent = Cast.captain(id);
+      if (intro) { const el = $('cap-' + team); el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; }
+    });
+  }
+
   // ---------- countdown ----------
+  let introSaid = false;
   socket.on('countdown', () => {
     showScreen('countdown');
     stopMusic();
+    introSaid = false;
+    Object.keys(lmLast).forEach((k) => delete lmLast[k]);
     let n = 3;
     const num = $('countdown-num');
     const tick = () => {
       num.style.animation = 'none'; void num.offsetWidth; num.style.animation = '';
       if (n > 0) { num.textContent = n; sfx('tick', 0.9); n--; setTimeout(tick, 900); }
-      else { num.textContent = '¡A conquistar!'; num.style.fontSize = '7rem'; sfx('whoosh', 0.9); setTimeout(() => { num.style.fontSize = ''; showScreen('active'); startTimer(); playMusic('music-battle', 0.32); }, 900); }
+      else { num.textContent = '¡A conquistar!'; num.classList.add('go'); sfx('whoosh', 0.9); setTimeout(() => { num.classList.remove('go'); showScreen('active'); startTimer(); playMusic('music-battle', 0.32); }, 900); }
     };
     tick();
   });
@@ -155,10 +185,20 @@
     boardData = d.board;
     own = Object.assign({}, d.own);
     Object.entries(d.players || {}).forEach(([id, p]) => { players[id] = Object.assign(players[id] || {}, p); });
+    if (d.captains) { captains = d.captains; paintCaptains(false); }
     board = KdBoard.create($('board'), boardData, own, { grass: '/assets/kingdoms/grass.png', castle: '/assets/kingdoms/castle.png' });
+    Object.values(boardData.landmarks || {}).forEach((k) => { new Image().src = LM_BIG(k); });   // the big moment shows instantly
+    lmKey = '';
     updateScores(d.teamScores);
     renderRosters();
-    say('¡Que empiece la conquista! Respondan bien para ganar banderas 🚩', 'flag');
+    renderLms();
+    // A projector that reconnected mid-round (missed 'countdown') would otherwise sit on the lobby: go to the board.
+    if (state && state.state === 'active' && $('screen-active').classList.contains('hidden') && $('screen-countdown').classList.contains('hidden')) {
+      showScreen('active');
+      startTimer();
+      playMusic('music-battle', 0.32);
+    }
+    if (!introSaid) { introSaid = true; say('¡Que empiece la conquista! Respondan bien y conquisten los monumentos de Dubái 🏙️', 'flag'); }
   });
 
   socket.on('kd:plant', (d) => {
@@ -167,48 +207,90 @@
     if (d.tile !== null && d.tile !== undefined) {
       own[d.tile] = d.team;
       board.set(d.tile, d.team, 'pop');
-      board.tag(d.tile, d.by, d.team);
+      board.tag(d.tile, (d.double ? '🚩🚩 ' : '') + d.by, d.team);
       sfx('plant', 0.5);
     }
-    (d.flipped || []).forEach((f, i) => {
+    const flipped = d.flipped || [];
+    flipped.forEach((f, i) => {
       own[f.id] = d.team;
       setTimeout(() => board.set(f.id, d.team, 'flip'), 120 + i * 45);
     });
-    const nf = (d.flipped || []).length;
+    const nf = flipped.length;
+    const tookLandmark = (d.events || []).some((ev) => ev.type === 'landmark');
     if (nf >= 1) {
+      setTimeout(() => board.burst(flipped.map((f) => f.id), d.team), 140);
       sfx('surround', 0.7);
       banner(`¡${d.by} rodeó ${nf === 1 ? '1 casilla' : nf + ' casillas'}! 🔁`, d.team);
-      if (nf >= 3) say(`¡Increíble, ${d.by}! El ${NAMES[d.team]} encerró ${nf} casillas de golpe.`, 'jump');
+      // a surround that also took a landmark: the landmark moment tells the story, no second effect on top
+      if (nf >= 5 && !tookLandmark) bigFx('zoom', { text: `¡${d.by} rodeó ${nf} casillas!`, poses: FX_POSES[d.team] }) || say(`¡Increíble, ${d.by}!`, 'jump', d.team);
+      else if (nf >= 3) say(`¡Increíble, ${d.by}! El ${NAMES[d.team]} encerró ${nf} casillas de golpe.`, 'jump', d.team);
     }
     (d.events || []).forEach((ev) => {
-      if (ev.type === 'castle-alert') {
+      if (ev.type === 'landmark') {
+        onLandmark(ev);
+      } else if (ev.type === 'castle-alert') {
         sfx('alert', 0.7);
         banner(`🏰 ¡El castillo del ${SHORT[ev.team]} está casi rodeado!`, ev.team === 'red' ? 'gold' : 'red');
-        say(`¡Cuidado, ${NAMES[ev.team]}! Defiendan su castillo.`, 'shocked');
+        const cap = captains && captains[ev.team];
+        if (!(cap && bigFx('cameo', { char: cap, mood: 'oops', text: '¡Defiendan el castillo!' }, 5000))) {
+          say(`¡Cuidado, ${NAMES[ev.team]}! Defiendan su castillo.`, 'shocked', ev.team);
+        }
       } else if (ev.type === 'siege') {
         sfx('siege', 0.8);
-        banner(`⚔️ ¡Asedio! ${NAMES[ev.by]} +${ev.bonus} casillas`, ev.by);
-        say(`¡Asedio total! El ${NAMES[ev.by]} rodeó el castillo enemigo.`, 'champion');
-        bigBurst(ev.by);
+        banner(`⚔️ ¡Asedio! ${NAMES[ev.by]} +${ev.bonus} puntos`, ev.by);
+        bigFx('gang', {
+          text: `¡El ${NAMES[ev.by]} rodeó el castillo!`, mood: 'win', stamp: '¡ASEDIO!', team: ev.by,
+          chars: captains ? [captains[ev.by]] : [], exclude: captains ? [captains[ev.team]] : [],
+        }, 0) || say(`¡Asedio total! El ${NAMES[ev.by]} rodeó el castillo enemigo.`, 'champion', ev.by);
+        confetti(ev.by, 40);
       } else if (ev.type === 'lead' && ev.team) {
-        say(`¡El ${NAMES[ev.team]} pasa al frente!`, 'pointing');
+        // In a close round the lead flips a lot: the captain cheers at most every 20 s, Dralingo's bubble covers the rest.
+        const cap = captains && captains[ev.team];
+        if (cap && Cast && Date.now() - leadFxAt > 20000 && bigFx('cameo', { char: cap, mood: 'battle', text: `¡${SHORT[ev.team]} al frente! ${Cast.line(cap, 'battle')}` })) {
+          leadFxAt = Date.now();
+        } else {
+          say(`¡El ${NAMES[ev.team]} pasa al frente!`, 'pointing', ev.team);
+        }
       }
     });
     updateScores(d.teamScores);
     renderRosters();
+    renderLms();
   });
 
   function updateScores(ts) {
     if (!ts) return;
-    const total = boardData ? boardData.tiles.length : 91;
     const r = ts.red || 0;
     const g = ts.gold || 0;
-    $('tug-red').style.flexBasis = Math.max(6, (r / total) * 100) + '%';
-    $('tug-gold').style.flexBasis = Math.max(6, (g / total) * 100) + '%';
+    const total = Math.max(1, r + g);
+    $('tug-red').style.flexBasis = Math.max(8, Math.min(92, (r / total) * 100)) + '%';
+    $('tug-gold').style.flexBasis = Math.max(8, Math.min(92, (g / total) * 100)) + '%';
     $('tug-red').textContent = r;
     $('tug-gold').textContent = g;
     $('tiles-red').textContent = r;
     $('tiles-gold').textContent = g;
+  }
+
+  // Landmarks each kingdom holds, as little pictures under its score (only re-drawn when something changed).
+  let lmKey = '';
+  function heldLms(team) {
+    return Object.entries((boardData && boardData.landmarks) || {}).filter(([id]) => own[id] === team).map(([, k]) => k);
+  }
+  function renderLms() {
+    const key = heldLms('red').join() + '|' + heldLms('gold').join();
+    if (key === lmKey) return;
+    lmKey = key;
+    ['red', 'gold'].forEach((team) => fillLms($('lms-' + team), heldLms(team)));
+  }
+  function fillLms(box, keys) {
+    box.innerHTML = '';
+    keys.forEach((k) => {
+      const i = document.createElement('img');
+      i.src = KdBoard.LM_SRC(k);
+      i.alt = LM[k].name;
+      i.title = `${LM[k].name} +${LM[k].bonus}`;
+      box.appendChild(i);
+    });
   }
 
   function renderRosters() {
@@ -216,7 +298,7 @@
       const ul = $('roster-' + team);
       const list = Object.values(players).filter((p) => p.team === team).sort((a, b) => (b.score || 0) - (a.score || 0));
       ul.innerHTML = '';
-      list.slice(0, 9).forEach((p, i) => {
+      list.slice(0, 8).forEach((p, i) => {
         const li = document.createElement('li');
         if (i === 0 && (p.score || 0) > 0) li.className = 'king';
         const name = document.createElement('span');
@@ -226,12 +308,78 @@
         li.append(name, sc);
         ul.appendChild(li);
       });
-      if (list.length > 9) {
+      if (list.length > 8) {
         const li = document.createElement('li');
-        li.textContent = `+${list.length - 9} más`;
+        li.textContent = `+${list.length - 8} más`;
         ul.appendChild(li);
       }
     });
+  }
+
+  // ---------- big moments ----------
+  // One big effect at a time and not too often: the board is the show.
+  let fxAt = 0;
+  let leadFxAt = 0;
+  function bigFx(kind, opts, gapMs) {
+    if (!window.DralingoFX || lmBusy) return false;          // never on top of a landmark moment
+    const now = Date.now();
+    if (now - fxAt < (gapMs == null ? 7000 : gapMs)) return false;
+    if (DralingoFX.play(kind, opts)) { fxAt = now; return true; }
+    return false;
+  }
+  // A Dubai landmark changed hands. With 30 kids they flip back and forth all round, so only the first capture of each
+  // landmark (or one after a long while) gets the full-screen moment, at most one every 8 s; the other flips get the
+  // board hop + a banner. A queued moment that is out of date by the time it would show is dropped.
+  const LM_FULL_GAP = 8000;
+  const LM_REPEAT_GAP = 25000;
+  const LM_SHOW_MS = 2300;
+  const lmLast = {};          // tile → when its last full moment played (cleared every round)
+  const lmQueue = [];
+  let lmBusy = false;
+  let lmFullAt = 0;
+  const lmText = (ev) => {
+    const L = LM[ev.lm];
+    return ev.from && ev.from !== ev.team ? `¡El ${SHORT[ev.team]} le quita ${L.the} al ${SHORT[ev.from]}!` : `¡El ${SHORT[ev.team]} conquista ${L.the}!`;
+  };
+  function onLandmark(ev) {
+    if (!LM[ev.lm]) return;
+    const now = Date.now();
+    const first = !lmLast[ev.tile];
+    if (!lmBusy && now - lmFullAt > LM_FULL_GAP && (first || now - lmLast[ev.tile] > LM_REPEAT_GAP)) { landmarkMoment(ev); return; }
+    if (first && lmQueue.length < 2 && !lmQueue.some((q) => q.tile === ev.tile)) { lmQueue.push(ev); return; }
+    sfx('landmark', 0.45);
+    banner('🏙️ ' + lmText(ev), ev.team);
+  }
+  function landmarkMoment(ev) {
+    if ($('screen-active').classList.contains('hidden')) return;      // the round ended meanwhile
+    lmBusy = true;
+    lmFullAt = Date.now();
+    lmLast[ev.tile] = lmFullAt;
+    const L = LM[ev.lm];
+    const bonus = ev.bonus || L.bonus;
+    sfx('landmark', 0.8);
+    const box = $('lm-moment');
+    $('lm-moment-img').src = LM_BIG(ev.lm);
+    $('lm-moment-plus').textContent = '+' + bonus;
+    const text = $('lm-moment-text');
+    text.innerHTML = '';
+    const big = document.createElement('b');
+    big.textContent = lmText(ev);
+    const small = document.createElement('span');
+    small.textContent = `🚩 ${ev.by} · +${bonus} puntos para el ${NAMES[ev.team]}`;
+    text.append(big, small);
+    box.className = 'kd-lm-moment ' + ev.team;
+    void box.offsetWidth;
+    box.classList.add('show');
+    fxAt = Date.now();                 // nothing else on top of this one
+    setTimeout(() => {
+      box.className = 'kd-lm-moment hidden';
+      lmBusy = false;
+      // next queued first-capture, only if that kingdom still holds it
+      let next = lmQueue.shift();
+      while (next && own[next.tile] !== next.team) next = lmQueue.shift();
+      if (next) setTimeout(() => { if (!lmBusy && own[next.tile] === next.team) landmarkMoment(next); }, 900);
+    }, LM_SHOW_MS);
   }
 
   // ---------- timer ----------
@@ -245,7 +393,12 @@
       const sec = Math.ceil(left / 1000);
       $('timer-display').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
       if (sec === 60 && !warned[60]) { warned[60] = 1; banner('⏱ ¡Queda 1 minuto!'); }
-      if (sec === 30 && !warned[30]) { warned[30] = 1; banner('⏱ ¡Quedan 30 segundos!'); say('¡Últimos 30 segundos! Rodeen todo lo que puedan.', 'countdown'); playMusic('music-final', 0.42); }
+      if (sec === 30 && !warned[30]) {
+        warned[30] = 1;
+        banner('⏱ ¡Quedan 30 segundos!');
+        bigFx('spotlight', { text: '¡Últimos 30 segundos! ¡Todo puede cambiar!', poses: ['countdown'] }, 0) || say('¡Últimos 30 segundos! Rodeen todo lo que puedan.', 'countdown');
+        playMusic('music-final', 0.42);
+      }
       if (sec <= 10 && sec > 0 && !warned['t' + sec]) { warned['t' + sec] = 1; sfx('tick', 0.5); $('timer-display').classList.add('urgent'); }
       if (sec > 10) $('timer-display').classList.remove('urgent');
     }, 250);
@@ -256,28 +409,51 @@
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
     stopMusic();
     hideDralingo();
+    $('lm-moment').className = 'kd-lm-moment hidden';
+    lmQueue.length = 0;
+    lmBusy = false;                    // the gang finale must not wait for a cut-off landmark moment
     showScreen('win');
     const r = d.teamScores.red || 0;
     const g = d.teamScores.gold || 0;
     $('final-red').textContent = r;
     $('final-gold').textContent = g;
+    ['red', 'gold'].forEach((team) => {
+      fillLms($('final-lms-' + team), heldLms(team));
+      const mvp = team === 'red' ? d.mvpRed : d.mvpGold;
+      $('mvp-' + team).textContent = mvp && mvp.score > 0 ? `👑 ${mvp.name} · ${mvp.score}` : '';
+    });
     const win = $('win-banner');
+    const cap = $('win-cap');
     if (d.winner === 'red' || d.winner === 'gold') {
-      win.textContent = `¡Gana el ${NAMES[d.winner]}!`;
+      $('win-pose').src = POSE('champion', d.winner);
+      const capId = captains && captains[d.winner];
+      cap.classList.toggle('hidden', !(capId && Cast));
+      if (capId && Cast) { cap.src = Cast.pose(capId, 'cheer'); cap.alt = Cast.captain(capId); }
+      win.textContent = `¡El ${NAMES[d.winner]} conquista Dubái!`;
       win.className = 'kd-winner ' + d.winner;
       const gap = Math.abs(r - g);
-      $('win-why').textContent = gap <= 3 ? `El imperio más grande, por solo ${gap === 1 ? '1 casilla' : gap + ' casillas'}` : `El imperio más grande del mapa: ${Math.max(r, g)} casillas`;
+      const lms = heldLms(d.winner).length;
+      const lmText = lms ? ` · ${lms === 1 ? '1 monumento' : lms + ' monumentos'} 🏙️` : '';
+      $('win-why').textContent = (gap <= 3 ? `¡Por solo ${gap === 1 ? '1 punto' : gap + ' puntos'}!` : `${Math.max(r, g)} puntos contra ${Math.min(r, g)}`) + lmText;
       sfx('win', 0.9);
       confetti(d.winner);
+      // the gang celebrates with the winning captain and a Dralingo in the winner's colour; no stamp over the headline
+      const loser = d.winner === 'red' ? 'gold' : 'red';
+      setTimeout(() => bigFx('gang', {
+        text: `¡${NAMES[d.winner]}!`, mood: 'win', stamp: false, team: d.winner,
+        chars: capId ? [capId] : [], exclude: captains ? [captains[loser]] : [],
+      }, 0), 700);
     } else {
+      $('win-pose').src = POSE('jump');
+      cap.classList.add('hidden');
       win.textContent = '¡Empate de reinos!';
       win.className = 'kd-winner';
-      $('win-why').textContent = `Los dos reinos terminaron con ${r} casillas`;
+      $('win-why').textContent = `Los dos reinos terminaron con ${r} puntos`;
       sfx('win', 0.6);
     }
     const lb = $('leaderboard');
     lb.innerHTML = '';
-    (d.leaderboard || []).slice(0, 10).forEach((p, i) => {
+    (d.leaderboard || []).slice(0, 6).forEach((p, i) => {
       const row = document.createElement('div');
       row.className = 'kd-lb-row';
       const rank = document.createElement('span');
@@ -287,7 +463,7 @@
       dot.className = 'kd-dot ' + p.team;
       name.append(dot, document.createTextNode((p.avatar ? p.avatar + ' ' : '') + p.name));
       const sc = document.createElement('span');
-      sc.textContent = `${p.score} casillas`;
+      sc.textContent = p.score === 1 ? '1 punto' : `${p.score} puntos`;
       row.append(rank, name, sc);
       lb.appendChild(row);
     });
@@ -306,12 +482,12 @@
   }
   let sayTimer = null;
   let lastSay = 0;
-  function say(text, pose) {
+  function say(text, pose, team) {
     const now = Date.now();
     if (now - lastSay < 2500) return;      // one line at a time, never a wall of chatter
     lastSay = now;
     $('dralingo-say').textContent = text;
-    $('dralingo-img').src = POSE(pose || 'pointing');
+    $('dralingo-img').src = POSE(pose || 'pointing', team);
     $('dralingo').classList.add('show');
     clearTimeout(sayTimer);
     sayTimer = setTimeout(hideDralingo, 4200);
@@ -330,7 +506,6 @@
       setTimeout(() => c.remove(), 5600);
     }
   }
-  function bigBurst(team) { confetti(team, 40); }
 
   function showScreen(name) {
     ['lobby', 'countdown', 'active', 'win'].forEach((n) => $('screen-' + n).classList.toggle('hidden', n !== name));
