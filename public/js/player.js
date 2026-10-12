@@ -22,6 +22,10 @@
   if (window.PaintPhone) {
     window.PaintPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
   }
+  // Batalla de Nieve en Ski Dubái phone module (public/js/player-snow.js)
+  if (window.SnowPhone) {
+    window.SnowPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
+  }
   // (legacy timer kept for any reference; bulletproof flow below replaces it)
 
   // === Global stuck-watchdog ===
@@ -365,6 +369,7 @@
       'monopoly':    'monopoly-roll',
       'kingdoms':    'question',
       'paint':       'paint',
+      'snow':        'snow',
     };
     const target = screenForType[gt];
     if (target) showScreen(target);
@@ -950,6 +955,9 @@
     } else if (gameType === 'kingdoms' || gameType === 'paint') {
       teamLabel = isRed ? 'Reino del Fuego' : 'Reino del Mar';
       teamMascot = isRed ? '🔥' : '🌊';
+    } else if (gameType === 'snow') {
+      teamLabel = 'Batalla de Nieve';      // no teams in the lobby: everyone starts as a survivor
+      teamMascot = '❄️';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
@@ -2793,6 +2801,9 @@
       } else if (gameType === 'kingdoms') {
         happyMascot = '🚩';
         sub = kingdoms && kingdoms.flags > 1 ? '¡Bandera doble! Plántalas en el mapa' : '¡Ganaste una bandera!';
+      } else if (gameType === 'snow') {
+        happyMascot = '❄️';
+        sub = '¡Copos para tus bolas de nieve!';
       } else {
         happyMascot = team === 'red' ? '🐼' : '🦊';
         sub = '¡Alimenta a tu equipo! ⚡';
@@ -2822,8 +2833,8 @@
           }
         } else if (gameType === 'kingdoms') {
           if (kingdoms && kingdoms.needsPlant && window.KingdomsPhone) window.KingdomsPhone.prompt(kingdoms);
-        } else if (gameType === 'paint') {
-          // Dragones Pintores: player-paint.js returns the kid to the sky after the result screen.
+        } else if (gameType === 'paint' || gameType === 'snow') {
+          // Dragones Pintores / Batalla de Nieve: their phone modules return the kid to the map after the result screen.
         } else if (gameType === 'sixseven') {
           // Sixseven handles its own screen via the dedicated handler.
           showScreen('sixseven');
@@ -4185,14 +4196,14 @@
       const lobbyVisible = $('screen-lobby') && !$('screen-lobby').classList.contains('hidden');
       const countdownVisible = $('screen-countdown') && !$('screen-countdown').classList.contains('hidden');
       if (lobbyVisible || countdownVisible) {
-        showScreen('question');
+        showScreen(gameType === 'snow' ? 'snow' : 'question');   // the snow map is the kid's main screen
         stopLobbyFlappy();
       }
     }
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'kd-plant', 'paint', 'wu', 'rd', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'kd-plant', 'paint', 'snow', 'wu', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

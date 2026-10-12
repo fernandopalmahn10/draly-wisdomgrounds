@@ -10,6 +10,7 @@ const ROOT = path.join(__dirname, '..');
 const FILES = [
   'public/index.html', 'public/homework.html', 'public/js/homework.js', 'public/player.html', 'public/js/player.js',
   'public/audios.html', 'public/js/audios.js', 'public/packs.html', 'core/assignments.js', 'core/levels.js',
+  'public/host-snow.html', 'public/js/host-snow.js', 'public/js/player-snow.js', 'public/js/player-kingdoms-skin.js',
   ...fs.readdirSync(path.join(ROOT, 'core/packs')).filter((f) => f.endsWith('.js')).map((f) => 'core/packs/' + f),
 ];
 const RULES = [

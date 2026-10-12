@@ -29,6 +29,8 @@ const Emirati = require('./core/emirati-vocab');
 const CustomAsg = require('./core/custom-assignments');
 const Kingdoms = require('./core/kingdoms');
 const Paint = require('./core/paint');
+const Snow = require('./core/snow');                 // Batalla de Nieve en Ski Dubái (rules)
+const SnowMap = require('./public/js/snow-map');     // … and its map, shared with the phones and the projector
 // Tiny persistence for the owner's Emirati Arabic gateway (single global
 // profile, since this is a super-admin-only personal feature). Lives on the
 // same data disk as the rest of the JSON state.
@@ -4164,7 +4166,7 @@ function publicState(game) {
     players: Object.fromEntries(
       Object.entries(game.players).map(([id, p]) => [
         id,
-        { name: p.name, team: p.team, score: p.score, avatar: p.avatar || '' }
+        Object.assign({ name: p.name, team: p.team, score: p.score, avatar: p.avatar || '' }, p.disconnected ? { off: true } : {})
       ])
     ),
     feed: game.feed.slice(-12)
@@ -4764,6 +4766,288 @@ function pcAnswer(pin, g, pid, p, correct, correctText) {
   }
 }
 
+// === ❄️ BATALLA DE NIEVE EN SKI DUBÁI (gameType 'snow') — Gimkit 2D-map infection game, Dralingo style ===
+// Rules in core/snow.js, map in public/js/snow-map.js (spec docs/specs/batalla-de-nieve.md). Phones walk their saga
+// avatar (movement runs on the phone, the server checks speed and walls), answer at the 4-colour stations for copos,
+// throw snowballs (server-simulated, 10 Hz), and the ice team grows until the timer ends or nobody is left.
+// Kids are numbered per round (p.snIdx) so the 5 Hz position broadcast stays small and survives rejoins.
+const SN_TICK_MS = 100;
+function snFlags(p, now) {
+  return (p.snSide === 'ice' ? 1 : 0) | (now < (p.snStunUntil || 0) ? 2 : 0) | (now < (p.snShieldUntil || 0) ? 4 : 0)
+    | (now < (p.snRespawnUntil || 0) ? 8 : 0);
+}
+function snRoster(g) {
+  const out = {};
+  Object.values(g.players).forEach((p) => {
+    if (!p.snIdx || p.snRound !== g.snow.id) return;
+    out[p.snIdx] = { name: p.name, skin: p.snSkin, side: p.snSide, on: !p.disconnected };
+  });
+  return out;
+}
+function snPosArray(g, now) {
+  const k = g.snow;
+  const arr = [];
+  Object.entries(g.players).forEach(([pid, p]) => {
+    const pos = k.pos[pid];
+    if (!pos || p.disconnected || p.snRound !== k.id) return;
+    arr.push([p.snIdx, Math.round(pos.x), Math.round(pos.y), pos.f || 0, snFlags(p, now)]);
+  });
+  return arr;
+}
+function snMe(g, p, now, extra) {
+  return Object.assign({
+    idx: p.snIdx, side: p.snSide, copos: p.snCopos, calor: p.snCalor, streak: p.snStreak || 0,
+    stunMs: Math.max(0, (p.snStunUntil || 0) - now), respawnMs: Math.max(0, (p.snRespawnUntil || 0) - now),
+    shieldMs: Math.max(0, (p.snShieldUntil || 0) - now), score: Snow.scoreOf(p, now), freezes: p.snFreezes || 0,
+    paused: !!g.snow.paused,
+  }, extra || {});
+}
+function snSendMe(g, pid, extra) {
+  const p = g.players[pid];
+  if (p && g.snow) io.to(pid).emit('sn:me', snMe(g, p, Date.now(), extra));
+}
+function snSpawnPos(g, side) {
+  const m = g.snow.map;
+  const list = side === 'ice' ? m.spawns.ice : m.spawns.sun;
+  const [tx, ty] = list[Math.floor(Math.random() * list.length)];
+  return { x: (tx + 0.5) * m.tile, y: (ty + 0.5) * m.tile + 6 };
+}
+// Bring a kid into the running round (start, late join, rejoin with a new socket id).
+function snAttach(g, pid, p, late) {
+  const k = g.snow;
+  const now = Date.now();
+  const fresh = p.snRound !== k.id;
+  Snow.preparePlayer(k, p, now, late);
+  if (fresh) p.snSkin = SnowMap.skinFor(p.avatar, p.name);
+  if (p.snPid && p.snPid !== pid && k.pos[p.snPid]) { k.pos[pid] = k.pos[p.snPid]; delete k.pos[p.snPid]; }
+  if (p.snPid && p.snPid !== pid) k.balls.forEach((b) => { if (b.by === p.snPid) b.by = pid; });
+  // a survivor's clock stops while their phone is away (see the disconnect handler) and runs again on the way back
+  if (!fresh && p.snSide === 'sun' && !p.snSunSince) p.snSunSince = now;
+  p.snPid = pid;
+  if (!k.pos[pid]) { const s = snSpawnPos(g, p.snSide); k.pos[pid] = { x: s.x, y: s.y, f: 2, at: now }; }
+  k.posDirty = true;
+}
+function snInitPayload(g, pid) {
+  const k = g.snow;
+  const now = Date.now();
+  const out = {
+    seed: k.seed, round: k.id, spellInMs: Math.max(0, k.spellAt - now), spellCast: k.spellCast, paused: k.paused,
+    players: snRoster(g), pos: snPosArray(g, now), counts: Snow.counts(g.players), captains: g.snCaptains || null,
+    chest: k.chest ? { id: k.chest.id, x: k.chest.x, y: k.chest.y, zone: k.chest.zone, lifeMs: k.chest.until - now } : null,
+  };
+  const p = pid ? g.players[pid] : null;
+  if (p && k.pos[pid]) out.me = snMe(g, p, now, { x: k.pos[pid].x, y: k.pos[pid].y });
+  return out;
+}
+function snStart(pin, g) {
+  snStop(g);
+  const now = Date.now();
+  g.snow = Snow.newRound(1 + Math.floor(Math.random() * 1e6), now);
+  g.snow.tick = null;
+  Object.entries(g.players).forEach(([pid, p]) => {
+    p.snRound = null; p.snPid = null;
+    p.score = 0;
+    p.currentQ = null;            // questions are on demand at the stations
+    // each kid starts the pack at a random spot, so «Otra ronda» never replays the same question order
+    p.queueIdx = Math.floor(Math.random() * Math.max(1, (g.questions || []).length));
+    // a phone that already left isn't in this round (class test 2026-10-12: absent kids were ranked as survivors);
+    // if it comes back, the join / resync attaches it as a late joiner
+    if (p.disconnected) { p.snSide = null; p.snSunSince = 0; return; }
+    snAttach(g, pid, p, false);
+  });
+  g.teamScores = { red: 0, gold: 0 };
+  Object.keys(g.players).forEach((pid) => io.to(pid).emit('sn:init', snInitPayload(g, pid)));
+  io.to(g.hostId).emit('sn:init', snInitPayload(g, null));
+  g.snow.lastStep = now;
+  const tick = setInterval(() => snTick(pin, tick), SN_TICK_MS);
+  g.snow.tick = tick;
+}
+function snStop(g) {
+  if (g && g.snow && g.snow.tick) { clearInterval(g.snow.tick); g.snow.tick = null; }
+}
+function snSpell(pin, g, now) {
+  const k = g.snow;
+  const ids = Snow.castSpell(k, g.players, now);
+  ids.forEach((pid) => {
+    const s = snSpawnPos(g, 'ice');
+    k.pos[pid] = { x: s.x, y: s.y, f: 2, at: now + Snow.R.RESPAWN_MS };
+    snSendMe(g, pid, { pos: [s.x, s.y], frozenBy: 'spell' });
+  });
+  k.posDirty = true;
+  io.to(pin).emit('sn:spell', {
+    kids: ids.map((pid) => ({ idx: g.players[pid].snIdx, name: g.players[pid].name, skin: g.players[pid].snSkin })),
+    counts: Snow.counts(g.players), again: !!k.spellAgain,
+  });
+  k.spellAgain = false;
+  k.nextChestAt = Math.max(k.nextChestAt, now + 6000);
+}
+// Big moments the projector shows (each once per round): half the class frozen, the last 3, the last one.
+function snMoments(pin, g) {
+  const k = g.snow;
+  const c = Snow.counts(g.players);
+  const m = k.milestones;
+  if (!m.half && c.total >= 4 && c.ice >= Math.ceil(c.total / 2) && c.sun > 0) { m.half = true; io.to(pin).emit('sn:moment', { type: 'half', counts: c }); }
+  if (!m.last3 && c.total >= 6 && c.sun <= 3 && c.sun >= 2) {
+    m.last3 = true;
+    const kids = Object.values(g.players).filter((p) => !p.disconnected && p.snSide === 'sun' && p.snRound === k.id).map((p) => ({ idx: p.snIdx, name: p.name, skin: p.snSkin }));
+    // «¡Último refugio!»: the last survivors get full ☀️ and a 5 s shield, so the finale lasts and is worth watching
+    Snow.refuge(g.players, Date.now()).forEach((pid) => snSendMe(g, pid, { refuge: true }));
+    io.to(pin).emit('sn:moment', { type: 'last3', counts: c, kids });
+  }
+  if (!m.last1 && c.total >= 3 && c.sun === 1) {
+    m.last1 = true;
+    const p = Object.values(g.players).find((pl) => !pl.disconnected && pl.snSide === 'sun' && pl.snRound === k.id);
+    if (p) io.to(pin).emit('sn:moment', { type: 'last1', counts: c, kids: [{ idx: p.snIdx, name: p.name, skin: p.snSkin }] });
+  }
+}
+function snHits(pin, g, events, now) {
+  const k = g.snow;
+  let froze = false;
+  events.forEach((ev) => {
+    const by = g.players[ev.by];
+    const t = g.players[ev.target];
+    io.to(pin).emit('sn:hit', {
+      type: ev.type, ball: ev.ball, x: ev.x, y: ev.y, calor: ev.calor,
+      by: by ? by.snIdx : 0, byName: by ? by.name : '', target: t ? t.snIdx : 0, targetName: t ? t.name : '',
+    });
+    if (!t) return;
+    if (ev.type === 'freeze') {
+      froze = true;
+      const s = snSpawnPos(g, 'ice');
+      k.pos[ev.target] = { x: s.x, y: s.y, f: 2, at: now + Snow.R.RESPAWN_MS };
+      snSendMe(g, ev.target, { pos: [s.x, s.y], frozenBy: by ? by.name : '', hit: 'freeze' });
+      if (by) snSendMe(g, ev.by, { scored: 'freeze', targetName: t.name });
+    } else if (ev.type === 'brrr' || ev.type === 'stun' || ev.type === 'shield') {
+      snSendMe(g, ev.target, { hit: ev.type, byName: by ? by.name : '' });
+      if (by && ev.type === 'stun') snSendMe(g, ev.by, { scored: 'stun', targetName: t.name });
+    }
+  });
+  k.posDirty = true;
+  if (froze) snMoments(pin, g);
+}
+function snTick(pin, id) {
+  const g = games[pin];
+  // A room that vanished (or a newer round) stops its own old interval.
+  if (!g || !g.snow || (id && g.snow.tick !== id)) { if (id) clearInterval(id); return; }
+  if (g.state !== 'active') return snStop(g);
+  const k = g.snow;
+  const now = Date.now();
+  const dt = Math.min(0.25, Math.max(0, (now - (k.lastStep || now)) / 1000));
+  k.lastStep = now;
+  k.n = (k.n || 0) + 1;
+  if (k.paused) return;
+  if (!k.spellCast) {
+    if (now >= k.spellAt) snSpell(pin, g, now);
+  } else if (!k.ending) {
+    // every ice kid left the game: the spell comes back for one survivor after a few seconds
+    const c = Snow.counts(g.players);
+    if (c.ice === 0 && c.sun >= 2) {
+      if (!k.noIceSince) k.noIceSince = now;
+      else if (now - k.noIceSince > 6000) { k.noIceSince = 0; k.spellAgain = true; snSpell(pin, g, now); }
+    } else k.noIceSince = 0;
+  }
+  if (k.balls.length) {
+    const evs = Snow.stepBalls(k, g.players, dt, now);
+    if (evs.length) snHits(pin, g, evs, now);
+  }
+  if (k.n % 10 === 0) Snow.warmUp(g.players, now).forEach((pid) => snSendMe(g, pid, { warm: true }));
+  if (k.chest && now > k.chest.until) {
+    io.to(pin).emit('sn:chest', { id: null, gone: k.chest.id });
+    k.chest = null;
+    k.nextChestAt = now + Snow.nextChestGap();
+  }
+  if (!k.chest && k.spellCast && now >= k.nextChestAt) {
+    const c = Snow.spawnChest(k, now);
+    io.to(pin).emit('sn:chest', { id: c.id, x: c.x, y: c.y, zone: c.zone, lifeMs: c.until - now });
+  }
+  // who is in the game (joins, leaves): a fresh roster for the projector and phones
+  if (k.n % 5 === 0) {
+    const sig = Object.values(g.players).filter((p) => p.snRound === k.id).map((p) => p.snIdx + (p.disconnected ? 'x' : '') + p.snSide).join(',');
+    if (sig !== k.rosterSig) { k.rosterSig = sig; io.to(pin).emit('sn:roster', { players: snRoster(g), counts: Snow.counts(g.players) }); k.posDirty = true; }
+  }
+  if (k.n % 2 === 0 && (k.posDirty || k.n % 20 === 0)) {
+    k.posDirty = false;
+    io.to(pin).emit('sn:tick', snPosArray(g, now));
+  }
+  if (!k.ending) {
+    const w = Snow.winnerNow(k, g.players, now);
+    if (w) {
+      k.ending = true;
+      setTimeout(() => {
+        if (games[pin] !== g || g.state !== 'active' || g.snow !== k) return;
+        if (!Snow.winnerNow(k, g.players, Date.now())) { k.ending = false; return; }   // someone came back meanwhile
+        if (g.endTimer) clearTimeout(g.endTimer);
+        endGame(pin);
+      }, 2600);
+    }
+  }
+}
+function snAnswer(pin, g, pid, p, correct, correctText) {
+  if (!g.snow) return;
+  const r = Snow.answer(p, correct);
+  io.to(pid).emit('answer-result', {
+    correct, correctText,
+    snow: { gained: r.gained, racha: r.racha, calor: r.calor, copos: p.snCopos, calorNow: p.snCalor, streak: p.snStreak || 0, side: p.snSide },
+  });
+  snSendMe(g, pid);
+  if (correct && r.racha) io.to(g.hostId).emit('sn:fx', { type: 'racha', idx: p.snIdx, name: p.name, streak: p.snStreak });
+}
+// Teacher pause: nothing moves, no snowballs, the clock stops; on resume every timer moves forward.
+function snPause(pin, g, paused) {
+  const k = g.snow;
+  if (!k || !!k.paused === !!paused) return;
+  const now = Date.now();
+  if (paused) {
+    k.paused = true;
+    k.pausedAt = now;
+    k.balls = [];                       // snowballs in the air melt (the screens drop theirs too)
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+  } else {
+    const shift = now - k.pausedAt;
+    Snow.shiftTimers(k, g.players, shift);
+    g.endsAt += shift;
+    k.paused = false;
+    if (g.endTimer) clearTimeout(g.endTimer);
+    g.endTimer = setTimeout(() => { if (games[pin] && games[pin].state === 'active') endGame(pin); }, Math.max(0, g.endsAt - now));
+  }
+  io.to(pin).emit('sn:pause', { paused: k.paused, spellInMs: k.spellCast ? 0 : Math.max(0, k.spellAt - now) });
+  Object.keys(g.players).forEach((pid) => snSendMe(g, pid));
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// End: the winner side, every kid's numbers. Each phone gets its own game-end (won/lost for the platform's end screen).
+function snFinish(pin, g) {
+  const k = g.snow;
+  if (!k) return;
+  snStop(g);
+  const now = Date.now();
+  const fin = Snow.finish(k, g.players, now);
+  const lite = (r) => r && ({ idx: (g.players[r.id] || {}).snIdx, name: r.name, skin: (g.players[r.id] || {}).snSkin, side: r.side, score: r.score, seconds: r.seconds, freezes: r.freezes, right: r.right });
+  Object.entries(g.players).forEach(([id, p]) => { if (p.snRound === k.id) p.score = Snow.scoreOf(p, now); });
+  const common = {
+    winner: fin.winner,
+    snow: {
+      winner: fin.winner, counts: fin.counts, mvpSun: lite(fin.mvpSun), mvpIce: lite(fin.mvpIce),
+      top: fin.rows.slice(0, 8).map(lite),
+      survivors: fin.rows.filter((r) => r.side === 'sun' && !r.gone).slice(0, 14).map(lite),
+    },
+    leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.score, team: r.side, avatar: r.avatar })),
+  };
+  g.teamScores = { red: fin.counts.sun, gold: fin.counts.ice };
+  io.to(g.hostId).emit('game-end', Object.assign({ teamScores: g.teamScores }, common));
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected || p.snRound !== k.id) return;
+    const won = p.snSide === fin.winner;
+    const other = p.team === 'red' ? 'gold' : 'red';
+    const row = fin.rows.find((r) => r.id === pid) || {};
+    io.to(pid).emit('game-end', Object.assign({}, common, {
+      teamScores: { [p.team]: won ? 1 : 0, [other]: won ? 0 : 1 },
+      scores: { [pid]: row.score || 0 },
+      me: { won, side: p.snSide, score: row.score || 0, seconds: row.seconds || 0, freezes: row.freezes || 0, right: row.right || 0, stuns: row.stuns || 0 },
+    }));
+  });
+}
+
 function endGame(pin) {
   const g = games[pin];
   if (!g) return;
@@ -4797,6 +5081,13 @@ function endGame(pin) {
   if (g.gameType === 'warmup' && g.warmup) {
     g.warmup.frozen = false;
     g.warmup.frozenNames = [];
+  }
+  // Batalla de Nieve: survivors vs the ice team, its own game-end per phone (core/snow.js finish()).
+  if (g.gameType === 'snow') {
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+    snFinish(pin, g);
+    broadcast(pin);
+    return;
   }
   const winner =
     g.teamScores.red > g.teamScores.gold
@@ -4833,7 +5124,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'warmup', 'reading', 'hsksim'];
+    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'snow', 'warmup', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'pinata'       ? 240 :
@@ -4842,6 +5133,7 @@ io.on('connection', (socket) => {
       type === 'sixseven'     ? 120 :
       type === 'kingdoms'     ? 180 :
       type === 'paint'        ? 240 :
+      type === 'snow'         ? 240 :
       type === 'warmup'       ? 3600 :   // 1 hour ceiling; teacher exits manually
       type === 'reading'      ? 3600 :   // 1 hour ceiling; teacher controls flow
       type === 'hsksim'       ? 3600 :   // 1 hour ceiling; kid takes the exam on their own pace
@@ -4956,6 +5248,9 @@ io.on('connection', (socket) => {
     if (g.gameType === 'paint' && g.paint && g.state === 'active') {
       io.to(socket.id).emit('pc:init', pcInitPayload(g, null));
     }
+    if (g.gameType === 'snow' && g.snow && g.state === 'active') {
+      io.to(socket.id).emit('sn:init', snInitPayload(g, null));
+    }
     cb({ ok: true, gameType: g.gameType, state: g.state });
   });
 
@@ -5053,7 +5348,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
     // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
-    if ((g.gameType === 'kingdoms' || g.gameType === 'paint') && g.state !== 'lobby') return;
+    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
     // generated server-side or teacher-driven). Don't gate them on
     // questions.length, otherwise Start silently does nothing and the
@@ -5086,6 +5381,12 @@ io.on('connection', (socket) => {
     broadcast(pin);
     // Reinos de Colores: the two captains are revealed during the countdown (projector VS intro, phones).
     if (g.gameType === 'kingdoms') { g.kdCaptains = kdPickCaptains(g.kdCaptains); io.to(pin).emit('kd:captains', g.kdCaptains); }
+    // Batalla de Nieve: one of the gang leads the survivors, another the ice team (VS intro on the projector).
+    if (g.gameType === 'snow') {
+      const c = kdPickCaptains(g.snCaptains ? { red: g.snCaptains.sun, gold: g.snCaptains.ice } : null);
+      g.snCaptains = { sun: c.red, ice: c.gold };
+      io.to(pin).emit('sn:captains', g.snCaptains);
+    }
     io.to(pin).emit('countdown', { ms: COUNTDOWN_MS });
 
     setTimeout(() => {
@@ -5178,6 +5479,7 @@ io.on('connection', (socket) => {
       }
       if (g.gameType === 'kingdoms') kdStart(pin, g);
       if (g.gameType === 'paint') pcStart(pin, g);
+      if (g.gameType === 'snow') snStart(pin, g);
       if (g.gameType === 'reading') {
         // === 📖 READING MODE ===
         // Teacher-driven story session. Server holds the master playback
@@ -5250,7 +5552,7 @@ io.on('connection', (socket) => {
       }
       broadcast(pin);
       // Every question-driven game auto-deals the first question (Dragones Pintores: kids ask with «Recargar»).
-      if (g.gameType !== 'paint') Object.keys(g.players).forEach((pid) => {
+      if (g.gameType !== 'paint' && g.gameType !== 'snow') Object.keys(g.players).forEach((pid) => {
         const q = nextQuestionFor(g, pid);
         if (q) io.to(pid).emit('question', q);
       });
@@ -5264,6 +5566,7 @@ io.on('connection', (socket) => {
   socket.on('host:end-now', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
+    if (g.gameType === 'snow' && g.state !== 'active') return;      // already over: no second end show
     if (g.endTimer) clearTimeout(g.endTimer);
     endGame(pin);
   });
@@ -5274,6 +5577,7 @@ io.on('connection', (socket) => {
     if (g.endTimer) clearTimeout(g.endTimer);
     if (g.gameType === 'kingdoms') { kdClearTimers(g); g.kingdoms = null; }
     if (g.gameType === 'paint') { pcStop(g); g.paint = null; }
+    if (g.gameType === 'snow') { snStop(g); g.snow = null; }
     g.state = 'lobby';
     g.teamScores = { red: 0, gold: 0 };
     g.endsAt = null;
@@ -5292,7 +5596,8 @@ io.on('connection', (socket) => {
   socket.on('player:join', ({ pin, name, avatar, studentCode }, cb) => {
     const g = games[pin];
     if (!g) return cb({ ok: false, error: 'No hay ningún juego con ese PIN. Revisa el número.' });
-    if (g.state === 'ended') return cb({ ok: false, error: 'Este juego ya terminó. Espera el próximo PIN de tu maestro.' });
+    // «Otra ronda» keeps the same PIN: tell the kid to try again, not to wait for a new PIN (class test 2026-10-12)
+    if (g.state === 'ended') return cb({ ok: false, error: 'Esta ronda terminó. Cuando tu maestro empiece otra, vuelve a tocar «¡Entrar!».' });
     const cleanName = String(name || '').trim().slice(0, 20);
     if (!cleanName) return cb({ ok: false, error: 'Escribe tu nombre.' });
 
@@ -5451,6 +5756,14 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('pc:init', pcInitPayload(g, socket.id));
         return;
       }
+      // Batalla de Nieve: a late joiner walks in as a survivor with a 10 s shield; a rejoin keeps everything.
+      if (g.gameType === 'snow' && g.snow) {
+        snAttach(g, socket.id, player, true);
+        io.to(socket.id).emit('sn:init', snInitPayload(g, socket.id));
+        io.to(pin).emit('sn:roster', { players: snRoster(g), counts: Snow.counts(g.players) });
+        if (player.currentQ) io.to(socket.id).emit('question', { qid: player.currentQ.qid, text: player.currentQ.text, answers: player.currentQ.answers, image: player.currentQ.image });
+        return;
+      }
       if (g.gameType === 'kingdoms' && g.kingdoms) {
         io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
         if (player.kdPending) { kdPrompt(pin, socket.id, { reprompt: true }); return; }
@@ -5541,6 +5854,8 @@ io.on('connection', (socket) => {
       }
     } else if (g.gameType === 'paint') {
       pcAnswer(pin, g, socket.id, p, correct, correctText);
+    } else if (g.gameType === 'snow') {
+      snAnswer(pin, g, socket.id, p, correct, correctText);
     } else if (g.gameType === 'kingdoms') {
       // Reinos de Colores: right answer = a flag to plant (3 in a row = 2 flags). The next question waits
       // until the flag is planted (kid taps a tile, or the server auto-plants after KD_PLANT_MS).
@@ -5624,8 +5939,8 @@ io.on('connection', (socket) => {
       nextDelay = correct ? -1 : 1500;
     } else if (g.gameType === 'kingdoms') {
       nextDelay = correct ? -1 : 1400;
-    } else if (g.gameType === 'paint') {
-      nextDelay = -1;                       // back to flying; the kid asks for the next question
+    } else if (g.gameType === 'paint' || g.gameType === 'snow') {
+      nextDelay = -1;                       // back to flying / walking; the kid asks for the next question
     } else if (g.gameType === 'sixseven') {
       // Snappy rhythm — fast cadence so the swing feels continuous
       nextDelay = correct ? 600 : 800;
@@ -5641,7 +5956,7 @@ io.on('connection', (socket) => {
     }
     // Reinos de Colores sends its own small kd:plant diffs; skipping the full-room 'state' push here
     // keeps 30 phones from receiving ~5 full state objects per second.
-    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint') broadcast(pin);
+    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow') broadcast(pin);
   });
 
   // Dragones Pintores: position (8 Hz from each phone), painted tiles, and «Recargar» (ask for a question).
@@ -5720,6 +6035,100 @@ io.on('connection', (socket) => {
     } catch (e) { console.error('[player:pc-ask]', e); }
   });
 
+  // Batalla de Nieve: position (8 Hz from each phone), snowballs, stations, pearls/dates, the ❄️ chest.
+  const snGame = (data) => {
+    const g = games[data && data.pin];
+    if (!g || g.gameType !== 'snow' || !g.snow || g.state !== 'active') return null;
+    const p = g.players[socket.id];
+    if (!p || p.snRound !== g.snow.id) return null;
+    if (p.snPid !== socket.id) snAttach(g, socket.id, p, false);   // a reconnected socket that hasn't re-joined yet
+    return { g, p, k: g.snow };
+  };
+  socket.on('player:sn-pos', (data) => {
+    try {
+      const c = snGame(data);
+      if (!c) return;
+      const { g, p, k } = c;
+      const now = Date.now();
+      const x = Number(data.x), y = Number(data.y);
+      const chk = Snow.checkPos(k, p, socket.id, x, y, now);
+      const pos = k.pos[socket.id];
+      if (!chk.ok) {
+        // too fast / inside a wall / frozen: the phone snaps back (at most twice a second, never a storm)
+        if (now - (p.snCorrAt || 0) > 500 && now >= (p.snRespawnUntil || 0)) { p.snCorrAt = now; snSendMe(g, socket.id, { pos: [chk.x, chk.y] }); }
+        return;
+      }
+      pos.x = x; pos.y = y; pos.at = now;
+      const f = Number(data.f);
+      if (Number.isInteger(f) && f >= 0 && f < 8) pos.f = f;
+      k.posDirty = true;
+    } catch (e) { console.error('[player:sn-pos]', e); }
+  });
+  socket.on('player:sn-throw', (data) => {
+    try {
+      const c = snGame(data);
+      if (!c) return;
+      const { g, p, k } = c;
+      const r = Snow.throwBall(k, p, socket.id, Number(data.dx), Number(data.dy), Date.now());
+      if (r.error) { io.to(socket.id).emit('sn:refused', { what: 'throw', why: r.error, copos: p.snCopos }); return; }
+      const b = r.ball;
+      io.to(data.pin).emit('sn:ball', {
+        id: b.id, by: p.snIdx, side: b.side, x: Math.round(b.x), y: Math.round(b.y), dx: b.dx, dy: b.dy, range: b.left, speed: Snow.R.BALL_SPEED,
+      });
+      snSendMe(g, socket.id);
+    } catch (e) { console.error('[player:sn-throw]', e); }
+  });
+  socket.on('player:sn-ask', (data) => {
+    try {
+      const c = snGame(data);
+      if (!c) return;
+      const { g, p, k } = c;
+      const now = Date.now();
+      if (k.paused || now < (p.snRespawnUntil || 0)) { io.to(socket.id).emit('sn:refused', { what: 'station', why: 'busy' }); return; }
+      if (!Snow.nearStation(k, socket.id, Number(data.station))) { io.to(socket.id).emit('sn:refused', { what: 'station', why: 'far' }); return; }
+      if (p.currentQ) {
+        io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
+        return;
+      }
+      const q = nextQuestionFor(g, socket.id);
+      if (q) io.to(socket.id).emit('question', q);
+      else io.to(socket.id).emit('sn:refused', { what: 'station', why: 'noq' });
+    } catch (e) { console.error('[player:sn-ask]', e); }
+  });
+  socket.on('player:sn-job', (data) => {
+    try {
+      const c = snGame(data);
+      if (!c) return;
+      const { g, p, k } = c;
+      const r = Snow.doJob(k, p, socket.id, Number(data.job), Date.now());
+      if (r.error) { io.to(socket.id).emit('sn:refused', { what: 'job', why: r.error, waitMs: r.waitMs || 0 }); return; }
+      snSendMe(g, socket.id, { job: { kind: r.kind, gained: r.gained } });
+      io.to(g.hostId).emit('sn:fx', { type: 'job', idx: p.snIdx, kind: r.kind });
+    } catch (e) { console.error('[player:sn-job]', e); }
+  });
+  socket.on('player:sn-grab', (data) => {
+    try {
+      const c = snGame(data);
+      if (!c) return;
+      const { g, p, k } = c;
+      const now = Date.now();
+      const r = Snow.grabChest(k, p, socket.id, Number(data.chest), now);
+      if (r.error) return;
+      k.nextChestAt = now + Snow.nextChestGap();
+      io.to(data.pin).emit('sn:chest', { id: null, taken: r.chest.id, by: p.snIdx, name: p.name, zone: r.chest.zone, x: r.chest.x, y: r.chest.y });
+      snSendMe(g, socket.id, { chest: { gained: r.gained } });
+    } catch (e) { console.error('[player:sn-grab]', e); }
+  });
+  // Teacher «Pausa» (Batalla de Nieve; other games can opt in the same way).
+  socket.on('host:pause', (data) => {
+    try {
+      const { pin, paused } = data || {};
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.state !== 'active') return;
+      if (g.gameType === 'snow') snPause(pin, g, !!paused);
+    } catch (e) { console.error('[host:pause]', e); }
+  });
+
   // Reinos de Colores: kid tapped a tile on the phone's mini board.
   socket.on('player:kd-plant', (data) => {
     try {
@@ -5740,7 +6149,8 @@ io.on('connection', (socket) => {
     g.duration += add / 1000;
     g.extraSecs = (g.extraSecs || 0) + add / 1000;   // only for this round: host:reset gives it back (playtest 2026-10-11)
     if (g.endTimer) clearTimeout(g.endTimer);
-    g.endTimer = setTimeout(() => {
+    g.endTimer = null;
+    if (!(g.snow && g.snow.paused)) g.endTimer = setTimeout(() => {   // paused: the resume re-arms it
       if (!games[pin] || games[pin].state !== 'active') return;
       endGame(pin);
     }, Math.max(0, g.endsAt - Date.now()));
@@ -5789,6 +6199,13 @@ io.on('connection', (socket) => {
       io.to(socket.id).emit('pc:init', pcInitPayload(g, socket.id));
       if (p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
       return;
+    }
+    if (g.gameType === 'snow' && g.state === 'active' && g.snow) {
+      const fresh = p.snRound !== g.snow.id;   // was away when the round started: walks in as a late joiner (shield)
+      snAttach(g, socket.id, p, fresh);
+      io.to(socket.id).emit('sn:init', snInitPayload(g, socket.id));
+      if (fresh) io.to(pin).emit('sn:roster', { players: snRoster(g), counts: Snow.counts(g.players) });
+      return;                         // an open question stays open: the station button re-sends it
     }
     if (g.gameType === 'kingdoms' && g.state === 'active' && g.kingdoms) {
       io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
@@ -6823,6 +7240,7 @@ io.on('connection', (socket) => {
           }
           if (stillExists.endTimer) clearTimeout(stillExists.endTimer);
           if (stillExists.gameType === 'paint') pcStop(stillExists);
+          if (stillExists.gameType === 'snow') snStop(stillExists);
           if (stillExists.gameType === 'kingdoms') kdClearTimers(stillExists);
           io.to(currentPin).emit('host-left');
           delete games[currentPin];
@@ -6834,6 +7252,8 @@ io.on('connection', (socket) => {
         // Soft disconnect: keep slot for rejoin, mark as disconnected
         p.disconnected = true;
         p.disconnectedAt = Date.now();
+        // Batalla de Nieve: survival seconds don't count while the phone is away (snAttach restarts them)
+        if (g.gameType === 'snow' && g.snow && p.snSide === 'sun' && p.snSunSince) { p.snSunMs = (p.snSunMs || 0) + Date.now() - p.snSunSince; p.snSunSince = 0; }
         g.feed.push({ type: 'leave', name: p.name, t: Date.now() });
         broadcast(currentPin);
         // Schedule full cleanup after 5 minutes of inactivity
@@ -6862,6 +7282,7 @@ setInterval(() => {
     if (g.state !== 'active') return;
     if (g.gameType === 'warmup') return;       // teacher-driven flashcards, no questions
     if (g.gameType === 'paint') return;        // questions are on demand («Recargar»)
+    if (g.gameType === 'snow') return;         // questions are on demand (the stations)
     Object.entries(g.players).forEach(([pid, p]) => {
       const inAction = p.mashUntil > now || p.currentQ;
       if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {
