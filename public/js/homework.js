@@ -3449,8 +3449,7 @@
     });
   }
   // Best-effort story→experience grouping for the reading folders.
-  const READING_EXP = { xiaomingday: 'exp8' };
-  function readingExpOf(r) { return (r && (READING_EXP[r.storyId] || r.exp)) || 'exp1'; }
+  function readingExpOf(r) { return (r && r.exp) || 'exp1'; }
   (function bindFolderBack() {
     const b = $('hw-folder-back');
     if (b) b.addEventListener('click', () => { hwFolder = null; renderList(); });

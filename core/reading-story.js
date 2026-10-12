@@ -4,10 +4,10 @@
 // HOW TO ADD A NEW STORY
 // =========================================================================
 // 1. Pick a short id (lowercase, no spaces) for your story. Examples:
-//      'xiaomingday', 'lunarnewyear', 'marketday', 'firstrain'
+//      'pinpin', 'lunarnewyear', 'marketday', 'firstrain'
 //
 // 2. Add a new entry to the STORIES object below, following the shape of
-//    the existing 'xiaomingday' entry:
+//    the existing 'pinpin' entry:
 //      - title (pinyin)
 //      - subtitle (Spanish gloss)
 //      - pages: an array of pages, each with
@@ -15,7 +15,7 @@
 //          (Spanish translation, same count + order), audioDurationMs
 //
 // 3. Drop your assets into:
-//      public/assets/reading/<storyId>/page-1.png   (illustration)
+//      public/assets/reading/<storyId>/page-1.webp  (illustration, WebP: imageExt: 'webp')
 //      public/assets/reading/<storyId>/page-1.mp3   (Chinese narration)
 //      ...one pair per page.
 //
@@ -36,172 +36,6 @@ const DEFAULT_PAGE_AUDIO_MS = 8000;
 // All stories live here. Add new entries to expand the library. The
 // `id` (key) becomes the URL path component for that story's assets.
 const STORIES = {
-  // === STORY 1 ===
-  xiaomingday: {
-    id: 'xiaomingday',
-    title: 'Xiǎo Míng de yī tiān',
-    subtitle: 'Un día con Xiǎo Míng',
-    exp: 'exp8',  // late-set vocab (school/weather/shopping) → EXP8
-    music: 'mochi-mash',     // upbeat, warm, daily-life vibes
-    animated: false,         // PNG stills only
-    assetVersion: '20260601a', // bump when you replace the page-N.png files
-    // === Test bank ===
-    // 5 multiple-choice questions, each worth 20 points (100 total).
-    // Questions are tied to EVENTS in the story — kids who actually
-    // read/listened can answer; kids who didn't can't guess. Pinyin and
-    // Spanish are intentionally mixed: some questions use pinyin in the
-    // stem with Spanish choices, some use Spanish stems with pinyin
-    // choices, so the test trains BOTH directions. HSK1 vocab only.
-    questions: [
-      {
-        // Story fact: "Wǒ jiā yǒu sì gè rén" (page 1)
-        q: '¿Cuántas personas viven en la casa de Xiǎo Míng?',
-        choices: ['Sì (4)', 'Sān (3)', 'Wǔ (5)', 'Liù (6)'],
-        correctIdx: 0,
-      },
-      {
-        // Story fact: "Bàba kàn diànshì" (page 2)
-        q: 'En la mañana, ¿qué hace bàba?',
-        choices: ['kàn diànshì', 'chī mǐfàn', 'qù xuéxiào', 'shuìjiào'],
-        correctIdx: 0,
-      },
-      {
-        // Story fact: "Wǒ qù xuéxiào" (page 3) — completion in pinyin
-        q: '"Wǒ qù ___" — completa como en el cuento:',
-        choices: ['xuéxiào (escuela)', 'shāngdiàn (tienda)', 'yīyuàn (hospital)', 'jiā (casa)'],
-        correctIdx: 0,
-      },
-      {
-        // Story fact: "Wǒ chī fàn, hē chá" (page 5)
-        q: 'En el almuerzo, Xiǎo Míng bebe…',
-        choices: ['chá (té)', 'shuǐ (agua)', 'kāfēi (café)', 'niúnǎi (leche)'],
-        correctIdx: 0,
-      },
-      {
-        // Story fact: "Tiānqì hěn rè" (page 6) — Spanish question, pinyin answer
-        q: 'Por la tarde, ¿cómo está el tiempo?',
-        choices: ['Hěn rè (caluroso)', 'Hěn lěng (frío)', 'Xiàyǔ (lluvia)', 'Xià xuě (nieve)'],
-        correctIdx: 0,
-      },
-    ],
-    pages: [
-      {
-        pageNum: 1,
-        caption: 'Por la mañana, en casa',
-        sentences: [
-          'Jīntiān shì xīngqī yī.',
-          'Wǒ jiào Xiǎo Míng. Wǒ shì xuéshēng.',
-          'Wǒ jiā yǒu sì gè rén: bàba, māma, jiějie hé wǒ.',
-          'Wǒ ài wǒ de jiā.',
-        ],
-        sentencesEs: [
-          'Hoy es lunes.',
-          'Me llamo Xiǎo Míng. Soy estudiante.',
-          'En mi casa somos cuatro personas: papá, mamá, mi hermana y yo.',
-          'Amo a mi familia.',
-        ],
-        audioDurationMs: 10000,
-      },
-      {
-        pageNum: 2,
-        caption: 'El desayuno',
-        sentences: [
-          'Shàngwǔ qī diǎn, wǒ qǐchuáng.',
-          'Wǒ chī mǐfàn, hē shuǐ.',
-          'Bàba kàn diànshì. Māma hěn gāoxìng.',
-          'Jiějie zài kàn shū.',
-        ],
-        sentencesEs: [
-          'A las siete de la mañana, me levanto.',
-          'Como arroz y tomo agua.',
-          'Papá ve la televisión. Mamá está muy contenta.',
-          'Mi hermana está leyendo un libro.',
-        ],
-        audioDurationMs: 9000,
-      },
-      {
-        pageNum: 3,
-        caption: 'Al colegio',
-        sentences: [
-          'Wǒ qù xuéxiào.',
-          'Xuéxiào zài qiánmiàn. Wǒ bù zuò chūzūchē.',
-          'Wǒ kàn yī gè gǒu. Gǒu hěn xiǎo, hěn piàoliang.',
-        ],
-        sentencesEs: [
-          'Voy a la escuela.',
-          'La escuela está al frente. No tomo taxi.',
-          'Veo un perrito. Es muy pequeño y muy bonito.',
-        ],
-        audioDurationMs: 8500,
-      },
-      {
-        pageNum: 4,
-        caption: 'En la escuela',
-        sentences: [
-          'Lǎoshī shuō: "Nǐ hǎo!"',
-          'Wǒ shuō: "Lǎoshī hǎo!"',
-          'Wǒmen xuéxí Hànyǔ. Wǒ rènshi wǒ de tóngxué.',
-          'Tā shì wǒ de péngyou.',
-        ],
-        sentencesEs: [
-          'La maestra dice: "¡Hola!"',
-          'Yo digo: "¡Hola, maestra!"',
-          'Estudiamos chino. Conozco a mis compañeros.',
-          'Él es mi amigo.',
-        ],
-        audioDurationMs: 10000,
-      },
-      {
-        pageNum: 5,
-        caption: 'La hora del almuerzo',
-        sentences: [
-          "Zhōngwǔ shí'èr diǎn. Wǒ chī fàn, hē chá.",
-          'Cài hěn hǎochī.',
-          'Yī gè píngguǒ duōshǎo qián?',
-          'Wǔ kuài. Wǒ mǎi yī gè.',
-        ],
-        sentencesEs: [
-          'Es mediodía, las doce. Como comida y tomo té.',
-          'La comida está muy rica.',
-          '¿Cuánto cuesta una manzana?',
-          'Cinco yuanes. Compro una.',
-        ],
-        audioDurationMs: 10000,
-      },
-      {
-        pageNum: 6,
-        caption: 'El tiempo',
-        sentences: [
-          'Xiànzài xiàwǔ. Tiānqì hěn rè.',
-          'Bù lěng. Xiàyǔ ma? Bù xiàyǔ.',
-          'Tài hǎo le! Wǒ hé péngyou qù shāngdiàn.',
-        ],
-        sentencesEs: [
-          'Es la tarde. El clima está muy caluroso.',
-          'No hace frío. ¿Está lloviendo? No, no llueve.',
-          '¡Qué bueno! Mi amigo y yo vamos a la tienda.',
-        ],
-        audioDurationMs: 9000,
-      },
-      {
-        pageNum: 7,
-        caption: 'Por la noche, en casa',
-        sentences: [
-          'Wǎnshang, wǒ huí jiā. Wǒ kàn diànyǐng.',
-          'Wǒ hěn xǐhuan zhège diànyǐng.',
-          'Wǒ ài wǒ de jiā. Wǒ shuìjiào.',
-          "Wǎn'ān!",
-        ],
-        sentencesEs: [
-          'En la noche, regreso a casa. Veo una película.',
-          'Me gusta mucho esta película.',
-          'Amo a mi familia. Me voy a dormir.',
-          '¡Buenas noches!',
-        ],
-        audioDurationMs: 10000,
-      },
-    ],
-  },
   // === STORY 2: PĪNPĪN — the soaking-wet water turtle =================
   // Funny Spanglish + pinyin half-and-half story for the kid who's
   // already wrestled with EXP1 vocab. Hardest HSK1 level (uses the
@@ -526,7 +360,7 @@ const STORIES = {
 };
 
 // Default story shown when a host first opens the reading page.
-const DEFAULT_STORY_ID = 'xiaomingday';
+const DEFAULT_STORY_ID = 'pinpin';   // 2026-10-12: «Xiǎo Míng de yī tiān» removed (41 MB of PNG pages)
 
 // === Helpers ===
 function tokenizePage(page) {

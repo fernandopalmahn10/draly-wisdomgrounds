@@ -111,6 +111,16 @@ app.get('/api/_diag', (req, res) => {
   try { out.assignments = Assignments.listAssignments().length; } catch (e) { out.asgErr = e.message; }
   try { out.teachers = Teachers.listAll().length; } catch (e) { out.teachersErr = e.message; }
   try { out.stories = Object.keys(ReadingStory.STORIES || {}).length; } catch (e) { out.storiesErr = e.message; }
+  // monthly health check (scripts/health-check.js): sizes only, never content. The student file is rewritten whole on
+  // every save, so its size is the early sign that it should move to a database (~20 MB).
+  try {
+    const fs = require('fs');
+    out.studentRecordsBytes = fs.statSync(path.join(__dirname, 'data', 'student-records.json')).size;
+  } catch (_) { out.studentRecordsBytes = null; }
+  const mu = process.memoryUsage();
+  out.memoryMB = Math.round(mu.rss / 1048576);
+  out.uptimeHours = Math.round(process.uptime() / 360) / 10;
+  out.rooms = Object.keys(games || {}).length;
   res.json(out);
 });
 
@@ -2503,7 +2513,7 @@ function _hwReadingListFor(code) {
 
 // 📚 Public stories list, grouped by HSK1 experience — used by the
 // Modo Maestro story picker. Returns every story with its `exp` tag
-// so the client can render folders (EXP1 has Pīnpīn, EXP8 has XiǎoMíng).
+// so the client can render folders (EXP1 has Pīnpīn, EXP2 has Lǎoshī Dralingo).
 app.get('/api/reading/stories', (req, res) => {
   res.json({ ok: true, stories: ReadingStory.listStories() });
 });
