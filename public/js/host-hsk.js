@@ -575,7 +575,9 @@
 
   // ── 🎬 ANIMATIONS panel ────────────────────────────────────────────
   const ANIMATIONS = [
-    { id: 'dralingo', name: 'Dralingo (saludo y baile)', tags: 'dralingo dragon dragón mascota emirati keffiyeh baile hola saludo', url: '/assets/kingdoms/dralingo/anim/hello.webp' },
+    { id: 'dralingo', name: 'Dralingo (saludo)', tags: 'dralingo dragon dragón mascota emirati kandura bigote hola saludo', url: '/assets/dralingo/anim/hello.webp' },
+    { id: 'dralingo-sabio', name: 'Dralingo sabio', tags: 'dralingo sabio piensa bigote pista idea', url: '/assets/dralingo/anim/wise.webp' },
+    { id: 'dralingo-poder', name: 'Poder de Dralingo', tags: 'dralingo poder fuerza alas campeón ganar', url: '/assets/dralingo/anim/power.webp' },
     { id: 'gojo',   name: 'Gojo (Jujutsu)',     tags: 'gojo satoru jjk anime sensei limitless infinity blue purple six eyes', url: '/assets/png-library/GOJO%20TRANSPARENT.gif' },
     { id: 'yugi',   name: 'Yugi (Yu-Gi-Oh!)',   tags: 'yugi pharaoh yugioh egypt millennium puzzle duel card master king games', url: '/assets/png-library/YUGI%20TRANSPARENT.gif' },
     { id: 'freddy', name: 'Freddy (FNAF)',      tags: 'freddy fnaf bear pizzeria hat haunted security animatronic robot', url: '/assets/png-library/FREDDY%20TRANSPARENT.gif' },

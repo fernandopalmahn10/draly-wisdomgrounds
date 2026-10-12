@@ -21,9 +21,14 @@
     flyby: '✈️ Vuelo', meteor: '☄️ Meteoro', gift: '🎁 Regalo', swarm: '🔥 Combo x3', zoom: '💥 Zoom',
     rain: '🌧️ Lluvia de Dralingos', spotlight: '🔦 Foco', dance: '💃 Baile', peek: '👀 Asomo',
     cameo: '🎬 Cameo del equipo', gang: '🕵️ ¡El equipo completo!',
+    sabio: '🧔 Dralingo sabio', poder: '💪 Poder de Dralingo',
   };
   // cameo + gang need the cast (js/cast.js); pages without it never pick them.
   const CAST_KINDS = ['cameo', 'gang'];
+  // Animated Dralingo in his kandura + mustache look (Higgsfield Kling clips, ~1 MB each): only when someone picks
+  // them, never in the random pool (30 phones loading 1 MB at once would choke the school WiFi).
+  const ANIM = '/assets/dralingo/anim/';
+  const HEAVY_KINDS = ['sabio', 'poder'];
   const hasCast = () => !!window.DralingoCast;
   const KINDS = Object.keys(LABELS);
   const src = (p) => BASE + p + '.webp';
@@ -113,6 +118,11 @@
 @keyframes dfxCameo{0%{bottom:-70vh}22%{bottom:-2vh}30%{bottom:-4vh}78%{bottom:-3vh}100%{bottom:-75vh}}
 .dfx-member{height:min(34vh,320px,58vw);bottom:-60vh;transform:translateX(-50%);animation:dfxPop 3.1s cubic-bezier(.3,1.6,.5,1) forwards}
 .dfx-who{display:block;font:800 .8em/1 'Nunito',sans-serif;color:#55607f;margin-bottom:4px;letter-spacing:.02em}
+.dfx-sabio{height:min(58vh,480px);left:4vw;bottom:-75vh;animation:dfxRise 5.4s cubic-bezier(.3,1.3,.5,1) forwards}
+@keyframes dfxRise{0%{bottom:-75vh}12%{bottom:-1vh}18%{bottom:-3vh}86%{bottom:-2vh}100%{bottom:-78vh}}
+.dfx-poder{height:min(64vh,520px);left:50%;top:52%;transform:translate(-50%,-50%) scale(0);animation:dfxPower 5.2s cubic-bezier(.2,1.4,.4,1) forwards}
+@keyframes dfxPower{0%{transform:translate(-50%,-50%) scale(0) rotate(-12deg)}14%{transform:translate(-50%,-50%) scale(1.1) rotate(2deg)}
+  20%{transform:translate(-50%,-50%) scale(1) rotate(0)}88%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1.12)}}
 `;
     document.head.appendChild(st);
   }
@@ -293,6 +303,28 @@
       bubble(o.text, l, '55%', '58%');
       return 3000;
     },
+    sabio(l, o) {
+      // The wise one rises from the corner stroking his mustache: a hint, a thought, «piensa conmigo».
+      const i = document.createElement('img');
+      i.className = 'dfx-img dfx-sabio';
+      i.alt = '';
+      i.src = ANIM + 'wise.webp';
+      l.appendChild(i);
+      bubble(o.text || pick(['Mmm… piensa conmigo.', 'Una pista: escucha bien.', 'Tú sabes la respuesta.']), l, '62%', '26%', 'Dralingo');
+      return 5400;
+    },
+    poder(l, o) {
+      // Super powerful, super friendly: rays, the power pose (wings + fist) and «¡PODER!».
+      const b = document.createElement('div'); b.className = 'dfx-burst'; b.style.bottom = '48vh'; l.appendChild(b);
+      const i = document.createElement('img');
+      i.className = 'dfx-img dfx-poder';
+      i.alt = '';
+      i.src = ANIM + 'power.webp';
+      l.appendChild(i);
+      setTimeout(() => { if (o.stamp !== false) stamp(o.stamp || '¡PODER!', l, '16%'); l.classList.add('dfx-shake'); }, 700);
+      if (o.text) setTimeout(() => bubble(o.text, l, '50%', '86%'), 900);
+      return 5200;
+    },
   };
 
   function play(kind, opts) {
@@ -319,7 +351,8 @@
 
   function celebrate(opts) {
     opts = opts || {};
-    const pool = (opts.kinds || KINDS).filter((k) => k !== lastKind && EFFECTS[k] && (hasCast() || !CAST_KINDS.includes(k)));
+    const pool = (opts.kinds || KINDS.filter((k) => !HEAVY_KINDS.includes(k)))
+      .filter((k) => k !== lastKind && EFFECTS[k] && (hasCast() || !CAST_KINDS.includes(k)));
     const kind = pick(pool.length ? pool : KINDS);
     lastKind = kind;
     return play(kind, opts);

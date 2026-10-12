@@ -1828,7 +1828,9 @@
   // Designed to be the foundation for a future "mascot of the day"
   // auto-rotation that fires server-side on login streaks etc.
   const GIF_LIBRARY = [
-    { id: 'dralingo', label: '🐉 Dralingo', url: '/assets/kingdoms/dralingo/anim/hello.webp' },
+    { id: 'dralingo', label: '🐉 Dralingo', url: '/assets/dralingo/anim/hello.webp' },
+    { id: 'dralingo-sabio', label: '🧔 Dralingo sabio', url: '/assets/dralingo/anim/wise.webp' },
+    { id: 'dralingo-poder', label: '💪 Poder de Dralingo', url: '/assets/dralingo/anim/power.webp' },
     { id: 'cr7',    label: '⚽ CR7',     url: '/assets/png-library/CR7%20TRANSPARENT.gif' },
     { id: 'gojo',   label: '👁 Gojo',    url: '/assets/png-library/GOJO%20TRANSPARENT.gif' },
     { id: 'yugi',   label: '🃏 Yugi',    url: '/assets/png-library/YUGI%20TRANSPARENT.gif' },

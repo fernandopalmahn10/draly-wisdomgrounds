@@ -130,7 +130,7 @@ function buildRound(level, world, round) {
 
 function itemQuestion(it, ctx) {
   const { level, world, items, worldItems, allItems, levelWords, worldWords, spanishClash } = ctx;
-  const single = (s) => (/^\S+$/.test(String(s || '').trim()) ? plain(s) : undefined);   // one-word answers get a key
+  const single = (s) => plain(s) || undefined;   // the answer's spelling is its key (no same word twice in a row)
   if (it.k === 'w') {                                           // exam word → its meaning
     const word = levelWords.find((x) => plain(x.py) === plain(it.py) && !x.gram && (!it.es || x.es === it.es));
     const correct = it.es || (word && word.es);

@@ -2324,7 +2324,9 @@
     // teacher can see what's being projected to the kids.
     const WU_ANIM_URL = {
       // 🐉 2026-10-11: Dralingo's own animated sticker (Higgsfield Kling clip, keyed to transparent WebP on this PC).
-      dralingo: '/assets/kingdoms/dralingo/anim/hello.webp',
+      dralingo: '/assets/dralingo/anim/hello.webp',            // kandura + mustache look, 2026-10-11
+      'dralingo-sabio': '/assets/dralingo/anim/wise.webp',
+      'dralingo-poder': '/assets/dralingo/anim/power.webp',
       gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
       yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
       freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',

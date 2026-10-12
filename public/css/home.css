@@ -67,7 +67,7 @@ body.home {
   display: block;
   width: clamp(140px, 40vw, 300px);
   height: auto;
-  aspect-ratio: 340 / 332;
+  aspect-ratio: 320 / 360;          /* his kandura + mustache look (2026-10-11) */
   object-fit: contain;
   filter: drop-shadow(0 8px 0 rgba(29, 36, 64, .18));
   position: relative;
