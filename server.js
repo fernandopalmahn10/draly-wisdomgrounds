@@ -1777,6 +1777,15 @@ app.post('/api/homework/enter', (req, res) => {
   if (!_enterRateLimit(req)) { console.warn('[security] homework/enter flood ip=' + _clientIp(req)); return res.status(429).json({ ok: false, error: 'demasiados intentos, espera un momento' }); }
   try {
     const { studentCode, displayName, accessCode, meta } = req.body || {};
+    // 🆕 2026-10-12 — never an «Anon» account: no code and no name is refused, and a short name («Luis», «María»)
+    // that looks like a code but matches no student comes back as codeNotFound (the client asks «¿eres nuevo/a?»
+    // and resends it as a name).
+    if (!studentCode && !String(displayName || '').trim()) {
+      return res.status(400).json({ ok: false, error: 'Escribe tu nombre o tu código de estudiante' });
+    }
+    if (studentCode && !displayName && !Students.get(studentCode)) {
+      return res.json({ ok: false, codeNotFound: true, error: 'No encontramos ese código de estudiante' });
+    }
     // 🆕 2026-09-15 — detect brand-new accounts BEFORE getOrCreate so the
     // client can show the big "anótalo en un cuaderno" student-code banner
     // exactly once (prevents duplicate accounts from forgotten codes).

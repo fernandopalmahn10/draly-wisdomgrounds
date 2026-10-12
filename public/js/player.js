@@ -386,18 +386,13 @@
   // 🦫 is the closest standard emoji to a capybara (capybara isn't a separate
   // Unicode emoji as of this writing; beaver is what every emoji keyboard
   // calls "capybara" in casual chat).
-  const AVATAR_CHOICES = [
-    '🦫','🦖','🦕','🐲','🦄',
-    '🐱','🐶','🦊','🐯','🦁',
-    '🐰','🐻','🐼','🐨','🐸',
-    '🐵','🐺','🦝','🐹','🐭',
-    '🦔','🦦','🦥','🐢','🐙',
-    '🐳','🐧','🦉','🦋','🐝',
-    '🐔','🦅','🦜','🦩','🦓',
-    '🦒','🐊','🐍','🦂','🐌'
-  ];
+  // 2026-10-12 — only our roster (his ask): the saga avatars (public/js/saga.js). The game carries each one's emoji
+  // (hosts print it as text); the phone's picker shows the picture.
+  const SAGA_AV = (window.Saga && window.Saga.AVATARS) || [];
+  const AVATAR_CHOICES = SAGA_AV.map((x) => x.emoji);
   function getMyAvatar() {
-    return localStorage.getItem('dralyAvatar') || '🐱';
+    const v = localStorage.getItem('dralyAvatar');
+    return AVATAR_CHOICES.includes(v) ? v : (AVATAR_CHOICES[0] || '🐉');   // an old animal emoji → Dralingo
   }
   function setMyAvatar(a) {
     try { localStorage.setItem('dralyAvatar', a); } catch (_) {}
@@ -729,8 +724,10 @@
     grid.innerHTML = '';
     AVATAR_CHOICES.forEach((a) => {
       const cell = document.createElement('div');
-      cell.className = 'avatar-cell' + (a === current ? ' selected' : '');
-      cell.textContent = a;
+      cell.className = 'avatar-cell avatar-cell-saga' + (a === current ? ' selected' : '');
+      const sv = SAGA_AV.find((x) => x.emoji === a);
+      if (sv) { const im = document.createElement('img'); im.src = sv.url; im.alt = sv.label; im.draggable = false; cell.appendChild(im); }
+      else cell.textContent = a;
       cell.addEventListener('pointerdown', (e) => {
         if (e) e.preventDefault();
         setMyAvatar(a);

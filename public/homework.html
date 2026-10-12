@@ -66,14 +66,25 @@
   <link rel="stylesheet" href="/css/homework.css?v=20261012c">
   <link rel="stylesheet" href="/css/characters.css?v=20260601o">
   <!-- 2026-10-11 pastel sticker restyle, loaded last; every rule is scoped to body.hw-pastel (drop the class to roll back) -->
-  <link rel="stylesheet" href="/css/homework-pastel.css?v=20261012a">
+  <link rel="stylesheet" href="/css/homework-pastel.css?v=20261012d">
 </head>
 <body class="hw-bg hw-pastel">
 
   <!-- SCREEN: ENTRY — access code + student code -->
   <div id="screen-entry" class="container hw-entry">
+    <!-- 2026-10-12 «alive, randomized, not overdone» (his rule): the Dubai skyline, a gang member or a saga animal
+         popping up beside the card with a line, the Dubai plane or the falcon flying by now and then. Filled by
+         startEntryLife() in homework.js; never over the card, still frames when reduced motion is on. -->
+    <div class="hw-life" aria-hidden="true">
+      <img class="hw-life-skyline" src="/assets/dubai/skyline-wide.webp" alt="" draggable="false">
+      <img class="hw-life-fly" id="hw-life-fly" alt="" draggable="false">
+    </div>
+    <button type="button" class="hw-life-peek" id="hw-life-peek" hidden aria-label="Un amigo del equipo">
+      <img alt="" draggable="false"><span class="hw-life-bubble"></span>
+    </button>
+    <a class="hw-entry-home" href="/" aria-label="Volver al inicio">← Inicio</a>
     <div class="hw-entry-card">
-      <img class="hw-entry-dralingo" src="/assets/kingdoms/dralingo/pointing.webp" alt="" width="148" height="188" draggable="false">
+      <img class="hw-entry-dralingo" id="hw-entry-dralingo" src="/assets/dralingo/anim/hello-still.webp" alt="Dralingo" width="148" height="166" draggable="false">
       <h1 class="hw-entry-title">Mis Tareas</h1>
       <p class="hw-entry-sub">Para hacer las tareas en tu casa, sin código PIN.</p>
       <label class="hw-entry-label">
@@ -93,7 +104,12 @@
   <!-- SCREEN: AVATAR PICKER — shown on first entry only -->
   <div id="screen-avatar" class="container hw-avatar-pick hidden">
     <div class="hw-avatar-pick-card">
-      <h1 class="hw-avatar-pick-title">¡Hola, <span id="hw-avatar-pick-name">amigo</span>!</h1>
+      <h1 class="hw-avatar-pick-title" id="hw-avatar-pick-title">¡Hola, <span id="hw-avatar-pick-name">amigo</span>!</h1>
+      <!-- 2026-10-12: an account without a real name asks for it here (never «Hola, Anon») -->
+      <label class="hw-avatar-name-row hidden" id="hw-avatar-name-row">
+        <span>¿Cómo te llamas?</span>
+        <input class="input hw-entry-input" id="hw-avatar-name-input" type="text" maxlength="20" placeholder="Tu nombre" autocomplete="off">
+      </label>
       <p class="hw-avatar-pick-sub">Elige tu avatar. Será el que verán tus papás cuando vean tu progreso.</p>
       <div class="hw-avatar-grid" id="hw-avatar-grid"></div>
       <p id="hw-avatar-err" style="color:var(--red-glow); text-align:center; font-size:0.85rem; min-height:1em;"></p>
@@ -609,11 +625,11 @@
        celebrate through dralingo-fx.js, and saga.js holds the saga avatars + teacher animations -->
   <script src="/js/cast.js?v=20261011c"></script>
   <script src="/js/dralingo-fx.js?v=20261011f"></script>
-  <script src="/js/saga.js?v=20261012a"></script>
+  <script src="/js/saga.js?v=20261012b"></script>
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/hw-i18n.js?v=20261012d"></script>
-  <script src="/js/homework.js?v=20261012e"></script>
+  <script src="/js/hw-i18n.js?v=20261012f"></script>
+  <script src="/js/homework.js?v=20261012i"></script>
   <script src="/js/super-admin-badge.js?v=20261011c"></script>
 </body>
 </html>
