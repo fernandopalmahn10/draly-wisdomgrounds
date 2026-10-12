@@ -175,44 +175,13 @@ All images are 2048×something resolution (Nano Banana's native 2k). I'll downsc
 - **ASPECT**: 9:16
 - **SAVE TO**: `public/assets/cutscenes/temple/dusk-pagoda.png`
 
-### Character intros — 2 poses each, sprite-cycled (14 images = 7 characters × 2 poses)
+### Characters — the saga only (2026-10-12)
 
-*CSS treatment: alternates between the two PNGs every 0.4 seconds + slide-in from edge. Looks animated.*
-
-### I16-17. Gojo (Pose A: walking in / Pose B: snap-finger pose)
-- **PROMPT A**: Anime character Gojo Satoru from JJK chibi style, walking forward casually with hands in pockets, dark blindfold over eyes, white spiky hair, dark blue uniform, transparent PNG
-- **PROMPT B**: Same Gojo chibi, now in mid-finger-snap pose, blue glowing infinity shockwave radiating outward from his hand, transparent PNG
-- **SAVE TO**: `public/assets/cutscenes/chars/gojo-a.png` + `public/assets/cutscenes/chars/gojo-b.png`
-
-### I18-19. Yuji (Pose A: running in / Pose B: fist-up grin)
-- **PROMPT A**: Yuji Itadori from JJK chibi style, mid-run pose with one foot forward, school uniform, pink spiky hair, friendly look, transparent PNG
-- **PROMPT B**: Same Yuji chibi, now in heroic fist-raised pose with big grin, pink cherry blossom petals swirling behind, transparent PNG
-- **SAVE TO**: `public/assets/cutscenes/chars/yuji-a.png` + `public/assets/cutscenes/chars/yuji-b.png`
-
-### I20-21. Shelly (Pose A: lowered gun walk / Pose B: finger-gun wink)
-- **PROMPT A**: Shelly from Brawl Stars chibi style, walking in with shotgun lowered casually across her shoulders, pink pigtails, transparent PNG
-- **PROMPT B**: Same Shelly chibi, now in playful finger-gun pose with one eye winked, sparkles around her hand, transparent PNG
-- **SAVE TO**: `public/assets/cutscenes/chars/shelly-a.png` + `public/assets/cutscenes/chars/shelly-b.png`
-
-### I22-23. FNAF Freddy (kid-friendly Pose A: standing / Pose B: waving)
-- **PROMPT A**: Friendly brown animatronic teddy bear chibi style with top hat, kid-friendly smiling purple eyes (NOT SCARY), standing pose, pizza arcade neon glow behind, transparent PNG
-- **PROMPT B**: Same Freddy chibi, now waving at camera with raised paw, big friendly smile, transparent PNG
-- **SAVE TO**: `public/assets/cutscenes/chars/fnaf-a.png` + `public/assets/cutscenes/chars/fnaf-b.png`
-
-### I24-25. Dandy (Pose A: standing tall / Pose B: bow)
-- **PROMPT A**: Tall friendly flower-headed mascot character (yellow petal head, green stem body) standing tall in greeting pose, transparent PNG
-- **PROMPT B**: Same Dandy character now in polite bowing pose with head tilted down, transparent PNG
-- **SAVE TO**: `public/assets/cutscenes/chars/dandy-a.png` + `public/assets/cutscenes/chars/dandy-b.png`
-
-### I26-27. Anime warrior (generic) — A katana ready / B spin slash
-- **PROMPT A**: Chibi anime warrior with traditional Asian samurai armor and cherry blossom katana, ready stance, transparent PNG
-- **PROMPT B**: Same warrior now mid-spin-slash with petals trailing his blade in an arc, transparent PNG
-- **SAVE TO**: `public/assets/cutscenes/chars/anime1-a.png` + `public/assets/cutscenes/chars/anime1-b.png`
-
-### I28-29. Anime mage (generic) — A staff ready / B casting spell
-- **PROMPT A**: Chibi anime mage girl with long flowing robes and magical wooden staff, calm ready pose, transparent PNG
-- **PROMPT B**: Same mage now mid-cast, glowing pinyin characters orbiting her staff in a magical circle, transparent PNG
-- **SAVE TO**: `public/assets/cutscenes/chars/anime2-a.png` + `public/assets/cutscenes/chars/anime2-b.png`
+Brand characters (Gojo, Yuji, Shelly, FNAF, Dandy, Pikachu, Mario, Elsa, CR7…) were removed from the platform on
+2026-10-12, with their prompts. Every character kids see is his own saga: Dralingo, Profe Fer, Hamdan, Latifa,
+Aileen, Adric, Adrian, plus the camel, the Dubai plane (unbranded), the falcon and the oryx. The list lives in
+`public/js/saga.js`; art in `public/assets/saga/` (stickers, `anim/` animated WebP, `avatars/`), `public/assets/cast/`
+and `public/assets/dralingo/`, made with the `higgsfield-art` skill.
 
 ### Game intro stills (8 images)
 *CSS treatment: pan-and-zoom for 3 seconds then fade to lobby. Movie-poster reveal.*

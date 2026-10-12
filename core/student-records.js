@@ -11,6 +11,7 @@
 const fs = require('fs');
 const path = require('path');
 const Levels = require('./levels');
+const Saga = require('../public/js/saga');   // the saga avatars (2026-10-12)
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const FILE_PATH = path.join(DATA_DIR, 'student-records.json');
@@ -56,6 +57,41 @@ function load() {
     });
     if (migrated) {
       console.log('[students] un-corrupted', migrated, 'records whose displayName was the code');
+      scheduleSave();
+    }
+    // 🆕 2026-10-12 — brand avatars (gojo, pikachu…) no longer exist: each becomes its saga replacement
+    // (public/js/saga.js LEGACY_AVATARS). Only removed ids are touched, so it is a no-op after the first boot.
+    let avMoved = 0;
+    Object.values(records).forEach((rec) => {
+      const to = rec && Saga.legacyAvatar(rec.avatar);
+      if (to) { rec.avatar = to; avMoved++; }
+    });
+    if (avMoved) {
+      console.log('[students] moved', avMoved, 'brand avatars to the saga');
+      scheduleSave();
+    }
+    // 🆕 2026-10-12 — the reading story «Lǎoshī Yugi» became «Lǎoshī Dralingo» (same id): saved attempts keep their
+    // scores, but their stored title / questions / choices stop saying Yugi (parents' view, «revisar errores»).
+    // Only touches text that still contains «Yugi», so it is a no-op after the first boot.
+    const deYugi = (v) => (typeof v === 'string' ? v.replace(/\bYugi\b/g, 'Dralingo') : v);
+    let tests = 0;
+    Object.values(records).forEach((rec) => {
+      (rec && Array.isArray(rec.testResults) ? rec.testResults : []).forEach((t) => {
+        if (!t || t.storyId !== 'yugipharaoh') return;
+        const before = JSON.stringify(t);
+        t.storyTitle = deYugi(t.storyTitle);
+        (Array.isArray(t.breakdown) ? t.breakdown : []).forEach((b) => {
+          if (!b || typeof b !== 'object') return;
+          Object.keys(b).forEach((k) => {
+            if (typeof b[k] === 'string') b[k] = deYugi(b[k]);
+            else if (Array.isArray(b[k])) b[k] = b[k].map(deYugi);
+          });
+        });
+        if (JSON.stringify(t) !== before) tests++;
+      });
+    });
+    if (tests) {
+      console.log('[students] renamed Yugi → Dralingo in', tests, 'saved reading results');
       scheduleSave();
     }
   } catch (e) {
@@ -257,6 +293,9 @@ function setClassroomId(code, classroomId) {
 // art, fantasy (lorelei), and stylized (micah, thumbs, big-ears).
 // All SVGs live in public/assets/avatars/<name>.svg.
 const AVATAR_OPTIONS = [
+  // 🆕 2026-10-12 — the saga first (Dralingo, the cast, camel, Dubai plane, falcon, oryx: public/js/saga.js); the
+  // brand characters (Gojo, Pikachu, Mario…) are gone and load() moves kids who had one to its saga replacement
+  ...Saga.AVATARS.map((a) => a.id),
   // Cartoon kids (adventurer)
   'mochi', 'dragon', 'stella', 'felix',
   'luna',  'atlas',  'zara',   'kai',
@@ -271,15 +310,6 @@ const AVATAR_OPTIONS = [
   'yeti',   'fox',     'owl',    'shark',
   'viking', 'galaxy',  'comet',  'boba',
   'lotus',  'ramen',   'koala',  'raptor',
-  // ⭐ Character roster — uses PNG art from /assets/cutscenes/chars/
-  // Each character has 2 poses + a victory video that triggers on
-  // daily completion (see public/js/characters.js).
-  'gojo',    'yugi',    'squirtle',  // generated assets ready
-  'yuji',    'shelly',  'fnaf',    'dandy',
-  'hanzo',   'mei2',    'dralingo',
-  'naruto',  'sasuke',  'luffy',   'goku',
-  'pikachu', 'sonic',   'mario',   'kirby',
-  'spiderman','ironman','elsa',    'moana',
 ];
 function setAvatar(code, avatar) {
   const rec = get(code);

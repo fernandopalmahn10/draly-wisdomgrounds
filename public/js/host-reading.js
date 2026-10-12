@@ -140,53 +140,12 @@
   //
   // To add more: drop the GIF into public/assets/png-library/ and add
   // an entry to the ANIMATIONS array below.
-  const ANIMATIONS = [
-    {
-      id: 'gojo',
-      name: 'Gojo (Jujutsu)',
-      tags: 'gojo satoru jujutsu kaisen jjk anime sensei limitless infinity blue purple six eyes',
-      url: '/assets/png-library/GOJO%20TRANSPARENT.gif',
-    },
-    {
-      id: 'yugi',
-      name: 'Yugi (Yu-Gi-Oh!)',
-      tags: 'yugi pharaoh yugioh egypt millennium puzzle duel card master king games',
-      url: '/assets/png-library/YUGI%20TRANSPARENT.gif',
-    },
-    {
-      id: 'freddy',
-      name: 'Freddy (FNAF)',
-      tags: 'freddy fnaf bear pizzeria hat haunted security animatronic robot',
-      url: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
-    },
-    {
-      id: 'mario',
-      name: 'Mario (Nintendo)',
-      tags: 'mario nintendo jump red plumber mustache mushroom italian princess',
-      url: '/assets/png-library/MARIO%20TRANSPARENT.gif',
-    },
-    {
-      id: 'sonic',
-      name: 'Sonic (Sega)',
-      tags: 'sonic hedgehog blue fast sega run shoes rings spin chaos',
-      url: '/assets/png-library/SONIC%20TRANSPARENT.gif',
-    },
-    {
-      id: 'elsa',
-      name: 'Elsa (Frozen)',
-      tags: 'elsa frozen disney ice queen snow princess arendelle',
-      url: '/assets/png-library/ELSA%20TRANSPARENT.gif',
-    },
-    {
-      id: 'turtle',
-      name: 'Squirtle dancing',
-      tags: 'squirtle turtle pinpin water dance dancing tortuga',
-      url: '/assets/png-library/Squirtle%20animation.gif',
-    },
-    // 🆕 Add new animations here as the user drops more transparent GIFs.
-    // Keep each under ~2.5 MB to respect Render bandwidth — overlay
-    // only loads when the teacher actively triggers it.
-  ];
+  // 2026-10-12 — the saga only (public/js/saga.js: Dralingo, the camel, the Dubai plane, the falcon, the oryx); the
+  // brand GIFs (Gojo, Yugi, Freddy, Mario, Sonic, Elsa, Squirtle) are gone. To add one: an entry in saga.js.
+  const ANIMATIONS = ((window.Saga && window.Saga.ANIMS) || []).map((x) => ({
+    id: x.id, name: x.label, url: x.url, thumb: x.still || x.url,
+    tags: window.Saga.searchText(x),
+  }));
   let _animCurrentFx = null;   // which animation is currently broadcasting
   function showAnimOverlay(fxId) {
     hideAnimOverlay();   // single overlay at a time
@@ -226,7 +185,7 @@
         card.dataset.fxId = a.id;
         card.dataset.searchHaystack = (a.name + ' ' + (a.tags || '')).toLowerCase();
         card.innerHTML =
-          '<div class="rd-anim-tile-thumb" style="background-image:url(\'' + a.url + '\');"></div>' +
+          '<div class="rd-anim-tile-thumb" style="background-image:url(\'' + a.thumb + '\');"></div>' +
           '<div class="rd-anim-tile-name">' + escapeHtml(a.name) + '</div>';
         card.addEventListener('click', () => {
           // Toggle: if same fx already on → off. Else switch to this one.

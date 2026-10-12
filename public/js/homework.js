@@ -36,49 +36,16 @@
     yeti:   '❄️ Yeti',   fox:    '🦊 Zorro',   owl:    '🦉 Búho',    shark:  '🦈 Tiburón',
     viking: '⚔️ Vikingo', galaxy: '🌌 Galaxia', comet:  '☄️ Cometa',  boba:   '🧋 Boba',
     lotus:  '🪷 Loto',   ramen:  '🍜 Ramen',   koala:  '🐨 Koala',   raptor: '🦖 Raptor',
-    // ⭐ Character roster — uses PNGs from /assets/cutscenes/chars/
-    gojo:   '👁 Gojo',    yugi:   '🃏 Yugi',    yuji:   '👊 Yuji',    shelly: '🔫 Shelly',
-    fnaf:   '🎩 Freddy', dandy:  '🌻 Dandy',   hanzo:  '⚔️ Hanzō',  mei2:   '🧙‍♀️ Méi M.',
-    dralingo:'🐲 Dralingo', naruto:'🍥 Naruto', sasuke: '⚡ Sasuke', luffy:  '🏴‍☠️ Luffy',
-    goku:   '🥋 Goku',   pikachu:'⚡ Pikachu', sonic:  '💨 Sonic',  mario:  '🍄 Mario',
-    kirby:  '🌸 Kirby',  spiderman:'🕷 Spider', ironman:'🤖 Iron Man', elsa: '❄️ Elsa', moana: '🌊 Moana',
-    squirtle: '🐢 Squirtle',
   };
-  // Set of names that resolve to PNGs in /assets/cutscenes/chars/ instead
-  // of SVGs in /assets/avatars/. These come from the character system.
-  const CHAR_AVATAR_NAMES = new Set([
-    'gojo','yugi','yuji','shelly','fnaf','dandy','hanzo','mei2','dralingo',
-    'naruto','sasuke','luffy','goku','pikachu','sonic','mario','kirby',
-    'spiderman','ironman','elsa','moana','squirtle',
-  ]);
-  // 🐢 Squirtle uses the user's transparent dancing GIF directly (in the
-  // /assets/png-library/ folder), not the standard /cutscenes/chars/
-  // path. Mapped here so avatarSrc returns the right URL.
-  const CUSTOM_AVATAR_URLS = {
-    squirtle: '/assets/png-library/Squirtle%20animation.gif',
-    // Transparent dancing GIFs override the static PNGs so the avatar
-    // moves wherever it appears (homework portal, parent roster,
-    // builder header, force-impose modal).
-    gojo:     '/assets/png-library/GOJO%20TRANSPARENT.gif',
-    yugi:     '/assets/png-library/YUGI%20TRANSPARENT.gif',
-    fnaf:     '/assets/png-library/FREDDY%20TRANSPARENT.gif',
-    mario:    '/assets/png-library/MARIO%20TRANSPARENT.gif',
-    sonic:    '/assets/png-library/SONIC%20TRANSPARENT.gif',
-    elsa:     '/assets/png-library/ELSA%20TRANSPARENT.gif',
-  };
-  // ?v bumped whenever the avatar ART is regenerated (same filenames, new
-  // look) so browsers don't serve the stale cached SVG. 2026-05-28: fresh
-  // cooler DiceBear set.
-  const AVATAR_ASSET_VER = '20260528b';
+  // 2026-10-12 — the saga avatars (Dralingo, the cast, the camel, the Dubai plane, the falcon, the oryx) replace the
+  // brand characters: labels + pictures come from public/js/saga.js. A kid who had a brand avatar (gojo, pikachu…)
+  // shows its saga replacement (Saga.LEGACY_AVATARS; the server also migrates the record).
+  if (window.Saga) {
+    window.Saga.AVATARS.forEach((x) => { AVATAR_LABELS[x.id] = x.label; });
+    Object.keys(window.Saga.LEGACY_AVATARS).forEach((old) => { AVATAR_LABELS[old] = AVATAR_LABELS[window.Saga.LEGACY_AVATARS[old]]; });
+  }
   function avatarSrc(name) {
-    // 🐢 Custom-URL avatars (e.g. squirtle → transparent dancing GIF
-    // in /assets/png-library/). Win over everything below.
-    if (CUSTOM_AVATAR_URLS[name]) return CUSTOM_AVATAR_URLS[name];
-    // Character roster uses pose-A PNG from cutscenes folder.
-    if (CHAR_AVATAR_NAMES.has(name)) {
-      return '/assets/cutscenes/chars/' + name + '-a.png?v=' + AVATAR_ASSET_VER;
-    }
-    return '/assets/avatars/' + encodeURIComponent(name) + '.svg?v=' + AVATAR_ASSET_VER;
+    return (window.Saga && window.Saga.avatarUrl(name)) || '/assets/avatars/' + encodeURIComponent(name) + '.svg?v=20260528b';
   }
   function isSvgAvatar(v) {
     return typeof v === 'string' && /^[a-z0-9]+$/.test(v) && AVATAR_LABELS[v];
@@ -371,6 +338,10 @@
   // Poll every 20s while on the list screen. Updates the 🔔 badge.
   // Opens a modal showing message history when the bell is tapped.
   let _inbox = [];
+  // 2026-10-12 — teacher animations are the saga's only (public/js/saga.js): an old brand-GIF message (Gojo, CR7…)
+  // stays in the record but is never shown or replayed again
+  const _sagaAnimUrls = new Set(((window.Saga && window.Saga.ANIMS) || []).map((a) => a.url));
+  const _inboxShown = (m) => m && (m.actionType !== 'anim' || _sagaAnimUrls.has(m.actionUrl));
   let _inboxUnread = 0;
   function fetchInbox() {
     if (!studentCode || !accessCode) return;
@@ -380,8 +351,9 @@
       .then((data) => {
         if (!data || !data.ok) return;
         const prevUnread = _inboxUnread;
-        _inbox = data.inbox || [];
-        _inboxUnread = data.unread || 0;
+        _inbox = (data.inbox || []).filter(_inboxShown);
+        const hiddenUnread = (data.inbox || []).filter((m) => !_inboxShown(m) && !m.readAt).length;
+        _inboxUnread = Math.max(0, (data.unread || 0) - hiddenUnread);
         renderBellBadge();
         // FORCE messages: the teacher pushed everyone into a live session.
         // Find the newest unread 'force' message and obey it immediately —
@@ -620,9 +592,12 @@
       const row = document.createElement('div');
       row.className = 'hw-inbox-msg' + (m.readAt ? '' : ' unread');
       const when = new Date(m.ts).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-      const actionHtml = m.actionUrl
-        ? `<a class="btn btn-jade hw-inbox-action" href="${escapeHtml(m.actionUrl)}">${escapeHtml(m.actionLabel || 'Abrir')}</a>`
-        : '';
+      // an animation from the teacher plays again over the page (it used to open the bare picture file)
+      const actionHtml = m.actionType === 'anim'
+        ? '<button type="button" class="btn btn-jade hw-inbox-action hw-inbox-replay">▶️ Verla otra vez</button>'
+        : m.actionUrl
+          ? `<a class="btn btn-jade hw-inbox-action" href="${escapeHtml(m.actionUrl)}">${escapeHtml(m.actionLabel || 'Abrir')}</a>`
+          : '';
       row.innerHTML = `
         <div class="hw-inbox-msg-head">
           <span class="hw-inbox-msg-from">👩‍🏫 ${escapeHtml(m.fromName || 'Maestra')}</span>
@@ -631,6 +606,8 @@
         <div class="hw-inbox-msg-text">${escapeHtml(m.text || '')}</div>
         ${actionHtml}
         ${m.broadcast ? '<span class="hw-inbox-msg-tag">📢 a toda la clase</span>' : ''}`;
+      const replay = row.querySelector('.hw-inbox-replay');
+      if (replay) replay.addEventListener('click', () => { closeInbox(); _showAnimOverlay(m); });
       list.appendChild(row);
     });
   }
@@ -1401,19 +1378,12 @@
     const game = $('hw-game'); if (!game) { if (onDone) onDone(); return; }
     // Check if this character has a victory mp4 — use it for both intro AND outro
     // so kids see real animation, not still PNG.
-    const charVideo = (window.DRALY_CHARACTERS && window.DRALY_CHARACTERS[char.id]) ? window.DRALY_CHARACTERS[char.id].victory : null;
+    const charVideo = null;
     const useVideo = false;   // Dralingo poses are animated stickers now (no borrowed-character videos)
     const poseImg = (kind === 'outro' && char.outroImg) ? char.outroImg : char.img;
     const wrap = document.createElement('div');
     wrap.className = 'hw-cutscene hw-cutscene-' + kind;
-    // Tint the lines + halftone per character mood so the scene FEELS right.
-    const tint = (char.id === 'fnaf') ? 'crimson'
-              : (char.id === 'shelly') ? 'crimson'
-              : (char.id === 'gojo') ? 'indigo'
-              : (char.id === 'yuji') ? 'crimson'
-              : (char.id === 'dandy') ? 'violet'
-              : 'amber';
-    wrap.classList.add('tint-' + tint);
+    wrap.classList.add('tint-amber');
     const impact = kind === 'intro'
       ? ['¡PREPÁRATE!', '¡VAMOS!', '¡AQUÍ VAMOS!', '¡A POR ELLOS!'][Math.floor(Math.random() * 4)]
       : ['¡EXCELENTE!', '¡INCREÍBLE!', '¡VICTORIA!', '¡GENIAL!', '¡CASO RESUELTO!'][Math.floor(Math.random() * 5)];
@@ -2441,14 +2411,10 @@
         + (res.leveledUp ? '<div class="hw-reward-row hw-reward-levelup">🆙 ¡Subiste a Nivel ' + res.newLevel + '!</div>' : '')
         + '</div><button class="hw-reward-ok" id="hw-reward-ok" type="button">¡Genial!</button></div>';
       try { if (MochiSounds && MochiSounds.winFanfare) MochiSounds.winFanfare(); } catch (_) {}
-      // 🎭 CHARACTER CELEBRATION — pick a random rare/legendary character
-      // and play their victory animation + catchphrase. Bigger emotional
-      // payoff than a static reward card alone.
+      // 🎭 CELEBRATION — Dralingo or the gang burst in (DralingoFX, a random entrance each time). 2026-10-12: the
+      // old characters.js roster (brand characters) is gone.
       try {
-        if (window.showCharacterCelebration && window.pickRandomCharacter) {
-          const char = window.pickRandomCharacter('rare');
-          setTimeout(() => window.showCharacterCelebration(char.id), 1400);
-        }
+        if (window.DralingoFX) setTimeout(() => window.DralingoFX.celebrate({ text: '¡Reto completado!', mood: 'win' }), 1400);
       } catch (_) {}
     } else if (res && res.reason === 'practice') {
       // Replay for fun — no double rewards, just a happy "well practiced".
@@ -2980,8 +2946,8 @@
   // auto-triggers print (→ "Save as PDF"). Dralingo EduTech branding is
   // prominent so it looks great shared on WhatsApp / stories.
   function openReportCardWindow(d) {
-    const avatarUrl = (typeof d.avatar === 'string' && /^[a-z]+$/.test(d.avatar))
-      ? '/assets/avatars/' + d.avatar + '.svg?v=20260528b' : '';
+    // saga or SVG; absolute, because the report card opens as a blob: document where /assets/… cannot resolve
+    const avatarUrl = (typeof d.avatar === 'string' && /^[a-z0-9]+$/.test(d.avatar)) ? location.origin + avatarSrc(d.avatar) : '';
     const notesHtml = (d.notes || []).length
       ? d.notes.map((n) => `<li>${escapeHtml(n.text)}</li>`).join('')
       : '<li>¡Sigue practicando en voz alta cada día! 🌱</li>';

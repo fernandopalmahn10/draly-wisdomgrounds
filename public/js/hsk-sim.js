@@ -735,18 +735,9 @@
   }
 
   // ── 🎬 Animation overlay (teacher-broadcast via PIN room) ─────────
-  const FX_URL = {
-    dralingo: '/assets/dralingo/anim/hello.webp',
-    'dralingo-sabio': '/assets/dralingo/anim/wise.webp',
-    'dralingo-poder': '/assets/dralingo/anim/power.webp',
-    gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
-    yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
-    freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
-    mario:  '/assets/png-library/MARIO%20TRANSPARENT.gif',
-    sonic:  '/assets/png-library/SONIC%20TRANSPARENT.gif',
-    elsa:   '/assets/png-library/ELSA%20TRANSPARENT.gif',
-    turtle: '/assets/png-library/Squirtle%20animation.gif',
-  };
+  // 2026-10-12 — the saga's animated stickers (public/js/saga.js); the brand GIFs are gone
+  const FX_URL = {};
+  ((window.Saga && window.Saga.ANIMS) || []).forEach((x) => { FX_URL[x.id] = x.url; });
   let _curFxId = null;
   function applyFx(fx) {
     const wantId = fx && fx.id;

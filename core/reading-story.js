@@ -216,7 +216,8 @@ const STORIES = {
     exp: 'exp1',  // pure EXP1 vocab (Yo / Familia: wǒ, jiā, gǒu, māo…)
     music: 'family',         // gentle warm "home / reunion" theme
     animated: false,         // set to true if you drop page-N.gif files
-    assetVersion: '20260602a', // bump this when you replace the art
+    assetVersion: '20261012a', // bump this when you replace the art
+    imageExt: 'webp',          // 2026-10-12: light WebP pages; 5-6 redrawn without the Pokémon (Squirtle) family
     questions: [
       {
         // Page 1: "Wǒ shì Pīnpīn"
@@ -358,18 +359,18 @@ const STORIES = {
       },
     ],
   },
-  // === STORY 3: YUGI — the ancient pharaoh teacher (EXP2: Escuela/Idioma)
-  // Mysterious Egyptian-pyramid vibe. Yugi appears as an ancient lǎoshī
-  // teaching the kid the basics of Hànyǔ. Drills EXP2's school+learning
-  // vocab in a dramatic anime ritual setting.
+  // === STORY 3: «Lǎoshī Dralingo» — the wise teacher of the pyramid (EXP2: Escuela/Idioma)
+  // 2026-10-12: was «Lǎoshī Yugi» (Yu-Gi-Oh art). Same id 'yugipharaoh' so kids' saved results still match;
+  // Dralingo in his platform look teaches the student (Aileen in the pictures) the basics of Hànyǔ.
   yugipharaoh: {
     id: 'yugipharaoh',
-    title: 'Lǎoshī Yugi',
+    title: 'Lǎoshī Dralingo',
     subtitle: 'El maestro misterioso de la pirámide',
     exp: 'exp2',                  // Escuela / Idioma
     music: 'identity',            // mysterious detective theme fits the mood
     animated: false,              // APNG files use .png extension natively
-    assetVersion: '20260603a',    // bumped: user dropped fresh Yugi-pharaoh art
+    assetVersion: '20261012a',    // Dralingo remake (Higgsfield pages as WebP + new narration)
+    imageExt: 'webp',
     // 🎨 Theme — purple + gold pharaoh palette. host-reading.js applies
     // these as CSS variables on the body when this story loads.
     theme: {
@@ -384,7 +385,7 @@ const STORIES = {
         correctIdx: 0,
       },
       {
-        q: '¿Qué hace Yugi con el shū antiguo?',
+        q: '¿Qué hace Dralingo con el shū antiguo?',
         choices: [
           'Lo lee — kàn shū',
           'Lo come',
@@ -404,7 +405,7 @@ const STORIES = {
         correctIdx: 0,
       },
       {
-        q: '¿Qué prueba le pone Yugi al estudiante?',
+        q: '¿Qué prueba le pone Dralingo al estudiante?',
         choices: [
           'Hablar chino — shuō Hànyǔ',
           'Saltar la pirámide',
@@ -429,11 +430,11 @@ const STORIES = {
         pageNum: 1,
         caption: 'La pirámide misteriosa',
         sentences: [
-          'Yugi lǎoshī.',
+          'Dralingo lǎoshī.',
           'Wǒ shì xuésheng.',
         ],
         sentencesEs: [
-          'Teacher Yugi — el maestro antiguo de la pirámide.',
+          'El maestro Dralingo — el sabio de la pirámide.',
           'Yo soy su nuevo estudiante. Estamos dentro de una pirámide enorme — las paredes brillan con jeroglíficos y caracteres chinos flotando en el aire.',
         ],
         audioDurationMs: 8000,
@@ -442,7 +443,7 @@ const STORIES = {
         pageNum: 2,
         caption: 'El libro antiguo',
         sentences: [
-          'Yugi lǎoshī kàn shū.',
+          'Dralingo lǎoshī kàn shū.',
           'Wǒ dú shū.',
         ],
         sentencesEs: [
@@ -455,12 +456,12 @@ const STORIES = {
         pageNum: 3,
         caption: 'El primer zì',
         sentences: [
-          'Yugi lǎoshī: kàn zì.',
+          'Dralingo lǎoshī: kàn zì.',
           'Wǒ kàn zì.',
           'Wǒ xiě zì.',
         ],
         sentencesEs: [
-          'Teacher Yugi: "Mira este carácter."',
+          'El maestro Dralingo: "Mira este carácter."',
           'Yo lo veo brillar dorado entre sus manos.',
           'Lo escribo con mi dedo en la arena. ¡Lo logré!',
         ],
@@ -470,12 +471,12 @@ const STORIES = {
         pageNum: 4,
         caption: 'La prueba',
         sentences: [
-          'Yugi lǎoshī shuō: tīng!',
+          'Dralingo lǎoshī shuō: tīng!',
           'Wǒ tīng.',
           'Wǒ shuō Hànyǔ.',
         ],
         sentencesEs: [
-          'Teacher Yugi dice: "¡Escucha!" — su voz retumba en la pirámide.',
+          'El maestro Dralingo dice: "¡Escucha!" — su voz retumba en la pirámide.',
           'Yo escucho con atención.',
           'Y luego yo hablo en chino — mi voz también suena ancestral.',
         ],
@@ -485,24 +486,24 @@ const STORIES = {
         pageNum: 5,
         caption: '¡Nǐ huì!',
         sentences: [
-          'Yugi lǎoshī: nǐ huì shuō.',
+          'Dralingo lǎoshī: nǐ huì shuō.',
           'Nǐ huì dú zì.',
         ],
         sentencesEs: [
-          'Teacher Yugi asiente con orgullo: "Tú SÍ sabes hablar."',
+          'El maestro Dralingo asiente con orgullo: "Tú SÍ sabes hablar."',
           'Tú SÍ puedes leer caracteres. Una luz dorada me envuelve — soy un verdadero estudiante de Hànyǔ.',
         ],
         audioDurationMs: 10000,
       },
       {
         pageNum: 6,
-        caption: 'El regalo del faraón',
+        caption: 'El regalo del maestro',
         sentences: [
-          'Wǒ shì Yugi lǎoshī de xuésheng.',
+          'Wǒ shì Dralingo lǎoshī de xuésheng.',
           'Wǒ ài xuéxí Hànyǔ.',
         ],
         sentencesEs: [
-          'Soy estudiante de Teacher Yugi.',
+          'Soy estudiante del maestro Dralingo.',
           'Amo aprender chino. El maestro me da un amuleto dorado — y se desvanece en partículas de luz dorada. Volveré a su pirámide algún día.',
         ],
         audioDurationMs: 11000,
@@ -562,13 +563,19 @@ function sentenceRanges(words) {
 // Build the wire-ready payload for ONE story (used when the teacher selects
 // it). Asset URLs are namespaced by storyId so multiple stories never
 // collide on filenames.
+// page picture format: `imageExt: 'webp'` (2026-10-12, the light re-drawn pages), `animated: true` → gif, else png
+function imageExt(story) { return story.imageExt || (story.animated ? 'gif' : 'png'); }
+function pageImageUrl(story, pageNum) {
+  const ver = story.assetVersion ? '?v=' + encodeURIComponent(story.assetVersion) : '';
+  return `/assets/reading/${story.id}/page-${pageNum}.${imageExt(story)}${ver}`;
+}
 function buildStoryPayload(storyId) {
   const id = storyId && STORIES[storyId] ? storyId : DEFAULT_STORY_ID;
   const story = STORIES[id];
   // 🎨 Animated stories (page-N.gif instead of page-N.png) opt in via
   // `animated: true` on the story config. Cache-busting via assetVersion
   // forces kids to fetch the new art when the teacher replaces it.
-  const ext = story.animated ? 'gif' : 'png';
+  const ext = imageExt(story);
   const ver = story.assetVersion ? '?v=' + encodeURIComponent(story.assetVersion) : '';
   return {
     id,
@@ -609,6 +616,7 @@ function listStories() {
     pageCount: s.pages.length,
     exp: s.exp || 'exp1',   // HSK1 folder bucket for the Modo Maestro picker
     questionCount: (s.questions || []).length,
+    coverImage: pageImageUrl(s, 1),
   }));
 }
 
@@ -624,6 +632,7 @@ module.exports = {
   DEFAULT_STORY_ID,
   buildStoryPayload,
   listStories,
+  pageImageUrl,
   tokenizePage,
   getStoryQuestions,
 };

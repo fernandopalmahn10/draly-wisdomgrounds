@@ -1970,8 +1970,10 @@
   //  - null/undefined — fallback emoji
   // This helper picks the right rendering.
   function renderAvatarChip(value) {
-    if (typeof value === 'string' && /^[a-z]+$/.test(value)) {
-      return `<img class="wu-nb-avatar-img" src="/assets/avatars/${value}.svg?v=20260528b" alt="${escapeHtml(value)}" draggable="false">`;
+    // saga avatars (WebP), the generic SVGs, old brand ids shown as their saga replacement: public/js/saga.js
+    const url = window.Saga ? window.Saga.avatarUrl(value) : null;
+    if (url) {
+      return `<img class="wu-nb-avatar-img" src="${escapeHtml(url)}" alt="${escapeHtml(String(value))}" draggable="false">`;
     }
     return `<span class="wu-nb-avatar-emoji">${escapeHtml(value || '🧒🏼')}</span>`;
   }
@@ -2292,12 +2294,33 @@
     }
 
     // --- 🎮 Interactive VFX buttons ---
+    // 2026-10-12 — the saga's buttons come from public/js/saga.js (animations after «🎬 Animaciones», one quick
+    // burst per cast member after «El equipo»)
+    const SAGA = window.Saga || { ANIMS: [], BURSTS: [] };
+    (function addSagaButtons() {
+      const mk = (cls, id, text, attrs) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'wu-fx-btn ' + cls; b.id = id; b.textContent = text;
+        Object.keys(attrs || {}).forEach((k) => b.setAttribute(k, attrs[k]));
+        return b;
+      };
+      let at = $('wu-anim-section');
+      SAGA.ANIMS.forEach((a) => {
+        const b = mk('wu-fx-anim-btn', 'wu-anim-' + a.id, a.label, { 'data-anim-id': a.id });
+        if (at) { at.after(b); at = b; }
+      });
+      at = $('wu-fx-gang');
+      SAGA.BURSTS.forEach((c) => {
+        const b = mk('wu-fx-char-btn', 'wu-fx-' + c.id, c.label);
+        if (at) { at.after(b); at = b; }
+      });
+    })();
     const fx = { 'wu-fx-rain': 'rain', 'wu-fx-confetti': 'confetti',
                  'wu-fx-zombies': 'zombies', 'wu-fx-moto': 'moto', 'wu-fx-shake': 'shake',
                  'wu-fx-sixseven': 'sixseven', 'wu-fx-stars': 'stars',
                  'wu-fx-flash': 'flash', 'wu-fx-tiger': 'tiger',
-                 'wu-fx-gojo': 'gojo', 'wu-fx-yuji': 'yuji', 'wu-fx-fnaf': 'fnaf',
-                 'wu-fx-shelly': 'shelly', 'wu-fx-dandy': 'dandy', 'wu-fx-dralingo': 'dralingo', 'wu-fx-gang': 'gang' };
+                 'wu-fx-dralingo': 'dralingo', 'wu-fx-gang': 'gang' };
+    SAGA.BURSTS.forEach((c) => { fx['wu-fx-' + c.id] = c.id; });
     Object.keys(fx).forEach((id) => {
       const b = $(id);
       if (b) b.addEventListener('click', () => broadcastFx(fx[id]));
@@ -2325,21 +2348,9 @@
     });
     // Render an animation overlay onto the host's own screen so the
     // teacher can see what's being projected to the kids.
-    const WU_ANIM_URL = {
-      // 🐉 2026-10-11: Dralingo's own animated sticker (Higgsfield Kling clip, keyed to transparent WebP on this PC).
-      dralingo: '/assets/dralingo/anim/hello.webp',            // kandura + mustache look, 2026-10-11
-      'dralingo-sabio': '/assets/dralingo/anim/wise.webp',
-      'dralingo-poder': '/assets/dralingo/anim/power.webp',
-      gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
-      yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
-      freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
-      mario:  '/assets/png-library/MARIO%20TRANSPARENT.gif',
-      sonic:  '/assets/png-library/SONIC%20TRANSPARENT.gif',
-      elsa:   '/assets/png-library/ELSA%20TRANSPARENT.gif',
-      turtle: '/assets/png-library/Squirtle%20animation.gif',
-      // 🆕 2026-06-08 (Fernando) — CR7 transparent dancing GIF.
-      cr7:    '/assets/png-library/CR7%20TRANSPARENT.gif',
-    };
+    // the saga's animated stickers (Higgsfield Kling clips keyed to transparent WebP): public/js/saga.js
+    const WU_ANIM_URL = {};
+    SAGA.ANIMS.forEach((a) => { WU_ANIM_URL[a.id] = a.url; });
     function wuApplyAnim(id, on) {
       let ov = document.getElementById('wu-anim-overlay-' + id);
       if (on) {
@@ -2545,13 +2556,10 @@
   // 🦸 Character summons — anime/comic-style full-screen "ult" entrances.
   // Each: themed aura color + comic speed-lines + screen shake + the
   // transparent PNG slamming in. label = the battle-cry shown.
-  const WU_CHARS = {
-    gojo:   { color: '#5ab0ff', glow: '#a98bff', label: '無量空処 ∞', cry: '¡GOJO!' },
-    yuji:   { color: '#ff5a5a', glow: '#ff2d2d', label: '黒閃 BLACK FLASH', cry: '¡YUJI!' },
-    fnaf:   { color: '#ff3b3b', glow: '#7a0000', label: 'IT\'S ME', cry: '¡FNAF!' },
-    shelly: { color: '#ffd23b', glow: '#ff9f1c', label: '¡SUPER!', cry: '¡SHELLY!' },
-    dandy:  { color: '#5be8d1', glow: '#7bdf7b', label: '¡HOLA!', cry: '¡DANDY!' },
-  };
+  // 2026-10-12 — the saga cast (public/js/saga.js BURSTS: transparent cheer stickers, colours, cry); the brand
+  // characters (Gojo, Yuji, FNAF, Shelly, Dandy) are gone
+  const WU_CHARS = {};
+  ((window.Saga && window.Saga.BURSTS) || []).forEach((c) => { WU_CHARS[c.id] = c; });
   function wuCharFx(layer, kind) {
     const c = WU_CHARS[kind];
     document.body.classList.remove('wu-shake'); void document.body.offsetWidth;
@@ -2565,55 +2573,13 @@
       <div class="wu-fx-char-lines"></div>
       <div class="wu-fx-char-aura"></div>
       <img class="wu-fx-char-img" alt="${kind}">
-      <div class="wu-fx-char-cry">${c.label}</div>`;
-    const img = el.querySelector('.wu-fx-char-img');
-    _wuTransparentChar(kind, (url) => { img.src = url; });
+      <div class="wu-fx-char-cry">${c.cry}</div>`;
+    el.querySelector('.wu-fx-char-img').src = c.img;
     layer.appendChild(el);
     if (MochiSounds.combo) MochiSounds.combo();
     else if (MochiSounds.correct) MochiSounds.correct();
     setTimeout(() => el.remove(), 3200);
   }
-  // Edge-flood chroma-key (downscaled + cached) — strips a solid background
-  // matte from character PNGs so they're truly transparent. Falls back to raw.
-  const _wuCharCache = {};
-  function _wuTransparentChar(kind, cb) {
-    const raw = '/assets/png-library/' + kind + '.png';
-    // Gojo's white hair gets eaten by the chroma-key flood; leave him untouched.
-    if (kind === 'gojo') { cb(raw); return; }
-    if (_wuCharCache[kind]) { cb(_wuCharCache[kind]); return; }
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const scale = Math.min(1, 680 / Math.max(img.width, img.height));
-        const w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale));
-        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
-        const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
-        const id = ctx.getImageData(0, 0, w, h); const px = id.data;
-        const at = (x, y) => (y * w + x) * 4;
-        let br = 0, bg = 0, bb = 0, n = 0;
-        for (let x = 0; x < w; x += Math.max(1, (w / 60) | 0)) { [0, h - 1].forEach((y) => { const o = at(x, y); if (px[o + 3] > 10) { br += px[o]; bg += px[o + 1]; bb += px[o + 2]; n++; } }); }
-        if (!n) { _wuCharCache[kind] = raw; cb(raw); return; }
-        br /= n; bg /= n; bb /= n;
-        const T = 46 * 46 * 3;
-        const close = (o) => { const dr = px[o] - br, dg = px[o + 1] - bg, db = px[o + 2] - bb; return (dr * dr + dg * dg + db * db) <= T; };
-        const stack = []; const seen = new Uint8Array(w * h);
-        for (let x = 0; x < w; x++) { stack.push(x, 0, x, h - 1); }
-        for (let y = 0; y < h; y++) { stack.push(0, y, w - 1, y); }
-        while (stack.length) {
-          const y = stack.pop(), x = stack.pop(); const i = y * w + x;
-          if (x < 0 || y < 0 || x >= w || y >= h || seen[i]) continue;
-          const o = i * 4;
-          if (px[o + 3] === 0 || close(o)) { seen[i] = 1; px[o + 3] = 0; stack.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1); }
-        }
-        ctx.putImageData(id, 0, 0);
-        const url = cv.toDataURL('image/png');
-        _wuCharCache[kind] = url; cb(url);
-      } catch (e) { _wuCharCache[kind] = raw; cb(raw); }
-    };
-    img.onerror = () => { _wuCharCache[kind] = raw; cb(raw); };
-    img.src = raw;
-  }
-
   function fireFx(kind) {
     const layer = $('wu-fx-layer');
     if (!layer) return;

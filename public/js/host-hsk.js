@@ -136,12 +136,9 @@
 
   function avatarHtml(a) {
     if (!a) return '<span class="hh-row-av is-emoji">🧒</span>';
-    if (/^[a-z0-9_-]+$/i.test(a)) {
-      const charSet = new Set(['gojo','yugi','yuji','shelly','fnaf','dandy','hanzo','mei2','dralingo','naruto','sasuke','luffy','goku','pikachu','sonic','mario','kirby','spiderman','ironman','elsa','moana','squirtle']);
-      const url = charSet.has(a) ? '/assets/cutscenes/chars/' + a + '-a.png'
-                                 : '/assets/avatars/' + encodeURIComponent(a) + '.svg';
-      return '<span class="hh-row-av"><img src="' + url + '" alt=""></span>';
-    }
+    // saga avatars + the generic SVGs (brand avatar ids show their saga replacement): public/js/saga.js
+    const url = window.Saga ? window.Saga.avatarUrl(a) : null;
+    if (url) return '<span class="hh-row-av"><img src="' + url + '" alt=""></span>';
     return '<span class="hh-row-av is-emoji">' + escapeHtml(a) + '</span>';
   }
 
@@ -574,18 +571,11 @@
   if ($('hh-home-btn-2')) $('hh-home-btn-2').addEventListener('click', openHomePicker);
 
   // ── 🎬 ANIMATIONS panel ────────────────────────────────────────────
-  const ANIMATIONS = [
-    { id: 'dralingo', name: 'Dralingo (saludo)', tags: 'dralingo dragon dragón mascota emirati kandura bigote hola saludo', url: '/assets/dralingo/anim/hello.webp' },
-    { id: 'dralingo-sabio', name: 'Dralingo sabio', tags: 'dralingo sabio piensa bigote pista idea', url: '/assets/dralingo/anim/wise.webp' },
-    { id: 'dralingo-poder', name: 'Poder de Dralingo', tags: 'dralingo poder fuerza alas campeón ganar', url: '/assets/dralingo/anim/power.webp' },
-    { id: 'gojo',   name: 'Gojo (Jujutsu)',     tags: 'gojo satoru jjk anime sensei limitless infinity blue purple six eyes', url: '/assets/png-library/GOJO%20TRANSPARENT.gif' },
-    { id: 'yugi',   name: 'Yugi (Yu-Gi-Oh!)',   tags: 'yugi pharaoh yugioh egypt millennium puzzle duel card master king games', url: '/assets/png-library/YUGI%20TRANSPARENT.gif' },
-    { id: 'freddy', name: 'Freddy (FNAF)',      tags: 'freddy fnaf bear pizzeria hat haunted security animatronic robot', url: '/assets/png-library/FREDDY%20TRANSPARENT.gif' },
-    { id: 'mario',  name: 'Mario (Nintendo)',   tags: 'mario nintendo jump red plumber mustache mushroom italian princess', url: '/assets/png-library/MARIO%20TRANSPARENT.gif' },
-    { id: 'sonic',  name: 'Sonic (Sega)',       tags: 'sonic hedgehog blue fast sega run shoes rings spin chaos', url: '/assets/png-library/SONIC%20TRANSPARENT.gif' },
-    { id: 'elsa',   name: 'Elsa (Frozen)',      tags: 'elsa frozen disney ice queen snow princess arendelle', url: '/assets/png-library/ELSA%20TRANSPARENT.gif' },
-    { id: 'turtle', name: 'Squirtle dancing',   tags: 'squirtle turtle pinpin water dance dancing tortuga', url: '/assets/png-library/Squirtle%20animation.gif' },
-  ];
+  // 2026-10-12 — the saga only (public/js/saga.js); the brand GIFs are gone
+  const ANIMATIONS = ((window.Saga && window.Saga.ANIMS) || []).map((x) => ({
+    id: x.id, name: x.label, url: x.url, thumb: x.still || x.url,
+    tags: window.Saga.searchText(x),
+  }));
   let _animCurrent = null;
   let _animBuilt = false;
   function openAnimModal() {
@@ -601,7 +591,7 @@
         card.dataset.fxId = a.id;
         card.dataset.searchHaystack = (a.name + ' ' + (a.tags || '')).toLowerCase();
         card.innerHTML =
-          '<div class="rd-anim-tile-thumb" style="background-image:url(\'' + a.url + '\');"></div>' +
+          '<div class="rd-anim-tile-thumb" style="background-image:url(\'' + a.thumb + '\');"></div>' +
           '<div class="rd-anim-tile-name">' + escapeHtml(a.name) + '</div>';
         card.addEventListener('click', () => {
           if (_animCurrent === a.id) { broadcastFx(a.id, false); _animCurrent = null; }
