@@ -55,7 +55,7 @@
         try { localStorage.setItem(STORAGE_PW, pw); } catch (_) {}
         $('m-login').classList.add('hidden');
         $('m-dash').classList.remove('hidden');
-        renderRoster(data.students || [], data.self || null);
+        renderRoster(data.students || [], data.self || null, data.archived);
       })
       .catch((e) => { $('m-login-err').textContent = 'Error: ' + e.message; });
   }
@@ -2303,7 +2303,7 @@
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { $('m-dash-sub').textContent = 'Error: ' + (data && data.error || ''); return; }
-        renderRoster(data.students || [], data.self || null);
+        renderRoster(data.students || [], data.self || null, data.archived);
       });
   }
   // === Tab switcher: students ↔ teachers (super-admin only) ===
@@ -2463,7 +2463,7 @@
 
   // 🆕 2026-06-16 — persisted roster search term (survives auto-refresh).
   let _rosterSearch = '';
-  function renderRoster(students, self) {
+  function renderRoster(students, self, archived) {
     // Surface "who am I" line and (if super admin) the Teachers tab.
     if (self) {
       const isSuper = !!self.isSuperAdmin;
@@ -2508,6 +2508,10 @@
       `${students.length} student${students.length === 1 ? '' : 's'} with activity` +
       (onlineCount > 0
         ? ` · <span class="m-online-pill">🟢 ${onlineCount} online now</span>`
+        : '') +
+      // accounts with 30 days of no activity rest in the archive (2026-10-12) and return when the kid uses their code
+      (archived > 0
+        ? ` · <span title="No activity for 30 days. They come back with everything the moment the kid types their code.">📦 ${archived} archived</span>`
         : '');
 
     // Summary
@@ -3521,7 +3525,7 @@
         if (data && data.ok) {
           $('m-login').classList.add('hidden');
           $('m-dash').classList.remove('hidden');
-          renderRoster(data.students || []);
+          renderRoster(data.students || [], null, data.archived);
         }
       });
   }

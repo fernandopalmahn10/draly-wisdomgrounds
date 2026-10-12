@@ -71,6 +71,120 @@ const io = new Server(server, {
   transports: ['websocket', 'polling']
 });
 
+// 🆕 2026-10-12 — the platform's address is now https://app.dralingo.app (through his Cloudflare). localStorage is per
+// address, so a PAGE opened at the old Render address hands the phone's saved data to the new address once, then goes
+// there (otherwise kids lose their saved student code and make duplicate accounts; teachers their login / lesson packs).
+//  · small values (student code, class code, avatar, language…) travel in the URL fragment (never sent to a server);
+//  · big or secret ones (a teacher's lesson packs, saved password) travel once through the server under a one-time
+//    token (POST /api/move/start → GET /api/move/:token, 10 min, 512 KB each, 25 MB for all moves together); if that
+//    fails the phone simply stays on the old address and tries again next visit: nothing is ever left behind;
+//  · after one complete move the old address only forwards (dralyMovedTo), so data removed on the new address (a
+//    teacher logging out) never comes back from an old bookmark;
+//  · the new address accepts saved data only when the visit really came from the old address (referrer) and writes
+//    only keys it doesn't have yet (a different student code there is kept, the old one saved as dralyStudentCodePrev).
+// Not moved: API calls, live-game sockets, files, the projector, live-game and exam pages (/host-*.html, player.html,
+// yct-sim.html, hsk-sim.html: mid-class sessionStorage and reloads), one-click launches (?autohost / livemaster /
+// livegame), and anything with ?nomove=1. Kids move when they open the home page, homework, audios or parents' view.
+// MOVE_FROM_HOST / MOVE_TO_ORIGIN override both addresses for local tests (launch config dralingo-move-test).
+const MOVE_FROM_HOST = String(process.env.MOVE_FROM_HOST || 'draly-wisdomgrounds-2.onrender.com').toLowerCase();
+const MOVE_TO_ORIGIN = process.env.MOVE_TO_ORIGIN || 'https://app.dralingo.app';
+const MOVE_KEYS_RE = /^(draly|mochi\.|hw_|em_|wu_)/i;   // the platform's own saved keys (homework, player, maestro, warm-up)
+const _moves = new Map();                               // token → { data, at, bytes }
+let _movesBytes = 0;
+const MOVE_PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="origin">
+<title>Draly Wisdom Grounds</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#fdf6e9;color:#1d2440;font:700 1.2rem system-ui,sans-serif}</style>
+</head><body><p>Cargando… 🐉</p><script>
+(function () {
+  var NEW = ${JSON.stringify(MOVE_TO_ORIGIN)}, FROM = ${JSON.stringify(MOVE_FROM_HOST)}, RE = ${MOVE_KEYS_RE.toString()};
+  function stay() { var u = new URL(location.href); u.searchParams.set('nomove', '1'); location.replace(u.toString()); }
+  if (location.host.toLowerCase() !== FROM) { stay(); return; }          // never loop on any other address
+  var to = location.pathname + location.search + location.hash;
+  var moved = false;
+  try { moved = localStorage.getItem('dralyMovedTo') === NEW; } catch (e) {}
+  var small = {}, big = {}, nSmall = 0, nBig = 0;
+  if (!moved) {
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!RE.test(k) || k === 'dralyMovedTo') continue;
+        var v = localStorage.getItem(k);
+        if (v.length <= 300 && !/pw|pass/i.test(k)) { small[k] = v; nSmall++; } else { big[k] = v; nBig++; }
+      }
+    } catch (e) {}
+  }
+  if (moved || (!nSmall && !nBig)) { location.replace(NEW + to); return; }
+  function go(token) {
+    var h = 'to=' + encodeURIComponent(to);
+    if (nSmall) h += '&d=' + encodeURIComponent(JSON.stringify(small));
+    if (token) h += '&t=' + token;
+    try { localStorage.setItem('dralyMovedTo', NEW); } catch (e) {}
+    location.replace(NEW + '/move.html#' + h);
+  }
+  if (!nBig) { go(''); return; }
+  var x = new XMLHttpRequest();
+  x.open('POST', '/api/move/start'); x.setRequestHeader('Content-Type', 'application/json'); x.timeout = 8000;
+  x.onload = function () { var t = ''; try { t = JSON.parse(x.responseText).token || ''; } catch (e) {} if (t) go(t); else stay(); };
+  x.onerror = x.ontimeout = stay;
+  x.send(JSON.stringify({ data: big }));
+})();
+</script></body></html>`;
+// The arrival page on the new address (served from code so it knows which address it may accept data from).
+const MOVE_ARRIVE_PAGE = `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Draly Wisdom Grounds</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#fdf6e9;color:#1d2440;font:700 1.2rem system-ui,sans-serif}</style>
+</head><body><p>Cargando… 🐉</p><script>
+(function () {
+  var FROM = ${JSON.stringify(MOVE_FROM_HOST)}, RE = ${MOVE_KEYS_RE.toString()};
+  var h = new URLSearchParams(location.hash.slice(1));
+  try { history.replaceState(null, '', '/move.html'); } catch (e) {}
+  var dest = '/';
+  try { var u = new URL(h.get('to') || '/', location.origin); if (u.origin === location.origin) dest = u.href; } catch (e) {}   // absolute: '//x' tricks can't leave the site
+  var done = false;
+  function go() { if (done) return; done = true; location.replace(dest); }
+  var ref = '';
+  try { ref = new URL(document.referrer).host.toLowerCase(); } catch (e) {}
+  if (ref !== FROM) { go(); return; }                                    // only a real move may write saved data here
+  function put(obj) {
+    Object.keys(obj || {}).forEach(function (k) {
+      try {
+        if (!RE.test(k) || k === 'dralyMovedTo' || typeof obj[k] !== 'string') return;
+        var cur = localStorage.getItem(k);
+        if (cur === null) localStorage.setItem(k, obj[k]);
+        else if (k === 'dralyStudentCode' && cur !== obj[k] && localStorage.getItem('dralyStudentCodePrev') === null) {
+          localStorage.setItem('dralyStudentCodePrev', obj[k]);          // two accounts on this phone: keep both codes
+        }
+      } catch (e) {}
+    });
+  }
+  try { put(JSON.parse(h.get('d') || '{}')); } catch (e) {}
+  var t = h.get('t');
+  if (!t || !/^[a-f0-9]{32}$/.test(t)) { go(); return; }
+  setTimeout(go, 10000);                                                 // never stuck on this page
+  fetch('/api/move/' + t, { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (j) { if (j && j.ok) put(j.data); })
+    .catch(function () {})
+    .then(go);
+})();
+</script></body></html>`;
+app.use((req, res, next) => {
+  if (req.method !== 'GET') return next();
+  if (req.path === '/move.html') {                                       // arrival page: never on the old address
+    if (String(req.headers.host || '').toLowerCase() === MOVE_FROM_HOST) return res.redirect(302, MOVE_TO_ORIGIN + '/');
+    res.set('Cache-Control', 'no-store');
+    return res.type('html').send(MOVE_ARRIVE_PAGE);
+  }
+  if (String(req.headers.host || '').toLowerCase() !== MOVE_FROM_HOST) return next();
+  if (/^\/(api|socket\.io|assets|js|css|health|healthz|_render-health)(\/|$)/i.test(req.path)) return next();
+  if (/^\/(host-[^/]*|player|yct-sim|hsk-sim)\.html$/i.test(req.path)) return next();   // projector, live game, exams: never mid-activity
+  if (/\.[a-z0-9]+$/i.test(req.path) && !/\.html$/i.test(req.path)) return next();      // files: served as usual
+  if (['nomove', 'autohost', 'livemaster', 'livegame'].some((q) => q in req.query)) return next();
+  if (!/text\/html/i.test(String(req.headers.accept || ''))) return next();            // scripts, health checks, bots
+  res.set('Cache-Control', 'no-store');
+  res.type('html').send(MOVE_PAGE);
+});
 // Serve static assets. HTML pages get no-cache headers so phones always pull
 // the latest markup (otherwise stale cached HTML keeps referencing old
 // rewards.js / player.js versions and users see "nothing changed" after a
@@ -95,6 +209,35 @@ app.use(express.static(path.join(__dirname, 'public'), {
   },
 }));
 app.use(express.json({ limit: '5mb' }));
+// The move to app.dralingo.app (see MOVE_PAGE above): the old address leaves a phone's big saved data here once...
+app.post('/api/move/start', (req, res) => {
+  const now = Date.now();
+  for (const [t, m] of _moves) if (now - m.at > 10 * 60 * 1000) { _movesBytes -= m.bytes; _moves.delete(t); }
+  const src = req.body && req.body.data;
+  if (!src || typeof src !== 'object' || Array.isArray(src)) return res.status(400).json({ ok: false });
+  const data = {};
+  let bytes = 0;
+  for (const [k, v] of Object.entries(src)) {
+    if (!MOVE_KEYS_RE.test(k) || k === 'dralyMovedTo' || typeof v !== 'string' || k.length > 80) continue;
+    bytes += 2 * (k.length + v.length);                    // JS strings: up to 2 bytes per character
+    data[k] = v;
+  }
+  if (bytes > 512 * 1024) return res.status(413).json({ ok: false });
+  if (_moves.size >= 300 || _movesBytes + bytes > 25 * 1024 * 1024) return res.status(429).json({ ok: false });
+  const token = require('crypto').randomBytes(16).toString('hex');
+  _moves.set(token, { data, at: now, bytes });
+  _movesBytes += bytes;
+  res.json({ ok: true, token });
+});
+// ...and the new address picks it up once (the arrival page writes only what the phone doesn't already have there).
+app.get('/api/move/:token', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const t = String(req.params.token);
+  const m = _moves.get(t);
+  if (m) { _moves.delete(t); _movesBytes -= m.bytes; }
+  if (!m || Date.now() - m.at > 10 * 60 * 1000) return res.status(404).json({ ok: false });
+  res.json({ ok: true, data: m.data });
+});
 // Health endpoints — Render hits one of these to verify the server is
 // alive after each deploy. Three paths covered because different
 // platforms look for different names. All return plain "ok" in <1ms
@@ -117,6 +260,12 @@ app.get('/api/_diag', (req, res) => {
     const fs = require('fs');
     out.studentRecordsBytes = fs.statSync(path.join(__dirname, 'data', 'student-records.json')).size;
   } catch (_) { out.studentRecordsBytes = null; }
+  try {
+    const a = Students.archiveStats();
+    out.archivedAccounts = a.archived;
+    out.archiveBytes = a.bytes;
+    if (a.broken) out.archiveBroken = true;
+  } catch (_) { /* older module */ }
   const mu = process.memoryUsage();
   out.memoryMB = Math.round(mu.rss / 1048576);
   out.uptimeHours = Math.round(process.uptime() / 360) / 10;
@@ -1103,6 +1252,11 @@ app.get('/api/admin/students', (req, res) => {
       isSuperAdmin: session.isSuperAdmin,
       accessCodes: session.teacher.accessCodes,
     } : { isSuperAdmin: true, legacy: true },
+    // accounts resting in the archive (30 days without activity): they come back when the kid uses their code
+    archived: Students.archiveStats
+      ? Students.archiveStats(session.isSuperAdmin || !session.teacher ? null : new Set(session.teacher.accessCodes || [])).archived
+      : 0,
+    archiveAfterDays: Students.ARCHIVE_AFTER_DAYS || 30,
   });
 });
 // 🆕 2026-06-21 (Fernando) — CLASSROOM SYSTEM (teacher-managed groups).
@@ -7314,3 +7468,9 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`\n  Mochi Mash running on http://localhost:${PORT}\n`);
 });
+
+// 🆕 2026-10-12 (his rule) — accounts with no activity for 30 days move to data/student-archive.json and come back by
+// themselves when their code is used again (core/student-records.js). Checked 2 min after each start, then daily.
+const _archiveRun = () => { try { Students.archiveInactive(); } catch (e) { console.warn('[students] archive run failed:', e.message); } };
+setTimeout(_archiveRun, 2 * 60 * 1000).unref();
+setInterval(_archiveRun, 24 * 60 * 60 * 1000).unref();

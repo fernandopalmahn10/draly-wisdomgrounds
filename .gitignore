@@ -19,6 +19,10 @@ data/tts-cache/
 # Persistent runtime data (lives on Render's persistent disk, NOT in git).
 # Includes student PII (sentence histories) + teacher presets.
 data/student-records.json
+data/student-archive.json
+data/student-archive.json.tmp
+data/student-records.json.tmp
+data/student-records.unreadable-*.json
 data/teacher-presets.json
 data/teachers.json
 data/heartbeat.txt

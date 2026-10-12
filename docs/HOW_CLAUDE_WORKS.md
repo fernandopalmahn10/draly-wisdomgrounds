@@ -4,7 +4,7 @@ A complete guide to the platform and to the work I do on it: what exists, how it
 build and test, and the new way of turning a screen recording into an official test. Use it to
 understand the scope, to direct the work, and to learn the method.
 
-**Live site:** `https://draly-wisdomgrounds-2.onrender.com`
+**Live site:** `https://app.dralingo.app` (through Cloudflare, since 2026-10-12); the Render address `https://draly-wisdomgrounds-2.onrender.com` still works
 **Code:** `C:\Users\ferpa\ClaudeCode\mochi-mash`, its own git repository on GitHub, deployed by Render.
 
 ---
@@ -224,6 +224,11 @@ A separate Emirati Arabic (Khaleeji) track:
   `CLAUDE.md` («Keep the site light») and `scripts/asset-guard.js` checks them before each deploy. The same day the
   site went from 587 MB to 115 MB of media (unused 3D models out, Old HSK exam pictures as WebP, the 41 MB
   «Xiǎo Míng» story removed).
+- **Old accounts rest in an archive (since 2026-10-12):** accounts with no activity for 30 days move out of the live
+  student file every day into an archive on the same disk; the kid's code brings everything back instantly. Teachers
+  see «📦 N archived» on the dashboard. Nothing is deleted.
+- **New address (since 2026-10-12):** `https://app.dralingo.app` through your Cloudflare (secure, flood guard, pictures
+  kept close to the kids). Opening the old Render link moves the phone there with its saved student code.
 - **Monthly health check:** on the 1st of each month a scheduled Claude task runs `scripts/health-check.js` (Render
   memory, processor, downloads, disk; the student file; media size; page weight) and tells you if a limit is crossed
   and what to do (bigger server, database, lighter pictures). Reports in `reports/platform-health/`.

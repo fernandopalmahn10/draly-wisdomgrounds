@@ -1,6 +1,6 @@
 # Draly Wisdom Grounds · platform rules
 
-Node web app (`server.js`, `core/`, `public/`), deployed on Render from this repo (`draly-wisdomgrounds-2.onrender.com`).
+Node web app (`server.js`, `core/`, `public/`), deployed on Render from this repo (`draly-wisdomgrounds-2.onrender.com`), served to the world through Cloudflare at **https://app.dralingo.app** (since 2026-10-12; `dralingo.app` too).
 Its own git repo. Teachers use `/maestro`; kids join rooms with a PIN; homework portal at `/homework`.
 Game modes live side by side (`public/host-*.html`, catalogue in `docs/GAME_MODES.md`); "Mochi Mash" is just the first
 game, the platform is Draly Wisdom Grounds with Dralingo as host. Agreed-but-unbuilt features: `TODO-QUEUED.md`.
@@ -18,6 +18,13 @@ the checklist for any new game mode.
   lines shipped without one).
 - **Deploy** with the `deploy-platform` skill (tests → exact staging → commit → push → wait until live → live check).
 - Never commit secrets (`.render-token`, credentials JSON, `data/*` runtime files with student data).
+- **Inactive accounts are archived, never deleted** (his rule 2026-10-12: "delete every account not active for 30
+  days" → archive with auto-restore, his choice). Every day the server moves accounts with no activity for 30 days
+  (max of lastSeen / firstSeen / restoredAt) into `data/student-archive.json`; `get()`, `getOrCreate()` and
+  `getOrProvisionForPin()` bring one back the moment its code is used (kid login, PIN join, parent link). Any new code
+  that looks a kid up by code goes through those three, never `listAll()` or the records map; boot migrations don't
+  touch the archive (repeat them in `restoreArchived` when they matter). `node scripts/test-archive.js` must pass.
+  Deleting the archive for good is his call alone.
 - **Boot-time migrations only fill what is missing** (load() in core/*.js runs on every deploy and Render wake-up):
   never force a value a teacher can change in /maestro. 2026-10-12 the review caught two that reset code levels on
   every boot (1002, Ms Han) the day levels became editable. Use "if missing" or a one-shot flag on the record.
@@ -75,6 +82,18 @@ the checklist for any new game mode.
   server, database, lighter media) and tell him. Reports in `../reports/platform-health/`. Render facts: one Starter
   server (0.5 CPU, 512 MB) on the Hobby workspace; Render already serves through Cloudflare (compressed); the 1 GB data
   disk is why deploys have a ~1 min gap and why we can't run two instances. Only one paid service should be running.
+- **Cloudflare (his account, since 2026-10-12)**: `dralingo.app` (Free plan) → CNAMEs `app`, `@`, `www` proxied to
+  `draly-wisdomgrounds-2.onrender.com`, SSL Full (strict), HTTPS always, TLS 1.2+, WebSockets on. Cache rule: `/assets/*`
+  kept at Cloudflare 2 h (a picture replaced under the SAME name shows up within 2 h: give new art a new name or
+  `?v=`). Rate limit: 400 `/api/` requests per 10 s per connection (a whole class shares one school IP: never lower
+  it below class size × requests per page). API token in `~/.dralingo/cloudflare-token.txt` (zone dralingo.app only;
+  never print it). Kids' saved student codes live per address (localStorage): never send kids to a new address
+  without a step that carries their code over, or they create duplicate accounts. Since 2026-10-12 page loads on the
+  old Render address carry the phone's saved data over once and land on app.dralingo.app (server.js `MOVE_PAGE` →
+  `MOVE_ARRIVE_PAGE` at /move.html: small values in the URL fragment, big or secret ones through a one-time token,
+  stays on the old address if that fails; accepted only with the old address as referrer). Not moved: API calls,
+  sockets, files, `/host-*.html`, `?autohost|livemaster|livegame|nomove`. A new localStorage key must start with
+  `draly`, `mochi.`, `hw_`, `em_` or `wu_` to travel.
 - Asset packs (Kenney etc.) live in `C:\Users\ferpa\ClaudeCode\assets-library\` (not in git, never served). Copy only
   the files a game uses into `public/assets/<game>/` and commit those; never commit a whole pack or an installer.
 - Spanish UI first; "Chino Mandarín"; big buttons, kid-friendly feedback; encouragement at the screen edge, never blocking play.
