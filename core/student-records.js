@@ -13,7 +13,7 @@ const path = require('path');
 const Levels = require('./levels');
 const Saga = require('../public/js/saga');   // the saga avatars (2026-10-12)
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.STUDENT_DATA_DIR || path.join(__dirname, '..', 'data');   // tests point it at a temp folder
 const FILE_PATH = path.join(DATA_DIR, 'student-records.json');
 // Code alphabet — avoids confusing chars (0/O, 1/I/l) so kids reading
 // codes off a phone screen don't mis-type them.
@@ -21,6 +21,15 @@ const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 let records = {};        // code → { code, displayName, firstSeen, lastSeen, sentencesBuilt: [] }
 let saveTimer = null;
+
+// 🆕 2026-10-12 (his rule) — accounts with no activity for ARCHIVE_AFTER_DAYS move out of the live file into
+// data/student-archive.json (same disk), and come back by themselves the moment anything looks their code up (the kid
+// types it, a PIN join, a parent link). Nothing is deleted: the live file stays small and the teacher's list clean.
+const ARCHIVE_PATH = path.join(DATA_DIR, 'student-archive.json');
+const ARCHIVE_AFTER_DAYS = 30;
+let archive = {};                // code → record (kept in memory like the live ones: a restore costs nothing)
+let archiveDirty = false;        // the archive file must be rewritten (always AFTER the live file is safely written)
+let archiveBroken = false;       // the archive file exists but can't be read: never overwrite it, never archive
 
 function ensureDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -30,14 +39,29 @@ function ensureDir() {
 
 function load() {
   ensureDir();
-  if (!fs.existsSync(FILE_PATH)) {
-    records = {};
-    return;
+  records = {};
+  if (fs.existsSync(FILE_PATH)) {
+    let parsed = null;
+    try {
+      parsed = JSON.parse(fs.readFileSync(FILE_PATH, 'utf8')) || {};
+    } catch (e) {
+      // 2026-10-12: never save over an unreadable student file (the next save used to wipe every account): keep it
+      // aside for recovery and start with an empty map
+      const aside = FILE_PATH.replace(/\.json$/, '.unreadable-' + Date.now() + '.json');
+      try { fs.renameSync(FILE_PATH, aside); } catch (_) { /* ignore */ }
+      console.error('[students] student file unreadable, kept as', path.basename(aside), '-', e.message);
+    }
+    if (parsed) {
+      records = parsed;
+      console.log('[students] loaded', Object.keys(records).length, 'student records');
+      try { bootMigrations(); } catch (e) { console.warn('[students] a boot migration failed (records kept):', e.message); }
+    }
   }
-  try {
-    const raw = fs.readFileSync(FILE_PATH, 'utf8');
-    records = JSON.parse(raw) || {};
-    console.log('[students] loaded', Object.keys(records).length, 'student records');
+  loadArchive();
+}
+
+function bootMigrations() {
+  {
     // 🆕 2026-06-04 v4 (Fernando bug): one-shot migration to UN-corrupt
     // records where displayName === code (the kid's name got clobbered
     // to their code by the unguarded getOrCreate or HSK heartbeat
@@ -94,19 +118,125 @@ function load() {
       console.log('[students] renamed Yugi → Dralingo in', tests, 'saved reading results');
       scheduleSave();
     }
-  } catch (e) {
-    console.warn('[students] failed to load records, starting fresh:', e.message);
-    records = {};
   }
 }
 
+function writeAtomic(file, text) {
+  const tmp = file + '.tmp';
+  fs.writeFileSync(tmp, text, 'utf8');
+  fs.renameSync(tmp, file);                      // a crash mid-write never leaves a cut-off file
+}
+
+// Write the live file (compact JSON, atomic), then the archive if it changed. The live file always goes first: an
+// account moving back from the archive is safe on disk before the archive lets it go. Returns false if the live
+// write failed.
 function persistNow() {
   ensureDir();
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   try {
-    fs.writeFileSync(FILE_PATH, JSON.stringify(records, null, 2), 'utf8');
+    writeAtomic(FILE_PATH, JSON.stringify(records));
   } catch (e) {
     console.warn('[students] failed to persist:', e.message);
+    return false;
   }
+  if (archiveDirty && !archiveBroken) {
+    try { writeAtomic(ARCHIVE_PATH, JSON.stringify(archive)); archiveDirty = false; }
+    catch (e) { console.warn('[students] failed to write the archive (will retry):', e.message); }
+  }
+  return true;
+}
+
+// === ARCHIVE (inactive accounts) ===
+const sameAccount = (a, b) => (Number(a && a.firstSeen) || 0) === (Number(b && b.firstSeen) || 0);
+function loadArchive() {
+  archive = {};
+  archiveDirty = false;
+  if (!fs.existsSync(ARCHIVE_PATH)) { archiveBroken = false; return; }
+  try {
+    archive = JSON.parse(fs.readFileSync(ARCHIVE_PATH, 'utf8')) || {};
+    archiveBroken = false;
+  } catch (e) {
+    archiveBroken = true;
+    archive = {};
+    console.warn('[students] archive unreadable, archiving is off until it is fixed:', e.message);
+    return;
+  }
+  // A code in both files: the same account (crash between two writes) → the live copy wins. A DIFFERENT account (the
+  // code was handed out again while the archive was unreadable) → the archived one is kept under code~firstSeen, so no
+  // history is ever dropped (it can be merged by hand).
+  Object.keys(archive).forEach((c) => {
+    if (!records[c]) return;
+    if (!sameAccount(records[c], archive[c])) {
+      archive[c + '~' + (Number(archive[c].firstSeen) || 0)] = archive[c];
+      console.warn('[students] code', c, 'is used by two different accounts: the archived one kept as', c + '~' + archive[c].firstSeen);
+    }
+    delete archive[c];
+    archiveDirty = true;
+  });
+  if (archiveDirty) scheduleSave();
+  const n = Object.keys(archive).length;
+  if (n) console.log('[students]', n, 'accounts in the archive');
+}
+function lastActive(rec) {
+  return Math.max(Number(rec && rec.lastSeen) || 0, Number(rec && rec.firstSeen) || 0, Number(rec && rec.restoredAt) || 0);
+}
+// Bring an archived account back (kid login, PIN join, parent link, teacher push). Instant: the archive is in memory;
+// the next save writes the live file first, then the trimmed archive.
+function restoreArchived(code) {
+  if (!code || records[code] || archiveBroken || !archive[code]) return null;
+  const rec = archive[code];
+  delete archive[code];
+  rec.restoredAt = Date.now();                   // counts as activity: it isn't archived again tomorrow
+  const av = Saga.legacyAvatar(rec.avatar);      // boot migrations only ran on live accounts
+  if (av) rec.avatar = av;
+  records[code] = rec;
+  archiveDirty = true;
+  scheduleSave();
+  console.log('[students] restored', code, 'from the archive');
+  return rec;
+}
+// Move every account with no activity for `days` days into the archive. Order on disk: the archive (with them) first,
+// then the live file (without them); if the live write fails they go straight back. Returns { moved, archived }.
+function archiveInactive(days, now) {
+  days = Number(days) || ARCHIVE_AFTER_DAYS;
+  now = Number(now) || Date.now();
+  if (archiveBroken) return { moved: 0, archived: 0, error: 'archive unreadable' };
+  // a restore waiting for its save (≤ 1 s) must reach the live file before the archive is rewritten without it
+  if ((saveTimer || archiveDirty) && !persistNow()) return { moved: 0, archived: Object.keys(archive).length, error: 'live file not written' };
+  const cutoff = now - days * 86400e3;
+  const moving = Object.keys(records).filter((c) => lastActive(records[c]) < cutoff);
+  if (!moving.length) return { moved: 0, archived: Object.keys(archive).length };
+  moving.forEach((c) => { archive[c] = records[c]; });
+  try {
+    ensureDir();
+    writeAtomic(ARCHIVE_PATH, JSON.stringify(archive));
+    const check = JSON.parse(fs.readFileSync(ARCHIVE_PATH, 'utf8'));
+    const missing = moving.filter((c) => !check[c]);
+    if (missing.length) throw new Error(missing.length + ' accounts missing after writing');
+  } catch (e) {
+    moving.forEach((c) => { delete archive[c]; });
+    archiveDirty = true;
+    console.warn('[students] archive write failed, nothing archived:', e.message);
+    return { moved: 0, archived: Object.keys(archive).length, error: e.message };
+  }
+  archiveDirty = false;
+  moving.forEach((c) => { delete records[c]; });
+  if (!persistNow()) {                            // live file not written: keep them live (the archive copy is the same)
+    moving.forEach((c) => { records[c] = archive[c]; delete archive[c]; });
+    archiveDirty = true;
+    return { moved: 0, archived: Object.keys(archive).length, error: 'live file not written' };
+  }
+  const total = Object.keys(archive).length;
+  console.log('[students] archived', moving.length, 'accounts inactive', days, 'days ·', total, 'in the archive');
+  return { moved: moving.length, archived: total };
+}
+// Counts for /api/_diag and the teacher dashboard. `classroomCodes` (a Set) limits the count to one teacher's classes.
+function archiveStats(classroomCodes) {
+  let bytes = 0;
+  try { bytes = fs.existsSync(ARCHIVE_PATH) ? fs.statSync(ARCHIVE_PATH).size : 0; } catch (_) { /* ignore */ }
+  const recs = Object.values(archive);
+  const archived = classroomCodes ? recs.filter((r) => r && classroomCodes.has(r.classroomCode)).length : recs.length;
+  return { archived, bytes, broken: archiveBroken, afterDays: ARCHIVE_AFTER_DAYS };
 }
 
 // Debounce writes so a class building 50 sentences/minute doesn't thrash
@@ -123,7 +253,7 @@ function generateCode() {
     for (let i = 0; i < 4; i++) {
       code += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
     }
-    if (!records[code]) return code;
+    if (!records[code] && !archive[code]) return code;   // an archived kid keeps their code
   }
   // Fallback to 5 chars on the cosmically-unlikely path
   let code = '';
@@ -153,6 +283,7 @@ function normalizeCode(code) {
 // 👤 badge and can rename or merge later.
 function getOrProvisionForPin(typedCode, displayName, classroomCode) {
   const normalized = normalizeCode(typedCode);
+  if (normalized) restoreArchived(normalized);   // a kid back after 30+ days gets their own account back
   if (normalized && records[normalized]) {
     const rec = records[normalized];
     // 🆕 2026-06-04 v3 (Fernando bug): do NOT overwrite an existing
@@ -200,6 +331,7 @@ function getOrProvisionForPin(typedCode, displayName, classroomCode) {
 // creates a new one with the given displayName and a fresh code.
 function getOrCreate(code, displayName) {
   const normalized = normalizeCode(code);
+  if (normalized) restoreArchived(normalized);
   if (normalized && records[normalized]) {
     const rec = records[normalized];
     // 🆕 2026-06-04 v4 (Fernando bug — same root cause as
@@ -474,7 +606,7 @@ function resetAssignmentSubmissions(code, assignmentId) {
 function get(code) {
   const normalized = normalizeCode(code);
   if (!normalized) return null;
-  return records[normalized] || null;
+  return records[normalized] || restoreArchived(normalized) || null;
 }
 
 // === TEACHER NOTES (for report cards) ===
@@ -950,4 +1082,8 @@ module.exports = {
   setClassroomId,
   broadcastToClassroom,
   AVATAR_OPTIONS,
+  archiveInactive,
+  archiveStats,
+  ARCHIVE_AFTER_DAYS,
+  flushNow: persistNow,   // write now (tests; before a planned shutdown)
 };
