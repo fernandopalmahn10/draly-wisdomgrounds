@@ -218,6 +218,15 @@ A separate Emirati Arabic (Khaleeji) track:
   - **Phase 3 (Cloudflare)** is still pending.
 - **Data:** student records, rooms and results live on Render's **permanent disk** (`data/`), never
   in the code or on GitHub.
+- **Room to grow (checked 2026-10-12):** one Starter server (half a CPU, 512 MB) used at most 40 % of its memory and
+  8 % of its processor in a month; the data disk holds 45 MB of 1 GB; kids downloaded ~7.5 GB a month. New games
+  are small (code + sounds 1-3 MB each); pictures and sounds are what grow, so they follow the size rules in
+  `CLAUDE.md` («Keep the site light») and `scripts/asset-guard.js` checks them before each deploy. The same day the
+  site went from 587 MB to 115 MB of media (unused 3D models out, Old HSK exam pictures as WebP, the 41 MB
+  «Xiǎo Míng» story removed).
+- **Monthly health check:** on the 1st of each month a scheduled Claude task runs `scripts/health-check.js` (Render
+  memory, processor, downloads, disk; the student file; media size; page weight) and tells you if a limit is crossed
+  and what to do (bigger server, database, lighter pictures). Reports in `reports/platform-health/`.
 
 ---
 

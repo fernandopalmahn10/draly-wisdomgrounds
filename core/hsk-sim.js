@@ -32,18 +32,18 @@ const SIMULATIONS = {
         title: 'Parte 1 · Verdadero / Falso',
         instruction: 'Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.',
         examples: [
-          { num: 'EJ1', image: `${BASE}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
-          { num: 'EJ2', image: `${BASE}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
+          { num: 'EJ1', image: `${BASE}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.webp`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
+          { num: 'EJ2', image: `${BASE}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.webp`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
         ],
         questions: [
           // User uploaded real MP3 files for Q1-5 — the renderer
           // prefers audioUrl over audioText so it streams the user's
           // own clear pronunciation instead of TTS.
-          { num: 1, image: `${BASE}/LISTENING%20PART%201/1%20(FALSE).png`, audioUrl: `${BASE}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
-          { num: 2, image: `${BASE}/LISTENING%20PART%201/2%20(TRUE).jpeg`, audioUrl: `${BASE}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
-          { num: 3, image: `${BASE}/LISTENING%20PART%201/3%20(FALSE).png`, audioUrl: `${BASE}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: false },
-          { num: 4, image: `${BASE}/LISTENING%20PART%201/4%20(FALSE).png`, audioUrl: `${BASE}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
-          { num: 5, image: `${BASE}/LISTENING%20PART%201/5%20(TRUE).png`,  audioUrl: `${BASE}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
+          { num: 1, image: `${BASE}/LISTENING%20PART%201/1%20(FALSE).webp`, audioUrl: `${BASE}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
+          { num: 2, image: `${BASE}/LISTENING%20PART%201/2%20(TRUE).webp`, audioUrl: `${BASE}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
+          { num: 3, image: `${BASE}/LISTENING%20PART%201/3%20(FALSE).webp`, audioUrl: `${BASE}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: false },
+          { num: 4, image: `${BASE}/LISTENING%20PART%201/4%20(FALSE).webp`, audioUrl: `${BASE}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
+          { num: 5, image: `${BASE}/LISTENING%20PART%201/5%20(TRUE).webp`,  audioUrl: `${BASE}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
         ],
       },
 
@@ -54,29 +54,29 @@ const SIMULATIONS = {
         instruction: 'Escucha el audio y toca la imagen correcta.',
         questions: [
           { num: 6, audioUrl: `${BASE}/LISTENING%20PART%202/6.mp3`, audioText: '', options: [
-              { letter: 'A', image: `${BASE}/LISTENING%20PART%202/6A.png` },
-              { letter: 'B', image: `${BASE}/LISTENING%20PART%202/6B.png` },
-              { letter: 'C', image: `${BASE}/LISTENING%20PART%202/6C%20(CORRECT).png` },
+              { letter: 'A', image: `${BASE}/LISTENING%20PART%202/6A.webp` },
+              { letter: 'B', image: `${BASE}/LISTENING%20PART%202/6B.webp` },
+              { letter: 'C', image: `${BASE}/LISTENING%20PART%202/6C%20(CORRECT).webp` },
             ], answer: 'C' },
           { num: 7, audioUrl: `${BASE}/LISTENING%20PART%202/7.mp3`, audioText: '', options: [
-              { letter: 'A', image: `${BASE}/LISTENING%20PART%202/7A%20(CORRECT).png` },
-              { letter: 'B', image: `${BASE}/LISTENING%20PART%202/7B.png` },
-              { letter: 'C', image: `${BASE}/LISTENING%20PART%202/7C.jpeg` },
+              { letter: 'A', image: `${BASE}/LISTENING%20PART%202/7A%20(CORRECT).webp` },
+              { letter: 'B', image: `${BASE}/LISTENING%20PART%202/7B.webp` },
+              { letter: 'C', image: `${BASE}/LISTENING%20PART%202/7C.webp` },
             ], answer: 'A' },
           { num: 8, audioUrl: `${BASE}/LISTENING%20PART%202/8.mp3`, audioText: '', options: [
-              { letter: 'A', image: `${BASE}/LISTENING%20PART%202/8A.png` },
-              { letter: 'B', image: `${BASE}/LISTENING%20PART%202/8B%20(CORRECT).png` },
-              { letter: 'C', image: `${BASE}/LISTENING%20PART%202/8C.png` },
+              { letter: 'A', image: `${BASE}/LISTENING%20PART%202/8A.webp` },
+              { letter: 'B', image: `${BASE}/LISTENING%20PART%202/8B%20(CORRECT).webp` },
+              { letter: 'C', image: `${BASE}/LISTENING%20PART%202/8C.webp` },
             ], answer: 'B' },
           { num: 9, audioUrl: `${BASE}/LISTENING%20PART%202/9.mp3`, audioText: '', options: [
-              { letter: 'A', image: `${BASE}/LISTENING%20PART%202/9A.png` },
-              { letter: 'B', image: `${BASE}/LISTENING%20PART%202/9B%20(CORRECT).png` },
-              { letter: 'C', image: `${BASE}/LISTENING%20PART%202/9C.png` },
+              { letter: 'A', image: `${BASE}/LISTENING%20PART%202/9A.webp` },
+              { letter: 'B', image: `${BASE}/LISTENING%20PART%202/9B%20(CORRECT).webp` },
+              { letter: 'C', image: `${BASE}/LISTENING%20PART%202/9C.webp` },
             ], answer: 'B' },
           { num: 10, audioUrl: `${BASE}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
-              { letter: 'A', image: `${BASE}/LISTENING%20PART%202/10A.png` },
-              { letter: 'B', image: `${BASE}/LISTENING%20PART%202/10B%20(CORRECT).png` },
-              { letter: 'C', image: `${BASE}/LISTENING%20PART%202/10C.png` },
+              { letter: 'A', image: `${BASE}/LISTENING%20PART%202/10A.webp` },
+              { letter: 'B', image: `${BASE}/LISTENING%20PART%202/10B%20(CORRECT).webp` },
+              { letter: 'C', image: `${BASE}/LISTENING%20PART%202/10C.webp` },
             ], answer: 'B' },
         ],
       },
@@ -90,12 +90,12 @@ const SIMULATIONS = {
         // Filenames embed the question number each letter answers:
         //   A (13), B (12), C (EXAMPLE), D (11), E (14), F (15)
         gallery: [
-          { letter: 'A', image: `${BASE}/LISTENING%20PART%203/A%20(13).png`,       label: 'A' },
-          { letter: 'B', image: `${BASE}/LISTENING%20PART%203/B%20(12).png`,       label: 'B' },
-          { letter: 'C', image: `${BASE}/LISTENING%20PART%203/C%20(EXAMPLE).png`,  label: 'C (ejemplo)' },
-          { letter: 'D', image: `${BASE}/LISTENING%20PART%203/D%20(11).jpeg`,      label: 'D' },
-          { letter: 'E', image: `${BASE}/LISTENING%20PART%203/E%20(14).png`,       label: 'E' },
-          { letter: 'F', image: `${BASE}/LISTENING%20PART%203/F%20(15).png`,       label: 'F' },
+          { letter: 'A', image: `${BASE}/LISTENING%20PART%203/A%20(13).webp`,       label: 'A' },
+          { letter: 'B', image: `${BASE}/LISTENING%20PART%203/B%20(12).webp`,       label: 'B' },
+          { letter: 'C', image: `${BASE}/LISTENING%20PART%203/C%20(EXAMPLE).webp`,  label: 'C (ejemplo)' },
+          { letter: 'D', image: `${BASE}/LISTENING%20PART%203/D%20(11).webp`,      label: 'D' },
+          { letter: 'E', image: `${BASE}/LISTENING%20PART%203/E%20(14).webp`,       label: 'E' },
+          { letter: 'F', image: `${BASE}/LISTENING%20PART%203/F%20(15).webp`,       label: 'F' },
         ],
         // Example: the example audio matches picture C.
         exampleAnswer: 'C',
@@ -164,16 +164,16 @@ const SIMULATIONS = {
         title: 'Parte 5 (Lectura 1) · Verdadero / Falso',
         instruction: 'Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.',
         example: {
-          num: 'EJ', word: 'diànshì', image: `${BASE}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false,
+          num: 'EJ', word: 'diànshì', image: `${BASE}/READING%20PART%201/EXAMPLE%20(FALSE).webp`, answer: false,
         },
         questions: [
-          { num: 21, word: 'shuǐguǒ',   image: `${BASE}/READING%20PART%201/21%20(FALSE).png`, answer: false },
-          { num: 22, word: 'xiānsheng', image: `${BASE}/READING%20PART%201/22%20(FALSE).png`, answer: false },
-          { num: 23, word: 'māo',       image: `${BASE}/READING%20PART%201/23%20(TRUE).png`,  answer: true  },
+          { num: 21, word: 'shuǐguǒ',   image: `${BASE}/READING%20PART%201/21%20(FALSE).webp`, answer: false },
+          { num: 22, word: 'xiānsheng', image: `${BASE}/READING%20PART%201/22%20(FALSE).webp`, answer: false },
+          { num: 23, word: 'māo',       image: `${BASE}/READING%20PART%201/23%20(TRUE).webp`,  answer: true  },
           // Q24 — user renamed the file to "24 (TRUE).png" confirming
           // the answer key. Image: clearly cold thing → matches lěng.
-          { num: 24, word: 'lěng',      image: `${BASE}/READING%20PART%201/24%20(TRUE).png`,  answer: true  },
-          { num: 25, word: 'xuéxí',     image: `${BASE}/READING%20PART%201/25%20(FALSE).png`, answer: false },
+          { num: 24, word: 'lěng',      image: `${BASE}/READING%20PART%201/24%20(TRUE).webp`,  answer: true  },
+          { num: 25, word: 'xuéxí',     image: `${BASE}/READING%20PART%201/25%20(FALSE).webp`, answer: false },
         ],
       },
 
@@ -185,12 +185,12 @@ const SIMULATIONS = {
         instruction: 'Lee cada frase y toca la letra de la imagen correcta.',
         gallery: [
           // Filenames: A (27), B 3(0), C (29), D (28), E (EXAMPLE), F (26)
-          { letter: 'A', image: `${BASE}/READING%20PART%202/A%20(27).png`,        label: 'A' },
-          { letter: 'B', image: `${BASE}/READING%20PART%202/B%203(0).png`,        label: 'B' },
-          { letter: 'C', image: `${BASE}/READING%20PART%202/C%20(29).png`,        label: 'C' },
-          { letter: 'D', image: `${BASE}/READING%20PART%202/D%20(28).png`,        label: 'D' },
-          { letter: 'E', image: `${BASE}/READING%20PART%202/E%20(EXAMPLE).png`,   label: 'E (ejemplo)' },
-          { letter: 'F', image: `${BASE}/READING%20PART%202/F%20(26).png`,        label: 'F' },
+          { letter: 'A', image: `${BASE}/READING%20PART%202/A%20(27).webp`,        label: 'A' },
+          { letter: 'B', image: `${BASE}/READING%20PART%202/B%203(0).webp`,        label: 'B' },
+          { letter: 'C', image: `${BASE}/READING%20PART%202/C%20(29).webp`,        label: 'C' },
+          { letter: 'D', image: `${BASE}/READING%20PART%202/D%20(28).webp`,        label: 'D' },
+          { letter: 'E', image: `${BASE}/READING%20PART%202/E%20(EXAMPLE).webp`,   label: 'E (ejemplo)' },
+          { letter: 'F', image: `${BASE}/READING%20PART%202/F%20(26).webp`,        label: 'F' },
         ],
         example: {
           num: 'EJ',
@@ -276,16 +276,16 @@ const SIMULATIONS = {
           title: 'Parte 1 · Verdadero / Falso',
           instruction: 'Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.',
           examples: [
-            { num: 'EJ1', image: `${B2}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
-            { num: 'EJ2', image: `${B2}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
+            { num: 'EJ1', image: `${B2}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.webp`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
+            { num: 'EJ2', image: `${B2}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.webp`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
           ],
           // Q1-5 answer keys + MP3s now in. Sim 2 L1 pattern: FFTTF.
           questions: [
-            { num: 1, image: `${B2}/LISTENING%20PART%201/1%20(FALSE).png`, audioUrl: `${B2}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
-            { num: 2, image: `${B2}/LISTENING%20PART%201/2%20(FALSE).png`, audioUrl: `${B2}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
-            { num: 3, image: `${B2}/LISTENING%20PART%201/3%20(TRUE).png`,  audioUrl: `${B2}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
-            { num: 4, image: `${B2}/LISTENING%20PART%201/4%20(TRUE).png`,  audioUrl: `${B2}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: true  },
-            { num: 5, image: `${B2}/LISTENING%20PART%201/5%20(FALSE).png`, audioUrl: `${B2}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: false },
+            { num: 1, image: `${B2}/LISTENING%20PART%201/1%20(FALSE).webp`, audioUrl: `${B2}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
+            { num: 2, image: `${B2}/LISTENING%20PART%201/2%20(FALSE).webp`, audioUrl: `${B2}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
+            { num: 3, image: `${B2}/LISTENING%20PART%201/3%20(TRUE).webp`,  audioUrl: `${B2}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
+            { num: 4, image: `${B2}/LISTENING%20PART%201/4%20(TRUE).webp`,  audioUrl: `${B2}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: true  },
+            { num: 5, image: `${B2}/LISTENING%20PART%201/5%20(FALSE).webp`, audioUrl: `${B2}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: false },
           ],
         },
         part2: {
@@ -294,29 +294,29 @@ const SIMULATIONS = {
           // All five MP3s wired + 9A image now in (user re-uploaded).
           questions: [
             { num: 6,  audioUrl: `${B2}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B2}/LISTENING%20PART%202/6A.png` },
-                { letter: 'B', image: `${B2}/LISTENING%20PART%202/6B.png` },
-                { letter: 'C', image: `${B2}/LISTENING%20PART%202/6C%20(CORRECT).png` },
+                { letter: 'A', image: `${B2}/LISTENING%20PART%202/6A.webp` },
+                { letter: 'B', image: `${B2}/LISTENING%20PART%202/6B.webp` },
+                { letter: 'C', image: `${B2}/LISTENING%20PART%202/6C%20(CORRECT).webp` },
               ], answer: 'C' },
             { num: 7,  audioUrl: `${B2}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B2}/LISTENING%20PART%202/7A%20(CORRECT).png` },
-                { letter: 'B', image: `${B2}/LISTENING%20PART%202/7B.png` },
-                { letter: 'C', image: `${B2}/LISTENING%20PART%202/7C.png` },
+                { letter: 'A', image: `${B2}/LISTENING%20PART%202/7A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B2}/LISTENING%20PART%202/7B.webp` },
+                { letter: 'C', image: `${B2}/LISTENING%20PART%202/7C.webp` },
               ], answer: 'A' },
             { num: 8,  audioUrl: `${B2}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B2}/LISTENING%20PART%202/8A%20(CORRECT).png` },
-                { letter: 'B', image: `${B2}/LISTENING%20PART%202/8B.png` },
-                { letter: 'C', image: `${B2}/LISTENING%20PART%202/8C.png` },
+                { letter: 'A', image: `${B2}/LISTENING%20PART%202/8A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B2}/LISTENING%20PART%202/8B.webp` },
+                { letter: 'C', image: `${B2}/LISTENING%20PART%202/8C.webp` },
               ], answer: 'A' },
             { num: 9,  audioUrl: `${B2}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B2}/LISTENING%20PART%202/9A.png` },
-                { letter: 'B', image: `${B2}/LISTENING%20PART%202/9B.png` },
-                { letter: 'C', image: `${B2}/LISTENING%20PART%202/9C%20(CORRECT).png` },
+                { letter: 'A', image: `${B2}/LISTENING%20PART%202/9A.webp` },
+                { letter: 'B', image: `${B2}/LISTENING%20PART%202/9B.webp` },
+                { letter: 'C', image: `${B2}/LISTENING%20PART%202/9C%20(CORRECT).webp` },
               ], answer: 'C' },
             { num: 10, audioUrl: `${B2}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
-                { letter: 'A', image: `${B2}/LISTENING%20PART%202/10A.png` },
-                { letter: 'B', image: `${B2}/LISTENING%20PART%202/10B.png` },
-                { letter: 'C', image: `${B2}/LISTENING%20PART%202/10C%20(CORRECT).png` },
+                { letter: 'A', image: `${B2}/LISTENING%20PART%202/10A.webp` },
+                { letter: 'B', image: `${B2}/LISTENING%20PART%202/10B.webp` },
+                { letter: 'C', image: `${B2}/LISTENING%20PART%202/10C%20(CORRECT).webp` },
               ], answer: 'C' },
           ],
         },
@@ -325,12 +325,12 @@ const SIMULATIONS = {
           instruction: 'Escucha cada audio y toca la letra de la imagen correcta.',
           // Sim 2 layout: A(15), B(14), C(EXAMPLE), D(12), E(13), F(11)
           gallery: [
-            { letter: 'A', image: `${B2}/LISTENING%20PART%203/A%20(15).png`, label: 'A' },
-            { letter: 'B', image: `${B2}/LISTENING%20PART%203/B%20(14).png`, label: 'B' },
-            { letter: 'C', image: `${B2}/LISTENING%20PART%203/C%20(EXAMPLE).png`, label: 'C (ejemplo)' },
-            { letter: 'D', image: `${B2}/LISTENING%20PART%203/D%20(12).png`, label: 'D' },
-            { letter: 'E', image: `${B2}/LISTENING%20PART%203/E%20(13).png`, label: 'E' },
-            { letter: 'F', image: `${B2}/LISTENING%20PART%203/F%20(11).png`, label: 'F' },
+            { letter: 'A', image: `${B2}/LISTENING%20PART%203/A%20(15).webp`, label: 'A' },
+            { letter: 'B', image: `${B2}/LISTENING%20PART%203/B%20(14).webp`, label: 'B' },
+            { letter: 'C', image: `${B2}/LISTENING%20PART%203/C%20(EXAMPLE).webp`, label: 'C (ejemplo)' },
+            { letter: 'D', image: `${B2}/LISTENING%20PART%203/D%20(12).webp`, label: 'D' },
+            { letter: 'E', image: `${B2}/LISTENING%20PART%203/E%20(13).webp`, label: 'E' },
+            { letter: 'F', image: `${B2}/LISTENING%20PART%203/F%20(11).webp`, label: 'F' },
           ],
           exampleAnswer: 'C',
           questions: [
@@ -389,16 +389,16 @@ const SIMULATIONS = {
           title: 'Parte 5 (Lectura 1) · Verdadero / Falso',
           instruction: 'Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.',
           example: {
-            num: 'EJ', word: 'diànshì', image: `${B2}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false,
+            num: 'EJ', word: 'diànshì', image: `${B2}/READING%20PART%201/EXAMPLE%20(FALSE).webp`, answer: false,
           },
           // R1 words filled from sim 2 READING PART 1/QUESTIONS.txt:
           //   21 píngguǒ · 22 tīng · 23 duō · 24 shuǐ · 25 zàijiàn
           questions: [
-            { num: 21, word: 'píngguǒ', image: `${B2}/READING%20PART%201/21%20(FALSE).png`, answer: false },
-            { num: 22, word: 'tīng',    image: `${B2}/READING%20PART%201/22%20(TRUE).png`,  answer: true  },
-            { num: 23, word: 'duō',     image: `${B2}/READING%20PART%201/23%20(TRUE).png`,  answer: true  },
-            { num: 24, word: 'shuǐ',    image: `${B2}/READING%20PART%201/24%20(FALSE).png`, answer: false },
-            { num: 25, word: 'zàijiàn', image: `${B2}/READING%20PART%201/25%20(TRUE).png`,  answer: true  },
+            { num: 21, word: 'píngguǒ', image: `${B2}/READING%20PART%201/21%20(FALSE).webp`, answer: false },
+            { num: 22, word: 'tīng',    image: `${B2}/READING%20PART%201/22%20(TRUE).webp`,  answer: true  },
+            { num: 23, word: 'duō',     image: `${B2}/READING%20PART%201/23%20(TRUE).webp`,  answer: true  },
+            { num: 24, word: 'shuǐ',    image: `${B2}/READING%20PART%201/24%20(FALSE).webp`, answer: false },
+            { num: 25, word: 'zàijiàn', image: `${B2}/READING%20PART%201/25%20(TRUE).webp`,  answer: true  },
           ],
         },
         part2: {
@@ -407,12 +407,12 @@ const SIMULATIONS = {
           // Picture-letter map from sim 2 R2 folder:
           //   A → Q26, B → Q27, C → Q28, D → Q29, E → EXAMPLE, F → Q30
           gallery: [
-            { letter: 'A', image: `${B2}/READING%20PART%202/26%20(A).png`,      label: 'A' },
-            { letter: 'B', image: `${B2}/READING%20PART%202/27%20(B).png`,      label: 'B' },
-            { letter: 'C', image: `${B2}/READING%20PART%202/28%20(C).png`,      label: 'C' },
-            { letter: 'D', image: `${B2}/READING%20PART%202/29%20(D).png`,      label: 'D' },
-            { letter: 'E', image: `${B2}/READING%20PART%202/E%20(EXAMPLE).png`, label: 'E (ejemplo)' },
-            { letter: 'F', image: `${B2}/READING%20PART%202/30%20(F).png`,      label: 'F' },
+            { letter: 'A', image: `${B2}/READING%20PART%202/26%20(A).webp`,      label: 'A' },
+            { letter: 'B', image: `${B2}/READING%20PART%202/27%20(B).webp`,      label: 'B' },
+            { letter: 'C', image: `${B2}/READING%20PART%202/28%20(C).webp`,      label: 'C' },
+            { letter: 'D', image: `${B2}/READING%20PART%202/29%20(D).webp`,      label: 'D' },
+            { letter: 'E', image: `${B2}/READING%20PART%202/E%20(EXAMPLE).webp`, label: 'E (ejemplo)' },
+            { letter: 'F', image: `${B2}/READING%20PART%202/30%20(F).webp`,      label: 'F' },
           ],
           example: {
             num: 'EJ', hanzi: '我很喜欢这本书', pinyin: 'Wǒ hěn xǐhuān zhè běn shū', answer: 'E',
@@ -489,16 +489,16 @@ const SIMULATIONS = {
           title: 'Parte 1 · Verdadero / Falso',
           instruction: 'Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.',
           examples: [
-            { num: 'EJ1', image: `${B3}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
-            { num: 'EJ2', image: `${B3}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
+            { num: 'EJ1', image: `${B3}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.webp`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
+            { num: 'EJ2', image: `${B3}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.webp`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
           ],
           // Sim 3 L1 pattern (from on-disk filename markers): F T T F T
           questions: [
-            { num: 1, image: `${B3}/LISTENING%20PART%201/1%20(FALSE).png`, audioUrl: `${B3}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
-            { num: 2, image: `${B3}/LISTENING%20PART%201/2%20(TRUE).png`,  audioUrl: `${B3}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
-            { num: 3, image: `${B3}/LISTENING%20PART%201/3%20(TRUE).png`,  audioUrl: `${B3}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
-            { num: 4, image: `${B3}/LISTENING%20PART%201/4%20(FALSE).png`, audioUrl: `${B3}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
-            { num: 5, image: `${B3}/LISTENING%20PART%201/5%20(TRUE).png`,  audioUrl: `${B3}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
+            { num: 1, image: `${B3}/LISTENING%20PART%201/1%20(FALSE).webp`, audioUrl: `${B3}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
+            { num: 2, image: `${B3}/LISTENING%20PART%201/2%20(TRUE).webp`,  audioUrl: `${B3}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
+            { num: 3, image: `${B3}/LISTENING%20PART%201/3%20(TRUE).webp`,  audioUrl: `${B3}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
+            { num: 4, image: `${B3}/LISTENING%20PART%201/4%20(FALSE).webp`, audioUrl: `${B3}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
+            { num: 5, image: `${B3}/LISTENING%20PART%201/5%20(TRUE).webp`,  audioUrl: `${B3}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
           ],
         },
         part2: {
@@ -507,29 +507,29 @@ const SIMULATIONS = {
           // Sim 3 L2 correct positions from on-disk filename markers: B C A A A
           questions: [
             { num: 6,  audioUrl: `${B3}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B3}/LISTENING%20PART%202/6A.png` },
-                { letter: 'B', image: `${B3}/LISTENING%20PART%202/6B%20(CORRECT).png` },
-                { letter: 'C', image: `${B3}/LISTENING%20PART%202/6C.png` },
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/6A.webp` },
+                { letter: 'B', image: `${B3}/LISTENING%20PART%202/6B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/6C.webp` },
               ], answer: 'B' },
             { num: 7,  audioUrl: `${B3}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B3}/LISTENING%20PART%202/7A.png` },
-                { letter: 'B', image: `${B3}/LISTENING%20PART%202/7B.png` },
-                { letter: 'C', image: `${B3}/LISTENING%20PART%202/7C%20(CORRECT).png` },
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/7A.webp` },
+                { letter: 'B', image: `${B3}/LISTENING%20PART%202/7B.webp` },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/7C%20(CORRECT).webp` },
               ], answer: 'C' },
             { num: 8,  audioUrl: `${B3}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B3}/LISTENING%20PART%202/8A%20(CORRECT).png` },
-                { letter: 'B', image: `${B3}/LISTENING%20PART%202/8B.png` },
-                { letter: 'C', image: `${B3}/LISTENING%20PART%202/8C.png` },
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/8A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B3}/LISTENING%20PART%202/8B.webp` },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/8C.webp` },
               ], answer: 'A' },
             { num: 9,  audioUrl: `${B3}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B3}/LISTENING%20PART%202/9A%20(CORRECT).png` },
-                { letter: 'B', image: `${B3}/LISTENING%20PART%202/9B.png` },
-                { letter: 'C', image: `${B3}/LISTENING%20PART%202/9C.png` },
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/9A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B3}/LISTENING%20PART%202/9B.webp` },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/9C.webp` },
               ], answer: 'A' },
             { num: 10, audioUrl: `${B3}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
-                { letter: 'A', image: `${B3}/LISTENING%20PART%202/10A%20(CORRECT).png` },
-                { letter: 'B', image: `${B3}/LISTENING%20PART%202/10B.png` },
-                { letter: 'C', image: `${B3}/LISTENING%20PART%202/10C.png` },
+                { letter: 'A', image: `${B3}/LISTENING%20PART%202/10A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B3}/LISTENING%20PART%202/10B.webp` },
+                { letter: 'C', image: `${B3}/LISTENING%20PART%202/10C.webp` },
               ], answer: 'A' },
           ],
         },
@@ -538,12 +538,12 @@ const SIMULATIONS = {
           instruction: 'Escucha cada audio y toca la letra de la imagen correcta.',
           // Sim 3 layout: A(15) B(14) C(EX) D(11) E(13) F(12)
           gallery: [
-            { letter: 'A', image: `${B3}/LISTENING%20PART%203/A%20(15).png`, label: 'A' },
-            { letter: 'B', image: `${B3}/LISTENING%20PART%203/B%20(14).png`, label: 'B' },
-            { letter: 'C', image: `${B3}/LISTENING%20PART%203/C%20(EXAMPLE).png`, label: 'C (ejemplo)' },
-            { letter: 'D', image: `${B3}/LISTENING%20PART%203/D%20(11).png`, label: 'D' },
-            { letter: 'E', image: `${B3}/LISTENING%20PART%203/E%20(13).png`, label: 'E' },
-            { letter: 'F', image: `${B3}/LISTENING%20PART%203/F%20(12).png`, label: 'F' },
+            { letter: 'A', image: `${B3}/LISTENING%20PART%203/A%20(15).webp`, label: 'A' },
+            { letter: 'B', image: `${B3}/LISTENING%20PART%203/B%20(14).webp`, label: 'B' },
+            { letter: 'C', image: `${B3}/LISTENING%20PART%203/C%20(EXAMPLE).webp`, label: 'C (ejemplo)' },
+            { letter: 'D', image: `${B3}/LISTENING%20PART%203/D%20(11).webp`, label: 'D' },
+            { letter: 'E', image: `${B3}/LISTENING%20PART%203/E%20(13).webp`, label: 'E' },
+            { letter: 'F', image: `${B3}/LISTENING%20PART%203/F%20(12).webp`, label: 'F' },
           ],
           exampleAnswer: 'C',
           questions: [
@@ -608,17 +608,17 @@ const SIMULATIONS = {
           title: 'Parte 5 (Lectura 1) · Verdadero / Falso',
           instruction: 'Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.',
           example: {
-            num: 'EJ', word: 'diànshì', image: `${B3}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false,
+            num: 'EJ', word: 'diànshì', image: `${B3}/READING%20PART%201/EXAMPLE%20(FALSE).webp`, answer: false,
           },
           // Words from sim 3 R1 QUESTIONS.txt:
           //   21 chá · 22 yīshēng · 23 māma · 24 nǎ'er · 25 chī
           // Answers from filename markers: F T F T F
           questions: [
-            { num: 21, word: 'chá',     image: `${B3}/READING%20PART%201/21%20(FALSE).png`, answer: false },
-            { num: 22, word: 'yīshēng', image: `${B3}/READING%20PART%201/22%20(TRUE).png`,  answer: true  },
-            { num: 23, word: 'māma',    image: `${B3}/READING%20PART%201/23%20(FALSE).png`, answer: false },
-            { num: 24, word: "nǎ'er",   image: `${B3}/READING%20PART%201/24%20(TRUE).png`,  answer: true  },
-            { num: 25, word: 'chī',     image: `${B3}/READING%20PART%201/25%20(FALSE).png`, answer: false },
+            { num: 21, word: 'chá',     image: `${B3}/READING%20PART%201/21%20(FALSE).webp`, answer: false },
+            { num: 22, word: 'yīshēng', image: `${B3}/READING%20PART%201/22%20(TRUE).webp`,  answer: true  },
+            { num: 23, word: 'māma',    image: `${B3}/READING%20PART%201/23%20(FALSE).webp`, answer: false },
+            { num: 24, word: "nǎ'er",   image: `${B3}/READING%20PART%201/24%20(TRUE).webp`,  answer: true  },
+            { num: 25, word: 'chī',     image: `${B3}/READING%20PART%201/25%20(FALSE).webp`, answer: false },
           ],
         },
         part2: {
@@ -627,12 +627,12 @@ const SIMULATIONS = {
           // Sim 3 R2 picture-letter map from filenames:
           //   A → Q26, C → Q27, D → Q28, F → Q29, B → Q30 (E is example)
           gallery: [
-            { letter: 'A', image: `${B3}/READING%20PART%202/26%20(A).png`,      label: 'A' },
-            { letter: 'B', image: `${B3}/READING%20PART%202/30%20(B).png`,      label: 'B' },
-            { letter: 'C', image: `${B3}/READING%20PART%202/27%20(C).png`,      label: 'C' },
-            { letter: 'D', image: `${B3}/READING%20PART%202/28%20(D).png`,      label: 'D' },
-            { letter: 'E', image: `${B3}/READING%20PART%202/E%20(EXAMPLE).png`, label: 'E (ejemplo)' },
-            { letter: 'F', image: `${B3}/READING%20PART%202/29%20(F).png`,      label: 'F' },
+            { letter: 'A', image: `${B3}/READING%20PART%202/26%20(A).webp`,      label: 'A' },
+            { letter: 'B', image: `${B3}/READING%20PART%202/30%20(B).webp`,      label: 'B' },
+            { letter: 'C', image: `${B3}/READING%20PART%202/27%20(C).webp`,      label: 'C' },
+            { letter: 'D', image: `${B3}/READING%20PART%202/28%20(D).webp`,      label: 'D' },
+            { letter: 'E', image: `${B3}/READING%20PART%202/E%20(EXAMPLE).webp`, label: 'E (ejemplo)' },
+            { letter: 'F', image: `${B3}/READING%20PART%202/29%20(F).webp`,      label: 'F' },
           ],
           example: {
             num: 'EJ', hanzi: '我很喜欢这本书', pinyin: 'Wǒ hěn xǐhuān zhè běn shū', answer: 'E',
@@ -709,17 +709,17 @@ const SIMULATIONS = {
           title: 'Parte 1 · Verdadero / Falso',
           instruction: 'Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.',
           examples: [
-            { num: 'EJ1', image: `${B4}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
-            { num: 'EJ2', image: `${B4}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
+            { num: 'EJ1', image: `${B4}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.webp`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
+            { num: 'EJ2', image: `${B4}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.webp`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
           ],
           // Sim 4 L1 answers from on-disk filename markers: F T F F T
           // NOTE: question 2 image is a .jpeg (not .png) on disk.
           questions: [
-            { num: 1, image: `${B4}/LISTENING%20PART%201/1%20(FALSE).png`, audioUrl: `${B4}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
-            { num: 2, image: `${B4}/LISTENING%20PART%201/2%20(TRUE).jpeg`, audioUrl: `${B4}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
-            { num: 3, image: `${B4}/LISTENING%20PART%201/3%20(FALSE).png`, audioUrl: `${B4}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: false },
-            { num: 4, image: `${B4}/LISTENING%20PART%201/4%20(FALSE).png`, audioUrl: `${B4}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
-            { num: 5, image: `${B4}/LISTENING%20PART%201/5%20(TRUE).png`,  audioUrl: `${B4}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
+            { num: 1, image: `${B4}/LISTENING%20PART%201/1%20(FALSE).webp`, audioUrl: `${B4}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
+            { num: 2, image: `${B4}/LISTENING%20PART%201/2%20(TRUE).webp`, audioUrl: `${B4}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
+            { num: 3, image: `${B4}/LISTENING%20PART%201/3%20(FALSE).webp`, audioUrl: `${B4}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: false },
+            { num: 4, image: `${B4}/LISTENING%20PART%201/4%20(FALSE).webp`, audioUrl: `${B4}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
+            { num: 5, image: `${B4}/LISTENING%20PART%201/5%20(TRUE).webp`,  audioUrl: `${B4}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
           ],
         },
         part2: {
@@ -729,29 +729,29 @@ const SIMULATIONS = {
           // NOTE: 7C is a .jpeg (not .png) on disk.
           questions: [
             { num: 6,  audioUrl: `${B4}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B4}/LISTENING%20PART%202/6A.png` },
-                { letter: 'B', image: `${B4}/LISTENING%20PART%202/6B%20(CORRECT).png` },
-                { letter: 'C', image: `${B4}/LISTENING%20PART%202/6C.png` },
+                { letter: 'A', image: `${B4}/LISTENING%20PART%202/6A.webp` },
+                { letter: 'B', image: `${B4}/LISTENING%20PART%202/6B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B4}/LISTENING%20PART%202/6C.webp` },
               ], answer: 'B' },
             { num: 7,  audioUrl: `${B4}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B4}/LISTENING%20PART%202/7A.png` },
-                { letter: 'B', image: `${B4}/LISTENING%20PART%202/7B.png` },
-                { letter: 'C', image: `${B4}/LISTENING%20PART%202/7C%20(CORRECT).jpeg` },
+                { letter: 'A', image: `${B4}/LISTENING%20PART%202/7A.webp` },
+                { letter: 'B', image: `${B4}/LISTENING%20PART%202/7B.webp` },
+                { letter: 'C', image: `${B4}/LISTENING%20PART%202/7C%20(CORRECT).webp` },
               ], answer: 'C' },
             { num: 8,  audioUrl: `${B4}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B4}/LISTENING%20PART%202/8A.png` },
-                { letter: 'B', image: `${B4}/LISTENING%20PART%202/8B.png` },
-                { letter: 'C', image: `${B4}/LISTENING%20PART%202/8C%20(CORRECT).png` },
+                { letter: 'A', image: `${B4}/LISTENING%20PART%202/8A.webp` },
+                { letter: 'B', image: `${B4}/LISTENING%20PART%202/8B.webp` },
+                { letter: 'C', image: `${B4}/LISTENING%20PART%202/8C%20(CORRECT).webp` },
               ], answer: 'C' },
             { num: 9,  audioUrl: `${B4}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B4}/LISTENING%20PART%202/9A.png` },
-                { letter: 'B', image: `${B4}/LISTENING%20PART%202/9B%20(CORRECT).png` },
-                { letter: 'C', image: `${B4}/LISTENING%20PART%202/9C.png` },
+                { letter: 'A', image: `${B4}/LISTENING%20PART%202/9A.webp` },
+                { letter: 'B', image: `${B4}/LISTENING%20PART%202/9B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B4}/LISTENING%20PART%202/9C.webp` },
               ], answer: 'B' },
             { num: 10, audioUrl: `${B4}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
-                { letter: 'A', image: `${B4}/LISTENING%20PART%202/10A.png` },
-                { letter: 'B', image: `${B4}/LISTENING%20PART%202/10B%20(CORRECT).png` },
-                { letter: 'C', image: `${B4}/LISTENING%20PART%202/10C.png` },
+                { letter: 'A', image: `${B4}/LISTENING%20PART%202/10A.webp` },
+                { letter: 'B', image: `${B4}/LISTENING%20PART%202/10B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B4}/LISTENING%20PART%202/10C.webp` },
               ], answer: 'B' },
           ],
         },
@@ -762,12 +762,12 @@ const SIMULATIONS = {
           //   A=Q13, B=Q15, C=EXAMPLE, D=Q11, E=Q14, F=Q12
           // Answer per question: Q11→D, Q12→F, Q13→A, Q14→E, Q15→B
           gallery: [
-            { letter: 'A', image: `${B4}/LISTENING%20PART%203/A%20(13).png`,    label: 'A' },
-            { letter: 'B', image: `${B4}/LISTENING%20PART%203/B%20(15).png`,    label: 'B' },
-            { letter: 'C', image: `${B4}/LISTENING%20PART%203/C%20(EXAMPLE).png`, label: 'C (ejemplo)' },
-            { letter: 'D', image: `${B4}/LISTENING%20PART%203/D%20(11).png`,    label: 'D' },
-            { letter: 'E', image: `${B4}/LISTENING%20PART%203/14%20(E).png`,    label: 'E' },
-            { letter: 'F', image: `${B4}/LISTENING%20PART%203/F%20(12).png`,    label: 'F' },
+            { letter: 'A', image: `${B4}/LISTENING%20PART%203/A%20(13).webp`,    label: 'A' },
+            { letter: 'B', image: `${B4}/LISTENING%20PART%203/B%20(15).webp`,    label: 'B' },
+            { letter: 'C', image: `${B4}/LISTENING%20PART%203/C%20(EXAMPLE).webp`, label: 'C (ejemplo)' },
+            { letter: 'D', image: `${B4}/LISTENING%20PART%203/D%20(11).webp`,    label: 'D' },
+            { letter: 'E', image: `${B4}/LISTENING%20PART%203/14%20(E).webp`,    label: 'E' },
+            { letter: 'F', image: `${B4}/LISTENING%20PART%203/F%20(12).webp`,    label: 'F' },
           ],
           exampleAnswer: 'C',
           questions: [
@@ -831,17 +831,17 @@ const SIMULATIONS = {
           title: 'Parte 5 (Lectura 1) · Verdadero / Falso',
           instruction: 'Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.',
           example: {
-            num: 'EJ', word: 'diànshì', image: `${B4}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false,
+            num: 'EJ', word: 'diànshì', image: `${B4}/READING%20PART%201/EXAMPLE%20(FALSE).webp`, answer: false,
           },
           // Sim 4 R1 words from QUESTIONS.txt:
           //   21 xiě · 22 nǚ'ér · 23 sì · 24 duō · 25 zhōngwǔ
           // Answers from filename markers: T F T T F
           questions: [
-            { num: 21, word: 'xiě',     image: `${B4}/READING%20PART%201/21%20(TRUE).png`,  answer: true  },
-            { num: 22, word: "nǚ'ér",   image: `${B4}/READING%20PART%201/22%20(FALSE).png`, answer: false },
-            { num: 23, word: 'sì',      image: `${B4}/READING%20PART%201/23%20(TRUE).png`,  answer: true  },
-            { num: 24, word: 'duō',     image: `${B4}/READING%20PART%201/24%20(TRUE).png`,  answer: true  },
-            { num: 25, word: 'zhōngwǔ', image: `${B4}/READING%20PART%201/25%20(FALSE).png`, answer: false },
+            { num: 21, word: 'xiě',     image: `${B4}/READING%20PART%201/21%20(TRUE).webp`,  answer: true  },
+            { num: 22, word: "nǚ'ér",   image: `${B4}/READING%20PART%201/22%20(FALSE).webp`, answer: false },
+            { num: 23, word: 'sì',      image: `${B4}/READING%20PART%201/23%20(TRUE).webp`,  answer: true  },
+            { num: 24, word: 'duō',     image: `${B4}/READING%20PART%201/24%20(TRUE).webp`,  answer: true  },
+            { num: 25, word: 'zhōngwǔ', image: `${B4}/READING%20PART%201/25%20(FALSE).webp`, answer: false },
           ],
         },
         part2: {
@@ -850,12 +850,12 @@ const SIMULATIONS = {
           // Sim 4 R2 picture-letter map from filenames:
           //   26 → C, 27 → A, 28 → F, 29 → B, 30 → D (E is example)
           gallery: [
-            { letter: 'A', image: `${B4}/READING%20PART%202/27%20(A).png`,     label: 'A' },
-            { letter: 'B', image: `${B4}/READING%20PART%202/29%20(B).png`,     label: 'B' },
-            { letter: 'C', image: `${B4}/READING%20PART%202/26%20(C).png`,     label: 'C' },
-            { letter: 'D', image: `${B4}/READING%20PART%202/30%20(D).png`,     label: 'D' },
-            { letter: 'E', image: `${B4}/READING%20PART%202/E%20(EXAMPLE).png`, label: 'E (ejemplo)' },
-            { letter: 'F', image: `${B4}/READING%20PART%202/28%20(F).png`,     label: 'F' },
+            { letter: 'A', image: `${B4}/READING%20PART%202/27%20(A).webp`,     label: 'A' },
+            { letter: 'B', image: `${B4}/READING%20PART%202/29%20(B).webp`,     label: 'B' },
+            { letter: 'C', image: `${B4}/READING%20PART%202/26%20(C).webp`,     label: 'C' },
+            { letter: 'D', image: `${B4}/READING%20PART%202/30%20(D).webp`,     label: 'D' },
+            { letter: 'E', image: `${B4}/READING%20PART%202/E%20(EXAMPLE).webp`, label: 'E (ejemplo)' },
+            { letter: 'F', image: `${B4}/READING%20PART%202/28%20(F).webp`,     label: 'F' },
           ],
           example: {
             num: 'EJ', hanzi: '我很喜欢这本书', pinyin: 'Wǒ hěn xǐhuān zhè běn shū', answer: 'E',
@@ -932,16 +932,16 @@ const SIMULATIONS = {
           title: 'Parte 1 · Verdadero / Falso',
           instruction: 'Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.',
           examples: [
-            { num: 'EJ1', image: `${B5}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
-            { num: 'EJ2', image: `${B5}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
+            { num: 'EJ1', image: `${B5}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.webp`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
+            { num: 'EJ2', image: `${B5}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.webp`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
           ],
           // Sim 5 L1 answers from on-disk markers: F F T F T
           questions: [
-            { num: 1, image: `${B5}/LISTENING%20PART%201/1%20(FALSE).png`, audioUrl: `${B5}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
-            { num: 2, image: `${B5}/LISTENING%20PART%201/2%20(FALSE).png`, audioUrl: `${B5}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
-            { num: 3, image: `${B5}/LISTENING%20PART%201/3%20(TRUE).png`,  audioUrl: `${B5}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
-            { num: 4, image: `${B5}/LISTENING%20PART%201/4%20(FALSE).png`, audioUrl: `${B5}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
-            { num: 5, image: `${B5}/LISTENING%20PART%201/5%20(TRUE).png`,  audioUrl: `${B5}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
+            { num: 1, image: `${B5}/LISTENING%20PART%201/1%20(FALSE).webp`, audioUrl: `${B5}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
+            { num: 2, image: `${B5}/LISTENING%20PART%201/2%20(FALSE).webp`, audioUrl: `${B5}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
+            { num: 3, image: `${B5}/LISTENING%20PART%201/3%20(TRUE).webp`,  audioUrl: `${B5}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
+            { num: 4, image: `${B5}/LISTENING%20PART%201/4%20(FALSE).webp`, audioUrl: `${B5}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
+            { num: 5, image: `${B5}/LISTENING%20PART%201/5%20(TRUE).webp`,  audioUrl: `${B5}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
           ],
         },
         part2: {
@@ -950,29 +950,29 @@ const SIMULATIONS = {
           // Sim 5 L2 correct positions: B C C B C
           questions: [
             { num: 6,  audioUrl: `${B5}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B5}/LISTENING%20PART%202/6A.png` },
-                { letter: 'B', image: `${B5}/LISTENING%20PART%202/6B%20(CORRECT).png` },
-                { letter: 'C', image: `${B5}/LISTENING%20PART%202/6C.png` },
+                { letter: 'A', image: `${B5}/LISTENING%20PART%202/6A.webp` },
+                { letter: 'B', image: `${B5}/LISTENING%20PART%202/6B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B5}/LISTENING%20PART%202/6C.webp` },
               ], answer: 'B' },
             { num: 7,  audioUrl: `${B5}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B5}/LISTENING%20PART%202/7A.png` },
-                { letter: 'B', image: `${B5}/LISTENING%20PART%202/7B.png` },
-                { letter: 'C', image: `${B5}/LISTENING%20PART%202/7C%20(CORRECT).png` },
+                { letter: 'A', image: `${B5}/LISTENING%20PART%202/7A.webp` },
+                { letter: 'B', image: `${B5}/LISTENING%20PART%202/7B.webp` },
+                { letter: 'C', image: `${B5}/LISTENING%20PART%202/7C%20(CORRECT).webp` },
               ], answer: 'C' },
             { num: 8,  audioUrl: `${B5}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B5}/LISTENING%20PART%202/8A.png` },
-                { letter: 'B', image: `${B5}/LISTENING%20PART%202/8B.png` },
-                { letter: 'C', image: `${B5}/LISTENING%20PART%202/8C%20(CORRECT).png` },
+                { letter: 'A', image: `${B5}/LISTENING%20PART%202/8A.webp` },
+                { letter: 'B', image: `${B5}/LISTENING%20PART%202/8B.webp` },
+                { letter: 'C', image: `${B5}/LISTENING%20PART%202/8C%20(CORRECT).webp` },
               ], answer: 'C' },
             { num: 9,  audioUrl: `${B5}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B5}/LISTENING%20PART%202/9A.png` },
-                { letter: 'B', image: `${B5}/LISTENING%20PART%202/9B%20(CORRECT).png` },
-                { letter: 'C', image: `${B5}/LISTENING%20PART%202/9C.png` },
+                { letter: 'A', image: `${B5}/LISTENING%20PART%202/9A.webp` },
+                { letter: 'B', image: `${B5}/LISTENING%20PART%202/9B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B5}/LISTENING%20PART%202/9C.webp` },
               ], answer: 'B' },
             { num: 10, audioUrl: `${B5}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
-                { letter: 'A', image: `${B5}/LISTENING%20PART%202/10A.png` },
-                { letter: 'B', image: `${B5}/LISTENING%20PART%202/10B.png` },
-                { letter: 'C', image: `${B5}/LISTENING%20PART%202/10C%20(CORRECT).png` },
+                { letter: 'A', image: `${B5}/LISTENING%20PART%202/10A.webp` },
+                { letter: 'B', image: `${B5}/LISTENING%20PART%202/10B.webp` },
+                { letter: 'C', image: `${B5}/LISTENING%20PART%202/10C%20(CORRECT).webp` },
               ], answer: 'C' },
           ],
         },
@@ -983,12 +983,12 @@ const SIMULATIONS = {
           // answer is LETTER. The same image IS the gallery letter image.
           //   11 (A) · 12 (D) · 13 (B) · 14 (F) · 15 (E) · C example
           gallery: [
-            { letter: 'A', image: `${B5}/LISTENING%20PART%203/11%20(A).png`,     label: 'A' },
-            { letter: 'B', image: `${B5}/LISTENING%20PART%203/13%20(B).png`,     label: 'B' },
-            { letter: 'C', image: `${B5}/LISTENING%20PART%203/C%20(EXAMPLE).png`, label: 'C (ejemplo)' },
-            { letter: 'D', image: `${B5}/LISTENING%20PART%203/12%20(D).png`,     label: 'D' },
-            { letter: 'E', image: `${B5}/LISTENING%20PART%203/15%20(E).png`,     label: 'E' },
-            { letter: 'F', image: `${B5}/LISTENING%20PART%203/14%20(F).png`,     label: 'F' },
+            { letter: 'A', image: `${B5}/LISTENING%20PART%203/11%20(A).webp`,     label: 'A' },
+            { letter: 'B', image: `${B5}/LISTENING%20PART%203/13%20(B).webp`,     label: 'B' },
+            { letter: 'C', image: `${B5}/LISTENING%20PART%203/C%20(EXAMPLE).webp`, label: 'C (ejemplo)' },
+            { letter: 'D', image: `${B5}/LISTENING%20PART%203/12%20(D).webp`,     label: 'D' },
+            { letter: 'E', image: `${B5}/LISTENING%20PART%203/15%20(E).webp`,     label: 'E' },
+            { letter: 'F', image: `${B5}/LISTENING%20PART%203/14%20(F).webp`,     label: 'F' },
           ],
           exampleAnswer: 'C',
           questions: [
@@ -1051,17 +1051,17 @@ const SIMULATIONS = {
           title: 'Parte 5 (Lectura 1) · Verdadero / Falso',
           instruction: 'Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.',
           example: {
-            num: 'EJ', word: 'diànshì', image: `${B5}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false,
+            num: 'EJ', word: 'diànshì', image: `${B5}/READING%20PART%201/EXAMPLE%20(FALSE).webp`, answer: false,
           },
           // Sim 5 R1 words from QUESTIONS.txt:
           //   21 qǐng · 22 xuéxí · 23 zàijiàn · 24 nǎ'er · 25 diànnǎo
           // Markers: T F F T F
           questions: [
-            { num: 21, word: 'qǐng',    image: `${B5}/READING%20PART%201/21%20(TRUE).png`,  answer: true  },
-            { num: 22, word: 'xuéxí',   image: `${B5}/READING%20PART%201/22%20(FALSE).png`, answer: false },
-            { num: 23, word: 'zàijiàn', image: `${B5}/READING%20PART%201/23%20(FALSE).png`, answer: false },
-            { num: 24, word: "nǎ'er",   image: `${B5}/READING%20PART%201/24%20(TRUE).png`,  answer: true  },
-            { num: 25, word: 'diànnǎo', image: `${B5}/READING%20PART%201/25%20(FALSE).png`, answer: false },
+            { num: 21, word: 'qǐng',    image: `${B5}/READING%20PART%201/21%20(TRUE).webp`,  answer: true  },
+            { num: 22, word: 'xuéxí',   image: `${B5}/READING%20PART%201/22%20(FALSE).webp`, answer: false },
+            { num: 23, word: 'zàijiàn', image: `${B5}/READING%20PART%201/23%20(FALSE).webp`, answer: false },
+            { num: 24, word: "nǎ'er",   image: `${B5}/READING%20PART%201/24%20(TRUE).webp`,  answer: true  },
+            { num: 25, word: 'diànnǎo', image: `${B5}/READING%20PART%201/25%20(FALSE).webp`, answer: false },
           ],
         },
         part2: {
@@ -1070,12 +1070,12 @@ const SIMULATIONS = {
           // Sim 5 R2 picture-letter map from filenames:
           //   26 → B · 27 → A · 28 → C · 29 → D · 30 → F · E example
           gallery: [
-            { letter: 'A', image: `${B5}/READING%20PART%202/27%20(A).png`,     label: 'A' },
-            { letter: 'B', image: `${B5}/READING%20PART%202/26%20(B).png`,     label: 'B' },
-            { letter: 'C', image: `${B5}/READING%20PART%202/28%20(C).png`,     label: 'C' },
-            { letter: 'D', image: `${B5}/READING%20PART%202/29%20(D).png`,     label: 'D' },
-            { letter: 'E', image: `${B5}/READING%20PART%202/E%20(EXAMPLE).png`, label: 'E (ejemplo)' },
-            { letter: 'F', image: `${B5}/READING%20PART%202/30%20(F).png`,     label: 'F' },
+            { letter: 'A', image: `${B5}/READING%20PART%202/27%20(A).webp`,     label: 'A' },
+            { letter: 'B', image: `${B5}/READING%20PART%202/26%20(B).webp`,     label: 'B' },
+            { letter: 'C', image: `${B5}/READING%20PART%202/28%20(C).webp`,     label: 'C' },
+            { letter: 'D', image: `${B5}/READING%20PART%202/29%20(D).webp`,     label: 'D' },
+            { letter: 'E', image: `${B5}/READING%20PART%202/E%20(EXAMPLE).webp`, label: 'E (ejemplo)' },
+            { letter: 'F', image: `${B5}/READING%20PART%202/30%20(F).webp`,     label: 'F' },
           ],
           example: {
             num: 'EJ', hanzi: '我很喜欢这本书', pinyin: 'Wǒ hěn xǐhuān zhè běn shū', answer: 'E',
@@ -1152,16 +1152,16 @@ const SIMULATIONS = {
           title: 'Parte 1 · Verdadero / Falso',
           instruction: 'Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.',
           examples: [
-            { num: 'EJ1', image: `${B6}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
-            { num: 'EJ2', image: `${B6}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
+            { num: 'EJ1', image: `${B6}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.webp`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
+            { num: 'EJ2', image: `${B6}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.webp`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
           ],
           // Sim 6 L1 answers from markers: F T T F T
           questions: [
-            { num: 1, image: `${B6}/LISTENING%20PART%201/1%20(FALSE).png`, audioUrl: `${B6}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
-            { num: 2, image: `${B6}/LISTENING%20PART%201/2%20(TRUE).png`,  audioUrl: `${B6}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
-            { num: 3, image: `${B6}/LISTENING%20PART%201/3%20(TRUE).png`,  audioUrl: `${B6}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
-            { num: 4, image: `${B6}/LISTENING%20PART%201/4%20(FALSE).png`, audioUrl: `${B6}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
-            { num: 5, image: `${B6}/LISTENING%20PART%201/5%20(TRUE).png`,  audioUrl: `${B6}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
+            { num: 1, image: `${B6}/LISTENING%20PART%201/1%20(FALSE).webp`, audioUrl: `${B6}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
+            { num: 2, image: `${B6}/LISTENING%20PART%201/2%20(TRUE).webp`,  audioUrl: `${B6}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
+            { num: 3, image: `${B6}/LISTENING%20PART%201/3%20(TRUE).webp`,  audioUrl: `${B6}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
+            { num: 4, image: `${B6}/LISTENING%20PART%201/4%20(FALSE).webp`, audioUrl: `${B6}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
+            { num: 5, image: `${B6}/LISTENING%20PART%201/5%20(TRUE).webp`,  audioUrl: `${B6}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
           ],
         },
         part2: {
@@ -1170,29 +1170,29 @@ const SIMULATIONS = {
           // Sim 6 L2 correct positions: A B C A C
           questions: [
             { num: 6,  audioUrl: `${B6}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B6}/LISTENING%20PART%202/6A%20(CORRECT).png` },
-                { letter: 'B', image: `${B6}/LISTENING%20PART%202/6B.png` },
-                { letter: 'C', image: `${B6}/LISTENING%20PART%202/6C.png` },
+                { letter: 'A', image: `${B6}/LISTENING%20PART%202/6A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B6}/LISTENING%20PART%202/6B.webp` },
+                { letter: 'C', image: `${B6}/LISTENING%20PART%202/6C.webp` },
               ], answer: 'A' },
             { num: 7,  audioUrl: `${B6}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B6}/LISTENING%20PART%202/7A.png` },
-                { letter: 'B', image: `${B6}/LISTENING%20PART%202/7B%20(CORRECT).png` },
-                { letter: 'C', image: `${B6}/LISTENING%20PART%202/7C.png` },
+                { letter: 'A', image: `${B6}/LISTENING%20PART%202/7A.webp` },
+                { letter: 'B', image: `${B6}/LISTENING%20PART%202/7B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B6}/LISTENING%20PART%202/7C.webp` },
               ], answer: 'B' },
             { num: 8,  audioUrl: `${B6}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B6}/LISTENING%20PART%202/8A.png` },
-                { letter: 'B', image: `${B6}/LISTENING%20PART%202/8B.png` },
-                { letter: 'C', image: `${B6}/LISTENING%20PART%202/8C%20(CORRECT).png` },
+                { letter: 'A', image: `${B6}/LISTENING%20PART%202/8A.webp` },
+                { letter: 'B', image: `${B6}/LISTENING%20PART%202/8B.webp` },
+                { letter: 'C', image: `${B6}/LISTENING%20PART%202/8C%20(CORRECT).webp` },
               ], answer: 'C' },
             { num: 9,  audioUrl: `${B6}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B6}/LISTENING%20PART%202/9A%20(CORRECT).png` },
-                { letter: 'B', image: `${B6}/LISTENING%20PART%202/9B.png` },
-                { letter: 'C', image: `${B6}/LISTENING%20PART%202/9C.png` },
+                { letter: 'A', image: `${B6}/LISTENING%20PART%202/9A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B6}/LISTENING%20PART%202/9B.webp` },
+                { letter: 'C', image: `${B6}/LISTENING%20PART%202/9C.webp` },
               ], answer: 'A' },
             { num: 10, audioUrl: `${B6}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
-                { letter: 'A', image: `${B6}/LISTENING%20PART%202/10A.png` },
-                { letter: 'B', image: `${B6}/LISTENING%20PART%202/10B.png` },
-                { letter: 'C', image: `${B6}/LISTENING%20PART%202/10C%20(CORRECT).png` },
+                { letter: 'A', image: `${B6}/LISTENING%20PART%202/10A.webp` },
+                { letter: 'B', image: `${B6}/LISTENING%20PART%202/10B.webp` },
+                { letter: 'C', image: `${B6}/LISTENING%20PART%202/10C%20(CORRECT).webp` },
               ], answer: 'C' },
           ],
         },
@@ -1201,12 +1201,12 @@ const SIMULATIONS = {
           instruction: 'Escucha cada audio y toca la letra de la imagen correcta.',
           // Sim 6 file convention "N (LETTER).png": 11→F 12→E 13→B 14→D 15→A · C example
           gallery: [
-            { letter: 'A', image: `${B6}/LISTENING%20PART%203/15%20(A).png`,     label: 'A' },
-            { letter: 'B', image: `${B6}/LISTENING%20PART%203/13%20(B).png`,     label: 'B' },
-            { letter: 'C', image: `${B6}/LISTENING%20PART%203/C%20(EXAMPLE).png`, label: 'C (ejemplo)' },
-            { letter: 'D', image: `${B6}/LISTENING%20PART%203/14%20(D).png`,     label: 'D' },
-            { letter: 'E', image: `${B6}/LISTENING%20PART%203/12%20(E).png`,     label: 'E' },
-            { letter: 'F', image: `${B6}/LISTENING%20PART%203/11%20(F).png`,     label: 'F' },
+            { letter: 'A', image: `${B6}/LISTENING%20PART%203/15%20(A).webp`,     label: 'A' },
+            { letter: 'B', image: `${B6}/LISTENING%20PART%203/13%20(B).webp`,     label: 'B' },
+            { letter: 'C', image: `${B6}/LISTENING%20PART%203/C%20(EXAMPLE).webp`, label: 'C (ejemplo)' },
+            { letter: 'D', image: `${B6}/LISTENING%20PART%203/14%20(D).webp`,     label: 'D' },
+            { letter: 'E', image: `${B6}/LISTENING%20PART%203/12%20(E).webp`,     label: 'E' },
+            { letter: 'F', image: `${B6}/LISTENING%20PART%203/11%20(F).webp`,     label: 'F' },
           ],
           exampleAnswer: 'C',
           questions: [
@@ -1269,17 +1269,17 @@ const SIMULATIONS = {
           title: 'Parte 5 (Lectura 1) · Verdadero / Falso',
           instruction: 'Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.',
           example: {
-            num: 'EJ', word: 'diànshì', image: `${B6}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false,
+            num: 'EJ', word: 'diànshì', image: `${B6}/READING%20PART%201/EXAMPLE%20(FALSE).webp`, answer: false,
           },
           // Sim 6 R1 words from QUESTIONS.txt:
           //   21 mǐfàn · 22 xiàwǔ · 23 dúshū · 24 chūzū chē · 25 xiǎng
           // Markers: T F T F T
           questions: [
-            { num: 21, word: 'mǐfàn',     image: `${B6}/READING%20PART%201/21%20(TRUE).png`,  answer: true  },
-            { num: 22, word: 'xiàwǔ',     image: `${B6}/READING%20PART%201/22%20(FALSE).png`, answer: false },
-            { num: 23, word: 'dúshū',     image: `${B6}/READING%20PART%201/23%20(TRUE).png`,  answer: true  },
-            { num: 24, word: 'chūzū chē', image: `${B6}/READING%20PART%201/24%20(FALSE).png`, answer: false },
-            { num: 25, word: 'xiǎng',     image: `${B6}/READING%20PART%201/25%20(TRUE).png`,  answer: true  },
+            { num: 21, word: 'mǐfàn',     image: `${B6}/READING%20PART%201/21%20(TRUE).webp`,  answer: true  },
+            { num: 22, word: 'xiàwǔ',     image: `${B6}/READING%20PART%201/22%20(FALSE).webp`, answer: false },
+            { num: 23, word: 'dúshū',     image: `${B6}/READING%20PART%201/23%20(TRUE).webp`,  answer: true  },
+            { num: 24, word: 'chūzū chē', image: `${B6}/READING%20PART%201/24%20(FALSE).webp`, answer: false },
+            { num: 25, word: 'xiǎng',     image: `${B6}/READING%20PART%201/25%20(TRUE).webp`,  answer: true  },
           ],
         },
         part2: {
@@ -1288,12 +1288,12 @@ const SIMULATIONS = {
           // Sim 6 R2 picture-letter map from filenames:
           //   26→D · 27→C · 28→A · 29→F · 30→B · E example
           gallery: [
-            { letter: 'A', image: `${B6}/READING%20PART%202/28%20(A).png`,     label: 'A' },
-            { letter: 'B', image: `${B6}/READING%20PART%202/30%20(B).png`,     label: 'B' },
-            { letter: 'C', image: `${B6}/READING%20PART%202/27%20(C).png`,     label: 'C' },
-            { letter: 'D', image: `${B6}/READING%20PART%202/26%20(D).png`,     label: 'D' },
-            { letter: 'E', image: `${B6}/READING%20PART%202/E%20(EXAMPLE).png`, label: 'E (ejemplo)' },
-            { letter: 'F', image: `${B6}/READING%20PART%202/29%20(F).png`,     label: 'F' },
+            { letter: 'A', image: `${B6}/READING%20PART%202/28%20(A).webp`,     label: 'A' },
+            { letter: 'B', image: `${B6}/READING%20PART%202/30%20(B).webp`,     label: 'B' },
+            { letter: 'C', image: `${B6}/READING%20PART%202/27%20(C).webp`,     label: 'C' },
+            { letter: 'D', image: `${B6}/READING%20PART%202/26%20(D).webp`,     label: 'D' },
+            { letter: 'E', image: `${B6}/READING%20PART%202/E%20(EXAMPLE).webp`, label: 'E (ejemplo)' },
+            { letter: 'F', image: `${B6}/READING%20PART%202/29%20(F).webp`,     label: 'F' },
           ],
           example: {
             num: 'EJ', hanzi: '我很喜欢这本书', pinyin: 'Wǒ hěn xǐhuān zhè běn shū', answer: 'E',
@@ -1372,16 +1372,16 @@ const SIMULATIONS = {
           title: 'Parte 1 · Verdadero / Falso',
           instruction: 'Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.',
           examples: [
-            { num: 'EJ1', image: `${B7}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
-            { num: 'EJ2', image: `${B7}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
+            { num: 'EJ1', image: `${B7}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.webp`, audioText: 'hěn gāoxìng',  answer: true,  caption: 'Hěn gāoxìng (muy feliz)' },
+            { num: 'EJ2', image: `${B7}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.webp`, audioText: 'kàn diànyǐng', answer: false, caption: 'Kàn diànyǐng (ver película)' },
           ],
           // Sim 7 L1 markers: T F T F F
           questions: [
-            { num: 1, image: `${B7}/LISTENING%20PART%201/1%20(TRUE).png`,  audioUrl: `${B7}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: true  },
-            { num: 2, image: `${B7}/LISTENING%20PART%201/2%20(FALSE).png`, audioUrl: `${B7}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
-            { num: 3, image: `${B7}/LISTENING%20PART%201/3%20(TRUE).png`,  audioUrl: `${B7}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
-            { num: 4, image: `${B7}/LISTENING%20PART%201/4%20(FALSE).png`, audioUrl: `${B7}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
-            { num: 5, image: `${B7}/LISTENING%20PART%201/5%20(FALSE).png`, audioUrl: `${B7}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: false },
+            { num: 1, image: `${B7}/LISTENING%20PART%201/1%20(TRUE).webp`,  audioUrl: `${B7}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: true  },
+            { num: 2, image: `${B7}/LISTENING%20PART%201/2%20(FALSE).webp`, audioUrl: `${B7}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
+            { num: 3, image: `${B7}/LISTENING%20PART%201/3%20(TRUE).webp`,  audioUrl: `${B7}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
+            { num: 4, image: `${B7}/LISTENING%20PART%201/4%20(FALSE).webp`, audioUrl: `${B7}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
+            { num: 5, image: `${B7}/LISTENING%20PART%201/5%20(FALSE).webp`, audioUrl: `${B7}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: false },
           ],
         },
         part2: {
@@ -1390,29 +1390,29 @@ const SIMULATIONS = {
           // Sim 7 L2 correct positions: B A C B C
           questions: [
             { num: 6,  audioUrl: `${B7}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B7}/LISTENING%20PART%202/6A.png` },
-                { letter: 'B', image: `${B7}/LISTENING%20PART%202/6B%20(CORRECT).png` },
-                { letter: 'C', image: `${B7}/LISTENING%20PART%202/6C.png` },
+                { letter: 'A', image: `${B7}/LISTENING%20PART%202/6A.webp` },
+                { letter: 'B', image: `${B7}/LISTENING%20PART%202/6B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B7}/LISTENING%20PART%202/6C.webp` },
               ], answer: 'B' },
             { num: 7,  audioUrl: `${B7}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B7}/LISTENING%20PART%202/7A%20(CORRECT).png` },
-                { letter: 'B', image: `${B7}/LISTENING%20PART%202/7B.png` },
-                { letter: 'C', image: `${B7}/LISTENING%20PART%202/7C.png` },
+                { letter: 'A', image: `${B7}/LISTENING%20PART%202/7A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B7}/LISTENING%20PART%202/7B.webp` },
+                { letter: 'C', image: `${B7}/LISTENING%20PART%202/7C.webp` },
               ], answer: 'A' },
             { num: 8,  audioUrl: `${B7}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B7}/LISTENING%20PART%202/8A.png` },
-                { letter: 'B', image: `${B7}/LISTENING%20PART%202/8B.png` },
-                { letter: 'C', image: `${B7}/LISTENING%20PART%202/8C%20(CORRECT).png` },
+                { letter: 'A', image: `${B7}/LISTENING%20PART%202/8A.webp` },
+                { letter: 'B', image: `${B7}/LISTENING%20PART%202/8B.webp` },
+                { letter: 'C', image: `${B7}/LISTENING%20PART%202/8C%20(CORRECT).webp` },
               ], answer: 'C' },
             { num: 9,  audioUrl: `${B7}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B7}/LISTENING%20PART%202/9A.png` },
-                { letter: 'B', image: `${B7}/LISTENING%20PART%202/9B%20(CORRECT).png` },
-                { letter: 'C', image: `${B7}/LISTENING%20PART%202/9C.png` },
+                { letter: 'A', image: `${B7}/LISTENING%20PART%202/9A.webp` },
+                { letter: 'B', image: `${B7}/LISTENING%20PART%202/9B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B7}/LISTENING%20PART%202/9C.webp` },
               ], answer: 'B' },
             { num: 10, audioUrl: `${B7}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
-                { letter: 'A', image: `${B7}/LISTENING%20PART%202/10A.png` },
-                { letter: 'B', image: `${B7}/LISTENING%20PART%202/10B.png` },
-                { letter: 'C', image: `${B7}/LISTENING%20PART%202/10C%20(CORRECT).png` },
+                { letter: 'A', image: `${B7}/LISTENING%20PART%202/10A.webp` },
+                { letter: 'B', image: `${B7}/LISTENING%20PART%202/10B.webp` },
+                { letter: 'C', image: `${B7}/LISTENING%20PART%202/10C%20(CORRECT).webp` },
               ], answer: 'C' },
           ],
         },
@@ -1421,12 +1421,12 @@ const SIMULATIONS = {
           instruction: 'Escucha cada audio y toca la letra de la imagen correcta.',
           // Sim 7 file convention "N (LETTER)": 11→D 12→F 13→A 14→E 15→B · C example
           gallery: [
-            { letter: 'A', image: `${B7}/LISTENING%20PART%203/13%20(A).png`,    label: 'A' },
-            { letter: 'B', image: `${B7}/LISTENING%20PART%203/15%20(B).png`,    label: 'B' },
-            { letter: 'C', image: `${B7}/LISTENING%20PART%203/C%20(EXAMPLE).png`, label: 'C (ejemplo)' },
-            { letter: 'D', image: `${B7}/LISTENING%20PART%203/11%20(D).png`,    label: 'D' },
-            { letter: 'E', image: `${B7}/LISTENING%20PART%203/14%20(E).png`,    label: 'E' },
-            { letter: 'F', image: `${B7}/LISTENING%20PART%203/12(F).png`,       label: 'F' },
+            { letter: 'A', image: `${B7}/LISTENING%20PART%203/13%20(A).webp`,    label: 'A' },
+            { letter: 'B', image: `${B7}/LISTENING%20PART%203/15%20(B).webp`,    label: 'B' },
+            { letter: 'C', image: `${B7}/LISTENING%20PART%203/C%20(EXAMPLE).webp`, label: 'C (ejemplo)' },
+            { letter: 'D', image: `${B7}/LISTENING%20PART%203/11%20(D).webp`,    label: 'D' },
+            { letter: 'E', image: `${B7}/LISTENING%20PART%203/14%20(E).webp`,    label: 'E' },
+            { letter: 'F', image: `${B7}/LISTENING%20PART%203/12(F).webp`,       label: 'F' },
           ],
           exampleAnswer: 'C',
           questions: [
@@ -1489,17 +1489,17 @@ const SIMULATIONS = {
           title: 'Parte 5 (Lectura 1) · Verdadero / Falso',
           instruction: 'Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.',
           example: {
-            num: 'EJ', word: 'diànshì', image: `${B7}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false,
+            num: 'EJ', word: 'diànshì', image: `${B7}/READING%20PART%201/EXAMPLE%20(FALSE).webp`, answer: false,
           },
           // Sim 7 R1 words from QUESTIONS.txt:
           //   21 hé · 22 kāichē · 23 xuéxiào · 24 shí'èr diǎn · 25 tóngxué
           // Markers: T F F F T
           questions: [
-            { num: 21, word: 'hé',          image: `${B7}/READING%20PART%201/21%20(TRUE).png`,  answer: true  },
-            { num: 22, word: 'kāichē',      image: `${B7}/READING%20PART%201/22%20(FALSE).png`, answer: false },
-            { num: 23, word: 'xuéxiào',     image: `${B7}/READING%20PART%201/23%20(FALSE).png`, answer: false },
-            { num: 24, word: "shí'èr diǎn", image: `${B7}/READING%20PART%201/24%20(FALSE).png`, answer: false },
-            { num: 25, word: 'tóngxué',     image: `${B7}/READING%20PART%201/25%20(TRUE).png`,  answer: true  },
+            { num: 21, word: 'hé',          image: `${B7}/READING%20PART%201/21%20(TRUE).webp`,  answer: true  },
+            { num: 22, word: 'kāichē',      image: `${B7}/READING%20PART%201/22%20(FALSE).webp`, answer: false },
+            { num: 23, word: 'xuéxiào',     image: `${B7}/READING%20PART%201/23%20(FALSE).webp`, answer: false },
+            { num: 24, word: "shí'èr diǎn", image: `${B7}/READING%20PART%201/24%20(FALSE).webp`, answer: false },
+            { num: 25, word: 'tóngxué',     image: `${B7}/READING%20PART%201/25%20(TRUE).webp`,  answer: true  },
           ],
         },
         part2: {
@@ -1508,12 +1508,12 @@ const SIMULATIONS = {
           // Sim 7 R2 picture-letter map: 26→F 27→B 28→C 29→D 30→A · E example
           // NOTE: 27 is .jpeg, the rest .png.
           gallery: [
-            { letter: 'A', image: `${B7}/READING%20PART%202/30%20(A).png`,     label: 'A' },
-            { letter: 'B', image: `${B7}/READING%20PART%202/27%20(B).jpeg`,    label: 'B' },
-            { letter: 'C', image: `${B7}/READING%20PART%202/28%20(C).png`,     label: 'C' },
-            { letter: 'D', image: `${B7}/READING%20PART%202/29%20(D).png`,     label: 'D' },
-            { letter: 'E', image: `${B7}/READING%20PART%202/E%20(EXAMPLE).png`, label: 'E (ejemplo)' },
-            { letter: 'F', image: `${B7}/READING%20PART%202/26%20(F).png`,     label: 'F' },
+            { letter: 'A', image: `${B7}/READING%20PART%202/30%20(A).webp`,     label: 'A' },
+            { letter: 'B', image: `${B7}/READING%20PART%202/27%20(B).webp`,    label: 'B' },
+            { letter: 'C', image: `${B7}/READING%20PART%202/28%20(C).webp`,     label: 'C' },
+            { letter: 'D', image: `${B7}/READING%20PART%202/29%20(D).webp`,     label: 'D' },
+            { letter: 'E', image: `${B7}/READING%20PART%202/E%20(EXAMPLE).webp`, label: 'E (ejemplo)' },
+            { letter: 'F', image: `${B7}/READING%20PART%202/26%20(F).webp`,     label: 'F' },
           ],
           example: {
             num: 'EJ', hanzi: '我很喜欢这本书', pinyin: 'Wǒ hěn xǐhuān zhè běn shū', answer: 'E',
@@ -1593,16 +1593,16 @@ const SIMULATIONS = {
           title: 'Parte 1 · Verdadero / Falso',
           instruction: 'Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.',
           examples: [
-            { num: 'EJ1', image: `${B8}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: '', answer: true,  caption: 'Ejemplo 1' },
-            { num: 'EJ2', image: `${B8}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: '', answer: false, caption: 'Ejemplo 2' },
+            { num: 'EJ1', image: `${B8}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.webp`, audioText: '', answer: true,  caption: 'Ejemplo 1' },
+            { num: 'EJ2', image: `${B8}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.webp`, audioText: '', answer: false, caption: 'Ejemplo 2' },
           ],
           // Sim 8 L1 markers: T F T F T
           questions: [
-            { num: 1, image: `${B8}/LISTENING%20PART%201/1%20(TRUE).png`,   audioUrl: `${B8}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: true  },
-            { num: 2, image: `${B8}/LISTENING%20PART%201/2%20(FALSE).png`,  audioUrl: `${B8}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
-            { num: 3, image: `${B8}/LISTENING%20PART%201/3%20(TRUE).jpeg`,  audioUrl: `${B8}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
-            { num: 4, image: `${B8}/LISTENING%20PART%201/4%20(FALSE).jpeg`, audioUrl: `${B8}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
-            { num: 5, image: `${B8}/LISTENING%20PART%201/5%20(TRUE).jpeg`,  audioUrl: `${B8}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
+            { num: 1, image: `${B8}/LISTENING%20PART%201/1%20(TRUE).webp`,   audioUrl: `${B8}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: true  },
+            { num: 2, image: `${B8}/LISTENING%20PART%201/2%20(FALSE).webp`,  audioUrl: `${B8}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
+            { num: 3, image: `${B8}/LISTENING%20PART%201/3%20(TRUE).webp`,  audioUrl: `${B8}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: true  },
+            { num: 4, image: `${B8}/LISTENING%20PART%201/4%20(FALSE).webp`, audioUrl: `${B8}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: false },
+            { num: 5, image: `${B8}/LISTENING%20PART%201/5%20(TRUE).webp`,  audioUrl: `${B8}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
           ],
         },
         part2: {
@@ -1611,29 +1611,29 @@ const SIMULATIONS = {
           // Sim 8 L2 correct positions: B A C A B
           questions: [
             { num: 6,  audioUrl: `${B8}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B8}/LISTENING%20PART%202/6A.jpeg` },
-                { letter: 'B', image: `${B8}/LISTENING%20PART%202/6B%20(CORRECT).jpeg` },
-                { letter: 'C', image: `${B8}/LISTENING%20PART%202/6C.jpeg` },
+                { letter: 'A', image: `${B8}/LISTENING%20PART%202/6A.webp` },
+                { letter: 'B', image: `${B8}/LISTENING%20PART%202/6B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B8}/LISTENING%20PART%202/6C.webp` },
               ], answer: 'B' },
             { num: 7,  audioUrl: `${B8}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B8}/LISTENING%20PART%202/7A%20(CORRECT).png` },
-                { letter: 'B', image: `${B8}/LISTENING%20PART%202/7B.png` },
-                { letter: 'C', image: `${B8}/LISTENING%20PART%202/7C.png` },
+                { letter: 'A', image: `${B8}/LISTENING%20PART%202/7A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B8}/LISTENING%20PART%202/7B.webp` },
+                { letter: 'C', image: `${B8}/LISTENING%20PART%202/7C.webp` },
               ], answer: 'A' },
             { num: 8,  audioUrl: `${B8}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B8}/LISTENING%20PART%202/8A.jpeg` },
-                { letter: 'B', image: `${B8}/LISTENING%20PART%202/8B.jpeg` },
-                { letter: 'C', image: `${B8}/LISTENING%20PART%202/8C%20(CORRECT).png` },
+                { letter: 'A', image: `${B8}/LISTENING%20PART%202/8A.webp` },
+                { letter: 'B', image: `${B8}/LISTENING%20PART%202/8B.webp` },
+                { letter: 'C', image: `${B8}/LISTENING%20PART%202/8C%20(CORRECT).webp` },
               ], answer: 'C' },
             { num: 9,  audioUrl: `${B8}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B8}/LISTENING%20PART%202/9A%20(CORRECT).png` },
-                { letter: 'B', image: `${B8}/LISTENING%20PART%202/9B.png` },
-                { letter: 'C', image: `${B8}/LISTENING%20PART%202/9C.png` },
+                { letter: 'A', image: `${B8}/LISTENING%20PART%202/9A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B8}/LISTENING%20PART%202/9B.webp` },
+                { letter: 'C', image: `${B8}/LISTENING%20PART%202/9C.webp` },
               ], answer: 'A' },
             { num: 10, audioUrl: `${B8}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
-                { letter: 'A', image: `${B8}/LISTENING%20PART%202/10A.png` },
-                { letter: 'B', image: `${B8}/LISTENING%20PART%202/10B%20(CORRECT).png` },
-                { letter: 'C', image: `${B8}/LISTENING%20PART%202/10C.png` },
+                { letter: 'A', image: `${B8}/LISTENING%20PART%202/10A.webp` },
+                { letter: 'B', image: `${B8}/LISTENING%20PART%202/10B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B8}/LISTENING%20PART%202/10C.webp` },
               ], answer: 'B' },
           ],
         },
@@ -1642,12 +1642,12 @@ const SIMULATIONS = {
           instruction: 'Escucha cada audio y toca la letra de la imagen correcta.',
           // Sim 8 file convention "N (LETTER)": 11→F 12→E 13→B 14→D 15→A · C example
           gallery: [
-            { letter: 'A', image: `${B8}/LISTENING%20PART%203/15%20(A).png`,     label: 'A' },
-            { letter: 'B', image: `${B8}/LISTENING%20PART%203/13%20(B).jpeg`,    label: 'B' },
-            { letter: 'C', image: `${B8}/LISTENING%20PART%203/C%20(EXAMPLE).png`, label: 'C (ejemplo)' },
-            { letter: 'D', image: `${B8}/LISTENING%20PART%203/14%20(D).jpeg`,    label: 'D' },
-            { letter: 'E', image: `${B8}/LISTENING%20PART%203/12%20(E).png`,     label: 'E' },
-            { letter: 'F', image: `${B8}/LISTENING%20PART%203/11%20(F).jpeg`,    label: 'F' },
+            { letter: 'A', image: `${B8}/LISTENING%20PART%203/15%20(A).webp`,     label: 'A' },
+            { letter: 'B', image: `${B8}/LISTENING%20PART%203/13%20(B).webp`,    label: 'B' },
+            { letter: 'C', image: `${B8}/LISTENING%20PART%203/C%20(EXAMPLE).webp`, label: 'C (ejemplo)' },
+            { letter: 'D', image: `${B8}/LISTENING%20PART%203/14%20(D).webp`,    label: 'D' },
+            { letter: 'E', image: `${B8}/LISTENING%20PART%203/12%20(E).webp`,     label: 'E' },
+            { letter: 'F', image: `${B8}/LISTENING%20PART%203/11%20(F).webp`,    label: 'F' },
           ],
           exampleAnswer: 'C',
           questions: [
@@ -1709,14 +1709,14 @@ const SIMULATIONS = {
         part1: {
           title: 'Parte 5 (Lectura 1) · Verdadero / Falso',
           instruction: 'Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.',
-          example: { num: 'EJ', word: 'diànshì', image: `${B8}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false },
+          example: { num: 'EJ', word: 'diànshì', image: `${B8}/READING%20PART%201/EXAMPLE%20(FALSE).webp`, answer: false },
           // Sim 8 R1 words (QUESTIONS.txt) + markers T F T F T
           questions: [
-            { num: 21, word: 'bēizi',         image: `${B8}/READING%20PART%201/21%20(TRUE).png`,   answer: true  },
-            { num: 22, word: 'gōngzuò',       image: `${B8}/READING%20PART%201/22%20(FALSE).png`,  answer: false },
-            { num: 23, word: 'xiānsheng',     image: `${B8}/READING%20PART%201/23%20(TRUE).jpeg`,  answer: true  },
-            { num: 24, word: 'diànyǐngyuàn',  image: `${B8}/READING%20PART%201/24%20(FALSE).jpeg`, answer: false },
-            { num: 25, word: 'gāoxìng',       image: `${B8}/READING%20PART%201/25%20(TRUE).jpeg`,  answer: true  },
+            { num: 21, word: 'bēizi',         image: `${B8}/READING%20PART%201/21%20(TRUE).webp`,   answer: true  },
+            { num: 22, word: 'gōngzuò',       image: `${B8}/READING%20PART%201/22%20(FALSE).webp`,  answer: false },
+            { num: 23, word: 'xiānsheng',     image: `${B8}/READING%20PART%201/23%20(TRUE).webp`,  answer: true  },
+            { num: 24, word: 'diànyǐngyuàn',  image: `${B8}/READING%20PART%201/24%20(FALSE).webp`, answer: false },
+            { num: 25, word: 'gāoxìng',       image: `${B8}/READING%20PART%201/25%20(TRUE).webp`,  answer: true  },
           ],
         },
         part2: {
@@ -1724,12 +1724,12 @@ const SIMULATIONS = {
           instruction: 'Lee cada oración y toca la letra de la imagen que la representa.',
           // Sim 8 R2 picture-letter map: 26→C 27→F 28→B 29→D 30→A · E example
           gallery: [
-            { letter: 'A', image: `${B8}/READING%20PART%202/30%20(A).png`,     label: 'A' },
-            { letter: 'B', image: `${B8}/READING%20PART%202/28%20(B).png`,     label: 'B' },
-            { letter: 'C', image: `${B8}/READING%20PART%202/26%20(C).png`,     label: 'C' },
-            { letter: 'D', image: `${B8}/READING%20PART%202/29%20(D).png`,     label: 'D' },
-            { letter: 'E', image: `${B8}/READING%20PART%202/E%20(EXAMPLE).png`, label: 'E (ejemplo)' },
-            { letter: 'F', image: `${B8}/READING%20PART%202/27%20(F).png`,     label: 'F' },
+            { letter: 'A', image: `${B8}/READING%20PART%202/30%20(A).webp`,     label: 'A' },
+            { letter: 'B', image: `${B8}/READING%20PART%202/28%20(B).webp`,     label: 'B' },
+            { letter: 'C', image: `${B8}/READING%20PART%202/26%20(C).webp`,     label: 'C' },
+            { letter: 'D', image: `${B8}/READING%20PART%202/29%20(D).webp`,     label: 'D' },
+            { letter: 'E', image: `${B8}/READING%20PART%202/E%20(EXAMPLE).webp`, label: 'E (ejemplo)' },
+            { letter: 'F', image: `${B8}/READING%20PART%202/27%20(F).webp`,     label: 'F' },
           ],
           example: { num: 'EJ', hanzi: '我很喜欢这本书', pinyin: 'Wǒ hěn xǐhuān zhè běn shū', answer: 'E' },
           questions: [
@@ -1802,16 +1802,16 @@ const SIMULATIONS = {
           title: 'Parte 1 · Verdadero / Falso',
           instruction: 'Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.',
           examples: [
-            { num: 'EJ1', image: `${B9}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: '', answer: true,  caption: 'Ejemplo 1' },
-            { num: 'EJ2', image: `${B9}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: '', answer: false, caption: 'Ejemplo 2' },
+            { num: 'EJ1', image: `${B9}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.webp`, audioText: '', answer: true,  caption: 'Ejemplo 1' },
+            { num: 'EJ2', image: `${B9}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.webp`, audioText: '', answer: false, caption: 'Ejemplo 2' },
           ],
           // Sim 9 L1 markers: F T F T F
           questions: [
-            { num: 1, image: `${B9}/LISTENING%20PART%201/1%20(FALSE).png`, audioUrl: `${B9}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
-            { num: 2, image: `${B9}/LISTENING%20PART%201/2%20(TRUE).png`,  audioUrl: `${B9}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
-            { num: 3, image: `${B9}/LISTENING%20PART%201/3%20(FALSE).png`, audioUrl: `${B9}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: false },
-            { num: 4, image: `${B9}/LISTENING%20PART%201/4%20(TRUE).png`,  audioUrl: `${B9}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: true  },
-            { num: 5, image: `${B9}/LISTENING%20PART%201/5%20(FALSE).png`, audioUrl: `${B9}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: false },
+            { num: 1, image: `${B9}/LISTENING%20PART%201/1%20(FALSE).webp`, audioUrl: `${B9}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: false },
+            { num: 2, image: `${B9}/LISTENING%20PART%201/2%20(TRUE).webp`,  audioUrl: `${B9}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: true  },
+            { num: 3, image: `${B9}/LISTENING%20PART%201/3%20(FALSE).webp`, audioUrl: `${B9}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: false },
+            { num: 4, image: `${B9}/LISTENING%20PART%201/4%20(TRUE).webp`,  audioUrl: `${B9}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: true  },
+            { num: 5, image: `${B9}/LISTENING%20PART%201/5%20(FALSE).webp`, audioUrl: `${B9}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: false },
           ],
         },
         part2: {
@@ -1820,29 +1820,29 @@ const SIMULATIONS = {
           // Sim 9 L2 correct positions: A C B A B
           questions: [
             { num: 6,  audioUrl: `${B9}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B9}/LISTENING%20PART%202/6A%20(CORRECT).png` },
-                { letter: 'B', image: `${B9}/LISTENING%20PART%202/6B.png` },
-                { letter: 'C', image: `${B9}/LISTENING%20PART%202/6C.png` },
+                { letter: 'A', image: `${B9}/LISTENING%20PART%202/6A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B9}/LISTENING%20PART%202/6B.webp` },
+                { letter: 'C', image: `${B9}/LISTENING%20PART%202/6C.webp` },
               ], answer: 'A' },
             { num: 7,  audioUrl: `${B9}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B9}/LISTENING%20PART%202/7A.jpeg` },
-                { letter: 'B', image: `${B9}/LISTENING%20PART%202/7B.png` },
-                { letter: 'C', image: `${B9}/LISTENING%20PART%202/7C%20(CORRECT).jpeg` },
+                { letter: 'A', image: `${B9}/LISTENING%20PART%202/7A.webp` },
+                { letter: 'B', image: `${B9}/LISTENING%20PART%202/7B.webp` },
+                { letter: 'C', image: `${B9}/LISTENING%20PART%202/7C%20(CORRECT).webp` },
               ], answer: 'C' },
             { num: 8,  audioUrl: `${B9}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B9}/LISTENING%20PART%202/8A.jpeg` },
-                { letter: 'B', image: `${B9}/LISTENING%20PART%202/8B%20(CORRECT).jpeg` },
-                { letter: 'C', image: `${B9}/LISTENING%20PART%202/8C.jpeg` },
+                { letter: 'A', image: `${B9}/LISTENING%20PART%202/8A.webp` },
+                { letter: 'B', image: `${B9}/LISTENING%20PART%202/8B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B9}/LISTENING%20PART%202/8C.webp` },
               ], answer: 'B' },
             { num: 9,  audioUrl: `${B9}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B9}/LISTENING%20PART%202/9A%20(CORRECT).jpeg` },
-                { letter: 'B', image: `${B9}/LISTENING%20PART%202/9B.png` },
-                { letter: 'C', image: `${B9}/LISTENING%20PART%202/9C.jpeg` },
+                { letter: 'A', image: `${B9}/LISTENING%20PART%202/9A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B9}/LISTENING%20PART%202/9B.webp` },
+                { letter: 'C', image: `${B9}/LISTENING%20PART%202/9C.webp` },
               ], answer: 'A' },
             { num: 10, audioUrl: `${B9}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
-                { letter: 'A', image: `${B9}/LISTENING%20PART%202/10A.png` },
-                { letter: 'B', image: `${B9}/LISTENING%20PART%202/10B%20(CORRECT).jpeg` },
-                { letter: 'C', image: `${B9}/LISTENING%20PART%202/10C.jpeg` },
+                { letter: 'A', image: `${B9}/LISTENING%20PART%202/10A.webp` },
+                { letter: 'B', image: `${B9}/LISTENING%20PART%202/10B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B9}/LISTENING%20PART%202/10C.webp` },
               ], answer: 'B' },
           ],
         },
@@ -1851,12 +1851,12 @@ const SIMULATIONS = {
           instruction: 'Escucha cada audio y toca la letra de la imagen correcta.',
           // Sim 9 "N (LETTER)": 11→B 12→F 13→A 14→E 15→D · C example
           gallery: [
-            { letter: 'A', image: `${B9}/LISTENING%20PART%203/13%20(A).jpeg`,    label: 'A' },
-            { letter: 'B', image: `${B9}/LISTENING%20PART%203/11%20(B).png`,     label: 'B' },
-            { letter: 'C', image: `${B9}/LISTENING%20PART%203/C%20(EXAMPLE).png`, label: 'C (ejemplo)' },
-            { letter: 'D', image: `${B9}/LISTENING%20PART%203/15%20(D).jpeg`,    label: 'D' },
-            { letter: 'E', image: `${B9}/LISTENING%20PART%203/14%20(E).jpeg`,    label: 'E' },
-            { letter: 'F', image: `${B9}/LISTENING%20PART%203/12%20(F).jpeg`,    label: 'F' },
+            { letter: 'A', image: `${B9}/LISTENING%20PART%203/13%20(A).webp`,    label: 'A' },
+            { letter: 'B', image: `${B9}/LISTENING%20PART%203/11%20(B).webp`,     label: 'B' },
+            { letter: 'C', image: `${B9}/LISTENING%20PART%203/C%20(EXAMPLE).webp`, label: 'C (ejemplo)' },
+            { letter: 'D', image: `${B9}/LISTENING%20PART%203/15%20(D).webp`,    label: 'D' },
+            { letter: 'E', image: `${B9}/LISTENING%20PART%203/14%20(E).webp`,    label: 'E' },
+            { letter: 'F', image: `${B9}/LISTENING%20PART%203/12%20(F).webp`,    label: 'F' },
           ],
           exampleAnswer: 'C',
           questions: [
@@ -1918,14 +1918,14 @@ const SIMULATIONS = {
         part1: {
           title: 'Parte 5 (Lectura 1) · Verdadero / Falso',
           instruction: 'Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.',
-          example: { num: 'EJ', word: 'diànshì', image: `${B9}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false },
+          example: { num: 'EJ', word: 'diànshì', image: `${B9}/READING%20PART%201/EXAMPLE%20(FALSE).webp`, answer: false },
           // Sim 9 R1 words (QUESTIONS.txt) + markers T F F F T
           questions: [
-            { num: 21, word: 'shuìjiào', image: `${B9}/READING%20PART%201/21%20(TRUE).jpeg`,  answer: true  },
-            { num: 22, word: 'rè',       image: `${B9}/READING%20PART%201/22%20(FALSE).png`,  answer: false },
-            { num: 23, word: 'xuéshēng', image: `${B9}/READING%20PART%201/23%20(FALSE).png`,  answer: false },
-            { num: 24, word: 'bēizi',    image: `${B9}/READING%20PART%201/24%20(FALSE).png`,  answer: false },
-            { num: 25, word: 'dú',       image: `${B9}/READING%20PART%201/25%20(TRUE).jpeg`,  answer: true  },
+            { num: 21, word: 'shuìjiào', image: `${B9}/READING%20PART%201/21%20(TRUE).webp`,  answer: true  },
+            { num: 22, word: 'rè',       image: `${B9}/READING%20PART%201/22%20(FALSE).webp`,  answer: false },
+            { num: 23, word: 'xuéshēng', image: `${B9}/READING%20PART%201/23%20(FALSE).webp`,  answer: false },
+            { num: 24, word: 'bēizi',    image: `${B9}/READING%20PART%201/24%20(FALSE).webp`,  answer: false },
+            { num: 25, word: 'dú',       image: `${B9}/READING%20PART%201/25%20(TRUE).webp`,  answer: true  },
           ],
         },
         part2: {
@@ -1933,12 +1933,12 @@ const SIMULATIONS = {
           instruction: 'Lee cada oración y toca la letra de la imagen que la representa.',
           // Sim 9 R2 picture-letter map: 26→C 27→F 28→A 29→D 30→B · E example
           gallery: [
-            { letter: 'A', image: `${B9}/READING%20PART%202/28%20(A).png`,     label: 'A' },
-            { letter: 'B', image: `${B9}/READING%20PART%202/30%20(B).png`,     label: 'B' },
-            { letter: 'C', image: `${B9}/READING%20PART%202/26%20(C).png`,     label: 'C' },
-            { letter: 'D', image: `${B9}/READING%20PART%202/29%20(D).jpeg`,    label: 'D' },
-            { letter: 'E', image: `${B9}/READING%20PART%202/E%20(EXAMPLE).png`, label: 'E (ejemplo)' },
-            { letter: 'F', image: `${B9}/READING%20PART%202/27%20(F).jpeg`,    label: 'F' },
+            { letter: 'A', image: `${B9}/READING%20PART%202/28%20(A).webp`,     label: 'A' },
+            { letter: 'B', image: `${B9}/READING%20PART%202/30%20(B).webp`,     label: 'B' },
+            { letter: 'C', image: `${B9}/READING%20PART%202/26%20(C).webp`,     label: 'C' },
+            { letter: 'D', image: `${B9}/READING%20PART%202/29%20(D).webp`,    label: 'D' },
+            { letter: 'E', image: `${B9}/READING%20PART%202/E%20(EXAMPLE).webp`, label: 'E (ejemplo)' },
+            { letter: 'F', image: `${B9}/READING%20PART%202/27%20(F).webp`,    label: 'F' },
           ],
           example: { num: 'EJ', hanzi: '我很喜欢这本书', pinyin: 'Wǒ hěn xǐhuān zhè běn shū', answer: 'E' },
           questions: [
@@ -2018,16 +2018,16 @@ const SIMULATIONS = {
           title: 'Parte 1 · Verdadero / Falso',
           instruction: 'Escucha el audio. ¿Es lo que muestra la imagen? Marca ✓ o ✕.',
           examples: [
-            { num: 'EJ1', image: `${B10}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.png`, audioText: '', answer: true,  caption: 'Ejemplo 1' },
-            { num: 'EJ2', image: `${B10}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.png`, audioText: '', answer: false, caption: 'Ejemplo 2' },
+            { num: 'EJ1', image: `${B10}/LISTENING%20PART%201/PART%201%20EXAMPLE%201.webp`, audioText: '', answer: true,  caption: 'Ejemplo 1' },
+            { num: 'EJ2', image: `${B10}/LISTENING%20PART%201/PART%201%20EXAMPLE%202.webp`, audioText: '', answer: false, caption: 'Ejemplo 2' },
           ],
           // Sim 10 L1 markers: T F F T T
           questions: [
-            { num: 1, image: `${B10}/LISTENING%20PART%201/1%20(TRUE).png`,  audioUrl: `${B10}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: true  },
-            { num: 2, image: `${B10}/LISTENING%20PART%201/2%20(FALSE).png`, audioUrl: `${B10}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
-            { num: 3, image: `${B10}/LISTENING%20PART%201/3%20(FALSE).png`, audioUrl: `${B10}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: false },
-            { num: 4, image: `${B10}/LISTENING%20PART%201/4%20(TRUE).png`,  audioUrl: `${B10}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: true  },
-            { num: 5, image: `${B10}/LISTENING%20PART%201/5%20(TRUE).png`,  audioUrl: `${B10}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
+            { num: 1, image: `${B10}/LISTENING%20PART%201/1%20(TRUE).webp`,  audioUrl: `${B10}/LISTENING%20PART%201/1.mp3`, audioText: '', answer: true  },
+            { num: 2, image: `${B10}/LISTENING%20PART%201/2%20(FALSE).webp`, audioUrl: `${B10}/LISTENING%20PART%201/2.mp3`, audioText: '', answer: false },
+            { num: 3, image: `${B10}/LISTENING%20PART%201/3%20(FALSE).webp`, audioUrl: `${B10}/LISTENING%20PART%201/3.mp3`, audioText: '', answer: false },
+            { num: 4, image: `${B10}/LISTENING%20PART%201/4%20(TRUE).webp`,  audioUrl: `${B10}/LISTENING%20PART%201/4.mp3`, audioText: '', answer: true  },
+            { num: 5, image: `${B10}/LISTENING%20PART%201/5%20(TRUE).webp`,  audioUrl: `${B10}/LISTENING%20PART%201/5.mp3`, audioText: '', answer: true  },
           ],
         },
         part2: {
@@ -2037,29 +2037,29 @@ const SIMULATIONS = {
           // (9B.png added by user 2026-07-05 — q9 has all 3 options now.)
           questions: [
             { num: 6,  audioUrl: `${B10}/LISTENING%20PART%202/6.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B10}/LISTENING%20PART%202/6A.png` },
-                { letter: 'B', image: `${B10}/LISTENING%20PART%202/6B.png` },
-                { letter: 'C', image: `${B10}/LISTENING%20PART%202/6C%20(TRUE).png` },
+                { letter: 'A', image: `${B10}/LISTENING%20PART%202/6A.webp` },
+                { letter: 'B', image: `${B10}/LISTENING%20PART%202/6B.webp` },
+                { letter: 'C', image: `${B10}/LISTENING%20PART%202/6C%20(TRUE).webp` },
               ], answer: 'C' },
             { num: 7,  audioUrl: `${B10}/LISTENING%20PART%202/7.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B10}/LISTENING%20PART%202/7A.png` },
-                { letter: 'B', image: `${B10}/LISTENING%20PART%202/7B%20(CORRECT).png` },
-                { letter: 'C', image: `${B10}/LISTENING%20PART%202/7C.png` },
+                { letter: 'A', image: `${B10}/LISTENING%20PART%202/7A.webp` },
+                { letter: 'B', image: `${B10}/LISTENING%20PART%202/7B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B10}/LISTENING%20PART%202/7C.webp` },
               ], answer: 'B' },
             { num: 8,  audioUrl: `${B10}/LISTENING%20PART%202/8.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B10}/LISTENING%20PART%202/8A.png` },
-                { letter: 'B', image: `${B10}/LISTENING%20PART%202/8B%20(CORRECT).png` },
-                { letter: 'C', image: `${B10}/LISTENING%20PART%202/8C.png` },
+                { letter: 'A', image: `${B10}/LISTENING%20PART%202/8A.webp` },
+                { letter: 'B', image: `${B10}/LISTENING%20PART%202/8B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B10}/LISTENING%20PART%202/8C.webp` },
               ], answer: 'B' },
             { num: 9,  audioUrl: `${B10}/LISTENING%20PART%202/9.mp3`,  audioText: '', options: [
-                { letter: 'A', image: `${B10}/LISTENING%20PART%202/9A%20(CORRECT).png` },
-                { letter: 'B', image: `${B10}/LISTENING%20PART%202/9B.png` },
-                { letter: 'C', image: `${B10}/LISTENING%20PART%202/9C.png` },
+                { letter: 'A', image: `${B10}/LISTENING%20PART%202/9A%20(CORRECT).webp` },
+                { letter: 'B', image: `${B10}/LISTENING%20PART%202/9B.webp` },
+                { letter: 'C', image: `${B10}/LISTENING%20PART%202/9C.webp` },
               ], answer: 'A' },
             { num: 10, audioUrl: `${B10}/LISTENING%20PART%202/10.mp3`, audioText: '', options: [
-                { letter: 'A', image: `${B10}/LISTENING%20PART%202/10A.png` },
-                { letter: 'B', image: `${B10}/LISTENING%20PART%202/10B%20(CORRECT).png` },
-                { letter: 'C', image: `${B10}/LISTENING%20PART%202/10C.png` },
+                { letter: 'A', image: `${B10}/LISTENING%20PART%202/10A.webp` },
+                { letter: 'B', image: `${B10}/LISTENING%20PART%202/10B%20(CORRECT).webp` },
+                { letter: 'C', image: `${B10}/LISTENING%20PART%202/10C.webp` },
               ], answer: 'B' },
           ],
         },
@@ -2068,12 +2068,12 @@ const SIMULATIONS = {
           instruction: 'Escucha cada audio y toca la letra de la imagen correcta.',
           // Sim 10 "N (LETTER)": 11→B 12→E 13→D 14→A 15→F · C example
           gallery: [
-            { letter: 'A', image: `${B10}/LISTENING%20PART%203/14%20(A).png`,     label: 'A' },
-            { letter: 'B', image: `${B10}/LISTENING%20PART%203/11%20(B).png`,     label: 'B' },
-            { letter: 'C', image: `${B10}/LISTENING%20PART%203/C%20(EXAMPLE).png`, label: 'C (ejemplo)' },
-            { letter: 'D', image: `${B10}/LISTENING%20PART%203/13%20(D).png`,     label: 'D' },
-            { letter: 'E', image: `${B10}/LISTENING%20PART%203/12%20(E).png`,     label: 'E' },
-            { letter: 'F', image: `${B10}/LISTENING%20PART%203/15%20(F).jpeg`,    label: 'F' },
+            { letter: 'A', image: `${B10}/LISTENING%20PART%203/14%20(A).webp`,     label: 'A' },
+            { letter: 'B', image: `${B10}/LISTENING%20PART%203/11%20(B).webp`,     label: 'B' },
+            { letter: 'C', image: `${B10}/LISTENING%20PART%203/C%20(EXAMPLE).webp`, label: 'C (ejemplo)' },
+            { letter: 'D', image: `${B10}/LISTENING%20PART%203/13%20(D).webp`,     label: 'D' },
+            { letter: 'E', image: `${B10}/LISTENING%20PART%203/12%20(E).webp`,     label: 'E' },
+            { letter: 'F', image: `${B10}/LISTENING%20PART%203/15%20(F).webp`,    label: 'F' },
           ],
           exampleAnswer: 'C',
           questions: [
@@ -2135,14 +2135,14 @@ const SIMULATIONS = {
         part1: {
           title: 'Parte 5 (Lectura 1) · Verdadero / Falso',
           instruction: 'Lee la palabra. ¿Coincide con la imagen? Marca ✓ o ✕.',
-          example: { num: 'EJ', word: 'diànshì', image: `${B10}/READING%20PART%201/EXAMPLE%20(FALSE).png`, answer: false },
+          example: { num: 'EJ', word: 'diànshì', image: `${B10}/READING%20PART%201/EXAMPLE%20(FALSE).webp`, answer: false },
           // Sim 10 R1 words (QUESTIONS.txt) + markers F T F T T
           questions: [
-            { num: 21, word: 'yīyuàn', image: `${B10}/READING%20PART%201/21%20(FALSE).png`, answer: false },
-            { num: 22, word: 'mǐfàn',  image: `${B10}/READING%20PART%201/22%20(TRUE).png`,  answer: true  },
-            { num: 23, word: 'bēizi',  image: `${B10}/READING%20PART%201/23%20(FALSE).png`, answer: false },
-            { num: 24, word: 'xuéxí',  image: `${B10}/READING%20PART%201/24%20(TRUE).png`,  answer: true  },
-            { num: 25, word: 'gǒu',    image: `${B10}/READING%20PART%201/25%20(TRUE).png`,  answer: true  },
+            { num: 21, word: 'yīyuàn', image: `${B10}/READING%20PART%201/21%20(FALSE).webp`, answer: false },
+            { num: 22, word: 'mǐfàn',  image: `${B10}/READING%20PART%201/22%20(TRUE).webp`,  answer: true  },
+            { num: 23, word: 'bēizi',  image: `${B10}/READING%20PART%201/23%20(FALSE).webp`, answer: false },
+            { num: 24, word: 'xuéxí',  image: `${B10}/READING%20PART%201/24%20(TRUE).webp`,  answer: true  },
+            { num: 25, word: 'gǒu',    image: `${B10}/READING%20PART%201/25%20(TRUE).webp`,  answer: true  },
           ],
         },
         part2: {
@@ -2151,12 +2151,12 @@ const SIMULATIONS = {
           // Sim 10 R2 picture-letter map: 26→D 27→A 28→C 29→F 30→B · E example
           // Files 28/29/30 use fullwidth （） in the name — encoded below.
           gallery: [
-            { letter: 'A', image: `${B10}/READING%20PART%202/27%20(A).png`,                    label: 'A' },
-            { letter: 'B', image: `${B10}/READING%20PART%202/30%20%EF%BC%88B%EF%BC%89.png`,    label: 'B' },
-            { letter: 'C', image: `${B10}/READING%20PART%202/28%20%EF%BC%88C%EF%BC%89.png`,    label: 'C' },
-            { letter: 'D', image: `${B10}/READING%20PART%202/26%20(D).png`,                    label: 'D' },
-            { letter: 'E', image: `${B10}/READING%20PART%202/E%20(EXAMPLE).png`,               label: 'E (ejemplo)' },
-            { letter: 'F', image: `${B10}/READING%20PART%202/29%20%EF%BC%88F%EF%BC%89.png`,    label: 'F' },
+            { letter: 'A', image: `${B10}/READING%20PART%202/27%20(A).webp`,                    label: 'A' },
+            { letter: 'B', image: `${B10}/READING%20PART%202/30%20%EF%BC%88B%EF%BC%89.webp`,    label: 'B' },
+            { letter: 'C', image: `${B10}/READING%20PART%202/28%20%EF%BC%88C%EF%BC%89.webp`,    label: 'C' },
+            { letter: 'D', image: `${B10}/READING%20PART%202/26%20(D).webp`,                    label: 'D' },
+            { letter: 'E', image: `${B10}/READING%20PART%202/E%20(EXAMPLE).webp`,               label: 'E (ejemplo)' },
+            { letter: 'F', image: `${B10}/READING%20PART%202/29%20%EF%BC%88F%EF%BC%89.webp`,    label: 'F' },
           ],
           example: { num: 'EJ', hanzi: '我很喜欢这本书', pinyin: 'Wǒ hěn xǐhuān zhè běn shū', answer: 'E' },
           questions: [

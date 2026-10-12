@@ -18,7 +18,7 @@ const fs = require('fs');
 const path = require('path');
 
 const SIMS_ROOT = path.join(__dirname, '..', 'public', 'assets', 'HSK SIMULATIONS');
-const IMG_RE = /\.(png|jpe?g)$/i;
+const IMG_RE = /\.(png|jpe?g|webp)$/i;   // 2026-10-12: the sim pictures are WebP now
 // Skip pure example/instruction frames? No — Fernando wants EVERYTHING
 // pictured. We keep examples too; they're fine teaching material.
 

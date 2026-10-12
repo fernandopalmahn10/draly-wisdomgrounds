@@ -64,6 +64,17 @@ the checklist for any new game mode.
   (`core/images.js`); never bring back image.pollinations.ai or any generator that draws at runtime (random pictures,
   watermarks). The 9 old uploaded sets (`seed-sets/`) have no pictures and still show hanzi + tone marks in their
   questions: rebuild them as curriculum packs before using them with kids.
+- **Keep the site light** (his ask 2026-10-12: "if I keep adding games and assets, are we gonna hit a limit?"). Games
+  are cheap (code + sounds 1-3 MB each); media is what grows. Still pictures WebP under ~300 KB (720-1200 px, quality
+  ~82), animations under 2 MB, sounds mp3 under 2 MB (exam recordings exempt), no file over 10 MB, never BMP/TIFF/WAV.
+  Never deploy source or working files (3D .glb sources, full-size originals, transcription notes, answer keys):
+  originals go in `assets-library/`. `node scripts/asset-guard.js` before every commit with media (exit 1 = fix it).
+- **Platform health, monthly** (his ask 2026-10-12): `node scripts/health-check.js` reads Render (memory, CPU,
+  downloads, data disk), the live `/api/_diag` and this repo; limits memory 70 %, CPU 60 %, student file 20 MB,
+  disk 30 %, media 1 GB, any file 10 MB, a page 1 MB compressed, downloads 25 GB/month. Over a limit = act (bigger
+  server, database, lighter media) and tell him. Reports in `../reports/platform-health/`. Render facts: one Starter
+  server (0.5 CPU, 512 MB) on the Hobby workspace; Render already serves through Cloudflare (compressed); the 1 GB data
+  disk is why deploys have a ~1 min gap and why we can't run two instances. Only one paid service should be running.
 - Asset packs (Kenney etc.) live in `C:\Users\ferpa\ClaudeCode\assets-library\` (not in git, never served). Copy only
   the files a game uses into `public/assets/<game>/` and commit those; never commit a whole pack or an installer.
 - Spanish UI first; "Chino Mandarín"; big buttons, kid-friendly feedback; encouragement at the screen edge, never blocking play.
