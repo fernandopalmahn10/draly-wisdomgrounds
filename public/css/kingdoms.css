@@ -242,6 +242,8 @@ body.kd-phone .answer-btn { border: 4px solid var(--kd-ink) !important; border-r
   font-family: 'Baloo 2', sans-serif !important; font-weight: 800 !important; font-size: clamp(1.3rem, 6vw, 1.9rem) !important;
   box-shadow: 0 6px 0 var(--kd-ink) !important; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   text-shadow: 0 2px 0 rgba(0,0,0,.25); transition: transform .06s; }
+body.kd-phone .answer-btn.ans-long { font-size: clamp(1rem, 4.4vw, 1.3rem) !important; line-height: 1.15; }
+body.kd-phone .answer-btn.ans-xlong { font-size: clamp(.86rem, 3.7vw, 1.02rem) !important; line-height: 1.12; padding: 8px 8px !important; }
 body.kd-phone .answer-btn:active { transform: translateY(4px) !important; box-shadow: 0 2px 0 var(--kd-ink) !important; }
 body.kd-phone .answer-btn:nth-child(1) { background: #f0443a !important; }
 body.kd-phone .answer-btn:nth-child(2) { background: #2f7bea !important; }

@@ -1,42 +1,18 @@
-// Returns an image URL for a question. Cheap, deterministic, no API key.
-//   - If the question already has an image URL, use it.
-//   - If `image` starts with "ai:" → Pollinations using the rest as prompt.
-//   - Otherwise → Pollinations using the question text as prompt.
-//
-// Pollinations is free, no signup. The same prompt yields the same image (deterministic seed).
-// We pass safe=true to encourage kid-friendly output.
-
-function pollinationsUrl(prompt, seed) {
-  const cleaned = String(prompt || '').trim().slice(0, 200);
-  const seedNum = seed != null ? seed : hashSeed(cleaned);
-  const params = new URLSearchParams({
-    width: '512',
-    height: '384',
-    nologo: 'true',
-    safe: 'true',
-    seed: String(seedNum)
-  });
-  return `https://image.pollinations.ai/prompt/${encodeURIComponent(cleaned + ', cute friendly illustration, vibrant')}?${params.toString()}`;
-}
-
-function hashSeed(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  return Math.abs(h) % 1000000;
-}
+// Returns the picture URL for a question, or null for no picture.
+//   - '/assets/…'    → our own pictures (Higgsfield packs, made for that word)
+//   - 'http(s)://…'  → a picture the teacher put in the set on purpose
+//   - anything else (no image, 'ai:…') → NO picture.
+// Until 2026-10-11 the fallback asked image.pollinations.ai to draw the question text: kids got unrelated pictures
+// (a pink cat for «ni hao») with a visible watermark, against the kid-safe rule "no text/logos in images" and the
+// rule that pictures are made for each question. A question without its own picture now shows none (the Reinos /
+// Pintores phones show a thinking Dralingo there). Real pictures come from curriculum packs (core/packs.js).
 
 function urlForQuestion(q) {
-  if (q.image === 'none') return null;                      // pack question with no picture on purpose
-  if (q.image && q.image.startsWith('/assets/')) return q.image;   // our own pictures (Higgsfield packs)
-  if (q.image) {
-    if (q.image.startsWith('ai:')) {
-      return pollinationsUrl(q.image.slice(3));
-    }
-    if (/^https?:\/\//i.test(q.image)) {
-      return q.image;
-    }
-  }
-  return pollinationsUrl(q.text);
+  const img = q && typeof q.image === 'string' ? q.image.trim() : '';
+  if (!img || img === 'none' || img.startsWith('ai:')) return null;
+  if (img.startsWith('/assets/')) return img;
+  if (/^https?:\/\//i.test(img)) return img;
+  return null;
 }
 
-module.exports = { urlForQuestion, pollinationsUrl };
+module.exports = { urlForQuestion };

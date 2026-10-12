@@ -1082,7 +1082,8 @@
     hideSendingOverlay();
     q.answers.forEach((a, i) => {
       const btn = document.createElement('button');
-      btn.className = 'answer-btn';
+      // sentence answers (exam simulacros, 2026-10-11) get smaller type so four of them still fit on a phone
+      btn.className = 'answer-btn' + (a.length > 34 ? ' ans-xlong' : a.length > 16 ? ' ans-long' : '');
       btn.innerHTML = `<span class="answer-shape shape-${i}">${SHAPES[i]}</span><span>${escapeHtml(a)}</span>`;
       // Use pointerdown — fires faster than 'click' and isn't subject to the
       // 300ms tap-delay or synthetic-click-eaten-by-scroll bugs on mobile.

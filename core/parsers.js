@@ -2,24 +2,28 @@ const XLSX = require('xlsx');
 const fs = require('fs');
 const path = require('path');
 
-// Headers we accept (case-insensitive). The first valid one wins.
+// Headers we accept (case-insensitive; spaces, dashes and underscores ignored, so "Correct Answer", "correct_answer"
+// and "Wrong 1" all match). The first valid one wins.
 const HEADERS = {
-  question: ['question', 'q', 'prompt'],
-  correct: ['correct', 'answer', 'right', 'correct_answer'],
-  wrong1: ['wrong1', 'wrong_1', 'option2', 'b'],
-  wrong2: ['wrong2', 'wrong_2', 'option3', 'c'],
-  wrong3: ['wrong3', 'wrong_3', 'option4', 'd'],
-  image: ['image', 'img', 'picture', 'photo', 'image_url']
+  question: ['question', 'q', 'prompt', 'pregunta'],
+  correct: ['correct', 'answer', 'right', 'correctanswer', 'respuesta', 'respuestacorrecta', 'correcta'],
+  wrong1: ['wrong1', 'wronganswer1', 'option2', 'b', 'incorrecta1'],
+  wrong2: ['wrong2', 'wronganswer2', 'option3', 'c', 'incorrecta2'],
+  wrong3: ['wrong3', 'wronganswer3', 'option4', 'd', 'incorrecta3'],
+  image: ['image', 'img', 'picture', 'photo', 'imageurl', 'imagen']
 };
+const norm = (h) => String(h || '').trim().toLowerCase().replace(/[\s_-]+/g, '');
 
 function pickHeader(headerRow, candidates) {
-  const lower = headerRow.map((h) => String(h || '').trim().toLowerCase());
+  const lower = headerRow.map(norm);
   for (const c of candidates) {
     const idx = lower.indexOf(c);
     if (idx >= 0) return idx;
   }
   return -1;
 }
+// A header row read as a question (2026-10-11: "Question / Correct Answer / Wrong 1…" reached the kids' phones)
+const looksLikeHeader = (r) => /^(question|pregunta)$/i.test(norm(r[0])) || /^(correct|correctanswer|respuestacorrecta)$/.test(norm(r[1]));
 
 function rowsToQuestions(rows) {
   if (!rows || rows.length < 2) return [];
@@ -28,7 +32,8 @@ function rowsToQuestions(rows) {
   const idxC = pickHeader(header, HEADERS.correct);
   if (idxQ < 0 || idxC < 0) {
     // Maybe no header row — assume positional: question, correct, wrong1, wrong2, wrong3, image
-    return rows
+    return (looksLikeHeader(rows[0]) ? rows.slice(1) : rows)   // only the FIRST row can be a header
+      .filter((r) => r && r.length)
       .map((r) => ({
         text: String(r[0] || '').trim(),
         correct: String(r[1] || '').trim(),

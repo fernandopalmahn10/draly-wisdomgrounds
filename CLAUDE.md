@@ -22,8 +22,24 @@ the checklist for any new game mode.
   rules hide in game files (2026-10-10: the avatar picker, timer pulse and music chip lived in zombie/triage/color-clash
   css and broke every lobby). Bot playtests can't see styling: also screenshot a lobby + question screen.
 - Question packs follow the curriculum (`core/packs.js` → picker `/packs.html?game=…`): test family → level → world →
-  round. Pictures come from Higgsfield (Nano Banana Pro, Unlimited ON) in his Chrome, saved to `assets-library/higgsfield/`,
-  web copies in `public/assets/packs/<level>/<world>/`. Pinyin without tone marks in games.
+  round. Content lives in `core/packs/<level>.js` (words + exam-style items; built into questions by `core/packs.js`).
+  Pictures come from Higgsfield (Nano Banana Pro, Unlimited ON) in his Chrome, saved to `assets-library/higgsfield/`,
+  web copies in `public/assets/packs/<level>/<world>/`; the brief per level is `content/packs/<level>-pictures.json`.
+  Pinyin without tone marks in games. `node scripts/test-packs.js` must pass before a deploy.
+- **Every question says exactly what it asks** (his correction 2026-10-11: "who is him? … how are we going to know just by a
+  picture? Completely out of context"). Name the word («¿Cómo se dice «hermano mayor» en Chino Mandarín?»), never a bare
+  picture with «¿Quién es?»; pronouns go in a scene with the cast («Dralingo saluda a Hamdan: "___ hao!"»). Test-day
+  practice comes first: each level has a «Simulacro del examen» world built from his mother file (all the sims of that
+  level with answers, `Downloads\IMPORTANT DOCUMENTS\CURRICULUM STRUCTURE\…`). New HSK 1 waits for its mother file.
+- **Pictures with the franchise** (his direction 2026-10-11: "the point is to make toys … irresistible, put them
+  everywhere"): question pictures use the glossy 3D toy look and often show the gang (Dralingo in his platform look, Profe
+  Fer, Hamdan, Latifa, Aileen, Adric + his dog) in scenes from that world's episode (`claude-setup/cast.md`). No picture
+  where it would need digits or text (clocks, calendars): those questions stay text-only. Counts (numbers) are composited
+  from one sticker so the count is exact.
+- **No outside AI pictures** (since 2026-10-11): a question without its own `/assets/…` picture shows none
+  (`core/images.js`); never bring back image.pollinations.ai or any generator that draws at runtime (random pictures,
+  watermarks). The 9 old uploaded sets (`seed-sets/`) have no pictures and still show hanzi + tone marks in their
+  questions: rebuild them as curriculum packs before using them with kids.
 - Asset packs (Kenney etc.) live in `C:\Users\ferpa\ClaudeCode\assets-library\` (not in git, never served). Copy only
   the files a game uses into `public/assets/<game>/` and commit those; never commit a whole pack or an installer.
 - Spanish UI first; "Chino Mandarín"; big buttons, kid-friendly feedback; encouragement at the screen edge, never blocking play.

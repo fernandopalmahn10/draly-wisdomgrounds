@@ -715,6 +715,8 @@ body::before {
   min-height: 56px;
   word-break: break-word;
 }
+.answer-btn.ans-long { font-size: .9rem; }
+.answer-btn.ans-xlong { font-size: .8rem; line-height: 1.15; }
 @media (min-height: 700px) {
   .answer-btn { padding: 16px 14px; font-size: 1rem; min-height: 64px; }
   .answers { gap: 10px; }
