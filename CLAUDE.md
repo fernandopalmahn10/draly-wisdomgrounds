@@ -39,7 +39,22 @@ the checklist for any new game mode.
   with our own saga characters"): no Gojo, Pikachu, Mario, Elsa, CR7… in avatars, animations, bursts, stories or
   celebrations. One list feeds every roster: `public/js/saga.js` (ANIMS for the warm-up / reading / HSK trays and
   «GIF to students», BURSTS for the cast quick effects, AVATARS + LEGACY_AVATARS for /homework); the server reads the
-  same file. Add a new character there (art in `public/assets/saga/`, made with the `higgsfield-art` skill).
+  same file. Add a new character there (art in `public/assets/saga/`, made with the `higgsfield-art` skill). Any page
+  that shows a kid's avatar uses `Saga.avatarUrl()` (2026-10-12 the review found a 6th hand-written avatar renderer in
+  the warm-up Cuaderno still building `/assets/avatars/<name>.svg`).
+- **Avatar pickers offer only our roster** (his direction 2026-10-12: "remove all options of characters that are not of
+  our roster, they subtract value to our presentation"): the saga avatars only (no DiceBear robots/kids/emoji); kids
+  who had one show a saga avatar instead (Saga.avatarUrl maps every old name).
+- **Alive, randomized, not overdone** (his direction 2026-10-12: "always use all the assets you have to randomize
+  things… so it feels like something is interacting with you; if it's plain it gets boring; we do not need to overdo
+  it"): every screen kids land on (home, homework login, lobbies, waiting screens) draws on the whole library (Dralingo
+  animations and stickers, the cast and their lines, the saga animals, the Dubai skyline) and picks a different mix on
+  each visit or every few seconds. One or two moving things at a time, never covering what the kid must tap, with
+  `prefers-reduced-motion` respected and a still first frame on pages a whole class opens at once.
+- **Removing or renaming something kids saw** (a character, a story, a tarea): student records keep copies of it
+  (stored avatar ids, reading-test titles and questions, inbox messages with old URLs). Fix those too in the same
+  change: a one-shot `load()` migration that only touches the old values, or a filter where they are shown. 2026-10-12
+  saved «Lǎoshī Yugi» results and brand-GIF inbox messages would still have shown after the rename.
 - **Pictures with the franchise** (his direction 2026-10-11: "the point is to make toys … irresistible, put them
   everywhere"): question pictures use the glossy 3D toy look and often show the gang (Dralingo in his platform look, Profe
   Fer, Hamdan, Latifa, Aileen, Adric + his dog) in scenes from that world's episode (`claude-setup/cast.md`). No picture
@@ -135,6 +150,9 @@ the checklist for any new game mode.
   that level: a themed world with real landmarks (not a plain board), a physical-feeling response to every tap (press,
   bounce, sound), feedback for every right/wrong/streak/capture, and rising excitement toward the end (final countdown,
   big reveals, a celebrated winner). Before calling a game done, compare it side by side with Reinos de Colores.
+- **Every pin game is graded before it ships** (his decision 2026-10-12): `docs/GAME_QUALITY_CHECKLIST.md`, 5 hard
+  gates + 7 areas scored 0–2 with evidence. Ships only with all gates passed, no 0 and 12/14 or more; the card goes in
+  the deploy report and the game's spec. Below that is work left: say the score and what is missing.
 - **One join screen** (his correction 2026-10-12: "ugly leftover interface when joining, poorly designed «Únete»"): kids
   type PIN + name only on the home card «🎮 Entrar al juego» (index.html; the projector's `/?pin=X` link fills the PIN).
   player.html only shows Dralingo «Entrando al juego…» and sends failures back to that card. Never add a second join

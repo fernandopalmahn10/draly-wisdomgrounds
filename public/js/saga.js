@@ -32,18 +32,19 @@
     { id: 'adrian', label: '🗺️ Adrian', color: '#26a65b', glow: '#b2ebcd', cry: '¡A LA AVENTURA!', img: '/assets/cast/adrian-cheer.webp' },
   ];
   const AV = '/assets/saga/avatars/';
+  // emoji: what the pin games carry for the kid (hosts print avatars as text); the phone shows the picture
   const AVATARS = [
-    { id: 'dralingo', label: '🐉 Dralingo', url: AV + 'dralingo.webp' },
-    { id: 'fer', label: '👨‍🏫 Profe Fer', url: AV + 'fer.webp' },
-    { id: 'hamdan', label: 'Hamdan', url: AV + 'hamdan.webp' },
-    { id: 'latifa', label: 'Latifa', url: AV + 'latifa.webp' },
-    { id: 'aileen', label: 'Aileen', url: AV + 'aileen.webp' },
-    { id: 'adric', label: 'Adric', url: AV + 'adric.webp' },
-    { id: 'adrian', label: 'Adrian', url: AV + 'adrian.webp' },
-    { id: 'camel', label: '🐪 Camello', url: AV + 'camel.webp' },
-    { id: 'plane', label: '✈️ Avión', url: AV + 'plane.webp' },
-    { id: 'falcon', label: '🦅 Halcón', url: AV + 'falcon.webp' },
-    { id: 'oryx', label: '🦌 Órix', url: AV + 'oryx.webp' },
+    { id: 'dralingo', emoji: '🐉', label: '🐉 Dralingo', url: AV + 'dralingo.webp' },
+    { id: 'fer', emoji: '👨‍🏫', label: '👨‍🏫 Profe Fer', url: AV + 'fer.webp' },
+    { id: 'hamdan', emoji: '🧔', label: 'Hamdan', url: AV + 'hamdan.webp' },
+    { id: 'latifa', emoji: '🧕', label: 'Latifa', url: AV + 'latifa.webp' },
+    { id: 'aileen', emoji: '🌎', label: 'Aileen', url: AV + 'aileen.webp' },
+    { id: 'adric', emoji: '🐕', label: 'Adric', url: AV + 'adric.webp' },
+    { id: 'adrian', emoji: '🗺️', label: 'Adrian', url: AV + 'adrian.webp' },
+    { id: 'camel', emoji: '🐪', label: '🐪 Camello', url: AV + 'camel.webp' },
+    { id: 'plane', emoji: '✈️', label: '✈️ Avión', url: AV + 'plane.webp' },
+    { id: 'falcon', emoji: '🦅', label: '🦅 Halcón', url: AV + 'falcon.webp' },
+    { id: 'oryx', emoji: '🦌', label: '🦌 Órix', url: AV + 'oryx.webp' },
   ];
   // a kid who had picked a brand avatar now shows one of the saga (server migrates the record once, pages map too)
   const LEGACY_AVATARS = {
@@ -57,18 +58,22 @@
   const byId = (list) => { const m = Object.create(null); list.forEach((x) => { m[x.id] = x; }); return m; };
   const ANIM = byId(ANIMS), BURST = byId(BURSTS), AVATAR = byId(AVATARS);
   const legacyAvatar = (id) => own(LEGACY_AVATARS, id);
-  const SVG_VER = '20260528b';   // the generic DiceBear avatars in /assets/avatars/<name>.svg
   return {
     ANIMS, BURSTS, AVATARS, LEGACY_AVATARS,
     anim: (id) => own(ANIM, id),
+    byEmoji: (e) => AVATARS.find((a) => a.emoji === e) || null,
     burst: (id) => own(BURST, id),
     legacyAvatar,
     avatar: (id) => own(AVATAR, legacyAvatar(id) || id),
-    // any stored avatar name → its picture (saga WebP, or the generic SVG); null for emoji / unknown values
+    // any stored avatar name → its saga picture; null for emoji / unknown values. 2026-10-12 (his ask: only our roster):
+    // the old generic DiceBear names (mochi, robo, alien…) also show a saga avatar, the same one every time for a name.
     avatarUrl(name) {
       const a = own(AVATAR, legacyAvatar(name) || name);
       if (a) return a.url;
-      return typeof name === 'string' && /^[a-z0-9]+$/.test(name) ? '/assets/avatars/' + name + '.svg?v=' + SVG_VER : null;
+      if (typeof name !== 'string' || !/^[a-z0-9]+$/.test(name)) return null;
+      let h = 0;
+      for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+      return AVATARS[h % AVATARS.length].url;
     },
     // search words for a tray tile: id + label, with and without accents («avión» / «avion»)
     searchText(x) {

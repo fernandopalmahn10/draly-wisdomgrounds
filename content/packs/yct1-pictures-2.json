@@ -1,0 +1,241 @@
+{
+ "about": "Second Higgsfield brief for YCT 1 (2026-10-12, his note: 'some questions don't have the pictures available, YCT1'): 8 word pictures that were missing + 26 scene pictures for the sentence questions of the 6 worlds. Same style / dralingo / cast templates as yct1-pictures.json. Originals -> assets-library/higgsfield/2026-10-12/yct1b/<world>/<slug>.png; web copy -> public/assets/packs/yct1/<world>/<slug>.webp (720 px, WebP q82). Time words (hoy, mañana, mes, semana, ahora, la hora, día del mes) and sentences with clock times, dates or ages stay text-only on purpose (a clock or calendar needs digits). 'ser / es' is too abstract to draw.",
+ "pictures": [
+  {
+   "world": "familia",
+   "slug": "jiao",
+   "ref": "cast:aileen.jpg",
+   "bg": "yellow",
+   "who": "Aileen, a girl with long brown hair with copper streaks and turquoise eyes, in a dress printed with world landscapes",
+   "scene": "Pointing proudly at herself with both thumbs, a big friendly smile, as if saying 'my name is…' (no name tag, no writing)."
+  },
+  {
+   "world": "familia",
+   "slug": "renshi",
+   "ref": "none",
+   "bg": "mint",
+   "subject": "Two cartoon kids meeting for the first time, standing apart and waving hello at each other with happy surprised faces (not touching)."
+  },
+  {
+   "world": "familia",
+   "slug": "shei",
+   "ref": "none",
+   "bg": "lilac",
+   "subject": "A curious little puppy looking at a mysterious dark shadow of a person behind a half-open door, with one big question mark floating above (the question mark is the only symbol)."
+  },
+  {
+   "world": "numeros",
+   "slug": "ji",
+   "ref": "dralingo",
+   "bg": "sky blue",
+   "pose": "holding a bunch of colorful balloons and counting them with one claw raised, a puzzled curious smile (no numbers anywhere)."
+  },
+  {
+   "world": "escuela",
+   "slug": "shenme",
+   "ref": "none",
+   "bg": "peach",
+   "subject": "A cartoon kid looking with big curious eyes at a mysterious wrapped gift box, one big question mark floating above (the only symbol)."
+  },
+  {
+   "world": "escuela",
+   "slug": "na_cual",
+   "ref": "none",
+   "bg": "pink",
+   "subject": "A cartoon kid choosing between two ice cream cones held up in front of them, one strawberry and one mint, thinking which one, a finger on the chin."
+  },
+  {
+   "world": "escuela",
+   "slug": "nar_donde",
+   "ref": "none",
+   "bg": "sky blue",
+   "subject": "A cartoon explorer kid holding up a plain paper map (no writing on it), looking around left and right searching, hand over the eyes like a visor."
+  },
+  {
+   "world": "escuela",
+   "slug": "zai",
+   "ref": "none",
+   "bg": "mint",
+   "subject": "A cute cat sitting inside a cardboard box, only its happy head and paws peeking out over the edge (the cat is IN the box)."
+  },
+  {
+   "world": "familia",
+   "slug": "s_baba_mama",
+   "ref": "none",
+   "bg": "peach",
+   "subject": "A smiling cartoon dad and mom standing side by side with a small gap between them (not touching), waving."
+  },
+  {
+   "world": "familia",
+   "slug": "s_liu_kou",
+   "ref": "none",
+   "bg": "yellow",
+   "subject": "A cartoon family of exactly six people standing in a row with small gaps between them (nobody touching): grandpa, grandma, dad, mom, a boy and a girl, in front of their house."
+  },
+  {
+   "world": "familia",
+   "slug": "s_yi_jia_ren",
+   "ref": "cast:latifa.jpg",
+   "bg": "mint",
+   "who": "Latifa, an Emirati girl in a black abaya and shayla with a gold embroidered collar",
+   "scene": "Proudly pointing at a framed family photo on the wall (the photo shows a smiling cartoon family, no writing)."
+  },
+  {
+   "world": "familia",
+   "slug": "s_gaoxing_renshi",
+   "ref": "cast:hamdan.jpg",
+   "bg": "sky blue",
+   "who": "Hamdan, an Emirati young man in a white kandura with a red-and-white checkered ghutra and black agal",
+   "scene": "Smiling warmly with one hand on his heart in a polite greeting, as when saying 'nice to meet you'."
+  },
+  {
+   "world": "familia",
+   "slug": "s_shei",
+   "ref": "none",
+   "bg": "lilac",
+   "subject": "Two cartoon kids peeking from behind a tree at a stranger in a big hat far away, curious faces, one big question mark floating above them."
+  },
+  {
+   "world": "espejo",
+   "slug": "s_yanjing_da",
+   "ref": "none",
+   "bg": "sky blue",
+   "subject": "Close-up of a cute cartoon girl with VERY big sparkling eyes, smiling, pointing at her own eyes."
+  },
+  {
+   "world": "espejo",
+   "slug": "s_yanjing_bizi",
+   "ref": "none",
+   "bg": "peach",
+   "subject": "A cute cartoon kid's face with big eyes and a cute round nose, both gently highlighted with soft glowing circles."
+  },
+  {
+   "world": "espejo",
+   "slug": "s_kan_shou",
+   "ref": "none",
+   "bg": "yellow",
+   "subject": "A cartoon kid proudly holding one open hand up toward the viewer, saying 'look at my hand', a big smile."
+  },
+  {
+   "world": "espejo",
+   "slug": "s_gou_erduo",
+   "ref": "none",
+   "bg": "mint",
+   "subject": "A cute puppy with big floppy ears, the ears gently highlighted with a soft glow."
+  },
+  {
+   "world": "espejo",
+   "slug": "s_toufa_chang",
+   "ref": "none",
+   "bg": "pink",
+   "subject": "A cartoon girl with VERY long flowing hair that reaches down to her knees, smiling."
+  },
+  {
+   "world": "espejo",
+   "slug": "s_shou_da_xiao",
+   "ref": "none",
+   "bg": "lilac",
+   "subject": "A tall cartoon dad and a small cartoon child standing apart, each holding up one open hand toward the viewer: the dad's hand is big, the child's hand is small (not touching)."
+  },
+  {
+   "world": "espejo",
+   "slug": "s_bizi_chang",
+   "ref": "none",
+   "bg": "sky blue",
+   "subject": "A cute cartoon elephant with a very long trunk, smiling (a funny long nose)."
+  },
+  {
+   "world": "espejo",
+   "slug": "s_gao_gezi",
+   "ref": "none",
+   "bg": "peach",
+   "subject": "A very tall cartoon basketball player standing next to a short cartoon kid with a gap between them (not touching), the kid looking up amazed."
+  },
+  {
+   "world": "mascotas",
+   "slug": "s_shenme_niao",
+   "ref": "none",
+   "bg": "mint",
+   "subject": "A cartoon kid looking up curiously at a colorful exotic bird sitting on a branch, one big question mark floating above the kid."
+  },
+  {
+   "world": "mascotas",
+   "slug": "s_ni_de_gou",
+   "ref": "none",
+   "bg": "yellow",
+   "subject": "A cartoon kid pointing at a cute puppy sitting next to another kid, asking whose dog it is (the kids stand apart)."
+  },
+  {
+   "world": "mascotas",
+   "slug": "s_mao_yu",
+   "ref": "none",
+   "bg": "sky blue",
+   "subject": "A cute cat sitting next to a round fishbowl with a little orange fish, both looking at each other."
+  },
+  {
+   "world": "comida",
+   "slug": "s_ai_chi_miantiao",
+   "ref": "cast:aileen.jpg",
+   "bg": "peach",
+   "who": "Aileen, a girl with long brown hair with copper streaks and turquoise eyes, in a dress printed with world landscapes",
+   "scene": "Happily eating a big bowl of noodles with chopsticks, hearts floating around her."
+  },
+  {
+   "world": "comida",
+   "slug": "s_baba_chi_fan",
+   "ref": "none",
+   "bg": "mint",
+   "subject": "A cartoon dad sitting at a table eating a bowl of rice with chopsticks, happy."
+  },
+  {
+   "world": "comida",
+   "slug": "s_zai_shangdian",
+   "ref": "none",
+   "bg": "yellow",
+   "subject": "A cartoon boy standing inside a small friendly shop with shelves of fruit and snacks behind him, holding a shopping basket (no signs, no labels, no writing)."
+  },
+  {
+   "world": "numeros",
+   "slug": "s_yi_ge_pingguo",
+   "ref": "none",
+   "bg": "pink",
+   "subject": "Exactly ONE shiny red apple, alone, centered."
+  },
+  {
+   "world": "escuela",
+   "slug": "s_ni_hao",
+   "ref": "dralingo",
+   "bg": "sky blue",
+   "pose": "waving hello with one claw and a big friendly smile, greeting the viewer."
+  },
+  {
+   "world": "escuela",
+   "slug": "s_mingtian_jian",
+   "ref": "none",
+   "bg": "lilac",
+   "subject": "A cartoon kid with a school backpack walking home at sunset, turning back to wave goodbye, see you tomorrow."
+  },
+  {
+   "world": "escuela",
+   "slug": "s_wo_de_laoshi",
+   "ref": "cast:fer.jpg",
+   "bg": "peach",
+   "who": "Profe Fer, a slim teacher in a royal-blue suit, white shirt, dark tie and black glasses, with swept black hair",
+   "scene": "Standing proudly in front of a plain green chalkboard (completely blank, no writing), smiling like a kind teacher."
+  },
+  {
+   "world": "escuela",
+   "slug": "s_ta_zai_nar",
+   "ref": "none",
+   "bg": "mint",
+   "subject": "A cartoon kid in the foreground pointing far away to another small cartoon boy standing on a distant hill (he is over there)."
+  },
+  {
+   "world": "escuela",
+   "slug": "s_ren_hen_duo",
+   "ref": "none",
+   "bg": "yellow",
+   "subject": "A big crowd of many cheerful cartoon people in a sunny town square, all standing (a lot of people here), no signs, no writing."
+  }
+ ]
+}

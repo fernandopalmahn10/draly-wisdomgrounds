@@ -259,20 +259,132 @@
   } catch (_) {}
 
   // ── Entry screen
+  // 🎬 2026-10-12 — the login feels alive (his rule: use the whole library, randomize, don't overdo): a random animated
+  // Dralingo (still first, the ~1 MB loop after load), one of the gang or a saga animal popping up beside the card with
+  // a line (a new one every ~9 s, tap → their cameo), the Dubai plane or the falcon crossing the sky every 16–28 s.
+  let stopEntryLife = null;   // called once the kid is in: no more timers on a hidden screen
+  (function startEntryLife() {
+    const scr = $('screen-entry');
+    if (!scr) return;
+    const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const pickOne = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const timers = new Set();
+    let stopped = false;
+    const later = (fn, ms) => { if (stopped) return; const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); };
+    stopEntryLife = () => { stopped = true; timers.forEach(clearTimeout); timers.clear(); };
+    const visible = () => !scr.classList.contains('hidden') && !document.hidden;
+    // Dralingo: hello / wise / power
+    const dr = $('hw-entry-dralingo');
+    const pose = pickOne(['hello', 'wise', 'power']);
+    if (dr) {
+      dr.src = '/assets/dralingo/anim/' + pose + '-still.webp';
+      if (!reduce) {
+        const swap = () => later(() => {
+          if (!visible()) return;   // already logged in: never load the animation for a hidden screen
+          const im = new Image(); im.onload = () => { if (visible()) dr.src = im.src; }; im.src = '/assets/dralingo/anim/' + pose + '.webp';
+        }, 1500);
+        if (document.readyState === 'complete') swap(); else window.addEventListener('load', swap);
+      }
+      dr.addEventListener('click', () => {
+        if (window.DralingoFX) DralingoFX.celebrate({ text: pickOne(['¡Hola!', '¡A estudiar!', '¡Tú puedes!', '¡Vamos!']), mood: 'win' });
+      });
+    }
+    // the peeker: the gang (with their own lines) and the saga animals
+    const peek = $('hw-life-peek');
+    const Cast = window.DralingoCast;
+    const animals = [
+      { img: '/assets/saga/anim/camel-still.webp', anim: '/assets/saga/anim/camel.webp', line: '¡Hola! Soy el camello de Dubái 🐪' },
+      { img: '/assets/saga/anim/oryx-still.webp', anim: '/assets/saga/anim/oryx.webp', line: '¡Salta conmigo a estudiar!' },
+      { img: '/assets/saga/anim/falcon-still.webp', anim: '/assets/saga/anim/falcon.webp', line: '¡Vuela alto hoy!' },
+    ];
+    const cast = Cast ? Cast.ids.map((id) => ({ id, img: Cast.pose(id, pickOne(['hello', 'cheer'])), line: Cast.line(id, 'hello') })) : [];
+    const pool = cast.concat(animals);
+    let last = null;
+    function showPeek() {
+      if (!peek || !pool.length) return;
+      if (!visible()) { later(showPeek, 4000); return; }
+      let p = pickOne(pool);
+      if (pool.length > 1) while (p === last) p = pickOne(pool);
+      last = p;
+      const img = peek.querySelector('img');
+      img.onerror = () => { peek.hidden = true; };
+      img.src = p.img;
+      if (p.anim && !reduce) { const im = new Image(); im.onload = () => { if (last === p) img.src = im.src; }; im.src = p.anim; }
+      peek.querySelector('.hw-life-bubble').textContent = p.id && Cast ? Cast.line(p.id, 'hello') : p.line;
+      peek.classList.toggle('is-right', Math.random() < 0.5);
+      peek.hidden = false;
+      peek.classList.remove('pop'); void peek.offsetWidth; peek.classList.add('pop');
+      peek.onclick = () => {
+        if (p.id && window.DralingoFX) DralingoFX.play('cameo', { char: p.id, mood: 'hello' });
+        else { peek.classList.remove('pop'); void peek.offsetWidth; peek.classList.add('pop'); }
+      };
+      if (!reduce) later(showPeek, 9000);
+    }
+    later(showPeek, 1200);
+    // a flyby across the sky, behind the card
+    const fly = $('hw-life-fly');
+    function flyby() {
+      if (!fly || reduce) return;
+      if (visible()) {
+        const flyers = [{ src: '/assets/saga/anim/plane.webp', cls: 'is-plane' }, { src: '/assets/saga/anim/falcon.webp', cls: 'is-falcon' }]
+          .filter((f) => !(last && last.anim === f.src));   // never the same animal twice on screen
+        const w = pickOne(flyers);
+        fly.className = 'hw-life-fly ' + w.cls + (Math.random() < 0.5 ? ' is-rtl' : '');
+        fly.onload = () => { fly.classList.add('go'); };
+        fly.src = w.src;
+        later(() => fly.classList.remove('go'), 9000);
+      }
+      later(flyby, 16000 + Math.random() * 12000);
+    }
+    later(flyby, 4500);
+  })();
   $('hw-enter-btn').addEventListener('click', tryEnter);
   $('hw-access-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('hw-student-code').focus(); });
   $('hw-student-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryEnter(); });
+  $('hw-student-code').addEventListener('input', () => { $('hw-entry-err').textContent = ''; });   // an old question never sits under a new code
 
-  function tryEnter() {
+  // 2026-10-12 — «Hola, Anon» fix: an empty box asks for the name; a short name that looks like a code («Luis») and
+  // matches no student comes back as codeNotFound → the kid taps «Soy nuevo/a» and it is sent as their name.
+  function showNewOrCode(typed) {
+    const box = $('hw-entry-err');
+    const input = $('hw-student-code');
+    box.innerHTML = '';
+    const p = document.createElement('div');
+    p.className = 'hw-entry-newq';
+    // a code with a digit («K7MQ») is never a name: an old or mistyped code → start again with the kid's real name
+    const isCode = /[2-9]/.test(typed);
+    p.innerHTML = isCode
+      ? '<div>Ese código ya no existe: <b></b></div>'
+        + '<button type="button" class="btn btn-jade hw-entry-new">✨ Empezar de nuevo</button>'
+        + '<button type="button" class="btn btn-ghost hw-entry-fix">🔑 Revisaré mi código</button>'
+      : '<div>No encontramos el código <b></b>. ¿Es tu nombre?</div>'
+        + '<button type="button" class="btn btn-jade hw-entry-new">✨ Sí, soy nuevo/a</button>'
+        + '<button type="button" class="btn btn-ghost hw-entry-fix">🔑 No, revisaré mi código</button>';
+    p.querySelector('b').textContent = typed;
+    p.querySelector('.hw-entry-new').addEventListener('click', () => {
+      if (!isCode) { tryEnter({ asName: true }); return; }
+      input.dataset.asName = '1';   // the next «Entrar» sends what they type as their name
+      input.value = '';
+      input.placeholder = 'Escribe tu nombre';
+      box.textContent = 'Escribe tu nombre y toca «Entrar»';
+      input.focus();
+    });
+    p.querySelector('.hw-entry-fix').addEventListener('click', () => { box.textContent = ''; input.focus(); input.select(); });
+    box.appendChild(p);
+  }
+  function tryEnter(opts) {
     const ac = $('hw-access-code').value.trim();
     const sc = $('hw-student-code').value.trim();
     if (!ac) { $('hw-entry-err').textContent = 'Ingresa el código de acceso'; return; }
+    if (!sc) { $('hw-entry-err').textContent = 'Escribe tu código de estudiante, o tu nombre si es la primera vez'; $('hw-student-code').focus(); return; }
     $('hw-entry-err').textContent = 'Entrando…';
-    const looksLikeCode = /^[A-Z2-9]{4,5}$/i.test(sc);
+    // after «Empezar de nuevo» the box holds a name, unless the kid found their real code after all (it has a digit)
+    const asName = (opts && opts.asName) || ($('hw-student-code').dataset.asName === '1' && !/[2-9]/.test(sc));
+    const looksLikeCode = !asName && /^[A-Z2-9]{4,5}$/i.test(sc);
     const payload = {
       accessCode: ac,
       studentCode: looksLikeCode ? sc.toUpperCase() : null,
-      displayName: looksLikeCode ? null : (sc || 'Anon'),
+      displayName: looksLikeCode ? null : sc,
       meta: collectDeviceMeta(),
     };
     fetch('/api/homework/enter', {
@@ -282,10 +394,14 @@
     })
       .then((r) => r.json())
       .then((data) => {
+        if (data && data.codeNotFound) { showNewOrCode(sc); return; }
         if (!data || !data.ok) {
           $('hw-entry-err').textContent = data && data.error ? data.error : 'No se pudo entrar';
           return;
         }
+        $('hw-entry-err').textContent = '';   // no «Entrando…» left behind after «Salir»
+        delete $('hw-student-code').dataset.asName;
+        if (stopEntryLife) stopEntryLife();
         accessCode = ac;
         studentCode = data.studentCode;
         displayName = data.displayName;
@@ -613,11 +729,13 @@
   }
   $('hw-list-inbox').addEventListener('click', openInbox);
 
+  // «Salir» = leave the portal: back to the home page (2026-10-12: it used to drop the kid on the login card with no
+  // way out). The codes stay saved on this phone, so coming back is one tap on «Entrar».
   $('hw-list-logout').addEventListener('click', () => {
     accessCode = '';
     studentCode = '';
     removePinnedStack();
-    showScreen('entry');
+    location.href = '/';
   });
   $('hw-list-parents').addEventListener('click', openParentView);
   $('hw-list-settings').addEventListener('click', openSettings);
@@ -2477,14 +2595,36 @@
   })();
 
   // === Avatar picker (first-time entry) ===
+  // a real name to greet with, or '' (empty, «Anon», or the kid's own code are not names)
+  function realName() {
+    const n = String(displayName || '').trim();
+    if (!n || n.toLowerCase() === 'anon' || n.toUpperCase() === String(studentCode || '').toUpperCase()) return '';
+    if (/^[A-Z2-9]{4,5}$/i.test(n) && /[2-9]/.test(n)) return '';   // a code saved as a name («K7MQ»), not a name
+    return n;
+  }
+  function saveName(name) {
+    return fetch('/api/homework/rename', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessCode, studentCode, displayName: name }),
+    }).then((r) => r.json()).then((d) => { if (d && d.ok) displayName = d.displayName; return d && d.ok; }).catch(() => false);
+  }
   function showAvatarPicker() {
-    $('hw-avatar-pick-name').textContent = displayName || 'amigo';
+    const name = realName();
+    $('hw-avatar-pick-title').innerHTML = name ? '¡Hola, <span id="hw-avatar-pick-name"></span>!' : '¡Hola! 👋';
+    if (name) $('hw-avatar-pick-name').textContent = name;
+    $('hw-avatar-name-row').classList.toggle('hidden', !!name);
     const grid = $('hw-avatar-grid');
     grid.innerHTML = '';
     avatarOptions.forEach((name) => {
       grid.appendChild(buildAvatarOption(name, (picked) => {
+        const typed = $('hw-avatar-name-input').value.trim();
+        if (!realName() && !typed) {
+          $('hw-avatar-err').textContent = 'Escribe tu nombre arriba ☝️ y vuelve a tocar tu avatar';
+          $('hw-avatar-name-input').focus();
+          return;
+        }
         $('hw-avatar-err').textContent = 'Guardando…';
-        saveAvatar(picked).then((ok) => {
+        (typed && !realName() ? saveName(typed) : Promise.resolve(true)).then(() => saveAvatar(picked)).then((ok) => {
           if (!ok) return;
           $('hw-avatar-err').textContent = '';
           renderList();
@@ -2535,10 +2675,10 @@
     showScreen('settings');
   }
   function renderSettings() {
-    $('hw-settings-name').textContent = displayName || 'Anon';
+    $('hw-settings-name').textContent = realName() || '—';
     $('hw-settings-code').textContent = studentCode;
     renderAvatarInto($('hw-settings-avatar'), avatar);
-    $('hw-settings-name-input').value = displayName || '';
+    $('hw-settings-name-input').value = realName();
     $('hw-settings-name-msg').textContent = '';
     $('hw-settings-avatar-msg').textContent = '';
     $('hw-settings-reset-msg').textContent = '';
@@ -2579,11 +2719,11 @@
         row.className = 'hw-settings-reset-row';
         row.innerHTML = `
           <div class="hw-settings-reset-info">
-            <div class="hw-settings-reset-title">${escapeHtml(a ? a.title : id)}</div>
+            <div class="hw-settings-reset-title">${escapeHtml(a ? a.title : (sub.assignmentTitle || 'Tarea'))}</div>
             <div class="hw-settings-reset-best">Mejor: <strong>${sub.score}/${sub.total} pts</strong></div>
           </div>
           <button class="btn btn-ghost btn-sm" data-id="${escapeHtml(id)}">🔄 Borrar</button>`;
-        row.querySelector('button').addEventListener('click', () => doResetAssignment(id, a ? a.title : id));
+        row.querySelector('button').addEventListener('click', () => doResetAssignment(id, a ? a.title : (sub.assignmentTitle || 'Tarea')));
         resetList.appendChild(row);
       });
     }
@@ -2657,7 +2797,7 @@
   }
   function renderParentView(data) {
     renderAvatarInto($('hw-parents-avatar'), data.avatar);
-    $('hw-parents-name').textContent = data.displayName || 'Anon';
+    $('hw-parents-name').textContent = (data.displayName && data.displayName !== 'Anon') ? data.displayName : 'Tu hijo/a';
     $('hw-parents-code').textContent = data.code;
     const t = data.totals || {};
     // Stats row — user feedback 2026-05-27 asked for word count
@@ -3746,7 +3886,16 @@
     drawQuestion();
   }
   function renderList() {
-    $('hw-list-name').textContent = displayName || 'Anon';
+    // never «Hola Anon»: no real name → a tappable «✏️ ¿Cómo te llamas?» that saves it right here
+    const nameEl = $('hw-list-name');
+    const name = realName();
+    nameEl.textContent = name || '✏️ ¿Cómo te llamas?';
+    nameEl.classList.toggle('hw-list-name-ask', !name);
+    nameEl.onclick = name ? null : () => {   // the settings name box (translated, styled), not a browser prompt
+      openSettings();
+      const inp = $('hw-settings-name-input');
+      if (inp) { inp.scrollIntoView({ block: 'center' }); inp.focus(); }
+    };
     renderAvatarInto($('hw-list-avatar'), avatar);
     renderPinnedStack();
     if (hwFolder) renderFolderContents(hwFolder);

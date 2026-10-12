@@ -10,8 +10,12 @@ const LEVELS = [
   // next: the level after it, for the parents' «próximamente» line · daily: false hides Desafíos (HSK 1 words)
   { id: 'yct1', name: 'YCT 1', teacherName: 'YCT 1', family: 'yct', emoji: '🧒', pack: 'yct1', packTareas: true,
     words: 83, packWords: true, exam: 'YCT', next: 'YCT 2', daily: false },
+  // New HSK 1 homework = only what prepares the exam (his ask 2026-10-12): the Simulacro rounds built from the two
+  // platform simulations (the mother file), nothing else — packWorlds limits the pack, onlyPackTareas hides the old
+  // «Bolsa de palabras» tareas
   { id: 'hsk2', name: 'New HSK 1', teacherName: 'New HSK 1', family: 'newhsk', emoji: '🆕', pack: 'newhsk1', words: 300,
-    packWords: true, exam: 'New HSK', next: 'New HSK 2' },
+    packTareas: true, packWorlds: ['simulacro'], onlyPackTareas: true, packWords: true, exam: 'New HSK',
+    next: 'New HSK 2' },
   { id: 'hsk1', name: 'HSK 1', teacherName: 'Old HSK 1', family: 'hsk', emoji: '📘', pack: 'hsk1', words: 150,
     exam: 'HSK', next: 'New HSK 1' },
 ];

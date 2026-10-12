@@ -714,10 +714,14 @@ HSK2_ASSIGNMENTS.forEach((a) => ASSIGNMENTS.push(a));
 // (question text → correct answer; texts are unique within a round and the same in every build).
 const Packs = require('./packs');
 const Levels = require('./levels');
+// the pack worlds a level's tareas come from (core/levels.js packWorlds; all of them when not set)
+function packWorldsOf(lv, pack) {
+  return pack.worlds.filter((w) => !lv.packWorlds || lv.packWorlds.includes(w.id));
+}
 Levels.LEVELS.filter((lv) => lv.packTareas).forEach((lv) => {
   const pack = Packs.LEVELS.find((p) => p.id === lv.pack);
   if (!pack) return;
-  pack.worlds.forEach((world) => world.rounds.forEach((round) => {
+  packWorldsOf(lv, pack).forEach((world) => world.rounds.forEach((round) => {
     const packId = `${pack.id}-${world.id}-${round.id}`;
     const key = new Map();
     let unsafe = false;
@@ -757,7 +761,7 @@ Levels.LEVELS.filter((lv) => lv.packTareas).forEach((lv) => {
 function levelFolders(level) {
   const lv = Levels.info(level);
   const pack = lv.packTareas && Packs.LEVELS.find((p) => p.id === lv.pack);
-  return pack ? pack.worlds.map((w) => ({ id: w.id, label: w.name, short: w.emoji })) : null;
+  return pack ? packWorldsOf(lv, pack).map((w) => ({ id: w.id, label: w.name, short: w.emoji })) : null;
 }
 // one play of a pack-quiz tarea: its questions with the answers shuffled and WITHOUT the correct one
 function packQuizQuestions(assignment) {
@@ -772,8 +776,10 @@ function packQuizQuestions(assignment) {
 // List assignments, optionally filtered by level ('hsk1' | 'hsk2').
 // No argument = ALL (used by health checks and teacher-side reports).
 function listAssignments(level) {
+  const onlyPack = level && Levels.info(level).onlyPackTareas;   // New HSK 1: the Simulacro rounds only
   return ASSIGNMENTS
     .filter((a) => !level || (a.level || 'hsk1') === level)
+    .filter((a) => !onlyPack || a.type === 'pack-quiz')
     .map((a) => {
       const isSack = a.type === 'word-sack';
       const isQuiz = a.type === 'pack-quiz';

@@ -2271,3 +2271,61 @@ body.hw-pastel #hw-lang-toggle {
   body.hw-pastel :is(.btn, .hw-hud, .hw-folder-card, .hw-card, .hw-tr-tiercard, .hw-lib-chip, .hw-avatar-option,
     .hw-dc-play, .hw-tr-expcard, .hw-tr-row) { transition: none; }
 }
+
+/* 🎬 2026-10-12 — the alive login (startEntryLife in homework.js): skyline, a peeking friend, a flyby. Behind the card,
+   never over the inputs; the kid can always tap «← Inicio» to leave. */
+body.hw-pastel .hw-entry { position: relative; }
+body.hw-pastel .hw-entry-card { position: relative; z-index: 2; }
+body.hw-pastel .hw-entry-dralingo { pointer-events: auto; cursor: pointer; }
+.hw-life { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.hw-life-skyline {
+  position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 44vh;
+  object-fit: cover; object-position: center bottom; opacity: .9;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 50%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 50%);
+}
+.hw-life-fly { position: absolute; top: 8vh; left: 0; width: 150px; opacity: 0; will-change: transform; }
+.hw-life-fly.is-falcon { width: 112px; top: 15vh; }
+.hw-life-fly.go { opacity: 1; animation: hwFlyLtr 9s linear forwards; }
+.hw-life-fly.is-plane.go, .hw-life-fly.is-falcon.is-rtl.go { animation-name: hwFlyRtl; }   /* the plane flies nose first */
+@keyframes hwFlyLtr { from { transform: translateX(-30vw); } to { transform: translateX(115vw); } }
+@keyframes hwFlyRtl { from { transform: translateX(115vw); } to { transform: translateX(-30vw); } }
+.hw-life-peek {
+  position: fixed; left: 2vw; bottom: 1.5vh; z-index: 1; width: clamp(92px, 15vw, 168px);
+  background: none; border: 0; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.hw-life-peek.is-right { left: auto; right: 2vw; }
+.hw-life-peek img { display: block; width: 100%; height: auto; filter: drop-shadow(0 6px 0 rgba(29, 36, 64, .16)); }
+.hw-life-peek.pop { animation: hwPeekPop .55s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes hwPeekPop { from { transform: translateY(40%) scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }
+.hw-life-bubble {
+  position: absolute; bottom: 100%; left: 20%; margin-bottom: 6px; width: max-content; max-width: min(240px, 44vw);
+  background: #fff; color: var(--hp-ink); border: 2.5px solid var(--hp-ink); border-radius: 14px; padding: 6px 10px;
+  font: 800 .86rem/1.2 var(--hp-body); text-align: left; box-shadow: 0 3px 0 var(--hp-ink);
+}
+.hw-life-peek.is-right .hw-life-bubble { left: auto; right: 20%; }
+.hw-life-bubble:empty { display: none; }
+.hw-entry-home {
+  position: fixed; top: 12px; left: 12px; z-index: 3; text-decoration: none;
+  background: #fff; color: var(--hp-ink); border: 2.5px solid var(--hp-ink); border-radius: 999px;
+  padding: 7px 14px; font: 900 .95rem/1 var(--hp-head); box-shadow: 0 3px 0 var(--hp-ink);
+}
+.hw-entry-home:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--hp-ink); }
+/* «No encontramos ese código. ¿Es tu nombre?» — two big choices instead of a silent «Anon» account */
+.hw-entry-newq { display: grid; gap: 8px; margin-top: 6px; color: var(--hp-ink); font-weight: 800; }
+.hw-entry-newq .btn { width: 100%; }
+.hw-avatar-name-row { display: grid; gap: 6px; max-width: 360px; margin: 6px auto 10px; font-weight: 900; color: var(--hp-ink); }
+.hw-list-name-ask { cursor: pointer; text-decoration: underline dotted; }
+@media (max-width: 640px) {
+  /* phones: the card fills the width, so the friend peeks in the free top-right sky (beside Dralingo, right of
+     «← Inicio»), never behind the card; the bubble hangs below it, clear of Dralingo's head */
+  .hw-life-peek, .hw-life-peek.is-right { top: 4px; bottom: auto; left: auto; right: 8px; width: 58px; z-index: 3; }
+  .hw-life-bubble, .hw-life-peek.is-right .hw-life-bubble {
+    bottom: auto; top: 100%; left: auto; right: 0; margin: 4px 0 0; font-size: .72rem; max-width: 118px;
+  }
+  .hw-life-skyline { height: 30vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hw-life-fly { display: none; }
+  .hw-life-peek.pop { animation: none; }
+}

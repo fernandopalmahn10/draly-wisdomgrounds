@@ -58,7 +58,10 @@ platform they appear as glossy 3D stickers (`public/assets/cast/`, made with Hig
 The teacher opens a game on the big screen, kids join with the PIN on phones or tablets, and
 everyone plays at once. On 2026-10-10 he retired 11 older games to make room for a new generation;
 the 5 he kept are all due for a full overhaul ("second run"). New games follow the `new-pin-game`
-skill and must pass the bot playtest (`scripts/playtest-bots.js`) before shipping.
+skill and must pass the bot playtest (`scripts/playtest-bots.js`) before shipping. Since 2026-10-12 every game is
+also graded with the Reinos de Colores scorecard (`docs/GAME_QUALITY_CHECKLIST.md`: 5 must-pass checks + 7 areas scored
+0–2: a real place, the gang, every tap answers, feedback with restraint, a finale, fair play, product feel). It ships
+at 12/14 or more with no area at 0, and you see the card in the deploy report.
 
 | Game | What it is |
 |---|---|

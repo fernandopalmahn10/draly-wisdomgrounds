@@ -292,25 +292,10 @@ function setClassroomId(code, classroomId) {
 // (bottts), aliens/doodles (croodles), emoji-style (fun-emoji), pixel
 // art, fantasy (lorelei), and stylized (micah, thumbs, big-ears).
 // All SVGs live in public/assets/avatars/<name>.svg.
-const AVATAR_OPTIONS = [
-  // 🆕 2026-10-12 — the saga first (Dralingo, the cast, camel, Dubai plane, falcon, oryx: public/js/saga.js); the
-  // brand characters (Gojo, Pikachu, Mario…) are gone and load() moves kids who had one to its saga replacement
-  ...Saga.AVATARS.map((a) => a.id),
-  // Cartoon kids (adventurer)
-  'mochi', 'dragon', 'stella', 'felix',
-  'luna',  'atlas',  'zara',   'kai',
-  'mei',   'theo',   'iris',   'nova',
-  // Crazy variations — user feedback 2026-05-27: "monkeys, aliens,
-  // funny hair, alien — like emojis but cooler."
-  'robo',   'cyborg', 'alien',  'blob',
-  'monkey', 'ghost',  'pixie',  'wizard',
-  'pixel',  'punky',  'panda',  'ninja',
-  // 2026-05-28 — wider variety: more heroes, beasts & robots.
-  'tiger',  'phoenix', 'knight', 'mecha',
-  'yeti',   'fox',     'owl',    'shark',
-  'viking', 'galaxy',  'comet',  'boba',
-  'lotus',  'ramen',   'koala',  'raptor',
-];
+// 2026-10-12 — only our roster (his ask: "remove all options of characters that are not of our roster"): the saga
+// avatars of public/js/saga.js. Kids who had a brand or generic avatar keep their stored value; every page shows
+// a saga picture for it (Saga.avatarUrl).
+const AVATAR_OPTIONS = Saga.AVATARS.map((a) => a.id);
 function setAvatar(code, avatar) {
   const rec = get(code);
   if (!rec) return false;
