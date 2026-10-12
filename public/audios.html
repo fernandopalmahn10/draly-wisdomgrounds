@@ -30,5 +30,23 @@
 
   <audio id="au-player" preload="none"></audio>
   <script src="/js/audios.js?v=20261011a"></script>
+  <!-- Dralingo Dorado: a rare golden visitor (about one visit in ten; ?dorado=1 forces him, ?dorado=0 never).
+       Nothing of it downloads on a normal visit; three.js comes from the CDN only when he appears. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module">
+    const ask = new URLSearchParams(location.search).get('dorado');
+    if (ask === '1' || (ask !== '0' && Math.random() < 0.1)) {
+      setTimeout(() => {
+        import('/js/golden/dorado.js?v=20261011a').then((m) => m.summon()).catch(() => {});
+      }, ask === '1' ? 300 : 1400);
+    }
+  </script>
 </body>
 </html>
