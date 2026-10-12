@@ -1,0 +1,1359 @@
+[
+ {
+  "n": 1,
+  "items": [
+   {
+    "k": "w",
+    "py": "shuiguo"
+   },
+   {
+    "k": "w",
+    "py": "xiansheng"
+   },
+   {
+    "k": "w",
+    "py": "mao"
+   },
+   {
+    "k": "w",
+    "py": "leng"
+   },
+   {
+    "k": "w",
+    "py": "xuexi"
+   },
+   {
+    "k": "m",
+    "py": "Xiamian nage da, shangmian nage xiao.",
+    "es": "El de abajo es grande y el de arriba es pequeño."
+   },
+   {
+    "k": "m",
+    "py": "Wo xianzai bu xiang ting ni shuo.",
+    "es": "Ahora no quiero escucharte."
+   },
+   {
+    "k": "m",
+    "py": "Duibuqi wo xiang qu shuijiao.",
+    "es": "Perdón, quiero ir a dormir."
+   },
+   {
+    "k": "m",
+    "py": "Ta zai jiali kan dianshi ne.",
+    "es": "Él está en casa viendo la televisión."
+   },
+   {
+    "k": "m",
+    "py": "Baba ni zai zuo shenme cai.",
+    "es": "Papá, ¿qué comida estás preparando?"
+   },
+   {
+    "k": "r",
+    "a": "Zhege yifu zenmeyang?",
+    "b": "Tai xiao le"
+   },
+   {
+    "k": "r",
+    "a": "Naxie pingguo shi shei mai de?",
+    "b": "Wo ma"
+   },
+   {
+    "k": "r",
+    "a": "Ni na tian hui jia?",
+    "b": "Xingqiliu"
+   },
+   {
+    "k": "r",
+    "a": "Ni nu'er zhu na'er?",
+    "b": "Xuexiao"
+   },
+   {
+    "k": "r",
+    "a": "Ta erzi gongzuo le ma?",
+    "b": "Meiyou"
+   },
+   {
+    "k": "f",
+    "s": "Nage ren shi wo de ___",
+    "a": "xuesheng",
+    "bank": [
+     "hui",
+     "ji",
+     "mingzi",
+     "mingtian",
+     "bei"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Zhuozi shang you ___ cha",
+    "a": "bei",
+    "bank": [
+     "hui",
+     "xuesheng",
+     "ji",
+     "mingzi",
+     "mingtian"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Zaijian, ___ xuexiao jian",
+    "a": "mingtian",
+    "bank": [
+     "hui",
+     "xuesheng",
+     "ji",
+     "mingzi",
+     "bei"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Xiaopengyou, ni ___ sui le?",
+    "a": "ji",
+    "bank": [
+     "hui",
+     "xuesheng",
+     "mingzi",
+     "mingtian",
+     "bei"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Xiexie ni, wo ___ xie zhege zi le",
+    "a": "hui",
+    "bank": [
+     "xuesheng",
+     "ji",
+     "mingzi",
+     "mingtian",
+     "bei"
+    ]
+   }
+  ]
+ },
+ {
+  "n": 2,
+  "items": [
+   {
+    "k": "w",
+    "py": "pingguo"
+   },
+   {
+    "k": "w",
+    "py": "ting"
+   },
+   {
+    "k": "w",
+    "py": "duo"
+   },
+   {
+    "k": "w",
+    "py": "shui"
+   },
+   {
+    "k": "w",
+    "py": "zaijian"
+   },
+   {
+    "k": "m",
+    "py": "Ni de gou ai chi shenme.",
+    "es": "¿Qué le gusta comer a tu perro?"
+   },
+   {
+    "k": "m",
+    "py": "Zhe limian you ji kuai qian.",
+    "es": "¿Cuántos yuanes hay aquí dentro?"
+   },
+   {
+    "k": "m",
+    "py": "Ta zenme bu shuo le? Bu gaoxing le?",
+    "es": "¿Por qué ya no habla? ¿Está triste?"
+   },
+   {
+    "k": "m",
+    "py": "Jintian tianqi youdian re.",
+    "es": "Hoy hace un poco de calor."
+   },
+   {
+    "k": "m",
+    "py": "Meiguanxi, wo de dongxi bu duo, hen shao.",
+    "es": "No pasa nada, no tengo muchas cosas."
+   },
+   {
+    "k": "r",
+    "a": "Zhongwu xiang chi shenme?",
+    "b": "Mifan"
+   },
+   {
+    "k": "r",
+    "a": "Li xiansheng zai na'er gongzuo?",
+    "b": "Shudian"
+   },
+   {
+    "k": "r",
+    "a": "Dianying shi ji dian de?",
+    "b": "Shangwu 8:40"
+   },
+   {
+    "k": "r",
+    "a": "Xie xiaojie zenme le?",
+    "b": "Ta xiang jia le"
+   },
+   {
+    "k": "r",
+    "a": "Zhege zi, shei hui du?",
+    "b": "Wo"
+   },
+   {
+    "k": "f",
+    "s": "Ta jinnian 27 ___, shi ge laoshi",
+    "a": "sui",
+    "bank": [
+     "shuijiao",
+     "xiao",
+     "mingzi",
+     "shang",
+     "qing"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Zuotian de zhege shihou wo zai feiji ___",
+    "a": "shang",
+    "bank": [
+     "shuijiao",
+     "sui",
+     "xiao",
+     "mingzi",
+     "qing"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Xianzai 22 dian le, wo xiang qu ___",
+    "a": "shuijiao",
+    "bank": [
+     "sui",
+     "xiao",
+     "mingzi",
+     "shang",
+     "qing"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Xiexie ni ___ wo chi fan. Bu keqi",
+    "a": "qing",
+    "bank": [
+     "shuijiao",
+     "sui",
+     "xiao",
+     "mingzi",
+     "shang"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Zhege zhuozi tai ___ le. Zhege ne?",
+    "a": "xiao",
+    "bank": [
+     "shuijiao",
+     "sui",
+     "mingzi",
+     "shang",
+     "qing"
+    ]
+   }
+  ]
+ },
+ {
+  "n": 3,
+  "items": [
+   {
+    "k": "w",
+    "py": "cha"
+   },
+   {
+    "k": "w",
+    "py": "yisheng"
+   },
+   {
+    "k": "w",
+    "py": "mama"
+   },
+   {
+    "k": "w",
+    "py": "na'er",
+    "es": "¿dónde?"
+   },
+   {
+    "k": "w",
+    "py": "chi"
+   },
+   {
+    "k": "m",
+    "py": "Qianmian zenme zheme duo ren?",
+    "es": "¿Por qué hay tanta gente adelante?"
+   },
+   {
+    "k": "m",
+    "py": "Na bushi wo de mao, shi wo pengyou de.",
+    "es": "Ese no es mi gato, es de mi amigo."
+   },
+   {
+    "k": "m",
+    "py": "Xianzai 7 dian le, 40 fenzhong hou women hui jia.",
+    "es": "Ya son las 7; en 40 minutos volvemos a casa."
+   },
+   {
+    "k": "m",
+    "py": "Zhege zi wo bu hui xie.",
+    "es": "No sé escribir este carácter."
+   },
+   {
+    "k": "m",
+    "py": "He baba shuo zaijian.",
+    "es": "Despídete de papá."
+   },
+   {
+    "k": "r",
+    "a": "Ni nu'er zhu na'er?",
+    "b": "Xuexiao"
+   },
+   {
+    "k": "r",
+    "a": "Zuotian tianqi zenmeyang?",
+    "b": "Hen re"
+   },
+   {
+    "k": "r",
+    "a": "Ni erzi jinnian duo da?",
+    "b": "8 sui"
+   },
+   {
+    "k": "r",
+    "a": "Mingtian ni zenme qu fandian?",
+    "b": "Zuo chuzu che"
+   },
+   {
+    "k": "r",
+    "a": "Zhongwu xiang chi shenme?",
+    "b": "Mifan"
+   },
+   {
+    "k": "f",
+    "s": "Ta hen ___ dushu, yi nian du le jishi ben",
+    "a": "ai",
+    "bank": [
+     "xuesheng",
+     "you",
+     "mingzi",
+     "bu keqi",
+     "shuo"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Neng qing ni zuo na'er ma? Zhe'er ___ ren",
+    "a": "you",
+    "bank": [
+     "ai",
+     "xuesheng",
+     "mingzi",
+     "bu keqi",
+     "shuo"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Wang laoshi xiang qu yiyuan kan ta de ___",
+    "a": "xuesheng",
+    "bank": [
+     "ai",
+     "you",
+     "mingzi",
+     "bu keqi",
+     "shuo"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Ni zuo de cai hen hao! Xiexie! ___",
+    "a": "bu keqi",
+    "bank": [
+     "ai",
+     "xuesheng",
+     "you",
+     "mingzi",
+     "shuo"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Li xiansheng hui ___ hanyu ma? Hui yidianr",
+    "a": "shuo",
+    "bank": [
+     "ai",
+     "xuesheng",
+     "you",
+     "mingzi",
+     "bu keqi"
+    ]
+   }
+  ]
+ },
+ {
+  "n": 4,
+  "items": [
+   {
+    "k": "w",
+    "py": "xie",
+    "es": "escribir"
+   },
+   {
+    "k": "w",
+    "py": "nu'er",
+    "es": "hija"
+   },
+   {
+    "k": "w",
+    "py": "si"
+   },
+   {
+    "k": "w",
+    "py": "duo"
+   },
+   {
+    "k": "w",
+    "py": "zhongwu"
+   },
+   {
+    "k": "m",
+    "py": "Kanjianle ma? Zai na'er, zai qianmian.",
+    "es": "¿Lo viste? Está allá, adelante."
+   },
+   {
+    "k": "m",
+    "py": "Xiao mao ni bu ai chi zhege ma?",
+    "es": "Gatito, ¿no te gusta comer esto?"
+   },
+   {
+    "k": "m",
+    "py": "Bu keqi Li xiaojie. Qing zuo.",
+    "es": "De nada, señorita Li. Siéntese, por favor."
+   },
+   {
+    "k": "m",
+    "py": "Zhege cai duoshao qian? 30 kuai.",
+    "es": "¿Cuánto cuesta este plato? 30 yuanes."
+   },
+   {
+    "k": "m",
+    "py": "Xiexie ni lai yiyuan kan wo.",
+    "es": "Gracias por venir al hospital a verme."
+   },
+   {
+    "k": "r",
+    "a": "Nage xiao gou shi shei de?",
+    "b": "Wo pengyou de"
+   },
+   {
+    "k": "r",
+    "a": "Ni erzi zai na'er gongzuo?",
+    "b": "Zhongguo"
+   },
+   {
+    "k": "r",
+    "a": "Ni zai zhe'er zhu ji tian?",
+    "b": "Yi ge yue"
+   },
+   {
+    "k": "r",
+    "a": "Ta de hanyu zenmeyang?",
+    "b": "Hen hao"
+   },
+   {
+    "k": "r",
+    "a": "Xuexiao houmian you shangdian ma?",
+    "b": "You, bu shao"
+   },
+   {
+    "k": "f",
+    "s": "Jintian tianqi hen ___",
+    "a": "leng",
+    "bank": [
+     "tai",
+     "cai",
+     "mingzi",
+     "kai",
+     "dianying"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Wo mama xihuan chi Zhongguo ___",
+    "a": "cai",
+    "bank": [
+     "tai",
+     "leng",
+     "mingzi",
+     "kai",
+     "dianying"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Beizi ___ shao le, women you jiu ge ren",
+    "a": "tai",
+    "bank": [
+     "leng",
+     "cai",
+     "mingzi",
+     "kai",
+     "dianying"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Xia yu le, ni zenme hui jia? Wo ___ che le",
+    "a": "kai",
+    "bank": [
+     "tai",
+     "leng",
+     "cai",
+     "mingzi",
+     "dianying"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Mingtian shangwu women qu kan ___ zenmeyang?",
+    "a": "dianying",
+    "bank": [
+     "tai",
+     "leng",
+     "cai",
+     "mingzi",
+     "kai"
+    ]
+   }
+  ]
+ },
+ {
+  "n": 5,
+  "items": [
+   {
+    "k": "w",
+    "py": "qing"
+   },
+   {
+    "k": "w",
+    "py": "xuexi"
+   },
+   {
+    "k": "w",
+    "py": "zaijian"
+   },
+   {
+    "k": "w",
+    "py": "na'er",
+    "es": "¿dónde?"
+   },
+   {
+    "k": "w",
+    "py": "diannao"
+   },
+   {
+    "k": "m",
+    "py": "Zhe'er you yizi, women zuo zhe'er.",
+    "es": "Aquí hay sillas, sentémonos aquí."
+   },
+   {
+    "k": "m",
+    "py": "Shi dian le, wo xianzai qu xuexiao.",
+    "es": "Ya son las diez, ahora voy a la escuela."
+   },
+   {
+    "k": "m",
+    "py": "Xiao mao zai na'er? Kanjianle ma?",
+    "es": "¿Dónde está el gatito? ¿Lo viste?"
+   },
+   {
+    "k": "m",
+    "py": "Ni xiang chi na yige?",
+    "es": "¿Cuál quieres comer?"
+   },
+   {
+    "k": "m",
+    "py": "Ta shi yisheng, zai yiyuan gongzuo.",
+    "es": "Es médico y trabaja en el hospital."
+   },
+   {
+    "k": "r",
+    "a": "Ta xianzai zai na'er dushu?",
+    "b": "Beijing daxue"
+   },
+   {
+    "k": "r",
+    "a": "Ni kanjian Zhang xiaojie le ma?",
+    "b": "Mei"
+   },
+   {
+    "k": "r",
+    "a": "Nimen shi shenme shihou renshi de?",
+    "b": "Shang ge yue"
+   },
+   {
+    "k": "r",
+    "a": "Nimen shei hui kaiche?",
+    "b": "Wo"
+   },
+   {
+    "k": "r",
+    "a": "Mingtian tianqi zenmeyang?",
+    "b": "Zhongwu you yu"
+   },
+   {
+    "k": "f",
+    "s": "Xianzai you hen ___ ren lai Zhongguo xue hanyu",
+    "a": "duo",
+    "bank": [
+     "mai",
+     "duibuqi",
+     "mingzi",
+     "mingtian",
+     "shangdian"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "___ ni shuo shenme? Wo mei tingjian",
+    "a": "duibuqi",
+    "bank": [
+     "mai",
+     "duo",
+     "mingzi",
+     "mingtian",
+     "shangdian"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Zaijian, ___ xuexiao jian",
+    "a": "mingtian",
+    "bank": [
+     "mai",
+     "duo",
+     "duibuqi",
+     "mingzi",
+     "shangdian"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Ni huilai de shihou ___ xie shuiguo",
+    "a": "mai",
+    "bank": [
+     "duo",
+     "duibuqi",
+     "mingzi",
+     "mingtian",
+     "shangdian"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Ni xianzai zai na'er? Wo zai ___, 10 fenzhong hou huiqu",
+    "a": "shangdian",
+    "bank": [
+     "mai",
+     "duo",
+     "duibuqi",
+     "mingzi",
+     "mingtian"
+    ]
+   }
+  ]
+ },
+ {
+  "n": 6,
+  "items": [
+   {
+    "k": "w",
+    "py": "mifan"
+   },
+   {
+    "k": "w",
+    "py": "xiawu"
+   },
+   {
+    "k": "w",
+    "py": "dushu",
+    "es": "leer / estudiar"
+   },
+   {
+    "k": "w",
+    "py": "chuzu che"
+   },
+   {
+    "k": "w",
+    "py": "xiang"
+   },
+   {
+    "k": "m",
+    "py": "Wo hui jia le, zaijian!",
+    "es": "¡Me voy a casa, adiós!"
+   },
+   {
+    "k": "m",
+    "py": "Mama shi wo de hao pengyou.",
+    "es": "Mamá es mi buena amiga."
+   },
+   {
+    "k": "m",
+    "py": "Zhexie dongxi duoshao qian?",
+    "es": "¿Cuánto cuestan estas cosas?"
+   },
+   {
+    "k": "m",
+    "py": "Wo jia jintian hen leng.",
+    "es": "Hoy hace mucho frío en mi casa."
+   },
+   {
+    "k": "m",
+    "py": "Zhuozi shang you yi ge pingguo.",
+    "es": "Sobre la mesa hay una manzana."
+   },
+   {
+    "k": "r",
+    "a": "Ni nu'er zai jia ma?",
+    "b": "Ta qu xuexiao le"
+   },
+   {
+    "k": "r",
+    "a": "Mingtian de tianqi zenmeyang?",
+    "b": "Hui hen re"
+   },
+   {
+    "k": "r",
+    "a": "Nimen xihuan chi shenme cai?",
+    "b": "Zhongguo cai"
+   },
+   {
+    "k": "r",
+    "a": "Ni zenme le?",
+    "b": "Xiang shuijiao"
+   },
+   {
+    "k": "r",
+    "a": "Shei shuo ni hanyu hen hao?",
+    "b": "Wo de laoshi"
+   },
+   {
+    "k": "f",
+    "s": "Ta ___ gei wo shuo, ta bu lai",
+    "a": "da dianhua",
+    "bank": [
+     "hui",
+     "piaoliang",
+     "yue",
+     "mingzi",
+     "xuesheng"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Laoshimen dou hen xihuan zhege ___",
+    "a": "xuesheng",
+    "bank": [
+     "hui",
+     "piaoliang",
+     "da dianhua"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Wo xue ___ le zuo fan",
+    "a": "hui",
+    "bank": [
+     "piaoliang",
+     "yue",
+     "mingzi",
+     "xuesheng",
+     "da dianhua"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Zhege yizi hen ___. Zhe shi wo baba mai de",
+    "a": "piaoliang",
+    "bank": [
+     "hui",
+     "yue",
+     "mingzi",
+     "xuesheng",
+     "da dianhua"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Zhe jia shangdian shi shenme shihou kai de? 3 ___ 7 hao",
+    "a": "yue",
+    "bank": [
+     "hui",
+     "piaoliang",
+     "mingzi",
+     "xuesheng",
+     "da dianhua"
+    ]
+   }
+  ]
+ },
+ {
+  "n": 7,
+  "items": [
+   {
+    "k": "w",
+    "py": "he",
+    "es": "y"
+   },
+   {
+    "k": "w",
+    "py": "kaiche",
+    "es": "manejar (un carro)"
+   },
+   {
+    "k": "w",
+    "py": "xuexiao"
+   },
+   {
+    "k": "w",
+    "py": "shi'er dian",
+    "es": "las doce"
+   },
+   {
+    "k": "w",
+    "py": "tongxue"
+   },
+   {
+    "k": "m",
+    "py": "Tamen you yi ge erzi yi ge nu'er.",
+    "es": "Ellos tienen un hijo y una hija."
+   },
+   {
+    "k": "m",
+    "py": "Wo kanjian ta zai yizi shang shuijiao ne.",
+    "es": "Lo vi durmiendo en la silla."
+   },
+   {
+    "k": "m",
+    "py": "Zhuozi shang you hen duo cai.",
+    "es": "Sobre la mesa hay mucha comida."
+   },
+   {
+    "k": "m",
+    "py": "Ta qu dianyingyuan kan dianying le.",
+    "es": "Fue al cine a ver una película."
+   },
+   {
+    "k": "m",
+    "py": "Laoshi shuo women xianzai xuexi hanzi.",
+    "es": "La maestra dice que ahora estudiamos caracteres chinos."
+   },
+   {
+    "k": "r",
+    "a": "Jintian xingqi ji?",
+    "b": "Xingqi yi"
+   },
+   {
+    "k": "r",
+    "a": "Xiexie ni qing wo chifan",
+    "b": "Bu keqi"
+   },
+   {
+    "k": "r",
+    "a": "Ni zai Beijing xue shenme?",
+    "b": "Xue hanyu"
+   },
+   {
+    "k": "r",
+    "a": "Ta shi yi ge ren lai Zhongguo de ma?",
+    "b": "Shi yi ge ren lai de"
+   },
+   {
+    "k": "r",
+    "a": "Ni de che zai na'er?",
+    "b": "Fandian houmian"
+   },
+   {
+    "k": "f",
+    "s": "Ta mai le ___ mifan",
+    "a": "yidianr",
+    "bank": [
+     "zai",
+     "zuotian",
+     "nian",
+     "mingzi",
+     "xuesheng"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Ta bu renshi zuo zai ta qianmian de ___",
+    "a": "xuesheng",
+    "bank": [
+     "zai",
+     "zuotian",
+     "nian",
+     "mingzi",
+     "yidianr"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Zhege dianying shi na yi ___ de?",
+    "a": "nian",
+    "bank": [
+     "zai",
+     "zuotian",
+     "mingzi",
+     "xuesheng",
+     "yidianr"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Ni zenme bu renshi zhege hanzi? Wo ___ mei lai",
+    "a": "zuotian",
+    "bank": [
+     "zai",
+     "nian",
+     "mingzi",
+     "xuesheng",
+     "yidianr"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Qian xiansheng ___ ma? Ta qu yiyuan le",
+    "a": "zai",
+    "bank": [
+     "zuotian",
+     "nian",
+     "mingzi",
+     "xuesheng",
+     "yidianr"
+    ]
+   }
+  ]
+ },
+ {
+  "n": 8,
+  "items": [
+   {
+    "k": "w",
+    "py": "beizi"
+   },
+   {
+    "k": "w",
+    "py": "gongzuo"
+   },
+   {
+    "k": "w",
+    "py": "xiansheng"
+   },
+   {
+    "k": "w",
+    "py": "dianyingyuan",
+    "es": "cine"
+   },
+   {
+    "k": "w",
+    "py": "gaoxing"
+   },
+   {
+    "k": "m",
+    "py": "Zuotian shi 12 yue 31 hao.",
+    "es": "Ayer fue 31 de diciembre."
+   },
+   {
+    "k": "m",
+    "py": "Zhege cai shi ta zuo de.",
+    "es": "Este plato lo hizo él."
+   },
+   {
+    "k": "m",
+    "py": "Women zuo feiji qu Beijing.",
+    "es": "Vamos a Pekín en avión."
+   },
+   {
+    "k": "m",
+    "py": "Ta zhuyuan le.",
+    "es": "Lo internaron en el hospital."
+   },
+   {
+    "k": "m",
+    "py": "Tamen liang ge shi hao pengyou.",
+    "es": "Ellos dos son buenos amigos."
+   },
+   {
+    "k": "r",
+    "a": "Zhexie dongxi duoshao qian?",
+    "b": "20 kuai"
+   },
+   {
+    "k": "r",
+    "a": "Ni baba zai na'er gongzuo?",
+    "b": "Beijing daxue"
+   },
+   {
+    "k": "r",
+    "a": "Xiao Yue zenme le?",
+    "b": "Xiang shuijiao le"
+   },
+   {
+    "k": "r",
+    "a": "Mingtian tianqi zenmeyang?",
+    "b": "Hui hen leng"
+   },
+   {
+    "k": "r",
+    "a": "Jintian shei zuo fan?",
+    "b": "Mama"
+   },
+   {
+    "k": "f",
+    "s": "Wo tingshuo Wang yisheng hen ___",
+    "a": "piaoliang",
+    "bank": [
+     "chi",
+     "xiexie",
+     "diannao",
+     "mingzi",
+     "shihou"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Tongxuemen dou xihuan ___ shuiguo",
+    "a": "chi",
+    "bank": [
+     "xiexie",
+     "diannao",
+     "mingzi",
+     "shihou",
+     "piaoliang"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Ta xiang xia ge xingqi qu mai ___",
+    "a": "diannao",
+    "bank": [
+     "chi",
+     "xiexie",
+     "mingzi",
+     "shihou",
+     "piaoliang"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Tamen shenme ___ qu shangdian?",
+    "a": "shihou",
+    "bank": [
+     "chi",
+     "xiexie",
+     "diannao",
+     "mingzi",
+     "piaoliang"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Qian xiaojie, ni de dianhua. Hao de, ___",
+    "a": "xiexie",
+    "bank": [
+     "chi",
+     "diannao",
+     "mingzi",
+     "shihou",
+     "piaoliang"
+    ]
+   }
+  ]
+ },
+ {
+  "n": 9,
+  "items": [
+   {
+    "k": "w",
+    "py": "shuijiao"
+   },
+   {
+    "k": "w",
+    "py": "re"
+   },
+   {
+    "k": "w",
+    "py": "xuesheng"
+   },
+   {
+    "k": "w",
+    "py": "beizi"
+   },
+   {
+    "k": "w",
+    "py": "du"
+   },
+   {
+    "k": "m",
+    "py": "Zhexie cai dou shi Wang xiaojie zuo de ma?",
+    "es": "¿Todos estos platos los hizo la señorita Wang?"
+   },
+   {
+    "k": "m",
+    "py": "Qing duo chi yidianr shuiguo.",
+    "es": "Por favor, come un poco más de fruta."
+   },
+   {
+    "k": "m",
+    "py": "Wo baba shi kai feiji de.",
+    "es": "Mi papá es piloto de avión."
+   },
+   {
+    "k": "m",
+    "py": "Duibuqi, wo xiawu qu shangdian mai yi ge beizi.",
+    "es": "Perdón, en la tarde voy a la tienda a comprar un vaso."
+   },
+   {
+    "k": "m",
+    "py": "9 dian le, wo xiang qu kan dianshi.",
+    "es": "Ya son las 9, quiero ir a ver la televisión."
+   },
+   {
+    "k": "r",
+    "a": "Qianmian nage ren shi shei?",
+    "b": "Wo tongxue"
+   },
+   {
+    "k": "r",
+    "a": "Ni zuotian shangwu qu xuexiao le ma?",
+    "b": "Meiyou"
+   },
+   {
+    "k": "r",
+    "a": "Zhege dianying shi 60 fenzhong ma?",
+    "b": "Bushi"
+   },
+   {
+    "k": "r",
+    "a": "Ni erzi jinnian duo da?",
+    "b": "10 sui"
+   },
+   {
+    "k": "r",
+    "a": "Ni na tian hui guo?",
+    "b": "Mingtian"
+   },
+   {
+    "k": "f",
+    "s": "Ta de yifu ___ xiao le",
+    "a": "tai",
+    "bank": [
+     "gongzuo",
+     "ben",
+     "mingzi",
+     "xihuan",
+     "neng"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Zuotian wo mai le yi ___ hanyu shu",
+    "a": "ben",
+    "bank": [
+     "tai",
+     "gongzuo",
+     "mingzi",
+     "xihuan",
+     "neng"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Wo zai Beijing zhu le 5 nian, wo hen ___ zheli",
+    "a": "xihuan",
+    "bank": [
+     "tai",
+     "gongzuo",
+     "ben",
+     "mingzi",
+     "neng"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Mama zhege yue ___ huilai",
+    "a": "neng",
+    "bank": [
+     "tai",
+     "gongzuo",
+     "ben",
+     "mingzi",
+     "xihuan"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Ni hao, ni shi zuo shenme ___ de?",
+    "a": "gongzuo",
+    "bank": [
+     "tai",
+     "ben",
+     "mingzi",
+     "xihuan",
+     "neng"
+    ]
+   }
+  ]
+ },
+ {
+  "n": 10,
+  "items": [
+   {
+    "k": "w",
+    "py": "yiyuan"
+   },
+   {
+    "k": "w",
+    "py": "mifan"
+   },
+   {
+    "k": "w",
+    "py": "beizi"
+   },
+   {
+    "k": "w",
+    "py": "xuexi"
+   },
+   {
+    "k": "w",
+    "py": "gou"
+   },
+   {
+    "k": "m",
+    "py": "Ta de gongzuo tai duo le.",
+    "es": "Tiene demasiado trabajo."
+   },
+   {
+    "k": "m",
+    "py": "Qing zai zheli xie ni de mingzi.",
+    "es": "Por favor, escribe tu nombre aquí."
+   },
+   {
+    "k": "m",
+    "py": "Diannao zai zhuozi shang.",
+    "es": "La computadora está sobre la mesa."
+   },
+   {
+    "k": "m",
+    "py": "Wo kan bu jian le.",
+    "es": "Ya no puedo ver."
+   },
+   {
+    "k": "m",
+    "py": "Mama zuo le san ge cai, ni xihuan nage?",
+    "es": "Mamá hizo tres platos, ¿cuál te gusta?"
+   },
+   {
+    "k": "r",
+    "a": "Ni zhongwu zenme mei hui jia ne?",
+    "b": "Qu fandian le"
+   },
+   {
+    "k": "r",
+    "a": "Xiao Wang na tian qu xue che?",
+    "b": "2 yue 1 hao"
+   },
+   {
+    "k": "r",
+    "a": "Qianmian na ji ge ren shi shei?",
+    "b": "Wo tongxue"
+   },
+   {
+    "k": "r",
+    "a": "Xiao Yue hui shuo Hanyu?",
+    "b": "Shi de"
+   },
+   {
+    "k": "r",
+    "a": "Ni de erzi duo da?",
+    "b": "4 sui"
+   },
+   {
+    "k": "f",
+    "s": "Ni lai kan wo, wo hen ___",
+    "a": "gaoxing",
+    "bank": [
+     "duibuqi",
+     "zhu",
+     "mingzi",
+     "shihou",
+     "shao"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "___, ni shuo shenme? Wo mei tingjian",
+    "a": "duibuqi",
+    "bank": [
+     "gaoxing",
+     "zhu",
+     "mingzi",
+     "shihou",
+     "shao"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Wo bu xihuan zhege shudian, shu tai ___ le",
+    "a": "shao",
+    "bank": [
+     "duibuqi",
+     "gaoxing",
+     "zhu",
+     "mingzi",
+     "shihou"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Ni shenme ___ hui Zhongguo? Mingnian, ni ne?",
+    "a": "shihou",
+    "bank": [
+     "duibuqi",
+     "gaoxing",
+     "zhu",
+     "mingzi",
+     "shao"
+    ]
+   },
+   {
+    "k": "f",
+    "s": "Ta zai na'er ___? Zai Beijing daxue houmian",
+    "a": "zhu",
+    "bank": [
+     "duibuqi",
+     "gaoxing",
+     "mingzi",
+     "shihou",
+     "shao"
+    ]
+   }
+  ]
+ }
+]

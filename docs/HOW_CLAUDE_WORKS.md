@@ -316,6 +316,17 @@ first test of each new family takes longer, and the rest go faster.
   Sim Trainer's 400 questions by theme.
 - **AI-generated pictures** (Higgsfield) only when you approve it, never for exam pictures.
 - **Text-to-speech** for practice audio (never for official tests, which use the real audio).
+- **Game questions from your "mother files"** (2026-10-11). A mother file is a PDF with every simulation of a level
+  and its answers. From it I build the questions every pin game uses:
+  1. Your mother file goes in `Downloads\IMPORTANT DOCUMENTS\CURRICULUM STRUCTURE\…`.
+  2. I turn it into game rounds in `core/packs/<level>.js`. Each world gets word rounds, and each simulation becomes its
+     own «Simulacro» round with the exam's real words, sentences, dialogues and fill-ins.
+  3. Pictures are made on your unlimited Higgsfield, often with the gang in scenes. The brief is
+     `content/packs/<level>-pictures.json`.
+  4. `scripts/test-packs.js` and `scripts/stress-packs.js` check that every question is clear and that no wrong option is
+     secretly right.
+  5. Teachers pick a round in `/packs.html` (test → level → world → round), from every game's «Elegir preguntas».
+  Done so far: YCT 1 and Old HSK 1. New HSK 1 waits for its mother file.
 
 ---
 
@@ -401,7 +412,7 @@ intro is long"), and I'll turn it into exact changes.
 | **June 2026** | 113 | Old HSK 1 Simulations 1–10 as PIN rooms with live monitor and results, mistake review for kids and parents, Cuaderno, push sentences and lesson packs, classrooms, Llevar a casa, security phases 1–2 |
 | **July 2026** | 12 | Simulation 10, sentence-practice sheet 31–40, Emirati local track with real Arabic and audio |
 | **September 2026** | 6 | HSK levels by access code, HSK2 Bolsa de Palabras, Sim Trainer v1–v2, teacher levels and accounts, 🌐 ES→EN toggle |
-| **October 2026** | 4+ | Official Tests folders, YCT1 Simulations 1–2 on the new exam interface, built from screen recordings |
+| **October 2026** | 4+ | Official Tests folders, YCT1 Simulations 1–2 on the new exam interface, built from screen recordings; the game question packs rebuilt from the mother files (YCT 1 + Old HSK 1, 47 rounds, clear questions, Higgsfield pictures with the gang) |
 
 ---
 
