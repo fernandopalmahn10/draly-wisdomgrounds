@@ -1602,7 +1602,10 @@ function _gpRateLimit(req) {
 // warmup Animaciones tray. Keeps server in charge of the URL so the
 // client can't shove an arbitrary URL through the inbox.
 const _GIF_LIBRARY = {
-  dralingo: { url: '/assets/kingdoms/dralingo/anim/hello.webp',    label: '🐉 Dralingo' },
+  // Dralingo in his kandura + mustache look (2026-10-11): hello, wise (strokes his mustache), power (wings + fist).
+  dralingo: { url: '/assets/dralingo/anim/hello.webp',    label: '🐉 Dralingo' },
+  'dralingo-sabio': { url: '/assets/dralingo/anim/wise.webp',  label: '🧔 Dralingo sabio' },
+  'dralingo-poder': { url: '/assets/dralingo/anim/power.webp', label: '💪 Poder de Dralingo' },
   gojo:   { url: '/assets/png-library/GOJO%20TRANSPARENT.gif',     label: '👁 Gojo' },
   yugi:   { url: '/assets/png-library/YUGI%20TRANSPARENT.gif',     label: '🃏 Yugi' },
   freddy: { url: '/assets/png-library/FREDDY%20TRANSPARENT.gif',   label: '🐻 Freddy' },
@@ -4813,11 +4816,13 @@ io.on('connection', (socket) => {
   async function warmImagesForGame(pin, questions) {
     const g = games[pin];
     if (!g) return;
-    const urls = questions.map((q) => Images.urlForQuestion(q));
+    // Only pictures on other sites need warming (our /assets/ files are served instantly); none → no badge at all.
+    const urls = [...new Set(questions.map((q) => Images.urlForQuestion(q)).filter((u) => u && /^https?:\/\//i.test(u)))];
+    if (!urls.length) return;
     const total = urls.length;
     let warmed = 0;
     io.to(g.hostId).emit('images-progress', { warmed: 0, total });
-    // Fire 3 in parallel to avoid hammering Pollinations
+    // Fire 3 in parallel to avoid hammering the image host
     const queue = [...urls];
     async function worker() {
       while (queue.length > 0) {
@@ -6096,7 +6101,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
     if (!(g.hostId === socket.id && isAdminPassword(password))) return;
-    const ok = ['dralingo', 'gojo', 'yugi', 'freddy', 'mario', 'sonic', 'elsa', 'turtle', 'cr7'];   // expand as more transparent GIFs land
+    const ok = ['dralingo', 'dralingo-sabio', 'dralingo-poder', 'gojo', 'yugi', 'freddy', 'mario', 'sonic', 'elsa', 'turtle', 'cr7'];   // expand as more transparent GIFs land
     if (!ok.includes(String(id || ''))) return;
     // Stash the current state on the room so a kid joining late
     // automatically sees whatever's already on.

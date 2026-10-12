@@ -1912,7 +1912,9 @@
   // particle bursts) — these are full-screen transparent GIFs that
   // stay on the kid's screen until the teacher toggles them off.
   const WU_ANIM_URL_PLAYER = {
-    dralingo: '/assets/kingdoms/dralingo/anim/hello.webp',
+    dralingo: '/assets/dralingo/anim/hello.webp',
+    'dralingo-sabio': '/assets/dralingo/anim/wise.webp',
+    'dralingo-poder': '/assets/dralingo/anim/power.webp',
     gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
     yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
     freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',

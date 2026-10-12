@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/home.css?v=20261011e">
+  <link rel="stylesheet" href="/css/home.css?v=20261011f">
 </head>
 <!-- Home redesigned 2026-10-11 (his brief): pastel sticker look from Reinos de Colores, Dralingo instead of Gojo,
      quiet page (no music, no sounds). Tap Dralingo for a random TikTok-style entrance (DralingoFX). -->
@@ -19,7 +19,7 @@
       <div class="home-stage">
         <button class="home-cast" id="home-cast-a" type="button" hidden><img alt=""></button>
         <button class="home-dralingo" id="home-dralingo" type="button" aria-label="Dralingo. Tócalo para una sorpresa">
-          <img id="home-dralingo-img" src="/assets/kingdoms/dralingo/anim/hello-still.webp" alt="" width="340" height="332">
+          <img id="home-dralingo-img" src="/assets/dralingo/anim/hello-still.webp" alt="" width="320" height="360">
           <span class="home-poke" aria-hidden="true">¡Tócame!</span>
         </button>
         <button class="home-cast" id="home-cast-b" type="button" hidden><img alt=""></button>
@@ -66,7 +66,7 @@
   </footer>
 
   <script src="/js/cast.js?v=20261011c"></script>
-  <script src="/js/dralingo-fx.js?v=20261011e"></script>
+  <script src="/js/dralingo-fx.js?v=20261011f"></script>
   <script src="/js/super-admin-badge.js?v=20261011c"></script>
   <script>
     // ?pin=X links jump straight into the player flow
@@ -123,7 +123,7 @@
       const swapIn = () => setTimeout(() => {
         const anim = new Image();
         anim.onload = () => { $('home-dralingo-img').src = anim.src; };
-        anim.src = '/assets/kingdoms/dralingo/anim/hello.webp';
+        anim.src = '/assets/dralingo/anim/hello.webp';   // 2026-10-11: his new look (kandura + mustache)
       }, 1200);
       if (document.readyState === 'complete') swapIn(); else window.addEventListener('load', swapIn);
     }
