@@ -17,7 +17,18 @@ the checklist for any new game mode.
   Lines built from a template (e.g. `'Hoy: {theme}.'`) need a regex entry in `DICT.patterns` (2026-10-11: the daily-story
   lines shipped without one).
 - **Deploy** with the `deploy-platform` skill (tests → exact staging → commit → push → wait until live → live check).
+- **Always ask him "is a class running right now?" before every deploy** (his rule 2026-10-12: "it's great that you
+  asked… yes, there is, but I forgot. Always ask me"). A deploy drops the site for ~1 minute and every live room.
+  Also check the live `/api/_diag` `rooms`; if a class is on, push only after it ends (rooms back to 0).
 - Never commit secrets (`.render-token`, credentials JSON, `data/*` runtime files with student data).
+- **Home-screen app (PWA, since 2026-10-12)**: `public/manifest.webmanifest` + `public/sw.js` + `public/js/pwa.js`,
+  icons in `public/assets/app/` (made by `../video_tools/app_icon.py` from the green-screen Dralingo original). The
+  service worker caches NOTHING but its offline page: never add caching of pages, `/api` or game files (a cached page
+  shows a class stale content and sticks on phones). If it ever misbehaves, replace sw.js with one that calls
+  `self.registration.unregister()` and deploy. A new page families open gets the same head tags + `pwa.js` (copy them
+  from index.html); `[data-pwa-install]` on any element makes it the «Instalar la app» button. iPhone home-screen
+  apps keep their own storage: the install sheet shows the kid's codes to type once. Notifications: sw.js shows them
+  and `DralyPWA.enableNotifications(publicKey)` subscribes; sending needs server keys (VAPID) + a sender — not built.
 - **Inactive accounts are archived, never deleted** (his rule 2026-10-12: "delete every account not active for 30
   days" → archive with auto-restore, his choice). Every day the server moves accounts with no activity for 30 days
   (max of lastSeen / firstSeen / restoredAt) into `data/student-archive.json`; `get()`, `getOrCreate()` and

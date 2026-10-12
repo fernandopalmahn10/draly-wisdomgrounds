@@ -3,12 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- home-screen app (2026-10-12): manifest.webmanifest + sw.js + js/pwa.js -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
+  <link rel="apple-touch-icon" href="/assets/app/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Dralingo">
   <title>Draly Wisdom Grounds</title>
   <meta name="theme-color" content="#9fdcf7">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/home.css?v=20261011f">
+  <link rel="stylesheet" href="/css/home.css?v=20261012a">
 </head>
 <!-- Home redesigned 2026-10-11 (his brief): pastel sticker look from Reinos de Colores, Dralingo instead of Gojo,
      quiet page (no music, no sounds). Tap Dralingo for a random TikTok-style entrance (DralingoFX). -->
@@ -62,6 +69,7 @@
   </main>
 
   <footer class="home-foot">
+    <button class="home-teacher home-install" type="button" data-pwa-install hidden>📲 Instalar la app</button>
     <a href="/games.html" class="home-teacher" id="host-link">👑 Maestros: crear un juego</a>
   </footer>
 
@@ -165,5 +173,6 @@
       if (window.DralingoFX) DralingoFX.celebrate({ text: lastLine, mood: Math.random() < 0.5 ? 'good' : 'win' });
     });
   </script>
+  <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

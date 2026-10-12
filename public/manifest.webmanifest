@@ -1,0 +1,24 @@
+{
+  "id": "/",
+  "name": "Draly Wisdom Grounds",
+  "short_name": "Dralingo",
+  "description": "Tareas, audios y juegos de Chino Mandarín con Dralingo y su equipo.",
+  "lang": "es",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#9fdcf7",
+  "theme_color": "#9fdcf7",
+  "categories": ["education", "kids"],
+  "icons": [
+    { "src": "/assets/app/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/app/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/assets/app/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Mis tareas", "short_name": "Tareas", "url": "/homework.html", "icons": [{ "src": "/assets/app/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Audios de las tareas", "short_name": "Audios", "url": "/audios", "icons": [{ "src": "/assets/app/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

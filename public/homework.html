@@ -6,6 +6,13 @@
        The aggressive blockers (gesturestart, touchend double-tap blocker)
        were eating LEGITIMATE second-taps on assignment cards. -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <!-- home-screen app (2026-10-12): manifest.webmanifest + sw.js + js/pwa.js -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
+  <link rel="apple-touch-icon" href="/assets/app/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Dralingo">
   <style>
     html, body {
       -webkit-touch-callout: none;
@@ -133,6 +140,7 @@
         <button class="btn btn-gold btn-sm hw-daily-cta" id="hw-list-daily">⚔️ Desafíos</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-sentences">📜 Mis oraciones</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-myexams">📝 Mis exámenes</button>
+        <button class="btn btn-gold btn-sm" id="hw-list-install" type="button" data-pwa-install hidden>📲 Instalar app</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-settings">⚙️ Ajustes</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-parents">👨‍👩‍👧 Papás</button>
         <button class="btn btn-ghost btn-sm" id="hw-list-logout">Salir</button>
@@ -628,8 +636,9 @@
   <script src="/js/saga.js?v=20261012b"></script>
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/hw-i18n.js?v=20261012f"></script>
+  <script src="/js/hw-i18n.js?v=20261012g"></script>
   <script src="/js/homework.js?v=20261012j"></script>
   <script src="/js/super-admin-badge.js?v=20261011c"></script>
+  <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

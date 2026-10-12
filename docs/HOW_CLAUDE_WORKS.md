@@ -229,6 +229,9 @@ A separate Emirati Arabic (Khaleeji) track:
   see «📦 N archived» on the dashboard. Nothing is deleted.
 - **New address (since 2026-10-12):** `https://app.dralingo.app` through your Cloudflare (secure, flood guard, pictures
   kept close to the kids). Opening the old Render link moves the phone there with its saved student code.
+- **Home-screen app (since 2026-10-12):** families tap «📲 Instalar la app» (home footer, homework header, audios
+  footer) and Dralingo's icon appears on the phone; it opens full-screen like an app, shows a «Sin conexión» page
+  without internet, and is ready to receive notifications (sending them is the next step). Same link, no store.
 - **Monthly health check:** on the 1st of each month a scheduled Claude task runs `scripts/health-check.js` (Render
   memory, processor, downloads, disk; the student file; media size; page weight) and tells you if a limit is crossed
   and what to do (bigger server, database, lighter pictures). Reports in `reports/platform-health/`.
