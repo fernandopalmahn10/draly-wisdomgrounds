@@ -20,6 +20,8 @@ const SimImages = require('./core/sim-images');
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
+const Levels = require('./core/levels');
+const Packs = require('./core/packs');
 const Classrooms = require('./core/classrooms');
 const Guides = require('./core/guides');
 const Emirati = require('./core/emirati-vocab');
@@ -1679,8 +1681,32 @@ app.post('/api/admin/teachers', (req, res) => {
   if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
   const { displayName, email, country, levels } = req.body || {};
   if (!displayName) return res.status(400).json({ ok: false, error: 'displayName required' });
-  // levels: ['hsk1'] | ['hsk2'] | ['hsk1','hsk2'] — one classroom code per level
+  // levels: any of core/levels.js (['yct1','hsk2','hsk1'] …) — one classroom code per level
   const t = Teachers.createTeacher({ displayName, email, country, levels });
+  res.json({ ok: true, teacher: t });
+});
+// 🆕 2026-10-12 — the levels a classroom code can have (pickers in the Teachers tab)
+app.get('/api/admin/levels', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  res.json({ ok: true, levels: Levels.list() });
+});
+// Add a classroom code with a level to an existing teacher
+app.post('/api/admin/teachers/:teacherId/codes', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const out = Teachers.addAccessCode(req.params.teacherId, (req.body || {}).level);
+  if (!out) return res.status(400).json({ ok: false, error: 'teacher or level not found' });
+  res.json({ ok: true, code: out.code, teacher: out.teacher });
+});
+// Change the level of one classroom code (the kids who type it next get that level's tareas)
+app.put('/api/admin/teachers/:teacherId/codes/:code', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const t = Teachers.setCodeLevel(req.params.teacherId, req.params.code, (req.body || {}).level);
+  if (!t) return res.status(400).json({ ok: false, error: 'teacher, code or level not found' });
   res.json({ ok: true, teacher: t });
 });
 // Delete a teacher (super-admin only; cannot delete a super admin)
@@ -1791,7 +1817,10 @@ app.post('/api/homework/enter', (req, res) => {
       avatar: rec.avatar || null,
       avatarOptions: Students.AVATAR_OPTIONS,
       classroomCode: rec.classroomCode || null,
-      level: level,                                   // 'hsk1' | 'hsk2'
+      level: level,                                   // 'yct1' | 'hsk2' (New HSK 1) | 'hsk1' — core/levels.js
+      levelName: Levels.info(level).name,
+      folders: Assignments.levelFolders(level),       // pack-quiz levels: one folder per world (else null)
+      daily: Levels.info(level).daily !== false,      // Desafíos (HSK 1 words): off below HSK 1
       isNew: isNew,                                   // show the code banner once
       assignments: Assignments.listAssignments(level), // portal reshapes by level
       submissions: Students.getAssignmentSubmissions(rec.code, 100),
@@ -1882,7 +1911,8 @@ app.get('/api/homework/insights/:code', (req, res) => {
   // ASSIGNMENTS THE KID HASN'T TRIED YET — surfaced so the parent can
   // nudge them ("¡Aún no has hecho la tarea de la familia! Hazla ahora.")
   // Listed in the parent view with a redirect CTA into the homework portal.
-  const allAssignments = Assignments.listAssignments();
+  const level = Levels.info(rec.level);   // only the kid's own level counts as "por hacer"
+  const allAssignments = Assignments.listAssignments(level.id);
   // PENDING = never tried OR best attempt < 80% (can't pass below 80).
   const bestPctById = {};
   Object.values(bestByAssignment).forEach((s) => {
@@ -1920,6 +1950,14 @@ app.get('/api/homework/insights/:code', (req, res) => {
   let sentencesAttempted = 0;
   let sentencesCorrect = 0;
   subs.forEach((s) => {
+    // 🎮 pack-quiz tareas (YCT game rounds) are questions, not sentences: only their «¿Cómo se dice…?» answers
+    // (pinyin) count as words
+    if (String(s.assignmentId || '').startsWith('pack-')) {
+      (s.breakdown || []).forEach((b) => {
+        if (b.correct && /^¿Cómo se dice/.test(b.es || '')) learnedWords.add(String(b.student).toLowerCase().replace(/[^a-z]/g, ''));
+      });
+      return;
+    }
     (s.breakdown || []).forEach((b) => {
       sentencesAttempted++;
       if (b.correct) {
@@ -1988,6 +2026,12 @@ app.get('/api/homework/insights/:code', (req, res) => {
     code: rec.code,
     displayName: rec.displayName,
     avatar: rec.avatar || '🧒🏼',
+    level: level.id,
+    levelName: level.name,
+    levelEmoji: level.emoji,
+    levelExam: level.exam,
+    levelNext: level.next,
+    levelWords: level.packWords ? Packs.wordLists(level.pack) : null,   // null = the client's HSK 1 list
     insights,
     tests: uniqueTests,
     remaining,
@@ -1996,7 +2040,8 @@ app.get('/api/homework/insights/:code', (req, res) => {
     hskResults: hskRows,
     totals: {
       assignmentAttempts:    subs.length,
-      assignmentsMastered:   insights.length,
+      // of THIS level's tareas (a kid who moved up keeps the old logros in the list, not in the count)
+      assignmentsMastered:   insights.filter((row) => allAssignments.some((a) => a.id === row.assignmentId)).length,
       assignmentsAvailable:  allAssignments.length,
       assignmentsRemaining:  remaining.length,
       readingTestsTaken:     uniqueTests.length,     // unique stories, NOT total attempts
@@ -2005,6 +2050,7 @@ app.get('/api/homework/insights/:code', (req, res) => {
       // — palabras aprendidas, oraciones, estimated").
       wordsLearned:          learnedWords.size,
       wordsTotalHsk1:        150,
+      wordsTotal:            level.words || null,   // null = the level has no fixed count to show (YCT 1)
       sentencesCorrect,
       sentencesAttempted,
       // 🌱 Lifetime saved-sentence count — drives the parent 0→2000 progress
@@ -2234,6 +2280,16 @@ app.get('/api/homework/assignment/:id', (req, res) => {
       items: [],   // legacy clients see an empty classic tarea, not a crash
     });
   }
+  // 🎮 pack-quiz (YCT game rounds): the round's questions, answers shuffled, never the correct one — each tap is
+  // checked by /api/homework/pack-check and the submit is re-graded on the server.
+  if (a.type === 'pack-quiz') {
+    return res.json({
+      ok: true, id: a.id, title: a.title, subtitle: a.subtitle, instructions: a.instructions,
+      type: a.type, level: a.level, expLabel: a.expLabel || null,
+      questions: Assignments.packQuizQuestions(a),
+      items: [],   // legacy clients see an empty classic tarea, not a crash
+    });
+  }
   // Don't send the `expected` answers — the student would see them in
   // dev tools. Send the prompts only; grading happens server-side.
   res.json({
@@ -2310,6 +2366,16 @@ app.delete('/api/admin/guides/:id', (req, res) => {
   res.json({ ok: !!ok });
 });
 
+// 🎮 one tap in a pack-quiz tarea → { correct, expected } (the right answer is shown after the tap, so the kid learns)
+app.post('/api/homework/pack-check', (req, res) => {
+  if (!_hwCheckAccess(req, res)) return;
+  const { assignmentId, text, chosen } = req.body || {};
+  const a = Assignments.getAssignment(assignmentId);
+  if (!a || a.type !== 'pack-quiz' || !a.key.has(text)) return res.status(404).json({ ok: false, error: 'Pregunta no encontrada' });
+  const expected = a.key.get(text);
+  res.json({ ok: true, correct: String(chosen || '') === expected, expected });
+});
+
 app.post('/api/homework/submit', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, assignmentId, answers, accessCode } = req.body || {};
@@ -2317,6 +2383,8 @@ app.post('/api/homework/submit', (req, res) => {
   if (!a) return res.status(404).json({ ok: false, error: 'Asignación no encontrada' });
   const rec = Students.get(studentCode);
   if (!rec) return res.status(401).json({ ok: false, error: 'Código de estudiante inválido — vuelve a entrar' });
+  // 🔒 2026-10-12 — only from the kid's own classroom code (same IDOR guard as avatar / rename / insights)
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const result = Assignments.gradeSubmission(a, answers);
   Students.logAssignmentSubmission(rec.code, {
     assignmentId: a.id,
@@ -2490,6 +2558,13 @@ app.get('/api/hsk-sim-practice', (req, res) => {
     } : null;
     levels[lvl].push({ id, title: sim.title || id, part3: pick(p3), part4: pick(p4) });
   });
+  // 🆕 2026-10-12 — YCT + New HSK sims too: their reading parts with a word bank, in the same part shape
+  Object.keys(YctSim.SIMS).forEach((id) => {
+    const s = _practiceFromYctSim(YctSim.SIMS[id]);
+    if (!s) return;
+    if (!levels[s.level]) levels[s.level] = [];
+    levels[s.level].push(s.sim);
+  });
   // Stable order: sim 1, 2, 3… (ids are 'hsk1-simN')
   Object.keys(levels).forEach((lvl) => {
     levels[lvl].sort((a, b) => {
@@ -2498,8 +2573,76 @@ app.get('/api/hsk-sim-practice', (req, res) => {
       return na - nb;
     });
   });
-  res.json({ ok: true, levels });
+  // folders for the dashboard: test family → level → sims (same families as Official Tests)
+  const FAMILIES = [
+    { id: 'yct', name: 'YCT', emoji: '🧒', blurb: 'Exams for kids', test: (l) => /^yct\d/.test(l) },
+    { id: 'newhsk', name: 'New HSK', emoji: '🆕', blurb: 'The new HSK', test: (l) => /^newhsk\d/.test(l) },
+    { id: 'oldhsk', name: 'Old HSK', emoji: '📘', blurb: 'The classic HSK', test: (l) => /^hsk\d/.test(l) },
+  ];
+  const levelName = (l) => l.replace(/^yct(\d+)$/, 'YCT $1').replace(/^newhsk(\d+)$/, 'New HSK $1').replace(/^hsk(\d+)$/, 'HSK $1');
+  const order = (l) => parseInt((l.match(/\d+/) || ['0'])[0], 10);
+  const families = FAMILIES.map((f) => ({
+    id: f.id, name: f.name, emoji: f.emoji, blurb: f.blurb,
+    levels: Object.keys(levels).filter(f.test).sort((a, b) => order(a) - order(b))
+      .map((l) => ({ id: l, name: levelName(l), sims: levels[l] })),
+  }));
+  const levelNames = {};
+  Object.keys(levels).forEach((l) => { levelNames[l] = levelName(l); });
+  res.json({ ok: true, levels, levelNames, families });
 });
+// One YCT / New HSK sim → { level, sim: { id, title, part3, part4 } } in the old-HSK practice shape: its reading
+// parts with a word bank (YCT 1: R3 fill-in · New HSK 1: R2 question ↔ reply, R3 fill-in), answers included.
+const _PRACTICE_PART_NAMES = {
+  read_choose_reply_bank: ['Question ↔ reply', 'Pick the reply from the bank that answers each question.'],
+  read_fill_blank_word_bank: ['Fill the blank', 'Pick the word from the bank that completes each sentence.'],
+};
+function _practiceFromYctSim(sim) {
+  if (!sim || !sim.reading || !Array.isArray(sim.reading.parts)) return null;
+  const level = String(sim.level || '').toLowerCase();
+  const es = _practiceSpanish(level);
+  const one = (it) => {
+    const lines = Array.isArray(it.dialogue) && it.dialogue.length ? it.dialogue : [it];
+    return {
+      hanzi: lines.map((l) => l.hanzi || '').join(' — '),
+      pinyin: lines.map((l) => l.pinyin || '').join(' — '),
+      es: lines.map((l) => es(l.pinyin)).filter(Boolean).join(' — '),
+    };
+  };
+  const parts = sim.reading.parts.filter((p) => Array.isArray(p.bank) && p.bank.length && _PRACTICE_PART_NAMES[p.type])
+    .map((p) => {
+      const real = p.items.filter((x) => !x.example);
+      const nums = real.map((x) => x.num);
+      const ex = p.items.find((x) => x.example);
+      const [name, instruction] = _PRACTICE_PART_NAMES[p.type];
+      return {
+        title: `${p.zh || ''} · Reading part ${p.part} (${Math.min(...nums)}–${Math.max(...nums)}) · ${name}`.replace(/^ · /, ''),
+        instruction,
+        bank: p.bank.map((b) => ({ letter: b.label, hanzi: b.hanzi || '', pinyin: b.pinyin || '' })),
+        example: ex ? Object.assign({ num: ex.num, answer: ex.answer }, one(ex)) : null,
+        questions: real.map((q) => Object.assign({ num: q.num, answer: q.answer, en: '' }, one(q))),
+      };
+    });
+  if (!parts.length) return null;
+  return { level, sim: { id: sim.id, title: sim.title || sim.id, part3: parts[0], part4: parts[1] || null } };
+}
+// Spanish for a sim sentence by its pinyin: New HSK 1 has its own file (mother file), YCT 1 borrows the game pack's
+// exam sentences; '' when unknown (the card just shows no meaning line).
+const _practiceEsCache = {};
+function _practiceSpanish(level) {
+  if (!_practiceEsCache[level]) {
+    const map = new Map();
+    const pack = Packs.LEVELS.find((l) => l.id === level);
+    if (pack) pack.worlds.forEach((w) => w.rounds.forEach((r) => (r.items || []).forEach((it) => {
+      if (it.k === 'm' && it.py && it.es) map.set(Packs.plain(it.py), it.es);
+    })));
+    if (level === 'newhsk1') {
+      try { Object.entries(require('./core/packs/newhsk1-es.json')).forEach(([py, s]) => map.set(Packs.plain(py), s)); } catch (_) {}
+    }
+    _practiceEsCache[level] = map;
+  }
+  const map = _practiceEsCache[level];
+  return (py) => map.get(Packs.plain(py)) || '';
+}
 // Auth helper for HSK endpoints — accept EITHER a valid HSK PIN OR a
 // homework access code. PIN flow is now the primary path (kids type
 // the 4-digit PIN to enter the room), and the homework access code
@@ -2619,6 +2762,7 @@ function _enrichHskWrongQs(sim, wrongQs) {
     out.givenLabel = fmtBool(wq.given);
     out.expectedLabel = fmtBool(wq.expected);
     if (!sim) return out;
+    if (sim.reading && Array.isArray(sim.reading.parts)) return _enrichYctWrongQ(sim, wq, out);   // YCT / New HSK
     const [part, numStr] = String(wq.qid).split('-');
     const num = parseInt(numStr, 10);
     out.partLabel = partLabels[part] || part;
@@ -2675,6 +2819,43 @@ function _enrichHskWrongQs(sim, wrongQs) {
   });
 }
 
+// 🆕 2026-10-12 — the same enrichment for a YCT / New HSK sim (core/yct/*.json: listening.parts / reading.parts with
+// items keyed by qid 'L1-3' / 'R3-31'), so «Mis exámenes» and the Cuaderno show the question, not bare letters.
+function _enrichYctWrongQ(sim, wq, out) {
+  const sec = String(wq.qid || '')[0] === 'L' ? 'listening' : 'reading';
+  const part = ((sim[sec] && sim[sec].parts) || []).find((p) => (p.items || []).some((x) => x.qid === wq.qid));
+  const it = part && part.items.find((x) => x.qid === wq.qid);
+  if (!it) return out;
+  out.partLabel = (sec === 'listening' ? 'Escucha' : 'Lectura') + ' · Parte ' + part.part;
+  out.qNum = it.num;
+  const lines = Array.isArray(it.dialogue) ? it.dialogue : null;
+  const zp = (o) => o ? { py: o.pinyin || '', hz: o.hanzi || '' } : null;
+  const shown = it.word ? zp(it.word)
+    : lines ? { py: lines.map((l) => l.pinyin).join(' — '), hz: lines.map((l) => l.hanzi).join(' — ') }
+    : it.passage ? { py: [it.passage.pinyin, it.question && it.question.pinyin].filter(Boolean).join(' — '),
+                     hz: [it.passage.hanzi, it.question && it.question.hanzi].filter(Boolean).join(' — ') }
+    : it.pinyin ? zp(it)
+    : it.transcript ? zp(it.transcript) : null;      // listening: what the audio said (review happens after the exam)
+  if (shown && shown.py) out.questionLabel = shown.py;
+  if (shown && shown.hz) out.questionHanzi = shown.hz;
+  if (it.image) out.image = it.image;
+  const resolve = (letter) => {
+    if (letter == null || letter === '' || typeof letter === 'boolean') return null;
+    const L = String(letter);
+    const pools = [it.options, part.gallery, part.bank];
+    for (const pool of pools) {
+      const o = Array.isArray(pool) && pool.find((x) => x.label === L);
+      if (o) return { text: o.pinyin ? o.pinyin + (o.hanzi ? ' (' + o.hanzi + ')' : '') : null, image: o.image || null };
+    }
+    return null;
+  };
+  const gv = resolve(wq.given);
+  const ev = resolve(wq.expected);
+  if (gv) { if (gv.text) out.givenLabel = wq.given + ' · ' + gv.text; if (gv.image) out.givenImage = gv.image; }
+  if (ev) { if (ev.text) out.expectedLabel = wq.expected + ' · ' + ev.text; if (ev.image) out.expectedImage = ev.image; }
+  return out;
+}
+
 // 🔍 Per-attempt drill-down — returns the wrong-question list for ONE
 // recorded attempt (identified by ts). Used by the maestro Cuaderno
 // "Ver errores" expander.
@@ -2694,7 +2875,7 @@ app.get('/api/admin/student/:code/hsk-attempt', (req, res) => {
   if (!attempt) return res.status(404).json({ ok: false, error: 'attempt not found' });
   // Re-attach question text/media via the shared enrichment helper so
   // the teacher sees content, not bare letters (and R3/R4 resolve too).
-  const sim = (HskSim.SIMULATIONS || {})[attempt.simId];
+  const sim = _simMeta(attempt.simId);   // old HSK or YCT / New HSK (2026-10-12)
   const wrongQs = _enrichHskWrongQs(sim, attempt.wrongQs);
   res.json({
     ok: true,
@@ -2751,7 +2932,7 @@ app.get('/api/homework/my-hsk-attempt/:code', (req, res) => {
   if (!ts) return res.status(400).json({ ok: false, error: 'ts required' });
   const attempt = (rec.hskResults || []).find((r) => r.ts === ts);
   if (!attempt) return res.status(404).json({ ok: false, error: 'attempt not found' });
-  const sim = (HskSim.SIMULATIONS || {})[attempt.simId];
+  const sim = _simMeta(attempt.simId);   // old HSK or YCT / New HSK (2026-10-12)
   // Shared enrichment (see _enrichHskWrongQs): question text + hanzi,
   // narrator audio replay URL, question/option images, and content-rich
   // "elegiste vs correcta" labels — R3/R4 included.

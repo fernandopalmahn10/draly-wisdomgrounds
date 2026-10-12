@@ -30,7 +30,8 @@ the checklist for any new game mode.
   picture? Completely out of context"). Name the word («¿Cómo se dice «hermano mayor» en Chino Mandarín?»), never a bare
   picture with «¿Quién es?»; pronouns go in a scene with the cast («Dralingo saluda a Hamdan: "___ hao!"»). Test-day
   practice comes first: each level has a «Simulacro del examen» world built from his mother file (all the sims of that
-  level with answers, `Downloads\IMPORTANT DOCUMENTS\CURRICULUM STRUCTURE\…`). New HSK 1 waits for its mother file.
+  level with answers, `Downloads\IMPORTANT DOCUMENTS\CURRICULUM STRUCTURE\…`). New HSK 1's Simulacro is built from
+  `core/yct/newhsk1-sim*.json` itself: a new sim needs only its Spanish lines in `core/packs/newhsk1-es.json`.
 - **Pictures with the franchise** (his direction 2026-10-11: "the point is to make toys … irresistible, put them
   everywhere"): question pictures use the glossy 3D toy look and often show the gang (Dralingo in his platform look, Profe
   Fer, Hamdan, Latifa, Aileen, Adric + his dog) in scenes from that world's episode (`claude-setup/cast.md`). No picture
@@ -43,6 +44,18 @@ the checklist for any new game mode.
 - Asset packs (Kenney etc.) live in `C:\Users\ferpa\ClaudeCode\assets-library\` (not in git, never served). Copy only
   the files a game uses into `public/assets/<game>/` and commit those; never commit a whole pack or an installer.
 - Spanish UI first; "Chino Mandarín"; big buttons, kid-friendly feedback; encouragement at the screen edge, never blocking play.
+
+## Levels: YCT mode everywhere (his direction 2026-10-12)
+- "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads
+  `core/levels.js` (yct1 · hsk2 = New HSK 1, its stored id · hsk1 = Old HSK 1). Never hardcode `'hsk1'`/`'hsk2'`
+  pairs again; a new level (YCT 2, New HSK 2…) is one entry there plus its game pack.
+- The level lives on the access code: 1001 Old HSK 1, 1002 New HSK 1, 1003 YCT 1 (EMAAR2026). Teachers change a code's
+  level or add a code in /maestro → Teachers. Kids/parents see "YCT 1" / "New HSK 1" / "HSK 1", never "HSK2".
+- A level with `packTareas` gets its /homework tareas from its curriculum game rounds (one folder per world, played in
+  the trainer's quiz player, graded on the server). YCT 1 uses it; New HSK 1 / Old HSK 1 can switch on with one flag.
+  Desafíos are HSK 1 words: hidden for YCT 1 kids (above their level).
+- Teacher-side exam content is organized like Official Tests: test family (YCT / New HSK / Old HSK) → level → item
+  (his ask 2026-10-12 for sentence practice). Any new teacher list of sims/sentences follows the same folders.
 
 ## Official tests (YCT · HSK · New HSK simulations)
 - Faithful to the real exam: same flow, timing, scoring (YCT /200, pass 120), the ORIGINAL recorded exam audio (not TTS).
@@ -114,6 +127,10 @@ the checklist for any new game mode.
   that level: a themed world with real landmarks (not a plain board), a physical-feeling response to every tap (press,
   bounce, sound), feedback for every right/wrong/streak/capture, and rising excitement toward the end (final countdown,
   big reveals, a celebrated winner). Before calling a game done, compare it side by side with Reinos de Colores.
+- **One join screen** (his correction 2026-10-12: "ugly leftover interface when joining, poorly designed «Únete»"): kids
+  type PIN + name only on the home card «🎮 Entrar al juego» (index.html; the projector's `/?pin=X` link fills the PIN).
+  player.html only shows Dralingo «Entrando al juego…» and sends failures back to that card. Never add a second join
+  form; delete leftover screens instead of leaving them reachable.
 - Build or overhaul any game with the `new-pin-game` skill. Before saying a game works: `node scripts/playtest-bots.js
   --game <type> --bots 20` must PASS (Monopoly is turn-based: waiting kids are expected there), then the
   `classroom-playtester` agent for the real-browser check.

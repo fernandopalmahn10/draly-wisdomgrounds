@@ -125,10 +125,23 @@
     exp7: { id: 'exp7', label: 'EXP7 · Aventura por China',     short: '🚄 EXP7' },
     exp8: { id: 'exp8', label: 'EXP8 · Palabras Mágicas II',    short: '🪄 EXP8' },
   };
+  // 🆕 2026-10-12 — YCT mode: levels come from core/levels.js ('hsk2' is the stored id of New HSK 1). A level whose
+  // tareas are game rounds (YCT 1) gets its folders from the server: one per world of its game pack.
+  const HW_LEVEL_NAMES = { yct1: 'YCT 1', hsk2: 'New HSK 1', hsk1: 'HSK 1' };
+  let hwLevelLabel = '';
+  let hwFolders = null;        // [{ id, label, short }] from /api/homework/enter, or null
   function hwExps() {
+    if (hwFolders) {
+      const out = {};
+      hwFolders.forEach((f) => { out[f.id] = { id: f.id, label: f.label, short: f.short }; });
+      return out;
+    }
     return hwLevel === 'hsk2' ? HSK2_EXPS : (window.WU_EXPERIENCES || {});
   }
-  function hwLevelName() { return hwLevel === 'hsk2' ? 'HSK2' : 'HSK1'; }
+  function hwFolderIds() {
+    return hwFolders ? hwFolders.map((f) => f.id) : ['exp1', 'exp2', 'exp3', 'exp4', 'exp5', 'exp6', 'exp7', 'exp8'];
+  }
+  function hwLevelName() { return hwLevelLabel || HW_LEVEL_NAMES[hwLevel] || 'HSK 1'; }
   // 🎯 SIM TRAINER (HSK1) — 3 tiers · 8 mini-tests built from the REAL
   // simulation bank (images + audio). Meta fetched once after login.
   let trainerMeta = null;   // { tiers, trainers, sessionSize, passPct }
@@ -313,7 +326,11 @@
         avatarOptions = data.avatarOptions || [];
         assignments = data.assignments || [];
         submissions = data.submissions || [];
-        hwLevel = (data.level === 'hsk2') ? 'hsk2' : 'hsk1';
+        // the server's level wins (core/levels.js); the local names only cover an older server
+        hwLevel = (data.levelName && data.level) || (HW_LEVEL_NAMES[data.level] ? data.level : 'hsk1');
+        hwLevelLabel = data.levelName || '';
+        hwFolders = Array.isArray(data.folders) && data.folders.length ? data.folders : null;
+        document.body.classList.toggle('hw-no-daily', data.daily === false);   // Desafíos = HSK 1 words (above YCT 1)
         try {
           localStorage.setItem(STORAGE_ACCESS_KEY, ac);
           localStorage.setItem(STORAGE_CODE_KEY, studentCode);
@@ -1126,6 +1143,7 @@
     if ($('hw-hud-streak')) $('hw-hud-streak').textContent = p.streak;
   }
   function openDaily() {
+    if (document.body.classList.contains('hw-no-daily')) return;   // YCT 1: Desafíos are above their level
     showScreen('daily');
     $('hw-game').classList.add('hidden');
     $('hw-reward').classList.add('hidden');
@@ -2684,12 +2702,13 @@
     const attempts = t.readingTestAttempts || 0;
     const storiesExtra = (attempts > stories) ? ` <small>(${attempts} veces)</small>` : '';
     const wordsLearned = t.wordsLearned || 0;
-    const wordsTotal   = t.wordsTotalHsk1 || 150;
+    // 🆕 2026-10-12 — the level's own word count (null for YCT 1: no fixed list to count against)
+    const wordsTotal   = t.wordsTotal === undefined ? (t.wordsTotalHsk1 || 150) : t.wordsTotal;
     const sentCorrect  = t.sentencesCorrect || 0;
     $('hw-parents-stats').innerHTML = `
       <span class="hw-parents-stat">📚 <strong>${t.assignmentsMastered || 0}</strong>/${t.assignmentsAvailable || 0} tareas dominadas</span>
       <span class="hw-parents-stat">📖 <strong>${stories}</strong> historia${stories === 1 ? '' : 's'} leída${stories === 1 ? '' : 's'}${storiesExtra}</span>
-      <span class="hw-parents-stat hw-parents-stat-pill is-clickable" id="hw-parents-pill-words" role="button">🌱 <strong>${wordsLearned}</strong>/${wordsTotal} palabras aprendidas <small>(estimado · toca para ver)</small></span>
+      <span class="hw-parents-stat hw-parents-stat-pill is-clickable" id="hw-parents-pill-words" role="button">🌱 <strong>${wordsLearned}</strong>${wordsTotal ? '/' + wordsTotal : ''} palabras aprendidas <small>(estimado · toca para ver)</small></span>
       <span class="hw-parents-stat hw-parents-stat-pill is-clickable" id="hw-parents-pill-sentences" role="button">✏️ <strong>${sentCorrect}</strong> oraciones correctas <small>(toca para ver)</small></span>`;
     // 🌱 0→2000 lifetime progress bar — counts every sentence the kid has
     // saved (warmup, daily-bonus, edits). User asked for "papas section
@@ -2826,7 +2845,7 @@
     if (hskWrap) {
       const hskRows = Array.isArray(data.hskResults) ? data.hskResults : [];
       if (!hskRows.length) {
-        hskWrap.innerHTML = '<div class="hw-parents-empty">Aún no ha hecho ninguna simulación del HSK. Estas son los exámenes oficiales que practicamos en clase — cuando tu hijo/a haga su primera, aquí verás el resultado.</div>';
+        hskWrap.innerHTML = '<div class="hw-parents-empty">Aún no ha hecho ninguna simulación del ' + escapeHtml(data.levelExam || 'HSK') + '. Estas son los exámenes oficiales que practicamos en clase — cuando tu hijo/a haga su primera, aquí verás el resultado.</div>';
       } else {
         hskWrap.innerHTML = '';
         hskRows.forEach((r) => {
@@ -2880,7 +2899,9 @@
     // For each experience (EXP1..EXP8): show total word count, list all
     // words with hanzi+pinyin+Spanish, and (if we can infer it) the kid's
     // evidence of having used the word in a graded submission.
-    renderHsk1Levels();
+    renderParentLevelHead(data);
+    if (Array.isArray(data.levelWords)) renderPackLevelWords(data.levelWords);   // YCT 1 / New HSK 1: the level's own words
+    else renderHsk1Levels();
 
     // === CONVERSATION PROMPTS — what to ask the kid ===
     // Concrete questions parents can ask, drawn from each mastered
@@ -3178,6 +3199,69 @@
         </a>`;
     }).join('');
   }
+  // 🆕 2026-10-12 — the «Nivel» block names the kid's real level (YCT 1 / New HSK 1 / HSK 1) and the next one
+  function renderParentLevelHead(data) {
+    const name = data.levelName || 'HSK 1';
+    const head = $('hw-parents-level-current');
+    if (head) head.textContent = (data.levelEmoji || '📘') + ' ' + name + (data.totals && data.totals.wordsTotal ? ' — ' + data.totals.wordsTotal + ' palabras' : '') + ' (nivel actual)';
+    const intro = $('hw-parents-level-intro');
+    if (intro) {
+      intro.textContent = data.level === 'yct1'
+        ? 'YCT 1 es el primer nivel del examen oficial de chino para niños. Las palabras están divididas en los mundos de sus tareas. Practica las que ya estudió en clase.'
+        : data.level === 'hsk2'
+          ? 'New HSK 1 es el primer nivel del nuevo examen oficial de chino. Las palabras están divididas en 8 experiencias temáticas. Practica las que ya estudió en clase.'
+          : 'HSK 1 es el primer nivel del examen oficial de chino. Las palabras están divididas en 8 experiencias temáticas. Practica las que ya estudió en clase.';
+    }
+    const next = $('hw-parents-level-next');
+    if (next) next.textContent = '🔒 ' + (data.levelNext || 'New HSK 1') + ' — próximamente';
+    const nextIntro = $('hw-parents-level-next-intro');
+    if (nextIntro) nextIntro.textContent = 'Cuando termine ' + name + ', desbloqueará ' + (data.levelNext || 'New HSK 1') + '.';
+  }
+  // the words of a pack level, per world (hanzi + pinyin + Spanish, same cards as the HSK 1 list)
+  function renderPackLevelWords(lists) {
+    const wrap = $('hw-parents-levels');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    lists.forEach((w, idx) => {
+      const card = document.createElement('details');
+      card.className = 'hw-level-card';
+      if (idx < 2) card.open = true;
+      card.innerHTML = `
+        <summary class="hw-level-summary">
+          <span class="hw-level-num">${escapeHtml(w.emoji || '📁')}</span>
+          <span class="hw-level-label">${escapeHtml(w.name)}</span>
+          <span class="hw-level-count">${w.words.length} palabras</span>
+          <span class="hw-level-toggle">▼</span>
+        </summary>
+        <div class="hw-level-body">
+          <p class="hw-level-tip">💡 Practica con tu hijo/a: pídele que traduzca cada palabra al chino EN VOZ ALTA. Si no la sabe, dile la pinyin tres veces y que la repita.</p>
+          <div class="hw-level-words">
+            ${w.words.map((x) => `
+              <div class="hw-level-word">
+                ${x.image ? `<img class="hw-level-pic" src="${escapeHtml(x.image)}" alt="" loading="lazy">` : ''}
+                ${x.hz ? `<span class="hw-level-word-hanzi">${escapeHtml(x.hz)}</span>` : ''}
+                <span class="hw-level-word-pinyin">${escapeHtml(x.py || '')}</span>
+                <span class="hw-level-word-es">${escapeHtml(x.es || '')}</span>
+                ${x.hz ? `<button type="button" class="hw-level-speak" data-pin="${escapeHtml(x.hz)}" aria-label="Escuchar ${escapeHtml(x.py || '')}">🔊</button>` : ''}
+              </div>`).join('')}
+          </div>
+        </div>`;
+      wrap.appendChild(card);
+    });
+    bindLevelSpeak(wrap);
+  }
+  function bindLevelSpeak(wrap) {
+    if (wrap._speakBound) return;
+    wrap._speakBound = true;
+    wrap.addEventListener('click', (e) => {
+      const b = e.target.closest('.hw-level-speak');
+      if (!b) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const pin = b.getAttribute('data-pin') || '';
+      if (pin) speakChinese(pin, b);
+    });
+  }
   // === HSK1 Levels render ===
   // Shows EXP1..EXP8 with word counts + expandable word lists. The
   // parent can pop open any level and quiz their kid on those words.
@@ -3224,17 +3308,7 @@
     // used in Modo Curioso (speakChinese object-URL cache + server disk
     // cache, so the 2nd tap is instant and never re-synthesizes). Bound
     // once via delegation because the list is bulk-rendered every open.
-    if (!wrap._speakBound) {
-      wrap._speakBound = true;
-      wrap.addEventListener('click', (e) => {
-        const b = e.target.closest('.hw-level-speak');
-        if (!b) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const pin = b.getAttribute('data-pin') || '';
-        if (pin) speakChinese(pin, b);
-      });
-    }
+    bindLevelSpeak(wrap);
   }
 
   $('hw-parents-back').addEventListener('click', () => {
@@ -3312,16 +3386,17 @@
     codePill.addEventListener('click', () => showStudentCodeBanner(studentCode));
     stack.appendChild(codePill);
     const lvl = document.createElement('span');
-    lvl.className = 'hw-pin-level ' + (hwLevel === 'hsk2' ? 'is-hsk2' : 'is-hsk1');
+    lvl.className = 'hw-pin-level is-' + hwLevel;
     lvl.textContent = hwLevelName();
     stack.appendChild(lvl);
     // Level theme accent on the whole portal (subtle: borders/tabs shift)
     document.body.classList.toggle('hw-lv-hsk2', hwLevel === 'hsk2');
+    document.body.classList.toggle('hw-lv-yct1', hwLevel === 'yct1');
   }
   function removePinnedStack() {
     const s = document.getElementById('hw-pin-stack');
     if (s) s.remove();
-    document.body.classList.remove('hw-lv-hsk2');
+    document.body.classList.remove('hw-lv-hsk2', 'hw-lv-yct1');
   }
   // 🔑 First-login banner: the kid's brand-new student code, BIG, with
   // the instruction to write it in a notebook. Shown once per account
@@ -3534,6 +3609,7 @@
   // mechanics (audio V/F, pick-the-image, banks…), so the coach line
   // adapts to each question's shape.
   function trInstrFor(q) {
+    if (q.instr) return q.instr;
     if (q.tf && q.audio) return 'Escucha 🔊 y mira la imagen. ¿Dicen lo mismo? ✓ o ✕';
     if (q.tf) return 'Lee la palabra. ¿Coincide con la imagen? ✓ o ✕';
     if (q.audio && q.options && q.options[0] && q.options[0].image) return 'Escucha 🔊 y toca la imagen correcta';
@@ -3541,7 +3617,43 @@
     if (q.options && q.options[0] && q.options[0].image) return 'Lee la oración y toca su imagen';
     return 'Lee y elige la respuesta correcta';
   }
-  function runTrainer(sess) {
+  // 🎮 2026-10-12 — a pack-quiz tarea (YCT game round) plays in the trainer's player: same big tiles, dots, bursts and
+  // celebration; each tap is checked by /api/homework/pack-check, the submit re-graded by /api/homework/submit.
+  function runPackQuiz(asg) {
+    const KEYS = 'ABCDEF';
+    const sess = {
+      questions: (asg.questions || []).map((q, i) => ({
+        qid: i, prompt: q.text, image: q.image || null, instr: 'Lee y toca la respuesta correcta',
+        options: q.answers.map((t, k) => ({ key: KEYS[k], text: t })),
+      })),
+    };
+    const textOf = (q, key) => { const o = q.options.find((x) => x.key === key); return o ? o.text : ''; };
+    const folder = hwExps()[asg.expLabel];
+    runTrainer(sess, {
+      kicker: folder ? folder.short + ' ' + folder.label : '🎮 ' + hwLevelName(),
+      title: folder ? asg.title.replace(folder.label + ' · ', '') : asg.title,   // «Ronda 2» under «Mi Familia»
+      assignmentId: asg.id,
+      check(q, key) {
+        return fetch('/api/homework/pack-check', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessCode, assignmentId: asg.id, text: q.prompt, chosen: textOf(q, key) }),
+        }).then((r) => r.json()).then((v) => {
+          // the round changed on the server mid-play (a deploy): never stick the kid, move on to the next question
+          if (!v || !v.ok) { _hwToast('Esta pregunta cambió — sigue con la siguiente'); return { ok: true, correct: false, expected: '' }; }
+          const right = q.options.find((o) => o.text === v.expected);
+          return { ok: true, correct: v.correct, expected: right ? right.key : '' };
+        });
+      },
+      submit(answers) {
+        return fetch('/api/homework/submit', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ accessCode, studentCode, assignmentId: asg.id,
+            answers: answers.map((a) => ({ text: sess.questions[a.qid].prompt, chosen: textOf(sess.questions[a.qid], a.answer) })) }),
+        }).then((r) => r.json());
+      },
+    });
+  }
+  function runTrainer(sess, mode) {
     const old = document.getElementById('hw-tr-play');
     if (old) old.remove();
     const qs = sess.questions;
@@ -3554,8 +3666,9 @@
     ov.id = 'hw-tr-play';
     ov.innerHTML = '<div class="hw-tr-playhead">'
       + '<button type="button" class="hw-tr-back" id="hw-tr-back">←</button>'
-      + '<div class="hw-tr-playtitles"><div class="hw-tr-kicker">' + sess.tier.icon + ' TIER ' + sess.tier.tier + ' · ENTRENAMIENTO</div>'
-      + '<div class="hw-tr-playtitle">' + escapeHtml(sess.expLabel) + '</div></div>'
+      + '<div class="hw-tr-playtitles"><div class="hw-tr-kicker">'
+      + (mode ? escapeHtml(mode.kicker) : sess.tier.icon + ' TIER ' + sess.tier.tier + ' · ENTRENAMIENTO') + '</div>'
+      + '<div class="hw-tr-playtitle">' + escapeHtml(mode ? mode.title : sess.expLabel) + '</div></div>'
       + '<div class="hw-tr-dots" id="hw-tr-dots"></div></div>'
       + '<p class="hw-tr-instr" id="hw-tr-instr"></p>'
       + '<div class="hw-tr-q" id="hw-tr-q"></div>';
@@ -3620,10 +3733,11 @@
       if (locked) return;
       locked = true;
       const given = q.tf ? (btn.dataset.k === 'true') : btn.dataset.k;
-      fetch('/api/homework/trainer/check', {
+      const checking = mode ? mode.check(q, given) : fetch('/api/homework/trainer/check', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accessCode, qid: q.qid, answer: given }),
-      }).then((r) => r.json()).then((v) => {
+      }).then((r) => r.json());
+      checking.then((v) => {
         if (!v || !v.ok) { locked = false; _hwToast('Error — intenta otra vez'); return; }
         answers[idx] = { qid: q.qid, answer: given, ok: v.correct };
         if (v.correct) {
@@ -3648,13 +3762,15 @@
     }
     function finish() {
       trStopAudio();
-      fetch('/api/homework/trainer/submit', {
+      const submitting = mode ? mode.submit(answers) : fetch('/api/homework/trainer/submit', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accessCode, studentCode, tier: sess.tier.tier, exp: sess.exp, answers: answers.map((a) => ({ qid: a.qid, answer: a.answer })) }),
-      }).then((r) => r.json()).then((d) => {
+      }).then((r) => r.json());
+      submitting.then((d) => {
         const score = d && d.ok ? d.score : Math.round((rightCount / qs.length) * 100);
-        if (d && d.ok) submissions.push({ assignmentId: 'trainer-t' + sess.tier.tier + '-' + sess.exp, score: d.score, total: d.total, ts: Date.now() });
-        const pass = score >= (trainerMeta ? trainerMeta.passPct : 80);
+        const asgId = mode ? mode.assignmentId : 'trainer-t' + sess.tier.tier + '-' + sess.exp;
+        if (d && d.ok) submissions.push({ assignmentId: asgId, score: d.score, total: d.total, ts: Date.now() });
+        const pass = score >= (!mode && trainerMeta ? trainerMeta.passPct : HW_PASS_PCT);
         epicCelebration({
           score: score, right: rightCount, of: qs.length, pass: pass,
           onClose: function () { ov.remove(); renderList(); },
@@ -3777,9 +3893,9 @@
     }
     grid.classList.remove('hidden');
     grid.innerHTML = '';
-    const exps = hwExps();   // HSK1 or HSK2 experiencias by level
+    const exps = hwExps();   // the level's folders: experiencias (HSK) or worlds (YCT)
     const showDone = currentTab === 'done';
-    ['exp1','exp2','exp3','exp4','exp5','exp6','exp7','exp8'].forEach((expId) => {
+    hwFolderIds().forEach((expId) => {
       const exp = exps[expId];
       if (!exp) return;
       const eAssigns = assignments.filter((a) => a.expLabel === expId);
@@ -3840,6 +3956,7 @@
       return showDone ? passed : !passed;
     });
     $('hw-sec-tareas').classList.toggle('hidden', list.length === 0);
+    $('hw-sec-tareas').textContent = hwFolders ? '🎮 Rondas de juego' : '📚 Tareas para armar oraciones';
     list.forEach((a) => grid.appendChild(buildAssignmentCard(a)));
     renderReadingsList();
     if (!list.length && !($('hw-list-readings').children.length)) {
@@ -3852,7 +3969,7 @@
   function updateTabCounts() {
     const exps = hwExps();
     let pendingCount = 0, doneCount = 0;
-    ['exp1','exp2','exp3','exp4','exp5','exp6','exp7','exp8'].forEach((expId) => {
+    hwFolderIds().forEach((expId) => {
       if (!exps[expId]) return;
       const eA = assignments.filter((a) => a.expLabel === expId);
       const eR = (readingTests || []).filter((r) => readingExpOf(r) === expId);
@@ -3885,10 +4002,12 @@
       : (passed
           ? `<span class="hw-card-badge done">✓ ${bestScore}/${a.totalPoints} pts</span>`
           : `<span class="hw-card-badge pending">⏳ ${bestScore}/${a.totalPoints} · reintenta (necesitas 80%)</span>`);
-    const expNum = (a.expLabel || '').replace('exp', '');
+    const expNum = /^exp\d+$/.test(a.expLabel || '') ? a.expLabel.slice(3) : '';
     const sameExp = assignments.filter((x) => x.expLabel === a.expLabel);
     const lessonNo = Math.max(1, sameExp.indexOf(a) + 1);
-    const lessonChip = expNum ? `<span class="hw-card-exp">EXP${expNum} / ${lessonNo}</span>` : '';
+    const isQuiz = a.type === 'pack-quiz';
+    const lessonChip = expNum ? `<span class="hw-card-exp">EXP${expNum} / ${lessonNo}</span>`
+      : isQuiz ? '<span class="hw-card-exp">🎮 Juego</span>' : '';
     card.innerHTML = `
       <div class="hw-card-head">
         ${statusBadge}
@@ -3897,7 +4016,7 @@
       ${lessonChip}
       <div class="hw-card-title">${escapeHtml(a.title)}</div>
       <div class="hw-card-sub">${escapeHtml(a.subtitle)}</div>
-      <div class="hw-card-meta">${a.itemCount} oraciones</div>`;
+      <div class="hw-card-meta">${a.itemCount} ${isQuiz ? 'preguntas' : 'oraciones'}</div>`;
     card.dataset.assignmentId = a.id;
     card.addEventListener('click', () => openAssignment(a.id));
     frag.appendChild(card);
@@ -4620,6 +4739,12 @@
           if (asg.type === 'word-sack') {
             renderWordSack(asg);
             window.scrollTo({ top: 0, behavior: 'instant' });
+            return;
+          }
+          // 🎮 YCT game round → the quiz player (overlay over the list)
+          if (asg.type === 'pack-quiz') {
+            if (!Array.isArray(asg.questions) || !asg.questions.length) { _hwToast('Tarea sin contenido. Avisa a tu maestra.'); return; }
+            runPackQuiz(asg);
             return;
           }
           currentAnswers = currentAssignment.items.map(() => '');

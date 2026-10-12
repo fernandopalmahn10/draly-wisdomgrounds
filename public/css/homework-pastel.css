@@ -525,6 +525,7 @@ body.hw-pastel .hw-pin-level {
 }
 body.hw-pastel .hw-pin-level.is-hsk1 { color: var(--hp-ink); background: var(--hp-gold); border-color: var(--hp-ink); }
 body.hw-pastel .hw-pin-level.is-hsk2 { color: var(--hp-ink); background: var(--hp-mint); border-color: var(--hp-ink); }
+body.hw-pastel .hw-pin-level.is-yct1 { color: var(--hp-ink); background: var(--hp-peach); border-color: var(--hp-ink); }
 /* never cover a screen's own header: the other screens start below the stack
    (the list header leaves room on its right instead, see .hw-list-header-id) */
 @media (max-width: 1220px) {

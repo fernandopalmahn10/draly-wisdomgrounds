@@ -96,8 +96,9 @@ How to add a game is documented in `docs/GAME_MODES.md`.
 - **Describe la imagen.** Send any picture from the simulations to every screen so the class
   describes it together.
 - **Animations tray.** Send dancing GIFs (Gojo, Yugi, Elsa, Mario, Sonic…) to every kid's screen.
-- **Sentence practice 31–40.** All the reading sentences from the simulations, with the answer bank,
-  to analyse in class by eliminating wrong options.
+- **Sentence practice.** All the reading sentences from the simulations, with the answer bank,
+  to analyse in class by eliminating wrong options. Since 2026-10-12 in folders like Official Tests: YCT (YCT 1 Sims
+  1–5) · New HSK (New HSK 1 Sims 1–2) · Old HSK (HSK 1 Sims 1–10).
 - **🚀 Lanzar juego.** One launcher for every game. It can **force** kids into a session (not just
   invite them).
 - **Live session to selected kids.** Pick who is online and pull them into Modo Maestro.
@@ -105,9 +106,12 @@ How to add a game is documented in `docs/GAME_MODES.md`.
 ### 2.3 Homework portal (`/homework`)
 
 Kids enter with a **class access code** plus **their student code**. The access code also sets
-their level: 1001 is HSK1, 1002 is HSK2.
+their level: 1001 is Old HSK 1, 1002 is New HSK 1, 1003 is YCT 1 (2026-10-12). You can change any code's level, or
+add a code, in /maestro → Teachers. The levels live in one list, `core/levels.js`.
 
-- **Folders:** HSK1 → 8 experiences → activities. Assignments grade themselves; 80% passes.
+- **Folders:** HSK 1 / New HSK 1 → 8 experiences → activities; YCT 1 → its 6 worlds + «Simulacro del examen», each
+  with the YCT 1 game rounds as tareas (same questions and Higgsfield pictures as the pin games). Assignments grade
+  themselves; 80% passes. The parents' view shows the kid's own level and its words.
 - **Personalized tareas** the teacher sends to specific kids.
 - **Mis Oraciones:** the kid's saved sentences plus sentences the teacher sent ("De la maestra"),
   with categories, audio, and tap-a-word flashcards.
@@ -326,7 +330,10 @@ first test of each new family takes longer, and the rest go faster.
   4. `scripts/test-packs.js` and `scripts/stress-packs.js` check that every question is clear and that no wrong option is
      secretly right.
   5. Teachers pick a round in `/packs.html` (test → level → world → round), from every game's «Elegir preguntas».
-  Done so far: YCT 1 and Old HSK 1. New HSK 1 waits for its mother file.
+  Done so far: YCT 1, Old HSK 1 and New HSK 1 (2026-10-12: 8 worlds with all 300 official words + 4 «Simulacro» rounds).
+  New HSK 1's mother file is made from the platform's own sims (`scripts/packs/make_mother_file.js`), and its Simulacro
+  rounds are built straight from `core/yct/newhsk1-sim*.json`: a new sim adds two rounds (Escucha + Lectura) by itself
+  once its Spanish lines are in `core/packs/newhsk1-es.json` (the mother-file script lists any that are missing).
 
 ---
 
@@ -412,7 +419,7 @@ intro is long"), and I'll turn it into exact changes.
 | **June 2026** | 113 | Old HSK 1 Simulations 1–10 as PIN rooms with live monitor and results, mistake review for kids and parents, Cuaderno, push sentences and lesson packs, classrooms, Llevar a casa, security phases 1–2 |
 | **July 2026** | 12 | Simulation 10, sentence-practice sheet 31–40, Emirati local track with real Arabic and audio |
 | **September 2026** | 6 | HSK levels by access code, HSK2 Bolsa de Palabras, Sim Trainer v1–v2, teacher levels and accounts, 🌐 ES→EN toggle |
-| **October 2026** | 4+ | Official Tests folders, YCT1 Simulations 1–2 on the new exam interface, built from screen recordings; the game question packs rebuilt from the mother files (YCT 1 + Old HSK 1, 47 rounds, clear questions, Higgsfield pictures with the gang) |
+| **October 2026** | 4+ | Official Tests folders, YCT1 Simulations 1–2 on the new exam interface, built from screen recordings; the game question packs rebuilt from the mother files (YCT 1 + Old HSK 1, 47 rounds, clear questions, Higgsfield pictures with the gang); New HSK 1 mother file + 35 game rounds; YCT mode across the platform (code 1003, YCT tareas from the game rounds, level picker per code, sentence practice in YCT / New HSK / Old HSK folders); one join screen (the home card) |
 
 ---
 
