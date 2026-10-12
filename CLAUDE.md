@@ -115,7 +115,7 @@ the checklist for any new game mode.
 - This is a large, multi-feature codebase: before adding a mode, read `docs/GAME_MODES.md` and reuse existing room/PIN/
   heartbeat plumbing instead of building parallel systems.
 - **Game roster (his decision 2026-10-10):** Reinos de Colores (new, `kingdoms`), Dragones Pintores (new 2026-10-11,
-  `paint`) + the 5 kept games Mochi Mash, Dàfùwēng ·
+  `paint`), Batalla de Nieve en Ski Dubái (new 2026-10-12, `snow`) + the 5 kept games Mochi Mash, Dàfùwēng ·
   Monopolio Chino, 6-7 Swing, Vuelo del Dragón, Piñata Tigre (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older
   games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:

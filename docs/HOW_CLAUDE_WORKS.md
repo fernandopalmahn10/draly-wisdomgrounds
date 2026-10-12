@@ -63,6 +63,7 @@ skill and must pass the bot playtest (`scripts/playtest-bots.js`) before shippin
 | Game | What it is |
 |---|---|
 | **Reinos de Colores** | Kahoot «Color Kingdoms» rebuilt and improved: right answer = a flag the kid plants on a hex map from the phone; surround zones to flip them, steal tiles, besiege the enemy castle. Dubai version (2026-10-11): five landmarks on the map worth +3/+5 (full-screen moment when one changes hands), two random captains from the gang per round (VS intro, side panels, cameos), Dubai skyline backdrop, the phone zooms onto the tiles you can tap |
+| **Batalla de Nieve en Ski Dubái** | Gimkit 2D-map infection game (`snow`, 2026-10-12, branch only): kids walk their saga avatar around a top-down Dubai on the phone (joystick + «Lanzar»), answer at the 4-colour stations for copos ❄️, throw snowballs; the Hechizo de Hielo makes 2 kids the ice team and 3 ice hits freeze a survivor into it; the projector shows the whole map, the frost bar and the captains. Spec + scorecard `docs/specs/batalla-de-nieve.md` |
 | **Dragones Pintores** | Gimkit «Color Clash» in Dralingo style: each kid flies a red or blue Dralingo over cloud platforms on the phone and paints every cloud it lands on; flying burns fire, «Recargar» + a right answer refills it; the projector shows the whole sky live |
 | **Mochi Mash** | The first game: panda vs kitsune teams tap-battle on quiz answers |
 | **Piñata Tigre** | Two-tiger team smash |
