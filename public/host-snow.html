@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Batalla de Nieve · Anfitrión</title>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/kingdoms.css?v=20261011g">
+  <link rel="stylesheet" href="/css/snow.css?v=20261012d">
+</head>
+<body class="kd-bg kd-dubai sn-host">
+  <div class="sn-snowfall" id="snowfall" aria-hidden="true"></div>
+  <button class="kd-mute" id="mute-btn">🔊 Sonido</button>
+
+  <!-- LOBBY -->
+  <main id="screen-lobby" class="kd-lobby pc-lobby sn-lobby">
+    <h1 class="kd-title kd-display">Batalla de Nieve <span class="sn-title-place">en Ski Dubái</span></h1>
+    <p class="kd-sub">Camina por Dubái, responde en las estaciones y lanza bolas de nieve. ¡Que no te congelen!</p>
+
+    <div class="sn-lobby-row">
+      <div class="kd-pin-card sn-pin-card">
+        <img class="kd-pin-pose" id="lobby-pose" src="/assets/kingdoms/dralingo/jump.webp" alt="">
+        <div>
+          <div class="kd-pin-label">PIN</div>
+          <div class="kd-pin" id="pin-display">····</div>
+        </div>
+        <div class="kd-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
+      </div>
+      <section class="sn-pool">
+        <div class="sn-pool-head"><span>☀️ Supervivientes</span><b id="count-all">0 jugadores</b></div>
+        <div class="sn-chips" id="players-all"></div>
+        <p class="sn-pool-hint">El Hechizo de Hielo elige a 2 al azar a los 10 segundos.</p>
+      </section>
+    </div>
+
+    <div class="kd-lobby-tools">
+      <label class="kd-duration">⏱ Duración
+        <input type="range" id="duration-slider" min="120" max="480" step="30" value="240">
+        <span id="duration-value">4 min</span>
+      </label>
+      <button class="kd-btn go sn-go" id="start-btn" disabled>❄️ ¡Que empiece la batalla!</button>
+    </div>
+    <div class="kd-set" id="set-display">Cargando preguntas…</div>
+
+    <!-- Same three steps the phones show (kids don't read: big pictures, few words). -->
+    <ol class="pc-howto sn-howto">
+      <li class="sn-step-q"><span class="sn-ico-station"><i></i><i></i><i></i><i></i><b>?</b></span><b>Responde en una estación</b><small>cada acierto: +3 copos ❄️</small></li>
+      <li class="sn-step-ball"><span class="sn-ico-ball"></span><b>Lanza bolas de nieve</b><small>cada bola cuesta 1 copo</small></li>
+      <li class="sn-step-ice"><span class="sn-ico-frost"><img id="howto-frost" src="/assets/saga/avatars/aileen.webp" alt=""></span><b>¡Que no te congelen!</b><small>3 golpes de hielo ☀️☀️☀️ y te unes al Equipo Hielo</small></li>
+    </ol>
+    <p class="pc-howto-extra">🎁 Cofre de hielo: +5 · 🦪 Perlas y 🌴 dátiles: +1 · ☀️ Al final ganan los que sigan sin congelar</p>
+  </main>
+
+  <!-- COUNTDOWN: the two captains of this round face off -->
+  <div id="screen-countdown" class="kd-count sn-count hidden">
+    <div class="kd-cap red sn-cap-sun" id="cap-sun"><img id="cap-sun-img" alt=""><div class="kd-cap-tag"><b id="cap-sun-name"></b><span>☀️ Supervivientes</span></div></div>
+    <div class="kd-count-num" id="countdown-num">3</div>
+    <div class="kd-cap gold sn-cap-ice" id="cap-ice"><img id="cap-ice-img" alt=""><div class="kd-cap-tag"><b id="cap-ice-name"></b><span>❄️ Equipo Hielo</span></div></div>
+  </div>
+
+  <!-- ACTIVE -->
+  <main id="screen-active" class="kd-arena hidden">
+    <div class="kd-top">
+      <div class="kd-pin-mini">PIN <span id="active-pin-display">····</span></div>
+      <div class="sn-frost" aria-label="Congelados">
+        <div class="sn-frost-fill" id="frost-fill"></div>
+        <div class="sn-frost-text" id="frost-text">❄️ 0 / 0 congelados</div>
+      </div>
+      <div class="kd-timer" id="timer-display">4:00</div>
+    </div>
+    <div class="pc-host-main sn-host-main">
+      <aside class="kd-side sn-side sun">
+        <div class="kd-side-head"><img class="kd-side-cap" id="side-cap-sun" alt=""><div><div class="kd-side-name">☀️ Supervivientes</div><div class="kd-side-capname" id="side-capname-sun"></div></div></div>
+        <div class="kd-side-tiles"><span id="count-sun">0</span> <small>siguen libres</small></div>
+        <ul class="kd-roster sn-roster" id="roster-sun"></ul>
+      </aside>
+      <div class="pc-host-map sn-map"><canvas id="sn-host-canvas" aria-label="Mapa de Dubái"></canvas>
+        <div class="sn-head-start hidden" id="head-start"><b id="head-start-n">10</b><span>¡Junten copos! El Hechizo de Hielo llega…</span></div>
+      </div>
+      <aside class="kd-side sn-side ice">
+        <div class="kd-side-head"><img class="kd-side-cap" id="side-cap-ice" alt=""><div><div class="kd-side-name">❄️ Equipo Hielo</div><div class="kd-side-capname" id="side-capname-ice"></div></div></div>
+        <div class="kd-side-tiles"><span id="count-ice">0</span> <small>congelados</small></div>
+        <ul class="kd-roster sn-roster" id="roster-ice"></ul>
+      </aside>
+    </div>
+    <div class="kd-bottom">
+      <button class="kd-btn small" id="pause-btn">⏸ Pausa</button>
+      <button class="kd-btn small" id="add-time-btn">+30 s</button>
+      <button class="kd-btn small" id="end-now-btn">Terminar ronda</button>
+    </div>
+  </main>
+
+  <div class="sn-paused hidden" id="paused">
+    <div class="sn-paused-card"><img src="/assets/kingdoms/dralingo/thinking.webp" alt=""><b>⏸ Pausa</b><span>Todos quietos: miren al profe</span>
+      <button class="kd-btn go" id="resume-btn">▶ Seguir jugando</button></div>
+  </div>
+
+  <div class="kd-dralingo" id="dralingo">
+    <img id="dralingo-img" src="/assets/kingdoms/dralingo/flag.webp" alt="Dralingo">
+    <div class="kd-bubble" id="dralingo-say">¡Que empiece la batalla!</div>
+  </div>
+
+  <!-- the Hechizo de Hielo: the first kids of the ice team, full screen -->
+  <div class="sn-spell hidden" id="spell" aria-live="polite">
+    <div class="sn-spell-rays"></div>
+    <div class="sn-spell-title" id="spell-title">¡Hechizo de Hielo!</div>
+    <div class="sn-spell-kids" id="spell-kids"></div>
+    <div class="sn-spell-sub" id="spell-sub">son el Equipo Hielo: ¡corran!</div>
+  </div>
+
+  <!-- END -->
+  <main id="screen-win" class="kd-end sn-end hidden">
+    <div class="kd-win-heroes sn-heroes" id="win-heroes">
+      <img class="kd-crown" id="win-pose" src="/assets/kingdoms/dralingo/champion.webp" alt="">
+      <img class="kd-win-cap" id="win-cap" alt="">
+    </div>
+    <div class="sn-survivors hidden" id="win-survivors"></div>
+    <div class="kd-winner" id="win-banner">¡Sobrevivieron!</div>
+    <div class="kd-why" id="win-why"></div>
+    <div class="kd-final sn-final">
+      <div class="sun"><span>☀️ Supervivientes</span><b id="final-sun">0</b><span>sin congelar</span><div class="kd-final-mvp" id="mvp-sun"></div></div>
+      <div class="ice"><span>❄️ Equipo Hielo</span><b id="final-ice">0</b><span>congelados</span><div class="kd-final-mvp" id="mvp-ice"></div></div>
+    </div>
+    <div class="kd-lb sn-lb" id="leaderboard"></div>
+    <div class="kd-end-tools">
+      <button class="kd-btn" onclick="location.href='/'">🏠 Inicio</button>
+      <button class="kd-btn go" id="play-again-btn">🔄 Otra ronda</button>
+    </div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/cast.js?v=20261011c"></script>
+  <script src="/js/dralingo-fx.js?v=20261011f"></script>
+  <script src="/js/snow-map.js?v=20261012b"></script>
+  <script src="/js/snow-render.js?v=20261012b"></script>
+  <script src="/js/host-snow.js?v=20261012f"></script>
+  <script src="/js/live-game.js?v=20261011c"></script>
+</body>
+</html>

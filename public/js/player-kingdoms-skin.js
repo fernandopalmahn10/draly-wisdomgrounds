@@ -8,7 +8,9 @@
   const POSE = (n) => A + 'dralingo/' + n + '.webp';
   // Team colours on the characters (his rule 2026-10-11): a Fuego kid sees the red Dralingo in both team games.
   const RED_POSES = ['jump', 'flag', 'shocked', 'thinking', 'pointing', 'champion', 'countdown'];
-  const TPOSE = (n) => POSE(n + (ctx && ctx.getTeam() === 'red' && RED_POSES.includes(n) ? '-red' : ''));
+  const TPOSE = (n) => POSE(n + (ctx && game !== 'snow' && ctx.getTeam() === 'red' && RED_POSES.includes(n) ? '-red' : ''));
+  // Batalla de Nieve: no red/blue kingdoms, two sides that change during the round (counts from the sn:* events)
+  let snowInfo = { sun: 0, ice: 0, side: 'sun' };
   let captains = null;           // Reinos de Colores: { red, gold } cast ids of this round's captains
   const Q_MS = 20000;            // time to answer each question
   let ctx = null;
@@ -31,7 +33,8 @@
   function sfx(name, vol) {
     if (muted || !on) return;
     try {
-      const a = (cache[name] && cache[name].paused) ? cache[name] : new Audio(A + name + '.mp3');
+      const url = name.indexOf('/') === 0 ? name : A + name + '.mp3';     // a full path plays as is (snow sounds)
+      const a = (cache[name] && cache[name].paused) ? cache[name] : new Audio(url);
       cache[name] = a;
       a.volume = vol == null ? 0.7 : vol;
       a.currentTime = 0;
@@ -44,7 +47,8 @@
     musicName = name;
     if (muted) return;
     try {
-      music = new Audio(A + name + '.mp3');
+      // Batalla de Nieve has its own chase loop; everything else shares the kingdoms music
+      music = new Audio(game === 'snow' && name === 'music-battle' ? '/assets/snow/music-battle.mp3' : A + name + '.mp3');
       music.loop = true;
       music.volume = vol == null ? 0.35 : vol;
       music.play().catch(() => {});
@@ -79,11 +83,12 @@
     };
   }
 
-  const SKIN_GAMES = ['kingdoms', 'paint'];
+  const SKIN_GAMES = ['kingdoms', 'paint', 'snow'];
   let game = null;
   function setMode(v, gt) {
     if (gt) game = gt;
     document.body.classList.toggle('pc-on', !!v && game === 'paint');
+    document.body.classList.toggle('sn-on', !!v && game === 'snow');
     if (v === on) return;
     on = v;
     document.body.classList.toggle('kd-phone', on);
@@ -113,6 +118,20 @@
   }
   function paintBar() {
     if (!$('kdp-r')) return;
+    const L = document.querySelector('.kdp-side.red'), Rr = document.querySelector('.kdp-side.gold');
+    if (L && L.firstChild) L.firstChild.nodeValue = game === 'snow' ? '☀️ ' : '🔥 ';
+    if (Rr && Rr.lastChild) Rr.lastChild.nodeValue = game === 'snow' ? ' ❄️' : ' 🌊';
+    if (game === 'snow') {
+      // survivors | ice team, and which side I am on right now
+      $('kdp-r').textContent = snowInfo.sun;
+      $('kdp-g').textContent = snowInfo.ice;
+      document.querySelector('.kdp-side.red').classList.toggle('me', snowInfo.side === 'sun');
+      document.querySelector('.kdp-side.gold').classList.toggle('me', snowInfo.side === 'ice');
+      const st = $('kdp-status');
+      st.textContent = snowInfo.side === 'ice' ? 'Eres del Hielo ❄️' : 'Eres superviviente ☀️';
+      st.className = 'kdp-status ' + (snowInfo.side === 'ice' ? 'sn-st-ice' : 'sn-st-sun');
+      return;
+    }
     const team = ctx.getTeam();
     $('kdp-r').textContent = scores.red || 0;
     $('kdp-g').textContent = scores.gold || 0;
@@ -175,11 +194,42 @@
     t.className = 'kdp-team ' + team;
     if ($('kdp-lobby-img')) $('kdp-lobby-img').src = TPOSE('pointing');
     t.textContent = team === 'red' ? '¡Eres del Reino del Fuego! 🔥' : '¡Eres del Reino del Mar! 🌊';
+    if (game === 'snow') { t.className = 'kdp-team sn-team'; t.textContent = '❄️ ¡Batalla de Nieve en Ski Dubái!'; }
     howDecor();
   }
   // Reinos de Colores: kids don't read rules, so the lobby shows the whole game in 3 pictured steps
   // (the same 3 steps the projector shows).
+  // Batalla de Nieve lobby: the character this kid will walk as (their avatar pick) + the 3 pictured steps
+  function snowHow() {
+    const head = document.querySelector('#screen-lobby .lobby-header');
+    let card = $('sn-how');
+    if (game !== 'snow') { if (card) card.remove(); return; }
+    if (!head) return;
+    const M = window.SnowMap;
+    let av = '';
+    try { av = localStorage.getItem('dralyAvatar') || ''; } catch (_) {}
+    const name = ($('lobby-name') && $('lobby-name').textContent) || '';
+    const skin = M ? M.skinFor(av, name) : 'dralingo';
+    const saga = window.Saga && window.Saga.avatar ? window.Saga.avatar(skin) : null;
+    const label = saga ? saga.label.replace(/^[^A-Za-zÁÉÍÓÚÑáéíóúñ]+/, '').trim() : skin;
+    if (!card) {
+      card = document.createElement('div');
+      card.className = 'kdp-how sn-how';
+      card.id = 'sn-how';
+      card.innerHTML = '<div class="sn-you"><img id="sn-you-img" alt=""><span>Vas a jugar como<b id="sn-you-name"></b></span></div>'
+        + '<div class="kdp-how-title">Así se juega</div><ol>'
+        + '<li><span class="sn-ico-station"><i></i><i></i><i></i><i></i><b>?</b></span><span><b>Responde en una estación</b>cada acierto: +3 copos ❄️</span></li>'
+        + '<li><span class="sn-ico-ball"></span><span><b>Lanza bolas de nieve</b>cada bola cuesta 1 copo</span></li>'
+        + '<li><img id="sn-how-frost" class="sn-frost-img" alt=""><span><b>¡Que no te congelen!</b>3 golpes de hielo y eres del Equipo Hielo</span></li>'
+        + '</ol>';
+      head.after(card);
+    }
+    $('sn-you-img').src = '/assets/saga/avatars/' + skin + '.webp';
+    $('sn-how-frost').src = '/assets/saga/avatars/' + skin + '.webp';
+    $('sn-you-name').textContent = label;
+  }
   function howDecor() {
+    snowHow();
     const head = document.querySelector('#screen-lobby .lobby-header');
     let card = $('kdp-how');
     if (game !== 'kingdoms') { if (card) card.remove(); return; }
@@ -221,6 +271,17 @@
     const box = $('kdp-cap');
     if (!box) return;
     const C = window.DralingoCast;
+    if (game === 'snow') {
+      const ok = !!(C && captains && captains.sun);
+      box.classList.toggle('hidden', !ok);
+      if (!ok) return;
+      $('kdp-cap-img').src = C.pose(captains.sun, 'hello');
+      $('kdp-cap-text').innerHTML = '';
+      $('kdp-cap-text').append(document.createTextNode('☀️ ' + (C.fem(captains.sun) ? 'Tu capitana: ' : 'Tu capitán: ')),
+        Object.assign(document.createElement('b'), { textContent: C.name(captains.sun) }),
+        Object.assign(document.createElement('small'), { textContent: ' · ❄️ Hielo: ' + C.name(captains.ice) }));
+      return;
+    }
     const id = captains && ctx && captains[ctx.getTeam()];
     box.classList.toggle('hidden', !(game === 'kingdoms' && C && id));
     if (!(game === 'kingdoms' && C && id)) return;
@@ -245,10 +306,19 @@
     if (correct) {
       const sub = document.createElement('div');
       sub.className = 'kdp-res-sub';
-      sub.textContent = paint
-        ? (paint.blaze ? '¡LLAMARADA! 🔥🔥 Pintas más ancho' : '¡+10 s de fuego! 🔥')
-        : (streak >= 3 && streak % 3 === 0 ? '¡Bandera doble! 🚩🚩' : '¡Ganaste una bandera! 🚩');
+      const sn = r && r.snow;
+      sub.textContent = sn
+        ? (sn.racha ? `¡Racha! +${sn.gained} copos ❄️` : `+${sn.gained} copos ❄️`)
+        : paint
+          ? (paint.blaze ? '¡LLAMARADA! 🔥🔥 Pintas más ancho' : '¡+10 s de fuego! 🔥')
+          : (streak >= 3 && streak % 3 === 0 ? '¡Bandera doble! 🚩🚩' : '¡Ganaste una bandera! 🚩');
       box.appendChild(sub);
+      if (sn && sn.calor) {
+        const w = document.createElement('div');
+        w.className = 'kdp-res-sub sn-warm';
+        w.textContent = '☀️ ¡Recuperaste calor!';
+        box.appendChild(w);
+      }
       if (streak >= 2) {
         const fl = document.createElement('div');
         fl.className = 'kdp-streak';
@@ -264,11 +334,38 @@
       ans.className = 'kdp-res-answer';
       ans.textContent = correctText || '';
       box.append(sub, ans);
+      if (r && r.snow) {
+        const again = document.createElement('div');
+        again.className = 'kdp-res-sub sn-again';
+        again.textContent = '❓ Toca «¡Responder!» otra vez y gana copos';
+        box.appendChild(again);
+      }
     }
+  }
+  // Batalla de Nieve end: survived or frozen, my points, seconds survived, kids I froze
+  function snowEnd(data) {
+    const me = (data && data.me) || {};
+    const emoji = $('end-emoji');
+    emoji.innerHTML = '';
+    const img = document.createElement('img');
+    img.className = 'kdp-end-img' + (me.side === 'ice' ? ' sn-frost-img' : '');
+    img.alt = '';
+    img.src = POSE(me.won ? 'champion' : 'pointing');
+    emoji.appendChild(img);
+    const b = $('end-banner');
+    if (me.side === 'sun') b.textContent = '¡Sobreviviste! ☀️';
+    else if (me.won) b.textContent = '¡El Equipo Hielo ganó! ❄️';
+    else b.textContent = '¡Ganaron los supervivientes!';
+    const teamEl = $('end-team-score'), meEl = $('end-personal-score');
+    if (teamEl && teamEl.parentNode.firstChild) teamEl.parentNode.firstChild.nodeValue = me.side === 'sun' ? 'Sobreviviste: ' : 'Congelaste: ';
+    if (teamEl) teamEl.textContent = me.side === 'sun' ? `toda la ronda (${me.seconds || 0} s)` : `${me.freezes || 0} · aguantaste ${me.seconds || 0} s`;
+    if (meEl && meEl.parentNode.firstChild) meEl.parentNode.firstChild.nodeValue = 'Tus puntos: ';
+    if (meEl) meEl.textContent = (me.score || 0) + ' ⭐';
   }
   function endDecor(data) {
     const emoji = $('end-emoji');
     if (!emoji) return;
+    if (game === 'snow') { snowEnd(data); return; }
     const team = ctx.getTeam();
     const won = data && data.winner === team;
     emoji.innerHTML = '';
@@ -312,6 +409,15 @@
     s.on('kd:init', (d) => { setMode(true, 'kingdoms'); scores = d.teamScores || scores; if (d.captains) captains = d.captains; paintBar(); });
     s.on('kd:captains', (c) => { captains = c; if (on) capDecor(); });
     s.on('pc:init', (d) => { setMode(true, 'paint'); scores = d.teamScores || scores; paintBar(); });
+    // Batalla de Nieve: survivors / ice counts and my side for the question-screen bar
+    const snCounts = (c) => { if (c) { snowInfo.sun = c.sun || 0; snowInfo.ice = c.ice || 0; } };
+    s.on('sn:init', (d) => { setMode(true, 'snow'); snCounts(d.counts); if (d.me) snowInfo.side = d.me.side; if (d.captains) captains = d.captains; paintBar(); });
+    s.on('sn:roster', (d) => { snCounts(d.counts); paintBar(); });
+    s.on('sn:spell', (d) => { snCounts(d.counts); paintBar(); });
+    s.on('sn:moment', (d) => { snCounts(d.counts); paintBar(); });
+    s.on('sn:me', (m) => { if (m.side) snowInfo.side = m.side; paintBar(); });
+    s.on('sn:hit', (h) => { if (h.type === 'freeze') { snowInfo.sun = Math.max(0, snowInfo.sun - 1); snowInfo.ice++; paintBar(); } });
+    s.on('sn:captains', (c) => { captains = c; if (on) capDecor(); });
     s.on('pc:paint', (d) => {
       if (d.teamScores) { scores = d.teamScores; paintBar(); }
       if (d.scores && d.scores[s.id] != null) myPaint = d.scores[s.id];
