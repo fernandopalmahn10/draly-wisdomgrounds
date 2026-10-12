@@ -65,6 +65,10 @@ the checklist for any new game mode.
 - New PDFs arrive in `../TAREAS/` (Cowork copies them there); a SessionStart hook lists any without audio. Build them
   with the `tarea-audio` skill. TAREAS also holds kids' videos: never open, copy, commit or upload them.
 - Commit `content/audios/<id>.json`, `public/assets/audios/<id>/` and `public/assets/audios/catalog.json` together.
+- **Dralingo Dorado** (2026-10-11): about one visit in ten, a golden 3D Dralingo pops up in the corner of /audios
+  (`?dorado=1` forces him, `?dorado=0` never). `public/js/golden/dorado.js` + `css/dorado.css` are hand-written; the other
+  `js/golden/*.js` files come from `../three/golden-dralingo/ship.mjs`: never edit them here, rebuild there. three.js
+  loads from the CDN (import map in audios.html) only when he appears. Silent, corner-only, leaves after 30 s or ×.
 
 ## Pin games (Kahoot-style, inside Draly Wisdom Grounds)
 - Our own live quiz games: teacher hosts, kids join with a PIN, Kahoot-like pacing (question → answer → leaderboard), with
@@ -89,6 +93,11 @@ the checklist for any new game mode.
   ("¡Sin fuego! Responde una pregunta para volar"). Bigger buttons, fewer words, the action named on the button.
 - **Team colours on the characters** (his note 2026-10-11): in team games every kid's character wears its team colour
   (Fuego = red Dralingo, Mar = blue Dralingo) on the phone and on the projector, not only the tiles and scores.
+- **Quality bar = Reinos de Colores** (his words 2026-10-11, after the Dubai upgrade: "like playing a Nintendo Switch game…
+  so premium. The landmarks, the touches, the feedback, the excitement"). Every new game and every overhaul is designed to
+  that level: a themed world with real landmarks (not a plain board), a physical-feeling response to every tap (press,
+  bounce, sound), feedback for every right/wrong/streak/capture, and rising excitement toward the end (final countdown,
+  big reveals, a celebrated winner). Before calling a game done, compare it side by side with Reinos de Colores.
 - Build or overhaul any game with the `new-pin-game` skill. Before saying a game works: `node scripts/playtest-bots.js
   --game <type> --bots 20` must PASS (Monopoly is turn-based: waiting kids are expected there), then the
   `classroom-playtester` agent for the real-browser check.
