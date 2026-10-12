@@ -17,8 +17,32 @@
 // Picture brief for Higgsfield: content/packs/yct1-pictures.json.
 'use strict';
 
-const W = (py, es, img, extra) => Object.assign({ py, es, img }, extra || {});
-const G = (py, es) => ({ py, es, gram: true });
+// hanzi of every word (2026-10-12), keyed «py|es» (ta, he, shi, hao, na, nar have two words). NEVER shown in a game
+// question (core/packs.js only asks py / es): it feeds the parents' word list in /homework and its 🔊 (the voice reads
+// hanzi; toneless pinyin comes out letter by letter).
+const HZ = {
+  'baba|papá': '爸爸', 'mama|mamá': '妈妈', 'gege|hermano mayor': '哥哥', 'jiejie|hermana mayor': '姐姐',
+  'women|nosotros': '我们', 'jia|casa / familia': '家', 'you|tener': '有', 'ai|amar': '爱', 'he|y': '和', 'wo|yo': '我',
+  'ni|tú': '你', 'ta|él': '他', 'ta|ella': '她', 'jiao|llamarse': '叫', 'renshi|conocer (a alguien)': '认识',
+  'shei|¿quién?': '谁', 'de|de (mi, tu, su…)': '的',
+  'bizi|nariz': '鼻子', 'erduo|orejas': '耳朵', 'kou|boca': '口', 'shou|mano': '手', 'toufa|cabello': '头发',
+  'yanjing|ojos': '眼睛', 'chang|largo': '长', 'gao|alto': '高', 'gezi|estatura': '个子', 'da|grande': '大',
+  'xiao|pequeño': '小', 'hen|muy': '很',
+  'gou|perro': '狗', 'mao|gato': '猫', 'niao|pájaro': '鸟', 'yu|pez': '鱼', 'xihuan|gustar': '喜欢', 'kan|mirar / ver': '看',
+  'zhe|este / esto': '这', 'na|ese / eso': '那',
+  'chi|comer': '吃', 'he|beber': '喝', 'mifan|arroz': '米饭', 'miantiao|fideos': '面条', 'niunai|leche': '牛奶',
+  'pingguo|manzana': '苹果', 'shui|agua': '水', 'shangdian|tienda': '商店',
+  'yi|uno': '一', 'er|dos': '二', 'san|tres': '三', 'si|cuatro': '四', 'wu|cinco': '五', 'liu|seis': '六', 'qi|siete': '七',
+  'ba|ocho': '八', 'jiu|nueve': '九', 'shi|diez': '十', 'dian|en punto (la hora)': '点', 'hao|día del mes': '号',
+  'yue|mes': '月', 'xingqi|semana': '星期', 'jintian|hoy': '今天', 'mingtian|mañana': '明天', 'xianzai|ahora': '现在',
+  'sui|años (de edad)': '岁', 'ji|¿cuántos?': '几', 'ge|medida para cosas y personas': '个',
+  'hao|bueno / bien': '好', 'xiexie|gracias': '谢谢', 'zaijian|adiós': '再见', 'gaoxing|feliz': '高兴',
+  'laoshi|maestro / maestra': '老师', 'xuexiao|escuela': '学校', 'Zhongguoren|persona china': '中国人', 'bu|no': '不',
+  'shi|ser / es': '是', 'shenme|¿qué?': '什么', 'na|¿cuál?': '哪', 'nar|¿dónde?': '哪儿', 'zher|aquí': '这儿',
+  'nar|allá': '那儿', 'qu|ir': '去', 'zai|estar en': '在', 'duo|mucho / muchos': '多', 'ma|¿…? (pregunta de sí o no)': '吗',
+};
+const W = (py, es, img, extra) => Object.assign({ py, es, img, hz: HZ[py + '|' + es] }, extra || {});
+const G = (py, es) => ({ py, es, gram: true, hz: HZ[py + '|' + es] });
 
 module.exports = {
   id: 'yct1',

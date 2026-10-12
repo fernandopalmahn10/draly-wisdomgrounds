@@ -430,7 +430,7 @@ const HSK2_ASSIGNMENTS = [
     title: '👨‍👩‍👧 EXP1 · La Familia Grande',
     subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
     expLabel: 'exp1',
-    instructions: 'Tienes una BOLSA de palabras: verbos esenciales + tu familia nueva de HSK2. Combínalas para formar oraciones REALES en chino. ¿Cuántas puedes descubrir? Necesitas 6. 🗣️ Di cada una EN VOZ ALTA.',
+    instructions: 'Tienes una BOLSA de palabras: verbos esenciales + tu familia nueva de New HSK 1. Combínalas para formar oraciones REALES en chino. ¿Cuántas puedes descubrir? Necesitas 6. 🗣️ Di cada una EN VOZ ALTA.',
     goal: 6,
     sack: [
       _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '他', 'él', 'pronoun'),
@@ -447,8 +447,8 @@ const HSK2_ASSIGNMENTS = [
       _expand('wǒ jièshào wǒ de {F}', { F: ['gēge', 'dìdi', 'jiějie', 'mèimei'] })
     ),
     parentInsight: {
-      title: 'Tu hijo/a combina la familia extendida de HSK2',
-      bullets: ['Formó oraciones con 有 (tener), 爱 (amar) y 介绍 (presentar)', 'Usa los hermanos de HSK2: 哥哥, 弟弟, 姐姐, 妹妹', 'Descubrió combinaciones por sí mismo/a — no memorizó'],
+      title: 'Tu hijo/a combina la familia extendida de New HSK 1',
+      bullets: ['Formó oraciones con 有 (tener), 爱 (amar) y 介绍 (presentar)', 'Usa los hermanos de New HSK 1: 哥哥, 弟弟, 姐姐, 妹妹', 'Descubrió combinaciones por sí mismo/a — no memorizó'],
       encouragement: 'Pídele que te presente a la familia en chino: «我介绍我的哥哥».',
     },
   },
@@ -459,7 +459,7 @@ const HSK2_ASSIGNMENTS = [
     title: '🎓 EXP2 · Un Día en la Escuela',
     subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
     expLabel: 'exp2',
-    instructions: 'La bolsa trae los verbos del aula HSK2: entender, saber, pensar, preguntar. Combínalas para decir qué pasa en un examen. Necesitas 6 oraciones válidas. 🗣️ EN VOZ ALTA.',
+    instructions: 'La bolsa trae los verbos del aula New HSK 1: entender, saber, pensar, preguntar. Combínalas para decir qué pasa en un examen. Necesitas 6 oraciones válidas. 🗣️ EN VOZ ALTA.',
     goal: 6,
     sack: [
       _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '她', 'ella', 'pronoun'),
@@ -481,7 +481,7 @@ const HSK2_ASSIGNMENTS = [
       ['wǒ wèn lǎoshī', 'kǎoshì kāishǐ', 'kè kāishǐ', 'lǎoshī yǒu wèntí']
     ),
     parentInsight: {
-      title: 'Tu hijo/a habla del aula con verbos HSK2',
+      title: 'Tu hijo/a habla del aula con verbos New HSK 1',
       bullets: ['Usa 懂 (entender), 知道 (saber) y 觉得 (opinar)', 'Puede decir «no entiendo» y «tengo una pregunta» en chino', 'Formó oraciones sobre exámenes y clases'],
       encouragement: 'Pregúntale «¿dǒng?» cuando le expliques algo — que responda en chino.',
     },
@@ -493,7 +493,7 @@ const HSK2_ASSIGNMENTS = [
     title: '🥢 EXP3 · El Restaurante Chino',
     subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
     expLabel: 'exp3',
-    instructions: 'Como en el restaurante: «我要面条!» La bolsa trae comida HSK2 y los verbos para ordenar. Combina y descubre 6 oraciones válidas. 🗣️ Dilas EN VOZ ALTA como si ordenaras de verdad.',
+    instructions: 'Como en el restaurante: «我要面条!» La bolsa trae comida New HSK 1 y los verbos para ordenar. Combina y descubre 6 oraciones válidas. 🗣️ Dilas EN VOZ ALTA como si ordenaras de verdad.',
     goal: 6,
     sack: [
       _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '他', 'él', 'pronoun'),
@@ -514,8 +514,8 @@ const HSK2_ASSIGNMENTS = [
       ['nǐ děng wǒ', 'wǒ děng nǐ']
     ),
     parentInsight: {
-      title: 'Tu hijo/a ordena comida en chino (HSK2)',
-      bullets: ['Domina «我要…» (quiero…) con la comida de HSK2', 'Distingue 吃 (comer) de 喝 (beber) al combinar', 'Usa 给 (dar), 等 (esperar) y 卖 (vender) en contexto real'],
+      title: 'Tu hijo/a ordena comida en chino (New HSK 1)',
+      bullets: ['Domina «我要…» (quiero…) con la comida de New HSK 1', 'Distingue 吃 (comer) de 喝 (beber) al combinar', 'Usa 给 (dar), 等 (esperar) y 卖 (vender) en contexto real'],
       encouragement: 'En un restaurante, pídele que ordene por ti: «我要牛奶» — ¡déjalo pedir!',
     },
   },
@@ -526,7 +526,7 @@ const HSK2_ASSIGNMENTS = [
     title: '👗 EXP4 · La Tienda de Ropa',
     subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
     expLabel: 'exp4',
-    instructions: 'Estás en el centro comercial: celulares, relojes y colores HSK2. Combina la bolsa para hablar de tus cosas. Necesitas 6 oraciones. 🗣️ EN VOZ ALTA.',
+    instructions: 'Estás en el centro comercial: celulares, relojes y colores New HSK 1. Combina la bolsa para hablar de tus cosas. Necesitas 6 oraciones. 🗣️ EN VOZ ALTA.',
     goal: 6,
     sack: [
       _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '她', 'ella', 'pronoun'),
@@ -547,7 +547,7 @@ const HSK2_ASSIGNMENTS = [
       _expand('{P} chuān {C} de', { P: ['wǒ', 'nǐ', 'tā'], C: ['bái', 'hēi', 'hóng'] })
     ),
     parentInsight: {
-      title: 'Tu hijo/a habla de sus cosas con adjetivos HSK2',
+      title: 'Tu hijo/a habla de sus cosas con adjetivos New HSK 1',
       bullets: ['Usa 新 (nuevo), 找 (buscar) y los colores 白/黑/红', 'Combina el posesivo 的 correctamente', 'Habla de celulares y relojes en chino'],
       encouragement: 'Pregúntale de qué color es su ropa hoy — que responda en chino.',
     },
@@ -593,7 +593,7 @@ const HSK2_ASSIGNMENTS = [
     title: '⚽ EXP6 · Deportes y Salud',
     subtitle: 'Bolsa de palabras · descubre 6 combinaciones válidas',
     expLabel: 'exp6',
-    instructions: 'La cancha HSK2: cantar, bailar, correr, nadar, fútbol y básquet. Combina con 要 (querer), 爱 (amar) y 会 (saber). Necesitas 6 oraciones. 🗣️ EN VOZ ALTA.',
+    instructions: 'La cancha New HSK 1: cantar, bailar, correr, nadar, fútbol y básquet. Combina con 要 (querer), 爱 (amar) y 会 (saber). Necesitas 6 oraciones. 🗣️ EN VOZ ALTA.',
     goal: 6,
     sack: [
       _sackWord('wǒ', '我', 'yo', 'pronoun'), _sackWord('nǐ', '你', 'tú', 'pronoun'), _sackWord('tā', '她', 'ella', 'pronoun'), _sackWord('wǒmen', '我们', 'nosotros', 'pronoun'),
@@ -611,7 +611,7 @@ const HSK2_ASSIGNMENTS = [
     ),
     parentInsight: {
       title: 'Tu hijo/a habla de deportes con 3 verbos modales',
-      bullets: ['Distingue 要 (querer), 爱 (amar) y 会 (saber hacer)', 'Nombra 8 deportes/actividades de HSK2', 'Puede decir «mi salud es buena»: 我身体很好'],
+      bullets: ['Distingue 要 (querer), 爱 (amar) y 会 (saber hacer)', 'Nombra 8 deportes/actividades de New HSK 1', 'Puede decir «mi salud es buena»: 我身体很好'],
       encouragement: 'Pregúntale «nǐ huì yóuyǒng ma?» (¿sabes nadar?) — que responda en chino.',
     },
   },
@@ -644,7 +644,7 @@ const HSK2_ASSIGNMENTS = [
     ),
     parentInsight: {
       title: 'Tu hijo/a arma un viaje por China en chino',
-      bullets: ['Usa los lugares HSK2: 宾馆, 火车站, 机场', 'Domina 坐公共汽车 (tomar el autobús)', 'Construye 从…到… (desde… hasta…)'],
+      bullets: ['Usa los lugares New HSK 1: 宾馆, 火车站, 机场', 'Domina 坐公共汽车 (tomar el autobús)', 'Construye 从…到… (desde… hasta…)'],
       encouragement: 'Jueguen a planear un viaje: «wǒmen qù Běijīng!» — que arme la ruta en chino.',
     },
   },
@@ -675,7 +675,7 @@ const HSK2_ASSIGNMENTS = [
       _expand('{P} měi tiān {V}', { P: ['wǒ', 'nǐ', 'tā'], V: ['qù', 'lái', 'chī', 'wán'] })
     ),
     parentInsight: {
-      title: 'Tu hijo/a conecta ideas con las partículas HSK2',
+      title: 'Tu hijo/a conecta ideas con las partículas New HSK 1',
       bullets: ['Usa 也 (también), 可以 (poder) y 可能 (tal vez)', 'Sabe prohibir con 别 y repetir con 再', 'Pregunta 为什么 (¿por qué?) en oraciones completas'],
       encouragement: 'Dile «bié wán!» (¡no juegues!) en broma — a ver si responde «wèishénme?»',
     },
@@ -708,6 +708,67 @@ HSK2_ASSIGNMENTS.forEach((a) => {
 ASSIGNMENTS.forEach((a) => { if (!a.level) a.level = 'hsk1'; });
 HSK2_ASSIGNMENTS.forEach((a) => ASSIGNMENTS.push(a));
 
+// 🎮 'pack-quiz' tareas (2026-10-12, YCT mode): every round of a level's curriculum game pack (core/packs.js) is a
+// tarea the kid plays alone on the phone — the same questions, pictures and gang as the pin games, one folder per
+// world. Which levels get them: `packTareas` in core/levels.js. Graded on the server with an answer key built here
+// (question text → correct answer; texts are unique within a round and the same in every build).
+const Packs = require('./packs');
+const Levels = require('./levels');
+Levels.LEVELS.filter((lv) => lv.packTareas).forEach((lv) => {
+  const pack = Packs.LEVELS.find((p) => p.id === lv.pack);
+  if (!pack) return;
+  pack.worlds.forEach((world) => world.rounds.forEach((round) => {
+    const packId = `${pack.id}-${world.id}-${round.id}`;
+    const key = new Map();
+    let unsafe = false;
+    for (let i = 0; i < 4; i++) {
+      const qs = Packs.buildRound(pack, world, round);
+      // the key needs unique question texts with one answer each, in every build (scripts/test-packs.js checks too)
+      if (new Set(qs.map((q) => q.text)).size !== qs.length || (key.size && qs.length !== key.size)) unsafe = true;
+      qs.forEach((q) => { if (key.has(q.text) && key.get(q.text) !== q.correct) unsafe = true; key.set(q.text, q.correct); });
+    }
+    if (unsafe) { console.warn('[assignments] pack tarea skipped (repeated or unstable questions):', packId); return; }
+    if (!key.size) return;
+    ASSIGNMENTS.push({
+      id: 'pack-' + packId,
+      type: 'pack-quiz',
+      level: lv.id,
+      expLabel: world.id,                      // folder = the world
+      // the world in the title too: parents, the teacher's Cuaderno and «Ver mis errores» show it outside its folder
+      title: /^Simulacro/.test(round.name) ? round.name : `${world.name} · ${round.name}`,
+      subtitle: round.blurb || world.name,
+      instructions: 'Toca la respuesta correcta. ¡Necesitas 80% para completarla!',
+      pack: packId,
+      key,
+      // what the parents' view says once it is passed (≥80%) — counts as «tarea dominada»
+      parentInsight: world.id === 'simulacro' ? {
+        title: `Tu hijo/a practicó el examen: «${round.name}»`,
+        bullets: ['Respondió preguntas reales del examen oficial', 'Acertó al menos 8 de cada 10'],
+        encouragement: 'Pregúntale qué pregunta del examen le pareció más difícil y por qué.',
+      } : {
+        title: `Tu hijo/a completó «${world.name} · ${round.name}»`,
+        bullets: [round.blurb ? `Practicó: ${round.blurb}` : `Practicó las palabras de «${world.name}»`, 'Acertó al menos 8 de cada 10'],
+        encouragement: `Pídele que te diga en Chino Mandarín las palabras de «${world.name}» que más le gustan.`,
+      },
+    });
+  }));
+});
+// the folders of a level whose tareas come from its pack: [{ id, label, short }] in world order (null otherwise)
+function levelFolders(level) {
+  const lv = Levels.info(level);
+  const pack = lv.packTareas && Packs.LEVELS.find((p) => p.id === lv.pack);
+  return pack ? pack.worlds.map((w) => ({ id: w.id, label: w.name, short: w.emoji })) : null;
+}
+// one play of a pack-quiz tarea: its questions with the answers shuffled and WITHOUT the correct one
+function packQuizQuestions(assignment) {
+  const built = (Packs.loadPack(assignment.pack) || {}).questions || [];
+  return built.map((q) => ({
+    text: q.text,
+    image: q.image && q.image !== 'none' ? q.image : null,
+    answers: q.answers.map((a) => [Math.random(), a]).sort((x, y) => x[0] - y[0]).map((x) => x[1]),
+  }));
+}
+
 // List assignments, optionally filtered by level ('hsk1' | 'hsk2').
 // No argument = ALL (used by health checks and teacher-side reports).
 function listAssignments(level) {
@@ -715,8 +776,9 @@ function listAssignments(level) {
     .filter((a) => !level || (a.level || 'hsk1') === level)
     .map((a) => {
       const isSack = a.type === 'word-sack';
-      const itemCount = isSack ? a.goal : a.items.length;
-      const pointsPerItem = isSack ? Math.round(100 / a.goal) : a.pointsPerItem;
+      const isQuiz = a.type === 'pack-quiz';
+      const itemCount = isSack ? a.goal : isQuiz ? a.key.size : a.items.length;
+      const pointsPerItem = isSack || isQuiz ? Math.round(100 / itemCount) : a.pointsPerItem;
       return {
         id: a.id,
         title: a.title,
@@ -726,7 +788,7 @@ function listAssignments(level) {
         type: a.type || 'sentence-building',
         itemCount,
         pointsPerItem,
-        totalPoints: isSack ? 100 : a.items.length * a.pointsPerItem,
+        totalPoints: isSack || isQuiz ? 100 : a.items.length * a.pointsPerItem,
       };
     });
 }
@@ -769,6 +831,23 @@ function gradeSubmission(assignment, answers) {
     }
     return { score, total: 100, breakdown };
   }
+  // 🎮 pack-quiz: answers = [{ text, chosen }] — the first answer to each question of the key counts.
+  if (assignment.type === 'pack-quiz') {
+    const given = new Map();
+    for (const a of answers.slice(0, 200)) {
+      if (a && assignment.key.has(a.text) && !given.has(a.text)) given.set(a.text, String(a.chosen || '').slice(0, 160));
+    }
+    let right = 0;
+    const breakdown = [...assignment.key].map(([text, expected], i) => {
+      const student = given.get(text) || '';
+      const correct = student === expected;
+      if (correct) right++;
+      return { i, es: text, expected, student, correct, pointsEarned: 0 };
+    });
+    const per = Math.round(100 / assignment.key.size);
+    breakdown.forEach((b) => { if (b.correct) b.pointsEarned = per; });
+    return { score: Math.round((right / assignment.key.size) * 100), total: 100, breakdown };
+  }
   let score = 0;
   const breakdown = assignment.items.map((item, i) => {
     const studentRaw = String(answers[i] || '');
@@ -797,4 +876,6 @@ module.exports = {
   getAssignment,
   gradeSubmission,
   normalize,
+  levelFolders,
+  packQuizQuestions,
 };

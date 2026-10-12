@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const PUBLIC = path.join(__dirname, '..', 'public');
-const LEVELS = [require('./packs/yct1'), require('./packs/hsk1')];
+const LEVELS = [require('./packs/yct1'), require('./packs/hsk1'), require('./packs/newhsk1')];
 
 // ---------- helpers ----------
 // "Ni hao!" → "nihao", "na'er" → "nar": spelling without tones (homograph and duplicate checks)
@@ -95,7 +95,10 @@ function buildRound(level, world, round) {
 
   const asked = [];      // es2zh: Spanish → pinyin (with the word's own picture)
   const meaning = [];    // zh2es: pinyin → Spanish (no picture: it would give the answer away)
+  const askedEs = new Set();                                   // zher / zheli are both «aquí»: ask «aquí» once per round
   roundWords.filter((x) => !x.gram).forEach((x) => {
+    if (askedEs.has(x.es)) return;
+    askedEs.add(x.es);
     const correct = x.py.toLowerCase();
     asked.push({ kind: 'es2zh', key: plain(x.py), text: `¿Cómo se dice «${x.es}» en Chino Mandarín?`, correct,
       answers: [correct, ...options(correct, [py(roundWords), py(worldWords), py(levelWords)], 3, pinyinClash(x.es))],
@@ -192,9 +195,31 @@ function catalog() {
   return [
     { id: 'yct', name: 'YCT', emoji: '🧒', blurb: 'Exámenes para niños',
       levels: [levelCatalog(LEVELS[0]), { id: 'yct2', name: 'YCT 2', worlds: [] }] },
-    { id: 'newhsk', name: 'New HSK', emoji: '🆕', blurb: 'El HSK nuevo', levels: [{ id: 'nhsk1', name: 'New HSK 1', worlds: [] }] },
+    { id: 'newhsk', name: 'New HSK', emoji: '🆕', blurb: 'El HSK nuevo', levels: [levelCatalog(LEVELS[2])] },
     { id: 'hsk', name: 'HSK', emoji: '📘', blurb: 'El HSK de siempre', levels: [levelCatalog(LEVELS[1])] },
   ];
 }
 
-module.exports = { loadPack, catalog, buildRound, LEVELS, plain };
+// the words of a level per world (parents' «Nivel» list in /homework), grammar words included (they are on the
+// official list): [{ id, name, emoji, words: [{ hz, py, es, image }] }] — image = the word's question picture or null.
+// Built once per level (pictures only change with a deploy, which restarts the server).
+const _wordLists = {};
+function wordLists(levelId) {
+  if (!_wordLists[levelId]) _wordLists[levelId] = buildWordLists(levelId);
+  return _wordLists[levelId];
+}
+function buildWordLists(levelId) {
+  const level = LEVELS.find((l) => l.id === levelId);
+  if (!level) return [];
+  return level.worlds.map((w) => {
+    const seen = new Set();
+    const words = w.rounds.flatMap((r) => r.words || []).filter((x) => !seen.has(x.hz || x.py + '|' + x.es) && seen.add(x.hz || x.py + '|' + x.es))
+      .map((x) => {
+        const image = picture(level, w, x.img);
+        return { hz: x.hz || '', py: x.py, es: x.es, image: image === 'none' ? null : image };
+      });
+    return { id: w.id, name: w.name, emoji: w.emoji, words };
+  }).filter((w) => w.words.length);
+}
+
+module.exports = { loadPack, catalog, buildRound, wordLists, LEVELS, plain };

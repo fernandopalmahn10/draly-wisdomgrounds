@@ -265,11 +265,20 @@
   const urlAutojoin = params.get('autojoin') === '1';
   if (urlPin) $('pin-input').value = urlPin;
   if (urlName) $('name-input').value = urlName;
+  // 2026-10-12 — the join form lives on the home page card only (the old «Únete» screen here is gone)
+  const backToHomeJoin = (err) => {
+    const q = new URLSearchParams();
+    if (urlPin) q.set('pin', urlPin);
+    if (urlName) q.set('name', urlName);
+    if (err) q.set('err', err);
+    location.replace('/' + (q.toString() ? '?' + q.toString() : ''));
+  };
   if (urlPin && urlName && urlAutojoin) {
-    // Auto-fire join
+    // Auto-fire join; a phone that can't reach the game in 15 s goes back to the card instead of waiting forever
     setTimeout(tryJoin, 50);
-  } else if (urlPin) {
-    $('name-input').focus();
+    setTimeout(() => { if (!pin) backToHomeJoin('No pudimos conectar con el juego. Inténtalo otra vez.'); }, 15000);
+  } else {
+    backToHomeJoin('');
   }
 
   $('join-btn').addEventListener('click', tryJoin);
@@ -297,8 +306,11 @@
     })();
     socket.emit('player:join', { pin: p, name, avatar: getMyAvatar(), studentCode: savedCode }, (resp) => {
       if (!resp.ok) {
-        $('join-error').textContent = resp.error || 'No pudimos entrar. Inténtalo otra vez.';
+        const msg = resp.error || 'No pudimos entrar. Inténtalo otra vez.';
+        $('join-error').textContent = msg;
+        const jt = document.querySelector('.joining-text'); if (jt) jt.textContent = '¡Uy!';
         MochiSounds.wrong();
+        setTimeout(() => backToHomeJoin(msg), 1400);   // fix the PIN / name on the home card
         return;
       }
       pin = p;

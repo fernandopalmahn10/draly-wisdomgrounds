@@ -179,7 +179,8 @@ body.hw-bg {
 }
 .m-teacher-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  /* the codes column wraps its level pickers instead of squeezing the name (2026-10-12) */
+  grid-template-columns: minmax(170px, 1fr) minmax(0, 2.4fr) auto;
   gap: 12px;
   align-items: center;
   padding: 12px 14px;
@@ -232,6 +233,32 @@ body.hw-bg {
   padding: 2px 8px;
   letter-spacing: 0.08em;
 }
+/* 🆕 2026-10-12 — classroom codes with their level picker + "add code" */
+.m-teacher-code-row--codes { flex-wrap: wrap; row-gap: 6px; }
+.m-code-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  border-radius: 8px; padding: 2px; transition: background-color .3s ease;
+}
+.m-code-chip.is-saved { background: rgba(102, 187, 106, 0.35); }
+.m-code-level, .m-code-add-level {
+  background: rgba(0, 0, 0, 0.45); color: #f3e6c2;
+  border: 1px solid rgba(255, 224, 130, 0.35); border-radius: 6px;
+  padding: 4px 6px; font: inherit; font-size: 0.8rem; min-height: 32px;
+}
+.m-code-add {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding-left: 10px; margin-left: 4px; border-left: 1px dashed rgba(255, 224, 130, 0.35);
+}
+.m-code-add-label { color: rgba(243, 230, 194, 0.55); white-space: nowrap; }
+.m-level-checks { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 6px; }
+.m-level-checks label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 700; }
+.m-level-checks input { width: 18px; height: 18px; }
+.m-row-c.m-row-level {
+  background: rgba(255, 224, 130, 0.12); color: #ffe082;
+  border: 1px solid rgba(255, 224, 130, 0.3);
+}
+.m-row-level.is-yct1 { background: rgba(255, 138, 101, 0.16); color: #ffab91; border-color: rgba(255, 138, 101, 0.4); }
+.m-row-level.is-hsk2 { background: rgba(79, 195, 247, 0.14); color: #81d4fa; border-color: rgba(79, 195, 247, 0.4); }
 @media (max-width: 640px) {
   .m-teacher-row {
     grid-template-columns: 1fr;

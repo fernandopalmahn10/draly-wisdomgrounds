@@ -21,6 +21,7 @@ const bad = (id, q, why) => { fails++; console.log('FAIL', id, '·', why, '·', 
 
 const show = process.argv.indexOf('--show') > -1 ? process.argv[process.argv.indexOf('--show') + 1] : null;
 const ids = [];
+const firstTexts = {};
 for (const level of Packs.LEVELS) for (const w of level.worlds) for (const r of w.rounds) ids.push(`${level.id}-${w.id}-${r.id}`);
 
 for (const id of ids) {
@@ -46,6 +47,11 @@ for (const id of ids) {
       const n = pack.questions[i + 1];
       if (n && ((q.key && q.key === n.key) || (q.kind === 'es2zh' && plain(q.correct) && plain(q.correct) === plain(n.correct)))) bad(id, { q: q.text, next: n.text }, 'same word twice in a row');
     });
+    // /homework game-round tareas grade by question text (core/assignments.js): texts unique, same set every build
+    const texts = pack.questions.map((q) => q.text);
+    if (new Set(texts).size !== texts.length) bad(id, texts.filter((t, i) => texts.indexOf(t) !== i), 'two questions with the same text');
+    if (run === 0) firstTexts[id] = texts.slice().sort().join('\n');
+    else if (firstTexts[id] !== texts.slice().sort().join('\n')) bad(id, {}, 'the questions change between builds');
   }
   if (show && id === show) Packs.loadPack(id).questions.forEach((q, i) => console.log(String(i + 1).padStart(2), q.text, '→', q.correct, '|', q.answers.filter((a) => a !== q.correct).join(' · '), q.image !== 'none' ? '🖼' : ''));
 }

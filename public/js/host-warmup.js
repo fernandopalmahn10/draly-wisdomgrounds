@@ -399,7 +399,9 @@
     const wrap = $('wu-practice-body');
     if (!wrap || !_practiceData) return;
     $('wu-practice-crumb').style.display = 'none';
-    $('wu-practice-title').textContent = '🧠 Práctica de oraciones · ' + _practiceLevel.toUpperCase();
+    // 🆕 2026-10-12 — YCT + New HSK sims too: level names from the server ('newhsk1' → 'New HSK 1')
+    const _lvName = (lv) => ((_practiceData.levelNames || {})[lv]) || lv.toUpperCase();
+    $('wu-practice-title').textContent = '🧠 Práctica de oraciones · ' + _lvName(_practiceLevel);
     $('wu-practice-sub').textContent = 'Elige la simulación. Analiza cada pregunta con el banco real del examen: elimina las opciones equivocadas hasta que solo quede la respuesta.';
     const levels = _practiceData.levels || {};
     const sims = levels[_practiceLevel] || [];
@@ -413,7 +415,7 @@
         const b = document.createElement('button');
         b.type = 'button';
         b.className = 'btn btn-sm ' + (lv === _practiceLevel ? 'btn-gold' : 'btn-ghost');
-        b.textContent = lv.toUpperCase();
+        b.textContent = _lvName(lv);
         b.addEventListener('click', () => { _practiceLevel = lv; _renderPracticeSims(); });
         tabs.appendChild(b);
       });
@@ -430,12 +432,13 @@
     allCard.innerHTML = '<div class="wu-prac-simemoji">🌊</div><div class="wu-prac-simname">Todas en orden</div><div class="wu-prac-simmeta">' + totalQs + ' oraciones · Sim 1 → ' + sims.length + '</div>';
     allCard.addEventListener('click', () => _renderPracticeDetail(sims, 'Todas las simulaciones'));
     grid.appendChild(allCard);
+    const _range = (sim) => { const ns = [sim.part3, sim.part4].filter(Boolean).flatMap((p) => p.questions.map((q) => q.num)); return ns.length ? Math.min(...ns) + '–' + Math.max(...ns) : ''; };
     sims.forEach((s) => {
       const n = ((s.part3 && s.part3.questions.length) || 0) + ((s.part4 && s.part4.questions.length) || 0);
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'wu-prac-simcard';
-      card.innerHTML = '<div class="wu-prac-simemoji">📖</div><div class="wu-prac-simname">' + escapeHtml(s.title) + '</div><div class="wu-prac-simmeta">' + n + ' oraciones · 31-40</div>';
+      card.innerHTML = '<div class="wu-prac-simemoji">📖</div><div class="wu-prac-simname">' + escapeHtml(s.title) + '</div><div class="wu-prac-simmeta">' + n + ' oraciones · ' + _range(s) + '</div>';
       card.addEventListener('click', () => _renderPracticeDetail([s], s.title));
       grid.appendChild(card);
     });

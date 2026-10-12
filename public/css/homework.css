@@ -858,6 +858,8 @@ body.hw-bg {
   text-align: center;
 }
 .hw-level-icon { font-size: 1.4rem; line-height: 1; margin-bottom: 2px; }
+/* 2026-10-12 — YCT 1 / New HSK 1 word cards show the word's question picture */
+.hw-level-pic { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; margin-bottom: 4px; }
 .hw-level-word-hanzi {
   font-family: 'ZCOOL XiaoWei', serif;
   font-size: 1.3rem;
@@ -4190,6 +4192,10 @@ button.hw-sent-chip:active { transform: scale(0.94); }
 }
 .hw-pin-level.is-hsk1 { color: #ffe082; border-color: rgba(255, 224, 130, 0.8); background: rgba(255, 224, 130, 0.14); }
 .hw-pin-level.is-hsk2 { color: #5be8d1; border-color: rgba(91, 232, 209, 0.8); background: rgba(91, 232, 209, 0.14); }
+.hw-pin-level.is-yct1 { color: #ffab91; border-color: rgba(255, 138, 101, 0.8); background: rgba(255, 138, 101, 0.14); }
+/* YCT 1 (2026-10-12): Desafíos are built from HSK 1 words, above a YCT kid's level */
+body.hw-no-daily #hw-list-daily,
+body.hw-no-daily #hw-hud { display: none !important; }
 /* the old inline chip is gone */
 .hw-level-chip { display: none !important; }
 

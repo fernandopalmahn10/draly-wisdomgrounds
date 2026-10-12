@@ -30,6 +30,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const Levels = require('./levels');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const FILE_PATH = path.join(DATA_DIR, 'teachers.json');
@@ -69,8 +70,8 @@ function seedIfEmpty() {
     displayName:  '🐉 Dralingo 老师',
     email:        null,
     country:      'MX',
-    accessCodes:  ['1001', '1002'],
-    codeLevels:   { '1002': 'hsk2' },   // 1001 defaults to hsk1
+    accessCodes:  ['1001', '1002', '1003'],
+    codeLevels:   { '1002': 'hsk2', '1003': 'yct1' },   // 1001 defaults to hsk1
     isSuperAdmin: true,
     createdAt:    now,
     lastSeen:     now,
@@ -109,18 +110,36 @@ function load() {
       t.accessCodes = Array.isArray(t.accessCodes) ? t.accessCodes : [];
       if (!t.accessCodes.includes('1002')) { t.accessCodes.push('1002'); dirty = true; }
       t.codeLevels = (t.codeLevels && typeof t.codeLevels === 'object') ? t.codeLevels : {};
-      if (t.codeLevels['1002'] !== 'hsk2') { t.codeLevels['1002'] = 'hsk2'; dirty = true; }
+      // only when missing: since 2026-10-12 a code's level can be changed in /maestro and must survive restarts
+      if (!t.codeLevels['1002']) { t.codeLevels['1002'] = 'hsk2'; dirty = true; }
       if (dirty) {
         persistNow();
         console.log('[teachers] seeded HSK2 access code 1002 on EMAAR2026');
       }
     }
+    seedYctCode20261012();
     applyNamedSetup20260923();
   } catch (e) {
     console.warn('[teachers] failed to load, starting fresh:', e.message);
     teachers = {};
     seedIfEmpty();
   }
+}
+
+// 🆕 2026-10-12 (Fernando) — YCT door: access code 1003 (level yct1) on the super-admin, like 1002 for New HSK 1.
+// Idempotent; skipped with a log line if another teacher already owns 1003.
+function seedYctCode20261012() {
+  const t = teachers['EMAAR2026'];
+  if (!t) return;
+  const owner = getByAccessCode('1003');
+  if (owner && owner !== t) { console.warn('[teachers] code 1003 belongs to', owner.teacherId, '- YCT code not seeded'); return; }
+  t.accessCodes = Array.isArray(t.accessCodes) ? t.accessCodes : [];
+  t.codeLevels = (t.codeLevels && typeof t.codeLevels === 'object') ? t.codeLevels : {};
+  if (t.accessCodes.includes('1003') && t.codeLevels['1003']) return;   // already there (or re-levelled by him)
+  if (!t.accessCodes.includes('1003')) t.accessCodes.push('1003');
+  t.codeLevels['1003'] = 'yct1';
+  persistNow();
+  console.log('[teachers] seeded YCT 1 access code 1003 on EMAAR2026');
 }
 
 // 🆕 2026-09-23 (Fernando) — one-time named-teacher setup, idempotent
@@ -135,7 +154,8 @@ function applyNamedSetup20260923() {
   if (han) {
     han.codeLevels = (han.codeLevels && typeof han.codeLevels === 'object') ? han.codeLevels : {};
     for (const c of (han.accessCodes || [])) {
-      if (han.codeLevels[c] !== 'hsk2') { han.codeLevels[c] = 'hsk2'; dirty = true; }
+      // only codes without a level: levels changed in /maestro (2026-10-12) must survive restarts
+      if (!han.codeLevels[c]) { han.codeLevels[c] = 'hsk2'; dirty = true; }
     }
     if (dirty) console.log('[teachers] Ms Han → HSK2 default on classroom code(s):', (han.accessCodes || []).join(', '));
   }
@@ -193,10 +213,10 @@ function levelForAccessCode(code) {
   const norm = String(code || '').trim().toUpperCase();
   const t = getByAccessCode(norm);
   if (t && t.codeLevels && typeof t.codeLevels === 'object') {
-    const lvl = String(t.codeLevels[norm] || '').toLowerCase();
-    if (lvl === 'hsk2' || lvl === 'hsk1') return lvl;
+    const lvl = Levels.normalize(t.codeLevels[norm]);   // yct1 | hsk2 (New HSK 1) | hsk1 — core/levels.js
+    if (lvl) return lvl;
   }
-  return 'hsk1';
+  return Levels.DEFAULT;
 }
 
 // === CODE GENERATION ===
@@ -232,22 +252,19 @@ function generateAccessCode() {
 
 // === CRUD ===
 // Create a new teacher. Returns the new record (with codes filled in).
-// 🆕 2026-09-23 — `levels` picks which classroom codes to mint:
-// ['hsk1'] (default), ['hsk2'], or ['hsk1','hsk2'] → one 4-digit code
-// per level, HSK2 codes registered in codeLevels (hsk1 is the default
-// level so it needs no entry).
+// 🆕 2026-09-23 — `levels` picks which classroom codes to mint: one 4-digit code per level
+// (any of core/levels.js: yct1, hsk2 = New HSK 1, hsk1; default hsk1), each written in codeLevels.
 function createTeacher({ displayName, email, country, levels }) {
   const teacherId = generateTeacherId();
-  const wanted = (Array.isArray(levels) && levels.length ? levels : ['hsk1'])
-    .map((l) => String(l).toLowerCase())
-    .filter((l) => l === 'hsk1' || l === 'hsk2');
-  if (!wanted.length) wanted.push('hsk1');
+  const wanted = [...new Set((Array.isArray(levels) ? levels : []).map(Levels.normalize).filter(Boolean))];
+  if (!wanted.length) wanted.push(Levels.DEFAULT);
   const accessCodes = [];
   const codeLevels = {};
   for (const lvl of wanted) {
-    const code = generateAccessCode();
+    let code = generateAccessCode();
+    while (accessCodes.includes(code)) code = generateAccessCode();   // it only sees saved teachers, not this one
     accessCodes.push(code);
-    if (lvl === 'hsk2') codeLevels[code] = 'hsk2';
+    codeLevels[code] = lvl;
   }
   const now = Date.now();
   const rec = {
@@ -265,6 +282,30 @@ function createTeacher({ displayName, email, country, levels }) {
   scheduleSave();
   return rec;
 }
+// 🆕 2026-10-12 — classroom codes after creation: add one with a level, or change a code's level (the kids who type
+// it next time get that level's tareas). Returns the updated listAll() row, or null.
+function addAccessCode(teacherId, level) {
+  const t = getByTeacherId(teacherId);
+  const lvl = Levels.normalize(level);
+  if (!t || !lvl) return null;
+  const code = generateAccessCode();
+  t.accessCodes = Array.isArray(t.accessCodes) ? t.accessCodes : [];
+  t.codeLevels = (t.codeLevels && typeof t.codeLevels === 'object') ? t.codeLevels : {};
+  t.accessCodes.push(code);
+  t.codeLevels[code] = lvl;
+  scheduleSave();
+  return { code, teacher: row(t) };
+}
+function setCodeLevel(teacherId, code, level) {
+  const t = getByTeacherId(teacherId);
+  const lvl = Levels.normalize(level);
+  const c = String(code || '').trim().toUpperCase();
+  if (!t || !lvl || !(t.accessCodes || []).includes(c)) return null;
+  t.codeLevels = (t.codeLevels && typeof t.codeLevels === 'object') ? t.codeLevels : {};
+  t.codeLevels[c] = lvl;
+  scheduleSave();
+  return row(t);
+}
 // Delete a teacher (super-admin only). Their students get orphaned
 // (classroomCode survives on the records but no teacher owns the code).
 function deleteTeacher(teacherId) {
@@ -281,20 +322,21 @@ function touchLastSeen(teacherId) {
   if (t) { t.lastSeen = Date.now(); scheduleSave(); }
 }
 // List all teachers (super-admin view)
+function row(t) {
+  return {
+    teacherId: t.teacherId,
+    displayName: t.displayName,
+    email: t.email,
+    country: t.country,
+    accessCodes: (t.accessCodes || []).slice(),
+    codeLevels: Object.assign({}, t.codeLevels || {}),
+    isSuperAdmin: !!t.isSuperAdmin,
+    createdAt: t.createdAt,
+    lastSeen: t.lastSeen,
+  };
+}
 function listAll() {
-  return Object.values(teachers)
-    .map((t) => ({
-      teacherId: t.teacherId,
-      displayName: t.displayName,
-      email: t.email,
-      country: t.country,
-      accessCodes: (t.accessCodes || []).slice(),
-      codeLevels: Object.assign({}, t.codeLevels || {}),
-      isSuperAdmin: !!t.isSuperAdmin,
-      createdAt: t.createdAt,
-      lastSeen: t.lastSeen,
-    }))
-    .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+  return Object.values(teachers).map(row).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
 }
 
 // Initial load on require() — wrapped so a disk-permission issue or
@@ -312,6 +354,8 @@ module.exports = {
   isAccessCodeValid,
   levelForAccessCode,
   createTeacher,
+  addAccessCode,
+  setCodeLevel,
   deleteTeacher,
   touchLastSeen,
   listAll,

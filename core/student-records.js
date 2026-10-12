@@ -10,6 +10,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const Levels = require('./levels');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const FILE_PATH = path.join(DATA_DIR, 'student-records.json');
@@ -224,8 +225,8 @@ function setClassroomCode(code, classroomCode) {
 function setLevel(code, level) {
   const rec = get(code);
   if (!rec) return false;
-  const clean = String(level || '').toLowerCase();
-  if (clean !== 'hsk1' && clean !== 'hsk2') return false;
+  const clean = Levels.normalize(level);   // yct1 | hsk2 (New HSK 1) | hsk1 — core/levels.js
+  if (!clean) return false;
   if (rec.level !== clean) {
     rec.level = clean;
     scheduleSave();
@@ -766,6 +767,7 @@ function listAll() {
       avatar: r.avatar || null,
       classroomCode: r.classroomCode || null,
       classroomId: r.classroomId || null,
+      level: Levels.normalize(r.level) || Levels.DEFAULT,   // from the access code they last typed
       country: r.country || null,
       device: r.device || null,
       locale: r.locale || null,
@@ -835,7 +837,20 @@ function logAssignmentSubmission(code, payload) {
   };
   rec.assignmentSubmissions.push(entry);
   if (rec.assignmentSubmissions.length > 100) {
-    rec.assignmentSubmissions = rec.assignmentSubmissions.slice(-100);
+    // 2026-10-12 — keep each tarea's BEST attempt (a passed round must never turn pending again: YCT kids replay 20
+    // game rounds), then fill up to 100 with the most recent attempts; original order kept.
+    const pct = (s) => (Number(s.score) || 0) / (Number(s.total) || 100);
+    const best = new Map();
+    rec.assignmentSubmissions.forEach((s) => {
+      const b = best.get(s.assignmentId);
+      if (!b || pct(s) >= pct(b)) best.set(s.assignmentId, s);
+    });
+    const keep = new Set(best.values());
+    for (const s of rec.assignmentSubmissions.slice().reverse()) {
+      if (keep.size >= 100) break;
+      keep.add(s);
+    }
+    rec.assignmentSubmissions = rec.assignmentSubmissions.filter((s) => keep.has(s));
   }
   rec.lastSeen = Date.now();
   scheduleSave();

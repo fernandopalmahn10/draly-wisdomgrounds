@@ -69,14 +69,17 @@
   <script src="/js/dralingo-fx.js?v=20261011f"></script>
   <script src="/js/super-admin-badge.js?v=20261011c"></script>
   <script>
-    // ?pin=X links jump straight into the player flow
     const params = new URLSearchParams(location.search);
-    if (params.get('pin')) location.href = '/player.html' + location.search;
-
     const $ = (id) => document.getElementById(id);
     const goPlay = (pin, name) => {
       location.href = '/player.html?pin=' + encodeURIComponent(pin) + '&name=' + encodeURIComponent(name) + '&autojoin=1';
     };
+    // 2026-10-12 — this card is THE join screen (the old «Únete» page in player.html is gone): the projector's
+    // ?pin=X link and a failed join (?err=…) land here with the PIN filled in; ?pin + ?name goes straight in.
+    const urlPin = (params.get('pin') || '').replace(/\D/g, '').slice(0, 4);
+    const urlName = (params.get('name') || '').slice(0, 20);
+    const urlErr = params.get('err');
+    if (urlPin && urlName && !urlErr) goPlay(urlPin, urlName);
 
     // Rematch: a game joined in the last 4 hours on this device
     const REMATCH_KEY = 'dralyLastJoin';
@@ -92,10 +95,19 @@
           if (!d || !d.alive) return;
           $('rematch-wrap').hidden = false;
           $('rematch-sub').textContent = 'Como ' + saved.name + ' · PIN ' + saved.pin;
-          $('home-pin').value = saved.pin;
+          if (!urlPin) $('home-pin').value = saved.pin;   // a PIN from the projector link wins
           $('rematch-btn').onclick = () => goPlay(saved.pin, saved.name);
         })
         .catch(() => { /* offline: no rematch button */ });
+    }
+
+    // PIN from the projector link / a failed join: filled in, the name is the only thing left to type
+    if (urlPin) {
+      $('home-pin').value = urlPin;
+      if (urlName) $('home-name').value = urlName;
+      if (urlErr) $('home-error').textContent = urlErr.slice(0, 120);
+      setTimeout(() => { const n = $('home-name'); (n.value ? $('home-join-btn') : n).focus(); }, 60);
+      history.replaceState(null, '', '/');   // a reload doesn't repeat the error
     }
 
     // Join with the typed PIN + name

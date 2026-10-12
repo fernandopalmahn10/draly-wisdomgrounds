@@ -2325,15 +2325,50 @@
     });
   });
   // === Teacher management (super-admin) ===
+  // Class levels a code can have (core/levels.js via /api/admin/levels); 'hsk2' is stored for New HSK 1.
+  let mLevels = [
+    { id: 'yct1', teacherName: 'YCT 1', emoji: '🧒' },
+    { id: 'hsk2', teacherName: 'New HSK 1', emoji: '🆕' },
+    { id: 'hsk1', teacherName: 'Old HSK 1', emoji: '📘' },
+  ];
+  function levelLabel(id) {
+    const l = mLevels.find((x) => x.id === (id || 'hsk1'));
+    return l ? l.teacherName : String(id);
+  }
   function fetchTeachers() {
     const list = $('m-teachers-list');
     list.innerHTML = '<div class="m-empty">Loading teachers…</div>';
-    adminFetch('/api/admin/teachers', pw)
+    adminFetch('/api/admin/levels', pw).then((r) => r.json())
+      .then((d) => { if (d && d.ok && Array.isArray(d.levels)) mLevels = d.levels; })
+      .catch(() => {})
+      .then(() => adminFetch('/api/admin/teachers', pw))
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { list.innerHTML = '<div class="m-empty">Error: ' + (data && data.error || '') + '</div>'; return; }
         renderTeachers(data.teachers || []);
       });
+  }
+  // 🆕 2026-10-12 — change a classroom code's level / add a code with a level (super admin)
+  function setCodeLevel(teacherId, code, level, sel) {
+    sel.disabled = true;
+    adminFetch('/api/admin/teachers/' + encodeURIComponent(teacherId) + '/codes/' + encodeURIComponent(code), pw, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ level }),
+    }).then((r) => r.json()).then((d) => {
+      sel.disabled = false;
+      if (!d || !d.ok) { alert('Error: ' + (d && d.error || '')); fetchTeachers(); return; }
+      sel.closest('.m-code-chip').classList.add('is-saved');
+      setTimeout(() => { const c = sel.closest('.m-code-chip'); if (c) c.classList.remove('is-saved'); }, 1200);
+    }).catch(() => { sel.disabled = false; alert('Network error'); });
+  }
+  function addCode(teacherId, level, displayName) {
+    if (!confirm('Add a new ' + levelLabel(level) + ' classroom code for ' + displayName + '?')) return;
+    adminFetch('/api/admin/teachers/' + encodeURIComponent(teacherId) + '/codes', pw, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ level }),
+    }).then((r) => r.json()).then((d) => {
+      if (!d || !d.ok) { alert('Error: ' + (d && d.error || '')); return; }
+      alert('New classroom code: ' + d.code + ' (' + levelLabel(level) + ')');
+      fetchTeachers();
+    }).catch(() => alert('Network error'));
   }
   function renderTeachers(teachers) {
     const list = $('m-teachers-list');
@@ -2356,14 +2391,37 @@
             <span class="m-teacher-code-label">🔑 Teacher:</span>
             <code class="m-teacher-code">${escapeHtml(t.teacherId)}</code>
           </div>
-          <div class="m-teacher-code-row">
-            <span class="m-teacher-code-label">📚 Classroom:</span>
-            <code class="m-teacher-code">${(t.accessCodes || []).map((c) => escapeHtml(c) + ' (' + (((t.codeLevels || {})[c] === 'hsk2') ? 'HSK2' : 'HSK1') + ')').join(' · ')}</code>
+          <div class="m-teacher-code-row m-teacher-code-row--codes">
+            <span class="m-teacher-code-label">📚 Classroom codes:</span>
+            ${(t.accessCodes || []).map((c) => `<span class="m-code-chip"><code class="m-teacher-code">${escapeHtml(c)}</code>`
+              + `<select class="m-code-level" data-code="${escapeHtml(c)}" aria-label="Level of code ${escapeHtml(c)}">`
+              + mLevels.map((l) => `<option value="${escapeHtml(l.id)}"${((t.codeLevels || {})[c] || 'hsk1') === l.id ? ' selected' : ''}>${escapeHtml(l.emoji + ' ' + l.teacherName)}</option>`).join('')
+              + `</select></span>`).join('')}
+            <span class="m-code-add">
+              <span class="m-code-add-label">New code:</span>
+              <select class="m-code-add-level" aria-label="Level of the new code">${mLevels.map((l) => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.emoji + ' ' + l.teacherName)}</option>`).join('')}</select>
+              <button class="btn btn-ghost btn-sm m-code-add-btn" type="button">➕ Add</button>
+            </span>
           </div>
         </div>
         ${t.isSuperAdmin ? '' : `<button class="btn btn-ghost btn-sm m-teacher-del" data-id="${escapeHtml(t.teacherId)}" type="button">🗑️ Delete</button>`}`;
       const del = row.querySelector('.m-teacher-del');
       if (del) del.addEventListener('click', () => deleteTeacher(t.teacherId, t.displayName));
+      row.querySelectorAll('.m-code-level').forEach((sel) => {
+        const was = sel.value;
+        sel.addEventListener('change', () => {
+          // one code = a whole class: confirm before every kid on it changes level
+          if (!confirm('Change classroom code ' + sel.dataset.code + ' to ' + levelLabel(sel.value) + '?\n\n'
+            + 'Every kid who types ' + sel.dataset.code + ' gets ' + levelLabel(sel.value) + ' homework from their next login.')) {
+            sel.value = was;
+            return;
+          }
+          setCodeLevel(t.teacherId, sel.dataset.code, sel.value, sel);
+        });
+      });
+      row.querySelector('.m-code-add-btn').addEventListener('click', () => {
+        addCode(t.teacherId, row.querySelector('.m-code-add-level').value, t.displayName || t.teacherId);
+      });
       list.appendChild(row);
     });
   }
@@ -2391,9 +2449,8 @@
     const email = $('m-new-teacher-email').value.trim();
     const country = $('m-new-teacher-country').value.trim();
     if (!displayName) { $('m-new-teacher-msg').textContent = 'Enter a name'; return; }
-    const lvlSel = $('m-new-teacher-levels');
-    const levels = lvlSel && lvlSel.value === 'both' ? ['hsk1', 'hsk2']
-                 : lvlSel && lvlSel.value === 'hsk2' ? ['hsk2'] : ['hsk1'];
+    const levels = [...document.querySelectorAll('#m-new-teacher-levels input:checked')].map((i) => i.value);
+    if (!levels.length) { $('m-new-teacher-msg').textContent = 'Pick at least one class level'; return; }
     $('m-new-teacher-msg').textContent = 'Creating…';
     adminFetch('/api/admin/teachers', pw, {
       method: 'POST',
@@ -2407,7 +2464,7 @@
         $('m-result-teacher-id').textContent = data.teacher.teacherId;
         const cl = data.teacher.codeLevels || {};
         $('m-result-access-code').textContent = (data.teacher.accessCodes || [])
-          .map((c) => c + ' (' + (cl[c] === 'hsk2' ? 'HSK2' : 'HSK1') + ')').join(' · ');
+          .map((c) => c + ' (' + levelLabel(cl[c]) + ')').join(' · ');
         $('m-new-teacher-result').classList.remove('hidden');
         fetchTeachers();   // refresh list in background
       });
@@ -2533,6 +2590,7 @@
         <span class="m-row-name">${escapeHtml(s.displayName || 'Anon')}</span>
         <span class="m-row-classroom" title="Classroom" style="font-size:0.78rem;opacity:0.85;white-space:nowrap;">${s.classroomName ? '🎓 ' + escapeHtml(s.classroomName) : ''}</span>
         <span class="m-row-counts">
+          <span class="m-row-c m-row-level is-${escapeHtml(s.level || 'hsk1')}" title="Level (from the classroom code the kid typed)">${escapeHtml(levelLabel(s.level))}</span>
           <span class="m-row-c m-row-daily ${s.dailyDate === (new Date().toISOString().slice(0,10)) ? 'is-done' : ''}" title="Daily challenge"
             >${s.dailyDate === (new Date().toISOString().slice(0,10)) ? '✅' : '⌛'} Today</span>
           <span class="m-row-c" title="DralySwords ⚔️">⚔️ ${s.swords || 0}</span>
@@ -3090,6 +3148,7 @@
   // ════════════════════════════════════════════════════════════════
   let _pracData = null;
   let _pracLevel = 'hsk1';
+  let _pracFamily = null;   // 🆕 2026-10-12 — null = the test-family folders (YCT / New HSK / Old HSK)
   let _pracAudio = null;
   // Minimal play→cache→replay TTS (same /api/tts disk cache the kids use;
   // repeat taps of the same text are served from cache, never re-billed).
@@ -3151,45 +3210,80 @@
       if (_pracView) _renderPracDetail(_pracView.list, _pracView.heading);
     });
   })();
+  // 🆕 2026-10-12 — folders like Official Tests: test family → level → sims
+  function _pracFamilies() {
+    if (Array.isArray(_pracData.families)) return _pracData.families.filter((f) => f.levels.length);
+    const lv = _pracData.levels || {};   // older server: one family with every level
+    return [{ id: 'oldhsk', name: 'HSK', emoji: '📘', levels: Object.keys(lv).map((l) => ({ id: l, name: l.toUpperCase(), sims: lv[l] })) }];
+  }
+  function _pracCount(sims) {
+    return sims.reduce((n, s) => n + ((s.part3 && s.part3.questions.length) || 0) + ((s.part4 && s.part4.questions.length) || 0), 0);
+  }
+  function _pracRange(s) {
+    const nums = [s.part3, s.part4].filter(Boolean).flatMap((p) => p.questions.map((q) => q.num));
+    return nums.length ? Math.min(...nums) + '–' + Math.max(...nums) : '';
+  }
+  function _renderPracFamilies(wrap) {
+    $('m-prac-title').textContent = '🧠 Sentence practice';
+    $('m-prac-sub').textContent = 'Pick the exam: the sentences of its simulations with the real word bank.';
+    const grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;';
+    _pracFamilies().forEach((f) => {
+      const sims = f.levels.flatMap((l) => l.sims);
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'wu-prac-simcard';
+      card.innerHTML = '<div class="wu-prac-simemoji">' + escapeHtml(f.emoji || '📁') + '</div><div class="wu-prac-simname">' + escapeHtml(f.name) + '</div>'
+        + '<div class="wu-prac-simmeta">' + f.levels.map((l) => escapeHtml(l.name)).join(' · ') + ' · ' + sims.length + ' sims · ' + _pracCount(sims) + ' sentences</div>';
+      card.addEventListener('click', () => { _pracFamily = f.id; _pracLevel = f.levels[0].id; _renderPracSims(); });
+      grid.appendChild(card);
+    });
+    wrap.appendChild(grid);
+  }
   function _renderPracSims() {
     const wrap = $('m-prac-body');
     if (!wrap || !_pracData) return;
     $('m-prac-crumb').style.display = 'none';
-    $('m-prac-title').textContent = '🧠 Sentence practice · ' + _pracLevel.toUpperCase();
-    $('m-prac-sub').textContent = 'Pick a simulation. Analyze each question with the real exam bank: eliminate the wrong options until only the answer makes sense.';
-    const levels = _pracData.levels || {};
-    const sims = levels[_pracLevel] || [];
     wrap.innerHTML = '';
-    const lvlKeys = Object.keys(levels);
-    if (lvlKeys.length > 1) {
-      const tabs = document.createElement('div');
-      tabs.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;';
-      lvlKeys.forEach((lv) => {
+    const fam = _pracFamily && _pracFamilies().find((f) => f.id === _pracFamily);
+    if (!fam) { _pracFamily = null; _renderPracFamilies(wrap); return; }
+    const lvl = fam.levels.find((l) => l.id === _pracLevel) || fam.levels[0];
+    _pracLevel = lvl.id;
+    const sims = lvl.sims || [];
+    $('m-prac-title').textContent = '🧠 Sentence practice · ' + lvl.name;
+    $('m-prac-sub').textContent = 'Pick a simulation. Analyze each question with the real exam bank: eliminate the wrong options until only the answer makes sense.';
+    const bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;';
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'btn btn-ghost btn-sm';
+    back.textContent = '← Exams';
+    back.addEventListener('click', () => { _pracFamily = null; _renderPracSims(); });
+    bar.appendChild(back);
+    if (fam.levels.length > 1) {
+      fam.levels.forEach((l) => {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = 'btn btn-sm ' + (lv === _pracLevel ? 'btn-gold' : 'btn-ghost');
-        b.textContent = lv.toUpperCase();
-        b.addEventListener('click', () => { _pracLevel = lv; _renderPracSims(); });
-        tabs.appendChild(b);
+        b.className = 'btn btn-sm ' + (l.id === _pracLevel ? 'btn-gold' : 'btn-ghost');
+        b.textContent = l.name;
+        b.addEventListener('click', () => { _pracLevel = l.id; _renderPracSims(); });
+        bar.appendChild(b);
       });
-      wrap.appendChild(tabs);
     }
+    wrap.appendChild(bar);
     const grid = document.createElement('div');
     grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;';
-    const totalQs = sims.reduce((n, s) =>
-      n + ((s.part3 && s.part3.questions.length) || 0) + ((s.part4 && s.part4.questions.length) || 0), 0);
     const allCard = document.createElement('button');
     allCard.type = 'button';
     allCard.className = 'wu-prac-simcard is-all';
-    allCard.innerHTML = '<div class="wu-prac-simemoji">🌊</div><div class="wu-prac-simname">All in order</div><div class="wu-prac-simmeta">' + totalQs + ' sentences · Sim 1 → ' + sims.length + '</div>';
-    allCard.addEventListener('click', () => _renderPracDetail(sims, 'All simulations'));
+    allCard.innerHTML = '<div class="wu-prac-simemoji">🌊</div><div class="wu-prac-simname">All in order</div><div class="wu-prac-simmeta">' + _pracCount(sims) + ' sentences · Sim 1 → ' + sims.length + '</div>';
+    allCard.addEventListener('click', () => _renderPracDetail(sims, lvl.name + ' · All simulations'));
     grid.appendChild(allCard);
     sims.forEach((s) => {
-      const n = ((s.part3 && s.part3.questions.length) || 0) + ((s.part4 && s.part4.questions.length) || 0);
       const card = document.createElement('button');
       card.type = 'button';
       card.className = 'wu-prac-simcard';
-      card.innerHTML = '<div class="wu-prac-simemoji">📖</div><div class="wu-prac-simname">' + escapeHtml(s.title) + '</div><div class="wu-prac-simmeta">' + n + ' sentences · 31-40</div>';
+      card.innerHTML = '<div class="wu-prac-simemoji">📖</div><div class="wu-prac-simname">' + escapeHtml(s.title) + '</div><div class="wu-prac-simmeta">' + _pracCount([s]) + ' sentences · ' + _pracRange(s) + '</div>';
       card.addEventListener('click', () => _renderPracDetail([s], s.title));
       grid.appendChild(card);
     });

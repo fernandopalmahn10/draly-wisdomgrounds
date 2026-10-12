@@ -12,3 +12,9 @@ Old HSK 1 (2026-10-11), from `mochi-mash/`:
 `hsk1_extract.js` pulled the EXP word lists out of the 9 old uploaded sets (already folded into `core/packs/hsk1.js`).
 YCT 1 was written by hand in `core/packs/yct1.js` (its mother file includes the listening transcripts).
 Tone-less pinyin hides which word was meant (xie = 写/些, he = 和/喝): pin those meanings from the toned mother file.
+
+New HSK 1 mother file (2026-10-12): `node scripts/packs/make_mother_file.js out.html` reads every
+`core/yct/newhsk1-sim*.json` (a new sim is picked up automatically; add its Spanish lines to the `ES` table, the script
+lists any that are missing), then print to PDF with Edge:
+`msedge --headless=new --no-pdf-header-footer --print-to-pdf=out.pdf file:///…/out.html`.
+Saved as `Downloads\IMPORTANT DOCUMENTS\CURRICULUM STRUCTURE\NEW HSK\NEW HSK 1\NEW HSK1 · Simulaciones 1–2 (80 preguntas).pdf`.
