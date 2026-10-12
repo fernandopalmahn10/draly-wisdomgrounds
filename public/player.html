@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/css/reading.css?v=20260603d">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/kingdoms.css?v=20261011h">
+  <link rel="stylesheet" href="/css/snow.css?v=20261012e">
   <!-- Lobby layout + lobby mini-game (the little plane while kids wait).
        These rules used to live in flappy.css, which was deleted with the
        retired Flappy Dragon game (2026-10-10); the lobby itself is shared. -->
@@ -531,6 +532,52 @@
     </div>
   </div>
 
+  <!-- Batalla de Nieve en Ski Dubái: walk your avatar around Dubai (js/player-snow.js). Kids don't read: a 3-step card
+       first, a big prompt over the map saying what to do next, the action named on every button. -->
+  <div id="screen-snow" class="hidden">
+    <div class="sn-hud">
+      <div class="sn-me"><img id="sn-me-img" alt=""><div><b id="sn-me-side">☀️ Superviviente</b><span class="sn-calor" id="sn-calor">☀️☀️☀️</span></div></div>
+      <div class="sn-copos" id="sn-copos"><span class="sn-flake">❄️</span><b id="sn-copos-n">3</b><small>copos</small></div>
+    </div>
+    <div class="sn-bar"><div class="sn-bar-fill" id="sn-bar-fill"></div><span id="sn-bar-text">❄️ 0/0 congelados</span></div>
+    <div class="sn-stage">
+      <canvas id="sn-canvas" class="sn-canvas" aria-label="Mapa de Dubái"></canvas>
+      <div class="sn-frost-edges" id="sn-frost-edges"></div>
+      <button class="sn-prompt hidden" id="sn-prompt" type="button"><img alt="" id="sn-prompt-img"><span class="sn-prompt-words"><b id="sn-prompt-title"></b><small id="sn-prompt-text"></small></span><i class="sn-arrow" id="sn-prompt-arrow">➜</i></button>
+      <div class="sn-toast" id="sn-toast" role="status"></div>
+      <div class="sn-stunned hidden" id="sn-stunned"><span>🧊</span><b>¡Congelado 3 s!</b></div>
+      <div class="sn-pausecard hidden" id="sn-pause"><img src="/assets/kingdoms/dralingo/thinking.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div>
+      <div class="pc-card sn-help hidden" id="sn-help" role="dialog" aria-labelledby="sn-help-title">
+        <img class="pc-card-pose" id="sn-help-me" alt="">
+        <div class="pc-card-title" id="sn-help-title">¡Batalla de Nieve!</div>
+        <ol class="pc-steps">
+          <li><span class="pc-step-ico"><span class="sn-ico-station sm"><i></i><i></i><i></i><i></i><b>?</b></span></span><span>Camina a una <b>estación</b> y responde: <b>+3 ❄️</b></span></li>
+          <li><span class="pc-step-ico"><span class="sn-ico-ball sm"></span></span><span>Toca <b>Lanzar</b>: una bola de nieve cuesta 1 ❄️</span></li>
+          <li><span class="pc-step-ico"><img class="sn-frost-img" id="sn-help-frost" alt=""></span><span>¡Que no te congelen! 3 golpes y eres del <b>Equipo Hielo</b></span></li>
+        </ol>
+        <button class="pc-card-btn" id="sn-help-go" type="button">¡A jugar!</button>
+      </div>
+      <div class="sn-mini hidden" id="sn-mini">
+        <b id="sn-mini-title">🦪 ¡Toca cuando se abra la ostra!</b>
+        <button class="sn-mini-obj" id="sn-mini-obj" type="button">🦪</button>
+        <span class="sn-mini-msg" id="sn-mini-msg"></span>
+      </div>
+    </div>
+    <div class="sn-controls">
+      <div class="sn-joy" id="sn-joy" aria-label="Caminar"><div class="sn-knob" id="sn-knob"></div></div>
+      <button class="sn-use hidden" id="sn-use" type="button"><span id="sn-use-ico">❓</span><b id="sn-use-text">¡Responder!</b></button>
+      <button class="sn-throw" id="sn-throw" type="button" aria-label="Lanzar bola de nieve"><span class="sn-ball-ico"></span><b>Lanzar</b><i id="sn-throw-n">3</i></button>
+    </div>
+    <div class="sn-frozen hidden" id="sn-frozen" role="alertdialog" aria-labelledby="sn-frozen-title">
+      <img class="sn-frost-img" id="sn-frozen-img" alt="">
+      <b id="sn-frozen-title">¡Te congelaron!</b>
+      <span>Ahora eres del <strong>Equipo Hielo</strong>: ¡atrapa a los demás!</span>
+      <small id="sn-frozen-by"></small>
+      <div class="sn-frozen-cap hidden" id="sn-frozen-cap"><img id="sn-frozen-cap-img" alt=""><span><b id="sn-frozen-cap-name"></b><em id="sn-frozen-cap-line"></em></span></div>
+      <i class="sn-frozen-n" id="sn-frozen-n">3</i>
+    </div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -549,13 +596,16 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261011f"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261012t"></script>
   <script src="/js/player-kingdoms.js?v=20261011f"></script>
   <script src="/js/paint-render.js?v=20261011a"></script>
   <script src="/js/player-paint.js?v=20261011e"></script>
+  <script src="/js/snow-map.js?v=20261012b"></script>
+  <script src="/js/snow-render.js?v=20261012b"></script>
+  <script src="/js/player-snow.js?v=20261012f"></script>
   <script src="/js/cast.js?v=20261011c"></script>
   <script src="/js/dralingo-fx.js?v=20261011f"></script>
   <script src="/js/saga.js?v=20261012b"></script>
-  <script src="/js/player.js?v=20261012d"></script>
+  <script src="/js/player.js?v=20261012t"></script>
 </body>
 </html>
