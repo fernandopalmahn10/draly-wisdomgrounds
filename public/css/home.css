@@ -303,3 +303,5 @@ body.home {
   .home-dralingo.boing img { animation: none; }
   .home-hw, .home-btn { transition: none; }
 }
+/* 2026-10-12 — «Instalar la app» pill next to the teachers' link (js/pwa.js shows it only where the app can install) */
+.home-install { margin: 0 6px 8px; background: var(--paper); cursor: pointer; font-family: inherit; }
