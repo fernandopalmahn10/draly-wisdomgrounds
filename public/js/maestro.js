@@ -503,7 +503,7 @@
         // burned bandwidth (loaded for every teacher who opened the
         // picker). Back to static page-1.png until the compressed
         // ~1 MB version is ready.
-        const coverUrl = '/assets/reading/' + s.id + '/page-1.png';
+        const coverUrl = s.coverImage || ('/assets/reading/' + s.id + '/page-1.png');
         card.innerHTML =
           '<div class="m-reading-card-cover" style="background-image:url(\'' + coverUrl + '\');"></div>' +
           '<div class="m-reading-card-body">' +
@@ -1827,19 +1827,9 @@
   // shows an 8-second overlay over whatever the kid was doing.
   // Designed to be the foundation for a future "mascot of the day"
   // auto-rotation that fires server-side on login streaks etc.
-  const GIF_LIBRARY = [
-    { id: 'dralingo', label: '🐉 Dralingo', url: '/assets/dralingo/anim/hello.webp' },
-    { id: 'dralingo-sabio', label: '🧔 Dralingo sabio', url: '/assets/dralingo/anim/wise.webp' },
-    { id: 'dralingo-poder', label: '💪 Poder de Dralingo', url: '/assets/dralingo/anim/power.webp' },
-    { id: 'cr7',    label: '⚽ CR7',     url: '/assets/png-library/CR7%20TRANSPARENT.gif' },
-    { id: 'gojo',   label: '👁 Gojo',    url: '/assets/png-library/GOJO%20TRANSPARENT.gif' },
-    { id: 'yugi',   label: '🃏 Yugi',    url: '/assets/png-library/YUGI%20TRANSPARENT.gif' },
-    { id: 'freddy', label: '🐻 Freddy',  url: '/assets/png-library/FREDDY%20TRANSPARENT.gif' },
-    { id: 'mario',  label: '🍄 Mario',   url: '/assets/png-library/MARIO%20TRANSPARENT.gif' },
-    { id: 'sonic',  label: '💨 Sonic',   url: '/assets/png-library/SONIC%20TRANSPARENT.gif' },
-    { id: 'elsa',   label: '❄️ Elsa',    url: '/assets/png-library/ELSA%20TRANSPARENT.gif' },
-    { id: 'turtle', label: '🐢 Squirtle',url: '/assets/png-library/Squirtle%20animation.gif' },
-  ];
+  // 2026-10-12 — the saga only (public/js/saga.js: Dralingo ×3, camel, Dubai plane, falcon, oryx); brand GIFs gone.
+  // Tiles show the still frame (seven 1 MB animations would load at once otherwise).
+  const GIF_LIBRARY = ((window.Saga && window.Saga.ANIMS) || []).map((x) => ({ id: x.id, label: x.label, url: x.url, still: x.still || x.url }));
   let _gifPick = '';
   let _gifChecked = new Set();
   let _gifOnlineOnly = false;
@@ -1854,7 +1844,7 @@
         'padding:8px;border-radius:12px;background:' + (sel ? 'rgba(91,232,209,0.18)' : 'rgba(255,255,255,0.05)') +
         ';border:2px solid ' + (sel ? 'rgba(91,232,209,0.65)' : 'rgba(255,255,255,0.12)') +
         ';color:#fff;font-weight:800;cursor:pointer;touch-action:manipulation;text-align:center;">' +
-        '<img src="' + g.url + '" alt="" style="max-width:90px;max-height:90px;display:block;margin:0 auto 6px;">' +
+        '<img src="' + g.still + '" alt="" style="max-width:90px;max-height:90px;display:block;margin:0 auto 6px;">' +
         '<span>' + g.label + '</span></button>';
     }).join('');
     grid.querySelectorAll('.m-gif-tile').forEach((b) => {
@@ -3127,9 +3117,11 @@
   }
 
   function renderAvatar(value, size) {
-    if (typeof value === 'string' && /^[a-z]+$/.test(value)) {
+    // saga avatars (WebP), the generic SVGs, and old brand ids shown as their saga replacement (public/js/saga.js)
+    const url = window.Saga ? window.Saga.avatarUrl(value) : null;
+    if (url) {
       const cls = size === 'large' ? ' m-avatar-img-large' : '';
-      return `<img class="m-avatar-img${cls}" src="/assets/avatars/${value}.svg?v=20260528b" alt="">`;
+      return `<img class="m-avatar-img${cls}" src="${escapeHtml(url)}" alt="">`;
     }
     return `<span class="m-avatar-emoji">${escapeHtml(value || '🧒🏼')}</span>`;
   }

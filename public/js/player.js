@@ -1179,16 +1179,9 @@
   let rdTestTimerInt = null;
   let rdTestDeadline = 0;
   // 🎬 ANIMATION VFX — teacher pushes any animation by fxId.
-  // Mirror of the host's ANIMATIONS array — keep in sync.
-  const RD_ANIMATIONS_PLAYER = {
-    gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
-    yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
-    freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
-    mario:  '/assets/png-library/MARIO%20TRANSPARENT.gif',
-    sonic:  '/assets/png-library/SONIC%20TRANSPARENT.gif',
-    elsa:   '/assets/png-library/ELSA%20TRANSPARENT.gif',
-    turtle: '/assets/png-library/Squirtle%20animation.gif',
-  };
+  // 2026-10-12 — the saga's animated stickers (public/js/saga.js), same list as the host
+  const RD_ANIMATIONS_PLAYER = {};
+  ((window.Saga && window.Saga.ANIMS) || []).forEach((a) => { RD_ANIMATIONS_PLAYER[a.id] = a.url; });
   socket.on('rd:vfx', (msg) => {
     if (!msg || !msg.fx) return;
     const url = RD_ANIMATIONS_PLAYER[msg.fx];
@@ -1923,22 +1916,9 @@
   // Animaciones panel in host-warmup. Different from wu:fx (one-shot
   // particle bursts) — these are full-screen transparent GIFs that
   // stay on the kid's screen until the teacher toggles them off.
-  const WU_ANIM_URL_PLAYER = {
-    dralingo: '/assets/dralingo/anim/hello.webp',
-    'dralingo-sabio': '/assets/dralingo/anim/wise.webp',
-    'dralingo-poder': '/assets/dralingo/anim/power.webp',
-    gojo:   '/assets/png-library/GOJO%20TRANSPARENT.gif',
-    yugi:   '/assets/png-library/YUGI%20TRANSPARENT.gif',
-    freddy: '/assets/png-library/FREDDY%20TRANSPARENT.gif',
-    mario:  '/assets/png-library/MARIO%20TRANSPARENT.gif',
-    sonic:  '/assets/png-library/SONIC%20TRANSPARENT.gif',
-    elsa:   '/assets/png-library/ELSA%20TRANSPARENT.gif',
-    turtle: '/assets/png-library/Squirtle%20animation.gif',
-    // 🆕 2026-06-08 (Fernando) — CR7 transparent dancing GIF mirrored
-    // on the player side so the host's CR7 button shows the GIF on
-    // every kid's phone the same way Gojo/Yugi/Freddy/Mario do.
-    cr7:    '/assets/png-library/CR7%20TRANSPARENT.gif',
-  };
+  // 2026-10-12 — the saga's animated stickers only (public/js/saga.js); the brand GIFs are gone
+  const WU_ANIM_URL_PLAYER = {};
+  ((window.Saga && window.Saga.ANIMS) || []).forEach((a) => { WU_ANIM_URL_PLAYER[a.id] = a.url; });
   // 🖼 DESCRIBE-THE-IMAGE — 2026-06-08 (Fernando). Teacher broadcasts a
   // picture from the HSK sims; show it BIG and centered on the kid's
   // phone so the class describes it together. Stays until the teacher
@@ -2014,13 +1994,9 @@
     }
     return layer;
   }
-  const WU_CHARS_PL = {
-    gojo:   { color: '#5ab0ff', glow: '#a98bff', label: '無量空処 ∞' },
-    yuji:   { color: '#ff5a5a', glow: '#ff2d2d', label: '黒閃 BLACK FLASH' },
-    fnaf:   { color: '#ff3b3b', glow: '#7a0000', label: "IT'S ME" },
-    shelly: { color: '#ffd23b', glow: '#ff9f1c', label: '¡SUPER!' },
-    dandy:  { color: '#5be8d1', glow: '#7bdf7b', label: '¡HOLA!' },
-  };
+  // 2026-10-12 — the saga cast (public/js/saga.js BURSTS); the brand characters are gone
+  const WU_CHARS_PL = {};
+  ((window.Saga && window.Saga.BURSTS) || []).forEach((c) => { WU_CHARS_PL[c.id] = c; });
   function playerFireFx(kind) {
     if (kind === 'dralingo') { if (window.DralingoFX) window.DralingoFX.celebrate({ text: '¡Muy bien!', mood: 'win' }); return; }
     if (kind === 'gang') { if (window.DralingoFX) window.DralingoFX.play('gang', { text: '¡Muy bien!', mood: 'win' }); return; }
@@ -2038,60 +2014,14 @@
         <div class="wu-fx-char-lines"></div>
         <div class="wu-fx-char-aura"></div>
         <img class="wu-fx-char-img" alt="${kind}">
-        <div class="wu-fx-char-cry">${c.label}</div>`;
-      const img = el.querySelector('.wu-fx-char-img');
-      _wuTransparentChar(kind, (url) => { img.src = url; });
+        <div class="wu-fx-char-cry">${c.cry}</div>`;
+      el.querySelector('.wu-fx-char-img').src = c.img;
       layer.appendChild(el);
       if (MochiSounds && MochiSounds.combo) MochiSounds.combo();
       setTimeout(() => el.remove(), 3200);
       return;
     }
     return _playerFireFxStd(kind);
-  }
-  // Edge-flood chroma-key: removes a solid background matte from the
-  // character PNGs at load time (downscaled + cached), so they're truly
-  // transparent regardless of any baked-in background. Falls back to the
-  // raw PNG on any failure.
-  const _wuCharCache = {};
-  function _wuTransparentChar(kind, cb) {
-    const raw = '/assets/png-library/' + kind + '.png';
-    // Gojo's white hair sits on a light background — flood-key eats his hair.
-    // He looks better untouched, so skip chroma-key for him.
-    if (kind === 'gojo') { cb(raw); return; }
-    if (_wuCharCache[kind]) { cb(_wuCharCache[kind]); return; }
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const scale = Math.min(1, 680 / Math.max(img.width, img.height));
-        const w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale));
-        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
-        const ctx = cv.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
-        const id = ctx.getImageData(0, 0, w, h); const px = id.data;
-        const at = (x, y) => (y * w + x) * 4;
-        // Sample border-average as background color.
-        let br = 0, bg = 0, bb = 0, n = 0;
-        for (let x = 0; x < w; x += Math.max(1, (w / 60) | 0)) { [0, h - 1].forEach((y) => { const o = at(x, y); if (px[o + 3] > 10) { br += px[o]; bg += px[o + 1]; bb += px[o + 2]; n++; } }); }
-        if (!n) { _wuCharCache[kind] = raw; cb(raw); return; }
-        br /= n; bg /= n; bb /= n;
-        const T = 46 * 46 * 3;
-        const close = (o) => { const dr = px[o] - br, dg = px[o + 1] - bg, db = px[o + 2] - bb; return (dr * dr + dg * dg + db * db) <= T; };
-        // Flood from every border pixel.
-        const stack = []; const seen = new Uint8Array(w * h);
-        for (let x = 0; x < w; x++) { stack.push(x, 0, x, h - 1); }
-        for (let y = 0; y < h; y++) { stack.push(0, y, w - 1, y); }
-        while (stack.length) {
-          const y = stack.pop(), x = stack.pop(); const i = y * w + x;
-          if (x < 0 || y < 0 || x >= w || y >= h || seen[i]) continue;
-          const o = i * 4;
-          if (px[o + 3] === 0 || close(o)) { seen[i] = 1; px[o + 3] = 0; stack.push(x + 1, y, x - 1, y, x, y + 1, x, y - 1); }
-        }
-        ctx.putImageData(id, 0, 0);
-        const url = cv.toDataURL('image/png');
-        _wuCharCache[kind] = url; cb(url);
-      } catch (e) { _wuCharCache[kind] = raw; cb(raw); }
-    };
-    img.onerror = () => { _wuCharCache[kind] = raw; cb(raw); };
-    img.src = raw;
   }
   function _playerFireFxStd(kind) {
     const layer = _wuFxLayer();

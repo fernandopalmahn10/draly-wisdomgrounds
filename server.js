@@ -22,6 +22,7 @@ const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
 const Levels = require('./core/levels');
 const Packs = require('./core/packs');
+const Saga = require('./public/js/saga');   // the saga cast + animations (2026-10-12)
 const Classrooms = require('./core/classrooms');
 const Guides = require('./core/guides');
 const Emirati = require('./core/emirati-vocab');
@@ -1603,20 +1604,9 @@ function _gpRateLimit(req) {
 // Whitelist of GIF IDs the teacher can broadcast — same set as the
 // warmup Animaciones tray. Keeps server in charge of the URL so the
 // client can't shove an arbitrary URL through the inbox.
-const _GIF_LIBRARY = {
-  // Dralingo in his kandura + mustache look (2026-10-11): hello, wise (strokes his mustache), power (wings + fist).
-  dralingo: { url: '/assets/dralingo/anim/hello.webp',    label: '🐉 Dralingo' },
-  'dralingo-sabio': { url: '/assets/dralingo/anim/wise.webp',  label: '🧔 Dralingo sabio' },
-  'dralingo-poder': { url: '/assets/dralingo/anim/power.webp', label: '💪 Poder de Dralingo' },
-  gojo:   { url: '/assets/png-library/GOJO%20TRANSPARENT.gif',     label: '👁 Gojo' },
-  yugi:   { url: '/assets/png-library/YUGI%20TRANSPARENT.gif',     label: '🃏 Yugi' },
-  freddy: { url: '/assets/png-library/FREDDY%20TRANSPARENT.gif',   label: '🐻 Freddy' },
-  mario:  { url: '/assets/png-library/MARIO%20TRANSPARENT.gif',    label: '🍄 Mario' },
-  sonic:  { url: '/assets/png-library/SONIC%20TRANSPARENT.gif',    label: '💨 Sonic' },
-  elsa:   { url: '/assets/png-library/ELSA%20TRANSPARENT.gif',     label: '❄️ Elsa' },
-  turtle: { url: '/assets/png-library/Squirtle%20animation.gif',   label: '🐢 Squirtle' },
-  cr7:    { url: '/assets/png-library/CR7%20TRANSPARENT.gif',      label: '⚽ CR7' },
-};
+// 2026-10-12 — the saga only (public/js/saga.js: Dralingo ×3, camel, Dubai plane, falcon, oryx); brand GIFs gone
+const _GIF_LIBRARY = {};
+Saga.ANIMS.forEach((x) => { _GIF_LIBRARY[x.id] = { url: x.url, label: x.label }; });
 app.post('/api/admin/gif-push', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
@@ -2491,7 +2481,7 @@ function _hwReadingListFor(code) {
       title:     story.title,
       subtitle:  story.subtitle,
       pageCount: story.pages.length,
-      coverImage:  '/assets/reading/' + s.id + '/page-1.png',
+      coverImage:  ReadingStory.pageImageUrl(story, 1),
       available: triedInClass || READING_UNLOCKED_FOR_ALL,
       triedInClass,
       bestScore: best ? best.score : null,
@@ -3160,6 +3150,7 @@ app.post('/api/hsk-sim/room/:pin/fx', (req, res) => {
   const legacy = HSK_ROOMS.get(pin);
   if (!g && !legacy) return res.status(404).json({ ok: false, error: 'room not found' });
   const { fx, on } = req.body || {};
+  if (on && !Saga.anim(String(fx || ''))) return res.status(400).json({ ok: false, error: 'unknown animation' });   // saga only
   const fxState = on ? { id: String(fx || ''), since: Date.now() } : null;
   if (g)      g.hsk.fx = fxState;
   if (legacy) legacy.fx = fxState;
@@ -3325,7 +3316,7 @@ app.get('/api/homework/reading-test/:storyId', (req, res) => {
       sentences:  p.sentences,
       sentencesEs: p.sentencesEs,
       audioUrl:   '/assets/reading/' + story.id + '/page-' + p.pageNum + '.mp3',
-      imageUrl:   '/assets/reading/' + story.id + '/page-' + p.pageNum + '.png',
+      imageUrl:   ReadingStory.pageImageUrl(story, p.pageNum),
     })),
     questions: story.questions.map((q) => ({
       q: q.q,
@@ -6017,6 +6008,7 @@ io.on('connection', (socket) => {
   socket.on('rd:vfx', ({ pin, password, fx, on }) => {
     const g = games[pin];
     if (!readingRequireHost(g, socket, password)) return;
+    if (on && !Saga.anim(String(fx || ''))) return;   // the saga's animations only (public/js/saga.js)
     io.to(pin).emit('rd:vfx', { fx: String(fx || ''), on: !!on });
   });
   // === 📝 TEST MODE ===
@@ -6269,8 +6261,8 @@ io.on('connection', (socket) => {
     if (!g || g.gameType !== 'warmup') return;
     if (!(g.hostId === socket.id && isAdminPassword(password))) return;
     const ok = ['rain', 'confetti', 'zombies', 'moto', 'shake', 'sixseven', 'flash', 'stars', 'tiger',
-                'gojo', 'yuji', 'fnaf', 'shelly', 'dandy', 'dralingo', 'gang'];
-    if (!ok.includes(kind)) return;
+                'dralingo', 'gang'];
+    if (!ok.includes(kind) && !Saga.burst(kind)) return;   // + the saga cast bursts (public/js/saga.js)
     io.to(pin).emit('wu:fx', { kind });
   });
   // 🎬 wu:anim — PERSISTENT animation overlay (Gojo dance GIF, Squirtle,
@@ -6282,8 +6274,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
     if (!(g.hostId === socket.id && isAdminPassword(password))) return;
-    const ok = ['dralingo', 'dralingo-sabio', 'dralingo-poder', 'gojo', 'yugi', 'freddy', 'mario', 'sonic', 'elsa', 'turtle', 'cr7'];   // expand as more transparent GIFs land
-    if (!ok.includes(String(id || ''))) return;
+    if (!Saga.anim(String(id || ''))) return;   // the saga's animations only (public/js/saga.js)
     // Stash the current state on the room so a kid joining late
     // automatically sees whatever's already on.
     if (!g.wuAnim) g.wuAnim = {};

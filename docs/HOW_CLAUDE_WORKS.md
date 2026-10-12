@@ -95,7 +95,9 @@ How to add a game is documented in `docs/GAME_MODES.md`.
   mode, a Spanish/pinyin toggle, and a 5-question reading test per story.
 - **Describe la imagen.** Send any picture from the simulations to every screen so the class
   describes it together.
-- **Animations tray.** Send dancing GIFs (Gojo, Yugi, Elsa, Mario, Sonic…) to every kid's screen.
+- **Animations tray.** Send our own animated saga (Dralingo ×3, the camel, the Dubai plane, the falcon, the oryx) to
+  every kid's screen, plus quick bursts of the cast (Profe Fer, Hamdan, Latifa, Aileen, Adric, Adrian). Since
+  2026-10-12 there are no brand characters anywhere: one list, `public/js/saga.js`.
 - **Sentence practice.** All the reading sentences from the simulations, with the answer bank,
   to analyse in class by eliminating wrong options. Since 2026-10-12 in folders like Official Tests: YCT (YCT 1 Sims
   1–5) · New HSK (New HSK 1 Sims 1–2) · Old HSK (HSK 1 Sims 1–10).

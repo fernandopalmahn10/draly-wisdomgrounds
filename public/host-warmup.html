@@ -267,26 +267,12 @@
            there until toggled off. Different from "Efectos" (brief
            particle bursts) — these are persistent animated character
            takeovers. -->
-      <div class="wu-fx-tray-section">🎬 Animaciones</div>
-      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-dralingo" type="button" data-anim-id="dralingo">🐉 Dralingo</button>
-      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-dralingo-sabio" type="button" data-anim-id="dralingo-sabio">🧔 Dralingo sabio</button>
-      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-dralingo-poder" type="button" data-anim-id="dralingo-poder">💪 Poder de Dralingo</button>
-      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-gojo"   type="button" data-anim-id="gojo">👁 Gojo</button>
-      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-yugi"   type="button" data-anim-id="yugi">🃏 Yugi</button>
-      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-freddy" type="button" data-anim-id="freddy">🐻 Freddy</button>
-      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-mario"  type="button" data-anim-id="mario">🍄 Mario</button>
-      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-sonic"  type="button" data-anim-id="sonic">💨 Sonic</button>
-      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-elsa"   type="button" data-anim-id="elsa">❄️ Elsa</button>
-      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-turtle" type="button" data-anim-id="turtle">🐢 Squirtle</button>
-      <button class="wu-fx-btn wu-fx-anim-btn" id="wu-anim-cr7"    type="button" data-anim-id="cr7">⚽ CR7</button>
+      <!-- 2026-10-12: the saga only (public/js/saga.js): host-warmup.js adds one button per Saga.ANIMS entry after
+           this header and one per Saga.BURSTS cast member after «El equipo». No brand characters. -->
+      <div class="wu-fx-tray-section" id="wu-anim-section">🎬 Animaciones</div>
       <div class="wu-fx-tray-section">⭐ Personajes (efecto rápido)</div>
       <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-dralingo" type="button">🐉 Dralingo sorpresa</button>
       <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-gang" type="button">🕵️ El equipo</button>
-      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-gojo" type="button">🌀 Gojo (burst)</button>
-      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-yuji" type="button">👊 Yuji</button>
-      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-fnaf" type="button">🐻 FNAF</button>
-      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-shelly" type="button">💥 Shelly</button>
-      <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-dandy" type="button">🎩 Dandy</button>
       <button class="wu-fx-btn wu-fx-char-btn" id="wu-fx-sixseven" type="button">🤙 6-7 GRANDE</button>
       <div class="wu-fx-tray-section">✨ Efectos (ambiente)</div>
       <button class="wu-fx-btn" id="wu-fx-confetti" type="button">🎉 Confeti</button>
@@ -353,7 +339,8 @@
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/cast.js?v=20261011c"></script>
   <script src="/js/dralingo-fx.js?v=20261011f"></script>
-  <script src="/js/host-warmup.js?v=20261012a"></script>
+  <script src="/js/saga.js?v=20261012a"></script>
+  <script src="/js/host-warmup.js?v=20261012b"></script>
   <script src="/js/auto-host.js?v=20261011c"></script>
 </body>
 </html>

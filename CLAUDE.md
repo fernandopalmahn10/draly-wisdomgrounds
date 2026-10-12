@@ -18,6 +18,9 @@ the checklist for any new game mode.
   lines shipped without one).
 - **Deploy** with the `deploy-platform` skill (tests → exact staging → commit → push → wait until live → live check).
 - Never commit secrets (`.render-token`, credentials JSON, `data/*` runtime files with student data).
+- **Boot-time migrations only fill what is missing** (load() in core/*.js runs on every deploy and Render wake-up):
+  never force a value a teacher can change in /maestro. 2026-10-12 the review caught two that reset code levels on
+  every boot (1002, Ms Han) the day levels became editable. Use "if missing" or a one-shot flag on the record.
 - **Deleting a CSS/JS file?** First list every class/selector it defines and grep the remaining pages for them; shared
   rules hide in game files (2026-10-10: the avatar picker, timer pulse and music chip lived in zombie/triage/color-clash
   css and broke every lobby). Bot playtests can't see styling: also screenshot a lobby + question screen.
@@ -32,6 +35,11 @@ the checklist for any new game mode.
   practice comes first: each level has a «Simulacro del examen» world built from his mother file (all the sims of that
   level with answers, `Downloads\IMPORTANT DOCUMENTS\CURRICULUM STRUCTURE\…`). New HSK 1's Simulacro is built from
   `core/yct/newhsk1-sim*.json` itself: a new sim needs only its Spanish lines in `core/packs/newhsk1-es.json`.
+- **Only our own saga, never brand characters** (his direction 2026-10-12: "change everything we can find trouble with,
+  with our own saga characters"): no Gojo, Pikachu, Mario, Elsa, CR7… in avatars, animations, bursts, stories or
+  celebrations. One list feeds every roster: `public/js/saga.js` (ANIMS for the warm-up / reading / HSK trays and
+  «GIF to students», BURSTS for the cast quick effects, AVATARS + LEGACY_AVATARS for /homework); the server reads the
+  same file. Add a new character there (art in `public/assets/saga/`, made with the `higgsfield-art` skill).
 - **Pictures with the franchise** (his direction 2026-10-11: "the point is to make toys … irresistible, put them
   everywhere"): question pictures use the glossy 3D toy look and often show the gang (Dralingo in his platform look, Profe
   Fer, Hamdan, Latifa, Aileen, Adric + his dog) in scenes from that world's episode (`claude-setup/cast.md`). No picture

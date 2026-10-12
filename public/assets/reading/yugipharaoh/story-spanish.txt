@@ -1,10 +1,10 @@
 ═════════════════════════════════════════════════════════════════
-  LǍOSHĪ YUGI — Traducción al español
+  LǍOSHĪ DRALINGO — Traducción al español
   El maestro misterioso de la pirámide
 ═════════════════════════════════════════════════════════════════
 
 PÁGINA 1 — La pirámide misteriosa
-  Yugi es un maestro antiguo.
+  Dralingo es un maestro antiguo.
   Yo soy su nuevo estudiante. Estamos dentro de una
   pirámide enorme — las paredes brillan con jeroglíficos
   y caracteres chinos flotando en el aire.
@@ -29,8 +29,8 @@ PÁGINA 5 — ¡Nǐ huì!
   "Tú SÍ puedes leer caracteres." Una luz dorada me envuelve —
   soy un verdadero estudiante de Hànyǔ.
 
-PÁGINA 6 — El regalo del faraón
-  Soy estudiante de Yugi.
+PÁGINA 6 — El regalo del maestro
+  Soy estudiante de Dralingo.
   Amo aprender chino. El maestro me da un amuleto dorado —
   y se desvanece en partículas de luz dorada. Volveré a su
   pirámide algún día.
@@ -41,5 +41,5 @@ DIFICULTAD HSK1 — gramática enseñada (EXP2):
   • Verbo XUÉXÍ (estudiar): "Wǒ xuéxí Hànyǔ"
   • Verbos de aula: dú, xiě, kàn, tīng, shuō (read/write/see/listen/speak)
   • Sustantivos del aula: lǎoshī, xuésheng, shū, zì, Hànyǔ
-  • Posesivo DE: "Wǒ shì xuésheng de Yugi" = "Soy estudiante de Yugi"
+  • Posesivo DE: "Wǒ shì xuésheng de Dralingo" = "Soy estudiante de Dralingo"
 ═════════════════════════════════════════════════════════════════
