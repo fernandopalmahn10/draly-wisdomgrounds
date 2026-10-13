@@ -21,7 +21,7 @@
     flyby: '✈️ Vuelo', meteor: '☄️ Meteoro', gift: '🎁 Regalo', swarm: '🔥 Combo x3', zoom: '💥 Zoom',
     rain: '🌧️ Lluvia de Dralingos', spotlight: '🔦 Foco', dance: '💃 Baile', peek: '👀 Asomo',
     cameo: '🎬 Cameo del equipo', gang: '🕵️ ¡El equipo completo!',
-    sabio: '🧔 Dralingo sabio', poder: '💪 Poder de Dralingo',
+    sabio: '🧔 Dralingo sabio', poder: '💪 Poder de Dralingo', festeja: '🎉 Dralingo festeja',
   };
   // cameo + gang need the cast (js/cast.js); pages without it never pick them.
   const CAST_KINDS = ['cameo', 'gang'];
@@ -29,6 +29,8 @@
   // them, never in the random pool (30 phones loading 1 MB at once would choke the school WiFi).
   const ANIM = '/assets/dralingo/anim/';
   const HEAVY_KINDS = ['sabio', 'poder'];
+  // «festeja» (Canva clip, 2026-10-13) is in the random pool: phones get the ~250 KB version, big screens the full one.
+  const cheerSrc = () => ANIM + (window.innerWidth < 700 ? 'cheer-lite.webp' : 'cheer.webp');
   const hasCast = () => !!window.DralingoCast;
   const KINDS = Object.keys(LABELS);
   const src = (p) => BASE + p + '.webp';
@@ -118,6 +120,7 @@
 @keyframes dfxCameo{0%{bottom:-70vh}22%{bottom:-2vh}30%{bottom:-4vh}78%{bottom:-3vh}100%{bottom:-75vh}}
 .dfx-member{height:min(34vh,320px,58vw);bottom:-60vh;transform:translateX(-50%);animation:dfxPop 3.1s cubic-bezier(.3,1.6,.5,1) forwards}
 .dfx-who{display:block;font:800 .8em/1 'Nunito',sans-serif;color:#55607f;margin-bottom:4px;letter-spacing:.02em}
+.dfx-festeja{height:min(40vh,340px,64vw);left:50%;bottom:-60vh;transform:translateX(-50%);animation:dfxPop 3.2s cubic-bezier(.3,1.6,.5,1) forwards}
 .dfx-sabio{height:min(58vh,480px);left:4vw;bottom:-75vh;animation:dfxRise 5.4s cubic-bezier(.3,1.3,.5,1) forwards}
 @keyframes dfxRise{0%{bottom:-75vh}12%{bottom:-1vh}18%{bottom:-3vh}86%{bottom:-2vh}100%{bottom:-78vh}}
 .dfx-poder{height:min(64vh,520px);left:50%;top:52%;transform:translate(-50%,-50%) scale(0);animation:dfxPower 5.2s cubic-bezier(.2,1.4,.4,1) forwards}
@@ -324,6 +327,17 @@
       setTimeout(() => { if (o.stamp !== false) stamp(o.stamp || '¡PODER!', l, '16%'); l.classList.add('dfx-shake'); }, 700);
       if (o.text) setTimeout(() => bubble(o.text, l, '50%', '86%'), 900);
       return 5200;
+    },
+    festeja(l, o) {
+      // Dralingo jumps for joy, fists up, wings flapping (a real animation, not a sticker).
+      const b = document.createElement('div'); b.className = 'dfx-burst'; b.style.bottom = '30vh'; l.appendChild(b);
+      const i = document.createElement('img');
+      i.className = 'dfx-img dfx-festeja';
+      i.alt = '';
+      i.src = cheerSrc();
+      l.appendChild(i);
+      bubble(o.text || pick(['¡Bien hecho!', '¡Eso es!', '¡Increíble!']), l, '50%', '58%', 'Dralingo');
+      return 3200;
     },
   };
 
