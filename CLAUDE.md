@@ -42,6 +42,10 @@ the checklist for any new game mode.
 - **Deleting a CSS/JS file?** First list every class/selector it defines and grep the remaining pages for them; shared
   rules hide in game files (2026-10-10: the avatar picker, timer pulse and music chip lived in zombie/triage/color-clash
   css and broke every lobby). Bot playtests can't see styling: also screenshot a lobby + question screen.
+- **/maestro (remade 2026-10-13, `docs/specs/maestro-remake.md`)** loads only `css/teacher-dashboard.css` (style new
+  dashboard parts there; `maestro.css` now serves `host-hsk.html` only). Messages use `notify()` toasts, never
+  `alert()`; new windows are `.m-modal` + `.m-modal-card` (Esc, focus and scroll lock come for free); the start
+  actions stay at the top, nothing class-critical goes deeper than 2 taps.
 - Question packs follow the curriculum (`core/packs.js` → picker `/packs.html?game=…`): test family → level → world →
   round. Content lives in `core/packs/<level>.js` (words + exam-style items; built into questions by `core/packs.js`).
   Pictures come from Higgsfield (Nano Banana Pro, Unlimited ON) in his Chrome, saved to `assets-library/higgsfield/`,

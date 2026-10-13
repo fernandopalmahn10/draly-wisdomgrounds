@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -10,385 +10,455 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Dralingo">
-  <title>👩‍🏫 Teacher Mode · Draly Wisdomgrounds</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20261011a">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260707a">
-  <link rel="stylesheet" href="/css/maestro.css?v=20261012b">
+  <meta name="theme-color" content="#9fdcf7">
+  <title>Teacher Mode · Draly Wisdom Grounds</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <!-- 2026-10-13 remake: the teacher's control room in the platform's sticker world (spec docs/specs/maestro-remake.md).
+       teacher-dashboard.css is this page's only stylesheet; maestro.css stays for host-hsk.html. -->
+  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261013a">
 </head>
-<body class="hw-bg">
+<body class="m-app">
 
-  <!-- LOGIN PANEL -->
-  <div id="m-login" class="container m-login">
+  <!-- LOGIN -->
+  <main id="m-login" class="m-login">
     <div class="m-login-card">
-      <div class="m-login-icon">👩‍🏫</div>
+      <div class="m-login-stage" aria-hidden="true">
+        <img class="m-login-cast" id="m-login-cast-a" alt="" hidden>
+        <img class="m-login-icon" src="/assets/dralingo/anim/wise-still.webp" alt="" width="320" height="360">
+        <img class="m-login-cast" id="m-login-cast-b" alt="" hidden>
+      </div>
       <h1 class="m-login-title">Teacher Mode</h1>
-      <p class="m-login-sub">Student Notebook — no need to start a game session.</p>
-      <label class="m-login-label">
-        <span>Your teacher code:</span>
-        <input class="input m-login-input" id="m-pw" type="password" placeholder="Type your code" autocomplete="off" inputmode="text">
-      </label>
-      <button class="btn btn-jade btn-xl" id="m-enter-btn">Enter →</button>
-      <p id="m-login-err" style="color:var(--red-glow); text-align:center; min-height:1em;"></p>
-      <p class="m-login-hint">💡 This password gives access only to you. Your students don't need it.</p>
+      <p class="m-login-sub">Draly Wisdom Grounds</p>
+      <label class="m-login-label" for="m-pw">Teacher code</label>
+      <input class="input m-login-input" id="m-pw" type="password" placeholder="Type your code" autocomplete="off" inputmode="text">
+      <button class="btn btn-gold btn-xl" id="m-enter-btn" type="button">Enter</button>
+      <p id="m-login-err" class="m-login-err" role="alert"></p>
+      <p class="m-login-hint">Only you use this code. Your students never need it.</p>
     </div>
-  </div>
+  </main>
 
-  <!-- ROSTER + DETAIL — same UX as the in-game Cuaderno -->
-  <div id="m-dash" class="container m-dash hidden">
-    <div class="m-dash-header">
-      <div class="m-dash-titles">
-        <h1 class="m-dash-title">📓 Student Notebook</h1>
-        <p class="m-dash-sub" id="m-dash-sub">Loading…</p>
+  <!-- DASHBOARD -->
+  <div id="m-dash" class="m-dash hidden">
+    <header class="m-topbar">
+      <div class="m-brand">
+        <img class="m-brand-mark" src="/assets/app/icon-192.png" alt="" width="40" height="40">
+        <div class="m-brand-text">
+          <h1 class="m-dash-title">Teacher Mode</h1>
+          <p class="m-brand-sub">Draly Wisdom Grounds</p>
+        </div>
+      </div>
+      <!-- Tab switcher (only shows for the super admin) -->
+      <div class="m-tabs hidden" id="m-tabs" role="tablist" aria-label="Dashboard sections">
+        <button class="m-tab active" id="m-tab-students" data-tab="students" type="button" role="tab" aria-selected="true" aria-controls="m-tabpanel-students">Students</button>
+        <button class="m-tab" id="m-tab-teachers" data-tab="teachers" type="button" role="tab" aria-selected="false" aria-controls="m-tabpanel-teachers" tabindex="-1">Teachers</button>
+      </div>
+      <div class="m-topbar-end">
         <p class="m-dash-self" id="m-dash-self"></p>
+        <button class="btn btn-ghost btn-sm m-refresh" id="m-refresh" type="button" title="Reload the student list now (it also refreshes by itself every 15 s)"><span class="m-refresh-icon" aria-hidden="true">⟳</span><span class="m-refresh-label">Refresh</span></button>
+        <button class="btn btn-ghost btn-sm m-logout" id="m-logout" type="button">Log out</button>
       </div>
-      <div class="m-dash-actions">
-        <button class="btn btn-gold btn-sm" id="m-live-master-btn" title="Invite online students to a live session">🎯 Live Teacher Mode</button>
-        <button class="btn btn-red btn-sm" id="m-home-btn" title="Pull online students out of any stuck room/screen and send them to their homework profile">🏠 Send home</button>
-        <button class="btn btn-jade btn-sm" id="m-broadcast-btn">📢 Message the whole class</button>
-        <button class="btn btn-gold btn-sm" id="m-gif-btn" title="Send an animation to online students (Dralingo, the camel, the Dubai plane…)">🎬 GIF to students</button>
-        <button class="btn btn-jade btn-sm" id="m-guides-btn" title="Upload PDF study guides for the parents">📘 Guides (PDF)</button>
-        <button class="btn btn-jade btn-sm" id="m-launch-btn" title="Launch any game — the room opens and students join on their own">🚀 Launch game</button>
-        <button class="btn btn-jade btn-sm" id="m-reading-btn" title="Launch a live reading with the class">📖 Reading in class</button>
-        <button class="btn btn-gold btn-sm" id="m-hsk-btn" title="Official tests — HSK, YCT, New HSK mock exams">🏆 Official Tests</button>
-        <button class="btn btn-gold btn-sm" id="m-hsk-results-btn" title="Who finished + their test scores">🏅 Test Results</button>
-        <button class="btn btn-gold btn-sm" id="m-custom-btn" title="Send personalized assignments to specific students">🎯 Special assignment</button>
-        <button class="btn btn-jade btn-sm hidden" id="m-emirati-btn" title="Your personal language gateway">🌐 My Gateway · العربية</button>
-        <button class="btn btn-jade btn-sm" id="m-classroom-btn" title="Create, rename or delete classrooms and assign students">🎓 Classrooms</button>
-        <button class="btn btn-gold btn-sm" id="m-practice-btn" title="Reading questions 31-40 of every simulation with the real A-F exam bank — eliminate the wrong options in class until only the answer makes sense">🧠 Sentence practice</button>
-        <button class="btn btn-gold btn-sm" id="m-backup-btn" title="Download a backup of all data (students, grades, exams). Super-admin.">💾 Backup</button>
-        <button class="btn btn-ghost btn-sm" id="m-refresh">🔄 Refresh</button>
-        <button class="btn btn-ghost btn-sm" id="m-logout">Log out</button>
+    </header>
+
+    <!-- START THE CLASS + ONLINE NOW: what a teacher needs in the first 5 seconds -->
+    <div class="m-hero">
+      <section class="m-start" aria-labelledby="m-start-title">
+        <h2 class="m-h2" id="m-start-title">Start the class</h2>
+        <div class="m-start-grid">
+          <button class="m-start-tile is-primary" id="m-launch-btn" type="button">
+            <span class="m-start-icon" aria-hidden="true">🚀</span>
+            <span class="m-start-text"><b>Launch a game</b><small>Pick a game. The kids you choose join by themselves.</small></span>
+          </button>
+          <button class="m-start-tile" id="m-live-master-btn" type="button">
+            <span class="m-start-icon" aria-hidden="true">✏️</span>
+            <span class="m-start-text"><b>Live Teacher Mode</b><small>Build sentences with the online kids</small></span>
+          </button>
+          <button class="m-start-tile" id="m-hsk-btn" type="button">
+            <span class="m-start-icon" aria-hidden="true">🏆</span>
+            <span class="m-start-text"><b>Official tests</b><small>YCT, New HSK and Old HSK rooms</small></span>
+          </button>
+        </div>
+        <div class="m-start-more">
+          <button class="m-start-link" id="m-reading-btn" type="button"><span aria-hidden="true">📖</span> Reading in class</button>
+          <button class="m-start-link" id="m-practice-btn" type="button"><span aria-hidden="true">🧠</span> Sentence practice</button>
+        </div>
+      </section>
+
+      <section class="m-online" aria-labelledby="m-online-title">
+        <div class="m-online-head">
+          <h2 class="m-h2" id="m-online-title"><span class="m-live-dot" aria-hidden="true"></span>Online now</h2>
+          <span class="m-online-count" id="m-online-count" aria-live="polite">0</span>
+        </div>
+        <div class="m-online-stage">
+          <ul class="m-online-list" id="m-online-list" aria-label="Students online now">
+            <li class="m-online-skel" aria-hidden="true"></li><li class="m-online-skel" aria-hidden="true"></li><li class="m-online-skel" aria-hidden="true"></li>
+          </ul>
+        </div>
+        <div class="m-send" role="group" aria-label="Send to the class">
+          <button class="btn btn-ghost btn-sm m-send-btn" id="m-broadcast-btn" type="button"><span aria-hidden="true">📢</span> Message the class</button>
+          <button class="btn btn-ghost btn-sm m-send-btn" id="m-gif-btn" type="button" title="Show an animation on the online students' screens (Dralingo, the camel, the Dubai plane…)"><span aria-hidden="true">🎬</span> GIF to students</button>
+          <button class="btn btn-ghost btn-sm m-send-btn is-rescue" id="m-home-btn" type="button" title="Pull online students out of any stuck room or screen and send them to their homework profile"><span aria-hidden="true">🏠</span> Send home</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="m-work">
+      <!-- STUDENTS TAB -->
+      <div class="m-tabpanel" id="m-tabpanel-students" role="tabpanel" aria-labelledby="m-tab-students">
+        <section class="m-panel m-students" aria-labelledby="m-students-title">
+          <div class="m-panel-head">
+            <h2 class="m-h2" id="m-students-title">Students</h2>
+            <p class="m-dash-sub" id="m-dash-sub">Loading…</p>
+            <div id="m-summary"></div>
+          </div>
+          <div id="m-roster" class="m-roster" aria-busy="true">
+            <div class="m-skel-row" aria-hidden="true"></div><div class="m-skel-row" aria-hidden="true"></div><div class="m-skel-row" aria-hidden="true"></div><div class="m-skel-row" aria-hidden="true"></div>
+          </div>
+          <!-- Student detail (the Cuaderno): replaces the roster -->
+          <div id="m-detail" class="m-detail hidden">
+            <div class="m-detail-header">
+              <button class="btn btn-ghost btn-sm" id="m-detail-back" type="button">← All students</button>
+            </div>
+            <div id="m-detail-head" class="m-detail-head"></div>
+            <div id="m-detail-body" class="m-detail-body"></div>
+          </div>
+        </section>
       </div>
 
-      <!-- GUÍAS MODAL — upload + manage study-guide PDFs -->
-      <div id="m-guides-modal" class="m-modal hidden">
-        <div class="m-modal-card">
-          <button class="m-modal-close" id="m-guides-close" type="button" aria-label="Cerrar">✕</button>
-          <h2>📘 Study guides (PDF)</h2>
-          <p class="m-live-master-help">Upload the guides parents will see in the <strong>Guides</strong> tab of their portal. Choose which experience each one belongs to.</p>
+      <!-- TEACHERS TAB (super admin only) -->
+      <div class="m-tabpanel hidden" id="m-tabpanel-teachers" role="tabpanel" aria-labelledby="m-tab-teachers">
+        <section class="m-panel">
+          <div class="m-teachers-header">
+            <h2 class="m-h2 m-teachers-title">Teachers</h2>
+            <button class="btn btn-gold btn-sm" id="m-new-teacher-btn" type="button">➕ Create teacher</button>
+          </div>
+          <p class="m-teachers-help">Each teacher gets a private teacher code (to sign in here) and one class code per level (public: students type it at /homework). The level of a class code decides which homework its kids get.</p>
+          <div id="m-teachers-list" class="m-teachers-list"></div>
+        </section>
+
+        <!-- Create-teacher modal -->
+        <div id="m-new-teacher-modal" class="m-modal hidden">
+          <div class="m-modal-card">
+            <button class="m-modal-close" id="m-new-teacher-close" type="button" aria-label="Close">✕</button>
+            <h2>➕ New teacher</h2>
+            <label class="m-form-label">
+              <span>Teacher name</span>
+              <input class="input" id="m-new-teacher-name" type="text" placeholder="Mrs. Chen" maxlength="60">
+            </label>
+            <label class="m-form-label">
+              <span>Email (optional, for recovery)</span>
+              <input class="input" id="m-new-teacher-email" type="email" placeholder="maria@escuela.cn" maxlength="120">
+            </label>
+            <label class="m-form-label">
+              <span>Country (optional, 2-3 letters)</span>
+              <input class="input" id="m-new-teacher-country" type="text" placeholder="MX, CN, TW…" maxlength="3">
+            </label>
+            <div class="m-form-label">
+              <span>Class levels (one class code per level)</span>
+              <div class="m-level-checks" id="m-new-teacher-levels">
+                <label><input type="checkbox" value="yct1"> 🧒 YCT 1</label>
+                <label><input type="checkbox" value="hsk2"> 🆕 New HSK 1</label>
+                <label><input type="checkbox" value="hsk1" checked> 📘 Old HSK 1</label>
+              </div>
+            </div>
+            <button class="btn btn-gold btn-xl" id="m-new-teacher-submit" type="button">Create account</button>
+            <p class="m-modal-msg" id="m-new-teacher-msg" role="status"></p>
+            <div id="m-new-teacher-result" class="m-teacher-result hidden">
+              <div class="m-teacher-result-title">✓ Account created. Share these codes:</div>
+              <div class="m-teacher-result-row">
+                <span class="m-teacher-result-label">🔑 Teacher code (private)</span>
+                <code class="m-teacher-result-code" id="m-result-teacher-id"></code>
+              </div>
+              <div class="m-teacher-result-row">
+                <span class="m-teacher-result-label">📚 Class code (for students)</span>
+                <code class="m-teacher-result-code" id="m-result-access-code"></code>
+              </div>
+              <p class="m-teacher-result-hint">The teacher signs in at <strong>/maestro</strong> with the private code. Students type the class code at <strong>/homework</strong>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOOLS: everything that is not the live class, one tap each -->
+      <aside class="m-tools" aria-label="Tools">
+        <section class="m-panel m-tools-group" aria-labelledby="m-tools-class">
+          <h2 class="m-h3" id="m-tools-class">Class work</h2>
+          <button class="m-tool" id="m-hsk-results-btn" type="button"><span class="m-tool-icon" aria-hidden="true">🏅</span><span class="m-tool-text"><b>Test results</b><small>Who finished and their scores</small></span></button>
+          <button class="m-tool" id="m-custom-btn" type="button"><span class="m-tool-icon" aria-hidden="true">🎯</span><span class="m-tool-text"><b>Special assignment</b><small>Your own sentences for chosen kids</small></span></button>
+          <button class="m-tool" id="m-classroom-btn" type="button"><span class="m-tool-icon" aria-hidden="true">🎓</span><span class="m-tool-text"><b>Classrooms</b><small>Create classes and move students</small></span></button>
+        </section>
+        <section class="m-panel m-tools-group" aria-labelledby="m-tools-admin">
+          <h2 class="m-h3" id="m-tools-admin">Admin</h2>
+          <button class="m-tool" id="m-guides-btn" type="button"><span class="m-tool-icon" aria-hidden="true">📘</span><span class="m-tool-text"><b>Guides (PDF)</b><small>Study guides for the parents</small></span></button>
+          <button class="m-tool" id="m-backup-btn" type="button"><span class="m-tool-icon" aria-hidden="true">💾</span><span class="m-tool-text"><b>Backup</b><small>Download all data as one file</small></span></button>
+          <button class="m-tool hidden" id="m-emirati-btn" type="button"><span class="m-tool-icon" aria-hidden="true">🌐</span><span class="m-tool-text"><b>My Gateway · العربية</b><small>Your personal Emirati Arabic words</small></span></button>
+        </section>
+      </aside>
+    </div>
+
+    <!-- 📢 MESSAGE THE CLASS (2026-10-13: a form instead of five prompts; same /api/admin/broadcast call) -->
+    <div id="m-broadcast-modal" class="m-modal hidden">
+      <div class="m-modal-card">
+        <button class="m-modal-close" id="m-broadcast-close" type="button" aria-label="Close">✕</button>
+        <h2>📢 Message the class</h2>
+        <p class="m-modal-sub">Every student with this class code sees it as a notification in their homework portal.</p>
+        <div class="m-form-label">
+          <span id="m-bc-class-label">Class code</span>
+          <select class="input hidden" id="m-bc-class-select" aria-labelledby="m-bc-class-label"></select>
+          <input class="input hidden" id="m-bc-class" aria-labelledby="m-bc-class-label" type="text" list="m-bc-class-list" maxlength="12" autocomplete="off" inputmode="text">
+          <datalist id="m-bc-class-list"></datalist>
+        </div>
+        <label class="m-form-label">
+          <span>Message</span>
+          <textarea class="input" id="m-bc-text" rows="3" maxlength="500" placeholder="Type the message for the class"></textarea>
+        </label>
+        <details class="m-bc-link">
+          <summary>Add a button with a link (optional)</summary>
           <label class="m-form-label">
-            <span>Guide title:</span>
-            <input class="input" id="m-guide-title" type="text" placeholder="Lesson 1 · Week 1" maxlength="120">
+            <span>Link</span>
+            <input class="input" id="m-bc-url" type="text" placeholder="/player.html?pin=1234" maxlength="300" autocomplete="off">
           </label>
           <label class="m-form-label">
-            <span>Experience (lesson):</span>
-            <select class="input" id="m-guide-exp">
-              <option value="exp1">EXP1 · Me / Family</option>
-              <option value="exp2">EXP2 · School / Language</option>
-              <option value="exp3">EXP3 · Shopping / Eating</option>
-              <option value="exp4">EXP4 · Time / Weather</option>
-              <option value="exp5">EXP5 · Travel / Places</option>
-              <option value="exp6">EXP6 · Home / Activities</option>
-              <option value="exp7">EXP7 · People / ¿?</option>
-              <option value="exp8">EXP8 · Numbers / Particles</option>
+            <span>Button text</span>
+            <input class="input" id="m-bc-label" type="text" value="Join now" maxlength="40">
+          </label>
+        </details>
+        <button class="btn btn-gold btn-xl" id="m-bc-send" type="button">📤 Send to the class</button>
+        <p class="m-modal-msg" id="m-bc-msg" role="status"></p>
+      </div>
+    </div>
+
+    <!-- GUIDES MODAL: upload + manage study-guide PDFs -->
+    <div id="m-guides-modal" class="m-modal hidden">
+      <div class="m-modal-card">
+        <button class="m-modal-close" id="m-guides-close" type="button" aria-label="Close">✕</button>
+        <h2>📘 Study guides (PDF)</h2>
+        <p class="m-modal-sub">Parents see these in the <strong>Guides</strong> tab of their portal. Choose the experience each guide belongs to.</p>
+        <label class="m-form-label">
+          <span>Guide title</span>
+          <input class="input" id="m-guide-title" type="text" placeholder="Lesson 1 · Week 1" maxlength="120">
+        </label>
+        <label class="m-form-label">
+          <span>Experience (lesson)</span>
+          <select class="input" id="m-guide-exp">
+            <option value="exp1">EXP1 · Me / Family</option>
+            <option value="exp2">EXP2 · School / Language</option>
+            <option value="exp3">EXP3 · Shopping / Eating</option>
+            <option value="exp4">EXP4 · Time / Weather</option>
+            <option value="exp5">EXP5 · Travel / Places</option>
+            <option value="exp6">EXP6 · Home / Activities</option>
+            <option value="exp7">EXP7 · People / ¿?</option>
+            <option value="exp8">EXP8 · Numbers / Particles</option>
+          </select>
+        </label>
+        <label class="m-form-label">
+          <span>PDF file (max 18 MB)</span>
+          <input class="input m-file" id="m-guide-file" type="file" accept="application/pdf">
+        </label>
+        <button class="btn btn-gold btn-xl" id="m-guide-upload" type="button">⬆️ Upload guide</button>
+        <p class="m-modal-msg" id="m-guide-msg" role="status"></p>
+        <div class="m-guides-list" id="m-guides-list"></div>
+      </div>
+    </div>
+
+    <!-- 📖 READING IN CLASS: stories by HSK1 experience. A story opens host-reading.html in a new tab;
+         kids join via PIN; the live test unlocks the story in their homework portal. -->
+    <div id="m-reading-modal" class="m-modal hidden">
+      <div class="m-modal-card m-modal-card--wide">
+        <button class="m-modal-close" id="m-reading-close" type="button" aria-label="Close">✕</button>
+        <h2>📖 Reading in class</h2>
+        <p class="m-modal-sub">Pick a story. A room opens with a PIN; when the kids take the test live, the story unlocks for them at home.</p>
+        <div id="m-reading-folders" class="m-reading-folders">Loading…</div>
+      </div>
+    </div>
+
+    <!-- 🏆 OFFICIAL TESTS: family → level → simulation → open a PIN room (host-hsk.html) -->
+    <div id="m-hsk-modal" class="m-modal hidden">
+      <div class="m-modal-card m-modal-card--wide">
+        <button class="m-modal-close" id="m-hsk-close" type="button" aria-label="Close">✕</button>
+        <!-- Breadcrumb: shows the drill-down path (Official Tests › YCT › YCT1) -->
+        <nav class="m-hsk-crumb" id="m-hsk-crumb" aria-label="Official tests path">
+          <button type="button" class="m-hsk-crumb-link" data-step="root">🏆 Official Tests</button>
+        </nav>
+        <h2 id="m-hsk-title">🏆 Official Tests</h2>
+        <p class="m-modal-sub" id="m-hsk-sub">Pick the exam.</p>
+        <div id="m-hsk-view" class="m-reading-folders">Loading…</div>
+      </div>
+    </div>
+
+    <!-- 🎬 GIF PICKER: an animation from our saga on the chosen kids' screens for 8 seconds -->
+    <div id="m-gif-modal" class="m-modal hidden">
+      <div class="m-modal-card m-modal-card--wide">
+        <button class="m-modal-close" id="m-gif-close" type="button" aria-label="Close">✕</button>
+        <h2>🎬 Send a GIF</h2>
+        <p class="m-modal-sub">Pick a character and the students. It shows on their screen for 8 seconds.</p>
+        <div class="m-gif-grid" id="m-gif-grid"><!-- tiles rendered by maestro.js --></div>
+        <div class="m-gif-students">
+          <h3 class="m-h3">Students</h3>
+          <input class="input" id="m-gif-search" type="search" placeholder="Search by name or code" autocomplete="off">
+          <div class="m-picker-bar">
+            <button class="btn btn-ghost btn-sm" id="m-gif-online" type="button" aria-pressed="false">🟢 Online only</button>
+            <button class="btn btn-ghost btn-sm" id="m-gif-all" type="button">Select all</button>
+            <button class="btn btn-ghost btn-sm" id="m-gif-none" type="button">Clear</button>
+          </div>
+          <div id="m-gif-list" class="m-pick-list"></div>
+        </div>
+        <button class="btn btn-gold btn-xl m-sticky-go" id="m-gif-send" type="button">📤 Send GIF</button>
+        <p class="m-modal-msg" id="m-gif-msg" role="status"></p>
+      </div>
+    </div>
+
+    <!-- 🌐 EMIRATI ARABIC GATEWAY: super-admin only personal language sidecar -->
+    <div id="m-emirati-modal" class="m-modal hidden">
+      <div class="m-modal-card m-emirati-card">
+        <button class="m-modal-close" id="m-emirati-close" type="button" aria-label="Close">✕</button>
+        <div class="m-emirati-head">
+          <h2 class="m-emirati-title">🌐 Mi Gateway · العربية الإماراتية</h2>
+          <div class="m-emirati-sub">5 palabras nuevas cada día. 🔊 reproduce <strong>tu MP3 emiratí</strong> si existe en <code>data/emirati-audio/&lt;id&gt;.mp3</code>; si no, cae en Google MSA (etiqueta naranja).</div>
+        </div>
+        <div class="m-emirati-hud">
+          <button type="button" class="m-emirati-stat is-tappable" data-em-stat="words" title="Toca para revisar las palabras que ya viste">
+            <strong id="m-em-seen">0</strong><span>/ <em id="m-em-total">0</em> palabras vistas <small>↗</small></span>
+          </button>
+          <div class="m-emirati-stat">🔥 <strong id="m-em-streak">0</strong><span>días seguidos</span></div>
+          <button type="button" class="m-emirati-stat is-tappable" data-em-stat="sentences" title="Toca para revisar las oraciones que ya aprendiste">
+            ✏️ <strong id="m-em-sent-count">0</strong><span>oraciones aprendidas <small>↗</small></span>
+          </button>
+        </div>
+        <div class="m-emirati-list" id="m-emirati-list">Cargando…</div>
+        <div class="m-emirati-actions">
+          <button class="btn btn-gold btn-sm" id="m-em-mark-all" type="button">✅ Marcar las 5 como vistas</button>
+          <button class="btn btn-ghost btn-sm" id="m-em-shuffle" type="button">🔁 Otras 5</button>
+          <button class="btn btn-ghost btn-sm" id="m-em-review" type="button">📜 Mis aprendidos</button>
+          <button class="btn btn-red btn-sm" id="m-em-clear-cache" type="button" title="Borra todos los MP3 cacheados; se regeneran en la próxima reproducción">🧹 Limpiar caché audio</button>
+        </div>
+        <!-- 📜 REVIEW PANEL: every word marked as seen + every example sentence marked as learned -->
+        <div class="m-em-review hidden" id="m-em-review-panel">
+          <div class="m-em-review-head">
+            <button class="btn btn-ghost btn-sm" id="m-em-review-back" type="button">← Volver</button>
+            <span class="m-em-review-title">📜 Mis aprendidos</span>
+            <span class="m-em-review-counts" id="m-em-review-counts">0</span>
+          </div>
+          <div class="m-em-review-body" id="m-em-review-body">Cargando…</div>
+        </div>
+        <!-- 🎙️ AZURE auto-Khaleeji generator (needs AZURE_SPEECH_KEY on the server) -->
+        <div class="m-em-azure" id="m-em-azure">
+          <div class="m-em-azure-head">🎙️ Voz Khaleeji (Azure)</div>
+          <div class="m-em-azure-status" id="m-em-azure-status">Verificando…</div>
+          <div class="m-em-azure-row">
+            <select class="input m-em-azure-voice" id="m-em-azure-voice">
+              <option value="female">👩 Fatima · ar-AE (femenina)</option>
+              <option value="male">👨 Hamdan · ar-AE (masculino)</option>
             </select>
-          </label>
-          <label class="m-form-label">
-            <span>PDF file (max 18 MB):</span>
-            <input class="input" id="m-guide-file" type="file" accept="application/pdf">
-          </label>
-          <button class="btn btn-jade btn-xl" id="m-guide-upload">⬆️ Upload guide</button>
-          <p class="m-modal-msg" id="m-guide-msg"></p>
-          <div class="m-guides-list" id="m-guides-list"></div>
-        </div>
-      </div>
-
-      <!-- 📖 LECTURA EN CLASE — folder picker of all reading stories by HSK1
-           experience. Click a story → opens host-reading.html in a new tab
-           with that story pre-selected. Kids join via PIN, do the test live,
-           unlocks the story in their homework portal automatically. -->
-      <div id="m-reading-modal" class="m-modal hidden">
-        <div class="m-modal-card">
-          <button class="m-modal-close" id="m-reading-close" type="button" aria-label="Cerrar">✕</button>
-          <h2>📖 Reading in class</h2>
-          <p class="m-modal-sub">Pick a story. A room opens with a PIN. When the kids take the test live, it unlocks for them to repeat at home.</p>
-          <div id="m-reading-folders" class="m-reading-folders">Loading…</div>
-        </div>
-      </div>
-
-      <!-- 🏆 HSK1 SIMULATION launcher — full mock exam (4 listening + 2
-           reading parts, 30 questions). Teacher picks a simulation, then
-           selects online students to force-impose. The kids get a force
-           inbox-message that auto-redirects them to /hsk-sim.html with
-           access + their own code already in the URL. -->
-      <div id="m-hsk-modal" class="m-modal hidden">
-        <div class="m-modal-card">
-          <button class="m-modal-close" id="m-hsk-close" type="button" aria-label="Cerrar">✕</button>
-          <!-- Breadcrumb: shows the drill-down path (HSK → HSK1 → Simulación 1) -->
-          <div class="m-hsk-crumb" id="m-hsk-crumb">
-            <button type="button" class="m-hsk-crumb-link" data-step="root">🏆 Official Tests</button>
+            <button class="btn btn-gold btn-sm hidden" id="m-em-azure-gen" type="button">🎙️ Generar todas (275)</button>
           </div>
-          <h2 id="m-hsk-title">🏆 Official Tests</h2>
-          <p class="m-modal-sub" id="m-hsk-sub">Pick the exam.</p>
-          <div id="m-hsk-view" class="m-reading-folders">Loading…</div>
-        </div>
-      </div>
-
-      <!-- 🎬 GIF PICKER — push transparent dancing mascots to online kids.
-           Tap a GIF tile, tap which kids (search + online filter), Send.
-           Each kid sees an 8-second full-screen overlay over whatever
-           they were doing in their homework portal. Foundation for the
-           future "mascot of the day / streak reward" auto-rotation. -->
-      <div id="m-gif-modal" class="m-modal hidden">
-        <div class="m-modal-card">
-          <button class="m-modal-close" id="m-gif-close" type="button" aria-label="Cerrar">✕</button>
-          <h2>🎬 Send a GIF to online students</h2>
-          <p class="m-modal-sub">Pick a character and the students you want. It appears on their screen for 8 seconds.</p>
-          <div class="m-gif-grid" id="m-gif-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin:14px 0;">
-            <!-- tiles rendered by maestro.js -->
+          <div class="m-em-azure-help hidden" id="m-em-azure-help">
+            💡 Para activar la voz real emiratí: en Render, agrega las variables
+            de entorno <code>AZURE_SPEECH_KEY</code> (tu clave de Azure) y
+            opcionalmente <code>AZURE_SPEECH_REGION</code> (por defecto <code>eastus</code>).
+            El servidor genera y cachea los MP3 automáticamente. Plan gratuito
+            cubre 500k caracteres/mes, más que suficiente para el dataset.
           </div>
-          <div class="m-gif-students">
-            <div style="font-weight:800;margin:10px 0 6px;">Students</div>
-            <input class="input" id="m-gif-search" type="text" placeholder="🔎 Search by name or code…" autocomplete="off" style="margin-bottom:8px;">
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-              <button class="btn btn-ghost btn-sm" id="m-gif-online" type="button">🟢 Online only</button>
-              <button class="btn btn-ghost btn-sm" id="m-gif-all" type="button">✅ All visible</button>
-              <button class="btn btn-ghost btn-sm" id="m-gif-none" type="button">⬜ None</button>
-            </div>
-            <div id="m-gif-list" style="max-height:38vh;overflow:auto;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:6px;"></div>
-          </div>
-          <button class="btn btn-jade btn-xl" id="m-gif-send" type="button" style="width:100%;margin-top:12px;">📤 Send GIF</button>
-          <p class="m-modal-msg" id="m-gif-msg" style="text-align:center;margin-top:8px;min-height:1.2em;"></p>
-        </div>
-      </div>
-
-      <!-- 🌐 EMIRATI ARABIC GATEWAY — super-admin only personal language sidecar -->
-      <div id="m-emirati-modal" class="m-modal hidden">
-        <div class="m-modal-card m-emirati-card">
-          <button class="m-modal-close" id="m-emirati-close" type="button" aria-label="Cerrar">✕</button>
-          <div class="m-emirati-head">
-            <div class="m-emirati-title">🌐 Mi Gateway · العربية الإماراتية</div>
-            <div class="m-emirati-sub">5 palabras nuevas cada día. 🔊 reproduce <strong>tu MP3 emiratí</strong> si existe en <code>data/emirati-audio/&lt;id&gt;.mp3</code>; si no, cae en Google MSA (etiqueta naranja).</div>
-          </div>
-          <div class="m-emirati-hud">
-            <button type="button" class="m-emirati-stat is-tappable" data-em-stat="words" title="Toca para revisar las palabras que ya viste">
-              <strong id="m-em-seen">0</strong><span>/ <em id="m-em-total">0</em> palabras vistas <small>↗</small></span>
-            </button>
-            <div class="m-emirati-stat">🔥 <strong id="m-em-streak">0</strong><span>días seguidos</span></div>
-            <button type="button" class="m-emirati-stat is-tappable" data-em-stat="sentences" title="Toca para revisar las oraciones que ya aprendiste">
-              ✏️ <strong id="m-em-sent-count">0</strong><span>oraciones aprendidas <small>↗</small></span>
-            </button>
-          </div>
-          <div class="m-emirati-list" id="m-emirati-list">Cargando…</div>
-          <div class="m-emirati-actions">
-            <button class="btn btn-jade btn-sm" id="m-em-mark-all">✅ Marcar las 5 como vistas</button>
-            <button class="btn btn-ghost btn-sm" id="m-em-shuffle">🔁 Otras 5</button>
-            <button class="btn btn-ghost btn-sm" id="m-em-review">📜 Mis aprendidos</button>
-            <button class="btn btn-red btn-sm" id="m-em-clear-cache" title="Borra todos los MP3 cacheados — se regeneran en la próxima reproducción">🧹 Limpiar caché audio</button>
-          </div>
-          <!-- 📜 REVIEW PANEL — sliding overlay listing every word marked
-               as seen + every example sentence marked as learned, grouped
-               by section. Each item keeps its 🔊 + ✓ tools so the user
-               can hear, re-mark, or unmark right here. -->
-          <div class="m-em-review hidden" id="m-em-review-panel">
-            <div class="m-em-review-head">
-              <button class="btn btn-ghost btn-sm" id="m-em-review-back">← Volver</button>
-              <span class="m-em-review-title">📜 Mis aprendidos</span>
-              <span class="m-em-review-counts" id="m-em-review-counts">—</span>
-            </div>
-            <div class="m-em-review-body" id="m-em-review-body">Cargando…</div>
-          </div>
-          <!-- 🎙️ AZURE auto-Khaleeji generator. When AZURE_SPEECH_KEY is set
-               on the server, the 🔊 buttons play real ar-AE-FatimaNeural /
-               ar-AE-HamdanNeural voice. First tap generates + caches; every
-               next tap serves from disk. Bulk button pre-generates the whole
-               275-word set in one go (~75 sec, ~4 req/s, free tier safe). -->
-          <div class="m-em-azure" id="m-em-azure">
-            <div class="m-em-azure-head">🎙️ Voz Khaleeji (Azure)</div>
-            <div class="m-em-azure-status" id="m-em-azure-status">Verificando…</div>
-            <div class="m-em-azure-row">
-              <select class="input m-em-azure-voice" id="m-em-azure-voice">
-                <option value="female">👩 Fatima · ar-AE (femenina)</option>
-                <option value="male">👨 Hamdan · ar-AE (masculino)</option>
-              </select>
-              <button class="btn btn-jade btn-sm hidden" id="m-em-azure-gen" type="button">🎙️ Generar todas (275)</button>
-            </div>
-            <div class="m-em-azure-help hidden" id="m-em-azure-help">
-              💡 Para activar la voz real emiratí: en Render, agrega las variables
-              de entorno <code>AZURE_SPEECH_KEY</code> (tu clave de Azure) y
-              opcionalmente <code>AZURE_SPEECH_REGION</code> (por defecto <code>eastus</code>).
-              El servidor genera y cachea los MP3 automáticamente. Plan gratuito
-              cubre 500k caracteres/mes — más que suficiente para el dataset.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 🎓 CLASSROOM MANAGER — create / rename / delete classrooms -->
-      <div id="m-classroom-modal" class="m-modal hidden">
-        <div class="m-modal-card">
-          <button class="m-modal-close" id="m-classroom-close" type="button" aria-label="Cerrar">✕</button>
-          <h2>🎓 My Classrooms</h2>
-          <p class="m-modal-sub">Create named classrooms, assign students in the Notebook, and send sentences to a whole classroom.</p>
-          <div id="m-classroom-list" class="m-classroom-list"></div>
-          <div class="m-classroom-new" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <input class="input" id="m-classroom-new-name" type="text" placeholder="New classroom name (e.g. HSK1 Saturday AM)" maxlength="40" autocomplete="off" style="flex:1;min-width:160px;">
-            <button class="btn btn-jade btn-sm" id="m-classroom-add" type="button">➕ Create empty classroom</button>
-          </div>
-          <p class="m-modal-msg" id="m-classroom-msg" style="text-align:center;margin-top:8px;min-height:1.2em;"></p>
-        </div>
-      </div>
-
-      <!-- 🧠 SENTENCE PRACTICE — Reading 31-40 of every sim with the real
-           A-F exam bank. Teacher analyzes each question in class: tap the
-           wrong options to eliminate them until only the answer makes
-           sense. Reuses the wu-prac-* styles from warmup.css (loaded on
-           this page) and the WU_WORDS vocab from warmup-vocab.js. -->
-      <div id="m-practice-modal" class="m-modal hidden">
-        <div class="m-modal-card" style="max-width:980px;">
-          <button class="m-modal-close" id="m-practice-close" type="button" aria-label="Close">✕</button>
-          <h2 id="m-prac-title">🧠 Sentence practice</h2>
-          <p class="m-modal-sub" id="m-prac-sub">Pick a simulation. Analyze each question with the real exam bank: eliminate the wrong options until only the answer makes sense.</p>
-          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
-            <button class="btn btn-ghost btn-sm" id="m-prac-crumb" type="button" style="display:none;">← Simulations</button>
-            <button class="btn btn-gold btn-sm" id="m-prac-vocab-btn" type="button">📚 Vocabulary</button>
-            <button class="btn btn-ghost btn-sm" id="m-prac-lang" type="button" title="Switch meanings between Spanish and English">🌐 Meanings: ES</button>
-          </div>
-          <div id="m-prac-vocab" class="wu-practice-vocab" style="display:none;"></div>
-          <div id="m-prac-body">Loading…</div>
-        </div>
-      </div>
-
-      <!-- 🎯 CUSTOM ASSIGNMENT MODAL — author + send a personalized tarea -->
-      <div id="m-custom-modal" class="m-modal hidden">
-        <div class="m-modal-card m-custom-card">
-          <button class="m-modal-close" id="m-custom-close" type="button" aria-label="Cerrar">✕</button>
-          <h2>🎯 Special assignment</h2>
-          <p class="m-live-master-help">
-            Create an assignment with your own sentences and send it to specific students.
-            It appears above the HSK1 assignments in their portal. <strong>Multi-bank</strong> —
-            they can use words from any experience (the catalog isn't locked).
-          </p>
-          <label class="m-form-label">
-            <span>Title:</span>
-            <input class="input" id="m-cu-title" type="text" placeholder="E.g. Monday assignment — greetings" maxlength="120">
-          </label>
-          <label class="m-form-label">
-            <span>Instructions (optional):</span>
-            <input class="input" id="m-cu-instr" type="text" placeholder="E.g. Read each sentence aloud and then build the translation." maxlength="400">
-          </label>
-          <div class="m-cu-items-head">📝 Sentences (minimum 1, maximum 24)</div>
-          <div class="m-cu-items" id="m-cu-items"></div>
-          <button class="btn btn-ghost btn-sm" id="m-cu-add-item" type="button">➕ Add sentence</button>
-          <div class="m-cu-students-head">👥 Students (check who to send to)</div>
-          <div class="m-cu-students-bar">
-            <input class="input m-cu-students-search" id="m-cu-students-search" type="text" placeholder="Search by name or code…">
-            <button class="btn btn-ghost btn-sm" id="m-cu-students-all" type="button">All</button>
-            <button class="btn btn-ghost btn-sm" id="m-cu-students-none" type="button">None</button>
-          </div>
-          <div class="m-cu-students" id="m-cu-students"></div>
-          <p class="m-modal-msg" id="m-cu-msg"></p>
-          <button class="btn btn-jade btn-xl" id="m-cu-send" type="button">📤 Send assignment</button>
-
-          <div class="m-cu-existing-head">📂 Your active assignments</div>
-          <div class="m-cu-existing" id="m-cu-existing">Loading…</div>
-        </div>
-      </div>
-
-      <!-- LIVE MASTER MODAL — select online students + send invite to PIN -->
-      <div id="m-live-master-modal" class="m-modal hidden">
-        <div class="m-modal-card">
-          <button class="m-modal-close" id="m-live-master-close" type="button" aria-label="Cerrar">✕</button>
-          <h2>🎯 Live Teacher Mode</h2>
-          <p class="m-live-master-help">
-            Check the students who are online now. When you press <strong>Activate</strong>, their phones <strong>automatically</strong> enter the sentence builder as assistants — no PIN, no invitation. You land directly on the building screen. ✨
-          </p>
-          <!-- PIN no longer needed: the builder is created automatically.
-               Kept hidden so older code referencing it still resolves. -->
-          <input type="hidden" id="m-live-master-pin" value="">
-          <label class="m-form-label">
-            <span>Message they'll see when they enter (optional):</span>
-            <input class="input" id="m-live-master-text" type="text" placeholder="Enter Teacher Mode now!" maxlength="200">
-          </label>
-          <div class="m-live-master-list-head">
-            <span id="m-live-master-count">0 online</span>
-            <button class="btn btn-ghost btn-sm" id="m-live-master-all" type="button">Check all</button>
-            <button class="btn btn-ghost btn-sm" id="m-live-master-none" type="button">Uncheck</button>
-          </div>
-          <div id="m-live-master-list" class="m-live-master-list"></div>
-          <button class="btn btn-gold btn-xl" id="m-live-master-send">⚡ Activate Teacher Mode now</button>
-          <p class="m-modal-msg" id="m-live-master-msg"></p>
         </div>
       </div>
     </div>
 
-    <!-- Tab switcher (only shows if super admin) -->
-    <div class="m-tabs hidden" id="m-tabs">
-      <button class="m-tab active" data-tab="students" type="button">📓 Students</button>
-      <button class="m-tab" data-tab="teachers" type="button">👩‍🏫 Teachers</button>
-    </div>
-
-    <!-- STUDENTS TAB -->
-    <div class="m-tabpanel" id="m-tabpanel-students">
-      <div id="m-summary"></div>
-      <div id="m-roster" class="m-roster"></div>
-      <!-- Student detail (slides up over the roster) -->
-      <div id="m-detail" class="m-detail hidden">
-        <div class="m-detail-header">
-          <button class="btn btn-ghost btn-sm" id="m-detail-back">← Back</button>
-          <div id="m-detail-head" class="m-detail-head"></div>
+    <!-- 🎓 CLASSROOM MANAGER: create / rename / delete classrooms, add and remove members -->
+    <div id="m-classroom-modal" class="m-modal hidden">
+      <div class="m-modal-card">
+        <button class="m-modal-close" id="m-classroom-close" type="button" aria-label="Close">✕</button>
+        <h2>🎓 Classrooms</h2>
+        <p class="m-modal-sub">Group your students into classes. Open a class to add or remove students and to see their profiles.</p>
+        <div id="m-classroom-list" class="m-classroom-list"></div>
+        <div class="m-classroom-new">
+          <input class="input" id="m-classroom-new-name" type="text" placeholder="New class name (e.g. HSK1 Saturday AM)" maxlength="40" autocomplete="off">
+          <button class="btn btn-gold btn-sm" id="m-classroom-add" type="button">➕ Create class</button>
         </div>
-        <div id="m-detail-body" class="m-detail-body"></div>
+        <p class="m-modal-msg" id="m-classroom-msg" role="status"></p>
       </div>
     </div>
 
-    <!-- TEACHERS TAB (super admin only) -->
-    <div class="m-tabpanel hidden" id="m-tabpanel-teachers">
-      <div class="m-teachers-header">
-        <h2 class="m-teachers-title">👩‍🏫 Registered teachers</h2>
-        <button class="btn btn-jade btn-sm" id="m-new-teacher-btn">➕ Create teacher</button>
-      </div>
-      <p class="m-teachers-help">Create an account for another teacher. You'll get a teacher code (private — only for logging in at /maestro) and a classroom code (public — students type it to enter their class).</p>
-      <div id="m-teachers-list" class="m-teachers-list"></div>
-
-      <!-- Create-teacher modal -->
-      <div id="m-new-teacher-modal" class="m-modal hidden">
-        <div class="m-modal-card">
-          <button class="m-modal-close" id="m-new-teacher-close" type="button" aria-label="Cerrar">✕</button>
-          <h2>➕ New teacher</h2>
-          <label class="m-form-label">
-            <span>Teacher name:</span>
-            <input class="input" id="m-new-teacher-name" type="text" placeholder="Mrs. Chen" maxlength="60">
-          </label>
-          <label class="m-form-label">
-            <span>Email (optional, for recovery):</span>
-            <input class="input" id="m-new-teacher-email" type="email" placeholder="maria@escuela.cn" maxlength="120">
-          </label>
-          <label class="m-form-label">
-            <span>Country (optional, 2-3 letters):</span>
-            <input class="input" id="m-new-teacher-country" type="text" placeholder="MX, CN, TW…" maxlength="3">
-          </label>
-          <div class="m-form-label">
-            <span>Class levels (one classroom code per level):</span>
-            <div class="m-level-checks" id="m-new-teacher-levels">
-              <label><input type="checkbox" value="yct1"> 🧒 YCT 1</label>
-              <label><input type="checkbox" value="hsk2"> 🆕 New HSK 1</label>
-              <label><input type="checkbox" value="hsk1" checked> 📘 Old HSK 1</label>
-            </div>
-          </div>
-          <button class="btn btn-jade btn-xl" id="m-new-teacher-submit">Create account</button>
-          <p class="m-modal-msg" id="m-new-teacher-msg"></p>
-          <div id="m-new-teacher-result" class="m-teacher-result hidden">
-            <div class="m-teacher-result-title">✓ Account created — share these codes:</div>
-            <div class="m-teacher-result-row">
-              <span class="m-teacher-result-label">🔑 Teacher code (PRIVATE):</span>
-              <code class="m-teacher-result-code" id="m-result-teacher-id"></code>
-            </div>
-            <div class="m-teacher-result-row">
-              <span class="m-teacher-result-label">📚 Classroom code (for students):</span>
-              <code class="m-teacher-result-code" id="m-result-access-code"></code>
-            </div>
-            <p class="m-teacher-result-hint">The teacher logs in at <strong>/maestro</strong> with their private code. Students type the classroom code at <strong>/homework</strong>.</p>
-          </div>
+    <!-- 🧠 SENTENCE PRACTICE: Reading 31-40 of every sim with the real A-F exam bank. The teacher analyzes each
+         question in class: tap the wrong options to eliminate them until only the answer makes sense.
+         Uses the WU_WORDS vocab from warmup-vocab.js; no hanzi on screen. -->
+    <div id="m-practice-modal" class="m-modal hidden">
+      <div class="m-modal-card m-modal-card--xl">
+        <button class="m-modal-close" id="m-practice-close" type="button" aria-label="Close">✕</button>
+        <h2 id="m-prac-title">🧠 Sentence practice</h2>
+        <p class="m-modal-sub" id="m-prac-sub">Pick a simulation. Analyze each question with the real exam bank: eliminate the wrong options until only the answer makes sense.</p>
+        <div class="m-picker-bar">
+          <button class="btn btn-ghost btn-sm" id="m-prac-crumb" type="button" style="display:none;">← Simulations</button>
+          <button class="btn btn-ghost btn-sm" id="m-prac-vocab-btn" type="button">📚 Vocabulary</button>
+          <button class="btn btn-ghost btn-sm" id="m-prac-lang" type="button" title="Switch meanings between Spanish and English">🌐 Meanings: ES</button>
         </div>
+        <div id="m-prac-vocab" class="wu-practice-vocab" style="display:none;"></div>
+        <div id="m-prac-body">Loading…</div>
+      </div>
+    </div>
+
+    <!-- 🎯 SPECIAL ASSIGNMENT: author + send a personalized tarea -->
+    <div id="m-custom-modal" class="m-modal hidden">
+      <div class="m-modal-card m-custom-card">
+        <button class="m-modal-close" id="m-custom-close" type="button" aria-label="Close">✕</button>
+        <h2>🎯 Special assignment</h2>
+        <p class="m-modal-sub">Write your own sentences and send them to chosen students. It appears above their regular homework, and they may use words from any experience.</p>
+        <label class="m-form-label">
+          <span>Title</span>
+          <input class="input" id="m-cu-title" type="text" placeholder="E.g. Monday assignment: greetings" maxlength="120">
+        </label>
+        <label class="m-form-label">
+          <span>Instructions (optional)</span>
+          <input class="input" id="m-cu-instr" type="text" placeholder="E.g. Read each sentence aloud and then build the translation." maxlength="400">
+        </label>
+        <h3 class="m-h3 m-cu-items-head">📝 Sentences (1 to 24)</h3>
+        <div class="m-cu-items" id="m-cu-items"></div>
+        <button class="btn btn-ghost btn-sm" id="m-cu-add-item" type="button">➕ Add sentence</button>
+        <h3 class="m-h3 m-cu-students-head">👥 Students</h3>
+        <div class="m-cu-students-bar">
+          <input class="input m-cu-students-search" id="m-cu-students-search" type="search" placeholder="Search by name or code">
+          <button class="btn btn-ghost btn-sm" id="m-cu-students-all" type="button">Select all</button>
+          <button class="btn btn-ghost btn-sm" id="m-cu-students-none" type="button">Clear</button>
+        </div>
+        <div class="m-cu-students m-pick-list" id="m-cu-students"></div>
+        <p class="m-modal-msg" id="m-cu-msg" role="status"></p>
+        <button class="btn btn-gold btn-xl" id="m-cu-send" type="button">📤 Send assignment</button>
+
+        <h3 class="m-h3 m-cu-existing-head">📂 Your active assignments</h3>
+        <div class="m-cu-existing" id="m-cu-existing">Loading…</div>
+      </div>
+    </div>
+
+    <!-- 🎯 LIVE TEACHER MODE: pick online students; their phones enter the sentence builder as assistants -->
+    <div id="m-live-master-modal" class="m-modal hidden">
+      <div class="m-modal-card">
+        <button class="m-modal-close" id="m-live-master-close" type="button" aria-label="Close">✕</button>
+        <h2>✏️ Live Teacher Mode</h2>
+        <p class="m-modal-sub">The students you check enter the sentence builder as assistants on their phones, with no PIN. You land straight on the building screen.</p>
+        <!-- PIN no longer needed: the builder is created automatically. Kept hidden so older code referencing it still resolves. -->
+        <input type="hidden" id="m-live-master-pin" value="">
+        <label class="m-form-label">
+          <span>Message they see when they enter (optional)</span>
+          <input class="input" id="m-live-master-text" type="text" placeholder="Join Live Teacher Mode now!" maxlength="200">
+        </label>
+        <div class="m-live-master-list-head">
+          <span id="m-live-master-count">0 online</span>
+          <button class="btn btn-ghost btn-sm" id="m-live-master-all" type="button">Select all</button>
+          <button class="btn btn-ghost btn-sm" id="m-live-master-none" type="button">Clear</button>
+        </div>
+        <div id="m-live-master-list" class="m-live-master-list m-pick-list"></div>
+        <button class="btn btn-gold btn-xl m-sticky-go" id="m-live-master-send" type="button">⚡ Start Live Teacher Mode</button>
+        <p class="m-modal-msg" id="m-live-master-msg" role="status"></p>
       </div>
     </div>
   </div>
+
+  <div class="m-toasts" id="m-toasts" aria-live="polite"></div>
 
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/saga.js?v=20261012b"></script>
-  <script src="/js/maestro.js?v=20261012u"></script>
+  <script src="/js/cast.js?v=20261011c"></script>
+  <script src="/js/maestro.js?v=20261013a"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>
