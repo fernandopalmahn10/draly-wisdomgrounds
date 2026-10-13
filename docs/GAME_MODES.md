@@ -105,7 +105,8 @@ copy belongs on the player's phone.
 Live modes: **Reinos de Colores** (`kingdoms`, built 2026-10-10, Dubai upgrade 2026-10-11: landmarks, captains, zoom on
 the phone; spec `docs/specs/reinos-de-colores.md`), **Dragones
 Pintores** (`paint`, Gimkit Color Clash in Dralingo style, built 2026-10-11, spec `docs/specs/dragones-pintores.md`), **Batalla de Nieve en
-Ski Dubái** (`snow`, Gimkit 2D-map infection game, built 2026-10-12 on a branch, not deployed yet, spec `docs/specs/batalla-de-nieve.md`), **Mochi Mash** (`mochi-mash`), **Piñata Tigre** (`pinata`), **Vuelo del Dragón** (`dragon-eye`),
+Ski Dubái** (`snow`, Gimkit 2D-map infection game, built 2026-10-12 on a branch, not deployed yet, spec `docs/specs/batalla-de-nieve.md`), **La Gran Fuga de Dubái** (`escape`, Kahoot «Robot Run» co-op chase, built
+2026-10-13 on a branch, not deployed yet, spec `docs/specs/gran-fuga-de-dubai.md`), **Mochi Mash** (`mochi-mash`), **Piñata Tigre** (`pinata`), **Vuelo del Dragón** (`dragon-eye`),
 **Dàfùwēng · Monopolio Chino** (`monopoly`), **6-7 Swing** (`sixseven`) — all queued for an overhaul — plus the class
 tools Warm-up (`warmup`), Lectura (`reading`) and the HSK/YCT sim rooms (`hsksim`).
 

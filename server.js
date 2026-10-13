@@ -31,6 +31,8 @@ const Kingdoms = require('./core/kingdoms');
 const Paint = require('./core/paint');
 const Snow = require('./core/snow');                 // Batalla de Nieve en Ski Dubái (rules)
 const SnowMap = require('./public/js/snow-map');     // … and its map, shared with the phones and the projector
+const Escape = require('./core/escape');             // La Gran Fuga de Dubái (rules)
+const EscapeMap = require('./public/js/escape-map'); // … and its zona segura rooms, shared with the phones and the projector
 // Tiny persistence for the owner's Emirati Arabic gateway (single global
 // profile, since this is a super-admin-only personal feature). Lives on the
 // same data disk as the rest of the JSON state.
@@ -5212,6 +5214,278 @@ function snFinish(pin, g) {
   });
 }
 
+// === 🚀 LA GRAN FUGA DE DUBÁI (gameType 'escape') — Kahoot «Robot Run» style co-op chase, Dralingo episode ===
+// Rules in core/escape.js, rooms in public/js/escape-map.js (spec docs/specs/gran-fuga-de-dubai.md). The whole class
+// runs from Robotín through three Dubai zones: right answers are turbos (the run is server-timed, 10 Hz physics, 5 Hz
+// broadcast), then the «zona segura» waves in a top-down room (phones walk their avatar, the server checks positions).
+// Kids are numbered per round (p.esIdx) so the broadcasts stay small and survive rejoins. Every timer is checked against
+// the round object, so a stale timer never touches a new round.
+const ES_TICK_MS = 100;
+const ES_NEXT_Q_MS = { right: 1300, wrong: 1600 };   // the phone's turbo / right-answer screen, then the next question
+function esRoster(g) {
+  const out = {};
+  Object.values(g.players).forEach((p) => {
+    if (!p.esIdx || p.esRound !== g.escape.id) return;
+    out[p.esIdx] = { name: p.name, skin: p.esSkin, on: !p.disconnected };
+  });
+  return out;
+}
+function esPosArray(g, now) {
+  const k = g.escape;
+  const arr = [];
+  Object.entries(g.players).forEach(([pid, p]) => {
+    const pos = k.pos[pid];
+    if (!pos || p.disconnected || p.esRound !== k.id) return;
+    arr.push([p.esIdx, Math.round(pos.x), Math.round(pos.y), pos.f || 0, now < (p.esDizzyUntil || 0) ? 1 : 0]);
+  });
+  return arr;
+}
+// what every screen needs to draw the episode right now
+function esPublic(g, now) {
+  const k = g.escape;
+  return {
+    level: k.level, phase: k.phase, L: Escape.R.L, crew: Math.round(k.crew * 10) / 10, robot: Math.round(k.robot * 10) / 10,
+    hearts: k.hearts, levelsCleared: k.levelsCleared, replay: k.replay, paused: k.paused, close: k.phase === 'run' && !!k.closeSaid,
+    wakeMs: Math.max(0, k.wakeAt - now), dizzyMs: Math.max(0, k.dizzyUntil - now), phaseMs: k.phaseUntil ? Math.max(0, k.phaseUntil - now) : 0,
+    wave: k.wave, waves: Escape.R.WAVES, zones: k.zones, waveMs: k.wave && !k.waveResolved ? Math.max(0, k.waveUntil - now) : 0,
+    waveTotalMs: k.wave ? k.waveUntil - k.waveAt : 0, roomSeed: k.room ? k.seed : 0,
+  };
+}
+function esMe(g, p, now, extra) {
+  return Object.assign({
+    idx: p.esIdx, turbos: p.esTurbos || 0, best: p.esBest || 0, streak: p.esStreak || 0, safe: p.esSafe || 0, waves: p.esWaves || 0,
+    dizzyMs: Math.max(0, (p.esDizzyUntil || 0) - now),
+  }, extra || {});
+}
+function esSendMe(g, pid, extra) {
+  const p = g.players[pid];
+  if (p && g.escape) io.to(pid).emit('es:me', esMe(g, p, Date.now(), extra));
+}
+function esInitPayload(g, pid) {
+  const k = g.escape;
+  const now = Date.now();
+  const out = Object.assign(esPublic(g, now), {
+    seed: k.seed, round: k.id, players: esRoster(g), pos: k.phase === 'zone' ? esPosArray(g, now) : [], cast: g.esCast || null,
+  });
+  const p = pid ? g.players[pid] : null;
+  if (p && p.esRound === k.id) out.me = esMe(g, p, now, k.pos[pid] ? { x: k.pos[pid].x, y: k.pos[pid].y } : {});
+  return out;
+}
+// Bring a kid into the running round (start, late join, rejoin with a new socket id).
+function esAttach(g, pid, p) {
+  const k = g.escape;
+  const fresh = p.esRound !== k.id;
+  Escape.preparePlayer(k, p);
+  if (fresh) p.esSkin = EscapeMap.skinFor(p.avatar, p.name);
+  if (p.esPid && p.esPid !== pid && k.pos[p.esPid]) { k.pos[pid] = k.pos[p.esPid]; delete k.pos[p.esPid]; }
+  p.esPid = pid;
+  if (k.phase === 'zone' && k.room && !k.pos[pid]) { const s = Escape.spawnPos(k, p.esIdx); k.pos[pid] = { x: s.x, y: s.y, f: 2, at: Date.now() }; }
+}
+// a fresh question for every kid in the room (start of a run)
+function esDeal(pin, g) {
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected) return;
+    p.currentQ = null;
+    const q = nextQuestionFor(g, pid);
+    if (q) io.to(pid).emit('question', q);
+  });
+}
+function esStart(pin, g) {
+  esStop(g);
+  const now = Date.now();
+  g.escape = Escape.newRound(1 + Math.floor(Math.random() * 1e6), now, g.duration);
+  g.escape.tick = null;
+  Object.entries(g.players).forEach(([pid, p]) => {
+    p.esRound = null; p.esPid = null; p.score = 0;
+    // each kid starts the pack at a random spot, so «Otra ronda» never replays the same question order
+    p.queueIdx = Math.floor(Math.random() * Math.max(1, (g.questions || []).length));
+    if (p.disconnected) return;          // a phone that already left joins as a late joiner if it comes back
+    esAttach(g, pid, p);
+  });
+  g.teamScores = { red: 0, gold: 0 };
+  Object.keys(g.players).forEach((pid) => io.to(pid).emit('es:init', esInitPayload(g, pid)));
+  io.to(g.hostId).emit('es:init', esInitPayload(g, null));
+  g.escape.lastStep = now;
+  const tick = setInterval(() => esTick(pin, tick), ES_TICK_MS);
+  g.escape.tick = tick;
+}
+function esStop(g) {
+  if (g && g.escape && g.escape.tick) { clearInterval(g.escape.tick); g.escape.tick = null; }
+}
+// a new step of the episode for every screen (zone, wave, cleared, caught, escape, run)
+function esPhase(pin, g, extra) {
+  const now = Date.now();
+  io.to(pin).emit('es:phase', Object.assign(esPublic(g, now), { pos: g.escape.phase === 'zone' ? esPosArray(g, now) : [] }, extra || {}));
+}
+function esTick(pin, id) {
+  try { esTickInner(pin, id); } catch (e) { console.error('[esTick]', e); }
+}
+function esTickInner(pin, id) {
+  const g = games[pin];
+  // A room that vanished (or a newer round) stops its own old interval.
+  if (!g || !g.escape || (id && g.escape.tick !== id)) { if (id) clearInterval(id); return; }
+  if (g.state !== 'active') return esStop(g);
+  const k = g.escape;
+  const now = Date.now();
+  const dt = Math.min(0.25, Math.max(0, (now - (k.lastStep || now)) / 1000));
+  k.lastStep = now;
+  k.n = (k.n || 0) + 1;
+  if (k.paused) return;
+  // the last minute: once per round (phones + projector stage it)
+  if (!k.milestones.lastmin && g.endsAt && g.endsAt - now <= 60000 && g.endsAt - now > 1000 && g.duration >= 150 && k.phase !== 'escape') {
+    k.milestones.lastmin = true;
+    io.to(pin).emit('es:moment', { type: 'lastmin' });
+  }
+  if (k.phase === 'run') {
+    const evs = Escape.stepRun(k, g.players, dt, now);
+    evs.forEach((ev) => {
+      if (ev.type === 'zap') { io.to(pin).emit('es:zap', { crew: k.crew, robot: k.robot, dizzyMs: Escape.R.DIZZY_MS, zaps: k.zaps }); }
+      else if (ev.type === 'close') io.to(pin).emit('es:moment', { type: 'close' });
+      else if (ev.type === 'sprint') io.to(g.hostId).emit('es:moment', { type: 'sprint' });
+      else if (ev.type === 'done') {
+        // the crew reached the zone: open questions are dropped, everyone appears in the zona segura room
+        Escape.startZone(k, now);
+        Object.entries(g.players).forEach(([pid, p]) => {
+          p.currentQ = null;
+          if (p.disconnected || p.esRound !== k.id) return;
+          const s = Escape.spawnPos(k, p.esIdx);
+          k.pos[pid] = { x: s.x, y: s.y, f: 2, at: now };
+        });
+        esPhase(pin, g);
+      }
+    });
+    if (k.phase === 'run' && k.n % 2 === 0) {
+      io.to(pin).emit('es:tick', { c: Math.round(k.crew * 10) / 10, r: Math.round(k.robot * 10) / 10, d: now < k.dizzyUntil ? 1 : 0, cl: k.closeSaid ? 1 : 0 });
+    }
+  } else if (k.phase === 'zone') {
+    if (!k.wave && now >= k.phaseUntil) {
+      Escape.startWave(k, g.players, now);
+      io.to(pin).emit('es:wave', { wave: k.wave, waves: Escape.R.WAVES, zones: k.zones, ms: k.waveUntil - now });
+    } else if (k.wave && !k.waveResolved && now >= k.waveUntil) {
+      const r = Escape.resolveWave(k, g.players, now);
+      const idxOf = (pid) => (g.players[pid] || {}).esIdx || 0;
+      io.to(pin).emit('es:wave-end', { wave: k.wave, safe: r.safe.map(idxOf), out: r.out.map(idxOf), lost: r.lost, hearts: r.hearts, n: r.n, dizzyMs: Escape.R.ZONE_DIZZY_MS });
+      r.out.forEach((pid) => esSendMe(g, pid, { zapped: true }));
+      r.safe.forEach((pid) => esSendMe(g, pid, { safeNow: true }));
+      k.phaseUntil = now + Escape.R.WAVE_REST_MS;
+    } else if (k.wave && k.waveResolved && now >= k.phaseUntil) {
+      if (k.wave >= Escape.R.WAVES || (k.hearts <= 0 && !k.replayed[k.level])) {
+        const next = Escape.afterZone(k);
+        const level = k.level;
+        if (next === 'caught') { Escape.caught(k); k.phase = 'caught'; k.phaseAt = now; k.phaseUntil = now + Escape.R.CAUGHT_MS; esPhase(pin, g, { caughtLevel: level }); }
+        else if (next === 'cleared') { const h0 = k.hearts; Escape.clearLevel(k); k.phase = 'cleared'; k.phaseAt = now; k.phaseUntil = now + Escape.R.CLEARED_MS; esPhase(pin, g, { clearedLevel: level, heartBack: k.hearts > h0 }); }
+        else { k.levelsCleared = Escape.R.LEVELS; k.escaped = true; k.phase = 'escape'; k.phaseAt = now; k.phaseUntil = now + Escape.R.ESCAPE_MS; esPhase(pin, g, { clearedLevel: level }); }
+        k.zones = [];
+      } else {
+        Escape.startWave(k, g.players, now);
+        io.to(pin).emit('es:wave', { wave: k.wave, waves: Escape.R.WAVES, zones: k.zones, ms: k.waveUntil - now });
+      }
+    }
+    if (k.phase === 'zone' && k.n % 2 === 0) {
+      const live = k.wave && !k.waveResolved;
+      const msg = { pos: esPosArray(g, now), wl: live ? Math.max(0, k.waveUntil - now) : 0 };
+      // who is in which zone, only while the wave is live (the screens keep the last count after the zap)
+      if (live) msg.occ = Escape.occupancy(k, g.players, now).map((o) => [o.id, o.kids.length, o.safe.map((x) => x.idx)]);
+      io.to(pin).emit('es:tick', msg);
+    }
+  } else if (k.phase === 'cleared' || k.phase === 'caught') {
+    if (now >= k.phaseUntil) {
+      Escape.startRun(k, now, k.phase === 'caught');
+      esPhase(pin, g);
+      esDeal(pin, g);
+    }
+  } else if (k.phase === 'escape') {
+    if (now >= k.phaseUntil && !k.ending) {
+      k.ending = true;
+      if (g.endTimer) clearTimeout(g.endTimer);
+      endGame(pin);
+    }
+  }
+  // who is in the game (joins, leaves): a fresh roster for every screen
+  if (k.n % 5 === 0) {
+    const sig = Object.values(g.players).filter((p) => p.esRound === k.id).map((p) => p.esIdx + (p.disconnected ? 'x' : '')).join(',');
+    if (sig !== k.rosterSig) { k.rosterSig = sig; io.to(pin).emit('es:roster', { players: esRoster(g) }); }
+  }
+}
+function esAnswer(pin, g, pid, p, correct, correctText) {
+  const k = g.escape;
+  if (!k) return;
+  const n = Escape.kidsOn(g.players, k).length;
+  const r = Escape.answer(k, p, correct, n);
+  p.lastQuestionAt = Date.now();     // the global watchdog must not push a question over the turbo screen
+  io.to(pid).emit('answer-result', {
+    correct, correctText,
+    escape: { turbo: !!r.turbo, super: !!r.super, gain: r.gain || 0, streak: p.esStreak || 0, turbos: p.esTurbos || 0, crew: Math.round(k.crew * 10) / 10, robot: Math.round(k.robot * 10) / 10 },
+  });
+  if (r.turbo) io.to(g.hostId).emit('es:turbo', { idx: p.esIdx, name: p.name, super: r.super, gain: r.gain, streak: p.esStreak });
+  // the next question only while the crew is still running (a zone or a big moment may have started meanwhile)
+  setTimeout(() => {
+    if (games[pin] !== g || g.state !== 'active' || g.escape !== k || k.phase !== 'run' || k.paused || !g.players[pid] || g.players[pid].currentQ) return;
+    const q = nextQuestionFor(g, pid);
+    if (q) io.to(pid).emit('question', q);
+  }, correct ? ES_NEXT_Q_MS.right : ES_NEXT_Q_MS.wrong);
+}
+// Teacher pause: nothing moves, the clock stops; on resume every timer moves forward.
+function esPause(pin, g, paused) {
+  const k = g.escape;
+  if (!k || !!k.paused === !!paused) return;
+  const now = Date.now();
+  if (paused) {
+    k.paused = true;
+    k.pausedAt = now;
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+  } else {
+    const shift = now - k.pausedAt;
+    Escape.shiftTimers(k, g.players, shift);
+    g.endsAt += shift;
+    k.paused = false;
+    if (g.endTimer) clearTimeout(g.endTimer);
+    g.endTimer = setTimeout(() => { if (games[pin] && games[pin].state === 'active') endGame(pin); }, Math.max(0, g.endsAt - now));
+    // kids who answered during the pause get their next question now
+    if (k.phase === 'run') Object.entries(g.players).forEach(([pid, p]) => {
+      if (p.disconnected || p.currentQ || p.esRound !== k.id) return;
+      const q = nextQuestionFor(g, pid);
+      if (q) io.to(pid).emit('question', q);
+    });
+  }
+  io.to(pin).emit('es:pause', Object.assign(esPublic(g, now), { paused: k.paused }));
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// End: the crew's rank, the awards, every kid's own numbers (each phone gets its own game-end).
+function esFinish(pin, g) {
+  const k = g.escape;
+  if (!k) return;
+  esStop(g);
+  const fin = Escape.finish(k, g.players);
+  const lite = (r) => r && ({ idx: (g.players[r.id] || {}).esIdx, name: r.name, skin: (g.players[r.id] || {}).esSkin, score: r.score, turbos: r.turbos, best: r.best, safe: r.safe, waves: r.waves, reach: r.reach });
+  Object.entries(g.players).forEach(([, p]) => { if (p.esRound === k.id) p.score = (fin.rows.find((r) => g.players[r.id] === p) || {}).score || 0; });
+  const awards = { turbos: lite(fin.awards.turbos), fastest: lite(fin.awards.fastest), streak: lite(fin.awards.streak) };
+  const common = {
+    winner: fin.escaped ? 'crew' : 'tie',
+    escape: {
+      rank: fin.rank, levelsCleared: fin.levelsCleared, hearts: fin.hearts, escaped: fin.escaped, level: k.level, zaps: fin.zaps,
+      turbos: fin.turbos, awards, top: fin.rows.slice(0, 8).map(lite), // the whole crew, in join order (no public ranking of who did less)
+      crew: fin.rows.filter((r) => !r.gone).map(lite).sort((a, b) => (a.idx || 0) - (b.idx || 0)).slice(0, 40),
+      cast: g.esCast || null,
+    },
+    leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.score, team: 'crew', avatar: r.avatar })),
+  };
+  g.teamScores = { red: fin.levelsCleared, gold: 0 };
+  io.to(g.hostId).emit('game-end', Object.assign({ teamScores: g.teamScores }, common));
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected || p.esRound !== k.id) return;
+    const other = p.team === 'red' ? 'gold' : 'red';
+    const row = fin.rows.find((r) => r.id === pid) || {};
+    const mine = Object.keys(awards).filter((a) => awards[a] && fin.awards[a] && fin.awards[a].id === pid);
+    io.to(pid).emit('game-end', Object.assign({}, common, {
+      teamScores: { [p.team]: fin.escaped ? 1 : 0, [other]: 0 },
+      scores: { [pid]: row.score || 0 },
+      me: { score: row.score || 0, turbos: row.turbos || 0, supers: row.supers || 0, best: row.best || 0, safe: row.safe || 0, waves: row.waves || 0, reach: row.reach, awards: mine },
+    }));
+  });
+}
+
 function endGame(pin) {
   const g = games[pin];
   if (!g) return;
@@ -5253,6 +5527,13 @@ function endGame(pin) {
     broadcast(pin);
     return;
   }
+  // La Gran Fuga de Dubái: the crew's rank and each kid's own numbers (core/escape.js finish()).
+  if (g.gameType === 'escape') {
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+    esFinish(pin, g);
+    broadcast(pin);
+    return;
+  }
   const winner =
     g.teamScores.red > g.teamScores.gold
       ? 'red'
@@ -5288,7 +5569,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'snow', 'warmup', 'reading', 'hsksim'];
+    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'warmup', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'pinata'       ? 240 :
@@ -5298,6 +5579,7 @@ io.on('connection', (socket) => {
       type === 'kingdoms'     ? 180 :
       type === 'paint'        ? 240 :
       type === 'snow'         ? 240 :
+      type === 'escape'       ? 300 :    // three zones + three zona segura phases
       type === 'warmup'       ? 3600 :   // 1 hour ceiling; teacher exits manually
       type === 'reading'      ? 3600 :   // 1 hour ceiling; teacher controls flow
       type === 'hsksim'       ? 3600 :   // 1 hour ceiling; kid takes the exam on their own pace
@@ -5415,6 +5697,9 @@ io.on('connection', (socket) => {
     if (g.gameType === 'snow' && g.snow && g.state === 'active') {
       io.to(socket.id).emit('sn:init', snInitPayload(g, null));
     }
+    if (g.gameType === 'escape' && g.escape && g.state === 'active') {
+      io.to(socket.id).emit('es:init', esInitPayload(g, null));
+    }
     cb({ ok: true, gameType: g.gameType, state: g.state });
   });
 
@@ -5512,7 +5797,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
     // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
-    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow') && g.state !== 'lobby') return;
+    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
     // generated server-side or teacher-driven). Don't gate them on
     // questions.length, otherwise Start silently does nothing and the
@@ -5550,6 +5835,13 @@ io.on('connection', (socket) => {
       const c = kdPickCaptains(g.snCaptains ? { red: g.snCaptains.sun, gold: g.snCaptains.ice } : null);
       g.snCaptains = { sun: c.red, ice: c.gold };
       io.to(pin).emit('sn:captains', g.snCaptains);
+    }
+    // La Gran Fuga: Profe Fer opens the episode, Hamdan waits at the jet, one of the gang cheers at each big moment
+    // (the same picks on the projector and every phone).
+    if (g.gameType === 'escape') {
+      const gang = kdShuffle(['latifa', 'aileen', 'adric', 'adrian', 'hamdan', 'fer']);
+      g.esCast = { open: 'fer', jet: 'hamdan', cheers: gang.slice(0, 4) };
+      io.to(pin).emit('es:cast', g.esCast);
     }
     io.to(pin).emit('countdown', { ms: COUNTDOWN_MS });
 
@@ -5644,6 +5936,7 @@ io.on('connection', (socket) => {
       if (g.gameType === 'kingdoms') kdStart(pin, g);
       if (g.gameType === 'paint') pcStart(pin, g);
       if (g.gameType === 'snow') snStart(pin, g);
+      if (g.gameType === 'escape') esStart(pin, g);
       if (g.gameType === 'reading') {
         // === 📖 READING MODE ===
         // Teacher-driven story session. Server holds the master playback
@@ -5730,7 +6023,7 @@ io.on('connection', (socket) => {
   socket.on('host:end-now', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
-    if (g.gameType === 'snow' && g.state !== 'active') return;      // already over: no second end show
+    if ((g.gameType === 'snow' || g.gameType === 'escape') && g.state !== 'active') return;      // already over: no second end show
     if (g.endTimer) clearTimeout(g.endTimer);
     endGame(pin);
   });
@@ -5742,6 +6035,7 @@ io.on('connection', (socket) => {
     if (g.gameType === 'kingdoms') { kdClearTimers(g); g.kingdoms = null; }
     if (g.gameType === 'paint') { pcStop(g); g.paint = null; }
     if (g.gameType === 'snow') { snStop(g); g.snow = null; }
+    if (g.gameType === 'escape') { esStop(g); g.escape = null; }
     g.state = 'lobby';
     g.teamScores = { red: 0, gold: 0 };
     g.endsAt = null;
@@ -5928,6 +6222,17 @@ io.on('connection', (socket) => {
         if (player.currentQ) io.to(socket.id).emit('question', { qid: player.currentQ.qid, text: player.currentQ.text, answers: player.currentQ.answers, image: player.currentQ.image });
         return;
       }
+      // La Gran Fuga: a late joiner runs with the crew (or appears in the zona segura room); a rejoin keeps everything.
+      if (g.gameType === 'escape' && g.escape) {
+        esAttach(g, socket.id, player);
+        io.to(socket.id).emit('es:init', esInitPayload(g, socket.id));
+        io.to(pin).emit('es:roster', { players: esRoster(g) });
+        if (g.escape.phase !== 'run') { player.currentQ = null; return; }
+      if (g.escape.paused) {            // paused: the open question comes back, a new one waits for «Seguir»
+        if (player.currentQ) io.to(socket.id).emit('question', { qid: player.currentQ.qid, text: player.currentQ.text, answers: player.currentQ.answers, image: player.currentQ.image });
+        return;
+      }
+      }
       if (g.gameType === 'kingdoms' && g.kingdoms) {
         io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
         if (player.kdPending) { kdPrompt(pin, socket.id, { reprompt: true }); return; }
@@ -6020,6 +6325,8 @@ io.on('connection', (socket) => {
       pcAnswer(pin, g, socket.id, p, correct, correctText);
     } else if (g.gameType === 'snow') {
       snAnswer(pin, g, socket.id, p, correct, correctText);
+    } else if (g.gameType === 'escape') {
+      esAnswer(pin, g, socket.id, p, correct, correctText);
     } else if (g.gameType === 'kingdoms') {
       // Reinos de Colores: right answer = a flag to plant (3 in a row = 2 flags). The next question waits
       // until the flag is planted (kid taps a tile, or the server auto-plants after KD_PLANT_MS).
@@ -6105,6 +6412,8 @@ io.on('connection', (socket) => {
       nextDelay = correct ? -1 : 1400;
     } else if (g.gameType === 'paint' || g.gameType === 'snow') {
       nextDelay = -1;                       // back to flying / walking; the kid asks for the next question
+    } else if (g.gameType === 'escape') {
+      nextDelay = -1;                       // esAnswer deals the next one, only while the crew is running
     } else if (g.gameType === 'sixseven') {
       // Snappy rhythm — fast cadence so the swing feels continuous
       nextDelay = correct ? 600 : 800;
@@ -6120,7 +6429,7 @@ io.on('connection', (socket) => {
     }
     // Reinos de Colores sends its own small kd:plant diffs; skipping the full-room 'state' push here
     // keeps 30 phones from receiving ~5 full state objects per second.
-    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow') broadcast(pin);
+    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape') broadcast(pin);
   });
 
   // Dragones Pintores: position (8 Hz from each phone), painted tiles, and «Recargar» (ask for a question).
@@ -6283,13 +6592,47 @@ io.on('connection', (socket) => {
       snSendMe(g, socket.id, { chest: { gained: r.gained } });
     } catch (e) { console.error('[player:sn-grab]', e); }
   });
-  // Teacher «Pausa» (Batalla de Nieve; other games can opt in the same way).
+  // La Gran Fuga: the kid's position in the zona segura room (8 Hz while walking, 1/s standing still).
+  socket.on('player:es-pos', (data) => {
+    try {
+      const g = games[data && data.pin];
+      if (!g || g.gameType !== 'escape' || !g.escape || g.state !== 'active') return;
+      const k = g.escape;
+      const p = g.players[socket.id];
+      if (!p || p.esRound !== k.id || k.phase !== 'zone' || !k.room) return;
+      if (p.esPid !== socket.id) esAttach(g, socket.id, p);       // a reconnected socket that hasn't re-joined yet
+      const now = Date.now();
+      const x = Number(data.x), y = Number(data.y);
+      const chk = Escape.checkPos(k, p, socket.id, x, y, now);
+      if (!chk.ok) {
+        // too fast / inside a wall / dizzy: the phone snaps back (at most twice a second)
+        if (chk.x !== undefined && now - (p.esCorrAt || 0) > 500) { p.esCorrAt = now; esSendMe(g, socket.id, { pos: [chk.x, chk.y] }); }
+        else if (chk.unknown && !k.pos[socket.id]) { const s = Escape.spawnPos(k, p.esIdx); k.pos[socket.id] = { x: s.x, y: s.y, f: 2, at: now }; esSendMe(g, socket.id, { pos: [s.x, s.y] }); }
+        if (k.pos[socket.id]) k.pos[socket.id].at = now;            // the phone is here (not «away»), just refused
+        return;
+      }
+      const pos = k.pos[socket.id] || (k.pos[socket.id] = { x, y, f: 2, at: now });
+      pos.x = x; pos.y = y; pos.at = now;
+      const f = Number(data.f);
+      if (Number.isInteger(f) && f >= 0 && f < 8) pos.f = f;
+    } catch (e) { console.error('[player:es-pos]', e); }
+  });
+  // Teacher «Pausa» (Batalla de Nieve, La Gran Fuga; other games can opt in the same way).
+  // Teacher «⏭ Saltar zona» (La Gran Fuga): the zona segura ends now, nobody loses a heart for the wave in play.
+  socket.on('host:es-skip', (data) => {
+    try {
+      const g = games[data && data.pin];
+      if (!g || g.hostId !== socket.id || g.state !== 'active' || g.gameType !== 'escape' || !g.escape || g.escape.paused) return;
+      if (Escape.skipZone(g.escape, Date.now())) io.to(data.pin).emit('es:moment', { type: 'skip' });
+    } catch (e) { console.error('[host:es-skip]', e); }
+  });
   socket.on('host:pause', (data) => {
     try {
       const { pin, paused } = data || {};
       const g = games[pin];
       if (!g || g.hostId !== socket.id || g.state !== 'active') return;
       if (g.gameType === 'snow') snPause(pin, g, !!paused);
+      if (g.gameType === 'escape') esPause(pin, g, !!paused);
     } catch (e) { console.error('[host:pause]', e); }
   });
 
@@ -6314,7 +6657,7 @@ io.on('connection', (socket) => {
     g.extraSecs = (g.extraSecs || 0) + add / 1000;   // only for this round: host:reset gives it back (playtest 2026-10-11)
     if (g.endTimer) clearTimeout(g.endTimer);
     g.endTimer = null;
-    if (!(g.snow && g.snow.paused)) g.endTimer = setTimeout(() => {   // paused: the resume re-arms it
+    if (!(g.snow && g.snow.paused) && !(g.escape && g.escape.paused)) g.endTimer = setTimeout(() => {   // paused: the resume re-arms it
       if (!games[pin] || games[pin].state !== 'active') return;
       endGame(pin);
     }, Math.max(0, g.endsAt - Date.now()));
@@ -6370,6 +6713,15 @@ io.on('connection', (socket) => {
       io.to(socket.id).emit('sn:init', snInitPayload(g, socket.id));
       if (fresh) io.to(pin).emit('sn:roster', { players: snRoster(g), counts: Snow.counts(g.players) });
       return;                         // an open question stays open: the station button re-sends it
+    }
+    if (g.gameType === 'escape' && g.state === 'active' && g.escape) {
+      esAttach(g, socket.id, p);
+      io.to(socket.id).emit('es:init', esInitPayload(g, socket.id));
+      if (g.escape.phase !== 'run') return;            // zona segura / big moments: no questions now
+      if (g.escape.paused) {            // paused: the open question comes back, a new one waits for «Seguir»
+        if (p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
+        return;
+      }
     }
     if (g.gameType === 'kingdoms' && g.state === 'active' && g.kingdoms) {
       io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
@@ -7405,6 +7757,7 @@ io.on('connection', (socket) => {
           if (stillExists.endTimer) clearTimeout(stillExists.endTimer);
           if (stillExists.gameType === 'paint') pcStop(stillExists);
           if (stillExists.gameType === 'snow') snStop(stillExists);
+          if (stillExists.gameType === 'escape') esStop(stillExists);
           if (stillExists.gameType === 'kingdoms') kdClearTimers(stillExists);
           io.to(currentPin).emit('host-left');
           delete games[currentPin];
@@ -7447,6 +7800,7 @@ setInterval(() => {
     if (g.gameType === 'warmup') return;       // teacher-driven flashcards, no questions
     if (g.gameType === 'paint') return;        // questions are on demand («Recargar»)
     if (g.gameType === 'snow') return;         // questions are on demand (the stations)
+    if (g.gameType === 'escape' && !(g.escape && g.escape.phase === 'run' && !g.escape.paused)) return;   // only while the crew runs
     Object.entries(g.players).forEach(([pid, p]) => {
       const inAction = p.mashUntil > now || p.currentQ;
       if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {

@@ -8,7 +8,11 @@
   const POSE = (n) => A + 'dralingo/' + n + '.webp';
   // Team colours on the characters (his rule 2026-10-11): a Fuego kid sees the red Dralingo in both team games.
   const RED_POSES = ['jump', 'flag', 'shocked', 'thinking', 'pointing', 'champion', 'countdown'];
-  const TPOSE = (n) => POSE(n + (ctx && game !== 'snow' && ctx.getTeam() === 'red' && RED_POSES.includes(n) ? '-red' : ''));
+  // La Gran Fuga (co-op, no teams): Dralingo in his platform look (kandura + mustache: hello / power / wise)
+  const ES_POSE = { thinking: 'wise', shocked: 'wise', pointing: 'hello', countdown: 'hello', jump: 'power', flag: 'power', champion: 'power' };
+  const TPOSE = (n) => (game === 'escape' ? '/assets/dralingo/' + (ES_POSE[n] || 'hello') + '.webp'
+    : POSE(n + (ctx && game !== 'snow' && ctx.getTeam() === 'red' && RED_POSES.includes(n) ? '-red' : '')));
+  const ESC = () => (game === 'escape' && window.EscapePhone ? window.EscapePhone : null);
   // Batalla de Nieve: no red/blue kingdoms, two sides that change during the round (counts from the sn:* events)
   let snowInfo = { sun: 0, ice: 0, side: 'sun' };
   let captains = null;           // Reinos de Colores: { red, gold } cast ids of this round's captains
@@ -83,7 +87,7 @@
     };
   }
 
-  const SKIN_GAMES = ['kingdoms', 'paint', 'snow'];
+  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape'];
   let game = null;
   function setMode(v, gt) {
     if (gt) game = gt;
@@ -160,7 +164,9 @@
     fill.style.transition = `transform ${Q_MS}ms linear`;
     fill.style.transform = 'scaleX(0)';
     let lastTick = 99;
+    held = false;
     qTimer = setInterval(() => {
+      if (held) return;                 // La Gran Fuga: the clock waits while the teacher pauses or the kid is dizzy
       const left = Q_MS - (Date.now() - qStart);
       const sec = Math.ceil(left / 1000);
       if (sec <= 5 && sec !== lastTick && sec > 0) { lastTick = sec; box.classList.add('hurry'); sfx('tick', 0.55); }
@@ -173,8 +179,26 @@
         }
       }
     }, 200);
+    if (holdSrc && holdSrc()) hold(true);       // La Gran Fuga: a question that lands during a pause / dizzy starts held
   }
-  function stopQuestionTimer() { if (qTimer) { clearInterval(qTimer); qTimer = null; } }
+  function stopQuestionTimer() { if (qTimer) { clearInterval(qTimer); qTimer = null; } held = false; }
+  // hold(true) freezes the question timer bar where it is; hold(false) lets it run on from there
+  let held = false, heldAt = 0, holdSrc = null;
+  function hold(v) {
+    v = !!v;
+    if (v === held || !qTimer) { if (!qTimer) held = false; return; }
+    const fill = $('kdp-timer-fill');
+    held = v;
+    if (held) {
+      heldAt = Date.now();
+      const left = Math.max(0, Q_MS - (heldAt - qStart));
+      if (fill) { fill.style.transition = 'none'; fill.style.transform = `scaleX(${(left / Q_MS).toFixed(3)})`; }
+    } else {
+      qStart += Date.now() - heldAt;
+      const left = Math.max(0, Q_MS - (Date.now() - qStart));
+      if (fill) { void fill.offsetWidth; fill.style.transition = `transform ${left}ms linear`; fill.style.transform = 'scaleX(0)'; }
+    }
+  }
 
   // ---------- screens ----------
   function lobbyDecor() {
@@ -195,6 +219,7 @@
     if ($('kdp-lobby-img')) $('kdp-lobby-img').src = TPOSE('pointing');
     t.textContent = team === 'red' ? '¡Eres del Reino del Fuego! 🔥' : '¡Eres del Reino del Mar! 🌊';
     if (game === 'snow') { t.className = 'kdp-team sn-team'; t.textContent = '❄️ ¡Batalla de Nieve en Ski Dubái!'; }
+    if (game === 'escape') { t.className = 'kdp-team es-team'; t.textContent = '🚀 ¡Eres de la tripulación!'; }
     howDecor();
   }
   // Reinos de Colores: kids don't read rules, so the lobby shows the whole game in 3 pictured steps
@@ -230,6 +255,7 @@
   }
   function howDecor() {
     snowHow();
+    if (window.EscapePhone) window.EscapePhone.lobby(game === 'escape' ? document.querySelector('#screen-lobby .lobby-header') : null);
     const head = document.querySelector('#screen-lobby .lobby-header');
     let card = $('kdp-how');
     if (game !== 'kingdoms') { if (card) card.remove(); return; }
@@ -265,6 +291,7 @@
     const img = $('kdp-count-img');
     if (img) img.src = TPOSE('countdown');
     capDecor();
+    if (window.EscapePhone) window.EscapePhone.intro(game === 'escape' ? $('screen-countdown') : null);
   }
   // «Tu capitana: Aileen» under the countdown (Reinos de Colores picks two of the gang each round).
   function capDecor() {
@@ -294,6 +321,7 @@
     const paint = r && r.paint;
     const box = $('result-feedback');
     if (!box) return;
+    if (ESC()) { ESC().result(box, correct, correctText, Object.assign({ timeUp: !correct && answered && Date.now() - qStart >= Q_MS }, r)); return; }
     box.innerHTML = '';
     const img = document.createElement('img');
     img.className = 'kdp-sticker';
@@ -366,6 +394,7 @@
     const emoji = $('end-emoji');
     if (!emoji) return;
     if (game === 'snow') { snowEnd(data); return; }
+    if (ESC()) { ESC().end(data); return; }
     const team = ctx.getTeam();
     const won = data && data.winner === team;
     emoji.innerHTML = '';
@@ -418,6 +447,7 @@
     s.on('sn:me', (m) => { if (m.side) snowInfo.side = m.side; paintBar(); });
     s.on('sn:hit', (h) => { if (h.type === 'freeze') { snowInfo.sun = Math.max(0, snowInfo.sun - 1); snowInfo.ice++; paintBar(); } });
     s.on('sn:captains', (c) => { captains = c; if (on) capDecor(); });
+    s.on('es:init', () => { setMode(true, 'escape'); });
     s.on('pc:paint', (d) => {
       if (d.teamScores) { scores = d.teamScores; paintBar(); }
       if (d.scores && d.scores[s.id] != null) myPaint = d.scores[s.id];
@@ -429,7 +459,7 @@
       afterRender(() => {
         ensureBar();
         const hasImg = $('question-image-wrap') && $('question-image-wrap').style.display !== 'none';
-        if ($('kdp-think')) $('kdp-think').style.display = hasImg ? 'none' : 'flex';
+        if ($('kdp-think')) { $('kdp-think').style.display = hasImg ? 'none' : 'flex'; const ti = $('kdp-think').firstChild; if (ti && ti.getAttribute('src') !== TPOSE('thinking')) ti.src = TPOSE('thinking'); }
         paintBar();
         if (q && q.qid === curQid && qTimer) return;   // same question re-sent by a resync: keep its countdown
         curQid = q && q.qid;
@@ -451,5 +481,5 @@
     s.on('kd:prompt', () => sfx('flag', 0.6));
   }
 
-  window.KingdomsSkin = { init, sfx };
+  window.KingdomsSkin = { init, sfx, hold, holdWhen: (fn) => { holdSrc = typeof fn === 'function' ? fn : null; } };
 })();

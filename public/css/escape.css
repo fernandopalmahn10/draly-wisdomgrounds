@@ -1,0 +1,425 @@
+/* La Gran Fuga de Dubái — projector (host-escape.html) + phone (player.html #screen-escape, body.es-on).
+   Built on kingdoms.css (kd-* pieces: buttons, PIN card, banners, Dralingo bubble, confetti, the phone question skin).
+   The world: Dubai at golden hour (peach → pink → lilac), the sticker look (navy ink outline + a solid drop shadow),
+   three accents with one job each: turbo orange (answers), safe green (the zones), Robotín cyan (the robot and his zap). */
+:root {
+  --es-ink: #1d2440; --es-ink-soft: #55607f; --es-paper: #fff7e3;
+  --es-dusk-1: #ffe3b8; --es-dusk-2: #ffc9d6; --es-dusk-3: #d9c4f2;
+  --es-turbo: #ff8a1f; --es-turbo-hot: #ffd23f;
+  --es-safe: #2fbf71; --es-safe-deep: #178a4c; --es-safe-soft: #d6f7e3;
+  --es-robo: #3fd6e0; --es-robo-deep: #1b8fa3; --es-robo-soft: #dcfaff;
+  --es-danger: #f0443a;
+  --es-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --es-ease-io: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/* ================= projector ================= */
+body.es-host {
+  background: linear-gradient(180deg, rgba(255,227,184,.55) 0%, rgba(255,201,214,.35) 55%, rgba(217,196,242,.4) 100%),
+    url('/assets/dubai/skyline-wide.webp') center bottom / cover no-repeat fixed, var(--es-dusk-1);
+}
+.es-host ::selection { background: var(--es-turbo-hot); color: var(--es-ink); }
+.es-host .kd-btn:focus-visible, .es-host input:focus-visible { outline: 4px solid var(--es-turbo-hot); outline-offset: 2px; }
+
+/* lobby: Robotín | the title | Dralingo, then the PIN + the crew, the 3 steps, the start */
+.es-lobby { max-width: 1240px; margin: 0 auto; padding: 50px 20px 18px; position: relative; z-index: 2; }
+.es-lobby-head { display: grid; grid-template-columns: 190px 1fr 190px; align-items: end; gap: 10px; }
+.es-lobby-robot { width: 190px; height: 190px; justify-self: start; }
+.es-lobby-dralingo { height: 196px; justify-self: end; filter: drop-shadow(0 8px 0 rgba(29,36,64,.18)); animation: kdBob 1.8s ease-in-out infinite; }
+.es-lobby-titles { text-align: center; padding-bottom: 6px; }
+.es-title { position: relative; margin: 0; font-size: clamp(3rem, 6vw, 4.8rem); line-height: .95; color: #fff; letter-spacing: -0.01em;
+  -webkit-text-stroke: 3px var(--es-ink); paint-order: stroke fill; text-shadow: 0 6px 0 var(--es-ink); }
+.es-title > span:not(.es-tv) { display: block; font-size: .62em; color: var(--es-turbo-hot); }
+.es-tv { position: absolute; top: -10px; left: 50%; transform: translate(-50%, -100%) rotate(-3deg); white-space: nowrap;
+  font: 800 1.05rem/1 'Nunito', sans-serif; -webkit-text-stroke: 0; text-shadow: none; color: var(--es-ink);
+  background: var(--es-robo-soft); border: 3px solid var(--es-ink); border-radius: 999px; padding: 5px 14px; box-shadow: 0 4px 0 var(--es-ink); }
+.es-sub { max-width: 640px; margin: 12px auto 0; font-weight: 800; font-size: 1.12rem; line-height: 1.35; background: rgba(255,247,227,.9);
+  border-radius: 18px; padding: 6px 16px; }
+.es-lobby-row { display: grid; grid-template-columns: minmax(340px, 460px) 1fr; gap: 16px; margin-top: 14px; }
+.es-pin-card { margin: 0; max-width: none; justify-content: space-around; }
+.es-crew { background: var(--es-paper); border: 4px solid var(--es-ink); border-radius: 24px; padding: 10px 14px; box-shadow: 0 8px 0 var(--es-ink);
+  display: flex; flex-direction: column; min-height: 132px; }
+.es-crew-head { display: flex; justify-content: space-between; align-items: center; font: 800 1.4rem/1.1 'Baloo 2', sans-serif; }
+.es-crew-head b { font-size: 1rem; background: var(--es-turbo-hot); border: 3px solid var(--es-ink); border-radius: 999px; padding: 0 12px; }
+.es-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-content: flex-start; max-height: 150px; overflow: hidden; }
+.es-chip { display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 3px solid rgba(29,36,64,.16); border-radius: 999px;
+  padding: 0 12px 0 2px; font-weight: 800; font-size: 1.05rem; }
+.es-chip.new { animation: esChipIn .35s var(--es-ease-out) both; }      /* only the kid who just joined pops in */
+.es-chip img { width: 36px; height: 36px; object-fit: contain; margin: -4px 0; }
+@keyframes esChipIn { from { opacity: 0; transform: translateY(6px) scale(.92); } to { opacity: 1; transform: none; } }
+.es-chips.dense { gap: 4px; } .es-chips.dense .es-chip { font-size: .9rem; padding-right: 8px; border-width: 2px; } .es-chips.dense .es-chip img { width: 28px; height: 28px; }
+.es-chips.xdense .es-chip { font-size: .8rem; } .es-chips.xdense .es-chip img { width: 22px; height: 22px; }
+.es-crew-empty { margin: 8px 0 0; font-weight: 800; color: var(--es-ink-soft); }
+/* the 3 steps, as big pictures */
+.es-howto { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0 0; padding: 0; }
+.es-howto li { display: grid; justify-items: center; align-content: start; gap: 2px; text-align: center; border: 4px solid var(--es-ink); border-radius: 22px;
+  padding: 10px 10px 12px; box-shadow: 0 6px 0 var(--es-ink); background: var(--es-paper); }
+.es-howto li.es-step-turbo { background: linear-gradient(180deg, #fff3e0, #ffd9b0); }
+.es-howto li.es-step-robot { background: linear-gradient(180deg, #f0fdff, #c6f3f7); }
+.es-howto li.es-step-zone { background: linear-gradient(180deg, #effcf4, #c4efd6); }
+.es-howto b { font: 800 1.45rem/1.1 'Baloo 2', sans-serif; }
+.es-howto small { font-weight: 800; font-size: 1rem; color: var(--es-ink-soft); }
+.es-ico-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 74px; height: 66px; margin: 2px 0 4px; }
+.es-ico-tiles i { border: 3px solid var(--es-ink); border-radius: 9px; box-shadow: 0 3px 0 var(--es-ink); }
+.es-ico-tiles i:nth-child(1) { background: #f0443a; } .es-ico-tiles i:nth-child(2) { background: #2f7bea; }
+.es-ico-tiles i:nth-child(3) { background: #f5b301; } .es-ico-tiles i:nth-child(4) { background: #26a65b; }
+.es-ico-robot { width: 96px; height: 96px; margin: -14px 0 -8px; }
+.es-ico-zone { display: grid; place-items: center; width: 96px; height: 70px; margin: 2px 0 4px; border-radius: 18px; border: 4px dashed var(--es-safe-deep);
+  background: rgba(47,191,113,.35); }
+.es-ico-zone img { height: 62px; margin-top: -10px; }
+.es-tools { margin: 14px 0 6px; }
+.es-go { background: linear-gradient(180deg, #ffb35c, var(--es-turbo)); }
+.es-host .kd-set { background: rgba(255,247,227,.88); border-radius: 999px; padding: 4px 16px; width: fit-content; margin: 0 auto; }
+
+/* countdown: the episode intro — the crew (golden hour) VS Robotín (cyan), 3-2-1 in the middle */
+.es-intro { position: fixed; inset: 0; z-index: 50; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1vw; padding: 0 2vw;
+  background: linear-gradient(100deg, #ffc98f 0 49.6%, var(--es-paper) 49.6% 50.4%, #8fe9f0 50.4% 100%); overflow: hidden; }
+.es-intro-side { position: relative; display: grid; justify-items: center; align-content: center; gap: 8px; height: 100%; }
+.es-intro-crew { animation: kdCapInL .7s var(--es-ease-out) both; }
+.es-intro-robot { animation: kdCapInR .7s var(--es-ease-out) both; }
+.es-intro-robot canvas { height: min(62vh, 560px); width: auto; filter: drop-shadow(0 12px 0 rgba(29,36,64,.22)); }
+.es-intro-dralingo { height: min(40vh, 360px); filter: drop-shadow(0 10px 0 rgba(29,36,64,.22)); }
+.es-intro-kids { display: flex; flex-wrap: nowrap; justify-content: center; align-items: center; max-width: 40vw; margin-top: -2vh; }
+.es-intro-kids img { width: 70px; height: 70px; object-fit: contain; margin: 0 -9px; filter: drop-shadow(0 5px 0 rgba(29,36,64,.2));
+  animation: esKidIn .45s var(--es-ease-out) both; animation-delay: calc(.35s + var(--i) * 45ms); }
+.es-intro-kids b { align-self: center; font: 800 1.6rem/1 'Baloo 2', sans-serif; background: var(--es-paper); border: 3px solid var(--es-ink); border-radius: 999px; padding: 4px 12px; margin-left: 10px; }
+@keyframes esKidIn { from { opacity: 0; transform: translateY(18px) scale(.9); } to { opacity: 1; transform: none; } }
+.es-intro-tag { font: 800 2rem/1 'Baloo 2', sans-serif; color: var(--es-ink); background: var(--es-turbo); border: 4px solid var(--es-ink); border-radius: 20px;
+  padding: 6px 24px; box-shadow: 0 6px 0 var(--es-ink); }
+.es-intro-tag.robo { background: var(--es-robo-deep); color: #fff; }
+.es-intro-fer { position: absolute; left: 1vw; top: 6vh; display: flex; align-items: flex-start; gap: 6px; animation: esKidIn .5s .2s var(--es-ease-out) both; }
+.es-intro-fer img { height: min(30vh, 260px); filter: drop-shadow(0 6px 0 rgba(29,36,64,.2)); }
+.es-bubble { margin: 10px 0 0; max-width: 230px; background: var(--es-paper); border: 3px solid var(--es-ink); border-radius: 18px 18px 18px 4px; padding: 8px 14px;
+  font-weight: 800; font-size: 1.15rem; line-height: 1.25; box-shadow: 0 4px 0 var(--es-ink); }
+.es-intro-mid { display: grid; justify-items: center; gap: 4px; z-index: 2; }
+.es-intro-title { font: 800 3.4rem/1 'Baloo 2', sans-serif; color: #fff; text-align: center; -webkit-text-stroke: 3px var(--es-ink); paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--es-ink); }
+.es-intro-title span { display: block; font-size: .7em; color: var(--es-turbo-hot); }
+.es-vs { font: 800 5rem/1 'Baloo 2', sans-serif; color: var(--es-paper); -webkit-text-stroke: 4px var(--es-ink); paint-order: stroke fill; text-shadow: 0 7px 0 var(--es-ink);
+  animation: esStamp .5s .25s var(--es-ease-out) both; }
+@keyframes esStamp { from { opacity: 0; transform: scale(1.8) rotate(-8deg); } to { opacity: 1; transform: rotate(-4deg); } }
+.es-count-num { font-size: 10rem; }
+.es-count-num.go { font-size: 5rem; }
+
+/* the arena */
+.es-arena { height: 100vh; display: grid; grid-template-rows: auto 1fr auto; padding: 10px 14px; box-sizing: border-box; gap: 8px; position: relative; z-index: 2; }
+.es-top { display: grid; grid-template-columns: auto auto 1fr auto auto; gap: 12px; align-items: center; }
+.es-level { display: flex; align-items: center; gap: 8px; background: var(--es-paper); border: 3px solid var(--es-ink); border-radius: 18px; padding: 5px 16px 5px 6px;
+  box-shadow: 0 4px 0 var(--es-ink); }
+.es-level img { height: 46px; width: 52px; object-fit: contain; }
+.es-level b { display: block; font: 800 1.25rem/1.05 'Baloo 2', sans-serif; white-space: nowrap; }
+.es-level span { font-weight: 800; font-size: .9rem; color: var(--es-ink-soft); }
+/* the chase meter: Robotín | the crew (Dralingo) | the goal */
+.es-meter { position: relative; height: 56px; margin: 0 34px 0 26px; }
+.es-meter-track { position: absolute; left: 0; right: 0; top: 50%; height: 22px; transform: translateY(-50%); background: #fff; border: 4px solid var(--es-ink);
+  border-radius: 999px; overflow: hidden; box-shadow: 0 4px 0 var(--es-ink); }
+.es-meter-fill { position: absolute; inset: 0; background: linear-gradient(90deg, var(--es-turbo-hot), var(--es-turbo)); transform-origin: left; transform: scaleX(0); }
+.es-meter-crew, .es-meter-robot { position: absolute; left: 0; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; display: grid; place-items: center; z-index: 2;
+  will-change: transform; }
+.es-meter-crew img { height: 56px; filter: drop-shadow(0 3px 0 rgba(29,36,64,.3)); }
+.es-meter-robot canvas { width: 52px; height: 52px; }
+.es-meter-goal { position: absolute; right: -30px; top: 50%; height: 58px; transform: translateY(-58%); z-index: 1; filter: drop-shadow(0 3px 0 rgba(29,36,64,.25)); }
+.es-meter.close .es-meter-track { border-color: var(--es-danger); animation: esPulse .5s infinite alternate; }
+@keyframes esPulse { to { transform: translateY(-50%) scale(1.02); box-shadow: 0 4px 0 var(--es-danger); } }
+.es-hearts { display: flex; gap: 2px; background: var(--es-paper); border: 3px solid var(--es-ink); border-radius: 18px; padding: 4px 10px; box-shadow: 0 4px 0 var(--es-ink); }
+.es-hearts i { font-style: normal; font-size: 1.7rem; line-height: 1; transition: filter .3s, opacity .3s; }
+.es-hearts i.off { filter: grayscale(1); opacity: .35; }
+.es-hearts i.lose { animation: esHeartLose .7s var(--es-ease-out); }
+@keyframes esHeartLose { 0% { transform: scale(1.6); filter: none; opacity: 1; } 100% { transform: translateY(6px) scale(1); } }
+.es-stage { position: relative; min-height: 0; border: 4px solid var(--es-ink); border-radius: 24px; overflow: hidden; box-shadow: 0 6px 0 var(--es-ink); background: var(--es-dusk-1); }
+.es-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.es-danger { position: absolute; inset: 0; pointer-events: none; opacity: 0; box-shadow: inset 0 0 90px 30px rgba(240,68,58,.55); transition: opacity .3s; }
+.es-danger.on { opacity: .6; animation: esDanger .6s ease-in-out 4 alternate; }      /* a burst when he gets close, then a quiet edge */
+@keyframes esDanger { from { opacity: .55; } to { opacity: 1; } }
+/* turbo names pop big, one at a time */
+.es-pops { position: absolute; top: 22%; left: 50%; transform: translateX(-50%); display: grid; justify-items: center; gap: 6px; pointer-events: none; z-index: 3; }
+.es-pop { display: flex; align-items: center; gap: 10px; background: var(--es-paper); border: 4px solid var(--es-ink); border-radius: 999px; padding: 2px 22px 2px 4px;
+  box-shadow: 0 5px 0 var(--es-ink); animation: esPop 1.3s var(--es-ease-out) forwards; }
+.es-pop img { width: 54px; height: 54px; object-fit: contain; margin: -8px 0; }
+.es-pop b { font: 800 2rem/1 'Baloo 2', sans-serif; }
+.es-pop span { font: 800 1.2rem/1 'Baloo 2', sans-serif; color: #c4420a; }
+.es-pop.super { background: linear-gradient(180deg, #fff3c4, var(--es-turbo-hot)); }
+.es-pop.super span { color: var(--es-ink); }
+.es-pop.more { padding: 8px 22px; font: 800 1.3rem/1 'Baloo 2', sans-serif; }
+@keyframes esPop { 0% { opacity: 0; transform: translateY(-14px) scale(.92); } 16% { opacity: 1; transform: none; } 88% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
+/* Dralingo's bubble rides above him at the front of the crew */
+.es-run-say { position: absolute; left: 0; top: 0; z-index: 3; margin: 0; max-width: 300px; pointer-events: none; background: var(--es-paper);
+  border: 4px solid var(--es-ink); border-radius: 20px 20px 20px 4px; padding: 8px 16px; box-shadow: 0 5px 0 var(--es-ink);
+  font: 800 1.3rem/1.2 'Nunito', sans-serif; opacity: 0; transition: opacity .18s ease-out; }
+.es-run-say.show { opacity: 1; transition-duration: .25s; }
+/* zona segura HUD on the stage */
+.es-zonehud { position: absolute; top: 14px; left: 14px; width: 172px; box-sizing: border-box; display: grid; justify-items: center; gap: 8px; z-index: 3;
+  text-align: center; background: var(--es-paper); border: 4px solid var(--es-ink); border-radius: 24px; padding: 12px 10px 14px; box-shadow: 0 5px 0 var(--es-ink); }
+.es-zonehud b { display: block; font: 800 1.6rem/1.05 'Baloo 2', sans-serif; }
+.es-zonehud span { display: block; margin-top: 4px; font-weight: 800; font-size: 1.3rem; line-height: 1.2; color: #11703d; }
+.es-zonehud .es-ring { width: 112px; height: 112px; }
+.es-zonehud .es-ring b { width: 86px; height: 86px; font-size: 3rem; }
+.es-ring { --p: 1; width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  background: conic-gradient(var(--es-safe) calc(var(--p) * 360deg), rgba(29,36,64,.12) 0); }
+.es-ring b { width: 50px; height: 50px; border-radius: 50%; background: #fff; display: grid; place-items: center; font: 800 1.7rem/1 'Baloo 2', sans-serif; font-variant-numeric: tabular-nums; }
+.es-ring.hurry { background: conic-gradient(var(--es-danger) calc(var(--p) * 360deg), rgba(29,36,64,.12) 0); }
+.es-banner.robo { background: var(--es-robo-deep); color: #fff; }
+.es-banner.safe { background: var(--es-safe); color: var(--es-ink); }
+.es-host .kd-banner { top: 96px; font-size: 1.9rem; }
+/* pause: clicks go through the dim layer (the teacher's +30 s, Terminar ronda and Sonido keep working) */
+.es-host .es-paused { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; background: rgba(29,36,64,.45); pointer-events: none; }
+.es-paused-card { pointer-events: auto; display: grid; justify-items: center; gap: 8px; background: var(--es-paper); border: 5px solid var(--es-ink); border-radius: 30px;
+  padding: 20px 46px 26px; box-shadow: 0 10px 0 var(--es-ink); }
+.es-paused-card img { height: 170px; margin-top: -80px; }
+.es-paused-card b { font: 800 4rem/1 'Baloo 2', sans-serif; }
+.es-paused-card span { font-weight: 800; font-size: 1.4rem; color: var(--es-ink-soft); }
+.es-host .kd-dralingo img { width: 170px; }
+.es-host .kd-mute { z-index: 96; }                       /* Sonido stays usable over the big moments */
+.es-skip { display: none; }
+body.es-zone-on .es-skip { display: inline-block; }       /* the teacher's escape hatch, only in a zona segura */
+
+/* big moments (zap, level cleared, caught, escape): one authored sequence each, never stacked */
+.es-moment { position: fixed; inset: 0; z-index: 85; pointer-events: none; display: grid; place-items: center; align-content: center; gap: 8px; overflow: hidden; }
+.es-moment::before { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 42%, rgba(255,247,227,.97) 0 22%, rgba(255,214,180,.78) 50%, rgba(249,180,200,.55) 100%); }
+.es-moment.zap::before { background: radial-gradient(circle at 50% 42%, rgba(240,255,255,.97) 0 22%, rgba(159,248,255,.8) 52%, rgba(63,214,224,.6) 100%); }
+.es-moment.escape::before { background: linear-gradient(180deg, #d9c4f2 0%, #ffc9d6 55%, #ffe3b8 100%); }
+.es-moment.show { animation: esMomentOut var(--es-ms, 2.6s) ease-in forwards; }
+.es-moment.cleared.show { --es-ms: 3.8s; } .es-moment.caught.show { --es-ms: 3.8s; } .es-moment.escape.show { --es-ms: 6.6s; } .es-moment.zap.show { --es-ms: 2s; }
+@keyframes esMomentOut { 0%, 90% { opacity: 1; } 100% { opacity: 0; } }
+.es-moment-rays { position: absolute; left: 50%; top: 42%; width: 150vmax; height: 150vmax; margin: -75vmax 0 0 -75vmax; border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255,201,60,.55) 0 7deg, rgba(255,201,60,0) 7deg 18deg); animation: kdRays 3s linear forwards; }
+.es-moment.zap .es-moment-rays { background: repeating-conic-gradient(from 0deg, rgba(63,214,224,.5) 0 6deg, rgba(255,255,255,0) 6deg 16deg); }
+.es-moment-art, .es-moment-robot { position: relative; height: min(42vh, 380px); width: auto; filter: drop-shadow(0 14px 0 rgba(29,36,64,.25));
+  animation: kdLmIn .8s var(--es-ease-out) both; }
+.es-moment.escape .es-moment-art { animation: esTakeOff 4.6s .3s cubic-bezier(.5, 0, .75, .3) both; }
+@keyframes esTakeOff { 0% { transform: translate(-30vw, 18vh) rotate(-4deg) scale(.8); } 30% { transform: translate(0, 0) rotate(-10deg) scale(1); } 100% { transform: translate(55vw, -60vh) rotate(-18deg) scale(.6); } }
+.es-moment-title { position: relative; font: 800 6rem/1 'Baloo 2', sans-serif; color: #fff; -webkit-text-stroke: 5px var(--es-ink); paint-order: stroke fill;
+  text-shadow: 0 9px 0 var(--es-ink); animation: kdStampIn .6s .25s var(--es-ease-out) both; text-align: center; }
+.es-moment.zap .es-moment-title { color: var(--es-robo); }
+.es-moment.cleared .es-moment-title, .es-moment.escape .es-moment-title { color: var(--es-turbo-hot); }
+.es-moment-sub { position: relative; font-weight: 800; font-size: 1.8rem; background: var(--es-paper); border: 4px solid var(--es-ink); border-radius: 999px; padding: 6px 26px;
+  box-shadow: 0 6px 0 var(--es-ink); animation: kdPop .5s .45s both; }
+.es-moment-sub:empty { display: none; }
+.es-moment-title { max-width: 62vw; }
+/* the crew rides along: a row of the kids' avatars under the jet */
+.es-moment-crew { position: relative; display: flex; justify-content: center; }
+.es-moment-crew img { width: 82px; height: 82px; object-fit: contain; margin: 0 -6px; filter: drop-shadow(0 5px 0 rgba(29,36,64,.22));
+  animation: esKidIn .45s var(--es-ease-out) both; animation-delay: calc(.9s + var(--i) * 70ms); }
+/* caught at the gate: dusk, not the cyan tickle (the biggest setback has its own colour) */
+.es-moment.caught::before { background: radial-gradient(circle at 50% 42%, rgba(255,247,227,.97) 0 22%, rgba(201,182,242,.85) 55%, rgba(122,98,200,.7) 100%); }
+.es-moment.caught .es-moment-rays { background: repeating-conic-gradient(from 0deg, rgba(160,130,230,.45) 0 7deg, rgba(255,255,255,0) 7deg 18deg); }
+.es-moment.caught .es-moment-title { color: #c9b6f2; }
+.es-moment.caught.show { --es-ms: 3.8s; }
+.es-moment.timeup::before { background: radial-gradient(circle at 50% 42%, rgba(255,247,227,.97) 0 24%, rgba(255,214,165,.85) 58%, rgba(249,180,200,.7) 100%); }
+.es-moment.timeup .es-moment-title { color: var(--es-turbo-hot); }
+.es-moment.timeup.show { --es-ms: 2.6s; }
+/* the gang member who cheers: far right, bubble above the head, never over the title */
+.es-moment-cast { position: absolute; right: 2.5vw; bottom: 2vh; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 6px;
+  animation: kdCapInR .6s .5s var(--es-ease-out) both; }
+.es-moment-cast img { height: min(40vh, 340px); filter: drop-shadow(0 8px 0 rgba(29,36,64,.22)); }
+.es-moment-cast p { margin: 0; max-width: 250px; background: var(--es-paper); border: 3px solid var(--es-ink); border-radius: 18px 18px 4px 18px; padding: 8px 14px;
+  font-weight: 800; font-size: 1.2rem; line-height: 1.25; box-shadow: 0 4px 0 var(--es-ink); }
+
+/* end: the crew's rank badge, the zones, the awards, the crew */
+.es-end { max-width: 1240px; min-height: 100vh; box-sizing: border-box; margin: 0 auto; padding: 22px 20px 16px; position: relative; z-index: 2;
+  display: flex; flex-direction: column; justify-content: center; }
+.es-end.hidden { display: none; }
+.es-end-hero { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; max-width: 1000px; margin: 0 auto; }
+.es-badge { position: relative; width: 250px; height: 250px; border-radius: 50%; display: grid; place-items: center; border: 6px solid var(--es-ink);
+  box-shadow: 0 10px 0 var(--es-ink), inset 0 0 0 14px rgba(255,255,255,.55); animation: esBadgeIn .9s var(--es-ease-out) both;
+  background: radial-gradient(circle at 35% 30%, #fff6d6, var(--es-turbo-hot) 55%, var(--es-turbo) 100%); }
+.es-badge.burj { background: radial-gradient(circle at 35% 30%, #ffffff, #bfe7fb 55%, #6fb6e8 100%); }
+.es-badge.zoco { background: radial-gradient(circle at 35% 30%, #fff7e3, #f8d99a 55%, #e0a95a 100%); }
+.es-badge img { width: 74%; height: 74%; object-fit: contain; filter: drop-shadow(0 6px 0 rgba(29,36,64,.22)); }
+.es-badge-stars { position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 2rem; letter-spacing: 2px; background: var(--es-paper);
+  border: 4px solid var(--es-ink); border-radius: 999px; padding: 0 14px; box-shadow: 0 5px 0 var(--es-ink); white-space: nowrap; }
+@keyframes esBadgeIn { 0% { opacity: 0; transform: scale(.6) rotate(-14deg); } 100% { opacity: 1; transform: none; } }
+.es-rank { margin: 0; font-size: clamp(2.6rem, 4.4vw, 3.9rem); line-height: 1.02; color: var(--es-turbo-hot); -webkit-text-stroke: 4px var(--es-ink); paint-order: stroke fill;
+  text-shadow: 0 6px 0 var(--es-ink); text-wrap: balance; animation: esRankIn .55s .35s var(--es-ease-out) both; }
+@keyframes esRankIn { from { opacity: 0; transform: scale(1.25); } to { opacity: 1; transform: none; } }
+.es-end-why { margin: 10px 0 12px; font-weight: 800; font-size: 1.35rem; background: rgba(255,247,227,.92); border-radius: 18px; padding: 6px 14px; width: fit-content; }
+.es-end-levels { display: flex; flex-wrap: wrap; gap: 8px; }
+.es-lv { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 3px solid var(--es-ink); border-radius: 999px; padding: 2px 14px 2px 4px;
+  font-weight: 800; font-size: 1rem; opacity: .55; filter: grayscale(.8); }
+.es-lv img { height: 36px; width: 40px; object-fit: contain; }
+.es-lv.done { opacity: 1; filter: none; background: var(--es-safe-soft); box-shadow: 0 3px 0 var(--es-ink); }
+.es-lv.done::after { content: '✓'; color: var(--es-safe-deep); font-weight: 900; }
+.es-awards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; max-width: 1000px; margin: 30px auto 0; }
+.es-award { display: grid; grid-template-columns: 74px 1fr; grid-template-rows: auto auto auto; column-gap: 10px; align-items: center; background: var(--es-paper);
+  border: 4px solid var(--es-ink); border-radius: 22px; padding: 8px 14px 8px 8px; box-shadow: 0 6px 0 var(--es-ink);
+  animation: esKidIn .5s var(--es-ease-out) both; animation-delay: calc(.8s + var(--i) * 120ms); }
+.es-award img { grid-row: 1 / 4; width: 74px; height: 74px; object-fit: contain; }
+.es-award-t { font-weight: 800; font-size: .95rem; color: var(--es-ink-soft); }
+.es-award b { font: 800 1.5rem/1.05 'Baloo 2', sans-serif; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.es-award small { font-weight: 800; font-size: 1rem; color: #c4420a; }
+.es-end-crew { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 6px; max-width: 1180px; margin: 18px auto 0; padding: 6px 12px 8px;
+  background: rgba(255,247,227,.9); border: 3px solid var(--es-ink); border-radius: 22px; box-shadow: 0 5px 0 var(--es-ink); }
+.es-end-crew:empty { display: none; }
+.es-end-crew.dense .es-crewmate { width: 64px; } .es-end-crew.dense .es-crewmate img { width: 48px; height: 48px; }
+.es-end-crew.xdense .es-crewmate { width: 52px; } .es-end-crew.xdense .es-crewmate img { width: 40px; height: 40px; } .es-end-crew.xdense .es-crewmate b { font-size: .8rem; }
+.es-crewmate { display: grid; justify-items: center; width: 80px; animation: esKidIn .45s var(--es-ease-out) both; animation-delay: calc(1.1s + var(--i) * 40ms); }
+.es-crewmate img { width: 62px; height: 62px; object-fit: contain; }
+.es-crewmate b { font: 800 .95rem/1.1 'Baloo 2', sans-serif; max-width: 86px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.es-crewmate small { font-weight: 800; font-size: .8rem; color: var(--es-ink-soft); }
+.es-end .kd-end-tools { margin-top: 14px; }
+@media (max-width: 900px) {
+  .es-lobby-head { grid-template-columns: 1fr; } .es-lobby-robot, .es-lobby-dralingo { display: none; }
+  .es-lobby-row, .es-howto, .es-awards, .es-end-hero { grid-template-columns: 1fr; }
+  .es-top { grid-template-columns: auto 1fr auto; } .es-level, .es-hearts { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .es-lobby-dralingo, .es-chip, .es-intro-crew, .es-intro-robot, .es-intro-kids img, .es-vs, .es-pop, .es-moment-rays, .es-moment-art, .es-moment-robot,
+  .es-moment-title, .es-moment-sub, .es-moment-cast, .es-badge, .es-rank, .es-award, .es-crewmate, .es-danger.on, .es-meter.close .es-meter-track, .es-intro-fer { animation: none !important; }
+  .es-moment.show { animation: esMomentOut var(--es-ms, 2.6s) linear forwards; }
+}
+
+/* ================= phone (player.html) ================= */
+body.es-on .kdp-bar { display: none !important; }
+body.es-on #lobby-team-name { color: var(--es-ink) !important; }
+body.es-on.es-pausing .answer-btn { pointer-events: none; filter: saturate(.4) brightness(.95); }
+/* the chase rail on the question screen: Robotín | the crew with me | the zone's goal */
+.es-rail { position: relative; width: 100%; max-width: 560px; margin: 0 auto; height: 70px; box-sizing: border-box; background: linear-gradient(180deg, #fff3e0, #ffe0c4);
+  border: 3px solid var(--es-ink); border-radius: 18px; box-shadow: 0 4px 0 var(--es-ink); overflow: hidden; flex: none; transition: background-color .3s; }
+.es-rail-track { position: absolute; left: 22px; right: 46px; bottom: 15px; height: 8px; border-radius: 999px; background: rgba(29,36,64,.14); }
+.es-rail-fill { position: absolute; inset: 0; border-radius: 999px; background: linear-gradient(90deg, var(--es-turbo-hot), var(--es-turbo)); transform-origin: left; transform: scaleX(0); transition: transform .25s linear; }
+.es-rail-goal { position: absolute; right: 4px; bottom: 4px; height: 40px; width: 40px; object-fit: contain; }
+.es-rail-me, .es-rail-robot { position: absolute; left: 22px; bottom: 6px; width: 40px; height: 40px; margin-left: -20px; transition: transform .25s linear; }
+.es-rail-me { z-index: 2; }
+.es-rail-me img { width: 40px; height: 40px; object-fit: contain; filter: drop-shadow(0 2px 0 rgba(29,36,64,.35)); }
+.es-rail-me::after { content: ''; position: absolute; left: 8px; right: 8px; bottom: -3px; height: 4px; border-radius: 999px; background: var(--es-turbo-hot); box-shadow: 0 0 0 2px var(--es-ink); }
+.es-rail-robot canvas { width: 40px; height: 40px; }
+.es-rail-hearts { position: absolute; left: 8px; top: 4px; font-size: .9rem; letter-spacing: -1px; line-height: 1; }
+.es-rail-hearts i { font-style: normal; } .es-rail-hearts i.off { filter: grayscale(1); opacity: .3; }
+.es-rail-label { position: absolute; right: 10px; top: 5px; font: 800 .82rem/1 'Nunito', sans-serif; color: var(--es-ink-soft); white-space: nowrap; }
+.es-rail.close { background: linear-gradient(180deg, #ffe1dc, #ffc2b8); border-color: var(--es-danger); animation: esRail .45s ease-in-out infinite alternate; }
+.es-rail.close .es-rail-label { color: var(--es-danger); }
+@keyframes esRail { to { box-shadow: 0 4px 0 var(--es-danger); } }
+/* the phone's big moments, phone-sized: a band over the top of the screen, never over the answer tiles */
+.es-band { position: fixed; left: 8px; right: 8px; top: calc(8px + env(safe-area-inset-top)); z-index: 30; display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px 8px 8px; border: 4px solid var(--es-ink); border-radius: 22px; box-shadow: 0 6px 0 var(--es-ink); background: var(--es-paper); color: var(--es-ink);
+  pointer-events: none; transform-origin: 50% 0; animation: esBandIn .3s var(--es-ease-out) both; max-width: 540px; margin: 0 auto; }
+.es-band.out { animation: esBandOut .18s ease-in forwards; }
+/* below the chase rail + timer on a question, below the wave ring in the zona segura */
+.es-band { top: calc(96px + env(safe-area-inset-top)); }
+.es-band.onzone { top: calc(74px + env(safe-area-inset-top)); }
+@keyframes esBandIn { from { opacity: 0; transform: translateY(-16px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes esBandOut { to { opacity: 0; transform: translateY(-10px) scale(.98); } }
+.es-band canvas, .es-band img { width: 64px; height: 64px; object-fit: contain; flex: none; }
+.es-band b { display: block; font: 800 1.5rem/1.05 'Baloo 2', sans-serif; }
+.es-band span { display: block; font-weight: 800; font-size: 1rem; line-height: 1.15; color: var(--es-ink-soft); }
+.es-band.zap { background: linear-gradient(180deg, var(--es-robo-soft), #9ff3f8); border-color: var(--es-robo-deep); }
+.es-band.zap b { color: var(--es-robo-deep); }
+.es-band.time { background: linear-gradient(180deg, #fff3c4, #ffd98a); }
+.es-band.safe { background: linear-gradient(180deg, #effcf4, #c4efd6); }
+.es-band.safe b { color: var(--es-safe-deep); }
+/* dizzy: the tiles wobble a little and wait (3 s), the timer keeps the kid's place */
+body.es-on.es-dizzy .answer-btn { animation: esWobble .5s ease-in-out infinite alternate; filter: saturate(.5) brightness(.95); pointer-events: none; }
+@keyframes esWobble { from { transform: rotate(-1.2deg); } to { transform: rotate(1.2deg); } }
+/* the turbo on the result screen: my avatar dashes along a lane, Robotín left behind */
+.es-lane { position: relative; width: min(92vw, 420px); height: 120px; margin: 4px auto 0; border-radius: 22px; border: 4px solid var(--es-ink); overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,201,214,0) 40%, rgba(255,227,184,.6) 62%, #eef0fa 62%, #dfe3f3 100%),
+    url('/assets/dubai/skyline-wide.webp') center 26% / 160% auto no-repeat, #ffd6c4; box-shadow: 0 6px 0 var(--es-ink); }
+.es-lane-me { position: absolute; left: 8%; bottom: 10px; width: 84px; height: 84px; animation: esDash 1.05s var(--es-ease-out) both; }
+.es-lane-me img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 0 rgba(29,36,64,.25)); }
+.es-lane-me::before { content: ''; position: absolute; right: 70%; top: 30%; width: 120px; height: 34px; border-radius: 999px;
+  background: repeating-linear-gradient(180deg, rgba(255,255,255,.95) 0 5px, transparent 5px 11px); opacity: .9; }
+.es-lane.lv2 { background-color: #ffcfa8; filter: saturate(1.1); }
+.es-lane.lv3 { background: linear-gradient(180deg, rgba(217,196,242,.2) 40%, rgba(255,191,155,.6) 62%, #9aa6c2 62%, #8794b3 100%), url('/assets/dubai/skyline-wide.webp') center 26% / 160% auto no-repeat, #e7c6e8; }
+.es-lane.super .es-lane-me::before { background: repeating-linear-gradient(180deg, var(--es-turbo-hot) 0 6px, var(--es-turbo) 6px 12px); }
+.es-lane-robot { position: absolute; left: 4px; bottom: 4px; width: 70px; height: 70px; animation: esFall 1.05s ease-out both; }
+@keyframes esDash { 0% { transform: translateX(0) rotate(-6deg); } 70% { transform: translateX(min(58vw, 250px)) rotate(4deg); } 100% { transform: translateX(min(54vw, 236px)) rotate(0); } }
+@keyframes esFall { 0% { transform: none; opacity: 1; } 100% { transform: translateX(-30px); opacity: .7; } }
+.es-turbo-word { font: 800 2.6rem/1 'Baloo 2', sans-serif; margin-top: 8px; color: var(--es-turbo); -webkit-text-stroke: 2px var(--es-ink); paint-order: stroke fill;
+  animation: esStampP .45s .15s var(--es-ease-out) both; }
+.es-turbo-word.super { color: var(--es-turbo-hot); }
+@keyframes esStampP { from { opacity: 0; transform: scale(1.35) rotate(-6deg); } to { opacity: 1; transform: rotate(-2deg); } }
+/* zona segura screen */
+#screen-escape { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; font-family: 'Nunito', sans-serif; color: var(--es-ink);
+  background: linear-gradient(180deg, #ffe3cf, #f4d6ea); user-select: none; -webkit-user-select: none; touch-action: none; }
+.es-zhud { display: flex; align-items: center; gap: 8px; padding: calc(8px + env(safe-area-inset-top)) 10px 6px; }
+.es-zhud .es-ring { width: 56px; height: 56px; } .es-zhud .es-ring b { width: 42px; height: 42px; font-size: 1.4rem; }
+.es-zhud-words { flex: 1; min-width: 0; background: var(--es-paper); border: 3px solid var(--es-ink); border-radius: 16px; padding: 3px 10px; box-shadow: 0 3px 0 var(--es-ink); }
+.es-zhud-words b { display: block; font: 800 1.15rem/1.1 'Baloo 2', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.es-zhud-words span { display: block; font-weight: 800; font-size: .8rem; line-height: 1.15; color: var(--es-ink-soft); }
+.es-zhearts { font-size: .85rem; letter-spacing: -2px; background: var(--es-paper); border: 3px solid var(--es-ink); border-radius: 14px; padding: 4px 6px; box-shadow: 0 3px 0 var(--es-ink); white-space: nowrap; }
+.es-zhearts i { font-style: normal; } .es-zhearts i.off { filter: grayscale(1); opacity: .3; }
+.es-zstage { position: relative; flex: 1; min-height: 0; margin: 0 6px; border: 3px solid var(--es-ink); border-radius: 18px; overflow: hidden; background: #fbe9dc; }
+.es-zstage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.es-status { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); z-index: 3; display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 6px 14px; border: 3px solid var(--es-ink); border-radius: 999px; box-shadow: 0 4px 0 var(--es-ink); font: 800 1.15rem/1 'Baloo 2', sans-serif;
+  background: var(--es-paper); transition: background-color .2s, transform .2s var(--es-ease-out); pointer-events: none; }
+.es-status.safe { background: var(--es-safe); color: var(--es-ink); }
+.es-status.full { background: var(--es-turbo-hot); }
+.es-status.out { background: #fff; }
+.es-status.dizzy { background: var(--es-robo-soft); color: var(--es-robo-deep); }
+.es-status.pop { transform: translateX(-50%) scale(1.08); }
+.es-arrow { position: absolute; z-index: 3; width: 54px; height: 54px; margin: -27px 0 0 -27px; display: grid; place-items: center; pointer-events: none;
+  background: var(--es-safe); border: 4px solid var(--es-ink); border-radius: 50%; box-shadow: 0 4px 0 var(--es-ink); color: var(--es-ink); font: 900 1.8rem/1 sans-serif; }
+.es-arrow i { font-style: normal; display: block; transition: transform .15s linear; }
+.es-zcontrols { display: flex; align-items: center; gap: 10px; padding: 8px 12px calc(10px + env(safe-area-inset-bottom)); }
+.es-zcontrols .sn-joy { margin: 0 auto; }
+.es-zcontrols .sn-knob { background: radial-gradient(circle at 35% 30%, #fff, #8ce6b3); }
+.es-zcontrols .sn-joy.down { background: radial-gradient(circle, rgba(255,255,255,.95) 0 34%, rgba(196,239,214,.95) 35% 100%); }
+.es-zhint { flex: 1; font-weight: 800; font-size: .95rem; line-height: 1.2; color: var(--es-ink-soft); }
+.es-zcard { position: absolute; left: 10px; right: 10px; top: 50%; transform: translateY(-50%); z-index: 5; display: grid; justify-items: center; gap: 6px; text-align: center;
+  background: var(--es-paper); border: 4px solid var(--es-ink); border-radius: 26px; padding: 12px 14px 14px; box-shadow: 0 8px 0 var(--es-ink); animation: esCardIn .3s var(--es-ease-out) both; }
+@keyframes esCardIn { from { opacity: 0; transform: translateY(-46%) scale(.95); } to { opacity: 1; transform: translateY(-50%); } }
+.es-zcard img { height: 120px; margin-top: -56px; filter: drop-shadow(0 6px 0 rgba(29,36,64,.2)); }
+.es-zcard b { font: 800 1.7rem/1.05 'Baloo 2', sans-serif; }
+.es-zcard span { font-weight: 800; font-size: 1.05rem; color: var(--es-ink-soft); }
+.es-zcard .es-big { font: 800 2.3rem/1 'Baloo 2', sans-serif; color: var(--es-turbo); -webkit-text-stroke: 2px var(--es-ink); paint-order: stroke fill; }
+.es-zcard.cleared { background: linear-gradient(180deg, #fff7e3, #ffe2a8); }
+.es-zcard .es-heart-back { color: #c0262d; font-weight: 800; }
+.es-zcard.cleared img { height: 140px; animation: kdLmIn .7s var(--es-ease-out) both; }
+.es-zcard.zapcard { background: linear-gradient(180deg, #f3eeff, #d9c4f2); }
+.es-zcard .es-board { height: 84px; margin: 0; animation: esKidIn .45s .5s var(--es-ease-out) both; }
+/* a card is up: the zone's live HUD, status, arrow and joystick step away (they'd be stale) */
+body.es-card-on .es-zhud, body.es-card-on .es-status, body.es-card-on .es-arrow, body.es-card-on .es-zcontrols { visibility: hidden; }
+.es-pausecard { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; align-content: center; gap: 2px; background: rgba(29,36,64,.45); }
+.es-pausecard > div { display: grid; justify-items: center; background: var(--es-paper); border: 4px solid var(--es-ink); border-radius: 26px; padding: 0 30px 16px; box-shadow: 0 7px 0 var(--es-ink); }
+.es-pausecard img { height: 120px; margin-top: -50px; }
+.es-pausecard b { font: 800 2.4rem/1 'Baloo 2', sans-serif; }
+.es-pausecard span { font-weight: 800; font-size: 1.1rem; color: var(--es-ink-soft); }
+/* lobby: who you'll run as + the 3 steps (kids don't read: pictures first) */
+.es-you { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 6px; }
+.es-you img { width: 74px; height: 74px; object-fit: contain; margin: -10px 0 -6px; animation: kdBob 1.6s ease-in-out infinite; }
+.es-you span { font-weight: 800; color: var(--es-ink-soft); font-size: .95rem; line-height: 1.1; }
+.es-you b { display: block; font: 800 1.5rem/1.05 'Baloo 2', sans-serif; color: var(--es-ink); }
+.es-how li > .es-ico-tiles { width: 52px; height: 48px; gap: 3px; flex: none; margin: 0; }
+.es-how li > .es-ico-tiles i { border-width: 2px; border-radius: 6px; box-shadow: 0 2px 0 var(--es-ink); }
+.es-how li > canvas { width: 54px; height: 54px; flex: none; }
+.es-how li > .es-ico-zone { width: 56px; height: 48px; flex: none; margin: 0; border-width: 3px; border-radius: 12px; }
+.es-how li > .es-ico-zone img { height: 44px; margin-top: -6px; }
+.kdp-team.es-team { background: var(--es-turbo) !important; color: var(--es-ink) !important; }
+/* countdown on the phone: the episode card with my avatar in the crew */
+.es-pintro { display: grid; justify-items: center; gap: 6px; margin-bottom: 4px; }
+.es-pintro-title { font: 800 2.1rem/1 'Baloo 2', sans-serif; color: #fff; -webkit-text-stroke: 2px var(--es-ink); paint-order: stroke fill; text-shadow: 0 3px 0 var(--es-ink); text-align: center; }
+.es-pintro-title small { display: block; font-size: .7em; color: var(--es-turbo-hot); }
+.es-pintro-row { display: flex; align-items: flex-end; justify-content: center; gap: 4px; }
+.es-pintro-row img { width: 70px; height: 70px; object-fit: contain; margin: 0 -6px; animation: esKidIn .4s var(--es-ease-out) both; animation-delay: calc(var(--i) * 60ms); }
+.es-pintro-row img.me { width: 118px; height: 118px; filter: drop-shadow(0 4px 0 rgba(29,36,64,.3)); z-index: 1; }
+.es-pintro-row canvas { width: 104px; height: 104px; margin-left: 2px; animation: kdCapInR .6s var(--es-ease-out) both; }
+.es-pintro-you { font: 800 1rem/1 'Baloo 2', sans-serif; background: var(--es-turbo-hot); border: 3px solid var(--es-ink); border-radius: 999px; padding: 3px 12px; }
+.es-pintro-vs { font: 800 1.4rem/1 'Baloo 2', sans-serif; margin: 0 2px 26px; color: var(--es-robo-deep); }
+body.es-on .countdown-overlay .kdp-count-img { display: none; }
+body.es-on .countdown-overlay { background: linear-gradient(180deg, #ffd6a5 0%, #ffc9d6 60%, #d9c4f2 100%) !important; }
+/* the end on the phone: the crew rank + my own numbers */
+.es-pend { display: grid; justify-items: center; gap: 6px; }
+.es-pbadge { width: 132px; height: 132px; border-radius: 50%; display: grid; place-items: center; border: 5px solid var(--es-ink); box-shadow: 0 6px 0 var(--es-ink);
+  background: radial-gradient(circle at 35% 30%, #fff6d6, var(--es-turbo-hot) 55%, var(--es-turbo) 100%); animation: esBadgeIn .7s var(--es-ease-out) both; }
+.es-pbadge.burj { background: radial-gradient(circle at 35% 30%, #ffffff, #bfe7fb 55%, #6fb6e8 100%); }
+.es-pbadge.zoco { background: radial-gradient(circle at 35% 30%, #fff7e3, #f8d99a 55%, #e0a95a 100%); }
+.es-pbadge img { width: 74%; height: 74%; object-fit: contain; }
+.es-prank { font: 800 1.9rem/1.05 'Baloo 2', sans-serif; color: var(--es-turbo-hot); -webkit-text-stroke: 2px var(--es-ink); paint-order: stroke fill; text-shadow: 0 3px 0 var(--es-ink); text-align: center; }
+.es-pstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: min(92vw, 400px); }
+.es-pstats div { display: grid; justify-items: center; background: var(--es-paper); border: 3px solid var(--es-ink); border-radius: 16px; padding: 4px 2px; box-shadow: 0 3px 0 var(--es-ink); }
+.es-pstats b { font: 800 1.7rem/1 'Baloo 2', sans-serif; }
+.es-pstats span { font-weight: 800; font-size: .8rem; color: var(--es-ink-soft); text-align: center; line-height: 1.1; }
+body.es-on #end-banner { font-size: 1.6rem !important; line-height: 1.15 !important; margin: 10px 0 2px !important; }
+body.es-on #screen-end .win-screen { padding-top: 6px; }
+.es-paward { font: 800 1.1rem/1.15 'Baloo 2', sans-serif; background: var(--es-turbo-hot); border: 3px solid var(--es-ink); border-radius: 14px; padding: 4px 12px; box-shadow: 0 3px 0 var(--es-ink); text-align: center; }
+body.es-on:has(#screen-escape:not(.hidden)) .muted-toggle { top: auto !important; bottom: 158px !important; right: 8px !important; padding: 4px 8px !important; font-size: .85rem; }
+@media (max-height: 700px) { .es-zcontrols .sn-joy { width: 112px; height: 112px; } .es-lane { height: 100px; } .es-lane-me { width: 70px; height: 70px; } }
+/* small Android screens: the second row of answer tiles must stay above the fold */
+@media (max-height: 620px) { body.es-on .question-image-wrap { max-height: 22vh !important; } .es-rail { height: 56px; } .es-rail-hearts { font-size: .75rem; } .es-band { top: calc(80px + env(safe-area-inset-top)); } }
+@media (prefers-reduced-motion: reduce) {
+  .es-band, .es-band.out, .es-lane-me, .es-lane-robot, .es-turbo-word, .es-zcard, .es-zcard.cleared img, .es-you img, .es-pintro-row img, .es-pintro-row canvas, .es-pbadge,
+  .es-rail.close, body.es-on.es-dizzy .answer-btn { animation: none !important; }
+  .es-band.out { opacity: 0; }
+  .es-lane-me { transform: translateX(min(54vw, 236px)); }
+}

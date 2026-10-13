@@ -4,6 +4,7 @@
 //   DralingoCast.pose('aileen', 'cheer') → '/assets/cast/aileen-cheer.webp'
 //   DralingoCast.line('aileen', 'win')   → '¡Vos podés! ¡Lo hiciste!'   (Aileen speaks Argentine Spanish, voseo)
 //   DralingoCast.captain('aileen')       → 'Capitana Aileen'   (Reinos de Colores; moods: hello, win, battle, mystery, oops)
+//   moods: hello, win, battle (Reinos: flags, conquest), chase (La Gran Fuga: running from Robotín, turbos, the jet), mystery, oops
 // Poses: hello, cheer, mystery. Stickers are Higgsfield renders of his own character art, keyed to transparent WebP.
 (function () {
   const BASE = '/assets/cast/';
@@ -17,6 +18,7 @@
         mystery: ['Algo raro pasa en Dubái… ¿lo resolvemos?', 'Cada respuesta es una pista.', 'Escuchen bien: aquí hay un misterio.'],
         oops: ['Casi. ¡Inténtalo otra vez!', 'Pensemos juntos…'],
         battle: ['¡Vamos, equipo! ¡A conquistar!', '¡Esa bandera, bien plantada!', '¡Así se juega!'],
+        chase: ['¡Vamos, equipo! ¡Turbos!', '¡Nadie se queda atrás!', '¡Cada respuesta nos aleja de Robotín!'],
       },
     },
     hamdan: {
@@ -27,6 +29,7 @@
         mystery: ['Mmm… aquí hay una pista.', '¿Qué será esto?', '¡Miren esto, detectives!'],
         oops: ['No pasa nada. ¡Yalla, otra vez!', 'Casi, amigo. ¡Otra vez!'],
         battle: ['¡Yalla, yalla! ¡Vamos!', '¡Dubái es nuestro!', '¡A conquistar, amigos!'],
+        chase: ['¡Yalla, yalla! ¡Al jet!', '¡El jet los espera, amigos!', '¡Yalla, más rápido!'],
       },
     },
     latifa: {
@@ -37,6 +40,7 @@
         mystery: ['Cada palabra es una pista.', 'Si unimos las pistas, lo resolvemos.', 'Pensemos con calma…'],
         oops: ['Casi… revisemos la pista.', 'Tranquilos, lo intentamos de nuevo.'],
         battle: ['¡Rodeen esa zona!', '¡Buena estrategia, equipo!', '¡Vamos por los monumentos!'],
+        chase: ['¡Sepárense y lo logramos!', '¡Buena estrategia, equipo!', 'Piensen rápido: ¡turbo!'],
       },
     },
     aileen: {
@@ -47,6 +51,7 @@
         mystery: ['¿Viste eso? ¡Una pista!', 'Mirá, acá hay algo raro…', '¡Vamos a averiguarlo!'],
         oops: ['¡Casi! Dale, otra vez.', 'Tranqui, ¡vos podés!'],
         battle: ['¡Dale, che, vamos!', '¡Vos podés, plantá esa bandera!', '¡Vamos, vamos, que ganamos!'],
+        chase: ['¡Dale, che, corré!', '¡Vos podés, dale turbo!', '¡Dale, que se acerca Robotín!'],
       },
     },
     adric: {
@@ -57,6 +62,7 @@
         mystery: ['Mira… huellas.', 'Mi perro huele algo.', 'Silencio… escucha.'],
         oops: ['Casi.', 'Otra vez. Tú puedes.'],
         battle: ['Bien. Sigan así.', 'Mi perro huele la victoria.', 'Por ahí. Rápido.'],
+        chase: ['Mi perro corre más rápido. ¡Vamos!', 'Por ahí. Rápido.', 'Bien. Sigan así.'],
       },
     },
     adrian: {
@@ -67,6 +73,7 @@
         mystery: ['El mapa dice que es por aquí…', '¿Adónde lleva esta pista?', '¡Una X en el mapa!'],
         oops: ['¡Seguimos buscando!', 'El tesoro está cerca. ¡Otra vez!'],
         battle: ['¡El mapa dice: por aquí!', '¡A la aventura, equipo!', '¡Vamos por el tesoro!'],
+        chase: ['¡El mapa dice: por aquí!', '¡Ya casi llegamos!', '¡A la aventura, rápido!'],
       },
     },
     dralingo: {
@@ -78,11 +85,12 @@
         mystery: ['¿Y esto qué es?', '¡Una pista!', 'Mmm…'],
         oops: ['¡Casi!', '¡Otra vez!'],
         battle: ['¡Vamos!', '¡A conquistar!', '¡Yalla!'],
+        chase: ['¡Turbo!', '¡A correr!', '¡Yalla!'],
       },
     },
   };
   const HUMANS = ['fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian'];
-  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', mystery: 'mystery', oops: 'mystery' };
+  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', mystery: 'mystery', oops: 'mystery' };
   const pick1 = (a) => a[Math.floor(Math.random() * a.length)];
 
   function pick(n, opts) {
