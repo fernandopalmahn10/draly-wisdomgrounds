@@ -152,6 +152,20 @@ opens the matching child.
 
 ### 2.5 Teacher dashboard (`/maestro`)
 
+**The control room (remade 2026-10-13, spec `docs/specs/maestro-remake.md`).** Same features, laid out for the first
+five seconds of a class, in the platform's paper-and-navy sticker look (light, so it reads on a projector):
+- **Start the class** at the top: one big gold «🚀 Launch a game» (the last game is already picked), then «✏️ Live
+  Teacher Mode» and «🏆 Official tests», with «📖 Reading in class» and «🧠 Sentence practice» under them.
+- **Online now** beside it: the online kids' avatars standing on the Dubai waterfront with a big count (tap a kid for
+  their profile), and the three class actions: 📢 Message the class (now a form, not five pop-ups), 🎬 GIF, 🏠 Send home.
+- **Students** below: online kids first, then everyone else; search, filter chips (Online / per level) and a class
+  picker that survive the 15 s refresh; level, class, daily challenge, ⚔️🔥📝📚🏆 and last seen on every row;
+  «📦 N archived» in the header. **Tools** on the right: Test results, Special assignment, Classrooms, Guides, Backup,
+  My Gateway (super admin).
+- Pop-up messages became small notes at the bottom of the screen that never freeze the class; every window closes with
+  Esc or ✕; the Teachers tab hides the private teacher codes until you tap «Show». Phones get the same page in one
+  column, with windows sliding up from the bottom.
+
 - **Multi-teacher:** each teacher only sees their own classrooms. A super-admin sees everything.
   Teachers have levels (e.g. Ms Han HSK2, Ms Enni and Ms Nicole HSK1+2) and there's a quick-start
   guide.

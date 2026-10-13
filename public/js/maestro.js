@@ -14,6 +14,11 @@
   'use strict';
   const $ = (id) => document.getElementById(id);
   const STORAGE_PW = 'dralyMaestroPw';
+  // ONE meaning of «online» for the whole dashboard (2026-10-13; it was 30 s in the launcher, 45 s on the roster and
+  // 60 s in Send home / GIF / force pickers, so the hero said 4 while the launcher listed 3). Kids poll their inbox
+  // every 20 s and game pages ping every 30 s: 45 s covers one missed beat without letting stale records through.
+  const ONLINE_MS = 45 * 1000;
+  const isOnlineNow = (s, now) => !!(s && s.lastSeen && ((now || Date.now()) - s.lastSeen) <= ONLINE_MS);
 
   let pw = '';
   try { pw = localStorage.getItem(STORAGE_PW) || ''; } catch (_) {}
@@ -26,6 +31,16 @@
     o.headers = Object.assign({}, o.headers, { 'X-Admin-Pw': encodeURIComponent(code || '') });
     return fetch(url, o);
   }
+  // The roster call with its HTTP status (2026-10-13): only 401/403 means a wrong code. 429 is the server's lockout
+  // after repeated wrong codes from one network (a whole school shares one IP) and 5xx is a server hiccup: neither may
+  // wipe the saved code or send the teacher to the sign-in card. A stalled request gives up after 12 s.
+  function _studentsRequest(code, timeoutMs) {
+    const ctl = window.AbortController ? new AbortController() : null;
+    const t = ctl ? setTimeout(() => ctl.abort(), timeoutMs || 12000) : null;
+    return adminFetch('/api/admin/students', code, ctl ? { signal: ctl.signal } : undefined)
+      .then((r) => r.json().catch(() => null).then((data) => ({ status: r.status, data })))
+      .finally(() => { if (t) clearTimeout(t); });
+  }
   // /host-hsk.html gets the code through same-origin storage (host-hsk.js reads
   // localStorage 'mochi.maestroPw'), not the address bar. If storage is blocked,
   // fall back to the old &pw= so the teacher is never stuck mid-class.
@@ -34,40 +49,175 @@
     catch (_) { return url + '&pw=' + encodeURIComponent(code); }
   }
 
+  // ── 2026-10-13 remake helpers ─────────────────────────────────────────
+  // Toasts replace the blocking alert() boxes: a projector never shows a dialog that freezes the class.
+  // Errors stay longer and are announced (role=alert); a tap or ✕ dismisses.
+  function notify(msg, tone) {
+    const box = $('m-toasts');
+    const text = String(msg == null ? '' : msg);
+    if (!box) { try { window.alert(text); } catch (_) {} return; }
+    const t = tone || (/^(✕|✗|⚠)|error|could not|couldn't|can't|cannot|network|failed|not found|unknown|no students|select at least|pick at least|enter a|type a/i.test(text) ? 'error'
+      : (/^(✓|✅|🏠|📤)/.test(text) ? 'ok' : ''));
+    const el = document.createElement('div');
+    el.className = 'm-toast' + (t ? ' is-' + t : '');
+    el.setAttribute('role', t === 'error' ? 'alert' : 'status');
+    el.innerHTML = '<span class="m-toast-text"></span><button class="m-toast-x" type="button" aria-label="Dismiss">✕</button>';
+    el.querySelector('.m-toast-text').textContent = text;
+    const kill = () => {
+      if (!el.isConnected) return;
+      el.classList.add('is-leaving');
+      setTimeout(() => { try { el.remove(); } catch (_) {} }, 170);
+    };
+    el.querySelector('.m-toast-x').addEventListener('click', kill);
+    box.appendChild(el);
+    while (box.children.length > 3) box.firstChild.remove();
+    setTimeout(kill, Math.min(t === 'error' ? 12000 : 9000, (t === 'error' ? 6000 : 3500) + text.length * 45));
+  }
+
+  // Every .m-modal (static or built by this file) gets the same behaviour: dialog semantics, focus moves in and
+  // comes back, Esc closes the top one, the page behind stops scrolling, Tab stays inside.
+  let _dlgN = 0;
+  function _openModals() {
+    return Array.from(document.querySelectorAll('.m-modal')).filter((m) => !m.classList.contains('hidden'));
+  }
+  function _syncModals() {
+    const open = _openModals();
+    open.forEach((m) => {
+      if (m._mOpen) return;
+      m._mOpen = true;
+      m._mReturn = document.activeElement;
+      m.setAttribute('role', 'dialog');
+      m.setAttribute('aria-modal', 'true');
+      const h = m.querySelector('h2');
+      if (h) { if (!h.id) h.id = 'm-dlg-title-' + (++_dlgN); m.setAttribute('aria-labelledby', h.id); }
+      const card = m.querySelector('.m-modal-card');
+      if (card) {
+        card.setAttribute('tabindex', '-1');
+        setTimeout(() => { if (!m.classList.contains('hidden') && m.isConnected && !card.contains(document.activeElement)) card.focus({ preventScroll: true }); }, 30);
+      }
+    });
+    document.querySelectorAll('.m-modal').forEach((m) => {
+      if (m._mOpen && m.classList.contains('hidden')) _modalClosed(m);
+    });
+    // a window opened from another (Reading → Force) hides the one below, so only one ✕ shows
+    open.forEach((m, i) => m.classList.toggle('is-under', i < open.length - 1));
+    document.body.classList.toggle('m-modal-open', open.length > 0);
+  }
+  function _modalClosed(m) {
+    m._mOpen = false;
+    const back = m._mReturn;
+    m._mReturn = null;
+    const open = _openModals();
+    const top = open[open.length - 1];
+    // back to the trigger: on the page, or inside the window that is on top again (Reading → Force → close)
+    if (back && back.isConnected && typeof back.focus === 'function' && (!open.length || (top && top.contains(back)))) {
+      try { back.focus({ preventScroll: true }); } catch (_) {}
+    }
+  }
+  new MutationObserver((records) => {
+    records.forEach((rec) => rec.removedNodes && rec.removedNodes.forEach((n) => {
+      if (n.nodeType === 1 && n.classList && n.classList.contains('m-modal') && n._mOpen) _modalClosed(n);
+    }));
+    _syncModals();
+  }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('keydown', (e) => {
+    if (e.isComposing || e.keyCode === 229) return;   // a pinyin/IME candidate box takes Esc, not the window
+    if (e.key === 'Escape') {
+      const card = document.querySelector('.wu-prac-cardwrap');
+      if (card) { card.remove(); return; }
+      const review = $('m-em-review-panel');
+      if (review && !review.classList.contains('hidden')) { review.classList.add('hidden'); return; }
+      const open = _openModals();
+      const top = open[open.length - 1];
+      if (!top) return;
+      const x = top.querySelector('.m-modal-close');
+      if (x) x.click(); else top.classList.add('hidden');
+      return;
+    }
+    if (e.key === 'Tab') {
+      const open = _openModals();
+      const top = open[open.length - 1];
+      if (!top) return;
+      const items = Array.from(top.querySelectorAll('button, [href], input:not([type=hidden]), select, textarea, summary, [tabindex]:not([tabindex="-1"])'))
+        .filter((x) => !x.disabled && x.offsetParent !== null);
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      const card = top.querySelector('.m-modal-card');
+      if (!top.contains(document.activeElement)) { e.preventDefault(); first.focus(); return; }
+      else if (e.shiftKey && (document.activeElement === first || document.activeElement === card)) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+  // Sticky elements under the sticky top bar need its real height (it grows when the Teachers tab shows).
+  (function trackTopbar() {
+    const bar = document.querySelector('.m-topbar');
+    if (!bar || !window.ResizeObserver) return;
+    new ResizeObserver(() => {
+      if (bar.offsetHeight) document.documentElement.style.setProperty('--topbar-h', bar.offsetHeight + 'px');
+    }).observe(bar);
+  })();
+  // Two of the gang stand with Dralingo on the sign-in card, a new pair each visit (public/js/cast.js).
+  (function loginCast() {
+    if (!window.DralingoCast) return;
+    DralingoCast.pick(2).forEach((id, k) => {
+      const img = $(k ? 'm-login-cast-b' : 'm-login-cast-a');
+      if (!img) return;
+      img.onerror = () => { img.hidden = true; };
+      img.onload = () => { img.hidden = false; };
+      img.src = DralingoCast.pose(id, 'hello');
+    });
+  })();
+
   // ── Login
   if (pw) $('m-pw').value = pw;
   $('m-enter-btn').addEventListener('click', tryEnter);
   $('m-pw').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryEnter(); });
 
+  function showDashboard() {
+    $('m-login').classList.add('hidden');
+    $('m-dash').classList.remove('hidden');
+  }
   function tryEnter() {
     const v = $('m-pw').value.trim();
-    if (!v) { $('m-login-err').textContent = 'Enter the password'; return; }
-    $('m-login-err').textContent = 'Signing in…';
+    const btn = $('m-enter-btn');
+    if (btn.disabled) return;   // Enter pressed again while signing in: one request, not two failed attempts
+    if (!v) { $('m-login-err').textContent = 'Type your teacher code.'; $('m-pw').focus(); return; }
+    $('m-login-err').textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+    const done = () => { btn.disabled = false; btn.textContent = 'Enter'; };
     // Validate by hitting the roster endpoint
-    adminFetch('/api/admin/students', v)
-      .then((r) => r.json())
-      .then((data) => {
+    _studentsRequest(v)
+      .then(({ status, data }) => {
+        done();
         if (!data || !data.ok) {
-          $('m-login-err').textContent = 'Incorrect password';
+          $('m-login-err').textContent = status === 429
+            ? 'Too many wrong codes from this network. Wait about 10 minutes, then try again.'
+            : (status >= 500 ? 'The server is busy. Try again in a moment.' : 'That code didn\'t work. Check it and try again.');
           return;
         }
         pw = v;
         try { localStorage.setItem(STORAGE_PW, pw); } catch (_) {}
-        $('m-login').classList.add('hidden');
-        $('m-dash').classList.remove('hidden');
+        showDashboard();
         renderRoster(data.students || [], data.self || null, data.archived);
       })
-      .catch((e) => { $('m-login-err').textContent = 'Error: ' + e.message; });
+      .catch(() => { done(); $('m-login-err').textContent = 'Can\'t reach the server. Check the Wi-Fi and try again.'; });
   }
 
   $('m-logout').addEventListener('click', () => {
+    // a mis-tap mid-class would mean retyping the code in front of the kids
+    if (!confirm('Log out of Teacher Mode?\n\nYou will need your teacher code to come back.')) return;
     try { localStorage.removeItem(STORAGE_PW); } catch (_) {}
     pw = '';
     $('m-dash').classList.add('hidden');
     $('m-login').classList.remove('hidden');
     $('m-pw').value = '';
+    // a clean page for the next teacher on a shared laptop (open profile, drafts, filters, the last session's data)
+    try { sessionStorage.removeItem('dralyLiveMaster'); } catch (_) {}
+    location.reload();
   });
   $('m-refresh').addEventListener('click', () => {
+    _authStopped = false;   // a manual refresh may try again after a «code not accepted»
     fetchRoster();
   });
   // 🎯 Modo Maestro en vivo — invite only currently-ONLINE students to a
@@ -78,10 +228,10 @@
   $('m-live-master-btn').addEventListener('click', () => {
     adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
+      .catch(() => null)
       .then((data) => {
-        if (!data || !data.ok) { alert('Error: ' + (data && data.error || '')); return; }
+        if (!data || !data.ok) { notify('Could not load the students. Check the connection and try again.' + (data && data.error ? ' (' + data.error + ')' : '')); return; }
         const now = Date.now();
-        const ONLINE_MS = 45 * 1000;
         // Filter: only students online RIGHT NOW (lastSeen within 45s)
         _liveMasterStudents = (data.students || [])
           .filter((s) => s.lastSeen && (now - s.lastSeen) <= ONLINE_MS)
@@ -108,7 +258,7 @@
     $('m-live-master-count').textContent =
       `${_liveMasterStudents.length} online · ${_liveMasterSelected.size} selected`;
     if (!_liveMasterStudents.length) {
-      list.innerHTML = '<div class="m-empty">No students online right now. Ask them to open /homework first.</div>';
+      list.innerHTML = '<div class="m-empty">Nobody is online right now. Ask the kids to open their homework (/homework) on their phones, then open this again.</div>';
       return;
     }
     list.innerHTML = '';
@@ -281,7 +431,7 @@
         label: ctx.label,
         ts: Date.now(),
       }));
-    } catch (_) { alert('Could not save the session.'); return; }
+    } catch (_) { notify('Could not save the session.'); return; }
     const url = hostUrl + (hostUrl.includes('?') ? '&' : '?') + 'livegame=1';
     // 🆕 v4 (Fernando bug — mobile background-tab throttling):
     // SAME tab navigation, not window.open. Mobile browsers throttle
@@ -296,7 +446,7 @@
     adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
-        if (!data || !data.ok) { alert('Could not load the student list.'); return; }
+        if (!data || !data.ok) { notify('Could not load the student list. Check the connection and try again.'); return; }
         const students = (data.students || []).slice().sort((a, b) => {
           const an = (a.displayName || a.code || '').toLowerCase();
           const bn = (b.displayName || b.code || '').toLowerCase();
@@ -307,36 +457,44 @@
         overlay = document.createElement('div');
         overlay.id = 'm-launch-modal';
         overlay.className = 'm-modal';
-        const gameCardsHtml = LAUNCHER_GAMES.map((g) =>
+        const gameCard = (g) =>
           '<button class="m-launch-game" data-id="' + escapeHtml(g.id) + '" type="button">' +
             '<span class="m-launch-game-emoji">' + g.emoji + '</span>' +
             '<span class="m-launch-game-label">' + escapeHtml(g.label) + '</span>' +
             '<span class="m-launch-game-blurb">' + escapeHtml(g.blurb) + '</span>' +
-          '</button>'
-        ).join('');
+          '</button>';
+        // 2026-10-13: the class tools and the games in two short groups (11 cards in one grid was a wall);
+        // any new LAUNCHER_GAMES entry lands under Games by itself.
+        const TOOL_IDS = ['warmup', 'reading', 'hsksim'];
+        const gameCardsHtml =
+          '<p class="m-launch-group">Class tools</p>' +
+          '<div class="m-launch-games">' + LAUNCHER_GAMES.filter((g) => TOOL_IDS.includes(g.id)).map(gameCard).join('') + '</div>' +
+          '<p class="m-launch-group">Games</p>' +
+          '<div class="m-launch-games">' + LAUNCHER_GAMES.filter((g) => !TOOL_IDS.includes(g.id)).map(gameCard).join('') + '</div>';
         // 🆕 2026-06-04 v2 (Fernando): Default view is "🟢 En línea
         // ahora" as its OWN tab (not just a button), so the teacher
         // sees the relevant kids immediately. Toggle to "📋 Todos" to
         // see the full roster.
-        const onlineCount = students.filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000).length;
+        // the badge and the list share ONLINE_MS (the badge used 60 s and disagreed with the list)
+        const onlineCount = students.filter((s) => isOnlineNow(s)).length;
         overlay.innerHTML =
-          '<div class="m-modal-card" style="max-width:760px;">' +
+          '<div class="m-modal-card m-modal-card--wide">' +
             '<button class="m-modal-close" type="button" aria-label="Close">✕</button>' +
             '<h2>🚀 Launch a game</h2>' +
-            '<p class="m-modal-sub">Pick a game and the selected students will join automatically as soon as the PIN appears.</p>' +
-            '<div class="m-launch-section-h">1) Pick the game</div>' +
-            '<div class="m-launch-games">' + gameCardsHtml + '</div>' +
-            '<div class="m-launch-section-h">2) Pick the students</div>' +
-            '<div class="m-launch-stu-tabs" role="tablist">' +
-              '<button class="m-launch-stu-tab is-active" data-stu="online" type="button">🟢 Online now <span class="m-launch-stu-n">' + onlineCount + '</span></button>' +
-              '<button class="m-launch-stu-tab" data-stu="all" type="button">📋 All <span class="m-launch-stu-n">' + students.length + '</span></button>' +
+            '<p class="m-modal-sub">Pick a game and the students. They join by themselves as soon as the PIN appears.</p>' +
+            '<h3 class="m-launch-section-h">1. Pick the game</h3>' +
+            gameCardsHtml +
+            '<h3 class="m-launch-section-h">2. Pick the students</h3>' +
+            '<div class="m-launch-stu-tabs" role="tablist" aria-label="Which students">' +
+              '<button class="m-launch-stu-tab is-active" data-stu="online" type="button" role="tab" aria-selected="true">🟢 Online now <span class="m-launch-stu-n">' + onlineCount + '</span></button>' +
+              '<button class="m-launch-stu-tab" data-stu="all" type="button" role="tab" aria-selected="false">📋 All <span class="m-launch-stu-n">' + students.length + '</span></button>' +
             '</div>' +
             '<div class="m-force-actions">' +
-              '<button class="btn btn-ghost btn-sm" id="m-lc-all" type="button">✅ All visible</button>' +
-              '<button class="btn btn-ghost btn-sm" id="m-lc-none" type="button">⬜ None</button>' +
+              '<button class="btn btn-ghost btn-sm" id="m-lc-all" type="button">Select all</button>' +
+              '<button class="btn btn-ghost btn-sm" id="m-lc-none" type="button">Clear</button>' +
             '</div>' +
-            '<div class="m-force-students" id="m-lc-list" style="max-height:32vh;overflow-y:auto;"></div>' +
-            '<button class="btn btn-jade btn-xl" id="m-lc-go" disabled style="margin-top:14px;width:100%;">🚀 Pick a game first</button>' +
+            '<div class="m-force-students" id="m-lc-list"></div>' +
+            '<button class="btn btn-gold btn-xl" id="m-lc-go" type="button" disabled>🚀 Pick a game first</button>' +
           '</div>';
         document.body.appendChild(overlay);
         const list = overlay.querySelector('#m-lc-list');
@@ -345,29 +503,27 @@
           list.innerHTML = '';
           let shown = students;
           if (stuFilter === 'online') {
-            shown = students.filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 30 * 1000);
+            shown = students.filter((s) => isOnlineNow(s));
           }
           if (!shown.length) {
             list.innerHTML = '<div class="m-launch-empty">' +
               (stuFilter === 'online'
-                ? 'Nobody is online right now. Switch to 📋 All to see the whole group.'
-                : 'No students.') +
+                ? 'Nobody is online right now. Switch to 📋 All to pick from the whole group, or launch with the PIN on the projector.'
+                : 'No students yet.') +
               '</div>';
             return;
           }
           shown.forEach((s) => {
-            // 🆕 2026-06-04 v3 (Fernando: "Solo en línea displays
-            // everything") — tighten window to 30s. lastSeen is touched
-            // by many background events including admin reads; 60s was
-            // letting half-stale records through.
-            const isOnline = s.lastSeen && (Date.now() - s.lastSeen) <= 30 * 1000;
+            // 🆕 2026-06-04 v3 (Fernando: "Solo en línea displays everything"): 60 s let half-stale records
+            // through, so this list used 30 s. 2026-10-13: every screen now shares ONLINE_MS (45 s, see the top).
+            const isOnline = isOnlineNow(s);
             const row = document.createElement('label');
             row.className = 'm-force-row';
             row.dataset.online = isOnline ? '1' : '0';
             // Default checked = on (when in online tab); off in "all" tab
             row.innerHTML =
               '<input type="checkbox" data-code="' + escapeHtml(s.code) + (stuFilter === 'online' ? '" checked>' : '">') +
-              '<span class="m-force-row-dot" style="background:' + (isOnline ? '#5be88a' : '#666') + ';"></span>' +
+              '<span class="m-force-row-dot' + (isOnline ? '' : ' is-offline') + '" title="' + (isOnline ? 'Online' : 'Offline') + '"></span>' +
               '<span class="m-force-row-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
               '<span class="m-force-row-code">' + escapeHtml(s.code) + '</span>';
             list.appendChild(row);
@@ -376,8 +532,9 @@
         renderStudents();
         overlay.querySelectorAll('.m-launch-stu-tab').forEach((t) => {
           t.addEventListener('click', () => {
-            overlay.querySelectorAll('.m-launch-stu-tab').forEach((x) => x.classList.remove('is-active'));
+            overlay.querySelectorAll('.m-launch-stu-tab').forEach((x) => { x.classList.remove('is-active'); x.setAttribute('aria-selected', 'false'); });
             t.classList.add('is-active');
+            t.setAttribute('aria-selected', 'true');
             stuFilter = t.dataset.stu;
             renderStudents();
             updateGo();
@@ -390,17 +547,28 @@
           const n = list.querySelectorAll('input[type=checkbox]:checked').length;
           goBtn.disabled = !n;
           goBtn.textContent = n
-            ? '🚀 Launch ' + chosen.label + ' to ' + n + ' student(s)'
-            : '⬜ Pick at least one student';
+            ? '🚀 Launch ' + chosen.label + ' · ' + n + ' student' + (n === 1 ? '' : 's')
+            : 'Pick at least one student';
         }
+        const pickGame = (card) => {
+          overlay.querySelectorAll('.m-launch-game').forEach((c) => { c.classList.remove('is-active'); c.setAttribute('aria-pressed', 'false'); });
+          card.classList.add('is-active');
+          card.setAttribute('aria-pressed', 'true');
+          chosen = LAUNCHER_GAMES.find((g) => g.id === card.dataset.id);
+          updateGo();
+        };
         overlay.querySelectorAll('.m-launch-game').forEach((card) => {
+          card.setAttribute('aria-pressed', 'false');
           card.addEventListener('click', () => {
-            overlay.querySelectorAll('.m-launch-game').forEach((c) => c.classList.remove('is-active'));
-            card.classList.add('is-active');
-            chosen = LAUNCHER_GAMES.find((g) => g.id === card.dataset.id);
-            updateGo();
+            pickGame(card);
+            try { localStorage.setItem('dralyLastLaunchGame', card.dataset.id); } catch (_) {}
           });
         });
+        // 2026-10-13: the last game launched is already picked, so a repeat launch is one tap
+        let lastGame = '';
+        try { lastGame = localStorage.getItem('dralyLastLaunchGame') || ''; } catch (_) {}
+        const lastCard = lastGame && Array.from(overlay.querySelectorAll('.m-launch-game')).find((c) => c.dataset.id === lastGame);
+        if (lastCard) pickGame(lastCard);
         list.addEventListener('change', updateGo);
         const close = () => { try { overlay.remove(); } catch (_) {} };
         overlay.querySelector('.m-modal-close').addEventListener('click', close);
@@ -413,7 +581,6 @@
           list.querySelectorAll('input[type=checkbox]').forEach((cb) => { cb.checked = false; });
           updateGo();
         });
-        list.addEventListener('change', updateGo);
         goBtn.addEventListener('click', () => {
           if (!chosen) return;
           const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
@@ -422,14 +589,16 @@
           // 🆕 v4: each game's `launch` function does what's known to
           // work for THAT game. No more generic autohost script.
           if (typeof chosen.launch !== 'function') {
-            alert('This game does not have a launch path yet.');
+            notify('This game does not have a launch path yet.');
             return;
           }
+          goBtn.disabled = true;
+          goBtn.textContent = '🚀 Opening ' + chosen.label + '…';
           chosen.launch({ pw, codes, label: chosen.label });
           close();
         });
       })
-      .catch((e) => alert('Error: ' + e.message));
+      .catch(() => notify('Could not load the student list. Check the connection and try again.'));
   }
   const launchBtn = $('m-launch-btn');
   if (launchBtn) launchBtn.addEventListener('click', openUniversalLauncher);
@@ -543,15 +712,15 @@
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) {
-          alert('Could not load the list of online students.');
+          notify('Could not load the list of online students.');
           return;
         }
         const onlineNow = (data.students || []).filter((s) => {
           // "online" = lastSeen within last 60 seconds
-          return s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000;
+          return isOnlineNow(s);
         });
         if (!onlineNow.length) {
-          alert('No students online right now.\n\n(Ask them to open /homework first.)');
+          notify('No students online right now.\n\n(Ask them to open /homework first.)');
           return;
         }
         // Build the modal
@@ -567,11 +736,11 @@
             <p class="m-modal-sub">Reading: <strong>📖 ${escapeHtml(story.title || story.id)}</strong></p>
             <p class="m-modal-sub" style="margin-top:6px;">Select the students who are online now. They'll get a heads-up and join automatically in ~20 seconds.</p>
             <div class="m-force-actions">
-              <button class="btn btn-ghost btn-sm" id="m-force-all">✅ All</button>
-              <button class="btn btn-ghost btn-sm" id="m-force-none">⬜ None</button>
+              <button class="btn btn-ghost btn-sm" id="m-force-all" type="button">Select all</button>
+              <button class="btn btn-ghost btn-sm" id="m-force-none" type="button">Clear</button>
             </div>
             <div class="m-force-students" id="m-force-students"></div>
-            <button class="btn btn-jade btn-xl" id="m-force-launch" style="margin-top:16px;width:100%;">
+            <button class="btn btn-gold btn-xl" id="m-force-launch" type="button">
               🚀 Launch and force to selected students
             </button>
           </div>`;
@@ -604,7 +773,7 @@
           const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
             .map((cb) => cb.dataset.code).filter(Boolean);
           if (!codes.length) {
-            alert('Select at least one student.');
+            notify('Select at least one student.');
             return;
           }
           const url = '/host-reading.html?story=' + encodeURIComponent(story.id)
@@ -613,7 +782,7 @@
           close();
         });
       })
-      .catch((e) => { alert('Error: ' + e.message); });
+      .catch((e) => { notify('Error: ' + e.message); });
   }
 
   // ── 🏆 HSK SIMULATION launcher (folder → level → variation) ──────
@@ -683,8 +852,10 @@
     return fetch('/api/hsk-sim/list')
       .then((r) => r.json())
       .then((data) => {
-        _hskCachedSims = (data && data.sims) || [];
-        return _hskCachedSims;
+        const sims = (data && data.sims) || [];
+        // only a real list is kept: a failed reply must not mark every level «Not ready yet» until a reload
+        if (sims.length) _hskCachedSims = sims;
+        return sims;
       });
   }
   // Group flat sims by the level prefix in their ID (hsk1-sim1 → 1).
@@ -709,7 +880,7 @@
     if (toCode === null) return;                 // cancelled
     const clean = String(toCode).trim().toUpperCase();
     if (!clean) return;
-    if (clean === r.code) { alert('That is the same code. Nothing to migrate.'); return; }
+    if (clean === r.code) { notify('That is the same code. Nothing to migrate.'); return; }
     adminFetch('/api/admin/hsk-result/migrate', pw, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -717,11 +888,11 @@
     })
       .then((res) => res.json())
       .then((res) => {
-        if (!res || !res.ok) { alert('Could not migrate: ' + ((res && res.error) || 'unknown')); return; }
-        alert('✅ Result migrated to ' + res.toName + ' (' + res.toCode + '). It now appears in their history.');
+        if (!res || !res.ok) { notify('Could not migrate: ' + ((res && res.error) || 'unknown')); return; }
+        notify('✅ Result migrated to ' + res.toName + ' (' + res.toCode + '). It now appears in their history.');
         renderHskView();                          // refresh the list
       })
-      .catch((e) => alert('Error: ' + e.message));
+      .catch((e) => notify('Error: ' + e.message));
   }
 
   function renderHskView() {
@@ -759,6 +930,8 @@
         crumb.appendChild(sep);
       }
     });
+    // the path is hidden only at the root (it would just repeat the title); Results keeps its way back
+    crumb.classList.toggle('hidden', _hskNavStack.length === 1);
     // ─── RESULTS view — list every student's HSK exam outcomes ──
     if (_hskNavStack[0] === 'root' && _hskNavStack[1] === 'results') {
       title.textContent = '🏅 Test Results';
@@ -770,13 +943,12 @@
           view.innerHTML = '';
           const rows = (d && d.results) || [];
           if (!rows.length) {
-            view.innerHTML = '<p class="m-modal-sub" style="text-align:center;">Nobody has finished an HSK exam yet.</p>';
+            view.innerHTML = '<div class="m-empty">Nobody has turned in an official test yet. Results appear here the moment a student submits one.</div>';
             return;
           }
           const hint = document.createElement('p');
           hint.className = 'm-modal-sub';
-          hint.style.cssText = 'text-align:center;margin-bottom:8px;';
-          hint.innerHTML = '👆 Tap a result to <strong>migrate it</strong> to another code (if the student did it from the wrong account).';
+          hint.textContent = 'A student used the wrong account? Use Move on that result to give it to the right student code.';
           view.appendChild(hint);
           const list = document.createElement('div');
           list.className = 'm-hsk-results-list';
@@ -785,57 +957,80 @@
             const cls = r.percent >= 90 ? 'is-great' : r.percent >= 60 ? 'is-ok' : 'is-low';
             const item = document.createElement('div');
             item.className = 'm-hsk-result-row ' + cls;
-            item.style.cursor = 'pointer';
-            item.title = 'Tap to migrate this result to another student code';
-            // 🆕 2026-06-16 (Fernando): show BOTH the name AND the student
-            // code so the teacher can tell accounts apart, and tap to
-            // migrate a misplaced attempt to the correct student.
+            // 🆕 2026-06-16 (Fernando): show BOTH the name AND the student code so the teacher can tell accounts apart.
+            // 2026-10-13: migrating is an explicit «Move…» button (a tap on the row opened the migrate prompt by surprise).
             item.innerHTML =
               '<div class="m-hsk-result-name">' +
-                '<strong>' + escapeHtml(r.displayName || 'Anon') + '</strong>' +
-                '<span class="m-hsk-result-code" style="font-size:0.78rem;color:var(--ink-dim);font-weight:700;margin-left:6px;">🔑 ' + escapeHtml(r.code) + '</span>' +
+                '<strong>' + escapeHtml(r.displayName || 'Anon') + ' <span class="m-code-tag">' + escapeHtml(r.code) + '</span></strong>' +
                 '<span class="m-hsk-result-when">' + escapeHtml(when) + '</span>' +
               '</div>' +
               '<div class="m-hsk-result-sim">' + escapeHtml((r.simId || '').toUpperCase()) + '</div>' +
               '<div class="m-hsk-result-score">' +
                 '<span class="m-hsk-result-pct">' + r.percent + '%</span>' +
                 '<span class="m-hsk-result-pts">' + r.score + ' / ' + r.total + '</span>' +
-              '</div>';
-            item.addEventListener('click', () => _migrateHskResult(r));
+              '</div>' +
+              '<button class="btn btn-ghost btn-sm m-hsk-migrate" type="button" title="Move this result to another student code">Move…</button>';
+            item.querySelector('.m-hsk-migrate').addEventListener('click', () => _migrateHskResult(r));
             list.appendChild(item);
           });
           view.appendChild(list);
         })
-        .catch((e) => { view.textContent = 'Error: ' + e.message; });
+        .catch(() => { view.innerHTML = '<div class="m-empty">Could not load the results. Check the connection, then open Test results again.</div>'; });
       return;
     }
     // ─── ROOT view — exam families (+ shortcut to results); the
     // FAMILY view lists that family's levels.
-    const _folderGrid = (items, onOpen, icon) => {
+    // counts (optional): { [itemId]: number of sims }. A level with 0 sims shows as «Coming soon», not as an
+    // «Open ›» that leads to an empty screen (2026-10-13).
+    const _folderGrid = (items, onOpen, icon, counts) => {
+      const wrap = document.createElement('div');
       const grid = document.createElement('div');
       grid.className = 'm-reading-folder-grid';
+      wrap.appendChild(grid);
+      // levels with no sims yet share one quiet line instead of a row of dead cards
+      const soonOnes = counts ? items.filter((it) => !(counts[it.id] || 0)) : [];
+      if (soonOnes.length && soonOnes.length < items.length) {
+        const p = document.createElement('p');
+        p.className = 'm-soon-line';
+        p.textContent = soonOnes.map((it) => it.label).join(', ') + ': coming soon';
+        wrap.appendChild(p);
+      }
       items.forEach((it) => {
+        const n = counts ? (counts[it.id] || 0) : null;
+        const soon = counts && n === 0;
+        if (soon && soonOnes.length < items.length) return;
         const card = document.createElement('div');
-        card.className = 'm-reading-card';
+        card.className = 'm-reading-card' + (soon ? ' is-soon' : '');
         card.innerHTML =
           '<div class="m-reading-card-body">' +
             '<div class="m-reading-card-title">' + icon + ' ' + escapeHtml(it.label) + '</div>' +
-            '<div class="m-reading-card-sub">' + escapeHtml(it.subtitle) + '</div>' +
+            '<div class="m-reading-card-sub">' + escapeHtml(soon ? 'Coming soon' : it.subtitle) + '</div>' +
+            (n ? '<div class="m-reading-card-meta">' + n + ' simulation' + (n === 1 ? '' : 's') + '</div>' : '') +
           '</div>' +
           '<div class="m-reading-card-actions">' +
-            '<button class="m-reading-launch" type="button">Open ›</button>' +
+            '<button class="m-reading-launch" type="button"' + (soon ? ' disabled' : '') + '>' + (soon ? 'Not ready yet' : 'Open ›') + '</button>' +
           '</div>';
-        card.querySelector('.m-reading-launch').addEventListener('click', () => onOpen(it));
+        if (!soon) card.querySelector('.m-reading-launch').addEventListener('click', () => onOpen(it));
         grid.appendChild(card);
       });
-      return grid;
+      return wrap;
     };
+    const _simCounts = (all, keyOf) => {
+      const out = {};
+      all.forEach((s) => { const k = keyOf(_hskParseLevel(s.id)); if (k != null) out[k] = (out[k] || 0) + 1; });
+      return out;
+    };
+    const _famOfLevel = (lvl) => { const f = EXAM_FAMILIES.find((x) => x.levels.some((l) => l.id === lvl)); return f ? f.id : null; };
     if (_hskNavStack.length === 2 && _famById(_hskNavStack[1])) {
       const fam = _famById(_hskNavStack[1]);
       title.textContent = '📁 ' + fam.label;
       sub.textContent = 'Pick the level.';
-      view.innerHTML = '';
-      view.appendChild(_folderGrid(fam.levels, (lvl) => { _hskNavStack = ['root', fam.id, lvl.id]; renderHskView(); }, '🎓'));
+      view.textContent = 'Loading…';
+      const draw = (counts) => {
+        view.innerHTML = '';
+        view.appendChild(_folderGrid(fam.levels, (lvl) => { _hskNavStack = ['root', fam.id, lvl.id]; renderHskView(); }, '🎓', counts));
+      };
+      ensureHskSims().then((all) => draw(all.length ? _simCounts(all, (l) => l) : null)).catch(() => draw(null));
       return;
     }
     if (_hskNavStack.length === 1) {
@@ -854,8 +1049,14 @@
         _hskNavStack = ['root', 'results'];
         renderHskView();
       });
-
-      view.appendChild(_folderGrid(EXAM_FAMILIES, (fam) => { _hskNavStack = ['root', fam.id]; renderHskView(); }, '📁'));
+      const famGrid = document.createElement('div');
+      view.appendChild(famGrid);
+      const drawFams = (counts) => {
+        famGrid.innerHTML = '';
+        famGrid.appendChild(_folderGrid(EXAM_FAMILIES, (fam) => { _hskNavStack = ['root', fam.id]; renderHskView(); }, '📁', counts));
+      };
+      famGrid.textContent = 'Loading…';
+      ensureHskSims().then((all) => drawFams(all.length ? _simCounts(all, _famOfLevel) : null)).catch(() => drawFams(null));
       return;
     }
     // ─── LEVEL view — list every Simulación N for that level ─
@@ -869,7 +1070,7 @@
       const sims = all.filter((s) => _hskParseLevel(s.id) === levelId);
       view.innerHTML = '';
       if (!sims.length) {
-        view.innerHTML = '<p class="m-modal-sub" style="text-align:center;">No simulations for ' + lvlName + ' yet. Coming soon.</p>';
+        view.innerHTML = '<div class="m-empty">No simulations for ' + escapeHtml(lvlName) + ' yet. Go back and pick another level.</div>';
         return;
       }
       const grid = document.createElement('div');
@@ -884,7 +1085,7 @@
             '<div class="m-reading-card-meta">' + (sim.questionCount || 0) + ' questions · ' + (sim.partCount || 0) + ' parts</div>' +
           '</div>' +
           '<div class="m-reading-card-actions">' +
-            '<button class="m-reading-force" type="button" data-sim="' + escapeHtml(sim.id) + '" title="Open the HSK room with a PIN — students join by entering the PIN">🚀 Open room with PIN ›</button>' +
+            '<button class="m-reading-force" type="button" data-sim="' + escapeHtml(sim.id) + '" title="Open the exam room with a PIN; students join by typing the PIN">🚀 Open room with PIN</button>' +
           '</div>';
         // 🏆 NEW: launching a sim opens host-hsk.html in a new tab.
         // That page creates a PIN room on load, then displays it big
@@ -892,7 +1093,9 @@
         // link. Force-impose to currently-online kids is now a
         // button INSIDE that page so everything related to the
         // exam session lives in one place — like host-reading.html.
-        card.querySelector('.m-reading-force').addEventListener('click', () => {
+        card.querySelector('.m-reading-force').addEventListener('click', (ev) => {
+          ev.currentTarget.disabled = true;
+          ev.currentTarget.textContent = 'Opening the room…';
           const url = withHskCode('/host-hsk.html?sim=' + encodeURIComponent(sim.id), pw);
           // 🆕 2026-06-16 (Fernando): SAME-TAB nav, not window.open.
           // On mobile (Samsung Internet / Chrome Android on the S23)
@@ -917,12 +1120,12 @@
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) {
-          alert('Could not load the list of online students.');
+          notify('Could not load the list of online students.');
           return;
         }
-        const onlineNow = (data.students || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
+        const onlineNow = (data.students || []).filter((s) => isOnlineNow(s));
         if (!onlineNow.length) {
-          alert('No students online right now.\n\n(Ask them to open /homework first.)');
+          notify('No students online right now.\n\n(Ask them to open /homework first.)');
           return;
         }
         let overlay = document.getElementById('m-force-hsk-modal');
@@ -976,7 +1179,7 @@
           const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
             .map((cb) => cb.dataset.code).filter(Boolean);
           if (!codes.length) {
-            alert('Select at least one student.');
+            notify('Select at least one student.');
             return;
           }
           // Read the access code from URL or storage — same one /maestro
@@ -1019,13 +1222,13 @@
               // current tab to the live monitor always works. The
               // broadcast already fired above, so the kids are being
               // pulled in regardless.
-              alert('✅ Exam sent to ' + codes.length + ' student(s). They will join in ~20s. Taking you to the live monitor.');
+              notify('✅ Exam sent to ' + codes.length + ' student(s). They will join in ~20s. Taking you to the live monitor.');
               location.href = monitorUrl;
             } else {
-              alert('Error: ' + (res && res.error || 'unknown'));
+              notify('Error: ' + (res && res.error || 'unknown'));
             }
           })
-          .catch((e) => { alert('Error: ' + e.message); });
+          .catch((e) => { notify('Error: ' + e.message); });
         });
         // 🆕 2026-06-21 (Fernando) — "send to homework profile" rescue button.
         // Sends a 'gohome' inbox message; the kid's heartbeat (player.html /
@@ -1034,7 +1237,7 @@
         overlay.querySelector('#m-fhsk-gohome').addEventListener('click', () => {
           const codes = Array.from(list.querySelectorAll('input[type=checkbox]:checked'))
             .map((cb) => cb.dataset.code).filter(Boolean);
-          if (!codes.length) { alert('Select at least one student.'); return; }
+          if (!codes.length) { notify('Select at least one student.'); return; }
           adminFetch('/api/admin/broadcast-selected', pw, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1049,16 +1252,16 @@
           .then((r) => r.json())
           .then((res) => {
             if (res && res.ok) {
-              alert('🏠 ' + (res.sent || codes.length) + ' student(s) will return to their profile in ~30s.');
+              notify('🏠 ' + (res.sent || codes.length) + ' student(s) will return to their profile in ~30s.');
               close();
             } else {
-              alert('Error: ' + (res && res.error || 'unknown'));
+              notify('Error: ' + (res && res.error || 'unknown'));
             }
           })
-          .catch((e) => { alert('Error: ' + e.message); });
+          .catch((e) => { notify('Error: ' + e.message); });
         });
       })
-      .catch((e) => { alert('Error: ' + e.message); });
+      .catch((e) => { notify('Error: ' + e.message); });
   }
 
   // ── 🌐 EMIRATI ARABIC GATEWAY (super-admin only) ──────────────────
@@ -1075,10 +1278,10 @@
     if (!confirm('Delete all cached MP3s? They regenerate on the next tap.')) return;
     adminFetch('/api/maestro/emirati/audio/clear-cache', pw, { method: 'POST' })
       .then((r) => r.json()).then((d) => {
-        if (d.ok) alert('✅ Deleted ' + d.removed + ' files.\n\nTry now — the next playback regenerates fresh from Azure.');
-        else alert('Error: ' + (d.error || 'could not do it'));
+        if (d.ok) notify('✅ Deleted ' + d.removed + ' files.\n\nTry now: the next playback regenerates fresh from Azure.');
+        else notify('Error: ' + (d.error || 'could not do it'));
       })
-      .catch((e) => alert('Error: ' + e.message));
+      .catch((e) => notify('Error: ' + e.message));
   });
   if ($('m-em-mark-all')) $('m-em-mark-all').addEventListener('click', () => {
     if (!_emToday.length) return;
@@ -1429,8 +1632,9 @@
   function openCustomModal() {
     cuModal.classList.remove('hidden');
     $('m-cu-msg').textContent = '';
-    $('m-cu-title').value = ''; $('m-cu-instr').value = '';
-    _cuItems = [{ es: '', expected: '' }];
+    // 2026-10-13: an unsent draft survives closing the window (a tap on the backdrop used to wipe 24 sentences);
+    // the form only resets after a successful send.
+    if (!_cuItems.length) _cuItems = [{ es: '', expected: '' }];
     renderCustomItems();
     loadCustomStudents();
     loadCustomExisting();
@@ -1468,7 +1672,9 @@
       .then((r) => r.json())
       .then((data) => {
         const students = (data && data.students) || [];
-        _cuStudents = students.map((s) => ({ code: s.code, name: s.displayName || 'Anon', checked: false }));
+        const was = new Set(_cuStudents.filter((s) => s.checked).map((s) => s.code));
+        const now = Date.now();
+        _cuStudents = students.map((s) => ({ code: s.code, name: s.displayName || 'Anon', checked: was.has(s.code), online: isOnlineNow(s, now) }));
         renderCustomStudents();
       })
       .catch(() => { if (list) list.textContent = 'Error loading students.'; });
@@ -1481,7 +1687,7 @@
     list.innerHTML = '';
     filtered.forEach((s) => {
       const row = document.createElement('label'); row.className = 'm-cu-student' + (s.checked ? ' on' : '');
-      row.innerHTML = `<input type="checkbox" ${s.checked ? 'checked' : ''}> <span class="m-cu-stu-code">${escapeHtml(s.code)}</span> <span class="m-cu-stu-name">${escapeHtml(s.name)}</span>`;
+      row.innerHTML = `<input type="checkbox" ${s.checked ? 'checked' : ''}><span class="m-pick-dot${s.online ? '' : ' is-offline'}" title="${s.online ? 'Online' : 'Offline'}"></span><span class="m-cu-stu-name m-pick-name">${escapeHtml(s.name)}</span><span class="m-cu-stu-code">${escapeHtml(s.code)}</span>`;
       row.querySelector('input').addEventListener('change', (e) => { s.checked = e.target.checked; row.classList.toggle('on', s.checked); });
       list.appendChild(row);
     });
@@ -1503,10 +1709,11 @@
       body: JSON.stringify({ title, instructions, items, targetStudents: targets, pointsPerItem: 10 }),
     }).then((r) => r.json()).then((d) => {
       if (d && d.ok) {
-        if (msg) msg.textContent = '✅ Sent to ' + targets.length + ' student' + (targets.length === 1 ? '' : 's') + '.';
         _cuItems = [{ es: '', expected: '' }]; renderCustomItems();
         $('m-cu-title').value = ''; $('m-cu-instr').value = '';
         _cuStudents.forEach((s) => s.checked = false); renderCustomStudents();
+        // after the reset: renderCustomStudents() rewrites this line with the selection count (it used to wipe the confirmation)
+        if (msg) msg.textContent = '✅ Sent to ' + targets.length + ' student' + (targets.length === 1 ? '' : 's') + '.';
         loadCustomExisting();
       } else {
         if (msg) msg.textContent = '✕ Error: ' + ((d && d.error) || 'could not send');
@@ -1625,14 +1832,14 @@
       if (btn) {
         btn.classList.add('m-em-speak-err');
         btn.textContent = '🚫';
-        btn.title = 'Error: ' + (e.message || e) + ' — tap again to diagnose.';
+        btn.title = 'Error: ' + (e.message || e) + '. Tap again to diagnose.';
         btn.onclick = () => {
           btn.onclick = null;
           adminFetch('/api/maestro/emirati/azure/diagnose'
               + '?voice=' + _emAzureVoice
               + '&text=' + encodeURIComponent(arText), pw)
             .then((r) => r.json()).then((d) => {
-              alert('Diag:\nOK: ' + d.ok + '\nStatus: ' + (d.azureStatus || d.reason)
+              notify('Diag:\nOK: ' + d.ok + '\nStatus: ' + (d.azureStatus || d.reason)
                 + '\nBytes: ' + (d.bytesReceived || 0)
                 + '\nClient error: ' + (e.message || e));
             });
@@ -1842,12 +2049,9 @@
     if (!grid) return;
     grid.innerHTML = GIF_LIBRARY.map((g) => {
       const sel = g.id === _gifPick;
-      return '<button class="m-gif-tile" data-gid="' + g.id + '" type="button" style="' +
-        'padding:8px;border-radius:12px;background:' + (sel ? 'rgba(91,232,209,0.18)' : 'rgba(255,255,255,0.05)') +
-        ';border:2px solid ' + (sel ? 'rgba(91,232,209,0.65)' : 'rgba(255,255,255,0.12)') +
-        ';color:#fff;font-weight:800;cursor:pointer;touch-action:manipulation;text-align:center;">' +
-        '<img src="' + g.still + '" alt="" style="max-width:90px;max-height:90px;display:block;margin:0 auto 6px;">' +
-        '<span>' + g.label + '</span></button>';
+      return '<button class="m-gif-tile' + (sel ? ' is-selected' : '') + '" data-gid="' + escapeHtml(g.id) + '" type="button" aria-pressed="' + sel + '">' +
+        '<img src="' + escapeHtml(g.still) + '" alt="" width="84" height="84" loading="lazy">' +
+        '<span>' + escapeHtml(g.label) + '</span></button>';
     }).join('');
     grid.querySelectorAll('.m-gif-tile').forEach((b) => {
       b.addEventListener('click', () => {
@@ -1865,25 +2069,24 @@
     if (q) pool = pool.filter((s) =>
       (s.displayName || '').toLowerCase().includes(q) ||
       (s.code || '').toLowerCase().includes(q));
-    if (_gifOnlineOnly) pool = pool.filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
+    if (_gifOnlineOnly) pool = pool.filter((s) => isOnlineNow(s));
     if (!pool.length) {
-      list.innerHTML = '<p style="color:rgba(255,255,255,0.6);padding:12px;text-align:center;">No matches.</p>';
+      list.innerHTML = '<div class="m-empty">' + (_gifOnlineOnly && !q ? 'Nobody is online right now. Turn off «Online only» to pick from everyone.' : 'No students match.') + '</div>';
       return;
     }
     list.innerHTML = '';
     pool.forEach((s) => {
-      const online = s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000;
+      const online = isOnlineNow(s);
       const checked = _gifChecked.has(s.code);
       const row = document.createElement('label');
-      row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:8px;cursor:pointer;background:' + (checked ? 'rgba(91,232,209,0.1)' : 'transparent');
+      row.className = 'm-pick-row';
       row.innerHTML =
         '<input type="checkbox" data-code="' + escapeHtml(s.code) + '"' + (checked ? ' checked' : '') + '>' +
-        '<span style="width:8px;height:8px;border-radius:50%;background:' + (online ? '#5be88a' : '#666') + ';"></span>' +
-        '<span style="flex:1;font-weight:700;">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
-        '<span style="font-size:0.75rem;color:rgba(255,255,255,0.5);">' + escapeHtml(s.code) + '</span>';
+        '<span class="m-pick-dot' + (online ? '' : ' is-offline') + '" title="' + (online ? 'Online' : 'Offline') + '"></span>' +
+        '<span class="m-pick-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+        '<span class="m-pick-code">' + escapeHtml(s.code) + '</span>';
       row.querySelector('input').addEventListener('change', (e) => {
         if (e.target.checked) _gifChecked.add(s.code); else _gifChecked.delete(s.code);
-        row.style.background = e.target.checked ? 'rgba(91,232,209,0.1)' : 'transparent';
         _updateGifSendBtn();
       });
       list.appendChild(row);
@@ -1898,17 +2101,25 @@
     btn.disabled = false;
   }
   function _openGifModal() {
-    _gifPick = ''; _gifChecked = new Set(); _gifOnlineOnly = false; _gifSearch = '';
+    // 2026-10-13: like every other picker, it opens on the online kids, all checked (pick a GIF, press Send)
+    _gifPick = ''; _gifChecked = new Set(); _gifOnlineOnly = true; _gifSearch = '';
     $('m-gif-search').value = '';
     $('m-gif-msg').textContent = '';
+    $('m-gif-online').setAttribute('aria-pressed', 'true');
+    $('m-gif-online').classList.add('btn-jade');
+    $('m-gif-online').textContent = '🟢 Online only: on';
+    $('m-gif-list').innerHTML = '<div class="m-empty">Loading students…</div>';
     adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
-        if (!data || !data.ok) { _gifStudents = []; return; }
+        if (!data || !data.ok) { _gifStudents = []; $('m-gif-list').innerHTML = '<div class="m-empty">Could not load the students. Close and open this again.</div>'; return; }
         _gifStudents = (data.students || []).slice().sort((a, b) =>
           (a.displayName || a.code || '').localeCompare(b.displayName || b.code || ''));
+        _gifStudents.forEach((s) => { if (isOnlineNow(s)) _gifChecked.add(s.code); });
         _renderGifList();
-      });
+        _updateGifSendBtn();
+      })
+      .catch(() => { $('m-gif-list').innerHTML = '<div class="m-empty">Could not load the students. Check the connection, then close and open this again.</div>'; });
     _renderGifGrid();
     _updateGifSendBtn();
     $('m-gif-modal').classList.remove('hidden');
@@ -1920,6 +2131,12 @@
     // 🔒 2026-10-11: fetch with the code in the X-Admin-Pw header (a plain link
     // would have to put it in the URL), then save the file from memory. The
     // server's Content-Disposition header still names it draly-backup-<date>.json.
+    if (backupBtn.disabled) return;
+    backupBtn.disabled = true;
+    const label = backupBtn.querySelector('small');
+    const was = label ? label.textContent : '';
+    if (label) label.textContent = 'Preparing the file…';
+    const restore = () => { backupBtn.disabled = false; if (label) label.textContent = was; };
     adminFetch('/api/admin/backup', pw)
       .then((r) => {
         if (!r.ok) return r.json().catch(() => ({})).then((d) => { throw new Error((d && d.error) || ('HTTP ' + r.status)); });
@@ -1935,39 +2152,47 @@
         a.click();
         setTimeout(() => { try { a.remove(); } catch (_) {} }, 1000);
         setTimeout(() => { try { URL.revokeObjectURL(href); } catch (_) {} }, 60000);
+        restore();
+        notify('✅ Backup downloaded: ' + name);
       })
-      .catch((e) => alert('Error: ' + e.message));
+      .catch((e) => { restore(); notify('Backup failed: ' + e.message); });
   });
 
   // 🎓 2026-06-21 (Fernando) — CLASSROOM MANAGER. Create / rename / delete
   // classrooms here; assign students in the Cuaderno; send to a whole class
   // in the sentence push. Reuses the same admin pw as everything else.
-  function _openClassroomModal() { $('m-classroom-modal').classList.remove('hidden'); _renderClassroomList(); }
+  function _openClassroomModal() {
+    $('m-classroom-modal').classList.remove('hidden');
+    // the «new class» row was left hidden when the window closed from a class view (2026-10-13 fix)
+    const newRow = document.querySelector('.m-classroom-new');
+    if (newRow) newRow.style.display = '';
+    _renderClassroomList();
+  }
   function _closeClassroomModal() { $('m-classroom-modal').classList.add('hidden'); }
   function _classroomMsg(t, ok) {
     const el = $('m-classroom-msg'); if (!el) return;
-    el.textContent = t || ''; el.style.color = ok === false ? '#ff8a8a' : '#5be8a0';
-    if (t) setTimeout(() => { if (el.textContent === t) el.textContent = ''; }, 2500);
+    el.textContent = t || '';
+    el.classList.toggle('is-error', ok === false);
+    if (t) setTimeout(() => { if (el.textContent === t) el.textContent = ''; }, 3500);
   }
   function _renderClassroomList() {
     const box = $('m-classroom-list'); if (!box) return;
-    box.innerHTML = '<div style="opacity:.6;text-align:center;padding:8px;">Loading…</div>';
+    box.innerHTML = '<div class="m-empty">Loading classes…</div>';
     adminFetch('/api/admin/classrooms', pw)
       .then((r) => r.json())
       .then((data) => {
         const list = (data && data.classrooms) || [];
-        if (!list.length) { box.innerHTML = '<div style="opacity:.6;text-align:center;padding:12px;">No classrooms yet. Create the first one below. 👇</div>'; return; }
+        if (!list.length) { box.innerHTML = '<div class="m-empty">No classes yet. Type a name below and press Create class.</div>'; return; }
         box.innerHTML = '';
         list.forEach((c) => {
           const row = document.createElement('div');
           row.className = 'm-classroom-row';
-          row.style.cssText = 'display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px;';
           row.innerHTML =
-            '<input class="input m-classroom-name" value="' + escapeHtml(c.name || '') + '" maxlength="40" style="flex:1;min-width:120px;">' +
-            '<span class="m-classroom-count" style="font-size:0.8rem;opacity:.8;white-space:nowrap;">👥 ' + (c.studentCount || 0) + ' · 🟢 ' + (c.onlineCount || 0) + '</span>' +
-            '<button class="btn btn-jade btn-sm m-classroom-members" title="Open this classroom: add/remove students and view their profiles">👁 View classroom</button>' +
-            '<button class="btn btn-ghost btn-sm m-classroom-save" title="Save name">💾</button>' +
-            '<button class="btn btn-red btn-sm m-classroom-del" title="Delete classroom">🗑</button>';
+            '<input class="input m-classroom-name" value="' + escapeHtml(c.name || '') + '" maxlength="40" aria-label="Class name">' +
+            '<span class="m-classroom-count">👥 ' + (c.studentCount || 0) + ' · 🟢 ' + (c.onlineCount || 0) + ' online</span>' +
+            '<button class="btn btn-gold btn-sm m-classroom-members" type="button" title="Add or remove students and open their profiles">Open class</button>' +
+            '<button class="btn btn-ghost btn-sm m-classroom-save" type="button" title="Save the new name">💾 Save name</button>' +
+            '<button class="btn btn-red btn-sm m-classroom-del" type="button" title="Delete this class (no student is deleted)">🗑 Delete</button>';
           row.querySelector('.m-classroom-members').addEventListener('click', () => _openClassroomMembers(c));
           row.querySelector('.m-classroom-save').addEventListener('click', () => {
             const name = row.querySelector('.m-classroom-name').value;
@@ -1975,31 +2200,31 @@
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ name }),
             }).then((r) => r.json()).then((res) => {
-              _classroomMsg(res && res.ok ? '✓ Saved' : ('Error: ' + (res && res.error || '')), !!(res && res.ok));
+              _classroomMsg(res && res.ok ? '✓ Name saved' : ('Could not save: ' + (res && res.error || 'unknown error')), !!(res && res.ok));
               if (res && res.ok) _renderClassroomList();
-            }).catch((e) => _classroomMsg('Error: ' + e.message, false));
+            }).catch(() => _classroomMsg('Could not save. Check the connection and try again.', false));
           });
           row.querySelector('.m-classroom-del').addEventListener('click', () => {
-            if (!confirm('Delete the classroom "' + (c.name || '') + '"? The students will become Unassigned (no student is deleted).')) return;
+            if (!confirm('Delete the class "' + (c.name || '') + '"?\n\nIts students become Unassigned. No student is deleted.')) return;
             adminFetch('/api/admin/classroom/' + encodeURIComponent(c.id), pw, { method: 'DELETE' })
-              .then((r) => r.json()).then((res) => { _classroomMsg(res && res.ok ? '✓ Deleted' : 'Could not delete', !!(res && res.ok)); _renderClassroomList(); })
-              .catch((e) => _classroomMsg('Error: ' + e.message, false));
+              .then((r) => r.json()).then((res) => { _classroomMsg(res && res.ok ? '✓ Class deleted' : 'Could not delete the class.', !!(res && res.ok)); _renderClassroomList(); })
+              .catch(() => _classroomMsg('Could not delete. Check the connection and try again.', false));
           });
           box.appendChild(row);
         });
       })
-      .catch((e) => { box.innerHTML = '<div style="color:#ff8a8a;text-align:center;">Error: ' + escapeHtml(e.message) + '</div>'; });
+      .catch(() => { box.innerHTML = '<div class="m-empty">Could not load the classes. Check the connection, then close and open this again.</div>'; });
   }
   function _createClassroom() {
     const name = ($('m-classroom-new-name').value || '').trim();
-    if (!name) { _classroomMsg('Enter a name first', false); return; }
+    if (!name) { _classroomMsg('Type a name for the class first.', false); $('m-classroom-new-name').focus(); return; }
     adminFetch('/api/admin/classrooms', pw, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     }).then((r) => r.json()).then((res) => {
-      if (res && res.ok) { $('m-classroom-new-name').value = ''; _classroomMsg('✓ Empty classroom created — now add students with 👥', true); _renderClassroomList(); }
-      else _classroomMsg('Error: ' + (res && res.error || ''), false);
-    }).catch((e) => _classroomMsg('Error: ' + e.message, false));
+      if (res && res.ok) { $('m-classroom-new-name').value = ''; _classroomMsg('✓ Class created. Open it to add students.', true); _renderClassroomList(); }
+      else _classroomMsg('Could not create the class: ' + (res && res.error || 'unknown error'), false);
+    }).catch(() => _classroomMsg('Could not create the class. Check the connection and try again.', false));
   }
   // 👥 MEMBER EDITOR — see exactly who is in this aula and tick kids in/out.
   // Checked = belongs to THIS aula. Ticking moves them here; unticking makes
@@ -2008,7 +2233,7 @@
     const box = $('m-classroom-list');
     const newRow = document.querySelector('.m-classroom-new');
     if (newRow) newRow.style.display = 'none';
-    box.innerHTML = '<div style="opacity:.6;text-align:center;padding:10px;">Loading students…</div>';
+    box.innerHTML = '<div class="m-empty">Loading students…</div>';
     adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
@@ -2016,12 +2241,12 @@
           .sort((a, b) => (a.displayName || a.code || '').localeCompare(b.displayName || b.code || ''));
         const memberCount = students.filter((s) => s.classroomId === classroom.id).length;
         box.innerHTML =
-          '<button class="btn btn-ghost btn-sm" id="m-cls-back">← Back to classrooms</button>' +
-          '<h3 style="margin:10px 0 6px;">🎓 ' + escapeHtml(classroom.name) + '</h3>' +
-          '<button class="btn btn-jade btn-sm" id="m-cls-view-members" style="width:100%;margin-bottom:10px;">👥 View members (' + memberCount + ') — open their profiles</button>' +
-          '<p style="font-size:0.8rem;opacity:.7;margin:0 0 8px;">Check the students who belong to this classroom. Saved instantly.</p>' +
-          '<input class="input" id="m-cls-mem-search" placeholder="🔎 Search student…" style="margin-bottom:8px;">' +
-          '<div id="m-cls-mem-list" style="max-height:42vh;overflow:auto;"></div>';
+          '<button class="btn btn-ghost btn-sm" id="m-cls-back" type="button">← All classes</button>' +
+          '<h3 class="m-cls-title">🎓 ' + escapeHtml(classroom.name) + '</h3>' +
+          '<button class="btn btn-gold btn-sm m-cls-full" id="m-cls-view-members" type="button">👥 Members (' + memberCount + '): open their profiles</button>' +
+          '<p class="m-cls-note">Check the students who belong to this class. Each change saves at once.</p>' +
+          '<input class="input" id="m-cls-mem-search" type="search" placeholder="Search by name or code" aria-label="Search students">' +
+          '<div id="m-cls-mem-list" class="m-cls-list"></div>';
         box.querySelector('#m-cls-view-members').addEventListener('click', () => _openClassroomRoster(classroom));
         const listEl = box.querySelector('#m-cls-mem-list');
         const render = (q) => {
@@ -2030,14 +2255,15 @@
           const pool = students.filter((s) => !qq
             || (s.displayName || '').toLowerCase().includes(qq)
             || (s.code || '').toLowerCase().includes(qq));
-          if (!pool.length) { listEl.innerHTML = '<p style="opacity:.6;text-align:center;padding:8px;">No matches.</p>'; return; }
+          if (!pool.length) { listEl.innerHTML = '<div class="m-empty">No students match.</div>'; return; }
           pool.forEach((s) => {
             const inThis = s.classroomId === classroom.id;
-            const elsewhere = (s.classroomName && !inThis) ? ' <span style="opacity:.5;font-size:.78rem;">(' + escapeHtml(s.classroomName) + ')</span>' : '';
+            const elsewhere = (s.classroomName && !inThis) ? '<span class="m-cls-elsewhere">in ' + escapeHtml(s.classroomName) + '</span>' : '';
             const rowL = document.createElement('label');
-            rowL.style.cssText = 'display:flex;gap:8px;align-items:center;padding:5px 2px;cursor:pointer;';
+            rowL.className = 'm-cls-row';
             rowL.innerHTML = '<input type="checkbox"' + (inThis ? ' checked' : '') + '>'
-              + '<span>' + escapeHtml(s.displayName || 'Anon') + ' <span style="opacity:.5;">' + escapeHtml(s.code) + '</span>' + elsewhere + '</span>';
+              + '<span class="m-pick-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' + elsewhere
+              + '<span class="m-pick-code">' + escapeHtml(s.code) + '</span>';
             rowL.querySelector('input').addEventListener('change', (e) => {
               const cid = e.target.checked ? classroom.id : '';
               adminFetch('/api/admin/student/' + encodeURIComponent(s.code) + '/classroom', pw, {
@@ -2045,8 +2271,8 @@
                 body: JSON.stringify({ classroomId: cid }),
               }).then((r) => r.json()).then((res) => {
                 if (res && res.ok) { s.classroomId = cid || null; s.classroomName = e.target.checked ? classroom.name : null; }
-                else { e.target.checked = !e.target.checked; alert('Could not change: ' + (res && res.error || '')); }
-              }).catch(() => { e.target.checked = !e.target.checked; });
+                else { e.target.checked = !e.target.checked; notify('Could not change the class: ' + (res && res.error || 'unknown error')); }
+              }).catch(() => { e.target.checked = !e.target.checked; notify('Could not change the class. Check the connection and try again.'); });
             });
             listEl.appendChild(rowL);
           });
@@ -2055,7 +2281,7 @@
         box.querySelector('#m-cls-mem-search').addEventListener('input', (e) => render(e.target.value));
         box.querySelector('#m-cls-back').addEventListener('click', () => { if (newRow) newRow.style.display = ''; _renderClassroomList(); });
       })
-      .catch((e) => { box.innerHTML = '<div style="color:#ff8a8a;text-align:center;">Error: ' + escapeHtml(e.message) + '</div>'; });
+      .catch(() => { box.innerHTML = '<div class="m-empty">Could not load the students. Check the connection, then close and open this again.</div>'; });
   }
   // 👥 VER MIEMBROS — only the students ALREADY in this aula, each tappable to
   // open their full profile (oraciones, notas, mensajes, cambiar aula…).
@@ -2063,33 +2289,33 @@
     const box = $('m-classroom-list');
     const newRow = document.querySelector('.m-classroom-new');
     if (newRow) newRow.style.display = 'none';
-    box.innerHTML = '<div style="opacity:.6;text-align:center;padding:10px;">Loading…</div>';
+    box.innerHTML = '<div class="m-empty">Loading…</div>';
     adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
         const members = ((data && data.students) || []).filter((s) => s.classroomId === classroom.id)
           .sort((a, b) => (a.displayName || a.code || '').localeCompare(b.displayName || b.code || ''));
-        let html = '<button class="btn btn-ghost btn-sm" id="m-cls-roster-back">← Back to classroom</button>' +
-          '<h3 style="margin:10px 0 6px;">👥 Members of ' + escapeHtml(classroom.name) + ' (' + members.length + ')</h3>' +
-          '<p style="font-size:0.8rem;opacity:.7;margin:0 0 8px;">Tap a student to open their profile.</p>';
-        if (!members.length) html += '<p style="opacity:.6;text-align:center;padding:10px;">No students in this classroom yet. Use “View classroom” to add them.</p>';
-        html += '<div id="m-cls-roster-list" style="max-height:48vh;overflow:auto;"></div>';
+        let html = '<button class="btn btn-ghost btn-sm" id="m-cls-roster-back" type="button">← Back to the class</button>' +
+          '<h3 class="m-cls-title">👥 ' + escapeHtml(classroom.name) + ' (' + members.length + ')</h3>' +
+          '<p class="m-cls-note">Tap a student to open their profile.</p>';
+        if (!members.length) html += '<div class="m-empty">Nobody in this class yet. Go back and check the students who belong to it.</div>';
+        html += '<div id="m-cls-roster-list" class="m-cls-list"' + (members.length ? '' : ' hidden') + '></div>';
         box.innerHTML = html;
         const listEl = box.querySelector('#m-cls-roster-list');
         members.forEach((s) => {
           const row = document.createElement('button');
           row.type = 'button';
-          row.className = 'btn btn-ghost btn-sm';
-          row.style.cssText = 'display:flex;gap:10px;align-items:center;width:100%;justify-content:flex-start;margin-bottom:6px;text-align:left;';
-          row.innerHTML = '<span class="m-row-avatar">' + renderAvatar(s.avatar) + '</span>' +
-            '<span>' + escapeHtml(s.displayName || 'Anon') + ' <span style="opacity:.5;">' + escapeHtml(s.code) + '</span></span>' +
-            '<span style="margin-left:auto;opacity:.6;">open profile →</span>';
+          row.className = 'm-cls-member';
+          row.innerHTML = '<span class="m-pick-avatar">' + renderAvatar(s.avatar) + '</span>' +
+            '<span class="m-pick-name">' + escapeHtml(s.displayName || 'Anon') + '</span>' +
+            '<span class="m-pick-code">' + escapeHtml(s.code) + '</span>' +
+            '<span class="m-cls-open">Open profile ›</span>';
           row.addEventListener('click', () => { _closeClassroomModal(); openDetail(s.code); });
           listEl.appendChild(row);
         });
         box.querySelector('#m-cls-roster-back').addEventListener('click', () => _openClassroomMembers(classroom));
       })
-      .catch((e) => { box.innerHTML = '<div style="color:#ff8a8a;text-align:center;">Error: ' + escapeHtml(e.message) + '</div>'; });
+      .catch(() => { box.innerHTML = '<div class="m-empty">Could not load the members. Check the connection, then close and open this again.</div>'; });
   }
   // 🏠 2026-06-21 (Fernando) — TOP-LEVEL "Llevar a casa". Pick online kids and
   // force them out of ANY room / stuck screen ("estás en la sala", a dead PIN
@@ -2099,8 +2325,8 @@
     adminFetch('/api/admin/students', pw)
       .then((r) => r.json())
       .then((data) => {
-        const online = ((data && data.students) || []).filter((s) => s.lastSeen && (Date.now() - s.lastSeen) <= 60 * 1000);
-        if (!online.length) { alert('No students online right now.\n\n(Students with the portal or a game open show up here.)'); return; }
+        const online = ((data && data.students) || []).filter((s) => isOnlineNow(s));
+        if (!online.length) { notify('Nobody is online right now, so there is nobody to send home.\nStudents with their homework or a game open show up here.', 'info'); return; }
         let ov = document.getElementById('m-home-modal'); if (ov) ov.remove();
         ov = document.createElement('div');
         ov.id = 'm-home-modal'; ov.className = 'm-modal';
@@ -2108,13 +2334,13 @@
           '<div class="m-modal-card">' +
             '<button class="m-modal-close" type="button" aria-label="Close">✕</button>' +
             '<h2>🏠 Send home</h2>' +
-            '<p class="m-modal-sub">Pull the selected students out of any room or stuck screen and send them to their assignments profile. They return in ~30s. Great BEFORE opening a new simulation.</p>' +
+            '<p class="m-modal-sub">Pulls the checked students out of any room or stuck screen and back to their homework profile within about 30 seconds. Use it before opening a new simulation.</p>' +
             '<div class="m-force-actions">' +
-              '<button class="btn btn-ghost btn-sm" id="m-home-all">✅ All</button>' +
-              '<button class="btn btn-ghost btn-sm" id="m-home-none">⬜ None</button>' +
+              '<button class="btn btn-ghost btn-sm" id="m-home-all" type="button">Select all</button>' +
+              '<button class="btn btn-ghost btn-sm" id="m-home-none" type="button">Clear</button>' +
             '</div>' +
             '<div class="m-force-students" id="m-home-students"></div>' +
-            '<button class="btn btn-gold btn-xl" id="m-home-go" style="margin-top:14px;width:100%;">🏠 Send home</button>' +
+            '<button class="btn btn-red btn-xl" id="m-home-go" type="button">🏠 Send them home</button>' +
           '</div>';
         document.body.appendChild(ov);
         const listEl = ov.querySelector('#m-home-students');
@@ -2135,17 +2361,17 @@
         ov.querySelector('#m-home-none').addEventListener('click', () => listEl.querySelectorAll('input').forEach((c) => { c.checked = false; }));
         ov.querySelector('#m-home-go').addEventListener('click', () => {
           const codes = Array.from(listEl.querySelectorAll('input:checked')).map((c) => c.dataset.code).filter(Boolean);
-          if (!codes.length) { alert('Select at least one student.'); return; }
+          if (!codes.length) { notify('Select at least one student.'); return; }
           adminFetch('/api/admin/broadcast-selected', pw, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ studentCodes: codes, text: '📚 Your teacher sent you back to your assignments profile.', actionType: 'gohome', actionUrl: '/homework', actionLabel: 'Go to my assignments →' }),
           }).then((r) => r.json()).then((res) => {
             if (res && res.ok) { _mHomeFeedback(ov, codes); }
-            else alert('Error: ' + (res && res.error || 'unknown'));
-          }).catch((e) => alert('Error: ' + e.message));
+            else notify('Error: ' + (res && res.error || 'unknown'));
+          }).catch((e) => notify('Error: ' + e.message));
         });
       })
-      .catch((e) => alert('Error: ' + e.message));
+      .catch((e) => notify('Error: ' + e.message));
   }
   // Live status board for "Llevar a casa": poll who actually arrived (≤45s).
   function _mHomeFeedback(ov, codes) {
@@ -2154,9 +2380,10 @@
     card.innerHTML =
       '<button class="m-modal-close" type="button" aria-label="Close">✕</button>' +
       '<h2>🏠 Heading home…</h2>' +
-      '<p class="m-modal-sub" id="m-home-count">0 / ' + codes.length + ' home</p>' +
+      '<p class="m-modal-sub" id="m-home-count" role="status">0 / ' + codes.length + ' home</p>' +
       '<div class="m-force-students" id="m-home-status"></div>' +
-      '<button class="btn btn-ghost btn-sm" id="m-home-done" style="margin-top:12px;width:100%;">Close</button>';
+      '<button class="btn btn-xl" id="m-home-done" type="button">Close</button>';
+    card.focus({ preventScroll: true });
     const stop = () => { if (t) clearInterval(t); try { ov.remove(); } catch (_) {} };
     card.querySelector('.m-modal-close').addEventListener('click', stop);
     card.querySelector('#m-home-done').addEventListener('click', stop);
@@ -2172,14 +2399,21 @@
           sts.forEach((s) => {
             if (s.arrived) arrived++;
             const row = document.createElement('div'); row.className = 'm-force-row';
-            row.innerHTML = '<span style="width:1.5em;">' + (s.arrived ? '✅' : '⏳') + '</span>'
+            row.innerHTML = '<span class="m-force-row-state" aria-hidden="true">' + (s.arrived ? '✅' : '⏳') + '</span>'
               + '<span class="m-force-row-name">' + escapeHtml(s.name || s.code) + '</span>'
               + '<span class="m-force-row-code">' + (s.arrived ? 'home' : (s.online ? 'on the way…' : 'no signal')) + '</span>';
             board.appendChild(row);
           });
           const countEl = card.querySelector('#m-home-count');
           if (countEl) countEl.textContent = arrived + ' / ' + codes.length + ' home';
-          if (arrived >= codes.length || (Date.now() - started) > 45000) { if (t) clearInterval(t); }
+          if (arrived >= codes.length || (Date.now() - started) > 45000) {
+            if (t) clearInterval(t);
+            t = null;
+            // the board stops after 45 s: say so, and what to do about the kids who never answered
+            if (countEl && arrived < codes.length) {
+              countEl.textContent = arrived + ' / ' + codes.length + ' home. Kids marked «no signal» have closed the page or lost Wi-Fi: ask them to open /homework again.';
+            }
+          }
         })
         .catch(() => {});
     };
@@ -2197,7 +2431,9 @@
   $('m-gif-search').addEventListener('input', (e) => { _gifSearch = e.target.value || ''; _renderGifList(); });
   $('m-gif-online').addEventListener('click', (e) => {
     _gifOnlineOnly = !_gifOnlineOnly;
-    e.currentTarget.textContent = _gifOnlineOnly ? '🟢 Online only ✓' : '🟢 Online only';
+    e.currentTarget.setAttribute('aria-pressed', String(_gifOnlineOnly));
+    e.currentTarget.classList.toggle('btn-jade', _gifOnlineOnly);
+    e.currentTarget.textContent = _gifOnlineOnly ? '🟢 Online only: on' : '🟢 Online only';
     _renderGifList();
   });
   $('m-gif-all').addEventListener('click', () => {
@@ -2231,56 +2467,86 @@
       .catch((e) => { $('m-gif-msg').textContent = '✗ ' + e.message; _updateGifSendBtn(); });
   });
 
-  // 📢 Broadcast — sends a message to every student in the teacher's
-  // classroom. Super admin gets prompted for the classroomCode (defaults
-  // to "1001" — your own); regular teachers auto-target their own.
-  $('m-broadcast-btn').addEventListener('click', () => {
-    adminFetch('/api/admin/students', pw)
+  // 📢 Broadcast — sends a message to every student of one class code. 2026-10-13: a real form instead of five
+  // prompt()/confirm() dialogs on the projector (Cancel on the first one used to send to 1001 anyway). Regular
+  // teachers pick one of their own codes; the super admin may type any code (default: the first own code).
+  // Same /api/admin/broadcast call and body as before.
+  let _self = null;   // the signed-in teacher (renderRoster keeps it current)
+  function _openBroadcast() {
+    const self = _self || {};
+    const codes = (self.accessCodes || []).filter(Boolean);
+    const sel = $('m-bc-class-select');
+    const inp = $('m-bc-class');
+    const superAdmin = !!self.isSuperAdmin || !codes.length;
+    sel.classList.toggle('hidden', superAdmin);
+    inp.classList.toggle('hidden', !superAdmin);
+    if (superAdmin) {
+      $('m-bc-class-list').innerHTML = codes.map((c) => '<option value="' + escapeHtml(c) + '">').join('');
+      if (!inp.value) inp.value = codes[0] || '1001';
+    } else {
+      const was = sel.value;
+      sel.innerHTML = codes.map((c) => '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>').join('');
+      if (was && codes.includes(was)) sel.value = was;
+    }
+    $('m-bc-msg').textContent = '';
+    $('m-bc-msg').classList.remove('is-error');
+    $('m-bc-send').disabled = false;
+    $('m-broadcast-modal').classList.remove('hidden');
+  }
+  function _closeBroadcast() { $('m-broadcast-modal').classList.add('hidden'); }
+  function _sendBroadcast() {
+    const self = _self || {};
+    const superAdmin = !!self.isSuperAdmin || !(self.accessCodes || []).length;
+    const classroomCode = (superAdmin ? $('m-bc-class').value : $('m-bc-class-select').value || '').trim();
+    const text = ($('m-bc-text').value || '').trim();
+    const url = ($('m-bc-url').value || '').trim();
+    const label = ($('m-bc-label').value || '').trim() || 'Join now';
+    const msg = $('m-bc-msg');
+    const fail = (t) => { msg.textContent = t; msg.classList.add('is-error'); };
+    msg.classList.remove('is-error');
+    if (!classroomCode) { fail('Type the class code to send to.'); return; }
+    if (!text) { fail('Write the message first.'); $('m-bc-text').focus(); return; }
+    const btn = $('m-bc-send');
+    btn.disabled = true;
+    msg.textContent = 'Sending…';
+    adminFetch('/api/admin/broadcast', pw, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        classroomCode,
+        text,
+        actionType: url ? 'link' : null,
+        actionUrl: url || null,
+        actionLabel: url ? label : null,
+      }),
+    })
       .then((r) => r.json())
-      .then((data) => {
-        const self = data && data.self;
-        let classroomCode = self && self.accessCodes && self.accessCodes[0];
-        if (self && self.isSuperAdmin) {
-          // Super admin can target any classroom — default to first own code
-          classroomCode = prompt('Classroom code to send to (leave empty for 1001):', classroomCode || '1001') || '1001';
-        }
-        if (!classroomCode) { alert('You don\'t have a classroom code set up.'); return; }
-        const text = prompt(`Message for every student in classroom ${classroomCode}:\n\n(It will appear as a notification in their assignments portal)`, '');
-        if (!text || !text.trim()) return;
-        const wantLink = confirm('Attach an action link? (e.g. "Join my live session")\n\nOK = yes, Cancel = text only');
-        let actionUrl = null, actionLabel = null;
-        if (wantLink) {
-          actionUrl = prompt('Link URL (e.g. /player.html?pin=1234):', '/player.html?pin=');
-          actionLabel = actionUrl ? prompt('Button text (e.g. "Join now"):', 'Join now') : null;
-        }
-        adminFetch('/api/admin/broadcast', pw, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            classroomCode,
-            text: text.trim(),
-            actionType: actionUrl ? 'link' : null,
-            actionUrl,
-            actionLabel,
-          }),
-        })
-          .then((r) => r.json())
-          .then((r) => {
-            if (!r.ok) { alert('Error: ' + (r.error || 'could not do it')); return; }
-            alert(`✓ Message sent to ${r.sent} student${r.sent === 1 ? '' : 's'} in classroom ${classroomCode}.`);
-          });
-      });
-  });
+      .then((r) => {
+        btn.disabled = false;
+        if (!r || !r.ok) { fail('Could not send: ' + ((r && r.error) || 'unknown error')); return; }
+        $('m-bc-text').value = '';
+        $('m-bc-url').value = '';
+        _closeBroadcast();
+        notify('✓ Message sent to ' + r.sent + ' student' + (r.sent === 1 ? '' : 's') + ' of class ' + classroomCode + '.');
+      })
+      .catch(() => { btn.disabled = false; fail('Could not send. Check the connection and try again.'); });
+  }
+  $('m-broadcast-btn').addEventListener('click', _openBroadcast);
+  $('m-broadcast-close').addEventListener('click', _closeBroadcast);
+  $('m-bc-send').addEventListener('click', _sendBroadcast);
+  $('m-broadcast-modal').addEventListener('click', (e) => { if (e.target === $('m-broadcast-modal')) _closeBroadcast(); });
+  $('m-bc-text').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) _sendBroadcast(); });
 
   // Auto-refresh every 15 seconds so the teacher sees who's joining in
   // real time. Only refreshes when the dashboard is visible (not while
   // looking at a student detail page or when the tab is in background).
   // User feedback 2026-05-27: "I should know who has joined right now —
   // don't make me keep asking 'who has joined?'"
+  // 2026-10-13: it also runs while a student's profile is open, so «Online now» stays live (the hidden roster is
+  // rebuilt behind the profile; the profile itself is not touched).
   setInterval(() => {
     if (document.hidden) return;
     if ($('m-dash').classList.contains('hidden')) return;
-    if (!$('m-detail').classList.contains('hidden')) return;
     if (!pw) return;
     // 🆕 2026-06-16 (Fernando bug): don't rebuild the roster while the
     // teacher is actively typing in the search box — the 15s refresh was
@@ -2290,30 +2556,105 @@
     // that DO happen while a filter is applied but unfocused.)
     const active = document.activeElement;
     if (active && active.classList && active.classList.contains('m-roster-search-input')) return;
+    // an open class dropdown would snap shut under the teacher's finger
+    if (active && active.classList && active.classList.contains('m-roster-class')) return;
+    if (_authStopped) return;
     fetchRoster();
   }, 15000);
-  $('m-detail-back').addEventListener('click', () => {
+  function closeDetail() {
     $('m-detail').classList.add('hidden');
     $('m-roster').classList.remove('hidden');
     $('m-summary').classList.remove('hidden');
-  });
+    // the roster is rebuilt every 15 s, so the row is found again by its code (not by the old DOM node)
+    const code = _detailReturn;
+    _detailReturn = null;
+    const back = code && (document.querySelector('#m-roster .m-row[data-code="' + CSS.escape(code) + '"]')
+      || document.querySelector('#m-online-list .m-online-kid[data-code="' + CSS.escape(code) + '"]'));
+    if (back) { try { back.focus({ preventScroll: false }); } catch (_) {} }
+  }
+  let _detailReturn = null;   // the code of the student whose profile is open
+  $('m-detail-back').addEventListener('click', closeDetail);
 
+  // The 15 s refresh is silent: the list keeps showing while it loads (the old «Loading…» made the online pill
+  // blink out), the ⟳ button spins, and a failure says what to do instead of leaving «Loading…» forever.
+  let _rosterLoaded = false;
+  let _rosterAt = 0;
+  let _rosterInFlight = false;   // a stalled request never stacks a second one
+  let _authStopped = false;      // after a 401 the 15 s refresh stops (each poll would count as a failed sign-in)
   function fetchRoster() {
-    $('m-dash-sub').textContent = 'Loading…';
-    adminFetch('/api/admin/students', pw)
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data || !data.ok) { $('m-dash-sub').textContent = 'Error: ' + (data && data.error || ''); return; }
-        renderRoster(data.students || [], data.self || null, data.archived);
-      });
+    if (_rosterInFlight || !pw) return Promise.resolve();
+    _rosterInFlight = true;
+    const btn = $('m-refresh');
+    btn.classList.add('is-busy');
+    btn.setAttribute('aria-busy', 'true');
+    const done = () => { _rosterInFlight = false; btn.classList.remove('is-busy'); btn.removeAttribute('aria-busy'); };
+    return _studentsRequest(pw)
+      .then(({ status, data }) => {
+        done();
+        if (data && data.ok) {
+          _authStopped = false;
+          renderRoster(data.students || [], data.self || null, data.archived);
+          return;
+        }
+        if (status === 401 || status === 403) { _authStopped = true; _rosterProblem('auth', data && data.error); return; }
+        _rosterProblem(status === 429 ? 'busy' : 'network');
+      })
+      .catch(() => { done(); _rosterProblem('network'); });
+  }
+  function _rosterProblem(kind, err) {
+    const strip = document.querySelector('.m-online');
+    if (strip) strip.classList.add('is-stale');
+    if (_rosterLoaded && kind !== 'auth') {
+      const t = new Date(_rosterAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      $('m-dash-sub').innerHTML = '<span class="m-stale">⚠️ ' + (kind === 'busy'
+        ? 'The server is busy (too many wrong codes from this network).'
+        : 'No connection right now.') + ' This list is from ' + escapeHtml(t) + '; it updates by itself.</span>';
+      return;
+    }
+    const roster = $('m-roster');
+    roster.removeAttribute('aria-busy');
+    $('m-dash-sub').textContent = '';
+    $('m-summary').innerHTML = '';
+    if (kind === 'auth') {
+      roster.innerHTML = '<div class="m-state is-error"><div class="m-state-title">Your teacher code was not accepted</div>'
+        + '<p>It may have changed. Log out and sign in again with your current code.' + (err ? ' (' + escapeHtml(err) + ')' : '') + '</p>'
+        + '<button class="btn btn-gold" type="button" data-act="logout">Log out</button></div>';
+      roster.querySelector('[data-act=logout]').addEventListener('click', () => $('m-logout').click());
+      if (!$('m-detail').classList.contains('hidden')) notify('Your teacher code was not accepted any more. Log out and sign in again.');
+    } else {
+      roster.innerHTML = '<div class="m-state is-error"><div class="m-state-title">'
+        + (kind === 'busy' ? 'The server is busy right now' : 'Can\'t reach the server') + '</div>'
+        + '<p>' + (kind === 'busy'
+          ? 'Too many wrong codes were typed from this network, so sign-ins pause for a few minutes. The list comes back by itself.'
+          : 'Games that are already open keep running. Check the Wi-Fi, then try again.') + '</p>'
+        + '<button class="btn btn-gold" type="button" data-act="retry">⟳ Try again</button></div>';
+      roster.querySelector('[data-act=retry]').addEventListener('click', fetchRoster);
+    }
+    const list = $('m-online-list');
+    if (list && !_rosterLoaded) list.innerHTML = '';
   }
   // === Tab switcher: students ↔ teachers (super-admin only) ===
   document.querySelectorAll('.m-tab').forEach((btn) => {
     btn.addEventListener('click', () => {
       const target = btn.dataset.tab;
-      document.querySelectorAll('.m-tab').forEach((b) => b.classList.toggle('active', b.dataset.tab === target));
+      document.querySelectorAll('.m-tab').forEach((b) => {
+        b.classList.toggle('active', b.dataset.tab === target);
+        b.setAttribute('aria-selected', String(b.dataset.tab === target));
+      });
+      document.querySelectorAll('.m-tab').forEach((b) => b.setAttribute('tabindex', b.dataset.tab === target ? '0' : '-1'));
       document.querySelectorAll('.m-tabpanel').forEach((p) => p.classList.toggle('hidden', p.id !== 'm-tabpanel-' + target));
+      // admin work: the class start band steps aside so the teacher list starts at the top (one tap brings it back)
+      document.body.classList.toggle('m-tab-teachers', target === 'teachers');
       if (target === 'teachers') fetchTeachers();
+    });
+    // standard tab keys: ←/→ move between Students and Teachers
+    btn.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const tabs = Array.from(document.querySelectorAll('.m-tab'));
+      const next = tabs[(tabs.indexOf(btn) + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      e.preventDefault();
+      next.click();
+      next.focus();
     });
   });
   // === Teacher management (super-admin) ===
@@ -2336,9 +2677,10 @@
       .then(() => adminFetch('/api/admin/teachers', pw))
       .then((r) => r.json())
       .then((data) => {
-        if (!data || !data.ok) { list.innerHTML = '<div class="m-empty">Error: ' + (data && data.error || '') + '</div>'; return; }
+        if (!data || !data.ok) { list.innerHTML = '<div class="m-empty">Could not load the teachers: ' + escapeHtml(data && data.error || 'unknown error') + '</div>'; return; }
         renderTeachers(data.teachers || []);
-      });
+      })
+      .catch(() => { list.innerHTML = '<div class="m-empty">Could not load the teachers. Check the connection, then open this tab again.</div>'; });
   }
   // 🆕 2026-10-12 — change a classroom code's level / add a code with a level (super admin)
   function setCodeLevel(teacherId, code, level, sel) {
@@ -2347,20 +2689,20 @@
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ level }),
     }).then((r) => r.json()).then((d) => {
       sel.disabled = false;
-      if (!d || !d.ok) { alert('Error: ' + (d && d.error || '')); fetchTeachers(); return; }
+      if (!d || !d.ok) { notify('Error: ' + (d && d.error || '')); fetchTeachers(); return; }
       sel.closest('.m-code-chip').classList.add('is-saved');
       setTimeout(() => { const c = sel.closest('.m-code-chip'); if (c) c.classList.remove('is-saved'); }, 1200);
-    }).catch(() => { sel.disabled = false; alert('Network error'); });
+    }).catch(() => { sel.disabled = false; notify('Network error'); });
   }
   function addCode(teacherId, level, displayName) {
     if (!confirm('Add a new ' + levelLabel(level) + ' classroom code for ' + displayName + '?')) return;
     adminFetch('/api/admin/teachers/' + encodeURIComponent(teacherId) + '/codes', pw, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ level }),
     }).then((r) => r.json()).then((d) => {
-      if (!d || !d.ok) { alert('Error: ' + (d && d.error || '')); return; }
-      alert('New classroom code: ' + d.code + ' (' + levelLabel(level) + ')');
+      if (!d || !d.ok) { notify('Error: ' + (d && d.error || '')); return; }
+      notify('New classroom code: ' + d.code + ' (' + levelLabel(level) + ')');
       fetchTeachers();
-    }).catch(() => alert('Network error'));
+    }).catch(() => notify('Network error'));
   }
   function renderTeachers(teachers) {
     const list = $('m-teachers-list');
@@ -2372,7 +2714,7 @@
     teachers.forEach((t) => {
       const row = document.createElement('div');
       row.className = 'm-teacher-row' + (t.isSuperAdmin ? ' is-super' : '');
-      const since = t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+      const since = t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : 'unknown';
       row.innerHTML = `
         <div class="m-teacher-main">
           <div class="m-teacher-name">${escapeHtml(t.displayName || 'Anon')}${t.isSuperAdmin ? ' <span class="m-teacher-badge">👑 Super admin</span>' : ''}</div>
@@ -2380,8 +2722,9 @@
         </div>
         <div class="m-teacher-codes">
           <div class="m-teacher-code-row">
-            <span class="m-teacher-code-label">🔑 Teacher:</span>
-            <code class="m-teacher-code">${escapeHtml(t.teacherId)}</code>
+            <span class="m-teacher-code-label">🔑 Teacher code:</span>
+            <code class="m-teacher-code is-secret" data-secret="${escapeHtml(t.teacherId)}" aria-label="Hidden teacher code">••••••</code>
+            <button class="btn btn-ghost btn-sm m-secret-btn" type="button" aria-pressed="false" title="The private sign-in code: hidden so a projector never shows it">Show</button>
           </div>
           <div class="m-teacher-code-row m-teacher-code-row--codes">
             <span class="m-teacher-code-label">📚 Classroom codes:</span>
@@ -2396,9 +2739,20 @@
             </span>
           </div>
         </div>
-        ${t.isSuperAdmin ? '' : `<button class="btn btn-ghost btn-sm m-teacher-del" data-id="${escapeHtml(t.teacherId)}" type="button">🗑️ Delete</button>`}`;
+        ${t.isSuperAdmin ? '' : `<button class="btn btn-red btn-sm m-teacher-del" data-id="${escapeHtml(t.teacherId)}" type="button">🗑️ Delete</button>`}`;
       const del = row.querySelector('.m-teacher-del');
       if (del) del.addEventListener('click', () => deleteTeacher(t.teacherId, t.displayName));
+      // 2026-10-13: private codes stay masked (the Teachers tab may be on the projector in front of the class)
+      const secretBtn = row.querySelector('.m-secret-btn');
+      const secret = row.querySelector('.m-teacher-code.is-secret, .m-teacher-code[data-secret]');
+      if (secretBtn && secret) secretBtn.addEventListener('click', () => {
+        const show = secretBtn.getAttribute('aria-pressed') !== 'true';
+        secretBtn.setAttribute('aria-pressed', String(show));
+        secretBtn.textContent = show ? 'Hide' : 'Show';
+        secret.textContent = show ? secret.dataset.secret : '••••••';
+        secret.classList.toggle('is-secret', !show);
+        secret.setAttribute('aria-label', show ? 'Teacher code' : 'Hidden teacher code');
+      });
       row.querySelectorAll('.m-code-level').forEach((sel) => {
         const was = sel.value;
         sel.addEventListener('change', () => {
@@ -2418,11 +2772,12 @@
     });
   }
   function deleteTeacher(teacherId, displayName) {
-    if (!confirm(`Delete teacher "${displayName}" (${teacherId})?\n\nTheir students will be orphaned (you can reassign them later).`)) return;
+    // (the private teacher code is not printed: the Teachers tab keeps it masked)
+    if (!confirm(`Delete the teacher "${displayName}"?\n\nTheir students will be orphaned (you can reassign them later).`)) return;
     adminFetch('/api/admin/teachers/' + encodeURIComponent(teacherId), pw, { method: 'DELETE' })
       .then((r) => r.json())
       .then((data) => {
-        if (!data || !data.ok) { alert('Error: ' + (data && data.error || '')); return; }
+        if (!data || !data.ok) { notify('Error: ' + (data && data.error || '')); return; }
         fetchTeachers();
       });
   }
@@ -2464,17 +2819,43 @@
 
   // 🆕 2026-06-16 — persisted roster search term (survives auto-refresh).
   let _rosterSearch = '';
+  // 2026-10-13 remake: filter chips + class select also survive the 15 s refresh
+  let _rosterFilter = 'all';     // 'all' | 'online' | a level id (yct1 / hsk2 / hsk1)
+  let _rosterClass = '';         // '' = every class | a classroomId | '__none'
+  let _rosterByCode = {};        // code → roster entry (the profile reads level + presence from it)
+  let _prevOnline = null;        // codes online at the previous render: only newcomers pop in
+  const _byName = (a, b) => (a.displayName || a.code || '').localeCompare(b.displayName || b.code || '');
+  // The 15 s rebuild keeps keyboard focus where it was (a chip, a row, a face in Online now): the element is found
+  // again by what it is, not by the old DOM node.
   function renderRoster(students, self, archived) {
+    const act = document.activeElement;
+    let focusSel = null;
+    if (act && act !== document.body && act.classList) {
+      if (act.classList.contains('m-chip')) focusSel = '.m-chip[data-filter="' + CSS.escape(act.dataset.filter || '') + '"]';
+      else if (act.classList.contains('m-row') && act.dataset.code) focusSel = '#m-roster .m-row[data-code="' + CSS.escape(act.dataset.code) + '"]';
+      else if (act.classList.contains('m-online-kid') && act.dataset.code) focusSel = '#m-online-list .m-online-kid[data-code="' + CSS.escape(act.dataset.code) + '"]';
+    }
+    _renderRoster(students, self, archived);
+    const strip = document.querySelector('.m-online');
+    if (strip) strip.classList.remove('is-stale');
+    if (focusSel) {
+      const el = document.querySelector(focusSel);
+      if (el && !el.hidden) { try { el.focus({ preventScroll: true }); } catch (_) {} }
+    }
+  }
+  function _renderRoster(students, self, archived) {
+    _rosterLoaded = true;
+    _rosterAt = Date.now();
     // Surface "who am I" line and (if super admin) the Teachers tab.
     if (self) {
+      _self = self;
       const isSuper = !!self.isSuperAdmin;
-      const youLine = self.legacy
-        ? '👑 Super admin (legacy session)'
-        : `👩‍🏫 ${self.displayName || self.teacherId} — ${isSuper ? '👑 Super admin' : 'Teacher'}` +
-          (self.accessCodes && self.accessCodes.length
-            ? ` · Classroom code: ${self.accessCodes.join(', ')}`
-            : '');
-      $('m-dash-self').textContent = youLine;
+      const codes = (self.accessCodes || []).filter(Boolean);
+      const who = self.legacy ? 'Super admin (legacy session)' : (self.displayName || self.teacherId) + ' · ' + (isSuper ? 'Super admin' : 'Teacher');
+      // the class codes kids type at /homework get their own chip (they were cut off at the end of one long line)
+      $('m-dash-self').innerHTML = '<span class="m-self-name">' + escapeHtml(who) + '</span>'
+        + (codes.length ? '<span class="m-self-codes" title="Class codes: kids type one at /homework">Codes ' + codes.map(escapeHtml).join(' · ') + '</span>' : '');
+      $('m-dash-self').title = who + (codes.length ? ' · Class codes ' + codes.join(', ') : '');
       // Show tabs only for super admin
       const tabs = $('m-tabs');
       if (tabs) tabs.classList.toggle('hidden', !isSuper);
@@ -2482,40 +2863,37 @@
       const emBtn = $('m-emirati-btn');
       if (emBtn) emBtn.classList.toggle('hidden', !isSuper);
     }
-    // Show only students with ANY activity — including daily-challenge play
-    // so a kid who only does Desafíos del Día also appears in Cuaderno.
-    students = students.filter((s) =>
-      (s.sentenceCount > 0) || (s.testCount > 0) || (s.assignmentCount > 0)
-      || (s.xp || 0) > 0 || !!s.dailyDate
-    );
-    // Classify by recent activity — used both for the "online now" pill
-    // at the top and to sort the roster (active first).
-    // Kids poll inbox every 20s while their homework page is open. So
-    // "online right now" = lastSeen within the last 45 seconds. That
-    // window covers a single missed poll without flickering the dot off.
-    const ONLINE_MS  = 45 * 1000;        // active within last 45 sec
-    const RECENT_MS  = 60 * 60 * 1000;   // last hour
+    // Kids poll their inbox every 20 s while their homework page is open, so "online right now" = lastSeen within
+    // the last 45 seconds: one missed poll never flickers the dot off.
     const now = Date.now();
     students.forEach((s) => {
       const age = now - (s.lastSeen || 0);
-      s._onlineNow = age <= ONLINE_MS;
-      s._recent   = age <= RECENT_MS;
-      s._secsAgo  = Math.floor(age / 1000);
+      s._onlineNow = !!s.lastSeen && age <= ONLINE_MS;
+      s._secsAgo = Math.floor(age / 1000);
     });
-    // Sort: online first (most recent), then recent, then everyone else
-    students.sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+    // Online now: every kid online, even one who has done nothing yet (they just logged in).
+    renderOnline(students.filter((s) => s._onlineNow));
+    // The roster shows students with ANY activity (daily-challenge play counts) plus whoever is online right now.
+    students = students.filter((s) =>
+      s._onlineNow || (s.sentenceCount > 0) || (s.testCount > 0) || (s.assignmentCount > 0)
+      || (s.xp || 0) > 0 || !!s.dailyDate
+    );
+    // Online first, by name (rows no longer jump at every refresh), then everyone else by last seen.
+    students.sort((a, b) => (a._onlineNow !== b._onlineNow)
+      ? (a._onlineNow ? -1 : 1)
+      : (a._onlineNow ? _byName(a, b) : (b.lastSeen || 0) - (a.lastSeen || 0)));
+    _rosterByCode = {};
+    students.forEach((s) => { _rosterByCode[s.code] = s; });
     const onlineCount = students.filter((s) => s._onlineNow).length;
+    // (the online count lives in Online now and on the «Online» chip; repeating it here was noise)
     $('m-dash-sub').innerHTML =
-      `${students.length} student${students.length === 1 ? '' : 's'} with activity` +
-      (onlineCount > 0
-        ? ` · <span class="m-online-pill">🟢 ${onlineCount} online now</span>`
-        : '') +
+      `${students.length} with activity` +
       // accounts with 30 days of no activity rest in the archive (2026-10-12) and return when the kid uses their code
       (archived > 0
-        ? ` · <span title="No activity for 30 days. They come back with everything the moment the kid types their code.">📦 ${archived} archived</span>`
+        ? ` · <span class="m-archived" title="No activity for 30 days. They come back with everything the moment the kid types their code.">📦 ${archived} archived</span>`
         : '');
 
-    // Summary
+    // Summary: one quiet line (the old three big cards pushed the list below the fold)
     const totals = students.reduce((acc, s) => {
       acc.sent  += s.sentenceCount    || 0;
       acc.asg   += s.assignmentCount  || 0;
@@ -2525,48 +2903,78 @@
       if (s.testCount > 0)       acc.activeTests++;
       return acc;
     }, { sent: 0, asg: 0, tests: 0, activeSent: 0, activeAsg: 0, activeTests: 0 });
-    $('m-summary').innerHTML = `
-      <div class="m-summary-card">
-        <div class="m-summary-title">📊 Class summary</div>
-        <div class="m-summary-grid">
-          <div class="m-summary-stat">
-            <div class="m-summary-num">${totals.activeAsg}/${students.length}</div>
-            <div class="m-summary-lbl">📚 Turned in assignments</div>
-            <div class="m-summary-det">${totals.asg} submissions total</div>
-          </div>
-          <div class="m-summary-stat">
-            <div class="m-summary-num">${totals.activeTests}/${students.length}</div>
-            <div class="m-summary-lbl">🏆 Have taken exams</div>
-            <div class="m-summary-det">${totals.tests} attempts total</div>
-          </div>
-          <div class="m-summary-stat">
-            <div class="m-summary-num">${totals.activeSent}/${students.length}</div>
-            <div class="m-summary-lbl">📝 Have written sentences</div>
-            <div class="m-summary-det">${totals.sent} sentences total</div>
-          </div>
+    $('m-summary').innerHTML = students.length ? `
+      <div class="m-summary-card" role="group" aria-label="Class summary">
+        <div class="m-summary-stat" title="${totals.asg} homework submissions in total">
+          <span class="m-summary-num">${totals.activeAsg}/${students.length}</span><span class="m-summary-lbl">turned in homework</span>
         </div>
-      </div>`;
+        <div class="m-summary-stat" title="${totals.tests} reading-test attempts in total">
+          <span class="m-summary-num">${totals.activeTests}/${students.length}</span><span class="m-summary-lbl">took a reading test</span>
+        </div>
+        <div class="m-summary-stat" title="${totals.sent} sentences in total">
+          <span class="m-summary-num">${totals.activeSent}/${students.length}</span><span class="m-summary-lbl">wrote sentences</span>
+        </div>
+      </div>` : '';
 
     // Roster rows
     const roster = $('m-roster');
+    roster.removeAttribute('aria-busy');
     roster.innerHTML = '';
     if (!students.length) {
-      roster.innerHTML = '<div class="m-empty">Nobody has any recorded activity yet.</div>';
+      const codes = ((_self && _self.accessCodes) || []).filter(Boolean);
+      roster.innerHTML = '<div class="m-state"><div class="m-state-title">No student activity yet</div>'
+        + '<p>Kids appear here after their first homework, game or daily challenge'
+        + (codes.length ? '. They type your class code (' + codes.map(escapeHtml).join(', ') + ') at /homework.' : '.')
+        + '</p></div>';
       return;
     }
-    // 🔍 SEARCH BAR — when the teacher has many students (esp. multiple
-    // 'Luis' or 'María'), scrolling is painful. This filter narrows the
-    // roster by name OR code in real time. Useful for sharing the secret
-    // code with a specific parent without scrolling-and-guessing.
+    // 🔍 SEARCH + FILTERS — many kids (several «Luis» or «María»): narrow by name or code, by online / level, by class.
+    const levelIds = mLevels.map((l) => l.id).filter((id) => students.some((s) => (s.level || 'hsk1') === id));
+    if (_rosterFilter !== 'all' && _rosterFilter !== 'online' && !levelIds.includes(_rosterFilter)) _rosterFilter = 'all';
+    const classes = {};
+    let anyUnassigned = false;
+    students.forEach((s) => { if (s.classroomId) classes[s.classroomId] = s.classroomName || s.classroomId; else anyUnassigned = true; });
+    const classIds = Object.keys(classes).sort((a, b) => String(classes[a]).localeCompare(String(classes[b])));
+    if (_rosterClass && _rosterClass !== '__none' && !classes[_rosterClass]) _rosterClass = '';
+    const chip = (id, label, n) => '<button class="m-chip" type="button" data-filter="' + escapeHtml(id) + '" aria-pressed="' + (_rosterFilter === id) + '">'
+      + escapeHtml(label) + ' <span class="m-chip-n">' + n + '</span></button>';
     const searchBar = document.createElement('div');
     searchBar.className = 'm-roster-search';
-    searchBar.innerHTML = `
-      <input class="m-roster-search-input" type="text" inputmode="search"
-             placeholder="🔍 Search student by name or code…"
-             autocomplete="off" autocorrect="off" spellcheck="false">
-      <span class="m-roster-search-count" id="m-roster-search-count">${students.length} students</span>`;
+    searchBar.innerHTML =
+      '<input class="input m-roster-search-input" type="search" inputmode="search" placeholder="Search by name or code" aria-label="Search students by name or code" autocomplete="off" autocorrect="off" spellcheck="false">' +
+      '<div class="m-chips" role="group" aria-label="Show">' +
+        chip('all', 'All', students.length) +
+        chip('online', '🟢 Online', onlineCount) +
+        levelIds.map((id) => chip(id, levelLabel(id), students.filter((s) => (s.level || 'hsk1') === id).length)).join('') +
+      '</div>' +
+      (classIds.length
+        ? '<select class="input m-roster-class" aria-label="Class"><option value="">All classes</option>'
+          + classIds.map((id) => '<option value="' + escapeHtml(id) + '"' + (_rosterClass === id ? ' selected' : '') + '>' + escapeHtml(classes[id]) + '</option>').join('')
+          + (anyUnassigned ? '<option value="__none"' + (_rosterClass === '__none' ? ' selected' : '') + '>No class</option>' : '')
+          + '</select>'
+        : '') +
+      '<span class="m-roster-search-count" id="m-roster-search-count" role="status">' + students.length + ' students</span>';
     roster.appendChild(searchBar);
+    const cols = document.createElement('div');
+    cols.className = 'm-roster-cols';
+    cols.setAttribute('aria-hidden', 'true');
+    cols.innerHTML = '<span></span><span>Student</span><span>Level</span><span>Class</span><span>Daily</span><span>⚔️ 🔥 📝 📚 🏆</span><span>Last seen</span>';
+    roster.appendChild(cols);
+    const today = new Date().toISOString().slice(0, 10);
+    const groupLabel = (key, text, n) => {
+      const g = document.createElement('div');
+      g.className = 'm-roster-group';
+      g.dataset.group = key;
+      g.textContent = text + (n != null ? ' · ' + n : '');
+      roster.appendChild(g);
+    };
+    let lastGroup = '';
     students.forEach((s) => {
+      const group = s._onlineNow ? 'online' : 'earlier';
+      if (onlineCount > 0 && group !== lastGroup) {
+        groupLabel(group, group === 'online' ? 'Online now' : 'Earlier', group === 'online' ? onlineCount : null);
+        lastGroup = group;
+      }
       const row = document.createElement('button');
       row.type = 'button';
       row.className = 'm-row' + (s._onlineNow ? ' is-online' : '');
@@ -2576,32 +2984,44 @@
         .toLowerCase()
         .normalize('NFD').replace(/[̀-ͯ]/g, '');
       row.dataset.search = haystack;
-      // Friendly "5 min ago" / "2h ago" / "May 27" timestamp
+      row.dataset.code = s.code;
+      row.dataset.group = group;
+      row.dataset.online = s._onlineNow ? '1' : '0';
+      row.dataset.level = s.level || 'hsk1';
+      row.dataset.classroom = s.classroomId || '__none';
+      // Friendly "5 min ago" / "2 h ago" / "May 27" timestamp
       const sinceTxt = s._onlineNow
-        ? formatRelative(s._secsAgo)
-        : (s.lastSeen ? new Date(s.lastSeen).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }) : '—');
+        ? 'Online'
+        : (!s.lastSeen ? 'Never' : (s._secsAgo < 86400 ? formatRelative(s._secsAgo)
+          : new Date(s.lastSeen).toLocaleDateString('en-US', { day: '2-digit', month: 'short' })));
+      const done = s.dailyDate === today;
+      const name = s.displayName || 'Anon';
+      const c = (icon, n, title) => '<span class="m-row-c' + (n ? '' : ' is-zero') + '" title="' + title + '">' + icon + ' ' + n + '</span>';
+      row.setAttribute('aria-label', name + ', code ' + s.code + ', ' + levelLabel(s.level) + ', '
+        + (s.classroomName ? 'class ' + s.classroomName : 'no class') + ', '
+        + (s._onlineNow ? 'online now' : 'last seen ' + sinceTxt) + ', daily challenge ' + (done ? 'done' : 'not done') + ', '
+        + (s.sentenceCount || 0) + ' sentences, ' + (s.assignmentCount || 0) + ' homework, ' + (s.testCount || 0) + ' reading tests');
       row.innerHTML = `
-        <span class="m-row-avatar">${renderAvatar(s.avatar)}${s._onlineNow ? '<span class="m-online-dot" title="Online now"></span>' : ''}</span>
-        <span class="m-row-code">${escapeHtml(s.code)}</span>
-        <span class="m-row-name">${escapeHtml(s.displayName || 'Anon')}</span>
-        <span class="m-row-classroom" title="Classroom" style="font-size:0.78rem;opacity:0.85;white-space:nowrap;">${s.classroomName ? '🎓 ' + escapeHtml(s.classroomName) : ''}</span>
-        <span class="m-row-counts">
-          <span class="m-row-c m-row-level is-${escapeHtml(s.level || 'hsk1')}" title="Level (from the classroom code the kid typed)">${escapeHtml(levelLabel(s.level))}</span>
-          <span class="m-row-c m-row-daily ${s.dailyDate === (new Date().toISOString().slice(0,10)) ? 'is-done' : ''}" title="Daily challenge"
-            >${s.dailyDate === (new Date().toISOString().slice(0,10)) ? '✅' : '⌛'} Today</span>
-          <span class="m-row-c" title="DralySwords ⚔️">⚔️ ${s.swords || 0}</span>
-          <span class="m-row-c" title="Day streak">🔥 ${s.streak || 0}</span>
-          <span class="m-row-c" title="Sentences written">📝 ${s.sentenceCount}</span>
-          <span class="m-row-c" title="Assignments turned in">📚 ${s.assignmentCount}</span>
-          <span class="m-row-c" title="Reading exams">🏆 ${s.testCount}</span>
+        <span class="m-row-avatar"><span class="m-avatar-frame">${renderAvatar(s.avatar)}</span>${s._onlineNow ? '<span class="m-online-dot" title="Online now"></span>' : ''}</span>
+        <span class="m-row-who"><span class="m-row-name">${escapeHtml(name)}</span><span class="m-row-code">${escapeHtml(s.code)}</span></span>
+        <span class="m-row-tags">
+          <span class="m-row-level is-${escapeHtml(s.level || 'hsk1')}" title="Level (from the class code the kid typed)">${escapeHtml(levelLabel(s.level))}</span>
+          <span class="m-row-classroom${s.classroomName ? '' : ' is-none'}" title="Class">${s.classroomName ? '🎓 ' + escapeHtml(s.classroomName) : 'No class'}</span>
+          <span class="m-row-daily${done ? ' is-done' : ''}" title="Daily challenge today">${done ? '✅ Done' : 'Not yet'}</span>
         </span>
+        <span class="m-row-counts">${c('⚔️', s.swords || 0, 'DralySwords')}${c('🔥', s.streak || 0, 'Day streak')}${c('📝', s.sentenceCount || 0, 'Sentences written')}${c('📚', s.assignmentCount || 0, 'Homework turned in')}${c('🏆', s.testCount || 0, 'Reading tests')}</span>
         <span class="m-row-date">${sinceTxt}</span>`;
-      row.addEventListener('click', () => openDetail(s.code));
+      row.addEventListener('click', () => { _detailReturn = s.code; openDetail(s.code); });
       roster.appendChild(row);
     });
-    // Wire the search filter — runs on every keystroke, no debounce
-    // needed for ~30-100 rows; hides rows whose search-haystack doesn't
-    // contain the query (tone-stripped lowercase substring match).
+    const noMatch = document.createElement('div');
+    noMatch.className = 'm-state m-roster-nomatch';
+    noMatch.hidden = true;
+    noMatch.innerHTML = '<div class="m-state-title">No students match</div><p>Clear the search or pick All to see everyone.</p>'
+      + '<button class="btn btn-sm" type="button" data-act="clear">Show everyone</button>';
+    roster.appendChild(noMatch);
+    // Wire the search filter — runs on every keystroke, no debounce needed for ~30-100 rows; hides rows whose
+    // search-haystack doesn't contain the query (tone-stripped lowercase substring match) or that the chips exclude.
     const searchInput = searchBar.querySelector('.m-roster-search-input');
     const countEl = searchBar.querySelector('#m-roster-search-count');
     // Apply the current term to the visible rows + update the count.
@@ -2609,29 +3029,87 @@
       const q = (_rosterSearch || '').trim().toLowerCase()
         .normalize('NFD').replace(/[̀-ͯ]/g, '');
       let visible = 0;
+      const groupsShown = {};
       roster.querySelectorAll('.m-row').forEach((r) => {
-        const match = !q || (r.dataset.search || '').includes(q);
-        r.style.display = match ? '' : 'none';
-        if (match) visible++;
+        const okQ = !q || (r.dataset.search || '').includes(q);
+        const okF = _rosterFilter === 'all'
+          || (_rosterFilter === 'online' ? r.dataset.online === '1' : r.dataset.level === _rosterFilter);
+        const okC = !_rosterClass || r.dataset.classroom === _rosterClass;
+        const match = okQ && okF && okC;
+        r.hidden = !match;
+        if (match) { visible++; groupsShown[r.dataset.group] = true; }
       });
+      roster.querySelectorAll('.m-roster-group').forEach((g) => { g.hidden = !groupsShown[g.dataset.group]; });
+      noMatch.hidden = visible > 0;
+      const filtered = q || _rosterFilter !== 'all' || _rosterClass;
       if (countEl) {
-        countEl.textContent = q
-          ? (visible + ' of ' + students.length + ' match')
+        countEl.textContent = filtered
+          ? (visible + ' of ' + students.length + ' shown')
           : (students.length + ' student' + (students.length === 1 ? '' : 's'));
       }
     }
-    if (searchInput) {
-      // 🆕 2026-06-16 — persist the search term in module state so the
-      // 15s auto-refresh (which rebuilds this whole list) doesn't lose
-      // what the teacher typed. On every render we restore the value +
-      // re-apply the filter.
-      searchInput.value = _rosterSearch || '';
-      searchInput.addEventListener('input', () => {
-        _rosterSearch = searchInput.value;
-        applyRosterFilter();
-      });
-      if (_rosterSearch) applyRosterFilter();
+    // 🆕 2026-06-16 — persist the search term in module state so the 15s auto-refresh (which rebuilds this whole
+    // list) doesn't lose what the teacher typed. On every render we restore the value + re-apply the filter.
+    searchInput.value = _rosterSearch || '';
+    searchInput.addEventListener('input', () => {
+      _rosterSearch = searchInput.value;
+      applyRosterFilter();
+    });
+    searchBar.querySelectorAll('.m-chip').forEach((b) => b.addEventListener('click', () => {
+      _rosterFilter = b.dataset.filter;
+      searchBar.querySelectorAll('.m-chip').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      applyRosterFilter();
+    }));
+    const clsSel = searchBar.querySelector('.m-roster-class');
+    if (clsSel) clsSel.addEventListener('change', () => { _rosterClass = clsSel.value; applyRosterFilter(); });
+    noMatch.querySelector('[data-act=clear]').addEventListener('click', () => {
+      _rosterSearch = ''; _rosterFilter = 'all'; _rosterClass = '';
+      searchInput.value = '';
+      if (clsSel) clsSel.value = '';
+      searchBar.querySelectorAll('.m-chip').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.filter === 'all')));
+      applyRosterFilter();
+    });
+    applyRosterFilter();
+  }
+
+  // Online now: the class's avatars standing on the Dubai waterfront (the dashboard's one signature move).
+  // Up to 5 kids stand on the waterline; a bigger class becomes a scrolling grid of smaller faces, still with names
+  // (a real class is 10-30 kids: «who is here» must survive). Tap a kid → profile.
+  function renderOnline(list) {
+    const ul = $('m-online-list');
+    const count = $('m-online-count');
+    if (!ul || !count) return;
+    // aria-live: only write when the number changes, or a screen reader repeats it every 15 s
+    if (count.textContent !== String(list.length)) count.textContent = String(list.length);
+    count.classList.toggle('is-zero', !list.length);
+    const stage = ul.parentElement;
+    const oldEmpty = stage.querySelector('.m-online-empty');
+    const prev = _prevOnline;
+    _prevOnline = new Set(list.map((s) => s.code));
+    if (!list.length) {
+      ul.innerHTML = '';
+      ul.classList.remove('is-crowd');
+      if (!oldEmpty) {
+        const empty = document.createElement('div');
+        empty.className = 'm-online-empty';
+        const pair = window.DralingoCast ? DralingoCast.pick(2) : [];
+        const img = (id) => id ? '<img src="' + escapeHtml(DralingoCast.pose(id, 'hello')) + '" alt="" width="96" height="128" onerror="this.remove()">' : '<span></span>';
+        empty.innerHTML = img(pair[0]) + '<p>Nobody online yet. Kids show up here when they open their homework or join a game.</p>' + img(pair[1]);
+        stage.appendChild(empty);
+      }
+      return;
     }
+    if (oldEmpty) oldEmpty.remove();
+    const sorted = list.slice().sort(_byName);
+    const crowd = sorted.length > 5;
+    ul.classList.toggle('is-crowd', crowd);
+    ul.innerHTML = sorted.map((s) => {
+      const name = s.displayName || 'Anon';
+      return '<li><button class="m-online-kid' + (prev && !prev.has(s.code) ? ' is-new' : '') + '" type="button" data-code="' + escapeHtml(s.code) + '" title="' + escapeHtml(name) + ' · open profile">'
+        + '<span class="m-online-face">' + renderAvatar(s.avatar) + '</span>'
+        + '<span class="m-online-name">' + escapeHtml(name.split(' ')[0]) + '</span></button></li>';
+    }).join('');
+    ul.querySelectorAll('.m-online-kid').forEach((b) => b.addEventListener('click', () => { _detailReturn = b.dataset.code; openDetail(b.dataset.code); }));
   }
 
   // "hace 5s" / "hace 2 min" / "hace 1h"
@@ -2646,15 +3124,16 @@
     adminFetch('/api/admin/students/' + encodeURIComponent(code), pw)
       .then((r) => r.json())
       .then((data) => {
-        if (!data || !data.ok) { alert('Error: ' + (data && data.error || '')); return; }
+        if (!data || !data.ok) { notify('Could not open this student: ' + (data && data.error || 'unknown error')); return; }
         renderDetail(data);
-      });
+      })
+      .catch(() => notify('Could not open this student. Check the connection and try again.'));
   }
 
   function renderNotes(code, notes) {
     const list = $('m-notes-list');
     if (!list) return;
-    if (!notes.length) { list.innerHTML = '<div class="m-notes-empty">No notes yet.</div>'; return; }
+    if (!notes.length) { list.innerHTML = '<div class="m-notes-empty">No notes yet. Write a few words above; they go on the monthly report card.</div>'; return; }
     list.innerHTML = '';
     notes.slice().reverse().forEach((n) => {
       const row = document.createElement('div');
@@ -2662,58 +3141,94 @@
       row.innerHTML = `
         <span class="m-note-month-tag">${escapeHtml(n.month || '')}${n.grade ? ' · ' + escapeHtml(n.grade) : ''}</span>
         <span class="m-note-item-text">${escapeHtml(n.text)}</span>
-        <button class="m-note-del" type="button" aria-label="Delete">🗑</button>`;
+        <button class="m-note-del" type="button" aria-label="Delete this note" title="Delete this note">🗑</button>`;
       row.querySelector('.m-note-del').addEventListener('click', () => {
+        if (!confirm('Delete this note? Parents will no longer see it on the report card.')) return;
         adminFetch('/api/admin/student/' + encodeURIComponent(code) + '/note/' + n.ts, pw, { method: 'DELETE' })
-          .then((r) => r.json()).then((r) => renderNotes(code, r.notes || []));
+          .then((r) => r.json()).then((r) => renderNotes(code, r.notes || []))
+          .catch(() => notify('Could not delete the note. Check the connection and try again.'));
       });
       list.appendChild(row);
     });
   }
   function renderDetail(data) {
+    // a profile opened from Classrooms or Online now while the Teachers tab is showing: bring the Students tab back
+    if ($('m-tabpanel-students').classList.contains('hidden')) {
+      const tab = document.querySelector('.m-tab[data-tab=students]');
+      if (tab) tab.click();
+    }
+    const wasHidden = $('m-detail').classList.contains('hidden');
     $('m-roster').classList.add('hidden');
     $('m-summary').classList.add('hidden');
     $('m-detail').classList.remove('hidden');
-    const since = data.firstSeen ? new Date(data.firstSeen).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    const since = data.firstSeen ? new Date(data.firstSeen).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : 'unknown';
     const tests = data.tests || [];
     const assigns = data.assignments || [];
+    const entry = _rosterByCode[data.code] || {};
+    const level = entry.level || null;
+    const online = isOnlineNow(data);
+    const seen = online ? 'Online now'
+      : (data.lastSeen ? 'Last seen ' + new Date(data.lastSeen).toLocaleString('en-US', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Not seen yet');
     $('m-detail-head').innerHTML = `
-      <span class="m-detail-avatar">${renderAvatar(data.avatar, 'large')}</span>
-      <div class="m-detail-id">
-        <div class="m-detail-name-row">
-          <span class="m-detail-name" id="m-detail-name">${escapeHtml(data.displayName || 'Anon')}</span>
-          <button class="btn btn-ghost btn-sm" id="m-detail-rename-btn" title="Edit name">✏️</button>
-        </div>
-        <div class="m-detail-code">📇 ${escapeHtml(data.code)}</div>
-        <div class="m-detail-meta">Since ${since} ·
-          📝 ${data.sentences.length} sentences ·
-          📚 ${assigns.length} assignments ·
-          🏆 ${tests.length} exams</div>
-        <div class="m-detail-meta m-detail-device">
-          ${data.country ? '🌍 ' + escapeHtml(data.country) : '🌍 —'}
-          ${data.device ? ' · 📱 ' + escapeHtml(data.device) : ''}
-          ${data.locale ? ' · 🗣 ' + escapeHtml(data.locale) : ''}
-        </div>
-        <div class="m-detail-meta" style="margin-top:6px;">
-          🎓 Classroom: <select class="input" id="m-detail-classroom" style="display:inline-block;width:auto;min-width:150px;"><option value="">Loading…</option></select>
-        </div>
-        <div class="m-detail-actions-row">
-          <button class="btn btn-jade btn-sm" id="m-detail-send-btn">💬 Send message</button>
-          <button class="btn btn-ghost btn-sm" id="m-detail-clear-sent-btn" title="Deletes only the saved sentences — the student stays">🧹 Clear sentences</button>
-          <button class="btn btn-red btn-sm" id="m-detail-delete-btn" title="Delete this student permanently">🗑 Delete student</button>
-        </div>
-        <!-- 📋 Notas para el reporte mensual -->
-        <div class="m-notes-box">
-          <div class="m-notes-title">📋 Notes for the report (parents will see them)</div>
-          <div class="m-notes-row">
-            <input class="input m-note-grade" id="m-note-grade" type="text" placeholder="Grade (A, 95…)" maxlength="12">
-            <input class="input m-note-month" id="m-note-month" type="month">
+      <div class="m-detail-hero">
+        <span class="m-detail-avatar">${renderAvatar(data.avatar, 'large')}</span>
+        <div class="m-detail-id">
+          <div class="m-detail-name-row">
+            <h3 class="m-detail-name" id="m-detail-name">${escapeHtml(data.displayName || 'Anon')}</h3>
+            <button class="m-icon-btn" id="m-detail-rename-btn" type="button" title="Edit name" aria-label="Edit name">✏️</button>
           </div>
-          <textarea class="input m-note-text" id="m-note-text" rows="2" placeholder="Keywords: excellent pronunciation, shy to speak, mastered the family…" maxlength="400"></textarea>
-          <button class="btn btn-jade btn-sm" id="m-note-add">➕ Save note</button>
-          <div class="m-notes-list" id="m-notes-list"></div>
+          <div class="m-detail-tags">
+            <span class="m-detail-code" title="Student code">${escapeHtml(data.code)}</span>
+            ${level ? '<span class="m-level-pill is-' + escapeHtml(level) + '">' + escapeHtml(levelLabel(level)) + '</span>' : ''}
+            <span class="m-presence${online ? ' is-online' : ''}">${online ? '🟢 ' : ''}${escapeHtml(seen)}</span>
+          </div>
+          <div class="m-detail-meta">Since ${since} ·
+            📝 ${data.sentences.length} sentences ·
+            📚 ${assigns.length} assignments ·
+            🏆 ${tests.length} exams</div>
+          <div class="m-detail-meta m-detail-device">
+            ${data.country ? '🌍 ' + escapeHtml(data.country) : '🌍 unknown'}
+            ${data.device ? ' · 📱 ' + escapeHtml(data.device) : ''}
+            ${data.locale ? ' · 🗣 ' + escapeHtml(data.locale) : ''}
+          </div>
+          <label class="m-detail-class">🎓 Class
+            <select class="input" id="m-detail-classroom"><option value="">Loading…</option></select>
+          </label>
+          <div class="m-detail-actions-row">
+            <button class="btn btn-gold btn-sm" id="m-detail-send-btn" type="button" aria-expanded="false" aria-controls="m-detail-compose">💬 Send message</button>
+            <button class="btn btn-ghost btn-sm m-danger-ghost" id="m-detail-clear-sent-btn" type="button" title="Deletes only the saved sentences; the student stays">🧹 Clear sentences</button>
+            <button class="btn btn-red btn-sm m-danger-zone" id="m-detail-delete-btn" type="button" title="Delete this student permanently">🗑 Delete student</button>
+          </div>
+          <div class="m-compose hidden" id="m-detail-compose">
+            <label class="m-form-label" style="margin:0;"><span>Message for ${escapeHtml(data.displayName || data.code)} (shows in their homework portal)</span>
+              <textarea class="input" id="m-detail-msg-text" rows="2" maxlength="500" placeholder="Great work today! Practice your tones at home."></textarea>
+            </label>
+            <div class="m-compose-actions">
+              <button class="btn btn-gold btn-sm" id="m-detail-msg-send" type="button">📤 Send</button>
+              <button class="btn btn-ghost btn-sm" id="m-detail-msg-cancel" type="button">Cancel</button>
+            </div>
+          </div>
         </div>
+      </div>
+      <!-- 📋 Notes for the monthly report card -->
+      <div class="m-notes-box">
+        <div class="m-notes-title">📋 Report-card notes (parents see them)</div>
+        <div class="m-notes-row">
+          <input class="input m-note-grade" id="m-note-grade" type="text" placeholder="Grade: A, 95" maxlength="12" aria-label="Grade">
+          <input class="input m-note-month" id="m-note-month" type="month" aria-label="Month">
+        </div>
+        <textarea class="input m-note-text" id="m-note-text" rows="2" placeholder="Keywords: excellent pronunciation, shy to speak, mastered the family…" maxlength="400" aria-label="Note"></textarea>
+        <button class="btn btn-sm" id="m-note-add" type="button">➕ Save note</button>
+        <div class="m-notes-list" id="m-notes-list"></div>
       </div>`;
+    // the profile opens at its top (it used to open wherever the roster had been scrolled to)
+    // ...and always lands in view: from Online now or a phone it opened ~900 px below the tap (review 2026-10-13)
+    if (wasHidden) {
+      const bar = (document.querySelector('.m-topbar') || { offsetHeight: 0 }).offsetHeight;
+      const r = $('m-detail').getBoundingClientRect();
+      if (r.top < bar || r.top > window.innerHeight * 0.45) window.scrollTo({ top: Math.max(0, r.top + window.scrollY - bar - 12) });
+      setTimeout(() => { try { $('m-detail-back').focus({ preventScroll: true }); } catch (_) {} }, 0);
+    }
     // Notes: default month = current, render existing, wire add/delete.
     (function wireNotes() {
       const monthEl = $('m-note-month');
@@ -2722,30 +3237,33 @@
       const addBtn = $('m-note-add');
       if (addBtn) addBtn.addEventListener('click', () => {
         const text = ($('m-note-text').value || '').trim();
-        if (!text) return;
+        if (!text) { notify('Write the note first.'); $('m-note-text').focus(); return; }
+        addBtn.disabled = true;
         adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/note', pw, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text, grade: $('m-note-grade').value.trim(), month: $('m-note-month').value }),
         }).then((r) => r.json()).then((r) => {
-          if (!r.ok) { alert('Error: ' + (r.error || '')); return; }
+          addBtn.disabled = false;
+          if (!r.ok) { notify('Could not save the note: ' + (r.error || 'unknown error')); return; }
           $('m-note-text').value = '';
           renderNotes(data.code, r.notes || []);
-        });
+          notify('✓ Note saved');
+        }).catch(() => { addBtn.disabled = false; notify('Could not save the note. Check the connection and try again.'); });
       });
     })();
     // Wire "limpiar oraciones" — wipes saved sentences ONLY (kid record stays).
     // Useful when a class spammed test saves and the teacher wants a clean slate.
     $('m-detail-clear-sent-btn').addEventListener('click', () => {
       const n = (data.sentences || []).length;
-      if (!n) { alert('This student has no saved sentences.'); return; }
-      if (!confirm('Delete the ' + n + ' saved sentences from "' + (data.displayName || data.code) + '"?\n\nThe assignment and exam history is NOT touched. Only the builder sentences.')) return;
+      if (!n) { notify('This student has no saved sentences.', 'info'); return; }
+      if (!confirm('Delete the ' + n + ' saved sentences of "' + (data.displayName || data.code) + '"?\n\nHomework and exam history are NOT touched. Only the builder sentences.')) return;
       adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/sentences/clear', pw, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
       }).then((r) => r.json()).then((r) => {
-        if (!r.ok) { alert('Error: ' + (r.error || '')); return; }
-        alert('✅ ' + r.removed + ' sentences deleted. Reloading…');
+        if (!r.ok) { notify('Could not clear the sentences: ' + (r.error || 'unknown error')); return; }
+        notify('✓ ' + r.removed + ' sentences deleted.');
         openDetail(data.code);
-      }).catch((e) => alert('Error: ' + e.message));
+      }).catch((e) => notify('Could not clear the sentences: ' + e.message));
     });
     // Wire delete — irreversible; double-confirm.
     $('m-detail-delete-btn').addEventListener('click', () => {
@@ -2756,13 +3274,12 @@
       })
         .then((r) => r.json())
         .then((r) => {
-          if (!r.ok) { alert('Error: ' + (r.error || 'could not delete')); return; }
-          $('m-detail').classList.add('hidden');
-          $('m-roster').classList.remove('hidden');
-          $('m-summary').classList.remove('hidden');
+          if (!r.ok) { notify('Could not delete: ' + (r.error || 'unknown error')); return; }
+          closeDetail();
+          notify('✓ ' + (data.displayName || data.code) + ' was deleted.');
           fetchRoster();
         })
-        .catch((e) => alert('Error: ' + e.message));
+        .catch((e) => notify('Could not delete: ' + e.message));
     });
     // 🎓 2026-06-21 (Fernando) — classroom selector: populate with all aulas
     // and file/un-file this student on change. Uses the teacher-managed
@@ -2774,21 +3291,23 @@
         .then((r) => r.json())
         .then((cd) => {
           const list = (cd && cd.classrooms) || [];
-          let html = '<option value="">— Unassigned —</option>';
+          let html = '<option value="">No class</option>';
           list.forEach((c) => {
             html += '<option value="' + escapeHtml(c.id) + '"' + (c.id === data.classroomId ? ' selected' : '') +
               '>' + escapeHtml(c.name) + (c.code ? ' (' + escapeHtml(c.code) + ')' : '') + '</option>';
           });
           sel.innerHTML = html;
         })
-        .catch(() => { sel.innerHTML = '<option value="">(could not load classrooms)</option>'; });
+        .catch(() => { sel.innerHTML = '<option value="">(could not load the classes)</option>'; });
       sel.addEventListener('change', () => {
+        const label = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : '';
         adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/classroom', pw, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ classroomId: sel.value }),
         }).then((r) => r.json()).then((res) => {
-          if (!res || !res.ok) alert('Could not change the classroom: ' + (res && res.error || ''));
-        }).catch((e) => alert('Error: ' + e.message));
+          if (!res || !res.ok) { notify('Could not change the class: ' + (res && res.error || 'unknown error')); return; }
+          notify(sel.value ? '✓ Moved to ' + label : '✓ Removed from the class');
+        }).catch((e) => notify('Could not change the class: ' + e.message));
       });
     })();
     // Wire rename
@@ -2803,24 +3322,41 @@
       })
         .then((r) => r.json())
         .then((r) => {
-          if (!r.ok) { alert('Error: ' + (r.error || 'could not do it')); return; }
+          if (!r.ok) { notify('Could not rename: ' + (r.error || 'unknown error')); return; }
           $('m-detail-name').textContent = r.displayName;
-        });
+          notify('✓ Renamed to ' + r.displayName);
+        })
+        .catch(() => notify('Could not rename. Check the connection and try again.'));
     });
-    // Wire send-message
-    $('m-detail-send-btn').addEventListener('click', () => {
-      const text = prompt(`Message for ${data.displayName}:`, '');
-      if (!text || !text.trim()) return;
+    // Wire send-message: an inline composer (was a prompt() box)
+    const compose = $('m-detail-compose');
+    const sendBtn = $('m-detail-send-btn');
+    const setCompose = (open) => {
+      compose.classList.toggle('hidden', !open);
+      sendBtn.setAttribute('aria-expanded', String(open));
+      if (open) $('m-detail-msg-text').focus();
+    };
+    sendBtn.addEventListener('click', () => setCompose(compose.classList.contains('hidden')));
+    $('m-detail-msg-cancel').addEventListener('click', () => setCompose(false));
+    $('m-detail-msg-send').addEventListener('click', () => {
+      const text = ($('m-detail-msg-text').value || '').trim();
+      if (!text) { notify('Write the message first.'); $('m-detail-msg-text').focus(); return; }
+      const go = $('m-detail-msg-send');
+      go.disabled = true;
       adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/message', pw, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim() }),
+        body: JSON.stringify({ text }),
       })
         .then((r) => r.json())
         .then((r) => {
-          if (!r.ok) { alert('Error: ' + (r.error || 'could not do it')); return; }
-          alert('✓ Message sent to ' + data.displayName);
-        });
+          go.disabled = false;
+          if (!r.ok) { notify('Could not send: ' + (r.error || 'unknown error')); return; }
+          $('m-detail-msg-text').value = '';
+          setCompose(false);
+          notify('✓ Message sent to ' + (data.displayName || data.code));
+        })
+        .catch(() => { go.disabled = false; notify('Could not send. Check the connection and try again.'); });
     });
     const body = $('m-detail-body');
     body.innerHTML = '';
@@ -2912,12 +3448,12 @@
               })
                 .then((rr) => rr.json())
                 .then((d) => {
-                  if (!d || !d.ok) { alert('Could not delete: ' + (d && d.error || 'error')); return; }
+                  if (!d || !d.ok) { notify('Could not delete: ' + (d && d.error || 'error')); return; }
                   row.classList.add('is-leaving');
                   mistakeWrap.classList.add('is-leaving');
                   setTimeout(() => { try { row.remove(); mistakeWrap.remove(); } catch (_) {} }, 250);
                 })
-                .catch((e) => alert('Error: ' + e.message));
+                .catch((e) => notify('Error: ' + e.message));
             });
           }
           row.addEventListener('click', (ev) => {
@@ -3071,7 +3607,7 @@
           );
           if (next === null) return;            // cancelled
           const cleaned = String(next).trim();
-          if (!cleaned) { alert('The sentence cannot be empty.'); return; }
+          if (!cleaned) { notify('The sentence cannot be empty.'); return; }
           // Tokenize back to wordIDs the same way the homework save does
           const stripTones = (str) => String(str).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
           const byBare = {};
@@ -3089,11 +3625,11 @@
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ts: s.ts, words: newWords }),
           }).then((r) => r.json()).then((r) => {
-            if (!r.ok) { alert('Could not edit: ' + (r.error || 'unknown')); return; }
+            if (!r.ok) { notify('Could not edit: ' + (r.error || 'unknown')); return; }
             // Refresh — quickest path is just to re-render the detail.
             data.sentences = r.sentences || data.sentences;
             renderDetail(data);
-          }).catch((e) => alert('Error: ' + e.message));
+          }).catch((e) => notify('Error: ' + e.message));
         });
         // 🗑 Per-row delete — surgical, propagates to kid's Mis oraciones
         // and the parent 0→2000 progress bar (rec.sentencesBuilt.length).
@@ -3103,7 +3639,7 @@
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ts: s.ts }),
           }).then((r) => r.json()).then((r) => {
-            if (!r.ok) { alert('Could not delete.'); return; }
+            if (!r.ok) { notify('Could not delete.'); return; }
             item.remove();
             // Update the header count + warn if empty.
             data.sentences = r.sentences || [];
@@ -3112,7 +3648,7 @@
             if (!data.sentences.length) {
               body.querySelector('.m-section-title')?.remove();
             }
-          }).catch((e) => alert('Error: ' + e.message));
+          }).catch((e) => notify('Error: ' + e.message));
         });
         body.appendChild(item);
       });
@@ -3140,9 +3676,8 @@
   // as Modo Maestro's "Oraciones 31-40", surfaced on the MAIN dashboard
   // ("I want the simulation sentences explanations to appear here").
   // Data: /api/hsk-sim-practice (teacher-only, answers included).
-  // Visual classes (wu-prac-*) come from warmup.css, and the vocab
-  // panel reads WU_WORDS/WU_EXPERIENCES from warmup-vocab.js — both
-  // already loaded by maestro.html.
+  // Visual classes (wu-prac-*) are re-set for this page at the end of css/teacher-dashboard.css (warmup.css is no
+  // longer loaded here, 2026-10-13); the vocab panel reads WU_WORDS/WU_EXPERIENCES from warmup-vocab.js.
   // ════════════════════════════════════════════════════════════════
   let _pracData = null;
   let _pracLevel = 'hsk1';
@@ -3205,7 +3740,7 @@
       lb.textContent = _pracVocabLang === 'es' ? '🌐 Meanings: ES' : '🌐 Meanings: EN';
       const vp = $('m-prac-vocab');
       if (vp && vp.dataset.built) _buildPracVocab(vp);
-      if (_pracView) _renderPracDetail(_pracView.list, _pracView.heading);
+      if (_pracView && $('m-prac-crumb').style.display !== 'none') _renderPracDetail(_pracView.list, _pracView.heading);
     });
   })();
   // 🆕 2026-10-12 — folders like Official Tests: test family → level → sims
@@ -3329,7 +3864,7 @@
     crumb.style.display = '';
     crumb.onclick = _renderPracSims;
     $('m-prac-title').textContent = '🧠 ' + heading;
-    $('m-prac-sub').textContent = 'Tap 🔍 Analyze on a question: eliminate the wrong options one by one — in the end only the answer makes sense.';
+    $('m-prac-sub').textContent = 'Tap 🔍 Analyze on a question: eliminate the wrong options one by one until only the answer makes sense.';
     wrap.innerHTML = '';
     simList.forEach((sim) => {
       if (simList.length > 1) {
@@ -3489,6 +4024,10 @@
     langBtn.addEventListener('click', () => {
       _pracVocabLang = _pracVocabLang === 'es' ? 'en' : 'es';
       _buildPracVocab(panel);   // re-render with the other language
+      // keep the toolbar toggle and the open questions in step (they drifted apart before 2026-10-13)
+      const lb = $('m-prac-lang');
+      if (lb) lb.textContent = _pracVocabLang === 'es' ? '🌐 Meanings: ES' : '🌐 Meanings: EN';
+      if (_pracView && $('m-prac-crumb').style.display !== 'none') _renderPracDetail(_pracView.list, _pracView.heading);
     });
     langBar.appendChild(langBtn);
     panel.appendChild(langBar);
@@ -3517,17 +4056,35 @@
     });
   }
 
-  // Auto-login if we have a saved password
+  // Auto-login if we have a saved password. 2026-10-13: the dashboard shows at once with its loading skeleton (the
+  // sign-in card used to flash first) and gets the teacher identity right away (the Teachers tab and My Gateway
+  // used to appear only after the first 15 s refresh).
   if (pw) {
-    // Validate then mount
-    adminFetch('/api/admin/students', pw)
-      .then((r) => r.json())
-      .then((data) => {
+    showDashboard();
+    _rosterInFlight = true;
+    _studentsRequest(pw)
+      .then(({ status, data }) => {
+        _rosterInFlight = false;
         if (data && data.ok) {
-          $('m-login').classList.add('hidden');
-          $('m-dash').classList.remove('hidden');
-          renderRoster(data.students || [], null, data.archived);
+          renderRoster(data.students || [], data.self || null, data.archived);
+          return;
         }
-      });
+        if (status === 401 || status === 403) {
+          // the saved code no longer works: back to the sign-in card
+          try { localStorage.removeItem(STORAGE_PW); } catch (_) {}
+          pw = '';
+          $('m-dash').classList.add('hidden');
+          $('m-login').classList.remove('hidden');
+          $('m-pw').value = '';
+          $('m-login-err').textContent = 'Your saved teacher code no longer works. Type it again.';
+          return;
+        }
+        // 429 (lockout after wrong codes on this network) or a server hiccup: keep the code, the 15 s refresh retries
+        _rosterProblem(status === 429 ? 'busy' : 'network');
+      })
+      .catch(() => { _rosterInFlight = false; _rosterProblem('network'); });
   }
+  // Back from a game page through the browser's back button: reload, so no button stays in its «Opening…» state
+  // and the list is current.
+  window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
 })();
