@@ -1,0 +1,1011 @@
+/* =========================================================================
+   Student portal remake (2026-10-13) · docs/specs/portal-remake.md
+   His ask: "premium, like a Nintendo game, without losing a single feature".
+   Loaded LAST, on top of homework.css (old dark theme) + homework-pastel.css (the sticker look). Every rule is scoped
+   to body.hw-portal: without that class on <body> this layer and js/portal.js switch off (the home markup changed,
+   so a full rollback is reverting the commit). The moments and the alive
+   hero live in js/portal.js.
+   Rules of this layer: one gold action per screen · hard ink shadows (the sticker world chose them) · cards 22 px,
+   tiles 20 px, buttons 16 px, pills 999 px · motion only on transform/opacity, ease-out to enter, springs only for
+   pops, nothing moves under prefers-reduced-motion · 48 px tap targets · nothing under the 🌐 language pill.
+   ========================================================================= */
+
+body.hw-portal {
+  --pt-ink: #1d2440;
+  --pt-ink-soft: #4f5a7c;
+  --pt-paper: #fff7e3;
+  --pt-white: #ffffff;
+  --pt-sky: #9fdcf7;
+  --pt-sky-2: #c6ecfb;
+  --pt-gold: #ffc93c;
+  --pt-gold-deep: #f0a800;
+  --pt-mint: #c8f2dc;
+  --pt-jade: #26a65b;
+  --pt-jade-ink: #17733c;
+  --pt-coral: #f0443a;
+  --pt-coral-ink: #b8231b;
+  --pt-blue: #2f7bea;
+  --pt-head: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+  --pt-body: 'Nunito', system-ui, sans-serif;
+  --pt-out: cubic-bezier(.23, 1, .32, 1);
+  --pt-spring: cubic-bezier(.3, 1.5, .5, 1);
+  --pt-gloss: inset 0 3px 0 rgba(255, 255, 255, .55), inset 0 -5px 0 rgba(29, 36, 64, .08);
+  --pt-e1: 0 3px 0 var(--pt-ink);
+  --pt-e2: 0 5px 0 var(--pt-ink);
+  --pt-e3: 0 7px 0 var(--pt-ink);
+  --pt-stack-w: 100px;   /* room the pinned 🔑 code + level stack needs inside the hero (phones) */
+  --pt-stack-bar: 110px; /* … and inside the folder bar, which runs closer to the screen edge */
+}
+
+/* the parts nobody draws still carry the design */
+body.hw-portal ::selection { background: var(--pt-gold); color: var(--pt-ink); }
+body.hw-portal input, body.hw-portal textarea { caret-color: var(--pt-blue); }
+body.hw-portal :is(input, textarea, .input)::placeholder, body.hw-portal .input::placeholder { color: #6b7596; opacity: 1; }   /* 4.6:1 on white */
+
+/* every screen ends above the 🌐 language pill (it covered «por hacer» chips and avatar tiles) */
+body.hw-portal .container { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+body.hw-portal #hw-lang-toggle {
+  left: max(10px, env(safe-area-inset-left, 0px)) !important;
+  bottom: max(10px, env(safe-area-inset-bottom, 0px)) !important;
+  min-height: 36px;
+  opacity: .9 !important;
+}
+
+/* ── buttons: toy plastic. One gold action per screen; press = sink into the shadow ── */
+body.hw-portal .btn { transition: transform 100ms var(--pt-out), box-shadow 100ms var(--pt-out), background-color 160ms ease; }
+body.hw-portal :is(.btn-jade, .btn-gold) { box-shadow: var(--pt-e2), var(--pt-gloss); }
+body.hw-portal .btn-xl { box-shadow: 0 6px 0 var(--pt-ink), var(--pt-gloss); }
+body.hw-portal .btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--pt-ink); transition-duration: 60ms; }
+@media (hover: hover) and (pointer: fine) {
+  body.hw-portal :is(.btn-jade, .btn-gold):hover:not(:disabled) { box-shadow: 0 7px 0 var(--pt-ink), var(--pt-gloss); }
+}
+@media not ((hover: hover) and (pointer: fine)) {
+  body.hw-portal .btn:hover:not(:disabled):not(:active) { transform: none; box-shadow: var(--pt-e2); }
+  body.hw-portal :is(.btn-jade, .btn-gold):hover:not(:disabled):not(:active) { box-shadow: var(--pt-e2), var(--pt-gloss); }
+}
+
+/* ═════════════════════════════ ENTRY ═════════════════════════════ */
+body.hw-portal .hw-entry-title {
+  font-size: 2.6rem;
+  color: var(--pt-paper);
+  -webkit-text-stroke: 3px var(--pt-ink);
+  paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--pt-ink);
+  margin: 6px 0 4px;
+}
+body.hw-portal #hw-access-code { background: var(--pt-white); }
+body.hw-portal .hw-entry-hint {
+  margin-top: 12px;
+  padding: 0 4px;
+  font-size: .86rem;
+  font-weight: 700;
+  color: var(--pt-ink-soft);
+  background: none;
+  border: 0;
+  text-wrap: pretty;
+}
+
+/* ═════════════════════════════ AVATAR PICKER = character select ═════════════════════════════ */
+body.hw-portal .hw-avatar-pick-card { padding: 22px 16px 18px; }
+body.hw-portal .hw-avatar-option { transition: transform 100ms var(--pt-out), box-shadow 100ms var(--pt-out); }
+body.hw-portal .hw-avatar-option-img { background: linear-gradient(180deg, #bfe7fb, #fff); }
+body.hw-portal .hw-avatar-option.selected { animation: ptPick .42s var(--pt-spring); }
+@keyframes ptPick { 0% { transform: translateY(0) scale(1); } 40% { transform: translateY(-10px) scale(1.06); } 100% { transform: none; } }
+
+/* ═════════════════════════════ HOME (list) ═════════════════════════════ */
+/* 1 · hero stage: the kid, the level, Dralingo + a friend, Dubai at the bottom */
+body.hw-portal .pt-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "id id" "bubble cast" "hud hud";
+  align-items: end;
+  column-gap: 8px;
+  margin: 0 0 14px;
+  padding: 14px 14px 14px;
+  color: var(--pt-ink);
+  background: linear-gradient(180deg, #8fd5f6 0%, #c9edfc 62%, #fff1d6 100%);
+  border: 3px solid var(--pt-ink);
+  border-radius: 22px;
+  box-shadow: var(--pt-e3);
+}
+body.hw-portal .pt-hero-skyline {
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 74%;
+  object-fit: cover;
+  object-position: center 78%;
+  opacity: .5;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 55%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 55%);
+}
+body.hw-portal .pt-hero-id {
+  grid-area: id;
+  align-self: start;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding-right: var(--pt-stack-w);
+}
+body.hw-portal .pt-hero-avatar {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  overflow: hidden;
+  background: linear-gradient(180deg, #e4f5fd, #fff);
+  border: 3px solid var(--pt-ink);
+  border-radius: 18px;
+  box-shadow: var(--pt-e1);
+  cursor: pointer;
+  transition: transform 100ms var(--pt-out), box-shadow 100ms var(--pt-out);
+}
+body.hw-portal .pt-hero-avatar:active { transform: translateY(3px); box-shadow: 0 0 0 var(--pt-ink); }
+body.hw-portal .pt-hero-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: center 12%; }
+body.hw-portal .pt-hero-hello { min-width: 0; }
+body.hw-portal .pt-hero .hw-list-title { margin: 0; font: 800 .98rem/1.15 var(--pt-head); color: var(--pt-ink); }
+body.hw-portal .pt-hero .hw-list-sub { margin: 0; font: 800 1rem/1.1 var(--pt-body); color: var(--pt-ink); }
+body.hw-portal .pt-hero .hw-list-sub strong {
+  display: inline-block;
+  font: 800 clamp(1.35rem, 6.4vw, 1.85rem)/1.05 var(--pt-head);
+  color: var(--pt-ink);
+  background: none;
+  padding: 0;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+body.hw-portal .pt-hero .hw-list-name-ask { font-size: 1.25rem !important; }
+
+/* the alive corner: Dralingo breathes, a friend peeks in with a line (js/portal.js, max two moving things) */
+body.hw-portal .pt-hero-cast {
+  grid-area: cast;
+  position: relative;
+  width: 150px;
+  height: 104px;
+  margin: -8px -6px -4px 0;
+  pointer-events: none;
+}
+body.hw-portal .pt-hero-dragon {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  height: 104px;
+  width: auto;
+  filter: drop-shadow(0 4px 0 rgba(29, 36, 64, .16));
+  transform-origin: 50% 100%;
+  animation: ptBreathe 3.6s ease-in-out infinite;
+}
+body.hw-portal:has(#hw-tr-play, #hw-sack-overlay, #pt-reveal, #hw-sentences-overlay:not(.hidden)) .pt-hero-dragon { animation-play-state: paused; }
+@keyframes ptBreathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3px) scale(1.012); } }
+body.hw-portal .pt-hero-friend {
+  position: absolute;
+  right: 74px;
+  bottom: 0;
+  height: 80px;
+  transition: opacity 180ms ease, transform 180ms var(--pt-out);
+}
+body.hw-portal .pt-hero-friend img { height: 100%; width: auto; max-width: 92px; object-fit: contain; filter: drop-shadow(0 3px 0 rgba(29, 36, 64, .16)); }
+body.hw-portal .pt-hero-friend.is-out { opacity: 0; transform: translateY(10px); }
+body.hw-portal .pt-hero-friend.is-pop { animation: ptPeek .5s var(--pt-spring); }
+@keyframes ptPeek { from { opacity: 0; transform: translateY(26px) scale(.9); } to { opacity: 1; transform: none; } }
+body.hw-portal .pt-hero-bubble {
+  grid-area: bubble;
+  justify-self: start;
+  align-self: center;
+  position: relative;
+  max-width: 100%;
+  margin: 12px 0 4px;
+  padding: 7px 12px;
+  font: 800 .88rem/1.25 var(--pt-body);
+  color: var(--pt-ink);
+  background: var(--pt-white);
+  border: 2.5px solid var(--pt-ink);
+  border-radius: 16px 16px 4px 16px;
+  box-shadow: var(--pt-e1);
+}
+body.hw-portal .pt-hero-bubble:empty { visibility: hidden; }
+body.hw-portal .pt-hero-bubble b { display: block; font: 800 .74rem/1.2 var(--pt-head); color: var(--pt-ink-soft); }
+body.hw-portal .pt-hero-bubble::after {   /* the tail points at the friend */
+  content: '';
+  position: absolute;
+  right: -9px;
+  bottom: 8px;
+  width: 12px;
+  height: 12px;
+  background: var(--pt-white);
+  border-right: 2.5px solid var(--pt-ink);
+  border-top: 2.5px solid var(--pt-ink);
+  transform: rotate(45deg);
+}
+body.hw-portal .pt-hero-bubble { transition: opacity 180ms ease; }
+body.hw-portal .pt-hero-bubble.is-out { opacity: 0; }
+@media (max-width: 339px) { body.hw-portal .pt-hero-bubble { display: none; } }
+
+/* the level HUD inside the hero (HSK levels; YCT 1 hides it) */
+body.hw-portal .pt-hero .hw-hud {
+  grid-area: hud;
+  margin: 12px 0 0;
+  min-height: 56px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, .92);
+  border: 2.5px solid var(--pt-ink);
+  border-radius: 16px;
+  box-shadow: var(--pt-e1);
+}
+body.hw-portal .pt-hero .hw-hud:active { transform: translateY(3px); box-shadow: 0 0 0 var(--pt-ink); }
+body.hw-portal .pt-hero .hw-hud-tier { flex-basis: 40px; width: 40px; height: 40px; font-size: 1.3rem; }
+body.hw-portal .pt-hero .hw-hud-bar { height: 12px; }
+body.hw-portal .pt-hero .hw-hud-fill { background: linear-gradient(90deg, var(--pt-gold), var(--pt-gold-deep)); }
+body.hw-portal .pt-hero .hw-hud-stat { padding: 3px 9px; font-size: 1rem; }
+body.hw-portal .hw-hud.pt-bump { animation: ptBump .5s var(--pt-spring); }
+@keyframes ptBump { 0% { transform: scale(1); } 35% { transform: scale(1.04) translateY(-2px); } 100% { transform: none; } }
+
+/* 2 · ▶ Siguiente: the one big gold action of the home */
+body.hw-portal .pt-next {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 66px;
+  margin: 0 0 14px;
+  padding: 8px 16px 8px 10px;
+  text-align: left;
+  color: var(--pt-ink);
+  background: var(--pt-gold);
+  border: 3px solid var(--pt-ink);
+  border-radius: 20px;
+  box-shadow: var(--pt-e2), var(--pt-gloss);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 100ms var(--pt-out), box-shadow 100ms var(--pt-out);
+}
+body.hw-portal .pt-next[hidden] { display: none; }
+body.hw-portal .pt-next:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--pt-ink); transition-duration: 60ms; }
+body.hw-portal .pt-next-play {
+  display: grid;
+  place-items: center;
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  padding-left: 4px;
+  font: 800 1.35rem/1 var(--pt-head);
+  color: var(--pt-paper);
+  background: var(--pt-ink);
+  border-radius: 50%;
+}
+body.hw-portal .pt-next-text { display: grid; min-width: 0; }
+body.hw-portal .pt-next-kicker { font: 800 .85rem/1.1 var(--pt-body); color: #5a4300; }
+body.hw-portal .pt-next-title {
+  font: 800 1.2rem/1.15 var(--pt-head);
+  color: var(--pt-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* 3 · the dock: square tiles, picture over a short name */
+body.hw-portal .pt-dock {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+  gap: 8px;
+  margin: 0 0 10px;
+}
+body.hw-portal .pt-tile {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-height: 80px;
+  padding: 8px 4px 7px;
+  color: var(--pt-ink);
+  background: var(--pt-white);
+  border: 3px solid var(--pt-ink);
+  border-radius: 20px;
+  box-shadow: var(--pt-e2);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 100ms var(--pt-out), box-shadow 100ms var(--pt-out);
+}
+body.hw-portal .pt-tile:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--pt-ink); transition-duration: 60ms; }
+@media (hover: hover) and (pointer: fine) {
+  body.hw-portal .pt-tile:hover { transform: translateY(-2px); box-shadow: 0 7px 0 var(--pt-ink); }
+}
+body.hw-portal .pt-tile-ico { font-size: 1.7rem; line-height: 1.1; }
+body.hw-portal .pt-tile { grid-template-rows: auto 2.15em; }
+body.hw-portal .pt-tile-label { align-self: center; font: 800 .86rem/1.05 var(--pt-head); text-align: center; text-wrap: balance; }
+body.hw-portal .pt-tile-gold .pt-tile-ico {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  font-size: 1.4rem;
+  background: var(--pt-gold);
+  border: 2.5px solid var(--pt-ink);
+  border-radius: 50%;
+}
+body.hw-portal #screen-list #hw-list-daily {
+  grid-column: auto;
+  order: 0;
+  font-size: inherit;
+  color: var(--pt-ink) !important;
+  background: var(--pt-white) !important;
+}
+body.hw-portal #screen-list #hw-list-inbox { grid-column: auto; order: 0; font-size: inherit; background: var(--pt-white); }
+body.hw-portal #screen-list :is(#hw-list-sentences, #hw-list-myexams) { grid-column: auto; }
+body.hw-portal .pt-tile .hw-bell-badge {
+  position: absolute;
+  top: -9px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  font: 800 .85rem/1 var(--pt-head);
+  color: #fff;
+  background: var(--pt-coral-ink);
+  border: 2.5px solid var(--pt-ink);
+  border-radius: 999px;
+}
+
+/* 4 · quiet pills: Papás · Ajustes · Instalar app · Salir */
+body.hw-portal .pt-util { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 18px; }
+body.hw-portal .pt-pill {
+  min-height: 48px;
+  min-width: 64px;
+  padding: 6px 16px;
+  font: 800 .98rem/1 var(--pt-head);
+  color: var(--pt-ink);
+  background: rgba(255, 255, 255, .85);
+  border: 2.5px solid var(--pt-ink);
+  border-radius: 999px;
+  box-shadow: var(--pt-e1);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 100ms var(--pt-out), box-shadow 100ms var(--pt-out);
+}
+body.hw-portal .pt-pill:active { transform: translateY(3px); box-shadow: 0 0 0 var(--pt-ink); }
+body.hw-portal .pt-pill-gold { background: var(--pt-white); }
+body.hw-portal .pt-util :is(#hw-list-settings, #hw-list-parents, #hw-list-logout, #hw-list-install) {
+  padding: 6px 16px;
+  font-size: .98rem;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, .85);
+}
+body.hw-portal .pt-pill[hidden] { display: none !important; }
+
+/* tabs: a segmented control (not sticky any more: «Siguiente» is the fast path) */
+body.hw-portal .hw-tabs { position: static; margin: 0 0 16px; box-shadow: var(--pt-e2); }
+body.hw-portal .hw-tab { min-height: 58px; transition: background-color 160ms ease, transform 100ms var(--pt-out); }
+body.hw-portal .hw-tab:active { transform: translateY(2px); }
+body.hw-portal .hw-tab.is-active { background: var(--pt-ink); color: var(--pt-paper); border-color: var(--pt-ink); box-shadow: none; }
+body.hw-portal .hw-tab.is-active .hw-tab-count { color: var(--pt-ink); background: var(--pt-gold); }
+
+/* world cards: each world its own tint, the emoji in a white sticker, a progress bar done / total */
+body.hw-portal .hw-list-grid:not(.hw-list-custom):has(> .hw-folder-card) { grid-template-columns: repeat(auto-fill, minmax(156px, 1fr)); gap: 14px; }
+body.hw-portal .hw-folder-card {
+  --tint: #fff7e3;
+  position: relative;
+  min-height: 0;
+  padding: 14px 12px 14px;
+  gap: 6px;
+  background: var(--tint);
+  box-shadow: var(--pt-e2);
+}
+body.hw-portal .hw-folder-card[data-world="0"] { --tint: #ffe7cf; }
+body.hw-portal .hw-folder-card[data-world="1"] { --tint: #ece6ff; }
+body.hw-portal .hw-folder-card[data-world="2"] { --tint: #d9f6e6; }
+body.hw-portal .hw-folder-card[data-world="3"] { --tint: #dff2fd; }
+body.hw-portal .hw-folder-card[data-world="4"] { --tint: #fff0b8; }
+body.hw-portal .hw-folder-card[data-world="5"] { --tint: #ffe0ea; }
+body.hw-portal .hw-folder-card[data-world="6"] { --tint: #e6f0ff; }
+body.hw-portal .hw-folder-card[data-world="7"] { --tint: #fde2c8; }
+body.hw-portal .hw-folder-emoji {
+  width: 60px;
+  height: 60px;
+  font-size: 2rem;
+  border-radius: 50%;
+  box-shadow: var(--pt-e1);
+}
+body.hw-portal .hw-folder-name { font-size: 1.12rem; }
+body.hw-portal .hw-folder-meta { font-size: .82rem; color: var(--pt-ink-soft); }
+body.hw-portal .hw-folder-card .hw-folder-progress { background: var(--pt-white); }
+body.hw-portal .pt-world-bar {
+  display: block;
+  width: 100%;
+  height: 10px;
+  margin-top: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .8);
+  border: 2px solid var(--pt-ink);
+  border-radius: 999px;
+}
+body.hw-portal .pt-world-bar i { display: block; height: 100%; background: var(--pt-jade); border-radius: 999px; }
+@media (hover: hover) and (pointer: fine) {
+  body.hw-portal .hw-folder-card:hover { transform: translateY(-3px); box-shadow: 0 8px 0 var(--pt-ink); }
+}
+body.hw-portal .hw-folder-card:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--pt-ink); transition-duration: 60ms; }
+
+/* empty states: Dralingo points the way */
+body.hw-portal .hw-empty.pt-empty { display: grid; justify-items: center; gap: 6px; padding: 16px 16px 20px; }
+body.hw-portal .pt-empty-pose { width: 96px; height: auto; filter: drop-shadow(0 4px 0 rgba(29, 36, 64, .14)); }
+
+/* inside a world: the hero, «Siguiente», the dock and the pills step away; the folder bar is the top bar and the
+   pinned code stack sits in its right end */
+body.hw-portal #screen-list.pt-in-folder :is(.pt-hero, .pt-next, .pt-dock, .pt-util) { display: none !important; }
+body.hw-portal .hw-folder-bar,
+body.hw-portal:has(#hw-pin-stack) .hw-folder-bar {
+  position: sticky;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  min-height: 74px;
+  margin: 0 0 16px;
+  padding: 8px var(--pt-stack-bar) 8px 8px;
+  background: var(--pt-paper);
+  box-shadow: var(--pt-e2);
+}
+body.hw-portal .hw-folder-crumb { font-size: 1.1rem; }
+/* ← alone (the word stays for screen readers): the world's name gets the room */
+body.hw-portal #hw-folder-back { width: 56px; min-width: 56px !important; padding: 0 !important; font-size: 0 !important; }
+body.hw-portal #hw-folder-back::before { content: '←'; font: 800 1.6rem/1 var(--pt-head); }
+
+/* one round / tarea = a level-select card */
+body.hw-portal .hw-card { box-shadow: var(--pt-e2); }
+body.hw-portal .hw-card:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--pt-ink); transition-duration: 60ms; }
+body.hw-portal .hw-card:not(.hw-card-reading)::after {
+  content: '▶';
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding-left: 3px;
+  font: 800 1rem/1 var(--pt-head);
+  color: var(--pt-ink);
+  background: var(--pt-gold);
+  border: 2.5px solid var(--pt-ink);
+  border-radius: 50%;
+  box-shadow: var(--pt-e1);
+}
+body.hw-portal .hw-card-done:not(.hw-card-reading)::after { content: '✓'; padding-left: 0; background: var(--pt-mint); }
+body.hw-portal .hw-card .hw-card-meta { padding-right: 52px; }
+body.hw-portal .hw-card .hw-card-exp { background: var(--pt-white); }
+
+/* ═════════════════════════════ PINNED CODE STACK ═════════════════════════════ */
+body.hw-portal #hw-pin-stack { top: max(14px, calc(env(safe-area-inset-top, 0px) + 6px)); right: max(14px, env(safe-area-inset-right, 0px)); }
+body.hw-portal .hw-pin-code { min-height: 44px; background: var(--pt-white); }
+@media (min-width: 1220px) {
+  body.hw-portal { --pt-stack-w: 0px; --pt-stack-bar: 12px; }
+}
+
+/* ═════════════════════════════ QUIZ PLAYER ═════════════════════════════ */
+/* the 20 tiny dots become one segmented bar under the title: green right, coral wrong, gold now */
+body.hw-portal .hw-tr-playhead { flex-wrap: wrap; row-gap: 10px; }
+body.hw-portal .hw-tr-dots {
+  order: 3;
+  flex: 1 0 100%;
+  max-width: none;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 3px;
+  justify-content: stretch;
+  padding: 3px;
+  background: var(--pt-white);
+  border: 2.5px solid var(--pt-ink);
+  border-radius: 999px;
+}
+body.hw-portal .hw-tr-dot {
+  flex: 1 1 0;
+  width: auto;
+  height: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: #e3e8f2;
+  transform: none;
+  transition: background-color 200ms ease;
+}
+body.hw-portal .hw-tr-dot.is-now { background: var(--pt-gold); transform: none; }
+body.hw-portal .hw-tr-dot.is-ok { background: var(--pt-jade); }
+body.hw-portal .hw-tr-dot.is-bad { background: var(--pt-coral); }
+body.hw-portal .hw-tr-kicker { letter-spacing: .04em; }
+body.hw-portal .hw-tr-txtopt, body.hw-portal .hw-tr-imgopt, body.hw-portal .hw-tr-tfbtn { transition: transform 100ms var(--pt-out), box-shadow 100ms var(--pt-out); }
+body.hw-portal :is(.hw-tr-txtopt, .hw-tr-imgopt, .hw-tr-tfbtn):active { transform: translateY(4px); box-shadow: 0 1px 0 var(--pt-ink); transition-duration: 60ms; }
+body.hw-portal .hw-tr-txtopt { min-height: 64px; }
+/* «¡Combo x3!»: at the top edge, never over the answer tiles */
+body.hw-portal .pt-combo {
+  position: fixed;
+  z-index: 6600;
+  top: max(10px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  padding: 6px 18px;
+  font: 800 1.35rem/1.1 var(--pt-head);
+  color: var(--pt-paper);
+  background: linear-gradient(180deg, #ff9a3c, var(--pt-coral));
+  border: 3px solid var(--pt-ink);
+  border-radius: 999px;
+  box-shadow: var(--pt-e2);
+  -webkit-text-stroke: 1px var(--pt-ink);
+  paint-order: stroke fill;
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: ptCombo 1.4s var(--pt-out) forwards;
+}
+@keyframes ptCombo {
+  0% { opacity: 0; transform: translate(-50%, -16px) scale(.9); }
+  14% { opacity: 1; transform: translate(-50%, 0) scale(1.06); }
+  24% { transform: translate(-50%, 0) scale(1); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -6px); }
+}
+
+/* ═════════════════════════════ RESULTS REVEAL (js/portal.js) ═════════════════════════════ */
+body.hw-portal #pt-reveal.pt-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: calc(max(14px, env(safe-area-inset-top, 0px)) + 84px) 14px max(14px, env(safe-area-inset-bottom, 0px));
+  background: radial-gradient(120% 70% at 50% 18%, #3a4a8c 0%, #1d2440 70%);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+body.hw-portal #pt-reveal.is-in { opacity: 1; }
+body.hw-portal #pt-reveal.is-out { opacity: 0; transition-duration: 160ms; }
+body.hw-portal .pt-reveal.is-out .pt-rv-card { transform: translateY(8px) scale(.98); transition-duration: 140ms; }
+body.hw-portal #pt-reveal.pt-reveal.is-low { background: radial-gradient(120% 70% at 50% 18%, #3d5a8a 0%, #1d2440 72%); }
+body.hw-portal .pt-rv-rays {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  width: min(120vmax, 1100px);
+  height: min(120vmax, 1100px);
+  margin: calc(min(120vmax, 1100px) / -2) 0 0 calc(min(120vmax, 1100px) / -2);
+  border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 247, 227, .09) 0 8deg, rgba(255, 247, 227, 0) 8deg 20deg);
+  pointer-events: none;
+  animation: ptRays 6s var(--pt-out) 1 forwards;
+}
+@keyframes ptRays { from { transform: rotate(-20deg) scale(.9); opacity: 0; } to { transform: rotate(40deg) scale(1); opacity: 1; } }
+body.hw-portal .pt-rv-card {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 0 18px 18px;
+  text-align: center;
+  color: var(--pt-ink);
+  background: var(--pt-paper);
+  border: 4px solid var(--pt-ink);
+  border-radius: 28px;
+  box-shadow: 0 8px 0 #0e1226;
+  transform: translateY(16px) scale(.96);
+  transition: transform 260ms var(--pt-out);
+}
+body.hw-portal .pt-reveal.is-in .pt-rv-card { transform: none; }
+/* the kid's avatar meets one of the gang above the card's top edge */
+body.hw-portal .pt-rv-cast {
+  position: relative;
+  height: 128px;
+  margin: -64px -6px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+}
+body.hw-portal .pt-rv-kid {
+  width: 104px;
+  height: 104px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #bfe7fb, #fff);
+  border: 4px solid var(--pt-ink);
+  border-radius: 26px;
+  box-shadow: var(--pt-e2);
+  transform: translateX(-40px) rotate(-8deg);
+  opacity: 0;
+  transition: transform 420ms var(--pt-spring) 120ms, opacity 160ms ease 120ms;
+}
+body.hw-portal .pt-rv-kid img { width: 100%; height: 100%; object-fit: cover; object-position: center 12%; }
+body.hw-portal .pt-rv-gang {
+  height: 150px;
+  width: auto;
+  max-width: 150px;
+  object-fit: contain;
+  margin-bottom: -6px;
+  filter: drop-shadow(0 6px 0 rgba(14, 18, 38, .35));
+  transform: translateX(40px) rotate(8deg);
+  opacity: 0;
+  transition: transform 420ms var(--pt-spring) 220ms, opacity 160ms ease 220ms;
+}
+body.hw-portal .pt-reveal.is-in :is(.pt-rv-kid, .pt-rv-gang) { transform: none; opacity: 1; }
+body.hw-portal .pt-rv-title {
+  margin: 10px 0 6px;
+  font: 800 clamp(2.1rem, 10vw, 2.8rem)/1 var(--pt-head);
+  color: var(--pt-gold);
+  -webkit-text-stroke: 3px var(--pt-ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--pt-ink);
+  text-wrap: balance;
+  opacity: 0;
+  transform: scale(1.6) rotate(-6deg);
+}
+body.hw-portal .pt-reveal.is-low .pt-rv-title { color: #8fd5f6; font-size: clamp(1.9rem, 9vw, 2.5rem); }
+body.hw-portal .pt-reveal.is-in .pt-rv-title { animation: ptStamp .45s var(--pt-spring) 1.6s forwards; }
+@keyframes ptStamp { to { opacity: 1; transform: rotate(-3deg); } }
+@media (max-height: 700px) {
+  body.hw-portal #pt-reveal.pt-reveal { padding-top: calc(max(10px, env(safe-area-inset-top, 0px)) + 58px); }
+  body.hw-portal .pt-rv-cast { height: 96px; margin-top: -48px; }
+  body.hw-portal .pt-rv-kid { width: 80px; height: 80px; border-radius: 20px; }
+  body.hw-portal .pt-rv-gang { height: 112px; }
+  body.hw-portal .pt-rv-num { font-size: 3.2rem; }
+  body.hw-portal .pt-rv-btn { min-height: 52px; }
+}
+body.hw-portal .pt-reveal.is-low.is-in .pt-rv-title { animation-delay: .9s; }
+body.hw-portal .pt-rv-stars { display: flex; justify-content: center; gap: 6px; margin: 4px 0 2px; }
+body.hw-portal .pt-star { width: 52px; height: 50px; opacity: .35; transform: scale(.6); }
+body.hw-portal .pt-star svg { display: block; width: 100%; height: 100%; overflow: visible; }
+body.hw-portal .pt-star path { fill: var(--pt-white); stroke: var(--pt-ink); stroke-width: 3.5; stroke-linejoin: round; }
+body.hw-portal .pt-star.is-on path { fill: var(--pt-gold); }
+body.hw-portal .pt-star:nth-child(2) { transform: translateY(-8px) scale(.6); }
+body.hw-portal .pt-reveal.is-in .pt-star { animation: ptStar .4s var(--pt-spring) forwards; animation-delay: calc(1.15s + var(--i) * 140ms); }
+body.hw-portal .pt-reveal.is-in .pt-star:nth-child(2) { animation-name: ptStarMid; }
+@keyframes ptStar { to { opacity: 1; transform: scale(1); } }
+@keyframes ptStarMid { to { opacity: 1; transform: translateY(-8px) scale(1.12); } }
+body.hw-portal .pt-reveal.is-in .pt-star:not(.is-on) { animation-name: ptStarOff; }
+@keyframes ptStarOff { to { opacity: .55; transform: scale(.88); } }
+body.hw-portal .pt-reveal.is-in .pt-star:nth-child(2):not(.is-on) { animation-name: ptStarOffMid; }
+@keyframes ptStarOffMid { to { opacity: .55; transform: translateY(-8px) scale(.95); } }
+body.hw-portal .pt-rv-score { display: flex; justify-content: center; align-items: baseline; gap: 2px; margin: 2px 0; font-family: var(--pt-head); font-variant-numeric: tabular-nums; }
+body.hw-portal .pt-rv-num { font-size: 4.2rem; line-height: 1; font-weight: 800; color: var(--pt-ink); }
+body.hw-portal .pt-rv-of { font-size: 1.4rem; font-weight: 800; color: var(--pt-ink-soft); }
+body.hw-portal .pt-reveal.is-low .pt-rv-num { font-size: 3rem; }
+body.hw-portal .pt-rv-note { margin: 0; font-weight: 800; color: var(--pt-ink-soft); }
+body.hw-portal .pt-rv-need { margin: 6px 0 0; font-weight: 800; font-size: 1.02rem; color: var(--pt-ink); }
+body.hw-portal .pt-rv-line {
+  display: grid;
+  gap: 2px;
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  font: 800 1.05rem/1.25 var(--pt-body);
+  color: var(--pt-ink);
+  background: var(--pt-white);
+  border: 2.5px solid var(--pt-ink);
+  border-radius: 18px;
+  opacity: 0;
+  transform: translateY(6px);
+}
+body.hw-portal .pt-reveal.is-in .pt-rv-line { animation: ptLine .3s var(--pt-out) 1.85s forwards; }
+@keyframes ptLine { to { opacity: 1; transform: none; } }
+body.hw-portal .pt-rv-who { font: 800 .8rem/1.1 var(--pt-head); color: var(--pt-ink-soft); }
+body.hw-portal .pt-rv-actions { display: grid; gap: 10px; margin-top: 16px; }
+body.hw-portal .pt-rv-btn {
+  min-height: 58px;
+  padding: 8px 16px;
+  font: 800 1.3rem/1.1 var(--pt-head);
+  color: var(--pt-ink);
+  border: 3px solid var(--pt-ink);
+  border-radius: 18px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 100ms var(--pt-out), box-shadow 100ms var(--pt-out);
+}
+body.hw-portal .pt-rv-btn.is-primary { background: var(--pt-gold); box-shadow: var(--pt-e2), var(--pt-gloss); }
+body.hw-portal .pt-rv-btn.is-secondary { min-height: 52px; font-size: 1.1rem; background: var(--pt-white); box-shadow: var(--pt-e1); }
+body.hw-portal .pt-rv-btn:active { transform: translateY(4px); box-shadow: 0 0 0 var(--pt-ink); transition-duration: 60ms; }
+body.hw-portal .pt-rv-card:focus { outline: none; }
+body.hw-portal .pt-rv-btn:focus-visible { outline: 4px solid var(--pt-blue); outline-offset: 3px; }
+/* confetti: only for a passed tarea */
+body.hw-portal .pt-confetti { position: fixed; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
+body.hw-portal .pt-confetti i {
+  position: absolute;
+  top: -4vh;
+  width: 11px;
+  height: 15px;
+  border: 1.5px solid rgba(29, 36, 64, .55);
+  border-radius: 3px;
+  animation: ptFall linear forwards;
+}
+@keyframes ptFall { to { transform: translate(var(--x, 0), 110vh) rotate(var(--r, 360deg)); } }
+body.hw-portal .pt-reveal .pt-rv-card { z-index: 2; }
+
+/* ═════════════════════════════ WELCOME (js/portal.js) ═════════════════════════════ */
+body.hw-portal .pt-welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 9500;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 240ms ease;
+}
+body.hw-portal .pt-welcome.is-out { opacity: 0; }
+body.hw-portal .pt-wc-split {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, var(--pt-gold) 0 49.4%, var(--pt-ink) 49.4% 50.6%, #8fd5f6 50.6% 100%);
+  clip-path: inset(0 50% 0 50%);
+  transition: clip-path 380ms var(--pt-out);
+}
+body.hw-portal .pt-welcome.is-in .pt-wc-split { clip-path: inset(0 0 0 0); }
+body.hw-portal .pt-wc-kid {
+  position: absolute;
+  left: max(6vw, calc(50% - 420px));
+  bottom: 18vh;
+  width: min(36vw, 190px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: linear-gradient(180deg, #bfe7fb, #fff);
+  border: 4px solid var(--pt-ink);
+  border-radius: 28px;
+  box-shadow: var(--pt-e3);
+  transform: translateX(-70vw) rotate(-12deg);
+  transition: transform 520ms var(--pt-spring) 160ms;
+}
+body.hw-portal .pt-wc-kid img { width: 100%; height: 100%; object-fit: cover; object-position: center 12%; }
+body.hw-portal .pt-wc-dragon {
+  position: absolute;
+  right: max(2vw, calc(50% - 440px));
+  bottom: 12vh;
+  height: min(40vh, 320px);
+  width: auto;
+  filter: drop-shadow(0 8px 0 rgba(29, 36, 64, .3));
+  transform: translateX(70vw) rotate(10deg);
+  transition: transform 520ms var(--pt-spring) 240ms;
+}
+body.hw-portal .pt-welcome.is-in :is(.pt-wc-kid, .pt-wc-dragon) { transform: none; }
+body.hw-portal .pt-wc-words { position: relative; display: grid; justify-items: center; gap: 10px; margin-top: -30vh; padding: 0 16px; text-align: center; }
+body.hw-portal .pt-wc-stamp {
+  font: 800 clamp(2.4rem, 12vw, 4.4rem)/1 var(--pt-head);
+  color: var(--pt-paper);
+  -webkit-text-stroke: 4px var(--pt-ink);
+  paint-order: stroke fill;
+  text-shadow: 0 7px 0 var(--pt-ink);
+  overflow-wrap: anywhere;
+  opacity: 0;
+  transform: scale(2.2) rotate(-10deg);
+}
+body.hw-portal .pt-welcome.is-in .pt-wc-stamp { animation: ptWcStamp .5s var(--pt-spring) .5s forwards; }
+@keyframes ptWcStamp { to { opacity: 1; transform: rotate(-4deg); } }
+body.hw-portal .pt-wc-level {
+  padding: 4px 16px;
+  font: 800 1.15rem/1.2 var(--pt-head);
+  color: var(--pt-ink);
+  background: var(--pt-paper);
+  border: 3px solid var(--pt-ink);
+  border-radius: 999px;
+  box-shadow: var(--pt-e1);
+  opacity: 0;
+}
+body.hw-portal .pt-wc-sub { padding: 2px 14px; font: 800 1.15rem/1.3 var(--pt-head); color: var(--pt-ink); background: rgba(255, 247, 227, .92); border-radius: 999px; opacity: 0; }
+body.hw-portal .pt-welcome.is-in :is(.pt-wc-level, .pt-wc-sub) { animation: ptLine .3s var(--pt-out) .9s forwards; }
+
+@media (max-width: 520px) {
+  body.hw-portal .pt-wc-kid { left: 4vw; bottom: 7vh; width: 30vw; }
+  body.hw-portal .pt-wc-dragon { right: -5vw; bottom: 5vh; height: 34vh; }
+}
+
+/* ═════════════════════════════ LEVEL-UP / STREAK BANNER (js/portal.js) ═════════════════════════════ */
+body.hw-portal .pt-banner {
+  position: fixed;
+  z-index: 9400;
+  top: max(12px, env(safe-area-inset-top, 0px));
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(420px, calc(100vw - 24px));
+  padding: 8px 16px 8px 8px;
+  color: var(--pt-ink);
+  background: var(--pt-paper);
+  border: 3px solid var(--pt-ink);
+  border-radius: 22px;
+  box-shadow: var(--pt-e3);
+  pointer-events: none;
+  transform: translate(-50%, -140%);
+  transition: transform 360ms var(--pt-spring);
+}
+body.hw-portal .pt-banner.is-in { transform: translate(-50%, 0); }
+body.hw-portal .pt-banner.is-out { transform: translate(-50%, -140%); transition: transform 200ms ease; }
+body.hw-portal .pt-banner.is-level { background: var(--pt-gold); }
+body.hw-portal .pt-banner.is-streak { background: #ffd9b0; }
+body.hw-portal .pt-banner-pose { flex: 0 0 auto; height: 72px; width: auto; margin: -18px 0 -10px; filter: drop-shadow(0 3px 0 rgba(29, 36, 64, .2)); }
+body.hw-portal .pt-banner-text { display: grid; min-width: 0; }
+body.hw-portal .pt-banner-text b { font: 800 1.35rem/1.1 var(--pt-head); }
+body.hw-portal .pt-banner-text span { font: 800 .92rem/1.2 var(--pt-body); color: #3d4566; }
+
+/* ═════════════════════════════ RESULTS SCREEN (under the reveal) ═════════════════════════════ */
+body.hw-portal .hw-results-card { padding: 20px 16px 18px; }
+body.hw-portal .hw-results-emoji { font-size: 2.6rem; animation: none; }
+body.hw-portal .hw-results-title { font-size: 1.6rem; margin: 2px 0 8px; }
+body.hw-portal .hw-results-score { padding: 6px 18px; box-shadow: var(--pt-e2), var(--pt-gloss); }
+body.hw-portal .hw-results-num { font-size: 3rem; font-variant-numeric: tabular-nums; }
+body.hw-portal .hw-results-bk-row { border-left: 2.5px solid var(--pt-ink); }
+body.hw-portal .hw-results-bk-row.ok { background: #effbf3; }
+body.hw-portal .hw-results-bk-row.no { background: #fff4f1; }
+/* under the reveal this screen is «my answers»: a quiet header row, the low score never shouts */
+body.hw-portal .hw-results-card { display: flex; flex-direction: column; }
+body.hw-portal #screen-results.pt-low :is(.hw-results-score) { background: var(--pt-white); box-shadow: var(--pt-e1); }
+body.hw-portal #screen-results.pt-low .hw-results-num { font-size: 2.2rem; }
+body.hw-portal #screen-results.pt-low .hw-results-cert { background: #dff2fd; }
+
+/* ═════════════════════════════ SENTENCE TAREA ═════════════════════════════ */
+/* the top «Entregar» stays (tablets hid the bottom one) but quiet; the bottom one is the gold action, always in reach */
+body.hw-portal #hw-asg-submit-top { min-height: 52px; font-size: 1.15rem; background: var(--pt-white); box-shadow: var(--pt-e1); }
+body.hw-portal .hw-asg-actions:not(.hw-asg-actions-top) #hw-asg-submit { min-height: 68px; font-size: 1.6rem; }
+
+/* ═════════════════════════════ SETTINGS ═════════════════════════════ */
+/* the profile is a plain band inside the card, not a card inside a card */
+body.hw-portal .hw-settings-profile { background: transparent; border: 0; border-radius: 0; padding: 6px 4px 10px; }
+body.hw-portal .hw-settings-reset-row { border-width: 2px; background: var(--pt-white); }
+body.hw-portal .hw-settings-header { min-height: 56px; }
+
+/* ═════════════════════════════ PARENTS: calm, clear, trustworthy ═════════════════════════════ */
+body.hw-portal #screen-parents .hw-parents-card {
+  background: var(--pt-white);
+  border-width: 2px;
+  border-radius: 24px;
+  box-shadow: 0 4px 0 rgba(29, 36, 64, .16);
+}
+body.hw-portal #screen-parents :is(.btn, .hw-parents-tab, .hw-tip-card, .hw-guia-card, .hw-report-month-btn, .hw-parents-insight-card,
+  .hw-parents-levels-wrap, .hw-parents-remaining-row, .hw-parents-test-row, .hw-parents-hsk-row, .hw-parents-conv-row) {
+  border-width: 2px;
+  box-shadow: 0 2px 0 rgba(29, 36, 64, .18);
+}
+body.hw-portal #screen-parents .btn:active { transform: translateY(2px); box-shadow: none; }
+body.hw-portal #screen-parents .hw-parents-title { font-size: 1.55rem; }
+body.hw-portal #screen-parents .hw-parents-hero {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px 14px;
+  align-items: start;
+  padding: 14px;
+  background: #f7fbff;
+  border: 2px solid rgba(29, 36, 64, .2);
+  border-radius: 20px;
+  box-shadow: none;
+}
+body.hw-portal #screen-parents .hw-parents-avatar-frame { width: 76px; height: 76px; border-width: 2px; border-radius: 18px; box-shadow: none; }
+body.hw-portal #screen-parents .hw-parents-hero-name { font-size: 1.45rem; }
+/* the four counts: a 2 × 2 grid of number tiles (same data, same taps) */
+body.hw-portal #screen-parents .hw-parents-stats {
+  display: grid;
+  grid-auto-rows: 1fr;
+  align-items: stretch;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+body.hw-portal #screen-parents .hw-parents-stat {
+  display: block;
+  margin: 0;
+  padding: 10px 12px;
+  font-size: .86rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--pt-ink-soft);
+  background: var(--pt-white);
+  border: 2px solid rgba(29, 36, 64, .2);
+  border-radius: 14px;
+  box-shadow: none;
+}
+body.hw-portal #screen-parents .hw-parents-stat strong { display: inline-block; font: 800 1.5rem/1.05 var(--pt-head); color: var(--pt-ink); }
+body.hw-portal #screen-parents .hw-parents-stat small { display: block; font-size: .78rem; color: #2f6fd1; }
+body.hw-portal #screen-parents .hw-parents-stat.is-clickable { border-color: var(--pt-ink); cursor: pointer; }
+body.hw-portal #screen-parents .hw-parents-stat.is-clickable::after { display: none; }
+body.hw-portal #screen-parents .hw-parents-stat.is-clickable:active { transform: translateY(2px); }
+body.hw-portal #screen-parents .hw-parents-progress { grid-column: 1 / -1; margin-top: 4px; padding: 12px 2px 0; background: transparent; border: 0; border-top: 2px dashed rgba(29, 36, 64, .2); border-radius: 0; }
+body.hw-portal #screen-parents .hw-pp-fill { background: var(--pt-jade); }
+body.hw-portal #screen-parents .hw-parents-tabs {
+  position: sticky;
+  top: max(8px, env(safe-area-inset-top, 0px));
+  z-index: 4;
+  border-width: 2px;
+  box-shadow: 0 3px 0 rgba(29, 36, 64, .14);
+}
+body.hw-portal #screen-parents .hw-parents-tab.active { box-shadow: none; }
+@media (max-width: 1219px) {   /* stop under the pinned code stack, never under it */
+  body.hw-portal #screen-parents .hw-parents-tabs { top: calc(env(safe-area-inset-top, 0px) + 92px); }
+}
+body.hw-portal #screen-parents :is(.hw-parents-encouragement, .hw-parents-levels-intro) { border-width: 2px; }
+body.hw-portal #screen-parents .hw-parents-section-title { margin-top: 26px; font-size: 1.2rem; }
+body.hw-portal #screen-parents .hw-parents-empty { color: var(--pt-ink-soft); background: #f7fbff; border: 2px dashed rgba(29, 36, 64, .22); font-weight: 700; }
+@media (max-width: 560px) {
+  body.hw-portal #screen-parents .hw-parents-hero { grid-template-columns: 64px minmax(0, 1fr); }
+  body.hw-portal #screen-parents .hw-parents-avatar-frame { width: 64px; height: 64px; }
+  body.hw-portal #screen-parents :is(.hw-parents-stats, .hw-parents-progress) { grid-column: 1 / -1; }
+  body.hw-portal #screen-parents .hw-parents-avatar-frame { grid-row: 1 / span 2; }
+  body.hw-portal #screen-parents .hw-parents-hero-info { display: contents; }
+  body.hw-portal #screen-parents :is(.hw-parents-hero-name, .hw-parents-hero-code) { grid-column: 2; justify-self: start; text-align: left; margin: 0; }
+  body.hw-portal #screen-parents .hw-parents-hero-name { grid-row: 1; align-self: end; }
+  body.hw-portal #screen-parents .hw-parents-hero-code { grid-row: 2; align-self: start; }
+}
+
+/* ═════════════════════════════ SHEETS: inbox, Mis exámenes, «Ver mis errores» slide up on phones ═════════════════════════════ */
+@media (max-width: 640px) {
+  body.hw-portal :is(.hw-inbox-overlay, .hw-myexams-overlay, .hw-mistakes-overlay) { align-items: flex-end; padding: 0; }
+  body.hw-portal :is(.hw-inbox-card, .hw-myexams-card, .hw-mistakes-card) {
+    max-height: 86dvh;
+    border-bottom: 0;
+    border-radius: 28px 28px 0 0;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -4px 0 rgba(29, 36, 64, .25);
+    transform: translateY(24px);
+    transition: transform 240ms var(--pt-out);
+  }
+  body.hw-portal :is(.hw-inbox-overlay.show .hw-inbox-card, .hw-mistakes-overlay.show .hw-mistakes-card, .hw-myexams-overlay:not(.hidden) .hw-myexams-card) { transform: none; }
+}
+body.hw-portal :is(.hw-inbox-msg, .hw-myexams-attempt, .hw-mistake-row) { border-left: 2.5px solid var(--pt-ink); }
+body.hw-portal .hw-mistake-row.ok, body.hw-portal .hw-myexams-attempt:not(.is-low) { background: #effbf3; }
+body.hw-portal .hw-mistake-row.bad, body.hw-portal .hw-myexams-attempt.is-low { background: #fff4f1; }
+body.hw-portal .hw-inbox-msg.unread { background: #fff8e6; border-color: var(--pt-gold-deep); }
+body.hw-portal .hw-myexams-attempt.is-low { border-left-color: var(--pt-ink); }
+
+/* coral as a fill takes ink text (white on #f0443a was 3.8:1) */
+body.hw-portal .btn-red { color: var(--pt-ink); }
+
+/* ═════════════════════════════ FLOATING CHROME NEVER COVERS THE WORK ═════════════════════════════ */
+body.hw-portal:has(#hw-tr-play, #pt-reveal, .pt-welcome, .hw-inbox-overlay.show, #hw-myexams-overlay:not(.hidden), #hw-sack-overlay, .hw-mistakes-overlay.show) #hw-lang-toggle { display: none !important; }
+body.hw-portal:has(#screen-list:not(.hidden):not(.pt-in-folder), #screen-settings:not(.hidden), #screen-parents:not(.hidden)) { position: relative; }
+body.hw-portal:has(#screen-list:not(.hidden):not(.pt-in-folder), #screen-settings:not(.hidden), #screen-parents:not(.hidden)) #hw-pin-stack { position: absolute; }
+@media (max-width: 767px) {
+  body.hw-portal .hw-asg-actions-top, body.hw-portal:has(#hw-pin-stack) .hw-asg-actions-top { position: static; }
+}
+
+/* ═════════════════════════════ LAPTOP ═════════════════════════════ */
+@media (min-width: 760px) {
+  body.hw-portal .pt-hero { grid-template-areas: "id cast" "bubble cast" "hud hud"; padding: 18px 22px; }
+  body.hw-portal .pt-hero-cast { width: 230px; height: 150px; margin: 0 0 -6px; }
+  body.hw-portal .pt-hero-dragon { height: 150px; }
+  body.hw-portal .pt-hero-friend { right: 112px; height: 118px; }
+  body.hw-portal .pt-hero-friend img { max-width: 130px; }
+  body.hw-portal .pt-hero-bubble { justify-self: end; max-width: 300px; font-size: .95rem; }
+  body.hw-portal .pt-hero-avatar { width: 84px; height: 84px; border-radius: 22px; }
+  body.hw-portal .pt-hero .hw-list-sub strong { font-size: 2.3rem; }
+  body.hw-portal .pt-dock { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  body.hw-portal .pt-tile { grid-template-rows: none; grid-auto-flow: column; justify-content: center; align-items: center; gap: 10px; min-height: 64px; }
+  body.hw-portal .pt-tile-label { font-size: 1.05rem; }
+  body.hw-portal .pt-next { min-height: 72px; }
+  body.hw-portal .pt-next-title { font-size: 1.4rem; }
+  body.hw-portal .pt-util { justify-content: flex-end; }
+}
+
+/* ═════════════════════════════ CALM MOTION ═════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  body.hw-portal :is(.pt-hero-dragon, .pt-hero-friend, .pt-rv-rays, .hw-avatar-option.selected, .hw-hud.pt-bump) { animation: none !important; }
+  body.hw-portal :is(.pt-tile, .pt-pill, .pt-next, .hw-folder-card, .hw-card, .pt-hero-avatar, .pt-rv-btn) { transition: none; }
+  body.hw-portal .pt-combo { animation: ptComboFade 1.2s ease forwards; transform: translateX(-50%); }
+  body.hw-portal :is(.hw-inbox-card, .hw-myexams-card, .hw-mistakes-card) { transition: none; transform: none; }
+}
+@keyframes ptComboFade { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+/* portal.js adds .is-still under reduced motion: every moment shows its final frame, no movement */
+body.hw-portal #pt-reveal.is-still { opacity: 1; }
+body.hw-portal :is(.pt-reveal, .pt-welcome, .pt-banner).is-still,
+body.hw-portal :is(.pt-reveal, .pt-welcome, .pt-banner).is-still * { animation: none !important; transition: opacity 150ms ease !important; }
+body.hw-portal .pt-reveal.is-still :is(.pt-rv-card, .pt-rv-kid, .pt-rv-gang, .pt-rv-title, .pt-rv-line, .pt-wc-kid) { transform: none; opacity: 1; }
+body.hw-portal .pt-reveal.is-still .pt-rv-title { transform: rotate(-3deg); }
+body.hw-portal .pt-reveal.is-still .pt-star { opacity: 1; transform: none; }
+body.hw-portal .pt-reveal.is-still .pt-star:not(.is-on) { opacity: .55; }
+body.hw-portal .pt-welcome.is-still .pt-wc-split { clip-path: none; }
+body.hw-portal .pt-welcome.is-still :is(.pt-wc-kid, .pt-wc-dragon) { transform: none; }
+body.hw-portal .pt-welcome.is-still :is(.pt-wc-stamp, .pt-wc-level, .pt-wc-sub) { opacity: 1; transform: none; }
+body.hw-portal .pt-banner.is-still { transform: translate(-50%, 0); opacity: 0; }
+body.hw-portal .pt-banner.is-still.is-in { opacity: 1; }
+body.hw-portal .pt-banner.is-still.is-out { opacity: 0; }
