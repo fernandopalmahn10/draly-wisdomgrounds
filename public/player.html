@@ -23,6 +23,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/kingdoms.css?v=20261011h">
   <link rel="stylesheet" href="/css/snow.css?v=20261012e">
+  <link rel="stylesheet" href="/css/escape.css?v=20261013a">
   <!-- Lobby layout + lobby mini-game (the little plane while kids wait).
        These rules used to live in flappy.css, which was deleted with the
        retired Flappy Dragon game (2026-10-10); the lobby itself is shared. -->
@@ -585,6 +586,37 @@
     </div>
   </div>
 
+  <!-- La Gran Fuga de Dubái: the «zona segura» room (js/player-escape.js). The run itself is the question screen with the
+       chase rail on top. Kids don't read: a 3-step card the first time, a status pill that says what to do, an arrow. -->
+  <div id="screen-escape" class="hidden">
+    <div class="es-zhud">
+      <div class="es-ring" id="es-wave-ring"><b id="es-wave-n">…</b></div>
+      <div class="es-zhud-words"><b id="es-wave-title">Zona segura</b><span id="es-wave-sub"></span></div>
+      <div class="es-zhearts" id="es-zhearts" aria-label="Corazones del equipo"></div>
+    </div>
+    <div class="es-zstage">
+      <canvas id="es-zcanvas" aria-label="La zona segura"></canvas>
+      <div class="es-arrow" id="es-arrow" style="display:none" aria-hidden="true"><i>➜</i></div>
+      <div class="es-status" id="es-status" role="status">Las zonas verdes se encienden…</div>
+      <div class="pc-card es-help hidden" id="es-help" role="dialog" aria-labelledby="es-help-title">
+        <img class="pc-card-pose" id="es-help-me" alt="">
+        <div class="pc-card-title" id="es-help-title">¡Zona segura!</div>
+        <ol class="pc-steps">
+          <li><span class="pc-step-ico">🕹️</span><span>Arrastra el círculo para <b>caminar</b></span></li>
+          <li><span class="pc-step-ico"><span class="es-ico-zone" style="width:46px;height:36px;border-width:3px"></span></span><span>Entra en una <b>zona verde</b> antes del zap</span></li>
+          <li><span class="pc-step-ico">👤 4</span><span>El número es el <b>límite</b>: si está llena, ¡busca otra!</span></li>
+        </ol>
+        <button class="pc-card-btn" id="es-help-go" type="button">¡Entendido!</button>
+      </div>
+      <div class="es-zcard hidden" id="es-card" role="status"></div>
+      <div class="es-pausecard hidden" id="es-pause"><div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div></div>
+    </div>
+    <div class="es-zcontrols">
+      <div class="sn-joy" id="es-joy" aria-label="Caminar"><div class="sn-knob" id="es-knob"></div></div>
+      <p class="es-zhint" id="es-zhint"></p>
+    </div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -603,17 +635,20 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261012t"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261013a"></script>
   <script src="/js/player-kingdoms.js?v=20261011f"></script>
   <script src="/js/paint-render.js?v=20261011a"></script>
   <script src="/js/player-paint.js?v=20261011e"></script>
   <script src="/js/snow-map.js?v=20261012b"></script>
   <script src="/js/snow-render.js?v=20261012b"></script>
   <script src="/js/player-snow.js?v=20261012f"></script>
-  <script src="/js/cast.js?v=20261011c"></script>
+  <script src="/js/escape-map.js?v=20261013a"></script>
+  <script src="/js/escape-render.js?v=20261013a"></script>
+  <script src="/js/player-escape.js?v=20261013a"></script>
+  <script src="/js/cast.js?v=20261013a"></script>
   <script src="/js/dralingo-fx.js?v=20261011f"></script>
   <script src="/js/saga.js?v=20261012b"></script>
-  <script src="/js/player.js?v=20261012t"></script>
+  <script src="/js/player.js?v=20261013a"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>La Gran Fuga de Dubái · Anfitrión</title>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/kingdoms.css?v=20261011g">
+  <link rel="stylesheet" href="/css/escape.css?v=20261013a">
+</head>
+<body class="kd-bg es-host">
+  <button class="kd-mute" id="mute-btn" type="button">🔊 Sonido</button>
+
+  <!-- LOBBY -->
+  <main id="screen-lobby" class="es-lobby">
+    <header class="es-lobby-head">
+      <canvas class="es-lobby-robot" id="lobby-robot" width="300" height="300" aria-hidden="true"></canvas>
+      <div class="es-lobby-titles">
+        <h1 class="es-title kd-display"><span class="es-tv" aria-hidden="true">📺 Nuevo episodio</span>La Gran Fuga <span>de Dubái</span></h1>
+        <p class="es-sub">Robotín, el guardia del Museo del Futuro, tiene un fallo y persigue a todo el equipo. ¡Respondan para escapar en el jet de Hamdan!</p>
+      </div>
+      <img class="es-lobby-dralingo" src="/assets/dralingo/power.webp" alt="">
+    </header>
+
+    <div class="es-lobby-row">
+      <div class="kd-pin-card es-pin-card">
+        <div>
+          <div class="kd-pin-label">PIN</div>
+          <div class="kd-pin" id="pin-display">····</div>
+        </div>
+        <div class="kd-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
+      </div>
+      <section class="es-crew" aria-label="La tripulación">
+        <div class="es-crew-head"><span>La tripulación</span><b id="count-all">0 jugadores</b></div>
+        <div class="es-chips" id="players-all"></div>
+      </section>
+    </div>
+
+    <!-- the same three steps the phones show (kids don't read: big pictures, few words) -->
+    <ol class="es-howto">
+      <li class="es-step-turbo"><span class="es-ico-tiles"><i></i><i></i><i></i><i></i></span><b>Responde bien</b><small>cada acierto es un turbo 🚀</small></li>
+      <li class="es-step-robot"><canvas class="es-ico-robot" id="howto-robot" width="160" height="160" aria-hidden="true"></canvas><b>¡Que no los alcance!</b><small>si Robotín llega: ¡zap de cosquillas!</small></li>
+      <li class="es-step-zone"><span class="es-ico-zone"><img id="howto-me" src="/assets/saga/avatars/aileen.webp" alt=""></span><b>Zona segura</b><small>camina a una zona verde antes del zap</small></li>
+    </ol>
+
+    <div class="kd-lobby-tools es-tools">
+      <label class="kd-duration">⏱ Duración
+        <input type="range" id="duration-slider" min="240" max="360" step="30" value="300">
+        <span id="duration-value">5 min</span>
+      </label>
+      <button class="kd-btn go es-go" id="start-btn" type="button" disabled>🚀 ¡Empezar la fuga!</button>
+    </div>
+    <div class="kd-set" id="set-display">Cargando preguntas…</div>
+  </main>
+
+  <!-- COUNTDOWN: the episode intro, the crew against Robotín -->
+  <div id="screen-countdown" class="es-intro hidden" aria-live="polite">
+    <div class="es-intro-side es-intro-crew">
+      <div class="es-intro-fer"><img id="intro-fer" src="/assets/cast/fer-hello.webp" alt=""><p class="es-bubble" id="intro-line">¡Atención, equipo! Tenemos una misión.</p></div>
+      <img class="es-intro-dralingo" src="/assets/dralingo/power.webp" alt="">
+      <div class="es-intro-kids" id="intro-kids"></div>
+      <div class="es-intro-tag">La tripulación</div>
+    </div>
+    <div class="es-intro-mid">
+      <div class="es-intro-title">La Gran Fuga<span>de Dubái</span></div>
+      <div class="es-vs">VS</div>
+      <div class="kd-count-num es-count-num" id="countdown-num">3</div>
+    </div>
+    <div class="es-intro-side es-intro-robot">
+      <canvas id="intro-robot" width="520" height="560" aria-hidden="true"></canvas>
+      <div class="es-intro-tag robo">Robotín</div>
+    </div>
+  </div>
+
+  <!-- ACTIVE -->
+  <main id="screen-active" class="es-arena hidden">
+    <div class="es-top">
+      <div class="kd-pin-mini">PIN <span id="active-pin-display">····</span></div>
+      <div class="es-level" id="level-chip"><img id="level-ico" src="/assets/kingdoms/landmarks/big/museum.webp" alt=""><div><b id="level-name">Museo del Futuro</b><span id="level-num">Nivel 1 de 3</span></div></div>
+      <div class="es-meter" id="meter" aria-label="Distancia con Robotín">
+        <div class="es-meter-track"><i class="es-meter-fill" id="meter-fill"></i></div>
+        <span class="es-meter-robot" id="meter-robot"><canvas id="meter-robot-c" width="64" height="64" aria-hidden="true"></canvas></span>
+        <span class="es-meter-crew" id="meter-crew"><img src="/assets/dralingo/hello.webp" alt=""></span>
+        <img class="es-meter-goal" id="meter-goal" src="/assets/kingdoms/landmarks/big/burj.webp" alt="">
+      </div>
+      <div class="es-hearts" id="hearts" aria-label="Corazones del equipo"></div>
+      <div class="kd-timer" id="timer-display">5:00</div>
+    </div>
+    <div class="es-stage" id="stage">
+      <canvas id="es-canvas" aria-label="La persecución"></canvas>
+      <div class="es-zonehud hidden" id="zonehud">
+        <div class="es-ring" id="wave-ring"><b id="wave-n">12</b></div>
+        <div><b id="wave-title">¡Zona segura!</b><span id="wave-sub">Entren en una zona verde</span></div>
+      </div>
+      <div class="es-pops" id="pops" aria-live="polite"></div>
+      <p class="es-run-say" id="run-say" aria-live="polite"></p>
+      <div class="es-danger" id="danger" aria-hidden="true"></div>
+    </div>
+    <div class="kd-bottom">
+      <button class="kd-btn small" id="pause-btn" type="button">⏸ Pausa</button>
+      <button class="kd-btn small" id="add-time-btn" type="button">+30 s</button>
+      <button class="kd-btn small es-skip" id="skip-btn" type="button">⏭ Saltar zona</button>
+      <button class="kd-btn small" id="end-now-btn" type="button">Terminar ronda</button>
+    </div>
+  </main>
+
+  <div class="es-paused hidden" id="paused">
+    <div class="es-paused-card"><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Todos quietos: miren al profe</span>
+      <button class="kd-btn go" id="resume-btn" type="button">▶ Seguir jugando</button></div>
+  </div>
+
+  <div class="kd-dralingo" id="dralingo">
+    <img id="dralingo-img" src="/assets/dralingo/hello.webp" alt="Dralingo">
+    <div class="kd-bubble" id="dralingo-say">¡A correr!</div>
+  </div>
+
+  <!-- big moments: zap, level cleared, caught at the gate, escape (one at a time) -->
+  <div class="es-moment hidden" id="moment" aria-live="polite">
+    <div class="es-moment-rays"></div>
+    <img class="es-moment-art" id="moment-art" alt="">
+    <canvas class="es-moment-robot hidden" id="moment-robot" width="420" height="440" aria-hidden="true"></canvas>
+    <div class="es-moment-title" id="moment-title"></div>
+    <div class="es-moment-sub" id="moment-sub"></div>
+    <div class="es-moment-crew hidden" id="moment-crew"></div>
+    <div class="es-moment-cast hidden" id="moment-cast"><img id="moment-cast-img" alt=""><p id="moment-cast-line"></p></div>
+  </div>
+
+  <!-- END -->
+  <main id="screen-win" class="es-end hidden">
+    <div class="es-end-hero">
+      <div class="es-badge" id="rank-badge" aria-hidden="true"><img id="rank-art" alt=""><div class="es-badge-stars" id="rank-stars"></div></div>
+      <div class="es-end-words">
+        <h2 class="es-rank kd-display" id="rank-name">Pilotos del Cielo</h2>
+        <p class="es-end-why" id="end-why"></p>
+        <div class="es-end-levels" id="end-levels"></div>
+      </div>
+    </div>
+    <div class="es-awards" id="awards"></div>
+    <div class="es-end-crew" id="end-crew"></div>
+    <div class="kd-end-tools">
+      <button class="kd-btn" type="button" onclick="location.href='/'">🏠 Inicio</button>
+      <button class="kd-btn go" id="play-again-btn" type="button">🔄 Otra ronda</button>
+    </div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/cast.js?v=20261013a"></script>
+  <script src="/js/dralingo-fx.js?v=20261011f"></script>
+  <script src="/js/snow-map.js?v=20261012b"></script>
+  <script src="/js/escape-map.js?v=20261013a"></script>
+  <script src="/js/escape-render.js?v=20261013a"></script>
+  <script src="/js/host-escape.js?v=20261013a"></script>
+  <script src="/js/live-game.js?v=20261011c"></script>
+</body>
+</html>

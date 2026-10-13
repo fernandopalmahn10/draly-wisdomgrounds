@@ -171,7 +171,8 @@ the checklist for any new game mode.
 - This is a large, multi-feature codebase: before adding a mode, read `docs/GAME_MODES.md` and reuse existing room/PIN/
   heartbeat plumbing instead of building parallel systems.
 - **Game roster (his decision 2026-10-10):** Reinos de Colores (new, `kingdoms`), Dragones Pintores (new 2026-10-11,
-  `paint`), Batalla de Nieve en Ski Dubái (new 2026-10-12, `snow`) + the 5 kept games Mochi Mash, Dàfùwēng ·
+  `paint`), Batalla de Nieve en Ski Dubái (new 2026-10-12, `snow`), La Gran Fuga de Dubái
+  (new 2026-10-13, `escape`) + the 5 kept games Mochi Mash, Dàfùwēng ·
   Monopolio Chino, 6-7 Swing, Vuelo del Dragón, Piñata Tigre (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older
   games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:
@@ -180,6 +181,17 @@ the checklist for any new game mode.
   UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
   answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /
   win / lose), recorded music + sound effects (no synthesized beeps), pictures made for each question.
+- **Game-show moments on every phone, not only the projector** (his direction 2026-10-13, about the Reinos de Colores
+  VS intro: "that's what makes me feel like I'm living in a video game like Nintendo… more of these should be on the
+  kids' screens, not just the host's"). Every moment the projector stages (captains VS intro with the red/blue split,
+  the big 3-2-1, landmark captures, half-time/last-minute alarms, the winner reveal) also plays on each phone in a
+  phone-sized version, with the kid's own team colour, avatar and captain ("¡Tú eres del Reino del Fuego!"). Short
+  (≤ 2.5 s), never covering the answer tiles, reduced-motion respected, light enough for cheap phones.
+- **Design skills on every kid/teacher screen** (his question 2026-10-13: "have you been using Emil Kowalski, taste and
+  impeccable?"): any new or changed screen of the platform or a pin game gets a pass with `emil-design-eng` (motion,
+  press feel, timing), `design-taste-frontend` (layout and visual direction) and `impeccable` (critique + polish)
+  before it ships, compared side by side with Reinos de Colores. The area's own look always wins (palette, Dralingo
+  in his platform look, the cast, Spanish kid UI, big tap targets).
 - **Kids don't read instructions** (his correction 2026-10-11: "kids don't understand, so they start asking questions").
   Every mechanic must explain itself on the phone: a first-play card with 3 big pictured steps, and whenever a kid is
   blocked (out of energy/fire, waiting for a turn) a big full-width prompt with Dralingo that says exactly what to tap
