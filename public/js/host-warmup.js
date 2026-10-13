@@ -1971,11 +1971,12 @@
   // This helper picks the right rendering.
   function renderAvatarChip(value) {
     // saga avatars (WebP), the generic SVGs, old brand ids shown as their saga replacement: public/js/saga.js
-    const url = window.Saga ? window.Saga.avatarUrl(value) : null;
+    // no avatar yet / an old emoji one → Dralingo (only our roster, 2026-10-13)
+    const url = window.Saga ? (window.Saga.avatarUrl(value) || window.Saga.avatarUrl('dralingo')) : null;
     if (url) {
-      return `<img class="wu-nb-avatar-img" src="${escapeHtml(url)}" alt="${escapeHtml(String(value))}" draggable="false">`;
+      return `<img class="wu-nb-avatar-img" src="${escapeHtml(url)}" alt="${escapeHtml(String(value || 'Dralingo'))}" draggable="false">`;
     }
-    return `<span class="wu-nb-avatar-emoji">${escapeHtml(value || '🧒🏼')}</span>`;
+    return '<span class="wu-nb-avatar-emoji">🐉</span>';
   }
 
   // === CUADERNO DE ALUMNOS ============================================

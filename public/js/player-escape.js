@@ -620,8 +620,10 @@
     if (!box) {
       box = document.createElement('div');
       box.className = 'es-pintro'; box.id = 'es-pintro';
+      // 2026-10-13: the phone's own VS card, like the projector's split (crew on the warm side, Robotín on the cool side)
       box.innerHTML = '<div class="es-pintro-title">La Gran Fuga<small>de Dubái</small></div>'
-        + '<div class="es-pintro-row" id="es-pintro-row"></div><div class="es-pintro-you">¡Tú vas en la tripulación!</div>';
+        + '<div class="es-pintro-row" id="es-pintro-row"></div><div class="es-pintro-you">¡Tú vas en la tripulación!</div>'
+        + '<div class="es-pintro-vs">VS</div><div class="es-pintro-robo" id="es-pintro-robo"></div>';
       ov.prepend(box);
     }
     const row = $('es-pintro-row');
@@ -630,8 +632,10 @@
     mk(D + 'power.webp', '', 0);
     mk(R.SKIN_URL(M.skinFor(localAvatar(), myName())), 'me', 1);
     if (window.DralingoCast) mk(DralingoCast.pose('fer', 'hello'), '', 2);
-    const vs = document.createElement('span'); vs.className = 'es-pintro-vs'; vs.textContent = 'VS'; row.appendChild(vs);
-    const c = document.createElement('canvas'); c.width = 172; c.height = 172; row.appendChild(c);
+    const robo = $('es-pintro-robo');
+    robo.innerHTML = '';
+    const c = document.createElement('canvas'); c.width = 172; c.height = 172; robo.appendChild(c);
+    const tag = document.createElement('span'); tag.className = 'es-pintro-robotag'; tag.textContent = 'Robotín'; robo.appendChild(tag);
     let t0 = performance.now();
     const tick = (ts) => {
       if (!c.isConnected || $('screen-countdown').classList.contains('hidden')) return;
