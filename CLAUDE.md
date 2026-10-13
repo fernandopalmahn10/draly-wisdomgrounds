@@ -42,6 +42,10 @@ the checklist for any new game mode.
 - **Deleting a CSS/JS file?** First list every class/selector it defines and grep the remaining pages for them; shared
   rules hide in game files (2026-10-10: the avatar picker, timer pulse and music chip lived in zombie/triage/color-clash
   css and broke every lobby). Bot playtests can't see styling: also screenshot a lobby + question screen.
+- **/maestro (remade 2026-10-13, `docs/specs/maestro-remake.md`)** loads only `css/teacher-dashboard.css` (style new
+  dashboard parts there; `maestro.css` now serves `host-hsk.html` only). Messages use `notify()` toasts, never
+  `alert()`; new windows are `.m-modal` + `.m-modal-card` (Esc, focus and scroll lock come for free); the start
+  actions stay at the top, nothing class-critical goes deeper than 2 taps.
 - Question packs follow the curriculum (`core/packs.js` → picker `/packs.html?game=…`): test family → level → world →
   round. Content lives in `core/packs/<level>.js` (words + exam-style items; built into questions by `core/packs.js`).
   Pictures come from Higgsfield (Nano Banana Pro, Unlimited ON) in his Chrome, saved to `assets-library/higgsfield/`,
@@ -180,6 +184,17 @@ the checklist for any new game mode.
   UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
   answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /
   win / lose), recorded music + sound effects (no synthesized beeps), pictures made for each question.
+- **Game-show moments on every phone, not only the projector** (his direction 2026-10-13, about the Reinos de Colores
+  VS intro: "that's what makes me feel like I'm living in a video game like Nintendo… more of these should be on the
+  kids' screens, not just the host's"). Every moment the projector stages (captains VS intro with the red/blue split,
+  the big 3-2-1, landmark captures, half-time/last-minute alarms, the winner reveal) also plays on each phone in a
+  phone-sized version, with the kid's own team colour, avatar and captain ("¡Tú eres del Reino del Fuego!"). Short
+  (≤ 2.5 s), never covering the answer tiles, reduced-motion respected, light enough for cheap phones.
+- **Design skills on every kid/teacher screen** (his question 2026-10-13: "have you been using Emil Kowalski, taste and
+  impeccable?"): any new or changed screen of the platform or a pin game gets a pass with `emil-design-eng` (motion,
+  press feel, timing), `design-taste-frontend` (layout and visual direction) and `impeccable` (critique + polish)
+  before it ships, compared side by side with Reinos de Colores. The area's own look always wins (palette, Dralingo
+  in his platform look, the cast, Spanish kid UI, big tap targets).
 - **Kids don't read instructions** (his correction 2026-10-11: "kids don't understand, so they start asking questions").
   Every mechanic must explain itself on the phone: a first-play card with 3 big pictured steps, and whenever a kid is
   blocked (out of energy/fire, waiting for a turn) a big full-width prompt with Dralingo that says exactly what to tap
