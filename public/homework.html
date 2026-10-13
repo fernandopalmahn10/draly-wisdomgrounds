@@ -74,8 +74,10 @@
   <link rel="stylesheet" href="/css/characters.css?v=20260601o">
   <!-- 2026-10-11 pastel sticker restyle, loaded last; every rule is scoped to body.hw-pastel (drop the class to roll back) -->
   <link rel="stylesheet" href="/css/homework-pastel.css?v=20261012d">
+  <!-- 2026-10-13 remake (docs/specs/portal-remake.md), loaded last; every rule is scoped to body.hw-portal (without the class the layer and js/portal.js stay off) -->
+  <link rel="stylesheet" href="/css/portal.css?v=20261013b">
 </head>
-<body class="hw-bg hw-pastel">
+<body class="hw-bg hw-pastel hw-portal">
 
   <!-- SCREEN: ENTRY — access code + student code -->
   <div id="screen-entry" class="container hw-entry">
@@ -125,37 +127,48 @@
 
   <!-- SCREEN: ASSIGNMENT LIST — student's home -->
   <div id="screen-list" class="container hw-list hidden">
-    <div class="hw-list-header">
-      <div class="hw-list-header-id">
-        <div class="hw-list-avatar-wrap" id="hw-list-avatar"></div>
-        <div>
+    <!-- 2026-10-13 remake (docs/specs/portal-remake.md): the home is a game menu. 1) the hero stage (Dubai, the kid,
+         the level HUD, Dralingo + a friend who peeks in: js/portal.js), 2) «Siguiente» = the next tarea in one tap,
+         3) the dock (Desafíos · Mensajes · Mis oraciones · Mis exámenes), 4) quiet pills (Papás · Ajustes · app · Salir).
+         Every id the JS binds is kept. The pinned 🔑 code + level stack sits over the hero's empty sky corner. -->
+    <section class="pt-hero" aria-label="Tu perfil">
+      <img class="pt-hero-skyline" src="/assets/dubai/skyline-wide.webp" alt="" aria-hidden="true" draggable="false">
+      <div class="pt-hero-id">
+        <button type="button" class="hw-list-avatar-wrap pt-hero-avatar" id="hw-list-avatar" aria-label="Mis ajustes"></button>
+        <div class="pt-hero-hello">
           <h1 class="hw-list-title">📚 Mis Tareas</h1>
           <p class="hw-list-sub">Hola <strong id="hw-list-name">…</strong></p>
         </div>
       </div>
-      <div class="hw-list-header-actions">
-        <button class="btn btn-ghost btn-sm hw-bell-btn" id="hw-list-inbox" title="Mensajes de mi maestra">
-          🔔 <span class="hw-bell-badge" id="hw-bell-badge" style="display:none;">0</span>
-        </button>
-        <button class="btn btn-gold btn-sm hw-daily-cta" id="hw-list-daily">⚔️ Desafíos</button>
-        <button class="btn btn-ghost btn-sm" id="hw-list-sentences">📜 Mis oraciones</button>
-        <button class="btn btn-ghost btn-sm" id="hw-list-myexams">📝 Mis exámenes</button>
-        <button class="btn btn-gold btn-sm" id="hw-list-install" type="button" data-pwa-install hidden>📲 Instalar app</button>
-        <button class="btn btn-ghost btn-sm" id="hw-list-settings">⚙️ Ajustes</button>
-        <button class="btn btn-ghost btn-sm" id="hw-list-parents">👨‍👩‍👧 Papás</button>
-        <button class="btn btn-ghost btn-sm" id="hw-list-logout">Salir</button>
-      </div>
-    </div>
-    <!-- ⚔️ PROGRESSION HUD — level, XP, DralySwords, streak. Tap → Diario. -->
-    <button class="hw-hud" id="hw-hud" type="button" title="Abre tu Diario">
-      <span class="hw-hud-tier" id="hw-hud-tier">🥉</span>
-      <span class="hw-hud-xp">
-        <span class="hw-hud-lvl" id="hw-hud-lvl">Nivel 1</span>
-        <span class="hw-hud-bar"><span class="hw-hud-fill" id="hw-hud-fill"></span></span>
-      </span>
-      <span class="hw-hud-stat">⚔️ <strong id="hw-hud-swords">0</strong></span>
-      <span class="hw-hud-stat">🔥 <strong id="hw-hud-streak">0</strong></span>
+      <div class="pt-hero-cast" id="pt-hero-cast" aria-hidden="true"></div>
+      <!-- ⚔️ PROGRESSION HUD — level, XP, DralySwords, streak. Tap → Diario. -->
+      <button class="hw-hud" id="hw-hud" type="button" title="Abre tu Diario">
+        <span class="hw-hud-tier" id="hw-hud-tier">🥉</span>
+        <span class="hw-hud-xp">
+          <span class="hw-hud-lvl" id="hw-hud-lvl">Nivel 1</span>
+          <span class="hw-hud-bar"><span class="hw-hud-fill" id="hw-hud-fill"></span></span>
+        </span>
+        <span class="hw-hud-stat">⚔️ <strong id="hw-hud-swords">0</strong></span>
+        <span class="hw-hud-stat">🔥 <strong id="hw-hud-streak">0</strong></span>
+      </button>
+    </section>
+    <!-- ▶ the next tarea in one tap (filled by renderNextUp() in homework.js; hidden when nothing is pending) -->
+    <button type="button" class="pt-next" id="pt-next" hidden>
+      <span class="pt-next-play" aria-hidden="true">▶</span>
+      <span class="pt-next-text"><span class="pt-next-kicker">Siguiente</span><b class="pt-next-title" id="pt-next-title"></b></span>
     </button>
+    <nav class="pt-dock" aria-label="Menú">
+      <button class="pt-tile pt-tile-gold" id="hw-list-daily" type="button"><span class="pt-tile-ico" aria-hidden="true">⚔️</span><span class="pt-tile-label">Desafíos</span></button>
+      <button class="pt-tile hw-bell-btn" id="hw-list-inbox" type="button" title="Mensajes de mi maestra"><span class="pt-tile-ico" aria-hidden="true">🔔</span><span class="pt-tile-label">Mensajes</span><span class="hw-bell-badge" id="hw-bell-badge" style="display:none;">0</span></button>
+      <button class="pt-tile" id="hw-list-sentences" type="button"><span class="pt-tile-ico" aria-hidden="true">📜</span><span class="pt-tile-label">Mis oraciones</span></button>
+      <button class="pt-tile" id="hw-list-myexams" type="button"><span class="pt-tile-ico" aria-hidden="true">📝</span><span class="pt-tile-label">Mis exámenes</span></button>
+    </nav>
+    <div class="pt-util">
+      <button class="pt-pill" id="hw-list-parents" type="button">👨‍👩‍👧 Papás</button>
+      <button class="pt-pill" id="hw-list-settings" type="button">⚙️ Ajustes</button>
+      <button class="pt-pill pt-pill-gold" id="hw-list-install" type="button" data-pwa-install hidden>📲 Instalar app</button>
+      <button class="pt-pill" id="hw-list-logout" type="button">Salir</button>
+    </div>
 
     <!-- 📁 FOLDER BREADCRUMB — appears once you open an experience folder.
          Sticky (CSS position:fixed) so the Volver button is ALWAYS visible
@@ -229,7 +242,7 @@
           <button class="hw-sent-back" id="hw-sentences-close" type="button" aria-label="Volver">← Volver</button>
           <div class="hw-sent-hero-text">
             <h2 class="hw-sent-title">📜 Mis oraciones</h2>
-            <p class="hw-sent-sub" id="hw-sentences-sub">Tu colección de chino · 🔊 Escucha · ✏️ Edita · 🗑 Borra · 🔍 Toca una palabra para explorarla.</p>
+            <p class="hw-sent-sub" id="hw-sentences-sub">Tu colección de Chino Mandarín · 🔊 Escucha · ✏️ Edita · 🗑 Borra · 🔍 Toca una palabra para explorarla.</p>
           </div>
         </header>
         <div class="hw-sent-tabs" role="tablist">
@@ -636,8 +649,9 @@
   <script src="/js/saga.js?v=20261012b"></script>
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/hw-i18n.js?v=20261012g"></script>
-  <script src="/js/homework.js?v=20261012j"></script>
+  <script src="/js/hw-i18n.js?v=20261013b"></script>
+  <script src="/js/portal.js?v=20261013b"></script>
+  <script src="/js/homework.js?v=20261013b"></script>
   <script src="/js/super-admin-badge.js?v=20261011c"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
