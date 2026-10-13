@@ -63,11 +63,19 @@
       img.alt = AVATAR_LABELS[value] || value;
       img.draggable = false;
       el.appendChild(img);
+    } else if (window.Saga && window.Saga.avatarUrl('dralingo')) {
+      // no avatar yet (or an old emoji one): Dralingo, never a generic emoji face (only our roster, 2026-10-13)
+      el.classList.add('is-svg');
+      const img = document.createElement('img');
+      img.src = window.Saga.avatarUrl('dralingo');
+      img.alt = 'Dralingo';
+      img.draggable = false;
+      el.appendChild(img);
     } else {
       el.classList.add('is-emoji');
       const span = document.createElement('span');
       span.className = 'hw-avatar-emoji-fallback';
-      span.textContent = value || '🧒🏼';
+      span.textContent = '🐉';
       el.appendChild(span);
     }
   }

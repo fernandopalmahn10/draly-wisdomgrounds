@@ -3660,12 +3660,13 @@
 
   function renderAvatar(value, size) {
     // saga avatars (WebP), the generic SVGs, and old brand ids shown as their saga replacement (public/js/saga.js)
-    const url = window.Saga ? window.Saga.avatarUrl(value) : null;
+    // no avatar yet / an old emoji one → Dralingo, never a generic emoji face (only our roster, 2026-10-13)
+    const url = window.Saga ? (window.Saga.avatarUrl(value) || window.Saga.avatarUrl('dralingo')) : null;
     if (url) {
       const cls = size === 'large' ? ' m-avatar-img-large' : '';
       return `<img class="m-avatar-img${cls}" src="${escapeHtml(url)}" alt="">`;
     }
-    return `<span class="m-avatar-emoji">${escapeHtml(value || '🧒🏼')}</span>`;
+    return '<span class="m-avatar-emoji">🐉</span>';
   }
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

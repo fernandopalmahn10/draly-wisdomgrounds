@@ -387,15 +387,24 @@ body.es-card-on .es-zhud, body.es-card-on .es-status, body.es-card-on .es-arrow,
 .es-how li > .es-ico-zone img { height: 44px; margin-top: -6px; }
 .kdp-team.es-team { background: var(--es-turbo) !important; color: var(--es-ink) !important; }
 /* countdown on the phone: the episode card with my avatar in the crew */
-.es-pintro { display: grid; justify-items: center; gap: 6px; margin-bottom: 4px; }
+/* the phone's VS card (2026-10-13): the projector's split, stacked for a phone: crew on the warm side, Robotín on the
+   cool side, a cream seam and a big VS on it */
+.es-pintro { position: relative; width: min(100%, 400px); display: grid; justify-items: center; gap: 6px; margin: 0 auto 10px;
+  padding: 16px 12px 14px; border: 4px solid var(--es-ink); border-radius: 28px; box-shadow: 0 6px 0 var(--es-ink); overflow: hidden;
+  background: linear-gradient(170deg, #ffc98a 0 55%, #fff6e3 55% 56.5%, #8ee6f0 56.5% 100%); }
+.es-pintro-robo { display: grid; justify-items: center; gap: 4px; margin-top: -6px; }
+.es-pintro-robo canvas { width: 132px; height: 132px; animation: kdCapInR .6s var(--es-ease-out) both; }
+.es-pintro-robotag { font: 800 1.05rem/1 'Baloo 2', sans-serif; color: #fff; background: var(--es-robo-deep); border: 3px solid var(--es-ink);
+  border-radius: 999px; padding: 4px 14px; box-shadow: 0 3px 0 var(--es-ink); }
 .es-pintro-title { font: 800 2.1rem/1 'Baloo 2', sans-serif; color: #fff; -webkit-text-stroke: 2px var(--es-ink); paint-order: stroke fill; text-shadow: 0 3px 0 var(--es-ink); text-align: center; }
 .es-pintro-title small { display: block; font-size: .7em; color: var(--es-turbo-hot); }
 .es-pintro-row { display: flex; align-items: flex-end; justify-content: center; gap: 4px; }
-.es-pintro-row img { width: 70px; height: 70px; object-fit: contain; margin: 0 -6px; animation: esKidIn .4s var(--es-ease-out) both; animation-delay: calc(var(--i) * 60ms); }
-.es-pintro-row img.me { width: 118px; height: 118px; filter: drop-shadow(0 4px 0 rgba(29,36,64,.3)); z-index: 1; }
+.es-pintro-row img { width: 82px; height: 82px; object-fit: contain; margin: 0 -6px; animation: esKidIn .4s var(--es-ease-out) both; animation-delay: calc(var(--i) * 60ms); }
+.es-pintro-row img.me { width: 136px; height: 136px; filter: drop-shadow(0 4px 0 rgba(29,36,64,.3)); z-index: 1; }
 .es-pintro-row canvas { width: 104px; height: 104px; margin-left: 2px; animation: kdCapInR .6s var(--es-ease-out) both; }
 .es-pintro-you { font: 800 1rem/1 'Baloo 2', sans-serif; background: var(--es-turbo-hot); border: 3px solid var(--es-ink); border-radius: 999px; padding: 3px 12px; }
-.es-pintro-vs { font: 800 1.4rem/1 'Baloo 2', sans-serif; margin: 0 2px 26px; color: var(--es-robo-deep); }
+.es-pintro-vs { font: 800 2.6rem/1 'Baloo 2', sans-serif; color: #fff; -webkit-text-stroke: 2px var(--es-ink); paint-order: stroke fill;
+  text-shadow: 0 4px 0 var(--es-ink); margin: 4px 0 0; animation: esKidIn .4s var(--es-ease-out) .2s both; }
 body.es-on .countdown-overlay .kdp-count-img { display: none; }
 body.es-on .countdown-overlay { background: linear-gradient(180deg, #ffd6a5 0%, #ffc9d6 60%, #d9c4f2 100%) !important; }
 /* the end on the phone: the crew rank + my own numbers */
@@ -418,7 +427,7 @@ body.es-on:has(#screen-escape:not(.hidden)) .muted-toggle { top: auto !important
 /* small Android screens: the second row of answer tiles must stay above the fold */
 @media (max-height: 620px) { body.es-on .question-image-wrap { max-height: 22vh !important; } .es-rail { height: 56px; } .es-rail-hearts { font-size: .75rem; } .es-band { top: calc(80px + env(safe-area-inset-top)); } }
 @media (prefers-reduced-motion: reduce) {
-  .es-band, .es-band.out, .es-lane-me, .es-lane-robot, .es-turbo-word, .es-zcard, .es-zcard.cleared img, .es-you img, .es-pintro-row img, .es-pintro-row canvas, .es-pbadge,
+  .es-band, .es-band.out, .es-lane-me, .es-lane-robot, .es-turbo-word, .es-zcard, .es-zcard.cleared img, .es-you img, .es-pintro-row img, .es-pintro-robo canvas, .es-pintro-vs, .es-pbadge,
   .es-rail.close, body.es-on.es-dizzy .answer-btn { animation: none !important; }
   .es-band.out { opacity: 0; }
   .es-lane-me { transform: translateX(min(54vw, 236px)); }
