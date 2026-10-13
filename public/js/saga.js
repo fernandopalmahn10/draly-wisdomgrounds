@@ -21,6 +21,10 @@
     { id: 'plane', label: '✈️ Avión de Dubái', url: '/assets/saga/anim/plane.webp', still: '/assets/saga/anim/plane-still.webp' },
     { id: 'falcon', label: '🦅 Halcón', url: '/assets/saga/anim/falcon.webp', still: '/assets/saga/anim/falcon-still.webp' },
     { id: 'oryx', label: '🦌 Órix', url: '/assets/saga/anim/oryx.webp', still: '/assets/saga/anim/oryx-still.webp' },
+    // 2026-10-13: his route — local AI picture on green → Canva Image to Video → ../video_tools/canva_anim.py
+    { id: 'dralingo-festeja', label: '🎉 Dralingo festeja', url: '/assets/dralingo/anim/cheer.webp', still: '/assets/dralingo/anim/cheer-still.webp' },
+    { id: 'fer-bienvenida', label: '👨‍🏫 Profe Fer', url: '/assets/cast/anim/fer-welcome.webp', still: '/assets/cast/anim/fer-welcome-still.webp' },
+    { id: 'adric-festeja', label: '🐕 Adric y su perro', url: '/assets/cast/anim/adric-cheer.webp', still: '/assets/cast/anim/adric-cheer-still.webp' },
   ];
   // cry: shown big during the burst (the cast bible's voice: Hamdan/Latifa say «Yalla», Aileen speaks with voseo)
   const BURSTS = [

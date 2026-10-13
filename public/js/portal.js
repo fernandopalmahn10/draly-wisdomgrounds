@@ -28,7 +28,17 @@
   GANG.forEach((id) => {
     POSES[id] = { ready: C + id + '-hello.webp', victory: C + id + '-cheer.webp', kindSad: C + id + '-mystery.webp', pointing: C + id + '-hello.webp' };
   });
-  function pose(id, p) { const c = POSES[id] || POSES.dralingo; return c[p] || c.ready; }
+  // Animated poses (Canva clips keyed to WebP, ~1 MB): one kid at home sees them; reduced motion gets the still frame.
+  const ANIMATED = {
+    'dralingo:victory': D + 'anim/cheer',
+    'adric:victory': C + 'anim/adric-cheer',
+    'fer:ready': C + 'anim/fer-welcome',
+  };
+  function pose(id, p) {
+    const a = ANIMATED[(POSES[id] ? id : 'dralingo') + ':' + p];
+    if (a) return a + (reduced() ? '-still.webp' : '.webp');
+    const c = POSES[id] || POSES.dralingo; return c[p] || c.ready;
+  }
   let kidAvatar = null;   // the kid's own avatar id (HwPortal.kid): the friends who react are never the kid
 
   const Cast = () => window.DralingoCast || null;
