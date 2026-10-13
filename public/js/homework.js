@@ -112,16 +112,20 @@
   // 🎯 SIM TRAINER (HSK1) — 3 tiers · 8 mini-tests built from the REAL
   // simulation bank (images + audio). Meta fetched once after login.
   let trainerMeta = null;   // { tiers, trainers, sessionSize, passPct }
+  let trainerMetaLoading = false;
   function fetchTrainerMeta() {
     if (hwLevel !== 'hsk1' || trainerMeta) return;
+    trainerMetaLoading = true;
+    const done = () => { trainerMetaLoading = false; };
     fetch('/api/homework/trainer/list?accessCode=' + encodeURIComponent(accessCode))
       .then((r) => r.json())
       .then((d) => {
-        if (!d || !d.ok) return;
+        done();
+        if (!d || !d.ok) { renderNextUp(); return; }
         trainerMeta = d;
         if (!hwFolder) renderList();   // repaint the root with the hero
       })
-      .catch(() => {});
+      .catch(() => { done(); renderNextUp(); });
   }
   function trainerBest(tid) {
     let best = null;
@@ -424,6 +428,7 @@
         } else {
           renderList();
           showScreen('list');
+          ptWelcome();
         }
         // 🔑 Brand-new account → BIG banner with their student code so
         // they write it down (prevents duplicate accounts).
@@ -739,6 +744,7 @@
   });
   $('hw-list-parents').addEventListener('click', openParentView);
   $('hw-list-settings').addEventListener('click', openSettings);
+  $('hw-list-avatar').addEventListener('click', () => openSettings());   // tap your character = your settings (game menus)
   // 📜 Mis oraciones — kid's saved warmup sentences + 🔊 listen.
   $('hw-list-sentences').addEventListener('click', openMySentences);
   $('hw-sentences-close').addEventListener('click', () => $('hw-sentences-overlay').classList.add('hidden'));
@@ -771,7 +777,7 @@
   function renderMyExams(attempts) {
     const list = $('hw-myexams-list');
     if (!attempts.length) {
-      list.innerHTML = '<div class="hw-empty">Aún no has hecho ningún examen HSK. Cuando tu maestra abra una sala de examen, tu primer intento aparecerá aquí. 📝</div>';
+      list.innerHTML = '<div class="hw-empty">Aún no has hecho ningún examen. Cuando tu maestra abra una sala de examen, tu primer intento aparecerá aquí. 📝</div>';
       return;
     }
     list.innerHTML = '';
@@ -1236,6 +1242,11 @@
     if ($('hw-hud-tier')) $('hw-hud-tier').textContent = (p.tier && p.tier.emoji) || '🥉';
     if ($('hw-hud-swords')) $('hw-hud-swords').textContent = p.swords;
     if ($('hw-hud-streak')) $('hw-hud-streak').textContent = p.streak;
+    // 2026-10-13: a higher level / a longer streak than this phone saw last → a banner on the home (YCT 1 has no HUD)
+    if (window.HwPortal) {
+      const onList = !$('screen-list').classList.contains('hidden') && !document.body.classList.contains('hw-no-daily');
+      window.HwPortal.hud(p, studentCode, onList);
+    }
   }
   function openDaily() {
     if (document.body.classList.contains('hw-no-daily')) return;   // YCT 1: Desafíos are above their level
@@ -2624,12 +2635,22 @@
           return;
         }
         $('hw-avatar-err').textContent = 'Guardando…';
+        // character select: the picked tile jumps and goes gold while it saves
+        grid.querySelectorAll('.hw-avatar-option').forEach((b) => b.classList.toggle('selected', b.dataset.name === picked));
+        const pickedAt = Date.now();
+        grid.style.pointerEvents = 'none';
         (typed && !realName() ? saveName(typed) : Promise.resolve(true)).then(() => saveAvatar(picked)).then((ok) => {
+          if (!ok) return false;
+          return new Promise((res) => setTimeout(() => res(true), Math.max(0, 450 - (Date.now() - pickedAt))));
+        }).then((ok) => {
+          grid.style.pointerEvents = '';
           if (!ok) return;
           $('hw-avatar-err').textContent = '';
           renderList();
           showScreen('list');
+          ptWelcome();
         }).catch((e) => {
+          grid.style.pointerEvents = '';
           $('hw-avatar-err').textContent = 'Error: ' + e.message;
         });
       }));
@@ -3620,6 +3641,18 @@
   // 🎉 EPIC CELEBRATION — confetti canvas + 3D-rotating emoji + big
   // COMPLETADO ("go super crazy, Claude style").
   function epicCelebration(opts) {
+    // 2026-10-13 remake: the game-show reveal (js/portal.js) — the kid's avatar + one of the gang, count-up, stars,
+    // confetti only when passed, a kind «¡Casi!» otherwise. «Siguiente» / «Otra vez» when there is one.
+    if (window.HwPortal) {
+      const actions = [];
+      if (opts.pass && opts.next) actions.push({ label: '▶ Siguiente', kind: 'primary', run: opts.next });
+      if (!opts.pass && opts.retry) actions.push({ label: '🔁 Otra vez', kind: 'primary', run: opts.retry });
+      window.HwPortal.reveal({
+        score: opts.score, total: 100, right: opts.right, of: opts.of, pass: opts.pass, passPct: opts.passPct,
+        avatarUrl: ptAvatarUrl(), actions, onClose: opts.onClose,
+      });
+      return;
+    }
     const wrap = document.createElement('div');
     wrap.className = 'hw-epic';
     const emojiSet = opts.pass ? ['🎉', '⭐', '🐉', '🥳', '🏆', '✨'] : ['💪', '🌱', '🔥'];
@@ -3778,7 +3811,12 @@
       + '<p class="hw-tr-instr" id="hw-tr-instr"></p>'
       + '<div class="hw-tr-q" id="hw-tr-q"></div>';
     document.body.appendChild(ov);
-    ov.querySelector('#hw-tr-back').addEventListener('click', () => { trStopAudio(); ov.remove(); });
+    let streak = 0;   // right answers in a row → «¡Combo x3!» (js/portal.js)
+    ov.querySelector('#hw-tr-back').addEventListener('click', () => {
+      // mid-round, ← used to throw the answers away without a word (critique 2026-10-13)
+      if (answers.length && answers.length < qs.length && !confirm('¿Salir de la ronda? Perderás tus respuestas.')) return;
+      trStopAudio(); ov.remove();
+    });
 
     function drawDots() {
       const el = ov.querySelector('#hw-tr-dots');
@@ -3845,10 +3883,12 @@
       checking.then((v) => {
         if (!v || !v.ok) { locked = false; _hwToast('Error — intenta otra vez'); return; }
         answers[idx] = { qid: q.qid, answer: given, ok: v.correct };
+        streak = v.correct ? streak + 1 : 0;
         if (v.correct) {
           rightCount++;
           const r = btn.getBoundingClientRect();
           miniBurst(r.left + r.width / 2, r.top + r.height / 2);
+          if (window.HwPortal) window.HwPortal.combo(streak, ov);
         }
         btn.classList.add(v.correct ? 'is-right' : 'is-wrong');
         if (!v.correct) {
@@ -3859,6 +3899,7 @@
         }
         drawDots();
         setTimeout(() => {
+          if (!ov.isConnected) return;   // the kid left the round (←)
           idx++;
           if (idx < qs.length) drawQuestion();
           else finish();
@@ -3875,9 +3916,13 @@
         const score = d && d.ok ? d.score : Math.round((rightCount / qs.length) * 100);
         const asgId = mode ? mode.assignmentId : 'trainer-t' + sess.tier.tier + '-' + sess.exp;
         if (d && d.ok) submissions.push({ assignmentId: asgId, score: d.score, total: d.total, ts: Date.now() });
-        const pass = score >= (!mode && trainerMeta ? trainerMeta.passPct : HW_PASS_PCT);
+        const passPct = !mode && trainerMeta ? trainerMeta.passPct : HW_PASS_PCT;
+        const pass = score >= passPct;
+        const nx = pass ? nextUp(hwFolder, mode ? mode.assignmentId : 'trainer-t' + sess.tier.tier + '-' + sess.exp) : null;
         epicCelebration({
-          score: score, right: rightCount, of: qs.length, pass: pass,
+          score: score, right: rightCount, of: qs.length, pass: pass, passPct: passPct,
+          retry: mode ? () => openAssignment(mode.assignmentId) : () => openTrainer(sess.tier.tier, sess.exp),
+          next: nx ? nx.run : null,
           onClose: function () { ov.remove(); renderList(); },
         });
       }).catch(() => { _hwToast('Error al entregar'); });
@@ -3896,11 +3941,72 @@
       if (inp) { inp.scrollIntoView({ block: 'center' }); inp.focus(); }
     };
     renderAvatarInto($('hw-list-avatar'), avatar);
+    if (window.HwPortal) window.HwPortal.kid(avatar && window.Saga && window.Saga.legacyAvatar(avatar) || avatar);   // the hero friend is never the kid's own avatar
     renderPinnedStack();
+    // inside a world the hero, «Siguiente», the dock and the pills step away: the folder bar is the top bar
+    $('screen-list').classList.toggle('pt-in-folder', !!hwFolder);
     if (hwFolder) renderFolderContents(hwFolder);
     else renderFolderRoot();
+    renderNextUp();
     // Refresh reading state once; its callback re-renders (no fetch loop).
     fetchReadingTests();
+  }
+
+  // ▶ «Siguiente» (2026-10-13 remake: fast to the core activity): the next thing to play, in one tap. Teacher-sent
+  // tareas first, then the level's tareas in folder order (the open world first); the HSK 1 trainer home: the first
+  // tier · experiencia not passed yet. exclude = the tarea that just ended (in case its submit didn't reach us).
+  function nextUp(preferFolder, exclude) {
+    const custom = taggedCustomAssignments().find((x) => x.status !== 'done' && x.a.id !== exclude);
+    if (custom) return { title: custom.a.title || 'Tarea especial', run: () => openAssignment(custom.a.id) };
+    if (hwLevel === 'hsk1' && trainerMetaLoading && !trainerMeta && !hwClassicView && !preferFolder) return null;
+    if (hwLevel === 'hsk1' && trainerMeta && !hwClassicView && !preferFolder) {
+      for (const tier of trainerMeta.tiers || []) {
+        const row = (trainerMeta.matrix || {})['t' + tier.tier] || {};
+        for (const e of ['exp1', 'exp2', 'exp3', 'exp4', 'exp5', 'exp6', 'exp7', 'exp8']) {
+          const tid = 'trainer-t' + tier.tier + '-' + e;
+          if (!row[e] || tid === exclude || (trainerBest(tid) || 0) >= trainerMeta.passPct) continue;
+          const label = (trainerMeta.expLabels || {})[e] || ((window.WU_EXPERIENCES || {})[e] || {}).label || e;
+          return { title: tier.title + ' · ' + label, run: () => openTrainer(tier.tier, e) };
+        }
+      }
+      return null;
+    }
+    const exps = hwExps();
+    const order = hwFolderIds().filter((f) => exps[f]);
+    if (preferFolder && order.includes(preferFolder)) order.unshift(preferFolder);
+    for (const f of order) {
+      const a = assignments.find((x) => x.expLabel === f && x.id !== exclude && !assignmentPassed(x));
+      if (a) return { title: a.title, run: () => openAssignment(a.id) };
+    }
+    return null;
+  }
+  function renderNextUp() {
+    const b = $('pt-next');
+    if (!b) return;
+    const n = hwFolder ? null : nextUp();
+    b.hidden = !n;
+    b.onclick = n ? n.run : null;
+    if (n) $('pt-next-title').textContent = n.title;
+  }
+  // empty states get Dralingo's «pointing» pose (POSES map in js/portal.js)
+  function ptEmptyPose(host) {
+    const box = host && host.querySelector('.hw-empty');
+    if (!box || !window.HwPortal || box.querySelector('.pt-empty-pose')) return;
+    const im = document.createElement('img');
+    box.classList.add('pt-empty');
+    im.className = 'pt-empty-pose';
+    im.alt = '';
+    im.src = window.HwPortal.pose('dralingo', 'pointing');
+    box.prepend(im);
+  }
+  // the 2026-10-13 welcome moment (js/portal.js): once per visit, after the list is on screen
+  function ptWelcome() {
+    if (!window.HwPortal) return;
+    window.HwPortal.welcome({ code: studentCode, name: realName(), avatarUrl: ptAvatarUrl(), level: hwLevelName() });
+  }
+  // the kid's picture for the moments; an old emoji avatar has none (the frame stays empty, never a broken image)
+  function ptAvatarUrl() {
+    return isSvgAvatar(avatar) ? avatarSrc(avatar) : '';
   }
 
   // 🎯 Pull custom assignments the teacher sent to ME. ONLY re-renders the
@@ -3916,6 +4022,7 @@
         customAssignments = (d && d.assignments) || [];
         if (!hwFolder) renderCustomSection();
         updateTabCounts();
+        renderNextUp();   // a teacher-sent tarea goes first in «Siguiente»
       })
       .catch(() => { customAssignments = []; });
   }
@@ -3946,6 +4053,7 @@
     wrap.innerHTML = '';
     if (!tagged.length) {
       wrap.innerHTML = '<div class="hw-empty">Tu maestro/a aún no te ha enviado tareas. ✨</div>';
+      ptEmptyPose(wrap);
       return;
     }
     renderCustomCards(wrap, tagged);
@@ -4009,7 +4117,7 @@
     grid.innerHTML = '';
     const exps = hwExps();   // the level's folders: experiencias (HSK) or worlds (YCT)
     const showDone = currentTab === 'done';
-    hwFolderIds().forEach((expId) => {
+    hwFolderIds().forEach((expId, worldIdx) => {
       const exp = exps[expId];
       if (!exp) return;
       const eAssigns = assignments.filter((a) => a.expLabel === expId);
@@ -4034,7 +4142,9 @@
         <div class="hw-folder-emoji">${emoji}</div>
         <div class="hw-folder-name">${escapeHtml(exp.label || expId)}</div>
         <div class="hw-folder-meta">${total + ' actividad' + (total === 1 ? '' : 'es') + ' en total'}</div>
-        ${meta}`;
+        ${meta}
+        ${done && total ? `<span class="pt-world-bar" aria-hidden="true"><i style="width:${Math.round((done / total) * 100)}%"></i></span>` : ''}`;
+      card.dataset.world = String(worldIdx % 8);   // its own tint (portal.css)
       // 🛡️ data-folder-id mirrors the data-assignment-id approach so the
       // global capture-phase delegate catches folder taps too, even if
       // this per-card handler ever fails to attach (e.g. re-render race).
@@ -4046,6 +4156,7 @@
       grid.innerHTML = showDone
         ? '<div class="hw-empty">Aún no has completado ninguna tarea. ¡Vamos a Pendientes! 💪</div>'
         : '<div class="hw-empty">🎉 ¡Sin pendientes! Has terminado todo lo disponible.</div>';
+      ptEmptyPose(grid);
     }
   }
 
@@ -4077,6 +4188,7 @@
       grid.innerHTML = showDone
         ? '<div class="hw-empty">Aún no has completado actividades de esta unidad.</div>'
         : '<div class="hw-empty">¡Sin pendientes en esta unidad! 🎉</div>';
+      ptEmptyPose(grid);
     }
   }
   // 🔢 Update the 3 tab count badges. Called whenever data changes.
@@ -4502,6 +4614,7 @@
         }
         // Reuse the assignment-results screen for a consistent look
         showResults({
+          reading: true,
           score: data.score,
           total: data.total,
           breakdown: (data.breakdown || []).map((b) => ({
@@ -5352,6 +5465,14 @@
 
   function showResults(data) {
     showScreen('results');
+    // 2026-10-13 remake: the same game-show reveal as the game rounds, over this screen; its button opens the answers
+    if (window.HwPortal && data.total > 0) {
+      window.HwPortal.reveal({   // 80 % for every tarea (custom ones: 10 points per item, «8 per item» = 80 %)
+        score: data.score, total: data.total, pass: data.score * 100 >= data.total * HW_PASS_PCT, passPct: HW_PASS_PCT,
+        avatarUrl: ptAvatarUrl(), continueLabel: '📋 Ver mis respuestas',
+      });
+    }
+    $('screen-results').classList.toggle('pt-low', !(data.total > 0 && data.score * 100 >= data.total * HW_PASS_PCT));
     $('hw-results-total').textContent = data.total;
     const pct = (data.score / data.total) * 100;
     const cert = pct >= 95 ? { emoji: '🏅', text: '¡PERFECTO!' }
@@ -5437,6 +5558,7 @@
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });
+    if (window.HwPortal) window.HwPortal.screen(name);   // the alive hero runs only while the home is on screen
   }
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

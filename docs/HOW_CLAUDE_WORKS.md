@@ -131,6 +131,16 @@ add a code, in /maestro → Teachers. The levels live in one list, `core/levels.
 - **Mis exámenes:** the kid's own official-test results and mistakes.
 - **🌐 ES→EN toggle**, for teachers teaching from a student account.
 - **Avatars and settings.**
+- **The 2026-10-13 remake (game menu look, `docs/specs/portal-remake.md`).** The home is a game menu: a hero with the kid,
+  the level, Dralingo and one of the gang (a new friend and line every 12 s), a big gold **▶ Siguiente** (the next
+  tarea in one tap), a dock (Desafíos · Mensajes · Mis oraciones · Mis exámenes) and quiet pills (Papás · Ajustes ·
+  Instalar app · Salir); tap your avatar = Ajustes. Game-show moments on the phone: a welcome (the kid and Dralingo
+  over a gold | sky split, once per visit), a results reveal for every tarea (count-up, stars, the kid + a gang member,
+  confetti only when passed, a kind «¡Casi!» otherwise, ▶ Siguiente / 🔁 Otra vez), level-up and streak banners, a
+  «¡Combo x3!» chip in the quiz. The parents' view is calmer (white report, a 2 × 2 grid of counts). All of it lives
+  in `css/portal.css` + `js/portal.js` (without `hw-portal` on `<body>` the moments and the new styling switch off; a full
+  rollback is reverting the commit, the home markup changed too); the gang poses it shows come from
+  one map in portal.js (`POSES`).
 
 **🔊 Audios de las tareas (`/audios`, 2026-10-11).** Every homework PDF (the storybook guides) has its audio on a
 public page, no login: `/audios` lists the homeworks by level, `/audios/hsk1-e03-r1` opens one. Each has the PDF's
