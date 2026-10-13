@@ -257,6 +257,7 @@
           });
       },
     },
+    { id: 'escape',    label: 'La Gran Fuga de Dubái', emoji: '🚀', blurb: 'Whole class runs from Robotín', launch: (ctx) => _genericLaunch(ctx, '/host-escape.html', '/player.html') },
     { id: 'snow',      label: 'Batalla de Nieve',   emoji: '❄️', blurb: 'Walk Dubai, snowball fight', launch: (ctx) => _genericLaunch(ctx, '/host-snow.html', '/player.html') },
     { id: 'paint',     label: 'Dragones Pintores',  emoji: '🎨', blurb: 'Fly, paint the sky', launch: (ctx) => _genericLaunch(ctx, '/host-paint.html', '/player.html') },
     { id: 'kingdoms',  label: 'Reinos de Colores',  emoji: '🏰', blurb: 'Plant flags, conquer the map', launch: (ctx) => _genericLaunch(ctx, '/host-kingdoms.html', '/player.html') },

@@ -161,3 +161,13 @@ Three pieces:
 
 Kahoot «Color Kingdoms»-style mode, built as a NEW game (Reinos en Guerra stays). Full plan, video notes,
 rules, Kenney assets and build recipe: `docs/specs/reinos-de-colores.md`. His improvement list is still pending.
+
+---
+
+## La Gran Fuga de Dubái — new co-op chase pin game ✅ BUILT 2026-10-13 (branch, not deployed)
+
+Kahoot «Robot Run»-style mode (`escape`). Rules, as-built notes and the scorecard: `docs/specs/gran-fuga-de-dubai.md`.
+Still to make (no image generator was used for v1; brief `content/escape/pictures.json`): Robotín poses (idle, chase,
+zap, dizzy, goodbye), the three zone backdrops and top-down rooms, room props, the jet take-off, the turbo trail, the
+three crew-rank badges, Dralingo running, Hamdan at the jet stair; a recorded Arabic-flavoured chase loop. Tune
+`core/escape.js` `R` (target gaps, sprint, wave times) after the first real class.

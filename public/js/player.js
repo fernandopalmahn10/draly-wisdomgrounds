@@ -26,6 +26,10 @@
   if (window.SnowPhone) {
     window.SnowPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
   }
+  // La Gran Fuga de Dubái phone module (public/js/player-escape.js)
+  if (window.EscapePhone) {
+    window.EscapePhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
+  }
   // (legacy timer kept for any reference; bulletproof flow below replaces it)
 
   // === Global stuck-watchdog ===
@@ -370,6 +374,7 @@
       'kingdoms':    'question',
       'paint':       'paint',
       'snow':        'snow',
+      'escape':      'question',     // the zona segura room comes with es:init when the crew is in one
     };
     const target = screenForType[gt];
     if (target) showScreen(target);
@@ -958,6 +963,9 @@
     } else if (gameType === 'snow') {
       teamLabel = 'Batalla de Nieve';      // no teams in the lobby: everyone starts as a survivor
       teamMascot = '❄️';
+    } else if (gameType === 'escape') {
+      teamLabel = 'La Gran Fuga de Dubái';  // co-op: the whole class is one crew
+      teamMascot = '🚀';
     } else {
       teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
       teamMascot = isRed ? '🐼' : '🦊';
@@ -2804,6 +2812,9 @@
       } else if (gameType === 'snow') {
         happyMascot = '❄️';
         sub = '¡Copos para tus bolas de nieve!';
+      } else if (gameType === 'escape') {
+        happyMascot = '🚀';
+        sub = '¡Turbo para la tripulación!';
       } else {
         happyMascot = team === 'red' ? '🐼' : '🦊';
         sub = '¡Alimenta a tu equipo! ⚡';
@@ -2833,8 +2844,9 @@
           }
         } else if (gameType === 'kingdoms') {
           if (kingdoms && kingdoms.needsPlant && window.KingdomsPhone) window.KingdomsPhone.prompt(kingdoms);
-        } else if (gameType === 'paint' || gameType === 'snow') {
+        } else if (gameType === 'paint' || gameType === 'snow' || gameType === 'escape') {
           // Dragones Pintores / Batalla de Nieve: their phone modules return the kid to the map after the result screen.
+          // La Gran Fuga: the server sends the next question after the turbo.
         } else if (gameType === 'sixseven') {
           // Sixseven handles its own screen via the dedicated handler.
           showScreen('sixseven');
@@ -4203,7 +4215,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'kd-plant', 'paint', 'snow', 'wu', 'rd', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'kd-plant', 'paint', 'snow', 'escape', 'wu', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });
