@@ -1,8 +1,8 @@
 // Live check of Ojos de Halcón's server timing against a RUNNING local server (never the live site):
 //   node scripts/test-halcon-live.js --url http://localhost:3500
 // One teacher + 5 kids (one board of 5): skip in the intro, pause holds the round (no resolve, looks refused, the clock
-// stands still), resume, a double «Saltar» never skips the result, a kid who drops and rejoins mid-round keeps seat +
-// look, «+5 rondas», «Terminar» while paused ends at once, a projector that reconnects after the end gets its finale
+// stands still), resume, rivals and the projector learn only «ready» (never a window) until the reveal, a double
+// «Saltar» never skips the result, a kid who drops and rejoins mid-round keeps seat + look, «+5 rondas», «Terminar» while paused ends at once, a projector that reconnects after the end gets its finale
 // again, «Otra ronda» starts a clean game, «Terminar» during «¡FINAL!» is ignored and the finale still comes.
 'use strict';
 const assert = require('assert');
@@ -34,8 +34,19 @@ function none(s, ev, ms) {
   });
 }
 
+// hidden looks (his decision 2026-10-14): no screen may get another player's window before the reveal
+const leaks = [];
+function guard(s, who) {
+  s.onAny((ev, d) => {
+    if (ev === 'hc:look') leaks.push(who + ': hc:look');
+    if (ev === 'hc:ready' && d && 'pos' in d) leaks.push(who + ': hc:ready with a window');
+    if (ev === 'hc:init' && d && 'looks' in d) leaks.push(who + ': hc:init with looks');
+  });
+}
+
 (async () => {
   const host = connect();
+  guard(host, 'host');
   const { pin } = await ack(host, 'host:create', { gameType: 'halcon' });
   ok(pin, 'room created');
   const loaded = await ack(host, 'host:load-set', { pin, setId: SET });
@@ -49,6 +60,7 @@ function none(s, ev, ms) {
     ok(j && j.ok, name + ' joined');
     kids.push({ s, name, init: null });
     s.on('hc:init', (d) => { kids[i].init = d; });
+    guard(s, name);
   }
 
   // start: everyone is dealt into one board of 5 during the countdown
@@ -78,10 +90,20 @@ function none(s, ev, ms) {
   const p2 = await next(host, 'hc:pause', 2000);
   ok(!p2.paused && p2.phaseMs > 3000, 'resume gives back the time left');
 
-  // a kid looks, drops, and comes back on a new socket: same seat, same look
+  // a kid looks: the board's other phones and the projector learn only that this kid is READY (never the window)
+  const seat2 = kids[2].init && kids[2].init.you;
+  const rival = next(kids[3].s, 'hc:ready', 2000);
+  const proj = next(host, 'hc:ready', 2000);
   kids[2].s.emit('player:hc-look', { pin, pos: 0 });
   const m2 = await next(kids[2].s, 'hc:mine', 2000);
-  ok(m2.status === 'ok' || m2.status === 'closed', 'look sent');
+  ok(m2.status === 'ok', 'look sent');
+  const rv = await rival, pv = await proj;
+  ok(rv.id === seat2 && !('pos' in rv), 'a rival phone gets «ready» for that seat, without the window');
+  ok(pv.id === seat2 && !('pos' in pv), 'the projector gets «ready» too, without the window');
+  kids[1].s.emit('player:resync', { pin });
+  const rs1 = await next(kids[1].s, 'hc:init', 2000);
+  ok(rs1.ready.includes(seat2) && rs1.mine == null && !('looks' in rs1), 'a rival snapshot lists who is ready, no windows');
+  // … drops, and comes back on a new socket: same seat, same look
   const before = kids[2].init && kids[2].init.you;
   kids[2].s.close();
   await sleep(300);
@@ -91,13 +113,19 @@ function none(s, ev, ms) {
   ok(rj.ok && rj.rejoined, 'rejoin with the same name');
   const ri = await next(s2, 'hc:init', 2000);
   ok(ri.you === before, 'a rejoin keeps the seat');
-  if (m2.status === 'ok') ok(ri.looks.some(([sid, pos]) => sid === ri.you && pos === 0), 'a rejoin keeps the look of the round');
+  ok(ri.mine === 0 && ri.ready.includes(ri.you), 'a rejoin keeps the look of the round (its own window)');
   kids[2].s = s2;
+  guard(s2, 'Live2b');
 
   // double «Saltar»: the first resolves, the second (too soon) must not skip the result
+  const kres = next(kids[3].s, 'hc:resolve', 1500);
   host.emit('host:hc-skip', { pin });
   host.emit('host:hc-skip', { pin });
-  await next(host, 'hc:resolve', 1500);
+  const hres = await next(host, 'hc:resolve', 1500);
+  const r2 = hres.boards[0].rows.find((r) => r.id === seat2);
+  ok(r2 && r2.pos === 0, 'the reveal shows every window (the projector)');
+  const kr = await kres;
+  ok(kr.board.rows.find((r) => r.id === seat2).pos === 0, 'the reveal shows every window (a rival phone)');
   ok(await none(host, 'hc:q', 600), 'a double «Saltar» does not jump over the result');
 
   // «+5 rondas»
@@ -118,6 +146,7 @@ function none(s, ev, ms) {
 
   // a projector that reconnects after the end gets the finale again
   const host2 = connect();
+  guard(host2, 'host2');
   const again = next(host2, 'game-end', 3000);
   const rc = await ack(host2, 'host:reclaim', { pin });
   ok(rc.ok && rc.state === 'ended', 'reclaim after the end');
@@ -140,6 +169,7 @@ function none(s, ev, ms) {
   const g3 = await next(host2, 'game-end', 3000);
   ok(g3.halcon.winners.length === 0, 'nobody scored: nobody is the winner');
 
+  ok(leaks.length === 0, 'no window reached any screen before the reveal' + (leaks.length ? ': ' + leaks.join(', ') : ''));
   [host, host2, ...kids.map((k) => k.s)].forEach((s) => s.close());
   console.log(`test-halcon-live: ${checks} checks OK (${URL}, PIN ${pin})`);
   process.exit(0);

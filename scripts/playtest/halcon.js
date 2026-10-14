@@ -1,7 +1,8 @@
 // Playtest handler for Ojos de Halcón: there are no «question» events (the boards run the rounds), so this handler
 // plays the rounds like a kid: on hc:open it looks at a window (it doesn't know the right one) after a human delay
 // (0.3–4.5 s); now and then it taps twice (the «locked» path) or is distracted and never looks. Rounds count as the
-// harness's "questions"; a bot without a new round for 20 s while the game runs is reported as frozen. The lead bot
+// harness's "questions"; a bot without a new round for 20 s while the game runs is reported as frozen. Every bot fails
+// the run if a rival's window reaches it before the reveal (hc:look, a window in hc:ready or in hc:init). The lead bot
 // checks every resolve against the rules (right looks get 5/3/2/1 by board size in speed order, wrong = 0) and the
 // end payload; a broken rule lands in report.errors so the verdict fails. Stats in report.halcon.
 'use strict';
@@ -20,7 +21,15 @@ module.exports = (bot, ctx) => {
   const clear = () => { timers.forEach(clearTimeout); timers = []; };
   const fail = (what, d) => ctx.report.errors.push({ who: ctx.name, ev: 'rule:' + what, d });
 
+  // hidden looks (his decision 2026-10-14): before the reveal a phone may only learn WHO is ready, never their window
+  bot.on('hc:look', (d) => fail('leak: hc:look reached a phone', d));
+  bot.on('hc:ready', (d) => {
+    E.readies = (E.readies || 0) + 1;
+    if (!d || 'pos' in d) fail('leak: hc:ready carries a window', d);
+  });
   bot.on('hc:init', (d) => {
+    if ('looks' in d) fail('leak: hc:init carries looks', d);
+    if (d.mine != null && d.you == null) fail('hc:init mine without a seat', d);
     E.inits++;
     lastRoundAt = Date.now();                  // the stall clock starts with the game, not when the bot joined the lobby
     if (d.you != null && you == null) { E.botsSeated++; }

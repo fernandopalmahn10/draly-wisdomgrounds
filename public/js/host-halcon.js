@@ -219,7 +219,7 @@
       setQ(d.q.text, d.q.image);
       if (d.q.opts) eachBoard((b) => b.open(d.q.opts, d.q.pics, d.phase === 'answer' && !d.paused ? d.phaseMs : 0, ANSWER_MS));
       requestAnimationFrame(() => {
-        (d.looks || []).forEach(([sid, pos]) => { const b = boardOfSeat(sid); if (b) b.board.look(sid, pos, true); });
+        (d.ready || []).forEach((sid) => { const b = boardOfSeat(sid); if (b) b.board.ready(sid); });
         countLooks();
         if (d.phase === 'resolve' && d.res) d.res.boards.forEach((rb) => { if (boards[rb.id]) boards[rb.id].board.resolve(d.res.correctPos, rb.rows); });
       });
@@ -256,9 +256,10 @@
     sfx('pop', 0.55);
     [3000, 2000, 1000].forEach((left) => later(d.ms - left, () => { sfx('tick', 0.5); eachBoard((b) => b.timerEl.classList.add('hurry')); }));
   });
-  onHc('hc:look', (d) => {
+  // a kid has looked: «ready» only (the windows of everybody show at the reveal, like the video)
+  onHc('hc:ready', (d) => {
     if (!q || d.round !== q.round || !boards[d.board]) return;
-    boards[d.board].board.look(d.id, d.pos);
+    boards[d.board].board.ready(d.id);
     sfx('tap', 0.2, 60);
     countLooks();
   });
@@ -278,13 +279,16 @@
       b.board.resolve(d.correctPos, rb.rows);
       rb.rows.forEach((r) => { if (r.ok) right++; if (r.pts === 5) fives.push(b.seats.find((x) => x.id === r.id)); });
     });
-    showAnswer(d.correctText);
-    paintTop(d.top || []);
-    sfx(right ? 'yes' : 'aww', 0.7);
-    const f = fives.filter(Boolean);
-    if (f.length === 1) say(`¡${f[0].name} fue el más rápido! +5`);
-    else if (f.length > 1) say(`¡+5 para ${f.slice(0, 3).map((x) => x.name).join(', ')}${f.length > 3 ? '…' : ''}!`);
-    else say(`Era «${d.correctText}». ¡A la próxima!`);
+    sfx('whoosh', 0.5);                                         // the reveal: everybody snaps to their window
+    later(HB.REVEAL_MS, () => {                                 // then the verdict
+      showAnswer(d.correctText);
+      paintTop(d.top || []);
+      sfx(right ? 'yes' : 'aww', 0.7);
+      const f = fives.filter(Boolean);
+      if (f.length === 1) say(`¡${f[0].name} fue el más rápido! +5`);
+      else if (f.length > 1) say(`¡+5 para ${f.slice(0, 3).map((x) => x.name).join(', ')}${f.length > 3 ? '…' : ''}!`);
+      else say(`Era «${d.correctText}». ¡A la próxima!`);
+    });
   });
   onHc('hc:seat', (d) => {
     if (!d.board) return;
@@ -331,14 +335,15 @@
   function boardOfSeat(sid) { return Object.values(boards).find((b) => b.seats.some((x) => x.id === sid)) || null; }
   // a late joiner opened a new board: rebuild the grid but keep the round on every board (its windows, timer, looks)
   function rebuildKeeping(list) {
-    const looks = {};
+    const looks = {}, readies = {};
     let left = 0;
-    Object.values(boards).forEach((e) => { Object.assign(looks, e.board.looks); left = Math.max(left, e.board.timeLeft()); });
+    Object.values(boards).forEach((e) => { Object.assign(looks, e.board.looks); Object.assign(readies, e.board.readies); left = Math.max(left, e.board.timeLeft()); });
     buildBoards(list);
     Object.values(boards).forEach((e) => {
       if (game && game.phase === 'answer' && left) e.board.timer(left, ANSWER_MS);
-      e.seats.forEach((s) => { if (looks[s.id] != null) e.board.look(s.id, looks[s.id], true); });
+      e.seats.forEach((s) => { if (looks[s.id] != null) e.board.look(s.id, looks[s.id], true); if (readies[s.id]) e.board.ready(s.id); });
     });
+    countLooks();
     requestAnimationFrame(fitAll);
   }
   function buildBoards(list) {
@@ -375,6 +380,7 @@
     const layout = !r.height || r.width / r.height > 1.45 ? 'wide' : 'tall';
     if (entry.board && entry.layout === layout) return;
     const looks = entry.board ? Object.assign({}, entry.board.looks) : {};
+    const readies = entry.board ? Object.assign({}, entry.board.readies) : {};
     const left = entry.board ? entry.board.timeLeft() : 0;
     if (entry.board) entry.board.destroy();
     entry.layout = layout;
@@ -383,6 +389,7 @@
     entry.board.dots(game ? game.round : 0, game ? game.rounds : rounds);
     if (q && q.opts && game && (game.phase === 'answer' || game.phase === 'resolve')) entry.board.open(q.opts, q.pics, game.phase === 'answer' ? left : 0, ANSWER_MS);
     Object.keys(looks).forEach((sid) => entry.board.look(Number(sid), looks[sid], true));
+    Object.keys(readies).forEach((sid) => entry.board.ready(Number(sid)));
   }
   function fitAll() {
     Object.values(boards).forEach((e) => { makeBoard(e); e.board.fit(); });
@@ -390,7 +397,7 @@
   window.addEventListener('resize', () => { if (!$('screen-active').classList.contains('hidden')) fitAll(); });
   function countLooks() {
     Object.values(boards).forEach((b) => {
-      const n = Object.keys(b.board.looks).length;
+      const n = b.board.readyCount();
       b.count.textContent = game && game.phase === 'answer' ? `👀 ${n}/${b.seats.length}` : '';
     });
   }
@@ -506,5 +513,6 @@
     },
     queued: () => queue.map((x) => x[2]),
     hold: (v) => { testHold = !!v; },
+    holdReveal: (v) => HB.holdReveal(v),
   };
 })();

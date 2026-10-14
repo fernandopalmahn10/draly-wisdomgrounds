@@ -111,6 +111,28 @@ eq(H.pointsFor(0, 4), 0, 'no rank = 0');
   eq(b.hcWrong, 1, 'B one wrong');
 }
 
+// ---------- hidden looks: before the reveal a screen learns WHO looked, never which window ----------
+{
+  const { h, players } = game(8, 61);
+  H.startQuestion(h, Q(20), null, null, 0);
+  H.openAnswers(h, 0);
+  const kids = Object.values(players);
+  const a = kids[0], b = kids.find((p) => p.hcBoard === a.hcBoard && p !== a), other = kids.find((p) => p.hcBoard !== a.hcBoard);
+  H.answer(h, a, 2, 100);
+  H.answer(h, b, 1, 200);
+  H.answer(h, other, 3, 300);
+  const v = H.lookView(h, [a.hcBoard], b.hcSeat);
+  eq(Object.keys(v).sort(), ['mine', 'ready'], 'the view has only «ready» and «mine»');
+  eq(v.ready.slice().sort((x, y) => x - y), [a.hcSeat, b.hcSeat].sort((x, y) => x - y), 'ready = the seats of this board that looked');
+  ok(v.ready.every((x) => typeof x === 'number'), 'ready carries seat ids only (no windows)');
+  eq(v.mine, 1, 'a phone sees its own window');
+  ok(!v.ready.includes(other.hcSeat), 'another board is not in the view');
+  const proj = H.lookView(h, h.boards.map((x) => x.id), null);
+  eq([proj.ready.length, proj.mine], [3, null], 'the projector: who looked on every board, no windows');
+  eq(H.lookView(h, [a.hcBoard], kids.find((p) => p.hcBoard === a.hcBoard && p !== a && p !== b).hcSeat).mine, null, 'a kid who has not looked: mine = null');
+  ok(!JSON.stringify(H.lookView(h, [a.hcBoard], a.hcSeat)).includes('pos'), 'no «pos» field anywhere in the view');
+}
+
 // ---------- timeout: nobody (or not everybody) looked ----------
 {
   const { h, players } = game(4, 5);

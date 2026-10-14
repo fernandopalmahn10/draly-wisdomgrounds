@@ -142,9 +142,10 @@
         hint(paused ? '⏸ Pausa: mira al profe' : '¡Uy! La ronda ya se cerró', 'bad');
       }
     });
-    s.on('hc:look', (d) => {
+    // a rival has looked: «ready» only (their window shows at the reveal, when everybody snaps together)
+    s.on('hc:ready', (d) => {
       if (!on || !B || !q || d.round !== q.round || !g || d.board !== g.board || d.id === g.you) return;
-      B.look(d.id, d.pos);
+      B.ready(d.id);
       sfx(K + 'tap.mp3', 0.22);
     });
     s.on('hc:closing', (d) => {
@@ -243,16 +244,16 @@
       }
       requestAnimationFrame(() => {
         // a tap made during a network blip never reached the server (the new socket joined after it): send it again
-        const mineOnServer = (d.looks || []).some(([sid]) => sid === g.you);
+        const mineOnServer = d.mine != null;
         if (same && d.phase === 'answer' && !d.paused && myLook != null && !mineOnServer) {
           ctx.socket.emit('player:hc-look', { pin: ctx.getPin(), pos: myLook });
         }
-        (d.looks || []).forEach(([sid, pos]) => { B.look(sid, pos, true); if (sid === g.you) myLook = pos; });
+        if (mineOnServer) { myLook = d.mine; B.look(g.you, d.mine, true); }
+        (d.ready || []).forEach((sid) => { if (sid !== g.you) B.ready(sid); });
         if (d.phase === 'answer') hint(myLook != null ? '¡Listo! Esperando a los demás…' : '¡Toca la ventana correcta!', myLook != null ? 'ok' : 'go');
         if (d.phase === 'resolve' && d.res && d.res.boards[0]) {
           resolved = d.res;
-          B.resolve(d.res.correctPos, d.res.boards[0].rows);
-          hint(`La respuesta era «${d.res.correctText}»`, '');
+          B.resolve(d.res.correctPos, d.res.boards[0].rows, () => hint(`La respuesta era «${d.res.correctText}»`, ''));
         }
       });
       return;
@@ -364,9 +365,14 @@
     resolved = d;
     const rows = (d.board && d.board.rows) || [];
     B.bandHide();
-    B.resolve(d.correctPos, rows);
     const me = rows.find((r) => r.id === g.you);
-    if (!me) return;
+    hint('¡A ver!', 'go');
+    sfx(K + 'whoosh.mp3', 0.45);                      // the reveal: everybody snaps to their window
+    B.resolve(d.correctPos, rows, () => verdict(d, me));
+  }
+  // the verdict beat, REVEAL_MS after the reveal: my sounds, my points, my line
+  function verdict(d, me) {
+    if (!me || !g || resolved !== d) return;
     score = me.score;
     paintBar();
     if (me.ok) {
@@ -476,6 +482,7 @@
     }),
     tap,
     hold: (v) => { testHold = !!v; },
+    holdReveal: (v) => { if (HB()) HB().holdReveal(v); },
     freeze: (v) => {
       frozen = !!v;
       if (!frozen) { const q2 = queue; queue = []; q2.forEach(([fn, d]) => fn(d)); }

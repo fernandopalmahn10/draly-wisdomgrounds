@@ -178,8 +178,8 @@ the checklist for any new game mode.
   `paint`), Batalla de Nieve en Ski Dubái (new 2026-10-12, `snow`), La Gran Fuga de Dubái
   (new 2026-10-13, `escape`), «Ojos de Halcón» (new 2026-10-13, `halcon`: Super Mario Party «Looking for Love» played
   in boards of 4, the first of his Mario Party series, one minigame at a time from
-  https://www.youtube.com/watch?v=y9BKCVx_mNk; it replaces the first attempt Ojo de Halcón, `look`, whose launcher
-  entries are gone and whose code stays until he says to retire it) + the 5 kept games Mochi Mash, Dàfùwēng ·
+  https://www.youtube.com/watch?v=y9BKCVx_mNk; it replaced the first attempt «Ojo de Halcón», `look`, retired and
+  removed 2026-10-14, his decision; recover it from git commit 83dbcbd04 if ever needed) + the 5 kept games Mochi Mash, Dàfùwēng ·
   Monopolio Chino, 6-7 Swing, Vuelo del Dragón, Piñata Tigre (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older
   games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:
