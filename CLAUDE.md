@@ -152,7 +152,28 @@ the checklist for any new game mode.
   one level up each time). Finish all sims of a level before moving on unless he says otherwise. Old HSK sims already exist
   in `hsk-sim.html`.
 
-## Homework audio (/audios, since 2026-10-11)
+## Homework audio (/audios, since 2026-10-11) · «Audios y vocabulario» (folders since 2026-10-14)
+- `/audios` is a library of level folders (`/audios/yct1`, `/audios/newhsk1`, `/audios/hsk1`; names and order from
+  `core/levels.js`, written into `catalog.json` `levels` by the builder). A level's vocabulary base is pinned first in its
+  folder, then its homework audios. Old addresses never change: the printed PDFs link `/audios/<homework id>`,
+  `hsk2-…` opens `newhsk1-…` (and `/audios/hsk2` the New HSK 1 folder), `/audio/…` and `?t=<id>` still work.
+- **La base · Empieza aquí** (`/audios/yct1-base`, worlds `#mundo-1…6`, `#tonos`, `#repaso`, words `#palabra-N`): the
+  study book «YCT 1 · Vocabulario» digitally (his ask 2026-10-14: the first thing YCT 1 kids do). One source of words:
+  `../study/lib/web.py yct1` exports the book's own words, sentences, red words, tones and pictures (WebP <= 60 KB) +
+  the PDF (`public/assets/study/`) into `content/audios/yct1-base.json`; the hanzi the voice reads live in
+  `../study/yct1/voice.py` (never on screen). Then `node scripts/audios-build.js yct1-base` (one clip per word and per
+  sentence, page data `public/assets/audios/yct1-base/base.json`) and `node scripts/test-audios-base.js` (83 words in
+  the book's order, card by card against `../study/yct1/build/book.html`, every clip > 0.3 s, no hanzi, no em dash).
+  Readings: `<whisper python> ../study/lib/readings.py yct1` (Whisper on the processor + score_lines on every
+  disagreement); fix a wrong reading in voice.py, never in the page. Page: `js/audios-base.js` + the `bs-` rules in
+  `css/audios.css`; seals saved per phone in `localStorage draly_base_<level>` (the move bridge carries it); the
+  /homework home links it for levels with `base` in core/levels.js (`#pt-base`, server sends `base` on enter, read from
+  the catalog; `?from=homework` turns the page's back arrow into «Volver a mis tareas»).
+- Cloudflare keeps `/assets/*` 2 h: the builder stamps every base clip, picture and the PDF with `?v=<content hash>`,
+  and the page asks for catalog.json / base.json with a 10-minute stamp. A clip rebuilt under the same name still
+  reaches phones at once; never strip those stamps.
+- Type code of the books on the whole page: Gelasio = pinyin only, Noto Sans = Spanish and numbers, self-hosted subset
+  woff2 in `public/assets/fonts/study/` (OFL). Cover thumbnails `cover-s.webp` are made by the builder.
 - Every homework PDF (storybook guide) has its audio on the public page `/audios/<id>` (id `hsk1-e03-r1` from
   `DRALINGO_HSK1_E03_R1_…pdf`): no login, two taps, Spanish, pinyin WITH tone marks and Spanish exactly as in the PDF,
   never hanzi on screen. Same paper look as the PDFs (Rojo Imperial, Oro, Crema, serif pinyin) so parents recognise it.
@@ -162,6 +183,7 @@ the checklist for any new game mode.
 - New PDFs arrive in `../TAREAS/` (Cowork copies them there); a SessionStart hook lists any without audio. Build them
   with the `tarea-audio` skill. TAREAS also holds kids' videos: never open, copy, commit or upload them.
 - Commit `content/audios/<id>.json`, `public/assets/audios/<id>/` and `public/assets/audios/catalog.json` together.
+  From a worktree, `node scripts/audios-build.js <id> --cache <main checkout>/content/audios/.cache` reuses the voices.
 - **Dralingo Dorado** (2026-10-11): about one visit in ten, a golden 3D Dralingo pops up in the corner of /audios
   (`?dorado=1` forces him, `?dorado=0` never). `public/js/golden/dorado.js` + `css/dorado.css` are hand-written; the other
   `js/golden/*.js` files come from `../three/golden-dralingo/ship.mjs`: never edit them here, rebuild there. three.js

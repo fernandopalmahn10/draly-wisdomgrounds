@@ -8,8 +8,9 @@ const LEVELS = [
   // pack: the curriculum game level in core/packs.js · packTareas: its rounds are this level's /homework tareas ·
   // packWords: the parents' word list comes from the pack (hsk1 keeps its own 150-word list, warmup-vocab.js) ·
   // next: the level after it, for the parents' «próximamente» line · daily: false hides Desafíos (HSK 1 words)
+  // base: its vocabulary base on /audios («La base · Empieza aquí», /audios/<base>), linked from the /homework home
   { id: 'yct1', name: 'YCT 1', teacherName: 'YCT 1', family: 'yct', emoji: '🧒', pack: 'yct1', packTareas: true,
-    words: 83, packWords: true, exam: 'YCT', next: 'YCT 2', daily: false },
+    words: 83, packWords: true, exam: 'YCT', next: 'YCT 2', daily: false, base: 'yct1-base' },
   // New HSK 1 homework = only what prepares the exam (his ask 2026-10-12): the Simulacro rounds built from the two
   // platform simulations (the mother file), nothing else — packWorlds limits the pack, onlyPackTareas hides the old
   // «Bolsa de palabras» tareas

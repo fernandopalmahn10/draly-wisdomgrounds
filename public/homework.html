@@ -75,7 +75,7 @@
   <!-- 2026-10-11 pastel sticker restyle, loaded last; every rule is scoped to body.hw-pastel (drop the class to roll back) -->
   <link rel="stylesheet" href="/css/homework-pastel.css?v=20261012d">
   <!-- 2026-10-13 remake (docs/specs/portal-remake.md), loaded last; every rule is scoped to body.hw-portal (without the class the layer and js/portal.js stay off) -->
-  <link rel="stylesheet" href="/css/portal.css?v=20261013b">
+  <link rel="stylesheet" href="/css/portal.css?v=20261014a">
 </head>
 <body class="hw-bg hw-pastel hw-portal">
 
@@ -157,6 +157,13 @@
       <span class="pt-next-play" aria-hidden="true">▶</span>
       <span class="pt-next-text"><span class="pt-next-kicker">Siguiente</span><b class="pt-next-title" id="pt-next-title"></b></span>
     </button>
+    <!-- 📖 «Empieza aquí»: the level's vocabulary base on /audios (2026-10-14, YCT 1). renderBaseEntry() in homework.js
+         shows it when the server's level has a base (core/levels.js `base`) and fills the kid's seal count. -->
+    <a class="pt-base" id="pt-base" href="/audios" hidden>
+      <span class="pt-base-book" aria-hidden="true"><b id="pt-base-level"></b><i>La base</i></span>
+      <span class="pt-base-text"><b class="pt-base-title" id="pt-base-title"></b><span class="pt-base-sub" id="pt-base-sub"></span></span>
+      <span class="pt-base-go" aria-hidden="true">›</span>
+    </a>
     <nav class="pt-dock" aria-label="Menú">
       <button class="pt-tile pt-tile-gold" id="hw-list-daily" type="button"><span class="pt-tile-ico" aria-hidden="true">⚔️</span><span class="pt-tile-label">Desafíos</span></button>
       <button class="pt-tile hw-bell-btn" id="hw-list-inbox" type="button" title="Mensajes de mi maestra"><span class="pt-tile-ico" aria-hidden="true">🔔</span><span class="pt-tile-label">Mensajes</span><span class="hw-bell-badge" id="hw-bell-badge" style="display:none;">0</span></button>
@@ -649,9 +656,9 @@
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/hw-i18n.js?v=20261013b"></script>
+  <script src="/js/hw-i18n.js?v=20261014a"></script>
   <script src="/js/portal.js?v=20261013c"></script>
-  <script src="/js/homework.js?v=20261013c"></script>
+  <script src="/js/homework.js?v=20261014a"></script>
   <script src="/js/super-admin-badge.js?v=20261011c"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>

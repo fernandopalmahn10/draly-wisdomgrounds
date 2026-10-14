@@ -1989,6 +1989,7 @@ app.post('/api/homework/enter', (req, res) => {
       levelName: Levels.info(level).name,
       folders: Assignments.levelFolders(level),       // pack-quiz levels: one folder per world (else null)
       daily: Levels.info(level).daily !== false,      // Desafíos (HSK 1 words): off below HSK 1
+      base: audioBaseFor(Levels.info(level)),         // its vocabulary base on /audios («Empieza aquí»), or null
       isNew: isNew,                                   // show the code banner once
       assignments: Assignments.listAssignments(level), // portal reshapes by level
       submissions: Students.getAssignmentSubmissions(rec.code, 100),
@@ -4124,6 +4125,19 @@ app.get('/homework', (req, res) => {
 });
 // 🔊 Homework audio gateway (2026-10-11): public, no login. /audios lists every homework,
 // /audios/<id> (e.g. /audios/hsk1-e03-r1) opens one; the PDFs link straight to it.
+// A level's vocabulary base («La base · Empieza aquí», core/levels.js `base`) as the /homework home links it: its address,
+// its folder (the page saves seals under draly_base_<folder>) and its own word count, read once per boot from the
+// catalog scripts/audios-build.js writes (a deploy restarts the server, so it never goes stale).
+let _audioBases = null;
+function audioBaseFor(info) {
+  if (!info || !info.base) return null;
+  if (!_audioBases) {
+    try { _audioBases = JSON.parse(fs.readFileSync(path.join(__dirname, 'public', 'assets', 'audios', 'catalog.json'), 'utf8')).bases || []; }
+    catch (e) { console.warn('[audios] catalog unreadable:', e.message); _audioBases = []; }
+  }
+  const b = _audioBases.find((x) => x.id === info.base);
+  return b ? { href: '/audios/' + b.id, level: b.level, words: b.words } : null;
+}
 app.get(['/audios', '/audio', '/audios/:id', '/audio/:id'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.sendFile(_emPath.join(__dirname, 'public', 'audios.html'));
