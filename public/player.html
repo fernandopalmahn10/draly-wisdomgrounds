@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="/css/snow.css?v=20261012e">
   <link rel="stylesheet" href="/css/escape.css?v=20261013b">
   <link rel="stylesheet" href="/css/look.css?v=20261013a">
+  <link rel="stylesheet" href="/css/halcon.css?v=20261013h">
   <!-- Lobby layout + lobby mini-game (the little plane while kids wait).
        These rules used to live in flappy.css, which was deleted with the
        retired Flappy Dragon game (2026-10-10); the lobby itself is shared. -->
@@ -646,6 +647,20 @@
     <div class="lk-pstatus" id="lk-status" role="status">Espera… las respuestas se van a encender</div>
   </div>
 
+  <!-- Ojos de Halcón (js/player-halcon.js + js/halcon-board.js): the kid's own Mario Party board. The question on top,
+       the brass board with its four round windows (the windows are the buttons) and every kid of the board as their
+       full-body character; the studio run-in plays over it during the countdown. -->
+  <div id="screen-halcon" class="hidden">
+    <div class="hc-top">
+      <div class="hc-bar"><span id="hc-round">10 rondas</span><span class="hc-me"><b id="hc-score">⭐ 0</b></span></div>
+      <div class="hc-q wait" id="hc-q"><img id="hc-q-img" class="hidden" alt=""><b id="hc-q-text">¡Atentos!</b></div>
+      <div class="hc-hint" id="hc-hint" role="status"></div>
+    </div>
+    <div class="hc-boardwrap" id="hc-boardwrap"><i class="hc-hand" id="hc-hand" aria-hidden="true"></i></div>
+    <div class="hc-intro hidden" id="hc-intro"></div>
+    <div class="hc-pause hidden" id="hc-pause"><div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div></div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -664,7 +679,7 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261013a"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261013h"></script>
   <script src="/js/player-kingdoms.js?v=20261011f"></script>
   <script src="/js/paint-render.js?v=20261011a"></script>
   <script src="/js/player-paint.js?v=20261011e"></script>
@@ -675,10 +690,12 @@
   <script src="/js/escape-render.js?v=20261013a"></script>
   <script src="/js/player-escape.js?v=20261013b"></script>
   <script src="/js/player-look.js?v=20261013a"></script>
+  <script src="/js/halcon-board.js?v=20261013h"></script>
+  <script src="/js/player-halcon.js?v=20261013h"></script>
   <script src="/js/cast.js?v=20261013a"></script>
   <script src="/js/dralingo-fx.js?v=20261013a"></script>
   <script src="/js/saga.js?v=20261013a"></script>
-  <script src="/js/player.js?v=20261013a"></script>
+  <script src="/js/player.js?v=20261013h"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

@@ -10,7 +10,7 @@
   const RED_POSES = ['jump', 'flag', 'shocked', 'thinking', 'pointing', 'champion', 'countdown'];
   // La Gran Fuga (co-op, no teams): Dralingo in his platform look (kandura + mustache: hello / power / wise)
   const ES_POSE = { thinking: 'wise', shocked: 'wise', pointing: 'hello', countdown: 'hello', jump: 'power', flag: 'power', champion: 'power' };
-  const TPOSE = (n) => ((game === 'escape' || game === 'look') ? '/assets/dralingo/' + (ES_POSE[n] || 'hello') + '.webp'
+  const TPOSE = (n) => ((game === 'escape' || game === 'look' || game === 'halcon') ? '/assets/dralingo/' + (ES_POSE[n] || 'hello') + '.webp'
     : POSE(n + (ctx && game !== 'snow' && ctx.getTeam() === 'red' && RED_POSES.includes(n) ? '-red' : '')));
   const ESC = () => (game === 'escape' && window.EscapePhone ? window.EscapePhone : null);
   // Batalla de Nieve: no red/blue kingdoms, two sides that change during the round (counts from the sn:* events)
@@ -53,7 +53,8 @@
     try {
       // Batalla de Nieve has its own chase loop; everything else shares the kingdoms music
       music = new Audio(game === 'snow' && name === 'music-battle' ? '/assets/snow/music-battle.mp3'
-        : game === 'look' && name === 'music-battle' ? '/assets/look/music-show.mp3' : A + name + '.mp3');   // Ojo de Halcón: the show loop
+        : game === 'look' && name === 'music-battle' ? '/assets/look/music-show.mp3'    // Ojo de Halcón: the show loop
+        : game === 'halcon' && name === 'music-battle' ? '/assets/halcon/music-show.mp3' : A + name + '.mp3');   // Ojos de Halcón too
       music.loop = true;
       music.volume = vol == null ? 0.35 : vol;
       music.play().catch(() => {});
@@ -69,8 +70,9 @@
     const wrap = (key, fn) => { const orig = S[key]; S[key] = function () { return on ? fn.apply(this, arguments) : (orig && orig.apply(this, arguments)); }; };
     wrap('correct', () => sfx('correct', 0.8));
     wrap('wrong', () => sfx('wrong', 0.6));
-    wrap('countdownNum', () => sfx('tick', 0.8));
-    wrap('go', () => sfx('whoosh', 0.8));
+    // Ojos de Halcón plays its own studio run-in during the countdown (no 3-2-1 ticks, like the video)
+    wrap('countdownNum', () => { if (game !== 'halcon') sfx('tick', 0.8); });
+    wrap('go', () => { if (game !== 'halcon') sfx('whoosh', 0.8); });
     wrap('startGameTheme', () => playMusic('music-battle', 0.32));
     wrap('startMusic', () => playMusic('music-battle', 0.32));
     wrap('stopGameTheme', () => stopMusic());
@@ -88,7 +90,7 @@
     };
   }
 
-  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'look'];
+  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'look', 'halcon'];
   let game = null;
   function setMode(v, gt) {
     if (gt) game = gt;
@@ -222,6 +224,7 @@
     if (game === 'snow') { t.className = 'kdp-team sn-team'; t.textContent = '❄️ ¡Batalla de Nieve en Ski Dubái!'; }
     if (game === 'escape') { t.className = 'kdp-team es-team'; t.textContent = '🚀 ¡Eres de la tripulación!'; }
     if (game === 'look') { t.className = 'kdp-team lk-team'; t.textContent = '🦅 ¡El concurso más rápido de Dubái!'; }
+    if (game === 'halcon') { t.className = 'kdp-team hc-team'; t.textContent = '🦅 Ojos de Halcón · ¡tableros de 4!'; }
     howDecor();
   }
   // Reinos de Colores: kids don't read rules, so the lobby shows the whole game in 3 pictured steps
@@ -259,6 +262,7 @@
     snowHow();
     if (window.EscapePhone) window.EscapePhone.lobby(game === 'escape' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.LookPhone) window.LookPhone.lobby(game === 'look' ? document.querySelector('#screen-lobby .lobby-header') : null);
+    if (window.HalconPhone) window.HalconPhone.lobby(game === 'halcon' ? document.querySelector('#screen-lobby .lobby-header') : null);
     const head = document.querySelector('#screen-lobby .lobby-header');
     let card = $('kdp-how');
     if (game !== 'kingdoms') { if (card) card.remove(); return; }
@@ -400,6 +404,7 @@
     if (game === 'snow') { snowEnd(data); return; }
     if (ESC()) { ESC().end(data); return; }
     if (game === 'look' && window.LookPhone) { window.LookPhone.end(data); return; }
+    if (game === 'halcon' && window.HalconPhone) { window.HalconPhone.end(data); return; }
     const team = ctx.getTeam();
     const won = data && data.winner === team;
     emoji.innerHTML = '';
@@ -454,6 +459,7 @@
     s.on('sn:captains', (c) => { captains = c; if (on) capDecor(); });
     s.on('es:init', () => { setMode(true, 'escape'); });
     s.on('lk:init', () => { setMode(true, 'look'); });
+    s.on('hc:init', () => { setMode(true, 'halcon'); });
     s.on('pc:paint', (d) => {
       if (d.teamScores) { scores = d.teamScores; paintBar(); }
       if (d.scores && d.scores[s.id] != null) myPaint = d.scores[s.id];

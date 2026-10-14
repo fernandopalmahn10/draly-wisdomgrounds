@@ -23,7 +23,9 @@ const BOTS = +opt('bots', 10);
 const SECONDS = +opt('seconds', 60);
 const STALL = +opt('stall', 8) * 1000;
 const SET = opt('set', 'first');
-const HANDLERS = opt('handlers', null);
+// a game's own handler module (scripts/playtest/<game>.js) loads by itself when --handlers is not given
+const OWN_HANDLERS = path.join(__dirname, 'playtest', GAME + '.js');
+const HANDLERS = opt('handlers', null) || (require('fs').existsSync(OWN_HANDLERS) ? OWN_HANDLERS : null);
 // Games whose content is generated server-side (no question set to load).
 const NO_SET = ['sixseven', 'warmup', 'hsksim'];
 

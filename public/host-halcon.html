@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Ojos de Halcón · Anfitrión</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/halcon.css?v=20261013h">
+</head>
+<body class="hc-host">
+  <button class="hc-btn hc-mute" id="mute-btn" type="button">🔊 Sonido</button>
+
+  <!-- LOBBY: PIN + QR, the 3 steps, the contestants as full-body characters, rounds, start -->
+  <main id="screen-lobby" class="hc-lobby">
+    <section class="hc-lobby-left">
+      <h1 class="hc-title">Ojos de <span>Halcón</span></h1>
+      <p class="hc-tagline">El concurso de Dralingo en Dubái: la clase juega en tableros de 4. ¡Mira la ventana con la respuesta correcta antes que nadie!</p>
+      <div class="hc-pin-card">
+        <div>
+          <div class="hc-pin-label">PIN</div>
+          <div class="hc-pin" id="pin-display">····</div>
+        </div>
+        <div class="hc-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
+        <div class="hc-qr" id="qr" aria-hidden="true"></div>
+      </div>
+      <ol class="hc-steps">
+        <li><div class="hc-step"><div class="q">¿Qué significa…?</div></div>Lee la pregunta<small>sale en el tablero</small></li>
+        <li><div class="hc-step"><i class="w t">baba</i><i class="w l">gege</i><i class="w r ok">mama</i><img src="/assets/halcon/cast/aileen-ready.webp" alt=""></div>Toca la ventana<small>con la respuesta</small></li>
+        <li><div class="hc-step"><i class="ring"></i><img src="/assets/halcon/cast/hamdan-victory.webp" alt=""><b class="pts">+5</b></div>¡El más rápido!<small>+5 · +3 · +2 · +1 · mal = 0</small></li>
+      </ol>
+      <div class="hc-tools">
+        <div class="hc-rounds" role="group" aria-label="Rondas"><span>🔁 Rondas</span>
+          <button class="hc-btn on" type="button" data-r="10">10</button><button class="hc-btn" type="button" data-r="15">15</button>
+        </div>
+        <button class="hc-btn go" id="start-btn" type="button" disabled>🦅 ¡Empezar el concurso!</button>
+      </div>
+      <div class="hc-set" id="set-display">Cargando preguntas…</div>
+    </section>
+    <section class="hc-lobby-right">
+      <div id="lobby-studio" class="hc-lstudio"></div>
+      <div class="hc-crew">
+        <div class="hc-crew-head"><span>Los concursantes</span><b id="count-all">0 jugadores</b></div>
+        <div class="hc-kids" id="players-all"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- COUNTDOWN: the studio, the class runs in -->
+  <div id="screen-countdown" class="hc-count hidden"></div>
+
+  <!-- ACTIVE: the question, every board, the class top 5, the teacher's buttons -->
+  <main id="screen-active" class="hc-stage hidden">
+    <header class="hc-head">
+      <div class="hc-roundchip"><b id="round-label">Ronda 1</b><span id="round-of">de 10</span></div>
+      <div class="hc-hq" id="hq"><img id="hq-img" class="hidden" alt=""><b id="hq-text">¡Mira la respuesta correcta!</b></div>
+      <div class="hc-pinmini">PIN <b id="active-pin">····</b></div>
+    </header>
+    <section class="hc-boards" id="boards"></section>
+    <aside class="hc-side">
+      <div class="hc-top5"><h2>🏆 Top 5 de la clase</h2><ol id="top5"></ol></div>
+      <div class="hc-host-say"><img src="/assets/dralingo/hello.webp" alt="Dralingo"><p id="host-say">¡Miren bien!</p></div>
+    </aside>
+    <nav class="hc-controls">
+      <button class="hc-btn" id="pause-btn" type="button">⏸ Pausa</button>
+      <button class="hc-btn" id="skip-btn" type="button">⏭ Saltar</button>
+      <button class="hc-btn" id="more-btn" type="button">+5 rondas</button>
+      <span class="sp"></span>
+      <button class="hc-btn" id="end-now-btn" type="button">⏹ Terminar</button>
+    </nav>
+  </main>
+
+  <div class="hc-bigband hidden" id="bigband"></div>
+
+  <div class="hc-paused hidden" id="paused">
+    <div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Todos quietos: miren al profe</span>
+      <button class="hc-btn go" id="resume-btn" type="button">▶ Seguir jugando</button>
+      <button class="hc-btn" id="paused-end-btn" type="button">⏹ Terminar</button></div>
+  </div>
+
+  <!-- END: the studio finale with the class winner and each board's champion -->
+  <main id="screen-win" class="hc-end hidden">
+    <div id="end-studio" class="hc-estudio"></div>
+    <aside class="hc-end-side">
+      <h2>👑 Campeones de cada tablero</h2>
+      <div class="hc-champs" id="champs"></div>
+      <h2>🏆 Top 5 de la clase</h2>
+      <div class="hc-top5"><ol id="end-top5"></ol></div>
+      <div class="hc-end-tools">
+        <button class="hc-btn" type="button" onclick="location.href='/'">🏠 Inicio</button>
+        <button class="hc-btn go" id="play-again-btn" type="button">🔄 Otra ronda</button>
+      </div>
+    </aside>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/saga.js?v=20261013a"></script>
+  <script src="/js/halcon-board.js?v=20261013h"></script>
+  <script src="/js/host-halcon.js?v=20261013h"></script>
+  <script src="/js/live-game.js?v=20261011c"></script>
+</body>
+</html>
