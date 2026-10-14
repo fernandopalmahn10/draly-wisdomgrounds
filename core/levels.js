@@ -18,7 +18,7 @@ const LEVELS = [
     packTareas: true, packWorlds: ['simulacro'], onlyPackTareas: true, packWords: true, exam: 'New HSK',
     next: 'New HSK 2' },
   { id: 'hsk1', name: 'HSK 1', teacherName: 'Old HSK 1', family: 'hsk', emoji: '📘', pack: 'hsk1', words: 150,
-    exam: 'HSK', next: 'New HSK 1' },
+    exam: 'HSK', next: 'New HSK 1', base: 'hsk1-base' },
 ];
 const DEFAULT = 'hsk1';                      // codes without a level (every code made before 2026-09-15)
 const ALIASES = { newhsk1: 'hsk2' };         // the curriculum name of the stored id

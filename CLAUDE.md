@@ -157,15 +157,21 @@ the checklist for any new game mode.
   `core/levels.js`, written into `catalog.json` `levels` by the builder). A level's vocabulary base is pinned first in its
   folder, then its homework audios. Old addresses never change: the printed PDFs link `/audios/<homework id>`,
   `hsk2-…` opens `newhsk1-…` (and `/audios/hsk2` the New HSK 1 folder), `/audio/…` and `?t=<id>` still work.
-- **La base · Empieza aquí** (`/audios/yct1-base`, worlds `#mundo-1…6`, `#tonos`, `#repaso`, words `#palabra-N`): the
-  study book «YCT 1 · Vocabulario» digitally (his ask 2026-10-14: the first thing YCT 1 kids do). One source of words:
-  `../study/lib/web.py yct1` exports the book's own words, sentences, red words, tones and pictures (WebP <= 60 KB) +
-  the PDF (`public/assets/study/`) into `content/audios/yct1-base.json`; the hanzi the voice reads live in
-  `../study/yct1/voice.py` (never on screen). Then `node scripts/audios-build.js yct1-base` (one clip per word and per
-  sentence, page data `public/assets/audios/yct1-base/base.json`) and `node scripts/test-audios-base.js` (83 words in
-  the book's order, card by card against `../study/yct1/build/book.html`, every clip > 0.3 s, no hanzi, no em dash).
-  Readings: `<whisper python> ../study/lib/readings.py yct1` (Whisper on the processor + score_lines on every
-  disagreement); fix a wrong reading in voice.py, never in the page. Page: `js/audios-base.js` + the `bs-` rules in
+- **La base · Empieza aquí** (`/audios/<level>-base`: `yct1-base` 83 words, `hsk1-base` 150 words; worlds
+  `#mundo-N`, `#tonos`, `#repaso`, words `#palabra-N`): a level's study book («YCT 1 · Vocabulario», «HSK 1 ·
+  Vocabulario») digitally (his ask 2026-10-14: the first thing the level's kids do). One page code for every level:
+  `js/audios-base.js` reads only the level's data (no word looked up by its pinyin; the yī/gè tone note only where the
+  book has it). One source of words: `../study/lib/web.py <level>` exports the book's own words, sentences, red words,
+  tones and pictures (WebP <= 60 KB) + the PDF (`public/assets/study/<level>-vocabulario.pdf`; a book over 9 MB gets a
+  lighter web copy from `../study/lib/webpdf.py`, pictures re-encoded at full chroma) into
+  `content/audios/<level>-base.json`; the hanzi the voice reads live in `../study/<level>/voice.py` (never on screen).
+  Then `node scripts/audios-build.js <level>-base` (one clip per word, per sentence and per Dralingo bubble, page data
+  `public/assets/audios/<level>-base/base.json`) and `node scripts/test-audios-base.js` (every base named in
+  core/levels.js `base`: its words in the book's order, card by card against `../study/<level>/build/book.html`, every
+  clip > 0.3 s, no hanzi, no em dash). A new level's base = `base` in core/levels.js + its voice.py + those two steps.
+  Readings: `<whisper python> ../study/lib/readings.py <level>` (pypinyin, the pitch of one-syllable words, one Whisper
+  batch on the processor, words re-heard after «Wǒ shuō», score_lines on the rest); fix a wrong reading in voice.py,
+  never in the page. Page: `js/audios-base.js` + the `bs-` rules in
   `css/audios.css`; seals saved per phone in `localStorage draly_base_<level>` (the move bridge carries it); the
   /homework home links it for levels with `base` in core/levels.js (`#pt-base`, server sends `base` on enter, read from
   the catalog; `?from=homework` turns the page's back arrow into «Volver a mis tareas»).

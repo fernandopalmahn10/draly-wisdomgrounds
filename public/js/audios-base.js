@@ -1,9 +1,10 @@
 // =========================================================================
-// audios-base.js · «La base · Empieza aquí» (/audios/yct1-base)
+// audios-base.js · «La base · Empieza aquí» (/audios/<level>-base)
 // =========================================================================
-// The study book «YCT 1 · Vocabulario», digitally. Data: the base.json that
-// scripts/audios-build.js writes from content/audios/yct1-base.json, itself
-// exported from the book's own source (../study/yct1/export_web.py): same
+// A level's study book («YCT 1 · Vocabulario», «HSK 1 · Vocabulario»…),
+// digitally, one page code for every level. Data: the base.json that
+// scripts/audios-build.js writes from content/audios/<level>-base.json, itself
+// exported from the book's own source (../study/lib/web.py <level>): same
 // words, sentences, pictures and order as the PDF. Never hanzi on screen.
 //   tap the picture   → the word        tap the sentence → the sentence
 //   tap the seal      → «¡Me la sé!» stamped, saved on this phone
@@ -115,8 +116,8 @@
   function page(d) {
     const W = d.worlds;
     const total = d.words.length;
-    const hello = d.words.find((w) => w.py === 'hǎo');
-    const bye = d.words.find((w) => w.py === 'zàijiàn');
+    const hello = d.cover && d.cover.hello;   // «Nǐ hǎo!» on the cover, «Zàijiàn!» on the closing card (base.json)
+    const bye = d.cover && d.cover.bye;
     const pdf = d.book ? '<a class="bs-btn bs-btn-line" href="' + esc(d.book.pdf) + '" download="' + esc(d.book.name) + '.pdf">' + ICON.down +
       '<span>Descargar el libro (PDF) <small>' + String(d.book.mb).replace('.', ',') + ' MB</small></span></a>' : '';
     let h = '<div class="bs">';
@@ -135,7 +136,7 @@
       '<h1><span class="bs-level">' + esc(d.levelName) + '</span><span class="bs-name">' + esc(d.title) + '</span></h1>' +
       '<p class="bs-lede">' + esc(d.lede) + '</p>' +
       '<img class="bs-dragon" src="' + DRAGON.hello + '" alt="Dralingo saluda" width="432" height="480" decoding="async">' +
-      (hello ? '<button type="button" class="bs-bubble" data-au="' + esc(hello.exau) + '" aria-label="Escuchar: ' + esc(hello.ex.join('')) + '"><span lang="zh-Latn-pinyin" translate="no">' + esc(hello.ex.join('')) + '</span></button>' : '') +
+      (hello ? '<button type="button" class="bs-bubble" data-au="' + esc(hello.au) + '" aria-label="Escuchar: ' + esc(hello.py) + '"><span lang="zh-Latn-pinyin" translate="no">' + esc(hello.py) + '</span></button>' : '') +
       '</div><div class="bs-cover-body">' +
         '<div class="bs-progress">' + meter(W) + '<p id="bs-cover-count"><b>0</b> de ' + total + ' sellos</p></div>' +
         '<div class="bs-actions"><a class="bs-btn bs-btn-gold" id="bs-go" href="#como-estudiar">' + ICON.play + '<span>Empezar</span></a>' + pdf + '</div>' +
@@ -167,10 +168,11 @@
           '<span class="bs-tone-word"><b lang="zh-Latn-pinyin" translate="no">' + esc(t.py) + '</b><small>' + esc(t.es) + '</small></span>' +
           '<span class="bs-mini bs-tone-spk">' + SPK + BARS + '</span></button></li>';
       }).join('') + '</ul>' +
-      '<p class="bs-tones-note">Dentro de una frase, <span lang="zh-Latn-pinyin" translate="no">yī</span> y <span lang="zh-Latn-pinyin" translate="no">gè</span> a veces cambian de tono: ' +
-      (d.toneNote || []).map((t) => '<button type="button" class="bs-chip" data-au="' + esc(t.au) + '" aria-label="Escuchar ' + esc(t.py) + '">' + SPK + BARS +
-        '<span lang="zh-Latn-pinyin" translate="no">' + esc(t.py) + '</span></button>').join(' ') + '</p></div></section>';
-    // the six worlds
+      // the «yī and gè change tone» note only where the book prints it (YCT 1; the HSK 1 book writes every tone as is)
+      (d.toneNote.length ? '<p class="bs-tones-note">Dentro de una frase, <span lang="zh-Latn-pinyin" translate="no">yī</span> y <span lang="zh-Latn-pinyin" translate="no">gè</span> a veces cambian de tono: ' +
+        d.toneNote.map((t) => '<button type="button" class="bs-chip" data-au="' + esc(t.au) + '" aria-label="Escuchar ' + esc(t.py) + '">' + SPK + BARS +
+          '<span lang="zh-Latn-pinyin" translate="no">' + esc(t.py) + '</span></button>').join(' ') + '</p>' : '') + '</div></section>';
+    // the worlds
     W.forEach((w) => {
       const words = d.words.filter((x) => x.world === w.n);
       const pics = w.pics.map((n) => byN.get(n)).filter(Boolean);
@@ -191,7 +193,7 @@
     // closing card + repaso
     h += '<div class="bs-wrap"><div class="bs-closing on-red" id="bs-closing">' +
       '<h2 id="bs-close-h">Después de las ' + total + ' palabras, el repaso</h2><p id="bs-close-p">Mira cada dibujo y di la palabra.</p>' +
-      (bye ? '<button type="button" class="bs-bye" data-au="' + esc(bye.au) + '" aria-label="Escuchar ' + esc(bye.py) + '"><span lang="zh-Latn-pinyin" translate="no">' + esc(bye.py.charAt(0).toUpperCase() + bye.py.slice(1)) + '!</span></button>' : '') +
+      (bye ? '<button type="button" class="bs-bye" data-au="' + esc(bye.au) + '" aria-label="Escuchar: ' + esc(bye.py) + '"><span lang="zh-Latn-pinyin" translate="no">' + esc(bye.py) + '</span></button>' : '') +
       '<img src="' + DRAGON.hello + '" alt="" width="432" height="480" loading="lazy" decoding="async"></div></div>';
     h += '<section class="bs-sec" id="repaso" aria-labelledby="bs-h-repaso"><div class="bs-wrap">' +
       '<h2 class="bs-h2" id="bs-h-repaso">Repaso: ¿cómo se dice?</h2>' +
@@ -583,6 +585,13 @@
         const on = +tb.getAttribute('data-tab') === here;
         tb.classList.toggle('is-here', on);
         if (on) tb.setAttribute('aria-current', 'location'); else tb.removeAttribute('aria-current');
+        const strip = tb.parentNode;
+        if (on && strip.scrollWidth > strip.clientWidth) {
+          const left = tb.offsetLeft - strip.offsetLeft;
+          if (left < strip.scrollLeft || left + tb.offsetWidth > strip.scrollLeft + strip.clientWidth) {
+            strip.scrollTo({ left: left - (strip.clientWidth - tb.offsetWidth) / 2, behavior: reduced() ? 'auto' : 'smooth' });
+          }
+        }
       });
     };
     io = new IntersectionObserver((entries) => {

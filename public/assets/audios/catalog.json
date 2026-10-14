@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-14T13:47:00.286Z",
+ "updated": "2026-10-14T16:40:23.177Z",
  "levels": [
   {
    "id": "yct1",
@@ -69,6 +69,69 @@
     "pages": 20,
     "mb": 7.2,
     "name": "YCT 1 · Vocabulario"
+   }
+  },
+  {
+   "id": "hsk1-base",
+   "kind": "base",
+   "level": "hsk1",
+   "levelName": "HSK 1",
+   "title": "La base",
+   "kicker": "Empieza aquí",
+   "words": 150,
+   "worlds": [
+    {
+     "n": 1,
+     "first": 1,
+     "count": 20
+    },
+    {
+     "n": 2,
+     "first": 21,
+     "count": 18
+    },
+    {
+     "n": 3,
+     "first": 39,
+     "count": 22
+    },
+    {
+     "n": 4,
+     "first": 61,
+     "count": 20
+    },
+    {
+     "n": 5,
+     "first": 81,
+     "count": 18
+    },
+    {
+     "n": 6,
+     "first": 99,
+     "count": 18
+    },
+    {
+     "n": 7,
+     "first": 117,
+     "count": 16
+    },
+    {
+     "n": 8,
+     "first": 133,
+     "count": 18
+    }
+   ],
+   "data": "/assets/audios/hsk1-base/base.json",
+   "peek": [
+    "/assets/audios/hsk1-base/pics/fluent_redapple.webp?v=36a08a36",
+    "/assets/audios/hsk1-base/pics/roblox_109762655069458.webp?v=6f52b42d",
+    "/assets/audios/hsk1-base/pics/fluent_television.webp?v=5f63ec58"
+   ],
+   "book": {
+    "pdf": "/assets/study/hsk1-vocabulario.pdf?v=eb3295e9",
+    "pages": 35,
+    "mb": 8.7,
+    "name": "HSK 1 · Vocabulario"
    }
   }
  ],

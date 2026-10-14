@@ -289,9 +289,16 @@ body.au-is-base .au-main { max-width: none; padding: 0; }
   color: var(--rojo); border-radius: 12px; text-decoration: none;
 }
 .bs-bar-back svg { width: 22px; height: 22px; }
-.bs-tabs { flex: 1; display: flex; gap: 4px; justify-content: center; min-width: 0; }
+/* the tabs scroll sideways when a book has more worlds than the phone has room for (HSK 1: 8); centred otherwise */
+.bs-tabs {
+  flex: 1; display: flex; gap: 4px; min-width: 0; padding: 5px 6px; overflow-x: auto; overscroll-behavior-x: contain;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.bs-tabs::-webkit-scrollbar { display: none; }
+.bs-tab:first-child { margin-left: auto; }
+.bs-tab:last-child { margin-right: auto; }
 .bs-tab {
-  position: relative; flex: 0 1 42px; min-width: 38px; height: 44px; display: flex; align-items: center; justify-content: center;
+  position: relative; flex: 0 0 40px; height: 44px; display: flex; align-items: center; justify-content: center;
   border-radius: 10px; background: var(--crema-2); color: var(--tinta-2); text-decoration: none;
   font-weight: 800; font-size: .98rem; font-variant-numeric: tabular-nums;
   transition: background-color 200ms ease, color 200ms ease, transform 140ms var(--ease-out);
@@ -316,14 +323,19 @@ body.au-is-base .au-main { max-width: none; padding: 0; }
 /* cover */
 .bs-cover { background: var(--rojo); color: var(--crema); overflow: hidden; }
 .bs-cover .bs-wrap { position: relative; padding-top: 22px; padding-bottom: 28px; }
-.bs-cover-top { position: relative; min-height: 244px; }
+/* phones: the bubble and Dralingo hang just under the level title and grow with it (--lv), so a wider phone never
+   puts the bubble over the title or Dralingo over the progress bar (--dw: his width, 480/432 his height ratio) */
+.bs-cover-top {
+  --lv: clamp(4rem, 20vw, 7.5rem); --dw: min(40vw, 200px);
+  position: relative; min-height: calc(var(--lv) * .8 + 10px + var(--dw) * 1.111);
+}
 .bs-cover h1 { display: flex; flex-direction: column; position: relative; z-index: 1; }
-.bs-level { font-weight: 800; font-size: clamp(4rem, 20vw, 7.5rem); line-height: .84; letter-spacing: -.035em; }
+.bs-level { font-weight: 800; font-size: var(--lv); line-height: .84; letter-spacing: -.035em; }
 .bs-name { margin-top: 8px; font-weight: 800; font-size: clamp(2.1rem, 10vw, 3.4rem); line-height: 1; letter-spacing: -.015em; color: var(--oro); }
 .bs-lede { position: relative; z-index: 1; max-width: 56%; margin-top: 12px; font-size: 1rem; line-height: 1.42; color: var(--crema-78); }
-.bs-dragon { position: absolute; right: -8px; top: 76px; width: 42%; max-width: 230px; height: auto; pointer-events: none; }
+.bs-dragon { position: absolute; right: -8px; top: calc(var(--lv) * .8 + 18px); width: var(--dw); height: auto; pointer-events: none; }
 .bs-bubble {
-  position: absolute; z-index: 2; right: 25%; top: 60px; max-width: none; min-height: 44px;
+  position: absolute; z-index: 2; right: calc(var(--dw) * .55 - 8px); top: calc(var(--lv) * .8 + 2px); max-width: none; min-height: 44px;
   padding: 9px 14px 10px; border: 0; border-radius: 12px; cursor: pointer;
   background: var(--crema); color: var(--rojo); font: 700 1.35rem/1 var(--py); white-space: nowrap;
   box-shadow: 0 3px 10px rgba(40, 6, 6, .3);
@@ -666,7 +678,7 @@ body.bs-has-now .bs-end { padding-bottom: 110px; }
   /* the book's cover: Dralingo stands at the bottom right, the contents on the left */
   .bs-cover-top { position: static; min-height: 0; }
   .bs-cover .bs-wrap { padding-top: 40px; padding-bottom: 40px; }
-  .bs-cover .bs-wrap { --dw: min(40%, 420px, calc(100% - 530px)); }
+  .bs-cover .bs-cover-top { --dw: min(40%, 420px, calc(100% - 530px)); }
   .bs-dragon { top: 96px; right: 3%; width: var(--dw); max-width: none; }
   .bs-bubble { top: 52px; right: calc(3% + var(--dw) * .62); font-size: 1.8rem; padding: 10px 16px 11px; }
   .bs-seal { width: 64px; height: 66px; }
@@ -682,6 +694,16 @@ body.bs-has-now .bs-end { padding-bottom: 110px; }
   .bs-wise p::after { left: 50%; bottom: -8px; margin-left: -8px; border: 8px solid transparent; border-bottom: 0; border-top-color: var(--crema-2); }
   .bs-closing { min-height: 240px; padding: 28px; }
   .bs-closing h2 { font-size: 2rem; }
+}
+/* the world tabs show their names only where they all fit: numbers only below 768 px, and below 900 px when a book
+   has 7 worlds or more (HSK 1 has 8) */
+@media (min-width: 640px) and (max-width: 767px) {
+  .bs-tabs .bs-tab { flex-basis: 48px; padding: 0; }
+  .bs-tabs .bs-tab-name { display: none; }
+}
+@media (min-width: 768px) and (max-width: 899px) {
+  .bs-tabs:has(> .bs-tab:nth-child(7)) .bs-tab { flex-basis: 48px; padding: 0; }
+  .bs-tabs:has(> .bs-tab:nth-child(7)) .bs-tab-name { display: none; }
 }
 @media (min-width: 1000px) {
   .bs-grid { gap: 16px; }
