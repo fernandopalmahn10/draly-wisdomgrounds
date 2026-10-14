@@ -13,6 +13,7 @@ const FILES = [
   'public/host-snow.html', 'public/js/host-snow.js', 'public/js/player-snow.js', 'public/js/player-kingdoms-skin.js',
   'public/host-escape.html', 'public/js/host-escape.js', 'public/js/player-escape.js', 'public/js/escape-render.js', 'public/js/escape-map.js',
   'core/escape.js', 'public/js/cast.js',
+  'public/host-look.html', 'public/js/host-look.js', 'public/js/player-look.js', 'core/look.js', 'public/games.html',
   ...fs.readdirSync(path.join(ROOT, 'core/packs')).filter((f) => f.endsWith('.js')).map((f) => 'core/packs/' + f),
 ];
 const RULES = [

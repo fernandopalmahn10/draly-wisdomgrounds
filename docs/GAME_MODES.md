@@ -102,7 +102,8 @@ copy belongs on the player's phone.
 
 ## Status (2026-10-11)
 
-Live modes: **Reinos de Colores** (`kingdoms`, built 2026-10-10, Dubai upgrade 2026-10-11: landmarks, captains, zoom on
+Live modes: **Ojo de Halcón** (`look`, built 2026-10-13, local only: Super Mario Party «Looking for Love» as a Dralingo game show,
+the first of the Mario Party series; spec `docs/specs/ojo-de-halcon.md`), **Reinos de Colores** (`kingdoms`, built 2026-10-10, Dubai upgrade 2026-10-11: landmarks, captains, zoom on
 the phone; spec `docs/specs/reinos-de-colores.md`), **Dragones
 Pintores** (`paint`, Gimkit Color Clash in Dralingo style, built 2026-10-11, spec `docs/specs/dragones-pintores.md`), **Batalla de Nieve en
 Ski Dubái** (`snow`, Gimkit 2D-map infection game, built 2026-10-12 on a branch, not deployed yet, spec `docs/specs/batalla-de-nieve.md`), **La Gran Fuga de Dubái** (`escape`, Kahoot «Robot Run» co-op chase, built

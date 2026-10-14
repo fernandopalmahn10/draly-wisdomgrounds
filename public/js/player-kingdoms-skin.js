@@ -10,7 +10,7 @@
   const RED_POSES = ['jump', 'flag', 'shocked', 'thinking', 'pointing', 'champion', 'countdown'];
   // La Gran Fuga (co-op, no teams): Dralingo in his platform look (kandura + mustache: hello / power / wise)
   const ES_POSE = { thinking: 'wise', shocked: 'wise', pointing: 'hello', countdown: 'hello', jump: 'power', flag: 'power', champion: 'power' };
-  const TPOSE = (n) => (game === 'escape' ? '/assets/dralingo/' + (ES_POSE[n] || 'hello') + '.webp'
+  const TPOSE = (n) => ((game === 'escape' || game === 'look') ? '/assets/dralingo/' + (ES_POSE[n] || 'hello') + '.webp'
     : POSE(n + (ctx && game !== 'snow' && ctx.getTeam() === 'red' && RED_POSES.includes(n) ? '-red' : '')));
   const ESC = () => (game === 'escape' && window.EscapePhone ? window.EscapePhone : null);
   // Batalla de Nieve: no red/blue kingdoms, two sides that change during the round (counts from the sn:* events)
@@ -52,7 +52,8 @@
     if (muted) return;
     try {
       // Batalla de Nieve has its own chase loop; everything else shares the kingdoms music
-      music = new Audio(game === 'snow' && name === 'music-battle' ? '/assets/snow/music-battle.mp3' : A + name + '.mp3');
+      music = new Audio(game === 'snow' && name === 'music-battle' ? '/assets/snow/music-battle.mp3'
+        : game === 'look' && name === 'music-battle' ? '/assets/look/music-show.mp3' : A + name + '.mp3');   // Ojo de Halcón: the show loop
       music.loop = true;
       music.volume = vol == null ? 0.35 : vol;
       music.play().catch(() => {});
@@ -87,7 +88,7 @@
     };
   }
 
-  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape'];
+  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'look'];
   let game = null;
   function setMode(v, gt) {
     if (gt) game = gt;
@@ -220,6 +221,7 @@
     t.textContent = team === 'red' ? '¡Eres del Reino del Fuego! 🔥' : '¡Eres del Reino del Mar! 🌊';
     if (game === 'snow') { t.className = 'kdp-team sn-team'; t.textContent = '❄️ ¡Batalla de Nieve en Ski Dubái!'; }
     if (game === 'escape') { t.className = 'kdp-team es-team'; t.textContent = '🚀 ¡Eres de la tripulación!'; }
+    if (game === 'look') { t.className = 'kdp-team lk-team'; t.textContent = '🦅 ¡El concurso más rápido de Dubái!'; }
     howDecor();
   }
   // Reinos de Colores: kids don't read rules, so the lobby shows the whole game in 3 pictured steps
@@ -256,6 +258,7 @@
   function howDecor() {
     snowHow();
     if (window.EscapePhone) window.EscapePhone.lobby(game === 'escape' ? document.querySelector('#screen-lobby .lobby-header') : null);
+    if (window.LookPhone) window.LookPhone.lobby(game === 'look' ? document.querySelector('#screen-lobby .lobby-header') : null);
     const head = document.querySelector('#screen-lobby .lobby-header');
     let card = $('kdp-how');
     if (game !== 'kingdoms') { if (card) card.remove(); return; }
@@ -292,6 +295,7 @@
     if (img) img.src = TPOSE('countdown');
     capDecor();
     if (window.EscapePhone) window.EscapePhone.intro(game === 'escape' ? $('screen-countdown') : null);
+    if (window.LookPhone) window.LookPhone.intro(game === 'look' ? $('screen-countdown') : null);
   }
   // «Tu capitana: Aileen» under the countdown (Reinos de Colores picks two of the gang each round).
   function capDecor() {
@@ -395,6 +399,7 @@
     if (!emoji) return;
     if (game === 'snow') { snowEnd(data); return; }
     if (ESC()) { ESC().end(data); return; }
+    if (game === 'look' && window.LookPhone) { window.LookPhone.end(data); return; }
     const team = ctx.getTeam();
     const won = data && data.winner === team;
     emoji.innerHTML = '';
@@ -448,6 +453,7 @@
     s.on('sn:hit', (h) => { if (h.type === 'freeze') { snowInfo.sun = Math.max(0, snowInfo.sun - 1); snowInfo.ice++; paintBar(); } });
     s.on('sn:captains', (c) => { captains = c; if (on) capDecor(); });
     s.on('es:init', () => { setMode(true, 'escape'); });
+    s.on('lk:init', () => { setMode(true, 'look'); });
     s.on('pc:paint', (d) => {
       if (d.teamScores) { scores = d.teamScores; paintBar(); }
       if (d.scores && d.scores[s.id] != null) myPaint = d.scores[s.id];
