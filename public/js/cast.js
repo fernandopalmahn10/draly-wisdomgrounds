@@ -4,7 +4,8 @@
 //   DralingoCast.pose('aileen', 'cheer') → '/assets/cast/aileen-cheer.webp'
 //   DralingoCast.line('aileen', 'win')   → '¡Vos podés! ¡Lo hiciste!'   (Aileen speaks Argentine Spanish, voseo)
 //   DralingoCast.captain('aileen')       → 'Capitana Aileen'   (Reinos de Colores; moods: hello, win, battle, mystery, oops)
-//   moods: hello, win, battle (Reinos: flags, conquest), chase (La Gran Fuga: running from Robotín, turbos, the jet), mystery, oops
+//   moods: hello, win, battle (Reinos: flags, conquest), chase (La Gran Fuga: running from Robotín, turbos, the jet),
+//   feast (Mochi Mash: feeding the Dragoncito), mystery, oops
 // Poses: hello, cheer, mystery. Stickers are Higgsfield renders of his own character art, keyed to transparent WebP.
 (function () {
   const BASE = '/assets/cast/';
@@ -19,6 +20,7 @@
         oops: ['Casi. ¡Inténtalo otra vez!', 'Pensemos juntos…'],
         battle: ['¡Vamos, equipo! ¡A conquistar!', '¡Esa bandera, bien plantada!', '¡Así se juega!'],
         chase: ['¡Vamos, equipo! ¡Turbos!', '¡Nadie se queda atrás!', '¡Cada respuesta nos aleja de Robotín!'],
+        feast: ['¡Respondan y alimenten al dragoncito!', '¡Eso es trabajo en equipo!', '¡Qué hambre tiene ese dragoncito!'],
       },
     },
     hamdan: {
@@ -30,6 +32,7 @@
         oops: ['No pasa nada. ¡Yalla, otra vez!', 'Casi, amigo. ¡Otra vez!'],
         battle: ['¡Yalla, yalla! ¡Vamos!', '¡Dubái es nuestro!', '¡A conquistar, amigos!'],
         chase: ['¡Yalla, yalla! ¡Al jet!', '¡El jet los espera, amigos!', '¡Yalla, más rápido!'],
+        feast: ['¡Yalla, más mochis!', '¡Marhaba, dragoncito! ¡A comer!', '¡Yalla, yalla, que no pare!'],
       },
     },
     latifa: {
@@ -41,6 +44,7 @@
         oops: ['Casi… revisemos la pista.', 'Tranquilos, lo intentamos de nuevo.'],
         battle: ['¡Rodeen esa zona!', '¡Buena estrategia, equipo!', '¡Vamos por los monumentos!'],
         chase: ['¡Sepárense y lo logramos!', '¡Buena estrategia, equipo!', 'Piensen rápido: ¡turbo!'],
+        feast: ['Respuesta correcta, mochi asegurado.', 'Cada mochi cuenta, equipo.', '¡Buena estrategia: respondan rápido!'],
       },
     },
     aileen: {
@@ -52,6 +56,7 @@
         oops: ['¡Casi! Dale, otra vez.', 'Tranqui, ¡vos podés!'],
         battle: ['¡Dale, che, vamos!', '¡Vos podés, plantá esa bandera!', '¡Vamos, vamos, que ganamos!'],
         chase: ['¡Dale, che, corré!', '¡Vos podés, dale turbo!', '¡Dale, que se acerca Robotín!'],
+        feast: ['¡Dale, che, más mochis!', '¡Vos podés, tocá rápido!', '¡Qué genial, che, cómo come!'],
       },
     },
     adric: {
@@ -63,6 +68,7 @@
         oops: ['Casi.', 'Otra vez. Tú puedes.'],
         battle: ['Bien. Sigan así.', 'Mi perro huele la victoria.', 'Por ahí. Rápido.'],
         chase: ['Mi perro corre más rápido. ¡Vamos!', 'Por ahí. Rápido.', 'Bien. Sigan así.'],
+        feast: ['Mi perro también quiere mochis.', 'Rápido. Toca.', 'Bien. Que coma.'],
       },
     },
     adrian: {
@@ -74,6 +80,7 @@
         oops: ['¡Seguimos buscando!', 'El tesoro está cerca. ¡Otra vez!'],
         battle: ['¡El mapa dice: por aquí!', '¡A la aventura, equipo!', '¡Vamos por el tesoro!'],
         chase: ['¡El mapa dice: por aquí!', '¡Ya casi llegamos!', '¡A la aventura, rápido!'],
+        feast: ['¡El mapa dice: más mochis!', '¡A la aventura, a comer!', '¡Vamos por el Burj Khalifa!'],
       },
     },
     dralingo: {
@@ -86,11 +93,12 @@
         oops: ['¡Casi!', '¡Otra vez!'],
         battle: ['¡Vamos!', '¡A conquistar!', '¡Yalla!'],
         chase: ['¡Turbo!', '¡A correr!', '¡Yalla!'],
+        feast: ['¡Ñam!', '¡Más mochis!', '¡Yalla!'],
       },
     },
   };
   const HUMANS = ['fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian'];
-  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', mystery: 'mystery', oops: 'mystery' };
+  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', mystery: 'mystery', oops: 'mystery' };
   const pick1 = (a) => a[Math.floor(Math.random() * a.length)];
 
   function pick(n, opts) {

@@ -15,6 +15,7 @@ const FILES = [
   'core/escape.js', 'public/js/cast.js',
   'public/games.html',
   'public/host-halcon.html', 'public/js/host-halcon.js', 'public/js/player-halcon.js', 'public/js/halcon-board.js', 'core/halcon.js',
+  'public/host.html', 'public/js/host-mochi.js', 'public/js/player-mochi.js', 'public/js/mochi-stage.js', 'core/mochi.js',
   ...fs.readdirSync(path.join(ROOT, 'core/packs')).filter((f) => f.endsWith('.js')).map((f) => 'core/packs/' + f),
 ];
 const RULES = [

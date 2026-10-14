@@ -34,6 +34,7 @@ const SnowMap = require('./public/js/snow-map');     // … and its map, shared 
 const Escape = require('./core/escape');             // La Gran Fuga de Dubái (rules)
 const EscapeMap = require('./public/js/escape-map'); // … and its zona segura rooms, shared with the phones and the projector
 const Halcon = require('./core/halcon');             // Ojos de Halcón: Mario Party «Looking for Love» in boards of 4 (rules)
+const Mochi = require('./core/mochi');               // Mochi Mash v2: «La Terraza del Mochi», team mash + ceremony (rules)
 // Tiny persistence for the owner's Emirati Arabic gateway (single global
 // profile, since this is a super-admin-only personal feature). Lives on the
 // same data disk as the rest of the JSON state.
@@ -4347,7 +4348,7 @@ function publicState(game) {
     players: Object.fromEntries(
       Object.entries(game.players).map(([id, p]) => [
         id,
-        Object.assign({ name: p.name, team: p.team, score: p.score, avatar: p.avatar || '' }, p.disconnected ? { off: true } : {})
+        Object.assign({ name: p.name, team: p.team, score: p.score, avatar: p.avatar || '' }, p.disconnected ? { off: true } : {}, p.mmId ? { k: p.mmId, sk: hcSkin(p) } : {})
       ])
     ),
     feed: game.feed.slice(-12)
@@ -5525,6 +5526,219 @@ function hcEndPayloads(g) {
   };
 }
 
+// === 🍡 MOCHI MASH v2 (gameType 'mochi-mash') — «La Terraza del Mochi», team mash with a Mario Party ceremony ===
+// Rules in core/mochi.js (spec docs/specs/mochi-mash-v2.md). Fuego ('red') and Mar ('gold') feed their Dragoncitos:
+// a right answer opens a mash window; the phone sends tap COUNTS every 250 ms (player:mm-taps) and the server credits at
+// most R.RATE per second. One 250 ms tick per room runs the clock: intro → play (questions dealt) → frenzy (last 30 s)
+// → «¡FINAL!» → game-end (each phone its own card, the projector everything). Meter: the projector every tick, phones
+// every other tick and only when it changed; the projector also gets who fed (mm:fx inside mm:meter) for the flying
+// mochis. Questions come from the room's pack through nextQuestionFor; no full-room 'state' push on answers.
+const MM_TICK_MS = 250;
+function mmEnsureId(g, p) { if (!p.mmId) p.mmId = (g.mmNextId = (g.mmNextId || 0) + 1); return p.mmId; }
+function mmRoster(g) {
+  return Object.values(g.players).filter((p) => p.mmId).map((p) => ({ k: p.mmId, name: p.name, skin: hcSkin(p), team: p.team, on: !p.disconnected }));
+}
+function mmInitPayload(g, pid) {
+  const m = g.mm;
+  const now = Date.now();
+  const clock = m.paused ? m.pausedAt : now;
+  const p = pid ? g.players[pid] : null;
+  return {
+    id: m.id, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock), paused: !!m.paused,
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzy: !!m.frenzy,
+    frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null, duration: m.duration,
+    totals: Mochi.display(m), E: m.E, lead: m.lead, behind: m.behind,
+    landmarks: m.landmarks.map((l) => ({ id: l.id, name: l.name, at: l.at, bonus: l.bonus, team: l.team })),
+    roster: mmRoster(g), captains: g.mmCaptains || null,
+    you: p ? { k: p.mmId, team: p.team, mochis: p.mmMochis || 0, streak: p.mmStreak || 0, right: p.mmRight || 0 } : null,
+  };
+}
+function mmStop(g) { if (g && g.mm && g.mm.timer) { clearInterval(g.mm.timer); g.mm.timer = null; } }
+// a late joiner early in the game grows the expected total and moves the landmarks nobody has won yet (core rescale)
+function mmRescale(pin, g) {
+  const m = g.mm;
+  if (!m || !Mochi.rescale(m, Mochi.teamSizes(g.players), Date.now())) return;
+  io.to(pin).emit('mm:scale', { id: m.id, E: m.E, landmarks: m.landmarks.map((l) => ({ id: l.id, name: l.name, at: l.at, bonus: l.bonus, team: l.team })) });
+}
+// The countdown is over: the intro («¡Toca rápido!» → «¿Listos?» → «¡YA!»), then mmPlay deals the questions.
+function mmStart(pin, g) {
+  mmStop(g);
+  const now = Date.now();
+  const m = Mochi.newGame(1 + Math.floor(Math.random() * 1e9), g.duration, now, Mochi.teamSizes(g.players));
+  g.mm = m;
+  Object.values(g.players).forEach((p) => { mmEnsureId(g, p); Mochi.resetKid(p, m); p.currentQ = null; p.mashUntil = 0; p.lastQuestionAt = now; });
+  g.endsAt = now + Mochi.R.INTRO_MS + m.duration * 1000;
+  io.to(g.hostId).emit('mm:init', mmInitPayload(g, null));
+  Object.entries(g.players).forEach(([pid, p]) => { if (!p.disconnected) io.to(pid).emit('mm:init', mmInitPayload(g, pid)); });
+  m.timer = setInterval(() => mmTick(pin, m), MM_TICK_MS);
+}
+function mmPlay(pin, g) {
+  const m = g.mm;
+  if (!m || m.phase !== 'intro') return;
+  const now = Date.now();
+  Mochi.startPlay(m, now);
+  g.endsAt = m.endsAt;
+  io.to(pin).emit('mm:play', { id: m.id, endsMs: m.endsAt - now, frenzyMs: m.frenzyAt - now });
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected || p.currentQ) return;
+    const q = nextQuestionFor(g, pid);
+    if (q) io.to(pid).emit('question', q);
+  });
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// a kid's window is over: its summary, the next question NEXT_MS later (tick)
+function mmClose(g, pid, p, now) {
+  const s = Mochi.closeMash(g.mm, p, now);
+  if (s) { p.mashUntil = now + Mochi.R.NEXT_MS + 1000; if (!p.disconnected) io.to(pid).emit('mm:mashed', s); }   // (the tick deals the next one)
+  return s;
+}
+function mmTick(pin, m) {
+  const g = games[pin];
+  if (!g || g.mm !== m || g.state !== 'active') { clearInterval(m.timer); m.timer = null; return; }
+  if (m.paused) return;
+  const now = Date.now();
+  try {
+    if (m.phase === 'intro') { if (now >= m.phaseUntil) mmPlay(pin, g); return; }
+    if (m.phase === 'play' || m.phase === 'final') {
+      m.w = Mochi.weights(Mochi.teamSizes(g.players));
+      const cutAt = m.phase === 'final' ? m.endedAt : Infinity;
+      Object.entries(g.players).forEach(([pid, p]) => {
+        if (!Mochi.inGame(m, p)) return;
+        if (p.mmMash && now >= Math.min(p.mmMash.until, cutAt) + Mochi.R.GRACE_MS) mmClose(g, pid, p, now);
+        if (m.phase === 'play' && !p.mmMash && !p.currentQ && p.mmNextQAt && now >= p.mmNextQAt && !p.disconnected) {
+          p.mmNextQAt = 0;
+          const q = nextQuestionFor(g, pid);
+          if (q) io.to(pid).emit('question', q);
+        }
+      });
+    }
+    if (m.phase === 'play') {
+      const ev = Mochi.tick(m, now);
+      ev.landmarks.forEach((l) => io.to(pin).emit('mm:landmark', Object.assign({ totals: Mochi.display(m) }, l)));
+      if (ev.lead) io.to(pin).emit('mm:lead', Object.assign({ totals: Mochi.display(m) }, ev.lead));
+      if (ev.frenzy) io.to(pin).emit('mm:frenzy', { endsMs: Math.max(0, m.endsAt - now) });
+    }
+    // the meter: the projector every tick (with who fed), phones every other tick, only when something changed
+    const fx = Object.entries(m.fx).map(([k, v]) => [Number(k), v[0], v[1]]);
+    m.fx = {};
+    const d = Mochi.display(m);
+    const key = d.r + ':' + d.g;
+    if (fx.length || key !== m.hostKey) { m.hostKey = key; io.to(g.hostId).emit('mm:meter', { r: d.r, g: d.g, f: fx, b: m.behind }); }
+    m.beat = (m.beat || 0) + 1;
+    if (m.beat % 2 === 0 && key !== m.kidKey) { m.kidKey = key; io.to(pin).except(g.hostId).emit('mm:meter', { r: d.r, g: d.g, b: m.behind }); }
+    if (m.phase === 'play' && now >= m.endsAt) mmFinal(pin, g);
+    else if (m.phase === 'final' && now >= m.phaseUntil) {
+      Object.entries(g.players).forEach(([pid, p]) => { if (p.mmMash) mmClose(g, pid, p, now); });
+      mmStop(g);
+      if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+      endGame(pin);
+    }
+  } catch (e) { console.error('[mochi] tick', e); }
+}
+// A right / wrong answer (player:answer). Right: the mash window opens LEAD_MS later (the phone shows «¡Correcto!»).
+function mmAnswer(pin, g, pid, p, correct, correctText) {
+  const now = Date.now();
+  if (p.mmMash) mmClose(g, pid, p, now);                   // (defensive) never two windows at once
+  const r = Mochi.answer(g.mm, p, correct, now - (p.lastQuestionAt || now), now);
+  if (r.right) {
+    p.mashUntil = Mochi.closeAt(p.mmMash) + 1500;          // keeps the global watchdog from pushing a question meanwhile
+    p.mmNextQAt = 0;
+    io.to(pid).emit('answer-result', { correct: true, correctText, mochi: Object.assign({ streak: r.streak }, r.mash) });
+  } else {
+    // the room's tick deals the next question after the «¡Casi!» wait (pause-shifted, cancelled by «¡FINAL!» / reset);
+    // mashUntil keeps the global watchdog away meanwhile
+    p.mmNextQAt = now + r.wait;
+    p.mashUntil = now + r.wait + 1000;
+    io.to(pid).emit('answer-result', { correct: false, correctText, mochi: { wait: r.wait, streak: 0 } });
+  }
+}
+// «¡FINAL!» on every screen; the tick ends the game FINAL_MS later (windows in flight still count for GRACE_MS).
+function mmFinal(pin, g) {
+  const m = g.mm;
+  if (!m || m.phase === 'final' || m.phase === 'done') return;
+  const now = Date.now();
+  if (m.paused) { const shift = now - m.pausedAt; Mochi.shiftTimes(m, shift); Object.values(g.players).forEach((p) => Mochi.shiftMash(p, shift)); m.paused = false; }
+  Mochi.final(m, now);
+  Object.values(g.players).forEach((p) => { p.currentQ = null; p.mmNextQAt = 0; });
+  io.to(pin).emit('mm:final', { id: m.id, ms: Mochi.R.FINAL_MS, totals: Mochi.display(m) });
+  if (!m.timer) m.timer = setInterval(() => mmTick(pin, m), MM_TICK_MS);
+}
+function mmPause(pin, g, paused) {
+  const m = g.mm;
+  if (!m || !!m.paused === !!paused || m.phase === 'final' || m.phase === 'done') return;
+  const now = Date.now();
+  if (paused) { m.paused = true; m.pausedAt = now; }
+  else {
+    const shift = now - m.pausedAt;
+    Mochi.shiftTimes(m, shift);
+    Object.values(g.players).forEach((p) => { Mochi.shiftMash(p, shift); if (p.mashUntil) p.mashUntil += shift; });
+    if (g.endsAt) g.endsAt += shift;
+    m.paused = false;
+  }
+  const clock = m.paused ? m.pausedAt : now;
+  io.to(pin).emit('mm:pause', {
+    id: m.id, paused: !!m.paused, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock),
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null,
+  });
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// The end: totals, winner, bonus stars; each phone its own card (built again on demand for a reconnect).
+function mmEndPayloads(g) {
+  const m = g.mm;
+  const rows = Object.values(g.players).filter((p) => Mochi.inGame(m, p)).map((p) => ({
+    k: p.mmId, name: p.name, skin: hcSkin(p), team: p.team, mochis: p.mmMochis || 0, right: p.mmRight || 0,
+    answered: p.mmAnswered || 0, best: p.mmBest || 0, fast: p.mmFast, behind: p.mmBehind || 0, gold: p.mmGold || 0,
+  }));
+  const fin = Mochi.finish(m, rows);
+  const byK = {};
+  fin.rows.forEach((r) => { byK[r.k] = r; });
+  const lite = (r) => r && { k: r.k, name: r.name, skin: r.skin, team: r.team, mochis: r.mochis, rank: r.rank, stars: r.stars };
+  const stars = fin.stars.map((s) => ({ id: s.id, name: s.name, unit: s.unit, value: s.value, n: s.winners.length, who: s.winners.slice(0, 4).map((k) => lite(byK[k])) }));
+  const common = {
+    winner: fin.winner,
+    teamScores: { red: fin.totals.r, gold: fin.totals.g },
+    mochi: {
+      totals: fin.totals, winner: fin.winner, stars, landmarks: fin.landmarks, E: m.E, count: fin.rows.length, captains: g.mmCaptains || null,
+      top: fin.rows.slice(0, 10).map(lite), mvp: { red: lite(byK[fin.mvp.red]), gold: lite(byK[fin.mvp.gold]) },
+      teams: { red: fin.rows.filter((r) => r.team === 'red').slice(0, 12).map(lite), gold: fin.rows.filter((r) => r.team === 'gold').slice(0, 12).map(lite) },
+    },
+  };
+  return {
+    host: Object.assign({ leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.mochis, team: r.team })) }, common),
+    forPlayer(pid) {
+      const p = g.players[pid];
+      if (!p || !Mochi.inGame(m, p)) return null;
+      const r = byK[p.mmId];
+      if (!r) return null;
+      return Object.assign({}, common, {
+        scores: { [pid]: r.mochis },
+        me: {
+          k: r.k, team: r.team, mochis: r.mochis, share: r.share, right: r.right, answered: r.answered, best: r.best,
+          fast: r.fast, gold: r.gold, stars: r.stars, rank: r.rank, of: fin.rows.length,
+          won: fin.winner === r.team, tie: fin.winner === 'tie', mvp: fin.mvp[r.team] === r.k,
+        },
+      });
+    },
+  };
+}
+function mmFinish(pin, g) {
+  const m = g.mm;
+  if (!m) return;
+  mmStop(g);
+  m.phase = 'done';
+  const end = mmEndPayloads(g);
+  g.teamScores = end.host.teamScores;
+  Object.values(g.players).forEach((p) => { if (Mochi.inGame(m, p)) p.score = p.mmMochis || 0; });   // the room's own score = mochis
+  io.to(g.hostId).emit('game-end', end.host);
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected) return;
+    const one = end.forPlayer(pid);
+    if (one) io.to(pid).emit('game-end', one);
+  });
+}
+
 // === 🚀 LA GRAN FUGA DE DUBÁI (gameType 'escape') — Kahoot «Robot Run» style co-op chase, Dralingo episode ===
 // Rules in core/escape.js, rooms in public/js/escape-map.js (spec docs/specs/gran-fuga-de-dubai.md). The whole class
 // runs from Robotín through three Dubai zones: right answers are turbos (the run is server-timed, 10 Hz physics, 5 Hz
@@ -5845,6 +6059,13 @@ function endGame(pin) {
     broadcast(pin);
     return;
   }
+  // Mochi Mash v2: totals, winner, bonus stars, each phone its own card (core/mochi.js finish()).
+  if (g.gameType === 'mochi-mash' && g.mm) {
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+    mmFinish(pin, g);
+    broadcast(pin);
+    return;
+  }
   // Ojos de Halcón: each board's ranking + winner (its phones play the studio finale), the class ranking (core/halcon.js).
   if (g.gameType === 'halcon') {
     if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
@@ -5899,6 +6120,7 @@ io.on('connection', (socket) => {
       type === 'snow'         ? 240 :
       type === 'escape'       ? 300 :    // three zones + three zona segura phases
       type === 'halcon'       ? Halcon.timeCapS(Halcon.R.ROUNDS) :   // the same: hcStart sets the cap for the rounds picked
+      type === 'mochi-mash'   ? Mochi.R.DURATION :   // 3 min (the lobby offers 2 / 3 / 4)
       type === 'warmup'       ? 3600 :   // 1 hour ceiling; teacher exits manually
       type === 'reading'      ? 3600 :   // 1 hour ceiling; teacher controls flow
       type === 'hsksim'       ? 3600 :   // 1 hour ceiling; kid takes the exam on their own pace
@@ -6026,6 +6248,9 @@ io.on('connection', (socket) => {
     if (g.gameType === 'halcon' && g.halcon && g.state === 'ended') {
       io.to(socket.id).emit('game-end', hcEndPayloads(g).host);
     }
+    // Mochi Mash: the terrace again (mid-game), or the ceremony again (after the end)
+    if (g.gameType === 'mochi-mash' && g.mm && g.state === 'active') io.to(socket.id).emit('mm:init', mmInitPayload(g, null));
+    if (g.gameType === 'mochi-mash' && g.mm && g.state === 'ended') io.to(socket.id).emit('game-end', mmEndPayloads(g).host);
     cb({ ok: true, gameType: g.gameType, state: g.state });
   });
 
@@ -6103,6 +6328,7 @@ io.on('connection', (socket) => {
     if (!g || g.hostId !== socket.id) return;
     const p = g.players[playerId];
     if (!p) return;
+    if (g.gameType === 'mochi-mash' && g.state !== 'lobby') return;   // a kid's mochis belong to the team they fed
     p.team = p.team === 'red' ? 'gold' : 'red';
     g.feed.push({ type: 'swap', name: p.name, team: p.team, t: Date.now() });
     io.to(playerId).emit('team-changed', { team: p.team });
@@ -6112,6 +6338,7 @@ io.on('connection', (socket) => {
   socket.on('host:auto-balance', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
+    if (g.gameType === 'mochi-mash' && g.state !== 'lobby') return;
     const ids = Object.keys(g.players).sort(() => Math.random() - 0.5);
     ids.forEach((id, i) => {
       g.players[id].team = i % 2 === 0 ? 'red' : 'gold';
@@ -6124,7 +6351,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
     // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
-    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon') && g.state !== 'lobby') return;
+    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
     // generated server-side or teacher-driven). Don't gate them on
     // questions.length, otherwise Start silently does nothing and the
@@ -6170,6 +6397,8 @@ io.on('connection', (socket) => {
       g.esCast = { open: 'fer', jet: 'hamdan', cheers: gang.slice(0, 4) };
       io.to(pin).emit('es:cast', g.esCast);
     }
+    // Mochi Mash: one of the gang captains each team (the run-in shows them; they cheer on lead changes and landmarks)
+    if (g.gameType === 'mochi-mash') { g.mmCaptains = kdPickCaptains(g.mmCaptains); io.to(pin).emit('mm:captains', g.mmCaptains); }
     io.to(pin).emit('countdown', { ms: COUNTDOWN_MS });
     // Ojos de Halcón: the boards are dealt now, so the countdown plays each board's run-in on its phones.
     if (g.gameType === 'halcon') hcDeal(pin, g);
@@ -6267,6 +6496,7 @@ io.on('connection', (socket) => {
       if (g.gameType === 'snow') snStart(pin, g);
       if (g.gameType === 'escape') esStart(pin, g);
       if (g.gameType === 'halcon') hcStart(pin, g);
+      if (g.gameType === 'mochi-mash') mmStart(pin, g);   // the intro first: mmPlay deals the questions and runs the clock
       if (g.gameType === 'reading') {
         // === 📖 READING MODE ===
         // Teacher-driven story session. Server holds the master playback
@@ -6339,11 +6569,11 @@ io.on('connection', (socket) => {
       }
       broadcast(pin);
       // Every question-driven game auto-deals the first question (Dragones Pintores: kids ask with «Recargar»).
-      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon') Object.keys(g.players).forEach((pid) => {
+      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon' && g.gameType !== 'mochi-mash') Object.keys(g.players).forEach((pid) => {
         const q = nextQuestionFor(g, pid);
         if (q) io.to(pid).emit('question', q);
       });
-      g.endTimer = setTimeout(() => {
+      if (g.gameType !== 'mochi-mash') g.endTimer = setTimeout(() => {
         if (!games[pin] || games[pin].state !== 'active') return;
         endGame(pin);
       }, g.duration * 1000);
@@ -6353,11 +6583,17 @@ io.on('connection', (socket) => {
   socket.on('host:end-now', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
-    if ((g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon') && g.state !== 'active') return;      // already over: no second end show
+    if ((g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash') && g.state !== 'active') return;      // already over: no second end show
     // Ojos de Halcón: «Terminar» plays «¡FINAL!» first (paused: straight to the finale, the pause holds every timer)
     if (g.gameType === 'halcon' && g.halcon && !g.halcon.paused) {
       if (g.halcon.phase === 'final') return;      // «¡FINAL!» is already on: the finale follows by itself
       if (g.halcon.phase !== 'done') { hcFinal(pin, g); return; }
+    }
+    // Mochi Mash: «Terminar» plays «¡FINAL!» first (also when paused: the pause ends), then the ceremony
+    if (g.gameType === 'mochi-mash' && g.mm) {
+      if (g.state !== 'active' || g.mm.phase === 'final' || g.mm.phase === 'done') return;
+      mmFinal(pin, g);
+      return;
     }
     if (g.endTimer) clearTimeout(g.endTimer);
     endGame(pin);
@@ -6372,6 +6608,11 @@ io.on('connection', (socket) => {
     if (g.gameType === 'snow') { snStop(g); g.snow = null; }
     if (g.gameType === 'escape') { esStop(g); g.escape = null; }
     if (g.gameType === 'halcon') { hcStop(g); g.halcon = null; }
+    if (g.gameType === 'mochi-mash') {
+      mmStop(g);
+      g.mm = null;
+      Object.values(g.players).forEach((p) => { p.mmGame = null; p.mmMash = null; p.mmNextQAt = 0; });
+    }
     g.state = 'lobby';
     g.teamScores = { red: 0, gold: 0 };
     g.endsAt = null;
@@ -6390,6 +6631,27 @@ io.on('connection', (socket) => {
   socket.on('player:join', ({ pin, name, avatar, studentCode }, cb) => {
     const g = games[pin];
     if (!g) return cb({ ok: false, error: 'No hay ningún juego con ese PIN. Revisa el número.' });
+    // Mochi Mash / Ojos de Halcón: a kid of this game whose phone dropped around the end (a new socket) gets its slot
+    // back and its own end card again, and stays in the room for «Otra ronda»
+    if (g.state === 'ended' && ((g.gameType === 'mochi-mash' && g.mm) || (g.gameType === 'halcon' && g.halcon))) {
+      const nm = String(name || '').trim().slice(0, 20).toLowerCase();
+      const ex = nm ? Object.entries(g.players).find(([, p]) => p.name.toLowerCase() === nm) : null;
+      if (ex) {
+        const [oldId, pl] = ex;
+        pl.disconnected = false;
+        pl.disconnectedAt = null;
+        if (pl.cleanupTimer) { clearTimeout(pl.cleanupTimer); pl.cleanupTimer = null; }
+        if (oldId !== socket.id) { g.players[socket.id] = pl; delete g.players[oldId]; }
+        currentPin = pin;
+        role = 'player';
+        socket.join(pin);
+        cb({ ok: true, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: pl.studentCode });
+        io.to(socket.id).emit('state', publicState(g));
+        const one = g.gameType === 'mochi-mash' ? mmEndPayloads(g).forPlayer(socket.id) : hcEndPayloads(g).forPlayer(socket.id);
+        if (one) setTimeout(() => io.to(socket.id).emit('game-end', one), 60);
+        return;
+      }
+    }
     // «Otra ronda» keeps the same PIN: tell the kid to try again, not to wait for a new PIN (class test 2026-10-12)
     if (g.state === 'ended') return cb({ ok: false, error: 'Esta ronda terminó. Cuando tu maestro empiece otra, vuelve a tocar «¡Entrar!».' });
     const cleanName = String(name || '').trim().slice(0, 20);
@@ -6422,8 +6684,8 @@ io.on('connection', (socket) => {
       if (avatar && typeof avatar === 'string') player.avatar = String(avatar).slice(0, 8);
       g.feed.push({ type: 'rejoin', name: cleanName, team: player.team, t: Date.now() });
     } else {
-      // New player — pick smaller team
-      const team = pickTeam(g);
+      // New player — pick smaller team (Mochi Mash: fewer CONNECTED kids, a tie goes to the team that is behind)
+      const team = g.gameType === 'mochi-mash' ? Mochi.pickTeam(g.players, g.mm) : pickTeam(g);
       player = {
         name: cleanName,
         team,
@@ -6447,6 +6709,7 @@ io.on('connection', (socket) => {
     // same phone = same record = same sentence history forever.
     const studentRec = Students.getOrCreate(studentCode, cleanName);
     player.studentCode = studentRec.code;
+    if (g.gameType === 'mochi-mash') mmEnsureId(g, player);   // the projector knows every kid (k + character) from the lobby
 
     currentPin = pin;
     role = 'player';
@@ -6581,6 +6844,21 @@ io.on('connection', (socket) => {
         player.currentQ = null;
         io.to(socket.id).emit('hc:init', hcInitPayload(g, socket.id));
         return;
+      }
+      // Mochi Mash: a late joiner feeds from now (fresh stats), a rejoin keeps its mochis; a reload in the middle of a
+      // mash window ends that window (its taps already count). Questions only while the game is in play.
+      if (g.gameType === 'mochi-mash' && g.mm) {
+        mmEnsureId(g, player);
+        Mochi.join(g.mm, player);
+        if (player.mmMash) mmClose(g, socket.id, player, Date.now());
+        io.to(socket.id).emit('mm:init', mmInitPayload(g, socket.id));
+        mmRescale(pin, g);
+        if (g.mm.phase !== 'play') { player.currentQ = null; return; }
+        if (g.mm.paused) {             // paused: the open question comes back, a new one waits for «Seguir»
+          if (player.currentQ) io.to(socket.id).emit('question', { qid: player.currentQ.qid, text: player.currentQ.text, answers: player.currentQ.answers, image: player.currentQ.image });
+          return;
+        }
+        if (!player.currentQ && player.mmNextQAt) return;   // the «¡Casi!» wait or a window summary: the tick deals it
       }
       if (g.gameType === 'kingdoms' && g.kingdoms) {
         io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
@@ -6733,8 +7011,16 @@ io.on('connection', (socket) => {
           teamScores: g.teamScores,
         });
       }
+    } else if (g.gameType === 'mochi-mash' && g.mm) {
+      // Mochi Mash v2: paused or not in play → the question stays open (the phone gets its buttons back)
+      if (g.mm.paused || g.mm.phase !== 'play') {
+        if (g.mm.phase === 'play') p.currentQ = cqData;
+        io.to(socket.id).emit('answer-stale', { reason: g.mm.paused ? 'paused' : 'not-playing' });
+        return;
+      }
+      mmAnswer(pin, g, socket.id, p, correct, correctText);
     } else {
-      // Mochi Mash logic
+      // Mochi Mash (legacy path, a room without the v2 game object)
       if (correct) {
         p.mashUntil = Date.now() + MASH_DURATION_MS;
         io.to(socket.id).emit('answer-result', {
@@ -6766,19 +7052,22 @@ io.on('connection', (socket) => {
     } else if (g.gameType === 'sixseven') {
       // Snappy rhythm — fast cadence so the swing feels continuous
       nextDelay = correct ? 600 : 800;
+    } else if (g.gameType === 'mochi-mash' && g.mm) {
+      nextDelay = -1;                       // the room's tick deals the next one (after the mash window or the «¡Casi!» wait)
     } else {
       nextDelay = correct ? MASH_DURATION_MS + 600 : 1400;
     }
     if (nextDelay >= 0) {
       setTimeout(() => {
         if (!games[pin] || games[pin].state !== 'active') return;
+        if (g.gameType === 'mochi-mash' && g.mm && g.mm.phase !== 'play') return;   // «¡FINAL!»: no more questions
         const q = nextQuestionFor(g, socket.id);
         if (q) io.to(socket.id).emit('question', q);
       }, nextDelay);
     }
     // Reinos de Colores sends its own small kd:plant diffs; skipping the full-room 'state' push here
     // keeps 30 phones from receiving ~5 full state objects per second.
-    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape') broadcast(pin);
+    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape' && g.gameType !== 'mochi-mash') broadcast(pin);
   });
 
   // Dragones Pintores: position (8 Hz from each phone), painted tiles, and «Recargar» (ask for a question).
@@ -6983,7 +7272,30 @@ io.on('connection', (socket) => {
       if (g.gameType === 'snow') snPause(pin, g, !!paused);
       if (g.gameType === 'escape') esPause(pin, g, !!paused);
       if (g.gameType === 'halcon') hcPause(pin, g, !!paused);
+      if (g.gameType === 'mochi-mash') mmPause(pin, g, !!paused);
     } catch (e) { console.error('[host:pause]', e); }
+  });
+
+  // Mochi Mash: a phone's tap COUNT for its open mash window (every ~250 ms while mashing, plus a last one at the end).
+  // No reply per batch: the phone counts on its own, the window's summary comes when it closes (mm:mashed).
+  socket.on('player:mm-taps', (data) => {
+    try {
+      const g = games[data && data.pin];
+      if (!g || g.gameType !== 'mochi-mash' || !g.mm || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      if (!p || !Mochi.inGame(g.mm, p)) return;
+      Mochi.taps(g.mm, p, Number(data.mid), data.n, Date.now());
+    } catch (e) { console.error('[player:mm-taps]', e); }
+  });
+  // Mochi Mash teacher «⏭ Saltar»: the intro → play now; after the end → every phone jumps to its own card.
+  socket.on('host:mm-skip', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'mochi-mash' || !g.mm) return;
+      if (g.state === 'active' && g.mm.phase === 'intro' && !g.mm.paused) mmPlay(pin, g);
+      else if (g.state === 'ended') io.to(pin).except(g.hostId).emit('mm:skip', { id: g.mm.id });
+    } catch (e) { console.error('[host:mm-skip]', e); }
   });
 
   // Ojos de Halcón: a kid looked at a window (0 top · 1 right · 2 bottom · 3 left).
@@ -7052,6 +7364,17 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id || g.state !== 'active') return;
     const add = Math.max(10, Math.min(120, Number(seconds) || 30)) * 1000;
+    // Mochi Mash: the room's tick owns the clock (no end timer); g.duration (the teacher's pick) is not touched, so the
+    // next round starts with the picked time again
+    if (g.gameType === 'mochi-mash' && g.mm) {
+      if (!Mochi.addTime(g.mm, add)) return;
+      g.endsAt = g.mm.endsAt;
+      const clock = g.mm.paused ? g.mm.pausedAt : Date.now();
+      io.to(pin).emit('mm:time', { id: g.mm.id, endsMs: Math.max(0, g.mm.endsAt - clock), frenzy: g.mm.frenzy, frenzyMs: Math.max(0, g.mm.frenzyAt - clock), add: add / 1000 });
+      g._lastBcast = 0;
+      broadcast(pin);
+      return;
+    }
     g.endsAt += add;
     g.duration += add / 1000;
     g.extraSecs = (g.extraSecs || 0) + add / 1000;   // only for this round: host:reset gives it back (playtest 2026-10-11)
@@ -7130,6 +7453,23 @@ io.on('connection', (socket) => {
         if (one) io.to(socket.id).emit('game-end', one);
       }
       return;                         // the board is the screen: never a question
+    }
+    if (g.gameType === 'mochi-mash' && g.mm) {
+      if (g.state === 'ended') {      // missed game-end (a drop at «¡FINAL!»): the ceremony again
+        const one = mmEndPayloads(g).forPlayer(socket.id);
+        if (one) io.to(socket.id).emit('game-end', one);
+        return;
+      }
+      if (g.state === 'active') {
+        mmEnsureId(g, p);
+        Mochi.join(g.mm, p);
+        io.to(socket.id).emit('mm:init', mmInitPayload(g, socket.id));
+        if (g.mm.phase !== 'play') return;       // intro / «¡FINAL!»: no question now
+        if (g.mm.paused || (!p.currentQ && (p.mmMash || p.mmNextQAt))) {   // paused, mashing or waiting: only the open question
+          if (p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
+          return;
+        }
+      }
     }
     if (g.gameType === 'kingdoms' && g.state === 'active' && g.kingdoms) {
       io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
@@ -8033,6 +8373,7 @@ io.on('connection', (socket) => {
   socket.on('player:tap', ({ pin }) => {
     const g = games[pin];
     if (!g || g.state !== 'active') return;
+    if (g.gameType === 'mochi-mash' && g.mm) return;   // Mochi Mash v2 counts taps in batches (player:mm-taps), capped
     const p = g.players[socket.id];
     if (!p) return;
     const now = Date.now();
@@ -8167,6 +8508,7 @@ io.on('connection', (socket) => {
           if (stillExists.gameType === 'snow') snStop(stillExists);
           if (stillExists.gameType === 'escape') esStop(stillExists);
           if (stillExists.gameType === 'halcon') hcStop(stillExists);
+          if (stillExists.gameType === 'mochi-mash') mmStop(stillExists);
           if (stillExists.gameType === 'kingdoms') kdClearTimers(stillExists);
           io.to(currentPin).emit('host-left');
           delete games[currentPin];
@@ -8220,6 +8562,7 @@ setInterval(() => {
     if (g.gameType === 'snow') return;         // questions are on demand (the stations)
     if (g.gameType === 'escape' && !(g.escape && g.escape.phase === 'run' && !g.escape.paused)) return;   // only while the crew runs
     if (g.gameType === 'halcon') return;       // no questions on the phones: the boards run the rounds
+    if (g.gameType === 'mochi-mash' && g.mm && (g.mm.phase !== 'play' || g.mm.paused)) return;   // intro, pause, «¡FINAL!»
     Object.entries(g.players).forEach(([pid, p]) => {
       const inAction = p.mashUntil > now || p.currentQ;
       if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {
