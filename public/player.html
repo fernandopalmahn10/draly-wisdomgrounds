@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="Dralingo">
   <title>Draly Wisdom Grounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20261012a">
+  <link rel="stylesheet" href="/css/styles.css?v=20261014a">
   <link rel="stylesheet" href="/css/dralingo.css">
   <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="/css/snow.css?v=20261012e">
   <link rel="stylesheet" href="/css/escape.css?v=20261013b">
   <link rel="stylesheet" href="/css/halcon.css?v=20261014a">
+  <link rel="stylesheet" href="/css/mochi.css?v=20261014a">
   <!-- Lobby layout + lobby mini-game (the little plane while kids wait).
        These rules used to live in flappy.css, which was deleted with the
        retired Flappy Dragon game (2026-10-10); the lobby itself is shared. -->
@@ -129,8 +130,8 @@
   <!-- LOBBY (waiting) — with a tiny Flappy mini-game to pass the time -->
   <div id="screen-lobby" class="hidden player-screen lobby-screen">
     <div class="lobby-header">
-      <div id="lobby-mascot" style="font-size:3.5rem;">🐼</div>
-      <h2 id="lobby-team-name" style="font-family:'ZCOOL XiaoWei',serif; font-size:1.4rem; margin:2px 0;">Team Panda</h2>
+      <div id="lobby-mascot" style="font-size:3.5rem;">🐉</div>
+      <h2 id="lobby-team-name" style="font-family:'ZCOOL XiaoWei',serif; font-size:1.4rem; margin:2px 0;">¡Bienvenido!</h2>
       <p style="color:var(--ink-dim); font-size:0.85rem; margin:2px 0;">¡Bienvenido <strong id="lobby-name"></strong>!</p>
       <p style="color:var(--gold-glow); font-weight:700; font-size:0.85rem; margin-top:4px;">Esperando al anfitrión… mientras tanto:</p>
     </div>
@@ -187,7 +188,7 @@
         ⚡ ¡A APLASTAR! ⚡
       </div>
       <button class="mash-button" id="mash-button">
-        <div class="mash-mascot" id="mash-mascot">🐼</div>
+        <div class="mash-mascot" id="mash-mascot">🍡</div>
         <div class="mash-counter" id="mash-counter">+0</div>
       </button>
       <div class="mash-timer"><div class="mash-timer-fill" id="mash-timer-fill"></div></div>
@@ -632,6 +633,39 @@
     <div class="hc-pause hidden" id="hc-pause"><div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div></div>
   </div>
 
+  <!-- Mochi Mash v2 (js/player-mochi.js + js/mochi-stage.js + css/mochi.css): the mash zone. The whole screen is the
+       button: every tap throws a mochi from the kid's full-body character into the team's Dragoncito. -->
+  <div id="screen-mochi" class="hidden">
+    <div class="mmz" id="mmz" role="button" tabindex="0" aria-label="Toca rápido: cada toque lanza un mochi a tu dragoncito">
+      <div class="mmz-meter" id="mmz-meter" aria-hidden="true">
+        <b class="mmz-meter-n r" id="mmz-meter-rn">0</b>
+        <div class="mmz-meter-bar"><i id="mmz-meter-r"></i></div>
+        <b class="mmz-meter-n g" id="mmz-meter-gn">0</b>
+      </div>
+      <div class="mmz-status" id="mmz-status"></div>
+      <div class="mmz-stage">
+        <div class="mmz-dragon" id="mmz-dragon"></div>
+        <div class="mmz-count"><b id="mmz-n">0</b><span>mochis</span></div>
+        <div class="mmz-plus" id="mmz-plus" aria-live="polite"></div>
+        <div class="mmz-note" id="mmz-note"></div>
+        <div class="mmz-kid" id="mmz-kid"></div>
+        <i class="mmz-tray" aria-hidden="true"><i class="mm-mochi f0"></i><i class="mm-mochi f1"></i><i class="mm-mochi f2"></i><i class="mm-mochi f3"></i><i class="mm-mochi f1"></i></i>
+        <i class="mmz-hand" aria-hidden="true"></i>
+      </div>
+      <div class="mmz-foot">
+        <div class="mmz-hint" id="mmz-hint">¡Toca rápido!</div>
+        <div class="mmz-bar"><i id="mmz-bar"></i></div>
+      </div>
+    </div>
+    <div class="mmz-fly" id="mmz-fly" aria-hidden="true"></div>
+  </div>
+  <!-- Mochi Mash overlays: the run-in / rules card, the top-edge banners, the 30-s chip, the pause card, «¡FINAL!» -->
+  <div class="mm-intro hidden" id="mm-intro"></div>
+  <div class="mm-banner" id="mm-banner" role="status" aria-live="polite"></div>
+  <div class="mm-chip hidden" id="mm-chip"><span>Doble mochi</span><b>0:30</b></div>
+  <div class="mm-pause hidden" id="mm-pause" role="alert"><div><img src="/assets/dralingo/wise.webp" alt=""><b>Pausa</b><span>Mira al profe</span></div></div>
+  <div class="mm-final hidden" id="mm-final"><b>¡FINAL!</b></div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -650,7 +684,7 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261014a"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261014b"></script>
   <script src="/js/player-kingdoms.js?v=20261011f"></script>
   <script src="/js/paint-render.js?v=20261011a"></script>
   <script src="/js/player-paint.js?v=20261011e"></script>
@@ -662,10 +696,12 @@
   <script src="/js/player-escape.js?v=20261013b"></script>
   <script src="/js/halcon-board.js?v=20261014a"></script>
   <script src="/js/player-halcon.js?v=20261014a"></script>
-  <script src="/js/cast.js?v=20261013a"></script>
+  <script src="/js/mochi-stage.js?v=20261014a"></script>
+  <script src="/js/player-mochi.js?v=20261014a"></script>
+  <script src="/js/cast.js?v=20261014a"></script>
   <script src="/js/dralingo-fx.js?v=20261013a"></script>
   <script src="/js/saga.js?v=20261013a"></script>
-  <script src="/js/player.js?v=20261014a"></script>
+  <script src="/js/player.js?v=20261014b"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

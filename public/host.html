@@ -1,179 +1,118 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Mochi Mash · Host</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20261011a">
-  <link rel="stylesheet" href="/css/dralingo.css">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f6c7cf">
+  <title>Mochi Mash · Anfitrión</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/mochi.css?v=20261014a">
 </head>
-<body>
-  <div class="lantern l1"></div>
-  <div class="lantern l2"></div>
-  <div class="lantern l3"></div>
+<body class="mm-host">
+  <button class="mmh-btn mmh-mute" id="mute-btn" type="button" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Sonido</span>
+  </button>
 
-  <button class="muted-toggle" id="mute-btn">🔊 On</button>
-
-  <!-- LOBBY -->
-  <div id="screen-lobby" class="container">
-    <div style="text-align:center; margin-bottom:16px;">
-      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em;">GAME PIN</div>
-      <div class="pin-display" id="pin-display">······</div>
-      <div style="color:var(--ink-dim); font-size:0.9rem;">
-        Players go to <span id="join-url" style="color:var(--gold-glow); font-weight:800;">this URL</span>
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:16px;">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-        <div style="font-size:2rem;">📚</div>
-        <div style="flex:1;">
-          <div style="font-size:0.75rem; color:var(--ink-dim); letter-spacing:0.15em; text-transform:uppercase;">Set Loaded</div>
-          <div id="set-title-display" style="font-weight:800; font-size:1.15rem;">…</div>
-          <div id="set-count-display" style="color:var(--ink-dim); font-size:0.85rem;">…</div>
-          <div id="images-progress-badge" style="margin-top:6px; font-size:0.85rem; color:var(--gold-glow); display:none;">
-            🔥 <span id="images-progress-text">0/0</span> images ready
-          </div>
+  <!-- LOBBY: PIN + QR, the 3 steps, time, the two teams as full-body characters (tap one to change team) -->
+  <main id="screen-lobby" class="mmh-lobby">
+    <section class="mmh-left">
+      <h1 class="mmh-title" translate="no">Mochi <span>Mash</span></h1>
+      <p class="mmh-tagline">La Terraza del Mochi en Dubái: Fuego contra Mar. Cada respuesta correcta da 5 segundos para darle mochis a tu dragoncito.</p>
+      <div class="mmh-pin-card">
+        <div>
+          <div class="mmh-pin-label">PIN</div>
+          <div class="mmh-pin" id="pin-display">····</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="location.href='/sets.html'">Change</button>
+        <div class="mmh-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
+        <div class="mmh-qr" id="qr" aria-hidden="true"></div>
       </div>
-
-      <div class="duration-control">
-        <span>⏱ Duration</span>
-        <input type="range" id="duration-slider" min="30" max="300" step="15" value="60">
-        <span class="duration-value" id="duration-value">60s</span>
-      </div>
-    </div>
-
-    <div class="host-grid">
-      <div class="team-panel team-red">
-        <div class="team-header">
-          <div class="team-mascot">🐼</div>
-          <div>
-            <div class="team-name">Team Panda</div>
-            <div style="color:var(--ink-dim); font-size:0.85rem;">紅</div>
-          </div>
+      <ol class="mmh-steps">
+        <li><div class="mm-step s1"><i class="t r"></i><i class="t b"></i><i class="t y"></i><i class="t g ok"></i></div>Responde bien<small>la pregunta en Chino Mandarín</small></li>
+        <li><div class="mm-step s2"><i class="mmi-pic-btn"></i><i class="mmi-pic-hand"></i></div>¡Toca rápido!<small>5 segundos de mochis</small></li>
+        <li><div class="mm-step s3"><img src="/assets/kingdoms/dralingo/champion-red.webp" alt=""></div>El más grande gana<small>¡y estrellas para los mejores!</small></li>
+      </ol>
+      <div class="mmh-tools">
+        <div class="mmh-dur" role="group" aria-label="Tiempo de juego"><span>Tiempo</span>
+          <button class="mmh-btn" type="button" data-s="120">2 min</button><button class="mmh-btn on" type="button" data-s="180">3 min</button><button class="mmh-btn" type="button" data-s="240">4 min</button>
         </div>
-        <div class="player-chips" id="players-red"></div>
+        <button class="mmh-btn" id="balance-btn" type="button">Equilibrar equipos</button>
+        <button class="mmh-btn go" id="start-btn" type="button" disabled>¡A comer!</button>
       </div>
-      <div class="team-panel team-gold">
-        <div class="team-header">
-          <div class="team-mascot">🦊</div>
-          <div>
-            <div class="team-name">Team Kitsune</div>
-            <div style="color:var(--ink-dim); font-size:0.85rem;">金</div>
-          </div>
-        </div>
-        <div class="player-chips" id="players-gold"></div>
+      <div class="mmh-set" id="set-display">Cargando preguntas…</div>
+    </section>
+    <section class="mmh-right">
+      <div class="mmh-preview" id="preview">
+        <div class="mmh-pv-d red" id="pv-red"></div>
+        <div class="mmh-pv-vs" aria-hidden="true">VS</div>
+        <div class="mmh-pv-d gold" id="pv-gold"></div>
       </div>
-    </div>
+      <div class="mmh-teams">
+        <div class="mmh-team red"><div class="mmh-team-head"><span>Equipo Fuego</span><small id="count-red">0</small></div><div class="mmh-kids" id="kids-red"></div></div>
+        <div class="mmh-team gold"><div class="mmh-team-head"><span>Equipo Mar</span><small id="count-gold">0</small></div><div class="mmh-kids" id="kids-gold"></div></div>
+      </div>
+      <p class="mmh-hint">Toca a un jugador para cambiarlo de equipo</p>
+    </section>
+  </main>
 
-    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:12px;">
-      Tap a player chip to swap their team
-    </p>
-
-    <div class="controls-panel">
-      <div class="controls-row" style="justify-content:center;">
-        <button class="btn btn-ghost" id="balance-btn">⚖️ Auto-balance</button>
-        <button class="btn btn-jade" id="start-btn" disabled>▶️ Start Battle</button>
+  <!-- THE TERRACE: countdown run-in, the rules card, the game, «¡FINAL!» -->
+  <main id="screen-stage" class="mmh-stage hidden">
+    <div class="mmh-pin-mini">PIN <b id="active-pin">···</b></div>
+    <div class="mmh-top">
+      <div class="mmh-meter" aria-label="Mochis de cada equipo">
+        <span class="mmh-mn r"><span id="m-red">0</span><small>Fuego</small></span>
+        <div class="mmh-bar"><i id="m-bar"></i></div>
+        <span class="mmh-mn g"><small>Mar</small><span id="m-gold">0</span></span>
       </div>
+      <div class="mmh-clock"><b class="mmh-time" id="clock">3:00</b><span class="mmh-x2">Doble mochi</span></div>
     </div>
+    <div class="mmh-plate red" id="plate-red"><span class="mmh-plate-name">Equipo Fuego</span></div>
+    <div class="mmh-ruler" id="ruler" aria-hidden="true"><i class="mmh-ruler-col"></i><i class="mmh-mark red" id="mark-red"></i><i class="mmh-mark gold" id="mark-gold"></i></div>
+    <div class="mmh-plate gold" id="plate-gold"><span class="mmh-plate-name">Equipo Mar</span></div>
+    <div class="mmh-capt red hidden" id="capt-red"><p class="mmh-capt-say"></p><img alt=""><b class="mmh-capt-name"></b></div>
+    <div class="mmh-capt gold hidden" id="capt-gold"><p class="mmh-capt-say"></p><img alt=""><b class="mmh-capt-name"></b></div>
+    <div class="mmh-crowd red" id="crowd-red"></div>
+    <div class="mmh-crowd gold" id="crowd-gold"></div>
+    <div class="mmh-host"><img src="/assets/dralingo/hello.webp" alt="Dralingo"><p class="mmh-say" id="host-say"></p></div>
+    <div class="mmh-count10 hidden" id="count10" aria-hidden="true"></div>
+  </main>
+  <div class="mmh-fly" id="fly" aria-hidden="true"></div>
+
+  <nav class="mmh-controls hidden" id="controls" aria-label="Controles del profe">
+    <button class="mmh-btn" id="pause-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg><span>Pausa</span></button>
+    <button class="mmh-btn" id="more-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span>30 s</span></button>
+    <button class="mmh-btn hidden" id="skip-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l7 6-7 6zM12 6l7 6-7 6z" fill="currentColor"/></svg><span>Saltar</span></button>
+    <button class="mmh-btn" id="end-now-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg><span>Terminar</span></button>
+  </nav>
+
+  <div class="mmh-band" id="band" role="status" aria-live="polite"></div>
+  <div class="mmh-rules hidden" id="rules"></div>
+  <div class="mmh-paused hidden" id="paused">
+    <div><img src="/assets/dralingo/wise.webp" alt=""><b>Pausa</b><span>Todos quietos: miren al profe</span>
+      <div class="row"><button class="mmh-btn go" id="resume-btn" type="button">Seguir jugando</button><button class="mmh-btn" id="paused-end-btn" type="button">Terminar</button></div></div>
   </div>
 
-  <!-- COUNTDOWN -->
-  <div id="screen-countdown" class="hidden countdown-overlay">
-    <div class="countdown-num" id="countdown-num">3</div>
-  </div>
-
-  <!-- ACTIVE GAME -->
-  <div id="screen-active" class="hidden container">
-    <div class="sticky-pin">
-      <span class="sticky-pin-label">PIN</span>
-      <span class="sticky-pin-value" id="active-pin-display">····</span>
-    </div>
-    <div class="timer-display" id="timer-display">60</div>
-    <div class="timer-bar" id="timer-bar"><div class="timer-bar-fill" id="timer-bar-fill" style="width:100%"></div></div>
-
-    <div class="host-grid">
-      <div class="team-panel team-red">
-        <div class="team-header">
-          <div class="team-mascot eating" id="mascot-red">🐼</div>
-          <div class="team-name">Team Panda</div>
-        </div>
-        <div class="team-score-label">Population · 紅</div>
-        <div class="team-score" id="score-red">0</div>
-        <div class="zoo-floor" id="zoo-red">
-          <div class="zoo-bamboo tl">🎋</div>
-          <div class="zoo-bamboo tr">🎋</div>
-          <div class="zoo-bamboo bl">🎋</div>
-          <div class="zoo-bamboo br">🎋</div>
-          <div class="territory" id="grid-red"></div>
-          <div class="zoo-grass"></div>
-          <div class="zoo-guardian-wrap">
-            <div class="zoo-guardian"><span class="bob">🐼</span></div>
-          </div>
-        </div>
-        <div class="player-chips" id="active-players-red"></div>
-      </div>
-      <div class="team-panel team-gold">
-        <div class="team-header">
-          <div class="team-mascot eating" id="mascot-gold">🦊</div>
-          <div class="team-name">Team Kitsune</div>
-        </div>
-        <div class="team-score-label">Population · 金</div>
-        <div class="team-score" id="score-gold">0</div>
-        <div class="zoo-floor" id="zoo-gold">
-          <div class="zoo-bamboo tl">🎋</div>
-          <div class="zoo-bamboo tr">🎋</div>
-          <div class="zoo-bamboo bl">🎋</div>
-          <div class="zoo-bamboo br">🎋</div>
-          <div class="territory" id="grid-gold"></div>
-          <div class="zoo-grass"></div>
-          <div class="zoo-guardian-wrap">
-            <div class="zoo-guardian gold"><span class="bob">🦊</span></div>
-          </div>
-        </div>
-        <div class="player-chips" id="active-players-gold"></div>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:16px;">
-      <h3 style="margin-bottom:8px; font-family:'ZCOOL XiaoWei',serif;">📜 Battle Feed</h3>
-      <div class="feed" id="feed"></div>
-    </div>
-
-    <div style="text-align:center; margin-top:16px;">
-      <button class="btn btn-ghost" id="end-now-btn">🛑 End Round</button>
-    </div>
-  </div>
-
-  <!-- WIN -->
-  <div id="screen-win" class="hidden container">
-    <div class="win-screen">
-      <div id="win-emoji" style="font-size:7rem;">🎉</div>
-      <div class="winner-banner" id="win-banner">¡Equipo Panda gana!</div>
-      <div class="final-scores">
-        <div><span class="red" id="final-red">0</span> <span style="color:var(--ink-dim); font-size:1rem;">🐼</span></div>
-        <div style="color:var(--ink-dim);">vs</div>
-        <div><span style="color:var(--ink-dim); font-size:1rem;">🦊</span> <span class="gold" id="final-gold">0</span></div>
-      </div>
-      <div class="win-narration" id="win-narration"></div>
-      <div class="win-mvp" id="win-mvp" style="display:none;"></div>
-      <div class="leaderboard" id="leaderboard"></div>
-      <div class="win-encourage" id="win-encourage"></div>
-      <div style="display:flex; gap:12px; margin-top:24px;">
-        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Inicio</button>
-        <button class="btn btn-jade" id="play-again-btn">🔄 Jugar otra vez</button>
-      </div>
-    </div>
+  <!-- THE CEREMONY: the weigh-in, the winner, the bonus stars, the podium -->
+  <main id="screen-win" class="mmh-end hidden">
+    <div class="mmh-cer" id="cer"></div>
+    <div class="mmh-fx" id="cer-fx"></div>
+  </main>
+  <button class="mmh-btn mmh-skip hidden" id="cer-skip" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l7 6-7 6zM12 6l7 6-7 6z" fill="currentColor"/></svg><span>Saltar</span></button>
+  <div class="mmh-endtools hidden" id="endtools">
+    <button class="mmh-btn" type="button" id="home-btn">Inicio</button>
+    <button class="mmh-btn go" id="play-again-btn" type="button">Otra ronda</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
   <script src="/js/sounds.js"></script>
-  <script src="/js/enter.js"></script>
-  <script src="/js/dralingo.js"></script>
-  <script src="/js/host.js"></script>
+  <script src="/js/saga.js?v=20261013a"></script>
+  <script src="/js/halcon-board.js?v=20261014a"></script>
+  <script src="/js/cast.js?v=20261014a"></script>
+  <script src="/js/mochi-stage.js?v=20261014a"></script>
+  <script src="/js/host-mochi.js?v=20261014a"></script>
   <script src="/js/live-game.js?v=20261011c"></script>
 </body>
 </html>

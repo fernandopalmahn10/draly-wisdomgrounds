@@ -53,7 +53,8 @@
     try {
       // Batalla de Nieve has its own chase loop; everything else shares the kingdoms music
       music = new Audio(game === 'snow' && name === 'music-battle' ? '/assets/snow/music-battle.mp3'
-        : game === 'halcon' && name === 'music-battle' ? '/assets/halcon/music-show.mp3' : A + name + '.mp3');   // Ojos de Halcón: the show loop
+        : game === 'halcon' && name === 'music-battle' ? '/assets/halcon/music-show.mp3'    // Ojos de Halcón: the show loop
+        : game === 'mochi-mash' && name === 'music-battle' ? '/assets/mochi/music-mash.mp3' : A + name + '.mp3');   // Mochi Mash: the polka
       music.loop = true;
       music.volume = vol == null ? 0.35 : vol;
       music.play().catch(() => {});
@@ -70,16 +71,18 @@
     wrap('correct', () => sfx('correct', 0.8));
     wrap('wrong', () => sfx('wrong', 0.6));
     // Ojos de Halcón plays its own studio run-in during the countdown (no 3-2-1 ticks, like the video)
-    wrap('countdownNum', () => { if (game !== 'halcon') sfx('tick', 0.8); });
-    wrap('go', () => { if (game !== 'halcon') sfx('whoosh', 0.8); });
+    // (Mochi Mash: its own run-in and «¿Listos?… ¡YA!» after the countdown)
+    wrap('countdownNum', () => { if (game !== 'halcon' && game !== 'mochi-mash') sfx('tick', 0.8); });
+    wrap('go', () => { if (game !== 'halcon' && game !== 'mochi-mash') sfx('whoosh', 0.8); });
     wrap('startGameTheme', () => playMusic('music-battle', 0.32));
     wrap('startMusic', () => playMusic('music-battle', 0.32));
     wrap('stopGameTheme', () => stopMusic());
     wrap('stopMusic', () => stopMusic());
-    wrap('winMusic', () => { stopMusic(); sfx('sting-win', 0.9); });
+    // (Mochi Mash: its ceremony keeps the result secret until the weigh-in, so no win / lose sound at game-end)
+    wrap('winMusic', () => { stopMusic(); if (game !== 'mochi-mash') sfx('sting-win', 0.9); });
     wrap('winFanfare', () => {});
-    wrap('loseMusic', () => { stopMusic(); sfx('wrong', 0.5); });
-    wrap('tieMusic', () => { stopMusic(); sfx('sting-win', 0.7); });
+    wrap('loseMusic', () => { stopMusic(); if (game !== 'mochi-mash') sfx('wrong', 0.5); });
+    wrap('tieMusic', () => { stopMusic(); if (game !== 'mochi-mash') sfx('sting-win', 0.7); });
     const tm = window.toggleMute;
     window.toggleMute = function () {
       const r = tm ? tm.apply(this, arguments) : !muted;
@@ -89,7 +92,7 @@
     };
   }
 
-  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'halcon'];
+  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'halcon', 'mochi-mash'];
   let game = null;
   function setMode(v, gt) {
     if (gt) game = gt;
@@ -181,11 +184,12 @@
         }
       }
     }, 200);
-    if (holdSrc && holdSrc()) hold(true);       // La Gran Fuga: a question that lands during a pause / dizzy starts held
+    if (holdSrcs.some((f) => f())) hold(true);   // a question that lands during a pause (La Gran Fuga, Mochi Mash) / dizzy starts held
   }
   function stopQuestionTimer() { if (qTimer) { clearInterval(qTimer); qTimer = null; } held = false; }
   // hold(true) freezes the question timer bar where it is; hold(false) lets it run on from there
-  let held = false, heldAt = 0, holdSrc = null;
+  let held = false, heldAt = 0;
+  const holdSrcs = [];                          // each game module registers its own «hold the clock now?» check
   function hold(v) {
     v = !!v;
     if (v === held || !qTimer) { if (!qTimer) held = false; return; }
@@ -223,6 +227,7 @@
     if (game === 'snow') { t.className = 'kdp-team sn-team'; t.textContent = '❄️ ¡Batalla de Nieve en Ski Dubái!'; }
     if (game === 'escape') { t.className = 'kdp-team es-team'; t.textContent = '🚀 ¡Eres de la tripulación!'; }
     if (game === 'halcon') { t.className = 'kdp-team hc-team'; t.textContent = '🦅 Ojos de Halcón · ¡tableros de 4!'; }
+    if (game === 'mochi-mash') t.textContent = team === 'red' ? '¡Eres del Equipo Fuego!' : '¡Eres del Equipo Mar!';
     howDecor();
   }
   // Reinos de Colores: kids don't read rules, so the lobby shows the whole game in 3 pictured steps
@@ -260,6 +265,7 @@
     snowHow();
     if (window.EscapePhone) window.EscapePhone.lobby(game === 'escape' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.HalconPhone) window.HalconPhone.lobby(game === 'halcon' ? document.querySelector('#screen-lobby .lobby-header') : null);
+    if (window.MochiPhone) window.MochiPhone.lobby(game === 'mochi-mash' ? document.querySelector('#screen-lobby .lobby-header') : null);
     const head = document.querySelector('#screen-lobby .lobby-header');
     let card = $('kdp-how');
     if (game !== 'kingdoms') { if (card) card.remove(); return; }
@@ -326,6 +332,7 @@
     const box = $('result-feedback');
     if (!box) return;
     if (ESC()) { ESC().result(box, correct, correctText, Object.assign({ timeUp: !correct && answered && Date.now() - qStart >= Q_MS }, r)); return; }
+    if (game === 'mochi-mash' && window.MochiPhone) { window.MochiPhone.result(box, correct, correctText, Object.assign({ timeUp: !correct && answered && Date.now() - qStart >= Q_MS }, r)); return; }
     box.innerHTML = '';
     const img = document.createElement('img');
     img.className = 'kdp-sticker';
@@ -400,6 +407,7 @@
     if (game === 'snow') { snowEnd(data); return; }
     if (ESC()) { ESC().end(data); return; }
     if (game === 'halcon' && window.HalconPhone) { window.HalconPhone.end(data); return; }
+    if (game === 'mochi-mash' && window.MochiPhone) { window.MochiPhone.end(data); return; }
     const team = ctx.getTeam();
     const won = data && data.winner === team;
     emoji.innerHTML = '';
@@ -487,5 +495,12 @@
     s.on('kd:prompt', () => sfx('flag', 0.6));
   }
 
-  window.KingdomsSkin = { init, sfx, hold, holdWhen: (fn) => { holdSrc = typeof fn === 'function' ? fn : null; } };
+  window.KingdomsSkin = {
+    init, sfx, hold,
+    holdWhen: (fn) => { if (typeof fn === 'function') holdSrcs.push(fn); },
+    // Mochi Mash: the team bar from its own meter events, the mute state for its Web Audio pops, the frenzy music
+    setScores: (s) => { if (s) { scores = { red: s.red || 0, gold: s.gold || 0 }; if (on) paintBar(); } },
+    isMuted: () => muted,
+    music: (name, vol) => { if (!on) return; if (name) playMusic(name, vol); else stopMusic(); },
+  };
 })();

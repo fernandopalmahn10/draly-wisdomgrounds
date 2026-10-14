@@ -34,6 +34,10 @@
   if (window.HalconPhone) {
     window.HalconPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
   }
+  // Mochi Mash v2 phone module (public/js/player-mochi.js): run-in, mash zone, banners, ceremony
+  if (window.MochiPhone) {
+    window.MochiPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
+  }
   // (legacy timer kept for any reference; bulletproof flow below replaces it)
 
   // === Global stuck-watchdog ===
@@ -974,9 +978,13 @@
     } else if (gameType === 'halcon') {
       teamLabel = 'Ojos de Halcón';         // boards of 4: every kid against the rivals of their board
       teamMascot = '🦅';
+    } else if (gameType === 'mochi-mash') {
+      // Mochi Mash (since the 2026-10-14 remake: Fuego vs Mar, each team feeds its Dragoncito)
+      teamLabel = isRed ? 'Equipo Fuego' : 'Equipo Mar';
+      teamMascot = isRed ? '🔥' : '🌊';
     } else {
-      teamLabel = isRed ? 'Team Panda 紅' : 'Team Kitsune 金';
-      teamMascot = isRed ? '🐼' : '🦊';
+      teamLabel = '¡Bienvenido!';        // class tools (warm-up, reading, HSK rooms): no teams
+      teamMascot = '🐉';
     }
     // Show team mascot + the player's chosen avatar side by side
     if ($('lobby-mascot')) {
@@ -1005,7 +1013,7 @@
       if (gameType === 'pinata') {
         $('mash-mascot').textContent = '🐯';
       } else {
-        $('mash-mascot').textContent = isRed ? '🐼' : '🦊';
+        $('mash-mascot').textContent = '🍡';
       }
     }
   }
@@ -2824,8 +2832,8 @@
         happyMascot = '🚀';
         sub = '¡Turbo para la tripulación!';
       } else {
-        happyMascot = team === 'red' ? '🐼' : '🦊';
-        sub = '¡Alimenta a tu equipo! ⚡';
+        happyMascot = '🍡';
+        sub = '¡Dale mochis a tu dragoncito!';
       }
       showResultFeedback({
         mascot: happyMascot,
@@ -2858,6 +2866,8 @@
         } else if (gameType === 'sixseven') {
           // Sixseven handles its own screen via the dedicated handler.
           showScreen('sixseven');
+        } else if (gameType === 'mochi-mash' && window.MochiPhone) {
+          // Mochi Mash v2: player-mochi.js opens its mash zone at the server's lead-in (it listens to answer-result)
         } else {
           mashEndTime = mashUntil;
           startMash();
@@ -4153,7 +4163,7 @@
       $('end-banner').className = 'winner-banner tie';
       MochiSounds.tieMusic();
     } else if (won) {
-      $('end-emoji').textContent = gameType === 'kingdoms' ? (team === 'red' ? '🔥👑' : '🌊👑') : (team === 'red' ? '🐼' : '🦊');
+      $('end-emoji').textContent = team === 'red' ? '🔥👑' : '🌊👑';
       $('end-banner').textContent = gameType === 'kingdoms' ? '¡Tu reino ganó!' : '¡Victoria!';
       $('end-banner').className = `winner-banner ${team}`;
       MochiSounds.winMusic();
@@ -4223,7 +4233,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'kd-plant', 'paint', 'snow', 'escape', 'halcon', 'wu', 'rd', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'mochi', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'kd-plant', 'paint', 'snow', 'escape', 'halcon', 'wu', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

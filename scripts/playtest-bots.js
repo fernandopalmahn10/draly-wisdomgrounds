@@ -132,7 +132,7 @@ const count = (bag, ev) => { bag[ev] = (bag[ev] || 0) + 1; };
   }, 1000);
 
   while (Date.now() - startedAt < (SECONDS + 15) * 1000 && !report.ended) await sleep(500);
-  if (report.ended) await sleep(2000); // let final events arrive
+  if (report.ended) await sleep(report.endedGrace || 2000); // let final events arrive (a handler can ask for longer)
   clearInterval(watch);
 
   report.perBot = bots.map(({ st }) => ({ name: st.name, questions: st.questions, answers: st.answers, correct: st.correct, wrong: st.wrong }));

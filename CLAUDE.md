@@ -207,9 +207,10 @@ the checklist for any new game mode.
   (new 2026-10-13, `escape`), «Ojos de Halcón» (new 2026-10-13, `halcon`: Super Mario Party «Looking for Love» played
   in boards of 4, the first of his Mario Party series, one minigame at a time from
   https://www.youtube.com/watch?v=y9BKCVx_mNk; it replaced the first attempt «Ojo de Halcón», `look`, retired and
-  removed 2026-10-14, his decision; recover it from git commit 83dbcbd04 if ever needed) + the 5 kept games Mochi Mash, Dàfùwēng ·
-  Monopolio Chino, 6-7 Swing, Vuelo del Dragón, Piñata Tigre (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older
-  games were retired to free room.
+  removed 2026-10-14, his decision; recover it from git commit 83dbcbd04 if ever needed) + the 5 kept games Mochi Mash
+  (remade 2026-10-14 as «La Terraza del Mochi», Fuego vs Mar feed their Dragoncitos, Mario Party ceremony; Panda vs Kitsune
+  retired), Dàfùwēng · Monopolio Chino, 6-7 Swing, Vuelo del Dragón, Piñata Tigre (plus the class tools Warm-up, Lectura,
+  HSK/YCT rooms); 11 older games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:
   retire a game rather than keep a half-optimized one.
 - **The kid's phone is the product** (his correction 2026-10-11: "a beautiful projector is useless if everybody else's
@@ -230,6 +231,11 @@ the checklist for any new game mode.
   the video shows; the phone shows the minigame itself (the kid's own character and rivals), not a remote control;
   the projector is secondary. A class plays in boards of 4 like real Mario Party matches (3 when it doesn't divide; one
   board up to 5 kids): each phone shows its own board, the projector shows every board + the class top 3.
+- **Feelings at the end of class** (his words 2026-10-14, after playing Ojos de Halcón: "the Mario Party feeling is so
+  important because it makes feelings at the end of a class"): every pin game ends with a Mario Party style ceremony,
+  not a plain score list: «¡FINAL!», a suspenseful reveal, the winners celebrating and the others reacting, bonus stars
+  by category (most fed, fastest, longest streak…), and on every phone the kid's own card (their full character, what
+  they contributed, any star). Short, skippable by the teacher, never stuck.
 - **Design skills on every kid/teacher screen** (his question 2026-10-13: "have you been using Emil Kowalski, taste and
   impeccable?"): any new or changed screen of the platform or a pin game gets a pass with `emil-design-eng` (motion,
   press feel, timing), `design-taste-frontend` (layout and visual direction) and `impeccable` (critique + polish)
