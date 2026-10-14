@@ -407,7 +407,7 @@
           });
       },
     },
-    // Ojos de Halcón (2026-10-13) takes the place of the first «Ojo de Halcón» (look): same minigame, boards of 4
+    // Ojos de Halcón (2026-10-13) replaced the first «Ojo de Halcón» (`look`, retired 2026-10-14)
     { id: 'halcon',    label: 'Ojos de Halcón',      emoji: '🦅', blurb: 'Look at the right window first, boards of 4 (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-halcon.html', '/player.html') },
     { id: 'escape',    label: 'La Gran Fuga de Dubái', emoji: '🚀', blurb: 'Whole class runs from Robotín', launch: (ctx) => _genericLaunch(ctx, '/host-escape.html', '/player.html') },
     { id: 'snow',      label: 'Batalla de Nieve',   emoji: '❄️', blurb: 'Walk Dubai, snowball fight', launch: (ctx) => _genericLaunch(ctx, '/host-snow.html', '/player.html') },

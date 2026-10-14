@@ -17,6 +17,9 @@
   // animated victory loops (phone-safe "lite" versions, 160–280 KB) for the finale winner
   const WIN_ANIM = { dralingo: '/assets/dralingo/anim/cheer-lite.webp', adric: '/assets/cast/anim/adric-cheer-lite.webp' };
   const POS_NAME = ['de arriba', 'de la derecha', 'de abajo', 'de la izquierda'];
+  const REVEAL_MS = 450;          // the reveal snap, then the verdict (glow / +N / slump)
+  let revealHold = false;         // test hook: screenshots hold the reveal before the verdict
+  const boards = new Set();
   const reduced = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const skinOk = (s) => (SKINS.includes(s) ? s : 'dralingo');
   const isAnimal = (s) => ANIMALS.includes(s);
@@ -78,6 +81,7 @@
     this.stallEls = {};
     this.chipEls = {};
     this.looks = {};
+    this.readies = {};
     this.shown = {};
     this.you = null;
     this.mine = null;
@@ -117,6 +121,7 @@
     host.appendChild(r);
     this._onResize = () => this.fit();
     root.addEventListener('resize', this._onResize);
+    boards.add(this);
   }
   // sizes come from the board's own box: the window size drives everything (on a phone never under 84 px: the window
   // is the button)
@@ -130,6 +135,8 @@
     this.relayout();
   };
   Board.prototype.destroy = function () {
+    clearTimeout(this._verdictT);
+    boards.delete(this);
     root.removeEventListener('resize', this._onResize);
     if (this.root.parentNode) this.root.parentNode.removeChild(this.root);
   };
@@ -177,9 +184,11 @@
     preload(this.seats.map((s) => s.skin));
     this.fit();
     this.beams.innerHTML = '';
-    const looks = this.looks;
+    const looks = this.looks, readies = this.readies;
     this.looks = {};
+    this.readies = {};
     Object.keys(looks).forEach((sid) => this.look(Number(sid), looks[sid], true));
+    Object.keys(readies).forEach((sid) => this.ready(Number(sid)));
   };
   Board.prototype.setOn = function (seatId, on) {
     const x = this.stallEls[seatId];
@@ -203,11 +212,14 @@
   Board.prototype.bandHide = function () { this.band.classList.remove('show'); };
   // a new round: windows closed, everybody facing front, no beams
   Board.prototype.newRound = function () {
+    clearTimeout(this._verdictT);
+    this._verdict = null;
     this.looks = {};
+    this.readies = {};
     this.mine = null;
     this.beams.innerHTML = '';
     this.beams.classList.remove('fade');
-    this.root.classList.remove('resolved', 'answering');
+    this.root.classList.remove('resolved', 'answering', 'revealing');
     delete this.root.dataset.len;
     this.wins.forEach((w) => {
       w.className = 'hcb-win w' + w.dataset.pos;
@@ -217,7 +229,7 @@
       if (this.o.onTap) w.disabled = true;
     });
     Object.values(this.stallEls).forEach((x) => {
-      x.st.classList.remove('ok', 'no', 'five', 'looked', 'look0', 'look1', 'look2', 'look3');
+      x.st.classList.remove('ok', 'no', 'five', 'looked', 'ready', 'look0', 'look1', 'look2', 'look3');
       x.img.src = art(x.skin, 'idle');
       x.pop.textContent = '';
       x.pop.className = 'hcb-pop';
@@ -321,33 +333,61 @@
   Board.prototype.relayout = function () {
     Object.keys(this.looks).forEach((sid) => this.drawBeam(Number(sid), this.looks[sid], true));
   };
-  // the round resolves: the right window glows, right looks shine with +N, wrong ones slump; chips count up
-  Board.prototype.resolve = function (correctPos, rows) {
+  // a rival (or anybody, on the projector) has looked: only «ready», never the window (it shows at the reveal)
+  Board.prototype.ready = function (seatId) {
+    const x = this.stallEls[seatId];
+    if (!x || seatId === this.you) return;
+    this.readies[seatId] = true;
+    x.st.classList.add('ready');
+    x.c.classList.add('looked');
+  };
+  Board.prototype.readyCount = function () {
+    return Object.keys(this.readies).filter((sid) => this.stallEls[sid]).length + (this.mine != null && this.you != null && !this.readies[this.you] ? 1 : 0);
+  };
+  // The round resolves, in two beats like the video: (1) the reveal: every character snaps to its window at once, with
+  // its beam; (2) REVEAL_MS later the verdict: the right window glows, right looks shine with +N, wrong ones slump, the
+  // chips count up. onVerdict runs with beat 2 (the phone's sounds and verdict line).
+  Board.prototype.resolve = function (correctPos, rows, onVerdict) {
     this.root.classList.remove('answering');
-    this.root.classList.add('resolved');
+    this.root.classList.add('resolved', 'revealing');
     this.timer(0);
-    this.wins.forEach((w, pos) => {
-      if (this.o.onTap) w.disabled = true;
-      w.classList.toggle('right', pos === correctPos);
-      w.classList.toggle('off', pos !== correctPos);
-    });
-    this.beams.classList.add('fade');
+    this.wins.forEach((w) => { if (this.o.onTap) w.disabled = true; });
     (rows || []).forEach((r) => {
       const x = this.stallEls[r.id];
       if (!x) return;
-      if (r.pos >= 0 && this.looks[r.id] == null) this.look(r.id, r.pos, true);   // a look we missed (reload) still shows
-      if (r.pos < 0 && this.looks[r.id] != null) this.unlook(r.id);               // a look the server never counted (too late)
-      if (r.id === this.you && r.pos >= 0 && r.pos !== correctPos) this.wins[r.pos].classList.add('miss');
-      x.st.classList.add(r.ok ? 'ok' : 'no');
-      if (r.pts === 5) x.st.classList.add('five');
-      x.img.src = art(x.skin, r.ok ? 'ok' : 'no');
-      if (r.ok) {
-        x.pop.textContent = '+' + r.pts;
-        x.pop.style.setProperty('--d', ((r.rank || 1) - 1) * 140 + 'ms');
-        x.pop.className = 'hcb-pop show' + (r.pts === 5 ? ' five' : '');
-      }
-      this.countTo(r.id, r.score, r.ok ? 350 + ((r.rank || 1) - 1) * 140 : 0);
+      x.st.classList.remove('ready');
+      delete this.readies[r.id];
+      if (r.pos >= 0 && this.looks[r.id] == null) this.look(r.id, r.pos, false);   // everybody snaps to their window now
+      if (r.pos < 0 && this.looks[r.id] != null) this.unlook(r.id);                // a look the server never counted (too late)
     });
+    const verdict = () => {
+      this._verdict = null;
+      this.root.classList.remove('revealing');
+      this.wins.forEach((w, pos) => {
+        w.classList.toggle('right', pos === correctPos);
+        w.classList.toggle('off', pos !== correctPos);
+      });
+      this.beams.classList.add('fade');
+      (rows || []).forEach((r) => {
+        const x = this.stallEls[r.id];
+        if (!x) return;
+        if (r.id === this.you && r.pos >= 0 && r.pos !== correctPos) this.wins[r.pos].classList.add('miss');
+        x.st.classList.add(r.ok ? 'ok' : 'no');
+        if (r.pts === 5) x.st.classList.add('five');
+        x.img.src = art(x.skin, r.ok ? 'ok' : 'no');
+        if (r.ok) {
+          x.pop.textContent = '+' + r.pts;
+          x.pop.style.setProperty('--d', ((r.rank || 1) - 1) * 140 + 'ms');
+          x.pop.className = 'hcb-pop show' + (r.pts === 5 ? ' five' : '');
+        }
+        this.countTo(r.id, r.score, r.ok ? 350 + ((r.rank || 1) - 1) * 140 : 0);
+      });
+      if (onVerdict) onVerdict();
+    };
+    clearTimeout(this._verdictT);
+    this._verdict = verdict;
+    if (reduced()) verdict();
+    else if (!revealHold) this._verdictT = setTimeout(verdict, REVEAL_MS);
   };
   Board.prototype.countTo = function (seatId, to, delay) {
     const c = this.chipEls[seatId];
@@ -507,5 +547,10 @@
   // the camera pushes into the board (intro → board view)
   Studio.prototype.zoom = function () { this.root.classList.add('zoom'); };
 
-  root.HalconBoard = { Board, Studio, art, head, preload, skinOk, skinFor, isAnimal, SKINS };
+  // test hook: hold the reveal (everybody turned) before the verdict; releasing plays the pending verdicts
+  function holdReveal(v) {
+    revealHold = !!v;
+    if (!revealHold) boards.forEach((b) => { if (b._verdict) b._verdict(); });
+  }
+  root.HalconBoard = { Board, Studio, art, head, preload, skinOk, skinFor, isAnimal, SKINS, REVEAL_MS, holdReveal };
 })(typeof window !== 'undefined' ? window : this);

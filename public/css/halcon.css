@@ -201,6 +201,18 @@
 .hcb-stall.looked:not(.ok):not(.no) .hcb-fig { animation: hcb-snap .22s var(--hc-ease-pop); }
 @keyframes hcb-snap { 0% { filter: brightness(1.25); } 100% { filter: none; } }
 
+/* a rival who has looked, before the reveal: READY (a ✓ over the head, a light at the feet, a little hop), never which
+   window: everybody's direction shows at the reveal, all at once (his decision 2026-10-14, like the video) */
+.hcb-stall.ready { background: radial-gradient(60% 24% at 50% 90%, rgba(255, 255, 255, .6), rgba(255, 255, 255, 0) 70%); }
+.hcb-stall.ready .hcb-fig { animation: hcb-ready-hop .42s var(--hc-ease-pop) both; }
+@keyframes hcb-ready-hop { 0% { transform: none; } 40% { transform: translateY(-8%) scale(1.03, .97); } 100% { transform: translateY(-2%) scale(1.02); } }
+.hcb-stall.ready::before { content: '✓'; position: absolute; z-index: 5; left: 50%; top: calc(var(--win) * .3); transform: translateX(-50%);
+  display: grid; place-items: center; width: calc(var(--win) * .32); height: calc(var(--win) * .32); border-radius: 50%;
+  border: 2px solid var(--hc-ink); background: #26a65b; color: #fff; font: 900 calc(var(--win) * .2)/1 'Nunito', sans-serif;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .65); animation: hcb-pop-in .3s var(--hc-ease-pop) both; }
+/* the reveal: a flash on the screen as every character snaps to its window */
+.hcb.revealing .hcb-screen { animation: hcb-reveal .45s ease-out; }
+@keyframes hcb-reveal { 0% { filter: brightness(1.4); } 100% { filter: none; } }
 /* the beam of the look, from the eyes to the window */
 .hcb-beams { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .hcb-beam { position: absolute; height: calc(var(--win) * .5); margin-top: calc(var(--win) * -.25); transform-origin: 0 50%;

@@ -1,7 +1,7 @@
 # Ojos de Halcón · new pin game (Super Mario Party «Looking for Love», recreated in boards of 4)
 
-gameType `halcon` · built 2026-10-13 on a worktree branch (not deployed) · replaces the first attempt «Ojo de Halcón»
-(`look`, `docs/specs/ojo-de-halcon.md`), whose launcher entries were removed; its code stays until he says to retire it.
+gameType `halcon` · built 2026-10-13 on a worktree branch (not deployed) · replaced the first attempt «Ojo de Halcón»
+(`look`), which was retired and removed on 2026-10-14 by his decision (recover it from commit 83dbcbd04 if ever needed).
 
 ## The brief (his words and decisions, 2026-10-13)
 He wants the Mario Party minigames recreated EXACTLY, one by one, as pin games with our cast. This one is the minigame
@@ -52,7 +52,9 @@ already know what works in groups. Just recreate exactly how they did it." He ch
 - `startQuestion`: the answers go to random windows. «¿Qué significa «gege»?» questions show a picture per window (with
   its Spanish label) when every answer has one in the level's word list; never for «¿Cómo se dice…?» (the picture of the
   asked word would give it away); otherwise text. One look per round, locked; right/wrong stays secret until the round
-  resolves (like the video, everybody learns it at once). `closeEarly`: when every connected kid has looked, the round
+  resolves (like the video, everybody learns it at once). **Hidden looks** (his decision 2026-10-14, the video at 1:16:
+  everybody snaps to their window together at the resolve): before the reveal a screen only learns WHO has looked
+  (`lookView`: `ready` seat ids + the phone's own window `mine`), never another player's window. `closeEarly`: when every connected kid has looked, the round
   resolves 0.5 s later.
 - `resolve`: points per board by speed rank, streaks, +5 count, misses. `finish`: each board's ranking and winner(s)
   (score, then most +5, then the faster average look; exact ties share the win) and the class ranking.
@@ -63,7 +65,7 @@ already know what works in groups. Just recreate exactly how they did it." He ch
 
 ### Server (`server.js` «OJOS DE HALCÓN» block)
 `hcDeal` (at «Empezar», so the countdown plays each board's run-in) → `hcStart` (cap, late seats, intro) → `hcRound`
-(`hc:q`) → `hcOpen` (`hc:open`) → `hcAnswer` (`hc:mine` to the kid, `hc:look` to the board's phones + projector,
+(`hc:q`) → `hcOpen` (`hc:open`) → `hcAnswer` (`hc:mine` to the kid, `hc:ready` WITHOUT the window to the board's phones + projector,
 `hc:closing` when all looked) → `hcResolve` (`hc:resolve` per board to its phones, all boards + top 5 to the
 projector) → … → `hcFinal` (`hc:finish`) → `endGame` → `hcFinish` (`game-end`: each phone gets its board's ranking +
 its own place, the projector everything). Phones only ever receive their own board. Branches in host:create / start /
@@ -83,9 +85,10 @@ keeps `g.setId` (for the level's word pictures).
 - **A round:** the question across the board (band, 1.5 s), then the answers pop into the windows (text sized so words
   never break, or pictures with labels); the hint line always says what to do; a tapping hand on round 1. My tap: my
   character snaps to look (lean + turn toward the window + a gold beam from the eyes to the window + an arrow on my
-  tag), the window rings gold «TÚ», whoosh + buzz, «¡Miraste arriba! Esperando a los demás…». Rivals turn live with
-  white beams as they look. Ticks in the last 3 s.
-- **Resolve:** the right window glows, right looks get the ring + sparkles + «+5 / +3 / +2 / +1» (staggered by rank) +
+  tag), the window rings gold «TÚ», whoosh + buzz, «¡Miraste arriba! Esperando a los demás…». A rival who has looked
+  shows READY only (a green ✓ over the head, a light at the feet, a little hop), never which window. Ticks in the last 3 s.
+- **Resolve, in two beats like the video:** the reveal (every character snaps to its window at once, with its beam, a
+  flash on the screen, «¡A ver!»), then 0.45 s later the verdict: the right window glows, right looks get the ring + sparkles + «+5 / +3 / +2 / +1» (staggered by rank) +
   the victory pose with a hop; wrong / no look: blue dim + the sad pose slumping; chips count up; «¡Sí!» (rising sax) /
   «Aww» (falling sax) / the +5 jingle; the hint names the right answer when I missed.
 - **«¡FINAL!»** band (windows close if «Terminar» came mid-round), the leader's chip gets the crown.
@@ -93,7 +96,7 @@ keeps `g.setId` (for the level's word pictures).
   in front (Dralingo and Adric animate), the others sit or fall on the floor (mine always in view), confetti, fanfare;
   then my card: place on my board, my points, my class place, the class champion, «🏠 Inicio».
 - Pause card «⏸ Pausa · Mira al profe». `prefers-reduced-motion`: no run-in, no confetti, instant looks.
-- Sounds: `assets/halcon/` (Kenney CC0: yes/aww/start jingles; round/pop/final/first/show loop from the `look` set) +
+- Sounds: `assets/halcon/` (Kenney CC0: yes/aww/start jingles; round/pop/final/first/show loop, first made for the retired `look`) +
   `assets/kingdoms/` (tick, whoosh, tap, sting-win); the platform mute. No synthesized beeps.
 
 ### The projector (secondary): `host-halcon.html` + `js/host-halcon.js`
@@ -133,25 +136,29 @@ network blip is re-sent (1.2 s retry + after a rejoin), the paused clock stands 
 triggers the early close, nobody «wins» with 0 points, «Terminar» also on the pause card, a late board keeps the other
 boards' round on the projector, late seats join after «intro». Classroom playtest: «Terminar» while the windows are
 open still scores the looks already made; the bot stall clock starts with the game.
-Kept on purpose (his brief): rivals' looks are visible live, as in the video — a kid could copy the fastest rival, but
-copying is slower and scores less.
+2026-10-14 (his decisions): rivals' looks hidden until the reveal (no copying the fastest rival); the projector shows
+«👀 x/4» only; `look` retired and removed (pages, js, css, sounds, tests, spec, server block, registrations).
 
 ## Tests (2026-10-13)
-- `node scripts/test-halcon.js` → 68,221 checks OK (boards for 1–40 kids + 12 late joiners each, 5/3/2/1 · 5/3/2 ·
+- `node scripts/test-halcon.js` → 68,229 checks OK (+ `lookView`: who is ready, never another window) (boards for 1–40 kids + 12 late joiners each, 5/3/2/1 · 5/3/2 ·
   5/3/2/1/1 · 5/3 · 5, wrong / none = 0, one look per round, early close vs the 6 s window, a disconnected kid never
   holds a round, ranks per board, pause shift, question order, per-answer pictures, ties and tiebreaks, nobody wins at
   0, the end payload, 400 simulated classes where every point adds up).
-- `node scripts/test-halcon-live.js --url http://localhost:3500` → 31 checks OK against a running server: skip in the
-  intro, pause holds the round (no resolve, looks refused, the clock stands still), resume, a double «Saltar», a kid
+- `node scripts/test-halcon-live.js --url http://localhost:3500` → 37 checks OK against a running server (2026-10-14): skip
+  in the intro, pause holds the round (no resolve, looks refused, the clock stands still), resume, rivals and the
+  projector get «ready» without the window and snapshots list who is ready without windows, the reveal shows every
+  window, no window reaches any screen before the reveal, a double «Saltar», a kid
   who drops and rejoins mid-round keeps seat + look, «+5 rondas», «Terminar» while paused, a projector reconnecting
   after the end gets its finale again, «Otra ronda» = a clean game, «Terminar» during «¡FINAL!» is ignored.
 - Bots (`node scripts/playtest-bots.js --url http://localhost:3500 --game halcon --bots N --seconds 120`, handler
-  `scripts/playtest/halcon.js` checks every resolve against the rules and every end payload): **4 bots PASS** (one board
+  `scripts/playtest/halcon.js` checks every resolve against the rules, every end payload, and since 2026-10-14 that no
+  rival's window reaches a phone before the reveal): **4 bots PASS** (one board
   of 4, 10 rounds, 40/40 rule checks, 4/4 end payloads) · **10 bots PASS** (boards 4+3+3, 100/100, 10/10) · **30 bots
   PASS** (boards 6×4 + 2×3, 300/300, 30/30) · the classroom-playtester's own **20 bots PASS** (5×4) and **30 bots
-  PASS**. 0 frozen kids, 0 errors, ≤ 9.8 s per round.
-- `test-packs` (82 rounds, 1,593 questions), `test-wording` (35 files clean), `test-escape`, `test-look`,
-  `test-kingdoms`, `test-paint`, `test-snow` pass.
+  PASS**. 0 frozen kids, 0 errors, ≤ 9.8 s per round. Re-run 2026-10-14 with hidden looks: 4 / 10 / 30 bots PASS (4 · 4+3+3 ·
+  6×4+2×3, 40 / 100 / 300 rule checks, 120 / 212 / 771 «ready» events, 0 leaks).
+- `test-packs` (82 rounds, 1,593 questions), `test-wording` (31 files clean after `look` left), `test-escape`,
+  `test-kingdoms`, `test-paint`, `test-snow`, `test-archive` pass.
 - Real browsers (classroom-playtester agent: projector 1600×900 + up to 4 phones 390×844 + bots, 7 games): joins with
   full-body characters, each phone only its own board, a real tap registers and locks, rivals' beams live, scores by
   speed on boards of 3 and 4 checked by hand, 9 kids = 3 boards of 3, a late joiner lands on the smallest board and
@@ -196,7 +203,7 @@ Total 13/14 → ships (≥ 12, no 0). For 14/14: a landmark worth points (not in
 ```
 
 ## Open / next
-- His OK to retire `look` (code, `assets/look`, `content/look`, its spec, the server block).
+- (done 2026-10-14) `look` retired and removed; rivals' looks hidden until the reveal.
 - Recorded crowd «¡Sí!» / «Aww» voices (local voice studio) instead of the sax jingles.
 - Optional pictures: a studio backdrop painting and Dralingo with a microphone (local AI studio).
 - Next minigames of the series reuse `core/halcon.js` (boards, seats, speed ranks, timers) and `js/halcon-board.js`

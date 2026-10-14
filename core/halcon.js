@@ -4,6 +4,8 @@
 // answers pop into the four round windows (top · right · bottom · left) and every kid "looks" at (taps) the window with
 // the right answer. One look per round, locked. When the round resolves, the right looks of each board score by speed
 // INSIDE that board: +5 / +3 / +2 / +1 (board of 3: 5/3/2, board of 5: 5/3/2/1/1); a wrong look or no look = 0.
+// Until the reveal, screens only learn WHO has looked (lookView), never which window: at the resolve everybody snaps
+// to their window at once, like the video.
 // Ten rounds (or 15), no elimination; the class ranking sums the points (every board hands out the same maximum).
 // Spec: docs/specs/ojos-de-halcon.md. Player fields live on the room's player objects with an `hc` prefix; the game is
 // `h` (server: g.halcon). Kids sit in SEATS (stable ids) so a reload or a new socket keeps the seat, the board and the look.
@@ -199,6 +201,20 @@ function closeEarly(h, players, now) {
   h.phaseUntil = h.q.closeAt;
   return R.ALL_DONE_MS;
 }
+// What a screen may know about this round's looks BEFORE the reveal (his decision 2026-10-14, like the video: everybody
+// snaps to their window together at the resolve): who is ready (has looked) on the given boards and, for a phone, its
+// own window. Other players' windows are never in it.
+function lookView(h, boardIds, you) {
+  const ids = new Set(boardIds);
+  const ready = [];
+  let mine = null;
+  Object.entries(h.looks).forEach(([sid, l]) => {
+    if (!ids.has(l.board)) return;
+    ready.push(Number(sid));
+    if (you != null && Number(sid) === you) mine = l.pos;
+  });
+  return { ready, mine };
+}
 // how many of a board looked already (the projector's «3/4»)
 const lookedIn = (h, boardId) => Object.values(h.looks).filter((l) => l.board === boardId).length;
 
@@ -313,6 +329,6 @@ function shiftTimes(h, ms) {
 
 module.exports = {
   R, POS, mulberry32, shuffle, clampRounds, timeCapS, boardSizes, splitBoards, newGame, inGame, deal, lateSeat, boardOf,
-  pickOrder, nextQuestion, startQuestion, openAnswers, answer, allAnswered, closeEarly, lookedIn, pointsFor, resolve, finish,
+  pickOrder, nextQuestion, startQuestion, openAnswers, answer, allAnswered, closeEarly, lookView, lookedIn, pointsFor, resolve, finish,
   shiftTimes,
 };
