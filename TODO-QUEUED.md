@@ -164,6 +164,14 @@ rules, Kenney assets and build recipe: `docs/specs/reinos-de-colores.md`. His im
 
 ---
 
+## Ojo de Halcón — Mario Party «Looking for Love» pin game ✅ BUILT 2026-10-13 (local, not deployed)
+
+First of his Mario Party series (`look`). Rules, as-built notes and the scorecard: `docs/specs/ojo-de-halcon.md`.
+Still to make (brief `content/look/pictures.json`): the studio backdrop, the board frame and lamps as pictures, Hamdan
+as the TV host (microphone), the falcon perched on a lamp, Dralingo with binoculars / dizzy, the three award medals.
+Next minigames of the series: pick the next clip from the same video, reuse the round / reveal / rank skeleton of
+`core/look.js` + the panel wall of `host-look.js`.
+
 ## La Gran Fuga de Dubái — new co-op chase pin game ✅ BUILT 2026-10-13 (branch, not deployed)
 
 Kahoot «Robot Run»-style mode (`escape`). Rules, as-built notes and the scorecard: `docs/specs/gran-fuga-de-dubai.md`.

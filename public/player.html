@@ -24,6 +24,7 @@
   <link rel="stylesheet" href="/css/kingdoms.css?v=20261011h">
   <link rel="stylesheet" href="/css/snow.css?v=20261012e">
   <link rel="stylesheet" href="/css/escape.css?v=20261013b">
+  <link rel="stylesheet" href="/css/look.css?v=20261013a">
   <!-- Lobby layout + lobby mini-game (the little plane while kids wait).
        These rules used to live in flappy.css, which was deleted with the
        retired Flappy Dragon game (2026-10-10); the lobby itself is shared. -->
@@ -617,6 +618,34 @@
     </div>
   </div>
 
+  <!-- Ojo de Halcón: the board on the phone (js/player-look.js). My avatar in the centre panel, four lamps around it that
+       light up on the server's schedule; a status line that always says what to do; the pause card. -->
+  <div id="screen-look" class="hidden">
+    <div class="lk-ptop">
+      <div class="lk-pdots" id="lk-dots" aria-hidden="true"></div>
+      <div class="lk-pround" id="lk-round">10 rondas</div>
+      <div class="lk-pscore"><b id="lk-score">0</b> ⭐</div>
+      <div class="lk-pstreak hidden" id="lk-streak">🔥 2</div>
+    </div>
+    <div class="lk-pprompt waiting" id="lk-prompt"><img id="lk-prompt-img" class="hidden" alt=""><b id="lk-prompt-text">¡Atentos!</b></div>
+    <div class="lk-pboard" id="lk-board">
+      <button class="lk-plamp top" data-pos="0" type="button" aria-label="Lámpara de arriba"><i></i><span></span></button>
+      <button class="lk-plamp left" data-pos="3" type="button" aria-label="Lámpara izquierda"><i></i><span></span></button>
+      <div class="lk-ppanel" id="lk-panel">
+        <span class="lk-eye" aria-hidden="true"></span>
+        <img class="lk-pme" id="lk-me" alt="">
+        <b id="lk-me-name"></b>
+        <div class="lk-ppop" id="lk-pop"></div>
+        <img class="lk-ppose hidden" id="lk-pose" alt="">
+      </div>
+      <button class="lk-plamp right" data-pos="1" type="button" aria-label="Lámpara derecha"><i></i><span></span></button>
+      <button class="lk-plamp bottom" data-pos="2" type="button" aria-label="Lámpara de abajo"><i></i><span></span></button>
+      <div class="pc-card lk-pcard hidden" id="lk-card" role="status"></div>
+      <div class="lk-ppause hidden" id="lk-pause"><div><img src="/assets/dralingo/wise.webp" alt=""><b>⏸ Pausa</b><span>Mira al profe</span></div></div>
+    </div>
+    <div class="lk-pstatus" id="lk-status" role="status">Espera… las respuestas se van a encender</div>
+  </div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -645,6 +674,7 @@
   <script src="/js/escape-map.js?v=20261013a"></script>
   <script src="/js/escape-render.js?v=20261013a"></script>
   <script src="/js/player-escape.js?v=20261013b"></script>
+  <script src="/js/player-look.js?v=20261013a"></script>
   <script src="/js/cast.js?v=20261013a"></script>
   <script src="/js/dralingo-fx.js?v=20261013a"></script>
   <script src="/js/saga.js?v=20261013a"></script>

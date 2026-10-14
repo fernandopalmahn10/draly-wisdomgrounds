@@ -176,7 +176,8 @@ the checklist for any new game mode.
   heartbeat plumbing instead of building parallel systems.
 - **Game roster (his decision 2026-10-10):** Reinos de Colores (new, `kingdoms`), Dragones Pintores (new 2026-10-11,
   `paint`), Batalla de Nieve en Ski Dubái (new 2026-10-12, `snow`), La Gran Fuga de Dubái
-  (new 2026-10-13, `escape`) + the 5 kept games Mochi Mash, Dàfùwēng ·
+  (new 2026-10-13, `escape`), Ojo de Halcón (new 2026-10-13, `look`: Super Mario Party «Looking for Love», the first of
+  his Mario Party series, one minigame at a time from https://www.youtube.com/watch?v=y9BKCVx_mNk) + the 5 kept games Mochi Mash, Dàfùwēng ·
   Monopolio Chino, 6-7 Swing, Vuelo del Dragón, Piñata Tigre (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older
   games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:

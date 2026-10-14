@@ -407,6 +407,7 @@
           });
       },
     },
+    { id: 'look',      label: 'Ojo de Halcón',       emoji: '🦅', blurb: 'Look at the right word first (Mario Party style)', launch: (ctx) => _genericLaunch(ctx, '/host-look.html', '/player.html') },
     { id: 'escape',    label: 'La Gran Fuga de Dubái', emoji: '🚀', blurb: 'Whole class runs from Robotín', launch: (ctx) => _genericLaunch(ctx, '/host-escape.html', '/player.html') },
     { id: 'snow',      label: 'Batalla de Nieve',   emoji: '❄️', blurb: 'Walk Dubai, snowball fight', launch: (ctx) => _genericLaunch(ctx, '/host-snow.html', '/player.html') },
     { id: 'paint',     label: 'Dragones Pintores',  emoji: '🎨', blurb: 'Fly, paint the sky', launch: (ctx) => _genericLaunch(ctx, '/host-paint.html', '/player.html') },
