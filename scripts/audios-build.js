@@ -184,9 +184,16 @@ async function buildBase(id, src) {
     const t = src.toneNote[i];
     toneNote.push({ py: t.py, au: await sentence(t.zh, 'n' + (i + 1) + '.mp3') });
   }
+  // Dralingo's bubbles on the cover and the closing card («Nǐ hǎo!», «Zàijiàn!»), when the source has them
+  const cover = {};
+  for (const k of ['hello', 'bye']) {
+    const c = src.cover && src.cover[k];
+    if (c && c.zh) cover[k] = { py: c.py, au: await sentence(c.zh, 'c-' + k + '.mp3') };
+  }
   console.log(' ' + words.length + ' words, ' + said.size + ' sentences');
   // clips nobody uses any more (a sentence changed) leave the folder
-  const keep = new Set(words.flatMap((w) => [w.au, w.exau]).concat(toneNote.map((t) => t.au)).map((u) => path.basename(u.split('?')[0])));
+  const keep = new Set(words.flatMap((w) => [w.au, w.exau]).concat(toneNote.map((t) => t.au), Object.values(cover).map((c) => c.au))
+    .map((u) => path.basename(u.split('?')[0])));
   fs.readdirSync(dir).filter((f) => f.endsWith('.mp3') && !keep.has(f)).forEach((f) => fs.unlinkSync(path.join(dir, f)));
   // the page's data, field by field: whatever else the source carries (the voice's hanzi) stays out of public/
   const pdfFile = src.book && path.join(ROOT, 'public', src.book.pdf.replace(/^\//, ''));
@@ -195,7 +202,7 @@ async function buildBase(id, src) {
     id, kind: 'base', level: src.level, levelName: levelName(src.level), title: src.title, kicker: src.kicker, lede: src.lede,
     book: book || null, steps: src.steps || [], parents: src.parents || [],
     tones: (src.tones || []).map((t) => ({ mark: t.mark, name: t.name, how: t.how, py: t.py, es: t.es, word: t.word, points: t.points })),
-    toneNote, worlds: (src.worlds || []).map((w) => ({ n: w.n, name: w.name, short: w.short, first: w.first, count: w.count, pics: w.pics })),
+    toneNote, cover, worlds: (src.worlds || []).map((w) => ({ n: w.n, name: w.name, short: w.short, first: w.first, count: w.count, pics: w.pics })),
     words, updated: new Date().toISOString(),
   };
   fs.writeFileSync(path.join(dir, 'base.json'), JSON.stringify(data));

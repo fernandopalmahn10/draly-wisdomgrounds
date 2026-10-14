@@ -1,0 +1,2636 @@
+{
+ "id": "hsk1-base",
+ "kind": "base",
+ "level": "hsk1",
+ "title": "La base",
+ "kicker": "Empieza aquí",
+ "lede": "Las 150 palabras de Chino Mandarín de HSK 1, con dibujos, frases y audio.",
+ "book": {
+  "pdf": "/assets/study/hsk1-vocabulario.pdf",
+  "pages": 35,
+  "mb": 8.7,
+  "name": "HSK 1 · Vocabulario"
+ },
+ "steps": [
+  "Toca el dibujo: escucha la palabra y dila en voz alta.",
+  "Toca «Tapar el español»: ¿sabes qué significa cada palabra?",
+  "Toca la frase y escúchala. La palabra en rojo es la que estás aprendiendo.",
+  "¿Ya te la sabes? Toca su sello."
+ ],
+ "parents": [
+  "No hace falta saber Chino Mandarín para ayudar: pídanle a su hijo o hija que les enseñe cada palabra.",
+  "Mejor diez minutos cada día que una hora una vez por semana.",
+  "Celebren cada sello."
+ ],
+ "tones": [
+  {
+   "mark": "ā",
+   "name": "1.er tono",
+   "how": "alto y largo",
+   "py": "māo",
+   "es": "gato",
+   "word": 14,
+   "points": [
+    [
+     4,
+     5
+    ],
+    [
+     44,
+     5
+    ]
+   ]
+  },
+  {
+   "mark": "á",
+   "name": "2.º tono",
+   "how": "sube",
+   "py": "chá",
+   "es": "té",
+   "word": 48,
+   "points": [
+    [
+     4,
+     3
+    ],
+    [
+     44,
+     5
+    ]
+   ]
+  },
+  {
+   "mark": "ǎ",
+   "name": "3.er tono",
+   "how": "baja y sube",
+   "py": "gǒu",
+   "es": "perro",
+   "word": 13,
+   "points": [
+    [
+     4,
+     2.2
+    ],
+    [
+     20,
+     1
+    ],
+    [
+     28,
+     1
+    ],
+    [
+     44,
+     4
+    ]
+   ]
+  },
+  {
+   "mark": "à",
+   "name": "4.º tono",
+   "how": "baja fuerte",
+   "py": "dà",
+   "es": "grande",
+   "word": 113,
+   "points": [
+    [
+     4,
+     5
+    ],
+    [
+     44,
+     1
+    ]
+   ]
+  },
+  {
+   "mark": "a",
+   "name": "tono neutro",
+   "how": "corto y suave",
+   "py": "ma",
+   "es": "¿…?",
+   "word": 145,
+   "points": [
+    [
+     18,
+     2.6
+    ],
+    [
+     28,
+     2.6
+    ]
+   ]
+  }
+ ],
+ "toneNote": [],
+ "worlds": [
+  {
+   "n": 1,
+   "name": "Mi Familia",
+   "short": "Familia",
+   "first": 1,
+   "count": 20,
+   "pics": [
+    6,
+    7,
+    8
+   ]
+  },
+  {
+   "n": 2,
+   "name": "La Escuela",
+   "short": "Escuela",
+   "first": 21,
+   "count": 18,
+   "pics": [
+    23,
+    28,
+    27
+   ]
+  },
+  {
+   "n": 3,
+   "name": "El Mercado",
+   "short": "Mercado",
+   "first": 39,
+   "count": 22,
+   "pics": [
+    51,
+    43,
+    48
+   ]
+  },
+  {
+   "n": 4,
+   "name": "¿Qué Hora Es?",
+   "short": "Hora",
+   "first": 61,
+   "count": 20,
+   "pics": [
+    63,
+    65,
+    69
+   ]
+  },
+  {
+   "n": 5,
+   "name": "Viajando por China",
+   "short": "Viaje",
+   "first": 81,
+   "count": 18,
+   "pics": [
+    86,
+    87,
+    92
+   ]
+  },
+  {
+   "n": 6,
+   "name": "Mi Casa",
+   "short": "Casa",
+   "first": 99,
+   "count": 18,
+   "pics": [
+    103,
+    105,
+    107
+   ]
+  },
+  {
+   "n": 7,
+   "name": "La Ciudad",
+   "short": "Ciudad",
+   "first": 117,
+   "count": 16,
+   "pics": [
+    120,
+    125,
+    132
+   ]
+  },
+  {
+   "n": 8,
+   "name": "Números y Palabras Mágicas",
+   "short": "Números",
+   "first": 133,
+   "count": 18,
+   "pics": [
+    150,
+    149,
+    145
+   ]
+  }
+ ],
+ "words": [
+  {
+   "n": 1,
+   "world": 1,
+   "py": "wǒ",
+   "es": "yo",
+   "hint": "yo",
+   "ex": [
+    "",
+    "Wǒ",
+    " shì xuésheng."
+   ],
+   "exes": "Yo soy estudiante.",
+   "pic": "roblox_79778099070591.webp",
+   "zh": "我",
+   "exzh": "我是学生。"
+  },
+  {
+   "n": 2,
+   "world": 1,
+   "py": "nǐ",
+   "es": "tú",
+   "hint": "tú",
+   "ex": [
+    "",
+    "Nǐ",
+    " shì xuésheng ma?"
+   ],
+   "exes": "¿Eres estudiante?",
+   "pic": "roblox_119896149812372.webp",
+   "zh": "你",
+   "exzh": "你是学生吗？"
+  },
+  {
+   "n": 3,
+   "world": 1,
+   "py": "tā",
+   "es": "él",
+   "hint": "él",
+   "ex": [
+    "",
+    "Tā",
+    " shì wǒ de péngyou."
+   ],
+   "exes": "Él es mi amigo.",
+   "pic": "fluent_boy.webp",
+   "zh": "他",
+   "exzh": "他是我的朋友。"
+  },
+  {
+   "n": 4,
+   "world": 1,
+   "py": "tā",
+   "es": "ella",
+   "hint": "ella",
+   "ex": [
+    "",
+    "Tā",
+    " xiǎng jiā le."
+   ],
+   "exes": "Ella extraña su casa.",
+   "pic": "fluent_woman.webp",
+   "zh": "她",
+   "exzh": "她想家了。"
+  },
+  {
+   "n": 5,
+   "world": 1,
+   "py": "wǒmen",
+   "es": "nosotros",
+   "hint": "nosotros",
+   "ex": [
+    "",
+    "Wǒmen",
+    " yǒu jiǔ gè rén."
+   ],
+   "exes": "Somos nueve personas.",
+   "pic": "roblox_131973745831617.webp",
+   "zh": "我们",
+   "exzh": "我们有九个人。"
+  },
+  {
+   "n": 6,
+   "world": 1,
+   "py": "bàba",
+   "es": "papá",
+   "hint": "papá",
+   "ex": [
+    "Zhè shì wǒ ",
+    "bàba",
+    " mǎi de."
+   ],
+   "exes": "Esto lo compró mi papá.",
+   "pic": "roblox_137607483362947.webp",
+   "zh": "爸爸",
+   "exzh": "这是我爸爸买的。"
+  },
+  {
+   "n": 7,
+   "world": 1,
+   "py": "māma",
+   "es": "mamá",
+   "hint": "mamá",
+   "ex": [
+    "Jīntiān ",
+    "māma",
+    " zuò fàn."
+   ],
+   "exes": "Hoy cocina mamá.",
+   "pic": "roblox_82491976224175.webp",
+   "zh": "妈妈",
+   "exzh": "今天妈妈做饭。"
+  },
+  {
+   "n": 8,
+   "world": 1,
+   "py": "érzi",
+   "es": "hijo",
+   "hint": "hijo",
+   "ex": [
+    "Nǐ ",
+    "érzi",
+    " jīnnián duō dà?"
+   ],
+   "exes": "¿Cuántos años tiene tu hijo?",
+   "pic": "roblox_139033467940818.webp",
+   "zh": "儿子",
+   "exzh": "你儿子今年多大？"
+  },
+  {
+   "n": 9,
+   "world": 1,
+   "py": "nǚ’ér",
+   "es": "hija",
+   "hint": "hija",
+   "ex": [
+    "Nǐ ",
+    "nǚ’ér",
+    " zài jiā ma?"
+   ],
+   "exes": "¿Tu hija está en casa?",
+   "pic": "fluent_girl.webp",
+   "zh": "女儿",
+   "exzh": "你女儿在家吗？"
+  },
+  {
+   "n": 10,
+   "world": 1,
+   "py": "péngyou",
+   "es": "amigo",
+   "hint": "amigo",
+   "ex": [
+    "Nàge xiǎo gǒu shì wǒ ",
+    "péngyou",
+    " de."
+   ],
+   "exes": "Ese perrito es de mi amigo.",
+   "pic": "fluent_teddybear.webp",
+   "zh": "朋友",
+   "exzh": "那个小狗是我朋友的。"
+  },
+  {
+   "n": 11,
+   "world": 1,
+   "py": "jiā",
+   "es": "casa / familia",
+   "hint": "casa / familia",
+   "ex": [
+    "Nǐ nǎ tiān huí ",
+    "jiā",
+    "?"
+   ],
+   "exes": "¿Qué día vuelves a casa?",
+   "pic": "fluent_house.webp",
+   "zh": "家",
+   "exzh": "你哪天回家？"
+  },
+  {
+   "n": 12,
+   "world": 1,
+   "py": "ài",
+   "es": "amar / encantar",
+   "hint": "amar / encantar",
+   "ex": [
+    "Tā hěn ",
+    "ài",
+    " dúshū."
+   ],
+   "exes": "Le encanta leer.",
+   "pic": "fluent_redheart.webp",
+   "zh": "爱",
+   "exzh": "他很爱读书。"
+  },
+  {
+   "n": 13,
+   "world": 1,
+   "py": "gǒu",
+   "es": "perro",
+   "hint": "perro",
+   "ex": [
+    "Nàge xiǎo ",
+    "gǒu",
+    " shì shéi de?"
+   ],
+   "exes": "¿De quién es ese perrito?",
+   "pic": "roblox_139254505278965.webp",
+   "zh": "狗",
+   "exzh": "那个小狗是谁的？"
+  },
+  {
+   "n": 14,
+   "world": 1,
+   "py": "māo",
+   "es": "gato",
+   "hint": "gato",
+   "ex": [
+    "Wǒ hěn xǐhuan ",
+    "māo",
+    "."
+   ],
+   "exes": "Me gustan mucho los gatos.",
+   "pic": "fluent_catface.webp",
+   "zh": "猫",
+   "exzh": "我很喜欢猫。"
+  },
+  {
+   "n": 15,
+   "world": 1,
+   "py": "jiào",
+   "es": "llamarse",
+   "hint": "llamarse",
+   "ex": [
+    "Wǒ ",
+    "jiào",
+    " Xiǎo Wáng."
+   ],
+   "exes": "Me llamo Xiao Wang.",
+   "pic": "fluent_speakinghead.webp",
+   "zh": "叫",
+   "exzh": "我叫小王。"
+  },
+  {
+   "n": 16,
+   "world": 1,
+   "py": "míngzi",
+   "es": "nombre",
+   "hint": "nombre",
+   "ex": [
+    "Nǐ jiào shénme ",
+    "míngzi",
+    "?"
+   ],
+   "exes": "¿Cómo te llamas?",
+   "pic": "fluent_label.webp",
+   "zh": "名字",
+   "exzh": "你叫什么名字？"
+  },
+  {
+   "n": 17,
+   "world": 1,
+   "py": "shì",
+   "es": "ser / estar",
+   "hint": "ser / estar",
+   "ex": [
+    "Tā ",
+    "shì",
+    " gè lǎoshī."
+   ],
+   "exes": "Él es maestro.",
+   "pic": "roblox_135256018428165.webp",
+   "zh": "是",
+   "exzh": "他是个老师。"
+  },
+  {
+   "n": 18,
+   "world": 1,
+   "py": "de",
+   "es": "de (mi, tu, su…)",
+   "hint": "de",
+   "ex": [
+    "Nàge rén shì wǒ ",
+    "de",
+    " xuésheng."
+   ],
+   "exes": "Esa persona es mi estudiante.",
+   "pic": "fluent_link.webp",
+   "zh": "的",
+   "exzh": "那个人是我的学生。"
+  },
+  {
+   "n": 19,
+   "world": 1,
+   "py": "rènshi",
+   "es": "conocer",
+   "hint": "conocer",
+   "ex": [
+    "Nǐmen shì shénme shíhou ",
+    "rènshi",
+    " de?"
+   ],
+   "exes": "¿Cuándo se conocieron?",
+   "pic": "fluent_personraisinghand.webp",
+   "zh": "认识",
+   "exzh": "你们是什么时候认识的？"
+  },
+  {
+   "n": 20,
+   "world": 1,
+   "py": "suì",
+   "es": "años de edad",
+   "hint": "años de edad",
+   "ex": [
+    "Xiǎopéngyou, nǐ jǐ ",
+    "suì",
+    " le?"
+   ],
+   "exes": "Niño, ¿cuántos años tienes?",
+   "pic": "fluent_birthdaycake.webp",
+   "zh": "岁",
+   "exzh": "小朋友，你几岁了？"
+  },
+  {
+   "n": 21,
+   "world": 2,
+   "py": "xuéxiào",
+   "es": "escuela",
+   "hint": "escuela",
+   "ex": [
+    "Zàijiàn, míngtiān ",
+    "xuéxiào",
+    " jiàn."
+   ],
+   "exes": "Adiós, nos vemos mañana en la escuela.",
+   "pic": "fluent_school.webp",
+   "zh": "学校",
+   "exzh": "再见，明天学校见。"
+  },
+  {
+   "n": 22,
+   "world": 2,
+   "py": "xuésheng",
+   "es": "estudiante",
+   "hint": "estudiante",
+   "ex": [
+    "Lǎoshīmen dōu hěn xǐhuan zhège ",
+    "xuésheng",
+    "."
+   ],
+   "exes": "A los maestros les gusta mucho este alumno.",
+   "pic": "fluent_student.webp",
+   "zh": "学生",
+   "exzh": "老师们都很喜欢这个学生。"
+  },
+  {
+   "n": 23,
+   "world": 2,
+   "py": "lǎoshī",
+   "es": "maestro",
+   "hint": "maestro",
+   "ex": [
+    "Wǒ de ",
+    "lǎoshī",
+    " shuō wǒ hànyǔ hěn hǎo."
+   ],
+   "exes": "Mi maestro dice que mi Chino Mandarín es muy bueno.",
+   "pic": "fluent_teacher.webp",
+   "zh": "老师",
+   "exzh": "我的老师说我汉语很好。"
+  },
+  {
+   "n": 24,
+   "world": 2,
+   "py": "tóngxué",
+   "es": "compañero de clase",
+   "hint": "compañero de clase",
+   "ex": [
+    "Qiánmiàn nàge rén shì wǒ ",
+    "tóngxué",
+    "."
+   ],
+   "exes": "El de adelante es mi compañero de clase.",
+   "pic": "fluent_backpack.webp",
+   "zh": "同学",
+   "exzh": "前面那个人是我同学。"
+  },
+  {
+   "n": 25,
+   "world": 2,
+   "py": "xuéxí",
+   "es": "estudiar",
+   "hint": "estudiar",
+   "ex": [
+    "Wǒ zài Běijīng ",
+    "xuéxí",
+    " hànyǔ."
+   ],
+   "exes": "Estudio Chino Mandarín en Beijing.",
+   "pic": "fluent_brain.webp",
+   "zh": "学习",
+   "exzh": "我在北京学习汉语。"
+  },
+  {
+   "n": 26,
+   "world": 2,
+   "py": "dú",
+   "es": "leer",
+   "hint": "leer",
+   "ex": [
+    "Zhège zì, shéi huì ",
+    "dú",
+    "?"
+   ],
+   "exes": "¿Quién sabe leer este carácter?",
+   "pic": "fluent_openbook.webp",
+   "zh": "读",
+   "exzh": "这个字，谁会读？"
+  },
+  {
+   "n": 27,
+   "world": 2,
+   "py": "xiě",
+   "es": "escribir",
+   "hint": "escribir",
+   "ex": [
+    "Wǒ huì ",
+    "xiě",
+    " zhège zì le."
+   ],
+   "exes": "Ya sé escribir este carácter.",
+   "pic": "fluent_writinghand.webp",
+   "zh": "写",
+   "exzh": "我会写这个字了。"
+  },
+  {
+   "n": 28,
+   "world": 2,
+   "py": "shū",
+   "es": "libro",
+   "hint": "libro",
+   "ex": [
+    "Zuótiān wǒ mǎi le yī běn hànyǔ ",
+    "shū",
+    "."
+   ],
+   "exes": "Ayer compré un libro de Chino Mandarín.",
+   "pic": "fluent_closedbook.webp",
+   "zh": "书",
+   "exzh": "昨天我买了一本汉语书。"
+  },
+  {
+   "n": 29,
+   "world": 2,
+   "py": "běn",
+   "es": "para contar libros",
+   "hint": "para contar libros",
+   "ex": [
+    "Wǒ mǎi le sān ",
+    "běn",
+    " shū."
+   ],
+   "exes": "Compré tres libros.",
+   "pic": "fluent_books.webp",
+   "zh": "本",
+   "exzh": "我买了三本书。"
+  },
+  {
+   "n": 30,
+   "world": 2,
+   "py": "zì",
+   "es": "carácter",
+   "hint": "carácter",
+   "ex": [
+    "Zhège ",
+    "zì",
+    " hěn piàoliang."
+   ],
+   "exes": "Este carácter es muy bonito.",
+   "pic": "fluent_paintbrush.webp",
+   "zh": "字",
+   "exzh": "这个字很漂亮。"
+  },
+  {
+   "n": 31,
+   "world": 2,
+   "py": "hànyǔ",
+   "es": "Chino Mandarín",
+   "hint": "Chino Mandarín",
+   "ex": [
+    "Tā de ",
+    "hànyǔ",
+    " hěn hǎo."
+   ],
+   "exes": "Su Chino Mandarín es muy bueno.",
+   "pic": "fluent_dragon.webp",
+   "zh": "汉语",
+   "exzh": "他的汉语很好。"
+  },
+  {
+   "n": 32,
+   "world": 2,
+   "py": "shuō",
+   "es": "hablar",
+   "hint": "hablar",
+   "ex": [
+    "Lǐ xiānsheng huì ",
+    "shuō",
+    " hànyǔ ma?"
+   ],
+   "exes": "¿El Sr. Li sabe hablar Chino Mandarín?",
+   "pic": "roblox_79657198215074.webp",
+   "zh": "说",
+   "exzh": "李先生会说汉语吗？"
+  },
+  {
+   "n": 33,
+   "world": 2,
+   "py": "tīng",
+   "es": "escuchar",
+   "hint": "escuchar",
+   "ex": [
+    "Wǒ xǐhuan ",
+    "tīng",
+    " lǎoshī shuō hànyǔ."
+   ],
+   "exes": "Me gusta escuchar al maestro hablar Chino Mandarín.",
+   "pic": "fluent_ear.webp",
+   "zh": "听",
+   "exzh": "我喜欢听老师说汉语。"
+  },
+  {
+   "n": 34,
+   "world": 2,
+   "py": "kàn",
+   "es": "mirar",
+   "hint": "mirar",
+   "ex": [
+    "Míngtiān wǒmen qù ",
+    "kàn",
+    " diànyǐng."
+   ],
+   "exes": "Mañana vamos a mirar una película.",
+   "pic": "roblox_83953825719157.webp",
+   "zh": "看",
+   "exzh": "明天我们去看电影。"
+  },
+  {
+   "n": 35,
+   "world": 2,
+   "py": "kànjiàn",
+   "es": "ver",
+   "hint": "ver",
+   "ex": [
+    "Nǐ ",
+    "kànjiàn",
+    " Zhāng xiǎojiě le ma?"
+   ],
+   "exes": "¿Viste a la Srta. Zhang?",
+   "pic": "fluent_eyes.webp",
+   "zh": "看见",
+   "exzh": "你看见张小姐了吗？"
+  },
+  {
+   "n": 36,
+   "world": 2,
+   "py": "huì",
+   "es": "saber / poder",
+   "hint": "saber / poder",
+   "ex": [
+    "Wǒ xué ",
+    "huì",
+    " le zuò fàn."
+   ],
+   "exes": "Ya sé cocinar.",
+   "pic": "fluent_lightbulb.webp",
+   "zh": "会",
+   "exzh": "我学会了做饭。"
+  },
+  {
+   "n": 37,
+   "world": 2,
+   "py": "néng",
+   "es": "poder (capacidad)",
+   "hint": "poder",
+   "ex": [
+    "Māma zhège yuè ",
+    "néng",
+    " huílái."
+   ],
+   "exes": "Mamá puede volver este mes.",
+   "pic": "fluent_flexedbiceps.webp",
+   "zh": "能",
+   "exzh": "妈妈这个月能回来。"
+  },
+  {
+   "n": 38,
+   "world": 2,
+   "py": "xiānsheng",
+   "es": "señor",
+   "hint": "señor",
+   "ex": [
+    "Lǐ ",
+    "xiānsheng",
+    " zài nǎr gōngzuò?"
+   ],
+   "exes": "¿Dónde trabaja el Sr. Li?",
+   "pic": "fluent_personintuxedo.webp",
+   "zh": "先生",
+   "exzh": "李先生在哪儿工作？"
+  },
+  {
+   "n": 39,
+   "world": 3,
+   "py": "mǎi",
+   "es": "comprar",
+   "hint": "comprar",
+   "ex": [
+    "Nǐ huílái de shíhou ",
+    "mǎi",
+    " xiē shuǐguǒ."
+   ],
+   "exes": "Cuando vuelvas, compra algo de fruta.",
+   "pic": "roblox_95317258127987.webp",
+   "zh": "买",
+   "exzh": "你回来的时候买些水果。"
+  },
+  {
+   "n": 40,
+   "world": 3,
+   "py": "dōngxi",
+   "es": "cosa / objeto",
+   "hint": "cosa / objeto",
+   "ex": [
+    "Zhèxiē ",
+    "dōngxi",
+    " duōshǎo qián?"
+   ],
+   "exes": "¿Cuánto cuestan estas cosas?",
+   "pic": "fluent_package.webp",
+   "zh": "东西",
+   "exzh": "这些东西多少钱？"
+  },
+  {
+   "n": 41,
+   "world": 3,
+   "py": "shāngdiàn",
+   "es": "tienda",
+   "hint": "tienda",
+   "ex": [
+    "Xuéxiào hòumiàn yǒu ",
+    "shāngdiàn",
+    " ma?"
+   ],
+   "exes": "¿Hay tiendas detrás de la escuela?",
+   "pic": "fluent_conveniencestore.webp",
+   "zh": "商店",
+   "exzh": "学校后面有商店吗？"
+  },
+  {
+   "n": 42,
+   "world": 3,
+   "py": "fàndiàn",
+   "es": "restaurante",
+   "hint": "restaurante",
+   "ex": [
+    "Míngtiān nǐ zěnme qù ",
+    "fàndiàn",
+    "?"
+   ],
+   "exes": "¿Cómo irás mañana al restaurante?",
+   "pic": "fluent_cook.webp",
+   "zh": "饭店",
+   "exzh": "明天你怎么去饭店？"
+  },
+  {
+   "n": 43,
+   "world": 3,
+   "py": "qián",
+   "es": "dinero",
+   "hint": "dinero",
+   "ex": [
+    "Wǒ méiyǒu ",
+    "qián",
+    "."
+   ],
+   "exes": "No tengo dinero.",
+   "pic": "roblox_88531823777281.webp",
+   "zh": "钱",
+   "exzh": "我没有钱。"
+  },
+  {
+   "n": 44,
+   "world": 3,
+   "py": "kuài",
+   "es": "yuan (moneda)",
+   "hint": "yuan",
+   "ex": [
+    "Zhèxiē dōngxi èrshí ",
+    "kuài",
+    "."
+   ],
+   "exes": "Estas cosas cuestan 20 yuanes.",
+   "pic": "fluent_yenbanknote.webp",
+   "zh": "块",
+   "exzh": "这些东西二十块。"
+  },
+  {
+   "n": 45,
+   "world": 3,
+   "py": "duōshǎo",
+   "es": "cuánto",
+   "hint": "cuánto",
+   "ex": [
+    "Zhège ",
+    "duōshǎo",
+    " qián?"
+   ],
+   "exes": "¿Cuánto cuesta esto?",
+   "pic": "fluent_abacus.webp",
+   "zh": "多少",
+   "exzh": "这个多少钱？"
+  },
+  {
+   "n": 46,
+   "world": 3,
+   "py": "cài",
+   "es": "platillo",
+   "hint": "platillo",
+   "ex": [
+    "Wǒ māma xǐhuan chī Zhōngguó ",
+    "cài",
+    "."
+   ],
+   "exes": "A mi mamá le gusta la comida china.",
+   "pic": "fluent_shallowpanoffood.webp",
+   "zh": "菜",
+   "exzh": "我妈妈喜欢吃中国菜。"
+  },
+  {
+   "n": 47,
+   "world": 3,
+   "py": "mǐfàn",
+   "es": "arroz",
+   "hint": "arroz",
+   "ex": [
+    "Tā mǎi le yīdiǎnr ",
+    "mǐfàn",
+    "."
+   ],
+   "exes": "Ella compró un poco de arroz.",
+   "pic": "fluent_cookedrice.webp",
+   "zh": "米饭",
+   "exzh": "她买了一点儿米饭。"
+  },
+  {
+   "n": 48,
+   "world": 3,
+   "py": "chá",
+   "es": "té",
+   "hint": "té",
+   "ex": [
+    "Zhuōzi shàng yǒu bēi ",
+    "chá",
+    "."
+   ],
+   "exes": "Sobre la mesa hay una taza de té.",
+   "pic": "fluent_teacupwithouthandle.webp",
+   "zh": "茶",
+   "exzh": "桌子上有杯茶。"
+  },
+  {
+   "n": 49,
+   "world": 3,
+   "py": "shuǐ",
+   "es": "agua",
+   "hint": "agua",
+   "ex": [
+    "Wǒ xiǎng hē ",
+    "shuǐ",
+    "."
+   ],
+   "exes": "Quiero beber agua.",
+   "pic": "fluent_droplet.webp",
+   "zh": "水",
+   "exzh": "我想喝水。"
+  },
+  {
+   "n": 50,
+   "world": 3,
+   "py": "shuǐguǒ",
+   "es": "fruta",
+   "hint": "fruta",
+   "ex": [
+    "Tóngxuémen dōu xǐhuan chī ",
+    "shuǐguǒ",
+    "."
+   ],
+   "exes": "A los compañeros les gusta comer fruta.",
+   "pic": "fluent_grapes.webp",
+   "zh": "水果",
+   "exzh": "同学们都喜欢吃水果。"
+  },
+  {
+   "n": 51,
+   "world": 3,
+   "py": "píngguǒ",
+   "es": "manzana",
+   "hint": "manzana",
+   "ex": [
+    "Nàxiē ",
+    "píngguǒ",
+    " shì shéi mǎi de?"
+   ],
+   "exes": "¿Quién compró esas manzanas?",
+   "pic": "fluent_redapple.webp",
+   "zh": "苹果",
+   "exzh": "那些苹果是谁买的？"
+  },
+  {
+   "n": 52,
+   "world": 3,
+   "py": "bēizi",
+   "es": "taza",
+   "hint": "taza",
+   "ex": [
+    "",
+    "Bēizi",
+    " tài shǎo le."
+   ],
+   "exes": "Hay muy pocas tazas.",
+   "pic": "fluent_hotbeverage.webp",
+   "zh": "杯子",
+   "exzh": "杯子太少了。"
+  },
+  {
+   "n": 53,
+   "world": 3,
+   "py": "chī",
+   "es": "comer",
+   "hint": "comer",
+   "ex": [
+    "Zhōngwǔ xiǎng ",
+    "chī",
+    " shénme?"
+   ],
+   "exes": "¿Qué quieres comer al mediodía?",
+   "pic": "roblox_139587790765654.webp",
+   "zh": "吃",
+   "exzh": "中午想吃什么？"
+  },
+  {
+   "n": 54,
+   "world": 3,
+   "py": "hē",
+   "es": "beber",
+   "hint": "beber",
+   "ex": [
+    "Nǐ xiǎng ",
+    "hē",
+    " shénme?"
+   ],
+   "exes": "¿Qué quieres beber?",
+   "pic": "fluent_cupwithstraw.webp",
+   "zh": "喝",
+   "exzh": "你想喝什么？"
+  },
+  {
+   "n": 55,
+   "world": 3,
+   "py": "xǐhuan",
+   "es": "gustar",
+   "hint": "gustar",
+   "ex": [
+    "Wǒ hěn ",
+    "xǐhuan",
+    " zhèlǐ."
+   ],
+   "exes": "Me gusta mucho este lugar.",
+   "pic": "fluent_smilingfacewithhearteyes.webp",
+   "zh": "喜欢",
+   "exzh": "我很喜欢这里。"
+  },
+  {
+   "n": 56,
+   "world": 3,
+   "py": "xiǎng",
+   "es": "querer / pensar",
+   "hint": "querer / pensar",
+   "ex": [
+    "Wǒ ",
+    "xiǎng",
+    " qù shuìjiào."
+   ],
+   "exes": "Quiero ir a dormir.",
+   "pic": "roblox_120866551295956.webp",
+   "zh": "想",
+   "exzh": "我想去睡觉。"
+  },
+  {
+   "n": 57,
+   "world": 3,
+   "py": "qǐng",
+   "es": "por favor",
+   "hint": "por favor",
+   "ex": [
+    "",
+    "Qǐng",
+    " zuò."
+   ],
+   "exes": "Siéntate, por favor.",
+   "pic": "fluent_foldedhands.webp",
+   "zh": "请",
+   "exzh": "请坐。"
+  },
+  {
+   "n": 58,
+   "world": 3,
+   "py": "xièxie",
+   "es": "gracias",
+   "hint": "gracias",
+   "ex": [
+    "Hǎo de, ",
+    "xièxie",
+    "."
+   ],
+   "exes": "Está bien, gracias.",
+   "pic": "fluent_bouquet.webp",
+   "zh": "谢谢",
+   "exzh": "好的，谢谢。"
+  },
+  {
+   "n": 59,
+   "world": 3,
+   "py": "búkèqi",
+   "es": "de nada",
+   "hint": "de nada",
+   "ex": [
+    "Xièxie! ",
+    "Búkèqi",
+    "."
+   ],
+   "exes": "¡Gracias! ¡De nada!",
+   "pic": "fluent_smilingfacewithsmilingeyes.webp",
+   "zh": "不客气",
+   "exzh": "谢谢！不客气。"
+  },
+  {
+   "n": 60,
+   "world": 3,
+   "py": "hǎo",
+   "es": "bueno",
+   "hint": "bueno",
+   "ex": [
+    "Nǐ zuò de cài hěn ",
+    "hǎo",
+    "!"
+   ],
+   "exes": "¡Tu comida está muy buena!",
+   "pic": "fluent_thumbsup.webp",
+   "zh": "好",
+   "exzh": "你做的菜很好！"
+  },
+  {
+   "n": 61,
+   "world": 4,
+   "py": "diǎn",
+   "es": "hora (en el reloj)",
+   "hint": "hora",
+   "ex": [
+    "Diànyǐng shì jǐ ",
+    "diǎn",
+    " de?"
+   ],
+   "exes": "¿A qué hora es la película?",
+   "pic": "fluent_eightoclock.webp",
+   "zh": "点",
+   "exzh": "电影是几点的？"
+  },
+  {
+   "n": 62,
+   "world": 4,
+   "py": "fēnzhōng",
+   "es": "minuto",
+   "hint": "minuto",
+   "ex": [
+    "Wǒ shí ",
+    "fēnzhōng",
+    " hòu huíqù."
+   ],
+   "exes": "Vuelvo en diez minutos.",
+   "pic": "fluent_stopwatch.webp",
+   "zh": "分钟",
+   "exzh": "我十分钟后回去。"
+  },
+  {
+   "n": 63,
+   "world": 4,
+   "py": "xiànzài",
+   "es": "ahora",
+   "hint": "ahora",
+   "ex": [
+    "Nǐ ",
+    "xiànzài",
+    " zài nǎr?"
+   ],
+   "exes": "¿Dónde estás ahora?",
+   "pic": "roblox_109762655069458.webp",
+   "zh": "现在",
+   "exzh": "你现在在哪儿？"
+  },
+  {
+   "n": 64,
+   "world": 4,
+   "py": "shíhou",
+   "es": "momento",
+   "hint": "momento",
+   "ex": [
+    "Tāmen shénme ",
+    "shíhou",
+    " qù shāngdiàn?"
+   ],
+   "exes": "¿Cuándo van a la tienda?",
+   "pic": "fluent_hourglassnotdone.webp",
+   "zh": "时候",
+   "exzh": "他们什么时候去商店？"
+  },
+  {
+   "n": 65,
+   "world": 4,
+   "py": "jīntiān",
+   "es": "hoy",
+   "hint": "hoy",
+   "ex": [
+    "",
+    "Jīntiān",
+    " xīngqī jǐ?"
+   ],
+   "exes": "¿Qué día es hoy?",
+   "pic": "roblox_77554574524050.webp",
+   "zh": "今天",
+   "exzh": "今天星期几？"
+  },
+  {
+   "n": 66,
+   "world": 4,
+   "py": "míngtiān",
+   "es": "mañana (el día siguiente)",
+   "hint": "mañana",
+   "ex": [
+    "",
+    "Míngtiān",
+    " tiānqì zěnmeyàng?"
+   ],
+   "exes": "¿Qué tiempo hará mañana?",
+   "pic": "roblox_112449725225011.webp",
+   "zh": "明天",
+   "exzh": "明天天气怎么样？"
+  },
+  {
+   "n": 67,
+   "world": 4,
+   "py": "zuótiān",
+   "es": "ayer",
+   "hint": "ayer",
+   "ex": [
+    "",
+    "Zuótiān",
+    " tiānqì hěn rè."
+   ],
+   "exes": "Ayer hizo mucho calor.",
+   "pic": "fluent_lasttrackbutton.webp",
+   "zh": "昨天",
+   "exzh": "昨天天气很热。"
+  },
+  {
+   "n": 68,
+   "world": 4,
+   "py": "shàngwǔ",
+   "es": "por la mañana",
+   "hint": "por la mañana",
+   "ex": [
+    "Nǐ zuótiān ",
+    "shàngwǔ",
+    " qù xuéxiào le ma?"
+   ],
+   "exes": "¿Fuiste a la escuela ayer en la mañana?",
+   "pic": "fluent_rooster.webp",
+   "zh": "上午",
+   "exzh": "你昨天上午去学校了吗？"
+  },
+  {
+   "n": 69,
+   "world": 4,
+   "py": "zhōngwǔ",
+   "es": "mediodía",
+   "hint": "mediodía",
+   "ex": [
+    "",
+    "Zhōngwǔ",
+    " wǒ hē chá."
+   ],
+   "exes": "Al mediodía tomo té.",
+   "pic": "fluent_sun.webp",
+   "zh": "中午",
+   "exzh": "中午我喝茶。"
+  },
+  {
+   "n": 70,
+   "world": 4,
+   "py": "xiàwǔ",
+   "es": "por la tarde",
+   "hint": "por la tarde",
+   "ex": [
+    "",
+    "Xiàwǔ",
+    " wǒ qù shāngdiàn."
+   ],
+   "exes": "Por la tarde voy a la tienda.",
+   "pic": "fluent_sunset.webp",
+   "zh": "下午",
+   "exzh": "下午我去商店。"
+  },
+  {
+   "n": 71,
+   "world": 4,
+   "py": "xīngqī",
+   "es": "semana",
+   "hint": "semana",
+   "ex": [
+    "Jīntiān ",
+    "xīngqī",
+    " yī."
+   ],
+   "exes": "Hoy es lunes.",
+   "pic": "week_calendar.webp",
+   "zh": "星期",
+   "exzh": "今天星期一。"
+  },
+  {
+   "n": 72,
+   "world": 4,
+   "py": "yuè",
+   "es": "mes / luna",
+   "hint": "mes / luna",
+   "ex": [
+    "Wǒ zài zhèr zhù yī gè ",
+    "yuè",
+    "."
+   ],
+   "exes": "Me quedo aquí un mes.",
+   "pic": "fluent_crescentmoon.webp",
+   "zh": "月",
+   "exzh": "我在这儿住一个月。"
+  },
+  {
+   "n": 73,
+   "world": 4,
+   "py": "nián",
+   "es": "año",
+   "hint": "año",
+   "ex": [
+    "Zhège diànyǐng shì nǎ yī ",
+    "nián",
+    " de?"
+   ],
+   "exes": "¿De qué año es esta película?",
+   "pic": "fluent_fireworks.webp",
+   "zh": "年",
+   "exzh": "这个电影是哪一年的？"
+  },
+  {
+   "n": 74,
+   "world": 4,
+   "py": "hào",
+   "es": "día del mes",
+   "hint": "día del mes",
+   "ex": [
+    "Èr yuè yī ",
+    "hào",
+    "."
+   ],
+   "exes": "El 1 de febrero.",
+   "pic": "fluent_tearoffcalendar.webp",
+   "zh": "号",
+   "exzh": "二月一号。"
+  },
+  {
+   "n": 75,
+   "world": 4,
+   "py": "tiānqì",
+   "es": "clima",
+   "hint": "clima",
+   "ex": [
+    "Zuótiān ",
+    "tiānqì",
+    " zěnmeyàng?"
+   ],
+   "exes": "¿Qué tiempo hizo ayer?",
+   "pic": "fluent_sunbehindsmallcloud.webp",
+   "zh": "天气",
+   "exzh": "昨天天气怎么样？"
+  },
+  {
+   "n": 76,
+   "world": 4,
+   "py": "rè",
+   "es": "caliente",
+   "hint": "caliente",
+   "ex": [
+    "Míngtiān huì hěn ",
+    "rè",
+    "."
+   ],
+   "exes": "Mañana hará mucho calor.",
+   "pic": "fluent_hotface.webp",
+   "zh": "热",
+   "exzh": "明天会很热。"
+  },
+  {
+   "n": 77,
+   "world": 4,
+   "py": "lěng",
+   "es": "frío",
+   "hint": "frío",
+   "ex": [
+    "Jīntiān tiānqì hěn ",
+    "lěng",
+    "."
+   ],
+   "exes": "Hoy hace mucho frío.",
+   "pic": "fluent_coldface.webp",
+   "zh": "冷",
+   "exzh": "今天天气很冷。"
+  },
+  {
+   "n": 78,
+   "world": 4,
+   "py": "xiàyǔ",
+   "es": "llover",
+   "hint": "llover",
+   "ex": [
+    "",
+    "Xiàyǔ",
+    " le, nǐ zěnme huí jiā?"
+   ],
+   "exes": "Está lloviendo, ¿cómo vuelves a casa?",
+   "pic": "fluent_cloudwithrain.webp",
+   "zh": "下雨",
+   "exzh": "下雨了，你怎么回家？"
+  },
+  {
+   "n": 79,
+   "world": 4,
+   "py": "tài",
+   "es": "demasiado",
+   "hint": "demasiado",
+   "ex": [
+    "Tā de yīfu ",
+    "tài",
+    " xiǎo le."
+   ],
+   "exes": "Su ropa es demasiado pequeña.",
+   "pic": "fluent_doubleexclamationmark.webp",
+   "zh": "太",
+   "exzh": "她的衣服太小了。"
+  },
+  {
+   "n": 80,
+   "world": 4,
+   "py": "hěn",
+   "es": "muy",
+   "hint": "muy",
+   "ex": [
+    "Wǒ ",
+    "hěn",
+    " gāoxìng."
+   ],
+   "exes": "Estoy muy feliz.",
+   "pic": "roblox_92145229147987.webp",
+   "zh": "很",
+   "exzh": "我很高兴。"
+  },
+  {
+   "n": 81,
+   "world": 5,
+   "py": "Běijīng",
+   "es": "Beijing",
+   "hint": "Beijing",
+   "ex": [
+    "Wǒ zài ",
+    "Běijīng",
+    " zhù le wǔ nián."
+   ],
+   "exes": "Viví cinco años en Beijing.",
+   "pic": "fluent_redpaperlantern.webp",
+   "zh": "北京",
+   "exzh": "我在北京住了五年。"
+  },
+  {
+   "n": 82,
+   "world": 5,
+   "py": "Zhōngguó",
+   "es": "China",
+   "hint": "China",
+   "ex": [
+    "Xiànzài yǒu hěn duō rén lái ",
+    "Zhōngguó",
+    "."
+   ],
+   "exes": "Ahora muchas personas vienen a China.",
+   "pic": "fluent_panda.webp",
+   "zh": "中国",
+   "exzh": "现在有很多人来中国。"
+  },
+  {
+   "n": 83,
+   "world": 5,
+   "py": "qù",
+   "es": "ir",
+   "hint": "ir",
+   "ex": [
+    "Tā ",
+    "qù",
+    " yīyuàn le."
+   ],
+   "exes": "Se fue al hospital.",
+   "pic": "fluent_rightarrow.webp",
+   "zh": "去",
+   "exzh": "他去医院了。"
+  },
+  {
+   "n": 84,
+   "world": 5,
+   "py": "lái",
+   "es": "venir",
+   "hint": "venir",
+   "ex": [
+    "Nǐ ",
+    "lái",
+    " kàn wǒ, wǒ hěn gāoxìng."
+   ],
+   "exes": "¡Qué feliz estoy de que vinieras a verme!",
+   "pic": "fluent_leftarrow.webp",
+   "zh": "来",
+   "exzh": "你来看我，我很高兴。"
+  },
+  {
+   "n": 85,
+   "world": 5,
+   "py": "huí",
+   "es": "regresar",
+   "hint": "regresar",
+   "ex": [
+    "Nǐ shénme shíhou ",
+    "huí",
+    " Zhōngguó?"
+   ],
+   "exes": "¿Cuándo vuelves a China?",
+   "pic": "fluent_repeatbutton.webp",
+   "zh": "回",
+   "exzh": "你什么时候回中国？"
+  },
+  {
+   "n": 86,
+   "world": 5,
+   "py": "fēijī",
+   "es": "avión",
+   "hint": "avión",
+   "ex": [
+    "Zuótiān de zhège shíhou wǒ zài ",
+    "fēijī",
+    " shàng."
+   ],
+   "exes": "Ayer a esta hora yo estaba en el avión.",
+   "pic": "fluent_airplane.webp",
+   "zh": "飞机",
+   "exzh": "昨天的这个时候我在飞机上。"
+  },
+  {
+   "n": 87,
+   "world": 5,
+   "py": "chūzūchē",
+   "es": "taxi",
+   "hint": "taxi",
+   "ex": [
+    "Wǒ zuò ",
+    "chūzūchē",
+    " qù fàndiàn."
+   ],
+   "exes": "Voy al restaurante en taxi.",
+   "pic": "fluent_taxi.webp",
+   "zh": "出租车",
+   "exzh": "我坐出租车去饭店。"
+  },
+  {
+   "n": 88,
+   "world": 5,
+   "py": "zuò",
+   "es": "sentarse",
+   "hint": "sentarse",
+   "ex": [
+    "Néng qǐng nǐ ",
+    "zuò",
+    " nàr ma?"
+   ],
+   "exes": "¿Puedes sentarte allá?",
+   "pic": "fluent_seat.webp",
+   "zh": "坐",
+   "exzh": "能请你坐那儿吗？"
+  },
+  {
+   "n": 89,
+   "world": 5,
+   "py": "zhù",
+   "es": "vivir",
+   "hint": "vivir",
+   "ex": [
+    "Tā zài nǎr ",
+    "zhù",
+    "?"
+   ],
+   "exes": "¿Dónde vive él?",
+   "pic": "fluent_houses.webp",
+   "zh": "住",
+   "exzh": "他在哪儿住？"
+  },
+  {
+   "n": 90,
+   "world": 5,
+   "py": "zài",
+   "es": "en / estar",
+   "hint": "en / estar",
+   "ex": [
+    "Wǒ ",
+    "zài",
+    " shāngdiàn."
+   ],
+   "exes": "Estoy en la tienda.",
+   "pic": "fluent_roundpushpin.webp",
+   "zh": "在",
+   "exzh": "我在商店。"
+  },
+  {
+   "n": 91,
+   "world": 5,
+   "py": "nǎ",
+   "es": "cuál",
+   "hint": "cuál",
+   "ex": [
+    "Nǐ ",
+    "nǎ",
+    " tiān huí guó?"
+   ],
+   "exes": "¿Qué día regresas a tu país?",
+   "pic": "fluent_thinkingface.webp",
+   "zh": "哪",
+   "exzh": "你哪天回国？"
+  },
+  {
+   "n": 92,
+   "world": 5,
+   "py": "nǎr",
+   "es": "dónde",
+   "hint": "dónde",
+   "ex": [
+    "Nǐ de chē zài ",
+    "nǎr",
+    "?"
+   ],
+   "exes": "¿Dónde está tu auto?",
+   "pic": "fluent_worldmap.webp",
+   "zh": "哪儿",
+   "exzh": "你的车在哪儿？"
+  },
+  {
+   "n": 93,
+   "world": 5,
+   "py": "nà",
+   "es": "ese",
+   "hint": "ese",
+   "ex": [
+    "",
+    "Nà",
+    "ge rén shì shéi?"
+   ],
+   "exes": "¿Quién es esa persona?",
+   "pic": "roblox_108039198819341.webp",
+   "zh": "那",
+   "exzh": "那个人是谁？"
+  },
+  {
+   "n": 94,
+   "world": 5,
+   "py": "zhè",
+   "es": "este",
+   "hint": "este",
+   "ex": [
+    "",
+    "Zhè",
+    " shì wǒ de shū."
+   ],
+   "exes": "Este es mi libro.",
+   "pic": "fluent_backhandindexpointingdown.webp",
+   "zh": "这",
+   "exzh": "这是我的书。"
+  },
+  {
+   "n": 95,
+   "world": 5,
+   "py": "qiánmiàn",
+   "es": "adelante",
+   "hint": "adelante",
+   "ex": [
+    "",
+    "Qiánmiàn",
+    " nà jǐ gè rén shì shéi?"
+   ],
+   "exes": "¿Quiénes son esas personas de adelante?",
+   "pic": "fluent_uparrow.webp",
+   "zh": "前面",
+   "exzh": "前面那几个人是谁？"
+  },
+  {
+   "n": 96,
+   "world": 5,
+   "py": "hòumiàn",
+   "es": "atrás",
+   "hint": "atrás",
+   "ex": [
+    "Wǒ de chē zài fàndiàn ",
+    "hòumiàn",
+    "."
+   ],
+   "exes": "Mi auto está detrás del restaurante.",
+   "pic": "fluent_downarrow.webp",
+   "zh": "后面",
+   "exzh": "我的车在饭店后面。"
+  },
+  {
+   "n": 97,
+   "world": 5,
+   "py": "shàng",
+   "es": "arriba",
+   "hint": "arriba",
+   "ex": [
+    "Māo zài zhuōzi ",
+    "shàng",
+    "."
+   ],
+   "exes": "El gato está sobre la mesa.",
+   "pic": "fluent_upwardsbutton.webp",
+   "zh": "上",
+   "exzh": "猫在桌子上。"
+  },
+  {
+   "n": 98,
+   "world": 5,
+   "py": "xià",
+   "es": "abajo / próximo",
+   "hint": "abajo / próximo",
+   "ex": [
+    "Tā xiǎng ",
+    "xià",
+    " gè xīngqī qù mǎi diànnǎo."
+   ],
+   "exes": "La próxima semana quiere ir a comprar una computadora.",
+   "pic": "fluent_downwardsbutton.webp",
+   "zh": "下",
+   "exzh": "他想下个星期去买电脑。"
+  },
+  {
+   "n": 99,
+   "world": 6,
+   "py": "lǐ",
+   "es": "dentro",
+   "hint": "dentro",
+   "ex": [
+    "Bēizi ",
+    "lǐ",
+    " yǒu shuǐ."
+   ],
+   "exes": "Dentro de la taza hay agua.",
+   "pic": "fluent_inboxtray.webp",
+   "zh": "里",
+   "exzh": "杯子里有水。"
+  },
+  {
+   "n": 100,
+   "world": 6,
+   "py": "zhuōzi",
+   "es": "mesa",
+   "hint": "mesa",
+   "ex": [
+    "Zhège ",
+    "zhuōzi",
+    " tài xiǎo le."
+   ],
+   "exes": "Esta mesa es demasiado pequeña.",
+   "pic": "fluent_forkandknifewithplate.webp",
+   "zh": "桌子",
+   "exzh": "这个桌子太小了。"
+  },
+  {
+   "n": 101,
+   "world": 6,
+   "py": "yǐzi",
+   "es": "silla",
+   "hint": "silla",
+   "ex": [
+    "Zhège ",
+    "yǐzi",
+    " hěn piàoliang."
+   ],
+   "exes": "Esta silla es muy bonita.",
+   "pic": "fluent_chair.webp",
+   "zh": "椅子",
+   "exzh": "这个椅子很漂亮。"
+  },
+  {
+   "n": 102,
+   "world": 6,
+   "py": "diànnǎo",
+   "es": "computadora",
+   "hint": "computadora",
+   "ex": [
+    "Tā xiǎng qù mǎi ",
+    "diànnǎo",
+    "."
+   ],
+   "exes": "Quiere ir a comprar una computadora.",
+   "pic": "fluent_laptop.webp",
+   "zh": "电脑",
+   "exzh": "他想去买电脑。"
+  },
+  {
+   "n": 103,
+   "world": 6,
+   "py": "diànshì",
+   "es": "televisión",
+   "hint": "televisión",
+   "ex": [
+    "Wǒ bàba xǐhuan kàn ",
+    "diànshì",
+    "."
+   ],
+   "exes": "A mi papá le gusta ver la televisión.",
+   "pic": "fluent_television.webp",
+   "zh": "电视",
+   "exzh": "我爸爸喜欢看电视。"
+  },
+  {
+   "n": 104,
+   "world": 6,
+   "py": "diànyǐng",
+   "es": "película",
+   "hint": "película",
+   "ex": [
+    "Zhège ",
+    "diànyǐng",
+    " shì liùshí fēnzhōng ma?"
+   ],
+   "exes": "¿Esta película dura 60 minutos?",
+   "pic": "fluent_clapperboard.webp",
+   "zh": "电影",
+   "exzh": "这个电影是六十分钟吗？"
+  },
+  {
+   "n": 105,
+   "world": 6,
+   "py": "yīfu",
+   "es": "ropa",
+   "hint": "ropa",
+   "ex": [
+    "Zhège ",
+    "yīfu",
+    " zěnmeyàng?"
+   ],
+   "exes": "¿Qué tal esta ropa?",
+   "pic": "fluent_tshirt.webp",
+   "zh": "衣服",
+   "exzh": "这个衣服怎么样？"
+  },
+  {
+   "n": 106,
+   "world": 6,
+   "py": "kāi",
+   "es": "abrir / prender",
+   "hint": "abrir / prender",
+   "ex": [
+    "Wǒ ",
+    "kāi",
+    " diànshì."
+   ],
+   "exes": "Prendo la televisión.",
+   "pic": "fluent_key.webp",
+   "zh": "开",
+   "exzh": "我开电视。"
+  },
+  {
+   "n": 107,
+   "world": 6,
+   "py": "shuìjiào",
+   "es": "dormir",
+   "hint": "dormir",
+   "ex": [
+    "Māo zài yǐzi shàng ",
+    "shuìjiào",
+    "."
+   ],
+   "exes": "El gato duerme en la silla.",
+   "pic": "fluent_sleepingface.webp",
+   "zh": "睡觉",
+   "exzh": "猫在椅子上睡觉。"
+  },
+  {
+   "n": 108,
+   "world": 6,
+   "py": "zuò",
+   "es": "hacer",
+   "hint": "hacer",
+   "ex": [
+    "Jīntiān shéi ",
+    "zuò",
+    " fàn?"
+   ],
+   "exes": "¿Quién hace la comida hoy?",
+   "pic": "fluent_hammerandwrench.webp",
+   "zh": "做",
+   "exzh": "今天谁做饭？"
+  },
+  {
+   "n": 109,
+   "world": 6,
+   "py": "gōngzuò",
+   "es": "trabajar",
+   "hint": "trabajar",
+   "ex": [
+    "Nǐ bàba zài nǎr ",
+    "gōngzuò",
+    "?"
+   ],
+   "exes": "¿Dónde trabaja tu papá?",
+   "pic": "fluent_briefcase.webp",
+   "zh": "工作",
+   "exzh": "你爸爸在哪儿工作？"
+  },
+  {
+   "n": 110,
+   "world": 6,
+   "py": "dǎ diànhuà",
+   "es": "llamar por teléfono",
+   "hint": "llamar por teléfono",
+   "ex": [
+    "Bàba xiǎng ",
+    "dǎ diànhuà",
+    "."
+   ],
+   "exes": "Papá quiere llamar por teléfono.",
+   "pic": "fluent_telephonereceiver.webp",
+   "zh": "打电话",
+   "exzh": "爸爸想打电话。"
+  },
+  {
+   "n": 111,
+   "world": 6,
+   "py": "wèi",
+   "es": "hola (teléfono)",
+   "hint": "hola",
+   "ex": [
+    "",
+    "Wèi",
+    "? Qián xiānsheng zài ma?"
+   ],
+   "exes": "¿Hola? ¿Está el Sr. Qian?",
+   "pic": "fluent_mobilephone.webp",
+   "zh": "喂",
+   "exzh": "喂？钱先生在吗？"
+  },
+  {
+   "n": 112,
+   "world": 6,
+   "py": "piàoliang",
+   "es": "bonito",
+   "hint": "bonito",
+   "ex": [
+    "Wáng yīshēng hěn ",
+    "piàoliang",
+    "."
+   ],
+   "exes": "La doctora Wang es muy bonita.",
+   "pic": "fluent_sparkles.webp",
+   "zh": "漂亮",
+   "exzh": "王医生很漂亮。"
+  },
+  {
+   "n": 113,
+   "world": 6,
+   "py": "dà",
+   "es": "grande",
+   "hint": "grande",
+   "ex": [
+    "Wǒ jiā hěn ",
+    "dà",
+    "."
+   ],
+   "exes": "Mi casa es muy grande.",
+   "pic": "roblox_78396025502609.webp",
+   "zh": "大",
+   "exzh": "我家很大。"
+  },
+  {
+   "n": 114,
+   "world": 6,
+   "py": "xiǎo",
+   "es": "pequeño",
+   "hint": "pequeño",
+   "ex": [
+    "Wǒ de gǒu hěn ",
+    "xiǎo",
+    "."
+   ],
+   "exes": "Mi perro es muy pequeño.",
+   "pic": "roblox_131201123116729.webp",
+   "zh": "小",
+   "exzh": "我的狗很小。"
+  },
+  {
+   "n": 115,
+   "world": 6,
+   "py": "yǒu",
+   "es": "tener / hay",
+   "hint": "tener / hay",
+   "ex": [
+    "Zhèr ",
+    "yǒu",
+    " rén."
+   ],
+   "exes": "Aquí hay alguien.",
+   "pic": "roblox_96271725324293.webp",
+   "zh": "有",
+   "exzh": "这儿有人。"
+  },
+  {
+   "n": 116,
+   "world": 6,
+   "py": "méiyǒu",
+   "es": "no tener",
+   "hint": "no tener",
+   "ex": [
+    "Wǒ ",
+    "méiyǒu",
+    " gǒu."
+   ],
+   "exes": "No tengo perro.",
+   "pic": "fluent_prohibited.webp",
+   "zh": "没有",
+   "exzh": "我没有狗。"
+  },
+  {
+   "n": 117,
+   "world": 7,
+   "py": "rén",
+   "es": "persona",
+   "hint": "persona",
+   "ex": [
+    "Nàge ",
+    "rén",
+    " shì wǒ bàba."
+   ],
+   "exes": "Esa persona es mi papá.",
+   "pic": "fluent_personstanding.webp",
+   "zh": "人",
+   "exzh": "那个人是我爸爸。"
+  },
+  {
+   "n": 118,
+   "world": 7,
+   "py": "yīshēng",
+   "es": "doctor",
+   "hint": "doctor",
+   "ex": [
+    "Wǒ māma shì ",
+    "yīshēng",
+    "."
+   ],
+   "exes": "Mi mamá es doctora.",
+   "pic": "fluent_healthworker.webp",
+   "zh": "医生",
+   "exzh": "我妈妈是医生。"
+  },
+  {
+   "n": 119,
+   "world": 7,
+   "py": "yīyuàn",
+   "es": "hospital",
+   "hint": "hospital",
+   "ex": [
+    "Wáng lǎoshī xiǎng qù ",
+    "yīyuàn",
+    "."
+   ],
+   "exes": "El maestro Wang quiere ir al hospital.",
+   "pic": "fluent_hospital.webp",
+   "zh": "医院",
+   "exzh": "王老师想去医院。"
+  },
+  {
+   "n": 120,
+   "world": 7,
+   "py": "xiǎojiě",
+   "es": "señorita",
+   "hint": "señorita",
+   "ex": [
+    "Xiè ",
+    "xiǎojiě",
+    " zěnme le?"
+   ],
+   "exes": "¿Qué le pasa a la Srta. Xie?",
+   "pic": "fluent_womantippinghand.webp",
+   "zh": "小姐",
+   "exzh": "谢小姐怎么了？"
+  },
+  {
+   "n": 121,
+   "world": 7,
+   "py": "xiē",
+   "es": "algunos",
+   "hint": "algunos",
+   "ex": [
+    "Nǐ mǎi ",
+    "xiē",
+    " shuǐguǒ."
+   ],
+   "exes": "Compra algo de fruta.",
+   "pic": "fluent_basket.webp",
+   "zh": "些",
+   "exzh": "你买些水果。"
+  },
+  {
+   "n": 122,
+   "world": 7,
+   "py": "duō",
+   "es": "muchos",
+   "hint": "muchos",
+   "ex": [
+    "Shāngdiàn lǐ yǒu hěn ",
+    "duō",
+    " rén."
+   ],
+   "exes": "Hay mucha gente en la tienda.",
+   "pic": "roblox_94915233617797.webp",
+   "zh": "多",
+   "exzh": "商店里有很多人。"
+  },
+  {
+   "n": 123,
+   "world": 7,
+   "py": "shǎo",
+   "es": "pocos",
+   "hint": "pocos",
+   "ex": [
+    "Shū tài ",
+    "shǎo",
+    " le."
+   ],
+   "exes": "Hay muy pocos libros.",
+   "pic": "fluent_chartdecreasing.webp",
+   "zh": "少",
+   "exzh": "书太少了。"
+  },
+  {
+   "n": 124,
+   "world": 7,
+   "py": "gè",
+   "es": "para contar cosas y personas",
+   "hint": "para contar cosas y personas",
+   "ex": [
+    "Wǒ yǒu sān ",
+    "gè",
+    " péngyou."
+   ],
+   "exes": "Tengo tres amigos.",
+   "pic": "fluent_smallbluediamond.webp",
+   "zh": "个",
+   "exzh": "我有三个朋友。"
+  },
+  {
+   "n": 125,
+   "world": 7,
+   "py": "shéi",
+   "es": "quién",
+   "hint": "quién",
+   "ex": [
+    "",
+    "Shéi",
+    " shì nǐ de lǎoshī?"
+   ],
+   "exes": "¿Quién es tu maestro?",
+   "pic": "roblox_105817152044475.webp",
+   "zh": "谁",
+   "exzh": "谁是你的老师？"
+  },
+  {
+   "n": 126,
+   "world": 7,
+   "py": "shénme",
+   "es": "qué",
+   "hint": "qué",
+   "ex": [
+    "Nǐ zài Běijīng xué ",
+    "shénme",
+    "?"
+   ],
+   "exes": "¿Qué estudias en Beijing?",
+   "pic": "roblox_77236499915740.webp",
+   "zh": "什么",
+   "exzh": "你在北京学什么？"
+  },
+  {
+   "n": 127,
+   "world": 7,
+   "py": "zěnme",
+   "es": "cómo",
+   "hint": "cómo",
+   "ex": [
+    "Nǐ ",
+    "zěnme",
+    " qù xuéxiào?"
+   ],
+   "exes": "¿Cómo vas a la escuela?",
+   "pic": "fluent_personshrugging.webp",
+   "zh": "怎么",
+   "exzh": "你怎么去学校？"
+  },
+  {
+   "n": 128,
+   "world": 7,
+   "py": "zěnmeyàng",
+   "es": "qué tal",
+   "hint": "qué tal",
+   "ex": [
+    "Tā de hànyǔ ",
+    "zěnmeyàng",
+    "?"
+   ],
+   "exes": "¿Qué tal su Chino Mandarín?",
+   "pic": "roblox_128649284441712.webp",
+   "zh": "怎么样",
+   "exzh": "他的汉语怎么样？"
+  },
+  {
+   "n": 129,
+   "world": 7,
+   "py": "jǐ",
+   "es": "cuántos",
+   "hint": "cuántos",
+   "ex": [
+    "Nǐ jiā yǒu ",
+    "jǐ",
+    " gè rén?"
+   ],
+   "exes": "¿Cuántas personas hay en tu familia?",
+   "pic": "fluent_inputnumbers.webp",
+   "zh": "几",
+   "exzh": "你家有几个人？"
+  },
+  {
+   "n": 130,
+   "world": 7,
+   "py": "dōu",
+   "es": "todos",
+   "hint": "todos",
+   "ex": [
+    "Wǒmen ",
+    "dōu",
+    " shì xuésheng."
+   ],
+   "exes": "Todos somos estudiantes.",
+   "pic": "fluent_raisinghands.webp",
+   "zh": "都",
+   "exzh": "我们都是学生。"
+  },
+  {
+   "n": 131,
+   "world": 7,
+   "py": "gāoxìng",
+   "es": "feliz",
+   "hint": "feliz",
+   "ex": [
+    "Rènshi nǐ hěn ",
+    "gāoxìng",
+    "."
+   ],
+   "exes": "Estoy muy feliz de conocerte.",
+   "pic": "fluent_grinningfacewithsmilingeyes.webp",
+   "zh": "高兴",
+   "exzh": "认识你很高兴。"
+  },
+  {
+   "n": 132,
+   "world": 7,
+   "py": "duìbuqǐ",
+   "es": "perdón",
+   "hint": "perdón",
+   "ex": [
+    "",
+    "Duìbuqǐ",
+    ", nǐ shuō shénme?"
+   ],
+   "exes": "Perdón, ¿qué dijiste?",
+   "pic": "roblox_73828543277389.webp",
+   "zh": "对不起",
+   "exzh": "对不起，你说什么？"
+  },
+  {
+   "n": 133,
+   "world": 8,
+   "py": "yī",
+   "es": "uno",
+   "hint": "uno",
+   "ex": [
+    "",
+    "Yī",
+    ", èr, sān!"
+   ],
+   "exes": "¡Uno, dos, tres!",
+   "pic": "roblox_87449977908974.webp",
+   "zh": "一",
+   "exzh": "一，二，三！"
+  },
+  {
+   "n": 134,
+   "world": 8,
+   "py": "èr",
+   "es": "dos",
+   "hint": "dos",
+   "ex": [
+    "Jīntiān shì ",
+    "èr",
+    " hào."
+   ],
+   "exes": "Hoy es día dos.",
+   "pic": "roblox_86438041199430.webp",
+   "zh": "二",
+   "exzh": "今天是二号。"
+  },
+  {
+   "n": 135,
+   "world": 8,
+   "py": "sān",
+   "es": "tres",
+   "hint": "tres",
+   "ex": [
+    "",
+    "Sān",
+    " yuè qī hào."
+   ],
+   "exes": "El 7 de marzo.",
+   "pic": "roblox_135714969340594.webp",
+   "zh": "三",
+   "exzh": "三月七号。"
+  },
+  {
+   "n": 136,
+   "world": 8,
+   "py": "sì",
+   "es": "cuatro",
+   "hint": "cuatro",
+   "ex": [
+    "Wǒ érzi ",
+    "sì",
+    " suì."
+   ],
+   "exes": "Mi hijo tiene cuatro años.",
+   "pic": "roblox_94335359132754.webp",
+   "zh": "四",
+   "exzh": "我儿子四岁。"
+  },
+  {
+   "n": 137,
+   "world": 8,
+   "py": "wǔ",
+   "es": "cinco",
+   "hint": "cinco",
+   "ex": [
+    "Wǒ yǒu ",
+    "wǔ",
+    " běn shū."
+   ],
+   "exes": "Tengo cinco libros.",
+   "pic": "roblox_96684551941061.webp",
+   "zh": "五",
+   "exzh": "我有五本书。"
+  },
+  {
+   "n": 138,
+   "world": 8,
+   "py": "liù",
+   "es": "seis",
+   "hint": "seis",
+   "ex": [
+    "Wǒ mǎi le ",
+    "liù",
+    " gè píngguǒ."
+   ],
+   "exes": "Compré seis manzanas.",
+   "pic": "roblox_79801882895498.webp",
+   "zh": "六",
+   "exzh": "我买了六个苹果。"
+  },
+  {
+   "n": 139,
+   "world": 8,
+   "py": "qī",
+   "es": "siete",
+   "hint": "siete",
+   "ex": [
+    "",
+    "Qī",
+    " diǎn wǒ qù xuéxiào."
+   ],
+   "exes": "A las siete voy a la escuela.",
+   "pic": "roblox_88799298889805.webp",
+   "zh": "七",
+   "exzh": "七点我去学校。"
+  },
+  {
+   "n": 140,
+   "world": 8,
+   "py": "bā",
+   "es": "ocho",
+   "hint": "ocho",
+   "ex": [
+    "Wǒ érzi ",
+    "bā",
+    " suì."
+   ],
+   "exes": "Mi hijo tiene ocho años.",
+   "pic": "roblox_137262784704477.webp",
+   "zh": "八",
+   "exzh": "我儿子八岁。"
+  },
+  {
+   "n": 141,
+   "world": 8,
+   "py": "jiǔ",
+   "es": "nueve",
+   "hint": "nueve",
+   "ex": [
+    "Xiànzài ",
+    "jiǔ",
+    " diǎn."
+   ],
+   "exes": "Ahora son las nueve.",
+   "pic": "roblox_82308121042356.webp",
+   "zh": "九",
+   "exzh": "现在九点。"
+  },
+  {
+   "n": 142,
+   "world": 8,
+   "py": "shí",
+   "es": "diez",
+   "hint": "diez",
+   "ex": [
+    "Wǒ érzi ",
+    "shí",
+    " suì."
+   ],
+   "exes": "Mi hijo tiene diez años.",
+   "pic": "fluent_keycap10.webp",
+   "zh": "十",
+   "exzh": "我儿子十岁。"
+  },
+  {
+   "n": 143,
+   "world": 8,
+   "py": "yīdiǎnr",
+   "es": "un poco",
+   "hint": "un poco",
+   "ex": [
+    "Tā huì shuō ",
+    "yīdiǎnr",
+    " hànyǔ."
+   ],
+   "exes": "Él sabe hablar un poco de Chino Mandarín.",
+   "pic": "fluent_pinchinghand.webp",
+   "zh": "一点儿",
+   "exzh": "他会说一点儿汉语。"
+  },
+  {
+   "n": 144,
+   "world": 8,
+   "py": "bù",
+   "es": "no",
+   "hint": "no",
+   "ex": [
+    "Tā shuō tā ",
+    "bù",
+    " lái."
+   ],
+   "exes": "Él dice que no viene.",
+   "pic": "fluent_persongesturingno.webp",
+   "zh": "不",
+   "exzh": "他说他不来。"
+  },
+  {
+   "n": 145,
+   "world": 8,
+   "py": "ma",
+   "es": "¿…? (pregunta de sí o no)",
+   "hint": "¿…?",
+   "ex": [
+    "Nǐ hǎo ",
+    "ma",
+    "?"
+   ],
+   "exes": "¿Estás bien?",
+   "pic": "roblox_77581867231906.webp",
+   "zh": "吗",
+   "exzh": "你好吗？"
+  },
+  {
+   "n": 146,
+   "world": 8,
+   "py": "ne",
+   "es": "¿y tú? (devuelve la pregunta)",
+   "hint": "¿y tú?",
+   "ex": [
+    "Wǒ míngnián huí Zhōngguó, nǐ ",
+    "ne",
+    "?"
+   ],
+   "exes": "Yo vuelvo a China el próximo año, ¿y tú?",
+   "pic": "fluent_rightarrowcurvingleft.webp",
+   "zh": "呢",
+   "exzh": "我明年回中国，你呢？"
+  },
+  {
+   "n": 147,
+   "world": 8,
+   "py": "le",
+   "es": "ya pasó (acción terminada)",
+   "hint": "ya pasó",
+   "ex": [
+    "Tā qù xuéxiào ",
+    "le",
+    "."
+   ],
+   "exes": "Ella se fue a la escuela.",
+   "pic": "roblox_72513398992012.webp",
+   "zh": "了",
+   "exzh": "她去学校了。"
+  },
+  {
+   "n": 148,
+   "world": 8,
+   "py": "hé",
+   "es": "y",
+   "hint": "y",
+   "ex": [
+    "Bàba ",
+    "hé",
+    " māma dōu zài jiā."
+   ],
+   "exes": "Papá y mamá están en casa.",
+   "pic": "roblox_105535289138406.webp",
+   "zh": "和",
+   "exzh": "爸爸和妈妈都在家。"
+  },
+  {
+   "n": 149,
+   "world": 8,
+   "py": "zàijiàn",
+   "es": "adiós",
+   "hint": "adiós",
+   "ex": [
+    "Lǎoshī, ",
+    "zàijiàn",
+    "!"
+   ],
+   "exes": "¡Adiós, maestro!",
+   "pic": "fluent_wavinghand.webp",
+   "zh": "再见",
+   "exzh": "老师，再见！"
+  },
+  {
+   "n": 150,
+   "world": 8,
+   "py": "méiguānxi",
+   "es": "no importa",
+   "hint": "no importa",
+   "ex": [
+    "Duìbuqǐ! ",
+    "Méiguānxi",
+    "."
+   ],
+   "exes": "¡Perdón! ¡No importa!",
+   "pic": "fluent_huggingface.webp",
+   "zh": "没关系",
+   "exzh": "对不起！没关系。"
+  }
+ ],
+ "cover": {
+  "hello": {
+   "py": "Nǐ hǎo!",
+   "zh": "你好！"
+  },
+  "bye": {
+   "py": "Zàijiàn!",
+   "zh": "再见！"
+  }
+ }
+}

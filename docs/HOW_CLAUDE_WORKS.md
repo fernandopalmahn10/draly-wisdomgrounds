@@ -158,7 +158,8 @@ word in red), tap the picture to hear the word and the sentence to hear the sent
 (saved on the phone, progress per world and x/83), «Escuchar el mundo» plays a whole world, the tones with sound, the
 repaso, and «Descargar el libro (PDF)». It is exported from the book's own source (`study/lib/web.py`), so the page and
 the PDF never disagree; every reading was checked with local Whisper. YCT 1 kids see «Empieza aquí · La base de
-YCT 1» on their /homework home.
+YCT 1» on their /homework home. HSK 1 has its own base the same way (`/audios/hsk1-base`, «HSK 1 · Vocabulario»:
+150 words in 8 worlds, pinned above its homework audios; HSK 1 kids see «Empieza aquí · La base de HSK 1»).
 
 ### 2.4 Parent control
 
