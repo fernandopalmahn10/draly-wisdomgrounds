@@ -341,26 +341,29 @@
 .hcs.finale .hcs-kid.winner .hcs-body { animation: hcs-pose 1.8s ease-in-out 1s infinite alternate; }
 @keyframes hcs-win-in { from { transform: translate(-50%, 20%) scale(.6); opacity: 0; } }
 @keyframes hcs-pose { to { transform: translateY(-3%) scale(1.02); } }
-.hcs.finale .hcs-kid.loser { z-index: 2; height: 28%; bottom: 15%; }
+/* the losers fall flat on the studio floor (front row beside the winner, back row a step behind him, always in front
+   of the props' bases), each on a soft floor shadow, their sad pose lying down */
+.hcs.finale .hcs-kid.loser.near { z-index: 4; height: 25%; bottom: 3%; }
+.hcs.finale .hcs-kid.loser.back { z-index: 2; height: 20%; bottom: 13%; }
 .hcs.finale .hcs-kid.me { z-index: 4; }
 .hcs.finale .hcs-kid.stander { z-index: 2; height: 30%; bottom: 15%; animation: hcs-win-in .55s var(--hc-ease-pop) calc(.7s + var(--i) * .1s) both; }
-.hcs.finale .hcs-kid.loser .hcs-tag { opacity: .85; }
-.hcs.finale .loser.fall-l .hcs-body { animation: hcs-fall-l .6s cubic-bezier(.5, 0, .75, .3) calc(.5s + var(--i) * .15s) both; }
-.hcs.finale .loser.fall-r .hcs-body { animation: hcs-fall-r .6s cubic-bezier(.5, 0, .75, .3) calc(.5s + var(--i) * .15s) both; }
-.hcs.finale .loser.sit .hcs-body { animation: hcs-sit .45s ease-in calc(.5s + var(--i) * .15s) both; }
-.hcs.finale .loser.sit2 .hcs-body { animation: hcs-sit2 .45s ease-in calc(.5s + var(--i) * .15s) both; }
-@keyframes hcs-fall-l { to { transform: translate(-18%, 6%) rotate(-78deg); } }
-@keyframes hcs-fall-r { to { transform: translate(18%, 6%) rotate(78deg); } }
-@keyframes hcs-sit { to { transform: translateY(20%) rotate(-14deg) scale(.82); } }
-@keyframes hcs-sit2 { to { transform: translateY(20%) rotate(14deg) scale(.82); } }
+.hcs.finale .hcs-kid.loser .hcs-tag { opacity: .9; }
+.hcs.finale .hcs-kid.loser::before { content: ''; position: absolute; left: 50%; bottom: 8%; width: 150%; height: 16%;
+  transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(90, 60, 20, .35), rgba(90, 60, 20, 0)); }
+.hcs.finale .loser.lie-l .hcs-body, .hcs.finale .loser.lie-r .hcs-body { transform-origin: 50% 50%; }
+.hcs.finale .loser.lie-l .hcs-body { animation: hcs-lie-l .55s cubic-bezier(.5, 0, .75, .3) calc(.45s + var(--i) * .15s) both; }
+.hcs.finale .loser.lie-r .hcs-body { animation: hcs-lie-r .55s cubic-bezier(.5, 0, .75, .3) calc(.45s + var(--i) * .15s) both; }
+@keyframes hcs-lie-l { to { transform: translateY(30%) rotate(-82deg); } }
+@keyframes hcs-lie-r { to { transform: translateY(30%) rotate(82deg); } }
 .hcs-fx { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
 .hcs-confetti { position: absolute; top: -4%; left: var(--x); width: 1.2%; min-width: 6px; aspect-ratio: .55; border-radius: 2px;
   transform: rotate(var(--r)); animation: hcs-confetti 2.6s linear var(--d) 2 both; }
 @keyframes hcs-confetti { to { transform: translateY(115vh) rotate(calc(var(--r) + 540deg)); } }
-/* Dralingo hosts from the side of the set (never in front of the contestants) */
-.hcs-host { position: absolute; z-index: 5; right: 1%; bottom: 30%; width: 15%; max-width: 170px; }
+/* Dralingo hosts from the front corner of the set, standing on the floor (never on a prop, never over a contestant);
+   his line rises above him */
+.hcs-host { position: absolute; z-index: 5; right: 1%; bottom: 3%; width: 13%; max-width: 160px; }
 .hcs-host img { width: 100%; height: auto; display: block; filter: drop-shadow(0 6px 4px rgba(60, 40, 10, .3)); }
-.hcs-bubble { position: absolute; right: 86%; bottom: 58%; width: max-content; max-width: min(52cqw, 420px); padding: 6px 12px; border-radius: 16px;
+.hcs-bubble { position: absolute; right: 20%; bottom: 100%; margin-bottom: 6px; width: max-content; max-width: min(46cqw, 420px); padding: 6px 12px; border-radius: 16px;
   border: 3px solid var(--hc-ink); background: #fff; color: var(--hc-ink); font: 800 clamp(.8rem, 3.4vw, 1.25rem)/1.2 'Nunito', sans-serif;
   box-shadow: 0 4px 0 var(--hc-ink); opacity: 0; transform: translateY(8px) scale(.94); transform-origin: 100% 100%;
   transition: opacity .2s, transform .25s var(--hc-ease-pop); }
@@ -374,12 +377,15 @@
   .hcs-arch.a2 { display: none; }
   .hcs-board { top: 4%; width: 78cqw; }
   .hcs-kid { height: min(40%, 50cqw); bottom: 5%; }
+  /* both landmark models at the back left, so the host's corner on the right is plain floor */
   .hcs-prop.l { height: 21%; bottom: 40%; left: -1%; }
-  .hcs-prop.r { height: 9%; bottom: 41%; right: 0; }
-  .hcs-host { bottom: 41%; width: 19%; }
-  .hcs.finale .hcs-kid.loser { height: 24%; bottom: 8%; }
-  .hcs.finale .hcs-kid.loser.back { height: 18%; bottom: 30%; z-index: 1; }
+  .hcs-prop.r { height: 8%; bottom: 41%; left: 15%; right: auto; }
+  .hcs-host { bottom: 41%; width: 17%; }
+  .hcs.finale .hcs-kid.loser.near { height: 19%; bottom: 2%; }
+  .hcs.finale .hcs-kid.loser.back { height: 15%; bottom: 14%; }
 }
+/* the phone finale is the board's own moment (the result card comes up over the floor): no host on stage */
+.hc-finale .hcs-host { display: none; }
 .hcs-host.talk .hcs-bubble { opacity: 1; transform: none; }
 
 /* ============================ THE PHONE ============================ */

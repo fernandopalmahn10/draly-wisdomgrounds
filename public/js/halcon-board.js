@@ -460,11 +460,13 @@
     const names = wins.map((w) => w.name);
     if (!wins.length) this.title('Nadie sumó puntos', '¡A la próxima!');
     else this.title(names.length > 2 ? names.slice(0, 2).join(', ') + '…' : names.join(' y '), wins.length > 1 ? '¡Ganan!' : '¡Gana!');
-    // The losers sit or fall like the video's ending, each in its own slot (no bodies piled on each other): on a wide
-    // screen a loser alone on its side falls outward, the others sit; on a phone held upright they sit at the edges
-    // (the far ones a step behind), always clear of the winner.
+    // The losers fall flat ON THE STUDIO FLOOR around the winner, like the video's ending: each in its own slot (never on
+    // a prop, never floating, nobody on top of anybody): a front row at the two sides of the winner, a back row a step
+    // behind them, still clear of the winner. The phone's own kid takes the front-left slot (always in full view).
     const portrait = this.root.clientHeight > this.root.clientWidth;
-    const perSide = [Math.ceil(rest.length / 2), Math.floor(rest.length / 2)];
+    const SLOTS = portrait
+      ? [[17, 'near', 'lie-l'], [83, 'near', 'lie-r'], [74, 'back', 'lie-l'], [26, 'back', 'lie-r']]
+      : [[25, 'near', 'lie-l'], [75, 'near', 'lie-r'], [66, 'back', 'lie-l'], [34, 'back', 'lie-r']];
     rest.forEach((seat, i) => {
       // o.rest 'stand': the projector's board champions cheer at the sides instead of falling
       const stand = o.rest === 'stand';
@@ -474,13 +476,10 @@
       const step = rest.length > 4 ? 10 : 13;
       f.classList.add(stand ? 'stander' : 'loser');
       let x = 50 + side * (23 + k * step);
-      if (!stand && portrait) {
-        x = 50 + side * (k === 0 ? 36 : 38);
-        f.classList.add(side < 0 ? 'sit' : 'sit2');
-        if (k > 0) f.classList.add('back');
-      } else if (!stand) {
-        const alone = perSide[side < 0 ? 0 : 1] === 1;
-        f.classList.add(k === 0 && alone ? (side < 0 ? 'fall-l' : 'fall-r') : (side < 0 ? 'sit' : 'sit2'));
+      if (!stand) {
+        const slot = SLOTS[Math.min(i, SLOTS.length - 1)];
+        x = slot[0];
+        f.classList.add(slot[1], slot[2]);
       }
       f.style.setProperty('--x', x + '%');
       f.style.setProperty('--i', i);
