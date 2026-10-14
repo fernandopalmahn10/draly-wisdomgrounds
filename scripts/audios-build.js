@@ -20,16 +20,28 @@
 //   dialogue the whole conversation once, then line by line with pauses
 //   video    each line with a pause to repeat, then all lines in one go
 //            (the video is ONE take: the model to imitate)
+//
+// A script with "kind": "base" is a level's vocabulary base (2026-10-14:
+// content/audios/yct1-base.json, written by ../study/yct1/export_web.py from
+// the same source as the printed book). It gets one clip per word (wNN.mp3)
+// and one per example sentence (sNN.mp3, shared when two cards use the same
+// sentence), plus public/assets/audios/<id>/base.json, the data its page
+// reads (no hanzi). The catalog lists it under `bases`, and `levels` (the
+// /audios folders) comes from core/levels.js.
+//
+//   --cache <dir>   use another clip cache (e.g. the main checkout's, from a worktree)
 // =========================================================================
 'use strict';
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
+const Levels = require('../core/levels');
 
 const ROOT = path.join(__dirname, '..');
 const SRC = path.join(ROOT, 'content', 'audios');
-const CACHE = path.join(SRC, '.cache');
+const argCache = process.argv.indexOf('--cache');
+const CACHE = argCache > 0 ? path.resolve(process.argv[argCache + 1]) : path.join(SRC, '.cache');
 const OUT = path.join(ROOT, 'public', 'assets', 'audios');
 const FFDIR = 'C:/Users/ferpa/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-9.0.2-full_build/bin/';
 const FFMPEG = process.env.FFMPEG || (fs.existsSync(FFDIR + 'ffmpeg.exe') ? FFDIR + 'ffmpeg.exe' : 'ffmpeg');
@@ -38,8 +50,22 @@ const VOICE = { word: 'cmn-CN-Wavenet-A', profe: 'cmn-CN-Wavenet-A', tu: 'cmn-CN
 const SR = 24000;                 // mono s16le working format
 const BPS = SR * 2;
 const NAME_GAP = 1.4;             // seconds left for the kid's name (zh given as a list)
-const LEVELS = { hsk1: 'HSK 1', hsk2: 'HSK 2', hsk3: 'HSK 3', yct1: 'YCT 1', yct2: 'YCT 2', newhsk1: 'New HSK 1', newhsk2: 'New HSK 2' };
-const LEVEL_ORDER = ['hsk1', 'hsk2', 'hsk3', 'yct1', 'yct2', 'newhsk1', 'newhsk2'];
+// /audios folders: one per level, in core/levels.js order, named as kids see them («YCT 1», «New HSK 1», «HSK 1»).
+// A script's `level` is the curriculum id (yct1 · newhsk1 · hsk1) = the level's `pack`.
+const FOLDERS = Levels.LEVELS.map((l) => ({ id: l.pack, name: l.name }));
+// a level's stored id that differs from its folder id (hsk2 → newhsk1): old /audios/hsk2-… links open the right page
+const ALIASES = Object.fromEntries(Levels.LEVELS.filter((l) => l.id !== l.pack).map((l) => [l.id, l.pack]));
+const folderOf = (lv) => ALIASES[String(lv).toLowerCase()] || lv;
+const levelName = (lv) => {
+  const f = FOLDERS.find((x) => x.id === folderOf(lv));
+  if (f) return f.name;
+  const id = Levels.normalize(lv);                        // never print a raw id such as «HSK2» to families
+  return id ? Levels.info(id).name : String(lv).toUpperCase();
+};
+const levelRank = (lv) => { const i = FOLDERS.findIndex((f) => f.id === folderOf(lv)); return i < 0 ? 99 : i; };
+// ?v=<content hash> on clips and pictures: Cloudflare keeps /assets/* for 2 h, a rebuilt clip (a fixed reading) under
+// the same name must still reach phones at once
+const stamp = (file) => crypto.createHash('sha1').update(fs.readFileSync(file)).digest('hex').slice(0, 8);
 
 fs.mkdirSync(CACHE, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -125,8 +151,68 @@ function shape(kind, clips) {
   return { pcm: Buffer.concat(bufs), segs, parts };
 }
 
+// ── A level's vocabulary base (kind "base"): one clip per word and per sentence ──
+const pad2 = (n) => String(n).padStart(2, '0');
+async function buildBase(id, src) {
+  const dir = path.join(OUT, id);
+  fs.mkdirSync(dir, { recursive: true });
+  const web = '/assets/audios/' + id + '/';
+  const clip = async (zh, name) => {                       // short clip: a breath of air before and after
+    encode(Buffer.concat([silence(0.12), await itemPcm({ zh }, VOICE.word), silence(0.22)]), path.join(dir, name));
+    return web + name + '?v=' + stamp(path.join(dir, name));
+  };
+  const pic = (name) => {
+    const f = path.join(dir, 'pics', name);
+    return web + 'pics/' + name + (fs.existsSync(f) ? '?v=' + stamp(f) : '');
+  };
+  const said = new Map();                                  // zh → clip already made (repeated sentences)
+  const sentence = async (zh, name) => {
+    if (!said.has(zh)) said.set(zh, await clip(zh, name));
+    return said.get(zh);
+  };
+  const words = [];
+  process.stdout.write('  ');
+  for (const w of src.words) {
+    const au = await clip(w.zh, 'w' + pad2(w.n) + '.mp3');
+    const exau = await sentence(w.exzh, 's' + pad2(w.n) + '.mp3');
+    // only what the page shows (never the voice's hanzi, nor any field added to the source later)
+    words.push({ n: w.n, world: w.world, py: w.py, es: w.es, hint: w.hint, ex: w.ex, exes: w.exes, pic: pic(w.pic), au, exau });
+    process.stdout.write(w.n % 10 ? '.' : String(w.n));
+  }
+  const toneNote = [];
+  for (let i = 0; i < (src.toneNote || []).length; i++) {
+    const t = src.toneNote[i];
+    toneNote.push({ py: t.py, au: await sentence(t.zh, 'n' + (i + 1) + '.mp3') });
+  }
+  console.log(' ' + words.length + ' words, ' + said.size + ' sentences');
+  // clips nobody uses any more (a sentence changed) leave the folder
+  const keep = new Set(words.flatMap((w) => [w.au, w.exau]).concat(toneNote.map((t) => t.au)).map((u) => path.basename(u.split('?')[0])));
+  fs.readdirSync(dir).filter((f) => f.endsWith('.mp3') && !keep.has(f)).forEach((f) => fs.unlinkSync(path.join(dir, f)));
+  // the page's data, field by field: whatever else the source carries (the voice's hanzi) stays out of public/
+  const pdfFile = src.book && path.join(ROOT, 'public', src.book.pdf.replace(/^\//, ''));
+  const book = src.book && { pdf: src.book.pdf + (fs.existsSync(pdfFile) ? '?v=' + stamp(pdfFile) : ''), pages: src.book.pages, mb: src.book.mb, name: src.book.name };
+  const data = {
+    id, kind: 'base', level: src.level, levelName: levelName(src.level), title: src.title, kicker: src.kicker, lede: src.lede,
+    book: book || null, steps: src.steps || [], parents: src.parents || [],
+    tones: (src.tones || []).map((t) => ({ mark: t.mark, name: t.name, how: t.how, py: t.py, es: t.es, word: t.word, points: t.points })),
+    toneNote, worlds: (src.worlds || []).map((w) => ({ n: w.n, name: w.name, short: w.short, first: w.first, count: w.count, pics: w.pics })),
+    words, updated: new Date().toISOString(),
+  };
+  fs.writeFileSync(path.join(dir, 'base.json'), JSON.stringify(data));
+  // three pictures that peek out of the level's folder: the first of the 3rd, 4th and 6th world openers (for YCT 1 the
+  // dog, the noodles, the school: clear on their own)
+  const picOf = (n) => (words.find((w) => w.n === n) || {}).pic;
+  const peek = [2, 3, 5].map((i) => src.worlds && src.worlds[i] && picOf(src.worlds[i].pics[0])).filter(Boolean);
+  return {
+    id, kind: 'base', level: src.level, levelName: levelName(src.level), title: src.title, kicker: src.kicker,
+    words: words.length, worlds: (src.worlds || []).map((w) => ({ n: w.n, first: w.first, count: w.count })), data: web + 'base.json',
+    peek, book: book || null,
+  };
+}
+
 async function build(id) {
   const src = JSON.parse(fs.readFileSync(path.join(SRC, id + '.json'), 'utf8'));
+  if (src.kind === 'base') return buildBase(id, src);
   const dir = path.join(OUT, id);
   fs.mkdirSync(dir, { recursive: true });
   const web = '/assets/audios/' + id + '/';
@@ -154,26 +240,41 @@ async function build(id) {
   }
   const cover = fs.existsSync(path.join(dir, 'cover.jpg')) ? web + 'cover.jpg' : null;
   return {
-    id, level: src.level, levelName: LEVELS[src.level] || src.level.toUpperCase(), exp: src.exp, round: src.round,
+    id, level: src.level, levelName: levelName(src.level), exp: src.exp, round: src.round,
     title: src.title, tagline: src.tagline, cover, tracks,
   };
 }
 
 (async () => {
-  const want = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const want = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--cache');
   const ids = want.length ? want : fs.readdirSync(SRC).filter((f) => /^[a-z0-9-]+\.json$/.test(f)).map((f) => f.replace(/\.json$/, ''));
   const catFile = path.join(OUT, 'catalog.json');
   const cat = fs.existsSync(catFile) ? JSON.parse(fs.readFileSync(catFile, 'utf8')) : { homeworks: [] };
-  const byId = new Map(cat.homeworks.map((h) => [h.id, h]));
+  const byId = new Map((cat.homeworks || []).concat(cat.bases || []).map((h) => [h.id, h]));
   for (const id of ids) {
     console.log(id);
     byId.set(id, await build(id));
   }
   // Drop entries whose script was deleted.
   for (const id of [...byId.keys()]) if (!fs.existsSync(path.join(SRC, id + '.json'))) byId.delete(id);
-  const homeworks = [...byId.values()].sort((a, b) =>
-    (LEVEL_ORDER.indexOf(a.level) - LEVEL_ORDER.indexOf(b.level)) || (a.exp - b.exp) || (a.round - b.round));
+  const all = [...byId.values()];
+  all.forEach((h) => {
+    h.levelName = levelName(h.level);   // names always as core/levels.js says them
+    // a small copy of the cover for the folder and the list (the 1200 px cover is ~100 KB; this one ~10 KB)
+    const cover = path.join(OUT, h.id, 'cover.jpg');
+    const small = path.join(OUT, h.id, 'cover-s.webp');
+    if (h.kind !== 'base' && fs.existsSync(cover)) {
+      if (!fs.existsSync(small) || fs.statSync(small).mtimeMs < fs.statSync(cover).mtimeMs) {
+        execFileSync(FFMPEG, ['-v', 'error', '-y', '-i', cover, '-vf', 'scale=360:-2', '-c:v', 'libwebp', '-quality', '78', small]);
+      }
+      h.thumb = '/assets/audios/' + h.id + '/cover-s.webp';
+    }
+  });
+  const homeworks = all.filter((h) => h.kind !== 'base').sort((a, b) =>
+    (levelRank(a.level) - levelRank(b.level)) || (a.exp - b.exp) || (a.round - b.round));
+  const bases = all.filter((h) => h.kind === 'base').sort((a, b) => levelRank(a.level) - levelRank(b.level));
   fs.mkdirSync(OUT, { recursive: true });
-  fs.writeFileSync(catFile, JSON.stringify({ updated: new Date().toISOString(), homeworks }, null, 1));
-  console.log('catalog:', homeworks.length, 'homeworks →', path.relative(ROOT, catFile));
+  fs.writeFileSync(catFile, JSON.stringify({ updated: new Date().toISOString(), levels: FOLDERS, aliases: ALIASES, bases, homeworks }, null, 1));
+  console.log('catalog:', FOLDERS.length, 'folders,', bases.length, 'bases,', homeworks.length, 'homeworks →', path.relative(ROOT, catFile));
 })().catch((e) => { console.error('FAILED:', e.message); process.exit(1); });

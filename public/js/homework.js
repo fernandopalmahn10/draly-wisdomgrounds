@@ -105,6 +105,7 @@
   const HW_LEVEL_NAMES = { yct1: 'YCT 1', hsk2: 'New HSK 1', hsk1: 'HSK 1' };
   let hwLevelLabel = '';
   let hwFolders = null;        // [{ id, label, short }] from /api/homework/enter, or null
+  let hwBase = null;           // { href, level, words }: the level's vocabulary base on /audios (core/levels.js), or null
   function hwExps() {
     if (hwFolders) {
       const out = {};
@@ -425,6 +426,7 @@
         hwLevel = (data.levelName && data.level) || (HW_LEVEL_NAMES[data.level] ? data.level : 'hsk1');
         hwLevelLabel = data.levelName || '';
         hwFolders = Array.isArray(data.folders) && data.folders.length ? data.folders : null;
+        hwBase = data.base && data.base.href ? data.base : null;
         document.body.classList.toggle('hw-no-daily', data.daily === false);   // Desafíos = HSK 1 words (above YCT 1)
         try {
           localStorage.setItem(STORAGE_ACCESS_KEY, ac);
@@ -3956,6 +3958,7 @@
     if (hwFolder) renderFolderContents(hwFolder);
     else renderFolderRoot();
     renderNextUp();
+    renderBaseEntry();
     // Refresh reading state once; its callback re-renders (no fetch loop).
     fetchReadingTests();
   }
@@ -3987,6 +3990,23 @@
       if (a) return { title: a.title, run: () => openAssignment(a.id) };
     }
     return null;
+  }
+  // 📖 «Empieza aquí · La base de YCT 1» (2026-10-14): the level's vocabulary base on /audios, on the home only. The kid's
+  // seals live on this phone (localStorage draly_base_<level>, written by /audios), so the count is read here too.
+  function renderBaseEntry() {
+    const a = $('pt-base');
+    if (!a) return;
+    a.hidden = !hwBase || !!hwFolder;
+    if (a.hidden) return;
+    a.href = hwBase.href + '?from=homework';   // the base's back arrow then returns here (the home-screen app has no back button)
+    let n = 0;
+    try {
+      const o = JSON.parse(localStorage.getItem('draly_base_' + hwBase.level) || 'null');
+      n = o && Array.isArray(o.seals) ? o.seals.filter((x) => Number.isInteger(x) && x >= 1 && x <= hwBase.words).length : 0;
+    } catch (_) { n = 0; }
+    $('pt-base-level').textContent = hwLevelName();
+    $('pt-base-title').textContent = 'Empieza aquí · La base de ' + hwLevelName();
+    $('pt-base-sub').textContent = n ? n + ' de ' + hwBase.words + ' sellos' : hwBase.words + ' palabras con audio';
   }
   function renderNextUp() {
     const b = $('pt-next');

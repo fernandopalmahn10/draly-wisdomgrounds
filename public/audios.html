@@ -11,23 +11,24 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Dralingo">
   <meta name="theme-color" content="#5a1010">
-  <title>Audios de las tareas · Dralingo</title>
-  <meta name="description" content="Escucha cómo suena cada palabra y cada frase de tu tarea de Chino Mandarín.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Serif:ital,wght@0,500;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/audios.css?v=20261012a">
+  <title>Audios y vocabulario · Dralingo</title>
+  <meta name="description" content="Escucha cada palabra y cada frase de Chino Mandarín: el vocabulario de tu nivel y los audios de tus tareas.">
+  <!-- the study book's own fonts (OFL), subset: Noto Sans = Spanish and numbers, Gelasio = pinyin -->
+  <link rel="preload" href="/assets/fonts/study/noto-sans-800.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/study/noto-sans-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/study/gelasio-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/audios.css?v=20261014a">
 </head>
 <body>
   <header class="au-top">
-    <a class="au-brand" href="/audios" data-nav="list" aria-label="Todas las tareas">
-      <span class="au-word">DRALINGO</span>
-      <span class="au-sub">Audios de las tareas</span>
+    <a class="au-brand" href="/audios" data-nav aria-label="Audios y vocabulario: todos los niveles">
+      <span class="au-word" translate="no">DRALINGO</span>
+      <span class="au-sub">Audios y vocabulario</span>
     </a>
   </header>
 
-  <main id="au-main" class="au-main" aria-live="polite">
-    <p class="au-loading">Cargando tus tareas…</p>
+  <main id="au-main" class="au-main">
+    <p class="au-loading">Cargando…</p>
   </main>
 
   <footer class="au-foot">
@@ -35,8 +36,10 @@
     <p>Chino Mandarín para niños · Dralingo</p>
   </footer>
 
+  <p class="au-sr" id="au-say" aria-live="polite"></p>
   <audio id="au-player" preload="none"></audio>
-  <script src="/js/audios.js?v=20261011a"></script>
+  <script src="/js/audios-base.js?v=20261014a"></script>
+  <script src="/js/audios.js?v=20261014a"></script>
   <!-- Dralingo Dorado: a rare golden visitor (about one visit in ten; ?dorado=1 forces him, ?dorado=0 never).
        Nothing of it downloads on a normal visit; three.js comes from the CDN only when he appears. -->
   <script type="importmap">
@@ -49,7 +52,8 @@
   </script>
   <script type="module">
     const ask = new URLSearchParams(location.search).get('dorado');
-    if (ask === '1' || (ask !== '0' && Math.random() < 0.1)) {
+    // never on a base page (/audios/<level>-base): his corner card would cover the seals and the playing bar
+    if (!/-base\/?$/i.test(location.pathname) && (ask === '1' || (ask !== '0' && Math.random() < 0.1))) {
       setTimeout(() => {
         import('/js/golden/dorado.js?v=20261011a').then((m) => m.summon()).catch(() => {});
       }, ask === '1' ? 300 : 1400);

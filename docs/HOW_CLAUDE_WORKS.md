@@ -151,6 +151,15 @@ tappable on its own, the line being read lit in gold. How new ones get there: Co
 `ClaudeCode/TAREAS/`; when a Claude Code window opens, a check lists PDFs without audio, and I build them
 (`tarea-audio` skill, about 5 minutes each). The voices are the platform's Google voices.
 
+**📖 Audios y vocabulario: folders + «La base · Empieza aquí» (2026-10-14).** `/audios` is now a library of level
+folders (YCT 1 · New HSK 1 · HSK 1). Pinned first in YCT 1: `/audios/yct1-base`, the study book «YCT 1 · Vocabulario»
+digitally: the 83 words in its 6 worlds, each card like the book (number, picture, pinyin, Spanish, sentence with the
+word in red), tap the picture to hear the word and the sentence to hear the sentence, a «¡Me la sé!» seal to stamp
+(saved on the phone, progress per world and x/83), «Escuchar el mundo» plays a whole world, the tones with sound, the
+repaso, and «Descargar el libro (PDF)». It is exported from the book's own source (`study/lib/web.py`), so the page and
+the PDF never disagree; every reading was checked with local Whisper. YCT 1 kids see «Empieza aquí · La base de
+YCT 1» on their /homework home.
+
 ### 2.4 Parent control
 
 Parents open their child's progress with the same codes. A privacy guard makes sure a code only
