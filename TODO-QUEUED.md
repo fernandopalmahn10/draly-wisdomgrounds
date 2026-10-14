@@ -164,7 +164,7 @@ rules, Kenney assets and build recipe: `docs/specs/reinos-de-colores.md`. His im
 
 ---
 
-## Ojo de Halcón — Mario Party «Looking for Love» pin game ✅ BUILT 2026-10-13 (local, not deployed)
+## Ojo de Halcón — Mario Party «Looking for Love» pin game ✅ DEPLOYED 2026-10-13 (83dbcbd04)
 
 First of his Mario Party series (`look`). Rules, as-built notes and the scorecard: `docs/specs/ojo-de-halcon.md`.
 Still to make (brief `content/look/pictures.json`): the studio backdrop, the board frame and lamps as pictures, Hamdan

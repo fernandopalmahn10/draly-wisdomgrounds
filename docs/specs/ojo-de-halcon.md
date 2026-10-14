@@ -1,6 +1,6 @@
 # Ojo de Halcón · new pin game (Mario Party «Looking for Love»)
 
-Status: **BUILT 2026-10-13, local only, not deployed** (gameType `look`). His brief: "/watch
+Status: **DEPLOYED 2026-10-13 (83dbcbd04)** (gameType `look`). His brief: "/watch
 https://www.youtube.com/watch?v=y9BKCVx_mNk … lets recreate Mario Party style pin games, lets go one by one … minute 1:07
 until 1:51 … with our roster characters". The clip is Super Mario Party's **Looking for Love** (watched frame by frame
 2026-10-13, 1:04–1:54 at 1 and 6 fps). First of the Mario Party series: the round/reveal/rank skeleton here is meant to
@@ -79,7 +79,7 @@ jumps on stage with a crown, top 6, awards, the gang cheers. Big moments one at 
 - Real-browser class (classroom-playtester agent: projector 1600×900, 3 phones 390×844 + 8 bots in the room, two games): late joiner mid-reveal gets a panel and locks in that round; reload mid-round keeps the panel, score and lock; Pausa freezes lamps and taps on every screen, Seguir continues; Saltar ronda closes a round at once and skips a result; +5 rondas grows the dots on host and phones; Terminar → «¡FINAL!» → winner show + every phone's own card; Otra ronda → clean lobby and a clean second game (a tie shows both names). No page errors, no hanzi, no overlap at 390 px, lamps 370×80 / 121×364 px. Its 7 cosmetic notes are fixed (round chip after +5, the falcon perches on the lamp's corner instead of its word, the gang comes in after the awards and never lingers into the lobby, the arrow chip on the phone panel, no «+5 rondas» banner without effect, «1 acierto», a neutral welcome line, favicon).
 - Code review (agent-skills:code-reviewer): server timers / pause / cap / rejoin / crash paths sound; its required fix (a status update landing during a band was lost) and optionals (lamps closed during the result, the right answer always rides along in sets with more than four answers, a skip during the bare question restarts the round without misses, the pause flag resets on «Otra ronda») are applied; 20-bot run re-passed on the restarted server.
 
-### Scorecard · Ojo de Halcón · 2026-10-13 · local, not deployed
+### Scorecard · Ojo de Halcón · 2026-10-13 · 83dbcbd04 (deployed)
 ```
 Hard gates: bots PASS (20/20, 0 frozen, 0 errors, game-end) · teacher controls ✓ (Pausa holds every clock, ⏭ Saltar ronda,
   +5 rondas, Terminar, Sonido, Otra ronda; every wait is server-timed) · saga only ✓ (saga avatars, the cast, Dralingo in
