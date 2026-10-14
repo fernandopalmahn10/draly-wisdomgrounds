@@ -164,7 +164,15 @@ rules, Kenney assets and build recipe: `docs/specs/reinos-de-colores.md`. His im
 
 ---
 
-## Ojo de Halcón — Mario Party «Looking for Love» pin game ✅ BUILT 2026-10-13 (local, not deployed)
+## Ojos de Halcón — Mario Party «Looking for Love» recreated in boards of 4 ✅ BUILT 2026-10-13 (branch, not deployed)
+
+His verdict on the first attempt (below): "it looks nothing like the mini game". Rebuilt as `halcon` from the video's
+frames: boards of 4, full-body characters on every phone, the video's board / windows / stalls / scoring / studio
+finale. Spec, as-built notes and the scorecard: `docs/specs/ojos-de-halcon.md`. Open: his OK to retire `look` (code,
+assets, spec); recorded «¡Sí!» / «Aww» crowd voices (local voice studio) instead of the sax jingles; the next
+minigame of the series reuses `core/halcon.js` (boards, seats, speed ranks) + `js/halcon-board.js` (board + studio).
+
+## Ojo de Halcón (first attempt, replaced by Ojos de Halcón) — Mario Party «Looking for Love» pin game ✅ BUILT 2026-10-13 (local, not deployed)
 
 First of his Mario Party series (`look`). Rules, as-built notes and the scorecard: `docs/specs/ojo-de-halcon.md`.
 Still to make (brief `content/look/pictures.json`): the studio backdrop, the board frame and lamps as pictures, Hamdan
