@@ -176,8 +176,10 @@ the checklist for any new game mode.
   heartbeat plumbing instead of building parallel systems.
 - **Game roster (his decision 2026-10-10):** Reinos de Colores (new, `kingdoms`), Dragones Pintores (new 2026-10-11,
   `paint`), Batalla de Nieve en Ski Dubái (new 2026-10-12, `snow`), La Gran Fuga de Dubái
-  (new 2026-10-13, `escape`), Ojo de Halcón (new 2026-10-13, `look`: Super Mario Party «Looking for Love», the first of
-  his Mario Party series, one minigame at a time from https://www.youtube.com/watch?v=y9BKCVx_mNk) + the 5 kept games Mochi Mash, Dàfùwēng ·
+  (new 2026-10-13, `escape`), «Ojos de Halcón» (new 2026-10-13, `halcon`: Super Mario Party «Looking for Love» played
+  in boards of 4, the first of his Mario Party series, one minigame at a time from
+  https://www.youtube.com/watch?v=y9BKCVx_mNk; it replaced the first attempt «Ojo de Halcón», `look`, retired and
+  removed 2026-10-14, his decision; recover it from git commit 83dbcbd04 if ever needed) + the 5 kept games Mochi Mash, Dàfùwēng ·
   Monopolio Chino, 6-7 Swing, Vuelo del Dragón, Piñata Tigre (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older
   games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:
@@ -192,6 +194,14 @@ the checklist for any new game mode.
   the big 3-2-1, landmark captures, half-time/last-minute alarms, the winner reveal) also plays on each phone in a
   phone-sized version, with the kid's own team colour, avatar and captain ("¡Tú eres del Reino del Fuego!"). Short
   (≤ 2.5 s), never covering the answer tiles, reduced-motion respected, light enough for cheap phones.
+- **Mario Party recreations** (his direction 2026-10-13, after another model's copy "looked nothing like the mini
+  game… the teacher screen is useless, the kids' screens are the most important"): when he points at a Mario Party
+  minigame (a video + timestamps), watch it and look at its frames, then recreate THAT minigame's structure, flow,
+  camera, timing and scoring as exactly as possible, reskinned only with our cast, Dubai and curriculum questions.
+  Kids compete as their FULL-BODY characters (never a face crop or round avatar chip in the play area) moving the way
+  the video shows; the phone shows the minigame itself (the kid's own character and rivals), not a remote control;
+  the projector is secondary. A class plays in boards of 4 like real Mario Party matches (3 when it doesn't divide; one
+  board up to 5 kids): each phone shows its own board, the projector shows every board + the class top 3.
 - **Design skills on every kid/teacher screen** (his question 2026-10-13: "have you been using Emil Kowalski, taste and
   impeccable?"): any new or changed screen of the platform or a pin game gets a pass with `emil-design-eng` (motion,
   press feel, timing), `design-taste-frontend` (layout and visual direction) and `impeccable` (critique + polish)

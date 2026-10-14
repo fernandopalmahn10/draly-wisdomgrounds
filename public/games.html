@@ -68,9 +68,10 @@
 <script>
   // host: page that runs the game · game: id for /packs.html · noSet: content made by the game itself
   const GAMES = [
-    { id: 'look', emo: '🦅', name: 'Ojo de Halcón', badge: 'Nuevo', host: '/host-look.html', game: 'look',
-      desc: 'El concurso de Hamdan: las respuestas se encienden una a una alrededor del tablero y cada alumno mira la correcta lo más rápido que puede. +5 al primero, 0 por mirar una equivocada.',
-      tags: ['Cada uno por sí mismo', 'Reflejos', '2–40 jugadores'] },
+    // Ojos de Halcón (2026-10-13) replaced the first «Ojo de Halcón» (`look`, retired 2026-10-14).
+    { id: 'halcon', emo: '🦅', name: 'Ojos de Halcón', badge: 'Nuevo', host: '/host-halcon.html', game: 'halcon',
+      desc: 'El concurso de Dralingo en Dubái, en tableros de 4: la respuesta sale en una de las cuatro ventanas y cada alumno la mira con su personaje. +5 al más rápido de su tablero, luego +3, +2, +1; mirar la equivocada = 0.',
+      tags: ['Tableros de 4', 'Reflejos', '1–40 jugadores'] },
     { id: 'escape', emo: '🚀', name: 'La Gran Fuga de Dubái', badge: 'Nuevo', host: '/host-escape.html', game: 'escape',
       desc: 'Toda la clase huye de Robotín por tres zonas de Dubái: cada respuesta correcta es un turbo y en la zona segura todos corren a una zona verde.',
       tags: ['Todos juntos', 'Persecución', '2–40 jugadores'] },

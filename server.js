@@ -33,7 +33,7 @@ const Snow = require('./core/snow');                 // Batalla de Nieve en Ski 
 const SnowMap = require('./public/js/snow-map');     // … and its map, shared with the phones and the projector
 const Escape = require('./core/escape');             // La Gran Fuga de Dubái (rules)
 const EscapeMap = require('./public/js/escape-map'); // … and its zona segura rooms, shared with the phones and the projector
-const Look = require('./core/look');                 // Ojo de Halcón (rules)
+const Halcon = require('./core/halcon');             // Ojos de Halcón: Mario Party «Looking for Love» in boards of 4 (rules)
 // Tiny persistence for the owner's Emirati Arabic gateway (single global
 // profile, since this is a super-admin-only personal feature). Lives on the
 // same data disk as the rest of the JSON state.
@@ -5215,206 +5215,300 @@ function snFinish(pin, g) {
   });
 }
 
-// === 👁️ OJO DE HALCÓN (gameType 'look') — Super Mario Party «Looking for Love» as a Dralingo game show ===
-// Rules in core/look.js (spec docs/specs/ojo-de-halcon.md). Every round is server-timed: the question alone → the four
-// lamps light up on a schedule the server sends once (every screen runs the same clock from the offsets) → the round
-// closes → the result → the next round. Kids are numbered per game (p.lkIdx = their panel); looks are keyed by panel,
-// so a kid who reloads keeps their place and can't look twice. One timer per room, always checked against the game.
-function lkRoster(g) {
+// === 🦅 OJOS DE HALCÓN (gameType 'halcon') — Super Mario Party «Looking for Love», played in boards of 4 ===
+// Rules in core/halcon.js (spec docs/specs/ojos-de-halcon.md). The teacher's «Empezar» deals the class into boards of 4
+// (3 when it doesn't divide; ≤ 5 kids = one board) so the countdown can show each board's run-in on its phones. Every
+// round is server-timed: the question across the boards → the four answers in the windows (each look reaches the kid's
+// board and the projector at once; right / wrong stays secret) → the round resolves (+5/+3/+2/+1 by speed inside each
+// board, 0 for a wrong look) → next. One timer per room that a pause re-arms. Phones get only their own board; the
+// projector gets every board and the class top 5. Kids sit in seats (p.hcSeat): a reload keeps the seat and the look.
+function hcSeatMap(g) {
   const out = {};
-  const k = g.look;
-  Object.values(g.players).forEach((p) => {
-    if (!Look.inRound(k, p)) return;
-    out[p.lkIdx] = { name: p.name, skin: p.lkSkin, on: !p.disconnected, score: p.score || 0, streak: p.lkStreak || 0 };
-  });
+  const h = g.halcon;
+  Object.entries(g.players).forEach(([pid, p]) => { if (Halcon.inGame(h, p)) out[p.hcSeat] = [pid, p]; });
   return out;
 }
-const lkLooksArray = (k) => Object.entries(k.looks).map(([idx, l]) => [Number(idx), l.pos, l.ok ? 1 : 0, l.rank]);
-// what every screen needs to show the board right now
-function lkPublic(g, now) {
-  const k = g.look;
-  const q = k.q;
-  const showQ = !!q && (k.phase === 'show' || k.phase === 'reveal' || k.phase === 'result');
+const hcSkin = (p) => SnowMap.skinFor(p.avatar, p.name);   // the saga character the kid picked in the lobby
+function hcBoardPublic(g, b, seats) {
+  const h = g.halcon;
   return {
-    round: k.round, rounds: k.rounds, phase: k.phase, phaseMs: Math.max(0, k.phaseUntil - now), paused: !!k.paused,
-    q: showQ ? {
-      text: q.text, image: q.image, opts: q.opts, at: Look.offsets(k, now), showMs: Math.max(0, q.open - now),
-      closeMs: Math.max(0, q.closeAt - now), correctPos: k.phase === 'result' ? q.correctPos : -1,
-    } : null,
-    looks: showQ ? lkLooksArray(k) : [],
+    id: b.id,
+    seats: b.seats.map((sid) => {
+      const s = h.seats[sid], hit = seats[sid];
+      return { id: sid, name: s.name, skin: s.skin, score: s.score || 0, on: !!(hit && !hit[1].disconnected) };
+    }),
   };
 }
-function lkMe(k, p) {
-  const l = k.looks[p.lkIdx];
-  return { idx: p.lkIdx, score: p.score || 0, streak: p.lkStreak || 0, look: l ? { pos: l.pos, ok: l.ok, rank: l.rank } : null };
+function hcBoardPids(g, boardId) {
+  const h = g.halcon;
+  return Object.entries(g.players)
+    .filter(([, p]) => Halcon.inGame(h, p) && p.hcBoard === boardId && !p.disconnected).map(([pid]) => pid);
 }
-function lkInitPayload(g, pid) {
-  const k = g.look;
+function hcTop(g, n) {
+  return Object.values(g.halcon.seats).slice().sort((a, b) => (b.score || 0) - (a.score || 0) || a.id - b.id).slice(0, n)
+    .map((s) => ({ id: s.id, name: s.name, skin: s.skin, score: s.score || 0, board: s.board }));
+}
+// the question as a screen may see it now: the answers only once the windows open, the right one only at resolve
+function hcQPublic(h) {
+  const q = h.q;
+  if (!q || !['question', 'answer', 'resolve'].includes(h.phase)) return null;
+  const open = h.phase !== 'question';
+  return { text: q.text, image: q.image, opts: open ? q.opts : null, pics: open ? q.pics : null, correctPos: h.phase === 'resolve' ? q.correctPos : -1 };
+}
+// time left in the phase; while paused the clock stands still (phaseUntil only moves on resume)
+const hcPhaseLeft = (h, now) => Math.max(0, h.phaseUntil - (h.paused ? h.pausedAt : now));
+function hcInitPayload(g, pid) {
+  const h = g.halcon;
   const now = Date.now();
-  const out = Object.assign(lkPublic(g, now), { id: k.id, players: lkRoster(g), cast: g.lkCast || null, serverNow: now });
+  const seats = hcSeatMap(g);
   const p = pid ? g.players[pid] : null;
-  if (p && Look.inRound(k, p)) out.me = lkMe(k, p);
-  return out;
+  const mine = p && Halcon.inGame(h, p) ? Halcon.boardOf(h, p.hcBoard) : null;
+  const boards = pid ? (mine ? [mine] : []) : h.boards;
+  const ids = new Set(boards.map((b) => b.id));
+  const res = h.phase === 'resolve' && h.lastRes ? h.lastRes : null;
+  // before the reveal only WHO looked (and the phone's own window); the windows of the others come with the resolve
+  const view = Halcon.lookView(h, [...ids], mine ? p.hcSeat : null);
+  return {
+    id: h.id, phase: h.phase, phaseMs: hcPhaseLeft(h, now), paused: !!h.paused, round: h.round, rounds: h.rounds,
+    you: mine ? p.hcSeat : null, board: mine ? mine.id : null,
+    boards: boards.map((b) => hcBoardPublic(g, b, seats)),
+    q: hcQPublic(h),
+    ready: view.ready, mine: view.mine,
+    res: res ? { correctPos: res.correctPos, correctText: res.correctText, boards: res.boards.filter((b) => ids.has(b.id)) } : null,
+    top: pid ? null : hcTop(g, 5),
+    serverNow: now,
+  };
 }
-// Bring a kid into the game (start, late join, rejoin with a new socket id): their panel stays for the whole game.
-function lkAttach(g, pid, p) {
-  const fresh = Look.preparePlayer(g.look, p);
-  if (fresh) p.lkSkin = EscapeMap.skinFor(p.avatar, p.name);
-  return fresh;
+function hcSendInit(pin, g) {
+  io.to(g.hostId).emit('hc:init', hcInitPayload(g, null));
+  Object.entries(g.players).forEach(([pid, p]) => { if (!p.disconnected) io.to(pid).emit('hc:init', hcInitPayload(g, pid)); });
 }
 // the one timer of the room: remembers what it was going to do, so a pause can re-arm it with the time left
-function lkTimer(pin, g, ms, fn) {
-  const k = g.look;
-  if (k.timer) clearTimeout(k.timer);
-  k.timerAt = Date.now() + Math.max(0, ms);
-  k.timerFn = fn;
-  k.timer = setTimeout(() => {
+function hcTimer(pin, g, ms, fn) {
+  const h = g.halcon;
+  if (h.timer) clearTimeout(h.timer);
+  h.timerAt = Date.now() + Math.max(0, ms);
+  h.timerFn = fn;
+  h.timer = setTimeout(() => {
     const gg = games[pin];
-    if (!gg || gg.look !== k || gg.state !== 'active' || k.paused) return;
-    k.timer = null;
-    try { fn(); } catch (e) { console.error('[look] timer', e); }
+    if (!gg || gg.halcon !== h || h.paused || gg.state !== 'active') return;
+    h.timer = null;
+    try { fn(); } catch (e) { console.error('[halcon] timer', e); }
   }, Math.max(0, ms));
 }
-function lkStop(g) { if (g && g.look && g.look.timer) { clearTimeout(g.look.timer); g.look.timer = null; } }
-function lkSendInit(pin, g) {
-  io.to(g.hostId).emit('lk:init', lkInitPayload(g, null));
-  Object.entries(g.players).forEach(([pid, p]) => { if (!p.disconnected) io.to(pid).emit('lk:init', lkInitPayload(g, pid)); });
+function hcStop(g) { if (g && g.halcon && g.halcon.timer) { clearTimeout(g.halcon.timer); g.halcon.timer = null; } }
+// Per-answer pictures for «¿Qué significa «gege»?» questions: the window shows the picture of each meaning (+ its
+// label) when every answer has one in the level's word list; otherwise text. Never for «¿Cómo se dice…?» (the picture
+// of the asked word would give the answer away).
+const _hcPics = {};
+function hcPicFor(g, q) {
+  if (!q || (q.kind !== 'zh2es' && q.kind !== 'w')) return null;
+  const sid = String(g.setId || '');
+  if (!sid.startsWith('pack:')) return null;
+  const level = sid.slice(5).split('-')[0];
+  if (!_hcPics[level]) {
+    const m = {};
+    try { Packs.wordLists(level).forEach((w) => w.words.forEach((x) => { if (x.image) m[String(x.es).toLowerCase().trim()] = x.image; })); } catch (_) {}
+    _hcPics[level] = m;
+  }
+  const m = _hcPics[level], out = {};
+  q.answers.forEach((a) => { const u = m[String(a).toLowerCase().trim()]; if (u) out[a] = u; });
+  return out;
 }
-function lkStart(pin, g) {
-  lkStop(g);
+// «Empezar» (the countdown starts): the boards are dealt now so every phone's run-in shows its own board.
+function hcDeal(pin, g) {
+  hcStop(g);
   const now = Date.now();
-  const k = Look.newGame(1 + Math.floor(Math.random() * 1e6), g.lkRounds || Look.R.ROUNDS, now);
-  k.timer = null;
-  k.order = kdShuffle(g.questions.map((_, i) => i));   // the pack in a random order, no repeats until it is exhausted
-  k.qi = 0;
-  g.look = k;
-  Object.entries(g.players).forEach(([pid, p]) => { p.lkRound = null; p.currentQ = null; lkAttach(g, pid, p); });
-  lkSendInit(pin, g);
-  lkTimer(pin, g, Look.R.INTRO_MS, () => lkRound(pin, g));
+  const h = Halcon.newGame(1 + Math.floor(Math.random() * 1e9), g.hcRounds || Halcon.R.ROUNDS, now);
+  h.timer = null;
+  g.halcon = h;
+  Object.values(g.players).forEach((p) => { p.hcGame = null; p.currentQ = null; });
+  Halcon.deal(h, Object.entries(g.players).filter(([, p]) => !p.disconnected).map(([pid, p]) => [pid, p, hcSkin(p)]));
+  h.phaseUntil = now + COUNTDOWN_MS;
+  hcSendInit(pin, g);
 }
-function lkNextQuestion(g) {
-  const k = g.look;
-  if (!g.questions.length) return null;
-  if (k.qi >= k.order.length) { k.order = kdShuffle(k.order); k.qi = 0; }
-  return g.questions[k.order[k.qi++]] || null;
+// A kid who wasn't dealt in (joined late, came back after the deal) sits at the smallest board; the board's phones and
+// the projector add the new stall. Returns true when the kid got a new seat.
+function hcSeatLate(pin, g, pid, p) {
+  const h = g.halcon;
+  const b = Halcon.lateSeat(h, p, hcSkin(p));
+  if (!b) return false;
+  p.currentQ = null;
+  const pub = hcBoardPublic(g, b, hcSeatMap(g));
+  hcBoardPids(g, b.id).forEach((id) => { if (id !== pid) io.to(id).emit('hc:seat', { board: pub }); });
+  io.to(g.hostId).emit('hc:seat', { board: pub, top: hcTop(g, 5) });
+  return true;
 }
-function lkRoundPayload(g, now) {
-  const k = g.look, q = k.q;
-  return {
-    id: k.id, round: k.round, rounds: k.rounds, text: q.text, image: q.image, opts: q.opts, at: Look.offsets(k, now),
-    showMs: Math.max(0, q.open - now), closeMs: Math.max(0, q.closeAt - now), last: k.round >= k.rounds, serverNow: now,
-  };
-}
-function lkRound(pin, g) {
-  const k = g.look;
-  const q = lkNextQuestion(g);
-  if (!q || !Array.isArray(q.answers) || q.answers.length < 2) { lkFinal(pin, g); return; }
+// The countdown is over: «¡Mira la respuesta correcta!» → «¡YA!» → round 1.
+function hcStart(pin, g) {
+  if (!g.halcon) hcDeal(pin, g);
+  const h = g.halcon;
   const now = Date.now();
-  Look.startRound(k, q, Images.urlForQuestion(q), now);
-  io.to(pin).emit('lk:round', lkRoundPayload(g, now));
-  lkTimer(pin, g, Look.R.SHOW_MS, () => {
-    Look.beginReveal(k, Date.now());
-    lkTimer(pin, g, k.q.closeAt - Date.now(), () => lkClose(pin, g));
+  // the rounds end the game themselves; the room's cap is only a safety net (a +5 rondas or a pause moves it)
+  g.duration = Halcon.timeCapS(h.rounds);
+  g.endsAt = now + g.duration * 1000;
+  h.phase = 'intro';
+  h.phaseAt = now;
+  h.phaseUntil = now + Halcon.R.INTRO_MS;
+  // whoever joined during the countdown sits down now (their snapshot already says «intro», not the run-in)
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (!p.disconnected && !Halcon.inGame(h, p) && hcSeatLate(pin, g, pid, p)) io.to(pid).emit('hc:init', hcInitPayload(g, pid));
   });
+  io.to(pin).emit('hc:intro', { id: h.id, ms: Halcon.R.INTRO_MS, rounds: h.rounds });
+  hcTimer(pin, g, Halcon.R.INTRO_MS, () => hcRound(pin, g));
 }
-function lkLook(pin, g, pid, pos) {
-  const k = g.look;
-  const p = g.players[pid];
-  if (!k || !p || g.state !== 'active') return;
+function hcRound(pin, g) {
+  const h = g.halcon;
+  const q = Halcon.nextQuestion(h, g.questions);
+  if (!q) { hcFinal(pin, g); return; }
   const now = Date.now();
-  const r = Look.look(k, p, pos, now);
-  io.to(pid).emit('lk:looked', { round: k.round, status: r.status, pos: r.look ? r.look.pos : pos, ok: !!(r.look && r.look.ok), rank: r.look ? r.look.rank : 0 });
-  if (r.status !== 'ok' && r.status !== 'wrong') return;
-  io.to(g.hostId).emit('lk:look', { round: k.round, idx: p.lkIdx, pos: r.look.pos, ok: r.look.ok, rank: r.look.rank });
-  // everyone looked: the round closes soon instead of waiting the whole window
-  if (Look.everyoneLooked(k, g.players) && k.q.closeAt - now > Look.R.ALL_LOOKED_MS) {
-    k.q.closeAt = now + Look.R.ALL_LOOKED_MS;
-    k.phaseUntil = k.q.closeAt;
-    lkTimer(pin, g, Look.R.ALL_LOOKED_MS, () => lkClose(pin, g));
+  Halcon.startQuestion(h, q, Images.urlForQuestion(q), hcPicFor(g, q), now);
+  io.to(pin).emit('hc:q', { id: h.id, round: h.round, rounds: h.rounds, text: h.q.text, image: h.q.image, ms: Halcon.R.QUESTION_MS, last: h.round >= h.rounds });
+  hcTimer(pin, g, Halcon.R.QUESTION_MS, () => hcOpen(pin, g));
+}
+function hcOpen(pin, g) {
+  const h = g.halcon;
+  if (!Halcon.openAnswers(h, Date.now())) return;
+  io.to(pin).emit('hc:open', { id: h.id, round: h.round, opts: h.q.opts, pics: h.q.pics, ms: Halcon.R.ANSWER_MS });
+  hcTimer(pin, g, Halcon.R.ANSWER_MS, () => hcResolve(pin, g));
+}
+function hcAnswer(pin, g, pid, pos) {
+  const h = g.halcon;
+  const p = g.players[pid];
+  if (!h || !p || g.state !== 'active') return;
+  const now = Date.now();
+  const r = Halcon.answer(h, p, pos, now);
+  io.to(pid).emit('hc:mine', { round: h.round, status: r.status, pos: r.look ? r.look.pos : -1 });
+  if (r.status !== 'ok') return;
+  // the board's other phones and the projector only learn that this kid is READY, never the window (the reveal shows it)
+  const ev = { round: h.round, id: p.hcSeat, board: p.hcBoard };
+  hcBoardPids(g, p.hcBoard).forEach((id) => { if (id !== pid) io.to(id).emit('hc:ready', ev); });
+  io.to(g.hostId).emit('hc:ready', ev);
+  // everyone looked: the round resolves soon instead of waiting the whole window
+  const left = Halcon.closeEarly(h, g.players, now);
+  if (left) {
+    hcTimer(pin, g, left, () => hcResolve(pin, g));
+    io.to(pin).emit('hc:closing', { round: h.round, ms: left });
   }
 }
-function lkClose(pin, g) {
-  const k = g.look;
-  if (!k || !k.q || k.phase === 'result' || k.phase === 'final' || k.phase === 'done') return;
-  if (k.phase === 'show') Look.beginReveal(k, Date.now());     // skipped while the question was alone: close at once
-  const res = Look.closeRound(k, g.players, Date.now());
-  k.lastRes = res;
-  io.to(pin).emit('lk:result', res);
-  broadcast(pin);                                             // the scores ride on the state too
-  lkTimer(pin, g, Look.R.RESULT_MS, () => (g.look.round >= g.look.rounds ? lkFinal(pin, g) : lkRound(pin, g)));
+function hcResolve(pin, g) {
+  const h = g.halcon;
+  if (!h || !h.q || h.phase === 'resolve' || h.phase === 'final' || h.phase === 'done') return;
+  if (h.phase === 'question') Halcon.openAnswers(h, Date.now());
+  const res = Halcon.resolve(h, g.players, Date.now());
+  h.lastRes = res;
+  io.to(g.hostId).emit('hc:resolve', Object.assign({ top: hcTop(g, 5) }, res));
+  res.boards.forEach((b) => {
+    const pub = { round: res.round, rounds: res.rounds, correctPos: res.correctPos, correctText: res.correctText, last: res.last, board: b };
+    hcBoardPids(g, b.id).forEach((pid) => io.to(pid).emit('hc:resolve', pub));
+  });
+  broadcast(pin);                                            // the scores ride on the room's state too
+  hcTimer(pin, g, Halcon.R.RESOLVE_MS, () => (h.round >= h.rounds ? hcFinal(pin, g) : hcRound(pin, g)));
 }
-function lkFinal(pin, g) {
-  const k = g.look;
-  if (!k || k.phase === 'final' || k.phase === 'done') return;
-  k.phase = 'final';
-  k.phaseAt = Date.now();
-  k.phaseUntil = k.phaseAt + Look.R.FINAL_MS;
-  k.q = null;
-  io.to(pin).emit('lk:final', { rounds: k.round });
-  lkTimer(pin, g, Look.R.FINAL_MS, () => { if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; } endGame(pin); });
+// «¡FINAL!» on every screen, the final chips, then the studio finale (game-end).
+function hcFinal(pin, g) {
+  const h = g.halcon;
+  if (!h || h.phase === 'final' || h.phase === 'done') return;
+  // «Terminar» while the windows are open: the looks already made still count (a kid who saw it gets the points)
+  if (h.q && h.phase === 'answer') {
+    const res = Halcon.resolve(h, g.players, Date.now());
+    h.lastRes = res;
+    io.to(g.hostId).emit('hc:resolve', Object.assign({ top: hcTop(g, 5) }, res));
+    res.boards.forEach((b) => {
+      const pub = { round: res.round, rounds: res.rounds, correctPos: res.correctPos, correctText: res.correctText, last: true, board: b };
+      hcBoardPids(g, b.id).forEach((pid) => io.to(pid).emit('hc:resolve', pub));
+    });
+    broadcast(pin);
+  }
+  h.phase = 'final';
+  h.phaseAt = Date.now();
+  h.phaseUntil = h.phaseAt + Halcon.R.FINAL_MS;
+  h.q = null;
+  io.to(pin).emit('hc:finish', { id: h.id, round: h.round, ms: Halcon.R.FINAL_MS });
+  hcTimer(pin, g, Halcon.R.FINAL_MS, () => { if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; } endGame(pin); });
 }
-// Teacher «⏭ Saltar ronda»: a round that drags on closes now; a result that is showing gives way to the next round.
-function lkSkip(pin, g) {
-  const k = g.look;
-  if (!k || k.paused) return;
-  // skipped while the question was alone (nobody could look yet): the next question takes this round, no misses counted
-  if (k.phase === 'show') { if (k.timer) { clearTimeout(k.timer); k.timer = null; } k.round--; k.q = null; lkRound(pin, g); return; }
-  if (k.phase === 'reveal') lkClose(pin, g);
-  else if (k.phase === 'result') { if (k.timer) { clearTimeout(k.timer); k.timer = null; } (k.round >= k.rounds ? lkFinal(pin, g) : lkRound(pin, g)); }
+// Teacher «⏭ Saltar»: the intro or a bare question gives way to a (fresh) question, an open round resolves now, a
+// resolve gives way to the next round.
+function hcSkip(pin, g) {
+  const h = g.halcon;
+  if (!h || h.paused) return;
+  if (Date.now() - h.phaseAt < 700) return;      // a double tap must not skip the result the first tap just opened
+  if (h.phase === 'intro') hcRound(pin, g);
+  else if (h.phase === 'question') { h.round--; h.q = null; hcRound(pin, g); }
+  else if (h.phase === 'answer') hcResolve(pin, g);
+  else if (h.phase === 'resolve') { if (h.round >= h.rounds) hcFinal(pin, g); else hcRound(pin, g); }
 }
-function lkPause(pin, g, paused) {
-  const k = g.look;
-  if (!k || !!k.paused === !!paused || k.phase === 'done') return;
+function hcPause(pin, g, paused) {
+  const h = g.halcon;
+  if (!h || !!h.paused === !!paused || h.phase === 'done') return;
   const now = Date.now();
   if (paused) {
-    k.paused = true;
-    k.pausedAt = now;
-    if (k.timer) { clearTimeout(k.timer); k.timer = null; }
+    h.paused = true;
+    h.pausedAt = now;
+    if (h.timer) { clearTimeout(h.timer); h.timer = null; }
     if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
   } else {
-    const shift = now - k.pausedAt;
-    Look.shiftTimes(k, shift);
-    k.timerAt = (k.timerAt || now) + shift;
+    const shift = now - h.pausedAt;
+    Halcon.shiftTimes(h, shift);
+    h.timerAt = (h.timerAt || now) + shift;
     g.endsAt += shift;
-    k.paused = false;
-    if (k.timerFn) lkTimer(pin, g, k.timerAt - now, k.timerFn);
+    h.paused = false;
+    if (h.timerFn) hcTimer(pin, g, h.timerAt - now, h.timerFn);
     if (g.endTimer) clearTimeout(g.endTimer);
     g.endTimer = setTimeout(() => { if (games[pin] && games[pin].state === 'active') endGame(pin); }, Math.max(0, g.endsAt - now));
   }
-  io.to(pin).emit('lk:pause', Object.assign(lkPublic(g, Date.now()), { paused: !!k.paused, serverNow: Date.now() }));
+  io.to(pin).emit('hc:pause', { id: h.id, paused: !!h.paused, phase: h.phase, phaseMs: hcPhaseLeft(h, Date.now()), round: h.round });
 }
-function lkFinish(pin, g) {
-  const k = g.look;
-  if (!k) return;
-  lkStop(g);
-  k.phase = 'done';
-  const fin = Look.finish(k, g.players);
-  const lite = (r) => (r ? { idx: r.idx, name: r.name, skin: r.skin, score: r.score, firsts: r.firsts, right: r.right, best: r.best, avg: r.avg } : null);
-  const common = {
-    winner: 'tie',   // player.js's generic end screen needs a value; the phone module paints its own end card
-    look: {
-      winner: lite(fin.winner), winners: fin.winners.map(lite), tie: fin.tie, top: fin.rows.slice(0, 8).map(lite),
-      all: fin.rows.map(lite).slice(0, 40), awards: { eye: lite(fin.awards.eye), fastest: lite(fin.awards.fastest), streak: lite(fin.awards.streak) },
-      rounds: fin.rounds, totalRounds: fin.totalRounds, cast: g.lkCast || null,
-    },
-    leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.score, team: 'all', avatar: r.avatar })),
-  };
+// The end: each board's ranking and winner (the studio finale on its phones), the class ranking on the projector.
+function hcFinish(pin, g) {
+  const h = g.halcon;
+  if (!h) return;
+  hcStop(g);
+  h.phase = 'done';
   g.teamScores = { red: 0, gold: 0 };
-  io.to(g.hostId).emit('game-end', Object.assign({ teamScores: g.teamScores }, common));
+  const end = hcEndPayloads(g);
+  io.to(g.hostId).emit('game-end', end.host);
   Object.entries(g.players).forEach(([pid, p]) => {
-    if (p.disconnected || !Look.inRound(k, p)) return;
-    const row = fin.rows.find((r) => r.id === pid) || {};
-    const mine = ['eye', 'fastest', 'streak'].filter((a) => fin.awards[a] && fin.awards[a].id === pid);
-    io.to(pid).emit('game-end', Object.assign({}, common, {
-      teamScores: { red: 0, gold: 0 },
-      scores: { [pid]: row.score || 0 },
-      me: {
-        rank: fin.rows.indexOf(row) + 1, of: fin.rows.length, score: row.score || 0, firsts: row.firsts || 0, right: row.right || 0,
-        wrong: row.wrong || 0, miss: row.miss || 0, best: row.best || 0, avg: row.avg == null ? null : row.avg,
-        won: fin.winners.some((w) => w.id === pid), awards: mine,
-      },
-    }));
+    if (p.disconnected) return;
+    const one = end.forPlayer(pid);
+    if (one) io.to(pid).emit('game-end', one);
   });
+}
+// The game-end payloads (the projector's, and each phone's own: its board + its place). Built again on demand, so a
+// projector or a phone that drops around the end still gets its finale after reconnecting (reclaim / resync).
+function hcEndPayloads(g) {
+  const h = g.halcon;
+  const fin = Halcon.finish(h, g.players);
+  const lite = (r) => ({ id: r.id, board: r.board, name: r.name, skin: r.skin, score: r.score, rank: r.rank, firsts: r.firsts, right: r.right, best: r.best, avg: r.avg });
+  const boards = fin.boards.map((b) => ({ id: b.id, rows: b.rows.map(lite), winners: b.winners.map((w) => w.id), why: b.why }));
+  const common = {
+    winner: 'tie',   // player.js's generic end screen needs a value; the phone module paints the studio finale
+    halcon: {
+      boards, top: fin.all.slice(0, 10).map(lite), winners: fin.winners.map((w) => w.id), why: fin.why,
+      count: fin.all.length, rounds: fin.rounds, totalRounds: fin.totalRounds,
+    },
+  };
+  return {
+    host: Object.assign({ teamScores: { red: 0, gold: 0 }, leaderboard: fin.all.map((r) => ({ name: r.name, score: r.score, team: 'all' })) }, common),
+    forPlayer(pid) {
+      const p = g.players[pid];
+      if (!p || !Halcon.inGame(h, p)) return null;
+      const r = fin.all.find((x) => x.id === p.hcSeat);
+      if (!r) return null;
+      const b = boards.find((x) => x.id === r.board);
+      const mineRow = b ? b.rows.find((x) => x.id === r.id) : null;
+      return Object.assign({}, common, {
+        teamScores: { red: 0, gold: 0 },
+        scores: { [pid]: r.score },
+        halcon: Object.assign({}, common.halcon, { boards: b ? [b] : [] }),
+        me: {
+          id: r.id, board: r.board, rank: mineRow ? mineRow.rank : 1, of: b ? b.rows.length : 1, classRank: r.rank, classOf: fin.all.length,
+          score: r.score, firsts: r.firsts, right: r.right, best: r.best, avg: r.avg,
+          won: !!(b && b.winners.includes(r.id)), classWon: fin.winners.some((w) => w.id === r.id),
+        },
+      });
+    },
+  };
 }
 
 // === 🚀 LA GRAN FUGA DE DUBÁI (gameType 'escape') — Kahoot «Robot Run» style co-op chase, Dralingo episode ===
@@ -5737,10 +5831,10 @@ function endGame(pin) {
     broadcast(pin);
     return;
   }
-  // Ojo de Halcón: standings by points, the sharpest eye wins, each phone its own rank (core/look.js finish()).
-  if (g.gameType === 'look') {
+  // Ojos de Halcón: each board's ranking + winner (its phones play the studio finale), the class ranking (core/halcon.js).
+  if (g.gameType === 'halcon') {
     if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
-    lkFinish(pin, g);
+    hcFinish(pin, g);
     broadcast(pin);
     return;
   }
@@ -5779,7 +5873,7 @@ io.on('connection', (socket) => {
       else if (a && typeof a === 'object') opts = a;
     }
     const pin = genPin();
-    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'look', 'warmup', 'reading', 'hsksim'];
+    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'halcon', 'warmup', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
       type === 'pinata'       ? 240 :
@@ -5790,7 +5884,7 @@ io.on('connection', (socket) => {
       type === 'paint'        ? 240 :
       type === 'snow'         ? 240 :
       type === 'escape'       ? 300 :    // three zones + three zona segura phases
-      type === 'look'         ? Look.timeCapS(Look.R.ROUNDS) :   // ten rounds + a safety margin (the rounds end the game themselves)
+      type === 'halcon'       ? Halcon.timeCapS(Halcon.R.ROUNDS) :   // the same: hcStart sets the cap for the rounds picked
       type === 'warmup'       ? 3600 :   // 1 hour ceiling; teacher exits manually
       type === 'reading'      ? 3600 :   // 1 hour ceiling; teacher controls flow
       type === 'hsksim'       ? 3600 :   // 1 hour ceiling; kid takes the exam on their own pace
@@ -5911,8 +6005,12 @@ io.on('connection', (socket) => {
     if (g.gameType === 'escape' && g.escape && g.state === 'active') {
       io.to(socket.id).emit('es:init', esInitPayload(g, null));
     }
-    if (g.gameType === 'look' && g.look && g.state === 'active') {
-      io.to(socket.id).emit('lk:init', lkInitPayload(g, null));
+    if (g.gameType === 'halcon' && g.halcon && (g.state === 'active' || g.state === 'countdown')) {
+      io.to(socket.id).emit('hc:init', hcInitPayload(g, null));
+    }
+    // Ojos de Halcón: a projector that dropped around the end still gets its finale («Otra ronda» stays reachable)
+    if (g.gameType === 'halcon' && g.halcon && g.state === 'ended') {
+      io.to(socket.id).emit('game-end', hcEndPayloads(g).host);
     }
     cb({ ok: true, gameType: g.gameType, state: g.state });
   });
@@ -5942,6 +6040,7 @@ io.on('connection', (socket) => {
       }
       g.questions = set.questions;
       g.setTitle = set.title;
+      g.setId = String(setId);          // Ojos de Halcón finds the level's word pictures from it
       broadcast(pin);
       console.log('[host:load-set] OK pin=' + pin + ' setId=' + setId + ' title=' + set.title + ' questions=' + set.questions.length);
       if (cb) cb({ ok: true, title: set.title, count: set.questions.length });
@@ -6011,7 +6110,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
     // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
-    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'look') && g.state !== 'lobby') return;
+    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
     // generated server-side or teacher-driven). Don't gate them on
     // questions.length, otherwise Start silently does nothing and the
@@ -6057,12 +6156,9 @@ io.on('connection', (socket) => {
       g.esCast = { open: 'fer', jet: 'hamdan', cheers: gang.slice(0, 4) };
       io.to(pin).emit('es:cast', g.esCast);
     }
-    // Ojo de Halcón: Profe Fer opens the episode, Hamdan hosts the show, three of the gang cheer (streaks, last round).
-    if (g.gameType === 'look') {
-      g.lkCast = { host: 'hamdan', open: 'fer', cheers: kdShuffle(['latifa', 'aileen', 'adric', 'adrian']).slice(0, 3) };
-      io.to(pin).emit('lk:cast', g.lkCast);
-    }
     io.to(pin).emit('countdown', { ms: COUNTDOWN_MS });
+    // Ojos de Halcón: the boards are dealt now, so the countdown plays each board's run-in on its phones.
+    if (g.gameType === 'halcon') hcDeal(pin, g);
 
     setTimeout(() => {
       if (!games[pin]) return;
@@ -6156,7 +6252,7 @@ io.on('connection', (socket) => {
       if (g.gameType === 'paint') pcStart(pin, g);
       if (g.gameType === 'snow') snStart(pin, g);
       if (g.gameType === 'escape') esStart(pin, g);
-      if (g.gameType === 'look') lkStart(pin, g);
+      if (g.gameType === 'halcon') hcStart(pin, g);
       if (g.gameType === 'reading') {
         // === 📖 READING MODE ===
         // Teacher-driven story session. Server holds the master playback
@@ -6229,7 +6325,7 @@ io.on('connection', (socket) => {
       }
       broadcast(pin);
       // Every question-driven game auto-deals the first question (Dragones Pintores: kids ask with «Recargar»).
-      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'look') Object.keys(g.players).forEach((pid) => {
+      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon') Object.keys(g.players).forEach((pid) => {
         const q = nextQuestionFor(g, pid);
         if (q) io.to(pid).emit('question', q);
       });
@@ -6243,7 +6339,12 @@ io.on('connection', (socket) => {
   socket.on('host:end-now', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
-    if ((g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'look') && g.state !== 'active') return;      // already over: no second end show
+    if ((g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon') && g.state !== 'active') return;      // already over: no second end show
+    // Ojos de Halcón: «Terminar» plays «¡FINAL!» first (paused: straight to the finale, the pause holds every timer)
+    if (g.gameType === 'halcon' && g.halcon && !g.halcon.paused) {
+      if (g.halcon.phase === 'final') return;      // «¡FINAL!» is already on: the finale follows by itself
+      if (g.halcon.phase !== 'done') { hcFinal(pin, g); return; }
+    }
     if (g.endTimer) clearTimeout(g.endTimer);
     endGame(pin);
   });
@@ -6256,7 +6357,7 @@ io.on('connection', (socket) => {
     if (g.gameType === 'paint') { pcStop(g); g.paint = null; }
     if (g.gameType === 'snow') { snStop(g); g.snow = null; }
     if (g.gameType === 'escape') { esStop(g); g.escape = null; }
-    if (g.gameType === 'look') { lkStop(g); g.look = null; }
+    if (g.gameType === 'halcon') { hcStop(g); g.halcon = null; }
     g.state = 'lobby';
     g.teamScores = { red: 0, gold: 0 };
     g.endsAt = null;
@@ -6348,6 +6449,11 @@ io.on('connection', (socket) => {
     });
     broadcast(pin);
 
+    // Ojos de Halcón during the countdown: a kid who was dealt in and reloads gets the run-in of their board again
+    // (a new kid sits down when the game starts, hcStart).
+    if (g.state === 'countdown' && g.gameType === 'halcon' && g.halcon && Halcon.inGame(g.halcon, player)) {
+      io.to(socket.id).emit('hc:init', hcInitPayload(g, socket.id));
+    }
     // If joining/rejoining mid-game, sync them up
     if (g.state === 'active') {
       // === READING: send the current page + audio play state so the
@@ -6454,12 +6560,12 @@ io.on('connection', (socket) => {
         return;
       }
       }
-      // Ojo de Halcón: a late joiner gets a panel and plays from the next lamp; a rejoin keeps the panel and its look.
-      if (g.gameType === 'look' && g.look) {
-        lkAttach(g, socket.id, player);
+      // Ojos de Halcón: a late joiner sits at the smallest board (max 5) and plays from this round; a rejoin keeps the
+      // seat, the board and the look.
+      if (g.gameType === 'halcon' && g.halcon) {
+        hcSeatLate(pin, g, socket.id, player);
         player.currentQ = null;
-        io.to(socket.id).emit('lk:init', lkInitPayload(g, socket.id));
-        io.to(g.hostId).emit('lk:roster', { players: lkRoster(g) });
+        io.to(socket.id).emit('hc:init', hcInitPayload(g, socket.id));
         return;
       }
       if (g.gameType === 'kingdoms' && g.kingdoms) {
@@ -6862,56 +6968,58 @@ io.on('connection', (socket) => {
       if (!g || g.hostId !== socket.id || g.state !== 'active') return;
       if (g.gameType === 'snow') snPause(pin, g, !!paused);
       if (g.gameType === 'escape') esPause(pin, g, !!paused);
-      if (g.gameType === 'look') lkPause(pin, g, !!paused);
+      if (g.gameType === 'halcon') hcPause(pin, g, !!paused);
     } catch (e) { console.error('[host:pause]', e); }
   });
 
-  // Ojo de Halcón: a kid tapped a lamp (its position 0 top · 1 right · 2 bottom · 3 left).
-  socket.on('player:lk-look', (data) => {
+  // Ojos de Halcón: a kid looked at a window (0 top · 1 right · 2 bottom · 3 left).
+  socket.on('player:hc-look', (data) => {
     try {
       const { pin, pos } = data || {};
       const g = games[pin];
-      if (!g || g.gameType !== 'look' || !g.look) return;
-      lkLook(pin, g, socket.id, Number(pos));
-    } catch (e) { console.error('[player:lk-look]', e); }
+      if (!g || g.gameType !== 'halcon' || !g.halcon) return;
+      hcAnswer(pin, g, socket.id, Number(pos));
+    } catch (e) { console.error('[player:hc-look]', e); }
   });
-  // Teacher, in the lobby: how many rounds (10 / 15 / 20). The room's time cap follows.
-  socket.on('host:lk-rounds', (data) => {
+  // Teacher, in the lobby: 10 or 15 rounds (5–20 accepted). The room's time cap follows at the start.
+  socket.on('host:hc-rounds', (data) => {
     try {
       const { pin, rounds } = data || {};
       const g = games[pin];
-      if (!g || g.hostId !== socket.id || g.gameType !== 'look' || g.state !== 'lobby') return;
-      g.lkRounds = Look.clampRounds(rounds);
-      g.duration = Look.timeCapS(g.lkRounds);
+      if (!g || g.hostId !== socket.id || g.gameType !== 'halcon' || g.state !== 'lobby') return;
+      g.hcRounds = Halcon.clampRounds(rounds);
+      g.duration = Halcon.timeCapS(g.hcRounds);
       broadcast(pin);
-    } catch (e) { console.error('[host:lk-rounds]', e); }
+    } catch (e) { console.error('[host:hc-rounds]', e); }
   });
-  // Teacher, mid-game: «+5 rondas» (the class is loving it), up to 30.
-  socket.on('host:lk-more', (data) => {
+  // Teacher, mid-game: «+5 rondas» (the class is loving it), up to 20.
+  socket.on('host:hc-more', (data) => {
     try {
-      const g = games[data && data.pin];
-      if (!g || g.hostId !== socket.id || g.gameType !== 'look' || !g.look || g.state !== 'active') return;
-      const k = g.look;
-      if (k.phase === 'final' || k.phase === 'done' || k.rounds >= Look.R.ROUNDS_MAX) return;
-      const before = k.rounds;
-      k.rounds = Math.min(Look.R.ROUNDS_MAX, k.rounds + Look.R.MORE);
-      const extra = (k.rounds - before) * Look.R.CAP_PER_ROUND_S * 1000;
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'halcon' || !g.halcon || g.state !== 'active') return;
+      const h = g.halcon;
+      if (h.phase === 'final' || h.phase === 'done' || h.rounds >= Halcon.R.ROUNDS_MAX) return;
+      const before = h.rounds;
+      h.rounds = Math.min(Halcon.R.ROUNDS_MAX, h.rounds + Halcon.R.MORE);
+      const extra = (h.rounds - before) * Halcon.R.CAP_PER_ROUND_S * 1000;
       g.endsAt += extra;
       g.duration += extra / 1000;
-      if (!k.paused) {
+      if (!h.paused) {
         if (g.endTimer) clearTimeout(g.endTimer);
-        g.endTimer = setTimeout(() => { if (games[data.pin] && games[data.pin].state === 'active') endGame(data.pin); }, Math.max(0, g.endsAt - Date.now()));
+        g.endTimer = setTimeout(() => { if (games[pin] && games[pin].state === 'active') endGame(pin); }, Math.max(0, g.endsAt - Date.now()));
       }
-      io.to(data.pin).emit('lk:rounds', { round: k.round, rounds: k.rounds });
-    } catch (e) { console.error('[host:lk-more]', e); }
+      io.to(pin).emit('hc:rounds', { id: h.id, round: h.round, rounds: h.rounds });
+    } catch (e) { console.error('[host:hc-more]', e); }
   });
-  // Teacher «⏭ Saltar ronda».
-  socket.on('host:lk-skip', (data) => {
+  // Teacher «⏭ Saltar».
+  socket.on('host:hc-skip', (data) => {
     try {
-      const g = games[data && data.pin];
-      if (!g || g.hostId !== socket.id || g.gameType !== 'look' || !g.look || g.state !== 'active') return;
-      lkSkip(data.pin, g);
-    } catch (e) { console.error('[host:lk-skip]', e); }
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'halcon' || !g.halcon || g.state !== 'active') return;
+      hcSkip(pin, g);
+    } catch (e) { console.error('[host:hc-skip]', e); }
   });
 
   // Reinos de Colores: kid tapped a tile on the phone's mini board.
@@ -6935,7 +7043,7 @@ io.on('connection', (socket) => {
     g.extraSecs = (g.extraSecs || 0) + add / 1000;   // only for this round: host:reset gives it back (playtest 2026-10-11)
     if (g.endTimer) clearTimeout(g.endTimer);
     g.endTimer = null;
-    if (!(g.snow && g.snow.paused) && !(g.escape && g.escape.paused) && !(g.look && g.look.paused)) g.endTimer = setTimeout(() => {   // paused: the resume re-arms it
+    if (!(g.snow && g.snow.paused) && !(g.escape && g.escape.paused) && !(g.halcon && g.halcon.paused)) g.endTimer = setTimeout(() => {   // paused: the resume re-arms it
       if (!games[pin] || games[pin].state !== 'active') return;
       endGame(pin);
     }, Math.max(0, g.endsAt - Date.now()));
@@ -7001,8 +7109,12 @@ io.on('connection', (socket) => {
         return;
       }
     }
-    if (g.gameType === 'look') {
-      if (g.state === 'active' && g.look) { lkAttach(g, socket.id, p); io.to(socket.id).emit('lk:init', lkInitPayload(g, socket.id)); }
+    if (g.gameType === 'halcon') {
+      if (g.state === 'active' && g.halcon) { hcSeatLate(pin, g, socket.id, p); io.to(socket.id).emit('hc:init', hcInitPayload(g, socket.id)); }
+      if (g.state === 'ended' && g.halcon) {        // missed game-end (a drop at «¡FINAL!»): the finale again
+        const one = hcEndPayloads(g).forPlayer(socket.id);
+        if (one) io.to(socket.id).emit('game-end', one);
+      }
       return;                         // the board is the screen: never a question
     }
     if (g.gameType === 'kingdoms' && g.state === 'active' && g.kingdoms) {
@@ -8040,7 +8152,7 @@ io.on('connection', (socket) => {
           if (stillExists.gameType === 'paint') pcStop(stillExists);
           if (stillExists.gameType === 'snow') snStop(stillExists);
           if (stillExists.gameType === 'escape') esStop(stillExists);
-          if (stillExists.gameType === 'look') lkStop(stillExists);
+          if (stillExists.gameType === 'halcon') hcStop(stillExists);
           if (stillExists.gameType === 'kingdoms') kdClearTimers(stillExists);
           io.to(currentPin).emit('host-left');
           delete games[currentPin];
@@ -8056,6 +8168,15 @@ io.on('connection', (socket) => {
         if (g.gameType === 'snow' && g.snow && p.snSide === 'sun' && p.snSunSince) { p.snSunMs = (p.snSunMs || 0) + Date.now() - p.snSunSince; p.snSunSince = 0; }
         g.feed.push({ type: 'leave', name: p.name, t: Date.now() });
         broadcast(currentPin);
+        // Ojos de Halcón: if everyone still here has looked, a dropped phone must not hold the round its whole 6 s
+        if (g.gameType === 'halcon' && g.halcon && g.state === 'active' && !g.halcon.paused) {
+          const left = Halcon.closeEarly(g.halcon, g.players, Date.now());
+          if (left) {
+            const dropPin = currentPin;
+            hcTimer(dropPin, g, left, () => hcResolve(dropPin, g));
+            io.to(dropPin).emit('hc:closing', { round: g.halcon.round, ms: left });
+          }
+        }
         // Schedule full cleanup after 5 minutes of inactivity
         const grabbedSocketId = socket.id;
         p.cleanupTimer = setTimeout(() => {
@@ -8084,7 +8205,7 @@ setInterval(() => {
     if (g.gameType === 'paint') return;        // questions are on demand («Recargar»)
     if (g.gameType === 'snow') return;         // questions are on demand (the stations)
     if (g.gameType === 'escape' && !(g.escape && g.escape.phase === 'run' && !g.escape.paused)) return;   // only while the crew runs
-    if (g.gameType === 'look') return;         // no questions on the phones: the board runs the rounds
+    if (g.gameType === 'halcon') return;       // no questions on the phones: the boards run the rounds
     Object.entries(g.players).forEach(([pid, p]) => {
       const inAction = p.mashUntil > now || p.currentQ;
       if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {

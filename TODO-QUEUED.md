@@ -164,13 +164,16 @@ rules, Kenney assets and build recipe: `docs/specs/reinos-de-colores.md`. His im
 
 ---
 
-## Ojo de Halcón — Mario Party «Looking for Love» pin game ✅ DEPLOYED 2026-10-13 (83dbcbd04)
+## Ojos de Halcón — Mario Party «Looking for Love» recreated in boards of 4 ✅ BUILT 2026-10-13 (branch, not deployed)
 
-First of his Mario Party series (`look`). Rules, as-built notes and the scorecard: `docs/specs/ojo-de-halcon.md`.
-Still to make (brief `content/look/pictures.json`): the studio backdrop, the board frame and lamps as pictures, Hamdan
-as the TV host (microphone), the falcon perched on a lamp, Dralingo with binoculars / dizzy, the three award medals.
-Next minigames of the series: pick the next clip from the same video, reuse the round / reveal / rank skeleton of
-`core/look.js` + the panel wall of `host-look.js`.
+His verdict on the first attempt (below): "it looks nothing like the mini game". Rebuilt as `halcon` from the video's
+frames: boards of 4, full-body characters on every phone, the video's board / windows / stalls / scoring / studio
+finale. Spec, as-built notes and the scorecard: `docs/specs/ojos-de-halcon.md`. 2026-10-14 (his decisions): rivals'
+looks stay hidden until the reveal (they show «listo ✓», then everybody snaps to their window at once, like the
+video), and the first attempt «Ojo de Halcón» (`look`) is retired and removed (replaced by Ojos de Halcón; recover
+from commit 83dbcbd04 if ever needed). Open: recorded «¡Sí!» / «Aww» crowd voices (local voice studio) instead of the
+sax jingles; the next minigame of the series reuses `core/halcon.js` (boards, seats, speed ranks, hidden looks) +
+`js/halcon-board.js` (board + studio).
 
 ## La Gran Fuga de Dubái — new co-op chase pin game ✅ BUILT 2026-10-13 (branch, not deployed)
 
