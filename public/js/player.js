@@ -38,6 +38,10 @@
   if (window.MochiPhone) {
     window.MochiPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
   }
+  // Piñata Tigre v2 phone module (public/js/player-pinata.js): run-in, the hit with the timing meter, banners, ceremony
+  if (window.PinataPhone) {
+    window.PinataPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
+  }
   // (legacy timer kept for any reference; bulletproof flow below replaces it)
 
   // === Global stuck-watchdog ===
@@ -376,7 +380,7 @@
       'reading':     'rd',
       'sixseven':    'sixseven',
       'mochi-mash':  'question',
-      'pinata':      'pinata-smash',
+      'pinata':      'question',     // the hit screen opens itself after a right answer (player-pinata.js)
       'dragon-eye':  'dragon-flap',
       'monopoly':    'monopoly-roll',
       'kingdoms':    'question',
@@ -437,7 +441,6 @@
     const nameWithAv = av ? `${av} ${myName || ''}`.trim() : (myName || '');
     if ($('player-name-tag')) $('player-name-tag').textContent = nameWithAv;
     if ($('mash-name-tag'))   $('mash-name-tag').textContent   = nameWithAv;
-    if ($('pn-smash-name'))   $('pn-smash-name').textContent   = nameWithAv;
     // Lobby mascot: avatar · team-mascot combo. Re-build via updateTeamUI.
   }
 
@@ -955,8 +958,9 @@
     // Lobby title varies by game type
     let teamLabel, teamMascot;
     if (gameType === 'pinata') {
-      teamLabel = isRed ? 'Equipo Bastón 紅棍' : 'Equipo Arco 金弓';
-      teamMascot = isRed ? '🥢' : '🏹';
+      // Piñata Tigre (since the 2026-10-15 remake: Fuego vs Mar, each team breaks its ladder of tiger piñatas)
+      teamLabel = isRed ? 'Equipo Fuego' : 'Equipo Mar';
+      teamMascot = isRed ? '🔥' : '🌊';
     } else if (gameType === 'dragon-eye') {
       teamLabel = isRed ? 'Equipo Pincel 紅毛筆' : 'Equipo Tinta 金墨水';
       teamMascot = isRed ? '✒️' : '🖌️';
@@ -1007,15 +1011,7 @@
       mashBtn.classList.remove('red', 'gold');
       mashBtn.classList.add(team);
     }
-    if ($('mash-mascot')) {
-      // Piñata reskins the mash button: the target IS the tiger; the team
-      // identity is read from the stick/bow emoji elsewhere.
-      if (gameType === 'pinata') {
-        $('mash-mascot').textContent = '🐯';
-      } else {
-        $('mash-mascot').textContent = '🍡';
-      }
-    }
+    if ($('mash-mascot')) $('mash-mascot').textContent = '🍡';
   }
 
   socket.on('team-changed', ({ team: newTeam }) => {
@@ -2814,8 +2810,8 @@
       fireRewardForCorrect();
       let happyMascot, sub;
       if (gameType === 'pinata') {
-        happyMascot = team === 'red' ? '🥢' : '🏹';
-        sub = '¡Golpea la piñata! 🐯💥';
+        happyMascot = '🎯';                // (player-pinata.js redraws this screen with the team's tiger)
+        sub = '¡Prepárate para golpear!';
       } else if (gameType === 'dragon-eye') {
         happyMascot = team === 'red' ? '🐉' : '🐲';
         sub = '¡A volar! Toca rápido para subir ☁️';
@@ -2846,8 +2842,7 @@
       if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
       setTimeout(() => {
         if (gameType === 'pinata') {
-          mashEndTime = mashUntil;
-          startPinataSmash();
+          // Piñata Tigre v2: player-pinata.js opens the hit screen at the server's lead-in (it listens to answer-result)
         } else if (gameType === 'dragon-eye') {
           // Dragon flight: SWIPE-UP gesture, NOT tap mashing. Each upswipe
           // gestures sends a player:tap (server logic unchanged) but the
@@ -2911,141 +2906,6 @@
       s.style.setProperty('--rot', (Math.random() * 720) + 'deg');
       document.body.appendChild(s);
       setTimeout(() => s.remove(), 900);
-    }
-  }
-
-  // === Piñata smash screen — the real interaction. ===
-  // Hanging tiger that swings, a wooden Mexican stick at the bottom-right that
-  // arcs up to hit on every tap, and candies that burst from the tiger and fall.
-  let pnSmashTimerInt = null;
-  let pnSmashTaps = 0;
-  let pnSmashActive = false;
-
-  function startPinataSmash() {
-    pnSmashActive = true;
-    pnSmashTaps = 0;
-    document.body.classList.add('pinata-active');
-    if ($('pn-smash-name-tag')) {
-      const a = getMyAvatar();
-      $('pn-smash-name-tag').textContent = a ? `${a} ${myName}` : myName;
-    }
-    if ($('pn-smash-score')) $('pn-smash-score').textContent = myScore;
-    if ($('pn-smash-header')) $('pn-smash-header').className = `player-header ${team}`;
-    // Reset tiger
-    const tiger = $('pn-smash-tiger');
-    const tigerWrap = $('pn-smash-tiger-wrap');
-    if (tiger) {
-      tiger.textContent = '🐯';
-      tiger.classList.remove('hit', 'angry');
-    }
-    if (tigerWrap) tigerWrap.classList.remove('damaged');
-    // Clear any leftover candies
-    const layer = $('pn-smash-candy-layer');
-    if (layer) layer.innerHTML = '';
-    // Reset timer fill
-    const fill = $('pn-smash-timer-fill');
-    if (fill) fill.style.width = '100%';
-    showScreen('pinata-smash');
-    // Bind tap button
-    const btn = $('pn-smash-tap-btn');
-    if (btn) {
-      btn.onpointerdown = (e) => {
-        e.preventDefault();
-        pnHandleSmashTap();
-      };
-    }
-    // Also let the player tap the tiger directly
-    if (tigerWrap) {
-      tigerWrap.onpointerdown = (e) => {
-        e.preventDefault();
-        pnHandleSmashTap();
-      };
-    }
-    // Timer
-    if (pnSmashTimerInt) clearInterval(pnSmashTimerInt);
-    const totalDur = mashEndTime - Date.now();
-    pnSmashTimerInt = setInterval(() => {
-      const remaining = Math.max(0, mashEndTime - Date.now());
-      if (fill) fill.style.width = ((remaining / totalDur) * 100) + '%';
-      if (remaining <= 0) {
-        clearInterval(pnSmashTimerInt);
-        pnSmashTimerInt = null;
-        pnSmashActive = false;
-        document.body.classList.remove('pinata-active');
-        // The next 'question' event will move us to screen-question naturally.
-      }
-    }, 50);
-  }
-
-  // Called from inside the tap-ack handler when piñata is the active game. We
-  // animate the stick swing + spawn candies + shake the tiger. The actual tap
-  // event was already sent to the server by the regular mash flow.
-  function pnSmashScreenTap() {
-    if (!pnSmashActive) return;
-    pnSmashTaps++;
-    if ($('pn-smash-score')) $('pn-smash-score').textContent = myScore;
-    const stick = $('pn-smash-stick');
-    if (stick) {
-      stick.classList.remove('swing');
-      void stick.offsetWidth;
-      stick.classList.add('swing');
-    }
-    const tigerWrap = $('pn-smash-tiger-wrap');
-    if (tigerWrap) {
-      tigerWrap.classList.remove('shake');
-      void tigerWrap.offsetWidth;
-      tigerWrap.classList.add('shake');
-      // After ~8 taps the tiger looks visibly damaged
-      if (pnSmashTaps > 8) tigerWrap.classList.add('damaged');
-      // Tiger face turns angry after a while (no demon)
-      const tiger = $('pn-smash-tiger');
-      if (tiger && pnSmashTaps > 6) tiger.textContent = '😾';
-    }
-    spawnPnCandyBurst();
-  }
-
-  function pnHandleSmashTap() {
-    if (!pnSmashActive) return;
-    if (Date.now() > mashEndTime) {
-      pnSmashActive = false;
-      document.body.classList.remove('pinata-active');
-      return;
-    }
-    if (navigator.vibrate) navigator.vibrate(15);
-    MochiSounds.tap && MochiSounds.tap();
-    // Send tap to server — server emits tap-ack, which calls pnSmashScreenTap
-    // for the animations. We do the visuals optimistically here too so it feels
-    // instant even on a slow connection.
-    socket.emit('player:tap', { pin });
-    pnSmashScreenTap();
-  }
-
-  function spawnPnCandyBurst() {
-    const layer = $('pn-smash-candy-layer');
-    if (!layer) return;
-    const tigerWrap = $('pn-smash-tiger-wrap');
-    if (!tigerWrap) return;
-    const stageRect = layer.getBoundingClientRect();
-    const tigerRect = tigerWrap.getBoundingClientRect();
-    const cx = tigerRect.left - stageRect.left + tigerRect.width / 2;
-    const cy = tigerRect.top - stageRect.top + tigerRect.height / 2;
-    const candies = ['🍬', '🍭', '🍫', '🧧', '🪙', '🥮', '🍡'];
-    const count = 3 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < count; i++) {
-      const c = document.createElement('div');
-      c.className = 'pn-candy';
-      c.textContent = candies[Math.floor(Math.random() * candies.length)];
-      c.style.left = cx + 'px';
-      c.style.top = cy + 'px';
-      const dx = (Math.random() - 0.5) * 280;
-      const dy = 220 + Math.random() * 180; // always falls down
-      const rot = (Math.random() * 720 - 360) + 'deg';
-      c.style.setProperty('--dx', dx + 'px');
-      c.style.setProperty('--dy', dy + 'px');
-      c.style.setProperty('--rot', rot);
-      c.style.animationDuration = (0.9 + Math.random() * 0.4) + 's';
-      layer.appendChild(c);
-      setTimeout(() => c.remove(), 1500);
     }
   }
 
@@ -3982,23 +3842,10 @@
     const mashBtn = $('mash-button');
     let localTaps = 0;
 
-    // Re-skin the headline / hint + button based on game
-    if (gameType === 'pinata') {
-      document.body.classList.add('pinata-active');
-      document.body.classList.remove('dragon-flying-active');
-      if ($('mash-headline')) $('mash-headline').innerHTML = '🥢 ¡ROMPE EL TIGRE!';
-      if ($('mash-hint')) $('mash-hint').innerHTML = 'Cada toque = un golpe a tu tigre. ¡Sigue golpeando hasta romperlo!';
-      const mascotEl = $('mash-mascot');
-      if (mascotEl) {
-        mascotEl.textContent = '🐯';
-        mascotEl.classList.remove('pinata-angry', 'pinata-furious', 'pinata-hit');
-        mascotEl._pnTaps = 0;
-      }
-    } else {
-      document.body.classList.remove('pinata-active', 'dragon-flying-active');
-      if ($('mash-headline')) $('mash-headline').innerHTML = '⚡ ¡A APLASTAR! ⚡';
-      if ($('mash-hint')) $('mash-hint').innerHTML = '¡TOCA, TOCA, TOCA! 🔥 8/seg = combo';
-    }
+    // (the headline / hint of the legacy mash screen)
+    document.body.classList.remove('dragon-flying-active');
+    if ($('mash-headline')) $('mash-headline').innerHTML = '⚡ ¡A APLASTAR! ⚡';
+    if ($('mash-hint')) $('mash-hint').innerHTML = '¡TOCA, TOCA, TOCA! 🔥 8/seg = combo';
 
     // Reset button state
     mashBtn.classList.remove('combo', 'idle', 'tapped');
@@ -4015,7 +3862,7 @@
       mashBtn.classList.add('idle');
       mashBtn.classList.remove('combo');
       // Strip game-specific body classes so the next question screen is clean
-      document.body.classList.remove('pinata-active', 'dragon-flying-active');
+      document.body.classList.remove('dragon-flying-active');
       if (mashTapHandler) {
         mashBtn.removeEventListener('pointerdown', mashTapHandler);
         mashTapHandler = null;
@@ -4073,30 +3920,6 @@
       }
     } else {
       $('mash-button').classList.remove('combo');
-    }
-    // Piñata: tiger gets visibly angrier the more you tap during this window.
-    // Stage 1: 🐯 calm, Stage 2: 😾 annoyed, Stage 3: 👹 furious.
-    if (gameType === 'pinata') {
-      // The brand-new piñata smash screen has its own per-tap visuals — see
-      // pnSmashScreenTap() below. The legacy mash-mascot reskin only runs as a
-      // fallback if for any reason the player ended up on the standard mash
-      // screen. No demon face — just calm tiger → angry cat (per user feedback).
-      const mascotEl = $('mash-mascot');
-      if (mascotEl) {
-        const tapsThisRound = (mascotEl._pnTaps || 0) + 1;
-        mascotEl._pnTaps = tapsThisRound;
-        const face = tapsThisRound > 6 ? '😾' : '🐯';
-        if (mascotEl.textContent !== face) mascotEl.textContent = face;
-        mascotEl.classList.remove('pinata-furious');
-        if (tapsThisRound > 6) mascotEl.classList.add('pinata-angry');
-        mascotEl.classList.remove('pinata-hit');
-        void mascotEl.offsetWidth;
-        mascotEl.classList.add('pinata-hit');
-        if (MochiSounds.thwack) MochiSounds.thwack();
-      }
-      pnSmashScreenTap();
-    } else if (gameType === 'dragon-eye') {
-      // Dragon: visuals happen at swipe-time on the flap screen.
     }
   });
 
@@ -4233,7 +4056,7 @@
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'mochi', 'pinata-smash', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'kd-plant', 'paint', 'snow', 'escape', 'halcon', 'wu', 'rd', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'mochi', 'pinata', 'dragon-flap', 'monopoly-welcome', 'monopoly-roll', 'sixseven', 'kd-plant', 'paint', 'snow', 'escape', 'halcon', 'wu', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });

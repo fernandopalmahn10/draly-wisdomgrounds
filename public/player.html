@@ -14,7 +14,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20261014a">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/pinata.css">
   <link rel="stylesheet" href="/css/dragon.css">
   <link rel="stylesheet" href="/css/monopoly.css?v=20260520c">
   <link rel="stylesheet" href="/css/sixseven.css?v=20260520c">
@@ -26,6 +25,7 @@
   <link rel="stylesheet" href="/css/escape.css?v=20261013b">
   <link rel="stylesheet" href="/css/halcon.css?v=20261014a">
   <link rel="stylesheet" href="/css/mochi.css?v=20261014a">
+  <link rel="stylesheet" href="/css/pinata.css?v=20261015b">
   <!-- Lobby layout + lobby mini-game (the little plane while kids wait).
        These rules used to live in flappy.css, which was deleted with the
        retired Flappy Dragon game (2026-10-10); the lobby itself is shared. -->
@@ -268,40 +268,6 @@
       <div class="dr-flap-popup-layer" id="dr-flap-popup-layer"></div>
     </div>
     <div class="dr-flap-hint">Toca y arrastra HACIA ARRIBA cualquier parte de la pantalla 🐉💨</div>
-  </div>
-
-  <!-- PIÑATA SMASH — replaces the generic mash screen for piñata.
-       Player taps anywhere on the scene: a Mexican wooden stick swings up
-       and hits the tiger; candies burst out and fall. -->
-  <div id="screen-pinata-smash" class="hidden player-screen pn-smash-screen">
-    <div class="player-header" id="pn-smash-header">
-      <span id="pn-smash-name-tag">You</span>
-      <span>Golpes: <span id="pn-smash-score">0</span></span>
-    </div>
-    <div class="pn-smash-headline">🎉 ¡ROMPE LA PIÑATA! 🎉</div>
-    <div class="pn-smash-stage" id="pn-smash-stage">
-      <div class="pn-smash-rope"></div>
-      <div class="pn-smash-tiger-wrap" id="pn-smash-tiger-wrap">
-        <div class="pn-smash-tiger" id="pn-smash-tiger">🐯</div>
-      </div>
-      <!-- Candies burst from tiger position into this layer -->
-      <div class="pn-smash-candy-layer" id="pn-smash-candy-layer"></div>
-      <!-- Wooden Mexican piñata stick: bottom-right, swings up on each tap -->
-      <div class="pn-smash-stick" id="pn-smash-stick">
-        <div class="pn-smash-stick-shaft"></div>
-        <div class="pn-smash-stick-grip"></div>
-        <div class="pn-smash-stick-ribbon r1"></div>
-        <div class="pn-smash-stick-ribbon r2"></div>
-        <div class="pn-smash-stick-ribbon r3"></div>
-      </div>
-    </div>
-    <div class="pn-smash-timer-wrap">
-      <div class="pn-smash-timer-fill" id="pn-smash-timer-fill"></div>
-    </div>
-    <button class="pn-smash-tap-btn" id="pn-smash-tap-btn">
-      🥢 <span style="margin: 0 8px;">¡GOLPEAR!</span> 🥢
-    </button>
-    <p class="pn-smash-hint">Toca el botón rápido — cada golpe rompe más al tigre 🐯💥</p>
   </div>
 
   <!-- ENDED -->
@@ -666,6 +632,41 @@
   <div class="mm-pause hidden" id="mm-pause" role="alert"><div><img src="/assets/dralingo/wise.webp" alt=""><b>Pausa</b><span>Mira al profe</span></div></div>
   <div class="mm-final hidden" id="mm-final"><b>¡FINAL!</b></div>
 
+  <!-- Piñata Tigre v2 (js/player-pinata.js + js/pinata-stage.js + css/pinata.css): the hit. The whole screen is the
+       button: one tap stops the arrow on the meter and the kid's character swings at the team's tiger piñata. -->
+  <div id="screen-pinata" class="hidden">
+    <div class="ptz" id="ptz" role="button" tabindex="0" aria-label="Toca cuando la flecha esté en el dorado para golpear la piñata">
+      <div class="ptz-top">
+        <div class="ptz-meter" aria-hidden="true"><b class="ptz-mn r" id="ptz-rn">0</b><div class="ptz-mbar"><i id="ptz-mr"></i></div><b class="ptz-mn g" id="ptz-gn">0</b></div>
+        <div class="ptz-status" id="ptz-status"></div>
+      </div>
+      <div class="ptz-stage">
+        <div class="ptz-tier" id="ptz-tier"><img id="ptz-tier-img" alt=""><span><b id="ptz-tier-name"></b><i class="ptz-life"><i id="ptz-life"></i></i></span></div>
+        <div class="ptz-tiger" id="ptz-tiger"></div>
+        <div class="ptz-kid" id="ptz-kid"></div>
+        <div class="ptz-count"><b id="ptz-n">0</b><span>caramelos</span></div>
+        <div class="ptz-notes" id="ptz-notes"></div>
+        <div class="ptz-streak" id="ptz-streak"></div>
+        <div class="ptz-stamp" id="ptz-stamp" aria-live="polite"></div>
+      </div>
+      <div class="ptz-foot">
+        <div class="ptz-hint" id="ptz-hint">¡Toca en el dorado!</div>
+        <div class="ptz-meterbox" id="ptz-meterbox"><i class="pt-hand ptz-hand" aria-hidden="true"></i></div>
+        <div class="ptz-bar"><i id="ptz-bar"></i></div>
+      </div>
+      <i class="ptz-flash" id="ptz-flash" aria-hidden="true"></i>
+    </div>
+    <div class="ptz-conf" id="ptz-conf" aria-hidden="true"></div>
+    <div class="ptz-fx" id="ptz-fx" aria-hidden="true"></div>
+    <div class="ptz-big" id="ptz-big" aria-live="polite"></div>
+  </div>
+  <!-- Piñata Tigre overlays: the run-in / rules card, the top-edge banners, the 30-s chip, the pause card, «¡FINAL!» -->
+  <div class="pt-intro hidden" id="pt-intro"></div>
+  <div class="pt-banner" id="pt-banner" role="status" aria-live="polite"></div>
+  <div class="pt-chip hidden" id="pt-chip"><span>Doble golpe</span><b>0:30</b></div>
+  <div class="pt-pause hidden" id="pt-pause" role="alert"><div><img src="/assets/dralingo/wise.webp" alt=""><b>Pausa</b><span>Mira al profe</span></div></div>
+  <div class="pt-final hidden" id="pt-final"><b>¡FINAL!</b></div>
+
   <div id="screen-end" class="hidden player-screen" style="justify-content:center; align-items:center;">
     <div class="win-screen">
       <div id="end-emoji" style="font-size:6rem;">🎉</div>
@@ -684,7 +685,7 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261014b"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261015a"></script>
   <script src="/js/player-kingdoms.js?v=20261011f"></script>
   <script src="/js/paint-render.js?v=20261011a"></script>
   <script src="/js/player-paint.js?v=20261011e"></script>
@@ -697,11 +698,13 @@
   <script src="/js/halcon-board.js?v=20261014a"></script>
   <script src="/js/player-halcon.js?v=20261014a"></script>
   <script src="/js/mochi-stage.js?v=20261014a"></script>
-  <script src="/js/player-mochi.js?v=20261014a"></script>
-  <script src="/js/cast.js?v=20261014a"></script>
+  <script src="/js/player-mochi.js?v=20261015a"></script>
+  <script src="/js/pinata-stage.js?v=20261015b"></script>
+  <script src="/js/player-pinata.js?v=20261015b"></script>
+  <script src="/js/cast.js?v=20261015a"></script>
   <script src="/js/dralingo-fx.js?v=20261013a"></script>
   <script src="/js/saga.js?v=20261013a"></script>
-  <script src="/js/player.js?v=20261014b"></script>
+  <script src="/js/player.js?v=20261015a"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

@@ -35,6 +35,7 @@ const Escape = require('./core/escape');             // La Gran Fuga de Dubái (
 const EscapeMap = require('./public/js/escape-map'); // … and its zona segura rooms, shared with the phones and the projector
 const Halcon = require('./core/halcon');             // Ojos de Halcón: Mario Party «Looking for Love» in boards of 4 (rules)
 const Mochi = require('./core/mochi');               // Mochi Mash v2: «La Terraza del Mochi», team mash + ceremony (rules)
+const Pinata = require('./core/pinata');             // Piñata Tigre v2: «La Fiesta de las Piñatas», team hits + timing meter (rules)
 // Tiny persistence for the owner's Emirati Arabic gateway (single global
 // profile, since this is a super-admin-only personal feature). Lives on the
 // same data disk as the rest of the JSON state.
@@ -4306,15 +4307,6 @@ const MP_FESTIVAL_BONUS = 150;
 const MP_DICE_MIN       = 1;
 const MP_DICE_MAX       = 6;
 
-// === Piñata Tigre constants ===
-// Each TEAM has its own tiger piñata on the host screen. Players play it like
-// Mochi Mash: answer a vocab question right → unlocks a short "smash mode"
-// where every tap = swing of their stick = 1 damage to their team's tiger.
-// First tiger to reach 0 HP loses (their opponents broke the most piñata).
-const PN_TIGER_HP   = 220;   // each tiger's HP — tuned so a ~3 min match breaks one
-const PN_MASH_MS    = 5000;  // smash-mode duration after correct answer
-const PN_HP_BCAST_MS = 100;  // throttle HP broadcasts to ~10 Hz
-
 function genPin() {
   // Prefer short 3-digit PINs (100-999) so kids can type them in 1 second.
   // If we ever have so many active games that 3-digit space is exhausted
@@ -4348,7 +4340,8 @@ function publicState(game) {
     players: Object.fromEntries(
       Object.entries(game.players).map(([id, p]) => [
         id,
-        Object.assign({ name: p.name, team: p.team, score: p.score, avatar: p.avatar || '' }, p.disconnected ? { off: true } : {}, p.mmId ? { k: p.mmId, sk: hcSkin(p) } : {})
+        Object.assign({ name: p.name, team: p.team, score: p.score, avatar: p.avatar || '' }, p.disconnected ? { off: true } : {},
+          p.mmId ? { k: p.mmId, sk: hcSkin(p) } : {}, game.gameType === 'pinata' && p.pnId ? { k: p.pnId, sk: hcSkin(p) } : {})
       ])
     ),
     feed: game.feed.slice(-12)
@@ -5739,6 +5732,239 @@ function mmFinish(pin, g) {
   });
 }
 
+// === 🐯 PIÑATA TIGRE v2 (gameType 'pinata') — «La Fiesta de las Piñatas», team hits + a server-judged timing meter ===
+// Rules in core/pinata.js (spec docs/specs/pinata-tigre-v2.md). Fuego ('red') and Mar ('gold') each break a ladder of
+// tiger piñatas under Dubai landmarks: EVERY right answer is a hit for that kid. The answer-result carries the swing (the
+// arrow's random start), then pn:ping WITH an ack measures this phone's round trip; the phone's tap (player:pn-hit, the
+// ms on its own arrow clock) is accepted only within ± TOL of the server's estimate. One 250 ms tick per room runs the
+// clock: intro → play (questions dealt) → frenzy (last 30 s) → «¡FINAL!» → game-end (each phone its own card, the
+// projector everything). Meter: the projector every tick (with who hit: f), phones every other tick and only when it
+// changed. No full-room 'state' push on answers.
+const PN_TICK_MS = 250;
+function pnEnsureId(g, p) { if (!p.pnId) p.pnId = (g.pnNextId = (g.pnNextId || 0) + 1); return p.pnId; }
+function pnRoster(g) {
+  return Object.values(g.players).filter((p) => p.pnId).map((p) => ({ k: p.pnId, name: p.name, skin: hcSkin(p), team: p.team, on: !p.disconnected }));
+}
+const pnMeter = (m) => Object.assign(Pinata.display(m), { b: m.behind });
+function pnInitPayload(g, pid) {
+  const m = g.pn;
+  const now = Date.now();
+  const clock = m.paused ? m.pausedAt : now;
+  const p = pid ? g.players[pid] : null;
+  return {
+    id: m.id, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock), paused: !!m.paused,
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzy: !!m.frenzy,
+    frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null, duration: m.duration,
+    meter: pnMeter(m), E: m.E, lead: m.lead, ladder: Pinata.ladder(m),
+    roster: pnRoster(g), captains: g.pnCaptains || null,
+    you: p ? { k: p.pnId, team: p.team, candy: p.pnCandy || 0, streak: p.pnStreak || 0, right: p.pnRight || 0, hits: p.pnHits || 0 } : null,
+  };
+}
+function pnStop(g) { if (g && g.pn && g.pn.timer) { clearInterval(g.pn.timer); g.pn.timer = null; } }
+// a late joiner early in the game makes the ladder longer (core rescale)
+function pnRescale(pin, g) {
+  const m = g.pn;
+  if (!m || !Pinata.rescale(m, Pinata.teamSizes(g.players), Date.now())) return;
+  io.to(pin).emit('pn:scale', { id: m.id, E: m.E, ladder: Pinata.ladder(m), meter: pnMeter(m) });
+}
+// The countdown is over: the intro («¡Para la flecha en el dorado!» → «¿Listos?» → «¡YA!»), then pnPlay deals questions.
+function pnStart(pin, g) {
+  pnStop(g);
+  const now = Date.now();
+  const m = Pinata.newGame(1 + Math.floor(Math.random() * 1e9), g.duration, now, Pinata.teamSizes(g.players));
+  g.pn = m;
+  Object.values(g.players).forEach((p) => { pnEnsureId(g, p); Pinata.resetKid(p, m); p.currentQ = null; p.mashUntil = 0; p.lastQuestionAt = now; });
+  g.endsAt = now + Pinata.R.INTRO_MS + m.duration * 1000;
+  io.to(g.hostId).emit('pn:init', pnInitPayload(g, null));
+  Object.entries(g.players).forEach(([pid, p]) => { if (!p.disconnected) io.to(pid).emit('pn:init', pnInitPayload(g, pid)); });
+  m.timer = setInterval(() => pnTick(pin, m), PN_TICK_MS);
+}
+function pnPlay(pin, g) {
+  const m = g.pn;
+  if (!m || m.phase !== 'intro') return;
+  const now = Date.now();
+  Pinata.startPlay(m, now);
+  g.endsAt = m.endsAt;
+  io.to(pin).emit('pn:play', { id: m.id, endsMs: m.endsAt - now, frenzyMs: m.frenzyAt - now });
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected || p.currentQ) return;
+    const q = nextQuestionFor(g, pid);
+    if (q) io.to(pid).emit('question', q);
+  });
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// A tap (or an automatic hit) judged: the kid's own result, every broken tiger to the whole room.
+function pnApplyHit(pin, g, pid, p, hid, c, auto, now) {
+  const m = g.pn;
+  const h = Pinata.hit(m, p, Number.isFinite(hid) ? hid : null, c, auto, now);
+  if (!h) { if (!p.disconnected && Number.isFinite(hid)) io.to(pid).emit('pn:nohit', { hid, paused: !!m.paused }); return null; }
+  p.mashUntil = p.pnNextQAt + 1000;                        // keeps the global watchdog away until the tick deals the next one
+  const meter = h.bursts.length ? pnMeter(m) : null;
+  if (!p.disconnected) io.to(pid).emit('pn:hit', Object.assign({ meter }, h));
+  h.bursts.forEach((b) => io.to(pin).emit('pn:burst', Object.assign({ who: p.name, k: p.pnId, meter: pnMeter(m) }, b)));
+  return h;
+}
+function pnTick(pin, m) {
+  const g = games[pin];
+  if (!g || g.pn !== m || g.state !== 'active') { clearInterval(m.timer); m.timer = null; return; }
+  if (m.paused) return;
+  const now = Date.now();
+  try {
+    if (m.phase === 'intro') { if (now >= m.phaseUntil) pnPlay(pin, g); return; }
+    if (m.phase === 'play' || m.phase === 'final') {
+      m.w = Pinata.weights(Pinata.teamSizes(g.players));
+      Object.entries(g.players).forEach(([pid, p]) => {
+        if (!Pinata.inGame(m, p)) return;
+        // a swing nobody tapped (or whose tap never arrived): an automatic hit, the right answer is not lost
+        if (p.pnSwing && now >= Pinata.cutAt(m, p.pnSwing)) pnApplyHit(pin, g, pid, p, null, null, true, now);
+        if (m.phase === 'play' && !p.pnSwing && !p.currentQ && (!p.pnNextQAt || now >= p.pnNextQAt) && !p.disconnected) {
+          p.pnNextQAt = 0;
+          const q = nextQuestionFor(g, pid);
+          if (q) io.to(pid).emit('question', q);
+        }
+      });
+    }
+    if (m.phase === 'play') {
+      const ev = Pinata.tick(m, now);
+      if (ev.lead) io.to(pin).emit('pn:lead', Object.assign({ meter: pnMeter(m) }, ev.lead));
+      if (ev.frenzy) io.to(pin).emit('pn:frenzy', { endsMs: Math.max(0, m.endsAt - now) });
+    }
+    // the meter: the projector every tick (with who hit), phones every other tick, only when something changed
+    const fx = Object.entries(m.fx).map(([k, v]) => [Number(k), v[0], v[1]]);
+    m.fx = {};
+    const d = pnMeter(m);
+    const key = [d.r, d.g, d.tr, d.tg, d.hr, d.hg, d.lr, d.lg, d.b].join(':');
+    if (fx.length || key !== m.hostKey) { m.hostKey = key; io.to(g.hostId).emit('pn:meter', Object.assign({ f: fx }, d)); }
+    m.beat = (m.beat || 0) + 1;
+    if (m.beat % 2 === 0 && key !== m.kidKey) { m.kidKey = key; io.to(pin).except(g.hostId).emit('pn:meter', d); }
+    if (m.phase === 'play' && now >= m.endsAt) pnFinal(pin, g);
+    else if (m.phase === 'final' && now >= m.phaseUntil) {
+      Object.entries(g.players).forEach(([pid, p]) => { if (p.pnSwing && Pinata.inGame(m, p)) pnApplyHit(pin, g, pid, p, null, null, true, now); });
+      pnStop(g);
+      if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+      endGame(pin);
+    }
+  } catch (e) { console.error('[pinata] tick', e); }
+}
+// A right / wrong answer (player:answer). Right: the swing; its pin:ping ack measures the phone's round trip.
+function pnAnswer(pin, g, socket, p, correct, correctText) {
+  const now = Date.now();
+  const pid = socket.id;
+  const m = g.pn;
+  if (p.pnSwing) pnApplyHit(pin, g, pid, p, null, null, true, now);   // (defensive) never two swings at once
+  const r = Pinata.answer(m, p, correct, now - (p.lastQuestionAt || now), now);
+  if (r.right) {
+    p.pnNextQAt = 0;
+    p.mashUntil = Pinata.closeAt(p.pnSwing) + Pinata.R.BURST_MS + 1500;   // keeps the global watchdog away meanwhile
+    // the ping goes FIRST: the phone acks it before running its (heavier) answer-result handlers, so the round trip
+    // measured is the network's, not the page's
+    const hid = r.swing.hid;
+    try {
+      socket.timeout(Pinata.R.RTT_MAX).emit('pn:ping', { hid }, (err) => {
+        if (!err && g.pn === m && Pinata.inGame(m, p)) Pinata.ack(m, p, hid, Date.now());
+      });
+    } catch (e) { /* no ack: the default round trip */ }
+    io.to(pid).emit('answer-result', { correct: true, correctText, pinata: Object.assign({ streak: r.streak }, r.swing) });
+  } else {
+    // the room's tick deals the next question after the «¡Casi!» wait (pause-shifted, cancelled by «¡FINAL!» / reset)
+    p.pnNextQAt = now + r.wait;
+    p.mashUntil = now + r.wait + 1000;
+    io.to(pid).emit('answer-result', { correct: false, correctText, pinata: { wait: r.wait, streak: 0 } });
+  }
+}
+// «¡FINAL!» on every screen; the tick ends the game FINAL_MS later (taps already on their way still count).
+function pnFinal(pin, g) {
+  const m = g.pn;
+  if (!m || m.phase === 'final' || m.phase === 'done') return;
+  const now = Date.now();
+  if (m.paused) {
+    const shift = now - m.pausedAt;
+    Pinata.shiftTimes(m, shift);
+    Object.values(g.players).forEach((p) => Pinata.shiftSwing(p, shift));
+    m.paused = false;
+  }
+  Pinata.final(m, now);
+  Object.values(g.players).forEach((p) => { p.currentQ = null; p.pnNextQAt = 0; });
+  io.to(pin).emit('pn:final', { id: m.id, ms: Pinata.R.FINAL_MS, meter: pnMeter(m) });
+  if (!m.timer) m.timer = setInterval(() => pnTick(pin, m), PN_TICK_MS);
+}
+function pnPause(pin, g, paused) {
+  const m = g.pn;
+  if (!m || !!m.paused === !!paused || m.phase === 'final' || m.phase === 'done') return;
+  const now = Date.now();
+  if (paused) { m.paused = true; m.pausedAt = now; }
+  else {
+    const shift = now - m.pausedAt;
+    Pinata.shiftTimes(m, shift);
+    Object.values(g.players).forEach((p) => { Pinata.shiftSwing(p, shift); if (p.mashUntil) p.mashUntil += shift; });
+    if (g.endsAt) g.endsAt += shift;
+    m.paused = false;
+  }
+  const clock = m.paused ? m.pausedAt : now;
+  io.to(pin).emit('pn:pause', {
+    id: m.id, paused: !!m.paused, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock),
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null,
+  });
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// The end: candies, winner, bonus stars; each phone its own card (built again on demand for a reconnect).
+function pnEndPayloads(g) {
+  const m = g.pn;
+  const rows = Object.values(g.players).filter((p) => Pinata.inGame(m, p)).map((p) => ({
+    k: p.pnId, name: p.name, skin: hcSkin(p), team: p.team, candy: p.pnCandy || 0, hits: p.pnHits || 0, crits: p.pnCrits || 0,
+    right: p.pnRight || 0, answered: p.pnAnswered || 0, best: p.pnBest || 0, fast: p.pnFast, behind: p.pnBehind || 0, bursts: p.pnBursts || 0,
+  }));
+  const fin = Pinata.finish(m, rows);
+  const byK = {};
+  fin.rows.forEach((r) => { byK[r.k] = r; });
+  const lite = (r) => r && { k: r.k, name: r.name, skin: r.skin, team: r.team, candy: r.candy, rank: r.rank, stars: r.stars };
+  const stars = fin.stars.map((s) => ({ id: s.id, name: s.name, unit: s.unit, value: s.value, n: s.winners.length, who: s.winners.slice(0, 4).map((k) => lite(byK[k])) }));
+  const common = {
+    winner: fin.winner,
+    teamScores: { red: fin.totals.r, gold: fin.totals.g },
+    pinata: {
+      totals: fin.totals, winner: fin.winner, stars, landmarks: fin.landmarks, tiers: fin.tiers, E: m.E, count: fin.rows.length,
+      captains: g.pnCaptains || null,
+      top: fin.rows.slice(0, 10).map(lite), mvp: { red: lite(byK[fin.mvp.red]), gold: lite(byK[fin.mvp.gold]) },
+      teams: { red: fin.rows.filter((r) => r.team === 'red').slice(0, 12).map(lite), gold: fin.rows.filter((r) => r.team === 'gold').slice(0, 12).map(lite) },
+    },
+  };
+  return {
+    host: Object.assign({ leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.candy, team: r.team })) }, common),
+    forPlayer(pid) {
+      const p = g.players[pid];
+      if (!p || !Pinata.inGame(m, p)) return null;
+      const r = byK[p.pnId];
+      if (!r) return null;
+      return Object.assign({}, common, {
+        scores: { [pid]: r.candy },
+        me: {
+          k: r.k, team: r.team, candy: r.candy, share: r.share, hits: r.hits, crits: r.crits, right: r.right, answered: r.answered,
+          best: r.best, fast: r.fast, bursts: r.bursts, stars: r.stars, rank: r.rank, of: fin.rows.length,
+          won: fin.winner === r.team, tie: fin.winner === 'tie', mvp: fin.mvp[r.team] === r.k,
+        },
+      });
+    },
+  };
+}
+function pnFinish(pin, g) {
+  const m = g.pn;
+  if (!m) return;
+  pnStop(g);
+  m.phase = 'done';
+  const end = pnEndPayloads(g);
+  g.teamScores = end.host.teamScores;
+  Object.values(g.players).forEach((p) => { if (Pinata.inGame(m, p)) p.score = p.pnCandy || 0; });   // the room's own score = candies
+  io.to(g.hostId).emit('game-end', end.host);
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected) return;
+    const one = end.forPlayer(pid);
+    if (one) io.to(pid).emit('game-end', one);
+  });
+}
+
 // === 🚀 LA GRAN FUGA DE DUBÁI (gameType 'escape') — Kahoot «Robot Run» style co-op chase, Dralingo episode ===
 // Rules in core/escape.js, rooms in public/js/escape-map.js (spec docs/specs/gran-fuga-de-dubai.md). The whole class
 // runs from Robotín through three Dubai zones: right answers are turbos (the run is server-timed, 10 Hz physics, 5 Hz
@@ -6066,6 +6292,13 @@ function endGame(pin) {
     broadcast(pin);
     return;
   }
+  // Piñata Tigre v2: candies, winner, bonus stars, each phone its own card (core/pinata.js finish()).
+  if (g.gameType === 'pinata' && g.pn) {
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+    pnFinish(pin, g);
+    broadcast(pin);
+    return;
+  }
   // Ojos de Halcón: each board's ranking + winner (its phones play the studio finale), the class ranking (core/halcon.js).
   if (g.gameType === 'halcon') {
     if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
@@ -6111,7 +6344,7 @@ io.on('connection', (socket) => {
     const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'halcon', 'warmup', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     const defaultDuration =
-      type === 'pinata'       ? 240 :
+      type === 'pinata'       ? Pinata.R.DURATION :  // 3 min (the lobby offers 2 / 3 / 4)
       type === 'dragon-eye'   ? 240 :
       type === 'monopoly'     ? 300 :
       type === 'sixseven'     ? 120 :
@@ -6251,6 +6484,9 @@ io.on('connection', (socket) => {
     // Mochi Mash: the terrace again (mid-game), or the ceremony again (after the end)
     if (g.gameType === 'mochi-mash' && g.mm && g.state === 'active') io.to(socket.id).emit('mm:init', mmInitPayload(g, null));
     if (g.gameType === 'mochi-mash' && g.mm && g.state === 'ended') io.to(socket.id).emit('game-end', mmEndPayloads(g).host);
+    // Piñata Tigre: the party again (mid-game), or the ceremony again (after the end)
+    if (g.gameType === 'pinata' && g.pn && g.state === 'active') io.to(socket.id).emit('pn:init', pnInitPayload(g, null));
+    if (g.gameType === 'pinata' && g.pn && g.state === 'ended') io.to(socket.id).emit('game-end', pnEndPayloads(g).host);
     cb({ ok: true, gameType: g.gameType, state: g.state });
   });
 
@@ -6328,7 +6564,7 @@ io.on('connection', (socket) => {
     if (!g || g.hostId !== socket.id) return;
     const p = g.players[playerId];
     if (!p) return;
-    if (g.gameType === 'mochi-mash' && g.state !== 'lobby') return;   // a kid's mochis belong to the team they fed
+    if ((g.gameType === 'mochi-mash' || g.gameType === 'pinata') && g.state !== 'lobby') return;   // a kid's points belong to the team they played for
     p.team = p.team === 'red' ? 'gold' : 'red';
     g.feed.push({ type: 'swap', name: p.name, team: p.team, t: Date.now() });
     io.to(playerId).emit('team-changed', { team: p.team });
@@ -6338,7 +6574,7 @@ io.on('connection', (socket) => {
   socket.on('host:auto-balance', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
-    if (g.gameType === 'mochi-mash' && g.state !== 'lobby') return;
+    if ((g.gameType === 'mochi-mash' || g.gameType === 'pinata') && g.state !== 'lobby') return;
     const ids = Object.keys(g.players).sort(() => Math.random() - 0.5);
     ids.forEach((id, i) => {
       g.players[id].team = i % 2 === 0 ? 'red' : 'gold';
@@ -6351,7 +6587,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
     // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
-    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash') && g.state !== 'lobby') return;
+    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
     // generated server-side or teacher-driven). Don't gate them on
     // questions.length, otherwise Start silently does nothing and the
@@ -6399,6 +6635,8 @@ io.on('connection', (socket) => {
     }
     // Mochi Mash: one of the gang captains each team (the run-in shows them; they cheer on lead changes and landmarks)
     if (g.gameType === 'mochi-mash') { g.mmCaptains = kdPickCaptains(g.mmCaptains); io.to(pin).emit('mm:captains', g.mmCaptains); }
+    // Piñata Tigre: the same (they cheer on hits, bursts, landmarks and lead changes)
+    if (g.gameType === 'pinata') { g.pnCaptains = kdPickCaptains(g.pnCaptains); io.to(pin).emit('pn:captains', g.pnCaptains); }
     io.to(pin).emit('countdown', { ms: COUNTDOWN_MS });
     // Ojos de Halcón: the boards are dealt now, so the countdown plays each board's run-in on its phones.
     if (g.gameType === 'halcon') hcDeal(pin, g);
@@ -6471,32 +6709,13 @@ io.on('connection', (socket) => {
         });
       }
 
-      // Piñata Tigre: two tigers (one per team), each with HP. Players answer
-      // questions like Mochi Mash — correct answer unlocks a 5s smash window
-      // where every tap deals 1 damage to THEIR team's tiger.
-      if (g.gameType === 'pinata') {
-        g.pinata = {
-          hpRed: PN_TIGER_HP,
-          hpGold: PN_TIGER_HP,
-          maxHp: PN_TIGER_HP,
-          brokenTeam: null
-        };
-        io.to(pin).emit('pn:init', {
-          hpRed: g.pinata.hpRed,
-          hpGold: g.pinata.hpGold,
-          maxHp: g.pinata.maxHp,
-          players: Object.fromEntries(
-            Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team }])
-          ),
-          teamScores: g.teamScores
-        });
-      }
       if (g.gameType === 'kingdoms') kdStart(pin, g);
       if (g.gameType === 'paint') pcStart(pin, g);
       if (g.gameType === 'snow') snStart(pin, g);
       if (g.gameType === 'escape') esStart(pin, g);
       if (g.gameType === 'halcon') hcStart(pin, g);
       if (g.gameType === 'mochi-mash') mmStart(pin, g);   // the intro first: mmPlay deals the questions and runs the clock
+      if (g.gameType === 'pinata') pnStart(pin, g);       // the same: pnPlay deals the questions and runs the clock
       if (g.gameType === 'reading') {
         // === 📖 READING MODE ===
         // Teacher-driven story session. Server holds the master playback
@@ -6569,11 +6788,11 @@ io.on('connection', (socket) => {
       }
       broadcast(pin);
       // Every question-driven game auto-deals the first question (Dragones Pintores: kids ask with «Recargar»).
-      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon' && g.gameType !== 'mochi-mash') Object.keys(g.players).forEach((pid) => {
+      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata') Object.keys(g.players).forEach((pid) => {
         const q = nextQuestionFor(g, pid);
         if (q) io.to(pid).emit('question', q);
       });
-      if (g.gameType !== 'mochi-mash') g.endTimer = setTimeout(() => {
+      if (g.gameType !== 'mochi-mash' && g.gameType !== 'pinata') g.endTimer = setTimeout(() => {
         if (!games[pin] || games[pin].state !== 'active') return;
         endGame(pin);
       }, g.duration * 1000);
@@ -6583,7 +6802,7 @@ io.on('connection', (socket) => {
   socket.on('host:end-now', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
-    if ((g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash') && g.state !== 'active') return;      // already over: no second end show
+    if ((g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata') && g.state !== 'active') return;      // already over: no second end show
     // Ojos de Halcón: «Terminar» plays «¡FINAL!» first (paused: straight to the finale, the pause holds every timer)
     if (g.gameType === 'halcon' && g.halcon && !g.halcon.paused) {
       if (g.halcon.phase === 'final') return;      // «¡FINAL!» is already on: the finale follows by itself
@@ -6593,6 +6812,12 @@ io.on('connection', (socket) => {
     if (g.gameType === 'mochi-mash' && g.mm) {
       if (g.state !== 'active' || g.mm.phase === 'final' || g.mm.phase === 'done') return;
       mmFinal(pin, g);
+      return;
+    }
+    // Piñata Tigre: the same («¡FINAL!» first, also from the pause card)
+    if (g.gameType === 'pinata' && g.pn) {
+      if (g.state !== 'active' || g.pn.phase === 'final' || g.pn.phase === 'done') return;
+      pnFinal(pin, g);
       return;
     }
     if (g.endTimer) clearTimeout(g.endTimer);
@@ -6612,6 +6837,11 @@ io.on('connection', (socket) => {
       mmStop(g);
       g.mm = null;
       Object.values(g.players).forEach((p) => { p.mmGame = null; p.mmMash = null; p.mmNextQAt = 0; });
+    }
+    if (g.gameType === 'pinata') {
+      pnStop(g);
+      g.pn = null;
+      Object.values(g.players).forEach((p) => { p.pnGame = null; p.pnSwing = null; p.pnNextQAt = 0; });
     }
     g.state = 'lobby';
     g.teamScores = { red: 0, gold: 0 };
@@ -6633,7 +6863,7 @@ io.on('connection', (socket) => {
     if (!g) return cb({ ok: false, error: 'No hay ningún juego con ese PIN. Revisa el número.' });
     // Mochi Mash / Ojos de Halcón: a kid of this game whose phone dropped around the end (a new socket) gets its slot
     // back and its own end card again, and stays in the room for «Otra ronda»
-    if (g.state === 'ended' && ((g.gameType === 'mochi-mash' && g.mm) || (g.gameType === 'halcon' && g.halcon))) {
+    if (g.state === 'ended' && ((g.gameType === 'mochi-mash' && g.mm) || (g.gameType === 'halcon' && g.halcon) || (g.gameType === 'pinata' && g.pn))) {
       const nm = String(name || '').trim().slice(0, 20).toLowerCase();
       const ex = nm ? Object.entries(g.players).find(([, p]) => p.name.toLowerCase() === nm) : null;
       if (ex) {
@@ -6647,7 +6877,8 @@ io.on('connection', (socket) => {
         socket.join(pin);
         cb({ ok: true, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: pl.studentCode });
         io.to(socket.id).emit('state', publicState(g));
-        const one = g.gameType === 'mochi-mash' ? mmEndPayloads(g).forPlayer(socket.id) : hcEndPayloads(g).forPlayer(socket.id);
+        const one = g.gameType === 'mochi-mash' ? mmEndPayloads(g).forPlayer(socket.id)
+          : g.gameType === 'pinata' ? pnEndPayloads(g).forPlayer(socket.id) : hcEndPayloads(g).forPlayer(socket.id);
         if (one) setTimeout(() => io.to(socket.id).emit('game-end', one), 60);
         return;
       }
@@ -6685,7 +6916,8 @@ io.on('connection', (socket) => {
       g.feed.push({ type: 'rejoin', name: cleanName, team: player.team, t: Date.now() });
     } else {
       // New player — pick smaller team (Mochi Mash: fewer CONNECTED kids, a tie goes to the team that is behind)
-      const team = g.gameType === 'mochi-mash' ? Mochi.pickTeam(g.players, g.mm) : pickTeam(g);
+      const team = g.gameType === 'mochi-mash' ? Mochi.pickTeam(g.players, g.mm)
+        : g.gameType === 'pinata' ? Pinata.pickTeam(g.players, g.pn) : pickTeam(g);
       player = {
         name: cleanName,
         team,
@@ -6710,6 +6942,7 @@ io.on('connection', (socket) => {
     const studentRec = Students.getOrCreate(studentCode, cleanName);
     player.studentCode = studentRec.code;
     if (g.gameType === 'mochi-mash') mmEnsureId(g, player);   // the projector knows every kid (k + character) from the lobby
+    if (g.gameType === 'pinata') pnEnsureId(g, player);
 
     currentPin = pin;
     role = 'player';
@@ -6860,6 +7093,22 @@ io.on('connection', (socket) => {
         }
         if (!player.currentQ && player.mmNextQAt) return;   // the «¡Casi!» wait or a window summary: the tick deals it
       }
+      // Piñata Tigre: a late joiner hits from now (fresh stats), a rejoin keeps its candies. A swing that was open when
+      // the phone dropped stays open until its window ends (a Wi-Fi blip: the phone re-sends its tap after the rejoin);
+      // past that, it is an automatic hit (the right answer is never lost). Questions only while the game is in play.
+      if (g.gameType === 'pinata' && g.pn) {
+        pnEnsureId(g, player);
+        Pinata.join(g.pn, player);
+        if (player.pnSwing && !g.pn.paused && Date.now() >= Pinata.cutAt(g.pn, player.pnSwing)) pnApplyHit(pin, g, socket.id, player, null, null, true, Date.now());
+        io.to(socket.id).emit('pn:init', pnInitPayload(g, socket.id));
+        pnRescale(pin, g);
+        if (g.pn.phase !== 'play') { player.currentQ = null; return; }
+        if (g.pn.paused) {             // paused: the open question comes back, a new one waits for «Seguir»
+          if (player.currentQ) io.to(socket.id).emit('question', { qid: player.currentQ.qid, text: player.currentQ.text, answers: player.currentQ.answers, image: player.currentQ.image });
+          return;
+        }
+        if (!player.currentQ && (player.pnNextQAt || player.pnSwing)) return;   // the result / «¡Casi!» wait: the tick deals it
+      }
       if (g.gameType === 'kingdoms' && g.kingdoms) {
         io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
         if (player.kdPending) { kdPrompt(pin, socket.id, { reprompt: true }); return; }
@@ -6939,15 +7188,14 @@ io.on('connection', (socket) => {
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
-    } else if (g.gameType === 'pinata') {
-      if (correct) {
-        p.mashUntil = Date.now() + PN_MASH_MS;
-        io.to(socket.id).emit('answer-result', {
-          correct: true, mashUntil: p.mashUntil, correctText
-        });
-      } else {
-        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+    } else if (g.gameType === 'pinata' && g.pn) {
+      // Piñata Tigre v2: paused or not in play → the question stays open (the phone gets its buttons back)
+      if (g.pn.paused || g.pn.phase !== 'play') {
+        if (g.pn.phase === 'play') p.currentQ = cqData;
+        io.to(socket.id).emit('answer-stale', { reason: g.pn.paused ? 'paused' : 'not-playing' });
+        return;
       }
+      pnAnswer(pin, g, socket, p, correct, correctText);
     } else if (g.gameType === 'paint') {
       pcAnswer(pin, g, socket.id, p, correct, correctText);
     } else if (g.gameType === 'snow') {
@@ -7037,8 +7285,8 @@ io.on('connection', (socket) => {
     }
 
     let nextDelay;
-    if (g.gameType === 'pinata') {
-      nextDelay = correct ? PN_MASH_MS + 600 : 1400;
+    if (g.gameType === 'pinata' && g.pn) {
+      nextDelay = -1;                       // the room's tick deals the next one (after the hit or the «¡Casi!» wait)
     } else if (g.gameType === 'dragon-eye') {
       nextDelay = correct ? DR_MASH_MS + 600 : 1400;
     } else if (g.gameType === 'monopoly') {
@@ -7067,7 +7315,7 @@ io.on('connection', (socket) => {
     }
     // Reinos de Colores sends its own small kd:plant diffs; skipping the full-room 'state' push here
     // keeps 30 phones from receiving ~5 full state objects per second.
-    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape' && g.gameType !== 'mochi-mash') broadcast(pin);
+    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata') broadcast(pin);
   });
 
   // Dragones Pintores: position (8 Hz from each phone), painted tiles, and «Recargar» (ask for a question).
@@ -7273,7 +7521,31 @@ io.on('connection', (socket) => {
       if (g.gameType === 'escape') esPause(pin, g, !!paused);
       if (g.gameType === 'halcon') hcPause(pin, g, !!paused);
       if (g.gameType === 'mochi-mash') mmPause(pin, g, !!paused);
+      if (g.gameType === 'pinata') pnPause(pin, g, !!paused);
     } catch (e) { console.error('[host:pause]', e); }
+  });
+
+  // Piñata Tigre: the tap that stops the arrow (c = ms since the phone's arrow started), or `auto` when the phone's
+  // window ran out. The server judges it (core/pinata.js hit) and answers with pn:hit (or pn:nohit).
+  socket.on('player:pn-hit', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.gameType !== 'pinata' || !g.pn || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      if (!p || !Pinata.inGame(g.pn, p)) return;
+      pnApplyHit(pin, g, socket.id, p, Number(data.hid), data.c, !!data.auto, Date.now());
+    } catch (e) { console.error('[player:pn-hit]', e); }
+  });
+  // Piñata Tigre teacher «Saltar»: the intro → play now; after the end → every phone jumps to its own card.
+  socket.on('host:pn-skip', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'pinata' || !g.pn) return;
+      if (g.state === 'active' && g.pn.phase === 'intro' && !g.pn.paused) pnPlay(pin, g);
+      else if (g.state === 'ended') io.to(pin).except(g.hostId).emit('pn:skip', { id: g.pn.id });
+    } catch (e) { console.error('[host:pn-skip]', e); }
   });
 
   // Mochi Mash: a phone's tap COUNT for its open mash window (every ~250 ms while mashing, plus a last one at the end).
@@ -7375,6 +7647,15 @@ io.on('connection', (socket) => {
       broadcast(pin);
       return;
     }
+    if (g.gameType === 'pinata' && g.pn) {     // the same for Piñata Tigre
+      if (!Pinata.addTime(g.pn, add)) return;
+      g.endsAt = g.pn.endsAt;
+      const clock = g.pn.paused ? g.pn.pausedAt : Date.now();
+      io.to(pin).emit('pn:time', { id: g.pn.id, endsMs: Math.max(0, g.pn.endsAt - clock), frenzy: g.pn.frenzy, frenzyMs: Math.max(0, g.pn.frenzyAt - clock), add: add / 1000 });
+      g._lastBcast = 0;
+      broadcast(pin);
+      return;
+    }
     g.endsAt += add;
     g.duration += add / 1000;
     g.extraSecs = (g.extraSecs || 0) + add / 1000;   // only for this round: host:reset gives it back (playtest 2026-10-11)
@@ -7466,6 +7747,23 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('mm:init', mmInitPayload(g, socket.id));
         if (g.mm.phase !== 'play') return;       // intro / «¡FINAL!»: no question now
         if (g.mm.paused || (!p.currentQ && (p.mmMash || p.mmNextQAt))) {   // paused, mashing or waiting: only the open question
+          if (p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
+          return;
+        }
+      }
+    }
+    if (g.gameType === 'pinata' && g.pn) {
+      if (g.state === 'ended') {      // missed game-end (a drop at «¡FINAL!»): the ceremony again
+        const one = pnEndPayloads(g).forPlayer(socket.id);
+        if (one) io.to(socket.id).emit('game-end', one);
+        return;
+      }
+      if (g.state === 'active') {
+        pnEnsureId(g, p);
+        Pinata.join(g.pn, p);
+        io.to(socket.id).emit('pn:init', pnInitPayload(g, socket.id));
+        if (g.pn.phase !== 'play') return;       // intro / «¡FINAL!»: no question now
+        if (g.pn.paused || (!p.currentQ && (p.pnSwing || p.pnNextQAt))) {   // paused, swinging or waiting: only the open question
           if (p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
           return;
         }
@@ -8374,6 +8672,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.state !== 'active') return;
     if (g.gameType === 'mochi-mash' && g.mm) return;   // Mochi Mash v2 counts taps in batches (player:mm-taps), capped
+    if (g.gameType === 'pinata') return;               // Piñata Tigre v2: one judged swing per right answer (player:pn-hit)
     const p = g.players[socket.id];
     if (!p) return;
     const now = Date.now();
@@ -8437,35 +8736,6 @@ io.on('connection', (socket) => {
         // No endGame here — wait for the duration timer to fire.
       }
     }
-
-    // === Piñata: each tap damages this player's TEAM tiger ===
-    // teamScores already incremented above represents damage dealt by this team
-    // (which equals damage taken by their own tiger). HP is the visual countdown.
-    if (g.gameType === 'pinata' && g.pinata && !g.pinata.brokenTeam) {
-      const hpKey = p.team === 'red' ? 'hpRed' : 'hpGold';
-      g.pinata[hpKey] = Math.max(0, g.pinata[hpKey] - points);
-      // Throttled HP broadcast — clients lerp between ticks
-      if (!g.lastPnHpBcast || now - g.lastPnHpBcast >= PN_HP_BCAST_MS) {
-        g.lastPnHpBcast = now;
-        io.to(pin).emit('pn:hp', {
-          hpRed:  g.pinata.hpRed,
-          hpGold: g.pinata.hpGold,
-          maxHp:  g.pinata.maxHp
-        });
-      }
-      // Broken? End the round and award victory to the team that broke their own piñata.
-      if (g.pinata[hpKey] <= 0) {
-        g.pinata.brokenTeam = p.team;
-        io.to(pin).emit('pn:broken', {
-          team: p.team,
-          hpRed: g.pinata.hpRed,
-          hpGold: g.pinata.hpGold,
-          teamScores: g.teamScores
-        });
-        if (g.endTimer) clearTimeout(g.endTimer);
-        setTimeout(() => endGame(pin), 3500);
-      }
-    }
   });
 
   // (Watchdog moved outside the connection handler — see bottom of file. The previous
@@ -8509,6 +8779,7 @@ io.on('connection', (socket) => {
           if (stillExists.gameType === 'escape') esStop(stillExists);
           if (stillExists.gameType === 'halcon') hcStop(stillExists);
           if (stillExists.gameType === 'mochi-mash') mmStop(stillExists);
+          if (stillExists.gameType === 'pinata') pnStop(stillExists);
           if (stillExists.gameType === 'kingdoms') kdClearTimers(stillExists);
           io.to(currentPin).emit('host-left');
           delete games[currentPin];
@@ -8563,6 +8834,7 @@ setInterval(() => {
     if (g.gameType === 'escape' && !(g.escape && g.escape.phase === 'run' && !g.escape.paused)) return;   // only while the crew runs
     if (g.gameType === 'halcon') return;       // no questions on the phones: the boards run the rounds
     if (g.gameType === 'mochi-mash' && g.mm && (g.mm.phase !== 'play' || g.mm.paused)) return;   // intro, pause, «¡FINAL!»
+    if (g.gameType === 'pinata') return;       // Piñata Tigre: its room tick deals every question (after the hit / the wait)
     Object.entries(g.players).forEach(([pid, p]) => {
       const inAction = p.mashUntil > now || p.currentQ;
       if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {
