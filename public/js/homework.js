@@ -4004,7 +4004,8 @@
       const o = JSON.parse(localStorage.getItem('draly_base_' + hwBase.level) || 'null');
       n = o && Array.isArray(o.seals) ? o.seals.filter((x) => Number.isInteger(x) && x >= 1 && x <= hwBase.words).length : 0;
     } catch (_) { n = 0; }
-    $('pt-base-level').textContent = hwLevelName();
+    // the little book's spine: a long name («New HSK 1») breaks as «New / HSK 1», never «HSK / 1»
+    $('pt-base-level').textContent = hwLevelName().replace(/ (\d+)$/, ' $1');
     $('pt-base-title').textContent = 'Empieza aquí · La base de ' + hwLevelName();
     $('pt-base-sub').textContent = n ? n + ' de ' + hwBase.words + ' sellos' : hwBase.words + ' palabras con audio';
   }

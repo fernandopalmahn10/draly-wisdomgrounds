@@ -109,6 +109,27 @@
   }
 
   // ── markup ─────────────────────────────────────────────────────────
+  // The line under the tones, word for word as the level's book prints it (YCT 1: yī and gè; New HSK 1: yī and bù;
+  // the HSK 1 book has none): {braces} are pinyin, and the examples that have a clip are buttons.
+  function toneNote(d) {
+    if (!d.toneNoteText) return '';
+    const clips = new Map((d.toneNote || []).map((t) => [t.py, t]));
+    const parts = String(d.toneNoteText).split(/\{([^}]+)\}/);
+    let h = '';
+    for (let i = 0; i < parts.length; i++) {
+      if (i % 2 === 0) { h += esc(parts[i]); continue; }
+      const t = clips.get(parts[i]);
+      if (!t) { h += '<span lang="zh-Latn-pinyin" translate="no">' + esc(parts[i]) + '</span>'; continue; }
+      // a button keeps the punctuation after it on its line, glued to it («yí ge,» … «bú shì.»)
+      const punct = (parts[i + 1] || '').match(/^[,.;:!?]*/)[0];
+      if (punct) parts[i + 1] = parts[i + 1].slice(punct.length);
+      h += '<span class="bs-chip-at"><button type="button" class="bs-chip" data-au="' + esc(t.au) + '" aria-label="Escuchar ' + esc(t.py) + '">' +
+        SPK + BARS + '<span lang="zh-Latn-pinyin" translate="no">' + esc(t.py) + '</span></button>' + esc(punct) + '</span>';
+    }
+    return '<p class="bs-tones-note">' + h + '</p>';
+  }
+  // «New HSK 1» never breaks inside its name (the lede says «… de New HSK 1, con dibujos…»)
+  const keepName = (text, name) => esc(text).split(esc(name)).join(esc(name).replace(/ /g, ' '));
   function meter(worlds, extraClass) {
     return '<div class="au-meter' + (extraClass || '') + '" aria-hidden="true">' +
       worlds.map((w) => '<i data-mw="' + w.n + '" style="--w:' + w.count + '"></i>').join('') + '</div>';
@@ -132,9 +153,10 @@
         '<span aria-hidden="true">' + w.n + '</span><span class="bs-tab-name" aria-hidden="true">' + esc(w.short) + '</span></a>').join('') + '</div>' +
       '<span class="bs-count" id="bs-count"><i aria-hidden="true">' + ICON.check + '</i><span><b>0</b>/' + total + '</span></span></div></nav>';
     // cover
-    h += '<header class="bs-cover on-red" id="inicio"><div class="bs-wrap"><div class="bs-cover-top">' +
+    // a long level name («New HSK 1») takes a smaller title so it stays on one line, like the book's cover (t-level long)
+    h += '<header class="bs-cover on-red" id="inicio"><div class="bs-wrap"><div class="bs-cover-top' + (String(d.levelName).length > 6 ? ' is-long' : '') + '">' +
       '<h1><span class="bs-level">' + esc(d.levelName) + '</span><span class="bs-name">' + esc(d.title) + '</span></h1>' +
-      '<p class="bs-lede">' + esc(d.lede) + '</p>' +
+      '<p class="bs-lede">' + keepName(d.lede, d.levelName) + '</p>' +
       '<img class="bs-dragon" src="' + DRAGON.hello + '" alt="Dralingo saluda" width="432" height="480" decoding="async">' +
       (hello ? '<button type="button" class="bs-bubble" data-au="' + esc(hello.au) + '" aria-label="Escuchar: ' + esc(hello.py) + '"><span lang="zh-Latn-pinyin" translate="no">' + esc(hello.py) + '</span></button>' : '') +
       '</div><div class="bs-cover-body">' +
@@ -168,10 +190,7 @@
           '<span class="bs-tone-word"><b lang="zh-Latn-pinyin" translate="no">' + esc(t.py) + '</b><small>' + esc(t.es) + '</small></span>' +
           '<span class="bs-mini bs-tone-spk">' + SPK + BARS + '</span></button></li>';
       }).join('') + '</ul>' +
-      // the «yī and gè change tone» note only where the book prints it (YCT 1; the HSK 1 book writes every tone as is)
-      (d.toneNote.length ? '<p class="bs-tones-note">Dentro de una frase, <span lang="zh-Latn-pinyin" translate="no">yī</span> y <span lang="zh-Latn-pinyin" translate="no">gè</span> a veces cambian de tono: ' +
-        d.toneNote.map((t) => '<button type="button" class="bs-chip" data-au="' + esc(t.au) + '" aria-label="Escuchar ' + esc(t.py) + '">' + SPK + BARS +
-          '<span lang="zh-Latn-pinyin" translate="no">' + esc(t.py) + '</span></button>').join(' ') + '</p>' : '') + '</div></section>';
+      toneNote(d) + '</div></section>';
     // the worlds
     W.forEach((w) => {
       const words = d.words.filter((x) => x.world === w.n);

@@ -16,7 +16,7 @@ const LEVELS = [
   // «Bolsa de palabras» tareas
   { id: 'hsk2', name: 'New HSK 1', teacherName: 'New HSK 1', family: 'newhsk', emoji: '🆕', pack: 'newhsk1', words: 300,
     packTareas: true, packWorlds: ['simulacro'], onlyPackTareas: true, packWords: true, exam: 'New HSK',
-    next: 'New HSK 2' },
+    next: 'New HSK 2', base: 'newhsk1-base' },   // the base takes the curriculum name (/audios/newhsk1-base)
   { id: 'hsk1', name: 'HSK 1', teacherName: 'Old HSK 1', family: 'hsk', emoji: '📘', pack: 'hsk1', words: 150,
     exam: 'HSK', next: 'New HSK 1', base: 'hsk1-base' },
 ];
