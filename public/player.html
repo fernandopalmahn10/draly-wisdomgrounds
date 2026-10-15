@@ -16,8 +16,8 @@
   <link rel="stylesheet" href="/css/dralingo.css">
   <link rel="stylesheet" href="/css/dragon.css">
   <link rel="stylesheet" href="/css/monopoly.css?v=20260520c">
-  <link rel="stylesheet" href="/css/sixseven.css?v=20260520c">
-  <link rel="stylesheet" href="/css/warmup.css?v=20260707a">
+  <link rel="stylesheet" href="/css/sixseven.css?v=20261015e">
+  <link rel="stylesheet" href="/css/warmup.css?v=20261015s">
   <link rel="stylesheet" href="/css/reading.css?v=20260603d">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/kingdoms.css?v=20261011h">
@@ -110,10 +110,6 @@
   <button class="muted-toggle" id="mute-btn">🔊 Sonido</button>
   <!-- Music indicator pops bottom-left for ~3.5s when the theme starts -->
   <div class="music-chip hidden" id="music-chip">🎵 <span id="music-chip-name">…</span></div>
-
-  <!-- 6-7 SWING ambient peek layer (covers the whole viewport with
-       cheerful "67!" pop-ins from the edges). Hidden by default. -->
-  <div id="ss-ambience" class="ss-ambience hidden"></div>
 
   <!-- JOINING — 2026-10-12: the old «Únete» form is gone. Kids type PIN + name on the home page card
        («🎮 Entrar al juego», index.html); this page only shows Dralingo while the join goes through. Without
@@ -271,41 +267,47 @@
   </div>
 
   <!-- ENDED -->
-  <!-- 6-7 SWING — math problems with two giant 6/7 buttons. The mini
-       character on the player's phone sways toward whichever button they
-       last tapped. Floating 6s and 7s drift up in the background. -->
-  <div id="screen-sixseven" class="hidden player-screen ss-player-screen">
-    <div class="ss-player-float-layer" id="ss-player-float-layer"></div>
-    <div class="ss-player-top">
-      <div class="ss-player-score-pill">💯 <span id="ss-player-score">0</span></div>
-      <div class="ss-player-streak-pill" id="ss-player-streak-pill">🔥 <span id="ss-player-streak">0</span></div>
-    </div>
-    <div class="ss-problem" id="ss-problem">3 + 3 = ?</div>
-    <div class="ss-player-character">
-      <div class="ss-character-wrap" id="ss-player-character-wrap">
-        <!-- CSS character — clean blocky 6-7 with hands, eyes, feet. The
-             real 67.png art shows up SEPARATELY as a full-screen dance
-             jumpscare on big combos, not as a rectangular icon here. -->
-        <div class="ss-character">
-          <div class="ss-c-eye left"></div>
-          <div class="ss-c-eye right"></div>
-          <div class="ss-c-six">6</div>
-          <div class="ss-c-seven">7</div>
-          <div class="ss-c-arm left">🤙</div>
-          <div class="ss-c-arm right">🤙</div>
-          <div class="ss-c-foot left"></div>
-          <div class="ss-c-foot right"></div>
+  <!-- 6-7 Swing v2 «La Balanza de Oro» (js/player-sixseven.js + js/sixseven-stage.js + css/sixseven.css): rapid-fire
+       sums whose answer is always 6 or 7, the kid's full-body character, two giant buttons «6 · liu» / «7 · qi». -->
+  <div id="screen-sixseven" class="hidden">
+    <div class="ssx" id="ssx">
+      <div class="ssx-top">
+        <div class="ssx-meter" aria-hidden="true"><b class="ssx-mn r" id="ssx-rn">0</b><div class="ssx-mbar"><i id="ssx-mr"></i></div><b class="ssx-mn g" id="ssx-gn">0</b></div>
+        <div class="ssx-row"><div class="ssx-mini" id="ssx-mini"></div><div class="ssx-status" id="ssx-status" role="status"></div></div>
+      </div>
+      <div class="ssx-card" id="ssx-card">
+        <div class="ssx-tag" aria-hidden="true">¡Pregunta dorada!</div>
+        <div class="ssx-eq" id="ssx-eq" aria-live="polite"></div>
+        <div class="ssx-eqq" aria-hidden="true">= <b id="ssx-ask">?</b></div>
+        <div class="ssx-qt"><i id="ssx-qbar"></i></div>
+        <div class="ssx-verdict" id="ssx-verdict" aria-live="polite"></div>
+        <i class="ssx-flash" id="ssx-flash" aria-hidden="true"></i>
+        <div class="ssx-chip hidden" id="ssx-chip"><span>Doble oro</span><b>0:30</b></div>
+      </div>
+      <div class="ssx-stage">
+        <div class="ssx-me" id="ssx-me"></div>
+        <div class="ssx-side">
+          <div class="ssx-count" id="ssx-count"><i class="ssc" aria-hidden="true"></i><b id="ssx-n">0</b><span>de oro</span></div>
+          <div class="ssx-combo" id="ssx-combo"></div>
+          <div class="ssx-team" id="ssx-team"></div>
         </div>
-        <div class="ss-character-shadow"></div>
+        <div class="ssx-plus" id="ssx-plus" aria-hidden="true"></div>
+        <div class="ssx-dral" id="ssx-dral" aria-hidden="true"></div>
+      </div>
+      <div class="ssx-btns">
+        <button class="ssx-btn b6" id="ssx-b6" type="button" aria-label="6, liu"><b>6</b><span>liu</span></button>
+        <button class="ssx-btn b7" id="ssx-b7" type="button" aria-label="7, qi"><b>7</b><span>qi</span></button>
+        <i class="ssx-hand ssx-teach" aria-hidden="true"></i>
+        <div class="ssx-lock" id="ssx-lock" aria-live="polite"></div>
       </div>
     </div>
-    <div class="ss-buttons">
-      <button class="ss-btn ss-btn-6" id="ss-btn-6">6</button>
-      <button class="ss-btn ss-btn-7" id="ss-btn-7">7</button>
-    </div>
-    <div class="ss-flash-correct" id="ss-flash-correct"></div>
-    <div class="ss-flash-wrong"   id="ss-flash-wrong"></div>
+    <div class="ssx-fx" id="ssx-fx" aria-hidden="true"></div>
   </div>
+  <!-- 6-7 Swing overlays: the run-in / rules card, the top-edge banners, the 30-s chip, the pause card, «¡FINAL!» -->
+  <div class="ssx-intro hidden" id="ssx-intro"></div>
+  <div class="ssx-banner" id="ssx-banner" role="status" aria-live="polite"></div>
+  <div class="ssx-pause hidden" id="ssx-pause" role="alert"><div><img src="/assets/dralingo/wise.webp" alt=""><b>Pausa</b><span>Mira al profe</span></div></div>
+  <div class="ssx-final hidden" id="ssx-final"><b>¡FINAL!</b></div>
 
   <!-- 📖 READING · cuento HSK1 con audio sincronizado y resaltado de palabras -->
   <div id="screen-rd" class="hidden player-screen rd-player-screen">
@@ -678,14 +680,14 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260524d"></script>
+  <script src="/js/sounds.js?v=20261015s"></script>
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/enter.js"></script>
   <script src="/js/dralingo.js"></script>
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261015a"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261015s"></script>
   <script src="/js/player-kingdoms.js?v=20261011f"></script>
   <script src="/js/paint-render.js?v=20261011a"></script>
   <script src="/js/player-paint.js?v=20261011e"></script>
@@ -701,10 +703,12 @@
   <script src="/js/player-mochi.js?v=20261015a"></script>
   <script src="/js/pinata-stage.js?v=20261015b"></script>
   <script src="/js/player-pinata.js?v=20261015b"></script>
-  <script src="/js/cast.js?v=20261015a"></script>
+  <script src="/js/sixseven-stage.js?v=20261015c"></script>
+  <script src="/js/player-sixseven.js?v=20261015e"></script>
+  <script src="/js/cast.js?v=20261015c"></script>
   <script src="/js/dralingo-fx.js?v=20261013a"></script>
   <script src="/js/saga.js?v=20261013a"></script>
-  <script src="/js/player.js?v=20261015a"></script>
+  <script src="/js/player.js?v=20261015s"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

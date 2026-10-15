@@ -36,6 +36,7 @@ const EscapeMap = require('./public/js/escape-map'); // … and its zona segura 
 const Halcon = require('./core/halcon');             // Ojos de Halcón: Mario Party «Looking for Love» in boards of 4 (rules)
 const Mochi = require('./core/mochi');               // Mochi Mash v2: «La Terraza del Mochi», team mash + ceremony (rules)
 const Pinata = require('./core/pinata');             // Piñata Tigre v2: «La Fiesta de las Piñatas», team hits + timing meter (rules)
+const Sixseven = require('./core/sixseven');         // 6-7 Swing v2: «La Balanza de Oro», sums that are always 6 or 7 (rules)
 // Tiny persistence for the owner's Emirati Arabic gateway (single global
 // profile, since this is a super-admin-only personal feature). Lives on the
 // same data disk as the rest of the JSON state.
@@ -4341,11 +4342,14 @@ function publicState(game) {
       Object.entries(game.players).map(([id, p]) => [
         id,
         Object.assign({ name: p.name, team: p.team, score: p.score, avatar: p.avatar || '' }, p.disconnected ? { off: true } : {},
-          p.mmId ? { k: p.mmId, sk: hcSkin(p) } : {}, game.gameType === 'pinata' && p.pnId ? { k: p.pnId, sk: hcSkin(p) } : {})
+          p.mmId ? { k: p.mmId, sk: hcSkin(p) } : {}, game.gameType === 'pinata' && p.pnId ? { k: p.pnId, sk: hcSkin(p) } : {},
+          game.gameType === 'sixseven' && p.ssId ? { k: p.ssId, sk: hcSkin(p) } : {})
       ])
     ),
     feed: game.feed.slice(-12)
   };
+  // 6-7 Swing: the round style the teacher picked (the phones' lobby shows «Hoy: En Chino»)
+  if (game.gameType === 'sixseven') out.ssStyle = Sixseven.cleanStyle(game.ssStyle);
   // HSK rooms expose simId so kid clients know what to load when
   // state flips to 'active'. fx is the current animation overlay.
   if (game.gameType === 'hsksim' && game.hsk) {
@@ -4383,79 +4387,12 @@ function broadcast(pin) {
   }, Math.max(20, wait));
 }
 
-// 6-7 SWING math generator — returns a problem whose answer is always 6 or 7.
-// PINYIN-ONLY for the Chinese variants (no characters per user request).
-// 7 problem flavors with addition, subtraction, visual counting, comparisons,
-// pinyin number recognition, and pinyin-word addition/subtraction.
-// PLAIN-ASCII pinyin (no tone marks). Tone marks can render as ?/box on some
-// Android keyboards / older browsers + are confusing for kids who can't type
-// or pronounce the tones yet at this level.
-const SS_NUM_PINYIN = ['ling','yi','er','san','si','wu','liu','qi','ba','jiu','shi'];
-function generateSixSevenProblem(queueIdx) {
-  const ans = Math.random() < 0.5 ? 6 : 7;
-  const kind = Math.floor(Math.random() * 7);
-  let text = '';
-  if (kind === 0) {
-    // Addition (Arabic numerals)
-    const b = Math.floor(Math.random() * (ans + 1));
-    const a = ans - b;
-    text = `${a} + ${b} = ?`;
-  } else if (kind === 1) {
-    // Subtraction (Arabic)
-    const big = ans + 1 + Math.floor(Math.random() * 8);
-    text = `${big} − ${big - ans} = ?`;
-  } else if (kind === 2) {
-    // Visual count
-    const choices = ['⭐', '🍎', '🐱', '🐶', '🍦', '🎈', '🏀', '🐟', '🐲', '🤙'];
-    const icon = choices[Math.floor(Math.random() * choices.length)];
-    text = `¿Cuántos? ${icon.repeat(ans)}`;
-  } else if (kind === 3) {
-    // Doubles / halves
-    if (ans === 6) {
-      const variants = ['3 + 3 = ?', '12 ÷ 2 = ?', '2 × 3 = ?', '1 + 5 = ?'];
-      text = variants[Math.floor(Math.random() * variants.length)];
-    } else {
-      const variants = ['3 + 4 = ?', '14 ÷ 2 = ?', '1 + 6 = ?', '5 + 2 = ?'];
-      text = variants[Math.floor(Math.random() * variants.length)];
-    }
-  } else if (kind === 4) {
-    // Mayor / menor
-    const other = ans === 6 ? (Math.random() < 0.5 ? 5 : 4) : (Math.random() < 0.5 ? 6 : 8);
-    if (ans > other)  text = `¿Cuál es mayor: ${ans} o ${other}?`;
-    else              text = `¿Cuál es menor: ${other} o ${ans}?`;
-  } else if (kind === 5) {
-    // PINYIN: pure recognition — "liù = ?" / "qī = ?"
-    text = `${SS_NUM_PINYIN[ans]} = ?`;
-  } else {
-    // PINYIN addition or subtraction — mixes pinyin operands with the answer
-    if (Math.random() < 0.5) {
-      const b = Math.floor(Math.random() * (ans + 1));
-      const a = ans - b;
-      text = `${SS_NUM_PINYIN[a]} + ${SS_NUM_PINYIN[b]} = ?`;
-    } else {
-      const big = ans + 1 + Math.floor(Math.random() * 4);   // 7..10
-      text = `${SS_NUM_PINYIN[big]} − ${SS_NUM_PINYIN[big - ans]} = ?`;
-    }
-  }
-  return { text, ans };
-}
-
 function nextQuestionFor(game, playerId) {
   const p = game.players[playerId];
   if (!p || !game.questions.length) return null;
 
-  // 6-7 SWING: generate a fresh math problem each call, never reuse
-  if (game.gameType === 'sixseven') {
-    p.queueIdx = (p.queueIdx || 0) + 1;
-    const { text, ans } = generateSixSevenProblem(p.queueIdx);
-    // Answers are always ["6", "7"] in that order — players tap the matching button
-    const answers = ['6', '7'];
-    const correctIdx = ans === 6 ? 0 : 1;
-    const qid = `q-67-${p.queueIdx}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    p.currentQ = { qid, correctIdx, text, answers };
-    p.lastQuestionAt = Date.now();
-    return { qid, text, answers, gameMode: 'sixseven' };
-  }
+  // 6-7 Swing v2: its room tick deals every sum (ssDeal, core/sixseven.js); never a generic question
+  if (game.gameType === 'sixseven') return null;
 
   const q = game.questions[p.queueIdx % game.questions.length];
   p.queueIdx++;
@@ -5965,6 +5902,251 @@ function pnFinish(pin, g) {
   });
 }
 
+// === 🤙 6-7 SWING v2 (gameType 'sixseven') — «La Balanza de Oro», sums whose answer is always 6 or 7 ===
+// Rules in core/sixseven.js (spec docs/specs/six-seven-v2.md). No question pack: the core deals each kid its next sum
+// (Números / En Chino / Mezcla, the teacher's pick in the lobby), the phone shows two giant buttons «6 · liu» / «7 · qi»
+// and the server judges every tap (a right one drops gold on the team's pan, a wrong one costs a short wait). One 125 ms
+// tick per room runs the clock: intro → play (deals the next sum after each answer's beat) → frenzy (last 30 s) →
+// «¡FINAL!» → game-end (each phone its own card, the projector everything). Meter: the projector every 250 ms (with the
+// feed of who scored: f), phones every 750 ms and only when it changed. No full-room 'state' push on answers.
+const SS_TICK_MS = 125;
+const SS_GRACE_MS = 600;            // an answer already on its way when «¡FINAL!» starts still counts
+const SS_LATE_MS = 2500;            // an open sum the phone never timed out (a frozen tab): the server calls time up
+function ssEnsureId(g, p) { if (!p.ssId) p.ssId = (g.ssNextId = (g.ssNextId || 0) + 1); return p.ssId; }
+function ssRoster(g) {
+  return Object.values(g.players).filter((p) => p.ssId && (!g.ss || Sixseven.inGame(g.ss, p))).map((p) => ({ k: p.ssId, name: p.name, skin: hcSkin(p), team: p.team, on: !p.disconnected }));
+}
+const ssMeter = (m) => Object.assign(Sixseven.display(m), { b: m.behind });
+function ssInitPayload(g, pid) {
+  const m = g.ss;
+  const now = Date.now();
+  const clock = m.paused ? m.pausedAt : now;
+  const p = pid ? g.players[pid] : null;
+  return {
+    id: m.id, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock), paused: !!m.paused, style: m.style,
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzy: !!m.frenzy,
+    frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null, duration: m.duration,
+    meter: ssMeter(m), E: m.E, lead: m.lead, race: Sixseven.race(m),
+    roster: ssRoster(g), captains: g.ssCaptains || null,
+    you: p ? { k: p.ssId, team: p.team, coins: p.ssCoins || 0, streak: p.ssStreak || 0, right: p.ssRight || 0, answered: p.ssAnswered || 0, best: p.ssBest || 0 } : null,
+  };
+}
+function ssStop(g) { if (g && g.ss && g.ss.timer) { clearInterval(g.ss.timer); g.ss.timer = null; } }
+// a late joiner early in the game makes the landmark race longer (core rescale)
+function ssRescale(pin, g) {
+  const m = g.ss;
+  if (!m || !Sixseven.rescale(m, Sixseven.teamSizes(g.players), Date.now())) return;
+  io.to(pin).emit('ss:scale', { id: m.id, E: m.E, race: Sixseven.race(m), meter: ssMeter(m) });
+}
+// The countdown is over: the intro («¡Toca el resultado!» → «¿Listos?» → «¡YA!»), then ssPlay deals the sums.
+function ssStart(pin, g) {
+  ssStop(g);
+  const now = Date.now();
+  const m = Sixseven.newGame(1 + Math.floor(Math.random() * 1e9), g.duration, now, Sixseven.teamSizes(g.players), g.ssStyle);
+  g.ss = m;
+  Object.values(g.players).forEach((p) => {
+    p.currentQ = null; p.ssOut = null; p.mashUntil = 0;
+    // a kid who left before the round sits it out (not in the crowds, the ceremony or «of N»); back = joins fresh
+    if (p.disconnected) { p.ssGame = null; p.ssQ = null; p.ssNextQAt = 0; return; }
+    ssEnsureId(g, p); Sixseven.resetKid(p, m); p.lastQuestionAt = now;
+  });
+  g.endsAt = now + Sixseven.R.INTRO_MS + m.duration * 1000;
+  io.to(g.hostId).emit('ss:init', ssInitPayload(g, null));
+  Object.entries(g.players).forEach(([pid, p]) => { if (!p.disconnected) io.to(pid).emit('ss:init', ssInitPayload(g, pid)); });
+  m.timer = setInterval(() => ssTick(pin, m), SS_TICK_MS);
+}
+function ssPlay(pin, g) {
+  const m = g.ss;
+  if (!m || m.phase !== 'intro') return;
+  const now = Date.now();
+  Sixseven.startPlay(m, now);
+  g.endsAt = m.endsAt;
+  io.to(pin).emit('ss:play', { id: m.id, endsMs: m.endsAt - now, frenzyMs: m.frenzyAt - now });
+  Object.entries(g.players).forEach(([pid, p]) => { if (!p.disconnected && Sixseven.inGame(m, p) && !p.ssQ) ssSend(g, pid, p, now); });
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// a kid's next sum (the answer stays on the server: p.ssQ); p.ssOut is the same sum again for a resync / rejoin / pause
+function ssSend(g, pid, p, now) {
+  const q = Sixseven.deal(g.ss, p, now);
+  p.ssOut = q;
+  p.lastQuestionAt = now;
+  io.to(pid).emit('question', q);
+}
+// the open sum again (a rejoin, a resync, a reload): with the time it really has left on the server's clock; a sum
+// that is almost over is dropped without a verdict (no streak lost for a Wi-Fi drop) and the tick deals a fresh one
+function ssResend(g, pid, p) {
+  const m = g.ss;
+  if (!p.ssQ || !p.ssOut) { p.ssQ = null; p.ssOut = null; return; }
+  const clock = m.paused ? m.pausedAt : Date.now();
+  const left = Sixseven.R.Q_MS - (clock - p.ssQ.at);
+  if (left < 3000) { p.ssQ = null; p.ssOut = null; p.ssNextQAt = 0; return; }
+  io.to(pid).emit('question', Object.assign({}, p.ssOut, { ss: Object.assign({}, p.ssOut.ss, { ms: Math.round(left) }) }));
+}
+// the kid's verdict: its own answer-result (never a room broadcast); the next sum comes from the tick after the wait
+function ssResult(g, pid, p, r) {
+  p.mashUntil = Date.now() + r.wait + 1500;          // keeps the global watchdog away until the tick deals the next one
+  if (p.disconnected) return;
+  io.to(pid).emit('answer-result', {
+    correct: r.right, correctText: `${r.ans} · ${r.word}`,
+    sixseven: {
+      qid: r.qid, right: r.right, ans: r.ans, word: r.word, choice: r.choice, timeUp: !!r.timeUp, tooFast: !!r.tooFast, calm: !!r.calm,
+      wait: r.wait, streak: r.streak, mult: r.mult || 1, coins: r.coins, total: r.total, gold: !!r.gold, goldExtra: r.goldExtra || 0,
+      frenzy: !!r.frenzy, zh: !!r.zh,
+    },
+  });
+}
+function ssTick(pin, m) {
+  const g = games[pin];
+  if (!g || g.ss !== m || g.state !== 'active') { clearInterval(m.timer); m.timer = null; return; }
+  if (m.paused) return;
+  const now = Date.now();
+  try {
+    if (m.phase === 'intro') { if (now >= m.phaseUntil) ssPlay(pin, g); return; }
+    if (m.phase === 'play') {
+      m.w = Sixseven.weights(Sixseven.teamSizes(g.players));
+      Object.entries(g.players).forEach(([pid, p]) => {
+        if (!Sixseven.inGame(m, p) || p.disconnected) return;
+        // a sum the phone never timed out (frozen tab): time up, so the kid gets a fresh one when it wakes up
+        if (p.ssQ && now - p.ssQ.at > Sixseven.R.Q_MS + SS_LATE_MS) { ssResult(g, pid, p, Sixseven.answer(m, p, null, now)); p.ssOut = null; return; }
+        if (!p.ssQ && (!p.ssNextQAt || now >= p.ssNextQAt)) ssSend(g, pid, p, now);
+      });
+      const ev = Sixseven.tick(m, now);
+      ev.landmarks.forEach((l) => io.to(pin).emit('ss:landmark', Object.assign({ meter: ssMeter(m) }, l)));
+      if (ev.lead) io.to(pin).emit('ss:lead', Object.assign({ meter: ssMeter(m) }, ev.lead));
+      if (ev.frenzy) io.to(pin).emit('ss:frenzy', { endsMs: Math.max(0, m.endsAt - now) });
+    }
+    // the meter: the projector every 250 ms (with who scored), phones every 750 ms, only when something changed
+    m.beat = (m.beat || 0) + 1;
+    if (m.beat % 2 === 0) {
+      const fx = Object.entries(m.fx).map(([k, v]) => [Number(k), v[0], v[1], v[2]]);
+      m.fx = {};
+      const d = ssMeter(m);
+      const k = [d.r, d.g, d.b].join(':');
+      if (fx.length || k !== m.hostKey) { m.hostKey = k; io.to(g.hostId).emit('ss:meter', Object.assign({ f: fx }, d)); }
+      if (m.beat % 6 === 0 && k !== m.kidKey) { m.kidKey = k; io.to(pin).except(g.hostId).emit('ss:meter', d); }
+    }
+    if (m.phase === 'play' && now >= m.endsAt) ssFinal(pin, g);
+    else if (m.phase === 'final' && now >= m.phaseUntil) {
+      ssStop(g);
+      if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+      endGame(pin);
+    }
+  } catch (e) { console.error('[sixseven] tick', e); }
+}
+// player:answer for 6-7 Swing (choiceIdx 0 = «6», 1 = «7», -1 = time up). A tap with no open sum (a mashing finger)
+// gets at most one 'answer-stale' a second, so mashing can't make the server talk back 10 times a second. An answer
+// for an older sum (a late time-up, a tap re-sent after a Wi-Fi blip) is dropped: it never judges a sum the kid hasn't seen.
+function ssAnswer(pin, g, socket, p, choiceIdx, qid) {
+  const m = g.ss;
+  const now = Date.now();
+  if (!Sixseven.inGame(m, p)) { ssEnsureId(g, p); Sixseven.join(m, p); }
+  const stale = (reason) => {
+    if (now - (p.ssStaleAt || 0) < 1000) return;
+    p.ssStaleAt = now;
+    io.to(socket.id).emit('answer-stale', { reason });
+  };
+  if (!p.ssQ) return stale('no-question');
+  if (qid != null && qid !== p.ssQ.qid) return;             // an older sum's answer
+  if (m.paused) return stale('paused');                     // the sum stays open: the phone gets its buttons back
+  if (m.phase !== 'play' && !(m.phase === 'final' && now - m.endedAt <= SS_GRACE_MS)) return stale('not-playing');
+  const choice = choiceIdx === 0 ? 6 : choiceIdx === 1 ? 7 : null;
+  const r = Sixseven.answer(m, p, choice, now);
+  p.ssOut = null;
+  if (r) ssResult(g, socket.id, p, r);
+}
+// «¡FINAL!» on every screen; the tick ends the game FINAL_MS later (an answer already on its way still counts).
+function ssFinal(pin, g) {
+  const m = g.ss;
+  if (!m || m.phase === 'final' || m.phase === 'done') return;
+  const now = Date.now();
+  if (m.paused) {
+    const shift = now - m.pausedAt;
+    Sixseven.shiftTimes(m, shift);
+    Object.values(g.players).forEach((p) => Sixseven.shiftKid(p, shift));
+    m.paused = false;
+  }
+  Sixseven.final(m, now);
+  Object.values(g.players).forEach((p) => { p.currentQ = null; p.ssNextQAt = 0; p.ssOut = null; });
+  io.to(pin).emit('ss:final', { id: m.id, ms: Sixseven.R.FINAL_MS, meter: ssMeter(m) });
+  if (!m.timer) m.timer = setInterval(() => ssTick(pin, m), SS_TICK_MS);
+}
+function ssPause(pin, g, paused) {
+  const m = g.ss;
+  if (!m || !!m.paused === !!paused || m.phase === 'final' || m.phase === 'done') return;
+  const now = Date.now();
+  if (paused) { m.paused = true; m.pausedAt = now; }
+  else {
+    const shift = now - m.pausedAt;
+    Sixseven.shiftTimes(m, shift);
+    Object.values(g.players).forEach((p) => { Sixseven.shiftKid(p, shift); if (p.mashUntil) p.mashUntil += shift; });
+    if (g.endsAt) g.endsAt += shift;
+    m.paused = false;
+  }
+  const clock = m.paused ? m.pausedAt : now;
+  io.to(pin).emit('ss:pause', {
+    id: m.id, paused: !!m.paused, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock),
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null,
+  });
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// The end: gold, winner, bonus stars; each phone its own card (built again on demand for a reconnect).
+function ssEndPayloads(g) {
+  const m = g.ss;
+  const rows = Object.values(g.players).filter((p) => Sixseven.inGame(m, p)).map((p) => ({
+    k: p.ssId, name: p.name, skin: hcSkin(p), team: p.team, coins: p.ssCoins || 0, right: p.ssRight || 0, answered: p.ssAnswered || 0,
+    best: p.ssBest || 0, fast: p.ssFast, behind: p.ssBehind || 0, zh: p.ssZh || 0, golds: p.ssGolds || 0,
+  }));
+  const fin = Sixseven.finish(m, rows);
+  const byK = {};
+  fin.rows.forEach((r) => { byK[r.k] = r; });
+  const lite = (r) => r && { k: r.k, name: r.name, skin: r.skin, team: r.team, coins: r.coins, rank: r.rank, stars: r.stars };
+  const stars = fin.stars.map((s) => ({ id: s.id, name: s.name, unit: s.unit, value: s.value, n: s.winners.length, who: s.winners.slice(0, 4).map((k) => lite(byK[k])) }));
+  const common = {
+    winner: fin.winner,
+    teamScores: { red: fin.totals.r, gold: fin.totals.g },
+    sixseven: {
+      totals: fin.totals, winner: fin.winner, stars, landmarks: fin.landmarks, E: m.E, count: fin.rows.length, style: fin.style,
+      captains: g.ssCaptains || null,
+      top: fin.rows.slice(0, 10).map(lite), mvp: { red: lite(byK[fin.mvp.red]), gold: lite(byK[fin.mvp.gold]) },
+      teams: { red: fin.rows.filter((r) => r.team === 'red').slice(0, 12).map(lite), gold: fin.rows.filter((r) => r.team === 'gold').slice(0, 12).map(lite) },
+    },
+  };
+  return {
+    host: Object.assign({ leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.coins, team: r.team })) }, common),
+    forPlayer(pid) {
+      const p = g.players[pid];
+      if (!p || !Sixseven.inGame(m, p)) return null;
+      const r = byK[p.ssId];
+      if (!r) return null;
+      return Object.assign({}, common, {
+        scores: { [pid]: r.coins },
+        me: {
+          k: r.k, team: r.team, coins: r.coins, share: r.share, right: r.right, answered: r.answered, aim: r.aim, best: r.best,
+          fast: r.fast, zh: r.zh, golds: r.golds, stars: r.stars, rank: r.rank, of: fin.rows.length,
+          won: fin.winner === r.team, tie: fin.winner === 'tie', mvp: fin.mvp[r.team] === r.k,
+        },
+      });
+    },
+  };
+}
+function ssFinish(pin, g) {
+  const m = g.ss;
+  if (!m) return;
+  ssStop(g);
+  m.phase = 'done';
+  const end = ssEndPayloads(g);
+  g.teamScores = end.host.teamScores;
+  Object.values(g.players).forEach((p) => { if (Sixseven.inGame(m, p)) { p.score = p.ssCoins || 0; p.ssQ = null; p.ssOut = null; } });
+  io.to(g.hostId).emit('game-end', end.host);
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected) return;
+    const one = end.forPlayer(pid);
+    if (one) io.to(pid).emit('game-end', one);
+  });
+}
+
 // === 🚀 LA GRAN FUGA DE DUBÁI (gameType 'escape') — Kahoot «Robot Run» style co-op chase, Dralingo episode ===
 // Rules in core/escape.js, rooms in public/js/escape-map.js (spec docs/specs/gran-fuga-de-dubai.md). The whole class
 // runs from Robotín through three Dubai zones: right answers are turbos (the run is server-timed, 10 Hz physics, 5 Hz
@@ -6299,6 +6481,13 @@ function endGame(pin) {
     broadcast(pin);
     return;
   }
+  // 6-7 Swing v2: gold, winner, bonus stars, each phone its own card (core/sixseven.js finish()).
+  if (g.gameType === 'sixseven' && g.ss) {
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+    ssFinish(pin, g);
+    broadcast(pin);
+    return;
+  }
   // Ojos de Halcón: each board's ranking + winner (its phones play the studio finale), the class ranking (core/halcon.js).
   if (g.gameType === 'halcon') {
     if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
@@ -6347,7 +6536,7 @@ io.on('connection', (socket) => {
       type === 'pinata'       ? Pinata.R.DURATION :  // 3 min (the lobby offers 2 / 3 / 4)
       type === 'dragon-eye'   ? 240 :
       type === 'monopoly'     ? 300 :
-      type === 'sixseven'     ? 120 :
+      type === 'sixseven'     ? Sixseven.R.DURATION :   // 2 min (the lobby offers 2 / 3 / 4)
       type === 'kingdoms'     ? 180 :
       type === 'paint'        ? 240 :
       type === 'snow'         ? 240 :
@@ -6370,17 +6559,16 @@ io.on('connection', (socket) => {
       teamScores: { red: 0, gold: 0 },
       feed: []
     };
-    // 6-7 SWING — math game with server-generated questions. No vocab set
-    // needed. We seed questions with a single stub so questionsLoaded > 0
-    // passes the start-button check; nextQuestionFor() returns a freshly
-    // generated math problem on every call (answer is always 6 or 7).
+    // 6-7 Swing v2 — the sums are generated (core/sixseven.js, dealt by ssTick). No question pack: a single stub keeps
+    // questionsLoaded > 0 for the start button; the teacher picks the round style in the lobby (host:ss-style).
     if (type === 'sixseven') {
       games[pin].questions = [{
         text: '__sixseven_stub__',
         correct: '6',
         answers: ['6', '7'],
       }];
-      games[pin].setTitle = '6-7 Swing 🤙';
+      games[pin].setTitle = '6-7 Swing · La Balanza de Oro';
+      games[pin].ssStyle = Sixseven.cleanStyle(opts.style);
     }
     // HSKSIM — full mock exam. The host page emits host:create with
     // a simId (which simulation to run). State stays 'lobby' until
@@ -6487,6 +6675,9 @@ io.on('connection', (socket) => {
     // Piñata Tigre: the party again (mid-game), or the ceremony again (after the end)
     if (g.gameType === 'pinata' && g.pn && g.state === 'active') io.to(socket.id).emit('pn:init', pnInitPayload(g, null));
     if (g.gameType === 'pinata' && g.pn && g.state === 'ended') io.to(socket.id).emit('game-end', pnEndPayloads(g).host);
+    // 6-7 Swing: the balance again (mid-game), or the ceremony again (after the end)
+    if (g.gameType === 'sixseven' && g.ss && g.state === 'active') io.to(socket.id).emit('ss:init', ssInitPayload(g, null));
+    if (g.gameType === 'sixseven' && g.ss && g.state === 'ended') io.to(socket.id).emit('game-end', ssEndPayloads(g).host);
     cb({ ok: true, gameType: g.gameType, state: g.state });
   });
 
@@ -6564,7 +6755,7 @@ io.on('connection', (socket) => {
     if (!g || g.hostId !== socket.id) return;
     const p = g.players[playerId];
     if (!p) return;
-    if ((g.gameType === 'mochi-mash' || g.gameType === 'pinata') && g.state !== 'lobby') return;   // a kid's points belong to the team they played for
+    if ((g.gameType === 'mochi-mash' || g.gameType === 'pinata' || g.gameType === 'sixseven') && g.state !== 'lobby') return;   // a kid's points belong to the team they played for
     p.team = p.team === 'red' ? 'gold' : 'red';
     g.feed.push({ type: 'swap', name: p.name, team: p.team, t: Date.now() });
     io.to(playerId).emit('team-changed', { team: p.team });
@@ -6574,8 +6765,9 @@ io.on('connection', (socket) => {
   socket.on('host:auto-balance', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
-    if ((g.gameType === 'mochi-mash' || g.gameType === 'pinata') && g.state !== 'lobby') return;
-    const ids = Object.keys(g.players).sort(() => Math.random() - 0.5);
+    if ((g.gameType === 'mochi-mash' || g.gameType === 'pinata' || g.gameType === 'sixseven') && g.state !== 'lobby') return;
+    // only the kids who are still connected (a kid who left stays where they were; the room drops them after 5 min)
+    const ids = Object.keys(g.players).filter((id) => !g.players[id].disconnected).sort(() => Math.random() - 0.5);
     ids.forEach((id, i) => {
       g.players[id].team = i % 2 === 0 ? 'red' : 'gold';
       io.to(id).emit('team-changed', { team: g.players[id].team });
@@ -6587,7 +6779,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
     // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
-    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata') && g.state !== 'lobby') return;
+    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata' || g.gameType === 'sixseven') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
     // generated server-side or teacher-driven). Don't gate them on
     // questions.length, otherwise Start silently does nothing and the
@@ -6637,6 +6829,8 @@ io.on('connection', (socket) => {
     if (g.gameType === 'mochi-mash') { g.mmCaptains = kdPickCaptains(g.mmCaptains); io.to(pin).emit('mm:captains', g.mmCaptains); }
     // Piñata Tigre: the same (they cheer on hits, bursts, landmarks and lead changes)
     if (g.gameType === 'pinata') { g.pnCaptains = kdPickCaptains(g.pnCaptains); io.to(pin).emit('pn:captains', g.pnCaptains); }
+    // 6-7 Swing: the same (they cheer on leads, landmarks and the frenzy, and the winner's captain speaks at the end)
+    if (g.gameType === 'sixseven') { g.ssCaptains = kdPickCaptains(g.ssCaptains); io.to(pin).emit('ss:captains', g.ssCaptains); }
     io.to(pin).emit('countdown', { ms: COUNTDOWN_MS });
     // Ojos de Halcón: the boards are dealt now, so the countdown plays each board's run-in on its phones.
     if (g.gameType === 'halcon') hcDeal(pin, g);
@@ -6716,6 +6910,7 @@ io.on('connection', (socket) => {
       if (g.gameType === 'halcon') hcStart(pin, g);
       if (g.gameType === 'mochi-mash') mmStart(pin, g);   // the intro first: mmPlay deals the questions and runs the clock
       if (g.gameType === 'pinata') pnStart(pin, g);       // the same: pnPlay deals the questions and runs the clock
+      if (g.gameType === 'sixseven') ssStart(pin, g);     // the same: ssPlay deals the sums and runs the clock
       if (g.gameType === 'reading') {
         // === 📖 READING MODE ===
         // Teacher-driven story session. Server holds the master playback
@@ -6788,11 +6983,11 @@ io.on('connection', (socket) => {
       }
       broadcast(pin);
       // Every question-driven game auto-deals the first question (Dragones Pintores: kids ask with «Recargar»).
-      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata') Object.keys(g.players).forEach((pid) => {
+      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'sixseven') Object.keys(g.players).forEach((pid) => {
         const q = nextQuestionFor(g, pid);
         if (q) io.to(pid).emit('question', q);
       });
-      if (g.gameType !== 'mochi-mash' && g.gameType !== 'pinata') g.endTimer = setTimeout(() => {
+      if (g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'sixseven') g.endTimer = setTimeout(() => {
         if (!games[pin] || games[pin].state !== 'active') return;
         endGame(pin);
       }, g.duration * 1000);
@@ -6802,7 +6997,7 @@ io.on('connection', (socket) => {
   socket.on('host:end-now', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
-    if ((g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata') && g.state !== 'active') return;      // already over: no second end show
+    if ((g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata' || g.gameType === 'sixseven') && g.state !== 'active') return;      // already over: no second end show
     // Ojos de Halcón: «Terminar» plays «¡FINAL!» first (paused: straight to the finale, the pause holds every timer)
     if (g.gameType === 'halcon' && g.halcon && !g.halcon.paused) {
       if (g.halcon.phase === 'final') return;      // «¡FINAL!» is already on: the finale follows by itself
@@ -6818,6 +7013,12 @@ io.on('connection', (socket) => {
     if (g.gameType === 'pinata' && g.pn) {
       if (g.state !== 'active' || g.pn.phase === 'final' || g.pn.phase === 'done') return;
       pnFinal(pin, g);
+      return;
+    }
+    // 6-7 Swing: the same («¡FINAL!» first, also from the pause card)
+    if (g.gameType === 'sixseven' && g.ss) {
+      if (g.state !== 'active' || g.ss.phase === 'final' || g.ss.phase === 'done') return;
+      ssFinal(pin, g);
       return;
     }
     if (g.endTimer) clearTimeout(g.endTimer);
@@ -6843,6 +7044,11 @@ io.on('connection', (socket) => {
       g.pn = null;
       Object.values(g.players).forEach((p) => { p.pnGame = null; p.pnSwing = null; p.pnNextQAt = 0; });
     }
+    if (g.gameType === 'sixseven') {
+      ssStop(g);
+      g.ss = null;
+      Object.values(g.players).forEach((p) => { p.ssGame = null; p.ssQ = null; p.ssOut = null; p.ssNextQAt = 0; });
+    }
     g.state = 'lobby';
     g.teamScores = { red: 0, gold: 0 };
     g.endsAt = null;
@@ -6863,7 +7069,7 @@ io.on('connection', (socket) => {
     if (!g) return cb({ ok: false, error: 'No hay ningún juego con ese PIN. Revisa el número.' });
     // Mochi Mash / Ojos de Halcón: a kid of this game whose phone dropped around the end (a new socket) gets its slot
     // back and its own end card again, and stays in the room for «Otra ronda»
-    if (g.state === 'ended' && ((g.gameType === 'mochi-mash' && g.mm) || (g.gameType === 'halcon' && g.halcon) || (g.gameType === 'pinata' && g.pn))) {
+    if (g.state === 'ended' && ((g.gameType === 'mochi-mash' && g.mm) || (g.gameType === 'halcon' && g.halcon) || (g.gameType === 'pinata' && g.pn) || (g.gameType === 'sixseven' && g.ss))) {
       const nm = String(name || '').trim().slice(0, 20).toLowerCase();
       const ex = nm ? Object.entries(g.players).find(([, p]) => p.name.toLowerCase() === nm) : null;
       if (ex) {
@@ -6878,7 +7084,8 @@ io.on('connection', (socket) => {
         cb({ ok: true, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: pl.studentCode });
         io.to(socket.id).emit('state', publicState(g));
         const one = g.gameType === 'mochi-mash' ? mmEndPayloads(g).forPlayer(socket.id)
-          : g.gameType === 'pinata' ? pnEndPayloads(g).forPlayer(socket.id) : hcEndPayloads(g).forPlayer(socket.id);
+          : g.gameType === 'pinata' ? pnEndPayloads(g).forPlayer(socket.id)
+          : g.gameType === 'sixseven' ? ssEndPayloads(g).forPlayer(socket.id) : hcEndPayloads(g).forPlayer(socket.id);
         if (one) setTimeout(() => io.to(socket.id).emit('game-end', one), 60);
         return;
       }
@@ -6917,7 +7124,8 @@ io.on('connection', (socket) => {
     } else {
       // New player — pick smaller team (Mochi Mash: fewer CONNECTED kids, a tie goes to the team that is behind)
       const team = g.gameType === 'mochi-mash' ? Mochi.pickTeam(g.players, g.mm)
-        : g.gameType === 'pinata' ? Pinata.pickTeam(g.players, g.pn) : pickTeam(g);
+        : g.gameType === 'pinata' ? Pinata.pickTeam(g.players, g.pn)
+        : g.gameType === 'sixseven' ? Sixseven.pickTeam(g.players, g.ss) : pickTeam(g);
       player = {
         name: cleanName,
         team,
@@ -6943,6 +7151,7 @@ io.on('connection', (socket) => {
     player.studentCode = studentRec.code;
     if (g.gameType === 'mochi-mash') mmEnsureId(g, player);   // the projector knows every kid (k + character) from the lobby
     if (g.gameType === 'pinata') pnEnsureId(g, player);
+    if (g.gameType === 'sixseven') ssEnsureId(g, player);
 
     currentPin = pin;
     role = 'player';
@@ -7109,6 +7318,17 @@ io.on('connection', (socket) => {
         }
         if (!player.currentQ && (player.pnNextQAt || player.pnSwing)) return;   // the result / «¡Casi!» wait: the tick deals it
       }
+      // 6-7 Swing: a late joiner plays from now (fresh stats), a rejoin keeps its gold and gets its open sum again; the
+      // room tick deals every new sum (never in the intro, a pause or «¡FINAL!»).
+      if (g.gameType === 'sixseven' && g.ss) {
+        ssEnsureId(g, player);
+        Sixseven.join(g.ss, player);
+        player.currentQ = null;
+        io.to(socket.id).emit('ss:init', ssInitPayload(g, socket.id));
+        ssRescale(pin, g);
+        if (g.ss.phase === 'play') ssResend(g, socket.id, player);
+        return;
+      }
       if (g.gameType === 'kingdoms' && g.kingdoms) {
         io.to(socket.id).emit('kd:init', kdInitPayload(g, false));
         if (player.kdPending) { kdPrompt(pin, socket.id, { reprompt: true }); return; }
@@ -7136,6 +7356,8 @@ io.on('connection', (socket) => {
     if (!g || g.state !== 'active') return;
     const p = g.players[socket.id];
     if (!p) return;
+    // 6-7 Swing v2: its own judge (core/sixseven.js answer) and its own open sum (p.ssQ), never p.currentQ
+    if (g.gameType === 'sixseven' && g.ss) { ssAnswer(pin, g, socket, p, choiceIdx, qid); return; }
     // If the player has no open question at all → tell the client so they can recover
     // (otherwise their answer buttons stay disabled forever — the "frozen" bug).
     if (!p.currentQ) {
@@ -7149,9 +7371,6 @@ io.on('connection', (socket) => {
     const cqData = p.currentQ;
     const correct = cqData.correctIdx === choiceIdx;
     const correctText = cqData.answers[cqData.correctIdx];
-    // Stash the player's actual TAP (6 or 7 for sixseven) for the per-game
-    // branches below — currentQ is nulled before those branches run.
-    p._lastChoice = cqData.answers ? cqData.answers[choiceIdx] : null;
     p.currentQ = null;
 
     if (g.gameType === 'dragon-eye') {
@@ -7219,46 +7438,6 @@ io.on('connection', (socket) => {
         p.kdStreak = 0;
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
-    } else if (g.gameType === 'sixseven') {
-      // 6-7 SWING — math game with combo + speed bonus. Correct answer:
-      // +1 base, +1 if their TAP was within 2.5s of question arrival (speed).
-      // Combo multiplier scales the per-tap bump from streaks of 3+.
-      if (correct) {
-        const reactionMs = Date.now() - (p.lastQuestionAt || 0);
-        p.ssStreak = (p.ssStreak || 0) + 1;
-        const speedBonus = reactionMs < 2500 ? 1 : 0;
-        // Combo multiplier: 1× under 3, 2× at 3-5, 3× at 6+
-        const mult = p.ssStreak >= 6 ? 3 : p.ssStreak >= 3 ? 2 : 1;
-        const gained = (1 + speedBonus) * mult;
-        p.score = (p.score || 0) + gained;
-        g.teamScores[p.team] = (g.teamScores[p.team] || 0) + gained;
-        const chosen = p._lastChoice || '6';
-        io.to(socket.id).emit('answer-result', {
-          correct: true,
-          correctText,
-          sixseven: {
-            chosen, streak: p.ssStreak, mult, gained, speedBonus,
-          },
-        });
-        io.to(pin).emit('ss:tap', {
-          playerId: socket.id, playerName: p.name, playerScore: p.score,
-          team: p.team, choice: chosen, gained,
-          streak: p.ssStreak, teamScores: g.teamScores,
-        });
-      } else {
-        p.ssStreak = 0;
-        const chosen = p._lastChoice || '6';
-        io.to(socket.id).emit('answer-result', {
-          correct: false,
-          correctText,
-          sixseven: { chosen, streak: 0, mult: 1, gained: 0 },
-        });
-        io.to(pin).emit('ss:tap', {
-          playerId: socket.id, playerName: p.name, playerScore: p.score,
-          team: p.team, choice: chosen, gained: 0, streak: 0,
-          teamScores: g.teamScores,
-        });
-      }
     } else if (g.gameType === 'mochi-mash' && g.mm) {
       // Mochi Mash v2: paused or not in play → the question stays open (the phone gets its buttons back)
       if (g.mm.paused || g.mm.phase !== 'play') {
@@ -7297,9 +7476,6 @@ io.on('connection', (socket) => {
       nextDelay = -1;                       // back to flying / walking; the kid asks for the next question
     } else if (g.gameType === 'escape') {
       nextDelay = -1;                       // esAnswer deals the next one, only while the crew is running
-    } else if (g.gameType === 'sixseven') {
-      // Snappy rhythm — fast cadence so the swing feels continuous
-      nextDelay = correct ? 600 : 800;
     } else if (g.gameType === 'mochi-mash' && g.mm) {
       nextDelay = -1;                       // the room's tick deals the next one (after the mash window or the «¡Casi!» wait)
     } else {
@@ -7522,7 +7698,29 @@ io.on('connection', (socket) => {
       if (g.gameType === 'halcon') hcPause(pin, g, !!paused);
       if (g.gameType === 'mochi-mash') mmPause(pin, g, !!paused);
       if (g.gameType === 'pinata') pnPause(pin, g, !!paused);
+      if (g.gameType === 'sixseven') ssPause(pin, g, !!paused);
     } catch (e) { console.error('[host:pause]', e); }
+  });
+
+  // 6-7 Swing teacher: the round style in the lobby (Números / En Chino / Mezcla), and «Saltar» (the intro → play now;
+  // after the end → every phone jumps to its own card).
+  socket.on('host:ss-style', (data) => {
+    try {
+      const g = games[data && data.pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'sixseven' || g.state !== 'lobby') return;
+      g.ssStyle = Sixseven.cleanStyle(data.style);
+      g._lastBcast = 0;
+      broadcast(data.pin);
+    } catch (e) { console.error('[host:ss-style]', e); }
+  });
+  socket.on('host:ss-skip', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'sixseven' || !g.ss) return;
+      if (g.state === 'active' && g.ss.phase === 'intro' && !g.ss.paused) ssPlay(pin, g);
+      else if (g.state === 'ended') io.to(pin).except(g.hostId).emit('ss:skip', { id: g.ss.id });
+    } catch (e) { console.error('[host:ss-skip]', e); }
   });
 
   // Piñata Tigre: the tap that stops the arrow (c = ms since the phone's arrow started), or `auto` when the phone's
@@ -7656,6 +7854,15 @@ io.on('connection', (socket) => {
       broadcast(pin);
       return;
     }
+    if (g.gameType === 'sixseven' && g.ss) {   // the same for 6-7 Swing
+      if (!Sixseven.addTime(g.ss, add)) return;
+      g.endsAt = g.ss.endsAt;
+      const clock = g.ss.paused ? g.ss.pausedAt : Date.now();
+      io.to(pin).emit('ss:time', { id: g.ss.id, endsMs: Math.max(0, g.ss.endsAt - clock), frenzy: g.ss.frenzy, frenzyMs: Math.max(0, g.ss.frenzyAt - clock), add: add / 1000 });
+      g._lastBcast = 0;
+      broadcast(pin);
+      return;
+    }
     g.endsAt += add;
     g.duration += add / 1000;
     g.extraSecs = (g.extraSecs || 0) + add / 1000;   // only for this round: host:reset gives it back (playtest 2026-10-11)
@@ -7751,6 +7958,20 @@ io.on('connection', (socket) => {
           return;
         }
       }
+    }
+    if (g.gameType === 'sixseven' && g.ss) {
+      if (g.state === 'ended') {      // missed game-end (a drop at «¡FINAL!»): the ceremony again
+        const one = ssEndPayloads(g).forPlayer(socket.id);
+        if (one) io.to(socket.id).emit('game-end', one);
+        return;
+      }
+      if (g.state === 'active') {
+        ssEnsureId(g, p);
+        Sixseven.join(g.ss, p);
+        io.to(socket.id).emit('ss:init', ssInitPayload(g, socket.id));
+        if (g.ss.phase === 'play') ssResend(g, socket.id, p);   // the same sum again (with its real time left)
+      }
+      return;                         // the tick deals every new sum (after the wait)
     }
     if (g.gameType === 'pinata' && g.pn) {
       if (g.state === 'ended') {      // missed game-end (a drop at «¡FINAL!»): the ceremony again
@@ -8673,6 +8894,7 @@ io.on('connection', (socket) => {
     if (!g || g.state !== 'active') return;
     if (g.gameType === 'mochi-mash' && g.mm) return;   // Mochi Mash v2 counts taps in batches (player:mm-taps), capped
     if (g.gameType === 'pinata') return;               // Piñata Tigre v2: one judged swing per right answer (player:pn-hit)
+    if (g.gameType === 'sixseven') return;             // 6-7 Swing v2: answers only (player:answer)
     const p = g.players[socket.id];
     if (!p) return;
     const now = Date.now();
@@ -8780,6 +9002,7 @@ io.on('connection', (socket) => {
           if (stillExists.gameType === 'halcon') hcStop(stillExists);
           if (stillExists.gameType === 'mochi-mash') mmStop(stillExists);
           if (stillExists.gameType === 'pinata') pnStop(stillExists);
+          if (stillExists.gameType === 'sixseven') ssStop(stillExists);
           if (stillExists.gameType === 'kingdoms') kdClearTimers(stillExists);
           io.to(currentPin).emit('host-left');
           delete games[currentPin];
@@ -8835,6 +9058,7 @@ setInterval(() => {
     if (g.gameType === 'halcon') return;       // no questions on the phones: the boards run the rounds
     if (g.gameType === 'mochi-mash' && g.mm && (g.mm.phase !== 'play' || g.mm.paused)) return;   // intro, pause, «¡FINAL!»
     if (g.gameType === 'pinata') return;       // Piñata Tigre: its room tick deals every question (after the hit / the wait)
+    if (g.gameType === 'sixseven') return;     // 6-7 Swing: the same (ssTick deals every sum and calls time up)
     Object.entries(g.players).forEach(([pid, p]) => {
       const inAction = p.mashUntil > now || p.currentQ;
       if (!inAction && (!p.lastQuestionAt || now - p.lastQuestionAt > 12000)) {

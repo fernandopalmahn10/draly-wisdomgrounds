@@ -3,186 +3,122 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>6-7 SWING 🤙 · Host</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Press+Start+2P&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20261011a">
-  <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/sixseven.css?v=20260521a">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#151b46">
+  <title>6-7 Swing · Anfitrión</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/mochi.css?v=20261014a">
+  <link rel="stylesheet" href="/css/sixseven.css?v=20261015e">
 </head>
-<body class="ss-bg">
-  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+<body class="ss-host">
+  <button class="ssp-btn ssp-mute" id="mute-btn" type="button" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Sonido</span>
+  </button>
 
-  <!-- LOBBY -->
-  <div id="screen-lobby" class="container ss-lobby">
-    <div style="text-align:center; margin-bottom:16px;">
-      <div class="ss-title-pixel">6 — 7 SWING 🤙</div>
-      <div style="color:#1a3a5a; font-weight:900; letter-spacing:0.1em; margin-top:8px;">PIN</div>
-      <div class="pin-display ss-pin" id="pin-display">····</div>
-      <div style="color:#1a3a5a; font-size:0.9rem;">
-        Tus jugadores entran en <span id="join-url" style="color:#0a4a6a; font-weight:800;">esta URL</span>
-      </div>
-    </div>
-
-    <div class="card ss-card" style="margin-bottom:16px;">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-        <div style="font-size:2rem;">🧮</div>
-        <div style="flex:1;">
-          <div style="font-size:0.75rem; color:#1a3a5a; letter-spacing:0.15em; text-transform:uppercase;">Modo</div>
-          <div style="font-weight:800; font-size:1.15rem;">Matemáticas 6 vs 7</div>
-          <div style="color:#1a3a5a; font-size:0.85rem;">Problemas auto-generados · sin set necesario</div>
+  <!-- LOBBY: PIN + QR, the 3 steps, the round style, time, the two teams as full-body characters (tap one to change team) -->
+  <main id="screen-lobby" class="ssp-lobby">
+    <section class="ssp-left">
+      <h1 class="ssp-title" translate="no">6-7 <span>Swing</span><small>La Balanza de Oro</small></h1>
+      <div class="ssp-pin-card">
+        <div>
+          <div class="ssp-pin-label">PIN</div>
+          <div class="ssp-pin" id="pin-display">····</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="location.href='/'">← Inicio</button>
+        <div class="ssp-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
+        <div class="ssp-qr" id="qr" aria-hidden="true"></div>
       </div>
-      <div class="duration-control">
-        <span>⏱ Duración</span>
-        <input type="range" id="duration-slider" min="60" max="300" step="30" value="120">
-        <span class="duration-value" id="duration-value">2m</span>
-      </div>
-    </div>
-
-    <div class="host-grid">
-      <div class="team-panel team-red ss-team-red">
-        <div class="team-header">
-          <div class="team-mascot ss-six">6</div>
-          <div>
-            <div class="team-name">Equipo 6</div>
-            <div style="color:#1a3a5a; font-size:0.85rem;">¡SIX!</div>
-          </div>
-        </div>
-        <div class="player-chips" id="players-red"></div>
-      </div>
-      <div class="team-panel team-gold ss-team-gold">
-        <div class="team-header">
-          <div class="team-mascot ss-seven">7</div>
-          <div>
-            <div class="team-name">Equipo 7</div>
-            <div style="color:#1a3a5a; font-size:0.85rem;">¡SEVEN!</div>
-          </div>
-        </div>
-        <div class="player-chips" id="players-gold"></div>
-      </div>
-    </div>
-
-    <p style="text-align:center; color:#1a3a5a; font-size:0.85rem; margin-top:12px;">
-      Toca el chip de un jugador para cambiar de equipo
-    </p>
-
-    <div class="controls-panel">
-      <div class="controls-row" style="justify-content:center;">
-        <button class="btn btn-ghost" id="balance-btn">⚖️ Equilibrar</button>
-        <button class="btn btn-jade" id="start-btn" disabled>▶️ ¡A swingear!</button>
-      </div>
-    </div>
-
-    <div class="card ss-card" style="margin-top:18px;">
-      <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se juega</div>
-      <ol style="color:#1a3a5a; font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
-        <li>Cada respuesta tiene como resultado <strong>6 o 7</strong>.</li>
-        <li>En el teléfono, dos botones: <strong>6</strong> 🟦 y <strong>7</strong> 🟪. Toca el correcto.</li>
-        <li>Cuanto más rápido respondes, más puntos. ¡Combos x2, x3 con racha!</li>
-        <li>El personaje 6-7 <strong>se balancea</strong> hacia el lado que va ganando.</li>
-        <li>Equipo con más puntos al final gana 🏆.</li>
+      <ol class="ssp-steps">
+        <li><div class="ssh-step s1" id="step-sum"></div>Mira la cuenta<small>siempre da 6 o 7</small></li>
+        <li><div class="ssh-step s2"><span class="ssi-pic-b b6"><b>6</b><small>liu</small></span><span class="ssi-pic-b b7"><b>7</b><small>qi</small></span><i class="ssx-hand"></i></div>Toca 6 o 7<small>6 es liu · 7 es qi</small></li>
+        <li><div class="ssh-step s3" id="step-bal"></div>¡Llena la balanza!<small>en racha, más oro</small></li>
       </ol>
-    </div>
-  </div>
-
-  <!-- COUNTDOWN -->
-  <div id="screen-countdown" class="hidden countdown-overlay">
-    <div class="countdown-num" id="countdown-num">3</div>
-  </div>
-
-  <!-- ACTIVE — the swinging arena -->
-  <div id="screen-active" class="hidden ss-container">
-    <div class="sticky-pin">
-      <span class="sticky-pin-label">PIN</span>
-      <span class="sticky-pin-value" id="active-pin-display">····</span>
-    </div>
-
-    <div class="ss-topbar">
-      <div class="ss-team six">
-        <span class="ss-team-num">6</span>
-        <span class="ss-team-label">SIX</span>
-        <span class="ss-team-score" id="score-red">0</span>
+      <div class="ssp-styles" role="radiogroup" aria-label="Cómo se escriben las cuentas">
+        <button class="ssp-style" type="button" role="radio" data-style="num" aria-checked="false"><b>Números</b><span class="sss num" translate="no"><span class="sss-n">3</span><span class="sss-op">+</span><span class="sss-n">4</span></span></button>
+        <button class="ssp-style" type="button" role="radio" data-style="zh" aria-checked="false"><b>En Chino</b><span class="sss zh" translate="no"><span class="sss-n">san</span><span class="sss-op">+</span><span class="sss-n">si</span></span></button>
+        <button class="ssp-style on" type="button" role="radio" data-style="mix" aria-checked="true"><b>Mezcla</b><span class="ssp-style-mix" translate="no">3 + 4 · san + si</span></button>
       </div>
-      <div class="ss-time"><span id="timer-display">2:00</span></div>
-      <div class="ss-team seven">
-        <span class="ss-team-score" id="score-gold">0</span>
-        <span class="ss-team-label">SEVEN</span>
-        <span class="ss-team-num">7</span>
-      </div>
-    </div>
-
-    <!-- LEFT team roster — Team 6 (red) -->
-    <aside class="ss-roster-sidebar ss-roster-six" id="ss-roster-red">
-      <div class="ss-roster-header"><span class="ss-roster-mascot">6</span> Equipo 6</div>
-      <div class="ss-roster-list" id="ss-roster-list-red"></div>
-    </aside>
-
-    <!-- RIGHT team roster — Team 7 (gold) -->
-    <aside class="ss-roster-sidebar ss-roster-seven" id="ss-roster-gold">
-      <div class="ss-roster-header"><span class="ss-roster-mascot">7</span> Equipo 7</div>
-      <div class="ss-roster-list" id="ss-roster-list-gold"></div>
-    </aside>
-
-    <!-- The arena — giant swinging 6-7 character + floating numbers everywhere -->
-    <div class="ss-arena" id="ss-arena">
-      <!-- Floating ambient 6s and 7s -->
-      <div class="ss-float-layer" id="ss-float-layer"></div>
-
-      <!-- The big swinging central character. This is the CSS-built one
-           the teacher prefers — clean, themed, no rectangular framing.
-           The user's 67.png artwork shows up SEPARATELY as a rare
-           full-screen dance jumpscare every 25-45s + on big combos. -->
-      <div class="ss-character-wrap" id="ss-character-wrap">
-        <div class="ss-character" id="ss-character">
-          <div class="ss-c-eye left"></div>
-          <div class="ss-c-eye right"></div>
-          <div class="ss-c-six">6</div>
-          <div class="ss-c-seven">7</div>
-          <div class="ss-c-arm left">🤙</div>
-          <div class="ss-c-arm right">🤙</div>
-          <div class="ss-c-foot left"></div>
-          <div class="ss-c-foot right"></div>
+      <div class="ssp-tools">
+        <div class="ssp-dur" role="group" aria-label="Tiempo de juego"><span>Tiempo</span>
+          <button class="ssp-btn on" type="button" data-s="120">2 min</button><button class="ssp-btn" type="button" data-s="180">3 min</button><button class="ssp-btn" type="button" data-s="240">4 min</button>
         </div>
-        <div class="ss-character-shadow"></div>
+        <button class="ssp-btn" id="balance-btn" type="button">Equilibrar equipos</button>
+        <button class="ssp-btn go" id="start-btn" type="button" disabled>¡A jugar!</button>
       </div>
+    </section>
+    <section class="ssp-right">
+      <div class="ssp-preview" id="preview">
+        <div class="ssp-pv-bal" id="pv-bal"></div>
+        <div class="ssp-pv-dral" id="pv-dral"></div>
+        <div class="ssp-pv-t red">Equipo Fuego</div>
+        <div class="ssp-pv-t gold">Equipo Mar</div>
+      </div>
+      <div class="ssp-teams">
+        <div class="ssp-team red"><div class="ssp-team-head"><span>Equipo Fuego</span><small id="count-red">0</small></div><div class="ssp-kids" id="kids-red"></div></div>
+        <div class="ssp-team gold"><div class="ssp-team-head"><span>Equipo Mar</span><small id="count-gold">0</small></div><div class="ssp-kids" id="kids-gold"></div></div>
+      </div>
+      <p class="ssp-hint">Toca a un jugador para cambiarlo de equipo · sin preguntas que elegir: las cuentas se hacen solas</p>
+    </section>
+  </main>
 
-      <!-- Tap-bursts that fly up when players score -->
-      <div class="ss-tap-burst-layer" id="ss-tap-burst-layer"></div>
-
-      <!-- Banner for events -->
-      <div class="ss-banner" id="ss-banner">¡SIX SEVEN!</div>
+  <!-- THE BALANCE: countdown run-in, the rules card, the game, «¡FINAL!» -->
+  <main id="screen-stage" class="ssp-stage hidden">
+    <div class="ssp-pin-mini">PIN <b id="active-pin">···</b></div>
+    <div class="ssp-top">
+      <div class="ssp-meter" aria-label="Oro de cada equipo">
+        <span class="ssp-mn r"><span id="m-red">0</span><small>Fuego</small></span>
+        <div class="ssp-bar"><i id="m-bar"></i></div>
+        <span class="ssp-mn g"><small>Mar</small><span id="m-gold">0</span></span>
+      </div>
+      <div class="ssp-clock"><b class="ssp-time" id="clock">2:00</b><span class="ssp-x2">Doble oro</span><span class="ssp-style-now" id="style-now"></span></div>
+      <div class="ssp-race" id="race" aria-label="Carrera de monumentos"><i class="ssp-race-track"></i><i class="ssp-race-mark red" id="mark-red"></i><i class="ssp-race-mark gold" id="mark-gold"></i></div>
     </div>
+    <div class="ssp-bal" id="bal"></div>
+    <div class="ssp-dral" id="dral"></div>
+    <div class="ssp-capt red hidden" id="capt-red"><p class="ssp-capt-say"></p><img src="/assets/cast/hamdan-hello.webp" alt=""><b class="ssp-capt-name"></b></div>
+    <div class="ssp-capt gold hidden" id="capt-gold"><p class="ssp-capt-say"></p><img src="/assets/cast/latifa-hello.webp" alt=""><b class="ssp-capt-name"></b></div>
+    <div class="ssp-crowd red" id="crowd-red"></div>
+    <div class="ssp-crowd gold" id="crowd-gold"></div>
+    <p class="ssp-say" id="host-say"></p>
+    <div class="ssp-count10 hidden" id="count10" aria-hidden="true"></div>
+  </main>
+  <div class="ssp-fx" id="fx" aria-hidden="true"></div>
 
-    <div style="text-align:center; padding:6px;">
-      <button class="end-now-floating" id="end-now-btn">🛑 Terminar</button>
-    </div>
+  <nav class="ssp-controls hidden" id="controls" aria-label="Controles del profe">
+    <button class="ssp-btn" id="pause-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg><span>Pausa</span></button>
+    <button class="ssp-btn" id="more-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span>30 s</span></button>
+    <button class="ssp-btn hidden" id="skip-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l7 6-7 6zM12 6l7 6-7 6z" fill="currentColor"/></svg><span>Saltar</span></button>
+    <button class="ssp-btn" id="end-now-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg><span>Terminar</span></button>
+  </nav>
+
+  <div class="ssp-band" id="band" role="status" aria-live="polite"></div>
+  <div class="ssp-rules hidden" id="rules"></div>
+  <div class="ssp-paused hidden" id="paused">
+    <div><img src="/assets/dralingo/wise.webp" alt=""><b>Pausa</b><span>Todos quietos: miren al profe</span>
+      <div class="row"><button class="ssp-btn go" id="resume-btn" type="button">Seguir jugando</button><button class="ssp-btn" id="paused-end-btn" type="button">Terminar</button></div></div>
   </div>
 
-  <!-- WIN -->
-  <div id="screen-win" class="hidden container">
-    <div class="win-screen">
-      <div id="win-emoji" style="font-size:7rem;">🤙</div>
-      <div class="winner-banner" id="win-banner">¡Ganador!</div>
-      <div class="final-scores">
-        <div><span class="red"><span id="final-red">0</span> pts</span></div>
-        <div style="color:var(--ink-dim);">vs</div>
-        <div><span class="gold"><span id="final-gold">0</span> pts</span></div>
-      </div>
-      <div class="win-narration" id="win-narration"></div>
-      <div class="leaderboard" id="leaderboard"></div>
-      <div style="display:flex; gap:12px; margin-top:24px;">
-        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Inicio</button>
-        <button class="btn btn-jade" id="play-again-btn">🔄 Otra ronda</button>
-      </div>
-    </div>
+  <!-- THE CEREMONY: the great weigh-in, the winner, the bonus stars, the podium -->
+  <main id="screen-win" class="ssp-end hidden">
+    <div class="ssp-cer" id="cer"></div>
+    <div class="ssp-fxl" id="cer-fx"></div>
+  </main>
+  <button class="ssp-btn ssp-skip hidden" id="cer-skip" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l7 6-7 6zM12 6l7 6-7 6z" fill="currentColor"/></svg><span>Saltar</span></button>
+  <div class="ssp-endtools hidden" id="endtools">
+    <button class="ssp-btn" type="button" id="home-btn">Inicio</button>
+    <button class="ssp-btn go" id="play-again-btn" type="button">Otra ronda</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/sounds.js?v=20260521a"></script>
-  <script src="/js/enter.js"></script>
-  <script src="/js/dralingo.js"></script>
-  <script src="/js/host-sixseven.js?v=20260521a"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script src="/js/sounds.js?v=20261015s"></script>
+  <script src="/js/saga.js?v=20261013a"></script>
+  <script src="/js/halcon-board.js?v=20261014a"></script>
+  <script src="/js/cast.js?v=20261015c"></script>
+  <script src="/js/mochi-stage.js?v=20261014a"></script>
+  <script src="/js/sixseven-stage.js?v=20261015c"></script>
+  <script src="/js/host-sixseven.js?v=20261015d"></script>
   <script src="/js/live-game.js?v=20261011c"></script>
 </body>
 </html>

@@ -2626,15 +2626,15 @@
       return;
     }
     if (kind === 'sixseven') {
-      // 6-7 swing jumpscare — the same mascot from the 6-7 game crashes
-      // across the screen with a little dance + screen shake. Anti-monotony.
+      // 6-7 swing — Dralingo (the star of 6-7 Swing) dances the «6-7» across the screen + screen shake. Anti-monotony.
+      // (2026-10-15: our saga; the old blocky meme figure was retired with the 6-7 Swing remake)
       document.body.classList.remove('wu-shake');
       void document.body.offsetWidth;
       document.body.classList.add('wu-shake');
       setTimeout(() => document.body.classList.remove('wu-shake'), 700);
       const el = document.createElement('div');
       el.className = 'wu-fx-67';
-      el.innerHTML = '<img src="/assets/png-library/67-transparent.png" alt="6-7" onerror="this.replaceWith(document.createTextNode(\'6️⃣7️⃣\'))">';
+      el.innerHTML = '<img class="a" src="/assets/sixseven/dralingo-67-a.webp" alt="Dralingo: seis-siete"><img class="b" src="/assets/sixseven/dralingo-67-b.webp" alt="">';
       layer.appendChild(el);
       if (MochiSounds.combo) MochiSounds.combo();
       else if (MochiSounds.correct) MochiSounds.correct();
