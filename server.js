@@ -17,6 +17,8 @@ const _simGrade = (id, a) => (YctSim.isYct(id) ? YctSim.gradeSim(id, a) : HskSim
 const _simMeta = (id) => (HskSim.SIMULATIONS || {})[id] || YctSim.get(id) || null;
 const SimTrainer = require('./core/sim-trainer');
 const SimImages = require('./core/sim-images');
+const SimLock = require('./core/sim-lock');   // 🔒 simulations for enrolled students + teachers only (2026-10-15)
+SimLock.scan();                                 // the index of the locked files (~1000, a few ms), before the first class
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
@@ -191,6 +193,25 @@ app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store');
   res.type('html').send(MOVE_PAGE);
 });
+// 🔒 2026-10-15 — La Ruta Dorada, phase 1: the exam simulations are no longer open to anyone with the address (his
+// words: "we're not going to give away everything for free"). Pages, data AND media (core/sim-lock.js):
+//  · /yct-sim.html and /hsk-sim.html live in protected/pages/ and open only for: a kid with the PIN of a teacher's open
+//    room, a logged-in student (the `dsim` session cookie the /homework login sets) — with ?sim= only for their own
+//    level —, a teacher (cookie from their /maestro code), or the local test harness (?debug=1&direct=1, this PC only).
+//    Everyone else gets the friendly «Este simulacro es para alumnos de Dralingo» page.
+//  · the recordings and pictures live in protected/ and only travel as signed /sim-media/ links inside a payload the
+//    request was allowed to see (never under /assets/: Cloudflare keeps /assets/* for 2 h).
+// The files left the old /assets/… addresses: those answer 404 (even for copies left on a PC that never got pushed).
+app.use((req, res, next) => {
+  if (!/simulations/i.test(req.path)) return next();
+  let p = req.path;
+  try { p = decodeURIComponent(p); } catch (_) { /* keep raw */ }
+  if (!/^\/+assets\/+[^/]*simulations/i.test(path.posix.normalize(p.replace(/\\/g, '/')))) return next();
+  res.set(SimLock.NO_STORE);
+  res.status(404).type('text').send('Not found');
+});
+app.get(['/yct-sim.html', '/hsk-sim.html'], (req, res) => _simPageGate(req, res));
+app.get('/sim-media/:token/:file', (req, res) => _simMediaFile(req, res));
 // Serve static assets. HTML pages get no-cache headers so phones always pull
 // the latest markup (otherwise stale cached HTML keeps referencing old
 // rewards.js / player.js versions and users see "nothing changed" after a
@@ -339,9 +360,16 @@ app.get('/api/admin/backup', (req, res) => {
 //     brute-forcing. Legit teachers (who send the right code) never fail,
 //     so their dashboard polling is never throttled.
 function _clientIp(req) {
-  const ip = req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'unknown';
+  return _ipFromHeaders(req.headers || {}, req.connection?.remoteAddress);
+}
+// 🔒 2026-10-15: Cloudflare's CF-Connecting-IP first (Cloudflare overwrites it, so a visitor can't fake it on
+// app.dralingo.app the way they can put anything first in X-Forwarded-For); the old order otherwise. The old Render
+// address still takes any header: lock it to Cloudflare to make every per-address limit exact.
+function _ipFromHeaders(h, remote) {
+  const ip = h['cf-connecting-ip'] || h['x-forwarded-for'] || remote || 'unknown';
   return String(ip).split(',')[0].trim();
 }
+const _socketIp = (socket) => _ipFromHeaders(socket.handshake.headers || {}, socket.handshake.address);
 // 🔒 2026-10-11 — every browser page now sends the code in the X-Admin-Pw header
 // (URI-encoded so any character fits in a header; decoded here) or a JSON body
 // field `pw`. The ?pw= / ?password= query param is a TRANSITION fallback only, so
@@ -1981,6 +2009,9 @@ app.post('/api/homework/enter', (req, res) => {
     try {
       if (meta && typeof meta === 'object') Students.setMeta(rec.code, meta);
     } catch (e) { console.warn('[hw:enter] setMeta failed:', e.message); }
+    // 🔒 2026-10-15 — the same login opens this kid's level's simulations on this phone (httpOnly session cookie,
+    // core/sim-lock.js); only from their own classroom code, like every other read of their record
+    if (_hwOwnsStudent(req, rec)) SimLock.setSession(req, res, 's', rec.code, level);
     res.json({
       ok: true,
       studentCode: rec.code,
@@ -2593,13 +2624,22 @@ app.get('/api/homework/trainer/list', (req, res) => {
 });
 app.get('/api/homework/trainer/session/:tier/:exp', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
+  // 🔒 2026-10-15: these are the Old HSK 1 simulations' own pictures and recordings: only for the classes of that level
+  // (the portal offers the trainer to them only), as signed links like every sim file
+  const trainerLevel = _simLevel(Object.keys(HskSim.SIMULATIONS)[0]);
+  if (Teachers.levelForAccessCode(req.query.accessCode) !== trainerLevel) return res.status(403).json({ ok: false, error: 'Este entrenamiento es de otro nivel' });
   const s = SimTrainer.getSession(req.params.tier, req.params.exp);
   if (!s) return res.status(404).json({ ok: false, error: 'entrenamiento no encontrado' });
-  res.json({ ok: true, tier: s.tier, exp: s.exp, expLabel: s.expLabel, questions: s.questions, total: s.total, poolSize: s.poolSize });
+  res.set('Cache-Control', 'private, no-store');
+  res.json({ ok: true, tier: s.tier, exp: s.exp, expLabel: s.expLabel, questions: SimLock.rewrite(s.questions, { kind: 's' }), total: s.total, poolSize: s.poolSize });
 });
 // Instant per-tap verdict — answers never travel to the client.
 app.post('/api/homework/trainer/check', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
+  // 🔒 2026-10-15: each verdict tells the answer of an Old HSK 1 sim question: that level's classes only, like the session
+  if (Teachers.levelForAccessCode(req.body && req.body.accessCode) !== _simLevel(Object.keys(HskSim.SIMULATIONS)[0])) {
+    return res.status(403).json({ ok: false, error: 'Este entrenamiento es de otro nivel' });
+  }
   const { qid, answer } = req.body || {};
   const v = SimTrainer.check(qid, answer);
   if (!v) return res.status(404).json({ ok: false, error: 'pregunta no encontrada' });
@@ -2697,7 +2737,8 @@ app.get('/api/sim-images', (req, res) => {
   const maxSim = req.query.maxSim ? parseInt(req.query.maxSim, 10) : 10;  // default: ready sims 1-10
   const refresh = req.query.refresh === '1';
   const cat = SimImages.getCatalog({ maxSim, refresh });
-  res.json({ ok: true, groups: cat.groups, total: cat.total });
+  res.set('Cache-Control', 'private, no-store');
+  res.json({ ok: true, groups: SimLock.rewrite(cat.groups, { kind: 't' }), total: cat.total });   // 🔒 signed links (2026-10-15)
 });
 // 🧠 SENTENCE PRACTICE (teacher-only, WITH answers) — feeds the
 // "Práctica de oraciones 31-40" sheet in Modo Maestro. Returns every
@@ -2815,29 +2856,155 @@ function _practiceSpanish(level) {
   const map = _practiceEsCache[level];
   return (py) => map.get(Packs.plain(py)) || '';
 }
-// Auth helper for HSK endpoints — accept EITHER a valid HSK PIN OR a
-// homework access code. PIN flow is now the primary path (kids type
-// the 4-digit PIN to enter the room), and the homework access code
-// remains valid as the legacy fallback for force-impose users who
-// don't go through the PIN gate. This was the root cause of
-// "código de acceso incorrecto" — the kid was passing the PIN as
-// accessCode and the homework validator was rejecting it.
-function _hskAuth(req, res) {
-  const pin = String(req.query.pin || (req.body && req.body.pin) || '').trim();
-  // Authoritative source: real games[] table (same reliability as
-  // every other live game). Falls through to disk-persisted HSK_ROOMS
-  // if the dyno restarted before the kid joined, and finally to the
-  // homework classroom-code check for legacy force-impose URLs.
-  if (pin) {
-    const g = games[pin];
-    if (g && g.gameType === 'hsksim') return true;
-    if (HSK_ROOMS.has(pin)) return true;
-  }
-  return _hwCheckAccess(req, res);
+// ── 🔒 Who may open a simulation (2026-10-15, La Ruta Dorada phase 1; core/sim-lock.js) ───────────────────────────
+// Until today any PIN of any exam room or just a class access code (1001…) opened every sim, answers on submit
+// included. Now one of these, and only for the sims it covers:
+//   t · a teacher: the /maestro code in X-Admin-Pw (admin turnstile counts wrong codes), or the teacher sim session
+//   r · a kid in a teacher's exam room: that room's PIN, for THAT room's sim, while the room is open
+//   s · an enrolled student (the `dsim` cookie of the /homework login): the sims of their level (core/levels.js)
+//   d · the local test harness (?debug=1&direct=1 on this PC only, SimLock.isLocalDev — never on Render)
+// A teacher's exam room behind a PIN, or null once it is closed («Cerrar la sala», host:end) or 6 h old. HSK_ROOMS is
+// the authority (written for every exam room, kept on the data disk, so a restart or a deploy never closes one);
+// a different live game that happens to reuse the PIN means the old exam room is gone.
+// PIN guessing: an exam PIN is 3-4 digits, so a sim page / payload / room lookup with a PIN that never belonged to an
+// exam room counts against the caller's IP; 60 such misses in 10 min stop PIN entry from that IP for 10 min (a class
+// arrives with the right PIN by the redirect, and a just-closed room's PIN is never a miss).
+const _pinMisses = new Map();    // ip → [timestamps]
+const _hskClosed = new Map();    // pin → when its exam room closed (kids reloading it are not guessing)
+function _pinBlocked(req) {
+  const arr = (_pinMisses.get(_clientIp(req)) || []).filter((t) => Date.now() - t < 10 * 60 * 1000);
+  return arr.length >= 60;
 }
+function _pinMiss(req, pin) {
+  const now = Date.now();
+  const closed = _hskClosed.get(String(pin));
+  if (closed && now - closed < 6 * 60 * 60 * 1000) return;
+  const ip = _clientIp(req);
+  const arr = (_pinMisses.get(ip) || []).filter((t) => now - t < 10 * 60 * 1000);
+  arr.push(now);
+  _pinMisses.set(ip, arr);
+  if (arr.length === 60) console.warn('[security] exam PIN guessing ip=' + ip + ' → PIN entry paused 10 min');
+  if (_pinMisses.size > 5000) for (const [k, v] of _pinMisses) if (!v.length || now - v[v.length - 1] > 10 * 60 * 1000) _pinMisses.delete(k);
+}
+function _hskRoomFor(pin) {
+  pin = String(pin || '').trim();
+  if (!/^\d{3,5}$/.test(pin)) return null;
+  const r = HSK_ROOMS.get(pin);
+  if (!r || Date.now() - (r.createdAt || 0) > 6 * 60 * 60 * 1000) return null;
+  const g = games[pin];
+  if (g && (g.gameType !== 'hsksim' || !g.hsk || g.hsk.simId !== r.simId)) return null;
+  return { pin, simId: r.simId };
+}
+const _simLevel = (simId) => { const m = _simMeta(simId); return m ? Levels.normalize(m.level) : null; };
+const _simsOfLevel = (level) => HskSim.listSims().concat(YctSim.listSims()).filter((s) => Levels.normalize(s.level) === level).map((s) => s.id);
+// The `dsim` session, checked on every request: a student's record must still exist (Students.get brings an archived
+// kid back) and still be of that level; a teacher's code must still exist ('*' = the legacy admin password).
+function _simSession(req) {
+  const s = SimLock.session(req);
+  if (!s) return null;
+  if (s.kind === 's') {
+    const rec = Students.get(s.code);
+    if (!rec) return null;
+    if (rec.level && Levels.normalize(rec.level) !== s.level) return null;   // moved to another level since
+  }
+  if (s.kind === 't' && s.id !== '*' && !Teachers.getByTeacherId(s.id)) return null;
+  return s;
+}
+// → { grant } or { status, error }. countMiss: a PIN that opens nothing counts as a guess (the payload, not the submit).
+function _simGrant(req, simId, countMiss) {
+  const level = _simLevel(simId);
+  if (!level) return { status: 404, error: 'unknown sim' };
+  const h = req.headers || {};
+  if ((h['x-admin-pw'] || h['x-admin-password']) && _adminAuth(req, null)) return { grant: { kind: 't' } };
+  // a room first: whoever plays in a teacher's room plays as a kid (their grade is saved like everyone's). It takes the
+  // room pass that joining the room gave the phone (player:join, so they are on the teacher's roster), not a bare PIN.
+  const pin = String((req.query && req.query.pin) || (req.body && req.body.pin) || '').trim();
+  const pass = String((req.query && req.query.pass) || (req.body && req.body.pass) || '');
+  const room = pin ? _hskRoomFor(pin) : null;
+  if (room && room.simId === simId && SimLock.roomPassOk(pass, room.pin, simId)) return { grant: { kind: 'r', pin: room.pin } };
+  if (pin && !room && countMiss) _pinMiss(req, pin);
+  const sess = _simSession(req);
+  if (sess && sess.kind === 't') return { grant: { kind: 't' } };
+  if (sess && sess.kind === 's' && sess.level === level) return { grant: { kind: 's', studentCode: sess.code } };
+  if (req.query && req.query.debug === '1' && req.query.direct === '1' && SimLock.isLocalDev(req)) return { grant: { kind: 'd' } };
+  if (sess && sess.kind === 's') return { status: 403, error: 'Este simulacro es de otro nivel.' };
+  return { status: 401, error: pin ? 'Esta sala ya cerró. Pídele a tu maestra el PIN nuevo.' : 'Este simulacro es para alumnos de Dralingo. Entra con tu código.' };
+}
+// GET /yct-sim.html · /hsk-sim.html — the player, or the friendly locked page (never a raw 401 text)
+function _simPageGate(req, res) {
+  const page = /yct-sim/i.test(req.path) ? 'yct-sim.html' : 'hsk-sim.html';
+  const q = req.query || {};
+  if (q.debug === '1' && q.direct === '1' && SimLock.isLocalDev(req)) return SimLock.sendPage(res, page);
+  const pin = String(q.pin || '').trim();
+  if (pin) {
+    // the page itself holds no exam (the sim loads only with the room pass): a live room's PIN always opens it, so a
+    // whole class behind one address is never locked out; a PIN that opens nothing counts as a guess
+    if (_hskRoomFor(pin)) return SimLock.sendPage(res, page);
+    _pinMiss(req, pin);
+    return SimLock.sendLocked(res, { reason: 'room' });
+  }
+  const sess = _simSession(req);
+  if (!sess) return SimLock.sendLocked(res, { reason: 'login' });
+  // a student opening one sim by its link (no room): only their own level's. The old forced links (?access=…) and
+  // the bare page keep their PIN box.
+  const sim = String(q.sim || '').trim();
+  if (sess.kind === 's' && sim && !('access' in q) && _simLevel(sim) && _simLevel(sim) !== sess.level) {
+    return SimLock.sendLocked(res, { reason: 'level', levelName: Levels.info(sess.level).name });
+  }
+  return SimLock.sendPage(res, page);
+}
+// GET /sim-media/<token>/<file> — a recording or picture, only with a valid link of ITS sim, never cached by anyone.
+function _simMediaFile(req, res) {
+  res.set(SimLock.NO_STORE);
+  res.set('Cross-Origin-Resource-Policy', 'same-origin');
+  const m = SimLock.openMedia(req.params.token, req.params.file);
+  if (!m.file) return res.status(m.status || 403).type('text').send(m.status === 404 ? 'Not found' : 'Forbidden');
+  const alive = m.kind === 'r' ? !!(_hskRoomFor(m.pin) && _hskRoomFor(m.pin).simId === m.sim)
+    : m.kind === 'w' ? !!(games[m.pin] && games[m.pin].gameType === 'warmup' && games[m.pin].state !== 'ended')
+    : m.kind === 'd' ? SimLock.isLocalDev(req)
+    : m.kind === 's' || m.kind === 't';
+  if (!alive) return res.status(403).type('text').send('Forbidden');
+  res.type(m.type);
+  res.sendFile(m.file.abs, { cacheControl: false, lastModified: false }, (err) => {   // Range requests for the audio
+    if (err && !res.headersSent) res.status(err.statusCode || 404).end();
+  });
+}
+// The sim session for this phone, from codes it already has (the friendly locked page calls this before showing its
+// card): a student's access code + student code (an existing account only, never a new one), or a teacher's code in
+// X-Admin-Pw. Wrong codes count in a turnstile like the admin one (a class shares one IP: 30 fails / 10 min).
+const _simSessFails = new Map();
+app.post('/api/sim-access/session', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const ip = _clientIp(req);
+  const now = Date.now();
+  const fails = (_simSessFails.get(ip) || []).filter((t) => now - t < 10 * 60 * 1000);
+  if (fails.length >= 30) return res.status(429).json({ ok: false, error: 'demasiados intentos, espera unos minutos' });
+  const fail = (status, error) => {
+    fails.push(now);
+    _simSessFails.set(ip, fails);
+    if (_simSessFails.size > 5000) _simSessFails.clear();
+    return res.status(status).json({ ok: false, error });
+  };
+  const h = req.headers || {};
+  if (h['x-admin-pw'] || h['x-admin-password']) {
+    const s = _adminAuth(req, res);   // writes its own 401 / 429
+    if (!s) return;
+    SimLock.setSession(req, res, 't', (s.teacher && s.teacher.teacherId) || '*', '');   // re-checked on every request
+    return res.json({ ok: true, kind: 'teacher' });
+  }
+  const { accessCode, studentCode } = req.body || {};
+  if (!Assignments.isAccessCodeValid(accessCode)) return fail(401, 'Código de acceso incorrecto');
+  const rec = studentCode ? Students.get(String(studentCode).trim().toUpperCase()) : null;
+  if (!rec) return fail(401, 'No encontramos ese código de estudiante');
+  // only a kid already tagged with this classroom code (an untagged old account logs in once at /homework, which tags it)
+  if (!rec.classroomCode || !_hwOwnsStudent(req, rec)) return fail(403, 'no autorizado');
+  const level = Teachers.levelForAccessCode(accessCode);
+  SimLock.setSession(req, res, 's', rec.code, level);
+  res.json({ ok: true, kind: 'student', level, levelName: Levels.info(level).name, sims: _simsOfLevel(level) });
+});
 
-// Fetch a simulation's full payload (correct answers stripped client-side).
-// Auth: valid PIN OR valid classroom access code.
+// Fetch a simulation's payload (answers stripped by the engine), its media as signed /sim-media/ links, plus a
+// submit ticket (a kid can still hand in after the room closed).
 // ⚠️ ROUTE COLLISION GUARD — this is a wildcard `:simId` route, so it
 // matches ANY single-segment URL after /api/hsk-sim/. That means a path
 // like /api/hsk-sim/results would shadow the more-specific results
@@ -2847,15 +3014,33 @@ function _hskAuth(req, res) {
 const HSK_RESERVED_PATHS = new Set(['results', 'sessions', 'heartbeat', 'list', 'room']);
 app.get('/api/hsk-sim/:simId', (req, res, next) => {
   if (HSK_RESERVED_PATHS.has(req.params.simId)) return next();
-  if (!_hskAuth(req, res)) return;
-  const payload = _simPayload(req.params.simId);
+  res.set('Cache-Control', 'private, no-store');
+  const simId = String(req.params.simId);
+  const g = _simGrant(req, simId, true);
+  if (!g.grant) return res.status(g.status).json({ ok: false, locked: g.status !== 404, error: g.error });
+  const payload = _simPayload(simId);
   if (!payload) return res.status(404).json({ ok: false, error: 'unknown sim' });
-  res.json({ ok: true, sim: payload });
+  const sim = SimLock.rewrite(payload, g.grant);
+  sim.ticket = SimLock.ticket(g.grant, simId);
+  res.json({ ok: true, sim });
 });
 // Submit answers, grade them, persist to student record.
 app.post('/api/hsk-sim/:simId/submit', (req, res) => {
-  if (!_hskAuth(req, res)) return;
-  const { studentCode, answers, displayName } = req.body || {};
+  res.set('Cache-Control', 'private, no-store');
+  const simId = String(req.params.simId);
+  const g = _simGrant(req, simId);
+  const grant = g.grant || SimLock.ticketGrant(req.body && req.body.ticket, simId);
+  if (!grant) return res.status(g.status || 401).json({ ok: false, locked: true, error: g.error });
+  // a teacher trying a sim: graded, never saved on a student's record
+  if (grant.kind === 't') {
+    const r0 = _simGrade(simId, (req.body && req.body.answers) || {});
+    return r0 ? res.json({ ok: true, result: r0, saved: false }) : res.status(404).json({ ok: false, error: 'unknown sim' });
+  }
+  const { answers, displayName } = req.body || {};
+  // a logged-in student on their own (no room) saves on their own record, whatever the page sent (their session, or
+  // the code inside their ticket)
+  const studentCode = grant.kind === 's' && grant.studentCode ? grant.studentCode : (req.body || {}).studentCode;
+  if (grant.kind === 's' && !grant.studentCode) return res.status(401).json({ ok: false, locked: true, error: 'Vuelve a entrar con tu código.' });
   // 🆕 Same guest-provisioning + name recovery as heartbeat. Without
   // this, the kid's exam result would land under code-as-name instead
   // of their actual chosen name. Match the heartbeat logic exactly.
@@ -3048,7 +3233,8 @@ app.get('/api/admin/student/:code/hsk-attempt', (req, res) => {
   // Re-attach question text/media via the shared enrichment helper so
   // the teacher sees content, not bare letters (and R3/R4 resolve too).
   const sim = _simMeta(attempt.simId);   // old HSK or YCT / New HSK (2026-10-12)
-  const wrongQs = _enrichHskWrongQs(sim, attempt.wrongQs);
+  const wrongQs = SimLock.rewrite(_enrichHskWrongQs(sim, attempt.wrongQs), { kind: 't' });   // 🔒 signed links
+  res.set('Cache-Control', 'private, no-store');
   res.json({
     ok: true,
     code: rec.code,
@@ -3100,6 +3286,8 @@ app.get('/api/homework/my-hsk-attempt/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.params.code);
   if (!rec) return res.status(404).json({ ok: false, error: 'no such student' });
+  // 🔒 2026-10-15: the exam's pictures and recordings come with it, so only from the kid's own classroom code
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const ts = parseInt(req.query.ts, 10);
   if (!ts) return res.status(400).json({ ok: false, error: 'ts required' });
   const attempt = (rec.hskResults || []).find((r) => r.ts === ts);
@@ -3107,8 +3295,9 @@ app.get('/api/homework/my-hsk-attempt/:code', (req, res) => {
   const sim = _simMeta(attempt.simId);   // old HSK or YCT / New HSK (2026-10-12)
   // Shared enrichment (see _enrichHskWrongQs): question text + hanzi,
   // narrator audio replay URL, question/option images, and content-rich
-  // "elegiste vs correcta" labels — R3/R4 included.
-  const wrongQs = _enrichHskWrongQs(sim, attempt.wrongQs);
+  // "elegiste vs correcta" labels — R3/R4 included. Its media as signed links (🔒 2026-10-15): the kid took this exam.
+  const wrongQs = SimLock.rewrite(_enrichHskWrongQs(sim, attempt.wrongQs), { kind: 's' });
+  res.set('Cache-Control', 'private, no-store');
   res.json({
     ok: true,
     simId: attempt.simId,
@@ -3231,8 +3420,9 @@ setInterval(() => {
   const cutoff = Date.now() - 6 * 60 * 60 * 1000;
   let changed = false;
   for (const [pin, room] of HSK_ROOMS) {
-    if ((room.createdAt || 0) < cutoff) { HSK_ROOMS.delete(pin); changed = true; }
+    if ((room.createdAt || 0) < cutoff) { HSK_ROOMS.delete(pin); _hskClosed.set(pin, Date.now()); changed = true; }
   }
+  for (const [pin, at] of _hskClosed) if (at < cutoff) _hskClosed.delete(pin);   // 🔒 closed-room PINs: 6 h memory
   if (changed) _hskRoomsSave();
 }, 10 * 60 * 1000);
 
@@ -3245,6 +3435,7 @@ setInterval(() => {
 function _hskGameLookup(pin) {
   let g = games[pin];
   if (g && g.gameType === 'hsksim') return g;
+  if (g) return null;   // 2026-10-15: another live game owns this PIN now; never overwrite it with an old exam room
   // LAZY HYDRATION: HSK_ROOMS is the disk-persistent table loaded at
   // boot. games[] is in-memory only. After a dyno restart, the PIN is
   // in HSK_ROOMS but NOT in games[]. We recreate the games[] entry on
@@ -3313,6 +3504,9 @@ app.post('/api/hsk-sim/room/create', (req, res) => {
 // loaded from disk after a restart.
 app.get('/api/hsk-sim/room/:pin', (req, res) => {
   const pin = req.params.pin;
+  // 🔒 2026-10-15: a PIN that was never an exam room counts as a guess (see _pinMiss)
+  if (_pinBlocked(req)) return res.status(429).json({ ok: false, error: 'Espera unos minutos y vuelve a escribir el PIN.' });
+  if (!HSK_ROOMS.has(String(pin)) && !(games[pin] && games[pin].gameType === 'hsksim')) _pinMiss(req, pin);
   const g = _hskGameLookup(pin);
   if (g) {
     return res.json({ ok: true, pin, simId: g.hsk.simId, fx: g.hsk.fx || null });
@@ -4167,6 +4361,13 @@ app.get('/api/sets/:id', (req, res) => {
   try {
     const set = Sets.loadSet(req.params.id);
     if (!set) return res.status(404).json({ error: 'Set not found' });
+    // 🔒 2026-10-15 — a «Simulacro del examen» round is the simulations' own questions WITH their answers: its name
+    // only (all games.html needs), unless a teacher code comes along. Games load rounds on the server (host:load-set).
+    if (/^pack:[a-z0-9]+-simulacro-/i.test(String(req.params.id))) {
+      const h = req.headers || {};
+      const teacher = (h['x-admin-pw'] || h['x-admin-password']) && _adminAuth(req, null);
+      if (!teacher) return res.set('Cache-Control', 'no-store').json({ id: set.id, title: set.title, filename: set.filename, questions: [], locked: true });
+    }
     res.json(set);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -4315,11 +4516,11 @@ function genPin() {
   let pin;
   for (let tries = 0; tries < 50; tries++) {
     pin = String(Math.floor(100 + Math.random() * 900));
-    if (!games[pin]) return pin;
+    if (!games[pin] && !HSK_ROOMS.has(pin)) return pin;   // 🔒 never an open exam room's PIN (kept on disk across restarts)
   }
   do {
     pin = String(Math.floor(1000 + Math.random() * 9000));
-  } while (games[pin]);
+  } while (games[pin] || HSK_ROOMS.has(pin));
   return pin;
 }
 
@@ -6529,9 +6730,20 @@ io.on('connection', (socket) => {
       if (typeof a === 'function') cb = a;
       else if (a && typeof a === 'object') opts = a;
     }
-    const pin = genPin();
     const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'halcon', 'warmup', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
+    // 🔒 2026-10-15 — an exam room opens a simulation to every kid with its PIN: only a teacher opens one (host-hsk sends
+    // the /maestro code; wrong codes count in the admin turnstile). Checked before anything is created.
+    if (type === 'hsksim') {
+      const ip = _socketIp(socket);
+      if (_adminFailCount(ip) >= 10) return cb({ error: 'demasiados intentos, espera unos minutos' });
+      if (!isAdminPassword(opts.password)) {
+        _adminNoteFail(ip);
+        return cb({ error: 'Falta tu código de maestra: abre la simulación desde /maestro.' });
+      }
+      if (!_simPayload(String(opts.simId || 'hsk1-sim1'))) return cb({ error: 'unknown simId' });
+    }
+    const pin = genPin();
     const defaultDuration =
       type === 'pinata'       ? Pinata.R.DURATION :  // 3 min (the lobby offers 2 / 3 / 4)
       type === 'dragon-eye'   ? 240 :
@@ -6621,7 +6833,7 @@ io.on('connection', (socket) => {
     // Auth: warmup/reading teacher tools validate via the admin password.
     // Other game types: allow reclaim if the game has no live host right now
     // (host was disconnected) — the password gate already protects warmup.
-    const isWarmupTool = (g.gameType === 'warmup' || g.gameType === 'reading');
+    const isWarmupTool = (g.gameType === 'warmup' || g.gameType === 'reading' || g.gameType === 'hsksim');   // 🔒 exam rooms too (2026-10-15)
     if (isWarmupTool && !isAdminPassword(password)) {
       return cb({ ok: false, error: 'bad-password' });
     }
@@ -7025,6 +7237,32 @@ io.on('connection', (socket) => {
     endGame(pin);
   });
 
+  // 🔒 2026-10-15 — «Cerrar la sala» on the exam monitor (host-hsk.js): the room closes for good (it used to do nothing,
+  // so a PIN kept opening the exam for 6 h). Its PIN, its page and its files stop working; kids who already took it
+  // can still hand it in (their submit ticket). The teacher's socket, or anyone with a teacher code (a monitor that
+  // reconnected under a new socket).
+  socket.on('host:end', ({ pin, password } = {}, cb) => {
+    cb = typeof cb === 'function' ? cb : () => {};
+    pin = String(pin || '');
+    const g = games[pin];
+    const isExam = (g && g.gameType === 'hsksim') || (!g && HSK_ROOMS.has(pin));
+    if (!isExam) return cb({ ok: false });
+    // always the teacher code (the monitor sends it), even from the host socket: closing ends the exam for everyone.
+    // Wrong codes count in the admin turnstile like every other teacher check.
+    const ip = _socketIp(socket);
+    if (_adminFailCount(ip) >= 10) return cb({ ok: false, error: 'demasiados intentos' });
+    if (!isAdminPassword(password)) { _adminNoteFail(ip); return cb({ ok: false, error: 'not-teacher' }); }
+    if (g) {
+      if (g.endTimer) clearTimeout(g.endTimer);
+      io.to(pin).emit('host-left');
+      delete games[pin];
+    }
+    HSK_ROOMS.delete(pin);
+    _hskClosed.set(pin, Date.now());
+    _hskRoomsSave();
+    cb({ ok: true });
+  });
+
   socket.on('host:reset', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
@@ -7165,6 +7403,8 @@ io.on('connection', (socket) => {
       rejoined: isRejoin,
       gameState: g.state,
       studentCode: player.studentCode,
+      // 🔒 2026-10-15: an exam room's pass (this kid is now on the teacher's roster): the room's sim loads with it
+      roomPass: g.gameType === 'hsksim' && g.hsk && g.hsk.simId ? SimLock.roomPass(String(pin), g.hsk.simId) : undefined,
     });
     broadcast(pin);
 
@@ -8501,8 +8741,11 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
     if (!(g.hostId === socket.id && isAdminPassword(password))) return;
-    if (url && !SimImages.isValidImageUrl(String(url))) return;   // reject anything not in the catalog
-    g.wuImage = url ? String(url) : null;
+    // 🔒 2026-10-15: the picker holds signed links; back to the picture's own address, checked against the catalog,
+    // then a fresh link for THIS room (it stops working when the room ends).
+    const logical = url ? SimLock.logicalUrl(String(url)) : null;
+    if (url && (!logical || !SimImages.isValidImageUrl(logical))) return;   // reject anything not in the catalog
+    g.wuImage = logical ? SimLock.linkFor(logical, { kind: 'w', pin: String(pin) }) : null;
     io.to(pin).emit('wu:image', { url: g.wuImage });
   });
   // === JUDGE role === host designates a kid as a "juez" who can approve or

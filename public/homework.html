@@ -73,7 +73,7 @@
   <link rel="stylesheet" href="/css/homework.css?v=20261012c">
   <link rel="stylesheet" href="/css/characters.css?v=20260601o">
   <!-- 2026-10-11 pastel sticker restyle, loaded last; every rule is scoped to body.hw-pastel (drop the class to roll back) -->
-  <link rel="stylesheet" href="/css/homework-pastel.css?v=20261012d">
+  <link rel="stylesheet" href="/css/homework-pastel.css?v=20261015a">
   <!-- 2026-10-13 remake (docs/specs/portal-remake.md), loaded last; every rule is scoped to body.hw-portal (without the class the layer and js/portal.js stay off) -->
   <link rel="stylesheet" href="/css/portal.css?v=20261014b">
 </head>
@@ -96,6 +96,8 @@
       <img class="hw-entry-dralingo" id="hw-entry-dralingo" src="/assets/dralingo/anim/hello-still.webp" alt="Dralingo" width="148" height="166" draggable="false">
       <h1 class="hw-entry-title">Mis Tareas</h1>
       <p class="hw-entry-sub">Para hacer las tareas en tu casa, sin código PIN.</p>
+      <!-- 🔒 2026-10-15: shown when a locked simulation sent the kid here (?next=…, homework.js) -->
+      <p class="hw-entry-next" id="hw-entry-next" hidden>🏆 Entra con tu código y vuelves directo a tu simulacro.</p>
       <label class="hw-entry-label">
         <span>Código de acceso (4 números):</span>
         <input class="input hw-entry-input" id="hw-access-code" type="tel" inputmode="numeric" placeholder="1001" autocomplete="off" maxlength="4">
@@ -656,9 +658,9 @@
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/hw-i18n.js?v=20261014a"></script>
+  <script src="/js/hw-i18n.js?v=20261015a"></script>
   <script src="/js/portal.js?v=20261013c"></script>
-  <script src="/js/homework.js?v=20261014b"></script>
+  <script src="/js/homework.js?v=20261015a"></script>
   <script src="/js/super-admin-badge.js?v=20261011c"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>

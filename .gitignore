@@ -32,6 +32,8 @@ data/guides.json
 # 🏆 HSK PIN rooms — persisted so a Render dyno restart doesn't wipe
 # active classroom PINs mid-exam.
 data/hsk-rooms.json
+# 🔒 The key that signs simulation links and sim sessions (core/sim-lock.js): made once on the data disk. NEVER commit.
+data/sim-lock.key
 # Original (uncompressed) 3D models — only the compressed dralingo-*.glb + john-monk.glb ship to git
 public/assets/Arab Dralingo flying with white ghutra.glb
 public/assets/Arab Dralingo in Red F8.glb

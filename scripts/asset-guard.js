@@ -11,10 +11,11 @@ const { execSync } = require('child_process');
 
 const ROOT = path.join(__dirname, '..');
 const all = process.argv.includes('--all');
+// protected/ = the locked simulation media (2026-10-15, core/sim-lock.js): deployed too, same rules
 const list = all
-  ? execSync('git ls-files -z public/assets', { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 << 20 }).split('\0')
+  ? execSync('git ls-files -z public/assets protected', { cwd: ROOT, encoding: 'utf8', maxBuffer: 64 << 20 }).split('\0')
   : execSync('git diff --cached --name-only --diff-filter=AM -z', { cwd: ROOT, encoding: 'utf8' }).split('\0');
-const files = list.filter((f) => f && f.startsWith('public/assets/'));
+const files = list.filter((f) => f && (f.startsWith('public/assets/') || (f.startsWith('protected/') && !f.startsWith('protected/pages/'))));
 const MB = 1048576;
 const errors = [], warns = [];
 for (const f of files) {

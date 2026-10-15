@@ -13,7 +13,7 @@ const FILES = [
   'public/host-snow.html', 'public/js/host-snow.js', 'public/js/player-snow.js', 'public/js/player-kingdoms-skin.js',
   'public/host-escape.html', 'public/js/host-escape.js', 'public/js/player-escape.js', 'public/js/escape-render.js', 'public/js/escape-map.js',
   'core/escape.js', 'public/js/cast.js',
-  'public/games.html',
+  'public/games.html', 'protected/pages/sim-locked.html',
   'public/host-halcon.html', 'public/js/host-halcon.js', 'public/js/player-halcon.js', 'public/js/halcon-board.js', 'core/halcon.js',
   'public/host.html', 'public/js/host-mochi.js', 'public/js/player-mochi.js', 'public/js/mochi-stage.js', 'core/mochi.js',
   'public/host-pinata.html', 'public/js/host-pinata.js', 'public/js/player-pinata.js', 'public/js/pinata-stage.js', 'core/pinata.js',

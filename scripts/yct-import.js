@@ -12,12 +12,14 @@
 //                     screen recording (seconds)
 //   images/*.jpg      the pictures
 // Writes core/yct/<level>-sim<N>.json and copies the images into
-// public/assets/YCT SIMULATIONS/<LEVEL>/SIMULATION <N>/images/.
+// protected/YCT SIMULATIONS/<LEVEL>/SIMULATION <N>/images/ (New HSK: protected/NEW HSK SIMULATIONS/…).
+// 🔒 Since 2026-10-15 the sim media live in protected/, never in public/ (core/sim-lock.js): the JSON keeps the
+// logical address /assets/<FAMILY> SIMULATIONS/… and the server turns it into a signed /sim-media/ link per request.
 //
 // The listening audio is ONE continuous track cut from the recording
 // (welcome + instructions + every item, exactly as in the real exam):
 //   ffmpeg -ss <offset> -to <end> -i recording.mp4 -vn -ac 1 -c:a aac -b:a 96k listening.m4a
-// placed at public/assets/YCT SIMULATIONS/<LEVEL>/SIMULATION <N>/listening.m4a.
+// placed at protected/YCT SIMULATIONS/<LEVEL>/SIMULATION <N>/listening.m4a.
 // --offset is the second of the recording where that track starts; every
 // item time is stored relative to it so the player can follow the audio.
 // =========================================================================
@@ -58,8 +60,8 @@ const FAMILY = /^newhsk/i.test(level)
   ? { dir: 'NEW HSK SIMULATIONS', level: 'NEW HSK ' + levelNum, title: 'New HSK ' + levelNum }
   : { dir: 'YCT SIMULATIONS', level: level.toUpperCase().replace(/^YCT/, 'YCT '), title: level.toUpperCase() };
 const LEVEL_DIR = FAMILY.level;
-const assetDir = path.join(ROOT, 'public', 'assets', FAMILY.dir, LEVEL_DIR, 'SIMULATION ' + simNum);
-const webBase = '/assets/' + [FAMILY.dir, LEVEL_DIR, 'SIMULATION ' + simNum].map(encodeURIComponent).join('/');
+const assetDir = path.join(ROOT, 'protected', FAMILY.dir, LEVEL_DIR, 'SIMULATION ' + simNum);   // locked, see top
+const webBase = '/assets/' + [FAMILY.dir, LEVEL_DIR, 'SIMULATION ' + simNum].map(encodeURIComponent).join('/');   // logical
 fs.mkdirSync(path.join(assetDir, 'images'), { recursive: true });
 
 const ZH_PART = ['', '第一部分', '第二部分', '第三部分', '第四部分'];

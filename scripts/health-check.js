@@ -19,7 +19,7 @@ const LIMITS = {                      // the thresholds he agreed to (docs/HOW_C
   cpuPct: 60,                         // peak 1-minute CPU vs the server's share
   studentFileMB: 20,                  // student-records.json: past this, move to a database
   diskPct: 30,                        // data disk used
-  deployedMediaMB: 1024,              // tracked public/assets
+  deployedMediaMB: 1024,              // tracked public/assets + protected/ (the locked sim media)
   biggestFileMB: 10,                  // any single tracked file
   pageKB: 1024,                       // a page + its scripts/styles, compressed, as a phone downloads it
   bandwidthGB: 25,                    // downloads in 30 days (Hobby includes 5 GB; extra is $0.15/GB)
@@ -92,10 +92,10 @@ function repoPart() {
   for (const f of tracked) {
     let size = 0;
     try { size = fs.statSync(path.join(ROOT, f)).size; } catch (_) { continue; }
-    if (f.startsWith('public/assets/')) media += size;
+    if (f.startsWith('public/assets/') || f.startsWith('protected/')) media += size;   // protected/ = locked sim media (2026-10-15)
     if (size > big.size) big = { size, f };
   }
-  add('Deployed media (public/assets)', `${(media / 1048576).toFixed(0)} MB`, LIMITS.deployedMediaMB + ' MB', media / 1048576 <= LIMITS.deployedMediaMB);
+  add('Deployed media (public/assets + protected)', `${(media / 1048576).toFixed(0)} MB`, LIMITS.deployedMediaMB + ' MB', media / 1048576 <= LIMITS.deployedMediaMB);
   add('Biggest single file', `${(big.size / 1048576).toFixed(1)} MB (${big.f})`, LIMITS.biggestFileMB + ' MB', big.size / 1048576 <= LIMITS.biggestFileMB);
   let worst = { kb: 0, p: '' };
   for (const p of ['player.html', 'homework.html', 'index.html', 'maestro.html', 'host-snow.html', 'host-kingdoms.html', 'host-paint.html', 'audios.html']) {

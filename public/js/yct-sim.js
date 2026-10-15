@@ -57,6 +57,7 @@
   let finished = false;
   let socket = null;
   let started = false;
+  let roomPass = '';               // 🔒 joining the teacher's room gives it; the room's sim loads with it (2026-10-15)
 
   // Exam family (YCT / New HSK, 2026-10-11) from the sim id: names on the gate
   // and cover, and a body class for family layouts (New HSK full-card pictures).
@@ -75,6 +76,18 @@
   $('y-enter').addEventListener('click', tryEnter);
   ['y-pin', 'y-code'].forEach((id) => $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') tryEnter(); }));
   if (roomPin && studentCode && params.get('direct') !== '1') setTimeout(tryEnter, 60);
+
+  // 🔒 2026-10-15 (La Ruta Dorada): a logged-in student opens one simulation by its link (?sim=…, no room PIN) and
+  // takes it on their own. The server only serves this page to a student of that level (or a teacher), and the
+  // payload, files and grade follow the same session (core/sim-lock.js). Old forced links (?access=…) keep the PIN box.
+  const debugDirect = params.get('debug') === '1' && params.get('direct') === '1';
+  const solo = !!simId && !roomPin && !params.has('access') && !debugDirect;
+  if (solo) {
+    started = true;
+    $('y-gate').classList.add('hidden');
+    if (!studentCode) { try { studentCode = localStorage.getItem('dralyStudentCode') || ''; } catch (_) {} }
+    setTimeout(loadSim, 30);
+  }
 
   $('y-waiting-home').addEventListener('click', goHome);
   function goHome() {
@@ -102,6 +115,7 @@
         socket = null;
         return;
       }
+      roomPass = resp.roomPass || '';
       $('y-gate').classList.add('hidden');
       $('y-waiting').classList.remove('hidden');
       $('y-waiting-pin').textContent = 'PIN: ' + roomPin;
@@ -118,11 +132,22 @@
   }
 
   function loadSim() {
-    const q = '?studentCode=' + encodeURIComponent(studentCode) + '&pin=' + encodeURIComponent(roomPin);
-    fetch('/api/hsk-sim/' + encodeURIComponent(simId) + q)
+    const q = '?studentCode=' + encodeURIComponent(studentCode) + '&pin=' + encodeURIComponent(roomPin) +
+      (roomPass ? '&pass=' + encodeURIComponent(roomPass) : '') +
+      (debugDirect ? '&debug=1&direct=1' : '');   // the local harness (the server allows it on this PC only)
+    fetch('/api/hsk-sim/' + encodeURIComponent(simId) + q, { credentials: 'same-origin' })
       .then((r) => r.json())
       .then((d) => {
+        // a solo exam whose session ended (12 h): the page itself asks for the code again, once
+        let relogged = true;
+        try { relogged = !!sessionStorage.getItem('yct:relogin'); } catch (_) {}
+        if (d && d.locked && solo && !relogged) {
+          try { sessionStorage.setItem('yct:relogin', '1'); } catch (_) {}
+          location.reload();
+          return;
+        }
         if (!d || !d.ok) { $('y-gate').classList.remove('hidden'); $('y-gate-err').textContent = 'No se pudo cargar: ' + ((d && d.error) || ''); return; }
+        try { sessionStorage.removeItem('yct:relogin'); } catch (_) {}
         sim = d.sim;
         simId = sim.id;
         applyFamily();
@@ -748,16 +773,19 @@
     $('y-exam').classList.add('hidden');
     $('y-results').classList.remove('hidden');
     $('y-res-title').textContent = sim.title + (timeUp ? ' · ¡Se acabó el tiempo!' : '');
-    const q = '?studentCode=' + encodeURIComponent(studentCode) + '&pin=' + encodeURIComponent(roomPin);
-    fetch('/api/hsk-sim/' + encodeURIComponent(sim.id) + '/submit' + q, {
+    const q = '?studentCode=' + encodeURIComponent(studentCode) + '&pin=' + encodeURIComponent(roomPin) +
+      (roomPass ? '&pass=' + encodeURIComponent(roomPass) : '');
+    fetch('/api/hsk-sim/' + encodeURIComponent(sim.id) + '/submit' + q + (debugDirect ? '&debug=1&direct=1' : ''), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentCode, answers, pin: roomPin, displayName: realName() || undefined }),
+      credentials: 'same-origin',
+      // ticket: the server's signed «this phone took this sim», so the grade is saved even if the room closed meanwhile
+      body: JSON.stringify({ studentCode, answers, pin: roomPin, displayName: realName() || undefined, ticket: sim.ticket || undefined }),
     })
       .then((r) => r.json())
       .then((d) => {
         if (!d || !d.ok) { $('y-res-saving').textContent = 'No se pudo guardar la nota: ' + ((d && d.error) || ''); return; }
-        $('y-res-saving').textContent = '✓ Nota guardada';
+        $('y-res-saving').textContent = d.saved === false ? 'Vista de maestra · la nota no se guarda' : '✓ Nota guardada';
         result = d.result;
         renderResults();
       })
@@ -846,10 +874,13 @@
       if (view === 'review') { phase = 'listening'; startReview(false); return true; }
       if (view === 'reading') { readCursor = parseInt(params.get('rc') || '0', 10); startReading(false); return true; }
       if (view === 'results') {
-        const key = isNewHsk()
-          ? { 'L1-1': 'B', 'L1-2': 'A', 'L2-6': 'A', 'L3-11': 'C', 'L4-16': 'A', 'R1-21': 'F', 'R2-26': 'C', 'R3-31': 'B', 'R4-36': 'A' }
-          : { 'L1-1': 'F', 'L1-2': 'F', 'L1-3': 'T', 'L2-9': 'C', 'R2-28': 'C', 'R3-33': 'A' };
-        answers = key; finish(false); return true;
+        // a fixed pick on a few items (some right, some wrong) for the layout shot — never a real key in a public file
+        answers = {};
+        [sim.listening, sim.reading].forEach((sec) => sec.parts.forEach((p) => p.items.filter((i) => !i.example).slice(0, 2).forEach((i, k) => {
+          const opts = (i.options || p.bank || p.gallery || []).map((o) => o.label);
+          answers[i.qid] = opts.length ? opts[k % opts.length] : (k ? 'F' : 'T');
+        })));
+        finish(false); return true;
       }
       return false;
     };
