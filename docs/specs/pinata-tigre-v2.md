@@ -311,6 +311,14 @@ Hard gates: bots PASS (4/20/30, earlier 40) · teacher controls ✓ (Pausa, +30 
 Total 14/14 → ships (≥ 12, no 0)
 ```
 
+### Fixed later (2026-10-15, with 6-7 Swing v2; found by its classroom playtest)
+- A kid with no saved avatar saw one character on the phone and another (Dralingo) on the projector: the phone now uses
+  the server's character (`mySkin()` reads `sk` from the room state, else what the join sent).
+- The end card's big «Inicio» took kids out of the class before «Otra ronda»: now «Quédate aquí: tu profe puede empezar
+  otra ronda» and a quiet «Salir del juego».
+- Fuego's Dralingo was blue with a red outline: now red (`pinata.css`, the same art turned on the colour wheel; the
+  kandura stays white), on the phone and the projector, sobbing too.
+
 ### Open
 - The candy pace (`E = 0.36 × seconds × team size`, the ladder at 12 / 30 / 55 / 85 %) comes from bots and the
   simulator: check with a real class that a 3-minute game reaches the Burj Khalifa only when a team plays well.

@@ -46,9 +46,15 @@
   // ---------- who I am ----------
   const myTeam = () => (ctx && ctx.getTeam()) || 'red';
   const myName = () => ($('lobby-name') && $('lobby-name').textContent) || '';
+  // my character = the one the server (and the projector) shows: its `sk` for me, else what player.js getMyAvatar()
+  // sends at join (Dralingo when nothing is saved)
+  let mySk = '';
   function mySkin() {
+    if (mySk) return mySk;
     let v = '';
     try { v = localStorage.getItem('dralyAvatar') || ''; } catch (_) {}
+    const list = (window.Saga && window.Saga.AVATARS) || [];
+    if (!list.some((a) => a.emoji === v)) v = (list[0] && list[0].emoji) || '🐉';
     return S() ? S().skinFor(v, myName()) : 'dralingo';
   }
   const teamName = (t) => (t === 'red' ? 'Fuego' : 'Mar');
@@ -612,6 +618,8 @@
       if (st.gameType) setOn(st.gameType === 'pinata');
       if (!on) return;
       roster = Object.values(st.players || {}).map((p) => ({ name: p.name, team: p.team, avatar: p.avatar, off: !!p.off }));
+      const meP = st.players && sock.id && st.players[sock.id];
+      if (meP && meP.sk) mySk = meP.sk;
       if (st.state === 'lobby') { teardown(true); g = null; meter = { r: 0, g: 0, tr: 0, tg: 0, hr: 1, hg: 1, lr: 1, lg: 1, b: null }; me = { k: null, candy: 0, streak: 0 }; }
     });
     s.on('team-changed', () => { if (on) { paintPrompt(); if ($('ptz')) paintZoneTeam(); } });
@@ -1049,7 +1057,9 @@
         mineStars.forEach((x) => { const b = el('div', 'ptk-star'); b.append(S().starSvg(), el('span', null, x.name)); row.appendChild(b); });
         s.appendChild(row);
       }
-      const home = el('button', 'ptk-home', 'Inicio');
+      // the card never sends a kid out of the class: «Otra ronda» brings every phone back to the lobby
+      s.appendChild(el('p', 'ptk-wait', 'Quédate aquí: tu profe puede empezar otra ronda'));
+      const home = el('button', 'ptk-home', 'Salir del juego');
       home.type = 'button';
       home.addEventListener('click', () => { location.href = '/'; });
       s.appendChild(home);
