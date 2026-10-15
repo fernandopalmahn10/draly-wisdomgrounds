@@ -341,7 +341,7 @@
   // Themes are scheduled procedurally on a beat grid (no external audio assets,
   // no licensing risk, works offline). All voices are synthesized via WebAudio.
   //
-  // The user starts a game's theme with `MochiSounds.startGameTheme('pinata')`,
+  // The user starts a game's theme with `MochiSounds.startGameTheme('monopoly')`,
   // and stops with `MochiSounds.stopGameTheme()` (or any of the win/lose/tie
   // music helpers, which fade the theme out first).
   // ===========================================================================
@@ -626,22 +626,6 @@
     for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.05);
   }
 
-  // 🐯 PIÑATA — mariachi fiesta, D major, 130bpm. Walking bass + brass triad
-  // stabs + maracas. Should feel celebratory.
-  function themePinata(barIdx, t0, BD) {
-    // Walking bass D-A-D-A
-    [['D2', 0], ['A2', 1], ['D3', 2], ['A2', 3]].forEach(([n, b]) =>
-      vBassPluck(t0 + b * BD, n, BD * 0.8, 0.24)
-    );
-    // Brass triad stab on beats 2 and 4 — classic mariachi
-    ['F#4', 'A4', 'D5'].forEach((n) => vBrass(t0 + 1 * BD, n, BD * 0.4, 0.20));
-    ['F#4', 'A4', 'D5'].forEach((n) => vBrass(t0 + 3 * BD, n, BD * 0.4, 0.20));
-    // Maracas on every 8th
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.11);
-    vSnare(t0 + 1 * BD, 0.16);
-    vSnare(t0 + 3 * BD, 0.16);
-  }
-
   // 🏰 REINOS DE COLORES — bright marching fanfare, Bb major, 112bpm. Taiko march + brass call-and-answer
   // (one phrase per kingdom) over a bouncing bass; bells on the bar so it stays cheerful, never tense.
   function themeKingdoms(barIdx, t0, BD) {
@@ -667,7 +651,6 @@
     'sixseven':      { bpm: 100, beatsPerBar: 4, fn: themeSixseven },
     'mochi-mash':    { bpm: 105, beatsPerBar: 4, fn: themeMochi },
     'dragon-eye':    { bpm:  96, beatsPerBar: 4, fn: themeDragon },
-    'pinata':        { bpm: 130, beatsPerBar: 4, fn: themePinata },
     'kingdoms':      { bpm: 112, beatsPerBar: 4, fn: themeKingdoms },
   };
 
@@ -907,13 +890,6 @@
       tone({ freq: 587, dur: 0.30, type: 'triangle', vol: 0.32, delay: 0.20 });
       tone({ freq: 784, dur: 0.20, type: 'sine',     vol: 0.22, delay: 0.45 });
     },
-    candySpill() {
-      // Cheerful confetti-y cascade for when the piñata bursts
-      [880, 1320, 1760, 2200, 1760, 1320].forEach((f, i) =>
-        tone({ freq: f, dur: 0.12, type: 'triangle', vol: 0.18, delay: i * 0.04 })
-      );
-      noise({ dur: 0.4, vol: 0.10, delay: 0.05 });
-    },
     welcome() {
       // Soft Chinese-style welcoming chime: low gong + pentatonic bells + airy shimmer
       // Low warm gong base
@@ -949,7 +925,7 @@
     startMusic,
     stopMusic,
     // Per-game themed background music (procedural). Each game gets its own
-    // key/tempo/timbre — call startGameTheme('pinata'), startGameTheme('monopoly'),
+    // key/tempo/timbre — call startGameTheme('kingdoms'), startGameTheme('monopoly'),
     // etc. after the countdown. Stop with stopGameTheme() — or any of the
     // win/lose/tie helpers, which also stop the theme via stopMusic().
     startGameTheme,

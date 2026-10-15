@@ -113,8 +113,13 @@ Ski Dubái** (`snow`, Gimkit 2D-map infection game, built 2026-10-12 on a branch
 2026-10-14 on a branch, not deployed: «La Terraza del Mochi», Fuego vs Mar feed their Dragoncitos in a mash zone, landmark
 race, comeback golden mochis, Mario Party ceremony with bonus stars; rules `core/mochi.js`, phone `js/player-mochi.js`,
 projector `host.html` + `js/host-mochi.js`, shared `js/mochi-stage.js` + `css/mochi.css`; spec `docs/specs/mochi-mash-v2.md`),
-**Piñata Tigre** (`pinata`), **Vuelo del Dragón** (`dragon-eye`),
-**Dàfùwēng · Monopolio Chino** (`monopoly`), **6-7 Swing** (`sixseven`) — those four queued for an overhaul — plus the class
+**Piñata Tigre** (`pinata`, remade 2026-10-15 on a branch, not deployed: «La Fiesta de las Piñatas», Fuego vs Mar break a
+ladder of tiger piñatas under Dubai landmarks; every right answer = a hit with a server-judged timing meter (critical in
+the gold), bursts with candy jackpots, landmark race, comeback wide golden zone, Mario Party ceremony with bonus stars;
+rules `core/pinata.js`, phone `js/player-pinata.js`, projector `host-pinata.html` + `js/host-pinata.js`, shared
+`js/pinata-stage.js` + `css/pinata.css` (+ `js/mochi-stage.js` / `css/mochi.css` for the kid figures); spec
+`docs/specs/pinata-tigre-v2.md`), **Vuelo del Dragón** (`dragon-eye`),
+**Dàfùwēng · Monopolio Chino** (`monopoly`), **6-7 Swing** (`sixseven`) — those three queued for an overhaul — plus the class
 tools Warm-up (`warmup`), Lectura (`reading`) and the HSK/YCT sim rooms (`hsksim`).
 
 Retired 2026-10-10 by his decision (code removed; recover from git history at commit `5e3743698`, the last one that still has them, if ever

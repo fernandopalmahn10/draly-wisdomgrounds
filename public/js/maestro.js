@@ -416,7 +416,7 @@
     { id: 'sixseven',  label: '6-7 Swing',          emoji: '🤙', blurb: 'Fast math + Chinese numbers',    launch: (ctx) => _genericLaunch(ctx, '/host-sixseven.html', '/player.html') },
     { id: 'monopoly',  label: 'Dàfùwēng · Monopolio Chino', emoji: '🏯', blurb: 'Chinese Monopoly board',         launch: (ctx) => _genericLaunch(ctx, '/host-monopoly.html', '/player.html') },
     { id: 'mochi',     label: 'Mochi Mash',         emoji: '🍡', blurb: 'Answer, tap fast, feed your team dragon (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host.html',          '/player.html') },
-    { id: 'pinata',    label: 'Piñata Tigre',       emoji: '🐯', blurb: 'Break the piñata',                 launch: (ctx) => _genericLaunch(ctx, '/host-pinata.html',   '/player.html') },
+    { id: 'pinata',    label: 'Piñata Tigre',       emoji: '🐯', blurb: 'Answer, stop the arrow on gold, break your team piñata (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-pinata.html',   '/player.html') },
     { id: 'dragon',    label: 'Vuelo del Dragón',   emoji: '🐉', blurb: 'Dragon flight',                  launch: (ctx) => _genericLaunch(ctx, '/host-dragon.html',   '/player.html') },
   ];
   // 🆕 2026-06-04 v4 — universal force launch using ?livegame=1.

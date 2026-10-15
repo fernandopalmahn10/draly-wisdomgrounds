@@ -600,6 +600,7 @@
       if (!on) return;
       ctx.markActivity();
       clearTimers();                                       // a window that was about to open never opens after «¡FINAL!»
+      hideIntro();                                         // (a pause in the intro + «Terminar»: the rules card never stays on top)
       stopMash(false);
       document.body.classList.remove('mm-zone');
       clearInterval(chipT);
@@ -618,6 +619,7 @@
       if (!on) return;
       document.body.classList.remove('mm-zone');
       clearTimers(); stopMash(true); clearInterval(chipT);
+      hideIntro();
       if ($('mm-chip')) $('mm-chip').classList.add('hidden');
       pauseUI(false);
     });
