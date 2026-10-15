@@ -413,7 +413,7 @@
     { id: 'snow',      label: 'Batalla de Nieve',   emoji: '❄️', blurb: 'Walk Dubai, snowball fight', launch: (ctx) => _genericLaunch(ctx, '/host-snow.html', '/player.html') },
     { id: 'paint',     label: 'Dragones Pintores',  emoji: '🎨', blurb: 'Fly, paint the sky', launch: (ctx) => _genericLaunch(ctx, '/host-paint.html', '/player.html') },
     { id: 'kingdoms',  label: 'Reinos de Colores',  emoji: '🏰', blurb: 'Plant flags, conquer the map', launch: (ctx) => _genericLaunch(ctx, '/host-kingdoms.html', '/player.html') },
-    { id: 'sixseven',  label: '6-7 Swing',          emoji: '🤙', blurb: 'Fast math + Chinese numbers',    launch: (ctx) => _genericLaunch(ctx, '/host-sixseven.html', '/player.html') },
+    { id: 'sixseven',  label: '6-7 Swing',          emoji: '🤙', blurb: 'Sums that are always 6 or 7, digits or pinyin, fill your team balance (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-sixseven.html', '/player.html') },
     { id: 'monopoly',  label: 'Dàfùwēng · Monopolio Chino', emoji: '🏯', blurb: 'Chinese Monopoly board',         launch: (ctx) => _genericLaunch(ctx, '/host-monopoly.html', '/player.html') },
     { id: 'mochi',     label: 'Mochi Mash',         emoji: '🍡', blurb: 'Answer, tap fast, feed your team dragon (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host.html',          '/player.html') },
     { id: 'pinata',    label: 'Piñata Tigre',       emoji: '🐯', blurb: 'Answer, stop the arrow on gold, break your team piñata (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-pinata.html',   '/player.html') },

@@ -55,7 +55,8 @@
       music = new Audio(game === 'snow' && name === 'music-battle' ? '/assets/snow/music-battle.mp3'
         : game === 'halcon' && name === 'music-battle' ? '/assets/halcon/music-show.mp3'    // Ojos de Halcón: the show loop
         : game === 'mochi-mash' && name === 'music-battle' ? '/assets/mochi/music-mash.mp3'     // Mochi Mash: the polka
-        : game === 'pinata' && name === 'music-battle' ? '/assets/pinata/music-fiesta.mp3' : A + name + '.mp3');   // Piñata Tigre: the party loop
+        : game === 'pinata' && name === 'music-battle' ? '/assets/pinata/music-fiesta.mp3'          // Piñata Tigre: the party loop
+        : game === 'sixseven' && name === 'music-battle' ? '/assets/sixseven/music-swing.mp3' : A + name + '.mp3');   // 6-7 Swing: the dance loop
       music.loop = true;
       music.volume = vol == null ? 0.35 : vol;
       music.play().catch(() => {});
@@ -73,7 +74,7 @@
     wrap('wrong', () => sfx('wrong', 0.6));
     // Ojos de Halcón plays its own studio run-in during the countdown (no 3-2-1 ticks, like the video)
     // (Mochi Mash, Piñata Tigre: their own run-in and «¿Listos?… ¡YA!» after the countdown)
-    const ownIntro = () => game === 'halcon' || game === 'mochi-mash' || game === 'pinata';
+    const ownIntro = () => game === 'halcon' || game === 'mochi-mash' || game === 'pinata' || game === 'sixseven';
     wrap('countdownNum', () => { if (!ownIntro()) sfx('tick', 0.8); });
     wrap('go', () => { if (!ownIntro()) sfx('whoosh', 0.8); });
     wrap('startGameTheme', () => playMusic('music-battle', 0.32));
@@ -81,7 +82,7 @@
     wrap('stopGameTheme', () => stopMusic());
     wrap('stopMusic', () => stopMusic());
     // (Mochi Mash, Piñata Tigre: the ceremony keeps the result secret until the reveal, so no win / lose sound at game-end)
-    const ownReveal = () => game === 'mochi-mash' || game === 'pinata';
+    const ownReveal = () => game === 'mochi-mash' || game === 'pinata' || game === 'sixseven';
     wrap('winMusic', () => { stopMusic(); if (!ownReveal()) sfx('sting-win', 0.9); });
     wrap('winFanfare', () => {});
     wrap('loseMusic', () => { stopMusic(); if (!ownReveal()) sfx('wrong', 0.5); });
@@ -95,7 +96,7 @@
     };
   }
 
-  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'halcon', 'mochi-mash', 'pinata'];
+  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'halcon', 'mochi-mash', 'pinata', 'sixseven'];
   let game = null;
   function setMode(v, gt) {
     if (gt) game = gt;
@@ -230,7 +231,7 @@
     if (game === 'snow') { t.className = 'kdp-team sn-team'; t.textContent = '❄️ ¡Batalla de Nieve en Ski Dubái!'; }
     if (game === 'escape') { t.className = 'kdp-team es-team'; t.textContent = '🚀 ¡Eres de la tripulación!'; }
     if (game === 'halcon') { t.className = 'kdp-team hc-team'; t.textContent = '🦅 Ojos de Halcón · ¡tableros de 4!'; }
-    if (game === 'mochi-mash' || game === 'pinata') t.textContent = team === 'red' ? '¡Eres del Equipo Fuego!' : '¡Eres del Equipo Mar!';
+    if (game === 'mochi-mash' || game === 'pinata' || game === 'sixseven') t.textContent = team === 'red' ? '¡Eres del Equipo Fuego!' : '¡Eres del Equipo Mar!';
     howDecor();
   }
   // Reinos de Colores: kids don't read rules, so the lobby shows the whole game in 3 pictured steps
@@ -270,6 +271,7 @@
     if (window.HalconPhone) window.HalconPhone.lobby(game === 'halcon' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.MochiPhone) window.MochiPhone.lobby(game === 'mochi-mash' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.PinataPhone) window.PinataPhone.lobby(game === 'pinata' ? document.querySelector('#screen-lobby .lobby-header') : null);
+    if (window.SixSevenPhone) window.SixSevenPhone.lobby(game === 'sixseven' ? document.querySelector('#screen-lobby .lobby-header') : null);
     const head = document.querySelector('#screen-lobby .lobby-header');
     let card = $('kdp-how');
     if (game !== 'kingdoms') { if (card) card.remove(); return; }
@@ -414,6 +416,7 @@
     if (game === 'halcon' && window.HalconPhone) { window.HalconPhone.end(data); return; }
     if (game === 'mochi-mash' && window.MochiPhone) { window.MochiPhone.end(data); return; }
     if (game === 'pinata' && window.PinataPhone) { window.PinataPhone.end(data); return; }
+    if (game === 'sixseven' && window.SixSevenPhone) { window.SixSevenPhone.end(data); return; }
     const team = ctx.getTeam();
     const won = data && data.winner === team;
     emoji.innerHTML = '';
@@ -475,7 +478,7 @@
     s.on('kd:plant', (d) => { if (d.teamScores) { scores = d.teamScores; paintBar(); } if (on && d.playerId !== s.id && (d.flipped || []).length >= 3) sfx('surround', 0.35); });
     s.on('countdown', () => { streak = 0; myPaint = 0; curQid = null; if (!on) return; countdownDecor(); countdownPose(); });
     s.on('question', (q) => {
-      if (!on) return;
+      if (!on || game === 'sixseven') return;      // 6-7 Swing: its own screen and clock (player-sixseven.js)
       afterRender(() => {
         ensureBar();
         const hasImg = $('question-image-wrap') && $('question-image-wrap').style.display !== 'none';
@@ -491,7 +494,7 @@
       if (on && e.target.closest && e.target.closest('.answer-btn')) { answered = true; stopQuestionTimer(); sfx('tap', 0.6); }
     }, true);
     s.on('answer-result', (r) => {
-      if (!on || !r) return;
+      if (!on || !r || game === 'sixseven') return;
       answered = true;
       stopQuestionTimer();
       streak = r.correct ? streak + 1 : 0;

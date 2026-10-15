@@ -2062,6 +2062,12 @@ body.wu-timemachine::after {
 /* Bigger 6-7 jumpscare — HUGE */
 .wu-fx-67 { bottom: 4vh !important; }
 .wu-fx-67 img { width: min(90vw, 640px) !important; }
+/* (2026-10-15) the 6-7 is Dralingo doing the «6-7» (our saga): two frames, one palm up then the other */
+.wu-fx-67 { display: grid; }
+.wu-fx-67 img { grid-area: 1 / 1; width: min(60vw, 420px) !important; }
+.wu-fx-67 img.b { animation: wu67Beat .5s steps(1, end) infinite; }
+@keyframes wu67Beat { 0% { opacity: 0; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .wu-fx-67, .wu-fx-67 img.b { animation: none; } .wu-fx-67 img.b { opacity: 0; } }
 
 /* Full-screen anime/comic character summon */
 .wu-fx-char {

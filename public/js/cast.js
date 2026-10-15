@@ -5,7 +5,8 @@
 //   DralingoCast.line('aileen', 'win')   → '¡Vos podés! ¡Lo hiciste!'   (Aileen speaks Argentine Spanish, voseo)
 //   DralingoCast.captain('aileen')       → 'Capitana Aileen'   (Reinos de Colores; moods: hello, win, battle, mystery, oops)
 //   moods: hello, win, battle (Reinos: flags, conquest), chase (La Gran Fuga: running from Robotín, turbos, the jet),
-//   feast (Mochi Mash: feeding the Dragoncito), smash (Piñata Tigre: hitting the piñata), mystery, oops
+//   feast (Mochi Mash: feeding the Dragoncito), smash (Piñata Tigre: hitting the piñata), swing (6-7 Swing: the golden
+//   balance), oro (6-7 Swing: the winners), casi (6-7 Swing: the team that lost, kindly), mystery, oops
 // Poses: hello, cheer, mystery. Stickers are Higgsfield renders of his own character art, keyed to transparent WebP.
 (function () {
   const BASE = '/assets/cast/';
@@ -23,6 +24,9 @@
         feast: ['¡Respondan y alimenten al dragoncito!', '¡Eso es trabajo en equipo!', '¡Qué hambre tiene ese dragoncito!'],
         smash: ['¡Dale a esa piñata!', '¡Golpe en el dorado, equipo!', '¡Qué golpazo!'],
         fiesta: ['¡Piñata rota! Excelente trabajo.', '¡Así se aprende y así se celebra!', '¡Equipo de campeones!'],
+        swing: ['¡Seis o siete: piensa y toca!', '¡Esa balanza está bajando, equipo!', '¡Liu, qi! ¡Muy bien!'],
+        oro: ['¡La balanza es de ustedes! Excelente trabajo.', '¡Así se cuenta en Chino Mandarín!', '¡Equipo de campeones!'],
+        casi: ['¡Casi! La próxima ronda es nuestra.', 'Buen esfuerzo, equipo. ¡A la revancha!'],
       },
     },
     hamdan: {
@@ -37,6 +41,9 @@
         feast: ['¡Yalla, más mochis!', '¡Marhaba, dragoncito! ¡A comer!', '¡Yalla, yalla, que no pare!'],
         smash: ['¡Yalla, golpe fuerte!', '¡Yalla, yalla, rompan la piñata!', '¡Marhaba, caramelos!'],
         fiesta: ['¡Yalla! ¡Caramelos para todos!', '¡Increíble, equipo!', '¡Esta fiesta merece un viaje en jet!'],
+        swing: ['¡Yalla, más oro!', '¡Yalla, yalla, liu qi!', '¡Marhaba, monedas de oro!'],
+        oro: ['¡Yalla! ¡Oro para todos!', '¡Increíble, equipo!', '¡Esa balanza merece un viaje en jet!'],
+        casi: ['¡Yalla, la revancha es nuestra!', 'Casi, amigos. ¡Otra ronda!'],
       },
     },
     latifa: {
@@ -51,6 +58,9 @@
         feast: ['Respuesta correcta, mochi asegurado.', 'Cada mochi cuenta, equipo.', '¡Buena estrategia: respondan rápido!'],
         smash: ['Miren la flecha y toquen en el dorado.', 'Paciencia… ¡ahora!', '¡Golpe perfecto, equipo!'],
         fiesta: ['¡Brillante! La piñata no tuvo oportunidad.', '¡Así se piensa y así se golpea!', '¡Yalla, a la siguiente piñata!'],
+        swing: ['Primero piensa, después toca.', 'Una racha vale más oro.', '¡Buena cuenta, equipo!'],
+        oro: ['¡Brillante! Pensaron antes de tocar.', '¡La balanza no miente!', '¡Yalla, a la siguiente ronda!'],
+        casi: ['Casi. La próxima vez, primero pensamos.', 'La próxima balanza es nuestra.'],
       },
     },
     aileen: {
@@ -65,6 +75,9 @@
         feast: ['¡Dale, che, más mochis!', '¡Vos podés, tocá rápido!', '¡Qué genial, che, cómo come!'],
         smash: ['¡Dale, che, pegale fuerte!', '¡Vos podés, tocá en el dorado!', '¡Qué golpazo, che!'],
         fiesta: ['¡Vos podés! ¡La rompimos!', '¡Qué genial, che!', '¡Dale, otra piñata más!'],
+        swing: ['¡Dale, che, tocá el bueno!', '¡Vos sabés: seis o siete!', '¡Qué genial, che, cuánto oro!'],
+        oro: ['¡Vos podés! ¡Ganamos el oro!', '¡Qué genial, che!', '¡Dale, otra ronda más!'],
+        casi: ['¡Casi, che! La próxima es nuestra.', 'Tranqui, ¡vos podés! Dale, otra ronda.'],
       },
     },
     adric: {
@@ -79,6 +92,9 @@
         feast: ['Mi perro también quiere mochis.', 'Rápido. Toca.', 'Bien. Que coma.'],
         smash: ['Mi perro quiere caramelos.', 'Espera… ahora.', 'Buen golpe.'],
         fiesta: ['Bien hecho. Mi perro está feliz.', 'Nada mal, equipo.', '¡Eso fue genial!'],
+        swing: ['Mi perro sabe contar hasta siete.', 'Piensa. Toca.', 'Bien. Más oro.'],
+        oro: ['Bien hecho. Mi perro está feliz.', 'Nada mal, equipo.', '¡Eso fue genial!'],
+        casi: ['Casi. Mi perro cree en ustedes.', 'Otra ronda. Esta vez sí.'],
       },
     },
     adrian: {
@@ -93,6 +109,9 @@
         feast: ['¡El mapa dice: más mochis!', '¡A la aventura, a comer!', '¡Vamos por el Burj Khalifa!'],
         smash: ['¡El mapa dice: caramelos!', '¡A la aventura, a golpear!', '¡Vamos por el tigre de oro!'],
         fiesta: ['¡Tesoro de caramelos!', '¡Misión cumplida!', '¡Lo logramos juntos!'],
+        swing: ['¡El mapa dice: más oro!', '¡A la aventura, liu qi!', '¡Vamos por el Burj Khalifa!'],
+        oro: ['¡Tesoro de oro!', '¡Misión cumplida!', '¡Lo logramos juntos!'],
+        casi: ['¡El tesoro sigue ahí! Otra ronda.', '¡Casi lo encontramos!'],
       },
     },
     dralingo: {
@@ -108,11 +127,14 @@
         feast: ['¡Ñam!', '¡Más mochis!', '¡Yalla!'],
         smash: ['¡Pum!', '¡Caramelos!', '¡Yalla!'],
         fiesta: ['¡Lo logramos!', '¡Qué fiesta, amigos!', '¡Bien hecho!'],
+        swing: ['¡Liu, qi!', '¡Seis-siete!', '¡Yalla!'],
+        oro: ['¡Liu, qi! ¡Lo logramos!', '¡Qué balanza, amigos!', '¡Bien hecho!'],
+        casi: ['¡Casi, amigos! ¡Otra ronda!', 'Los dragones nunca se rinden.'],
       },
     },
   };
   const HUMANS = ['fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian'];
-  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', smash: 'cheer', fiesta: 'cheer', mystery: 'mystery', oops: 'mystery' };
+  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', smash: 'cheer', fiesta: 'cheer', swing: 'cheer', oro: 'cheer', casi: 'hello', mystery: 'mystery', oops: 'mystery' };
   const pick1 = (a) => a[Math.floor(Math.random() * a.length)];
 
   function pick(n, opts) {

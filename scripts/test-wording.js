@@ -17,12 +17,15 @@ const FILES = [
   'public/host-halcon.html', 'public/js/host-halcon.js', 'public/js/player-halcon.js', 'public/js/halcon-board.js', 'core/halcon.js',
   'public/host.html', 'public/js/host-mochi.js', 'public/js/player-mochi.js', 'public/js/mochi-stage.js', 'core/mochi.js',
   'public/host-pinata.html', 'public/js/host-pinata.js', 'public/js/player-pinata.js', 'public/js/pinata-stage.js', 'core/pinata.js',
+  'public/host-sixseven.html', 'public/js/host-sixseven.js', 'public/js/player-sixseven.js', 'public/js/sixseven-stage.js', 'core/sixseven.js',
   ...fs.readdirSync(path.join(ROOT, 'core/packs')).filter((f) => f.endsWith('.js')).map((f) => 'core/packs/' + f),
 ];
 const RULES = [
   { re: /(?<!New )\bHSK ?2\b/, why: 'kids/parents see "New HSK 1", never "HSK 2" (root CLAUDE.md, 2026-10-11)' },
   { re: /pollinations/i, why: 'no outside AI pictures drawn at runtime (mochi-mash CLAUDE.md, 2026-10-11)' },
   { re: /\bChinese\b/, why: 'Spanish text says "Chino Mandarín", never "Chinese"', only: /\.(html)$/ },
+  // (Spanish never uses macrons or carons: any of these in a game file is pinyin WITH tone marks)
+  { re: /[āēīōūǎěǐǒǔǖǘǚǜ]/, why: 'games show pinyin without tone marks (mochi-mash CLAUDE.md)', only: /sixseven/ },
 ];
 
 // blank out comments but keep line numbers

@@ -574,27 +574,7 @@
     for (let i = 0; i < 4; i++) vHat(t0 + i * BD + BD / 2, 0.08);
   }
 
-  // 🤙 6-7 SWING — funky trap, A minor, 100bpm. Slappy bass riff + offbeat
-  // synth stabs + ratcheting hihats.
-  function themeSixseven(barIdx, t0, BD) {
-    // Slappy bass riff
-    const bass = [['A1', 0, 0.5], ['A1', 1, 0.25], ['C2', 1.5, 0.5], ['D2', 2.5, 0.5], ['A1', 3, 0.5], ['G1', 3.5, 0.5]];
-    bass.forEach(([n, b, len]) => vBassPluck(t0 + b * BD, n, len * BD * 0.9, 0.28));
-    // Offbeat synth stabs
-    [0.5, 1.5, 2.5, 3.5].forEach((b) => vLeadSquare(t0 + b * BD, 'E5', BD * 0.2, 0.16));
-    // Trap hihats — 16ths
-    for (let i = 0; i < 16; i++) {
-      const vol = (i % 2 === 1) ? 0.07 : 0.11;
-      vHat(t0 + i * (BD / 4), vol);
-    }
-    // Kick on 1, 2.75, 3
-    vKick(t0 + 0 * BD,    0.42);
-    vKick(t0 + 2.75 * BD, 0.32);
-    vKick(t0 + 3 * BD,    0.34);
-    // Snare on 2+4
-    vSnare(t0 + 1 * BD, 0.24);
-    vSnare(t0 + 3 * BD, 0.24);
-  }
+  // (6-7 Swing's synthesized theme was retired 2026-10-15: the remade game plays a recorded Kenney loop, assets/sixseven/)
 
   // 🥮 MOCHI MASH — Chinese pentatonic (G-A-B-D-E), 105bpm. Light bamboo
   // koto-ish lead over a soft taiko bed.
@@ -648,7 +628,6 @@
   // === Registry ===
   const GAME_THEMES = {
     'monopoly':      { bpm: 124, beatsPerBar: 4, fn: themeMonopoly },
-    'sixseven':      { bpm: 100, beatsPerBar: 4, fn: themeSixseven },
     'mochi-mash':    { bpm: 105, beatsPerBar: 4, fn: themeMochi },
     'dragon-eye':    { bpm:  96, beatsPerBar: 4, fn: themeDragon },
     'kingdoms':      { bpm: 112, beatsPerBar: 4, fn: themeKingdoms },
@@ -855,40 +834,6 @@
       // Soft padded step for board walking
       tone({ freq: 180 + Math.random() * 60, dur: 0.05, type: 'sine', vol: 0.18, slideTo: 90 });
       noise({ dur: 0.04, vol: 0.10 });
-    },
-    // === 6-7 SWING sounds === Two clearly-different bell tones for the
-    // 6 button (lower bell) and the 7 button (higher bell). Plus a whoosh
-    // for the character swing and an ascending bell ladder for combos.
-    tap6() {
-      // Low warm chime — "siiix"
-      tone({ freq: 392, dur: 0.16, type: 'triangle', vol: 0.32, slideTo: 587 });
-      tone({ freq: 196, dur: 0.18, type: 'sine',     vol: 0.20, delay: 0.02 });
-      tone({ freq: 784, dur: 0.12, type: 'sine',     vol: 0.18, delay: 0.04 });
-    },
-    tap7() {
-      // Higher bright chime — "seveeen"
-      tone({ freq: 523, dur: 0.16, type: 'triangle', vol: 0.32, slideTo: 880 });
-      tone({ freq: 1046, dur: 0.14, type: 'sine',    vol: 0.22, delay: 0.02 });
-      tone({ freq: 1568, dur: 0.10, type: 'sine',    vol: 0.16, delay: 0.06 });
-    },
-    swingWhoosh() {
-      // Cartoonish swing sound — pitch sweep + airy noise
-      noise({ dur: 0.18, vol: 0.16 });
-      tone({ freq: 200, dur: 0.25, type: 'sine', vol: 0.14, slideTo: 600 });
-    },
-    comboBell(streak) {
-      // Each step in a combo climbs a pentatonic ladder — bigger streak,
-      // higher + louder. Caps at the top of the ladder.
-      const ladder = [523, 659, 784, 988, 1175, 1318, 1568, 1760];
-      const n = Math.min(streak || 1, ladder.length);
-      tone({ freq: ladder[n - 1], dur: 0.18, type: 'triangle', vol: 0.30 });
-      if (n >= 4) tone({ freq: ladder[n - 1] * 2, dur: 0.12, type: 'sine', vol: 0.18, delay: 0.04 });
-    },
-    sixSevenChant() {
-      // "Six-seven!" two-note hook for major celebrations
-      tone({ freq: 392, dur: 0.22, type: 'triangle', vol: 0.32 });
-      tone({ freq: 587, dur: 0.30, type: 'triangle', vol: 0.32, delay: 0.20 });
-      tone({ freq: 784, dur: 0.20, type: 'sine',     vol: 0.22, delay: 0.45 });
     },
     welcome() {
       // Soft Chinese-style welcoming chime: low gong + pentatonic bells + airy shimmer

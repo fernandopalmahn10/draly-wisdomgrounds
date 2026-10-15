@@ -42,6 +42,10 @@
   if (window.PinataPhone) {
     window.PinataPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
   }
+  // 6-7 Swing v2 phone module (public/js/player-sixseven.js): run-in, the sums with the two giant buttons, banners, ceremony
+  if (window.SixSevenPhone) {
+    window.SixSevenPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
+  }
   // (legacy timer kept for any reference; bulletproof flow below replaces it)
 
   // === Global stuck-watchdog ===
@@ -444,301 +448,6 @@
     // Lobby mascot: avatar · team-mascot combo. Re-build via updateTeamUI.
   }
 
-  // === 6-7 SWING (sixseven) PLAYER LOGIC =====================================
-  // Math problem + two giant 6/7 buttons. The mini character sways toward the
-  // button last tapped. Streak counter + speed bonus + Rewards toasts on combos.
-  let ssMyScore = 0;
-  let ssMyStreak = 0;
-  let ssCurrentQid = null;
-  let ssSwayTarget = 0;
-  let ssSwayLerp = 0;
-  let ssSwayRaf = null;
-  let ssFloatTimer = null;
-  let ssButtonsBound = false;
-
-  function renderSixSevenQuestion(q) {
-    ssCurrentQid = q.qid;
-    // Show the math problem; reset button states
-    if ($('ss-problem')) $('ss-problem').textContent = q.text;
-    document.querySelectorAll('.ss-btn').forEach((b) => {
-      b.disabled = false;
-      b.classList.remove('tapped');
-    });
-    // First-time setup: bind buttons + start ambient loops + load asset
-    if (!ssButtonsBound) {
-      bindSixSevenButtons();
-      startSixSevenSwayLoop();
-      startSixSevenFloats();
-      loadSixSevenPlayerAsset();
-      startPlayerJumpscareLoop();
-      ssButtonsBound = true;
-    }
-    showScreen('sixseven');
-  }
-
-  // 67 JUMPSCARE — the user's PNG art now appears RARELY as a full-screen
-  // dance, NOT as the central icon. Detect which file is available, then
-  // spawn the big dancing overlay on combo x3 + every 30-50s ambient.
-  // CSS character stays as the calm central figure.
-  let ssPlayerJumpscareUrl = null;
-  function loadSixSevenPlayerAsset() {
-    const candidates = [
-      '/assets/png-library/67-transparent.png',  // bg-removed version — preferred
-      '/assets/png-library/67.png',
-      '/assets/67.jpg',
-      '/assets/sixseven-character.png',
-      '/assets/sixseven-character.jpg',
-      '/assets/sixseven.png',
-    ];
-    let idx = 0;
-    function tryNext() {
-      if (idx >= candidates.length) {
-        console.warn('[6-7] No jumpscare image in /assets/.');
-        return;
-      }
-      const url = candidates[idx++];
-      const probe = new Image();
-      probe.onload = () => {
-        ssPlayerJumpscareUrl = url;
-        console.log('[6-7] Player jumpscare ready: ' + url);
-      };
-      probe.onerror = () => tryNext();
-      probe.src = url;
-    }
-    tryNext();
-  }
-  function spawnPlayerSixSevenJumpscare() {
-    if (!ssPlayerJumpscareUrl) return;
-    if (document.querySelector('.ss-jumpscare')) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'ss-jumpscare';
-    const img = document.createElement('img');
-    img.src = ssPlayerJumpscareUrl;
-    img.alt = '67';
-    img.draggable = false;
-    wrap.appendChild(img);
-    document.body.appendChild(wrap);
-    MochiSounds.sixSevenChant && MochiSounds.sixSevenChant();
-    setTimeout(() => MochiSounds.swingWhoosh && MochiSounds.swingWhoosh(), 80);
-    if (navigator.vibrate) navigator.vibrate([40, 20, 60, 20, 40]);
-    setTimeout(() => wrap.remove(), 2300);
-  }
-  // Periodic player jumpscare every 30-50s
-  let ssPlayerJumpscareTimer = null;
-  function startPlayerJumpscareLoop() {
-    if (ssPlayerJumpscareTimer) clearTimeout(ssPlayerJumpscareTimer);
-    const tick = () => {
-      ssPlayerJumpscareTimer = setTimeout(() => {
-        if (gameType === 'sixseven' && !document.hidden) {
-          spawnPlayerSixSevenJumpscare();
-        }
-        tick();
-      }, 30000 + Math.random() * 20000);
-    };
-    tick();
-  }
-  function stopPlayerJumpscareLoop() {
-    if (ssPlayerJumpscareTimer) { clearTimeout(ssPlayerJumpscareTimer); ssPlayerJumpscareTimer = null; }
-  }
-
-  function bindSixSevenButtons() {
-    const btn6 = $('ss-btn-6');
-    const btn7 = $('ss-btn-7');
-    [{ btn: btn6, idx: 0, choice: '6' },
-     { btn: btn7, idx: 1, choice: '7' }].forEach(({ btn, idx, choice }) => {
-      if (!btn) return;
-      // Belt-and-suspenders: pointerdown + click + touchstart, dedupe, no
-      // preventDefault on mouse so synthetic click survives.
-      let lastTap = 0;
-      const onTap = (e) => {
-        const now = Date.now();
-        if (now - lastTap < 120) return;     // dedupe pointer + click
-        lastTap = now;
-        if (e && e.pointerType !== 'mouse' && e.cancelable) {
-          try { e.preventDefault(); } catch (_) {}
-        }
-        if (btn.disabled) return;
-        // Tap pop + sway nudge — IMMEDIATE local feedback before server reply
-        btn.classList.remove('tapped');
-        void btn.offsetWidth;
-        btn.classList.add('tapped');
-        ssSwayTarget = Math.max(-1, Math.min(1, ssSwayTarget * 0.4 + (choice === '7' ? 1 : -1) * 0.6));
-        if (navigator.vibrate) navigator.vibrate(20);
-        if (choice === '7') MochiSounds.tap7 && MochiSounds.tap7();
-        else MochiSounds.tap6 && MochiSounds.tap6();
-        // Disable both buttons until we get a response
-        document.querySelectorAll('.ss-btn').forEach((b) => b.disabled = true);
-        // Fire-and-forget — NO heartbeat overlay, NO retry layer.
-        // Sixseven runs at 600-800ms cadence so the next question always
-        // bails out the player if anything went wrong.
-        sendSixSevenAnswer(ssCurrentQid, idx);
-      };
-      btn.addEventListener('pointerdown', onTap, { passive: false });
-      btn.addEventListener('click', onTap);
-      btn.addEventListener('touchstart', onTap, { passive: false });
-      btn.oncontextmenu = (e) => { e.preventDefault(); return false; };
-    });
-  }
-
-  // Direct, no-overlay, no-heartbeat send for sixseven. The standard
-  // sendAnswerBulletproof() shows an "Enviando respuesta…" overlay + uses
-  // a 1Hz heartbeat that retries the answer if no ack — overkill for the
-  // 600-800ms cadence sixseven runs at, and the user reported the overlay
-  // getting stuck visually. Fire-and-forget: if the answer is dropped, the
-  // next question arrives in <1s anyway and resets everything.
-  function sendSixSevenAnswer(qid, choiceIdx) {
-    try {
-      socket.emit('player:answer', { pin, qid, choiceIdx });
-    } catch (_) {}
-    // Safety net: if no answer-result arrives in 1.5s, re-enable buttons
-    // so the player isn't stuck (e.g., they tapped during a disconnect).
-    setTimeout(() => {
-      document.querySelectorAll('.ss-btn').forEach((b) => {
-        if (b.disabled) b.disabled = false;
-      });
-    }, 1500);
-  }
-
-  function startSixSevenSwayLoop() {
-    if (ssSwayRaf) cancelAnimationFrame(ssSwayRaf);
-    const frame = () => {
-      ssSwayLerp += (ssSwayTarget - ssSwayLerp) * 0.12;
-      ssSwayTarget *= 0.985;
-      const wrap = $('ss-player-character-wrap');
-      if (wrap) wrap.style.setProperty('--sway', ssSwayLerp.toFixed(3));
-      ssSwayRaf = requestAnimationFrame(frame);
-    };
-    frame();
-  }
-
-  function startSixSevenFloats() {
-    if (ssFloatTimer) clearInterval(ssFloatTimer);
-    ssFloatTimer = setInterval(() => {
-      const layer = $('ss-player-float-layer');
-      if (!layer || gameType !== 'sixseven') return;
-      // Light density on phones — 1 floater every 1.4s
-      const f = document.createElement('div');
-      f.className = 'ss-floater ' + (Math.random() < 0.5 ? 'six' : 'seven');
-      f.textContent = Math.random() < 0.5 ? '6' : '7';
-      f.style.left = (Math.random() * 100) + '%';
-      f.style.fontSize = (1.2 + Math.random() * 2.5) + 'rem';
-      f.style.animationDuration = (5 + Math.random() * 4) + 's';
-      layer.appendChild(f);
-      setTimeout(() => f.remove(), 11000);
-    }, 1400);
-  }
-
-  function flashSixSevenFeedback(correct) {
-    const el = $(correct ? 'ss-flash-correct' : 'ss-flash-wrong');
-    if (!el) return;
-    el.classList.remove('fire');
-    void el.offsetWidth;
-    el.classList.add('fire');
-  }
-
-  // === ENGAGEMENT LAYER (cheerful ambient peeks) ===
-  // Ambient "67!" peeks from the screen edges every 4-8s, periodic dance
-  // moments (10-16s) where the character breaks out + the screen flashes
-  // gold/cyan/purple with a giant "67!" centerpiece, and screen shake on
-  // big combos. Critical: gives the math grind real emotional beats.
-  let ssAmbiencePeekTimer = null;
-  let ssDanceTimer = null;
-  function startSixSevenAmbience() {
-    const layer = $('ss-ambience');
-    if (layer) layer.classList.remove('hidden');
-    schedulePeek();
-    scheduleDance();
-  }
-  function stopSixSevenAmbience() {
-    const layer = $('ss-ambience');
-    if (layer) { layer.classList.add('hidden'); layer.innerHTML = ''; }
-    if (ssAmbiencePeekTimer) { clearTimeout(ssAmbiencePeekTimer); ssAmbiencePeekTimer = null; }
-    if (ssDanceTimer) { clearTimeout(ssDanceTimer); ssDanceTimer = null; }
-  }
-  function schedulePeek() {
-    const wait = 4000 + Math.random() * 4000;
-    ssAmbiencePeekTimer = setTimeout(() => {
-      spawnSixSevenPeek();
-      schedulePeek();
-    }, wait);
-  }
-  function spawnSixSevenPeek() {
-    if (gameType !== 'sixseven') return;
-    if (document.hidden) return;
-    const layer = $('ss-ambience');
-    if (!layer) return;
-    const sides = ['top', 'bottom', 'left', 'right'];
-    const side = sides[Math.floor(Math.random() * sides.length)];
-    const isSeven = Math.random() < 0.5;
-    const peek = document.createElement('div');
-    peek.className = `ss-peek ${side}${isSeven ? ' seven' : ''}`;
-    peek.textContent = isSeven ? '7!' : '6!';
-    const pos = 15 + Math.random() * 70;
-    if (side === 'top' || side === 'bottom') peek.style.left = pos + '%';
-    if (side === 'left' || side === 'right') peek.style.top = pos + '%';
-    layer.appendChild(peek);
-    // Audio cue — alternate 6 and 7 tones for variety
-    if (isSeven) MochiSounds.tap7 && MochiSounds.tap7();
-    else MochiSounds.tap6 && MochiSounds.tap6();
-    if (navigator.vibrate) navigator.vibrate(20);
-    setTimeout(() => peek.remove(), 2000);
-  }
-  function scheduleDance() {
-    const wait = 10000 + Math.random() * 6000;
-    ssDanceTimer = setTimeout(() => {
-      triggerSixSevenDance();
-      scheduleDance();
-    }, wait);
-  }
-  function triggerSixSevenDance() {
-    if (gameType !== 'sixseven') return;
-    if (document.hidden) return;
-    // 1) Make BOTH the PNG image and the CSS-fallback character DANCE for ~2.5s
-    document.querySelectorAll('.ss-character, .ss-character-img').forEach((c) => {
-      c.classList.remove('dancing');
-      void c.offsetWidth;
-      c.classList.add('dancing');
-      setTimeout(() => c.classList.remove('dancing'), 2500);
-    });
-    // 2) Full-screen colored flash + centerpiece
-    const flash = document.createElement('div');
-    flash.className = 'ss-dance-flash';
-    document.body.appendChild(flash);
-    setTimeout(() => flash.remove(), 1900);
-    const center = document.createElement('div');
-    center.className = 'ss-dance-centerpiece';
-    center.textContent = '67!';
-    document.body.appendChild(center);
-    setTimeout(() => center.remove(), 1900);
-    // 3) Audio fanfare: 67 chant + drum + swing whoosh
-    MochiSounds.sixSevenChant && MochiSounds.sixSevenChant();
-    setTimeout(() => MochiSounds.swingWhoosh && MochiSounds.swingWhoosh(), 200);
-    // 4) Vibrate
-    if (navigator.vibrate) navigator.vibrate([60, 40, 60, 40, 100]);
-    // 5) Burst of edge peeks for spectacle
-    for (let i = 0; i < 4; i++) {
-      setTimeout(spawnSixSevenPeek, i * 200);
-    }
-  }
-  function shakeSixSevenScreen() {
-    document.body.classList.remove('ss-shake');
-    void document.body.offsetWidth;
-    document.body.classList.add('ss-shake');
-    setTimeout(() => document.body.classList.remove('ss-shake'), 550);
-  }
-
-  function updateSixSevenHud(score, streak) {
-    if (typeof score === 'number') {
-      ssMyScore = score;
-      if ($('ss-player-score')) $('ss-player-score').textContent = ssMyScore;
-    }
-    if (typeof streak === 'number') {
-      ssMyStreak = streak;
-      if ($('ss-player-streak')) $('ss-player-streak').textContent = ssMyStreak;
-      const pill = $('ss-player-streak-pill');
-      if (pill) pill.classList.toggle('hot', ssMyStreak >= 3);
-    }
-  }
   function renderAvatarPicker() {
     const grid = $('avatar-grid');
     if (!grid) return;
@@ -968,8 +677,9 @@
       teamLabel = isRed ? 'Equipo Rojo 紅龍' : 'Equipo Dorado 金龍';
       teamMascot = isRed ? '🐉' : '🐲';
     } else if (gameType === 'sixseven') {
-      teamLabel = isRed ? 'Equipo 6 🟦' : 'Equipo 7 🟪';
-      teamMascot = isRed ? '6' : '7';
+      // 6-7 Swing (since the 2026-10-15 remake: Fuego vs Mar fill the pans of the golden balance)
+      teamLabel = isRed ? 'Equipo Fuego' : 'Equipo Mar';
+      teamMascot = isRed ? '🔥' : '🌊';
     } else if (gameType === 'kingdoms' || gameType === 'paint') {
       teamLabel = isRed ? 'Reino del Fuego' : 'Reino del Mar';
       teamMascot = isRed ? '🔥' : '🌊';
@@ -1050,13 +760,6 @@
         renderWuStage([]);
       }, 1000);
     }
-    // 6-7 SWING engagement layer — ambient peeks + periodic dance moments
-    if (gameType === 'sixseven') {
-      if (window.unlockAudio) window.unlockAudio();
-      // Mark body so the decorative lanterns hide site-wide on Safari (no :has())
-      document.body.classList.add('sixseven-active');
-      startSixSevenAmbience();
-    }
     // Piñata uses the standard question + mash flow — no special countdown branch needed.
     let n = 3;
     const numEl = $('player-countdown-num');
@@ -1084,12 +787,8 @@
   socket.on('question', (q) => {
     markActivity();
     currentQid = q.qid;
-    // 6-7 SWING — completely different question UI: skip the standard
-    // multi-choice answer grid, show the math problem + two giant buttons.
-    if (q.gameMode === 'sixseven' || gameType === 'sixseven') {
-      renderSixSevenQuestion(q);
-      return;
-    }
+    // 6-7 Swing: its own screen (the sum + two giant buttons), drawn by player-sixseven.js (it listens to 'question')
+    if (q.gameMode === 'sixseven' || gameType === 'sixseven') return;
     $('question-text').textContent = q.text;
     // Show image (or placeholder while loading)
     const imgWrap = $('question-image-wrap');
@@ -2062,7 +1761,7 @@
       setTimeout(() => document.body.classList.remove('wu-shake'), 700);
       const el = document.createElement('div');
       el.className = 'wu-fx-67';
-      el.innerHTML = '<img src="/assets/png-library/67-transparent.png" alt="6-7" onerror="this.replaceWith(document.createTextNode(\'6️⃣7️⃣\'))">';
+      el.innerHTML = '<img class="a" src="/assets/sixseven/dralingo-67-a.webp" alt="Dralingo: seis-siete"><img class="b" src="/assets/sixseven/dralingo-67-b.webp" alt="">';
       layer.appendChild(el);
       if (MochiSounds && MochiSounds.combo) MochiSounds.combo();
       setTimeout(() => el.remove(), 2600);
@@ -2775,36 +2474,8 @@
     hideSendingOverlay();
     if (!correct) resetStreak();
 
-    // 6-7 SWING fast-path — keep the player on the swing screen, just flash
-    // feedback + update HUD + bump the sway. Server will send the next
-    // question almost immediately (600-800ms).
-    if (gameType === 'sixseven') {
-      flashSixSevenFeedback(correct);
-      if (sixseven) {
-        const newScore = ssMyScore + (sixseven.gained || 0);
-        updateSixSevenHud(newScore, sixseven.streak || 0);
-        // Combo bell on streak milestones
-        if (correct && sixseven.streak >= 3 && MochiSounds.comboBell) {
-          MochiSounds.comboBell(sixseven.streak);
-        }
-        if (correct && sixseven.streak === 6 && window.Rewards) {
-          window.Rewards.show({ tier: 'epic', icon: '⚡', text: '¡Combo x3!', duration: 1800 });
-          shakeSixSevenScreen();
-          // Combo x3 unlock — the FULL 67-character jumpscare takes over
-          // the player's whole screen, dances, then disappears. Rare moment.
-          triggerSixSevenDance();
-          spawnPlayerSixSevenJumpscare();
-        } else if (correct && sixseven.streak >= 3 && window.Rewards && sixseven.streak % 3 === 0) {
-          window.Rewards.combo(sixseven.streak);
-          if (sixseven.streak >= 9) shakeSixSevenScreen();
-        }
-      }
-      // Re-enable buttons so the next question arrives clean
-      setTimeout(() => {
-        document.querySelectorAll('.ss-btn').forEach((b) => b.classList.remove('tapped'));
-      }, 250);
-      return;  // skip the standard result-feedback screen flow
-    }
+    // 6-7 Swing: player-sixseven.js shows the verdict on its own screen (the swing, the coins, the wobble)
+    if (gameType === 'sixseven') return;
     if (correct) {
       MochiSounds.correct();
       fireRewardForCorrect();
@@ -2858,9 +2529,6 @@
         } else if (gameType === 'paint' || gameType === 'snow' || gameType === 'escape') {
           // Dragones Pintores / Batalla de Nieve: their phone modules return the kid to the map after the result screen.
           // La Gran Fuga: the server sends the next question after the turbo.
-        } else if (gameType === 'sixseven') {
-          // Sixseven handles its own screen via the dedicated handler.
-          showScreen('sixseven');
         } else if (gameType === 'mochi-mash' && window.MochiPhone) {
           // Mochi Mash v2: player-mochi.js opens its mash zone at the server's lead-in (it listens to answer-result)
         } else {
@@ -3965,9 +3633,6 @@
       return;
     }
     Dralingo.stopRandom();
-    stopSixSevenAmbience();
-    stopPlayerJumpscareLoop();
-    document.body.classList.remove('sixseven-active');
     stopLobbyFlappy();
     if (mashTimerInterval) clearInterval(mashTimerInterval);
     if (mashTapHandler) {
@@ -4049,7 +3714,7 @@
       const lobbyVisible = $('screen-lobby') && !$('screen-lobby').classList.contains('hidden');
       const countdownVisible = $('screen-countdown') && !$('screen-countdown').classList.contains('hidden');
       if (lobbyVisible || countdownVisible) {
-        showScreen(gameType === 'snow' ? 'snow' : gameType === 'halcon' ? 'halcon' : 'question');   // the snow map / the board is the kid's main screen
+        showScreen(gameType === 'snow' ? 'snow' : gameType === 'halcon' ? 'halcon' : gameType === 'sixseven' ? 'sixseven' : 'question');   // the snow map / the board is the kid's main screen
         stopLobbyFlappy();
       }
     }

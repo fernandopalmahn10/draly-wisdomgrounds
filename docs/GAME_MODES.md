@@ -118,9 +118,15 @@ ladder of tiger piñatas under Dubai landmarks; every right answer = a hit with 
 the gold), bursts with candy jackpots, landmark race, comeback wide golden zone, Mario Party ceremony with bonus stars;
 rules `core/pinata.js`, phone `js/player-pinata.js`, projector `host-pinata.html` + `js/host-pinata.js`, shared
 `js/pinata-stage.js` + `css/pinata.css` (+ `js/mochi-stage.js` / `css/mochi.css` for the kid figures); spec
-`docs/specs/pinata-tigre-v2.md`), **Vuelo del Dragón** (`dragon-eye`),
-**Dàfùwēng · Monopolio Chino** (`monopoly`), **6-7 Swing** (`sixseven`) — those three queued for an overhaul — plus the class
-tools Warm-up (`warmup`), Lectura (`reading`) and the HSK/YCT sim rooms (`hsksim`).
+`docs/specs/pinata-tigre-v2.md`), **6-7 Swing** (`sixseven`, remade 2026-10-15 on a branch, not deployed: «La Balanza de
+Oro», rapid-fire sums whose answer is always 6 or 7 (numbers 1-10, + / −; digits, pinyin words without tone marks, or both,
+the teacher's pick), two giant buttons «6 · liu» / «7 · qi», Fuego vs Mar fill a golden balance on Dubai Creek; server-judged
+with a too-fast rule, a streak multiplier and wrong-answer waits so random tapping loses to thinking; Dralingo's «6-7» art,
+landmark race, comeback golden sums, Mario Party ceremony with bonus stars; rules `core/sixseven.js` (no question pack),
+phone `js/player-sixseven.js`, projector `host-sixseven.html` + `js/host-sixseven.js`, shared `js/sixseven-stage.js` +
+`css/sixseven.css` (+ `js/mochi-stage.js` / `css/mochi.css` for the kid figures); spec `docs/specs/six-seven-v2.md`),
+**Vuelo del Dragón** (`dragon-eye`), **Dàfùwēng · Monopolio Chino** (`monopoly`) — those two queued for an overhaul — plus the
+class tools Warm-up (`warmup`), Lectura (`reading`) and the HSK/YCT sim rooms (`hsksim`).
 
 Retired 2026-10-10 by his decision (code removed; recover from git history at commit `5e3743698`, the last one that still has them, if ever
 needed): Market Quest, Market Clash, Clase de Caligrafía, Flappy Dragon, Zombie Escape, Mi Familia, Reinos en Guerra,

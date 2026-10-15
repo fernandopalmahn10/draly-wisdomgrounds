@@ -212,7 +212,9 @@ the checklist for any new game mode.
   https://www.youtube.com/watch?v=y9BKCVx_mNk; it replaced the first attempt «Ojo de Halcón», `look`, retired and
   removed 2026-10-14, his decision; recover it from git commit 83dbcbd04 if ever needed) + the 5 kept games Mochi Mash
   (remade 2026-10-14 as «La Terraza del Mochi», Fuego vs Mar feed their Dragoncitos, Mario Party ceremony; Panda vs Kitsune
-  retired), Dàfùwēng · Monopolio Chino, 6-7 Swing, Vuelo del Dragón, Piñata Tigre (remade 2026-10-15 as «La Fiesta de las
+  retired), Dàfùwēng · Monopolio Chino, 6-7 Swing (remade 2026-10-15 as «La Balanza de Oro»: rapid-fire sums that are always
+  6 or 7, digits or pinyin, two giant buttons «6 · liu» / «7 · qi», Fuego vs Mar fill a golden balance, Dralingo does the 6-7;
+  the blocky meme figure retired), Vuelo del Dragón, Piñata Tigre (remade 2026-10-15 as «La Fiesta de las
   Piñatas»: Fuego vs Mar break a ladder of tiger piñatas, every right answer a hit with a server-judged timing meter;
   Bastón vs Arco retired) (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:
