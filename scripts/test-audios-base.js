@@ -2,8 +2,8 @@
 // =========================================================================
 // test-audios-base.js · the vocabulary bases («La base · Empieza aquí», /audios/<level>-base) and the /audios library
 // =========================================================================
-// Each base must be its printed study book («YCT 1 · Vocabulario», «HSK 1 · Vocabulario»), digitally, with a voice for
-// everything. For every base the level registry (core/levels.js `base`) names:
+// Each base must be its printed study book («YCT 1 · Vocabulario», «HSK 1 · Vocabulario», «New HSK 1 · Vocabulario»),
+// digitally, with a voice for everything. For every base the level registry (core/levels.js `base`) names:
 //   - the level's words (core/levels.js `words`) in the book's order, worlds in a row; when the study book's build is
 //     on this PC (../study/<level>/build/book.html), every card (number, pinyin, Spanish, sentence, red word, its
 //     Spanish), every repaso tile and the tones page match it
@@ -48,7 +48,7 @@ let shortest = Infinity;
 
 const cat = read(path.join(PUB, 'assets', 'audios', 'catalog.json'));
 const BASES = Levels.LEVELS.filter((l) => l.base).map((l) => ({ id: l.base, level: l.pack, name: l.name, words: l.words }));
-ok(BASES.length >= 2, `core/levels.js names the bases (${BASES.map((b) => b.id).join(', ')})`);
+ok(BASES.length >= 3, `core/levels.js names the bases (${BASES.map((b) => b.id).join(', ')})`);
 
 function checkBase(B) {
   const tag = B.id + ': ';
@@ -99,8 +99,16 @@ function checkBase(B) {
     const toneEs = [...html.matchAll(/<p class="tn-py"[^>]*>([^<]*)<\/p>\s*<p class="tn-es">([^<]*)<\/p>/g)];
     ok(toneEs.length === web.tones.length, tag + `the book's tones page has ${web.tones.length} tone words`);
     toneEs.forEach((m, i) => { const t = web.tones[i]; ok(t && unescape(m[1]) === t.py && unescape(m[2]) === t.es, tag + `tone ${i + 1}: «${unescape(m[1])} ${unescape(m[2])}» in the book vs «${t && t.py} ${t && t.es}»`); });
-    // the «yī and gè change tone» note only where the book prints it
-    ok(/class="tones-note"/.test(html) === ((web.toneNote || []).length > 0), tag + 'the tone note is on the page only when the book has it');
+    // the line under the tones («… cambian de tono: yí ge, …»), word for word as the book prints it, or none (HSK 1)
+    const note = (html.match(/<p class="tones-note">([\s\S]*?)<\/p>/) || [])[1];
+    const pageNote = web.toneNoteText || '';
+    ok(unescape((note || '').replace(/<[^>]+>/g, '')) === pageNote.replace(/[{}]/g, ''),
+      tag + `tone note «${pageNote}» vs the book's «${note ? unescape(note.replace(/<[^>]+>/g, '')) : ''}»`);
+    const bookPy = [...(note || '').matchAll(/<span lang="zh-Latn-pinyin">([^<]*)<\/span>/g)].map((m) => unescape(m[1]));
+    const pagePy = [...pageNote.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]);
+    ok(JSON.stringify(bookPy) === JSON.stringify(pagePy), tag + `tone note: the same words in pinyin type (${pagePy.join(', ')})`);
+    ok((web.toneNote || []).every((t) => pagePy.includes(t.py)) && (note != null || !(web.toneNote || []).length),
+      tag + 'tone note: every example with a clip is one the book prints');
   } else {
     console.log(`note: the study book build (../study/${B.level}/build/) is not on this machine: compared with the content file only`);
   }
@@ -175,7 +183,8 @@ const resolve = (id) => { id = id.toLowerCase(); Object.keys(aliases).forEach((a
 ok(aliases.hsk2 === 'newhsk1', 'catalog aliases: hsk2 → newhsk1 (from core/levels.js)');
 ok(cat.homeworks.some((h) => h.id === resolve('HSK2-E01-R1')), 'old /audios/hsk2-e01-r1 (any case) opens newhsk1-e01-r1');
 ok(cat.levels.some((f) => f.id === resolve('hsk2')), 'old /audios/hsk2 opens the New HSK 1 folder');
-ok(['hsk1-e03-r1', 'yct1-base', 'hsk1-base', 'hsk1'].every((x) => resolve(x) === x), 'other addresses are left alone (hsk1-base is not an hsk2 alias)');
+ok(['hsk1-e03-r1', 'yct1-base', 'hsk1-base', 'newhsk1-base', 'hsk1'].every((x) => resolve(x) === x), 'other addresses are left alone (hsk1-base is not an hsk2 alias)');
+ok(resolve('hsk2-base') === 'newhsk1-base', 'an address with the stored id (/audios/hsk2-base) opens the New HSK 1 base');
 ok(/catalog\.aliases/.test(js) && /id\.indexOf\(a \+ '-'\) === 0/.test(js), 'audios.js resolves addresses with catalog.aliases');
 const key = (bjs.match(/const KEY = \(level\) => '([^']+)'/) || [])[1];
 ok(key && /^(draly|mochi\.|hw_|em_|wu_)/i.test(key), `seals saved under a key the move bridge carries (${key})`);

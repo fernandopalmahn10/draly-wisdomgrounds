@@ -8,7 +8,7 @@
  "book": {
   "pdf": "/assets/study/yct1-vocabulario.pdf",
   "pages": 20,
-  "mb": 7.2,
+  "mb": 4.6,
   "name": "YCT 1 · Vocabulario"
  },
  "steps": [
@@ -122,6 +122,7 @@
    ]
   }
  ],
+ "toneNoteText": "Dentro de una frase, {yī} y {gè} a veces cambian de tono: {yí ge}, {sì ge}.",
  "toneNote": [
   {
    "py": "yí ge",

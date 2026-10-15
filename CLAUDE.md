@@ -157,11 +157,14 @@ the checklist for any new game mode.
   `core/levels.js`, written into `catalog.json` `levels` by the builder). A level's vocabulary base is pinned first in its
   folder, then its homework audios. Old addresses never change: the printed PDFs link `/audios/<homework id>`,
   `hsk2-…` opens `newhsk1-…` (and `/audios/hsk2` the New HSK 1 folder), `/audio/…` and `?t=<id>` still work.
-- **La base · Empieza aquí** (`/audios/<level>-base`: `yct1-base` 83 words, `hsk1-base` 150 words; worlds
-  `#mundo-N`, `#tonos`, `#repaso`, words `#palabra-N`): a level's study book («YCT 1 · Vocabulario», «HSK 1 ·
-  Vocabulario») digitally (his ask 2026-10-14: the first thing the level's kids do). One page code for every level:
-  `js/audios-base.js` reads only the level's data (no word looked up by its pinyin; the yī/gè tone note only where the
-  book has it). One source of words: `../study/lib/web.py <level>` exports the book's own words, sentences, red words,
+- **La base · Empieza aquí** (`/audios/<level>-base`: `yct1-base` 83 words, `hsk1-base` 150 words, `newhsk1-base`
+  300 words; worlds `#mundo-N`, `#tonos`, `#repaso`, words `#palabra-N`): a level's study book («YCT 1 · Vocabulario»,
+  «HSK 1 · Vocabulario», «New HSK 1 · Vocabulario») digitally (his ask 2026-10-14: the first thing the level's kids
+  do). The base takes the curriculum name (`newhsk1-base`, never `hsk2-base`; `/audios/hsk2-base` still opens it
+  through the alias) while core/levels.js keeps the stored id `hsk2`. One page code for every level:
+  `js/audios-base.js` reads only the level's data (no word looked up by its pinyin; the line under the tones is the
+  book's own `toneNoteText`, `{braces}` = pinyin, its examples with a clip are buttons; none where the book has none,
+  like HSK 1). One source of words: `../study/lib/web.py <level>` exports the book's own words, sentences, red words,
   tones and pictures (WebP <= 60 KB) + the PDF (`public/assets/study/<level>-vocabulario.pdf`; a book over 9 MB gets a
   lighter web copy from `../study/lib/webpdf.py`, pictures re-encoded at full chroma) into
   `content/audios/<level>-base.json`; the hanzi the voice reads live in `../study/<level>/voice.py` (never on screen).

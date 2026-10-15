@@ -202,7 +202,9 @@ async function buildBase(id, src) {
     id, kind: 'base', level: src.level, levelName: levelName(src.level), title: src.title, kicker: src.kicker, lede: src.lede,
     book: book || null, steps: src.steps || [], parents: src.parents || [],
     tones: (src.tones || []).map((t) => ({ mark: t.mark, name: t.name, how: t.how, py: t.py, es: t.es, word: t.word, points: t.points })),
-    toneNote, cover, worlds: (src.worlds || []).map((w) => ({ n: w.n, name: w.name, short: w.short, first: w.first, count: w.count, pics: w.pics })),
+    // the line under the tones as the book prints it ({braces} = pinyin) + a clip per example that has one
+    toneNoteText: src.toneNoteText || '', toneNote, cover,
+    worlds: (src.worlds || []).map((w) => ({ n: w.n, name: w.name, short: w.short, first: w.first, count: w.count, pics: w.pics })),
     words, updated: new Date().toISOString(),
   };
   fs.writeFileSync(path.join(dir, 'base.json'), JSON.stringify(data));

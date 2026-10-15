@@ -328,7 +328,7 @@ body.hw-portal .pt-base-book {
   border-radius: 8px 12px 12px 8px;
   box-shadow: inset 4px 0 0 rgba(0, 0, 0, .18);
 }
-body.hw-portal .pt-base-book b { font: 800 .9rem/1 var(--pt-head); color: #f7f1e4; white-space: nowrap; }
+body.hw-portal .pt-base-book b { font: 800 .9rem/1 var(--pt-head); color: #f7f1e4; }   /* «New HSK 1» takes two lines (homework.js keeps «HSK 1» together) */
 body.hw-portal .pt-base-book i { margin-top: 3px; font: 800 .62rem/1 var(--pt-body); font-style: normal; color: #c79c3e; white-space: nowrap; }
 body.hw-portal .pt-base-text { display: grid; flex: 1; min-width: 0; }
 body.hw-portal .pt-base-title { font: 800 1.2rem/1.15 var(--pt-head); color: var(--pt-ink); }

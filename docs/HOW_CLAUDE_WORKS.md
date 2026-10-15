@@ -159,7 +159,9 @@ word in red), tap the picture to hear the word and the sentence to hear the sent
 repaso, and «Descargar el libro (PDF)». It is exported from the book's own source (`study/lib/web.py`), so the page and
 the PDF never disagree; every reading was checked with local Whisper. YCT 1 kids see «Empieza aquí · La base de
 YCT 1» on their /homework home. HSK 1 has its own base the same way (`/audios/hsk1-base`, «HSK 1 · Vocabulario»:
-150 words in 8 worlds, pinned above its homework audios; HSK 1 kids see «Empieza aquí · La base de HSK 1»).
+150 words in 8 worlds, pinned above its homework audios; HSK 1 kids see «Empieza aquí · La base de HSK 1»), and so
+does New HSK 1 (`/audios/newhsk1-base`, «New HSK 1 · Vocabulario»: 300 words in 8 worlds, with the book's note on the
+spoken tone changes yí ge, yì běn, bú shì; code 1002 kids see «Empieza aquí · La base de New HSK 1»).
 
 ### 2.4 Parent control
 
