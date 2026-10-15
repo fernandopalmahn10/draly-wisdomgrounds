@@ -357,6 +357,12 @@ body.kd-phone.mm-on.mm-ended .muted-toggle { top: max(8px, env(safe-area-inset-t
 .mmf-crew .mmk.me { height: 100%; width: 38%; z-index: 2; }
 .mmk.cheer .mmk-img { animation: mm-cheer .7s var(--mm-ease-pop) calc(var(--i) * .12s) 3 both; }
 .mmk.slump .mmk-img { transform: translateY(6%) scale(.94); filter: saturate(.55) brightness(.9); transition: transform .6s var(--mm-ease-out); }
+/* Fuego's Dralingo is red (his rule: Fuego = red Dralingo, Mar = blue): the same art turned on the colour wheel, so the
+   kandura and ghutra stay white (as in 6-7 Swing) */
+:is(body.gametype-mochi-mash, body.mm-host) .mmk-red .mmk-img:is([src*="/cast/dralingo-"], [src*="/dralingo/anim/"]) {
+  filter: hue-rotate(140deg) saturate(1.15) drop-shadow(2px 0 0 var(--tc)) drop-shadow(-2px 0 0 var(--tc)) drop-shadow(0 2px 0 var(--tc)) drop-shadow(0 -2px 0 var(--tc))
+    drop-shadow(0 5px 3px rgba(29, 36, 64, .3)); }
+:is(body.gametype-mochi-mash, body.mm-host) .mmk-red.slump .mmk-img:is([src*="/cast/dralingo-"], [src*="/dralingo/anim/"]) { filter: hue-rotate(140deg) saturate(.55) brightness(.9); }
 @keyframes mm-cheer { 0% { transform: none; } 40% { transform: translateY(-14%) scale(1.04, .96); } 100% { transform: none; } }
 .mmf-total { font: 800 1rem/1 'Baloo 2', sans-serif; padding: 4px 10px; border-radius: 999px; background: #fff; border: 2px solid var(--mm-ink); margin-top: 8px; }
 .mmf-team-side.mine .mmf-total { background: var(--mm-gold); }
@@ -395,9 +401,9 @@ body.kd-phone.mm-on.mm-ended .muted-toggle { top: max(8px, env(safe-area-inset-t
 .mmc-star { display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 6px; border-radius: 999px; background: #fff6d6;
   border: 2px solid var(--mm-ink); font: 800 .9rem/1.2 'Nunito', sans-serif; animation: mm-rise .4s var(--mm-ease-pop) both; }
 .mmc-star .mm-star { width: 26px; height: 26px; }
-.mmc-home { margin-top: auto; padding: 12px 34px; border-radius: 999px; border: 3px solid var(--mm-ink); background: var(--mm-gold); color: var(--mm-ink);
-  box-shadow: 0 4px 0 var(--mm-ink); font: 800 1.15rem/1 'Baloo 2', sans-serif; cursor: pointer; }
-.mmc-home:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--mm-ink); }
+.mmc-wait { margin: auto 0 0; padding-top: 10px; text-align: center; font: 700 .95rem/1.3 'Nunito', sans-serif; color: var(--mm-ink-soft); text-wrap: balance; }
+.mmc-home { min-height: 44px; margin-top: 2px; padding: 8px 16px; border: 0; background: none; color: var(--mm-ink-soft); text-decoration: underline; text-underline-offset: 3px;
+  font: 700 .9rem/1 'Nunito', sans-serif; cursor: pointer; }
 @media (max-height: 700px) {
   .mmc-top { height: 24vh; }
   .mmf-who { height: 24vh; }

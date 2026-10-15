@@ -333,10 +333,9 @@ Total 14/14 → ships (≥ 12, no 0)
 - «Escucha» (hear the sum) left out on purpose (30 phones talking at once); the voice says the answer on every right tap.
 - Dralingo's second dance frame is the mirror of the first (one Higgsfield picture); a true second pose needs another
   Higgsfield pass in his Chrome.
-- Shared with Mochi Mash v2 and Piñata v2 (same code, not changed here): a kid with no saved avatar sees a different
-  character on the phone than on the projector (`player-mochi.js:40`, `player-pinata.js:49` `mySkin()`; 6-7 now uses the
-  server's `sk`), the end card's big «Inicio» takes kids out of the class (`player-mochi.js:892`,
-  `player-pinata.js:1052`), and Fuego's Dralingo is blue there (6-7 turns it red in its own CSS). One-line fixes each.
+- Done in Mochi Mash v2 and Piñata v2 too (same branch, after this game): the phone shows the server's character
+  (`mySkin()` uses its `sk`), the end card says «Quédate aquí: tu profe puede empezar otra ronda» with a quiet «Salir
+  del juego» instead of the big «Inicio», and Fuego's Dralingo is red (`mochi.css`, `pinata.css`).
 - Left as in the other games: «Terminar» pressed during the intro gives a 0–0 «¡Empate!» ceremony (short, skippable);
   during the 3.5 s countdown «Terminar» is hidden; «Terminar» asks with the browser's own confirm box; `host:reclaim`
   checks no teacher login (pre-existing for every game).
