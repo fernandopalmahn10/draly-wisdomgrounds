@@ -62,7 +62,8 @@
   }
 
   // ── Step 1: create the socket room ──────────────────────────────────
-  socket.emit('host:create', { gameType: 'hsksim', simId }, (resp) => {
+  // 🔒 2026-10-15: only a teacher opens an exam room (the server checks the /maestro code)
+  socket.emit('host:create', { gameType: 'hsksim', simId, password: pw }, (resp) => {
     if (!resp || !resp.pin) {
       alert('No pude crear la sala: ' + ((resp && resp.error) || 'error desconocido'));
       return;
@@ -307,8 +308,10 @@
   // ── 🛑 END button — close the room ─────────────────────────────────
   $('hh-end-btn').addEventListener('click', () => {
     if (!confirm('¿Cerrar la sala? Los alumnos que aún no terminen perderán su progreso.')) return;
-    socket.emit('host:end', { pin });
-    setTimeout(() => { window.close(); }, 600);
+    // 🔒 2026-10-15: the room really closes now (its PIN, page and files stop; finished kids can still hand in)
+    socket.emit('host:end', { pin, password: pw });
+    // a tab /maestro opened in place can't close itself: back to the dashboard instead of a dead room
+    setTimeout(() => { window.close(); location.href = '/maestro.html'; }, 600);
   });
 
   // ── 🎯 FORCE-IMPOSE picker (lobby + active) ───────────────────────

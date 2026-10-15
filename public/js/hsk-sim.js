@@ -158,6 +158,19 @@
   // waiting screen until the teacher hits Empezar examen.
   let _hskSocket = null;
   let _hskTestStarted = false;
+  let _roomPass = '';   // 🔒 what joining the teacher's room gives this phone (2026-10-15)
+
+  // 🔒 2026-10-15 (La Ruta Dorada): a logged-in student opens one simulation by its link (?sim=…, no room PIN) and
+  // takes it on their own; the server serves this page only to a student of that level (or a teacher), and the
+  // payload, files and grade follow that session (core/sim-lock.js). Old forced links (?access=…) keep the PIN box.
+  const solo = !!simId && !roomPin && !urlAc;
+  if (solo && /^(yct|newhsk)\d+-/i.test(simId)) { location.replace('/yct-sim.html?sim=' + encodeURIComponent(simId)); return; }
+  if (solo) {
+    $('hsk-gate').classList.add('hidden');
+    try { studentCode = urlSc || localStorage.getItem('dralyStudentCode') || ''; } catch (_) { studentCode = urlSc || ''; }
+    _hskTestStarted = true;
+    setTimeout(loadSim, 30);
+  }
 
   // 🆕 2026-06-16 (Fernando): escape hatch on the waiting screen. A kid
   // who finished a previous exam (or shouldn't be here) can always get
@@ -220,6 +233,7 @@
       // Successfully joined the socket room — show waiting screen and
       // wait for state===active. The 'state' listener below handles
       // the transition.
+      _roomPass = resp.roomPass || '';   // 🔒 the room's sim loads with it (2026-10-15)
       $('hsk-gate').classList.add('hidden');
       $('hsk-waiting').classList.remove('hidden');
       $('hsk-waiting-pin').textContent = 'PIN: ' + roomPin;
@@ -251,15 +265,25 @@
   function loadSim() {
     // Auth: prefer PIN, fall back to access code.
     let q = '?studentCode=' + encodeURIComponent(studentCode);
-    if (roomPin)        q += '&pin=' + encodeURIComponent(roomPin);
+    if (roomPin)        q += '&pin=' + encodeURIComponent(roomPin) + (_roomPass ? '&pass=' + encodeURIComponent(_roomPass) : '');
     else if (accessCode) q += '&accessCode=' + encodeURIComponent(accessCode);
-    fetch('/api/hsk-sim/' + encodeURIComponent(simId) + q)
+    fetch('/api/hsk-sim/' + encodeURIComponent(simId) + q, { credentials: 'same-origin' })
       .then((r) => r.json())
       .then((d) => {
+        // a solo exam whose session ended (12 h): the page itself asks for the code again, once
+        let relogged = true;
+        try { relogged = !!sessionStorage.getItem('hsk:relogin'); } catch (_) {}
+        if (d && d.locked && solo && !relogged) {
+          try { sessionStorage.setItem('hsk:relogin', '1'); } catch (_) {}
+          location.reload();
+          return;
+        }
         if (!d || !d.ok) {
+          $('hsk-gate').classList.remove('hidden');
           $('hsk-gate-err').textContent = 'No se pudo cargar: ' + (d && d.error || '');
           return;
         }
+        try { sessionStorage.removeItem('hsk:relogin'); } catch (_) {}
         sim = d.sim;
         buildTimeline();
         $('hsk-title').textContent = sim.title;
@@ -799,7 +823,7 @@
     $('hsk-results').classList.remove('hidden');
     // Submit (auth: PIN preferred, accessCode legacy)
     let sq = '?studentCode=' + encodeURIComponent(studentCode);
-    if (roomPin)         sq += '&pin=' + encodeURIComponent(roomPin);
+    if (roomPin)         sq += '&pin=' + encodeURIComponent(roomPin) + (_roomPass ? '&pass=' + encodeURIComponent(_roomPass) : '');
     else if (accessCode)  sq += '&accessCode=' + encodeURIComponent(accessCode);
     let realName2 = '';
     try {
@@ -809,10 +833,12 @@
     fetch('/api/hsk-sim/' + encodeURIComponent(sim.id) + '/submit' + sq, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({
         studentCode, answers,
         pin: roomPin || undefined,
         displayName: realName2 || undefined,
+        ticket: sim.ticket || undefined,   // 🔒 the grade is saved even if the room closed meanwhile (2026-10-15)
       }),
     })
       .then((r) => r.json())
@@ -821,6 +847,7 @@
           $('hsk-results-title').textContent = 'No se pudo guardar la nota';
           return;
         }
+        if (d.saved === false) $('hsk-results-title').textContent = 'Vista de maestra · la nota no se guarda';
         const r = d.result;
         $('hsk-results-percent').textContent = r.percent + '%';
         $('hsk-results-detail').textContent = r.score + ' / ' + r.total + ' pts';

@@ -239,6 +239,16 @@
     return city ? city.replace(/_/g, ' ') : null;
   }
 
+  // 🔒 2026-10-15 (La Ruta Dorada) — arriving from a locked simulation («Entrar con mi código» on its friendly page):
+  // after the login the kid goes straight back to that exam (the login also opens their level's sims on this phone).
+  // Only this site's own two exam pages are accepted as a destination.
+  let hwNext = '';
+  try {
+    const n = new URLSearchParams(location.search).get('next') || '';
+    if (/^\/(yct|hsk)-sim\.html(\?[^#\s\\]*)?$/.test(n)) hwNext = n;
+  } catch (_) {}
+  if (hwNext && $('hw-entry-next')) $('hw-entry-next').hidden = false;
+
   // ── Pre-fill remembered values
   try {
     const savedAccess = localStorage.getItem(STORAGE_ACCESS_KEY) || '';
@@ -432,6 +442,8 @@
           localStorage.setItem(STORAGE_ACCESS_KEY, ac);
           localStorage.setItem(STORAGE_CODE_KEY, studentCode);
         } catch (_) {}
+        // back to the simulation they came from (a brand-new account first sees its code banner, as always)
+        if (hwNext && !data.isNew) { location.replace(hwNext); return; }
         // First-time joiners pick an avatar before seeing the list
         if (!avatar) {
           showAvatarPicker();

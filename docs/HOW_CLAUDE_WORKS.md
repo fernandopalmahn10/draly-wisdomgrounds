@@ -235,6 +235,22 @@ five seconds of a class, in the platform's paper-and-navy sticker look (light, s
 It has a sober official look, works on phones, and **resumes at the same second** if the page
 reloads. Results are saved for teachers, kids and parents.
 
+**Who can open a simulation (locked since 15 October 2026, the first step of «La Ruta Dorada»):**
+the simulations are no longer open to anyone who knows the address. Pages, questions **and** the recordings and
+pictures are protected:
+- **A teacher** opens any of them from /maestro (Official Tests opens a PIN room; only a teacher code can open one).
+- **A kid in your room** gets in with your PIN, for that room's simulation only. «Terminar sala» on the monitor now
+  really closes the room: its PIN, page and files stop working (a kid who already finished can still hand in).
+- **An enrolled student** (logged in at /homework with the class access code + their own student code) can open the
+  simulations of **their own level** by link, on their own, and the grade lands on their record.
+- **Anyone else** sees a friendly Dralingo page: «Este simulacro es para alumnos de Dralingo» with «Entrar con mi
+  código»; after logging in they land straight back in the exam. La Base stays free for everybody.
+
+The recordings and pictures now live in a locked folder of the code (`protected/`), never as public files: the
+platform hands each phone links that expire after 3 hours and work for one simulation only. One thing it costs:
+Cloudflare can't keep a copy of locked files, so each phone downloads the exam audio from our server (YCT ~3.5 MB,
+New HSK ~10 MB per kid).
+
 **Build order (your decision):** YCT 1 → New HSK 1 → YCT 2 → New HSK 2 → YCT 3 → … Finish all
 simulations of a level before moving up.
 
@@ -308,8 +324,10 @@ Think of a restaurant:
    - a **local copy** of the site on your PC (`localhost:3000`), so real kids are never affected
    - I play **teacher and student**: open a room, join with a PIN, take the exam
    - **hidden test switches** jump anywhere instantly, e.g.
-     `yct-sim.html?debug=1&direct=1&sim=yct1-sim2&pin=…&view=reading&rc=13`, or
-     `yctDebug.seek(195)` to jump the audio
+     `yct-sim.html?debug=1&direct=1&sim=yct1-sim2&view=reading&rc=13`, or
+     `yctDebug.seek(195)` to jump the audio (these switches only work on the copy on your PC, never on the live site)
+   - `node scripts/test-sims-lock.js` checks the simulation lock from every side (anonymous visitor, each level's
+     student, teacher, a room PIN before and after the room closes, expired and forged links)
    - **screenshots** with a hidden Edge browser, so I check desktop and phone layouts with my own eyes
    - **number checks**: a perfect answer sheet must score exactly 200/200
 6. **Save, deploy, verify.** I commit with a note explaining *why*, push, wait for Render, and check
@@ -351,7 +369,7 @@ credits.
 | 10 | Cut the audio track | From the welcome to the end of listening, with volume levelled |
 | 11 | Import it | `node scripts/yct-import.js <folder> <N> --offset --start --intros --end` |
 | 12 | Test | Jump the audio to ~20 points and check each screen matches; a perfect sheet must give 200/200; screenshots |
-| 13 | Deploy | Commit the data **and the picture/audio folder**, push, confirm live |
+| 13 | Deploy | Commit the data **and the picture/audio folder** (`protected/<TEST> SIMULATIONS/…`, locked: the import writes there), push, confirm live |
 | 14 | Remember | Update the notes |
 
 **Tools:** ffmpeg (from your CapCut install), Whisper large-v3, Python (Pillow, NumPy, OpenCV),
@@ -425,6 +443,8 @@ first test of each new family takes longer, and the rest go faster.
   - use the **original exam audio**, never TTS
   - **pinyin without tone marks**
   - a sober official look that **does not copy** the source site
+  - **never open to anonymous visitors**: only teachers, kids in a teacher's room, and enrolled students of that level
+    (only La Base is free)
 - **Pictures:** **no Higgsfield credits for exam pictures**; crop them from your recordings.
 - **Assets:** always **commit the picture and audio folder**. Code alone means a broken exam on
   Render.
@@ -457,6 +477,8 @@ intro is long"), and I'll turn it into exact changes.
 
 ## 10. What's next (pending work)
 
+- **La Ruta Dorada** (plan `docs/specs/ruta-dorada.md`): step 1, the simulation lock, is built; next the tab
+  itself, progress on the server, El Entrenamiento and El Simulacro Dorado
 - **Official tests:**
   - more New HSK 1 simulations (send the next recording), then YCT 2 per the build order
   - move Old HSK onto the new exam interface, once you're happy with YCT

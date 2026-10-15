@@ -1,9 +1,10 @@
 // =========================================================================
 // maestro.js — Standalone teacher Cuaderno (no session needed)
 //
-// Per user feedback 2026-05-27: "Give me a teacher password (EMAAR2026)
-// so I can see the cuaderno without having to host a game and have a
-// device randomly join."
+// Per user feedback 2026-05-27: "Give me a teacher password so I can see
+// the cuaderno without having to host a game and have a device randomly
+// join." (2026-10-15: never write a real teacher code in a public file —
+// this one is served to every visitor.)
 //
 // Same UX shape as the in-game Cuaderno on host-warmup, but lives on
 // its own page so the teacher can pop it open anywhere. Uses the

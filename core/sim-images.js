@@ -17,7 +17,10 @@
 const fs = require('fs');
 const path = require('path');
 
-const SIMS_ROOT = path.join(__dirname, '..', 'public', 'assets', 'HSK SIMULATIONS');
+// 🔒 2026-10-15: the pictures live in protected/ (core/sim-lock.js); the catalog keeps their logical /assets/… address
+// (what the sim data uses) and the server turns it into a signed link before it reaches a browser.
+const PROTECTED = path.join(__dirname, '..', 'protected');
+const SIMS_ROOT = path.join(PROTECTED, 'HSK SIMULATIONS');
 const IMG_RE = /\.(png|jpe?g|webp)$/i;   // 2026-10-12: the sim pictures are WebP now
 // Skip pure example/instruction frames? No — Fernando wants EVERYTHING
 // pictured. We keep examples too; they're fine teaching material.
@@ -33,11 +36,11 @@ function _cleanLabel(file) {
   return s || file;
 }
 
-// Convert an absolute disk path to the public URL the browser fetches,
+// Convert an absolute disk path to its logical /assets/… URL (as written in core/hsk-sim.js),
 // URL-encoding each path segment (spaces, etc.) but keeping the slashes.
 function _toUrl(absPath) {
-  const rel = path.relative(path.join(__dirname, '..', 'public'), absPath);
-  return '/' + rel.split(path.sep).map(encodeURIComponent).join('/');
+  const rel = path.relative(PROTECTED, absPath);
+  return '/assets/' + rel.split(path.sep).map(encodeURIComponent).join('/');
 }
 
 // Recursively collect image files under a directory.

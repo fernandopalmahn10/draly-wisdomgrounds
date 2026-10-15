@@ -2,6 +2,7 @@
 //
 //   node scripts/playtest-bots.js --game pinata --bots 20 --seconds 60
 //   options: --url http://localhost:3000  --set <setId|first>  --stall 8  --handlers scripts/playtest/<game>.js
+//            --password <teacher code> (exam rooms)  --sim <simId> (hsksim, default yct1-sim1)
 //
 // Kids answer every question with a random choice after a human-like delay (0.6–2.5 s).
 // --stall counts from a kid's answer to the next question (default 8 s; reward windows are ~5 s).
@@ -23,6 +24,9 @@ const BOTS = +opt('bots', 10);
 const SECONDS = +opt('seconds', 60);
 const STALL = +opt('stall', 8) * 1000;
 const SET = opt('set', 'first');
+// the teacher's code: exam rooms (hsksim) open only with one (2026-10-15); the local default is the legacy admin code
+const PASSWORD = opt('password', process.env.WU_ADMIN_PASSWORD || 'draly2026');
+const SIM = opt('sim', 'yct1-sim1');   // hsksim: which simulation the room opens
 // a game's own handler module (scripts/playtest/<game>.js) loads by itself when --handlers is not given
 const OWN_HANDLERS = path.join(__dirname, 'playtest', GAME + '.js');
 const HANDLERS = opt('handlers', null) || (require('fs').existsSync(OWN_HANDLERS) ? OWN_HANDLERS : null);
@@ -54,10 +58,11 @@ const count = (bag, ev) => { bag[ev] = (bag[ev] || 0) + 1; };
     if (/error/i.test(ev)) report.errors.push({ who: 'host', ev, d });
   });
   host.on('connect_error', (e) => report.errors.push({ who: 'host', ev: 'connect_error', d: String(e && e.message) }));
-  const created = await emitAck(host, 'host:create', { gameType: GAME });
+  const created = await emitAck(host, 'host:create', GAME === 'hsksim' ? { gameType: GAME, simId: SIM, password: PASSWORD } : { gameType: GAME });
   const pin = created && created.pin;
   if (!pin) { console.log('FAIL: host:create returned no PIN', created); process.exit(1); }
   report.pin = pin;
+  report.sim = GAME === 'hsksim' ? SIM : undefined;
 
   if (!NO_SET.includes(GAME)) {
     let setId = SET;
@@ -97,8 +102,9 @@ const count = (bag, ev) => { bag[ev] = (bag[ev] || 0) + 1; };
     });
     s.on('answer-result', (r) => { if (r && r.correct) st.correct++; else st.wrong++; });
     s.on('connect_error', (e) => report.errors.push({ who: name, ev: 'connect_error', d: String(e && e.message) }));
-    if (handler) handler(s, { pin, name, state: st, report });
+    if (handler) handler(s, { pin, name, state: st, report, url: URL, sim: SIM });
     const j = await emitAck(s, 'player:join', { pin, name });
+    st.join = j;   // e.g. an exam room's pass (scripts/playtest/hsksim.js)
     if (j && j.ok !== false && !j.timeout) report.joined++;
     else report.joinErrors.push({ name, d: j });
     bots.push({ s, st });

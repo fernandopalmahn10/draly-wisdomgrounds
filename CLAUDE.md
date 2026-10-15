@@ -9,9 +9,9 @@ recording → official test pipeline, toolbox, pending work) is `docs/HOW_CLAUDE
 the checklist for any new game mode.
 
 ## Always
-- **Media must be in git**: Render serves only what is committed. After adding any asset-backed feature (sims, images, audio
-  under `public/assets/…`) run `git status --short` / `git ls-files "<asset dir>" | wc -l` and confirm the media is staged
-  before saying it is live. On-disk ≠ deployed.
+- **Media must be in git**: Render serves only what is committed. After adding any asset-backed feature (images, audio
+  under `public/assets/…`, sim media under `protected/…`) run `git status --short` / `git ls-files "<asset dir>" | wc -l`
+  and confirm the media is staged before saying it is live. On-disk ≠ deployed.
 - **i18n**: `/homework` has an ES→EN toggle driven by a dictionary (`public/js/hw-i18n.js`, `var DICT =`). Every new
   student-facing Spanish string must be added there (and bump its `?v=` in homework.html) or it stays Spanish in EN mode.
   Lines built from a template (e.g. `'Hoy: {theme}.'`) need a regex entry in `DICT.patterns` (2026-10-11: the daily-story
@@ -128,9 +128,30 @@ the checklist for any new game mode.
 ## Official tests (YCT · HSK · New HSK simulations)
 - Faithful to the real exam: same flow, timing, scoring (YCT /200, pass 120), the ORIGINAL recorded exam audio (not TTS).
   Sober official look (petrol ink #0f2f33, seal red #9e2a2b, paper bg, Source Sans 3), not kiddy, not a copy of HSK Mock's style.
+- **Locked: never open to anonymous visitors** (La Ruta Dorada phase 1, 2026-10-15; his words "we're not going to give
+  away everything for free"): pages, data AND files. The files live in `protected/<TEST> SIMULATIONS/…`, the player
+  pages in `protected/pages/` (`yct-sim.html`, `hsk-sim.html` + the friendly `sim-locked.html`); none of it under
+  `public/`, and never under `/assets/` (Cloudflare keeps `/assets/*` 2 h). The sim data keeps its media as logical
+  `/assets/<TEST>%20SIMULATIONS/…` URLs; `core/sim-lock.js` rewrites them in every payload into
+  `/sim-media/<token>/<fileId>` (signed, 3 h, ONE sim, `private, no-store`; a room PIN's links die when the room closes;
+  file ids hide the old «(CORRECT)» names). Who gets in (`_simGrant` in server.js): a teacher (/maestro code in X-Admin-Pw,
+  or the teacher sim session); a kid who JOINED a teacher's open exam room (socket `player:join` answers with a room
+  pass, so they are on the teacher's roster; a bare PIN loads nothing), for THAT room's sim (opening, taking over or
+  closing a room needs the teacher code, «Terminar sala» = socket `host:end`; 60 never-used PINs from one address in
+  10 min pause its room lookups); an enrolled student = the httpOnly `dsim` cookie the
+  /homework login sets (or the friendly page silently, from the codes the phone saved), for their level's sims only
+  (core/levels.js), solo by link (`/yct-sim.html?sim=…`); the local harness `?debug=1&direct=1` on localhost only.
+  Everyone else: «Este simulacro es para alumnos de Dralingo» → «Entrar con mi código» (`/homework.html?next=…` comes
+  back to the exam). A teacher's try is graded, never saved; a solo grade goes on the logged-in kid's own record; the
+  payload's `ticket` still hands in after the room closed. Key: env `SIM_LOCK_SECRET`, else `data/sim-lock.key` (made once
+  on the disk, gitignored). Any new page or endpoint that shows sim content goes through `_simGrant` + `SimLock.rewrite`;
+  `node scripts/test-sims-lock.js` (starts its own server on 4000) must pass. The «Simulacro del examen» pack rounds show
+  only their name to non-teachers on `/api/sets`.
 - Pipeline per sim: his screen recording of a full run (Videos/Captures) → build package folder `<TEST>_SimN_Build/`
   (simulation.json + images + its own CLAUDE.md) → cut audio with ffmpeg (aac .m4a) → `node scripts/yct-import.js <buildDir> <N>
-  --start s --intros a,b,c,d --end e` → `core/yct/…json` + `public/assets/<TEST> SIMULATIONS/…` → commit the asset folder too.
+  --start s --intros a,b,c,d --end e` → `core/yct/…json` + `protected/<TEST> SIMULATIONS/…` (locked; the JSON keeps the
+  `/assets/…` form) → commit the protected folder too (`git ls-files "protected/<TEST> SIMULATIONS" | wc -l`). Old HSK
+  sims (core/hsk-sim.js) the same: `/assets/HSK%20SIMULATIONS/…` in the code, the files in `protected/HSK SIMULATIONS/`.
   Picture cropping/transcription tools: `../video_tools/yct_capture/README.md`. Do NOT use Higgsfield for sim pictures —
   crop them from the recording.
 - Every listening track ends with the closing line 听力考试现在结束 (`--endline`). If the recording skipped it (review started
@@ -145,7 +166,9 @@ the checklist for any new game mode.
 - Every answer in a key must be SEEN selected in the recording, never filled in from what the content suggests: when the
   2-s frames miss it (auto-advance, a look-back, a click during the review) scan at full frame rate
   (`../video_tools/yct_capture/README.md` § New HSK 1 Sim 2 lessons). His 200/200 runs make his selections the key.
-- Pinyin without tone marks in tests. Test harness: `yct-sim.html?debug=1&direct=1&sim=…&pin=…&view=…`; headless Edge screenshots.
+- Pinyin without tone marks in tests. Test harness: `yct-sim.html?debug=1&direct=1&sim=…&view=…` (no room needed, opens
+  on localhost only: `SimLock.isLocalDev`); headless Edge screenshots. A logged-in look: `/api/homework/enter` on the
+  local server gives the session cookie.
 - /maestro → "Official Tests" → test family → level → sims. Every new test reuses the YCT interface structure
   (cover, audio-driven listening, review, timed reading, gauge results) with that exam's real flow.
 - **Build order (his decision 2026-10-08):** YCT 1 → New HSK 1 → YCT 2 → New HSK 2 → YCT 3 → New HSK 3 → … (alternate,
