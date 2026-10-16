@@ -69,8 +69,9 @@ the next levels) is prepared in three levels with our own names. Rules live in `
    **Built 2026-10-16** (branch `ruta-dorada-libro`), with his picks of that day: a simulation's book opens once the kid
    has taken that simulation (a graded try on the account with half its questions answered; a teacher sees every book); phone
    cards like La Base, simulation by simulation; mistakes first («Repasa tus N errores» from the latest try, then the
-   whole simulation; /maestro «Ver su libro» shows a teacher the same list); the PDF once every simulation is taken (a
-   web copy under 9 MB). `../study/lib/examweb.py` (the export from exam.py), `core/golden.js`, `/api/golden/…` +
+   whole simulation; /maestro «Ver su libro» shows a teacher the same list); the PDF once every simulation is taken and
+   the Dorado is open (a web copy under 9 MB). His pick after the build: taken anywhere is enough (a simulation taken
+   in a teacher's room opens its own book before the Dorado; the other simulations and the PDF still need it). `../study/lib/examweb.py` (the export from exam.py), `core/golden.js`, `/api/golden/…` +
    `/golden-media/…`, `public/js/libro.js` + `css/libro.css`, `scripts/test-golden-book.js`.
 
 ## Open defaults (he can change them)

@@ -11,14 +11,17 @@
 // A level names its book in core/levels.js (`golden`). Old HSK's clips are the platform's own mp3 per question
 // (protected/HSK SIMULATIONS/…): the JSON names them, they are served as they are.
 //
-// His picks (the doors live in server.js, in this order): the level's key (LevelKeys.access, the one door) → El
-// Simulacro Dorado open (RutaProgress.doradoOpen) → THAT simulation taken (a graded attempt on the kid's account:
-// solo, homework or a teacher's room all land in rec.hskResults through /api/hsk-sim/:simId/submit). The sim is a real
-// test first, the book is the review. A teacher sees every book and the PDF; a key-only phone has no account, so no
-// book («Entra con tu código»). Mistakes first: the book opens on the wrong questions of the kid's LATEST graded
-// attempt (its wrongQs), then the whole simulation. The PDF (it holds every answer) downloads once every simulation of
-// the book is taken. Never leaked: a simulation's cards travel only to whoever may open them, its photos and clips are
-// served by index through a checked route (a file name never says an answer), and the page code holds no content.
+// His picks (the doors live in server.js, in this order): the level's key (LevelKeys.access, the one door) → an
+// account → THAT simulation taken (a graded attempt on the kid's account: solo, homework or a teacher's room all land
+// in rec.hskResults through /api/hsk-sim/:simId/submit). Taken anywhere is enough (his pick after the build): a sim
+// taken in a teacher's room opens its own book even before the kid earns El Simulacro Dorado
+// (RutaProgress.doradoOpen); the other sims (a kid takes them alone only with the Dorado) and the PDF still need it.
+// The sim is a real test first, the book is the review. A teacher sees every book and the PDF; a key-only phone has no
+// account, so no book («Entra con tu código»). Mistakes first: the book opens on the wrong questions of the kid's
+// LATEST graded attempt (its wrongQs), then the whole simulation. The PDF (it holds every answer) downloads once every
+// simulation of the book is taken and the Dorado is open. Never leaked: a simulation's cards travel only to whoever
+// may open them, its photos and clips are served by index through a checked route (a file name never says an
+// answer), and the page code holds no content.
 // =========================================================================
 'use strict';
 const fs = require('fs');
@@ -106,15 +109,18 @@ function attemptView(t, sim) {
 }
 
 // ── one level's book for one visitor: per simulation taken / mistakes, and the PDF ───────────────────────────────
-// rec: the kid's record (null for a teacher or a phone without a login) · teacher: sees every book and the PDF
-function summary(b, rec, teacher) {
+// rec: the kid's record (null for a teacher or a phone without a login) · teacher: sees every book and the PDF ·
+// dorado: the kid's El Simulacro Dorado is open (the PDF, which holds every answer, also needs it; a taken sim's own
+// book does not)
+function summary(b, rec, teacher, dorado) {
   if (!b) return null;
   const sims = b.sims.map((s) => {
     const t = rec ? latest(rec, s.id) : null;
     return { n: s.n, id: s.id, taken: !!t, mistakes: t ? mistakesOf(t) : null, open: !!(teacher || t) };
   });
   const left = teacher ? 0 : sims.filter((s) => !s.taken).length;
-  return { book: b.id, sims, left, pdf: { ready: !!teacher || (!!rec && left === 0), mb: b.pdf && b.pdf.mb, pages: b.pdf && b.pdf.pages } };
+  return { book: b.id, sims, left,
+    pdf: { ready: !!teacher || (!!rec && dorado !== false && left === 0), dorado: !!teacher || dorado !== false, mb: b.pdf && b.pdf.mb, pages: b.pdf && b.pdf.pages } };
 }
 
 // ── what the page draws: one simulation's cards, its media as checked links (by index) ───────────────────────────

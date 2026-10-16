@@ -227,8 +227,11 @@ resultados» (right answers per part), «Así es el examen» (the solved example
 part. Every card is the book's own: the exam's photos as the book prints them (a tap shows one big), a gold play
 button with the original exam recording of that question only (cut from the recording; old HSK uses its own clip
 per question), the pinyin with tone marks, the Spanish and the answer in gold. Zero mistakes = a celebration line from
-the gang. **The PDF downloads once every simulation of the level is taken** (a web copy under 9 MB); before that the
-page and the route say how many are left. On the route, a simulation the kid took gets a red «Libro dorado» ribbon
+the gang. **Taken anywhere is enough** (your pick after the build): a simulation taken in your room opens its own
+book even before the kid earns El Simulacro Dorado (the route keeps showing how the Dorado opens, plus that
+simulation's «Libro dorado»); the other simulations and the PDF still need the Dorado. **The PDF downloads once every
+simulation of the level is taken and the Dorado is open** (a web copy under 9 MB); before that the page and the route
+say how many are left, or that the PDF comes with El Simulacro Dorado. On the route, a simulation the kid took gets a red «Libro dorado» ribbon
 with its mistakes count; a phone that only has the key is asked to «Entra con tu código» (the book lives on an
 account). Teachers see every book and the PDF; in a kid's profile each simulation they took shows its mistakes and
 «📖 Ver su libro» (that kid's mistakes view; the link works only on a teacher's device, and a kid holding it sees only

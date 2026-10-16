@@ -188,12 +188,14 @@ the checklist for any new game mode.
   simulation keep it open; «Desbloquear» still opens anyone.
 - **El libro dorado (his picks 2026-10-16, phase 5)**: the golden book on the web, inside El Simulacro Dorado.
   **A simulation's book opens once the kid has taken that simulation** (the sim is a real test first, the book is the
-  review; a teacher sees every book). **Phone cards, like La Base**: one card per question with its photos, its own
+  review; a teacher sees every book). **Taken anywhere is enough** (his pick after the build): a sim taken in a
+  teacher's room opens its own book even before the kid earns the Dorado; the other sims and the PDF still need the
+  Dorado. **Phone cards, like La Base**: one card per question with its photos, its own
   play button cut from the original exam recording, pinyin with tones, the Spanish and the answer in gold, simulation by
   simulation, from the same source as the printed book (`study/<level>sim`, `exam.py`). **Mistakes first**: after a
   sim the book opens on «Repasa tus N errores» (that kid's wrong questions, each with its play button), then the whole
   simulation; teachers see the same list. **The PDF downloads once the kid has taken every simulation of the level**
-  (it holds every answer; a lighter web copy under 9 MB).
+  and has the Dorado (it holds every answer; a lighter web copy under 9 MB).
 - **Built (phase 3, 2026-10-16): progress on the kid's account, one unlock engine.** `core/ruta-progress.js` is the
   ONLY place that decides a step (the key is still the level's door: `LevelKeys.access` first, the engine after it).
   The record keeps, per stored level id, `rec.ruta[level] = { s: '1-17,20' (the seals as ranges of word numbers of
@@ -263,13 +265,17 @@ the checklist for any new game mode.
   reuses its own mp3 per question from `protected/HSK SIMULATIONS/`) + `book.pdf` (web copy < 9 MB); a level names its
   book in core/levels.js (`golden`). `core/golden.js` reads it; server.js: the page `/audios/<level>/libro/<n>` (the key
   screen without the level's key; `/audios/<level>/libro` → the route's step 3), `GET /api/golden/<level>/<n>` (the
-  doors in order: `LevelKeys.access` → an account (a key-only phone: `why: 'login'`) → `RutaProgress.doradoOpen` →
-  that sim taken = a graded try in `rec.hskResults` (solo, homework and room tries all land there through
-  `/api/hsk-sim/:simId/submit`) that really answered the exam: since phase 5 the submit stores `answeredCount` as the
-  grader saw it (not the keys a phone sent) and `questions`; a try needs half of them answered (older tries: anything
-  but blank); a teacher passes them all), `GET /golden-media/<book>/<n|ex>/<p|a><i>` (by index from the JSON, only a
-  book core/levels.js names, the same doors per file, `private` + Cloudflare no-store) and
-  `/golden-media/<book>/book.pdf` (every sim taken, or a teacher; `private, no-store`, attachment). Rates in fixed 5-min
+  doors in order: `LevelKeys.access` → an account (a key-only phone: `why: 'login'`) → that sim taken = a graded try in
+  `rec.hskResults` (solo, homework and room tries all land there through `/api/hsk-sim/:simId/submit`) that really
+  answered the exam: since phase 5 the submit stores `answeredCount` as the grader saw it (not the keys a phone sent)
+  and `questions`; a try needs half of them answered (older tries: anything but blank). Taken anywhere is enough: no
+  `RutaProgress.doradoOpen` for a taken sim's book, its files or the examples; a sim not taken answers `why: 'dorado'`
+  while the Dorado is closed, else `why: 'taken'`; a teacher passes them all), `GET /golden-media/<book>/<n|ex>/<p|a><i>`
+  (by index from the JSON, only a book core/levels.js names, the same doors per file, `private` + Cloudflare no-store)
+  and `/golden-media/<book>/book.pdf` (the Dorado open and every sim taken, or a teacher; `private, no-store`,
+  attachment; `Golden.summary`'s `pdf.ready` / `pdf.dorado` say the same). While the Dorado is closed the route's
+  step 3 keeps phase 4's practice view and adds the kid's own taken sims (`golden.taken`: «Libro dorado del Simulacro
+  N» with its mistakes, «El libro en PDF llega con El Simulacro Dorado»), sent only to that logged-in kid. Rates in fixed 5-min
   windows counted AFTER the door: a teacher never waits, a kid's account 600 views / 6000 files, refused or unknown
   requests 300 per address (they never spend a school Wi-Fi's budget). A try whose total differs from today's grader
   (old HSK sims 1-6 had 30 questions until 2026-06) shows no per-question mistakes; «¡Aprobado!» = the try's % against

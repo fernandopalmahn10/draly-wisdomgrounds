@@ -246,8 +246,11 @@
         '<a class="gd-btn gd-btn-gold" href="' + esc(p.href) + '" download>' + I.down + 'Descargar el libro</a></div></section>';
     }
     const left = Number(p.left) || 0;
+    // (a kid whose Dorado is still closed: the PDF, every answer, comes with it)
+    const why = p.dorado === false ? 'Llega con El Simulacro Dorado: practica cada mundo de El Entrenamiento con ' + (Number(d.pct) || 70) + ' % o más.'
+      : (left === 1 ? 'Haz el simulacro que falta para descargar el libro.' : 'Haz los ' + left + ' simulacros que faltan para descargar el libro.');
     return '<section class="gd-pdf"><span class="gd-pdf-ic" aria-hidden="true">' + I.lock + '</span><div class="gd-pdf-body"><h2 class="gd-pdf-t">El libro en PDF</h2>' +
-      '<p>' + (left === 1 ? 'Haz el simulacro que falta para descargar el libro.' : 'Haz los ' + left + ' simulacros que faltan para descargar el libro.') + '</p></div></section>';
+      '<p>' + why + '</p></div></section>';
   }
   function resultsHtml(d, parts) {
     const m = d.mine;
@@ -289,7 +292,8 @@
         const after = (d.sims || []).filter((s) => s.n > d.n).concat((d.sims || []).filter((s) => s.n < d.n));
         const todo = after.find((s) => !s.taken);
         const again = after.find((s) => s.taken && s.mistakes);
-        if (todo) next = '<a class="gd-btn gd-btn-gold" href="' + esc((/^hsk\d/.test(todo.id) ? '/hsk-sim.html?sim=' : '/yct-sim.html?sim=') + encodeURIComponent(todo.id)) + '">Hacer el Simulacro ' + todo.n + '</a>';
+        // (a kid whose Dorado is still closed can't take a simulation alone yet: no «Hacer» then)
+        if (todo && d.dorado !== false) next = '<a class="gd-btn gd-btn-gold" href="' + esc((/^hsk\d/.test(todo.id) ? '/hsk-sim.html?sim=' : '/yct-sim.html?sim=') + encodeURIComponent(todo.id)) + '">Hacer el Simulacro ' + todo.n + '</a>';
         else if (again) next = '<a class="gd-btn gd-btn-red" href="/audios/' + esc(d.slug) + '/libro/' + again.n + '" data-nav>Repasar el Simulacro ' + again.n + '</a>';
       }
       return '<section class="gd-zero" aria-labelledby="gd-zero-t"><div class="gd-zero-head"><span class="gd-zero-coin" aria-hidden="true"><b>' + q + '</b>' + I.check + '</span>' +
@@ -389,8 +393,8 @@
             btn: '<a class="gd-btn gd-btn-red" href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug + '/libro/' + Number(n)) + '">Entrar con mi código</a>' });
         }
         if (d.why === 'dorado') {
-          return stateCard(main, base, { sub: 'Tu repaso de cada simulacro', title: 'Primero, El Simulacro Dorado',
-            text: 'Se abre cuando practiques cada mundo de El Entrenamiento. Después haces el simulacro y lo repasas aquí.',
+          return stateCard(main, base, { nav: true, sub: 'Tu repaso de cada simulacro', title: 'Primero, El Simulacro Dorado',
+            text: 'Se abre cuando practiques cada mundo de El Entrenamiento con ' + (Number(d.pct) || 70) + ' % o más. Después haces el simulacro y lo repasas aquí.',
             btn: '<a class="gd-btn gd-btn-gold" href="/audios/' + esc(m.slug) + '#paso-3" data-nav>Ver mi ruta</a>', dragon: DRAGON.power });
         }
         if (d.why === 'taken') {
