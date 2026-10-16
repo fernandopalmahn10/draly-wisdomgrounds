@@ -176,9 +176,29 @@ the checklist for any new game mode.
 - **The simulations' audio = a digital golden book**: the golden book on screen page by page, each listening question
   with its own play button (the original exam recording, cut per question), plus the PDF to download.
 - The whole tab is **«La Ruta Dorada»** (was «Audios y vocabulario»). Choosing your module feels like a game: a swipe
-  between modules with a super cool animation.
-- `node scripts/test-level-keys.js` (its own server on port 4300 and a fresh data folder) and
-  `node scripts/test-sims-lock.js` must pass.
+  between modules with a super cool animation: **big glossy module cards that fly in with depth and a little bounce**
+  (his pick 2026-10-15, "like choosing a world in a Nintendo game").
+- Until progress unlocking exists (phases 3-4), a kid with the key gets La Base and El Simulacro Dorado (the level's
+  existing simulations); El Entrenamiento shows a beautiful «Muy pronto» step (his pick 2026-10-15).
+- **Built (phase 2, 2026-10-15)**: `/audios` = the module picker, `/audios/<level>` = that module's golden route
+  (`public/js/ruta.js` + `css/ruta.css`, routed by `js/audios.js`). One card per level of core/levels.js (its jewel
+  colour by test family, a new level of the same family takes the next free colour; Dralingo's pose shuffled per visit;
+  the gold Dubai skyline is one `<symbol id="rd-sky">` in audios.html). The flight is a JS spring writing transform and
+  opacity only (no layout read in a frame; measured 0 frames over 34 ms at 4x CPU slowdown); reduced motion = a
+  crossfade; the first frame is still. What a visitor may open comes ONLY from `GET /api/ruta-dorada` (server.js
+  `_rutaState`, `LevelKeys.access` per level): `open`, the base, `simCount`, and the sims list (links to the players,
+  the logged-in kid's best %) only when open; `home` = the logged-in kid's class level, else the first level this
+  device holds the key of (the picker shows it first; then the tab's last card, then the phone's last choice). A step
+  is open / locked (the gold lock, one «Escribe la clave de <nivel>» box) / «Muy pronto» (El Entrenamiento until
+  phase 4; La Base or the Simulacro of a level that has none yet). «Escribe la clave» = `/audios/<level>/clave`: the
+  phase-1 key screen (with a way back to the path), which returns to the path once open. A visitor gets «Entra con
+  tu código» (`/homework.html?next=/audios…`, homework.js accepts `/audios`, `/audios/<id>`, `/audios/<id>/clave`).
+  The /homework entry «La Ruta Dorada de <nivel>» opens `/audios/<level>?from=homework` (the path's back arrow then
+  says «Volver a mis tareas»). A new locked thing on the path (El Entrenamiento, the golden book) gets its state from
+  `_rutaState` (never a list sent to everyone) and its door from `LevelKeys.access`.
+- `node scripts/test-level-keys.js` (its own server on port 4300 and a fresh data folder),
+  `node scripts/test-sims-lock.js` and `node scripts/test-ruta-dorada.js` (port 4410: every kind of visitor, nothing
+  protected reaches one who may not open it) must pass.
 
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads
@@ -242,11 +262,12 @@ the checklist for any new game mode.
   one level up each time). Finish all sims of a level before moving on unless he says otherwise. Old HSK sims already exist
   in `hsk-sim.html`.
 
-## Homework audio (/audios, since 2026-10-11) · «Audios y vocabulario» (folders since 2026-10-14)
-- `/audios` is a library of level folders (`/audios/yct1`, `/audios/newhsk1`, `/audios/hsk1`; names and order from
-  `core/levels.js`, written into `catalog.json` `levels` by the builder). A level's vocabulary base is pinned first in its
-  folder, then its homework audios. Old addresses never change: the printed PDFs link `/audios/<homework id>`,
-  `hsk2-…` opens `newhsk1-…` (and `/audios/hsk2` the New HSK 1 folder), `/audio/…` and `?t=<id>` still work.
+## Homework audio (/audios, since 2026-10-11) · «La Ruta Dorada» (was «Audios y vocabulario»; renamed 2026-10-15)
+- `/audios` is La Ruta Dorada's module picker (§ Three levels: the flying cards) and `/audios/<level>`
+  (`/audios/yct1`, `/audios/newhsk1`, `/audios/hsk1`; names and order from `core/levels.js`) that module's route:
+  La Base, El Entrenamiento, El Simulacro Dorado, then the level's homework audios. Old addresses never change: the
+  printed PDFs link `/audios/<homework id>`, `hsk2-…` opens `newhsk1-…` (and `/audios/hsk2` the New HSK 1 path),
+  `/audio/…` and `?t=<id>` still work.
 - **La base · Empieza aquí** (`/audios/<level>-base`: `yct1-base` 83 words, `hsk1-base` 150 words, `newhsk1-base`
   300 words; worlds `#mundo-N`, `#tonos`, `#repaso`, words `#palabra-N`): a level's study book («YCT 1 · Vocabulario»,
   «HSK 1 · Vocabulario», «New HSK 1 · Vocabulario») digitally (his ask 2026-10-14: the first thing the level's kids
@@ -267,14 +288,15 @@ the checklist for any new game mode.
   batch on the processor, words re-heard after «Wǒ shuō», score_lines on the rest); fix a wrong reading in voice.py,
   never in the page. Page: `js/audios-base.js` + the `bs-` rules in
   `css/audios.css`; seals saved per phone in `localStorage draly_base_<level>` (the move bridge carries it); the
-  /homework home links it for levels with `base` in core/levels.js (`#pt-base`, server sends `base` on enter, read from
-  the catalog; `?from=homework` turns the page's back arrow into «Volver a mis tareas»).
+  /homework home links the level's route for levels with `base` in core/levels.js («La Ruta Dorada de <nivel>»,
+  `#pt-base`, server sends `base` on enter, read from the catalog; `?from=homework` turns the route's back arrow into
+  «Volver a mis tareas»; the base's own back arrow returns to the route).
 - **La Base is behind its level's key** (2026-10-15, § Three levels): its files live in `protected/base/<level>-base/` and
   `protected/study/` (never `public/`; the old `/assets/audios/<level>-base/…` and `/assets/study/…` answer 404) and travel
   only as `/base-media/<base id>/<file>` (`book.pdf` = the PDF), checked on every file with `levelAccess`, `private`
   + `Cloudflare-CDN-Cache-Control: no-store` (never kept by Cloudflare; the phone keeps clips a week). `/audios/<level>-base`
-  shows the key screen to whoever may not use the level; the library draws a gold lock seal on those bases
-  (`/api/level-access`). Commit `protected/base/<id>/` + `protected/study/` with the catalog.
+  shows the key screen to whoever may not use the level; the picker and the route draw the gold lock on those levels
+  (`/api/ruta-dorada`; `/api/level-access` still answers). Commit `protected/base/<id>/` + `protected/study/` with the catalog.
 - The builder stamps every base clip, picture and the PDF with `?v=<content hash>`, and the page asks for catalog.json /
   base.json with a 10-minute stamp (Cloudflare keeps the public `/assets/*`, catalog included, 2 h). A clip rebuilt
   under the same name still reaches phones at once; never strip those stamps.
@@ -291,7 +313,7 @@ the checklist for any new game mode.
 - Commit `content/audios/<id>.json`, `public/assets/audios/<id>/` and `public/assets/audios/catalog.json` together.
   From a worktree, `node scripts/audios-build.js <id> --cache <main checkout>/content/audios/.cache` reuses the voices.
 - **Dralingo Dorado** (2026-10-11): about one visit in ten, a golden 3D Dralingo pops up in the corner of /audios
-  (`?dorado=1` forces him, `?dorado=0` never). `public/js/golden/dorado.js` + `css/dorado.css` are hand-written; the other
+  (`?dorado=1` forces him, `?dorado=0` never; never on a base page nor on the picker, where he would cover the ‹ › buttons). `public/js/golden/dorado.js` + `css/dorado.css` are hand-written; the other
   `js/golden/*.js` files come from `../three/golden-dralingo/ship.mjs`: never edit them here, rebuild there. three.js
   loads from the CDN (import map in audios.html) only when he appears. Silent, corner-only, leaves after 30 s or ×.
 

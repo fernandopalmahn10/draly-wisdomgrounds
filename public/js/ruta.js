@@ -93,6 +93,15 @@
     return b ? ctx.sealsOf(b) : new Set();
   }
 
+  // a friend of the gang cheers along (a new one, and a new line, on each visit: «alive, randomized»)
+  function friendRow(cls) {
+    const C = window.DralingoCast;
+    if (!C) return '';
+    const f = C.pick(1)[0];
+    return '<div class="rd-friend' + (cls ? ' ' + cls : '') + '"><img src="' + esc(C.pose(f, 'ruta')) + '" alt="" width="200" height="240" decoding="async">' +
+      '<p class="rd-bubble"><b>' + esc(C.name(f)) + '</b>' + esc(C.line(f, 'ruta')) + '</p></div>';
+  }
+
   // ── the picker: big glossy cards that fly ─────────────────────────
   let live = null;   // the carousel on screen (one at a time)
   function leave() { if (live) { live.destroy(); live = null; } }
@@ -154,7 +163,7 @@
           (friend ? '<img class="rd-join-friend" src="' + esc(window.DralingoCast.pose(friend, 'hello')) + '" alt="" width="200" height="240" loading="lazy" decoding="async">' : '') +
           '<div class="rd-join-text"><h2 class="rd-join-title">¿Ya eres alumno de Dralingo?</h2>' +
           '<p>Entra con tu código de estudiante. ¿Tienes la clave de tu nivel? Toca tu mundo.</p>' +
-          '<a class="rd-btn rd-btn-red" href="/homework.html?next=%2Faudios">Entrar con mi código</a></div></div>' : '') +
+          '<a class="rd-btn rd-btn-red" href="/homework.html?next=%2Faudios">Entrar con mi código</a></div></div>' : friendRow('is-pick')) +
       '</section>';
     live = carousel(main, mods, start);
   }
@@ -370,13 +379,7 @@
       (m.open ? '' : '<span class="rd-seal" aria-hidden="true">' + I.lock + '</span>') +
       '<span class="rd-card-gloss" aria-hidden="true"></span></section>';
 
-    // a friend of the gang cheers along the route (a new one on each visit)
-    let friend = '';
-    if (window.DralingoCast) {
-      const f = window.DralingoCast.pick(1)[0];
-      friend = '<div class="rd-friend"><img src="' + esc(window.DralingoCast.pose(f, 'ruta')) + '" alt="" width="200" height="240" decoding="async">' +
-        '<p class="rd-bubble"><b>' + esc(window.DralingoCast.name(f)) + '</b>' + esc(window.DralingoCast.line(f, 'ruta')) + '</p></div>';
-    }
+    const friend = friendRow('');
 
     const keyBox = m.open ? '' :
       '<div class="rd-keybox"><span class="rd-keybox-seal" aria-hidden="true">' + I.lock + '</span>' +
@@ -413,7 +416,9 @@
             '<b class="rd-sim-n" aria-hidden="true">' + s.n + '</b>' +
             '<span class="rd-sim-name">Simulacro ' + s.n + '</span>' +
             '<span class="rd-sim-meta">' + s.questions + ' preguntas</span>' +
-            (s.best != null ? '<span class="rd-sim-best">' + I.check + s.best + ' %</span>' : '') +
+            // the kid's best try: gold with a check from the exam's pass line (60 %: YCT and HSK pass at 120 / 200)
+            (s.best != null ? '<span class="rd-sim-best' + (s.best >= 60 ? ' is-pass' : '') + '"><span class="au-sr">Tu mejor resultado: </span>' +
+              (s.best >= 60 ? I.check : '') + s.best + ' %</span>' : '') +
           '</a></li>').join('') + '</ul>';
     } else if (st.gold === 'locked') {
       goldBody = '<p class="rd-stop-text">' + m.simCount + (m.simCount === 1 ? ' simulacro completo' : ' simulacros completos') + ' con el audio original del examen.</p>' +
