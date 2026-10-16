@@ -7,7 +7,9 @@
 // same sum on a resync, a 13 s pause with the watchdog's resyncs, the answer after «Seguir» counts), «+30 s», a swap
 // refused mid-game, a rejoin keeps team + gold + the open sum, a late joiner to the smaller team, «Terminar» →
 // «¡FINAL!» → the ceremony (a second «Terminar» ignored), the end payloads, a reconnect after the end gets the card,
-// «Saltar» after the end reaches the phones, «Otra ronda» = a clean game in the new style.
+// «Saltar» after the end reaches the phones, «Otra ronda» = a clean game in the new style. Since 2026-10-16 («no dead
+// phones»): every sum carries the too-fast line `ss.min`, every verdict its «six seven» flags, and another phone sees A's
+// coins in the phones' meter feed.
 'use strict';
 const assert = require('assert');
 const { io } = require('socket.io-client');
@@ -130,6 +132,14 @@ async function answer(kid, right, waitMs) {
   ok(kids.every((k) => !!k.q), 'every kid got a sum when the play started');
   ok(kids.every((k) => k.q.gameMode === 'sixseven' && k.q.answers.join() === '6,7' && !k.q.ss.zh && /^\d+ [+−] \d+ = \?$/.test(k.q.text)), '«Números»: digit sums with the buttons 6 and 7');
   ok(kids.every((k) => { const v = solve(k.q); return v === 6 || v === 7; }), 'every answer is 6 or 7');
+  ok(kids.every((k) => k.q.ss.min === 400), 'every sum carries the too-fast line (the phone reacts the moment the kid taps)');
+  // the phones' meter carries who scored (2026-10-16, «no dead phones»): another phone sees A's coins land
+  const feedSeen = { coins: 0, beats: 0 };
+  kids[3].s.on('ss:meter', (d) => {
+    if (!d || !Array.isArray(d.f)) return;
+    feedSeen.beats++;
+    d.f.forEach((e) => { if (e[0] === kids[0].init.you.k) feedSeen.coins += e[1]; });
+  });
 
   // a swap mid-game is refused
   const st0 = await next(host, 'state', 3000).catch(() => null);
@@ -157,6 +167,9 @@ async function answer(kid, right, waitMs) {
   const r3 = await answer(A, true);
   ok(r3.sixseven.streak === 3 && r3.sixseven.mult === 2 && r3.sixseven.coins === 2 + r3.sixseven.goldExtra, 'a streak of 3: ×2 coins');
   ok(r3.sixseven.total === r1.sixseven.coins + r2.sixseven.coins + r3.sixseven.coins, 'my running total adds up');
+  ok([r1, r2, r3].every((r) => typeof r.sixseven.six === 'number' && typeof r.sixseven.pair === 'boolean' && !(r.sixseven.six & 1)), 'every verdict carries the «six seven» flags (no racha 7 yet)');
+  const aTotal = r3.sixseven.total;          // (checked after B's waits: the feed comes every 750 ms; no extra sleep here,
+                                             //  C's first sum must still be open when C answers it below)
 
   // wrong answers: the wait, then «¡Respira!»
   const B = kids[1];
@@ -168,6 +181,7 @@ async function answer(kid, right, waitMs) {
   ok(w2.sixseven.calm && w2.sixseven.wait === 2600, 'two wrong in a row: «¡Respira!» and a longer wait');
   ok(await none(B.s, 'question', 2200), 'the longer wait holds');
   await next(B.s, 'question', 2000);
+  ok(feedSeen.beats > 0 && feedSeen.coins === aTotal, `another phone saw A's coins land in the meter feed (${feedSeen.coins} of ${aTotal})`);
 
   // a too-fast tap (right button, but nobody reads that fast) is wrong
   const C = kids[2];

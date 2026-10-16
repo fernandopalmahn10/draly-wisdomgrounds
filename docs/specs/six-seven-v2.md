@@ -7,6 +7,35 @@ launcher keep working, `?livegame=1` kept) · remade 2026-10-15 on a worktree br
 "I loved Mochi Mash" (v2, 14/14) and Piñata Tigre v2 (14/14) → "Next is 6-7 Swing please", same treatment: the Mario
 Party feeling, the same feelings at the end of class, super addictive, every design filter passed.
 
+## Second pass · «no dead phones» (his words, 2026-10-16)
+He played it and said: "I didn't even feel there was a feeling. There's nothing in between." His two picks: **(1) phones
+go dead** (after answering, the phone just waited: no reaction, nothing to watch, no sense the tap mattered) and **(2)
+not enough 6-7 energy** (the meme the kids love, the hand swing and the shout «six seven!», only at the end). New rule in
+`mochi-mash/CLAUDE.md` «Feelings in between too: no dead phones». What changed (as built: «As built · 2026-10-16» below):
+- **The tap answers at once.** The sum is on the screen, so the phone knows a wrong button is wrong, and the right one is
+  right once the sum has been readable for the too-fast line (`ss.min`, the server's 400 ms: its clock started earlier,
+  so its time is never shorter). The whole reaction plays on the tap; the server's verdict follows and settles the coins
+  (the golden extra, the exact wait) or, very rarely, takes the guess back. A school Wi-Fi's round trip no longer leaves
+  a kid staring at a pressed button.
+- **My world above the card**, a mini of the projector: the golden balance with both pans filling and tipping live; my
+  team under my pan (me big, two mates), two rivals under theirs, Dralingo at the foot doing the 6-7 whenever my team
+  scores; my coins fly from the button into my team's pan; **my teammates' coins land in our pan between my sums** (the
+  phones' meter now carries who scored: their figures swing, «Sofía +3» pops over the pan); the gap «¡Vamos ganando por
+  3!», «¡Nos alcanzan! Solo 3», «¡Faltan 5 para alcanzarlos!» always on screen; my captain's bubble reacts (a slip, a
+  lead change, a wave, the last 30 s).
+- **The in-between beat:** 0.65 s after a right answer (was 0.5 s): the two buttons swing like the two palms of the 6-7,
+  the coin lands, the next sum tips in from alternating sides. A wrong answer's wait is «¡Recargando!», never «Espera…».
+- **«¡SIX SEVEN!» during play:** a 6 then a 7 right in a row (a small stamp at my pan, the palms double-swing, the voice
+  has just said liù… qī), **racha 7** and **my 67th coin** (the big one on my phone: «¡SIX SEVEN!» stamped over my world,
+  a crowd shouting «six seven!», Dralingo sliding in doing it, my crew swinging, gold confetti, then Dralingo's «liù, qī!»),
+  and **team waves**: each team's gold at 67, then every ~E ÷ 3 (a multiple of 67, ≥ 12 s apart): the team's phones get
+  the shout, their whole crew does the 6-7, the balance rocks; the projector shows a big «¡SIX SEVEN!» band, that crowd
+  swinging in unison, Dralingo dancing bigger. All cosmetic: no gold changes hands (the anti-spam maths is untouched).
+- **The projector builds hype:** the team that passes ahead jumps into the 6-7 and the balance swings over; a kid who
+  hits racha 7 or 67 coins gets «¡6-7!» over the head; in the last 30 s both crowds bob to the beat, Dralingo dances
+  faster and the gap is called out every 7 s («¡Fuego gana solo por 4! ¡Vamos, Mar!»); bands queue instead of being lost.
+- **The pause card** shows the live score and my gold (a pause is a wait too).
+
 ## Kept from the old game, and what changed
 - Kept (its soul): **fast, funny, every answer is 6 or 7** (the kids' «six-seven» meme), **two giant buttons** on the
   phone, two teams, a swing / balance that tips toward the team that scores, no question pack (the sums are generated).
@@ -56,19 +85,25 @@ Party feeling, the same feelings at the end of class, super addictive, every des
    pans, the captains say hello.
 3. **Intro (2.8 s).** One pictured control: a sum card «3 + 4 = ?», the two buttons, a hand pressing «7» (it lights green):
    «¡Toca el resultado!» → «¿Listos?» → «¡YA!». The teacher can skip it.
-4. **Play, rapid-fire.** Each kid has their own stream of sums. The phone: the team meter + a mini balance + «¡Ganamos
-   por 12!»; the sum card (a 12 s clock bar under it, ticking in the last 3 s); my full-body character and my gold; the
-   two giant buttons (≥ 156 px tall, the whole lower third). A hand shows «one of these» on the first sum.
-   - **Right** → the button pops, a pop sound whose pitch climbs with the streak, a 14 ms buzz, the voice says «liù» /
-     «qī», my character swings toward the side I tapped (6 left, 7 right), coins fly from the button to my counter, «+3»,
-     the verdict pill «¡Sí! 7 · qi», the combo chip «Racha 4 · ×2 oro». **The next sum 0.5 s later.**
-   - **Racha** milestones (3 → ×2, 6 → ×3, 10 → ×4, then every 5): Dralingo slides in from the right edge doing the 6-7,
-     «¡Racha 6! ×3 oro», the voice chants «liù, qī!» (one Dralingo at a time, ≥ 2.5 s apart, never over the buttons).
+4. **Play, rapid-fire.** Each kid has their own stream of sums. The phone (since 2026-10-16, «no dead phones», below):
+   the team meter on top; **my world** (the golden balance, my team under my pan: me big + two mates, two rivals under
+   theirs, Dralingo at the foot, my gold in my corner, my captain's bubble, the live gap «¡Vamos ganando por 3!»); the
+   sum card (a 12 s clock bar under it, ticking in the last 3 s); the two giant buttons (≥ 156 px tall, the whole lower
+   third). A hand shows «one of these» on the first sum.
+   - **Right** (shown on the tap itself, the server's verdict settles it) → the button pops, the two buttons swing like
+     the two palms of the 6-7, a pop sound whose pitch climbs with the streak, a 14 ms buzz, the voice says «liù» /
+     «qī», my character swings toward the side I tapped (6 left, 7 right), my coins fly up into MY TEAM'S PAN (it dips,
+     Dralingo at the foot does the 6-7, «+3» rises), the verdict pill «¡Sí! 7 · qi», the combo chip «Racha 4 · ×2 oro».
+     **The next sum 0.65 s later** (was 0.5 s), tipping in like a palm from alternating sides.
+   - **Racha** milestones (3 → ×2, 10 → ×4, then every 5): Dralingo slides in from the far edge doing the 6-7, the voice
+     chants «liù, qī!» (one Dralingo at a time, ≥ 2.5 s apart, never over the buttons); 6 → ×3 is a chip; **7 = «¡SIX
+     SEVEN!»** (below).
    - **Golden sum** (8 %, 25 % for the trailing team): the card turns gold «¡Pregunta dorada!» (+5, ×2 in the
      frenzy; while trailing capped at the gap, so the card names no number), a coin fountain.
    - **Wrong / time up / too fast** → a funny wobble (the tapped button shakes and greys, my character wobbles in the sad
-     pose), a «wah» sound, «¡Uy! Era 7 · qi» (the right button glows gold), the buttons sleep under «Espera…» with a bar
-     that drains: **1.6 s**, or **2.6 s after two wrong in a row: «¡Respira! Piensa y toca»**. Then the next sum.
+     pose), a «wah» sound, «¡Uy! Era 7 · qi» (the right button glows gold), my captain says something kind, the buttons
+     **recharge**: «¡Recargando!» with a gold bar that fills, the two buttons rocking gently, the world above going on:
+     **1.6 s**, or **2.6 s after two wrong in a row: «¡Respira! Piensa y toca»**. Then the next sum.
 5. **Rising excitement.**
    - **Live balance + meter** on both screens.
    - **Carrera de monumentos:** four Dubai landmarks on a gold track on the projector (Museo del Futuro 12 %, Marco de
@@ -142,9 +177,11 @@ the same room back (sessionStorage `draly.sixsevenHost`). Every wait is server-t
 «time up» by the server 2.5 s after the phone's 12 s clock (a frozen tab can't hold a kid). «Otra ronda» = a clean game.
 
 ## Network budget (30 phones)
-Per kid: its own sum and verdict (one event each), the meter every 750 ms only when it changed, one banner per lead
-change / landmark / frenzy. The projector: the meter + the feed of who scored or slipped (`f: [k, coins, golden,
-wrong]`) every 250 ms. No room-wide event per answer, no full-room `state` push on answers.
+Per kid: its own sum and verdict (one event each), the meter every 750 ms only when it changed, carrying since
+2026-10-16 the feed of the last beat's top 8 scorers (`f: [k, coins, golden, six]`, «six seven» kids first), one banner
+per lead change / landmark / frenzy / team wave (~2-3 waves a team a game). The projector: the meter + the feed of who
+scored or slipped (`f: [k, coins, golden, wrong, six]`) every 250 ms. No room-wide event per answer, no full-room
+`state` push on answers. Measured with 30 bots: ~150 events per kid in a 60-s round (≈ 2.5 a second), as before.
 
 ## Scorecard target
 Gates all pass; 14/14 aimed: 1 real place = the golden balance on Dubai Creek + the landmark race worth gold; 2 the gang =
@@ -339,3 +376,132 @@ Total 14/14 → ships (≥ 12, no 0)
 - Left as in the other games: «Terminar» pressed during the intro gives a 0–0 «¡Empate!» ceremony (short, skippable);
   during the 3.5 s countdown «Terminar» is hidden; «Terminar» asks with the browser's own confirm box; `host:reclaim`
   checks no teacher login (pre-existing for every game).
+
+## As built · 2026-10-16 («no dead phones», branch `sixseven-alive`)
+### Files
+- `core/sixseven.js`: `RIGHT_MS` 500 → 650 (the in-between beat), `PER_KID_S` 0.95 → 0.90 (the landmark pace kept: the
+  Burj Khalifa in 94 of 300 simulated classes, 31 %, as before); the kid's own «six seven» flags in `answer()` (`six`:
+  1 = racha 7, 2 = the 67th coin; `pair` = a right 6 then a right 7; cosmetic, after `credit()`); the team waves in
+  `tick()` (`WAVE_FIRST` 67, then every `waveStep(E)` ≈ E ÷ 3 rounded to a multiple of 67, a team's waves ≥ 12 s apart,
+  moved by a pause, spaced out by rescale); `min` (the too-fast line) in the dealt sum; the feed entries
+  `[coins, golden, wrong, six]` (golden only when the extra was paid); the «Experto en Chino Mandarín» star.
+- `server.js` «6-7 SWING v2» block: `ss:wave` to the room; the phones' meter every 750 ms carries `f` (up to 4 scorers
+  of each team: «six seven» kids first, then the biggest, ties shuffled); the verdict carries `six` / `pair`; `ss:init`
+  carries the beats `w`; `ss:pause` carries the meter (the pause card shows that moment's score).
+- `public/js/player-sixseven.js` (the play loop rewritten): the instant reaction (`predict` → `apply`, the server's
+  verdict `settle`s or `revertGuess`es; the same sum sent again, a paused stale or a new sum undo a guess the server never
+  judged; a 3 s rescue re-sends a guessed answer once; a 200 ms margin after a pause), my coins' `shots` shown on top of
+  the meter until the first meter after the verdict (never counted twice), the world (`paintTeam` crews, `feed`,
+  `whoChip`, `gang`, `footDance`, `crewCheer`), the «¡SIX SEVEN!» moments (`sixStamp`, `mySix`, `wave`), «¡Recargando!»
+  (`lockUI`), the pause score. `public/js/sixseven-stage.js`: `palms`, `wipe`, `sumValue`, `Balance.rock`, the coin layer
+  measured once per size. `public/css/sixseven.css`: the world (`.ssx-world` and its parts), the recharge lock, the
+  «SIX SEVEN» banner / stamp, the projector's crowd cheer / bob, kid pops, Dralingo's hype, reduced-motion fallbacks.
+  `public/player.html`: the world markup (6-7 block only). `public/js/host-sixseven.js` + `host-sixseven.html`: the band
+  queue (no band in the last 10 s, none after «¡FINAL!»), `ss:wave`, kid pops, crowd cheers on leads / landmarks / waves,
+  the last-30-s gap callouts, Dralingo's lines at least 2.5 s each (two teams' waves together = one line).
+- `public/js/cast.js`: a `sixseven` mood line per character (after `swing`; Aileen in voseo, Adric and his dog…).
+- `public/assets/sixseven/shout67.mp3` (11 KB): «six… SEVEN!» shouted by a crowd, made from Kenney's Voiceover Pack
+  (CC0: the announcer and the male / female voices saying "six" and "seven", pitched up into kids' voices and layered a
+  few ms apart, a short echo, loudness-normalised; recipe in the scratchpad `ss67/shout.sh`, sources in
+  `assets-library/kenney/…/Audio/Voiceover Pack*`). Plays with the global mute.
+- Tests: `scripts/test-sixseven.js` (+ the six flags, the pair, the waves, their gap and pause shift, the wave stats in
+  300 simulated classes), `scripts/test-sixseven-phone.js` (NEW: the real phone module in a tiny fake page with a fake
+  clock and socket: the guess, settle and revert paths, the meter never counting my coins twice, the golden extra
+  before / after landing, the pause score, a capped golden sum), `scripts/test-sixseven-live.js` (+ `ss.min`, the six
+  flags, another phone seeing A's coins in the feed), `scripts/playtest/sixseven.js` (+ the waves, the six flags, the
+  feed's shape). Docs: this spec, `docs/GAME_MODES.md`, `docs/HOW_CLAUDE_WORKS.md`, the «no dead phones» rule in
+  `CLAUDE.md` (copied word for word from his main checkout).
+- Kept on purpose: `cast.js?v=` in player.html (the server revalidates every file, max-age 0 + ETag; another branch is
+  editing the cast too, so the bump is left to whichever merges last); «Esperando al anfitrión» in the shared lobby
+  (player.js, every game); the lobby's style button «En Chino» (short label).
+
+### Tests (final code)
+- `node scripts/test-sixseven.js`: 390,864 checks; thinker 127 · slow thinker 65 · fast guesser 60 · masher 0 coins in
+  a 2-minute game; 300 simulated classes: 0.65 coins per kid per second, 3.3 landmarks a game, the Burj Khalifa in 94;
+  waves 2.7 a team per game (at most 4, never a game without one, a team's two closest 13.4 s apart).
+- `node scripts/test-sixseven-phone.js`: 44 checks. `node scripts/test-sixseven-live.js --url …`: 63 checks.
+- Bots (`--seconds 60`, the fast bots of `scripts/playtest/sixseven.js`), all PASS, 0 frozen, 0 errors, 0 stale:
+
+| Bots | Sums | Answers (right / wrong / too fast / time up) | Waves | Pairs · racha 7 · 67th coin | Coins: thinkers avg (min) · guesser · masher | Events per kid avg / max |
+| --- | --- | --- | --- | --- | --- | --- |
+| 4 | 105 | 101 (60 / 41 / 21 / 0) | 3 | 8 · 2 · 2 | 88 (76) · 28 · 0 | 125 / 136 |
+| 20 | 477 | 463 (376 / 87 / 21 / 4) | 8 | 73 · 22 · 11 | 84.9 (56) · 9 · 0 | 150 / 159 |
+| 30 | 728 | 710 (597 / 113 / 22 / 4) | 8 | 118 · 31 · 22 | 87.7 (40) · 27 · 0 | 153 / 169 |
+
+  (Bots answer faster than a class, so they reach more waves than the ~2-3 a team of a real 2-minute round.)
+- Every other test passes on this code: test-mochi 1,593 · test-pinata 248,399 · test-halcon 68,229 · test-kingdoms ·
+  test-paint 120,728 · test-snow 94,768 · test-escape 319,101 · test-packs 82 rounds · stress-packs · test-wording 52
+  files · test-archive 27 · test-ruta-dorada 91 · test-ruta-progress 161 · test-ruta-training 165 · test-level-keys 203 ·
+  test-sims-lock 413 · test-golden-book 263 · test-audios-base 3,502 (with `STUDY_DIR`) · asset-guard exit 0.
+
+### Reviews and what they changed
+- `agent-skills:code-reviewer`: approve after two Important items, both done: (1) the team meter briefly counted my own
+  coins twice (an update that already held them arrived before they landed) → my coins in flight are shown on top of the
+  meter only until the first meter after the server's verdict (same socket, in order); (2) no automated test of the
+  guessing → `scripts/test-sixseven-phone.js`. Also done: a guess never judged (a rejoin dropped its sum) is undone when a
+  new sum arrives; a margin after a pause; the phones' feed 4 per team (the trailing team sees its own teammates); the
+  coin layer measured once; no stale band over the ceremony; the gap chip no longer chatters to screen readers; a golden
+  extra after landing pops only the difference; the beats sent in `ss:init`; a comment on merged waves.
+- `classroom-playtester` (1 projector + 2-4 real phones at 390×844 and 360×640 + 24 socket kids, 3 full rounds, a small
+  class of 6, bots 20 / 30): **PASS: no phone ever dead between questions** (sampled every 0.5 s: never quiet for more
+  than 2 s between sums; the reaction on the tap 150 of 150 times; per phone per round ~50 «+N» teammate chips, ~30
+  teammate «six seven» chips, 8-10 big stamps, 11 Dralingo entrances; no plain wait screen; buttons and sum never
+  covered; no console errors). Teacher controls, F5, reloads and late joiners all worked. Fixed after its report: the
+  pause card showed a score up to 750 ms old (now sent with the pause); my corner piled up («+N» on the racha chip, the
+  mini stamp on the teammate chip) → «+N» rises from my pan, the mini stamp sits on the pillar, the teammate chip shares
+  the other corner with my captain one at a time; the projector band hid the last-10-s number (now above it, and no band
+  in the last 10 s); Dralingo's lines raced each other (each stays ≥ 2.5 s, two waves together = one line); a golden sum
+  capped to 0 by the comeback rule no longer plays the golden fanfare; «Capitana» capitalised in the run-in; «Experto en
+  Chino Mandarín».
+- Design pass: `emil-design-eng` (the per-answer motion fast and transform-only: palms 420 ms, the coin 470 ms, the wipe
+  230 ms; the rare moments get the delight: stamps, the shout, the crowd), `design-taste-frontend` (design read: an
+  in-class kids' game phone, playful-premium game-show language on the platform's own system; anti-clutter, motivated
+  motion, reduced motion, no em dash), `impeccable` craft floor; detector once at the end: it flagged a 8 px side stripe
+  on the new phone banner (removed: my team's wave is gold, the rivals' wears their colour); kept as before: the
+  ceremony floor's top line and the game-show pop easing.
+- Fresh-eyes finish review (a subagent that only saw the screenshots): "fix, then ship" (the phone has life between
+  questions, the 6-7 shows during play, the sum and the buttons are never covered). Done: the phone's banners now slide
+  in just under the score bar (the score stays on screen, even in the last 30 s) and the world's top chips step aside
+  while one shows; my own «¡SIX SEVEN!» holds the next banner for a beat and hides the teammate chip; a rival's wave is
+  one compact line in their colour; on a small phone (360×640) the crews are me + one mate and one rival, side by side
+  with a gap (nobody touching), and Dralingo's entrance is smaller; «me» gets a gold glow on the ground; the last-30-s
+  chip sits on the card corner away from my «TÚ»; «¡Falta 1 para alcanzarlos!» in the singular; projector: bigger race
+  markers and kid names, a stronger tilt (×3.2), the lead band without a duplicate bubble line (in the last 10 s the
+  bubble says it instead of a band), lead / landmark bands above Dralingo's head, the crowds clear of the gold frame.
+  Kept: the projector race stays a track with team dots (bigger now), not captains' faces.
+
+### Scorecard
+```
+Scorecard · 6-7 Swing v2 «La Balanza de Oro» · second pass «no dead phones» · 2026-10-16 · branch sixseven-alive
+Hard gates: bots PASS (4/20/30: 0 frozen, 0 errors, 0 stale; playtester 3 rounds + small class) · teacher controls ✓
+            (Pausa with the live score, Seguir, +30 s, Saltar intro + ceremony, Terminar in play and from the pause card,
+            Sonido, F5, Otra ronda) · saga only ✓ (our Dralingo art, the cast; the shout is Kenney CC0 voices) ·
+            Spanish / pinyin without tones / level ✓ («6 · liu», «7 · qi», no hanzi; «Chino Mandarín») · kid-safe ✓
+            (figures side by side in the crews)
+1 Real place ........ 2/2  night Dubai Creek, the golden balance now on every phone too, the landmark race worth gold
+2 The gang .......... 2/2  Dralingo at the foot of every phone's balance doing the 6-7 when my team scores, sliding in on
+                            rachas and «six seven»; my captain's bubble reacts (a slip, a lead, a wave, the last 30 s);
+                            my two mates and two rivals full-body in team colours on my phone
+3 Every tap ......... 2/2  the reaction lands ON the tap (no Wi-Fi wait): palms swing, my character swings, the voice,
+                            my coins fly into my team's pan; the pictured rules, the tapping hand, «¡Recargando!» /
+                            «¡Respira! Piensa y toca» name the wait
+4 Feedback .......... 2/2  right / wrong / too fast / time up / golden (only when paid) / racha / six seven / landmark /
+                            lead / wave each with its own reaction; one Dralingo at a time, the news corner one at a time,
+                            team waves ~2-3 a team, bands queued, none in the last 10 s
+5 Finale ............ 2/2  lead cheers, waves, landmarks, last 30 s with crowds bobbing, gap callouts and the countdown;
+                            the Mario Party ceremony unchanged
+6 Fair, no stall .... 2/2  unchanged rules: server-judged, too-fast line, multiplier + waits (a masher 0, a guesser below
+                            the weakest thinker in every run), comeback capped at the gap; the phone's guess never decides
+                            gold (the server's verdict settles or reverts it, tested)
+7 Product feel ...... 2/2  the phone is now a living mini of the projector at 390 and 360 px; our art, Kenney music and
+                            effects, the platform voice and a crowd shout (no beeps)
+Total 14/14 → ships (≥ 12, no 0)
+```
+
+### Open (second pass)
+- **Not deployed**: committed on the branch only; deploy with `deploy-platform` after asking him whether a class runs.
+- Watch in the first real class: the waves' pace (~2-3 a team in 2 minutes) and the shout's volume with 30 phones; a
+  guessed reaction taken back (the server disagrees) should be rare (a pause racing a tap, a sum dropped on a rejoin);
+  how often kids on slow Wi-Fi see «¡Muy rápido!»; whether the phone world stays smooth on the cheapest phones.
+- Art requests (no generation done): Dralingo's true second 6-7 frame (frame b is still the mirror of a), and one
+  «6-7 palms up» pose per saga character (11 avatars on green, Higgsfield Unlimited) so the crews do the real gesture.

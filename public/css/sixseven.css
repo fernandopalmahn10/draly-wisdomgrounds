@@ -157,12 +157,49 @@ body.kd-phone.ssx-on #lobby-mascot, body.kd-phone.ssx-on #lobby-team-name { disp
 .ssx-mn.g { background: var(--ss-blue); }
 .ssx-mbar { height: 14px; border-radius: 999px; border: 2px solid var(--ss-ink); background: var(--ss-blue); overflow: hidden; }
 .ssx-mbar i { display: block; height: 100%; background: var(--ss-red); transform-origin: 0 50%; transform: scaleX(.5); transition: transform .45s var(--ss-ease-out); box-shadow: 2px 0 0 #fff; }
-.ssx-row { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; }
-.ssx-mini { width: 74px; height: 42px; flex: 0 0 auto; }
-.ssx-status { min-height: 1.3em; padding: 2px 12px; border-radius: 999px; font: 800 .98rem/1.3 'Nunito', sans-serif; color: var(--ss-ink); background: rgba(255, 247, 227, .94); }
+/* ---------- the kid's little world (2026-10-16, «no dead phones»): a mini of the projector's scene ----------
+   the golden balance, my team under my pan (me big + two mates), the rivals under theirs, Dralingo at its foot doing
+   the 6-7 whenever my team scores, my gold in my corner, my captain's bubble in the other. Fuego always on the left,
+   Mar on the right (like the balance and the meter); .ssx.gold = I am Mar. Everything moves by transform / opacity. */
+.ssx-world { flex: 1 1 auto; min-height: 0; position: relative; margin: 0 -12px; overflow: hidden; contain: layout paint;
+  background: radial-gradient(60% 40% at 50% 46%, rgba(255, 201, 60, .22), rgba(255, 201, 60, 0) 70%); }
+.ssx-world::after { content: ''; position: absolute; z-index: 0; left: 0; right: 0; bottom: 0; height: 17%; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 220, 140, .22), rgba(0, 0, 0, 0) 34%), linear-gradient(180deg, #3a2a5c 0%, #241a3e 100%); border-top: 3px solid var(--ss-gold-deep); }
+.ssx-world > * { position: absolute; }
+.ssx-bal { z-index: 1; left: 3%; right: 3%; top: 15%; bottom: 13%; }
+.ssx-bal .ssb-stack { transition-duration: .45s; }
+/* Dralingo at the foot of the balance: still between scores, a short 6-7 when my team scores (.go), always in the frenzy */
+.ssx-foot { z-index: 3; left: 50%; bottom: 3%; width: 18%; height: 38%; transform: translateX(-50%); pointer-events: none; }
+.ssx-foot .ssd { width: 100%; height: 100%; }
+/* the crews: Fuego under the left pan, Mar under the right one; mine has me big at the outer edge, side by side with
+   two mates (never overlapping: kid-safe), the rivals a little smaller */
+.ssx-crew { z-index: 4; bottom: 1%; width: 40%; height: 50%; display: flex; align-items: flex-end; gap: 2%; pointer-events: none; }
+.ssx-crew.l { left: 2%; justify-content: flex-start; }
+.ssx-crew.r { right: 2%; justify-content: flex-start; flex-direction: row-reverse; }
+.ssx-crew .mmk { height: 62%; width: 22%; margin: 0; flex: 0 0 auto; }
+.ssx-crew .mmk.me { height: 100%; width: 52%; z-index: 2; }
+/* me: a gold glow on the ground and «TÚ» on my tag, so a kid finds themselves at once (even a blue Dralingo next to the real one) */
+.ssx-crew .mmk.me .mmk-disc { box-shadow: 0 0 0 3px var(--ss-gold), 0 0 16px 5px rgba(255, 201, 60, .75); }
+.ssx-crew .mmk.me .mmk-tag { bottom: 2px; }
+.ssx-crew.rival .mmk { height: 54%; width: 27%; }
+.ssx-crew .mmk-img { transform-origin: 50% 100%; }
+/* a crew cheers together (a «six seven» wave, a lead) or bobs to the beat in the last 30 s */
+.ssx-crew.cheer .mmk-img { animation: ss-67 .26s ease-in-out calc(var(--i, 0) * -.09s) 8 alternate; }
+.ssx.frenzy .ssx-crew .mmk-img { animation: ss-bob67 .52s ease-in-out calc(var(--i, 0) * -.13s) infinite alternate; }
+@keyframes ss-bob67 { from { transform: rotate(-3deg); } to { transform: rotate(3deg) translateY(-3%); } }
+/* the gap, live: «¡Vamos ganando por 3!» */
+.ssx-status { z-index: 6; left: 50%; top: 3%; transform: translateX(-50%); white-space: nowrap; min-height: 1.3em; padding: 2px 12px; border-radius: 999px; border: 2px solid var(--ss-ink);
+  font: 800 .98rem/1.3 'Nunito', sans-serif; color: var(--ss-ink); background: rgba(255, 247, 227, .96); box-shadow: 0 2px 0 var(--ss-ink); transition: background-color .2s; }
 .ssx-status.ahead { background: #d6f5c2; color: #155c33; }
 .ssx-status.behind { background: #ffe0a8; color: #7a2a12; }
-/* the sum card */
+.ssx-status.close { background: #fff0b3; color: #6b4300; }
+.ssx-status.pop { animation: ss-status .32s var(--ss-ease-pop); }
+@keyframes ss-status { 40% { transform: translateX(-50%) scale(1.12); } }
+/* my gold, in my team's top corner (left for Fuego, right for Mar) */
+.ssx-mine { z-index: 6; top: 13%; left: 3%; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.ssx.gold .ssx-mine { left: auto; right: 3%; align-items: flex-end; }
+/* the sum card (above the buttons: its verdict pill on the bottom edge stays readable while the «palms» swing) */
+.ssx > .ssx-card { z-index: 2; }
 .ssx-card { flex: 0 0 auto; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 12px 18px; border-radius: 26px;
   background: var(--ss-paper); border: 4px solid var(--ss-ink); box-shadow: 0 6px 0 var(--ss-ink); text-align: center; transition: background-color .18s; }
 .ssx-tag { display: none; position: absolute; left: 50%; top: -15px; transform: translateX(-50%); white-space: nowrap; padding: 2px 14px; border-radius: 999px;
@@ -194,42 +231,71 @@ body.kd-phone.ssx-on #lobby-mascot, body.kd-phone.ssx-on #lobby-team-name { disp
 .ssx-flash { position: absolute; inset: -4px; z-index: 3; border-radius: 26px; pointer-events: none; opacity: 0; background: radial-gradient(closest-side, rgba(255, 250, 220, .95), rgba(255, 220, 110, 0)); }
 .ssx-flash.show { animation: ss-flash .45s ease-out; }
 @keyframes ss-flash { 20% { opacity: 1; } 100% { opacity: 0; } }
-/* the stage: me (full body, team outline) and my gold */
-.ssx-stage { flex: 1 1 auto; min-height: 0; position: relative; display: grid; grid-template-columns: 54% 46%; align-items: end; padding-top: 18px; }
-.ssx-stage::before { content: ''; position: absolute; left: -12px; right: -12px; bottom: -4px; height: 34%; z-index: -1; pointer-events: none;
-  background: linear-gradient(180deg, rgba(23, 26, 68, 0), rgba(23, 26, 68, .85) 70%); }
-.ssx-me { position: relative; height: 100%; min-height: 0; }
-.ssx-me .mmk { height: 100%; }
-.ssx-me .mmk-tag { bottom: 2px; }
-.ssx-side { display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 6px; padding-bottom: 8px; min-width: 0; }
-.ssx-count { display: flex; align-items: center; gap: 6px; transform-origin: 100% 60%; }
-.ssx-count .ssc { width: 34px; height: 34px; flex: 0 0 auto; }
-.ssx-count b { color: #fff; font: 800 clamp(2.4rem, 13vw, 3.6rem)/.95 'Baloo 2', sans-serif; font-variant-numeric: tabular-nums;
+.ssx-count { display: flex; align-items: center; gap: 5px; transform-origin: 0 60%; }
+.ssx.gold .ssx-count { transform-origin: 100% 60%; }
+.ssx-count .ssc { width: 30px; height: 30px; flex: 0 0 auto; }
+.ssx-count b { color: #fff; font: 800 clamp(2rem, 11vw, 3rem)/.95 'Baloo 2', sans-serif; font-variant-numeric: tabular-nums;
   -webkit-text-stroke: 5px var(--ss-ink); paint-order: stroke fill; text-shadow: 0 4px 0 var(--ss-ink); }
-.ssx-count span { align-self: flex-end; margin-bottom: 6px; font: 800 .9rem/1 'Baloo 2', sans-serif; color: var(--ss-ink); background: rgba(255, 247, 227, .94);
-  padding: 2px 8px; border-radius: 999px; border: 2px solid var(--ss-ink); }
+.ssx-count span { align-self: flex-end; margin-bottom: 5px; font: 800 .82rem/1 'Baloo 2', sans-serif; color: var(--ss-ink); background: rgba(255, 247, 227, .94);
+  padding: 2px 7px; border-radius: 999px; border: 2px solid var(--ss-ink); }
 .ssx.frenzy .ssx-count b { color: var(--ss-gold); }
-.ssx-combo { display: none; flex-direction: column; align-items: flex-end; gap: 2px; }
+.ssx-combo { display: none; flex-direction: column; align-items: flex-start; gap: 2px; }
+.ssx.gold .ssx-combo { align-items: flex-end; }
 .ssx-combo.show { display: flex; animation: ss-rise .3s var(--ss-ease-pop) both; }
+/* my captain pops in at the other top corner with a bubble (a wrong answer, a lead, a wave…), never over the buttons */
+.ssx-gang { z-index: 7; top: 12%; right: 2%; display: flex; flex-direction: row-reverse; align-items: flex-start; gap: 4px; max-width: 56%; pointer-events: none;
+  opacity: 0; transform: translateX(30%); transition: transform .26s var(--ss-ease-out), opacity .18s; }
+.ssx.gold .ssx-gang { right: auto; left: 2%; flex-direction: row; transform: translateX(-30%); }
+.ssx-gang.show { opacity: 1; transform: none; }
+.ssx-gang img { flex: 0 0 auto; width: 52px; height: 64px; object-fit: cover; object-position: 50% 0; border-radius: 14px; border: 3px solid var(--ss-ink); background: var(--ss-paper);
+  box-shadow: 0 3px 0 var(--ss-ink); }
+.ssx-gang b { margin-top: 6px; padding: 5px 10px; border-radius: 14px; background: #fff; border: 2px solid var(--ss-ink); box-shadow: 0 2px 0 var(--ss-ink);
+  font: 800 .84rem/1.2 'Nunito', sans-serif; color: var(--ss-ink); text-wrap: balance; }
+/* who just scored in my team: «Sofía +3» over my pan (one at a time) */
+.ssx-who { z-index: 6; top: 13%; right: 3%; display: flex; align-items: center; gap: 4px; padding: 2px 9px 2px 4px; border-radius: 999px; background: var(--ss-paper); border: 2px solid var(--ss-ink);
+  box-shadow: 0 2px 0 var(--ss-ink); font: 800 .82rem/1.25 'Baloo 2', sans-serif; color: var(--ss-ink); white-space: nowrap; opacity: 0; transform: translateY(6px) scale(.92);
+  transition: opacity .16s, transform .22s var(--ss-ease-out); pointer-events: none; }
+.ssx.gold .ssx-who { right: auto; left: 3%; }   /* the «news» corner, shared with the captain (one at a time) */
+.ssx-who.show { opacity: 1; transform: none; }
+.ssx-who img { width: 22px; height: 22px; object-fit: cover; object-position: 50% 10%; border-radius: 50%; border: 1.5px solid var(--ss-ink); background: #fff; }
+.ssx-who b { color: var(--ss-gold-dark); }
+.ssx-who.six { background: var(--ss-gold); }
+/* «¡SIX SEVEN!» stamped over the world (racha 7, my 67th coin, a team wave) or a mini one at my pan (a 6 then a 7) */
+.ssx-six { z-index: 8; left: 50%; top: 34%; display: flex; flex-direction: column; align-items: center; pointer-events: none; opacity: 0; transform: translate(-50%, -50%) scale(.7) rotate(-6deg); }
+.ssx-six b { font: 800 clamp(2.4rem, 13vw, 3.4rem)/1 'Baloo 2', sans-serif; color: var(--ss-gold); white-space: nowrap; -webkit-text-stroke: 6px var(--ss-ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ss-ink); }
+.ssx-six span { margin-top: 2px; padding: 1px 12px; border-radius: 999px; background: #fff; border: 2px solid var(--ss-ink); font: 800 1rem/1.2 'Baloo 2', sans-serif; color: var(--ss-ink); }
+.ssx-six.show { animation: ss-six 1.25s var(--ss-ease-out) both; }
+.ssx-six.mini { top: 42%; left: 50%; }
+.ssx.gold .ssx-six.mini { left: 50%; }
+.ssx-six.mini b { font-size: clamp(1.4rem, 7.4vw, 1.9rem); -webkit-text-stroke: 4px var(--ss-ink); text-shadow: 0 3px 0 var(--ss-ink); }
+.ssx-six.mini span { font-size: .8rem; }
+.ssx-six.mini.show { animation-duration: .95s; }
+@keyframes ss-six { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.7) rotate(-8deg); } 14% { opacity: 1; transform: translate(-50%, -50%) scale(1.08) rotate(4deg); }
+  26% { transform: translate(-50%, -50%) scale(1) rotate(-3deg); } 40% { transform: translate(-50%, -50%) scale(1) rotate(2deg); } 80% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(-50%, -62%) scale(.96); } }
+.ssx-conf { z-index: 7; inset: 0; pointer-events: none; overflow: hidden; }
 .ssx-combo b { padding: 2px 12px; border-radius: 999px; border: 3px solid var(--ss-ink); background: #fff; color: var(--ss-ink); font: 800 1.1rem/1.2 'Baloo 2', sans-serif; }
 .ssx-combo span { padding: 1px 9px; border-radius: 999px; background: var(--ss-ink); color: #fff; font: 800 .82rem/1.25 'Nunito', sans-serif; }
 .ssx-combo.hot b { background: var(--ss-gold); }
 .ssx-combo.fire b { background: linear-gradient(90deg, #ff8a1f, var(--ss-red)); color: #fff; -webkit-text-stroke: 2px var(--ss-ink); paint-order: stroke fill; animation: ss-beat .8s ease-in-out infinite; }
 .ssx-combo.fire span { background: var(--ss-gold); color: var(--ss-ink); }
-.ssx-team { padding: 2px 10px; border-radius: 999px; border: 2px solid var(--ss-ink); background: var(--tc); color: #fff; font: 800 .82rem/1.3 'Baloo 2', sans-serif; }
-.ssx-plus { position: absolute; right: 4%; top: 6%; z-index: 4; opacity: 0; pointer-events: none; font: 800 2.4rem/1 'Baloo 2', sans-serif; color: var(--ss-gold);
+/* «+3» rises from my pan when my coins land */
+.ssx-plus { z-index: 6; left: 9%; top: 50%; opacity: 0; pointer-events: none; font: 800 2.4rem/1 'Baloo 2', sans-serif; color: var(--ss-gold);
   -webkit-text-stroke: 5px var(--ss-ink); paint-order: stroke fill; text-shadow: 0 4px 0 var(--ss-ink); font-variant-numeric: tabular-nums; }
+.ssx.gold .ssx-plus { left: auto; right: 9%; }
 .ssx-plus.show { animation: ss-plus .8s var(--ss-ease-out) both; }
 .ssx-plus.x2 { color: #fff; }
 .ssx-plus.gold { font-size: 3rem; }
 @keyframes ss-plus { 0% { opacity: 0; transform: translateY(14px) scale(.6); } 20% { opacity: 1; transform: translateY(0) scale(1.1); } 70% { opacity: 1; transform: translateY(-14px) scale(1); } 100% { opacity: 0; transform: translateY(-26px); } }
-/* Dralingo comes in from the right edge on a racha (never over the buttons) */
-.ssx-dral { position: absolute; z-index: 5; right: 0; bottom: 2%; width: 50%; height: 92%; pointer-events: none; transform: translateX(110%); opacity: 0;
+/* Dralingo comes in big from the far edge on a racha / a «six seven» (inside the world: never over the buttons) */
+.ssx-dral { z-index: 9; right: 0; bottom: 2%; width: 44%; height: 76%; pointer-events: none; transform: translateX(110%); opacity: 0;
   transition: transform .32s var(--ss-ease-out), opacity .2s; }
-.ssx-dral.show { transform: none; opacity: 1; }
+.ssx.gold .ssx-dral { right: auto; left: 0; transform: translateX(-110%); }
+.ssx-dral.show, .ssx.gold .ssx-dral.show { transform: none; opacity: 1; }
 .ssx-dral .ssd { width: 100%; height: 100%; }
-.ssx-dral-say { position: absolute; left: -20%; top: 0; white-space: nowrap; padding: 4px 12px; border-radius: 16px; background: var(--ss-gold); border: 3px solid var(--ss-ink);
+.ssx-dral-say { position: absolute; left: -34%; top: 6%; white-space: nowrap; padding: 4px 12px; border-radius: 16px; background: var(--ss-gold); border: 3px solid var(--ss-ink);
   box-shadow: 0 3px 0 var(--ss-ink); font: 800 1.15rem/1.15 'Baloo 2', sans-serif; color: var(--ss-ink); }
+.ssx.gold .ssx-dral-say { left: auto; right: -20%; }
 /* THE TWO GIANT BUTTONS */
 .ssx-btns { flex: 0 0 auto; position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; height: clamp(156px, 29vh, 250px); }
 .ssx-btn { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 0; padding: 0; margin: 0;
@@ -252,14 +318,21 @@ body.kd-phone.ssx-on #lobby-mascot, body.kd-phone.ssx-on #lobby-team-name { disp
   box-shadow: 0 0 0 4px var(--ss-gold), 0 0 24px 8px rgba(255, 201, 60, .7); }
 .ssx-btn.hint::after { animation: ss-hint .7s ease-in-out infinite alternate; }
 @keyframes ss-hint { to { opacity: 1; } }
-/* after a wrong answer the buttons sleep for a moment: the right one glows, a bar drains */
-.ssx-lock { position: absolute; inset: 0; z-index: 3; display: none; flex-direction: column; align-items: center; justify-content: flex-start; gap: 6px; pointer-events: auto;
-  border-radius: 28px; background: rgba(16, 20, 54, .35); }
+/* after a wrong answer the buttons recharge for a moment: the right one glows, the two «hands» rock gently (6-7),
+   a gold bar FILLS («¡Recargando!»: never a plain «Espera…»), while the world above keeps going */
+.ssx-lock { position: absolute; inset: 0; z-index: 3; display: none; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; pointer-events: auto;
+  padding-bottom: 10px; border-radius: 28px; background: rgba(16, 20, 54, .3); }
 .ssx-lock.show { display: flex; }
-.ssx-lock b { margin-top: -22px; padding: 6px 16px; border-radius: 16px; background: rgba(255, 247, 227, .97); border: 3px solid var(--ss-ink); box-shadow: 0 4px 0 var(--ss-ink);
-  font: 800 1.3rem/1.15 'Baloo 2', sans-serif; color: var(--ss-ink); text-align: center; }
-.ssx-lock.calm b { background: #ffe0a8; font-size: 1.4rem; }
-.ssx-lock i { display: block; width: 46%; height: 10px; border-radius: 999px; border: 2px solid var(--ss-ink); background: var(--ss-gold); transform-origin: 0 50%; }
+/* (at the bottom edge: the verdict «¡Uy! Era 7 · qi» sits on the card's bottom edge just above, the digits stay readable) */
+.ssx-lock b { padding: 4px 16px 3px; border-radius: 16px 16px 6px 6px; background: rgba(255, 247, 227, .97); border: 3px solid var(--ss-ink); border-bottom: 0;
+  font: 800 1.2rem/1.15 'Baloo 2', sans-serif; color: var(--ss-ink); text-align: center; }
+.ssx-lock.calm b { background: #ffe0a8; }
+.ssx-lock i { display: block; width: 58%; height: 14px; margin-top: -4px; border-radius: 999px; border: 3px solid var(--ss-ink); background: rgba(29, 36, 64, .7); overflow: hidden;
+  box-shadow: 0 3px 0 var(--ss-ink); }
+.ssx-lock i em { display: block; height: 100%; background: linear-gradient(90deg, #fff4bd, var(--ss-gold)); transform-origin: 0 50%; transform: scaleX(0); }
+body.ssx-locked .ssx-btn.b6 { animation: ss-rest6 .9s ease-in-out infinite alternate; }
+body.ssx-locked .ssx-btn.b7 { animation: ss-rest6 .9s ease-in-out -.9s infinite alternate; }
+@keyframes ss-rest6 { from { transform: translateY(5px); } to { transform: translateY(-3px); } }
 /* the first sum: a hand shows «tap one of these» */
 .ssx-teach { position: absolute; z-index: 4; left: calc(50% - 26px); bottom: 18%; opacity: 0; }
 .ssx.teach .ssx-teach { animation: ss-teach 1.3s ease-in-out 2 both; }
@@ -360,11 +433,17 @@ body.kd-phone.ssx-on.ssx-ended .muted-toggle { left: 8px !important; right: auto
 .ssx-intro.go .ssi-card { transform: scale(.94); opacity: .6; transition: transform .3s var(--ss-ease-out), opacity .3s; }
 
 /* ---------- banners at the top edge, the 30-s chip, the pause, «¡FINAL!» ---------- */
-.ssx-banner { position: fixed; z-index: 104; left: 10px; right: 10px; top: max(8px, env(safe-area-inset-top)); display: none; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
+/* (just under the score bar, so the score stays on screen; the world's top chips step aside while a banner shows) */
+.ssx-banner { position: fixed; z-index: 104; left: 10px; right: 10px; top: calc(max(8px, env(safe-area-inset-top)) + 42px); display: none; grid-template-columns: auto 1fr; grid-template-rows: auto auto;
   column-gap: 10px; align-items: center; padding: 10px 14px; border-radius: 18px; border: 3px solid var(--ss-ink); box-shadow: 0 5px 0 var(--ss-ink); background: var(--ss-paper);
-  color: var(--ss-ink); transform: translateY(-140%); transition: transform .32s var(--ss-ease-out); pointer-events: none; }
+  color: var(--ss-ink); opacity: 0; transform: translateY(-18px) scale(.97); transition: transform .3s var(--ss-ease-out), opacity .18s; pointer-events: none; }
 body.ssx-on .ssx-banner { display: grid; }
-.ssx-banner.show { transform: none; }
+.ssx-banner.show { transform: none; opacity: 1; }
+.ssx-world > .ssx-status, .ssx-world > .ssx-mine, .ssx-world > .ssx-who, .ssx-world > .ssx-gang { transition: opacity .16s, transform .26s var(--ss-ease-out); }
+body.ssx-bannering .ssx-world > :is(.ssx-status, .ssx-mine, .ssx-who, .ssx-gang) { opacity: 0 !important; }
+/* a rival team's news: one compact line */
+.ssx-banner.compact { padding: 7px 14px; }
+.ssx-banner.compact b { font-size: 1.05rem !important; -webkit-text-stroke: 0 !important; text-shadow: none !important; color: #fff !important; }
 .ssx-banner b { grid-column: 1 / -1; font: 800 1.15rem/1.15 'Baloo 2', sans-serif; }
 .ssx-banner span { grid-column: 1 / -1; font: 700 .92rem/1.25 'Nunito', sans-serif; }
 .ssx-banner img { grid-row: 1 / span 2; grid-column: 1; width: 52px; height: 52px; object-fit: contain; }
@@ -372,8 +451,15 @@ body.ssx-on .ssx-banner { display: grid; }
 .ssx-banner.red { background: var(--ss-red); color: #fff; }
 .ssx-banner.gold { background: var(--ss-blue); color: #fff; }
 .ssx-banner.frenzy { background: var(--ss-gold); }
+/* a team's «¡SIX SEVEN!» wave: MY team's is gold (the celebration), the rivals' wears their colour (.red / .gold) */
+.ssx-banner.six { background: linear-gradient(90deg, #ffe58a, var(--ss-gold) 60%, #ffd24d); color: var(--ss-ink); }
+.ssx-banner.six.red { background: var(--ss-red); color: #fff; }
+.ssx-banner.six.gold { background: var(--ss-blue); color: #fff; }
+.ssx-banner.six b { font-size: 1.55rem; line-height: 1.05; color: #fff; -webkit-text-stroke: 4px var(--ss-ink); paint-order: stroke fill; text-shadow: 0 3px 0 var(--ss-ink); }
 .ssx-banner.time { background: #d6f5c2; text-align: center; font: 800 1.1rem/1.2 'Baloo 2', sans-serif; display: none; }
 body.ssx-on .ssx-banner.time { display: block; }
+/* (on the card's corner away from my «TÚ»: Mar kids stand on the right) */
+.ssx.gold .ssx-chip { right: auto; left: -8px; }
 .ssx-chip { position: absolute; z-index: 4; right: -8px; top: -16px; display: flex; flex-direction: column; align-items: center; padding: 4px 10px;
   border-radius: 14px; background: var(--ss-gold); border: 3px solid var(--ss-ink); box-shadow: 0 3px 0 var(--ss-ink); color: var(--ss-ink); font: 800 .7rem/1 'Nunito', sans-serif; }
 .ssx-chip b { font: 800 1.3rem/1 'Baloo 2', sans-serif; font-variant-numeric: tabular-nums; }
@@ -483,7 +569,30 @@ body.ssx-on:not(.ssx-frenzy) .ssx-chip { display: none; }
   .ssx-btns { height: clamp(140px, 27vh, 210px); }
   .ssk-top { height: 22vh; }
   .ssf-who { height: 24vh; }
+  .ssx-crew { height: 50%; }
+  .ssx-count b { font-size: clamp(1.7rem, 9vw, 2.4rem); }
+  .ssx-count .ssc { width: 24px; height: 24px; }
+  .ssx-gang img { width: 42px; height: 50px; }
+  .ssx-gang b { font-size: .78rem; padding: 4px 8px; }
+  .ssx-six b { font-size: clamp(2rem, 11vw, 2.8rem); }
+  .ssx-mine, .ssx-gang, .ssx-who { top: 15%; }        /* clear of the gap chip on a short world */
+  /* a short world: me + one mate, one rival (side by side, nobody touching), a smaller Dralingo entrance */
+  .ssx-crew.mine .mmk:nth-child(n+3), .ssx-crew.rival .mmk:nth-child(n+2) { display: none; }
+  .ssx-crew .mmk { width: 30%; }
+  .ssx-crew.rival .mmk { width: 36%; }
+  .ssx-dral { width: 34%; height: 62%; }
+  .ssx-lock { padding-bottom: 4px; }
+  .ssx-lock b { font-size: 1rem; padding: 2px 12px 1px; }
+  .ssx-lock i { height: 11px; }
+  .ssx-btn span { font-size: clamp(1.1rem, 5.6vw, 1.4rem); }
+  .ssx-btn { gap: 2px; justify-content: flex-start; padding-top: 6%; }
 }
+/* the pause card shows the live score: the pause is a wait too */
+.ssx-pause-score { margin: 4px 0 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; font: 800 1rem/1.3 'Baloo 2', sans-serif; }
+.ssx-pause-score:empty { display: none; }
+.ssx-pause-score b { padding: 1px 10px; border-radius: 999px; border: 2px solid var(--ss-ink); color: #fff; }
+.ssx-pause-score b.r { background: var(--ss-red); } .ssx-pause-score b.g { background: var(--ss-blue); }
+.ssx-pause-score span { flex-basis: 100%; text-align: center; font: 700 .95rem/1.3 'Nunito', sans-serif; color: var(--ss-ink-soft); }
 
 @media (prefers-reduced-motion: reduce) {
   .ssd.on, .ssd.on .ssd-a, .ssd.on .ssd-b, .ssf-cloud, .ssf-drop, .ssx.frenzy::after, .ssx-card.gold .ssx-tag, .ssx-card.ok .ssx-eqq b, .ssx-flash.show, .ssx-plus.show,
@@ -494,7 +603,13 @@ body.ssx-on:not(.ssx-frenzy) .ssx-chip { display: none; }
   .ssd-b { opacity: 0 !important; }
   .ssx.frenzy::after { opacity: .85; }   /* the gold frame stays, still */
   .ssx-plus.show { opacity: 1; }
+  /* the in-between world: no swinging or bobbing, the moments fade in and out in place */
+  .ssx-crew.cheer .mmk-img, .ssx.frenzy .ssx-crew .mmk-img, body.ssx-locked .ssx-btn.b6, body.ssx-locked .ssx-btn.b7, .ssx-status.pop { animation: none !important; }
+  .ssx-gang, .ssx-who { transition: opacity .2s !important; transform: none !important; }
+  .ssx-six.show { animation: ss-fade67 1.2s linear both !important; }
+  .ssx-six { transform: translate(-50%, -50%) !important; }
 }
+@keyframes ss-fade67 { 0% { opacity: 0; } 12% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
 
 /* ============================ THE PROJECTOR ============================ */
 body.ss-host { margin: 0; min-height: 100vh; min-height: 100dvh; color: var(--ss-ink); font-family: 'Nunito', system-ui, sans-serif; overflow: hidden;
@@ -611,10 +726,10 @@ body.ss-host .hidden { display: none !important; }
 .ssp-race { position: relative; width: 92%; height: 96px; margin-top: 0; }
 .ssp-race::before { content: ''; position: absolute; left: -26px; right: -26px; top: 14px; bottom: 14px; border-radius: 999px; background: rgba(16, 20, 54, .66); border: 3px solid var(--ss-ink); }
 .ssp-race-track { position: absolute; left: 0; right: 0; top: 42px; height: 12px; border-radius: 999px; border: 3px solid var(--ss-ink); background: linear-gradient(180deg, #ffe9a8, #e2aa45 55%, #9c661b); }
-.ssp-race-mark { position: absolute; z-index: 4; left: 0; width: 22px; height: 22px; margin-left: -11px; border-radius: 50%; border: 3px solid var(--ss-ink); box-shadow: 0 2px 0 var(--ss-ink);
+.ssp-race-mark { position: absolute; z-index: 4; left: 0; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%; border: 3px solid var(--ss-ink); box-shadow: 0 2px 0 var(--ss-ink);
   transition: left .5s var(--ss-ease-out); }
-.ssp-race-mark.red { top: 0; background: var(--ss-red); }
-.ssp-race-mark.gold { top: 74px; background: var(--ss-blue); }
+.ssp-race-mark.red { top: -8px; background: var(--ss-red); }
+.ssp-race-mark.gold { top: 70px; background: var(--ss-blue); }
 .ssp-lm { position: absolute; z-index: 3; top: 21px; width: 54px; height: 54px; margin-left: -27px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 247, 227, .96);
   border: 3px solid var(--ss-ink); box-shadow: 0 3px 0 var(--ss-ink); transition: background-color .3s; }
 .ssp-lm img { width: 40px; height: 40px; object-fit: contain; }
@@ -649,11 +764,32 @@ body.ss-host .hidden { display: none !important; }
 body.ss-host.band-on .ssp-capt-say { opacity: 0 !important; }
 /* the two crowds under their pans */
 .ssp-crowd { position: absolute; z-index: 3; bottom: 20px; width: 36vw; height: 22vh; display: flex; flex-wrap: wrap-reverse; justify-content: center; align-content: flex-start; gap: 0 2px; }
+.ssp-stage.frenzy .ssp-crowd { bottom: 30px; }   /* (clear of the last-30-s gold frame) */
 .ssp-crowd.red { left: 1.5vw; }
 .ssp-crowd.gold { right: 1.5vw; }
 .ssp-crowd .mmk { width: var(--kw, 86px); height: var(--kh, 120px); }
 .ssp-crowd .mmk.off { opacity: .4; filter: grayscale(.8); }
-.ssp-crowd .mmk-tag { font-size: .72rem; }
+.ssp-crowd .mmk-tag { font-size: .88rem; }
+.ssp-crowd .mmk-img { transform-origin: 50% 100%; }
+/* the whole crowd does the 6-7 together (a «six seven» wave, a lead, a landmark), and bobs to the beat in the last 30 s */
+.ssp-crowd.cheer .mmk:not(.off) .mmk-img { animation: ss-67 .26s ease-in-out calc(var(--ci, 0) * -.07s) 10 alternate; }
+.ssp-stage.frenzy .ssp-crowd .mmk:not(.off) .mmk-img { animation: ss-bob67 .52s ease-in-out infinite alternate; }
+.ssp-stage.frenzy .ssp-crowd.cheer .mmk:not(.off) .mmk-img { animation: ss-67 .26s ease-in-out 10 alternate; }
+/* a kid's own «six seven» (racha 7, the 67th coin): «¡6-7!» over the head */
+.ssp-pop { position: absolute; z-index: 3; left: 50%; bottom: 96%; transform: translateX(-50%); white-space: nowrap; padding: 1px 9px; border-radius: 999px; border: 2px solid var(--ss-ink);
+  background: var(--ss-gold); color: var(--ss-ink); box-shadow: 0 2px 0 var(--ss-ink); font: 800 1rem/1.2 'Baloo 2', sans-serif; pointer-events: none; animation: ss-pop67 1.7s var(--ss-ease-out) both; }
+@keyframes ss-pop67 { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.8); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.1); } 30% { transform: translate(-50%, 0) scale(1); }
+  80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -14px); } }
+.ssp-crowd .mmk.six .mmk-img { animation: ss-67 .26s ease-in-out 6 alternate; }
+/* Dralingo at the foot dances bigger and faster on a wave and in the last 30 s */
+.ssp-dral { transition: transform .3s var(--ss-ease-out); }
+.ssp-dral.hype { transform: translateX(-50%) scale(1.14); }
+.ssp-dral.hype .ssd.on, .ssp-stage.frenzy .ssp-dral .ssd.on { animation-duration: .18s; }
+.ssp-dral.hype .ssd.on .ssd-a, .ssp-dral.hype .ssd.on .ssd-b, .ssp-stage.frenzy .ssp-dral .ssd.on .ssd-a, .ssp-stage.frenzy .ssp-dral .ssd.on .ssd-b { animation-duration: .36s; }
+.ssp-band.six { background: linear-gradient(90deg, rgba(184, 34, 26, .97), rgba(26, 79, 176, .97)); }
+.ssp-band.six.red { background: rgba(184, 34, 26, .97); }
+.ssp-band.six.gold { background: rgba(26, 79, 176, .97); }
+.ssp-band.six b { font-size: 5rem; color: var(--ss-gold); }
 .ssp-more { align-self: center; padding: 4px 10px; border-radius: 999px; background: var(--ss-ink); color: #fff; font: 800 1rem 'Baloo 2', sans-serif; }
 .ssp-fx { position: fixed; inset: 0; z-index: 6; pointer-events: none; overflow: hidden; perspective: 900px; }
 .ssp-say { position: absolute; z-index: 5; left: 50%; bottom: calc(13vh + 27vh + 6px); transform: translate(-50%, 8px); max-width: 26vw; box-sizing: border-box; margin: 0; padding: 8px 14px;
@@ -674,11 +810,11 @@ body.ss-host.band-on .ssp-capt-say { opacity: 0 !important; }
 .ssp-band.red { background: rgba(184, 34, 26, .97); }
 .ssp-band.gold { background: rgba(26, 79, 176, .97); }
 .ssp-band.final b { font-size: 7rem; }
-.ssp-band.landmark, .ssp-band.lead, .ssp-band.frenzy { top: 66%; padding: 12px 20px; }
+.ssp-band.landmark, .ssp-band.lead, .ssp-band.frenzy { top: 57%; padding: 12px 20px; }   /* above Dralingo's head */
 .ssp-band.lead b, .ssp-band.frenzy b, .ssp-band.landmark b { font-size: 3rem; }
 .ssp-band.landmark img { height: 70px; }
 .ssp-band.frenzy b, .ssp-band.landmark b { color: var(--ss-gold); }
-.ssp-count10 { position: fixed; z-index: 35; right: 40px; top: 44%; transform: translateY(-50%); color: #fff; font: 800 9rem/1 'Baloo 2', sans-serif; -webkit-text-stroke: 8px var(--ss-ink);
+.ssp-count10 { position: fixed; z-index: 45; right: 40px; top: 44%; transform: translateY(-50%); color: #fff; font: 800 9rem/1 'Baloo 2', sans-serif; -webkit-text-stroke: 8px var(--ss-ink);
   paint-order: stroke fill; text-shadow: 0 8px 0 var(--ss-ink); pointer-events: none; }
 .ssp-count10.tick { animation: ss-say .4s var(--ss-ease-pop) both; }
 /* the rules card on the projector (intro) */
@@ -760,7 +896,8 @@ body.ss-host.band-on .ssp-capt-say { opacity: 0 !important; }
 
 @media (prefers-reduced-motion: reduce) {
   .ssp-stage.frenzy::before, .ssp-stage.frenzy .ssp-x2, .ssp-kid.new .mmk, .ssp-lm.won, .ssp-capt.cheer img, .ssp-count10.tick, .ssp-rules-card, .ssp-cer-h, .ssp-capline,
-  .ssp-star-who .mmk, .ssp-star .ssf-val { animation: none !important; }
-  .ssp-bar i, .ssp-race-mark, .ssp-band, .ssp-capt-say, .ssp-say { transition: none !important; }
+  .ssp-star-who .mmk, .ssp-star .ssf-val, .ssp-crowd .mmk .mmk-img, .ssp-pop { animation: none !important; }
+  .ssp-bar i, .ssp-race-mark, .ssp-band, .ssp-capt-say, .ssp-say, .ssp-dral { transition: none !important; }
+  .ssp-dral.hype { transform: translateX(-50%); }
   .ssp-stage.frenzy::before { opacity: .85; }
 }

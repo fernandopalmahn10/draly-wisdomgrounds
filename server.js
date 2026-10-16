@@ -7091,6 +7091,7 @@ function pnFinish(pin, g) {
 const SS_TICK_MS = 125;
 const SS_GRACE_MS = 600;            // an answer already on its way when «¡FINAL!» starts still counts
 const SS_LATE_MS = 2500;            // an open sum the phone never timed out (a frozen tab): the server calls time up
+const SS_KID_FEED = 8;              // the phones' feed: at most 8 scorers per 750 ms beat (4 per team, «six seven» kids first)
 function ssEnsureId(g, p) { if (!p.ssId) p.ssId = (g.ssNextId = (g.ssNextId || 0) + 1); return p.ssId; }
 function ssRoster(g) {
   return Object.values(g.players).filter((p) => p.ssId && (!g.ss || Sixseven.inGame(g.ss, p))).map((p) => ({ k: p.ssId, name: p.name, skin: hcSkin(p), team: p.team, on: !p.disconnected }));
@@ -7107,6 +7108,7 @@ function ssInitPayload(g, pid) {
     frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null, duration: m.duration,
     meter: ssMeter(m), E: m.E, lead: m.lead, race: Sixseven.race(m),
     roster: ssRoster(g), captains: g.ssCaptains || null,
+    w: [Sixseven.R.RIGHT_MS, Sixseven.R.WRONG_MS, Sixseven.R.WRONG2_MS],   // the beats, for the phone's instant reaction
     you: p ? { k: p.ssId, team: p.team, coins: p.ssCoins || 0, streak: p.ssStreak || 0, right: p.ssRight || 0, answered: p.ssAnswered || 0, best: p.ssBest || 0 } : null,
   };
 }
@@ -7171,7 +7173,7 @@ function ssResult(g, pid, p, r) {
     sixseven: {
       qid: r.qid, right: r.right, ans: r.ans, word: r.word, choice: r.choice, timeUp: !!r.timeUp, tooFast: !!r.tooFast, calm: !!r.calm,
       wait: r.wait, streak: r.streak, mult: r.mult || 1, coins: r.coins, total: r.total, gold: !!r.gold, goldExtra: r.goldExtra || 0,
-      frenzy: !!r.frenzy, zh: !!r.zh,
+      frenzy: !!r.frenzy, zh: !!r.zh, six: r.six || 0, pair: !!r.pair,     // the kid's own «¡SIX SEVEN!» (racha 7 / 67th coin / 6 → 7)
     },
   });
 }
@@ -7192,18 +7194,41 @@ function ssTick(pin, m) {
       });
       const ev = Sixseven.tick(m, now);
       ev.landmarks.forEach((l) => io.to(pin).emit('ss:landmark', Object.assign({ meter: ssMeter(m) }, l)));
+      // a team's «¡SIX SEVEN!» wave (its gold at 67, then every waveStep): rare, one event for the whole room
+      ev.waves.forEach((w) => io.to(pin).emit('ss:wave', Object.assign({ meter: ssMeter(m) }, w)));
       if (ev.lead) io.to(pin).emit('ss:lead', Object.assign({ meter: ssMeter(m) }, ev.lead));
       if (ev.frenzy) io.to(pin).emit('ss:frenzy', { endsMs: Math.max(0, m.endsAt - now) });
     }
-    // the meter: the projector every 250 ms (with who scored), phones every 750 ms, only when something changed
+    // the meter: the projector every 250 ms (with who scored), phones every 750 ms, only when something changed. Both
+    // carry the feed of who scored (f: [k, coins, golden, wrong, six] for the projector; [k, coins, golden, six] of the
+    // biggest scorers since the last phone beat for the phones), so every phone sees its teammates' coins land in the
+    // team's pan between its own sums (his «no dead phones», 2026-10-16). Still one event per beat, never one per answer.
     m.beat = (m.beat || 0) + 1;
     if (m.beat % 2 === 0) {
-      const fx = Object.entries(m.fx).map(([k, v]) => [Number(k), v[0], v[1], v[2]]);
+      const fx = Object.entries(m.fx).map(([k, v]) => [Number(k), v[0], v[1], v[2], v[3] || 0]);
       m.fx = {};
+      m.kfx = m.kfx || {};
+      fx.forEach(([k, n, gold, , six]) => {
+        if (!(n > 0)) return;
+        const e = m.kfx[k] || (m.kfx[k] = [0, 0, 0]);
+        e[0] += n; e[1] |= gold ? 1 : 0; e[2] |= six;
+      });
       const d = ssMeter(m);
       const k = [d.r, d.g, d.b].join(':');
       if (fx.length || k !== m.hostKey) { m.hostKey = k; io.to(g.hostId).emit('ss:meter', Object.assign({ f: fx }, d)); }
-      if (m.beat % 6 === 0 && k !== m.kidKey) { m.kidKey = k; io.to(pin).except(g.hostId).emit('ss:meter', d); }
+      if (m.beat % 6 === 0) {
+        // up to 4 scorers of EACH team («six seven» kids first, then the biggest, ties in a fresh order every beat), so
+        // the trailing team's phones see their own teammates' coins too, not only the strongest kids of the room
+        const teamOf = {};
+        Object.values(g.players).forEach((p) => { if (p.ssId) teamOf[p.ssId] = p.team; });
+        const all = Object.entries(m.kfx).map(([kk, v]) => [Number(kk), v[0], v[1], v[2], Math.random()])
+          .sort((a, b) => (b[3] ? 1 : 0) - (a[3] ? 1 : 0) || b[1] - a[1] || a[4] - b[4]);
+        const per = { red: 0, gold: 0 };
+        const kf = [];
+        all.forEach((e) => { const t = teamOf[e[0]]; if (per[t] == null || per[t] >= SS_KID_FEED / 2) return; per[t]++; kf.push(e.slice(0, 4)); });
+        m.kfx = {};
+        if (k !== m.kidKey || kf.length) { m.kidKey = k; io.to(pin).except(g.hostId).emit('ss:meter', kf.length ? Object.assign({ f: kf }, d) : d); }
+      }
     }
     if (m.phase === 'play' && now >= m.endsAt) ssFinal(pin, g);
     else if (m.phase === 'final' && now >= m.phaseUntil) {
@@ -7266,6 +7291,7 @@ function ssPause(pin, g, paused) {
   io.to(pin).emit('ss:pause', {
     id: m.id, paused: !!m.paused, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock),
     endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null,
+    meter: ssMeter(m),                  // the pause card shows the score of THIS moment (the meter stops while paused)
   });
   g._lastBcast = 0;
   broadcast(pin);

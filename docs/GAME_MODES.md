@@ -122,7 +122,9 @@ rules `core/pinata.js`, phone `js/player-pinata.js`, projector `host-pinata.html
 Oro», rapid-fire sums whose answer is always 6 or 7 (numbers 1-10, + / −; digits, pinyin words without tone marks, or both,
 the teacher's pick), two giant buttons «6 · liu» / «7 · qi», Fuego vs Mar fill a golden balance on Dubai Creek; server-judged
 with a too-fast rule, a streak multiplier and wrong-answer waits so random tapping loses to thinking; Dralingo's «6-7» art,
-landmark race, comeback golden sums, Mario Party ceremony with bonus stars; rules `core/sixseven.js` (no question pack),
+landmark race, comeback golden sums, Mario Party ceremony with bonus stars; second pass 2026-10-16 «no dead phones»: the
+tap reacts at once, a little world on the phone where my coins and my teammates' fly into our pan between sums, «¡SIX
+SEVEN!» moments during play (racha 7, the 67th coin, team waves at 67 gold); rules `core/sixseven.js` (no question pack),
 phone `js/player-sixseven.js`, projector `host-sixseven.html` + `js/host-sixseven.js`, shared `js/sixseven-stage.js` +
 `css/sixseven.css` (+ `js/mochi-stage.js` / `css/mochi.css` for the kid figures); spec `docs/specs/six-seven-v2.md`),
 **Vuelo del Dragón** (`dragon-eye`), **Dàfùwēng · Monopolio Chino** (`monopoly`) — those two queued for an overhaul — plus the

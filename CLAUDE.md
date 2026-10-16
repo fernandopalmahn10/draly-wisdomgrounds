@@ -488,6 +488,11 @@ the checklist for any new game mode.
   not a plain score list: «¡FINAL!», a suspenseful reveal, the winners celebrating and the others reacting, bonus stars
   by category (most fed, fastest, longest streak…), and on every phone the kid's own card (their full character, what
   they contributed, any star). Short, skippable by the teacher, never stuck.
+- **Feelings in between too: no dead phones** (his words 2026-10-16 on 6-7: "I didn't even feel there was a feeling,
+  there's nothing in between"): from one question to the next the kid's phone stays alive. Their tap shows what it did
+  (to their team, the board, their character), the gang reacts, the live race or team state stays on screen, and a
+  short moment fills any wait. A plain «espera» screen between questions is a bug. The game's own identity (6-7's
+  hand-swing and shout, Mochi's mash…) is felt DURING play, not only in the ending.
 - **Design skills on every kid/teacher screen** (his question 2026-10-13: "have you been using Emil Kowalski, taste and
   impeccable?"): any new or changed screen of the platform or a pin game gets a pass with `emil-design-eng` (motion,
   press feel, timing), `design-taste-frontend` (layout and visual direction) and `impeccable` (critique + polish)
