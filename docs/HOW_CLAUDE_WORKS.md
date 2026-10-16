@@ -168,8 +168,8 @@ visitor without it sees the key screen at the same address, and La Ruta Dorada s
 **🏆 La Ruta Dorada (the tab, 15 October 2026; was «Audios y vocabulario»).** `/audios` now opens like choosing a world
 in a Nintendo game: one big glossy card per level (YCT 1 in Rojo Imperial, New HSK 1 in jade, HSK 1 in lapis; a new
 level in core/levels.js gets its own card by itself), Dralingo in his kandura on a gold Dubai skyline (Burj Khalifa,
-Museum of the Future, Emirates Towers, Burj Al Arab). Kids swipe (or drag, or tap ‹ ›, the dots, or the arrow keys) and
-the next card flies in with depth and a little bounce; a kid who is logged in lands on their own level first, and so
+Emirates Towers, Burj Al Arab). Kids swipe (or drag, or tap ‹ ›, the dots, or the arrow keys) and the next card flies
+in with depth and a little bounce, round and round; a kid who is logged in lands on their own level first, and so
 does a phone that typed a level's key. Each card opens its **golden route**: 1 · La Base (with the kid's seals, «7 de
 83 sellos»), 2 · El Entrenamiento (a «Muy pronto» step until it is built), 3 · El Simulacro Dorado (the level's
 simulations: YCT 1 sims 1-5, New HSK 1 sims 1-2, Old HSK 1 sims 1-10, each opening its exam player), then the homework

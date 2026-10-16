@@ -72,6 +72,7 @@
     right: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M6.6 2.8v4.6h4.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   };
   const sky = '<svg class="rd-sky" viewBox="0 0 400 110" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><use href="#rd-sky"/></svg>' +
     '<svg class="rd-sky rd-sky-mirror" viewBox="0 0 400 110" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><use href="#rd-sky"/></svg>';
@@ -133,6 +134,7 @@
     leave();
     const mods = ctx.ruta.modules || [];
     if (!mods.length) { main.innerHTML = '<p class="au-error">Muy pronto: tus mundos de Chino Mandarín.</p>'; return; }
+    store.set('draly_ruta_from', '');   // the kid chose «all worlds»: the routes' back arrow leads here again, not to Mis tareas
     const looks = looksFor(mods);
     // the first card: the one this tab was on (back from a path), else the kid's own module (or a level this device
     // holds the key of), else the last one chosen on this phone, else the first
@@ -181,10 +183,15 @@
     const now = main.querySelector('.rd-dot-now');
     const arrows = Array.prototype.slice.call(main.querySelectorAll('.rd-arrow'));
     const liveEl = main.querySelector('#rd-live');
+    const shines = slides.map((s) => s.querySelector('.rd-card-shine'));
     const n = slides.length;
     const calm = stage.classList.contains('is-calm');
+    // three worlds or more go round in a ring (a neighbour on each side, like a world select); two stop at the ends
+    const loop = n >= 3;
+    const norm = (i) => ((i % n) + n) % n;
+    const ring = (x) => (loop ? x - n * Math.round(x / n) : x);       // the shortest way from the middle to a card
     let pos = start, target = start, vel = 0, active = -1, raf = 0, last = 0, spacing = 300, dotStep = 44;
-    let drag = null, dragEndAt = 0, userMoved = false;
+    let drag = null, dragRaf = 0, dragEndAt = 0, userMoved = false;
     const zNow = [];
     // spring: stiffness 190, damping ratio 0.66 (about 6 % overshoot: the little bounce), settles in ~0.45 s
     const K = 190, C = 2 * Math.sqrt(K) * 0.66;
@@ -195,10 +202,11 @@
       // the neighbours peek in from the edges on a phone, stand beside the middle card on a laptop
       spacing = Math.min(w * 0.86, Math.max(w * 0.72, (room - w) / 2 + w * 0.3));
       dotStep = dots.length > 1 ? (dots[1].offsetLeft - dots[0].offsetLeft) || 44 : 44;
+      if (now) now.style.transform = 'translate3d(' + (Math.max(0, active) * dotStep) + 'px,0,0)';
     }
     function paint() {
       for (let i = 0; i < n; i++) {
-        const d = i - pos, ad = Math.abs(d);
+        const d = ring(i - pos), ad = Math.abs(d);
         if (!calm) {
           const cd = Math.max(-1.5, Math.min(1.5, d));
           slides[i].style.transform = 'perspective(1100px) translate3d(' + (d * spacing).toFixed(1) + 'px,' + (Math.min(ad, 1) * 16).toFixed(1) + 'px,' +
@@ -207,10 +215,9 @@
           shades[i].style.opacity = (Math.min(ad, 1) * 0.46).toFixed(3);
           glosses[i].style.transform = 'translate3d(' + (cd * -38).toFixed(1) + '%,0,0)';
         }
-        const z = 20 - Math.round(ad * 4);
+        const z = 100 - Math.round(ad * 20);   // the card nearest the middle is always in front
         if (zNow[i] !== z) { slides[i].style.zIndex = String(z); zNow[i] = z; }
       }
-      if (now) now.style.transform = 'translate3d(' + (Math.max(0, Math.min(n - 1, pos)) * dotStep).toFixed(1) + 'px,0,0)';
     }
     function setActive(i, announce) {
       if (i === active) return;
@@ -219,10 +226,13 @@
         const on = k === i;
         s.classList.toggle('is-active', on);
         if (on) s.removeAttribute('inert'); else s.setAttribute('inert', '');
+        cards[k].tabIndex = on ? 0 : -1;       // (phones without inert: only the middle card is a tab stop)
       });
       dots.forEach((d, k) => { d.setAttribute('aria-selected', String(k === i)); d.tabIndex = k === i ? 0 : -1; });
-      arrows[0].disabled = i <= 0;
-      arrows[1].disabled = i >= n - 1;
+      if (now) now.style.transform = 'translate3d(' + (i * dotStep) + 'px,0,0)';   // the gold pill slides (css transition)
+      // aria-disabled, not disabled: a focused ‹ › keeps the focus (only two worlds stop at the ends)
+      arrows[0].setAttribute('aria-disabled', String(!loop && i <= 0));
+      arrows[1].setAttribute('aria-disabled', String(!loop && i >= n - 1));
       store.set('draly_ruta_at', mods[i].slug);
       store.setL('draly_ruta_last', mods[i].slug);
       if (announce && liveEl) {
@@ -242,7 +252,7 @@
         left -= h;
       }
       if (Math.abs(pos - target) < 0.0006 && Math.abs(vel) < 0.003) {
-        pos = target; vel = 0; raf = 0; paint(); settled();
+        pos = target = norm(Math.round(target)); vel = 0; raf = 0; paint(); settled();   // back to 0…n-1 (the ring looks the same)
         return;
       }
       paint();
@@ -256,27 +266,32 @@
     function settled() {
       if (!userMoved) return;
       userMoved = false;
-      const c = cards[active];                 // the arrival: one gold sweep across the card that just landed
-      c.classList.remove('is-shine');
-      void c.offsetWidth;
-      c.classList.add('is-shine');
+      const s = shines[active];               // the arrival: one gold sweep across the card that just landed
+      if (s && s.animate) {
+        try {
+          s.animate([{ opacity: 1, transform: 'translate3d(-45%,0,0)' }, { opacity: 0, transform: 'translate3d(45%,0,0)' }],
+            { duration: 820, easing: 'cubic-bezier(.23, 1, .32, 1)' });
+        } catch (_) { /* an old phone: no sweep */ }
+      }
     }
-    function go(i, v0, focusWhat) {
-      i = Math.max(0, Math.min(n - 1, i));
+    // how: 'card' / 'dot' = the keyboard moved (focus follows, the focused element speaks for itself);
+    // 'tap' = a dot was tapped (it speaks for itself too); nothing = a swipe or ‹ ›: the live region says where we are
+    function go(i, v0, how) {
+      const idx = loop ? norm(i) : Math.max(0, Math.min(n - 1, i));
       userMoved = true;
-      setActive(i, true);
-      if (calm) { pos = target = i; paint(); }
+      setActive(idx, !how);
+      if (calm) { pos = target = idx; paint(); }
       else {
-        target = i;
+        target = loop ? idx + n * Math.round((pos - idx) / n) : idx;   // the nearest way round the ring
         if (typeof v0 === 'number' && isFinite(v0)) vel = Math.max(-14, Math.min(14, v0));
         kick();
       }
-      if (focusWhat === 'card') { try { cards[i].focus({ preventScroll: true }); } catch (_) {} }
-      if (focusWhat === 'dot' && dots[i]) { try { dots[i].focus({ preventScroll: true }); } catch (_) {} }
+      if (how === 'card') { try { cards[idx].focus({ preventScroll: true }); } catch (_) {} }
+      if (how === 'dot' && dots[idx]) { try { dots[idx].focus({ preventScroll: true }); } catch (_) {} }
     }
 
     // ── touch and mouse: the card follows the finger, a flick flies one card on ──
-    const rubber = (x) => 0.32 * (1 - Math.exp(-x * 1.6));   // past the first or last card: it gives a little, then stops
+    const rubber = (x) => 0.32 * (1 - Math.exp(-x * 1.6));   // two worlds, past an end: it gives a little, then stops
     function onDown(e) {
       if (drag || !e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;   // one finger at a time
       drag = { id: e.pointerId, x0: e.clientX, y0: e.clientY, p0: pos, from: active, moved: false, pts: [[e.timeStamp, e.clientX]] };
@@ -284,6 +299,8 @@
     }
     function onMove(e) {
       if (!drag || e.pointerId !== drag.id) return;
+      // a mouse let go outside the window never sends pointerup: no button pressed any more = the drag is over
+      if (e.pointerType === 'mouse' && !(e.buttons & 1)) { endDrag(false); return; }
       const dx = e.clientX - drag.x0, dy = e.clientY - drag.y0;
       if (!drag.moved) {
         if (Math.abs(dx) < 7 && Math.abs(dy) < 7) return;
@@ -296,21 +313,25 @@
       while (drag.pts.length > 2 && e.timeStamp - drag.pts[0][0] > 90) drag.pts.shift();
       if (calm) return;
       let p = drag.p0 - dx / spacing;
-      if (p < 0) p = -rubber(-p);
-      else if (p > n - 1) p = n - 1 + rubber(p - (n - 1));
+      if (!loop) {
+        if (p < 0) p = -rubber(-p);
+        else if (p > n - 1) p = n - 1 + rubber(p - (n - 1));
+      }
       pos = p;
-      paint();
+      // a 120 Hz screen sends several moves per frame: draw once per frame
+      if (!dragRaf) dragRaf = requestAnimationFrame(() => { dragRaf = 0; paint(); });
     }
     function endDrag(fling) {
       const d = drag;
       drag = null;
+      if (dragRaf) { cancelAnimationFrame(dragRaf); dragRaf = 0; }
       stage.classList.remove('is-dragging');
       if (!d) return;
       if (!d.moved || !fling) { if (pos !== target) kick(); return; }
       dragEndAt = performance.now();
       const a = d.pts[0], b = d.pts[d.pts.length - 1];
       const v = b[0] > a[0] ? (b[1] - a[1]) / (b[0] - a[0]) : 0;          // px per ms; < 0 = towards the next card
-      const moved = calm ? -((b[1] - d.x0) / spacing) : pos - d.from;
+      const moved = calm ? -((b[1] - d.x0) / spacing) : ring(pos - d.from);
       const dir = v < -0.28 ? 1 : v > 0.28 ? -1 : (moved > 0.2 ? 1 : moved < -0.2 ? -1 : 0);
       go(d.from + dir, (-v * 1000) / spacing);
     }
@@ -333,7 +354,7 @@
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); go(active + (e.key === 'ArrowRight' ? 1 : -1), undefined, 'card'); }
     });
     dots.forEach((d, k) => {
-      d.addEventListener('click', () => go(k));
+      d.addEventListener('click', () => go(k, undefined, 'tap'));
       d.addEventListener('keydown', (e) => {
         const to = e.key === 'ArrowRight' ? active + 1 : e.key === 'ArrowLeft' ? active - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : null;
         if (to == null) return;
@@ -341,15 +362,18 @@
         go(to, undefined, 'dot');
       });
     });
-    arrows.forEach((b) => b.addEventListener('click', () => go(active + Number(b.getAttribute('data-dir')))));
+    arrows.forEach((b) => b.addEventListener('click', () => {
+      if (b.getAttribute('aria-disabled') === 'true') return;
+      go(active + Number(b.getAttribute('data-dir')));
+    }));
     const onResize = () => { measure(); paint(); };
     window.addEventListener('resize', onResize);
 
-    measure();
     setActive(start, false);
+    measure();
     paint();   // the still first frame: no entrance animation
     return {
-      destroy() { if (raf) cancelAnimationFrame(raf); raf = 0; window.removeEventListener('resize', onResize); },
+      destroy() { if (raf) cancelAnimationFrame(raf); raf = 0; if (dragRaf) cancelAnimationFrame(dragRaf); dragRaf = 0; window.removeEventListener('resize', onResize); },
       // test hook (screenshots of a card mid-flight; headless browsers barely animate): draw position p as it is
       at(p) { if (raf) { cancelAnimationFrame(raf); raf = 0; } pos = p; paint(); return pos; },
       go,
@@ -416,9 +440,11 @@
             '<b class="rd-sim-n" aria-hidden="true">' + s.n + '</b>' +
             '<span class="rd-sim-name">Simulacro ' + s.n + '</span>' +
             '<span class="rd-sim-meta">' + s.questions + ' preguntas</span>' +
-            // the kid's best try: gold with a check from the exam's pass line (60 %: YCT and HSK pass at 120 / 200)
-            (s.best != null ? '<span class="rd-sim-best' + (s.best >= 60 ? ' is-pass' : '') + '"><span class="au-sr">Tu mejor resultado: </span>' +
-              (s.best >= 60 ? I.check : '') + s.best + ' %</span>' : '') +
+            // the kid's best try: from the exam's pass line (60 %: YCT and HSK pass at 120 / 200) its score with a gold
+            // check; below it, never a low number on screen, just «Otra vez» (a kid reads a low score as failing)
+            (s.best == null ? '' : s.best >= 60
+              ? '<span class="rd-sim-best is-pass"><span class="au-sr">Tu mejor resultado: </span>' + I.check + s.best + ' %</span>'
+              : '<span class="rd-sim-best"><span class="au-sr">Ya lo intentaste. </span>' + I.again + 'Otra vez</span>') +
           '</a></li>').join('') + '</ul>';
     } else if (st.gold === 'locked') {
       goldBody = '<p class="rd-stop-text">' + m.simCount + (m.simCount === 1 ? ' simulacro completo' : ' simulacros completos') + ' con el audio original del examen.</p>' +

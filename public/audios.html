@@ -22,8 +22,8 @@
   <link rel="stylesheet" href="/css/ruta.css?v=20261015r">
 </head>
 <body>
-  <!-- the Dubai skyline the module cards stand on: one gold silhouette (Burj Khalifa, the Museum of the Future, the
-       Emirates Towers, the Burj Al Arab), drawn once here and reused by every card (<use href="#rd-sky">) -->
+  <!-- the Dubai skyline the module cards stand on: one gold silhouette (Burj Khalifa, the Emirates Towers, the Burj
+       Al Arab), drawn once here and reused by every card (<use href="#rd-sky">) -->
   <svg class="rd-sprite" width="0" height="0" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="rd-sky-gold" x1="0" y1="0" x2="0" y2="1">
@@ -37,8 +37,10 @@
         <rect x="17" y="56" width="13" height="54"/>
         <path d="M32 110V50l7-11 7 11v60z"/>
         <rect x="48" y="66" width="11" height="44"/>
-        <path d="M58 110c8-11 52-11 60 0z"/>
-        <path fill-rule="evenodd" d="M65 86a23 16 0 1 0 46 0a23 16 0 1 0-46 0zM79 86.5a11 6.5 0 1 0 22 0a11 6.5 0 1 0-22 0z"/>
+        <rect x="62" y="72" width="12" height="38"/>
+        <path d="M77 110V58l6-9 6 9v52z"/>
+        <rect x="92" y="78" width="11" height="32"/>
+        <rect x="105" y="66" width="13" height="44"/>
         <rect x="121" y="60" width="12" height="50"/>
         <path d="M135 110V52l14-9v67z"/>
         <rect x="152" y="70" width="13" height="40"/>
@@ -93,9 +95,11 @@
   </script>
   <script type="module">
     const ask = new URLSearchParams(location.search).get('dorado');
-    // never on a base page (/audios/<level>-base): his corner card would cover the seals and the playing bar; never on
-    // the module picker (/audios): it would cover the cards' ‹ › buttons
-    if (!/-base\/?$/i.test(location.pathname) && !/^\/audios?\/?$/i.test(location.pathname) && (ask === '1' || (ask !== '0' && Math.random() < 0.1))) {
+    // only on a homework's audio page (/audios/<level>-e<N>-r<N>, ?t=…): on a base his corner card would cover the seals
+    // and the playing bar, on the picker the cards' ‹ › buttons, on a route its key box (css/ruta.css hides him there
+    // too if the visitor moves on inside the page)
+    const onHomework = /^\/audios?\/[a-z0-9]+-e\d+-r\d+\/?$/i.test(location.pathname) || new URLSearchParams(location.search).has('t');
+    if (onHomework && (ask === '1' || (ask !== '0' && Math.random() < 0.1))) {
       setTimeout(() => {
         import('/js/golden/dorado.js?v=20261011a').then((m) => m.summon()).catch(() => {});
       }, ask === '1' ? 300 : 1400);

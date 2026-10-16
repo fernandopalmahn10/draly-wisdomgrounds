@@ -86,16 +86,18 @@ body.ks-root { min-height: 100vh; min-height: 100dvh; }
 }
 .ks-word { margin: 4px 0 0; font: 800 .82rem/1 var(--ks-sans); letter-spacing: .32em; text-indent: .32em; color: var(--ks-oro-claro); }
 /* La Ruta Dorada (phase 2): back to the level's path, inside the gold frame's top-left corner */
-.ks-back {
+.ks-routeback {
   position: absolute; z-index: 2; left: 14px; top: calc(14px + var(--ks-safe-top)); display: inline-flex; align-items: center; gap: 4px;
   min-height: 44px; padding: 0 12px 0 6px; border-radius: 12px; color: var(--ks-papel); text-decoration: none;
   font: 700 .88rem/1 var(--ks-sans); transition: background-color 160ms ease, transform 140ms var(--ks-ease);
 }
-.ks-back svg { width: 20px; height: 20px; flex: none; }
-.ks-back:active { transform: scale(.96); }
-@media (hover: hover) and (pointer: fine) { .ks-back:hover { background: rgba(255, 253, 248, .1); } }
-/* a phone: the arrow alone (its name stays for screen readers), clear of the centred DRALINGO word */
-@media (max-width: 559px) { .ks-back span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .ks-back { padding: 0; width: 44px; justify-content: center; } }
+.ks-routeback svg { width: 20px; height: 20px; flex: none; }
+.ks-routeback:active { transform: scale(.96); }
+@media (hover: hover) and (pointer: fine) { .ks-routeback:hover { background: rgba(255, 253, 248, .1); } }
+/* the arrow alone (its name stays for screen readers) wherever the label could touch the centred DRALINGO word: a
+   phone, and a laptop's narrow stage (the stage is 44 % of the screen from 860 px); inside the gold frame on a laptop */
+@media (min-width: 860px) { .ks-routeback { left: 26px; top: 26px; } }
+@media (max-width: 559px), (min-width: 860px) and (max-width: 1199px) { .ks-routeback span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .ks-routeback { padding: 0; width: 44px; justify-content: center; } }
 .ks-hero { position: relative; width: min(230px, 62vw); margin-top: 14px; }
 .ks-dragon { display: block; width: 100%; height: auto; filter: drop-shadow(0 14px 18px rgba(30, 4, 4, .45)); user-select: none; -webkit-user-drag: none; }
 .ks-bubble {
@@ -197,11 +199,24 @@ body.ks-root { min-height: 100vh; min-height: 100dvh; }
 /* what the key opens: the module's three levels, in their order */
 .ks-route { margin: 26px 0 0; padding: 16px 0 0; border-top: 1px solid var(--ks-linea); }
 .ks-route-title { margin: 0 0 12px; font: 700 .92rem/1.3 var(--ks-sans); color: var(--ks-tinta-2); }
-.ks-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; position: relative; }
-.ks-step { position: relative; display: grid; justify-items: center; gap: 6px; text-align: center; font: 700 .86rem/1.2 var(--ks-sans); color: var(--ks-tinta); }
+.ks-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); align-items: start; gap: 8px; position: relative; }
+.ks-step { position: relative; display: grid; justify-items: center; align-content: start; gap: 6px; text-align: center; font: 700 .86rem/1.2 var(--ks-sans); color: var(--ks-tinta); }
+/* the route's gold medallions (La Ruta Dorada, js/ruta.js): an icon, its number on a small red badge */
 .ks-step-n {
-  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
-  background: var(--ks-papel); border: 2px solid var(--ks-oro); color: var(--ks-oro-tinta); font: 800 .95rem/1 var(--ks-sans);
+  position: relative; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: #3d0707;
+  background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%);
+  box-shadow: 0 6px 12px -7px rgba(90, 16, 16, .6), inset 0 0 0 2px rgba(61, 7, 7, .14);
+}
+.ks-step-n svg { width: 21px; height: 21px; }
+.ks-step-n b {
+  position: absolute; left: -4px; top: -4px; width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--ks-rojo); color: var(--ks-papel); font: 800 .68rem/1 var(--ks-sans); box-shadow: 0 0 0 2px var(--ks-crema);
+}
+.ks-step.is-soon .ks-step-n { background: var(--ks-crema); border: 2px dashed var(--ks-oro); color: var(--ks-oro-tinta); box-shadow: none; }
+.ks-step.is-soon .ks-step-n b { background: var(--ks-oro-tinta); }
+.ks-step-soon {
+  display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--ks-oro-palido); color: var(--ks-rojo);
+  font: 800 .72rem/1.3 var(--ks-sans);
 }
 
 .ks-alt { margin: 22px 0 0; font-size: .98rem; color: var(--ks-tinta-2); }

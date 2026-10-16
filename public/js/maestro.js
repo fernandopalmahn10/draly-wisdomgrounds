@@ -2792,10 +2792,11 @@
     }).catch(() => { $('m-keys-status').textContent = 'No se pudieron cargar las claves. Revisa la conexión.'; });
   }
   function keyMessage(l) {
-    const link = location.origin + '/audios/' + (l.base || '');
+    // La Ruta Dorada (phase 2): the level's key screen, which then opens the level's route (/audios/<level>/clave)
+    const link = location.origin + '/audios/' + encodeURIComponent(l.id) + '/clave';
     return '🐉 ¡Hola, familia de Dralingo!\n' +
       'Esta es la clave de *' + l.name + '*: *' + l.key + '*\n\n' +
-      'Abre La Base, El Entrenamiento y El Simulacro Dorado de ' + l.name + '.\n' +
+      'Abre La Ruta Dorada de ' + l.name + ': La Base, El Entrenamiento y El Simulacro Dorado.\n' +
       '1. Entra aquí: ' + link + '\n' +
       '2. Escribe la clave una sola vez. El teléfono la recuerda.\n\n' +
       'Es solo para alumnos de Dralingo: por favor no la compartas. 💛';

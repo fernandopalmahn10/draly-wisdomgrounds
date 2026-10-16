@@ -139,6 +139,15 @@ async function run() {
   ok(/'La Ruta Dorada de ' \+ hwLevelName\(\)/.test(visible('public/js/homework.js')) && /'\/audios\/' \+ encodeURIComponent\(hwBase\.level\) \+ '\?from=homework'/.test(visible('public/js/homework.js')),
     'the /homework entry is «La Ruta Dorada de <nivel>» and opens the kid\'s module path');
   ok(/"La Ruta Dorada"/.test(visible('public/manifest.webmanifest')), 'the app shortcut is «La Ruta Dorada»');
+  // /homework.html?next=…: back to La Ruta Dorada after the login, never anywhere else (the check homework.js runs)
+  const cond = (fs.readFileSync(path.join(ROOT, 'public/js/homework.js'), 'utf8').match(/if \((.+)\) hwNext = n;/) || [])[1];
+  const nextOk = cond ? new Function('n', 'return ' + cond) : () => null;   // eslint-disable-line no-new-func
+  ok(['/audios', '/audios/yct1', '/audios/newhsk1/clave', '/audios/yct1-base', '/yct-sim.html?sim=yct1-sim1'].every((n) => nextOk(n) === true),
+    '/homework next= takes the picker, a route, a key address, a base and a sim');
+  ok(['//evil.example', 'https://evil.example/audios', '/audiosx', '/audios/x/clave/x', '/audios/../maestro.html', '/audios/yct1/clave?x=1', '/audios/%2e%2e', '/maestro.html']
+    .every((n) => nextOk(n) === false), '… and nothing else (no other site, no other page)');
+  ok(/'\/audios\/' \+ encodeURIComponent\(l\.id\) \+ '\/clave'/.test(visible('public/js/maestro.js')),
+    'the key\'s WhatsApp message (/maestro) links the level\'s key screen, which lands on its route');
   const i18n = fs.readFileSync(path.join(ROOT, 'public/js/hw-i18n.js'), 'utf8');
   ok(i18n.includes('"re":"^La Ruta Dorada de (.+)$"') && i18n.includes('"🔑 Entra con tu código y vuelves directo a La Ruta Dorada."'), 'hw-i18n.js translates the new /homework lines');
   const rjs = fs.readFileSync(path.join(ROOT, 'public/js/ruta.js'), 'utf8');
@@ -164,7 +173,7 @@ async function run() {
   for (const [lvl, name, slug] of [['yct1', 'YCT 1', 'yct1'], ['newhsk1', 'New HSK 1', 'newhsk1'], ['hsk2', 'New HSK 1', 'newhsk1'], ['hsk1', 'HSK 1', 'hsk1']]) {
     const r = await get('/audios/' + lvl + '/clave', as(anon));
     ok(isKeyScreen(r, name), `/audios/${lvl}/clave: the ${name} key screen`);
-    ok(r.text.includes('"route":"/audios/' + slug + '"') && /id="ks-back"/.test(r.text), `… with its way back to the path (/audios/${slug})`);
+    ok(r.text.includes('"route":"/audios/' + slug + '"') && /id="ks-routeback"/.test(r.text), `… with its way back to the path (/audios/${slug})`);
     ok(/no-store/.test(r.headers['cache-control'] || ''), '… never cached');
   }
   const bad = await get('/audios/zz9/clave', as(anon));
