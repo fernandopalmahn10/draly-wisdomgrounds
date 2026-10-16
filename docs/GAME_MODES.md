@@ -52,8 +52,8 @@ In `server.js`:
 6. **Set `nextDelay`** in the post-answer block. Use `-1` if the mode
    drives its own follow-up (e.g., waits for a placement / dice roll).
 7. **Add any mode-specific socket events** near the existing ones
-   (`monopoly:roll`, `family:place`, `dragon:aim-place`, etc.).
-8. **Define helpers** like `fmPlace`, `processMonopolyRoll`, etc. at
+   (`player:mn-roll`, `player:pn-hit`, `dragon:aim-place`, etc.).
+8. **Define helpers** like `mnRoll`, `pnApplyHit`, etc. at
    module scope so the bulletproof stuck-recovery `player:resync` handler
    can also re-trigger them if needed.
 
@@ -125,7 +125,15 @@ with a too-fast rule, a streak multiplier and wrong-answer waits so random tappi
 landmark race, comeback golden sums, Mario Party ceremony with bonus stars; rules `core/sixseven.js` (no question pack),
 phone `js/player-sixseven.js`, projector `host-sixseven.html` + `js/host-sixseven.js`, shared `js/sixseven-stage.js` +
 `css/sixseven.css` (+ `js/mochi-stage.js` / `css/mochi.css` for the kid figures); spec `docs/specs/six-seven-v2.md`),
-**Vuelo del Dragón** (`dragon-eye`), **Dàfùwēng · Monopolio Chino** (`monopoly`) — those two queued for an overhaul — plus the
+**Vuelo del Dragón** (`dragon-eye`, queued for an overhaul), **Dàfùwēng · Monopolio** (`monopoly`, remade 2026-10-16 on a
+branch, not deployed: «El Gran Tablero de Dubái», a Mario Party board night in boards of 4 dealt like Ojos de Halcón; every
+right answer opens a dice window (the server rolls; no tap in 3 s = the same dice), the kid's full-body piece walks a
+24-space Dubai loop on its own phone (the board is the screen, the question a sheet under it): Salida, the star (10 coins,
+Dralingo), blue / red, 5 landmarks to buy that charge tolls, «¡Suerte!» (chest, swap, duel, advance 3), the sand storm;
+lead alarms per board, the last 30 s double, lucky coins for the last kid of a board capped at the gap, three bonus stars
+per board, each board's winner, the class podium; rules `core/monopoly.js` + the shared board data
+`js/monopoly-map.js`, phone `js/player-monopoly.js`, projector `host-monopoly.html` + `js/host-monopoly.js`, both draw
+`js/monopoly-board.js` + `css/monopoly.css`; spec `docs/specs/monopoly-v2.md`) — plus the
 class tools Warm-up (`warmup`), Lectura (`reading`) and the HSK/YCT sim rooms (`hsksim`).
 
 Retired 2026-10-10 by his decision (code removed; recover from git history at commit `5e3743698`, the last one that still has them, if ever

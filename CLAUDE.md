@@ -465,6 +465,9 @@ the checklist for any new game mode.
   Bastón vs Arco retired) (plus the class tools Warm-up, Lectura, HSK/YCT rooms); 11 older games were retired to free room.
   The 5 kept games each get a full overhaul ("second run"); new games replace the retired ones. Quality over quantity:
   retire a game rather than keep a half-optimized one.
+  Dàfùwēng · Monopolio Chino was remade 2026-10-16 as «Dàfùwēng · Monopolio · El Gran Tablero de Dubái» (`monopoly`):
+  a Mario Party board night in boards of 4, every right answer a dice roll on the kid's own board (spec
+  `docs/specs/monopoly-v2.md`).
 - **The kid's phone is the product** (his correction 2026-10-11: "a beautiful projector is useless if everybody else's
   UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
   answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /
@@ -488,6 +491,11 @@ the checklist for any new game mode.
   not a plain score list: «¡FINAL!», a suspenseful reveal, the winners celebrating and the others reacting, bonus stars
   by category (most fed, fastest, longest streak…), and on every phone the kid's own card (their full character, what
   they contributed, any star). Short, skippable by the teacher, never stuck.
+- **Feelings in between too: no dead phones** (his words 2026-10-16 on 6-7: "I didn't even feel there was a feeling,
+  there's nothing in between"): from one question to the next the kid's phone stays alive. Their tap shows what it did
+  (to their team, the board, their character), the gang reacts, the live race or team state stays on screen, and a
+  short moment fills any wait. A plain «espera» screen between questions is a bug. The game's own identity (6-7's
+  hand-swing and shout, Mochi's mash…) is felt DURING play, not only in the ending.
 - **Design skills on every kid/teacher screen** (his question 2026-10-13: "have you been using Emil Kowalski, taste and
   impeccable?"): any new or changed screen of the platform or a pin game gets a pass with `emil-design-eng` (motion,
   press feel, timing), `design-taste-frontend` (layout and visual direction) and `impeccable` (critique + polish)
@@ -512,5 +520,6 @@ the checklist for any new game mode.
   player.html only shows Dralingo «Entrando al juego…» and sends failures back to that card. Never add a second join
   form; delete leftover screens instead of leaving them reachable.
 - Build or overhaul any game with the `new-pin-game` skill. Before saying a game works: `node scripts/playtest-bots.js
-  --game <type> --bots 20` must PASS (Monopoly is turn-based: waiting kids are expected there), then the
+  --game <type> --bots 20` must PASS (a long reward such as a Monopolio turn tells the frozen-kid watch how long it
+  lasts through its handler's `graceUntil`), then the
   `classroom-playtester` agent for the real-browser check.
