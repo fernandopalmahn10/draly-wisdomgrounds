@@ -20,6 +20,7 @@ const SimImages = require('./core/sim-images');
 const SimLock = require('./core/sim-lock');   // 🔒 simulations for enrolled students + teachers only (2026-10-15)
 SimLock.scan();                                 // the index of the locked files (~1000, a few ms), before the first class
 const LevelKeys = require('./core/level-keys'); // 🔑 a key per level opens La Base / Entrenamiento / Simulacro Dorado (2026-10-15)
+const RutaProgress = require('./core/ruta-progress'); // 🏆 La Ruta Dorada: seals on the kid's record + the unlock engine (2026-10-16)
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
@@ -1394,8 +1395,9 @@ app.get('/api/admin/students', (req, res) => {
   students = students.map((s) => {
     const c = _effectiveClassroom(s);
     const lv = _levelState(s);
-    const out = Object.assign({}, s, { classroomId: c ? c.id : null, classroomName: c ? c.name : null, levelOpen: lv.open, levelVia: lv.via });
-    delete out.rawLevel; delete out.levelSince; delete out.levelAccess;
+    const out = Object.assign({}, s, { classroomId: c ? c.id : null, classroomName: c ? c.name : null, levelOpen: lv.open, levelVia: lv.via,
+      rutaBar: _rutaBar(s) });   // 🏆 La Ruta Dorada of their class level, in one small bar (2026-10-16)
+    delete out.rawLevel; delete out.levelSince; delete out.levelAccess; delete out.ruta;
     return out;
   });
   res.json({
@@ -1562,6 +1564,7 @@ app.get('/api/admin/students/:code', (req, res) => {
     // to keep, rename, or merge into an existing student.
     isGuestPinJoin: !!rec.isGuestPinJoin,
     levelKey: _levelState(rec),   // 🔑 2026-10-15: is their level open on their account, and how
+    ruta: _rutaAdmin(rec),        // 🏆 2026-10-16: La Ruta Dorada per level (seals, El Entrenamiento, El Simulacro Dorado)
   });
 });
 // ── 🔑 2026-10-15 — a kid's level on their account (core/level-keys.js), for the Cuaderno ─────────────────────────
@@ -1584,7 +1587,59 @@ app.post('/api/admin/student/:code/level-access', (req, res) => {
   const level = Levels.normalize((req.body || {}).level) || LevelKeys.classLevel(rec);
   if (!level) return res.status(400).json({ ok: false, error: 'this student has no level yet' });
   Students.setLevelAccess(rec.code, level, 'teacher');
-  res.json({ ok: true, levelKey: _levelState(rec) });
+  res.json({ ok: true, levelKey: _levelState(rec), ruta: _rutaAdmin(rec) });
+});
+// ── 🏆 2026-10-16 La Ruta Dorada, phase 3: a kid's progress for the Cuaderno (core/ruta-progress.js) ───────────────
+// The levels shown: their class level first, then any level they have progress in or have open on their account.
+// Per level: open on the account (and how), seals per world, which El Entrenamiento worlds are open (by their seals
+// or a teacher), El Simulacro Dorado (the rule in force) and their best % per simulation.
+function _rutaAdmin(rec) {
+  const st = RutaProgress.getSettings();
+  const own = LevelKeys.classLevel(rec);
+  const tries = Array.isArray(rec.hskResults) ? rec.hskResults : [];
+  const levels = Levels.LEVELS
+    .filter((l) => RutaProgress.baseOf(l.id) && (l.id === own || RutaProgress.hasAny(rec, l.id) || LevelKeys.recordOpenVia(rec, l.id)))
+    .sort((a, b) => (a.id === own ? -1 : b.id === own ? 1 : 0))
+    .map((l) => {
+      const s = RutaProgress.state(rec, l.id);
+      const via = LevelKeys.recordOpenVia(rec, l.id);
+      return {
+        id: l.id, name: l.name, own: l.id === own, open: !!via, via: via || null,
+        words: s.words, sealed: s.sealed, worlds: s.worlds, train: s.train, dorado: s.dorado,
+        sims: _rutaSimsOf(l.id).map((x) => {
+          const mine = tries.filter((t) => t && t.simId === x.id);
+          const best = mine.reduce((m, t) => Math.max(m, Number(t.percent) || 0), -1);
+          return { id: x.id, n: x.n, best: best >= 0 ? Math.round(best) : null, tries: mine.length };
+        }),
+      };
+    });
+  return { settings: { trainingLive: st.trainingLive, doradoPct: st.doradoPct }, levels };
+}
+// the roster's small bar: the kid's class level (seals, El Entrenamiento worlds open) from a Students.listAll() row
+function _rutaBar(s) {
+  const lvl = LevelKeys.classLevel({ level: s.rawLevel, classroomCode: s.classroomCode });
+  const st = lvl ? RutaProgress.state({ ruta: s.ruta }, lvl) : null;
+  if (!st) return null;
+  return { level: lvl, sealed: st.sealed, words: st.words, train: st.train.open, worlds: st.train.of };
+}
+// «Desbloquear» / «Volver a bloquear» one step for one kid: POST { level, step: 'train' | 'dorado', world: n | 'all',
+// action: 'unlock' | 'lock' }. Teachers of the kid's class (or the super admin). «Volver a bloquear» undoes only what a
+// teacher opened: a world the kid's own seals opened stays open.
+app.post('/api/admin/student/:code/ruta', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  const b = req.body || {};
+  const level = Levels.normalize(b.level);
+  if (!level || !RutaProgress.baseOf(level)) return res.status(400).json({ ok: false, error: 'unknown level' });
+  const on = b.action === 'unlock' ? true : (b.action === 'lock' ? false : null);
+  if (on === null) return res.status(400).json({ ok: false, error: 'action must be unlock or lock' });
+  const out = RutaProgress.setTeacherUnlock(rec.code, level, String(b.step || ''), b.world, on);
+  if (!out.ok) return res.status(out.status || 400).json(out);
+  res.json({ ok: true, ruta: _rutaAdmin(rec) });
 });
 
 // Permanently DELETE a student record (super-admin or owning teacher).
@@ -2104,6 +2159,28 @@ app.post('/api/admin/level-keys/:level/close-devices', (req, res) => {
   if (!out.ok) return res.status(400).json(out);
   res.json({ ok: true, levels: LevelKeys.list() });
 });
+// ── 🏆 2026-10-16 La Ruta Dorada, phase 3: the unlock rules (core/ruta-progress.js) ───────────────────────────────────
+// Every teacher may read them (a kid's profile explains them); only the super admin changes them: «El Entrenamiento
+// está activo» (OFF until phase 4 ships: the Simulacro Dorado opens with the key) and the % every world needs then.
+app.get('/api/admin/ruta-settings', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  res.json({ ok: true, settings: RutaProgress.getSettings(), canEdit: !!session.isSuperAdmin });
+});
+app.put('/api/admin/ruta-settings', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const b = req.body || {};
+  const patch = {};
+  if ('trainingLive' in b) patch.trainingLive = b.trainingLive;
+  if ('doradoPct' in b) patch.doradoPct = b.doradoPct;
+  const out = RutaProgress.setSettings(patch);
+  if (!out.ok) return res.status(400).json(out);
+  res.json({ ok: true, settings: out.settings, canEdit: true });
+});
 
 // Delete a teacher (super-admin only; cannot delete a super admin)
 app.delete('/api/admin/teachers/:teacherId', (req, res) => {
@@ -2268,6 +2345,10 @@ app.post('/api/homework/enter', (req, res) => {
       SimLock.setSession(req, res, 's', rec.code, level);
       levelOpen = _openLevelOnDevice(req, res, rec, level);
     }
+    // 🏆 2026-10-16: the seals on their account (any phone) for the «La Ruta Dorada de <nivel>» count on their home;
+    // only to the kid's own login (their own class code), like everything else of their record
+    const base = audioBaseFor(Levels.info(level));
+    if (base && ownsBefore) { base.seals = [...RutaProgress.sealsOf(rec, level)].sort((a, b) => a - b); base.who = _sealWho(rec.code); }
     res.json({
       ok: true,
       studentCode: rec.code,
@@ -2279,7 +2360,7 @@ app.post('/api/homework/enter', (req, res) => {
       levelName: Levels.info(level).name,
       folders: Assignments.levelFolders(level),       // pack-quiz levels: one folder per world (else null)
       daily: Levels.info(level).daily !== false,      // Desafíos (HSK 1 words): off below HSK 1
-      base: audioBaseFor(Levels.info(level)),         // its vocabulary base on /audios («Empieza aquí»), or null
+      base,                                           // its vocabulary base on /audios («Empieza aquí»), or null
       levelOpen,                                      // 🔑 its levels are open on this phone (else the base asks the key)
       isNew: isNew,                                   // show the code banner once
       assignments: Assignments.listAssignments(level), // portal reshapes by level
@@ -4686,33 +4767,60 @@ app.get(['/audios/:id/clave', '/audio/:id/clave'], (req, res) => {
 // sim list, no answers (the sims' names and question counts are only for whoever may open them).
 //   home = the module to show first: the logged-in kid's class level, else the first level this device holds a key of
 let _rutaSims = null;   // the sims never change while the server runs (a new one comes with a deploy)
+const _rutaSimNum = (id) => parseInt((String(id).match(/sim(\d+)$/) || [])[1] || '0', 10);
+// a level's simulations in order: [{ id, n, questions, href }]
+function _rutaSimsOf(level) {
+  if (!_rutaSims) _rutaSims = HskSim.listSims().concat(YctSim.listSims());
+  return _rutaSims.filter((s) => Levels.normalize(s.level) === level).sort((x, y) => _rutaSimNum(x.id) - _rutaSimNum(y.id))
+    .map((s) => ({ id: s.id, n: _rutaSimNum(s.id), questions: s.totalQuestions || s.questionCount || 0,
+      href: (/^hsk\d/.test(s.id) ? '/hsk-sim.html?sim=' : '/yct-sim.html?sim=') + encodeURIComponent(s.id) }));
+}
+// 🏆 phase 3 (2026-10-16): an open module also carries its worlds (number + short name: the route draws a key-only
+// phone's progress from its own seals) and, for the logged-in kid, `progress` from their record (core/ruta-progress.js:
+// seals per world, the El Entrenamiento worlds their seals or a teacher opened, El Simulacro Dorado). `dorado` = the
+// rule in force: while El Entrenamiento is not live the key opens it; once it is live the sims are listed only to whoever
+// has earned it (a teacher, or the kid's practice / «Desbloquear»). A locked module carries none of it.
 function _rutaState(req) {
   const teacher = !!_teacherOf(req);
   const rec = _studentOf(req);
   const bases = _loadAudioBases();
-  if (!_rutaSims) _rutaSims = HskSim.listSims().concat(YctSim.listSims());
-  const allSims = _rutaSims;
-  const num = (id) => parseInt((String(id).match(/sim(\d+)$/) || [])[1] || '0', 10);
+  const live = RutaProgress.getSettings().trainingLive;
   let home = rec ? LevelKeys.classLevel(rec) : null;
   const modules = Levels.LEVELS.map((l) => {
     const a = LevelKeys.access(req, l.id);
     if (!home && !teacher && a.ok && a.via === 'key') home = l.id;
     const b = l.base ? bases.find((x) => x.id === l.base) : null;
-    const own = allSims.filter((s) => Levels.normalize(s.level) === l.id).sort((x, y) => num(x.id) - num(y.id));
+    const own = _rutaSimsOf(l.id);
     const tries = a.ok && rec && Array.isArray(rec.hskResults) ? rec.hskResults : [];
+    const rb = a.ok ? RutaProgress.baseOf(l.id) : null;
+    const prog = a.ok && rec && rb ? RutaProgress.state(rec, l.id) : null;
+    // El Simulacro Dorado for this visitor (only meaningful when the module is open)
+    let dorado = null;
+    if (a.ok) {
+      if (!live || a.via === 'teacher') dorado = { open: true, rule: live ? 'practice' : 'key' };
+      else if (prog) dorado = { open: prog.dorado.open, rule: 'practice', pct: prog.dorado.pct, practiced: prog.dorado.practiced, of: prog.dorado.of };
+      else dorado = { open: false, rule: 'practice', pct: RutaProgress.getSettings().doradoPct, login: true };   // a phone alone can't save practice
+    }
+    const listSims = a.ok && dorado && dorado.open;
     return {
       id: l.id, slug: l.pack || l.id, name: l.name, family: l.family, exam: l.exam || '', open: !!a.ok,
-      base: b ? { id: b.id, words: b.words } : null,
+      base: b ? Object.assign({ id: b.id, words: b.words }, rb ? { worlds: rb.worlds.map((w) => ({ n: w.n, short: w.short, first: w.first, count: w.count })) } : {}) : null,
       simCount: own.length,
-      sims: a.ok ? own.map((s) => {
+      sims: listSims ? own.map((s) => {
         const best = tries.filter((t) => t && t.simId === s.id).reduce((m, t) => Math.max(m, Number(t.percent) || 0), -1);
-        return { id: s.id, n: num(s.id), questions: s.totalQuestions || s.questionCount || 0,
-          href: (/^hsk\d/.test(s.id) ? '/hsk-sim.html?sim=' : '/yct-sim.html?sim=') + encodeURIComponent(s.id),
-          best: best >= 0 ? Math.round(best) : null };
+        return Object.assign({}, s, { best: best >= 0 ? Math.round(best) : null });
       }) : [],
+      dorado,
+      progress: prog ? {
+        sealed: prog.sealed, words: prog.words,
+        worlds: prog.worlds.map((w) => ({ n: w.n, short: w.short, count: w.count, sealed: w.sealed, train: w.train, teacher: w.teacher })),
+        train: { live: prog.train.live, open: prog.train.open, of: prog.train.of },
+      } : null,
     };
   });
-  return { ok: true, teacher, student: !!rec, home: home ? (Levels.info(home).pack || home) : null, modules };
+  // who: the logged-in kid's opaque id (the same as /api/ruta/seals): the route trusts a phone's seal mirror only when
+  // it holds this kid's account
+  return { ok: true, teacher, student: !!rec, who: rec ? _sealWho(rec.code) : null, home: home ? (Levels.info(home).pack || home) : null, modules };
 }
 app.get('/api/ruta-dorada', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
@@ -4720,6 +4828,56 @@ app.get('/api/ruta-dorada', (req, res) => {
     console.error('[ruta-dorada] state failed:', e.message);
     res.status(500).json({ ok: false, error: 'No se pudo cargar La Ruta Dorada.' });
   }
+});
+// ── 🏆 La Ruta Dorada, phase 3 (2026-10-16): a logged-in kid's «¡Me la sé!» seals live on their record ──────────────
+// GET  /api/ruta/seals?level=yct1           → { ok, student: false } (a key on this phone, nobody logged in: the seals
+//                                              stay on the phone, as before) | { ok, student: true, who, seals: [n…] }
+// POST /api/ruta/seals { level, add, remove } → { ok, who, seals } — the page's batched stamps / unstamps, and the
+//                                              phone's own seals the first time it meets the kid's account (a union)
+// Only for a level this request may use (LevelKeys.access: the one door) and only the logged-in kid's own record (the
+// /homework session). Word numbers are checked against the level's base. `who` tells the page whose seals its mirror
+// holds (an opaque id of the account, never the code), so a sibling's login on the same phone never mixes them.
+// Rate: 90 calls a minute per kid, 4000 per 5 minutes per address (a class shares one school address; the page
+// batches its taps, so a kid stamping fast sends one request a second or less; a refusal is retried by the page).
+const _sealHits = new Map();   // 'k:<code>' | 'i:<ip>' → [timestamps]
+function _sealRateOk(req, code) {
+  const now = Date.now();
+  const hit = (k, win, max) => {
+    const arr = (_sealHits.get(k) || []).filter((t) => now - t < win);
+    if (arr.length >= max) { _sealHits.set(k, arr); return false; }
+    arr.push(now);
+    _sealHits.set(k, arr);
+    return true;
+  };
+  if (_sealHits.size > 5000) for (const [k, v] of _sealHits) if (!v.length || now - v[v.length - 1] > 5 * 60 * 1000) _sealHits.delete(k);
+  return hit('i:' + _clientIp(req), 5 * 60 * 1000, 4000) && (!code || hit('k:' + code, 60 * 1000, 90));
+}
+const _sealWho = (code) => SimLock.hmacHex('ruta-who:' + code, 12);
+function _sealDoor(req, res, raw) {
+  res.set('Cache-Control', 'private, no-store');
+  const lvl = Levels.normalize(raw);
+  if (!lvl || !RutaProgress.baseOf(lvl)) { res.status(404).json({ ok: false, error: 'Ese nivel no tiene La Base.' }); return null; }
+  if (!levelAccess(req, lvl).ok) { res.status(401).json({ ok: false, locked: true, level: lvl }); return null; }
+  return lvl;
+}
+app.get('/api/ruta/seals', (req, res) => {
+  const lvl = _sealDoor(req, res, req.query && req.query.level);
+  if (!lvl) return;
+  if (!_sealRateOk(req, null)) return res.status(429).set('Retry-After', '30').json({ ok: false, error: 'Espera un momento.' });
+  const rec = _studentOf(req);
+  if (!rec) return res.json({ ok: true, student: false });
+  res.json({ ok: true, student: true, who: _sealWho(rec.code), seals: [...RutaProgress.sealsOf(rec, lvl)].sort((a, b) => a - b) });
+});
+app.post('/api/ruta/seals', (req, res) => {
+  const b = req.body || {};
+  const lvl = _sealDoor(req, res, b.level);
+  if (!lvl) return;
+  const rec = _studentOf(req);
+  if (!rec) return res.status(403).json({ ok: false, student: false, error: 'Entra con tu código para guardar tus sellos en tu cuenta.' });
+  if (!_sealRateOk(req, rec.code)) return res.status(429).set('Retry-After', '20').json({ ok: false, error: 'Espera un momento: tus sellos se guardan enseguida.' });
+  const out = RutaProgress.applySeals(rec.code, lvl, b.add, b.remove);
+  if (!out.ok) return res.status(out.status || 400).json({ ok: false, error: out.error });
+  res.json({ ok: true, who: _sealWho(rec.code), seals: out.seals });
 });
 // ── 🔑 La Base files: /base-media/<base id>/<file> (2026-10-15) ────────────────────────────────────────────────────
 // protected/base/<base id>/ (base.json, the clips, pics/) and protected/study/<level>-vocabulario.pdf (as book.pdf).

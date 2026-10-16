@@ -2677,6 +2677,7 @@
     const list = $('m-teachers-list');
     list.innerHTML = '<div class="m-empty">Loading teachers…</div>';
     fetchLevelKeys();   // 🔑 the «Claves de nivel» panel sits on top of this tab (2026-10-15)
+    fetchRutaRules();   // 🏆 and La Ruta Dorada's rules under it (2026-10-16)
     adminFetch('/api/admin/levels', pw).then((r) => r.json())
       .then((d) => { if (d && d.ok && Array.isArray(d.levels)) mLevels = d.levels; })
       .catch(() => {})
@@ -2894,6 +2895,65 @@
     });
   }
 
+  // ── 🏆 2026-10-16 La Ruta Dorada: cómo se abre (super admin; core/ruta-progress.js) ─────────────────────────────
+  // «El Entrenamiento está activo» stays OFF until phase 4 ships: until then El Simulacro Dorado opens with the key.
+  // Once ON, it opens when every world is practised with the % below (or a teacher's «Desbloquear»).
+  let _rutaRules = null;
+  function paintRutaRules(s) {
+    _rutaRules = s;
+    const sw = $('m-rules-live');
+    if (!sw) return;
+    sw.setAttribute('aria-checked', String(!!s.trainingLive));
+    sw.disabled = false;
+    $('m-rules-live-help').textContent = s.trainingLive
+      ? 'Encendido: El Simulacro Dorado se abre cuando el alumno practica cada mundo de El Entrenamiento con ' + s.doradoPct + ' % o más (o cuando tú lo desbloqueas).'
+      : 'Apagado: El Simulacro Dorado se abre solo con la clave. Enciéndelo cuando El Entrenamiento esté listo (la fase 4): mientras no exista, nadie podría ganárselo practicando.';
+    const pct = $('m-rules-pct');
+    pct.min = String(s.pctMin || 50);
+    pct.max = String(s.pctMax || 100);
+    if (document.activeElement !== pct) pct.value = String(s.doradoPct);
+    pct.disabled = false;
+    $('m-rules-pct-save').disabled = false;
+  }
+  function fetchRutaRules() {
+    if (!$('m-rules')) return;
+    adminFetch('/api/admin/ruta-settings', pw).then((r) => r.json()).then((d) => {
+      if (!d || !d.ok) { $('m-rules-live-help').textContent = 'No se pudieron cargar las reglas: ' + ((d && d.error) || ''); return; }
+      paintRutaRules(d.settings);
+    }).catch(() => { $('m-rules-live-help').textContent = 'No se pudieron cargar las reglas. Revisa la conexión.'; });
+  }
+  function saveRutaRules(patch, done) {
+    $('m-rules-msg').textContent = 'Guardando…';
+    adminFetch('/api/admin/ruta-settings', pw, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) })
+      .then((r) => r.json()).then((d) => {
+        if (!d || !d.ok) { $('m-rules-msg').textContent = (d && d.error) || 'No se pudo guardar.'; if (done) done(false); return; }
+        $('m-rules-msg').textContent = '';
+        paintRutaRules(d.settings);
+        if (done) done(true);
+      }).catch(() => { $('m-rules-msg').textContent = 'Sin conexión. Vuelve a intentarlo.'; if (done) done(false); });
+  }
+  if ($('m-rules-live')) {
+    $('m-rules-live').addEventListener('click', () => {
+      const sw = $('m-rules-live');
+      if (!_rutaRules || sw.disabled) return;
+      const on = !_rutaRules.trainingLive;
+      if (on && !confirm('¿Activar El Entrenamiento?\n\nDesde ahora El Simulacro Dorado se abre solo cuando el alumno practica cada mundo con ' +
+        _rutaRules.doradoPct + ' % o más (o cuando tú lo desbloqueas en su perfil).\n\nÚsalo solo cuando El Entrenamiento (la fase 4) ya esté publicado.')) return;
+      sw.disabled = true;
+      saveRutaRules({ trainingLive: on }, (ok) => {
+        sw.disabled = false;
+        if (ok) notify(on ? '✓ El Entrenamiento está activo: El Simulacro Dorado se gana practicando.' : '✓ El Entrenamiento apagado: El Simulacro Dorado se abre con la clave.');
+      });
+    });
+    $('m-rules-pct-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const n = Number($('m-rules-pct').value);
+      const lo = (_rutaRules && _rutaRules.pctMin) || 50, hi = (_rutaRules && _rutaRules.pctMax) || 100;
+      if (!Number.isInteger(n) || n < lo || n > hi) { $('m-rules-msg').textContent = 'Escribe un número de ' + lo + ' a ' + hi + '.'; $('m-rules-pct').focus(); return; }
+      saveRutaRules({ doradoPct: n }, (ok) => { if (ok) notify('✓ El Simulacro Dorado pide ' + n + ' % en cada mundo.'); });
+    });
+  }
+
   // ── 🔑 2026-10-15 «Cambiar mi código» (every teacher) · another teacher's code (super admin) ─────────────────────
   // The super-admin code was served to everyone in an old comment of this file: the code can now be changed here.
   // The old code stops at once on every device; this browser keeps working with the new one.
@@ -3050,9 +3110,10 @@
     // Online now: every kid online, even one who has done nothing yet (they just logged in).
     renderOnline(students.filter((s) => s._onlineNow));
     // The roster shows students with ANY activity (daily-challenge play counts) plus whoever is online right now.
+    // (2026-10-16: «¡Me la sé!» seals in La Base count as activity too)
     students = students.filter((s) =>
       s._onlineNow || (s.sentenceCount > 0) || (s.testCount > 0) || (s.assignmentCount > 0)
-      || (s.xp || 0) > 0 || !!s.dailyDate
+      || (s.xp || 0) > 0 || !!s.dailyDate || !!(s.rutaBar && s.rutaBar.sealed > 0)
     );
     // Online first, by name (rows no longer jump at every refresh), then everyone else by last seen.
     students.sort((a, b) => (a._onlineNow !== b._onlineNow)
@@ -3173,7 +3234,12 @@
       const done = s.dailyDate === today;
       const name = s.displayName || 'Anon';
       const c = (icon, n, title) => '<span class="m-row-c' + (n ? '' : ' is-zero') + '" title="' + title + '">' + icon + ' ' + n + '</span>';
-      row.setAttribute('aria-label', name + ', code ' + s.code + ', ' + levelLabel(s.level) + ', '
+      // 🏆 2026-10-16: La Ruta Dorada of their class level in one thin gold bar under the level (seals in La Base; the
+      // El Entrenamiento worlds their seals or a teacher opened, in the tooltip and the row's label)
+      const rb = s.rutaBar;
+      const rutaTxt = rb ? 'La Ruta Dorada: ' + rb.sealed + ' of ' + rb.words + ' seals, ' + rb.train + ' of ' + rb.worlds + ' worlds ready for El Entrenamiento' : '';
+      const rutaBar = rb ? '<span class="m-row-ruta" title="' + escapeHtml(rutaTxt) + '"><i style="width:' + (rb.words ? Math.round((rb.sealed / rb.words) * 100) : 0) + '%"></i></span>' : '';
+      row.setAttribute('aria-label', name + ', code ' + s.code + ', ' + levelLabel(s.level) + (rutaTxt ? ', ' + rutaTxt : '') + ', '
         + (s.classroomName ? 'class ' + s.classroomName : 'no class') + ', '
         + (s._onlineNow ? 'online now' : 'last seen ' + sinceTxt) + ', daily challenge ' + (done ? 'done' : 'not done') + ', '
         + (s.sentenceCount || 0) + ' sentences, ' + (s.assignmentCount || 0) + ' homework, ' + (s.testCount || 0) + ' reading tests');
@@ -3181,7 +3247,7 @@
         <span class="m-row-avatar"><span class="m-avatar-frame">${renderAvatar(s.avatar)}</span>${s._onlineNow ? '<span class="m-online-dot" title="Online now"></span>' : ''}</span>
         <span class="m-row-who"><span class="m-row-name">${escapeHtml(name)}</span><span class="m-row-code">${escapeHtml(s.code)}</span></span>
         <span class="m-row-tags">
-          <span class="m-row-level is-${escapeHtml(s.level || 'hsk1')}" title="Level (from the class code the kid typed)">${escapeHtml(levelLabel(s.level))}</span>
+          <span class="m-row-levelcell"><span class="m-row-level is-${escapeHtml(s.level || 'hsk1')}" title="Level (from the class code the kid typed)">${escapeHtml(levelLabel(s.level))}</span>${rutaBar}</span>
           <span class="m-row-classroom${s.classroomName ? '' : ' is-none'}" title="Class">${s.classroomName ? '🎓 ' + escapeHtml(s.classroomName) : 'No class'}</span>
           <span class="m-row-daily${done ? ' is-done' : ''}" title="Daily challenge today">${done ? '✅ Done' : 'Not yet'}</span>
         </span>
@@ -3327,6 +3393,116 @@
       list.appendChild(row);
     });
   }
+  // ── 🏆 2026-10-16 La Ruta Dorada in a kid's profile (server.js _rutaAdmin, core/ruta-progress.js) ───────────────
+  // One card per level (their class level first): is the level open on their account, the «¡Me la sé!» seals per
+  // world, which El Entrenamiento worlds are open (their seals, or a teacher), El Simulacro Dorado under the rule in
+  // force, and their best % per simulation. «Desbloquear» opens a step early; «Volver a bloquear» undoes only what a
+  // teacher opened (a world the kid's own seals opened stays open).
+  const RUTA_VIA = { grandfathered: 'enrolled before the keys', teacher: 'unlocked by a teacher', key: 'key saved on their account' };
+  function rutaLevelHtml(L, S) {
+    const name = escapeHtml(L.name);
+    const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
+    const btn = (label, attrs, kind) => '<button class="btn btn-sm ' + (kind || 'btn-ghost') + ' m-ruta-btn" type="button" ' + attrs + '>' + label + '</button>';
+    const access = L.open
+      ? '<span class="m-ruta-access is-open">🔓 Open · ' + escapeHtml(RUTA_VIA[L.via] || 'open') + '</span>'
+      : '<span class="m-ruta-access">🔒 Needs the ' + name + ' key</span>' + btn('🔓 Desbloquear ' + name, 'data-ruta-act="level"', 'btn-gold');
+    const rows = (L.worlds || []).map((w) => {
+      const state = w.train
+        ? '<span class="m-ruta-train is-open">' + (w.via === 'seals' ? '✓ Open · their seals' : '🔓 Open · unlocked by a teacher') + '</span>'
+        : '<span class="m-ruta-train">Closed</span>';
+      const act = w.teacher
+        ? btn('Volver a bloquear', 'data-ruta-act="lock" data-step="train" data-world="' + w.n + '" aria-label="Volver a bloquear el mundo ' + w.n + ' de ' + name + '"')
+        : (!w.train ? btn('Desbloquear', 'data-ruta-act="unlock" data-step="train" data-world="' + w.n + '" aria-label="Desbloquear el mundo ' + w.n + ' de ' + name + '"') : '');
+      return '<div class="m-ruta-tr" role="row">' +
+        '<span class="m-ruta-w" role="cell"><b>' + w.n + '</b><span>' + escapeHtml(w.name || w.short || ('World ' + w.n)) + '</span></span>' +
+        '<span class="m-ruta-seals" role="cell"><span class="m-ruta-bar' + (w.sealed >= w.count ? ' is-full' : '') + '" aria-hidden="true"><i style="width:' + pct(w.sealed, w.count) + '%"></i></span>' +
+          '<span class="m-ruta-num">' + w.sealed + '/' + w.count + '</span></span>' +
+        '<span class="m-ruta-tcell" role="cell">' + state + '</span>' +
+        '<span class="m-ruta-act" role="cell">' + act + '</span></div>';
+    }).join('');
+    const T = L.train || { open: 0, of: 0 };
+    const anyTeacher = (L.worlds || []).some((w) => w.teacher);
+    const allOpen = T.of > 0 && T.open === T.of;
+    const D = L.dorado || {};
+    let dStatus;
+    if (D.rule === 'key') dStatus = L.open ? 'Open with the key (El Entrenamiento is not live yet)' : 'Locked: needs the ' + L.name + ' key';
+    else if (!L.open) dStatus = 'Locked: needs the ' + L.name + ' key';
+    else if (D.open) dStatus = D.via === 'teacher' ? 'Open · unlocked by a teacher' : 'Open · every world practised with ' + D.pct + ' % or more';
+    else dStatus = 'Closed · ' + (D.practiced || 0) + ' of ' + D.of + ' worlds practised with ' + D.pct + ' % or more';
+    const dNote = D.rule === 'key' && D.teacher ? ' <span class="m-ruta-note">Unlocked by a teacher too: it counts once El Entrenamiento is live.</span>' : '';
+    const sims = (L.sims || []).map((s) => '<li class="m-ruta-sim' + (s.best == null ? '' : s.best >= 60 ? ' is-pass' : ' is-low') + '"><b>Sim ' + s.n + '</b>' +
+      (s.best == null ? '<span>not taken</span>' : '<span>best ' + s.best + ' % · ' + s.tries + (s.tries === 1 ? ' try' : ' tries') + '</span>') + '</li>').join('');
+    return '<div class="m-ruta-level' + (L.own ? ' is-own' : '') + '" data-level="' + escapeHtml(L.id) + '">' +
+      '<div class="m-ruta-head">' +
+        '<h4 class="m-ruta-name" tabindex="-1"><span class="m-level-pill is-' + escapeHtml(L.id) + '">' + name + '</span>' + (L.own ? '<span class="m-ruta-own">class level</span>' : '') + '</h4>' +
+        access +
+      '</div>' +
+      '<div class="m-ruta-steps">' +
+        '<div class="m-ruta-step"><span class="m-ruta-step-n" aria-hidden="true">1</span><div class="m-ruta-step-body">' +
+          '<div class="m-ruta-step-title">La Base <span class="m-ruta-big">' + L.sealed + '<small> / ' + L.words + ' seals</small></span></div>' +
+          '<span class="m-ruta-bar is-wide' + (L.sealed >= L.words ? ' is-full' : '') + '" aria-hidden="true"><i style="width:' + pct(L.sealed, L.words) + '%"></i></span></div></div>' +
+        '<div class="m-ruta-step"><span class="m-ruta-step-n" aria-hidden="true">2</span><div class="m-ruta-step-body">' +
+          '<div class="m-ruta-step-title">El Entrenamiento <span class="m-ruta-big">' + T.open + '<small> of ' + T.of + ' worlds open</small></span>' +
+            '<span class="m-ruta-step-acts">' +
+              (!allOpen ? btn('Desbloquear todos', 'data-ruta-act="unlock" data-step="train" data-world="all" aria-label="Desbloquear todos los mundos de El Entrenamiento de ' + name + '"') : '') +
+              (anyTeacher ? btn('Volver a bloquear todos', 'data-ruta-act="lock" data-step="train" data-world="all" aria-label="Volver a bloquear lo que un maestro abrió en El Entrenamiento de ' + name + '"') : '') +
+            '</span></div>' +
+          '<div class="m-ruta-table" role="table" aria-label="' + name + ': worlds">' +
+            '<div class="m-ruta-tr m-ruta-th" role="row"><span role="columnheader">World</span><span role="columnheader">La Base seals</span><span role="columnheader">El Entrenamiento</span><span role="columnheader"><span class="m-sr">Action</span></span></div>' +
+            rows + '</div></div></div>' +
+        '<div class="m-ruta-step"><span class="m-ruta-step-n" aria-hidden="true">3</span><div class="m-ruta-step-body">' +
+          '<div class="m-ruta-step-title">El Simulacro Dorado' +
+            '<span class="m-ruta-step-acts">' + (D.teacher
+              ? btn('Volver a bloquear', 'data-ruta-act="lock" data-step="dorado" aria-label="Volver a bloquear El Simulacro Dorado de ' + name + '"')
+              : btn('Desbloquear', 'data-ruta-act="unlock" data-step="dorado" aria-label="Desbloquear El Simulacro Dorado de ' + name + '"')) + '</span></div>' +
+          '<p class="m-ruta-dstatus' + (L.open && (D.rule === 'key' || D.open) ? ' is-open' : '') + '">' + escapeHtml(dStatus) + dNote + '</p>' +
+          (sims ? '<ul class="m-ruta-sims" aria-label="' + name + ': best score per simulation">' + sims + '</ul>' : '') +
+        '</div></div>' +
+      '</div></div>';
+  }
+  function renderRuta(wrap, data) {
+    const R = data.ruta || { levels: [] };
+    const S = R.settings || {};
+    const rule = S.trainingLive
+      ? 'El Entrenamiento is live: El Simulacro Dorado opens when every world is practised with ' + S.doradoPct + ' % or more.'
+      : 'El Entrenamiento opens world by world with the kid\'s La Base seals. El Simulacro Dorado opens with the key until El Entrenamiento is live.';
+    wrap.innerHTML = '<h3 class="m-section-title" id="m-ruta-title">🏆 La Ruta Dorada</h3>' +
+      '<p class="m-ruta-rule">' + escapeHtml(rule) + '</p>' + R.levels.map((L) => rutaLevelHtml(L, S)).join('');
+    if (wrap.dataset.wired) return;
+    wrap.dataset.wired = '1';
+    wrap.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-ruta-act]');
+      if (!b || !wrap.contains(b) || b.disabled) return;
+      const card = b.closest('[data-level]');
+      const level = card ? card.dataset.level : '';
+      const act = b.dataset.rutaAct;
+      const key = [level, act === 'level' ? 'level' : 'step', b.dataset.step || '', b.dataset.world || ''].join('|');   // the same control, unlocked or locked
+      const url = '/api/admin/student/' + encodeURIComponent(data.code) + (act === 'level' ? '/level-access' : '/ruta');
+      const payload = act === 'level' ? { level } : { level, step: b.dataset.step, world: b.dataset.world === 'all' ? 'all' : Number(b.dataset.world || 0), action: act };
+      b.disabled = true;
+      adminFetch(url, pw, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        .then((r) => r.json()).then((r) => {
+          if (!r || !r.ok || !r.ruta) { b.disabled = false; notify('Could not change it: ' + ((r && r.error) || 'unknown error')); return; }
+          data.ruta = r.ruta;
+          if (act === 'level' && r.levelKey && $('m-detail-key') && r.levelKey.level === level) {
+            $('m-detail-key').innerHTML = levelKeyLine(r.levelKey);
+            $('m-detail-key').classList.toggle('is-open', !!r.levelKey.open);
+          }
+          renderRuta(wrap, data);
+          // the focus stays where the teacher was: the same world's or step's button (now «Volver a bloquear» or «Desbloquear»), else the level's title
+          const again = Array.from(wrap.querySelectorAll('[data-ruta-act]')).find((x) => {
+            const c = x.closest('[data-level]');
+            return [c ? c.dataset.level : '', x.dataset.rutaAct === 'level' ? 'level' : 'step', x.dataset.step || '', x.dataset.world || ''].join('|') === key;
+          });
+          const lvlCard = wrap.querySelector('[data-level="' + CSS.escape(level) + '"]');
+          const target = again || (lvlCard && lvlCard.querySelector('.m-ruta-name'));
+          if (target) { try { target.focus({ preventScroll: true }); } catch (_) {} }
+          const who = data.displayName || data.code;
+          const what = act === 'level' ? 'La Ruta Dorada open' : (payload.step === 'dorado' ? 'El Simulacro Dorado' : (payload.world === 'all' ? 'El Entrenamiento, every world' : 'El Entrenamiento, world ' + payload.world));
+          notify('✓ ' + who + ': ' + what + (act === 'lock' ? ' locked again' : act === 'level' ? '' : ' unlocked') + '. Their phone shows it next time La Ruta Dorada opens.');
+        }).catch(() => { b.disabled = false; notify('Network error'); });
+    });
+  }
   // 🔑 2026-10-15 La Ruta Dorada: is this kid's level open on their account (any phone)? «Desbloquear» opens it.
   function levelKeyLine(lk) {
     if (!lk || !lk.level) return '🔑 La Ruta Dorada: no level yet (the kid has not entered a class code)';
@@ -3427,6 +3603,8 @@
         if (!r || !r.ok) { unlockBtn.disabled = false; notify('Could not unlock: ' + ((r && r.error) || 'unknown error')); return; }
         const line = $('m-detail-key');
         if (line) { line.innerHTML = levelKeyLine(r.levelKey); line.classList.add('is-open'); }
+        const rw = $('m-ruta');
+        if (rw && r.ruta) { data.ruta = r.ruta; renderRuta(rw, data); }
         notify('✓ ' + (data.displayName || data.code) + ': La Ruta Dorada open. It opens on their phone at their next login to Mis Tareas.');
       }).catch(() => { unlockBtn.disabled = false; notify('Network error'); });
     });
@@ -3715,6 +3893,15 @@
         });
       });
     }
+    // 🏆 La Ruta Dorada (2026-10-16): per level, the seals per world, the El Entrenamiento worlds, El Simulacro Dorado
+    if (data.ruta && Array.isArray(data.ruta.levels) && data.ruta.levels.length) {
+      const wrap = document.createElement('section');
+      wrap.className = 'm-ruta';
+      wrap.id = 'm-ruta';
+      wrap.setAttribute('aria-labelledby', 'm-ruta-title');
+      body.appendChild(wrap);
+      renderRuta(wrap, data);
+    }
     // Assignments
     if (assigns.length) {
       const h = document.createElement('div');
@@ -3854,8 +4041,14 @@
         body.appendChild(item);
       });
     }
-    if (!assigns.length && !tests.length && !data.sentences.length) {
-      body.innerHTML = '<div class="m-empty">This student has no activity yet.</div>';
+    // (2026-10-16: placed on top instead of replacing the body: it used to wipe the HSK simulations of a kid who had only
+    // those, and now La Ruta Dorada, which every kid with a level has)
+    const anySeal = !!(data.ruta && data.ruta.levels && data.ruta.levels.some((l) => l.sealed > 0));
+    if (!assigns.length && !tests.length && !data.sentences.length && !hskList.length && !anySeal) {
+      const empty = document.createElement('div');
+      empty.className = 'm-empty';
+      empty.textContent = 'This student has no activity yet.';
+      body.prepend(empty);
     }
   }
 

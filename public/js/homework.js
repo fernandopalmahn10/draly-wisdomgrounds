@@ -4018,10 +4018,19 @@
     if (a.hidden) return;
     // ?from=homework: the path's back arrow then returns here (the home-screen app has no back button)
     a.href = '/audios/' + encodeURIComponent(hwBase.level) + '?from=homework';
+    // 2026-10-16 (phase 3): the seals live on the kid's account too (server: hwBase.seals). This phone's mirror counts
+    // when it already holds THIS kid's account (it is the newest); a phone that never met the account adds its own
+    // (they join the account at the next visit to La Base); a sibling's mirror never counts.
     let n = 0;
     try {
       const o = JSON.parse(localStorage.getItem('draly_base_' + hwBase.level) || 'null');
-      n = o && Array.isArray(o.seals) ? o.seals.filter((x) => Number.isInteger(x) && x >= 1 && x <= hwBase.words).length : 0;
+      const okN = (x) => Number.isInteger(x) && x >= 1 && x <= hwBase.words;
+      const mine = o && Array.isArray(o.seals) ? o.seals.filter(okN) : [];
+      const acct = Array.isArray(hwBase.seals) ? hwBase.seals.filter(okN) : null;
+      if (!acct) n = mine.length;
+      else if (o && o.who && o.who === hwBase.who) n = mine.length;
+      else if (o && o.who) n = acct.length;
+      else n = new Set(acct.concat(mine)).size;
     } catch (_) { n = 0; }
     // the little book's spine: a long name («New HSK 1») breaks as «New / HSK 1», never «HSK / 1»
     $('pt-base-level').textContent = hwLevelName().replace(/ (\d+)$/, ' $1');

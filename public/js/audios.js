@@ -91,7 +91,9 @@
   }
   // back to this page from the key screen (a phone's back/forward cache) or from another tab: the locks may have
   // opened meanwhile. Ask the server again; redraw only the picker or a route, and only when something changed.
-  const sig = (s) => JSON.stringify(s && s.modules ? s.modules.map((m) => [m.id, m.open, m.sims.length]) : null);
+  // (phase 3: a kid's progress too, so seals saved from this phone or opened by a teacher redraw the route)
+  const sig = (s) => JSON.stringify(s && s.modules ? s.modules.map((m) => [m.id, m.open, m.sims.length, m.dorado && m.dorado.open,
+    m.progress ? [m.progress.sealed, m.progress.worlds.map((w) => (w.train ? 1 : 0) + (w.teacher ? 2 : 0)).join('')] : null]) : null);
   function refreshState() {
     if (!catalog || !isWorldView()) return;
     fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
@@ -192,7 +194,7 @@
   // ── La Ruta Dorada (js/ruta.js draws both screens) ─────────────────
   // what ruta.js needs from this page: the catalog, the visitor's modules, the seals on this phone, the meters and
   // the homework cards (one look for them everywhere)
-  const rutaCtx = () => ({ catalog, ruta, sealsOf, meterHtml, cardHtml, homeworksOf });
+  const rutaCtx = () => ({ catalog, ruta, sealsOf, meterHtml, cardHtml, homeworksOf, refresh: refreshState });
   function renderPicker() {
     hw = null;
     document.title = 'La Ruta Dorada · Dralingo';

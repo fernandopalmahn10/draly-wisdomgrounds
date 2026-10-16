@@ -80,19 +80,48 @@
     '<use href="#rd-sky" x="0" y="0" width="400" height="110"/><use href="#rd-sky" x="400" y="0" width="400" height="110"/></svg>';
 
   // ── what a module holds, for this visitor ─────────────────────────
-  // base / gold: 'open' | 'locked' | 'soon' (nothing yet); train: 'soon' until phase 4
+  // base / gold: 'open' | 'locked' | 'soon' (nothing yet); train: 'soon' until phase 4. A gold step that the key opens
+  // but the kid has not earned yet (once El Entrenamiento is live: every world practised) is 'locked' with goldEarn.
   function statesOf(m) {
+    const earn = !!(m.open && m.simCount && m.dorado && !m.dorado.open);
     return {
       base: !m.base ? 'soon' : (m.open ? 'open' : 'locked'),
       train: 'soon',
-      gold: !m.simCount ? 'soon' : (m.open ? 'open' : 'locked'),
+      gold: !m.simCount ? 'soon' : (m.open && !earn ? 'open' : 'locked'),
+      goldEarn: earn,
     };
   }
   const sellos = (n, of) => n + ' de ' + of + ' sellos';   // the same wording as La Base: «7 de 83 sellos»
-  function sealsOf(ctx, m) {
-    const b = m.base && (ctx.catalog.bases || []).find((x) => x.id === m.base.id);
-    return b ? ctx.sealsOf(b) : new Set();
+
+  // ── what this visitor's seals add up to in an open module (phase 3, 2026-10-16) ──
+  // A logged-in kid: their account (server `progress`), or this phone's mirror when it already holds THEIR account (it
+  // is the newest: taps not saved yet included). Anyone else with the key (a key-only phone, a teacher): this phone's
+  // own seals. El Entrenamiento opens world by world: every seal of a world in La Base (or a teacher's «Desbloquear»).
+  // → null | { sealed, words, base (catalog entry), worlds: [{ n, short, count, sealed, train, via }] }
+  function progressOf(ctx, m) {
+    if (!m.open || !m.base) return null;
+    const cb = (ctx.catalog.bases || []).find((x) => x.id === m.base.id);
+    const list = (m.base.worlds && m.base.worlds.length ? m.base.worlds : (cb && cb.worlds) || []);
+    const P = m.progress;
+    const AB = window.AudiosBase;
+    const mine = !!(P && ctx.ruta.who && AB && AB.who && cb && AB.who(cb.level) === ctx.ruta.who);
+    const seals = (!P || mine) && cb ? ctx.sealsOf(cb) : null;
+    let next = 1;
+    const worlds = list.map((w) => {
+      const first = w.first || next;
+      next = first + w.count;
+      const pw = P ? (P.worlds || []).find((x) => x.n === w.n) : null;
+      let sealed = 0;
+      if (seals) { for (let n = first; n < first + w.count; n++) if (seals.has(n)) sealed++; } else sealed = pw ? Math.min(pw.sealed, w.count) : 0;
+      const bySeals = sealed >= w.count;
+      const byTeacher = !!(pw && pw.teacher);
+      return { n: w.n, short: w.short || '', count: w.count, sealed, train: bySeals || byTeacher, via: bySeals ? 'seals' : (byTeacher ? 'teacher' : null) };
+    });
+    return { sealed: worlds.reduce((a, w) => a + w.sealed, 0), words: m.base.words, base: cb, worlds };
   }
+  // La Base's meter (the same look as audios.js meterHtml), from the per-world counts
+  const meterOf = (p) => '<span class="au-meter" aria-hidden="true">' +
+    p.worlds.map((w) => '<i style="--w:' + w.count + ';--p:' + (w.sealed / w.count).toFixed(3) + '"></i>').join('') + '</span>';
 
   // a friend of the gang cheers along (a new one, and a new line, on each visit: «alive, randomized»)
   function friendRow(cls) {
@@ -105,11 +134,15 @@
 
   // ── the picker: big glossy cards that fly ─────────────────────────
   let live = null;   // the carousel on screen (one at a time)
-  function leave() { if (live) { live.destroy(); live = null; } }
+  function leave() {
+    if (live) { live.destroy(); live = null; }
+    if (readyIo) { readyIo.disconnect(); readyIo = null; }
+  }
 
   function cardHtml(m, i, look, ctx) {
     const st = statesOf(m);
-    const seals = m.open && m.base ? sealsOf(ctx, m).size : 0;
+    const pr = progressOf(ctx, m);
+    const seals = pr ? pr.sealed : 0;
     // a locked module: the gold lock seal of the key screen next to its words (kids who don't read see the lock)
     const status = !m.open
       ? '<span class="rd-card-status is-locked"><span class="rd-lockseal" aria-hidden="true">' + I.lock + '</span><span id="rd-s-' + esc(m.slug) + '">Se abre con la clave</span></span>'
@@ -415,12 +448,12 @@
 
     // 1 · La Base
     const b = m.base && (ctx.catalog.bases || []).find((x) => x.id === m.base.id);
+    const pr = progressOf(ctx, m);
     let baseBody;
-    if (st.base === 'open' && b) {
-      const seals = ctx.sealsOf(b);
-      const go = seals.size ? (seals.size >= b.words ? 'Repasar' : 'Seguir') : 'Empezar';
+    if (st.base === 'open' && b && pr) {
+      const go = pr.sealed ? (pr.sealed >= b.words ? 'Repasar' : 'Seguir') : 'Empezar';
       baseBody = '<p class="rd-stop-text">Las ' + b.words + ' palabras con su dibujo, una frase y el audio.</p>' +
-        '<div class="rd-progress">' + ctx.meterHtml(b, seals) + '<p>' + sellos(seals.size, b.words) + '</p></div>' +
+        '<div class="rd-progress">' + meterOf(pr) + '<p>' + sellos(pr.sealed, b.words) + '</p></div>' +
         '<a class="rd-btn rd-btn-red" href="/audios/' + esc(b.id) + '" data-nav>' + I.play + go + '</a>';
     } else if (st.base === 'locked') {
       baseBody = '<p class="rd-stop-text">Las ' + m.base.words + ' palabras con su dibujo, una frase y el audio.</p>' +
@@ -428,12 +461,40 @@
     } else {
       baseBody = '<p class="rd-stop-text">Todas las palabras del nivel, con su dibujo y el audio.</p><p class="rd-soon">Muy pronto</p>';
     }
-    // 2 · El Entrenamiento (phase 4): an honest «muy pronto»
-    const trainBody = '<p class="rd-stop-text">Practica cada mundo como en el examen, con audio y la respuesta al instante.</p>' +
+    // 2 · El Entrenamiento (phase 4): an honest «muy pronto», and (phase 3) what the kid's seals already earn there:
+    // world by world, every seal of a world in La Base opens that world here. Each world links to it in La Base.
+    let trainBody = '<p class="rd-stop-text">Practica cada mundo como en el examen, con audio y la respuesta al instante.</p>' +
       '<p class="rd-soon">' + I.soon + 'Muy pronto</p>';
+    if (pr && b && pr.worlds.length) {
+      const ready = pr.worlds.filter((w) => w.train).length;
+      const all = ready === pr.worlds.length;
+      trainBody += '<div class="rd-train">' +
+        '<p class="rd-train-count"><b>' + ready + '</b> de ' + pr.worlds.length + ' mundos listos para entrenar</p>' +
+        '<ol class="rd-worlds" aria-label="Los mundos de El Entrenamiento">' + pr.worlds.map((w) => {
+          const left = w.count - w.sealed;
+          const label = 'Mundo ' + w.n + (w.short ? ', ' + w.short : '') + ': ' + (w.train ? 'listo para entrenar'
+            : (left === 1 ? 'falta 1 sello' : 'faltan ' + left + ' sellos') + ' en La Base');
+          return '<li><a class="rd-world' + (w.train ? ' is-ready' : '') + '" data-w="' + w.n + '" href="/audios/' + esc(b.id) + '#mundo-' + w.n + '" data-nav' +
+            ' aria-label="' + esc(label) + '">' +
+            '<b class="rd-world-n" aria-hidden="true">' + (w.train ? I.check : w.n) + '</b>' +
+            '<span class="rd-world-name" aria-hidden="true">' + esc(w.short || ('Mundo ' + w.n)) + '</span>' +
+            '<span class="rd-world-meta" aria-hidden="true">' + (w.train ? 'Listo' : w.sealed + '/' + w.count) + '</span></a></li>';
+        }).join('') + '</ol>' +
+        '<p class="rd-train-hint">' + (all ? '¡Todos tus mundos están listos! El Entrenamiento llega muy pronto.'
+          : 'Completa los sellos de un mundo en La Base y ese mundo se abre aquí.') + '</p></div>';
+    }
     // 3 · El Simulacro Dorado: the level's simulations (only when open: each opens its player through the key check)
     let goldBody;
-    if (st.gold === 'open') {
+    if (st.goldEarn) {
+      // the key opens it, but (El Entrenamiento live) the kid earns it: every world practised with pct % or more
+      const d = m.dorado;
+      goldBody = '<p class="rd-stop-text">' + m.simCount + (m.simCount === 1 ? ' simulacro completo' : ' simulacros completos') + ' con el audio original del examen.</p>' +
+        (d.login
+          ? '<p class="rd-stop-state">' + I.lock + 'Entra con tu código para guardar tu avance</p>' +
+            '<a class="rd-btn rd-btn-red" href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">Entrar con mi código</a>'
+          : '<p class="rd-stop-state">' + I.lock + 'Se abre cuando practiques cada mundo con ' + d.pct + ' % o más</p>' +
+            (d.of ? '<p class="rd-train-count"><b>' + (d.practiced || 0) + '</b> de ' + d.of + ' mundos con ' + d.pct + ' %</p>' : ''));
+    } else if (st.gold === 'open') {
       goldBody = '<p class="rd-stop-text">El examen completo con el audio original, como el día del examen.</p>' +
         '<ul class="rd-sims">' + m.sims.map((s) =>
           '<li><a class="rd-sim' + (s.best != null ? ' is-done' : '') + '" href="' + esc(s.href) + '">' +
@@ -464,6 +525,56 @@
         stop('gold', 3, 'El Simulacro Dorado', I.trophy, goldBody) +
       '</ol>' +
       (hws.length ? '<h2 class="au-h2">Audios de las tareas</h2><div class="au-cards">' + hws.map((h, k) => ctx.cardHtml(h, k === 0)).join('') + '</div>' : '');
+    if (pr) celebrateNewWorlds(main, m, pr);
+    // a logged-in kid: this phone's seals meet their account (a phone's seals from before the login join it, taps not
+    // saved yet go up); when the account changed, the route asks the server again and redraws (js/audios.js)
+    const AB = window.AudiosBase;
+    if (ctx.ruta.student && m.open && b && AB && AB.sync) {
+      const at = location.pathname;
+      AB.sync(b.level, b.words).then((r) => { if (r && r.sent && location.pathname === at && ctx.refresh) ctx.refresh(); }, () => {});
+    }
+  }
+
+  // ── the route's one moment (phase 3): a world that became ready for El Entrenamiento since this phone last saw the
+  // route pops its gold coin once, when it comes into view («so kids see what their seals earn»). The first look at
+  // a route only remembers what is ready (no fireworks for the past). localStorage draly_ruta_ready: { slug: [n…] }.
+  let readyIo = null;
+  function celebrateNewWorlds(main, m, pr) {
+    if (readyIo) { readyIo.disconnect(); readyIo = null; }
+    const now = pr.worlds.filter((w) => w.train).map((w) => w.n);
+    let seen = null;
+    try { seen = JSON.parse(store.getL('draly_ruta_ready') || 'null'); } catch (_) { seen = null; }
+    if (!seen || typeof seen !== 'object' || Array.isArray(seen)) seen = {};
+    const before = Array.isArray(seen[m.slug]) ? seen[m.slug] : null;
+    // remembered once the kid has seen it (a redraw before the tile came into view must not swallow the moment)
+    const remember = () => { seen[m.slug] = now; store.setL('draly_ruta_ready', JSON.stringify(seen)); };
+    const fresh = before ? now.filter((n) => before.indexOf(n) < 0) : [];
+    const tiles = fresh.map((n) => main.querySelector('.rd-world[data-w="' + n + '"]')).filter(Boolean);
+    if (!tiles.length || !tiles[0].animate) { remember(); return; }
+    const pop = (tile, i) => {
+      if (i === 0) remember();
+      const coin = tile.querySelector('.rd-world-n');
+      try {
+        if (calmMotion()) { coin.animate([{ opacity: 0.25 }, { opacity: 1 }], { duration: 320, delay: i * 80, easing: 'ease-out', fill: 'backwards' }); return; }
+        coin.animate([
+          { transform: 'scale(.55) rotate(-24deg)', opacity: 0.2 },
+          { transform: 'scale(1.16) rotate(7deg)', opacity: 1, offset: 0.62 },
+          { transform: 'none', opacity: 1 },
+        ], { duration: 560, delay: i * 90, easing: 'cubic-bezier(.23, 1, .32, 1)', fill: 'backwards' });
+        tile.animate([
+          { boxShadow: 'inset 0 0 0 1.5px #c9a14a, 0 0 0 0 rgba(216, 176, 90, .55)' },
+          { boxShadow: 'inset 0 0 0 1.5px #c9a14a, 0 0 0 10px rgba(216, 176, 90, 0)' },
+        ], { duration: 900, delay: i * 90 + 200, easing: 'cubic-bezier(.23, 1, .32, 1)' });
+      } catch (_) { /* an old phone: the tile is simply gold */ }
+    };
+    if (!('IntersectionObserver' in window)) { tiles.forEach(pop); return; }
+    readyIo = new IntersectionObserver((entries) => {
+      if (!entries.some((en) => en.isIntersecting)) return;
+      readyIo.disconnect();
+      readyIo = null;
+      tiles.forEach(pop);
+    }, { threshold: 0.7 });
+    readyIo.observe(tiles[0]);
   }
 
   window.Ruta = { picker, path, leave, get live() { return live; } };

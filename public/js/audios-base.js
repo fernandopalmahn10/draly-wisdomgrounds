@@ -9,7 +9,9 @@
 //   tap the picture   → the word        tap the sentence → the sentence
 //   tap the seal      → «¡Me la sé!» stamped, saved on this phone
 //                       (localStorage draly_base_<level>: travels with the
-//                       move bridge to app.dralingo.app)
+//                       move bridge to app.dralingo.app) and, for a kid
+//                       logged in at /homework, on their account too
+//                       (phase 3: any phone, their teacher sees it)
 //   «Escuchar el mundo» → word, pause, sentence, next word… (stoppable)
 // One <audio> element (shared with audios.js) plays everything: one sound at a
 // time. audios.js calls AudiosBase.render() / AudiosBase.leave().
@@ -35,19 +37,143 @@
   const DRAGON = { hello: '/assets/dralingo/hello.webp', wise: '/assets/dralingo/wise.webp', power: '/assets/dralingo/power.webp' };
 
   // ── saved seals (one small JSON per level) ─────────────────────────
-  function readSeals(level) {
-    try {
-      const o = JSON.parse(localStorage.getItem(KEY(level)) || 'null');
-      return new Set(o && Array.isArray(o.seals) ? o.seals.filter((n) => Number.isInteger(n)) : []);
-    } catch (_) { return new Set(); }
+  // { v: 1, seals: [n…], last, who?, pend? }: who + pend since phase 3 (below)
+  function readObj(level) {
+    try { const o = JSON.parse(localStorage.getItem(KEY(level)) || 'null'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (_) { return {}; }
   }
+  function writeObj(level, o) { try { localStorage.setItem(KEY(level), JSON.stringify(o)); } catch (_) {} }
+  const ints = (a) => (Array.isArray(a) ? a.filter((n) => Number.isInteger(n) && n > 0) : []);
+  const sorted = (set) => [...set].sort((a, b) => a - b);
+  function readSeals(level) { return new Set(ints(readObj(level).seals)); }
   // last: the word stamped most recently («Seguir» continues from its world, not from world 1)
-  function readLast(level) {
-    try { const o = JSON.parse(localStorage.getItem(KEY(level)) || 'null'); return o && Number.isInteger(o.last) ? o.last : 0; } catch (_) { return 0; }
+  function readLast(level) { const o = readObj(level); return Number.isInteger(o.last) ? o.last : 0; }
+  // change: { n, on } = a tap, kept as a change to save on the kid's account (pend) until the server has it
+  function writeSeals(level, set, last, change) {
+    const o = readObj(level);
+    o.v = 1;
+    o.seals = sorted(set);
+    o.last = last || 0;
+    // (a phone nobody is logged in on, that never held an account: nothing to save for anyone, the seals are its own)
+    if (change && (o.who || !sync[level] || sync[level].mode !== 'device')) {
+      const p = o.pend && typeof o.pend === 'object' ? o.pend : {};
+      p[change.n] = change.on ? 1 : 0;
+      o.pend = p;
+    }
+    writeObj(level, o);
   }
-  function writeSeals(level, set, last) {
-    try { localStorage.setItem(KEY(level), JSON.stringify({ v: 1, seals: [...set].sort((a, b) => a - b), last: last || 0 })); } catch (_) {}
+
+  // ── the seals on the kid's account (La Ruta Dorada, phase 3 · 2026-10-16) ──
+  // A logged-in kid (the /homework session): every stamp and unstamp is saved on their record too (batched, retried
+  // while the phone is offline), so La Base shows the same seals on any phone and their teacher sees them. This phone
+  // keeps a mirror in draly_base_<level>:
+  //   who  = whose account the mirror holds (an opaque id from the server, never the kid's code)
+  //   pend = changes not saved yet: { <word number>: 1 stamped | 0 unstamped }
+  // The first time a phone meets the kid's account, the seals it holds from before the login join the account (a
+  // union); a phone holding another kid's mirror (a sibling) takes this kid's seals instead and never mixes them.
+  // Nobody logged in (a key-only phone): the seals stay on the phone, as before; a mirror whose login ended keeps its
+  // changes for that kid's next login. Server: /api/ruta/seals (server.js, core/ruta-progress.js).
+  const sync = {};   // level → { mode: 'account' | 'device' | null, max, timer, busy, again, tries, onChange, sent }
+  const applyPend = (set, pend) => { const s = new Set(set); Object.keys(pend || {}).forEach((k) => { if (pend[k]) s.add(+k); else s.delete(+k); }); return s; };
+  const sameList = (a, b) => a.length === b.length && a.every((n, i) => n === b[i]);
+  function syncOf(level) { return sync[level] || (sync[level] = { mode: null, max: 0, timer: 0, busy: null, again: false, tries: 0, onChange: null, sent: false }); }
+  function later(level, ms) {
+    const s = syncOf(level);
+    clearTimeout(s.timer);
+    s.timer = setTimeout(() => { s.timer = 0; flush(level); }, ms);
   }
+  // save the changes waiting on this phone. → a promise that settles when this round is done (never rejects)
+  function flush(level) {
+    const s = syncOf(level);
+    if (s.mode !== 'account') return Promise.resolve();
+    if (s.busy) { s.again = true; return s.busy; }
+    clearTimeout(s.timer); s.timer = 0;
+    const pend = readObj(level).pend || {};
+    const sent = Object.assign({}, pend);
+    const keys = Object.keys(sent);
+    if (!keys.length) return Promise.resolve();
+    const add = keys.filter((k) => sent[k]).map(Number);
+    const remove = keys.filter((k) => !sent[k]).map(Number);
+    s.busy = fetch('/api/ruta/seals', {
+      method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ level, add, remove }),
+    }).then((r) => r.json().catch(() => null).then((d) => ({ status: r.status, d })), () => ({ status: 0, d: null }))
+      .then(({ status, d }) => {
+        s.busy = null;
+        const o = readObj(level);
+        const p = o.pend && typeof o.pend === 'object' ? o.pend : {};
+        if (d && d.ok && Array.isArray(d.seals)) {
+          s.tries = 0;
+          s.sent = true;
+          Object.keys(sent).forEach((k) => { if (p[k] === sent[k]) delete p[k]; });   // a newer tap on the same word stays
+          const before = ints(o.seals);
+          o.pend = p;
+          if (d.who) o.who = d.who;
+          o.seals = sorted(applyPend(ints(d.seals), p));
+          writeObj(level, o);
+          if (!sameList(before, o.seals) && s.onChange) s.onChange(level);
+          if (Object.keys(p).length || s.again) { s.again = false; later(level, 300); }
+          return;
+        }
+        s.again = false;
+        // the login ended (12 h) or the level was closed: the changes wait on this phone for this kid's next login
+        if (status === 401 || status === 403) { s.mode = 'device'; return; }
+        // a word this level's base doesn't have (an old mirror): those changes are dropped, never retried forever
+        if (status === 400 || status === 404) {
+          Object.keys(sent).forEach((k) => { if (p[k] === sent[k]) delete p[k]; });
+          o.pend = p;
+          writeObj(level, o);
+          return;
+        }
+        // offline, a busy server, too many at once: again a little later (2 s, 4 s, 8 s… up to a minute)
+        s.tries += 1;
+        later(level, Math.min(60000, 2000 * Math.pow(2, s.tries - 1)));
+      });
+    return s.busy;
+  }
+  // Ask the account (if a kid is logged in), settle the mirror, send what waits. max: the base's word count.
+  // → Promise<{ account, who, changed, sent }> (changed: the mirror's seals changed; sent: the account was written)
+  function syncLevel(level, max, onChange) {
+    const s = syncOf(level);
+    if (max) s.max = max;
+    if (onChange) s.onChange = onChange;
+    s.sent = false;
+    return fetch('/api/ruta/seals?level=' + encodeURIComponent(level), { credentials: 'same-origin', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null), () => null)
+      .then((d) => {
+        const o = readObj(level);
+        const before = ints(o.seals);
+        if (!d || !d.ok) {                       // offline or server trouble: the phone keeps what it has, changes wait
+          if (s.mode === 'account' && o.pend && Object.keys(o.pend).length) later(level, 4000);
+          return { account: s.mode === 'account', who: o.who || null, changed: false, sent: false };
+        }
+        if (!d.student) {                        // a key on this phone, nobody logged in: the seals stay here
+          s.mode = 'device';
+          if (!o.who && o.pend) { delete o.pend; writeObj(level, o); }
+          return { account: false, who: null, changed: false, sent: false };
+        }
+        s.mode = 'account';
+        const acct = new Set(ints(d.seals));
+        let pend;
+        if (o.who === d.who) pend = o.pend && typeof o.pend === 'object' ? o.pend : {};     // the same kid: what waits goes up
+        else if (!o.who) {                       // the first time this phone meets the account: its seals join it
+          pend = {};
+          ints(o.seals).forEach((n) => { if (!acct.has(n) && (!s.max || n <= s.max)) pend[n] = 1; });
+        } else pend = {};                        // another kid's mirror: this kid's own seals replace it
+        o.v = 1;
+        o.who = d.who;
+        o.pend = pend;
+        o.seals = sorted(applyPend(acct, pend));
+        writeObj(level, o);
+        const changed = !sameList(before, o.seals);
+        if (changed && s.onChange) s.onChange(level);
+        return flush(level).then(() => ({ account: true, who: d.who, changed, sent: s.sent }));
+      });
+  }
+  // a tap: saved on the account a moment later (taps in a row travel together)
+  function queueSave(level) { if (syncOf(level).mode === 'account') later(level, 1200); }
+  window.addEventListener('online', () => Object.keys(sync).forEach((l) => flush(l)));
+  // whose account a phone's mirror holds (La Ruta Dorada compares it with the logged-in kid's)
+  const mirrorWho = (level) => readObj(level).who || null;
   // first visit (no seal, no sound yet): the first card's speaker invites the first tap
   const HINT_KEY = 'draly_base_tapped';
   const tappedBefore = () => { try { return localStorage.getItem(HINT_KEY) === '1'; } catch (_) { return true; } };
@@ -89,6 +215,14 @@
     watchWorlds();
     hintFirstTap();
     mediaInfo();
+    // a logged-in kid: the seals of their account (any phone) replace this phone's, once settled (phase 3)
+    const lvl = d.level;
+    syncLevel(lvl, d.words.length, (changedLevel) => {
+      if (!active || !data || data.level !== changedLevel) return;
+      seals = new Set([...readSeals(changedLevel)].filter((n) => byN.has(n)));
+      lastWord = byN.has(readLast(changedLevel)) ? readLast(changedLevel) : lastWord;
+      update(false);
+    });
     if (location.hash) {
       let target = null;
       try { target = document.getElementById(decodeURIComponent(location.hash.slice(1))); } catch (_) { target = null; }
@@ -100,6 +234,7 @@
     if (!active) return;
     stopAll();
     active = false;
+    if (data) flush(data.level);              // the route behind this page shows the account's seals: save the last taps now
     if (io) { io.disconnect(); io = null; }
     if (hintIo) { hintIo.disconnect(); hintIo = null; }
     document.removeEventListener('keydown', onKey);
@@ -241,7 +376,7 @@
   function done(w, next) {
     return '<div class="bs-done on-red" data-done="' + w.n + '" hidden>' +
       '<img data-src="' + DRAGON.power + '" alt="" width="432" height="480">' +
-      '<div><h3>¡Mundo ' + w.n + ' completo!</h3><p>Ya tienes los ' + w.count + ' sellos de ' + esc(w.name) + '.</p>' +
+      '<div><h3>¡Mundo ' + w.n + ' completo!</h3><p>Ya tienes los ' + w.count + ' sellos de ' + esc(w.name) + '. Este mundo ya se abre en El Entrenamiento.</p>' +
       (next ? '<a class="bs-btn bs-btn-gold" href="#mundo-' + next.n + '">' + ICON.play + '<span>Sigue: mundo ' + next.n + '</span></a>'
         : '<a class="bs-btn bs-btn-gold" href="#repaso">' + ICON.play + '<span>Ir al repaso</span></a>') +
       '</div></div>';
@@ -357,7 +492,8 @@
     const w = byN.get(n);
     const on = !seals.has(n);
     if (on) { seals.add(n); lastWord = n; } else seals.delete(n);
-    writeSeals(data.level, seals, lastWord);
+    writeSeals(data.level, seals, lastWord, { n, on });
+    queueSave(data.level);
     markTapped();
     if (on && !reduced() && btn.animate) {
       btn.querySelector('i').animate([
@@ -373,7 +509,7 @@
     if (seals.size === data.words.length) {
       toast('¡Las ' + data.words.length + ' palabras!', 'Terminaste La base de ' + data.levelName + '. Ahora, el repaso.', true);
     } else if (k === world.count) {
-      toast('¡Mundo ' + world.n + ' completo!', world.name + ': ' + k + ' de ' + world.count + ' sellos.', false);
+      toast('¡Mundo ' + world.n + ' completo!', world.name + ' ya se abre en El Entrenamiento.', false);   // what the seals earn (phase 3)
     }
   }
 
@@ -646,5 +782,9 @@
     render(main, d, c) { bind(c.player); render(main, d, c); },
     leave,
     seals: readSeals,
+    // La Ruta Dorada (js/ruta.js): settle a level's seals with the logged-in kid's account, and whose account this
+    // phone's mirror holds
+    sync: (level, max) => syncLevel(level, max),
+    who: mirrorWho,
   };
 })();

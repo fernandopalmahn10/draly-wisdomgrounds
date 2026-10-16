@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <!-- 2026-10-13 remake: the teacher's control room in the platform's sticker world (spec docs/specs/maestro-remake.md).
        teacher-dashboard.css is this page's only stylesheet; maestro.css stays for host-hsk.html. -->
-  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261015b">
+  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261016b">
 </head>
 <body class="m-app">
 
@@ -135,6 +135,24 @@
           <p class="m-keys-help">Una clave por nivel abre La Base, El Entrenamiento y El Simulacro Dorado. Cada familia la escribe una vez en su teléfono. Una palabra y un número, fácil de dictar (por ejemplo DRAGON-47); no uses PANDA-12, es el ejemplo que ve todo el mundo.</p>
           <p class="m-keys-status" id="m-keys-status">Cargando…</p>
           <div class="m-keys-list" id="m-keys-list"></div>
+        </section>
+        <!-- 🏆 2026-10-16 La Ruta Dorada, phase 3: how the steps open (core/ruta-progress.js) -->
+        <section class="m-panel m-rules" id="m-rules" aria-labelledby="m-rules-title">
+          <h2 class="m-h2" id="m-rules-title">🏆 La Ruta Dorada: cómo se abre</h2>
+          <p class="m-keys-help">La clave abre el nivel. Dentro, El Entrenamiento se abre mundo por mundo: cuando el alumno pone todos los sellos «¡Me la sé!» de ese mundo en La Base. En el perfil de cada alumno puedes desbloquear cualquier paso antes.</p>
+          <div class="m-rules-row">
+            <button class="m-switch" id="m-rules-live" type="button" role="switch" aria-checked="false" aria-describedby="m-rules-live-help" disabled>
+              <span class="m-switch-track" aria-hidden="true"></span><span>El Entrenamiento está activo</span>
+            </button>
+            <p class="m-rules-help" id="m-rules-live-help">Cargando…</p>
+          </div>
+          <form class="m-rules-row" id="m-rules-pct-form" novalidate>
+            <label class="m-rules-label" for="m-rules-pct">El Simulacro Dorado se abre con</label>
+            <input class="input m-rules-pct" id="m-rules-pct" type="number" min="50" max="100" step="5" inputmode="numeric" disabled>
+            <span class="m-rules-label">% o más en cada mundo</span>
+            <button class="btn btn-gold btn-sm" type="submit" id="m-rules-pct-save" disabled>Guardar</button>
+            <p class="m-key-msg" id="m-rules-msg" role="status"></p>
+          </form>
         </section>
         <section class="m-panel">
           <div class="m-teachers-header">
@@ -488,7 +506,7 @@
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/cast.js?v=20261013a"></script>
-  <script src="/js/maestro.js?v=20261015y"></script>
+  <script src="/js/maestro.js?v=20261016d"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>
