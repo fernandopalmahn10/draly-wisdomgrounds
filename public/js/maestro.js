@@ -2813,7 +2813,7 @@
   function renderLevelKeys(d) {
     const when = d.goLiveAt ? new Date(d.goLiveAt).toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
     $('m-keys-status').innerHTML = d.goLiveAt
-      ? '✅ Las claves están activas desde el <b>' + escapeHtml(when) + '</b>. Los alumnos registrados antes no necesitan clave; las cuentas nuevas sí.'
+      ? '✅ Las claves están activas desde el <b>' + escapeHtml(when) + '</b>: los alumnos registrados antes no necesitan clave; las cuentas nuevas sí.'
       : '⏳ Todavía no hay claves. Cuando pongas la primera, las claves quedan activas: los alumnos registrados hasta ese momento siguen entrando sin clave, las cuentas nuevas la necesitarán.';
     const list = $('m-keys-list');
     list.innerHTML = '';
@@ -2831,7 +2831,7 @@
         '<div class="m-key-actions">' +
           '<button class="btn btn-ghost btn-sm m-key-edit" type="button">' + (l.key ? '✏️ Cambiar' : '➕ Poner clave') + '</button>' +
           (l.key ? '<button class="btn btn-gold btn-sm m-key-copy" type="button">📋 Copiar mensaje para WhatsApp</button>' : '') +
-          (l.key ? '<button class="btn btn-ghost btn-sm m-danger-ghost m-key-close" type="button" title="Every phone that opened this level must type the key again (accounts keep theirs)">Cerrar en todos los aparatos</button>' : '') +
+          (l.key ? '<button class="btn btn-ghost btn-sm m-danger-ghost m-key-close" type="button" title="Every phone and account that opened this level with the key must type the new key (kids from before the keys and kids you unlocked keep it)">Cerrar en todos los aparatos</button>' : '') +
         '</div>' +
         '<form class="m-key-form hidden" novalidate>' +
           '<label class="m-form-label"><span>Clave nueva de ' + escapeHtml(l.name) + ' (una palabra y un número, como ' + KEY_EX + ')</span>' +
@@ -2882,7 +2882,7 @@
       });
       const close = row.querySelector('.m-key-close');
       if (close) close.addEventListener('click', () => {
-        if (!confirm('¿Cerrar ' + l.name + ' en todos los aparatos?\n\nCada teléfono que ya la abrió tendrá que escribir la clave otra vez. Los alumnos con la clave guardada en su cuenta (o registrados antes de las claves) la recuperan al entrar en Mis Tareas.\n\nÚsalo solo si la clave se compartió fuera de la escuela: cámbiala primero.')) return;
+        if (!confirm('¿Cerrar ' + l.name + ' en todos los aparatos?\n\nCada teléfono y cada cuenta que la abrió con la clave tendrá que escribir la clave nueva. Los alumnos registrados antes de las claves y los que desbloqueaste tú la conservan.\n\nÚsalo solo si la clave se compartió fuera de la escuela: cámbiala primero.')) return;
         adminFetch('/api/admin/level-keys/' + encodeURIComponent(l.id) + '/close-devices', pw, { method: 'POST' })
           .then((r) => r.json()).then((r) => {
             if (!r || !r.ok) { notify('Error: ' + ((r && r.error) || '')); return; }
@@ -2899,10 +2899,10 @@
   let _codeTarget = null;    // null = my own code · { teacherId, displayName } = another teacher's (super admin)
   function openCodeModal(target) {
     _codeTarget = target || null;
-    $('m-mycode-title').textContent = target ? '🔑 Change the code of ' + (target.displayName || 'this teacher') : '🔑 Cambiar mi código';
+    $('m-mycode-title').textContent = target ? '🔑 Cambiar el código de ' + (target.displayName || 'esta maestra') : '🔑 Cambiar mi código';
     $('m-mycode-sub').textContent = target
-      ? 'Their old code stops working at once, on every device. Give them the new one in private.'
-      : 'Your new teacher code: to sign in here and to open games. The old code stops working at once, on every device. / Tu código nuevo: el viejo deja de funcionar en todos los aparatos.';
+      ? 'Su código viejo deja de funcionar al momento, en todos los aparatos. Dale el nuevo en privado. (Their old code stops working at once.)'
+      : 'Tu código nuevo sirve para entrar aquí y para abrir juegos. El viejo deja de funcionar al momento, en todos los aparatos. (The old code stops working at once, on every device.)';
     $('m-mycode-new').value = '';
     $('m-mycode-again').value = '';
     $('m-mycode-msg').textContent = '';
@@ -3334,7 +3334,7 @@
       const how = lk.via === 'grandfathered' ? 'enrolled before the keys' : lk.via === 'teacher' ? 'unlocked by a teacher' : 'key saved on their account';
       return '🔓 La Ruta Dorada ' + name + ': <b>open</b> · ' + how;
     }
-    return '🔒 La Ruta Dorada ' + name + ': <b>locked</b> · needs the ' + name + ' key ' +
+    return '🔒 La Ruta Dorada ' + name + ': <b>locked</b> (needs the ' + name + ' key) ' +
       '<button class="btn btn-gold btn-sm" id="m-detail-unlock" type="button" title="Open La Base, El Entrenamiento and El Simulacro Dorado for this kid on every phone">🔓 Desbloquear</button>';
   }
   function renderDetail(data) {

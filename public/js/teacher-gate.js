@@ -22,6 +22,7 @@
   var waiters = [];
   var ui = null;
   var ls = function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+  var forgetSaved = function () { ['dralyMaestroPw', 'mochi.maestroPw'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} }); };
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function open(c) {
@@ -45,7 +46,11 @@
         if (d && d.remembered) { open(); return; }
         var saved = ls('dralyMaestroPw') || ls('mochi.maestroPw');
         if (!saved) { state = 'closed'; show(); return; }
-        remember(saved).then(function (r) { if (r && r.ok) open(saved); else { state = 'closed'; show(); } });
+        remember(saved).then(function (r) {
+          if (r && r.ok) { open(saved); return; }
+          if (r && r.retired) forgetSaved();   // a code changed with «Cambiar mi código»: never tried again
+          state = 'closed'; show();
+        });
       })
       .catch(function () { open(); });   // no answer: the server decides at host:create (a refusal shows the screen)
   }
@@ -65,7 +70,7 @@
       opts = Object.assign({}, opts || {});
       var send = function () {
         var o = Object.assign({}, opts);
-        if (code && !o.password) o.password = code;
+        if (code) o.password = code;   // the code the teacher just typed wins over one the page brought (it may be old)
         emit.call(sock, 'host:create', o, function (resp) {
           if (resp && resp.needTeacherKey) {
             state = 'closed'; code = '';
@@ -93,7 +98,7 @@
   function build() {
     if (!document.querySelector('link[data-ks-css]')) {
       var l = document.createElement('link');
-      l.rel = 'stylesheet'; l.href = '/css/key-screen.css?v=20261015a'; l.setAttribute('data-ks-css', '1');
+      l.rel = 'stylesheet'; l.href = '/css/key-screen.css?v=20261015f'; l.setAttribute('data-ks-css', '1');
       document.head.appendChild(l);
     }
     var el = document.createElement('div');
@@ -114,10 +119,10 @@
         '</header>' +
         '<main class="ks-sheet"><div class="ks-inner">' +
           '<h1 class="ks-title" id="ks-t-title">Escribe tu código de maestra o maestro</h1>' +
-          '<p class="ks-lede">Es el mismo código con el que entras a /maestro. Este aparato lo recordará 90 días y ya no te lo pedirá.</p>' +
-          '<p class="ks-lede" lang="en">Teacher code: the one you use at /maestro. This device will remember it for 90 days.</p>' +
+          '<p class="ks-lede">Es el mismo código con el que entras a Teacher Mode (/maestro). Este aparato lo recordará 90 días y ya no te lo pedirá.</p>' +
+          '<p class="ks-lede is-en" lang="en">Your Teacher Mode code. This device remembers it for 90 days.</p>' +
           '<form class="ks-form" novalidate>' +
-            '<label class="ks-label" for="ks-t-code">Código de maestra</label>' +
+            '<label class="ks-label" for="ks-t-code">Tu código</label>' +
             '<div class="ks-field">' +
               '<input class="ks-input is-secret" id="ks-t-code" name="code" type="password" autocomplete="current-password" ' +
                 'autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="40" aria-describedby="ks-t-err" required>' +
@@ -126,7 +131,8 @@
             '<p class="ks-error" id="ks-t-err" role="alert"></p>' +
             '<button class="ks-go" type="submit">Entrar</button>' +
           '</form>' +
-          '<p class="ks-alt">¿Aún no entras a /maestro en este aparato? <a class="ks-link" href="/maestro.html">Ir a /maestro</a></p>' +
+          '<p class="ks-alt">¿Olvidaste tu código? Pídeselo a Profe Fer.</p>' +
+          '<p class="ks-alt"><a class="ks-link ks-back" href="/">← Volver</a></p>' +
         '</div></main>' +
       '</div>';
     var reveal = function () { el.style.visibility = ''; };
@@ -135,12 +141,21 @@
     setTimeout(reveal, 1500);
 
     var form = el.querySelector('form'), input = el.querySelector('.ks-input'), go = el.querySelector('.ks-go');
+    el.querySelector('.ks-back').addEventListener('click', function (e) {
+      if (history.length > 1) { e.preventDefault(); history.back(); }
+    });
     var err = el.querySelector('.ks-error'), eye = el.querySelector('.ks-show');
-    eye.addEventListener('click', function () {
-      var showIt = input.type === 'password';
+    var hideT = null;
+    var setShown = function (showIt) {
       input.type = showIt ? 'text' : 'password';
       eye.textContent = showIt ? 'Ocultar' : 'Ver';
       eye.setAttribute('aria-pressed', String(showIt));
+    };
+    eye.addEventListener('click', function () {
+      var showIt = input.type === 'password';
+      setShown(showIt);
+      clearTimeout(hideT);
+      if (showIt && window.innerWidth >= 860) hideT = setTimeout(function () { setShown(false); }, 3000);
       input.focus();
     });
     input.addEventListener('input', function () { if (input.getAttribute('aria-invalid')) { err.textContent = ''; input.removeAttribute('aria-invalid'); } });
@@ -153,19 +168,20 @@
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       var c = input.value.trim();
-      if (!c) { setError('Escribe tu código de maestra.'); input.focus(); return; }
+      if (!c) { setError('Escribe tu código.'); input.focus(); return; }
       go.disabled = true; go.setAttribute('aria-busy', 'true'); go.textContent = 'Revisando…';
       remember(c).then(function (r) {
         if (r && r.ok) {
+          // an exam monitor (host-hsk) reads the code from here: keep it current
+          try { if (localStorage.getItem('mochi.maestroPw')) localStorage.setItem('mochi.maestroPw', c); } catch (_) {}
           el.classList.add('is-open');
           go.textContent = '¡Listo!';
           setTimeout(function () { open(c); }, reduce ? 150 : 520);
           return;
         }
         go.disabled = false; go.setAttribute('aria-busy', 'false'); go.textContent = 'Entrar';
-        setError((r && r.error) || 'Ese código no es. Es el mismo código con el que entras a /maestro.');
+        setError((r && r.error) || 'Ese código no funciona. Es el mismo con el que entras a Teacher Mode (/maestro).');
         input.focus();
-        try { input.select(); } catch (_) {}
       });
     });
     return el;
@@ -184,7 +200,10 @@
       var go = ui.querySelector('.ks-go');
       go.disabled = false; go.setAttribute('aria-busy', 'false'); go.textContent = 'Entrar';
       if (msg) { var e = ui.querySelector('.ks-error'); e.textContent = msg; }
-      setTimeout(function () { try { ui.querySelector('.ks-input').focus(); } catch (_) {} }, 60);
+      // the field takes the focus on a laptop or projector; on a phone the keyboard waits for a tap
+      if (window.matchMedia && matchMedia('(pointer: fine)').matches) {
+        setTimeout(function () { try { ui.querySelector('.ks-input').focus(); } catch (_) {} }, 60);
+      }
     };
     if (document.body) mount(); else document.addEventListener('DOMContentLoaded', mount);
   }

@@ -24,8 +24,9 @@ const BOTS = +opt('bots', 10);
 const SECONDS = +opt('seconds', 60);
 const STALL = +opt('stall', 8) * 1000;
 const SET = opt('set', 'first');
-// the teacher's code: exam rooms (hsksim) open only with one (2026-10-15); the local default is the legacy admin code
-const PASSWORD = opt('password', process.env.WU_ADMIN_PASSWORD || 'draly2026');
+// the teacher's code: creating any room needs a teacher (2026-10-15); no default written here (--password, or the
+// WU_ADMIN_PASSWORD / TEST_TEACHER_PW of the server under test)
+const PASSWORD = opt('password', process.env.TEST_TEACHER_PW || process.env.WU_ADMIN_PASSWORD || '');
 const SIM = opt('sim', 'yct1-sim1');   // hsksim: which simulation the room opens
 // a game's own handler module (scripts/playtest/<game>.js) loads by itself when --handlers is not given
 const OWN_HANDLERS = path.join(__dirname, 'playtest', GAME + '.js');
@@ -58,7 +59,7 @@ const count = (bag, ev) => { bag[ev] = (bag[ev] || 0) + 1; };
     if (/error/i.test(ev)) report.errors.push({ who: 'host', ev, d });
   });
   host.on('connect_error', (e) => report.errors.push({ who: 'host', ev: 'connect_error', d: String(e && e.message) }));
-  const created = await emitAck(host, 'host:create', GAME === 'hsksim' ? { gameType: GAME, simId: SIM, password: PASSWORD } : { gameType: GAME });
+  const created = await emitAck(host, 'host:create', GAME === 'hsksim' ? { gameType: GAME, simId: SIM, password: PASSWORD } : { gameType: GAME, password: PASSWORD });
   const pin = created && created.pin;
   if (!pin) { console.log('FAIL: host:create returned no PIN', created); process.exit(1); }
   report.pin = pin;

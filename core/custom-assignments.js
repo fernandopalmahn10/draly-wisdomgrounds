@@ -6,7 +6,7 @@
 // =====================================================================
 const fs = require('fs');
 const path = require('path');
-const FILE = path.join(__dirname, '..', 'data', 'custom-assignments.json');
+const FILE = path.join(process.env.DRALY_DATA_DIR || path.join(__dirname, '..', 'data'), 'custom-assignments.json');   // tests: their own folder
 
 let store = { items: {} };
 function load() {

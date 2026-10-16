@@ -163,12 +163,14 @@ async function run() {
   // ── 2. anonymous visitor: friendly page everywhere, no data ──
   section('anonymous visitor');
   const pages = ['/yct-sim.html', '/hsk-sim.html', '/hsk-sim.html?pin=9999', '/yct-sim.html?pin=123&code=ABCD',
-    '/hsk-sim.html?access=1001&sim=hsk1-sim1&code=ABCD', '/yct-sim.html?sim=yct1-sim1&code=ABCD']
+    '/yct-sim.html?sim=yct1-sim1&code=ABCD']
     .concat(yct.concat(nhsk).map((id) => '/yct-sim.html?sim=' + id)).concat(ohsk.map((id) => '/hsk-sim.html?sim=' + id));
   for (const p of pages) {
     const r = await get(p);
     ok(r.status === 401 && isLocked(r) && (/Escribe la clave de (YCT 1|New HSK 1|HSK 1)/.test(r.text) || /"reason":"(room|pin)"/.test(r.text)) && noStore(r), `the key screen (or the PIN card) on ${p} (${r.status})`);
   }
+  ok(isPlayer(await get('/hsk-sim.html?access=1001&sim=hsk1-sim1&code=ABCD')), 'a teacher\'s forced link (?access=…) opens the PIN box page (it holds no exam), so a kid without the key still joins the room');
+  ok((await get('/api/hsk-sim/hsk1-sim1?accessCode=1001&studentCode=ABCD')).status === 401, '… while the forced link\'s sim itself stays locked');
   const dead = await get('/yct-sim.html?pin=9999');
   ok(/"reason":"room"/.test(dead.text), 'a closed room PIN gets the «Esta sala ya cerró» card');
   ok(/Escribe la clave de New HSK 1/.test((await get('/yct-sim.html?sim=newhsk1-sim1')).text) && /Escribe la clave de HSK 1/.test((await get('/hsk-sim.html?sim=hsk1-sim2')).text), 'a sim\'s key screen names its own level');
@@ -430,12 +432,36 @@ async function run() {
   let n = 0;
   for (let p = 100; n < 65; p++) {
     if (String(p) === String(c1.pin) || String(p) === String(pin)) continue;
-    await get('/api/hsk-sim/room/' + p, { headers: Object.assign({ 'X-Forwarded-For': '10.0.0.' + (n % 250) }, OUT) });   // a new XFF each time
+    await get('/api/hsk-sim/room/' + p, { headers: Object.assign({ 'X-Forwarded-For': '10.0.0.' + (n % 250) + ', 162.158.0.9' }, OUT) });   // through Cloudflare, a new XFF in front each time
     n++;
   }
   ok((await get('/api/hsk-sim/room/' + c1.pin, { headers: OUT })).status === 429, '65 unknown PINs from one address pause its room lookups (a changing X-Forwarded-For does not help)');
   ok((await get('/api/hsk-sim/yct1-sim4?pin=' + c1.pin, { headers: OUT })).status === 401, '… and a PIN alone never loads the sim anyway');
   ok((await get('/api/hsk-sim/room/' + c1.pin)).status === 200, 'the class at another address is not affected');
+  // straight to the server (not Cloudflare): a forged CF-Connecting-IP per request changes nothing, the real hop counts
+  let m = 0;
+  for (let p = 100; m < 65; p++) {
+    if (String(p) === String(c1.pin) || String(p) === String(pin)) continue;
+    await get('/api/hsk-sim/room/' + p, { headers: { 'X-Forwarded-For': '198.51.100.200', 'CF-Connecting-IP': '203.0.113.' + (m % 250) } });
+    m++;
+  }
+  ok((await get('/api/hsk-sim/room/' + c1.pin, { headers: { 'X-Forwarded-For': '198.51.100.200', 'CF-Connecting-IP': '192.0.2.1' } })).status === 429,
+    'a forged CF-Connecting-IP (not from Cloudflare) does not reset the count: the address that reached us is paused');
+  // the same over the socket: PINs tried with player:join count too, and a paused address can't find an exam room
+  const guesser = io('http://127.0.0.1:' + PORT, { transports: ['websocket'], forceNew: true, extraHeaders: { 'CF-Connecting-IP': '203.0.113.88' } });
+  let k = 0;
+  for (let p = 100; k < 61; p++) {
+    if (String(p) === String(c1.pin) || String(p) === String(pin)) continue;
+    await emitAck(guesser, 'player:join', { pin: String(p), name: 'G' + k });
+    k++;
+  }
+  const blockedJoin = await emitAck(guesser, 'player:join', { pin: c1.pin, name: 'Guesser' });
+  ok(blockedJoin && !blockedJoin.ok && !blockedJoin.roomPass && /Espera/.test(blockedJoin.error || ''), 'PINs guessed over the socket pause that address: no exam room, no room pass');
+  guesser.close();
+  const fine = sock();
+  const fineJoin = await emitAck(fine, 'player:join', { pin: c1.pin, name: 'Real Kid' });
+  ok(fineJoin && fineJoin.ok && fineJoin.roomPass, '… a kid at another address still joins the exam room');
+  fine.close();
   ok(isPlayer(await get('/yct-sim.html?pin=' + c1.pin, { headers: OUT })), 'a live room\'s page still opens (it holds no exam): a class sharing that address is never locked out');
   host1.close();
 }

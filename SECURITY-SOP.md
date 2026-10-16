@@ -195,6 +195,14 @@ This stops a leaked TTS key from running up a $40,000 bill.
 4. Save the new one in 1Password. Delete the old one.
 5. ✅ Old password is dead.
 
+### "A teacher code or a level key got out" (since 2026-10-15)
+1. Teacher code: /maestro → **🔑 Cambiar mi código** (or Teachers tab → **Change code** for another teacher). The old
+   code stops at once on every device and can never be used again.
+2. Level key: /maestro → Teachers → **Claves de nivel** → **Cambiar**, then **Cerrar en todos los aparatos** if it
+   spread outside the school. Send the new **Copiar mensaje para WhatsApp** to the families.
+3. ✅ Kids registered before the keys and kids you unlocked get back in by logging in to Mis Tareas; families who had
+   typed the old key type the new one once.
+
 ### "My site is getting hammered with traffic"
 1. Go to **Cloudflare → your domain → Security → Settings**
 2. Change Security Level to **"Under Attack"**

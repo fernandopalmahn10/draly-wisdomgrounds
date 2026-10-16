@@ -7,7 +7,7 @@
 //
 // ── DATA MODEL ───────────────────────────────────────────────────────
 // Each teacher has TWO codes:
-//   • teacherId   — secret login code (e.g. "EMAAR2026"). Logs into
+//   • teacherId   — secret login code (e.g. "T-ABC234"). Logs into
 //                   /maestro to see their students. Never shared with kids.
 //   • accessCodes — short classroom code(s) (e.g. "1001"). KIDS type this
 //                   on /homework.html to join. Each student record gets
@@ -298,7 +298,7 @@ function levelForAccessCode(code) {
 function randomCode(length) {
   let s = '';
   for (let i = 0; i < length; i++) {
-    s += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+    s += CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)];
   }
   return s;
 }

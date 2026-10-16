@@ -157,11 +157,14 @@ const ticket = (grant, sim) => sign('x', [grant.kind, sim, grant.pin || '', gran
 // The room pass: what joining a teacher's exam room (socket player:join, so the kid is on the teacher's roster) gives
 // a phone; the room's sim loads only with it (a bare PIN guessed from outside opens nothing).
 const ROOM_PASS_TTL = 6 * 60 * 60 * 1000;   // an exam room lives 6 h at most
-const roomPass = (pin, sim) => sign('p', [pin, sim], ROOM_PASS_TTL);
-function roomPassOk(tok, pin, sim) {
+// Bound to the room's creation moment too (2026-10-15 review): a PIN used again later never reopens with an old pass.
+const roomPass = (pin, sim, createdAt) => sign('p', [pin, sim, Number(createdAt) || 0], ROOM_PASS_TTL);
+function roomPassOk(tok, pin, sim, createdAt) {
   const v = verify(tok, 'p');
-  return !!(v && v[0] === String(pin) && v[1] === sim);
+  return !!(v && v[0] === String(pin) && v[1] === sim && v[2] === String(Number(createdAt) || 0));
 }
+// An HMAC of `s` with the server key, hex (e.g. a fingerprint that must not be testable offline)
+const hmacHex = (s, n) => mac(String(s)).toString('hex').slice(0, n || 16);
 
 // Every protected media URL inside `value` (any depth) → its signed link for `grant`. A new copy; `value` is untouched.
 function rewrite(value, grant) {
@@ -250,7 +253,7 @@ function sendPage(res, name) {
 
 module.exports = {
   DIR, PAGES, NO_STORE, COOKIE,
-  relOf, isSimMediaUrl, simOfUrl, logicalUrl, rewrite, linkFor, ticket, ticketGrant, roomPass, roomPassOk, openMedia,
+  relOf, isSimMediaUrl, simOfUrl, logicalUrl, rewrite, linkFor, ticket, ticketGrant, roomPass, roomPassOk, openMedia, hmacHex,
   session, setSession, isLocalDev, sendPage, scan,
   sign, verify, readCookie, setCookie, https,
   _sign: sign, _verify: verify,   // tests

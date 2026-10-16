@@ -1152,13 +1152,13 @@ button.m-emirati-stat.is-tappable small { color: var(--blue-deep); font-weight: 
 /* ── Phone ────────────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .m-topbar { grid-template-columns: 1fr auto; gap: 8px; padding: 8px 12px; }
-  .m-brand-sub, .m-dash-self, .m-refresh-label { display: none; }
+  .m-brand-sub, .m-dash-self, .m-refresh-label, .m-mycode-label { display: none; }
   .m-brand-mark { width: 36px; height: 36px; }
   .m-tabs { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; display: flex; }
   .m-tabs.hidden { display: none !important; }
   .m-tab { flex: 1; }
   .m-tab, .m-chip, .m-roster-class { min-height: 44px; }
-  .m-refresh { padding: 6px 10px; }
+  .m-refresh, .m-mycode-btn { padding: 6px 10px; }
   .m-hero { padding: 14px 12px; gap: 14px; }
   .m-work { padding: 0 12px 40px; gap: 14px; }
   .m-start { padding: 14px 14px 16px; }

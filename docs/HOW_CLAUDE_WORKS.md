@@ -162,6 +162,8 @@ YCT 1» on their /homework home. HSK 1 has its own base the same way (`/audios/h
 150 words in 8 worlds, pinned above its homework audios; HSK 1 kids see «Empieza aquí · La base de HSK 1»), and so
 does New HSK 1 (`/audios/newhsk1-base`, «New HSK 1 · Vocabulario»: 300 words in 8 worlds, with the book's note on the
 spoken tone changes yí ge, yì běn, bú shì; code 1002 kids see «Empieza aquí · La base de New HSK 1»).
+Since 15 October 2026 each base opens with its level's key (see «Who can open a simulation or La Base» below): a
+visitor without it sees the key screen at the same address, and the library shows a gold lock on that level.
 
 ### 2.4 Parent control
 
@@ -235,16 +237,30 @@ five seconds of a class, in the platform's paper-and-navy sticker look (light, s
 It has a sober official look, works on phones, and **resumes at the same second** if the page
 reloads. Results are saved for teachers, kids and parents.
 
-**Who can open a simulation (locked since 15 October 2026, the first step of «La Ruta Dorada»):**
-the simulations are no longer open to anyone who knows the address. Pages, questions **and** the recordings and
-pictures are protected:
-- **A teacher** opens any of them from /maestro (Official Tests opens a PIN room; only a teacher code can open one).
-- **A kid in your room** gets in with your PIN, for that room's simulation only. «Terminar sala» on the monitor now
+**Who can open a simulation or La Base (locked since 15 October 2026, the first step of «La Ruta Dorada»):**
+nothing of a module is free any more. One **secret key per level** (YCT 1, New HSK 1, HSK 1; you set them in /maestro →
+Teachers → «Claves de nivel», and «Copiar mensaje para WhatsApp» gives you the message for the families) opens all
+three levels of that module: La Base, El Entrenamiento and El Simulacro Dorado. Pages, questions **and** the
+recordings, pictures and the La Base PDF are protected:
+- **A family** types the key once on the key screen (big, Spanish, Dralingo, one field, «Entrar»). That phone keeps it
+  for a year; if the kid is logged in at /homework, it is also saved on their account, so their other phones open too.
+  Wrong guesses are limited (5 per phone, 30 per internet address in 15 minutes, then a short wait).
+- **Kids registered before you set the first key** keep their level without typing anything (once they log in at
+  /homework). New accounts need the key. A kid who moves up a level needs the new level's key.
+- **You can open any kid early**: «Desbloquear» in the kid's profile in /maestro.
+- **A kid in your room** gets in with your PIN, no key, for that room's simulation only. «Terminar sala» on the monitor
   really closes the room: its PIN, page and files stop working (a kid who already finished can still hand in).
-- **An enrolled student** (logged in at /homework with the class access code + their own student code) can open the
-  simulations of **their own level** by link, on their own, and the grade lands on their record.
-- **Anyone else** sees a friendly Dralingo page: «Este simulacro es para alumnos de Dralingo» with «Entrar con mi
-  código»; after logging in they land straight back in the exam. La Base stays free for everybody.
+- **A teacher** opens everything. Creating any game needs your teacher code the **first time on a device** (the
+  /maestro login does it, or the teacher-key screen that appears on the game page); then that device is remembered for
+  90 days. «Log out» in /maestro forgets it.
+- **Changing a key**: the old key stops working for new phones; phones that already opened the level keep it. If a key
+  leaks outside the school, change it and press «Cerrar en todos los aparatos» (families type the new key once; kids from
+  before the keys and kids you unlocked keep it; they get it back at their next
+  login to Mis Tareas).
+- **Your own code**: «Cambiar mi código» in /maestro (you can also change any teacher's code in the Teachers tab). The
+  old code stops at once everywhere and can never be used again.
+- **Homework stays exactly as before**: /homework (class code + name or student code) and the audio pages of the
+  printed homework PDFs (/audios/<homework>) are open as always.
 
 The recordings and pictures now live in a locked folder of the code (`protected/`), never as public files: the
 platform hands each phone links that expire after 3 hours and work for one simulation only. One thing it costs:
@@ -268,7 +284,8 @@ A separate Emirati Arabic (Khaleeji) track:
 - **Security:**
   - **Phase 1 and 2 done:** a parent can only see their own child, password-guessing protection,
     and security logging.
-  - **Admin password:** you set `WU_ADMIN_PASSWORD` on Render.
+  - **Admin password:** you set `WU_ADMIN_PASSWORD` on Render (since 2026-10-15 there is no default in the code: if it
+    is not set on Render there is no backup password, only teacher codes).
   - **Phase 3 (Cloudflare)** is still pending.
 - **Data:** student records, rooms and results live on Render's **permanent disk** (`data/`), never
   in the code or on GitHub.
@@ -327,7 +344,9 @@ Think of a restaurant:
      `yct-sim.html?debug=1&direct=1&sim=yct1-sim2&view=reading&rc=13`, or
      `yctDebug.seek(195)` to jump the audio (these switches only work on the copy on your PC, never on the live site)
    - `node scripts/test-sims-lock.js` checks the simulation lock from every side (anonymous visitor, each level's
-     student, teacher, a room PIN before and after the room closes, expired and forged links)
+     student, teacher, a room PIN before and after the room closes, expired and forged links);
+     `node scripts/test-level-keys.js` checks the keys (anonymous, right/wrong keys and their limits, grandfathered and
+     new accounts, key changes, teacher devices, «Cambiar mi código», restarts)
    - **screenshots** with a hidden Edge browser, so I check desktop and phone layouts with my own eyes
    - **number checks**: a perfect answer sheet must score exactly 200/200
 6. **Save, deploy, verify.** I commit with a note explaining *why*, push, wait for Render, and check
@@ -443,8 +462,8 @@ first test of each new family takes longer, and the rest go faster.
   - use the **original exam audio**, never TTS
   - **pinyin without tone marks**
   - a sober official look that **does not copy** the source site
-  - **never open to anonymous visitors**: only teachers, kids in a teacher's room, and enrolled students of that level
-    (only La Base is free)
+  - **never open to anonymous visitors**: only teachers, kids in a teacher's room, and whoever has that level's key
+    (typed on the phone or saved on the account, or registered before the keys)
 - **Pictures:** **no Higgsfield credits for exam pictures**; crop them from your recordings.
 - **Assets:** always **commit the picture and audio folder**. Code alone means a broken exam on
   Render.
@@ -477,8 +496,9 @@ intro is long"), and I'll turn it into exact changes.
 
 ## 10. What's next (pending work)
 
-- **La Ruta Dorada** (plan `docs/specs/ruta-dorada.md`): step 1, the simulation lock, is built; next the tab
-  itself, progress on the server, El Entrenamiento and El Simulacro Dorado
+- **La Ruta Dorada** (plan `docs/specs/ruta-dorada.md`): step 1 is built: the key per level (La Base + the
+  simulations behind it), teacher devices for hosting, «Cambiar mi código»; next the tab itself, progress on the
+  server, El Entrenamiento and El Simulacro Dorado (they ask the same key: `LevelKeys.access`)
 - **Official tests:**
   - more New HSK 1 simulations (send the next recording), then YCT 2 per the build order
   - move Old HSK onto the new exam interface, once you're happy with YCT
