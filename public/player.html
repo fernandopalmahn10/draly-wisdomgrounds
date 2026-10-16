@@ -26,6 +26,9 @@
   <link rel="stylesheet" href="/css/halcon.css?v=20261014a">
   <link rel="stylesheet" href="/css/mochi.css?v=20261015s">
   <link rel="stylesheet" href="/css/pinata.css?v=20261015s">
+  <!-- Dàfùwēng · Monopolio v2 (the line with monopoly.css?v=20260520c above can go once the 6-7 branch has landed:
+       this newer one is the one that counts; both load the same file) -->
+  <link rel="stylesheet" href="/css/monopoly.css?v=20261016a">
   <!-- Lobby layout + lobby mini-game (the little plane while kids wait).
        These rules used to live in flappy.css, which was deleted with the
        retired Flappy Dragon game (2026-10-10); the lobby itself is shared. -->
@@ -192,52 +195,34 @@
     </div>
   </div>
 
-  <!-- MONOPOLY WELCOME — first time you join the monopoly game. Cinematic
-       character intro: bounce-in from the wing, animated speech bubble with
-       a personality line, sparkle particles, BIG tap-to-continue button. -->
-  <div id="screen-monopoly-welcome" class="hidden player-screen mp-welcome-screen">
-    <div class="mp-welcome-sparkles" id="mp-welcome-sparkles"></div>
-    <div class="mp-welcome-card">
-      <div class="mp-welcome-bubble" id="mp-welcome-bubble">
-        <div class="mp-welcome-bubble-text" id="mp-welcome-bubble-text">¡Hola!</div>
-        <div class="mp-welcome-bubble-cn" id="mp-welcome-bubble-cn">你好!</div>
-      </div>
-      <img class="mp-welcome-char" id="mp-welcome-char" src="/assets/monopoly/chars/char-0.png" alt="Tu personaje">
-      <div class="mp-welcome-meta">
-        <div class="mp-welcome-line2">Soy tu personaje</div>
-        <div class="mp-welcome-name" id="mp-welcome-name">…</div>
-      </div>
-      <button class="mp-welcome-btn" id="mp-welcome-btn">🎲 ¡VAMOS! 🚀</button>
+  <!-- Dàfùwēng · Monopolio v2 «El Gran Tablero de Dubái» (js/player-monopoly.js + js/monopoly-board.js + css/monopoly.css):
+       the board around my piece (my board's players on top, the minimap, rivals hopping by), the question as a sheet at
+       the bottom, the dice block over my head (the whole screen is its button), each space's moment with its host -->
+  <div id="screen-monopoly" class="hidden">
+    <div class="mnx" id="mnx">
+      <div class="mnx-view" id="mnx-view" aria-hidden="true"></div>
+      <div class="mnx-hud" id="mnx-hud" aria-label="Tu tablero"></div>
+      <div class="mnx-side"><div class="mnx-clock" id="mnx-clock" role="timer"><b>–:––</b></div></div>
+      <div class="mnx-mini" id="mnx-mini" aria-hidden="true"></div>
+      <div class="mnx-tick" id="mnx-tick" aria-live="polite"></div>
+      <div class="mnx-stage" id="mnx-stage" aria-hidden="true"></div>
+      <button class="mnx-tap" id="mnx-tap" type="button" aria-label="Tirar el dado"></button>
+      <div class="mnx-prompt" id="mnx-prompt" aria-live="polite"></div>
+      <div class="mnx-card" id="mnx-card"></div>
+      <section class="mnq down" id="mnq" aria-label="Pregunta" aria-hidden="true">
+        <div class="mnq-clock"><i id="mnq-bar"></i></div>
+        <div class="mnq-head"><div class="mnq-pic"><img id="mnq-img" alt=""></div><p class="mnq-text" id="mnq-text" aria-live="polite"></p></div>
+        <div class="mnq-ans" id="mnq-ans"></div>
+        <div class="mnq-verdict" id="mnq-verdict" aria-live="polite"></div>
+      </section>
+      <div class="mnx-fx" id="mnx-fx" aria-hidden="true"></div>
     </div>
   </div>
-
-  <!-- MONOPOLY MINI-BOARD — the player's view of the same board the host shows.
-       Opens after a correct answer. Player sees their character on its tile,
-       throws the dice in the center, watches their character walk tile-by-tile
-       to the destination, then a floating action toast over the landing tile.
-  -->
-  <div id="screen-monopoly-roll" class="hidden player-screen mp-roll-screen">
-    <div class="mp-roll-header">
-      <div class="mp-roll-char-wrap">
-        <img class="mp-roll-char" id="mp-roll-char" src="/assets/monopoly/chars/char-0.png" alt="Tu personaje">
-        <div class="mp-roll-name" id="mp-roll-name">Tú</div>
-      </div>
-      <div class="mp-roll-cash">💼 ¥<span id="mp-roll-cash">0</span></div>
-    </div>
-    <div class="mp-roll-title" id="mp-roll-title">🎲 ¡Sacude y lanza el dado!</div>
-    <!-- Mini-board: same 5x5 grid as host, scaled to phone. Tiles rendered by JS. -->
-    <div class="mp-mini-board" id="mp-mini-board">
-      <!-- The dice sits in the center plate. Player holds + releases on it. -->
-      <div class="mp-mini-center">
-        <img class="mp-mini-dice" id="mp-mini-dice" src="/assets/monopoly/dice/dice-1.png" alt="Dado">
-        <div class="mp-mini-action-toast hidden" id="mp-mini-action"></div>
-      </div>
-    </div>
-    <div class="mp-roll-hint" id="mp-roll-hint">👆 ¡TAP TAP TAP! Toca el dado rápido</div>
-    <div class="mp-roll-timer-wrap">
-      <div class="mp-roll-timer-fill" id="mp-roll-timer-fill"></div>
-    </div>
-  </div>
+  <div class="mnx-intro hidden" id="mnx-intro"></div>
+  <div class="mnx-banner" id="mnx-banner" role="status" aria-live="polite"></div>
+  <div class="mnx-big hidden" id="mnx-big" aria-live="polite"></div>
+  <div class="mnx-pause hidden" id="mnx-pause" role="alert"><div><img src="/assets/dralingo/wise.webp" alt=""><b>Pausa</b><span>Mira al profe</span></div></div>
+  <div class="mnx-final hidden" id="mnx-final"><b>¡FINAL!</b></div>
 
   <!-- DRAGON FLAP — opens after correct answer in Vuelo del Dragón.
        Instead of tap-mashing (Mochi/Piñata pattern), the player SWIPES UP on
@@ -695,7 +680,7 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261015s"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261016m"></script>
   <script src="/js/player-kingdoms.js?v=20261011f"></script>
   <script src="/js/paint-render.js?v=20261011a"></script>
   <script src="/js/player-paint.js?v=20261011e"></script>
@@ -707,6 +692,9 @@
   <script src="/js/player-escape.js?v=20261013b"></script>
   <script src="/js/halcon-board.js?v=20261014a"></script>
   <script src="/js/player-halcon.js?v=20261014a"></script>
+  <script src="/js/monopoly-map.js?v=20261016a"></script>
+  <script src="/js/monopoly-board.js?v=20261016a"></script>
+  <script src="/js/player-monopoly.js?v=20261016a"></script>
   <script src="/js/mochi-stage.js?v=20261014a"></script>
   <script src="/js/player-mochi.js?v=20261015s"></script>
   <script src="/js/pinata-stage.js?v=20261015b"></script>
@@ -716,7 +704,7 @@
   <script src="/js/cast.js?v=20261015c"></script>
   <script src="/js/dralingo-fx.js?v=20261013a"></script>
   <script src="/js/saga.js?v=20261013a"></script>
-  <script src="/js/player.js?v=20261015s"></script>
+  <script src="/js/player.js?v=20261016m"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

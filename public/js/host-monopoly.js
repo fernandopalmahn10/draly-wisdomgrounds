@@ -1,654 +1,718 @@
-// 中国大富翁 · Chinese Trivia Monopoly — host view.
-// 16-tile perimeter board rendered with CSS grid + 3D perspective tilt. Each
-// player's dragon token sits on its tile. Correct vocab answer → server rolls
-// a die, advances the token, resolves the tile. We animate movement, money
-// popups, and ownership colors.
+// Dàfùwēng · Monopolio v2 «El Gran Tablero de Dubái» — the projector (secondary: the phones are the product). Lobby (PIN +
+// QR, the 3 steps, the question pack, 3 / 4 / 5 min, the class as full-body characters) → the boards are dealt (each
+// board's pieces on Salida) → the rules card «¡Responde y tira el dado!» → «¿Listos?» → «¡YA!» → the game: every board
+// side by side (the same Dubai map, each kid a full-body piece in its seat colour hopping as it moves, the star with
+// Dralingo, the landmarks taking their owner's flag), each board's players with stars and coins (a flash on every
+// answer), the class top 3, the clock; bands for the big moments one at a time (a star, a storm, Burj Khalifa bought,
+// a new leader, the last 30 s) → «¡FINAL!» → the ceremony: every board's bonus stars, each board's winner, the class
+// podium. Teacher: Pausa (holds every clock), +30 s, Saltar (the intro, the ceremony), Terminar, Sonido, Otra ronda;
+// F5 takes the same room back.
+// Test hooks: MonoHost.frame(), .freeze(v) / .replay(ev), .hold(v), .stage(name), .sim(ev, d).
 (function () {
+  'use strict';
   const socket = io();
-  let pin = null;
-  let state = null;
-  let timerInterval = null;
-  let urgentTriggered = false;
-
-  let tiles = [];
-  let players = {};           // pid → { name, team, pos, money }
-  let ownership = {};         // tileId → 'red' | 'gold' | null
-  let scores = { red: 0, gold: 0 };
-  let instantWin = 2000;
-  let tycoonTeam = null;
-
   const $ = (id) => document.getElementById(id);
+  const B = window.MonoBoard;
+  const MAP = window.MonoMap;
+  const T = MAP.T;
+  const MN = '/assets/monopoly/', K = '/assets/kingdoms/', H = '/assets/halcon/', MO = '/assets/mochi/';
+  const reduced = B.reduced;
+  const el = B.el;
+  const fmt = B.fmt;
+  const sleep = B.sleep;
+  const LM = MAP.LANDMARKS;
+  const PAUSE_ICON = '<rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/>';
+  const PLAY_ICON = '<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/>';
 
+  let pin = null, state = null, muted = false, duration = 240, paused = false;
+  let g = null;                         // { id, phase, frenzy, endAt (perf), pausedLeft }
+  let tiles = {};                       // board id → { id, root, board, head, chips: { k: el }, seats: { k: seat }, lead }
+  let timers = [], frozen = false, queue = [], testHold = false;
+  const handlers = {};
+  const on = (ev, fn) => { handlers[ev] = fn; socket.on(ev, (d) => { if (frozen) { queue.push([fn, d, ev]); return; } fn(d); }); };
+  const later = (ms, fn) => { const t = setTimeout(fn, Math.max(0, ms)); timers.push(t); return t; };
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+  // ---------- sound ----------
+  const SFX = {
+    tick: K + 'tick.mp3', whoosh: K + 'whoosh.mp3', win: K + 'sting-win.mp3', flag: K + 'flag.mp3', alert: K + 'castle-alert.mp3',
+    siege: K + 'siege.mp3', start: H + 'start.mp3', final: H + 'final.mp3', aww: H + 'aww.mp3', round: H + 'round.mp3',
+    drum: MO + 'drum.mp3', star: MN + 'star.mp3', landmark: K + 'landmark.mp3', storm: MN + 'storm.mp3', level: MN + 'level.mp3',
+  };
+  const MUSIC = { lobby: K + 'music-lobby.mp3', play: MN + 'music-board.mp3', final: K + 'music-final.mp3' };
+  let music = null, musicName = null;
+  const lastSfx = {};
+  function sfx(name, vol, gap) {
+    if (muted || !SFX[name]) return;
+    const now = Date.now();
+    if (gap && now - (lastSfx[name] || 0) < gap) return;
+    lastSfx[name] = now;
+    try { const a = new Audio(SFX[name]); a.volume = vol || 0.6; a.play().catch(() => {}); } catch (_) {}
+  }
+  function playMusic(name, vol) {
+    if (musicName === name) return;
+    stopMusic();
+    musicName = name;
+    if (muted || !MUSIC[name]) return;
+    try { music = new Audio(MUSIC[name]); music.loop = true; music.volume = vol || 0.3; music.play().catch(() => {}); } catch (_) {}
+  }
+  function stopMusic() { if (music) { try { music.pause(); } catch (_) {} } music = null; musicName = null; }
+  function musicFor() {
+    if (muted || paused) return;
+    if (!$('screen-lobby').classList.contains('hidden')) playMusic('lobby', 0.3);
+    else if (!$('screen-stage').classList.contains('hidden') && g && g.phase === 'play') playMusic(g.frenzy ? 'final' : 'play', g.frenzy ? 0.36 : 0.3);
+    else if (!$('screen-win').classList.contains('hidden')) playMusic('final', 0.26);
+  }
   $('mute-btn').addEventListener('click', () => {
-    const muted = window.toggleMute();
-    $('mute-btn').textContent = muted ? '🔇 Off' : '🔊 On';
+    muted = window.toggleMute ? window.toggleMute() : !muted;
+    $('mute-btn').querySelector('span').textContent = muted ? 'Sin sonido' : 'Sonido';
+    $('mute-btn').setAttribute('aria-pressed', muted ? 'true' : 'false');
+    if (muted) stopMusic(); else musicFor();
   });
-  document.addEventListener('click', () => window.unlockAudio && window.unlockAudio(), { once: true });
-
-  const params = new URLSearchParams(location.search);
-  const chosenSetId = params.get('setId');
-  if (!chosenSetId) location.href = '/sets.html?game=monopoly';
-
-  socket.emit('host:create', { gameType: 'monopoly' }, ({ pin: p }) => {
-    pin = p;
-    $('pin-display').textContent = p;
-    if ($('active-pin-display')) $('active-pin-display').textContent = p;
-    $('join-url').textContent = `${location.origin}/?pin=${p}`;
-    document.title = `Dàfùwēng · ${p}`;
-    socket.emit('host:load-set', { pin, setId: chosenSetId }, (resp) => {
-      if (!resp.ok) {
-        alert('No se pudo cargar el set: ' + (resp.error || 'desconocido'));
-        location.href = '/sets.html?game=monopoly';
-        return;
-      }
-      $('set-title-display').textContent = resp.title;
-      $('set-count-display').textContent = `${resp.count} preguntas`;
-      MochiSounds.correct();
-      updateStartBtn();
-    });
-  });
-
-  $('duration-slider').addEventListener('input', (e) => {
-    const v = +e.target.value;
-    $('duration-value').textContent = v >= 60 ? `${Math.floor(v / 60)}m${v % 60 ? ' ' + (v % 60) + 's' : ''}` : `${v}s`;
-  });
-  $('duration-slider').addEventListener('change', (e) => {
-    socket.emit('host:set-duration', { pin, duration: +e.target.value });
-  });
-  $('balance-btn').addEventListener('click', () => {
-    socket.emit('host:auto-balance', { pin });
-    MochiSounds.swap();
-  });
-  $('start-btn').addEventListener('click', () => socket.emit('host:start', { pin }));
-  $('end-now-btn').addEventListener('click', () => {
-    if (confirm('¿Terminar la ronda ahora?')) socket.emit('host:end-now', { pin });
-  });
-  $('play-again-btn').addEventListener('click', () => {
-    if (MochiSounds.stopEndMusic) MochiSounds.stopEndMusic();
-    socket.emit('host:reset', { pin });
-    showScreen('lobby');
-    players = {};
-    ownership = {};
-    scores = { red: 0, gold: 0 };
-    tycoonTeam = null;
-    updateWealthDisplay();
-  });
-
-  function updateStartBtn() {
-    const btn = $('start-btn');
-    if (!state) return;
-    btn.disabled = !(state.questionsLoaded > 0 && Object.keys(state.players || {}).length > 0);
-  }
-
-  socket.on('state', (s) => {
-    state = s;
-    if (s.state === 'lobby') {
-      renderLobbyPlayers(s.players);
-      updateStartBtn();
-    }
-  });
-
-  socket.on('countdown', () => {
-    showScreen('countdown');
-    MochiSounds.startMusic();
-    MochiSounds.startGameTheme && MochiSounds.startGameTheme('monopoly');
-    let n = 3;
-    const numEl = $('countdown-num');
-    const tick = () => {
-      if (n > 0) {
-        numEl.textContent = n;
-        numEl.style.animation = 'none';
-        numEl.offsetHeight;
-        numEl.style.animation = '';
-        MochiSounds.countdownNum();
-        n--;
-        setTimeout(tick, 900);
-      } else {
-        numEl.textContent = '¡发!';
-        numEl.style.animation = 'none';
-        numEl.offsetHeight;
-        numEl.style.animation = '';
-        MochiSounds.go();
-        setTimeout(() => {
-          showScreen('active');
-          startTimer();
-        }, 800);
-      }
-    };
-    tick();
-  });
-
-  socket.on('mp:init', (data) => {
-    tiles = data.tiles || [];
-    players = data.players || {};
-    ownership = {};
-    scores = data.teamScores || { red: 0, gold: 0 };
-    if (data.instantWin) instantWin = data.instantWin;
-    tycoonTeam = null;
-    renderBoard();
-    placeTokensInitial();
-    updateWealthDisplay();
-    renderLiveLeaderboard();
-    renderSideRosters();
-    setRecentEvent('¡Que rueden los dados! 🎲');
-  });
-
-  socket.on('mp:move', (data) => {
-    if (data.teamScores) scores = data.teamScores;
-    if (data.ownership)  ownership = data.ownership;
-    // Update player position + wealth (drives the live leaderboard)
-    const wealth = (typeof data.playerWealth === 'number') ? data.playerWealth : data.money;
-    if (players[data.playerId]) {
-      players[data.playerId].pos = data.toPos;
-      players[data.playerId].money = wealth;
-    } else {
-      players[data.playerId] = { name: data.playerName, team: data.team, pos: data.toPos, money: wealth, char: data.char };
-    }
-    // Animate the move (one tile at a time)
-    animateMove(data.playerId, data.fromPos, data.toPos, () => {
-      applyTileEffect(data);
-    });
-    // Show dice
-    if (!data.skipped) showDice(data.roll);
-    refreshOwnership();
-    updateWealthDisplay();
-    renderLiveLeaderboard();
-    renderSideRosters();
-  });
-
-  socket.on('mp:tycoon', ({ team, teamScores }) => {
-    tycoonTeam = team;
-    if (teamScores) scores = teamScores;
-    updateWealthDisplay();
-    const emoji = team === 'red' ? '🐉' : '🐲';
-    // Celebrate the milestone but keep the round going — the teacher wants
-    // the duration timer to control when the round actually ends.
-    setRecentEvent(`🏆 ¡${emoji} EQUIPO ${team === 'red' ? 'ROJO' : 'DORADO'} llegó a ¥${instantWin}! 💰 ¡Sigan jugando!`);
-    MochiSounds.winFanfare && MochiSounds.winFanfare();
-  });
-
-  socket.on('game-end', (data) => {
-    if (timerInterval) clearInterval(timerInterval);
-    MochiSounds.stopMusic();
-    showScreen('win');
-    $('final-red').textContent = data.teamScores.red || 0;
-    $('final-gold').textContent = data.teamScores.gold || 0;
-    const r = data.teamScores.red || 0;
-    const g = data.teamScores.gold || 0;
-    const gap = Math.abs(r - g);
-    const narr = $('win-narration');
-    if (data.winner === 'red') {
-      $('win-banner').textContent = '🐉 ¡El Equipo Rojo se hizo rico!';
-      $('win-banner').className = 'winner-banner red';
-      $('win-emoji').textContent = '🐉';
-      MochiSounds.winMusic && MochiSounds.winMusic();
-      setTimeout(() => MochiSounds.winFanfare && MochiSounds.winFanfare(), 400);
-      if (narr) narr.innerHTML = `🐉 <span class="red-team">El Equipo Rojo</span> acumuló <strong>¥${r}</strong> en efectivo + propiedades — ${gap > 500 ? 'un imperio comercial 💰' : gap > 200 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
-      launchConfetti(['#ff5a66', '#d92e3a', '#ffd57a']);
-    } else if (data.winner === 'gold') {
-      $('win-banner').textContent = '🐲 ¡El Equipo Dorado se hizo rico!';
-      $('win-banner').className = 'winner-banner gold';
-      $('win-emoji').textContent = '🐲';
-      MochiSounds.winMusic && MochiSounds.winMusic();
-      setTimeout(() => MochiSounds.winFanfare && MochiSounds.winFanfare(), 400);
-      if (narr) narr.innerHTML = `🐲 <span class="gold-team">El Equipo Dorado</span> acumuló <strong>¥${g}</strong> — ${gap > 500 ? 'un imperio comercial 💰' : gap > 200 ? 'una victoria sólida 💪' : 'un duelo reñido ⚔️'}.`;
-      launchConfetti(['#ffd57a', '#e8b14a', '#ff5a66']);
-    } else {
-      $('win-banner').textContent = '🤝 ¡Empate de mercaderes!';
-      $('win-banner').className = 'winner-banner tie';
-      $('win-emoji').textContent = '⚖️';
-      MochiSounds.tieMusic && MochiSounds.tieMusic();
-      if (narr) narr.innerHTML = `🤝 Ambos equipos igualaron en <strong>¥${r}</strong>.`;
-    }
-    renderLeaderboard(data);
-  });
-
-  // === Board rendering ===
-  // Perimeter layout on a 6x6 CSS grid. Tile ids 0..15 wrap clockwise from
-  // top-left corner. Top row = ids 0..4, right column = 5..7, bottom row =
-  // 8..11 (reversed visually), left column = 12..15 (reversed).
-  function renderBoard() {
-    const board = $('mp-board');
-    if (!board || !tiles.length) return;
-    // Remove any existing tile elements (keep .mp-board-center)
-    [...board.querySelectorAll('.mp-tile')].forEach((el) => el.remove());
-    tiles.forEach((t) => {
-      const el = document.createElement('div');
-      el.className = 'mp-tile tile-' + t.type + ' side-' + t.side;
-      el.id = 'mp-tile-' + t.id;
-      el.dataset.tileId = t.id;
-      const ownerBorder = ownership[t.id] ? `<div class="mp-tile-owner ${ownership[t.id]}"></div>` : '';
-      const costLabel = t.cost ? `<div class="mp-tile-cost">¥${t.cost}</div>` : '';
-      el.innerHTML = `
-        <div class="mp-tile-icon">${t.icon}</div>
-        <div class="mp-tile-name">${escapeHtml(t.name)}</div>
-        ${costLabel}
-        <div class="mp-tile-tokens" id="mp-tokens-${t.id}"></div>
-        ${ownerBorder}
-      `;
-      // CSS grid position based on tile id
-      const { col, row } = tileGridPos(t.id);
-      el.style.gridColumn = col;
-      el.style.gridRow = row;
-      board.appendChild(el);
-    });
-  }
-
-  // Map 16 tile ids to 6x6 grid coords going clockwise from id=0 (top-left).
-  // top row:    ids 0..4  at row 1, cols 1..5
-  // right col:  ids 5..7  at rows 2..4, col 6
-  // bottom row: id 8 at row 5 col 6 (corner), ids 9..11 at row 5 cols 5..3 → actually need 5x5+corner
-  // Easier: 6x6 grid; top row r1c1..c6, right col r2..r5 c6, bottom r6c6..c1, left c1 r5..r2.
-  // 16 tiles in 4 corners + 3 per side = 4 corners + 12 sides = 16. ✓
-  // Corner-clockwise mapping:
-  //   id 0 (corner) = r1 c1
-  //   id 1 = r1 c2, id 2 = r1 c3, id 3 = r1 c4   (top side, 3 mid tiles; r1 c5 unused? No, need 1 more)
-  // Wait — 16 tiles, 4 corners. Each side has 3 mid tiles. Corner + 3 mid + Corner + 3 mid + Corner + 3 mid + Corner + 3 mid = 16. Perfect.
-  // Grid dims: corners + 3 mid per side → side length = 5 (corner + 3 + corner = 5 cells). 5x5 grid.
-  function tileGridPos(id) {
-    // 5x5 grid (1-indexed), corners + 3 mids per side, 16 tiles total.
-    // ids 0..3 = top row (r1, c1..c4)
-    // ids 4..7 = right col (r1..r4, c5)  → id 4 is corner top-right
-    // ids 8..11 = bottom row going right→left (r5, c5..c2)
-    // ids 12..15 = left col going bottom→top (r5..r2, c1)
-    if (id <= 3)       return { row: 1, col: id + 1 };
-    if (id <= 7)       return { row: id - 3, col: 5 };
-    if (id <= 11)      return { row: 5, col: 13 - id };
-    return { row: 17 - id, col: 1 };
-  }
-
-  function placeTokensInitial() {
-    Object.entries(players).forEach(([pid, p]) => {
-      const slot = $('mp-tokens-' + (p.pos || 0));
-      if (!slot) return;
-      const token = makeTokenEl(pid, p);
-      slot.appendChild(token);
-    });
-  }
-
-  // Build a token element that uses the player's Kenney character PNG. The
-  // team-colored ring around it keeps the per-team coloring readable.
-  function makeTokenEl(pid, p) {
-    const token = document.createElement('div');
-    token.id = 'mp-token-' + pid;
-    token.className = 'mp-token ' + p.team;
-    token.title = p.name;
-    const charIdx = (typeof p.char === 'number') ? p.char : 0;
-    token.innerHTML = `<img class="mp-token-img" src="/assets/monopoly/chars/char-${charIdx}.png" alt="${escapeHtml(p.name)}">`;
-    return token;
-  }
-
-  function animateMove(pid, fromPos, toPos, onDone) {
-    const token = $('mp-token-' + pid);
-    if (!token) {
-      // Token wasn't placed yet (player joined late) — place directly
-      const slot = $('mp-tokens-' + toPos);
-      if (slot && players[pid]) {
-        slot.appendChild(makeTokenEl(pid, players[pid]));
-      }
-      if (onDone) onDone();
-      return;
-    }
-    if (fromPos === toPos) { if (onDone) onDone(); return; }
-    // Clear any prior "active" auras and apply to the moving token
-    document.querySelectorAll('.mp-token.active').forEach((t) => t.classList.remove('active'));
-    token.classList.add('active');
-    // Hop one tile at a time around the board
-    const steps = ((toPos - fromPos) + tiles.length) % tiles.length;
-    let cur = fromPos;
-    let i = 0;
-    function step() {
-      cur = (cur + 1) % tiles.length;
-      i++;
-      const newSlot = $('mp-tokens-' + cur);
-      const passedTile = $('mp-tile-' + cur);
-      if (newSlot) {
-        newSlot.appendChild(token);
-        token.classList.remove('hopping');
-        void token.offsetWidth;
-        token.classList.add('hopping');
-      }
-      // Trail-light each tile briefly as the token passes over it
-      if (passedTile) {
-        passedTile.classList.remove('mp-tile-passed');
-        void passedTile.offsetWidth;
-        passedTile.classList.add('mp-tile-passed');
-        setTimeout(() => passedTile.classList.remove('mp-tile-passed'), 700);
-      }
-      MochiSounds.tick && MochiSounds.tick();
-      if (i < steps) {
-        setTimeout(step, 160);
-      } else {
-        // Landing emphasis on the final tile
-        if (passedTile) {
-          passedTile.classList.add('mp-tile-landed');
-          setTimeout(() => passedTile.classList.remove('mp-tile-landed'), 1400);
-        }
-        // Drop the active aura after a beat
-        setTimeout(() => token.classList.remove('active'), 1600);
-        if (onDone) onDone();
-      }
-    }
-    if (steps === 0) { if (onDone) onDone(); return; }
-    step();
-  }
-
-  function applyTileEffect(data) {
-    const tile = data.tile;
-    if (!tile) return;
-    const teamEmoji = data.team === 'red' ? '🐉' : '🐲';
-    let msg = '';
-    let sound = null;
-    const tEl = $('mp-tile-' + data.toPos);
-    switch (data.action) {
-      case 'bought':
-        msg = `${teamEmoji} ${escapeHtml(data.playerName)} compró ${tile.name} por ¥${-data.moneyDelta}`;
-        spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        spawnPropertyRipple(tEl, data.team);
-        sound = 'cashRegister';
-        if (MochiSounds.titleStamp) MochiSounds.titleStamp();
-        break;
-      case 'own-city':
-        msg = `${teamEmoji} ${escapeHtml(data.playerName)} llegó a su propia ciudad ${tile.name}`;
-        sound = 'coinClink';
-        break;
-      case 'paid-rent':
-        msg = `${teamEmoji} ${escapeHtml(data.playerName)} pagó ¥${data.rentAmount} de renta en ${tile.name}`;
-        spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        sound = 'wrong';
-        break;
-      case 'cant-afford':
-        msg = `${teamEmoji} ${escapeHtml(data.playerName)} llegó a ${tile.name} pero no tiene dinero`;
-        break;
-      case 'card-bonus':
-        msg = `🎴 ${escapeHtml(data.playerName)} sacó una carta +¥${data.moneyDelta}`;
-        spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        sound = 'coinClink';
-        break;
-      case 'treasure':
-        msg = `🐉 ${escapeHtml(data.playerName)} encontró un tesoro +¥${data.moneyDelta}`;
-        spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        spawnTreasureBurst(tEl);
-        sound = 'dragonRoar';
-        setTimeout(() => MochiSounds.cashRegister && MochiSounds.cashRegister(), 500);
-        break;
-      case 'tax':
-        msg = `💰 ${escapeHtml(data.playerName)} pagó ¥${-data.moneyDelta} de impuestos`;
-        spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        sound = 'wrong';
-        break;
-      case 'festival':
-        msg = `🏮 ¡FIESTA! ${escapeHtml(data.playerName)} ganó +¥${data.moneyDelta}`;
-        spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        spawnFestivalBurst(tEl);
-        sound = 'festival';
-        break;
-      case 'jail':
-        msg = `🏛 ${escapeHtml(data.playerName)} cayó en la cárcel — pierde el próximo turno`;
-        sound = 'jailSlam';
-        break;
-      case 'start-bonus':
-        msg = `🏯 ${escapeHtml(data.playerName)} cayó en START +¥${data.moneyDelta}`;
-        spawnMoneyPop(data.toPos, data.moneyDelta, data.team);
-        sound = 'cashRegister';
-        break;
-      case 'skipped':
-        msg = `🏛 ${escapeHtml(data.playerName)} estaba en la cárcel — turno perdido`;
-        break;
-      default:
-        msg = `${teamEmoji} ${escapeHtml(data.playerName)} llegó a ${tile.name}`;
-    }
-    setRecentEvent(msg);
-    if (sound && MochiSounds[sound]) MochiSounds[sound]();
-  }
-
-  // Property-buy ripple — a colored ring expands outward from the bought tile,
-  // visually announcing the new owner without you having to read the toast.
-  function spawnPropertyRipple(tileEl, team) {
-    if (!tileEl) return;
-    const ripple = document.createElement('div');
-    ripple.className = 'mp-tile-ripple ' + team;
-    tileEl.appendChild(ripple);
-    setTimeout(() => ripple.remove(), 1100);
-  }
-  function spawnTreasureBurst(tileEl) {
-    if (!tileEl) return;
-    const layer = $('mp-fx-layer');
-    if (!layer) return;
-    const r = tileEl.getBoundingClientRect();
-    const lr = layer.getBoundingClientRect();
-    for (let i = 0; i < 10; i++) {
-      const c = document.createElement('div');
-      c.className = 'mp-treasure-spark';
-      c.textContent = ['🪙', '💰', '🧧', '✨', '🐉'][i % 5];
-      c.style.left = ((r.left + r.width / 2) - lr.left) + 'px';
-      c.style.top  = ((r.top  + r.height / 2) - lr.top)  + 'px';
-      c.style.setProperty('--dx', (Math.random() * 160 - 80) + 'px');
-      c.style.setProperty('--dy', (-60 - Math.random() * 100) + 'px');
-      c.style.animationDelay = (i * 50) + 'ms';
-      layer.appendChild(c);
-      setTimeout(() => c.remove(), 1400);
-    }
-  }
-  function spawnFestivalBurst(tileEl) {
-    if (!tileEl) return;
-    const layer = $('mp-fx-layer');
-    if (!layer) return;
-    const r = tileEl.getBoundingClientRect();
-    const lr = layer.getBoundingClientRect();
-    for (let i = 0; i < 14; i++) {
-      const c = document.createElement('div');
-      c.className = 'mp-treasure-spark festival';
-      c.textContent = ['🏮', '🎊', '🎉', '🧧', '✨'][i % 5];
-      c.style.left = ((r.left + r.width / 2) - lr.left) + 'px';
-      c.style.top  = ((r.top  + r.height / 2) - lr.top)  + 'px';
-      c.style.setProperty('--dx', (Math.random() * 200 - 100) + 'px');
-      c.style.setProperty('--dy', (-80 - Math.random() * 140) + 'px');
-      c.style.animationDelay = (i * 40) + 'ms';
-      layer.appendChild(c);
-      setTimeout(() => c.remove(), 1500);
-    }
-  }
-
-  function spawnMoneyPop(tilePos, delta, team) {
-    const slot = $('mp-tokens-' + tilePos);
-    if (!slot) return;
-    const layer = $('mp-fx-layer');
-    if (!layer) return;
-    const pop = document.createElement('div');
-    pop.className = 'mp-money-pop ' + (delta >= 0 ? 'gain' : 'loss');
-    pop.textContent = (delta >= 0 ? '+' : '') + '¥' + Math.abs(delta);
-    const r = slot.getBoundingClientRect();
-    const lr = layer.getBoundingClientRect();
-    pop.style.left = ((r.left + r.width / 2) - lr.left) + 'px';
-    pop.style.top  = ((r.top  + r.height / 2) - lr.top)  + 'px';
-    layer.appendChild(pop);
-    setTimeout(() => pop.remove(), 1500);
-  }
-
-  function refreshOwnership() {
-    tiles.forEach((t) => {
-      const tEl = $('mp-tile-' + t.id);
-      if (!tEl) return;
-      const existing = tEl.querySelector('.mp-tile-owner');
-      const owner = ownership[t.id];
-      if (existing) existing.remove();
-      if (owner) {
-        const d = document.createElement('div');
-        d.className = 'mp-tile-owner ' + owner;
-        tEl.appendChild(d);
-      }
-    });
-  }
-
-  function showDice(n) {
-    const dice = $('mp-dice');
-    if (!dice) return;
-    dice.textContent = '🎲 ' + n;
-    dice.classList.remove('show');
-    void dice.offsetWidth;
-    dice.classList.add('show');
-  }
-
-  function setRecentEvent(text) {
-    const el = $('mp-recent-event');
-    if (!el) return;
-    el.innerHTML = text;
-    el.classList.remove('flash');
-    void el.offsetWidth;
-    el.classList.add('flash');
-  }
-
-  function updateWealthDisplay() {
-    if ($('wealth-red'))  $('wealth-red').textContent  = scores.red  || 0;
-    if ($('wealth-gold')) $('wealth-gold').textContent = scores.gold || 0;
-  }
-
-  // === SIDE ROSTERS === Show every team member's name + wealth on the
-  // left/right edges of the host stage so the host can see participants
-  // at a glance regardless of count. Auto-densifies (font shrinks) past 8
-  // members per team. Updates on every mp:move broadcast.
-  function renderSideRosters() {
-    const redList = $('mp-roster-list-red');
-    const goldList = $('mp-roster-list-gold');
-    if (!redList || !goldList) return;
-    const red = [], gold = [];
-    Object.entries(players).forEach(([id, p]) => {
-      (p.team === 'red' ? red : gold).push({ id, ...p });
-    });
-    // Sort each team by wealth descending so the top contributor is at the top
-    red.sort((a, b) => (b.money || 0) - (a.money || 0));
-    gold.sort((a, b) => (b.money || 0) - (a.money || 0));
-    // Density classes
-    [['mp-roster-red', red.length], ['mp-roster-gold', gold.length]].forEach(([id, n]) => {
-      const el = $(id);
-      if (!el) return;
-      el.classList.remove('density-compact', 'density-micro');
-      if (n >= 12) el.classList.add('density-micro');
-      else if (n >= 7) el.classList.add('density-compact');
-    });
-    function rowHtml(p) {
-      const charIdx = (typeof p.char === 'number') ? p.char : 0;
-      const avatar = `<img class="mp-roster-avatar" src="/assets/monopoly/chars/char-${charIdx}.png" alt="">`;
-      return `<div class="mp-roster-row">
-        ${avatar}
-        <span class="mp-roster-name">${escapeHtml(p.name || '')}</span>
-        <span class="mp-roster-cash">¥${p.money || 0}</span>
-      </div>`;
-    }
-    redList.innerHTML  = red.map(rowHtml).join('');
-    goldList.innerHTML = gold.map(rowHtml).join('');
-  }
-
-  // === LIVE LEADERBOARD === Shows EVERY player (up to ~16) sorted by wealth.
-  // The container auto-densifies: 1-5 players = comfortable rows, 6-9 = compact,
-  // 10+ = micro. A subtle inner scroll kicks in past 12 players so the dice +
-  // event text always stay visible. Never crops players off-screen at the end —
-  // the cap was the original 5-row .slice() that the teacher just flagged.
-  function renderLiveLeaderboard() {
-    const lb = $('mp-leaderboard');
-    if (!lb) return;
-    const ranked = Object.entries(players)
-      .map(([id, p]) => ({ id, name: p.name, team: p.team, money: p.money || 0 }))
-      .sort((a, b) => b.money - a.money);
-    // Apply a density class based on player count so the layout shrinks
-    // automatically instead of overflowing the board-center plate.
-    lb.classList.remove('density-compact', 'density-micro');
-    if (ranked.length >= 10)      lb.classList.add('density-micro');
-    else if (ranked.length >= 6)  lb.classList.add('density-compact');
-    lb.innerHTML = ranked.map((p, i) => {
-      const medal = ['🥇', '🥈', '🥉'][i] || `${i + 1}.`;
-      const teamEmoji = p.team === 'red' ? '🐉' : '🐲';
-      return `<div class="mp-lb-row ${p.team}">
-        <span class="mp-lb-rank">${medal}</span>
-        <span class="mp-lb-name">${teamEmoji} ${escapeHtml(p.name)}</span>
-        <span class="mp-lb-cash">¥${p.money}</span>
-      </div>`;
-    }).join('');
-  }
-
-  function startTimer() {
-    if (!state || !state.endsAt) return;
-    urgentTriggered = false;
-    if (timerInterval) clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-      const remaining = Math.max(0, state.endsAt - Date.now());
-      const sec = Math.ceil(remaining / 1000);
-      const m = Math.floor(sec / 60);
-      const s = sec % 60;
-      $('timer-display').textContent = m > 0 ? `${m}:${String(s).padStart(2, '0')}` : sec;
-      if (sec <= 10 && !urgentTriggered) {
-        urgentTriggered = true;
-        $('timer-display').classList.add('urgent');
-        MochiSounds.urgent && MochiSounds.urgent();
-      }
-      if (remaining <= 0) clearInterval(timerInterval);
-    }, 100);
-  }
-
-  function renderLeaderboard(data) {
-    const lb = $('leaderboard');
-    if (!lb) return;
-    lb.innerHTML = '';
-    const rows = (data.leaderboard || []).slice(0, 12);
-    rows.forEach((p, i) => {
-      const row = document.createElement('div');
-      row.className = `lb-row ${p.team}`;
-      const medal = ['🥇', '🥈', '🥉'][i] || `#${i + 1}`;
-      const teamEmoji = p.team === 'red' ? '🐉' : '🐲';
-      row.innerHTML = `
-        <span class="lb-rank">${medal}</span>
-        <span class="lb-name">${p.avatar ? p.avatar + " " : ""}${teamEmoji} ${escapeHtml(p.name)}</span>
-        <span class="lb-score">¥${p.score}</span>
-      `;
-      lb.appendChild(row);
-    });
-  }
-
-  function renderLobbyPlayers(playersMap) {
-    const red = $('players-red');
-    const gold = $('players-gold');
-    red.innerHTML = '';
-    gold.innerHTML = '';
-    Object.entries(playersMap || {}).forEach(([id, p]) => {
-      const chip = document.createElement('div');
-      chip.className = 'player-chip';
-      chip.innerHTML = `${p.avatar ? `<span class="chip-avatar">${p.avatar}</span>` : ""}<span>${escapeHtml(p.name)}</span><span class="swap-arrow">↔</span>`;
-      chip.addEventListener('click', () => {
-        socket.emit('host:swap-team', { pin, playerId: id });
-        MochiSounds.swap();
-      });
-      (p.team === 'red' ? red : gold).appendChild(chip);
-    });
-  }
-
-  function launchConfetti(colors) {
-    for (let i = 0; i < 80; i++) {
-      const c = document.createElement('div');
-      c.className = 'confetti';
-      c.style.left = Math.random() * 100 + '%';
-      c.style.animationDelay = Math.random() * 1.5 + 's';
-      c.style.animationDuration = 2 + Math.random() * 2 + 's';
-      c.textContent = ['💰', '🏯', '🐉', '🧧', '✨'][i % 5];
-      c.style.fontSize = (1 + Math.random() * 1) + 'rem';
-      c.style.background = 'transparent';
-      document.body.appendChild(c);
-      setTimeout(() => c.remove(), 5000);
-    }
-  }
+  document.addEventListener('click', () => { if (window.unlockAudio) window.unlockAudio(); musicFor(); }, { once: true });
 
   function showScreen(name) {
-    ['lobby', 'countdown', 'active', 'win'].forEach((n) => {
-      const el = $('screen-' + n);
-      if (el) el.classList.toggle('hidden', n !== name);
+    ['lobby', 'stage', 'win'].forEach((n) => $('screen-' + n).classList.toggle('hidden', n !== name));
+    $('controls').classList.toggle('hidden', name !== 'stage');
+    $('endtools').classList.add('hidden');
+    $('cer-skip').classList.toggle('hidden', name !== 'win');
+    musicFor();
+  }
+
+  // ---------- bands: one big moment at a time, ≥ 2.6 s apart, the most important first ----------
+  let bandQ = [], bandOn = false;
+  const RANK = { star: 4, storm: 3, frenzy: 5, lead: 1, buy: 2, time: 5 };
+  function band(kind, parts, extra, ms) {
+    // a newer band of the same kind replaces a waiting one: the projector never tells an old storm while another board storms
+    for (let i = bandQ.length - 1; i >= 0; i--) if (bandQ[i].kind === kind) bandQ.splice(i, 1);
+    bandQ.push({ kind, parts, extra, ms: ms || 2600, at: Date.now() });
+    bandQ.sort((a, b) => (RANK[b.kind] || 0) - (RANK[a.kind] || 0));
+    if (bandQ.length > 3) bandQ.length = 3;
+    if (!bandOn) nextBand();
+  }
+  function nextBand() {
+    const b = $('band');
+    let it = bandQ.shift();
+    // too old: skip it (a board moment is over after ~3 s; the frenzy and the clock bands wait longer)
+    while (it && Date.now() - it.at > (it.kind === 'frenzy' || it.kind === 'time' ? 6000 : 3000)) it = bandQ.shift();
+    if (!it) { bandOn = false; return; }
+    bandOn = true;
+    b.className = 'mnh-band ' + it.kind;
+    b.innerHTML = '';
+    if (it.extra) b.appendChild(it.extra);
+    const txt = el('div');
+    it.parts.forEach((p) => txt.appendChild(p));
+    b.appendChild(txt);
+    void b.offsetWidth;
+    b.classList.add('show');
+    setTimeout(() => {
+      if (testHold) return;
+      b.classList.remove('show');
+      setTimeout(nextBand, 300);
+    }, it.ms);
+  }
+  const bold = (t) => el('b', null, t);
+  const span = (t) => el('span', null, t);
+
+  // ---------- the room ----------
+  const params = new URLSearchParams(location.search);
+  const setId = params.get('setId');
+  const LIVE = params.get('livegame') === '1' ? '&livegame=1' : '';
+  if (!setId) { location.href = '/packs.html?game=monopoly' + LIVE; return; }
+  $('set-change').href = '/packs.html?game=monopoly' + LIVE;
+  function showPin(p) {
+    pin = p;
+    $('pin-display').textContent = p;
+    $('active-pin').textContent = p;
+    const url = `${location.origin}/?pin=${p}`;
+    $('join-url').replaceChildren(location.host, document.createElement('wbr'), `/?pin=${p}`);
+    document.title = `Dàfùwēng · ${p}`;
+    drawQr(url);
+    try { sessionStorage.setItem('draly.monopolyHost', JSON.stringify({ pin: p, setId })); } catch (_) {}
+  }
+  function createRoom() {
+    socket.emit('host:create', { gameType: 'monopoly' }, (r) => {
+      if (!r || !r.pin) return;
+      showPin(r.pin);
+      socket.emit('host:set-duration', { pin, duration });
+      socket.emit('host:load-set', { pin, setId }, (resp) => {
+        if (!resp || !resp.ok) { alert('No se pudo cargar la serie de preguntas.'); location.href = '/packs.html?game=monopoly' + LIVE; return; }
+        $('set-title').textContent = `${resp.title} · ${resp.count} preguntas`;
+        updateStartBtn();
+      });
+    });
+  }
+  // A reload of this tab (F5 mid-class) takes the same room back instead of opening a new PIN.
+  let saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem('draly.monopolyHost') || 'null'); } catch (_) {}
+  if (saved && saved.pin && saved.setId === setId && !LIVE) {
+    socket.emit('host:reclaim', { pin: saved.pin }, (r) => {
+      if (r && r.ok && r.gameType === 'monopoly') { showPin(saved.pin); $('set-title').textContent = 'la serie elegida'; }
+      else createRoom();
+    });
+  } else createRoom();
+  function drawQr(url) {
+    const box = $('qr');
+    try {
+      if (!window.qrcode) { box.style.display = 'none'; return; }
+      const qr = window.qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+    } catch (_) { box.style.display = 'none'; }
+  }
+  let connectedOnce = false;
+  socket.on('connect', () => { if (connectedOnce && pin) socket.emit('host:reclaim', { pin }, () => {}); connectedOnce = true; });
+  document.querySelectorAll('.mnh-dur button').forEach((b) => b.addEventListener('click', () => {
+    duration = +b.dataset.s;
+    document.querySelectorAll('.mnh-dur button').forEach((x) => x.classList.toggle('on', x === b));
+    socket.emit('host:set-duration', { pin, duration });
+  }));
+  $('start-btn').addEventListener('click', () => { $('start-btn').disabled = true; socket.emit('host:start', { pin }); });
+  $('pause-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: !paused }));
+  $('resume-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: false }));
+  $('more-btn').addEventListener('click', () => socket.emit('host:add-time', { pin, seconds: 30 }));
+  $('skip-btn').addEventListener('click', () => {
+    const b = $('skip-btn');
+    if (b.disabled) return;
+    b.disabled = true;
+    socket.emit('host:mn-skip', { pin });
+    setTimeout(() => { b.disabled = false; }, 800);
+  });
+  const endNow = () => { if (confirm('¿Terminar la partida ahora?')) socket.emit('host:end-now', { pin }); };
+  $('end-now-btn').addEventListener('click', endNow);
+  $('paused-end-btn').addEventListener('click', endNow);
+  $('cer-skip').addEventListener('click', () => { socket.emit('host:mn-skip', { pin }); stage('podium'); });
+  $('home-btn').addEventListener('click', () => { location.href = '/'; });
+  $('play-again-btn').addEventListener('click', () => {
+    socket.emit('host:reset', { pin });
+    clearTimers();
+    resetBoards();
+    g = null;
+    $('cer').innerHTML = '';
+    showScreen('lobby');
+  });
+  socket.on('host:start-error', (e) => { alert(e && e.message ? e.message : 'No se pudo empezar.'); updateStartBtn(); });
+  function updateStartBtn() {
+    if (!state) return;
+    $('start-btn').disabled = !(state.state === 'lobby' && state.questionsLoaded > 0 && Object.values(state.players || {}).some((p) => !p.off));
+  }
+
+  // ---------- the lobby ----------
+  let preview = null, crowdKey = '';
+  function lobbyDecor() {
+    const sd = $('step-dice');
+    if (sd && !sd.firstChild) { const d = B.dice(); d._face.textContent = '4'; sd.append(d, el('i', 'mn-hand')); }
+    const ss = $('step-star');
+    if (ss && !ss.firstChild) { const im = el('img'); im.src = B.DRALINGO; im.alt = ''; ss.append(B.star(), im); }
+    if (!preview && $('preview')) {
+      preview = new B.Board($('preview'), { mode: 'tile', tags: false });
+      requestAnimationFrame(() => preview.fit());
+    }
+  }
+  function boardsNote(n) {
+    if (n <= 0) return 'Tableros de 4: cada uno contra 3 rivales';
+    if (n <= 5) return `1 tablero de ${n}`;
+    const k = Math.ceil(n / 4);
+    return `${k} tableros de 3 o 4`;
+  }
+  function paintCrowd() {
+    const list = Object.values((state && state.players) || {});
+    $('count').textContent = String(list.filter((p) => !p.off).length);
+    $('boards-note').textContent = boardsNote(list.filter((p) => !p.off).length);
+    const key = list.map((p) => `${p.name}:${p.sk || ''}:${p.off ? 1 : 0}`).join('|');
+    if (key === crowdKey) return;
+    crowdKey = key;
+    const box = $('crowd');
+    box.innerHTML = '';
+    const n = list.length;
+    const kh = n > 24 ? 74 : n > 14 ? 88 : 104;
+    box.style.setProperty('--kh', kh + 'px');
+    box.style.setProperty('--kw', Math.round(kh * 0.72) + 'px');
+    list.forEach((p, i) => {
+      const f = B.figure({ skin: p.sk || B.skinFor(p.avatar, p.name), c: -1, name: p.name, tag: true });   // seats (colours) come with the deal
+      if (p.off) f.classList.add('off');
+      box.appendChild(f);
     });
   }
 
-  function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // ---------- the boards ----------
+  function resetBoards() {
+    Object.values(tiles).forEach((t) => { if (t.board) t.board.destroy(); });
+    tiles = {};
+    $('grid').innerHTML = '';
+    $('top3').innerHTML = '';
+    classTile = null;
+  }
+  // an odd number of boards leaves a hole in the grid: the class ranking fills it (who leads the whole class)
+  let classTile = null;
+  function layoutGrid() {
+    const n = Object.keys(tiles).length;
+    const cols = n <= 1 ? 1 : n <= 4 ? 2 : n <= 6 ? 3 : n <= 8 ? 4 : n <= 9 ? 3 : 4;
+    const holes = n > 1 ? (cols - (n % cols)) % cols : 0;
+    if (holes && !classTile) { classTile = el('section', 'mnh-tile mnh-class'); classTile.appendChild(el('h3', 'mnh-class-h', 'La clase')); classTile.appendChild(el('ol', 'mnh-class-list')); }
+    if (classTile) { if (holes) { $('grid').appendChild(classTile); classTile.style.gridColumn = 'span ' + holes; } else classTile.remove(); }
+    $('grid').style.setProperty('--cols', String(cols));
+    $('grid').classList.toggle('roomy', n <= 4);   // up to 4 boards: bigger chips, readable from the back
+    paintTop3();
+    requestAnimationFrame(() => Object.values(tiles).forEach((t) => t.board.fit()));
+  }
+  function ensureTile(view) {
+    let t = tiles[view.id];
+    if (!t) {
+      const root = el('section', 'mnh-tile');
+      const head = el('div', 'mnh-tile-head');
+      head.appendChild(el('span', 'mnh-tile-name', 'Tablero ' + view.id));
+      const mapBox = el('div', 'mnh-tile-map');
+      root.append(head, mapBox);
+      $('grid').appendChild(root);
+      const board = new B.Board(mapBox, { mode: 'tile', tags: false });
+      t = tiles[view.id] = { id: view.id, root, head, board, chips: {}, seats: {}, lead: null, viewSeq: 0 };
+      layoutGrid();
+    }
+    (view.seats || []).forEach((s) => { t.seats[s.k] = Object.assign(t.seats[s.k] || {}, s, { seq: Math.max((t.seats[s.k] && t.seats[s.k].seq) || 0, view.seq || 0) }); });
+    t.board.setSeats(Object.values(t.seats));
+    t.board.setOwners(view.owners || {});
+    t.board.setStar(view.star, false);
+    t.lead = view.lead;
+    t.viewSeq = Math.max(t.viewSeq, view.seq || 0);
+    paintChips(t);
+    return t;
+  }
+  function paintChips(t) {
+    const list = Object.values(t.seats).sort((a, b) => a.c - b.c);
+    list.forEach((s) => {
+      let c = t.chips[s.k];
+      if (!c) {
+        c = el('div', 'mnh-chip');
+        c.style.setProperty('--pc', B.colorOf(s.c).c);
+        c.append(el('i'), el('b', null, s.name));
+        const st = el('span'); st.append(B.star(), el('em', 'n-st', '0'));
+        const co = el('span'); co.append(B.coin(), el('em', 'n-co', '0'));
+        c.append(st, co);
+        c.querySelectorAll('em').forEach((x) => { x.style.fontStyle = 'normal'; });
+        t.head.appendChild(c);
+        t.chips[s.k] = c;
+      }
+      c.querySelector('.n-st').textContent = fmt(s.stars);
+      c.querySelector('.n-co').textContent = fmt(s.coins);
+      c.classList.toggle('lead', t.lead === s.k && list.length > 1);
+      c.classList.toggle('off', s.on === false);
+    });
+  }
+  function snap(t, map, seq, keepPos) {
+    let changed = false;
+    Object.entries(map || {}).forEach(([k, v]) => {
+      const s = t.seats[k];
+      if (!s || (s.seq || 0) > seq) return;
+      s.seq = seq;
+      if (s.coins !== v[1] || s.stars !== v[2]) changed = true;
+      s.coins = v[1];
+      s.stars = v[2];
+      if (!keepPos) s.pos = v[0];
+    });
+    if (changed) { paintChips(t); top3Soon(); }
+  }
+  const group = (ev) => { const out = {}; (ev || []).forEach((e) => { (out[e.at] = out[e.at] || []).push(e); }); return out; };
+  function move(mv) {
+    const t = tiles[mv.b];
+    if (!t || !t.seats[mv.k]) return;
+    if (mv.seq <= t.viewSeq) return;          // already in the board this screen got whole (F5 / reclaim)
+    const at = group(mv.ev);
+    t.board.hop(mv.k, mv.path, {
+      gate: async (i) => { if (i > 0) for (const e of (at[i] || [])) await moment(t, e, mv); },
+      end: async () => { for (const e of (at[mv.path.length] || [])) await moment(t, e, mv); },
+    }).then(() => {
+      (mv.seats || []).forEach((x) => { if (t.seats[x.k]) t.board.settle(x.k, x.pos); });
+      snap(t, Object.fromEntries((mv.seats || []).map((x) => [x.k, [x.pos, x.coins, x.stars]])), mv.seq);
+    });
+  }
+  const nameOf = (t, k) => (t.seats[k] ? t.seats[k].name : '');
+  function kidFig(t, k, pose) {
+    const s = t.seats[k];
+    return s ? B.figure({ skin: s.skin, c: s.c, name: s.name, pose: pose || 'ok' }) : null;
+  }
+  function ping(t) { t.root.classList.remove('ping'); void t.root.offsetWidth; t.root.classList.add('ping'); }
+  async function moment(t, e, mv) {
+    const k = mv.k;
+    const ms = MAP.evMs(e);
+    const t0 = performance.now();
+    const p = t.board.posOf(k);
+    switch (e.type) {
+      case 'star':
+        t.board.pop(p, '★', 'star');
+        later(700, () => t.board.setStar(e.to, true));
+        band('star', [bold(`¡Estrella para ${nameOf(t, k)}!`), span(`Tablero ${t.id} · Dralingo se la dio por 10 monedas`)], kidFig(t, k), 2600);
+        sfx('star', 0.7, 900);
+        ping(t);
+        break;
+      case 'buy':
+        t.board.own(e.lm, { k, lvl: 1 });
+        if (LM[e.lm].id === 'burj' || LM[e.lm].id === 'arab') {
+          const im = el('img'); im.src = B.lmArt(LM[e.lm].id); im.alt = '';
+          band('buy', [bold(`${nameOf(t, k)} compró ${LM[e.lm].name}`), span(`Tablero ${t.id} · quien caiga ahí le paga peaje`)], im, 2300);
+          sfx('landmark', 0.5, 1500);
+        }
+        ping(t);
+        break;
+      case 'level': t.board.own(e.lm, { k, lvl: e.lvl }); break;
+      case 'lucky':
+        if (e.out === 'swap') { t.board.jump(k, e.to, { now: true }); t.board.jump(e.with, e.from); }
+        break;
+      case 'storm':
+        t.board.storm();
+        later(900, () => t.board.setStar(e.to, true));
+        band('storm', [bold(`¡Tormenta de arena en el Tablero ${t.id}!`), span(`La provocó ${nameOf(t, k)}: todos pierden monedas y la estrella vuela`)], null, 2400);
+        sfx('storm', 0.6, 1200);
+        ping(t);
+        break;
+      case 'blue': t.board.pop(p, '+' + e.coins, 'gain'); break;
+      case 'red': t.board.pop(p, String(e.coins || 0), 'loss'); break;
+      case 'pass': t.board.pop(0, '+' + e.coins, 'gain'); break;
+      default: break;
+    }
+    const half = Math.min(500, ms * 0.4);
+    if (half > 0) await sleep(half);
+    snap(t, e.s, mv.seq, true);
+    const rest = ms - (performance.now() - t0);
+    if (rest > 0) await sleep(rest);
+  }
+  // the class top 3 (stars, then coins) across every board
+  let top3T = null;
+  function top3Soon() { if (top3T) return; top3T = setTimeout(() => { top3T = null; paintTop3(); }, 500); }
+  function paintTop3() {
+    const all = [];
+    Object.values(tiles).forEach((t) => Object.values(t.seats).forEach((s) => all.push(s)));
+    all.sort((a, b) => b.stars - a.stars || b.coins - a.coins);
+    const box = $('top3');
+    box.innerHTML = '';
+    all.slice(0, 3).forEach((s, i) => {
+      if (!(s.stars > 0 || s.coins > 0)) return;
+      const k = el('div', 'mnh-top3-k');
+      k.appendChild(B.figure({ skin: s.skin, c: s.c, name: s.name }));
+      const txt = el('div');
+      const nm = el('b'); nm.append(el('em', null, (i + 1) + 'º'), document.createTextNode(s.name));
+      const v = el('span'); v.append(B.star(), document.createTextNode(fmt(s.stars) + ' · ' + fmt(s.coins)), B.coin());
+      txt.append(nm, v);
+      k.appendChild(txt);
+      box.appendChild(k);
+    });
+    // the class panel (when a board-sized hole is free): the top 6 of the whole class
+    const list = classTile && classTile.querySelector('.mnh-class-list');
+    if (!list || !classTile.isConnected) return;
+    list.innerHTML = '';
+    all.slice(0, 6).forEach((s, i) => {
+      const li = el('li', 'mnh-class-k');
+      li.appendChild(el('em', null, (i + 1) + 'º'));
+      li.appendChild(B.figure({ skin: s.skin, c: s.c, name: s.name }));
+      li.appendChild(el('b', null, s.name));
+      const v = el('span'); v.append(B.star(), document.createTextNode(fmt(s.stars)), B.coin(), document.createTextNode(fmt(s.coins)));
+      li.appendChild(v);
+      list.appendChild(li);
+    });
   }
 
-  socket.on('disconnect', () => console.log('[host-monopoly] disconnected'));
-  socket.on('connect', () => console.log('[host-monopoly] connected'));
-  socket.on('host-left', () => console.warn('[host-monopoly] host-left'));
+  // ---------- the clock ----------
+  let clockT = null, lastCount = null;
+  function runClock() {
+    clearInterval(clockT);
+    const paint = () => {
+      if (!g || !g.endAt) { const d = (g && g.dur) || duration; $('clock').textContent = `${Math.floor(d / 60)}:${String(d % 60).padStart(2, '0')}`; return; }
+      const left = g.paused ? g.pausedLeft : Math.max(0, g.endAt - performance.now());
+      const s = Math.max(0, Math.ceil(left / 1000));
+      $('clock').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+      const c10 = $('count10');
+      if (g.phase === 'play' && !g.paused && s <= 10 && s > 0) {
+        c10.classList.remove('hidden');
+        if (lastCount !== s) { lastCount = s; c10.textContent = String(s); sfx('tick', 0.5); }
+      } else c10.classList.add('hidden');
+    };
+    paint();
+    clockT = setInterval(paint, 250);
+  }
+
+  // ---------- the countdown, the rules card ----------
+  function runIn(n) {
+    const r = $('runin');
+    r.classList.remove('hidden');
+    r.innerHTML = '';
+    const b = el('b', null, n > 1 ? `¡${n} tableros listos!` : '¡Tablero listo!');
+    b.appendChild(el('small', null, 'Cada uno a su Salida… ¡la estrella espera!'));
+    r.appendChild(b);
+    sfx('round', 0.5);
+    later(COUNTDOWN_HIDE, () => { if (!testHold) r.classList.add('hidden'); });
+  }
+  const COUNTDOWN_HIDE = 2600;
+  function showRules(ms) {
+    const box = $('rules');
+    box.classList.remove('hidden');
+    box.innerHTML = '';
+    const c = el('div', 'mni-card');
+    const pic = el('div', 'mni-pic');
+    const d = B.dice(); d._face.textContent = '5';
+    pic.append(d, B.figure({ skin: 'dralingo', c: 1, name: '' }), el('i', 'mn-hand'));
+    c.append(pic, el('h2', null, '¡Responde y tira el dado!'), el('p', null, 'Cada respuesta correcta es un dado. Compra monumentos y llega a la estrella con 10 monedas'));
+    const say = el('div', 'mni-say');
+    c.appendChild(say);
+    box.appendChild(c);
+    const total = Math.max(1400, ms || T.show * 3.7);
+    later(total - 1250, () => { say.textContent = '¿Listos?'; sfx('tick', 0.7); });
+    later(total - 600, () => { say.textContent = '¡YA!'; sfx('start', 0.8); });
+    later(total + 300, () => { if (!testHold) box.classList.add('hidden'); });
+  }
+
+  // ---------- events ----------
+  on('state', (s) => {
+    state = s;
+    if (s.state === 'lobby') {
+      if (!$('screen-win').classList.contains('hidden') || !$('screen-stage').classList.contains('hidden')) { resetBoards(); g = null; }
+      showScreen('lobby');
+      lobbyDecor();
+      paintCrowd();
+      if ([180, 240, 300].includes(s.duration)) {
+        duration = s.duration;
+        document.querySelectorAll('.mnh-dur button').forEach((x) => x.classList.toggle('on', +x.dataset.s === s.duration));
+      }
+    }
+    // who is online (a kid who left stays on the board, greyed)
+    Object.values(s.players || {}).forEach((p) => {
+      if (p.k == null) return;
+      Object.values(tiles).forEach((t) => { const st = t.seats[p.k]; if (st && st.on !== !p.off) { st.on = !p.off; t.board.online(p.k, !p.off); paintChips(t); } });
+    });
+    updateStartBtn();
+  });
+  on('countdown', () => { clearTimers(); resetBoards(); showScreen('stage'); $('skip-btn').classList.add('hidden'); });
+  on('mn:init', (d) => {
+    g = { id: d.id, dur: d.duration, phase: d.phase, frenzy: !!d.frenzy, paused: !!d.paused, endAt: d.endsMs != null ? performance.now() + d.endsMs : 0, pausedLeft: d.endsMs || 0 };
+    showScreen('stage');
+    (d.boards || []).forEach((v) => ensureTile(v));
+    B.preload([].concat(...(d.boards || []).map((v) => v.seats.map((s) => s.skin))));
+    layoutGrid();
+    paintTop3();
+    runClock();
+    setPaused(!!d.paused);
+    $('screen-stage').classList.toggle('frenzy', g.frenzy);
+    if (d.phase === 'countdown') runIn((d.boards || []).length);
+    if (d.phase === 'intro') { $('skip-btn').classList.remove('hidden'); showRules(d.phaseMs); }
+    if (d.phase === 'final') $('final').classList.remove('hidden');
+  });
+  on('mn:seat', (d) => { if (d && d.board) { ensureTile(d.board); paintTop3(); } });
+  on('mn:intro', (d) => { if (!g) return; g.phase = 'intro'; $('skip-btn').classList.remove('hidden'); showRules(d && d.ms); });
+  on('mn:play', (d) => {
+    if (!g) return;
+    g.phase = 'play';
+    g.endAt = performance.now() + (d.endsMs || 0);
+    $('skip-btn').classList.add('hidden');
+    $('rules').classList.add('hidden');
+    musicFor();
+  });
+  on('mn:move', (mv) => { if (mv) move(mv); });
+  on('mn:ans', (a) => {
+    Object.values(tiles).forEach((t) => {
+      const c = t.chips[a.k];
+      if (!c) return;
+      c.classList.remove('ok', 'no');
+      void c.offsetWidth;
+      c.classList.add(a.right ? 'ok' : 'no');
+    });
+  });
+  on('mn:lead', (l) => {
+    const t = tiles[l.b];
+    if (!t) return;
+    t.lead = l.k;
+    paintChips(t);
+    band('lead', [bold(`Tablero ${t.id}: ¡${nameOf(t, l.k)} ${l.first ? 'toma la delantera' : 'pasa al primer lugar'}!`), span('Más estrellas gana; si empatan, más monedas')], kidFig(t, l.k), 2200);
+    sfx('flag', 0.4, 2500);
+  });
+  on('mn:frenzy', (d) => {
+    if (!g) return;
+    g.frenzy = true;
+    g.endAt = performance.now() + (d.endsMs || 30000);
+    $('screen-stage').classList.add('frenzy');
+    band('frenzy', [bold('¡Últimos 30 segundos!'), span('¡MONEDAS DOBLES en todos los tableros!')], B.star(), 2800);
+    sfx('siege', 0.6);
+    musicFor();
+  });
+  on('mn:time', (d) => {
+    if (!g) return;
+    g.endAt = performance.now() + (d.endsMs || 0);
+    if (g.paused) g.pausedLeft = d.endsMs || g.pausedLeft;
+    band('time', [bold(`+${d.add || 30} segundos más`)], null, 1600);
+  });
+  function setPaused(v) {
+    paused = !!v;
+    $('paused').classList.toggle('hidden', !paused);
+    $('pause-btn').querySelector('svg').innerHTML = paused ? PLAY_ICON : PAUSE_ICON;
+    $('pause-btn').querySelector('span').textContent = paused ? 'Seguir' : 'Pausa';
+    if (paused) stopMusic(); else musicFor();
+  }
+  on('mn:pause', (d) => {
+    if (!g) return;
+    g.paused = !!d.paused;
+    if (g.paused) g.pausedLeft = Math.max(0, g.endAt - performance.now());
+    else if (d.endsMs != null) g.endAt = performance.now() + d.endsMs;
+    setPaused(g.paused);
+    if (g.phase === 'intro') { if (g.paused) { clearTimers(); $('rules').classList.add('hidden'); } else showRules(d.phaseMs); }
+  });
+  on('mn:final', () => {
+    if (g) { g.phase = 'final'; g.paused = false; }
+    setPaused(false);
+    $('count10').classList.add('hidden');
+    $('rules').classList.add('hidden');
+    $('final').classList.remove('hidden');
+    sfx('final', 0.85);
+    stopMusic();
+  });
+  on('game-end', (d) => {
+    $('final').classList.add('hidden');
+    $('count10').classList.add('hidden');
+    clearInterval(clockT);
+    bandQ = [];
+    $('band').classList.remove('show');
+    ceremony(d);
+  });
+
+  // ---------- the ceremony ----------
+  let cer = null;
+  function ceremony(d) {
+    clearTimers();
+    cer = { d, stage: null };
+    showScreen('win');
+    const mo = (d && d.monopoly) || {};
+    const nb = Math.max(...(mo.boards || []).map((b) => (b.bonus || []).length), 0);
+    const plan = [['bonus-intro', 1800]];
+    for (let i = 0; i < nb; i++) plan.push(['bonus' + i, 2300]);
+    plan.push(['drum', 1300], ['winners', 3800], ['podium', 0]);
+    let t = 0;
+    plan.forEach(([name, ms]) => { later(t, () => stage(name), 0); t += ms; });
+  }
+  function cerGrid(boards, fill) {
+    const grid = el('div', 'mnh-cer-grid');
+    const n = boards.length;
+    grid.style.setProperty('--cols', String(n <= 1 ? 1 : n <= 4 ? 2 : n <= 6 ? 3 : 4));
+    grid.classList.toggle('roomy', n <= 4);   // few boards: bigger characters and numbers
+    boards.forEach((b) => { const box = el('section', 'mnh-cer-b'); box.appendChild(el('h3', null, 'Tablero ' + b.id)); fill(box, b); grid.appendChild(box); });
+    return grid;
+  }
+  function confetti(host, c, n) {
+    if (reduced()) return;
+    const col = B.colorOf(c);
+    const cols = [col.c, col.s, '#ffc93c', '#fff7e3'];
+    for (let i = 0; i < (n || 30); i++) {
+      const x = el('i', 'mn-confetti');
+      x.style.setProperty('--x', (2 + Math.random() * 96) + '%');
+      x.style.setProperty('--d', (Math.random() * 0.8).toFixed(2) + 's');
+      x.style.setProperty('--r', Math.round(Math.random() * 360) + 'deg');
+      x.style.setProperty('--dx', Math.round((Math.random() - 0.5) * 140) + 'px');
+      x.style.background = cols[i % cols.length];
+      host.appendChild(x);
+      setTimeout(() => x.remove(), 3600);
+    }
+  }
+  function stage(name) {
+    if (!cer) return;
+    cer.stage = name;
+    const mo = (cer.d && cer.d.monopoly) || {};
+    const boards = mo.boards || [];
+    const box = $('cer');
+    box.innerHTML = '';
+    const head = (h, sub) => { const x = el('h2', 'mnh-end-h', h); if (sub) x.appendChild(el('small', null, sub)); box.appendChild(x); };
+    const row = (b, opts) => {
+      const r = el('div', 'mnh-cer-row');
+      (b.rows || []).slice().sort((a, c) => a.c - c.c).forEach((x) => {
+        const win = opts.winners && opts.winners.includes(x.k);
+        const k = el('div', 'mnh-cer-k' + (opts.result ? (win ? ' win' : ' lose') : ''));
+        if (opts.bonus && opts.bonus.includes(x.k)) { const bb = el('div', 'mnh-cer-bonus'); bb.appendChild(B.star()); k.appendChild(bb); }
+        k.appendChild(B.figure({ skin: x.skin, c: x.c, name: x.name, pose: opts.result ? (win ? 'ok' : 'no') : (opts.bonus && opts.bonus.includes(x.k) ? 'ok' : 'idle'), tag: true }));
+        const tot = el('div', 'mnh-cer-tot');
+        const upTo = opts.upTo != null ? opts.upTo : (opts.useTotal ? 99 : 0);
+        tot.append(B.star(), document.createTextNode(String(x.stars + (b.bonus || []).slice(0, upTo).filter((s) => (s.winners || []).includes(x.k)).length)));
+        // the coins too once the board is decided: a tie on stars goes to more coins, the class sees why
+        if (opts.useTotal) { const c = el('span', 'mnh-cer-coins'); c.append(B.coin(), String(x.coins)); tot.appendChild(c); }
+        k.appendChild(tot);
+        r.appendChild(k);
+      });
+      return r;
+    };
+    if (name === 'bonus-intro') {
+      head('¡Estrellas bonus!', 'Tres estrellas más en cada tablero… ¡pueden cambiar quién gana!');
+      box.appendChild(cerGrid(boards, (bx, b) => bx.appendChild(row(b, {}))));
+      sfx('drum', 0.7);
+      return;
+    }
+    if (/^bonus\d+$/.test(name)) {
+      const i = Number(name.slice(5));
+      const ex = boards.map((b) => (b.bonus || [])[i]).find(Boolean);
+      const sh = el('div', 'mnh-cer-star');
+      sh.appendChild(B.star());
+      const tt = el('div');
+      tt.append(el('b', null, ex ? ex.name : 'Estrella bonus'), el('span', null, ex ? 'para ' + ex.what : ''));
+      sh.appendChild(tt);
+      box.appendChild(sh);
+      box.appendChild(cerGrid(boards, (bx, b) => {
+        const st = (b.bonus || [])[i];
+        bx.appendChild(row(b, { bonus: st ? st.winners : [], upTo: i + 1 }));
+        if (!st) bx.appendChild(el('p', 'mnh-hint', 'Nadie la ganó en este tablero'));
+      }));
+      sfx('star', 0.6);
+      return;
+    }
+    if (name === 'drum') {
+      head('¿Quién gana cada tablero?', 'Más estrellas gana. Si empatan: más monedas');
+      box.appendChild(cerGrid(boards, (bx, b) => bx.appendChild(row(b, { useTotal: true }))));
+      sfx('drum', 0.8);
+      return;
+    }
+    if (name === 'winners') {
+      head('¡Los ganadores!');
+      box.appendChild(cerGrid(boards, (bx, b) => {
+        bx.appendChild(row(b, { result: true, winners: b.winners || [], useTotal: true }));
+        const conf = el('div', 'mnf-conf');
+        bx.appendChild(conf);
+        const w = (b.rows || []).find((x) => (b.winners || []).includes(x.k));
+        if (w) confetti(conf, w.c, 18);
+      }));
+      sfx('win', 0.9);
+      later(800, () => sfx('aww', 0.35));
+      return;
+    }
+    if (name === 'podium') {
+      clearTimers();
+      head('¡El podio de la clase!', 'Las estrellas de todos los tableros');
+      const pod = el('div', 'mnh-podium');
+      const top = (mo.podium || []).slice(0, 3);
+      const order = top.length >= 3 ? [top[1], top[0], top[2]] : top.length === 2 ? [top[1], top[0]] : top;
+      order.forEach((x) => {
+        if (!x) return;
+        const rk = top.indexOf(x) + 1;
+        const p = el('div', 'mnh-pod p' + rk);
+        p.appendChild(B.figure({ skin: x.skin, c: x.c, name: x.name, pose: 'ok', tag: true }));
+        const step = el('div', 'mnh-pod-step');
+        step.appendChild(el('b', null, rk + 'º'));
+        const v = el('span'); v.append(B.star(), document.createTextNode(String(x.total) + ' · ' + fmt(x.coins)), B.coin());
+        step.appendChild(v);
+        p.appendChild(step);
+        pod.appendChild(p);
+      });
+      if (!top.length) pod.appendChild(el('p', 'mnh-hint', '¡La próxima ronda será épica!'));
+      box.appendChild(pod);
+      const conf = el('div', 'mnf-conf');
+      box.appendChild(conf);
+      if (top[0]) confetti(conf, top[0].c, 40);
+      $('cer-skip').classList.add('hidden');
+      $('endtools').classList.remove('hidden');
+    }
+  }
+
+  window.MonoHost = {
+    frame: () => ({ pin, phase: g && g.phase, boards: Object.keys(tiles).length, paused, stage: cer && cer.stage,
+      seats: Object.values(tiles).reduce((a, t) => a + Object.keys(t.seats).length, 0) }),
+    freeze: (v) => { frozen = !!v; if (!frozen) { const q = queue; queue = []; q.forEach(([fn, d]) => fn(d)); } return queue.length; },
+    replay: (ev) => { while (queue.length) { const [fn, d, e] = queue.shift(); fn(d); if (e === ev) break; } return queue.length; },
+    queued: () => queue.map((x) => x[2]),
+    hold: (v) => { testHold = !!v; },
+    stage: (name) => { if (cer) { clearTimers(); stage(name); } },
+    sim: (ev, d) => { if (handlers[ev]) handlers[ev](d); },
+    band: (kind, title, sub) => band(kind, [bold(title), span(sub || '')], B.star(), 4000),
+  };
 })();

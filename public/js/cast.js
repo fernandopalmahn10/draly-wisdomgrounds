@@ -9,6 +9,8 @@
 //   balance), oro (6-7 Swing: the winners), casi (6-7 Swing: the team that lost, kindly), mystery, oops,
 //   ruta (La Ruta Dorada /audios/<level>: a friend cheers the kid along the path of three levels), libro (El libro dorado:
 //   a simulation with zero mistakes), repaso (El libro dorado: before the kid's mistakes)
+//   tablero (Dàfùwēng · Monopolio: each one hosts the board's spaces: Fer the episode, Hamdan the landmarks, Latifa the
+//   «¡Suerte!» roulette, Aileen the duels, Adric the storm, Adrian Salida, Dralingo the star)
 // Poses: hello, cheer, mystery. Stickers are Higgsfield renders of his own character art, keyed to transparent WebP.
 (function () {
   const BASE = '/assets/cast/';
@@ -23,6 +25,7 @@
         oops: ['Casi. ¡Inténtalo otra vez!', 'Pensemos juntos…'],
         battle: ['¡Vamos, equipo! ¡A conquistar!', '¡Esa bandera, bien plantada!', '¡Así se juega!'],
         chase: ['¡Vamos, equipo! ¡Turbos!', '¡Nadie se queda atrás!', '¡Cada respuesta nos aleja de Robotín!'],
+        tablero: ['¡Bienvenidos a la noche del Gran Tablero!', '¡Cada respuesta es un dado!', '¡Esa estrella brilla, a buscarla!'],
         feast: ['¡Respondan y alimenten al dragoncito!', '¡Eso es trabajo en equipo!', '¡Qué hambre tiene ese dragoncito!'],
         smash: ['¡Dale a esa piñata!', '¡Golpe en el dorado, equipo!', '¡Qué golpazo!'],
         fiesta: ['¡Piñata rota! Excelente trabajo.', '¡Así se aprende y así se celebra!', '¡Equipo de campeones!'],
@@ -44,6 +47,7 @@
         oops: ['No pasa nada. ¡Yalla, otra vez!', 'Casi, amigo. ¡Otra vez!'],
         battle: ['¡Yalla, yalla! ¡Vamos!', '¡Dubái es nuestro!', '¡A conquistar, amigos!'],
         chase: ['¡Yalla, yalla! ¡Al jet!', '¡El jet los espera, amigos!', '¡Yalla, más rápido!'],
+        tablero: ['¡Yalla! ¡Un monumento para ti!', '¡Marhaba, dueño de Dubái!', '¡Yalla, que paguen peaje!'],
         feast: ['¡Yalla, más mochis!', '¡Marhaba, dragoncito! ¡A comer!', '¡Yalla, yalla, que no pare!'],
         smash: ['¡Yalla, golpe fuerte!', '¡Yalla, yalla, rompan la piñata!', '¡Marhaba, caramelos!'],
         fiesta: ['¡Yalla! ¡Caramelos para todos!', '¡Increíble, equipo!', '¡Esta fiesta merece un viaje en jet!'],
@@ -65,6 +69,7 @@
         oops: ['Casi… revisemos la pista.', 'Tranquilos, lo intentamos de nuevo.'],
         battle: ['¡Rodeen esa zona!', '¡Buena estrategia, equipo!', '¡Vamos por los monumentos!'],
         chase: ['¡Sepárense y lo logramos!', '¡Buena estrategia, equipo!', 'Piensen rápido: ¡turbo!'],
+        tablero: ['Gira la ruleta… ¡a ver qué sale!', 'Un buen plan y un poco de suerte.', '¡Veamos tu suerte!'],
         feast: ['Respuesta correcta, mochi asegurado.', 'Cada mochi cuenta, equipo.', '¡Buena estrategia: respondan rápido!'],
         smash: ['Miren la flecha y toquen en el dorado.', 'Paciencia… ¡ahora!', '¡Golpe perfecto, equipo!'],
         fiesta: ['¡Brillante! La piñata no tuvo oportunidad.', '¡Así se piensa y así se golpea!', '¡Yalla, a la siguiente piñata!'],
@@ -86,6 +91,7 @@
         oops: ['¡Casi! Dale, otra vez.', 'Tranqui, ¡vos podés!'],
         battle: ['¡Dale, che, vamos!', '¡Vos podés, plantá esa bandera!', '¡Vamos, vamos, que ganamos!'],
         chase: ['¡Dale, che, corré!', '¡Vos podés, dale turbo!', '¡Dale, que se acerca Robotín!'],
+        tablero: ['¡Dale, che! ¡Duelo de dados!', '¡Vos podés, tirá ese dado!', '¡Qué duelo, che!'],
         feast: ['¡Dale, che, más mochis!', '¡Vos podés, tocá rápido!', '¡Qué genial, che, cómo come!'],
         smash: ['¡Dale, che, pegale fuerte!', '¡Vos podés, tocá en el dorado!', '¡Qué golpazo, che!'],
         fiesta: ['¡Vos podés! ¡La rompimos!', '¡Qué genial, che!', '¡Dale, otra piñata más!'],
@@ -107,6 +113,7 @@
         oops: ['Casi.', 'Otra vez. Tú puedes.'],
         battle: ['Bien. Sigan así.', 'Mi perro huele la victoria.', 'Por ahí. Rápido.'],
         chase: ['Mi perro corre más rápido. ¡Vamos!', 'Por ahí. Rápido.', 'Bien. Sigan así.'],
+        tablero: ['Mi perro huele una tormenta.', 'Cuidado. Arena.', 'Agárrense…'],
         feast: ['Mi perro también quiere mochis.', 'Rápido. Toca.', 'Bien. Que coma.'],
         smash: ['Mi perro quiere caramelos.', 'Espera… ahora.', 'Buen golpe.'],
         fiesta: ['Bien hecho. Mi perro está feliz.', 'Nada mal, equipo.', '¡Eso fue genial!'],
@@ -128,6 +135,7 @@
         oops: ['¡Seguimos buscando!', 'El tesoro está cerca. ¡Otra vez!'],
         battle: ['¡El mapa dice: por aquí!', '¡A la aventura, equipo!', '¡Vamos por el tesoro!'],
         chase: ['¡El mapa dice: por aquí!', '¡Ya casi llegamos!', '¡A la aventura, rápido!'],
+        tablero: ['¡El mapa dice: otra vuelta!', '¡Otra vuelta al tablero!', '¡A la aventura, otra vuelta!'],
         feast: ['¡El mapa dice: más mochis!', '¡A la aventura, a comer!', '¡Vamos por el Burj Khalifa!'],
         smash: ['¡El mapa dice: caramelos!', '¡A la aventura, a golpear!', '¡Vamos por el tigre de oro!'],
         fiesta: ['¡Tesoro de caramelos!', '¡Misión cumplida!', '¡Lo logramos juntos!'],
@@ -150,6 +158,7 @@
         oops: ['¡Casi!', '¡Otra vez!'],
         battle: ['¡Vamos!', '¡A conquistar!', '¡Yalla!'],
         chase: ['¡Turbo!', '¡A correr!', '¡Yalla!'],
+        tablero: ['¡Una estrella para ti!', '¡Estrella, amigo!', '¡Yalla, qué estrella!'],
         feast: ['¡Ñam!', '¡Más mochis!', '¡Yalla!'],
         smash: ['¡Pum!', '¡Caramelos!', '¡Yalla!'],
         fiesta: ['¡Lo logramos!', '¡Qué fiesta, amigos!', '¡Bien hecho!'],
