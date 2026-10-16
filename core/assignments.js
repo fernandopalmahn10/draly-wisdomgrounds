@@ -52,7 +52,7 @@
 // 2026-05-27: access codes are now stored in core/teachers.js, one per
 // teacher. The list below is kept only as documentation of the OLD shape
 // — actual validation goes through Teachers.isAccessCodeValid() which
-// reads from data/teachers.json. The super-admin teacher (EMAAR2026) is
+// reads from data/teachers.json. The super-admin teacher is
 // seeded with code "1001" for backwards compatibility with existing
 // students. Other 1001-5005 codes are dropped (user feedback: "I only
 // use one anyway").

@@ -251,13 +251,13 @@ function generateCode() {
   for (let attempt = 0; attempt < 20; attempt++) {
     let code = '';
     for (let i = 0; i < 4; i++) {
-      code += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+      code += ALPHABET[require('crypto').randomInt(ALPHABET.length)];
     }
     if (!records[code] && !archive[code]) return code;   // an archived kid keeps their code
   }
   // Fallback to 5 chars on the cosmically-unlikely path
   let code = '';
-  for (let i = 0; i < 5; i++) code += ALPHABET[Math.floor(Math.random() * ALPHABET.length)];
+  for (let i = 0; i < 5; i++) code += ALPHABET[require('crypto').randomInt(ALPHABET.length)];
   return code;
 }
 
@@ -399,23 +399,29 @@ function setLevel(code, level, previous) {
   if (rec.level !== clean) {
     // 2026-10-15: when the level changed (core/level-keys.js: a kid who moves to a level after the keys went live
     // needs that level's key; their old level stays open)
+    // (a record that never had a level nor a class code gets its level now: dated too, so it is never "kept from
+    // before the keys" for whichever level its first login happens to pick)
     const before = Levels.normalize(rec.level) || Levels.normalize(previous);
-    if (before && before !== clean) rec.levelSince = Date.now();
+    if (!before || before !== clean) rec.levelSince = Date.now();
     rec.level = clean;
     scheduleSave();
   }
   return true;
 }
 // 🆕 2026-10-15 (La Ruta Dorada) — a level opened on the kid's ACCOUNT (any device): the key typed while logged in
-// ('key'), a teacher's «Desbloquear» ('teacher'), or kept from before the keys went live ('grandfathered').
-// core/level-keys.js decides; this only stores. Never removes anything.
-function setLevelAccess(code, level, via) {
+// ('key', with the level's device generation `gen`: «Cerrar en todos los aparatos» ends it), a teacher's «Desbloquear»
+// ('teacher'), or kept from before the keys went live ('grandfathered'). core/level-keys.js decides; this only stores.
+// A teacher or grandfathered grant is never replaced; a key grant is renewed (or upgraded to those two).
+function setLevelAccess(code, level, via, gen) {
   const rec = get(code);
   const clean = Levels.normalize(level);
   if (!rec || !clean) return false;
   if (!rec.levelAccess || typeof rec.levelAccess !== 'object') rec.levelAccess = {};
-  if (rec.levelAccess[clean]) return true;          // the first way in is kept
-  rec.levelAccess[clean] = { via: String(via || 'key').slice(0, 16), at: Date.now() };
+  const cur = rec.levelAccess[clean];
+  const how = String(via || 'key').slice(0, 16);
+  if (cur && cur.via !== 'key') return true;
+  if (cur && how === 'key' && Number(cur.gen || 1) === Number(gen || 1)) return true;
+  rec.levelAccess[clean] = how === 'key' ? { via: how, at: Date.now(), gen: Number(gen) || 1 } : { via: how, at: Date.now() };
   scheduleSave();
   return true;
 }

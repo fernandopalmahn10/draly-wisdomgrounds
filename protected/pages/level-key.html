@@ -10,7 +10,7 @@
   <title>Clave de {{levelName}} · Dralingo</title>
   <link rel="preload" href="/assets/fonts/study/noto-sans-800.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/study/noto-sans-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/css/key-screen.css?v=20261015a">
+  <link rel="stylesheet" href="/css/key-screen.css?v=20261015f">
   <!-- 🔑 2026-10-15 (La Ruta Dorada): what a visitor without the level's key sees on a locked page (La Base
        /audios/<level>-base, a simulation /yct-sim.html · /hsk-sim.html). Served by server.js in place of the locked
        page (core/level-keys.js sendKeyScreen fills {{levelName}} and the state below), never cached. The key is typed
@@ -40,16 +40,16 @@
           <label class="ks-label" for="ks-key">Clave de {{levelName}}</label>
           <div class="ks-field">
             <input class="ks-input" id="ks-key" name="key" type="text" inputmode="text" autocomplete="off" autocapitalize="characters"
-              autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="40" aria-describedby="ks-help ks-err" required>
+              autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="600" aria-describedby="ks-help ks-err" required>
           </div>
-          <p class="ks-help" id="ks-help">Es una palabra y un número, como <b translate="no">PANDA-12</b>. Mayúsculas o minúsculas, da igual.</p>
+          <p class="ks-help" id="ks-help">Es una palabra y un número, como <b translate="no">PANDA-12</b> (con o sin guion). También puedes pegar aquí el mensaje entero.</p>
           <p class="ks-error" id="ks-err" role="alert"></p>
           <button class="ks-go" id="ks-go" type="submit">Entrar</button>
         </form>
         <a class="ks-go" id="ks-pin" href="/" hidden>Escribir el PIN</a>
 
         <section class="ks-route" id="ks-route" aria-labelledby="ks-route-title">
-          <h2 class="ks-route-title" id="ks-route-title">La clave abre los tres niveles de {{levelName}}:</h2>
+          <h2 class="ks-route-title" id="ks-route-title">Con esta clave se abren:</h2>
           <ol class="ks-steps">
             <li class="ks-step"><span class="ks-step-n" aria-hidden="true">1</span>La Base</li>
             <li class="ks-step"><span class="ks-step-n" aria-hidden="true">2</span>El Entrenamiento</li>
@@ -57,8 +57,8 @@
           </ol>
         </section>
 
-        <p class="ks-alt" id="ks-alt">¿Ya tienes tu código de alumno? <a id="ks-login" href="/homework.html">Entra a Mis Tareas</a> y vuelves aquí.</p>
         <p class="ks-alt" id="ks-nokey">¿No tienes la clave? Pídesela a tu maestra o maestro de Dralingo.</p>
+        <p class="ks-alt" id="ks-alt">¿Ya eras alumno antes? <a id="ks-login" href="/homework.html">Entra a Mis Tareas</a> con tu código: si tu cuenta ya tiene la clave, esta página se abre sola.</p>
       </div>
     </main>
   </div>
@@ -93,9 +93,11 @@
     }
     if (S.reason === 'room') { noKey('Esta sala ya cerró', 'Pídele a tu maestra el PIN nuevo y vuelve a entrar.', 'Escribir el PIN nuevo'); return; }
     if (S.reason === 'pin') { noKey('¿Vas a un examen con tu clase?', 'Escribe el PIN que te da tu maestra en la pantalla de inicio.', 'Escribir el PIN'); return; }
-    if (S.what === 'sim') {
-      $('ks-lede').textContent = 'Este simulacro es para alumnos de Dralingo. La clave está en el mensaje de tu maestra y se escribe una sola vez en este teléfono.';
-    }
+    // a phone says «teléfono»; a laptop or a tablet with a mouse says «aparato»
+    var thing = (window.matchMedia && matchMedia('(pointer: coarse)').matches) ? 'este teléfono' : 'este aparato';
+    $('ks-lede').textContent = S.what === 'sim'
+      ? 'Este simulacro es para alumnos de Dralingo. La clave está en el mensaje de tu maestra y se escribe una sola vez en ' + thing + '.'
+      : 'Está en el mensaje de tu maestra. Se escribe una sola vez: ' + thing + ' la recuerda.';
 
     function setError(msg) {
       err.textContent = '';
@@ -125,6 +127,14 @@
       e.preventDefault();
       var key = input.value.trim();
       if (!key) { setError('Escribe la clave del mensaje de tu maestra.'); input.focus(); return; }
+      // a pasted WhatsApp message: the first «WORD-12» in it (the level's name «YCT 1» never looks like one)
+      if (key.length > 30) {
+        var m = key.match(/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{4,}[\s-]*\d{2,}/);
+        if (m) { key = m[0]; input.value = key.toUpperCase(); }
+      }
+      if (key.replace(/[^A-Za-z0-9]/g, '').toUpperCase() === 'PANDA12') {
+        setError('PANDA-12 es solo un ejemplo: escribe la clave que viene en tu mensaje.'); input.focus(); return;
+      }
       setError('');
       busy(true, 'Revisando…');
       fetch('/api/level-key', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
@@ -135,7 +145,7 @@
           busy(false);
           setError((d && d.error) || 'Esa clave no es. Revísala en el mensaje de tu maestra.');
           input.focus();
-          try { input.select(); } catch (_) {}
+          if (!(window.matchMedia && matchMedia('(pointer: coarse)').matches)) { try { input.select(); } catch (_) {} }
         })
         .catch(function () { busy(false); setError('No hay conexión. Revisa tu internet y vuelve a intentarlo.'); });
     });

@@ -332,6 +332,9 @@ async function run() {
 
   // ── 9. a kid who moves up after the go-live ──
   section('moving to another level');
+  // (a login with the kid's own class code after the go-live stamps the grandfathered level on the account; a move
+  // with a new class code never stamps anything: from outside it looks exactly like someone trying another class)
+  ok((await enter(moverPh, '1003', null, mover.studentCode)).levelOpen === true, 'the grandfathered YCT kid logs in after the go-live (own class code)');
   const mv = await enter(moverPh, '1002', null, mover.studentCode);
   ok(mv.level === 'hsk2' && mv.levelOpen === false, 'a grandfathered YCT kid now on New HSK 1: that level needs its key');
   const mvPh2 = phone();
@@ -350,6 +353,11 @@ async function run() {
   ok(cl.json && cl.json.ok, '«Cerrar en todos los aparatos» for YCT 1');
   ok(isKeyScreen(await get('/audios/yct1-base', as(k)), 'YCT 1'), '… that device asks again');
   ok(await openBase(k, BASES[0]) === false, '… its files too');
+  ok((await enter(phone(), '1003', null, newKid.studentCode)).levelOpen === false, '… and an account that had typed the (leaked) key loses it too: it types the new key once');
+  const relock = phone();
+  await enter(relock, '1003', null, newKid.studentCode);
+  ok((await post('/api/level-key', { level: 'yct1', key: 'Cielo-2024' }, as(relock))).json.ok && (await enter(phone(), '1003', null, newKid.studentCode)).levelOpen === true,
+    '… after typing the new key it is saved on the account again');
   const back = phone();
   ok((await enter(back, '1003', null, oldKid.studentCode)).levelOpen === true && await openBase(back, BASES[0]), '… a grandfathered kid gets it back at the next /homework login (from the account)');
   ok((await post('/api/admin/level-keys/zz9/close-devices', {}, { headers: T(SEED) })).status === 400, 'an unknown level is refused');
@@ -374,6 +382,8 @@ async function run() {
   const tdev = phone();
   ok(((await get('/api/teacher-device', as(tdev))).json || {}).remembered === false, 'a new device is not remembered');
   ok((await post('/api/teacher-device', { code: 'nope' }, as(tdev))).status === 401, 'the teacher screen refuses a wrong code');
+  const viaQuery = await post('/api/teacher-device?pw=' + encodeURIComponent(SEED), {}, as(phone()));
+  ok(viaQuery.status === 401 && !viaQuery.setCookie.some((c) => c.startsWith('dtd=')), 'a code in the address (?pw=, a link from another site) remembers nothing');
   const rem = await post('/api/teacher-device', { code: SEED.toLowerCase() }, as(tdev));
   ok(rem.json && rem.json.ok && cookieOk(rem.setCookie, 'dtd') && /Max-Age=77\d{5}/.test(rem.setCookie.find((c) => c.startsWith('dtd='))), 'the right code remembers THIS device (httpOnly, 90 days)');
   ok(((await get('/api/teacher-device', as(tdev))).json || {}).remembered === true, '… it is remembered');
@@ -427,6 +437,14 @@ async function run() {
   ok(mine && (mine.assignments || []).some((a) => a.title === 'Prueba ' + stamp), '… her special assignment is still hers');
   ok((await put('/api/admin/teachers/' + encodeURIComponent(ENNI2) + '/code', { newCode: enni.teacherId }, { headers: T(NEW) })).status === 400, 'a retired code can never be taken again');
   ok((await post('/api/admin/my-code', { newCode: 'Back-' + rnd(4) + '1' }, { headers: T(LEGACY) })).status === 400, 'the legacy password has no code to change here (Render)');
+  const school = { 'CF-Connecting-IP': '203.0.113.150' };
+  for (let i = 0; i < 12; i++) await get('/api/admin/students', { headers: Object.assign({}, school, T(SEED)) });
+  const stale = await get('/api/admin/students', { headers: Object.assign({}, school, T(SEED)) });
+  ok(stale.status === 401 && stale.json && stale.json.retired, 'an old tab still sending the changed code: «ya se cambió», not counted as a guess');
+  ok((await get('/api/admin/students', { headers: Object.assign({}, school, T(NEW)) })).status === 200, '… so the school\'s address is not locked out');
+  for (let i = 0; i < 10; i++) await get('/api/admin/students', { headers: Object.assign({}, school, T('WRONG-' + i)) });
+  ok((await get('/api/admin/students', { headers: Object.assign({}, school, T(NEW)) })).status === 429, '10 really wrong codes from that address lock it…');
+  ok((await get('/api/admin/students', { jar: me.jar, headers: Object.assign({}, school, T(NEW)) })).status === 200, '… except a remembered teacher device (never stranded mid-class)');
   const sug = (await get('/api/admin/teachers/suggest-code', { headers: T(NEW) })).json;
   ok(sug && /^T-[A-Z0-9]{8}$/.test(sug.code), '«nuevo código al azar» offers a code of the usual shape');
 
@@ -441,9 +459,20 @@ async function run() {
   const hist = await get('/api/homework/sentences/' + newKid.studentCode + '?accessCode=1003');
   ok(hist.status === 200 && !/editedBy/.test(hist.text), 'saved sentences carry no editor code');
   for (const f of ['public/js/maestro.js', 'public/js/teacher-gate.js', 'protected/pages/level-key.html', 'public/js/audios.js']) {
-    ok(!/draly2026|EMAAR/i.test(fs.readFileSync(path.join(ROOT, f), 'utf8')), `${f}: no teacher code written in it`);
+    ok(!new RegExp(['dra', 'ly20', '26'].join('') + '|' + ['EMA', 'AR'].join(''), 'i').test(fs.readFileSync(path.join(ROOT, f), 'utf8')), `${f}: no teacher code written in it`);
   }
   ok(!/WU_ADMIN_PASSWORD \|\| '[^']/.test(fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8')), 'server.js: the legacy password has no default written in the code');
+
+  // ── 14b. a login with another class's code (class codes are not secret) opens nothing ──
+  section('another class\'s code');
+  const intruder = phone();
+  const wrongClass = await enter(intruder, '1003', null, oldHskKid.studentCode);
+  ok(wrongClass.ok && wrongClass.levelOpen === false && !intruder.jar.dsim && !intruder.jar.dlv_hsk1 && !intruder.jar.dlv_yct1,
+    'a grandfathered HSK 1 kid\'s code typed with the YCT 1 class code: homework works, but no session and no level');
+  ok(isKeyScreen(await get('/audios/hsk1-base', as(intruder)), 'HSK 1') && isKeyScreen(await get('/audios/yct1-base', as(intruder)), 'YCT 1'), '… both bases still ask their key');
+  const again = await enter(intruder, '1003', null, oldHskKid.studentCode);   // the code the first login re-tagged
+  ok(again.ok && again.levelOpen === false && isKeyScreen(await get('/audios/hsk1-base', as(intruder)), 'HSK 1') && isKeyScreen(await get('/audios/yct1-base', as(intruder)), 'YCT 1'),
+    '… and a second login with the class code the first one re-tagged opens nothing either');
 
   // ── 15. student-code guessing at /homework ──
   section('student-code guessing');

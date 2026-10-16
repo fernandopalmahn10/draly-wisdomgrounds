@@ -203,11 +203,13 @@ app.use((req, res, next) => {
 //  · the recordings and pictures live in protected/ and only travel as signed /sim-media/ links inside a payload the
 //    request was allowed to see (never under /assets/: Cloudflare keeps /assets/* for 2 h).
 // The files left the old /assets/… addresses: those answer 404 (even for copies left on a PC that never got pushed).
+// (2026-10-15 review: every /assets/ path is decoded BEFORE it is tested, so %73tudy or %53IMULATIONS can't slip by)
 app.use((req, res, next) => {
-  if (!/simulations/i.test(req.path)) return next();
+  if (!/(assets|%)/i.test(req.path)) return next();   // a cheap pre-test; the decoded path decides
   let p = req.path;
   try { p = decodeURIComponent(p); } catch (_) { /* keep raw */ }
-  if (!/^\/+assets\/+[^/]*simulations/i.test(path.posix.normalize(p.replace(/\\/g, '/')))) return next();
+  p = path.posix.normalize(p.replace(/\\/g, '/')).toLowerCase();
+  if (!/^\/+assets\/+([^/]*simulations|study(\/|$)|audios\/+[^/]*-base(\/|$))/.test(p)) return next();
   res.set(SimLock.NO_STORE);
   res.status(404).type('text').send('Not found');
 });
@@ -217,15 +219,7 @@ app.get('/sim-media/:token/:file', (req, res) => _simMediaFile(req, res));
 // public/ for protected/base/<level>-base/ and protected/study/, served only through /base-media/ to a request that
 // may use that level (core/level-keys.js access()). The old /assets/… addresses answer 404 (a copy that a build tool
 // writes into public/ again, e.g. a new PDF from ../study/lib/web.py, is never served from there).
-app.use((req, res, next) => {
-  if (!/study|-base/i.test(req.path)) return next();
-  let p = req.path;
-  try { p = decodeURIComponent(p); } catch (_) { /* keep raw */ }
-  p = path.posix.normalize(p.replace(/\\/g, '/')).toLowerCase();
-  if (!/^\/+assets\/+(study\/|audios\/+[^/]*-base(\/|$))/.test(p)) return next();
-  res.set(SimLock.NO_STORE);
-  res.status(404).type('text').send('Not found');
-});
+// (the guard above answers them)
 app.get('/base-media/:base/*', (req, res) => _baseMediaFile(req, res));
 // Serve static assets. HTML pages get no-cache headers so phones always pull
 // the latest markup (otherwise stale cached HTML keeps referencing old
@@ -380,9 +374,44 @@ function _clientIp(req) {
 // 🔒 2026-10-15: Cloudflare's CF-Connecting-IP first (Cloudflare overwrites it, so a visitor can't fake it on
 // app.dralingo.app the way they can put anything first in X-Forwarded-For); the old order otherwise. The old Render
 // address still takes any header: lock it to Cloudflare to make every per-address limit exact.
+// 🔒 2026-10-15 (security review): a client can write any CF-Connecting-IP or X-Forwarded-For it likes, e.g. through
+// the old onrender.com address, so neither is believed blindly any more (every per-address limit hangs on this):
+//   · the hop that reached us = the LAST X-Forwarded-For entry (Render's proxy appends the address that connected to
+//     it), or the socket address when there is no proxy;
+//   · CF-Connecting-IP counts only when that hop is Cloudflare (its published ranges), or on this PC's own tests
+//     (loopback, never on Render);
+//   · IPv6 addresses count per /64 (one home network), so a prefix can't mint endless addresses.
+const _CF_V4 = ['173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22', '103.31.4.0/22', '141.101.64.0/18', '108.162.192.0/18',
+  '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22', '198.41.128.0/17', '162.158.0.0/15', '104.16.0.0/13', '104.24.0.0/14',
+  '172.64.0.0/13', '131.0.72.0/22'].map((c) => { const [a, b] = c.split('/'); return [a.split('.').reduce((n, x) => n * 256 + +x, 0), +b]; });
+const _CF_V6 = ['2400:cb00', '2606:4700', '2803:f800', '2405:b500', '2405:8100', '2c0f:f248'];   // /32s (+ 2a06:98c0::/29 below)
+function _v4num(ip) { const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(ip); return m ? ((+m[1] * 256 + +m[2]) * 256 + +m[3]) * 256 + +m[4] : null; }
+function _isCloudflare(ip) {
+  const n = _v4num(ip);
+  if (n != null) return _CF_V4.some(([base, bits]) => Math.floor(n / 2 ** (32 - bits)) === Math.floor(base / 2 ** (32 - bits)));
+  const s = ip.toLowerCase();
+  if (_CF_V6.some((p) => s.startsWith(p + ':'))) return true;
+  const m = /^2a06:([0-9a-f]{1,4}):/.exec(s);
+  return !!(m && (parseInt(m[1], 16) & 0xfff8) === 0x98c0);
+}
+function _cleanIp(ip) {
+  let s = String(ip || '').trim().replace(/^\[|\]$/g, '');
+  if (/^::ffff:\d+\.\d+\.\d+\.\d+$/i.test(s)) s = s.slice(7);
+  if (!s.includes(':')) return s;
+  // IPv6: its /64 (the first four groups, '::' expanded)
+  const [head, tail] = s.toLowerCase().split('::');
+  const h = head ? head.split(':') : [];
+  const t = tail !== undefined ? (tail ? tail.split(':') : []) : [];
+  const groups = tail !== undefined ? h.concat(Array(Math.max(0, 8 - h.length - t.length)).fill('0'), t) : h;
+  return groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, '')).join(':') + '::/64';
+}
 function _ipFromHeaders(h, remote) {
-  const ip = h['cf-connecting-ip'] || h['x-forwarded-for'] || remote || 'unknown';
-  return String(ip).split(',')[0].trim();
+  const xff = String(h['x-forwarded-for'] || '').split(',').map((x) => x.trim()).filter(Boolean);
+  const hop = _cleanIp(xff.length ? xff[xff.length - 1] : remote);
+  const loopTest = !process.env.RENDER && /^(127\.0\.0\.1|::1)$/.test(String(remote || '').replace(/^::ffff:/, '')) && !xff.length;
+  const cf = String(h['cf-connecting-ip'] || '').split(',')[0].trim();
+  if (cf && (_isCloudflare(hop) || loopTest)) return _cleanIp(cf);
+  return hop || 'unknown';
 }
 const _socketIp = (socket) => _ipFromHeaders(socket.handshake.headers || {}, socket.handshake.address);
 // 🔒 2026-10-11 — every browser page now sends the code in the X-Admin-Pw header
@@ -521,12 +550,20 @@ function _adminAuth(req, res) {
   // one IP → 429. Only failures are counted, so legitimate dashboard
   // polling with the correct code is never throttled.
   const ip = _clientIp(req);
-  if (_adminFailCount(ip) >= 10) {
+  // 🔒 2026-10-15: a remembered teacher device is never locked out with its school's address (kids or an old tab
+  // sending wrong codes from the same Wi-Fi must not strand the teacher mid-class)
+  if (_adminFailCount(ip) >= 10 && !LevelKeys.teacherDevice(req)) {
     if (res) res.status(429).json({ ok: false, error: 'demasiados intentos, espera unos minutos' });
     return null;
   }
   // Read from header first, then legacy ?pw= query param (back-compat).
   const givenPw = _adminPw(req);
+  // 🔒 2026-10-15: a code changed with «Cambiar mi código» is refused but never counted as a guess (every tab and
+  // projector that still holds it keeps asking until it is reloaded, and that must not lock the school out)
+  if (givenPw && Teachers.isRetired(givenPw)) {
+    if (res) res.status(401).json({ ok: false, retired: true, error: 'Este código ya se cambió. Entra con tu código nuevo.' });
+    return null;
+  }
   // Legacy super-admin passwords still grant full access for the live
   // warmup-host flow (host-warmup.html unlock). These bypass the
   // teachers table entirely. Constant-time compare so the secret can't be
@@ -578,12 +615,17 @@ app.post('/api/teacher-device', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
   const ip = _clientIp(req);
   if (_adminFailCount(ip) >= 10) return res.status(429).json({ ok: false, error: 'Muchos intentos. Espera 10 minutos y vuelve a intentarlo.' });
-  const code = String((req.body && req.body.code) || _adminPw(req) || '').trim();
+  // the JSON body or the header only (never ?pw=: a link on another site must not remember a device)
+  const hdr = req.headers || {};
+  let viaHeader = String(hdr['x-admin-password'] || hdr['x-admin-pw'] || '');
+  try { viaHeader = decodeURIComponent(viaHeader); } catch (_) { /* as-is */ }
+  const code = String((req.body && typeof req.body.code === 'string' && req.body.code) || viaHeader || '').trim().slice(0, 80);
   const s = code && _legacyPwOk(code) ? { teacher: null, isSuperAdmin: true, legacy: true }
     : (code ? (Teachers.getByTeacherId(code) ? { teacher: Teachers.getByTeacherId(code), isSuperAdmin: !!Teachers.getByTeacherId(code).isSuperAdmin, legacy: false } : null) : null);
   if (!s) {
+    if (code && Teachers.isRetired(code)) return res.status(401).json({ ok: false, retired: true, error: 'Ese código ya se cambió. Escribe tu código nuevo.' });
     if (code) _adminNoteFail(ip);
-    return res.status(401).json({ ok: false, error: 'Ese código no es. Es el mismo código con el que entras a /maestro.' });
+    return res.status(401).json({ ok: false, error: 'Ese código no funciona. Es el mismo con el que entras a Teacher Mode (/maestro).' });
   }
   if (s.teacher) Teachers.touchLastSeen(s.teacher.teacherId);
   LevelKeys.rememberTeacher(req, res, s);
@@ -2136,10 +2178,15 @@ function _enterRateLimit(req) {
   }
   return arr.length <= 100;
 }
-// 🔒 2026-10-15 — student codes typed that match no account, per address (see /api/homework/enter)
+// 🔒 2026-10-15 — student codes typed that match no account (or someone else's class code on a tagged account), per
+// address (60 / 10 min) and for the whole platform (600 / hour: class codes are not secret, so many addresses together
+// must not find codes either; a pause then lasts until the hour's count drops, logged once). See /api/homework/enter.
 const _hwMisses = new Map();
+let _hwMissesAll = [];
 function _hwCodeMissBlocked(req) {
   const now = Date.now();
+  _hwMissesAll = _hwMissesAll.filter((t) => now - t < 60 * 60 * 1000);
+  if (_hwMissesAll.length >= 600) return true;
   return (_hwMisses.get(_clientIp(req)) || []).filter((t) => now - t < 10 * 60 * 1000).length >= 60;
 }
 function _hwCodeMiss(req) {
@@ -2148,7 +2195,9 @@ function _hwCodeMiss(req) {
   const arr = (_hwMisses.get(ip) || []).filter((t) => now - t < 10 * 60 * 1000);
   arr.push(now);
   _hwMisses.set(ip, arr);
+  _hwMissesAll.push(now);
   if (arr.length === 60) console.warn('[security] student-code guessing ip=' + ip + ' → logins with unknown codes paused 10 min');
+  if (_hwMissesAll.length === 600) console.warn('[security] 600 unknown student codes in one hour from many addresses → unknown-code logins paused');
   if (_hwMisses.size > 5000) for (const [k, v] of _hwMisses) if (!v.length || now - v[v.length - 1] > 10 * 60 * 1000) _hwMisses.delete(k);
 }
 app.post('/api/homework/enter', (req, res) => {
@@ -2177,10 +2226,20 @@ app.post('/api/homework/enter', (req, res) => {
     // exactly once (prevents duplicate accounts from forgotten codes).
     const isNew = !(studentCode && Students.get(studentCode));
     const rec = Students.getOrCreate(studentCode, displayName);
-    // 🔑 2026-10-15: the level this account had before this login (a grandfathered level is stamped on the account
-    // below, before the new code may move the kid to another level)
+    // 🔒 2026-10-15 (security review): is this the kid's OWN class code, BEFORE this login re-tags the account (moving a
+    // kid up is just handing them the next code, so homework keeps working either way)? Only then does the login open
+    // anything of the key model (session, grandfathered level, the level on this device). A different class code on an
+    // already-tagged account also counts as a guess.
+    const ownsBefore = isNew || _hwOwnsStudent(req, rec);
+    if (!ownsBefore) {
+      if (_hwCodeMissBlocked(req)) return res.status(429).json({ ok: false, error: 'demasiados intentos, espera unos minutos' });
+      _hwCodeMiss(req);
+    }
+    // 🔑 the level this account had before this login (a grandfathered level is stamped on the account below, before
+    // the new code may move the kid to another level). Only on the kid's own class code: stamped by someone else's
+    // login, a second login with the code they just re-tagged would hand them that level through the account.
     const prevLevel = LevelKeys.classLevel(rec);
-    if (prevLevel && LevelKeys.goLiveAt() && LevelKeys.recordOpenVia(rec, prevLevel) === 'grandfathered') {
+    if (ownsBefore && prevLevel && LevelKeys.goLiveAt() && LevelKeys.recordOpenVia(rec, prevLevel) === 'grandfathered') {
       Students.setLevelAccess(rec.code, prevLevel, 'grandfathered');
     }
     // 🆕 HSK level comes from the ACCESS CODE the kid typed (1001→hsk1,
@@ -2205,7 +2264,7 @@ app.post('/api/homework/enter', (req, res) => {
     // their own classroom code, like every other read of their record. 🔑 Their level opens here when their account has
     // it open (grandfathered, key saved, «Desbloquear»), and a key this device typed before is saved on the account.
     let levelOpen = false;
-    if (_hwOwnsStudent(req, rec)) {
+    if (ownsBefore) {
       SimLock.setSession(req, res, 's', rec.code, level);
       levelOpen = _openLevelOnDevice(req, res, rec, level);
     }
@@ -3072,15 +3131,16 @@ function _practiceSpanish(level) {
 // arrives with the right PIN by the redirect, and a just-closed room's PIN is never a miss).
 const _pinMisses = new Map();    // ip → [timestamps]
 const _hskClosed = new Map();    // pin → when its exam room closed (kids reloading it are not guessing)
+// (req = an HTTP request, or the address string of a socket)
 function _pinBlocked(req) {
-  const arr = (_pinMisses.get(_clientIp(req)) || []).filter((t) => Date.now() - t < 10 * 60 * 1000);
+  const arr = (_pinMisses.get(typeof req === 'string' ? req : _clientIp(req)) || []).filter((t) => Date.now() - t < 10 * 60 * 1000);
   return arr.length >= 60;
 }
 function _pinMiss(req, pin) {
   const now = Date.now();
   const closed = _hskClosed.get(String(pin));
   if (closed && now - closed < 6 * 60 * 60 * 1000) return;
-  const ip = _clientIp(req);
+  const ip = typeof req === 'string' ? req : _clientIp(req);
   const arr = (_pinMisses.get(ip) || []).filter((t) => now - t < 10 * 60 * 1000);
   arr.push(now);
   _pinMisses.set(ip, arr);
@@ -3094,7 +3154,7 @@ function _hskRoomFor(pin) {
   if (!r || Date.now() - (r.createdAt || 0) > 6 * 60 * 60 * 1000) return null;
   const g = games[pin];
   if (g && (g.gameType !== 'hsksim' || !g.hsk || g.hsk.simId !== r.simId)) return null;
-  return { pin, simId: r.simId };
+  return { pin, simId: r.simId, createdAt: r.createdAt || 0 };
 }
 const _simLevel = (simId) => { const m = _simMeta(simId); return m ? Levels.normalize(m.level) : null; };
 const _simsOfLevel = (level) => HskSim.listSims().concat(YctSim.listSims()).filter((s) => Levels.normalize(s.level) === level).map((s) => s.id);
@@ -3110,7 +3170,7 @@ function _simGrant(req, simId, countMiss) {
   const pin = String((req.query && req.query.pin) || (req.body && req.body.pin) || '').trim();
   const pass = String((req.query && req.query.pass) || (req.body && req.body.pass) || '');
   const room = pin ? _hskRoomFor(pin) : null;
-  if (room && room.simId === simId && SimLock.roomPassOk(pass, room.pin, simId)) return { grant: { kind: 'r', pin: room.pin } };
+  if (room && room.simId === simId && SimLock.roomPassOk(pass, room.pin, simId, room.createdAt)) return { grant: { kind: 'r', pin: room.pin } };
   if (pin && !room && countMiss) _pinMiss(req, pin);
   const a = levelAccess(req, level);     // a teacher device · the logged-in kid's account · this device's key
   if (a.ok && a.via === 'teacher') return { grant: { kind: 't' } };
@@ -3133,8 +3193,10 @@ function _simPageGate(req, res) {
     _pinMiss(req, pin);
     return LevelKeys.sendKeyScreen(res, { reason: 'room', what: 'sim' });
   }
-  // one sim by its link (no room): whoever may use its level; else that level's key screen. The old forced links
-  // (?access=…) keep their PIN box once the page opens.
+  // a teacher's forced link (/maestro «Forzar», ?access=…&sim=…): the page with its PIN box (it holds no exam; the sim
+  // loads only with the room pass or the level's key), so a kid without the key still joins the teacher's room
+  if ('access' in q) return SimLock.sendPage(res, page);
+  // one sim by its link (no room): whoever may use its level; else that level's key screen
   const sim = String(q.sim || '').trim();
   const level = sim ? _simLevel(sim) : null;
   if (level) {
@@ -3205,7 +3267,7 @@ function _openLevelOnDevice(req, res, rec, level) {
   if (!rec || !level) return false;
   if (LevelKeys.goLiveAt() && LevelKeys.recordOpenVia(rec, level) === 'grandfathered') Students.setLevelAccess(rec.code, level, 'grandfathered');
   const onDevice = LevelKeys.deviceOpen(req, level);
-  if (onDevice) Students.setLevelAccess(rec.code, level, 'key');
+  if (onDevice) Students.setLevelAccess(rec.code, level, 'key', LevelKeys.genOf(level));
   const open = !!LevelKeys.recordOpenVia(rec, level);
   if (open && !onDevice) LevelKeys.rememberDevice(req, res, level);
   return open || onDevice;
@@ -3239,7 +3301,7 @@ app.post('/api/level-key', (req, res) => {
   LevelKeys.clearDevice(dev);
   LevelKeys.rememberDevice(req, res, level);
   const stu = _studentOf(req);                        // logged in at /homework → saved on the account too
-  if (stu) Students.setLevelAccess(stu.code, level, 'key');
+  if (stu) Students.setLevelAccess(stu.code, level, 'key', LevelKeys.genOf(level));
   res.json({ ok: true, level, levelName: name, saved: !!stu });
 });
 // Which levels this device may use (the /audios library draws its locks with it): { levels: { yct1: true, … } }
@@ -3638,7 +3700,7 @@ function _hskSessionKey(pin, sc) {
 // dyno restart (or new deploy) doesn't wipe the PIN — otherwise the
 // teacher creates a PIN, the server restarts, and kids see "no room
 // with this PIN" forever. This is exactly the bug reported 2026-06-03.
-const HSK_ROOMS_FILE = path.join(__dirname, 'data', 'hsk-rooms.json');
+const HSK_ROOMS_FILE = path.join(process.env.DRALY_DATA_DIR || path.join(__dirname, 'data'), 'hsk-rooms.json');   // tests: their own folder
 const HSK_ROOMS = new Map();   // pin → { pin, simId, createdAt, fx, hostHeartbeat }
 
 function _hskRoomsLoad() {
@@ -7038,7 +7100,7 @@ io.on('connection', (socket) => {
       if (!viaDevice) {
         if (_adminFailCount(ip) >= 10) return cb({ error: 'Muchos intentos. Espera 10 minutos y vuelve a intentarlo.', needTeacherKey: true });
         if (!isAdminPassword(opts.password)) {
-          if (opts.password) _adminNoteFail(ip);
+          if (opts.password && !Teachers.isRetired(opts.password)) _adminNoteFail(ip);
           return cb({ error: 'Falta tu código de maestra: escríbelo una vez en este aparato.', needTeacherKey: true });
         }
       }
@@ -7550,9 +7612,17 @@ io.on('connection', (socket) => {
     if (!isExam) return cb({ ok: false });
     // always the teacher code (the monitor sends it), even from the host socket: closing ends the exam for everyone.
     // Wrong codes count in the admin turnstile like every other teacher check.
+    // 🔒 2026-10-15: a remembered teacher device's monitor counts too; only a code actually sent (and not a retired one)
+    // counts as a wrong guess, so kids in the room can't lock the school's address out by spamming this
     const ip = _socketIp(socket);
-    if (_adminFailCount(ip) >= 10) return cb({ ok: false, error: 'demasiados intentos' });
-    if (!isAdminPassword(password)) { _adminNoteFail(ip); return cb({ ok: false, error: 'not-teacher' }); }
+    const tdev = LevelKeys.teacherDevice(socket.handshake.headers || {});
+    if (!tdev) {
+      if (_adminFailCount(ip) >= 10) return cb({ ok: false, error: 'demasiados intentos' });
+      if (!isAdminPassword(password)) {
+        if (password && !Teachers.isRetired(password)) _adminNoteFail(ip);
+        return cb({ ok: false, error: 'not-teacher' });
+      }
+    }
     if (g) {
       if (g.endTimer) clearTimeout(g.endTimer);
       io.to(pin).emit('host-left');
@@ -7604,8 +7674,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('player:join', ({ pin, name, avatar, studentCode }, cb) => {
+    cb = typeof cb === 'function' ? cb : () => {};
     const g = games[pin];
-    if (!g) return cb({ ok: false, error: 'No hay ningún juego con ese PIN. Revisa el número.' });
+    // 🔒 2026-10-15 (security review): joining an exam room hands out its room pass, so PINs must not be found by
+    // trying them over the socket either: a PIN with no game counts as a guess for this address (same 60 / 10 min as
+    // the HTTP lookups); once paused, unknown PINs and exam rooms answer «espera», other games still let a class in
+    const ip = _socketIp(socket);
+    const paused = _pinBlocked(ip);
+    if (!g) {
+      if (!paused) _pinMiss(ip, pin);
+      return cb({ ok: false, error: paused ? 'Espera unos minutos y vuelve a escribir el PIN.' : 'No hay ningún juego con ese PIN. Revisa el número.' });
+    }
+    if (paused && g.gameType === 'hsksim') return cb({ ok: false, error: 'Espera unos minutos y vuelve a escribir el PIN.' });
     // Mochi Mash / Ojos de Halcón: a kid of this game whose phone dropped around the end (a new socket) gets its slot
     // back and its own end card again, and stays in the room for «Otra ronda»
     if (g.state === 'ended' && ((g.gameType === 'mochi-mash' && g.mm) || (g.gameType === 'halcon' && g.halcon) || (g.gameType === 'pinata' && g.pn) || (g.gameType === 'sixseven' && g.ss))) {
@@ -7705,7 +7785,7 @@ io.on('connection', (socket) => {
       gameState: g.state,
       studentCode: player.studentCode,
       // 🔒 2026-10-15: an exam room's pass (this kid is now on the teacher's roster): the room's sim loads with it
-      roomPass: g.gameType === 'hsksim' && g.hsk && g.hsk.simId ? SimLock.roomPass(String(pin), g.hsk.simId) : undefined,
+      roomPass: g.gameType === 'hsksim' && g.hsk && g.hsk.simId ? SimLock.roomPass(String(pin), g.hsk.simId, (HSK_ROOMS.get(String(pin)) || {}).createdAt) : undefined,
     });
     broadcast(pin);
 

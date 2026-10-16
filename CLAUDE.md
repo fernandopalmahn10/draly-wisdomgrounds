@@ -113,11 +113,78 @@ the checklist for any new game mode.
   the files a game uses into `public/assets/<game>/` and commit those; never commit a whole pack or an installer.
 - Spanish UI first; "Chino Mandarín"; big buttons, kid-friendly feedback; encouragement at the screen edge, never blocking play.
 
+## Three levels of preparation per module (his plan 2026-10-15)
+- Every module (YCT 1, New HSK 1, HSK 1, …) is prepared in three levels, with our own names: **La Base** (the
+  vocabulary book digitally: every word + sentence with audio) → **El Entrenamiento** (exam-style practice world by world,
+  from the curriculum packs, with audio and instant feedback) → **El Simulacro Dorado** (the full simulations, plus their
+  golden book and its audio).
+- **Nothing of a module is free: a secret key per level opens all three levels** (his decision 2026-10-15, replacing
+  "La Base free": "we are a premium company, it looks bad if everything is free"; and the short class codes 1001-1003 can
+  be guessed, so a login alone does not prove a real student). One key per level of core/levels.js (future levels
+  automatically), a word + a number (e.g. DRAGON-47), set and changed by him in /maestro → Teachers → «Claves de nivel»
+  (masked, «Ver», «Cambiar», «Copiar mensaje para WhatsApp», «Cerrar en todos los aparatos»), never written in the repo,
+  a log line or chat: only `data/level-keys.json` on the data disk (gitignored). He sets the keys himself (Claude
+  guides, never chooses or writes them). Built in `core/level-keys.js`: compared ignoring case, spaces, dashes and
+  accents; a key needs a word of 4+ letters and a number of 2+ digits, each level its own, never the screen's example
+  PANDA-12. The kid types it ONCE on the key screen (`protected/pages/level-key.html`, served by the server in place of
+  whatever is locked, never cached; it first tries the codes the phone saved): that device keeps the level a year
+  (httpOnly cookie `dlv_<level>`), and when the kid is logged in at /homework it is also saved on their account
+  (`levelAccess`: their next login opens it on any phone). Wrong guesses: 5 per device + 30 per address in 15 min,
+  then a wait with a kind message. A key change stops the old key for new devices; devices and accounts that opened the
+  level keep it (no family retypes); «Cerrar en todos los aparatos» (for a key that leaked) ends every device of a level and
+  every key saved on an account (they type the new key once); grandfathered and «Desbloquear» accounts keep it.
+  The key screen must stay beautiful and very easy to read and use (his words: "parents get lost with something hard to
+  use"): books' palette, Dralingo in his platform look, one big field, «Entrar», plain-language errors, 360 px, reduced
+  motion; `css/key-screen.css` is shared with the teacher-key screen.
+- **One question for every locked level**: `LevelKeys.access(req, level)` (server.js `levelAccess`) answers "may this
+  request use level X?" (a teacher device or code · the logged-in kid's account · this device's key). La Base and the
+  sims use it; El Entrenamiento and the golden book must use it too, never a check of their own.
+- **Kids registered before the keys went live keep their level without typing it**; only new accounts need the key. The
+  keys go live the moment the FIRST key is set (`goLiveAt`, recorded once, shown in the panel); an account created
+  before (firstSeen; archived ones too) keeps its class level once the kid logs in at /homework WITH THEIR OWN CLASS
+  CODE (stamped `grandfathered` on the account). A login with another class's code still does homework as always (it
+  re-tags the kid: that is how kids move up) but opens nothing of the keys (no session, no level: from outside it looks
+  like a stranger trying codes, and it counts as a guess). A kid who moves to another level after the go-live needs that
+  level's key (Students.setLevel dates `levelSince`); the old level stays theirs if it was stamped at an earlier login.
+  A teacher opens any kid early with «Desbloquear» in the kid's profile. /homework pauses an address after 60 unknown
+  student codes in 10 min, and the whole platform after 600 in an hour (a login opens the account's levels, so codes
+  must not be found by trying). Key screen limits, exam-PIN guesses (HTTP and socket `player:join`), the admin
+  turnstile and these all count per address with `_clientIp`: CF-Connecting-IP only when the hop that reached the
+  server is Cloudflare (else the last X-Forwarded-For entry), IPv6 per /64. A code retired by «Cambiar mi código» is
+  refused but never counted, and a remembered teacher device is never locked out by its school's address.
+- **Open on purpose**: the HSK 1 trainer in /homework (built from the Old HSK 1 sims) still answers any HSK 1 class
+  code, because homework stays as it is; El Entrenamiento (phase 4) replaces it behind the key.
+- **In class, no key for kids**: a kid in a teacher's live room (PIN) takes what the teacher launches (the room pass).
+  **Creating a game (hosting) needs the teacher's key the first time on that device**, then THAT DEVICE is remembered
+  (~90 days; his words: "maestros crear un juego needs first time key access, then it's safe"): socket `host:create`
+  needs the httpOnly cookie `dtd` (signed teacher uid + codeGen) from a /maestro login or from the teacher-key screen
+  (`js/teacher-gate.js`, loaded right after `/socket.io/socket.io.js` on EVERY host page: a new host page loads it too),
+  or the teacher code in `password` (bots and test scripts: `--password`). Never trust by internet address: a school's
+  Wi-Fi gives every kid's phone the same address. «Log out» in /maestro forgets the device.
+- **Teacher codes**: «Cambiar mi código» in /maestro for every teacher (the super admin also changes others'): the old
+  code stops at once, is retired for good (`data/teachers-meta.json`), devices remembered with it ask again. The boot
+  seed creates a super admin only on the very first boot of an empty disk, never again (one-shot flag), and never with
+  a code written in the source. Teacher codes never reach a kid's phone (inbox, special assignments, sentences) or a log
+  line. The legacy password is the `WU_ADMIN_PASSWORD` env var only (no default in the code: unset = none).
+- **Homework (/homework) stays as it is** (class code + the kid's name or code), and so do its audio pages
+  (`/audios/<homework id>`, linked from the printed PDFs).
+- **The simulations are never open to anonymous visitors** (his words: "we're not going to give away everything for
+  free"): the Simulacro Dorado (player, golden book, audio) like the other levels needs the level's key; teachers still
+  launch simulations from /maestro.
+- **Levels unlock by progress, like a game**: Entrenamiento after enough «¡Me la sé!» seals in La Base, the Simulacro
+  Dorado after enough practice in Entrenamiento; a teacher can unlock any kid early from /maestro.
+- **The simulations' audio = a digital golden book**: the golden book on screen page by page, each listening question
+  with its own play button (the original exam recording, cut per question), plus the PDF to download.
+- The whole tab is **«La Ruta Dorada»** (was «Audios y vocabulario»). Choosing your module feels like a game: a swipe
+  between modules with a super cool animation.
+- `node scripts/test-level-keys.js` (its own server on port 4300 and a fresh data folder) and
+  `node scripts/test-sims-lock.js` must pass.
+
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads
   `core/levels.js` (yct1 · hsk2 = New HSK 1, its stored id · hsk1 = Old HSK 1). Never hardcode `'hsk1'`/`'hsk2'`
   pairs again; a new level (YCT 2, New HSK 2…) is one entry there plus its game pack.
-- The level lives on the access code: 1001 Old HSK 1, 1002 New HSK 1, 1003 YCT 1 (EMAAR2026). Teachers change a code's
+- The level lives on the access code: 1001 Old HSK 1, 1002 New HSK 1, 1003 YCT 1 (all three on the super admin). Teachers change a code's
   level or add a code in /maestro → Teachers. Kids/parents see "YCT 1" / "New HSK 1" / "HSK 1", never "HSK2".
 - A level with `packTareas` gets its /homework tareas from its curriculum game rounds (one folder per world, played in
   the trainer's quiz player, graded on the server). YCT 1 uses it; New HSK 1 / Old HSK 1 can switch on with one flag.
@@ -130,20 +197,20 @@ the checklist for any new game mode.
   Sober official look (petrol ink #0f2f33, seal red #9e2a2b, paper bg, Source Sans 3), not kiddy, not a copy of HSK Mock's style.
 - **Locked: never open to anonymous visitors** (La Ruta Dorada phase 1, 2026-10-15; his words "we're not going to give
   away everything for free"): pages, data AND files. The files live in `protected/<TEST> SIMULATIONS/…`, the player
-  pages in `protected/pages/` (`yct-sim.html`, `hsk-sim.html` + the friendly `sim-locked.html`); none of it under
+  pages in `protected/pages/` (`yct-sim.html`, `hsk-sim.html`; refusals get the level's key screen `level-key.html`); none of it under
   `public/`, and never under `/assets/` (Cloudflare keeps `/assets/*` 2 h). The sim data keeps its media as logical
   `/assets/<TEST>%20SIMULATIONS/…` URLs; `core/sim-lock.js` rewrites them in every payload into
   `/sim-media/<token>/<fileId>` (signed, 3 h, ONE sim, `private, no-store`; a room PIN's links die when the room closes;
   file ids hide the old «(CORRECT)» names). Who gets in (`_simGrant` in server.js): a teacher (/maestro code in X-Admin-Pw,
-  or the teacher sim session); a kid who JOINED a teacher's open exam room (socket `player:join` answers with a room
+  or a remembered teacher device); a kid who JOINED a teacher's open exam room (socket `player:join` answers with a room
   pass, so they are on the teacher's roster; a bare PIN loads nothing), for THAT room's sim (opening, taking over or
   closing a room needs the teacher code, «Terminar sala» = socket `host:end`; 60 never-used PINs from one address in
-  10 min pause its room lookups); an enrolled student = the httpOnly `dsim` cookie the
-  /homework login sets (or the friendly page silently, from the codes the phone saved), for their level's sims only
-  (core/levels.js), solo by link (`/yct-sim.html?sim=…`); the local harness `?debug=1&direct=1` on localhost only.
-  Everyone else: «Este simulacro es para alumnos de Dralingo» → «Entrar con mi código» (`/homework.html?next=…` comes
-  back to the exam). A teacher's try is graded, never saved; a solo grade goes on the logged-in kid's own record; the
-  payload's `ticket` still hands in after the room closed. Key: env `SIM_LOCK_SECRET`, else `data/sim-lock.key` (made once
+  10 min pause its room lookups); whoever may use the sim's level (`levelAccess`, § Three levels: the level's key on
+  this device or on the logged-in kid's account, «Desbloquear», grandfathered), solo by link (`/yct-sim.html?sim=…`);
+  the local harness `?debug=1&direct=1` on localhost only. Everyone else: the level's key screen («Entra a Mis Tareas»
+  = `/homework.html?next=…` comes back to the exam). A teacher's try is graded, never saved; a solo grade goes on the
+  logged-in kid's own record (a key-only phone: only when it sends the kid's class code + student code, else graded and
+  not saved); the payload's `ticket` still hands in after the room closed. Key: env `SIM_LOCK_SECRET`, else `data/sim-lock.key` (made once
   on the disk, gitignored). Any new page or endpoint that shows sim content goes through `_simGrant` + `SimLock.rewrite`;
   `node scripts/test-sims-lock.js` (starts its own server on 4000) must pass. The «Simulacro del examen» pack rounds show
   only their name to non-teachers on `/api/sets`.
@@ -188,11 +255,12 @@ the checklist for any new game mode.
   `js/audios-base.js` reads only the level's data (no word looked up by its pinyin; the line under the tones is the
   book's own `toneNoteText`, `{braces}` = pinyin, its examples with a clip are buttons; none where the book has none,
   like HSK 1). One source of words: `../study/lib/web.py <level>` exports the book's own words, sentences, red words,
-  tones and pictures (WebP <= 60 KB) + the PDF (`public/assets/study/<level>-vocabulario.pdf`; a book over 9 MB gets a
+  tones and pictures (WebP <= 60 KB) + the PDF (web.py writes `public/assets/study/<level>-vocabulario.pdf`; the builder
+  MOVES it to `protected/study/`; a book over 9 MB gets a
   lighter web copy from `../study/lib/webpdf.py`, pictures re-encoded at full chroma) into
   `content/audios/<level>-base.json`; the hanzi the voice reads live in `../study/<level>/voice.py` (never on screen).
   Then `node scripts/audios-build.js <level>-base` (one clip per word, per sentence and per Dralingo bubble, page data
-  `public/assets/audios/<level>-base/base.json`) and `node scripts/test-audios-base.js` (every base named in
+  `base.json`, all in `protected/base/<level>-base/`) and `node scripts/test-audios-base.js` (every base named in
   core/levels.js `base`: its words in the book's order, card by card against `../study/<level>/build/book.html`, every
   clip > 0.3 s, no hanzi, no em dash). A new level's base = `base` in core/levels.js + its voice.py + those two steps.
   Readings: `<whisper python> ../study/lib/readings.py <level>` (pypinyin, the pitch of one-syllable words, one Whisper
@@ -201,12 +269,18 @@ the checklist for any new game mode.
   `css/audios.css`; seals saved per phone in `localStorage draly_base_<level>` (the move bridge carries it); the
   /homework home links it for levels with `base` in core/levels.js (`#pt-base`, server sends `base` on enter, read from
   the catalog; `?from=homework` turns the page's back arrow into «Volver a mis tareas»).
-- Cloudflare keeps `/assets/*` 2 h: the builder stamps every base clip, picture and the PDF with `?v=<content hash>`,
-  and the page asks for catalog.json / base.json with a 10-minute stamp. A clip rebuilt under the same name still
-  reaches phones at once; never strip those stamps.
+- **La Base is behind its level's key** (2026-10-15, § Three levels): its files live in `protected/base/<level>-base/` and
+  `protected/study/` (never `public/`; the old `/assets/audios/<level>-base/…` and `/assets/study/…` answer 404) and travel
+  only as `/base-media/<base id>/<file>` (`book.pdf` = the PDF), checked on every file with `levelAccess`, `private`
+  + `Cloudflare-CDN-Cache-Control: no-store` (never kept by Cloudflare; the phone keeps clips a week). `/audios/<level>-base`
+  shows the key screen to whoever may not use the level; the library draws a gold lock seal on those bases
+  (`/api/level-access`). Commit `protected/base/<id>/` + `protected/study/` with the catalog.
+- The builder stamps every base clip, picture and the PDF with `?v=<content hash>`, and the page asks for catalog.json /
+  base.json with a 10-minute stamp (Cloudflare keeps the public `/assets/*`, catalog included, 2 h). A clip rebuilt
+  under the same name still reaches phones at once; never strip those stamps.
 - Type code of the books on the whole page: Gelasio = pinyin only, Noto Sans = Spanish and numbers, self-hosted subset
   woff2 in `public/assets/fonts/study/` (OFL). Cover thumbnails `cover-s.webp` are made by the builder.
-- Every homework PDF (storybook guide) has its audio on the public page `/audios/<id>` (id `hsk1-e03-r1` from
+- Every homework PDF (storybook guide) has its audio on the public page `/audios/<id>` (open, no key: homework stays as it is) (id `hsk1-e03-r1` from
   `DRALINGO_HSK1_E03_R1_…pdf`): no login, two taps, Spanish, pinyin WITH tone marks and Spanish exactly as in the PDF,
   never hanzi on screen. Same paper look as the PDFs (Rojo Imperial, Oro, Crema, serif pinyin) so parents recognise it.
 - Three tracks per PDF with the PDF's own codes (EXP3.1 words · EXP3.2 dialogue · EXP3.3 the six video lines); built by

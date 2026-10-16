@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <!-- 2026-10-13 remake: the teacher's control room in the platform's sticker world (spec docs/specs/maestro-remake.md).
        teacher-dashboard.css is this page's only stylesheet; maestro.css stays for host-hsk.html. -->
-  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261015a">
+  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261015b">
 </head>
 <body class="m-app">
 
@@ -57,7 +57,7 @@
       <div class="m-topbar-end">
         <p class="m-dash-self" id="m-dash-self"></p>
         <button class="btn btn-ghost btn-sm m-refresh" id="m-refresh" type="button" title="Reload the student list now (it also refreshes by itself every 15 s)"><span class="m-refresh-icon" aria-hidden="true">⟳</span><span class="m-refresh-label">Refresh</span></button>
-        <button class="btn btn-ghost btn-sm m-mycode-btn" id="m-mycode-btn" type="button" title="Change my teacher code"><span aria-hidden="true">🔑</span> Cambiar mi código</button>
+        <button class="btn btn-ghost btn-sm m-mycode-btn" id="m-mycode-btn" type="button" title="Cambiar mi código · Change my teacher code" aria-label="Cambiar mi código"><span aria-hidden="true">🔑</span><span class="m-mycode-label"> Cambiar mi código</span></button>
         <button class="btn btn-ghost btn-sm m-logout" id="m-logout" type="button">Log out</button>
       </div>
     </header>
@@ -212,16 +212,16 @@
         <h2 id="m-mycode-title">🔑 Cambiar mi código</h2>
         <p class="m-modal-sub" id="m-mycode-sub">Your new teacher code: to sign in here and to open games. The old code stops working at once, on every device. / Tu código nuevo: la clave vieja deja de funcionar en todos los aparatos.</p>
         <label class="m-form-label">
-          <span>New code: 8 or more letters and numbers</span>
+          <span>Código nuevo: 8 o más letras y números (new code)</span>
           <input class="input m-code-input" id="m-mycode-new" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false">
         </label>
         <label class="m-form-label">
-          <span>Type it again</span>
+          <span>Escríbelo otra vez (type it again)</span>
           <input class="input m-code-input" id="m-mycode-again" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false">
         </label>
         <div class="m-mycode-actions">
-          <button class="btn btn-gold btn-xl" id="m-mycode-save" type="button">Change the code</button>
-          <button class="btn btn-ghost btn-sm" id="m-mycode-random" type="button" title="Fill in a random code of the usual shape">🎲 Random code</button>
+          <button class="btn btn-gold btn-xl" id="m-mycode-save" type="button">Cambiar el código</button>
+          <button class="btn btn-ghost btn-sm" id="m-mycode-random" type="button" title="Fill in a random code of the usual shape">🎲 Código al azar</button>
         </div>
         <p class="m-modal-msg" id="m-mycode-msg" role="status"></p>
       </div>
@@ -488,7 +488,7 @@
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/cast.js?v=20261013a"></script>
-  <script src="/js/maestro.js?v=20261015u"></script>
+  <script src="/js/maestro.js?v=20261015x"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

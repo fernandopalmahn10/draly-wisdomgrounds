@@ -14,6 +14,9 @@ const { io } = require('socket.io-client');
 
 const args = process.argv.slice(2);
 const URL = (args.indexOf('--url') >= 0 && args[args.indexOf('--url') + 1]) || 'http://localhost:3900';
+// creating a room needs a teacher (2026-10-15): the teacher code of the server under test (--password or TEST_TEACHER_PW)
+const PASSWORD = (args.indexOf('--password') >= 0 && args[args.indexOf('--password') + 1]) || process.env.TEST_TEACHER_PW || '';
+if (!PASSWORD) { console.error('pass the teacher code of the server under test: --password <code> (or TEST_TEACHER_PW)'); process.exit(2); }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 let checks = 0;
 const ok = (c, m) => { checks++; assert.ok(c, m); };
@@ -68,7 +71,7 @@ async function answer(kid, right, waitMs) {
   const host = connect();
   let feed = 0;
   host.on('ss:meter', (d) => { if (d && d.f && d.f.length) feed += d.f.length; });
-  const { pin } = await ack(host, 'host:create', { gameType: 'sixseven', style: 'zh' });
+  const { pin } = await ack(host, 'host:create', { gameType: 'sixseven', password: PASSWORD, style: 'zh' });
   ok(pin, 'room created');
   const s0 = next(host, 'state', 3000);
   host.emit('host:set-duration', { pin, duration: 120 });

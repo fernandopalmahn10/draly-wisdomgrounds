@@ -26,8 +26,9 @@
 //
 // A key change: the old key stops working for anyone typing it from then on; devices and accounts that already
 // opened the level KEEP it (his "no disruption": 800 families must not retype; a leaked key that spread can be
-// cut with «Cerrar en todos los aparatos», which bumps the level's `gen` and ends every device cookie of that
-// level — real students get it back at their next /homework login, from their account).
+// cut with «Cerrar en todos los aparatos», which bumps the level's `gen` and ends every device cookie and every key
+// saved on an account (they carry the gen) of that level; families type the new key once, while grandfathered and
+// teacher-unlocked accounts get it back at their next /homework login).
 //
 // Wrong guesses: 5 per device (cookie dkd) and 30 per internet address (a class shares one school IP) in 15 min,
 // then a wait with a kind message. A key that belongs to ANOTHER level gets its own message (and is not a guess).
@@ -133,7 +134,8 @@ function setKey(level, raw) {
   console.log('[level-keys] the key of ' + Levels.info(v.level).name + (prev ? ' was changed' : ' was set') + (state.goLiveAt === now ? ' (keys live from now on)' : ''));
   return { ok: true, level: v.level, levelName: Levels.info(v.level).name };
 }
-// «Cerrar en todos los aparatos»: every device cookie of the level stops (accounts keep what they have)
+// «Cerrar en todos los aparatos»: every device cookie of the level and every key saved on an account stop (grandfathered
+// and teacher-unlocked accounts keep theirs)
 function closeDevices(level) {
   const lvl = Levels.normalize(level);
   if (!lvl) return { ok: false, error: 'Ese nivel no existe.' };
@@ -227,14 +229,17 @@ function recordOpenVia(rec, level) {
   const lvl = Levels.normalize(level);
   if (!rec || !lvl) return null;
   const a = rec.levelAccess && rec.levelAccess[lvl];
-  if (a) return a.via || 'key';
+  // a key saved on the account counts while the level's devices were not closed since («Cerrar en todos los aparatos»
+  // ends a leaked key everywhere: those accounts type the new key once); teacher and grandfathered grants stay
+  if (a && !(a.via === 'key' && Number(a.gen || 1) !== genOf(lvl))) return a.via || 'key';
   return grandfathered(rec, lvl) ? 'grandfathered' : null;
 }
 
 // ── a teacher's device ──────────────────────────────────────────────────────────────────────────────────────────
 const legacyGen = () => {
   const pw = process.env.WU_ADMIN_PASSWORD;
-  return pw ? crypto.createHash('sha256').update('draly-legacy-device:' + pw).digest('hex').slice(0, 16) : null;
+  // keyed with the server's signing key: the cookie carries no fingerprint of the password that could be tested offline
+  return pw ? SimLock.hmacHex('draly-legacy-device:' + pw, 16) : null;
 };
 // req (or a socket's handshake headers) → { teacher, isSuperAdmin, legacy } | null. Re-checked on every use: the
 // teacher must still exist with the same codeGen (a changed code ends the device).
