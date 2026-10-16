@@ -39,6 +39,7 @@ const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const UNIT = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-rprog-unit-'));
 process.env.DRALY_DATA_DIR = UNIT;
 process.env.STUDENT_DATA_DIR = UNIT;
+process.env.DRALY_TRAINING_BUILT = '1';   // the switch's ON side is tested here as phase 4 will use it (the OFF-only check runs below)
 const DAY = 86400e3, NOW = Date.now();
 fs.writeFileSync(path.join(UNIT, 'student-records.json'), JSON.stringify({
   AAAA: { code: 'AAAA', displayName: 'Kid A', firstSeen: NOW - 60 * DAY, lastSeen: NOW, level: 'yct1', sentencesBuilt: [] },
@@ -84,6 +85,22 @@ function unit() {
   RP.loadSettings();
   ok(RP.getSettings().trainingLive === false && fs.readdirSync(UNIT).some((f) => /^ruta-settings\.unreadable-/.test(f)), 'an unreadable settings file is kept aside, never written over');
   ok(RP.setSettings({ trainingLive: false, doradoPct: 70 }).ok, 'back to the defaults');
+  fs.writeFileSync(RP.SETTINGS_FILE, JSON.stringify({ trainingLive: false, doradoPct: 80, phase5Thing: { a: 1 } }));
+  RP.loadSettings();
+  ok(RP.setSettings({ doradoPct: 70 }).ok && JSON.parse(fs.readFileSync(RP.SETTINGS_FILE, 'utf8')).phase5Thing.a === 1, 'a key this version does not know survives a save');
+  // before El Entrenamiento exists (no DRALY_TRAINING_BUILT): the switch can't go on, and a file that says ON is not in force
+  const NOB = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-rprog-nob-'));
+  fs.writeFileSync(path.join(NOB, 'ruta-settings.json'), JSON.stringify({ trainingLive: true, doradoPct: 70 }));
+  const probe = 'const R = require(' + JSON.stringify(path.join(ROOT, 'core', 'ruta-progress.js')) + ');' +
+    'const a = R.getSettings(); const b = R.setSettings({ trainingLive: true });' +
+    'console.log(JSON.stringify({ built: a.trainingBuilt, live: a.trainingLive, ok: b.ok, err: b.error || "", open: R.doradoOpen({ ok: true, via: "key" }, null, "yct1") }));';
+  const env = Object.assign({}, process.env, { DRALY_DATA_DIR: NOB, STUDENT_DATA_DIR: NOB });
+  delete env.DRALY_TRAINING_BUILT;
+  let pr = {};
+  try { pr = JSON.parse(require('child_process').execFileSync(process.execPath, ['-e', probe], { env, encoding: 'utf8' }).trim().split('\n').pop()); } catch (e) { pr = { crash: String(e) }; }
+  ok(pr.built === false && pr.live === false && pr.ok === false && /todavía no está publicado/.test(pr.err) && pr.open === true,
+    'before phase 4: the switch is refused, a hand-set ON is not in force, the Dorado opens with the key (' + JSON.stringify(pr) + ')');
+  try { fs.rmSync(NOB, { recursive: true, force: true }); } catch (_) {}
 
   section('seals on a record (applySeals)');
   ok(RP.applySeals('AAAA', 'yct1', [1, 2, 3], []).ok, 'stamps 1, 2, 3');
@@ -219,7 +236,7 @@ async function startServer() {
   srv = spawn(process.execPath, ['server.js'], {
     cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'],
     env: Object.assign({}, process.env, { PORT: String(PORT), DRALY_DATA_DIR: DATA, STUDENT_DATA_DIR: '', SIM_LOCK_SECRET: SECRET,
-      WU_ADMIN_PASSWORD: LEGACY, DRALY_SEED_ADMIN_CODE: SEED, RENDER: '' }),
+      WU_ADMIN_PASSWORD: LEGACY, DRALY_SEED_ADMIN_CODE: SEED, RENDER: '', DRALY_TRAINING_BUILT: '1' }),
   });
   srv.stdout.on('data', (d) => { allLog += d; });
   srv.stderr.on('data', (d) => { allLog += d; });
@@ -279,6 +296,12 @@ async function server() {
   ok(eqList((await seals(A1, 'yct1')).json.seals, [1, 3]), '… the first phone sees it');
   ok(eqList((await stamp(A1, 'yct1', [3, 4, 5])).json.seals, [1, 3, 4, 5]), 'a phone\'s own seals join the account (a union: 3 twice is one seal)');
   ok(eqList((await stamp(A1, 'yct1', [], [])).json.seals, [1, 3, 4, 5]), 'an empty batch changes nothing');
+  const whoA = (await seals(A1, 'yct1')).json.who;
+  ok((await post('/api/ruta/seals', { level: 'yct1', add: [9], who: whoA }, as(A1))).status === 200, 'a save that names its own account goes through');
+  const w409 = await post('/api/ruta/seals', { level: 'yct1', add: [10], who: 'aaaaaaaaaaaa' }, as(A1));
+  ok(w409.status === 409 && w409.json.who === whoA && eqList((await seals(A1, 'yct1')).json.seals, [1, 3, 4, 5, 9]),
+    'a save from a mirror of another account (a sibling logged in meanwhile): 409 with the account\'s id, nothing written');
+  await stamp(A1, 'yct1', [], [9]);
 
   section('only valid word numbers, only a level the request may use');
   for (const [body, why] of [[{ level: 'yct1', add: [84] }, 'word 84 (YCT 1 has 83)'], [{ level: 'yct1', add: [0] }, 'word 0'], [{ level: 'yct1', add: ['7'] }, 'a number in quotes'],
@@ -406,6 +429,12 @@ async function server() {
   const ra = recs[kidA.studentCode] && recs[kidA.studentCode].ruta;
   ok(ra && ra.yct1 && ra.yct1.s === '1-' + Y.words && JSON.stringify(ra).length < 120, 'every YCT 1 seal + New HSK 1 + a teacher\'s marks: ' + JSON.stringify(ra || {}).length + ' characters on the record');
   ok(!ra.yct1.p, 'no practice stored (phase 4 has not run)');
+  section('«Salir» ends the kid\'s session on that phone');
+  const out = await post('/api/homework/logout', {}, as(A2));
+  ok(out.status === 200 && !A2.jar.dsim, 'the session cookie is gone');
+  const g2 = await seals(A2, 'yct1');
+  ok(g2.status === 200 && g2.json.student === false && (await stamp(A2, 'yct1', [12])).status === 403, '… the phone keeps the level (its key) but writes nothing on the account any more');
+  ok((await enter(A2, '1003', null, kidA.studentCode)).levelOpen === true && (await seals(A2, 'yct1')).json.student === true, 'one login brings it back');
   // last: a login with another class's code re-tags the kid (homework as always), so it comes after every class check
   const other = await enter(phone(), T2.accessCodes[0], null, kidA.studentCode);
   ok(other.ok && !(other.base && other.base.seals), 'a login with another class\'s code (a stranger trying codes) gets no seals');

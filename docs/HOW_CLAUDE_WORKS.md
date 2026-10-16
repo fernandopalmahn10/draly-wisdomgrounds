@@ -178,6 +178,24 @@ the route with a new line each visit. Without the key the route shows its locks 
 YCT 1» (it opens the key screen and comes back to the route); a visitor also gets «Entra con tu código». The kids'
 /homework home shows «La Ruta Dorada de YCT 1» (their seals), and the home page card says «La Ruta Dorada».
 
+**🏆 Progress on the kid's account (La Ruta Dorada, step 3, 16 October 2026).** A kid logged in at /homework keeps
+their «¡Me la sé!» seals on their account: stamp on one phone, open La Base on another and they are there (the
+phone also keeps them while offline and saves them when the signal comes back). Seals a phone had from before the
+kid's first login join their account; a brother's or sister's seals on the same phone never mix. A phone that only
+has the key (nobody logged in) keeps its seals on the phone, as before. Your picks rule how the steps open: a seal is
+a free tap; **El Entrenamiento opens world by world** (every seal of a world in La Base opens that world there), and
+the route already shows it: «2 de 6 mundos listos para entrenar», one tile per world (a gold coin when it is ready,
+its seals when not; a world that just became ready pops its coin once). **El Simulacro Dorado stays open with the
+key** until El Entrenamiento exists; then (a switch in /maestro → Teachers → «La Ruta Dorada: cómo se abre», with the
+% next to it, 70 by default; it can only be turned on once El Entrenamiento is published) it opens when every world
+is practised with that % or more. «Salir» in Mis Tareas now also ends the kid's session on that phone, so a brother or
+sister using the same phone never stamps seals on their account. In /maestro
+each kid's profile shows La Ruta Dorada per level: seals per world, which El Entrenamiento worlds are open (their seals
+or a teacher), El Simulacro Dorado, their best % per simulation, and «Desbloquear» / «Volver a bloquear» for one world,
+every world or the Simulacro Dorado («Volver a bloquear» only undoes what a teacher opened). The student list shows a
+thin gold bar of each kid's seals. The rules live in one place (`core/ruta-progress.js`); El Entrenamiento (step 4)
+will hand in each world's % there.
+
 ### 2.4 Parent control
 
 Parents open their child's progress with the same codes. A privacy guard makes sure a code only
@@ -509,10 +527,12 @@ intro is long"), and I'll turn it into exact changes.
 
 ## 10. What's next (pending work)
 
-- **La Ruta Dorada** (plan `docs/specs/ruta-dorada.md`): steps 1-2 are built: the key per level (La Base + the
-  simulations behind it), teacher devices for hosting, «Cambiar mi código», and the tab itself (the flying module
-  cards, each module's golden route); next progress on the server (seals on the kid's record, unlock by progress,
-  «Desbloquear» per step), El Entrenamiento and the digital golden book (they ask the same key: `LevelKeys.access`)
+- **La Ruta Dorada** (plan `docs/specs/ruta-dorada.md`): steps 1-3 are built: the key per level (La Base + the
+  simulations behind it), teacher devices for hosting, «Cambiar mi código», the tab itself (the flying module
+  cards, each module's golden route), and progress on the kid's account (seals on any phone, El Entrenamiento world by
+  world, «Desbloquear» / «Volver a bloquear» per step, the rules in /maestro); next El Entrenamiento (it hands each
+  world's % to `core/ruta-progress.js` and then the «El Entrenamiento está activo» switch goes on) and the digital
+  golden book (they ask the same key: `LevelKeys.access`)
 - **Official tests:**
   - more New HSK 1 simulations (send the next recording), then YCT 2 per the build order
   - move Old HSK onto the new exam interface, once you're happy with YCT

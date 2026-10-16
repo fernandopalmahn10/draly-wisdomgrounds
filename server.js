@@ -4797,7 +4797,8 @@ function _rutaState(req) {
     // El Simulacro Dorado for this visitor (only meaningful when the module is open)
     let dorado = null;
     if (a.ok) {
-      if (!live || a.via === 'teacher') dorado = { open: true, rule: live ? 'practice' : 'key' };
+      // (a level without a La Base has no worlds to practise: the key keeps opening its Simulacro)
+      if (!live || a.via === 'teacher' || !rb) dorado = { open: true, rule: live && rb ? 'practice' : 'key' };
       else if (prog) dorado = { open: prog.dorado.open, rule: 'practice', pct: prog.dorado.pct, practiced: prog.dorado.practiced, of: prog.dorado.of };
       else dorado = { open: false, rule: 'practice', pct: RutaProgress.getSettings().doradoPct, login: true };   // a phone alone can't save practice
     }
@@ -4837,8 +4838,11 @@ app.get('/api/ruta-dorada', (req, res) => {
 // Only for a level this request may use (LevelKeys.access: the one door) and only the logged-in kid's own record (the
 // /homework session). Word numbers are checked against the level's base. `who` tells the page whose seals its mirror
 // holds (an opaque id of the account, never the code), so a sibling's login on the same phone never mixes them.
-// Rate: 90 calls a minute per kid, 4000 per 5 minutes per address (a class shares one school address; the page
-// batches its taps, so a kid stamping fast sends one request a second or less; a refusal is retried by the page).
+// Rate: a save (a signed kid session) counts per kid only, 90 a minute (the page batches its taps: one request a second
+// or less; a refusal is retried) so a school address full of kids (one Wi-Fi, two classes) is never slowed down; a
+// read counts per address, 4000 per 5 minutes.
+// A save carries the `who` its phone's mirror holds: when another kid has logged in on that phone meanwhile, the
+// server answers 409 (never writes one kid's taps on a sibling's account) and the page settles with the new account.
 const _sealHits = new Map();   // 'k:<code>' | 'i:<ip>' → [timestamps]
 function _sealRateOk(req, code) {
   const now = Date.now();
@@ -4850,7 +4854,7 @@ function _sealRateOk(req, code) {
     return true;
   };
   if (_sealHits.size > 5000) for (const [k, v] of _sealHits) if (!v.length || now - v[v.length - 1] > 5 * 60 * 1000) _sealHits.delete(k);
-  return hit('i:' + _clientIp(req), 5 * 60 * 1000, 4000) && (!code || hit('k:' + code, 60 * 1000, 90));
+  return code ? hit('k:' + code, 60 * 1000, 90) : hit('i:' + _clientIp(req), 5 * 60 * 1000, 4000);
 }
 const _sealWho = (code) => SimLock.hmacHex('ruta-who:' + code, 12);
 function _sealDoor(req, res, raw) {
@@ -4875,9 +4879,17 @@ app.post('/api/ruta/seals', (req, res) => {
   const rec = _studentOf(req);
   if (!rec) return res.status(403).json({ ok: false, student: false, error: 'Entra con tu código para guardar tus sellos en tu cuenta.' });
   if (!_sealRateOk(req, rec.code)) return res.status(429).set('Retry-After', '20').json({ ok: false, error: 'Espera un momento: tus sellos se guardan enseguida.' });
+  const who = _sealWho(rec.code);
+  if (b.who != null && String(b.who) !== who) return res.status(409).json({ ok: false, who, error: 'Otra cuenta entró en este teléfono.' });
   const out = RutaProgress.applySeals(rec.code, lvl, b.add, b.remove);
   if (!out.ok) return res.status(out.status || 400).json({ ok: false, error: out.error });
-  res.json({ ok: true, who: _sealWho(rec.code), seals: out.seals });
+  res.json({ ok: true, who, seals: out.seals });
+});
+// «Salir» on /homework (2026-10-16): the kid's session on this phone ends (the next kid on a family phone writes no
+// seals or results on them); their codes stay saved on the phone, so coming back is still one tap on «Entrar».
+app.post('/api/homework/logout', (req, res) => {
+  SimLock.setCookie(req, res, SimLock.COOKIE, '', 0);
+  res.set('Cache-Control', 'no-store').json({ ok: true });
 });
 // ── 🔑 La Base files: /base-media/<base id>/<file> (2026-10-15) ────────────────────────────────────────────────────
 // protected/base/<base id>/ (base.json, the clips, pics/) and protected/study/<level>-vocabulario.pdf (as book.pdf).

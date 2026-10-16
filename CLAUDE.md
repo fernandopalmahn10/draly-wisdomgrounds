@@ -172,14 +172,46 @@ the checklist for any new game mode.
   free"): the Simulacro Dorado (player, golden book, audio) like the other levels needs the level's key; teachers still
   launch simulations from /maestro.
 - **Levels unlock by progress, like a game**: Entrenamiento after enough «¡Me la sé!» seals in La Base, the Simulacro
-  Dorado after enough practice in Entrenamiento; a teacher can unlock any kid early from /maestro.
+  Dorado after enough practice in Entrenamiento; a teacher can unlock any kid early from /maestro. His picks
+  2026-10-16 (phase 3): seals stay a **free tap** (a kid's own checklist, no listening or quiz needed); **El
+  Entrenamiento opens world by world** (all seals of a world in La Base → that same world opens in El Entrenamiento);
+  **the Simulacro Dorado stays open with the key until El Entrenamiento is live** (phase 4), then it opens when every
+  world is practised with 70 % or more (the % changeable in /maestro) or by the teacher's «Desbloquear».
+- **Built (phase 3, 2026-10-16): progress on the kid's account, one unlock engine.** `core/ruta-progress.js` is the
+  ONLY place that decides a step (the key is still the level's door: `LevelKeys.access` first, the engine after it).
+  The record keeps, per stored level id, `rec.ruta[level] = { s: '1-17,20' (the seals as ranges of word numbers of
+  the level's base: a whole base is ~10 characters), at, tw: 'all' | [worlds a teacher opened], td: 1 (a teacher
+  opened the Dorado), p: { world: best % } }` (written only through `Students.updateRuta`, so an archived kid comes
+  back and the seals travel with the archive). A logged-in kid's stamps go to `POST /api/ruta/seals` (batched, retried
+  offline; `GET` says `student: false` to a key-only phone, whose seals stay on the phone as before); the phone keeps a
+  mirror in `draly_base_<level>` (`who` = an opaque id of the account, `pend` = changes not saved yet, `held` = a
+  sibling's unsaved changes kept for their next login) and its seals from before the first login JOIN the account (a
+  union); a sibling's mirror is replaced, never mixed: every save names its `who` and the server answers 409 to a save
+  from another account's mirror. The page asks again when it comes back into view, retries (capped) when offline and
+  sends what waits on `pagehide`. «Salir» on /homework ends the kid's session on that phone (`/api/homework/logout`).
+  Word numbers are checked against the level's base; a save counts per kid (90 a minute), a read per address (4000 per
+  5 minutes): a school Wi-Fi full of kids is never slowed. «El Entrenamiento está activo» (`trainingLive`) and the
+  Dorado % (`doradoPct`, 50-100) live in `data/ruta-settings.json` (gitignored; super admin, /maestro → Teachers, under
+  «Claves de nivel»): the switch stays OFF and disabled until phase 4 sets `TRAINING_BUILT = true` in
+  core/ruta-progress.js (tests: env `DRALY_TRAINING_BUILT=1`), so nobody can lock the Dorado behind practice that
+  does not exist yet; a level without a La Base always opens its Dorado with the key. Phase 4 calls `recordPractice(code,
+  level, world, pct)` (best % per world) and puts `trainWorldOpen(a, rec, level, world)` / `doradoOpen(a, rec, level)`
+  behind `LevelKeys.access` at its doors (the sim players still ask only the key: when the switch goes ON, phase 4 adds
+  `doradoOpen` to `_simGrant` for solo kids); its worlds are the base's worlds by number (the packs' extra worlds,
+  «Simulacro del examen» and HSK 1's «Pinyin básico», have no base world: phase 4 decides). /maestro: a kid's profile
+  shows La Ruta Dorada per level (seals per world, El Entrenamiento worlds and who opened them, the Dorado rule in force,
+  best % per sim) with «Desbloquear» / «Volver a bloquear» per world, all worlds and the Dorado («Volver a bloquear»
+  undoes only a teacher's opening: a world the kid's seals opened stays open); the roster shows a thin gold bar of the
+  class level's seals (seals count as roster activity). `node scripts/test-ruta-progress.js` (port 4420) must pass.
 - **The simulations' audio = a digital golden book**: the golden book on screen page by page, each listening question
   with its own play button (the original exam recording, cut per question), plus the PDF to download.
 - The whole tab is **«La Ruta Dorada»** (was «Audios y vocabulario»). Choosing your module feels like a game: a swipe
   between modules with a super cool animation: **big glossy module cards that fly in with depth and a little bounce**
   (his pick 2026-10-15, "like choosing a world in a Nintendo game").
-- Until progress unlocking exists (phases 3-4), a kid with the key gets La Base and El Simulacro Dorado (the level's
-  existing simulations); El Entrenamiento shows a beautiful «Muy pronto» step (his pick 2026-10-15).
+- Until El Entrenamiento exists (phase 4), a kid with the key gets La Base and El Simulacro Dorado (the level's
+  existing simulations); El Entrenamiento shows a beautiful «Muy pronto» step (his pick 2026-10-15) and, since phase 3,
+  what the kid's seals already open there («2 de 6 mundos listos para entrenar», one tile per world that links to it in
+  La Base; a world that became ready since the phone's last visit pops its gold coin once, `draly_ruta_ready`).
 - **Built (phase 2, 2026-10-15)**: `/audios` = the module picker, `/audios/<level>` = that module's golden route
   (`public/js/ruta.js` + `css/ruta.css`, routed by `js/audios.js`). One card per level of core/levels.js (its jewel
   colour by test family, a new level of the same family takes the next free colour; Dralingo's pose shuffled per visit;
@@ -187,7 +219,9 @@ the checklist for any new game mode.
   neighbour on each side); the flight is a JS spring writing transform and opacity only (no layout read in a frame;
   measured 0 frames over 34 ms at 4x CPU slowdown); reduced motion = a crossfade; the first frame is still. What a visitor may open comes ONLY from `GET /api/ruta-dorada` (server.js
   `_rutaState`, `LevelKeys.access` per level): `open`, the base, `simCount`, and the sims list (links to the players,
-  the logged-in kid's best %) only when open; `home` = the logged-in kid's class level, else the first level this
+  the logged-in kid's best %) only when open (phase 3 adds, only when open, the base's worlds, `dorado` = the rule in
+  force, the logged-in kid's `progress`, and `who`; once El Entrenamiento is live the sims are listed only to whoever
+  has earned the Dorado); `home` = the logged-in kid's class level, else the first level this
   device holds the key of (the picker shows it first; then the tab's last card, then the phone's last choice). A step
   is open / locked (the gold lock, one «Escribe la clave de <nivel>» box) / «Muy pronto» (El Entrenamiento until
   phase 4; La Base or the Simulacro of a level that has none yet). «Escribe la clave» = `/audios/<level>/clave`: the
@@ -198,8 +232,9 @@ the checklist for any new game mode.
   says «Volver a mis tareas»). A new locked thing on the path (El Entrenamiento, the golden book) gets its state from
   `_rutaState` (never a list sent to everyone) and its door from `LevelKeys.access`.
 - `node scripts/test-level-keys.js` (its own server on port 4300 and a fresh data folder),
-  `node scripts/test-sims-lock.js` and `node scripts/test-ruta-dorada.js` (port 4410: every kind of visitor, nothing
-  protected reaches one who may not open it) must pass.
+  `node scripts/test-sims-lock.js`, `node scripts/test-ruta-dorada.js` (port 4410: every kind of visitor, nothing
+  protected reaches one who may not open it) and `node scripts/test-ruta-progress.js` (port 4420: seals, the unlock
+  engine, /maestro's «Desbloquear», archive) must pass.
 
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads
@@ -288,7 +323,8 @@ the checklist for any new game mode.
   Readings: `<whisper python> ../study/lib/readings.py <level>` (pypinyin, the pitch of one-syllable words, one Whisper
   batch on the processor, words re-heard after «Wǒ shuō», score_lines on the rest); fix a wrong reading in voice.py,
   never in the page. Page: `js/audios-base.js` + the `bs-` rules in
-  `css/audios.css`; seals saved per phone in `localStorage draly_base_<level>` (the move bridge carries it); the
+  `css/audios.css`; seals saved per phone in `localStorage draly_base_<level>` (the move bridge carries it) and, for a
+  kid logged in at /homework, on their account (phase 3, § Three levels: `/api/ruta/seals`, any phone); the
   /homework home links the level's route for levels with `base` in core/levels.js («La Ruta Dorada de <nivel>»,
   `#pt-base`, server sends `base` on enter, read from the catalog; `?from=homework` turns the route's back arrow into
   «Volver a mis tareas»; the base's own back arrow returns to the route).

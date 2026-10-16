@@ -767,6 +767,9 @@
     accessCode = '';
     studentCode = '';
     removePinnedStack();
+    // 2026-10-16: the kid's session on this phone ends too (a brother or sister on the same phone never stamps La Base
+    // seals or saves results on this kid's account); one tap on «Entrar» brings it back
+    try { fetch('/api/homework/logout', { method: 'POST', credentials: 'same-origin', keepalive: true }).catch(() => {}); } catch (_) {}
     location.href = '/';
   });
   $('hw-list-parents').addEventListener('click', openParentView);
@@ -4018,9 +4021,10 @@
     if (a.hidden) return;
     // ?from=homework: the path's back arrow then returns here (the home-screen app has no back button)
     a.href = '/audios/' + encodeURIComponent(hwBase.level) + '?from=homework';
-    // 2026-10-16 (phase 3): the seals live on the kid's account too (server: hwBase.seals). This phone's mirror counts
-    // when it already holds THIS kid's account (it is the newest); a phone that never met the account adds its own
-    // (they join the account at the next visit to La Base); a sibling's mirror never counts.
+    // 2026-10-16 (phase 3): the seals live on the kid's account (server: hwBase.seals, fresh from this login: another
+    // phone's stamps included). This phone's mirror adds only its changes not saved yet when it holds THIS kid's
+    // account; a phone that never met the account adds its own seals (they join the account at the next visit to La
+    // Base); a sibling's mirror never counts.
     let n = 0;
     try {
       const o = JSON.parse(localStorage.getItem('draly_base_' + hwBase.level) || 'null');
@@ -4028,8 +4032,12 @@
       const mine = o && Array.isArray(o.seals) ? o.seals.filter(okN) : [];
       const acct = Array.isArray(hwBase.seals) ? hwBase.seals.filter(okN) : null;
       if (!acct) n = mine.length;
-      else if (o && o.who && o.who === hwBase.who) n = mine.length;
-      else if (o && o.who) n = acct.length;
+      else if (o && o.who && o.who === hwBase.who) {
+        const s = new Set(acct);
+        const p = o.pend && typeof o.pend === 'object' ? o.pend : {};
+        Object.keys(p).forEach((k) => { const x = Number(k); if (!okN(x)) return; if (p[k]) s.add(x); else s.delete(x); });
+        n = s.size;
+      } else if (o && o.who) n = acct.length;
       else n = new Set(acct.concat(mine)).size;
     } catch (_) { n = 0; }
     // the little book's spine: a long name («New HSK 1») breaks as «New / HSK 1», never «HSK / 1»

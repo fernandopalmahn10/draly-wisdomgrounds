@@ -68,18 +68,33 @@
   // keeps a mirror in draly_base_<level>:
   //   who  = whose account the mirror holds (an opaque id from the server, never the kid's code)
   //   pend = changes not saved yet: { <word number>: 1 stamped | 0 unstamped }
+  //   held = another kid's changes not saved yet, kept for their next login on this phone: { <who>: pend }
   // The first time a phone meets the kid's account, the seals it holds from before the login join the account (a
-  // union); a phone holding another kid's mirror (a sibling) takes this kid's seals instead and never mixes them.
-  // Nobody logged in (a key-only phone): the seals stay on the phone, as before; a mirror whose login ended keeps its
-  // changes for that kid's next login. Server: /api/ruta/seals (server.js, core/ruta-progress.js).
-  const sync = {};   // level → { mode: 'account' | 'device' | null, max, timer, busy, again, tries, onChange, sent }
+  // union; unstamps made before that are not carried). A phone holding another kid's mirror (a sibling) takes this
+  // kid's seals instead and never mixes them: every save names its `who`, and the server refuses (409) a save whose
+  // `who` is not the logged-in kid. Nobody logged in (a key-only phone): the seals stay on the phone, as before; a mirror
+  // whose login ended keeps its changes for that kid's next login. Server: /api/ruta/seals (server.js,
+  // core/ruta-progress.js).
+  const sync = {};   // level → { mode: 'account' | 'device' | null, max, timer, busy, again, tries, onChange, sent, syncTimer, syncTries }
+  const MAX_TRIES = 8;   // then the page waits for the next visit, the next return to the tab or the connection coming back
   const applyPend = (set, pend) => { const s = new Set(set); Object.keys(pend || {}).forEach((k) => { if (pend[k]) s.add(+k); else s.delete(+k); }); return s; };
   const sameList = (a, b) => a.length === b.length && a.every((n, i) => n === b[i]);
-  function syncOf(level) { return sync[level] || (sync[level] = { mode: null, max: 0, timer: 0, busy: null, again: false, tries: 0, onChange: null, sent: false }); }
+  const pendOf = (o) => (o.pend && typeof o.pend === 'object' && !Array.isArray(o.pend) ? o.pend : {});
+  function syncOf(level) {
+    return sync[level] || (sync[level] = { mode: null, max: 0, timer: 0, busy: null, again: false, tries: 0, onChange: null, sent: false, syncTimer: 0, syncTries: 0 });
+  }
   function later(level, ms) {
     const s = syncOf(level);
     clearTimeout(s.timer);
     s.timer = setTimeout(() => { s.timer = 0; flush(level); }, ms);
+  }
+  // only word numbers of this base travel (a stray entry would make the server refuse the whole batch)
+  function cleanPend(level, o) {
+    const s = syncOf(level);
+    const p = pendOf(o);
+    const okKey = (k) => /^\d{1,4}$/.test(k) && +k >= 1 && (!s.max || +k <= s.max);
+    Object.keys(p).forEach((k) => { if (!okKey(k) || (p[k] !== 0 && p[k] !== 1)) delete p[k]; });
+    return p;
   }
   // save the changes waiting on this phone. → a promise that settles when this round is done (never rejects)
   function flush(level) {
@@ -87,7 +102,10 @@
     if (s.mode !== 'account') return Promise.resolve();
     if (s.busy) { s.again = true; return s.busy; }
     clearTimeout(s.timer); s.timer = 0;
-    const pend = readObj(level).pend || {};
+    const cur = readObj(level);
+    const pend = cleanPend(level, cur);
+    cur.pend = pend;
+    writeObj(level, cur);
     const sent = Object.assign({}, pend);
     const keys = Object.keys(sent);
     if (!keys.length) return Promise.resolve();
@@ -95,12 +113,12 @@
     const remove = keys.filter((k) => !sent[k]).map(Number);
     s.busy = fetch('/api/ruta/seals', {
       method: 'POST', credentials: 'same-origin', cache: 'no-store',
-      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ level, add, remove }),
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ level, add, remove, who: cur.who || null }),
     }).then((r) => r.json().catch(() => null).then((d) => ({ status: r.status, d })), () => ({ status: 0, d: null }))
       .then(({ status, d }) => {
         s.busy = null;
         const o = readObj(level);
-        const p = o.pend && typeof o.pend === 'object' ? o.pend : {};
+        const p = pendOf(o);
         if (d && d.ok && Array.isArray(d.seals)) {
           s.tries = 0;
           s.sent = true;
@@ -115,6 +133,9 @@
           return;
         }
         s.again = false;
+        // another kid logged in on this phone meanwhile: never their account. Settle again (this kid's changes are
+        // kept for their next login, the new kid's seals come in).
+        if (status === 409) { s.mode = null; syncLevel(level); return; }
         // the login ended (12 h) or the level was closed: the changes wait on this phone for this kid's next login
         if (status === 401 || status === 403) { s.mode = 'device'; return; }
         // a word this level's base doesn't have (an old mirror): those changes are dropped, never retried forever
@@ -124,11 +145,35 @@
           writeObj(level, o);
           return;
         }
-        // offline, a busy server, too many at once: again a little later (2 s, 4 s, 8 s… up to a minute)
+        // offline, a busy server, too many at once: again a little later (2 s, 4 s, 8 s… up to a minute), a few times
         s.tries += 1;
-        later(level, Math.min(60000, 2000 * Math.pow(2, s.tries - 1)));
+        if (s.tries <= MAX_TRIES) later(level, Math.min(60000, 2000 * Math.pow(2, s.tries - 1)));
       });
     return s.busy;
+  }
+  // the mirror now holds `who`'s account (`acct` = its seals): what this phone holds for `who` goes up, a sibling's
+  // unsaved changes are kept aside for them
+  function settle(level, o, who, acct) {
+    const s = syncOf(level);
+    let pend;
+    if (o.who === who) pend = pendOf(o);                       // the same kid: what waits goes up
+    else if (!o.who) {                                         // the first time this phone meets the account: a union
+      pend = {};
+      ints(o.seals).forEach((n) => { if (!acct.has(n) && (!s.max || n <= s.max)) pend[n] = 1; });
+    } else {                                                   // another kid's mirror: theirs waits for them, never mixed
+      const held = o.held && typeof o.held === 'object' && !Array.isArray(o.held) ? o.held : {};
+      const mine = pendOf(o);
+      if (Object.keys(mine).length) held[o.who] = Object.assign({}, held[o.who] || {}, mine);
+      pend = held[who] && typeof held[who] === 'object' ? held[who] : {};
+      delete held[who];
+      const ids = Object.keys(held);
+      ids.slice(0, Math.max(0, ids.length - 4)).forEach((k) => { delete held[k]; });   // a family phone: 4 kids at most
+      if (ids.length) o.held = held; else delete o.held;
+    }
+    o.v = 1;
+    o.who = who;
+    o.pend = pend;
+    o.seals = sorted(applyPend(acct, pend));
   }
   // Ask the account (if a kid is logged in), settle the mirror, send what waits. max: the base's word count.
   // → Promise<{ account, who, changed, sent }> (changed: the mirror's seals changed; sent: the account was written)
@@ -137,32 +182,30 @@
     if (max) s.max = max;
     if (onChange) s.onChange = onChange;
     s.sent = false;
+    clearTimeout(s.syncTimer); s.syncTimer = 0;
     return fetch('/api/ruta/seals?level=' + encodeURIComponent(level), { credentials: 'same-origin', cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null), () => null)
       .then((d) => {
         const o = readObj(level);
         const before = ints(o.seals);
-        if (!d || !d.ok) {                       // offline or server trouble: the phone keeps what it has, changes wait
-          if (s.mode === 'account' && o.pend && Object.keys(o.pend).length) later(level, 4000);
+        if (!d || !d.ok) {
+          // offline, a busy class network or server trouble: the phone keeps what it has and asks again a little later
+          // (and when the connection comes back); a locked level (401) simply stays on the phone
+          if (s.mode !== 'device' && s.syncTries < MAX_TRIES) {
+            s.syncTries += 1;
+            s.syncTimer = setTimeout(() => { s.syncTimer = 0; syncLevel(level); }, Math.min(60000, 4000 * Math.pow(2, s.syncTries - 1)));
+          }
           return { account: s.mode === 'account', who: o.who || null, changed: false, sent: false };
         }
+        s.syncTries = 0;
+        s.tries = 0;
         if (!d.student) {                        // a key on this phone, nobody logged in: the seals stay here
           s.mode = 'device';
           if (!o.who && o.pend) { delete o.pend; writeObj(level, o); }
           return { account: false, who: null, changed: false, sent: false };
         }
         s.mode = 'account';
-        const acct = new Set(ints(d.seals));
-        let pend;
-        if (o.who === d.who) pend = o.pend && typeof o.pend === 'object' ? o.pend : {};     // the same kid: what waits goes up
-        else if (!o.who) {                       // the first time this phone meets the account: its seals join it
-          pend = {};
-          ints(o.seals).forEach((n) => { if (!acct.has(n) && (!s.max || n <= s.max)) pend[n] = 1; });
-        } else pend = {};                        // another kid's mirror: this kid's own seals replace it
-        o.v = 1;
-        o.who = d.who;
-        o.pend = pend;
-        o.seals = sorted(applyPend(acct, pend));
+        settle(level, o, d.who, new Set(ints(d.seals)));
         writeObj(level, o);
         const changed = !sameList(before, o.seals);
         if (changed && s.onChange) s.onChange(level);
@@ -171,8 +214,41 @@
   }
   // a tap: saved on the account a moment later (taps in a row travel together)
   function queueSave(level) { if (syncOf(level).mode === 'account') later(level, 1200); }
-  window.addEventListener('online', () => Object.keys(sync).forEach((l) => flush(l)));
-  // whose account a phone's mirror holds (La Ruta Dorada compares it with the logged-in kid's)
+  // the connection is back: send what waits, or ask the account if the first look never got through
+  window.addEventListener('online', () => Object.keys(sync).forEach((l) => {
+    const s = sync[l];
+    s.tries = 0;
+    if (s.mode === 'account') flush(l);
+    else if (s.mode === null) { s.syncTries = 0; syncLevel(l); }
+  }));
+  // the app closes or the kid leaves with taps not saved yet: they travel now (kept on the phone until a save is
+  // confirmed, so they go again at the next visit if this one did not arrive)
+  window.addEventListener('pagehide', () => Object.keys(sync).forEach((l) => {
+    const s = sync[l];
+    if (s.mode !== 'account' || s.busy) return;
+    const o = readObj(l);
+    const p = cleanPend(l, o);
+    const keys = Object.keys(p);
+    if (!keys.length) return;
+    try {
+      fetch('/api/ruta/seals', {
+        method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level: l, add: keys.filter((k) => p[k]).map(Number), remove: keys.filter((k) => !p[k]).map(Number), who: o.who || null }),
+      }).catch(() => {});
+    } catch (_) { /* an old phone: the next visit sends them */ }
+  }));
+  // back to a base left open (another tab, the phone's lock screen, a phone switched): the account may have seals from
+  // another phone meanwhile; the page asks again (its onChange redraws). One small request per return, never a poll.
+  function resync() {
+    if (!active || !data || document.visibilityState !== 'visible') return;
+    const s = sync[data.level];
+    if (!s || s.mode === 'device') return;
+    s.syncTries = 0;
+    syncLevel(data.level, data.words.length);
+  }
+  document.addEventListener('visibilitychange', resync);
+  window.addEventListener('pageshow', (e) => { if (e.persisted) resync(); });
+  // whose account a phone's mirror holds, and its changes not saved yet (La Ruta Dorada, /homework)
   const mirrorWho = (level) => readObj(level).who || null;
   // first visit (no seal, no sound yet): the first card's speaker invites the first tap
   const HINT_KEY = 'draly_base_tapped';
@@ -376,7 +452,7 @@
   function done(w, next) {
     return '<div class="bs-done on-red" data-done="' + w.n + '" hidden>' +
       '<img data-src="' + DRAGON.power + '" alt="" width="432" height="480">' +
-      '<div><h3>¡Mundo ' + w.n + ' completo!</h3><p>Ya tienes los ' + w.count + ' sellos de ' + esc(w.name) + '. Este mundo ya se abre en El Entrenamiento.</p>' +
+      '<div><h3>¡Mundo ' + w.n + ' completo!</h3><p>Ya tienes los ' + w.count + ' sellos de ' + esc(w.name) + '. Este mundo ya está listo para El Entrenamiento.</p>' +
       (next ? '<a class="bs-btn bs-btn-gold" href="#mundo-' + next.n + '">' + ICON.play + '<span>Sigue: mundo ' + next.n + '</span></a>'
         : '<a class="bs-btn bs-btn-gold" href="#repaso">' + ICON.play + '<span>Ir al repaso</span></a>') +
       '</div></div>';
@@ -509,7 +585,7 @@
     if (seals.size === data.words.length) {
       toast('¡Las ' + data.words.length + ' palabras!', 'Terminaste La base de ' + data.levelName + '. Ahora, el repaso.', true);
     } else if (k === world.count) {
-      toast('¡Mundo ' + world.n + ' completo!', world.name + ' ya se abre en El Entrenamiento.', false);   // what the seals earn (phase 3)
+      toast('¡Mundo ' + world.n + ' completo!', world.name + ': ¡listo para El Entrenamiento!', false);   // what the seals earn (phase 3)
     }
   }
 
