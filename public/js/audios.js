@@ -93,7 +93,8 @@
   // opened meanwhile. Ask the server again; redraw only the picker or a route, and only when something changed.
   // (phase 3: a kid's progress too, so seals saved from this phone or opened by a teacher redraw the route)
   const sig = (s) => JSON.stringify(s && s.modules ? s.modules.map((m) => [m.id, m.open, m.sims.length, m.dorado && m.dorado.open,
-    m.progress ? [m.progress.sealed, m.progress.worlds.map((w) => (w.train ? 1 : 0) + (w.teacher ? 2 : 0)).join('')] : null]) : null);
+    m.progress ? [m.progress.sealed, m.progress.worlds.map((w) => (w.train ? 1 : 0) + (w.teacher ? 2 : 0)).join('')] : null,
+    m.train ? m.train.worlds.map((w) => (w.open ? 1 : 0) + ':' + (w.best == null ? '' : w.best)).join(',') : null]) : null);
   function refreshState(force) {   // force: redraw even when the server says the same (the phone's seals changed)
     if (!catalog || !isWorldView()) return;
     fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
@@ -148,7 +149,27 @@
     stop();
     if (window.AudiosBase) window.AudiosBase.leave();
     if (window.Ruta) window.Ruta.leave();
+    if (window.Entrenamiento) window.Entrenamiento.leave();
     document.body.classList.remove('au-is-base', 'au-is-pick', 'au-is-path');
+    // 🎯 El Entrenamiento (phase 4): /audios/<level>/entrenamiento[/<world>] (js/entrenamiento.js; the server let only
+    // whoever has the level's key reach this page)
+    const tm = location.pathname.match(/^\/audios?\/([a-z0-9-]+)\/entrenamiento(?:\/([a-z0-9-]+))?\/?$/i);
+    if (tm) {
+      const tid = tm[1].toLowerCase();
+      const tmod = ruta && ruta.modules.find((x) => x.slug === tid || x.id === tid);
+      if (tmod && tmod.open && window.Entrenamiento) {
+        document.title = 'El Entrenamiento · ' + tmod.name + ' · Dralingo';
+        try { window.Entrenamiento.render(main, rutaCtx(), tmod, tm[2] ? tm[2].toLowerCase() : null); } catch (e) {
+          console.error('[audios] El Entrenamiento could not be drawn', e);
+          main.innerHTML = failedHtml('Algo salió mal. Vuelve a intentarlo.');
+          $('#au-retry').addEventListener('click', load);
+        }
+        firstRoute = false;
+        return;
+      }
+      if (!ruta) { main.innerHTML = failedHtml('No se pudo cargar La Ruta Dorada. Revisa tu internet.'); $('#au-retry').addEventListener('click', load); return; }
+      if (tmod) { history.replaceState(null, '', '/audios/' + tmod.slug); renderPath(tmod); return; }
+    }
     const m = location.pathname.match(/^\/audios?\/([a-z0-9-]+)\/?$/i);
     let id = (m && m[1]) || new URLSearchParams(location.search).get('t');
     // HSK 2 was absorbed into New HSK 1 (2026-10-11): old links (hsk2-e01-r1, hsk2) still work

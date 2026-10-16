@@ -45,6 +45,9 @@ data/teachers.unreadable-*.json
 data/ruta-settings.json
 data/ruta-settings.json.tmp
 data/ruta-settings.unreadable-*.json
+# 🎯 El Entrenamiento: the rounds whose phone scores already joined an account (core/entrenamiento.js): data disk only
+data/train-proofs.json
+data/train-proofs.json.tmp
 # Original (uncompressed) 3D models — only the compressed dralingo-*.glb + john-monk.glb ship to git
 public/assets/Arab Dralingo flying with white ghutra.glb
 public/assets/Arab Dralingo in Red F8.glb

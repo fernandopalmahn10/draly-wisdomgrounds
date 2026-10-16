@@ -21,6 +21,7 @@ const SimLock = require('./core/sim-lock');   // 🔒 simulations for enrolled s
 SimLock.scan();                                 // the index of the locked files (~1000, a few ms), before the first class
 const LevelKeys = require('./core/level-keys'); // 🔑 a key per level opens La Base / Entrenamiento / Simulacro Dorado (2026-10-15)
 const RutaProgress = require('./core/ruta-progress'); // 🏆 La Ruta Dorada: seals on the kid's record + the unlock engine (2026-10-16)
+const Train = require('./core/entrenamiento');        // 🎯 El Entrenamiento: practice world by world, graded here (phase 4, 2026-10-16)
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
@@ -1603,9 +1604,13 @@ function _rutaAdmin(rec) {
     .map((l) => {
       const s = RutaProgress.state(rec, l.id);
       const via = LevelKeys.recordOpenVia(rec, l.id);
+      // 🎯 phase 4: El Entrenamiento's extra worlds (Pinyin básico, Simulacro del examen) with the kid's best %: shown,
+      // never counted for the Dorado (the regular worlds' best % is `practiced` in each world)
+      const extra = (Train.worldsOf(l.id) || []).filter((w) => w.kind !== 'world')
+        .map((w) => ({ key: w.key, name: w.name, best: s.extra && s.extra[w.key] != null ? s.extra[w.key] : null }));
       return {
         id: l.id, name: l.name, own: l.id === own, open: !!via, via: via || null,
-        words: s.words, sealed: s.sealed, worlds: s.worlds, train: s.train, dorado: s.dorado,
+        words: s.words, sealed: s.sealed, worlds: s.worlds, train: s.train, dorado: s.dorado, extra,
         sims: _rutaSimsOf(l.id).map((x) => {
           const mine = tries.filter((t) => t && t.simId === x.id);
           const best = mine.reduce((m, t) => Math.max(m, Number(t.percent) || 0), -1);
@@ -1613,7 +1618,7 @@ function _rutaAdmin(rec) {
         }),
       };
     });
-  return { settings: { trainingLive: st.trainingLive, doradoPct: st.doradoPct }, levels };
+  return { settings: { trainingLive: st.trainingLive, doradoPct: st.doradoPct, trainingLaunchAt: st.trainingLaunchAt }, levels };
 }
 // the roster's small bar: the kid's class level (seals, El Entrenamiento worlds open) from a Students.listAll() row
 function _rutaBar(s) {
@@ -3255,6 +3260,12 @@ function _simGrant(req, simId, countMiss) {
   if (pin && !room && countMiss) _pinMiss(req, pin);
   const a = levelAccess(req, level);     // a teacher device · the logged-in kid's account · this device's key
   if (a.ok && a.via === 'teacher') return { grant: { kind: 't' } };
+  // 🏆 phase 4 (2026-10-16): a kid on their own (no teacher's room) also needs El Simulacro Dorado open: once El
+  // Entrenamiento is live it is earned (every world practised with doradoPct %, a teacher's «Desbloquear», or a sim
+  // taken before the launch), and only on an account (a key-only phone can't earn it). Rooms and teachers: as before.
+  if (a.ok && !RutaProgress.doradoOpen(a, a.studentCode ? Students.get(a.studentCode) : null, level)) {
+    return { status: 403, level, dorado: true, error: 'El Simulacro Dorado de ' + Levels.info(level).name + ' se abre cuando practiques cada mundo de El Entrenamiento.' };
+  }
   if (a.ok && a.studentCode) return { grant: { kind: 's', studentCode: a.studentCode } };
   if (a.ok) return { grant: { kind: 'k' } };
   if (req.query && req.query.debug === '1' && req.query.direct === '1' && SimLock.isLocalDev(req)) return { grant: { kind: 'd' } };
@@ -3281,8 +3292,15 @@ function _simPageGate(req, res) {
   const sim = String(q.sim || '').trim();
   const level = sim ? _simLevel(sim) : null;
   if (level) {
-    if (levelAccess(req, level).ok) return SimLock.sendPage(res, page);
-    return LevelKeys.sendKeyScreen(res, { level, what: 'sim' });
+    const a = levelAccess(req, level);
+    if (!a.ok) return LevelKeys.sendKeyScreen(res, { level, what: 'sim' });
+    // 🏆 phase 4: the key is there but El Simulacro Dorado is not earned yet → the level's route, whose step 3 says
+    // how it opens («Se abre cuando practiques cada mundo con 70 %») and shows the kid's progress
+    if (!RutaProgress.doradoOpen(a, a.studentCode ? Students.get(a.studentCode) : null, level)) {
+      res.set('Cache-Control', 'private, no-store');
+      return res.redirect(302, '/audios/' + (Levels.info(level).pack || level) + '?dorado=cerrado#paso-3');
+    }
+    return SimLock.sendPage(res, page);
   }
   // the bare page (its PIN box): a teacher, or anyone with a level open; else the «PIN de tu maestra» card
   if (_teacherOf(req) || Levels.LEVELS.some((l) => levelAccess(req, l.id).ok)) return SimLock.sendPage(res, page);
@@ -4535,6 +4553,14 @@ function _convertPinyinToHanzi(text) {
   if (hits === 0) return text;  // nothing matched, pass through
   return out;
 }
+// one pinyin word → its hanzi from the platform's list, or null (El Entrenamiento's voice falls back to it after the
+// curriculum's own words: core/entrenamiento.js speechText)
+function _pinyinTokenHanzi(tok) {
+  const maps = _loadPinyinHanziMap();
+  const s = String(tok || '').toLowerCase().replace(/['ʼ]/g, '');
+  return maps.withTone.get(s) || maps.toneless.get(s.normalize('NFD').replace(/[̀-ͯ]/g, '')) || null;
+}
+Train.configure({ tokenHanzi: _pinyinTokenHanzi });
 // Hash a (text, voice) pair so different voices don't collide and the
 // same text re-uses the same file forever.
 function _ttsCacheKey(text, voice) {
@@ -4659,17 +4685,33 @@ app.get('/api/tts', async (req, res) => {
       && !/^ar-XA-[A-Za-z0-9-]+$/.test(voice)) {
     return res.status(400).json({ ok: false, error: 'invalid voice' });
   }
+  return _ttsServe(req, res, text, voice, null);
+});
+// The cache-first Google voice behind /api/tts, also used by El Entrenamiento's questions (/api/ruta/train/voice/…).
+// opts.trusted: the text was chosen by the server (a curriculum question), never typed by a visitor, so the per-address
+// synth limit (a denial-of-wallet guard against floods of unique strings) does not apply; a global cap of new voices
+// a minute still does. opts.cacheControl: the response's Cache-Control (default public, 30 days).
+const _ttsTrustedHits = [];
+const _ttsInFlight = new Map();   // cache path → the synthesis already running for it (a class asking at once: one call)
+async function _ttsServe(req, res, text, voice, opts) {
+  const o = opts || {};
+  const cc = o.cacheControl || 'public, max-age=2592000';   // 30 days
   const cachePath = _ttsCachePath(text, voice);
   // Cache hit → stream from disk, ~5ms
   if (fs.existsSync(cachePath)) {
     res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Cache-Control', 'public, max-age=2592000');  // 30 days
+    res.setHeader('Cache-Control', cc);
     return fs.createReadStream(cachePath).pipe(res);
   }
   // Cache miss → this is the ONLY path that costs money. Throttle it so a
   // loop of unique strings can't run up the Google bill. Returns 429 (and a
   // friendly message) past 20 fresh syntheses/min/IP — well above real use.
-  if (!_ttsSynthRateLimit(req)) {
+  if (o.trusted) {
+    const now = Date.now();
+    while (_ttsTrustedHits.length && now - _ttsTrustedHits[0] > 60 * 1000) _ttsTrustedHits.shift();
+    if (_ttsTrustedHits.length >= 240) return res.status(429).set('Retry-After', '20').json({ ok: false, error: 'Espera un momento.' });
+    _ttsTrustedHits.push(now);
+  } else if (!_ttsSynthRateLimit(req)) {
     console.warn('[security] tts synth rate-limit hit ip=' + _clientIp(req) + ' (possible denial-of-wallet probe)');
     return res.status(429).json({ ok: false, error: 'demasiadas voces nuevas, espera un momento' });
   }
@@ -4677,38 +4719,51 @@ app.get('/api/tts', async (req, res) => {
   const client = _getTtsClient();
   if (!client) return res.status(503).json({ ok: false, error: 'TTS not configured' });
   try {
-    // Convert pinyin → hanzi for true Mandarin pronunciation. Sending
-    // "wo ai mama" to a cmn-CN voice produces a confused tone-deaf
-    // reading. Sending "我爱妈妈" produces native pronunciation. SKIP this
-    // conversion for non-Mandarin voices (Arabic etc.) — the conversion
-    // would mangle the native script.
-    const isMandarin = /^(cmn|zh)-/.test(voice);
-    const synthText = isMandarin ? _convertPinyinToHanzi(text) : text;
-    console.log('[tts] synth voice=' + voice + ' text=' + JSON.stringify(text) + ' → ' + JSON.stringify(synthText));
-    const [out] = await client.synthesizeSpeech({
-      input: { text: synthText },
-      voice: { languageCode: _languageCodeFromVoice(voice), name: voice },
-      audioConfig: {
-        audioEncoding: 'MP3',
-        speakingRate: 0.85,    // ~15% slower so kids can mimic
-        pitch: 0.0,
-      },
-    });
+    let job = _ttsInFlight.get(cachePath);
+    if (!job) {
+      // Convert pinyin → hanzi for true Mandarin pronunciation. Sending
+      // "wo ai mama" to a cmn-CN voice produces a confused tone-deaf
+      // reading. Sending "我爱妈妈" produces native pronunciation. SKIP this
+      // conversion for non-Mandarin voices (Arabic etc.) — the conversion
+      // would mangle the native script.
+      const isMandarin = /^(cmn|zh)-/.test(voice);
+      const synthText = isMandarin ? _convertPinyinToHanzi(text) : text;
+      if (!o.trusted) console.log('[tts] synth voice=' + voice + ' text=' + JSON.stringify(text) + ' → ' + JSON.stringify(synthText));
+      job = client.synthesizeSpeech({
+        input: { text: synthText },
+        voice: { languageCode: _languageCodeFromVoice(voice), name: voice },
+        audioConfig: {
+          audioEncoding: 'MP3',
+          speakingRate: 0.85,    // ~15% slower so kids can mimic
+          pitch: 0.0,
+        },
+      }).then(async ([out]) => {
+        // Persist for next time: written whole to a temp file and renamed, so a request in between never streams a
+        // half-written clip (the synthesis stays "in flight" until the file is complete)
+        if (out && out.audioContent) {
+          const tmp = cachePath + '.' + process.pid + '.tmp';
+          try { await fs.promises.writeFile(tmp, out.audioContent); await fs.promises.rename(tmp, cachePath); } catch (err) {
+            console.warn('[tts] failed to cache', cachePath, err.message);
+            fs.promises.unlink(tmp).catch(() => {});
+          }
+        }
+        return out;
+      }).finally(() => _ttsInFlight.delete(cachePath));
+      _ttsInFlight.set(cachePath, job);
+    }
+    const out = await job;
     if (!out || !out.audioContent) {
       return res.status(502).json({ ok: false, error: 'no audio returned' });
     }
-    // Persist for next time, then stream this response
-    fs.writeFile(cachePath, out.audioContent, (err) => {
-      if (err) console.warn('[tts] failed to cache', cachePath, err.message);
-    });
     res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Cache-Control', 'public, max-age=2592000');
+    res.setHeader('Cache-Control', cc);
     res.end(out.audioContent);
   } catch (e) {
-    console.error('[tts] synthesize failed for', JSON.stringify(text), ':', e.message);
-    res.status(502).json({ ok: false, error: 'tts failed: ' + e.message });
+    // (a curriculum question's text stays out of the log: El Entrenamiento's voice never prints what it says)
+    console.error('[tts] synthesize failed' + (o.trusted ? '' : ' for ' + JSON.stringify(text)) + ':', e.message);
+    if (!res.headersSent) res.status(502).json({ ok: false, error: o.trusted ? 'tts failed' : 'tts failed: ' + e.message });
   }
-});
+}
 
 // Friendly redirect: students can type /homework or /tarea — both work.
 // The Modo-Maestro auto-exit redirect lands on /homework?code=...&from=maestro,
@@ -4760,6 +4815,20 @@ app.get(['/audios/:id/clave', '/audio/:id/clave'], (req, res) => {
   if (LevelKeys.access(req, lvl).ok) return res.redirect(302, '/audios/' + slug);
   return LevelKeys.sendKeyScreen(res, { level: lvl, what: 'ruta' });
 });
+// 🎯 El Entrenamiento (phase 4, 2026-10-16): /audios/<level>/entrenamiento (its worlds) and
+// /audios/<level>/entrenamiento/<world> (a world's quick rounds), drawn by js/entrenamiento.js inside La Ruta Dorada's
+// page. Behind the level's key (LevelKeys.access, the one door): without it, the key screen right here, which comes
+// back to the same address once the key is right. Whether a world is open is the API's answer (it knows the kid).
+app.get(['/audios/:id/entrenamiento', '/audios/:id/entrenamiento/:world', '/audio/:id/entrenamiento', '/audio/:id/entrenamiento/:world'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  const lvl = Levels.normalize(req.params.id);
+  const W = lvl ? Train.worldsOf(lvl) : null;
+  if (!W) return res.redirect(302, lvl ? '/audios/' + (Levels.info(lvl).pack || lvl) : '/audios');
+  const slug = Levels.info(lvl).pack || lvl;
+  if (req.params.world && !W.some((w) => w.key === req.params.world)) return res.redirect(302, '/audios/' + slug + '/entrenamiento');
+  if (!LevelKeys.access(req, lvl).ok) return LevelKeys.sendKeyScreen(res, { level: lvl, what: 'train' });
+  res.sendFile(_emPath.join(__dirname, 'public', 'audios.html'));
+});
 // What the picker and the paths draw, for THIS request (never cached): one module per level of core/levels.js
 // (future levels automatically), whether its key is open here (LevelKeys.access: a teacher, the logged-in kid's
 // account, this device's key), and only when it is open the level's simulations (links to the players, which ask
@@ -4799,9 +4868,15 @@ function _rutaState(req) {
     if (a.ok) {
       // (a level without a La Base has no worlds to practise: the key keeps opening its Simulacro)
       if (!live || a.via === 'teacher' || !rb) dorado = { open: true, rule: live && rb ? 'practice' : 'key' };
-      else if (prog) dorado = { open: prog.dorado.open, rule: 'practice', pct: prog.dorado.pct, practiced: prog.dorado.practiced, of: prog.dorado.of };
-      else dorado = { open: false, rule: 'practice', pct: RutaProgress.getSettings().doradoPct, login: true };   // a phone alone can't save practice
+      else if (prog) {
+        dorado = { open: prog.dorado.open, rule: 'practice', via: prog.dorado.via, pct: prog.dorado.pct, practiced: prog.dorado.practiced, of: prog.dorado.of };
+      } else dorado = { open: false, rule: 'practice', pct: RutaProgress.getSettings().doradoPct, login: true };   // a phone alone can't save practice
     }
+    // 🎯 phase 4: El Entrenamiento's worlds for this visitor (open by the account's seals / a teacher, the account's best
+    // %); a key-only phone adds its own seals and scores on the page (they never travel in this state)
+    const tv = a.ok && rb ? Train.view(l.id, rec, a, null) : null;
+    const train = tv ? { live, ready: tv.ready, of: tv.of,
+      worlds: tv.worlds.map((w) => ({ key: w.key, kind: w.kind, n: w.n, short: w.short, emoji: w.emoji, open: w.open, via: w.via, best: w.best })) } : null;
     const listSims = a.ok && dorado && dorado.open;
     return {
       id: l.id, slug: l.pack || l.id, name: l.name, family: l.family, exam: l.exam || '', open: !!a.ok,
@@ -4812,6 +4887,7 @@ function _rutaState(req) {
         return Object.assign({}, s, { best: best >= 0 ? Math.round(best) : null });
       }) : [],
       dorado,
+      train,
       progress: prog ? {
         sealed: prog.sealed, words: prog.words,
         worlds: prog.worlds.map((w) => ({ n: w.n, short: w.short, count: w.count, sealed: w.sealed, train: w.train, teacher: w.teacher })),
@@ -4884,6 +4960,145 @@ app.post('/api/ruta/seals', (req, res) => {
   const out = RutaProgress.applySeals(rec.code, lvl, b.add, b.remove);
   if (!out.ok) return res.status(out.status || 400).json({ ok: false, error: out.error });
   res.json({ ok: true, who, seals: out.seals });
+});
+// ── 🎯 El Entrenamiento (phase 4, 2026-10-16): quick rounds graded here (core/entrenamiento.js) ─────────────────────
+// GET  /api/ruta/train?level=yct1&s=1-17,20            → the level's practice worlds for this visitor: open or not (the
+//                                                        account's seals + `s` = the seals this phone holds: a free
+//                                                        tap carries no secret), the account's best %, the Dorado rule
+// POST /api/ruta/train/round  { level, world, s }      → a round: ~10 questions WITHOUT their right answers
+// POST /api/ruta/train/answer { round, i, chosen }     → right or wrong + the right answer, only once answered (the
+//                                                        first answer counts)
+// POST /api/ruta/train/finish { round }                → the % counted here; the best goes on the logged-in kid's record
+//                                                        (a key-only phone gets a signed proof instead)
+// GET  /api/ruta/train/voice/<round>/<i>/<part>        → the question's audio (part: ask · o0…o3 · after, once answered)
+// POST /api/ruta/train/scores { level, who, proofs }   → a key-only phone's proofs join the logged-in kid's account
+// Every call asks LevelKeys.access for the level first (the one door); a round answers only the phone or account that
+// started it. Never a right answer before the kid answered, never a % taken from the phone.
+const _trainHits = new Map();
+function _trainRate(key, win, max) {
+  const now = Date.now();
+  const arr = (_trainHits.get(key) || []).filter((t) => now - t < win);
+  if (arr.length >= max) { _trainHits.set(key, arr); return false; }
+  arr.push(now);
+  _trainHits.set(key, arr);
+  return true;
+}
+// the counters forget on a timer (never on a request: a flood can't make every request walk them), with a hard size
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _trainHits) if (!v.length || now - v[v.length - 1] > 10 * 60 * 1000) _trainHits.delete(k);
+  if (_trainHits.size > 50000) _trainHits.clear();
+}, 60 * 1000).unref();
+// who is asking: the logged-in kid (their account), this phone (its id), a teacher (their id). Only a new round gives a
+// phone its id (the `dkd` cookie of core/level-keys.js); every later call reads the one it has (none = no round of it).
+function _trainWho(req, res, a, create) {
+  const t = a && a.via === 'teacher' ? _teacherOf(req) : null;
+  let dev = '';
+  if (create) dev = LevelKeys.deviceId(req, res);
+  else { const c = SimLock.readCookie(req, LevelKeys.DEVICE_COOKIE); if (/^[a-f0-9]{24}$/.test(c)) dev = c; }
+  return { code: a && a.via !== 'teacher' && a.studentCode ? a.studentCode : null, dev,
+    tid: t ? (t.teacher ? String(t.teacher.uid || t.teacher.teacherId) : '*') : null };
+}
+const _trainOwner = (who) => (who.tid ? 't:' + who.tid : who.code ? 's:' + who.code : 'd:' + who.dev);
+// the level's door for a training call → { lvl, a } or null (the response is written)
+function _trainDoor(req, res, raw) {
+  res.set({ 'Cache-Control': 'private, no-store', 'Cloudflare-CDN-Cache-Control': 'no-store' });
+  const lvl = Levels.normalize(raw);
+  if (!lvl || !Train.worldsOf(lvl)) { res.status(404).json({ ok: false, error: 'Ese nivel no tiene El Entrenamiento.' }); return null; }
+  const a = levelAccess(req, lvl);
+  if (!a.ok) { res.status(401).json({ ok: false, locked: true, level: lvl }); return null; }
+  return { lvl, a };
+}
+// the seals a phone says it holds ('1-17,20', ranges of word numbers of the level's base)
+function _trainClaimed(lvl, s) {
+  const b = RutaProgress.baseOf(lvl);
+  const str = typeof s === 'string' ? s.slice(0, 2000) : '';
+  return b && str ? RutaProgress.decodeSeals(str, b.words) : null;
+}
+const _trainRec = (a) => (a.via !== 'teacher' && a.studentCode ? Students.get(a.studentCode) : null);
+app.get('/api/ruta/train', (req, res) => {
+  const d = _trainDoor(req, res, req.query && req.query.level);
+  if (!d) return;
+  if (!_trainRate('i:' + _clientIp(req), 5 * 60 * 1000, 4000)) return res.status(429).set('Retry-After', '30').json({ ok: false, error: 'Espera un momento.' });
+  const rec = _trainRec(d.a);
+  const v = Train.view(d.lvl, rec, d.a, _trainClaimed(d.lvl, req.query.s));
+  const info = Levels.info(d.lvl);
+  res.json(Object.assign({ ok: true, slug: info.pack || d.lvl, name: info.name, base: info.base || null, student: !!rec, teacher: d.a.via === 'teacher',
+    who: rec ? _sealWho(rec.code) : null, live: RutaProgress.getSettings().trainingLive }, v));
+});
+app.post('/api/ruta/train/round', (req, res) => {
+  const b = req.body || {};
+  const d = _trainDoor(req, res, b.level);
+  if (!d) return;
+  // (the address first: a class shares one, 600 rounds in 10 minutes is far above two classes at once)
+  const ip = _clientIp(req);
+  if (!_trainRate('ri:' + ip, 10 * 60 * 1000, 600)) return res.status(429).set('Retry-After', '30').json({ ok: false, error: 'Muchas rondas seguidas: espera un momento.' });
+  const who = _trainWho(req, res, d.a, true);
+  if (!_trainRate('r:' + _trainOwner(who), 10 * 60 * 1000, 40)) return res.status(429).set('Retry-After', '30').json({ ok: false, error: 'Muchas rondas seguidas: espera un momento.' });
+  const out = Train.startRound(d.lvl, String(b.world || ''), who, d.a, _trainRec(d.a), _trainClaimed(d.lvl, b.s), ip);
+  if (!out.ok) return res.status(out.status || 400).json(out);
+  res.json(out);
+});
+// a call about a round: its level's door first, then the round's owner (core/entrenamiento.js)
+function _trainRoundDoor(req, res, id) {
+  res.set({ 'Cache-Control': 'private, no-store', 'Cloudflare-CDN-Cache-Control': 'no-store' });
+  const lvl = Train.roundLevel(String(id || ''));
+  if (!lvl) { res.status(410).json({ ok: false, gone: true, error: 'Esta ronda ya terminó. ¡Empieza otra!' }); return null; }
+  return _trainDoor(req, res, lvl);
+}
+app.post('/api/ruta/train/answer', (req, res) => {
+  const b = req.body || {};
+  const d = _trainRoundDoor(req, res, b.round);
+  if (!d) return;
+  if (!_trainRate('ai:' + _clientIp(req), 10 * 60 * 1000, 8000)) return res.status(429).set('Retry-After', '20').json({ ok: false, error: 'Espera un momento.' });
+  const out = Train.answer(String(b.round), b.i, b.chosen, _trainWho(req, res, d.a));
+  if (!out.ok) return res.status(out.status || 400).json(out);
+  res.json(out);
+});
+app.post('/api/ruta/train/finish', (req, res) => {
+  const b = req.body || {};
+  const d = _trainRoundDoor(req, res, b.round);
+  if (!d) return;
+  const out = Train.finish(String(b.round), _trainWho(req, res, d.a), d.a, _trainRec(d.a));
+  if (!out.ok) return res.status(out.status || 400).json(out);
+  res.json(out);
+});
+app.get('/api/ruta/train/voice/:round/:i/:part', (req, res) => {
+  const d = _trainRoundDoor(req, res, req.params.round);
+  if (!d) return;
+  if (!_trainRate('v:' + _clientIp(req), 5 * 60 * 1000, 40000)) return res.status(429).set('Retry-After', '20').json({ ok: false });
+  const out = Train.voice(String(req.params.round), req.params.i, String(req.params.part || ''), _trainWho(req, res, d.a));
+  if (!out.ok) return res.status(out.status || 404).json({ ok: false });
+  // (kept by the phone for the round's hour only, on success: an error is never kept)
+  res.set({ 'X-Content-Type-Options': 'nosniff', 'Cross-Origin-Resource-Policy': 'same-origin' });
+  if (out.file) {
+    res.set('Cache-Control', 'private, max-age=3600').type('audio/mpeg');
+    return res.sendFile(out.file, { cacheControl: false }, (err) => { if (err && !res.headersSent) res.status(404).set('Cache-Control', 'no-store').end(); });
+  }
+  _ttsServe(req, res, out.text, TTS_DEFAULT_VOICE, { trusted: true, cacheControl: 'private, max-age=3600' });
+});
+// a question's picture by the round (never the picture's own file name: it would say a «¿Cómo se dice?»'s answer)
+app.get('/api/ruta/train/pic/:round/:i', (req, res) => {
+  const d = _trainRoundDoor(req, res, req.params.round);
+  if (!d) return;
+  if (!_trainRate('v:' + _clientIp(req), 5 * 60 * 1000, 40000)) return res.status(429).set('Retry-After', '20').json({ ok: false });
+  const out = Train.picture(String(req.params.round), req.params.i, _trainWho(req, res, d.a));
+  if (!out.ok) return res.status(out.status || 404).json({ ok: false });
+  res.set({ 'X-Content-Type-Options': 'nosniff', 'Cross-Origin-Resource-Policy': 'same-origin', 'Cache-Control': 'private, max-age=3600' }).type('image/webp');
+  res.sendFile(out.file, { cacheControl: false }, (err) => { if (err && !res.headersSent) res.status(404).set('Cache-Control', 'no-store').end(); });
+});
+app.post('/api/ruta/train/scores', (req, res) => {
+  const b = req.body || {};
+  const d = _trainDoor(req, res, b.level);
+  if (!d) return;
+  const rec = _trainRec(d.a);
+  if (!rec) return res.status(403).json({ ok: false, student: false, error: 'Entra con tu código para guardar tus puntos en tu cuenta.' });
+  if (!_trainRate('s:' + rec.code, 60 * 1000, 30)) return res.status(429).set('Retry-After', '20').json({ ok: false, error: 'Espera un momento.' });
+  const who = _sealWho(rec.code);
+  if (b.who != null && String(b.who) !== who) return res.status(409).json({ ok: false, who, error: 'Otra cuenta entró en este teléfono.' });
+  const out = Train.mergeProofs(rec.code, d.lvl, b.proofs, _trainWho(req, res, d.a));
+  if (!out.ok) return res.status(out.status || 400).json(out);
+  res.json({ ok: true, who, merged: out.merged, best: Train.bestOf(Students.get(rec.code), d.lvl) });
 });
 // «Salir» on /homework (2026-10-16): the kid's session on this phone ends (the next kid on a family phone writes no
 // seals or results on them); their codes stay saved on the phone, so coming back is still one tap on «Entrar».

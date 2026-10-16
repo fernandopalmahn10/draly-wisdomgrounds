@@ -31,6 +31,9 @@ const ROOT = path.join(__dirname, '..');
 const TEACHER = 'legacy-' + crypto.randomBytes(12).toString('hex');   // this server's WU_ADMIN_PASSWORD (no default since 2026-10-15)
 const SECRET = 'test-' + crypto.randomBytes(24).toString('hex');  // same key here and in the server we start
 const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-simlock-'));   // its own teachers, students, keys
+// (phase 4, 2026-10-16: this test checks the key's door, so El Entrenamiento's switch is OFF here, as he may set it
+// after the launch: the key alone opens a simulation. The Dorado rule ON is scripts/test-ruta-training.js)
+fs.writeFileSync(path.join(DATA, 'ruta-settings.json'), JSON.stringify({ trainingLive: false, doradoPct: 70, trainingLaunchAt: Date.now() }));
 process.env.SIM_LOCK_SECRET = SECRET;
 const SimLock = require('../core/sim-lock');
 const YctSim = require('../core/yct-sim');

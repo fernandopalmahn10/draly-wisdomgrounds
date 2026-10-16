@@ -39,8 +39,11 @@ const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 const UNIT = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-rprog-unit-'));
 process.env.DRALY_DATA_DIR = UNIT;
 process.env.STUDENT_DATA_DIR = UNIT;
-process.env.DRALY_TRAINING_BUILT = '1';   // the switch's ON side is tested here as phase 4 will use it (the OFF-only check runs below)
+process.env.DRALY_TRAINING_BUILT = '1';   // the switch's ON side is tested here as phase 4 uses it (the OFF-only check runs below)
 const DAY = 86400e3, NOW = Date.now();
+// (phase 4, 2026-10-16: El Entrenamiento's launch already happened and he switched it OFF; the launch itself, once, is
+// scripts/test-ruta-training.js)
+fs.writeFileSync(path.join(UNIT, 'ruta-settings.json'), JSON.stringify({ trainingLive: false, doradoPct: 70, trainingLaunchAt: NOW - DAY }));
 fs.writeFileSync(path.join(UNIT, 'student-records.json'), JSON.stringify({
   AAAA: { code: 'AAAA', displayName: 'Kid A', firstSeen: NOW - 60 * DAY, lastSeen: NOW, level: 'yct1', sentencesBuilt: [] },
   BBBB: { code: 'BBBB', displayName: 'Kid B', firstSeen: NOW - 90 * DAY, lastSeen: NOW - 45 * DAY, level: 'yct1', sentencesBuilt: [],
@@ -72,20 +75,20 @@ function unit() {
   const Y = RP.baseOf('yct1');
 
   section('settings: only fill what is missing');
-  ok(RP.getSettings().trainingLive === false && RP.getSettings().doradoPct === 70, 'defaults: El Entrenamiento not live, 70 %');
+  ok(RP.getSettings().trainingLive === false && RP.getSettings().doradoPct === 70, 'his switch OFF and 70 %, read as he left them');
   ok(!RP.setSettings({ doradoPct: 49 }).ok && !RP.setSettings({ doradoPct: 101 }).ok && !RP.setSettings({ doradoPct: 'x' }).ok && !RP.setSettings({ doradoPct: 72.5 }).ok, 'the % must be a whole number from 50 to 100');
   ok(!RP.setSettings({ trainingLive: 'yes' }).ok && !RP.setSettings({}).ok, 'the switch takes only true / false; an empty change is refused');
   ok(RP.setSettings({ doradoPct: 85 }).ok && RP.getSettings().doradoPct === 85, 'a valid % is saved');
   RP.loadSettings();
   ok(RP.getSettings().doradoPct === 85 && RP.getSettings().trainingLive === false, '… and survives a restart (boot never forces it back)');
-  fs.writeFileSync(RP.SETTINGS_FILE, JSON.stringify({ doradoPct: 'oops', trainingLive: true }));
+  fs.writeFileSync(RP.SETTINGS_FILE, JSON.stringify({ doradoPct: 'oops', trainingLive: false, trainingLaunchAt: NOW - DAY }));
   RP.loadSettings();
-  ok(RP.getSettings().doradoPct === 70 && RP.getSettings().trainingLive === true, 'a broken value takes its default, a good one is kept');
+  ok(RP.getSettings().doradoPct === 70 && RP.getSettings().trainingLive === false, 'a broken value takes its default, a good one is kept');
   fs.writeFileSync(RP.SETTINGS_FILE, '{not json');
   RP.loadSettings();
-  ok(RP.getSettings().trainingLive === false && fs.readdirSync(UNIT).some((f) => /^ruta-settings\.unreadable-/.test(f)), 'an unreadable settings file is kept aside, never written over');
-  ok(RP.setSettings({ trainingLive: false, doradoPct: 70 }).ok, 'back to the defaults');
-  fs.writeFileSync(RP.SETTINGS_FILE, JSON.stringify({ trainingLive: false, doradoPct: 80, phase5Thing: { a: 1 } }));
+  ok(RP.getSettings().trainingLive === false && fs.readdirSync(UNIT).some((f) => /^ruta-settings\.unreadable-/.test(f)), 'an unreadable settings file is kept aside, never written over (nothing readable in it: the key rule)');
+  ok(RP.setSettings({ trainingLive: false, doradoPct: 70 }).ok, 'back to OFF, 70 %');
+  fs.writeFileSync(RP.SETTINGS_FILE, JSON.stringify({ trainingLive: false, doradoPct: 80, trainingLaunchAt: NOW - DAY, phase5Thing: { a: 1 } }));
   RP.loadSettings();
   ok(RP.setSettings({ doradoPct: 70 }).ok && JSON.parse(fs.readFileSync(RP.SETTINGS_FILE, 'utf8')).phase5Thing.a === 1, 'a key this version does not know survives a save');
   // before El Entrenamiento exists (no DRALY_TRAINING_BUILT): the switch can't go on, and a file that says ON is not in force
@@ -94,8 +97,8 @@ function unit() {
   const probe = 'const R = require(' + JSON.stringify(path.join(ROOT, 'core', 'ruta-progress.js')) + ');' +
     'const a = R.getSettings(); const b = R.setSettings({ trainingLive: true });' +
     'console.log(JSON.stringify({ built: a.trainingBuilt, live: a.trainingLive, ok: b.ok, err: b.error || "", open: R.doradoOpen({ ok: true, via: "key" }, null, "yct1") }));';
-  const env = Object.assign({}, process.env, { DRALY_DATA_DIR: NOB, STUDENT_DATA_DIR: NOB });
-  delete env.DRALY_TRAINING_BUILT;
+  // (phase 4 built it: DRALY_TRAINING_BUILT=0 is the guard that still says «not built»)
+  const env = Object.assign({}, process.env, { DRALY_DATA_DIR: NOB, STUDENT_DATA_DIR: NOB, DRALY_TRAINING_BUILT: '0' });
   let pr = {};
   try { pr = JSON.parse(require('child_process').execFileSync(process.execPath, ['-e', probe], { env, encoding: 'utf8' }).trim().split('\n').pop()); } catch (e) { pr = { crash: String(e) }; }
   ok(pr.built === false && pr.live === false && pr.ok === false && /todavía no está publicado/.test(pr.err) && pr.open === true,
@@ -187,6 +190,9 @@ function unit() {
 // 2. its own server
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-rprog-'));
+// (phase 4: the launch already happened and he switched El Entrenamiento OFF: this part checks the key rule first, then
+// turns the switch ON itself)
+fs.writeFileSync(path.join(DATA, 'ruta-settings.json'), JSON.stringify({ trainingLive: false, doradoPct: 70, trainingLaunchAt: Date.now() }));
 const rnd = (n) => crypto.randomBytes(n).toString('hex').toUpperCase();
 const LEGACY = 'legacy-' + rnd(12);
 const SEED = 'T-' + rnd(5);
