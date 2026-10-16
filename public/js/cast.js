@@ -11,6 +11,8 @@
 //   a simulation with zero mistakes), repaso (El libro dorado: before the kid's mistakes)
 //   tablero (Dàfùwēng · Monopolio: each one hosts the board's spaces: Fer the episode, Hamdan the landmarks, Latifa the
 //   «¡Suerte!» roulette, Aileen the duels, Adric the storm, Adrian Salida, Dralingo the star)
+//   vuelo (Vuelo del Dragón: the sky race: Fer opens the episode, Hamdan the star sprints, Latifa the golden rings, Aileen
+//   the overtakes, Adric (and his dog) the tailwind, Adrian the laps, Dralingo the stars)
 // Poses: hello, cheer, mystery. Stickers are Higgsfield renders of his own character art, keyed to transparent WebP.
 (function () {
   const BASE = '/assets/cast/';
@@ -26,6 +28,7 @@
         battle: ['¡Vamos, equipo! ¡A conquistar!', '¡Esa bandera, bien plantada!', '¡Así se juega!'],
         chase: ['¡Vamos, equipo! ¡Turbos!', '¡Nadie se queda atrás!', '¡Cada respuesta nos aleja de Robotín!'],
         tablero: ['¡Bienvenidos a la noche del Gran Tablero!', '¡Cada respuesta es un dado!', '¡Esa estrella brilla, a buscarla!'],
+        vuelo: ['¡Esta noche: carrera de dragones sobre Dubái!', '¡Cada respuesta es un vuelo!', '¡Qué vuelo, equipo!'],
         feast: ['¡Respondan y alimenten al dragoncito!', '¡Eso es trabajo en equipo!', '¡Qué hambre tiene ese dragoncito!'],
         smash: ['¡Dale a esa piñata!', '¡Golpe en el dorado, equipo!', '¡Qué golpazo!'],
         fiesta: ['¡Piñata rota! Excelente trabajo.', '¡Así se aprende y así se celebra!', '¡Equipo de campeones!'],
@@ -48,6 +51,7 @@
         battle: ['¡Yalla, yalla! ¡Vamos!', '¡Dubái es nuestro!', '¡A conquistar, amigos!'],
         chase: ['¡Yalla, yalla! ¡Al jet!', '¡El jet los espera, amigos!', '¡Yalla, más rápido!'],
         tablero: ['¡Yalla! ¡Un monumento para ti!', '¡Marhaba, dueño de Dubái!', '¡Yalla, que paguen peaje!'],
+        vuelo: ['¡Yalla! ¡Dralingo espera con la estrella!', '¡Marhaba, campeón del cielo!', '¡Yalla, yalla, más rápido!'],
         feast: ['¡Yalla, más mochis!', '¡Marhaba, dragoncito! ¡A comer!', '¡Yalla, yalla, que no pare!'],
         smash: ['¡Yalla, golpe fuerte!', '¡Yalla, yalla, rompan la piñata!', '¡Marhaba, caramelos!'],
         fiesta: ['¡Yalla! ¡Caramelos para todos!', '¡Increíble, equipo!', '¡Esta fiesta merece un viaje en jet!'],
@@ -70,6 +74,7 @@
         battle: ['¡Rodeen esa zona!', '¡Buena estrategia, equipo!', '¡Vamos por los monumentos!'],
         chase: ['¡Sepárense y lo logramos!', '¡Buena estrategia, equipo!', 'Piensen rápido: ¡turbo!'],
         tablero: ['Gira la ruleta… ¡a ver qué sale!', 'Un buen plan y un poco de suerte.', '¡Veamos tu suerte!'],
+        vuelo: ['¡Anillo dorado! Buen plan.', 'Lee, piensa y después vuela.', 'Tengo un plan: responde bien y aletea.'],
         feast: ['Respuesta correcta, mochi asegurado.', 'Cada mochi cuenta, equipo.', '¡Buena estrategia: respondan rápido!'],
         smash: ['Miren la flecha y toquen en el dorado.', 'Paciencia… ¡ahora!', '¡Golpe perfecto, equipo!'],
         fiesta: ['¡Brillante! La piñata no tuvo oportunidad.', '¡Así se piensa y así se golpea!', '¡Yalla, a la siguiente piñata!'],
@@ -92,6 +97,7 @@
         battle: ['¡Dale, che, vamos!', '¡Vos podés, plantá esa bandera!', '¡Vamos, vamos, que ganamos!'],
         chase: ['¡Dale, che, corré!', '¡Vos podés, dale turbo!', '¡Dale, que se acerca Robotín!'],
         tablero: ['¡Dale, che! ¡Duelo de dados!', '¡Vos podés, tirá ese dado!', '¡Qué duelo, che!'],
+        vuelo: ['¡Dale, che, pasalo!', '¡Vos volás como un rayo!', '¡Qué genial, che! ¡Adelante!'],
         feast: ['¡Dale, che, más mochis!', '¡Vos podés, tocá rápido!', '¡Qué genial, che, cómo come!'],
         smash: ['¡Dale, che, pegale fuerte!', '¡Vos podés, tocá en el dorado!', '¡Qué golpazo, che!'],
         fiesta: ['¡Vos podés! ¡La rompimos!', '¡Qué genial, che!', '¡Dale, otra piñata más!'],
@@ -114,6 +120,7 @@
         battle: ['Bien. Sigan así.', 'Mi perro huele la victoria.', 'Por ahí. Rápido.'],
         chase: ['Mi perro corre más rápido. ¡Vamos!', 'Por ahí. Rápido.', 'Bien. Sigan así.'],
         tablero: ['Mi perro huele una tormenta.', 'Cuidado. Arena.', 'Agárrense…'],
+        vuelo: ['Mira… viento a favor.', 'Sígueme. Por aquí sopla.', 'Mi perro huele el viento.'],
         feast: ['Mi perro también quiere mochis.', 'Rápido. Toca.', 'Bien. Que coma.'],
         smash: ['Mi perro quiere caramelos.', 'Espera… ahora.', 'Buen golpe.'],
         fiesta: ['Bien hecho. Mi perro está feliz.', 'Nada mal, equipo.', '¡Eso fue genial!'],
@@ -136,6 +143,7 @@
         battle: ['¡El mapa dice: por aquí!', '¡A la aventura, equipo!', '¡Vamos por el tesoro!'],
         chase: ['¡El mapa dice: por aquí!', '¡Ya casi llegamos!', '¡A la aventura, rápido!'],
         tablero: ['¡El mapa dice: otra vuelta!', '¡Otra vuelta al tablero!', '¡A la aventura, otra vuelta!'],
+        vuelo: ['¡Otra vuelta a Dubái!', '¡Por aquí, al próximo monumento!', '¡A la aventura, más rápido!'],
         feast: ['¡El mapa dice: más mochis!', '¡A la aventura, a comer!', '¡Vamos por el Burj Khalifa!'],
         smash: ['¡El mapa dice: caramelos!', '¡A la aventura, a golpear!', '¡Vamos por el tigre de oro!'],
         fiesta: ['¡Tesoro de caramelos!', '¡Misión cumplida!', '¡Lo logramos juntos!'],
@@ -159,6 +167,7 @@
         battle: ['¡Vamos!', '¡A conquistar!', '¡Yalla!'],
         chase: ['¡Turbo!', '¡A correr!', '¡Yalla!'],
         tablero: ['¡Una estrella para ti!', '¡Estrella, amigo!', '¡Yalla, qué estrella!'],
+        vuelo: ['¡Una estrella para ti!', '¡Fuego azul!', '¡Yalla, qué vuelo!'],
         feast: ['¡Ñam!', '¡Más mochis!', '¡Yalla!'],
         smash: ['¡Pum!', '¡Caramelos!', '¡Yalla!'],
         fiesta: ['¡Lo logramos!', '¡Qué fiesta, amigos!', '¡Bien hecho!'],
@@ -170,7 +179,7 @@
     },
   };
   const HUMANS = ['fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian'];
-  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', smash: 'cheer', fiesta: 'cheer', swing: 'cheer', oro: 'cheer', casi: 'hello', ruta: 'hello', libro: 'cheer', repaso: 'hello', mystery: 'mystery', oops: 'mystery' };
+  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', smash: 'cheer', fiesta: 'cheer', swing: 'cheer', oro: 'cheer', vuelo: 'cheer', casi: 'hello', ruta: 'hello', libro: 'cheer', repaso: 'hello', mystery: 'mystery', oops: 'mystery' };
   const pick1 = (a) => a[Math.floor(Math.random() * a.length)];
 
   function pick(n, opts) {

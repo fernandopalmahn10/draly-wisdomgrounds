@@ -39,6 +39,11 @@
   if (window.MonoPhone) {
     window.MonoPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
   }
+  // Vuelo del Dragón v2 phone module (public/js/player-dragon.js): the race of 4 over Dubai, my dragoncito, the question
+  // sheet, the flight (every swipe up = a wing beat), the star sprints, banners, ceremony
+  if (window.DragonPhone) {
+    window.DragonPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
+  }
   // Mochi Mash v2 phone module (public/js/player-mochi.js): run-in, mash zone, banners, ceremony
   if (window.MochiPhone) {
     window.MochiPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
@@ -390,7 +395,7 @@
       'sixseven':    'sixseven',
       'mochi-mash':  'question',
       'pinata':      'question',     // the hit screen opens itself after a right answer (player-pinata.js)
-      'dragon-eye':  'dragon-flap',
+      'dragon-eye':  'dragon',       // the race is the kid's main screen (player-dragon.js)
       'monopoly':    'monopoly',     // the board is the kid's main screen (player-monopoly.js)
       'kingdoms':    'question',
       'paint':       'paint',
@@ -676,8 +681,8 @@
       teamLabel = isRed ? 'Equipo Fuego' : 'Equipo Mar';
       teamMascot = isRed ? '🔥' : '🌊';
     } else if (gameType === 'dragon-eye') {
-      teamLabel = isRed ? 'Equipo Pincel 紅毛筆' : 'Equipo Tinta 金墨水';
-      teamMascot = isRed ? '✒️' : '🖌️';
+      teamLabel = 'Vuelo del Dragón';       // races of 4: every kid on their own dragoncito (no teams)
+      teamMascot = '🐉';
     } else if (gameType === 'monopoly') {
       teamLabel = 'Dàfùwēng · Monopolio';   // boards of 4: every kid against the rivals of their board (no teams)
       teamMascot = '🎲';
@@ -793,6 +798,7 @@
     markActivity();
     currentQid = q.qid;
     if (gameType === 'monopoly') return;   // Dàfùwēng · Monopolio: the question is a sheet on the board (player-monopoly.js)
+    if (gameType === 'dragon-eye') return; // Vuelo del Dragón: the question is a sheet under the race (player-dragon.js)
     // 6-7 Swing: its own screen (the sum + two giant buttons), drawn by player-sixseven.js (it listens to 'question')
     if (q.gameMode === 'sixseven' || gameType === 'sixseven') return;
     $('question-text').textContent = q.text;
@@ -2474,12 +2480,13 @@
     });
   });
 
-  socket.on('answer-result', ({ correct, mashUntil, correctText, dragonDot, dragonAim, dragonAimMs, points, monopoly, sixseven, kingdoms }) => {
+  socket.on('answer-result', ({ correct, mashUntil, correctText, points, monopoly, sixseven, kingdoms }) => {
     markActivity();
     clearAnswerHeartbeat();
     hideSendingOverlay();
     if (!correct) resetStreak();
     if (gameType === 'monopoly') return;   // Dàfùwēng · Monopolio: player-monopoly.js shows the verdict on its question sheet
+    if (gameType === 'dragon-eye') return; // Vuelo del Dragón: player-dragon.js shows the verdict and opens the flight
 
     // 6-7 Swing: player-sixseven.js shows the verdict on its own screen (the swing, the coins, the wobble)
     if (gameType === 'sixseven') return;
@@ -2490,9 +2497,6 @@
       if (gameType === 'pinata') {
         happyMascot = '🎯';                // (player-pinata.js redraws this screen with the team's tiger)
         sub = '¡Prepárate para golpear!';
-      } else if (gameType === 'dragon-eye') {
-        happyMascot = team === 'red' ? '🐉' : '🐲';
-        sub = '¡A volar! Toca rápido para subir ☁️';
       } else if (gameType === 'kingdoms') {
         happyMascot = '🚩';
         sub = kingdoms && kingdoms.flags > 1 ? '¡Bandera doble! Plántalas en el mapa' : '¡Ganaste una bandera!';
@@ -2518,12 +2522,6 @@
       setTimeout(() => {
         if (gameType === 'pinata') {
           // Piñata Tigre v2: player-pinata.js opens the hit screen at the server's lead-in (it listens to answer-result)
-        } else if (gameType === 'dragon-eye') {
-          // Dragon flight: SWIPE-UP gesture, NOT tap mashing. Each upswipe
-          // gestures sends a player:tap (server logic unchanged) but the
-          // physical motion on the phone is wholly different.
-          mashEndTime = mashUntil;
-          startDragonFlap();
         } else if (gameType === 'kingdoms') {
           if (kingdoms && kingdoms.needsPlant && window.KingdomsPhone) window.KingdomsPhone.prompt(kingdoms);
         } else if (gameType === 'paint' || gameType === 'snow' || gameType === 'escape') {
@@ -2577,131 +2575,12 @@
     }
   }
 
-  // === Dragon flight: swipe-up to flap ===
-  // Different gesture from Mochi/Piñata tap-mash. The player swipes upward
-  // anywhere on the screen; each successful upswipe lifts their team's
-  // dragon. Server logic is unchanged — we re-use the player:tap event.
-  let dragonFlapActive = false;
-  let dragonFlapCount = 0;
-  let dragonFlapTimerRaf = null;
-  let dragonFlapPointer = null;
-  let dragonFlapTapHandler = null;
-
-  function startDragonFlap() {
-    dragonFlapActive = true;
-    dragonFlapCount = 0;
-    showScreen('dragon-flap');
-    const dragonEl = $('dr-flap-dragon');
-    if (dragonEl) {
-      dragonEl.textContent = team === 'red' ? '🐉' : '🐲';
-      dragonEl.style.transform = '';
-    }
-    if ($('dr-flap-counter')) $('dr-flap-counter').textContent = '0';
-    const fill = $('dr-flap-timer-fill');
-    if (fill) fill.style.width = '100%';
-    const area = $('dr-flap-area');
-    if (!area) return;
-
-    // === Swipe gesture detection ===
-    let startY = 0, startT = 0, started = false, peakDeltaY = 0;
-    function onDown(e) {
-      if (!dragonFlapActive) return;
-      e.preventDefault();
-      started = true;
-      peakDeltaY = 0;
-      startY = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-      startT = Date.now();
-      dragonFlapPointer = e.pointerId;
-      if (area.setPointerCapture && e.pointerId != null) {
-        try { area.setPointerCapture(e.pointerId); } catch (_) {}
-      }
-    }
-    function onMove(e) {
-      if (!started || !dragonFlapActive) return;
-      const cy = e.clientY != null ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-      const dy = cy - startY; // negative = swiping up
-      if (dy < peakDeltaY) peakDeltaY = dy;
-      // Visual: dragon follows the finger upward in lock-step (capped at -180px)
-      if (dragonEl) {
-        const lift = Math.max(0, Math.min(180, -dy));
-        dragonEl.style.transform = `translate(-50%, -${lift}px) rotate(-${lift * 0.06}deg)`;
-      }
-    }
-    function onUp(e) {
-      if (!started) return;
-      started = false;
-      const dt = Date.now() - startT;
-      // Detect a valid upswipe: at least 50 px and faster than 800 ms
-      if (peakDeltaY <= -50 && dt < 800) {
-        registerFlap();
-      }
-      // Dragon settles back to base position
-      if (dragonEl) {
-        dragonEl.style.transition = 'transform 0.35s cubic-bezier(.22,1.6,.36,1)';
-        dragonEl.style.transform = '';
-        setTimeout(() => { if (dragonEl) dragonEl.style.transition = ''; }, 380);
-      }
-    }
-    // Wire (and remove any previously-wired) listeners idempotently
-    area.onpointerdown = onDown;
-    area.onpointermove = onMove;
-    area.onpointerup = onUp;
-    area.onpointercancel = onUp;
-    area.onpointerleave = (e) => { if (started) onUp(e); };
-
-    // === Timer + auto-close ===
-    cancelAnimationFrame(dragonFlapTimerRaf);
-    const totalMs = mashEndTime - Date.now();
-    function tick() {
-      const remaining = Math.max(0, mashEndTime - Date.now());
-      if (fill) fill.style.width = ((remaining / totalMs) * 100) + '%';
-      if (remaining <= 0) {
-        dragonFlapActive = false;
-        // Next 'question' event drives the next transition.
-        return;
-      }
-      dragonFlapTimerRaf = requestAnimationFrame(tick);
-    }
-    tick();
-  }
-
-  function registerFlap() {
-    if (!dragonFlapActive) return;
-    if (Date.now() > mashEndTime) {
-      dragonFlapActive = false;
-      return;
-    }
-    dragonFlapCount++;
-    if ($('dr-flap-counter')) $('dr-flap-counter').textContent = dragonFlapCount;
-    // Send to server — re-uses the same player:tap path so altitude logic and
-    // host visuals (cloud puff fx + dragon climb) work unchanged.
-    socket.emit('player:tap', { pin });
-    if (navigator.vibrate) navigator.vibrate(25);
-    MochiSounds.whoosh ? MochiSounds.whoosh() : (MochiSounds.thwack && MochiSounds.thwack());
-    // "+1" popup pulses upward from the dragon to celebrate the flap
-    const layer = $('dr-flap-popup-layer');
-    const dragonEl = $('dr-flap-dragon');
-    if (layer && dragonEl) {
-      const pop = document.createElement('div');
-      pop.className = 'dr-flap-popup';
-      pop.textContent = '+1';
-      // Position near the dragon's current center
-      const dr = dragonEl.getBoundingClientRect();
-      const lr = layer.getBoundingClientRect();
-      pop.style.left = ((dr.left + dr.width / 2) - lr.left) + 'px';
-      pop.style.top  = ((dr.top  + dr.height / 2) - lr.top)  + 'px';
-      layer.appendChild(pop);
-      setTimeout(() => pop.remove(), 800);
-    }
-  }
-
   function startMash() {
     showScreen('mash');
     const mashBtn = $('mash-button');
     let localTaps = 0;
 
     // (the headline / hint of the legacy mash screen)
-    document.body.classList.remove('dragon-flying-active');
     if ($('mash-headline')) $('mash-headline').innerHTML = '⚡ ¡A APLASTAR! ⚡';
     if ($('mash-hint')) $('mash-hint').innerHTML = '¡TOCA, TOCA, TOCA! 🔥 8/seg = combo';
 
@@ -2719,8 +2598,6 @@
     function endMash() {
       mashBtn.classList.add('idle');
       mashBtn.classList.remove('combo');
-      // Strip game-specific body classes so the next question screen is clean
-      document.body.classList.remove('dragon-flying-active');
       if (mashTapHandler) {
         mashBtn.removeEventListener('pointerdown', mashTapHandler);
         mashTapHandler = null;
@@ -2904,14 +2781,14 @@
       const lobbyVisible = $('screen-lobby') && !$('screen-lobby').classList.contains('hidden');
       const countdownVisible = $('screen-countdown') && !$('screen-countdown').classList.contains('hidden');
       if (lobbyVisible || countdownVisible) {
-        showScreen(gameType === 'snow' ? 'snow' : gameType === 'halcon' ? 'halcon' : gameType === 'sixseven' ? 'sixseven' : 'question');   // the snow map / the board is the kid's main screen
+        showScreen(gameType === 'snow' ? 'snow' : gameType === 'halcon' ? 'halcon' : gameType === 'sixseven' ? 'sixseven' : gameType === 'dragon-eye' ? 'dragon' : 'question');   // the snow map / the board is the kid's main screen
         stopLobbyFlappy();
       }
     }
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'mochi', 'pinata', 'dragon-flap', 'monopoly', 'sixseven', 'kd-plant', 'paint', 'snow', 'escape', 'halcon', 'wu', 'rd', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'mochi', 'pinata', 'dragon', 'monopoly', 'sixseven', 'kd-plant', 'paint', 'snow', 'escape', 'halcon', 'wu', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });
