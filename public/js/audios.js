@@ -94,11 +94,11 @@
   // (phase 3: a kid's progress too, so seals saved from this phone or opened by a teacher redraw the route)
   const sig = (s) => JSON.stringify(s && s.modules ? s.modules.map((m) => [m.id, m.open, m.sims.length, m.dorado && m.dorado.open,
     m.progress ? [m.progress.sealed, m.progress.worlds.map((w) => (w.train ? 1 : 0) + (w.teacher ? 2 : 0)).join('')] : null]) : null);
-  function refreshState() {
+  function refreshState(force) {   // force: redraw even when the server says the same (the phone's seals changed)
     if (!catalog || !isWorldView()) return;
     fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null)).then((s) => {
-        if (!s || !Array.isArray(s.modules) || sig(s) === sig(ruta) || !isWorldView()) return;
+        if (!s || !Array.isArray(s.modules) || (force !== true && sig(s) === sig(ruta)) || !isWorldView()) return;
         ruta = s;
         firstRoute = true;                     // a quiet redraw: the focus stays where it was
         route();

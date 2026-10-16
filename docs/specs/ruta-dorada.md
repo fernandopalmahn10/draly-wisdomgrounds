@@ -6,8 +6,8 @@ the next levels) is prepared in three levels with our own names. Rules live in `
 | Level | What | Who can open it | Unlocks when |
 |---|---|---|---|
 | 1 · **La Base** | the vocabulary book digitally (done: /audios/<level>-base), «¡Me la sé!» seals | the level's key (or a grandfathered student); see Update below | with the key |
-| 2 · **El Entrenamiento** | exam-style practice world by world, from the curriculum packs (`core/packs`), audio + instant feedback | enrolled students (level access code + student code) | enough seals in La Base (default: half), or the teacher unlocks |
-| 3 · **El Simulacro Dorado** | the full simulations (player), the golden book on screen with a play button per listening question (original recording cut per question) + the PDF | enrolled students | enough Entrenamiento done (default: every world practised once with ≥ 70 %), or the teacher unlocks |
+| 2 · **El Entrenamiento** | exam-style practice world by world, from the curriculum packs (`core/packs`), audio + instant feedback | enrolled students (level access code + student code) | world by world: every seal of a world in La Base opens that world (his pick 2026-10-16), or the teacher unlocks |
+| 3 · **El Simulacro Dorado** | the full simulations (player), the golden book on screen with a play button per listening question (original recording cut per question) + the PDF | enrolled students | the key until El Entrenamiento is live; then every world practised with ≥ 70 % (changeable), or the teacher unlocks |
 
 ## Update 2026-10-15 (second planning round): keys, not free
 - **Nothing of a module is free**: one secret key per level (word + number, set by him in /maestro, changeable) opens
@@ -45,6 +45,14 @@ the next levels) is prepared in three levels with our own names. Rules live in `
    unlock thresholds and a per-step «Desbloquear»; a kid's sim results already come back as «best %» on the path.
 3. **Progress on the server**: a logged-in kid's seals sync to their record (any device, teachers see them), the unlock
    rules above, and a teacher «Desbloquear» per kid in /maestro.
+   **Built 2026-10-16** (branch `ruta-dorada-progress`), with his picks of that day: seals stay a free tap; El
+   Entrenamiento opens world by world (every seal of a world); the Simulacro Dorado stays open with the key until El
+   Entrenamiento is live, then needs every world practised with 70 % (changeable) or a teacher. `core/ruta-progress.js`
+   (the engine, `rec.ruta[level]` on the record), `/api/ruta/seals` (save + the first-login union), the route's world
+   tiles, the /maestro profile panel + roster bar + rules panel, `scripts/test-ruta-progress.js`.
+   Open for phase 4: call `recordPractice` per world, put `trainWorldOpen` / `doradoOpen` after `LevelKeys.access` at
+   its doors (and `doradoOpen` in `_simGrant` for solo kids when the switch goes ON), decide the pack worlds that have
+   no base world (Simulacro del examen, Pinyin básico) and how a key-only phone (no login) practises.
 4. **El Entrenamiento**: practice by world from the packs (reuse the YCT tareas quiz player graded on the server), audio
    for every question, instant feedback, a score per world that feeds the unlock.
 5. **El Simulacro Dorado**: the golden books digitally from the same source as their PDFs (`study/<level>sim/`, exam.py,
@@ -52,5 +60,6 @@ the next levels) is prepared in three levels with our own names. Rules live in `
    original recording, the PDF download (behind the login), and the simulation player.
 
 ## Open defaults (he can change them)
-- Unlock thresholds: half the seals → Entrenamiento; every world practised once with ≥ 70 % → Dorado.
-- Anonymous seals stay on the device; after login they merge into the kid's record.
+- Unlock thresholds (his picks 2026-10-16, replacing "half the seals"): every seal of a world → that world of
+  Entrenamiento; every world practised with ≥ 70 % → Dorado (the % in /maestro → Teachers).
+- Anonymous seals stay on the device; after login they merge into the kid's record (built: a union, phase 3).

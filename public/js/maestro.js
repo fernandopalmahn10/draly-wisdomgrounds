@@ -2899,27 +2899,34 @@
   // «El Entrenamiento está activo» stays OFF until phase 4 ships: until then El Simulacro Dorado opens with the key.
   // Once ON, it opens when every world is practised with the % below (or a teacher's «Desbloquear»).
   let _rutaRules = null;
-  function paintRutaRules(s) {
+  // canEdit: the super admin (the server refuses everyone else) · s.trainingBuilt: El Entrenamiento exists (phase 4), so
+  // the switch may go on; until then it stays off and disabled, with the reason
+  function paintRutaRules(s, canEdit) {
     _rutaRules = s;
     const sw = $('m-rules-live');
     if (!sw) return;
+    const edit = canEdit !== false;
     sw.setAttribute('aria-checked', String(!!s.trainingLive));
-    sw.disabled = false;
-    $('m-rules-live-help').textContent = s.trainingLive
+    sw.disabled = !edit || (!s.trainingBuilt && !s.trainingLive);
+    $('m-rules-live-help').textContent = !s.trainingBuilt && !s.trainingLive
+      ? 'Apagado: El Simulacro Dorado se abre solo con la clave. El interruptor se podrá encender cuando El Entrenamiento esté publicado; entonces el Simulacro Dorado se ganará practicando cada mundo.'
+      : s.trainingLive
       ? 'Encendido: El Simulacro Dorado se abre cuando el alumno practica cada mundo de El Entrenamiento con ' + s.doradoPct + ' % o más (o cuando tú lo desbloqueas).'
-      : 'Apagado: El Simulacro Dorado se abre solo con la clave. Enciéndelo cuando El Entrenamiento esté listo (la fase 4): mientras no exista, nadie podría ganárselo practicando.';
+      : 'Apagado: El Simulacro Dorado se abre solo con la clave. Enciéndelo cuando El Entrenamiento esté listo: mientras no exista, nadie podría ganárselo practicando.';
+    $('m-rules-pct-form').classList.toggle('is-off', !s.trainingLive);
+    $('m-rules-off-note').hidden = !!s.trainingLive;
     const pct = $('m-rules-pct');
     pct.min = String(s.pctMin || 50);
     pct.max = String(s.pctMax || 100);
     if (document.activeElement !== pct) pct.value = String(s.doradoPct);
-    pct.disabled = false;
-    $('m-rules-pct-save').disabled = false;
+    pct.disabled = !edit;
+    $('m-rules-pct-save').disabled = !edit;
   }
   function fetchRutaRules() {
     if (!$('m-rules')) return;
     adminFetch('/api/admin/ruta-settings', pw).then((r) => r.json()).then((d) => {
       if (!d || !d.ok) { $('m-rules-live-help').textContent = 'No se pudieron cargar las reglas: ' + ((d && d.error) || ''); return; }
-      paintRutaRules(d.settings);
+      paintRutaRules(d.settings, d.canEdit);
     }).catch(() => { $('m-rules-live-help').textContent = 'No se pudieron cargar las reglas. Revisa la conexión.'; });
   }
   function saveRutaRules(patch, done) {
@@ -2928,7 +2935,7 @@
       .then((r) => r.json()).then((d) => {
         if (!d || !d.ok) { $('m-rules-msg').textContent = (d && d.error) || 'No se pudo guardar.'; if (done) done(false); return; }
         $('m-rules-msg').textContent = '';
-        paintRutaRules(d.settings);
+        paintRutaRules(d.settings, d.canEdit);
         if (done) done(true);
       }).catch(() => { $('m-rules-msg').textContent = 'Sin conexión. Vuelve a intentarlo.'; if (done) done(false); });
   }
@@ -3238,7 +3245,7 @@
       // El Entrenamiento worlds their seals or a teacher opened, in the tooltip and the row's label)
       const rb = s.rutaBar;
       const rutaTxt = rb ? 'La Ruta Dorada: ' + rb.sealed + ' of ' + rb.words + ' seals, ' + rb.train + ' of ' + rb.worlds + ' worlds ready for El Entrenamiento' : '';
-      const rutaBar = rb ? '<span class="m-row-ruta" title="' + escapeHtml(rutaTxt) + '"><i style="width:' + (rb.words ? Math.round((rb.sealed / rb.words) * 100) : 0) + '%"></i></span>' : '';
+      const rutaBar = rb ? '<span class="m-row-ruta" title="' + escapeHtml(rutaTxt) + '">' + (rb.sealed > 0 && rb.words ? '<i style="width:' + Math.round((rb.sealed / rb.words) * 100) + '%"></i>' : '') + '</span>' : '';
       row.setAttribute('aria-label', name + ', code ' + s.code + ', ' + levelLabel(s.level) + (rutaTxt ? ', ' + rutaTxt : '') + ', '
         + (s.classroomName ? 'class ' + s.classroomName : 'no class') + ', '
         + (s._onlineNow ? 'online now' : 'last seen ' + sinceTxt) + ', daily challenge ' + (done ? 'done' : 'not done') + ', '
@@ -3408,7 +3415,7 @@
       : '<span class="m-ruta-access">🔒 Needs the ' + name + ' key</span>' + btn('🔓 Desbloquear ' + name, 'data-ruta-act="level"', 'btn-gold');
     const rows = (L.worlds || []).map((w) => {
       const state = w.train
-        ? '<span class="m-ruta-train is-open">' + (w.via === 'seals' ? '✓ Open · their seals' : '🔓 Open · unlocked by a teacher') + '</span>'
+        ? '<span class="m-ruta-train is-open">' + (w.via === 'seals' ? '✓ Open · their seals' : '🔓 Open · a teacher') + '</span>'
         : '<span class="m-ruta-train">Closed</span>';
       const act = w.teacher
         ? btn('Volver a bloquear', 'data-ruta-act="lock" data-step="train" data-world="' + w.n + '" aria-label="Volver a bloquear el mundo ' + w.n + ' de ' + name + '"')
@@ -3429,7 +3436,10 @@
     else if (!L.open) dStatus = 'Locked: needs the ' + L.name + ' key';
     else if (D.open) dStatus = D.via === 'teacher' ? 'Open · unlocked by a teacher' : 'Open · every world practised with ' + D.pct + ' % or more';
     else dStatus = 'Closed · ' + (D.practiced || 0) + ' of ' + D.of + ' worlds practised with ' + D.pct + ' % or more';
-    const dNote = D.rule === 'key' && D.teacher ? ' <span class="m-ruta-note">Unlocked by a teacher too: it counts once El Entrenamiento is live.</span>' : '';
+    // (while the key rule is in force, «Desbloquear» only matters later: say so, before and after)
+    const dNote = D.rule !== 'key' || !L.open ? ''
+      : ' <span class="m-ruta-note">' + (D.teacher ? 'Unlocked by a teacher too: it counts once El Entrenamiento is live.'
+        : '«Desbloquear» keeps it open for this kid once El Entrenamiento is live.') + '</span>';
     const sims = (L.sims || []).map((s) => '<li class="m-ruta-sim' + (s.best == null ? '' : s.best >= 60 ? ' is-pass' : ' is-low') + '"><b>Sim ' + s.n + '</b>' +
       (s.best == null ? '<span>not taken</span>' : '<span>best ' + s.best + ' % · ' + s.tries + (s.tries === 1 ? ' try' : ' tries') + '</span>') + '</li>').join('');
     return '<div class="m-ruta-level' + (L.own ? ' is-own' : '') + '" data-level="' + escapeHtml(L.id) + '">' +

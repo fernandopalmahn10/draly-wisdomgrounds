@@ -26,7 +26,8 @@
 // It travels with the record: archived and restored with it (Students.get/getOrCreate/getOrProvisionForPin).
 //
 // Settings (super admin, /maestro): <data>/ruta-settings.json { trainingLive, doradoPct } (gitignored, data disk).
-// Boot only fills what is missing: a value he set is never reset.
+// Boot only fills what is missing: a value he set is never reset; keys a later phase adds are kept on every save.
+// The switch turns on only once El Entrenamiento exists (TRAINING_BUILT below: phase 4 sets it to true).
 // =========================================================================
 'use strict';
 const fs = require('fs');
@@ -39,16 +40,22 @@ const CATALOG = path.join(__dirname, '..', 'public', 'assets', 'audios', 'catalo
 const BASE_DIR = path.join(__dirname, '..', 'protected', 'base');
 const DEFAULTS = { trainingLive: false, doradoPct: 70 };
 const PCT_MIN = 50, PCT_MAX = 100;
+// El Entrenamiento exists (phase 4 sets this to true when it ships). Until then the switch can't be turned on: a
+// Simulacro Dorado that only practice opens, with no practice to do, would lock every kid out. (Tests: the env var.)
+const TRAINING_BUILT = false || process.env.DRALY_TRAINING_BUILT === '1';
 
 // ── settings ────────────────────────────────────────────────────────────────────────────────────────────────────
 let settings = Object.assign({}, DEFAULTS);
+let extra = {};          // keys this version doesn't know (written by a later phase): kept as they are on every save
 let settingsOk = true;
 function loadSettings() {
   settings = Object.assign({}, DEFAULTS);
+  extra = {};
   settingsOk = true;
   if (!fs.existsSync(SETTINGS_FILE)) return;
   try {
     const raw = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) || {};
+    Object.keys(raw).forEach((k) => { if (!(k in DEFAULTS) && k !== 'updatedAt') extra[k] = raw[k]; });
     // only what is missing or broken takes the default (a value he set is never forced back)
     if (typeof raw.trainingLive === 'boolean') settings.trainingLive = raw.trainingLive;
     if (Number.isInteger(raw.doradoPct) && raw.doradoPct >= PCT_MIN && raw.doradoPct <= PCT_MAX) settings.doradoPct = raw.doradoPct;
@@ -64,7 +71,7 @@ function saveSettings() {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const tmp = SETTINGS_FILE + '.tmp';
-    fs.writeFileSync(tmp, JSON.stringify(settings, null, 2), 'utf8');
+    fs.writeFileSync(tmp, JSON.stringify(Object.assign({}, extra, settings), null, 2), 'utf8');
     fs.renameSync(tmp, SETTINGS_FILE);
     return true;
   } catch (e) {
@@ -73,14 +80,16 @@ function saveSettings() {
   }
 }
 loadSettings();
-const getSettings = () => ({ trainingLive: !!settings.trainingLive, doradoPct: settings.doradoPct, updatedAt: settings.updatedAt || 0,
-  pctMin: PCT_MIN, pctMax: PCT_MAX });
+// trainingLive = the switch in force (only once El Entrenamiento is built) · trainingBuilt: may it be turned on
+const getSettings = () => ({ trainingLive: !!settings.trainingLive && TRAINING_BUILT, doradoPct: settings.doradoPct, updatedAt: settings.updatedAt || 0,
+  pctMin: PCT_MIN, pctMax: PCT_MAX, trainingBuilt: TRAINING_BUILT });
 // patch: { trainingLive?: boolean, doradoPct?: integer 50-100 } → { ok, settings } | { ok: false, error } (Spanish: his panel)
 function setSettings(patch) {
   const p = patch && typeof patch === 'object' ? patch : {};
   const next = Object.assign({}, settings);
   if ('trainingLive' in p) {
     if (typeof p.trainingLive !== 'boolean') return { ok: false, error: 'El interruptor necesita sí o no.' };
+    if (p.trainingLive && !TRAINING_BUILT) return { ok: false, error: 'El Entrenamiento todavía no está publicado: el interruptor se puede encender cuando lo esté.' };
     next.trainingLive = p.trainingLive;
   }
   if ('doradoPct' in p) {
@@ -229,6 +238,7 @@ function doradoOpen(a, rec, level, opts) {
   if (!a || !a.ok) return false;
   if (a.via === 'teacher') return true;
   if (!getSettings().trainingLive) return true;           // until El Entrenamiento is live: the key is enough
+  if (!baseOf(level)) return true;                        // a level without a La Base has no worlds to practise
   if (!rec) return false;                                 // practice is saved on an account: a phone alone can't earn it
   const s = state(rec, level, opts);
   return !!(s && s.dorado.open);

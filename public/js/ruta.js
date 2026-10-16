@@ -476,12 +476,12 @@
             : (left === 1 ? 'falta 1 sello' : 'faltan ' + left + ' sellos') + ' en La Base');
           return '<li><a class="rd-world' + (w.train ? ' is-ready' : '') + '" data-w="' + w.n + '" href="/audios/' + esc(b.id) + '#mundo-' + w.n + '" data-nav' +
             ' aria-label="' + esc(label) + '">' +
-            '<b class="rd-world-n" aria-hidden="true">' + (w.train ? I.check : w.n) + '</b>' +
+            '<b class="rd-world-n" aria-hidden="true"' + (w.train ? '' : ' style="--p:' + Math.round((w.sealed / w.count) * 100) + '"') + '>' + (w.train ? I.check : w.n) + '</b>' +
             '<span class="rd-world-name" aria-hidden="true">' + esc(w.short || ('Mundo ' + w.n)) + '</span>' +
             '<span class="rd-world-meta" aria-hidden="true">' + (w.train ? 'Listo' : w.sealed + '/' + w.count) + '</span></a></li>';
         }).join('') + '</ol>' +
         '<p class="rd-train-hint">' + (all ? '¡Todos tus mundos están listos! El Entrenamiento llega muy pronto.'
-          : 'Completa los sellos de un mundo en La Base y ese mundo se abre aquí.') + '</p></div>';
+          : 'Pon «¡Me la sé!» en todas las palabras de un mundo y ese mundo se abre aquí.') + '</p></div>';
     }
     // 3 · El Simulacro Dorado: the level's simulations (only when open: each opens its player through the key check)
     let goldBody;
@@ -531,7 +531,7 @@
     const AB = window.AudiosBase;
     if (ctx.ruta.student && m.open && b && AB && AB.sync) {
       const at = location.pathname;
-      AB.sync(b.level, b.words).then((r) => { if (r && r.sent && location.pathname === at && ctx.refresh) ctx.refresh(); }, () => {});
+      AB.sync(b.level, b.words).then((r) => { if (r && (r.sent || r.changed) && location.pathname === at && ctx.refresh) ctx.refresh(true); }, () => {});
     }
   }
 
@@ -562,8 +562,8 @@
           { transform: 'none', opacity: 1 },
         ], { duration: 560, delay: i * 90, easing: 'cubic-bezier(.23, 1, .32, 1)', fill: 'backwards' });
         tile.animate([
-          { boxShadow: 'inset 0 0 0 1.5px #c9a14a, 0 0 0 0 rgba(216, 176, 90, .55)' },
-          { boxShadow: 'inset 0 0 0 1.5px #c9a14a, 0 0 0 10px rgba(216, 176, 90, 0)' },
+          { boxShadow: 'inset 0 0 0 2px #b88b2c, 0 0 0 0 rgba(216, 176, 90, .55)' },
+          { boxShadow: 'inset 0 0 0 2px #b88b2c, 0 0 0 10px rgba(216, 176, 90, 0)' },
         ], { duration: 900, delay: i * 90 + 200, easing: 'cubic-bezier(.23, 1, .32, 1)' });
       } catch (_) { /* an old phone: the tile is simply gold */ }
     };

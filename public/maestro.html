@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <!-- 2026-10-13 remake: the teacher's control room in the platform's sticker world (spec docs/specs/maestro-remake.md).
        teacher-dashboard.css is this page's only stylesheet; maestro.css stays for host-hsk.html. -->
-  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261016b">
+  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261016c">
 </head>
 <body class="m-app">
 
@@ -148,9 +148,10 @@
           </div>
           <form class="m-rules-row" id="m-rules-pct-form" novalidate>
             <label class="m-rules-label" for="m-rules-pct">El Simulacro Dorado se abre con</label>
-            <input class="input m-rules-pct" id="m-rules-pct" type="number" min="50" max="100" step="5" inputmode="numeric" disabled>
+            <input class="input m-rules-pct" id="m-rules-pct" type="number" min="50" max="100" step="5" inputmode="numeric" autocomplete="off" disabled>
             <span class="m-rules-label">% o más en cada mundo</span>
             <button class="btn btn-gold btn-sm" type="submit" id="m-rules-pct-save" disabled>Guardar</button>
+            <p class="m-rules-off-note" id="m-rules-off-note" hidden>Cuenta cuando El Entrenamiento esté activo.</p>
             <p class="m-key-msg" id="m-rules-msg" role="status"></p>
           </form>
         </section>
@@ -506,7 +507,7 @@
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/cast.js?v=20261013a"></script>
-  <script src="/js/maestro.js?v=20261016d"></script>
+  <script src="/js/maestro.js?v=20261016f"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>
