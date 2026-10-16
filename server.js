@@ -4645,23 +4645,77 @@ app.get('/homework', (req, res) => {
 // its folder (the page saves seals under draly_base_<folder>) and its own word count, read once per boot from the
 // catalog scripts/audios-build.js writes (a deploy restarts the server, so it never goes stale).
 let _audioBases = null;
-function audioBaseFor(info) {
-  if (!info || !info.base) return null;
+function _loadAudioBases() {
   if (!_audioBases) {
     try { _audioBases = JSON.parse(fs.readFileSync(path.join(__dirname, 'public', 'assets', 'audios', 'catalog.json'), 'utf8')).bases || []; }
     catch (e) { console.warn('[audios] catalog unreadable:', e.message); _audioBases = []; }
   }
-  const b = _audioBases.find((x) => x.id === info.base);
+  return _audioBases;
+}
+function audioBaseFor(info) {
+  if (!info || !info.base) return null;
+  const b = _loadAudioBases().find((x) => x.id === info.base);
   return b ? { href: '/audios/' + b.id, level: b.level, words: b.words } : null;
 }
 app.get(['/audios', '/audio', '/audios/:id', '/audio/:id'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   // 🔑 2026-10-15: a level's base (/audios/yct1-base, /audios/hsk2-base…) opens only for whoever may use that level;
   // everyone else gets the level's key screen right here (after the key, the same address shows the base). Homework
-  // audio pages (/audios/<homework id>) and the folders stay open: the printed PDFs link to them.
+  // audio pages (/audios/<homework id>), the module picker (/audios) and each module's path (/audios/<level>) stay
+  // open: the printed PDFs link to them, and the path shows its locks itself.
   const b = req.params.id ? _baseOf(req.params.id) : null;
   if (b && !LevelKeys.access(req, b.level).ok) return LevelKeys.sendKeyScreen(res, { level: b.level, what: 'base' });
   res.sendFile(_emPath.join(__dirname, 'public', 'audios.html'));
+});
+// ── 🏆 La Ruta Dorada, phase 2 (2026-10-15): the module picker (/audios) and each module's path (/audios/<level>) ──
+// «Escribe la clave de YCT 1» on a locked path = /audios/<level>/clave: the level's key screen (phase 1, the same
+// LevelKeys.access question as everything else), which reloads itself once the key is right; then this address sends
+// the visitor back to the path, now open. A level that is already open goes straight back.
+app.get(['/audios/:id/clave', '/audio/:id/clave'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  const lvl = Levels.normalize(req.params.id);
+  if (!lvl) return res.redirect(302, '/audios');
+  const slug = Levels.info(lvl).pack || lvl;
+  if (LevelKeys.access(req, lvl).ok) return res.redirect(302, '/audios/' + slug);
+  return LevelKeys.sendKeyScreen(res, { level: lvl, what: 'ruta' });
+});
+// What the picker and the paths draw, for THIS request (never cached): one module per level of core/levels.js
+// (future levels automatically), whether its key is open here (LevelKeys.access: a teacher, the logged-in kid's
+// account, this device's key), and only when it is open the level's simulations (links to the players, which ask
+// LevelKeys.access again at their own door: never a bypass). Nothing locked travels to a visitor: no media links, no
+// sim list, no answers (the sims' names and question counts are only for whoever may open them).
+//   home = the module to show first: the logged-in kid's class level, else the first level this device holds a key of
+function _rutaState(req) {
+  const teacher = !!_teacherOf(req);
+  const rec = _studentOf(req);
+  const bases = _loadAudioBases();
+  const allSims = HskSim.listSims().concat(YctSim.listSims());
+  const num = (id) => parseInt((String(id).match(/sim(\d+)$/) || [])[1] || '0', 10);
+  let home = rec ? LevelKeys.classLevel(rec) : null;
+  const modules = Levels.LEVELS.map((l) => {
+    const a = LevelKeys.access(req, l.id);
+    if (!home && !teacher && a.ok && a.via === 'key') home = l.id;
+    const b = l.base ? bases.find((x) => x.id === l.base) : null;
+    const own = allSims.filter((s) => Levels.normalize(s.level) === l.id).sort((x, y) => num(x.id) - num(y.id));
+    const tries = a.ok && rec && Array.isArray(rec.hskResults) ? rec.hskResults : [];
+    return {
+      id: l.id, slug: l.pack || l.id, name: l.name, family: l.family, exam: l.exam || '', open: !!a.ok,
+      base: b ? { id: b.id, words: b.words } : null,
+      simCount: own.length,
+      sims: a.ok ? own.map((s) => {
+        const best = tries.filter((t) => t && t.simId === s.id).reduce((m, t) => Math.max(m, Number(t.percent) || 0), -1);
+        return { id: s.id, n: num(s.id), questions: s.totalQuestions || s.questionCount || 0,
+          href: (/^hsk\d/.test(s.id) ? '/hsk-sim.html?sim=' : '/yct-sim.html?sim=') + encodeURIComponent(s.id),
+          best: best >= 0 ? Math.round(best) : null };
+      }) : [],
+    };
+  });
+  return { ok: true, teacher, student: !!rec, home: home ? (Levels.info(home).pack || home) : null,
+    levels: LevelKeys.accessMap(req), modules };
+}
+app.get('/api/ruta-dorada', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  res.json(_rutaState(req));
 });
 // ── 🔑 La Base files: /base-media/<base id>/<file> (2026-10-15) ────────────────────────────────────────────────────
 // protected/base/<base id>/ (base.json, the clips, pics/) and protected/study/<level>-vocabulario.pdf (as book.pdf).

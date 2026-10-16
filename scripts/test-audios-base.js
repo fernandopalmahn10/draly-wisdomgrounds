@@ -166,7 +166,7 @@ BASES.forEach(checkBase);
 const catText = JSON.stringify(cat);
 ok(!CJK.test(catText), 'no hanzi in the catalog');
 ok(!/—/.test(JSON.stringify(cat.bases || [])) && !/—/.test(JSON.stringify(cat.levels || [])), 'no em dash in the folders and bases');
-for (const f of ['public/audios.html', 'public/js/audios.js', 'public/js/audios-base.js', 'public/css/audios.css']) {
+for (const f of ['public/audios.html', 'public/js/audios.js', 'public/js/audios-base.js', 'public/css/audios.css', 'public/js/ruta.js', 'public/css/ruta.css']) {
   const t = fs.readFileSync(path.join(ROOT, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"])\/\/.*$/gm, '$1').replace(/<!--[\s\S]*?-->/g, '');
   ok(!CJK.test(t), `${f}: no hanzi`);
   ok(!/—/.test(t), `${f}: no em dash`);

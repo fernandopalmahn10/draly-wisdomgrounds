@@ -1,0 +1,334 @@
+/* ===================================================================== */
+/* LA RUTA DORADA (/audios), phase 2 · 2026-10-15 · js/ruta.js           */
+/* The module picker ("like choosing a world in a Nintendo game"): one   */
+/* big glossy card per module, each its own jewel colour next to Rojo    */
+/* Imperial, Oro and Crema (the books' palette), Dralingo in his         */
+/* platform look on a gold Dubai skyline. The one authored moment is the */
+/* flight between cards (a spring in js/ruta.js: transform and opacity   */
+/* only) and the gold sweep when one lands. Every size inside a card is  */
+/* a share of its width (--cw), so the card scales like a real object.   */
+/* Then each module's path: a golden route of three steps.               */
+/* Uses the tokens of css/audios.css (:root). One light theme.           */
+/* ===================================================================== */
+.rd-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* ── the picker ─────────────────────────────────────────────────────── */
+body.au-is-pick .au-main { max-width: 1120px; padding-top: 20px; }
+.rd-pick { display: grid; justify-items: center; text-align: center; }
+.rd-h1 { font-weight: 800; font-size: clamp(2rem, 8.4vw, 3rem); line-height: 1.02; letter-spacing: -.025em; color: var(--rojo); }
+.rd-lede { margin-top: 8px; max-width: 32ch; color: var(--tinta-2); font-size: 1rem; }
+
+/* the stage spans the whole screen (the neighbours fly in from its edges); the page itself never scrolls sideways */
+body.au-is-pick { overflow-x: clip; }
+.rd-carousel { justify-self: stretch; width: auto; margin-inline: calc(50% - 50vw); }
+.rd-stage {
+  --cw: clamp(228px, min(74vw, 300px, calc((100vh - 300px) / 1.42)), 300px);
+  --cw: clamp(228px, min(74vw, 300px, calc((100svh - 300px) / 1.42)), 300px);
+  position: relative; height: calc(var(--cw) * 1.42 + 46px); overflow: hidden;
+  touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab;
+}
+/* only the sides are cut (where the cards fly in): the soft shadow under the cards stays whole */
+@supports (overflow-x: clip) { .rd-stage { overflow: visible; overflow-x: clip; } }
+.rd-stage.is-dragging { cursor: grabbing; }
+.rd-slide {
+  position: absolute; left: 50%; top: 18px; width: var(--cw); height: calc(var(--cw) * 1.42); margin-left: calc(var(--cw) / -2);
+  will-change: transform, opacity; backface-visibility: hidden;
+}
+/* reduced motion: the cards do not fly; the chosen one fades in where it stands */
+.rd-stage.is-calm .rd-slide { transition: opacity 220ms ease !important; transition-duration: 220ms !important; }
+.rd-stage.is-calm .rd-slide:not(.is-active) { opacity: 0; }
+
+/* a card */
+.rd-card {
+  --gold: #e8c878;                 /* gold on the jewel colours (5.6:1 on Jade, more on the others) */
+  position: absolute; inset: 0; display: block; overflow: hidden; isolation: isolate;
+  border-radius: calc(var(--cw) * .08); color: var(--crema); text-decoration: none; -webkit-user-drag: none;
+  background:
+    radial-gradient(80% 52% at 76% 58%, var(--c1) 0%, rgba(0, 0, 0, 0) 72%),
+    linear-gradient(168deg, var(--c2) 0%, var(--c2) 42%, var(--c3) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 26px 38px -22px rgba(28, 6, 6, .62), 0 8px 16px -8px rgba(28, 6, 6, .34);
+  transition: transform 160ms var(--ease-out);
+}
+.rd-card:active { transform: scale(.98); }
+.rd-card:focus-visible { outline: 3px solid var(--oro); outline-offset: 4px; border-radius: calc(var(--cw) * .08); }
+.rd-card::before {               /* the glossy top of the card */
+  content: ''; position: absolute; inset: 0 0 50% 0; z-index: 6; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .15), rgba(255, 255, 255, 0));
+}
+.rd-card::after {                /* the gold frame of the books' covers */
+  content: ''; position: absolute; inset: calc(var(--cw) * .027); z-index: 6; pointer-events: none;
+  border: 1.5px solid rgba(232, 200, 120, .58); border-radius: calc(var(--cw) * .056);
+}
+.rd-card-text {
+  position: absolute; z-index: 4; left: calc(var(--cw) * .085); right: calc(var(--cw) * .085); top: calc(var(--cw) * .09);
+  display: grid; gap: calc(var(--cw) * .02); text-align: left;
+}
+.rd-card-name { font-weight: 800; font-size: calc(var(--cw) * .2); line-height: .86; letter-spacing: -.035em; text-shadow: 0 2px 12px rgba(0, 0, 0, .22); }
+.is-long .rd-card-name { font-size: calc(var(--cw) * .145); }
+.rd-card-sub { font-weight: 700; font-size: calc(var(--cw) * .05); line-height: 1.2; color: var(--gold); }
+
+/* the route in small: 1 La Base · 2 Entrenamiento · 3 Simulacro */
+.rd-mini {
+  position: absolute; z-index: 4; left: calc(var(--cw) * .085); top: calc(var(--cw) * .44); margin: 0; padding: 0; list-style: none;
+  display: grid; gap: calc(var(--cw) * .042); text-align: left;
+}
+.rd-mini li { display: flex; align-items: center; gap: calc(var(--cw) * .03); font-weight: 700; font-size: calc(var(--cw) * .047); line-height: 1.1; color: var(--crema); }
+.rd-mini i { position: relative; flex: none; width: calc(var(--cw) * .105); height: calc(var(--cw) * .105); border-radius: 50%; display: grid; place-items: center; }
+.rd-mini i svg { width: 54%; height: 54%; }
+.rd-mini li:not(:last-child) i::after {
+  content: ''; position: absolute; left: 50%; top: 100%; width: 2px; height: calc(var(--cw) * .042); margin-left: -1px; background: rgba(232, 200, 120, .55);
+}
+.rd-mini .is-open i { background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 58%, #a87d26 100%); color: #3d0707; box-shadow: 0 3px 8px -3px rgba(0, 0, 0, .5); }
+.rd-mini .is-soon { color: rgba(247, 241, 228, .74); }
+.rd-mini .is-soon i { border: 1.5px dashed rgba(232, 200, 120, .8); color: var(--gold); }
+.rd-mini .is-locked i { background: rgba(0, 0, 0, .26); box-shadow: inset 0 0 0 1.5px rgba(232, 200, 120, .62); color: var(--gold); }
+
+/* Dralingo stands on the skyline, which stands on the water */
+.rd-card-dragon {
+  position: absolute; z-index: 3; right: -11%; bottom: 15.5%; width: 55%; height: auto; pointer-events: none;
+  filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .36)); -webkit-user-drag: none;
+}
+/* the skyline keeps its own shape (never cropped: the Museum of the Future stays a ring) */
+.rd-sky { position: absolute; z-index: 1; left: 0; bottom: 16%; display: block; width: 100%; height: auto; aspect-ratio: 400 / 110; opacity: .52; pointer-events: none; }
+.rd-sky-mirror {
+  bottom: auto; top: 84%; opacity: .17; transform: scaleY(-1);
+  -webkit-mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0) 55%); mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0) 55%);
+}
+.rd-card-foot {
+  position: absolute; z-index: 7; left: calc(var(--cw) * .085); right: calc(var(--cw) * .07); bottom: calc(var(--cw) * .065);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.rd-card-status {
+  display: inline-flex; align-items: center; gap: 5px; min-width: 0; text-align: left;
+  font-weight: 700; font-size: calc(var(--cw) * .046); line-height: 1.15; color: var(--crema); font-variant-numeric: tabular-nums;
+}
+.rd-card-status.is-locked { gap: calc(var(--cw) * .03); }
+.rd-lockseal {
+  flex: none; display: grid; place-items: center; width: calc(var(--cw) * .13); height: calc(var(--cw) * .13); min-width: 34px; min-height: 34px;
+  border-radius: 50%; color: #3d0707; transform: rotate(-8deg);
+  background: radial-gradient(circle at 35% 30%, #f0d58e 0%, #d1a94b 58%, #b08530 100%);
+  box-shadow: 0 6px 12px -6px rgba(0, 0, 0, .65), inset 0 0 0 2px rgba(61, 7, 7, .7), inset 0 0 0 3.5px #e7c873;
+}
+.rd-lockseal svg { width: 46%; height: 46%; }
+.rd-card-go {
+  flex: none; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; height: calc(var(--cw) * .15); padding: 0 calc(var(--cw) * .045) 0 calc(var(--cw) * .065);
+  border-radius: 999px; background: linear-gradient(180deg, #f2d98f 0%, #d8b05a 100%); color: #3d0707;
+  font-weight: 800; font-size: calc(var(--cw) * .058); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 6px 14px -6px rgba(0, 0, 0, .55);
+}
+.rd-card-go svg { width: 1.05em; height: 1.05em; }
+.rd-card.is-locked .rd-card-go { background: rgba(247, 241, 228, .14); color: var(--crema); box-shadow: inset 0 0 0 1.5px rgba(232, 200, 120, .7); }
+/* a locked module: the gold lock seal of the key screen, in the corner */
+.rd-seal {
+  position: absolute; z-index: 7; top: calc(var(--cw) * .075); right: calc(var(--cw) * .075); width: calc(var(--cw) * .17); height: calc(var(--cw) * .17);
+  border-radius: 50%; display: grid; place-items: center; color: #3d0707; transform: rotate(-8deg);
+  background: radial-gradient(circle at 35% 30%, #f0d58e 0%, #d1a94b 58%, #b08530 100%);
+  box-shadow: 0 8px 14px -8px rgba(0, 0, 0, .65), inset 0 0 0 2.5px rgba(61, 7, 7, .7), inset 0 0 0 4.5px #e7c873;
+}
+.rd-seal svg { width: 44%; height: 44%; }
+/* while flying: the light slides across the gloss; a card further back gets darker */
+.rd-card-gloss {
+  position: absolute; z-index: 8; top: 0; bottom: 0; left: -30%; width: 160%; pointer-events: none;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0) 36%, rgba(255, 255, 255, .12) 45%, rgba(255, 255, 255, .03) 52%, rgba(255, 255, 255, 0) 60%);
+}
+.rd-card-shine {
+  position: absolute; z-index: 8; top: 0; bottom: 0; left: -30%; width: 160%; pointer-events: none; opacity: 0;
+  background: linear-gradient(100deg, rgba(255, 236, 170, 0) 40%, rgba(255, 236, 170, .34) 50%, rgba(255, 236, 170, 0) 60%);
+}
+.rd-card.is-shine .rd-card-shine { animation: rd-shine 820ms var(--ease-out) 1; }
+@keyframes rd-shine { 0% { opacity: 1; transform: translate3d(-45%, 0, 0); } 100% { opacity: 0; transform: translate3d(45%, 0, 0); } }
+.rd-card-shade { position: absolute; z-index: 9; inset: 0; background: #14040a; opacity: 0; pointer-events: none; }
+
+/* ‹ the dots › */
+.rd-ctrl { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 2px; }
+.rd-arrow {
+  width: 52px; height: 52px; padding: 0; border: 0; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  background: var(--papel); color: var(--rojo);
+  box-shadow: 0 1px 2px rgba(90, 16, 16, .12), 0 6px 14px -6px rgba(90, 16, 16, .3);
+  transition: transform 140ms var(--ease-out), opacity 160ms ease;
+}
+.rd-arrow svg { width: 22px; height: 22px; }
+.rd-arrow:active { transform: scale(.93); }
+.rd-arrow:disabled { opacity: .35; cursor: default; box-shadow: none; }
+.rd-arrow:disabled:active { transform: none; }
+.rd-dots { position: relative; display: flex; }
+.rd-dot { width: 40px; height: 44px; padding: 0; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; border-radius: 10px; }
+.rd-dot i { width: 10px; height: 10px; border-radius: 50%; background: rgba(90, 16, 16, .24); }
+.rd-dot-now {
+  position: absolute; left: 7px; top: 50%; width: 26px; height: 10px; margin-top: -5px; border-radius: 5px;
+  background: var(--oro); pointer-events: none; will-change: transform;
+}
+@media (hover: hover) and (pointer: fine) {
+  .rd-arrow:not(:disabled):hover { box-shadow: 0 1px 2px rgba(90, 16, 16, .14), 0 10px 20px -8px rgba(90, 16, 16, .38); }
+  .rd-dot:hover i { background: rgba(90, 16, 16, .45); }
+}
+
+/* a visitor: «Entra con tu código», never a dead end */
+.rd-join {
+  width: 100%; max-width: 520px; margin-top: 22px; display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 12px; align-items: end;
+  padding: 16px 18px 18px 6px; border-radius: var(--r); background: var(--crema-2); text-align: left;
+}
+.rd-join-friend { width: 92px; height: auto; align-self: end; margin-bottom: -18px; }
+.rd-join-title { font-weight: 800; font-size: 1.15rem; line-height: 1.2; color: var(--rojo); }
+.rd-join p { margin-top: 4px; font-size: .95rem; color: var(--tinta-2); }
+.rd-join .rd-btn { margin-top: 12px; }
+
+/* buttons of the route (the same family as La Base's) */
+.rd-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 50px; padding: 0 20px;
+  border: 0; border-radius: 999px; cursor: pointer; text-decoration: none; white-space: nowrap;
+  font: 800 1rem/1.1 var(--sans); transition: transform 140ms var(--ease-out), background-color 200ms ease;
+}
+.rd-btn svg { width: 18px; height: 18px; flex: none; }
+.rd-btn:active { transform: scale(.97); }
+.rd-btn-red { background: var(--rojo); color: var(--crema); }
+.rd-btn-gold { background: linear-gradient(180deg, #f2d98f 0%, #d8b05a 100%); color: #3d0707; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5); }
+@media (hover: hover) and (pointer: fine) {
+  .rd-btn-red:hover { background: var(--rojo-2); }
+  .rd-btn-gold:hover { background: #f2d98f; }
+}
+
+/* ── a module's path ────────────────────────────────────────────────── */
+body.au-is-path .au-main { max-width: 720px; }
+.rd-hero {
+  position: relative; overflow: hidden; isolation: isolate; height: clamp(184px, 50vw, 240px); margin-top: 2px; padding: 22px 22px 0;
+  border-radius: 22px; color: var(--crema);
+  background:
+    radial-gradient(70% 90% at 80% 70%, var(--c1) 0%, rgba(0, 0, 0, 0) 72%),
+    linear-gradient(168deg, var(--c2) 0%, var(--c2) 40%, var(--c3) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 22px 34px -24px rgba(28, 6, 6, .6), 0 8px 16px -10px rgba(28, 6, 6, .3);
+}
+.rd-hero::before { content: ''; position: absolute; inset: 0 0 50% 0; z-index: 6; pointer-events: none; background: linear-gradient(180deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, 0)); }
+.rd-hero::after { content: ''; position: absolute; inset: 8px; z-index: 6; pointer-events: none; border: 1.5px solid rgba(232, 200, 120, .58); border-radius: 15px; }
+/* the banner: the skyline twice in a row, cut on the right (behind Dralingo), the same height on a phone and a laptop */
+.rd-hero .rd-sky { bottom: 0; height: 46%; aspect-ratio: auto; opacity: .45; }
+.rd-hero .rd-card-gloss { z-index: 5; }
+.rd-hero-dragon { position: absolute; z-index: 3; right: 0; bottom: -18%; height: 116%; width: auto; pointer-events: none; filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .36)); }
+.rd-hero-name { position: relative; z-index: 4; max-width: 62%; font-weight: 800; font-size: clamp(2.9rem, 16vw, 4.4rem); line-height: .86; letter-spacing: -.035em; text-shadow: 0 2px 12px rgba(0, 0, 0, .22); }
+.rd-hero.is-long .rd-hero-name { font-size: clamp(2.2rem, 11vw, 3.4rem); }
+.rd-hero-sub { position: relative; z-index: 4; max-width: 60%; margin-top: 10px; font-weight: 700; font-size: 1rem; line-height: 1.25; color: #e8c878; }
+.rd-hero .rd-seal { --cw: 300px; top: auto; right: auto; bottom: 16px; left: 18px; width: 52px; height: 52px; }
+:focus-visible.rd-hero-name { outline-color: var(--crema); }
+
+/* the chosen card grows into this banner (View Transitions, js/audios.js swap()) */
+.rd-slide.is-active .rd-card, .rd-hero { view-transition-name: rd-world; }
+::view-transition-group(rd-world) { animation-duration: 420ms; animation-timing-function: cubic-bezier(.32, .72, 0, 1); }
+::view-transition-old(rd-world), ::view-transition-new(rd-world) { height: 100%; object-fit: cover; animation-duration: 260ms; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 200ms; }
+
+/* a friend of the gang, cheering along */
+.rd-friend { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: end; gap: 8px; margin-top: 12px; }
+.rd-friend img { width: 64px; height: auto; }
+.rd-bubble {
+  position: relative; justify-self: start; margin-bottom: 16px; padding: 9px 14px 10px; border-radius: 14px; background: var(--papel);
+  box-shadow: 0 1px 2px rgba(90, 16, 16, .08), 0 6px 16px -10px rgba(90, 16, 16, .35);
+  font-weight: 700; font-size: 1rem; line-height: 1.3; color: var(--tinta);
+}
+.rd-bubble b { display: block; font-size: .8rem; font-weight: 800; color: var(--oro-tinta); }
+.rd-bubble::after { content: ''; position: absolute; left: -7px; bottom: 12px; border: 8px solid transparent; border-left: 0; border-right-color: var(--papel); }
+
+/* a locked module: one way in, the level's key */
+.rd-keybox {
+  position: relative; margin-top: 14px; padding: 18px 18px 20px; border-radius: var(--r); background: var(--rojo); color: var(--crema);
+}
+.rd-keybox-seal {
+  position: absolute; right: 16px; top: -18px; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; color: #3d0707;
+  background: radial-gradient(circle at 35% 30%, #f0d58e 0%, #d1a94b 58%, #b08530 100%); transform: rotate(-8deg);
+  box-shadow: 0 8px 14px -8px rgba(20, 2, 2, .65), inset 0 0 0 2.5px rgba(61, 7, 7, .7), inset 0 0 0 4.5px #e7c873;
+}
+.rd-keybox-seal svg { width: 24px; height: 24px; }
+.rd-keybox-title { padding-right: 56px; font-weight: 800; font-size: 1.22rem; line-height: 1.2; letter-spacing: -.01em; }
+.rd-keybox p { margin-top: 6px; color: var(--crema-78); font-size: .97rem; }
+.rd-keybox .rd-btn { width: 100%; margin-top: 14px; font-size: clamp(.9rem, 4.2vw, 1.02rem); padding: 0 14px; }
+.rd-keybox-alt a { color: #e8c878; font-weight: 800; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.rd-keybox :focus-visible { outline-color: var(--crema); }
+
+/* the golden route: three steps on one gold line (solid as far as the kid can go, dashed after) */
+.rd-route { list-style: none; margin: 26px 0 0; padding: 0; }
+.rd-stop { position: relative; display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 14px; padding-bottom: 28px; }
+.rd-stop:last-child { padding-bottom: 6px; }
+.rd-stop:not(:last-child)::before {
+  content: ''; position: absolute; left: 28.5px; top: 66px; bottom: 6px; width: 0; border-left: 3px solid var(--oro);
+}
+.rd-stop[data-next="soon"]::before, .rd-stop[data-next="locked"]::before { border-left-style: dashed; opacity: .75; }
+.rd-coin { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; }
+.rd-coin svg { width: 27px; height: 27px; }
+.rd-coin b {
+  position: absolute; left: -5px; top: -5px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--rojo); color: var(--crema); font-weight: 800; font-size: .8rem; box-shadow: 0 0 0 3px var(--crema);
+}
+.rd-stop.is-open .rd-coin {
+  background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); color: #3d0707;
+  box-shadow: 0 8px 16px -8px rgba(90, 16, 16, .6), inset 0 0 0 2.5px rgba(61, 7, 7, .16);
+}
+.rd-stop.is-soon .rd-coin { background: var(--crema); border: 2.5px dashed var(--oro); color: var(--oro-tinta); }
+.rd-stop.is-soon .rd-coin b { background: var(--oro-tinta); }
+.rd-stop.is-locked .rd-coin { background: var(--crema-2); color: var(--oro-tinta); box-shadow: inset 0 0 0 2.5px var(--oro); }
+.rd-stop-body { min-width: 0; padding-top: 4px; }
+.rd-stop-title { font-weight: 800; font-size: 1.38rem; line-height: 1.15; letter-spacing: -.012em; color: var(--rojo); }
+.rd-stop-text { margin-top: 4px; max-width: 46ch; color: var(--tinta-2); font-size: .98rem; }
+.rd-progress { max-width: 360px; margin-top: 12px; }
+.rd-progress .au-meter { height: 10px; }
+.rd-progress p { margin-top: 6px; font-weight: 700; font-size: .92rem; color: var(--tinta); font-variant-numeric: tabular-nums; }
+.rd-stop .rd-btn { margin-top: 14px; }
+.rd-soon {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 13px 6px 10px; border-radius: 999px;
+  background: var(--oro-palido); color: var(--rojo); font-weight: 800; font-size: .88rem;
+}
+.rd-soon svg { width: 16px; height: 16px; color: var(--oro-tinta); }
+.rd-stop-state { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-weight: 700; font-size: .92rem; color: var(--oro-tinta); }
+.rd-stop-state svg { width: 16px; height: 16px; }
+
+/* El Simulacro Dorado: one gold medal per simulation */
+.rd-sims { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.rd-sim {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; height: 100%; padding: 12px 12px 12px;
+  border-radius: 14px; background: var(--papel); color: var(--tinta); text-decoration: none;
+  box-shadow: 0 1px 2px rgba(90, 16, 16, .08), 0 4px 14px rgba(90, 16, 16, .06);
+  transition: transform 140ms var(--ease-out), box-shadow 200ms ease;
+}
+.rd-sim:active { transform: scale(.97); }
+.rd-sim-n {
+  width: 42px; height: 42px; margin-bottom: 6px; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); color: #3d0707; font-weight: 800; font-size: 1.15rem;
+  box-shadow: 0 5px 10px -6px rgba(90, 16, 16, .55);
+}
+.rd-sim-name { font-weight: 800; font-size: 1rem; line-height: 1.2; color: var(--rojo); }
+.rd-sim-meta { font-size: .85rem; color: var(--tinta-2); }
+.rd-sim-best {
+  position: absolute; right: 8px; top: 10px; display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px 3px 6px; border-radius: 999px;
+  background: var(--rojo); color: var(--crema); font-weight: 800; font-size: .76rem; font-variant-numeric: tabular-nums;
+}
+.rd-sim-best svg { width: 12px; height: 12px; color: #e8c878; }
+@media (hover: hover) and (pointer: fine) {
+  .rd-sim:hover { box-shadow: 0 1px 2px rgba(90, 16, 16, .1), 0 8px 22px rgba(90, 16, 16, .13); }
+  .rd-card:hover .rd-card-go { filter: brightness(1.04); }
+}
+
+/* ── wider screens ──────────────────────────────────────────────────── */
+@media (min-width: 560px) {
+  .rd-sims { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .rd-keybox .rd-btn { width: auto; padding: 0 22px; }
+}
+@media (min-width: 900px) {
+  .rd-stage {
+    --cw: clamp(260px, min(340px, calc((100vh - 310px) / 1.42)), 340px);
+    --cw: clamp(260px, min(340px, calc((100svh - 310px) / 1.42)), 340px);
+  }
+  .rd-lede { max-width: none; }
+  .rd-friend { grid-template-columns: 76px minmax(0, 1fr); }
+  .rd-friend img { width: 76px; }
+}
+@media (max-width: 380px) {
+  .rd-join { grid-template-columns: 70px minmax(0, 1fr); }
+  .rd-join-friend { width: 70px; }
+  .rd-stop { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; }
+  .rd-stop:not(:last-child)::before { left: 24.5px; top: 58px; }
+  .rd-coin { width: 52px; height: 52px; }
+  .rd-coin svg { width: 23px; height: 23px; }
+  .rd-sims { gap: 8px; }
+  .rd-sim { padding: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rd-card:active, .rd-arrow:active, .rd-btn:active, .rd-sim:active { transform: none; }
+  .rd-card.is-shine .rd-card-shine { animation: none; }
+}

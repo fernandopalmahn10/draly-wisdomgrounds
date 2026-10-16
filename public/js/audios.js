@@ -1,17 +1,19 @@
 // =========================================================================
-// audios.js · «Audios y vocabulario» (/audios, /audios/<id>)
+// audios.js · «La Ruta Dorada» (/audios, /audios/<id>), was «Audios y vocabulario»
 // =========================================================================
-// Reads /assets/audios/catalog.json (written by scripts/audios-build.js).
-// /audios               → the library: one folder per level (core/levels.js
-//                         names: YCT 1 · New HSK 1 · HSK 1)
-// /audios/<level>       → a level folder: its vocabulary base pinned first
-//                         («La base · Empieza aquí»), then its homework audios
+// Reads /assets/audios/catalog.json (written by scripts/audios-build.js) and
+// /api/ruta-dorada (what THIS visitor may open, per level: server.js).
+// /audios               → the module picker: one big card per level of
+//                         core/levels.js that flies in (js/ruta.js)
+// /audios/<level>       → the module's golden route: La Base, El
+//                         Entrenamiento, El Simulacro Dorado, then the level's
+//                         homework audios (js/ruta.js)
 // /audios/<level>-base  → the base itself (js/audios-base.js)
 // /audios/<homework id> → the homework: its three tracks (words, dialogue,
 //                         video lines). The printed PDFs link here: these
 //                         addresses never change (hsk2-… opens newhsk1-…).
 // One <audio> element plays everything, so only one sound at a time.
-// No login and no hanzi (kid UI rule): pinyin with tones + Spanish.
+// Homework audio needs no login; no hanzi (kid UI rule): pinyin + Spanish.
 // =========================================================================
 (function () {
   'use strict';
@@ -51,24 +53,32 @@
 
   const say = (text) => { if (!sayEl) return; sayEl.textContent = ''; setTimeout(() => { sayEl.textContent = text; }, 30); };
 
-  // 🔑 2026-10-15 (La Ruta Dorada): a level's base opens with that level's key (typed once on this phone, or on the
-  // kid's account). The server knows (httpOnly cookies): /api/level-access says which levels this phone may open, so
-  // a locked base shows its lock instead of its pictures, and its card leads to the key screen (/audios/<base>).
-  let access = {};
-  const isOpen = (b) => !!(b && access[b.level]);
+  // 🔑 2026-10-15 (La Ruta Dorada): a level's three levels open with that level's key (typed once on this phone, or on
+  // the kid's account). The server knows (httpOnly cookies): /api/ruta-dorada says, per module, what this visitor may
+  // open (and, only when open, the level's simulations), so a locked base shows its lock instead of its pictures.
+  let ruta = { modules: [] };
   function load() {
     main.innerHTML = '<p class="au-loading">Cargando…</p>';
-    const levels = fetch('/api/level-access', { credentials: 'same-origin', cache: 'no-store' })
-      .then((r) => r.json()).then((d) => (d && d.levels) || {}).catch(() => ({}));
-    Promise.all([fetch(fresh('/assets/audios/catalog.json')).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }), levels])
-      .then(([c, a]) => { catalog = c; access = a; route(); })
+    const state = fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+    Promise.all([fetch(fresh('/assets/audios/catalog.json')).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }), state])
+      .then(([c, s]) => { catalog = c; ruta = (s && Array.isArray(s.modules)) ? s : { modules: [] }; route(); })
       .catch(() => {
-        main.innerHTML = '<p class="au-error">No se pudieron cargar los audios. Revisa tu internet.</p>' +
+        main.innerHTML = '<p class="au-error">No se pudo cargar La Ruta Dorada. Revisa tu internet.</p>' +
           '<p style="text-align:center"><button type="button" class="bs-btn bs-btn-red au-press" id="au-retry">Volver a intentar</button></p>';
         $('#au-retry').addEventListener('click', load);
       });
   }
   load();
+
+  // the picker ↔ a path: the chosen card grows into the path's banner (View Transitions, where the phone has them);
+  // reduced motion or an older phone: the new screen simply appears
+  const calm = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const isWorldView = () => document.body.classList.contains('au-is-pick') || document.body.classList.contains('au-is-path');
+  function swap(update) {
+    if (!document.startViewTransition || calm() || !isWorldView()) { update(); return; }
+    try { document.startViewTransition(update); } catch (_) { update(); }
+  }
 
   let shownPath = null;            // the page on screen: going back through #mundo-… anchors only scrolls
   window.addEventListener('popstate', () => {
@@ -79,15 +89,18 @@
       if (el) el.scrollIntoView(); else window.scrollTo(0, 0);
       return;
     }
-    route();
+    swap(route);
   });
   document.addEventListener('click', (e) => {
     const a = e.target.closest('a[data-nav]');
-    if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
+    if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button) return;
     e.preventDefault();
-    history.pushState(null, '', a.getAttribute('href'));
-    route();
-    if (!location.hash) window.scrollTo(0, 0);
+    const href = a.getAttribute('href');
+    swap(() => {
+      history.pushState(null, '', href);
+      route();
+      if (!location.hash) window.scrollTo(0, 0);
+    });
   });
 
   // ── what the catalog holds, per level folder ──────────────────────
@@ -97,7 +110,6 @@
     catalog.homeworks.forEach((h) => { if (!out.some((f) => f.id === h.level)) out.push({ id: h.level, name: h.levelName }); });
     return out;
   }
-  const basesOf = (lv) => (catalog.bases || []).filter((b) => b.level === lv);
   const homeworksOf = (lv) => catalog.homeworks.filter((h) => h.level === lv)
     .sort((a, b) => (b.exp - a.exp) || (b.round - a.round));
   const sealsOf = (b) => (window.AudiosBase ? window.AudiosBase.seals(b.level) : new Set());
@@ -108,7 +120,8 @@
     navSeq++;
     stop();
     if (window.AudiosBase) window.AudiosBase.leave();
-    document.body.classList.remove('au-is-base');
+    if (window.Ruta) window.Ruta.leave();
+    document.body.classList.remove('au-is-base', 'au-is-pick', 'au-is-path');
     const m = location.pathname.match(/^\/audios?\/([a-z0-9-]+)\/?$/i);
     let id = (m && m[1]) || new URLSearchParams(location.search).get('t');
     // HSK 2 was absorbed into New HSK 1 (2026-10-11): old links (hsk2-e01-r1, hsk2) still work
@@ -120,12 +133,12 @@
       Object.keys(aliases).forEach((a) => { if (id === a || id.indexOf(a + '-') === 0) id = aliases[a] + id.slice(a.length); });
     }
     const base = id && (catalog.bases || []).find((b) => b.id === id);
-    const folder = !base && id && folders().find((f) => f.id === id);
-    const found = !base && !folder && id && catalog.homeworks.find((h) => h.id === id);
+    const mod = !base && id && (ruta.modules || []).find((x) => x.slug === id || x.id === id);
+    const found = !base && !mod && id && catalog.homeworks.find((h) => h.id === id);
     if (base) renderBase(base);
-    else if (folder) renderFolder(folder);
+    else if (mod) renderPath(mod);
     else if (found) renderHomework(found);
-    else renderLibrary();
+    else renderPicker();
     // after a tap inside the page, the new screen's heading takes the focus (screen readers hear where they are)
     if (!firstRoute && !base) {
       const h = main.querySelector('h1');
@@ -145,70 +158,24 @@
       return '<i style="--w:' + w.count + ';--p:' + (k / w.count).toFixed(3) + '"></i>';
     }).join('') + '</span>';
   }
-  const sellos = (n, of) => n + ' de ' + of + ' sellos';   // one wording everywhere: «7 de 83 sellos»
 
-  // ── The library: one folder per level ──────────────────────────────
-  function renderLibrary() {
+  // ── La Ruta Dorada (js/ruta.js draws both screens) ─────────────────
+  // what ruta.js needs from this page: the catalog, the visitor's modules, the seals on this phone, the meters and
+  // the homework cards (one look for them everywhere)
+  const rutaCtx = () => ({ catalog, ruta, sealsOf, meterHtml, cardHtml, homeworksOf });
+  function renderPicker() {
     hw = null;
-    document.title = 'Audios y vocabulario · Dralingo';
-    const list = folders().map((f) => ({ f, bases: basesOf(f.id), hws: homeworksOf(f.id) }))
-      .filter((x) => x.bases.length || x.hws.length);
-    if (!list.length) { main.innerHTML = '<p class="au-error">Todavía no hay audios. ¡Muy pronto!</p>'; return; }
-    main.innerHTML =
-      '<h1 class="au-h1">Audios y vocabulario</h1>' +
-      '<p class="au-lede">Elige tu nivel. En cada uno están sus palabras y los audios de sus tareas.</p>' +
-      '<div class="au-folders">' + list.map(({ f, bases, hws }) => {
-        const b = bases[0];
-        const open = isOpen(b);
-        const seals = b ? sealsOf(b) : null;
-        const pics = b ? (open ? (b.peek || []) : []) : hws.map((h) => h.thumb || h.cover).filter(Boolean).slice(0, 3);
-        const tareas = hws.length ? hws.length + (hws.length === 1 ? ' tarea' : ' tareas') + ' con audio' : 'Tareas con audio: muy pronto';
-        return '<a class="au-folder' + (b ? ' is-start on-red' : '') + (b && !open ? ' is-locked' : '') + '" href="/audios/' + esc(f.id) + '" data-nav>' +
-          '<span><span class="au-folder-name">' + esc(f.name) + '</span>' +
-          (b ? '<span class="au-folder-what"><b>' + esc(b.title) + ' · ' + esc(b.kicker || 'Empieza aquí') + '</b><br>' + b.words + ' palabras con audio</span>' +
-                (open ? meterHtml(b, seals) +
-                  '<span class="au-folder-meta">' + sellos(seals.size, b.words) + (hws.length ? ' · ' + tareas : '') + '</span>'
-                  : '<span class="au-folder-meta">Se abre con la clave de ' + esc(f.name) + (hws.length ? ' · ' + tareas : '') + '</span>')
-             : '<span class="au-folder-what"><b>' + tareas + '</b></span>' +
-               '<span class="au-folder-meta">La más nueva: ' + esc(hws[0].title) + '</span>') +
-          '</span>' +
-          (pics.length ? '<span class="au-peek' + (b ? '' : ' is-covers') + '" aria-hidden="true">' +
-            pics.map((p) => '<img src="' + esc(p) + '" alt="" ' + (b ? 'width="400" height="400"' : 'width="360" height="241"') + ' decoding="async">').join('') + '</span>'
-            : (b ? '<span class="au-lock" aria-hidden="true">' + ICON.lock + '</span>' : '')) +
-          '</a>';
-      }).join('') + '</div>';
+    document.title = 'La Ruta Dorada · Dralingo';
+    document.body.classList.add('au-is-pick');
+    if (!window.Ruta) { main.innerHTML = '<p class="au-error">No se pudo cargar La Ruta Dorada. Recarga la página.</p>'; return; }
+    window.Ruta.picker(main, rutaCtx());
   }
-
-  // ── A level folder: its base pinned first, then its homework audios ─
-  function renderFolder(f) {
+  function renderPath(mod) {
     hw = null;
-    document.title = f.name + ' · Audios y vocabulario · Dralingo';
-    const b = basesOf(f.id)[0];
-    const hws = homeworksOf(f.id);
-    let html = '<a class="au-back" data-nav href="/audios">' + ICON.back + 'Todos los niveles</a>' +
-      '<h1 class="au-h1">' + esc(f.name) + '</h1>';
-    if (b) {
-      const seals = sealsOf(b);
-      const open = isOpen(b);
-      const go = !open ? 'Abrir con la clave' : (seals.size ? (seals.size >= b.words ? 'Repasar' : 'Seguir') : 'Empezar');
-      // a locked base: a plain link (a full page load), so the server shows the level's key screen at its address
-      html += '<p class="au-lede">Empieza por la base: las ' + b.words + ' palabras, con su dibujo, una frase y el audio.</p>' +
-        '<a class="au-start on-red' + (open ? '' : ' is-locked') + '" href="/audios/' + esc(b.id) + '"' + (open ? ' data-nav' : '') + '>' +
-          '<span class="au-start-title">' + esc(b.title) + '<span>' + esc(b.kicker || 'Empieza aquí') + '</span></span>' +
-          '<span class="au-start-what">' + b.words + ' palabras en ' + (b.worlds || []).length + ' mundos</span>' +
-          (open ? meterHtml(b, seals) + '<span class="au-start-count">' + sellos(seals.size, b.words) + '</span>'
-            : '<span class="au-start-count">Se abre con la clave de ' + esc(f.name) + ' que te manda tu maestra</span>') +
-          '<span class="au-start-go">' + (open ? ICON.play : ICON.lock) + go + '</span>' +
-          '<img class="au-start-dragon" src="/assets/dralingo/hello.webp" alt="" width="432" height="480" decoding="async">' +
-        '</a>' +
-        '<h2 class="au-h2">Audios de las tareas</h2>';
-    } else {
-      html += '<p class="au-lede">Toca tu tarea y escucha cada palabra y cada frase.</p><div style="height:16px"></div>';
-    }
-    html += hws.length ? '<div class="au-cards">' + hws.map((h, k) => cardHtml(h, k === 0)).join('') + '</div>'
-      : '<p class="au-empty"><b>Todavía no hay tareas de ' + esc(f.name) + ' con audio.</b> Cuando llegue la primera, aparece aquí.' +
-        (b ? ' Mientras tanto, empieza por la base.' : '') + '</p>';
-    main.innerHTML = html;
+    document.title = mod.name + ' · La Ruta Dorada · Dralingo';
+    document.body.classList.add('au-is-path');
+    if (!window.Ruta) { main.innerHTML = '<p class="au-error">No se pudo cargar La Ruta Dorada. Recarga la página.</p>'; return; }
+    window.Ruta.path(main, rutaCtx(), mod);
   }
   function cardHtml(h, isNew) {
     return '<a class="au-card" data-nav href="/audios/' + esc(h.id) + '">' +
@@ -265,7 +232,7 @@
     hw = h;
     document.title = h.title + ' · Audios · Dralingo';
     const folder = folders().find((f) => f.id === h.level);
-    let html = '<a class="au-back" data-nav href="/audios/' + esc(folder ? folder.id : '') + '">' + ICON.back + esc(folder ? folder.name : 'Todos los niveles') + '</a>' +
+    let html = '<a class="au-back" data-nav href="/audios/' + esc(folder ? folder.id : '') + '">' + ICON.back + esc(folder ? folder.name : 'Todos los mundos') + '</a>' +
       '<section class="au-hero">' + (h.cover ? '<img src="' + esc(h.cover) + '" alt="">' : '') +
       '<h1>' + esc(h.title) + '</h1>' +
       '<p class="au-hero-meta">' + esc(h.levelName) + ' · Experiencia ' + h.exp + ' · Ronda ' + h.round + '</p>' +

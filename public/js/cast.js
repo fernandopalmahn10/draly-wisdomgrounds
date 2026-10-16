@@ -6,7 +6,8 @@
 //   DralingoCast.captain('aileen')       → 'Capitana Aileen'   (Reinos de Colores; moods: hello, win, battle, mystery, oops)
 //   moods: hello, win, battle (Reinos: flags, conquest), chase (La Gran Fuga: running from Robotín, turbos, the jet),
 //   feast (Mochi Mash: feeding the Dragoncito), smash (Piñata Tigre: hitting the piñata), swing (6-7 Swing: the golden
-//   balance), oro (6-7 Swing: the winners), casi (6-7 Swing: the team that lost, kindly), mystery, oops
+//   balance), oro (6-7 Swing: the winners), casi (6-7 Swing: the team that lost, kindly), mystery, oops,
+//   ruta (La Ruta Dorada /audios/<level>: a friend cheers the kid along the path of three levels)
 // Poses: hello, cheer, mystery. Stickers are Higgsfield renders of his own character art, keyed to transparent WebP.
 (function () {
   const BASE = '/assets/cast/';
@@ -27,6 +28,7 @@
         swing: ['¡Seis o siete: piensa y toca!', '¡Esa balanza está bajando, equipo!', '¡Liu, qi! ¡Muy bien!'],
         oro: ['¡La balanza es de ustedes! Excelente trabajo.', '¡Así se cuenta en Chino Mandarín!', '¡Equipo de campeones!'],
         casi: ['¡Casi! La próxima ronda es nuestra.', 'Buen esfuerzo, equipo. ¡A la revancha!'],
+        ruta: ['Paso a paso se llega al oro.', 'Primero La Base. Después, el examen.', 'Un poco cada día, ¡y llegas!'],
       },
     },
     hamdan: {
@@ -44,6 +46,7 @@
         swing: ['¡Yalla, más oro!', '¡Yalla, yalla, liu qi!', '¡Marhaba, monedas de oro!'],
         oro: ['¡Yalla! ¡Oro para todos!', '¡Increíble, equipo!', '¡Esa balanza merece un viaje en jet!'],
         casi: ['¡Yalla, la revancha es nuestra!', 'Casi, amigos. ¡Otra ronda!'],
+        ruta: ['¡Yalla, a la Ruta Dorada!', '¡Yalla, un sello más!', 'Al final de la ruta, ¡el oro!'],
       },
     },
     latifa: {
@@ -61,6 +64,7 @@
         swing: ['Primero piensa, después toca.', 'Una racha vale más oro.', '¡Buena cuenta, equipo!'],
         oro: ['¡Brillante! Pensaron antes de tocar.', '¡La balanza no miente!', '¡Yalla, a la siguiente ronda!'],
         casi: ['Casi. La próxima vez, primero pensamos.', 'La próxima balanza es nuestra.'],
+        ruta: ['Buena estrategia: primero La Base.', 'Cada sello es una pista para el examen.', 'Con calma y cada día, se llega.'],
       },
     },
     aileen: {
@@ -78,6 +82,7 @@
         swing: ['¡Dale, che, tocá el bueno!', '¡Vos sabés: seis o siete!', '¡Qué genial, che, cuánto oro!'],
         oro: ['¡Vos podés! ¡Ganamos el oro!', '¡Qué genial, che!', '¡Dale, otra ronda más!'],
         casi: ['¡Casi, che! La próxima es nuestra.', 'Tranqui, ¡vos podés! Dale, otra ronda.'],
+        ruta: ['¡Dale, che! Un sello por día.', '¡Vos podés llegar al oro!', 'Mirá tu ruta: ¡vamos paso a paso!'],
       },
     },
     adric: {
@@ -95,6 +100,7 @@
         swing: ['Mi perro sabe contar hasta siete.', 'Piensa. Toca.', 'Bien. Más oro.'],
         oro: ['Bien hecho. Mi perro está feliz.', 'Nada mal, equipo.', '¡Eso fue genial!'],
         casi: ['Casi. Mi perro cree en ustedes.', 'Otra ronda. Esta vez sí.'],
+        ruta: ['Paso a paso.', 'Mi perro ya sigue la ruta.', 'Sígueme. Por aquí.'],
       },
     },
     adrian: {
@@ -112,6 +118,7 @@
         swing: ['¡El mapa dice: más oro!', '¡A la aventura, liu qi!', '¡Vamos por el Burj Khalifa!'],
         oro: ['¡Tesoro de oro!', '¡Misión cumplida!', '¡Lo logramos juntos!'],
         casi: ['¡El tesoro sigue ahí! Otra ronda.', '¡Casi lo encontramos!'],
+        ruta: ['¡El mapa dice: primero La Base!', '¡El tesoro está al final de la ruta!', '¡A la aventura, paso a paso!'],
       },
     },
     dralingo: {
@@ -134,7 +141,7 @@
     },
   };
   const HUMANS = ['fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian'];
-  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', smash: 'cheer', fiesta: 'cheer', swing: 'cheer', oro: 'cheer', casi: 'hello', mystery: 'mystery', oops: 'mystery' };
+  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', smash: 'cheer', fiesta: 'cheer', swing: 'cheer', oro: 'cheer', casi: 'hello', ruta: 'hello', mystery: 'mystery', oops: 'mystery' };
   const pick1 = (a) => a[Math.floor(Math.random() * a.length)];
 
   function pick(n, opts) {

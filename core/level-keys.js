@@ -292,7 +292,8 @@ function accessMap(req) {
 // ── the key screen (protected/pages/level-key.html), served in place of whatever was locked ─────────────────────
 let _tpl = null;
 const escHtml = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-// st: { level, what: 'base' | 'sim', reason: 'key' | 'room' | 'pin' }
+// st: { level, what: 'base' | 'sim' | 'ruta', reason: 'key' | 'room' | 'pin' }
+// (route = the level's path on La Ruta Dorada, /audios/<level>: the screen's «volver» link, never a dead end)
 function sendKeyScreen(res, st) {
   if (!_tpl || !process.env.RENDER) _tpl = fs.readFileSync(PAGE, 'utf8');   // re-read locally (design work), once on Render
   const lvl = Levels.normalize(st && st.level);
@@ -300,6 +301,7 @@ function sendKeyScreen(res, st) {
   const state = {
     level: lvl, levelName: info ? info.name : '', family: info ? info.family : '', what: (st && st.what) || 'base',
     reason: (st && st.reason) || 'key', example: EXAMPLE, base: info && info.base ? '/audios/' + info.base : '/audios',
+    route: info ? '/audios/' + (info.pack || info.id) : '/audios',
   };
   const json = JSON.stringify(state).replace(/</g, '\\u003c');
   const html = _tpl.replace(/\{\{levelName\}\}/g, () => escHtml(state.levelName || 'tu nivel'))

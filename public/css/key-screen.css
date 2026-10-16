@@ -85,6 +85,17 @@ body.ks-root { min-height: 100vh; min-height: 100dvh; }
   border: 1px solid rgba(212, 172, 82, .55); border-radius: 18px; pointer-events: none;
 }
 .ks-word { margin: 4px 0 0; font: 800 .82rem/1 var(--ks-sans); letter-spacing: .32em; text-indent: .32em; color: var(--ks-oro-claro); }
+/* La Ruta Dorada (phase 2): back to the level's path, inside the gold frame's top-left corner */
+.ks-back {
+  position: absolute; z-index: 2; left: 14px; top: calc(14px + var(--ks-safe-top)); display: inline-flex; align-items: center; gap: 4px;
+  min-height: 44px; padding: 0 12px 0 6px; border-radius: 12px; color: var(--ks-papel); text-decoration: none;
+  font: 700 .88rem/1 var(--ks-sans); transition: background-color 160ms ease, transform 140ms var(--ks-ease);
+}
+.ks-back svg { width: 20px; height: 20px; flex: none; }
+.ks-back:active { transform: scale(.96); }
+@media (hover: hover) and (pointer: fine) { .ks-back:hover { background: rgba(255, 253, 248, .1); } }
+/* a phone: the arrow alone (its name stays for screen readers), clear of the centred DRALINGO word */
+@media (max-width: 559px) { .ks-back span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .ks-back { padding: 0; width: 44px; justify-content: center; } }
 .ks-hero { position: relative; width: min(230px, 62vw); margin-top: 14px; }
 .ks-dragon { display: block; width: 100%; height: auto; filter: drop-shadow(0 14px 18px rgba(30, 4, 4, .45)); user-select: none; -webkit-user-drag: none; }
 .ks-bubble {
