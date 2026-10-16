@@ -1,0 +1,50 @@
+# La Ruta Dorada · plan (agreed with Fernando 2026-10-15)
+
+The audio tab («Audios y vocabulario», /audios) becomes **La Ruta Dorada**: each module (YCT 1, New HSK 1, HSK 1, then
+the next levels) is prepared in three levels with our own names. Rules live in `CLAUDE.md` § Three levels of preparation.
+
+| Level | What | Who can open it | Unlocks when |
+|---|---|---|---|
+| 1 · **La Base** | the vocabulary book digitally (done: /audios/<level>-base), «¡Me la sé!» seals | the level's key (or a grandfathered student); see Update below | with the key |
+| 2 · **El Entrenamiento** | exam-style practice world by world, from the curriculum packs (`core/packs`), audio + instant feedback | enrolled students (level access code + student code) | enough seals in La Base (default: half), or the teacher unlocks |
+| 3 · **El Simulacro Dorado** | the full simulations (player), the golden book on screen with a play button per listening question (original recording cut per question) + the PDF | enrolled students | enough Entrenamiento done (default: every world practised once with ≥ 70 %), or the teacher unlocks |
+
+## Update 2026-10-15 (second planning round): keys, not free
+- **Nothing of a module is free**: one secret key per level (word + number, set by him in /maestro, changeable) opens
+  all three levels of that module. The key screen is beautiful and very easy for parents. Typed once: remembered on the
+  device, saved on the kid's account when logged in; wrong guesses limited.
+- **Kids registered before the keys go live keep their level** without typing it (no disruption); new accounts need it.
+- **In class**: kids in a teacher's PIN room need no key. **Hosting a game** needs the teacher's key the first time on
+  that device, then the device is remembered (~90 days), never by internet address.
+- **Homework unchanged** (class code + name/code).
+- The super-admin teacher code was exposed in a comment of the public `/js/maestro.js`: removed in the lock branch; he
+  must change the code itself (a «cambiar mi código» in /maestro, and the boot seed must not recreate the old one).
+- Phase 1 branch `ruta-dorada-sims-lock` (61a2f99c8, not deployed) already locks the sims (protected media, signed
+  tokens, room passes, friendly page); it is reworked for the key model before deploy.
+
+## Why now
+- Today anyone with the address can take a full simulation (`/yct-sim.html?sim=…`, `/hsk-sim.html` answer 200 with no
+  login), and the exam recordings and pictures are plain public files (`public/assets/*SIMULATIONS/`). His words: "if
+  anyone random accesses our platform and goes directly to the simulations we could get in trouble, and we're not going
+  to give away everything for free".
+
+## Phases (each one tested, reviewed and deployed with his class check)
+1. **Lock the simulations** (first, it is the risk): the sim player pages, their JSON and their media need an enrolled
+   student's session (same login as /homework) or a teacher session; the media move out of `public/` behind a checked
+   route (hiding the page is not enough: the files must not be downloadable by URL). Keep working: teacher launches from
+   /maestro (projector), the New HSK 1 «Simulacro» homework, old links (they now ask to log in). Tests: anonymous = refused
+   for every sim page, JSON and file; student of the level = allowed; student of another level = refused.
+2. **La Ruta Dorada tab**: rename, the swipe module picker with a super cool animation (each module a big card; a
+   logged-in kid lands on their own), and per module the three-level path (Base → Entrenamiento → Dorado) with locks,
+   progress and «¿Cómo se abre?» hints. Anonymous visitors see the locks and a friendly «Entra con tu código» (login).
+3. **Progress on the server**: a logged-in kid's seals sync to their record (any device, teachers see them), the unlock
+   rules above, and a teacher «Desbloquear» per kid in /maestro.
+4. **El Entrenamiento**: practice by world from the packs (reuse the YCT tareas quiz player graded on the server), audio
+   for every question, instant feedback, a score per world that feeds the unlock.
+5. **El Simulacro Dorado**: the golden books digitally from the same source as their PDFs (`study/<level>sim/`, exam.py,
+   one source like La Base's `web.py`), page by page, each listening question with its own play button cut from the
+   original recording, the PDF download (behind the login), and the simulation player.
+
+## Open defaults (he can change them)
+- Unlock thresholds: half the seals → Entrenamiento; every world practised once with ≥ 70 % → Dorado.
+- Anonymous seals stay on the device; after login they merge into the kid's record.
