@@ -5,16 +5,17 @@
 // =========================================================================
 // What this module owns (the checks that need live rooms or student records stay in server.js):
 //   · Where the locked files live: protected/<YCT|NEW HSK|HSK> SIMULATIONS/… (recordings + pictures) and
-//     protected/pages/ (yct-sim.html, hsk-sim.html and the friendly sim-locked.html). Nothing is under public/, so the
+//     protected/pages/ (yct-sim.html, hsk-sim.html and the level key screen level-key.html). Nothing is under public/, so the
 //     static server can never hand it out, and nothing is under /assets/ (Cloudflare keeps /assets/* for 2 h).
 //   · Media links: the sim data keeps its media as logical URLs (/assets/YCT%20SIMULATIONS/…, what yct-import.js and
 //     core/hsk-sim.js write). rewrite() turns every one of them into /sim-media/<token>/<fileId>.<ext>: the token is
 //     signed with the server key, expires (3 h), is bound to ONE simulation and to the way in (a teacher's room PIN is
 //     re-checked on every file, so the files stop when the room closes); the file id is an HMAC of the path, so no
 //     «(CORRECT)» / «(TRUE)» from an old file name ever reaches a phone.
-//   · The sim session cookie `dsim` (httpOnly, 12 h): student = code + level (set by the /homework login, or by the
-//     friendly page from the codes the phone already saved), teacher = any simulation (re-checked on every request
-//     in server.js). Never the code in a URL.
+//   · The student session cookie `dsim` (httpOnly, 12 h): code + level, set by the /homework login (or by the key
+//     screen from the codes the phone already saved; re-checked on every request in server.js). Never the code in a
+//     URL. Since 2026-10-15 (second round) a session alone opens nothing locked: core/level-keys.js decides with the
+//     level's key; a teacher is a remembered teacher device (core/level-keys.js), not a sim session any more.
 //   · The room pass: joining a teacher's exam room (socket player:join) gives the phone one; the room's sim loads only
 //     with it, so a PIN guessed from outside opens nothing. The submit ticket in each payload hands an exam in even
 //     after the room closed (a student's ticket carries their own code: their grade, their record).
@@ -41,7 +42,7 @@ const MISSING = '/sim-media/missing';      // a referenced file that is not on d
 function loadKey() {
   const env = process.env.SIM_LOCK_SECRET;
   if (env && env.length >= 32) return Buffer.from(env, 'utf8');
-  const file = path.join(ROOT, 'data', 'sim-lock.key');
+  const file = path.join(process.env.DRALY_DATA_DIR || path.join(ROOT, 'data'), 'sim-lock.key');   // tests: their own folder
   try {
     const hex = fs.readFileSync(file, 'utf8').trim();
     if (/^[a-f0-9]{64}$/.test(hex)) return Buffer.from(hex, 'hex');
@@ -57,7 +58,8 @@ const KEY = loadKey();
 const mac = (s) => crypto.createHmac('sha256', KEY).update(s).digest();
 const b64u = (buf) => Buffer.from(buf).toString('base64url');
 
-// purpose 'm' = media link · 'x' = submit ticket · 'c' = session cookie (a token of one purpose never works as another)
+// purpose 'm' = media link · 'x' = submit ticket · 'c' = session cookie · 'p' = room pass · 'l' = a level's key on a
+// device · 'T' = a remembered teacher device (core/level-keys.js). A token of one purpose never works as another.
 function sign(purpose, fields, ttl) {
   const exp = Math.floor((Date.now() + ttl) / 1000).toString(36);
   const body = [purpose].concat(fields.map((f) => String(f == null ? '' : f).replace(/~/g, '')), exp).join('~');
@@ -145,8 +147,9 @@ function logicalUrl(url) {
   return f ? '/assets/' + f.rel.split('/').map(encodeURIComponent).join('/') : null;
 }
 
-// grant = how this request may see the sim: { kind: 't' teacher | 's' student | 'r' kid in a teacher's room (pin) |
-// 'w' kid in a Modo Maestro room (pin) | 'd' local test harness }
+// grant = how this request may see the sim: { kind: 't' teacher | 's' logged-in student with the level open |
+// 'k' a device with the level's key (no login) | 'r' kid in a teacher's room (pin) | 'w' kid in a Modo Maestro room
+// (pin) | 'd' local test harness }
 const mediaToken = (grant, sim) => sign('m', [grant.kind, sim, grant.pin || ''], MEDIA_TTL);
 // the submit ticket travels in the JSON body (never a URL): a student's carries their own code, so a grade handed in
 // with it always lands on their record
@@ -193,30 +196,35 @@ function ticketGrant(tok, sim) {
   return v && v[1] === sim ? { kind: v[0], pin: v[2] || '', studentCode: v[3] || '', ticket: true } : null;
 }
 
-// ── the session cookie ─────────────────────────────────────────────────────────────────────────────────────────
-function readCookie(req) {
-  const raw = String((req.headers && req.headers.cookie) || '');
+// ── cookies (the student session here; the level keys and teacher devices in core/level-keys.js) ───────────────────
+// `headers` = req.headers or a socket's handshake headers
+function readCookie(reqOrHeaders, name) {
+  const h = (reqOrHeaders && reqOrHeaders.headers) || reqOrHeaders || {};
+  const raw = String(h.cookie || '');
+  const want = name || COOKIE;
   for (const part of raw.split(';')) {
     const i = part.indexOf('=');
-    if (i > 0 && part.slice(0, i).trim() === COOKIE) {
+    if (i > 0 && part.slice(0, i).trim() === want) {
       try { return decodeURIComponent(part.slice(i + 1).trim()); } catch (_) { return ''; }
     }
   }
   return '';
 }
-// → { kind: 's', code, level } | { kind: 't', id } | null (server.js re-checks the student / teacher still exists)
+const https = (req) => !!req.secure || /^https$/i.test(String((req.headers && req.headers['x-forwarded-proto']) || '').split(',')[0].trim());
+// One httpOnly, same-site cookie (never readable by page scripts; Secure behind https). maxAgeMs 0 = delete it.
+function setCookie(req, res, name, value, maxAgeMs) {
+  res.append('Set-Cookie', name + '=' + (value || '') + '; Path=/; Max-Age=' + Math.max(0, Math.floor((maxAgeMs || 0) / 1000)) +
+    '; HttpOnly; SameSite=Lax' + (https(req) ? '; Secure' : ''));
+}
+// → { kind: 's', code, level } | null (server.js re-checks the student still exists)
 function session(req) {
   const v = verify(readCookie(req), 'c');
   if (!v) return null;
   if (v[0] === 's' && v[1] && v[2]) return { kind: 's', code: v[1], level: v[2] };
-  if (v[0] === 't' && v[1]) return { kind: 't', id: v[1] };
   return null;
 }
-const https = (req) => !!req.secure || /^https$/i.test(String((req.headers && req.headers['x-forwarded-proto']) || '').split(',')[0].trim());
 function setSession(req, res, kind, code, level) {
-  const tok = sign('c', [kind, code || '', level || ''], COOKIE_TTL);
-  res.append('Set-Cookie', COOKIE + '=' + tok + '; Path=/; Max-Age=' + Math.floor(COOKIE_TTL / 1000) +
-    '; HttpOnly; SameSite=Lax' + (https(req) ? '; Secure' : ''));
+  setCookie(req, res, COOKIE, sign('c', [kind, code || '', level || ''], COOKIE_TTL), COOKIE_TTL);
 }
 
 // ── local test harness: yct-sim.html?debug=1&direct=1… opens without a room on this PC only ───────────────────────
@@ -238,19 +246,12 @@ function sendPage(res, name) {
   res.set(NO_STORE);
   res.sendFile(path.join(PAGES, name));
 }
-let _lockedTpl = null;
-// The friendly «Este simulacro es para alumnos de Dralingo» page. state.reason: 'login' | 'room' (that PIN's room
-// is closed) | 'level' (the kid's level has other sims; state.levelName).
-function sendLocked(res, state) {
-  if (!_lockedTpl) _lockedTpl = fs.readFileSync(path.join(PAGES, 'sim-locked.html'), 'utf8');
-  const json = JSON.stringify(state || { reason: 'login' }).replace(/</g, '\\u003c');
-  res.status(state && state.reason === 'level' ? 403 : 401).set(NO_STORE).type('html')
-    .send(_lockedTpl.replace('/*SIM_LOCK_STATE*/null', () => json));   // a function: no $-patterns expanded
-}
+// (Who is refused gets the level's key screen, core/level-keys.js sendKeyScreen: protected/pages/level-key.html.)
 
 module.exports = {
   DIR, PAGES, NO_STORE, COOKIE,
   relOf, isSimMediaUrl, simOfUrl, logicalUrl, rewrite, linkFor, ticket, ticketGrant, roomPass, roomPassOk, openMedia,
-  session, setSession, isLocalDev, sendPage, sendLocked, scan,
+  session, setSession, isLocalDev, sendPage, scan,
+  sign, verify, readCookie, setCookie, https,
   _sign: sign, _verify: verify,   // tests
 };

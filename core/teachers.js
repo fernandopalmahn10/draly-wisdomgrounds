@@ -15,11 +15,21 @@
 //
 // ── AUTH RULES ───────────────────────────────────────────────────────
 // • Super admin (isSuperAdmin:true): sees every student, can list/create
-//   other teachers. Default seeded super admin is EMAAR2026.
+//   other teachers. Seeded once, on the very first boot of an empty disk.
 // • Regular teacher: sees only students whose `classroomCode` is in
 //   their `accessCodes` array.
-// • Legacy passwords (draly2026, WU_ADMIN_PASSWORD env): still grant
-//   super-admin access for back-compat with the warmup-mode host page.
+// • The legacy password (WU_ADMIN_PASSWORD env, set on Render; no default
+//   since 2026-10-15): still grants super-admin access for back-compat with
+//   the warmup-mode host page.
+//
+// ── CHANGING A CODE (2026-10-15, «Cambiar mi código») ─────────────────
+// The super-admin code was exposed in a comment of the public maestro.js, so
+// codes can now be changed in /maestro: changeCode() moves the record to the
+// new code (same uid, codeGen + 1, so every device remembered with the old one
+// asks again), and the old code is RETIRED for good (data/teachers-meta.json
+// keeps a hash of it; no teacher can take it again). Each record has a `uid`
+// (never shown, never a secret) that cookies and stored references use
+// instead of the code. Codes never go into a log line.
 //
 // ── PHONE SWITCHING ──────────────────────────────────────────────────
 // All teacher data lives in data/teachers.json on Render's persistent
@@ -30,10 +40,32 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const Levels = require('./levels');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.DRALY_DATA_DIR || path.join(__dirname, '..', 'data');   // tests: their own folder
 const FILE_PATH = path.join(DATA_DIR, 'teachers.json');
+// One-shot facts about the teacher table that must survive even if teachers.json is lost or unreadable: a super-admin
+// existed once (so the boot seed never runs again) and the hashes of retired codes (never reused).
+const META_PATH = path.join(DATA_DIR, 'teachers-meta.json');
+let meta = { superAdminSeenAt: 0, retired: [] };
+function loadMeta() {
+  try { meta = Object.assign({ superAdminSeenAt: 0, retired: [] }, JSON.parse(fs.readFileSync(META_PATH, 'utf8')) || {}); }
+  catch (_) { meta = { superAdminSeenAt: 0, retired: [] }; }
+  if (!Array.isArray(meta.retired)) meta.retired = [];
+}
+function saveMeta() {
+  ensureDir();
+  try { fs.writeFileSync(META_PATH, JSON.stringify(meta, null, 2), 'utf8'); }
+  catch (e) { console.warn('[teachers] failed to write the meta file:', e.message); }
+}
+const codeHash = (code) => crypto.createHash('sha256').update('draly-teacher-code:' + normalizeTeacherId(code)).digest('hex').slice(0, 32);
+const isRetired = (code) => !!normalizeTeacherId(code) && meta.retired.includes(codeHash(code));
+const newUid = () => crypto.randomBytes(9).toString('base64url');
+// The first seeded super-admin's code, as a hash (the code itself was exposed and must not live in the source): the
+// record still holding it, or null once he changed it.
+const ORIGINAL_SEED_HASH = 'c1e9e02a9bfb60fefcdc539ac97f80b3';
+const originalSeedId = () => Object.keys(teachers).find((k) => codeHash(k) === ORIGINAL_SEED_HASH) || null;
 
 // Alphabet for code generation — drops 0/O/1/I/L for legibility
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -60,13 +92,24 @@ function scheduleSave() {
   saveTimer = setTimeout(persistNow, 800);
 }
 
-// Seed the file with the super-admin teacher on first boot. After that
-// the JSON file lives on the persistent disk and survives deploys.
+// Seed the super-admin on the VERY FIRST boot of an empty disk only. Never again once a super-admin has existed
+// (teachers-meta.json superAdminSeenAt, a one-shot flag — CLAUDE.md "boot migrations only fill what is missing"): a lost
+// or unreadable teachers.json must never bring back an old, known code (2026-10-15: the old seeded code had been
+// served to everyone in a comment of maestro.js). The code comes from DRALY_SEED_ADMIN_CODE (local tests) or is random,
+// and is never printed: sign in with WU_ADMIN_PASSWORD and read it in /maestro → Teachers.
 function seedIfEmpty() {
   if (Object.keys(teachers).length > 0) return;
+  if (meta.superAdminSeenAt) {
+    console.warn('[teachers] no teacher accounts on the disk; the first-boot seed stays off (a super-admin existed before).' +
+      ' Sign in with WU_ADMIN_PASSWORD and restore data/teachers.json from a backup.');
+    return;
+  }
   const now = Date.now();
-  teachers['EMAAR2026'] = {
-    teacherId:    'EMAAR2026',
+  const id = normalizeTeacherId(process.env.DRALY_SEED_ADMIN_CODE || '') || generateTeacherId();
+  teachers[id] = {
+    teacherId:    id,
+    uid:          newUid(),
+    codeGen:      0,
     displayName:  '🐉 Dralingo 老师',
     email:        null,
     country:      'MX',
@@ -77,35 +120,68 @@ function seedIfEmpty() {
     lastSeen:     now,
   };
   persistNow();
-  console.log('[teachers] seeded super-admin EMAAR2026 with access code 1001');
+  console.log('[teachers] first boot: seeded the super-admin (class codes 1001-1003; its teacher code is in /maestro → Teachers)');
+}
+// After every load: each record gets a uid + codeGen when missing (fill-only), and the one-shot «a super-admin
+// existed» flag is written the first time one is seen.
+function afterLoad() {
+  let dirty = false;
+  Object.values(teachers).forEach((t) => {
+    if (!t || typeof t !== 'object') return;
+    if (!t.uid) { t.uid = newUid(); dirty = true; }
+    if (typeof t.codeGen !== 'number') { t.codeGen = 0; dirty = true; }
+  });
+  if (dirty) persistNow();
+  if (!meta.superAdminSeenAt && Object.values(teachers).some((t) => t && t.isSuperAdmin)) {
+    meta.superAdminSeenAt = Date.now();
+    saveMeta();
+  }
 }
 
 function load() {
   ensureDir();
+  loadMeta();
   if (!fs.existsSync(FILE_PATH)) {
     teachers = {};
     seedIfEmpty();
-    applyNamedSetup20260923();
+    if (Object.keys(teachers).length) applyNamedSetup20260923();
+    afterLoad();
     return;
   }
+  let parsed = null;
   try {
-    const raw = fs.readFileSync(FILE_PATH, 'utf8');
-    teachers = JSON.parse(raw) || {};
-    console.log('[teachers] loaded', Object.keys(teachers).length, 'teacher accounts');
+    parsed = JSON.parse(fs.readFileSync(FILE_PATH, 'utf8')) || {};
+  } catch (e) {
+    // 2026-10-15: never save over an unreadable teacher file (the seed used to overwrite it): keep it aside for recovery
+    const aside = FILE_PATH.replace(/\.json$/, '.unreadable-' + Date.now() + '.json');
+    try { fs.renameSync(FILE_PATH, aside); } catch (_) { /* ignore */ }
+    console.error('[teachers] teachers.json unreadable, kept as', path.basename(aside), '-', e.message);
+    teachers = {};
+    seedIfEmpty();
+    afterLoad();
+    return;
+  }
+  teachers = parsed;
+  console.log('[teachers] loaded', Object.keys(teachers).length, 'teacher accounts');
+  // The old one-time migrations below look the first seeded super-admin up by its old code (originalSeedId(): only a
+  // hash of that code is in the source): they were applied long ago and are no-ops once he changes that code
+  // («Cambiar mi código», 2026-10-15). They only fill what is missing. A failing migration keeps every record (it used
+  // to start an empty table and seed over the file).
+  try {
     seedIfEmpty();
     // One-time migration: rename the old default "Sra. Emaar" to the
     // new "🐉 Dralingo 老师" on the existing persistent-disk record.
     // (The disk already has the old name from the first seed.)
-    if (teachers['EMAAR2026'] && teachers['EMAAR2026'].displayName === 'Sra. Emaar') {
-      teachers['EMAAR2026'].displayName = '🐉 Dralingo 老师';
+    if (teachers[originalSeedId()] && teachers[originalSeedId()].displayName === 'Sra. Emaar') {
+      teachers[originalSeedId()].displayName = '🐉 Dralingo 老师';
       persistNow();
-      console.log('[teachers] migrated EMAAR2026 displayName → 🐉 Dralingo 老师');
+      console.log('[teachers] migrated the super-admin display name → 🐉 Dralingo 老师');
     }
     // 🆕 2026-09-15 — HSK2 door: seed access code 1002 (level hsk2) on the
     // super-admin so teachers can enroll the new HSK2 students today.
     // One-time on the persistent-disk record; harmless if re-run.
-    if (teachers['EMAAR2026']) {
-      const t = teachers['EMAAR2026'];
+    if (teachers[originalSeedId()]) {
+      const t = teachers[originalSeedId()];
       let dirty = false;
       t.accessCodes = Array.isArray(t.accessCodes) ? t.accessCodes : [];
       if (!t.accessCodes.includes('1002')) { t.accessCodes.push('1002'); dirty = true; }
@@ -114,32 +190,31 @@ function load() {
       if (!t.codeLevels['1002']) { t.codeLevels['1002'] = 'hsk2'; dirty = true; }
       if (dirty) {
         persistNow();
-        console.log('[teachers] seeded HSK2 access code 1002 on EMAAR2026');
+        console.log('[teachers] seeded HSK2 access code 1002 on the super-admin');
       }
     }
     seedYctCode20261012();
     applyNamedSetup20260923();
   } catch (e) {
-    console.warn('[teachers] failed to load, starting fresh:', e.message);
-    teachers = {};
-    seedIfEmpty();
+    console.warn('[teachers] a boot migration failed (accounts kept):', e.message);
   }
+  afterLoad();
 }
 
 // 🆕 2026-10-12 (Fernando) — YCT door: access code 1003 (level yct1) on the super-admin, like 1002 for New HSK 1.
 // Idempotent; skipped with a log line if another teacher already owns 1003.
 function seedYctCode20261012() {
-  const t = teachers['EMAAR2026'];
+  const t = teachers[originalSeedId()];
   if (!t) return;
   const owner = getByAccessCode('1003');
-  if (owner && owner !== t) { console.warn('[teachers] code 1003 belongs to', owner.teacherId, '- YCT code not seeded'); return; }
+  if (owner && owner !== t) { console.warn('[teachers] class code 1003 belongs to another teacher - YCT code not seeded'); return; }
   t.accessCodes = Array.isArray(t.accessCodes) ? t.accessCodes : [];
   t.codeLevels = (t.codeLevels && typeof t.codeLevels === 'object') ? t.codeLevels : {};
   if (t.accessCodes.includes('1003') && t.codeLevels['1003']) return;   // already there (or re-levelled by him)
   if (!t.accessCodes.includes('1003')) t.accessCodes.push('1003');
   t.codeLevels['1003'] = 'yct1';
   persistNow();
-  console.log('[teachers] seeded YCT 1 access code 1003 on EMAAR2026');
+  console.log('[teachers] seeded YCT 1 access code 1003 on the super-admin');
 }
 
 // 🆕 2026-09-23 (Fernando) — one-time named-teacher setup, idempotent
@@ -147,7 +222,7 @@ function seedYctCode20261012() {
 //   · Ms Han → her classroom codes default to HSK2
 //   · Ms Enni + Ms Nicole → created with BOTH an HSK1 and an HSK2 code
 // The exact codes land on the persistent disk; read them in the
-// Teachers tab of /maestro (they're also printed to the server log).
+// Teachers tab of /maestro (never in the server log: 2026-10-15).
 function applyNamedSetup20260923() {
   let dirty = false;
   const han = Object.values(teachers).find((t) => !t.isSuperAdmin && /\bhan\b/i.test(t.displayName || ''));
@@ -164,9 +239,8 @@ function applyNamedSetup20260923() {
     const exists = Object.values(teachers).some((t) => (t.displayName || '').toLowerCase().includes(key));
     if (!exists) {
       const rec = createTeacher({ displayName: name, levels: ['hsk1', 'hsk2'] });
-      console.log('[teachers] created', name, '→ teacher code', rec.teacherId,
-        '| HSK1 class:', rec.accessCodes.find((c) => rec.codeLevels[c] !== 'hsk2'),
-        '| HSK2 class:', rec.accessCodes.find((c) => rec.codeLevels[c] === 'hsk2'));
+      console.log('[teachers] created', name, '(teacher code and class codes in /maestro → Teachers) | class codes:',
+        rec.accessCodes.length);
       dirty = true;
     }
   }
@@ -233,10 +307,12 @@ function randomCode(length) {
 function generateTeacherId() {
   for (let i = 0; i < 50; i++) {
     const candidate = 'T-' + randomCode(6);
-    if (!teachers[candidate]) return candidate;
+    if (!teachers[candidate] && !isRetired(candidate)) return candidate;
   }
   return 'T-' + randomCode(10);  // statistical impossibility fallback
 }
+// A random code of the same shape, for the super-admin's «nuevo código al azar» in /maestro
+function suggestCode() { return 'T-' + randomCode(8); }
 // Generate a 4-digit numeric classroom code. Kid-friendly typing.
 function generateAccessCode() {
   const used = new Set();
@@ -269,6 +345,8 @@ function createTeacher({ displayName, email, country, levels }) {
   const now = Date.now();
   const rec = {
     teacherId,
+    uid: newUid(),
+    codeGen: 0,
     displayName: String(displayName || 'Teacher').slice(0, 60),
     email:       email ? String(email).slice(0, 120) : null,
     country:     country ? String(country).slice(0, 3).toUpperCase() : null,
@@ -306,6 +384,48 @@ function setCodeLevel(teacherId, code, level) {
   scheduleSave();
   return row(t);
 }
+// 🆕 2026-10-15 «Cambiar mi código». The rules for a new teacher code: 8-24 characters after normalizing (letters,
+// numbers and dashes), at least one letter and one number, not a class code, not another teacher's code, not a code
+// that was ever retired. → { ok: true, code } | { ok: false, error } (Spanish, shown to the teacher).
+function validateNewCode(raw, forTeacherId) {
+  const code = normalizeTeacherId(String(raw || '').trim());
+  if (!code || code.replace(/-/g, '').length < 8) return { ok: false, error: 'El código necesita al menos 8 letras o números.' };
+  if (code.length > 24) return { ok: false, error: 'El código puede tener 24 caracteres como máximo.' };
+  if (!/[A-Z]/.test(code) || !/[0-9]/.test(code)) return { ok: false, error: 'Usa letras y números juntos (por ejemplo, una palabra y unos números).' };
+  const self = getByTeacherId(forTeacherId);
+  if (self && self.teacherId === code) return { ok: false, error: 'Ese ya es el código actual.' };
+  if (teachers[code] || isRetired(code)) return { ok: false, error: 'Ese código no se puede usar. Elige otro.' };
+  if (getByAccessCode(code)) return { ok: false, error: 'Ese es un código de clase. Elige otro.' };
+  if (process.env.WU_ADMIN_PASSWORD && normalizeTeacherId(process.env.WU_ADMIN_PASSWORD) === code) return { ok: false, error: 'Ese código no se puede usar. Elige otro.' };
+  return { ok: true, code };
+}
+// Move a teacher to a new code: same record and uid, codeGen + 1 (devices remembered with the old code ask again),
+// the old code retired for good (it stops working at once and can never be taken again). Custom assignments that
+// stored the old code follow (onRename hook from server.js). → { ok, teacher } | { ok: false, error }
+function changeCode(teacherId, newCodeRaw, onRename) {
+  const t = getByTeacherId(teacherId);
+  if (!t) return { ok: false, error: 'No encontramos a esa maestra o maestro.' };
+  const v = validateNewCode(newCodeRaw, t.teacherId);
+  if (!v.ok) return v;
+  const old = t.teacherId;
+  delete teachers[old];
+  t.teacherId = v.code;
+  t.codeGen = (Number(t.codeGen) || 0) + 1;
+  t.codeChangedAt = Date.now();
+  if (!t.uid) t.uid = newUid();
+  teachers[v.code] = t;
+  if (!meta.retired.includes(codeHash(old))) meta.retired.push(codeHash(old));
+  saveMeta();
+  persistNow();                                    // at once: a restart right after must already know the new code
+  try { if (typeof onRename === 'function') onRename(old, v.code); } catch (e) { console.warn('[teachers] rename hook failed:', e.message); }
+  console.log('[teachers] a teacher code was changed (' + (t.isSuperAdmin ? 'super-admin' : 'teacher') + ', ' + String(t.displayName || '').slice(0, 30) + ')');
+  return { ok: true, teacher: row(t) };
+}
+function getByUid(uid) {
+  if (!uid || typeof uid !== 'string') return null;
+  return Object.values(teachers).find((t) => t && t.uid === uid) || null;
+}
+
 // Delete a teacher (super-admin only). Their students get orphaned
 // (classroomCode survives on the records but no teacher owns the code).
 function deleteTeacher(teacherId) {
@@ -360,4 +480,9 @@ module.exports = {
   touchLastSeen,
   listAll,
   normalizeTeacherId,
+  getByUid,
+  changeCode,
+  validateNewCode,
+  suggestCode,
+  isRetired,
 };

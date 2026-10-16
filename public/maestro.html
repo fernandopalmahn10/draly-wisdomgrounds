@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <!-- 2026-10-13 remake: the teacher's control room in the platform's sticker world (spec docs/specs/maestro-remake.md).
        teacher-dashboard.css is this page's only stylesheet; maestro.css stays for host-hsk.html. -->
-  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261013a">
+  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261015a">
 </head>
 <body class="m-app">
 
@@ -57,6 +57,7 @@
       <div class="m-topbar-end">
         <p class="m-dash-self" id="m-dash-self"></p>
         <button class="btn btn-ghost btn-sm m-refresh" id="m-refresh" type="button" title="Reload the student list now (it also refreshes by itself every 15 s)"><span class="m-refresh-icon" aria-hidden="true">⟳</span><span class="m-refresh-label">Refresh</span></button>
+        <button class="btn btn-ghost btn-sm m-mycode-btn" id="m-mycode-btn" type="button" title="Change my teacher code"><span aria-hidden="true">🔑</span> Cambiar mi código</button>
         <button class="btn btn-ghost btn-sm m-logout" id="m-logout" type="button">Log out</button>
       </div>
     </header>
@@ -128,6 +129,13 @@
 
       <!-- TEACHERS TAB (super admin only) -->
       <div class="m-tabpanel hidden" id="m-tabpanel-teachers" role="tabpanel" aria-labelledby="m-tab-teachers">
+        <!-- 🔑 2026-10-15 La Ruta Dorada: one key per level opens its three levels (core/level-keys.js) -->
+        <section class="m-panel m-keys" id="m-keys" aria-labelledby="m-keys-title">
+          <h2 class="m-h2" id="m-keys-title">🔑 Claves de nivel</h2>
+          <p class="m-keys-help">Una clave por nivel abre La Base, El Entrenamiento y El Simulacro Dorado. Cada familia la escribe una vez en su teléfono. Una palabra y un número, fácil de dictar (por ejemplo DRAGON-47); no uses PANDA-12, es el ejemplo que ve todo el mundo.</p>
+          <p class="m-keys-status" id="m-keys-status">Cargando…</p>
+          <div class="m-keys-list" id="m-keys-list"></div>
+        </section>
         <section class="m-panel">
           <div class="m-teachers-header">
             <h2 class="m-h2 m-teachers-title">Teachers</h2>
@@ -195,6 +203,28 @@
           <button class="m-tool hidden" id="m-emirati-btn" type="button"><span class="m-tool-icon" aria-hidden="true">🌐</span><span class="m-tool-text"><b>My Gateway · العربية</b><small>Your personal Emirati Arabic words</small></span></button>
         </section>
       </aside>
+    </div>
+
+    <!-- 🔑 2026-10-15 «Cambiar mi código» (and, for the super admin, another teacher's code): the old code stops at once -->
+    <div id="m-mycode-modal" class="m-modal hidden">
+      <div class="m-modal-card">
+        <button class="m-modal-close" id="m-mycode-close" type="button" aria-label="Close">✕</button>
+        <h2 id="m-mycode-title">🔑 Cambiar mi código</h2>
+        <p class="m-modal-sub" id="m-mycode-sub">Your new teacher code: to sign in here and to open games. The old code stops working at once, on every device. / Tu código nuevo: la clave vieja deja de funcionar en todos los aparatos.</p>
+        <label class="m-form-label">
+          <span>New code: 8 or more letters and numbers</span>
+          <input class="input m-code-input" id="m-mycode-new" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        </label>
+        <label class="m-form-label">
+          <span>Type it again</span>
+          <input class="input m-code-input" id="m-mycode-again" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        </label>
+        <div class="m-mycode-actions">
+          <button class="btn btn-gold btn-xl" id="m-mycode-save" type="button">Change the code</button>
+          <button class="btn btn-ghost btn-sm" id="m-mycode-random" type="button" title="Fill in a random code of the usual shape">🎲 Random code</button>
+        </div>
+        <p class="m-modal-msg" id="m-mycode-msg" role="status"></p>
+      </div>
     </div>
 
     <!-- 📢 MESSAGE THE CLASS (2026-10-13: a form instead of five prompts; same /api/admin/broadcast call) -->
@@ -458,7 +488,7 @@
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/cast.js?v=20261013a"></script>
-  <script src="/js/maestro.js?v=20261015t"></script>
+  <script src="/js/maestro.js?v=20261015u"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

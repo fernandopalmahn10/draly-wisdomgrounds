@@ -34,6 +34,13 @@ data/guides.json
 data/hsk-rooms.json
 # 🔒 The key that signs simulation links and sim sessions (core/sim-lock.js): made once on the data disk. NEVER commit.
 data/sim-lock.key
+# 🔑 The level keys + the go-live moment (core/level-keys.js), the teacher table's one-shot facts (core/teachers.js),
+# and unreadable copies kept aside: data disk only. NEVER commit.
+data/level-keys.json
+data/level-keys.json.tmp
+data/level-keys.unreadable-*.json
+data/teachers-meta.json
+data/teachers.unreadable-*.json
 # Original (uncompressed) 3D models — only the compressed dralingo-*.glb + john-monk.glb ship to git
 public/assets/Arab Dralingo flying with white ghutra.glb
 public/assets/Arab Dralingo in Red F8.glb

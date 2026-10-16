@@ -239,15 +239,18 @@
     return city ? city.replace(/_/g, ' ') : null;
   }
 
-  // 🔒 2026-10-15 (La Ruta Dorada) — arriving from a locked simulation («Entrar con mi código» on its friendly page):
-  // after the login the kid goes straight back to that exam (the login also opens their level's sims on this phone).
-  // Only this site's own two exam pages are accepted as a destination.
+  // 🔒 2026-10-15 (La Ruta Dorada) — arriving from a level's key screen («Entra a Mis Tareas» on a locked simulation or
+  // La Base): after the login the kid goes straight back there (the login opens their level on this phone when their
+  // account has it). Only this site's own exam pages and /audios/<id> pages are accepted as a destination.
   let hwNext = '';
   try {
     const n = new URLSearchParams(location.search).get('next') || '';
-    if (/^\/(yct|hsk)-sim\.html(\?[^#\s\\]*)?$/.test(n)) hwNext = n;
+    if (/^\/(yct|hsk)-sim\.html(\?[^#\s\\]*)?$/.test(n) || /^\/audios\/[a-z0-9-]{1,40}$/i.test(n)) hwNext = n;
   } catch (_) {}
-  if (hwNext && $('hw-entry-next')) $('hw-entry-next').hidden = false;
+  if (hwNext && $('hw-entry-next')) {
+    if (/^\/audios\//.test(hwNext)) $('hw-entry-next').textContent = '🔑 Entra con tu código y vuelves directo a La Base.';
+    $('hw-entry-next').hidden = false;
+  }
 
   // ── Pre-fill remembered values
   try {

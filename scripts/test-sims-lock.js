@@ -11,9 +11,13 @@
 // ticket still hands in, a student's ticket only on their own record); nobody else takes over or closes a room;
 // signed links expire, can't open another sim's file, carry no student code; every protected answer is private +
 // no-store; ?debug=1&direct=1 opens only on this PC, never with another Host or through a proxy; PIN guessing from one
-// address pauses there only; La Base stays open.
+// address pauses there only. Since the key model (2026-10-15, second round; scripts/test-level-keys.js tests the keys
+// themselves) this server never gets a key: every kid enrolled here is "before the go-live" and keeps their level, a
+// refusal is the level's key screen, and La Base is locked too. Its own temporary data folder; throw-away codes.
 'use strict';
 const http = require('http');
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
@@ -24,8 +28,9 @@ const PORT = Number(opt('port', 4000));
 const KEEP = args.includes('--keep');
 if (PORT === 3000) { console.error('never port 3000 (that is the dev server of the main checkout)'); process.exit(2); }
 const ROOT = path.join(__dirname, '..');
-const TEACHER = process.env.TEST_TEACHER_PW || 'draly2026';      // the local legacy admin code (WU_ADMIN_PASSWORD default)
+const TEACHER = 'legacy-' + crypto.randomBytes(12).toString('hex');   // this server's WU_ADMIN_PASSWORD (no default since 2026-10-15)
 const SECRET = 'test-' + crypto.randomBytes(24).toString('hex');  // same key here and in the server we start
+const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-simlock-'));   // its own teachers, students, keys
 process.env.SIM_LOCK_SECRET = SECRET;
 const SimLock = require('../core/sim-lock');
 const YctSim = require('../core/yct-sim');
@@ -39,7 +44,7 @@ const section = (t) => console.log('· ' + t);
 function req(method, p, o = {}) {
   return new Promise((resolve, reject) => {
     const h = Object.assign({}, o.headers || {});
-    if (o.jar && o.jar.dsim) h.Cookie = 'dsim=' + o.jar.dsim;
+    if (o.jar && Object.keys(o.jar).length) h.Cookie = Object.entries(o.jar).map(([k, v]) => k + '=' + v).join('; ');
     let data = null;
     if (o.body !== undefined) { data = Buffer.from(JSON.stringify(o.body)); h['Content-Type'] = 'application/json'; h['Content-Length'] = data.length; }
     const r = http.request({ host: '127.0.0.1', port: PORT, method, path: p, headers: h }, (res) => {
@@ -49,7 +54,7 @@ function req(method, p, o = {}) {
         const buf = Buffer.concat(chunks);
         const text = buf.toString('utf8');
         const sc = res.headers['set-cookie'] || [];
-        if (o.jar) sc.forEach((c) => { const m = /^dsim=([^;]*)/.exec(c); if (m) o.jar.dsim = m[1]; });
+        if (o.jar) sc.forEach((c) => { const m = /^([^=]+)=([^;]*)/.exec(c); if (m) o.jar[m[1]] = m[2]; });
         let json = null;
         try { json = JSON.parse(text); } catch (_) {}
         resolve({ status: res.statusCode, headers: res.headers, text, json, bytes: buf.length, setCookie: sc });
@@ -64,8 +69,8 @@ const get = (p, o) => req('GET', p, o);
 const post = (p, body, o = {}) => req('POST', p, Object.assign({}, o, { body }));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const noStore = (r) => /private/.test(r.headers['cache-control'] || '') && /no-store/.test(r.headers['cache-control'] || '');
-const isLocked = (r) => /data-sim-lock="locked"/.test(r.text) && !/id="y-exam"|id="hsk-runner"/.test(r.text);
-const isPlayer = (r) => r.status === 200 && /id="y-exam"|id="hsk-runner"/.test(r.text) && !/data-sim-lock/.test(r.text);
+const isLocked = (r) => /data-level-key="locked"/.test(r.text) && !/id="y-exam"|id="hsk-runner"/.test(r.text);
+const isPlayer = (r) => r.status === 200 && /id="y-exam"|id="hsk-runner"/.test(r.text) && !/data-level-key/.test(r.text);
 const links = (obj) => Array.from(new Set(JSON.stringify(obj).match(/\/sim-media\/[^"\\]+/g) || []));
 const oldUrls = (obj) => (JSON.stringify(obj).match(/\/assets\/[^"]*SIMULATIONS[^"]*/gi) || []);
 function scoredHaveNoKey(sim) {
@@ -104,7 +109,8 @@ async function startServer() {
   try { await get('/health'); console.error('port ' + PORT + ' is busy: stop that server first'); process.exit(2); } catch (_) { /* free */ }
   // --keep: a detached server that outlives this script (stop it by its port afterwards)
   const srv = spawn(process.execPath, ['server.js'], {
-    cwd: ROOT, env: Object.assign({}, process.env, { PORT: String(PORT), SIM_LOCK_SECRET: SECRET }),
+    cwd: ROOT, env: Object.assign({}, process.env, { PORT: String(PORT), SIM_LOCK_SECRET: SECRET, WU_ADMIN_PASSWORD: TEACHER,
+      DRALY_DATA_DIR: DATA, STUDENT_DATA_DIR: '', DRALY_SEED_ADMIN_CODE: 'T-' + crypto.randomBytes(5).toString('hex').toUpperCase() }),
     stdio: KEEP ? 'ignore' : ['ignore', 'pipe', 'pipe'], detached: KEEP,
   });
   let log = '';
@@ -124,7 +130,7 @@ async function startServer() {
 (async () => {
   const srv = await startServer();
   try { await run(); } catch (e) { failed++; console.log('  ✖ crashed: ' + (e && e.stack || e)); }
-  if (!KEEP) srv.kill();
+  if (!KEEP) { srv.kill(); await sleep(300); try { fs.rmSync(DATA, { recursive: true, force: true }); } catch (_) {} }
   console.log(failed ? `test-sims-lock: ${failed} FAILED, ${passed} passed` : `test-sims-lock: all ${passed} checks passed`);
   if (KEEP) console.log('(server left running on port ' + PORT + ', key ' + SECRET.slice(0, 9) + '…)');
   process.exit(failed ? 1 : 0);
@@ -161,10 +167,11 @@ async function run() {
     .concat(yct.concat(nhsk).map((id) => '/yct-sim.html?sim=' + id)).concat(ohsk.map((id) => '/hsk-sim.html?sim=' + id));
   for (const p of pages) {
     const r = await get(p);
-    ok(r.status === 401 && isLocked(r) && /Este simulacro es para alumnos de Dralingo/.test(r.text) && noStore(r), `friendly locked page on ${p} (${r.status})`);
+    ok(r.status === 401 && isLocked(r) && (/Escribe la clave de (YCT 1|New HSK 1|HSK 1)/.test(r.text) || /"reason":"(room|pin)"/.test(r.text)) && noStore(r), `the key screen (or the PIN card) on ${p} (${r.status})`);
   }
   const dead = await get('/yct-sim.html?pin=9999');
   ok(/"reason":"room"/.test(dead.text), 'a closed room PIN gets the «Esta sala ya cerró» card');
+  ok(/Escribe la clave de New HSK 1/.test((await get('/yct-sim.html?sim=newhsk1-sim1')).text) && /Escribe la clave de HSK 1/.test((await get('/hsk-sim.html?sim=hsk1-sim2')).text), 'a sim\'s key screen names its own level');
   for (const id of sims) {
     const a = await get('/api/hsk-sim/' + id);
     const b = await get('/api/hsk-sim/' + id + '?accessCode=1001&studentCode=ABCD');   // the old access-code-only way in
@@ -230,6 +237,7 @@ async function run() {
     ok(r.json && r.json.ok && r.json.studentCode, `${name}: enrolled through /api/homework/enter`);
     const c = (r.setCookie || []).find((x) => /^dsim=/.test(x)) || '';
     ok(/HttpOnly/i.test(c) && /SameSite=Lax/i.test(c) && /Path=\//.test(c) && !/Secure/.test(c), `${name}: the login sets the httpOnly sim session cookie`);
+    ok(r.json && r.json.levelOpen === true, `${name}: enrolled before any key, their level is open`);
     return { jar, code: r.json && r.json.studentCode, accessCode, level: r.json && r.json.level };
   }
   const kids = {
@@ -259,8 +267,8 @@ async function run() {
         ok(!ls.some((u) => Buffer.from(u.split('/')[2].split('.')[0], 'base64url').toString().includes(kid.code)), `${id}: no student code inside a link`);
         ok(!/\((TRUE|FALSE|CORRECT)\)/i.test(ls.join(' ')), `${id}: no answer hint in a file name`);
       } else {
-        ok(pg.status === 403 && isLocked(pg) && /"reason":"level"/.test(pg.text), `${lvl} kid is refused ${id} (other level, page ${pg.status})`);
-        ok(api.status === 403 && !/listening/.test(api.text), `${lvl} kid gets no ${id} payload (${api.status})`);
+        ok(pg.status === 401 && isLocked(pg), `${lvl} kid gets that level's key screen for ${id} (other level, page ${pg.status})`);
+        ok(api.status === 401 && !/listening/.test(api.text), `${lvl} kid gets no ${id} payload (${api.status})`);
       }
     }
     ok(isPlayer(await get('/yct-sim.html', { jar: kid.jar })) || isPlayer(await get('/hsk-sim.html', { jar: kid.jar })), `${lvl} kid keeps the PIN box page`);
@@ -284,7 +292,7 @@ async function run() {
   // the silent session from codes the phone saved (the friendly page)
   const jar2 = {};
   const s1 = await post('/api/sim-access/session', { accessCode: '1003', studentCode: y.code }, { jar: jar2 });
-  ok(s1.json && s1.json.ok && s1.json.kind === 'student' && s1.json.sims.includes('yct1-sim1') && !s1.json.sims.includes('newhsk1-sim1') && jar2.dsim,
+  ok(s1.json && s1.json.ok && s1.json.kind === 'student' && s1.json.open === true && s1.json.sims.includes('yct1-sim1') && !s1.json.sims.includes('newhsk1-sim1') && jar2.dsim && jar2.dlv_yct1,
     'a saved student code makes a session for its level');
   ok(isPlayer(await get('/yct-sim.html?sim=yct1-sim2', { jar: jar2 })), '… which opens the exam');
   ok((await post('/api/sim-access/session', { accessCode: '1003', studentCode: 'ZZZZ' })).status === 401, 'an unknown student code makes no session');
@@ -304,9 +312,11 @@ async function run() {
   // a kid moved to another level: the old session stops at the next request
   const mover = await enroll('1003', 'Lock Mover');
   ok(isPlayer(await get('/yct-sim.html?sim=yct1-sim1', { jar: mover.jar })), 'the mover opens a YCT sim');
-  const moved = await post('/api/homework/enter', { accessCode: '1002', studentCode: mover.code });
+  const moved = await post('/api/homework/enter', { accessCode: '1002', studentCode: mover.code }, { jar: mover.jar });
   ok(moved.json && moved.json.level === 'hsk2', '… then logs in with the New HSK 1 code (level changes)');
-  ok(isLocked(await get('/yct-sim.html?sim=yct1-sim1', { jar: mover.jar })), '… and the old YCT session no longer opens YCT sims');
+  ok(isPlayer(await get('/yct-sim.html?sim=newhsk1-sim1', { jar: mover.jar })), '… New HSK 1 opens (no key exists yet on this server)');
+  ok(isPlayer(await get('/yct-sim.html?sim=yct1-sim1', { jar: mover.jar })), '… the phone that opened YCT 1 keeps it (a device keeps an opened level)');
+  ok(isLocked(await get('/yct-sim.html?sim=yct1-sim1', { jar: { dsim: mover.jar.dsim } })), '… but the session alone no longer opens YCT 1 (the account is New HSK 1 now)');
   // the New HSK 1 «Simulacro» homework (pack rounds made from the sims) still works for a logged-in kid
   const enter2 = await post('/api/homework/enter', { accessCode: '1002', studentCode: kids.nhsk.code });
   const sima = ((enter2.json && enter2.json.assignments) || []).find((a) => /simulacro/i.test(a.id + ' ' + a.title));
@@ -327,7 +337,7 @@ async function run() {
   ok(tsub.json && tsub.json.ok && tsub.json.saved === false, 'a teacher\'s try is graded, never saved');
   const tj = {};
   const ts = await post('/api/sim-access/session', {}, { headers: T, jar: tj });
-  ok(ts.json && ts.json.ok && ts.json.kind === 'teacher' && tj.dsim, 'the teacher code makes a teacher session');
+  ok(ts.json && ts.json.ok && ts.json.kind === 'teacher' && tj.dtd, 'the teacher code remembers the device as a teacher\'s');
   ok(isPlayer(await get('/yct-sim.html?sim=newhsk1-sim2', { jar: tj })) && isPlayer(await get('/hsk-sim.html?sim=hsk1-sim3', { jar: tj })), 'a teacher opens any sim page');
   ok((await post('/api/sim-access/session', {}, { headers: { 'X-Admin-Pw': 'nope' } })).status === 401, 'a wrong teacher code makes no session');
   const cat = await get('/api/sim-images', { headers: T });
@@ -388,7 +398,7 @@ async function run() {
   // ── 8. «Describe la imagen» in Modo Maestro: the picture on every phone of THAT room, only while it lives ──
   section('Modo Maestro picture');
   const wh = sock();
-  const wc = await emitAck(wh, 'host:create', { gameType: 'warmup' });
+  const wc = await emitAck(wh, 'host:create', { gameType: 'warmup', password: TEACHER });
   const wkid = sock();
   await emitAck(wkid, 'player:join', { pin: wc.pin, name: 'Warm Kid' });
   const gotImg = new Promise((res) => { wkid.on('wu:image', (d) => res(d)); setTimeout(() => res(null), 4000); });
@@ -404,9 +414,10 @@ async function run() {
   wh.close();
 
   // ── 9. what stays open ──
-  section('La Base stays open');
-  ok((await get('/audios/yct1-base')).status === 200 && (await get('/assets/audios/catalog.json')).status === 200, '/audios and its catalog are public');
-  ok((await get('/assets/audios/yct1-base/base.json')).status === 200, 'La Base data is public');
+  section('La Base is locked too (2026-10-15); the library and homework audio stay open');
+  ok(isLocked(await get('/audios/yct1-base')) && (await get('/assets/audios/catalog.json')).status === 200 && (await get('/audios')).status === 200, 'La Base asks the key; /audios and its catalog are public');
+  ok((await get('/base-media/yct1-base/base.json')).status === 401 && (await get('/assets/audios/yct1-base/base.json')).status === 404, 'La Base data is refused, its old address is gone');
+  ok((await get('/base-media/yct1-base/base.json', { jar: kids.yct.jar })).status === 200, 'the enrolled YCT kid opens it');
   ok((await get('/homework.html?next=' + encodeURIComponent('/yct-sim.html?sim=yct1-sim1'))).status === 200, 'the login page takes ?next=');
 
   // ── 10. PIN guessing: an outside address (Cloudflare's CF-Connecting-IP, which a visitor can't fake through it) ──

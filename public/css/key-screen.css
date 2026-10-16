@@ -1,0 +1,231 @@
+/* ===================================================================== */
+/* KEY SCREENS (2026-10-15, La Ruta Dorada) · one design family for:     */
+/*   · the level key (protected/pages/level-key.html): a parent or kid   */
+/*     types the level's key once (La Base, Entrenamiento, Simulacro)    */
+/*   · the teacher key (js/teacher-gate.js on every host page): a        */
+/*     teacher's code the first time a device creates a game             */
+/* The study books' paper (Rojo Imperial, Oro, Crema; Gelasio = pinyin   */
+/* only, Noto Sans = Spanish and numbers), Dralingo in his platform look */
+/* on a Rojo Imperial stage like a book cover, the form on the paper.    */
+/* One light theme, like the printed books and /audios. Phone first      */
+/* (360 px), a split stage + form from 860 px. Every class is ks-        */
+/* (the teacher screen lands on game pages with their own CSS).         */
+/* Radii: controls 14px, the paper sheet 24px, seal + step dots round.   */
+/* The one authored moment: the seal opens when the key is right.       */
+/* ===================================================================== */
+@font-face { font-family: 'Noto Sans'; src: url('/assets/fonts/study/noto-sans-400.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Noto Sans'; src: url('/assets/fonts/study/noto-sans-600.woff2') format('woff2'); font-weight: 500 600; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Noto Sans'; src: url('/assets/fonts/study/noto-sans-800.woff2') format('woff2'); font-weight: 700 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Gelasio'; src: url('/assets/fonts/study/gelasio-700.woff2') format('woff2'); font-weight: 600 700; font-style: normal; font-display: swap; }
+
+.ks-root {
+  --ks-rojo: #5a1010;          /* Rojo Imperial */
+  --ks-rojo-2: #741a1a;
+  --ks-rojo-3: #8e2a22;        /* the stage's light, behind Dralingo */
+  --ks-oro: #b88b2c;           /* Oro: the seal, rules */
+  --ks-oro-claro: #d4ac52;     /* small gold on Rojo Imperial */
+  --ks-oro-tinta: #85631d;     /* gold text on Crema (4.9:1) */
+  --ks-oro-palido: #f3e2b3;
+  --ks-crema: #f7f1e4;         /* Crema: the paper */
+  --ks-crema-2: #efe4cc;
+  --ks-papel: #fffdf8;
+  --ks-tinta: #1c1a17;
+  --ks-tinta-2: #5f584e;       /* secondary text on Crema: 6:1 */
+  --ks-linea: #d9c9a3;
+  --ks-error: #8e1d16;
+  --ks-ok: #1f6b43;
+  --ks-sans: 'Noto Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --ks-py: 'Gelasio', Georgia, 'Times New Roman', serif;   /* pinyin only */
+  --ks-ease: cubic-bezier(.23, 1, .32, 1);
+  --ks-safe-top: env(safe-area-inset-top, 0px);
+  --ks-safe-bottom: env(safe-area-inset-bottom, 0px);
+  color-scheme: light;
+  box-sizing: border-box;
+  font-family: var(--ks-sans);
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--ks-tinta);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  font-synthesis: none;
+}
+.ks-root *, .ks-root *::before, .ks-root *::after { box-sizing: border-box; }
+.ks-root ::selection { background: var(--ks-oro-palido); color: var(--ks-tinta); }
+.ks-root [hidden] { display: none !important; }
+
+/* the page itself (the level key): the whole viewport */
+html.ks-html, html.ks-html body { margin: 0; background: var(--ks-crema); }
+body.ks-root { min-height: 100vh; min-height: 100dvh; }
+
+/* the teacher key: over a game page, everything else waits behind it */
+.ks-overlay {
+  position: fixed; inset: 0; z-index: 2147483000; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--ks-crema);
+  opacity: 1; transition: opacity 180ms var(--ks-ease);
+}
+@starting-style { .ks-overlay { opacity: 0; } }
+.ks-overlay.is-leaving { opacity: 0; pointer-events: none; }
+
+.ks-layout { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+
+/* ── the stage: Rojo Imperial, Dralingo, his bubble, the level's seal ── */
+.ks-stage {
+  position: relative; isolation: isolate; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 78%, var(--ks-rojo-3) 0%, var(--ks-rojo-2) 34%, var(--ks-rojo) 72%);
+  color: var(--ks-papel);
+  padding: calc(14px + var(--ks-safe-top)) 16px 40px;
+  display: grid; justify-items: center; align-content: start;
+  min-height: 300px;
+}
+/* the book cover's gold frame */
+.ks-stage::before {
+  content: ''; position: absolute; inset: calc(10px + var(--ks-safe-top)) 10px 10px; z-index: -1;
+  border: 1px solid rgba(212, 172, 82, .55); border-radius: 18px; pointer-events: none;
+}
+.ks-word { margin: 4px 0 0; font: 800 .82rem/1 var(--ks-sans); letter-spacing: .32em; text-indent: .32em; color: var(--ks-oro-claro); }
+.ks-hero { position: relative; width: min(230px, 62vw); margin-top: 14px; }
+.ks-dragon { display: block; width: 100%; height: auto; filter: drop-shadow(0 14px 18px rgba(30, 4, 4, .45)); user-select: none; -webkit-user-drag: none; }
+.ks-bubble {
+  position: absolute; top: 6%; left: -34%; max-width: 62%;
+  background: var(--ks-papel); color: var(--ks-rojo); border-radius: 16px; padding: 7px 12px 8px;
+  font: 700 1.05rem/1.15 var(--ks-py); white-space: nowrap;
+  box-shadow: 0 8px 18px -8px rgba(20, 2, 2, .55);
+}
+.ks-bubble::after {
+  content: ''; position: absolute; right: -7px; top: 58%; width: 14px; height: 14px; background: inherit;
+  transform: rotate(45deg); border-radius: 2px;
+}
+/* the seal: the level's name in gold, with the lock that opens */
+.ks-seal {
+  position: absolute; right: -16%; bottom: 4%; width: 92px; height: 92px; border-radius: 50%;
+  display: grid; place-items: center; align-content: center; gap: 1px;
+  background: radial-gradient(circle at 35% 30%, #e6c46e 0%, var(--ks-oro) 58%, #9c7322 100%);
+  color: var(--ks-rojo); text-align: center;
+  box-shadow: 0 10px 18px -8px rgba(20, 2, 2, .65), inset 0 0 0 3px rgba(90, 16, 16, .82), inset 0 0 0 6px #e7c873;
+  transform: rotate(-8deg);
+}
+.ks-seal-lock { width: 22px; height: 22px; display: block; }
+.ks-seal-lock .ks-shackle { transform-origin: 70% 100%; transition: transform 360ms var(--ks-ease); }
+.ks-seal-name { font: 800 .95rem/1 var(--ks-sans); letter-spacing: .01em; max-width: 74px; }
+.ks-seal-name.is-long { font-size: .74rem; }
+.ks-root.is-open .ks-seal { animation: ks-stamp 420ms var(--ks-ease) both; }
+.ks-root.is-open .ks-shackle { transform: translateY(-3px) rotate(28deg); }
+@keyframes ks-stamp {
+  0% { transform: rotate(-8deg) scale(1); }
+  35% { transform: rotate(-4deg) scale(1.12); }
+  100% { transform: rotate(-8deg) scale(1); }
+}
+
+/* ── the paper: what to do, the one field, «Entrar» ── */
+.ks-sheet {
+  position: relative; margin-top: -24px; flex: 1;
+  background: var(--ks-crema); border-radius: 24px 24px 0 0;
+  padding: 26px 16px calc(28px + var(--ks-safe-bottom));
+}
+.ks-inner { width: 100%; max-width: 440px; margin: 0 auto; }
+.ks-badge {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0 0 10px; padding: 4px 11px 5px;
+  border-radius: 999px; background: var(--ks-oro-palido); color: var(--ks-oro-tinta);
+  font: 700 .82rem/1.2 var(--ks-sans);
+}
+.ks-title { margin: 0; font: 800 1.72rem/1.12 var(--ks-sans); letter-spacing: -.02em; color: var(--ks-tinta); text-wrap: balance; }
+.ks-lede { margin: 10px 0 0; font-size: 1.02rem; color: var(--ks-tinta-2); text-wrap: pretty; }
+
+.ks-form { margin: 22px 0 0; }
+.ks-label { display: block; margin: 0 0 8px; font: 700 .95rem/1.3 var(--ks-sans); color: var(--ks-tinta); }
+.ks-field { position: relative; }
+.ks-input {
+  display: block; width: 100%; height: 66px; margin: 0; padding: 0 16px;
+  border: 2px solid var(--ks-linea); border-radius: 14px; background: var(--ks-papel); color: var(--ks-tinta);
+  font: 800 1.55rem/1 var(--ks-sans); letter-spacing: .1em; text-align: center; text-transform: uppercase;
+  caret-color: var(--ks-rojo); outline: none; -webkit-appearance: none; appearance: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.ks-input::placeholder { color: #8c8376; opacity: 1; letter-spacing: .08em; font-weight: 600; }
+.ks-input:focus { border-color: var(--ks-oro-tinta); box-shadow: 0 0 0 4px rgba(184, 139, 44, .28); }
+.ks-input[aria-invalid='true'] { border-color: var(--ks-error); }
+.ks-input[aria-invalid='true']:focus { box-shadow: 0 0 0 4px rgba(142, 29, 22, .18); }
+.ks-input.is-secret { letter-spacing: .14em; }
+.ks-input:disabled { opacity: .7; }
+.ks-root.is-shake .ks-input { animation: ks-shake 260ms var(--ks-ease); }
+@keyframes ks-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 60% { transform: translateX(5px); } 85% { transform: translateX(-2px); } }
+.ks-show {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%); height: 44px; min-width: 52px; padding: 0 10px;
+  border: 0; border-radius: 10px; background: transparent; color: var(--ks-oro-tinta);
+  font: 700 .9rem/1 var(--ks-sans); cursor: pointer;
+}
+.ks-show:hover { background: var(--ks-crema-2); }
+.ks-help { margin: 8px 0 0; font-size: .9rem; color: var(--ks-tinta-2); }
+.ks-help b { font-weight: 800; color: var(--ks-tinta); letter-spacing: .04em; white-space: nowrap; }
+.ks-error {
+  display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; padding: 10px 12px; border-radius: 12px;
+  background: #f8e3dc; color: var(--ks-error); font: 700 .98rem/1.35 var(--ks-sans);
+}
+.ks-error svg { flex: none; width: 20px; height: 20px; margin-top: 1px; }
+.ks-error:empty { display: none; }
+
+.ks-go {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 64px; margin: 16px 0 0;
+  padding: 0 20px; border: 0; border-radius: 14px; background: var(--ks-rojo); color: var(--ks-papel);
+  font: 800 1.3rem/1 var(--ks-sans); letter-spacing: .01em; cursor: pointer; text-decoration: none;
+  box-shadow: 0 10px 20px -12px rgba(90, 16, 16, .9);
+  transition: transform 140ms var(--ks-ease), background-color 160ms ease;
+}
+.ks-go svg { width: 22px; height: 22px; flex: none; }
+.ks-go:active { transform: scale(.97); }
+@media (hover: hover) and (pointer: fine) { .ks-go:hover { background: var(--ks-rojo-2); } }
+.ks-go[aria-busy='true'] { cursor: progress; background: var(--ks-rojo-2); }
+.ks-go:disabled { cursor: default; }
+.ks-root.is-open .ks-go { background: var(--ks-ok); }
+
+.ks-root :focus-visible { outline: 3px solid var(--ks-oro); outline-offset: 3px; }
+.ks-root .ks-input:focus-visible { outline: none; }
+
+/* what the key opens: the module's three levels, in their order */
+.ks-route { margin: 26px 0 0; padding: 16px 0 0; border-top: 1px solid var(--ks-linea); }
+.ks-route-title { margin: 0 0 12px; font: 700 .92rem/1.3 var(--ks-sans); color: var(--ks-tinta-2); }
+.ks-steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; position: relative; }
+.ks-steps::before {   /* the golden path between the three levels */
+  content: ''; position: absolute; left: 16.6%; right: 16.6%; top: 15px; height: 2px; background: var(--ks-oro); opacity: .55;
+}
+.ks-step { position: relative; display: grid; justify-items: center; gap: 6px; text-align: center; font: 700 .86rem/1.2 var(--ks-sans); color: var(--ks-tinta); }
+.ks-step-n {
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+  background: var(--ks-papel); border: 2px solid var(--ks-oro); color: var(--ks-oro-tinta); font: 800 .95rem/1 var(--ks-sans);
+}
+.ks-step:last-child .ks-step-n { background: var(--ks-oro); border-color: var(--ks-oro); color: var(--ks-rojo); }
+
+.ks-alt { margin: 22px 0 0; font-size: .98rem; color: var(--ks-tinta-2); }
+.ks-alt a, .ks-link { color: var(--ks-rojo); font-weight: 800; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; text-decoration-color: rgba(184, 139, 44, .7); }
+.ks-alt a:hover, .ks-link:hover { text-decoration-color: var(--ks-rojo); }
+.ks-alt + .ks-alt { margin-top: 10px; }
+
+/* the quiet first second: the codes this phone already saved are tried before the form asks anything */
+.ks-root.is-checking .ks-form { opacity: .55; pointer-events: none; }
+
+/* ── laptop and projector: the stage on the left, the paper on the right ── */
+@media (min-width: 860px) {
+  .ks-layout { flex-direction: row; }
+  .ks-stage { width: 44%; max-width: 620px; min-height: 100vh; min-height: 100dvh; align-content: center; padding: 48px 32px; }
+  .ks-stage::before { inset: 16px; }
+  .ks-word { position: absolute; top: 40px; left: 0; right: 0; text-align: center; }
+  .ks-hero { width: min(330px, 70%); margin-top: 24px; }
+  .ks-bubble { font-size: 1.35rem; padding: 9px 16px 10px; left: -26%; }
+  .ks-seal { width: 118px; height: 118px; }
+  .ks-seal-lock { width: 28px; height: 28px; }
+  .ks-seal-name { font-size: 1.15rem; max-width: 96px; }
+  .ks-seal-name.is-long { font-size: .9rem; }
+  .ks-sheet { margin: 0; border-radius: 0; display: grid; align-items: center; padding: 56px 48px; }
+  .ks-title { font-size: 2.3rem; }
+  .ks-lede { font-size: 1.1rem; }
+}
+@media (max-width: 380px) {
+  .ks-title { font-size: 1.55rem; }
+  .ks-input { font-size: 1.35rem; letter-spacing: .07em; }
+  .ks-bubble { left: -28%; font-size: .98rem; }
+  .ks-seal { width: 82px; height: 82px; right: -12%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ks-root *, .ks-overlay { animation: none !important; transition: none !important; }
+}

@@ -27,6 +27,7 @@
     pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>',
     sound: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9.5v5h3.5L12 19V5L7.5 9.5H4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>',
     back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11.5V8a4 4 0 0 1 8 0v3.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><rect x="4.5" y="11" width="15" height="10.5" rx="2.6" fill="currentColor"/></svg>',
   };
   const KIND = {
     words: { title: 'Las palabras', how: 'Cada palabra suena dos veces. Repítela en voz alta en la pausa.' },
@@ -50,11 +51,17 @@
 
   const say = (text) => { if (!sayEl) return; sayEl.textContent = ''; setTimeout(() => { sayEl.textContent = text; }, 30); };
 
+  // 🔑 2026-10-15 (La Ruta Dorada): a level's base opens with that level's key (typed once on this phone, or on the
+  // kid's account). The server knows (httpOnly cookies): /api/level-access says which levels this phone may open, so
+  // a locked base shows its lock instead of its pictures, and its card leads to the key screen (/audios/<base>).
+  let access = {};
+  const isOpen = (b) => !!(b && access[b.level]);
   function load() {
     main.innerHTML = '<p class="au-loading">Cargando…</p>';
-    fetch(fresh('/assets/audios/catalog.json'))
-      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then((c) => { catalog = c; route(); })
+    const levels = fetch('/api/level-access', { credentials: 'same-origin', cache: 'no-store' })
+      .then((r) => r.json()).then((d) => (d && d.levels) || {}).catch(() => ({}));
+    Promise.all([fetch(fresh('/assets/audios/catalog.json')).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }), levels])
+      .then(([c, a]) => { catalog = c; access = a; route(); })
       .catch(() => {
         main.innerHTML = '<p class="au-error">No se pudieron cargar los audios. Revisa tu internet.</p>' +
           '<p style="text-align:center"><button type="button" class="bs-btn bs-btn-red au-press" id="au-retry">Volver a intentar</button></p>';
@@ -152,19 +159,22 @@
       '<p class="au-lede">Elige tu nivel. En cada uno están sus palabras y los audios de sus tareas.</p>' +
       '<div class="au-folders">' + list.map(({ f, bases, hws }) => {
         const b = bases[0];
+        const open = isOpen(b);
         const seals = b ? sealsOf(b) : null;
-        const pics = b ? (b.peek || []) : hws.map((h) => h.thumb || h.cover).filter(Boolean).slice(0, 3);
+        const pics = b ? (open ? (b.peek || []) : []) : hws.map((h) => h.thumb || h.cover).filter(Boolean).slice(0, 3);
         const tareas = hws.length ? hws.length + (hws.length === 1 ? ' tarea' : ' tareas') + ' con audio' : 'Tareas con audio: muy pronto';
-        return '<a class="au-folder' + (b ? ' is-start on-red' : '') + '" href="/audios/' + esc(f.id) + '" data-nav>' +
+        return '<a class="au-folder' + (b ? ' is-start on-red' : '') + (b && !open ? ' is-locked' : '') + '" href="/audios/' + esc(f.id) + '" data-nav>' +
           '<span><span class="au-folder-name">' + esc(f.name) + '</span>' +
           (b ? '<span class="au-folder-what"><b>' + esc(b.title) + ' · ' + esc(b.kicker || 'Empieza aquí') + '</b><br>' + b.words + ' palabras con audio</span>' +
-                meterHtml(b, seals) +
-                '<span class="au-folder-meta">' + sellos(seals.size, b.words) + (hws.length ? ' · ' + tareas : '') + '</span>'
+                (open ? meterHtml(b, seals) +
+                  '<span class="au-folder-meta">' + sellos(seals.size, b.words) + (hws.length ? ' · ' + tareas : '') + '</span>'
+                  : '<span class="au-folder-meta">Se abre con la clave de ' + esc(f.name) + (hws.length ? ' · ' + tareas : '') + '</span>')
              : '<span class="au-folder-what"><b>' + tareas + '</b></span>' +
                '<span class="au-folder-meta">La más nueva: ' + esc(hws[0].title) + '</span>') +
           '</span>' +
           (pics.length ? '<span class="au-peek' + (b ? '' : ' is-covers') + '" aria-hidden="true">' +
-            pics.map((p) => '<img src="' + esc(p) + '" alt="" ' + (b ? 'width="400" height="400"' : 'width="360" height="241"') + ' decoding="async">').join('') + '</span>' : '') +
+            pics.map((p) => '<img src="' + esc(p) + '" alt="" ' + (b ? 'width="400" height="400"' : 'width="360" height="241"') + ' decoding="async">').join('') + '</span>'
+            : (b ? '<span class="au-lock" aria-hidden="true">' + ICON.lock + '</span>' : '')) +
           '</a>';
       }).join('') + '</div>';
   }
@@ -179,14 +189,16 @@
       '<h1 class="au-h1">' + esc(f.name) + '</h1>';
     if (b) {
       const seals = sealsOf(b);
-      const go = seals.size ? (seals.size >= b.words ? 'Repasar' : 'Seguir') : 'Empezar';
+      const open = isOpen(b);
+      const go = !open ? 'Abrir con la clave' : (seals.size ? (seals.size >= b.words ? 'Repasar' : 'Seguir') : 'Empezar');
+      // a locked base: a plain link (a full page load), so the server shows the level's key screen at its address
       html += '<p class="au-lede">Empieza por la base: las ' + b.words + ' palabras, con su dibujo, una frase y el audio.</p>' +
-        '<a class="au-start on-red" href="/audios/' + esc(b.id) + '" data-nav>' +
+        '<a class="au-start on-red' + (open ? '' : ' is-locked') + '" href="/audios/' + esc(b.id) + '"' + (open ? ' data-nav' : '') + '>' +
           '<span class="au-start-title">' + esc(b.title) + '<span>' + esc(b.kicker || 'Empieza aquí') + '</span></span>' +
           '<span class="au-start-what">' + b.words + ' palabras en ' + (b.worlds || []).length + ' mundos</span>' +
-          meterHtml(b, seals) +
-          '<span class="au-start-count">' + sellos(seals.size, b.words) + '</span>' +
-          '<span class="au-start-go">' + ICON.play + go + '</span>' +
+          (open ? meterHtml(b, seals) + '<span class="au-start-count">' + sellos(seals.size, b.words) + '</span>'
+            : '<span class="au-start-count">Se abre con la clave de ' + esc(f.name) + ' que te manda tu maestra</span>') +
+          '<span class="au-start-go">' + (open ? ICON.play : ICON.lock) + go + '</span>' +
           '<img class="au-start-dragon" src="/assets/dralingo/hello.webp" alt="" width="432" height="480" decoding="async">' +
         '</a>' +
         '<h2 class="au-h2">Audios de las tareas</h2>';
@@ -219,8 +231,19 @@
         '<p style="text-align:center"><button type="button" class="bs-btn bs-btn-red au-press" id="au-retry">Volver a intentar</button></p>';
       $('#au-retry').addEventListener('click', () => { navSeq++; renderBase(b); });
     };
-    fetch(fresh(b.data))
-      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    fetch(fresh(b.data), { credentials: 'same-origin' })
+      .then((r) => {
+        // 🔑 locked (no key on this phone, or it was closed meanwhile): the base's own address shows the key screen
+        if (r.status === 401) {
+          const at = '/audios/' + b.id;
+          let again = false;
+          try { again = sessionStorage.getItem('draly_base_401') === at; sessionStorage.setItem('draly_base_401', at); } catch (_) {}
+          if (!again || location.pathname !== at) { location.replace(at); return new Promise(() => {}); }
+        }
+        try { sessionStorage.removeItem('draly_base_401'); } catch (_) {}
+        if (!r.ok) throw new Error(r.status);
+        return r.json();
+      })
       .then((d) => {
         if (nav !== navSeq || !window.AudiosBase) return;   // the reader already moved on
         try {

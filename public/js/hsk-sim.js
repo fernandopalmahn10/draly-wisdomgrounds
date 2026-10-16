@@ -161,7 +161,7 @@
   let _roomPass = '';   // 🔒 what joining the teacher's room gives this phone (2026-10-15)
 
   // 🔒 2026-10-15 (La Ruta Dorada): a logged-in student opens one simulation by its link (?sim=…, no room PIN) and
-  // takes it on their own; the server serves this page only to a student of that level (or a teacher), and the
+  // takes it on their own; the server serves this page only to whoever may use that level (its key, core/level-keys.js), and the
   // payload, files and grade follow that session (core/sim-lock.js). Old forced links (?access=…) keep the PIN box.
   const solo = !!simId && !roomPin && !urlAc;
   if (solo && /^(yct|newhsk)\d+-/i.test(simId)) { location.replace('/yct-sim.html?sim=' + encodeURIComponent(simId)); return; }
@@ -839,6 +839,8 @@
         pin: roomPin || undefined,
         displayName: realName2 || undefined,
         ticket: sim.ticket || undefined,   // 🔒 the grade is saved even if the room closed meanwhile (2026-10-15)
+        // 🔑 solo with only the level's key on this phone: the phone's saved class code proves whose grade it is
+        accessCode: solo ? (function () { try { return localStorage.getItem('dralyHwAccessCode') || undefined; } catch (_) { return undefined; } })() : undefined,
       }),
     })
       .then((r) => r.json())
@@ -847,7 +849,9 @@
           $('hsk-results-title').textContent = 'No se pudo guardar la nota';
           return;
         }
-        if (d.saved === false) $('hsk-results-title').textContent = 'Vista de maestra · la nota no se guarda';
+        if (d.saved === false) $('hsk-results-title').textContent = d.guest
+          ? 'Tu nota no se guardó: entra en Mis Tareas con tu código para que se guarde la próxima vez.'
+          : 'Vista de maestra · la nota no se guarda';
         const r = d.result;
         $('hsk-results-percent').textContent = r.percent + '%';
         $('hsk-results-detail').textContent = r.score + ' / ' + r.total + ' pts';

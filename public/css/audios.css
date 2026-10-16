@@ -132,6 +132,14 @@ body.au-is-base .au-main { max-width: none; padding: 0; }
 .au-peek img:nth-child(3) { transform: rotate(7deg); }
 .au-peek.is-covers { gap: 0; }
 .au-peek.is-covers img { width: 66px; height: 56px; object-fit: cover; border-radius: 6px; border: 2px solid var(--papel); margin-left: -14px; box-shadow: 0 2px 6px rgba(40, 6, 6, .18); }
+/* 🔑 2026-10-15: a base still behind its level's key: a gold seal with the lock instead of its pictures */
+.au-lock {
+  position: absolute; right: 18px; top: -30px; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 35% 30%, #e6c46e 0%, var(--oro) 58%, #9c7322 100%); color: var(--rojo);
+  box-shadow: 0 8px 14px -8px rgba(30, 4, 4, .6), inset 0 0 0 3px rgba(90, 16, 16, .82), inset 0 0 0 5px #e7c873; transform: rotate(-8deg);
+}
+.au-lock svg { width: 26px; height: 26px; }
+.au-start.is-locked .au-start-count { max-width: 60%; }
 
 /* the segmented meter: one segment per world, sized by its words */
 .au-meter { display: flex; gap: 3px; height: 8px; }

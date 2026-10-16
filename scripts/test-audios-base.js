@@ -29,7 +29,16 @@ const CJK = /[\u2e80-\u9fff\uf900-\ufaff\u3000-\u303f\uff00-\uffef]/;
 let fails = 0, checks = 0;
 const ok = (cond, msg) => { checks++; if (!cond) { fails++; console.log('FAIL ' + msg); } };
 const read = (p) => JSON.parse(fs.readFileSync(p, 'utf8'));
-const file = (url) => path.join(PUB, decodeURIComponent(url.split('?')[0]).replace(/^\//, ''));   // ?v= content stamps stay out
+// 🔑 2026-10-15: a base lives in protected/ behind its level's key and is read as /base-media/<id>/… (server.js):
+// /base-media/<id>/book.pdf = protected/study/<level>-vocabulario.pdf, /base-media/<id>/<x> = protected/base/<id>/<x>;
+// homework audio stays public (/assets/…). ?v= content stamps stay out.
+const PROT = path.join(ROOT, 'protected');
+function file(url) {
+  const p = decodeURIComponent(url.split('?')[0]);
+  const m = /^\/base-media\/([a-z0-9]+)-base\/(.+)$/.exec(p);
+  if (m) return m[2] === 'book.pdf' ? path.join(PROT, 'study', m[1] + '-vocabulario.pdf') : path.join(PROT, 'base', m[1] + '-base', m[2]);
+  return path.join(PUB, p.replace(/^\//, ''));
+}
 const unescape = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&#39;/g, "'").replace(/&amp;/g, '&');
 function findUp(rel) {
   let dir = ROOT;
@@ -53,7 +62,8 @@ ok(BASES.length >= 3, `core/levels.js names the bases (${BASES.map((b) => b.id).
 function checkBase(B) {
   const tag = B.id + ': ';
   const src = read(path.join(ROOT, 'content', 'audios', B.id + '.json'));
-  const web = read(path.join(PUB, 'assets', 'audios', B.id, 'base.json'));
+  const web = read(path.join(PROT, 'base', B.id, 'base.json'));
+  ok(!fs.existsSync(path.join(PUB, 'assets', 'audios', B.id)), tag + 'nothing of the base is left in public/ (it is behind the level key)');
   const N = B.words;
 
   // ── shape: the level's words, worlds in a row ────────────────────
@@ -142,12 +152,12 @@ function checkBase(B) {
     ok(fs.existsSync(f) && /\.webp$/.test(f), tag + `picture ${url} exists as WebP`);
     if (fs.existsSync(f)) ok(fs.statSync(f).size <= 60 * 1024, tag + `${url} is ${(fs.statSync(f).size / 1024).toFixed(0)} KB (max 60)`);
   }
-  ok(web.book && fs.existsSync(file(web.book.pdf)), tag + 'the book PDF is in public/');
+  ok(web.book && /^\/base-media\//.test(web.book.pdf) && fs.existsSync(file(web.book.pdf)), tag + 'the book PDF is in protected/study/ (served behind the key)');
   if (web.book && fs.existsSync(file(web.book.pdf))) ok(fs.statSync(file(web.book.pdf)).size < 10 * 1048576, tag + 'the book PDF is under 10 MB');
 
   // ── its folder pins it ────────────────────────────────────────────
   const entry = (cat.bases || []).find((b) => b.id === B.id);
-  ok(entry && entry.level === B.level && entry.words === N && entry.data === '/assets/audios/' + B.id + '/base.json', tag + `the ${B.name} folder pins its base`);
+  ok(entry && entry.level === B.level && entry.words === N && entry.data === '/base-media/' + B.id + '/base.json' && (entry.peek || []).every((u) => /^\/base-media\//.test(u)), tag + `the ${B.name} folder pins its base`);
   ok(entry && Array.isArray(entry.worlds) && entry.worlds.every((w) => w.first >= 1), tag + 'the catalog gives each world its first word (folder meters)');
 }
 BASES.forEach(checkBase);
