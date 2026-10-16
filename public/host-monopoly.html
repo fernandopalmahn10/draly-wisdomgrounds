@@ -3,182 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Dàfùwēng · Anfitrión</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Long+Cang&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20261011a">
-  <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/monopoly.css?v=20260521a">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#151c48">
+  <title>Dàfùwēng · Monopolio · Anfitrión</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20261016a">
 </head>
-<body class="monopoly-bg">
-  <div class="lantern l1"></div>
-  <div class="lantern l2"></div>
-  <button class="muted-toggle" id="mute-btn">🔊 On</button>
+<body class="mnh">
+  <button class="mnh-btn mnh-mute" id="mute-btn" type="button" aria-pressed="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Sonido</span>
+  </button>
 
-  <!-- LOBBY -->
-  <div id="screen-lobby" class="container">
-    <div style="text-align:center; margin-bottom:16px;">
-      <div class="market-banner">🏯 大富翁 · Monopolio Chino 🎲</div>
-      <div style="color:var(--ink-dim); font-weight:700; letter-spacing:0.1em; margin-top:8px;">PIN</div>
-      <div class="pin-display" id="pin-display">····</div>
-      <div style="color:var(--ink-dim); font-size:0.9rem;">
-        Tus jugadores entran en <span id="join-url" style="color:var(--gold-glow); font-weight:800;">esta URL</span>
-      </div>
-    </div>
-
-    <div class="card" style="margin-bottom:16px;">
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
-        <div style="font-size:2rem;">📚</div>
-        <div style="flex:1;">
-          <div style="font-size:0.75rem; color:var(--ink-dim); letter-spacing:0.15em; text-transform:uppercase;">Set cargado</div>
-          <div id="set-title-display" style="font-weight:800; font-size:1.15rem;">…</div>
-          <div id="set-count-display" style="color:var(--ink-dim); font-size:0.85rem;">…</div>
+  <!-- LOBBY: PIN + QR, the 3 steps, the questions, time, the class as full-body characters (they play in boards of 4) -->
+  <main id="screen-lobby" class="mnh-lobby">
+    <section class="mnh-left">
+      <h1 class="mnh-title" translate="no">Dàfùwēng · Monopolio<small>El Gran Tablero de Dubái</small></h1>
+      <div class="mnh-pin-card">
+        <div>
+          <div class="mnh-pin-label">PIN</div>
+          <div class="mnh-pin" id="pin-display">···</div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="location.href='/games.html?setId=' + new URLSearchParams(location.search).get('setId')">Cambiar juego</button>
+        <div class="mnh-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
+        <div class="mnh-qr" id="qr" aria-hidden="true"></div>
       </div>
-      <div class="duration-control">
-        <span>⏱ Duración</span>
-        <input type="range" id="duration-slider" min="120" max="600" step="30" value="300">
-        <span class="duration-value" id="duration-value">5m</span>
-      </div>
-    </div>
-
-    <div class="host-grid">
-      <div class="team-panel team-red">
-        <div class="team-header">
-          <div class="team-mascot">🐉</div>
-          <div>
-            <div class="team-name">Equipo Rojo</div>
-            <div style="color:var(--ink-dim); font-size:0.85rem;">紅龍商人</div>
-          </div>
-        </div>
-        <div class="player-chips" id="players-red"></div>
-      </div>
-      <div class="team-panel team-gold">
-        <div class="team-header">
-          <div class="team-mascot">🐲</div>
-          <div>
-            <div class="team-name">Equipo Dorado</div>
-            <div style="color:var(--ink-dim); font-size:0.85rem;">金龍商人</div>
-          </div>
-        </div>
-        <div class="player-chips" id="players-gold"></div>
-      </div>
-    </div>
-
-    <p style="text-align:center; color:var(--ink-dim); font-size:0.85rem; margin-top:12px;">
-      Toca el chip de un jugador para cambiar de equipo
-    </p>
-
-    <div class="controls-panel">
-      <div class="controls-row" style="justify-content:center;">
-        <button class="btn btn-ghost" id="balance-btn">⚖️ Equilibrar</button>
-        <button class="btn btn-jade" id="start-btn" disabled>▶️ ¡A girar el dado!</button>
-      </div>
-    </div>
-
-    <div class="card" style="margin-top:18px;">
-      <div style="font-weight:800; font-size:1.05rem; margin-bottom:8px;">🎯 Cómo se juega</div>
-      <ol style="color:var(--ink-dim); font-size:0.95rem; line-height:1.6; padding-left:20px; margin:0;">
-        <li>Cada jugador empieza en 北京 START con <strong>¥200</strong>.</li>
-        <li>Responde una pregunta bien → tu dragón <strong>lanza un dado</strong> 🎲 (1-6) y avanza esos casilleros.</li>
-        <li>¿Casillero vacío de ciudad? Se compra <strong>automáticamente</strong> 🏙.</li>
-        <li>¿Casillero del enemigo? Pagas <strong>renta</strong> 💸.</li>
-        <li>🎴 Cartas y 🐉 tesoros dan dinero · 💰 impuestos te quitan · 🏛 cárcel pierdes turno · 🏮 fiesta jackpot!</li>
-        <li>El equipo con <strong>más riqueza</strong> (efectivo + propiedades) cuando termine el tiempo gana. ¥2000 = victoria instantánea 🏆.</li>
+      <ol class="mnh-steps">
+        <li><div class="mnh-step"><div class="mnh-q"><i></i><i></i><i></i><i></i></div></div>Responde bien<small>cada acierto es un dado</small></li>
+        <li><div class="mnh-step" id="step-dice"></div>Toca el dado<small>camina por Dubái</small></li>
+        <li><div class="mnh-step" id="step-star"></div>¡Junta estrellas!<small>10 monedas = 1 estrella</small></li>
       </ol>
-    </div>
-  </div>
-
-  <!-- COUNTDOWN -->
-  <div id="screen-countdown" class="hidden countdown-overlay">
-    <div class="countdown-num" id="countdown-num">3</div>
-  </div>
-
-  <!-- ACTIVE -->
-  <div id="screen-active" class="hidden mp-container">
-    <div class="sticky-pin">
-      <span class="sticky-pin-label">PIN</span>
-      <span class="sticky-pin-value" id="active-pin-display">····</span>
-    </div>
-
-    <div class="mp-topbar">
-      <div class="mp-team red">
-        <div class="mp-team-emoji">🐉</div>
-        <div class="mp-team-label">Rojo</div>
-        <div class="mp-team-wealth">¥<span id="wealth-red">0</span></div>
-      </div>
-      <div class="mp-time"><span id="timer-display">5:00</span></div>
-      <div class="mp-team gold">
-        <div class="mp-team-wealth">¥<span id="wealth-gold">0</span></div>
-        <div class="mp-team-label">Dorado</div>
-        <div class="mp-team-emoji">🐲</div>
-      </div>
-    </div>
-
-    <div class="mp-stage">
-      <!-- LEFT SIDEBAR — Team Red roster (all members, ¥ wealth, ranked) -->
-      <aside class="mp-roster-sidebar mp-roster-red" id="mp-roster-red">
-        <div class="mp-roster-header"><span class="mp-roster-mascot">🐉</span> Equipo Rojo</div>
-        <div class="mp-roster-list" id="mp-roster-list-red"></div>
-      </aside>
-
-      <!-- 3D-tilted board container -->
-      <div class="mp-board-perspective">
-        <div class="mp-board" id="mp-board">
-          <!-- 16 tiles rendered by JS in CSS-grid perimeter -->
-          <div class="mp-board-center" id="mp-board-center">
-            <div class="mp-landmark">🏯</div>
-            <div class="mp-board-title">Dàfùwēng</div>
-            <div class="mp-board-subtitle">Trivia Monopolio Chino</div>
-            <!-- LIVE leaderboard — top 5 richest players, updates every move -->
-            <div class="mp-leaderboard" id="mp-leaderboard"></div>
-            <div class="mp-dice" id="mp-dice"></div>
-            <div class="mp-recent-event" id="mp-recent-event"></div>
-          </div>
+      <p class="mnh-hint" id="set-line">Preguntas: <b id="set-title">…</b> · <a id="set-change" href="#" style="color:#ffd76a">cambiar</a></p>
+      <div class="mnh-tools">
+        <div class="mnh-dur" role="group" aria-label="Tiempo de juego"><span>Tiempo</span>
+          <button class="mnh-btn" type="button" data-s="180">3 min</button><button class="mnh-btn on" type="button" data-s="240">4 min</button><button class="mnh-btn" type="button" data-s="300">5 min</button>
         </div>
+        <button class="mnh-btn go" id="start-btn" type="button" disabled>¡A jugar!</button>
       </div>
+    </section>
+    <section class="mnh-right">
+      <div class="mnh-preview" id="preview"></div>
+      <div class="mnh-crowd-box">
+        <div class="mnh-crowd-head"><span>En la sala: <b id="count">0</b></span><small id="boards-note">Tableros de 4: cada uno contra 3 rivales</small></div>
+        <div class="mnh-crowd" id="crowd"></div>
+      </div>
+      <p class="mnh-hint">Gana cada tablero quien junte más estrellas (si empatan, más monedas). Al final: estrellas bonus y el podio de la clase.</p>
+    </section>
+  </main>
 
-      <!-- RIGHT SIDEBAR — Team Gold roster -->
-      <aside class="mp-roster-sidebar mp-roster-gold" id="mp-roster-gold">
-        <div class="mp-roster-header"><span class="mp-roster-mascot">🐲</span> Equipo Dorado</div>
-        <div class="mp-roster-list" id="mp-roster-list-gold"></div>
-      </aside>
-
-      <!-- Flying money + event toasts spawn here -->
-      <div class="mp-fx-layer" id="mp-fx-layer"></div>
+  <!-- THE GAME: every board side by side, the class top 3 -->
+  <main id="screen-stage" class="mnh-stage hidden">
+    <div class="mnh-top">
+      <div class="mnh-top-title" translate="no">Dàfùwēng<small>El Gran Tablero de Dubái</small></div>
+      <div class="mnh-pin-mini">PIN <b id="active-pin">···</b></div>
+      <div class="mnh-top3" id="top3" aria-label="Los 3 primeros de la clase"></div>
+      <div class="mnh-clock" role="timer"><span>×2</span><b id="clock">4:00</b></div>
     </div>
+    <div class="mnh-grid" id="grid"></div>
+  </main>
 
-    <div style="text-align:center; padding:6px;">
-      <button class="end-now-floating" id="end-now-btn">🛑 Terminar ronda</button>
-    </div>
+  <nav class="mnh-controls hidden" id="controls" aria-label="Controles del profe">
+    <button class="mnh-btn" id="pause-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg><span>Pausa</span></button>
+    <button class="mnh-btn" id="more-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span>30 s</span></button>
+    <button class="mnh-btn hidden" id="skip-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l7 6-7 6zM12 6l7 6-7 6z" fill="currentColor"/></svg><span>Saltar</span></button>
+    <button class="mnh-btn" id="end-now-btn" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg><span>Terminar</span></button>
+  </nav>
+
+  <div class="mnh-band" id="band" role="status" aria-live="polite"></div>
+  <div class="mnh-runin hidden" id="runin"></div>
+  <div class="mnh-rules hidden" id="rules"></div>
+  <div class="mnh-count10 hidden" id="count10" aria-hidden="true"></div>
+  <div class="mnh-final hidden" id="final"><b>¡FINAL!</b></div>
+  <div class="mnh-paused hidden" id="paused">
+    <div><img src="/assets/dralingo/wise.webp" alt=""><b>Pausa</b><span>Todos quietos: miren al profe</span>
+      <div class="row"><button class="mnh-btn go" id="resume-btn" type="button">Seguir jugando</button><button class="mnh-btn" id="paused-end-btn" type="button">Terminar</button></div></div>
   </div>
 
-  <!-- WIN -->
-  <div id="screen-win" class="hidden container">
-    <div class="win-screen">
-      <div id="win-emoji" style="font-size:7rem;">🏯</div>
-      <div class="winner-banner" id="win-banner">¡Ganador!</div>
-      <div class="final-scores">
-        <div><span class="red">¥<span id="final-red">0</span></span></div>
-        <div style="color:var(--ink-dim);">vs</div>
-        <div><span class="gold">¥<span id="final-gold">0</span></span></div>
-      </div>
-      <div class="win-narration" id="win-narration"></div>
-      <div class="leaderboard" id="leaderboard"></div>
-      <div style="display:flex; gap:12px; margin-top:24px;">
-        <button class="btn btn-ghost" onclick="location.href='/'">🏠 Inicio</button>
-        <button class="btn btn-jade" id="play-again-btn">🔄 Nueva ronda</button>
-      </div>
-    </div>
+  <!-- THE CEREMONY: the bonus stars of every board, each board's winner, the class podium -->
+  <main id="screen-win" class="mnh-end hidden">
+    <div id="cer" style="display:flex;flex-direction:column;flex:1 1 auto;min-height:0"></div>
+  </main>
+  <button class="mnh-btn mnh-skip hidden" id="cer-skip" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6l7 6-7 6zM12 6l7 6-7 6z" fill="currentColor"/></svg><span>Saltar</span></button>
+  <div class="mnh-endtools hidden" id="endtools">
+    <button class="mnh-btn" type="button" id="home-btn">Inicio</button>
+    <button class="mnh-btn go" id="play-again-btn" type="button">Otra ronda</button>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <!-- 🔑 2026-10-15: creating a game needs a teacher the first time on a device (js/teacher-gate.js) -->
   <script src="/js/teacher-gate.js?v=20261015g"></script>
-  <script src="/js/sounds.js?v=20260521a"></script>
-  <script src="/js/enter.js"></script>
-  <script src="/js/dralingo.js"></script>
-  <script src="/js/host-monopoly.js?v=20260521a"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script src="/js/sounds.js?v=20261015s"></script>
+  <script src="/js/saga.js?v=20261013a"></script>
+  <script src="/js/halcon-board.js?v=20261014a"></script>
+  <script src="/js/cast.js?v=20261016m"></script>
+  <script src="/js/monopoly-map.js?v=20261016a"></script>
+  <script src="/js/monopoly-board.js?v=20261016a"></script>
+  <script src="/js/host-monopoly.js?v=20261016a"></script>
   <script src="/js/live-game.js?v=20261011c"></script>
 </body>
 </html>

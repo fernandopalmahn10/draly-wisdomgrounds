@@ -40,6 +40,7 @@ const SnowMap = require('./public/js/snow-map');     // … and its map, shared 
 const Escape = require('./core/escape');             // La Gran Fuga de Dubái (rules)
 const EscapeMap = require('./public/js/escape-map'); // … and its zona segura rooms, shared with the phones and the projector
 const Halcon = require('./core/halcon');             // Ojos de Halcón: Mario Party «Looking for Love» in boards of 4 (rules)
+const Mono = require('./core/monopoly');             // Dàfùwēng · Monopolio v2: «El Gran Tablero de Dubái», boards of 4 (rules)
 const Mochi = require('./core/mochi');               // Mochi Mash v2: «La Terraza del Mochi», team mash + ceremony (rules)
 const Pinata = require('./core/pinata');             // Piñata Tigre v2: «La Fiesta de las Piñatas», team hits + timing meter (rules)
 const Sixseven = require('./core/sixseven');         // 6-7 Swing v2: «La Balanza de Oro», sums that are always 6 or 7 (rules)
@@ -5446,47 +5447,6 @@ const DR_ALT_MAX     = 500;   // altitude needed to reach the heavens + win
 const DR_MASH_MS     = 5000;  // 5 s flap window after a correct answer
 const DR_ALT_BCAST_MS = 100;  // throttle altitude broadcasts to ~10 Hz
 
-// === 中国大富翁 · Chinese Trivia Monopoly ===
-// 16-tile perimeter board. Each correct vocab answer rolls a 1d6 and advances
-// the player's dragon token by that many tiles. Tiles trigger auto-buy / rent /
-// bonuses on landing. Pass over START → +¥200. Team wealth (sum of player
-// cash + property values) drives the win condition.
-const MP_TILES = [
-  { id: 0,  type: 'start',    name: 'Salida',      icon: '🏯', side: 'top'    },
-  { id: 1,  type: 'city',     name: 'Shànghǎi',    icon: '🏙', side: 'top',    cost: 80,  rent: 20 },
-  { id: 2,  type: 'card',     name: 'Carta',       icon: '🎴', side: 'top',    bonus: 40 },
-  { id: 3,  type: 'city',     name: 'Guǎngzhōu',   icon: '🛕', side: 'top',    cost: 80,  rent: 20 },
-  { id: 4,  type: 'treasure', name: 'Tesoro',      icon: '🐉', side: 'right',  bonus: 100 },
-  { id: 5,  type: 'city',     name: 'Xī’ān',  icon: '🕌', side: 'right',  cost: 100, rent: 25 },
-  { id: 6,  type: 'card',     name: 'Carta',       icon: '🎴', side: 'right',  bonus: 40 },
-  { id: 7,  type: 'city',     name: 'Hángzhōu',    icon: '🌸', side: 'right',  cost: 120, rent: 30 },
-  { id: 8,  type: 'festival', name: '¡Fiesta!',    icon: '🏮', side: 'bottom' },
-  { id: 9,  type: 'city',     name: 'Chángchéng',  icon: '🧱', side: 'bottom', cost: 140, rent: 35 },
-  { id: 10, type: 'tax',      name: 'Impuesto',    icon: '💰', side: 'bottom', penalty: 50 },
-  { id: 11, type: 'city',     name: 'Yíhéyuán',    icon: '⛲', side: 'bottom', cost: 160, rent: 40 },
-  { id: 12, type: 'jail',     name: 'Cárcel',      icon: '🏛', side: 'left'   },
-  { id: 13, type: 'city',     name: 'Gùgōng',      icon: '🏯', side: 'left',   cost: 180, rent: 45 },
-  { id: 14, type: 'treasure', name: 'Tesoro',      icon: '🐉', side: 'left',   bonus: 100 },
-  { id: 15, type: 'city',     name: 'Tiān’ānmén', icon: '🏛', side: 'left', cost: 200, rent: 50 }
-];
-const MP_BOARD_SIZE     = MP_TILES.length;
-const MP_START_MONEY    = 200;
-// Player character slots — 6 distinct Kenney toon characters with names
-const MP_CHAR_COUNT     = 6;
-const MP_CHAR_NAMES = [
-  'Mei 🛡️',       // 0 — Female adventurer
-  'Liáng 🛡️',     // 1 — Male adventurer
-  'Sara 👩',       // 2 — Female person
-  'Daniel 👨',     // 3 — Male person
-  'Robot-Bao 🤖',  // 4 — Robot
-  'Zombi 🧟'       // 5 — Zombie
-];
-const MP_PASS_BONUS     = 200;     // each time you cross START
-const MP_INSTANT_WIN    = 2000;    // a team hitting this total wealth wins instantly
-const MP_FESTIVAL_BONUS = 150;
-const MP_DICE_MIN       = 1;
-const MP_DICE_MAX       = 6;
-
 function genPin() {
   // Prefer short 3-digit PINs (100-999) so kids can type them in 1 second.
   // If we ever have so many active games that 3-digit space is exhausted
@@ -5534,6 +5494,8 @@ function publicState(game) {
   if (game.gameType === 'hsksim' && game.hsk) {
     out.hsk = { simId: game.hsk.simId, fx: game.hsk.fx || null };
   }
+  // Dàfùwēng · Monopolio: each kid's id (k) and character (sk) for the lobby, the boards and the greyed piece of a kid who left
+  if (game.gameType === 'monopoly') Object.entries(game.players).forEach(([id, p]) => { if (p.mnK) Object.assign(out.players[id], { k: p.mnK, sk: hcSkin(p) }); });
   return out;
 }
 
@@ -5569,6 +5531,7 @@ function broadcast(pin) {
 function nextQuestionFor(game, playerId) {
   const p = game.players[playerId];
   if (!p || !game.questions.length) return null;
+  if (game.gameType === 'monopoly' && !(game.mn && game.mn.phase === 'play')) return null;   // Monopolio: questions only in play (mnTick deals)
 
   // 6-7 Swing v2: its room tick deals every sum (ssDeal, core/sixseven.js); never a generic question
   if (game.gameType === 'sixseven') return null;
@@ -5587,202 +5550,262 @@ function nextQuestionFor(game, playerId) {
   return { qid, text: q.text, answers: shuffled, image };
 }
 
-// === Chinese Monopoly turn resolver ===
-// The player rolls their own dice on their phone — server is just the ref.
-// If a `roll` is provided (player's tap-stopped value), it's used; otherwise
-// the server rolls (safety fallback). Server clamps to 1..6.
-function resolveMonopolyTurn(g, pid, playerRoll) {
-  const p = g.players[pid];
-  if (!p) return null;
-  if (!g.monopoly) return null;
-  // Skipped this turn? (landed on Jail last time)
-  if (p.mpSkip) {
-    p.mpSkip = false;
-    return { skipped: true, roll: 0, fromPos: p.mpPos, toPos: p.mpPos,
-             money: p.mpMoney, action: 'skipped' };
-  }
-  let roll = Number(playerRoll);
-  if (!roll || roll < MP_DICE_MIN || roll > MP_DICE_MAX) {
-    roll = MP_DICE_MIN + Math.floor(Math.random() * (MP_DICE_MAX - MP_DICE_MIN + 1));
-  }
-  const fromPos = p.mpPos || 0;
-  const newPos = (fromPos + roll) % MP_BOARD_SIZE;
-  // Pass-over-START bonus (if we wrap around, we passed start)
-  if (fromPos + roll >= MP_BOARD_SIZE) {
-    p.mpMoney = (p.mpMoney || 0) + MP_PASS_BONUS;
-  }
-  p.mpPos = newPos;
-  const tile = MP_TILES[newPos];
-  const result = {
-    skipped: false,
-    roll,
-    fromPos,
-    toPos: newPos,
-    tile: { id: tile.id, type: tile.type, name: tile.name, icon: tile.icon },
-    action: 'landed',
-    moneyDelta: 0,
-    rentTo: null,
-    bought: false,
-    money: 0
-  };
-  switch (tile.type) {
-    case 'start':
-      // Landing exactly on START → extra +¥200 (in addition to pass bonus)
-      p.mpMoney += MP_PASS_BONUS;
-      result.moneyDelta = MP_PASS_BONUS;
-      result.action = 'start-bonus';
-      break;
-    case 'city': {
-      const owner = g.monopoly.ownership[tile.id];
-      if (!owner) {
-        // Auto-buy if player has enough cash
-        if (p.mpMoney >= tile.cost) {
-          p.mpMoney -= tile.cost;
-          g.monopoly.ownership[tile.id] = p.team;
-          result.bought = true;
-          result.action = 'bought';
-          result.moneyDelta = -tile.cost;
-        } else {
-          result.action = 'cant-afford';
-        }
-      } else if (owner === p.team) {
-        result.action = 'own-city';
-      } else {
-        // Pay rent to the enemy team — split equally among that team's players
-        const enemyTeam = owner;
-        const rentDue = Math.min(p.mpMoney, tile.rent);
-        p.mpMoney -= rentDue;
-        // Distribute rent among the enemy team's players (so it's MP team wealth)
-        const enemies = Object.values(g.players).filter((q) => q.team === enemyTeam);
-        if (enemies.length) {
-          const each = Math.floor(rentDue / enemies.length) || 0;
-          const remainder = rentDue - each * enemies.length;
-          enemies.forEach((q, i) => { q.mpMoney = (q.mpMoney || 0) + each + (i === 0 ? remainder : 0); });
-        }
-        result.action = 'paid-rent';
-        result.moneyDelta = -rentDue;
-        result.rentTo = enemyTeam;
-        result.rentAmount = rentDue;
-      }
-      break;
-    }
-    case 'card':
-      p.mpMoney += (tile.bonus || 40);
-      result.moneyDelta = tile.bonus || 40;
-      result.action = 'card-bonus';
-      break;
-    case 'treasure':
-      p.mpMoney += (tile.bonus || 100);
-      result.moneyDelta = tile.bonus || 100;
-      result.action = 'treasure';
-      break;
-    case 'tax': {
-      const pen = Math.min(p.mpMoney, tile.penalty || 50);
-      p.mpMoney -= pen;
-      result.moneyDelta = -pen;
-      result.action = 'tax';
-      break;
-    }
-    case 'festival':
-      p.mpMoney += MP_FESTIVAL_BONUS;
-      result.moneyDelta = MP_FESTIVAL_BONUS;
-      result.action = 'festival';
-      break;
-    case 'jail':
-      p.mpSkip = true;
-      result.action = 'jail';
-      break;
-  }
-  // Personal score reflects player's individual progress (cash earned)
-  p.score = (p.score || 0) + Math.max(0, result.moneyDelta) + (result.bought ? tile.cost : 0);
-  result.money = p.mpMoney;
-  return result;
+// === 🎲 DÀFÙWĒNG · MONOPOLIO v2 (gameType 'monopoly') — «El Gran Tablero de Dubái», a Mario Party board night ===
+// Rules in core/monopoly.js (spec docs/specs/monopoly-v2.md). Boards of 4, every kid for themself, all boards on the same
+// map. The boards are dealt when the countdown starts (each phone runs in with its own board, mn:init); one 200 ms tick
+// per room runs the clock: intro → play (questions dealt, a dice window nobody tapped rolls by itself, time-ups called)
+// → frenzy (last 30 s) → «¡FINAL!» (open dice windows still roll) → game-end (each phone its own board's ceremony and
+// card, the projector every board + the class podium). A right answer opens a dice window (answer-result.monopoly); the
+// tap (player:mn-roll) or the tick resolves the whole turn at once: the kid gets its script (mn:turn), the other phones
+// of its board and the projector a copy (mn:move). Each board is a socket.io room of its own (the game id in its name,
+// so «Otra ronda» never mixes boards). No full-room 'state' push on answers.
+const MN_TICK_MS = 200;
+function mnEnsureId(g, p) { if (!p.mnK) p.mnK = (g.mnNextK = (g.mnNextK || 0) + 1); return p.mnK; }
+const mnRoom = (pin, m, bid) => `${pin}:mn:${m.id}:${bid}`;
+function mnJoinRoom(pin, g, pid, p) {
+  const m = g.mn;
+  const r = m && Mono.kid(m, p.mnK);
+  if (!r || r.b == null) return;
+  const s = io.sockets.sockets.get(pid);
+  if (s) s.join(mnRoom(pin, m, r.b));
 }
-
-// Once the player commits their tap-stopped dice roll (or the safety timer
-// fires), this resolves the turn, broadcasts the move, and queues the next
-// question for the player.
-function processMonopolyRoll(pin, pid, playerRoll) {
+function mnOnline(g) {
+  const on = new Set();
+  Object.values(g.players).forEach((p) => { if (p.mnK && !p.disconnected) on.add(p.mnK); });
+  return (k) => on.has(k);
+}
+const mnClock = (m) => (m.paused ? m.pausedAt : Date.now());
+function mnInitPayload(g, pid) {
+  const m = g.mn;
+  const clock = mnClock(m);
+  const online = mnOnline(g);
+  const out = {
+    id: m.id, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock), paused: !!m.paused,
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzy: !!m.frenzy,
+    frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null, duration: m.duration, boardsN: m.boards.length,
+  };
+  if (!pid) { out.boards = m.boards.map((b) => Mono.boardView(m, b, online)); return out; }
+  const p = g.players[pid];
+  const r = p && Mono.kid(m, p.mnK);
+  if (!r || r.b == null) return out;
+  const b = Mono.boardOf(m, r.b);
+  out.board = b ? Mono.boardView(m, b, online) : null;
+  out.you = {
+    k: r.k, b: r.b, c: r.c, pos: r.pos, coins: r.coins, stars: r.stars, right: r.right, streak: r.streak, best: r.best,
+    // an open dice window (with the time really left), a turn still playing (its script again), a wait
+    turn: r.turn ? { tid: r.turn.tid, dice: r.turn.dice, msLeft: Math.max(0, Mono.R.LEAD_MS + Mono.R.DICE_MS - (clock - r.turn.sentAt)) } : null,
+    busyMs: r.nextQAt ? Math.max(0, r.nextQAt - clock) : 0,
+    last: r.last && r.nextQAt > clock ? r.last : null,
+  };
+  return out;
+}
+function mnStop(g) { if (g && g.mn && g.mn.timer) { clearInterval(g.mn.timer); g.mn.timer = null; } }
+// The countdown starts: the boards are dealt now, so every phone runs in with its own board and the projector with all.
+function mnDeal(pin, g) {
+  mnStop(g);
+  const now = Date.now();
+  const m = Mono.newGame(1 + Math.floor(Math.random() * 1e9), g.duration, now);
+  m.phase = 'countdown';
+  m.phaseUntil = now + COUNTDOWN_MS;
+  g.mn = m;
+  Object.values(g.players).forEach((p) => { mnEnsureId(g, p); p.currentQ = null; p.mashUntil = 0; });
+  Mono.deal(m, Object.values(g.players).filter((p) => !p.disconnected).map((p) => [p.mnK, p.name, hcSkin(p)]));
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected || !Mono.inGame(m, p.mnK)) return;
+    mnJoinRoom(pin, g, pid, p);
+    io.to(pid).emit('mn:init', mnInitPayload(g, pid));
+  });
+  io.to(g.hostId).emit('mn:init', mnInitPayload(g, null));
+}
+// A kid who wasn't dealt in (joined late, came back after the deal) sits at the smallest board; that board's phones and
+// the projector get the new piece. Returns true when the kid got a new seat.
+function mnSeatLate(pin, g, pid, p) {
+  const m = g.mn;
+  const b = Mono.seatLate(m, mnEnsureId(g, p), p.name, hcSkin(p));
+  if (!b) return false;
+  mnJoinRoom(pin, g, pid, p);
+  const view = Mono.boardView(m, b, mnOnline(g));
+  io.to(mnRoom(pin, m, b.id)).except(pid).emit('mn:seat', { board: view });
+  io.to(g.hostId).emit('mn:seat', { board: view });
+  return true;
+}
+// The countdown is over: the intro («¡Responde y tira el dado!» → «¿Listos?» → «¡YA!»), then mnPlay; the tick deals.
+function mnStart(pin, g) {
+  const m = g.mn;
+  if (!m || m.phase !== 'countdown') return;
+  const now = Date.now();
+  m.phase = 'intro';
+  m.phaseAt = now;
+  m.phaseUntil = now + Mono.R.INTRO_MS;
+  Object.entries(g.players).forEach(([pid, p]) => {
+    mnEnsureId(g, p);
+    p.currentQ = null;
+    p.lastQuestionAt = now;
+    if (!p.disconnected && !Mono.inGame(m, p.mnK)) { mnSeatLate(pin, g, pid, p); io.to(pid).emit('mn:init', mnInitPayload(g, pid)); }
+  });
+  g.endsAt = now + Mono.R.INTRO_MS + m.duration * 1000;
+  io.to(pin).emit('mn:intro', { id: m.id, ms: Mono.R.INTRO_MS });
+  mnStop(g);
+  m.timer = setInterval(() => mnTick(pin, m), MN_TICK_MS);
+}
+function mnPlay(pin, g) {
+  const m = g.mn;
+  if (!m || m.phase !== 'intro') return;
+  const now = Date.now();
+  Mono.startPlay(m, now);
+  g.endsAt = m.endsAt;
+  io.to(pin).emit('mn:play', { id: m.id, endsMs: m.endsAt - now, frenzyMs: m.frenzyAt - now });
+  g._lastBcast = 0;
+  broadcast(pin);                      // (the next tick deals every kid's first question)
+}
+function mnSendQ(g, pid, p) {
+  const q = nextQuestionFor(g, pid);
+  if (q) io.to(pid).emit('question', q);
+}
+// A turn resolved (a tap, or by itself): the kid its script, the board's other phones and the projector the move.
+function mnRoll(pin, g, pid, p, auto, now) {
+  const m = g.mn;
+  const t = Mono.roll(m, p.mnK, now, auto);
+  if (!t) return null;
+  if (!p.disconnected) io.to(pid).emit('mn:turn', t.script);
+  io.to(mnRoom(pin, m, t.move.b)).except(pid).emit('mn:move', t.move);
+  io.to(g.hostId).emit('mn:move', t.move);
+  return t;
+}
+// A right / wrong / time-up answer. Right: the dice window opens (its tap or the tick rolls). Wrong: the wait.
+function mnAnswer(pin, g, pid, p, correct, correctText, timeUp) {
+  const m = g.mn;
+  const now = Date.now();
+  const res = Mono.answer(m, p.mnK, correct, now - (p.lastQuestionAt || now), now, !!timeUp);
+  if (!res) return;
+  if (res.right) io.to(pid).emit('answer-result', { correct: true, correctText, monopoly: Object.assign({ right: true, streak: res.streak }, res.turn) });
+  else io.to(pid).emit('answer-result', { correct: false, correctText, monopoly: { right: false, wait: res.wait, calm: res.calm, tooFast: res.tooFast, timeUp: res.timeUp } });
+  io.to(g.hostId).emit('mn:ans', { k: p.mnK, right: res.right });
+}
+function mnTick(pin, m) {
   const g = games[pin];
-  if (!g || g.gameType !== 'monopoly' || g.state !== 'active') return;
-  const p = g.players[pid];
-  if (!p || !p.mpAwaitingRoll) return;
-  p.mpAwaitingRoll = false;
-  const turn = resolveMonopolyTurn(g, pid, playerRoll);
-  g.teamScores = {
-    red:  monopolyTeamWealth(g, 'red'),
-    gold: monopolyTeamWealth(g, 'gold')
-  };
-  // Tell the player their turn outcome
-  io.to(pid).emit('mp:result', {
-    ...turn,
-    money: p.mpMoney
-  });
-  // Broadcast for host board animation
-  io.to(pin).emit('mp:move', {
-    playerId: pid,
-    playerName: p.name,
-    team: p.team,
-    char: p.mpChar,
-    ...turn,
-    ownership: g.monopoly.ownership,
-    teamScores: g.teamScores,
-    // Also send player's running wealth for the live leaderboard on the host
-    playerWealth: p.mpMoney
-  });
-  // Tycoon milestone — celebrate the team hitting MP_INSTANT_WIN, but
-  // RESPECT THE TIMER. Per teacher feedback, games (except piñata)
-  // should run for the full duration the host set. Fire the tycoon banner
-  // once per team per match so the celebration still happens.
-  const w = (g.teamScores.red >= MP_INSTANT_WIN) ? 'red'
-          : (g.teamScores.gold >= MP_INSTANT_WIN) ? 'gold' : null;
-  if (w && !g.monopoly.tycoonAnnounced) {
-    g.monopoly.tycoonAnnounced = w;
-    io.to(pin).emit('mp:tycoon', { team: w, teamScores: g.teamScores });
-    // No setTimeout/endGame — the round continues until the duration expires.
-  }
-  // Queue next question after the worst-case client animation budget:
-  // 6 walk-steps × 360ms + camera-hold 1.7s + tile reaction overlay 1.9s
-  // = ~5800ms. We use 6500ms as a safety ceiling so the player never gets
-  // kicked off the walk/celebration mid-animation. The client also emits
-  // a "monopoly:ready" signal — whichever arrives first wins.
-  if (g.mpQuestionTimers && g.mpQuestionTimers[pid]) {
-    clearTimeout(g.mpQuestionTimers[pid]);
-  }
-  if (!g.mpQuestionTimers) g.mpQuestionTimers = {};
-  const sendNext = () => {
-    if (g.mpQuestionTimers) delete g.mpQuestionTimers[pid];
-    if (!games[pin] || games[pin].state !== 'active') return;
-    if (!g.players[pid]) return;
-    // Don't double-send if a question was already pushed via the ready signal
-    if (g.players[pid]._mpQuestionSent) {
-      g.players[pid]._mpQuestionSent = false;
-      return;
+  if (!g || g.mn !== m || g.state !== 'active') { clearInterval(m.timer); m.timer = null; return; }
+  if (m.paused) return;
+  const now = Date.now();
+  try {
+    if (m.phase === 'intro') { if (now >= m.phaseUntil) mnPlay(pin, g); return; }
+    if (m.phase !== 'play' && m.phase !== 'final') return;
+    Object.entries(g.players).forEach(([pid, p]) => { try {
+      const r = Mono.kid(m, p.mnK);
+      if (!r || r.b == null) return;
+      if (r.turn && now >= Mono.rollAt(r)) mnRoll(pin, g, pid, p, true, now);   // no tap in time: the dice roll by themselves
+      if (m.phase !== 'play') return;
+      // a question nobody answered: «time up» 3 s after the phone's 20 s (a frozen tab can't hold a kid)
+      if (p.currentQ && now - (p.lastQuestionAt || now) >= Mono.R.Q_MS + Mono.R.Q_GRACE_MS) {
+        const cq = p.currentQ;
+        p.currentQ = null;
+        mnAnswer(pin, g, pid, p, false, cq.answers[cq.correctIdx], true);
+      }
+      if (!p.disconnected && !p.currentQ && !r.turn && now >= (r.nextQAt || 0)) mnSendQ(g, pid, p);
+    } catch (e) { console.error('[monopoly] kid', e); } });
+    if (m.phase === 'play') {
+      const ev = Mono.tick(m, now);
+      ev.leads.forEach((l) => { io.to(mnRoom(pin, m, l.b)).emit('mn:lead', l); io.to(g.hostId).emit('mn:lead', l); });
+      if (ev.frenzy) io.to(pin).emit('mn:frenzy', { endsMs: Math.max(0, m.endsAt - now) });
+      if (now >= m.endsAt) mnFinal(pin, g);
+    } else if (now >= m.phaseUntil) {
+      // «¡FINAL!» is over: a dice window still open rolls now (a right answer is never lost), then the ceremony
+      Object.entries(g.players).forEach(([pid, p]) => { const r = Mono.kid(m, p.mnK); if (r && r.turn) mnRoll(pin, g, pid, p, true, now); });
+      mnStop(g);
+      if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+      endGame(pin);
     }
-    g.players[pid]._mpQuestionSent = true;
-    const q = nextQuestionFor(g, pid);
-    if (q) io.to(pid).emit('question', q);
-  };
-  g.mpQuestionTimers[pid] = setTimeout(() => {
-    g.players[pid] && (g.players[pid]._mpQuestionSent = false);
-    sendNext();
-  }, 6500);
-  // Stash the resolver so the client's `monopoly:ready` event can call it.
-  if (!g.mpQuestionResolvers) g.mpQuestionResolvers = {};
-  g.mpQuestionResolvers[pid] = sendNext;
+  } catch (e) { console.error('[monopoly] tick', e); }
 }
-
-// Sum total team wealth: cash + value of owned cities.
-function monopolyTeamWealth(g, team) {
-  let total = 0;
-  Object.values(g.players).forEach((p) => {
-    if (p.team === team) total += (p.mpMoney || 0);
+// «¡FINAL!» on every screen; the tick ends the game FINAL_MS later (a dice window still open can be tapped meanwhile).
+function mnFinal(pin, g) {
+  const m = g.mn;
+  if (!m || m.phase === 'final' || m.phase === 'done') return;
+  const now = Date.now();
+  if (m.paused) {
+    const shift = now - m.pausedAt;
+    Mono.shiftTimes(m, shift);
+    Object.values(g.players).forEach((p) => { if (p.lastQuestionAt) p.lastQuestionAt += shift; });
+    m.paused = false;
+  }
+  if (m.phase !== 'play') {           // «Terminar» in the countdown / intro: nothing played yet
+    Mono.startPlay(m, now);
+  }
+  Mono.final(m, now);
+  Object.values(g.players).forEach((p) => { p.currentQ = null; });
+  io.to(pin).emit('mn:final', { id: m.id, ms: Mono.R.FINAL_MS });
+  if (!m.timer) m.timer = setInterval(() => mnTick(pin, m), MN_TICK_MS);
+}
+function mnPause(pin, g, paused) {
+  const m = g.mn;
+  if (!m || !!m.paused === !!paused || m.phase === 'final' || m.phase === 'done' || m.phase === 'countdown') return;
+  const now = Date.now();
+  if (paused) { m.paused = true; m.pausedAt = now; }
+  else {
+    const shift = now - m.pausedAt;
+    Mono.shiftTimes(m, shift);
+    Object.values(g.players).forEach((p) => { if (p.lastQuestionAt) p.lastQuestionAt += shift; });
+    if (g.endsAt) g.endsAt += shift;
+    m.paused = false;
+  }
+  const clock = mnClock(m);
+  io.to(pin).emit('mn:pause', {
+    id: m.id, paused: !!m.paused, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock),
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null,
   });
-  MP_TILES.forEach((t) => {
-    if (t.type !== 'city') return;
-    if (g.monopoly && g.monopoly.ownership[t.id] === team) total += t.cost;
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// The end: bonus stars per board, each board's winner, the class podium; each phone gets its own board + its card
+// (built again on demand for a reconnect).
+function mnEndPayloads(g) {
+  const m = g.mn;
+  const fin = Mono.finish(m);
+  const lite = (x) => x && { k: x.k, name: x.name, skin: x.skin, c: x.c, b: x.b, total: x.total, stars: x.stars, coins: x.coins, rank: x.rank, bonus: x.bonus, lands: x.lands, right: x.right };
+  const boards = fin.boards.map((bd) => ({
+    id: bd.id, star: bd.star, owners: bd.owners, winners: bd.winners, rows: bd.rows.map(lite),
+    bonus: bd.bonus.map((s) => ({ id: s.id, name: s.name, what: s.what, value: s.value, winners: s.winners })),
+  }));
+  const podium = fin.podium.map(lite);
+  const byK = {};
+  fin.rows.forEach((x) => { byK[x.k] = x; });
+  const common = { winner: 'tie', teamScores: { red: 0, gold: 0 } };   // (no teams: the shared phone code reads these)
+  return {
+    byK,
+    host: Object.assign({
+      leaderboard: podium.map((x) => ({ name: x.name, score: x.total, team: 'red' })),
+      monopoly: { boards, podium, count: fin.rows.length },
+    }, common),
+    forPlayer(pid) {
+      const p = g.players[pid];
+      const x = p && byK[p.mnK];
+      if (!x) return null;
+      const board = boards.find((bd) => bd.id === x.b) || null;
+      return Object.assign({}, common, {
+        scores: { [pid]: x.total },
+        monopoly: { board, podium, count: fin.rows.length, boardsN: boards.length },
+        me: {
+          k: x.k, b: x.b, c: x.c, rank: x.rank, of: x.of, classRank: x.classRank, total: x.total, stars: x.stars, bonus: x.bonus,
+          coins: x.coins, lands: x.lands, right: x.right, answered: x.answered, best: x.best, tolls: x.tolls, bought: x.bought,
+          laps: x.laps, won: !!(board && board.winners.includes(x.k)),
+        },
+      });
+    },
+  };
+}
+function mnFinish(pin, g) {
+  const m = g.mn;
+  if (!m) return;
+  mnStop(g);
+  m.phase = 'done';
+  const end = mnEndPayloads(g);
+  Object.values(g.players).forEach((p) => { const x = end.byK[p.mnK]; if (x) p.score = x.total; });   // the room's own score = stars (bonus included)
+  io.to(g.hostId).emit('game-end', end.host);
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected) return;
+    const one = end.forPlayer(pid);
+    if (one) io.to(pid).emit('game-end', one);
   });
-  return total;
 }
 
 // === 🏰 REINOS DE COLORES (gameType 'kingdoms') — hex territory game, Kahoot «Color Kingdoms» style ===
@@ -7646,6 +7669,13 @@ function endGame(pin) {
     broadcast(pin);
     return;
   }
+  // Dàfùwēng · Monopolio v2: bonus stars per board, each board's winner, the class podium, each phone its own card.
+  if (g.gameType === 'monopoly' && g.mn) {
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+    mnFinish(pin, g);
+    broadcast(pin);
+    return;
+  }
   // Mochi Mash v2: totals, winner, bonus stars, each phone its own card (core/mochi.js finish()).
   if (g.gameType === 'mochi-mash' && g.mm) {
     if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
@@ -7731,7 +7761,7 @@ io.on('connection', (socket) => {
     const defaultDuration =
       type === 'pinata'       ? Pinata.R.DURATION :  // 3 min (the lobby offers 2 / 3 / 4)
       type === 'dragon-eye'   ? 240 :
-      type === 'monopoly'     ? 300 :
+      type === 'monopoly'     ? Mono.R.DURATION :   // 4 min (the lobby offers 3 / 4 / 5)
       type === 'sixseven'     ? Sixseven.R.DURATION :   // 2 min (the lobby offers 2 / 3 / 4)
       type === 'kingdoms'     ? 180 :
       type === 'paint'        ? 240 :
@@ -7865,6 +7895,9 @@ io.on('connection', (socket) => {
     if (g.gameType === 'halcon' && g.halcon && g.state === 'ended') {
       io.to(socket.id).emit('game-end', hcEndPayloads(g).host);
     }
+    // Dàfùwēng · Monopolio: every board again (the countdown or mid-game), or the ceremony again (after the end)
+    if (g.gameType === 'monopoly' && g.mn && (g.state === 'active' || g.state === 'countdown')) io.to(socket.id).emit('mn:init', mnInitPayload(g, null));
+    if (g.gameType === 'monopoly' && g.mn && g.state === 'ended') io.to(socket.id).emit('game-end', mnEndPayloads(g).host);
     // Mochi Mash: the terrace again (mid-game), or the ceremony again (after the end)
     if (g.gameType === 'mochi-mash' && g.mm && g.state === 'active') io.to(socket.id).emit('mm:init', mmInitPayload(g, null));
     if (g.gameType === 'mochi-mash' && g.mm && g.state === 'ended') io.to(socket.id).emit('game-end', mmEndPayloads(g).host);
@@ -7974,6 +8007,7 @@ io.on('connection', (socket) => {
   socket.on('host:start', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
+    if (g.gameType === 'monopoly' && g.state !== 'lobby') return;   // Monopolio: a second click never deals the boards again
     // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
     if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata' || g.gameType === 'sixseven') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
@@ -8030,9 +8064,13 @@ io.on('connection', (socket) => {
     io.to(pin).emit('countdown', { ms: COUNTDOWN_MS });
     // Ojos de Halcón: the boards are dealt now, so the countdown plays each board's run-in on its phones.
     if (g.gameType === 'halcon') hcDeal(pin, g);
+    // Dàfùwēng · Monopolio: the same (each phone's run-in shows its own board of 4)
+    if (g.gameType === 'monopoly') mnDeal(pin, g);
+    const mnDealt = g.gameType === 'monopoly' && g.mn ? g.mn.id : null;   // (a reset / new deal during the countdown: this start is void)
 
     setTimeout(() => {
       if (!games[pin]) return;
+      if (g.gameType === 'monopoly' && (g.state !== 'countdown' || !g.mn || g.mn.id !== mnDealt)) return;
       g.state = 'active';
       g.startedAt = Date.now();
       g.endsAt = Date.now() + g.duration * 1000;
@@ -8043,42 +8081,8 @@ io.on('connection', (socket) => {
         p.mashUntil = 0;
         p.recentTaps = [];
       });
-      // Chinese Monopoly: reset board + each player gets a fresh start + character
-      if (g.gameType === 'monopoly') {
-        g.monopoly = { ownership: {} };
-        // Assign each player a character (0..MP_CHAR_COUNT-1) by join order
-        const pids = Object.keys(g.players);
-        pids.forEach((pid, idx) => {
-          const p = g.players[pid];
-          p.mpPos = 0;
-          p.mpMoney = MP_START_MONEY;
-          p.mpSkip = false;
-          p.mpChar = idx % MP_CHAR_COUNT;
-        });
-        io.to(pin).emit('mp:init', {
-          tiles: MP_TILES,
-          startMoney: MP_START_MONEY,
-          instantWin: MP_INSTANT_WIN,
-          charCount: MP_CHAR_COUNT,
-          charNames: MP_CHAR_NAMES,
-          players: Object.fromEntries(
-            Object.entries(g.players).map(([id, p]) => [id, {
-              name: p.name, team: p.team, pos: 0, money: MP_START_MONEY,
-              char: p.mpChar, charName: MP_CHAR_NAMES[p.mpChar]
-            }])
-          ),
-          teamScores: g.teamScores
-        });
-        // Tell each player privately which character is theirs + show welcome
-        pids.forEach((pid) => {
-          const charIdx = g.players[pid].mpChar;
-          io.to(pid).emit('mp:my-char', {
-            charIdx,
-            charName: MP_CHAR_NAMES[charIdx],
-            welcome: true
-          });
-        });
-      }
+      // Dàfùwēng · Monopolio: the boards were dealt at the countdown; the intro now, then mnPlay (its tick deals the questions)
+      if (g.gameType === 'monopoly') mnStart(pin, g);
 
       // Vuelo del Dragón: TWO dragons, one per team. Players answer vocab to
       // unlock flap windows; each tap raises their dragon's altitude. First to
@@ -8187,6 +8191,8 @@ io.on('connection', (socket) => {
         if (!games[pin] || games[pin].state !== 'active') return;
         endGame(pin);
       }, g.duration * 1000);
+      // Dàfùwēng · Monopolio: its room tick owns the clock (intro, +30 s, pause, «¡FINAL!»): no generic end timer
+      if (g.gameType === 'monopoly' && g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
     }, COUNTDOWN_MS);
   });
 
@@ -8198,6 +8204,12 @@ io.on('connection', (socket) => {
     if (g.gameType === 'halcon' && g.halcon && !g.halcon.paused) {
       if (g.halcon.phase === 'final') return;      // «¡FINAL!» is already on: the finale follows by itself
       if (g.halcon.phase !== 'done') { hcFinal(pin, g); return; }
+    }
+    // Dàfùwēng · Monopolio: «Terminar» plays «¡FINAL!» first (also from the pause card), then the ceremony; never twice
+    if (g.gameType === 'monopoly') {
+      if (!g.mn || g.state !== 'active' || g.mn.phase === 'final' || g.mn.phase === 'done') return;
+      mnFinal(pin, g);
+      return;
     }
     // Mochi Mash: «Terminar» plays «¡FINAL!» first (also when paused: the pause ends), then the ceremony
     if (g.gameType === 'mochi-mash' && g.mm) {
@@ -8264,6 +8276,7 @@ io.on('connection', (socket) => {
     if (g.gameType === 'snow') { snStop(g); g.snow = null; }
     if (g.gameType === 'escape') { esStop(g); g.escape = null; }
     if (g.gameType === 'halcon') { hcStop(g); g.halcon = null; }
+    if (g.gameType === 'monopoly') { mnStop(g); g.mn = null; }   // (each kid keeps its id k; a new game makes new boards)
     if (g.gameType === 'mochi-mash') {
       mmStop(g);
       g.mm = null;
@@ -8307,6 +8320,27 @@ io.on('connection', (socket) => {
       return cb({ ok: false, error: paused ? 'Espera unos minutos y vuelve a escribir el PIN.' : 'No hay ningún juego con ese PIN. Revisa el número.' });
     }
     if (paused && g.gameType === 'hsksim') return cb({ ok: false, error: 'Espera unos minutos y vuelve a escribir el PIN.' });
+    // Dàfùwēng · Monopolio: a kid of this game whose phone dropped around the end (a new socket) gets its slot back and
+    // its own board's ceremony + card again, and stays in the room for «Otra ronda»
+    if (g.state === 'ended' && g.gameType === 'monopoly' && g.mn) {
+      const nm = String(name || '').trim().slice(0, 20).toLowerCase();
+      const ex = nm ? Object.entries(g.players).find(([, p]) => p.name.toLowerCase() === nm) : null;
+      if (ex) {
+        const [oldId, pl] = ex;
+        pl.disconnected = false;
+        pl.disconnectedAt = null;
+        if (pl.cleanupTimer) { clearTimeout(pl.cleanupTimer); pl.cleanupTimer = null; }
+        if (oldId !== socket.id) { g.players[socket.id] = pl; delete g.players[oldId]; }
+        currentPin = pin;
+        role = 'player';
+        socket.join(pin);
+        cb({ ok: true, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: pl.studentCode });
+        io.to(socket.id).emit('state', publicState(g));
+        const one = mnEndPayloads(g).forPlayer(socket.id);
+        if (one) setTimeout(() => io.to(socket.id).emit('game-end', one), 60);
+        return;
+      }
+    }
     // Mochi Mash / Ojos de Halcón: a kid of this game whose phone dropped around the end (a new socket) gets its slot
     // back and its own end card again, and stays in the room for «Otra ronda»
     if (g.state === 'ended' && ((g.gameType === 'mochi-mash' && g.mm) || (g.gameType === 'halcon' && g.halcon) || (g.gameType === 'pinata' && g.pn) || (g.gameType === 'sixseven' && g.ss))) {
@@ -8389,6 +8423,7 @@ io.on('connection', (socket) => {
     // same phone = same record = same sentence history forever.
     const studentRec = Students.getOrCreate(studentCode, cleanName);
     player.studentCode = studentRec.code;
+    if (g.gameType === 'monopoly') mnEnsureId(g, player);     // the projector knows every kid (k + character) from the lobby
     if (g.gameType === 'mochi-mash') mmEnsureId(g, player);   // the projector knows every kid (k + character) from the lobby
     if (g.gameType === 'pinata') pnEnsureId(g, player);
     if (g.gameType === 'sixseven') ssEnsureId(g, player);
@@ -8414,6 +8449,12 @@ io.on('connection', (socket) => {
     // (a new kid sits down when the game starts, hcStart).
     if (g.state === 'countdown' && g.gameType === 'halcon' && g.halcon && Halcon.inGame(g.halcon, player)) {
       io.to(socket.id).emit('hc:init', hcInitPayload(g, socket.id));
+    }
+    // Dàfùwēng · Monopolio during the countdown: a dealt kid who reloads gets its board's run-in again (a new kid sits
+    // down when the intro starts, mnStart)
+    if (g.state === 'countdown' && g.gameType === 'monopoly' && g.mn && Mono.inGame(g.mn, player.mnK)) {
+      mnJoinRoom(pin, g, socket.id, player);
+      io.to(socket.id).emit('mn:init', mnInitPayload(g, socket.id));
     }
     // If joining/rejoining mid-game, sync them up
     if (g.state === 'active') {
@@ -8465,37 +8506,17 @@ io.on('connection', (socket) => {
           Object.keys(g.wuAnim).forEach((id) => io.to(socket.id).emit('wu:anim', { id, on: true }));
         }
       }
-      // Monopoly: send the board state + assign/restore character
-      if (g.gameType === 'monopoly' && g.monopoly) {
-        // If this player slot has no character yet (truly new mid-game joiner),
-        // assign one based on the current player count.
-        if (typeof player.mpChar !== 'number') {
-          player.mpChar = (Object.keys(g.players).length - 1) % MP_CHAR_COUNT;
-          player.mpPos = 0;
-          player.mpMoney = MP_START_MONEY;
-          player.mpSkip = false;
-        }
-        io.to(socket.id).emit('mp:init', {
-          tiles: MP_TILES,
-          startMoney: MP_START_MONEY,
-          instantWin: MP_INSTANT_WIN,
-          charCount: MP_CHAR_COUNT,
-          charNames: MP_CHAR_NAMES,
-          players: Object.fromEntries(
-            Object.entries(g.players).map(([id, pl]) => [id, {
-              name: pl.name, team: pl.team, pos: pl.mpPos || 0,
-              money: pl.mpMoney || 0, char: pl.mpChar,
-              charName: MP_CHAR_NAMES[pl.mpChar]
-            }])
-          ),
-          teamScores: g.teamScores,
-          ownership: g.monopoly.ownership
-        });
-        io.to(socket.id).emit('mp:my-char', {
-          charIdx: player.mpChar,
-          charName: MP_CHAR_NAMES[player.mpChar],
-          welcome: !isRejoin    // brand-new joiner gets welcome modal; rejoin doesn't
-        });
+      // Dàfùwēng · Monopolio: a late joiner sits at the smallest board (max 5) and plays from now; a rejoin keeps its seat,
+      // piece, coins, stars, an open dice window and a turn still playing (mn:init carries them). Its open question comes
+      // back; the room's tick deals every new one (never in the intro, a pause or «¡FINAL!»).
+      if (g.gameType === 'monopoly' && g.mn) {
+        mnEnsureId(g, player);
+        if (!Mono.inGame(g.mn, player.mnK)) mnSeatLate(pin, g, socket.id, player);
+        else mnJoinRoom(pin, g, socket.id, player);
+        io.to(socket.id).emit('mn:init', mnInitPayload(g, socket.id));
+        if (g.mn.phase === 'play' && player.currentQ) io.to(socket.id).emit('question', { qid: player.currentQ.qid, text: player.currentQ.text, answers: player.currentQ.answers, image: player.currentQ.image });
+        else if (g.mn.phase !== 'play') player.currentQ = null;
+        return;
       }
       if (g.gameType === 'paint' && g.paint) {
         pcPreparePlayer(player);
@@ -8627,28 +8648,14 @@ io.on('connection', (socket) => {
       } else {
         io.to(socket.id).emit('answer-result', { correct: false, correctText });
       }
-    } else if (g.gameType === 'monopoly') {
-      // Correct answer = you earn the RIGHT TO ROLL THE DICE. The player taps
-      // a stop-the-spinner mini-game on their phone; whatever number they land
-      // on is sent via 'monopoly:roll' (see handler below). We mark the player
-      // as "awaiting roll" so the next-question timer doesn't fire too early.
-      if (correct && g.monopoly) {
-        p.mpAwaitingRoll = true;
-        io.to(socket.id).emit('answer-result', {
-          correct: true,
-          correctText,
-          monopoly: { needsRoll: true, money: p.mpMoney }
-        });
-        // Safety net: if the player never taps stop within 8s, server auto-rolls.
-        setTimeout(() => {
-          if (!games[pin] || games[pin].state !== 'active') return;
-          const pNow = games[pin].players[socket.id];
-          if (!pNow || !pNow.mpAwaitingRoll) return;
-          processMonopolyRoll(pin, socket.id, null);
-        }, 8000);
-      } else {
-        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+    } else if (g.gameType === 'monopoly' && g.mn) {
+      // Dàfùwēng · Monopolio v2: paused or not in play → the question stays open (the phone gets its buttons back)
+      if (g.mn.paused || g.mn.phase !== 'play') {
+        if (g.mn.phase === 'play') p.currentQ = cqData;
+        io.to(socket.id).emit('answer-stale', { reason: g.mn.paused ? 'paused' : 'not-playing' });
+        return;
       }
+      mnAnswer(pin, g, socket.id, p, correct, correctText, choiceIdx === -1);   // -1 = the phone's own clock ran out
     } else if (g.gameType === 'pinata' && g.pn) {
       // Piñata Tigre v2: paused or not in play → the question stays open (the phone gets its buttons back)
       if (g.pn.paused || g.pn.phase !== 'play') {
@@ -8711,7 +8718,7 @@ io.on('connection', (socket) => {
     } else if (g.gameType === 'dragon-eye') {
       nextDelay = correct ? DR_MASH_MS + 600 : 1400;
     } else if (g.gameType === 'monopoly') {
-      nextDelay = correct ? -1 : 1500;
+      nextDelay = -1;                       // Monopolio v2: the room's tick deals the next one (after the turn or the «¡Casi!» wait)
     } else if (g.gameType === 'kingdoms') {
       nextDelay = correct ? -1 : 1400;
     } else if (g.gameType === 'paint' || g.gameType === 'snow') {
@@ -8733,7 +8740,7 @@ io.on('connection', (socket) => {
     }
     // Reinos de Colores sends its own small kd:plant diffs; skipping the full-room 'state' push here
     // keeps 30 phones from receiving ~5 full state objects per second.
-    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata') broadcast(pin);
+    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'monopoly') broadcast(pin);
   });
 
   // Dragones Pintores: position (8 Hz from each phone), painted tiles, and «Recargar» (ask for a question).
@@ -8938,6 +8945,7 @@ io.on('connection', (socket) => {
       if (g.gameType === 'snow') snPause(pin, g, !!paused);
       if (g.gameType === 'escape') esPause(pin, g, !!paused);
       if (g.gameType === 'halcon') hcPause(pin, g, !!paused);
+      if (g.gameType === 'monopoly') mnPause(pin, g, !!paused);
       if (g.gameType === 'mochi-mash') mmPause(pin, g, !!paused);
       if (g.gameType === 'pinata') pnPause(pin, g, !!paused);
       if (g.gameType === 'sixseven') ssPause(pin, g, !!paused);
@@ -9076,6 +9084,16 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id || g.state !== 'active') return;
     const add = Math.max(10, Math.min(120, Number(seconds) || 30)) * 1000;
+    // Dàfùwēng · Monopolio: its room tick owns the clock; the teacher's pick (g.duration) stays for the next round
+    if (g.gameType === 'monopoly' && g.mn) {
+      if (!Mono.addTime(g.mn, add)) return;
+      g.endsAt = g.mn.endsAt;
+      const clock = mnClock(g.mn);
+      io.to(pin).emit('mn:time', { id: g.mn.id, endsMs: Math.max(0, g.mn.endsAt - clock), frenzy: g.mn.frenzy, frenzyMs: Math.max(0, g.mn.frenzyAt - clock), add: add / 1000 });
+      g._lastBcast = 0;
+      broadcast(pin);
+      return;
+    }
     // Mochi Mash: the room's tick owns the clock (no end timer); g.duration (the teacher's pick) is not touched, so the
     // next round starts with the picked time again
     if (g.gameType === 'mochi-mash' && g.mm) {
@@ -9144,7 +9162,6 @@ io.on('connection', (socket) => {
     const inAction =
       (p.mashUntil && p.mashUntil > now) ||
       !!p.currentQ ||
-      !!p.mpAwaitingRoll ||
       !!p.dragonAim;
     io.to(socket.id).emit('state-resync', {
       state: g.state,
@@ -9152,9 +9169,25 @@ io.on('connection', (socket) => {
       hasOpenQuestion: !!p.currentQ,
       mashUntil:      p.mashUntil || 0,
       score:          p.score     || 0,
-      mpAwaitingRoll: !!p.mpAwaitingRoll,
       inAction
     });
+    // Dàfùwēng · Monopolio: the board again (seat, piece, coins, an open dice window, a turn still playing), the open
+    // question again; after the end, the ceremony + card again. The room's tick deals every new question.
+    if (g.gameType === 'monopoly' && g.mn) {
+      if (g.state === 'ended') {
+        const one = mnEndPayloads(g).forPlayer(socket.id);
+        if (one) io.to(socket.id).emit('game-end', one);
+        return;
+      }
+      if (g.state === 'active') {
+        mnEnsureId(g, p);
+        if (!Mono.inGame(g.mn, p.mnK)) mnSeatLate(pin, g, socket.id, p);
+        else mnJoinRoom(pin, g, socket.id, p);
+        io.to(socket.id).emit('mn:init', mnInitPayload(g, socket.id));
+        if (g.mn.phase === 'play' && p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
+      }
+      return;
+    }
     if (g.gameType === 'paint' && g.state === 'active' && g.paint) {
       io.to(socket.id).emit('pc:init', pcInitPayload(g, socket.id));
       if (p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
@@ -10106,32 +10139,38 @@ io.on('connection', (socket) => {
     wuEmitState(g, pin);
   });
 
-  // Chinese Monopoly: player committed their tap-stopped dice value (1..6).
-  socket.on('monopoly:roll', ({ pin, roll }) => {
-    const g = games[pin];
-    if (!g || g.gameType !== 'monopoly' || g.state !== 'active') return;
-    processMonopolyRoll(pin, socket.id, roll);
-  });
-
-  // Client signals: walk + tile-reaction overlay done, push my next question.
-  // Lets the next question fire AS SOON AS the player is ready, instead of
-  // waiting for the 6.5s safety ceiling — keeps the round snappy when the
-  // player rolled a low number (short walk).
-  socket.on('monopoly:ready', ({ pin }) => {
-    const g = games[pin];
-    if (!g || g.gameType !== 'monopoly' || g.state !== 'active') return;
-    const resolver = g.mpQuestionResolvers && g.mpQuestionResolvers[socket.id];
-    if (typeof resolver === 'function') {
-      // Cancel the safety timer — we're firing the question via this signal
-      if (g.mpQuestionTimers && g.mpQuestionTimers[socket.id]) {
-        clearTimeout(g.mpQuestionTimers[socket.id]);
-        delete g.mpQuestionTimers[socket.id];
+  // Dàfùwēng · Monopolio: the tap on the dice block. The phone only says "now" (tid = its dice window); the server picks
+  // the number and resolves the whole turn (mnRoll). A tap for a turn already resolved gets its script again (the phone
+  // missed it), at most once every 1.5 s.
+  socket.on('player:mn-roll', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.gameType !== 'monopoly' || !g.mn || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      const m = g.mn;
+      const r = p && Mono.kid(m, p.mnK);
+      if (!r) return;
+      const tid = Number(data.tid);
+      const now = Date.now();
+      if (r.turn && r.turn.tid === tid) {
+        if (m.paused || (m.phase !== 'play' && m.phase !== 'final')) { io.to(socket.id).emit('mn:noroll', { tid, paused: !!m.paused }); return; }
+        mnRoll(pin, g, socket.id, p, false, now);
+      } else if (r.last && r.last.tid === tid && now - (r.resentAt || 0) > 1500) {
+        r.resentAt = now;
+        io.to(socket.id).emit('mn:turn', r.last);
       }
-      delete g.mpQuestionResolvers[socket.id];
-      // Reset the "sent" flag so resolver actually sends
-      if (g.players[socket.id]) g.players[socket.id]._mpQuestionSent = false;
-      resolver();
-    }
+    } catch (e) { console.error('[player:mn-roll]', e); }
+  });
+  // Dàfùwēng · Monopolio teacher «Saltar»: the intro → play now; after the end → every phone jumps to its own card.
+  socket.on('host:mn-skip', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'monopoly' || !g.mn) return;
+      if (g.state === 'active' && g.mn.phase === 'intro' && !g.mn.paused) mnPlay(pin, g);
+      else if (g.state === 'ended') io.to(pin).except(g.hostId).emit('mn:skip', { id: g.mn.id });
+    } catch (e) { console.error('[host:mn-skip]', e); }
   });
 
   socket.on('player:tap', ({ pin }) => {
@@ -10245,6 +10284,7 @@ io.on('connection', (socket) => {
           if (stillExists.gameType === 'snow') snStop(stillExists);
           if (stillExists.gameType === 'escape') esStop(stillExists);
           if (stillExists.gameType === 'halcon') hcStop(stillExists);
+          if (stillExists.gameType === 'monopoly') mnStop(stillExists);
           if (stillExists.gameType === 'mochi-mash') mmStop(stillExists);
           if (stillExists.gameType === 'pinata') pnStop(stillExists);
           if (stillExists.gameType === 'sixseven') ssStop(stillExists);
@@ -10301,6 +10341,7 @@ setInterval(() => {
     if (g.gameType === 'snow') return;         // questions are on demand (the stations)
     if (g.gameType === 'escape' && !(g.escape && g.escape.phase === 'run' && !g.escape.paused)) return;   // only while the crew runs
     if (g.gameType === 'halcon') return;       // no questions on the phones: the boards run the rounds
+    if (g.gameType === 'monopoly') return;     // Monopolio: its room tick deals every question (after the turn / the wait)
     if (g.gameType === 'mochi-mash' && g.mm && (g.mm.phase !== 'play' || g.mm.paused)) return;   // intro, pause, «¡FINAL!»
     if (g.gameType === 'pinata') return;       // Piñata Tigre: its room tick deals every question (after the hit / the wait)
     if (g.gameType === 'sixseven') return;     // 6-7 Swing: the same (ssTick deals every sum and calls time up)
