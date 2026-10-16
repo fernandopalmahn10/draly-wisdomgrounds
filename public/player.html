@@ -14,7 +14,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20261014a">
   <link rel="stylesheet" href="/css/dralingo.css">
-  <link rel="stylesheet" href="/css/dragon.css">
+  <!-- Vuelo del Dragón v2 «La Carrera del Cielo de Dubái» -->
+  <link rel="stylesheet" href="/css/dragon.css?v=20261016dr">
   <link rel="stylesheet" href="/css/sixseven.css?v=20261016a">
   <link rel="stylesheet" href="/css/warmup.css?v=20261015s">
   <link rel="stylesheet" href="/css/reading.css?v=20260603d">
@@ -200,7 +201,7 @@
     <div class="mnx" id="mnx">
       <div class="mnx-view" id="mnx-view" aria-hidden="true"></div>
       <div class="mnx-hud" id="mnx-hud" aria-label="Tu tablero"></div>
-      <div class="mnx-side"><div class="mnx-clock" id="mnx-clock" role="timer"><b>–:––</b></div></div>
+      <div class="mnx-side"><div class="mnx-clock" id="mnx-clock" role="timer"><b>-:--</b></div></div>
       <div class="mnx-mini" id="mnx-mini" aria-hidden="true"></div>
       <div class="mnx-tick" id="mnx-tick" aria-live="polite"></div>
       <div class="mnx-stage" id="mnx-stage" aria-hidden="true"></div>
@@ -222,32 +223,38 @@
   <div class="mnx-pause hidden" id="mnx-pause" role="alert"><div><img src="/assets/dralingo/wise.webp" alt=""><b>Pausa</b><span>Mira al profe</span></div></div>
   <div class="mnx-final hidden" id="mnx-final"><b>¡FINAL!</b></div>
 
-  <!-- DRAGON FLAP — opens after correct answer in Vuelo del Dragón.
-       Instead of tap-mashing (Mochi/Piñata pattern), the player SWIPES UP on
-       the screen to flap the dragon's wings. Each successful upswipe lifts the
-       team's dragon higher on the host screen. -->
-  <div id="screen-dragon-flap" class="hidden player-screen dr-flap-screen">
-    <div class="dr-flap-header">
-      <div class="dr-flap-title">🐉 ¡DESLIZA HACIA ARRIBA! ☁️</div>
-      <div class="dr-flap-counter"><span id="dr-flap-counter">0</span> aleteos</div>
+  <!-- Vuelo del Dragón v2 «La Carrera del Cielo de Dubái» (js/player-dragon.js + js/dragon-sky.js + js/dragon-course.js +
+       css/dragon.css): the race of 4 over Dubai, my dragoncito big in front with my character on its back, my rivals in
+       their lanes, the question as a sheet; a right answer = a flight where every swipe up (or tap) is a wing beat. -->
+  <div id="screen-dragon" class="hidden">
+    <div class="drx" id="drx">
+      <div class="drx-sky" id="drx-sky" aria-hidden="true"></div>
+      <div class="drx-hud" id="drx-hud" aria-label="Tu carrera"></div>
+      <div class="drx-clock" id="drx-clock" role="timer"><b>-:--</b></div>
+      <div class="drx-sprint hidden" id="drx-sprint" aria-live="polite"></div>
+      <div class="drx-fx" id="drx-fx" aria-hidden="true"></div>
+      <div class="drx-chip" id="drx-chip" aria-live="polite"></div>
+      <div class="drx-gang" id="drx-gang" aria-live="polite"></div>
+      <div class="drx-fly hidden" id="drx-fly">
+        <div class="drx-fly-bar" aria-hidden="true"><i id="drx-fly-bar"></i></div>
+        <div class="drx-fly-head" id="drx-fly-head" aria-live="polite">¡A VOLAR!</div>
+        <div class="drx-fly-count" aria-hidden="true"><b id="drx-fly-n">0</b><span>aleteos</span><em id="drx-fly-m">+0 m</em></div>
+        <div class="drx-fly-hint" id="drx-fly-hint"><i class="drx-hand up"></i><span>Desliza hacia arriba</span></div>
+      </div>
+      <button class="drx-tap" id="drx-tap" type="button" aria-label="Aletear: desliza hacia arriba o toca"></button>
+      <section class="drq down" id="drq" aria-label="Pregunta" aria-hidden="true">
+        <div class="drq-clock"><i id="drq-bar"></i></div>
+        <div class="drq-head"><div class="drq-pic"><img id="drq-img" alt=""></div><p class="drq-text" id="drq-text" aria-live="polite"></p></div>
+        <div class="drq-ans" id="drq-ans"></div>
+        <div class="drq-verdict" id="drq-verdict" aria-live="polite"></div>
+      </section>
     </div>
-    <div class="dr-flap-timer-wrap">
-      <div class="dr-flap-timer-fill" id="dr-flap-timer-fill"></div>
-    </div>
-    <div class="dr-flap-area" id="dr-flap-area">
-      <!-- Floating scenery to give a sense of climbing -->
-      <div class="dr-flap-cloud c1">☁️</div>
-      <div class="dr-flap-cloud c2">☁️</div>
-      <div class="dr-flap-cloud c3">☁️</div>
-      <!-- The dragon at the bottom — visually rises with finger during swipe -->
-      <div class="dr-flap-dragon" id="dr-flap-dragon">🐉</div>
-      <!-- Arrow hint -->
-      <div class="dr-flap-arrow" id="dr-flap-arrow">⬆️</div>
-      <!-- Floating "+1" pops when each swipe registers -->
-      <div class="dr-flap-popup-layer" id="dr-flap-popup-layer"></div>
-    </div>
-    <div class="dr-flap-hint">Toca y arrastra HACIA ARRIBA cualquier parte de la pantalla 🐉💨</div>
   </div>
+  <div class="drx-intro hidden" id="drx-intro"></div>
+  <div class="drx-banner" id="drx-banner" role="status" aria-live="polite"></div>
+  <div class="drx-big hidden" id="drx-big" aria-live="polite"></div>
+  <div class="drx-pause hidden" id="drx-pause" role="alert"><div><img src="/assets/dralingo/wise.webp" alt=""><b>Pausa</b><span>Mira al profe</span></div></div>
+  <div class="drx-final hidden" id="drx-final"><b>¡FINAL!</b></div>
 
   <!-- ENDED -->
   <!-- 6-7 Swing v2 «La Balanza de Oro» (js/player-sixseven.js + js/sixseven-stage.js + css/sixseven.css): rapid-fire
@@ -678,7 +685,7 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261016m"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261016dr"></script>
   <script src="/js/player-kingdoms.js?v=20261011f"></script>
   <script src="/js/paint-render.js?v=20261011a"></script>
   <script src="/js/player-paint.js?v=20261011e"></script>
@@ -699,10 +706,13 @@
   <script src="/js/player-pinata.js?v=20261015s"></script>
   <script src="/js/sixseven-stage.js?v=20261016a"></script>
   <script src="/js/player-sixseven.js?v=20261016a"></script>
-  <script src="/js/cast.js?v=20261015c"></script>
+  <script src="/js/dragon-course.js?v=20261016dr"></script>
+  <script src="/js/dragon-sky.js?v=20261016dr"></script>
+  <script src="/js/player-dragon.js?v=20261016dr"></script>
+  <script src="/js/cast.js?v=20261016dr"></script>
   <script src="/js/dralingo-fx.js?v=20261013a"></script>
   <script src="/js/saga.js?v=20261013a"></script>
-  <script src="/js/player.js?v=20261016m"></script>
+  <script src="/js/player.js?v=20261016dr"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

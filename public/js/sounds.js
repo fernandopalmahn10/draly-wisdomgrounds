@@ -574,19 +574,7 @@
     vSubBass(t0, 'G2', BD * 4, 0.22);
   }
 
-  // 🐉 DRAGON EYE / VUELO — soaring flight, F# minor, 96bpm. Wide-interval
-  // bass + airy pad + ascending arpeggio bells.
-  function themeDragon(barIdx, t0, BD) {
-    vSubBass(t0, 'F#2', BD * 2, 0.26);
-    vSubBass(t0 + 2 * BD, 'C#3', BD * 2, 0.22);
-    vPad(t0, 'A3', BD * 4, 0.12);
-    vPad(t0, 'C#4', BD * 4, 0.10);
-    // Ascending arp every bar
-    const arp = ['F#4', 'A4', 'C#5', 'F#5', 'A5', 'F#5', 'C#5', 'A4'];
-    for (let i = 0; i < 8; i++) vBell(t0 + i * (BD / 2), arp[i], BD * 0.4, 0.12);
-    // Light shaker on 8ths
-    for (let i = 0; i < 8; i++) vShaker(t0 + i * (BD / 2), 0.05);
-  }
+  // (🐉 Vuelo del Dragón: its synthesized theme retired 2026-10-16; the remake plays /assets/dragon/music-race.mp3)
 
   // 🏰 REINOS DE COLORES — bright marching fanfare, Bb major, 112bpm. Taiko march + brass call-and-answer
   // (one phrase per kingdom) over a bouncing bass; bells on the bar so it stays cheerful, never tense.
@@ -610,7 +598,6 @@
   // === Registry ===
   const GAME_THEMES = {
     'mochi-mash':    { bpm: 105, beatsPerBar: 4, fn: themeMochi },
-    'dragon-eye':    { bpm:  96, beatsPerBar: 4, fn: themeDragon },
     'kingdoms':      { bpm: 112, beatsPerBar: 4, fn: themeKingdoms },
   };
 

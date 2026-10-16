@@ -420,7 +420,7 @@
     { id: 'monopoly',  label: 'Dàfùwēng · Monopolio', emoji: '🎲', blurb: 'Dubai board night in boards of 4: answer, roll the dice, buy landmarks, collect stars (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-monopoly.html', '/player.html') },
     { id: 'mochi',     label: 'Mochi Mash',         emoji: '🍡', blurb: 'Answer, tap fast, feed your team dragon (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host.html',          '/player.html') },
     { id: 'pinata',    label: 'Piñata Tigre',       emoji: '🐯', blurb: 'Answer, stop the arrow on gold, break your team piñata (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-pinata.html',   '/player.html') },
-    { id: 'dragon',    label: 'Vuelo del Dragón',   emoji: '🐉', blurb: 'Dragon flight',                  launch: (ctx) => _genericLaunch(ctx, '/host-dragon.html',   '/player.html') },
+    { id: 'dragon',    label: 'Vuelo del Dragón',   emoji: '🐉', blurb: 'Sky race over Dubai in races of 4: answer, swipe up to flap, win Dralingo\'s stars (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-dragon.html',   '/player.html') },
   ];
   // 🆕 2026-06-04 v4 — universal force launch using ?livegame=1.
   // Same pattern as ?livemaster=1 for warmup, generalized for non-gated

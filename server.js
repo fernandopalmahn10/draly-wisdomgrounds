@@ -41,6 +41,7 @@ const Escape = require('./core/escape');             // La Gran Fuga de Dubái (
 const EscapeMap = require('./public/js/escape-map'); // … and its zona segura rooms, shared with the phones and the projector
 const Halcon = require('./core/halcon');             // Ojos de Halcón: Mario Party «Looking for Love» in boards of 4 (rules)
 const Mono = require('./core/monopoly');             // Dàfùwēng · Monopolio v2: «El Gran Tablero de Dubái», boards of 4 (rules)
+const Dragon = require('./core/dragon');               // Vuelo del Dragón v2: «La Carrera del Cielo de Dubái», races of 4 (rules)
 const Mochi = require('./core/mochi');               // Mochi Mash v2: «La Terraza del Mochi», team mash + ceremony (rules)
 const Pinata = require('./core/pinata');             // Piñata Tigre v2: «La Fiesta de las Piñatas», team hits + timing meter (rules)
 const Sixseven = require('./core/sixseven');         // 6-7 Swing v2: «La Balanza de Oro», sums that are always 6 or 7 (rules)
@@ -5437,16 +5438,6 @@ function isSuperAdminPassword(password) {
   return !!(t && t.isSuperAdmin);
 }
 
-// === Vuelo del Dragón (Dragon Flight) constants ===
-// Each team has its OWN dragon. Players answer vocab → unlock 5 s of flap-mode.
-// Every tap during flap-mode is one wing-beat that lifts the team's dragon
-// higher. As altitude crosses milestones the host reveals new scenery layers
-// (rooftops → bamboo → mountains → clouds → heavens). First dragon to reach
-// the top wins.
-const DR_ALT_MAX     = 500;   // altitude needed to reach the heavens + win
-const DR_MASH_MS     = 5000;  // 5 s flap window after a correct answer
-const DR_ALT_BCAST_MS = 100;  // throttle altitude broadcasts to ~10 Hz
-
 function genPin() {
   // Prefer short 3-digit PINs (100-999) so kids can type them in 1 second.
   // If we ever have so many active games that 3-digit space is exhausted
@@ -5496,6 +5487,8 @@ function publicState(game) {
   }
   // Dàfùwēng · Monopolio: each kid's id (k) and character (sk) for the lobby, the boards and the greyed piece of a kid who left
   if (game.gameType === 'monopoly') Object.entries(game.players).forEach(([id, p]) => { if (p.mnK) Object.assign(out.players[id], { k: p.mnK, sk: hcSkin(p) }); });
+  // Vuelo del Dragón: the same (the lobby, the races and the greyed dragon of a kid who left)
+  if (game.gameType === 'dragon-eye') Object.entries(game.players).forEach(([id, p]) => { if (p.drK) Object.assign(out.players[id], { k: p.drK, sk: hcSkin(p) }); });
   return out;
 }
 
@@ -5532,6 +5525,7 @@ function nextQuestionFor(game, playerId) {
   const p = game.players[playerId];
   if (!p || !game.questions.length) return null;
   if (game.gameType === 'monopoly' && !(game.mn && game.mn.phase === 'play')) return null;   // Monopolio: questions only in play (mnTick deals)
+  if (game.gameType === 'dragon-eye' && !(game.dr && game.dr.phase === 'play')) return null;   // Vuelo del Dragón: the same (drTick deals)
 
   // 6-7 Swing v2: its room tick deals every sum (ssDeal, core/sixseven.js); never a generic question
   if (game.gameType === 'sixseven') return null;
@@ -5800,6 +5794,303 @@ function mnFinish(pin, g) {
   m.phase = 'done';
   const end = mnEndPayloads(g);
   Object.values(g.players).forEach((p) => { const x = end.byK[p.mnK]; if (x) p.score = x.total; });   // the room's own score = stars (bonus included)
+  io.to(g.hostId).emit('game-end', end.host);
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected) return;
+    const one = end.forPlayer(pid);
+    if (one) io.to(pid).emit('game-end', one);
+  });
+}
+
+// === 🐉 VUELO DEL DRAGÓN v2 (gameType 'dragon-eye') — «La Carrera del Cielo de Dubái», a Mario Party sky race ===
+// Rules in core/dragon.js (spec docs/specs/dragon-v2.md). Races of 4, every kid on their own dragoncito, every race over
+// the same Dubai course. The races are dealt when the countdown starts (each phone runs in with its own race, dr:init);
+// one 200 ms tick per room runs the clock: intro → play (questions dealt, flights closed on the server's clock, time-ups
+// called, the star sprints, leads, the frenzy) → «¡FINAL!» (beats on their way still count) → game-end (each phone its own
+// race's ceremony and card, the projector every race + the class podium). A right answer opens a flight
+// (answer-result.dragon); the phone sends its wing beats in batches (player:dr-beats, no answer per batch: the phone
+// predicts with the same cap) and gets the flight's summary when the server closes it (dr:flown). Each race is a
+// socket.io room of its own (the game id in its name, so «Otra ronda» never mixes races): its phones get the race's live
+// line (dr:race: metres + flags, every 500 ms only when something changed), the projector one line for every race
+// (dr:races). No full-room 'state' push on answers.
+const DR_TICK_MS = 200;
+const DR_LINE_MS = 500;
+function drEnsureId(g, p) { if (!p.drK) p.drK = (g.drNextK = (g.drNextK || 0) + 1); return p.drK; }
+const drRoom = (pin, m, bid) => `${pin}:dr:${m.id}:${bid}`;
+function drJoinRoom(pin, g, pid, p) {
+  const m = g.dr;
+  const r = m && Dragon.kid(m, p.drK);
+  if (!r || r.b == null) return;
+  const s = io.sockets.sockets.get(pid);
+  if (s) s.join(drRoom(pin, m, r.b));
+}
+function drOnline(g) {
+  const on = new Set();
+  Object.values(g.players).forEach((p) => { if (p.drK && !p.disconnected) on.add(p.drK); });
+  return (k) => on.has(k);
+}
+const drClock = (m) => (m.paused ? m.pausedAt : Date.now());
+function drSprintView(m, clock) {
+  const sp = m.sprint;
+  return sp ? { n: sp.n, lm: sp.lm, ms: Math.max(0, sp.until - clock), total: Dragon.R.SPRINT_MS } : null;
+}
+function drInitPayload(g, pid) {
+  const m = g.dr;
+  const clock = drClock(m);
+  const online = drOnline(g);
+  const out = {
+    id: m.id, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock), paused: !!m.paused,
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzy: !!m.frenzy,
+    frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null, duration: m.duration, racesN: m.races.length,
+    played: m.playAt ? Math.max(0, clock - m.playAt) : 0, sprint: drSprintView(m, clock),
+  };
+  if (!pid) { out.races = m.races.map((b) => Dragon.raceView(m, b, online)); return out; }
+  const p = g.players[pid];
+  const r = p && Dragon.kid(m, p.drK);
+  if (!r || r.b == null) return out;
+  const b = Dragon.raceOf(m, r.b);
+  out.race = b ? Dragon.raceView(m, b, online) : null;
+  const x = r.flap && !r.flap.closed ? r.flap : null;
+  out.you = {
+    k: r.k, b: r.b, c: r.c, m: Math.round(r.m), st: r.stars, right: r.right, streak: r.streak, best: r.best,
+    // an open flight (with the time really left), a wait
+    flight: x ? {
+      mid: x.mid, lead: Math.max(0, x.start - clock), ms: x.until - x.start, elapsed: Math.max(0, clock - x.start), beats: x.beats,
+      ring: x.ringHit ? 0 : x.ring, fire: x.fire, power: x.power, frenzy: m.frenzy, tail: Dragon.tailOn(m, r),
+      beatM: Dragon.R.BEAT_M, rate: Dragon.R.RATE, burst: Dragon.R.BURST, resumed: true,
+    } : null,
+    busyMs: r.nextQAt ? Math.max(0, r.nextQAt - clock) : 0,
+  };
+  return out;
+}
+function drStop(g) { if (g && g.dr && g.dr.timer) { clearInterval(g.dr.timer); g.dr.timer = null; } }
+// The countdown starts: the races are dealt now, so every phone runs in with its own race and the projector with all.
+function drDeal(pin, g) {
+  drStop(g);
+  const now = Date.now();
+  const m = Dragon.newGame(1 + Math.floor(Math.random() * 1e9), g.duration, now);
+  m.phase = 'countdown';
+  m.phaseUntil = now + COUNTDOWN_MS;
+  g.dr = m;
+  Object.values(g.players).forEach((p) => { drEnsureId(g, p); p.currentQ = null; p.mashUntil = 0; });
+  Dragon.deal(m, Object.values(g.players).filter((p) => !p.disconnected).map((p) => [p.drK, p.name, hcSkin(p)]));
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected || !Dragon.inGame(m, p.drK)) return;
+    drJoinRoom(pin, g, pid, p);
+    io.to(pid).emit('dr:init', drInitPayload(g, pid));
+  });
+  io.to(g.hostId).emit('dr:init', drInitPayload(g, null));
+}
+// A kid who wasn't dealt in (joined late, came back after the deal) flies in the smallest race (level with its last
+// dragon); that race's phones and the projector get the new dragon. Returns true when the kid got a new seat.
+function drSeatLate(pin, g, pid, p) {
+  const m = g.dr;
+  const nm = String(p.name || '').toLowerCase();
+  const taken = new Set(Object.values(g.players).filter((q) => q !== p).map((q) => q.drK));
+  const old = nm && Object.values(m.kids).find((r) => r.away && r.b != null && r.name.toLowerCase() === nm && !taken.has(r.k));
+  if (old) {
+    p.drK = old.k;
+    Dragon.setAway(m, old.k, false);
+    drJoinRoom(pin, g, pid, p);
+    return false;
+  }
+  const b = Dragon.seatLate(m, drEnsureId(g, p), p.name, hcSkin(p));
+  if (!b) return false;
+  drJoinRoom(pin, g, pid, p);
+  const view = Dragon.raceView(m, b, drOnline(g));
+  io.to(drRoom(pin, m, b.id)).except(pid).emit('dr:seat', { race: view });
+  io.to(g.hostId).emit('dr:seat', { race: view });
+  return true;
+}
+// The countdown is over: the intro («¡Responde y aletea!» → «¿Listos?» → «¡YA!»), then drPlay; the tick deals.
+function drStart(pin, g) {
+  const m = g.dr;
+  if (!m || m.phase !== 'countdown') return;
+  const now = Date.now();
+  m.phase = 'intro';
+  m.phaseAt = now;
+  m.phaseUntil = now + Dragon.R.INTRO_MS;
+  Object.entries(g.players).forEach(([pid, p]) => {
+    drEnsureId(g, p);
+    p.currentQ = null;
+    p.lastQuestionAt = now;
+    if (!p.disconnected && !Dragon.inGame(m, p.drK)) { drSeatLate(pin, g, pid, p); io.to(pid).emit('dr:init', drInitPayload(g, pid)); }
+  });
+  g.endsAt = now + Dragon.R.INTRO_MS + m.duration * 1000;
+  io.to(pin).emit('dr:intro', { id: m.id, ms: Dragon.R.INTRO_MS });
+  drStop(g);
+  m.timer = setInterval(() => drTick(pin, m), DR_TICK_MS);
+}
+function drPlay(pin, g) {
+  const m = g.dr;
+  if (!m || m.phase !== 'intro') return;
+  const now = Date.now();
+  Dragon.startPlay(m, now);
+  g.endsAt = m.endsAt;
+  io.to(pin).emit('dr:play', { id: m.id, endsMs: m.endsAt - now, frenzyMs: m.frenzyAt - now, sprintMs: m.nextSprintAt - now });
+  g._lastBcast = 0;
+  broadcast(pin);                      // (the next tick deals every kid's first question)
+}
+function drSendQ(g, pid, p) {
+  const q = nextQuestionFor(g, pid);
+  if (q) io.to(pid).emit('question', q);
+}
+// A right / wrong / time-up answer. Right: a flight opens (the phone flies at the lead). Wrong: the wait.
+function drAnswer(pin, g, pid, p, correct, correctText, timeUp) {
+  const m = g.dr;
+  const now = Date.now();
+  const res = Dragon.answer(m, p.drK, correct, now - (p.lastQuestionAt || now), now, !!timeUp);
+  if (!res) return;
+  if (res.right) io.to(pid).emit('answer-result', { correct: true, correctText, dragon: Object.assign({ right: true, streak: res.streak }, res.flight) });
+  else io.to(pid).emit('answer-result', { correct: false, correctText, dragon: { right: false, wait: res.wait, calm: res.calm, tooFast: res.tooFast, timeUp: res.timeUp } });
+  io.to(g.hostId).emit('dr:ans', { k: p.drK, right: res.right });
+}
+// A flight is over on the server's clock: its summary to the phone (the phone settles its metres to it).
+function drClose(g, pid, p, now) {
+  const s = Dragon.closeFlap(g.dr, p.drK, now);
+  if (s && !p.disconnected) io.to(pid).emit('dr:flown', s);
+  return s;
+}
+// Each race's live line (metres + flags of its dragons, the sprint metres during a sprint) when something changed.
+function drLines(pin, g, now, force) {
+  const m = g.dr;
+  const all = [];
+  m.races.forEach((b) => {
+    if (!b.dirty && !force) return;
+    b.dirty = false;
+    b.seq++;
+    const d = Dragon.racePos(m, b, now);
+    io.to(drRoom(pin, m, b.id)).emit('dr:race', { id: m.id, b: b.id, seq: b.seq, d });
+    all.push([b.id, b.seq, d]);
+  });
+  if (all.length) io.to(g.hostId).emit('dr:races', { id: m.id, r: all });
+}
+function drSprintEnd(pin, g, end) {
+  io.to(pin).emit('dr:sprint', { id: g.dr.id, go: false, n: end.n, lm: end.lm, star: end.star, races: end.races });
+}
+function drTick(pin, m) {
+  const g = games[pin];
+  if (!g || g.dr !== m || g.state !== 'active') { clearInterval(m.timer); m.timer = null; return; }
+  if (m.paused) return;
+  const now = Date.now();
+  try {
+    if (m.phase === 'intro') { if (now >= m.phaseUntil) drPlay(pin, g); return; }
+    if (m.phase !== 'play' && m.phase !== 'final') return;
+    Object.entries(g.players).forEach(([pid, p]) => { try {
+      const r = Dragon.kid(m, p.drK);
+      if (!r || r.b == null) return;
+      if (r.flap && now >= Dragon.closeAt(r.flap)) drClose(g, pid, p, now);
+      if (m.phase !== 'play') return;
+      // a question nobody answered: «time up» 3 s after the phone's 20 s (a frozen tab can't hold a kid)
+      if (p.currentQ && now - (p.lastQuestionAt || now) >= Dragon.R.Q_MS + Dragon.R.Q_GRACE_MS) {
+        const cq = p.currentQ;
+        p.currentQ = null;
+        drAnswer(pin, g, pid, p, false, cq.answers[cq.correctIdx], true);
+      }
+      if (!p.disconnected && !p.currentQ && !r.flap && now >= (r.nextQAt || 0)) drSendQ(g, pid, p);
+    } catch (e) { console.error('[dragon] kid', e); } });
+    if (m.phase === 'play') {
+      const ev = Dragon.tick(m, now);
+      if (ev.sprintEnd) drSprintEnd(pin, g, ev.sprintEnd);
+      if (ev.sprintGo) io.to(pin).emit('dr:sprint', { id: m.id, go: true, n: ev.sprintGo.n, lm: ev.sprintGo.lm, ms: ev.sprintGo.ms });
+      ev.leads.forEach((l) => { io.to(drRoom(pin, m, l.b)).emit('dr:lead', l); io.to(g.hostId).emit('dr:lead', l); });
+      if (ev.frenzy) io.to(pin).emit('dr:frenzy', { id: m.id, endsMs: Math.max(0, m.endsAt - now) });
+      if (now >= m.endsAt) drFinal(pin, g);
+    } else if (now >= m.phaseUntil) {
+      // «¡FINAL!» is over: every flight closes now (its beats are in), the last line, then the ceremony
+      Object.entries(g.players).forEach(([pid, p]) => { const r = Dragon.kid(m, p.drK); if (r && r.flap) drClose(g, pid, p, now); });
+      drLines(pin, g, now, true);
+      drStop(g);
+      if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+      endGame(pin);
+      return;
+    }
+    if (now - (m.lineAt || 0) >= DR_LINE_MS) { m.lineAt = now; drLines(pin, g, now, false); }
+  } catch (e) { console.error('[dragon] tick', e); }
+}
+// «¡FINAL!» on every screen; the tick ends the game FINAL_MS later (beats already on their way still count).
+function drFinal(pin, g) {
+  const m = g.dr;
+  if (!m || m.phase === 'final' || m.phase === 'done') return;
+  const now = Date.now();
+  if (m.paused) {
+    const shift = now - m.pausedAt;
+    Dragon.shiftTimes(m, shift);
+    Object.values(g.players).forEach((p) => { if (p.lastQuestionAt) p.lastQuestionAt += shift; });
+    m.paused = false;
+  }
+  if (m.phase !== 'play') Dragon.startPlay(m, now);   // «Terminar» in the countdown / intro: nothing flown yet
+  const sp = Dragon.final(m, now);
+  if (sp) drSprintEnd(pin, g, sp);
+  Object.values(g.players).forEach((p) => { p.currentQ = null; });
+  io.to(pin).emit('dr:final', { id: m.id, ms: Dragon.R.FINAL_MS });
+  if (!m.timer) m.timer = setInterval(() => drTick(pin, m), DR_TICK_MS);
+}
+function drPause(pin, g, paused) {
+  const m = g.dr;
+  if (!m || !!m.paused === !!paused || m.phase === 'final' || m.phase === 'done' || m.phase === 'countdown') return;
+  const now = Date.now();
+  if (paused) { m.paused = true; m.pausedAt = now; }
+  else {
+    const shift = now - m.pausedAt;
+    Dragon.shiftTimes(m, shift);
+    Object.values(g.players).forEach((p) => { if (p.lastQuestionAt) p.lastQuestionAt += shift; });
+    if (g.endsAt) g.endsAt += shift;
+    m.paused = false;
+  }
+  const clock = drClock(m);
+  io.to(pin).emit('dr:pause', {
+    id: m.id, paused: !!m.paused, phase: m.phase, phaseMs: Math.max(0, m.phaseUntil - clock),
+    endsMs: m.endsAt ? Math.max(0, m.endsAt - clock) : null, frenzyMs: m.frenzyAt ? Math.max(0, m.frenzyAt - clock) : null,
+    sprint: drSprintView(m, clock),
+  });
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// The end: bonus stars per race, each race's winner, the class podium; each phone gets its own race + its card (built
+// again on demand for a reconnect).
+function drEndPayloads(g) {
+  const m = g.dr;
+  const fin = Dragon.finish(m);
+  const lite = (x) => x && { k: x.k, name: x.name, skin: x.skin, c: x.c, b: x.b, total: x.total, flown: x.flown, stars: x.stars, rank: x.rank, bonus: x.bonus, right: x.right };
+  const races = fin.races.map((rc) => ({
+    id: rc.id, winners: rc.winners, rows: rc.rows.map(lite),
+    bonus: rc.bonus.map((s) => ({ id: s.id, name: s.name, what: s.what, unit: s.unit, value: s.value, winners: s.winners })),
+  }));
+  const podium = fin.podium.map(lite);
+  const byK = {};
+  fin.rows.forEach((x) => { byK[x.k] = x; });
+  const common = { winner: 'tie', teamScores: { red: 0, gold: 0 } };   // (no teams: the shared phone code reads these)
+  return {
+    byK,
+    host: Object.assign({
+      leaderboard: podium.map((x) => ({ name: x.name, score: x.total, team: 'red' })),
+      dragon: { races, podium, count: fin.rows.length, bonusM: Dragon.R.BONUS_M },
+    }, common),
+    forPlayer(pid) {
+      const p = g.players[pid];
+      const x = p && byK[p.drK];
+      if (!x) return null;
+      const race = races.find((rc) => rc.id === x.b) || null;
+      return Object.assign({}, common, {
+        scores: { [pid]: x.total },
+        dragon: { race, podium, count: fin.rows.length, racesN: races.length, bonusM: Dragon.R.BONUS_M },
+        me: {
+          k: x.k, b: x.b, c: x.c, rank: x.rank, of: x.of, classRank: x.classRank, total: x.total, flown: x.flown, stars: x.stars,
+          bonus: x.bonus, right: x.right, answered: x.answered, best: x.best, beats: x.beats, rings: x.rings, laps: x.laps,
+          won: !!(race && race.winners.includes(x.k)),
+        },
+      });
+    },
+  };
+}
+function drFinish(pin, g) {
+  const m = g.dr;
+  if (!m) return;
+  drStop(g);
+  m.phase = 'done';
+  const end = drEndPayloads(g);
+  Object.values(g.players).forEach((p) => { const x = end.byK[p.drK]; if (x) p.score = x.total; });   // the room's own score = metres (bonus included)
   io.to(g.hostId).emit('game-end', end.host);
   Object.entries(g.players).forEach(([pid, p]) => {
     if (p.disconnected) return;
@@ -7702,6 +7993,13 @@ function endGame(pin) {
     broadcast(pin);
     return;
   }
+  // Vuelo del Dragón v2: bonus stars per race, each race's winner, the class podium, each phone its own card.
+  if (g.gameType === 'dragon-eye' && g.dr) {
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+    drFinish(pin, g);
+    broadcast(pin);
+    return;
+  }
   // Mochi Mash v2: totals, winner, bonus stars, each phone its own card (core/mochi.js finish()).
   if (g.gameType === 'mochi-mash' && g.mm) {
     if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
@@ -7786,7 +8084,7 @@ io.on('connection', (socket) => {
     const pin = genPin();
     const defaultDuration =
       type === 'pinata'       ? Pinata.R.DURATION :  // 3 min (the lobby offers 2 / 3 / 4)
-      type === 'dragon-eye'   ? 240 :
+      type === 'dragon-eye'   ? Dragon.R.DURATION :   // 4 min (the lobby offers 3 / 4 / 5)
       type === 'monopoly'     ? Mono.R.DURATION :   // 4 min (the lobby offers 3 / 4 / 5)
       type === 'sixseven'     ? Sixseven.R.DURATION :   // 2 min (the lobby offers 2 / 3 / 4)
       type === 'kingdoms'     ? 180 :
@@ -7924,6 +8222,9 @@ io.on('connection', (socket) => {
     // Dàfùwēng · Monopolio: every board again (the countdown or mid-game), or the ceremony again (after the end)
     if (g.gameType === 'monopoly' && g.mn && (g.state === 'active' || g.state === 'countdown')) io.to(socket.id).emit('mn:init', mnInitPayload(g, null));
     if (g.gameType === 'monopoly' && g.mn && g.state === 'ended') io.to(socket.id).emit('game-end', mnEndPayloads(g).host);
+    // Vuelo del Dragón: every race again (the countdown or mid-game), or the ceremony again (after the end)
+    if (g.gameType === 'dragon-eye' && g.dr && (g.state === 'active' || g.state === 'countdown')) io.to(socket.id).emit('dr:init', drInitPayload(g, null));
+    if (g.gameType === 'dragon-eye' && g.dr && g.state === 'ended') io.to(socket.id).emit('game-end', drEndPayloads(g).host);
     // Mochi Mash: the terrace again (mid-game), or the ceremony again (after the end)
     if (g.gameType === 'mochi-mash' && g.mm && g.state === 'active') io.to(socket.id).emit('mm:init', mmInitPayload(g, null));
     if (g.gameType === 'mochi-mash' && g.mm && g.state === 'ended') io.to(socket.id).emit('game-end', mmEndPayloads(g).host);
@@ -8033,7 +8334,7 @@ io.on('connection', (socket) => {
   socket.on('host:start', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
-    if (g.gameType === 'monopoly' && g.state !== 'lobby') return;   // Monopolio: a second click never deals the boards again
+    if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye') && g.state !== 'lobby') return;   // Monopolio / Vuelo: a second click never deals again
     // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
     if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata' || g.gameType === 'sixseven') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
@@ -8093,10 +8394,14 @@ io.on('connection', (socket) => {
     // Dàfùwēng · Monopolio: the same (each phone's run-in shows its own board of 4)
     if (g.gameType === 'monopoly') mnDeal(pin, g);
     const mnDealt = g.gameType === 'monopoly' && g.mn ? g.mn.id : null;   // (a reset / new deal during the countdown: this start is void)
+    // Vuelo del Dragón: the same (each phone's run-in shows its own race of 4)
+    if (g.gameType === 'dragon-eye') drDeal(pin, g);
+    const drDealt = g.gameType === 'dragon-eye' && g.dr ? g.dr.id : null;
 
     setTimeout(() => {
       if (!games[pin]) return;
       if (g.gameType === 'monopoly' && (g.state !== 'countdown' || !g.mn || g.mn.id !== mnDealt)) return;
+      if (g.gameType === 'dragon-eye' && (g.state !== 'countdown' || !g.dr || g.dr.id !== drDealt)) return;
       g.state = 'active';
       g.startedAt = Date.now();
       g.endsAt = Date.now() + g.duration * 1000;
@@ -8110,24 +8415,8 @@ io.on('connection', (socket) => {
       // Dàfùwēng · Monopolio: the boards were dealt at the countdown; the intro now, then mnPlay (its tick deals the questions)
       if (g.gameType === 'monopoly') mnStart(pin, g);
 
-      // Vuelo del Dragón: TWO dragons, one per team. Players answer vocab to
-      // unlock flap windows; each tap raises their dragon's altitude. First to
-      // DR_ALT_MAX reaches the heavens and wins.
-      if (g.gameType === 'dragon-eye') {
-        g.dragon = {
-          altRed: 0,
-          altGold: 0,
-          maxAlt: DR_ALT_MAX,
-          winner: null
-        };
-        io.to(pin).emit('dragon:init', {
-          maxAlt: DR_ALT_MAX,
-          players: Object.fromEntries(
-            Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team }])
-          ),
-          teamScores: g.teamScores
-        });
-      }
+      // Vuelo del Dragón v2: the races were dealt at the countdown; the intro now, then drPlay (its tick deals the questions)
+      if (g.gameType === 'dragon-eye') drStart(pin, g);
 
       if (g.gameType === 'kingdoms') kdStart(pin, g);
       if (g.gameType === 'paint') pcStart(pin, g);
@@ -8218,7 +8507,7 @@ io.on('connection', (socket) => {
         endGame(pin);
       }, g.duration * 1000);
       // Dàfùwēng · Monopolio: its room tick owns the clock (intro, +30 s, pause, «¡FINAL!»): no generic end timer
-      if (g.gameType === 'monopoly' && g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+      if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye') && g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
     }, COUNTDOWN_MS);
   });
 
@@ -8235,6 +8524,12 @@ io.on('connection', (socket) => {
     if (g.gameType === 'monopoly') {
       if (!g.mn || g.state !== 'active' || g.mn.phase === 'final' || g.mn.phase === 'done') return;
       mnFinal(pin, g);
+      return;
+    }
+    // Vuelo del Dragón: the same («¡FINAL!» first, then the ceremony; never twice)
+    if (g.gameType === 'dragon-eye') {
+      if (!g.dr || g.state !== 'active' || g.dr.phase === 'final' || g.dr.phase === 'done') return;
+      drFinal(pin, g);
       return;
     }
     // Mochi Mash: «Terminar» plays «¡FINAL!» first (also when paused: the pause ends), then the ceremony
@@ -8303,6 +8598,7 @@ io.on('connection', (socket) => {
     if (g.gameType === 'escape') { esStop(g); g.escape = null; }
     if (g.gameType === 'halcon') { hcStop(g); g.halcon = null; }
     if (g.gameType === 'monopoly') { mnStop(g); g.mn = null; }   // (each kid keeps its id k; a new game makes new boards)
+    if (g.gameType === 'dragon-eye') { drStop(g); g.dr = null; }  // (the same: a new game deals new races)
     if (g.gameType === 'mochi-mash') {
       mmStop(g);
       g.mm = null;
@@ -8363,6 +8659,26 @@ io.on('connection', (socket) => {
         cb({ ok: true, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: pl.studentCode });
         io.to(socket.id).emit('state', publicState(g));
         const one = mnEndPayloads(g).forPlayer(socket.id);
+        if (one) setTimeout(() => io.to(socket.id).emit('game-end', one), 60);
+        return;
+      }
+    }
+    // Vuelo del Dragón: the same (its own race's ceremony + card again)
+    if (g.state === 'ended' && g.gameType === 'dragon-eye' && g.dr) {
+      const nm = String(name || '').trim().slice(0, 20).toLowerCase();
+      const ex = nm ? Object.entries(g.players).find(([, p]) => p.name.toLowerCase() === nm) : null;
+      if (ex) {
+        const [oldId, pl] = ex;
+        pl.disconnected = false;
+        pl.disconnectedAt = null;
+        if (pl.cleanupTimer) { clearTimeout(pl.cleanupTimer); pl.cleanupTimer = null; }
+        if (oldId !== socket.id) { g.players[socket.id] = pl; delete g.players[oldId]; }
+        currentPin = pin;
+        role = 'player';
+        socket.join(pin);
+        cb({ ok: true, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: pl.studentCode });
+        io.to(socket.id).emit('state', publicState(g));
+        const one = drEndPayloads(g).forPlayer(socket.id);
         if (one) setTimeout(() => io.to(socket.id).emit('game-end', one), 60);
         return;
       }
@@ -8450,6 +8766,7 @@ io.on('connection', (socket) => {
     const studentRec = Students.getOrCreate(studentCode, cleanName);
     player.studentCode = studentRec.code;
     if (g.gameType === 'monopoly') mnEnsureId(g, player);     // the projector knows every kid (k + character) from the lobby
+    if (g.gameType === 'dragon-eye') drEnsureId(g, player);
     if (g.gameType === 'mochi-mash') mmEnsureId(g, player);   // the projector knows every kid (k + character) from the lobby
     if (g.gameType === 'pinata') pnEnsureId(g, player);
     if (g.gameType === 'sixseven') ssEnsureId(g, player);
@@ -8481,6 +8798,12 @@ io.on('connection', (socket) => {
     if (g.state === 'countdown' && g.gameType === 'monopoly' && g.mn && Mono.inGame(g.mn, player.mnK)) {
       mnJoinRoom(pin, g, socket.id, player);
       io.to(socket.id).emit('mn:init', mnInitPayload(g, socket.id));
+    }
+    // Vuelo del Dragón during the countdown: the same (its race's run-in again; a new kid flies in at drStart)
+    if (g.state === 'countdown' && g.gameType === 'dragon-eye' && g.dr && Dragon.inGame(g.dr, player.drK)) {
+      Dragon.setAway(g.dr, player.drK, false);
+      drJoinRoom(pin, g, socket.id, player);
+      io.to(socket.id).emit('dr:init', drInitPayload(g, socket.id));
     }
     // If joining/rejoining mid-game, sync them up
     if (g.state === 'active') {
@@ -8542,6 +8865,18 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('mn:init', mnInitPayload(g, socket.id));
         if (g.mn.phase === 'play' && player.currentQ) io.to(socket.id).emit('question', { qid: player.currentQ.qid, text: player.currentQ.text, answers: player.currentQ.answers, image: player.currentQ.image });
         else if (g.mn.phase !== 'play') player.currentQ = null;
+        return;
+      }
+      // Vuelo del Dragón: a late joiner flies in the smallest race (max 5, level with its last dragon); a rejoin keeps its
+      // seat, metres, stars and an open flight (dr:init carries it with the time left). Its open question comes back; the
+      // room's tick deals every new one (never in the intro, a pause or «¡FINAL!»).
+      if (g.gameType === 'dragon-eye' && g.dr) {
+        drEnsureId(g, player);
+        if (!Dragon.inGame(g.dr, player.drK)) drSeatLate(pin, g, socket.id, player);
+        else { Dragon.setAway(g.dr, player.drK, false); drJoinRoom(pin, g, socket.id, player); }
+        io.to(socket.id).emit('dr:init', drInitPayload(g, socket.id));
+        if (g.dr.phase === 'play' && player.currentQ) io.to(socket.id).emit('question', { qid: player.currentQ.qid, text: player.currentQ.text, answers: player.currentQ.answers, image: player.currentQ.image });
+        else if (g.dr.phase !== 'play') player.currentQ = null;
         return;
       }
       if (g.gameType === 'paint' && g.paint) {
@@ -8662,18 +8997,14 @@ io.on('connection', (socket) => {
     const correctText = cqData.answers[cqData.correctIdx];
     p.currentQ = null;
 
-    if (g.gameType === 'dragon-eye') {
-      // Vuelo del Dragón: correct → 5s flap window. Wrong = nothing (no penalty).
-      if (correct && g.dragon && !g.dragon.winner) {
-        p.mashUntil = Date.now() + DR_MASH_MS;
-        io.to(socket.id).emit('answer-result', {
-          correct: true,
-          mashUntil: p.mashUntil,
-          correctText
-        });
-      } else {
-        io.to(socket.id).emit('answer-result', { correct: false, correctText });
+    if (g.gameType === 'dragon-eye' && g.dr) {
+      // Vuelo del Dragón v2: paused or not in play → the question stays open (the phone gets its buttons back)
+      if (g.dr.paused || g.dr.phase !== 'play') {
+        if (g.dr.phase === 'play') p.currentQ = cqData;
+        io.to(socket.id).emit('answer-stale', { reason: g.dr.paused ? 'paused' : 'not-playing' });
+        return;
       }
+      drAnswer(pin, g, socket.id, p, correct, correctText, choiceIdx === -1);   // -1 = the phone's own clock ran out
     } else if (g.gameType === 'monopoly' && g.mn) {
       // Dàfùwēng · Monopolio v2: paused or not in play → the question stays open (the phone gets its buttons back)
       if (g.mn.paused || g.mn.phase !== 'play') {
@@ -8742,7 +9073,7 @@ io.on('connection', (socket) => {
     if (g.gameType === 'pinata' && g.pn) {
       nextDelay = -1;                       // the room's tick deals the next one (after the hit or the «¡Casi!» wait)
     } else if (g.gameType === 'dragon-eye') {
-      nextDelay = correct ? DR_MASH_MS + 600 : 1400;
+      nextDelay = -1;                       // Vuelo del Dragón v2: the room's tick deals the next one (after the flight or the «¡Casi!» wait)
     } else if (g.gameType === 'monopoly') {
       nextDelay = -1;                       // Monopolio v2: the room's tick deals the next one (after the turn or the «¡Casi!» wait)
     } else if (g.gameType === 'kingdoms') {
@@ -8766,7 +9097,7 @@ io.on('connection', (socket) => {
     }
     // Reinos de Colores sends its own small kd:plant diffs; skipping the full-room 'state' push here
     // keeps 30 phones from receiving ~5 full state objects per second.
-    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'monopoly') broadcast(pin);
+    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'monopoly' && g.gameType !== 'dragon-eye') broadcast(pin);
   });
 
   // Dragones Pintores: position (8 Hz from each phone), painted tiles, and «Recargar» (ask for a question).
@@ -8972,6 +9303,7 @@ io.on('connection', (socket) => {
       if (g.gameType === 'escape') esPause(pin, g, !!paused);
       if (g.gameType === 'halcon') hcPause(pin, g, !!paused);
       if (g.gameType === 'monopoly') mnPause(pin, g, !!paused);
+      if (g.gameType === 'dragon-eye') drPause(pin, g, !!paused);
       if (g.gameType === 'mochi-mash') mmPause(pin, g, !!paused);
       if (g.gameType === 'pinata') pnPause(pin, g, !!paused);
       if (g.gameType === 'sixseven') ssPause(pin, g, !!paused);
@@ -9120,6 +9452,17 @@ io.on('connection', (socket) => {
       broadcast(pin);
       return;
     }
+    // Vuelo del Dragón: the same (and a sprint that no longer fitted may come back)
+    if (g.gameType === 'dragon-eye' && g.dr) {
+      if (!Dragon.addTime(g.dr, add)) return;
+      g.endsAt = g.dr.endsAt;
+      const clock = drClock(g.dr);
+      Dragon.reopenSprints(g.dr, clock);
+      io.to(pin).emit('dr:time', { id: g.dr.id, endsMs: Math.max(0, g.dr.endsAt - clock), frenzy: g.dr.frenzy, frenzyMs: Math.max(0, g.dr.frenzyAt - clock), add: add / 1000 });
+      g._lastBcast = 0;
+      broadcast(pin);
+      return;
+    }
     // Mochi Mash: the room's tick owns the clock (no end timer); g.duration (the teacher's pick) is not touched, so the
     // next round starts with the picked time again
     if (g.gameType === 'mochi-mash' && g.mm) {
@@ -9187,8 +9530,7 @@ io.on('connection', (socket) => {
     const now = Date.now();
     const inAction =
       (p.mashUntil && p.mashUntil > now) ||
-      !!p.currentQ ||
-      !!p.dragonAim;
+      !!p.currentQ;
     io.to(socket.id).emit('state-resync', {
       state: g.state,
       gameType: g.gameType,
@@ -9211,6 +9553,23 @@ io.on('connection', (socket) => {
         else mnJoinRoom(pin, g, socket.id, p);
         io.to(socket.id).emit('mn:init', mnInitPayload(g, socket.id));
         if (g.mn.phase === 'play' && p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
+      }
+      return;
+    }
+    // Vuelo del Dragón: the race again (seat, metres, an open flight with the time left), the open question again; after
+    // the end, the ceremony + card again. The room's tick deals every new question.
+    if (g.gameType === 'dragon-eye' && g.dr) {
+      if (g.state === 'ended') {
+        const one = drEndPayloads(g).forPlayer(socket.id);
+        if (one) io.to(socket.id).emit('game-end', one);
+        return;
+      }
+      if (g.state === 'active') {
+        drEnsureId(g, p);
+        if (!Dragon.inGame(g.dr, p.drK)) drSeatLate(pin, g, socket.id, p);
+        else { Dragon.setAway(g.dr, p.drK, false); drJoinRoom(pin, g, socket.id, p); }
+        io.to(socket.id).emit('dr:init', drInitPayload(g, socket.id));
+        if (g.dr.phase === 'play' && p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
       }
       return;
     }
@@ -10188,6 +10547,29 @@ io.on('connection', (socket) => {
       }
     } catch (e) { console.error('[player:mn-roll]', e); }
   });
+  // Vuelo del Dragón: the wing beats of a flight, counted by the phone every 250 ms (mid = the flight). The server credits
+  // at most R.RATE a second of the flight (+ a burst) and never answers a batch (the phone predicts with the same cap;
+  // dr:flown settles it).
+  socket.on('player:dr-beats', (data) => {
+    try {
+      const { pin, mid, n } = data || {};
+      const g = games[pin];
+      if (!g || g.gameType !== 'dragon-eye' || !g.dr || g.state !== 'active') return;
+      const p = g.players[socket.id];
+      if (!p || !p.drK) return;
+      Dragon.beats(g.dr, p.drK, Number(mid), n, Date.now());
+    } catch (e) { console.error('[player:dr-beats]', e); }
+  });
+  // Vuelo del Dragón teacher «Saltar»: the intro → play now; after the end → every phone jumps to its own card.
+  socket.on('host:dr-skip', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'dragon-eye' || !g.dr) return;
+      if (g.state === 'active' && g.dr.phase === 'intro' && !g.dr.paused) drPlay(pin, g);
+      else if (g.state === 'ended') io.to(pin).except(g.hostId).emit('dr:skip', { id: g.dr.id });
+    } catch (e) { console.error('[host:dr-skip]', e); }
+  });
   // Dàfùwēng · Monopolio teacher «Saltar»: the intro → play now; after the end → every phone jumps to its own card.
   socket.on('host:mn-skip', (data) => {
     try {
@@ -10205,6 +10587,7 @@ io.on('connection', (socket) => {
     if (g.gameType === 'mochi-mash' && g.mm) return;   // Mochi Mash v2 counts taps in batches (player:mm-taps), capped
     if (g.gameType === 'pinata') return;               // Piñata Tigre v2: one judged swing per right answer (player:pn-hit)
     if (g.gameType === 'sixseven') return;             // 6-7 Swing v2: answers only (player:answer)
+    if (g.gameType === 'dragon-eye') return;           // Vuelo del Dragón v2: wing beats come in batches (player:dr-beats), capped
     const p = g.players[socket.id];
     if (!p) return;
     const now = Date.now();
@@ -10238,35 +10621,6 @@ io.on('connection', (socket) => {
     if (combo && Math.random() < 0.15) {
       g.feed.push({ type: 'combo', name: p.name, team: p.team, t: now });
       broadcast(pin);
-    }
-
-    // === Vuelo del Dragón: each tap lifts this player's TEAM dragon ===
-    if (g.gameType === 'dragon-eye' && g.dragon && !g.dragon.winner) {
-      const altKey = p.team === 'red' ? 'altRed' : 'altGold';
-      g.dragon[altKey] = Math.min(g.dragon.maxAlt, g.dragon[altKey] + points);
-      // Throttled altitude broadcast
-      if (!g.lastDrAltBcast || now - g.lastDrAltBcast >= DR_ALT_BCAST_MS) {
-        g.lastDrAltBcast = now;
-        io.to(pin).emit('dragon:alt', {
-          altRed: g.dragon.altRed,
-          altGold: g.dragon.altGold,
-          maxAlt: g.dragon.maxAlt
-        });
-      }
-      // Reaching the heavens — celebrate, but RESPECT the timer. The team
-      // can keep playing (collecting more taps + points) until duration ends.
-      // Once a team has hit the heavens, they cannot go higher (capped above)
-      // but they can keep contributing to their score via the normal tap flow.
-      if (g.dragon[altKey] >= g.dragon.maxAlt && !g.dragon.heavensAnnounced) {
-        g.dragon.heavensAnnounced = p.team;
-        io.to(pin).emit('dragon:reached-heavens', {
-          team: p.team,
-          altRed: g.dragon.altRed,
-          altGold: g.dragon.altGold,
-          teamScores: g.teamScores
-        });
-        // No endGame here — wait for the duration timer to fire.
-      }
     }
   });
 
@@ -10311,6 +10665,7 @@ io.on('connection', (socket) => {
           if (stillExists.gameType === 'escape') esStop(stillExists);
           if (stillExists.gameType === 'halcon') hcStop(stillExists);
           if (stillExists.gameType === 'monopoly') mnStop(stillExists);
+          if (stillExists.gameType === 'dragon-eye') drStop(stillExists);
           if (stillExists.gameType === 'mochi-mash') mmStop(stillExists);
           if (stillExists.gameType === 'pinata') pnStop(stillExists);
           if (stillExists.gameType === 'sixseven') ssStop(stillExists);
@@ -10325,6 +10680,8 @@ io.on('connection', (socket) => {
         // Soft disconnect: keep slot for rejoin, mark as disconnected
         p.disconnected = true;
         p.disconnectedAt = Date.now();
+        // Vuelo del Dragón: the comeback rules (tailwind, Remontada) look at the dragons still flying
+        if (g.gameType === 'dragon-eye' && g.dr && p.drK) Dragon.setAway(g.dr, p.drK, true);
         // Batalla de Nieve: survival seconds don't count while the phone is away (snAttach restarts them)
         if (g.gameType === 'snow' && g.snow && p.snSide === 'sun' && p.snSunSince) { p.snSunMs = (p.snSunMs || 0) + Date.now() - p.snSunSince; p.snSunSince = 0; }
         g.feed.push({ type: 'leave', name: p.name, t: Date.now() });
@@ -10368,6 +10725,7 @@ setInterval(() => {
     if (g.gameType === 'escape' && !(g.escape && g.escape.phase === 'run' && !g.escape.paused)) return;   // only while the crew runs
     if (g.gameType === 'halcon') return;       // no questions on the phones: the boards run the rounds
     if (g.gameType === 'monopoly') return;     // Monopolio: its room tick deals every question (after the turn / the wait)
+    if (g.gameType === 'dragon-eye') return;   // Vuelo del Dragón: the same (after the flight / the wait)
     if (g.gameType === 'mochi-mash' && g.mm && (g.mm.phase !== 'play' || g.mm.paused)) return;   // intro, pause, «¡FINAL!»
     if (g.gameType === 'pinata') return;       // Piñata Tigre: its room tick deals every question (after the hit / the wait)
     if (g.gameType === 'sixseven') return;     // 6-7 Swing: the same (ssTick deals every sum and calls time up)
