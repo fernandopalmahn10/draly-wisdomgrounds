@@ -262,6 +262,100 @@ const valueOf = (e) => (e.op === '+' ? e.a + e.b : e.a - e.b);
   ok(!M.addTime(m4, 30000), 'no «+30 s» after «¡FINAL!»');
 }
 
+// ---------- «¡SIX SEVEN!» during play (2026-10-16): racha 7, the 67th coin, the 6 → 7 pair, the team waves ----------
+{
+  const pl = room(2, 2);
+  const m = game(pl, 120, 0);
+  M.startPlay(m, 0);
+  m.rng = mulberry32(3);
+  const p = pl.r0;
+  const dealPlain = (t) => { const q = M.deal(m, p, t); p.ssQ.gold = false; return q; };   // no golden sums here
+  const q0 = dealPlain(0);
+  eq(q0.ss.min, R.MIN_THINK_MS, 'the phone knows the too-fast line (to show a certain verdict at the tap)');
+  ok(!JSON.stringify(q0).includes('"ans"'), 'still no answer in what the phone gets');
+  // play right answers with chosen values: 6 then 7 = a pair; 7 then 6 is not
+  const playAns = (want, right) => {
+    let r;
+    for (let i = 0; i < 50; i++) {
+      dealPlain(1000);
+      if (p.ssQ.ans === want) { r = M.answer(m, p, right === false ? (want === 6 ? 7 : 6) : want, 2000); break; }
+      p.ssQ = null;
+    }
+    return r;
+  };
+  p.ssStreak = 0; p.ssLastRight = 0;
+  let r = playAns(6);
+  ok(r.right && !r.pair, 'a right 6 alone is no pair');
+  r = playAns(7);
+  ok(r.right && r.pair, 'right 6 then right 7: «six seven» pair');
+  r = playAns(6);
+  ok(r.right && !r.pair, '7 then 6 is not the pair');
+  r = playAns(6, false);
+  ok(!r.right && !r.pair && r.six === 0, 'a wrong answer breaks the pair');
+  r = playAns(7);
+  ok(r.right && !r.pair, 'a wrong 6 then a right 7: no pair');
+  // racha 7 = six flag 1, once per racha
+  M.resetKid(p, m);
+  const sixes = [];
+  for (let i = 0; i < 9; i++) { dealPlain(1000); sixes.push(M.answer(m, p, p.ssQ.ans, 2000).six); }
+  eq(sixes.map((x) => x & 1), [0, 0, 0, 0, 0, 0, 1, 0, 0], 'racha 7 flags «six seven» once');
+  // the 67th coin = six flag 2, once
+  M.resetKid(p, m);
+  p.ssCoins = 65;
+  dealPlain(1000);
+  const c1 = M.answer(m, p, p.ssQ.ans, 2000);
+  eq(c1.six & 2, 0, '66 coins: not yet');
+  dealPlain(1000);
+  const c2 = M.answer(m, p, p.ssQ.ans, 2000);
+  eq(c2.six & 2, 2, 'the 67th coin flags «six seven»');
+  dealPlain(1000);
+  eq(M.answer(m, p, p.ssQ.ans, 2000).six & 2, 0, 'only once');
+  // the projector's feed carries the flag
+  m.fx = {};
+  M.resetKid(p, m);
+  for (let i = 0; i < 7; i++) { dealPlain(1000); M.answer(m, p, p.ssQ.ans, 2000); }
+  eq(m.fx[p.ssId][3] & 1, 1, 'the feed marks the kid who just did «six seven»');
+  ok(m.fx[p.ssId].length === 4, 'feed entries: [coins, golden, wrong, six]');
+  // a «six seven» is cosmetic: same coins as without it
+  eq(M.streakMult(7), 3, 'racha 7 pays ×3 like any racha 6-9');
+
+  // the team waves: the first at 67, then every waveStep (~E ÷ 3, a multiple of 67)
+  eq(M.waveStep(M.expected(120, 2)), 67, 'teams of 2, 2 minutes: a wave every 67');
+  eq(M.waveStep(M.expected(120, 4)), 134, 'teams of 4: every 134');
+  eq(M.waveStep(M.expected(120, 15)), 536, 'teams of 15: every 536');
+  eq(M.waveStep(M.expected(240, 15)), 1072, 'teams of 15, 4 minutes: every 1072');
+  ok([20, 100, 216, 500, 999, 1620, 3240].every((E) => M.waveStep(E) % 67 === 0 && M.waveStep(E) >= 67), 'every wave lands on a multiple of 67');
+  const m2 = game(room(2, 2), 120, 0);
+  eq(m2.waveStep, 67, 'a game of 2 + 2: every 67');
+  M.startPlay(m2, 0);
+  m2.landmarks.forEach((l) => { l.team = 'gold'; });     // (landmarks out of the way: only the waves here)
+  m2.totals = { red: 66, gold: 0 };
+  eq(M.tick(m2, 100).waves, [], '66: no wave yet');
+  m2.totals = { red: 67, gold: 10 };
+  eq(M.tick(m2, 200).waves, [{ team: 'red', n: 1, gold: 67 }], 'Fuego reaches 67: «¡SIX SEVEN!»');
+  eq(M.tick(m2, 300).waves, [], 'a wave is shouted once');
+  m2.totals = { red: 300, gold: 140 };
+  eq(M.tick(m2, 400).waves, [{ team: 'gold', n: 2, gold: 134 }], 'a big jump: one wave naming the highest mark passed; Fuego waits for its gap');
+  eq(M.tick(m2, 200 + R.WAVE_GAP_MS - 1).waves, [], 'a team\'s waves stay WAVE_GAP_MS apart');
+  eq(M.tick(m2, 200 + R.WAVE_GAP_MS).waves, [{ team: 'red', n: 4, gold: 268 }], '…then the waiting wave comes (never lost)');
+  m2.paused = true;
+  m2.totals = { red: 600, gold: 600 };
+  eq(M.tick(m2, 99000).waves, [], 'no wave while paused');
+  M.shiftTimes(m2, 5000);
+  eq(m2.waveLast.red, 200 + R.WAVE_GAP_MS + 5000, 'a pause moves the waves\' gap too');
+  m2.paused = false;
+  const m3 = game(room(1, 1), 120, 0);
+  M.startPlay(m3, 0);
+  m3.landmarks.forEach((l) => { l.team = 'gold'; });
+  m3.totals = { red: 66.6, gold: 0 };
+  eq(M.tick(m3, 100).waves.map((w) => w.gold), [67], 'the wave follows the gold the screens show (66.6 shows 67)');
+  // rescale grows the step for the next waves only
+  const m4 = game(room(1, 1), 120, 0);
+  const s0 = m4.waveStep;
+  M.rescale(m4, { red: 12, gold: 12 }, 100);
+  ok(m4.waveStep > s0 && m4.waveStep % 67 === 0, 'late joiners: the waves space out (still multiples of 67)');
+}
+
 // ---------- rescale (late joiners early in the game) ----------
 {
   const pl = room(1, 1);
@@ -355,7 +449,7 @@ function play(kind, seed, seconds) {
 
 // ---------- 300 simulated classes: every coin adds up ----------
 {
-  let landmarks = 0, burj = 0, ties = 0, games = 0, maxGap = 0, rate = 0;
+  let landmarks = 0, burj = 0, ties = 0, games = 0, maxGap = 0, rate = 0, waves = 0, maxWaves = 0, noWave = 0, waveGap = 1e9;
   for (let gi = 0; gi < 300; gi++) {
     const rng = mulberry32(1000 + gi);
     const n = 4 + Math.floor(rng() * 27);
@@ -367,9 +461,11 @@ function play(kind, seed, seconds) {
     M.startPlay(m, 0);
     m.w = M.weights(M.teamSizes(players));
     // each kid: a speed and an accuracy like a real class (2-5 s a sum, 70-95 % right)
+    const tw = { red: 0, gold: 0 }, lastWave = {};
     const kids = Object.values(players).map((p) => ({ p, speed: 2000 + rng() * 3000, acc: 0.7 + rng() * 0.25, next: 0, open: false }));
     for (let t = 0; t < m.endsAt; t += 100) {
-      M.tick(m, t);
+      const ev = M.tick(m, t);
+      ev.waves.forEach((w) => { waves++; tw[w.team]++; if (lastWave[w.team] != null) waveGap = Math.min(waveGap, t - lastWave[w.team]); lastWave[w.team] = t; });
       kids.forEach((k) => {
         if (!k.open && t >= (k.p.ssNextQAt || 0)) { M.deal(m, k.p, t); k.open = true; k.at = t + k.speed * (0.6 + rng() * 0.8); }
         else if (k.open && t >= k.at) {
@@ -379,6 +475,8 @@ function play(kind, seed, seconds) {
         }
       });
     }
+    maxWaves = Math.max(maxWaves, tw.red, tw.gold);
+    if (!tw.red && !tw.gold) noWave++;
     const raw = { red: 0, gold: 0 };
     Object.values(players).forEach((p) => { raw[p.team] += p.ssCoins; });
     eq(raw, m.raw, 'raw coins = the sum of the kids\' coins');
@@ -396,6 +494,11 @@ function play(kind, seed, seconds) {
   console.log(`  300 simulated classes: ${(rate / games).toFixed(2)} coins per kid per second, ${landmarks} landmarks won (${(landmarks / games).toFixed(2)} a game), the Burj Khalifa reached in ${burj}, ${ties} ties`);
   ok(landmarks / games >= 2, 'most games give out at least two landmarks');
   ok(burj < games, 'the Burj Khalifa is not a given');
+  console.log(`  «¡SIX SEVEN!» team waves: ${(waves / games / 2).toFixed(1)} a team per game, at most ${maxWaves}, ${noWave} games with none, the closest two of a team ${(waveGap / 1000).toFixed(1)} s apart`);
+  ok(waves / games / 2 >= 1.5 && waves / games / 2 <= 6, 'a team gets a few «six seven» waves a game: a moment, not a drone');
+  ok(maxWaves <= 8, 'never a wave storm');
+  ok(waveGap >= R.WAVE_GAP_MS, 'a team\'s waves at least WAVE_GAP_MS apart');
+  ok(noWave === 0, 'every game has at least one wave (the meme is felt in every round)');
 }
 
 console.log(`test-sixseven: ${checks} checks passed`);

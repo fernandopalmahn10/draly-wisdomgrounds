@@ -19,7 +19,8 @@ const R = {
   INTRO_MS: 2800,            // «¡Toca el resultado!» → «¿Listos?» → «¡YA!» after the 3.5 s run-in countdown
   FINAL_MS: 2400,            // «¡FINAL!» before the ceremony (game-end)
   Q_MS: 12000,               // the phone's clock for one question (time up = a wrong answer)
-  RIGHT_MS: 500,             // a right answer: the swing on the phone, then the next question
+  RIGHT_MS: 650,             // a right answer: the in-between beat (the coin lands in the team's pan, the phone does the
+                             // 6-7 swing, the next sum swings in). Was 500 until 2026-10-16: "there's nothing in between"
   WRONG_MS: 1600,            // a wrong answer / time up: the wobble + «Era 7 · qi», then the next question
   WRONG2_MS: 2600,           // …a second wrong in a row waits longer («¡Respira! Piensa y toca»)
   MIN_THINK_MS: 400,         // nobody reads a sum and taps faster (server clock, round trip included): a tap under this is wrong
@@ -31,8 +32,9 @@ const R = {
   FRENZY_MAX_FRAC: 1 / 3,    // (a very short game: the last third)
   LEAD_MIN: 4, LEAD_FRAC: 0.03, LEAD_GAP_MS: 7000,   // a lead counts at ≥ 4 coins and ≥ 3 % of the total; alarms ≥ 7 s apart
   BEHIND_MIN: 10, BEHIND_FRAC: 0.15,                 // trailing (for golden questions): ≥ 10 and ≥ 15 % of the leader
-  PER_KID_S: 0.95,           // E per kid per second of play (calibrates the landmarks). A simulated class (2-5 s a sum,
-                             // 70-95 % right) makes ~0.67 coins per kid per second; E sits above that so the Burj Khalifa
+  PER_KID_S: 0.90,           // E per kid per second of play (calibrates the landmarks). A simulated class (2-5 s a sum,
+                             // 70-95 % right) makes ~0.65 coins per kid per second (0.90 since the 650 ms beat: was 0.95 at
+                             // 500 ms); E sits above that so the Burj Khalifa
                              // takes a team that plays well (~30 % of 300 simulated classes, scripts/test-sixseven.js)
   LANDMARKS: [
     { id: 'museum', name: 'Museo del Futuro', at: 0.12 },
@@ -43,6 +45,12 @@ const R = {
   LANDMARK_BONUS: 0.04,      // × the expected team total
   RESCALE_MS: 20000,         // late joiners in the intro or the first 20 s of play grow the race (rescale)
   FAST_MIN_MS: 400,          // the fastest-answer star ignores times under this
+  // «¡SIX SEVEN!» moments (the kids' meme, felt DURING play, his ask 2026-10-16). Cosmetic: they never change the gold.
+  SIX_STREAK: 7,             // a kid's racha reaches 7 (the 6th right was ×3, the 7th is «six seven»)
+  SIX_COINS: 67,             // a kid's 67th coin
+  WAVE_FIRST: 67,            // a team's «¡SIX SEVEN!» wave: the first when its gold reaches 67…
+  WAVES_PER_E: 3,            // …then every ~E ÷ 3 more, rounded to a multiple of 67: ~2-3 waves a team, any class or length
+  WAVE_GAP_MS: 12000,        // a team's waves at least 12 s apart (a landmark bonus right after a wave waits its turn)
   DURATIONS: [120, 180, 240],
   DURATION: 120,
   STYLES: ['num', 'zh', 'mix'],
@@ -56,6 +64,11 @@ const pickTeam = (players, m) => Mochi.pickTeam(players, m ? { totals: m.totals 
 const expected = (durationS, avgSize) => Math.max(20, Math.round(R.PER_KID_S * Math.max(10, durationS) * Math.max(1, avgSize)));
 const frenzyMs = (durationS) => Math.round(Math.min(R.FRENZY_MS, Math.max(10, durationS) * 1000 * R.FRENZY_MAX_FRAC));
 const clampDuration = (s) => clamp(Math.round(Number(s) || R.DURATION), 30, 600);
+// the gold between two «¡SIX SEVEN!» waves of a team, from the expected team total E: ~E ÷ 3 rounded to a multiple of
+// 67 (67 for a tiny class, 536 for teams of 15 in 2 minutes): the waves stay a moment, not a drone, and every wave
+// lands on a multiple of 67.
+const waveStep = (E) => R.WAVE_FIRST * Math.max(1, Math.round(Math.max(1, E) / (R.WAVE_FIRST * R.WAVES_PER_E)));
+const waveAt = (m, n) => (n <= 0 ? R.WAVE_FIRST : R.WAVE_FIRST + n * m.waveStep);
 const cleanStyle = (s) => (R.STYLES.includes(s) ? s : R.STYLE);
 
 // ---------- the questions ----------
@@ -101,6 +114,7 @@ function newGame(seed, durationS, now, sizes, style) {
     totals: { red: 0, gold: 0 }, raw: { red: 0, gold: 0 }, w: weights(sizes || {}),
     E, landmarks: R.LANDMARKS.map((l) => ({ id: l.id, name: l.name, at: Math.max(4, Math.round(E * l.at)), bonus: Math.max(2, Math.round(E * R.LANDMARK_BONUS)), team: null })),
     lead: null, announced: null, lastAlarm: -1e12, behind: null,
+    waves: { red: 0, gold: 0 }, waveStep: waveStep(E), waveLast: { red: -1e12, gold: -1e12 },
     nextQid: 1, dirty: true, fx: {},
   };
 }
@@ -111,6 +125,7 @@ function rescale(m, sizes, now) {
   const E = expected(m.duration, avg);
   if (E <= m.E) return false;
   m.E = E;
+  m.waveStep = Math.max(m.waveStep || 0, waveStep(E));       // the next waves only (a wave already shouted stays)
   m.landmarks.forEach((l) => {
     if (l.team) return;
     const d = R.LANDMARKS.find((x) => x.id === l.id);
@@ -125,6 +140,7 @@ function resetKid(p, m) {
   p.ssGame = m.id;
   p.ssCoins = 0; p.ssRight = 0; p.ssWrong = 0; p.ssAnswered = 0; p.ssStreak = 0; p.ssBest = 0; p.ssMisses = 0;
   p.ssFast = null; p.ssBehind = 0; p.ssGolds = 0; p.ssZh = 0; p.ssN = 0; p.ssPrev = null; p.ssNextQAt = 0; p.ssQ = null;
+  p.ssLastRight = 0;          // the answer (6 or 7) of the kid's last sum when it was right, else 0 (the 6 → 7 pair)
 }
 function join(m, p) { if (!inGame(m, p)) resetKid(p, m); }
 function startPlay(m, now) {
@@ -157,7 +173,9 @@ function deal(m, p, now) {
   p.ssQ = { qid: 'q-67-' + m.id + '-' + (m.nextQid++), ans: q.ans, zh: q.zh, gold, at: now, text: q.text, a: q.a, b: q.b, op: q.op };
   return {
     qid: p.ssQ.qid, text: q.text + ' = ?', answers: ['6', '7'], gameMode: 'sixseven',
-    ss: { a: q.a, b: q.b, op: q.op, zh: q.zh, gold, ms: R.Q_MS, n: p.ssN, words: q.zh ? [PINYIN[q.a], PINYIN[q.b]] : null },
+    // min: the too-fast line, so the phone can show a verdict the moment the kid taps (a wrong button, or the right one
+    // after `min` ms, is certain; the server's verdict still decides the coins and corrects the phone if it ever differs)
+    ss: { a: q.a, b: q.b, op: q.op, zh: q.zh, gold, ms: R.Q_MS, min: R.MIN_THINK_MS, n: p.ssN, words: q.zh ? [PINYIN[q.a], PINYIN[q.b]] : null },
   };
 }
 const streakMult = (s) => (s >= R.STREAK[2] ? 4 : s >= R.STREAK[1] ? 3 : s >= R.STREAK[0] ? 2 : 1);
@@ -178,15 +196,20 @@ function answer(m, p, choice, now) {
   if (!right) {
     p.ssWrong++;
     p.ssStreak = 0;
+    p.ssLastRight = 0;
     p.ssMisses = (p.ssMisses || 0) + 1;
     const wait = p.ssMisses >= 2 ? R.WRONG2_MS : R.WRONG_MS;
     p.ssNextQAt = now + wait;
-    if (p.ssId != null) { m.fx[p.ssId] = m.fx[p.ssId] || [0, 0, 0]; m.fx[p.ssId][2] = 1; }   // the projector: a wobble
-    return Object.assign(base, { right: false, timeUp, tooFast, calm: p.ssMisses >= 2, wait, streak: 0, coins: 0, total: p.ssCoins });
+    if (p.ssId != null) { m.fx[p.ssId] = m.fx[p.ssId] || [0, 0, 0, 0]; m.fx[p.ssId][2] = 1; }   // the projector: a wobble
+    return Object.assign(base, { right: false, timeUp, tooFast, calm: p.ssMisses >= 2, wait, streak: 0, coins: 0, total: p.ssCoins, six: 0, pair: false });
   }
   p.ssMisses = 0;
   p.ssRight++;
   p.ssStreak++;
+  // «six seven» in a row: this right answer is 7 and the one just before it (also right) was 6
+  const pair = p.ssLastRight === 6 && q.ans === 7;
+  p.ssLastRight = q.ans;
+  const coinsBefore = p.ssCoins;
   p.ssBest = Math.max(p.ssBest, p.ssStreak);
   if (q.zh) p.ssZh++;
   if (ms >= R.FAST_MIN_MS) p.ssFast = p.ssFast == null ? ms : Math.min(p.ssFast, ms);
@@ -207,13 +230,16 @@ function answer(m, p, choice, now) {
   }
   value += goldExtra;
   credit(m, p, value);
-  if (p.ssId != null) {                // the projector's feed: who scored since the last tick
-    m.fx[p.ssId] = m.fx[p.ssId] || [0, 0, 0];
+  // the kid's own «¡SIX SEVEN!»: 1 = racha 7, 2 = the 67th coin (both on one answer = 3)
+  const six = (p.ssStreak === R.SIX_STREAK ? 1 : 0) | (coinsBefore < R.SIX_COINS && p.ssCoins >= R.SIX_COINS ? 2 : 0);
+  if (p.ssId != null) {                // the screens' feed: who scored since the last tick (and who just did a «six seven»)
+    m.fx[p.ssId] = m.fx[p.ssId] || [0, 0, 0, 0];
     m.fx[p.ssId][0] += value;
-    if (q.gold) m.fx[p.ssId][1] = 1;
+    if (q.gold && goldExtra > 0) m.fx[p.ssId][1] = 1;   // (a golden coin on the screens only when the extra was paid)
+    m.fx[p.ssId][3] |= six;
   }
   p.ssNextQAt = now + R.RIGHT_MS;
-  return Object.assign(base, { right: true, streak: p.ssStreak, mult, frenzy: m.frenzy, goldExtra, coins: value, total: p.ssCoins, wait: R.RIGHT_MS });
+  return Object.assign(base, { right: true, streak: p.ssStreak, mult, frenzy: m.frenzy, goldExtra, coins: value, total: p.ssCoins, wait: R.RIGHT_MS, six, pair });
 }
 function credit(m, p, value) {
   const t = p.team;
@@ -228,7 +254,7 @@ function credit(m, p, value) {
 // ---------- the room clock ----------
 // Every tick while playing: the landmark race, the lead (hysteresis + alarm gap), who trails, the frenzy.
 function tick(m, now) {
-  const ev = { lead: null, landmarks: [], frenzy: false };
+  const ev = { lead: null, landmarks: [], frenzy: false, waves: [] };
   if (m.paused || m.phase !== 'play') return ev;
   const T = m.totals;
   m.landmarks.forEach((l) => {
@@ -241,6 +267,22 @@ function tick(m, now) {
     T[t] += l.bonus;
     m.dirty = true;
     ev.landmarks.push({ id: l.id, name: l.name, team: t, bonus: l.bonus });
+  });
+  // a team's «¡SIX SEVEN!» wave: its gold (as the screens show it) passed the next mark (67, then every waveStep).
+  // One wave per team per tick, naming the highest mark passed (a landmark bonus can jump two marks at once), and a
+  // team's waves at least WAVE_GAP_MS apart (marks passed during the gap come together in one wave naming the highest).
+  if (!m.waves) m.waves = { red: 0, gold: 0 };
+  if (!m.waveLast) m.waveLast = { red: -1e12, gold: -1e12 };
+  if (!m.waveStep) m.waveStep = waveStep(m.E);
+  TEAMS.forEach((t) => {
+    if (now - m.waveLast[t] < R.WAVE_GAP_MS) return;
+    const v = Math.round(T[t]);
+    let n = m.waves[t] || 0, mark = 0;
+    while (v >= waveAt(m, n)) { mark = waveAt(m, n); n++; }
+    if (!mark) return;
+    m.waves[t] = n;
+    m.waveLast[t] = now;
+    ev.waves.push({ team: t, n, gold: mark });
   });
   const d = T.red - T.gold;
   const need = Math.max(R.LEAD_MIN, (T.red + T.gold) * R.LEAD_FRAC);
@@ -260,7 +302,7 @@ const display = (m) => ({ r: Math.round(m.totals.red), g: Math.round(m.totals.go
 function tilt(r, g) {
   const sum = (r || 0) + (g || 0);
   if (!sum) return 0;
-  return clamp(((g || 0) - (r || 0)) / Math.max(sum, 12) * 2.2, -1, 1);
+  return clamp(((g || 0) - (r || 0)) / Math.max(sum, 12) * 3.2, -1, 1);
 }
 const race = (m) => m.landmarks.map((l) => ({ id: l.id, name: l.name, at: l.at, bonus: l.bonus, team: l.team }));
 // the teacher paused for `ms`: every pending moment moves by that much (each kid's waits are moved by shiftKid)
@@ -270,6 +312,7 @@ function shiftTimes(m, ms) {
   if (m.endsAt) m.endsAt += ms;
   if (m.frenzyAt) m.frenzyAt += ms;
   m.lastAlarm += ms;
+  if (m.waveLast) { m.waveLast.red += ms; m.waveLast.gold += ms; }
 }
 function shiftKid(p, ms) {
   if (p.ssNextQAt) p.ssNextQAt += ms;
@@ -290,7 +333,7 @@ const STARS = [
   { id: 'aim', name: 'Mejor puntería', unit: '%', val: (r) => (r.answered ? Math.round((100 * r.right) / r.answered) : 0), ok: (r) => r.answered >= 5 && r.right >= 1, best: 'max' },
   // the fastest answer of a kid who thinks (a guesser who got lucky once doesn't win it)
   { id: 'fast', name: 'Respuesta más rápida', unit: 's', val: (r) => r.fast, ok: (r) => r.fast != null && r.right >= 3 && r.right >= 0.6 * r.answered, best: 'min' },
-  { id: 'zh', name: 'Experto en Chino', unit: 'en chino', val: (r) => r.zh, ok: (r) => r.zh >= 1, best: 'max' },
+  { id: 'zh', name: 'Experto en Chino Mandarín', unit: 'en Chino Mandarín', val: (r) => r.zh, ok: (r) => r.zh >= 1, best: 'max' },
   { id: 'comeback', name: 'Gran remontada', unit: 'monedas', val: (r) => r.behind, ok: (r) => r.behind >= 1, best: 'max' },
 ];
 function stars(rows) {
@@ -328,7 +371,7 @@ function finish(m, rows) {
 }
 
 module.exports = {
-  R, TEAMS, other, teamSizes, weights, pickTeam, expected, frenzyMs, clampDuration, cleanStyle,
+  R, TEAMS, other, teamSizes, weights, pickTeam, expected, frenzyMs, clampDuration, cleanStyle, waveStep, waveAt,
   PINYIN, MINUS, POOL, write, makeQuestion, streakMult,
   newGame, rescale, inGame, resetKid, join, startPlay, addTime, deal, answer, tick, display, tilt, race,
   shiftTimes, shiftKid, final, stars, finish, STARS,

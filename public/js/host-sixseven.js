@@ -31,13 +31,14 @@
   const handlers = {};
   const onSs = (ev, fn) => { handlers[ev] = fn; socket.on(ev, (d) => { if (frozen) { queue.push([fn, d, ev]); return; } fn(d); }); };
   const later = (ms, fn) => { const t = setTimeout(fn, Math.max(0, ms)); timers.push(t); return t; };
-  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; stopHype(); bandQ = []; sayQ = []; }   // (only ever called after init)
 
   // ---------- sound ----------
   const SFX = {
     tick: K + 'tick.mp3', whoosh: K + 'whoosh.mp3', win: K + 'sting-win.mp3', flag: K + 'flag.mp3', alert: K + 'castle-alert.mp3',
     siege: K + 'siege.mp3', start: H + 'start.mp3', final: H + 'final.mp3', aww: H + 'aww.mp3', round: H + 'round.mp3',
     drum: MO + 'drum.mp3', star: MO + 'star.mp3', gold: MO + 'gold.mp3', coin: A + 'coins.mp3', landmark: K + 'landmark.mp3', liuqi: A + 'liuqi.mp3',
+    shout: A + 'shout67.mp3',             // «¡SIX SEVEN!» shouted by a crowd (Kenney Voiceover Pack, CC0, layered: ../ss67 shout.sh)
   };
   const MUSIC = { lobby: K + 'music-lobby.mp3', play: A + 'music-swing.mp3', final: K + 'music-final.mp3' };
   let music = null, musicName = null;
@@ -78,16 +79,33 @@
     $('cer-skip').classList.toggle('hidden', name !== 'win');
     musicFor();
   }
-  let sayT = null;
+  // Dralingo's bubble: each line stays at least 2.5 s (a new one waits its turn, at most two wait), so the room can read it
+  let sayT = null, sayQT = null, sayMinUntil = 0, sayQ = [];
   function say(text, ms) {
+    const now = Date.now();
+    if (now < sayMinUntil) {
+      sayQ.push([text, ms]);
+      if (sayQ.length > 2) sayQ.shift();
+      if (!sayQT) sayQT = setTimeout(nextSay, sayMinUntil - now + 20);
+      return;
+    }
     const el = $('host-say');
     el.textContent = text;
     el.classList.add('show');
     clearTimeout(sayT);
     sayT = setTimeout(() => el.classList.remove('show'), ms || 3200);
+    sayMinUntil = now + 2500;
+    if (sayQ.length && !sayQT) sayQT = setTimeout(nextSay, 2520);
   }
-  let bandT = null, bandUntil = 0;
+  function nextSay() { sayQT = null; const n = sayQ.shift(); if (n) say(n[0], n[1]); }
+  // the big bands, one at a time: a band that arrives while another shows waits its turn (at most two wait; «¡FINAL!»
+  // goes first and clears the rest), so a «six seven» wave right after a landmark is never lost
+  let bandT = null, bandUntil = 0, bandQ = [];
   function band(kind, parts, team, ms) {
+    if (kind === 'final') bandQ = [];
+    else if (!g || g.phase !== 'play') return;          // a late band never lands on «¡FINAL!» or the ceremony
+    else if (g.endAt && !paused && g.endAt - performance.now() < 10500) return;   // the last 10 s belong to the big countdown
+    else if (Date.now() < bandUntil - 150) { bandQ.push([kind, parts, team, ms]); if (bandQ.length > 2) bandQ.shift(); return; }
     const b = $('band');
     b.className = 'ssp-band ' + kind + (team ? ' ' + team : '');
     b.innerHTML = '';
@@ -97,7 +115,13 @@
     document.body.classList.add('band-on');
     clearTimeout(bandT);
     bandUntil = Date.now() + (ms || 2200);
-    bandT = setTimeout(() => { if (!testHold) { b.classList.remove('show'); document.body.classList.remove('band-on'); } }, ms || 2200);
+    bandT = setTimeout(() => {
+      if (testHold) return;
+      b.classList.remove('show');
+      document.body.classList.remove('band-on');
+      const nx = bandQ.shift();
+      if (nx) timers.push(setTimeout(() => band(...nx), 260));
+    }, ms || 2200);
   }
   const node = (tag, txt, cls) => X.el(tag, cls, txt);
 
@@ -282,6 +306,7 @@
           figs[p.k] = f;
         }
         f.classList.toggle('off', p.off);
+        f.style.setProperty('--ci', i % 8);      // the crowd's 6-7 ripples a little from kid to kid
         if (runIn && !reduced()) {
           f.style.animation = 'none';
           void f.offsetWidth;
@@ -411,6 +436,7 @@
     renderCrowds(false);
     setPaused(!!d.paused, d);
     $('screen-stage').classList.toggle('frenzy', g.frenzy);
+    if (g.frenzy && d.phase === 'play') hype();
     $('skip-btn').classList.toggle('hidden', d.phase !== 'intro');
     $('more-btn').classList.toggle('hidden', d.phase !== 'play');
     if (d.phase === 'intro' && d.duration) $('clock').textContent = `${Math.floor(d.duration / 60)}:${String(Math.round(d.duration) % 60).padStart(2, '0')}`;
@@ -465,15 +491,17 @@
     if (!g) return;
     meter = Object.assign({}, meter, d);
     paintMeter();
-    (d.f || []).forEach(([k, n, gold, wrong]) => score(k, n, gold, wrong));
+    (d.f || []).forEach(([k, n, gold, wrong, six]) => score(k, n, gold, wrong, six));
   });
-  // kids who answered since the last beat: the kid swings and a coin flies up to the team's pan (or a wobble)
-  let flying = 0;
+  // kids who answered since the last beat: the kid swings and a coin flies up to the team's pan (or a wobble); a kid who
+  // just did a «six seven» (racha 7, their 67th coin) gets a little «¡6-7!» over the head and a longer swing
+  let flying = 0, pops = 0;
   const lastBump = { red: 0, gold: 0 };
-  function score(k, n, gold, wrong) {
+  function score(k, n, gold, wrong, six) {
     const p = roster[k];
     if (!p || !bal) return;
     const f = figs[k];
+    if (six && f && f.isConnected) kidPop(f, p.team);
     if (n > 0) {
       if (f && f.isConnected) X.swing(f, Math.random() < 0.5 ? 6 : 7, n >= 3);
       if (flying > 40) return;
@@ -494,6 +522,49 @@
       if (gold) sfx('gold', 0.55, 400);
     } else if (wrong && f && f.isConnected) X.wobble(f._img, false);
   }
+  function kidPop(f, team) {
+    if (pops >= 3) return;                     // 30 kids: at most three pops on screen at once
+    pops++;
+    f.classList.add('six');
+    const chip = node('b', '¡6-7!', 'ssp-pop ' + team);
+    f.appendChild(chip);
+    sfx('coin', 0.45, 200);
+    setTimeout(() => { chip.remove(); f.classList.remove('six'); pops = Math.max(0, pops - 1); }, 1700);
+  }
+  // a crew cheers together (the 6-7 swing) for a moment
+  const crewT = {};
+  function crewCheer(team, ms) {
+    const box = $('crowd-' + team);
+    if (!box || reduced()) return;
+    box.classList.remove('cheer');
+    void box.offsetWidth;
+    box.classList.add('cheer');
+    clearTimeout(crewT[team]);
+    crewT[team] = setTimeout(() => box.classList.remove('cheer'), ms || 2000);
+  }
+  // a team's «¡SIX SEVEN!» wave: the whole crowd does the 6-7, the crowd shout, Dralingo dances big, gold into its pan
+  onSs('ss:wave', (d) => {
+    if (!g || !d) return;
+    if (d.meter) { meter = Object.assign({}, meter, d.meter); paintMeter(); }
+    const t = TEAM_NAME[d.team];
+    crewCheer(d.team, 2600);
+    band('six', [node('b', '¡SIX SEVEN!'), node('span', `¡El Equipo ${t} llegó a ${X.fmt(d.gold)} de oro! Liu, qi`)], d.team, 2400);
+    sfx('shout', 0.9);
+    later(1050, () => sfx('liuqi', 0.8));
+    if (bal) {
+      bal.rock(true);
+      if (!reduced()) { const to = bal.target(d.team); coins.burst({ x: to.x, y: to.y - 50 }, 16, { spread: 160, fall: 70, size: 30 }); }
+    }
+    const dr = $('dral');
+    if (dr && !reduced()) { dr.classList.remove('hype'); void dr.offsetWidth; dr.classList.add('hype'); later(2400, () => dr.classList.remove('hype')); }
+    capSay(d.team, 'sixseven', 2600);
+    // both teams waving within a moment: one line for the two, not three lines racing each other
+    const both = lastWave.team && lastWave.team !== d.team && Date.now() - lastWave.at < 1500;
+    lastWave = { team: d.team, at: Date.now() };
+    if (both) { sayQ = []; say('¡Six seven de los dos equipos! ¡Qué carrera!', 2600); }
+    else say(`¡Six seven! ¡${t} suma ${X.fmt(d.gold)} de oro!`, 2600);
+  });
+  let lastWave = { team: null, at: 0 };
   onSs('ss:landmark', (l) => {
     if (!g || !l) return;
     if (l.meter) { meter = Object.assign({}, meter, l.meter); paintMeter(); }
@@ -506,18 +577,23 @@
     const im = node('img');
     im.src = K + 'landmarks/big/' + l.id + '.webp';
     im.alt = '';
-    if (Date.now() > bandUntil - 400) band('landmark', [im, node('b', `¡El Equipo ${TEAM_NAME[l.team]} llegó al ${l.name}!`), node('span', `+${l.bonus} monedas de oro para su balanza`)], l.team, 2500);
+    band('landmark', [im, node('b', `¡El Equipo ${TEAM_NAME[l.team]} llegó al ${l.name}!`), node('span', `+${l.bonus} monedas de oro para su balanza`)], l.team, 2500);
     say(`¡${TEAM_NAME[l.team]} llegó primero al ${l.name}!`);
     capSay(l.team, 'swing');
+    crewCheer(l.team, 1600);
   });
   onSs('ss:lead', (d) => {
     if (d.meter) { meter = Object.assign({}, meter, d.meter); paintMeter(); }
     const t = TEAM_NAME[d.team];
-    if (Date.now() > bandUntil - 400) band('lead', [node('b', d.first ? `¡El Equipo ${t} toma la delantera!` : `¡El Equipo ${t} pasa adelante!`), node('span', d.first ? '¡La balanza baja de su lado!' : '¡La balanza cambia de lado!')], d.team, 2300);
+    band('lead', [node('b', d.first ? `¡El Equipo ${t} toma la delantera!` : `¡El Equipo ${t} pasa adelante!`), node('span', d.first ? '¡La balanza baja de su lado!' : '¡La balanza cambia de lado!')], d.team, 2300);
     sfx(d.first ? 'flag' : 'alert', 0.7);
-    say(d.first ? `¡${t} va primero! ¡Vamos, ${d.team === 'red' ? 'Mar' : 'Fuego'}!` : `¡Remontada del Equipo ${t}!`);
+    // (no bubble line next to the band: it already says it; in the last 10 s, when no band covers the countdown, the
+    // bubble says it instead)
+    if (g && g.endAt && !paused && g.endAt - performance.now() < 10500) say(`¡${t} pasa adelante!`, 2400);
     capSay(d.team, 'swing');
     capSay(d.team === 'red' ? 'gold' : 'red', 'oops');
+    crewCheer(d.team, 1600);               // the team that passes ahead jumps into the 6-7
+    if (bal && !d.first) bal.rock(false);  // the balance swings over to its side
   });
   onSs('ss:frenzy', (d) => {
     if (!g) return;
@@ -531,7 +607,24 @@
     capSay('gold', 'swing', 3600);
     stopMusic();
     musicFor();
+    hype();
   });
+  // the last 30 s on the projector: both crowds bob to the beat (css .frenzy), Dralingo dances faster, and the gap is
+  // called out every ~7 s («¡Fuego gana por 12! ¡Vamos, Mar!») so the room hears the race
+  let hypeT = null;
+  function hype() {
+    clearInterval(hypeT);
+    hypeT = setInterval(() => {
+      if (!g || g.phase !== 'play' || paused) return;
+      const gap = Math.round(meter.r - meter.g);
+      if (!gap) say('¡Empate! ¡Todo puede pasar!', 3000);
+      else {
+        const lead = gap > 0 ? 'Fuego' : 'Mar', trail = gap > 0 ? 'Mar' : 'Fuego';
+        say(Math.abs(gap) <= 6 ? `¡${lead} gana solo por ${Math.abs(gap)}! ¡Vamos, ${trail}!` : `¡${lead} gana por ${X.fmt(Math.abs(gap))}! ¡Vamos, ${trail}!`, 3000);
+      }
+    }, 7000);
+  }
+  const stopHype = () => { clearInterval(hypeT); hypeT = null; };
   onSs('ss:scale', (d) => {
     if (!g || d.id !== g.id) return;
     g.race = d.race || g.race;
@@ -709,7 +802,7 @@
     if (st.id === 'streak') return `${st.value} seguidas`;
     if (st.id === 'right') return `${X.fmt(st.value)} ${st.value === 1 ? 'acierto' : 'aciertos'}`;
     if (st.id === 'aim') return `${st.value} %`;
-    if (st.id === 'zh') return `${X.fmt(st.value)} en chino`;
+    if (st.id === 'zh') return `${X.fmt(st.value)} en Chino Mandarín`;
     return `${X.fmt(st.value)} ${st.value === 1 ? 'moneda' : 'monedas'}`;
   }
 

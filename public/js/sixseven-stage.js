@@ -5,8 +5,10 @@
 //   · gold coins with a square hole (the old Chinese coin) flying in an arc to a pan or a counter (WAAPI, pooled nodes)
 //   · Dralingo doing the «6-7»: two frames (one palm up, then the other), swapped on a beat (CSS steps, no JS loop)
 //   · the kid's swing (rock toward the button tapped: 6 = left, 7 = right) and the wrong-answer wobble
+//   · the 6-7 gesture in between (2026-10-16): the two buttons swing like the two palms (palms), the next sum tips in
+//     from alternating sides (wipe), the balance rocks on a «six seven» wave (Balance.rock)
 //   · a little rain cloud over the team that lost
-// window.SixSevenStage = { TEAM, PINYIN, tilt, Balance, Coins, coin, dancer, swing, wobble, cloud, sum, el, fmt, reduced, preload }.
+// window.SixSevenStage = { TEAM, PINYIN, tilt, Balance, Coins, coin, dancer, swing, wobble, palms, wipe, sumValue, cloud, sum, el, fmt, reduced, preload }.
 (function (root) {
   'use strict';
   const A = '/assets/sixseven/';
@@ -26,7 +28,7 @@
   function tilt(r, g) {
     const sum = (r || 0) + (g || 0);
     if (!sum) return 0;
-    return Math.max(-1, Math.min(1, ((g || 0) - (r || 0)) / Math.max(sum, 12) * 2.2));
+    return Math.max(-1, Math.min(1, ((g || 0) - (r || 0)) / Math.max(sum, 12) * 3.2));
   }
   const pre = {};
   function preload() {
@@ -76,7 +78,7 @@
     k = Math.max(-1, Math.min(1, Number(k) || 0));
     this.k = k;
     // a positive angle turns the beam clockwise: its right end (Mar) goes down; Fuego heavier = negative
-    this.root.style.setProperty('--a', (k * MAX_DEG).toFixed(2) + 'deg');
+    if (!this.rocking || instant) this.root.style.setProperty('--a', (k * MAX_DEG).toFixed(2) + 'deg');
     this.root.classList.toggle('still', !!instant || reduced());
     this.root.classList.toggle('lead-red', k < -0.04);
     this.root.classList.toggle('lead-gold', k > 0.04);
@@ -128,6 +130,27 @@
     go();
   };
 
+  // a «six seven» wave: the beam rocks like the two palms of the gesture (up, down, up…) and settles back where the gold
+  // says. Interrupts itself (a new rock restarts from the beam's current place); reduced motion: no rock.
+  Balance.prototype.rock = function (big) {
+    if (reduced() || !this.root.animate) return;
+    clearTimeout(this._r);
+    const a = big ? 0.42 : 0.3;
+    const offs = [-a, a * 0.85, -a * 0.55, a * 0.3, 0];
+    let i = 0;
+    this.rocking = true;
+    const go = () => {
+      if (i >= offs.length) { this.rocking = false; this.root.style.removeProperty('--sw'); this.set(this.k); return; }
+      this.root.classList.remove('still');
+      this.root.style.setProperty('--sw', '260ms');
+      // around the CURRENT target (a meter update during the rock moves the centre, never undoes it)
+      this.root.style.setProperty('--a', (Math.max(-1, Math.min(1, this.k + offs[i])) * MAX_DEG).toFixed(2) + 'deg');
+      i++;
+      this._r = setTimeout(go, 240);
+    };
+    go();
+  };
+
   // ---------- flying coins (a pool of nodes on a fixed layer) ----------
   function Coins(layer, n) {
     this.layer = layer;
@@ -148,7 +171,11 @@
     slot.busy = true;
     slot.land = o.onLand || null;
     const c = slot.node;
-    const L = this.layer.getBoundingClientRect();
+    // the layer's box, read once (and again after a resize): no layout read per coin right after the last coin's writes
+    if (!this._L || this._Lw !== root.innerWidth || this._Lh !== root.innerHeight) {
+      this._L = this.layer.getBoundingClientRect(); this._Lw = root.innerWidth; this._Lh = root.innerHeight;
+    }
+    const L = this._L;
     const sz = o.size || 30;
     c.className = 'ssc ssc-fly' + (o.gold ? ' shine' : '');
     c.style.width = c.style.height = sz + 'px';
@@ -219,6 +246,38 @@
       { transform: 'translateY(0) rotate(0deg)' },
     ], { duration: big ? 620 : 480, easing: 'cubic-bezier(.3,.7,.3,1)' });
   }
+  // the two giant buttons ARE the two palms of the 6-7 gesture: on a right answer one goes down while the other goes
+  // up, then they swap and settle (the side the kid tapped goes down first, like a weight). times: 1 = one swing,
+  // 2 = the double swing of a «six seven». Transforms only (WAAPI), ~0.4 s, never blocks a tap.
+  function palms(b6, b7, side, times) {
+    if (!b6 || !b7 || reduced() || !b6.animate) return;
+    const d = side === 7 ? -1 : 1;                       // 6 tapped: the 6 palm sinks first
+    const amp = times >= 2 ? 13 : 9;
+    const k = (s) => [
+      { transform: 'translateY(0)' },
+      { transform: `translateY(${s * amp}px) rotate(${s * 2}deg)`, offset: times >= 2 ? 0.16 : 0.28 },
+      { transform: `translateY(${-s * amp * 0.8}px) rotate(${-s * 2}deg)`, offset: times >= 2 ? 0.36 : 0.62 },
+    ].concat(times >= 2 ? [
+      { transform: `translateY(${s * amp * 0.8}px) rotate(${s * 1.5}deg)`, offset: 0.58 },
+      { transform: `translateY(${-s * amp * 0.5}px)`, offset: 0.8 },
+    ] : []).concat([{ transform: 'translateY(0)' }]);
+    const o = { duration: times >= 2 ? 760 : 420, easing: 'cubic-bezier(.37,0,.63,1)' };
+    b6.animate(k(d), o);
+    b7.animate(k(-d), o);
+  }
+  // the next sum swings in like a palm: the sum tips in from one side, the card rocks; alternating sides (6, 7, 6…)
+  let wipeSide = 1;
+  function wipe(card, eq) {
+    if (!card || reduced() || !card.animate) return;
+    wipeSide = -wipeSide;
+    const s = wipeSide;
+    if (eq) eq.animate([{ transform: `translate(${s * 26}px, 12px) rotate(${s * 9}deg)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
+      { duration: 230, easing: 'cubic-bezier(.23,1,.32,1)' });
+    card.animate([{ transform: `rotate(${s * 1.6}deg) translateY(4px)` }, { transform: `rotate(${-s * 0.6}deg)`, offset: 0.55 }, { transform: 'none' }],
+      { duration: 300, easing: 'cubic-bezier(.37,0,.63,1)' });
+  }
+  const sumValue = (ss) => (!ss ? null : ss.op === '+' ? ss.a + ss.b : ss.a - ss.b);
+
   function wobble(node, strong) {
     if (!node || reduced() || !node.animate) return;
     const a = strong ? 9 : 6;
@@ -276,5 +335,5 @@
     requestAnimationFrame(fit);
   }
 
-  root.SixSevenStage = { TEAM, PINYIN, MAX_DEG, tilt, Balance, Coins, coin, dancer, swing, wobble, cloud, fitCloud, sum, el, fmt, reduced, preload, kid: (o) => S().kidFigure(o) };
+  root.SixSevenStage = { TEAM, PINYIN, MAX_DEG, tilt, Balance, Coins, coin, dancer, swing, wobble, palms, wipe, sumValue, cloud, fitCloud, sum, el, fmt, reduced, preload, kid: (o) => S().kidFigure(o) };
 })(typeof window !== 'undefined' ? window : this);

@@ -8,8 +8,11 @@
 // Checks on what comes back: every answer gets exactly one verdict; a right one earns ≥ 1 coin and exactly the streak's
 // multiplier (×1, ×2 from 3, ×3 from 6, ×4 from 10; ×2 in the last 30 s; + the golden extra), a wrong one 0 coins and a
 // wait; my running total = the sum of my coins; every sum's answer is 6 or 7 with numbers 1-10 only; the end payload
-// (teamScores = totals, the winner, my card = my total, stars only for kids with something). Stats in report.sixseven,
-// including coins per kind of kid (the random tappers must end below the thinkers) and events per kid.
+// (teamScores = totals, the winner, my card = my total, stars only for kids with something). Since 2026-10-16 («no dead
+// phones») also: every sum carries the too-fast line (ss.min), the kid's own «six seven» flags (the 6 → 7 pair, racha 7,
+// the 67th coin) are exactly right, the phones' meter feed (who scored) stays small, and each team's «¡SIX SEVEN!» waves
+// land on multiples of 67 and climb one at a time. Stats in report.sixseven, including coins per kind of kid (the random
+// tappers must end below the thinkers) and events per kid.
 'use strict';
 
 const PINYIN = ['ling', 'yi', 'er', 'san', 'si', 'wu', 'liu', 'qi', 'ba', 'jiu', 'shi'];
@@ -22,16 +25,35 @@ module.exports = (bot, ctx) => {
   const E = R.sixseven || (R.sixseven = {
     sums: 0, answers: 0, results: 0, right: 0, wrong: 0, tooFast: 0, timeUps: 0, golds: 0, calm: 0, coins: 0, zh: 0, num: 0,
     leads: 0, landmarks: 0, frenzy: 0, finals: 0, ends: 0, meterPerKid: {}, eventsPerKid: {}, kinds: {}, winner: null, totals: null, stars: null,
+    waves: [], pairs: 0, sixRacha: 0, six67: 0, feedPerKid: {}, feedMax: 0,
   });
   const kind = ctx.name === 'Bot03' ? 'masher' : ctx.name === 'Bot04' ? 'guesser' : ctx.name === 'Bot05' ? 'sleeper' : 'thinker';
   const lead = ctx.name === 'Bot01';
   const K = E.kinds[ctx.name] = { kind, answers: 0, right: 0, coins: 0, best: 0 };
-  let mySum = 0, frenzy = false, finalSeen = false, timer = null, open = null, streak = 0;
+  let mySum = 0, frenzy = false, finalSeen = false, timer = null, open = null, streak = 0, lastRight = 0;
+  const waveN = { red: 0, gold: 0 };
   E.meterPerKid[ctx.name] = 0;
   E.eventsPerKid[ctx.name] = 0;
+  E.feedPerKid[ctx.name] = 0;
   const fail = (what, d) => R.errors.push({ who: ctx.name, ev: 'rule:' + what, d });
   bot.onAny(() => { E.eventsPerKid[ctx.name]++; });
-  bot.on('ss:meter', () => { E.meterPerKid[ctx.name]++; });
+  // the phones' meter carries the feed of who scored (2026-10-16): at most 8 scorers, each with coins > 0
+  bot.on('ss:meter', (d) => {
+    E.meterPerKid[ctx.name]++;
+    if (d && d.f) {
+      if (!Array.isArray(d.f) || d.f.length > 8) fail('the phones\' feed: at most 8 scorers a beat', d.f);
+      (d.f || []).forEach((e) => { if (!Array.isArray(e) || e.length !== 4 || !(e[1] > 0)) fail('a feed entry is [k, coins > 0, golden, six]', e); });
+      E.feedPerKid[ctx.name] += d.f.length;
+      E.feedMax = Math.max(E.feedMax, d.f.length);
+    }
+  });
+  // a team's «¡SIX SEVEN!» wave: the gold mark is a multiple of 67, the count climbs one wave at a time per team
+  bot.on('ss:wave', (w) => {
+    if (!w || (w.team !== 'red' && w.team !== 'gold') || !(w.gold > 0) || w.gold % 67 !== 0) { fail('a wave names its team and a multiple of 67', w); return; }
+    if (!(w.n > waveN[w.team])) fail('the waves of a team climb', { w, before: waveN[w.team] });
+    waveN[w.team] = w.n;
+    if (lead) E.waves.push(`${w.team}:${w.gold}`);
+  });
   bot.on('ss:lead', () => { if (lead) E.leads++; });
   bot.on('ss:landmark', () => { if (lead) E.landmarks++; });
   bot.on('ss:frenzy', () => { frenzy = true; if (lead) E.frenzy++; });
@@ -49,6 +71,7 @@ module.exports = (bot, ctx) => {
     if (!s || !(q.answers && q.answers[0] === '6' && q.answers[1] === '7')) { fail('a sum must come with the buttons 6 and 7', q); return; }
     const val = s.op === '+' ? s.a + s.b : s.a - s.b;
     if (!(val === 6 || val === 7)) fail('the answer must be 6 or 7', s);
+    if (!(s.min >= 300 && s.min <= 1000)) fail('the sum carries the too-fast line (the phone reacts at the tap)', s);
     if (!(s.a >= 1 && s.a <= 10 && s.b >= 1 && s.b <= 10)) fail('only the numbers 1-10', s);
     if (s.zh) {
       E.zh++;
@@ -97,7 +120,18 @@ module.exports = (bot, ctx) => {
       const want = mult(streak) * (x.frenzy ? 2 : 1) + (x.goldExtra || 0);
       if (x.coins !== want || x.coins < 1) fail('a right answer earns the multiplier', { coins: x.coins, want, x });
       if (x.gold) E.golds++;
+      // the kid's own «¡SIX SEVEN!» (cosmetic): the 6 → 7 pair, racha 7, the 67th coin
+      const pairWant = lastRight === 6 && x.ans === 7;
+      if (!!x.pair !== pairWant) fail('the 6 → 7 pair', { pair: x.pair, last: lastRight, ans: x.ans });
+      if (((x.six & 1) === 1) !== (streak === 7)) fail('racha 7 = «six seven»', { six: x.six, streak });
+      if (((x.six & 2) === 2) !== (mySum < 67 && mySum + x.coins >= 67)) fail('the 67th coin = «six seven»', { six: x.six, before: mySum, coins: x.coins });
+      if (x.pair) E.pairs++;
+      if (x.six & 1) E.sixRacha++;
+      if (x.six & 2) E.six67++;
+      lastRight = x.ans;
     } else {
+      if (x.six || x.pair) fail('a wrong answer has no «six seven»', x);
+      lastRight = 0;
       streak = 0;
       E.wrong++;
       if (x.tooFast) E.tooFast++;
