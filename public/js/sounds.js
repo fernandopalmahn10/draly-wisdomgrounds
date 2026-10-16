@@ -341,7 +341,7 @@
   // Themes are scheduled procedurally on a beat grid (no external audio assets,
   // no licensing risk, works offline). All voices are synthesized via WebAudio.
   //
-  // The user starts a game's theme with `MochiSounds.startGameTheme('monopoly')`,
+  // The user starts a game's theme with `MochiSounds.startGameTheme('kingdoms')`,
   // and stops with `MochiSounds.stopGameTheme()` (or any of the win/lose/tie
   // music helpers, which fade the theme out first).
   // ===========================================================================
@@ -554,25 +554,7 @@
   //   BD     — beat duration (BAR_DUR = BD * beatsPerBar)
   // Schedule notes at t0 + offsets. Keep volumes low (≤ 0.25) so SFX cut through.
 
-  // 🏯 MONOPOLY — plucky boardgame, G major, 124bpm. Walking bass +
-  // arpeggios + bells. Cheerful, "watching the dice roll" vibe.
-  function themeMonopoly(barIdx, t0, BD) {
-    const phase = barIdx % 4;
-    const bassLine = ['G2', 'B2', 'D3', 'G3'];
-    bassLine.forEach((n, b) => vBassPluck(t0 + b * BD, n, BD * 0.8, 0.20));
-    // Arp pattern — G, B, D, B (G major triad twinkle)
-    const arpNotes = phase < 2 ? ['G4', 'B4', 'D5', 'B4'] : ['G4', 'D5', 'B4', 'D5'];
-    for (let i = 0; i < 8; i++) {
-      vLeadSquare(t0 + i * (BD / 2), arpNotes[i % 4], BD * 0.4, 0.11);
-    }
-    // Ding bell on bar starts
-    if (phase === 0) vBell(t0, 'G5', BD * 2, 0.16);
-    if (phase === 2) vBell(t0, 'D5', BD * 2, 0.14);
-    // Light kick on 1+3, hat on offbeats
-    vKick(t0 + 0 * BD, 0.30);
-    vKick(t0 + 2 * BD, 0.30);
-    for (let i = 0; i < 4; i++) vHat(t0 + i * BD + BD / 2, 0.08);
-  }
+  // (Dàfùwēng · Monopolio's synthesized theme was retired 2026-10-16: the remade game plays a recorded Kenney loop, assets/monopoly/)
 
   // (6-7 Swing's synthesized theme was retired 2026-10-15: the remade game plays a recorded Kenney loop, assets/sixseven/)
 
@@ -627,7 +609,6 @@
 
   // === Registry ===
   const GAME_THEMES = {
-    'monopoly':      { bpm: 124, beatsPerBar: 4, fn: themeMonopoly },
     'mochi-mash':    { bpm: 105, beatsPerBar: 4, fn: themeMochi },
     'dragon-eye':    { bpm:  96, beatsPerBar: 4, fn: themeDragon },
     'kingdoms':      { bpm: 112, beatsPerBar: 4, fn: themeKingdoms },
@@ -870,7 +851,7 @@
     startMusic,
     stopMusic,
     // Per-game themed background music (procedural). Each game gets its own
-    // key/tempo/timbre — call startGameTheme('kingdoms'), startGameTheme('monopoly'),
+    // key/tempo/timbre — call startGameTheme('kingdoms'), startGameTheme('mochi-mash'),
     // etc. after the countdown. Stop with stopGameTheme() — or any of the
     // win/lose/tie helpers, which also stop the theme via stopMusic().
     startGameTheme,
