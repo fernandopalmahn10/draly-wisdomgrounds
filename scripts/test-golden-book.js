@@ -340,6 +340,34 @@ async function takeSim(ph, simId, wrong, blank, none) {
   return { status: r.status, json: r.json };
 }
 const recordOf = (code) => { try { return read(path.join(DATA, 'student-records.json'))[code] || null; } catch (_) { return null; } };
+// a simulation taken in a teacher's PIN room (the kid joins with the room's PIN; no key or Dorado needed there)
+const { io } = require('socket.io-client');
+const emitAck = (s, ev, payload, ms = 5000) => new Promise((res) => {
+  const t = setTimeout(() => res({ timeout: true }), ms);
+  s.emit(ev, payload, (r) => { clearTimeout(t); res(r || {}); });
+});
+async function takeInRoom(ph, code, simId, wrong) {
+  const host = io('http://127.0.0.1:' + PORT, { transports: ['websocket'], forceNew: true });
+  const kid = io('http://127.0.0.1:' + PORT, { transports: ['websocket'], forceNew: true });
+  try {
+    const created = await emitAck(host, 'host:create', { gameType: 'hsksim', simId, password: LEGACY });
+    const joined = created && created.pin ? await emitAck(kid, 'player:join', { pin: created.pin, name: 'Sala ' + code, studentCode: code }) : {};
+    if (!joined || !joined.roomPass) return { status: 0 };
+    const q = '?pin=' + created.pin + '&pass=' + encodeURIComponent(joined.roomPass);
+    const p = await get('/api/hsk-sim/' + simId + q, as(ph));
+    const b = book(Levels.info(Levels.normalize(simId.replace(/-sim\d+$/, ''))).golden);
+    const s = b.sims.find((x) => x.id === simId);
+    const answers = {};
+    webQuestions(b, s.n).forEach((w) => {
+      let a = w.ans;
+      if ((wrong || []).includes(w.q)) a = w.kind === 'tf' ? (a === 'T' ? 'F' : 'T') : ['A', 'B', 'C', 'D', 'E', 'F'].find((x) => x !== a);
+      answers[w.q] = a;
+    });
+    const r = await post('/api/hsk-sim/' + simId + '/submit' + q, { answers, ticket: p.json && p.json.sim && p.json.sim.ticket, pin: created.pin, pass: joined.roomPass, studentCode: code }, as(ph));
+    await emitAck(host, 'host:end', { pin: created.pin, password: LEGACY });
+    return { status: r.status, json: r.json };
+  } finally { host.close(); kid.close(); }
+}
 
 async function server() {
   const stamp36 = Date.now().toString(36).slice(-4);
@@ -351,7 +379,9 @@ async function server() {
   const kBL = await enter(BL, '1003', 'Libro Blanco ' + stamp36);
   const kH1 = await enter(H1, '1001', 'Libro Hsk ' + stamp36);
   const kD1 = await enter(D1, '1003', 'Libro Cerrado ' + stamp36);
-  ok([kS1, kALL, kBL, kH1, kD1].every((k) => k.ok && k.levelOpen), 'five kids enrolled before the keys (their level open)');
+  const R1 = phone();
+  const kR1 = await enter(R1, '1003', 'Libro Sala ' + stamp36);   // takes simulations in a teacher's room, no Dorado
+  ok([kS1, kALL, kBL, kH1, kD1, kR1].every((k) => k.ok && k.levelOpen), 'six kids enrolled before the keys (their level open)');
   for (const [lvl, k] of Object.entries(KEYS)) ok((await put('/api/admin/level-keys/' + lvl, { key: k }, teacher(SEED))).json.ok, `the ${lvl} key is set`);
   const st0 = (await get('/api/admin/ruta-settings', teacher(SEED))).json.settings;
   ok(st0.trainingLive === true, 'the Dorado rule is ON (El Entrenamiento live): the Dorado is earned');
@@ -411,7 +441,7 @@ async function server() {
   r = await gb(K1, 'yct1', 1);
   ok(r.status === 403 && r.json.why === 'login' && !r.json.sim, 'a key-only phone: «Entra con tu código para ver tu libro dorado» (no answers)');
   r = await gb(D1, 'yct1', 1);
-  ok(r.status === 403 && r.json.why === 'dorado' && !r.json.sim, 'a kid whose El Simulacro Dorado is still closed: refused (the route says how it opens)');
+  ok(r.status === 403 && r.json.why === 'dorado' && !r.json.sim, 'a kid whose El Simulacro Dorado is still closed and who took nothing: «Primero, El Simulacro Dorado»');
   r = await gb(BL, 'yct1', 1);
   ok(r.status === 403 && r.json.why === 'taken' && !r.json.sim, 'a kid who handed Simulacro 1 in blank: not taken, no book');
   r = await gb(S1, 'yct1', 2);
@@ -467,6 +497,40 @@ async function server() {
     'the PDF downloads (private, no-store, as a file)');
   r = await gb(ALL, 'yct1', 1);
   ok(r.status === 200 && r.json.mine.wrong.length === 0, 'Simulacro 1 with zero mistakes: the celebration (wrong = [])');
+
+  section('taken anywhere: a kid without the Dorado who took Simulacro 1 in a teacher\'s room');
+  ok(!mod(await ruta(as(R1)), 'yct1').dorado.open, 'kid R: El Simulacro Dorado still closed (no practice, no «Desbloquear»)');
+  const yR = webQuestions(Y, 1);
+  let tr = await takeInRoom(R1, kR1.studentCode, 'yct1-sim1', [yR[1].q, yR[20].q]);
+  ok(tr.status === 200 && tr.json.ok, 'kid R hands in Simulacro 1 in a teacher\'s room (2 wrong)');
+  r = await gb(R1, 'yct1', 1);
+  ok(r.status === 200 && r.json.who === 'kid' && r.json.dorado === false && JSON.stringify(r.json.mine.wrong) === JSON.stringify([yR[1].q, yR[20].q]),
+    'its book opens, mistakes first, before the Dorado');
+  ok(r.json.pdf.href === null && r.json.pdf.dorado === false && r.json.pdf.ready === false, '… no PDF: it comes with the Dorado');
+  const rp = r.json.sim.pics[0].url, ra = r.json.sim.clips[0];
+  ok((await get(rp, as(R1))).status === 200 && (await get(ra, as(R1))).status === 200 && (await get('/golden-media/yct1sim/ex/p0', as(R1))).status === 200,
+    '… its photos, its clips and the examples load');
+  r = await gb(R1, 'yct1', 2);
+  ok(r.status === 403 && r.json.why === 'dorado' && !r.json.sim && r.json.sims[0].taken && !r.json.sims[1].taken, 'Simulacro 2 (not taken): «Primero, El Simulacro Dorado», nothing of it');
+  ok((await get('/golden-media/yct1sim/2/p0', as(R1))).status === 403 && (await get('/golden-media/yct1sim/2/a0', as(R1))).status === 403, '… its photos and clips refused');
+  ok((await get('/golden-media/yct1sim/book.pdf', as(R1))).status === 403, 'the PDF: refused');
+  let mR = mod(await ruta(as(R1)), 'yct1');
+  ok(!mR.dorado.open && mR.sims.length === 0 && mR.golden && mR.golden.closed && mR.golden.pdf === null &&
+    JSON.stringify(mR.golden.taken) === JSON.stringify([{ n: 1, mistakes: 2, book: '/audios/yct1/libro/1' }]), 'the route: the Dorado still closed, only Simulacro 1\'s «Libro dorado» with its 2 mistakes');
+  const anyTaken = (st) => (st.modules || []).some((x) => x.golden && x.golden.taken);
+  ok(!anyTaken(await ruta(as(K1))) && !anyTaken(await ruta(as(anon))) && !anyTaken(await ruta(as(D1))), '… sent only to the kid who took it (not a key-only phone, a visitor or another kid)');
+  for (let n = 2; n <= Y.sims.length; n++) ok((await takeInRoom(R1, kR1.studentCode, 'yct1-sim' + n, [])).status === 200, 'kid R takes Simulacro ' + n + ' in a room too');
+  r = await gb(R1, 'yct1', 3);
+  ok(r.status === 200 && r.json.pdf.href === null && r.json.pdf.dorado === false, 'every simulation taken, still no Dorado: every book, but no PDF');
+  ok((await get('/golden-media/yct1sim/book.pdf', as(R1))).status === 403, '… the PDF refused');
+  mR = mod(await ruta(as(R1)), 'yct1');
+  ok(mR.golden.taken.length === Y.sims.length && mR.golden.pdf === null, '… the route lists their five books, no PDF');
+  ok((await unlock(kR1.studentCode, 'yct1')).json.ok, 'a teacher opens kid R\'s Dorado');
+  r = await gb(R1, 'yct1', 3);
+  ok(r.status === 200 && r.json.dorado === true && /book\.pdf/.test(r.json.pdf.href || ''), 'now the book offers the PDF');
+  ok((await get('/golden-media/yct1sim/book.pdf', as(R1))).status === 200, '… and it downloads');
+  mR = mod(await ruta(as(R1)), 'yct1');
+  ok(mR.dorado.open && mR.sims.every((s) => s.book) && /book\.pdf/.test(mR.golden.pdf || '') && !mR.golden.closed, '… the route: every simulation with its book, the PDF');
 
   section('old HSK: the mistakes map onto the book too');
   r = await gb(H1, 'hsk1', 1);

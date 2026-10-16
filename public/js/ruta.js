@@ -540,9 +540,26 @@
     }
     // 3 · El Simulacro Dorado: the level's simulations (only when open: each opens its player through the key check)
     let goldBody;
+    // 📖 phase 5: a taken simulation's «Libro dorado» ribbon with its latest try's mistakes (`alone`: a ribbon of its own,
+    // named after its simulation, while El Simulacro Dorado is still closed)
+    const bookRow = (s, alone) => {
+      if (!s.book) return '';
+      const n = s.mistakes;
+      const tag = !s.taken || n == null ? '' : n === 0 ? '<span class="rd-sim-book-n is-zero">' + I.check + '<span>Sin errores</span></span>'
+        : '<span class="rd-sim-book-n">' + n + (n === 1 ? ' error' : ' errores') + '</span>';
+      const label = 'Libro dorado del Simulacro ' + s.n + (s.taken && n != null ? (n === 0 ? ', sin errores' : ', ' + n + (n === 1 ? ' error' : ' errores') + ' para repasar') : '');
+      return '<a class="rd-sim-book' + (alone ? ' is-alone' : '') + '" href="' + esc(s.book) + '" data-nav aria-label="' + esc(label) + '">' + I.book +
+        '<span class="rd-sim-book-t" aria-hidden="true">' + (alone ? 'Libro dorado del Simulacro ' + (Number(s.n) || 0) : 'Libro dorado') + '</span>' + tag + '</a>';
+    };
     if (st.goldEarn) {
       // the key opens it, but (El Entrenamiento live) the kid earns it: every world practised with pct % or more
       const d = m.dorado;
+      // taken anywhere is enough (his pick after the build): a simulation the kid took in a teacher's room opens its own
+      // book now; the others and the PDF come with El Simulacro Dorado (the server sends only the taken ones, to this kid)
+      const GT = m.golden && Array.isArray(m.golden.taken) ? m.golden.taken : [];
+      const takenBooks = GT.length ? '<div class="rd-gold-taken"><p class="rd-gold-taken-t">' + (GT.length === 1 ? 'Tu libro dorado' : 'Tus libros dorados') + '</p>' +
+        '<ul class="rd-books">' + GT.map((s) => '<li>' + bookRow(Object.assign({ taken: true }, s), true) + '</li>').join('') + '</ul>' +
+        '<p class="rd-gold-pdf">' + I.lock + '<span>El libro en PDF llega con El Simulacro Dorado.</span></p></div>' : '';
       // (phase 4) one coin per world that counts: gold with a check once that world has the %, else its best so far
       const regular = tw.filter((w) => w.kind === 'world');
       const goal = regular.length ? '<ol class="rd-goal" aria-hidden="true">' + regular.map((w) => {
@@ -557,19 +574,12 @@
         (d.login
           ? '<p class="rd-gold-note">Tus puntos quedan en este teléfono: entra con tu código para que cuenten.</p>' +
             '<a class="rd-btn rd-btn-red" href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">Entrar con mi código</a>'
-          : (st.train === 'open' ? '<a class="rd-btn rd-btn-gold" href="/audios/' + esc(m.slug) + '/entrenamiento" data-nav>' + I.target + 'Practicar en El Entrenamiento</a>' : ''));
+          : (st.train === 'open' ? '<a class="rd-btn rd-btn-gold" href="/audios/' + esc(m.slug) + '/entrenamiento" data-nav>' + I.target + 'Practicar en El Entrenamiento</a>' : '')) +
+        takenBooks;
     } else if (st.gold === 'open') {
       // 📖 phase 5: a simulation the kid took (a teacher: every one) gets its «Libro dorado» under the tile, with the
       // latest try's mistakes; the PDF of the whole golden book once every simulation is taken (the server decides)
       const G = m.golden;
-      const bookRow = (s) => {
-        if (!s.book) return '';
-        const n = s.mistakes;
-        const tag = !s.taken || n == null ? '' : n === 0 ? '<span class="rd-sim-book-n is-zero">' + I.check + '<span>Sin errores</span></span>'
-          : '<span class="rd-sim-book-n">' + n + (n === 1 ? ' error' : ' errores') + '</span>';
-        const label = 'Libro dorado del Simulacro ' + s.n + (s.taken && n != null ? (n === 0 ? ', sin errores' : ', ' + n + (n === 1 ? ' error' : ' errores') + ' para repasar') : '');
-        return '<a class="rd-sim-book" href="' + esc(s.book) + '" data-nav aria-label="' + esc(label) + '">' + I.book + '<span class="rd-sim-book-t" aria-hidden="true">Libro dorado</span>' + tag + '</a>';
-      };
       let pdf = '';
       if (G && G.pdf) {
         pdf = '<div class="rd-gold-pdf is-ready"><p><b>El libro dorado en PDF</b>' + (G.mb ? '<span>' + String(Number(G.mb) || 0).replace('.', ',') + ' MB</span>' : '') + '</p>' +

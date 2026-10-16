@@ -394,6 +394,11 @@ body.au-is-path .au-main { max-width: 720px; }
 .rd-gold-pdf.is-ready p { display: grid; gap: 1px; }
 .rd-gold-pdf.is-ready b { font-weight: 800; font-size: 1rem; color: var(--rojo); }
 .rd-gold-pdf.is-ready span { font-size: .85rem; }
+/* while El Simulacro Dorado is still closed: the books of the simulations the kid took in a teacher's room */
+.rd-gold-taken { margin-top: 18px; padding-top: 14px; border-top: 1.5px solid var(--linea); }
+.rd-gold-taken-t { font-weight: 800; font-size: 1rem; color: var(--rojo); }
+.rd-books { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.rd-sim-book.is-alone { border-radius: 14px; padding: 10px 14px; }
 @media (hover: hover) and (pointer: fine) { .rd-sim-book:hover { background: var(--rojo-2); } }
 @media (prefers-reduced-motion: reduce) { .rd-sim-book:active { transform: none; } }
 @media (hover: hover) and (pointer: fine) {

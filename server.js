@@ -4904,11 +4904,14 @@ function _rutaState(req) {
       worlds: tv.worlds.map((w) => ({ key: w.key, kind: w.kind, n: w.n, short: w.short, emoji: w.emoji, open: w.open, via: w.via, best: w.best })) } : null;
     const listSims = a.ok && dorado && dorado.open;
     // 📖 phase 5: the golden book of each simulation (core/golden.js): once the logged-in kid took that simulation (a
-    // teacher: every one), its «Libro dorado» with the latest try's mistakes, and the PDF once every one is taken. A
+    // teacher: every one), its «Libro dorado» with the latest try's mistakes, and the PDF once every one is taken AND
+    // the Dorado is open. Taken anywhere is enough (his pick after the build): a kid whose Dorado is still closed but who
+    // took a simulation in a teacher's room gets that one's book (`golden.taken`, nothing about the others). A
     // key-only phone has no account: `golden.login` (the step says «Entra con tu código»). Counts only, never answers.
     const teach = a.ok && a.via === 'teacher';
-    const gb = listSims ? Golden.ofLevel(l.id) : null;
-    const gs = gb ? Golden.summary(gb, teach ? null : rec, teach) : null;
+    const gb = a.ok && (listSims || (rec && !teach)) ? Golden.ofLevel(l.id) : null;
+    const gs = gb ? Golden.summary(gb, teach ? null : rec, teach, !!listSims) : null;
+    const takenOnly = gs && !listSims ? gs.sims.filter((s) => s.taken).map((s) => ({ n: s.n, mistakes: s.mistakes, book: _goldenHref(l.id, s.n) })) : null;
     return {
       id: l.id, slug: l.pack || l.id, name: l.name, family: l.family, exam: l.exam || '', open: !!a.ok,
       base: b ? Object.assign({ id: b.id, words: b.words }, rb ? { worlds: rb.worlds.map((w) => ({ n: w.n, short: w.short, first: w.first, count: w.count })) } : {}) : null,
@@ -4919,8 +4922,9 @@ function _rutaState(req) {
         return Object.assign({}, s, { best: best >= 0 ? Math.round(best) : null, taken: !!(g && g.taken),
           mistakes: g && g.taken ? g.mistakes : null, book: g && g.open && (teach || rec) ? _goldenHref(l.id, g.n) : null });
       }) : [],
-      golden: gs ? { sims: gs.sims.length, left: gs.left, login: !teach && !rec, mb: gs.pdf.mb,
-        pdf: gs.pdf.ready ? '/golden-media/' + gb.id + '/book.pdf?v=' + encodeURIComponent((gb.pdf && gb.pdf.v) || '') : null } : null,
+      golden: !gs ? null : takenOnly ? (takenOnly.length ? { closed: true, taken: takenOnly, pdf: null } : null)
+        : { sims: gs.sims.length, left: gs.left, login: !teach && !rec, mb: gs.pdf.mb,
+          pdf: gs.pdf.ready ? '/golden-media/' + gb.id + '/book.pdf?v=' + encodeURIComponent((gb.pdf && gb.pdf.v) || '') : null },
       dorado,
       train,
       progress: prog ? {
@@ -5138,11 +5142,14 @@ app.post('/api/ruta/train/scores', (req, res) => {
 // ── 📖 El libro dorado (phase 5, 2026-10-16): the golden book on the web (core/golden.js) ──────────────────────────
 // GET /api/golden/<level>/<n>[?de=<teacher link>] → simulation n's book for THIS visitor, or why not (never cached)
 // GET /golden-media/<book>/<n|ex>/<p|a><i>           → a photo / a clip of that simulation (or of the examples), by index
-// GET /golden-media/<book>/book.pdf                  → the PDF, once every simulation of the book is taken (or a teacher)
+// GET /golden-media/<book>/book.pdf                  → the PDF, once every simulation is taken and the Dorado open (or a teacher)
 // Doors, in order (his picks): the level's key (LevelKeys.access, the one door: 401 = the key screen) → a kid's account
-// (a key-only phone has none: «Entra con tu código») → El Simulacro Dorado open (RutaProgress.doradoOpen) → THAT
-// simulation taken (Golden.taken: a graded try on the record that really answered the exam). A teacher (code header or
-// remembered teacher device) passes them all; with ?de= (the sealed link of /maestro's «Ver su libro») and a teacher
+// (a key-only phone has none: «Entra con tu código») → THAT simulation taken (Golden.taken: a graded try on the record
+// that really answered the exam). Taken anywhere is enough (his pick after the build): a simulation taken in a
+// teacher's room opens its own book (its photos, clips and the examples) even before El Simulacro Dorado
+// (RutaProgress.doradoOpen); a simulation not taken answers `why: 'dorado'` while the Dorado is closed (the kid can't
+// take it alone yet), else `why: 'taken'`; the PDF needs the Dorado and every simulation taken. A teacher (code header
+// or remembered teacher device) passes them all; with ?de= (the sealed link of /maestro's «Ver su libro») and a teacher
 // session that may see that kid, the page shows that kid's mistakes. Views only read: nothing here writes on a record.
 // Rates (fixed windows of 5 minutes, counted AFTER the door so nobody spends another's budget on a school's one Wi-Fi):
 // a teacher never waits; a kid's account 600 book views and 6000 files; refused or unknown requests 300 per address.
@@ -5176,16 +5183,17 @@ Golden.configure({ totalOf: (simId) => {
   if (!(simId in _goldenTotals)) { const g = _simGrade(simId, {}); _goldenTotals[simId] = g ? Number(g.total) || null : null; }
   return _goldenTotals[simId];
 } });
-// → { ok: true, teacher, rec } | { ok: false, status, why: 'key' | 'login' | 'dorado' }
+// → { ok: true, teacher, rec, dorado (El Simulacro Dorado open for this visitor) } | { ok: false, status, why: 'key' | 'login' }
 function _goldenDoor(req, lvl) {
   const a = levelAccess(req, lvl);
   if (!a.ok) return { ok: false, status: 401, why: 'key' };
-  if (a.via === 'teacher') return { ok: true, teacher: true, rec: null };
+  if (a.via === 'teacher') return { ok: true, teacher: true, rec: null, dorado: true };
   const rec = a.studentCode ? Students.get(a.studentCode) : null;
   if (!rec) return { ok: false, status: 403, why: 'login' };
-  if (!RutaProgress.doradoOpen(a, rec, lvl)) return { ok: false, status: 403, why: 'dorado' };
-  return { ok: true, teacher: false, rec };
+  return { ok: true, teacher: false, rec, dorado: RutaProgress.doradoOpen(a, rec, lvl) };
 }
+// the PDF holds every answer: a teacher, or the Dorado open and every simulation of the book taken
+const _goldenPdfOk = (door, b) => !!(door.ok && (door.teacher || (door.dorado && b.sims.every((s) => Golden.taken(door.rec, s.id)))));
 const _goldenSimOk = (door, sim) => !!(door.ok && sim && (door.teacher || Golden.taken(door.rec, sim.id)));
 const _goldenHref = (lvl, n) => '/audios/' + (Levels.info(lvl).pack || lvl) + '/libro/' + n;
 app.get('/api/golden/:level/:n', (req, res) => {
@@ -5203,7 +5211,8 @@ app.get('/api/golden/:level/:n', (req, res) => {
     return res.status(401).json({ ok: false, why: 'key', locked: true, level: lvl, slug });
   }
   const head = { level: lvl, slug, name: info.name, book: b.id, title: b.title, n: sim.n,
-    simCount: b.sims.length, player: (/^hsk\d/.test(sim.id) ? '/hsk-sim.html?sim=' : '/yct-sim.html?sim=') + encodeURIComponent(sim.id) };
+    simCount: b.sims.length, player: (/^hsk\d/.test(sim.id) ? '/hsk-sim.html?sim=' : '/yct-sim.html?sim=') + encodeURIComponent(sim.id),
+    pct: RutaProgress.getSettings().doradoPct };   // (the Dorado's % per world, for «Se abre cuando practiques… con 70 %»)
   // a teacher's «Ver su libro» opened where this browser is no teacher's (no remembered device): the page offers to
   // remember it with the /maestro code it holds, never shows a kid's message
   if (!door.ok && req.query && req.query.de && Golden.readTeacherLink(String(req.query.de))) {
@@ -5219,13 +5228,15 @@ app.get('/api/golden/:level/:n', (req, res) => {
     rec = r;
     kid = { name: String(r.displayName || 'Anon').slice(0, 40) };
   }
-  const sum = Golden.summary(b, rec, door.teacher && !kid);
+  const sum = Golden.summary(b, rec, door.teacher && !kid, door.dorado);
   if (kid) sum.sims.forEach((s) => { s.open = true; });     // the teacher sees every book; the kid's tries mark theirs
-  if (!_goldenSimOk(door, sim)) return res.status(403).json(Object.assign({ ok: false, why: 'taken', sims: sum.sims }, head));
+  // a simulation not taken: while the Dorado is closed the kid can't take it alone yet («Primero, El Simulacro Dorado»)
+  if (!_goldenSimOk(door, sim)) return res.status(403).json(Object.assign({ ok: false, why: door.dorado ? 'taken' : 'dorado', sims: sum.sims }, head));
   const mine = Golden.attemptView(rec ? Golden.latest(rec, sim.id) : null, sim);
-  res.json(Object.assign({ ok: true, who: kid ? 'teacher-kid' : (door.teacher ? 'teacher' : 'kid'), kid }, head, {
+  res.json(Object.assign({ ok: true, who: kid ? 'teacher-kid' : (door.teacher ? 'teacher' : 'kid'), kid, dorado: !!door.dorado }, head, {
     sim: Golden.simView(b, sim.n), examples: Golden.examplesView(b), review: b.review || [], mine, sims: sum.sims,
-    pdf: Object.assign({}, sum.pdf, { left: door.teacher ? 0 : sum.left, href: (door.teacher || sum.pdf.ready) ? '/golden-media/' + b.id + '/book.pdf?v=' + encodeURIComponent((b.pdf && b.pdf.v) || '') : null }),
+    pdf: Object.assign({}, sum.pdf, { left: door.teacher ? 0 : sum.left, dorado: !!door.dorado,
+      href: _goldenPdfOk(door, b) ? '/golden-media/' + b.id + '/book.pdf?v=' + encodeURIComponent((b.pdf && b.pdf.v) || '') : null }),
   }));
 });
 function _goldenMediaDoor(req, res, bookId) {
@@ -5243,8 +5254,8 @@ function _goldenMediaDoor(req, res, bookId) {
 app.get('/golden-media/:book/book.pdf', (req, res) => {
   const d = _goldenMediaDoor(req, res, req.params.book);
   if (!d) return;
-  // the PDF holds every answer: only once every simulation of the book is taken (or a teacher)
-  if (!d.door.teacher && !d.b.sims.every((s) => Golden.taken(d.door.rec, s.id))) return res.status(403).type('text').send('Forbidden');
+  // the PDF holds every answer: only with the Dorado open and every simulation of the book taken (or a teacher)
+  if (!_goldenPdfOk(d.door, d.b)) return res.status(403).type('text').send('Forbidden');
   const name = String(d.b.title || d.b.id).replace(/[^\w .·-]/g, '');
   res.type('application/pdf').set('Content-Disposition', 'attachment; filename="' + d.b.id + '.pdf"; filename*=UTF-8\'\'' + encodeURIComponent(name + '.pdf'));
   res.sendFile(Golden.pdfFile(d.b), { cacheControl: false, lastModified: false }, (err) => {
