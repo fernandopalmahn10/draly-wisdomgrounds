@@ -79,9 +79,31 @@
   const calm = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const isWorldView = () => document.body.classList.contains('au-is-pick') || document.body.classList.contains('au-is-path');
   function swap(update) {
-    if (!document.startViewTransition || calm() || !isWorldView()) { update(); return; }
-    try { document.startViewTransition(update); } catch (_) { update(); }
+    const safe = () => {
+      try { update(); } catch (e) {
+        console.error('[audios] the screen could not be drawn', e);
+        main.innerHTML = failedHtml('Algo salió mal. Vuelve a intentarlo.');
+        $('#au-retry').addEventListener('click', load);
+      }
+    };
+    if (!document.startViewTransition || calm() || !isWorldView()) { safe(); return; }
+    try { document.startViewTransition(safe); } catch (_) { safe(); }
   }
+  // back to this page from the key screen (a phone's back/forward cache) or from another tab: the locks may have
+  // opened meanwhile. Ask the server again; redraw only the picker or a route, and only when something changed.
+  const sig = (s) => JSON.stringify(s && s.modules ? s.modules.map((m) => [m.id, m.open, m.sims.length]) : null);
+  function refreshState() {
+    if (!catalog || !isWorldView()) return;
+    fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null)).then((s) => {
+        if (!s || !Array.isArray(s.modules) || sig(s) === sig(ruta) || !isWorldView()) return;
+        ruta = s;
+        firstRoute = true;                     // a quiet redraw: the focus stays where it was
+        route();
+      }).catch(() => {});
+  }
+  window.addEventListener('pageshow', (e) => { if (e.persisted) refreshState(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshState(); });
 
   let shownPath = null;            // the page on screen: going back through #mundo-… anchors only scrolls
   window.addEventListener('popstate', () => {

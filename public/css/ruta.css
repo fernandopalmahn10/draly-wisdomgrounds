@@ -19,13 +19,16 @@ body.au-is-pick .au-main { max-width: 1120px; padding-top: 20px; }
 .rd-lede { margin-top: 8px; max-width: 32ch; color: var(--tinta-2); font-size: 1rem; }
 
 /* the stage spans the whole screen (the neighbours fly in from its edges); the page itself never scrolls sideways */
-body.au-is-pick { overflow-x: clip; }
+body.au-is-pick { overflow-x: hidden; }
+@supports (overflow-x: clip) { body.au-is-pick { overflow-x: clip; } }
+/* the golden visitor (css/dorado.css) never stands over the cards' ‹ › nor over a route's key box */
+body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rd-carousel { justify-self: stretch; width: auto; margin-inline: calc(50% - 50vw); }
 .rd-stage {
   --cw: clamp(228px, min(74vw, 300px, calc((100vh - 300px) / 1.42)), 300px);
   --cw: clamp(228px, min(74vw, 300px, calc((100svh - 300px) / 1.42)), 300px);
   position: relative; height: calc(var(--cw) * 1.42 + 46px); overflow: hidden;
-  touch-action: pan-y; -webkit-user-select: none; user-select: none; cursor: grab;
+  touch-action: pan-y pinch-zoom; -webkit-user-select: none; user-select: none; cursor: grab;   /* sideways = our swipe; zoom stays */
 }
 /* only the sides are cut (where the cards fly in): the soft shadow under the cards stays whole */
 @supports (overflow-x: clip) { .rd-stage { overflow: visible; overflow-x: clip; } }
@@ -79,7 +82,7 @@ body.au-is-pick { overflow-x: clip; }
   content: ''; position: absolute; left: 50%; top: 100%; width: 2px; height: calc(var(--cw) * .042); margin-left: -1px; background: rgba(232, 200, 120, .55);
 }
 .rd-mini .is-open i { background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 58%, #a87d26 100%); color: #3d0707; box-shadow: 0 3px 8px -3px rgba(0, 0, 0, .5); }
-.rd-mini .is-soon { color: rgba(247, 241, 228, .74); }
+.rd-mini .is-soon { color: rgba(255, 244, 230, .86); }
 .rd-mini .is-soon i { border: 1.5px dashed rgba(232, 200, 120, .8); color: var(--gold); }
 .rd-mini .is-locked i { background: rgba(0, 0, 0, .26); box-shadow: inset 0 0 0 1.5px rgba(232, 200, 120, .62); color: var(--gold); }
 
@@ -89,7 +92,7 @@ body.au-is-pick { overflow-x: clip; }
   filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .36)); -webkit-user-drag: none;
 }
 /* the skyline keeps its own shape (never cropped: the Museum of the Future stays a ring) */
-.rd-sky { position: absolute; z-index: 1; left: 0; bottom: 16%; display: block; width: 100%; height: auto; aspect-ratio: 400 / 110; opacity: .52; pointer-events: none; }
+.rd-sky { position: absolute; z-index: 1; left: 0; bottom: 16%; display: block; width: 100%; height: auto; aspect-ratio: 400 / 110; opacity: .6; pointer-events: none; }
 .rd-sky-mirror {
   bottom: auto; top: 84%; opacity: .17; transform: scaleY(-1);
   -webkit-mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0) 55%); mask-image: linear-gradient(to top, #000, rgba(0, 0, 0, 0) 55%);
@@ -134,8 +137,7 @@ body.au-is-pick { overflow-x: clip; }
   position: absolute; z-index: 8; top: 0; bottom: 0; left: -30%; width: 160%; pointer-events: none; opacity: 0;
   background: linear-gradient(100deg, rgba(255, 236, 170, 0) 40%, rgba(255, 236, 170, .34) 50%, rgba(255, 236, 170, 0) 60%);
 }
-.rd-card.is-shine .rd-card-shine { animation: rd-shine 820ms var(--ease-out) 1; }
-@keyframes rd-shine { 0% { opacity: 1; transform: translate3d(-45%, 0, 0); } 100% { opacity: 0; transform: translate3d(45%, 0, 0); } }
+/* (its one sweep when a card lands is a Web Animation in js/ruta.js: no class toggle, no layout read in a frame) */
 .rd-card-shade { position: absolute; z-index: 9; inset: 0; background: #14040a; opacity: 0; pointer-events: none; }
 
 /* ‹ the dots › */
@@ -148,14 +150,14 @@ body.au-is-pick { overflow-x: clip; }
 }
 .rd-arrow svg { width: 22px; height: 22px; }
 .rd-arrow:active { transform: scale(.93); }
-.rd-arrow:disabled { opacity: .35; cursor: default; box-shadow: none; }
-.rd-arrow:disabled:active { transform: none; }
+.rd-arrow[aria-disabled="true"] { opacity: .35; cursor: default; box-shadow: none; }
+.rd-arrow[aria-disabled="true"]:active { transform: none; }
 .rd-dots { position: relative; display: flex; }
 .rd-dot { width: 40px; height: 44px; padding: 0; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; border-radius: 10px; }
 .rd-dot i { width: 10px; height: 10px; border-radius: 50%; background: rgba(90, 16, 16, .24); }
 .rd-dot-now {
   position: absolute; left: 7px; top: 50%; width: 26px; height: 10px; margin-top: -5px; border-radius: 5px;
-  background: var(--oro); pointer-events: none; will-change: transform;
+  background: var(--oro); pointer-events: none; will-change: transform; transition: transform 300ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
   .rd-arrow:not(:disabled):hover { box-shadow: 0 1px 2px rgba(90, 16, 16, .14), 0 10px 20px -8px rgba(90, 16, 16, .38); }
@@ -202,10 +204,11 @@ body.au-is-path .au-main { max-width: 720px; }
 /* the banner: the skyline twice in a row, cut on the right (behind Dralingo), the same height on a phone and a laptop */
 .rd-hero .rd-sky { bottom: 0; height: 46%; aspect-ratio: auto; opacity: .45; }
 .rd-hero .rd-card-gloss { z-index: 5; }
-.rd-hero-dragon { position: absolute; z-index: 3; right: 0; bottom: -18%; height: 116%; width: auto; pointer-events: none; filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .36)); }
-.rd-hero-name { position: relative; z-index: 4; max-width: 62%; font-weight: 800; font-size: clamp(2.9rem, 16vw, 4.4rem); line-height: .86; letter-spacing: -.035em; text-shadow: 0 2px 12px rgba(0, 0, 0, .22); }
+/* Dralingo stands inside the gold frame, clear of the words (his head below its top line) */
+.rd-hero-dragon { position: absolute; z-index: 3; right: -6px; bottom: -10%; height: 100%; width: auto; pointer-events: none; filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .36)); }
+.rd-hero-name { position: relative; z-index: 4; max-width: 58%; font-weight: 800; font-size: clamp(2.9rem, 16vw, 4.4rem); line-height: .86; letter-spacing: -.035em; text-shadow: 0 2px 12px rgba(0, 0, 0, .22); }
 .rd-hero.is-long .rd-hero-name { max-width: 74%; font-size: clamp(1.9rem, 9.4vw, 3.4rem); white-space: nowrap; }   /* «New HSK 1» on one line */
-.rd-hero-sub { position: relative; z-index: 4; max-width: 60%; margin-top: 10px; font-weight: 700; font-size: 1rem; line-height: 1.25; color: #e8c878; }
+.rd-hero-sub { position: relative; z-index: 4; max-width: 54%; margin-top: 10px; font-weight: 700; font-size: 1rem; line-height: 1.25; color: #e8c878; }
 .rd-hero .rd-seal { --cw: 300px; top: auto; right: auto; bottom: 16px; left: 18px; width: 52px; height: 52px; }
 /* a screen's heading takes the focus after a tap (for screen readers, js/audios.js): it is not a control, no ring */
 .rd-hero-name:focus, .rd-h1:focus { outline: none; }
@@ -284,10 +287,11 @@ body.au-is-path .au-main { max-width: 720px; }
 
 /* El Simulacro Dorado: one gold medal per simulation */
 .rd-sims { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+/* the climax of the route: gold-leaf tiles (one gold edge, no shadow), not a settings list */
 .rd-sim {
   position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; height: 100%; padding: 12px 12px 12px;
-  border-radius: 14px; background: var(--papel); color: var(--tinta); text-decoration: none;
-  box-shadow: 0 1px 2px rgba(90, 16, 16, .08), 0 4px 14px rgba(90, 16, 16, .06);
+  border-radius: 14px; color: var(--tinta); text-decoration: none;
+  background: linear-gradient(160deg, #fffaf0 0%, #f6e7c4 100%); box-shadow: inset 0 0 0 1.5px #c9a14a;
   transition: transform 140ms var(--ease-out), box-shadow 200ms ease;
 }
 .rd-sim:active { transform: scale(.97); }
@@ -299,13 +303,15 @@ body.au-is-path .au-main { max-width: 720px; }
 .rd-sim-name { font-weight: 800; font-size: 1rem; line-height: 1.2; color: var(--rojo); }
 .rd-sim-meta { font-size: .85rem; color: var(--tinta-2); }
 .rd-sim-best {
-  position: absolute; right: 8px; top: 10px; display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 999px;
-  background: var(--crema-2); color: var(--tinta); font-weight: 800; font-size: .76rem; font-variant-numeric: tabular-nums;
+  position: absolute; right: 8px; top: 10px; display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px 3px 6px; border-radius: 999px;
+  background: var(--papel); color: var(--rojo); font-weight: 800; font-size: .76rem; font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 0 0 1.5px rgba(90, 16, 16, .35);
 }
-.rd-sim-best.is-pass { padding-left: 6px; background: var(--rojo); color: var(--crema); }
-.rd-sim-best svg { width: 12px; height: 12px; color: #e8c878; }
+.rd-sim-best svg { width: 12px; height: 12px; }
+.rd-sim-best.is-pass { background: var(--rojo); color: var(--crema); box-shadow: none; }
+.rd-sim-best.is-pass svg { color: #e8c878; }
 @media (hover: hover) and (pointer: fine) {
-  .rd-sim:hover { box-shadow: 0 1px 2px rgba(90, 16, 16, .1), 0 8px 22px rgba(90, 16, 16, .13); }
+  .rd-sim:hover { box-shadow: inset 0 0 0 2px var(--oro), 0 10px 20px -12px rgba(90, 16, 16, .35); }
   .rd-card:hover .rd-card-go { filter: brightness(1.04); }
 }
 
@@ -335,5 +341,5 @@ body.au-is-path .au-main { max-width: 720px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .rd-card:active, .rd-arrow:active, .rd-btn:active, .rd-sim:active { transform: none; }
-  .rd-card.is-shine .rd-card-shine { animation: none; }
+  .rd-dot-now { transition: none; }
 }

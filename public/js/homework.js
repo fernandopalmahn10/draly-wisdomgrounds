@@ -4026,6 +4026,10 @@
     // the little book's spine: a long name («New HSK 1») breaks as «New / HSK 1», never «HSK / 1»
     $('pt-base-level').textContent = hwLevelName().replace(/ (\d+)$/, ' $1');
     $('pt-base-title').textContent = 'La Ruta Dorada de ' + hwLevelName();
+    // the module's own card colour on La Ruta Dorada (js/ruta.js: YCT Rojo Imperial, New HSK jade, HSK lapis)
+    const look = /^yct/.test(hwBase.level) ? ['#a8352c', '#5a1010'] : /^newhsk/.test(hwBase.level) ? ['#24806b', '#0b3d35']
+      : /^hsk/.test(hwBase.level) ? ['#3c5bb0', '#16275a'] : null;
+    if (look && $('pt-base-book')) { $('pt-base-book').style.setProperty('--rd-c1', look[0]); $('pt-base-book').style.setProperty('--rd-c2', look[1]); }
     $('pt-base-sub').textContent = n ? n + ' de ' + hwBase.words + ' sellos' : hwBase.words + ' palabras con audio';
   }
   function renderNextUp() {

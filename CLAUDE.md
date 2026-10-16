@@ -183,15 +183,16 @@ the checklist for any new game mode.
 - **Built (phase 2, 2026-10-15)**: `/audios` = the module picker, `/audios/<level>` = that module's golden route
   (`public/js/ruta.js` + `css/ruta.css`, routed by `js/audios.js`). One card per level of core/levels.js (its jewel
   colour by test family, a new level of the same family takes the next free colour; Dralingo's pose shuffled per visit;
-  the gold Dubai skyline is one `<symbol id="rd-sky">` in audios.html). The flight is a JS spring writing transform and
-  opacity only (no layout read in a frame; measured 0 frames over 34 ms at 4x CPU slowdown); reduced motion = a
-  crossfade; the first frame is still. What a visitor may open comes ONLY from `GET /api/ruta-dorada` (server.js
+  the gold Dubai skyline is one `<symbol id="rd-sky">` in audios.html). Three worlds or more go round in a ring (a
+  neighbour on each side); the flight is a JS spring writing transform and opacity only (no layout read in a frame;
+  measured 0 frames over 34 ms at 4x CPU slowdown); reduced motion = a crossfade; the first frame is still. What a visitor may open comes ONLY from `GET /api/ruta-dorada` (server.js
   `_rutaState`, `LevelKeys.access` per level): `open`, the base, `simCount`, and the sims list (links to the players,
   the logged-in kid's best %) only when open; `home` = the logged-in kid's class level, else the first level this
   device holds the key of (the picker shows it first; then the tab's last card, then the phone's last choice). A step
   is open / locked (the gold lock, one «Escribe la clave de <nivel>» box) / «Muy pronto» (El Entrenamiento until
   phase 4; La Base or the Simulacro of a level that has none yet). «Escribe la clave» = `/audios/<level>/clave`: the
-  phase-1 key screen (with a way back to the path), which returns to the path once open. A visitor gets «Entra con
+  phase-1 key screen (with a way back to the path), which returns to the path once open (the key's «Copiar mensaje
+  para WhatsApp» in /maestro links this address). A visitor gets «Entra con
   tu código» (`/homework.html?next=/audios…`, homework.js accepts `/audios`, `/audios/<id>`, `/audios/<id>/clave`).
   The /homework entry «La Ruta Dorada de <nivel>» opens `/audios/<level>?from=homework` (the path's back arrow then
   says «Volver a mis tareas»). A new locked thing on the path (El Entrenamiento, the golden book) gets its state from
@@ -313,7 +314,8 @@ the checklist for any new game mode.
 - Commit `content/audios/<id>.json`, `public/assets/audios/<id>/` and `public/assets/audios/catalog.json` together.
   From a worktree, `node scripts/audios-build.js <id> --cache <main checkout>/content/audios/.cache` reuses the voices.
 - **Dralingo Dorado** (2026-10-11): about one visit in ten, a golden 3D Dralingo pops up in the corner of /audios
-  (`?dorado=1` forces him, `?dorado=0` never; never on a base page nor on the picker, where he would cover the ‹ › buttons). `public/js/golden/dorado.js` + `css/dorado.css` are hand-written; the other
+  (`?dorado=1` forces him, `?dorado=0` never); only on a homework's audio page (on a base he would cover the seals, on
+  the picker the ‹ › buttons, on a route its key box; css/ruta.css hides him there). `public/js/golden/dorado.js` + `css/dorado.css` are hand-written; the other
   `js/golden/*.js` files come from `../three/golden-dralingo/ship.mjs`: never edit them here, rebuild there. three.js
   loads from the CDN (import map in audios.html) only when he appears. Silent, corner-only, leaves after 30 s or ×.
 

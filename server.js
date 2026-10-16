@@ -4685,11 +4685,13 @@ app.get(['/audios/:id/clave', '/audio/:id/clave'], (req, res) => {
 // LevelKeys.access again at their own door: never a bypass). Nothing locked travels to a visitor: no media links, no
 // sim list, no answers (the sims' names and question counts are only for whoever may open them).
 //   home = the module to show first: the logged-in kid's class level, else the first level this device holds a key of
+let _rutaSims = null;   // the sims never change while the server runs (a new one comes with a deploy)
 function _rutaState(req) {
   const teacher = !!_teacherOf(req);
   const rec = _studentOf(req);
   const bases = _loadAudioBases();
-  const allSims = HskSim.listSims().concat(YctSim.listSims());
+  if (!_rutaSims) _rutaSims = HskSim.listSims().concat(YctSim.listSims());
+  const allSims = _rutaSims;
   const num = (id) => parseInt((String(id).match(/sim(\d+)$/) || [])[1] || '0', 10);
   let home = rec ? LevelKeys.classLevel(rec) : null;
   const modules = Levels.LEVELS.map((l) => {
@@ -4710,12 +4712,14 @@ function _rutaState(req) {
       }) : [],
     };
   });
-  return { ok: true, teacher, student: !!rec, home: home ? (Levels.info(home).pack || home) : null,
-    levels: LevelKeys.accessMap(req), modules };
+  return { ok: true, teacher, student: !!rec, home: home ? (Levels.info(home).pack || home) : null, modules };
 }
 app.get('/api/ruta-dorada', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
-  res.json(_rutaState(req));
+  try { res.json(_rutaState(req)); } catch (e) {
+    console.error('[ruta-dorada] state failed:', e.message);
+    res.status(500).json({ ok: false, error: 'No se pudo cargar La Ruta Dorada.' });
+  }
 });
 // ── 🔑 La Base files: /base-media/<base id>/<file> (2026-10-15) ────────────────────────────────────────────────────
 // protected/base/<base id>/ (base.json, the clips, pics/) and protected/study/<level>-vocabulario.pdf (as book.pdf).
