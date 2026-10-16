@@ -425,6 +425,24 @@ function setLevelAccess(code, level, via, gen) {
   scheduleSave();
   return true;
 }
+// 🆕 2026-10-16 (La Ruta Dorada, phase 3) — the kid's progress on La Ruta Dorada, per level: rec.ruta[level] (the
+// «¡Me la sé!» seals, a teacher's «Desbloquear» of El Entrenamiento worlds or El Simulacro Dorado, practice per world).
+// core/ruta-progress.js decides what goes in; this only finds the record (an archived kid comes back), hands the
+// level's entry to `mutate`, drops what ends up empty, and saves. opts.activity: the kid did it (counts as activity,
+// so the account is not archived). → the record, or null.
+function updateRuta(code, level, mutate, opts) {
+  const rec = get(code);
+  const lvl = Levels.normalize(level);
+  if (!rec || !lvl || typeof mutate !== 'function') return null;
+  const all = rec.ruta && typeof rec.ruta === 'object' && !Array.isArray(rec.ruta) ? rec.ruta : {};
+  const e = all[lvl] && typeof all[lvl] === 'object' && !Array.isArray(all[lvl]) ? all[lvl] : {};
+  mutate(e);
+  if (Object.keys(e).some((k) => k !== 'at')) all[lvl] = e; else delete all[lvl];
+  if (Object.keys(all).length) rec.ruta = all; else delete rec.ruta;
+  if (opts && opts.activity) rec.lastSeen = Date.now();
+  scheduleSave();
+  return rec;
+}
 // 🆕 2026-06-21 (Fernando) — teacher-managed classroom. Sets the student's
 // classroomId (a classrooms.js id, or '' to unassign). Unlike setClassroomCode
 // this is NEVER touched by login, so the teacher's filing sticks.
@@ -945,6 +963,8 @@ function listAll() {
       rawLevel: r.level || null,                            // (level keys: what the record really says)
       levelSince: r.levelSince || 0,
       levelAccess: r.levelAccess || null,                   // levels opened on the account (core/level-keys.js)
+      ruta: r.ruta || null,                                 // La Ruta Dorada progress (core/ruta-progress.js; server.js
+                                                            // turns it into a small bar and drops it from the roster)
       country: r.country || null,
       device: r.device || null,
       locale: r.locale || null,
@@ -1103,6 +1123,7 @@ module.exports = {
   setClassroomCode,
   setLevel,
   setLevelAccess,
+  updateRuta,
   resetAssignmentSubmissions,
   sendMessage,
   getInbox,

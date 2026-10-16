@@ -41,6 +41,10 @@ data/level-keys.json.tmp
 data/level-keys.unreadable-*.json
 data/teachers-meta.json
 data/teachers.unreadable-*.json
+# 🏆 La Ruta Dorada's unlock rules (core/ruta-progress.js: «El Entrenamiento está activo», the Dorado %): data disk only
+data/ruta-settings.json
+data/ruta-settings.json.tmp
+data/ruta-settings.unreadable-*.json
 # Original (uncompressed) 3D models — only the compressed dralingo-*.glb + john-monk.glb ship to git
 public/assets/Arab Dralingo flying with white ghutra.glb
 public/assets/Arab Dralingo in Red F8.glb
