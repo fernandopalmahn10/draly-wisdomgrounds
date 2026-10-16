@@ -242,11 +242,12 @@
   // 🔒 2026-10-15 (La Ruta Dorada) — arriving from a level's key screen («Entra a Mis Tareas» on a locked simulation or
   // La Base): after the login the kid goes straight back there (the login opens their level on this phone when their
   // account has it). Only this site's own exam pages and La Ruta Dorada's pages (/audios, /audios/<id>, a level's key
-  // address /audios/<level>/clave) are accepted as a destination.
+  // address /audios/<level>/clave, El Entrenamiento /audios/<level>/entrenamiento[/<world>], a golden book
+  // /audios/<level>/libro/<n>) are accepted as a destination.
   let hwNext = '';
   try {
     const n = new URLSearchParams(location.search).get('next') || '';
-    if (/^\/(yct|hsk)-sim\.html(\?[^#\s\\]*)?$/.test(n) || /^\/audios(\/[a-z0-9-]{1,40}(\/clave)?)?$/i.test(n)) hwNext = n;
+    if (/^\/(yct|hsk)-sim\.html(\?[^#\s\\]*)?$/.test(n) || /^\/audios(\/[a-z0-9-]{1,40}(\/clave|\/entrenamiento(\/[a-z0-9-]{1,40})?|\/libro\/[1-9]\d?)?)?$/i.test(n)) hwNext = n;
   } catch (_) {}
   if (hwNext && $('hw-entry-next')) {
     if (/^\/audios\/[a-z0-9-]+-base$/i.test(hwNext)) $('hw-entry-next').textContent = '🔑 Entra con tu código y vuelves directo a La Base.';

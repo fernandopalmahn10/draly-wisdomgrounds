@@ -705,6 +705,16 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--ink); flex
 .m-ruta-sim b { font-weight: 900; color: var(--ink); }
 .m-ruta-sim.is-pass { background: var(--mint); color: var(--jade); }
 .m-ruta-sim.is-low { background: var(--butter); color: #6b4d00; }
+/* 📖 phase 5: the latest try's mistakes and «Ver su libro» (that kid's golden book) */
+.m-ruta-sim:has(.m-ruta-book) { align-items: center; flex-wrap: wrap; padding-right: 4px; }
+.m-ruta-miss { font-weight: 800; color: var(--coral-ink); }
+.m-ruta-miss.is-zero { color: var(--jade); }
+.m-ruta-book {
+  display: inline-flex; align-items: center; min-height: 32px; padding: 0 12px; border-radius: 999px; font-weight: 800; font-size: 0.8125rem;
+  color: var(--ink); background: var(--gold); text-decoration: none; box-shadow: 0 2px 0 var(--ink); transition: transform 140ms var(--ease-out);
+}
+.m-ruta-book:active { transform: translateY(2px); box-shadow: 0 0 0 var(--ink); }
+@media (hover: hover) and (pointer: fine) { .m-ruta-book:hover { background: var(--gold-soft); } }
 @media (max-width: 720px) {
   .m-ruta-level { padding: 12px 12px 14px; }
   .m-ruta-th { display: none; }

@@ -3456,8 +3456,13 @@
     const dNote = D.rule !== 'key' || !L.open ? ''
       : ' <span class="m-ruta-note">' + (D.teacher ? 'Unlocked by a teacher too: it counts when El Entrenamiento is on.'
         : '«Desbloquear» keeps it open for this kid when El Entrenamiento is on.') + '</span>';
+    // 📖 phase 5: per simulation taken, the latest try's mistakes and «Ver su libro» (that kid's golden book, mistakes
+    // first; the link opens only on a teacher's device, server.js /api/golden)
     const sims = (L.sims || []).map((s) => '<li class="m-ruta-sim' + (s.best == null ? '' : s.best >= 60 ? ' is-pass' : ' is-low') + '"><b>Sim ' + s.n + '</b>' +
-      (s.best == null ? '<span>not taken</span>' : '<span>best ' + s.best + ' % · ' + s.tries + (s.tries === 1 ? ' try' : ' tries') + '</span>') + '</li>').join('');
+      (s.best == null ? '<span>not taken</span>' : '<span>best ' + s.best + ' % · ' + s.tries + (s.tries === 1 ? ' try' : ' tries') + '</span>') +
+      (s.mistakes != null ? '<span class="m-ruta-miss' + (s.mistakes === 0 ? ' is-zero' : '') + '">' + (s.mistakes === 0 ? 'no mistakes' : s.mistakes + (s.mistakes === 1 ? ' mistake' : ' mistakes')) + ' (last try)</span>' : '') +
+      (s.book ? '<a class="m-ruta-book" href="' + escapeHtml(s.book) + '" target="_blank" rel="noopener" aria-label="Ver su libro: Simulacro ' + s.n + ' de ' + name + '">📖 Ver su libro</a>' : '') +
+      '</li>').join('');
     return '<div class="m-ruta-level' + (L.own ? ' is-own' : '') + '" data-level="' + escapeHtml(L.id) + '">' +
       '<div class="m-ruta-head">' +
         '<h4 class="m-ruta-name" tabindex="-1"><span class="m-level-pill is-' + escapeHtml(L.id) + '">' + name + '</span>' + (L.own ? '<span class="m-ruta-own">class level</span>' : '') + '</h4>' +

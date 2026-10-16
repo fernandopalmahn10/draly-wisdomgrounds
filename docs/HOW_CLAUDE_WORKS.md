@@ -216,6 +216,26 @@ now called «El Simulacro Dorado se gana practicando» (ON by default; OFF = the
 you turn it off). Each kid's profile shows their best % per world. Answers never travel to the phone before the kid
 answers, and El Entrenamiento never uses the homework endpoints.
 
+**📖 El libro dorado (La Ruta Dorada, step 5, 16 October 2026).** The printed golden book of a level's simulations
+(«YCT 1 · Simulaciones», «New HSK 1 · Simulaciones», «HSK 1 · Simulaciones») on the phone, inside El Simulacro
+Dorado: `/audios/yct1/libro/1` is Simulacro 1's book. **It opens once the kid has taken that simulation** (on their
+own, as homework or in your room: a graded try on their account with at least half of the questions answered; a try
+handed in blank or with a question or two does not count), so the simulation stays a real test and the book is the
+review. It opens on **«Repasa tus N errores»**: the
+questions of their latest try that went wrong, each a full card with the kid's own answer marked, then «Mis
+resultados» (right answers per part), «Así es el examen» (the solved examples, folded) and the whole simulation part by
+part. Every card is the book's own: the exam's photos as the book prints them (a tap shows one big), a gold play
+button with the original exam recording of that question only (cut from the recording; old HSK uses its own clip
+per question), the pinyin with tone marks, the Spanish and the answer in gold. Zero mistakes = a celebration line from
+the gang. **The PDF downloads once every simulation of the level is taken** (a web copy under 9 MB); before that the
+page and the route say how many are left. On the route, a simulation the kid took gets a red «Libro dorado» ribbon
+with its mistakes count; a phone that only has the key is asked to «Entra con tu código» (the book lives on an
+account). Teachers see every book and the PDF; in a kid's profile each simulation they took shows its mistakes and
+«📖 Ver su libro» (that kid's mistakes view; the link works only on a teacher's device, and a kid holding it sees only
+their own book). Nothing of a book travels to a phone that may not open it: the questions come one simulation at a
+time from the server, and the photos and clips are served by number, checked on every file. The content comes from the
+same source as the printed book (`../study/lib/examweb.py`): fix a line in the study book, rebuild it, export again.
+
 ### 2.4 Parent control
 
 Parents open their child's progress with the same codes. A privacy guard makes sure a code only
@@ -547,11 +567,14 @@ intro is long"), and I'll turn it into exact changes.
 
 ## 10. What's next (pending work)
 
-- **La Ruta Dorada** (plan `docs/specs/ruta-dorada.md`): steps 1-4 are built: the key per level (La Base + the
+- **La Ruta Dorada** (plan `docs/specs/ruta-dorada.md`): steps 1-5 are built: the key per level (La Base + the
   simulations behind it), teacher devices for hosting, «Cambiar mi código», the tab itself (the flying module
   cards, each module's golden route), progress on the kid's account (seals on any phone, «Desbloquear» / «Volver a
-  bloquear» per step, the rules in /maestro) and El Entrenamiento (quick rounds per world, the Dorado earned by
-  practice); next the digital golden book (it asks the same key: `LevelKeys.access`). First week of El Entrenamiento:
+  bloquear» per step, the rules in /maestro), El Entrenamiento (quick rounds per world, the Dorado earned by
+  practice) and El libro dorado (each simulation's book once taken, mistakes first, the PDF once all are taken).
+  First week of El libro dorado: listen to a few play buttons per level (each clip is cut from the exam recording by
+  the times the import measured), and say if the book should also open for a kid who took a simulation in your room
+  before earning El Simulacro Dorado (today it follows the Dorado's door). First week of El Entrenamiento:
   listen to a few questions per level on a real phone (the platform voice reads some sentences from toneless pinyin;
   wrong readings are fixed in `core/entrenamiento.js` speechText), and watch whether 70 % per world is the right bar
 - **Official tests:**

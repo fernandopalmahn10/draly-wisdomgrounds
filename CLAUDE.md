@@ -186,6 +186,14 @@ the checklist for any new game mode.
   scores stay on the phone and join the kid's account at the first login (like seals); only account scores open the
   Dorado. **The Dorado rule switches on at launch**: new kids earn the Dorado by practising; kids who already took a
   simulation keep it open; «Desbloquear» still opens anyone.
+- **El libro dorado (his picks 2026-10-16, phase 5)**: the golden book on the web, inside El Simulacro Dorado.
+  **A simulation's book opens once the kid has taken that simulation** (the sim is a real test first, the book is the
+  review; a teacher sees every book). **Phone cards, like La Base**: one card per question with its photos, its own
+  play button cut from the original exam recording, pinyin with tones, the Spanish and the answer in gold, simulation by
+  simulation, from the same source as the printed book (`study/<level>sim`, `exam.py`). **Mistakes first**: after a
+  sim the book opens on «Repasa tus N errores» (that kid's wrong questions, each with its play button), then the whole
+  simulation; teachers see the same list. **The PDF downloads once the kid has taken every simulation of the level**
+  (it holds every answer; a lighter web copy under 9 MB).
 - **Built (phase 3, 2026-10-16): progress on the kid's account, one unlock engine.** `core/ruta-progress.js` is the
   ONLY place that decides a step (the key is still the level's door: `LevelKeys.access` first, the engine after it).
   The record keeps, per stored level id, `rec.ruta[level] = { s: '1-17,20' (the seals as ranges of word numbers of
@@ -248,6 +256,35 @@ the checklist for any new game mode.
   Teachers → the switch is labelled «El Simulacro Dorado se gana practicando». `node scripts/test-ruta-training.js`
   (port 4430: boot 1 = phase 3 where a kid takes a sim, boot 2 = the launch) must pass; the key-door tests run with the
   switch seeded OFF (`ruta-settings.json` in their temp folder).
+- **Built (phase 5, 2026-10-16): El libro dorado.** One source with the printed golden books: `../study/lib/examweb.py
+  <book> --repo <checkout>` (exam.py's own Exam: the sim data, texts.py / transcripts.py, the photos as the book
+  processes them) writes `content/golden/<book>.json` (never served as is) + `protected/golden/<book>/<n>/p<NN>.webp`
+  (photos, <= 60 KB) + `a<NN>.m4a` (each listening question cut from the exam recording, mono AAC 48 kbps; old HSK
+  reuses its own mp3 per question from `protected/HSK SIMULATIONS/`) + `book.pdf` (web copy < 9 MB); a level names its
+  book in core/levels.js (`golden`). `core/golden.js` reads it; server.js: the page `/audios/<level>/libro/<n>` (the key
+  screen without the level's key; `/audios/<level>/libro` → the route's step 3), `GET /api/golden/<level>/<n>` (the
+  doors in order: `LevelKeys.access` → an account (a key-only phone: `why: 'login'`) → `RutaProgress.doradoOpen` →
+  that sim taken = a graded try in `rec.hskResults` (solo, homework and room tries all land there through
+  `/api/hsk-sim/:simId/submit`) that really answered the exam: since phase 5 the submit stores `answeredCount` as the
+  grader saw it (not the keys a phone sent) and `questions`; a try needs half of them answered (older tries: anything
+  but blank); a teacher passes them all), `GET /golden-media/<book>/<n|ex>/<p|a><i>` (by index from the JSON, only a
+  book core/levels.js names, the same doors per file, `private` + Cloudflare no-store) and
+  `/golden-media/<book>/book.pdf` (every sim taken, or a teacher; `private, no-store`, attachment). Rates in fixed 5-min
+  windows counted AFTER the door: a teacher never waits, a kid's account 600 views / 6000 files, refused or unknown
+  requests 300 per address (they never spend a school Wi-Fi's budget). A try whose total differs from today's grader
+  (old HSK sims 1-6 had 30 questions until 2026-06) shows no per-question mistakes; «¡Aprobado!» = the try's % against
+  the exam's pass line (old HSK grades in points of 400). The page (`public/js/libro.js` + `css/libro.css`) holds no
+  content: mistakes first («Repasa tus N errores» = the latest try's `wrongQs`, each card with the kid's answer beside
+  the right one), «Mis resultados», «Así es el examen» (folded; its word lists never name a sim question), the whole
+  sim, the PDF; one clip at a time, started by the tap. The
+  route's step 3: a taken sim's tile gets a red «Libro dorado» ribbon with its mistakes; the PDF button or «Haz los N
+  simulacros que faltan». /maestro (kid profile): per sim taken, its mistakes and «📖 Ver su libro» =
+  `/audios/<level>/libro/<n>?de=<link>` (AES-GCM sealed kid + level, 12 h, opens only for a teacher session that may
+  touch that kid; a kid holding it sees their own book; a browser that is no teacher's gets `why: 'teacher'` and the
+  page remembers it with the /maestro code it keeps, else says to open it where /maestro is). Cast moods `libro` (zero
+  mistakes) and `repaso` in cast.js. The export is atomic (a new folder swapped in only when all of it worked) and the
+  test checks every file against its stamp.
+  `node scripts/test-golden-book.js` (port 4440; `STUDY_DIR=<…/study>` compares a clone with the printed books) must pass.
 - **The simulations' audio = a digital golden book**: the golden book on screen page by page, each listening question
   with its own play button (the original exam recording, cut per question), plus the PDF to download.
 - The whole tab is **«La Ruta Dorada»** (was «Audios y vocabulario»). Choosing your module feels like a game: a swipe
@@ -278,8 +315,9 @@ the checklist for any new game mode.
 - `node scripts/test-level-keys.js` (its own server on port 4300 and a fresh data folder),
   `node scripts/test-sims-lock.js`, `node scripts/test-ruta-dorada.js` (port 4410: every kind of visitor, nothing
   protected reaches one who may not open it), `node scripts/test-ruta-progress.js` (port 4420: seals, the unlock
-  engine, /maestro's «Desbloquear», archive) and `node scripts/test-ruta-training.js` (port 4430: El Entrenamiento, the
-  grading, the Dorado rule ON at launch) must pass.
+  engine, /maestro's «Desbloquear», archive), `node scripts/test-ruta-training.js` (port 4430: El Entrenamiento, the
+  grading, the Dorado rule ON at launch) and `node scripts/test-golden-book.js` (port 4440: El libro dorado, every
+  visitor's doors, the media by index, the web against the printed books) must pass.
 
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads

@@ -145,9 +145,11 @@ async function run() {
   // /homework.html?next=…: back to La Ruta Dorada after the login, never anywhere else (the check homework.js runs)
   const cond = (fs.readFileSync(path.join(ROOT, 'public/js/homework.js'), 'utf8').match(/if \((.+)\) hwNext = n;/) || [])[1];
   const nextOk = cond ? new Function('n', 'return ' + cond) : () => null;   // eslint-disable-line no-new-func
-  ok(['/audios', '/audios/yct1', '/audios/newhsk1/clave', '/audios/yct1-base', '/yct-sim.html?sim=yct1-sim1'].every((n) => nextOk(n) === true),
-    '/homework next= takes the picker, a route, a key address, a base and a sim');
-  ok(['//evil.example', 'https://evil.example/audios', '/audiosx', '/audios/x/clave/x', '/audios/../maestro.html', '/audios/yct1/clave?x=1', '/audios/%2e%2e', '/maestro.html']
+  ok(['/audios', '/audios/yct1', '/audios/newhsk1/clave', '/audios/yct1-base', '/yct-sim.html?sim=yct1-sim1',
+    '/audios/yct1/entrenamiento', '/audios/yct1/entrenamiento/familia', '/audios/yct1/libro/1', '/audios/hsk1/libro/10'].every((n) => nextOk(n) === true),
+  '/homework next= takes the picker, a route, a key address, a base, a sim, El Entrenamiento and a golden book');
+  ok(['//evil.example', 'https://evil.example/audios', '/audiosx', '/audios/x/clave/x', '/audios/../maestro.html', '/audios/yct1/clave?x=1', '/audios/%2e%2e', '/maestro.html',
+    '/audios/yct1/libro/0', '/audios/yct1/libro/01', '/audios/yct1/libro/1?de=x', '/audios/yct1/libro', '/audios/yct1/entrenamiento/x/y']
     .every((n) => nextOk(n) === false), '… and nothing else (no other site, no other page)');
   ok(/'\/audios\/' \+ encodeURIComponent\(l\.id\) \+ '\/clave'/.test(visible('public/js/maestro.js')),
     'the key\'s WhatsApp message (/maestro) links the level\'s key screen, which lands on its route');

@@ -22,6 +22,7 @@ SimLock.scan();                                 // the index of the locked files
 const LevelKeys = require('./core/level-keys'); // 🔑 a key per level opens La Base / Entrenamiento / Simulacro Dorado (2026-10-15)
 const RutaProgress = require('./core/ruta-progress'); // 🏆 La Ruta Dorada: seals on the kid's record + the unlock engine (2026-10-16)
 const Train = require('./core/entrenamiento');        // 🎯 El Entrenamiento: practice world by world, graded here (phase 4, 2026-10-16)
+const Golden = require('./core/golden');             // 📖 El libro dorado: the golden book on the web (phase 5, 2026-10-16)
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
@@ -1608,13 +1609,20 @@ function _rutaAdmin(rec) {
       // never counted for the Dorado (the regular worlds' best % is `practiced` in each world)
       const extra = (Train.worldsOf(l.id) || []).filter((w) => w.kind !== 'world')
         .map((w) => ({ key: w.key, name: w.name, best: s.extra && s.extra[w.key] != null ? s.extra[w.key] : null }));
+      // 📖 phase 5: per simulation taken, the latest try's mistakes and «Ver su libro» (that kid's mistakes view, a
+      // sealed link that opens only for a teacher session: core/golden.js teacherLink)
+      const gb = Golden.ofLevel(l.id);
+      let link = null;
       return {
         id: l.id, name: l.name, own: l.id === own, open: !!via, via: via || null,
         words: s.words, sealed: s.sealed, worlds: s.worlds, train: s.train, dorado: s.dorado, extra,
         sims: _rutaSimsOf(l.id).map((x) => {
           const mine = tries.filter((t) => t && t.simId === x.id);
           const best = mine.reduce((m, t) => Math.max(m, Number(t.percent) || 0), -1);
-          return { id: x.id, n: x.n, best: best >= 0 ? Math.round(best) : null, tries: mine.length };
+          const last = gb && Golden.simOf(gb, x.n) && Golden.simOf(gb, x.n).id === x.id ? Golden.latest(rec, x.id) : null;
+          if (last && !link) link = Golden.teacherLink(rec.code, l.id);
+          return { id: x.id, n: x.n, best: best >= 0 ? Math.round(best) : null, tries: mine.length,
+            mistakes: last ? Golden.mistakesOf(last) : null, book: last ? _goldenHref(l.id, x.n) + '?de=' + link : null };
         }),
       };
     });
@@ -3501,7 +3509,10 @@ app.post('/api/hsk-sim/:simId/submit', (req, res) => {
     total: result.total,
     percent: result.percent,
     wrongQs,                                // [{qid:'L1-1', expected:false, given:true}, ...]
-    answeredCount: Object.keys(answers || {}).length,
+    // 📖 2026-10-16 (El libro dorado): the questions really answered, as the grader saw them (not the keys a phone
+    // sent), out of how many: a simulation's golden book opens only after a real try (core/golden.js `real`)
+    answeredCount: Array.isArray(result.breakdown) ? result.breakdown.filter((b) => b.given != null && b.given !== '').length : Object.keys(answers || {}).length,
+    questions: Array.isArray(result.breakdown) ? result.breakdown.length : undefined,
     ts: Date.now(),
   });
   try { Students._save && Students._save(); } catch (_) {}
@@ -4829,6 +4840,20 @@ app.get(['/audios/:id/entrenamiento', '/audios/:id/entrenamiento/:world', '/audi
   if (!LevelKeys.access(req, lvl).ok) return LevelKeys.sendKeyScreen(res, { level: lvl, what: 'train' });
   res.sendFile(_emPath.join(__dirname, 'public', 'audios.html'));
 });
+// 📖 El libro dorado (phase 5, 2026-10-16): /audios/<level>/libro/<n> = simulation n's golden book, drawn by
+// js/libro.js inside La Ruta Dorada's page. The page holds no content: what it may show comes from /api/golden/…
+// (below), which asks every door. Without the level's key: the key screen right here (it comes back to this address).
+// /audios/<level>/libro (no simulation) = the route's step 3.
+app.get(['/audios/:id/libro', '/audio/:id/libro', '/audios/:id/libro/:n', '/audio/:id/libro/:n'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  const lvl = Levels.normalize(req.params.id);
+  const b = lvl ? Golden.ofLevel(lvl) : null;
+  const slug = lvl ? (Levels.info(lvl).pack || lvl) : null;
+  if (!b) return res.redirect(302, slug ? '/audios/' + slug : '/audios');
+  if (req.params.n == null || !Golden.simOf(b, req.params.n)) return res.redirect(302, '/audios/' + slug + '#paso-3');
+  if (!LevelKeys.access(req, lvl).ok) return LevelKeys.sendKeyScreen(res, { level: lvl, what: 'sim' });
+  res.sendFile(_emPath.join(__dirname, 'public', 'audios.html'));
+});
 // What the picker and the paths draw, for THIS request (never cached): one module per level of core/levels.js
 // (future levels automatically), whether its key is open here (LevelKeys.access: a teacher, the logged-in kid's
 // account, this device's key), and only when it is open the level's simulations (links to the players, which ask
@@ -4878,14 +4903,24 @@ function _rutaState(req) {
     const train = tv ? { live, ready: tv.ready, of: tv.of,
       worlds: tv.worlds.map((w) => ({ key: w.key, kind: w.kind, n: w.n, short: w.short, emoji: w.emoji, open: w.open, via: w.via, best: w.best })) } : null;
     const listSims = a.ok && dorado && dorado.open;
+    // 📖 phase 5: the golden book of each simulation (core/golden.js): once the logged-in kid took that simulation (a
+    // teacher: every one), its «Libro dorado» with the latest try's mistakes, and the PDF once every one is taken. A
+    // key-only phone has no account: `golden.login` (the step says «Entra con tu código»). Counts only, never answers.
+    const teach = a.ok && a.via === 'teacher';
+    const gb = listSims ? Golden.ofLevel(l.id) : null;
+    const gs = gb ? Golden.summary(gb, teach ? null : rec, teach) : null;
     return {
       id: l.id, slug: l.pack || l.id, name: l.name, family: l.family, exam: l.exam || '', open: !!a.ok,
       base: b ? Object.assign({ id: b.id, words: b.words }, rb ? { worlds: rb.worlds.map((w) => ({ n: w.n, short: w.short, first: w.first, count: w.count })) } : {}) : null,
       simCount: own.length,
       sims: listSims ? own.map((s) => {
         const best = tries.filter((t) => t && t.simId === s.id).reduce((m, t) => Math.max(m, Number(t.percent) || 0), -1);
-        return Object.assign({}, s, { best: best >= 0 ? Math.round(best) : null });
+        const g = gs ? gs.sims.find((x) => x.id === s.id) : null;
+        return Object.assign({}, s, { best: best >= 0 ? Math.round(best) : null, taken: !!(g && g.taken),
+          mistakes: g && g.taken ? g.mistakes : null, book: g && g.open && (teach || rec) ? _goldenHref(l.id, g.n) : null });
       }) : [],
+      golden: gs ? { sims: gs.sims.length, left: gs.left, login: !teach && !rec, mb: gs.pdf.mb,
+        pdf: gs.pdf.ready ? '/golden-media/' + gb.id + '/book.pdf?v=' + encodeURIComponent((gb.pdf && gb.pdf.v) || '') : null } : null,
       dorado,
       train,
       progress: prog ? {
@@ -5099,6 +5134,138 @@ app.post('/api/ruta/train/scores', (req, res) => {
   const out = Train.mergeProofs(rec.code, d.lvl, b.proofs, _trainWho(req, res, d.a));
   if (!out.ok) return res.status(out.status || 400).json(out);
   res.json({ ok: true, who, merged: out.merged, best: Train.bestOf(Students.get(rec.code), d.lvl) });
+});
+// ── 📖 El libro dorado (phase 5, 2026-10-16): the golden book on the web (core/golden.js) ──────────────────────────
+// GET /api/golden/<level>/<n>[?de=<teacher link>] → simulation n's book for THIS visitor, or why not (never cached)
+// GET /golden-media/<book>/<n|ex>/<p|a><i>           → a photo / a clip of that simulation (or of the examples), by index
+// GET /golden-media/<book>/book.pdf                  → the PDF, once every simulation of the book is taken (or a teacher)
+// Doors, in order (his picks): the level's key (LevelKeys.access, the one door: 401 = the key screen) → a kid's account
+// (a key-only phone has none: «Entra con tu código») → El Simulacro Dorado open (RutaProgress.doradoOpen) → THAT
+// simulation taken (Golden.taken: a graded try on the record that really answered the exam). A teacher (code header or
+// remembered teacher device) passes them all; with ?de= (the sealed link of /maestro's «Ver su libro») and a teacher
+// session that may see that kid, the page shows that kid's mistakes. Views only read: nothing here writes on a record.
+// Rates (fixed windows of 5 minutes, counted AFTER the door so nobody spends another's budget on a school's one Wi-Fi):
+// a teacher never waits; a kid's account 600 book views and 6000 files; refused or unknown requests 300 per address.
+const _goldenWin = new Map();   // key → { start, n }
+const GOLDEN_WIN = 5 * 60 * 1000;
+function _goldenRate(key, max) {
+  const now = Date.now();
+  let e = _goldenWin.get(key);
+  if (!e || now - e.start >= GOLDEN_WIN) {
+    if (!e && _goldenWin.size >= 50000) return false;   // a flood of new keys: refuse rather than grow
+    e = { start: now, n: 0 };
+    _goldenWin.set(key, e);
+  }
+  if (e.n >= max) return false;
+  e.n++;
+  return true;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, e] of _goldenWin) if (now - e.start >= GOLDEN_WIN) _goldenWin.delete(k);
+}, 60 * 1000).unref();
+// one budget per visitor kind: → true when the request may go on
+const _goldenOk = (req, door, kind) => (door.ok ? (door.teacher || _goldenRate(kind + ':k:' + door.rec.code, kind === 'b' ? 600 : 6000))
+  : _goldenRate('x:' + _clientIp(req), 300));
+const _GOLDEN_NO_STORE = { 'Cache-Control': 'private, no-store', 'CDN-Cache-Control': 'no-store', 'Cloudflare-CDN-Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex' };
+// the attempts' totals as the graders count them today (old HSK: 10 points a question; 30-question sims grew to 40 in
+// 2026-06): a try with another total is from before, its per-question record does not fit the book
+const _goldenTotals = {};
+Golden.configure({ totalOf: (simId) => {
+  if (!(simId in _goldenTotals)) { const g = _simGrade(simId, {}); _goldenTotals[simId] = g ? Number(g.total) || null : null; }
+  return _goldenTotals[simId];
+} });
+// → { ok: true, teacher, rec } | { ok: false, status, why: 'key' | 'login' | 'dorado' }
+function _goldenDoor(req, lvl) {
+  const a = levelAccess(req, lvl);
+  if (!a.ok) return { ok: false, status: 401, why: 'key' };
+  if (a.via === 'teacher') return { ok: true, teacher: true, rec: null };
+  const rec = a.studentCode ? Students.get(a.studentCode) : null;
+  if (!rec) return { ok: false, status: 403, why: 'login' };
+  if (!RutaProgress.doradoOpen(a, rec, lvl)) return { ok: false, status: 403, why: 'dorado' };
+  return { ok: true, teacher: false, rec };
+}
+const _goldenSimOk = (door, sim) => !!(door.ok && sim && (door.teacher || Golden.taken(door.rec, sim.id)));
+const _goldenHref = (lvl, n) => '/audios/' + (Levels.info(lvl).pack || lvl) + '/libro/' + n;
+app.get('/api/golden/:level/:n', (req, res) => {
+  res.set(_GOLDEN_NO_STORE);
+  const lvl = Levels.normalize(req.params.level);
+  const b = lvl ? Golden.ofLevel(lvl) : null;
+  const sim = b ? Golden.simOf(b, req.params.n) : null;
+  const door = sim ? _goldenDoor(req, lvl) : { ok: false };
+  if (!_goldenOk(req, door, 'b')) return res.status(429).set('Retry-After', '30').json({ ok: false, why: 'wait', error: 'Espera un momento.' });
+  if (!sim) return res.status(404).json({ ok: false, error: 'Ese libro no existe.' });
+  const info = Levels.info(lvl);
+  const slug = info.pack || lvl;
+  // (without the level's key nothing of the book travels: not its title, its simulations or their players)
+  if (!door.ok && door.why === 'key' && !(req.query && req.query.de && Golden.readTeacherLink(String(req.query.de)))) {
+    return res.status(401).json({ ok: false, why: 'key', locked: true, level: lvl, slug });
+  }
+  const head = { level: lvl, slug, name: info.name, book: b.id, title: b.title, n: sim.n,
+    simCount: b.sims.length, player: (/^hsk\d/.test(sim.id) ? '/hsk-sim.html?sim=' : '/yct-sim.html?sim=') + encodeURIComponent(sim.id) };
+  // a teacher's «Ver su libro» opened where this browser is no teacher's (no remembered device): the page offers to
+  // remember it with the /maestro code it holds, never shows a kid's message
+  if (!door.ok && req.query && req.query.de && Golden.readTeacherLink(String(req.query.de))) {
+    return res.status(403).json({ ok: false, why: 'teacher', level: lvl, slug, name: info.name, n: sim.n });
+  }
+  if (!door.ok) return res.status(door.status).json(Object.assign({ ok: false, why: door.why }, head));
+  // a teacher's «Ver su libro»: that kid's attempts (only for a teacher session that may see the kid)
+  let rec = door.rec, kid = null;
+  if (door.teacher && req.query && req.query.de) {
+    const link = Golden.readTeacherLink(String(req.query.de));
+    const r = link && Levels.normalize(link.level) === lvl ? Students.get(link.code) : null;
+    if (!r || !_canSessionTouchStudent(_teacherOf(req), r)) return res.status(403).json(Object.assign({ ok: false, why: 'link' }, head));
+    rec = r;
+    kid = { name: String(r.displayName || 'Anon').slice(0, 40) };
+  }
+  const sum = Golden.summary(b, rec, door.teacher && !kid);
+  if (kid) sum.sims.forEach((s) => { s.open = true; });     // the teacher sees every book; the kid's tries mark theirs
+  if (!_goldenSimOk(door, sim)) return res.status(403).json(Object.assign({ ok: false, why: 'taken', sims: sum.sims }, head));
+  const mine = Golden.attemptView(rec ? Golden.latest(rec, sim.id) : null, sim);
+  res.json(Object.assign({ ok: true, who: kid ? 'teacher-kid' : (door.teacher ? 'teacher' : 'kid'), kid }, head, {
+    sim: Golden.simView(b, sim.n), examples: Golden.examplesView(b), review: b.review || [], mine, sims: sum.sims,
+    pdf: Object.assign({}, sum.pdf, { left: door.teacher ? 0 : sum.left, href: (door.teacher || sum.pdf.ready) ? '/golden-media/' + b.id + '/book.pdf?v=' + encodeURIComponent((b.pdf && b.pdf.v) || '') : null }),
+  }));
+});
+function _goldenMediaDoor(req, res, bookId) {
+  res.set(_GOLDEN_NO_STORE);
+  res.set('Cross-Origin-Resource-Policy', 'same-origin');
+  // only a book a level names (core/levels.js `golden`): an unknown name never reaches the disk or a cache
+  const l = Levels.LEVELS.find((x) => x.golden && x.golden === String(bookId || ''));
+  const b = l ? Golden.book(l.golden) : null;
+  const door = b ? _goldenDoor(req, l.id) : { ok: false };
+  if (!_goldenOk(req, door, 'm')) { res.status(429).set('Retry-After', '20').type('text').send('Espera un momento.'); return null; }
+  if (!b) { res.status(404).type('text').send('Not found'); return null; }
+  if (!door.ok) { res.status(door.status).type('text').send('Forbidden'); return null; }
+  return { b, lvl: l.id, door };
+}
+app.get('/golden-media/:book/book.pdf', (req, res) => {
+  const d = _goldenMediaDoor(req, res, req.params.book);
+  if (!d) return;
+  // the PDF holds every answer: only once every simulation of the book is taken (or a teacher)
+  if (!d.door.teacher && !d.b.sims.every((s) => Golden.taken(d.door.rec, s.id))) return res.status(403).type('text').send('Forbidden');
+  const name = String(d.b.title || d.b.id).replace(/[^\w .·-]/g, '');
+  res.type('application/pdf').set('Content-Disposition', 'attachment; filename="' + d.b.id + '.pdf"; filename*=UTF-8\'\'' + encodeURIComponent(name + '.pdf'));
+  res.sendFile(Golden.pdfFile(d.b), { cacheControl: false, lastModified: false }, (err) => {
+    if (err && !res.headersSent) res.status(404).type('text').send('Not found');
+  });
+});
+app.get('/golden-media/:book/:where/:name', (req, res) => {
+  const d = _goldenMediaDoor(req, res, req.params.book);
+  if (!d) return;
+  const where = String(req.params.where);
+  // the examples («Así es el examen») go with any book this visitor may open; a simulation's files with that book only
+  const ok = where === 'ex' ? (d.door.teacher || d.b.sims.some((s) => Golden.taken(d.door.rec, s.id)))
+    : _goldenSimOk(d.door, Golden.simOf(d.b, where));
+  if (!ok) return res.status(403).type('text').send('Forbidden');
+  const f = Golden.mediaFile(d.b, where, req.params.name);
+  if (!f) return res.status(404).type('text').send('Not found');
+  // (the phone keeps a file a week: its address carries the file's content stamp, ?v=; Cloudflare keeps nothing)
+  res.set('Cache-Control', 'private, max-age=604800').type(f.type);
+  res.sendFile(f.abs, { cacheControl: false, lastModified: false }, (err) => {   // Range requests for the clips
+    if (err && !res.headersSent) res.status(404).set('Cache-Control', 'no-store').type('text').send('Not found');
+  });
 });
 // «Salir» on /homework (2026-10-16): the kid's session on this phone ends (the next kid on a family phone writes no
 // seals or results on them); their codes stay saved on the phone, so coming back is still one tap on «Entrar».

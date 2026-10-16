@@ -1,0 +1,3145 @@
+{
+ "id": "newhsk1sim",
+ "kind": "golden",
+ "name": "New HSK 1",
+ "title": "New HSK 1 · Simulaciones",
+ "level": "newhsk1",
+ "pdf": {
+  "f": "book.pdf",
+  "v": "4665351177",
+  "mb": 2.8,
+  "pages": 22,
+  "src": "4665351177"
+ },
+ "review": [
+  {
+   "b": "Frases cortas",
+   "t": " (Escuchar 1): repásalas en el libro «Vocabulario»."
+  },
+  {
+   "b": "Preguntas, conversaciones y textos",
+   "t": ": léelos en voz alta con su español, hasta que te salgan solos."
+  }
+ ],
+ "examples": {
+  "parts": [
+   {
+    "sec": "L",
+    "part": 1,
+    "kind": "abc",
+    "how": "Escuchas una frase corta. Elige su foto: A, B o C.",
+    "first": 1,
+    "last": 5,
+    "items": [
+     {
+      "num": 0,
+      "ans": "C",
+      "ex": 1,
+      "a": 0,
+      "opts": [
+       {
+        "l": "A",
+        "p": 0
+       },
+       {
+        "l": "B",
+        "p": 1
+       },
+       {
+        "l": "C",
+        "p": 2
+       }
+      ],
+      "tab": [
+       15.89,
+       25.73
+      ],
+      "py": "sān ge píngguǒ",
+      "es": "tres manzanas"
+     }
+    ],
+    "big": 1
+   },
+   {
+    "sec": "L",
+    "part": 2,
+    "kind": "text",
+    "how": "Escuchas una pregunta. Elige la respuesta: A, B o C.",
+    "first": 6,
+    "last": 10,
+    "items": [
+     {
+      "num": 0,
+      "ans": "C",
+      "ex": 1,
+      "a": 1,
+      "said": [
+       {
+        "py": "Jīntiān tiānqì zěnmeyàng?",
+        "es": "¿Qué tiempo hace hoy?",
+        "k": "lead"
+       }
+      ],
+      "opts": [
+       {
+        "l": "A",
+        "py": "zài xuéxí",
+        "es": "está estudiando"
+       },
+       {
+        "l": "B",
+        "py": "hěn hǎotīng",
+        "es": "suena muy bonito"
+       },
+       {
+        "l": "C",
+        "py": "fēicháng rè",
+        "es": "hace muchísimo calor"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "sec": "L",
+    "part": 3,
+    "kind": "gal",
+    "how": "Escuchas cinco conversaciones. Cada una va con una de las fotos, de la A a la F.",
+    "first": 11,
+    "last": 15,
+    "items": [
+     {
+      "num": 0,
+      "ans": "C",
+      "ex": 1,
+      "a": 2,
+      "p": 3,
+      "tab": [
+       17.86,
+       23.44
+      ],
+      "lines": [
+       {
+        "py": "Nǐ hǎo!",
+        "es": "¡Hola!",
+        "v": 0
+       },
+       {
+        "py": "Nǐ hǎo, hěn gāoxìng rènshi nǐ.",
+        "es": "Hola, mucho gusto en conocerte.",
+        "v": 1
+       }
+      ]
+     }
+    ],
+    "talk": 1
+   },
+   {
+    "sec": "L",
+    "part": 4,
+    "kind": "text",
+    "how": "Escuchas una frase y una pregunta sobre ella. Elige la respuesta: A, B o C.",
+    "first": 16,
+    "last": 20,
+    "items": [
+     {
+      "num": 0,
+      "ans": "A",
+      "ex": 1,
+      "a": 3,
+      "said": [
+       {
+        "py": "Xiàwǔ wǒ qù chāoshì, wǒ xiǎng mǎi yìxiē shuǐguǒ.",
+        "es": "Por la tarde voy al supermercado: quiero comprar algo de fruta.",
+        "k": "lead"
+       },
+       {
+        "py": "Wèn: Shuōhuàrén xiàwǔ qù nǎlǐ?",
+        "es": "Pregunta: ¿Adónde va por la tarde la persona que habla?",
+        "k": "ask"
+       }
+      ],
+      "opts": [
+       {
+        "l": "A",
+        "py": "chāoshì",
+        "es": "al supermercado"
+       },
+       {
+        "l": "B",
+        "py": "yīyuàn",
+        "es": "al hospital"
+       },
+       {
+        "l": "C",
+        "py": "xuéxiào",
+        "es": "a la escuela"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "sec": "R",
+    "part": 1,
+    "kind": "gal",
+    "how": "Lees cinco frases. Cada una va con una de las fotos, de la A a la F.",
+    "first": 21,
+    "last": 25,
+    "items": [
+     {
+      "num": 0,
+      "ans": "E",
+      "ex": 1,
+      "p": 4,
+      "tab": [
+       17.63,
+       23.44
+      ],
+      "py": "Wǒ hěn xǐhuan zhè běn shū.",
+      "es": "Me gusta mucho este libro."
+     }
+    ],
+    "talk": 0
+   },
+   {
+    "sec": "R",
+    "part": 2,
+    "kind": "reply",
+    "how": "Lees cinco preguntas. Elige en la lista la respuesta de cada una, de la A a la F.",
+    "first": 26,
+    "last": 30,
+    "items": [
+     {
+      "num": 0,
+      "ans": "F",
+      "ex": 1,
+      "lines": [
+       {
+        "py": "Nǐ hē shuǐ ma?",
+        "es": "¿Quieres agua?",
+        "v": 0
+       },
+       {
+        "py": "Hǎo de, xièxie!",
+        "es": "¡Sí, gracias!",
+        "v": 1,
+        "mark": 1
+       }
+      ]
+     }
+    ],
+    "bank": [
+     {
+      "l": "A",
+      "py": "Zhēn hǎotīng!",
+      "es": "¡Suena muy bonito!"
+     },
+     {
+      "l": "B",
+      "py": "Xīngqītiān.",
+      "es": "El domingo."
+     },
+     {
+      "l": "C",
+      "py": "Dōu hěn piàoliang.",
+      "es": "Las dos son muy bonitas."
+     },
+     {
+      "l": "D",
+      "py": "Zhōngxué qiánbian.",
+      "es": "Delante de la escuela secundaria."
+     },
+     {
+      "l": "E",
+      "py": "33 yuán.",
+      "es": "33 yuanes."
+     },
+     {
+      "l": "F",
+      "py": "Hǎo de, xièxie!",
+      "es": "¡Sí, gracias!",
+      "for": "ex"
+     }
+    ]
+   },
+   {
+    "sec": "R",
+    "part": 3,
+    "kind": "fill",
+    "how": "Lees cinco frases. Complétalas con las palabras de la lista.",
+    "first": 31,
+    "last": 35,
+    "items": [
+     {
+      "num": 0,
+      "ans": "D",
+      "ex": 1,
+      "lines": [
+       {
+        "py": "Nǐ ___ shénme míngzi?",
+        "es": "¿Cómo te llamas?",
+        "fw": "jiào"
+       }
+      ]
+     }
+    ],
+    "bank": [
+     {
+      "l": "A",
+      "py": "dú",
+      "es": "leer en voz alta"
+     },
+     {
+      "l": "B",
+      "py": "dàjiā",
+      "es": "todos"
+     },
+     {
+      "l": "C",
+      "py": "dà",
+      "es": "grande"
+     },
+     {
+      "l": "D",
+      "py": "jiào",
+      "es": "llamarse",
+      "for": "ex"
+     },
+     {
+      "l": "E",
+      "py": "zài",
+      "es": "estar en"
+     },
+     {
+      "l": "F",
+      "py": "Zhōngguó",
+      "es": "China"
+     }
+    ]
+   },
+   {
+    "sec": "R",
+    "part": 4,
+    "kind": "text",
+    "how": "Lees un texto corto y una pregunta. Elige la respuesta: A, B o C.",
+    "first": 36,
+    "last": 40,
+    "items": [],
+    "note": "Esta parte no tiene ejemplo resuelto: empieza en la pregunta 36."
+   }
+  ],
+  "pics": [
+   {
+    "f": "ex/p01.webp",
+    "v": "5d0c21c459",
+    "w": 360,
+    "h": 270
+   },
+   {
+    "f": "ex/p02.webp",
+    "v": "2a1638f699",
+    "w": 360,
+    "h": 270
+   },
+   {
+    "f": "ex/p03.webp",
+    "v": "9aaed6e7a3",
+    "w": 360,
+    "h": 270
+   },
+   {
+    "f": "ex/p04.webp",
+    "v": "959491a807",
+    "w": 480,
+    "h": 360
+   },
+   {
+    "f": "ex/p05.webp",
+    "v": "2a5963df2f",
+    "w": 480,
+    "h": 360
+   }
+  ],
+  "clips": [
+   {
+    "f": "ex/a01.m4a",
+    "v": "b5c7e834c2",
+    "s": 9.17
+   },
+   {
+    "f": "ex/a02.m4a",
+    "v": "feb6c795a3",
+    "s": 9.57
+   },
+   {
+    "f": "ex/a03.m4a",
+    "v": "0640894c39",
+    "s": 13.37
+   },
+   {
+    "f": "ex/a04.m4a",
+    "v": "da0453d922",
+    "s": 25.07
+   }
+  ]
+ },
+ "sims": [
+  {
+   "n": 1,
+   "id": "newhsk1-sim1",
+   "total": 200,
+   "questions": 40,
+   "parts": [
+    {
+     "sec": "L",
+     "part": 1,
+     "kind": "abc",
+     "how": "Escuchas una frase corta. Elige su foto: A, B o C.",
+     "first": 1,
+     "last": 5,
+     "items": [
+      {
+       "num": 1,
+       "ans": "B",
+       "q": "L1-1",
+       "a": 0,
+       "opts": [
+        {
+         "l": "A",
+         "p": 0
+        },
+        {
+         "l": "B",
+         "p": 1
+        },
+        {
+         "l": "C",
+         "p": 2
+        }
+       ],
+       "tab": [
+        19.71,
+        29.17
+       ],
+       "py": "chuān yīfu",
+       "es": "ponerse la ropa"
+      },
+      {
+       "num": 2,
+       "ans": "C",
+       "q": "L1-2",
+       "a": 1,
+       "opts": [
+        {
+         "l": "A",
+         "p": 3
+        },
+        {
+         "l": "B",
+         "p": 4
+        },
+        {
+         "l": "C",
+         "p": 5
+        }
+       ],
+       "tab": [
+        26.0,
+        31.25
+       ],
+       "py": "mài jīdàn",
+       "es": "vender huevos"
+      },
+      {
+       "num": 3,
+       "ans": "A",
+       "q": "L1-3",
+       "a": 2,
+       "opts": [
+        {
+         "l": "A",
+         "p": 6
+        },
+        {
+         "l": "B",
+         "p": 7
+        },
+        {
+         "l": "C",
+         "p": 8
+        }
+       ],
+       "tab": [
+        15.49,
+        29.32
+       ],
+       "py": "méi tīngjiàn",
+       "es": "no lo oyó"
+      },
+      {
+       "num": 4,
+       "ans": "C",
+       "q": "L1-4",
+       "a": 3,
+       "opts": [
+        {
+         "l": "A",
+         "p": 9
+        },
+        {
+         "l": "B",
+         "p": 10
+        },
+        {
+         "l": "C",
+         "p": 11
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "mèimei de gǒu",
+       "es": "el perro de mi hermana menor"
+      },
+      {
+       "num": 5,
+       "ans": "A",
+       "q": "L1-5",
+       "a": 4,
+       "opts": [
+        {
+         "l": "A",
+         "p": 12
+        },
+        {
+         "l": "B",
+         "p": 13
+        },
+        {
+         "l": "C",
+         "p": 14
+        }
+       ],
+       "tab": [
+        13.46,
+        29.32
+       ],
+       "py": "háizimen",
+       "es": "los niños"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 2,
+     "kind": "text",
+     "how": "Escuchas una pregunta. Elige la respuesta: A, B o C.",
+     "first": 6,
+     "last": 10,
+     "items": [
+      {
+       "num": 6,
+       "ans": "A",
+       "q": "L2-6",
+       "a": 5,
+       "said": [
+        {
+         "py": "Jiějie ài chī shénme?",
+         "es": "¿Qué le encanta comer a la hermana mayor?",
+         "k": "lead"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "píngguǒ",
+         "es": "manzanas"
+        },
+        {
+         "l": "B",
+         "py": "shuìjiào",
+         "es": "dormir"
+        },
+        {
+         "l": "C",
+         "py": "méi kànjiàn",
+         "es": "no lo vi"
+        }
+       ]
+      },
+      {
+       "num": 7,
+       "ans": "A",
+       "q": "L2-7",
+       "a": 6,
+       "said": [
+        {
+         "py": "Wǒmen huí jiā le, zàijiàn!",
+         "es": "Ya nos vamos a casa. ¡Adiós!",
+         "k": "lead"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "zàijiàn",
+         "es": "adiós"
+        },
+        {
+         "l": "B",
+         "py": "nín hǎo",
+         "es": "hola (con respeto)"
+        },
+        {
+         "l": "C",
+         "py": "bú kèqi",
+         "es": "de nada"
+        }
+       ]
+      },
+      {
+       "num": 8,
+       "ans": "B",
+       "q": "L2-8",
+       "a": 7,
+       "said": [
+        {
+         "py": "Tā érzi zài nǎr gōngzuò?",
+         "es": "¿Dónde trabaja su hijo?",
+         "k": "lead"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "tāmen",
+         "es": "ellos (animales o cosas)"
+        },
+        {
+         "l": "B",
+         "py": "fàndiàn lǐ",
+         "es": "en un restaurante"
+        },
+        {
+         "l": "C",
+         "py": "xiàbān le",
+         "es": "ya salió del trabajo"
+        }
+       ]
+      },
+      {
+       "num": 9,
+       "ans": "B",
+       "q": "L2-9",
+       "a": 8,
+       "said": [
+        {
+         "py": "Wǒmen zhōngwǔ qù nǎlǐ mǎi dōngxi?",
+         "es": "¿Adónde vamos a comprar al mediodía?",
+         "k": "lead"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "mǎi cài",
+         "es": "comprar verduras"
+        },
+        {
+         "l": "B",
+         "py": "shāngdiàn",
+         "es": "a la tienda"
+        },
+        {
+         "l": "C",
+         "py": "hěn piányi",
+         "es": "muy barato"
+        }
+       ]
+      },
+      {
+       "num": 10,
+       "ans": "C",
+       "q": "L2-10",
+       "a": 9,
+       "said": [
+        {
+         "py": "Zhège diànnǎo zěnmeyàng?",
+         "es": "¿Qué te parece esta computadora?",
+         "k": "lead"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "kàn diànyǐng",
+         "es": "ver una película"
+        },
+        {
+         "l": "B",
+         "py": "wǒ yǒu shíjiān",
+         "es": "tengo tiempo"
+        },
+        {
+         "l": "C",
+         "py": "wǒ hěn xǐhuan",
+         "es": "me gusta mucho"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "sec": "L",
+     "part": 3,
+     "kind": "gal",
+     "how": "Escuchas cinco conversaciones. Cada una va con una de las fotos, de la A a la F.",
+     "first": 11,
+     "last": 15,
+     "items": [
+      {
+       "num": 11,
+       "ans": "D",
+       "q": "L3-11",
+       "a": 10,
+       "p": 15,
+       "tab": [
+        17.86,
+        23.44
+       ],
+       "lines": [
+        {
+         "py": "Wáng nǚshì, nǐ hē shénme?",
+         "es": "Señora {Wáng}, ¿qué quiere tomar?",
+         "v": 0
+        },
+        {
+         "py": "Lái yì bēi chá ba, xièxie.",
+         "es": "Una taza de té, por favor. Gracias.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 12,
+       "ans": "A",
+       "q": "L3-12",
+       "a": 11,
+       "p": 16,
+       "tab": [
+        17.86,
+        23.44
+       ],
+       "lines": [
+        {
+         "py": "Wǒ zhīdào, zhège shì nǐ nǚ’ér.",
+         "es": "Ya sé: esta es tu hija.",
+         "v": 0
+        },
+        {
+         "py": "Duì, nà shíhou tā shíjiǔ suì.",
+         "es": "Sí, en esa época tenía diecinueve años.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 13,
+       "ans": "B",
+       "q": "L3-13",
+       "a": 12,
+       "p": 17,
+       "tab": [
+        17.86,
+        23.44
+       ],
+       "lines": [
+        {
+         "py": "Wèi, jiā lǐ méiyǒu niúnǎi le?",
+         "es": "¿Aló? ¿Ya no hay leche en casa?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ zài shāngdiàn, wǒ mǎi yìxiē ba.",
+         "es": "Estoy en la tienda: compro un poco.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 14,
+       "ans": "F",
+       "q": "L3-14",
+       "a": 13,
+       "p": 18,
+       "tab": [
+        17.86,
+        23.44
+       ],
+       "lines": [
+        {
+         "py": "Wǒ bú rènshi tā bàba.",
+         "es": "No conozco a su papá.",
+         "v": 0
+        },
+        {
+         "py": "Wǒ rènshi, tā shì yīshēng.",
+         "es": "Yo sí lo conozco: es médico.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 15,
+       "ans": "E",
+       "q": "L3-15",
+       "a": 14,
+       "p": 19,
+       "tab": [
+        17.86,
+        23.44
+       ],
+       "lines": [
+        {
+         "py": "Qǐng zài zhèlǐ xiě nǐ de míngzi.",
+         "es": "Por favor, escribe aquí tu nombre.",
+         "v": 0
+        },
+        {
+         "py": "Hǎo de.",
+         "es": "Está bien.",
+         "v": 1
+        }
+       ]
+      }
+     ],
+     "talk": 1
+    },
+    {
+     "sec": "L",
+     "part": 4,
+     "kind": "text",
+     "how": "Escuchas una frase y una pregunta sobre ella. Elige la respuesta: A, B o C.",
+     "first": 16,
+     "last": 20,
+     "items": [
+      {
+       "num": 16,
+       "ans": "A",
+       "q": "L4-16",
+       "a": 15,
+       "said": [
+        {
+         "py": "Zuótiān báitiān xià le yǔ.",
+         "es": "Ayer llovió durante el día.",
+         "k": "lead"
+        },
+        {
+         "py": "Wèn: Zuótiān báitiān de tiānqì zěnmeyàng?",
+         "es": "Pregunta: ¿Qué tiempo hizo ayer durante el día?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "xià yǔ le",
+         "es": "llovió"
+        },
+        {
+         "l": "B",
+         "py": "xià xuě le",
+         "es": "nevó"
+        },
+        {
+         "l": "C",
+         "py": "yǒudiǎnr rè",
+         "es": "hizo un poco de calor"
+        }
+       ]
+      },
+      {
+       "num": 17,
+       "ans": "A",
+       "q": "L4-17",
+       "a": 16,
+       "said": [
+        {
+         "py": "Xiànzài shì liù diǎn èrshí fēn, wǒ bàn xiǎoshí hòu huí gōngsī.",
+         "es": "Son las seis y veinte; vuelvo a la oficina en media hora.",
+         "k": "lead"
+        },
+        {
+         "py": "Wèn: Xiànzài jǐ diǎn?",
+         "es": "Pregunta: ¿Qué hora es?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "6:20",
+         "es": ""
+        },
+        {
+         "l": "B",
+         "py": "6:25",
+         "es": ""
+        },
+        {
+         "l": "C",
+         "py": "6:50",
+         "es": ""
+        }
+       ]
+      },
+      {
+       "num": 18,
+       "ans": "B",
+       "q": "L4-18",
+       "a": 17,
+       "said": [
+        {
+         "py": "Xiǎo Xiè zhèngzài kàn diànshì ne, wǒ qù jiào tā.",
+         "es": "{Xiǎo Xiè} está viendo la tele; voy a llamarlo.",
+         "k": "lead"
+        },
+        {
+         "py": "Wèn: Xiǎo Xiè zài zuò shénme?",
+         "es": "Pregunta: ¿Qué está haciendo {Xiǎo Xiè}?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "zuò fàn",
+         "es": "está cocinando"
+        },
+        {
+         "l": "B",
+         "py": "kàn diànshì",
+         "es": "está viendo la tele"
+        },
+        {
+         "l": "C",
+         "py": "dǎ diànhuà",
+         "es": "está hablando por teléfono"
+        }
+       ]
+      },
+      {
+       "num": 19,
+       "ans": "C",
+       "q": "L4-19",
+       "a": 18,
+       "said": [
+        {
+         "py": "Xiàwǔ dìdi xiǎng zuò chūzūchē qù xuéxiào.",
+         "es": "Por la tarde, el hermano menor quiere ir a la escuela en taxi.",
+         "k": "lead"
+        },
+        {
+         "py": "Wèn: Dìdi xiǎng zěnme qù xuéxiào?",
+         "es": "Pregunta: ¿Cómo quiere ir a la escuela el hermano menor?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "kāichē",
+         "es": "manejando"
+        },
+        {
+         "l": "B",
+         "py": "zuò fēijī",
+         "es": "en avión"
+        },
+        {
+         "l": "C",
+         "py": "zuò chūzūchē",
+         "es": "en taxi"
+        }
+       ]
+      },
+      {
+       "num": 20,
+       "ans": "B",
+       "q": "L4-20",
+       "a": 19,
+       "said": [
+        {
+         "py": "Zhèxiē Hànyǔ shū shì wǒ xuésheng de.",
+         "es": "Estos libros de Chino Mandarín son de mis alumnos.",
+         "k": "lead"
+        },
+        {
+         "py": "Wèn: Nàxiē Hànyǔ shū shì shéi de?",
+         "es": "Pregunta: ¿De quién son esos libros de Chino Mandarín?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "jiārén de",
+         "es": "de su familia"
+        },
+        {
+         "l": "B",
+         "py": "xuésheng de",
+         "es": "de sus alumnos"
+        },
+        {
+         "l": "C",
+         "py": "nánpéngyou de",
+         "es": "de su novio"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "sec": "R",
+     "part": 1,
+     "kind": "gal",
+     "how": "Lees cinco frases. Cada una va con una de las fotos, de la A a la F.",
+     "first": 21,
+     "last": 25,
+     "items": [
+      {
+       "num": 21,
+       "ans": "F",
+       "q": "R1-21",
+       "p": 20,
+       "tab": [
+        17.63,
+        23.44
+       ],
+       "py": "Wǒ hòubian yǒu sì ge rén.",
+       "es": "Detrás de mí hay cuatro personas."
+      },
+      {
+       "num": 22,
+       "ans": "C",
+       "q": "R1-22",
+       "p": 21,
+       "tab": [
+        17.63,
+        23.44
+       ],
+       "py": "Tāmen mǎi le xīn de zhuōzi hé yǐzi.",
+       "es": "Compraron una mesa y sillas nuevas."
+      },
+      {
+       "num": 23,
+       "ans": "B",
+       "q": "R1-23",
+       "p": 22,
+       "tab": [
+        17.63,
+        23.44
+       ],
+       "py": "Zài zhèr kěyǐ kànjiàn liǎng zhī xiǎo māo.",
+       "es": "Aquí se pueden ver dos gatitos."
+      },
+      {
+       "num": 24,
+       "ans": "A",
+       "q": "R1-24",
+       "p": 23,
+       "tab": [
+        17.63,
+        23.44
+       ],
+       "py": "Lǐ xiānsheng shàngwǔ hěn bù gāoxìng.",
+       "es": "El señor {Lǐ} estaba muy disgustado por la mañana."
+      },
+      {
+       "num": 25,
+       "ans": "D",
+       "q": "R1-25",
+       "p": 24,
+       "tab": [
+        17.63,
+        23.44
+       ],
+       "py": "Nǐ de mǐfàn tài shǎo le, zài gěi nǐ yìxiē ba.",
+       "es": "Tienes muy poco arroz: te sirvo un poco más."
+      }
+     ],
+     "talk": 0
+    },
+    {
+     "sec": "R",
+     "part": 2,
+     "kind": "reply",
+     "how": "Lees cinco preguntas. Elige en la lista la respuesta de cada una, de la A a la F.",
+     "first": 26,
+     "last": 30,
+     "items": [
+      {
+       "num": 26,
+       "ans": "B",
+       "q": "R2-26",
+       "lines": [
+        {
+         "py": "Nǐ nǎ tiān qù yīyuàn?",
+         "es": "¿Qué día vas al hospital?",
+         "v": 0
+        },
+        {
+         "py": "Xīngqītiān.",
+         "es": "El domingo.",
+         "v": 1,
+         "mark": 1
+        }
+       ]
+      },
+      {
+       "num": 27,
+       "ans": "E",
+       "q": "R2-27",
+       "lines": [
+        {
+         "py": "Zhè běn shū duōshao qián?",
+         "es": "¿Cuánto cuesta este libro?",
+         "v": 0
+        },
+        {
+         "py": "33 yuán.",
+         "es": "33 yuanes.",
+         "v": 1,
+         "mark": 1
+        }
+       ]
+      },
+      {
+       "num": 28,
+       "ans": "A",
+       "q": "R2-28",
+       "lines": [
+        {
+         "py": "Wǒ chàng de gē zěnmeyàng?",
+         "es": "¿Qué tal la canción que canté?",
+         "v": 0
+        },
+        {
+         "py": "Zhēn hǎotīng!",
+         "es": "¡Suena muy bonito!",
+         "v": 1,
+         "mark": 1
+        }
+       ]
+      },
+      {
+       "num": 29,
+       "ans": "D",
+       "q": "R2-29",
+       "lines": [
+        {
+         "py": "Qǐngwèn, nà jiā shūdiàn zài nǎlǐ?",
+         "es": "Disculpe, ¿dónde está esa librería?",
+         "v": 0
+        },
+        {
+         "py": "Zhōngxué qiánbian.",
+         "es": "Delante de la escuela secundaria.",
+         "v": 1,
+         "mark": 1
+        }
+       ]
+      },
+      {
+       "num": 30,
+       "ans": "C",
+       "q": "R2-30",
+       "lines": [
+        {
+         "py": "Zhè liǎng ge bēizi, nǎge hǎokàn?",
+         "es": "De estas dos tazas, ¿cuál es más bonita?",
+         "v": 0
+        },
+        {
+         "py": "Dōu hěn piàoliang.",
+         "es": "Las dos son muy bonitas.",
+         "v": 1,
+         "mark": 1
+        }
+       ]
+      }
+     ],
+     "bank": [
+      {
+       "l": "A",
+       "py": "Zhēn hǎotīng!",
+       "es": "¡Suena muy bonito!",
+       "for": 28
+      },
+      {
+       "l": "B",
+       "py": "Xīngqītiān.",
+       "es": "El domingo.",
+       "for": 26
+      },
+      {
+       "l": "C",
+       "py": "Dōu hěn piàoliang.",
+       "es": "Las dos son muy bonitas.",
+       "for": 30
+      },
+      {
+       "l": "D",
+       "py": "Zhōngxué qiánbian.",
+       "es": "Delante de la escuela secundaria.",
+       "for": 29
+      },
+      {
+       "l": "E",
+       "py": "33 yuán.",
+       "es": "33 yuanes.",
+       "for": 27
+      },
+      {
+       "l": "F",
+       "py": "Hǎo de, xièxie!",
+       "es": "¡Sí, gracias!",
+       "for": "ex"
+      }
+     ]
+    },
+    {
+     "sec": "R",
+     "part": 3,
+     "kind": "fill",
+     "how": "Lees cinco frases. Complétalas con las palabras de la lista.",
+     "first": 31,
+     "last": 35,
+     "items": [
+      {
+       "num": 31,
+       "ans": "B",
+       "q": "R3-31",
+       "lines": [
+        {
+         "py": "Xièxie ___ jīntiān lái kàn wǒ.",
+         "es": "Gracias a todos por venir a verme hoy.",
+         "fw": "dàjiā"
+        }
+       ]
+      },
+      {
+       "num": 32,
+       "ans": "C",
+       "q": "R3-32",
+       "lines": [
+        {
+         "py": "Zhè jiàn yīfu yǒu ___ yìdiǎnr de ma?",
+         "es": "¿Tienen esta ropa un poco más grande?",
+         "fw": "dà"
+        }
+       ]
+      },
+      {
+       "num": 33,
+       "ans": "E",
+       "q": "R3-33",
+       "lines": [
+        {
+         "py": "Māma, wǒ míngtiān zhù ___ tóngxué jiā.",
+         "es": "Mamá, mañana me quedo en casa de un compañero.",
+         "fw": "zài"
+        }
+       ]
+      },
+      {
+       "num": 34,
+       "ans": "F",
+       "q": "R3-34",
+       "lines": [
+        {
+         "py": "Wǒ shì jīnnián 8 yuè 7 hào lái ___ de.",
+         "es": "Vine a China el 7 de agosto de este año.",
+         "fw": "Zhōngguó"
+        }
+       ]
+      },
+      {
+       "num": 35,
+       "ans": "A",
+       "q": "R3-35",
+       "lines": [
+        {
+         "py": "Duìbuqǐ, wǒ yě bú huì ___ zhège Hànzì.",
+         "es": "Lo siento, yo tampoco sé leer este carácter.",
+         "v": 0,
+         "fw": "dú"
+        },
+        {
+         "py": "Méi guānxi.",
+         "es": "No pasa nada.",
+         "v": 1
+        }
+       ]
+      }
+     ],
+     "bank": [
+      {
+       "l": "A",
+       "py": "dú",
+       "es": "leer en voz alta",
+       "for": 35
+      },
+      {
+       "l": "B",
+       "py": "dàjiā",
+       "es": "todos",
+       "for": 31
+      },
+      {
+       "l": "C",
+       "py": "dà",
+       "es": "grande",
+       "for": 32
+      },
+      {
+       "l": "D",
+       "py": "jiào",
+       "es": "llamarse",
+       "for": "ex"
+      },
+      {
+       "l": "E",
+       "py": "zài",
+       "es": "estar en",
+       "for": 33
+      },
+      {
+       "l": "F",
+       "py": "Zhōngguó",
+       "es": "China",
+       "for": 34
+      }
+     ]
+    },
+    {
+     "sec": "R",
+     "part": 4,
+     "kind": "text",
+     "how": "Lees un texto corto y una pregunta. Elige la respuesta: A, B o C.",
+     "first": 36,
+     "last": 40,
+     "items": [
+      {
+       "num": 36,
+       "ans": "C",
+       "q": "R4-36",
+       "said": [
+        {
+         "py": "Jīntiān wǎnshang, wǒmen diànyǐngyuàn jiàn!",
+         "es": "¡Esta noche nos vemos en el cine!",
+         "k": "lead"
+        },
+        {
+         "py": "Tāmen jīnwǎn:",
+         "es": "Esta noche, ellos…",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "méishì",
+         "es": "no tienen planes"
+        },
+        {
+         "l": "B",
+         "py": "yào shàngxué",
+         "es": "tienen que ir a la escuela"
+        },
+        {
+         "l": "C",
+         "py": "qù diànyǐngyuàn",
+         "es": "van al cine"
+        }
+       ]
+      },
+      {
+       "num": 37,
+       "ans": "A",
+       "q": "R4-37",
+       "said": [
+        {
+         "py": "Nàge shǒujī yào 5500 kuài, zhēn guì!",
+         "es": "Ese celular cuesta 5500 yuanes. ¡Qué caro!",
+         "k": "lead"
+        },
+        {
+         "py": "Tā juéde nàge shǒujī:",
+         "es": "Él piensa que ese celular…",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "hěn guì",
+         "es": "es muy caro"
+        },
+        {
+         "l": "B",
+         "py": "hǎowánr",
+         "es": "es divertido"
+        },
+        {
+         "l": "C",
+         "py": "fēicháng hǎo",
+         "es": "es buenísimo"
+        }
+       ]
+      },
+      {
+       "num": 38,
+       "ans": "C",
+       "q": "R4-38",
+       "said": [
+        {
+         "py": "Wǒmen jīntiān de zǎofàn shì miàntiáor, wǔfàn shì jiǎozi.",
+         "es": "Hoy desayunamos fideos y almorzamos {jiǎozi}.",
+         "k": "lead"
+        },
+        {
+         "py": "Tāmen zǎoshang chī shénme?",
+         "es": "¿Qué comen por la mañana?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "bāozi",
+         "es": "{bāozi} (bollos al vapor)"
+        },
+        {
+         "l": "B",
+         "py": "miànbāo",
+         "es": "pan"
+        },
+        {
+         "l": "C",
+         "py": "miàntiáor",
+         "es": "fideos"
+        }
+       ]
+      },
+      {
+       "num": 39,
+       "ans": "C",
+       "q": "R4-39",
+       "said": [
+        {
+         "py": "Wàibian hěn lěng, wǒmen zài fángjiān lǐ xiūxi ba.",
+         "es": "Afuera hace mucho frío: descansemos en la habitación.",
+         "k": "lead"
+        },
+        {
+         "py": "Tāmen zài nǎr xiūxi?",
+         "es": "¿Dónde descansan?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "shuǐguǒdiàn",
+         "es": "en la frutería"
+        },
+        {
+         "l": "B",
+         "py": "dàxué lǐ",
+         "es": "en la universidad"
+        },
+        {
+         "l": "C",
+         "py": "fángjiān lǐ",
+         "es": "en la habitación"
+        }
+       ]
+      },
+      {
+       "num": 40,
+       "ans": "B",
+       "q": "R4-40",
+       "said": [
+        {
+         "py": "Gēge jīntiān shēngbìng le, méi qù gōngsī shàngbān.",
+         "es": "Hoy el hermano mayor se enfermó y no fue a trabajar a la oficina.",
+         "k": "lead"
+        },
+        {
+         "py": "Gēge jīntiān:",
+         "es": "Hoy, el hermano mayor…",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "hěn máng",
+         "es": "está muy ocupado"
+        },
+        {
+         "l": "B",
+         "py": "bìng le",
+         "es": "está enfermo"
+        },
+        {
+         "l": "C",
+         "py": "qù shàngkè le",
+         "es": "fue a clase"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "pics": [
+    {
+     "f": "1/p01.webp",
+     "v": "1806cb3d15",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p02.webp",
+     "v": "8cae89d66f",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p03.webp",
+     "v": "a8b9924f9e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p04.webp",
+     "v": "fe2f9779b2",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p05.webp",
+     "v": "cbd1cc8d85",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p06.webp",
+     "v": "2d890c040f",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p07.webp",
+     "v": "537cbd8243",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p08.webp",
+     "v": "6888531ee2",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p09.webp",
+     "v": "549d17f28e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p10.webp",
+     "v": "3437dfe53a",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p11.webp",
+     "v": "dc5baafd25",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p12.webp",
+     "v": "3f133dff63",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p13.webp",
+     "v": "5c5919e009",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p14.webp",
+     "v": "7f5a2b2467",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p15.webp",
+     "v": "ba3c9f37dd",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p16.webp",
+     "v": "f9ba182e5d",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p17.webp",
+     "v": "660acad0f1",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p18.webp",
+     "v": "ab408bd8c8",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p19.webp",
+     "v": "4b2126df7d",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p20.webp",
+     "v": "dc4d19c8f8",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p21.webp",
+     "v": "b427c40951",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p22.webp",
+     "v": "6347870000",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p23.webp",
+     "v": "e21184073d",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p24.webp",
+     "v": "d8f434405e",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p25.webp",
+     "v": "13e2187276",
+     "w": 480,
+     "h": 360
+    }
+   ],
+   "clips": [
+    {
+     "f": "1/a01.m4a",
+     "v": "3cc37c3ed6",
+     "s": 9.47
+    },
+    {
+     "f": "1/a02.m4a",
+     "v": "2e3c16779b",
+     "s": 5.77
+    },
+    {
+     "f": "1/a03.m4a",
+     "v": "936da5a1ab",
+     "s": 6.27
+    },
+    {
+     "f": "1/a04.m4a",
+     "v": "5987855566",
+     "s": 6.77
+    },
+    {
+     "f": "1/a05.m4a",
+     "v": "f71a8d5706",
+     "s": 5.97
+    },
+    {
+     "f": "1/a06.m4a",
+     "v": "d28085f826",
+     "s": 11.57
+    },
+    {
+     "f": "1/a07.m4a",
+     "v": "4de5d76686",
+     "s": 9.77
+    },
+    {
+     "f": "1/a08.m4a",
+     "v": "df86cf68fe",
+     "s": 9.27
+    },
+    {
+     "f": "1/a09.m4a",
+     "v": "0a8a9d9244",
+     "s": 11.67
+    },
+    {
+     "f": "1/a10.m4a",
+     "v": "304c6dc641",
+     "s": 8.67
+    },
+    {
+     "f": "1/a11.m4a",
+     "v": "37a40a2c3c",
+     "s": 20.07
+    },
+    {
+     "f": "1/a12.m4a",
+     "v": "3611056876",
+     "s": 18.67
+    },
+    {
+     "f": "1/a13.m4a",
+     "v": "64aa9d479c",
+     "s": 18.77
+    },
+    {
+     "f": "1/a14.m4a",
+     "v": "0ea22ca6f3",
+     "s": 16.77
+    },
+    {
+     "f": "1/a15.m4a",
+     "v": "8d7c55bbee",
+     "s": 12.87
+    },
+    {
+     "f": "1/a16.m4a",
+     "v": "93a9e4c2d3",
+     "s": 23.87
+    },
+    {
+     "f": "1/a17.m4a",
+     "v": "89374daf84",
+     "s": 23.57
+    },
+    {
+     "f": "1/a18.m4a",
+     "v": "2747c7bf49",
+     "s": 22.47
+    },
+    {
+     "f": "1/a19.m4a",
+     "v": "e9a5831ff3",
+     "s": 24.67
+    },
+    {
+     "f": "1/a20.m4a",
+     "v": "4b186a2163",
+     "s": 21.67
+    }
+   ],
+   "pass": 120
+  },
+  {
+   "n": 2,
+   "id": "newhsk1-sim2",
+   "total": 200,
+   "questions": 40,
+   "parts": [
+    {
+     "sec": "L",
+     "part": 1,
+     "kind": "abc",
+     "how": "Escuchas una frase corta. Elige su foto: A, B o C.",
+     "first": 1,
+     "last": 5,
+     "items": [
+      {
+       "num": 1,
+       "ans": "A",
+       "q": "L1-1",
+       "a": 0,
+       "opts": [
+        {
+         "l": "A",
+         "p": 0
+        },
+        {
+         "l": "B",
+         "p": 1
+        },
+        {
+         "l": "C",
+         "p": 2
+        }
+       ],
+       "tab": [
+        13.46,
+        29.7
+       ],
+       "py": "zuò fàn",
+       "es": "cocinar"
+      },
+      {
+       "num": 2,
+       "ans": "C",
+       "q": "L1-2",
+       "a": 1,
+       "opts": [
+        {
+         "l": "A",
+         "p": 3
+        },
+        {
+         "l": "B",
+         "p": 4
+        },
+        {
+         "l": "C",
+         "p": 5
+        }
+       ],
+       "tab": [
+        13.46,
+        29.32
+       ],
+       "py": "shíyī diǎn",
+       "es": "las once"
+      },
+      {
+       "num": 3,
+       "ans": "A",
+       "q": "L1-3",
+       "a": 2,
+       "opts": [
+        {
+         "l": "A",
+         "p": 6
+        },
+        {
+         "l": "B",
+         "p": 7
+        },
+        {
+         "l": "C",
+         "p": 8
+        }
+       ],
+       "tab": [
+        23.43,
+        27.18
+       ],
+       "py": "liǎng zhī xiǎo gǒu",
+       "es": "dos perritos"
+      },
+      {
+       "num": 4,
+       "ans": "C",
+       "q": "L1-4",
+       "a": 3,
+       "opts": [
+        {
+         "l": "A",
+         "p": 9
+        },
+        {
+         "l": "B",
+         "p": 10
+        },
+        {
+         "l": "C",
+         "p": 11
+        }
+       ],
+       "tab": [
+        23.95,
+        25.99
+       ],
+       "py": "yìxiē shuǐguǒ",
+       "es": "algunas frutas"
+      },
+      {
+       "num": 5,
+       "ans": "B",
+       "q": "L1-5",
+       "a": 4,
+       "opts": [
+        {
+         "l": "A",
+         "p": 12
+        },
+        {
+         "l": "B",
+         "p": 13
+        },
+        {
+         "l": "C",
+         "p": 14
+        }
+       ],
+       "tab": [
+        29.66,
+        26.21
+       ],
+       "py": "zuò huǒchē",
+       "es": "ir en tren"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 2,
+     "kind": "text",
+     "how": "Escuchas una pregunta. Elige la respuesta: A, B o C.",
+     "first": 6,
+     "last": 10,
+     "items": [
+      {
+       "num": 6,
+       "ans": "C",
+       "q": "L2-6",
+       "a": 5,
+       "said": [
+        {
+         "py": "Nǐ kànjiàn wǒ de shū le ma?",
+         "es": "¿Viste mi libro?",
+         "k": "lead"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "xīngqītiān",
+         "es": "el domingo"
+        },
+        {
+         "l": "B",
+         "py": "duōshao qián",
+         "es": "¿cuánto cuesta?"
+        },
+        {
+         "l": "C",
+         "py": "zài zhuōzi shàng",
+         "es": "está en la mesa"
+        }
+       ]
+      },
+      {
+       "num": 7,
+       "ans": "B",
+       "q": "L2-7",
+       "a": 6,
+       "said": [
+        {
+         "py": "Zhège zì zěnme dú?",
+         "es": "¿Cómo se lee este carácter?",
+         "k": "lead"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "hǎowánr",
+         "es": "es divertido"
+        },
+        {
+         "l": "B",
+         "py": "wǒ bú huì",
+         "es": "no sé"
+        },
+        {
+         "l": "C",
+         "py": "dì èr ge",
+         "es": "el segundo"
+        }
+       ]
+      },
+      {
+       "num": 8,
+       "ans": "A",
+       "q": "L2-8",
+       "a": 7,
+       "said": [
+        {
+         "py": "Nǐ hē diǎn shénme?",
+         "es": "¿Qué quieres tomar?",
+         "k": "lead"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "niúnǎi",
+         "es": "leche"
+        },
+        {
+         "l": "B",
+         "py": "yǒu yìxiē",
+         "es": "hay un poco"
+        },
+        {
+         "l": "C",
+         "py": "xià yǔ le",
+         "es": "está lloviendo"
+        }
+       ]
+      },
+      {
+       "num": 9,
+       "ans": "A",
+       "q": "L2-9",
+       "a": 8,
+       "said": [
+        {
+         "py": "Shàngwǔ nǐ qù nǎr le?",
+         "es": "¿Adónde fuiste esta mañana?",
+         "k": "lead"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "shūdiàn",
+         "es": "a la librería"
+        },
+        {
+         "l": "B",
+         "py": "hěn rè",
+         "es": "hace mucho calor"
+        },
+        {
+         "l": "C",
+         "py": "tài dà le",
+         "es": "es demasiado grande"
+        }
+       ]
+      },
+      {
+       "num": 10,
+       "ans": "C",
+       "q": "L2-10",
+       "a": 9,
+       "said": [
+        {
+         "py": "Nǐ xīngqīrì zěnme qù Běijīng?",
+         "es": "¿Cómo vas a Pekín el domingo?",
+         "k": "lead"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "méi shíjiān",
+         "es": "no tengo tiempo"
+        },
+        {
+         "l": "B",
+         "py": "xiàkè hòu",
+         "es": "después de clase"
+        },
+        {
+         "l": "C",
+         "py": "zuò fēijī",
+         "es": "en avión"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "sec": "L",
+     "part": 3,
+     "kind": "gal",
+     "how": "Escuchas cinco conversaciones. Cada una va con una de las fotos, de la A a la F.",
+     "first": 11,
+     "last": 15,
+     "items": [
+      {
+       "num": 11,
+       "ans": "F",
+       "q": "L3-11",
+       "a": 10,
+       "p": 15,
+       "tab": [
+        28.0,
+        22.92
+       ],
+       "lines": [
+        {
+         "py": "Qiánmiàn nàge xiǎoxuéshēng shì shéi?",
+         "es": "¿Quién es esa alumna de primaria de adelante?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ rènshi, tā jiào Xiǎoyuè.",
+         "es": "Yo la conozco: se llama {Xiǎoyuè}.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 12,
+       "ans": "A",
+       "q": "L3-12",
+       "a": 11,
+       "p": 16,
+       "tab": [
+        28.0,
+        22.92
+       ],
+       "lines": [
+        {
+         "py": "Xià yǔ le, hěn lěng.",
+         "es": "Está lloviendo y hace mucho frío.",
+         "v": 0
+        },
+        {
+         "py": "Shì de, jīntiān tiānqì bú tài hǎo.",
+         "es": "Sí, hoy no hace muy buen tiempo.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 13,
+       "ans": "D",
+       "q": "L3-13",
+       "a": 12,
+       "p": 17,
+       "tab": [
+        28.0,
+        22.92
+       ],
+       "lines": [
+        {
+         "py": "Yǐzi shàng nà jiàn yīfu bú shì wǒ de.",
+         "es": "Esa ropa de la silla no es mía.",
+         "v": 0
+        },
+        {
+         "py": "Yě bú shì wǒ de.",
+         "es": "Tampoco es mía.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 14,
+       "ans": "B",
+       "q": "L3-14",
+       "a": 13,
+       "p": 18,
+       "tab": [
+        28.0,
+        22.92
+       ],
+       "lines": [
+        {
+         "py": "Wǎnfàn, wǒ xiǎng chī miàntiáo.",
+         "es": "De cena quiero comer fideos.",
+         "v": 0
+        },
+        {
+         "py": "Jīdàn miàn zěnmeyàng?",
+         "es": "¿Qué tal unos fideos con huevo?",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 15,
+       "ans": "E",
+       "q": "L3-15",
+       "a": 14,
+       "p": 19,
+       "tab": [
+        28.0,
+        22.92
+       ],
+       "lines": [
+        {
+         "py": "Zhè shì nǐ de érzi ba?",
+         "es": "Este es tu hijo, ¿no?",
+         "v": 0
+        },
+        {
+         "py": "Duì, tā jīnnián èrshíwǔ suì le.",
+         "es": "Sí, este año cumple veinticinco.",
+         "v": 1
+        }
+       ]
+      }
+     ],
+     "talk": 1
+    },
+    {
+     "sec": "L",
+     "part": 4,
+     "kind": "text",
+     "how": "Escuchas una frase y una pregunta sobre ella. Elige la respuesta: A, B o C.",
+     "first": 16,
+     "last": 20,
+     "items": [
+      {
+       "num": 16,
+       "ans": "B",
+       "q": "L4-16",
+       "a": 15,
+       "said": [
+        {
+         "py": "Zhè bēi shuǐ shì gēge de, bú shì bàba de.",
+         "es": "Este vaso de agua es del hermano mayor, no de papá.",
+         "k": "lead"
+        },
+        {
+         "py": "Wèn: Nà bēi shuǐ shì shéi de?",
+         "es": "Pregunta: ¿De quién es ese vaso de agua?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "māma de",
+         "es": "de mamá"
+        },
+        {
+         "l": "B",
+         "py": "gēge de",
+         "es": "del hermano mayor"
+        },
+        {
+         "l": "C",
+         "py": "nǚpéngyou de",
+         "es": "de su novia"
+        }
+       ]
+      },
+      {
+       "num": 17,
+       "ans": "B",
+       "q": "L4-17",
+       "a": 16,
+       "said": [
+        {
+         "py": "Wǒ shì yīshēng, zài yīyuàn gōngzuò.",
+         "es": "Soy médico y trabajo en un hospital.",
+         "k": "lead"
+        },
+        {
+         "py": "Wèn: Shuōhuàrén shì zuò shénme de?",
+         "es": "Pregunta: ¿A qué se dedica la persona que habla?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "lǎoshī",
+         "es": "maestro"
+        },
+        {
+         "l": "B",
+         "py": "yīshēng",
+         "es": "médico"
+        },
+        {
+         "l": "C",
+         "py": "xuésheng",
+         "es": "estudiante"
+        }
+       ]
+      },
+      {
+       "num": 18,
+       "ans": "C",
+       "q": "L4-18",
+       "a": 17,
+       "said": [
+        {
+         "py": "Míngtiān zhōngwǔ, wǒ hé tóngxué qù diànyǐngyuàn.",
+         "es": "Mañana al mediodía voy al cine con mis compañeros.",
+         "k": "lead"
+        },
+        {
+         "py": "Wèn: Shuōhuàrén hé tóngxué míngtiān qù nǎr?",
+         "es": "Pregunta: ¿Adónde van mañana la persona que habla y sus compañeros?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "dàxué",
+         "es": "a la universidad"
+        },
+        {
+         "l": "B",
+         "py": "fàndiàn",
+         "es": "a un restaurante"
+        },
+        {
+         "l": "C",
+         "py": "diànyǐngyuàn",
+         "es": "al cine"
+        }
+       ]
+      },
+      {
+       "num": 19,
+       "ans": "A",
+       "q": "L4-19",
+       "a": 18,
+       "said": [
+        {
+         "py": "Wǒ jiào le chūzūchē, chē liù diǎn bàn néng lái.",
+         "es": "Pedí un taxi; puede llegar a las seis y media.",
+         "k": "lead"
+        },
+        {
+         "py": "Wèn: Chē jǐ diǎn lái?",
+         "es": "Pregunta: ¿A qué hora llega el taxi?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "6:30",
+         "es": ""
+        },
+        {
+         "l": "B",
+         "py": "8:00",
+         "es": ""
+        },
+        {
+         "l": "C",
+         "py": "9:00",
+         "es": ""
+        }
+       ]
+      },
+      {
+       "num": 20,
+       "ans": "B",
+       "q": "L4-20",
+       "a": 19,
+       "said": [
+        {
+         "py": "Háizi xiǎng shuìjiào le, bù xiǎng xuéxí le.",
+         "es": "El niño ya quiere dormir; ya no quiere estudiar.",
+         "k": "lead"
+        },
+        {
+         "py": "Wèn: Háizi xiǎng zuò shénme?",
+         "es": "Pregunta: ¿Qué quiere hacer el niño?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "xuéxí",
+         "es": "estudiar"
+        },
+        {
+         "l": "B",
+         "py": "shuìjiào",
+         "es": "dormir"
+        },
+        {
+         "l": "C",
+         "py": "wán diànnǎo",
+         "es": "jugar en la computadora"
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "sec": "R",
+     "part": 1,
+     "kind": "gal",
+     "how": "Lees cinco frases. Cada una va con una de las fotos, de la A a la F.",
+     "first": 21,
+     "last": 25,
+     "items": [
+      {
+       "num": 21,
+       "ans": "C",
+       "q": "R1-21",
+       "p": 20,
+       "tab": [
+        17.63,
+        23.44
+       ],
+       "py": "Érzi bú tài gāoxìng.",
+       "es": "El hijo no está muy contento."
+      },
+      {
+       "num": 22,
+       "ans": "B",
+       "q": "R1-22",
+       "p": 21,
+       "tab": [
+        17.63,
+        23.44
+       ],
+       "py": "Wǒ rènshi nà sì ge xuésheng.",
+       "es": "Conozco a esos cuatro alumnos."
+      },
+      {
+       "num": 23,
+       "ans": "D",
+       "q": "R1-23",
+       "p": 22,
+       "tab": [
+        17.63,
+        23.44
+       ],
+       "py": "Qǐng zài zhèlǐ xiě nǐ de míngzi.",
+       "es": "Por favor, escribe aquí tu nombre."
+      },
+      {
+       "num": 24,
+       "ans": "F",
+       "q": "R1-24",
+       "p": 23,
+       "tab": [
+        17.63,
+        23.44
+       ],
+       "py": "Xièxie nǐmen, wǒ xiànzài hǎo duō le.",
+       "es": "Gracias a todos, ya estoy mucho mejor."
+      },
+      {
+       "num": 25,
+       "ans": "A",
+       "q": "R1-25",
+       "p": 24,
+       "tab": [
+        17.63,
+        23.44
+       ],
+       "py": "Xiǎo māo zài yǐzi shàngmiàn, nǐ kànjiàn le ma?",
+       "es": "El gatito está sobre la silla. ¿Lo viste?"
+      }
+     ],
+     "talk": 0
+    },
+    {
+     "sec": "R",
+     "part": 2,
+     "kind": "reply",
+     "how": "Lees cinco preguntas. Elige en la lista la respuesta de cada una, de la A a la F.",
+     "first": 26,
+     "last": 30,
+     "items": [
+      {
+       "num": 26,
+       "ans": "D",
+       "q": "R2-26",
+       "lines": [
+        {
+         "py": "Wèi, nǐ nǎ tiān qù gōngsī?",
+         "es": "¿Aló? ¿Qué día vas a la oficina?",
+         "v": 0
+        },
+        {
+         "py": "2 yuè 14 hào.",
+         "es": "El 14 de febrero.",
+         "v": 1,
+         "mark": 1
+        }
+       ]
+      },
+      {
+       "num": 27,
+       "ans": "A",
+       "q": "R2-27",
+       "lines": [
+        {
+         "py": "Lǐ nǚshì, jīntiān xièxie nín!",
+         "es": "Señora {Lǐ}, ¡gracias por lo de hoy!",
+         "v": 0
+        },
+        {
+         "py": "Bú kèqi.",
+         "es": "De nada.",
+         "v": 1,
+         "mark": 1
+        }
+       ]
+      },
+      {
+       "num": 28,
+       "ans": "B",
+       "q": "R2-28",
+       "lines": [
+        {
+         "py": "Nǐ zěnme le?",
+         "es": "¿Qué te pasa?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ méishì.",
+         "es": "No me pasa nada.",
+         "v": 1,
+         "mark": 1
+        }
+       ]
+      },
+      {
+       "num": 29,
+       "ans": "C",
+       "q": "R2-29",
+       "lines": [
+        {
+         "py": "Nǐ zuótiān zhù nǎr le?",
+         "es": "¿Dónde dormiste anoche?",
+         "v": 0
+        },
+        {
+         "py": "Péngyou jiā.",
+         "es": "En casa de un amigo.",
+         "v": 1,
+         "mark": 1
+        }
+       ]
+      },
+      {
+       "num": 30,
+       "ans": "E",
+       "q": "R2-30",
+       "lines": [
+        {
+         "py": "Nàxiē dōngxi shì shéi mǎi de?",
+         "es": "¿Quién compró esas cosas?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ dìdi.",
+         "es": "Mi hermano menor.",
+         "v": 1,
+         "mark": 1
+        }
+       ]
+      }
+     ],
+     "bank": [
+      {
+       "l": "A",
+       "py": "Bú kèqi.",
+       "es": "De nada.",
+       "for": 27
+      },
+      {
+       "l": "B",
+       "py": "Wǒ méishì.",
+       "es": "No me pasa nada.",
+       "for": 28
+      },
+      {
+       "l": "C",
+       "py": "Péngyou jiā.",
+       "es": "En casa de un amigo.",
+       "for": 29
+      },
+      {
+       "l": "D",
+       "py": "2 yuè 14 hào.",
+       "es": "El 14 de febrero.",
+       "for": 26
+      },
+      {
+       "l": "E",
+       "py": "Wǒ dìdi.",
+       "es": "Mi hermano menor.",
+       "for": 30
+      },
+      {
+       "l": "F",
+       "py": "Hǎo de, xièxie!",
+       "es": "¡Sí, gracias!",
+       "for": "ex"
+      }
+     ]
+    },
+    {
+     "sec": "R",
+     "part": 3,
+     "kind": "fill",
+     "how": "Lees cinco frases. Complétalas con las palabras de la lista.",
+     "first": 31,
+     "last": 35,
+     "items": [
+      {
+       "num": 31,
+       "ans": "F",
+       "q": "R3-31",
+       "lines": [
+        {
+         "py": "Zhège shǒujī hěn piàoliang, yě hěn ___.",
+         "es": "Este celular es muy bonito y también muy caro.",
+         "fw": "guì"
+        }
+       ]
+      },
+      {
+       "num": 32,
+       "ans": "C",
+       "q": "R3-32",
+       "lines": [
+        {
+         "py": "Wǒ ___ ài wǒ de jiārén.",
+         "es": "Quiero muchísimo a mi familia.",
+         "fw": "fēicháng"
+        }
+       ]
+      },
+      {
+       "num": 33,
+       "ans": "A",
+       "q": "R3-33",
+       "lines": [
+        {
+         "py": "Zhèxiē píngguǒ 57 ___ qián.",
+         "es": "Estas manzanas cuestan 57 yuanes.",
+         "fw": "kuài"
+        }
+       ]
+      },
+      {
+       "num": 34,
+       "ans": "B",
+       "q": "R3-34",
+       "lines": [
+        {
+         "py": "Shàngkè le, dàjiā bú yào ___ le.",
+         "es": "Ya empezó la clase: todos, dejen de hablar.",
+         "fw": "shuōhuà"
+        }
+       ]
+      },
+      {
+       "num": 35,
+       "ans": "E",
+       "q": "R3-35",
+       "lines": [
+        {
+         "py": "Nǐ hǎo, zhèr yǒu rén ma? Wǒ kěyǐ zuò zhèr ma?",
+         "es": "Hola, ¿está ocupado este lugar? ¿Me puedo sentar aquí?",
+         "v": 0
+        },
+        {
+         "py": "Méiyǒu, ___ zuò.",
+         "es": "No, siéntate, por favor.",
+         "v": 1,
+         "fw": "qǐng"
+        }
+       ]
+      }
+     ],
+     "bank": [
+      {
+       "l": "A",
+       "py": "kuài",
+       "es": "yuan (al hablar)",
+       "for": 33
+      },
+      {
+       "l": "B",
+       "py": "shuōhuà",
+       "es": "hablar",
+       "for": 34
+      },
+      {
+       "l": "C",
+       "py": "fēicháng",
+       "es": "muchísimo",
+       "for": 32
+      },
+      {
+       "l": "D",
+       "py": "jiào",
+       "es": "llamarse",
+       "for": "ex"
+      },
+      {
+       "l": "E",
+       "py": "qǐng",
+       "es": "por favor",
+       "for": 35
+      },
+      {
+       "l": "F",
+       "py": "guì",
+       "es": "caro",
+       "for": 31
+      }
+     ]
+    },
+    {
+     "sec": "R",
+     "part": 4,
+     "kind": "text",
+     "how": "Lees un texto corto y una pregunta. Elige la respuesta: A, B o C.",
+     "first": 36,
+     "last": 40,
+     "items": [
+      {
+       "num": 36,
+       "ans": "C",
+       "q": "R4-36",
+       "said": [
+        {
+         "py": "Mèimei, xiǎo māo qù nǎr le, nǐ kànjiàn tā le ma?",
+         "es": "Hermanita, ¿adónde se fue el gatito? ¿Lo viste?",
+         "k": "lead"
+        },
+        {
+         "py": "Shuōhuàrén zài zhǎo:",
+         "es": "La persona que habla busca…",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "diànyǐng",
+         "es": "una película"
+        },
+        {
+         "l": "B",
+         "py": "miànbāo",
+         "es": "pan"
+        },
+        {
+         "l": "C",
+         "py": "xiǎo māo",
+         "es": "al gatito"
+        }
+       ]
+      },
+      {
+       "num": 37,
+       "ans": "C",
+       "q": "R4-37",
+       "said": [
+        {
+         "py": "Wǒ báitiān yào qù kànbìng, bù néng qù xuéxiào le.",
+         "es": "Durante el día tengo que ir al médico: no puedo ir a la escuela.",
+         "k": "lead"
+        },
+        {
+         "py": "Tā zěnme le?",
+         "es": "¿Qué le pasa?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "bù máng",
+         "es": "no está ocupado"
+        },
+        {
+         "l": "B",
+         "py": "yào shàngxué",
+         "es": "tiene que ir a la escuela"
+        },
+        {
+         "l": "C",
+         "py": "shēngbìng le",
+         "es": "está enfermo"
+        }
+       ]
+      },
+      {
+       "num": 38,
+       "ans": "A",
+       "q": "R4-38",
+       "said": [
+        {
+         "py": "Jīntiān diàn lǐ méi cài le, nǐ míngzǎo zài lái mǎi ba.",
+         "es": "Hoy ya no quedan verduras en la tienda: vuelve mañana temprano a comprar.",
+         "k": "lead"
+        },
+        {
+         "py": "Shuōhuàrén zài:",
+         "es": "La persona que habla está…",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "mài cài",
+         "es": "vendiendo verduras"
+        },
+        {
+         "l": "B",
+         "py": "zuò bāozi",
+         "es": "haciendo {bāozi}"
+        },
+        {
+         "l": "C",
+         "py": "mǎi jiǎozi",
+         "es": "comprando {jiǎozi}"
+        }
+       ]
+      },
+      {
+       "num": 39,
+       "ans": "B",
+       "q": "R4-39",
+       "said": [
+        {
+         "py": "Jiějie, nǐ chàng de Zhōngwén gē zhēn hǎotīng!",
+         "es": "Hermana, ¡qué bonitas suenan las canciones en Chino Mandarín que cantas!",
+         "k": "lead"
+        },
+        {
+         "py": "Jiějie huì:",
+         "es": "La hermana mayor sabe…",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "zuò fàn",
+         "es": "cocinar"
+        },
+        {
+         "l": "B",
+         "py": "chàng gē",
+         "es": "cantar"
+        },
+        {
+         "l": "C",
+         "py": "xiě míngzi",
+         "es": "escribir nombres"
+        }
+       ]
+      },
+      {
+       "num": 40,
+       "ans": "B",
+       "q": "R4-40",
+       "said": [
+        {
+         "py": "Duìbuqǐ, wǒ xiàwǔ shuìjiào le, méi tīngjiàn nǐ de diànhuà.",
+         "es": "Perdón, dormí por la tarde y no oí tu llamada.",
+         "k": "lead"
+        },
+        {
+         "py": "Shuōhuàrén xiàwǔ zuò le shénme?",
+         "es": "¿Qué hizo por la tarde la persona que habla?",
+         "k": "ask"
+        }
+       ],
+       "opts": [
+        {
+         "l": "A",
+         "py": "shàngbān",
+         "es": "fue a trabajar"
+        },
+        {
+         "l": "B",
+         "py": "xiūxi",
+         "es": "descansó"
+        },
+        {
+         "l": "C",
+         "py": "dǎ diànhuà",
+         "es": "habló por teléfono"
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "pics": [
+    {
+     "f": "2/p01.webp",
+     "v": "8c63bbf8f6",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p02.webp",
+     "v": "6c6b6452ec",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p03.webp",
+     "v": "18e42d0362",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p04.webp",
+     "v": "30943909bb",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p05.webp",
+     "v": "a67e775d76",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p06.webp",
+     "v": "955cf995fb",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p07.webp",
+     "v": "e90d440b76",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p08.webp",
+     "v": "65deaab1b5",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p09.webp",
+     "v": "69074133a4",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p10.webp",
+     "v": "3b63e1ee74",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p11.webp",
+     "v": "db89e5bfb8",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p12.webp",
+     "v": "34d869ef85",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p13.webp",
+     "v": "16c30882d5",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p14.webp",
+     "v": "4d618dbb8b",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p15.webp",
+     "v": "adf89bd7ce",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p16.webp",
+     "v": "7707e9b830",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p17.webp",
+     "v": "fe6115d7e4",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p18.webp",
+     "v": "d11cd92edd",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p19.webp",
+     "v": "779c3f086d",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p20.webp",
+     "v": "19724b8923",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p21.webp",
+     "v": "cc7e9d8ee4",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p22.webp",
+     "v": "ec45ba2d1b",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p23.webp",
+     "v": "f4277868cc",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p24.webp",
+     "v": "5d0bd71c58",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p25.webp",
+     "v": "74ccf7eff7",
+     "w": 480,
+     "h": 360
+    }
+   ],
+   "clips": [
+    {
+     "f": "2/a01.m4a",
+     "v": "37fe8e3b7b",
+     "s": 6.17
+    },
+    {
+     "f": "2/a02.m4a",
+     "v": "2feedeeee9",
+     "s": 6.27
+    },
+    {
+     "f": "2/a03.m4a",
+     "v": "916197b63a",
+     "s": 8.17
+    },
+    {
+     "f": "2/a04.m4a",
+     "v": "06634f1400",
+     "s": 8.17
+    },
+    {
+     "f": "2/a05.m4a",
+     "v": "aee683d87f",
+     "s": 7.07
+    },
+    {
+     "f": "2/a06.m4a",
+     "v": "844c33cf89",
+     "s": 9.77
+    },
+    {
+     "f": "2/a07.m4a",
+     "v": "8786f8f38f",
+     "s": 7.97
+    },
+    {
+     "f": "2/a08.m4a",
+     "v": "8226eb30a4",
+     "s": 7.37
+    },
+    {
+     "f": "2/a09.m4a",
+     "v": "03030d8a82",
+     "s": 8.57
+    },
+    {
+     "f": "2/a10.m4a",
+     "v": "c92a81ab96",
+     "s": 10.17
+    },
+    {
+     "f": "2/a11.m4a",
+     "v": "92351fc36d",
+     "s": 17.47
+    },
+    {
+     "f": "2/a12.m4a",
+     "v": "16b74dfd34",
+     "s": 15.67
+    },
+    {
+     "f": "2/a13.m4a",
+     "v": "dd77f12140",
+     "s": 16.37
+    },
+    {
+     "f": "2/a14.m4a",
+     "v": "72b95fe02e",
+     "s": 14.17
+    },
+    {
+     "f": "2/a15.m4a",
+     "v": "a667e5ea01",
+     "s": 15.17
+    },
+    {
+     "f": "2/a16.m4a",
+     "v": "1f7040a313",
+     "s": 23.07
+    },
+    {
+     "f": "2/a17.m4a",
+     "v": "5796151bd7",
+     "s": 21.57
+    },
+    {
+     "f": "2/a18.m4a",
+     "v": "fd48dffa09",
+     "s": 25.47
+    },
+    {
+     "f": "2/a19.m4a",
+     "v": "4ed5cbbe7e",
+     "s": 20.27
+    },
+    {
+     "f": "2/a20.m4a",
+     "v": "29480d82ea",
+     "s": 20.27
+    }
+   ],
+   "pass": 120
+  }
+ ]
+}

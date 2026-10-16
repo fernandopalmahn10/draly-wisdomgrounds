@@ -7,7 +7,7 @@ the next levels) is prepared in three levels with our own names. Rules live in `
 |---|---|---|---|
 | 1 · **La Base** | the vocabulary book digitally (done: /audios/<level>-base), «¡Me la sé!» seals | the level's key (or a grandfathered student); see Update below | with the key |
 | 2 · **El Entrenamiento** | exam-style practice world by world, from the curriculum packs (`core/packs`), audio + instant feedback (built 2026-10-16: /audios/<level>/entrenamiento) | the level's key | world by world: every seal of a world in La Base opens that world (his pick 2026-10-16), or the teacher unlocks; Pinyin básico from the start; Simulacro del examen once every world is ready |
-| 3 · **El Simulacro Dorado** | the full simulations (player), the golden book on screen with a play button per listening question (original recording cut per question) + the PDF | enrolled students | the key until El Entrenamiento is live; then every world practised with ≥ 70 % (changeable), or the teacher unlocks |
+| 3 · **El Simulacro Dorado** | the full simulations (player), the golden book on screen with a play button per listening question (original recording cut per question) + the PDF (built 2026-10-16: /audios/<level>/libro/<n>) | enrolled students | the key until El Entrenamiento is live; then every world practised with ≥ 70 % (changeable), or the teacher unlocks; a simulation's book once that simulation is taken, the PDF once all are |
 
 ## Update 2026-10-15 (second planning round): keys, not free
 - **Nothing of a module is free**: one secret key per level (word + number, set by him in /maestro, changeable) opens
@@ -66,6 +66,12 @@ the next levels) is prepared in three levels with our own names. Rules live in `
 5. **El Simulacro Dorado**: the golden books digitally from the same source as their PDFs (`study/<level>sim/`, exam.py,
    one source like La Base's `web.py`), page by page, each listening question with its own play button cut from the
    original recording, the PDF download (behind the login), and the simulation player.
+   **Built 2026-10-16** (branch `ruta-dorada-libro`), with his picks of that day: a simulation's book opens once the kid
+   has taken that simulation (a graded try on the account with half its questions answered; a teacher sees every book); phone
+   cards like La Base, simulation by simulation; mistakes first («Repasa tus N errores» from the latest try, then the
+   whole simulation; /maestro «Ver su libro» shows a teacher the same list); the PDF once every simulation is taken (a
+   web copy under 9 MB). `../study/lib/examweb.py` (the export from exam.py), `core/golden.js`, `/api/golden/…` +
+   `/golden-media/…`, `public/js/libro.js` + `css/libro.css`, `scripts/test-golden-book.js`.
 
 ## Open defaults (he can change them)
 - Unlock thresholds (his picks 2026-10-16, replacing "half the seals"): every seal of a world → that world of

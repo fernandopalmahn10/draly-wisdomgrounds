@@ -370,6 +370,32 @@ body.au-is-path .au-main { max-width: 720px; }
 .rd-sim-best svg { width: 12px; height: 12px; }
 .rd-sim-best.is-pass { background: var(--rojo); color: var(--crema); box-shadow: none; }
 .rd-sim-best.is-pass svg { color: #e8c878; }
+/* 📖 phase 5: a taken simulation's «Libro dorado», a red ribbon under its gold tile (one tile, two taps: the exam
+   again, or its golden book with the latest try's mistakes) */
+.rd-sims li.has-book { display: flex; flex-direction: column; }
+.rd-sims li.has-book .rd-sim { height: auto; flex: 1; border-radius: 14px 14px 0 0; }
+.rd-sim-book {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; min-height: 48px; padding: 8px 12px; border-radius: 0 0 14px 14px;
+  color: #f3dc9a; background: var(--rojo); text-decoration: none; font-weight: 800; font-size: .92rem; line-height: 1.15;
+  transition: transform 140ms var(--ease-out), background-color 200ms ease;
+}
+.rd-sim-book:active { transform: scale(.97); }
+.rd-sim-book > svg { width: 18px; height: 18px; flex: none; }
+.rd-sim-book-t { color: var(--crema); }
+.rd-sim-book-n {
+  display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; font-size: .76rem;
+  color: #3d0707; background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); font-variant-numeric: tabular-nums;
+}
+.rd-sim-book-n svg { width: 12px; height: 12px; }
+.rd-gold-pdf { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: .92rem; color: var(--tinta-2); }
+.rd-gold-pdf > svg { width: 18px; height: 18px; flex: none; color: var(--oro-tinta); }
+.rd-gold-pdf.is-ready { flex-wrap: wrap; justify-content: space-between; gap: 10px 14px; padding: 12px 14px; border-radius: 14px;
+  background: linear-gradient(160deg, #fffaf0 0%, #f6e7c4 100%); box-shadow: inset 0 0 0 1.5px #c9a14a; }
+.rd-gold-pdf.is-ready p { display: grid; gap: 1px; }
+.rd-gold-pdf.is-ready b { font-weight: 800; font-size: 1rem; color: var(--rojo); }
+.rd-gold-pdf.is-ready span { font-size: .85rem; }
+@media (hover: hover) and (pointer: fine) { .rd-sim-book:hover { background: var(--rojo-2); } }
+@media (prefers-reduced-motion: reduce) { .rd-sim-book:active { transform: none; } }
 @media (hover: hover) and (pointer: fine) {
   .rd-sim:hover { box-shadow: inset 0 0 0 2px var(--oro), 0 10px 20px -12px rgba(90, 16, 16, .35); }
   .rd-card:hover .rd-card-go { filter: brightness(1.04); }
