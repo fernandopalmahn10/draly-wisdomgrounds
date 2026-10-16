@@ -215,7 +215,9 @@
     $('m-pw').value = '';
     // a clean page for the next teacher on a shared laptop (open profile, drafts, filters, the last session's data)
     try { sessionStorage.removeItem('dralyLiveMaster'); } catch (_) {}
-    location.reload();
+    // 🔑 2026-10-15: and this device stops being a teacher's (games ask for the code again)
+    const reload = () => location.reload();
+    fetch('/api/teacher-device/forget', { method: 'POST', credentials: 'same-origin', keepalive: true }).then(reload, reload);
   });
   $('m-refresh').addEventListener('click', () => {
     _authStopped = false;   // a manual refresh may try again after a «code not accepted»
@@ -2674,6 +2676,7 @@
   function fetchTeachers() {
     const list = $('m-teachers-list');
     list.innerHTML = '<div class="m-empty">Loading teachers…</div>';
+    fetchLevelKeys();   // 🔑 the «Claves de nivel» panel sits on top of this tab (2026-10-15)
     adminFetch('/api/admin/levels', pw).then((r) => r.json())
       .then((d) => { if (d && d.ok && Array.isArray(d.levels)) mLevels = d.levels; })
       .catch(() => {})
@@ -2728,6 +2731,7 @@
             <span class="m-teacher-code-label">🔑 Teacher code:</span>
             <code class="m-teacher-code is-secret" data-secret="${escapeHtml(t.teacherId)}" aria-label="Hidden teacher code">••••••</code>
             <button class="btn btn-ghost btn-sm m-secret-btn" type="button" aria-pressed="false" title="The private sign-in code: hidden so a projector never shows it">Show</button>
+            <button class="btn btn-ghost btn-sm m-code-change-btn" type="button" title="Give this teacher a new code: the old one stops working at once">🔑 Change code</button>
           </div>
           <div class="m-teacher-code-row m-teacher-code-row--codes">
             <span class="m-teacher-code-label">📚 Classroom codes:</span>
@@ -2771,9 +2775,177 @@
       row.querySelector('.m-code-add-btn').addEventListener('click', () => {
         addCode(t.teacherId, row.querySelector('.m-code-add-level').value, t.displayName || t.teacherId);
       });
+      row.querySelector('.m-code-change-btn').addEventListener('click', () => openCodeModal({ teacherId: t.teacherId, displayName: t.displayName }));
       list.appendChild(row);
     });
   }
+  // ── 🔑 2026-10-15 La Ruta Dorada: «Claves de nivel» (super admin) ──────────────────────────────────────────────
+  // One key per level opens La Base, El Entrenamiento and El Simulacro Dorado (core/level-keys.js). He sets and changes
+  // them here; they are shown masked (this tab may be on the projector) and never written anywhere else.
+  const KEY_EX = 'DRAGON-47';
+  function fetchLevelKeys() {
+    const list = $('m-keys-list');
+    if (!list) return;
+    adminFetch('/api/admin/level-keys', pw).then((r) => r.json()).then((d) => {
+      if (!d || !d.ok) { $('m-keys-status').textContent = 'No se pudieron cargar las claves: ' + ((d && d.error) || ''); return; }
+      renderLevelKeys(d);
+    }).catch(() => { $('m-keys-status').textContent = 'No se pudieron cargar las claves. Revisa la conexión.'; });
+  }
+  function keyMessage(l) {
+    const link = location.origin + '/audios/' + (l.base || '');
+    return '🐉 ¡Hola, familia de Dralingo!\n' +
+      'Esta es la clave de *' + l.name + '*: *' + l.key + '*\n\n' +
+      'Abre La Base, El Entrenamiento y El Simulacro Dorado de ' + l.name + '.\n' +
+      '1. Entra aquí: ' + link + '\n' +
+      '2. Escribe la clave una sola vez. El teléfono la recuerda.\n\n' +
+      'Es solo para alumnos de Dralingo: por favor no la compartas. 💛';
+  }
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise((res, rej) => {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy') ? res() : rej(new Error('copy')); } catch (e) { rej(e); }
+      ta.remove();
+    });
+  }
+  function renderLevelKeys(d) {
+    const when = d.goLiveAt ? new Date(d.goLiveAt).toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    $('m-keys-status').innerHTML = d.goLiveAt
+      ? '✅ Las claves están activas desde el <b>' + escapeHtml(when) + '</b>. Los alumnos registrados antes no necesitan clave; las cuentas nuevas sí.'
+      : '⏳ Todavía no hay claves. Cuando pongas la primera, las claves quedan activas: los alumnos registrados hasta ese momento siguen entrando sin clave, las cuentas nuevas la necesitarán.';
+    const list = $('m-keys-list');
+    list.innerHTML = '';
+    (d.levels || []).forEach((l) => {
+      const row = document.createElement('div');
+      row.className = 'm-key-row';
+      row.innerHTML =
+        '<div class="m-key-main">' +
+          '<span class="m-key-level">' + escapeHtml(l.name) + '</span>' +
+          (l.key
+            ? '<code class="m-key-value is-secret" aria-label="Clave oculta">••••••••</code>' +
+              '<button class="btn btn-ghost btn-sm m-key-show" type="button" aria-pressed="false">Ver</button>'
+            : '<span class="m-key-none">Sin clave todavía</span>') +
+        '</div>' +
+        '<div class="m-key-actions">' +
+          '<button class="btn btn-ghost btn-sm m-key-edit" type="button">' + (l.key ? '✏️ Cambiar' : '➕ Poner clave') + '</button>' +
+          (l.key ? '<button class="btn btn-gold btn-sm m-key-copy" type="button">📋 Copiar mensaje para WhatsApp</button>' : '') +
+          (l.key ? '<button class="btn btn-ghost btn-sm m-danger-ghost m-key-close" type="button" title="Every phone that opened this level must type the key again (accounts keep theirs)">Cerrar en todos los aparatos</button>' : '') +
+        '</div>' +
+        '<form class="m-key-form hidden" novalidate>' +
+          '<label class="m-form-label"><span>Clave nueva de ' + escapeHtml(l.name) + ' (una palabra y un número, como ' + KEY_EX + ')</span>' +
+          '<input class="input m-key-input" type="text" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>' +
+          '<div class="m-key-form-actions"><button class="btn btn-gold btn-sm" type="submit">Guardar</button>' +
+          '<button class="btn btn-ghost btn-sm m-key-cancel" type="button">Cancelar</button></div>' +
+          '<p class="m-key-msg" role="status"></p>' +
+        '</form>';
+      const show = row.querySelector('.m-key-show');
+      const val = row.querySelector('.m-key-value');
+      if (show) show.addEventListener('click', () => {
+        const on = show.getAttribute('aria-pressed') !== 'true';
+        show.setAttribute('aria-pressed', String(on));
+        show.textContent = on ? 'Ocultar' : 'Ver';
+        val.textContent = on ? l.key : '••••••••';
+        val.classList.toggle('is-secret', !on);
+        val.setAttribute('aria-label', on ? 'Clave' : 'Clave oculta');
+      });
+      const form = row.querySelector('.m-key-form');
+      const input = row.querySelector('.m-key-input');
+      const msg = row.querySelector('.m-key-msg');
+      row.querySelector('.m-key-edit').addEventListener('click', () => {
+        form.classList.remove('hidden');
+        input.value = '';
+        msg.textContent = l.key ? 'Las familias que ya la escribieron siguen entrando; la clave vieja deja de abrir aparatos nuevos.' : '';
+        input.focus();
+      });
+      row.querySelector('.m-key-cancel').addEventListener('click', () => form.classList.add('hidden'));
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const key = input.value.trim();
+        if (!key) { msg.textContent = 'Escribe la clave.'; input.focus(); return; }
+        if (l.key && !confirm('¿Cambiar la clave de ' + l.name + '?\n\nLa clave vieja deja de abrir aparatos nuevos. Manda el mensaje nuevo a las familias.')) return;
+        msg.textContent = 'Guardando…';
+        adminFetch('/api/admin/level-keys/' + encodeURIComponent(l.id), pw, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }),
+        }).then((r) => r.json()).then((r) => {
+          if (!r || !r.ok) { msg.textContent = (r && r.error) || 'No se pudo guardar.'; input.focus(); return; }
+          notify('✓ Clave de ' + l.name + ' guardada. Copia el mensaje para WhatsApp y mándalo a las familias.');
+          renderLevelKeys(r);
+        }).catch(() => { msg.textContent = 'Sin conexión. Vuelve a intentarlo.'; });
+      });
+      const copy = row.querySelector('.m-key-copy');
+      if (copy) copy.addEventListener('click', () => {
+        copyText(keyMessage(l))
+          .then(() => notify('✓ Mensaje copiado: pégalo en el grupo de WhatsApp de ' + l.name + '.'))
+          .catch(() => { window.prompt('Copia este mensaje:', keyMessage(l)); });
+      });
+      const close = row.querySelector('.m-key-close');
+      if (close) close.addEventListener('click', () => {
+        if (!confirm('¿Cerrar ' + l.name + ' en todos los aparatos?\n\nCada teléfono que ya la abrió tendrá que escribir la clave otra vez. Los alumnos con la clave guardada en su cuenta (o registrados antes de las claves) la recuperan al entrar en Mis Tareas.\n\nÚsalo solo si la clave se compartió fuera de la escuela: cámbiala primero.')) return;
+        adminFetch('/api/admin/level-keys/' + encodeURIComponent(l.id) + '/close-devices', pw, { method: 'POST' })
+          .then((r) => r.json()).then((r) => {
+            if (!r || !r.ok) { notify('Error: ' + ((r && r.error) || '')); return; }
+            notify('✓ ' + l.name + ' cerrado en todos los aparatos.');
+          }).catch(() => notify('Network error'));
+      });
+      list.appendChild(row);
+    });
+  }
+
+  // ── 🔑 2026-10-15 «Cambiar mi código» (every teacher) · another teacher's code (super admin) ─────────────────────
+  // The super-admin code was served to everyone in an old comment of this file: the code can now be changed here.
+  // The old code stops at once on every device; this browser keeps working with the new one.
+  let _codeTarget = null;    // null = my own code · { teacherId, displayName } = another teacher's (super admin)
+  function openCodeModal(target) {
+    _codeTarget = target || null;
+    $('m-mycode-title').textContent = target ? '🔑 Change the code of ' + (target.displayName || 'this teacher') : '🔑 Cambiar mi código';
+    $('m-mycode-sub').textContent = target
+      ? 'Their old code stops working at once, on every device. Give them the new one in private.'
+      : 'Your new teacher code: to sign in here and to open games. The old code stops working at once, on every device. / Tu código nuevo: el viejo deja de funcionar en todos los aparatos.';
+    $('m-mycode-new').value = '';
+    $('m-mycode-again').value = '';
+    $('m-mycode-msg').textContent = '';
+    $('m-mycode-random').classList.toggle('hidden', !(_self && _self.isSuperAdmin));
+    $('m-mycode-modal').classList.remove('hidden');
+    setTimeout(() => { try { $('m-mycode-new').focus(); } catch (_) {} }, 40);
+  }
+  $('m-mycode-btn').addEventListener('click', () => openCodeModal(null));
+  $('m-mycode-close').addEventListener('click', () => $('m-mycode-modal').classList.add('hidden'));
+  $('m-mycode-random').addEventListener('click', () => {
+    adminFetch('/api/admin/teachers/suggest-code', pw).then((r) => r.json()).then((d) => {
+      if (!d || !d.ok) return;
+      $('m-mycode-new').value = d.code;
+      $('m-mycode-again').value = d.code;
+    }).catch(() => {});
+  });
+  $('m-mycode-save').addEventListener('click', () => {
+    const a = $('m-mycode-new').value.trim();
+    const b = $('m-mycode-again').value.trim();
+    const msg = $('m-mycode-msg');
+    if (!a) { msg.textContent = 'Type the new code.'; $('m-mycode-new').focus(); return; }
+    if (a.toUpperCase() !== b.toUpperCase()) { msg.textContent = 'The two codes are not the same. / Los dos códigos no coinciden.'; $('m-mycode-again').focus(); return; }
+    const target = _codeTarget;
+    const self = !target || (_self && _self.teacherId && target.teacherId === _self.teacherId);
+    if (!confirm(self ? 'Change your teacher code now?\n\nThe old code stops working at once on every device (other computers and projectors will ask for the new one).'
+      : 'Change the code of ' + (target.displayName || 'this teacher') + ' now?\n\nTheir old code stops working at once.')) return;
+    msg.textContent = 'Saving…';
+    const url = target ? '/api/admin/teachers/' + encodeURIComponent(target.teacherId) + '/code' : '/api/admin/my-code';
+    adminFetch(url, pw, { method: target ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newCode: a }) })
+      .then((r) => r.json()).then((d) => {
+        if (!d || !d.ok) { msg.textContent = (d && d.error) || 'Could not change the code.'; return; }
+        if (self) {
+          pw = d.teacher.teacherId;
+          try { localStorage.setItem(STORAGE_PW, pw); } catch (_) {}
+          try { if (localStorage.getItem('mochi.maestroPw')) localStorage.setItem('mochi.maestroPw', pw); } catch (_) {}
+        }
+        $('m-mycode-modal').classList.add('hidden');
+        notify(self ? '✓ Code changed. Use the new one from now on (keep it private).' : '✓ The code of ' + (target.displayName || 'the teacher') + ' changed.');
+        if (!$('m-tabpanel-teachers').classList.contains('hidden')) fetchTeachers();
+        fetchRoster();
+      }).catch(() => { msg.textContent = 'Network error. Try again.'; });
+  });
+
   function deleteTeacher(teacherId, displayName) {
     // (the private teacher code is not printed: the Teachers tab keeps it masked)
     if (!confirm(`Delete the teacher "${displayName}"?\n\nTheir students will be orphaned (you can reassign them later).`)) return;
@@ -3154,6 +3326,17 @@
       list.appendChild(row);
     });
   }
+  // 🔑 2026-10-15 La Ruta Dorada: is this kid's level open on their account (any phone)? «Desbloquear» opens it.
+  function levelKeyLine(lk) {
+    if (!lk || !lk.level) return '🔑 La Ruta Dorada: no level yet (the kid has not entered a class code)';
+    const name = escapeHtml(lk.levelName || levelLabel(lk.level));
+    if (lk.open) {
+      const how = lk.via === 'grandfathered' ? 'enrolled before the keys' : lk.via === 'teacher' ? 'unlocked by a teacher' : 'key saved on their account';
+      return '🔓 La Ruta Dorada ' + name + ': <b>open</b> · ' + how;
+    }
+    return '🔒 La Ruta Dorada ' + name + ': <b>locked</b> · needs the ' + name + ' key ' +
+      '<button class="btn btn-gold btn-sm" id="m-detail-unlock" type="button" title="Open La Base, El Entrenamiento and El Simulacro Dorado for this kid on every phone">🔓 Desbloquear</button>';
+  }
   function renderDetail(data) {
     // a profile opened from Classrooms or Online now while the Teachers tab is showing: bring the Students tab back
     if ($('m-tabpanel-students').classList.contains('hidden')) {
@@ -3194,6 +3377,7 @@
             ${data.device ? ' · 📱 ' + escapeHtml(data.device) : ''}
             ${data.locale ? ' · 🗣 ' + escapeHtml(data.locale) : ''}
           </div>
+          <div class="m-detail-key${data.levelKey && data.levelKey.open ? ' is-open' : ''}" id="m-detail-key">${levelKeyLine(data.levelKey)}</div>
           <label class="m-detail-class">🎓 Class
             <select class="input" id="m-detail-classroom"><option value="">Loading…</option></select>
           </label>
@@ -3232,6 +3416,19 @@
       if (r.top < bar || r.top > window.innerHeight * 0.45) window.scrollTo({ top: Math.max(0, r.top + window.scrollY - bar - 12) });
       setTimeout(() => { try { $('m-detail-back').focus({ preventScroll: true }); } catch (_) {} }, 0);
     }
+    // 🔑 «Desbloquear»: this kid's level opens on their account (their next /homework login opens it on any phone)
+    const unlockBtn = $('m-detail-unlock');
+    if (unlockBtn) unlockBtn.addEventListener('click', () => {
+      unlockBtn.disabled = true;
+      adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/level-access', pw, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      }).then((r) => r.json()).then((r) => {
+        if (!r || !r.ok) { unlockBtn.disabled = false; notify('Could not unlock: ' + ((r && r.error) || 'unknown error')); return; }
+        const line = $('m-detail-key');
+        if (line) { line.innerHTML = levelKeyLine(r.levelKey); line.classList.add('is-open'); }
+        notify('✓ ' + (data.displayName || data.code) + ': La Ruta Dorada open. It opens on their phone at their next login to Mis Tareas.');
+      }).catch(() => { unlockBtn.disabled = false; notify('Network error'); });
+    });
     // Notes: default month = current, render existing, wire add/delete.
     (function wireNotes() {
       const monthEl = $('m-note-month');

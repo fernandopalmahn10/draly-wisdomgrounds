@@ -13,7 +13,7 @@ const path = require('path');
 const Levels = require('./levels');
 const Saga = require('../public/js/saga');   // the saga avatars (2026-10-12)
 
-const DATA_DIR = process.env.STUDENT_DATA_DIR || path.join(__dirname, '..', 'data');   // tests point it at a temp folder
+const DATA_DIR = process.env.STUDENT_DATA_DIR || process.env.DRALY_DATA_DIR || path.join(__dirname, '..', 'data');   // tests point it at a temp folder
 const FILE_PATH = path.join(DATA_DIR, 'student-records.json');
 // Code alphabet — avoids confusing chars (0/O, 1/I/l) so kids reading
 // codes off a phone screen don't mis-type them.
@@ -390,15 +390,33 @@ function setClassroomCode(code, classroomCode) {
 // from the access code they typed (Teachers.levelForAccessCode). So a kid
 // who moves up just starts using the HSK2 code and their portal reshapes.
 // Absent/legacy records read as 'hsk1'.
-function setLevel(code, level) {
+// `previous`: the level an old record without one had (its class code's), so a change from it is dated too.
+function setLevel(code, level, previous) {
   const rec = get(code);
   if (!rec) return false;
   const clean = Levels.normalize(level);   // yct1 | hsk2 (New HSK 1) | hsk1 — core/levels.js
   if (!clean) return false;
   if (rec.level !== clean) {
+    // 2026-10-15: when the level changed (core/level-keys.js: a kid who moves to a level after the keys went live
+    // needs that level's key; their old level stays open)
+    const before = Levels.normalize(rec.level) || Levels.normalize(previous);
+    if (before && before !== clean) rec.levelSince = Date.now();
     rec.level = clean;
     scheduleSave();
   }
+  return true;
+}
+// 🆕 2026-10-15 (La Ruta Dorada) — a level opened on the kid's ACCOUNT (any device): the key typed while logged in
+// ('key'), a teacher's «Desbloquear» ('teacher'), or kept from before the keys went live ('grandfathered').
+// core/level-keys.js decides; this only stores. Never removes anything.
+function setLevelAccess(code, level, via) {
+  const rec = get(code);
+  const clean = Levels.normalize(level);
+  if (!rec || !clean) return false;
+  if (!rec.levelAccess || typeof rec.levelAccess !== 'object') rec.levelAccess = {};
+  if (rec.levelAccess[clean]) return true;          // the first way in is kept
+  rec.levelAccess[clean] = { via: String(via || 'key').slice(0, 16), at: Date.now() };
+  scheduleSave();
   return true;
 }
 // 🆕 2026-06-21 (Fernando) — teacher-managed classroom. Sets the student's
@@ -718,7 +736,10 @@ function logSentence(contributors, sentence, pin, customWords) {
 function getHistory(code, limit) {
   const rec = get(code);
   if (!rec) return [];
-  const arr = rec.sentencesBuilt.slice().reverse();
+  // 🔒 2026-10-15: `editedBy` held the editing teacher's CODE on edits older than today, and this list reaches kids'
+  // phones: it never leaves the server (nothing on screen uses it)
+  const arr = (rec.sentencesBuilt || []).slice().reverse()
+    .map((s) => { if (!s || !('editedBy' in s)) return s; const o = Object.assign({}, s); delete o.editedBy; return o; });
   return typeof limit === 'number' ? arr.slice(0, limit) : arr;
 }
 
@@ -915,6 +936,9 @@ function listAll() {
       classroomCode: r.classroomCode || null,
       classroomId: r.classroomId || null,
       level: Levels.normalize(r.level) || Levels.DEFAULT,   // from the access code they last typed
+      rawLevel: r.level || null,                            // (level keys: what the record really says)
+      levelSince: r.levelSince || 0,
+      levelAccess: r.levelAccess || null,                   // levels opened on the account (core/level-keys.js)
       country: r.country || null,
       device: r.device || null,
       locale: r.locale || null,
@@ -1072,6 +1096,7 @@ module.exports = {
   setDisplayName,
   setClassroomCode,
   setLevel,
+  setLevelAccess,
   resetAssignmentSubmissions,
   sendMessage,
   getInbox,

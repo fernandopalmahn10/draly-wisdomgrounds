@@ -25,9 +25,13 @@
 // content/audios/yct1-base.json, written by ../study/yct1/export_web.py from
 // the same source as the printed book). It gets one clip per word (wNN.mp3)
 // and one per example sentence (sNN.mp3, shared when two cards use the same
-// sentence), plus public/assets/audios/<id>/base.json, the data its page
-// reads (no hanzi). The catalog lists it under `bases`, and `levels` (the
-// /audios folders) comes from core/levels.js.
+// sentence), plus base.json, the data its page reads (no hanzi). The catalog
+// lists it under `bases`, and `levels` (the /audios folders) comes from
+// core/levels.js. 🔑 Since 2026-10-15 a base is behind its level's key: it is
+// written to protected/base/<id>/ (never public/) and its page reads it as
+// /base-media/<id>/… (server.js checks every file); the La Base PDF lives in
+// protected/study/ (a fresh copy that ../study/lib/web.py drops in
+// public/assets/study/ is moved there) and is served as /base-media/<id>/book.pdf.
 //
 //   --cache <dir>   use another clip cache (e.g. the main checkout's, from a worktree)
 // =========================================================================
@@ -43,6 +47,8 @@ const SRC = path.join(ROOT, 'content', 'audios');
 const argCache = process.argv.indexOf('--cache');
 const CACHE = argCache > 0 ? path.resolve(process.argv[argCache + 1]) : path.join(SRC, '.cache');
 const OUT = path.join(ROOT, 'public', 'assets', 'audios');
+const BASE_OUT = path.join(ROOT, 'protected', 'base');     // 🔑 the bases: behind their level's key (2026-10-15)
+const STUDY = path.join(ROOT, 'protected', 'study');       // … and their PDFs
 const FFDIR = 'C:/Users/ferpa/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-9.0.2-full_build/bin/';
 const FFMPEG = process.env.FFMPEG || (fs.existsSync(FFDIR + 'ffmpeg.exe') ? FFDIR + 'ffmpeg.exe' : 'ffmpeg');
 const TTS_BASE = process.env.TTS_BASE || 'https://draly-wisdomgrounds-2.onrender.com';
@@ -154,9 +160,9 @@ function shape(kind, clips) {
 // ── A level's vocabulary base (kind "base"): one clip per word and per sentence ──
 const pad2 = (n) => String(n).padStart(2, '0');
 async function buildBase(id, src) {
-  const dir = path.join(OUT, id);
+  const dir = path.join(BASE_OUT, id);
   fs.mkdirSync(dir, { recursive: true });
-  const web = '/assets/audios/' + id + '/';
+  const web = '/base-media/' + id + '/';
   const clip = async (zh, name) => {                       // short clip: a breath of air before and after
     encode(Buffer.concat([silence(0.12), await itemPcm({ zh }, VOICE.word), silence(0.22)]), path.join(dir, name));
     return web + name + '?v=' + stamp(path.join(dir, name));
@@ -195,9 +201,22 @@ async function buildBase(id, src) {
   const keep = new Set(words.flatMap((w) => [w.au, w.exau]).concat(toneNote.map((t) => t.au), Object.values(cover).map((c) => c.au))
     .map((u) => path.basename(u.split('?')[0])));
   fs.readdirSync(dir).filter((f) => f.endsWith('.mp3') && !keep.has(f)).forEach((f) => fs.unlinkSync(path.join(dir, f)));
-  // the page's data, field by field: whatever else the source carries (the voice's hanzi) stays out of public/
-  const pdfFile = src.book && path.join(ROOT, 'public', src.book.pdf.replace(/^\//, ''));
-  const book = src.book && { pdf: src.book.pdf + (fs.existsSync(pdfFile) ? '?v=' + stamp(pdfFile) : ''), pages: src.book.pages, mb: src.book.mb, name: src.book.name };
+  // the page's data, field by field: whatever else the source carries (the voice's hanzi) stays out of public/.
+  // The book: src.book.pdf names it (/assets/study/<level>-vocabulario.pdf, what web.py writes); its copy lives in
+  // protected/study/ (a fresh one web.py left in public/ moves there: nothing of La Base stays public).
+  let book = null;
+  if (src.book) {
+    const name = path.basename(src.book.pdf.split('?')[0]);
+    const pdfFile = path.join(STUDY, name);
+    const fresh = path.join(ROOT, 'public', 'assets', 'study', name);
+    if (fs.existsSync(fresh)) {
+      fs.mkdirSync(STUDY, { recursive: true });
+      fs.copyFileSync(fresh, pdfFile);
+      fs.unlinkSync(fresh);
+      console.log('  (the new ' + name + ' moved to protected/study/)');
+    }
+    book = { pdf: web + 'book.pdf' + (fs.existsSync(pdfFile) ? '?v=' + stamp(pdfFile) : ''), pages: src.book.pages, mb: src.book.mb, name: src.book.name };
+  }
   const data = {
     id, kind: 'base', level: src.level, levelName: levelName(src.level), title: src.title, kicker: src.kicker, lede: src.lede,
     book: book || null, steps: src.steps || [], parents: src.parents || [],

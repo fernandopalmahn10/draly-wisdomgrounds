@@ -606,6 +606,41 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--ink); flex
 .m-sent-pin { font-weight: 900; font-size: 0.9375rem; }
 .m-sent-es { font-size: 0.75rem; font-weight: 700; color: var(--ink-soft); }
 
+/* ── 🔑 Claves de nivel (super admin, 2026-10-15) ─────────────── */
+.m-keys { margin-bottom: 16px; }
+.m-keys-help { color: var(--ink-soft); font-weight: 700; font-size: 0.9375rem; max-width: 80ch; margin: 6px 0 10px; }
+.m-keys-status { font-weight: 700; font-size: 0.9375rem; max-width: 80ch; margin-bottom: 12px; padding: 10px 12px; border-radius: var(--r-card); background: var(--butter); border: 2px solid var(--line-2); }
+.m-keys-list { display: flex; flex-direction: column; gap: 10px; }
+.m-key-row {
+  display: grid; grid-template-columns: minmax(220px, 1fr) auto; gap: 10px 14px; align-items: center;
+  padding: 12px 14px; background: var(--paper-hi); border: 2px solid var(--line-2); border-radius: var(--r-card);
+}
+.m-key-main { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.m-key-level { font-weight: 900; font-size: 1.0625rem; min-width: 6.5em; }
+.m-key-value { display: inline-block; padding: 3px 10px; font-weight: 900; font-size: 1rem; letter-spacing: 0.08em; background: #fff; border: 2px solid var(--ink); border-radius: 8px; }
+.m-key-value.is-secret { letter-spacing: 0.2em; color: var(--ink-soft); }
+.m-key-none { color: var(--coral-ink); font-weight: 800; }
+.m-key-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.m-key-form { grid-column: 1 / -1; display: grid; gap: 8px; max-width: 520px; }
+.m-key-input { text-transform: uppercase; letter-spacing: 0.06em; font-weight: 900; }
+.m-key-form-actions { display: flex; gap: 8px; }
+.m-key-msg { min-height: 1.2em; color: var(--ink-soft); font-weight: 700; font-size: 0.875rem; }
+.m-code-change-btn { min-height: 32px; padding: 2px 10px; font-size: 0.8125rem; }
+.m-code-input { text-transform: uppercase; letter-spacing: 0.06em; font-weight: 900; }
+.m-mycode-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.m-mycode-btn { white-space: nowrap; }
+/* the kid's La Ruta Dorada line in their profile (open / locked + «Desbloquear») */
+.m-detail-key {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; padding: 8px 10px; border-radius: var(--r-btn);
+  background: var(--coral-soft); color: var(--coral-ink); font-weight: 700; font-size: 0.875rem;
+}
+.m-detail-key.is-open { background: var(--mint); color: var(--jade); }
+.m-detail-key b { font-weight: 900; }
+@media (max-width: 720px) {
+  .m-key-row { grid-template-columns: 1fr; }
+  .m-key-actions { justify-content: flex-start; }
+}
+
 /* ── Teachers tab ─────────────────────────────────────────────── */
 .m-teachers-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .m-teachers-help { color: var(--ink-soft); font-weight: 700; font-size: 0.9375rem; max-width: 80ch; margin-bottom: 14px; }

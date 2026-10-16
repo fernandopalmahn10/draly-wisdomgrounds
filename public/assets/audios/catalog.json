@@ -58,14 +58,14 @@
      "count": 18
     }
    ],
-   "data": "/assets/audios/yct1-base/base.json",
+   "data": "/base-media/yct1-base/base.json",
    "peek": [
-    "/assets/audios/yct1-base/pics/roblox_139254505278965.webp?v=1f21c054",
-    "/assets/audios/yct1-base/pics/roblox_97620740759621.webp?v=03f4fd94",
-    "/assets/audios/yct1-base/pics/fluent_school.webp?v=d263fb8d"
+    "/base-media/yct1-base/pics/roblox_139254505278965.webp?v=1f21c054",
+    "/base-media/yct1-base/pics/roblox_97620740759621.webp?v=03f4fd94",
+    "/base-media/yct1-base/pics/fluent_school.webp?v=d263fb8d"
    ],
    "book": {
-    "pdf": "/assets/study/yct1-vocabulario.pdf?v=849f9bcc",
+    "pdf": "/base-media/yct1-base/book.pdf?v=849f9bcc",
     "pages": 20,
     "mb": 4.6,
     "name": "YCT 1 · Vocabulario"
@@ -121,14 +121,14 @@
      "count": 49
     }
    ],
-   "data": "/assets/audios/newhsk1-base/base.json",
+   "data": "/base-media/newhsk1-base/base.json",
    "peek": [
-    "/assets/audios/newhsk1-base/pics/fluent_dumpling.webp?v=614078e8",
-    "/assets/audios/newhsk1-base/pics/fluent_tshirt.webp?v=fb769e9d",
-    "/assets/audios/newhsk1-base/pics/fluent_healthworker.webp?v=5c7be061"
+    "/base-media/newhsk1-base/pics/fluent_dumpling.webp?v=614078e8",
+    "/base-media/newhsk1-base/pics/fluent_tshirt.webp?v=fb769e9d",
+    "/base-media/newhsk1-base/pics/fluent_healthworker.webp?v=5c7be061"
    ],
    "book": {
-    "pdf": "/assets/study/newhsk1-vocabulario.pdf?v=d41abb4b",
+    "pdf": "/base-media/newhsk1-base/book.pdf?v=d41abb4b",
     "pages": 66,
     "mb": 8.5,
     "name": "New HSK 1 · Vocabulario"
@@ -184,14 +184,14 @@
      "count": 18
     }
    ],
-   "data": "/assets/audios/hsk1-base/base.json",
+   "data": "/base-media/hsk1-base/base.json",
    "peek": [
-    "/assets/audios/hsk1-base/pics/fluent_redapple.webp?v=36a08a36",
-    "/assets/audios/hsk1-base/pics/roblox_109762655069458.webp?v=6f52b42d",
-    "/assets/audios/hsk1-base/pics/fluent_television.webp?v=5f63ec58"
+    "/base-media/hsk1-base/pics/fluent_redapple.webp?v=36a08a36",
+    "/base-media/hsk1-base/pics/roblox_109762655069458.webp?v=6f52b42d",
+    "/base-media/hsk1-base/pics/fluent_television.webp?v=5f63ec58"
    ],
    "book": {
-    "pdf": "/assets/study/hsk1-vocabulario.pdf?v=d1670054",
+    "pdf": "/base-media/hsk1-base/book.pdf?v=d1670054",
     "pages": 35,
     "mb": 7.6,
     "name": "HSK 1 · Vocabulario"

@@ -19,6 +19,7 @@ const SimTrainer = require('./core/sim-trainer');
 const SimImages = require('./core/sim-images');
 const SimLock = require('./core/sim-lock');   // 🔒 simulations for enrolled students + teachers only (2026-10-15)
 SimLock.scan();                                 // the index of the locked files (~1000, a few ms), before the first class
+const LevelKeys = require('./core/level-keys'); // 🔑 a key per level opens La Base / Entrenamiento / Simulacro Dorado (2026-10-15)
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
@@ -212,6 +213,20 @@ app.use((req, res, next) => {
 });
 app.get(['/yct-sim.html', '/hsk-sim.html'], (req, res) => _simPageGate(req, res));
 app.get('/sim-media/:token/:file', (req, res) => _simMediaFile(req, res));
+// 🔑 2026-10-15 (second round) — La Base is no longer free either: its data, clips, pictures and the La Base PDF left
+// public/ for protected/base/<level>-base/ and protected/study/, served only through /base-media/ to a request that
+// may use that level (core/level-keys.js access()). The old /assets/… addresses answer 404 (a copy that a build tool
+// writes into public/ again, e.g. a new PDF from ../study/lib/web.py, is never served from there).
+app.use((req, res, next) => {
+  if (!/study|-base/i.test(req.path)) return next();
+  let p = req.path;
+  try { p = decodeURIComponent(p); } catch (_) { /* keep raw */ }
+  p = path.posix.normalize(p.replace(/\\/g, '/')).toLowerCase();
+  if (!/^\/+assets\/+(study\/|audios\/+[^/]*-base(\/|$))/.test(p)) return next();
+  res.set(SimLock.NO_STORE);
+  res.status(404).type('text').send('Not found');
+});
+app.get('/base-media/:base/*', (req, res) => _baseMediaFile(req, res));
 // Serve static assets. HTML pages get no-cache headers so phones always pull
 // the latest markup (otherwise stale cached HTML keeps referencing old
 // rewards.js / player.js versions and users see "nothing changed" after a
@@ -393,6 +408,16 @@ function _safeEqual(a, b) {
   try { return require('crypto').timingSafeEqual(ba, bb); }
   catch (_) { return String(a) === String(b); }
 }
+// 🔒 2026-10-15 — the legacy super-admin password is ONLY the WU_ADMIN_PASSWORD env var (set on Render). It used to
+// fall back to a default written in this file (so it was known to anyone who ever saw the code); with the variable
+// unset there is no legacy password at all (teacher codes still work). Never compared when either side is empty.
+const _LEGACY_PW = String(process.env.WU_ADMIN_PASSWORD || '');
+if (!_LEGACY_PW) console.log('[security] WU_ADMIN_PASSWORD is not set: no legacy admin password (teacher codes only)');
+else if (_LEGACY_PW.length < 16) console.warn('[security] WU_ADMIN_PASSWORD is short: make it a long random value (SECURITY-SOP step 10)');
+function _legacyPwOk(given) {
+  const g = String(given == null ? '' : given).trim();
+  return !!(_LEGACY_PW && g && _safeEqual(g, _LEGACY_PW));
+}
 const _adminFailHits = new Map();   // ip → [timestamps of FAILED admin auths]
 function _adminFailCount(ip) {
   const now = Date.now();
@@ -422,8 +447,7 @@ app.get('/api/admin/disk-status', (req, res) => {
   const ip = _clientIp(req);
   if (_adminFailCount(ip) >= 10) return res.status(429).json({ error: 'demasiados intentos, espera unos minutos' });
   const givenPw = _adminPw(req);
-  const expected = process.env.WU_ADMIN_PASSWORD || 'draly2026';
-  if (!_safeEqual(givenPw, expected)) { _adminNoteFail(ip); return res.status(401).json({ error: 'wrong password' }); }
+  if (!_legacyPwOk(givenPw)) { _adminNoteFail(ip); return res.status(401).json({ error: 'wrong password' }); }
 
   const DATA_DIR = path.join(__dirname, 'data');
   const STUDENTS_FILE = path.join(DATA_DIR, 'student-records.json');
@@ -507,8 +531,7 @@ function _adminAuth(req, res) {
   // warmup-host flow (host-warmup.html unlock). These bypass the
   // teachers table entirely. Constant-time compare so the secret can't be
   // recovered via response timing.
-  const wuPw = process.env.WU_ADMIN_PASSWORD || 'draly2026';
-  if (_safeEqual(givenPw, wuPw)) {
+  if (_legacyPwOk(givenPw)) {
     return { teacher: null, isSuperAdmin: true, legacy: true };
   }
   // Otherwise look up as a teacher code
@@ -521,6 +544,55 @@ function _adminAuth(req, res) {
   Teachers.touchLastSeen(teacher.teacherId);
   return { teacher, isSuperAdmin: !!teacher.isSuperAdmin, legacy: false };
 }
+// ── 🔑 2026-10-15 — who a request is, for the level keys (core/level-keys.js) ─────────────────────────────────────
+// A teacher: a code in the X-Admin-Pw header (wrong codes count in the turnstile above) or a remembered teacher device
+// (that answer carries device: true). Once per request (a wrong code is counted once).
+function _teacherOf(req) {
+  if (req && Object.prototype.hasOwnProperty.call(req, '_dralyTeacher')) return req._dralyTeacher;
+  const h = (req && req.headers) || {};
+  let t = null;
+  if (h['x-admin-pw'] || h['x-admin-password']) t = _adminAuth(req, null);
+  if (!t) t = LevelKeys.teacherDevice(req);
+  if (req) req._dralyTeacher = t;
+  return t;
+}
+// The logged-in kid's record (the /homework session): Students.get brings an archived kid back.
+function _studentOf(req) {
+  const s = SimLock.session(req);
+  return s && s.kind === 's' ? Students.get(s.code) : null;
+}
+LevelKeys.configure({ teacherOf: _teacherOf, studentOf: _studentOf });
+// The one question every locked level asks (La Base now; El Entrenamiento and El Simulacro Dorado in phases 2-4):
+// may this request use level X? → { ok, level, via: 'teacher' | 'student' | 'key', studentCode? }
+const levelAccess = (req, level) => LevelKeys.access(req, level);
+
+// ── 🔑 a teacher device («crear un juego» needs the teacher's code the first time on a device, then it is remembered)
+// GET → is this device remembered? POST { code } (or the X-Admin-Pw header) → remember it (90 days). Wrong codes count
+// in the admin turnstile (10 per 10 min per address). The /maestro login remembers the device too.
+app.get('/api/teacher-device', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  const t = LevelKeys.teacherDevice(req);
+  res.json({ ok: true, remembered: !!t, name: t ? (t.teacher ? t.teacher.displayName : 'Super admin') : null });
+});
+app.post('/api/teacher-device', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  const ip = _clientIp(req);
+  if (_adminFailCount(ip) >= 10) return res.status(429).json({ ok: false, error: 'Muchos intentos. Espera 10 minutos y vuelve a intentarlo.' });
+  const code = String((req.body && req.body.code) || _adminPw(req) || '').trim();
+  const s = code && _legacyPwOk(code) ? { teacher: null, isSuperAdmin: true, legacy: true }
+    : (code ? (Teachers.getByTeacherId(code) ? { teacher: Teachers.getByTeacherId(code), isSuperAdmin: !!Teachers.getByTeacherId(code).isSuperAdmin, legacy: false } : null) : null);
+  if (!s) {
+    if (code) _adminNoteFail(ip);
+    return res.status(401).json({ ok: false, error: 'Ese código no es. Es el mismo código con el que entras a /maestro.' });
+  }
+  if (s.teacher) Teachers.touchLastSeen(s.teacher.teacherId);
+  LevelKeys.rememberTeacher(req, res, s);
+  res.json({ ok: true, name: s.teacher ? s.teacher.displayName : 'Super admin' });
+});
+app.post('/api/teacher-device/forget', (req, res) => {   // /maestro «Log out»: this device is a teacher's no more
+  LevelKeys.forgetTeacher(req, res);
+  res.set('Cache-Control', 'no-store').json({ ok: true });
+});
 // === 🌐 EMIRATI ARABIC GATEWAY (super-admin only) =====================
 // The platform owner's personal language-learning sidecar. Returns today's
 // 5 words deterministically by date, prioritizing words not yet seen. The
@@ -1213,7 +1285,7 @@ app.get('/api/homework/custom-assignments/:code', (req, res) => {
     instructions: a.instructions,
     itemCount: a.items.length,
     createdAt: a.createdAt,
-    teacherId: a.teacherId,
+    // 🔒 2026-10-15: the teacher's code (teacherId) is never sent to a kid's phone
   }));
   res.json({ ok: true, assignments: list });
 });
@@ -1264,6 +1336,10 @@ app.post('/api/homework/custom-assignment/submit', (req, res) => {
 app.get('/api/admin/students', (req, res) => {
   const session = _adminAuth(req, res);
   if (!session) return;
+  // 🔑 2026-10-15: the /maestro login (this call) remembers the device as a teacher's: games open from it without
+  // asking again (core/level-keys.js). Only when it isn't already (the roster polls every 15 s).
+  const dev = LevelKeys.teacherDevice(req);
+  if (!dev || (dev.teacher ? dev.teacher.uid : '*') !== (session.teacher ? session.teacher.uid : '*')) LevelKeys.rememberTeacher(req, res, session);
   let students = Students.listAll();
   // Filter by the teacher's classroom access codes. Super admin sees
   // everyone (including legacy students without a classroomCode).
@@ -1275,7 +1351,10 @@ app.get('/api/admin/students', (req, res) => {
   // so the roster + push picker can show + group by class.
   students = students.map((s) => {
     const c = _effectiveClassroom(s);
-    return Object.assign({}, s, { classroomId: c ? c.id : null, classroomName: c ? c.name : null });
+    const lv = _levelState(s);
+    const out = Object.assign({}, s, { classroomId: c ? c.id : null, classroomName: c ? c.name : null, levelOpen: lv.open, levelVia: lv.via });
+    delete out.rawLevel; delete out.levelSince; delete out.levelAccess;
+    return out;
   });
   res.json({
     ok: true,
@@ -1440,7 +1519,30 @@ app.get('/api/admin/students/:code', (req, res) => {
     // The Cuaderno shows a badge so the teacher can decide whether
     // to keep, rename, or merge into an existing student.
     isGuestPinJoin: !!rec.isGuestPinJoin,
+    levelKey: _levelState(rec),   // 🔑 2026-10-15: is their level open on their account, and how
   });
+});
+// ── 🔑 2026-10-15 — a kid's level on their account (core/level-keys.js), for the Cuaderno ─────────────────────────
+// s = a record or a Students.listAll() row → { level, levelName, open, via: 'key' | 'teacher' | 'grandfathered' | null }
+function _levelState(s) {
+  const rec = { level: 'rawLevel' in s ? s.rawLevel : s.level, classroomCode: s.classroomCode, firstSeen: s.firstSeen,
+    levelSince: s.levelSince, levelAccess: s.levelAccess };
+  const lvl = LevelKeys.classLevel(rec);
+  const via = lvl ? LevelKeys.recordOpenVia(rec, lvl) : null;
+  return { level: lvl, levelName: lvl ? Levels.info(lvl).name : null, open: !!via, via: via || null };
+}
+// «Desbloquear»: a teacher opens a kid's level on their account (any device, after their next /homework login),
+// e.g. a new kid whose family hasn't got the key yet. Teachers of that kid's class (or the super-admin) only.
+app.post('/api/admin/student/:code/level-access', (req, res) => {
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  const rec = Students.get(req.params.code);
+  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
+  if (!_canSessionTouchStudent(session, rec)) return res.status(403).json({ ok: false, error: 'not in your classroom' });
+  const level = Levels.normalize((req.body || {}).level) || LevelKeys.classLevel(rec);
+  if (!level) return res.status(400).json({ ok: false, error: 'this student has no level yet' });
+  Students.setLevelAccess(rec.code, level, 'teacher');
+  res.json({ ok: true, levelKey: _levelState(rec) });
 });
 
 // Permanently DELETE a student record (super-admin or owning teacher).
@@ -1486,7 +1588,7 @@ app.post('/api/admin/student/:code/message', (req, res) => {
     return res.status(400).json({ ok: false, error: 'text or actionUrl required' });
   }
   const fromName = session.teacher ? session.teacher.displayName : 'Maestro/a';
-  const fromId   = session.teacher ? session.teacher.teacherId   : 'super';
+  const fromId   = session.teacher ? 't:' + session.teacher.uid : 'super';   // 🔒 2026-10-15: never the teacher's code (kids' phones get their inbox)
   const msg = Students.sendMessage(rec.code, { from: fromId, fromName, text, actionType, actionUrl, actionLabel });
   if (!msg) return res.status(400).json({ ok: false, error: 'message rejected' });
   res.json({ ok: true, message: msg });
@@ -1651,7 +1753,7 @@ app.post('/api/admin/broadcast-selected', (req, res) => {
     return res.status(400).json({ ok: false, error: 'text or actionUrl required' });
   }
   const fromName = session.teacher ? session.teacher.displayName : 'Maestro/a';
-  const fromId   = session.teacher ? session.teacher.teacherId   : 'super';
+  const fromId   = session.teacher ? 't:' + session.teacher.uid : 'super';   // 🔒 2026-10-15: never the teacher's code (kids' phones get their inbox)
   // Authorization: regular teachers can only message students in their
   // own classrooms. Super admin can message anyone.
   const ownCodes = session.teacher ? new Set(session.teacher.accessCodes || []) : null;
@@ -1689,7 +1791,7 @@ app.post('/api/admin/broadcast', (req, res) => {
     return res.status(400).json({ ok: false, error: 'text or actionUrl required' });
   }
   const fromName = session.teacher ? session.teacher.displayName : 'Maestro/a';
-  const fromId   = session.teacher ? session.teacher.teacherId   : 'super';
+  const fromId   = session.teacher ? 't:' + session.teacher.uid : 'super';   // 🔒 2026-10-15: never the teacher's code (kids' phones get their inbox)
   const count = Students.broadcastToClassroom(cc, { from: fromId, fromName, text, actionType, actionUrl, actionLabel });
   res.json({ ok: true, sent: count });
 });
@@ -1707,7 +1809,8 @@ app.get('/api/homework/inbox', (req, res) => {
   if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
   if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   rec.lastSeen = Date.now();   // ← presence heartbeat
-  const inbox = Students.getInbox(rec.code, 30);
+  // 🔒 2026-10-15: `from` held the sending teacher's CODE on messages older than today: never sent to a phone
+  const inbox = Students.getInbox(rec.code, 30).map((m) => { const o = Object.assign({}, m); delete o.from; return o; });
   const unread = inbox.filter((m) => !m.readAt).length;
   res.json({ ok: true, inbox, unread });
 });
@@ -1818,7 +1921,7 @@ app.post('/api/admin/gif-push', (req, res) => {
   const gif = _GIF_LIBRARY[String(animId || '').toLowerCase()];
   if (!gif) return res.status(400).json({ ok: false, error: 'unknown animId' });
   const fromName = (session.teacher && session.teacher.displayName) || 'Tu maestra';
-  const fromId = (session.teacher && session.teacher.teacherId) || 'super';
+  const fromId = (session.teacher && 't:' + session.teacher.uid) || 'super';   // 🔒 never the teacher's code
   let sent = 0;
   studentCodes.slice(0, 200).forEach((code) => {
     const rec = Students.get(String(code || '').trim());
@@ -1899,6 +2002,67 @@ app.put('/api/admin/teachers/:teacherId/codes/:code', (req, res) => {
   if (!t) return res.status(400).json({ ok: false, error: 'teacher, code or level not found' });
   res.json({ ok: true, teacher: t });
 });
+// ── 🔑 2026-10-15 «Cambiar mi código» ──────────────────────────────────────────────────────────────────────────────
+// The super-admin code was served to everyone in a comment of the public maestro.js: every teacher can now change
+// their own code (POST /api/admin/my-code { newCode }, signed in with the current one), and the super-admin can change
+// any teacher's (PUT /api/admin/teachers/:teacherId/code). The old code stops at once and is retired for good
+// (core/teachers.js); devices remembered with it ask again; THIS device is remembered with the new one. Codes never
+// reach a log line.
+function _changeTeacherCode(req, res, teacherId, newCode, isSelf) {
+  const out = Teachers.changeCode(teacherId, newCode, (oldId, newId) => CustomAsg.renameTeacher(oldId, newId));
+  if (!out.ok) return res.status(400).json({ ok: false, error: out.error });
+  if (isSelf) LevelKeys.rememberTeacher(req, res, { teacher: Teachers.getByTeacherId(out.teacher.teacherId) });
+  res.json({ ok: true, teacher: out.teacher });
+}
+app.post('/api/admin/my-code', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.teacher) return res.status(400).json({ ok: false, error: 'Entraste con la contraseña de respaldo (WU_ADMIN_PASSWORD): esa se cambia en Render, no aquí.' });
+  _changeTeacherCode(req, res, session.teacher.teacherId, (req.body || {}).newCode, true);
+});
+app.put('/api/admin/teachers/:teacherId/code', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const self = session.teacher && Teachers.getByTeacherId(req.params.teacherId) === session.teacher;
+  _changeTeacherCode(req, res, req.params.teacherId, (req.body || {}).newCode, !!self);
+});
+app.get('/api/admin/teachers/suggest-code', (req, res) => {   // a random code of the usual shape (T-XXXXXXXX)
+  res.set('Cache-Control', 'no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  res.json({ ok: true, code: Teachers.suggestCode() });
+});
+
+// ── 🔑 2026-10-15 «Claves de nivel» (super-admin): see, set and change each level's key (core/level-keys.js) ──────
+app.get('/api/admin/level-keys', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  res.json({ ok: true, goLiveAt: LevelKeys.goLiveAt(), example: LevelKeys.EXAMPLE, levels: LevelKeys.list() });
+});
+app.put('/api/admin/level-keys/:level', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const out = LevelKeys.setKey(req.params.level, (req.body || {}).key);
+  if (!out.ok) return res.status(400).json(out);
+  res.json({ ok: true, goLiveAt: LevelKeys.goLiveAt(), levels: LevelKeys.list() });
+});
+app.post('/api/admin/level-keys/:level/close-devices', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const out = LevelKeys.closeDevices(req.params.level);
+  if (!out.ok) return res.status(400).json(out);
+  res.json({ ok: true, levels: LevelKeys.list() });
+});
+
 // Delete a teacher (super-admin only; cannot delete a super admin)
 app.delete('/api/admin/teachers/:teacherId', (req, res) => {
   const session = _adminAuth(req, res);
@@ -1972,6 +2136,21 @@ function _enterRateLimit(req) {
   }
   return arr.length <= 100;
 }
+// 🔒 2026-10-15 — student codes typed that match no account, per address (see /api/homework/enter)
+const _hwMisses = new Map();
+function _hwCodeMissBlocked(req) {
+  const now = Date.now();
+  return (_hwMisses.get(_clientIp(req)) || []).filter((t) => now - t < 10 * 60 * 1000).length >= 60;
+}
+function _hwCodeMiss(req) {
+  const now = Date.now();
+  const ip = _clientIp(req);
+  const arr = (_hwMisses.get(ip) || []).filter((t) => now - t < 10 * 60 * 1000);
+  arr.push(now);
+  _hwMisses.set(ip, arr);
+  if (arr.length === 60) console.warn('[security] student-code guessing ip=' + ip + ' → logins with unknown codes paused 10 min');
+  if (_hwMisses.size > 5000) for (const [k, v] of _hwMisses) if (!v.length || now - v[v.length - 1] > 10 * 60 * 1000) _hwMisses.delete(k);
+}
 app.post('/api/homework/enter', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   if (!_enterRateLimit(req)) { console.warn('[security] homework/enter flood ip=' + _clientIp(req)); return res.status(429).json({ ok: false, error: 'demasiados intentos, espera un momento' }); }
@@ -1983,6 +2162,13 @@ app.post('/api/homework/enter', (req, res) => {
     if (!studentCode && !String(displayName || '').trim()) {
       return res.status(400).json({ ok: false, error: 'Escribe tu nombre o tu código de estudiante' });
     }
+    // 🔒 2026-10-15: a typed code that matches no account counts against the address (a login opens the levels the
+    // kid's account has open, so student codes must not be found by trying them: 60 misses / 10 min per address; a
+    // class of new kids whose names look like codes stays far below it)
+    if (studentCode && !Students.get(studentCode)) {
+      if (_hwCodeMissBlocked(req)) return res.status(429).json({ ok: false, error: 'demasiados intentos, espera unos minutos' });
+      _hwCodeMiss(req);
+    }
     if (studentCode && !displayName && !Students.get(studentCode)) {
       return res.json({ ok: false, codeNotFound: true, error: 'No encontramos ese código de estudiante' });
     }
@@ -1991,11 +2177,17 @@ app.post('/api/homework/enter', (req, res) => {
     // exactly once (prevents duplicate accounts from forgotten codes).
     const isNew = !(studentCode && Students.get(studentCode));
     const rec = Students.getOrCreate(studentCode, displayName);
+    // 🔑 2026-10-15: the level this account had before this login (a grandfathered level is stamped on the account
+    // below, before the new code may move the kid to another level)
+    const prevLevel = LevelKeys.classLevel(rec);
+    if (prevLevel && LevelKeys.goLiveAt() && LevelKeys.recordOpenVia(rec, prevLevel) === 'grandfathered') {
+      Students.setLevelAccess(rec.code, prevLevel, 'grandfathered');
+    }
     // 🆕 HSK level comes from the ACCESS CODE the kid typed (1001→hsk1,
     // 1002→hsk2 …). Stamped on the record every entry, so moving a kid
     // up is just handing them the next code.
     const level = Teachers.levelForAccessCode(accessCode);
-    try { Students.setLevel(rec.code, level); }
+    try { Students.setLevel(rec.code, level, prevLevel); }
     catch (e) { console.warn('[hw:enter] setLevel failed:', e.message); }
     // Tag with their teacher's classroom code. Guard so a failure here
     // never blocks the kid from entering — they can still do tareas.
@@ -2009,9 +2201,14 @@ app.post('/api/homework/enter', (req, res) => {
     try {
       if (meta && typeof meta === 'object') Students.setMeta(rec.code, meta);
     } catch (e) { console.warn('[hw:enter] setMeta failed:', e.message); }
-    // 🔒 2026-10-15 — the same login opens this kid's level's simulations on this phone (httpOnly session cookie,
-    // core/sim-lock.js); only from their own classroom code, like every other read of their record
-    if (_hwOwnsStudent(req, rec)) SimLock.setSession(req, res, 's', rec.code, level);
+    // 🔒 2026-10-15 — the same login is this kid's session on this phone (httpOnly cookie, core/sim-lock.js); only from
+    // their own classroom code, like every other read of their record. 🔑 Their level opens here when their account has
+    // it open (grandfathered, key saved, «Desbloquear»), and a key this device typed before is saved on the account.
+    let levelOpen = false;
+    if (_hwOwnsStudent(req, rec)) {
+      SimLock.setSession(req, res, 's', rec.code, level);
+      levelOpen = _openLevelOnDevice(req, res, rec, level);
+    }
     res.json({
       ok: true,
       studentCode: rec.code,
@@ -2024,6 +2221,7 @@ app.post('/api/homework/enter', (req, res) => {
       folders: Assignments.levelFolders(level),       // pack-quiz levels: one folder per world (else null)
       daily: Levels.info(level).daily !== false,      // Desafíos (HSK 1 words): off below HSK 1
       base: audioBaseFor(Levels.info(level)),         // its vocabulary base on /audios («Empieza aquí»), or null
+      levelOpen,                                      // 🔑 its levels are open on this phone (else the base asks the key)
       isNew: isNew,                                   // show the code banner once
       assignments: Assignments.listAssignments(level), // portal reshapes by level
       submissions: Students.getAssignmentSubmissions(rec.code, 100),
@@ -2380,7 +2578,7 @@ app.post('/api/admin/student/:code/sentence/edit', (req, res) => {
   // Mutate in place — preserves ts so the entry stays in the same
   // chronological slot. Cap word count + length per word.
   rec.sentencesBuilt[idx].words = words.map((w) => String(w).slice(0, 32)).slice(0, 24);
-  rec.sentencesBuilt[idx].editedBy = session.teacher ? session.teacher.teacherId : 'super';
+  rec.sentencesBuilt[idx].editedBy = session.teacher ? 't:' + session.teacher.uid : 'super';   // 🔒 never the teacher's code
   rec.sentencesBuilt[idx].editedAt = Date.now();
   try { Students._save && Students._save(); } catch (_) {}
   res.json({ ok: true, sentences: Students.getHistory(rec.code, 200) });
@@ -2856,13 +3054,16 @@ function _practiceSpanish(level) {
   const map = _practiceEsCache[level];
   return (py) => map.get(Packs.plain(py)) || '';
 }
-// ── 🔒 Who may open a simulation (2026-10-15, La Ruta Dorada phase 1; core/sim-lock.js) ───────────────────────────
+// ── 🔒 Who may open a simulation (2026-10-15, La Ruta Dorada phase 1; core/sim-lock.js + core/level-keys.js) ──────
 // Until today any PIN of any exam room or just a class access code (1001…) opened every sim, answers on submit
 // included. Now one of these, and only for the sims it covers:
-//   t · a teacher: the /maestro code in X-Admin-Pw (admin turnstile counts wrong codes), or the teacher sim session
-//   r · a kid in a teacher's exam room: that room's PIN, for THAT room's sim, while the room is open
-//   s · an enrolled student (the `dsim` cookie of the /homework login): the sims of their level (core/levels.js)
+//   t · a teacher: the /maestro code in X-Admin-Pw (admin turnstile counts wrong codes), or a remembered teacher device
+//   r · a kid in a teacher's exam room: that room's PIN + the room pass, for THAT room's sim, while the room is open
+//   s · the logged-in kid (the `dsim` cookie of the /homework login) who may use the sim's level (levelAccess: the
+//       level's key on this device or on their account, a teacher's «Desbloquear», or grandfathered): saved on them
+//   k · a device with the level's key and nobody logged in: graded, saved only for the kid whose codes the phone proves
 //   d · the local test harness (?debug=1&direct=1 on this PC only, SimLock.isLocalDev — never on Render)
+// Everyone else gets the level's key screen (core/level-keys.js sendKeyScreen).
 // A teacher's exam room behind a PIN, or null once it is closed («Cerrar la sala», host:end) or 6 h old. HSK_ROOMS is
 // the authority (written for every exam room, kept on the data disk, so a restart or a deploy never closes one);
 // a different live game that happens to reuse the PIN means the old exam room is gone.
@@ -2897,25 +3098,13 @@ function _hskRoomFor(pin) {
 }
 const _simLevel = (simId) => { const m = _simMeta(simId); return m ? Levels.normalize(m.level) : null; };
 const _simsOfLevel = (level) => HskSim.listSims().concat(YctSim.listSims()).filter((s) => Levels.normalize(s.level) === level).map((s) => s.id);
-// The `dsim` session, checked on every request: a student's record must still exist (Students.get brings an archived
-// kid back) and still be of that level; a teacher's code must still exist ('*' = the legacy admin password).
-function _simSession(req) {
-  const s = SimLock.session(req);
-  if (!s) return null;
-  if (s.kind === 's') {
-    const rec = Students.get(s.code);
-    if (!rec) return null;
-    if (rec.level && Levels.normalize(rec.level) !== s.level) return null;   // moved to another level since
-  }
-  if (s.kind === 't' && s.id !== '*' && !Teachers.getByTeacherId(s.id)) return null;
-  return s;
-}
 // → { grant } or { status, error }. countMiss: a PIN that opens nothing counts as a guess (the payload, not the submit).
 function _simGrant(req, simId, countMiss) {
   const level = _simLevel(simId);
   if (!level) return { status: 404, error: 'unknown sim' };
   const h = req.headers || {};
-  if ((h['x-admin-pw'] || h['x-admin-password']) && _adminAuth(req, null)) return { grant: { kind: 't' } };
+  const t = _teacherOf(req);
+  if ((h['x-admin-pw'] || h['x-admin-password']) && t && !t.device) return { grant: { kind: 't' } };
   // a room first: whoever plays in a teacher's room plays as a kid (their grade is saved like everyone's). It takes the
   // room pass that joining the room gave the phone (player:join, so they are on the teacher's roster), not a bare PIN.
   const pin = String((req.query && req.query.pin) || (req.body && req.body.pin) || '').trim();
@@ -2923,14 +3112,15 @@ function _simGrant(req, simId, countMiss) {
   const room = pin ? _hskRoomFor(pin) : null;
   if (room && room.simId === simId && SimLock.roomPassOk(pass, room.pin, simId)) return { grant: { kind: 'r', pin: room.pin } };
   if (pin && !room && countMiss) _pinMiss(req, pin);
-  const sess = _simSession(req);
-  if (sess && sess.kind === 't') return { grant: { kind: 't' } };
-  if (sess && sess.kind === 's' && sess.level === level) return { grant: { kind: 's', studentCode: sess.code } };
+  const a = levelAccess(req, level);     // a teacher device · the logged-in kid's account · this device's key
+  if (a.ok && a.via === 'teacher') return { grant: { kind: 't' } };
+  if (a.ok && a.studentCode) return { grant: { kind: 's', studentCode: a.studentCode } };
+  if (a.ok) return { grant: { kind: 'k' } };
   if (req.query && req.query.debug === '1' && req.query.direct === '1' && SimLock.isLocalDev(req)) return { grant: { kind: 'd' } };
-  if (sess && sess.kind === 's') return { status: 403, error: 'Este simulacro es de otro nivel.' };
-  return { status: 401, error: pin ? 'Esta sala ya cerró. Pídele a tu maestra el PIN nuevo.' : 'Este simulacro es para alumnos de Dralingo. Entra con tu código.' };
+  return { status: 401, level, error: pin ? 'Esta sala ya cerró. Pídele a tu maestra el PIN nuevo.'
+    : 'Escribe la clave de ' + Levels.info(level).name + ' para abrir este simulacro.' };
 }
-// GET /yct-sim.html · /hsk-sim.html — the player, or the friendly locked page (never a raw 401 text)
+// GET /yct-sim.html · /hsk-sim.html — the player, or the level's key screen (never a raw 401 text)
 function _simPageGate(req, res) {
   const page = /yct-sim/i.test(req.path) ? 'yct-sim.html' : 'hsk-sim.html';
   const q = req.query || {};
@@ -2941,17 +3131,19 @@ function _simPageGate(req, res) {
     // whole class behind one address is never locked out; a PIN that opens nothing counts as a guess
     if (_hskRoomFor(pin)) return SimLock.sendPage(res, page);
     _pinMiss(req, pin);
-    return SimLock.sendLocked(res, { reason: 'room' });
+    return LevelKeys.sendKeyScreen(res, { reason: 'room', what: 'sim' });
   }
-  const sess = _simSession(req);
-  if (!sess) return SimLock.sendLocked(res, { reason: 'login' });
-  // a student opening one sim by its link (no room): only their own level's. The old forced links (?access=…) and
-  // the bare page keep their PIN box.
+  // one sim by its link (no room): whoever may use its level; else that level's key screen. The old forced links
+  // (?access=…) keep their PIN box once the page opens.
   const sim = String(q.sim || '').trim();
-  if (sess.kind === 's' && sim && !('access' in q) && _simLevel(sim) && _simLevel(sim) !== sess.level) {
-    return SimLock.sendLocked(res, { reason: 'level', levelName: Levels.info(sess.level).name });
+  const level = sim ? _simLevel(sim) : null;
+  if (level) {
+    if (levelAccess(req, level).ok) return SimLock.sendPage(res, page);
+    return LevelKeys.sendKeyScreen(res, { level, what: 'sim' });
   }
-  return SimLock.sendPage(res, page);
+  // the bare page (its PIN box): a teacher, or anyone with a level open; else the «PIN de tu maestra» card
+  if (_teacherOf(req) || Levels.LEVELS.some((l) => levelAccess(req, l.id).ok)) return SimLock.sendPage(res, page);
+  return LevelKeys.sendKeyScreen(res, { reason: 'pin', what: 'sim' });
 }
 // GET /sim-media/<token>/<file> — a recording or picture, only with a valid link of ITS sim, never cached by anyone.
 function _simMediaFile(req, res) {
@@ -2962,18 +3154,20 @@ function _simMediaFile(req, res) {
   const alive = m.kind === 'r' ? !!(_hskRoomFor(m.pin) && _hskRoomFor(m.pin).simId === m.sim)
     : m.kind === 'w' ? !!(games[m.pin] && games[m.pin].gameType === 'warmup' && games[m.pin].state !== 'ended')
     : m.kind === 'd' ? SimLock.isLocalDev(req)
-    : m.kind === 's' || m.kind === 't';
+    : m.kind === 's' || m.kind === 't' || m.kind === 'k';
   if (!alive) return res.status(403).type('text').send('Forbidden');
   res.type(m.type);
   res.sendFile(m.file.abs, { cacheControl: false, lastModified: false }, (err) => {   // Range requests for the audio
     if (err && !res.headersSent) res.status(err.statusCode || 404).end();
   });
 }
-// The sim session for this phone, from codes it already has (the friendly locked page calls this before showing its
-// card): a student's access code + student code (an existing account only, never a new one), or a teacher's code in
-// X-Admin-Pw. Wrong codes count in a turnstile like the admin one (a class shares one IP: 30 fails / 10 min).
+// The session for this phone from codes it already has (the key screen calls this, silently, before showing its
+// form): a student's access code + student code (an existing account only, never a new one, never re-tagged) — the
+// kid's level opens on this device when their account has it open (grandfathered, key saved, teacher) —, or a
+// teacher's code in X-Admin-Pw (remembers the device as a teacher's). Wrong codes count in a turnstile like the admin
+// one (a class shares one IP: 30 fails / 10 min). /api/sim-access/session is the address the lock branch used.
 const _simSessFails = new Map();
-app.post('/api/sim-access/session', (req, res) => {
+function _accessSession(req, res) {
   res.set('Cache-Control', 'no-store');
   const ip = _clientIp(req);
   const now = Date.now();
@@ -2989,7 +3183,7 @@ app.post('/api/sim-access/session', (req, res) => {
   if (h['x-admin-pw'] || h['x-admin-password']) {
     const s = _adminAuth(req, res);   // writes its own 401 / 429
     if (!s) return;
-    SimLock.setSession(req, res, 't', (s.teacher && s.teacher.teacherId) || '*', '');   // re-checked on every request
+    LevelKeys.rememberTeacher(req, res, s);
     return res.json({ ok: true, kind: 'teacher' });
   }
   const { accessCode, studentCode } = req.body || {};
@@ -2998,9 +3192,60 @@ app.post('/api/sim-access/session', (req, res) => {
   if (!rec) return fail(401, 'No encontramos ese código de estudiante');
   // only a kid already tagged with this classroom code (an untagged old account logs in once at /homework, which tags it)
   if (!rec.classroomCode || !_hwOwnsStudent(req, rec)) return fail(403, 'no autorizado');
-  const level = Teachers.levelForAccessCode(accessCode);
+  const level = LevelKeys.classLevel(rec);
   SimLock.setSession(req, res, 's', rec.code, level);
-  res.json({ ok: true, kind: 'student', level, levelName: Levels.info(level).name, sims: _simsOfLevel(level) });
+  const open = _openLevelOnDevice(req, res, rec, level);
+  res.json({ ok: true, kind: 'student', level, levelName: Levels.info(level).name, open, sims: _simsOfLevel(level) });
+}
+app.post(['/api/level-access/session', '/api/sim-access/session'], _accessSession);
+// A logged-in kid (their own class code): a grandfathered level is stamped on the account (it stays theirs if they
+// move up later), the key this device already typed is saved on the account (any device from now on), and a level
+// open on the account opens on this device (a year). → is the level open for this kid on this device?
+function _openLevelOnDevice(req, res, rec, level) {
+  if (!rec || !level) return false;
+  if (LevelKeys.goLiveAt() && LevelKeys.recordOpenVia(rec, level) === 'grandfathered') Students.setLevelAccess(rec.code, level, 'grandfathered');
+  const onDevice = LevelKeys.deviceOpen(req, level);
+  if (onDevice) Students.setLevelAccess(rec.code, level, 'key');
+  const open = !!LevelKeys.recordOpenVia(rec, level);
+  if (open && !onDevice) LevelKeys.rememberDevice(req, res, level);
+  return open || onDevice;
+}
+// ── 🔑 The key screen's «Entrar»: POST { level, key } (core/level-keys.js) ─────────────────────────────────────────
+// Right key → this device keeps the level a year (and the logged-in kid's account keeps it on every device). Wrong →
+// a kind message; 5 wrong per device / 30 per address in 15 min → a wait. Never logged, never echoed.
+app.post('/api/level-key', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  const level = Levels.normalize((req.body || {}).level);
+  if (!level) return res.status(400).json({ ok: false, error: 'Ese nivel no existe.' });
+  const name = Levels.info(level).name;
+  const ip = _clientIp(req);
+  const dev = LevelKeys.deviceId(req, res);
+  const wait = LevelKeys.guessWait(ip, dev);
+  if (wait) {
+    return res.status(429).json({ ok: false, wait, error: 'Ya fueron muchos intentos. Espera ' + wait + (wait === 1 ? ' minuto' : ' minutos') +
+      ' y vuelve a intentarlo con la clave del mensaje de tu maestra.' });
+  }
+  const typed = String((req.body || {}).key || '').slice(0, 80);
+  if (!LevelKeys.normalizeKey(typed)) return res.status(400).json({ ok: false, error: 'Escribe la clave.' });
+  if (!LevelKeys.list().some((l) => l.id === level && l.key)) {
+    return res.status(401).json({ ok: false, error: name + ' todavía no tiene clave. Tu maestra te la enviará muy pronto.' });
+  }
+  if (!LevelKeys.keyFits(level, typed)) {
+    const other = LevelKeys.levelOfKey(typed);
+    if (other) return res.status(401).json({ ok: false, otherLevel: other, error: 'Esa clave es de ' + Levels.info(other).name + '. Aquí va la clave de ' + name + '.' });
+    LevelKeys.noteWrong(ip, dev);
+    return res.status(401).json({ ok: false, error: 'Esa clave no es. Revísala en el mensaje de tu maestra.' });
+  }
+  LevelKeys.clearDevice(dev);
+  LevelKeys.rememberDevice(req, res, level);
+  const stu = _studentOf(req);                        // logged in at /homework → saved on the account too
+  if (stu) Students.setLevelAccess(stu.code, level, 'key');
+  res.json({ ok: true, level, levelName: name, saved: !!stu });
+});
+// Which levels this device may use (the /audios library draws its locks with it): { levels: { yct1: true, … } }
+app.get('/api/level-access', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  res.json({ ok: true, levels: LevelKeys.accessMap(req), teacher: !!_teacherOf(req) });
 });
 
 // Fetch a simulation's payload (answers stripped by the engine), its media as signed /sim-media/ links, plus a
@@ -3039,8 +3284,20 @@ app.post('/api/hsk-sim/:simId/submit', (req, res) => {
   const { answers, displayName } = req.body || {};
   // a logged-in student on their own (no room) saves on their own record, whatever the page sent (their session, or
   // the code inside their ticket)
-  const studentCode = grant.kind === 's' && grant.studentCode ? grant.studentCode : (req.body || {}).studentCode;
+  let studentCode = grant.kind === 's' && grant.studentCode ? grant.studentCode : (req.body || {}).studentCode;
   if (grant.kind === 's' && !grant.studentCode) return res.status(401).json({ ok: false, locked: true, error: 'Vuelve a entrar con tu código.' });
+  // 🔑 'k' (2026-10-15): a device with the level's key and nobody logged in. The grade lands on a record only when the
+  // phone proves whose it is like homework does (the kid's class code + student code, an existing tagged account);
+  // otherwise it is graded and not saved (never on a classmate's record by a typed code).
+  if (grant.kind === 'k') {
+    const b = req.body || {};
+    const r = b.studentCode ? Students.get(String(b.studentCode).trim().toUpperCase()) : null;
+    if (r && r.classroomCode && Assignments.isAccessCodeValid(b.accessCode) && _hwOwnsStudent(req, r)) studentCode = r.code;
+    else {
+      const rg = _simGrade(simId, answers || {});
+      return rg ? res.json({ ok: true, result: rg, saved: false, guest: true }) : res.status(404).json({ ok: false, error: 'unknown sim' });
+    }
+  }
   // 🆕 Same guest-provisioning + name recovery as heartbeat. Without
   // this, the kid's exam result would land under code-as-name instead
   // of their actual chosen name. Match the heartbeat logic exactly.
@@ -4337,8 +4594,48 @@ function audioBaseFor(info) {
 }
 app.get(['/audios', '/audio', '/audios/:id', '/audio/:id'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  // 🔑 2026-10-15: a level's base (/audios/yct1-base, /audios/hsk2-base…) opens only for whoever may use that level;
+  // everyone else gets the level's key screen right here (after the key, the same address shows the base). Homework
+  // audio pages (/audios/<homework id>) and the folders stay open: the printed PDFs link to them.
+  const b = req.params.id ? _baseOf(req.params.id) : null;
+  if (b && !LevelKeys.access(req, b.level).ok) return LevelKeys.sendKeyScreen(res, { level: b.level, what: 'base' });
   res.sendFile(_emPath.join(__dirname, 'public', 'audios.html'));
 });
+// ── 🔑 La Base files: /base-media/<base id>/<file> (2026-10-15) ────────────────────────────────────────────────────
+// protected/base/<base id>/ (base.json, the clips, pics/) and protected/study/<level>-vocabulario.pdf (as book.pdf).
+// Checked on every file (the level's device key cookie or the logged-in kid's account, core/level-keys.js), private to
+// the phone (never kept by Cloudflare: not under /assets/, Cloudflare-CDN-Cache-Control no-store), and the clips and
+// pictures carry their ?v= content stamps, so the phone may keep them a week.
+const BASE_DIR = path.join(__dirname, 'protected', 'base');
+const STUDY_DIR = path.join(__dirname, 'protected', 'study');
+const BASE_TYPES = { '.mp3': 'audio/mpeg', '.webp': 'image/webp', '.json': 'application/json; charset=utf-8', '.pdf': 'application/pdf', '.jpg': 'image/jpeg', '.png': 'image/png' };
+// 'yct1-base' / 'HSK2-base' (the stored id's old address) → { id: 'newhsk1-base', level: 'hsk2', pack: 'newhsk1' } or null
+function _baseOf(raw) {
+  let id = String(raw || '').toLowerCase();
+  Levels.LEVELS.forEach((l) => { if (l.pack && l.pack !== l.id && id.indexOf(l.id + '-') === 0) id = l.pack + id.slice(l.id.length); });
+  const l = Levels.LEVELS.find((x) => x.base && x.base === id);
+  return l ? { id, level: l.id, pack: l.pack } : null;
+}
+function _baseMediaFile(req, res) {
+  res.set({ 'CDN-Cache-Control': 'no-store', 'Cloudflare-CDN-Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+    'X-Robots-Tag': 'noindex', 'Cross-Origin-Resource-Policy': 'same-origin' });
+  const b = _baseOf(req.params.base);
+  const rest = String(req.params[0] || '');
+  if (!b || !/^(pics\/)?[A-Za-z0-9_-]+\.(mp3|webp|json|pdf|jpg|png)$/.test(rest)) {
+    return res.status(404).set('Cache-Control', 'no-store').type('text').send('Not found');
+  }
+  if (!LevelKeys.access(req, b.level).ok) {
+    return res.status(401).set('Cache-Control', 'private, no-store').json({ ok: false, locked: true, level: b.level });
+  }
+  const file = rest === 'book.pdf' ? path.join(STUDY_DIR, b.pack + '-vocabulario.pdf') : path.join(BASE_DIR, b.id, rest);
+  const ext = path.extname(file).toLowerCase();
+  res.set('Cache-Control', ext === '.json' ? 'private, no-cache' : 'private, max-age=604800');
+  res.type(BASE_TYPES[ext] || 'application/octet-stream');
+  if (rest === 'book.pdf') res.set('Content-Disposition', 'inline; filename="' + b.pack + '-vocabulario.pdf"');
+  res.sendFile(file, { cacheControl: false }, (err) => {   // Range requests for the clips
+    if (err && !res.headersSent) res.status(err.statusCode || 404).set('Cache-Control', 'no-store').type('text').send('Not found');
+  });
+}
 
 // Record the server boot time so the heartbeat above can be compared
 // across deploys. If your disk is genuinely persistent, the heartbeat
@@ -4429,22 +4726,20 @@ const COUNTDOWN_MS = 3500;
 // to every player phone. Color-coded by category so kids can see how the
 // pinyin words map to Spanish word-for-word.
 // No timer, no scoring, no game loop — teacher exits when ready.
-const WU_ADMIN_PASSWORD = process.env.WU_ADMIN_PASSWORD || 'draly2026';
-
 // 2026-05-27: unified admin password gate. ANY of the following grants
 // admin powers in the live-game socket handlers below:
-//   - WU_ADMIN_PASSWORD (legacy default 'draly2026')
-//   - Any teacherId from teachers.json (so the super admin EMAAR2026 +
-//     every regular teacher can host their own warmup sessions, save
-//     presets, see the Cuaderno, etc., using ONE code — same one they
-//     use to log into /maestro)
+//   - WU_ADMIN_PASSWORD (the legacy password: the Render env var only, no
+//     default since 2026-10-15, see _legacyPwOk)
+//   - Any teacherId from teachers.json (so the super admin + every regular
+//     teacher can host their own warmup sessions, save presets, see the
+//     Cuaderno, etc., using ONE code — same one they use to log into /maestro)
 //
 // This solves user feedback 2026-05-27: "I should be super admin and
 // have that privilege everywhere — don't make me re-enter passwords."
 function isAdminPassword(password) {
   if (!password) return false;
   const p = String(password).trim();
-  if (_safeEqual(p, WU_ADMIN_PASSWORD)) return true;   // constant-time
+  if (_legacyPwOk(p)) return true;   // constant-time
   return !!Teachers.getByTeacherId(p);
 }
 // True ONLY for super-admin credentials: the legacy WU_ADMIN_PASSWORD, OR a
@@ -4453,7 +4748,7 @@ function isAdminPassword(password) {
 function isSuperAdminPassword(password) {
   if (!password) return false;
   const p = String(password).trim();
-  if (_safeEqual(p, WU_ADMIN_PASSWORD)) return true;   // constant-time
+  if (_legacyPwOk(p)) return true;   // constant-time
   const t = Teachers.getByTeacherId(p);
   return !!(t && t.isSuperAdmin);
 }
@@ -6732,16 +7027,22 @@ io.on('connection', (socket) => {
     }
     const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'halcon', 'warmup', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
-    // 🔒 2026-10-15 — an exam room opens a simulation to every kid with its PIN: only a teacher opens one (host-hsk sends
-    // the /maestro code; wrong codes count in the admin turnstile). Checked before anything is created.
-    if (type === 'hsksim') {
+    // 🔑 2026-10-15 — creating ANY room needs a teacher (his words: "maestros crear un juego needs first time key access,
+    // then it's safe"): a remembered teacher device (the dtd cookie the page's connection carried: a /maestro login
+    // or the host page's teacher-key screen), or the teacher's code in `password` (host-hsk, the key screen's first
+    // create, bots and test scripts). Never by internet address. Wrong codes count in the admin turnstile. An exam room
+    // also opens a simulation to every kid with its PIN. Checked before anything is created.
+    {
       const ip = _socketIp(socket);
-      if (_adminFailCount(ip) >= 10) return cb({ error: 'demasiados intentos, espera unos minutos' });
-      if (!isAdminPassword(opts.password)) {
-        _adminNoteFail(ip);
-        return cb({ error: 'Falta tu código de maestra: abre la simulación desde /maestro.' });
+      const viaDevice = !!LevelKeys.teacherDevice(socket.handshake.headers || {});
+      if (!viaDevice) {
+        if (_adminFailCount(ip) >= 10) return cb({ error: 'Muchos intentos. Espera 10 minutos y vuelve a intentarlo.', needTeacherKey: true });
+        if (!isAdminPassword(opts.password)) {
+          if (opts.password) _adminNoteFail(ip);
+          return cb({ error: 'Falta tu código de maestra: escríbelo una vez en este aparato.', needTeacherKey: true });
+        }
       }
-      if (!_simPayload(String(opts.simId || 'hsk1-sim1'))) return cb({ error: 'unknown simId' });
+      if (type === 'hsksim' && !_simPayload(String(opts.simId || 'hsk1-sim1'))) return cb({ error: 'unknown simId' });
     }
     const pin = genPin();
     const defaultDuration =

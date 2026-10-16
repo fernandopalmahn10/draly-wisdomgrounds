@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es" class="ks-html">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#5a1010">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/app/favicon-32.png">
+  <link rel="apple-touch-icon" href="/assets/app/apple-touch-icon.png">
+  <title>Clave de {{levelName}} · Dralingo</title>
+  <link rel="preload" href="/assets/fonts/study/noto-sans-800.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/study/noto-sans-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/key-screen.css?v=20261015a">
+  <!-- 🔑 2026-10-15 (La Ruta Dorada): what a visitor without the level's key sees on a locked page (La Base
+       /audios/<level>-base, a simulation /yct-sim.html · /hsk-sim.html). Served by server.js in place of the locked
+       page (core/level-keys.js sendKeyScreen fills {{levelName}} and the state below), never cached. The key is typed
+       once: the server remembers this device (httpOnly cookie) and the same address then opens. Before showing the
+       form it tries, once, the codes this phone already saved (the /homework login, or a teacher's /maestro code). -->
+</head>
+<body class="ks-root" data-level-key="locked">
+  <div class="ks-layout">
+    <header class="ks-stage">
+      <p class="ks-word" translate="no">DRALINGO</p>
+      <div class="ks-hero">
+        <p class="ks-bubble" lang="zh-Latn-pinyin" translate="no">Nǐ hǎo!</p>
+        <img class="ks-dragon" src="/assets/dralingo/hello.webp" alt="Dralingo te saluda" width="426" height="480" decoding="async">
+        <div class="ks-seal" id="ks-seal" aria-hidden="true">
+          <svg class="ks-seal-lock" viewBox="0 0 24 24"><path class="ks-shackle" d="M8 11.5V8a4 4 0 0 1 8 0v3.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><rect x="4.5" y="11" width="15" height="10.5" rx="2.6" fill="currentColor"/></svg>
+          <span class="ks-seal-name" id="ks-seal-name">{{levelName}}</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="ks-sheet">
+      <div class="ks-inner">
+        <h1 class="ks-title" id="ks-title">Escribe la clave de {{levelName}}</h1>
+        <p class="ks-lede" id="ks-lede">Está en el mensaje de tu maestra. Se escribe una sola vez: este teléfono la recuerda.</p>
+
+        <form class="ks-form" id="ks-form" novalidate>
+          <label class="ks-label" for="ks-key">Clave de {{levelName}}</label>
+          <div class="ks-field">
+            <input class="ks-input" id="ks-key" name="key" type="text" inputmode="text" autocomplete="off" autocapitalize="characters"
+              autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="40" aria-describedby="ks-help ks-err" required>
+          </div>
+          <p class="ks-help" id="ks-help">Es una palabra y un número, como <b translate="no">PANDA-12</b>. Mayúsculas o minúsculas, da igual.</p>
+          <p class="ks-error" id="ks-err" role="alert"></p>
+          <button class="ks-go" id="ks-go" type="submit">Entrar</button>
+        </form>
+        <a class="ks-go" id="ks-pin" href="/" hidden>Escribir el PIN</a>
+
+        <section class="ks-route" id="ks-route" aria-labelledby="ks-route-title">
+          <h2 class="ks-route-title" id="ks-route-title">La clave abre los tres niveles de {{levelName}}:</h2>
+          <ol class="ks-steps">
+            <li class="ks-step"><span class="ks-step-n" aria-hidden="true">1</span>La Base</li>
+            <li class="ks-step"><span class="ks-step-n" aria-hidden="true">2</span>El Entrenamiento</li>
+            <li class="ks-step"><span class="ks-step-n" aria-hidden="true">3</span>El Simulacro Dorado</li>
+          </ol>
+        </section>
+
+        <p class="ks-alt" id="ks-alt">¿Ya tienes tu código de alumno? <a id="ks-login" href="/homework.html">Entra a Mis Tareas</a> y vuelves aquí.</p>
+        <p class="ks-alt" id="ks-nokey">¿No tienes la clave? Pídesela a tu maestra o maestro de Dralingo.</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+    var S = /*LEVEL_KEY_STATE*/null || { level: '', levelName: '', what: 'base', reason: 'key' };
+    var $ = function (id) { return document.getElementById(id); };
+    var root = document.body;
+    var here = location.pathname + location.search;
+    var ls = function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var name = S.levelName || 'tu nivel';
+    var form = $('ks-form'), input = $('ks-key'), go = $('ks-go'), err = $('ks-err');
+
+    if (name.length > 6) $('ks-seal-name').classList.add('is-long');
+    $('ks-login').href = '/homework.html?next=' + encodeURIComponent(here);
+
+    // ── a room that closed, or the bare exam page: no key here, the PIN on the home card ──
+    function noKey(title, lede, button) {
+      $('ks-title').textContent = title;
+      $('ks-lede').textContent = lede;
+      form.hidden = true;
+      $('ks-route').hidden = true;
+      $('ks-nokey').hidden = true;
+      $('ks-pin').hidden = false;
+      $('ks-pin').textContent = button;
+      if (!S.level) $('ks-seal').hidden = true;
+      $('ks-alt').innerHTML = '¿Quieres repasar? <a href="/audios">Abre Audios y vocabulario</a>.';
+      document.title = title + ' · Dralingo';
+    }
+    if (S.reason === 'room') { noKey('Esta sala ya cerró', 'Pídele a tu maestra el PIN nuevo y vuelve a entrar.', 'Escribir el PIN nuevo'); return; }
+    if (S.reason === 'pin') { noKey('¿Vas a un examen con tu clase?', 'Escribe el PIN que te da tu maestra en la pantalla de inicio.', 'Escribir el PIN'); return; }
+    if (S.what === 'sim') {
+      $('ks-lede').textContent = 'Este simulacro es para alumnos de Dralingo. La clave está en el mensaje de tu maestra y se escribe una sola vez en este teléfono.';
+    }
+
+    function setError(msg) {
+      err.textContent = '';
+      if (!msg) { input.removeAttribute('aria-invalid'); return; }
+      // the text node after a tiny pause, so a screen reader repeats the same message on a second wrong try
+      setTimeout(function () {
+        err.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/>' +
+          '<path d="M12 7v6" stroke="#f8e3dc" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.5" fill="#f8e3dc"/></svg>';
+        err.appendChild(document.createTextNode(msg));
+      }, 30);
+      input.setAttribute('aria-invalid', 'true');
+      if (!reduce) { root.classList.remove('is-shake'); void root.offsetWidth; root.classList.add('is-shake'); }
+    }
+    function busy(on, label) {
+      go.disabled = !!on;
+      go.setAttribute('aria-busy', on ? 'true' : 'false');
+      go.textContent = label || 'Entrar';
+    }
+    function opened(text) {
+      root.classList.add('is-open');
+      busy(true, text || '¡Listo! Abriendo…');
+      setTimeout(function () { location.reload(); }, reduce ? 200 : 700);
+    }
+    input.addEventListener('input', function () { if (input.getAttribute('aria-invalid')) setError(''); });
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var key = input.value.trim();
+      if (!key) { setError('Escribe la clave del mensaje de tu maestra.'); input.focus(); return; }
+      setError('');
+      busy(true, 'Revisando…');
+      fetch('/api/level-key', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level: S.level, key: key }) })
+        .then(function (r) { return r.json().catch(function () { return null; }); })
+        .then(function (d) {
+          if (d && d.ok) { opened(); return; }
+          busy(false);
+          setError((d && d.error) || 'Esa clave no es. Revísala en el mensaje de tu maestra.');
+          input.focus();
+          try { input.select(); } catch (_) {}
+        })
+        .catch(function () { busy(false); setError('No hay conexión. Revisa tu internet y vuelve a intentarlo.'); });
+    });
+
+    // ── once per visit: the codes this phone already saved open the level without typing anything ──
+    var TRY = 'draly_levelkey_try';
+    function triedJustNow() {
+      try { var t = JSON.parse(sessionStorage.getItem(TRY) || 'null'); return !!(t && t.url === here && Date.now() - t.at < 20000); }
+      catch (e) { return false; }
+    }
+    function post(body, teacher) {
+      var h = { 'Content-Type': 'application/json' };
+      if (teacher) h['X-Admin-Pw'] = encodeURIComponent(teacher);
+      return fetch('/api/level-access/session', { method: 'POST', headers: h, body: JSON.stringify(body || {}), credentials: 'same-origin' })
+        .then(function (r) { return r.json(); }).catch(function () { return null; });
+    }
+    var ac = ls('dralyHwAccessCode'), sc = ls('dralyStudentCode');
+    var teacher = ls('dralyMaestroPw') || ls('mochi.maestroPw');
+    var ready = function () {
+      root.classList.remove('is-checking');
+      busy(false);
+      if (window.matchMedia && matchMedia('(pointer: fine)').matches) input.focus();   // no keyboard popping over a phone
+    };
+    if (triedJustNow() || (!(ac && sc) && !teacher)) { ready(); return; }
+    try { sessionStorage.setItem(TRY, JSON.stringify({ url: here, at: Date.now() })); } catch (e) {}
+    root.classList.add('is-checking');
+    busy(true, 'Un momento…');
+    var fits = function (d) { return d && d.ok && (d.kind === 'teacher' || (d.open && d.level === S.level)); };
+    ((ac && sc) ? post({ accessCode: ac, studentCode: sc }) : Promise.resolve(null)).then(function (d) {
+      if (fits(d)) { opened('Abriendo…'); return; }
+      if (!teacher) { ready(); return; }
+      post({}, teacher).then(function (t) { if (fits(t)) opened('Abriendo…'); else ready(); });
+    });
+  })();
+  </script>
+</body>
+</html>

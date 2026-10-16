@@ -107,4 +107,12 @@ function grade(rec, answers) {
   return { score, total, breakdown };
 }
 
-module.exports = { create, listForTeacher, listAll, listForStudent, get, remove, grade };
+// 2026-10-15 «Cambiar mi código»: a teacher's assignments stored their old code; they follow the new one
+function renameTeacher(oldId, newId) {
+  let n = 0;
+  Object.values(store.items || {}).forEach((a) => { if (a && a.teacherId && a.teacherId === oldId) { a.teacherId = newId; n++; } });
+  if (n) scheduleSave();
+  return n;
+}
+
+module.exports = { create, listForTeacher, listAll, listForStudent, get, remove, grade, renameTeacher };

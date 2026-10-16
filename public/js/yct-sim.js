@@ -78,7 +78,7 @@
   if (roomPin && studentCode && params.get('direct') !== '1') setTimeout(tryEnter, 60);
 
   // 🔒 2026-10-15 (La Ruta Dorada): a logged-in student opens one simulation by its link (?sim=…, no room PIN) and
-  // takes it on their own. The server only serves this page to a student of that level (or a teacher), and the
+  // takes it on their own. The server only serves this page to whoever may use that level (its key, core/level-keys.js), and the
   // payload, files and grade follow the same session (core/sim-lock.js). Old forced links (?access=…) keep the PIN box.
   const debugDirect = params.get('debug') === '1' && params.get('direct') === '1';
   const solo = !!simId && !roomPin && !params.has('access') && !debugDirect;
@@ -780,12 +780,16 @@
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
       // ticket: the server's signed «this phone took this sim», so the grade is saved even if the room closed meanwhile
-      body: JSON.stringify({ studentCode, answers, pin: roomPin, displayName: realName() || undefined, ticket: sim.ticket || undefined }),
+      // 🔑 solo with only the level's key on this phone: the phone's saved class code proves whose grade it is
+      body: JSON.stringify({ studentCode, answers, pin: roomPin, displayName: realName() || undefined, ticket: sim.ticket || undefined,
+        accessCode: solo ? (function () { try { return localStorage.getItem('dralyHwAccessCode') || undefined; } catch (_) { return undefined; } })() : undefined }),
     })
       .then((r) => r.json())
       .then((d) => {
         if (!d || !d.ok) { $('y-res-saving').textContent = 'No se pudo guardar la nota: ' + ((d && d.error) || ''); return; }
-        $('y-res-saving').textContent = d.saved === false ? 'Vista de maestra · la nota no se guarda' : '✓ Nota guardada';
+        $('y-res-saving').textContent = d.saved === false
+          ? (d.guest ? 'Tu nota no se guardó: entra en Mis Tareas con tu código para que se guarde la próxima vez.' : 'Vista de maestra · la nota no se guarda')
+          : '✓ Nota guardada';
         result = d.result;
         renderResults();
       })
