@@ -55,7 +55,8 @@ const KEY_COOKIE = (level) => 'dlv_' + level;
 const KEY_TTL = 365 * 24 * 3600e3;            // browsers keep a cookie ~400 days at most
 const TEACHER_COOKIE = 'dtd';
 const TEACHER_TTL = 90 * 24 * 3600e3;         // his "first time key access, then it's safe" (~90 days)
-const DEVICE_COOKIE = 'dkd';                  // a random id per browser, only to count wrong guesses per device
+const DEVICE_COOKIE = 'dkd';                  // a random id per browser: wrong guesses per device, and El Entrenamiento's
+                                              // phone id (a key-only phone's rounds and score proofs, core/entrenamiento.js)
 const EXAMPLE = 'PANDA-12';                   // the shape the key screen shows: never accepted as a real key
 const DEV_MAX = 5, IP_MAX = 30, WINDOW = 15 * 60 * 1000;
 

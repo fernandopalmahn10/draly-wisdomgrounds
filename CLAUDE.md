@@ -153,7 +153,8 @@ the checklist for any new game mode.
   server is Cloudflare (else the last X-Forwarded-For entry), IPv6 per /64. A code retired by «Cambiar mi código» is
   refused but never counted, and a remembered teacher device is never locked out by its school's address.
 - **Open on purpose**: the HSK 1 trainer in /homework (built from the Old HSK 1 sims) still answers any HSK 1 class
-  code, because homework stays as it is; El Entrenamiento (phase 4) replaces it behind the key.
+  code, because homework stays as it is; El Entrenamiento (phase 4, built) is the practice behind the key and never
+  uses that trainer's or the tareas' endpoints.
 - **In class, no key for kids**: a kid in a teacher's live room (PIN) takes what the teacher launches (the room pass).
   **Creating a game (hosting) needs the teacher's key the first time on that device**, then THAT DEVICE is remembered
   (~90 days; his words: "maestros crear un juego needs first time key access, then it's safe"): socket `host:create`
@@ -177,6 +178,14 @@ the checklist for any new game mode.
   Entrenamiento opens world by world** (all seals of a world in La Base → that same world opens in El Entrenamiento);
   **the Simulacro Dorado stays open with the key until El Entrenamiento is live** (phase 4), then it opens when every
   world is practised with 70 % or more (the % changeable in /maestro) or by the teacher's «Desbloquear».
+- **El Entrenamiento (his picks 2026-10-16, phase 4)**: practice worlds = the level's curriculum pack worlds (world N ↔
+  La Base world N); **«Pinyin básico» (HSK 1) is open from the start; «Simulacro del examen» opens when all worlds are
+  ready** (the bridge to the Dorado); only the regular worlds count for the Dorado's % rule. **Quick rounds with game
+  touches**: one question at a time with audio, instant right/wrong showing the right answer, streaks, Dralingo and the
+  gang reacting, stars and a % per round (~10 questions); the best % per world counts. **A key-only phone may practise**:
+  scores stay on the phone and join the kid's account at the first login (like seals); only account scores open the
+  Dorado. **The Dorado rule switches on at launch**: new kids earn the Dorado by practising; kids who already took a
+  simulation keep it open; «Desbloquear» still opens anyone.
 - **Built (phase 3, 2026-10-16): progress on the kid's account, one unlock engine.** `core/ruta-progress.js` is the
   ONLY place that decides a step (the key is still the level's door: `LevelKeys.access` first, the engine after it).
   The record keeps, per stored level id, `rec.ruta[level] = { s: '1-17,20' (the seals as ranges of word numbers of
@@ -190,28 +199,63 @@ the checklist for any new game mode.
   from another account's mirror. The page asks again when it comes back into view, retries (capped) when offline and
   sends what waits on `pagehide`. «Salir» on /homework ends the kid's session on that phone (`/api/homework/logout`).
   Word numbers are checked against the level's base; a save counts per kid (90 a minute), a read per address (4000 per
-  5 minutes): a school Wi-Fi full of kids is never slowed. «El Entrenamiento está activo» (`trainingLive`) and the
-  Dorado % (`doradoPct`, 50-100) live in `data/ruta-settings.json` (gitignored; super admin, /maestro → Teachers, under
-  «Claves de nivel»): the switch stays OFF and disabled until phase 4 sets `TRAINING_BUILT = true` in
-  core/ruta-progress.js (tests: env `DRALY_TRAINING_BUILT=1`), so nobody can lock the Dorado behind practice that
-  does not exist yet; a level without a La Base always opens its Dorado with the key. Phase 4 calls `recordPractice(code,
-  level, world, pct)` (best % per world) and puts `trainWorldOpen(a, rec, level, world)` / `doradoOpen(a, rec, level)`
-  behind `LevelKeys.access` at its doors (the sim players still ask only the key: when the switch goes ON, phase 4 adds
-  `doradoOpen` to `_simGrant` for solo kids); its worlds are the base's worlds by number (the packs' extra worlds,
-  «Simulacro del examen» and HSK 1's «Pinyin básico», have no base world: phase 4 decides). /maestro: a kid's profile
+  5 minutes): a school Wi-Fi full of kids is never slowed. The Dorado rule (`trainingLive`, in /maestro «El Simulacro
+  Dorado se gana practicando», was «El Entrenamiento está activo») and the Dorado % (`doradoPct`, 50-100) live in
+  `data/ruta-settings.json` (gitignored; super admin, /maestro → Teachers, under «Claves de nivel»); phase 4 set
+  `TRAINING_BUILT = true` and switched the rule ON at its launch (see «Built (phase 4)» below); a level without a La
+  Base always opens its Dorado with the key. Phase 4 calls `recordPractice(code, level, world, pct)` (best % per world)
+  and puts the world doors / `doradoOpen(a, rec, level)` behind `LevelKeys.access` (`_simGrant` for solo kids); its
+  worlds are the base's worlds by number, plus the packs' extra worlds by name (`pinyin`, `simulacro`). /maestro: a kid's profile
   shows La Ruta Dorada per level (seals per world, El Entrenamiento worlds and who opened them, the Dorado rule in force,
   best % per sim) with «Desbloquear» / «Volver a bloquear» per world, all worlds and the Dorado («Volver a bloquear»
   undoes only a teacher's opening: a world the kid's seals opened stays open); the roster shows a thin gold bar of the
   class level's seals (seals count as roster activity). `node scripts/test-ruta-progress.js` (port 4420) must pass.
+- **Built (phase 4, 2026-10-16): El Entrenamiento.** `core/entrenamiento.js` (worlds, rounds, grading, voice, proofs) +
+  `public/js/entrenamiento.js` / `css/entrenamiento.css`, drawn inside La Ruta Dorada's page: `/audios/<level>/entrenamiento`
+  (the worlds, the Dorado meter) and `/audios/<level>/entrenamiento/<world>` (start card → round → stars), both behind
+  `LevelKeys.access` (server.js: the key screen otherwise). Worlds: the pack's regular worlds BY ORDER = La Base's worlds
+  (checked by shared words in the test; HSK 1's pack names differ, the page shows La Base's names), `pinyin` first
+  (always open), `simulacro` last (open once every regular world is open, or a teacher device). A world opens with the
+  account's seals, a teacher's «Desbloquear», or the seals the phone sends (`s=1-17,20`: seals are a free tap, so a
+  phone's own count too). API (all behind the key): `GET /api/ruta/train?level=&s=`, `POST /api/ruta/train/round`
+  (~10 questions mixed by kind, no two neighbours on the same word, answers shuffled, NO right answer in it),
+  `POST …/answer` (the first answer counts; the right one comes back only now), `POST …/finish` (the % counted on the
+  server; the logged-in kid's best via `recordPractice`; `pinyin`/`simulacro` stored by name and never counted for the
+  Dorado; a key-only phone gets a `tp` proof signed with SimLock and bound to its `dkd` cookie, kept in
+  `localStorage draly_train_<level>` {who, best, proofs, held}), `GET …/voice/<round>/<i>/<part>` (ask = the pinyin the
+  screen already shows, o0-o3 = the options read one by one while their tile lights up, after = the right answer /
+  the filled sentence / the reply, only once answered; La Base's own clips when the word or sentence is in the book,
+  else the platform voice through `_ttsServe` with hanzi made on the server (`speechText`, context rules for
+  hao/shi/zai/he/na…) in "trusted" mode: no per-address cap, 240 new voices a minute for everyone, one synthesis per
+  text at a time), `POST …/scores` (a key-only phone's proofs join the account at login: `who`/409 like the seals).
+  Rounds live in memory (3 h, one per kid/phone per world (a new one ends the open one: no second tab to peek), 3 per
+  kid/phone, 400 per address, 3000 in all; a deploy ends them: the page says «Esta ronda ya terminó»). Pictures travel
+  as `/api/ruta/train/pic/<round>/<i>` (the pack names a word's picture after its pinyin: the file name would be the
+  answer). A proof joins ONE account (`data/train-proofs.json`: round → account, gitignored). Only a new round gives a
+  phone its `dkd` id; the rate counters are swept on a timer. The never-leaky rule: no `/api/homework/pack-check`,
+  `/api/sets` or `/api/packs` from El Entrenamiento (the test greps the page). His pick kept on purpose: «Simulacro del
+  examen» opens with the seals (a free tap), before the Dorado, and shows each answer after it is given (its items are
+  the official sims' questions; the same rounds are New HSK 1's homework already). **The Dorado rule ON at launch**: `TRAINING_BUILT` is true (env `DRALY_TRAINING_BUILT=0` = the
+  guard), DEFAULTS trainingLive true, and the first boot of phase 4 switches it ON once even over a phase-3 file and
+  stamps `trainingLaunchAt` (a one-shot flag: his later OFF sticks; a missing file is ON + stamped; a damaged file never
+  launches again: what can be read in it is kept, else OFF with the moment unknown).
+  Grandfathered: a graded simulation of that level (`hskResults`, total > 0) before `trainingLaunchAt` keeps the Dorado
+  open (`via: 'taken'`). `_simGrant` asks `doradoOpen` after the key for solo kids only (403 «practica»; a teacher and a
+  kid in a teacher's PIN room as before); a sim link not earned yet → `/audios/<level>?dorado=cerrado#paso-3`. The
+  route: step 2 = one tile per practice world (open = plays it, closed = that world in La Base with its seals), step 3
+  not earned = one coin per world with its best % (a key-only phone: «Entra con tu código»). /maestro: best % per world
+  (gold-green at the Dorado's %), Pinyin/Simulacro apart, the Dorado's reason (practice / teacher / took a simulation);
+  Teachers → the switch is labelled «El Simulacro Dorado se gana practicando». `node scripts/test-ruta-training.js`
+  (port 4430: boot 1 = phase 3 where a kid takes a sim, boot 2 = the launch) must pass; the key-door tests run with the
+  switch seeded OFF (`ruta-settings.json` in their temp folder).
 - **The simulations' audio = a digital golden book**: the golden book on screen page by page, each listening question
   with its own play button (the original exam recording, cut per question), plus the PDF to download.
 - The whole tab is **«La Ruta Dorada»** (was «Audios y vocabulario»). Choosing your module feels like a game: a swipe
   between modules with a super cool animation: **big glossy module cards that fly in with depth and a little bounce**
   (his pick 2026-10-15, "like choosing a world in a Nintendo game").
-- Until El Entrenamiento exists (phase 4), a kid with the key gets La Base and El Simulacro Dorado (the level's
-  existing simulations); El Entrenamiento shows a beautiful «Muy pronto» step (his pick 2026-10-15) and, since phase 3,
-  what the kid's seals already open there («2 de 6 mundos listos para entrenar», one tile per world that links to it in
-  La Base; a world that became ready since the phone's last visit pops its gold coin once, `draly_ruta_ready`).
+- Since phase 4 the route's step 2 is El Entrenamiento itself («2 de 6 mundos listos para entrenar», one tile per
+  practice world: an open one plays it, a closed one links to that world in La Base; a world that became ready since
+  the phone's last visit pops its gold coin once, `draly_ruta_ready`). A level with no La Base keeps «Muy pronto» there.
 - **Built (phase 2, 2026-10-15)**: `/audios` = the module picker, `/audios/<level>` = that module's golden route
   (`public/js/ruta.js` + `css/ruta.css`, routed by `js/audios.js`). One card per level of core/levels.js (its jewel
   colour by test family, a new level of the same family takes the next free colour; Dralingo's pose shuffled per visit;
@@ -233,8 +277,9 @@ the checklist for any new game mode.
   `_rutaState` (never a list sent to everyone) and its door from `LevelKeys.access`.
 - `node scripts/test-level-keys.js` (its own server on port 4300 and a fresh data folder),
   `node scripts/test-sims-lock.js`, `node scripts/test-ruta-dorada.js` (port 4410: every kind of visitor, nothing
-  protected reaches one who may not open it) and `node scripts/test-ruta-progress.js` (port 4420: seals, the unlock
-  engine, /maestro's «Desbloquear», archive) must pass.
+  protected reaches one who may not open it), `node scripts/test-ruta-progress.js` (port 4420: seals, the unlock
+  engine, /maestro's «Desbloquear», archive) and `node scripts/test-ruta-training.js` (port 4430: El Entrenamiento, the
+  grading, the Dorado rule ON at launch) must pass.
 
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads

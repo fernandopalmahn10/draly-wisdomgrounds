@@ -12,14 +12,16 @@
   <meta name="apple-mobile-web-app-title" content="Dralingo">
   <meta name="theme-color" content="#5a1010">
   <title>La Ruta Dorada · Dralingo</title>
-  <meta name="description" content="Tu ruta en Chino Mandarín, nivel por nivel: La Base con cada palabra y su audio, El Simulacro Dorado y los audios de tus tareas.">
+  <meta name="description" content="Tu ruta en Chino Mandarín, nivel por nivel: La Base con cada palabra y su audio, El Entrenamiento mundo por mundo, El Simulacro Dorado y los audios de tus tareas.">
   <!-- the study book's own fonts (OFL), subset: Noto Sans = Spanish and numbers, Gelasio = pinyin -->
   <link rel="preload" href="/assets/fonts/study/noto-sans-800.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/study/noto-sans-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/study/gelasio-700.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/audios.css?v=20261015b">
   <!-- 🏆 La Ruta Dorada (phase 2, 2026-10-15): the flying module cards and each module's golden route (js/ruta.js) -->
-  <link rel="stylesheet" href="/css/ruta.css?v=20261016c">
+  <link rel="stylesheet" href="/css/ruta.css?v=20261016f">
+  <!-- 🎯 El Entrenamiento (phase 4, 2026-10-16): the practice worlds and their quick rounds (js/entrenamiento.js) -->
+  <link rel="stylesheet" href="/css/entrenamiento.css?v=20261016c">
 </head>
 <body>
   <!-- the Dubai skyline the module cards stand on: one gold silhouette (Burj Khalifa, the Emirates Towers, the Burj
@@ -81,8 +83,9 @@
   <audio id="au-player" preload="none"></audio>
   <script src="/js/audios-base.js?v=20261016d"></script>
   <script src="/js/cast.js?v=20261015r"></script>
-  <script src="/js/ruta.js?v=20261016c"></script>
-  <script src="/js/audios.js?v=20261016b"></script>
+  <script src="/js/entrenamiento.js?v=20261016c"></script>
+  <script src="/js/ruta.js?v=20261016e"></script>
+  <script src="/js/audios.js?v=20261016c"></script>
   <!-- Dralingo Dorado: a rare golden visitor (about one visit in ten; ?dorado=1 forces him, ?dorado=0 never).
        Nothing of it downloads on a normal visit; three.js comes from the CDN only when he appears. -->
   <script type="importmap">

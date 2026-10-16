@@ -8,9 +8,9 @@
 //                                                  flies in with depth and a little bounce (a spring, transform and
 //                                                  opacity only). Reduced motion: a calm crossfade. The first frame is
 //                                                  still (a whole class may open it at once).
-//   Ruta.path(main, ctx, module)  /audios/<level>  the module's golden route: 1 La Base, 2 El Entrenamiento (muy
-//                                                  pronto), 3 El Simulacro Dorado (the level's sims), then the
-//                                                  homework audios of the level (open, unchanged).
+//   Ruta.path(main, ctx, module)  /audios/<level>  the module's golden route: 1 La Base, 2 El Entrenamiento (since
+//                                                  phase 4: its practice worlds, js/entrenamiento.js), 3 El Simulacro
+//                                                  Dorado (the level's sims), then the homework audios of the level.
 // What is open comes from the server (GET /api/ruta-dorada, LevelKeys.access per level: a teacher, the logged-in
 // kid's account, this device's key). A locked module shows its locks and «Escribe la clave de <nivel>», which opens
 // the phase-1 key screen at /audios/<level>/clave and comes back here. The sims only reach this page when open, and
@@ -80,17 +80,37 @@
     '<use href="#rd-sky" x="0" y="0" width="400" height="110"/><use href="#rd-sky" x="400" y="0" width="400" height="110"/></svg>';
 
   // ── what a module holds, for this visitor ─────────────────────────
-  // base / gold: 'open' | 'locked' | 'soon' (nothing yet); train: 'soon' until phase 4. A gold step that the key opens
-  // but the kid has not earned yet (once El Entrenamiento is live: every world practised) is 'locked' with goldEarn.
+  // base / train / gold: 'open' | 'locked' | 'soon' (nothing yet). El Entrenamiento (phase 4) exists for every level
+  // with a La Base and a practice pack (the server sends `train` only when the module is open). A gold step that the key
+  // opens but the kid has not earned yet (El Entrenamiento live: every world practised) is 'locked' with goldEarn.
   function statesOf(m) {
     const earn = !!(m.open && m.simCount && m.dorado && !m.dorado.open);
     return {
       base: !m.base ? 'soon' : (m.open ? 'open' : 'locked'),
-      train: 'soon',
+      train: !m.open ? (m.base ? 'locked' : 'soon') : (m.train ? 'open' : 'soon'),
       gold: !m.simCount ? 'soon' : (m.open && !earn ? 'open' : 'locked'),
       goldEarn: earn,
     };
   }
+  // El Entrenamiento's worlds for this visitor (phase 4): the server's answer (the account's seals, a teacher's opening,
+  // the account's best %), plus what THIS phone holds (its own seals open a world too; a key-only phone's own scores)
+  // → [{ key, kind, n, short, open, best }]
+  function trainWorldsOf(ctx, m, pr) {
+    if (!m.train || !Array.isArray(m.train.worlds)) return [];
+    const E = window.Entrenamiento;
+    const mine = !ctx.ruta.student && !ctx.ruta.teacher && E ? E.phoneBest(m.slug) : {};
+    const list = m.train.worlds.map((w) => {
+      const pw = pr && w.kind === 'world' ? pr.worlds.find((x) => x.n === w.n) : null;
+      const best = w.best != null ? w.best : (mine[w.key] != null ? Number(mine[w.key]) : null);
+      return { key: w.key, kind: w.kind, n: w.n, short: w.short, open: !!w.open || !!(pw && pw.train), best,
+        sealed: pw ? pw.sealed : 0, count: pw ? pw.count : 0 };
+    });
+    const regular = list.filter((w) => w.kind === 'world');
+    list.forEach((w) => { if (w.kind === 'simulacro' && !w.open) w.open = regular.length > 0 && regular.every((x) => x.open); });
+    return list;
+  }
+  const ABC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17l3.4-10h.6l3.4 10M4.7 13.5h4.8M13.5 7v10h3.3a2.6 2.6 0 0 0 0-5.2h-3.3 3a2.4 2.4 0 0 0 0-4.8z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const EXAM = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.4" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
   const sellos = (n, of) => n + ' de ' + of + ' sellos';   // the same wording as La Base: «7 de 83 sellos»
 
   // ── what this visitor's seals add up to in an open module (phase 3, 2026-10-16) ──
@@ -441,7 +461,7 @@
     const keyBox = m.open ? '' :
       '<div class="rd-keybox"><span class="rd-keybox-seal" aria-hidden="true">' + I.lock + '</span>' +
         '<div class="rd-keybox-body"><h2 class="rd-keybox-title">Tu ruta se abre con la clave de ' + esc(m.name) + '</h2>' +
-        '<p>Está en el mensaje de tu maestra. Se escribe una sola vez y abre La Base y El Simulacro Dorado.</p>' +
+        '<p>Está en el mensaje de tu maestra. Se escribe una sola vez y abre La Base, El Entrenamiento y El Simulacro Dorado.</p>' +
         '<a class="rd-btn rd-btn-gold" href="/audios/' + esc(m.slug) + '/clave">' + I.key + 'Escribe la clave de ' + esc(m.name) + '</a>' +
         (anon ? '<p class="rd-keybox-alt">¿Ya eres alumno? <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug + '/clave') + '">Entra con tu código</a></p>' : '') +
         '</div></div>';
@@ -461,39 +481,82 @@
     } else {
       baseBody = '<p class="rd-stop-text">Todas las palabras del nivel, con su dibujo y el audio.</p><p class="rd-soon">Muy pronto</p>';
     }
-    // 2 · El Entrenamiento (phase 4): an honest «muy pronto», and (phase 3) what the kid's seals already earn there:
-    // world by world, every seal of a world in La Base opens that world here. Each world links to it in La Base.
-    let trainBody = '<p class="rd-stop-text">Practica cada mundo como en el examen, con audio y la respuesta al instante.</p>' +
-      '<p class="rd-soon">' + I.soon + 'Muy pronto</p>';
-    if (pr && b && pr.worlds.length) {
-      const ready = pr.worlds.filter((w) => w.train).length;
-      const all = ready === pr.worlds.length;
-      trainBody += '<div class="rd-train">' +
-        '<p class="rd-train-count"><b>' + ready + '</b> de ' + pr.worlds.length + ' mundos listos para entrenar</p>' +
-        '<ol class="rd-worlds" aria-label="Los mundos de El Entrenamiento">' + pr.worlds.map((w) => {
-          const left = w.count - w.sealed;
-          const label = 'Mundo ' + w.n + (w.short ? ', ' + w.short : '') + ': ' + (w.train ? 'listo para entrenar'
-            : (left === 1 ? 'falta 1 sello' : 'faltan ' + left + ' sellos') + ' en La Base');
-          return '<li><a class="rd-world' + (w.train ? ' is-ready' : '') + '" data-w="' + w.n + '" href="/audios/' + esc(b.id) + '#mundo-' + w.n + '" data-nav' +
-            ' aria-label="' + esc(label) + '">' +
-            '<b class="rd-world-n" aria-hidden="true"' + (w.train ? '' : ' style="--p:' + Math.round((w.sealed / w.count) * 100) + '"') + '>' + (w.train ? I.check : w.n) + '</b>' +
-            '<span class="rd-world-name" aria-hidden="true">' + esc(w.short || ('Mundo ' + w.n)) + '</span>' +
-            '<span class="rd-world-meta" aria-hidden="true">' + (w.train ? 'Listo' : w.sealed + '/' + w.count) + '</span></a></li>';
+    // 2 · El Entrenamiento (phase 4): one tile per practice world. A world opens with every seal of that world in La
+    // Base (or a teacher): an open tile plays it (/audios/<level>/entrenamiento/<world>) and shows the kid's best, a closed
+    // one leads to that world in La Base with its seals so far. «Pinyin básico» (HSK 1) is open from the start; the
+    // «Simulacro del examen» opens with every world.
+    const need = (m.dorado && m.dorado.pct) || 70;
+    const tw = trainWorldsOf(ctx, m, pr);
+    let trainBody;
+    if (st.train === 'open' && tw.length) {
+      const regular = tw.filter((w) => w.kind === 'world');
+      const ready = regular.filter((w) => w.open).length;
+      const counted = regular.filter((w) => w.best != null && w.best >= need).length;
+      const trainHref = '/audios/' + m.slug + '/entrenamiento';
+      trainBody = '<p class="rd-stop-text">Rondas de 10 preguntas como en el examen, con audio y la respuesta al instante.</p>' +
+        '<div class="rd-train">' +
+        '<p class="rd-train-count"><b>' + ready + '</b> de ' + regular.length + ' mundos listos para entrenar</p>' +
+        '<ol class="rd-worlds" aria-label="Los mundos de El Entrenamiento">' + tw.map((w) => {
+          const extra = w.kind !== 'world';
+          // (the pack's «Simulacro del examen» is «Examen» on its tile: step 3's «El Simulacro Dorado» is another thing)
+          const name = extra ? (w.kind === 'pinyin' ? 'Pinyin' : 'Examen') : (w.short || ('Mundo ' + w.n));
+          const done = w.best != null && (extra || w.best >= need);
+          let href, label, coin, meta, cls = 'rd-world';
+          if (w.open) {
+            href = trainHref + '/' + w.key;
+            coin = done && !extra ? I.check : (w.kind === 'pinyin' ? ABC : w.kind === 'simulacro' ? EXAM : String(w.n));
+            meta = w.best != null ? w.best + ' %' : 'Jugar';
+            label = (extra ? '' : 'Mundo ' + w.n + ', ') + name + ': ' + (w.best != null ? 'tu mejor ' + w.best + ' %' : 'listo para jugar');
+            cls += ' is-ready' + (done && !extra ? ' is-done' : '');
+          } else if (w.kind === 'simulacro') {
+            href = trainHref;
+            coin = I.lock;
+            meta = 'Con todos';
+            label = 'Preguntas del examen: se abren cuando todos tus mundos estén listos';
+          } else {
+            const left = Math.max(0, w.count - w.sealed);
+            href = b ? '/audios/' + b.id + '#mundo-' + w.n : trainHref;
+            coin = String(w.n);
+            meta = w.count ? w.sealed + '/' + w.count : '';
+            label = 'Mundo ' + w.n + ', ' + name + ': ' + (left === 1 ? 'falta 1 sello' : 'faltan ' + left + ' sellos') + ' en La Base';
+          }
+          const pie = !w.open && w.kind === 'world' && w.count ? ' style="--p:' + Math.round((w.sealed / w.count) * 100) + '"' : '';
+          return '<li><a class="' + cls + '"' + (w.kind === 'world' ? ' data-w="' + w.n + '"' : '') + ' href="' + esc(href) + '" data-nav aria-label="' + esc(label) + '">' +
+            '<b class="rd-world-n" aria-hidden="true"' + pie + '>' + coin + '</b>' +
+            '<span class="rd-world-name" aria-hidden="true">' + esc(name) + '</span>' +
+            '<span class="rd-world-meta" aria-hidden="true">' + esc(meta) + '</span></a></li>';
         }).join('') + '</ol>' +
-        '<p class="rd-train-hint">' + (all ? '¡Todos tus mundos están listos! El Entrenamiento llega muy pronto.'
-          : 'Pon «¡Me la sé!» en todas las palabras de un mundo y ese mundo se abre aquí.') + '</p></div>';
+        '<p class="rd-train-hint">' + (!ready ? 'Pon «¡Me la sé!» en todas las palabras de un mundo y ese mundo se abre aquí.'
+          : counted === regular.length ? '¡Todos tus mundos tienen ' + need + ' % o más!'
+          : 'Cada mundo con ' + need + ' % o más te acerca a El Simulacro Dorado.') + '</p>' +
+        '<a class="rd-btn rd-btn-red" href="' + esc(trainHref) + '" data-nav>' + I.target + 'Entrar al Entrenamiento</a></div>';
+    } else if (st.train === 'locked') {
+      trainBody = '<p class="rd-stop-text">Rondas de 10 preguntas como en el examen, con audio y la respuesta al instante.</p>' +
+        '<p class="rd-stop-state">' + I.lock + 'Se abre con la clave</p>';
+    } else {
+      trainBody = '<p class="rd-stop-text">Practica cada mundo como en el examen, con audio y la respuesta al instante.</p>' +
+        '<p class="rd-soon">' + I.soon + 'Muy pronto</p>';
     }
     // 3 · El Simulacro Dorado: the level's simulations (only when open: each opens its player through the key check)
     let goldBody;
     if (st.goldEarn) {
       // the key opens it, but (El Entrenamiento live) the kid earns it: every world practised with pct % or more
       const d = m.dorado;
+      // (phase 4) one coin per world that counts: gold with a check once that world has the %, else its best so far
+      const regular = tw.filter((w) => w.kind === 'world');
+      const goal = regular.length ? '<ol class="rd-goal" aria-hidden="true">' + regular.map((w) => {
+        const on = w.best != null && w.best >= d.pct;
+        return '<li class="' + (on ? 'is-on' : '') + '"><b>' + (on ? I.check : w.n) + '</b><span>' + esc(w.short || '') + '</span>' +
+          (w.best != null ? '<span class="rd-goal-pct">' + w.best + ' %</span>' : '') + '</li>';
+      }).join('') + '</ol>' : '';
+      const counted = regular.filter((w) => w.best != null && w.best >= d.pct).length;
       goldBody = '<p class="rd-stop-text">' + m.simCount + (m.simCount === 1 ? ' simulacro completo' : ' simulacros completos') + ' con el audio original del examen.</p>' +
+        '<p class="rd-stop-state">' + I.lock + 'Se abre cuando practiques cada mundo con ' + d.pct + ' %</p>' + goal +
+        '<p class="rd-train-count"><b>' + (d.login ? counted : (d.practiced || 0)) + '</b> de ' + (d.of || regular.length) + ' mundos con ' + d.pct + ' % o más</p>' +
         (d.login
-          ? '<p class="rd-stop-state">' + I.lock + 'Entra con tu código para guardar tu avance</p>' +
+          ? '<p class="rd-gold-note">Tus puntos quedan en este teléfono: entra con tu código para que cuenten.</p>' +
             '<a class="rd-btn rd-btn-red" href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">Entrar con mi código</a>'
-          : '<p class="rd-stop-state">' + I.lock + 'Se abre cuando practiques cada mundo con ' + d.pct + ' % o más</p>' +
-            (d.of ? '<p class="rd-train-count"><b>' + (d.practiced || 0) + '</b> de ' + d.of + ' mundos con ' + d.pct + ' %</p>' : ''));
+          : (st.train === 'open' ? '<a class="rd-btn rd-btn-gold" href="/audios/' + esc(m.slug) + '/entrenamiento" data-nav>' + I.target + 'Practicar en El Entrenamiento</a>' : ''));
     } else if (st.gold === 'open') {
       goldBody = '<p class="rd-stop-text">El examen completo con el audio original, como el día del examen.</p>' +
         '<ul class="rd-sims">' + m.sims.map((s) =>
@@ -513,7 +576,7 @@
     } else {
       goldBody = '<p class="rd-stop-text">El examen completo con el audio original.</p><p class="rd-soon">Muy pronto</p>';
     }
-    const stop = (k, n, title, icon, body, next) => '<li class="rd-stop is-' + st[k] + '"' + (next ? ' data-next="' + next + '"' : '') + '>' +
+    const stop = (k, n, title, icon, body, next) => '<li class="rd-stop is-' + st[k] + '" id="paso-' + n + '"' + (next ? ' data-next="' + next + '"' : '') + '>' +
       '<span class="rd-coin" aria-hidden="true">' + (st[k] === 'locked' ? I.lock : icon) + '<b>' + n + '</b></span>' +
       '<div class="rd-stop-body"><h2 class="rd-stop-title"><span class="au-sr">Paso ' + n + ': </span>' + title + '</h2>' + body + '</div></li>';
 
@@ -532,6 +595,23 @@
     if (ctx.ruta.student && m.open && b && AB && AB.sync) {
       const at = location.pathname;
       AB.sync(b.level, b.words).then((r) => { if (r && (r.sent || r.changed) && location.pathname === at && ctx.refresh) ctx.refresh(true); }, () => {});
+    }
+    // (phase 4) … and so do the El Entrenamiento scores this phone made before the login (with their proofs)
+    const E = window.Entrenamiento;
+    if (ctx.ruta.student && ctx.ruta.who && m.open && m.train && E) {
+      const at = location.pathname;
+      E.syncScores(m.slug, ctx.ruta.who).then((r) => { if (r && r.sent && location.pathname === at && ctx.refresh) ctx.refresh(true); });
+    }
+    // a simulation's link that is not earned yet lands here (server.js: /audios/<level>?dorado=cerrado#paso-3): step 3
+    // comes into view and lights up once, so the kid sees how it opens
+    if (location.hash === '#paso-3') {
+      const s3 = main.querySelector('#paso-3');
+      if (s3) {
+        try { s3.scrollIntoView({ block: 'center', behavior: calmMotion() ? 'auto' : 'smooth' }); } catch (_) { s3.scrollIntoView(); }
+        if (/dorado=cerrado/.test(location.search) && s3.animate && !calmMotion()) {
+          try { s3.querySelector('.rd-coin').animate([{ boxShadow: '0 0 0 0 rgba(216, 176, 90, .7)' }, { boxShadow: '0 0 0 16px rgba(216, 176, 90, 0)' }], { duration: 1100, delay: 350, iterations: 2, easing: 'cubic-bezier(.23, 1, .32, 1)' }); } catch (_) {}
+        }
+      }
     }
   }
 

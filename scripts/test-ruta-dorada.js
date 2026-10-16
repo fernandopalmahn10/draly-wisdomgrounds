@@ -26,6 +26,9 @@ const KEEP = args.includes('--keep');
 if (PORT === 3000) { console.error('never port 3000 (that is the dev server of the main checkout)'); process.exit(2); }
 const ROOT = path.join(__dirname, '..');
 const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-ruta-'));
+// (phase 4, 2026-10-16: this test checks who may open each module, so El Entrenamiento's switch is OFF here, as he may
+// set it after the launch: the key alone lists a level's simulations. The Dorado rule ON is scripts/test-ruta-training.js)
+fs.writeFileSync(path.join(DATA, 'ruta-settings.json'), JSON.stringify({ trainingLive: false, doradoPct: 70, trainingLaunchAt: Date.now() }));
 const rnd = (n) => crypto.randomBytes(n).toString('hex').toUpperCase();
 const LEGACY = 'legacy-' + rnd(12);
 const SEED = 'T-' + rnd(5);

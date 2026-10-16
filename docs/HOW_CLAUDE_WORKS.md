@@ -171,7 +171,7 @@ level in core/levels.js gets its own card by itself), Dralingo in his kandura on
 Emirates Towers, Burj Al Arab). Kids swipe (or drag, or tap ‹ ›, the dots, or the arrow keys) and the next card flies
 in with depth and a little bounce, round and round; a kid who is logged in lands on their own level first, and so
 does a phone that typed a level's key. Each card opens its **golden route**: 1 · La Base (with the kid's seals, «7 de
-83 sellos»), 2 · El Entrenamiento (a «Muy pronto» step until it is built), 3 · El Simulacro Dorado (the level's
+83 sellos»), 2 · El Entrenamiento (practice world by world, since 16 October), 3 · El Simulacro Dorado (the level's
 simulations: YCT 1 sims 1-5, New HSK 1 sims 1-2, Old HSK 1 sims 1-10, each opening its exam player), then the homework
 audios of that level (still open to everyone, the printed PDFs' links unchanged). A friend of the gang cheers along
 the route with a new line each visit. Without the key the route shows its locks and one gold box «Escribe la clave de
@@ -194,7 +194,27 @@ each kid's profile shows La Ruta Dorada per level: seals per world, which El Ent
 or a teacher), El Simulacro Dorado, their best % per simulation, and «Desbloquear» / «Volver a bloquear» for one world,
 every world or the Simulacro Dorado («Volver a bloquear» only undoes what a teacher opened). The student list shows a
 thin gold bar of each kid's seals. The rules live in one place (`core/ruta-progress.js`); El Entrenamiento (step 4)
-will hand in each world's % there.
+hands in each world's % there.
+
+**🎯 El Entrenamiento (La Ruta Dorada, step 4, 16 October 2026).** Step 2 of every route is now real practice:
+`/audios/yct1/entrenamiento` lists the level's worlds (the same worlds as La Base; HSK 1 starts with «Pinyin básico»,
+open from the start, and every level ends with «Simulacro del examen», open once all worlds are ready) with the kid's
+best stars and a gold meter of El Simulacro Dorado. A world opens when every word of that world has its «¡Me la sé!»
+seal in La Base (or a teacher unlocks it). Tapping a world shows one big «¡A jugar!» card with three pictured steps
+(Escucha · Toca la respuesta · Gana estrellas), then a quick round of 10 questions from that world's curriculum pack,
+one at a time: the question is read aloud (La Base's own recordings when the word or sentence is in the book, the
+platform voice otherwise) or, when the answers are pinyin, the four answers are read one by one and each tile lights
+up; big tiles that press down; the server says right or wrong and only then which answer was right (green tile, the
+answer read aloud), a streak counter with moments at 3, 5, 7 and 10 in a row, Dralingo or one of the gang reacting
+in a sheet at the bottom with the big «Siguiente»; at the end the stars land one by one, the % counts up, a record is
+celebrated and «Otra ronda» / «Siguiente mundo». The best % of each world goes on the kid's account; a phone that only
+has the key keeps its scores (with a signed proof) and they join the kid's account at their first login on that
+phone. **The Dorado rule is ON since this launch**: El Simulacro Dorado opens when every world has 70 % or more (or a
+teacher's «Desbloquear»); kids who had already taken a simulation keep it open; a kid who follows a simulation's link
+before earning it lands on step 3 of the route, which shows each world's best %. Your switch in /maestro → Teachers is
+now called «El Simulacro Dorado se gana practicando» (ON by default; OFF = the key alone opens it, and it stays OFF if
+you turn it off). Each kid's profile shows their best % per world. Answers never travel to the phone before the kid
+answers, and El Entrenamiento never uses the homework endpoints.
 
 ### 2.4 Parent control
 
@@ -527,12 +547,13 @@ intro is long"), and I'll turn it into exact changes.
 
 ## 10. What's next (pending work)
 
-- **La Ruta Dorada** (plan `docs/specs/ruta-dorada.md`): steps 1-3 are built: the key per level (La Base + the
+- **La Ruta Dorada** (plan `docs/specs/ruta-dorada.md`): steps 1-4 are built: the key per level (La Base + the
   simulations behind it), teacher devices for hosting, «Cambiar mi código», the tab itself (the flying module
-  cards, each module's golden route), and progress on the kid's account (seals on any phone, El Entrenamiento world by
-  world, «Desbloquear» / «Volver a bloquear» per step, the rules in /maestro); next El Entrenamiento (it hands each
-  world's % to `core/ruta-progress.js` and then the «El Entrenamiento está activo» switch goes on) and the digital
-  golden book (they ask the same key: `LevelKeys.access`)
+  cards, each module's golden route), progress on the kid's account (seals on any phone, «Desbloquear» / «Volver a
+  bloquear» per step, the rules in /maestro) and El Entrenamiento (quick rounds per world, the Dorado earned by
+  practice); next the digital golden book (it asks the same key: `LevelKeys.access`). First week of El Entrenamiento:
+  listen to a few questions per level on a real phone (the platform voice reads some sentences from toneless pinyin;
+  wrong readings are fixed in `core/entrenamiento.js` speechText), and watch whether 70 % per world is the right bar
 - **Official tests:**
   - more New HSK 1 simulations (send the next recording), then YCT 2 per the build order
   - move Old HSK onto the new exam interface, once you're happy with YCT

@@ -2896,8 +2896,9 @@
   }
 
   // ── 🏆 2026-10-16 La Ruta Dorada: cómo se abre (super admin; core/ruta-progress.js) ─────────────────────────────
-  // «El Entrenamiento está activo» stays OFF until phase 4 ships: until then El Simulacro Dorado opens with the key.
-  // Once ON, it opens when every world is practised with the % below (or a teacher's «Desbloquear»).
+  // «El Entrenamiento está activo»: ON since phase 4's launch (his pick). ON = El Simulacro Dorado opens when every world
+  // is practised with the % below (or a teacher's «Desbloquear», or the kid took a simulation before the launch);
+  // OFF = the key alone opens it (El Entrenamiento stays open for practice either way).
   let _rutaRules = null;
   // canEdit: the super admin (the server refuses everyone else) · s.trainingBuilt: El Entrenamiento exists (phase 4), so
   // the switch may go on; until then it stays off and disabled, with the reason
@@ -2911,8 +2912,8 @@
     $('m-rules-live-help').textContent = !s.trainingBuilt && !s.trainingLive
       ? 'Apagado: El Simulacro Dorado se abre solo con la clave. El interruptor se podrá encender cuando El Entrenamiento esté publicado; entonces el Simulacro Dorado se ganará practicando cada mundo.'
       : s.trainingLive
-      ? 'Encendido: El Simulacro Dorado se abre cuando el alumno practica cada mundo de El Entrenamiento con ' + s.doradoPct + ' % o más (o cuando tú lo desbloqueas).'
-      : 'Apagado: El Simulacro Dorado se abre solo con la clave. Enciéndelo cuando El Entrenamiento esté listo: mientras no exista, nadie podría ganárselo practicando.';
+      ? 'Encendido: El Simulacro Dorado se abre cuando el alumno practica cada mundo de El Entrenamiento con ' + s.doradoPct + ' % o más, o cuando tú lo desbloqueas en su perfil. Quien ya había hecho un simulacro antes de encenderlo lo sigue teniendo abierto.'
+      : 'Apagado: El Simulacro Dorado se abre solo con la clave. El Entrenamiento sigue abierto para practicar; enciéndelo para que el Simulacro Dorado se gane practicando.';
     $('m-rules-pct-form').classList.toggle('is-off', !s.trainingLive);
     $('m-rules-off-note').hidden = !!s.trainingLive;
     const pct = $('m-rules-pct');
@@ -2944,12 +2945,13 @@
       const sw = $('m-rules-live');
       if (!_rutaRules || sw.disabled) return;
       const on = !_rutaRules.trainingLive;
-      if (on && !confirm('¿Activar El Entrenamiento?\n\nDesde ahora El Simulacro Dorado se abre solo cuando el alumno practica cada mundo con ' +
-        _rutaRules.doradoPct + ' % o más (o cuando tú lo desbloqueas en su perfil).\n\nÚsalo solo cuando El Entrenamiento (la fase 4) ya esté publicado.')) return;
+      if (on && !confirm('¿Encender la regla de El Entrenamiento?\n\nDesde ahora El Simulacro Dorado se abre cuando el alumno practica cada mundo con ' +
+        _rutaRules.doradoPct + ' % o más (o cuando tú lo desbloqueas en su perfil).')) return;
+      if (!on && !confirm('¿Apagar la regla?\n\nEl Simulacro Dorado se abrirá solo con la clave, sin practicar.')) return;
       sw.disabled = true;
       saveRutaRules({ trainingLive: on }, (ok) => {
         sw.disabled = false;
-        if (ok) notify(on ? '✓ El Entrenamiento está activo: El Simulacro Dorado se gana practicando.' : '✓ El Entrenamiento apagado: El Simulacro Dorado se abre con la clave.');
+        if (ok) notify(on ? '✓ Encendido: El Simulacro Dorado se gana practicando.' : '✓ Apagado: El Simulacro Dorado se abre con la clave.');
       });
     });
     $('m-rules-pct-form').addEventListener('submit', (e) => {
@@ -3413,10 +3415,14 @@
     const access = L.open
       ? '<span class="m-ruta-access is-open">🔓 Open · ' + escapeHtml(RUTA_VIA[L.via] || 'open') + '</span>'
       : '<span class="m-ruta-access">🔒 Needs the ' + name + ' key</span>' + btn('🔓 Desbloquear ' + name, 'data-ruta-act="level"', 'btn-gold');
+    // 🎯 phase 4: their best % in each world of El Entrenamiento (gold once it reaches the Dorado's %)
+    const need = (S && S.doradoPct) || (L.dorado && L.dorado.pct) || 70;
+    const pctPill = (p) => (p == null ? '<span class="m-ruta-pct is-none">not practised</span>'
+      : '<span class="m-ruta-pct' + (p >= need ? ' is-ok' : '') + '">best ' + p + ' %</span>');
     const rows = (L.worlds || []).map((w) => {
       const state = w.train
-        ? '<span class="m-ruta-train is-open">' + (w.via === 'seals' ? '✓ Open · their seals' : '🔓 Open · a teacher') + '</span>'
-        : '<span class="m-ruta-train">Closed</span>';
+        ? '<span class="m-ruta-train is-open">' + (w.via === 'seals' ? '✓ Open · their seals' : '🔓 Open · a teacher') + '</span>' + pctPill(w.practiced)
+        : '<span class="m-ruta-train">Closed</span>' + (w.practiced != null ? pctPill(w.practiced) : '');
       const act = w.teacher
         ? btn('Volver a bloquear', 'data-ruta-act="lock" data-step="train" data-world="' + w.n + '" aria-label="Volver a bloquear el mundo ' + w.n + ' de ' + name + '"')
         : (!w.train ? btn('Desbloquear', 'data-ruta-act="unlock" data-step="train" data-world="' + w.n + '" aria-label="Desbloquear el mundo ' + w.n + ' de ' + name + '"') : '');
@@ -3427,19 +3433,29 @@
         '<span class="m-ruta-tcell" role="cell">' + state + '</span>' +
         '<span class="m-ruta-act" role="cell">' + act + '</span></div>';
     }).join('');
+    // the extra practice worlds (Pinyin básico, the Simulacro del examen): shown, never counted for the Dorado
+    const extraRows = (L.extra || []).map((x) => '<div class="m-ruta-tr is-extra" role="row">' +
+      '<span class="m-ruta-w" role="cell"><b>' + (x.key === 'pinyin' ? 'Aa' : '★') + '</b><span>' + escapeHtml(x.name) + '</span></span>' +
+      '<span class="m-ruta-seals" role="cell"><span class="m-ruta-num">—</span></span>' +
+      '<span class="m-ruta-tcell" role="cell"><span class="m-ruta-train">' + (x.key === 'pinyin' ? 'Open from the start' : 'Opens with every world') + '</span>' + pctPill(x.best) + '</span>' +
+      '<span class="m-ruta-act" role="cell"></span></div>').join('');
     const T = L.train || { open: 0, of: 0 };
     const anyTeacher = (L.worlds || []).some((w) => w.teacher);
     const allOpen = T.of > 0 && T.open === T.of;
     const D = L.dorado || {};
+    const practisedOk = (L.worlds || []).filter((w) => w.practiced != null && w.practiced >= need).length;
     let dStatus;
-    if (D.rule === 'key') dStatus = L.open ? 'Open with the key (El Entrenamiento is not live yet)' : 'Locked: needs the ' + L.name + ' key';
+    if (D.rule === 'key') dStatus = L.open ? 'Open with the key (El Entrenamiento is switched off in Teachers)' : 'Locked: needs the ' + L.name + ' key';
     else if (!L.open) dStatus = 'Locked: needs the ' + L.name + ' key';
-    else if (D.open) dStatus = D.via === 'teacher' ? 'Open · unlocked by a teacher' : 'Open · every world practised with ' + D.pct + ' % or more';
-    else dStatus = 'Closed · ' + (D.practiced || 0) + ' of ' + D.of + ' worlds practised with ' + D.pct + ' % or more';
+    else if (D.open) {
+      dStatus = D.via === 'teacher' ? 'Open · unlocked by a teacher'
+        : D.via === 'taken' ? 'Open · they took a simulation before El Entrenamiento went live'
+        : 'Open · every world practised with ' + D.pct + ' % or more';
+    } else dStatus = 'Closed · ' + (D.practiced || 0) + ' of ' + D.of + ' worlds practised with ' + D.pct + ' % or more';
     // (while the key rule is in force, «Desbloquear» only matters later: say so, before and after)
     const dNote = D.rule !== 'key' || !L.open ? ''
-      : ' <span class="m-ruta-note">' + (D.teacher ? 'Unlocked by a teacher too: it counts once El Entrenamiento is live.'
-        : '«Desbloquear» keeps it open for this kid once El Entrenamiento is live.') + '</span>';
+      : ' <span class="m-ruta-note">' + (D.teacher ? 'Unlocked by a teacher too: it counts when El Entrenamiento is on.'
+        : '«Desbloquear» keeps it open for this kid when El Entrenamiento is on.') + '</span>';
     const sims = (L.sims || []).map((s) => '<li class="m-ruta-sim' + (s.best == null ? '' : s.best >= 60 ? ' is-pass' : ' is-low') + '"><b>Sim ' + s.n + '</b>' +
       (s.best == null ? '<span>not taken</span>' : '<span>best ' + s.best + ' % · ' + s.tries + (s.tries === 1 ? ' try' : ' tries') + '</span>') + '</li>').join('');
     return '<div class="m-ruta-level' + (L.own ? ' is-own' : '') + '" data-level="' + escapeHtml(L.id) + '">' +
@@ -3453,13 +3469,14 @@
           '<span class="m-ruta-bar is-wide' + (L.sealed >= L.words ? ' is-full' : '') + '" aria-hidden="true"><i style="width:' + pct(L.sealed, L.words) + '%"></i></span></div></div>' +
         '<div class="m-ruta-step"><span class="m-ruta-step-n" aria-hidden="true">2</span><div class="m-ruta-step-body">' +
           '<div class="m-ruta-step-title">El Entrenamiento <span class="m-ruta-big">' + T.open + '<small> of ' + T.of + ' worlds open</small></span>' +
+            '<span class="m-ruta-big">' + practisedOk + '<small> of ' + T.of + ' with ' + need + ' %</small></span>' +
             '<span class="m-ruta-step-acts">' +
               (!allOpen ? btn('Desbloquear todos', 'data-ruta-act="unlock" data-step="train" data-world="all" aria-label="Desbloquear todos los mundos de El Entrenamiento de ' + name + '"') : '') +
               (anyTeacher ? btn('Volver a bloquear todos', 'data-ruta-act="lock" data-step="train" data-world="all" aria-label="Volver a bloquear lo que un maestro abrió en El Entrenamiento de ' + name + '"') : '') +
             '</span></div>' +
           '<div class="m-ruta-table" role="table" aria-label="' + name + ': worlds">' +
             '<div class="m-ruta-tr m-ruta-th" role="row"><span role="columnheader">World</span><span role="columnheader">La Base seals</span><span role="columnheader">El Entrenamiento</span><span role="columnheader"><span class="m-sr">Action</span></span></div>' +
-            rows + '</div></div></div>' +
+            rows + extraRows + '</div></div></div>' +
         '<div class="m-ruta-step"><span class="m-ruta-step-n" aria-hidden="true">3</span><div class="m-ruta-step-body">' +
           '<div class="m-ruta-step-title">El Simulacro Dorado' +
             '<span class="m-ruta-step-acts">' + (D.teacher
@@ -3474,8 +3491,9 @@
     const R = data.ruta || { levels: [] };
     const S = R.settings || {};
     const rule = S.trainingLive
-      ? 'El Entrenamiento is live: El Simulacro Dorado opens when every world is practised with ' + S.doradoPct + ' % or more.'
-      : 'El Entrenamiento opens world by world with the kid\'s La Base seals. El Simulacro Dorado opens with the key until El Entrenamiento is live.';
+      ? 'El Entrenamiento opens world by world with the kid\'s La Base seals. El Simulacro Dorado opens when every world is practised with ' + S.doradoPct +
+        ' % or more (kids who took a simulation before El Entrenamiento went live keep it open).'
+      : 'El Entrenamiento opens world by world with the kid\'s La Base seals. El Simulacro Dorado opens with the key (the rule is switched off in Teachers).';
     wrap.innerHTML = '<h3 class="m-section-title" id="m-ruta-title">🏆 La Ruta Dorada</h3>' +
       '<p class="m-ruta-rule">' + escapeHtml(rule) + '</p>' + R.levels.map((L) => rutaLevelHtml(L, S)).join('');
     if (wrap.dataset.wired) return;

@@ -11,9 +11,11 @@
 //   El Entrenamiento  · opens WORLD BY WORLD: every seal of world N in La Base → world N of El Entrenamiento opens.
 //                       A teacher's «Desbloquear» opens one world or all of them early («Volver a bloquear» undoes
 //                       the teacher's opening; a world the kid's own seals opened stays open).
-//   El Simulacro Dorado · opens with the key while El Entrenamiento is not live (the switch `trainingLive`, OFF until
-//                       phase 4 ships, set in /maestro). Once it is live: every world practised with `doradoPct` % or
-//                       more (default 70, changeable in /maestro), or a teacher's «Desbloquear».
+//   El Simulacro Dorado · opens with the key while El Entrenamiento is not live (the switch `trainingLive`, set in
+//                       /maestro). Once it is live (ON since phase 4, 2026-10-16): every world practised with
+//                       `doradoPct` % or more (default 70, changeable in /maestro), or a teacher's «Desbloquear», or
+//                       (grandfathered, his pick) the kid had already taken a simulation of that level before El
+//                       Entrenamiento went live (a graded try on their record, «Mis exámenes»).
 //
 // Stored on the student record (core/student-records.js updateRuta), per stored level id (yct1 · hsk2 · hsk1):
 //   rec.ruta[level] = { s: '1-17,19,23-40'  the seals: word numbers of the level's base, as ranges (small: a whole
@@ -21,13 +23,15 @@
 //                       at: <ms>            last seal change
 //                       tw: 'all' | [n…]    El Entrenamiento worlds a teacher opened
 //                       td: 1               a teacher opened El Simulacro Dorado
-//                       p: { n: pct }       El Entrenamiento: the best % per world (phase 4 writes it through
-//                                           recordPractice; nothing fake is stored before that) }
+//                       p: { n: pct,        El Entrenamiento (core/entrenamiento.js): the best % per world, written
+//                            pinyin, simulacro }   through recordPractice; the extra worlds by name (they never count
+//                                           for the Dorado) }
 // It travels with the record: archived and restored with it (Students.get/getOrCreate/getOrProvisionForPin).
 //
-// Settings (super admin, /maestro): <data>/ruta-settings.json { trainingLive, doradoPct } (gitignored, data disk).
-// Boot only fills what is missing: a value he set is never reset; keys a later phase adds are kept on every save.
-// The switch turns on only once El Entrenamiento exists (TRAINING_BUILT below: phase 4 sets it to true).
+// Settings (super admin, /maestro): <data>/ruta-settings.json { trainingLive, doradoPct, trainingLaunchAt }
+// (gitignored, data disk). Boot only fills what is missing: a value he set is never reset; keys a later phase adds are
+// kept on every save. One exception, once: the first boot of phase 4 switches El Entrenamiento ON (his pick: "the
+// Dorado rule switches on at launch") and stamps `trainingLaunchAt`; from then on his switch is his (a later OFF sticks).
 // =========================================================================
 'use strict';
 const fs = require('fs');
@@ -38,11 +42,15 @@ const DATA_DIR = process.env.DRALY_DATA_DIR || path.join(__dirname, '..', 'data'
 const SETTINGS_FILE = path.join(DATA_DIR, 'ruta-settings.json');
 const CATALOG = path.join(__dirname, '..', 'public', 'assets', 'audios', 'catalog.json');
 const BASE_DIR = path.join(__dirname, '..', 'protected', 'base');
-const DEFAULTS = { trainingLive: false, doradoPct: 70 };
+const DEFAULTS = { trainingLive: true, doradoPct: 70 };
 const PCT_MIN = 50, PCT_MAX = 100;
-// El Entrenamiento exists (phase 4 sets this to true when it ships). Until then the switch can't be turned on: a
-// Simulacro Dorado that only practice opens, with no practice to do, would lock every kid out. (Tests: the env var.)
-const TRAINING_BUILT = false || process.env.DRALY_TRAINING_BUILT === '1';
+// El Entrenamiento exists (phase 4, 2026-10-16). Before it did, the switch could not be turned on: a Simulacro Dorado
+// that only practice opens, with no practice to do, would have locked every kid out. Kept as a guard: a test (or a
+// future emergency) can run without it with DRALY_TRAINING_BUILT=0.
+const TRAINING_BUILT = process.env.DRALY_TRAINING_BUILT !== '0';
+// the practice worlds of the packs that have no La Base world (core/entrenamiento.js): stored by name, never counted
+// for the Dorado
+const EXTRA_WORLDS = ['pinyin', 'simulacro'];
 
 // ── settings ────────────────────────────────────────────────────────────────────────────────────────────────────
 let settings = Object.assign({}, DEFAULTS);
@@ -52,18 +60,48 @@ function loadSettings() {
   settings = Object.assign({}, DEFAULTS);
   extra = {};
   settingsOk = true;
-  if (!fs.existsSync(SETTINGS_FILE)) return;
-  try {
-    const raw = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')) || {};
-    Object.keys(raw).forEach((k) => { if (!(k in DEFAULTS) && k !== 'updatedAt') extra[k] = raw[k]; });
-    // only what is missing or broken takes the default (a value he set is never forced back)
-    if (typeof raw.trainingLive === 'boolean') settings.trainingLive = raw.trainingLive;
-    if (Number.isInteger(raw.doradoPct) && raw.doradoPct >= PCT_MIN && raw.doradoPct <= PCT_MAX) settings.doradoPct = raw.doradoPct;
-    if (Number(raw.updatedAt) > 0) settings.updatedAt = Number(raw.updatedAt);
-  } catch (e) {
-    const aside = SETTINGS_FILE.replace(/\.json$/, '.unreadable-' + Date.now() + '.json');
-    try { fs.renameSync(SETTINGS_FILE, aside); } catch (_) { settingsOk = false; }
-    console.error('[ruta] ruta-settings.json unreadable, kept aside; defaults in use -', e.message);
+  let raw = null;
+  let unreadable = false;
+  if (fs.existsSync(SETTINGS_FILE)) {
+    let text = '';
+    try {
+      text = fs.readFileSync(SETTINGS_FILE, 'utf8');
+      raw = JSON.parse(text) || {};
+      Object.keys(raw).forEach((k) => { if (!(k in DEFAULTS) && k !== 'updatedAt' && k !== 'trainingLaunchAt') extra[k] = raw[k]; });
+      // only what is missing or broken takes the default (a value he set is never forced back)
+      if (typeof raw.trainingLive === 'boolean') settings.trainingLive = raw.trainingLive;
+      if (Number.isInteger(raw.doradoPct) && raw.doradoPct >= PCT_MIN && raw.doradoPct <= PCT_MAX) settings.doradoPct = raw.doradoPct;
+      if (Number(raw.updatedAt) > 0) settings.updatedAt = Number(raw.updatedAt);
+      if (Number(raw.trainingLaunchAt) > 0) settings.trainingLaunchAt = Number(raw.trainingLaunchAt);
+    } catch (e) {
+      raw = null;
+      unreadable = true;
+      // a damaged file never re-runs the launch (it would move the moment that decides who is grandfathered and turn
+      // his OFF back ON): what can still be read in it is kept, else the key rule (OFF) until he sets it again
+      const num = (k) => { const m = new RegExp('"' + k + '"\\s*:\\s*(\\d+)').exec(text); return m ? Number(m[1]) : 0; };
+      const live = /"trainingLive"\s*:\s*(true|false)/.exec(text);
+      settings.trainingLive = live ? live[1] === 'true' : false;
+      if (num('trainingLaunchAt') > 0) settings.trainingLaunchAt = num('trainingLaunchAt');
+      const pct = num('doradoPct');
+      if (pct >= PCT_MIN && pct <= PCT_MAX) settings.doradoPct = pct;
+      // (no readable launch moment: 1 = "launched, moment unknown", so a later boot never launches again; nobody counts
+      // as grandfathered then, which only matters if he switches the rule back ON)
+      if (!settings.trainingLaunchAt) settings.trainingLaunchAt = 1;
+      const aside = SETTINGS_FILE.replace(/\.json$/, '.unreadable-' + Date.now() + '.json');
+      try { fs.renameSync(SETTINGS_FILE, aside); } catch (_) { settingsOk = false; }
+      console.error('[ruta] ruta-settings.json unreadable, kept aside; what could be read is kept, else the key rule -', e.message);
+      if (settingsOk) saveSettings();
+    }
+  }
+  // 🏆 phase 4's launch, ONCE (a one-shot flag, the boot-migration rule): El Entrenamiento goes live on the first boot
+  // that has it, even over a file saved with the switch OFF in phase 3 (where it could only be OFF); the moment is
+  // stamped, so every later boot leaves his switch exactly as he set it. Kids with a simulation taken before this
+  // moment keep El Simulacro Dorado open (state() below). Only on a missing file or a file read fine without the stamp.
+  if (TRAINING_BUILT && !settings.trainingLaunchAt && !unreadable) {
+    settings.trainingLive = true;
+    settings.trainingLaunchAt = Date.now();
+    if (settingsOk && saveSettings()) console.log('[ruta] El Entrenamiento is LIVE (phase 4 launch): El Simulacro Dorado now opens by practice');
+    else console.error('[ruta] the phase 4 launch could not be saved to ruta-settings.json: it will be stamped again at the next boot (check the data disk)');
   }
 }
 function saveSettings() {
@@ -82,7 +120,7 @@ function saveSettings() {
 loadSettings();
 // trainingLive = the switch in force (only once El Entrenamiento is built) · trainingBuilt: may it be turned on
 const getSettings = () => ({ trainingLive: !!settings.trainingLive && TRAINING_BUILT, doradoPct: settings.doradoPct, updatedAt: settings.updatedAt || 0,
-  pctMin: PCT_MIN, pctMax: PCT_MAX, trainingBuilt: TRAINING_BUILT });
+  pctMin: PCT_MIN, pctMax: PCT_MAX, trainingBuilt: TRAINING_BUILT, trainingLaunchAt: settings.trainingLaunchAt || 0 });
 // patch: { trainingLive?: boolean, doradoPct?: integer 50-100 } → { ok, settings } | { ok: false, error } (Spanish: his panel)
 function setSettings(patch) {
   const p = patch && typeof patch === 'object' ? patch : {};
@@ -183,13 +221,24 @@ function teacherWorlds(e, b) {
 // is there anything of this level on the record (a profile lists those levels too)
 const hasAny = (rec, level) => !!entryOf(rec, level);
 
+// Did this kid take a simulation of this level before El Entrenamiento went live? (a graded try on their record, the
+// one «Mis exámenes» lists; a sim id starts with its level: yct1-sim3, newhsk1-sim1, hsk1-sim7) → the try's time or 0
+function simTakenBefore(rec, level, at) {
+  const lvl = Levels.normalize(level);
+  if (!rec || !lvl || !(at > 0) || !Array.isArray(rec.hskResults)) return 0;
+  const hit = rec.hskResults.find((t) => t && Number(t.ts) > 0 && Number(t.ts) < at && Number(t.total) > 0 &&
+    Levels.normalize(String(t.simId || '').replace(/-sim\d+$/i, '')) === lvl);
+  return hit ? Number(hit.ts) : 0;
+}
+
 // The whole picture of one level for one kid.
 //   rec: their record, or null for a phone without a login (then opts.seals = the seals that phone holds: a free tap
 //   carries no secret, so a key-only phone may count its own)
 // → null (the level has no La Base) | {
 //     level, words, sealed, worlds: [{ n, name, short, count, sealed, train, via: 'seals'|'teacher'|null, practiced }],
+//     extra: { pinyin?: pct, simulacro?: pct }      (the practice of the worlds that never count for the Dorado)
 //     train: { live, open, of, all },               (all = a teacher opened every world)
-//     dorado: { rule: 'key'|'practice', open, via: 'key'|'practice'|'teacher'|null, pct, practiced, of, teacher } }
+//     dorado: { rule: 'key'|'practice', open, via: 'key'|'practice'|'teacher'|'taken'|null, pct, practiced, of, teacher, taken } }
 // dorado.open assumes the level's key: callers check LevelKeys.access first (the key is the door, this is the path).
 function state(rec, level, opts) {
   const o = opts || {};
@@ -214,14 +263,17 @@ function state(rec, level, opts) {
   const open = worlds.filter((w) => w.train).length;
   const practiced = worlds.filter((w) => w.practiced != null && w.practiced >= st.doradoPct).length;
   const byTeacher = !!e.td;
+  const taken = !!simTakenBefore(rec, lvl, st.trainingLaunchAt);
   let dorado;
-  if (!st.trainingLive) dorado = { rule: 'key', open: true, via: 'key', pct: st.doradoPct, practiced, of: worlds.length, teacher: byTeacher };
+  if (!st.trainingLive) dorado = { rule: 'key', open: true, via: 'key', pct: st.doradoPct, practiced, of: worlds.length, teacher: byTeacher, taken };
   else {
     const all = worlds.length > 0 && practiced === worlds.length;
-    dorado = { rule: 'practice', open: byTeacher || all, via: byTeacher ? 'teacher' : (all ? 'practice' : null), pct: st.doradoPct,
-      practiced, of: worlds.length, teacher: byTeacher };
+    dorado = { rule: 'practice', open: byTeacher || all || taken, via: byTeacher ? 'teacher' : (all ? 'practice' : (taken ? 'taken' : null)), pct: st.doradoPct,
+      practiced, of: worlds.length, teacher: byTeacher, taken };
   }
-  return { level: lvl, words: b.words, sealed: seals.size, worlds,
+  const extraP = {};
+  EXTRA_WORLDS.forEach((k) => { const v = Number(practice[k]); if (practice[k] != null && Number.isFinite(v)) extraP[k] = v; });
+  return { level: lvl, words: b.words, sealed: seals.size, worlds, extra: extraP,
     train: { live: st.trainingLive, open, of: worlds.length, all: e.tw === 'all' }, dorado };
 }
 
@@ -297,15 +349,15 @@ function setTeacherUnlock(code, level, step, world, on) {
   return { ok: true };
 }
 
-// Phase 4 (El Entrenamiento) hands in a practice of world N of a level: the best % per world stays on the record, and
-// El Simulacro Dorado opens by itself once every world has doradoPct % or more (when trainingLive is on).
-// → { ok, best } | { ok: false, status, error }
+// El Entrenamiento (core/entrenamiento.js) hands in a practice of world N of a level (or of an extra world, by name:
+// 'pinyin', 'simulacro'): the best % per world stays on the record, and El Simulacro Dorado opens by itself once every
+// La Base world has doradoPct % or more (when trainingLive is on). → { ok, best } | { ok: false, status, error }
 function recordPractice(code, level, world, pct) {
   const lvl = Levels.normalize(level);
   const b = baseOf(lvl);
   if (!b) return fail(404, 'that level has no La Base');
-  const w = Number(world);
-  if (!b.worlds.some((x) => x.n === w)) return fail(400, 'that world does not exist');
+  const w = EXTRA_WORLDS.includes(world) ? world : Number(world);
+  if (typeof w === 'number' && !b.worlds.some((x) => x.n === w)) return fail(400, 'that world does not exist');
   const p = Number(pct);
   if (!Number.isFinite(p) || p < 0 || p > 100) return fail(400, 'pct must be 0-100');
   let best = 0;
@@ -320,10 +372,10 @@ function recordPractice(code, level, world, pct) {
 }
 
 module.exports = {
-  DEFAULTS, SETTINGS_FILE, PCT_MIN, PCT_MAX,
+  DEFAULTS, SETTINGS_FILE, PCT_MIN, PCT_MAX, EXTRA_WORLDS,
   loadSettings, getSettings, setSettings,
   bases, baseOf, encodeSeals, decodeSeals,
-  entryOf, sealsOf, hasAny, state,
+  entryOf, sealsOf, hasAny, state, simTakenBefore,
   trainWorldOpen, doradoOpen,
   applySeals, setTeacherUnlock, recordPractice,
 };

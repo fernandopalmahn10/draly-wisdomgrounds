@@ -690,6 +690,12 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--ink); flex
 .m-ruta-num { font-variant-numeric: tabular-nums; }
 .m-ruta-train { font-weight: 800; font-size: 0.875rem; color: var(--ink-mute); }
 .m-ruta-train.is-open { color: var(--jade); }
+/* 🎯 phase 4: the kid's best % per world of El Entrenamiento (gold-green once it reaches the Dorado's %) */
+.m-ruta-tcell { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.m-ruta-pct { padding: 2px 9px; border-radius: 999px; font-weight: 800; font-size: 0.8125rem; font-variant-numeric: tabular-nums; background: var(--butter); color: #6b4d00; }
+.m-ruta-pct.is-ok { background: var(--mint); color: var(--jade); }
+.m-ruta-pct.is-none { background: rgba(29, 36, 64, 0.05); color: var(--ink-mute); font-weight: 700; }
+.m-ruta-tr.is-extra .m-ruta-w b { font-size: 0.75rem; background: var(--paper-hi); }
 .m-ruta-act { justify-self: end; }
 .m-ruta-dstatus { margin-top: 4px; font-weight: 800; font-size: 0.9375rem; color: var(--coral-ink); }
 .m-ruta-dstatus.is-open { color: var(--jade); }

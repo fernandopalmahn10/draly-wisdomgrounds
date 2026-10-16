@@ -6,7 +6,7 @@ the next levels) is prepared in three levels with our own names. Rules live in `
 | Level | What | Who can open it | Unlocks when |
 |---|---|---|---|
 | 1 · **La Base** | the vocabulary book digitally (done: /audios/<level>-base), «¡Me la sé!» seals | the level's key (or a grandfathered student); see Update below | with the key |
-| 2 · **El Entrenamiento** | exam-style practice world by world, from the curriculum packs (`core/packs`), audio + instant feedback | enrolled students (level access code + student code) | world by world: every seal of a world in La Base opens that world (his pick 2026-10-16), or the teacher unlocks |
+| 2 · **El Entrenamiento** | exam-style practice world by world, from the curriculum packs (`core/packs`), audio + instant feedback (built 2026-10-16: /audios/<level>/entrenamiento) | the level's key | world by world: every seal of a world in La Base opens that world (his pick 2026-10-16), or the teacher unlocks; Pinyin básico from the start; Simulacro del examen once every world is ready |
 | 3 · **El Simulacro Dorado** | the full simulations (player), the golden book on screen with a play button per listening question (original recording cut per question) + the PDF | enrolled students | the key until El Entrenamiento is live; then every world practised with ≥ 70 % (changeable), or the teacher unlocks |
 
 ## Update 2026-10-15 (second planning round): keys, not free
@@ -55,6 +55,14 @@ the next levels) is prepared in three levels with our own names. Rules live in `
    no base world (Simulacro del examen, Pinyin básico) and how a key-only phone (no login) practises.
 4. **El Entrenamiento**: practice by world from the packs (reuse the YCT tareas quiz player graded on the server), audio
    for every question, instant feedback, a score per world that feeds the unlock.
+   **Built 2026-10-16** (branch `ruta-dorada-training`), with his picks of that day: the pack's worlds = La Base's
+   worlds by number (HSK 1 shows La Base's names), «Pinyin básico» open from the start, «Simulacro del examen» open
+   once every world is ready, only the regular worlds count for the Dorado; quick rounds of 10 with game touches (its
+   own player, not the tareas': audio per question, right/wrong from the server after each answer, streaks, the gang,
+   stars and a %); a key-only phone practises and its scores join the account at the first login (signed proofs);
+   the Dorado rule ON at launch (a one-shot `trainingLaunchAt`), kids who already took a simulation keep it, and
+   `_simGrant` asks it of solo kids. `core/entrenamiento.js`, `public/js/entrenamiento.js`, `/api/ruta/train/*`,
+   `scripts/test-ruta-training.js`.
 5. **El Simulacro Dorado**: the golden books digitally from the same source as their PDFs (`study/<level>sim/`, exam.py,
    one source like La Base's `web.py`), page by page, each listening question with its own play button cut from the
    original recording, the PDF download (behind the login), and the simulation player.
