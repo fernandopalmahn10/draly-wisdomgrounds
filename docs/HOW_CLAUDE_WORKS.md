@@ -163,7 +163,20 @@ YCT 1» on their /homework home. HSK 1 has its own base the same way (`/audios/h
 does New HSK 1 (`/audios/newhsk1-base`, «New HSK 1 · Vocabulario»: 300 words in 8 worlds, with the book's note on the
 spoken tone changes yí ge, yì běn, bú shì; code 1002 kids see «Empieza aquí · La base de New HSK 1»).
 Since 15 October 2026 each base opens with its level's key (see «Who can open a simulation or La Base» below): a
-visitor without it sees the key screen at the same address, and the library shows a gold lock on that level.
+visitor without it sees the key screen at the same address, and La Ruta Dorada shows a gold lock on that level.
+
+**🏆 La Ruta Dorada (the tab, 15 October 2026; was «Audios y vocabulario»).** `/audios` now opens like choosing a world
+in a Nintendo game: one big glossy card per level (YCT 1 in Rojo Imperial, New HSK 1 in jade, HSK 1 in lapis; a new
+level in core/levels.js gets its own card by itself), Dralingo in his kandura on a gold Dubai skyline (Burj Khalifa,
+Museum of the Future, Emirates Towers, Burj Al Arab). Kids swipe (or drag, or tap ‹ ›, the dots, or the arrow keys) and
+the next card flies in with depth and a little bounce; a kid who is logged in lands on their own level first, and so
+does a phone that typed a level's key. Each card opens its **golden route**: 1 · La Base (with the kid's seals, «7 de
+83 sellos»), 2 · El Entrenamiento (a «Muy pronto» step until it is built), 3 · El Simulacro Dorado (the level's
+simulations: YCT 1 sims 1-5, New HSK 1 sims 1-2, Old HSK 1 sims 1-10, each opening its exam player), then the homework
+audios of that level (still open to everyone, the printed PDFs' links unchanged). A friend of the gang cheers along
+the route with a new line each visit. Without the key the route shows its locks and one gold box «Escribe la clave de
+YCT 1» (it opens the key screen and comes back to the route); a visitor also gets «Entra con tu código». The kids'
+/homework home shows «La Ruta Dorada de YCT 1» (their seals), and the home page card says «La Ruta Dorada».
 
 ### 2.4 Parent control
 
@@ -496,9 +509,10 @@ intro is long"), and I'll turn it into exact changes.
 
 ## 10. What's next (pending work)
 
-- **La Ruta Dorada** (plan `docs/specs/ruta-dorada.md`): step 1 is built: the key per level (La Base + the
-  simulations behind it), teacher devices for hosting, «Cambiar mi código»; next the tab itself, progress on the
-  server, El Entrenamiento and El Simulacro Dorado (they ask the same key: `LevelKeys.access`)
+- **La Ruta Dorada** (plan `docs/specs/ruta-dorada.md`): steps 1-2 are built: the key per level (La Base + the
+  simulations behind it), teacher devices for hosting, «Cambiar mi código», and the tab itself (the flying module
+  cards, each module's golden route); next progress on the server (seals on the kid's record, unlock by progress,
+  «Desbloquear» per step), El Entrenamiento and the digital golden book (they ask the same key: `LevelKeys.access`)
 - **Official tests:**
   - more New HSK 1 simulations (send the next recording), then YCT 2 per the build order
   - move Old HSK onto the new exam interface, once you're happy with YCT

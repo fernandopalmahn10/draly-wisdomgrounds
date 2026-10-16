@@ -56,16 +56,19 @@
   // 🔑 2026-10-15 (La Ruta Dorada): a level's three levels open with that level's key (typed once on this phone, or on
   // the kid's account). The server knows (httpOnly cookies): /api/ruta-dorada says, per module, what this visitor may
   // open (and, only when open, the level's simulations), so a locked base shows its lock instead of its pictures.
-  let ruta = { modules: [] };
+  // (a homework audio page and a base never wait on it: if it fails, only the picker and the routes ask to retry)
+  let ruta = null;
+  const failedHtml = (msg) => '<p class="au-error">' + msg + '</p>' +
+    '<p style="text-align:center"><button type="button" class="bs-btn bs-btn-red au-press" id="au-retry">Volver a intentar</button></p>';
   function load() {
     main.innerHTML = '<p class="au-loading">Cargando…</p>';
     const state = fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
-      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((s) => ((s && Array.isArray(s.modules)) ? s : null), () => null);
     Promise.all([fetch(fresh('/assets/audios/catalog.json')).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }), state])
-      .then(([c, s]) => { catalog = c; ruta = (s && Array.isArray(s.modules)) ? s : { modules: [] }; route(); })
+      .then(([c, s]) => { catalog = c; ruta = s; route(); })
       .catch(() => {
-        main.innerHTML = '<p class="au-error">No se pudo cargar La Ruta Dorada. Revisa tu internet.</p>' +
-          '<p style="text-align:center"><button type="button" class="bs-btn bs-btn-red au-press" id="au-retry">Volver a intentar</button></p>';
+        main.innerHTML = failedHtml('No se pudo cargar La Ruta Dorada. Revisa tu internet.');
         $('#au-retry').addEventListener('click', load);
       });
   }
@@ -133,11 +136,16 @@
       Object.keys(aliases).forEach((a) => { if (id === a || id.indexOf(a + '-') === 0) id = aliases[a] + id.slice(a.length); });
     }
     const base = id && (catalog.bases || []).find((b) => b.id === id);
-    const mod = !base && id && (ruta.modules || []).find((x) => x.slug === id || x.id === id);
-    const found = !base && !mod && id && catalog.homeworks.find((h) => h.id === id);
+    const found = !base && id && catalog.homeworks.find((h) => h.id === id);
+    const mod = !base && !found && id && ruta && ruta.modules.find((x) => x.slug === id || x.id === id);
     if (base) renderBase(base);
-    else if (mod) renderPath(mod);
     else if (found) renderHomework(found);
+    else if (!ruta) {                                     // the visitor's state did not arrive: ask again, never guess locks
+      hw = null;
+      main.innerHTML = failedHtml('No se pudo cargar La Ruta Dorada. Revisa tu internet.');
+      $('#au-retry').addEventListener('click', load);
+    }
+    else if (mod) renderPath(mod);
     else renderPicker();
     // after a tap inside the page, the new screen's heading takes the focus (screen readers hear where they are)
     if (!firstRoute && !base) {

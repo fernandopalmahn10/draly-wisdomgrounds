@@ -204,10 +204,11 @@ body.au-is-path .au-main { max-width: 720px; }
 .rd-hero .rd-card-gloss { z-index: 5; }
 .rd-hero-dragon { position: absolute; z-index: 3; right: 0; bottom: -18%; height: 116%; width: auto; pointer-events: none; filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .36)); }
 .rd-hero-name { position: relative; z-index: 4; max-width: 62%; font-weight: 800; font-size: clamp(2.9rem, 16vw, 4.4rem); line-height: .86; letter-spacing: -.035em; text-shadow: 0 2px 12px rgba(0, 0, 0, .22); }
-.rd-hero.is-long .rd-hero-name { font-size: clamp(2.2rem, 11vw, 3.4rem); }
+.rd-hero.is-long .rd-hero-name { max-width: 74%; font-size: clamp(1.9rem, 9.4vw, 3.4rem); white-space: nowrap; }   /* «New HSK 1» on one line */
 .rd-hero-sub { position: relative; z-index: 4; max-width: 60%; margin-top: 10px; font-weight: 700; font-size: 1rem; line-height: 1.25; color: #e8c878; }
 .rd-hero .rd-seal { --cw: 300px; top: auto; right: auto; bottom: 16px; left: 18px; width: 52px; height: 52px; }
-:focus-visible.rd-hero-name { outline-color: var(--crema); }
+/* a screen's heading takes the focus after a tap (for screen readers, js/audios.js): it is not a control, no ring */
+.rd-hero-name:focus, .rd-h1:focus { outline: none; }
 
 /* the chosen card grows into this banner (View Transitions, js/audios.js swap()) */
 .rd-slide.is-active .rd-card, .rd-hero { view-transition-name: rd-world; }
@@ -224,6 +225,7 @@ body.au-is-path .au-main { max-width: 720px; }
   font-weight: 700; font-size: 1rem; line-height: 1.3; color: var(--tinta);
 }
 .rd-bubble b { display: block; font-size: .8rem; font-weight: 800; color: var(--oro-tinta); }
+.rd-friend.is-pick { width: 100%; max-width: 420px; margin-top: 18px; text-align: left; }
 .rd-bubble::after { content: ''; position: absolute; left: -7px; bottom: 12px; border: 8px solid transparent; border-left: 0; border-right-color: var(--papel); }
 
 /* a locked module: one way in, the level's key */
@@ -247,9 +249,11 @@ body.au-is-path .au-main { max-width: 720px; }
 .rd-stop { position: relative; display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 14px; padding-bottom: 28px; }
 .rd-stop:last-child { padding-bottom: 6px; }
 .rd-stop:not(:last-child)::before {
-  content: ''; position: absolute; left: 28.5px; top: 66px; bottom: 6px; width: 0; border-left: 3px solid var(--oro);
+  content: ''; position: absolute; left: 28.5px; top: 66px; bottom: 6px; width: 3px; border-radius: 2px; background: var(--oro);
 }
-.rd-stop[data-next="soon"]::before, .rd-stop[data-next="locked"]::before { border-left-style: dashed; opacity: .75; }
+.rd-stop[data-next="soon"]::before, .rd-stop[data-next="locked"]::before {
+  opacity: .8; border-radius: 0; background: linear-gradient(to bottom, var(--oro) 55%, rgba(184, 139, 44, 0) 55%) 0 0 / 3px 12px repeat-y;
+}
 .rd-coin { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; }
 .rd-coin svg { width: 27px; height: 27px; }
 .rd-coin b {
@@ -295,9 +299,10 @@ body.au-is-path .au-main { max-width: 720px; }
 .rd-sim-name { font-weight: 800; font-size: 1rem; line-height: 1.2; color: var(--rojo); }
 .rd-sim-meta { font-size: .85rem; color: var(--tinta-2); }
 .rd-sim-best {
-  position: absolute; right: 8px; top: 10px; display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px 3px 6px; border-radius: 999px;
-  background: var(--rojo); color: var(--crema); font-weight: 800; font-size: .76rem; font-variant-numeric: tabular-nums;
+  position: absolute; right: 8px; top: 10px; display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 999px;
+  background: var(--crema-2); color: var(--tinta); font-weight: 800; font-size: .76rem; font-variant-numeric: tabular-nums;
 }
+.rd-sim-best.is-pass { padding-left: 6px; background: var(--rojo); color: var(--crema); }
 .rd-sim-best svg { width: 12px; height: 12px; color: #e8c878; }
 @media (hover: hover) and (pointer: fine) {
   .rd-sim:hover { box-shadow: 0 1px 2px rgba(90, 16, 16, .1), 0 8px 22px rgba(90, 16, 16, .13); }
@@ -322,7 +327,7 @@ body.au-is-path .au-main { max-width: 720px; }
   .rd-join { grid-template-columns: 70px minmax(0, 1fr); }
   .rd-join-friend { width: 70px; }
   .rd-stop { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; }
-  .rd-stop:not(:last-child)::before { left: 24.5px; top: 58px; }
+  .rd-stop:not(:last-child)::before { left: 24.5px; top: 58px; }   /* the line through the middle of the smaller coin */
   .rd-coin { width: 52px; height: 52px; }
   .rd-coin svg { width: 23px; height: 23px; }
   .rd-sims { gap: 8px; }

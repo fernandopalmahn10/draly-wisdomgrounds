@@ -37,6 +37,12 @@ the next levels) is prepared in three levels with our own names. Rules live in `
 2. **La Ruta Dorada tab**: rename, the swipe module picker with a super cool animation (each module a big card; a
    logged-in kid lands on their own), and per module the three-level path (Base → Entrenamiento → Dorado) with locks,
    progress and «¿Cómo se abre?» hints. Anonymous visitors see the locks and a friendly «Entra con tu código» (login).
+   **Built 2026-10-15** (branch `ruta-dorada-tab`): big glossy cards that fly in with depth and a spring bounce
+   (`public/js/ruta.js`, `css/ruta.css`), per-visitor state from `GET /api/ruta-dorada` (sims listed only when the
+   level is open), `/audios/<level>/clave` for the key round trip, a kid with the key gets La Base + El Simulacro
+   Dorado (the existing sims), El Entrenamiento «Muy pronto»; `scripts/test-ruta-dorada.js`.
+   Open for phase 3: seals live on the phone only (`draly_base_<level>`), so the path's progress is per phone; the
+   unlock thresholds and a per-step «Desbloquear»; a kid's sim results already come back as «best %» on the path.
 3. **Progress on the server**: a logged-in kid's seals sync to their record (any device, teachers see them), the unlock
    rules above, and a teacher «Desbloquear» per kid in /maestro.
 4. **El Entrenamiento**: practice by world from the packs (reuse the YCT tareas quiz player graded on the server), audio
