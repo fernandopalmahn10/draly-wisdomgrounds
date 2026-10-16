@@ -10,7 +10,7 @@
   <title>Clave de {{levelName}} · Dralingo</title>
   <link rel="preload" href="/assets/fonts/study/noto-sans-800.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/study/noto-sans-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/css/key-screen.css?v=20261015f">
+  <link rel="stylesheet" href="/css/key-screen.css?v=20261015g">
   <!-- 🔑 2026-10-15 (La Ruta Dorada): what a visitor without the level's key sees on a locked page (La Base
        /audios/<level>-base, a simulation /yct-sim.html · /hsk-sim.html). Served by server.js in place of the locked
        page (core/level-keys.js sendKeyScreen fills {{levelName}} and the state below), never cached. The key is typed
@@ -20,6 +20,7 @@
 <body class="ks-root" data-level-key="locked">
   <div class="ks-layout">
     <header class="ks-stage">
+      <a class="ks-back" id="ks-back" href="/audios" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>La Ruta Dorada</span></a>
       <p class="ks-word" translate="no">DRALINGO</p>
       <div class="ks-hero">
         <p class="ks-bubble" lang="zh-Latn-pinyin" translate="no">Nǐ hǎo!</p>
@@ -88,8 +89,14 @@
       $('ks-pin').hidden = false;
       $('ks-pin').textContent = button;
       if (!S.level) $('ks-seal').hidden = true;
-      $('ks-alt').innerHTML = '¿Quieres repasar? <a href="/audios">Abre Audios y vocabulario</a>.';
+      $('ks-alt').innerHTML = '¿Quieres repasar? <a href="/audios">Abre La Ruta Dorada</a>.';
       document.title = title + ' · Dralingo';
+    }
+    // 🏆 phase 2: a way back to the level's path on La Ruta Dorada (the home-screen app has no back button)
+    if (S.reason === 'key' && S.level && /^\/audios\/[a-z0-9-]+$/.test(S.route || '')) {
+      $('ks-back').href = S.route;
+      $('ks-back').setAttribute('aria-label', 'Volver a La Ruta Dorada de ' + name);
+      $('ks-back').hidden = false;
     }
     if (S.reason === 'room') { noKey('Esta sala ya cerró', 'Pídele a tu maestra el PIN nuevo y vuelve a entrar.', 'Escribir el PIN nuevo'); return; }
     if (S.reason === 'pin') { noKey('¿Vas a un examen con tu clase?', 'Escribe el PIN que te da tu maestra en la pantalla de inicio.', 'Escribir el PIN'); return; }

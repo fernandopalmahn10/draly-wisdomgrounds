@@ -241,14 +241,16 @@
 
   // 🔒 2026-10-15 (La Ruta Dorada) — arriving from a level's key screen («Entra a Mis Tareas» on a locked simulation or
   // La Base): after the login the kid goes straight back there (the login opens their level on this phone when their
-  // account has it). Only this site's own exam pages and /audios/<id> pages are accepted as a destination.
+  // account has it). Only this site's own exam pages and La Ruta Dorada's pages (/audios, /audios/<id>, a level's key
+  // address /audios/<level>/clave) are accepted as a destination.
   let hwNext = '';
   try {
     const n = new URLSearchParams(location.search).get('next') || '';
-    if (/^\/(yct|hsk)-sim\.html(\?[^#\s\\]*)?$/.test(n) || /^\/audios\/[a-z0-9-]{1,40}$/i.test(n)) hwNext = n;
+    if (/^\/(yct|hsk)-sim\.html(\?[^#\s\\]*)?$/.test(n) || /^\/audios(\/[a-z0-9-]{1,40}(\/clave)?)?$/i.test(n)) hwNext = n;
   } catch (_) {}
   if (hwNext && $('hw-entry-next')) {
-    if (/^\/audios\//.test(hwNext)) $('hw-entry-next').textContent = '🔑 Entra con tu código y vuelves directo a La Base.';
+    if (/^\/audios\/[a-z0-9-]+-base$/i.test(hwNext)) $('hw-entry-next').textContent = '🔑 Entra con tu código y vuelves directo a La Base.';
+    else if (/^\/audios/.test(hwNext)) $('hw-entry-next').textContent = '🔑 Entra con tu código y vuelves directo a La Ruta Dorada.';
     $('hw-entry-next').hidden = false;
   }
 
@@ -4006,14 +4008,16 @@
     }
     return null;
   }
-  // 📖 «Empieza aquí · La base de YCT 1» (2026-10-14): the level's vocabulary base on /audios, on the home only. The kid's
-  // seals live on this phone (localStorage draly_base_<level>, written by /audios), so the count is read here too.
+  // 🏆 «La Ruta Dorada de YCT 1» (2026-10-15, was «Empieza aquí · La base de YCT 1»): the kid's own module on La Ruta
+  // Dorada (/audios/<level>: La Base, El Entrenamiento, El Simulacro Dorado), on the home only. The kid's seals live on
+  // this phone (localStorage draly_base_<level>, written by /audios), so the count is read here too.
   function renderBaseEntry() {
     const a = $('pt-base');
     if (!a) return;
     a.hidden = !hwBase || !!hwFolder;
     if (a.hidden) return;
-    a.href = hwBase.href + '?from=homework';   // the base's back arrow then returns here (the home-screen app has no back button)
+    // ?from=homework: the path's back arrow then returns here (the home-screen app has no back button)
+    a.href = '/audios/' + encodeURIComponent(hwBase.level) + '?from=homework';
     let n = 0;
     try {
       const o = JSON.parse(localStorage.getItem('draly_base_' + hwBase.level) || 'null');
@@ -4021,7 +4025,7 @@
     } catch (_) { n = 0; }
     // the little book's spine: a long name («New HSK 1») breaks as «New / HSK 1», never «HSK / 1»
     $('pt-base-level').textContent = hwLevelName().replace(/ (\d+)$/, ' $1');
-    $('pt-base-title').textContent = 'Empieza aquí · La base de ' + hwLevelName();
+    $('pt-base-title').textContent = 'La Ruta Dorada de ' + hwLevelName();
     $('pt-base-sub').textContent = n ? n + ' de ' + hwBase.words + ' sellos' : hwBase.words + ' palabras con audio';
   }
   function renderNextUp() {

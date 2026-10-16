@@ -11,19 +11,58 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Dralingo">
   <meta name="theme-color" content="#5a1010">
-  <title>Audios y vocabulario · Dralingo</title>
-  <meta name="description" content="Escucha cada palabra y cada frase de Chino Mandarín: el vocabulario de tu nivel y los audios de tus tareas.">
+  <title>La Ruta Dorada · Dralingo</title>
+  <meta name="description" content="Tu ruta en Chino Mandarín, nivel por nivel: La Base con cada palabra y su audio, El Simulacro Dorado y los audios de tus tareas.">
   <!-- the study book's own fonts (OFL), subset: Noto Sans = Spanish and numbers, Gelasio = pinyin -->
   <link rel="preload" href="/assets/fonts/study/noto-sans-800.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/study/noto-sans-400.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/study/gelasio-700.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/audios.css?v=20261015b">
+  <!-- 🏆 La Ruta Dorada (phase 2, 2026-10-15): the flying module cards and each module's golden route (js/ruta.js) -->
+  <link rel="stylesheet" href="/css/ruta.css?v=20261015r">
 </head>
 <body>
+  <!-- the Dubai skyline the module cards stand on: one gold silhouette (Burj Khalifa, the Museum of the Future, the
+       Emirates Towers, the Burj Al Arab), drawn once here and reused by every card (<use href="#rd-sky">) -->
+  <svg class="rd-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="rd-sky-gold" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#f3dc9a"/>
+        <stop offset="1" stop-color="#b88b2c"/>
+      </linearGradient>
+    </defs>
+    <symbol id="rd-sky" viewBox="0 0 400 110">
+      <g fill="url(#rd-sky-gold)">
+        <rect x="0" y="74" width="15" height="36"/>
+        <rect x="17" y="56" width="13" height="54"/>
+        <path d="M32 110V50l7-11 7 11v60z"/>
+        <rect x="48" y="66" width="11" height="44"/>
+        <path d="M58 110c8-11 52-11 60 0z"/>
+        <path fill-rule="evenodd" d="M65 86a23 16 0 1 0 46 0a23 16 0 1 0-46 0zM79 86.5a11 6.5 0 1 0 22 0a11 6.5 0 1 0-22 0z"/>
+        <rect x="121" y="60" width="12" height="50"/>
+        <path d="M135 110V52l14-9v67z"/>
+        <rect x="152" y="70" width="13" height="40"/>
+        <rect x="167" y="80" width="10" height="30"/>
+        <path d="M180 110v-14h4V82h4V66h3V50h3V34h2.5V18h2.1L200 0l1.4 18h2.1v16h2.5v16h3v16h3v16h4v14h4v14z"/>
+        <rect x="226" y="64" width="13" height="46"/>
+        <path d="M244 110V46l11-15v79z"/>
+        <path d="M260 110V56l10-13v67z"/>
+        <rect x="274" y="74" width="12" height="36"/>
+        <rect x="288" y="62" width="11" height="48"/>
+        <path d="M308 110V24h3v86z"/>
+        <path d="M312 110V30c20 10 30 40 30 80z"/>
+        <rect x="346" y="66" width="13" height="44"/>
+        <path d="M361 110V70l9-6 9 6v40z"/>
+        <rect x="381" y="58" width="12" height="52"/>
+        <rect x="395" y="78" width="5" height="32"/>
+        <rect x="0" y="107" width="400" height="3"/>
+      </g>
+    </symbol>
+  </svg>
   <header class="au-top">
-    <a class="au-brand" href="/audios" data-nav aria-label="Audios y vocabulario: todos los niveles">
+    <a class="au-brand" href="/audios" data-nav aria-label="La Ruta Dorada: todos los mundos">
       <span class="au-word" translate="no">DRALINGO</span>
-      <span class="au-sub">Audios y vocabulario</span>
+      <span class="au-sub">La Ruta Dorada</span>
     </a>
   </header>
 
@@ -39,7 +78,9 @@
   <p class="au-sr" id="au-say" aria-live="polite"></p>
   <audio id="au-player" preload="none"></audio>
   <script src="/js/audios-base.js?v=20261015a"></script>
-  <script src="/js/audios.js?v=20261015a"></script>
+  <script src="/js/cast.js?v=20261015r"></script>
+  <script src="/js/ruta.js?v=20261015r"></script>
+  <script src="/js/audios.js?v=20261015r"></script>
   <!-- Dralingo Dorado: a rare golden visitor (about one visit in ten; ?dorado=1 forces him, ?dorado=0 never).
        Nothing of it downloads on a normal visit; three.js comes from the CDN only when he appears. -->
   <script type="importmap">
@@ -52,8 +93,9 @@
   </script>
   <script type="module">
     const ask = new URLSearchParams(location.search).get('dorado');
-    // never on a base page (/audios/<level>-base): his corner card would cover the seals and the playing bar
-    if (!/-base\/?$/i.test(location.pathname) && (ask === '1' || (ask !== '0' && Math.random() < 0.1))) {
+    // never on a base page (/audios/<level>-base): his corner card would cover the seals and the playing bar; never on
+    // the module picker (/audios): it would cover the cards' ‹ › buttons
+    if (!/-base\/?$/i.test(location.pathname) && !/^\/audios?\/?$/i.test(location.pathname) && (ask === '1' || (ask !== '0' && Math.random() < 0.1))) {
       setTimeout(() => {
         import('/js/golden/dorado.js?v=20261011a').then((m) => m.summon()).catch(() => {});
       }, ask === '1' ? 300 : 1400);

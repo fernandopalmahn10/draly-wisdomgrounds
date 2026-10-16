@@ -19,6 +19,6 @@
   ],
   "shortcuts": [
     { "name": "Mis tareas", "short_name": "Tareas", "url": "/homework.html", "icons": [{ "src": "/assets/app/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Audios de las tareas", "short_name": "Audios", "url": "/audios", "icons": [{ "src": "/assets/app/icon-192.png", "sizes": "192x192" }] }
+    { "name": "La Ruta Dorada", "short_name": "Ruta Dorada", "url": "/audios", "icons": [{ "src": "/assets/app/icon-192.png", "sizes": "192x192" }] }
   ]
 }
