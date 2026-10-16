@@ -150,7 +150,27 @@
     if (window.AudiosBase) window.AudiosBase.leave();
     if (window.Ruta) window.Ruta.leave();
     if (window.Entrenamiento) window.Entrenamiento.leave();
+    if (window.GoldenBook) window.GoldenBook.leave();
     document.body.classList.remove('au-is-base', 'au-is-pick', 'au-is-path');
+    // 📖 El libro dorado (phase 5): /audios/<level>/libro/<n> (js/libro.js; the server let only whoever has the level's
+    // key reach this page, and its API asks every other door)
+    const gm = location.pathname.match(/^\/audios?\/([a-z0-9-]+)\/libro\/(\d{1,2})\/?$/i);
+    if (gm) {
+      const gid = gm[1].toLowerCase();
+      const gmod = ruta && ruta.modules.find((x) => x.slug === gid || x.id === gid);
+      if (gmod && gmod.open && window.GoldenBook) {
+        try { window.GoldenBook.render(main, Object.assign(rutaCtx(), { focus: !firstRoute }), gmod, gm[2]); } catch (e) {
+          console.error('[audios] El libro dorado could not be drawn', e);
+          main.innerHTML = failedHtml('Algo salió mal. Vuelve a intentarlo.');
+          $('#au-retry').addEventListener('click', load);
+        }
+        if (!firstRoute) { const h = main.querySelector('h1'); if (h) { try { h.focus({ preventScroll: true }); } catch (_) {} } }
+        firstRoute = false;
+        return;
+      }
+      if (!ruta) { main.innerHTML = failedHtml('No se pudo cargar La Ruta Dorada. Revisa tu internet.'); $('#au-retry').addEventListener('click', load); return; }
+      if (gmod) { history.replaceState(null, '', '/audios/' + gmod.slug); renderPath(gmod); return; }
+    }
     // 🎯 El Entrenamiento (phase 4): /audios/<level>/entrenamiento[/<world>] (js/entrenamiento.js; the server let only
     // whoever has the level's key reach this page)
     const tm = location.pathname.match(/^\/audios?\/([a-z0-9-]+)\/entrenamiento(?:\/([a-z0-9-]+))?\/?$/i);

@@ -7,7 +7,8 @@
 //   moods: hello, win, battle (Reinos: flags, conquest), chase (La Gran Fuga: running from Robotín, turbos, the jet),
 //   feast (Mochi Mash: feeding the Dragoncito), smash (Piñata Tigre: hitting the piñata), swing (6-7 Swing: the golden
 //   balance), oro (6-7 Swing: the winners), casi (6-7 Swing: the team that lost, kindly), mystery, oops,
-//   ruta (La Ruta Dorada /audios/<level>: a friend cheers the kid along the path of three levels)
+//   ruta (La Ruta Dorada /audios/<level>: a friend cheers the kid along the path of three levels), libro (El libro dorado:
+//   a simulation with zero mistakes), repaso (El libro dorado: before the kid's mistakes)
 // Poses: hello, cheer, mystery. Stickers are Higgsfield renders of his own character art, keyed to transparent WebP.
 (function () {
   const BASE = '/assets/cast/';
@@ -29,6 +30,8 @@
         oro: ['¡La balanza es de ustedes! Excelente trabajo.', '¡Así se cuenta en Chino Mandarín!', '¡Equipo de campeones!'],
         casi: ['¡Casi! La próxima ronda es nuestra.', 'Buen esfuerzo, equipo. ¡A la revancha!'],
         ruta: ['Paso a paso se llega al oro.', 'Primero La Base. Después, el examen.', 'Un poco cada día, ¡y llegas!'],
+        libro: ['¡Caso resuelto! Así se aprende.', '¡Equipo de campeones!', '¡Eso es estudiar de verdad!'],
+        repaso: ['Cada error es una pista. ¡A repasar!', 'Escucha otra vez y mira la respuesta dorada.'],
       },
     },
     hamdan: {
@@ -47,6 +50,8 @@
         oro: ['¡Yalla! ¡Oro para todos!', '¡Increíble, equipo!', '¡Esa balanza merece un viaje en jet!'],
         casi: ['¡Yalla, la revancha es nuestra!', 'Casi, amigos. ¡Otra ronda!'],
         ruta: ['¡Yalla, a la Ruta Dorada!', '¡Yalla, un sello más!', 'Al final de la ruta, ¡el oro!'],
+        libro: ['¡Yalla! ¡Increíble!', '¡Eso merece un viaje en jet!', '¡Marhaba! ¡Qué examen!'],
+        repaso: ['Sin prisa. ¡Yalla, a repasar!', 'Marhaba, errores: hoy los arreglamos.'],
       },
     },
     latifa: {
@@ -65,6 +70,8 @@
         oro: ['¡Brillante! Pensaron antes de tocar.', '¡La balanza no miente!', '¡Yalla, a la siguiente ronda!'],
         casi: ['Casi. La próxima vez, primero pensamos.', 'La próxima balanza es nuestra.'],
         ruta: ['Buena estrategia: primero La Base.', 'Cada sello es una pista para el examen.', 'Con calma y cada día, se llega.'],
+        libro: ['¡Brillante! No se te escapó ninguna pista.', 'Tu plan funcionó. ¡Así se piensa!'],
+        repaso: ['Cada error es una pista para el examen.', 'Con calma: escucha, lee y mira la respuesta.'],
       },
     },
     aileen: {
@@ -83,6 +90,8 @@
         oro: ['¡Vos podés! ¡Ganamos el oro!', '¡Qué genial, che!', '¡Dale, otra ronda más!'],
         casi: ['¡Casi, che! La próxima es nuestra.', 'Tranqui, ¡vos podés! Dale, otra ronda.'],
         ruta: ['¡Dale, che! Un sello por día.', '¡Vos podés llegar al oro!', 'Mirá tu ruta: ¡vamos paso a paso!'],
+        libro: ['¡Qué genial, che!', '¡Vos podés y lo hiciste!'],
+        repaso: ['¡Dale, che! Repasalas y listo.', 'Tranqui, ¡vos podés! Escuchalas otra vez.'],
       },
     },
     adric: {
@@ -101,6 +110,8 @@
         oro: ['Bien hecho. Mi perro está feliz.', 'Nada mal, equipo.', '¡Eso fue genial!'],
         casi: ['Casi. Mi perro cree en ustedes.', 'Otra ronda. Esta vez sí.'],
         ruta: ['Paso a paso.', 'Mi perro ya sigue la ruta.', 'Sígueme. Por aquí.'],
+        libro: ['Bien hecho.', 'Mi perro está feliz.'],
+        repaso: ['Escucha otra vez.', 'Mira bien. Ahí está la pista.'],
       },
     },
     adrian: {
@@ -119,6 +130,8 @@
         oro: ['¡Tesoro de oro!', '¡Misión cumplida!', '¡Lo logramos juntos!'],
         casi: ['¡El tesoro sigue ahí! Otra ronda.', '¡Casi lo encontramos!'],
         ruta: ['¡El mapa dice: primero La Base!', '¡El tesoro está al final de la ruta!', '¡A la aventura, paso a paso!'],
+        libro: ['¡Tesoro encontrado!', '¡Misión cumplida!'],
+        repaso: ['¡El mapa dice: repasa por aquí!', '¡A la aventura, pregunta por pregunta!'],
       },
     },
     dralingo: {
@@ -141,7 +154,7 @@
     },
   };
   const HUMANS = ['fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian'];
-  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', smash: 'cheer', fiesta: 'cheer', swing: 'cheer', oro: 'cheer', casi: 'hello', ruta: 'hello', mystery: 'mystery', oops: 'mystery' };
+  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', smash: 'cheer', fiesta: 'cheer', swing: 'cheer', oro: 'cheer', casi: 'hello', ruta: 'hello', libro: 'cheer', repaso: 'hello', mystery: 'mystery', oops: 'mystery' };
   const pick1 = (a) => a[Math.floor(Math.random() * a.length)];
 
   function pick(n, opts) {

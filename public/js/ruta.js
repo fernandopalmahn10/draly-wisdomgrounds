@@ -73,6 +73,7 @@
     play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M6.6 2.8v4.6h4.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   };
   const sky = '<svg class="rd-sky" viewBox="0 0 400 110" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><use href="#rd-sky"/></svg>' +
     '<svg class="rd-sky rd-sky-mirror" viewBox="0 0 400 110" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><use href="#rd-sky"/></svg>';
@@ -558,9 +559,29 @@
             '<a class="rd-btn rd-btn-red" href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">Entrar con mi código</a>'
           : (st.train === 'open' ? '<a class="rd-btn rd-btn-gold" href="/audios/' + esc(m.slug) + '/entrenamiento" data-nav>' + I.target + 'Practicar en El Entrenamiento</a>' : ''));
     } else if (st.gold === 'open') {
+      // 📖 phase 5: a simulation the kid took (a teacher: every one) gets its «Libro dorado» under the tile, with the
+      // latest try's mistakes; the PDF of the whole golden book once every simulation is taken (the server decides)
+      const G = m.golden;
+      const bookRow = (s) => {
+        if (!s.book) return '';
+        const n = s.mistakes;
+        const tag = !s.taken || n == null ? '' : n === 0 ? '<span class="rd-sim-book-n is-zero">' + I.check + '<span>Sin errores</span></span>'
+          : '<span class="rd-sim-book-n">' + n + (n === 1 ? ' error' : ' errores') + '</span>';
+        const label = 'Libro dorado del Simulacro ' + s.n + (s.taken && n != null ? (n === 0 ? ', sin errores' : ', ' + n + (n === 1 ? ' error' : ' errores') + ' para repasar') : '');
+        return '<a class="rd-sim-book" href="' + esc(s.book) + '" data-nav aria-label="' + esc(label) + '">' + I.book + '<span class="rd-sim-book-t" aria-hidden="true">Libro dorado</span>' + tag + '</a>';
+      };
+      let pdf = '';
+      if (G && G.pdf) {
+        pdf = '<div class="rd-gold-pdf is-ready"><p><b>El libro dorado en PDF</b>' + (G.mb ? '<span>' + String(Number(G.mb) || 0).replace('.', ',') + ' MB</span>' : '') + '</p>' +
+          '<a class="rd-btn rd-btn-gold" href="' + esc(G.pdf) + '" download>' + I.down + 'Descargar el libro</a></div>';
+      } else if (G && G.login) {
+        pdf = '<p class="rd-gold-note">Tu libro dorado se abre en tu cuenta: <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">entra con tu código</a> para ver tus errores de cada simulacro.</p>';
+      } else if (G && G.left > 0) {
+        pdf = '<p class="rd-gold-pdf">' + I.lock + '<span>' + (G.left === 1 ? 'Haz el simulacro que falta para descargar el libro.' : 'Haz los ' + G.left + ' simulacros que faltan para descargar el libro.') + '</span></p>';
+      }
       goldBody = '<p class="rd-stop-text">El examen completo con el audio original, como el día del examen.</p>' +
         '<ul class="rd-sims">' + m.sims.map((s) =>
-          '<li><a class="rd-sim' + (s.best != null ? ' is-done' : '') + '" href="' + esc(s.href) + '">' +
+          '<li' + (s.book ? ' class="has-book"' : '') + '><a class="rd-sim' + (s.best != null ? ' is-done' : '') + '" href="' + esc(s.href) + '">' +
             '<b class="rd-sim-n" aria-hidden="true">' + s.n + '</b>' +
             '<span class="rd-sim-name">Simulacro ' + s.n + '</span>' +
             '<span class="rd-sim-meta">' + s.questions + ' preguntas</span>' +
@@ -569,7 +590,7 @@
             (s.best == null ? '' : s.best >= 60
               ? '<span class="rd-sim-best is-pass"><span class="au-sr">Tu mejor resultado: </span>' + I.check + s.best + ' %</span>'
               : '<span class="rd-sim-best"><span class="au-sr">Ya lo intentaste. </span>' + I.again + 'Otra vez</span>') +
-          '</a></li>').join('') + '</ul>';
+          '</a>' + bookRow(s) + '</li>').join('') + '</ul>' + pdf;
     } else if (st.gold === 'locked') {
       goldBody = '<p class="rd-stop-text">' + m.simCount + (m.simCount === 1 ? ' simulacro completo' : ' simulacros completos') + ' con el audio original del examen.</p>' +
         '<p class="rd-stop-state">' + I.lock + 'Se abre con la clave</p>';

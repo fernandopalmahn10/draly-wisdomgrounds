@@ -1,0 +1,6148 @@
+{
+ "id": "yct1sim",
+ "kind": "golden",
+ "name": "YCT 1",
+ "title": "YCT 1 · Simulaciones",
+ "level": "yct1",
+ "pdf": {
+  "f": "book.pdf",
+  "v": "54ace73b42",
+  "mb": 8.3,
+  "pages": 41,
+  "src": "54ace73b42"
+ },
+ "review": [
+  {
+   "b": "Palabras sueltas",
+   "t": " (Escuchar 1, Leer 1): repásalas en el libro «Vocabulario»."
+  },
+  {
+   "b": "Frases y conversaciones",
+   "t": ": léelas en voz alta con su español, hasta que te salgan solas."
+  }
+ ],
+ "examples": {
+  "parts": [
+   {
+    "sec": "L",
+    "part": 1,
+    "kind": "tf",
+    "how": "Escuchas una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+    "first": 1,
+    "last": 5,
+    "items": [
+     {
+      "num": 0,
+      "ans": "T",
+      "ex": 1,
+      "a": 0,
+      "p": 0,
+      "py": "kǒu",
+      "es": "boca"
+     },
+     {
+      "num": 0,
+      "ans": "F",
+      "ex": 1,
+      "a": 1,
+      "p": 1,
+      "py": "ěrduo",
+      "es": "orejas"
+     }
+    ],
+    "big": 1
+   },
+   {
+    "sec": "L",
+    "part": 2,
+    "kind": "abc",
+    "how": "Escuchas una palabra o una frase corta. Elige su foto: A, B o C.",
+    "first": 6,
+    "last": 10,
+    "items": [
+     {
+      "num": 0,
+      "ans": "A",
+      "ex": 1,
+      "a": 2,
+      "opts": [
+       {
+        "l": "A",
+        "p": 2
+       },
+       {
+        "l": "B",
+        "p": 3
+       },
+       {
+        "l": "C",
+        "p": 4
+       }
+      ],
+      "tab": [
+       13.46,
+       17.95
+      ],
+      "py": "Zhōngguórén",
+      "es": "persona china"
+     }
+    ],
+    "big": 1
+   },
+   {
+    "sec": "L",
+    "part": 3,
+    "kind": "tf",
+    "how": "Escuchas una frase. ¿Va con la foto? Marca {ok} o {no}.",
+    "first": 11,
+    "last": 15,
+    "items": [
+     {
+      "num": 0,
+      "ans": "T",
+      "ex": 1,
+      "a": 3,
+      "p": 5,
+      "py": "Wǒ de yǎnjing dà.",
+      "es": "Mis ojos son grandes."
+     },
+     {
+      "num": 0,
+      "ans": "F",
+      "ex": 1,
+      "a": 4,
+      "p": 6,
+      "py": "Xiànzài sì diǎn.",
+      "es": "Son las cuatro."
+     }
+    ],
+    "big": 0
+   },
+   {
+    "sec": "L",
+    "part": 4,
+    "kind": "abc",
+    "how": "Escuchas una conversación corta. Elige su foto: A, B o C.",
+    "first": 16,
+    "last": 20,
+    "items": [
+     {
+      "num": 0,
+      "ans": "C",
+      "ex": 1,
+      "a": 5,
+      "opts": [
+       {
+        "l": "A",
+        "p": 7
+       },
+       {
+        "l": "B",
+        "p": 8
+       },
+       {
+        "l": "C",
+        "p": 9
+       }
+      ],
+      "tab": [
+       13.46,
+       17.95
+      ],
+      "lines": [
+       {
+        "py": "Míngtiān shì qī yuè jǐ hào?",
+        "es": "¿Qué día de julio es mañana?",
+        "v": 0
+       },
+       {
+        "py": "Míngtiān shì qī yuè èr hào.",
+        "es": "Mañana es 2 de julio.",
+        "v": 1
+       }
+      ]
+     }
+    ],
+    "big": 1
+   },
+   {
+    "sec": "R",
+    "part": 1,
+    "kind": "tf",
+    "how": "Lees una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+    "first": 21,
+    "last": 25,
+    "items": [
+     {
+      "num": 0,
+      "ans": "F",
+      "ex": 1,
+      "p": 10,
+      "py": "gǒu",
+      "es": "perro"
+     }
+    ],
+    "big": 1
+   },
+   {
+    "sec": "R",
+    "part": 2,
+    "kind": "gal",
+    "how": "Lees cinco frases. Cada una va con una de las fotos, de la A a la F.",
+    "first": 26,
+    "last": 30,
+    "items": [
+     {
+      "num": 0,
+      "ans": "E",
+      "ex": 1,
+      "p": 11,
+      "tab": [
+       13.73,
+       18.3
+      ],
+      "py": "Wǒ de bízi cháng.",
+      "es": "Mi nariz es larga."
+     }
+    ],
+    "talk": 0
+   },
+   {
+    "sec": "R",
+    "part": 3,
+    "kind": "fill",
+    "how": "Lees cinco conversaciones. Complétalas con las palabras de la lista.",
+    "first": 31,
+    "last": 35,
+    "items": [
+     {
+      "num": 0,
+      "ans": "D",
+      "ex": 1,
+      "lines": [
+       {
+        "py": "Zhèr yǒu jǐ ge rén?",
+        "es": "¿Cuántas personas hay aquí?",
+        "v": 0
+       },
+       {
+        "py": "Zhèr yǒu ___ ge rén.",
+        "es": "Aquí hay tres personas.",
+        "v": 1,
+        "fw": "sān"
+       }
+      ],
+      "p": 12
+     }
+    ],
+    "bank": [
+     {
+      "l": "A",
+      "py": "dà",
+      "es": "grande"
+     },
+     {
+      "l": "B",
+      "py": "shì",
+      "es": "ser / es"
+     },
+     {
+      "l": "C",
+      "py": "diǎn",
+      "es": "en punto (la hora)"
+     },
+     {
+      "l": "D",
+      "py": "sān",
+      "es": "tres",
+      "for": "ex"
+     },
+     {
+      "l": "E",
+      "py": "xuéxiào",
+      "es": "escuela"
+     },
+     {
+      "l": "F",
+      "py": "ma",
+      "es": "¿…? (pregunta de sí o no)"
+     }
+    ]
+   }
+  ],
+  "pics": [
+   {
+    "f": "ex/p01.webp",
+    "v": "5978f9645d",
+    "w": 480,
+    "h": 360
+   },
+   {
+    "f": "ex/p02.webp",
+    "v": "7e7f3a0cf3",
+    "w": 480,
+    "h": 360
+   },
+   {
+    "f": "ex/p03.webp",
+    "v": "70b03d9e40",
+    "w": 360,
+    "h": 270
+   },
+   {
+    "f": "ex/p04.webp",
+    "v": "5b4c5ab957",
+    "w": 360,
+    "h": 270
+   },
+   {
+    "f": "ex/p05.webp",
+    "v": "e78306798a",
+    "w": 360,
+    "h": 270
+   },
+   {
+    "f": "ex/p06.webp",
+    "v": "244c8c81c8",
+    "w": 480,
+    "h": 360
+   },
+   {
+    "f": "ex/p07.webp",
+    "v": "18ee8708b9",
+    "w": 480,
+    "h": 360
+   },
+   {
+    "f": "ex/p08.webp",
+    "v": "0c6b8b8fcf",
+    "w": 360,
+    "h": 270
+   },
+   {
+    "f": "ex/p09.webp",
+    "v": "6b80d2a1d2",
+    "w": 360,
+    "h": 270
+   },
+   {
+    "f": "ex/p10.webp",
+    "v": "e52376e58e",
+    "w": 360,
+    "h": 270
+   },
+   {
+    "f": "ex/p11.webp",
+    "v": "e8bdb618d6",
+    "w": 480,
+    "h": 360
+   },
+   {
+    "f": "ex/p12.webp",
+    "v": "ac8eb8cf90",
+    "w": 480,
+    "h": 360
+   },
+   {
+    "f": "ex/p13.webp",
+    "v": "892540538e",
+    "w": 380,
+    "h": 285
+   }
+  ],
+  "clips": [
+   {
+    "f": "ex/a01.m4a",
+    "v": "9cf19136c5",
+    "s": 5.51
+   },
+   {
+    "f": "ex/a02.m4a",
+    "v": "36cb3c249b",
+    "s": 5.32
+   },
+   {
+    "f": "ex/a03.m4a",
+    "v": "0fa3df30d3",
+    "s": 7.26
+   },
+   {
+    "f": "ex/a04.m4a",
+    "v": "170a658b71",
+    "s": 10.08
+   },
+   {
+    "f": "ex/a05.m4a",
+    "v": "676c661d7f",
+    "s": 9.28
+   },
+   {
+    "f": "ex/a06.m4a",
+    "v": "d86405bb74",
+    "s": 21.0
+   }
+  ]
+ },
+ "sims": [
+  {
+   "n": 1,
+   "id": "yct1-sim1",
+   "total": 200,
+   "questions": 35,
+   "parts": [
+    {
+     "sec": "L",
+     "part": 1,
+     "kind": "tf",
+     "how": "Escuchas una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+     "first": 1,
+     "last": 5,
+     "items": [
+      {
+       "num": 1,
+       "ans": "F",
+       "q": "L1-1",
+       "a": 0,
+       "p": 0,
+       "py": "wǒmen",
+       "es": "nosotros"
+      },
+      {
+       "num": 2,
+       "ans": "F",
+       "q": "L1-2",
+       "a": 1,
+       "p": 1,
+       "py": "shǒu",
+       "es": "mano"
+      },
+      {
+       "num": 3,
+       "ans": "T",
+       "q": "L1-3",
+       "a": 2,
+       "p": 2,
+       "py": "miàntiáo",
+       "es": "fideos"
+      },
+      {
+       "num": 4,
+       "ans": "F",
+       "q": "L1-4",
+       "a": 3,
+       "p": 3,
+       "py": "shuǐ",
+       "es": "agua"
+      },
+      {
+       "num": 5,
+       "ans": "T",
+       "q": "L1-5",
+       "a": 4,
+       "p": 4,
+       "py": "bízi",
+       "es": "nariz"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 2,
+     "kind": "abc",
+     "how": "Escuchas una palabra o una frase corta. Elige su foto: A, B o C.",
+     "first": 6,
+     "last": 10,
+     "items": [
+      {
+       "num": 6,
+       "ans": "B",
+       "q": "L2-6",
+       "a": 5,
+       "opts": [
+        {
+         "l": "A",
+         "p": 5
+        },
+        {
+         "l": "B",
+         "p": 6
+        },
+        {
+         "l": "C",
+         "p": 7
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "sì ge",
+       "es": "cuatro"
+      },
+      {
+       "num": 7,
+       "ans": "B",
+       "q": "L2-7",
+       "a": 6,
+       "opts": [
+        {
+         "l": "A",
+         "p": 8
+        },
+        {
+         "l": "B",
+         "p": 9
+        },
+        {
+         "l": "C",
+         "p": 10
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "míngtiān jiàn",
+       "es": "¡hasta mañana!"
+      },
+      {
+       "num": 8,
+       "ans": "C",
+       "q": "L2-8",
+       "a": 7,
+       "opts": [
+        {
+         "l": "A",
+         "p": 11
+        },
+        {
+         "l": "B",
+         "p": 12
+        },
+        {
+         "l": "C",
+         "p": 13
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "bù gāoxìng",
+       "es": "no está contenta"
+      },
+      {
+       "num": 9,
+       "ans": "B",
+       "q": "L2-9",
+       "a": 8,
+       "opts": [
+        {
+         "l": "A",
+         "p": 14
+        },
+        {
+         "l": "B",
+         "p": 15
+        },
+        {
+         "l": "C",
+         "p": 16
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "cháng ěrduo",
+       "es": "orejas largas"
+      },
+      {
+       "num": 10,
+       "ans": "A",
+       "q": "L2-10",
+       "a": 9,
+       "opts": [
+        {
+         "l": "A",
+         "p": 17
+        },
+        {
+         "l": "B",
+         "p": 18
+        },
+        {
+         "l": "C",
+         "p": 19
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "hē niúnǎi",
+       "es": "tomar leche"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 3,
+     "kind": "tf",
+     "how": "Escuchas una frase. ¿Va con la foto? Marca {ok} o {no}.",
+     "first": 11,
+     "last": 15,
+     "items": [
+      {
+       "num": 11,
+       "ans": "T",
+       "q": "L3-11",
+       "a": 10,
+       "p": 20,
+       "py": "Nǐ hěn hǎo.",
+       "es": "Eres muy bueno."
+      },
+      {
+       "num": 12,
+       "ans": "T",
+       "q": "L3-12",
+       "a": 11,
+       "p": 21,
+       "py": "Bàba zài chī fàn.",
+       "es": "Papá está comiendo."
+      },
+      {
+       "num": 13,
+       "ans": "F",
+       "q": "L3-13",
+       "a": 12,
+       "p": 22,
+       "py": "Wǒ xiànzài yí ge rén zài jiā.",
+       "es": "Ahora estoy solo en casa."
+      },
+      {
+       "num": 14,
+       "ans": "F",
+       "q": "L3-14",
+       "a": 13,
+       "p": 23,
+       "py": "Zhèr yǒu hěn duō yú.",
+       "es": "Aquí hay muchos peces."
+      },
+      {
+       "num": 15,
+       "ans": "T",
+       "q": "L3-15",
+       "a": 14,
+       "p": 24,
+       "py": "Èr hào hé shísān hào, nǎge shì nǐ gēge?",
+       "es": "El número 2 y el 13: ¿cuál es tu hermano mayor?"
+      }
+     ],
+     "big": 0
+    },
+    {
+     "sec": "L",
+     "part": 4,
+     "kind": "abc",
+     "how": "Escuchas una conversación corta. Elige su foto: A, B o C.",
+     "first": 16,
+     "last": 20,
+     "items": [
+      {
+       "num": 16,
+       "ans": "A",
+       "q": "L4-16",
+       "a": 15,
+       "opts": [
+        {
+         "l": "A",
+         "p": 25
+        },
+        {
+         "l": "B",
+         "p": 26
+        },
+        {
+         "l": "C",
+         "p": 27
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Wǒ hé tā, shéi de gèzi gāo?",
+         "es": "Él y yo, ¿quién es más alto?",
+         "v": 0
+        },
+        {
+         "py": "Nǐ de gèzi gāo.",
+         "es": "Tú eres más alta.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 17,
+       "ans": "A",
+       "q": "L4-17",
+       "a": 16,
+       "opts": [
+        {
+         "l": "A",
+         "p": 28
+        },
+        {
+         "l": "B",
+         "p": 29
+        },
+        {
+         "l": "C",
+         "p": 30
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Nǐ kàn, zhè shì shénme?",
+         "es": "Mira, ¿qué es esto?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ bú kàn.",
+         "es": "No quiero mirar.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 18,
+       "ans": "B",
+       "q": "L4-18",
+       "a": 17,
+       "opts": [
+        {
+         "l": "A",
+         "p": 31
+        },
+        {
+         "l": "B",
+         "p": 32
+        },
+        {
+         "l": "C",
+         "p": 33
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Zhè shì nǐ de niǎo?",
+         "es": "¿Este es tu pájaro?",
+         "v": 0
+        },
+        {
+         "py": "Shì de.",
+         "es": "Sí.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 19,
+       "ans": "C",
+       "q": "L4-19",
+       "a": 18,
+       "opts": [
+        {
+         "l": "A",
+         "p": 34
+        },
+        {
+         "l": "B",
+         "p": 35
+        },
+        {
+         "l": "C",
+         "p": 36
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Nǐ xǐhuan ma?",
+         "es": "¿Te gusta?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ hěn xǐhuan, xièxie.",
+         "es": "Me gusta mucho, gracias.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 20,
+       "ans": "C",
+       "q": "L4-20",
+       "a": 19,
+       "opts": [
+        {
+         "l": "A",
+         "p": 37
+        },
+        {
+         "l": "B",
+         "p": 38
+        },
+        {
+         "l": "C",
+         "p": 39
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Tāmen zài nǎr?",
+         "es": "¿Dónde están ellos?",
+         "v": 0
+        },
+        {
+         "py": "Zài shāngdiàn.",
+         "es": "En la tienda.",
+         "v": 1
+        }
+       ]
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "R",
+     "part": 1,
+     "kind": "tf",
+     "how": "Lees una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+     "first": 21,
+     "last": 25,
+     "items": [
+      {
+       "num": 21,
+       "ans": "F",
+       "q": "R1-21",
+       "p": 40,
+       "py": "qī",
+       "es": "siete"
+      },
+      {
+       "num": 22,
+       "ans": "F",
+       "q": "R1-22",
+       "p": 41,
+       "py": "niú",
+       "es": "vaca"
+      },
+      {
+       "num": 23,
+       "ans": "F",
+       "q": "R1-23",
+       "p": 42,
+       "py": "zàijiàn",
+       "es": "adiós"
+      },
+      {
+       "num": 24,
+       "ans": "T",
+       "q": "R1-24",
+       "p": 43,
+       "py": "māo",
+       "es": "gato"
+      },
+      {
+       "num": 25,
+       "ans": "T",
+       "q": "R1-25",
+       "p": 44,
+       "py": "nàr",
+       "es": "allá"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "R",
+     "part": 2,
+     "kind": "gal",
+     "how": "Lees cinco frases. Cada una va con una de las fotos, de la A a la F.",
+     "first": 26,
+     "last": 30,
+     "items": [
+      {
+       "num": 26,
+       "ans": "B",
+       "q": "R2-26",
+       "p": 45,
+       "tab": [
+        13.73,
+        18.3
+       ],
+       "py": "Zhège dà, nàge xiǎo.",
+       "es": "Este es grande y ese es pequeño."
+      },
+      {
+       "num": 27,
+       "ans": "A",
+       "q": "R2-27",
+       "p": 46,
+       "tab": [
+        13.73,
+        18.3
+       ],
+       "py": "Māma, nǐ chī píngguǒ ma?",
+       "es": "Mamá, ¿quieres una manzana?"
+      },
+      {
+       "num": 28,
+       "ans": "C",
+       "q": "R2-28",
+       "p": 47,
+       "tab": [
+        13.73,
+        18.3
+       ],
+       "py": "Hěn gāoxìng rènshi nǐ, nǐ jiào shénme?",
+       "es": "Mucho gusto, ¿cómo te llamas?"
+      },
+      {
+       "num": 29,
+       "ans": "F",
+       "q": "R2-29",
+       "p": 48,
+       "tab": [
+        13.73,
+        18.3
+       ],
+       "py": "Lǎoshī, Zhōngguó zài zhèr.",
+       "es": "Maestra, China está aquí."
+      },
+      {
+       "num": 30,
+       "ans": "D",
+       "q": "R2-30",
+       "p": 49,
+       "tab": [
+        13.73,
+        18.3
+       ],
+       "py": "Bù, wǒ bù hē.",
+       "es": "No, no quiero tomar."
+      }
+     ],
+     "talk": 0
+    },
+    {
+     "sec": "R",
+     "part": 3,
+     "kind": "fill",
+     "how": "Lees cinco conversaciones. Complétalas con las palabras de la lista.",
+     "first": 31,
+     "last": 35,
+     "items": [
+      {
+       "num": 31,
+       "ans": "A",
+       "q": "R3-31",
+       "lines": [
+        {
+         "py": "Nǐmen shéi ___?",
+         "es": "¿Quién de ustedes es mayor?",
+         "v": 0,
+         "fw": "dà"
+        },
+        {
+         "py": "Wǒ. Tā 8 suì, wǒ 9 suì.",
+         "es": "Yo. Él tiene 8 años y yo, 9.",
+         "v": 1
+        }
+       ],
+       "p": 50
+      },
+      {
+       "num": 32,
+       "ans": "C",
+       "q": "R3-32",
+       "lines": [
+        {
+         "py": "Jīntiān jǐ ___ qù nàr?",
+         "es": "¿A qué hora vamos allá hoy?",
+         "v": 0,
+         "fw": "diǎn"
+        },
+        {
+         "py": "7:15.",
+         "es": "A las 7:15.",
+         "v": 1
+        }
+       ],
+       "p": 51
+      },
+      {
+       "num": 33,
+       "ans": "F",
+       "q": "R3-33",
+       "lines": [
+        {
+         "py": "Nǐ ài chī yú ___?",
+         "es": "¿Te gusta el pescado?",
+         "v": 0,
+         "fw": "ma"
+        },
+        {
+         "py": "Bú ài chī.",
+         "es": "No me gusta.",
+         "v": 1
+        }
+       ],
+       "p": 52
+      },
+      {
+       "num": 34,
+       "ans": "B",
+       "q": "R3-34",
+       "lines": [
+        {
+         "py": "Nǎge ___ nǐ jiějie?",
+         "es": "¿Cuál es tu hermana mayor?",
+         "v": 0,
+         "fw": "shì"
+        },
+        {
+         "py": "Cháng tóufa de nàge.",
+         "es": "La de cabello largo.",
+         "v": 1
+        }
+       ],
+       "p": 53
+      },
+      {
+       "num": 35,
+       "ans": "E",
+       "q": "R3-35",
+       "lines": [
+        {
+         "py": "Xīngqīliù nǐmen qù nǎr?",
+         "es": "¿Adónde van ustedes el sábado?",
+         "v": 0
+        },
+        {
+         "py": "___.",
+         "es": "A la escuela.",
+         "v": 1,
+         "fw": "Xuéxiào"
+        }
+       ],
+       "p": 54
+      }
+     ],
+     "bank": [
+      {
+       "l": "A",
+       "py": "dà",
+       "es": "grande",
+       "for": 31
+      },
+      {
+       "l": "B",
+       "py": "shì",
+       "es": "ser / es",
+       "for": 34
+      },
+      {
+       "l": "C",
+       "py": "diǎn",
+       "es": "en punto (la hora)",
+       "for": 32
+      },
+      {
+       "l": "D",
+       "py": "sān",
+       "es": "tres",
+       "for": "ex"
+      },
+      {
+       "l": "E",
+       "py": "xuéxiào",
+       "es": "escuela",
+       "for": 35
+      },
+      {
+       "l": "F",
+       "py": "ma",
+       "es": "¿…? (pregunta de sí o no)",
+       "for": 33
+      }
+     ]
+    }
+   ],
+   "pics": [
+    {
+     "f": "1/p01.webp",
+     "v": "d0f94c1a3a",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p02.webp",
+     "v": "4bf8b9d02f",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p03.webp",
+     "v": "7c9230d997",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p04.webp",
+     "v": "8f69fd3b4f",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p05.webp",
+     "v": "c4ce5772d6",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p06.webp",
+     "v": "25a2af644e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p07.webp",
+     "v": "69c85bd17d",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p08.webp",
+     "v": "24672e6655",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p09.webp",
+     "v": "92c2f4a9fa",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p10.webp",
+     "v": "44cf6306d6",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p11.webp",
+     "v": "923968eb97",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p12.webp",
+     "v": "7808834351",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p13.webp",
+     "v": "fe873d656d",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p14.webp",
+     "v": "cefdb778ae",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p15.webp",
+     "v": "75ee7f0549",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p16.webp",
+     "v": "5d810d0b7a",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p17.webp",
+     "v": "96996cb5a9",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p18.webp",
+     "v": "2ef96ae384",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p19.webp",
+     "v": "76fd65dad8",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p20.webp",
+     "v": "dbb59915ce",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p21.webp",
+     "v": "2120afc722",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p22.webp",
+     "v": "13210391fe",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p23.webp",
+     "v": "8beef665c6",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p24.webp",
+     "v": "c44f0bf683",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p25.webp",
+     "v": "7140a98a2c",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p26.webp",
+     "v": "485cef52b6",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p27.webp",
+     "v": "50ad6ab3cb",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p28.webp",
+     "v": "83c9f57ca3",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p29.webp",
+     "v": "0c0f2ce716",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p30.webp",
+     "v": "5ca7965066",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p31.webp",
+     "v": "d453a9bda6",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p32.webp",
+     "v": "342f81f2bc",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p33.webp",
+     "v": "22ccbc922e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p34.webp",
+     "v": "81581b2dd3",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p35.webp",
+     "v": "ae6db977fe",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p36.webp",
+     "v": "3095e7a22e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p37.webp",
+     "v": "ba00d4aa2d",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p38.webp",
+     "v": "3219ff1f73",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p39.webp",
+     "v": "9fc1a5524e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p40.webp",
+     "v": "481414d924",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "1/p41.webp",
+     "v": "7970d5bbc9",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p42.webp",
+     "v": "0cdd22d9fe",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p43.webp",
+     "v": "dac30ebd3d",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p44.webp",
+     "v": "f9a39932e4",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p45.webp",
+     "v": "80b48a1a2d",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p46.webp",
+     "v": "9182b09edc",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p47.webp",
+     "v": "0bfe6ce423",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p48.webp",
+     "v": "ed7a611c0d",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p49.webp",
+     "v": "bcf610d6bd",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p50.webp",
+     "v": "4694c8a268",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "1/p51.webp",
+     "v": "e45bfe4e4f",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "1/p52.webp",
+     "v": "cad4ac29ef",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "1/p53.webp",
+     "v": "8aaf5f9e2f",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "1/p54.webp",
+     "v": "2f0e57308e",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "1/p55.webp",
+     "v": "fa639ac102",
+     "w": 380,
+     "h": 285
+    }
+   ],
+   "clips": [
+    {
+     "f": "1/a01.m4a",
+     "v": "e32f023b64",
+     "s": 5.08
+    },
+    {
+     "f": "1/a02.m4a",
+     "v": "ec11c21a92",
+     "s": 5.24
+    },
+    {
+     "f": "1/a03.m4a",
+     "v": "944206376c",
+     "s": 5.53
+    },
+    {
+     "f": "1/a04.m4a",
+     "v": "aa930c4deb",
+     "s": 5.24
+    },
+    {
+     "f": "1/a05.m4a",
+     "v": "720dad74df",
+     "s": 5.2
+    },
+    {
+     "f": "1/a06.m4a",
+     "v": "3744795f16",
+     "s": 5.17
+    },
+    {
+     "f": "1/a07.m4a",
+     "v": "511d0e115e",
+     "s": 6.22
+    },
+    {
+     "f": "1/a08.m4a",
+     "v": "7a377dda67",
+     "s": 6.3
+    },
+    {
+     "f": "1/a09.m4a",
+     "v": "78c1ed508a",
+     "s": 6.57
+    },
+    {
+     "f": "1/a10.m4a",
+     "v": "722a96f835",
+     "s": 7.14
+    },
+    {
+     "f": "1/a11.m4a",
+     "v": "d622920362",
+     "s": 7.12
+    },
+    {
+     "f": "1/a12.m4a",
+     "v": "b41a006a11",
+     "s": 8.61
+    },
+    {
+     "f": "1/a13.m4a",
+     "v": "c5f03a2cae",
+     "s": 11.17
+    },
+    {
+     "f": "1/a14.m4a",
+     "v": "a8521c31ad",
+     "s": 9.02
+    },
+    {
+     "f": "1/a15.m4a",
+     "v": "b39392320b",
+     "s": 15.4
+    },
+    {
+     "f": "1/a16.m4a",
+     "v": "af67d195e1",
+     "s": 19.41
+    },
+    {
+     "f": "1/a17.m4a",
+     "v": "f4d448d419",
+     "s": 14.85
+    },
+    {
+     "f": "1/a18.m4a",
+     "v": "ecf6aa4563",
+     "s": 13.76
+    },
+    {
+     "f": "1/a19.m4a",
+     "v": "68db508d87",
+     "s": 16.09
+    },
+    {
+     "f": "1/a20.m4a",
+     "v": "626ee3b647",
+     "s": 14.39
+    }
+   ],
+   "pass": 120
+  },
+  {
+   "n": 2,
+   "id": "yct1-sim2",
+   "total": 200,
+   "questions": 35,
+   "parts": [
+    {
+     "sec": "L",
+     "part": 1,
+     "kind": "tf",
+     "how": "Escuchas una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+     "first": 1,
+     "last": 5,
+     "items": [
+      {
+       "num": 1,
+       "ans": "F",
+       "q": "L1-1",
+       "a": 0,
+       "p": 0,
+       "py": "māma",
+       "es": "mamá"
+      },
+      {
+       "num": 2,
+       "ans": "F",
+       "q": "L1-2",
+       "a": 1,
+       "p": 1,
+       "py": "cháng",
+       "es": "largo"
+      },
+      {
+       "num": 3,
+       "ans": "T",
+       "q": "L1-3",
+       "a": 2,
+       "p": 2,
+       "py": "bù",
+       "es": "no"
+      },
+      {
+       "num": 4,
+       "ans": "F",
+       "q": "L1-4",
+       "a": 3,
+       "p": 3,
+       "py": "tóufa",
+       "es": "cabello"
+      },
+      {
+       "num": 5,
+       "ans": "T",
+       "q": "L1-5",
+       "a": 4,
+       "p": 4,
+       "py": "kàn",
+       "es": "mirar / ver"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 2,
+     "kind": "abc",
+     "how": "Escuchas una palabra o una frase corta. Elige su foto: A, B o C.",
+     "first": 6,
+     "last": 10,
+     "items": [
+      {
+       "num": 6,
+       "ans": "B",
+       "q": "L2-6",
+       "a": 5,
+       "opts": [
+        {
+         "l": "A",
+         "p": 5
+        },
+        {
+         "l": "B",
+         "p": 6
+        },
+        {
+         "l": "C",
+         "p": 7
+        }
+       ],
+       "tab": [
+        19.09,
+        29.75
+       ],
+       "py": "xièxie nǐ",
+       "es": "¡gracias!"
+      },
+      {
+       "num": 7,
+       "ans": "C",
+       "q": "L2-7",
+       "a": 6,
+       "opts": [
+        {
+         "l": "A",
+         "p": 8
+        },
+        {
+         "l": "B",
+         "p": 9
+        },
+        {
+         "l": "C",
+         "p": 10
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "shíwǔ suì",
+       "es": "quince años"
+      },
+      {
+       "num": 8,
+       "ans": "C",
+       "q": "L2-8",
+       "a": 7,
+       "opts": [
+        {
+         "l": "A",
+         "p": 11
+        },
+        {
+         "l": "B",
+         "p": 12
+        },
+        {
+         "l": "C",
+         "p": 13
+        }
+       ],
+       "tab": [
+        13.46,
+        28.87
+       ],
+       "py": "yǎnjing hé bízi",
+       "es": "ojos y nariz"
+      },
+      {
+       "num": 9,
+       "ans": "B",
+       "q": "L2-9",
+       "a": 8,
+       "opts": [
+        {
+         "l": "A",
+         "p": 14
+        },
+        {
+         "l": "B",
+         "p": 15
+        },
+        {
+         "l": "C",
+         "p": 16
+        }
+       ],
+       "tab": [
+        25.71,
+        29.14
+       ],
+       "py": "yí ge píngguǒ",
+       "es": "una manzana"
+      },
+      {
+       "num": 10,
+       "ans": "A",
+       "q": "L2-10",
+       "a": 9,
+       "opts": [
+        {
+         "l": "A",
+         "p": 17
+        },
+        {
+         "l": "B",
+         "p": 18
+        },
+        {
+         "l": "C",
+         "p": 19
+        }
+       ],
+       "tab": [
+        22.57,
+        27.84
+       ],
+       "py": "wǒ de lǎoshī",
+       "es": "mi maestra"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 3,
+     "kind": "tf",
+     "how": "Escuchas una frase. ¿Va con la foto? Marca {ok} o {no}.",
+     "first": 11,
+     "last": 15,
+     "items": [
+      {
+       "num": 11,
+       "ans": "T",
+       "q": "L3-11",
+       "a": 10,
+       "p": 20,
+       "py": "Zhè shì shénme niǎo?",
+       "es": "¿Qué pájaro es este?"
+      },
+      {
+       "num": 12,
+       "ans": "T",
+       "q": "L3-12",
+       "a": 11,
+       "p": 21,
+       "py": "Wǒ ài chī miàntiáo.",
+       "es": "Me encanta comer fideos."
+      },
+      {
+       "num": 13,
+       "ans": "F",
+       "q": "L3-13",
+       "a": 12,
+       "p": 22,
+       "py": "Zhèr rén hěn duō.",
+       "es": "Aquí hay mucha gente."
+      },
+      {
+       "num": 14,
+       "ans": "T",
+       "q": "L3-14",
+       "a": 13,
+       "p": 23,
+       "py": "Nǐ kàn, wǒ gèzi gāo ma?",
+       "es": "Mira, ¿soy alta?"
+      },
+      {
+       "num": 15,
+       "ans": "F",
+       "q": "L3-15",
+       "a": 14,
+       "p": 24,
+       "py": "Jīntiān xīngqīliù, tā zài jiā.",
+       "es": "Hoy es sábado y él está en casa."
+      }
+     ],
+     "big": 0
+    },
+    {
+     "sec": "L",
+     "part": 4,
+     "kind": "abc",
+     "how": "Escuchas una conversación corta. Elige su foto: A, B o C.",
+     "first": 16,
+     "last": 20,
+     "items": [
+      {
+       "num": 16,
+       "ans": "C",
+       "q": "L4-16",
+       "a": 15,
+       "opts": [
+        {
+         "l": "A",
+         "p": 25
+        },
+        {
+         "l": "B",
+         "p": 26
+        },
+        {
+         "l": "C",
+         "p": 27
+        }
+       ],
+       "tab": [
+        13.46,
+        29.05
+       ],
+       "lines": [
+        {
+         "py": "Zhèr yǒu shuǐ hé niúnǎi, nǐ hē shénme?",
+         "es": "Aquí hay agua y leche, ¿qué tomas?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ hē shuǐ.",
+         "es": "Tomo agua.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 17,
+       "ans": "B",
+       "q": "L4-17",
+       "a": 16,
+       "opts": [
+        {
+         "l": "A",
+         "p": 28
+        },
+        {
+         "l": "B",
+         "p": 29
+        },
+        {
+         "l": "C",
+         "p": 30
+        }
+       ],
+       "tab": [
+        16.57,
+        28.76
+       ],
+       "lines": [
+        {
+         "py": "Zàijiàn!",
+         "es": "¡Adiós!",
+         "v": 0
+        },
+        {
+         "py": "Zàijiàn, wǒmen bā yuè jiàn.",
+         "es": "Adiós, nos vemos en agosto.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 18,
+       "ans": "A",
+       "q": "L4-18",
+       "a": 17,
+       "opts": [
+        {
+         "l": "A",
+         "p": 31
+        },
+        {
+         "l": "B",
+         "p": 32
+        },
+        {
+         "l": "C",
+         "p": 33
+        }
+       ],
+       "tab": [
+        13.46,
+        28.57
+       ],
+       "lines": [
+        {
+         "py": "Qù jiào gēge chī fàn.",
+         "es": "Ve a llamar a tu hermano para comer.",
+         "v": 0
+        },
+        {
+         "py": "Hǎo de, bàba.",
+         "es": "Está bien, papá.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 19,
+       "ans": "A",
+       "q": "L4-19",
+       "a": 18,
+       "opts": [
+        {
+         "l": "A",
+         "p": 34
+        },
+        {
+         "l": "B",
+         "p": 35
+        },
+        {
+         "l": "C",
+         "p": 36
+        }
+       ],
+       "tab": [
+        28.57,
+        22.08
+       ],
+       "lines": [
+        {
+         "py": "Yí ge dà, yí ge xiǎo, nǐ xǐhuan nǎge?",
+         "es": "Uno grande y uno pequeño, ¿cuál te gusta?",
+         "v": 0
+        },
+        {
+         "py": "Xiǎo de.",
+         "es": "El pequeño.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 20,
+       "ans": "B",
+       "q": "L4-20",
+       "a": 19,
+       "opts": [
+        {
+         "l": "A",
+         "p": 37
+        },
+        {
+         "l": "B",
+         "p": 38
+        },
+        {
+         "l": "C",
+         "p": 39
+        }
+       ],
+       "tab": [
+        26.0,
+        28.95
+       ],
+       "lines": [
+        {
+         "py": "Nǐ zài nǎr?",
+         "es": "¿Dónde estás?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ zài zhèr.",
+         "es": "Estoy aquí.",
+         "v": 1
+        }
+       ]
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "R",
+     "part": 1,
+     "kind": "tf",
+     "how": "Lees una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+     "first": 21,
+     "last": 25,
+     "items": [
+      {
+       "num": 21,
+       "ans": "T",
+       "q": "R1-21",
+       "p": 40,
+       "py": "shǒu",
+       "es": "mano"
+      },
+      {
+       "num": 22,
+       "ans": "F",
+       "q": "R1-22",
+       "p": 41,
+       "py": "jiǔ",
+       "es": "nueve"
+      },
+      {
+       "num": 23,
+       "ans": "F",
+       "q": "R1-23",
+       "p": 42,
+       "py": "wǒmen",
+       "es": "nosotros"
+      },
+      {
+       "num": 24,
+       "ans": "T",
+       "q": "R1-24",
+       "p": 43,
+       "py": "hē",
+       "es": "beber"
+      },
+      {
+       "num": 25,
+       "ans": "T",
+       "q": "R1-25",
+       "p": 44,
+       "py": "hǎo",
+       "es": "bueno / bien"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "R",
+     "part": 2,
+     "kind": "gal",
+     "how": "Lees cinco frases. Cada una va con una de las fotos, de la A a la F.",
+     "first": 26,
+     "last": 30,
+     "items": [
+      {
+       "num": 26,
+       "ans": "B",
+       "q": "R2-26",
+       "p": 45,
+       "tab": [
+        23.71,
+        27.14
+       ],
+       "py": "Tā xiànzài zài shāngdiàn.",
+       "es": "Él está en la tienda ahora."
+      },
+      {
+       "num": 27,
+       "ans": "D",
+       "q": "R2-27",
+       "p": 46,
+       "tab": [
+        23.71,
+        27.14
+       ],
+       "py": "Chī yì kǒu, hǎo ma?",
+       "es": "Prueba un bocado, ¿sí?"
+      },
+      {
+       "num": 28,
+       "ans": "F",
+       "q": "R2-28",
+       "p": 47,
+       "tab": [
+        23.71,
+        27.14
+       ],
+       "py": "Tāmen zài kàn shénme?",
+       "es": "¿Qué están mirando?"
+      },
+      {
+       "num": 29,
+       "ans": "A",
+       "q": "R2-29",
+       "p": 48,
+       "tab": [
+        23.71,
+        27.14
+       ],
+       "py": "Wǒ 5 diǎn qù nàr.",
+       "es": "Voy allá a las 5."
+      },
+      {
+       "num": 30,
+       "ans": "C",
+       "q": "R2-30",
+       "p": 49,
+       "tab": [
+        23.71,
+        27.14
+       ],
+       "py": "Gē, zhè shì “mǐfàn” de “mǐ” ma?",
+       "es": "Hermano, ¿este es el «{mǐ}» de «{mǐfàn}» (arroz)?"
+      }
+     ],
+     "talk": 0
+    },
+    {
+     "sec": "R",
+     "part": 3,
+     "kind": "fill",
+     "how": "Lees cinco conversaciones. Complétalas con las palabras de la lista.",
+     "first": 31,
+     "last": 35,
+     "items": [
+      {
+       "num": 31,
+       "ans": "F",
+       "q": "R3-31",
+       "lines": [
+        {
+         "py": "Jiě, nǐ qù ___?",
+         "es": "Hermana, ¿adónde vas?",
+         "v": 0,
+         "fw": "nǎr"
+        },
+        {
+         "py": "Xuéxiào.",
+         "es": "A la escuela.",
+         "v": 1
+        }
+       ],
+       "p": 50
+      },
+      {
+       "num": 32,
+       "ans": "A",
+       "q": "R3-32",
+       "lines": [
+        {
+         "py": "Xiǎo māo ài chī ___?",
+         "es": "¿Qué le gusta comer al gatito?",
+         "v": 0,
+         "fw": "shénme"
+        },
+        {
+         "py": "Yú.",
+         "es": "Pescado.",
+         "v": 1
+        }
+       ],
+       "p": 51
+      },
+      {
+       "num": 33,
+       "ans": "B",
+       "q": "R3-33",
+       "lines": [
+        {
+         "py": "Nǐ jǐ hào qù lǎoshī ___?",
+         "es": "¿Qué día vas a la casa de la maestra?",
+         "v": 0,
+         "fw": "jiā"
+        },
+        {
+         "py": "Míngtiān.",
+         "es": "Mañana.",
+         "v": 1
+        }
+       ],
+       "p": 52
+      },
+      {
+       "num": 34,
+       "ans": "E",
+       "q": "R3-34",
+       "lines": [
+        {
+         "py": "Nàge Zhōngguórén shì shéi?",
+         "es": "¿Quién es esa persona china?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ bú ___.",
+         "es": "No lo conozco.",
+         "v": 1,
+         "fw": "rènshi"
+        }
+       ],
+       "p": 53
+      },
+      {
+       "num": 35,
+       "ans": "C",
+       "q": "R3-35",
+       "lines": [
+        {
+         "py": "Nǎge shì nǐ ___ gǒu?",
+         "es": "¿Cuál es tu perro?",
+         "v": 0,
+         "fw": "de"
+        },
+        {
+         "py": "Cháng ěrduo zhège.",
+         "es": "Este, el de las orejas largas.",
+         "v": 1
+        }
+       ],
+       "p": 54
+      }
+     ],
+     "bank": [
+      {
+       "l": "A",
+       "py": "shénme",
+       "es": "¿qué?",
+       "for": 32
+      },
+      {
+       "l": "B",
+       "py": "jiā",
+       "es": "casa / familia",
+       "for": 33
+      },
+      {
+       "l": "C",
+       "py": "de",
+       "es": "de (mi, tu, su…)",
+       "for": 35
+      },
+      {
+       "l": "D",
+       "py": "sān",
+       "es": "tres",
+       "for": "ex"
+      },
+      {
+       "l": "E",
+       "py": "rènshi",
+       "es": "conocer (a alguien)",
+       "for": 34
+      },
+      {
+       "l": "F",
+       "py": "nǎr",
+       "es": "¿dónde?",
+       "for": 31
+      }
+     ]
+    }
+   ],
+   "pics": [
+    {
+     "f": "2/p01.webp",
+     "v": "d7fef0c600",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p02.webp",
+     "v": "c4e9fdd616",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p03.webp",
+     "v": "3af1098912",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p04.webp",
+     "v": "70473d66ca",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p05.webp",
+     "v": "0d75448980",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p06.webp",
+     "v": "c801f179f3",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p07.webp",
+     "v": "deda00c0ee",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p08.webp",
+     "v": "131299b3cc",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p09.webp",
+     "v": "9eccc0bb62",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p10.webp",
+     "v": "6b23f6c2e1",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p11.webp",
+     "v": "c4c837f712",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p12.webp",
+     "v": "b513313f12",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p13.webp",
+     "v": "d3b223d7fc",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p14.webp",
+     "v": "d1778a9ce9",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p15.webp",
+     "v": "7ebbe7356f",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p16.webp",
+     "v": "d47fd1f436",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p17.webp",
+     "v": "cb845138f9",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p18.webp",
+     "v": "28bfa7e884",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p19.webp",
+     "v": "2fecca9b03",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p20.webp",
+     "v": "379759b774",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p21.webp",
+     "v": "a15aa7d517",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p22.webp",
+     "v": "fafd7d3ee7",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p23.webp",
+     "v": "f532b19581",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p24.webp",
+     "v": "1bd183ab4c",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p25.webp",
+     "v": "998683760c",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p26.webp",
+     "v": "716a1833a6",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p27.webp",
+     "v": "754775d0a7",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p28.webp",
+     "v": "5605be5df8",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p29.webp",
+     "v": "cff0b74ac9",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p30.webp",
+     "v": "75efe22aeb",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p31.webp",
+     "v": "1019f5c9dd",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p32.webp",
+     "v": "dbd085f6be",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p33.webp",
+     "v": "8c0f3d6586",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p34.webp",
+     "v": "eed1d72f64",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p35.webp",
+     "v": "81d2fc62d5",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p36.webp",
+     "v": "c7d7262954",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p37.webp",
+     "v": "bcacc37f50",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p38.webp",
+     "v": "156539fb56",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p39.webp",
+     "v": "c95fae5459",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p40.webp",
+     "v": "a7224d7fa5",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "2/p41.webp",
+     "v": "f42d8f6285",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p42.webp",
+     "v": "cb0f2b3218",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p43.webp",
+     "v": "54bf5f7fe2",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p44.webp",
+     "v": "224fe463fd",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p45.webp",
+     "v": "121d4093da",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p46.webp",
+     "v": "4a86f664d2",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p47.webp",
+     "v": "b0f11d9e41",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p48.webp",
+     "v": "5dffa52609",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p49.webp",
+     "v": "d14c9c0e8a",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p50.webp",
+     "v": "25d0ad9f60",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "2/p51.webp",
+     "v": "5b48132579",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "2/p52.webp",
+     "v": "401cf65028",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "2/p53.webp",
+     "v": "16c30ae6f7",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "2/p54.webp",
+     "v": "aa8fbb6707",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "2/p55.webp",
+     "v": "21363d61c2",
+     "w": 380,
+     "h": 285
+    }
+   ],
+   "clips": [
+    {
+     "f": "2/a01.m4a",
+     "v": "39a7374326",
+     "s": 6.47
+    },
+    {
+     "f": "2/a02.m4a",
+     "v": "a0dde61f87",
+     "s": 5.97
+    },
+    {
+     "f": "2/a03.m4a",
+     "v": "432542269e",
+     "s": 5.67
+    },
+    {
+     "f": "2/a04.m4a",
+     "v": "788f0159fe",
+     "s": 6.57
+    },
+    {
+     "f": "2/a05.m4a",
+     "v": "7def7efcbb",
+     "s": 5.67
+    },
+    {
+     "f": "2/a06.m4a",
+     "v": "41919cb6b9",
+     "s": 10.47
+    },
+    {
+     "f": "2/a07.m4a",
+     "v": "f532960e29",
+     "s": 7.57
+    },
+    {
+     "f": "2/a08.m4a",
+     "v": "6b73cf39dd",
+     "s": 10.17
+    },
+    {
+     "f": "2/a09.m4a",
+     "v": "caffb0ba74",
+     "s": 9.17
+    },
+    {
+     "f": "2/a10.m4a",
+     "v": "043c3d5b1d",
+     "s": 8.87
+    },
+    {
+     "f": "2/a11.m4a",
+     "v": "60383aec49",
+     "s": 13.07
+    },
+    {
+     "f": "2/a12.m4a",
+     "v": "73bcbbaca3",
+     "s": 10.57
+    },
+    {
+     "f": "2/a13.m4a",
+     "v": "e52ecf4be0",
+     "s": 10.87
+    },
+    {
+     "f": "2/a14.m4a",
+     "v": "08e7b6e2e4",
+     "s": 13.37
+    },
+    {
+     "f": "2/a15.m4a",
+     "v": "5029a5843c",
+     "s": 14.87
+    },
+    {
+     "f": "2/a16.m4a",
+     "v": "678e338c76",
+     "s": 25.37
+    },
+    {
+     "f": "2/a17.m4a",
+     "v": "19bc7574ca",
+     "s": 18.17
+    },
+    {
+     "f": "2/a18.m4a",
+     "v": "c6b866c2de",
+     "s": 18.27
+    },
+    {
+     "f": "2/a19.m4a",
+     "v": "04932467c1",
+     "s": 22.47
+    },
+    {
+     "f": "2/a20.m4a",
+     "v": "09fdd65b87",
+     "s": 15.37
+    }
+   ],
+   "pass": 120
+  },
+  {
+   "n": 3,
+   "id": "yct1-sim3",
+   "total": 200,
+   "questions": 35,
+   "parts": [
+    {
+     "sec": "L",
+     "part": 1,
+     "kind": "tf",
+     "how": "Escuchas una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+     "first": 1,
+     "last": 5,
+     "items": [
+      {
+       "num": 1,
+       "ans": "F",
+       "q": "L1-1",
+       "a": 0,
+       "p": 0,
+       "py": "niúnǎi",
+       "es": "leche"
+      },
+      {
+       "num": 2,
+       "ans": "T",
+       "q": "L1-2",
+       "a": 1,
+       "p": 1,
+       "py": "gāoxìng",
+       "es": "feliz / contento"
+      },
+      {
+       "num": 3,
+       "ans": "T",
+       "q": "L1-3",
+       "a": 2,
+       "p": 2,
+       "py": "nàr",
+       "es": "allá"
+      },
+      {
+       "num": 4,
+       "ans": "F",
+       "q": "L1-4",
+       "a": 3,
+       "p": 3,
+       "py": "lǎoshī",
+       "es": "maestro / maestra"
+      },
+      {
+       "num": 5,
+       "ans": "F",
+       "q": "L1-5",
+       "a": 4,
+       "p": 4,
+       "py": "zàijiàn",
+       "es": "adiós"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 2,
+     "kind": "abc",
+     "how": "Escuchas una palabra o una frase corta. Elige su foto: A, B o C.",
+     "first": 6,
+     "last": 10,
+     "items": [
+      {
+       "num": 6,
+       "ans": "B",
+       "q": "L2-6",
+       "a": 5,
+       "opts": [
+        {
+         "l": "A",
+         "p": 5
+        },
+        {
+         "l": "B",
+         "p": 6
+        },
+        {
+         "l": "C",
+         "p": 7
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "māo hé yú",
+       "es": "un gato y un pez"
+      },
+      {
+       "num": 7,
+       "ans": "C",
+       "q": "L2-7",
+       "a": 6,
+       "opts": [
+        {
+         "l": "A",
+         "p": 8
+        },
+        {
+         "l": "B",
+         "p": 9
+        },
+        {
+         "l": "C",
+         "p": 10
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "shíyī diǎn wǔshíqī",
+       "es": "las 11:57"
+      },
+      {
+       "num": 8,
+       "ans": "C",
+       "q": "L2-8",
+       "a": 7,
+       "opts": [
+        {
+         "l": "A",
+         "p": 11
+        },
+        {
+         "l": "B",
+         "p": 12
+        },
+        {
+         "l": "C",
+         "p": 13
+        }
+       ],
+       "tab": [
+        28.57,
+        25.22
+       ],
+       "py": "hěn duō rén",
+       "es": "mucha gente"
+      },
+      {
+       "num": 9,
+       "ans": "B",
+       "q": "L2-9",
+       "a": 8,
+       "opts": [
+        {
+         "l": "A",
+         "p": 14
+        },
+        {
+         "l": "B",
+         "p": 15
+        },
+        {
+         "l": "C",
+         "p": 16
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "chī miàntiáo",
+       "es": "comer fideos"
+      },
+      {
+       "num": 10,
+       "ans": "C",
+       "q": "L2-10",
+       "a": 9,
+       "opts": [
+        {
+         "l": "A",
+         "p": 17
+        },
+        {
+         "l": "B",
+         "p": 18
+        },
+        {
+         "l": "C",
+         "p": 19
+        }
+       ],
+       "tab": [
+        13.46,
+        29.39
+       ],
+       "py": "zài shāngdiàn",
+       "es": "en la tienda"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 3,
+     "kind": "tf",
+     "how": "Escuchas una frase. ¿Va con la foto? Marca {ok} o {no}.",
+     "first": 11,
+     "last": 15,
+     "items": [
+      {
+       "num": 11,
+       "ans": "F",
+       "q": "L3-11",
+       "a": 10,
+       "p": 20,
+       "py": "Tā de tóufa hěn cháng.",
+       "es": "Su cabello es muy largo."
+      },
+      {
+       "num": 12,
+       "ans": "F",
+       "q": "L3-12",
+       "a": 11,
+       "p": 21,
+       "py": "Tā zài hē shénme?",
+       "es": "¿Qué está tomando?"
+      },
+      {
+       "num": 13,
+       "ans": "T",
+       "q": "L3-13",
+       "a": 12,
+       "p": 22,
+       "py": "Zhè shì nǐ de gǒu?",
+       "es": "¿Este es tu perro?"
+      },
+      {
+       "num": 14,
+       "ans": "T",
+       "q": "L3-14",
+       "a": 13,
+       "p": 23,
+       "py": "Hǎo, wǒ bú kàn.",
+       "es": "Está bien, no miro."
+      },
+      {
+       "num": 15,
+       "ans": "T",
+       "q": "L3-15",
+       "a": 14,
+       "p": 24,
+       "py": "Wǒ de shǒu dà, nǐ de shǒu xiǎo.",
+       "es": "Mi mano es grande y la tuya es pequeña."
+      }
+     ],
+     "big": 0
+    },
+    {
+     "sec": "L",
+     "part": 4,
+     "kind": "abc",
+     "how": "Escuchas una conversación corta. Elige su foto: A, B o C.",
+     "first": 16,
+     "last": 20,
+     "items": [
+      {
+       "num": 16,
+       "ans": "B",
+       "q": "L4-16",
+       "a": 15,
+       "opts": [
+        {
+         "l": "A",
+         "p": 25
+        },
+        {
+         "l": "B",
+         "p": 26
+        },
+        {
+         "l": "C",
+         "p": 27
+        }
+       ],
+       "tab": [
+        29.43,
+        29.71
+       ],
+       "lines": [
+        {
+         "py": "Wǒmen qù nǎr?",
+         "es": "¿Adónde vamos?",
+         "v": 0
+        },
+        {
+         "py": "Zhōngguó.",
+         "es": "A China.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 17,
+       "ans": "A",
+       "q": "L4-17",
+       "a": 16,
+       "opts": [
+        {
+         "l": "A",
+         "p": 28
+        },
+        {
+         "l": "B",
+         "p": 29
+        },
+        {
+         "l": "C",
+         "p": 30
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Nǐ bàba zài jiā ma?",
+         "es": "¿Tu papá está en casa?",
+         "v": 0
+        },
+        {
+         "py": "Zài.",
+         "es": "Sí, está.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 18,
+       "ans": "A",
+       "q": "L4-18",
+       "a": 17,
+       "opts": [
+        {
+         "l": "A",
+         "p": 31
+        },
+        {
+         "l": "B",
+         "p": 32
+        },
+        {
+         "l": "C",
+         "p": 33
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Chī yì kǒu, hǎo ma?",
+         "es": "Prueba un bocado, ¿sí?",
+         "v": 0
+        },
+        {
+         "py": "Bù, wǒ bù xǐhuan chī.",
+         "es": "No, no me gusta.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 19,
+       "ans": "B",
+       "q": "L4-19",
+       "a": 18,
+       "opts": [
+        {
+         "l": "A",
+         "p": 34
+        },
+        {
+         "l": "B",
+         "p": 35
+        },
+        {
+         "l": "C",
+         "p": 36
+        }
+       ],
+       "tab": [
+        24.86,
+        28.73
+       ],
+       "lines": [
+        {
+         "py": "Zhè shì Lǐ lǎoshī.",
+         "es": "Este es el maestro Li.",
+         "v": 0
+        },
+        {
+         "py": "Nǐ hǎo, hěn gāoxìng rènshi nǐ.",
+         "es": "Hola, mucho gusto.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 20,
+       "ans": "A",
+       "q": "L4-20",
+       "a": 19,
+       "opts": [
+        {
+         "l": "A",
+         "p": 37
+        },
+        {
+         "l": "B",
+         "p": 38
+        },
+        {
+         "l": "C",
+         "p": 39
+        }
+       ],
+       "tab": [
+        13.46,
+        28.57
+       ],
+       "lines": [
+        {
+         "py": "Nǎge shì nǐ gēge?",
+         "es": "¿Cuál es tu hermano mayor?",
+         "v": 0
+        },
+        {
+         "py": "Yī hào.",
+         "es": "El número 1.",
+         "v": 1
+        }
+       ]
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "R",
+     "part": 1,
+     "kind": "tf",
+     "how": "Lees una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+     "first": 21,
+     "last": 25,
+     "items": [
+      {
+       "num": 21,
+       "ans": "T",
+       "q": "R1-21",
+       "p": 40,
+       "py": "tāmen",
+       "es": "ellos"
+      },
+      {
+       "num": 22,
+       "ans": "F",
+       "q": "R1-22",
+       "p": 41,
+       "py": "yǎnjing",
+       "es": "ojos"
+      },
+      {
+       "num": 23,
+       "ans": "F",
+       "q": "R1-23",
+       "p": 42,
+       "py": "jiǔ",
+       "es": "nueve"
+      },
+      {
+       "num": 24,
+       "ans": "F",
+       "q": "R1-24",
+       "p": 43,
+       "py": "xièxie",
+       "es": "gracias"
+      },
+      {
+       "num": 25,
+       "ans": "T",
+       "q": "R1-25",
+       "p": 44,
+       "py": "gāo",
+       "es": "alto"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "R",
+     "part": 2,
+     "kind": "gal",
+     "how": "Lees cinco frases. Cada una va con una de las fotos, de la A a la F.",
+     "first": 26,
+     "last": 30,
+     "items": [
+      {
+       "num": 26,
+       "ans": "B",
+       "q": "R2-26",
+       "p": 45,
+       "tab": [
+        23.43,
+        27.48
+       ],
+       "py": "Zhèr yǒu shuǐ.",
+       "es": "Aquí hay agua."
+      },
+      {
+       "num": 27,
+       "ans": "C",
+       "q": "R2-27",
+       "p": 46,
+       "tab": [
+        23.43,
+        27.48
+       ],
+       "py": "Wǒ chī ge píngguǒ.",
+       "es": "Me como una manzana."
+      },
+      {
+       "num": 28,
+       "ans": "F",
+       "q": "R2-28",
+       "p": 47,
+       "tab": [
+        23.43,
+        27.48
+       ],
+       "py": "Wǒ 6 suì, jiějie 8 suì.",
+       "es": "Yo tengo 6 años y mi hermana, 8."
+      },
+      {
+       "num": 29,
+       "ans": "A",
+       "q": "R2-29",
+       "p": 48,
+       "tab": [
+        23.43,
+        27.48
+       ],
+       "py": "Xiǎo niǎo, nǐ jiào shénme?",
+       "es": "Pajarito, ¿cómo te llamas?"
+      },
+      {
+       "num": 30,
+       "ans": "D",
+       "q": "R2-30",
+       "p": 49,
+       "tab": [
+        23.43,
+        27.48
+       ],
+       "py": "Kàn, zhè shì wǒmen yì jiā rén, bàba, māma hé wǒ.",
+       "es": "Mira, esta es mi familia: papá, mamá y yo."
+      }
+     ],
+     "talk": 0
+    },
+    {
+     "sec": "R",
+     "part": 3,
+     "kind": "fill",
+     "how": "Lees cinco conversaciones. Complétalas con las palabras de la lista.",
+     "first": 31,
+     "last": 35,
+     "items": [
+      {
+       "num": 31,
+       "ans": "A",
+       "q": "R3-31",
+       "lines": [
+        {
+         "py": "___ shì shénme?",
+         "es": "¿Qué es eso?",
+         "v": 0,
+         "fw": "Nà"
+        },
+        {
+         "py": "Nǎiniú.",
+         "es": "Una vaca.",
+         "v": 1
+        }
+       ],
+       "p": 50
+      },
+      {
+       "num": 32,
+       "ans": "F",
+       "q": "R3-32",
+       "lines": [
+        {
+         "py": "Nǐ xǐhuan xiànzài de xuéxiào?",
+         "es": "¿Te gusta tu escuela de ahora?",
+         "v": 0
+        },
+        {
+         "py": "Shì de, ___ xǐhuan.",
+         "es": "Sí, me gusta mucho.",
+         "v": 1,
+         "fw": "hěn"
+        }
+       ],
+       "p": 51
+      },
+      {
+       "num": 33,
+       "ans": "E",
+       "q": "R3-33",
+       "lines": [
+        {
+         "py": "Tā nǎ tiān qù lǎoshī jiā?",
+         "es": "¿Qué día va ella a la casa de la maestra?",
+         "v": 0
+        },
+        {
+         "py": "Míngtiān, ___ èr.",
+         "es": "Mañana, martes.",
+         "v": 1,
+         "fw": "xīngqī"
+        }
+       ],
+       "p": 52
+      },
+      {
+       "num": 34,
+       "ans": "C",
+       "q": "R3-34",
+       "lines": [
+        {
+         "py": "Nǐ hé jiějie shéi ___ gāo?",
+         "es": "¿Quién es más alto, tú o tu hermana?",
+         "v": 0,
+         "fw": "gèzi"
+        },
+        {
+         "py": "Wǒ gāo.",
+         "es": "Yo soy más alto.",
+         "v": 1
+        }
+       ],
+       "p": 53
+      },
+      {
+       "num": 35,
+       "ans": "B",
+       "q": "R3-35",
+       "lines": [
+        {
+         "py": "Jīntiān chī mǐfàn?",
+         "es": "¿Hoy comemos arroz?",
+         "v": 0
+        },
+        {
+         "py": "Hǎo, wǒ ___ chī mǐfàn.",
+         "es": "Sí, me encanta comer arroz.",
+         "v": 1,
+         "fw": "ài"
+        }
+       ],
+       "p": 54
+      }
+     ],
+     "bank": [
+      {
+       "l": "A",
+       "py": "nà",
+       "es": "ese / eso",
+       "for": 31
+      },
+      {
+       "l": "B",
+       "py": "ài",
+       "es": "amar / encantar",
+       "for": 35
+      },
+      {
+       "l": "C",
+       "py": "gèzi",
+       "es": "estatura",
+       "for": 34
+      },
+      {
+       "l": "D",
+       "py": "sān",
+       "es": "tres",
+       "for": "ex"
+      },
+      {
+       "l": "E",
+       "py": "xīngqī",
+       "es": "semana",
+       "for": 33
+      },
+      {
+       "l": "F",
+       "py": "hěn",
+       "es": "muy",
+       "for": 32
+      }
+     ]
+    }
+   ],
+   "pics": [
+    {
+     "f": "3/p01.webp",
+     "v": "eaccfd32d7",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p02.webp",
+     "v": "d770987c04",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p03.webp",
+     "v": "deb32529f2",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p04.webp",
+     "v": "ed7cf2fa40",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p05.webp",
+     "v": "1a55099e8f",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p06.webp",
+     "v": "1dda5955bf",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p07.webp",
+     "v": "82324f8292",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p08.webp",
+     "v": "994494350b",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p09.webp",
+     "v": "56f3b8c65f",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p10.webp",
+     "v": "1801742a12",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p11.webp",
+     "v": "e9949dfbab",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p12.webp",
+     "v": "78bfa4a3d4",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p13.webp",
+     "v": "ac50ef9774",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p14.webp",
+     "v": "b5dd9bde04",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p15.webp",
+     "v": "cb10ede8ef",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p16.webp",
+     "v": "fe82a2934e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p17.webp",
+     "v": "8545c03d0f",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p18.webp",
+     "v": "d8c15aaf0c",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p19.webp",
+     "v": "4733bda6c1",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p20.webp",
+     "v": "889596aafe",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p21.webp",
+     "v": "885857719f",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p22.webp",
+     "v": "03432f4719",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p23.webp",
+     "v": "5c25e3bf06",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p24.webp",
+     "v": "2276d58545",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p25.webp",
+     "v": "6c940897aa",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p26.webp",
+     "v": "172028d4cd",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p27.webp",
+     "v": "d772033276",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p28.webp",
+     "v": "a0bde9724e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p29.webp",
+     "v": "c995908d6d",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p30.webp",
+     "v": "157af92149",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p31.webp",
+     "v": "91ac2872ac",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p32.webp",
+     "v": "4c93e775aa",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p33.webp",
+     "v": "bf76998a03",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p34.webp",
+     "v": "6d473a59f2",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p35.webp",
+     "v": "18dd1db962",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p36.webp",
+     "v": "de96461c6c",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p37.webp",
+     "v": "7f446128e9",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p38.webp",
+     "v": "82b6e09298",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p39.webp",
+     "v": "7a786ce19e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p40.webp",
+     "v": "3bac4986b8",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "3/p41.webp",
+     "v": "d980e8eddf",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p42.webp",
+     "v": "f8fef903cc",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p43.webp",
+     "v": "3cd5fd2663",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p44.webp",
+     "v": "b3f89f966f",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p45.webp",
+     "v": "1680f1f248",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p46.webp",
+     "v": "cd8f2535c7",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p47.webp",
+     "v": "233e579fa0",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p48.webp",
+     "v": "2a314e6e99",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p49.webp",
+     "v": "96e7796907",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p50.webp",
+     "v": "8e0e4475c9",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "3/p51.webp",
+     "v": "46e958821a",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "3/p52.webp",
+     "v": "0abdc9d8c2",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "3/p53.webp",
+     "v": "c4baebaa4a",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "3/p54.webp",
+     "v": "54e0543ba6",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "3/p55.webp",
+     "v": "1602f03e14",
+     "w": 380,
+     "h": 285
+    }
+   ],
+   "clips": [
+    {
+     "f": "3/a01.m4a",
+     "v": "bc7cd40027",
+     "s": 7.97
+    },
+    {
+     "f": "3/a02.m4a",
+     "v": "e2f08ef448",
+     "s": 6.87
+    },
+    {
+     "f": "3/a03.m4a",
+     "v": "bfb3855e00",
+     "s": 7.17
+    },
+    {
+     "f": "3/a04.m4a",
+     "v": "2dee9e059a",
+     "s": 7.67
+    },
+    {
+     "f": "3/a05.m4a",
+     "v": "4d65116651",
+     "s": 6.97
+    },
+    {
+     "f": "3/a06.m4a",
+     "v": "1e562c11d8",
+     "s": 10.87
+    },
+    {
+     "f": "3/a07.m4a",
+     "v": "6cd7d377af",
+     "s": 10.77
+    },
+    {
+     "f": "3/a08.m4a",
+     "v": "bbdaf3c650",
+     "s": 8.37
+    },
+    {
+     "f": "3/a09.m4a",
+     "v": "1143183038",
+     "s": 8.37
+    },
+    {
+     "f": "3/a10.m4a",
+     "v": "2d7cded97f",
+     "s": 8.37
+    },
+    {
+     "f": "3/a11.m4a",
+     "v": "b7bbce5e8f",
+     "s": 13.87
+    },
+    {
+     "f": "3/a12.m4a",
+     "v": "f2e197221d",
+     "s": 9.97
+    },
+    {
+     "f": "3/a13.m4a",
+     "v": "8607ef7cf6",
+     "s": 10.37
+    },
+    {
+     "f": "3/a14.m4a",
+     "v": "71e5b64cfc",
+     "s": 10.07
+    },
+    {
+     "f": "3/a15.m4a",
+     "v": "993796a35d",
+     "s": 14.97
+    },
+    {
+     "f": "3/a16.m4a",
+     "v": "7ced7ee89c",
+     "s": 15.67
+    },
+    {
+     "f": "3/a17.m4a",
+     "v": "e9b8789b0e",
+     "s": 14.67
+    },
+    {
+     "f": "3/a18.m4a",
+     "v": "8111335b80",
+     "s": 19.47
+    },
+    {
+     "f": "3/a19.m4a",
+     "v": "7121976b7d",
+     "s": 21.37
+    },
+    {
+     "f": "3/a20.m4a",
+     "v": "e6a7bea632",
+     "s": 16.77
+    }
+   ],
+   "pass": 120
+  },
+  {
+   "n": 4,
+   "id": "yct1-sim4",
+   "total": 200,
+   "questions": 35,
+   "parts": [
+    {
+     "sec": "L",
+     "part": 1,
+     "kind": "tf",
+     "how": "Escuchas una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+     "first": 1,
+     "last": 5,
+     "items": [
+      {
+       "num": 1,
+       "ans": "F",
+       "q": "L1-1",
+       "a": 0,
+       "p": 0,
+       "py": "bù",
+       "es": "no"
+      },
+      {
+       "num": 2,
+       "ans": "T",
+       "q": "L1-2",
+       "a": 1,
+       "p": 1,
+       "py": "niúnǎi",
+       "es": "leche"
+      },
+      {
+       "num": 3,
+       "ans": "T",
+       "q": "L1-3",
+       "a": 2,
+       "p": 2,
+       "py": "xiǎo",
+       "es": "pequeño"
+      },
+      {
+       "num": 4,
+       "ans": "F",
+       "q": "L1-4",
+       "a": 3,
+       "p": 3,
+       "py": "xièxie",
+       "es": "gracias"
+      },
+      {
+       "num": 5,
+       "ans": "F",
+       "q": "L1-5",
+       "a": 4,
+       "p": 4,
+       "py": "māma",
+       "es": "mamá"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 2,
+     "kind": "abc",
+     "how": "Escuchas una palabra o una frase corta. Elige su foto: A, B o C.",
+     "first": 6,
+     "last": 10,
+     "items": [
+      {
+       "num": 6,
+       "ans": "A",
+       "q": "L2-6",
+       "a": 5,
+       "opts": [
+        {
+         "l": "A",
+         "p": 5
+        },
+        {
+         "l": "B",
+         "p": 6
+        },
+        {
+         "l": "C",
+         "p": 7
+        }
+       ],
+       "tab": [
+        24.29,
+        27.41
+       ],
+       "py": "zài shāngdiàn",
+       "es": "en la tienda"
+      },
+      {
+       "num": 7,
+       "ans": "B",
+       "q": "L2-7",
+       "a": 6,
+       "opts": [
+        {
+         "l": "A",
+         "p": 8
+        },
+        {
+         "l": "B",
+         "p": 9
+        },
+        {
+         "l": "C",
+         "p": 10
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "cháng ěrduo",
+       "es": "orejas largas"
+      },
+      {
+       "num": 8,
+       "ans": "C",
+       "q": "L2-8",
+       "a": 7,
+       "opts": [
+        {
+         "l": "A",
+         "p": 11
+        },
+        {
+         "l": "B",
+         "p": 12
+        },
+        {
+         "l": "C",
+         "p": 13
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "wǒ hé jiějie",
+       "es": "mi hermana mayor y yo"
+      },
+      {
+       "num": 9,
+       "ans": "A",
+       "q": "L2-9",
+       "a": 8,
+       "opts": [
+        {
+         "l": "A",
+         "p": 14
+        },
+        {
+         "l": "B",
+         "p": 15
+        },
+        {
+         "l": "C",
+         "p": 16
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "xīngqīliù",
+       "es": "sábado"
+      },
+      {
+       "num": 10,
+       "ans": "C",
+       "q": "L2-10",
+       "a": 9,
+       "opts": [
+        {
+         "l": "A",
+         "p": 17
+        },
+        {
+         "l": "B",
+         "p": 18
+        },
+        {
+         "l": "C",
+         "p": 19
+        }
+       ],
+       "tab": [
+        15.7,
+        23.08
+       ],
+       "py": "hěn xǐhuan",
+       "es": "me gusta mucho"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 3,
+     "kind": "tf",
+     "how": "Escuchas una frase. ¿Va con la foto? Marca {ok} o {no}.",
+     "first": 11,
+     "last": 15,
+     "items": [
+      {
+       "num": 11,
+       "ans": "T",
+       "q": "L3-11",
+       "a": 10,
+       "p": 20,
+       "py": "Tā zài chī fàn.",
+       "es": "Está comiendo."
+      },
+      {
+       "num": 12,
+       "ans": "F",
+       "q": "L3-12",
+       "a": 11,
+       "p": 21,
+       "py": "Bàba jīntiān hěn gāoxìng.",
+       "es": "Papá está muy contento hoy."
+      },
+      {
+       "num": 13,
+       "ans": "F",
+       "q": "L3-13",
+       "a": 12,
+       "p": 22,
+       "py": "Tā jiǔ suì, wǒ bā suì.",
+       "es": "Tiene nueve años y yo, ocho."
+      },
+      {
+       "num": 14,
+       "ans": "T",
+       "q": "L3-14",
+       "a": 13,
+       "p": 23,
+       "py": "Wǒ de tóufa hěn cháng.",
+       "es": "Mi cabello es muy largo."
+      },
+      {
+       "num": 15,
+       "ans": "T",
+       "q": "L3-15",
+       "a": 14,
+       "p": 24,
+       "py": "Nǐ kàn wǒ de shǒu.",
+       "es": "Mira mi mano."
+      }
+     ],
+     "big": 0
+    },
+    {
+     "sec": "L",
+     "part": 4,
+     "kind": "abc",
+     "how": "Escuchas una conversación corta. Elige su foto: A, B o C.",
+     "first": 16,
+     "last": 20,
+     "items": [
+      {
+       "num": 16,
+       "ans": "B",
+       "q": "L4-16",
+       "a": 15,
+       "opts": [
+        {
+         "l": "A",
+         "p": 25
+        },
+        {
+         "l": "B",
+         "p": 26
+        },
+        {
+         "l": "C",
+         "p": 27
+        }
+       ],
+       "tab": [
+        13.46,
+        28.9
+       ],
+       "lines": [
+        {
+         "py": "Zhè shì shéi jiā de gǒu?",
+         "es": "¿De quién es este perro?",
+         "v": 0
+        },
+        {
+         "py": "Gēge jiā de.",
+         "es": "Es de mi hermano.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 17,
+       "ans": "B",
+       "q": "L4-17",
+       "a": 16,
+       "opts": [
+        {
+         "l": "A",
+         "p": 28
+        },
+        {
+         "l": "B",
+         "p": 29
+        },
+        {
+         "l": "C",
+         "p": 30
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Nǐ qù nǎr?",
+         "es": "¿Adónde vas?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ qù xuéxiào, zàijiàn.",
+         "es": "Voy a la escuela, adiós.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 18,
+       "ans": "A",
+       "q": "L4-18",
+       "a": 17,
+       "opts": [
+        {
+         "l": "A",
+         "p": 31
+        },
+        {
+         "l": "B",
+         "p": 32
+        },
+        {
+         "l": "C",
+         "p": 33
+        }
+       ],
+       "tab": [
+        28.86,
+        27.05
+       ],
+       "lines": [
+        {
+         "py": "Nàr rén duō bu duō?",
+         "es": "¿Hay mucha gente allá?",
+         "v": 0
+        },
+        {
+         "py": "Hěn duō.",
+         "es": "Mucha.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 19,
+       "ans": "C",
+       "q": "L4-19",
+       "a": 18,
+       "opts": [
+        {
+         "l": "A",
+         "p": 34
+        },
+        {
+         "l": "B",
+         "p": 35
+        },
+        {
+         "l": "C",
+         "p": 36
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Nǐ rènshi nàge Zhōngguórén ma?",
+         "es": "¿Conoces a esa persona china?",
+         "v": 0
+        },
+        {
+         "py": "Tā shì wǒ de lǎoshī.",
+         "es": "Es mi maestro.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 20,
+       "ans": "C",
+       "q": "L4-20",
+       "a": 19,
+       "opts": [
+        {
+         "l": "A",
+         "p": 37
+        },
+        {
+         "l": "B",
+         "p": 38
+        },
+        {
+         "l": "C",
+         "p": 39
+        }
+       ],
+       "tab": [
+        24.57,
+        25.86
+       ],
+       "lines": [
+        {
+         "py": "Hē kǒu shuǐ.",
+         "es": "Toma un poco de agua.",
+         "v": 0
+        },
+        {
+         "py": "Xièxie.",
+         "es": "Gracias.",
+         "v": 1
+        }
+       ]
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "R",
+     "part": 1,
+     "kind": "tf",
+     "how": "Lees una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+     "first": 21,
+     "last": 25,
+     "items": [
+      {
+       "num": 21,
+       "ans": "F",
+       "q": "R1-21",
+       "p": 40,
+       "py": "shí",
+       "es": "diez"
+      },
+      {
+       "num": 22,
+       "ans": "F",
+       "q": "R1-22",
+       "p": 41,
+       "py": "xuéxiào",
+       "es": "escuela"
+      },
+      {
+       "num": 23,
+       "ans": "F",
+       "q": "R1-23",
+       "p": 42,
+       "py": "hē",
+       "es": "beber"
+      },
+      {
+       "num": 24,
+       "ans": "T",
+       "q": "R1-24",
+       "p": 43,
+       "py": "ài",
+       "es": "amar / encantar"
+      },
+      {
+       "num": 25,
+       "ans": "T",
+       "q": "R1-25",
+       "p": 44,
+       "py": "wǒmen",
+       "es": "nosotros"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "R",
+     "part": 2,
+     "kind": "gal",
+     "how": "Lees cinco frases. Cada una va con una de las fotos, de la A a la F.",
+     "first": 26,
+     "last": 30,
+     "items": [
+      {
+       "num": 26,
+       "ans": "D",
+       "q": "R2-26",
+       "p": 45,
+       "tab": [
+        23.14,
+        21.73
+       ],
+       "py": "Wǒmen shéi de gèzi gāo?",
+       "es": "¿Quién de nosotros es más alto?"
+      },
+      {
+       "num": 27,
+       "ans": "F",
+       "q": "R2-27",
+       "p": 46,
+       "tab": [
+        23.14,
+        21.73
+       ],
+       "py": "Nǐ chī nǎge píngguǒ?",
+       "es": "¿Qué manzana te comes?"
+      },
+      {
+       "num": 28,
+       "ans": "B",
+       "q": "R2-28",
+       "p": 47,
+       "tab": [
+        23.14,
+        21.73
+       ],
+       "py": "Nǐ hǎo, nǐ jiào shénme míngzi?",
+       "es": "Hola, ¿cómo te llamas?"
+      },
+      {
+       "num": 29,
+       "ans": "A",
+       "q": "R2-29",
+       "p": 48,
+       "tab": [
+        23.14,
+        21.73
+       ],
+       "py": "Èr hào shì wǒ mèimei.",
+       "es": "La número 2 es mi hermana menor."
+      },
+      {
+       "num": 30,
+       "ans": "C",
+       "q": "R2-30",
+       "p": 49,
+       "tab": [
+        23.14,
+        21.73
+       ],
+       "py": "Tā zài nàr.",
+       "es": "Él está allá."
+      }
+     ],
+     "talk": 0
+    },
+    {
+     "sec": "R",
+     "part": 3,
+     "kind": "fill",
+     "how": "Lees cinco conversaciones. Complétalas con las palabras de la lista.",
+     "first": 31,
+     "last": 35,
+     "items": [
+      {
+       "num": 31,
+       "ans": "E",
+       "q": "R3-31",
+       "lines": [
+        {
+         "py": "Bízi ___ nǎr?",
+         "es": "¿Dónde está la nariz?",
+         "v": 0,
+         "fw": "zài"
+        },
+        {
+         "py": "Zhèr.",
+         "es": "Aquí.",
+         "v": 1
+        }
+       ],
+       "p": 50
+      },
+      {
+       "num": 32,
+       "ans": "A",
+       "q": "R3-32",
+       "lines": [
+        {
+         "py": "Tā de ___ xiǎo ma?",
+         "es": "¿Sus ojos son pequeños?",
+         "v": 0,
+         "fw": "yǎnjing"
+        },
+        {
+         "py": "Bù xiǎo.",
+         "es": "No, no son pequeños.",
+         "v": 1
+        }
+       ],
+       "p": 51
+      },
+      {
+       "num": 33,
+       "ans": "F",
+       "q": "R3-33",
+       "lines": [
+        {
+         "py": "Nǐ chī shénme?",
+         "es": "¿Qué comes?",
+         "v": 0
+        },
+        {
+         "py": "___.",
+         "es": "Pan.",
+         "v": 1,
+         "fw": "Miànbāo"
+        }
+       ],
+       "p": 52
+      },
+      {
+       "num": 34,
+       "ans": "C",
+       "q": "R3-34",
+       "lines": [
+        {
+         "py": "Yí ge ___ yǒu jǐ tiān?",
+         "es": "¿Cuántos días tiene una semana?",
+         "v": 0,
+         "fw": "xīngqī"
+        },
+        {
+         "py": "7 tiān.",
+         "es": "7 días.",
+         "v": 1
+        }
+       ],
+       "p": 53
+      },
+      {
+       "num": 35,
+       "ans": "B",
+       "q": "R3-35",
+       "lines": [
+        {
+         "py": "Nǐ de māo 5 ge yuè ___?",
+         "es": "¿Tu gato tiene 5 meses?",
+         "v": 0,
+         "fw": "dà"
+        },
+        {
+         "py": "Shì de.",
+         "es": "Sí.",
+         "v": 1
+        }
+       ],
+       "p": 54
+      }
+     ],
+     "bank": [
+      {
+       "l": "A",
+       "py": "yǎnjing",
+       "es": "ojos",
+       "for": 32
+      },
+      {
+       "l": "B",
+       "py": "dà",
+       "es": "grande",
+       "for": 35
+      },
+      {
+       "l": "C",
+       "py": "xīngqī",
+       "es": "semana",
+       "for": 34
+      },
+      {
+       "l": "D",
+       "py": "sān",
+       "es": "tres",
+       "for": "ex"
+      },
+      {
+       "l": "E",
+       "py": "zài",
+       "es": "estar en",
+       "for": 31
+      },
+      {
+       "l": "F",
+       "py": "miànbāo",
+       "es": "pan",
+       "for": 33
+      }
+     ]
+    }
+   ],
+   "pics": [
+    {
+     "f": "4/p01.webp",
+     "v": "308db889e6",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p02.webp",
+     "v": "69431a5ea6",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p03.webp",
+     "v": "99fb849d41",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p04.webp",
+     "v": "abe849a5d9",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p05.webp",
+     "v": "6eef17cec5",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p06.webp",
+     "v": "955677c8d4",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p07.webp",
+     "v": "a191563f2f",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p08.webp",
+     "v": "8d27f89ffa",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p09.webp",
+     "v": "64f5697dec",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p10.webp",
+     "v": "730ad839df",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p11.webp",
+     "v": "def89d52ed",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p12.webp",
+     "v": "d82e5fc9d3",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p13.webp",
+     "v": "bb13495533",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p14.webp",
+     "v": "a264964162",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p15.webp",
+     "v": "ce430b13cb",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p16.webp",
+     "v": "8f16861ef4",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p17.webp",
+     "v": "018f8be543",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p18.webp",
+     "v": "6090914c1e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p19.webp",
+     "v": "c9e51a3abd",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p20.webp",
+     "v": "6f98988ae4",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p21.webp",
+     "v": "7b19bd8f77",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p22.webp",
+     "v": "b0efa26333",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p23.webp",
+     "v": "df3083fe16",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p24.webp",
+     "v": "4347d2e09c",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p25.webp",
+     "v": "4d7634eb8d",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p26.webp",
+     "v": "bb37eaf011",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p27.webp",
+     "v": "77d28925ff",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p28.webp",
+     "v": "85e92faa99",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p29.webp",
+     "v": "10d38b4b24",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p30.webp",
+     "v": "165a6b8859",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p31.webp",
+     "v": "017670f8a2",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p32.webp",
+     "v": "3874d3407b",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p33.webp",
+     "v": "59451f27d2",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p34.webp",
+     "v": "8a7a93565d",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p35.webp",
+     "v": "e700451196",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p36.webp",
+     "v": "ebce0ef535",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p37.webp",
+     "v": "9fdce86490",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p38.webp",
+     "v": "cbd0387605",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p39.webp",
+     "v": "cf50be6972",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p40.webp",
+     "v": "b0ce7640db",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "4/p41.webp",
+     "v": "b694d6c0ba",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p42.webp",
+     "v": "5a0cc7fbd4",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p43.webp",
+     "v": "47848a0eff",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p44.webp",
+     "v": "4f58330ff0",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p45.webp",
+     "v": "7d75b7011b",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p46.webp",
+     "v": "eb4d3cd347",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p47.webp",
+     "v": "99fed29de1",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p48.webp",
+     "v": "5553438d0a",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p49.webp",
+     "v": "11c3e2e78d",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p50.webp",
+     "v": "e7fd8ac557",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "4/p51.webp",
+     "v": "b346128d44",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "4/p52.webp",
+     "v": "329744be68",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "4/p53.webp",
+     "v": "10e5e17202",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "4/p54.webp",
+     "v": "bc843c19f6",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "4/p55.webp",
+     "v": "fcbe73435f",
+     "w": 380,
+     "h": 285
+    }
+   ],
+   "clips": [
+    {
+     "f": "4/a01.m4a",
+     "v": "2990e8b75a",
+     "s": 5.77
+    },
+    {
+     "f": "4/a02.m4a",
+     "v": "50ad6c7bd9",
+     "s": 6.57
+    },
+    {
+     "f": "4/a03.m4a",
+     "v": "0d853f0991",
+     "s": 5.07
+    },
+    {
+     "f": "4/a04.m4a",
+     "v": "3c3f707f89",
+     "s": 5.37
+    },
+    {
+     "f": "4/a05.m4a",
+     "v": "09a4ce0211",
+     "s": 5.97
+    },
+    {
+     "f": "4/a06.m4a",
+     "v": "dae482500b",
+     "s": 10.87
+    },
+    {
+     "f": "4/a07.m4a",
+     "v": "495131e25a",
+     "s": 7.17
+    },
+    {
+     "f": "4/a08.m4a",
+     "v": "21e4acd966",
+     "s": 8.67
+    },
+    {
+     "f": "4/a09.m4a",
+     "v": "eacf13a1d2",
+     "s": 7.37
+    },
+    {
+     "f": "4/a10.m4a",
+     "v": "ccd66cf3cb",
+     "s": 7.07
+    },
+    {
+     "f": "4/a11.m4a",
+     "v": "8b5712c582",
+     "s": 12.77
+    },
+    {
+     "f": "4/a12.m4a",
+     "v": "6efc5392a1",
+     "s": 11.87
+    },
+    {
+     "f": "4/a13.m4a",
+     "v": "b3de9e96b1",
+     "s": 11.47
+    },
+    {
+     "f": "4/a14.m4a",
+     "v": "930eea4093",
+     "s": 10.97
+    },
+    {
+     "f": "4/a15.m4a",
+     "v": "21ab239739",
+     "s": 10.17
+    },
+    {
+     "f": "4/a16.m4a",
+     "v": "48f24f1caf",
+     "s": 16.97
+    },
+    {
+     "f": "4/a17.m4a",
+     "v": "16fa7a9f48",
+     "s": 16.77
+    },
+    {
+     "f": "4/a18.m4a",
+     "v": "a3486d8a32",
+     "s": 14.27
+    },
+    {
+     "f": "4/a19.m4a",
+     "v": "b88fd81ba9",
+     "s": 20.57
+    },
+    {
+     "f": "4/a20.m4a",
+     "v": "8b8aa92720",
+     "s": 11.67
+    }
+   ],
+   "pass": 120
+  },
+  {
+   "n": 5,
+   "id": "yct1-sim5",
+   "total": 200,
+   "questions": 35,
+   "parts": [
+    {
+     "sec": "L",
+     "part": 1,
+     "kind": "tf",
+     "how": "Escuchas una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+     "first": 1,
+     "last": 5,
+     "items": [
+      {
+       "num": 1,
+       "ans": "F",
+       "q": "L1-1",
+       "a": 0,
+       "p": 0,
+       "py": "rén",
+       "es": "persona"
+      },
+      {
+       "num": 2,
+       "ans": "T",
+       "q": "L1-2",
+       "a": 1,
+       "p": 1,
+       "py": "gāoxìng",
+       "es": "feliz / contento"
+      },
+      {
+       "num": 3,
+       "ans": "T",
+       "q": "L1-3",
+       "a": 2,
+       "p": 2,
+       "py": "bā",
+       "es": "ocho"
+      },
+      {
+       "num": 4,
+       "ans": "F",
+       "q": "L1-4",
+       "a": 3,
+       "p": 3,
+       "py": "kàn",
+       "es": "mirar / ver"
+      },
+      {
+       "num": 5,
+       "ans": "F",
+       "q": "L1-5",
+       "a": 4,
+       "p": 4,
+       "py": "píngguǒ",
+       "es": "manzana"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 2,
+     "kind": "abc",
+     "how": "Escuchas una palabra o una frase corta. Elige su foto: A, B o C.",
+     "first": 6,
+     "last": 10,
+     "items": [
+      {
+       "num": 6,
+       "ans": "B",
+       "q": "L2-6",
+       "a": 5,
+       "opts": [
+        {
+         "l": "A",
+         "p": 5
+        },
+        {
+         "l": "B",
+         "p": 6
+        },
+        {
+         "l": "C",
+         "p": 7
+        }
+       ],
+       "tab": [
+        13.46,
+        29.71
+       ],
+       "py": "sān yuè",
+       "es": "marzo"
+      },
+      {
+       "num": 7,
+       "ans": "C",
+       "q": "L2-7",
+       "a": 6,
+       "opts": [
+        {
+         "l": "A",
+         "p": 8
+        },
+        {
+         "l": "B",
+         "p": 9
+        },
+        {
+         "l": "C",
+         "p": 10
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "chī yì kǒu",
+       "es": "comer un bocado"
+      },
+      {
+       "num": 8,
+       "ans": "C",
+       "q": "L2-8",
+       "a": 7,
+       "opts": [
+        {
+         "l": "A",
+         "p": 11
+        },
+        {
+         "l": "B",
+         "p": 12
+        },
+        {
+         "l": "C",
+         "p": 13
+        }
+       ],
+       "tab": [
+        13.46,
+        28.74
+       ],
+       "py": "zài xuéxiào",
+       "es": "en la escuela"
+      },
+      {
+       "num": 9,
+       "ans": "A",
+       "q": "L2-9",
+       "a": 8,
+       "opts": [
+        {
+         "l": "A",
+         "p": 14
+        },
+        {
+         "l": "B",
+         "p": 15
+        },
+        {
+         "l": "C",
+         "p": 16
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "py": "wǒ hé gēge",
+       "es": "mi hermano mayor y yo"
+      },
+      {
+       "num": 10,
+       "ans": "B",
+       "q": "L2-10",
+       "a": 9,
+       "opts": [
+        {
+         "l": "A",
+         "p": 17
+        },
+        {
+         "l": "B",
+         "p": 18
+        },
+        {
+         "l": "C",
+         "p": 19
+        }
+       ],
+       "tab": [
+        28.0,
+        17.95
+       ],
+       "py": "gāo gèzi",
+       "es": "muy alto"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "L",
+     "part": 3,
+     "kind": "tf",
+     "how": "Escuchas una frase. ¿Va con la foto? Marca {ok} o {no}.",
+     "first": 11,
+     "last": 15,
+     "items": [
+      {
+       "num": 11,
+       "ans": "F",
+       "q": "L3-11",
+       "a": 10,
+       "p": 20,
+       "py": "Zhèr yǒu miànbāo.",
+       "es": "Aquí hay pan."
+      },
+      {
+       "num": 12,
+       "ans": "T",
+       "q": "L3-12",
+       "a": 11,
+       "p": 21,
+       "py": "Zhè shì xiǎo gǒu de ěrduo.",
+       "es": "Estas son las orejas del perrito."
+      },
+      {
+       "num": 13,
+       "ans": "T",
+       "q": "L3-13",
+       "a": 12,
+       "p": 22,
+       "py": "Māma de tóufa hěn cháng.",
+       "es": "Mamá tiene el cabello muy largo."
+      },
+      {
+       "num": 14,
+       "ans": "F",
+       "q": "L3-14",
+       "a": 13,
+       "p": 23,
+       "py": "Wǒ ài hē zhège.",
+       "es": "Me encanta tomar esto."
+      },
+      {
+       "num": 15,
+       "ans": "T",
+       "q": "L3-15",
+       "a": 14,
+       "p": 24,
+       "py": "Wǒ jiā yǒu liù kǒu rén.",
+       "es": "En mi familia somos seis."
+      }
+     ],
+     "big": 0
+    },
+    {
+     "sec": "L",
+     "part": 4,
+     "kind": "abc",
+     "how": "Escuchas una conversación corta. Elige su foto: A, B o C.",
+     "first": 16,
+     "last": 20,
+     "items": [
+      {
+       "num": 16,
+       "ans": "C",
+       "q": "L4-16",
+       "a": 15,
+       "opts": [
+        {
+         "l": "A",
+         "p": 25
+        },
+        {
+         "l": "B",
+         "p": 26
+        },
+        {
+         "l": "C",
+         "p": 27
+        }
+       ],
+       "tab": [
+        17.14,
+        24.0
+       ],
+       "lines": [
+        {
+         "py": "Nǐ chī píngguǒ ma?",
+         "es": "¿Quieres una manzana?",
+         "v": 0
+        },
+        {
+         "py": "Hǎo de, xièxie nǐ.",
+         "es": "Sí, gracias.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 17,
+       "ans": "A",
+       "q": "L4-17",
+       "a": 16,
+       "opts": [
+        {
+         "l": "A",
+         "p": 28
+        },
+        {
+         "l": "B",
+         "p": 29
+        },
+        {
+         "l": "C",
+         "p": 30
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Zhè shì nǐ de māo?",
+         "es": "¿Este es tu gato?",
+         "v": 0
+        },
+        {
+         "py": "Shì de.",
+         "es": "Sí.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 18,
+       "ans": "C",
+       "q": "L4-18",
+       "a": 17,
+       "opts": [
+        {
+         "l": "A",
+         "p": 31
+        },
+        {
+         "l": "B",
+         "p": 32
+        },
+        {
+         "l": "C",
+         "p": 33
+        }
+       ],
+       "tab": [
+        19.28,
+        28.87
+       ],
+       "lines": [
+        {
+         "py": "Nǐ xǐhuan nǎge?",
+         "es": "¿Cuál te gusta?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ xǐhuan zhège.",
+         "es": "Me gusta este.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 19,
+       "ans": "B",
+       "q": "L4-19",
+       "a": 18,
+       "opts": [
+        {
+         "l": "A",
+         "p": 34
+        },
+        {
+         "l": "B",
+         "p": 35
+        },
+        {
+         "l": "C",
+         "p": 36
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Lǎoshī, zàijiàn.",
+         "es": "Adiós, maestro.",
+         "v": 0
+        },
+        {
+         "py": "Zàijiàn, xīngqīyī jiàn.",
+         "es": "Adiós, nos vemos el lunes.",
+         "v": 1
+        }
+       ]
+      },
+      {
+       "num": 20,
+       "ans": "A",
+       "q": "L4-20",
+       "a": 19,
+       "opts": [
+        {
+         "l": "A",
+         "p": 37
+        },
+        {
+         "l": "B",
+         "p": 38
+        },
+        {
+         "l": "C",
+         "p": 39
+        }
+       ],
+       "tab": [
+        13.46,
+        17.95
+       ],
+       "lines": [
+        {
+         "py": "Zhè shì shénme?",
+         "es": "¿Qué es esto?",
+         "v": 0
+        },
+        {
+         "py": "Zhè shì wǒ de dà bízi.",
+         "es": "Es mi nariz grande.",
+         "v": 1
+        }
+       ]
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "R",
+     "part": 1,
+     "kind": "tf",
+     "how": "Lees una palabra. ¿Es lo que muestra la foto? Marca {ok} o {no}.",
+     "first": 21,
+     "last": 25,
+     "items": [
+      {
+       "num": 21,
+       "ans": "F",
+       "q": "R1-21",
+       "p": 40,
+       "py": "niúnǎi",
+       "es": "leche"
+      },
+      {
+       "num": 22,
+       "ans": "T",
+       "q": "R1-22",
+       "p": 41,
+       "py": "tā",
+       "es": "ella"
+      },
+      {
+       "num": 23,
+       "ans": "T",
+       "q": "R1-23",
+       "p": 42,
+       "py": "duō",
+       "es": "mucho / muchos"
+      },
+      {
+       "num": 24,
+       "ans": "F",
+       "q": "R1-24",
+       "p": 43,
+       "py": "xǐhuan",
+       "es": "gustar"
+      },
+      {
+       "num": 25,
+       "ans": "F",
+       "q": "R1-25",
+       "p": 44,
+       "py": "shǒu",
+       "es": "mano"
+      }
+     ],
+     "big": 1
+    },
+    {
+     "sec": "R",
+     "part": 2,
+     "kind": "gal",
+     "how": "Lees cinco frases. Cada una va con una de las fotos, de la A a la F.",
+     "first": 26,
+     "last": 30,
+     "items": [
+      {
+       "num": 26,
+       "ans": "B",
+       "q": "R2-26",
+       "p": 45,
+       "tab": [
+        20.86,
+        27.14
+       ],
+       "py": "Míngtiān shì 9 hào.",
+       "es": "Mañana es día 9."
+      },
+      {
+       "num": 27,
+       "ans": "D",
+       "q": "R2-27",
+       "p": 46,
+       "tab": [
+        20.86,
+        27.14
+       ],
+       "py": "Xiǎo gǒu nǐ hǎo, nǐ jiào shénme míngzi?",
+       "es": "Hola, perrito, ¿cómo te llamas?"
+      },
+      {
+       "num": 28,
+       "ans": "A",
+       "q": "R2-28",
+       "p": 47,
+       "tab": [
+        20.86,
+        27.14
+       ],
+       "py": "Wǒ zhèr yǒu shuǐ, nǐ hē ma?",
+       "es": "Aquí tengo agua, ¿quieres tomar?"
+      },
+      {
+       "num": 29,
+       "ans": "C",
+       "q": "R2-29",
+       "p": 48,
+       "tab": [
+        20.86,
+        27.14
+       ],
+       "py": "Nǐ kàn, shì bu shì hěn gāo?",
+       "es": "Mira, ¿no es muy alto?"
+      },
+      {
+       "num": 30,
+       "ans": "F",
+       "q": "R2-30",
+       "p": 49,
+       "tab": [
+        20.86,
+        27.14
+       ],
+       "py": "Māma, Zhōngguó zài nǎr?",
+       "es": "Mamá, ¿dónde está China?"
+      }
+     ],
+     "talk": 0
+    },
+    {
+     "sec": "R",
+     "part": 3,
+     "kind": "fill",
+     "how": "Lees cinco conversaciones. Complétalas con las palabras de la lista.",
+     "first": 31,
+     "last": 35,
+     "items": [
+      {
+       "num": 31,
+       "ans": "B",
+       "q": "R3-31",
+       "lines": [
+        {
+         "py": "Bàba, ___ jǐ diǎn?",
+         "es": "Papá, ¿qué hora es?",
+         "v": 0,
+         "fw": "xiànzài"
+        },
+        {
+         "py": "7:30.",
+         "es": "Las 7:30.",
+         "v": 1
+        }
+       ],
+       "p": 50
+      },
+      {
+       "num": 32,
+       "ans": "C",
+       "q": "R3-32",
+       "lines": [
+        {
+         "py": "Wǒmen jīntiān ___ shénme?",
+         "es": "¿Qué comemos hoy?",
+         "v": 0,
+         "fw": "chī"
+        },
+        {
+         "py": "Mǐfàn.",
+         "es": "Arroz.",
+         "v": 1
+        }
+       ],
+       "p": 51
+      },
+      {
+       "num": 33,
+       "ans": "F",
+       "q": "R3-33",
+       "lines": [
+        {
+         "py": "Māma, nǐ qù nǎr?",
+         "es": "Mamá, ¿adónde vas?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ qù ___.",
+         "es": "Voy a la tienda.",
+         "v": 1,
+         "fw": "shāngdiàn"
+        }
+       ],
+       "p": 52
+      },
+      {
+       "num": 34,
+       "ans": "A",
+       "q": "R3-34",
+       "lines": [
+        {
+         "py": "Nǐ duō dà?",
+         "es": "¿Cuántos años tienes?",
+         "v": 0
+        },
+        {
+         "py": "Wǒ 5 ___.",
+         "es": "Tengo 5 años.",
+         "v": 1,
+         "fw": "suì"
+        }
+       ],
+       "p": 53
+      },
+      {
+       "num": 35,
+       "ans": "E",
+       "q": "R3-35",
+       "lines": [
+        {
+         "py": "Jiějie, nàge rén shì ___?",
+         "es": "Hermana, ¿quién es esa persona?",
+         "v": 0,
+         "fw": "shéi"
+        },
+        {
+         "py": "Wǒ bú rènshi tā.",
+         "es": "No lo conozco.",
+         "v": 1
+        }
+       ],
+       "p": 54
+      }
+     ],
+     "bank": [
+      {
+       "l": "A",
+       "py": "suì",
+       "es": "años (de edad)",
+       "for": 34
+      },
+      {
+       "l": "B",
+       "py": "xiànzài",
+       "es": "ahora",
+       "for": 31
+      },
+      {
+       "l": "C",
+       "py": "chī",
+       "es": "comer",
+       "for": 32
+      },
+      {
+       "l": "D",
+       "py": "sān",
+       "es": "tres",
+       "for": "ex"
+      },
+      {
+       "l": "E",
+       "py": "shéi",
+       "es": "¿quién?",
+       "for": 35
+      },
+      {
+       "l": "F",
+       "py": "shāngdiàn",
+       "es": "tienda",
+       "for": 33
+      }
+     ]
+    }
+   ],
+   "pics": [
+    {
+     "f": "5/p01.webp",
+     "v": "2162b1c095",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p02.webp",
+     "v": "b23b1750d9",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p03.webp",
+     "v": "63f17104ae",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p04.webp",
+     "v": "2ddde6fca5",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p05.webp",
+     "v": "e6c0a87fd5",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p06.webp",
+     "v": "fb0229c111",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p07.webp",
+     "v": "ff612f515b",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p08.webp",
+     "v": "cd6da7d9be",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p09.webp",
+     "v": "7ff1b0f1c2",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p10.webp",
+     "v": "da7b0f0da5",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p11.webp",
+     "v": "66a656cbbc",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p12.webp",
+     "v": "5627ad0ae0",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p13.webp",
+     "v": "f4d222698e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p14.webp",
+     "v": "06186ba14e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p15.webp",
+     "v": "675d470664",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p16.webp",
+     "v": "da9db18dde",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p17.webp",
+     "v": "9b4331e8c2",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p18.webp",
+     "v": "a4b2964f95",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p19.webp",
+     "v": "e8d4762bfd",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p20.webp",
+     "v": "c63e9bff88",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p21.webp",
+     "v": "56787c7e32",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p22.webp",
+     "v": "9f1992d76e",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p23.webp",
+     "v": "7a229f11cc",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p24.webp",
+     "v": "c86781dd84",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p25.webp",
+     "v": "902f0671aa",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p26.webp",
+     "v": "c62cc08035",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p27.webp",
+     "v": "020610f387",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p28.webp",
+     "v": "cbc7646fef",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p29.webp",
+     "v": "2680d3939e",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p30.webp",
+     "v": "580b3bf2e1",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p31.webp",
+     "v": "ed34af683d",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p32.webp",
+     "v": "6dc118abdc",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p33.webp",
+     "v": "b0c8eedb95",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p34.webp",
+     "v": "e52a8daafd",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p35.webp",
+     "v": "b1a8cbc305",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p36.webp",
+     "v": "4c96cc0e8a",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p37.webp",
+     "v": "c9c2465457",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p38.webp",
+     "v": "cd3148cd5d",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p39.webp",
+     "v": "5008a66a99",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p40.webp",
+     "v": "c31ccf6714",
+     "w": 360,
+     "h": 270
+    },
+    {
+     "f": "5/p41.webp",
+     "v": "8ce4b6f7e7",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p42.webp",
+     "v": "267e62ee66",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p43.webp",
+     "v": "5aaed3e5c4",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p44.webp",
+     "v": "96f5d73815",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p45.webp",
+     "v": "22c8ed2a79",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p46.webp",
+     "v": "4d68749d2c",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p47.webp",
+     "v": "f809af7b3a",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p48.webp",
+     "v": "85f3ddd1be",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p49.webp",
+     "v": "573d5ea026",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p50.webp",
+     "v": "ac4315b01a",
+     "w": 480,
+     "h": 360
+    },
+    {
+     "f": "5/p51.webp",
+     "v": "2b16fd1e9c",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "5/p52.webp",
+     "v": "c1e6ad6119",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "5/p53.webp",
+     "v": "db0e1b6b1d",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "5/p54.webp",
+     "v": "3f8ba3ad1e",
+     "w": 380,
+     "h": 285
+    },
+    {
+     "f": "5/p55.webp",
+     "v": "783776c9a3",
+     "w": 380,
+     "h": 285
+    }
+   ],
+   "clips": [
+    {
+     "f": "5/a01.m4a",
+     "v": "5795524017",
+     "s": 8.27
+    },
+    {
+     "f": "5/a02.m4a",
+     "v": "a04d9729b6",
+     "s": 7.17
+    },
+    {
+     "f": "5/a03.m4a",
+     "v": "e580999b1f",
+     "s": 6.67
+    },
+    {
+     "f": "5/a04.m4a",
+     "v": "8b5d0289d5",
+     "s": 6.77
+    },
+    {
+     "f": "5/a05.m4a",
+     "v": "cd7c7d8f05",
+     "s": 7.37
+    },
+    {
+     "f": "5/a06.m4a",
+     "v": "3325000da4",
+     "s": 8.57
+    },
+    {
+     "f": "5/a07.m4a",
+     "v": "aebdec90f4",
+     "s": 7.97
+    },
+    {
+     "f": "5/a08.m4a",
+     "v": "b7aa9ae53b",
+     "s": 7.97
+    },
+    {
+     "f": "5/a09.m4a",
+     "v": "dda1068067",
+     "s": 8.47
+    },
+    {
+     "f": "5/a10.m4a",
+     "v": "83ad11da99",
+     "s": 7.57
+    },
+    {
+     "f": "5/a11.m4a",
+     "v": "b00c6aeb58",
+     "s": 10.47
+    },
+    {
+     "f": "5/a12.m4a",
+     "v": "086aeddeff",
+     "s": 10.17
+    },
+    {
+     "f": "5/a13.m4a",
+     "v": "c015a29254",
+     "s": 10.07
+    },
+    {
+     "f": "5/a14.m4a",
+     "v": "29a31e238f",
+     "s": 9.27
+    },
+    {
+     "f": "5/a15.m4a",
+     "v": "fc77cc49d3",
+     "s": 9.87
+    },
+    {
+     "f": "5/a16.m4a",
+     "v": "196e8d6640",
+     "s": 17.47
+    },
+    {
+     "f": "5/a17.m4a",
+     "v": "aae35fe9f4",
+     "s": 11.47
+    },
+    {
+     "f": "5/a18.m4a",
+     "v": "97c8625168",
+     "s": 15.27
+    },
+    {
+     "f": "5/a19.m4a",
+     "v": "4e1152496b",
+     "s": 16.77
+    },
+    {
+     "f": "5/a20.m4a",
+     "v": "1a2b954943",
+     "s": 16.87
+    }
+   ],
+   "pass": 120
+  }
+ ]
+}
