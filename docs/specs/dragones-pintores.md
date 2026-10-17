@@ -136,3 +136,7 @@ Total 13/14 → ships (≥ 12, no 0). To 14: Dubai landmark prizes in the sky (a
 - **The ceremony sounds** (drum, fanfare) under Profe Fer's voice: check the volume on the classroom speakers.
 - **Art requests (Higgsfield in his Chrome; kid-safe, no text or logos):** each captain in a true «talking» pose on
   flat #00FF00 (the bubbles use the ready / victory poses today).
+
+### Art batch 1 · 2026-10-17
+- The captains' new poses (Higgsfield Unlimited, 0 credits, his Chrome): `assets/cast/<id>-{talk,jump,wow,67}.webp` for Fer, Hamdan, Latifa, Aileen and Adric (Adrian: Higgsfield refuses him, his three poses stay) and Dralingo `assets/dralingo/{talk,jump,wow}.webp`. `js/cast.js` rotates them: `hello` → hello or talk, `cheer` → cheer or jump, `mystery` → mystery or wow (held 25 s per character, so a moment never flickers); `talk` / `jump` / `wow` / `67` ask for exactly one. The shared ending (`js/party.js`): the reveal shows both captains surprised (`wow`), the result the winners cheering and the other captain speaking kindly (`talk`), the phone card the same; the captains' stickers are preloaded with the show.
+- Dubai in the sky: five landmark «islands» (Burj Khalifa, Burj Al Arab, Museo del Futuro, Marco de Dubái, a palm-island resort; one Higgsfield sheet at one scale) in `assets/paint/islands/`, drawn by `PaintRender.islands()` behind the cloud platforms: the projector spreads them over the top of the sky, the phone with a slow parallax (30 % of the camera) so all five pass by; a slow bob, still with reduced motion. Scenery only (→ Real place 2/2).

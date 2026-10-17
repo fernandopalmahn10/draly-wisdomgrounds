@@ -17,6 +17,17 @@
   const A = '/assets/dragon/';
   const LM = '/assets/kingdoms/landmarks/big/';
   const DRALINGO = '/assets/dralingo/power.webp';
+  // Dralingo flying with the big gold star (art batch 2026-10-17): the run-ins, the sprint panels, «¡ESTRELLA!» and
+  // «¡Gana estrellas!» (one picture where a standing Dralingo + a drawn star used to be)
+  const DRALINGO_STAR = '/assets/dralingo/star-fly.webp';
+  function starFly(cls) {
+    const im = document.createElement('img');
+    im.className = 'ds-starfly' + (cls ? ' ' + cls : '');
+    im.src = DRALINGO_STAR;
+    im.alt = 'Dralingo con la estrella';
+    im.decoding = 'async';
+    return im;
+  }
   const NEUTRAL = { id: 'gold', name: 'Oro', c: '#ffc93c', d: '#c98a26', s: '#fff3c4' };
   const colorOf = (c) => (c == null || c < 0 ? NEUTRAL : C.COLORS[c] || C.COLORS[0]);
   const frame = (c, f) => A + 'fly-' + (c == null || c < 0 ? 'blue' : (C.COLORS[c] || C.COLORS[1]).id) + '-' + f + '.webp';
@@ -52,6 +63,7 @@
     const urls = [];
     (colors || []).forEach((c) => ['up', 'mid', 'down'].forEach((f) => urls.push(frame(c, f))));
     (skins || []).forEach((s) => ['idle', 'ok', 'no'].forEach((p) => urls.push(art(s, p))));
+    urls.push(DRALINGO_STAR);
     urls.forEach((u) => { if (!pre[u]) { pre[u] = new Image(); pre[u].decoding = 'async'; pre[u].src = u; } });
   }
 
@@ -336,5 +348,5 @@
     requestAnimationFrame(step);
   }
 
-  root.DragonSky = { COURSE: C, NEUTRAL, DRALINGO, colorOf, frame, art, skinFor, isAnimal, lmArt, preload, figure, flyer, Sky, star, ring, countUp, el, fmt, sleep, reduced };
+  root.DragonSky = { COURSE: C, NEUTRAL, DRALINGO, DRALINGO_STAR, starFly, colorOf, frame, art, skinFor, isAnimal, lmArt, preload, figure, flyer, Sky, star, ring, countUp, el, fmt, sleep, reduced };
 })(window);

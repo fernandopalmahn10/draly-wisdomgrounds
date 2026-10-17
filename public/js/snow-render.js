@@ -19,6 +19,8 @@
   function preload(skins) {
     (skins || ['dralingo', 'fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian', 'camel', 'plane', 'falcon', 'oryx']).forEach((k) => img(SKIN_URL(k)));
     ['museum', 'burj', 'arab', 'frame', 'atlantis'].forEach((k) => img(LM_URL(k)));
+    Object.values(PICS).forEach((d) => img(PROP_URL(d.f)));        // the map's props (~140 KB, art batch 2026-10-17)
+    ['lamp', 'lantern', 'abra', 'oyster', 'ice-chest'].forEach((f) => img(PROP_URL(f)));
   }
   // the ice-team version of an avatar: tinted icy blue with a frosty rim (made once per avatar)
   function frost(skin) {
@@ -163,6 +165,48 @@
 
   // ---------- props ----------
   function outline(g, w) { g.strokeStyle = INK; g.lineWidth = w || 2; g.stroke(); }
+  // The props as pictures (art batch 2026-10-17, Higgsfield; brief content/snow/pictures.json): a kind with a picture
+  // draws it once it has loaded (bottom-centre on its footprint, `w` tiles wide or the footprint width × `k`), else the
+  // canvas drawing below stays. The same pictures dress La Gran Fuga's rooms (assets/props/, js/escape-render.js).
+  const PROP_URL = (f) => '/assets/props/' + f + '.webp';
+  const PICS = {
+    igloo: { f: 'igloo', w: 2.2 }, snowman: { f: 'snowman', w: 0.95 }, pine: { f: 'pine', w: 1.3 }, palm: { f: 'date-palm', w: 1.75 },
+    potpalm: { f: 'palm-pot', w: 1.15 }, rock: { f: 'rock', w: 1.1 }, sacks: { f: 'sacks', w: 1.2 }, planter: { f: 'planter', w: 0.95 },
+    stall: { f: 'stall', each: 1.4 }, bench: { f: 'bench', k: 1 }, fountain: { f: 'fountain', k: 1.05, flat: true }, oasis: { f: 'oasis', w: 2.5, flat: true },
+  };
+  function drawPic(g, f, cx, base, wpx, shadow) {
+    const i = img(PROP_URL(f));
+    if (!ready(i)) return false;
+    const h = wpx * i.naturalHeight / i.naturalWidth;
+    if (shadow) { g.fillStyle = 'rgba(29,36,64,.16)'; ell(g, cx, base - 2, wpx * 0.42, Math.max(3, wpx * 0.1)); g.fill(); }
+    g.drawImage(i, cx - wpx / 2, base - h, wpx, h);
+    return true;
+  }
+  function drawPropPic(g, p, T) {
+    const d = PICS[p.kind];
+    if (!d) return false;
+    if (d.each) {             // a row of stalls: one picture per ~1.4 tiles of the footprint (a tall one would hide a station)
+      const n = Math.max(1, Math.round(p.w / d.each)), w = (p.w * T) / n;
+      let ok = true;
+      for (let i = 0; i < n; i++) ok = drawPic(g, d.f, p.x * T + w * (i + 0.5), (p.y + p.h) * T + 2, w * 0.98, true) && ok;
+      return ok;
+    }
+    return drawPic(g, d.f, (p.x + p.w / 2) * T, (p.y + p.h) * T + 2, (d.w || p.w * d.k) * T, !d.flat);
+  }
+  function drawDecorPic(g, d, T, now) {
+    if (d.kind === 'lamp') return drawPic(g, 'lamp', d.x * T, d.y * T + 2, 0.7 * T, true);
+    if (d.kind === 'lantern') return drawPic(g, 'lantern', d.x * T, d.y * T - 4 + Math.sin(now / 800 + d.x) * 1.5, 0.42 * T, false);
+    if (d.kind === 'boat') return drawPic(g, 'abra', d.x * T, d.y * T + 12 + Math.sin(now / 700 + d.x) * 2, 1.8 * T, false);
+    return false;
+  }
+  function drawPearlPic(g, j, T, now, cool) {
+    g.save();
+    if (cool) g.globalAlpha = 0.5;
+    const ok = drawPic(g, 'oyster', j.x * T, j.y * T + 10, 0.85 * T, false);
+    g.restore();
+    if (ok && !cool) { g.fillStyle = 'rgba(255,255,255,.9)'; const s = 2 + Math.sin(now / 200) * 1.5; g.fillRect(j.x * T + 5, j.y * T - 9, s, s); }
+    return ok;
+  }
   function drawStation(g, p, T, now, near, ready_) {
     const X = p.x * T, Y = p.y * T, S = 2 * T;
     const bob = Math.sin(now / 420 + p.id) * 3;
@@ -185,6 +229,12 @@
     g.fillStyle = INK; g.font = '900 24px Baloo 2, Nunito, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.fillText('?', bx, by + 1);
     if (ready_ === false) { g.fillStyle = 'rgba(255,255,255,.4)'; rr(g, X, Y, S, S, 12); g.fill(); }
+  }
+  function stationBubble(g, p, T, now) {
+    const bx = p.x * T + T, by = p.y * T - 14 + Math.sin(now / 420 + p.id) * 3;
+    g.fillStyle = '#fff7e3'; ell(g, bx, by, 17, 17); g.fill(); outline(g, 3);
+    g.fillStyle = INK; g.font = '900 24px Baloo 2, Nunito, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText('?', bx, by + 1);
   }
   function drawStall(g, p, T) {
     const X = p.x * T, Y = p.y * T, W = p.w * T;
@@ -439,6 +489,14 @@
       g.fillStyle = gr; g.fillRect(X - 16, Y - 140, 32, 140);
     }
     g.fillStyle = 'rgba(29,36,64,.22)'; ell(g, X, c.y + 3, 16, 5); g.fill();
+    const ci = img(PROP_URL('ice-chest'));          // the ice chest picture (art batch 2026-10-17)
+    if (ready(ci)) {
+      const w = 42, h = w * ci.naturalHeight / ci.naturalWidth;
+      g.drawImage(ci, X - w / 2, Y - h + 3, w, h);
+      const s2 = 2 + 2 * Math.sin(now / 150);
+      g.fillStyle = '#fff'; g.fillRect(X + 12, Y - h, s2, s2); g.fillRect(X - 15, Y - h + 6, s2 * 0.7, s2 * 0.7);
+      return;
+    }
     g.fillStyle = '#9fe0ff'; rr(g, X - 15, Y - 20, 30, 20, 4); g.fill(); outline(g, 2);
     g.fillStyle = '#5cc8ff'; rr(g, X - 16, Y - 28, 32, 10, 5); g.fill(); outline(g, 2);
     g.fillStyle = '#ffc93c'; g.fillRect(X - 3, Y - 28, 6, 28); g.strokeStyle = INK; g.lineWidth = 1.5; g.strokeRect(X - 3, Y - 28, 6, 28);
@@ -465,11 +523,11 @@
     // flat things on the ground first (oasis, fountain basins sit under everything)
     const list = [];
     map.props.forEach((p) => {
-      if (p.kind === 'oasis') { drawOasis(g, p, T); return; }
+      if (p.kind === 'oasis') { if (!drawPropPic(g, p, T)) drawOasis(g, p, T); return; }
       list.push({ y: (p.y + p.h) * T - (p.kind === 'fountain' ? 20 : 0), p });
     });
-    (map.decor || []).forEach((d) => { if (d.kind === 'boat') drawBoat(g, d, T, now); });
-    map.jobs.forEach((j) => { if (j.kind === 'pearl') drawPearl(g, j, T, now, st.jobsCool); });
+    (map.decor || []).forEach((d) => { if (d.kind === 'boat' && !drawDecorPic(g, d, T, now)) drawBoat(g, d, T, now); });
+    map.jobs.forEach((j) => { if (j.kind === 'pearl' && !drawPearlPic(g, j, T, now, st.jobsCool)) drawPearl(g, j, T, now, st.jobsCool); });
     (map.decor || []).forEach((d) => { if (d.kind === 'lamp' || d.kind === 'lantern') list.push({ y: d.y * T + 1, d }); });
     (st.kids || []).forEach((k) => list.push({ y: k.y, k }));
     if (st.chest) list.push({ y: st.chest.y, chest: st.chest });
@@ -477,10 +535,13 @@
     list.forEach((e) => {
       if (e.k) drawKid(g, e.k, T, now, { size: opts.size, armor: st.armor });
       else if (e.chest) drawChest(g, e.chest, now, opts.big);
-      else if (e.d) (e.d.kind === 'lamp' ? drawLamp : drawLantern)(g, e.d, T, now);
+      else if (e.d) { if (!drawDecorPic(g, e.d, T, now)) (e.d.kind === 'lamp' ? drawLamp : drawLantern)(g, e.d, T, now); }
       else if (e.p.kind === 'station') drawStation(g, e.p, T, now, st.near && st.near.station === e.p.id, true);
+      else if (drawPropPic(g, e.p, T)) { /* its picture */ }
       else if (PROP_DRAW[e.p.kind]) PROP_DRAW[e.p.kind](g, e.p, T, now);
     });
+    // the stations' «?» bubbles once more on top: no prop picture may ever hide where kids answer
+    map.props.forEach((p) => { if (p.kind === 'station') stationBubble(g, p, T, now); });
     (st.balls || []).forEach((b) => drawBall(g, b));
     (st.fx || []).forEach((fx) => drawFx(g, fx, now));
     (st.kids || []).forEach((k) => drawTag(g, k, view.s, { size: opts.size, tag: opts.tag, meLabel: opts.meLabel }));

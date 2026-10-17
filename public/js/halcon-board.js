@@ -16,6 +16,13 @@
   const POSE_FILE = { idle: 'ready', ok: 'victory', win: 'victory', no: 'sad', lose: 'sad' };
   // animated victory loops (phone-safe "lite" versions, 160–280 KB) for the finale winner
   const WIN_ANIM = { dralingo: '/assets/dralingo/anim/cheer-lite.webp', adric: '/assets/cast/anim/adric-cheer-lite.webp' };
+  // the «6-7» pose per character that has one (Adrian: Higgsfield refuses him; he shows his victory pose instead)
+  const SIX7 = {
+    dralingo: '/assets/sixseven/dralingo-67-a.webp', fer: '/assets/halcon/cast/fer-67.webp', hamdan: '/assets/halcon/cast/hamdan-67.webp',
+    latifa: '/assets/halcon/cast/latifa-67.webp', aileen: '/assets/halcon/cast/aileen-67.webp', adric: '/assets/halcon/cast/adric-67.webp',
+    // the animals do their own swing: the camel and the oryx rear up, the falcon one wing up, the plane tilts its wings
+    camel: '/assets/saga/67/camel.webp', plane: '/assets/saga/67/plane.webp', falcon: '/assets/saga/67/falcon.webp', oryx: '/assets/saga/67/oryx.webp',
+  };
   const POS_NAME = ['de arriba', 'de la derecha', 'de abajo', 'de la izquierda'];
   const REVEAL_MS = 450;          // the reveal snap, then the verdict (glow / +N / slump)
   let revealHold = false;         // test hook: screenshots hold the reveal before the verdict
@@ -43,6 +50,10 @@
   function art(skin, pose, animated) {
     skin = skinOk(skin);
     if (animated && pose === 'win' && WIN_ANIM[skin]) return WIN_ANIM[skin];
+    if (pose === '67') {             // the «6-7» (palms up, one high, one low): 6-7 Swing's crews (art batch 2026-10-17)
+      if (SIX7[skin]) return SIX7[skin];
+      pose = isAnimal(skin) ? 'idle' : 'ok';
+    }
     if (isAnimal(skin)) return '/assets/saga/anim/' + skin + '-still.webp';
     return '/assets/halcon/cast/' + skin + '-' + (POSE_FILE[pose] || 'ready') + '.webp';
   }

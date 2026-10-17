@@ -633,7 +633,9 @@
     hideCard();
     ctx.markActivity();
   }
-  function host(id) { return CAST() ? CAST().pose(id, 'cheer') : ''; }
+  // the gang member who hosts a space, in the pose of the moment (art batch 2026-10-17: talk / jump / wow; the default
+  // 'cheer' rotates cheer and jump)
+  function host(id, pose) { return CAST() ? CAST().pose(id, pose || 'cheer') : ''; }
   const line = (id) => (CAST() ? CAST().line(id, 'tablero') : '');
   // one moment of MY turn (on my own board), timed like the server (MAP.evMs)
   async function moment(e, s, n) {
@@ -671,7 +673,7 @@
       case 'buy':
         board.own(e.lm, { k: me, lvl: 1 });
         owners[e.lm] = { k: me, lvl: 1 };
-        card({ host: 'hamdan', lm: e.lm, title: `¡${lmName(e.lm)} es tuyo!`, sub: `Hamdan: «${line('hamdan')}» Quien caiga aquí te paga`, val: '−' + e.price, cls: 'loss', gold: true });
+        card({ host: 'hamdan', pose: 'jump', lm: e.lm, title: `¡${lmName(e.lm)} es tuyo!`, sub: `Hamdan: «${line('hamdan')}» Quien caiga aquí te paga`, val: '−' + e.price, cls: 'loss', gold: true });
         flyCoins(fromMe, me, e.price, true);
         sfx(K + 'landmark.mp3', 0.7);
         buzz([30, 30, 60]);
@@ -679,7 +681,7 @@
         later(1400, () => board && board.pose(me, 'idle'));
         break;
       case 'broke':
-        card({ host: 'hamdan', lm: e.lm, title: `Te faltan ${e.need} ${coinsWord(e.need)} para ${lmName(e.lm)}`, sub: 'Junta monedas y vuelve' });
+        card({ host: 'hamdan', pose: 'talk', lm: e.lm, title: `Te faltan ${e.need} ${coinsWord(e.need)} para ${lmName(e.lm)}`, sub: 'Junta monedas y vuelve' });
         break;
       case 'toll': {
         const to = e.to;
@@ -718,7 +720,7 @@
     inn.appendChild(B().star());
     inn.appendChild(el('b', null, '¡ESTRELLA!'));
     inn.appendChild(el('span', null, 'Dralingo: «' + (line('dralingo') || '¡Una estrella para ti!') + '» · −10 monedas'));
-    const d = el('img'); d.src = B().DRALINGO; d.alt = '';
+    const d = el('img', B().DRALINGO_STAR ? 'mnx-hold' : ''); d.src = B().DRALINGO_STAR || B().DRALINGO; d.alt = '';     // Dralingo hands you the star
     inn.appendChild(d);
     big.appendChild(inn);
     big.classList.remove('hidden');
@@ -737,17 +739,17 @@
     const me = meK;
     // Latifa spins the roulette, then the outcome
     const wheel = el('div', 'mnx-wheel');
-    card({ host: 'latifa', title: '¡Suerte!', sub: 'Latifa: «' + line('latifa') + '»', extra: wheel });
+    card({ host: 'latifa', pose: 'talk', title: '¡Suerte!', sub: 'Latifa: «' + line('latifa') + '»', extra: wheel });
     sfx(K + 'tick.mp3', 0.5);
     requestAnimationFrame(() => { wheel.style.setProperty('--turn', (900 + Math.floor(Math.random() * 360)) + 'deg'); wheel.classList.add('spin'); });
     await sleep(T.roulette);
     const fromMe = pieceAt(me);
     if (e.out === 'chest' || e.out === 'gold') {
-      card({ host: 'latifa', title: e.out === 'gold' ? '¡Cofre de oro!' : '¡Un cofre!', sub: e.lucky ? 'Con monedas de la suerte' : 'Monedas para comprar estrellas', val: '+' + e.coins, cls: 'gain', gold: true });
+      card({ host: 'latifa', pose: 'jump', title: e.out === 'gold' ? '¡Cofre de oro!' : '¡Un cofre!', sub: e.lucky ? 'Con monedas de la suerte' : 'Monedas para comprar estrellas', val: '+' + e.coins, cls: 'gain', gold: true });
       flyCoins(fromMe, me, e.coins);
       sfx(MO + 'gold.mp3', 0.7);
     } else if (e.out === 'swap') {
-      card({ host: 'latifa', title: `¡Cambio! Tú y ${seatName(e.with)}`, sub: 'Cambian de lugar en el tablero' });
+      card({ host: 'latifa', pose: 'wow', title: `¡Cambio! Tú y ${seatName(e.with)}`, sub: 'Cambian de lugar en el tablero' });
       sfx(K + 'whoosh.mp3', 0.7);
       board.jump(me, e.to, { now: true });
       board.jump(e.with, e.from);
@@ -761,7 +763,7 @@
       if (e.coins > 0) later(700, () => { flyCoins(pieceAt(e.with), me, e.coins); });
       else if (e.coins < 0) later(700, () => { flyCoins(fromMe, me, -e.coins, true); });
     } else if (e.out === 'ahead') {
-      card({ host: 'latifa', title: '¡Avanza 3!', sub: 'Tres casillas más' });
+      card({ host: 'latifa', pose: 'talk', title: '¡Avanza 3!', sub: 'Tres casillas más' });
     }
   }
   function stormMoment(e, by) {
@@ -769,7 +771,7 @@
     sfx(MN + 'storm.mp3', 0.8);
     buzz([80, 40, 80]);
     const mine = e.lost && e.lost[meK];
-    card({ host: 'adric', title: '¡Tormenta de arena!', sub: (by === meK ? 'La provocaste tú. ' : `La provocó ${seatName(by)}. `) + 'Todos pierden monedas y la estrella vuela', val: mine ? '−' + mine : '', cls: 'loss', bad: true });
+    card({ host: 'adric', pose: 'wow', title: '¡Tormenta de arena!', sub: (by === meK ? 'La provocaste tú. ' : `La provocó ${seatName(by)}. `) + 'Todos pierden monedas y la estrella vuela', val: mine ? '−' + mine : '', cls: 'loss', bad: true });
     if (mine) flyCoins(pieceAt(meK), meK, mine, true);
     later(900, () => { starPos = e.to; board.setStar(e.to, true); paintMini(); });
   }
@@ -783,7 +785,7 @@
     c.className = 'mnx-card' + (o.gold ? ' gold' : '') + (o.bad ? ' bad' : '');
     c.innerHTML = '';
     if (o.lm != null) { const i = el('img', 'mnx-card-lm'); i.src = B().lmArt(LM[o.lm].id); i.alt = ''; c.appendChild(i); }
-    else if (o.host) { const i = el('img', 'mnx-card-host'); i.src = host(o.host); i.alt = ''; c.appendChild(i); }
+    else if (o.host) { const i = el('img', 'mnx-card-host'); i.src = host(o.host, o.pose); i.alt = ''; c.appendChild(i); }
     else if (o.img) { const i = el('img', 'mnx-card-host'); i.src = o.img; i.alt = ''; c.appendChild(i); }
     const body = el('div', 'mnx-card-body');
     body.appendChild(el('b', null, o.title));
@@ -854,7 +856,7 @@
         break;
       case 'lucky':
         if (e.out === 'swap') {
-          if (e.with === meK) { banner('hurt', [bold(`¡${name} cambió de lugar contigo!`), span('«¡Suerte!» de Latifa: cambio')], host('latifa'), 2400); buzz([40, 30, 40]); }
+          if (e.with === meK) { banner('hurt', [bold(`¡${name} cambió de lugar contigo!`), span('«¡Suerte!» de Latifa: cambio')], host('latifa', 'wow'), 2400); buzz([40, 30, 40]); }
           else tick(k, `${name} cambió de lugar con ${seatName(e.with)}`);
           board.jump(k, e.to, { now: true });
           board.jump(e.with, e.from);
@@ -871,7 +873,7 @@
         board.storm();
         sfx(MN + 'storm.mp3', 0.6);
         const mine = e.lost && e.lost[meK];
-        banner('hurt', [bold('¡Tormenta de arena!'), span(`La provocó ${name}: ${mine ? 'pierdes ' + mine + ' · ' : ''}la estrella vuela`)], host('adric'), 2600);
+        banner('hurt', [bold('¡Tormenta de arena!'), span(`La provocó ${name}: ${mine ? 'pierdes ' + mine + ' · ' : ''}la estrella vuela`)], host('adric', 'wow'), 2600);
         if (mine) flyCoins(pieceAt(meK), meK, mine, true);
         later(900, () => { starPos = e.to; board.setStar(e.to, true); paintMini(); });
         buzz([60, 40, 60]);
@@ -958,8 +960,9 @@
     const rivals = list.filter((s) => s.k !== meK).length;
     box.appendChild(el('p', 'mni-sub', rivals ? `Juegas contra ${rivals} ${rivals === 1 ? 'rival' : 'rivales'}: ¡junta estrellas!` : '¡Junta estrellas!'));
     const st = el('div', 'mni-stage');
-    const starEl = B().star('mni-star');
-    const dr = el('img', 'mni-dral'); dr.src = B().DRALINGO; dr.alt = 'Dralingo';
+    // Dralingo holding the star (one picture; the drawn star stays only as the fallback)
+    const starEl = B().DRALINGO_STAR ? null : B().star('mni-star');
+    const dr = el('img', 'mni-dral' + (starEl ? '' : ' holds')); dr.src = B().DRALINGO_STAR || B().DRALINGO; dr.alt = 'Dralingo con la estrella';
     const crew = el('div', 'mni-crew');
     list.forEach((s, i) => {
       const f = B().figure({ skin: s.skin, c: s.c, name: s.k === meK ? myName() : s.name, me: s.k === meK, tag: true });
@@ -967,7 +970,8 @@
       f.style.setProperty('--i', i);
       crew.appendChild(f);
     });
-    st.append(starEl, dr, crew);
+    if (starEl) st.appendChild(starEl);
+    st.append(dr, crew);
     box.appendChild(st);
     const cap = el('p', 'mni-cap');
     cap.append('Dralingo tiene la ', bold('estrella'), ': ¡llega con 10 monedas!');
@@ -1200,8 +1204,8 @@
       head.after(box);
       const d = B().dice(); d._face.textContent = '4';
       $('mnh-s2').append(d, el('i', 'mn-hand'));
-      const im = el('img'); im.src = B().DRALINGO; im.alt = '';
-      $('mnh-s3').append(B().star(), im);
+      const im = el('img', 'mnh-hold'); im.src = B().DRALINGO_STAR || B().DRALINGO; im.alt = 'Dralingo con la estrella';
+      $('mnh-s3').append(im);
     }
     paintLobbyKid();
   }

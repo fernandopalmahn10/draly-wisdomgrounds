@@ -308,6 +308,11 @@
     const g = c2d;
     g.setTransform(1, 0, 0, 1, 0, 0);
     window.PaintRender.sky(g, cw, ch);
+    // Dubai's landmark islands far away in the sky: a slow parallax (30 % of the camera), all five pass by over the level
+    if (window.PaintRender.islands) {
+      const far = Math.max(0, lv.cols * t - vw) * scale * 0.3, ix = -camX * scale * 0.3;
+      window.PaintRender.islands(g, ix, ix + far + cw, ch * 0.16, ch * 0.17, Date.now() / 1000, 0.5);
+    }
     g.setTransform(scale, 0, 0, scale, -camX * scale, -camY * scale);
     // soft background clouds (parallax)
     g.fillStyle = 'rgba(255,255,255,.55)';

@@ -15,10 +15,17 @@
 //   «¡Suerte!» roulette, Aileen the duels, Adric the storm, Adrian Salida, Dralingo the star)
 //   vuelo (Vuelo del Dragón: the sky race: Fer opens the episode, Hamdan the star sprints, Latifa the golden rings, Aileen
 //   the overtakes, Adric (and his dog) the tailwind, Adrian the laps, Dralingo the stars)
-// Poses: hello, cheer, mystery. Stickers are Higgsfield renders of his own character art, keyed to transparent WebP.
+// Poses: hello, cheer, mystery + (art batch 2026-10-17) talk (explaining, one hand open), jump (a hop, both fists up),
+// wow (surprised, hands on the cheeks), 67 (the 6-7: palms up, one high, one low). Stickers are Higgsfield renders of
+// his own character art, keyed to transparent WebP. Adrian has only hello / cheer / mystery (Higgsfield refuses new
+// Adrian poses): his other keys fall back to those.
+//   Variety (his words 2026-10-17: "I love variety"): pose(id, 'hello') may answer hello OR talk, 'cheer' cheer OR
+//   jump, 'mystery' mystery OR wow; the pick holds ~25 s per character, so one moment never flickers between two.
+//   Ask for 'talk' / 'jump' / 'wow' / '67' to get exactly that one.
 (function () {
   const BASE = '/assets/cast/';
   const D = '/assets/kingdoms/dralingo/';
+  const ND = '/assets/dralingo/';
   const CAST = {
     fer: {
       name: 'Profe Fer', role: 'el profe',
@@ -184,7 +191,8 @@
     },
     dralingo: {
       name: 'Dralingo', role: 'el corazón del equipo',
-      poses: { hello: D + 'wave.webp', cheer: D + 'party.webp', mystery: D + 'thinking.webp' },
+      // his platform look (kandura, ghutra + agal, mustache) since 2026-10-17; the keffiyeh-only stickers in D retire here
+      poses: { hello: ND + 'hello.webp', talk: ND + 'talk.webp', cheer: ND + 'power.webp', jump: ND + 'jump.webp', mystery: ND + 'wise.webp', wow: ND + 'wow.webp', '67': '/assets/sixseven/dralingo-67-a.webp' },
       lines: {
         hello: ['¡Hola!', '¡A jugar!', '¡Qué bueno verte!'],
         win: ['¡Lo logramos!', '¡Vamos!', '¡Bien hecho!'],
@@ -211,6 +219,13 @@
   const HUMANS = ['fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian'];
   const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', smash: 'cheer', fiesta: 'cheer', swing: 'cheer', oro: 'cheer', vuelo: 'cheer', casi: 'hello', reino: 'cheer', pintado: 'cheer', nieve: 'cheer', animo: 'hello', ruta: 'hello', libro: 'cheer', repaso: 'hello', mystery: 'mystery', oops: 'mystery' };
   const pick1 = (a) => a[Math.floor(Math.random() * a.length)];
+  // the poses that can stand for a key (variety), and what a character without that art shows instead
+  const VARIANTS = { hello: ['hello', 'talk'], cheer: ['cheer', 'jump'], mystery: ['mystery', 'wow'] };
+  const FALLBACK = { talk: 'hello', jump: 'cheer', wow: 'mystery', '67': 'cheer' };
+  const FULL = { fer: 1, hamdan: 1, latifa: 1, aileen: 1, adric: 1 };     // humans with the 2026-10-17 poses
+  const POSE_KEYS = ['hello', 'cheer', 'mystery', 'talk', 'jump', 'wow', '67'];
+  const HOLD_MS = 25000;
+  const held = Object.create(null);
 
   function pick(n, opts) {
     const ex = (opts && opts.exclude) || [];
@@ -219,11 +234,24 @@
     while (out.length < n && pool.length) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     return out;
   }
+  // one URL per (character, pose key): a variant picked at random, kept HOLD_MS so a moment shows one picture
   function pose(id, p) {
     const c = CAST[id] || CAST.dralingo;
-    const key = MOOD_POSE[p] || p || 'hello';
-    if (c.poses) return c.poses[key] || c.poses.hello;
-    return BASE + id + '-' + key + '.webp';
+    const who = CAST[id] ? id : 'dralingo';
+    let key = MOOD_POSE[p] || p || 'hello';
+    if (!POSE_KEYS.includes(key)) key = 'hello';          // a mood without a sticker of its own
+    const opts = (VARIANTS[key] || [key]).map((k) => {
+      if (c.poses) return c.poses[k] || null;
+      const k2 = FULL[who] ? k : (FALLBACK[k] || k);
+      return ['hello', 'cheer', 'mystery'].includes(k2) || FULL[who] ? BASE + who + '-' + k2 + '.webp' : null;
+    }).filter(Boolean);
+    if (!opts.length) return c.poses ? (c.poses[FALLBACK[key]] || c.poses.hello) : BASE + who + '-hello.webp';
+    if (opts.length === 1) return opts[0];
+    const h = who + '|' + key, now = Date.now(), cur = held[h];
+    if (cur && cur.until > now && opts.includes(cur.url)) return cur.url;
+    const url = pick1(opts);
+    held[h] = { url, until: now + HOLD_MS };
+    return url;
   }
   function line(id, mood) {
     const c = CAST[id] || CAST.dralingo;

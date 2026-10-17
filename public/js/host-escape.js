@@ -138,6 +138,7 @@
     g.clearRect(0, 0, c.width, c.height);
     const s = c.height * (scale || 0.8);
     R.robotin(g, c.width / 2 - s * 0.08, c.height - c.height * 0.06, s, { t, mood, moving: mood === 'chase' });
+    if (R.onRobot) R.onRobot(mood, c, () => robotCanvas(c, mood, t, scale));      // his picture arrived: draw it
   }
   let lobbyRaf = 0;
   function lobbyLoop(ts) {

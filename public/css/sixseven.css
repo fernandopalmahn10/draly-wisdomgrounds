@@ -519,10 +519,10 @@ body.ssx-on:not(.ssx-frenzy) .ssx-chip { display: none; }
   transform: translateY(10%) scale(.9) rotate(4deg); animation: ss-sob .5s ease-in-out .5s 4; }
 /* Fuego's Dralingo is red (his rule: Fuego = red Dralingo, Mar = blue): the same art turned on the colour wheel, so the
    kandura and ghutra stay white; the sob keeps it (a more specific rule) */
-:is(body.gametype-sixseven, body.ss-host) .mmk-red .mmk-img:is([src*="/cast/dralingo-"], [src*="/dralingo/anim/"]) {
+:is(body.gametype-sixseven, body.ss-host) .mmk-red .mmk-img:is([src*="/cast/dralingo-"], [src*="/dralingo/anim/"], [src*="/sixseven/dralingo-67"]) {
   filter: hue-rotate(140deg) saturate(1.15) drop-shadow(2px 0 0 var(--tc)) drop-shadow(-2px 0 0 var(--tc)) drop-shadow(0 2px 0 var(--tc)) drop-shadow(0 -2px 0 var(--tc))
     drop-shadow(0 5px 3px rgba(29, 36, 64, .3)); }
-:is(.ssx-finale, .ssp-end) .mmk-red.sob .mmk-img:is([src*="/cast/dralingo-"], [src*="/dralingo/anim/"]) {
+:is(.ssx-finale, .ssp-end) .mmk-red.sob .mmk-img:is([src*="/cast/dralingo-"], [src*="/dralingo/anim/"], [src*="/sixseven/dralingo-67"]) {
   filter: hue-rotate(140deg) drop-shadow(2px 0 0 var(--tc)) drop-shadow(-2px 0 0 var(--tc)) drop-shadow(0 2px 0 var(--tc)) drop-shadow(0 -2px 0 var(--tc)) saturate(.25) brightness(.78); }
 @keyframes ss-sob { 0%, 100% { transform: translateY(10%) scale(.9) rotate(4deg); } 25% { transform: translateY(11%) scale(.9) rotate(1deg); } 75% { transform: translateY(11%) scale(.9) rotate(7deg); } }
 .ssf-total { font: 800 1rem/1 'Baloo 2', sans-serif; padding: 4px 10px; border-radius: 999px; background: #fff; border: 2px solid var(--ss-ink); }

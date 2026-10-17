@@ -835,7 +835,9 @@
   }
 
   // ---------- the gang talks (one at a time, ≥ 2.5 s apart, never over the tiles) ----------
-  const GANG_ART = (id) => (id === 'dralingo' ? '/assets/halcon/cast/dralingo-victory.webp' : H + 'cast/' + id + '-victory.webp');
+  // the one who talks, in a talking or cheering pose (art batch 2026-10-17; cast.js rotates the variants)
+  const GANG_ART = (id) => (id === 'dralingo' || !CAST() ? (id === 'dralingo' ? '/assets/halcon/cast/dralingo-victory.webp' : H + 'cast/' + id + '-victory.webp')
+    : CAST().pose(id, Math.random() < 0.5 ? 'talk' : 'cheer'));
   const line = (id) => (CAST() ? CAST().line(id, 'vuelo') : '');
   let gangAt = 0, gangT = null;
   function gang(id, text) {
@@ -894,9 +896,8 @@
     const tt = el('div', 'spr-t');
     tt.append(el('b', null, `¡Carrera al ${lmName(sp.lm)}!`), el('span', null, 'Quien más vuele se lleva la estrella'));
     const clock = el('div', 'spr-clock'); clock.id = 'drx-spr-clock';
-    const dral = el('div', 'spr-dral');
-    const di = el('img'); di.src = S().DRALINGO; di.alt = 'Dralingo';
-    dral.append(di, S().star());
+    const dral = el('div', 'spr-dral fly');
+    dral.appendChild(S().starFly());
     head.append(im, tt, clock, dral);
     const bars = el('div', 'spr-bars');
     bars.id = 'drx-spr-bars';
@@ -968,7 +969,7 @@
     const card = el('div', 'drb-card');
     const st = el('div', 'drb-star');
     st.appendChild(S().star());
-    const im = el('img', 'drb-dral'); im.src = S().DRALINGO; im.alt = 'Dralingo';
+    const im = S().starFly('drb-dral');
     card.append(st, im, el('h2', null, '¡ESTRELLA!'), el('p', null, `Ganaste la carrera al ${lmName(d.lm)} · +${d.star || 150} m`));
     big.appendChild(card);
     play('star', 1, 0.9);
@@ -1056,9 +1057,8 @@
       f.style.setProperty('--odd', i % 2);
       crew.appendChild(f);
     });
-    const host = el('div', 'dri-host');
-    const im = el('img'); im.src = S().DRALINGO; im.alt = 'Dralingo';
-    host.append(im, S().star());
+    const host = el('div', 'dri-host fly');
+    host.appendChild(S().starFly());
     st.append(crew, host);
     box.appendChild(st);
     const cap = el('p', 'dri-cap');
@@ -1296,8 +1296,7 @@
       head.after(box);
       const f = S().flyer({ skin: mySkin(), c: 1, name: '', tag: false, still: true });
       $('drh-s2').append(f, el('i', 'drx-hand up'));
-      const im = el('img'); im.src = S().DRALINGO; im.alt = '';
-      $('drh-s3').append(S().star(), im);
+      $('drh-s3').append(S().starFly());
     }
     paintLobbyKid();
   }

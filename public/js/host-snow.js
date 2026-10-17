@@ -14,7 +14,10 @@
     freeze: SN + 'freeze.mp3', hit: SN + 'hit.mp3', stun: SN + 'stun.mp3', chest: SN + 'chest.mp3', spawn: SN + 'spawn.mp3',
     throw: SN + 'throw.mp3', pop: SN + 'pop.mp3', streak: A + 'streak.mp3',
   };
-  const POSE = (n) => A + 'dralingo/' + n + '.webp';
+  // Dralingo in his platform look where he has the pose (art batch 2026-10-17; snow-* = his Ski Dubái poses), else the
+  // older keffiyeh stickers
+  const NEW_LOOK = { pointing: 'point', shocked: 'wow', champion: 'victory', jump: 'jump', thinking: 'wise', throw: 'snow-throw', frozen: 'snow-frozen', ski: 'snow-ski' };
+  const POSE = (n) => (NEW_LOOK[n] ? '/assets/dralingo/' + NEW_LOOK[n] : A + 'dralingo/' + n) + '.webp';
   const ZNAME = (z) => (M.ZONES[z] && M.ZONES[z].name) || 'Dubái';
 
   let pin = null, state = null, muted = false;
@@ -432,7 +435,7 @@
     box.classList.remove('show'); void box.offsetWidth; box.classList.add('show');
     fxAt = Date.now();
     setTimeout(() => { box.classList.add('hidden'); box.classList.remove('show'); }, 3000);
-    setTimeout(() => say('¡Supervivientes: respondan para tener copos y lancen bolas de nieve! ☀️', 'pointing'), 3200);
+    setTimeout(() => say('¡Supervivientes: respondan para tener copos y lancen bolas de nieve! ☀️', 'throw'), 3200);
   }
 
   // ---------- big moments: one at a time, ≥ 7 s apart ----------
@@ -507,7 +510,7 @@
     const capId = captains && captains[sunWon ? 'sun' : 'ice'];
     cap.classList.toggle('hidden', !(capId && Cast));
     if (capId && Cast) { cap.src = Cast.pose(capId, 'cheer'); cap.alt = Cast.captain(capId); }
-    $('win-pose').src = POSE('champion');
+    $('win-pose').src = POSE(sunWon ? 'champion' : 'frozen');     // the ice won: Dralingo frozen in his block of ice
     $('win-heroes').classList.toggle('frozen', !sunWon);
     const row = $('win-survivors');
     row.innerHTML = '';

@@ -202,6 +202,10 @@ body.kd-phone.drx-on.drx-play .muted-toggle { position: fixed !important; z-inde
 .spr-dral { position: relative; flex: 0 0 auto; width: 44px; height: 44px; }
 .spr-dral img { position: absolute; left: 0; bottom: -4px; height: 50px; width: auto; }
 .spr-dral .ds-star { position: absolute; right: -6px; top: -6px; width: 24px; height: 24px; filter: drop-shadow(0 0 6px rgba(255, 220, 90, .9)); animation: dr-starbob 1.2s ease-in-out infinite alternate; }
+/* Dralingo flying with the star (art batch 2026-10-17): one picture in place of Dralingo + a drawn star */
+.ds-starfly { display: block; filter: drop-shadow(0 0 8px rgba(255, 220, 90, .75)); }
+.spr-dral.fly { width: 66px; }
+.spr-dral.fly img { left: 0; bottom: -2px; height: 46px; animation: dr-starbob 1.2s ease-in-out infinite alternate; }
 @keyframes dr-starbob { from { transform: translateY(0) rotate(-8deg); } to { transform: translateY(-5px) rotate(8deg); } }
 .spr-bars { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; margin-top: 6px; }
 .spr-bar { --pc: #e0463c; position: relative; display: grid; grid-template-columns: 46px 1fr 40px; align-items: center; gap: 4px; min-width: 0; }
@@ -343,6 +347,7 @@ body.drx-bannering .drx-fly-head, .drx-chip.show ~ .drx-fly .drx-fly-head { visi
 .drb-star .ds-star { filter: drop-shadow(0 0 30px rgba(255, 230, 120, .95)); animation: dr-bigstar 1s var(--dr-ease-pop) both; }
 @keyframes dr-bigstar { from { transform: scale(.2) rotate(-200deg); opacity: 0; } to { transform: none; opacity: 1; } }
 .drb-dral { position: absolute; right: -8px; top: -10px; height: 128px; animation: dr-rise-v .5s .2s var(--dr-ease-pop) both; }
+.drb-dral.ds-starfly { right: 0; top: -14px; height: 104px; width: auto; max-width: 58%; object-fit: contain; }
 .drb-card h2 { margin: 6px 0 0; font: 800 3.2rem/1 'Baloo 2', sans-serif; color: var(--dr-gold); -webkit-text-stroke: 3px var(--dr-ink); paint-order: stroke fill;
   animation: dr-rise-v .4s .3s var(--dr-ease-pop) both; }
 .drb-card p { margin: 8px 0 0; padding: 6px 12px; border-radius: 14px; background: rgba(11, 16, 48, .8); font: 800 1.05rem/1.25 'Nunito', sans-serif; color: #fff; }
@@ -371,10 +376,12 @@ body.drx-bannering .drx-fly-head, .drx-chip.show ~ .drx-fly .drx-fly-head { visi
 .dri-crew { position: absolute; inset: 0 22% 0 0; }
 /* the crew zig-zags in two columns, so a rider never stands on the name tag of the dragon above */
 .dri-fly { --fw: 31vw; left: calc(2% + var(--odd, 0) * 40%); top: calc(3% + var(--i) * 17%); animation: dr-flyin .9s var(--dr-ease-out) calc(.15s + var(--i) * .16s) both; }
-.dri-fly.me { --fw: 38vw; }
+.dri-fly.me { --fw: 38vw; z-index: 2; }   /* the kid's own racer (and its «TÚ» tag) above the riders of the racers below */
 @keyframes dr-flyin { from { transform: translate3d(-110vw, 30px, 0); } to { transform: none; } }
 .dri-host { position: absolute; right: 0; top: 18%; width: 30%; }
 .dri-host img { width: 100%; height: auto; }
+.dri-host.fly { width: 40%; top: 7%; right: 1%; }
+.dri-host.fly img { animation: dr-starbob 1.4s ease-in-out infinite alternate; }
 .dri-host .ds-star { position: absolute; left: -18%; top: -14%; width: 56%; height: auto; aspect-ratio: 1; filter: drop-shadow(0 0 14px rgba(255, 220, 90, .9)); animation: dr-starbob 1.4s ease-in-out infinite alternate; }
 .dri-cap { position: relative; margin-top: 8px; font: 800 1.02rem/1.3 'Nunito', sans-serif; color: #fff; }
 .dri-cap b { color: var(--dr-gold); }
@@ -417,6 +424,7 @@ body.drx-bannering .drx-fly-head, .drx-chip.show ~ .drx-fly .drx-fly-head { visi
 .drh-step .drx-hand { position: absolute; right: -6px; bottom: -6px; width: 30px; height: 30px; }
 .drh-step .ds-star { width: 32px; height: 32px; flex: 0 0 auto; }
 .drh-step > img { height: 58px; width: auto; max-width: 40px; object-fit: contain; }
+.drh-step > img.ds-starfly { height: auto; width: 72px; max-width: 72px; }
 .drh-step .dsf-trail, .drh-step .dsf-wind { display: none; }
 .drh-q { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; width: 56px; }
 .drh-q i { height: 14px; border-radius: 4px; border: 2px solid var(--dr-ink); background: #fff; }
@@ -521,7 +529,7 @@ body.drx-ended #screen-end > *:not(.drx-finale) { display: none !important; }
   .drf-fly.dsf { --fw: 62px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .drx-hand.up, .dri-fly, .drf-champ-k .dsf, .drk-fly.dsf, .drx-clock.last, .spr-dral .ds-star, .dri-host .ds-star, .drx-ring { animation: none !important; }
+  .drx-hand.up, .dri-fly, .drf-champ-k .dsf, .drk-fly.dsf, .drx-clock.last, .spr-dral .ds-star, .dri-host .ds-star, .drx-ring, .spr-dral.fly img, .dri-host.fly img { animation: none !important; }
   .drq, .drx-chip, .drx-gang, .drx-banner { transition: none; }
   .drx-fly-head { animation-name: dr-flyhead-rm; }
 }
@@ -564,6 +572,7 @@ body.drh .drh-step .dsf { --fw: 160px; left: 6px; top: -6px; }
 body.drh .drh-step .drx-hand { position: absolute; right: -6px; bottom: -6px; width: 56px; height: 56px; }
 body.drh .drh-step .ds-star { width: 70px; height: 70px; }
 body.drh .drh-step > img { height: 140px; width: auto; max-width: none; }
+body.drh .drh-step > img.ds-starfly { height: auto; width: 180px; }
 body.drh .drh-q { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 140px; }
 body.drh .drh-q i { height: 44px; border-radius: 10px; border: 4px solid var(--dr-ink); background: #fff; }
 body.drh .drh-q i:nth-child(1) { background: #0f9d9a; } body.drh .drh-q i:nth-child(4) { background: #4b54c9; }
@@ -600,6 +609,7 @@ body.drh .drh-q i:nth-child(1) { background: #0f9d9a; } body.drh .drh-q i:nth-ch
 .spt-t span { display: block; font: 700 .85rem/1.2 'Nunito', sans-serif; color: #dfe4ff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .spt-dral { position: relative; flex: 0 0 auto; height: 46px; }
 .spt-dral img { display: block; height: 46px; width: auto; }
+.spt-dral img.ds-starfly { height: 50px; }
 .spt-dral .ds-star { position: absolute; left: -38%; top: -6%; width: 28px; height: 28px; filter: drop-shadow(0 0 8px rgba(255, 220, 90, .9)); }
 .spt-n { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--dr-gold); color: var(--dr-ink);
   border: 3px solid var(--dr-ink); font: 800 1.55rem/1 'Baloo 2', sans-serif; font-variant-numeric: tabular-nums; }

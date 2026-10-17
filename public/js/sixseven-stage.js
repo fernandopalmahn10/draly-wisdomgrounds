@@ -32,7 +32,7 @@
   }
   const pre = {};
   function preload() {
-    ['dralingo-67-a.webp', 'dralingo-67-b.webp'].forEach((f) => { if (!pre[f]) { pre[f] = new Image(); pre[f].src = A + f; } });
+    ['dralingo-67-a.webp', 'dralingo-67-b2.webp'].forEach((f) => { if (!pre[f]) { pre[f] = new Image(); pre[f].src = A + f; } });
   }
 
   // ---------- a gold coin (geometry: a disc with a square hole, like the old Chinese coins) ----------
@@ -224,13 +224,37 @@
     const b = el('img', 'ssd-b');
     b.alt = '';
     b.draggable = false;
-    b.src = A + 'dralingo-67-b.webp';
+    b.src = A + 'dralingo-67-b2.webp';
     b.width = 460; b.height = 520;
     d.append(a, b);
     if (o.say) d.appendChild(el('b', 'ssd-say', o.say));
     d.play = (on) => d.classList.toggle('on', on !== false && !reduced());
     if (o.on !== false) d.play(true);
     return d;
+  }
+
+  // ---------- the «6-7» pose (art batch 2026-10-17): a kid figure does the palms-up gesture for a moment ----------
+  // Each character's picture loads the first time it is asked for and shows from then on (never a blank figure on a
+  // slow school Wi-Fi). A wrong answer's 'no' pose in between is never undone by the timer.
+  const six7 = {};
+  function sixReady(skin) {
+    const u = S() && S().kidArt(skin, '67');
+    if (!u) return '';
+    if (!six7[u]) { const i = new Image(); i.decoding = 'async'; i.src = u; six7[u] = i; }
+    return six7[u].complete && six7[u].naturalWidth > 0 ? u : '';
+  }
+  function six(fig, ms) {
+    if (!fig || !fig.pose || !fig._img) return;
+    const u = sixReady(fig._skin);
+    if (!u) return;
+    fig.pose('67');
+    clearTimeout(fig._sixT);
+    fig._sixT = setTimeout(() => { if (fig._img.getAttribute('src') === u) fig.pose('idle'); }, ms || 700);
+  }
+  // a whole crew box at once (a team's wave, my «six seven»)
+  function sixCrew(box, ms) {
+    if (!box) return;
+    box.querySelectorAll('.mmk').forEach((f, i) => { if (f.pose) setTimeout(() => six(f, (ms || 2000) - i * 40), reduced() ? 0 : i * 40); });
   }
 
   // ---------- a kid's swing (right answer) and wobble (wrong answer) ----------
@@ -335,5 +359,5 @@
     requestAnimationFrame(fit);
   }
 
-  root.SixSevenStage = { TEAM, PINYIN, MAX_DEG, tilt, Balance, Coins, coin, dancer, swing, wobble, palms, wipe, sumValue, cloud, fitCloud, sum, el, fmt, reduced, preload, kid: (o) => S().kidFigure(o) };
+  root.SixSevenStage = { TEAM, PINYIN, MAX_DEG, tilt, Balance, Coins, coin, dancer, swing, wobble, palms, wipe, sumValue, cloud, fitCloud, sum, el, fmt, reduced, preload, six, sixCrew, sixReady, kid: (o) => S().kidFigure(o) };
 })(typeof window !== 'undefined' ? window : this);

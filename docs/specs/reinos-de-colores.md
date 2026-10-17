@@ -289,3 +289,6 @@ Total 14/14 → ships (≥ 12, no 0)
   `core/party.js` (the window for all four games) or make `flagsFor` in `core/kingdoms.js` double streaks only.
 - **The pause:** after «▶ Seguir» a kid who was holding a flag gets a fresh 8 s. Watch that nobody reads the pause card
   as «the game is over».
+
+### Art batch 1 · 2026-10-17
+- The captains' new poses (Higgsfield Unlimited, 0 credits, his Chrome): `assets/cast/<id>-{talk,jump,wow,67}.webp` for Fer, Hamdan, Latifa, Aileen and Adric (Adrian: Higgsfield refuses him, his three poses stay) and Dralingo `assets/dralingo/{talk,jump,wow}.webp`. `js/cast.js` rotates them: `hello` → hello or talk, `cheer` → cheer or jump, `mystery` → mystery or wow (held 25 s per character, so a moment never flickers); `talk` / `jump` / `wow` / `67` ask for exactly one. The shared ending (`js/party.js`): the reveal shows both captains surprised (`wow`), the result the winners cheering and the other captain speaking kindly (`talk`), the phone card the same; the captains' stickers are preloaded with the show.

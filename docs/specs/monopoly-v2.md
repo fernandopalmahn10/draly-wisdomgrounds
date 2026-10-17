@@ -228,3 +228,7 @@ Total 14/14 → ships (≥ 12, no 0)
   base, for the phone's buy card.
 - Pre-existing, platform-wide (not changed here): every kid gets the questions in the same order; a duplicate name can
   take over a seat. «Dàfùwēng» keeps its tone marks in the title (the game's name, not a curriculum word).
+
+### Art batch 1 · 2026-10-17
+- The captains' new poses (Higgsfield Unlimited, 0 credits, his Chrome): `assets/cast/<id>-{talk,jump,wow,67}.webp` for Fer, Hamdan, Latifa, Aileen and Adric (Adrian: Higgsfield refuses him, his three poses stay) and Dralingo `assets/dralingo/{talk,jump,wow}.webp`. `js/cast.js` rotates them: `hello` → hello or talk, `cheer` → cheer or jump, `mystery` → mystery or wow (held 25 s per character, so a moment never flickers); `talk` / `jump` / `wow` / `67` ask for exactly one.
+- Dralingo holding the big gold star (`assets/dralingo/star-hold.webp`, `MonoBoard.DRALINGO_STAR`): the «¡ESTRELLA!» moment, the phone's run-in («Dralingo tiene la estrella») and step 3 of the how-to on the phone and the projector. The gang hosts each space in the pose of the moment (`card({ host, pose })`: Hamdan jumps when you buy, talks when you are short; Latifa talks at «¡Suerte!», is surprised at the swap; Adric surprised at the storm).

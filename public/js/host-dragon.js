@@ -201,7 +201,7 @@
     const sf = $('step-fly');
     if (sf && !sf.firstChild) sf.append(S.flyer({ skin: 'aileen', c: 2, name: '', tag: false }), el('i', 'drx-hand up'));
     const ss = $('step-star');
-    if (ss && !ss.firstChild) { const im = el('img'); im.src = S.DRALINGO; im.alt = ''; ss.append(S.star(), im); }
+    if (ss && !ss.firstChild) ss.append(S.starFly());
   }
   // the lobby's sky: four dragoncitos flying past the landmarks (one rAF while the lobby shows)
   function startPreview() {
@@ -482,8 +482,7 @@
     b.appendChild(el('small', null, 'Cada dragoncito a la salida… ¡Dralingo espera con la estrella!'));
     // Dralingo holds the star beside the title (the same picture as the phones' run-in)
     const host = el('div', 'drh-runin-host');
-    const im = el('img'); im.src = S.DRALINGO; im.alt = 'Dralingo';
-    host.append(im, S.star());
+    host.appendChild(S.starFly());
     const card = el('div', 'drh-runin-card');
     card.append(b, host);
     r.appendChild(card);
@@ -539,8 +538,7 @@
     const tt = el('div', 'spt-t');
     tt.append(el('b', null, `¡Carrera al ${lmName(sprint.lm)}!`), el('span', null, 'En cada carrera, quien más vuele se lleva la estrella'));
     const dral = el('div', 'spt-dral');
-    const di = el('img'); di.src = S.DRALINGO; di.alt = 'Dralingo';
-    dral.append(di, S.star());
+    dral.appendChild(S.starFly());
     const n = el('b', 'spt-n'); n.id = 'sprtop-n';
     box.append(im, tt, dral, n);
     stage.classList.add('sprinting');
