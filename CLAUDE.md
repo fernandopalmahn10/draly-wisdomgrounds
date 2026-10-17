@@ -173,9 +173,10 @@ the checklist for any new game mode.
   the data disk (`owner` in `hsk-rooms.json`: a teacher uid, or `'*'` for the legacy password; never sent) so a
   restart never hands it to anyone; one
   saved before that has no owner and goes back only to a super admin. All three pages reclaim on a dropped connection
-  (token + code; a reload still opens a new room): the warm-up in its own `connect` handler, reading and exam since
-  2026-10-17 through `js/host-reconnect.js` (`DralyReconnect.watch`). It shows «Sin conexión · reconectando…» while
-  offline, re-syncs the page once back (the server re-sends `rd:state`; the exam polls), and never leaves a dead
+  (token + code; a reload still opens a new room) through `js/host-reconnect.js` (`DralyReconnect.watch`, loaded after
+  `teacher-gate.js`), all three since 2026-10-17 (before, the warm-up had its own `connect` handler that showed a
+  refusal only in the console: a dead screen). It shows «Sin conexión · reconectando…» while offline,
+  re-syncs the page once back (the server re-sends `wu:state` / `rd:state`; the exam polls), and never leaves a dead
   screen: a refusal is a Spanish card with a way forward (a new room, today's code, try again). An exam monitor takes
   its room back after a restart too (`host:reclaim` reads a disk-only exam room once a teacher code works). A new
   teacher-tool host page uses it.

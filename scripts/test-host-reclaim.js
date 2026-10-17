@@ -16,7 +16,9 @@
 // A dropped Wi-Fi (2026-10-17): the reading and exam projectors take their room back like the warm-up (before, their
 // controls went quiet and a reload opened a new room): the reading gets its state again and its rd:* controls work, the
 // exam monitor gets the room's state and «Empezar» works, also after a restart (its room was only on the disk); and
-// public/js/host-reconnect.js in a small fake page: the notices, the way forward on every refusal, the retries.
+// public/js/host-reconnect.js in a small fake page: the notices, the way forward on every refusal, the retries. The
+// warm-up uses it too since 2026-10-17 (its own reclaim showed a refusal only in the console): its builder state comes
+// again, its tools work, and its own options run in the fake page.
 'use strict';
 const http = require('http');
 const fs = require('fs');
@@ -286,9 +288,44 @@ async function run() {
   }
   await sleep(250);
 
-  section('a dropped Wi-Fi: the reading and exam projectors keep working (2026-10-17)');
+  section('a dropped Wi-Fi: the warm-up, reading and exam projectors keep working (2026-10-17)');
   // (before: only the warm-up took its room back; a reading's rd:* controls and an exam's «Empezar» went quiet)
   const nextEv = (s, ev, ms = 1500) => new Promise((res) => { const t = setTimeout(() => res(null), ms); s.once(ev, (d) => { clearTimeout(t); res(d); }); });
+  {
+    // the warm-up (its page moved onto host-reconnect.js 2026-10-17): the builder state comes again, the tools work
+    const proj = browser();
+    const ps = sock(proj);
+    const room = await emitAck(ps, 'host:create', { gameType: 'warmup', password: ENNI });
+    ok((await emitAck(ps, 'wu:auth', { pin: room.pin, password: ENNI })).ok === true, 'warm-up: the projector unlocks its tools');
+    const kid = sock(browser());
+    const kidStates = [];
+    kid.on('wu:state', (s) => kidStates.push(s));
+    ok((await emitAck(kid, 'player:join', { pin: room.pin, name: 'Leo' })).ok === true, 'warm-up: a kid joins');
+    const started = nextEv(kid, 'wu:state', 6000);            // (the builder opens after the 3.5 s countdown)
+    ps.emit('host:start', { pin: room.pin });
+    ok(!!(await started), 'warm-up: the builder opens on the kid\'s phone');
+    const said = () => (kidStates.length ? (kidStates[kidStates.length - 1].sentence || []).join(' ') : null);
+    ps.emit('wu:add-word', { pin: room.pin, password: ENNI, wordId: 'w-ni' });
+    await sleep(300);
+    ok(said() === 'w-ni', 'warm-up: the teacher builds a sentence and the kid\'s phone shows it');
+    const drop = sock(proj);                                   // the Wi-Fi blips: the same tab, a new connection
+    const before = kidStates.length;
+    drop.emit('wu:add-word', { pin: room.pin, password: ENNI, wordId: 'w-hao' });
+    await sleep(300);
+    ok(kidStates.length === before, 'warm-up: the new connection alone changes nothing (its tools wait for the room)');
+    const resync = nextEv(drop, 'wu:state');
+    const back = await emitAck(drop, 'host:reclaim', { pin: room.pin, hostToken: room.hostToken, password: ENNI });
+    ok(back.ok === true && back.gameType === 'warmup' && back.state === 'active', 'warm-up: the page takes its room back (same PIN), even before the old connection is gone');
+    const st = await resync;
+    ok(st && (st.sentence || []).join(' ') === 'w-ni', 'warm-up: … and gets the builder state again (wu:state: the sentence on the stage) to repaint');
+    drop.emit('wu:add-word', { pin: room.pin, password: ENNI, wordId: 'w-hao' });
+    await sleep(300);
+    ok(said() === 'w-ni w-hao', 'warm-up: its tools work again (the kid\'s phone gets the next word)');
+    ps.emit('wu:clear', { pin: room.pin, password: ENNI });
+    await sleep(300);
+    ok(said() === 'w-ni w-hao', 'warm-up: the old connection no longer drives the room');
+    ps.close(); drop.close(); kid.close();
+  }
   {
     const proj = browser();
     const ps = sock(proj);
@@ -492,15 +529,25 @@ async function gateSide() {
   ok(sent.filter((x) => x.ev === 'host:create').length === 1, 'and the new room waits for the code (nothing sent yet)');
 }
 
-// ── the reading and exam pages: public/js/host-reconnect.js takes the room back and never leaves a dead screen ──
+// ── the warm-up, reading and exam pages: public/js/host-reconnect.js takes the room back, never a dead screen ──
 async function reconnectSide() {
-  section('host-reconnect.js on the reading and exam pages');
-  for (const [page, js, codeVar] of [['host-reading.html', 'host-reading.js', 'adminPw'], ['host-hsk.html', 'host-hsk.js', 'pw']]) {
+  section('host-reconnect.js on the warm-up, reading and exam pages');
+  // (the warm-up had its own connect handler until 2026-10-17: a refusal reached only the console, a dead screen)
+  const srv = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+  const grace = srv.match(/const graceMs = \(g\.gameType === 'warmup' \|\| g\.gameType === 'reading'[^?]*\? (\d+) \* 60 \* 1000/);
+  for (const [page, js, pinOf, codeVar] of [
+    ['host-warmup.html', 'host-warmup.js', '\\(adminPw \\? pin : null\\)', 'adminPw'],
+    ['host-reading.html', 'host-reading.js', 'pin', 'adminPw'],
+    ['host-hsk.html', 'host-hsk.js', 'pin', 'pw'],
+  ]) {
     const html = fs.readFileSync(path.join(ROOT, 'public', page), 'utf8');
     const g = html.indexOf('/js/teacher-gate.js'), a = html.indexOf('/js/host-reconnect.js?v='), b = html.indexOf('/js/' + js + '?v=');
     ok(g >= 0 && a > g && b > a, `${page} loads host-reconnect.js after teacher-gate.js and before ${js}`);
     const code = fs.readFileSync(path.join(ROOT, 'public', 'js', js), 'utf8');
-    ok(new RegExp('DralyReconnect\\.watch\\(socket, \\{\\s*pin: \\(\\) => pin,\\s*code: \\(\\) => ' + codeVar + ',').test(code), `${js} hands it the room's PIN and the teacher code`);
+    ok(new RegExp('DralyReconnect\\.watch\\(socket, \\{\\s*pin: \\(\\) => ' + pinOf + ',(\\s*//[^\\n]*)?\\s*code: \\(\\) => ' + codeVar + ',').test(code), `${js} hands it the room's PIN and the teacher code`);
+    ok(!/emit\(\s*'host:reclaim'/.test(code), `${js} sends no host:reclaim of its own (one way back: two would race each other)`);
+    const holds = code.match(/holdsMinutes: (\d+)/);
+    if (holds) ok(grace && holds[1] === grace[1], `${js}: «La sala te espera ${holds[1]} minutos» is what server.js waits for its projector`);
   }
   const src = fs.readFileSync(path.join(ROOT, 'public', 'js', 'host-reconnect.js'), 'utf8');
   ok(!/innerHTML/.test(src), 'its notices are built as text (never innerHTML)');
@@ -669,6 +716,57 @@ async function reconnectSide() {
   tick(3000);
   ws.fire('disconnect', 'io client disconnect');
   ok(body() === '', 'the page closing its own connection shows nothing');
+
+  // the warm-up's own options, read from host-warmup.js and run with its two variables (pin, adminPw)
+  section('the warm-up page with host-reconnect.js');
+  const wuSrc = fs.readFileSync(path.join(ROOT, 'public', 'js', 'host-warmup.js'), 'utf8');
+  const opts = wuSrc.match(/DralyReconnect\.watch\(socket, (\{[\s\S]*?\n {4}\})\);/);
+  ok(!!opts, 'host-warmup.js: its options can be read');
+  if (!opts) return;
+  let reloads = 0;
+  const wctx = { location: { href: '', reload() { reloads++; } } };
+  vm.createContext(wctx);
+  const wu = vm.runInContext('(function () { let pin = null, adminPw = null; const o = ' + opts[1] +
+    '; return { o, set(p, c) { pin = p; adminPw = c; }, code: () => adminPw }; })()', wctx);
+  const ws2 = {
+    connected: false, handlers: {}, sent: [],
+    on(ev, fn) { (this.handlers[ev] = this.handlers[ev] || []).push(fn); return this; },
+    emit(ev, payload, cb) { this.sent.push({ ev, payload, cb }); return this; },
+    connect() {},
+    fire(ev, ...a) { (this.handlers[ev] || []).forEach((f) => f(...a)); },
+  };
+  ctx.window.DralyReconnect.watch(ws2, wu.o);
+  const wuAsk = () => ws2.sent.filter((x) => x.ev === 'host:reclaim').pop();
+  const wuAsks = () => ws2.sent.filter((x) => x.ev === 'host:reclaim').length;
+  ws2.connected = true; ws2.fire('connect');
+  wu.set('456', null);                                         // the gate refused the code: the page has a PIN, no code
+  ws2.connected = false; ws2.fire('disconnect', 'transport close');
+  ok(body() === '', 'warm-up: a room whose code the gate refused is not taken back (no notice over the gate)');
+  ws2.connected = true; ws2.fire('connect');
+  ok(wuAsks() === 0, '… and nothing is asked');
+  wu.set('456', 'CODE-W');                                     // the teacher's room, running
+  ws2.connected = false; ws2.fire('disconnect', 'transport close');
+  ok(/Sin conexión · reconectando con la sala 456/.test(body()), 'warm-up: offline, the notice says so with its PIN');
+  tick(20000);
+  ok(/La sala te espera 10 minutos/.test(body()), '… and after 20 s how long its room waits');
+  ws2.connected = true; ws2.fire('connect');
+  ok(wuAsks() === 1 && wuAsk().payload.pin === '456' && wuAsk().payload.password === 'CODE-W', 'warm-up: back online it asks for its room once (PIN + its code)');
+  wuAsk().cb({ ok: false, error: 'no-game' });
+  ok(card() && /El calentamiento se cerró/.test(card().textContent) && button('Abrir un calentamiento nuevo') && button('Volver a Modo Maestro'),
+    'warm-up: the room is gone (a restart): «El calentamiento se cerró», a new one or Modo Maestro (it used to be a dead screen)');
+  button('Abrir un calentamiento nuevo').fire('click');
+  ok(reloads === 1, '… «Abrir un calentamiento nuevo» reloads the page (its gate opens a new room)');
+  ws2.connected = false; ws2.fire('disconnect', 'transport close');
+  ws2.connected = true; ws2.fire('connect');
+  wuAsk().cb({ ok: false, error: 'bad-password' });
+  ok(card() && card().querySelector('input') && /Tu código ya no abre esta sala/.test(card().textContent), 'warm-up: its code changed mid-class: the card asks for today\'s code');
+  card().querySelector('input').value = 'HOY-7';
+  button('Recuperar la sala').fire('click');
+  ok(wu.code() === 'HOY-7' && wuAsk().payload.password === 'HOY-7', '… the typed code becomes the page\'s code (every warm-up tool sends it) and asks again');
+  wuAsk().cb({ ok: true, gameType: 'warmup', state: 'active' });
+  ok(!card() && /Conexión recuperada · sala 456/.test(body()), '… and the room is back');
+  tick(3000);
+  ok(body() === '', '… the notice goes away by itself');
 }
 
 (async () => {

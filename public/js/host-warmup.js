@@ -4,25 +4,28 @@
 (function () {
   const socket = io();
   const $ = (id) => document.getElementById(id);
-  // STABILITY: when our socket drops and reconnects (phone lock, network
-  // blip), re-claim our existing game so the room — and every kid in it —
-  // survives instead of being torn down. No new PIN, no kicks.
-  let _everConnected = false;
-  socket.on('connect', () => {
-    if (!_everConnected) { _everConnected = true; return; }
-    if (!pin || !adminPw) return;
-    socket.emit('host:reclaim', { pin, password: adminPw }, (resp) => {
-      // If the game truly vanished (very long outage past the grace window),
-      // we can't silently recreate with the same PIN — surface a gentle note.
-      if (!resp || !resp.ok) {
-        if ($('admin-err')) $('admin-err').textContent = '';
-        console.warn('[host] reclaim failed:', resp && resp.error);
-      }
-    });
-  });
   let pin = null;
   let state = null;
   let adminPw = null;
+  // STABILITY: when our socket drops and reconnects (phone lock, network
+  // blip), re-claim our existing game so the room — and every kid in it —
+  // survives instead of being torn down. No new PIN, no kicks. Since
+  // 2026-10-17 through public/js/host-reconnect.js, like the reading and exam
+  // projectors: before, a refusal (the room gone after a restart, the code
+  // changed mid-class) only reached the console and the teacher saw a dead
+  // screen; now «Sin conexión · reconectando…» while offline and a Spanish
+  // card with a way forward. Its token rides along (teacher-gate.js); once
+  // back, the server re-sends wu:state (handler below) and the roster.
+  if (window.DralyReconnect) {
+    window.DralyReconnect.watch(socket, {
+      pin: () => (adminPw ? pin : null),   // (a room whose code was refused at the gate is not ours to take back)
+      code: () => adminPw,
+      setCode: (c) => { adminPw = c; },    // every wu:* control sends adminPw: the code typed on the card fixes them all
+      room: 'el calentamiento',
+      holdsMinutes: 10,   // (server.js: a warm-up room waits 10 minutes for its projector)
+      newRoom: { label: 'Abrir un calentamiento nuevo', go: () => location.reload() },
+    });
+  }
   // 🔒 2026-10-11 (security): the teacher code travels in the X-Admin-Pw request
   // header, never in a URL (URLs end up in Render/proxy access logs). URI-encoded
   // because headers only carry Latin-1; server.js _adminPw() decodes it.
