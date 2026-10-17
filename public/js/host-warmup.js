@@ -162,7 +162,8 @@
           // that haven't been uploaded yet, push them all to the server.
           fetchServerPresets(() => migrateLegacyPresetsOnce());
         } else {
-          $('admin-err').textContent = 'Contraseña incorrecta';
+          // (wait = too many wrong codes from this internet address: the code was not even checked)
+          $('admin-err').textContent = resp && resp.wait ? 'Muchos intentos. Espera 10 minutos y vuelve a intentarlo.' : 'Contraseña incorrecta';
           adminPw = null;
         }
       });
