@@ -288,7 +288,7 @@ async function run() {
   ok(busy.ok === false && busy.error === 'host-live', 'nobody takes a running warm-up projector with a code, not even a super admin (2026-10-17)');
   opener.close();
   await sleep(250);
-  ok((await emitAck(taker, 'host:reclaim', { pin: ow.pin, password: OTHER })).error === 'not-host', 'once it is off, another regular teacher\'s code still does not take it');
+  ok((await emitAck(taker, 'host:reclaim', { pin: ow.pin, password: OTHER })).error === 'no-game', 'once it is off, another regular teacher\'s code still does not take it (to her the PIN is empty)');
   ok((await emitAck(taker, 'host:reclaim', { pin: ow.pin, password: SEED })).ok === true, '… a super admin does');
   await fillUp(tk);
   let none = true;
@@ -309,9 +309,9 @@ async function run() {
   let refused = true;
   for (let i = 0; i < 12; i++) {
     const r = await emitAck(os1, 'host:reclaim', { pin: oRoom.pin, password: i % 2 ? OTHER : SEED });
-    if (!(r.ok === false && r.error === 'host-live')) refused = false;
+    if (!(r.ok === false && r.error === (i % 2 ? 'no-game' : 'host-live'))) refused = false;
   }
-  ok(refused, '12 right codes on a running warm-up projector are refused («host-live»)');
+  ok(refused, '12 right codes on a running warm-up projector are refused («host-live» to a super admin, «no-game» to a colleague)');
   ok((await emitAck(sock({ jar: {}, ip: ob.ip }), 'wu:presets-list', { password: ENNI })).ok === true, '… and never counted as wrong ones');
   for (let i = 0; i < 5; i++) await emitAck(os1, 'host:reclaim', { pin: oRoom.pin, password: 'WRONG-R' + i });
   const os2 = sock({ jar: {}, ip: ob.ip });

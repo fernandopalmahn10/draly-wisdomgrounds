@@ -169,7 +169,7 @@ the checklist for any new game mode.
   a class); once it is gone, the same teacher's remembered device or code, or a super admin. **Exam, warm-up and reading
   rooms follow the same owner rule AND still need a teacher code** (his decision 2026-10-17; before, ANY teacher code
   took them, even mid-class: one code tried over the 900 PINs took every one, and an old sleeping warm-up tab took a
-  newer room whose PIN came back): the code first (`_socketCode`), then `_mayReclaim`. An exam room keeps its owner on
+  newer room whose PIN came back), all in `_mayReclaim` (codes through `_socketCode`). An exam room keeps its owner on
   the data disk (`owner` in `hsk-rooms.json`: a teacher uid, or `'*'` for the legacy password; never sent) so a
   restart never hands it to anyone; one
   saved before that has no owner and goes back only to a super admin. All three pages reclaim on a dropped connection
@@ -178,7 +178,7 @@ the checklist for any new game mode.
   refusal only in the console: a dead screen). It shows «Sin conexión · reconectando…» while offline,
   re-syncs the page once back (the server re-sends `wu:state` / `rd:state`; the exam polls), and never leaves a dead
   screen: a refusal is a Spanish card with a way forward (a new room, today's code, try again). An exam monitor takes
-  its room back after a restart too (`host:reclaim` reads a disk-only exam room once a teacher code works). A new
+  its room back after a restart too (`host:reclaim` loads a disk-only exam room, then the owner rule decides). A new
   teacher-tool host page uses it.
   **Closing an exam room follows the same owner rule** (his decision 2026-10-17; before, any teacher code or remembered
   teacher device closed ANY exam room: one code tried over the 900 PINs closed every running exam mid-exam): «Cerrar la
@@ -188,6 +188,14 @@ the checklist for any new game mode.
   PIN answers like a room that is not yours, so `host:end` never tells a socket which PINs are running exams. The
   monitor waits for the answer and says why a close was refused.
   `games` has no prototype (`Object.create(null)`) and reclaim takes digit PINs only.
+  **Nobody else learns whether a PIN is a running room** (2026-10-17; before, `host:reclaim` answered an empty PIN
+  'no-game' and a running room 'host-live' / 'not-host' / 'bad-password', to any socket and with no limit, and a running
+  exam room's PIN lets a stranger join it): `_mayReclaim` checks who asks first, the same way for every PIN. Only the
+  room's own projector (its token), its teacher or a super admin hear how that room is ('host-live', or 'bad-password'
+  when the code is missing); anyone else hears 'no-game' (a colleague's room too), or 'bad-password' / 'wait' for a
+  wrong code / a waiting address, for running rooms and empty PINs alike. The room's token is checked before anything
+  else and counts no PIN guess: its own projector is never slowed. A new socket handler that takes a PIN answers the
+  same way, or counts unknown PINs like `player:join` (`_pinMiss`).
   The key screen shows only when a NEW room waits, never over an F5 of a running one. A new host page needs nothing
   extra as long as it loads `teacher-gate.js`; a test script that reclaims passes the create answer's `hostToken`.
   Test: `scripts/test-host-reclaim.js`.
