@@ -281,6 +281,7 @@
     if (window.HalconPhone) window.HalconPhone.lobby(game === 'halcon' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.MonoPhone) window.MonoPhone.lobby(game === 'monopoly' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.DragonPhone) window.DragonPhone.lobby(game === 'dragon-eye' ? document.querySelector('#screen-lobby .lobby-header') : null);
+    if (window.PaintPhone && window.PaintPhone.lobby) window.PaintPhone.lobby(game === 'paint' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.MochiPhone) window.MochiPhone.lobby(game === 'mochi-mash' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.PinataPhone) window.PinataPhone.lobby(game === 'pinata' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.SixSevenPhone) window.SixSevenPhone.lobby(game === 'sixseven' ? document.querySelector('#screen-lobby .lobby-header') : null);
@@ -518,8 +519,8 @@
     if (game === 'paint') {
       // player.js fills these with quiz points; in the paint game what counts is clouds.
       const teamEl = $('end-team-score'), meEl = $('end-personal-score');
-      if (teamEl && teamEl.parentNode.firstChild) teamEl.parentNode.firstChild.nodeValue = 'Cielo de tu reino: ';
-      if (teamEl) teamEl.textContent = ((data && data.teamScores && data.teamScores[team]) || 0) + ' nubes';
+      if (teamEl && teamEl.parentNode.firstChild) teamEl.parentNode.firstChild.nodeValue = 'Puntos de tu reino: ';
+      if (teamEl) teamEl.textContent = ((data && data.teamScores && data.teamScores[team]) || 0) + ' puntos';
       if (data && data.scores && data.scores[ctx.socket.id] != null) myPaint = data.scores[ctx.socket.id];
       if (meEl && meEl.parentNode.firstChild) meEl.parentNode.firstChild.nodeValue = 'Tus nubes: ';
       if (meEl) meEl.textContent = myPaint + ' ☁️';
@@ -564,7 +565,7 @@
       if (!on || !P() || !d) return;
       if (d.off) { P().clearChip(); return; }
       if (d.again) {      // after «⏸ Pausa» / «+30 s»: the chip with the new seconds, no second banner
-        const lbl = game === 'kingdoms' ? 'Banderas ×2' : game === 'paint' ? 'Fuego ×2' : game === 'snow' ? 'Copos ×2' : '';
+        const lbl = game === 'kingdoms' ? 'Banderas ×2' : game === 'paint' ? 'Recarga doble' : game === 'snow' ? 'Copos ×2' : '';
         if (lbl) P().chip(lbl, d.endsMs);
         return;
       }
@@ -573,8 +574,8 @@
         P().news('¡Últimos 30 segundos!', { sub: '¡Banderas dobles! Cada acierto: 2 banderas', kind: 'alarm', cast: cap, ms: 2800 });
         P().chip('Banderas ×2', d.endsMs);
       } else if (game === 'paint') {
-        P().news('¡Últimos 30 segundos!', { sub: '¡Fuego doble! Cada acierto: +20 s y llamarada', kind: 'alarm', cast: cap, ms: 2800 });
-        P().chip('Fuego ×2', d.endsMs);
+        P().news('¡Últimos 30 segundos!', { sub: '¡Recarga doble! Cada acierto: +20 s y llamarada', kind: 'alarm', cast: cap, ms: 2800 });
+        P().chip('Recarga doble', d.endsMs);
       } else if (game === 'snow') {
         P().chip('Copos ×2', d.endsMs);       // the map's toast says it once; the chip stays for the 30 s
       }
@@ -593,13 +594,12 @@
     s.on('es:init', () => { setMode(true, 'escape'); });
     s.on('hc:init', () => { setMode(true, 'halcon'); });
     s.on('pc:paint', (d) => {
-      if (d.teamScores) { scores = d.teamScores; paintBar(); }
-      if (d.scores && d.scores[s.id] != null) myPaint = d.scores[s.id];
+      if (d && d.ts) { scores = d.ts; paintBar(); }      // Pintores v2: kingdom points (clouds + islands held)
     });
     s.on('kd:plant', (d) => { if (d.teamScores) { scores = d.teamScores; paintBar(); } if (on && d.playerId !== s.id && (d.flipped || []).length >= 3) sfx('surround', 0.35); });
     s.on('countdown', () => { streak = 0; myPaint = 0; curQid = null; if (!on) return; countdownDecor(); countdownPose(); });
     s.on('question', (q) => {
-      if (!on || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye') return;      // 6-7 Swing, Monopolio, Vuelo: their own screen and clock
+      if (!on || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye' || game === 'paint') return;      // 6-7 Swing, Monopolio, Vuelo, Pintores v2: their own screen and clock
       afterRender(() => {
         ensureBar();
         const hasImg = $('question-image-wrap') && $('question-image-wrap').style.display !== 'none';
@@ -615,7 +615,7 @@
       if (on && e.target.closest && e.target.closest('.answer-btn')) { answered = true; stopQuestionTimer(); sfx('tap', 0.6); }
     }, true);
     s.on('answer-result', (r) => {
-      if (!on || !r || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye') return;
+      if (!on || !r || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye' || game === 'paint') return;
       answered = true;
       stopQuestionTimer();
       streak = r.correct ? streak + 1 : 0;

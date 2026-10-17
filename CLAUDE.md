@@ -534,6 +534,9 @@ the checklist for any new game mode.
   Vuelo del Dragón was remade 2026-10-16 as «La Carrera del Cielo de Dubái» (`dragon-eye`): a Mario Party sky race in
   races of 4, every right answer a flight where each swipe up is a wing beat of the kid's own dragoncito (spec
   `docs/specs/dragon-v2.md`); the old Rojo / Dorado team version with hanzi retired.
+  Dragones Pintores was remade 2026-10-17 as «El Cielo de las Maravillas» (`paint`, his picks: Dubai + China, a new sky
+  each round with its landmarks as the prizes; tap where to fly): the server flies every dragon from the kids' tap intents
+  and judges every cloud (spec `docs/specs/dragones-pintores-v2.md`); the platformer with ◀ ▶ ⬆ retired.
   Reinos de Colores, Dragones Pintores, Batalla de Nieve and La Gran Fuga got the Mario Party ending 2026-10-16 (branch
   `ending-pass`): one shared ceremony (`js/party.js` + `css/party.css` + `core/party.js`), the last 30 s doubled, live
   news between questions; «As built · 2026-10-16» in each spec.

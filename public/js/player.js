@@ -800,6 +800,7 @@
     currentQid = q.qid;
     if (gameType === 'monopoly') return;   // Dàfùwēng · Monopolio: the question is a sheet on the board (player-monopoly.js)
     if (gameType === 'dragon-eye') return; // Vuelo del Dragón: the question is a sheet under the race (player-dragon.js)
+    if (gameType === 'paint') return;      // Dragones Pintores v2: the question is a sheet over the sky (player-paint.js)
     // 6-7 Swing: its own screen (the sum + two giant buttons), drawn by player-sixseven.js (it listens to 'question')
     if (q.gameMode === 'sixseven' || gameType === 'sixseven') return;
     $('question-text').textContent = q.text;
@@ -2488,6 +2489,7 @@
     if (!correct) resetStreak();
     if (gameType === 'monopoly') return;   // Dàfùwēng · Monopolio: player-monopoly.js shows the verdict on its question sheet
     if (gameType === 'dragon-eye') return; // Vuelo del Dragón: player-dragon.js shows the verdict and opens the flight
+    if (gameType === 'paint') return;      // Dragones Pintores v2: player-paint.js shows the verdict on its sheet
 
     // 6-7 Swing: player-sixseven.js shows the verdict on its own screen (the swing, the coins, the wobble)
     if (gameType === 'sixseven') return;
@@ -2525,8 +2527,8 @@
           // Piñata Tigre v2: player-pinata.js opens the hit screen at the server's lead-in (it listens to answer-result)
         } else if (gameType === 'kingdoms') {
           if (kingdoms && kingdoms.needsPlant && window.KingdomsPhone) window.KingdomsPhone.prompt(kingdoms);
-        } else if (gameType === 'paint' || gameType === 'snow' || gameType === 'escape') {
-          // Dragones Pintores / Batalla de Nieve: their phone modules return the kid to the map after the result screen.
+        } else if (gameType === 'snow' || gameType === 'escape') {
+          // Batalla de Nieve: its phone module returns the kid to the map after the result screen (Pintores v2 has its own sheet).
           // La Gran Fuga: the server sends the next question after the turbo.
         } else if (gameType === 'mochi-mash' && window.MochiPhone) {
           // Mochi Mash v2: player-mochi.js opens its mash zone at the server's lead-in (it listens to answer-result)
@@ -2782,7 +2784,7 @@
       const lobbyVisible = $('screen-lobby') && !$('screen-lobby').classList.contains('hidden');
       const countdownVisible = $('screen-countdown') && !$('screen-countdown').classList.contains('hidden');
       if (lobbyVisible || countdownVisible) {
-        showScreen(gameType === 'snow' ? 'snow' : gameType === 'halcon' ? 'halcon' : gameType === 'sixseven' ? 'sixseven' : gameType === 'dragon-eye' ? 'dragon' : 'question');   // the snow map / the board is the kid's main screen
+        showScreen(gameType === 'snow' ? 'snow' : gameType === 'halcon' ? 'halcon' : gameType === 'sixseven' ? 'sixseven' : gameType === 'dragon-eye' ? 'dragon' : gameType === 'paint' ? 'paint' : 'question');   // the snow map / the board is the kid's main screen
         stopLobbyFlappy();
       }
     }
