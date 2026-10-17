@@ -1,5 +1,6 @@
 // Playtest handler for La Gran Fuga de Dubái: the base bot answers every question (each right answer is a turbo for
-// the crew); this handler plays the «zona segura» like a kid: builds the room from the seed (public/js/escape-map.js),
+// the crew); this handler plays the «zona segura» like a kid: builds the room from the seed and the round's route
+// (public/js/escape-map.js),
 // walks (8 Hz, the phone's own collision code) to the nearest green zone that still has room, switches zone when the
 // one it picked fills up (capacity zones: the class must split), and sometimes dawdles so the crew loses hearts.
 // Stats land in report.escape (printed with the report).
@@ -15,7 +16,7 @@ module.exports = (bot, ctx) => {
   });
   const T = EscapeMap.TILE;
   let phase = 'run', room = null, zones = [], me = null, idx = 0, dizzyUntil = 0, paused = false;
-  let target = null, path = null, dawdle = false, occ = [], timer = null, f = 2, level = 1, seed = 0, lastSend = 0;
+  let target = null, path = null, dawdle = false, occ = [], timer = null, f = 2, level = 1, seed = 0, lastSend = 0, route = 0;
   const now = () => Date.now();
   // questions only come while the crew runs: the zona segura and the big moments are a legitimate wait
   const grace = setInterval(() => { if (phase !== 'run') st.graceUntil = now() + 1500; }, 250);
@@ -24,9 +25,10 @@ module.exports = (bot, ctx) => {
     if (d.phase && d.phase !== phase) E.phases[d.phase] = (E.phases[d.phase] || 0) + 1;
     phase = d.phase || phase;
     level = d.level || level;
+    if (typeof d.route === 'number') route = d.route;
     if (typeof d.hearts === 'number') E.hearts = d.hearts;
     if (phase === 'zone') {
-      room = EscapeMap.buildRoom(seed, level);
+      room = EscapeMap.buildRoom(seed, level, route);       // v2: the route's room (Dubái, China)
       const mine = (d.pos || []).find((a) => a[0] === idx);
       if (mine) me = { x: mine[1], y: mine[2] };
       zones = d.zones || [];

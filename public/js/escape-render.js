@@ -1,37 +1,57 @@
-// La Gran Fuga de Dubái — drawing shared by the projector and every phone: Robotín (the goofy guard robot), his
-// tickle-zap, the three «zona segura» rooms, the green zones and the kids. Look: the Reinos de Colores sticker world
-// (one navy outline, pastel fills, soft drop shadows) at Dubai's golden hour. Canvas only, no pictures with text.
-// Robotín is a picture per mood since 2026-10-17 (art batch, assets/escape/robotin/); the canvas drawing stays as the
-// fallback while a picture loads (brief: content/escape/pictures.json). window.EscapeRender.
+// La Gran Fuga de Dubái v2 — drawing shared by the projector and every phone (spec docs/specs/gran-fuga-v2.md):
+//   scene()  Robotín's world, the run: the zone's far background (slow parallax) and its ground strip scrolling under the
+//            crew (both mirror-tiled, so the seams always match), the gate of the next place or Hamdan's jet arriving
+//   room()   the zona segura: the zone's painted top-down room, the seeded props, Robotín at his dock, the glowing green
+//            zones with their limits, the kids, name tags that never overlap
+//   robotin(), kid(), tag(), zap(), stars()  the characters
+// Every picture is drawn once loaded; until then a soft fallback in the zone's colours (never a blank stage).
+// Art: assets/escape/<zone>/{bg,ground,room}.webp, gates/, jet.webp, props/, robotin/ (Higgsfield, 2026-10-17).
+// window.EscapeRender.
 (function () {
   const INK = '#1d2440';
   const SAFE = '#2fbf71', SAFE_DEEP = '#178a4c', ROBO = '#3fd6e0', ROBO_DEEP = '#1b8fa3', GOLD = '#ffd23f', DANGER = '#f0443a';
+  const M = () => window.EscapeMap;
   const SKIN_URL = (k) => '/assets/saga/avatars/' + k + '.webp';
-  // Robotín's pictures, one per mood (content/escape/pictures.json «robotin»)
+  // a kid's FULL-BODY character (never a bust in the play area): pose 'idle' | 'ok' (cheering: a turbo) | 'no' (dizzy);
+  // js/halcon-board.js holds the cast's full-body poses and the animals' stills (loaded on both pages)
+  const BODY_URL = (k, pose) => (window.HalconBoard ? window.HalconBoard.art(k || 'dralingo', pose || 'idle') : SKIN_URL(k || 'dralingo'));
+  // Robotín's pictures, one per mood (art batch 2026-10-17)
   const ROBO_MOODS = ['idle', 'chase', 'zap', 'dizzy', 'happy'];
   const ROBO_URL = (m) => '/assets/escape/robotin/' + (ROBO_MOODS.includes(m) ? m : 'idle') + '.webp';
-  // a one-off Robotín drawing (the projector's chase meter, a card) redraws itself once his picture has loaded
-  const robotWait = new Map();
-  function onRobot(mood, key, fn) {
-    const i = img(ROBO_URL(mood));
+  // a one-off drawing (a card, a band, the meter) redraws itself once a picture it needs has loaded
+  const waiters = new Map();
+  function onLoad(url, key, fn) {
+    const i = img(url);
     if (ready(i)) return;
-    let m = robotWait.get(i);
+    let m = waiters.get(i);
     if (!m) {
       m = new Map();
-      robotWait.set(i, m);
-      i.addEventListener('load', () => { const mm = robotWait.get(i); robotWait.delete(i); if (mm) mm.forEach((f) => { try { f(); } catch (_) {} }); }, { once: true });
+      waiters.set(i, m);
+      i.addEventListener('load', () => { const mm = waiters.get(i); waiters.delete(i); if (mm) mm.forEach((f) => { try { f(); } catch (_) {} }); }, { once: true });
     }
     m.set(key, fn);
   }
+  const onRobot = (mood, key, fn) => onLoad(ROBO_URL(mood), key, fn);
   const IMG = {};
   const img = (url) => { if (!IMG[url]) { const i = new Image(); i.decoding = 'async'; i.src = url; IMG[url] = i; } return IMG[url]; };
   const ready = (i) => i && i.complete && i.naturalWidth > 0;
   const still = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  function preload(skins) {
-    (skins || ['dralingo', 'fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian', 'camel', 'plane', 'falcon', 'oryx']).forEach((k) => img(SKIN_URL(k)));
-    ['/assets/kingdoms/landmarks/big/museum.webp', '/assets/kingdoms/landmarks/big/burj.webp', '/assets/saga/avatars/plane.webp'].forEach(img);
-    ROBO_MOODS.forEach((m) => img(ROBO_URL(m)));         // Robotín's five pictures (~120 KB): one-off drawings need them ready
+  // load what a screen will need: the cast skins, Robotín, and the route's art (the phones ask for one zone at a time)
+  function preload(skins, route, zones) {
+    (skins || ['dralingo', 'fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian', 'camel', 'plane', 'falcon', 'oryx']).forEach((k) => { img(SKIN_URL(k)); img(BODY_URL(k, 'idle')); });
+    ROBO_MOODS.forEach((m) => img(ROBO_URL(m)));
+    const EM = M();
+    if (!EM || route == null) return;
+    const list = zones || EM.route(route).zones;
+    list.forEach((zid) => {
+      const z = EM.ZONES[zid];
+      if (!z) return;
+      ['bg', 'ground'].forEach((f) => img(EM.art(zid, f)));
+      img(EM.gateArt(z.exit));
+    });
   }
+  // the room's picture: only when the room is about to be used (a phone downloads one room at a time)
+  const roomArt = (zid) => img(M().art(zid, 'room'));
   function rr(g, x, y, w, h, r) {
     g.beginPath();
     if (g.roundRect) g.roundRect(x, y, w, h, r);
@@ -189,151 +209,195 @@
     o = o || {};
     const S = size;
     const bob = k.moving && !k.dizzy ? -Math.abs(Math.sin(t * 11 + (k.idx || 0))) * S * 0.08 : 0;
-    g.fillStyle = 'rgba(29,36,64,.22)'; ell(g, k.x, k.y + 1, S * 0.3, S * 0.1); g.fill();
-    if (k.me || k.safe) {
-      g.strokeStyle = k.safe ? SAFE : GOLD; g.lineWidth = Math.max(2, S * 0.07);
-      ell(g, k.x, k.y + 1, S * 0.36, S * 0.14); g.stroke();
+    g.fillStyle = 'rgba(29,36,64,.24)'; ell(g, k.x, k.y + 1, S * 0.3, S * 0.1); g.fill();
+    if (k.me || k.safe || k.glow) {
+      g.strokeStyle = k.safe ? SAFE : GOLD; g.lineWidth = Math.max(2, S * 0.08);
+      ell(g, k.x, k.y + 1, S * 0.38, S * 0.15); g.stroke();
     }
-    if (k.me) { g.strokeStyle = `rgba(255,255,255,${0.55 + 0.4 * Math.sin(t * 5)})`; g.lineWidth = Math.max(1.5, S * 0.04); ell(g, k.x, k.y + 1, S * 0.46, S * 0.18); g.stroke(); }
-    const src = img(SKIN_URL(k.skin || 'dralingo'));
+    if (k.me) { g.strokeStyle = `rgba(255,255,255,${0.55 + 0.4 * Math.sin(t * 5)})`; g.lineWidth = Math.max(1.5, S * 0.045); ell(g, k.x, k.y + 1, S * 0.5, S * 0.2); g.stroke(); }
+    let src = img(BODY_URL(k.skin, k.dizzy ? 'no' : (k.cheer ? 'ok' : 'idle')));
+    let full = true;
+    if (!ready(src)) { src = img(BODY_URL(k.skin, 'idle')); }
+    if (!ready(src)) { src = img(SKIN_URL(k.skin || 'dralingo')); full = false; }      // (the bust while the body loads)
     g.save();
     g.translate(k.x, k.y + bob);
     if (k.dizzy) g.rotate(Math.sin(t * 9 + (k.idx || 0)) * 0.18);
     else if (k.moving) g.rotate(Math.sin(t * 11 + (k.idx || 0)) * 0.06);
     if (k.f === 3 || k.f === 4 || k.f === 5) g.scale(-1, 1);
     if (o.alpha) g.globalAlpha = o.alpha;
-    if (ready(src)) g.drawImage(src, -S / 2, -S + S * 0.06, S, S);
+    if (ready(src) && full) { const h = S * 1.12, w = h * src.naturalWidth / src.naturalHeight; g.drawImage(src, -w / 2, -h + S * 0.04, w, h); }
+    else if (ready(src)) g.drawImage(src, -S / 2, -S + S * 0.06, S, S);
     else { g.fillStyle = GOLD; ell(g, 0, -S / 2, S / 3, S / 3); g.fill(); }
     g.restore();
-    if (k.dizzy) stars(g, k.x, k.y - S * 0.95, S * 0.34, t + (k.idx || 0));
+    if (k.dizzy) stars(g, k.x, k.y - S * 1.12, S * 0.34, t + (k.idx || 0));
   }
-  // name tag a fixed size on screen (s = world → css px scale)
-  function tag(g, k, size, s, px, meLabel) {
-    if (!k.name) return;
+  // one name tag, a fixed size on screen (s = world → css px scale). Returns its box (world units), or draws nothing
+  // when `avoid` (boxes already taken) leaves no room above the head or below the feet (mine always shows).
+  function tag(g, k, size, s, px, meLabel, avoid) {
+    if (!k.name) return null;
     const fs = px / s;
     g.font = `800 ${fs}px Nunito, sans-serif`;
     g.textAlign = 'center'; g.textBaseline = 'middle';
     const label = k.me && meLabel ? meLabel : String(k.name).slice(0, 12);
-    const w = g.measureText(label).width + 12 / s;
-    const y = k.y - size - 3 / s - fs * 0.5;
-    g.fillStyle = k.me ? GOLD : (k.safe ? '#d6f7e3' : 'rgba(255,247,227,.95)');
-    rr(g, k.x - w / 2, y - fs * 0.62, w, fs * 1.24, fs * 0.5); g.fill();
+    const w = g.measureText(label).width + 12 / s, h = fs * 1.24;
+    const spots = k.below ? [k.y + 4 / s + h / 2, k.y - size * 1.14 - 3 / s - fs * 0.5] : [k.y - size * 1.14 - 3 / s - fs * 0.5, k.y + 4 / s + h / 2];
+    let y = null;
+    for (const cy of spots) {
+      const box = [k.x - w / 2, cy - h / 2, k.x + w / 2, cy + h / 2];
+      if (!avoid || !avoid.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1])) { y = cy; break; }
+    }
+    if (y === null) { if (!k.me) return null; y = spots[0]; }
+    g.fillStyle = k.me ? GOLD : (k.safe ? '#d6f7e3' : 'rgba(255,247,227,.96)');
+    rr(g, k.x - w / 2, y - fs * 0.62, w, h, fs * 0.5); g.fill();
     g.strokeStyle = k.safe ? SAFE_DEEP : INK; g.lineWidth = 1.5 / s; g.stroke();
     g.fillStyle = INK; g.fillText(label, k.x, y + fs * 0.04);
+    const box = [k.x - w / 2 - 2 / s, y - h / 2 - 2 / s, k.x + w / 2 + 2 / s, y + h / 2 + 2 / s];
+    if (avoid) avoid.push(box);
+    return box;
   }
 
-  // ---------- the zona segura rooms ----------
-  const ROOM = {
-    1: { floorA: '#efeafb', floorB: '#e7e1f7', seam: 'rgba(140,120,210,.18)', wall: '#cfd6ea', wallTop: '#e9edf7', glow: 'rgba(95,220,255,.35)' },
-    2: { floorA: '#fbf3e4', floorB: '#f5e9d4', seam: 'rgba(190,150,80,.2)', wall: '#f1d6a8', wallTop: '#fbe9c9', glow: 'rgba(255,210,63,.35)' },
-    3: { floorA: '#dfe7f2', floorB: '#d6e0ee', seam: 'rgba(80,110,160,.18)', wall: '#b9c6dc', wallTop: '#dbe4f2', glow: 'rgba(120,200,255,.3)' },
-  };
-  let roomCache = null;
-  function roomGround(room, scale) {
-    const key = room.seed + ':' + room.level + ':' + scale;
-    if (roomCache && roomCache.key === key) return roomCache.canvas;
-    const T = room.tile, W = room.cols * T, H = room.rows * T, P = ROOM[room.level] || ROOM[1];
-    const c = document.createElement('canvas');
-    c.width = Math.round(W * scale); c.height = Math.round(H * scale);
-    const g = c.getContext('2d');
-    g.scale(scale, scale);
-    for (let y = 0; y < room.rows; y++) for (let x = 0; x < room.cols; x++) {
-      const X = x * T, Y = y * T;
-      g.fillStyle = (x + y) % 2 ? P.floorA : P.floorB; g.fillRect(X, Y, T, T);
-      g.strokeStyle = P.seam; g.lineWidth = 1; g.strokeRect(X + 0.5, Y + 0.5, T - 1, T - 1);
+  // ---------- Robotín's world: the run ----------
+  // a picture repeated sideways, every other copy mirrored (the seams always match); off = how far the world scrolled
+  function strip(g, im, off, y, w, h, W) {
+    if (!(w > 1)) return;
+    let k = Math.floor(off / w);
+    for (let x = k * w - off; x < W; k++, x += w) {
+      if (((k % 2) + 2) % 2) { g.save(); g.translate(x + w, y); g.scale(-1, 1); g.drawImage(im, -0.5, 0, w + 1, h); g.restore(); }
+      else g.drawImage(im, x - 0.5, y, w + 1, h);
     }
-    if (room.level === 1) {          // glass floor: soft light strips
-      for (let i = 0; i < 6; i++) { g.fillStyle = P.glow; rr(g, (2 + i * 3) * T, 3.5 * T + (i % 2) * 4 * T, 2.2 * T, 5, 3); g.fill(); }
-    } else if (room.level === 2) {   // marble with gold diamonds
-      for (let y = 2; y < room.rows - 1; y += 3) for (let x = 2; x < room.cols - 1; x += 4) {
-        g.save(); g.translate(x * T, y * T); g.rotate(Math.PI / 4); g.fillStyle = 'rgba(255,201,60,.35)'; g.fillRect(-5, -5, 10, 10); g.restore();
-      }
-    } else {                         // gate carpet stripes + the walking lane
-      g.fillStyle = 'rgba(255,255,255,.35)'; for (let x = 1; x < room.cols - 1; x += 2) g.fillRect(x * T, 10.4 * T, T, 4);
-    }
-    // walls: a thick top wall with a window band (Dubai outside), side and bottom walls
-    g.fillStyle = P.wall; g.fillRect(0, 0, W, T); g.fillRect(0, 0, T, H); g.fillRect(W - T, 0, T, H); g.fillRect(0, H - T, W, T);
-    const win = g.createLinearGradient(0, 3, 0, T - 6);
-    win.addColorStop(0, '#ffd6a5'); win.addColorStop(1, '#f9b4c8');
-    g.fillStyle = win; rr(g, T * 1.2, 4, W - T * 2.4, T - 10, 6); g.fill();
-    g.fillStyle = 'rgba(29,36,64,.25)';
-    for (let x = 2; x < room.cols - 2; x += 1.6) { const h = 6 + ((x * 37) % 13); g.fillRect(x * T, T - 6 - h, T * 0.5, h); }   // skyline through the glass
-    if (room.level === 3) { g.fillStyle = '#ffffff'; rr(g, W * 0.62, 7, T * 2.2, 8, 4); g.fill(); g.fillRect(W * 0.62 + T * 0.9, 4, 5, 16); }   // the jet waiting outside
-    g.strokeStyle = INK; g.lineWidth = 3; g.strokeRect(T - 1.5, T - 1.5, W - 2 * T + 3, H - 2 * T + 3);
-    roomCache = { key, canvas: c };
-    return c;
   }
-  // the room props as pictures (art batch 2026-10-17, shared with Batalla de Nieve: assets/props/): drawn once loaded,
-  // bottom-centre on the footprint, `w` tiles wide or the footprint width × `k`; the canvas drawings stay the fallback
-  const PROP_PICS = {
-    case: { f: 'display-case', w: 0.95 }, planter: { f: 'planter', w: 0.95 }, palm: { f: 'palm-pot', w: 1.15 },
-    fountain: { f: 'fountain', k: 1.05 }, bench: { f: 'bench', k: 1 }, seats: { f: 'seats', k: 1 }, cart: { f: 'cart', w: 1.05 },
-  };
+  // The zone's scene in a W×H box (css px). o: { zone, crew (m scrolled), groundFrac (the strip's share of H),
+  // feetFrac (where feet stand, from the strip's bottom), pxm (ground px per metre), bgPxm (far layer px per metre),
+  // bgMinW (the far picture at least this share of W wide: a short phone strip crops it), bgFocus (0..1: which part of
+  // a cropped far picture shows; 0.5 = its middle) }. Returns { feetY, groundTop }.
+  function scene(g, o) {
+    const z = o.zone, W = o.W, H = o.H, EM = M();
+    const sh = H * (o.groundFrac || 0.42);
+    const bg = img(EM.art(z.id, 'bg')), gr = img(EM.art(z.id, 'ground'));
+    const sk = g.createLinearGradient(0, 0, 0, H);
+    sk.addColorStop(0, z.sky[0]); sk.addColorStop(1, z.sky[1]);
+    g.fillStyle = sk; g.fillRect(0, 0, W, H);
+    if (ready(bg)) {
+      // the far picture fills the stage's height (copies side by side, mirrored); its bottom hides behind the strip
+      const asp = bg.naturalWidth / bg.naturalHeight;
+      let bh = H, bw = bh * asp;
+      if (o.bgMinW && bw < W * o.bgMinW) { bw = W * o.bgMinW; bh = bw / asp; }
+      const by = (H - bh) * (o.bgFocus == null ? 0.5 : o.bgFocus);
+      strip(g, bg, (o.crew || 0) * (o.bgPxm == null ? 0.5 : o.bgPxm), by, bw, bh, W);
+    }
+    if (ready(gr)) {
+      const tw = sh * gr.naturalWidth / gr.naturalHeight;
+      strip(g, gr, (o.crew || 0) * (o.pxm || 20), H - sh, tw, sh, W);
+    } else {
+      const gg = g.createLinearGradient(0, H - sh * 0.5, 0, H);
+      gg.addColorStop(0, z.ground[0]); gg.addColorStop(1, z.ground[1]);
+      g.fillStyle = gg; g.fillRect(0, H - sh * 0.5, W, sh * 0.5);
+    }
+    return { feetY: H - sh * (o.feetFrac == null ? 0.1 : o.feetFrac), groundTop: H - sh };
+  }
+  // the end of a zone: the gate of the next place (or Hamdan's jet, its stairs at x), standing on feetY, h px tall
+  function goal(g, zone, x, feetY, h, t) {
+    const EM = M();
+    if (zone.exit === 'jet') return jet(g, x, feetY, h, {});
+    const im = img(EM.gateArt(zone.exit));
+    g.fillStyle = 'rgba(29,36,64,.2)'; ell(g, x, feetY, h * 0.32, h * 0.05); g.fill();
+    if (ready(im)) { const w = h * im.naturalWidth / im.naturalHeight; g.drawImage(im, x - w / 2, feetY - h + h * 0.03, w, h); return; }
+    // (until its picture arrives) an arch in the place's colours
+    const gw = h * 0.7;
+    g.strokeStyle = INK; g.lineWidth = Math.max(3, h * 0.012);
+    g.fillStyle = zone.sky[1];
+    rr(g, x - gw / 2, feetY - h, gw * 0.16, h, 8); g.fill(); g.stroke();
+    rr(g, x + gw / 2 - gw * 0.16, feetY - h, gw * 0.16, h, 8); g.fill(); g.stroke();
+    rr(g, x - gw / 2 - 10, feetY - h - 20, gw + 20, 34, 14); g.fill(); g.stroke();
+  }
+  // Hamdan's jet: its door (and the stairs) at x, wheels on feetY, h = the jet's height. o: { lift (off the ground),
+  // tilt (radians: + lifts the nose, which points left: the jet faces the crew running towards it) }
+  function jet(g, x, feetY, h, o) {
+    o = o || {};
+    const im = img(M().JET), fb = img('/assets/saga/avatars/plane.webp');
+    const pic = ready(im) ? im : (ready(fb) ? fb : null);
+    if (!pic) return;
+    const w = h * pic.naturalWidth / pic.naturalHeight;
+    // the door and its stairs sit at ~20 % of the picture from the left (the saga plane fallback: its middle)
+    const dx = x - w * (pic === im ? 0.2 : 0.5);
+    g.save();
+    if (!o.lift) { g.fillStyle = 'rgba(29,36,64,.22)'; ell(g, dx + w * 0.5, feetY, w * 0.42, h * 0.05); g.fill(); }
+    g.translate(dx + w * 0.5, feetY - h * 0.5);
+    if (o.tilt) g.rotate(o.tilt);
+    g.drawImage(pic, -w / 2, -h / 2, w, h);
+    if (pic === im && o.faces && o.faces.length) {
+      const WX = [0.246, 0.294, 0.341, 0.388, 0.435, 0.482], WY = 0.52, r = w * 0.016;
+      o.faces.slice(0, 6).forEach((skin, i) => {
+        const f = img(SKIN_URL(skin));
+        if (!ready(f)) return;
+        const fx = -w / 2 + WX[i] * w, fy = -h / 2 + WY * h;
+        g.save(); g.beginPath(); g.arc(fx, fy, r, 0, Math.PI * 2); g.clip();
+        g.fillStyle = '#dff3ff'; g.fillRect(fx - r, fy - r, r * 2, r * 2);
+        g.drawImage(f, fx - r * 1.25, fy - r * 1.05, r * 2.5, r * 2.5);
+        g.restore();
+        g.strokeStyle = 'rgba(29,36,64,.6)'; g.lineWidth = Math.max(1, r * 0.18); g.beginPath(); g.arc(fx, fy, r, 0, Math.PI * 2); g.stroke();
+      });
+    }
+    g.restore();
+    return { x: dx, w };
+  }
+
+  // ---------- the zona segura ----------
+  // the room while its picture loads: the floor and the walls in the zone's colours
+  function roomFallback(g, r) {
+    const T = r.tile, z = M().ZONES[r.zone] || {}, L = r.layout || { top: 1, bottom: 1, left: 1, right: 1 };
+    g.fillStyle = z.floor || '#efeafb'; g.fillRect(0, 0, r.cols * T, r.rows * T);
+    g.fillStyle = 'rgba(29,36,64,.55)';
+    g.fillRect(0, 0, r.cols * T, L.top * T); g.fillRect(0, (r.rows - L.bottom) * T, r.cols * T, L.bottom * T);
+    g.fillRect(0, 0, L.left * T, r.rows * T); g.fillRect((r.cols - L.right) * T, 0, L.right * T, r.rows * T);
+    (L.blocks || []).forEach(([x, y, w, h]) => { g.fillStyle = 'rgba(29,36,64,.3)'; rr(g, x * T + 3, y * T + 3, w * T - 6, h * T - 6, 10); g.fill(); });
+  }
+  // a seeded prop as its picture, bottom-centre on its footprint; the dock is Robotín's glowing pad
   function prop(g, p, T, t) {
     const X = p.x * T, Y = p.y * T, W = p.w * T, H = p.h * T;
-    g.fillStyle = 'rgba(29,36,64,.18)'; ell(g, X + W / 2, Y + H - 3, W * 0.48, 7); g.fill();
-    const pp = PROP_PICS[p.kind];
-    const pi = pp && img('/assets/props/' + pp.f + '.webp');
+    if (p.kind === 'dock') {
+      const glow = 0.55 + 0.25 * Math.sin(t * 3);
+      g.fillStyle = `rgba(63,214,224,${glow * 0.45})`; ell(g, X + W / 2, Y + H - 6, W * 0.62, H * 0.36); g.fill();
+      g.strokeStyle = ROBO_DEEP; g.lineWidth = 3; ell(g, X + W / 2, Y + H - 6, W * 0.5, H * 0.26); g.stroke();
+      return;
+    }
+    g.fillStyle = 'rgba(29,36,64,.22)'; ell(g, X + W / 2, Y + H - 4, W * 0.46, 7); g.fill();
+    const pa = (M().PROP_ART || {})[p.kind];
+    const pi = pa && img(pa.f);
     if (pi && ready(pi)) {
-      const w = (pp.w || p.w * pp.k) * T, h = w * pi.naturalHeight / pi.naturalWidth;
+      const w = (pa.dw || p.w) * T, h = w * pi.naturalHeight / pi.naturalWidth;
       g.drawImage(pi, X + W / 2 - w / 2, Y + H + 2 - h, w, h);
       return;
     }
-    if (p.kind === 'dock') {
-      g.fillStyle = '#9aa7c4'; rr(g, X + 4, Y + 8, W - 8, H - 12, 10); g.fill(); outline(g, 2);
-      g.fillStyle = ROBO; rr(g, X + 12, Y + 14, W - 24, 6, 3); g.fill();
-    } else if (p.kind === 'ring') {
-      const i = img('/assets/kingdoms/landmarks/big/museum.webp');
-      if (ready(i)) { const w = W * 0.9, h = w * i.naturalHeight / i.naturalWidth; g.drawImage(i, X + W / 2 - w / 2, Y + H - h + 2, w, h); }
-    } else if (p.kind === 'case') {
-      const c = ['#ff9fc0', '#8fdcff', '#ffd23f', '#9be15d'][p.hue || 0];
-      g.fillStyle = '#ffffff'; rr(g, X + 5, Y + 14, T - 10, T - 16, 4); g.fill(); outline(g, 2);
-      g.fillStyle = 'rgba(200,235,255,.7)'; rr(g, X + 6, Y - 4, T - 12, 20, 5); g.fill(); outline(g, 2);
-      g.fillStyle = c; ell(g, X + T / 2, Y + 7 + Math.sin(t * 2 + p.x) * 1.5, 6, 6); g.fill(); outline(g, 1.5);
-    } else if (p.kind === 'planter' || p.kind === 'palm') {
-      const cx = X + T / 2;
-      g.fillStyle = p.kind === 'palm' ? '#d98b5f' : '#f4f6fb'; rr(g, cx - 10, Y + 12, 20, 18, 5); g.fill(); outline(g, 2);
-      if (p.kind === 'palm') {
-        g.strokeStyle = '#8a5a35'; g.lineWidth = 4; g.beginPath(); g.moveTo(cx, Y + 13); g.lineTo(cx + Math.sin(t + p.x), Y - 12); g.stroke();
-        for (let k = 0; k < 6; k++) { const a = -Math.PI / 2 + (k - 2.5) * 0.6; g.fillStyle = k % 2 ? '#3fb36b' : '#2f9d62'; g.beginPath(); g.moveTo(cx, Y - 12); g.quadraticCurveTo(cx + Math.cos(a) * 12, Y - 18 + Math.sin(a) * 8, cx + Math.cos(a) * 18, Y - 6 + Math.sin(a) * 10); g.closePath(); g.fill(); outline(g, 1.2); }
-      } else { g.fillStyle = '#4cb87a'; ell(g, cx, Y + 9, 13, 11); g.fill(); outline(g, 2); }
-    } else if (p.kind === 'fountain') {
-      g.fillStyle = '#e9dcc3'; ell(g, X + W / 2, Y + H / 2, W / 2 + 4, H / 2 + 2); g.fill(); outline(g, 2.5);
-      g.fillStyle = '#7fd3ea'; ell(g, X + W / 2, Y + H / 2, W / 2 - 5, H / 2 - 6); g.fill();
-      g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 2;
-      for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2 + t * 0.6; const r = 10 + 5 * Math.sin(t * 3 + k); g.beginPath(); g.moveTo(X + W / 2, Y + H / 2 - 2); g.quadraticCurveTo(X + W / 2 + Math.cos(a) * r, Y + H / 2 - 26, X + W / 2 + Math.cos(a) * r * 1.6, Y + H / 2 + Math.sin(a) * 6); g.stroke(); }
-    } else if (p.kind === 'bench') {
-      g.fillStyle = '#b0773f'; rr(g, X + 4, Y + 10, W - 8, 10, 3); g.fill(); outline(g, 2);
-      g.fillStyle = '#8d5a2b'; rr(g, X + 4, Y + 3, W - 8, 6, 3); g.fill(); outline(g, 1.5);
-    } else if (p.kind === 'seats') {
-      const c = ['#2f7bea', '#26b5a8', '#8b5cf6'][p.hue || 0];
-      for (let i = 0; i < p.w; i++) { g.fillStyle = c; rr(g, X + i * T + 3, Y + 4, T - 6, T - 8, 6); g.fill(); outline(g, 2); g.fillStyle = 'rgba(255,255,255,.35)'; rr(g, X + i * T + 6, Y + 6, T - 12, 6, 3); g.fill(); }
-    } else if (p.kind === 'cart') {
-      g.fillStyle = '#9aa7c4'; rr(g, X + 4, Y + 16, T - 8, 10, 3); g.fill(); outline(g, 2);
-      g.fillStyle = '#ff9f1c'; rr(g, X + 6, Y + 2, 12, 14, 3); g.fill(); outline(g, 1.5);
-      g.fillStyle = '#f0443a'; rr(g, X + 15, Y + 6, 11, 10, 3); g.fill(); outline(g, 1.5);
-    }
+    g.fillStyle = '#f4f6fb'; rr(g, X + 5, Y + 6, W - 10, H - 10, 8); g.fill(); outline(g, 2);
   }
-  // a green safe zone. o: { count, cap, safeMe, mine, t, flash }
+  // a green safe zone. o: { count, cap, mine, mySafe, t }
   function zone(g, z, T, o) {
     const X = z.x * T, Y = z.y * T, W = z.w * T, H = z.h * T;
     const t = still() ? 0 : (o.t || 0);
     // full = grey (nobody else fits), except for me when I'm one of the protected kids inside: it stays green
     const full = z.cap && o.count >= z.cap && !o.mySafe;
     const pulse = 0.5 + 0.5 * Math.sin(t * 5 + z.id);
-    g.fillStyle = full ? 'rgba(160,168,190,.42)' : `rgba(47,191,113,${0.32 + pulse * 0.16})`;
-    rr(g, X + 3, Y + 3, W - 6, H - 6, 16); g.fill();
-    g.setLineDash([10, 7]); g.lineDashOffset = -t * 30;
-    g.strokeStyle = full ? '#7c849c' : SAFE_DEEP; g.lineWidth = 4; rr(g, X + 3, Y + 3, W - 6, H - 6, 16); g.stroke();
+    // a soft halo (no canvas blur: cheap phones), the glowing mat, the marching dashes
+    g.fillStyle = full ? 'rgba(160,168,190,.22)' : `rgba(120,255,170,${0.18 + pulse * 0.14})`;
+    rr(g, X - 5, Y - 5, W + 10, H + 10, 22); g.fill();
+    const fill = g.createRadialGradient(X + W / 2, Y + H / 2, 4, X + W / 2, Y + H / 2, W * 0.7);
+    if (full) { fill.addColorStop(0, 'rgba(210,214,226,.78)'); fill.addColorStop(1, 'rgba(150,158,180,.72)'); }
+    else { fill.addColorStop(0, `rgba(170,255,200,${0.78 + pulse * 0.12})`); fill.addColorStop(1, 'rgba(47,191,113,.7)'); }
+    g.fillStyle = fill; rr(g, X + 3, Y + 3, W - 6, H - 6, 16); g.fill();
+    g.setLineDash([12, 8]); g.lineDashOffset = -t * 30;
+    g.strokeStyle = full ? '#6b7390' : '#0f6b3a'; g.lineWidth = 4.5; rr(g, X + 3, Y + 3, W - 6, H - 6, 16); g.stroke();
     g.setLineDash([]);
+    g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 2; rr(g, X + 8, Y + 8, W - 16, H - 16, 12); g.stroke();
     if (o.mine && o.mySafe) { g.strokeStyle = SAFE_DEEP; g.lineWidth = 6; rr(g, X - 2, Y - 2, W + 4, H + 4, 20); g.stroke(); }
-    // the shield mark in the middle (a picture, no letters)
+    // the shield in the middle (a picture, no letters)
     const cx = X + W / 2, cy = Y + H / 2;
-    g.globalAlpha = 0.55;
-    g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(cx, cy - 16); g.lineTo(cx + 14, cy - 10); g.lineTo(cx + 12, cy + 6); g.quadraticCurveTo(cx, cy + 18, cx, cy + 18); g.quadraticCurveTo(cx, cy + 18, cx - 12, cy + 6); g.lineTo(cx - 14, cy - 10); g.closePath(); g.fill();
+    g.globalAlpha = 0.8;
+    g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(cx, cy - 17); g.lineTo(cx + 15, cy - 11); g.lineTo(cx + 13, cy + 6); g.quadraticCurveTo(cx, cy + 19, cx, cy + 19); g.quadraticCurveTo(cx, cy + 19, cx - 13, cy + 6); g.lineTo(cx - 15, cy - 11); g.closePath(); g.fill();
+    g.strokeStyle = full ? '#6b7390' : SAFE_DEEP; g.lineWidth = 2.5; g.stroke();
     g.globalAlpha = 1;
   }
-  // the zone's limit as a badge above it («3/6», full = gold). px = its size on screen, s = world → css scale
+  // the zone's limit as a badge on its bottom edge («3/6», full = grey). px = its size on screen, s = world → css scale
   function zoneBadge(g, z, T, count, s, px, mine) {
     if (!z.cap) return;
     const fs = px / s;
@@ -345,21 +409,23 @@
     const cx = (z.x + z.w / 2) * T, cy = (z.y + z.h) * T - 2;      // on the bottom edge: the name tags of the kids inside sit at the top
     g.fillStyle = full ? '#d9dce6' : (mine ? '#d6f7e3' : '#ffffff'); rr(g, cx - w / 2, cy - fs * 0.75, w, fs * 1.5, fs * 0.75); g.fill();
     g.strokeStyle = INK; g.lineWidth = 2 / s; g.stroke();
-    // a little person mark (head + shoulders), then the numbers
     const mx = cx - w / 2 + fs * 0.85, my = cy;
     g.fillStyle = INK; ell(g, mx, my - fs * 0.22, fs * 0.2, fs * 0.2); g.fill(); g.beginPath(); g.arc(mx, my + fs * 0.42, fs * 0.36, Math.PI, 0); g.fill();
     g.fillStyle = INK; g.fillText(label, cx + fs * 0.5, cy + fs * 0.05);
+    return [cx - w / 2, cy - fs * 0.75, cx + w / 2, cy + fs * 0.75];
   }
   // the whole room. st: { room, zones, occ: {zid: {n, safe:[idx]}}, kids:[{x,y,skin,name,me,safe,dizzy,moving,f,idx}], t,
-  //   flash (0..1 the zap landing), robot: { mood }, myZone }, view: { s }, o: { size, tag, groundScale, meLabel, badge }
+  //   flash (0..1 the zap landing), zapTargets, robot: { mood }, myZone, mySafe }, view: { s }, o: { size, tag, tags,
+  //   meLabel, badge, dimOthers }
   function room(g, st, view, o) {
-    const r = st.room, T = r.tile, t = st.t || 0;
-    g.drawImage(roomGround(r, o.groundScale || 1), 0, 0, r.cols * T, r.rows * T);
+    const r = st.room, T = r.tile, t = st.t || 0, RW = r.cols * T, RH = r.rows * T;
+    const pic = roomArt(r.zone);
+    if (ready(pic)) g.drawImage(pic, 0, 0, RW, RH); else roomFallback(g, r);
     // the zap landing lights the floor cyan everywhere but the zones (a floor effect: the kids stay readable on top)
     if (st.flash > 0) {
       g.save();
-      g.globalAlpha = Math.min(1, st.flash) * 0.5;
-      g.fillStyle = '#9ff8ff'; g.fillRect(T, T, (r.cols - 2) * T, (r.rows - 2) * T);
+      g.globalAlpha = Math.min(1, st.flash) * 0.45;
+      g.fillStyle = '#9ff8ff'; g.fillRect(0, 0, RW, RH);
       g.restore();
     }
     (st.zones || []).forEach((z) => {
@@ -367,24 +433,32 @@
       zone(g, z, T, { count: oc.n, t, mine: st.myZone === z.id, mySafe: st.myZone === z.id && st.mySafe });
     });
     // props + Robotín + kids, back to front
+    const size = o.size || 48;
     const list = [];
     r.props.forEach((p) => list.push({ y: (p.y + p.h) * T, p }));
-    (st.kids || []).forEach((k) => list.push({ y: k.y, k }));
-    const dx = (r.dock.x + r.dock.w / 2) * T, dy = (r.dock.y + r.dock.h) * T + 2;
+    (st.kids || []).forEach((k) => { if (!k.me) list.push({ y: k.y, k }); });
+    const dx = (r.dock.x + r.dock.w / 2) * T, dy = (r.dock.y + r.dock.h) * T - 4;
     list.push({ y: dy + 0.5, robot: true });
     list.sort((a, b) => a.y - b.y);
     list.forEach((e) => {
       if (e.p) prop(g, e.p, T, t);
-      else if (e.robot) robotin(g, dx, dy, T * 2.1, { t, mood: (st.robot && st.robot.mood) || 'idle' });
-      else if (!e.k.me) kid(g, e.k, o.size || 44, t, { alpha: o.dimOthers ? 0.9 : 1 });
+      else if (e.robot) robotin(g, dx, dy, T * 2.4, { t, mood: (st.robot && st.robot.mood) || 'idle' });
+      else kid(g, e.k, size, t, { alpha: o.dimOthers ? 0.92 : 1 });
     });
     // my own avatar always on top (on a phone a classmate standing on my tile must never hide me)
-    (st.kids || []).forEach((k) => { if (k.me) kid(g, k, o.size || 44, t, {}); });
+    const mine = (st.kids || []).find((k) => k.me);
+    if (mine) kid(g, mine, size * (o.meScale || 1), t, {});
     // … and the tickle lightning from Robotín to the kids caught outside
-    if (st.flash > 0) (st.zapTargets || []).slice(0, 12).forEach((k, i) => zap(g, dx + 10, dy - T * 1.2, k.x, k.y - 20, 3, Math.floor(t * 20) + i * 7));
-    (st.zones || []).forEach((z) => { const oc = (st.occ || {})[z.id] || { n: 0 }; zoneBadge(g, z, T, oc.n, view.s, o.badge || 13, st.myZone === z.id && st.mySafe); });
-    (st.kids || []).forEach((k) => { if (k.me || o.tags) tag(g, k, o.size || 44, view.s, o.tag || 11, o.meLabel); });
+    if (st.flash > 0) (st.zapTargets || []).slice(0, 12).forEach((k, i) => zap(g, dx + 10, dy - T * 1.5, k.x, k.y - 20, 3, Math.floor(t * 20) + i * 7));
+    const taken = [];
+    (st.zones || []).forEach((z) => { const oc = (st.occ || {})[z.id] || { n: 0 }; const b = zoneBadge(g, z, T, oc.n, view.s, o.badge || 13, st.myZone === z.id && st.mySafe); if (b) taken.push(b); });
+    // name tags: mine first, then front to back; a tag that would cover another moves under the feet or hides
+    const tagged = (st.kids || []).filter((k) => k.me || o.tags).sort((a, b) => (b.me ? 1 : 0) - (a.me ? 1 : 0) || b.y - a.y);
+    tagged.forEach((k) => tag(g, k, k.me ? size * (o.meScale || 1) : size, view.s, o.tag || 11, o.meLabel, taken));
   }
 
-  window.EscapeRender = { INK, SAFE, SAFE_DEEP, ROBO, ROBO_DEEP, GOLD, DANGER, SKIN_URL, img, ready, preload, rr, ell, robotin, onRobot, zap, star, stars, kid, tag, room, roomGround, zone };
+  window.EscapeRender = {
+    INK, SAFE, SAFE_DEEP, ROBO, ROBO_DEEP, GOLD, DANGER, SKIN_URL, BODY_URL, img, ready, preload, onLoad, roomArt, rr, ell,
+    robotin, onRobot, zap, star, stars, kid, tag, strip, scene, goal, jet, room, zone,
+  };
 })();

@@ -78,7 +78,13 @@
         : id === 'streak' ? `${fmt(v)} seguidas` : pl(v, 'ola a salvo', 'olas a salvo')),
     },
   };
-  const ESC_LEVELS = ['Museo del Futuro', 'Dubai Mall y la Fuente', 'Pista del aeropuerto'];
+  // La Gran Fuga v2: each round is a route of three places (js/escape-map.js ROUTES); its names come from the round
+  const ESC_LEVELS = ['Museo del Futuro', 'La Fuente del Burj Khalifa', 'La pista del aeropuerto'];
+  const escMap = () => root.EscapeMap || (typeof globalThis !== 'undefined' ? globalThis.EscapeMap : null);
+  const escZones = (ex) => (escMap() ? escMap().zonesOf((ex && ex.route) || 0) : ESC_LEVELS.map((name) => ({ name, icon: '/assets/dralingo/hello.webp' })));
+  const escReached = (ex) => escZones(ex)[Math.max(0, Math.min(2, ((ex && ex.level) || 1) - 1))].name;
+  const ESC_RANK_ART = { cielo: '/assets/saga/avatars/plane.webp', burj: '/assets/kingdoms/landmarks/big/burj.webp', zoco: '/assets/saga/avatars/camel.webp' };
+  const escRankArt = (rk) => (rk && rk.art) || ESC_RANK_ART[rk && rk.id] || ESC_RANK_ART.zoco;
 
   function starValue(game, st) {
     const G = GAMES[game];
@@ -151,7 +157,7 @@
       else if (me.safe > 0) big = { pre: 'Llegaste a salvo en ', n: me.safe, post: me.safe === 1 ? ' ola' : ' olas' };
       else zero = true;
       const ex = fin.extra || {};
-      sub = ex.escaped ? '¡Escaparon en el jet de Hamdan!' : `La tripulación llegó hasta ${ESC_LEVELS[Math.max(0, Math.min(2, (ex.level || 1) - 1))]}`;
+      sub = ex.escaped ? '¡Escaparon en el jet de Hamdan!' : `La tripulación llegó hasta ${escReached(ex)}`;
       if (zero) sub = 'Cada respuesta correcta es un turbo para la tripulación';
       if (me.turbos > 0 && me.safe > 0) fact(me.safe, me.safe === 1 ? 'ola a salvo' : 'olas a salvo');
       if (me.supers > 0) fact(me.supers, me.supers === 1 ? 'súper turbo' : 'súper turbos');
@@ -470,19 +476,24 @@
   };
   Ceremony.prototype.revealRoute = function (s) {
     const ex = this.fin.extra || {};
-    const reached = ex.escaped ? 3 : Math.max(1, Math.min(3, ex.level || 1));    // the zones lit: the one the crew reached
-    const LV = (root.EscapeMap && root.EscapeMap.LEVELS) || ESC_LEVELS.map((name) => ({ name, lm: '/assets/dralingo/hello.webp' }));
-    const stops = LV.map((l, i) => ({ name: l.name, img: l.lm, jet: i === LV.length - 1 }));
-    const route = el('div', 'pf-route');
+    // v2: the route's three places, then Hamdan's jet (lit only when they escaped: it takes off)
+    const LV = escZones(ex);
+    const jetImg = escMap() ? escMap().JET : '/assets/saga/avatars/plane.webp';
+    // each place as a postcard of its own art (the icon if the page has no EscapeMap), then the jet
+    const stops = LV.map((l) => ({ name: l.short || l.name, img: escMap() && l.id ? escMap().art(l.id, 'bg-s') : l.icon, card: !!(escMap() && l.id), fb: l.icon, jet: false }))
+      .concat([{ name: 'El jet', img: jetImg, jet: true }]);
+    const reached = ex.escaped ? stops.length : Math.max(1, Math.min(LV.length, ex.level || 1));    // the stops lit: up to the one the crew reached
+    const route = el('div', 'pf-route' + (stops.length > 3 ? ' four' : ''));
     const line = el('i', 'pf-route-line');
     const fill = el('i', 'pf-route-fill');
     route.append(line, fill);
     const nodes = stops.map((st, i) => {
       const n = el('div', 'pf-stop' + (st.jet ? ' jet' : ''));
-      const L = this.mode === 'phone' ? 16 : 8;      // a phone keeps the end stops off the edges
+      const L = this.mode === 'phone' ? (stops.length > 3 ? 12 : 16) : 8;      // a phone keeps the end stops off the edges
       n.style.setProperty('--x', (stops.length === 1 ? 50 : L + ((100 - 2 * L) * i) / (stops.length - 1)) + '%');
       const im = el('img');
       im.alt = '';
+      if (st.card) { im.className = 'pf-postcard'; im.onerror = () => { im.onerror = null; im.className = ''; im.src = st.fb; }; }
       im.src = st.img;
       n.append(im, el('span', null, st.name));
       route.appendChild(n);
@@ -502,7 +513,7 @@
     if (ex.escaped) this.later(step * reached + 200, () => { nodes[stops.length - 1].classList.add('takeoff'); this.sfx('jet', 0.7); });
     this.later(step * reached + (ex.escaped ? 900 : 400), () => {
       const rk = ex.rank || { id: 'zoco', name: 'Exploradores del Zoco', stars: 1 };
-      const art = { cielo: '/assets/saga/avatars/plane.webp', burj: '/assets/kingdoms/landmarks/big/burj.webp', zoco: '/assets/saga/avatars/camel.webp' }[rk.id] || '/assets/saga/avatars/camel.webp';
+      const art = escRankArt(rk);
       const im = el('img');
       im.alt = '';
       im.src = art;
@@ -657,7 +668,7 @@
     art.alt = '';
     if (G.coop) {
       const rk = (f.extra && f.extra.rank) || { id: 'zoco' };
-      art.src = { cielo: '/assets/saga/avatars/plane.webp', burj: '/assets/kingdoms/landmarks/big/burj.webp', zoco: '/assets/saga/avatars/camel.webp' }[rk.id] || '/assets/saga/avatars/camel.webp';
+      art.src = escRankArt(rk);
     } else art.src = castPose(f.captains && f.captains[team], me.won || me.tie ? 'cheer' : 'talk');
     top.append(kid, art);
     s.appendChild(top);
@@ -763,7 +774,7 @@
     for (let i = 0; i < 3; i++) rs.appendChild(S().starSvg(i < (rk.stars || 1) ? '' : 'off'));
     s.appendChild(rs);
     s.appendChild(el('p', 'pf-crew-why', ex.escaped ? `¡Escaparon en el jet de Hamdan con ${pl(ex.hearts || 0, 'corazón', 'corazones')}!`
-      : `Llegaron hasta ${ESC_LEVELS[Math.max(0, Math.min(2, (ex.level || 1) - 1))]} · ${pl(ex.hearts || 0, 'corazón', 'corazones')}`));
+      : `Llegaron hasta ${escReached(ex)} · ${pl(ex.hearts || 0, 'corazón', 'corazones')}`));
     const wall = el('div', 'pf-crewwall');
     const all = ((f.crews && f.crews.crew) || []).slice(0, 40);
     wall.classList.toggle('dense', all.length > 14);

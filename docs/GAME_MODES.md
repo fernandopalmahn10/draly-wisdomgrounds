@@ -111,7 +111,9 @@ Pintores** (`paint`, Gimkit Color Clash in Dralingo style, built 2026-10-11, spe
 «El Cielo de las Maravillas»: a new world each round — Dubái de noche, la Gran Muralla, el río Li, Shanghái — tap the sky
 and the dragon flies there painting clouds, three landmark islands to capture; spec `docs/specs/dragones-pintores-v2.md`), **Batalla de Nieve en
 Ski Dubái** (`snow`, Gimkit 2D-map infection game, built 2026-10-12 on a branch, not deployed yet, spec `docs/specs/batalla-de-nieve.md`), **La Gran Fuga de Dubái** (`escape`, Kahoot «Robot Run» co-op chase, built
-2026-10-13 on a branch, not deployed yet, spec `docs/specs/gran-fuga-de-dubai.md`; these four got the Mario Party ending on
+2026-10-13, spec `docs/specs/gran-fuga-de-dubai.md`; remade 2026-10-17 as «Las rutas de la fuga»: a route of three real
+places per round — Dubái or China — drawn as art for the run and the zona segura rooms, a live chase strip on every
+phone, pacing from the clock; spec `docs/specs/gran-fuga-v2.md`; these four got the Mario Party ending on
 2026-10-16, branch `ending-pass`: «¡FINAL!», a reveal, winners vs the others, bonus stars, the projector's podium and each
 phone's card, all from one shared ceremony `js/party.js` + `css/party.css` + `core/party.js`, plus the last 30 s doubled
 (Banderas dobles · Fuego doble · Copos dobles · Súper turbos) and live news between questions; «As built · 2026-10-16» in

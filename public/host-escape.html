@@ -6,9 +6,9 @@
   <title>La Gran Fuga de Dubái · Anfitrión</title>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/kingdoms.css?v=20261017pv2">
-  <link rel="stylesheet" href="/css/escape.css?v=20261013b">
+  <link rel="stylesheet" href="/css/escape.css?v=20261017ev2">
   <link rel="stylesheet" href="/css/mochi.css?v=20261015s">
-  <link rel="stylesheet" href="/css/party.css?v=20261017pv2">
+  <link rel="stylesheet" href="/css/party.css?v=20261017ev2">
 </head>
 <body class="kd-bg es-host">
   <button class="kd-mute" id="mute-btn" type="button">🔊 Sonido</button>
@@ -19,9 +19,9 @@
       <canvas class="es-lobby-robot" id="lobby-robot" width="300" height="300" aria-hidden="true"></canvas>
       <div class="es-lobby-titles">
         <h1 class="es-title kd-display"><span class="es-tv" aria-hidden="true">📺 Nuevo episodio</span>La Gran Fuga <span>de Dubái</span></h1>
-        <p class="es-sub">Robotín, el guardia del Museo del Futuro, tiene un fallo y persigue a todo el equipo. ¡Respondan para escapar en el jet de Hamdan!</p>
+        <p class="es-sub" id="es-sub">Robotín, el guardia del Museo del Futuro, tiene un fallo y persigue a todo el equipo. ¡Respondan para escapar en el jet de Hamdan!</p>
       </div>
-      <img class="es-lobby-dralingo" src="/assets/dralingo/power.webp" alt="">
+      <img class="es-lobby-dralingo" src="/assets/dralingo/point.webp" alt="">
     </header>
 
     <div class="es-lobby-row">
@@ -38,11 +38,21 @@
       </section>
     </div>
 
+    <!-- v2: this round's route (three places + the jet); «Otra ronda» moves on to the next one by itself -->
+    <section class="es-route" aria-label="La ruta de esta ronda">
+      <div class="es-route-head">
+        <button class="es-route-btn" id="route-prev" type="button" aria-label="Ruta anterior">◀</button>
+        <div><span id="route-n">Ruta 1 de 2</span><b id="route-name">Ruta de Dubái</b></div>
+        <button class="es-route-btn wide" id="route-next" type="button">Cambiar ruta ▶</button>
+      </div>
+      <div class="es-route-stops" id="route-stops"></div>
+    </section>
+
     <!-- the same three steps the phones show (kids don't read: big pictures, few words) -->
     <ol class="es-howto">
-      <li class="es-step-turbo"><span class="es-ico-tiles"><i></i><i></i><i></i><i></i></span><b>Responde bien</b><small>cada acierto es un turbo 🚀</small></li>
-      <li class="es-step-robot"><canvas class="es-ico-robot" id="howto-robot" width="160" height="160" aria-hidden="true"></canvas><b>¡Que no los alcance!</b><small>si Robotín llega: ¡zap de cosquillas!</small></li>
-      <li class="es-step-zone"><span class="es-ico-zone"><img id="howto-me" src="/assets/saga/avatars/aileen.webp" alt=""></span><b>Zona segura</b><small>camina a una zona verde antes del zap</small></li>
+      <li class="es-step-turbo"><span class="es-ico-tiles"><i></i><i></i><i></i><i></i></span><div><b>Responde bien</b><small>cada acierto es un turbo 🚀</small></div></li>
+      <li class="es-step-robot"><canvas class="es-ico-robot" id="howto-robot" width="160" height="160" aria-hidden="true"></canvas><div><b>¡Que no los alcance!</b><small>si Robotín llega: ¡zap de cosquillas!</small></div></li>
+      <li class="es-step-zone"><span class="es-ico-zone"><img id="howto-me" src="/assets/saga/avatars/aileen.webp" alt=""></span><div><b>Zona segura</b><small>camina a una zona verde antes del zap</small></div></li>
     </ol>
 
     <div class="kd-lobby-tools es-tools">
@@ -65,6 +75,7 @@
     </div>
     <div class="es-intro-mid">
       <div class="es-intro-title">La Gran Fuga<span>de Dubái</span></div>
+      <div class="es-intro-route" id="intro-route">Ruta de Dubái · Museo del Futuro</div>
       <div class="es-vs">VS</div>
       <div class="kd-count-num es-count-num" id="countdown-num">3</div>
     </div>
@@ -94,6 +105,12 @@
         <div class="es-ring" id="wave-ring"><b id="wave-n">12</b></div>
         <div><b id="wave-title">¡Zona segura!</b><span id="wave-sub">Entren en una zona verde</span></div>
       </div>
+      <div class="es-zoneside hidden" id="zoneside">
+        <b id="zoneside-name">Museo del Futuro</b>
+        <span id="zoneside-room">En el vestíbulo del Museo</span>
+        <em id="zoneside-safe"></em>
+      </div>
+      <div class="es-ribbon hidden" id="escape-ribbon" aria-live="polite"><b id="escape-title">¡Al jet de Hamdan!</b><span id="escape-sub"></span></div>
       <div class="es-pops" id="pops" aria-live="polite"></div>
       <p class="es-run-say" id="run-say" aria-live="polite"></p>
       <div class="es-danger" id="danger" aria-hidden="true"></div>
@@ -116,28 +133,27 @@
     <div class="kd-bubble" id="dralingo-say">¡A correr!</div>
   </div>
 
-  <!-- big moments: zap, level cleared, caught at the gate, escape (one at a time) -->
+  <!-- big moments: zap, level cleared (a postcard of the next place), caught at the gate (one at a time) -->
   <div class="es-moment hidden" id="moment" aria-live="polite">
     <div class="es-moment-rays"></div>
-    <img class="es-moment-art" id="moment-art" alt="">
+    <img class="es-moment-art hidden" id="moment-art" src="/assets/escape/jet.webp" alt="">
     <canvas class="es-moment-robot hidden" id="moment-robot" width="420" height="440" aria-hidden="true"></canvas>
     <div class="es-moment-title" id="moment-title"></div>
     <div class="es-moment-sub" id="moment-sub"></div>
     <div class="es-moment-crew hidden" id="moment-crew"></div>
-    <div class="es-moment-cast hidden" id="moment-cast"><img id="moment-cast-img" alt=""><p id="moment-cast-line"></p></div>
+    <div class="es-moment-cast hidden" id="moment-cast"><img id="moment-cast-img" src="/assets/cast/hamdan-cheer.webp" alt=""><p id="moment-cast-line"></p></div>
   </div>
 
-  <!-- END -->
+  <!-- END (a fallback: the Mario Party ceremony of js/party.js is the real ending) -->
   <main id="screen-win" class="es-end hidden">
     <div class="es-end-hero">
-      <div class="es-badge" id="rank-badge" aria-hidden="true"><img id="rank-art" alt=""><div class="es-badge-stars" id="rank-stars"></div></div>
+      <div class="es-badge" id="rank-badge" aria-hidden="true"><img id="rank-art" src="/assets/escape/jet.webp" alt=""><div class="es-badge-stars" id="rank-stars"></div></div>
       <div class="es-end-words">
         <h2 class="es-rank kd-display" id="rank-name">Pilotos del Cielo</h2>
         <p class="es-end-why" id="end-why"></p>
         <div class="es-end-levels" id="end-levels"></div>
       </div>
     </div>
-    <div class="es-awards" id="awards"></div>
     <div class="es-end-crew" id="end-crew"></div>
     <div class="kd-end-tools">
       <button class="kd-btn" type="button" onclick="location.href='/'">🏠 Inicio</button>
@@ -152,13 +168,13 @@
   <script src="/js/cast.js?v=20261017art"></script>
   <script src="/js/dralingo-fx.js?v=20261017art"></script>
   <script src="/js/snow-map.js?v=20261012b"></script>
-  <script src="/js/escape-map.js?v=20261013a"></script>
-  <script src="/js/escape-render.js?v=20261017art"></script>
+  <script src="/js/escape-map.js?v=20261017ev2"></script>
+  <script src="/js/escape-render.js?v=20261017ev2"></script>
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/halcon-board.js?v=20261017art"></script>
   <script src="/js/mochi-stage.js?v=20261014a"></script>
-  <script src="/js/party.js?v=20261017pv2"></script>
-  <script src="/js/host-escape.js?v=20261017art"></script>
+  <script src="/js/party.js?v=20261017ev2"></script>
+  <script src="/js/host-escape.js?v=20261017ev2"></script>
   <script src="/js/live-game.js?v=20261011c"></script>
 </body>
 </html>

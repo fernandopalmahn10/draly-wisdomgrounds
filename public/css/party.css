@@ -15,9 +15,13 @@
   var(--pp-world-bg, linear-gradient(180deg, #8fd0ff 0%, #d8efff 60%, #fff6e8 100%)) center top / cover no-repeat, linear-gradient(180deg, #8fd0ff 0%, #d8efff 60%, #fff6e8 100%); }
 .pf.pf-g-snow { background: radial-gradient(60% 40% at 50% 0%, rgba(255, 255, 255, .9), transparent 70%), linear-gradient(180deg, #cfe9ff 0%, #eef8ff 55%, #ffffff 100%); }
 .pf.pf-g-escape { background: linear-gradient(180deg, rgba(255, 247, 227, .3) 0%, rgba(255, 247, 227, 0) 34%, rgba(255, 247, 227, .2) 60%, rgba(255, 247, 227, .92) 100%),
-  url('/assets/dubai/skyline-wide.webp') center bottom / cover no-repeat, linear-gradient(180deg, #ffb36b 0%, #ffd7a8 45%, #ffeccf 100%); }
+  var(--es-world-bg, url('/assets/dubai/skyline-wide.webp')) center bottom / cover no-repeat, linear-gradient(180deg, #ffb36b 0%, #ffd7a8 45%, #ffeccf 100%); }
+/* (La Gran Fuga v2: --es-world-bg = the place the crew reached, set by js/host-escape.js / player-escape.js at «¡FINAL!») */
 /* on a phone the skyline is a strip along the bottom (cover would zoom the Burj Khalifa behind everything) */
-.pf.pf-phone.pf-g-kingdoms, .pf.pf-phone.pf-g-escape { background-size: auto, auto 26vh, auto; background-position: center, center bottom, center; }
+.pf.pf-phone.pf-g-kingdoms { background-size: auto, auto 26vh, auto; background-position: center, center bottom, center; }
+/* La Gran Fuga v2 on a phone: the place the crew reached fills the screen, softly (a strip of it showed a seam) */
+.pf.pf-phone.pf-g-escape { background: linear-gradient(180deg, rgba(255, 247, 227, .62) 0%, rgba(255, 247, 227, .42) 40%, rgba(255, 247, 227, .7) 72%, rgba(255, 247, 227, .95) 100%),
+  var(--es-world-bg, url('/assets/dubai/skyline-wide.webp')) 60% center / cover no-repeat, linear-gradient(180deg, #ffb36b 0%, #ffd7a8 45%, #ffeccf 100%); }
 .pf-box { position: absolute; inset: 0; }
 .pf-fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 6; }
 .pf .pf-red { --pc: #d8382e; --pd: #b8221a; --ps: #ffe1dc; }
@@ -122,6 +126,10 @@
 .pf-stop span { padding: 2px 8px; border-radius: 999px; background: #fff; border: 2px solid var(--ink); font: 800 .78rem/1.2 'Nunito', sans-serif; text-align: center; }
 .pf-phone .pf-route { --l: 16%; }
 .pf-phone .pf-stop { width: 31%; }
+.pf-stop img.pf-postcard { width: 100%; max-width: 260px; height: auto; aspect-ratio: 16 / 10; object-fit: cover; border: 3px solid var(--ink); border-radius: 14px; box-shadow: 0 4px 0 var(--ink); background: #fff; }
+.pf-host .pf-stop img.pf-postcard { height: auto; } .pf-phone .pf-stop img.pf-postcard { height: auto; border-width: 2px; border-radius: 10px; }
+.pf-route.four .pf-stop { width: 21%; }
+.pf-g-escape .pf-stop.jet img { scale: -1 1; }      /* La Gran Fuga's jet faces left: turned to fly off along the route */ .pf-phone .pf-route.four { --l: 12%; } .pf-phone .pf-route.four .pf-stop { width: 24%; }   /* La Gran Fuga v2: three places + the jet */
 .pf-phone .pf-stop img { height: 9vh; }
 .pf-host .pf-stop img { height: 18vh; } .pf-host .pf-stop span { font-size: 1.2rem; padding: 4px 14px; }
 .pf-stop.on { filter: none; animation: pf-stop-on .5s var(--ease-pop) both; }
@@ -282,6 +290,7 @@
 .pf-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--ink); }
 /* La Gran Fuga: the whole crew, no ranking in front of the class */
 .pf-crew-why { margin: 4px 0 8px; font: 800 1.6rem/1.2 'Nunito', sans-serif; text-align: center; }
+.pf-g-escape .pf-crew-why { background: rgba(255, 247, 227, .94); border: 3px solid var(--ink); border-radius: 999px; padding: 4px 18px; }   /* (readable on a night backdrop) */
 .pf-crewwall { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: 10px 14px; }
 .pf-mate { position: relative; width: 150px; height: 214px; animation: pf-rise .45s var(--ease-pop) calc(var(--i) * .04s) both; }
 .pf-crewwall.dense .pf-mate { width: 104px; height: 150px; }

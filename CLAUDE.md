@@ -537,6 +537,11 @@ the checklist for any new game mode.
   Dragones Pintores was remade 2026-10-17 as «El Cielo de las Maravillas» (`paint`, his picks: Dubai + China, a new sky
   each round with its landmarks as the prizes; tap where to fly): the server flies every dragon from the kids' tap intents
   and judges every cloud (spec `docs/specs/dragones-pintores-v2.md`); the platformer with ◀ ▶ ⬆ retired.
+  La Gran Fuga de Dubái was remade 2026-10-17 as «Las rutas de la fuga» (`escape`, spec `docs/specs/gran-fuga-v2.md`):
+  each round is a route of three real places drawn as art (Dubái: Museo del Futuro → la Fuente del Burj Khalifa → la
+  pista; China: el Mercado Nocturno → el Jardín Chino → la Gran Muralla), Hamdan's jet at the end of both; the zonas
+  seguras are the place's painted room (its walls authored per picture in `js/escape-map.js`); a live chase strip on
+  every phone; each run's pace set from the clock. The teacher picks the route in the lobby, «Otra ronda» = the next.
   Reinos de Colores, Dragones Pintores, Batalla de Nieve and La Gran Fuga got the Mario Party ending 2026-10-16 (branch
   `ending-pass`): one shared ceremony (`js/party.js` + `css/party.css` + `core/party.js`), the last 30 s doubled, live
   news between questions; «As built · 2026-10-16» in each spec.

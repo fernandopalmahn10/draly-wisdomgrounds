@@ -103,7 +103,14 @@ const frozen1 = UI.card('snow', Object.assign({}, none, { side: 'ice', team: 'ic
 ok(/aguantaste 40 s/i.test(frozen1.sub), 'Nieve: a kid frozen later keeps «Y antes aguantaste 40 s»');
 eq(UI.card('escape', Object.assign({}, none, { team: 'crew', turbos: 1 }), fins.escape).big, { pre: 'Diste ', n: 1, post: ' turbo a la tripulación' }, 'one turbo');
 eq(UI.card('escape', Object.assign({}, none, { team: 'crew', turbos: 3 }), fins.escape).title, '¡Viajeros del Burj!', 'the crew\'s rank is the headline');
-ok(/Dubai Mall/.test(UI.card('escape', Object.assign({}, none, { team: 'crew', turbos: 3 }), fins.escape).sub), 'the zone the crew reached');
+ok(/La Fuente del Burj Khalifa/.test(UI.card('escape', Object.assign({}, none, { team: 'crew', turbos: 3 }), fins.escape).sub), 'the zone the crew reached');
+// La Gran Fuga v2: the route's own places (js/escape-map.js on the page; here loaded by hand)
+global.EscapeMap = require('../public/js/escape-map');
+const chinaFin = { winner: 'crew', extra: { rank: { id: 'burj', name: 'Viajeros de la Muralla', stars: 2 }, route: 1, escaped: false, level: 2, hearts: 3 } };
+const chinaCard = UI.card('escape', Object.assign({}, none, { team: 'crew', turbos: 3 }), chinaFin);
+ok(/El Jardín Chino/.test(chinaCard.sub) && chinaCard.title === '¡Viajeros de la Muralla!', 'the China route: its own place and rank');
+ok(/La Fuente del Burj Khalifa/.test(UI.card('escape', Object.assign({}, none, { team: 'crew', turbos: 3 }), fins.escape).sub), 'the Dubái route is route 0');
+delete global.EscapeMap;
 
 // ---------- the star values ----------
 eq(UI.starValue('kingdoms', { id: 'big', value: 7, n: 1 }), '7 casillas de una vez', 'Mayor conquista');
