@@ -109,7 +109,11 @@ attempt «Ojo de Halcón» (`look`), retired and removed 2026-10-14 by his decis
 the phone; spec `docs/specs/reinos-de-colores.md`), **Dragones
 Pintores** (`paint`, Gimkit Color Clash in Dralingo style, built 2026-10-11, spec `docs/specs/dragones-pintores.md`), **Batalla de Nieve en
 Ski Dubái** (`snow`, Gimkit 2D-map infection game, built 2026-10-12 on a branch, not deployed yet, spec `docs/specs/batalla-de-nieve.md`), **La Gran Fuga de Dubái** (`escape`, Kahoot «Robot Run» co-op chase, built
-2026-10-13 on a branch, not deployed yet, spec `docs/specs/gran-fuga-de-dubai.md`), **Mochi Mash** (`mochi-mash`, remade
+2026-10-13 on a branch, not deployed yet, spec `docs/specs/gran-fuga-de-dubai.md`; these four got the Mario Party ending on
+2026-10-16, branch `ending-pass`: «¡FINAL!», a reveal, winners vs the others, bonus stars, the projector's podium and each
+phone's card, all from one shared ceremony `js/party.js` + `css/party.css` + `core/party.js`, plus the last 30 s doubled
+(Banderas dobles · Fuego doble · Copos dobles · Súper turbos) and live news between questions; «As built · 2026-10-16» in
+each spec), **Mochi Mash** (`mochi-mash`, remade
 2026-10-14 on a branch, not deployed: «La Terraza del Mochi», Fuego vs Mar feed their Dragoncitos in a mash zone, landmark
 race, comeback golden mochis, Mario Party ceremony with bonus stars; rules `core/mochi.js`, phone `js/player-mochi.js`,
 projector `host.html` + `js/host-mochi.js`, shared `js/mochi-stage.js` + `css/mochi.css`; spec `docs/specs/mochi-mash-v2.md`),

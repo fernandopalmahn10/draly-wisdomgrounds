@@ -56,3 +56,83 @@ over an answer tile, blue champion for Fuego, English join errors, winner screen
 ## Next ideas (not built)
 Power-ups from gems (paint bomb), a short "pintura" sound per tile on the projector, per-kid trails, Aileen/Adric/
 Adrian/Profe Fer as selectable dragons' riders once he sends their art.
+
+---
+
+## As built · 2026-10-16 · the Mario Party ending pass (branch `ending-pass`, not deployed)
+
+The shared ceremony, the lobby greeting, the shared files, every test with its count, the reviews and what they
+changed, and the design pass are written once in `docs/specs/reinos-de-colores.md` § «As built · 2026-10-16».
+
+- **Dragones Pintores: what changed.**
+  - *The gang:* two captains from the gang every round (server `g.pcCaptains`, event `pc:captains`): the red | blue VS
+    face-off in the projector's countdown, each kingdom's captain in its side panel, the leading captain's `battle` line
+    on a lead change, «Tu capitana: Aileen» under the phone's 3-2-1, and they speak in the ending.
+  - *The ending:* «¡FINAL!» (the dragons stop where they are; strokes already on their way count for 0.6 s) → «¿Qué reino
+    pintó más cielo?» (two columns of clouds fill with a drum) → «¡El Reino del … pintó el cielo!» (captains speaking,
+    kids cheering / slumped) → bonus stars: **Más nubes pintadas** (strokes), **Más cielo al final** (clouds still the
+    kid's colour at the end), **Racha más larga** (3+), **Más llamaradas** → podium by clouds owned at the end («9 nubes al final») + «Más cielo del
+    Reino del …»; the card: «Pintaste 19 nubes», «7 nubes siguen con tu color al final», aciertos, racha, llamaradas.
+    «Más llamaradas» counts only llamaradas a streak earned (the last 30 s gives everyone one) and is skipped when more
+    than 3 kids would share it.
+  - *No dead phones:* «☁️ N» (my clouds right now) in the phone's score bar; the result screen carries the live score,
+    my captain's reaction and «Tus nubes»; banners for lead changes (my captain's line, ≥ 7 s apart) and 25 / 50 / 75 %
+    of the sky painted (from the pc:paint events every phone already gets).
+  - *Mario Party touch:* **«¡Fuego doble!»** in the last 30 s (a right answer = +20 s of fire and always a Llamarada, the
+    wide brush): phone banner + «Fuego ×2» chip, projector banner. Kept out on purpose: a comeback bonus (every cloud can
+    be repainted, so the sky already swings back and forth all round).
+  - *«⏸ Pausa» (new, the hard gate «teacher never stuck»):* the clock stops, every dragon stands still (no fire burnt,
+    no clouds painted, «Recargar» waits), an answer comes back unused; «▶ Seguir» moves the clock on by the paused time;
+    the same cards as Reinos on the phones and the projector.
+
+### Files
+- Pintores parts: `core/paint.js` (`ENERGY_PER_RIGHT` / `ENERGY_MAX`, `reward`, `STARS`, `finish`), server.js
+  (`pcRight` / `pcAnswered` / `pcBest` / `pcBlazes` per kid, `g.pcCaptains` + `pc:captains`, `pcPause`, `pcEndPayloads`),
+  `public/host-paint.html` + `js/host-paint.js` (the captains: VS countdown, side panels, lead lines; the ceremony, the
+  ribbon, «⏸ Pausa»), `css/kingdoms.css` (`.kd-count.pc-vs`), `js/player-paint.js` («☁️ N», the news, the pause),
+  `scripts/test-paint.js`, `scripts/playtest/paint.js`.
+
+### Tests and reviews
+`node scripts/test-paint.js` ~120,900 checks; Pintores in `test-party.js` (cards, stars, «Más llamaradas» shared by
+  more than 3 = skipped) and `test-party-live.js` (the ending + the pause); bots PASS at 4 / 20 / 30 (30: 381 questions).
+
+Classroom playtest (4 rounds, projector + 3 phones + socket kids): PASS, no phone ever dead. Fixed: the «Fuego ×2»
+chip running out during a pause in the last 30 s and after «+30 s» at the bell, «+30 s» not moving the paused clock,
+the lead bubble contradicting the score bar, the reveal's unit, the chip on the out-of-fire card, «Reino del Mar» pale
+in the lobby, the VS divider through «¡A pintar!», a reload after the end replaying the show, the empty podium.
+
+### Scorecard · Dragones Pintores · 2026-10-16 · branch `ending-pass`
+```
+Hard gates: bots PASS (4/20/30) · teacher controls ✓ (⏸ Pausa NEW, +30 s, Terminar, ⏭ Saltar, Sonido, Otra ronda,
+            F5) · saga only ✓ · Spanish/pinyin/level ✓ · kid-safe ✓
+1 Real place ........ 1/2  a sky of clouds over the Dubai skyline; nothing in the sky is a Dubai place to win
+2 The gang .......... 2/2  NEW: two captains every round (VS in the countdown, side panels, lead lines, «Tu capitana»
+                           on the phone, speaking in the ending)
+3 Every tap ......... 2/2  unchanged: the dragon answers every swipe, fire bar, «Recargar»
+4 Feedback .......... 2/2  «☁️ N» my clouds live, the result screen's score + captain + «Tus nubes», lead and 25/50/75 %
+                           banners
+5 Finale ............ 2/2  «¡Fuego doble!» in the last 30 s, «¡FINAL!», cloud columns with a drum, winners vs the
+                           others, 4 bonus stars, podium + MVP per kingdom, every kid's own card
+6 Fair, no stall .... 2/2  server-judged painting, strokes in flight count for 0.6 s, «Más llamaradas» only from
+                           streaks, pause stops every dragon
+7 Product feel ...... 2/2  our dragons and the gang, Kenney sounds, phone at 390 and 360, projector at 1600×900
+Total 13/14 → ships (≥ 12, no 0). To 14: Dubai landmark prizes in the sky (art request below).
+```
+
+### Open items and what to watch in the first real class
+- **«¡Fuego doble!»** gives every right answer a Llamarada in the last 30 s: the sky swings a lot at the end. Watch
+  whether the side that led all round feels robbed; the switch is `Paint.reward(streak, frenzy)` in `core/paint.js`.
+- **Captains:** two of the gang each round, picked at random. Watch whether kids care who their captain is.
+- **Lead announcements** on the projector: at most one every 7 s now (the sky flips often). If the class wants more,
+  lower the 7000 in `js/host-paint.js` (the `lead` event).
+- **Art request:** five Dubai landmark prizes for the sky (Burj Khalifa, Burj Al Arab, Museo del Futuro, Marco de
+  Dubái, Atlantis) as small floating «islands» on #00FF00, the same style as Reinos' landmark pieces (→ Real place 2/2).
+- **The show's length.** ~15 s from «¡FINAL!» to the cards (2.4 + 3.6 + 3.2 + 2.1 per star). If the class gets
+  restless, «⏭ Saltar» jumps every phone to its card; the stage times are `REVEAL_MS` / `RESULT_MS` / `STAR_MS` in `public/js/party.js`.
+- **A projector reloaded after the end** shows the old screen until `finReclaim(socket.id, g)` is called from
+  `host:reclaim` (`reinos-de-colores.md` § Files). Phones that reload get their card back.
+- **School Wi-Fi.** A flag tap or a paint stroke counts up to 0.6 s into «¡FINAL!» (`GRACE_MS`); a quiz answer sent
+  during FINAL comes back unused. If kids complain «I answered!» at the bell, raise `GRACE_MS` in `core/party.js`.
+- **The ceremony sounds** (drum, fanfare) under Profe Fer's voice: check the volume on the classroom speakers.
+- **Art requests (Higgsfield in his Chrome; kid-safe, no text or logos):** each captain in a true «talking» pose on
+  flat #00FF00 (the bubbles use the ready / victory poses today).

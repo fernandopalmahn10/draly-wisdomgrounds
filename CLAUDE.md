@@ -471,6 +471,9 @@ the checklist for any new game mode.
   Vuelo del Dragón was remade 2026-10-16 as «La Carrera del Cielo de Dubái» (`dragon-eye`): a Mario Party sky race in
   races of 4, every right answer a flight where each swipe up is a wing beat of the kid's own dragoncito (spec
   `docs/specs/dragon-v2.md`); the old Rojo / Dorado team version with hanzi retired.
+  Reinos de Colores, Dragones Pintores, Batalla de Nieve and La Gran Fuga got the Mario Party ending 2026-10-16 (branch
+  `ending-pass`): one shared ceremony (`js/party.js` + `css/party.css` + `core/party.js`), the last 30 s doubled, live
+  news between questions; «As built · 2026-10-16» in each spec.
 - **The kid's phone is the product** (his correction 2026-10-11: "a beautiful projector is useless if everybody else's
   UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
   answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /
@@ -493,7 +496,9 @@ the checklist for any new game mode.
   important because it makes feelings at the end of a class"): every pin game ends with a Mario Party style ceremony,
   not a plain score list: «¡FINAL!», a suspenseful reveal, the winners celebrating and the others reacting, bonus stars
   by category (most fed, fastest, longest streak…), and on every phone the kid's own card (their full character, what
-  they contributed, any star). Short, skippable by the teacher, never stuck.
+  they contributed, any star). Short, skippable by the teacher, never stuck. A game without its own ceremony uses the
+  shared one (`js/party.js` `DralyParty.Ceremony` + a `fin` payload from `core/party.js`, as Reinos, Pintores, Nieve and
+  La Gran Fuga do since 2026-10-16); a kid with nothing to show reads «¡La próxima es tuya!», never a 0.
 - **Feelings in between too: no dead phones** (his words 2026-10-16 on 6-7: "I didn't even feel there was a feeling,
   there's nothing in between"): from one question to the next the kid's phone stays alive. Their tap shows what it did
   (to their team, the board, their character), the gang reacts, the live race or team state stays on screen, and a
