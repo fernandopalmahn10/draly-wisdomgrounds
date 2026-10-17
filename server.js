@@ -5388,7 +5388,8 @@ app.post('/api/sets/:id/rename', (req, res) => {
   }
 });
 
-const games = {};
+// 🔒 2026-10-16: no prototype (a «PIN» like __proto__ must never reach Object.prototype through games[pin])
+const games = Object.create(null);
 
 // Home page «Volver a la partida»: only offer the rematch while that room is still open (booleans only).
 app.get('/api/room-alive/:pin', (req, res) => {
@@ -5426,6 +5427,32 @@ function isAdminPassword(password) {
   const p = String(password).trim();
   if (_legacyPwOk(p)) return true;   // constant-time
   return !!Teachers.getByTeacherId(p);
+}
+// ── 🔒 2026-10-16 — who opened a live room, and who may take its projector back (host:create / host:reclaim) ──────
+// A room's owner is a teacher's uid ('*' = the legacy super-admin password or its remembered device).
+const _ownerOfTeacher = (t) => (t ? (t.teacher ? t.teacher.uid : '*') : null);
+function _ownerOfCode(code) {
+  const p = String(code == null ? '' : code).trim();
+  if (!p) return null;
+  if (_legacyPwOk(p)) return { owner: '*', superAdmin: true };
+  const t = Teachers.getByTeacherId(p);
+  return t ? { owner: t.uid, superAdmin: !!t.isSuperAdmin } : null;
+}
+// → 'ok' | 'host-live' | 'wait' | 'not-host'. The room's own secret (only the projector that opened it got it) always
+// works: an F5 or a dropped connection of that projector. While the room's projector is still CONNECTED nothing else
+// takes it (an old sleeping tab of the same teacher or of the super admin, whose PIN came back for a newer room, must
+// never freeze a running class). Once the projector is gone: the same teacher by remembered device or code, or a super
+// admin. A code is only read while its address has wrong codes left (the remembered device never waits).
+function _mayReclaim(g, socket, password, token) {
+  if (g.hostToken && token && _safeEqual(String(token), g.hostToken)) return 'ok';
+  if (g.hostId && io.sockets.sockets.get(g.hostId)) return 'host-live';
+  if (!g.hostOwner) return 'not-host';
+  const mine = (w) => !!w && (w.superAdmin || w.owner === g.hostOwner);
+  const dev = LevelKeys.teacherDevice((socket.handshake && socket.handshake.headers) || {});
+  if (dev && mine({ owner: _ownerOfTeacher(dev), superAdmin: !!dev.isSuperAdmin })) return 'ok';
+  if (!password) return 'not-host';
+  if (_adminFailCount(_socketIp(socket)) >= 10) return 'wait';
+  return mine(_ownerOfCode(password)) ? 'ok' : 'not-host';
 }
 // True ONLY for super-admin credentials: the legacy WU_ADMIN_PASSWORD, OR a
 // teacher code whose record has isSuperAdmin:true. Used to gate super-only
@@ -8069,18 +8096,25 @@ io.on('connection', (socket) => {
     // or the host page's teacher-key screen), or the teacher's code in `password` (host-hsk, the key screen's first
     // create, bots and test scripts). Never by internet address. Wrong codes count in the admin turnstile. An exam room
     // also opens a simulation to every kid with its PIN. Checked before anything is created.
+    // 🔒 2026-10-16: the room remembers WHO opened it (hostOwner) and gets a secret (hostToken) that only this projector
+    // receives: host:reclaim gives the room back only to them (see _mayReclaim).
+    let hostOwner = null;
     {
       const ip = _socketIp(socket);
-      const viaDevice = !!LevelKeys.teacherDevice(socket.handshake.headers || {});
-      if (!viaDevice) {
+      const dev = LevelKeys.teacherDevice(socket.handshake.headers || {});
+      if (dev) hostOwner = _ownerOfTeacher(dev);
+      else {
         if (_adminFailCount(ip) >= 10) return cb({ error: 'Muchos intentos. Espera 10 minutos y vuelve a intentarlo.', needTeacherKey: true });
         if (!isAdminPassword(opts.password)) {
           if (opts.password && !Teachers.isRetired(opts.password)) _adminNoteFail(ip);
           return cb({ error: 'Falta tu código de maestra: escríbelo una vez en este aparato.', needTeacherKey: true });
         }
+        const byCode = _ownerOfCode(opts.password);
+        hostOwner = byCode ? byCode.owner : null;
       }
       if (type === 'hsksim' && !_simPayload(String(opts.simId || 'hsk1-sim1'))) return cb({ error: 'unknown simId' });
     }
+    const hostToken = require('crypto').randomBytes(16).toString('hex');
     const pin = genPin();
     const defaultDuration =
       type === 'pinata'       ? Pinata.R.DURATION :  // 3 min (the lobby offers 2 / 3 / 4)
@@ -8100,6 +8134,8 @@ io.on('connection', (socket) => {
     games[pin] = {
       gameType: type,
       hostId: socket.id,
+      hostOwner,
+      hostToken,
       state: 'lobby',
       duration: defaultDuration,
       startedAt: null,
@@ -8152,7 +8188,7 @@ io.on('connection', (socket) => {
     currentPin = pin;
     role = 'host';
     socket.join(pin);
-    cb({ pin });
+    cb({ pin, hostToken });
     broadcast(pin);
   });
 
@@ -8164,16 +8200,25 @@ io.on('connection', (socket) => {
   // re-claim its existing game on reconnect: we move hostId to the new
   // socket, cancel the pending cleanup, and re-join the room. No new PIN,
   // so the kids never get kicked.
-  socket.on('host:reclaim', ({ pin, password }, cb) => {
+  socket.on('host:reclaim', (payload, cb) => {
     cb = (typeof cb === 'function') ? cb : () => {};
-    const g = games[pin];
+    const { pin, password, hostToken } = (payload && typeof payload === 'object') ? payload : {};
+    const g = /^\d{3,4}$/.test(String(pin)) ? games[pin] : null;
     if (!g) return cb({ ok: false, error: 'no-game' });
     // Auth: warmup/reading teacher tools validate via the admin password.
-    // Other game types: allow reclaim if the game has no live host right now
-    // (host was disconnected) — the password gate already protects warmup.
     const isWarmupTool = (g.gameType === 'warmup' || g.gameType === 'reading' || g.gameType === 'hsksim');   // 🔒 exam rooms too (2026-10-15)
     if (isWarmupTool && !isAdminPassword(password)) {
       return cb({ ok: false, error: 'bad-password' });
+    }
+    // 🔒 2026-10-16: every other room goes back only to the teacher who opened it (it used to go to anyone who knew the
+    // PIN, even while the teacher's projector was still connected): this projector's room secret (an F5 in the same
+    // tab), the same teacher's remembered device or code (another tab or browser), or a super admin.
+    if (!isWarmupTool) {
+      const may = _mayReclaim(g, socket, password, hostToken);
+      if (may !== 'ok') {
+        if (may === 'not-host' && password && !isAdminPassword(password) && !Teachers.isRetired(password)) _adminNoteFail(_socketIp(socket));
+        return cb({ ok: false, error: may });
+      }
     }
     // Move host identity to this socket; cancel any pending teardown.
     g.hostId = socket.id;

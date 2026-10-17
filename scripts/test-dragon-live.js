@@ -44,7 +44,7 @@ function none(s, ev, ms) {
 
   // ---------- the room ----------
   const host = connect();
-  const { pin } = await ack(host, 'host:create', { gameType: 'dragon-eye', password: PASSWORD });
+  const { pin, hostToken } = await ack(host, 'host:create', { gameType: 'dragon-eye', password: PASSWORD });
   ok(pin, 'a PIN');
   const loaded = await ack(host, 'host:load-set', { pin, setId: SET });
   ok(loaded.ok, 'the pack loads into the room');
@@ -212,7 +212,7 @@ function none(s, ev, ms) {
   ok(lInit.you.c === 4 && lInit.you.m === minM, 'purple, level with the last dragon of the race');
   const host2 = connect();
   const recl = next(host2, 'dr:init', 3000);
-  const rr = await ack(host2, 'host:reclaim', { pin, password: PASSWORD });
+  const rr = await ack(host2, 'host:reclaim', { pin, hostToken });   // an F5 brings the room's token (js/teacher-gate.js)
   ok(rr && rr.ok, 'the projector takes the room back (F5)');
   const rInit = await recl;
   ok(rInit.races && rInit.races[0].seats.length === 5 && rInit.phase === 'play', 'every race again after F5');
