@@ -23,6 +23,7 @@ const FILES = [
   // the Mario Party ending of Reinos / Pintores / Nieve / La Gran Fuga (2026-10-16) and the two games not listed above
   'public/js/party.js', 'core/party.js', 'public/host-kingdoms.html', 'public/js/host-kingdoms.js', 'public/js/player-kingdoms.js', 'core/kingdoms.js',
   'public/host-paint.html', 'public/js/host-paint.js', 'public/js/player-paint.js', 'core/paint.js', 'core/snow.js', 'core/escape.js', 'public/js/cast.js',
+  'public/js/paint-render.js', 'public/js/paint-worlds.js',
   ...fs.readdirSync(path.join(ROOT, 'core/packs')).filter((f) => f.endsWith('.js')).map((f) => 'core/packs/' + f),
 ];
 const RULES = [
@@ -30,9 +31,9 @@ const RULES = [
   { re: /pollinations/i, why: 'no outside AI pictures drawn at runtime (mochi-mash CLAUDE.md, 2026-10-11)' },
   { re: /\bChinese\b/, why: 'Spanish text says "Chino Mandarín", never "Chinese"', only: /\.(html)$/ },
   // (Spanish never uses macrons or carons: any of these in a game file is pinyin WITH tone marks)
-  { re: /[āēīōūǎěǐǒǔǖǘǚǜ]/, why: 'games show pinyin without tone marks (mochi-mash CLAUDE.md)', only: /sixseven|dragon|party/ },
+  { re: /[āēīōūǎěǐǒǔǖǘǚǜ]/, why: 'games show pinyin without tone marks (mochi-mash CLAUDE.md)', only: /sixseven|dragon|party|paint/ },
   // (the old Vuelo del Dragón showed hanzi on the projector and the phone: the remake must never bring them back)
-  { re: /[㐀-鿿]/, why: 'no hanzi on game screens (root CLAUDE.md: games show pinyin, no hanzi)', only: /dragon|party/ },
+  { re: /[㐀-鿿]/, why: 'no hanzi on game screens (root CLAUDE.md: games show pinyin, no hanzi)', only: /dragon|party|paint/ },
 ];
 
 // blank out comments but keep line numbers

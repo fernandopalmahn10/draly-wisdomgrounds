@@ -414,7 +414,7 @@
     { id: 'halcon',    label: 'Ojos de Halcón',      emoji: '🦅', blurb: 'Look at the right window first, boards of 4 (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-halcon.html', '/player.html') },
     { id: 'escape',    label: 'La Gran Fuga de Dubái', emoji: '🚀', blurb: 'Whole class runs from Robotín', launch: (ctx) => _genericLaunch(ctx, '/host-escape.html', '/player.html') },
     { id: 'snow',      label: 'Batalla de Nieve',   emoji: '❄️', blurb: 'Walk Dubai, snowball fight', launch: (ctx) => _genericLaunch(ctx, '/host-snow.html', '/player.html') },
-    { id: 'paint',     label: 'Dragones Pintores',  emoji: '🎨', blurb: 'Fly, paint the sky', launch: (ctx) => _genericLaunch(ctx, '/host-paint.html', '/player.html') },
+    { id: 'paint',     label: 'Dragones Pintores',  emoji: '🎨', blurb: 'Tap to fly, paint the sky, win the wonders', launch: (ctx) => _genericLaunch(ctx, '/host-paint.html', '/player.html') },
     { id: 'kingdoms',  label: 'Reinos de Colores',  emoji: '🏰', blurb: 'Plant flags, conquer the map', launch: (ctx) => _genericLaunch(ctx, '/host-kingdoms.html', '/player.html') },
     { id: 'sixseven',  label: '6-7 Swing',          emoji: '🤙', blurb: 'Sums that are always 6 or 7, digits or pinyin, fill your team balance (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-sixseven.html', '/player.html') },
     { id: 'monopoly',  label: 'Dàfùwēng · Monopolio', emoji: '🎲', blurb: 'Dubai board night in boards of 4: answer, roll the dice, buy landmarks, collect stars (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-monopoly.html', '/player.html') },

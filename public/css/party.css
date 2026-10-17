@@ -10,8 +10,9 @@
 /* each game's own sky */
 .pf.pf-g-kingdoms { background: linear-gradient(180deg, rgba(255, 247, 227, .45) 0%, rgba(255, 247, 227, 0) 34%, rgba(255, 247, 227, .2) 60%, rgba(255, 247, 227, .92) 100%),
   url('/assets/dubai/skyline-wide.webp') center bottom / cover no-repeat, linear-gradient(180deg, #a9d8ff 0%, #ffe3c2 100%); }
-.pf.pf-g-paint { background: radial-gradient(30% 14% at 18% 22%, rgba(255, 255, 255, .9), transparent 70%),
-  radial-gradient(26% 12% at 80% 34%, rgba(255, 255, 255, .85), transparent 70%), linear-gradient(180deg, #8fd0ff 0%, #d8efff 60%, #fff6e8 100%); }
+/* Dragones Pintores v2: the round's own world behind the show (js/player-paint.js / host-paint.js set --pp-world-bg), washed light so the ink reads */
+.pf.pf-g-paint { background: linear-gradient(180deg, rgba(255, 248, 234, .72) 0%, rgba(255, 248, 234, .58) 42%, rgba(255, 248, 234, .9) 78%, rgba(255, 248, 234, .97) 100%),
+  var(--pp-world-bg, linear-gradient(180deg, #8fd0ff 0%, #d8efff 60%, #fff6e8 100%)) center top / cover no-repeat, linear-gradient(180deg, #8fd0ff 0%, #d8efff 60%, #fff6e8 100%); }
 .pf.pf-g-snow { background: radial-gradient(60% 40% at 50% 0%, rgba(255, 255, 255, .9), transparent 70%), linear-gradient(180deg, #cfe9ff 0%, #eef8ff 55%, #ffffff 100%); }
 .pf.pf-g-escape { background: linear-gradient(180deg, rgba(255, 247, 227, .3) 0%, rgba(255, 247, 227, 0) 34%, rgba(255, 247, 227, .2) 60%, rgba(255, 247, 227, .92) 100%),
   url('/assets/dubai/skyline-wide.webp') center bottom / cover no-repeat, linear-gradient(180deg, #ffb36b 0%, #ffd7a8 45%, #ffeccf 100%); }
@@ -326,7 +327,6 @@ body.pf-on .pf-news, body.pf-on .pf-chip { display: none; }
 body.pf-chip-host .kd-banner { top: 156px; }
 .kd-timer.pf-frenzy { background: #d8382e !important; color: #fff !important; animation: pf-chip-beat 1s ease-in-out infinite; }
 .pf-news.show ~ .pf-chip { opacity: 0; transition: opacity .2s; }
-body:has(#pc-empty:not(.hidden)) .pf-chip { top: auto; right: auto; left: 10px; bottom: calc(max(8px, env(safe-area-inset-bottom)) + 214px); }   /* Pintores: off the out-of-fire card */     /* one thing at a time at the top edge */
 
 /* ---------- phone sizes ---------- */
 @media (max-height: 700px) {
@@ -354,7 +354,6 @@ body:has(#pc-empty:not(.hidden)) .pf-chip { top: auto; right: auto; left: 10px; 
 .kdp-live-say img { width: 52px; height: 52px; object-fit: contain; flex: 0 0 auto; }
 .kdp-live-say span { padding: 6px 12px; border-radius: 14px; background: #fff; border: 2px solid #1d2440; font: 800 .92rem/1.25 'Nunito', sans-serif; color: #1d2440; }
 .kdp-live-me { padding: 2px 12px; border-radius: 999px; background: #ffc93c; border: 2px solid #1d2440; font: 800 .9rem/1.3 'Nunito', sans-serif; color: #1d2440; }
-.pc-s.pc-mine { background: #fff; color: #1d2440; }
 @media (prefers-reduced-motion: reduce) { .kdp-live-say { animation: none; } }
 
 body.pf-on .kd-mute { z-index: 75; }
@@ -362,6 +361,10 @@ body.pf-on .kd-mute { z-index: 75; }
 body.kd-phone.pf-ended #screen-end .win-screen { display: none; }
 /* the phone's «Sonido» goes to the top-left corner while the ceremony shows («Ver mi tarjeta» is bottom-right) */
 body.kd-phone.pf-ended .muted-toggle { top: max(8px, env(safe-area-inset-top)) !important; bottom: auto !important; left: 8px !important; right: auto !important; z-index: 46 !important; }
+/* …whatever game screen still sits under the ceremony: a game's own map rule for the chip (Pintores, Nieve, La Fuga use
+   :has(#screen-…) = ID specificity) kept it bottom-right over «Ver mi tarjeta» (2026-10-17) */
+body.kd-phone.pf-on:has(#screen-end .pf.pf-phone) .muted-toggle { top: max(8px, env(safe-area-inset-top)) !important; bottom: auto !important; left: 8px !important;
+  right: auto !important; z-index: 46 !important; }
 
 /* ---------- «⏸ Pausa» (Reinos / Pintores) ---------- */
 .pf-pause { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: rgba(29, 36, 64, .5); }
