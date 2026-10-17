@@ -176,6 +176,25 @@ the checklist for any new game mode.
   seed creates a super admin only on the very first boot of an empty disk, never again (one-shot flag), and never with
   a code written in the source. Teacher codes never reach a kid's phone (inbox, special assignments, sentences) or a log
   line. The legacy password is the `WU_ADMIN_PASSWORD` env var only (no default in the code: unset = none).
+- **A socket checks a teacher code only through `_socketCode`** (server.js, 2026-10-17; the projector-lock review found
+  the warm-up presets, the warm-up / reading tools and the exam / warm-up / reading `host:reclaim` reading codes with no
+  limit, and Cloudflare's rate limit covers only HTTP `/api`). Never compare a code in a socket handler yourself (the
+  old `isAdminPassword` / `isSuperAdminPassword` are gone; `superAdmin` in its answer gates the super tools). It shares
+  the admin turnstile (10 wrong codes in 10 min per address, checked BEFORE a code is read, HTTP and sockets together)
+  and never counts an empty or retired code. A remembered teacher device counts its wrong codes on itself, 10
+  (`_deviceKey` = its own `dtd` cookie), and on all of that teacher's devices together, 30 (a fresh cookie is one
+  right code away), never on its school's address (`_turnstile`, HTTP `_adminAuth` too). While an address waits,
+  only two things get through: a code that same connection already
+  proved, and the room's own projector holding its room token with its own teacher's code (its misses count for that
+  teacher, 10 then even the right one waits): a running class never freezes. Being a room's host is no proof (a
+  warm-up, reading or exam room still goes to any teacher code on reclaim). A host-only tool reads a code only from
+  the room's host socket (`wuHostCode` / `readingHostCode`), so kids' phones can't fill the school's address.
+- **Sockets only from our own pages** (2026-10-17, socket.io `allowRequest` → `_socketOriginOk`): a handshake with an
+  Origin must be the address it reached, app.dralingo.app / dralingo.app / www or the old Render address (localhost
+  only off Render); no Origin (test scripts, bots, same-origin polling) is let in unless the browser marks it
+  `Sec-Fetch-Site: cross-site`; `null`, other sites and JSONP polling (engine.io's `_query.j`) are refused (logged once an hour per
+  site). A new address that serves pages to another host's socket goes in `_SOCKET_HOSTS` or the env var
+  `DRALY_SOCKET_ORIGINS` (comma-separated hosts). Test: `scripts/test-socket-codes.js` (port 4320, + 4321 as Render).
 - **Homework (/homework) stays as it is** (class code + the kid's name or code), and so do its audio pages
   (`/audios/<homework id>`, linked from the printed PDFs).
 - **The simulations are never open to anonymous visitors** (his words: "we're not going to give away everything for

@@ -360,7 +360,11 @@ A separate Emirati Arabic (Khaleeji) track:
     and security logging.
   - **Admin password:** you set `WU_ADMIN_PASSWORD` on Render (since 2026-10-15 there is no default in the code: if it
     is not set on Render there is no backup password, only teacher codes).
-  - **Phase 3 (Cloudflare)** is still pending.
+  - **Phase 3 (Cloudflare)** done 2026-10-12: the site is served at app.dralingo.app through your Cloudflare.
+  - **Live connections (2026-10-17):** every teacher code a projector or phone sends over the live-game connection
+    counts in the same wrong-code limit as /maestro (10 wrong in 10 minutes and that internet address waits; a
+    remembered teacher laptop never waits because of its school's Wi-Fi, and a running class keeps working), and only
+    the platform's own pages can open a live connection (a page on another site is refused).
 - **Data:** student records, rooms and results live on Render's **permanent disk** (`data/`), never
   in the code or on GitHub.
 - **Room to grow (checked 2026-10-12):** one Starter server (half a CPU, 512 MB) used at most 40 % of its memory and
