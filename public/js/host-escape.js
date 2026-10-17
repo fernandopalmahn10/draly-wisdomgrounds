@@ -92,6 +92,7 @@
   $('skip-btn').addEventListener('click', () => socket.emit('host:es-skip', { pin }));
   $('resume-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: false }));
   $('play-again-btn').addEventListener('click', () => {
+    if (ceremony) { ceremony.stop(); ceremony = null; }
     socket.emit('host:reset', { pin });
     es = null;
     showScreen('lobby');
@@ -702,11 +703,56 @@
     if (on) stopMusic(); else musicFor();
   }
 
+
+  // ---------- the Mario Party ending (js/party.js, 2026-10-16): «¡FINAL!», the ceremony, «Otra ronda» ----------
+  // His rule «Feelings at the end of class»: the reveal, the winners celebrate and the others react, the bonus stars one
+  // by one, the podium. «⏭ Saltar» (top right) jumps every phone to its card; «Sonido» stays on top.
+  let ceremony = null;
+  const playUrl = (url, vol) => { if (muted) return; try { const a = new Audio(url); a.volume = vol == null ? 0.7 : vol; a.play().catch(() => {}); } catch (_) {} };
+  const FINAL_SUB = { time: '¡Se acabó el tiempo!', end: '¡Fin de la ronda!', allFrozen: '¿Quién ganó la batalla?', escaped: '¡Despegamos! ¿Qué rango ganamos?' };
+  socket.on('fin:final', (d) => {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    if ($('timer-display')) { $('timer-display').textContent = '0:00'; $('timer-display').classList.remove('urgent'); }
+    stopMusic();
+    hideDralingo();
+    showPaused(false);
+    document.querySelectorAll('.kd-banner').forEach((b) => b.remove());
+    if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy');
+    if (window.DralyParty) { DralyParty.clearChip(); DralyParty.final({ mode: 'host', ms: d && d.ms, sub: FINAL_SUB[d && d.why] || FINAL_SUB.end, play: playUrl }); }
+  });
+  function partyEnd(d) {
+    if (!window.DralyParty || !d || !d.fin) return false;
+    DralyParty.clearChip();
+    if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy');
+    if (ceremony) ceremony.stop();      // (the frozen stage stays under the show: never the old end screen, it would spoil the result)
+    ceremony = new DralyParty.Ceremony({
+      mode: 'host', game: 'escape', data: d, mount: document.body, play: playUrl,
+      onSkip: () => socket.emit('host:fin-skip', { pin }),
+      onAgain: () => { ceremony = null; $('play-again-btn').click(); },
+      onHome: () => { location.href = '/'; },
+    });
+    return true;
+  }
+  socket.on('state', (s) => { if (s && s.state === 'lobby' && ceremony) { ceremony.stop(); ceremony = null; } });
+
+  // the last 30 s («¡Súper turbos!»): every right answer is a súper turbo; a ribbon with the seconds, a red clock
+  socket.on('fin:frenzy', (d) => {
+    if (!d || !window.DralyParty) return;
+    if (d.off) { DralyParty.clearChip(); if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy'); return; }
+    if (!d.again) {
+      banner('🚀 ¡Últimos 30 segundos! ¡Súper turbos!', 'time');
+      say('¡Últimos 30 segundos! ¡Cada acierto es un súper turbo!', 'power');
+    }
+    DralyParty.chip('Súper turbos', d.endsMs, 'host');
+    if ($('timer-display')) $('timer-display').classList.add('pf-frenzy');
+  });
   // ---------- end ----------
   socket.on('game-end', (d) => {
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
     setTimeout(() => { cancelAnimationFrame(raf); raf = 0; }, 3000);    // the stage is gone: no more frames
     stopMusic(); hideDralingo(); showPaused(false);
+    if (!$('moment').classList.contains('hidden')) $('moment').classList.add('hidden');
+    if (partyEnd(d)) return;           // the Mario Party ceremony (the old end screen below stays as a fallback)
     const e = d.escape || {};
     const show = () => {
       $('moment').classList.add('hidden');

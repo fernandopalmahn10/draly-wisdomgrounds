@@ -214,3 +214,82 @@ Total 13/14 → ships (≥ 12, no 0). Work left for 14/14: Robotín's poses and 
 Each green zone carries a picture and the wave says its word («¡A la zona de jiejie!»), so the zona segura also teaches
 (design review question) · a findable spot for every kid in the run (a lane or a seat with the tag always on) · tune
 `R` after the first real class (target gaps, sprint, wave times, hearts).
+
+---
+
+## As built · 2026-10-16 · the Mario Party ending pass (branch `ending-pass`, not deployed)
+
+The shared ceremony, the lobby greeting, the shared files, every test with its count, the reviews and what they
+changed, and the design pass are written once in `docs/specs/reinos-de-colores.md` § «As built · 2026-10-16».
+
+- **La Gran Fuga: what changed.**
+  - *The ending:* the jet's take-off (7 s) or the clock → «¡FINAL!» («¡Despegamos! ¿Qué rango ganamos?» / «¡Se acabó el
+    tiempo!») → «¿Hasta dónde llegó la tripulación?» (the three zones light up one by one with a drum, the jet takes off
+    when they escaped, then the rank badge and its stars pop) → «¡Escaparon de Robotín!» (the crew cheering, Robotín
+    dizzy, Hamdan's `win` line) or «¡Casi escapan!» (the crew sighing, Robotín happy, Hamdan's kind `animo` line) → bonus
+    stars: **Más turbos**, **Más rápido a la zona segura** (2 timed waves), **Mejor racha**, **Más olas a salvo**; co-op,
+    so everyone at the top shares a star (a crew safe in every wave all get «Más olas a salvo») → the projector shows the
+    whole crew (join order, the star icons on the kids who won one), never a ranking; the card: the rank as the title
+    with its stars, «Diste 6 turbos a la tripulación», where the crew got, olas a salvo, súper turbos, racha, aciertos.
+    The old awards (three different kids) stay in the payload for the old end screen.
+  - *No dead phones:* already alive (turbo lane, bands, the zona segura room, cards between zones); the «¡Tiempo!» band
+    moved into «¡FINAL!».
+  - *Mario Party touch:* **«¡Súper turbos!»** in the last 30 s (every right answer is a súper turbo, ×2.5), only while
+    the crew runs (a zona segura asks no questions: it switches off there and on again with its band when the next run
+    starts inside the last 30 s): phone band, projector banner + Dralingo's line + ribbon + red clock. Co-op: no lead changes, no comeback rule (the hearts and the one free distracted
+    kid in ten already keep the class going).
+
+### Files
+- La Gran Fuga parts: `core/escape.js` (súper turbos in the last 30 s in `answer`, `STARS`, `finish`), server.js
+  (`esEndPayloads` replaces `esFinish`; the jet goes through «¡FINAL!»; «Súper turbos» only while the crew runs),
+  `public/host-escape.html` + `js/host-escape.js`, `js/player-escape.js` (FINAL stops the chase, the last-30-s band; the
+  «¡Tiempo!» band moved into «¡FINAL!»), `scripts/test-escape.js`, `scripts/playtest/escape.js`.
+
+### Tests and reviews
+`node scripts/test-escape.js` 319,113 checks; La Gran Fuga in `test-party.js` (cards, shared stars) and
+  `test-party-live.js` (the ending after the clock, «Saltar zona» guarded under FINAL); bots PASS at 4 / 20 / 30 (30: 255
+  questions; «Súper turbos» off when the last 30 s fall in a zona segura).
+
+Classroom playtest (2 rounds: the clock, a late joiner, «Pausa», «Terminar» twice, a reload during «¡FINAL!»,
+«Saltar»): PASS, no phone ever dead. Fixed: «¡Súper turbos!» landing inside the last zona segura (it runs only while
+the crew runs), a crew of 14 over Hamdan's line, the star icons floating over the row above, a reload after the end
+replaying the show. Kept: the 4-minute pacing (see below), «Más rápido» won in 0.3 s by a socket kid.
+
+### Scorecard · La Gran Fuga de Dubái · 2026-10-16 · branch `ending-pass`
+```
+Hard gates: bots PASS (4/20/30) · teacher controls ✓ (⏸ Pausa, +30 s, ⏭ Saltar zona, Terminar, ⏭ Saltar, Sonido,
+            Otra ronda, F5) · saga only ✓ · Spanish/pinyin/level ✓ · kid-safe ✓ (Robotín's zap tickles)
+1 Real place ........ 2/2  Museo del Futuro → Dubai Mall y la Fuente → la pista del aeropuerto and the jet, lit
+                           up one by one in the reveal
+2 The gang .......... 2/2  Profe Fer's episode intro, Dralingo leads the run, Hamdan at the jet and speaking in the
+                           ending, the crew full body
+3 Every tap ......... 2/2  unchanged: turbo lane, zona segura room
+4 Feedback .......... 2/2  unchanged bands and cards + «¡Súper turbos!»
+5 Finale ............ 2/2  «¡Súper turbos!» in the last 30 s, «¡FINAL!», the route reveal with the rank and its stars,
+                           the crew cheering or sighing, 4 shared bonus stars, the whole crew (never ranked), every
+                           kid's own card
+6 Fair, no stall .... 2/2  co-op: stars shared by everyone at the top, nobody ranked last, hearts and the free
+                           distracted kid unchanged
+7 Product feel ...... 1/2  Robotín and the rooms are canvas drawings, not art
+Total 13/14 → ships (≥ 12, no 0). To 14: Robotín poses and the zone rooms (art request below).
+```
+
+### Open items and what to watch in the first real class
+- **«¡Súper turbos!»** makes every right answer a súper turbo in the last 30 s: a class close to the jet may now
+  escape at the bell. That is the point; watch it doesn't feel automatic.
+- **Shared stars:** a crew safe in every wave all get «Más olas a salvo» on their cards; the projector shows the star
+  icons on the kids, never a ranking.
+- **The clock vs the zonas seguras.** In the playtest each zona segura took ~45 s, so 4-minute rounds often ended one
+  wave short of the jet («¡Casi escapan!» twice). If classes never escape at 4 min, pick 5 min or shorten the waves
+  (`core/escape.js` `paceFor()` reserves 150 s for the three zonas seguras).
+- **Art request:** Robotín in four poses (running, dizzy, happy, sad) and the three zones' rooms (Museo del Futuro,
+  Dubai Mall y la Fuente, the airport runway with the jet), on #00FF00 for Robotín (→ Product feel 2/2).
+- **The show's length.** ~15 s from «¡FINAL!» to the cards (2.4 + 3.6 + 3.2 + 2.1 per star). If the class gets
+  restless, «⏭ Saltar» jumps every phone to its card; the stage times are `REVEAL_MS` / `RESULT_MS` / `STAR_MS` in `public/js/party.js`.
+- **A projector reloaded after the end** shows the old screen until `finReclaim(socket.id, g)` is called from
+  `host:reclaim` (`reinos-de-colores.md` § Files). Phones that reload get their card back.
+- **School Wi-Fi.** A flag tap or a paint stroke counts up to 0.6 s into «¡FINAL!» (`GRACE_MS`); a quiz answer sent
+  during FINAL comes back unused. If kids complain «I answered!» at the bell, raise `GRACE_MS` in `core/party.js`.
+- **The ceremony sounds** (drum, fanfare) under Profe Fer's voice: check the volume on the classroom speakers.
+- **Art requests (Higgsfield in his Chrome; kid-safe, no text or logos):** each captain in a true «talking» pose on
+  flat #00FF00 (the bubbles use the ready / victory poses today).

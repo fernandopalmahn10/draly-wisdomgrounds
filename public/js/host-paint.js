@@ -70,7 +70,7 @@
   $('start-btn').addEventListener('click', () => socket.emit('host:start', { pin }));
   $('add-time-btn').addEventListener('click', () => { socket.emit('host:add-time', { pin, seconds: 30 }); banner('+30 segundos ⏱'); });
   $('end-now-btn').addEventListener('click', () => { if (confirm('¿Terminar la ronda ahora?')) socket.emit('host:end-now', { pin }); });
-  $('play-again-btn').addEventListener('click', () => { socket.emit('host:reset', { pin }); showScreen('lobby'); playMusic('music-lobby', 0.35); });
+  $('play-again-btn').addEventListener('click', () => { if (ceremony) { ceremony.stop(); ceremony = null; } socket.emit('host:reset', { pin }); showScreen('lobby'); playMusic('music-lobby', 0.35); });
   socket.on('host:start-error', (e) => alert(e && e.message ? e.message : 'No se pudo empezar.'));
 
   function updateStartBtn() { if (state) $('start-btn').disabled = !(state.questionsLoaded > 0 && Object.keys(state.players || {}).length > 0); }
@@ -98,6 +98,25 @@
     });
   }
 
+  // ---------- captains (two of the gang lead the kingdoms; revealed during the countdown, as in Reinos) ----------
+  let captains = null;
+  function paintCaptains(intro) {
+    const C = window.DralingoCast;
+    const ok = !!(captains && C);
+    ['red', 'gold'].forEach((team) => {
+      $('cap-' + team).classList.toggle('hidden', !ok);
+      $('side-cap-' + team).classList.toggle('hidden', !ok);
+      if (!ok) { $('side-capname-' + team).textContent = ''; return; }
+      const id = captains[team];
+      $('cap-' + team + '-img').src = C.pose(id, 'cheer');
+      $('cap-' + team + '-name').textContent = C.captain(id);
+      $('side-cap-' + team).src = C.pose(id, 'hello');
+      $('side-capname-' + team).textContent = C.captain(id);
+      if (intro) { const el = $('cap-' + team); el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; }
+    });
+  }
+  socket.on('pc:captains', (c) => { captains = c; paintCaptains(true); });
+
   // ---------- countdown ----------
   socket.on('countdown', () => {
     showScreen('countdown');
@@ -123,6 +142,7 @@
     Object.entries(d.players || {}).forEach(([id, p]) => { players[id] = Object.assign(players[id] || {}, { name: p.name, team: p.team, score: 0 }); });
     updateScores(d.teamScores || { red: 0, gold: 0 });
     renderRosters();
+    if (d.captains) { captains = d.captains; paintCaptains(false); }
     canvas = $('pc-host-canvas');
     g2 = canvas.getContext('2d');
     resize();
@@ -146,7 +166,14 @@
     renderRosters();
     (d.events || []).forEach((ev) => {
       if (ev.type === 'lead' && ev.team) {
-        say(`¡El ${NAMES[ev.team]} pasa al frente!`, 'pointing');
+        const now = Date.now();
+        if (leadSaid && leadSaid !== ev.team && now - leadSaidAt < 4200) hideDralingo();   // the bubble said the other kingdom
+        if (now - leadSaidAt < 7000) return;
+        leadSaid = ev.team; leadSaidAt = now; lastSay = 0;
+        // the leading kingdom's captain cheers (Reinos does the same); Dralingo's bubble when there is no captain
+        const cap = captains && captains[ev.team];
+        const C = window.DralingoCast;
+        say(cap && C ? `¡El ${NAMES[ev.team]} pasa al frente! ${C.name(cap)}: «${C.line(cap, 'battle')}»` : `¡El ${NAMES[ev.team]} pasa al frente!`, 'pointing');
         if (window.DralingoFX) DralingoFX.play('flyby', { text: '¡' + (ev.team === 'red' ? 'Fuego' : 'Mar') + ' adelante!', mood: 'win' });
         sfx('surround', 0.5);
       } else if (ev.type === 'milestone') {
@@ -239,19 +266,78 @@
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
       if (!state || !state.endsAt) return;
+      if (hostPaused) {      // paused: the clock stands still (and shows «+30 s» at once)
+        const ps = Math.ceil(Math.max(0, state.endsAt - hostPausedAt) / 1000);
+        $('timer-display').textContent = `${Math.floor(ps / 60)}:${String(ps % 60).padStart(2, '0')}`;
+        return;
+      }
       const left = Math.max(0, state.endsAt - Date.now());
       const sec = Math.ceil(left / 1000);
       $('timer-display').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
       if (sec === 60 && !warned[60]) { warned[60] = 1; banner('⏱ ¡Queda 1 minuto!'); }
-      if (sec === 30 && !warned[30]) { warned[30] = 1; banner('⏱ ¡Quedan 30 segundos!'); say('¡Últimos 30 segundos! ¡Pinten todo!', 'countdown'); playMusic('music-final', 0.42); }
+      if (sec === 30 && !warned[30]) { warned[30] = 1; say('¡Últimos 30 segundos! Cada acierto: doble fuego y llamarada.', 'countdown'); playMusic('music-final', 0.42); }
       if (sec <= 10 && sec > 0 && !warned['t' + sec]) { warned['t' + sec] = 1; sfx('tick', 0.5); $('timer-display').classList.add('urgent'); }
     }, 250);
   }
 
   // ---------- end ----------
+
+  // ---------- the Mario Party ending (js/party.js, 2026-10-16): «¡FINAL!», the ceremony, «Otra ronda» ----------
+  // His rule «Feelings at the end of class»: the reveal, the winners celebrate and the others react, the bonus stars one
+  // by one, the podium. «⏭ Saltar» (top right) jumps every phone to its card; «Sonido» stays on top.
+  let ceremony = null;
+  const playUrl = (url, vol) => { if (muted) return; try { const a = new Audio(url); a.volume = vol == null ? 0.7 : vol; a.play().catch(() => {}); } catch (_) {} };
+  const FINAL_SUB = { time: '¡Se acabó el tiempo!', end: '¡Fin de la ronda!', allFrozen: '¿Quién ganó la batalla?', escaped: '¡Despegamos! ¿Qué rango ganamos?' };
+  socket.on('fin:final', (d) => {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    if ($('timer-display')) { $('timer-display').textContent = '0:00'; $('timer-display').classList.remove('urgent'); }
+    stopMusic();
+    hideDralingo();
+    document.querySelectorAll('.kd-banner').forEach((b) => b.remove());
+    if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy');
+    if (window.DralyParty) { DralyParty.clearChip(); DralyParty.final({ mode: 'host', ms: d && d.ms, sub: FINAL_SUB[d && d.why] || FINAL_SUB.end, play: playUrl }); }
+  });
+  // the last 30 s, from the server (it can switch off again after «+30 s»): a banner, a ribbon with the seconds, a red clock
+  socket.on('fin:frenzy', (d) => {
+    if (!d || !window.DralyParty) return;
+    if (d.off) { DralyParty.clearChip(); if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy'); return; }
+    if (!d.again) banner('🔥🔥 ¡Últimos 30 segundos! ¡Fuego doble!');
+    DralyParty.chip('Fuego ×2', d.endsMs, 'host');
+    if ($('timer-display')) $('timer-display').classList.add('pf-frenzy');
+  });
+  // «⏸ Pausa» (2026-10-16): the clock stops, plant windows / dragons wait; the card lets the buttons under it work
+  let hostPaused = false, hostPausedAt = 0;
+  function showHostPaused(v) {
+    if (!!v !== hostPaused) hostPausedAt = v ? Date.now() : 0;
+    hostPaused = !!v;
+    $('pause-btn').textContent = hostPaused ? '▶ Seguir' : '⏸ Pausa';
+    if (window.DralyParty) DralyParty.pauseCard(hostPaused, { mode: 'host' });
+    if (hostPaused) stopMusic(); else if (!$('screen-active').classList.contains('hidden')) playMusic('music-battle', 0.32);
+  }
+  $('pause-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: !hostPaused }));
+  socket.on('pc:pause', (d) => { if (d && !d.paused && state) state.endsAt = Date.now() + (d.endsMs || 0); showHostPaused(d && d.paused); });
+  socket.on('pc:init', (d) => { if (d && !!d.paused !== hostPaused) showHostPaused(d.paused); });
+  function partyEnd(d) {
+    if (hostPaused) showHostPaused(false);
+    if (!window.DralyParty || !d || !d.fin) return false;
+    DralyParty.clearChip();
+    if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy');
+    if (ceremony) ceremony.stop();      // (the frozen board stays under the show: never the old end screen, it would spoil the result)
+    ceremony = new DralyParty.Ceremony({
+      mode: 'host', game: 'paint', data: d, mount: document.body, play: playUrl,
+      onSkip: () => socket.emit('host:fin-skip', { pin }),
+      onAgain: () => { ceremony = null; $('play-again-btn').click(); },
+      onHome: () => { location.href = '/'; },
+    });
+    return true;
+  }
+  socket.on('state', (s) => { if (s && s.state === 'lobby' && ceremony) { ceremony.stop(); ceremony = null; } });
+
   socket.on('game-end', (d) => {
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-    stopMusic(); hideDralingo(); showScreen('win');
+    stopMusic(); hideDralingo();
+    if (partyEnd(d)) return;           // the Mario Party ceremony (the old end screen below stays as a fallback)
+    showScreen('win');
     const r = d.teamScores.red || 0, gg = d.teamScores.gold || 0;
     $('final-red').textContent = r; $('final-gold').textContent = gg;
     const win = $('win-banner');
@@ -289,7 +375,7 @@
     clearTimeout(bannerTimer);
     bannerTimer = setTimeout(() => b.remove(), 3100);
   }
-  let sayTimer = null, lastSay = 0;
+  let sayTimer = null, lastSay = 0, leadSaid = null, leadSaidAt = 0;
   function say(text, pose) {
     const now = Date.now();
     if (now - lastSay < 2500) return;

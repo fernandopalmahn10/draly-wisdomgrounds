@@ -214,3 +214,74 @@ Total 13/14 → ships (≥ 12, no 0). Work left for 14/14: the Higgsfield props/
 ### Next ideas (not built)
 Footprints in the snow, the ice gate at Ski Dubái as a picture, an «hielo» trail behind ice kids on the projector,
 `host:pause` for the other games, more stations when the class is over 30.
+
+---
+
+## As built · 2026-10-16 · the Mario Party ending pass (branch `ending-pass`, not deployed)
+
+The shared ceremony, the lobby greeting, the shared files, every test with its count, the reviews and what they
+changed, and the design pass are written once in `docs/specs/reinos-de-colores.md` § «As built · 2026-10-16».
+
+- **Batalla de Nieve: what changed.**
+  - *The ending:* «¡FINAL!» when the clock runs out, the teacher ends it (also from the pause card), or 2.6 s after the
+    ice team froze the last survivor (the map stands still; «¡FINAL!» seconds are not survived seconds) → «¿Quedó alguien
+    sin congelar?» (a frost meter creeps toward 100 % with a drum and stops short: «☀️ ¡Quedan 3!» with the survivors
+    popping up, or fills: «❄️ ¡Todos congelados!») → «¡Ganaron los supervivientes!» / «¡Ganó el Equipo Hielo!» (the
+    survivors' and the ice captains speaking; frozen kids in their icy frost look) → bonus stars: **Más tiempo sin
+    congelarse**, **Más congelados**, **Más aciertos**, **Más bolas certeras** (every snowball that hit a kid of the other
+    side: brrr, freeze or stun; 2+) → podium by points + the MVP of each side; the card: «¡Sobreviviste! Aguantaste toda
+    la ronda: 240 s» or «Congelaste a 3 amigos», aciertos, bolas certeras, puntos.
+  - *No dead phones:* already alive (the map, toasts for the spell, the half, the last 3, chests); added: the last 30 s
+    toast and the «¡FINAL!» card over the map.
+  - *Mario Party touch:* **«¡Copos dobles!»** in the last 30 s (a right answer at a station counts twice for both sides):
+    phone toast + a lasting «Copos ×2» chip with the seconds, projector banner + ribbon + red clock.
+    The finale already had «¡Último refugio!» (the last 3 survivors get full ☀️ + a
+    shield) and the escudo de hielo for a small ice team: no other comeback added.
+
+### Files
+- Nieve parts: `core/snow.js` (`snHits` / `snBest`, copos dobles in `answer`, `STARS`, `finish` with `spell`),
+  server.js (`snEndPayloads` replaces `snFinish`; the all-frozen end goes through «¡FINAL!»), `public/host-snow.html` +
+  `js/host-snow.js`, `js/player-snow.js` (FINAL stops the map, the last-30-s toast), `css/snow.css` («Sonido» steps
+  aside from the help card), `scripts/test-snow.js`, `scripts/playtest/snow.js`.
+
+### Tests and reviews
+`node scripts/test-snow.js` 94,784 checks; Nieve in `test-party.js` (cards, spell picks, stars) and `test-party-live.js`
+  (the ending, paused seconds never survived); bots PASS at 4 / 20 / 30 (30: 314 questions).
+
+Classroom playtest (4 rounds: the clock, everyone frozen, «+30 s» in the last 30 s, «Terminar» twice from the
+pause): PASS, no phone ever dead. Fixed: «¡Copos dobles!» missed on most phones (the lasting chip), the ribbon on
+top of the freeze banners, a side of 11-15 kids over its captain's bubble, a spell pick's «Y antes aguantaste 9 s»,
+a reload after the end replaying the show, «Sonido» over «¡A jugar!» at 360 px.
+
+### Scorecard · Batalla de Nieve en Ski Dubái · 2026-10-16 · branch `ending-pass`
+```
+Hard gates: bots PASS (4/20/30) · teacher controls ✓ (⏸ Pausa, +30 s, Terminar, ⏭ Saltar, Sonido, Otra ronda, F5)
+            · saga only ✓ · Spanish/pinyin/level ✓ · kid-safe ✓ (snowballs only, nobody touches)
+1 Real place ........ 2/2  the Dubai map (Zoco, Creek, Museo del Futuro, Ski Dubái, Desierto, Bulevar, Burj Khalifa)
+2 The gang .......... 2/2  the sides' captains speak in the ending (`nieve` / `animo`), full-body kids, frozen kids in
+                           their frost look
+3 Every tap ......... 2/2  unchanged: walk, throw, stations, side jobs
+4 Feedback .......... 2/2  unchanged toasts (the spell, the half, the last 3, chests) + the last 30 s
+5 Finale ............ 2/2  «¡Último refugio!», «¡Copos dobles!» in the last 30 s, «¡FINAL!», the frost meter, survivors
+                           vs the ice team, 4 bonus stars, podium + MVP per side, every kid's own card
+6 Fair, no stall .... 2/2  server physics, paused and FINAL seconds never count as survived, the escudo de hielo and
+                           no stun-lock unchanged
+7 Product feel ...... 1/2  the map's props (igloos, snowmen, stalls, palms) are canvas drawings, not art
+Total 13/14 → ships (≥ 12, no 0). To 14: the prop art (art request below).
+```
+
+### Open items and what to watch in the first real class
+- **«¡Copos dobles!»** counts a station answer twice for both sides in the last 30 s; the ice team's freezes are not
+  doubled. Watch whether the last 30 s change who wins.
+- **The frost meter** stops short with the survivors popping up: with many survivors the row is small on a 360 px phone.
+- **Art request:** the map's props as pictures (igloo, snowman, pine, market stall, date palm, abra boat, camel at
+  rest, fountain), top-down 3/4 view on #00FF00 (→ Product feel 2/2).
+- **The show's length.** ~15 s from «¡FINAL!» to the cards (2.4 + 3.6 + 3.2 + 2.1 per star). If the class gets
+  restless, «⏭ Saltar» jumps every phone to its card; the stage times are `REVEAL_MS` / `RESULT_MS` / `STAR_MS` in `public/js/party.js`.
+- **A projector reloaded after the end** shows the old screen until `finReclaim(socket.id, g)` is called from
+  `host:reclaim` (`reinos-de-colores.md` § Files). Phones that reload get their card back.
+- **School Wi-Fi.** A flag tap or a paint stroke counts up to 0.6 s into «¡FINAL!» (`GRACE_MS`); a quiz answer sent
+  during FINAL comes back unused. If kids complain «I answered!» at the bell, raise `GRACE_MS` in `core/party.js`.
+- **The ceremony sounds** (drum, fanfare) under Profe Fer's voice: check the volume on the classroom speakers.
+- **Art requests (Higgsfield in his Chrome; kid-safe, no text or logos):** each captain in a true «talking» pose on
+  flat #00FF00 (the bubbles use the ready / victory poses today).

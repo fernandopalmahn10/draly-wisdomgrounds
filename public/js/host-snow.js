@@ -95,6 +95,7 @@
   $('pause-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: !paused }));
   $('resume-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: false }));
   $('play-again-btn').addEventListener('click', () => {
+    if (ceremony) { ceremony.stop(); ceremony = null; }
     socket.emit('host:reset', { pin });
     heartbeat(false);
     showScreen('lobby');
@@ -400,7 +401,6 @@
       if (sec === 60 && !warned[60]) { warned[60] = 1; banner('⏱ ¡Queda 1 minuto!'); }
       if (sec === 30 && !warned[30]) {
         warned[30] = 1;
-        banner('⏱ ¡Quedan 30 segundos!');
         const sc = captains && captains.sun;
         (sc && Cast && bigFx('cameo', { char: sc, mood: 'battle', text: '¡Últimos 30 segundos! ' + Cast.line(sc, 'battle') }, 0))
           || bigFx('spotlight', { text: '¡Últimos 30 segundos! ¡Resistan! ☀️', poses: ['countdown'] }, 0) || say('¡Últimos 30 segundos! Supervivientes: ¡resistan!', 'countdown');
@@ -446,11 +446,54 @@
   }
 
   // ---------- end ----------
+
+  // ---------- the Mario Party ending (js/party.js, 2026-10-16): «¡FINAL!», the ceremony, «Otra ronda» ----------
+  // His rule «Feelings at the end of class»: the reveal, the winners celebrate and the others react, the bonus stars one
+  // by one, the podium. «⏭ Saltar» (top right) jumps every phone to its card; «Sonido» stays on top.
+  let ceremony = null;
+  const playUrl = (url, vol) => { if (muted) return; try { const a = new Audio(url); a.volume = vol == null ? 0.7 : vol; a.play().catch(() => {}); } catch (_) {} };
+  const FINAL_SUB = { time: '¡Se acabó el tiempo!', end: '¡Fin de la ronda!', allFrozen: '¿Quién ganó la batalla?', escaped: '¡Despegamos! ¿Qué rango ganamos?' };
+  socket.on('fin:final', (d) => {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    if ($('timer-display')) { $('timer-display').textContent = '0:00'; $('timer-display').classList.remove('urgent'); }
+    stopMusic();
+    hideDralingo();
+    heartbeat(false);
+    $('spell').classList.add('hidden');
+    showPaused(false);
+    document.querySelectorAll('.kd-banner').forEach((b) => b.remove());
+    if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy');
+    if (window.DralyParty) { DralyParty.clearChip(); DralyParty.final({ mode: 'host', ms: d && d.ms, sub: FINAL_SUB[d && d.why] || FINAL_SUB.end, play: playUrl }); }
+  });
+  // the last 30 s, from the server (it can switch off again after «+30 s»): a banner, a ribbon with the seconds, a red clock
+  socket.on('fin:frenzy', (d) => {
+    if (!d || !window.DralyParty) return;
+    if (d.off) { DralyParty.clearChip(); if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy'); return; }
+    if (!d.again) banner('❄️❄️ ¡Últimos 30 segundos! ¡Copos dobles!');
+    DralyParty.chip('Copos ×2', d.endsMs, 'host');
+    if ($('timer-display')) $('timer-display').classList.add('pf-frenzy');
+  });
+  function partyEnd(d) {
+    if (!window.DralyParty || !d || !d.fin) return false;
+    DralyParty.clearChip();
+    if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy');
+    if (ceremony) ceremony.stop();      // (the frozen board stays under the show: never the old end screen, it would spoil the result)
+    ceremony = new DralyParty.Ceremony({
+      mode: 'host', game: 'snow', data: d, mount: document.body, play: playUrl,
+      onSkip: () => socket.emit('host:fin-skip', { pin }),
+      onAgain: () => { ceremony = null; $('play-again-btn').click(); },
+      onHome: () => { location.href = '/'; },
+    });
+    return true;
+  }
+  socket.on('state', (s) => { if (s && s.state === 'lobby' && ceremony) { ceremony.stop(); ceremony = null; } });
+
   socket.on('game-end', (d) => {
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
     stopMusic(); heartbeat(false); hideDralingo();
     $('spell').classList.add('hidden');
     showPaused(false);
+    if (partyEnd(d)) return;           // the Mario Party ceremony (the old end screen below stays as a fallback)
     showScreen('win');
     const sn = d.snow || {};
     const c = sn.counts || counts;

@@ -1,6 +1,7 @@
 // Playtest handler for Dragones Pintores: each bot walks back and forth along the ground, sends its position at 8 Hz,
 // paints the surface tiles it passes, and taps «Recargar» (player:pc-ask) when its fire runs low.
 module.exports = (bot, ctx) => {
+  require('./party-check')(bot, ctx, 'paint');      // the Mario Party ending: «¡FINAL!», the show, my card (2026-10-16)
   let lv = null, x = 0, dir = 1, energy = 0, timer = null, asking = false;
   ctx.state.onDemand = true;                       // questions come only when the kid taps «Recargar»
   bot.on('pc:init', (d) => {
