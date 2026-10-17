@@ -46,6 +46,21 @@
   let lastState = null;
   let lastSimTitle = simId.replace(/-/g, ' · ').toUpperCase();
 
+  // STABILITY (2026-10-17): a dropped Wi-Fi gives this page a NEW connection outside the room: the roster froze and
+  // «Empezar» did nothing, and a reload opened a new room with a new PIN mid-exam. Like the warm-up, the monitor takes
+  // its own room back on reconnect (its token + the code), even after a restart (the room lives on the data disk); the
+  // room's state comes again and the live lists poll at once. The notices: public/js/host-reconnect.js.
+  if (window.DralyReconnect) {
+    window.DralyReconnect.watch(socket, {
+      pin: () => pin,
+      code: () => pw,
+      setCode: (c) => { pw = c; try { localStorage.setItem('mochi.maestroPw', c); } catch (_) {} },
+      room: 'la sala del examen',
+      newRoom: { label: 'Abrir una sala nueva', go: () => location.reload() },
+      onBack: () => pollSessions(),
+    });
+  }
+
   // Toast helpers
   function toast(text, kind) {
     const t = document.createElement('div');

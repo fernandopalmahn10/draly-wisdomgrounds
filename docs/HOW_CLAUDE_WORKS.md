@@ -369,8 +369,10 @@ A separate Emirati Arabic (Khaleeji) track:
     tab after a dropped Wi-Fi (in the games also after a reload); nobody else while that projector is still on; once it
     is off, the same teacher from another laptop or the super admin. Games since 2026-10-16; warm-up, reading and exam
     rooms since 2026-10-17 (they still ask for the teacher code too), so one teacher code can no longer take a
-    colleague's projector. A reload of the warm-up, reading or exam page opens a new room, and only the warm-up comes
-    back by itself after a dropped Wi-Fi.
+    colleague's projector. A reload of the warm-up, reading or exam page opens a new room. After a dropped Wi-Fi all
+    three come back by themselves with the same PIN (reading and exam since 2026-10-17; the exam monitor also after a
+    server restart): while offline the projector says «Sin conexión · reconectando…», and if the room can't come back it
+    says why in plain Spanish with a way forward (open a new room, type today's code, try again).
   - **Closing an exam room (2026-10-17):** «Cerrar la sala» closes only for the teacher who opened the exam (their
     monitor, their remembered laptop or their code) or the super admin. Before, any teacher code closed any running exam,
     so one code tried over the 3-digit PINs could close every exam in the school mid-exam. The monitor now says why if

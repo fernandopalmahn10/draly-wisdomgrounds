@@ -172,8 +172,13 @@ the checklist for any new game mode.
   newer room whose PIN came back): the code first (`_socketCode`), then `_mayReclaim`. An exam room keeps its owner on
   the data disk (`owner` in `hsk-rooms.json`: a teacher uid, or `'*'` for the legacy password; never sent) so a
   restart never hands it to anyone; one
-  saved before that has no owner and goes back only to a super admin. Of the three pages only the warm-up reclaims
-  (on a dropped connection, with its token); reading and exam projectors never do (a reload opens a new room).
+  saved before that has no owner and goes back only to a super admin. All three pages reclaim on a dropped connection
+  (token + code; a reload still opens a new room): the warm-up in its own `connect` handler, reading and exam since
+  2026-10-17 through `js/host-reconnect.js` (`DralyReconnect.watch`). It shows «Sin conexión · reconectando…» while
+  offline, re-syncs the page once back (the server re-sends `rd:state`; the exam polls), and never leaves a dead
+  screen: a refusal is a Spanish card with a way forward (a new room, today's code, try again). An exam monitor takes
+  its room back after a restart too (`host:reclaim` reads a disk-only exam room once a teacher code works). A new
+  teacher-tool host page uses it.
   **Closing an exam room follows the same owner rule** (his decision 2026-10-17; before, any teacher code or remembered
   teacher device closed ANY exam room: one code tried over the 900 PINs closed every running exam mid-exam): «Cerrar la
   sala» (socket `host:end`) needs a teacher (remembered device, or a code through `_socketCode`) and then the room's own

@@ -8642,7 +8642,12 @@ io.on('connection', (socket) => {
   socket.on('host:reclaim', (payload, cb) => {
     cb = (typeof cb === 'function') ? cb : () => {};
     const { pin, password, hostToken } = (payload && typeof payload === 'object') ? payload : {};
-    const g = /^\d{3,4}$/.test(String(pin)) ? games[pin] : null;
+    const digits = /^\d{3,4}$/.test(String(pin));
+    let g = digits ? games[pin] : null;
+    // 🔒 2026-10-17: after a restart an exam room lives only on the data disk (HSK_ROOMS) until something needs it; its
+    // own monitor coming back (a reconnect, public/js/host-reconnect.js) takes it back too, by the owner rule below.
+    // Only with a teacher code that works: a socket without one never learns which PINs are exam rooms.
+    if (!g && digits && HSK_ROOMS.has(String(pin)) && _socketCode(socket, password).ok) g = _hskGameLookup(String(pin));
     if (!g) return cb({ ok: false, error: 'no-game' });
     // Auth: warmup/reading teacher tools validate via the admin password.
     const isWarmupTool = (g.gameType === 'warmup' || g.gameType === 'reading' || g.gameType === 'hsksim');   // 🔒 exam rooms too (2026-10-15)
@@ -8685,6 +8690,8 @@ io.on('connection', (socket) => {
         customWords: g.warmup.customWords || [],
       });
     }
+    // Reading (2026-10-17): the page, the audio, the language, a test running… the projector repaints where it was
+    if (g.gameType === 'reading' && g.reading) io.to(socket.id).emit('rd:state', readingBuildStateMsg(g));
     if (g.gameType === 'kingdoms' && g.kingdoms && g.state === 'active') {
       io.to(socket.id).emit('kd:init', kdInitPayload(g, true));
     }
