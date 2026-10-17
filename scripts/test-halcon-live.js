@@ -50,7 +50,7 @@ function guard(s, who) {
 (async () => {
   const host = connect();
   guard(host, 'host');
-  const { pin } = await ack(host, 'host:create', { gameType: 'halcon', password: PASSWORD });
+  const { pin, hostToken } = await ack(host, 'host:create', { gameType: 'halcon', password: PASSWORD });
   ok(pin, 'room created');
   const loaded = await ack(host, 'host:load-set', { pin, setId: SET });
   ok(loaded && loaded.ok, 'pack loaded');
@@ -151,7 +151,7 @@ function guard(s, who) {
   const host2 = connect();
   guard(host2, 'host2');
   const again = next(host2, 'game-end', 3000);
-  const rc = await ack(host2, 'host:reclaim', { pin });
+  const rc = await ack(host2, 'host:reclaim', { pin, hostToken });
   ok(rc.ok && rc.state === 'ended', 'reclaim after the end');
   const ge2 = await again;
   ok(ge2.halcon && ge2.halcon.boards.length === 1, 'the reconnected projector gets its finale again');

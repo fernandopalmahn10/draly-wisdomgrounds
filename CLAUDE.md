@@ -162,6 +162,15 @@ the checklist for any new game mode.
   (`js/teacher-gate.js`, loaded right after `/socket.io/socket.io.js` on EVERY host page: a new host page loads it too),
   or the teacher code in `password` (bots and test scripts: `--password`). Never trust by internet address: a school's
   Wi-Fi gives every kid's phone the same address. «Log out» in /maestro forgets the device.
+  **A room's projector goes back only to the teacher who opened it** (2026-10-16; before, anyone with the PIN could take
+  it, even mid-class): `host:create` records the owner and answers a room token that `teacher-gate.js` keeps per tab
+  and adds to every `host:reclaim` (an F5 or a dropped connection). While the room's projector is still connected,
+  nothing but that token takes it (an old sleeping tab whose 3-digit PIN came back for a newer room must never freeze
+  a class); once it is gone, the same teacher's remembered device or code, or a super admin. Exam, warm-up and reading
+  rooms keep the teacher code rule. `games` has no prototype (`Object.create(null)`) and reclaim takes digit PINs only.
+  The key screen shows only when a NEW room waits, never over an F5 of a running one. A new host page needs nothing
+  extra as long as it loads `teacher-gate.js`; a test script that reclaims passes the create answer's `hostToken`.
+  Test: `scripts/test-host-reclaim.js`.
 - **Teacher codes**: «Cambiar mi código» in /maestro for every teacher (the super admin also changes others'): the old
   code stops at once, is retired for good (`data/teachers-meta.json`), devices remembered with it ask again. The boot
   seed creates a super admin only on the very first boot of an empty disk, never again (one-shot flag), and never with

@@ -55,7 +55,7 @@ async function answerUntilRight(kid, maxTries) {
   const host = connect();
   let lastMeter = null;
   host.on('mm:meter', (d) => { lastMeter = d; });
-  const { pin } = await ack(host, 'host:create', { gameType: 'mochi-mash', password: PASSWORD });
+  const { pin, hostToken } = await ack(host, 'host:create', { gameType: 'mochi-mash', password: PASSWORD });
   ok(pin, 'room created');
   const loaded = await ack(host, 'host:load-set', { pin, setId: SET });
   ok(loaded && loaded.ok, 'pack loaded');
@@ -243,7 +243,7 @@ async function answerUntilRight(kid, maxTries) {
   // after the end: a reconnecting projector / a phone that resyncs get the ceremony again; «Saltar» reaches the phones
   const host2 = connect();
   const re = next(host2, 'game-end', 2000);
-  const rc = await ack(host2, 'host:reclaim', { pin });
+  const rc = await ack(host2, 'host:reclaim', { pin, hostToken });
   ok(rc.ok && rc.state === 'ended', 'reclaim after the end');
   ok((await re).mochi, 'the projector gets the ceremony again');
   const kr = next(k1.s, 'game-end', 2000);

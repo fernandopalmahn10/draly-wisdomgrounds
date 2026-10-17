@@ -45,14 +45,32 @@
       .then(function (d) {
         if (d && d.remembered) { open(); return; }
         var saved = ls('dralyMaestroPw') || ls('mochi.maestroPw');
-        if (!saved) { state = 'closed'; show(); return; }
+        // (the screen only when a new room is waiting: an F5 that takes a running room back never gets covered by it,
+        // even when the teacher's code was changed mid-class)
+        if (!saved) { state = 'closed'; if (waiters.length) show(); return; }
         remember(saved).then(function (r) {
           if (r && r.ok) { open(saved); return; }
           if (r && r.retired) forgetSaved();   // a code changed with «Cambiar mi código»: never tried again
-          state = 'closed'; show();
+          state = 'closed'; if (waiters.length) show();
         });
       })
       .catch(function () { open(); });   // no answer: the server decides at host:create (a refusal shows the screen)
+  }
+
+  // ── the room's secret (2026-10-16): the server gives the projector that opened a room a token, and takes the projector
+  // back (host:reclaim) only with it or the same teacher's device or code. Kept per tab (an F5 keeps it; another tab
+  // or browser of the same teacher goes by the remembered device), never in localStorage or a URL.
+  var tokens = {};
+  var tokenKey = function (pin) { return 'draly.hostToken.' + pin; };
+  function keepToken(pin, t) {
+    if (!pin || !t) return;
+    tokens[pin] = t;
+    try { sessionStorage.setItem(tokenKey(pin), t); } catch (e) {}
+  }
+  function tokenOf(pin) {
+    if (!pin) return '';
+    if (tokens[pin]) return tokens[pin];
+    try { return sessionStorage.getItem(tokenKey(pin)) || ''; } catch (e) { return ''; }
   }
 
   // ── host:create waits for the gate; a refusal brings the screen back ──
@@ -61,6 +79,20 @@
     sock.__dralyGate = true;
     var emit = sock.emit;
     sock.emit = function (ev) {
+      if (ev === 'host:reclaim') {
+        // the room's token rides along; so does a code typed on this page (another browser of the same teacher)
+        var args = Array.prototype.slice.call(arguments, 1);
+        var i = -1;
+        args.forEach(function (a, k) { if (i < 0 && a && typeof a === 'object') i = k; });
+        if (i >= 0) {
+          var o = Object.assign({}, args[i]);
+          var t = tokenOf(o.pin);
+          if (t && !o.hostToken) o.hostToken = t;
+          if (code && !o.password) o.password = code;
+          args[i] = o;
+        }
+        return emit.apply(sock, ['host:reclaim'].concat(args));
+      }
       if (ev !== 'host:create') return emit.apply(sock, arguments);
       var opts = null, cb = null;
       Array.prototype.slice.call(arguments, 1).forEach(function (a) {
@@ -78,9 +110,11 @@
             show(resp.error);
             return;
           }
+          if (resp && resp.pin && resp.hostToken) keepToken(resp.pin, resp.hostToken);
           if (cb) cb.apply(null, arguments);
         });
       };
+      if (state === 'closed') show();   // the device is not a teacher's: the screen comes now, with the new room
       whenOpen(send);
       return sock;
     };
