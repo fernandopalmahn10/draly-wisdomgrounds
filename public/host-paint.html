@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Dragones Pintores · Anfitrión</title>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/kingdoms.css?v=20261011g">
+  <link rel="stylesheet" href="/css/kingdoms.css?v=20261016eq">
+  <link rel="stylesheet" href="/css/mochi.css?v=20261015s">
+  <link rel="stylesheet" href="/css/party.css?v=20261016eq">
 </head>
 <body class="kd-bg">
   <button class="kd-mute" id="mute-btn">🔊 Sonido</button>
@@ -69,7 +71,12 @@
   </main>
 
   <!-- COUNTDOWN -->
-  <div id="screen-countdown" class="kd-count hidden"><div class="kd-count-num" id="countdown-num">3</div></div>
+  <!-- the round's two captains face off during the countdown (as in Reinos de Colores) -->
+  <div id="screen-countdown" class="kd-count pc-vs hidden">
+    <div class="kd-cap red hidden" id="cap-red"><img id="cap-red-img" alt=""><div class="kd-cap-tag"><b id="cap-red-name"></b><span>Reino del Fuego</span></div></div>
+    <div class="kd-count-num" id="countdown-num">3</div>
+    <div class="kd-cap gold hidden" id="cap-gold"><img id="cap-gold-img" alt=""><div class="kd-cap-tag"><b id="cap-gold-name"></b><span>Reino del Mar</span></div></div>
+  </div>
 
   <!-- ACTIVE -->
   <main id="screen-active" class="kd-arena hidden">
@@ -84,18 +91,19 @@
     </div>
     <div class="pc-host-main">
       <aside class="kd-side red">
-        <div class="kd-side-name">Reino del Fuego</div>
+        <div class="kd-side-head"><img class="kd-side-cap hidden" id="side-cap-red" alt=""><div><div class="kd-side-name">Reino del Fuego</div><div class="kd-side-capname" id="side-capname-red"></div></div></div>
         <div class="kd-side-tiles"><span id="tiles-red">0</span> <small>nubes</small></div>
         <ul class="kd-roster" id="roster-red"></ul>
       </aside>
       <div class="pc-host-map"><canvas id="pc-host-canvas" aria-label="Mapa del cielo"></canvas></div>
       <aside class="kd-side gold">
-        <div class="kd-side-name">Reino del Mar</div>
+        <div class="kd-side-head"><img class="kd-side-cap hidden" id="side-cap-gold" alt=""><div><div class="kd-side-name">Reino del Mar</div><div class="kd-side-capname" id="side-capname-gold"></div></div></div>
         <div class="kd-side-tiles"><span id="tiles-gold">0</span> <small>nubes</small></div>
         <ul class="kd-roster" id="roster-gold"></ul>
       </aside>
     </div>
     <div class="kd-bottom">
+      <button class="kd-btn small" id="pause-btn">⏸ Pausa</button>
       <button class="kd-btn small" id="add-time-btn">+30 s</button>
       <button class="kd-btn small" id="end-now-btn">Terminar ronda</button>
     </div>
@@ -126,10 +134,14 @@
   <!-- 🔑 2026-10-15: creating a game needs a teacher the first time on a device (js/teacher-gate.js) -->
   <script src="/js/teacher-gate.js?v=20261015g"></script>
   <script src="/js/sounds.js"></script>
-  <script src="/js/cast.js?v=20261013a"></script>
+  <script src="/js/cast.js?v=20261016eq"></script>
   <script src="/js/dralingo-fx.js?v=20261013a"></script>
   <script src="/js/paint-render.js?v=20261011a"></script>
-  <script src="/js/host-paint.js?v=20261011f"></script>
+  <script src="/js/saga.js?v=20261013a"></script>
+  <script src="/js/halcon-board.js?v=20261014a"></script>
+  <script src="/js/mochi-stage.js?v=20261014a"></script>
+  <script src="/js/party.js?v=20261016eq"></script>
+  <script src="/js/host-paint.js?v=20261016eq"></script>
   <script src="/js/live-game.js?v=20261011c"></script>
 </body>
 </html>

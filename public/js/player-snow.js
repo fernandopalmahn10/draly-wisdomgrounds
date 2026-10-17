@@ -158,6 +158,14 @@
       hud(true);
     });
     s.on('game-end', () => { stop(); closeMini(); $('sn-frozen') && $('sn-frozen').classList.add('hidden'); });
+    // «¡FINAL!» (2026-10-16): the map stands still under the band; the ceremony follows (js/party.js)
+    s.on('fin:final', () => { if (!map) return; stop(); closeMini(); setJoy(-1); balls = []; $('sn-frozen') && $('sn-frozen').classList.add('hidden'); });
+    // the last 30 s: «¡Copos dobles!» (every right answer at a station counts twice, for both sides)
+    s.on('fin:frenzy', (d) => {
+      if (!map || !d || d.off || d.again) return;
+      toast(my.side === 'ice' ? '❄️❄️ ¡Copos dobles! Últimos 30 s: ¡atrapa a los últimos!' : '❄️❄️ ¡Copos dobles! Últimos 30 s: ¡aguanta!', 'gold', 3000);
+      sfx('copos', 0.6);
+    });
     bindControls();
   }
 

@@ -32,4 +32,28 @@ for (const seed of seeds) {
 }
 const c = P.counts({ 1: 'red', 2: 'gold', 3: 'red', 4: 'nobody' });
 ok(c.red === 2 && c.gold === 1, 'counts() tallies each kingdom');
+// ---------- 2026-10-16 ending pass: «¡Fuego doble!» in the last 30 s, the ending's stars and finish() ----------
+ok(JSON.stringify(P.reward(1, false)) === JSON.stringify({ energy: 10, blaze: false }), 'a right answer: +10 s of fire');
+ok(P.reward(3, false).blaze && P.reward(3, false).energy === 10, '3 in a row: a llamarada');
+ok(P.reward(1, true).blaze && P.reward(1, true).energy === 20, 'the last 30 s: twice the fire and always a llamarada');
+ok(P.reward(4, true).energy === 20 && P.reward(4, true).energy <= P.ENERGY_MAX, 'never more than twice');
+{
+  const rows = [
+    { k: 1, name: 'Ana', skin: 'aileen', team: 'red', owned: 14, painted: 40, best: 4, blazes: 1, right: 5, answered: 7 },
+    { k: 2, name: 'Omar', skin: 'hamdan', team: 'gold', owned: 14, painted: 61, best: 2, blazes: 0, right: 3, answered: 6 },
+    { k: 3, name: 'Lía', skin: 'latifa', team: 'gold', owned: 2, painted: 9, best: 3, blazes: 2, right: 4, answered: 4 },
+    { k: 4, name: 'Teo', skin: 'adric', team: 'red', owned: 0, painted: 0, best: 0, blazes: 0, right: 0, answered: 1 },
+  ];
+  const fin = P.finish(rows, { red: 20, gold: 31 });
+  ok(fin.winner === 'gold', 'more clouds win');
+  ok(P.finish(rows.map((r) => Object.assign({}, r)), { red: 5, gold: 5 }).winner === 'tie', 'equal clouds: a tie');
+  ok(JSON.stringify(fin.rows.map((r) => r.k)) === '[2,1,3,4]' && JSON.stringify(fin.rows.map((r) => r.rank)) === '[1,1,3,4]', 'podium by clouds owned (ties share), then strokes');
+  ok(fin.mvp.red === 1 && fin.mvp.gold === 2, 'the most sky of each kingdom');
+  ok(JSON.stringify(fin.stars.map((s) => s.id)) === '["painted","sky","streak","blaze"]', 'the four stars of Pintores');
+  ok(JSON.stringify(fin.stars.find((s) => s.id === 'sky').winners) === '[1,2]', 'Más cielo al final: a tie shares the star');
+  ok(JSON.stringify(fin.stars.find((s) => s.id === 'painted').winners) === '[2]', 'Más nubes pintadas');
+  ok(JSON.stringify(fin.stars.find((s) => s.id === 'blaze').winners) === '[3]', 'Más llamaradas');
+  ok(rows[0].share === 70 && rows[3].share === 0, 'a kid\'s share of the kingdom\'s clouds');
+  ok(JSON.stringify(rows[3].stars) === '[]', 'no star for a kid who did nothing');
+}
 console.log(`paint level: all ${checks} checks passed`);

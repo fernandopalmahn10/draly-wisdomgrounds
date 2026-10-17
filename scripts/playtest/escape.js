@@ -7,6 +7,7 @@
 const EscapeMap = require('../../public/js/escape-map');
 
 module.exports = (bot, ctx) => {
+  require('./party-check')(bot, ctx, 'escape');      // the Mario Party ending: «¡FINAL!», the show, my card (2026-10-16)
   const st = ctx.state;
   const E = ctx.report.escape || (ctx.report.escape = {
     inits: 0, phases: {}, turbos: 0, supers: 0, zaps: 0, waves: 0, safe: 0, out: 0, heartsLost: 0, hearts: null,

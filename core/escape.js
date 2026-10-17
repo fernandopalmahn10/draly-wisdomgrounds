@@ -96,13 +96,14 @@ function turboGain(round, n, sup) {
 }
 
 // A kid answered. Right = a turbo for the crew (during a run); 3 in a row = súper turbo. Wrong = nothing lost.
-function answer(round, p, correct, n) {
+// `frenzy` = the round's last 30 s («¡Súper turbos!»): every right answer is a súper turbo (one last push to the jet).
+function answer(round, p, correct, n, frenzy) {
   if (!correct) { p.esStreak = 0; p.esWrong = (p.esWrong || 0) + 1; return { turbo: false }; }
   p.esStreak = (p.esStreak || 0) + 1;
   p.esBest = Math.max(p.esBest || 0, p.esStreak);
   p.esRight = (p.esRight || 0) + 1;
   if (round.phase !== 'run' || round.paused) return { turbo: false, streak: p.esStreak };
-  const sup = p.esStreak % R.STREAK_EVERY === 0;
+  const sup = !!frenzy || p.esStreak % R.STREAK_EVERY === 0;
   const gain = turboGain(round, n, sup);
   round.pending += gain;
   round.turbos++;
@@ -306,9 +307,19 @@ function rankOf(levelsCleared, hearts) {
   const name = { cielo: 'Pilotos del Cielo', burj: 'Viajeros del Burj', zoco: 'Exploradores del Zoco' }[id];
   return { id, name, stars };
 }
+// Bonus stars of the Mario Party ending (core/party.js). Co-op: every kid at the top shares the star (a whole crew that
+// was safe in every wave all get «Más olas a salvo»); the crew itself is never ranked in front of the class.
+const STARS = [
+  { id: 'turbos', name: 'Más turbos', unit: 'turbos', val: (r) => r.turbos, ok: (r) => r.turbos >= 1 },
+  { id: 'fast', name: 'Más rápido a la zona segura', unit: 's', val: (r) => r.reach, ok: (r) => r.reach !== null && r.reachN >= 2, best: 'min', round: (v) => Math.round(v / 100) / 10 },
+  { id: 'streak', name: 'Mejor racha', unit: 'seguidas', val: (r) => r.best, ok: (r) => r.best >= 2 },
+  { id: 'safe', name: 'Más olas a salvo', unit: 'olas', val: (r) => r.safe, ok: (r) => r.safe >= 1 },
+];
 function finish(round, players) {
+  const Party = require('./party');
   const rows = Object.entries(players).filter(([, p]) => p.esRound === round.id).map(([id, p]) => ({
-    id, name: p.name, avatar: p.avatar || '', turbos: p.esTurbos || 0, supers: p.esSupers || 0, best: p.esBest || 0,
+    id, k: p.esIdx || 0, skin: p.esSkin, team: 'crew',
+    name: p.name, avatar: p.avatar || '', turbos: p.esTurbos || 0, supers: p.esSupers || 0, best: p.esBest || 0,
     right: p.esRight || 0, safe: p.esSafe || 0, waves: p.esWaves || 0, zapped: p.esZapped || 0,
     reach: p.esReachN ? Math.round(p.esReachMs / p.esReachN) : null, reachN: p.esReachN || 0, gone: !!p.disconnected,
   }));
@@ -324,7 +335,9 @@ function finish(round, players) {
   const fastest = pick(pool.filter((r) => r.reach !== null && r.reachN >= 2).sort((a, b) => a.reach - b.reach));
   const streak = pick(pool.filter((r) => r.best >= 2).sort((a, b) => b.best - a.best || b.score - a.score));
   const awards = { turbos, fastest, streak };
-  return { rank: rankOf(round.levelsCleared, round.hearts), levelsCleared: round.levelsCleared, hearts: round.hearts, escaped: round.escaped, zaps: round.zaps, turbos: round.turbos, rows, awards };
+  const stars = Party.stars(pool, STARS);
+  rows.forEach((r) => { r.stars = stars.filter((s) => s.winners.includes(r.k)).map((s) => s.id); });
+  return { rank: rankOf(round.levelsCleared, round.hearts), levelsCleared: round.levelsCleared, hearts: round.hearts, escaped: round.escaped, zaps: round.zaps, turbos: round.turbos, rows, awards, stars };
 }
 
 // Teacher pause: every timer moves forward by the paused time.
@@ -341,5 +354,5 @@ function shiftTimers(round, players, ms) {
 module.exports = {
   R, paceFor, newRound, preparePlayer, kidsOn, robotSpeed, turboGain, answer, stepRun,
   startZone, spawnPos, startWave, occupancy, resolveWave, afterZone, startRun, clearLevel, caught, skipZone, checkPos,
-  rankOf, finish, shiftTimers,
+  rankOf, finish, shiftTimers, STARS,
 };

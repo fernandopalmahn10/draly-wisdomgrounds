@@ -132,9 +132,17 @@
       document.body.classList.toggle('es-dizzy', now() < dizzyUntil);
       hold();
     });
-    s.on('game-end', (d) => {
+    s.on('game-end', () => {
       stop(); hideCard(); paused = false; hideBand(); document.body.classList.remove('es-dizzy', 'es-pausing');
-      if (on && d && d.escape && !d.escape.escaped) { sfx(K + 'tick.mp3', 0.6); band({ kind: 'time', robot: 'dizzy', title: '⏱ ¡Tiempo!', sub: 'Robotín se quedó sin batería', ms: 2400 }); }
+    });
+    // «¡FINAL!» (2026-10-16): the chase stops under the band (it says «¡Se acabó el tiempo!» when the clock ran out); the
+    // ceremony follows (js/party.js)
+    s.on('fin:final', () => { if (!on) return; stop(); hideBand(); paused = false; document.body.classList.remove('es-dizzy', 'es-pausing'); });
+    // the last 30 s: «¡Súper turbos!» (every right answer is a súper turbo)
+    s.on('fin:frenzy', (d) => {
+      if (!on || !d || d.off || d.again) return;
+      sfx('super', 0.6); buzz([60, 40, 60]);
+      band({ kind: 'time', img: D + 'power.webp', title: '🚀 ¡Súper turbos!', sub: 'Últimos 30 s: cada acierto es un súper turbo', ms: 2400 });
     });
     bindControls();
   }

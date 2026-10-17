@@ -353,4 +353,32 @@ eq(E.rankOf(1, 5).stars, 2, 'one zone cleared: at most two stars');
   eq(players.p0.esDizzyUntil, now0 + 13000, 'dizzy waits too');
 }
 
+// ---------- 2026-10-16 ending pass: «¡Súper turbos!» in the last 30 s, the stars ----------
+{
+  const { round, players } = room(10);
+  const [a, b] = Object.values(players);
+  const before = round.pending;
+  const r1 = E.answer(round, a, true, 10, true);
+  ok(r1.turbo && r1.super, 'the last 30 s: a right answer is a súper turbo');
+  near(round.pending - before, E.turboGain(round, 10, true), 1e-9, '… worth 2.5× a turbo');
+  const r2 = E.answer(round, b, true, 10, false);
+  ok(r2.turbo && !r2.super, 'before the last 30 s: a plain turbo (1 in a row)');
+  eq(E.answer(round, b, false, 10, true).turbo, false, 'a wrong answer is never a turbo, even in the last 30 s');
+}
+{
+  const { round, players } = room(4);
+  const [a, b, c, d] = Object.values(players);
+  a.esTurbos = 9; a.esBest = 2; a.esSafe = 3; b.esTurbos = 4; b.esBest = 6; b.esReachMs = 6000; b.esReachN = 2; b.esSafe = 3;
+  c.esReachMs = 800; c.esReachN = 1; c.esSafe = 1;
+  const fin = E.finish(round, players);
+  const ids = fin.stars.map((s) => s.id);
+  eq(ids, ['turbos', 'fast', 'streak', 'safe'], 'the four stars of La Gran Fuga');
+  eq(fin.stars.find((s) => s.id === 'turbos').winners, [a.esIdx], 'Más turbos');
+  eq(fin.stars.find((s) => s.id === 'fast').winners, [b.esIdx], 'Más rápido: 2 timed waves needed');
+  eq(fin.stars.find((s) => s.id === 'fast').value, 3, 'Más rápido in seconds (3,0 s average)');
+  eq(fin.stars.find((s) => s.id === 'safe').winners, [a.esIdx, b.esIdx], 'Más olas a salvo: the whole top shares it (co-op)');
+  ok(fin.rows.every((r) => Array.isArray(r.stars) && r.team === 'crew'), 'every kid knows their stars');
+  eq(d.esTurbos || 0, 0, 'a kid with nothing gets no star');
+  ok(!fin.rows.find((r) => r.k === d.esIdx).stars.length, '… and no star');
+}
 console.log(`escape: all ${checks} checks passed`);

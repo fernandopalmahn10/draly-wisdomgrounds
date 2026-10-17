@@ -44,6 +44,7 @@
           if (left.length !== picking.ids.length) { picking.ids = left; view.targets(left, picking.onPick); }
         }
       }
+      if (!ended) news(d, mine);
       if (mine && typeof d.playerScore === 'number' && $('player-score')) $('player-score').textContent = d.playerScore;
       if (mine && d.fallback && view) Object.keys(view.nodes).forEach((id) => view.set(+id, own[id] || null)); // undo the optimistic tile
       if (mine && waitingMine) {
@@ -62,6 +63,47 @@
       }
     });
     s.on('kd:prompt', prompt);
+    s.on('kd:pause', (d) => { if (d && d.paused) { stopRing(); if (view) view.targets([], null); picking = null; hideHand(); } });
+  }
+
+  // What the rest of the class just did, on my phone (his rule «no dead phones», 2026-10-16): the projector's big
+  // moments come as one banner at the top edge (js/party.js news: never over the answer tiles, one at a time, queued):
+  // a Dubai landmark won or lost, a castle in danger, a siege, my kingdom passing ahead (with my captain's line), a big
+  // surround by a teammate. Throttled so 30 kids planting never turns into noise; everything comes from the kd:plant
+  // diffs every phone already gets (no new network traffic).
+  const SHORT = { red: 'Fuego', gold: 'Mar' };
+  const newsAt = {};
+  function newsOk(kind, gap) { const t = Date.now(); if (t - (newsAt[kind] || 0) < gap) return false; newsAt[kind] = t; return true; }
+  function news(d, mine) {
+    const P = window.DralyParty;
+    if (!P || !ctx) return;
+    const team = ctx.getTeam();
+    const other = team === 'red' ? 'gold' : 'red';
+    const cap = window.KingdomsSkin && window.KingdomsSkin.captain ? window.KingdomsSkin.captain() : null;
+    const C = window.DralingoCast;
+    (d.events || []).forEach((ev) => {
+      if (ev.type === 'landmark') {
+        const L = KdBoard.LANDMARKS[ev.lm];
+        if (!L || (mine && !d.auto)) return;          // my own tap already shows «¡Conquistaste …!» big
+        if (!newsOk('lm', 3000)) return;
+        if (ev.team === team) P.news(`🏙️ ¡${ev.by} conquistó ${L.the}!`, { sub: `+${ev.bonus || L.bonus} para tu reino`, kind: team, key: 'lm' + ev.tile });
+        else P.news(`😮 ¡El ${SHORT[ev.team]} ${ev.from === team ? 'le quitó a tu reino' : 'conquistó'} ${L.the}!`, { sub: '¡Recupéralo con tus banderas!', kind: other, key: 'lm' + ev.tile });
+      } else if (ev.type === 'castle-alert') {
+        if (ev.team === team) P.news('🏰 ¡Defiendan su castillo!', { sub: 'Planten banderas junto al castillo', kind: 'alarm', cast: cap, pose: 'hello', key: 'castle' + ev.team });
+        else P.news(`🏰 ¡El castillo del ${SHORT[ev.team]} está casi rodeado!`, { sub: '¡Unas banderas más y es asedio!', kind: team, key: 'castle' + ev.team });
+      } else if (ev.type === 'siege') {
+        if (ev.by === team) P.news('⚔️ ¡Asedio! Rodearon el castillo', { sub: `+${ev.bonus} para tu reino`, kind: 'star', cast: cap, key: 'siege' });
+        else P.news(`⚔️ ¡El ${SHORT[ev.by]} rodeó su castillo!`, { sub: '¡Sigan plantando, todo puede cambiar!', kind: 'alarm', key: 'siege' });
+      } else if (ev.type === 'lead' && ev.team) {
+        if (!newsOk('lead', 7000)) return;
+        if (ev.team === team) P.news('🔥 ¡Tu reino pasa adelante!', { sub: C && cap ? `${C.name(cap)}: «${C.line(cap, 'battle')}»` : '¡Sigan así!', kind: team, cast: cap, key: 'lead' });
+        else P.news(`¡El ${SHORT[ev.team]} pasa adelante!`, { sub: '¡A recuperarlo! Responde y planta', kind: other, key: 'lead' });
+      }
+    });
+    const n = (d.flipped || []).length;
+    if (!mine && d.team === team && n >= 3 && !(d.events || []).some((ev) => ev.type === 'landmark') && newsOk('surround', 5000)) {
+      P.news(`🔁 ¡${d.by} rodeó ${n} casillas!`, { sub: 'para tu reino', kind: team, key: 'sur' });
+    }
   }
 
   // The kid's flag took a Dubai landmark: the piece pops up big on their phone with its bonus.

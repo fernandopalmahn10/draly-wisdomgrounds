@@ -1,0 +1,376 @@
+/* The Mario Party ending + the in-between pieces of Reinos de Colores, Dragones Pintores, Batalla de Nieve and La Gran
+   Fuga (js/party.js). Phone (.pf-phone, inside #screen-end) and projector (.pf-host, over the whole page). Kid figures,
+   stars and confetti come from css/mochi.css (.mmk, .mm-star, .mm-confetti): load it before this file.
+   Platform look: ink outlines, Baloo 2 / Nunito, gold accents; each game keeps its own sky. */
+.pf { --ink: #1d2440; --ink-soft: #46507a; --paper: #fff7e3; --gold: #ffc93c; --gold-deep: #c98a26;
+  --ease-out: cubic-bezier(.22, 1, .36, 1); --ease-pop: cubic-bezier(.3, 1.55, .5, 1);
+  position: fixed; inset: 0; z-index: 40; overflow: hidden; color: var(--ink); font-family: 'Nunito', system-ui, sans-serif;
+  background: linear-gradient(180deg, #b9c6f0 0%, #f2c3d3 46%, #ffd9b8 78%, #ffe9c9 100%); }
+.pf.pf-host { z-index: 60; }
+/* each game's own sky */
+.pf.pf-g-kingdoms { background: linear-gradient(180deg, rgba(255, 247, 227, .45) 0%, rgba(255, 247, 227, 0) 34%, rgba(255, 247, 227, .2) 60%, rgba(255, 247, 227, .92) 100%),
+  url('/assets/dubai/skyline-wide.webp') center bottom / cover no-repeat, linear-gradient(180deg, #a9d8ff 0%, #ffe3c2 100%); }
+.pf.pf-g-paint { background: radial-gradient(30% 14% at 18% 22%, rgba(255, 255, 255, .9), transparent 70%),
+  radial-gradient(26% 12% at 80% 34%, rgba(255, 255, 255, .85), transparent 70%), linear-gradient(180deg, #8fd0ff 0%, #d8efff 60%, #fff6e8 100%); }
+.pf.pf-g-snow { background: radial-gradient(60% 40% at 50% 0%, rgba(255, 255, 255, .9), transparent 70%), linear-gradient(180deg, #cfe9ff 0%, #eef8ff 55%, #ffffff 100%); }
+.pf.pf-g-escape { background: linear-gradient(180deg, rgba(255, 247, 227, .3) 0%, rgba(255, 247, 227, 0) 34%, rgba(255, 247, 227, .2) 60%, rgba(255, 247, 227, .92) 100%),
+  url('/assets/dubai/skyline-wide.webp') center bottom / cover no-repeat, linear-gradient(180deg, #ffb36b 0%, #ffd7a8 45%, #ffeccf 100%); }
+/* on a phone the skyline is a strip along the bottom (cover would zoom the Burj Khalifa behind everything) */
+.pf.pf-phone.pf-g-kingdoms, .pf.pf-phone.pf-g-escape { background-size: auto, auto 26vh, auto; background-position: center, center bottom, center; }
+.pf-box { position: absolute; inset: 0; }
+.pf-fx { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 6; }
+.pf .pf-red { --pc: #d8382e; --pd: #b8221a; --ps: #ffe1dc; }
+.pf .pf-gold { --pc: #2a6fdc; --pd: #1a4fb0; --ps: #dce8ff; }
+.pf .pf-sun { --pc: #e07a00; --pd: #b35c00; --ps: #fff0cc; }
+.pf .pf-ice { --pc: #2b8fc9; --pd: #1b6c9c; --ps: #def3ff; }
+.pf .pf-tie { --pc: var(--gold); --pd: var(--gold-deep); --ps: #fff3c4; }
+
+/* figures in the other sides' colours (css/mochi.css .mmk uses --tc / --td for the sticker outline and the disc) */
+.mmk.pfk-sun { --tc: #f59e0b; --td: #b45309; }
+.mmk.pfk-ice { --tc: #5ab8ea; --td: #2b8fc9; }
+.mmk.pfk-ice .mmk-img { filter: saturate(.55) brightness(1.08) hue-rotate(-12deg) drop-shadow(2px 0 0 var(--tc)) drop-shadow(-2px 0 0 var(--tc))
+  drop-shadow(0 2px 0 var(--tc)) drop-shadow(0 -2px 0 var(--tc)) drop-shadow(0 0 10px rgba(160, 220, 255, .9)); }
+.mmk.pfk-crew { --tc: #f2a516; --td: #c27a00; }
+/* Fuego's Dralingo is red (his rule): the same art turned on the colour wheel, so the kandura and ghutra stay white */
+.pf .mmk-red .mmk-img:is([src*="/cast/dralingo-"], [src*="/dralingo/anim/"]) {
+  filter: hue-rotate(140deg) saturate(1.15) drop-shadow(2px 0 0 var(--tc)) drop-shadow(-2px 0 0 var(--tc)) drop-shadow(0 2px 0 var(--tc))
+    drop-shadow(0 -2px 0 var(--tc)) drop-shadow(0 5px 3px rgba(29, 36, 64, .3)); }
+.pf .mmk.cheer .mmk-img { animation: pf-cheer .7s var(--ease-pop) calc(var(--i, 0) * .12s) 3 both; }
+.pf .mmk.slump .mmk-img { transform: translateY(6%) scale(.94); filter: saturate(.55) brightness(.92); transition: transform .6s var(--ease-out); }
+@keyframes pf-cheer { 0% { transform: none; } 40% { transform: translateY(-14%) scale(1.04, .96); } 100% { transform: none; } }
+.mm-star.off path { fill: rgba(255, 255, 255, .55); }
+
+.pf-skip { position: absolute; z-index: 9; right: 12px; bottom: max(14px, env(safe-area-inset-bottom)); min-height: 44px; padding: 8px 16px;
+  border-radius: 999px; border: 3px solid var(--ink); background: var(--paper); color: var(--ink); box-shadow: 0 3px 0 var(--ink);
+  font: 800 1rem/1 'Nunito', sans-serif; cursor: pointer; touch-action: manipulation; }
+.pf-skip:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.pf-skip:focus-visible, .pf-home:focus-visible, .pf-btn:focus-visible { outline: 4px solid var(--ink); outline-offset: 3px; }
+.pf-host .pf-skip { top: 18px; right: 22px; bottom: auto; font-size: 1.2rem; padding: 10px 20px; }
+
+.pf-stage { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; box-sizing: border-box;
+  padding: max(54px, calc(env(safe-area-inset-top) + 46px)) 14px 86px; animation: pf-stage-in .35s var(--ease-out) both; }
+.pf-host .pf-stage { padding: 30px 36px 100px; }
+@keyframes pf-stage-in { from { opacity: 0; transform: translateY(12px); } }
+.pf-h { margin: 0 0 12px; text-align: center; text-wrap: balance; font: 800 clamp(1.45rem, 7vw, 1.95rem)/1.08 'Baloo 2', sans-serif; color: var(--ink); }
+.pf-host .pf-h { font-size: 3.2rem; padding: 6px 30px; border-radius: 22px; background: rgba(255, 247, 227, .94); border: 4px solid var(--ink);
+  box-shadow: 0 6px 0 var(--ink); }
+.pf-h.big { font-size: clamp(1.9rem, 9.6vw, 2.7rem); color: #fff; -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); }
+.pf-host .pf-h.big { font-size: 4rem; background: var(--pc, var(--gold)); }
+.pf-host .pf-h.big.pf-tie, .pf-host .pf-h.pf-crewh { color: var(--ink); -webkit-text-stroke: 0; text-shadow: none; background: var(--gold); }
+.pf-capline { margin: -2px 0 8px; padding: 5px 14px; border-radius: 14px; background: #fff; border: 2px solid var(--ink); max-width: 92%;
+  text-align: center; font: 800 .98rem/1.25 'Nunito', sans-serif; animation: pf-rise .4s var(--ease-pop) .5s both; }
+.pf-host .pf-capline { font-size: 1.5rem; padding: 8px 22px; border-width: 3px; }
+@keyframes pf-rise { from { transform: translateY(30px); opacity: 0; } }
+@keyframes pf-pop { 0% { transform: scale(.6); opacity: 0; } 70% { transform: scale(1.08); opacity: 1; } 100% { transform: none; opacity: 1; } }
+
+/* ---------- 1 · the reveal: two columns that fill (Reinos, Pintores) ---------- */
+.pf-cols { flex: 1 1 auto; min-height: 0; width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: end; padding-bottom: 4px; }
+.pf-host .pf-cols { gap: 8vw; padding: 0 10vw; }
+.pf-col { display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; min-height: 0; justify-content: flex-end; }
+.pf-col-cap { height: 17vh; width: auto; max-width: 100%; object-fit: contain; filter: drop-shadow(0 5px 3px rgba(29, 36, 64, .25)); }
+.pf-tube { position: relative; width: 52%; max-width: 120px; height: 32vh; border-radius: 18px 18px 10px 10px; border: 4px solid var(--ink);
+  background: rgba(255, 255, 255, .7); overflow: hidden; box-shadow: 0 4px 0 var(--ink); }
+.pf-host .pf-tube { width: 190px; max-width: none; height: 44vh; border-width: 5px; }
+.pf-host .pf-col-cap { height: 26vh; }
+.pf-tube i { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; transform-origin: 50% 100%; transform: scaleY(0);
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, .25) 0 3px, transparent 3px 22px), var(--pc); }
+.pf-col-n { font: 800 2rem/1 'Baloo 2', sans-serif; font-variant-numeric: tabular-nums; color: var(--pc); -webkit-text-stroke: 1px var(--ink); }
+.pf-host .pf-col-n { font-size: 3.4rem; -webkit-text-stroke: 2px var(--ink); }
+.pf-col-nrow { display: flex; align-items: baseline; justify-content: center; gap: 6px; }
+.pf-col-unit { font: 800 .85rem/1 'Nunito', sans-serif; color: var(--ink-soft); }
+.pf-host .pf-col-unit { font-size: 1.35rem; }
+.pf-col-name { font: 800 .9rem/1.2 'Nunito', sans-serif; text-align: center; padding: 2px 10px; border-radius: 999px; background: rgba(255, 255, 255, .85); border: 2px solid var(--ink); }
+.pf-host .pf-col-name { font-size: 1.4rem; padding: 4px 18px; border-width: 3px; }
+.pf-col.mine .pf-col-name { background: var(--pc); color: #fff; }
+.pf-col-lms { display: flex; justify-content: center; gap: 2px; height: 34px; }
+.pf-host .pf-col-lms { height: 64px; gap: 6px; }
+.pf-col-lms img { height: 100%; width: auto; animation: pf-pop .45s var(--ease-pop) calc(2.4s + var(--i) * .22s) both; filter: drop-shadow(0 2px 0 rgba(29, 36, 64, .35)); }
+.pf-unit { margin: 6px 0 0; font: 800 .95rem/1 'Nunito', sans-serif; color: var(--ink-soft); }
+.pf-host .pf-unit { font-size: 1.4rem; }
+
+/* ---------- 1 · the reveal: the frost meter (Batalla de Nieve) ---------- */
+.pf-r-frost { justify-content: center; gap: 14px; }
+.pf-frost { position: relative; width: 92%; max-width: 900px; height: 46px; border-radius: 999px; border: 4px solid var(--ink); background: #fff7d6;
+  box-shadow: 0 4px 0 var(--ink); }
+.pf-host .pf-frost { height: 74px; border-width: 5px; }
+.pf-frost i { position: absolute; inset: 0; border-radius: 999px; transform-origin: 0 50%; transform: scaleX(0);
+  background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .45) 0 6px, transparent 6px 18px), linear-gradient(90deg, #9fd8f7, #3aa0d8); }
+.pf-frost-flake { position: absolute; top: 50%; left: 0; transform: translate(-50%, -50%); font-size: 2.2rem; filter: drop-shadow(0 2px 0 var(--ink)); }
+.pf-host .pf-frost-flake { font-size: 3.6rem; }
+.pf-frost-n { margin: 0; font: 800 1.2rem/1.2 'Nunito', sans-serif; }
+.pf-frost-n b { font: 800 2.2rem/1 'Baloo 2', sans-serif; color: #2b8fc9; font-variant-numeric: tabular-nums; }
+.pf-host .pf-frost-n { font-size: 2rem; } .pf-host .pf-frost-n b { font-size: 3.6rem; }
+.pf-frost-after { display: flex; flex-direction: column; align-items: center; gap: 10px; min-height: 30vh; }
+.pf-stamp { padding: 6px 22px; border-radius: 18px; border: 4px solid var(--ink); box-shadow: 0 5px 0 var(--ink); font: 800 1.9rem/1.1 'Baloo 2', sans-serif;
+  animation: pf-pop .5s var(--ease-pop) both; }
+.pf-host .pf-stamp { font-size: 3.4rem; padding: 8px 34px; }
+.pf-stamp.sun { background: #ffd65a; } .pf-stamp.ice { background: #bfe8ff; }
+.pf-frost-crew { display: flex; justify-content: center; align-items: flex-end; height: 22vh; width: 100%; gap: 4px; }
+.pf-host .pf-frost-crew { height: 30vh; gap: 14px; }
+.pf-frost-crew .mmk { width: 22%; max-width: 150px; animation: pf-rise .45s var(--ease-pop) calc(var(--i) * .1s) both; }
+
+/* ---------- 1 · the reveal: the route (La Gran Fuga) ---------- */
+.pf-r-route { gap: 10px; }
+.pf-route { position: relative; width: 100%; max-width: 1100px; height: 30vh; margin-top: 6vh; }
+.pf-route-line, .pf-route-fill { position: absolute; left: var(--l, 8%); right: var(--l, 8%); top: 42%; height: 12px; border-radius: 999px; }
+.pf-route-line { background: rgba(255, 255, 255, .7); border: 3px solid var(--ink); }
+.pf-route-fill { background: var(--gold); border: 3px solid var(--ink); transform-origin: 0 50%; transform: scaleX(0); transition: transform .55s var(--ease-out); }
+.pf-stop { position: absolute; left: var(--x); top: 42%; transform: translate(-50%, -62%); display: flex; flex-direction: column; align-items: center; gap: 4px; width: 26%;
+  filter: grayscale(1) opacity(.55); transition: filter .3s; }
+.pf-stop img { height: 13vh; width: auto; max-width: 100%; object-fit: contain; }
+.pf-stop span { padding: 2px 8px; border-radius: 999px; background: #fff; border: 2px solid var(--ink); font: 800 .78rem/1.2 'Nunito', sans-serif; text-align: center; }
+.pf-phone .pf-route { --l: 16%; }
+.pf-phone .pf-stop { width: 31%; }
+.pf-phone .pf-stop img { height: 9vh; }
+.pf-host .pf-stop img { height: 18vh; } .pf-host .pf-stop span { font-size: 1.2rem; padding: 4px 14px; }
+.pf-stop.on { filter: none; animation: pf-stop-on .5s var(--ease-pop) both; }
+@keyframes pf-stop-on { 50% { transform: translate(-50%, -72%) scale(1.12); } }
+.pf-stop.takeoff img { animation: pf-takeoff 1.3s cubic-bezier(.5, 0, .75, 0) both; }
+@keyframes pf-takeoff { to { transform: translate(60%, -160%) rotate(-14deg) scale(.7); opacity: .2; } }
+.pf-rank { display: flex; flex-direction: column; align-items: center; gap: 4px; opacity: 0; }
+.pf-rank.show { opacity: 1; animation: pf-pop .55s var(--ease-pop) both; }
+.pf-rank img { height: 16vh; width: auto; object-fit: contain; }
+.pf-rank b { padding: 6px 20px; border-radius: 18px; border: 4px solid var(--ink); background: var(--gold); box-shadow: 0 5px 0 var(--ink);
+  font: 800 1.7rem/1.1 'Baloo 2', sans-serif; }
+.pf-host .pf-rank b { font-size: 3rem; padding: 8px 34px; }
+.pf-rank-stars { display: flex; gap: 6px; height: 44px; }
+.pf-rank-stars.small { height: 30px; }
+.pf-host .pf-rank-stars { height: 64px; }
+.pf-rank-stars .mm-star { width: auto; height: 100%; aspect-ratio: 1; animation: pf-pop .45s var(--ease-pop) calc(.3s + var(--i, 0) * .2s) both; }
+
+/* ---------- 2 · the result ---------- */
+.pf-stage.result.pf-w-red { background: radial-gradient(120% 80% at 25% 20%, rgba(255, 196, 180, .8), transparent 70%); }
+.pf-stage.result.pf-w-gold { background: radial-gradient(120% 80% at 75% 20%, rgba(196, 220, 255, .85), transparent 70%); }
+.pf-stage.result.pf-w-sun { background: radial-gradient(120% 80% at 25% 20%, rgba(255, 224, 150, .85), transparent 70%); }
+.pf-stage.result.pf-w-ice { background: radial-gradient(120% 80% at 75% 20%, rgba(190, 232, 255, .9), transparent 70%); }
+/* phone: the two sides as rows (the winners on top, bigger); projector: side by side. Each captain speaks next to
+   themselves (a speech bubble), the kids are the big full-body figures. */
+.pf-sides { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; }
+.pf-side { position: relative; display: flex; flex-direction: column; align-items: stretch; gap: 2px; min-height: 0; }
+.pf-side.win { order: -1; }
+.pf-side-head { display: flex; align-items: flex-end; gap: 6px; min-height: 0; }
+.pf-side-cap { height: 11vh; width: auto; max-width: 30%; object-fit: contain; flex: 0 0 auto; filter: drop-shadow(0 4px 3px rgba(29, 36, 64, .25)); }
+.pf-side.win .pf-side-cap { animation: pf-win 1s var(--ease-pop) both; }
+.pf-side.lose .pf-side-cap { filter: saturate(.7) drop-shadow(0 4px 3px rgba(29, 36, 64, .25)); }
+@keyframes pf-win { 0% { transform: scale(.8); } 40% { transform: scale(1.12) translateY(-6%); } 100% { transform: scale(1.04); } }
+.pf-bubble { position: relative; align-self: center; margin: 0 0 4px; padding: 5px 10px; border-radius: 14px; background: #fff; border: 2px solid var(--ink);
+  font: 800 .85rem/1.25 'Nunito', sans-serif; text-wrap: balance; animation: pf-rise .4s var(--ease-pop) .6s both; }
+.pf-bubble b { display: block; font: 800 .72rem/1.2 'Nunito', sans-serif; color: var(--pd, var(--ink-soft)); }
+.pf-bubble::before { content: ''; position: absolute; left: -9px; bottom: 10px; border: 8px solid transparent; border-right-color: var(--ink); border-left: 0; }
+.pf-side.win .pf-bubble { background: var(--ps, #fff); }
+.pf-kids { position: relative; display: flex; justify-content: center; align-items: flex-end; height: 19vh; width: 100%; }
+.pf-side.win .pf-kids { height: 23vh; }
+.pf-sides.tie .pf-side .pf-kids { height: 19vh; }
+.pf-kids .mmk { height: 92%; width: calc(92% / var(--n, 3)); max-width: 150px; margin: 0 calc(3% / var(--n, 3)); }      /* side by side, never touching; n a row fits */
+.pf-kids .mmk.me { height: 100%; z-index: 2; }
+.pf-total { margin-left: auto; align-self: center; flex: 0 0 auto; white-space: nowrap; font: 800 1rem/1 'Baloo 2', sans-serif; padding: 5px 12px; border-radius: 999px; background: #fff;
+  border: 2px solid var(--ink); }
+.pf-side.mine .pf-total { background: var(--gold); }
+.pf-side.win .pf-total { background: var(--pc); color: #fff; }
+.pf-host .pf-sides { flex-direction: row; align-items: stretch; gap: 3vw; }
+.pf-host .pf-side { flex: 1 1 0; justify-content: flex-end; gap: 8px; }
+/* the projector: who won must read from the back of the room: the winners' half bigger, on a gold glow; the others
+   smaller and a little muted */
+.pf-host .pf-side.win { flex: 1.45 1 0; }
+.pf-host .pf-sides:not(.tie) .pf-side.win .pf-kids { background: radial-gradient(60% 34% at 50% 100%, rgba(255, 201, 60, .75), rgba(255, 201, 60, 0) 100%); }
+.pf-host .pf-sides:not(.tie) .pf-side.lose .pf-kids { height: 30vh; filter: saturate(.8); }
+.pf-host .pf-sides:not(.tie) .pf-side.lose .pf-side-cap { height: 16vh; }
+.pf-host .pf-side.win { order: 0; }
+.pf-host .pf-side-head { justify-content: center; }
+.pf-host .pf-side-cap { height: 21vh; }
+.pf-host .pf-bubble { font-size: 1.25rem; padding: 8px 16px; border-width: 3px; max-width: 60%; }
+.pf-host .pf-bubble b { font-size: 1rem; }
+.pf-host .pf-kids { height: 44vh; flex-wrap: wrap-reverse; align-content: flex-start; row-gap: 8px; }
+.pf-host .pf-side.win .pf-kids { height: 44vh; }
+.pf-host .pf-kids .mmk { height: 48%; width: calc(92% / var(--n, 5)); max-width: 190px; }
+.pf-host .pf-total { margin-left: 8px; font-size: 1.6rem; padding: 6px 20px; border-width: 3px; }
+.pf-crewhead { justify-content: center; }
+/* me among the others: a gold glow at my feet */
+.pf .mmk.me .mmk-disc { box-shadow: 0 0 0 3px #ffc93c, 0 0 16px 6px rgba(255, 201, 60, .85); }
+/* Fuego's red Dralingo stays red when the team slumps */
+.pf .mmk-red.slump .mmk-img:is([src*="/cast/dralingo-"], [src*="/dralingo/anim/"]) { filter: hue-rotate(140deg) saturate(.55) brightness(.92); }
+/* La Gran Fuga: the crew cheers (or sighs) next to Robotín */
+.pf-crewstage { flex: 1 1 auto; min-height: 0; width: 100%; display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 4px; }
+.pf-kids.wide { height: 26vh; }
+.pf-host .pf-kids.wide { height: 46vh; }
+.pf-robot { width: 28vw; max-width: 240px; height: auto; aspect-ratio: 1; }
+/* phone: the crew in two rows (big), Robotín in the top corner */
+.pf-phone .pf-crewstage { position: relative; display: flex; flex-direction: column; justify-content: flex-end; }
+.pf-phone .pf-robot { position: absolute; right: 2px; top: 0; width: 30vw; }
+.pf-phone .pf-kids.wide { height: 46vh; flex-wrap: wrap-reverse; align-content: flex-start; row-gap: 6px; }
+.pf-phone .pf-kids.wide .mmk { height: 48%; width: calc(92% / var(--c, 3)); max-width: 150px; margin: 0 calc(3% / var(--c, 3)); }
+.pf-host .pf-robot { width: 22vw; max-width: 340px; }
+.pf-stage.result.crew.won { background: radial-gradient(120% 80% at 40% 20%, rgba(255, 230, 150, .85), transparent 70%); }
+
+/* ---------- 3 · a bonus star ---------- */
+.pf-stage.star { justify-content: center; gap: 6px; background: radial-gradient(70% 50% at 50% 40%, #fff3c4, transparent 75%); }
+.pf-badge { width: 104px; height: 104px; animation: pf-star-in .6s var(--ease-pop) both; }
+.pf-host .pf-badge { width: 150px; height: 150px; }
+@keyframes pf-star-in { 0% { transform: scale(.4) rotate(-40deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.pf-kicker { padding: 4px 14px; border-radius: 999px; background: var(--gold); border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink);
+  font: 800 1.15rem/1.1 'Baloo 2', sans-serif; color: var(--ink); letter-spacing: .02em; }
+.pf-host .pf-kicker { font-size: 1.9rem; padding: 6px 24px; border-width: 4px; }
+.pf-star-h { margin-bottom: 4px; }
+.pf-host .pf-star-h { color: #fff; -webkit-text-stroke: 5px var(--ink); paint-order: stroke fill; text-shadow: 0 5px 0 var(--ink); background: none; border: 0; box-shadow: none; font-size: 3.6rem; }
+.pf-who { display: flex; justify-content: center; align-items: flex-end; gap: 6px; height: 30vh; width: 100%; margin-top: 4px; }
+.pf-host .pf-who { gap: 18px; height: 36vh; }
+.pf-who .mmk { width: 30%; max-width: 150px; animation: pf-rise .45s var(--ease-pop) calc(.45s + var(--i) * .1s) both; }
+.pf-host .pf-who .mmk { width: 180px; max-width: 180px; }
+.pf-host .pf-who .mmk-tag { font-size: 1.05rem; }
+.pf-val { margin-top: 22px; font: 800 1.3rem/1.15 'Baloo 2', sans-serif; padding: 4px 16px; border-radius: 999px; background: #fff; border: 3px solid var(--ink); text-align: center; }
+.pf-host .pf-val { font-size: 1.9rem; animation: pf-rise .4s var(--ease-pop) 1s both; }
+.pf-mine { margin-top: 10px; padding: 8px 18px; border-radius: 16px; background: var(--gold); border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink);
+  font: 800 1.6rem/1 'Baloo 2', sans-serif; animation: pf-pop .45s var(--ease-pop) .7s both; }
+
+/* ---------- 4a · my card (phone) ---------- */
+.pf-stage.card { justify-content: center; gap: 7px; padding-top: max(46px, calc(env(safe-area-inset-top) + 38px)); padding-bottom: max(16px, env(safe-area-inset-bottom));
+  overflow-y: auto; background: linear-gradient(180deg, var(--ps, #fff3c4) 0%, var(--paper) 46%); }
+.pf-card-top { display: flex; align-items: flex-end; justify-content: center; gap: 4px; height: 28vh; width: 100%; flex: 0 0 auto; }
+.pf-card-top .mmk { width: 46%; max-width: 190px; }
+.pf-card-art { height: 66%; width: auto; max-width: 44%; object-fit: contain; filter: drop-shadow(0 5px 3px rgba(29, 36, 64, .25)); }
+.pf-card-h { margin: 8px 0 0; text-align: center; text-wrap: balance; font: 800 clamp(1.45rem, 7.4vw, 1.95rem)/1.08 'Baloo 2', sans-serif; }
+.pf-card-big { margin: 0; text-align: center; text-wrap: balance; font: 800 1.2rem/1.25 'Nunito', sans-serif; }
+.pf-card-big b { font: 800 2.1rem/1 'Baloo 2', sans-serif; font-variant-numeric: tabular-nums; }
+.pf-card-big.zero { font: 800 1.7rem/1.1 'Baloo 2', sans-serif; color: var(--gold-deep); }
+.pf-card-line { margin: 0; text-align: center; text-wrap: balance; font: 700 .98rem/1.3 'Nunito', sans-serif; color: var(--ink-soft); }
+.pf-card-score { display: flex; justify-content: center; gap: 8px; margin: 2px 0 0; flex-wrap: wrap; }
+.pf-card-score b { padding: 2px 12px; border-radius: 999px; border: 2px solid var(--ink); color: #fff; background: var(--pc); font: 800 1rem/1.35 'Baloo 2', sans-serif;
+  font-variant-numeric: tabular-nums; }
+.pf-facts { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.pf-fact { display: flex; flex-direction: column; align-items: center; min-width: 72px; padding: 6px 10px; border-radius: 14px; background: #fff; border: 2px solid var(--ink); }
+.pf-fact b { font: 800 1.3rem/1 'Baloo 2', sans-serif; font-variant-numeric: tabular-nums; }
+.pf-fact span { font: 700 .78rem/1.2 'Nunito', sans-serif; color: var(--ink-soft); }
+.pf-mystars { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 2px; max-width: 420px; }
+.pf-mystar { display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 6px; border-radius: 999px; background: #fff6d6; border: 2px solid var(--ink);
+  font: 800 .9rem/1.2 'Nunito', sans-serif; animation: pf-rise .4s var(--ease-pop) both; }
+.pf-mystar .mm-star { width: 26px; height: 26px; }
+.pf-wait { margin: 14px 0 0; padding-top: 4px; text-align: center; text-wrap: balance; font: 700 .95rem/1.3 'Nunito', sans-serif; color: var(--ink-soft); }
+.pf-home { min-height: 44px; margin-top: 2px; padding: 8px 16px; border: 0; background: none; color: var(--ink-soft); text-decoration: underline;
+  text-underline-offset: 3px; font: 700 .9rem/1 'Nunito', sans-serif; cursor: pointer; }
+
+/* ---------- 4b · the projector: podium, MVPs, «Otra ronda» ---------- */
+.pf-pod-sub { margin: -4px 0 4px; font: 800 1.35rem/1.2 'Nunito', sans-serif; color: var(--ink-soft); }
+.pf-podium.empty { display: flex; justify-content: center; align-items: flex-end; gap: 8vw; }
+.pf-pod-cap { height: 44vh; max-width: 30vw; object-fit: contain; filter: drop-shadow(0 6px 4px rgba(29, 36, 64, .25)); }
+/* the podium centred under the title; the MVP of each side in the bottom-right corner */
+.pf-podium { position: relative; flex: 1 1 auto; width: 100%; max-width: 880px; min-height: 0; display: grid; grid-template-rows: minmax(0, 1fr); grid-template-columns: 1fr 1.25fr 1fr;
+  gap: 26px; align-items: end; padding: 0 3vw; }
+.pf-pod { display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.pf-pod .mmk { height: 32vh; width: 100%; max-width: 200px; animation: pf-rise .5s var(--ease-pop) both; }
+.pf-pod.p1 .mmk { height: 38vh; }
+.pf-pod-step { margin-top: 16px; width: 100%; max-width: 230px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border-radius: 16px 16px 0 0; border: 4px solid var(--ink); border-bottom: 0; background: #e8eef8; height: 96px; }
+.pf-pod-step span { font: 800 2.6rem/1 'Baloo 2', sans-serif; }
+.pf-pod-step small { font: 800 1.05rem/1 'Nunito', sans-serif; color: var(--ink-soft); }
+.pf-pod.p1 .pf-pod-step { height: 140px; background: var(--gold); }
+.pf-pod.p3 .pf-pod-step { height: 76px; background: #f6d4b0; }
+.pf-pod-stars { display: flex; align-items: center; gap: 6px; padding: 4px 14px 4px 8px; margin-bottom: 8px; border-radius: 999px; background: #fff;
+  border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); animation: pf-pop .45s var(--ease-pop) .5s both; }
+.pf-pod-stars .mm-star { width: 44px; height: 44px; }
+.pf-pod-stars b { font: 800 2rem/1 'Baloo 2', sans-serif; }
+.pf-mvps { position: fixed; right: 26px; bottom: 96px; display: flex; flex-direction: column; gap: 12px; z-index: 2; }
+.pf-mvp { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 18px; border: 4px solid var(--ink);
+  background: var(--ps); box-shadow: 0 4px 0 var(--ink); }
+.pf-mvp .mmk { height: 90px; }
+.pf-mvp b { display: block; font: 800 1.3rem/1.1 'Baloo 2', sans-serif; }
+.pf-mvp small { font: 800 .9rem/1.2 'Nunito', sans-serif; color: var(--ink-soft); }
+.pf-tools { position: absolute; z-index: 9; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 14px; }
+.pf-btn { min-height: 56px; padding: 10px 26px; border-radius: 999px; border: 4px solid var(--ink); background: var(--paper); color: var(--ink);
+  box-shadow: 0 5px 0 var(--ink); font: 800 1.35rem/1 'Baloo 2', sans-serif; cursor: pointer; }
+.pf-btn.go { background: var(--gold); }
+.pf-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--ink); }
+/* La Gran Fuga: the whole crew, no ranking in front of the class */
+.pf-crew-why { margin: 4px 0 8px; font: 800 1.6rem/1.2 'Nunito', sans-serif; text-align: center; }
+.pf-crewwall { flex: 1 1 auto; min-height: 0; width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: 10px 14px; }
+.pf-mate { position: relative; width: 150px; height: 214px; animation: pf-rise .45s var(--ease-pop) calc(var(--i) * .04s) both; }
+.pf-crewwall.dense .pf-mate { width: 104px; height: 150px; }
+.pf-crewwall.xdense .pf-mate { width: 80px; height: 116px; }
+.pf-mate .mmk { height: 100%; }
+.pf-mate-stars { position: absolute; z-index: 3; bottom: 20px; right: -4px; display: flex; gap: 1px; padding: 1px 5px; border-radius: 999px; background: #fff; border: 2px solid var(--ink);
+  font-size: .9rem; line-height: 1.3; }
+
+/* ---------- «¡FINAL!» ---------- */
+.pf-final { position: fixed; inset: 0; z-index: 85; display: grid; place-items: center; background: rgba(29, 36, 64, .55); pointer-events: auto; }
+.pf-final-band { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 10px 22px; background: var(--gold, #ffc93c);
+  border-top: 5px solid #1d2440; border-bottom: 5px solid #1d2440; box-shadow: 0 10px 0 rgba(29, 36, 64, .35); animation: pf-final-in .35s cubic-bezier(.22, 1, .36, 1) both; }
+.pf-final-band b { font: 800 clamp(3.4rem, 18vw, 5rem)/1 'Baloo 2', sans-serif; color: #fff; -webkit-text-stroke: 7px #1d2440; paint-order: stroke fill;
+  text-shadow: 0 6px 0 #1d2440; animation: pf-pop .5s cubic-bezier(.3, 1.55, .5, 1) .1s both; }
+.pf-final-band span { font: 800 1.15rem/1.2 'Nunito', sans-serif; color: #1d2440; text-align: center; }
+.pf-final.host .pf-final-band b { font-size: 9rem; -webkit-text-stroke: 10px #1d2440; }
+.pf-final.host .pf-final-band span { font-size: 2rem; }
+@keyframes pf-final-in { from { transform: scaleY(.2); opacity: .4; } }
+
+/* ---------- the phone's news banner + the last-30-s chip ---------- */
+.pf-news { position: fixed; z-index: 47; left: 10px; right: 10px; top: calc(max(8px, env(safe-area-inset-top)) + 50px); display: flex; align-items: center; gap: 8px;
+  min-height: 50px; padding: 5px 12px 5px 6px; box-sizing: border-box; border-radius: 16px; background: #fff; border: 3px solid #1d2440;
+  box-shadow: 0 4px 0 #1d2440; color: #1d2440; transform: translateY(-160%); opacity: 0; pointer-events: none;
+  transition: transform .26s cubic-bezier(.22, 1, .36, 1), opacity .2s; }
+.pf-news.show { transform: none; opacity: 1; }
+.pf-news:not(.show) { transition-duration: .18s, .15s; }      /* the exit is quicker than the entrance */
+.pf-news img { width: 44px; height: 44px; object-fit: contain; flex: 0 0 auto; }
+.pf-news-t { display: flex; flex-direction: column; min-width: 0; }
+.pf-news-t b { font: 800 1rem/1.2 'Baloo 2', sans-serif; }
+.pf-news-t span { font: 700 .82rem/1.25 'Nunito', sans-serif; color: #46507a; }
+.pf-news.red { background: #ffe1dc; } .pf-news.gold { background: #dce8ff; } .pf-news.star { background: #fff3c4; }
+.pf-news.alarm { background: #ffd65a; }
+.pf-chip { position: fixed; z-index: 46; right: 10px; top: calc(max(8px, env(safe-area-inset-top)) + 106px); display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px; background: #ffc93c; border: 3px solid #1d2440; box-shadow: 0 3px 0 #1d2440; color: #1d2440;
+  font: 800 .85rem/1.2 'Nunito', sans-serif; pointer-events: none; animation: pf-chip-beat 1s ease-in-out infinite; }
+.pf-chip span { font: 800 .95rem/1 'Baloo 2', sans-serif; font-variant-numeric: tabular-nums; }
+@keyframes pf-chip-beat { 0%, 70%, 100% { transform: none; } 85% { transform: scale(1.06); } }   /* a short beat each second, still most of the time */
+body.pf-on .pf-news, body.pf-on .pf-chip { display: none; }
+/* the projector's last-30-s ribbon (under the top bar, centred) and its clock in red */
+.pf-chip.host { top: 96px; right: auto; left: 50%; translate: -50% 0; padding: 8px 20px; border-width: 4px; font-size: 1.35rem; z-index: 55; }
+.pf-chip.host span { font-size: 1.6rem; }
+/* the projector's event banners (.kd-banner, all four games) step below the ribbon while it shows */
+body.pf-chip-host .kd-banner { top: 156px; }
+.kd-timer.pf-frenzy { background: #d8382e !important; color: #fff !important; animation: pf-chip-beat 1s ease-in-out infinite; }
+.pf-news.show ~ .pf-chip { opacity: 0; transition: opacity .2s; }
+body:has(#pc-empty:not(.hidden)) .pf-chip { top: auto; right: auto; left: 10px; bottom: calc(max(8px, env(safe-area-inset-bottom)) + 214px); }   /* Pintores: off the out-of-fire card */     /* one thing at a time at the top edge */
+
+/* ---------- phone sizes ---------- */
+@media (max-height: 700px) {
+  .pf-card-top { height: 22vh; }
+  .pf-who { height: 24vh; }
+  .pf-col-cap { height: 13vh; }
+  .pf-tube { height: 26vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-stage, .pf .mmk.cheer .mmk-img, .pf-capline, .pf-col-lms img, .pf-stamp, .pf-frost-crew .mmk, .pf-stop.on, .pf-stop.takeoff img, .pf-rank.show,
+  .pf-rank-stars .mm-star, .pf-side.win .pf-side-cap, .pf-bubble, .pf-badge, .pf-who .mmk, .pf-val, .pf-mine, .pf-mystar, .pf-pod .mmk, .pf-mate,
+  .pf-final-band, .pf-final-band b, .pf-chip, .kd-timer.pf-frenzy, .pf-pod-stars { animation: none !important; }
+  .pf-news { transition: none; }
+  .pf-route-fill { transition: none; }
+}
+
+/* ---------- Reinos / Pintores: the live strip on the result screen (between two questions) ---------- */
+.kdp-live { display: flex; flex-direction: column; align-items: center; gap: 6px; width: min(100%, 360px); margin: 12px auto 0; }
+.kdp-live-score { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 5px 8px; border-radius: 999px;
+  background: #fff; border: 3px solid #1d2440; box-shadow: 0 3px 0 #1d2440; font: 800 .95rem/1.2 'Nunito', sans-serif; color: #1d2440; }
+.kdp-live-score b { padding: 1px 10px; border-radius: 999px; color: #fff; font: 800 1rem/1.3 'Baloo 2', sans-serif; font-variant-numeric: tabular-nums; }
+.kdp-live-score b.red { background: #d8382e; } .kdp-live-score b.gold { background: #2a6fdc; }
+.kdp-live-score span { flex: 1 1 auto; text-align: center; }
+.kdp-live-say { display: flex; align-items: center; gap: 8px; max-width: 100%; animation: pf-rise .35s cubic-bezier(.3, 1.55, .5, 1) .15s both; }
+.kdp-live-say img { width: 52px; height: 52px; object-fit: contain; flex: 0 0 auto; }
+.kdp-live-say span { padding: 6px 12px; border-radius: 14px; background: #fff; border: 2px solid #1d2440; font: 800 .92rem/1.25 'Nunito', sans-serif; color: #1d2440; }
+.kdp-live-me { padding: 2px 12px; border-radius: 999px; background: #ffc93c; border: 2px solid #1d2440; font: 800 .9rem/1.3 'Nunito', sans-serif; color: #1d2440; }
+.pc-s.pc-mine { background: #fff; color: #1d2440; }
+@media (prefers-reduced-motion: reduce) { .kdp-live-say { animation: none; } }
+
+body.pf-on .kd-mute { z-index: 75; }
+/* the old end screen under the phone's ceremony is out of the way (keyboard and screen readers too) */
+body.kd-phone.pf-ended #screen-end .win-screen { display: none; }
+/* the phone's «Sonido» goes to the top-left corner while the ceremony shows («Ver mi tarjeta» is bottom-right) */
+body.kd-phone.pf-ended .muted-toggle { top: max(8px, env(safe-area-inset-top)) !important; bottom: auto !important; left: 8px !important; right: auto !important; z-index: 46 !important; }
+
+/* ---------- «⏸ Pausa» (Reinos / Pintores) ---------- */
+.pf-pause { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: rgba(29, 36, 64, .5); }
+.pf-pause.host { pointer-events: none; }          /* the teacher's buttons under it keep working */
+.pf-pause-card { pointer-events: auto; display: grid; justify-items: center; gap: 6px; padding: 18px 34px 22px; border-radius: 28px; background: #fff7e3;
+  border: 5px solid #1d2440; box-shadow: 0 8px 0 #1d2440; color: #1d2440; text-align: center; }
+.pf-pause-card img { height: 120px; width: auto; margin-top: -70px; filter: drop-shadow(0 6px 4px rgba(29, 36, 64, .3)); }
+.pf-pause-card b { font: 800 2.6rem/1 'Baloo 2', sans-serif; }
+.pf-pause-card span { font: 800 1.15rem/1.2 'Nunito', sans-serif; color: #46507a; }
+.pf-pause.host .pf-pause-card img { height: 170px; margin-top: -90px; }
+.pf-pause.host .pf-pause-card b { font-size: 4rem; }
+.pf-pause.host .pf-pause-card span { font-size: 1.5rem; }

@@ -7,6 +7,8 @@
 //   moods: hello, win, battle (Reinos: flags, conquest), chase (La Gran Fuga: running from Robotín, turbos, the jet),
 //   feast (Mochi Mash: feeding the Dragoncito), smash (Piñata Tigre: hitting the piñata), swing (6-7 Swing: the golden
 //   balance), oro (6-7 Swing: the winners), casi (6-7 Swing: the team that lost, kindly), mystery, oops,
+//   reino / pintado / nieve (the winners of Reinos de Colores, Dragones Pintores, Batalla de Nieve), animo (the side that
+//   lost any of those, or La Gran Fuga's crew that didn't escape, kindly),
 //   ruta (La Ruta Dorada /audios/<level>: a friend cheers the kid along the path of three levels), libro (El libro dorado:
 //   a simulation with zero mistakes), repaso (El libro dorado: before the kid's mistakes)
 //   tablero (Dàfùwēng · Monopolio: each one hosts the board's spaces: Fer the episode, Hamdan the landmarks, Latifa the
@@ -36,6 +38,10 @@
         sixseven: ['¡Six seven! ¡Liu, qi, equipo!', '¡Eso es: seis y siete, liu y qi!', '¡Six seven! ¡Así se cuenta!'],   // 6-7 Swing: a «¡SIX SEVEN!» moment during play (racha 7, a team wave)
         oro: ['¡La balanza es de ustedes! Excelente trabajo.', '¡Así se cuenta en Chino Mandarín!', '¡Equipo de campeones!'],
         casi: ['¡Casi! La próxima ronda es nuestra.', 'Buen esfuerzo, equipo. ¡A la revancha!'],
+        reino: ['¡Dubái es de este reino! Excelente trabajo.', '¡Así se conquista: respondiendo bien!', '¡Equipo de campeones!'],
+        pintado: ['¡Qué cielo tan bien pintado! Excelente trabajo.', '¡Así se aprende y así se pinta!', '¡Equipo de campeones!'],
+        nieve: ['¡Qué batalla de nieve! Excelente trabajo.', '¡Así se juega en Ski Dubái!', '¡Equipo de campeones!'],
+        animo: ['¡Buen esfuerzo, equipo! La próxima es nuestra.', 'Casi. ¡A la revancha!'],   // the ending of Reinos (reino), Pintores (pintado), Nieve (nieve); animo = the side that lost, kindly
         ruta: ['Paso a paso se llega al oro.', 'Primero La Base. Después, el examen.', 'Un poco cada día, ¡y llegas!'],
         libro: ['¡Caso resuelto! Así se aprende.', '¡Equipo de campeones!', '¡Eso es estudiar de verdad!'],
         repaso: ['Cada error es una pista. ¡A repasar!', 'Escucha otra vez y mira la respuesta dorada.'],
@@ -59,6 +65,10 @@
         sixseven: ['¡Yalla, six seven!', '¡Six seven! ¡Yalla, yalla!', '¡Marhaba, six seven! ¡Liu, qi!'],
         oro: ['¡Yalla! ¡Oro para todos!', '¡Increíble, equipo!', '¡Esa balanza merece un viaje en jet!'],
         casi: ['¡Yalla, la revancha es nuestra!', 'Casi, amigos. ¡Otra ronda!'],
+        reino: ['¡Yalla! ¡Dubái es nuestro!', '¡Marhaba, reyes de Dubái!', '¡Esto merece un viaje en jet!'],
+        pintado: ['¡Yalla! ¡El cielo es nuestro!', '¡Marhaba, cielo de colores!', '¡Esto merece un viaje en jet!'],
+        nieve: ['¡Yalla! ¡Ganamos en la nieve!', '¡Marhaba, campeones de Ski Dubái!', '¡Esto merece un viaje en jet!'],
+        animo: ['¡Yalla, la revancha es nuestra!', 'Casi, amigos. ¡Otra ronda!'],
         ruta: ['¡Yalla, a la Ruta Dorada!', '¡Yalla, un sello más!', 'Al final de la ruta, ¡el oro!'],
         libro: ['¡Yalla! ¡Increíble!', '¡Eso merece un viaje en jet!', '¡Marhaba! ¡Qué examen!'],
         repaso: ['Sin prisa. ¡Yalla, a repasar!', 'Marhaba, errores: hoy los arreglamos.'],
@@ -82,6 +92,10 @@
         sixseven: ['¡Six seven! Pensaron y tocaron.', 'Liu, qi: ¡six seven! Buena estrategia.', '¡Six seven! El plan funciona.'],
         oro: ['¡Brillante! Pensaron antes de tocar.', '¡La balanza no miente!', '¡Yalla, a la siguiente ronda!'],
         casi: ['Casi. La próxima vez, primero pensamos.', 'La próxima balanza es nuestra.'],
+        reino: ['¡Brillante! Buena estrategia, equipo.', '¡Rodearon justo donde había que rodear!', '¡El plan funcionó!'],
+        pintado: ['¡Brillante! Pintaron con estrategia.', '¡El plan funcionó: cada nube cuenta!', '¡Buena estrategia, equipo!'],
+        nieve: ['¡Brillante! Buena estrategia en la nieve.', '¡El plan funcionó!', 'Pensaron, corrieron y ganaron.'],
+        animo: ['Casi. La próxima vez, mejor plan.', 'Buen intento. ¡Otra ronda y lo logramos!'],
         ruta: ['Buena estrategia: primero La Base.', 'Cada sello es una pista para el examen.', 'Con calma y cada día, se llega.'],
         libro: ['¡Brillante! No se te escapó ninguna pista.', 'Tu plan funcionó. ¡Así se piensa!'],
         repaso: ['Cada error es una pista para el examen.', 'Con calma: escucha, lee y mira la respuesta.'],
@@ -105,6 +119,10 @@
         sixseven: ['¡Six seven, che! ¡Qué genial!', '¡Dale, che: six seven!', '¡Vos sabés: liu, qi!'],
         oro: ['¡Vos podés! ¡Ganamos el oro!', '¡Qué genial, che!', '¡Dale, otra ronda más!'],
         casi: ['¡Casi, che! La próxima es nuestra.', 'Tranqui, ¡vos podés! Dale, otra ronda.'],
+        reino: ['¡Vos podés! ¡Conquistamos Dubái!', '¡Qué genial, che!', '¡Dale, otra ronda más!'],
+        pintado: ['¡Vos podés! ¡Pintamos todo el cielo!', '¡Qué genial, che!', '¡Dale, otra ronda más!'],
+        nieve: ['¡Vos podés! ¡Ganamos la batalla!', '¡Qué genial, che!', '¡Dale, otra ronda más!'],
+        animo: ['¡Casi, che! La próxima es nuestra.', 'Tranqui, ¡vos podés! Dale, otra ronda.'],
         ruta: ['¡Dale, che! Un sello por día.', '¡Vos podés llegar al oro!', 'Mirá tu ruta: ¡vamos paso a paso!'],
         libro: ['¡Qué genial, che!', '¡Vos podés y lo hiciste!'],
         repaso: ['¡Dale, che! Repasalas y listo.', 'Tranqui, ¡vos podés! Escuchalas otra vez.'],
@@ -128,6 +146,10 @@
         sixseven: ['Six seven. Mi perro ladró dos veces.', 'Liu, qi. Bien.', 'Six seven. Mi perro está feliz.'],
         oro: ['Bien hecho. Mi perro está feliz.', 'Nada mal, equipo.', '¡Eso fue genial!'],
         casi: ['Casi. Mi perro cree en ustedes.', 'Otra ronda. Esta vez sí.'],
+        reino: ['Bien hecho. Mi perro conquistó una casilla.', 'Nada mal, equipo.', '¡Eso fue genial!'],
+        pintado: ['Bien hecho. Mi perro también pintó.', 'Nada mal, equipo.', '¡Eso fue genial!'],
+        nieve: ['Bien hecho. Mi perro ama la nieve.', 'Nada mal, equipo.', '¡Eso fue genial!'],
+        animo: ['Casi. Mi perro cree en ustedes.', 'Otra ronda. Esta vez sí.'],
         ruta: ['Paso a paso.', 'Mi perro ya sigue la ruta.', 'Sígueme. Por aquí.'],
         libro: ['Bien hecho.', 'Mi perro está feliz.'],
         repaso: ['Escucha otra vez.', 'Mira bien. Ahí está la pista.'],
@@ -151,6 +173,10 @@
         sixseven: ['¡El mapa dice: six seven!', '¡Six seven! ¡A la aventura!', '¡Liu, qi! ¡Tesoro de oro!'],
         oro: ['¡Tesoro de oro!', '¡Misión cumplida!', '¡Lo logramos juntos!'],
         casi: ['¡El tesoro sigue ahí! Otra ronda.', '¡Casi lo encontramos!'],
+        reino: ['¡El mapa dice: Dubái es nuestro!', '¡Misión cumplida!', '¡Lo logramos juntos!'],
+        pintado: ['¡El mapa dice: cielo conquistado!', '¡Misión cumplida!', '¡Lo logramos juntos!'],
+        nieve: ['¡El mapa dice: victoria en la nieve!', '¡Misión cumplida!', '¡Lo logramos juntos!'],
+        animo: ['¡El tesoro sigue ahí! Otra ronda.', '¡Casi lo logramos!'],
         ruta: ['¡El mapa dice: primero La Base!', '¡El tesoro está al final de la ruta!', '¡A la aventura, paso a paso!'],
         libro: ['¡Tesoro encontrado!', '¡Misión cumplida!'],
         repaso: ['¡El mapa dice: repasa por aquí!', '¡A la aventura, pregunta por pregunta!'],
@@ -175,11 +201,15 @@
         sixseven: ['¡Six seven!', '¡Liu, qi, amigos!', '¡Six seven! ¡Yalla!'],
         oro: ['¡Liu, qi! ¡Lo logramos!', '¡Qué balanza, amigos!', '¡Bien hecho!'],
         casi: ['¡Casi, amigos! ¡Otra ronda!', 'Los dragones nunca se rinden.'],
+        reino: ['¡Lo logramos!', '¡Dubái es nuestro!', '¡Bien hecho!'],
+        pintado: ['¡Lo logramos!', '¡Qué cielo, amigos!', '¡Bien hecho!'],
+        nieve: ['¡Lo logramos!', '¡Qué batalla, amigos!', '¡Bien hecho!'],
+        animo: ['¡Casi, amigos! ¡Otra ronda!', 'Los dragones nunca se rinden.'],
       },
     },
   };
   const HUMANS = ['fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian'];
-  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', smash: 'cheer', fiesta: 'cheer', swing: 'cheer', oro: 'cheer', vuelo: 'cheer', casi: 'hello', ruta: 'hello', libro: 'cheer', repaso: 'hello', mystery: 'mystery', oops: 'mystery' };
+  const MOOD_POSE = { hello: 'hello', win: 'cheer', good: 'cheer', battle: 'cheer', chase: 'cheer', feast: 'cheer', smash: 'cheer', fiesta: 'cheer', swing: 'cheer', oro: 'cheer', vuelo: 'cheer', casi: 'hello', reino: 'cheer', pintado: 'cheer', nieve: 'cheer', animo: 'hello', ruta: 'hello', libro: 'cheer', repaso: 'hello', mystery: 'mystery', oops: 'mystery' };
   const pick1 = (a) => a[Math.floor(Math.random() * a.length)];
 
   function pick(n, opts) {

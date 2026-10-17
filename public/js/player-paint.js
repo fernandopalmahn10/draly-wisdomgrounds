@@ -27,6 +27,9 @@
   let spent = 0;               // fire seconds burnt since the last position message
   let gems = [];
   let scores = { red: 0, gold: 0 };
+  let myClouds = 0;            // clouds that are mine right now (pc:paint scores): shown in the score bar
+  let paused = false;          // «⏸ Pausa»: the dragon stands still (no physics, no fire, no paint)
+  let captains = null;         // the round's two captains (pc:init / pc:captains): they cheer on my phone
   let canvas, c2d, dpr = 1;
   // Team colours on the dragons too (his note 2026-10-11): Fuego flies the red Dralingo, Mar the blue one.
   const IMG = { fly: {}, jump: {} };
@@ -62,6 +65,9 @@
       Object.entries(d.players || {}).forEach(([id, p]) => { names[id] = p.name; });
       energy = d.energy; energyMax = d.energyMax || 30;
       scores = d.teamScores || scores;
+      if (d.captains) captains = d.captains;
+      if (!sameRound) myClouds = 0;
+      paused = !!d.paused;
       loadImages();
       const ep = document.querySelector('#pc-empty .pc-card-pose');
       if (ep) ep.src = POSE(team() === 'red' ? 'shocked-red' : 'shocked');
@@ -80,8 +86,12 @@
     });
     s.on('pc:paint', (d) => {
       (d.tiles || []).forEach(([id, t]) => { own[id] = t ? 'gold' : 'red'; });
+      if (d.scores && d.scores[s.id] != null) myClouds = d.scores[s.id];
       if (d.teamScores) { scores = d.teamScores; hud(); }
+      if (running) news(d.events || []);
     });
+    s.on('pc:captains', (c) => { captains = c; });
+    s.on('pc:pause', (d) => { paused = !!(d && d.paused); input.l = false; input.r = false; spent = 0; pendingPaint = []; });
     s.on('pc:energy', (d) => { energy = d.energy; hud(); });
     s.on('state', (st) => { if (st && st.players) Object.entries(st.players).forEach(([id, p]) => { names[id] = p.name; }); });
     s.on('answer-result', (r) => {
@@ -94,7 +104,29 @@
       setTimeout(() => backToGame(), r.correct ? 1500 : 1700);
     });
     s.on('game-end', () => stop());
+    s.on('fin:final', () => { input.l = false; input.r = false; stop(); });     // «¡FINAL!»: the dragons stop where they are
     bindControls();
+  }
+
+  // What the class just did, on my phone (js/party.js news at the top edge, never over the controls): my kingdom passing
+  // ahead (my captain's line) or falling behind, a quarter / half / three quarters of the sky painted
+  let leadNewsAt = 0;
+  function news(events) {
+    const P = window.DralyParty;
+    if (!P || !events.length) return;
+    const my = team();
+    const cap = captains && captains[my];
+    const C = window.DralingoCast;
+    events.forEach((ev) => {
+      if (ev.type === 'lead' && ev.team) {
+        if (Date.now() - leadNewsAt < 7000) return;
+        leadNewsAt = Date.now();
+        if (ev.team === my) P.news('🔥 ¡Tu reino pasa adelante!', { sub: C && cap ? `${C.name(cap)}: «${C.line(cap, 'battle')}»` : '¡Sigan pintando!', kind: my, cast: cap, key: 'lead' });
+        else P.news(`¡El ${ev.team === 'red' ? 'Fuego' : 'Mar'} pasa adelante!`, { sub: '¡A pintar! Pisa sus nubes y son tuyas', kind: ev.team, key: 'lead' });
+      } else if (ev.type === 'milestone') {
+        P.news(`🎨 ¡${ev.pct} % del cielo pintado!`, { sub: `Fuego ${scores.red || 0} · Mar ${scores.gold || 0} nubes`, kind: 'star', key: 'm' + ev.pct });
+      }
+    });
   }
 
   function spawn() {
@@ -324,7 +356,7 @@
     const fill = $('pc-energy-fill');
     if (fill) fill.style.width = Math.max(0, Math.min(100, (energy / energyMax) * 100)) + '%';
     // Everything below only changes on whole seconds or score changes: skip the DOM work otherwise (cheap phones).
-    const key = [Math.ceil(Math.max(0, energy)), energy < 4, energy <= 0, running, helpOpen(), scores.red || 0, scores.gold || 0, team()].join('|');
+    const key = [Math.ceil(Math.max(0, energy)), energy < 4, energy <= 0, running, helpOpen(), scores.red || 0, scores.gold || 0, team(), myClouds].join('|');
     if (key === hudKey) return;
     hudKey = key;
     const et = $('pc-energy-text');
@@ -342,6 +374,7 @@
       const a = document.createElement('span'); a.className = 'pc-s red' + (my === 'red' ? ' me' : ''); a.textContent = '🔥 ' + (scores.red || 0);
       const b = document.createElement('span'); b.className = 'pc-s gold' + (my === 'gold' ? ' me' : ''); b.textContent = (scores.gold || 0) + ' 🌊';
       bar.append(a, b);
+      if (myClouds > 0) { const m = document.createElement('span'); m.className = 'pc-s pc-mine'; m.textContent = '☁️ ' + myClouds; m.title = 'Tus nubes'; bar.appendChild(m); }
     }
   }
 
@@ -349,7 +382,9 @@
     if (!running) return;
     const dt = Math.min(0.1, (now - lastT) / 1000);
     lastT = now;
-    if (lv && me && document.body.classList.contains('pc-on') && !$('screen-paint').classList.contains('hidden')) {
+    if (lv && me && document.body.classList.contains('pc-on') && !$('screen-paint').classList.contains('hidden') && paused) {
+      draw();                      // paused: the sky stays on screen, nothing moves
+    } else if (lv && me && document.body.classList.contains('pc-on') && !$('screen-paint').classList.contains('hidden')) {
       // ≤ 1/60 s per step: a dragon never moves more than ~23 px per step, less than a tile, so it can't tunnel
       for (let rem = dt; rem > 1e-6; rem -= 1 / 60) step(Math.min(rem, 1 / 60));
       send(now);
