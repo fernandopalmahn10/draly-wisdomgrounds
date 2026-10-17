@@ -166,8 +166,14 @@ the checklist for any new game mode.
   it, even mid-class): `host:create` records the owner and answers a room token that `teacher-gate.js` keeps per tab
   and adds to every `host:reclaim` (an F5 or a dropped connection). While the room's projector is still connected,
   nothing but that token takes it (an old sleeping tab whose 3-digit PIN came back for a newer room must never freeze
-  a class); once it is gone, the same teacher's remembered device or code, or a super admin. Exam, warm-up and reading
-  rooms keep the teacher code rule. `games` has no prototype (`Object.create(null)`) and reclaim takes digit PINs only.
+  a class); once it is gone, the same teacher's remembered device or code, or a super admin. **Exam, warm-up and reading
+  rooms follow the same owner rule AND still need a teacher code** (his decision 2026-10-17; before, ANY teacher code
+  took them, even mid-class: one code tried over the 900 PINs took every one, and an old sleeping warm-up tab took a
+  newer room whose PIN came back): the code first (`_socketCode`), then `_mayReclaim`. An exam room keeps its owner on
+  the data disk (`owner` in `hsk-rooms.json`, a teacher uid, never sent) so a restart never hands it to anyone; one
+  saved before that has no owner and goes back only to a super admin. Of the three pages only the warm-up reclaims
+  (on a dropped connection, with its token); reading and exam projectors never do (a reload opens a new room).
+  `games` has no prototype (`Object.create(null)`) and reclaim takes digit PINs only.
   The key screen shows only when a NEW room waits, never over an F5 of a running one. A new host page needs nothing
   extra as long as it loads `teacher-gate.js`; a test script that reclaims passes the create answer's `hostToken`.
   Test: `scripts/test-host-reclaim.js`.
@@ -187,7 +193,7 @@ the checklist for any new game mode.
   only two things get through: a code that same connection already
   proved, and the room's own projector holding its room token with its own teacher's code (its misses count for that
   teacher, 10 then even the right one waits): a running class never freezes. Being a room's host is no proof (a
-  warm-up, reading or exam room still goes to any teacher code on reclaim). A host-only tool reads a code only from
+  super admin, or the opener from another device, can host it too). A host-only tool reads a code only from
   the room's host socket (`wuHostCode` / `readingHostCode`), so kids' phones can't fill the school's address.
 - **Sockets only from our own pages** (2026-10-17, socket.io `allowRequest` → `_socketOriginOk`): a handshake with an
   Origin must be the address it reached, app.dralingo.app / dralingo.app / www or the old Render address (localhost

@@ -12,7 +12,8 @@
 // teacher device never waits for its school's address (its own wrong codes count on the device); a connection that
 // proved its code, and a room's own projector (its host socket or room token) with its own teacher's code, keep working
 // while the address waits, while any other code still waits; only the room's projector gets its code read by the
-// host-only tools; super-admin tools still need a super-admin code; handshakes from other sites are refused (WebSocket
+// host-only tools; a warm-up / reading / exam reclaim reads its code once (the owner check after it, 2026-10-17, counts
+// nothing more, and right codes refused by it never count); super-admin tools still need a super-admin code; handshakes from other sites are refused (WebSocket
 // and polling), ours and the ones with no Origin (test scripts, bots) are let in.
 'use strict';
 const http = require('http');
@@ -277,20 +278,45 @@ async function run() {
 
   section('a taken-over projector can\'t test the opener\'s code');
   const opener = sock(browser());
-  const ow = await emitAck(opener, 'host:create', { gameType: 'warmup', password: SEED });
+  const ow = await emitAck(opener, 'host:create', { gameType: 'warmup', password: ENNI });
   const tk = browser();
   const taker = sock(tk);
-  ok((await emitAck(taker, 'host:reclaim', { pin: ow.pin, password: ENNI })).ok === true, 'a regular teacher takes the super admin\'s warm-up projector with her own code (the warm-up rule)');
+  const busy = await emitAck(taker, 'host:reclaim', { pin: ow.pin, password: SEED });
+  ok(busy.ok === false && busy.error === 'host-live', 'nobody takes a running warm-up projector with a code, not even a super admin (2026-10-17)');
+  opener.close();
+  await sleep(250);
+  ok((await emitAck(taker, 'host:reclaim', { pin: ow.pin, password: OTHER })).error === 'not-host', 'once it is off, another regular teacher\'s code still does not take it');
+  ok((await emitAck(taker, 'host:reclaim', { pin: ow.pin, password: SEED })).ok === true, '… a super admin does');
   await fillUp(tk);
   let none = true;
-  for (const pw of [SEED, 'WRONG-' + rnd(3), SEED]) {
+  for (const pw of [ENNI, 'WRONG-' + rnd(3), ENNI]) {
     const r = await emitAck(taker, 'wu:auth', { pin: ow.pin, password: pw });
     if (!(r.ok === false && r.wait === true && !r.isSuperAdmin)) none = false;
   }
-  ok(none, 'with her address waiting, the opener\'s code and wrong ones answer the same «wait» (being the host is no proof)');
-  ok((await emitAck(taker, 'wu:presets-list', { pin: ow.pin, password: SEED })).error === WAIT, '… on the presets too');
-  ok((await emitAck(taker, 'wu:auth', { pin: ow.pin, password: ENNI })).ok === true, '… while her own code (proved on this connection) still works');
-  taker.close(); opener.close();
+  ok(none, 'with the taker\'s address waiting, the opener\'s code and wrong ones answer the same «wait» (being the host is no proof)');
+  ok((await emitAck(taker, 'wu:presets-list', { pin: ow.pin, password: ENNI })).error === WAIT, '… on the presets too');
+  ok((await emitAck(taker, 'wu:auth', { pin: ow.pin, password: SEED })).ok === true, '… while the taker\'s own code (proved on this connection) still works');
+  taker.close();
+
+  section('the owner check after the code reads nothing twice');
+  const ob = browser();
+  const oProj = sock(browser());
+  const oRoom = await emitAck(oProj, 'host:create', { gameType: 'warmup', password: ENNI });
+  const os1 = sock(ob);
+  let refused = true;
+  for (let i = 0; i < 12; i++) {
+    const r = await emitAck(os1, 'host:reclaim', { pin: oRoom.pin, password: i % 2 ? OTHER : SEED });
+    if (!(r.ok === false && r.error === 'host-live')) refused = false;
+  }
+  ok(refused, '12 right codes on a running warm-up projector are refused («host-live»)');
+  ok((await emitAck(sock({ jar: {}, ip: ob.ip }), 'wu:presets-list', { password: ENNI })).ok === true, '… and never counted as wrong ones');
+  for (let i = 0; i < 5; i++) await emitAck(os1, 'host:reclaim', { pin: oRoom.pin, password: 'WRONG-R' + i });
+  const os2 = sock({ jar: {}, ip: ob.ip });
+  for (let i = 0; i < 4; i++) await emitAck(os2, 'wu:presets-list', { password: 'WRONG-P' + i });
+  ok((await emitAck(sock({ jar: {}, ip: ob.ip }), 'wu:presets-list', { password: ENNI })).ok === true, 'a wrong code on reclaim counts once (5 + 4 = 9: the address still gets in)');
+  await emitAck(os2, 'wu:presets-list', { password: 'WRONG-P9' });
+  ok((await emitAck(sock({ jar: {}, ip: ob.ip }), 'wu:presets-list', { password: ENNI })).error === WAIT, '… and the 10th makes it wait');
+  os1.close(); os2.close(); oProj.close();
 
   section('host-only tools read only the room\'s own projector\'s code');
   const q = browser();
