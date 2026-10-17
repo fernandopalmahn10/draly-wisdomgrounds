@@ -9,8 +9,10 @@
 // Checks: host:create answers the room's token (32 hex) and never sends it in the room's state; a stranger with the PIN,
 // a wrong token, a wrong code or another regular teacher (code or remembered device) is refused while the room and its
 // projector stay as they were; the same tab (token), the same teacher in another browser (remembered device or code)
-// and a super admin get it back; a room opened from a remembered device belongs to that teacher; exam and warm-up rooms
-// keep their own rule (the teacher code, the token alone is not enough); wrong codes count in the turnstile.
+// and a super admin get it back; a room opened from a remembered device belongs to that teacher; warm-up, reading and
+// exam rooms follow the same rule AND still need a teacher code (2026-10-17: before, any teacher code took them, even
+// mid-class; one code over all 900 PINs takes none now, an old tab can't take a newer room, an exam room keeps its owner
+// across a restart and one saved without an owner goes only to a super admin); wrong codes count in the turnstile.
 'use strict';
 const http = require('http');
 const fs = require('fs');
@@ -203,21 +205,82 @@ async function run() {
   ok((await emitAck(s13, 'host:reclaim', { pin: c2.pin, password: ENNI })).ok === true, 'its teacher\'s code takes it back');
   s13.close();
 
-  section('exam and warm-up rooms keep their own rule');
-  const s14 = sock(browser());
-  const exam = await emitAck(s14, 'host:create', { gameType: 'hsksim', simId: 'yct1-sim1', password: ENNI });
-  ok(exam.pin && exam.hostToken, 'an exam room opens');
-  const s15 = sock(browser());
-  const e1 = await emitAck(s15, 'host:reclaim', { pin: exam.pin, hostToken: exam.hostToken });
-  ok(e1.ok === false && e1.error === 'bad-password', 'an exam room still needs the teacher code (the token alone is not enough)');
-  ok((await emitAck(s15, 'host:reclaim', { pin: exam.pin, password: ENNI })).ok === true, '… and comes back with it');
-  s15.close(); s14.close();
-  const s16 = sock(browser());
-  const wu = await emitAck(s16, 'host:create', { gameType: 'warmup', password: ENNI });
-  const s17 = sock(browser());
-  ok((await emitAck(s17, 'host:reclaim', { pin: wu.pin })).ok === false, 'a warm-up room still needs the teacher code');
-  ok((await emitAck(s17, 'host:reclaim', { pin: wu.pin, password: ENNI })).ok === true, '… and comes back with it');
-  s17.close(); s16.close();
+  section('warm-up, reading and exam rooms: the owner rule, and still the teacher code (his decision 2026-10-17)');
+  // (before: ANY teacher code took them, even while the teacher's projector was on)
+  const once = async (b, payload) => { const s = sock(b); const r = await emitAck(s, 'host:reclaim', payload); s.close(); return r; };
+  for (const type of ['warmup', 'reading', 'hsksim']) {
+    const proj = browser();
+    const ps = sock(proj);
+    const room = await emitAck(ps, 'host:create', { gameType: type, simId: 'yct1-sim1', password: ENNI });
+    ok(room.pin && /^[0-9a-f]{32}$/.test(String(room.hostToken || '')), `${type}: a room opens with its token`);
+    const t1 = await once(browser(), { pin: room.pin, hostToken: room.hostToken });
+    ok(t1.ok === false && t1.error === 'bad-password', `${type}: the token alone is not enough (the teacher code is still needed)`);
+    const t2 = await once(laptop, { pin: room.pin });
+    ok(t2.ok === false && t2.error === 'bad-password', `${type}: … nor her remembered device without the code`);
+    for (const [who, pw] of [['the same teacher\'s code (an old sleeping tab)', ENNI], ['another teacher\'s code', OTHER], ['a super admin\'s code', SEED]]) {
+      const r = await once(browser(), { pin: room.pin, password: pw });
+      ok(r.ok === false && r.error === 'host-live', `${type}: while its projector is on, ${who} cannot take it`);
+    }
+    const drop = sock(proj);                                       // a dropped Wi-Fi: a new connection of the same tab
+    const r1 = await emitAck(drop, 'host:reclaim', { pin: room.pin, hostToken: room.hostToken, password: ENNI });
+    ok(r1.ok === true && r1.gameType === type, `${type}: the same tab (its token + the code) gets it back, even before the old connection is gone`);
+    ps.close(); drop.close();
+    await sleep(250);
+    const r2 = await once(browser(), { pin: room.pin, password: OTHER });
+    ok(r2.ok === false && r2.error === 'not-host', `${type}: once the projector is off, a colleague's code still cannot take it`);
+    const r3 = await once(otherDev, { pin: room.pin, password: OTHER });
+    ok(r3.ok === false && r3.error === 'not-host', `${type}: … nor from her remembered device`);
+    const r4 = await once(browser(), { pin: room.pin, password: ENNI.toLowerCase() });
+    ok(r4.ok === true && r4.gameType === type, `${type}: the same teacher's code on another laptop takes it back`);
+    await sleep(250);
+    const r5 = await once(laptop, { pin: room.pin, password: OTHER });
+    ok(r5.ok === true, `${type}: … and her remembered device (with a teacher code)`);
+    await sleep(250);
+    const r6 = await once(browser(), { pin: room.pin, password: SEED });
+    ok(r6.ok === true, `${type}: … and a super admin`);
+    await sleep(250);
+  }
+  // an old sleeping warm-up tab whose PIN came back for a newer room (another teacher's): its old token and its code
+  const oldTab = sock(browser());
+  const oldRoom = await emitAck(oldTab, 'host:create', { gameType: 'warmup', password: ENNI });
+  oldTab.close();
+  const newProj = sock(browser());
+  const newRoom = await emitAck(newProj, 'host:create', { gameType: 'warmup', password: OTHER });
+  const w1 = await once(browser(), { pin: newRoom.pin, hostToken: oldRoom.hostToken, password: ENNI });
+  ok(w1.ok === false && w1.error === 'host-live', 'an old warm-up tab (another room\'s token + its code) cannot take a newer running room');
+  newProj.close();
+  await sleep(250);
+  const w2 = await once(browser(), { pin: newRoom.pin, hostToken: oldRoom.hostToken, password: ENNI });
+  ok(w2.ok === false && w2.error === 'not-host', '… nor once that projector dropped');
+  // one teacher code tried over every 3-digit PIN takes no projector (the hole: every warm-up, reading and exam room)
+  const sweepT = await post('/api/admin/teachers', { displayName: 'Ms Barrido', email: '', country: 'MX', levels: ['yct1'] }, { headers: T(SEED) });
+  const SWEEP = sweepT.json && (sweepT.json.teacher || sweepT.json).teacherId;
+  ok(!!SWEEP, 'a third regular teacher is created');
+  const live = [];
+  for (const type of ['warmup', 'reading', 'hsksim']) {
+    const s = sock(browser());
+    live.push({ s, room: await emitAck(s, 'host:create', { gameType: type, simId: 'yct1-sim1', password: ENNI }) });
+  }
+  const sweepB = browser();
+  const sweeper = sock(sweepB);
+  let taken = 0, seen = 0;
+  for (let p = 100; p <= 999; p++) {
+    const r = await emitAck(sweeper, 'host:reclaim', { pin: String(p), password: SWEEP });
+    if (r.ok) taken++;
+    if (r.error && r.error !== 'no-game') seen++;
+  }
+  ok(seen >= 3 && taken === 0, `one teacher code tried over all 900 PINs takes none of the ${seen} rooms (it used to take every warm-up, reading and exam room)`);
+  sweeper.close();
+  const after900 = sock({ jar: {}, ip: sweepB.ip });
+  ok((await emitAck(after900, 'wu:presets-list', { password: 'WRONG-' + rnd(3) })).ok === false
+    && (await emitAck(after900, 'wu:presets-list', { password: SWEEP })).ok === true, '… and its address is not waiting (a right code never counts as a wrong one)');
+  after900.close();
+  for (const l of live) {
+    const back = await emitAck(l.s, 'host:reclaim', { pin: l.room.pin, hostToken: l.room.hostToken, password: ENNI });
+    ok(back.ok === true, `… while each running ${back.gameType || 'room'} projector still has its room`);
+    l.s.close();
+  }
+  await sleep(250);
 
   section('wrong codes count');
   const brute = browser();
@@ -232,6 +295,34 @@ async function run() {
   const tokenOk = await emitAck(brute2, 'host:reclaim', { pin: c2.pin, hostToken: c2.hostToken });
   ok(tokenOk.ok === true, 'a projector with its room\'s token is never stopped by its address\'s wrong codes');
   brute2.close();
+
+  section('an exam room keeps its owner across a restart');
+  const viaHttp = await post('/api/hsk-sim/room/create', { simId: 'yct1-sim1' }, { headers: T(ENNI) });
+  const hPin = viaHttp.json && viaHttp.json.pin;
+  ok(viaHttp.status === 200 && hPin, 'an exam room opened over HTTP (/api/hsk-sim/room/create)');
+  ok((await once(browser(), { pin: hPin, password: OTHER })).error === 'not-host', '… goes back to no other teacher');
+  ok((await once(browser(), { pin: hPin, password: ENNI })).ok === true, '… but to the teacher who opened it');
+  const xs = sock(browser());
+  const xRoom = await emitAck(xs, 'host:create', { gameType: 'hsksim', simId: 'yct1-sim1', password: ENNI });
+  xs.close();
+  await sleep(250);
+  await stopServer();
+  const roomsFile = path.join(DATA, 'hsk-rooms.json');
+  const disk = JSON.parse(fs.readFileSync(roomsFile, 'utf8'));
+  ok(disk[hPin] && disk[xRoom.pin] && disk[hPin].owner && disk[hPin].owner === disk[xRoom.pin].owner, 'both exam rooms keep their owner on the data disk');
+  const diskText = JSON.stringify(disk);
+  ok(![ENNI, OTHER, SEED, LEGACY].some((c) => diskText.includes(c)) && !diskText.includes(xRoom.hostToken), '… as the teacher\'s id: never a code or a room token');
+  disk['7777'] = { pin: '7777', simId: 'yct1-sim1', createdAt: Date.now(), fx: null };   // a room saved before 2026-10-17
+  fs.writeFileSync(roomsFile, JSON.stringify(disk));
+  await startServer();
+  for (const p of [hPin, xRoom.pin, '7777']) ok((await get('/api/hsk-sim/room/' + p)).status === 200, `exam room ${p === '7777' ? 'saved before the change' : p === hPin ? '(HTTP)' : '(socket)'} is back after the restart`);
+  for (const p of [hPin, xRoom.pin]) {
+    ok((await once(browser(), { pin: p, password: OTHER })).error === 'not-host', 'after a restart another teacher still cannot take it');
+    ok((await once(browser(), { pin: p, password: ENNI })).ok === true, '… its teacher can');
+    await sleep(250);
+  }
+  ok((await once(browser(), { pin: '7777', password: ENNI })).error === 'not-host', 'a room with no owner on record goes to no regular teacher');
+  ok((await once(browser(), { pin: '7777', password: SEED })).ok === true, '… only to a super admin');
 
   section('odd PINs');
   const odd = sock(laptop);

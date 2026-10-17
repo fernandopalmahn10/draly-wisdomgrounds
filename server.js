@@ -3876,7 +3876,7 @@ function _hskSessionKey(pin, sc) {
 // teacher creates a PIN, the server restarts, and kids see "no room
 // with this PIN" forever. This is exactly the bug reported 2026-06-03.
 const HSK_ROOMS_FILE = path.join(process.env.DRALY_DATA_DIR || path.join(__dirname, 'data'), 'hsk-rooms.json');   // tests: their own folder
-const HSK_ROOMS = new Map();   // pin → { pin, simId, createdAt, fx, hostHeartbeat }
+const HSK_ROOMS = new Map();   // pin → { pin, simId, createdAt, fx, hostHeartbeat, owner (teacher uid, never sent) }
 
 function _hskRoomsLoad() {
   try {
@@ -3941,6 +3941,7 @@ function _hskGameLookup(pin) {
     gameType: 'hsksim',
     state: 'lobby',
     hostId: null,
+    hostOwner: legacy.owner || null,   // 🔒 2026-10-17: who opened it, kept on disk (a restart never hands it to anyone)
     createdAt: legacy.createdAt || Date.now(),
     duration: 3600,
     startedAt: null, endsAt: null,
@@ -3967,10 +3968,12 @@ app.post('/api/hsk-sim/room/create', (req, res) => {
   // /player.html couldn't see (root cause of "no game with that PIN"
   // reported 2026-06-03).
   const pin = genPin();
+  const owner = _ownerOfTeacher(session);   // 🔒 2026-10-17: who opened it (host:reclaim, _mayReclaim)
   games[pin] = {
     gameType: 'hsksim',
     state: 'lobby',
     hostId: null,                 // no socket host page right now (HTTP-driven)
+    hostOwner: owner,
     createdAt: Date.now(),
     duration: 3600,
     startedAt: null, endsAt: null,
@@ -3988,7 +3991,7 @@ app.post('/api/hsk-sim/room/create', (req, res) => {
   // Mirror into HSK_ROOMS too so the legacy disk-persistence keeps
   // working across restarts (and so /api/hsk-sim/room/:pin works for
   // old clients during the rollout).
-  HSK_ROOMS.set(pin, { pin, simId, createdAt: Date.now(), fx: null });
+  HSK_ROOMS.set(pin, { pin, simId, createdAt: Date.now(), fx: null, owner });
   _hskRoomsSave();
   res.json({ ok: true, pin, simId });
 });
@@ -5501,12 +5504,13 @@ function _ownerOfCode(code) {
 // works: an F5 or a dropped connection of that projector. While the room's projector is still CONNECTED nothing else
 // takes it (an old sleeping tab of the same teacher or of the super admin, whose PIN came back for a newer room, must
 // never freeze a running class). Once the projector is gone: the same teacher by remembered device or code, or a super
-// admin. A code is only read while its address has wrong codes left (the remembered device never waits).
+// admin. A code is only read while its address has wrong codes left (the remembered device never waits). Every room
+// follows this, warm-up, reading and exam rooms too (his decision 2026-10-17; they also need the teacher code first).
+// A room with no owner on record (an exam room saved to disk before 2026-10-17) goes back only to a super admin.
 function _mayReclaim(g, socket, password, token) {
   if (g.hostToken && token && _safeEqual(String(token), g.hostToken)) return 'ok';
   if (g.hostId && io.sockets.sockets.get(g.hostId)) return 'host-live';
-  if (!g.hostOwner) return 'not-host';
-  const mine = (w) => !!w && (w.superAdmin || w.owner === g.hostOwner);
+  const mine = (w) => !!w && (w.superAdmin || (!!g.hostOwner && w.owner === g.hostOwner));
   const dev = LevelKeys.teacherDevice((socket.handshake && socket.handshake.headers) || {});
   if (dev && mine({ owner: _ownerOfTeacher(dev), superAdmin: !!dev.isSuperAdmin })) return 'ok';
   const c = _socketCode(socket, password);   // (a wrong code counts; 'wait' comes before a code is read)
@@ -5529,8 +5533,8 @@ function _mayReclaim(g, socket, password, token) {
 //     F5 or a dropped connection) lets that room's own teacher's code through while the address waits: a running class
 //     never freezes because the school's address filled up with wrong codes. Any other code on that path waits too and
 //     counts as a miss for that teacher (10 like everywhere, then even the right one waits), so a stolen token can't
-//     test the opener's code without limit. Being a room's host is NOT proof (a warm-up, reading or exam room goes to
-//     any teacher code on reclaim: a host socket gets only the plain rule, so it can't test the opener's code).
+//     test the opener's code without limit. Being a room's host is NOT proof (a super admin, or the opener from another
+//     device, can host it too: a host socket gets only the plain rule, so it can't test the opener's code).
 // → { ok: true, owner, superAdmin } | { ok: false, why: 'none' | 'wait' | 'retired' | 'wrong' }
 const _codeMark = (p) => require('crypto').createHash('sha256').update('draly-socket-code:' + p).digest('hex');
 function _socketCode(socket, password, owner) {
@@ -8599,7 +8603,7 @@ io.on('connection', (socket) => {
       // Mirror into the legacy HSK_ROOMS table so disk-persistence
       // works across dyno restarts.
       try {
-        HSK_ROOMS.set(pin, { pin, simId, createdAt: Date.now(), fx: null });
+        HSK_ROOMS.set(pin, { pin, simId, createdAt: Date.now(), fx: null, owner: hostOwner });   // 🔒 owner: see _mayReclaim
         _hskRoomsSave();
       } catch (_) {}
     }
@@ -8631,13 +8635,14 @@ io.on('connection', (socket) => {
       const c = _socketCode(socket, password, _roomOwnerFor(g, hostToken));
       if (!c.ok) return cb({ ok: false, error: c.why === 'wait' ? 'wait' : 'bad-password' });
     }
-    // 🔒 2026-10-16: every other room goes back only to the teacher who opened it (it used to go to anyone who knew the
-    // PIN, even while the teacher's projector was still connected): this projector's room secret (an F5 in the same
-    // tab), the same teacher's remembered device or code (another tab or browser), or a super admin.
-    if (!isWarmupTool) {
-      const may = _mayReclaim(g, socket, password, hostToken);
-      if (may !== 'ok') return cb({ ok: false, error: may });
-    }
+    // 🔒 2026-10-16: a room goes back only to the teacher who opened it (it used to go to anyone who knew the PIN, even
+    // while the teacher's projector was still connected): this projector's room secret (an F5 in the same tab), the
+    // same teacher's remembered device or code (another tab or browser), or a super admin. 🔒 2026-10-17 (his decision):
+    // warm-up, reading and exam rooms too, on top of their teacher code (it used to be ANY teacher code, even mid-class:
+    // one code tried over the 900 PINs took every one of them, and an old sleeping warm-up tab took a newer room whose
+    // PIN came back). The code was proved just above, so _mayReclaim reads it again without counting anything.
+    const may = _mayReclaim(g, socket, password, hostToken);
+    if (may !== 'ok') return cb({ ok: false, error: may });
     // Move host identity to this socket; cancel any pending teardown.
     g.hostId = socket.id;
     g.hostDisconnectedAt = null;
