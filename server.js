@@ -5500,22 +5500,42 @@ function _ownerOfCode(code) {
   const t = Teachers.getByTeacherId(p);
   return t ? { owner: t.uid, superAdmin: !!t.isSuperAdmin } : null;
 }
-// → 'ok' | 'host-live' | 'wait' | 'not-host'. The room's own secret (only the projector that opened it got it) always
-// works: an F5 or a dropped connection of that projector. While the room's projector is still CONNECTED nothing else
-// takes it (an old sleeping tab of the same teacher or of the super admin, whose PIN came back for a newer room, must
-// never freeze a running class). Once the projector is gone: the same teacher by remembered device or code, or a super
-// admin. A code is only read while its address has wrong codes left (the remembered device never waits). Every room
-// follows this, warm-up, reading and exam rooms too (his decision 2026-10-17; they also need the teacher code first).
-// A room with no owner on record (an exam room saved to disk before 2026-10-17) goes back only to a super admin.
+// host:reclaim → 'ok' | 'host-live' | 'wait' | 'bad-password' | 'no-game'. `g` = the live room at that PIN, or null.
+// The room's own secret (only the projector that opened it got it) always works at once: an F5 or a dropped connection
+// of that projector (warm-up, reading and exam rooms also need a teacher code, and its own teacher's code never waits
+// for the school's address). While the room's projector is still CONNECTED nothing else takes it (an old sleeping tab
+// of the same teacher or of the super admin, whose PIN came back for a newer room, must never freeze a running class).
+// Once the projector is gone: the same teacher by remembered device or code, or a super admin. A code is only read
+// while its address has wrong codes left (the remembered device never waits). Every room follows this, warm-up,
+// reading and exam rooms too (his decision 2026-10-17; they also need the teacher code). A room with no owner on record
+// (an exam room saved to disk before 2026-10-17) goes back only to a super admin.
+// 🔒 2026-10-17 (PIN oracle): only the room's own projector, its teacher or a super admin hears anything about a PIN.
+// Anyone else is asked who they are FIRST, the same way for every PIN, and then gets the answer of an empty PIN
+// ('no-game'), or 'bad-password' / 'wait' for a wrong code / a waiting address. Before, 'no-game' against
+// 'bad-password' / 'not-host' / 'host-live' told running rooms from empty PINs to any socket, with no limit: a
+// running exam room's PIN lets a stranger join it (player:join hands out the room pass), which is why player:join
+// and the HTTP lookups count unknown PINs (_pinMiss). Any new socket handler that takes a PIN answers the same way.
+const _RECLAIM_NEEDS_CODE = new Set(['warmup', 'reading', 'hsksim']);   // 🔒 exam rooms too (2026-10-15)
 function _mayReclaim(g, socket, password, token) {
-  if (g.hostToken && token && _safeEqual(String(token), g.hostToken)) return 'ok';
-  if (g.hostId && io.sockets.sockets.get(g.hostId)) return 'host-live';
-  const mine = (w) => !!w && (w.superAdmin || (!!g.hostOwner && w.owner === g.hostOwner));
+  const needsCode = !!g && _RECLAIM_NEEDS_CODE.has(g.gameType);
+  const refused = (c) => (c.why === 'wait' ? 'wait' : 'bad-password');
+  if (g && g.hostToken && token && _safeEqual(String(token), g.hostToken)) {
+    if (!needsCode) return 'ok';
+    const c = _socketCode(socket, password, _roomOwnerFor(g, token));
+    return c.ok ? 'ok' : refused(c);
+  }
+  const mine = (w) => !!g && !!w && (w.superAdmin || (!!g.hostOwner && w.owner === g.hostOwner));
   const dev = LevelKeys.teacherDevice((socket.handshake && socket.handshake.headers) || {});
-  if (dev && mine({ owner: _ownerOfTeacher(dev), superAdmin: !!dev.isSuperAdmin })) return 'ok';
-  const c = _socketCode(socket, password);   // (a wrong code counts; 'wait' comes before a code is read)
-  if (c.why === 'wait') return 'wait';
-  return c.ok && mine(c) ? 'ok' : 'not-host';
+  let c = null;
+  if (!(dev && mine({ owner: _ownerOfTeacher(dev), superAdmin: !!dev.isSuperAdmin }))) {
+    c = _socketCode(socket, password);   // (a wrong code counts; 'wait' comes before a code is read)
+    if (!c.ok) return c.why === 'none' ? 'no-game' : refused(c);
+    if (!mine(c)) return 'no-game';      // a colleague's room, or no room at all: the same answer
+  }
+  // its teacher or a super admin from here on: the room may say how it is
+  if (needsCode && !c) { c = _socketCode(socket, password); if (!c.ok) return refused(c); }
+  if (g.hostId && io.sockets.sockets.get(g.hostId)) return 'host-live';
+  return 'ok';
 }
 // ── 🔒 2026-10-17 — ONE door for every teacher code a live-game socket sends ───────────────────────────────────────
 // The projector-lock review found the warm-up presets, the warm-up and reading teacher tools and the exam / warm-up /
@@ -8646,23 +8666,15 @@ io.on('connection', (socket) => {
     let g = digits ? games[pin] : null;
     // 🔒 2026-10-17: after a restart an exam room lives only on the data disk (HSK_ROOMS) until something needs it; its
     // own monitor coming back (a reconnect, public/js/host-reconnect.js) takes it back too, by the owner rule below.
-    // Only with a teacher code that works: a socket without one never learns which PINs are exam rooms.
-    if (!g && digits && HSK_ROOMS.has(String(pin)) && _socketCode(socket, password).ok) g = _hskGameLookup(String(pin));
-    if (!g) return cb({ ok: false, error: 'no-game' });
-    // Auth: warmup/reading teacher tools validate via the admin password.
-    const isWarmupTool = (g.gameType === 'warmup' || g.gameType === 'reading' || g.gameType === 'hsksim');   // 🔒 exam rooms too (2026-10-15)
-    // 🔒 2026-10-17: the code goes through _socketCode (it was read with no turnstile: any socket could try codes here);
-    // the room's own projector (its token) with its own teacher's code never waits for the address
-    if (isWarmupTool) {
-      const c = _socketCode(socket, password, _roomOwnerFor(g, hostToken));
-      if (!c.ok) return cb({ ok: false, error: c.why === 'wait' ? 'wait' : 'bad-password' });
-    }
+    // Loading it tells nobody anything: _mayReclaim answers every other socket the same for every PIN.
+    if (!g && digits && HSK_ROOMS.has(String(pin))) g = _hskGameLookup(String(pin));
     // 🔒 2026-10-16: a room goes back only to the teacher who opened it (it used to go to anyone who knew the PIN, even
     // while the teacher's projector was still connected): this projector's room secret (an F5 in the same tab), the
     // same teacher's remembered device or code (another tab or browser), or a super admin. 🔒 2026-10-17 (his decision):
-    // warm-up, reading and exam rooms too, on top of their teacher code (it used to be ANY teacher code, even mid-class:
-    // one code tried over the 900 PINs took every one of them, and an old sleeping warm-up tab took a newer room whose
-    // PIN came back). The code was proved just above, so _mayReclaim reads it again without counting anything.
+    // warm-up, reading and exam rooms too, on top of their teacher code, read only through _socketCode (it used to be
+    // ANY teacher code, even mid-class: one code tried over the 900 PINs took every one of them, and an old sleeping
+    // warm-up tab took a newer room whose PIN came back). 🔒 2026-10-17: and nobody else learns whether a PIN is a
+    // running room at all (an unknown PIN goes through the same checks: see _mayReclaim).
     const may = _mayReclaim(g, socket, password, hostToken);
     if (may !== 'ok') return cb({ ok: false, error: may });
     // Move host identity to this socket; cancel any pending teardown.

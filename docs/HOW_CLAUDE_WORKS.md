@@ -365,6 +365,11 @@ A separate Emirati Arabic (Khaleeji) track:
     counts in the same wrong-code limit as /maestro (10 wrong in 10 minutes and that internet address waits; a
     remembered teacher laptop never waits because of its school's Wi-Fi, and a running class keeps working), and only
     the platform's own pages can open a live connection (a page on another site is refused).
+  - **Room PINs stay private (2026-10-17):** asking to take a projector back no longer tells anyone whether a PIN is a
+    running class: only that room's own projector, the teacher who opened it or the super admin hear anything about
+    it; everyone else hears «no room here» for every PIN. Before, anyone could try all 900 three-digit PINs and list
+    every running class, and an exam room's PIN lets a stranger join the exam. The teacher's own projector still comes
+    back at once after a dropped Wi-Fi.
   - **Projectors (2026-10-16/17):** a running room's projector goes back only to the teacher who opened it: the same
     tab after a dropped Wi-Fi (in the games also after a reload); nobody else while that projector is still on; once it
     is off, the same teacher from another laptop or the super admin. Games since 2026-10-16; warm-up, reading and exam
