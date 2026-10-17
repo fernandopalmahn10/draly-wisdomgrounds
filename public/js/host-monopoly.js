@@ -204,7 +204,7 @@
     const sd = $('step-dice');
     if (sd && !sd.firstChild) { const d = B.dice(); d._face.textContent = '4'; sd.append(d, el('i', 'mn-hand')); }
     const ss = $('step-star');
-    if (ss && !ss.firstChild) { const im = el('img'); im.src = B.DRALINGO; im.alt = ''; ss.append(B.star(), im); }
+    if (ss && !ss.firstChild) { const im = el('img', 'mnh-hold'); im.src = B.DRALINGO_STAR || B.DRALINGO; im.alt = 'Dralingo con la estrella'; ss.append(im); }
     if (!preview && $('preview')) {
       preview = new B.Board($('preview'), { mode: 'tile', tags: false });
       requestAnimationFrame(() => preview.fit());

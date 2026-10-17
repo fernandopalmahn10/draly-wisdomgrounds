@@ -17,6 +17,8 @@
   const reduced = () => !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const LM = '/assets/kingdoms/landmarks/big/';
   const DRALINGO = '/assets/dralingo/power.webp';
+  // Dralingo holding the big gold star (art batch 2026-10-17): the star moment, the intro and «¡Junta estrellas!»
+  const DRALINGO_STAR = '/assets/dralingo/star-hold.webp';
   const STEP_ARC = 34;                // how high a hop goes (map units)
   const PIECE_H = 118;                // a piece's height on the board (map units; animals a little lower)
   const FRAME = 12;                   // the board's gold frame (css .mnb-map border): map units start inside it
@@ -518,8 +520,8 @@
   function preload(skins) {
     (skins || []).forEach((s) => ['idle', 'ok', 'no'].forEach((p) => { const u = art(s, p); if (!pre[u]) { pre[u] = new Image(); pre[u].src = u; } }));
     MAP.LANDMARKS.forEach((l) => { const u = lmArt(l.id); if (!pre[u]) { pre[u] = new Image(); pre[u].src = u; } });
-    if (!pre[DRALINGO]) { pre[DRALINGO] = new Image(); pre[DRALINGO].src = DRALINGO; }
+    [DRALINGO, DRALINGO_STAR].forEach((u) => { if (!pre[u]) { pre[u] = new Image(); pre[u].src = u; } });
   }
 
-  root.MonoBoard = { MAP, T, Board, Minimap, figure, coin, star, dice, colorOf, art, skinFor, isAnimal, lmArt, preload, fmt, el, reduced, sleep, DRALINGO };
+  root.MonoBoard = { MAP, T, Board, Minimap, figure, coin, star, dice, colorOf, art, skinFor, isAnimal, lmArt, preload, fmt, el, reduced, sleep, DRALINGO, DRALINGO_STAR };
 })(typeof window !== 'undefined' ? window : this);

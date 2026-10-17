@@ -352,6 +352,8 @@
       seen[r.skin] = 1;
       ['ok', 'no'].forEach((p) => { const i = new Image(); i.src = S().kidArt(r.skin, p); });
     });
+    // the captains' stickers of the show (suspense, cheer, the kind words): ~25 KB each, held per moment by cast.js
+    Object.values(f.captains || {}).forEach((id) => ['wow', 'cheer', 'talk'].forEach((p) => { const i = new Image(); i.src = castPose(id, p); }));
   };
   Ceremony.prototype.fresh = function (cls) {
     this.box.innerHTML = '';
@@ -391,7 +393,7 @@
       const col = el('div', 'pf-col pf-' + id + (this.mine(id) ? ' mine' : ''));
       const cap = el('img', 'pf-col-cap');
       cap.alt = '';
-      cap.src = castPose(f.captains && f.captains[id], 'hello');
+      cap.src = castPose(f.captains && f.captains[id], 'wow');     // the suspense: who wins?
       const tube = el('div', 'pf-tube');
       const fill = el('i');
       tube.appendChild(fill);
@@ -526,7 +528,7 @@
       const capId = f.captains && f.captains[id];
       const cap = el('img', 'pf-side-cap');
       cap.alt = '';
-      cap.src = castPose(capId, win ? 'cheer' : 'hello');
+      cap.src = castPose(capId, win ? 'cheer' : 'talk');      // the winners cheer, the other captain speaks kindly
       head.appendChild(cap);
       if (capId) {
         const b = el('p', 'pf-bubble');
@@ -571,7 +573,7 @@
     const head = el('div', 'pf-side-head pf-crewhead');
     const cap = el('img', 'pf-side-cap');
     cap.alt = '';
-    cap.src = castPose(jet, esc ? 'cheer' : 'hello');
+    cap.src = castPose(jet, esc ? 'cheer' : 'talk');
     const b = el('p', 'pf-bubble');
     b.append(el('b', null, castName(jet)), document.createTextNode(castLine(jet, esc ? 'win' : 'animo', esc ? '¡Lo lograron!' : '¡La próxima escapamos!')));
     head.append(cap, b);
@@ -652,7 +654,7 @@
     if (G.coop) {
       const rk = (f.extra && f.extra.rank) || { id: 'zoco' };
       art.src = { cielo: '/assets/saga/avatars/plane.webp', burj: '/assets/kingdoms/landmarks/big/burj.webp', zoco: '/assets/saga/avatars/camel.webp' }[rk.id] || '/assets/saga/avatars/camel.webp';
-    } else art.src = castPose(f.captains && f.captains[team], me.won || me.tie ? 'cheer' : 'hello');
+    } else art.src = castPose(f.captains && f.captains[team], me.won || me.tie ? 'cheer' : 'talk');
     top.append(kid, art);
     s.appendChild(top);
     s.appendChild(el('h2', 'pf-card-h', lines.title));

@@ -1774,7 +1774,7 @@
       setTimeout(() => document.body.classList.remove('wu-shake'), 700);
       const el = document.createElement('div');
       el.className = 'wu-fx-67';
-      el.innerHTML = '<img class="a" src="/assets/sixseven/dralingo-67-a.webp" alt="Dralingo: seis-siete"><img class="b" src="/assets/sixseven/dralingo-67-b.webp" alt="">';
+      el.innerHTML = '<img class="a" src="/assets/sixseven/dralingo-67-a.webp" alt="Dralingo: seis-siete"><img class="b" src="/assets/sixseven/dralingo-67-b2.webp" alt="">';
       layer.appendChild(el);
       if (MochiSounds && MochiSounds.combo) MochiSounds.combo();
       setTimeout(() => el.remove(), 2600);

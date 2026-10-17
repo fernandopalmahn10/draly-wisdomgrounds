@@ -277,3 +277,7 @@ Total 14/14 → ships (≥ 12, no 0)
 - Outside this game (reported, not changed): the shared phone lobby of every game says «¡Bienvenido …! Esperando al
   anfitrión… mientras tanto:» in small grey text (masculine for girls, «anfitrión» is an odd word for kids); a
   reviewer suggests «¡Hola, Sofi! Ya estás dentro. Espera a tu profe…» in white, 16 px or more.
+
+### Art batch 1 · 2026-10-17
+- The captains' new poses (Higgsfield Unlimited, 0 credits, his Chrome): `assets/cast/<id>-{talk,jump,wow,67}.webp` for Fer, Hamdan, Latifa, Aileen and Adric (Adrian: Higgsfield refuses him, his three poses stay) and Dralingo `assets/dralingo/{talk,jump,wow}.webp`. `js/cast.js` rotates them: `hello` → hello or talk, `cheer` → cheer or jump, `mystery` → mystery or wow (held 25 s per character, so a moment never flickers); `talk` / `jump` / `wow` / `67` ask for exactly one.
+- Dralingo flying with the big gold star (`assets/dralingo/star-fly.webp`, `DragonSky.starFly()`): one picture where the standing Dralingo + a drawn star used to be (the lobby's step 3, the projector's run-in and sprint panel, the phone's run-in, sprint panel, «¡ESTRELLA!» and how-to). The gang's lines show the speaker talking or cheering (cast.js) instead of the victory figure.

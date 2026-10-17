@@ -1,11 +1,28 @@
 // La Gran Fuga de Dubái — drawing shared by the projector and every phone: Robotín (the goofy guard robot), his
 // tickle-zap, the three «zona segura» rooms, the green zones and the kids. Look: the Reinos de Colores sticker world
 // (one navy outline, pastel fills, soft drop shadows) at Dubai's golden hour. Canvas only, no pictures with text.
-// Robotín is drawn here until his art exists (brief: content/escape/pictures.json). window.EscapeRender.
+// Robotín is a picture per mood since 2026-10-17 (art batch, assets/escape/robotin/); the canvas drawing stays as the
+// fallback while a picture loads (brief: content/escape/pictures.json). window.EscapeRender.
 (function () {
   const INK = '#1d2440';
   const SAFE = '#2fbf71', SAFE_DEEP = '#178a4c', ROBO = '#3fd6e0', ROBO_DEEP = '#1b8fa3', GOLD = '#ffd23f', DANGER = '#f0443a';
   const SKIN_URL = (k) => '/assets/saga/avatars/' + k + '.webp';
+  // Robotín's pictures, one per mood (content/escape/pictures.json «robotin»)
+  const ROBO_MOODS = ['idle', 'chase', 'zap', 'dizzy', 'happy'];
+  const ROBO_URL = (m) => '/assets/escape/robotin/' + (ROBO_MOODS.includes(m) ? m : 'idle') + '.webp';
+  // a one-off Robotín drawing (the projector's chase meter, a card) redraws itself once his picture has loaded
+  const robotWait = new Map();
+  function onRobot(mood, key, fn) {
+    const i = img(ROBO_URL(mood));
+    if (ready(i)) return;
+    let m = robotWait.get(i);
+    if (!m) {
+      m = new Map();
+      robotWait.set(i, m);
+      i.addEventListener('load', () => { const mm = robotWait.get(i); robotWait.delete(i); if (mm) mm.forEach((f) => { try { f(); } catch (_) {} }); }, { once: true });
+    }
+    m.set(key, fn);
+  }
   const IMG = {};
   const img = (url) => { if (!IMG[url]) { const i = new Image(); i.decoding = 'async'; i.src = url; IMG[url] = i; } return IMG[url]; };
   const ready = (i) => i && i.complete && i.naturalWidth > 0;
@@ -13,6 +30,7 @@
   function preload(skins) {
     (skins || ['dralingo', 'fer', 'hamdan', 'latifa', 'aileen', 'adric', 'adrian', 'camel', 'plane', 'falcon', 'oryx']).forEach((k) => img(SKIN_URL(k)));
     ['/assets/kingdoms/landmarks/big/museum.webp', '/assets/kingdoms/landmarks/big/burj.webp', '/assets/saga/avatars/plane.webp'].forEach(img);
+    ROBO_MOODS.forEach((m) => img(ROBO_URL(m)));         // Robotín's five pictures (~120 KB): one-off drawings need them ready
   }
   function rr(g, x, y, w, h, r) {
     g.beginPath();
@@ -42,6 +60,21 @@
     g.translate(0, bob);
     g.rotate(tilt);
     g.scale(dir, 1);
+    // his picture for this mood (art batch 2026-10-17, Higgsfield), with the same bob / tilt / facing; the canvas
+    // drawing below stays as the fallback until it has loaded (each mood loads the first time it is drawn)
+    const pic = img(ROBO_URL(mood));
+    if (ready(pic)) {
+      const h = s * 1.08, w = h * pic.naturalWidth / pic.naturalHeight;
+      g.drawImage(pic, -w / 2, -h + s * 0.02, w, h);
+      if (o.glitch !== false && (t % 2.4) < 0.14) {
+        g.globalAlpha = 0.5;
+        g.fillStyle = '#ff6ad5'; g.fillRect(-w * 0.42 + s * 0.05, -s * 0.66, w * 0.84, s * 0.035);
+        g.fillStyle = ROBO; g.fillRect(-w * 0.42 - s * 0.04, -s * 0.5, w * 0.84, s * 0.03);
+        g.globalAlpha = 1;
+      }
+      g.restore();
+      return;                       // (the dizzy picture has its own stars around the antenna)
+    }
     // wheels
     g.fillStyle = '#4a5578'; rr(g, -s * 0.24, -s * 0.13, s * 0.48, s * 0.13, s * 0.06); g.fill(); outline(g, lw);
     for (let i = -1; i <= 1; i++) {
@@ -230,9 +263,22 @@
     roomCache = { key, canvas: c };
     return c;
   }
+  // the room props as pictures (art batch 2026-10-17, shared with Batalla de Nieve: assets/props/): drawn once loaded,
+  // bottom-centre on the footprint, `w` tiles wide or the footprint width × `k`; the canvas drawings stay the fallback
+  const PROP_PICS = {
+    case: { f: 'display-case', w: 0.95 }, planter: { f: 'planter', w: 0.95 }, palm: { f: 'palm-pot', w: 1.15 },
+    fountain: { f: 'fountain', k: 1.05 }, bench: { f: 'bench', k: 1 }, seats: { f: 'seats', k: 1 }, cart: { f: 'cart', w: 1.05 },
+  };
   function prop(g, p, T, t) {
     const X = p.x * T, Y = p.y * T, W = p.w * T, H = p.h * T;
     g.fillStyle = 'rgba(29,36,64,.18)'; ell(g, X + W / 2, Y + H - 3, W * 0.48, 7); g.fill();
+    const pp = PROP_PICS[p.kind];
+    const pi = pp && img('/assets/props/' + pp.f + '.webp');
+    if (pi && ready(pi)) {
+      const w = (pp.w || p.w * pp.k) * T, h = w * pi.naturalHeight / pi.naturalWidth;
+      g.drawImage(pi, X + W / 2 - w / 2, Y + H + 2 - h, w, h);
+      return;
+    }
     if (p.kind === 'dock') {
       g.fillStyle = '#9aa7c4'; rr(g, X + 4, Y + 8, W - 8, H - 12, 10); g.fill(); outline(g, 2);
       g.fillStyle = ROBO; rr(g, X + 12, Y + 14, W - 24, 6, 3); g.fill();
@@ -340,5 +386,5 @@
     (st.kids || []).forEach((k) => { if (k.me || o.tags) tag(g, k, o.size || 44, view.s, o.tag || 11, o.meLabel); });
   }
 
-  window.EscapeRender = { INK, SAFE, SAFE_DEEP, ROBO, ROBO_DEEP, GOLD, DANGER, SKIN_URL, img, ready, preload, rr, ell, robotin, zap, star, stars, kid, tag, room, roomGround, zone };
+  window.EscapeRender = { INK, SAFE, SAFE_DEEP, ROBO, ROBO_DEEP, GOLD, DANGER, SKIN_URL, img, ready, preload, rr, ell, robotin, onRobot, zap, star, stars, kid, tag, room, roomGround, zone };
 })();

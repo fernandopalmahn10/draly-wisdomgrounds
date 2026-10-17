@@ -60,6 +60,7 @@
     s.on('countdown', () => { if (!on) return; stop(); room = null; zones = []; es = null; my = { idx: 0, turbos: 0, best: 0, streak: 0, safe: 0, waves: 0 }; });
     s.on('es:init', (d) => {
       setOn(true);
+      if (R.preload) R.preload([]);           // Robotín's pictures before the first one-off drawing (cached after once)
       seed = d.seed;
       roster = d.players || roster;
       cast = d.cast || cast;

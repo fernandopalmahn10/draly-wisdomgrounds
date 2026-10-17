@@ -33,7 +33,11 @@
   const cheerSrc = () => ANIM + (window.innerWidth < 700 ? 'cheer-lite.webp' : 'cheer.webp');
   const hasCast = () => !!window.DralingoCast;
   const KINDS = Object.keys(LABELS);
-  const src = (p) => BASE + p + '.webp';
+  // His platform look (kandura, ghutra + agal, mustache; art batch 2026-10-17) replaces each keffiyeh-only sticker it
+  // has a pose for; the others (flag, countdown, dance, fly, party, hearts, clap) stay until they are remade.
+  const NEW = '/assets/dralingo/';
+  const NEW_LOOK = { wave: 'hello', pointing: 'point', thumbsup: 'thumbsup', champion: 'victory', 'champion-red': 'victory-red', laugh: 'laugh', jump: 'jump', shocked: 'wow', thinking: 'wise' };
+  const src = (p) => (NEW_LOOK[p] ? NEW + NEW_LOOK[p] + '.webp' : BASE + p + '.webp');
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   let busy = false;
   let lastKind = null;

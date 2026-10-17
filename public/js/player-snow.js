@@ -7,7 +7,10 @@
   const M = window.SnowMap, R = window.SnowRender;
   const T = M ? M.TILE : 32;
   const SN = '/assets/snow/', K = '/assets/kingdoms/';
-  const POSE = (n) => K + 'dralingo/' + n + '.webp';
+  // Dralingo in his platform look where he has the pose (art batch 2026-10-17; snow-* = his Ski Dubái poses), else the
+  // older keffiyeh stickers
+  const NEW_LOOK = { pointing: 'point', shocked: 'wow', champion: 'victory', jump: 'jump', thinking: 'wise', throw: 'snow-throw', frozen: 'snow-frozen', ski: 'snow-ski' };
+  const POSE = (n) => (NEW_LOOK[n] ? '/assets/dralingo/' + NEW_LOOK[n] : K + 'dralingo/' + n) + '.webp';
   const SEND_MS = 125;              // position updates (8 Hz)
   const AIM = 7 * T;                // auto-aim reach
   const SPEED = { sun: 150, ice: 138 };
@@ -581,7 +584,7 @@
     if (spellCast && my.copos > 0 && !handDone('throw') && enemies().some((e) => e.d <= AIM)) showHand('throw');
     // the big prompt over the map: exactly what to do next
     const pr = $('sn-prompt');
-    let title = '', text = '', pose = 'pointing', target = null, kind = iceSide ? 'ice' : 'gold';
+    let title = '', text = '', pose = iceSide ? 'frozen' : 'pointing', target = null, kind = iceSide ? 'ice' : 'gold';
     const ns = nearestStation();
     if (headStart && my.side === 'sun') {
       title = '¡Junta copos!'; text = `El Hechizo de Hielo llega en ${Math.ceil((until.spell - t) / 1000)} s · ve a una estación ❓`; target = ns;

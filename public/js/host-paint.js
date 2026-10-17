@@ -201,6 +201,7 @@
     const ox = (cw - lv.cols * t * s) / 2, oy = (ch - lv.rows * t * s) / 2;
     g2.setTransform(1, 0, 0, 1, 0, 0);
     window.PaintRender.sky(g2, cw, ch);
+    if (window.PaintRender.islands) window.PaintRender.islands(g2, cw * 0.03, cw * 0.97, ch * 0.11, ch * 0.15, performance.now() / 1000, 0.45);   // Dubai far away in the sky (faint: never mistaken for a platform)
     g2.setTransform(s, 0, 0, s, ox, oy);
     window.PaintRender.tiles(g2, lv, solid, surf, own, 0, lv.cols - 1, 0, lv.rows - 1, 5);
     window.PaintRender.flags(g2, lv, 5);

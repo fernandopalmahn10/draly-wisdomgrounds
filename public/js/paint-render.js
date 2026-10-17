@@ -73,5 +73,33 @@
     });
   }
 
-  window.PaintRender = { INK, COL, HI, DEEP, sky, tiles, flags };
+  // Five Dubai landmark «islands» floating in the sky (art batch 2026-10-17, Higgsfield, content: his request in
+  // docs/specs/dragones-pintores.md): behind the cloud platforms, a slow bob (still with reduced motion). Each picture
+  // loads the first time it is drawn and shows from then on. Scenery only: the rules and the platforms never change.
+  //   islands(g, x0, x1, y, h, t, alpha): spread over x0..x1 (current transform), middle line y, h = the Burj island height
+  const ISLANDS = ['burj', 'arab', 'museum', 'frame', 'atlantis'];
+  const PIC = {};
+  const pic = (k) => {
+    const u = '/assets/paint/islands/' + k + '.webp';
+    if (!PIC[u]) { const i = new Image(); i.decoding = 'async'; i.src = u; PIC[u] = i; }
+    return PIC[u];
+  };
+  const still = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function islands(g, x0, x1, y, h, t, alpha) {
+    const span = (x1 - x0) / ISLANDS.length;
+    const tt = still() ? 0 : (t || 0);
+    g.save();
+    g.globalAlpha = alpha == null ? 0.92 : alpha;
+    ISLANDS.forEach((k, i) => {
+      const im = pic(k);
+      if (!(im.complete && im.naturalWidth)) return;
+      // one shared scale (the pictures were cut at one scale: the Burj is the tallest), bottoms staggered up and down
+      const sc = h / 350, hh = im.naturalHeight * sc, w = im.naturalWidth * sc;
+      const cx = x0 + span * (i + 0.5), base = y + h * 0.5 + (i % 2 ? h * 0.22 : 0) + Math.sin(tt * 0.8 + i * 1.7) * h * 0.035;
+      g.drawImage(im, cx - w / 2, base - hh, w, hh);
+    });
+    g.restore();
+  }
+
+  window.PaintRender = { INK, COL, HI, DEEP, sky, tiles, flags, islands, ISLANDS };
 })();

@@ -192,12 +192,13 @@
       meFig = S().kidFigure({ team: t, skin: mySkin(), name: myName(), me: true });
       meFig._team = t;
     }
+    X().sixReady(mySkin());                               // the 6-7 pictures load now, so the first wave shows them
     meFig.style.setProperty('--i', 0);
     myBox.appendChild(meFig);
     const fig = (p, i, team) => {
       let f = figs[p.k];
       const sk = p.sk || S().skinFor(p.avatar, p.name);
-      if (!f || f._skin !== sk || f._team !== team) { f = S().kidFigure({ team, skin: sk, name: p.name, tag: false }); f._team = team; figs[p.k] = f; }
+      if (!f || f._skin !== sk || f._team !== team) { f = S().kidFigure({ team, skin: sk, name: p.name, tag: false }); f._team = team; figs[p.k] = f; X().sixReady(sk); }
       f.style.setProperty('--i', i);
       return f;
     };
@@ -264,7 +265,9 @@
   // a crew cheers together (the 6-7 swing) for a moment
   function crewCheer(team, ms) {
     const box = $(team === 'red' ? 'ssx-crew-l' : 'ssx-crew-r');
-    if (!box || reduced()) return;
+    if (!box) return;
+    X().sixCrew(box, ms || 2000);                          // the whole crew does the 6-7 (a picture, not motion)
+    if (reduced()) return;
     box.classList.remove('cheer');
     void box.offsetWidth;
     box.classList.add('cheer');
@@ -554,6 +557,7 @@
     play(r.ans === 6 ? 'liu' : 'qi', 1, 0.95, 40);
     X().palms($('ssx-b6'), $('ssx-b7'), side, 1);           // the two buttons do the 6-7 (they are the two palms)
     X().swing(meFig, side, r.mult >= 3);
+    X().six(meFig, 760);                                   // my character does the 6-7 too (art batch 2026-10-17)
     buzz(r.mult >= 3 ? [14, 30, 14] : 14);
     // my coins fly from the button I tapped up into MY TEAM'S PAN; when they land the pan dips, my gold counts up
     // (shot: what lands, settled by the server's verdict while the coins are in the air)
@@ -706,7 +710,7 @@
       const p = byK(k);
       if (!p || (p.team !== 'red' && p.team !== 'gold')) return;
       const f = figs[k] && figs[k].isConnected ? figs[k] : null;
-      if (f) X().swing(f, Math.random() < 0.5 ? 6 : 7, n >= 3);
+      if (f) { X().swing(f, Math.random() < 0.5 ? 6 : 7, n >= 3); X().six(f, 650); }
       if (flights < 4 && !reduced()) {
         flights++;
         const to = bal.target(p.team);

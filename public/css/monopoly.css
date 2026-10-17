@@ -311,6 +311,7 @@ body.kd-phone.mnx-on.mnx-play .muted-toggle { position: fixed !important; z-inde
 .mnx-big b { margin-top: 6px; font: 800 3.3rem/1 'Baloo 2', sans-serif; color: var(--mn-gold); -webkit-text-stroke: 3px var(--mn-ink); paint-order: stroke fill; animation: mn-rise-v .4s .3s var(--mn-ease-pop) both; }
 .mnx-big span { margin-top: 8px; padding: 6px 12px; border-radius: 14px; background: rgba(11, 16, 48, .8); font: 800 1.1rem/1.2 'Nunito', sans-serif; color: #fff; }
 .mnx-big img { position: absolute; right: -4px; top: 0; height: 118px; animation: mn-rise-v .5s .2s var(--mn-ease-pop) both; }
+.mnx-big img.mnx-hold { height: 180px; top: -40px; right: -14px; filter: drop-shadow(0 0 14px rgba(255, 220, 90, .7)); }   /* Dralingo holding the star (2026-10-17) */
 
 /* banners at the top edge (never over the answer tiles) */
 .mnx-banner { position: fixed; z-index: 40; left: 10px; right: 10px; top: calc(env(safe-area-inset-top, 0px) + 78px); display: flex; align-items: center; gap: 10px;
@@ -335,6 +336,7 @@ body.kd-phone.mnx-on.mnx-play .muted-toggle { position: fixed !important; z-inde
 .mni-stage { position: relative; width: 100%; max-width: 440px; height: 48vh; margin-top: 10px; }
 .mni-star { position: absolute; left: 50%; top: 2%; width: 92px; height: 92px; transform: translateX(-50%); filter: drop-shadow(0 0 18px rgba(255, 220, 90, .9)); animation: mn-star-bob 1.6s ease-in-out infinite alternate; }
 .mni-dral { position: absolute; left: 50%; top: 18%; height: 34%; transform: translateX(-50%); }
+.mni-dral.holds { top: 1%; height: 52%; filter: drop-shadow(0 0 16px rgba(255, 220, 90, .75)); }   /* Dralingo holding the star (2026-10-17) */
 .mni-crew { position: absolute; left: 0; right: 0; bottom: 6%; height: 46%; display: flex; justify-content: center; align-items: flex-end; gap: 2%; }
 .mni-crew .mnf { width: 23%; height: 100%; }
 .mni-crew .mnf-img { height: 82%; max-width: 100%; }
@@ -386,6 +388,7 @@ body.kd-phone.mnx-on.mnx-play .muted-toggle { position: fixed !important; z-inde
 .mnh-step .mn-hand { position: absolute; right: -6px; bottom: -8px; width: 34px; height: 34px; animation: mn-tap 1s ease-in-out infinite; }
 .mnh-step .mn-star { width: 34px; height: 34px; flex: 0 0 auto; }
 .mnh-step img { height: 58px; width: auto; max-width: 40px; object-fit: contain; }
+.mnh-step img.mnh-hold { height: 66px; max-width: 52px; filter: drop-shadow(0 0 6px rgba(255, 220, 90, .8)); }
 .mnh-q { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; width: 56px; }
 .mnh-q i { height: 14px; border-radius: 4px; border: 2px solid var(--mn-ink); background: #fff; }
 .mnh-q i:nth-child(1) { background: #0f9d9a; } .mnh-q i:nth-child(4) { background: #4b54c9; }

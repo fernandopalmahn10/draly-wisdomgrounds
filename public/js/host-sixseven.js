@@ -304,6 +304,7 @@
           f = S.kidFigure({ team, skin, name: p.name });
           f._team = team;
           figs[p.k] = f;
+          X.sixReady(skin);                               // the 6-7 pictures load now, so the first wave shows them
         }
         f.classList.toggle('off', p.off);
         f.style.setProperty('--ci', i % 8);      // the crowd's 6-7 ripples a little from kid to kid
@@ -503,7 +504,7 @@
     const f = figs[k];
     if (six && f && f.isConnected) kidPop(f, p.team);
     if (n > 0) {
-      if (f && f.isConnected) X.swing(f, Math.random() < 0.5 ? 6 : 7, n >= 3);
+      if (f && f.isConnected) { X.swing(f, Math.random() < 0.5 ? 6 : 7, n >= 3); X.six(f, 650); }
       if (flying > 40) return;
       const shots = Math.min(3, Math.max(1, Math.round(n / 2)));
       const src = f && f.isConnected ? f._img.getBoundingClientRect() : $('crowd-' + p.team).getBoundingClientRect();
@@ -535,7 +536,9 @@
   const crewT = {};
   function crewCheer(team, ms) {
     const box = $('crowd-' + team);
-    if (!box || reduced()) return;
+    if (!box) return;
+    X.sixCrew(box, ms || 2000);                            // the whole crowd does the 6-7 (a picture, not motion)
+    if (reduced()) return;
     box.classList.remove('cheer');
     void box.offsetWidth;
     box.classList.add('cheer');
