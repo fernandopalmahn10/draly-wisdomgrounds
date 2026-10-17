@@ -5,31 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Dragones Pintores · Anfitrión</title>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/kingdoms.css?v=20261016eq">
+  <link rel="stylesheet" href="/css/kingdoms.css?v=20261017pv2">
   <link rel="stylesheet" href="/css/mochi.css?v=20261015s">
-  <link rel="stylesheet" href="/css/party.css?v=20261016eq">
+  <link rel="stylesheet" href="/css/party.css?v=20261017pv2">
+  <link rel="stylesheet" href="/css/paint.css?v=20261017pv2">
 </head>
-<body class="kd-bg">
+<body class="kd-bg ph-body">
   <button class="kd-mute" id="mute-btn">🔊 Sonido</button>
 
-  <!-- LOBBY -->
-  <main id="screen-lobby" class="kd-lobby pc-lobby">
+  <!-- LOBBY: the PIN, this round's world (the teacher can pick another), the two kingdoms, «Así se juega» -->
+  <main id="screen-lobby" class="kd-lobby ph-lobby">
     <h1 class="kd-title kd-display">Dragones Pintores</h1>
-    <p class="kd-sub">Vuela tu dragón por el cielo y pinta cada nube con el color de tu reino.</p>
+    <p class="kd-sub">El Cielo de las Maravillas · vuela, pinta el cielo y conquista las maravillas</p>
 
-    <div class="kd-pin-card">
-      <img class="kd-pin-pose" src="/assets/kingdoms/dralingo/jump.webp" alt="">
-      <div>
-        <div class="kd-pin-label">PIN</div>
-        <div class="kd-pin" id="pin-display">····</div>
+    <div class="ph-lobby-top">
+      <div class="kd-pin-card">
+        <img class="kd-pin-pose" src="/assets/dralingo/point.webp" alt="">
+        <div>
+          <div class="kd-pin-label">PIN</div>
+          <div class="kd-pin" id="pin-display">····</div>
+        </div>
+        <div class="kd-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
       </div>
-      <div class="kd-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
+      <section class="ph-world" aria-label="El mundo de esta ronda">
+        <img class="ph-world-bg" id="world-bg" src="/assets/paint/dubai/bg.webp" alt="">
+        <div class="ph-world-info">
+          <small id="world-n">Mundo 1 de 4</small>
+          <b id="world-name">Dubái de noche</b>
+          <div class="ph-world-isl" id="world-isl"></div>
+        </div>
+        <div class="ph-world-btns">
+          <button class="kd-btn small" id="world-prev" type="button" aria-label="Mundo anterior">◀</button>
+          <button class="kd-btn small" id="world-next" type="button">Cambiar mundo ▶</button>
+        </div>
+      </section>
     </div>
 
     <div class="kd-kingdoms">
       <section class="kd-king red">
         <div class="kd-king-head">
-          <img src="/assets/kingdoms/castle.png" alt="">
+          <img src="/assets/dragon/fly-red-mid.webp" alt="">
           <div>
             <div class="kd-king-name">Reino del Fuego</div>
             <div class="kd-king-count" id="count-red">0 jugadores</div>
@@ -40,7 +55,7 @@
       <div class="kd-vs">VS</div>
       <section class="kd-king gold">
         <div class="kd-king-head">
-          <img src="/assets/kingdoms/castle.png" alt="">
+          <img src="/assets/dragon/fly-blue-mid.webp" alt="" class="ph-flip">
           <div>
             <div class="kd-king-name">Reino del Mar</div>
             <div class="kd-king-count" id="count-gold">0 jugadores</div>
@@ -53,52 +68,56 @@
 
     <div class="kd-lobby-tools">
       <label class="kd-duration">⏱ Duración
-        <input type="range" id="duration-slider" min="60" max="600" step="30" value="180">
-        <span id="duration-value">3 min</span>
+        <input type="range" id="duration-slider" min="60" max="600" step="30" value="240">
+        <span id="duration-value">4 min</span>
       </label>
       <button class="kd-btn" id="balance-btn">⚖️ Equilibrar</button>
       <button class="kd-btn go" id="start-btn" disabled>¡A pintar el cielo!</button>
     </div>
     <div class="kd-set" id="set-display">Cargando preguntas…</div>
 
-    <!-- Same three steps the phones show at the start (kids don't read: big pictures, few words). -->
-    <ol class="pc-howto">
-      <li><span class="pc-howto-ico">◀ ▶ ⬆</span><b>Muévete y salta</b><small>con los botones del teléfono</small></li>
-      <li><span class="pc-howto-ico paint">🎨</span><b>Pisa las nubes</b><small>se pintan del color de tu reino</small></li>
-      <li class="fire"><span class="pc-howto-ico">🔥</span><b>¿Sin fuego? ¡Recarga!</b><small>toca «Recargar» y responde bien: +10&nbsp;s</small></li>
+    <!-- the same three steps the phones show (kids don't read: big pictures, few words) -->
+    <ol class="ph-howto">
+      <li><span class="ph-howto-pic tap"><img src="/assets/dragon/fly-red-up.webp" alt=""><i>👆</i></span><b>Toca el cielo</b><small>tu dragón vuela ahí y pinta las nubes</small></li>
+      <li><span class="ph-howto-pic isl"><img id="howto-isl" src="/assets/paint/dubai/burj.webp" alt=""></span><b>Conquista las maravillas</b><small>quédate en su anillo: +10 para tu reino</small></li>
+      <li class="fire"><span class="ph-howto-pic fire">🔥</span><b>¿Sin fuego? Responde</b><small>cada acierto: +10 s de vuelo · 3 seguidos = ¡Llamarada!</small></li>
     </ol>
-    <p class="pc-howto-extra">💎 Los diamantes dan un salto extra · 3 respuestas seguidas = ¡Llamarada! · 👑 Gana el reino con más cielo pintado</p>
   </main>
 
-  <!-- COUNTDOWN -->
-  <!-- the round's two captains face off during the countdown (as in Reinos de Colores) -->
+  <!-- COUNTDOWN: the round's two captains face off (as in Reinos), the world's name under the number -->
   <div id="screen-countdown" class="kd-count pc-vs hidden">
     <div class="kd-cap red hidden" id="cap-red"><img id="cap-red-img" alt=""><div class="kd-cap-tag"><b id="cap-red-name"></b><span>Reino del Fuego</span></div></div>
-    <div class="kd-count-num" id="countdown-num">3</div>
+    <div class="ph-count-mid"><div class="kd-count-num" id="countdown-num">3</div><div class="ph-count-world" id="count-world"></div></div>
     <div class="kd-cap gold hidden" id="cap-gold"><img id="cap-gold-img" alt=""><div class="kd-cap-tag"><b id="cap-gold-name"></b><span>Reino del Mar</span></div></div>
   </div>
 
-  <!-- ACTIVE -->
-  <main id="screen-active" class="kd-arena hidden">
-    <div class="kd-top">
+  <!-- ACTIVE: the race on top, the whole sky in the middle, each kingdom's captain + roster + islands on the sides -->
+  <main id="screen-active" class="kd-arena ph-arena hidden">
+    <div class="kd-top ph-top">
       <div class="kd-pin-mini">PIN <span id="active-pin-display">····</span></div>
-      <div class="kd-tug" aria-label="Cielo pintado por cada reino">
-        <div class="kd-tug-red" id="tug-red" style="flex-basis:6%">0</div>
-        <div class="kd-tug-gold" id="tug-gold" style="flex-basis:6%">0</div>
-        <div class="kd-tug-mid"></div>
+      <div class="ph-race" aria-label="Puntos de cada reino">
+        <div class="ph-num red"><b id="tiles-red">0</b></div>
+        <div class="ph-tug" id="ph-tug"><i id="tug-fill"></i><span class="ph-world-chip" id="world-chip"></span></div>
+        <div class="ph-num gold"><b id="tiles-gold">0</b></div>
       </div>
       <div class="kd-timer" id="timer-display">4:00</div>
     </div>
-    <div class="pc-host-main">
+    <div class="ph-main">
       <aside class="kd-side red">
         <div class="kd-side-head"><img class="kd-side-cap hidden" id="side-cap-red" alt=""><div><div class="kd-side-name">Reino del Fuego</div><div class="kd-side-capname" id="side-capname-red"></div></div></div>
-        <div class="kd-side-tiles"><span id="tiles-red">0</span> <small>nubes</small></div>
+        <div class="ph-side-pts"><span id="side-clouds-red">0</span> <small>nubes<span id="side-isl-red"></span></small></div>
+        <div class="kd-side-lms" id="side-lms-red"></div>
         <ul class="kd-roster" id="roster-red"></ul>
       </aside>
-      <div class="pc-host-map"><canvas id="pc-host-canvas" aria-label="Mapa del cielo"></canvas></div>
+      <div class="ph-map">
+        <canvas id="pc-host-canvas" aria-label="El cielo de esta ronda"></canvas>
+        <div class="ph-big" id="ph-big" aria-live="polite"><img id="ph-big-img" src="/assets/paint/dubai/burj.webp" alt=""><div><b id="ph-big-title"></b><small id="ph-big-sub"></small></div><em id="ph-big-pts">+10</em></div>
+        <div class="ph-last" id="ph-last" aria-hidden="true"></div>
+      </div>
       <aside class="kd-side gold">
         <div class="kd-side-head"><img class="kd-side-cap hidden" id="side-cap-gold" alt=""><div><div class="kd-side-name">Reino del Mar</div><div class="kd-side-capname" id="side-capname-gold"></div></div></div>
-        <div class="kd-side-tiles"><span id="tiles-gold">0</span> <small>nubes</small></div>
+        <div class="ph-side-pts"><span id="side-clouds-gold">0</span> <small>nubes<span id="side-isl-gold"></span></small></div>
+        <div class="kd-side-lms" id="side-lms-gold"></div>
         <ul class="kd-roster" id="roster-gold"></ul>
       </aside>
     </div>
@@ -110,18 +129,18 @@
   </main>
 
   <div class="kd-dralingo" id="dralingo">
-    <img id="dralingo-img" src="/assets/kingdoms/dralingo/flag.webp" alt="Dralingo">
-    <div class="kd-bubble" id="dralingo-say">¡Que empiece la conquista!</div>
+    <img id="dralingo-img" src="/assets/dralingo/point.webp" alt="Dralingo">
+    <div class="kd-bubble" id="dralingo-say">¡A pintar el cielo!</div>
   </div>
 
-  <!-- END -->
+  <!-- END (a fallback: the Mario Party ceremony of js/party.js covers it) -->
   <main id="screen-win" class="kd-end hidden">
-    <img class="kd-crown" id="win-pose" src="/assets/kingdoms/dralingo/champion.webp" alt="">
+    <img class="kd-crown" id="win-pose" src="/assets/dralingo/victory.webp" alt="">
     <div class="kd-winner" id="win-banner">¡Gana el Reino del Fuego!</div>
     <div class="kd-why" id="win-why">El cielo más pintado</div>
     <div class="kd-final">
-      <div class="red">Reino del Fuego<b id="final-red">0</b>nubes</div>
-      <div class="gold">Reino del Mar<b id="final-gold">0</b>nubes</div>
+      <div class="red">Reino del Fuego<b id="final-red">0</b>puntos</div>
+      <div class="gold">Reino del Mar<b id="final-gold">0</b>puntos</div>
     </div>
     <div class="kd-lb" id="leaderboard"></div>
     <div class="kd-end-tools">
@@ -136,12 +155,13 @@
   <script src="/js/sounds.js"></script>
   <script src="/js/cast.js?v=20261017art"></script>
   <script src="/js/dralingo-fx.js?v=20261017art"></script>
-  <script src="/js/paint-render.js?v=20261017art"></script>
+  <script src="/js/paint-worlds.js?v=20261017pv2"></script>
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/halcon-board.js?v=20261017art"></script>
+  <script src="/js/paint-render.js?v=20261017pv2"></script>
   <script src="/js/mochi-stage.js?v=20261014a"></script>
-  <script src="/js/party.js?v=20261017art"></script>
-  <script src="/js/host-paint.js?v=20261017art"></script>
+  <script src="/js/party.js?v=20261017pv2"></script>
+  <script src="/js/host-paint.js?v=20261017pv2"></script>
   <script src="/js/live-game.js?v=20261011c"></script>
 </body>
 </html>

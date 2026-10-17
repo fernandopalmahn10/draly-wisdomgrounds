@@ -1,6 +1,7 @@
 # Dragones Pintores · new pin game (Gimkit «Color Clash», Dralingo style)
 
-Status: **BUILT 2026-10-11, local, not deployed yet** (gameType `paint`). His brief: "design and improve this same game,
+Status: **REPLACED 2026-10-17 by v2 «El Cielo de las Maravillas»** (`docs/specs/dragones-pintores-v2.md`: worlds with
+landmark prizes, tap to fly). This file is v1's history (built 2026-10-11, gameType `paint`). His brief: "design and improve this same game,
 dralingo style … a new pin game" after watching Gimkit Color Clash (https://www.youtube.com/watch?v=SyAyV0LcRQQ).
 
 ## What we copy and what we beat

@@ -284,33 +284,7 @@ body.kd-phone .muted-toggle { top: auto !important; bottom: 12px !important; rig
 .kdp-flag-pose { height: 78px; vertical-align: middle; animation: kdBob 1.2s ease-in-out infinite; }
 .kdp-flags b { font-family: "Baloo 2", sans-serif; font-size: 1.6rem; color: var(--kd-fuego); vertical-align: middle; }
 
-/* ================= Dragones Pintores phone (body.pc-on) ================= */
-#screen-paint { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; background: linear-gradient(180deg, #bfe7fb, #fde4ec);
-  font-family: 'Nunito', sans-serif; user-select: none; -webkit-user-select: none; touch-action: none; }
-.pc-top { display: flex; align-items: center; gap: 8px; padding: 8px 10px 4px; }
-.pc-score { display: flex; gap: 6px; }
-.pc-s { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 1.15rem; color: #fff; border: 3px solid var(--kd-ink); border-radius: 12px; padding: 0 9px; }
-.pc-s.red { background: var(--kd-fuego); }
-.pc-s.gold { background: var(--kd-mar); }
-.pc-s.me { box-shadow: 0 0 0 3px var(--kd-gold); }
-.pc-energy { position: relative; flex: 1; height: 30px; border: 3px solid var(--kd-ink); border-radius: 999px; background: #fff; overflow: hidden; }
-.pc-energy-fill { position: absolute; inset: 0 auto 0 0; width: 30%; background: linear-gradient(90deg, #ff7a00, #ffc93c); transition: width .25s; }
-#pc-energy-text { position: absolute; inset: 0; display: grid; place-items: center; font-family: 'Baloo 2', sans-serif; font-weight: 800; color: var(--kd-ink); }
-.pc-stage { position: relative; flex: 1; min-height: 0; }
-.pc-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.pc-controls { display: flex; align-items: center; gap: 10px; padding: 8px 12px calc(10px + env(safe-area-inset-bottom)); }
-.pc-btn { width: 88px; height: 80px; border: 4px solid var(--kd-ink); border-radius: 20px; background: var(--kd-paper); font-size: 2.2rem; font-weight: 900;
-  color: var(--kd-ink); box-shadow: 0 5px 0 var(--kd-ink); touch-action: none; }
-.pc-btn.down { transform: translateY(4px); box-shadow: 0 1px 0 var(--kd-ink); }
-.pc-jump { width: 104px; height: 92px; margin-left: auto; background: #36c26b; color: #fff; border-radius: 50%; }
-/* the fire button: full width, always in reach, named by what it does */
-.pc-recharge { display: grid; place-items: center; gap: 0; margin: 6px 12px 0; min-height: 62px; padding: 4px 12px;
-  border: 4px solid var(--kd-ink); border-radius: 18px; background: linear-gradient(180deg, #ffb347, #ff7a00); color: #fff;
-  font-family: 'Baloo 2', sans-serif; box-shadow: 0 5px 0 var(--kd-ink); text-shadow: 0 2px 0 rgba(0,0,0,.25); touch-action: manipulation; }
-.pc-recharge b { font-weight: 800; font-size: 1.45rem; line-height: 1.1; }
-.pc-recharge small { font-weight: 800; font-size: .95rem; line-height: 1.1; opacity: .95; }
-.pc-recharge:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--kd-ink); }
-.pc-recharge.urgent { animation: kdPulse .5s infinite alternate; background: linear-gradient(180deg, #ff8a3d, #f0443a); }
+/* ================= cards over a phone map (Nieve, La Fuga; Pintores until 2026-10-17) ================= */
 /* cards over the sky: first-play steps and «sin fuego» */
 .pc-card { position: absolute; left: 12px; right: 12px; top: 50%; transform: translateY(-50%); z-index: 3; max-width: 420px; margin: 0 auto;
   display: grid; justify-items: center; gap: 8px; padding: 14px 16px 16px; background: var(--kd-paper); color: var(--kd-ink);
@@ -327,11 +301,6 @@ body.kd-phone .muted-toggle { top: auto !important; bottom: 12px !important; rig
 .pc-card-btn { width: 100%; min-height: 64px; border: 4px solid var(--kd-ink); border-radius: 18px; background: var(--kd-gold); color: var(--kd-ink);
   font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 1.6rem; box-shadow: 0 6px 0 var(--kd-ink); touch-action: manipulation; }
 .pc-card-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--kd-ink); }
-.pc-card-btn.pc-fire { background: linear-gradient(180deg, #ff8a3d, #f0443a); color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,.25); animation: kdPulse .55s infinite alternate; }
-.pc-empty { animation: pcPop .35s cubic-bezier(.3,1.6,.5,1); }
-@keyframes pcPop { from { transform: translateY(-50%) scale(.6); opacity: 0; } to { transform: translateY(-50%) scale(1); opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .pc-recharge.urgent, .pc-card-btn.pc-fire, .pc-empty { animation: none; } }
-body.pc-on:has(#screen-paint:not(.hidden)) .muted-toggle { top: auto !important; bottom: 200px !important; right: 10px !important; }
 .pc-host-main { display: grid; grid-template-columns: 220px 1fr 220px; gap: 12px; min-height: 0; }
 .pc-host-map { position: relative; min-height: 0; border: 4px solid var(--kd-ink); border-radius: 22px; overflow: hidden; box-shadow: 0 6px 0 var(--kd-ink);
   background: linear-gradient(180deg, #bfe7fb, #fde4ec); }

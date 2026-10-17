@@ -70,16 +70,13 @@ async function playOne(game) {
   const A = kids[0];
   // a moment of play: answer what comes; Reinos plants its flag, Pintores paints a few clouds
   if (game === 'paint') {
+    // Pintores v2: tap the sky (an intent; the server flies the dragon and paints what it passes), then «Recargar»
     const init = A.last['pc:init'];
-    const lv = init.level;
-    const row = lv.rows - 2;
-    const sp = lv.spawns.red;
-    for (let i = 0; i < 6; i++) {
-      const x = (sp[0] + i) * lv.tile + 4;
-      A.s.emit('player:pc-pos', { pin, x, y: row * lv.tile, f: 1, moving: true, spent: 0.1 });
-      await sleep(130);
-      const id = row * lv.cols + Math.floor(x / lv.tile);
-      if (lv.surfaces.includes(id)) A.s.emit('player:pc-paint', { pin, tiles: [id] });
+    const sky = require('../public/js/paint-worlds').build(init.world, init.seed);
+    for (let i = 0; i < 4; i++) {
+      const c = sky.clouds[i * 2];
+      A.s.emit('player:pc-go', { pin, x: c[0], y: c[1] });
+      await sleep(450);
     }
     A.s.emit('player:pc-ask', { pin });
   }
