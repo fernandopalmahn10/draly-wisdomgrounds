@@ -88,6 +88,7 @@
     var barT = null, slowT = null, retryT = null;
     var seq = 0;            // each ask has its number: an answer to an older ask never paints over a newer one
     var tries = 0;          // automatic tries since the last success
+    var liveTries = 0;      // «another screen has it» answers in this reconnect (its old connection closing): 8 × 5 s
     var codeTyped = false;  // the last ask carried a code typed on the card
 
     // ── the notice at the top ──
@@ -178,6 +179,13 @@
       if (why === 'no-game') return gone(pin);
       if (why === 'bad-password') { askCode(pin, codeTyped); codeTyped = false; return; }
       codeTyped = false;
+      // «another screen has it» right after a Wi-Fi blip is usually THIS screen's old connection, which the server keeps
+      // up to ~30 s (ping timeout): stay on the yellow bar and try every 5 s for 40 s before showing the red card
+      if (why === 'host-live' && liveTries++ < 8) {
+        showBar('off', 'Reconectando con la sala ' + pin + '…', 'La conexión anterior todavía se está cerrando.');
+        retryIn(5000);
+        return;
+      }
       if (why === 'wait') {
         showCard('Muchos intentos desde esta red',
           'Alguien escribió muchos códigos equivocados desde este internet y hay que esperar unos minutos. Esta página lo vuelve a intentar sola cada minuto.',
@@ -194,7 +202,7 @@
       if ((why === 'timeout' || why === 'host-live') && tries++ < 8) retryIn(why === 'timeout' ? 5000 : 15000);
     }
     function back(resp) {
-      tries = 0; codeTyped = false;
+      tries = 0; codeTyped = false; liveTries = 0;
       clearTimeout(retryT); clearTimeout(slowT);
       closeCard(); reopen = null;
       showBar('ok', '✓ Conexión recuperada · sala ' + pinOf(), '');
@@ -227,6 +235,7 @@
     }
     function offline() {
       seq++;   // an answer that comes back over the dead connection no longer counts
+      liveTries = 0;
       clearTimeout(retryT); clearTimeout(slowT);
       closeCard();
       var pin = pinOf();

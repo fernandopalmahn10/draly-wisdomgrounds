@@ -322,6 +322,8 @@
 
   // ── 🛑 END button — close the room ─────────────────────────────────
   $('hh-end-btn').addEventListener('click', () => {
+    // offline, socket.io would hold the close and send it on reconnect, AFTER this monitor already said it didn't close
+    if (!socket.connected) { alert('Sin conexión: la sala no se cerró. Espera a que vuelva la conexión y pulsa «Terminar sala» otra vez.'); return; }
     if (!confirm('¿Cerrar la sala? Los alumnos que aún no terminen perderán su progreso.')) return;
     // 🔒 2026-10-15: the room really closes now (its PIN, page and files stop; finished kids can still hand in)
     // 🔒 2026-10-17: only for the teacher who opened it, its own monitor (teacher-gate.js adds the room's token) or a

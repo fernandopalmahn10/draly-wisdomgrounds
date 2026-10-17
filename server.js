@@ -5458,9 +5458,17 @@ app.post('/api/sets/:id/rename', (req, res) => {
 const games = Object.create(null);
 
 // Home page «Volver a la partida»: only offer the rematch while that room is still open (booleans only).
+// 🔒 2026-10-17: the home page's «¿volver a tu juego?» check (public/index.html) counts like a join: a PIN that is no
+// running room spends one of the address's PIN guesses, and an address out of guesses hears «not alive» for every PIN,
+// so it can no longer list the running classes (it answered any PIN, unlimited, in ~25 s for all 900).
 app.get('/api/room-alive/:pin', (req, res) => {
-  const g = games[String(req.params.pin || '')];
-  res.json({ alive: !!g && g.state !== 'ended' });
+  res.set('Cache-Control', 'no-store');
+  const pin = String(req.params.pin || '');
+  if (!/^\d{3,4}$/.test(pin) || _pinBlocked(req)) return res.json({ alive: false });
+  const g = games[pin];
+  const alive = !!g && g.state !== 'ended';
+  if (!alive) _pinMiss(req, pin);
+  res.json({ alive });
 });
 
 const MASH_DURATION_MS = 5000;
@@ -8666,8 +8674,10 @@ io.on('connection', (socket) => {
     let g = digits ? games[pin] : null;
     // 🔒 2026-10-17: after a restart an exam room lives only on the data disk (HSK_ROOMS) until something needs it; its
     // own monitor coming back (a reconnect, public/js/host-reconnect.js) takes it back too, by the owner rule below.
-    // Loading it tells nobody anything: _mayReclaim answers every other socket the same for every PIN.
-    if (!g && digits && HSK_ROOMS.has(String(pin))) g = _hskGameLookup(String(pin));
+    // Who asks is checked against a stand-in first (its owner on disk); the room is loaded only for them, and only while
+    // it is younger than 6 h (_hskRoomFor), so no socket can wake old or other teachers' exam rooms.
+    const stored = (!g && digits && _hskRoomFor(String(pin)))
+      ? { gameType: 'hsksim', hostOwner: (HSK_ROOMS.get(String(pin)) || {}).owner || null, hostId: null, hostToken: null } : null;
     // 🔒 2026-10-16: a room goes back only to the teacher who opened it (it used to go to anyone who knew the PIN, even
     // while the teacher's projector was still connected): this projector's room secret (an F5 in the same tab), the
     // same teacher's remembered device or code (another tab or browser), or a super admin. 🔒 2026-10-17 (his decision):
@@ -8675,8 +8685,16 @@ io.on('connection', (socket) => {
     // ANY teacher code, even mid-class: one code tried over the 900 PINs took every one of them, and an old sleeping
     // warm-up tab took a newer room whose PIN came back). 🔒 2026-10-17: and nobody else learns whether a PIN is a
     // running room at all (an unknown PIN goes through the same checks: see _mayReclaim).
-    const may = _mayReclaim(g, socket, password, hostToken);
+    const may = _mayReclaim(g || stored, socket, password, hostToken);
     if (may !== 'ok') return cb({ ok: false, error: may });
+    if (!g) g = _hskGameLookup(String(pin));
+    if (!g) return cb({ ok: false, error: 'no-game' });
+    // 🔒 2026-10-17: taken back WITHOUT the room's token (its teacher's other laptop or code, a super admin, an exam room
+    // loaded from the disk after a restart) → the room moves to this projector with a fresh token (sent below, kept by
+    // teacher-gate.js): its next Wi-Fi blip comes back by the token at once, and an old tab holding the previous token
+    // can no longer take it from this one.
+    const tokenUsed = !!(g.hostToken && hostToken && _safeEqual(String(hostToken), g.hostToken));
+    if (!tokenUsed) g.hostToken = require('crypto').randomBytes(16).toString('hex');
     // Move host identity to this socket; cancel any pending teardown.
     g.hostId = socket.id;
     g.hostDisconnectedAt = null;
@@ -8741,7 +8759,7 @@ io.on('connection', (socket) => {
     // Reinos, Pintores, Nieve, La Fuga (the shared Mario Party ending, js/party.js): the last 30 s, «¡FINAL!» still on,
     // or the whole ceremony again after the end
     finReclaim(socket.id, g);
-    cb({ ok: true, gameType: g.gameType, state: g.state });
+    cb(Object.assign({ ok: true, gameType: g.gameType, state: g.state }, tokenUsed ? {} : { hostToken: g.hostToken }));
   });
 
   socket.on('host:upload-questions', ({ pin, questions }) => {
