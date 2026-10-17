@@ -99,6 +99,7 @@
     if (confirm('¿Terminar la ronda ahora?')) socket.emit('host:end-now', { pin });
   });
   $('play-again-btn').addEventListener('click', () => {
+    if (ceremony) { ceremony.stop(); ceremony = null; }
     socket.emit('host:reset', { pin });
     captains = null;
     showScreen('lobby');
@@ -389,20 +390,79 @@
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
       if (!state || !state.endsAt) return;
+      if (hostPaused) {      // paused: the clock stands still (and shows «+30 s» at once)
+        const ps = Math.ceil(Math.max(0, state.endsAt - hostPausedAt) / 1000);
+        $('timer-display').textContent = `${Math.floor(ps / 60)}:${String(ps % 60).padStart(2, '0')}`;
+        return;
+      }
       const left = Math.max(0, state.endsAt - Date.now());
       const sec = Math.ceil(left / 1000);
       $('timer-display').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
       if (sec === 60 && !warned[60]) { warned[60] = 1; banner('⏱ ¡Queda 1 minuto!'); }
       if (sec === 30 && !warned[30]) {
         warned[30] = 1;
-        banner('⏱ ¡Quedan 30 segundos!');
-        bigFx('spotlight', { text: '¡Últimos 30 segundos! ¡Todo puede cambiar!', poses: ['countdown'] }, 0) || say('¡Últimos 30 segundos! Rodeen todo lo que puedan.', 'countdown');
+        bigFx('spotlight', { text: '¡Últimos 30 segundos! ¡Banderas dobles!', poses: ['countdown'] }, 0) || say('¡Últimos 30 segundos! Cada acierto vale dos banderas.', 'countdown');
         playMusic('music-final', 0.42);
       }
       if (sec <= 10 && sec > 0 && !warned['t' + sec]) { warned['t' + sec] = 1; sfx('tick', 0.5); $('timer-display').classList.add('urgent'); }
       if (sec > 10) $('timer-display').classList.remove('urgent');
     }, 250);
   }
+
+
+  // ---------- the Mario Party ending (js/party.js, 2026-10-16): «¡FINAL!», the ceremony, «Otra ronda» ----------
+  // His rule «Feelings at the end of class»: the reveal, the winners celebrate and the others react, the bonus stars one
+  // by one, the podium. «⏭ Saltar» (top right) jumps every phone to its card; «Sonido» stays on top.
+  let ceremony = null;
+  const playUrl = (url, vol) => { if (muted) return; try { const a = new Audio(url); a.volume = vol == null ? 0.7 : vol; a.play().catch(() => {}); } catch (_) {} };
+  const FINAL_SUB = { time: '¡Se acabó el tiempo!', end: '¡Fin de la ronda!', allFrozen: '¿Quién ganó la batalla?', escaped: '¡Despegamos! ¿Qué rango ganamos?' };
+  socket.on('fin:final', (d) => {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    if ($('timer-display')) { $('timer-display').textContent = '0:00'; $('timer-display').classList.remove('urgent'); }
+    stopMusic();
+    hideDralingo();
+    $('lm-moment').className = 'kd-lm-moment hidden';
+    lmQueue.length = 0;
+    lmBusy = false;
+    document.querySelectorAll('.kd-banner').forEach((b) => b.remove());
+    if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy');
+    if (window.DralyParty) { DralyParty.clearChip(); DralyParty.final({ mode: 'host', ms: d && d.ms, sub: FINAL_SUB[d && d.why] || FINAL_SUB.end, play: playUrl }); }
+  });
+  // the last 30 s, from the server (it can switch off again after «+30 s»): a banner, a ribbon with the seconds, a red clock
+  socket.on('fin:frenzy', (d) => {
+    if (!d || !window.DralyParty) return;
+    if (d.off) { DralyParty.clearChip(); if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy'); return; }
+    if (!d.again) banner('🚩🚩 ¡Últimos 30 segundos! ¡Banderas dobles!');
+    DralyParty.chip('Banderas ×2', d.endsMs, 'host');
+    if ($('timer-display')) $('timer-display').classList.add('pf-frenzy');
+  });
+  // «⏸ Pausa» (2026-10-16): the clock stops, plant windows / dragons wait; the card lets the buttons under it work
+  let hostPaused = false, hostPausedAt = 0;
+  function showHostPaused(v) {
+    if (!!v !== hostPaused) hostPausedAt = v ? Date.now() : 0;
+    hostPaused = !!v;
+    $('pause-btn').textContent = hostPaused ? '▶ Seguir' : '⏸ Pausa';
+    if (window.DralyParty) DralyParty.pauseCard(hostPaused, { mode: 'host' });
+    if (hostPaused) stopMusic(); else if (!$('screen-active').classList.contains('hidden')) playMusic('music-battle', 0.32);
+  }
+  $('pause-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: !hostPaused }));
+  socket.on('kd:pause', (d) => { if (d && !d.paused && state) state.endsAt = Date.now() + (d.endsMs || 0); showHostPaused(d && d.paused); });
+  socket.on('kd:init', (d) => { if (d && !!d.paused !== hostPaused) showHostPaused(d.paused); });
+  function partyEnd(d) {
+    if (hostPaused) showHostPaused(false);
+    if (!window.DralyParty || !d || !d.fin) return false;
+    DralyParty.clearChip();
+    if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy');
+    if (ceremony) ceremony.stop();      // (the frozen board stays under the show: never the old end screen, it would spoil the result)
+    ceremony = new DralyParty.Ceremony({
+      mode: 'host', game: 'kingdoms', data: d, mount: document.body, play: playUrl,
+      onSkip: () => socket.emit('host:fin-skip', { pin }),
+      onAgain: () => { ceremony = null; $('play-again-btn').click(); },
+      onHome: () => { location.href = '/'; },
+    });
+    return true;
+  }
+  socket.on('state', (s) => { if (s && s.state === 'lobby' && ceremony) { ceremony.stop(); ceremony = null; } });
 
   // ---------- end ----------
   socket.on('game-end', (d) => {
@@ -412,6 +472,7 @@
     $('lm-moment').className = 'kd-lm-moment hidden';
     lmQueue.length = 0;
     lmBusy = false;                    // the gang finale must not wait for a cut-off landmark moment
+    if (partyEnd(d)) return;           // the Mario Party ceremony (the old end screen below stays as a fallback)
     showScreen('win');
     const r = d.teamScores.red || 0;
     const g = d.teamScores.gold || 0;

@@ -68,4 +68,38 @@ function counts(own) {
   return c;
 }
 
-module.exports = { COLS, ROWS, TILE, buildLevel, counts };
+// ---------- Mario Party touches (2026-10-16 ending pass) ----------
+// «¡Fuego doble!» in the last 30 s: a right answer gives twice the fire and always a «Llamarada» (the wide brush). The
+// same for both kingdoms (the map flips back and forth all round, so an early lead is never safe anyway).
+const ENERGY_PER_RIGHT = 10, ENERGY_MAX = 30;
+function reward(streak, frenzy) {
+  return { energy: ENERGY_PER_RIGHT * (frenzy ? 2 : 1), blaze: !!frenzy || (streak > 0 && streak % 3 === 0) };
+}
+
+// ---------- the ending (core/party.js: «¡FINAL!», the reveal, the winners, the bonus stars, each kid's card) ----------
+// rows: [{ k, name, skin, team, owned, painted, best, blazes, right, answered }]
+//   owned    clouds that are this kid's at the end (the last painter of each one): the kid's points, the crown
+//   painted  every cloud they turned their colour during the round (strokes)
+const STARS = [
+  { id: 'painted', name: 'Más nubes pintadas', unit: 'nubes', val: (r) => r.painted, ok: (r) => r.painted >= 1 },
+  { id: 'sky', name: 'Más cielo al final', unit: 'nubes suyas', val: (r) => r.owned, ok: (r) => r.owned >= 1 },
+  { id: 'streak', name: 'Racha más larga', unit: 'seguidas', val: (r) => r.best, ok: (r) => r.best >= 3 },
+  { id: 'blaze', name: 'Más llamaradas', unit: 'llamaradas', val: (r) => r.blazes, ok: (r) => r.blazes >= 1, maxShare: 3 },
+];
+function finish(rows, totals) {
+  const Party = require('./party');
+  const t = { red: (totals && totals.red) || 0, gold: (totals && totals.gold) || 0 };
+  const winner = t.red > t.gold ? 'red' : t.gold > t.red ? 'gold' : 'tie';
+  const sorted = rows.slice().sort((a, b) => b.owned - a.owned || b.painted - a.painted || a.k - b.k);
+  Party.ranks(sorted, 'owned');
+  const mvp = {};
+  ['red', 'gold'].forEach((team) => { const top = sorted.find((r) => r.team === team && r.owned > 0); mvp[team] = top ? top.k : null; });
+  const st = Party.stars(rows, STARS);
+  rows.forEach((r) => {
+    r.share = Party.share(r.owned, t[r.team]);
+    r.stars = st.filter((s) => s.winners.includes(r.k)).map((s) => s.id);
+  });
+  return { totals: t, winner, mvp, stars: st, rows: sorted };
+}
+
+module.exports = { COLS, ROWS, TILE, buildLevel, counts, ENERGY_PER_RIGHT, ENERGY_MAX, reward, STARS, finish };

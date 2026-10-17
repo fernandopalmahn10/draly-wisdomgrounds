@@ -707,7 +707,7 @@
       teamLabel = isRed ? 'Equipo Fuego' : 'Equipo Mar';
       teamMascot = isRed ? '🔥' : '🌊';
     } else {
-      teamLabel = '¡Bienvenido!';        // class tools (warm-up, reading, HSK rooms): no teams
+      teamLabel = '¡Hola!';              // class tools (warm-up, reading, HSK rooms): no teams (neutral for every kid)
       teamMascot = '🐉';
     }
     // Show team mascot + the player's chosen avatar side by side
@@ -717,7 +717,8 @@
     }
     if ($('lobby-team-name')) {
       $('lobby-team-name').textContent = teamLabel;
-      $('lobby-team-name').style.color = isRed ? 'var(--red-glow)' : 'var(--gold-glow)';
+      // «Reino del Mar» / «Equipo Mar» in deep blue: the gold glow was pale yellow on the pale blue lobby
+      $('lobby-team-name').style.color = isRed ? 'var(--red-glow)' : / Mar$/.test(teamLabel) ? '#1d52a8' : 'var(--gold-glow)';
     }
     if ($('player-header')) $('player-header').className = `player-header ${team}`;
     if ($('mash-header')) $('mash-header').className = `player-header ${team}`;

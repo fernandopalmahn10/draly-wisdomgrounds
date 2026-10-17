@@ -6,6 +6,7 @@
 const SnowMap = require('../../public/js/snow-map');
 
 module.exports = (bot, ctx) => {
+  require('./party-check')(bot, ctx, 'snow');      // the Mario Party ending: «¡FINAL!», the show, my card (2026-10-16)
   const st = ctx.state;
   st.onDemand = true;                              // questions only when the bot asks at a station
   const S = ctx.report.snow || (ctx.report.snow = {
