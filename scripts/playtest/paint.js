@@ -74,5 +74,8 @@ module.exports = (bot, ctx) => {
     if (ctx.state.waiting) ctx.state.lastAnsAt = Date.now();
   });
   bot.on('question', () => { asking = false; qOpen = true; });
+  // the same question can reach a bot twice (its «Recargar» crossed the server's own deal at 0 fire): the bot answers both,
+  // the second comes back stale. A phone shows one question per id, so this is not a frozen kid: stop waiting.
+  bot.on('answer-stale', () => { qOpen = false; ctx.state.waiting = false; });
   bot.on('game-end', () => clearInterval(timer));
 };

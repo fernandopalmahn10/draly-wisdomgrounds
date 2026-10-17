@@ -490,7 +490,7 @@
   }
 
   // ---------- the question sheet ----------
-  let cur = null, qT = null, rescueT = null, lastTick = 0, closeT = null;
+  let cur = null, qT = null, rescueT = null, lastTick = 0, closeT = null, lastDoneQid = null;
   const Q_MS = 20000;
   const isSheetUp = () => { const q = $('pp-sheet'); return !!q && !q.classList.contains('down'); };
   function sheet(up) {
@@ -509,7 +509,7 @@
     sheet(false);
   }
   function showQuestion(q) {
-    if (!q) return;
+    if (!q || q.qid === lastDoneQid) return;          // a late copy of a question already answered (a «Recargar» crossed the server's deal)
     clearTimeout(closeT);
     if (cur && cur.qid === q.qid && !cur.done) {            // the same question again (a resync / a rejoin)
       if (cur.tapped) { cur.tapped = false; setTiles(!paused); document.querySelectorAll('.pp-a').forEach((b) => b.classList.remove('picked')); runQTimer(); }
@@ -639,7 +639,7 @@
     const pr = r.paint;
     clearTimeout(rescueT);
     stopQTimer();
-    if (cur) { cur.done = true; cur.tapped = true; }
+    if (cur) { cur.done = true; cur.tapped = true; lastDoneQid = cur.qid; }
     setTiles(false);
     document.querySelectorAll('.pp-a').forEach((b) => {
       const txt = b.querySelector('.pp-at') && b.querySelector('.pp-at').textContent;
