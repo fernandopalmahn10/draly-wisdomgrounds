@@ -312,6 +312,12 @@ app.get('/api/_diag', (req, res) => {
   out.memoryMB = Math.round(mu.rss / 1048576);
   out.uptimeHours = Math.round(process.uptime() / 360) / 10;
   out.rooms = Object.keys(games || {}).length;
+  // 2026-10-17: rooms with someone in them right now (a connected projector or a connected kid). `rooms` also counts
+  // rooms kept up to an hour after their projector left (so a teacher can come back): the deploy guard reads this one.
+  try {
+    out.liveRooms = Object.values(games).filter((g) => (g.hostId && io.sockets.sockets.get(g.hostId)) ||
+      Object.values(g.players || {}).some((p) => p && !p.disconnected)).length;
+  } catch (_) { out.liveRooms = out.rooms; }
   res.json(out);
 });
 
@@ -8599,6 +8605,9 @@ io.on('connection', (socket) => {
     // 6-7 Swing: the balance again (mid-game), or the ceremony again (after the end)
     if (g.gameType === 'sixseven' && g.ss && g.state === 'active') io.to(socket.id).emit('ss:init', ssInitPayload(g, null));
     if (g.gameType === 'sixseven' && g.ss && g.state === 'ended') io.to(socket.id).emit('game-end', ssEndPayloads(g).host);
+    // Reinos, Pintores, Nieve, La Fuga (the shared Mario Party ending, js/party.js): the last 30 s, «¡FINAL!» still on,
+    // or the whole ceremony again after the end
+    finReclaim(socket.id, g);
     cb({ ok: true, gameType: g.gameType, state: g.state });
   });
 
