@@ -46,6 +46,7 @@ const Dragon = require('./core/dragon');               // Vuelo del Dragón v2: 
 const Mochi = require('./core/mochi');               // Mochi Mash v2: «La Terraza del Mochi», team mash + ceremony (rules)
 const Pinata = require('./core/pinata');             // Piñata Tigre v2: «La Fiesta de las Piñatas», team hits + timing meter (rules)
 const Sixseven = require('./core/sixseven');         // 6-7 Swing v2: «La Balanza de Oro», sums that are always 6 or 7 (rules)
+const Trap = require('./core/trapdoor');             // Las Trampillas: Mario Party's trapdoor platform, Fuego vs Mar (rules)
 // Tiny persistence for the owner's Emirati Arabic gateway (single global
 // profile, since this is a super-admin-only personal feature). Lives on the
 // same data disk as the rest of the JSON state.
@@ -5663,6 +5664,8 @@ function publicState(game) {
   if (game.gameType === 'paint') out.pcWorld = game.paint ? game.paint.sky.world : (game.pcWorld | 0);
   // La Gran Fuga v2: the route of this round (the phones' lobby shows its three places)
   if (game.gameType === 'escape') out.esRoute = game.escape ? game.escape.route : EscapeMap.routeIdx(game.esRoute);
+  // Las Trampillas: the arena and the rounds of this match (the phones' lobby shows them)
+  if (game.gameType === 'trapdoor') { out.tdArena = game.td ? game.td.arena : (game.tdArena | 0); out.tdRounds = game.td ? game.td.rounds : (game.tdRounds || Trap.R.ROUNDS); }
   // HSK rooms expose simId so kid clients know what to load when
   // state flips to 'active'. fx is the current animation overlay.
   if (game.gameType === 'hsksim' && game.hsk) {
@@ -6742,6 +6745,231 @@ function pcAnswer(pin, g, pid, p, correct, correctText, why) {
     p.pcNextQAt = now + wait;
     io.to(pid).emit('answer-result', { correct: false, correctText, paint: { energy: d.fire, streak: 0, why: why || '', wait } });
   }
+}
+
+// === 🕳️ LAS TRAMPILLAS (gameType 'trapdoor') — Mario Party's trapdoor platform (spec docs/specs/las-trampillas.md) ===
+// The rules live in core/trapdoor.js, the platform in public/js/trapdoor-arena.js (shared with the screens). One 100 ms
+// tick per room owns the clock: «¡YA!», the rounds (title → roulette → 5..1 → «0» → the doors → the tally), the Final
+// Round, then «¡FINAL!» and the shared ceremony (finBegin). The server moves every kid itself (a tap is an intent:
+// player:td-go), judges every fall at the instant the doors open, deals every question (the wings on the floor, the
+// comeback in the pit, «rise with wings» while waiting) and closes the wings question at «0». Down: td:pos at 5 Hz (only
+// who moved, everyone every 2 s), td:round / td:lock / td:open / td:close / td:tally at those instants, td:me per kid on
+// a change, td:roster on joins and team changes, td:rise when a kid comes back mid-round. No `state` pushes during play.
+const tdTeam = (p) => (p && p.team === 'gold' ? 'gold' : 'red');
+const TD_ARENAS = Trap.A.ARENAS.length;
+function tdEnsureK(g, p) { if (!p.tdK) p.tdK = (g.tdNextK = (g.tdNextK || 0) + 1); return p.tdK; }
+const tdKidOf = (g, p) => (g && g.td && p && p.tdK ? g.td.kids[p.tdK] || null : null);
+// the teacher's duration (the generic slider, the bots' --seconds) → rounds; the lobby's 5 · 7 · 10 sets them directly
+const tdRoundsFor = (sec) => Trap.clampRounds(Math.round((Math.max(15, Number(sec) || 0) * 1000 - Trap.R.INTRO_MS) / Trap.ROUND_MS(false)));
+const tdCapS = (n) => Math.ceil(Trap.timeCapMs(n) / 1000);
+// a kid on this match's platform (a late joiner rises at the next round), with the name and character it plays as
+function tdAttach(g, p, now) {
+  const k = tdEnsureK(g, p);
+  const d = Trap.addKid(g.td, k, tdTeam(p), now || Date.now());
+  d.away = !!p.disconnected;
+  return d;
+}
+function tdRoster(g) {
+  const out = {};
+  Object.values(g.players).forEach((p) => { if (p.tdK && (p.team === 'red' || p.team === 'gold')) out[p.tdK] = [p.name, p.team, p.avatar || '']; });
+  return out;
+}
+// [[k, x, y, tx, ty, flags]]  flags: 1 wings · 2 in the pit · 4 waiting to rise · 8 phone away · 16 hovering on wings
+const tdR1 = (v) => Math.round(v * 10) / 10;
+function tdPosArr(m) {
+  return Object.values(m.kids).map((d) => [d.k, tdR1(d.x), tdR1(d.y), tdR1(d.tx), tdR1(d.ty),
+    (d.wings ? 1 : 0) | (d.st === 'down' ? 2 : 0) | (d.st === 'wait' ? 4 : 0) | (d.away ? 8 : 0) | (d.hover ? 16 : 0)]);
+}
+// how far into the current round / the intro the clock is (paused: where it stopped)
+function tdAgo(m, now) { const at = m.paused ? m.pausedAt : now; return Math.max(0, at - (m.phase === 'intro' ? m.introAt : m.t0)); }
+const TD_SHOWN = { lock: 1, open: 1, close: 1 };
+function tdInitPayload(g, pid) {
+  const m = g.td;
+  const p = pid ? g.players[pid] : null;
+  const d = p ? tdKidOf(g, p) : null;
+  const now = Date.now();
+  return {
+    id: m.id, arena: m.arena, rounds: m.rounds, r: m.r, phase: m.phase, kind: m.kind, final: m.final, mult: m.mult,
+    jumps: m.jumps, ago: tdAgo(m, now), t: now,
+    set: TD_SHOWN[m.phase] && m.drop ? m.drop.set : null, open: m.phase === 'open' || m.phase === 'close',
+    score: { red: m.score.red, gold: m.score.gold }, roster: tdRoster(g), pos: tdPosArr(m),
+    me: d ? d.k : null, st: d ? d.st : null, wings: !!(d && d.wings), wingsNext: !!(d && d.wingsNext),
+    captains: g.tdCaptains || null, paused: !!m.paused, endsMs: Math.max(0, Trap.endsAt(m, now) - now),
+    speed: Trap.R.SPEED, q: !!(p && p.currentQ), qKind: p && p.currentQ ? p.tdQKind || null : null,
+  };
+}
+function tdStart(pin, g) {
+  tdStop(g);
+  const now = Date.now();
+  g.td = Trap.newGame({ arena: g.tdArena | 0, rounds: g.tdRounds || Trap.R.ROUNDS, now });
+  const m = g.td;
+  m.id = (g.tdMatches = (g.tdMatches || 0) + 1);
+  m.lastT = now; m.tickN = 0; m.sent = {}; m.tick = null;
+  Object.values(g.players).forEach((p) => { tdAttach(g, p, now); p.currentQ = null; p.tdQKind = null; p.tdMeKey = ''; p.score = 0; p.tdGo = { t: 0, n: 0 }; });
+  g.teamScores = { red: 0, gold: 0 };
+  g.endsAt = Trap.endsAt(m, now);
+  Object.keys(g.players).forEach((pid) => io.to(pid).emit('td:init', tdInitPayload(g, pid)));
+  io.to(g.hostId).emit('td:init', tdInitPayload(g, null));
+  const tick = setInterval(() => tdTick(pin, tick), Trap.R.TICK_MS);
+  m.tick = tick;
+}
+function tdStop(g) { if (g && g.td && g.td.tick) { clearInterval(g.td.tick); g.td.tick = null; } }
+// what this kid is now (on the floor / in the pit / waiting; wings): sent when it changes
+function tdMe(pid, p, d, force) {
+  if (!d) return;
+  const key = [d.st, d.wings ? 1 : 0, d.wingsNext ? 1 : 0, d.hover ? 1 : 0].join('|');
+  if (!force && key === p.tdMeKey) return;
+  p.tdMeKey = key;
+  io.to(pid).emit('td:me', { k: d.k, st: d.st, wings: !!d.wings, wingsNext: !!d.wingsNext, hover: !!d.hover });
+}
+// the events of Trap.advance(), told to every screen
+function tdEvents(pin, g, ev, now) {
+  const m = g.td;
+  ev.forEach((e) => {
+    if (e.type === 'round') {
+      io.to(pin).emit('td:round', { id: m.id, r: m.r, rounds: m.rounds, kind: m.kind, final: m.final, mult: m.mult, jumps: m.jumps, enter: e.enter, ago: tdAgo(m, now), pos: tdPosArr(m) });
+      // a kid who rises with a «rise with wings» question still open: the same question now gives the wings of this round
+      Object.entries(g.players).forEach(([pid, p]) => {
+        if (p.currentQ && p.tdQKind === 'pre' && e.enter.includes(p.tdK)) { p.tdQKind = 'wings'; io.to(pid).emit('td:qkind', { qid: p.currentQ.qid, kind: 'wings' }); }
+      });
+      g.endsAt = Trap.endsAt(m, now);
+    } else if (e.type === 'lock') {
+      io.to(pin).emit('td:lock', { id: m.id, r: m.r, set: e.set });
+      // «0»: the wings are decided; an open wings question closes («¡CORRE!»)
+      Object.entries(g.players).forEach(([pid, p]) => {
+        if (p.currentQ && p.tdQKind === 'wings') { const qid = p.currentQ.qid; p.currentQ = null; p.tdQKind = null; io.to(pid).emit('td:qclose', { qid, why: 'lock' }); }
+      });
+    } else if (e.type === 'open') {
+      io.to(pin).emit('td:open', { id: m.id, r: m.r, set: e.set, falls: e.falls, saves: e.saves });
+    } else if (e.type === 'close') {
+      io.to(pin).emit('td:close', { id: m.id, r: m.r });
+    } else if (e.type === 'tally') {
+      g.teamScores = { red: m.score.red, gold: m.score.gold };
+      Object.values(g.players).forEach((p) => { const d = tdKidOf(g, p); p.score = d ? d.pts : 0; });
+      io.to(pin).emit('td:tally', { id: m.id, r: m.r, rounds: m.rounds, add: e.add, stand: e.stand, present: e.present, score: e.score, lead: e.lead, leadChanged: e.leadChanged, mult: e.mult, final: e.final,
+        sc: Object.fromEntries(Object.values(m.kids).map((d) => [d.k, d.pts])) });
+    } else if (e.type === 'end') {
+      finBegin(pin, g, 'time');
+    }
+  });
+}
+function tdTick(pin, id) {
+  const g = games[pin];
+  // A room that vanished (or a newer match) stops its own old interval: no ticking forever after a host leaves.
+  if (!g || !g.td || (id && g.td.tick !== id)) { if (id) clearInterval(id); return; }
+  if (g.state !== 'active') return tdStop(g);
+  const m = g.td;
+  const now = Date.now();
+  const dt = Math.min(0.25, Math.max(0, (now - m.lastT) / 1000));
+  m.lastT = now;
+  if (m.paused) return;
+  // «¡FINAL!»: the platform stands still (nothing is scored after the last tally)
+  if (g.finalizing) { if (m.phase !== 'done') m.phase = 'final'; return; }
+  m.tickN++;
+  // the kids as the room knows them: team (a teacher swap), away (a phone that dropped), name + character
+  const byK = {};
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (!p.tdK) return;
+    byK[p.tdK] = [pid, p];
+    const d = m.kids[p.tdK];
+    if (d) { d.team = tdTeam(p); d.away = !!p.disconnected; }
+  });
+  Object.values(m.kids).forEach((d) => { if (!byK[d.k]) d.away = true; });     // left the room (the 5-min cleanup)
+  tdEvents(pin, g, Trap.advance(m, now, Math.random), now);
+  if (g.finalizing || g.state !== 'active') return;
+  Trap.stepKids(m, dt);
+  // questions: dealt by the room (never asked for), closed as «time up» after Trap.R.Q_SERVER_MS
+  Object.values(byK).forEach(([pid, p]) => {
+    const d = m.kids[p.tdK];
+    if (!d || p.disconnected) return;
+    if (p.currentQ && p.lastQuestionAt && now - p.lastQuestionAt > Trap.R.Q_SERVER_MS) {
+      const cq = p.currentQ;
+      p.currentQ = null;
+      tdAnswer(pin, g, pid, p, false, cq.answers[cq.correctIdx], 'timeup');
+    }
+    if (!p.currentQ && now >= (d.nextQAt || 0)) {
+      const kind = Trap.wantQ(m, d.k, now);
+      if (kind) {
+        const q = nextQuestionFor(g, pid);
+        if (q) { p.tdQKind = kind; io.to(pid).emit('question', Object.assign({}, q, { td: kind })); }
+      }
+    }
+    tdMe(pid, p, d, false);
+  });
+  if (m.tickN % 2 === 0) {
+    const arr = tdPosArr(m);
+    const full = m.tickN % 20 === 0;
+    const out = full ? arr : arr.filter((row) => { const was = m.sent[row[0]]; return !was || was.some((v, i) => v !== row[i]); });
+    arr.forEach((row) => { m.sent[row[0]] = row; });
+    if (out.length) io.to(pin).emit('td:pos', { t: now, d: out, full: full || undefined });
+  }
+}
+// A judged answer: too fast (< 450 ms) = wrong. The kind is the one the question was dealt for (p.tdQKind).
+function tdAnswer(pin, g, pid, p, correct, correctText, why) {
+  const m = g.td;
+  if (!m) return;
+  const d = tdKidOf(g, p) || tdAttach(g, p);
+  const now = Date.now();
+  if (correct && why !== 'timeup' && Trap.tooFast(p.lastQuestionAt, now)) { correct = false; why = 'fast'; }
+  const kind = p.tdQKind || 'wings';
+  p.tdQKind = null;
+  const res = Trap.answer(m, d.k, kind, correct, now, Math.random);
+  if (res.back === 'now' && res.rose) io.to(pin).emit('td:rise', { id: m.id, k: d.k, x: tdR1(res.rose[0]), y: tdR1(res.rose[1]) });
+  io.to(pid).emit('answer-result', { correct: !!correct, correctText, td: Object.assign({}, res, { why: why || '', r: m.r, final: m.final }) });
+  tdMe(pid, p, d, true);
+}
+// Teacher «⏸ Pausa»: the count, the roulette, the runners and the question clocks stand still; on «Seguir» every clock
+// moves on by the paused time (the round, the open questions, the «¡Casi!» waits).
+function tdPause(pin, g, paused) {
+  const m = g.td;
+  if (!m || !!m.paused === !!paused || g.finalizing) return;
+  const now = Date.now();
+  if (paused) {
+    if (!Trap.pause(m, now)) return;
+  } else {
+    const shift = Trap.resume(m, now);
+    m.lastT = now;
+    Object.values(g.players).forEach((p) => { if (p.currentQ && p.lastQuestionAt) p.lastQuestionAt += shift; });
+  }
+  g.endsAt = Trap.endsAt(m, now);
+  io.to(pin).emit('td:pause', { id: m.id, paused: !!m.paused, ago: tdAgo(m, now), phase: m.phase, r: m.r, endsMs: Math.max(0, g.endsAt - now) });
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+// Las Trampillas: kingdom points (the share standing each round), each kid's rounds standing, wings, comebacks, stars
+function tdEndPayloads(g) {
+  const m = g.td;
+  const rows = Object.values(g.players).filter((p) => p.team && p.tdK && m && m.kids[p.tdK]).map((p) => {
+    const d = m.kids[p.tdK];
+    return { k: finKey(g, p), name: p.name, skin: hcSkin(p), team: p.team, pts: d.pts, stood: d.stood, best: d.best, saved: d.saved, backs: d.backs, right: d.right, answered: d.answered, falls: d.falls, away: !!p.disconnected };
+  }).filter((r) => !r.away || r.pts > 0 || r.answered > 0);
+  const fin = Trap.finish(rows, g.teamScores);
+  const byK = {};
+  fin.rows.forEach((r) => { byK[r.k] = r; });
+  const lite = (r) => Party.lite(r, r && r.pts);
+  const common = {
+    winner: fin.winner,
+    leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.pts, team: r.team, avatar: '' })),
+    fin: {
+      game: 'trapdoor', winner: fin.winner, why: g.finalizing ? g.finalizing.why : 'time', count: fin.rows.length,
+      totals: fin.totals, captains: g.tdCaptains || null, arena: m ? m.arena : (g.tdArena | 0), rounds: m ? m.r : 0,
+      crews: { red: fin.rows.filter((r) => r.team === 'red').slice(0, 12).map(lite), gold: fin.rows.filter((r) => r.team === 'gold').slice(0, 12).map(lite) },
+      stars: Party.publicStars(fin.stars, byK, (r) => r.pts),
+      top: fin.rows.slice(0, 10).map(lite), mvp: { red: lite(byK[fin.mvp.red]), gold: lite(byK[fin.mvp.gold]) },
+    },
+  };
+  const cards = {};
+  fin.rows.forEach((r) => {
+    cards[r.k] = {
+      score: r.pts,
+      me: {
+        k: r.k, team: r.team, skin: r.skin, won: fin.winner === r.team, tie: fin.winner === 'tie', mvp: fin.mvp[r.team] === r.k,
+        stars: r.stars, rank: r.rank, of: fin.rows.length,
+        pts: r.pts, stood: r.stood, best: r.best, saved: r.saved, backs: r.backs, right: r.right, answered: r.answered, falls: r.falls, share: r.share,
+      },
+    };
+  });
+  return finPack(g, common, fin.totals, cards);
 }
 
 // === ❄️ BATALLA DE NIEVE EN SKI DUBÁI (gameType 'snow') — Gimkit 2D-map infection game, Dralingo style ===
@@ -8376,7 +8604,9 @@ function esEndPayloads(g) {
 // reconnects. «⏭ Saltar» on the projector (host:fin-skip) jumps every phone to its card (fin:skip).
 // The last 30 s of these games (g.finFrenzy, the fin:frenzy event, one 0.5 s check for every room): Reinos «¡Banderas
 // dobles!», Pintores «¡Fuego doble!», Nieve «¡Copos dobles!», La Gran Fuga «¡Súper turbos!» (rules in each core file).
-const FIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape'];
+// (Las Trampillas joined 2026-10-17: its own clock ends the match after the Final Round's tally; no last-30-s frenzy, the
+// Final Round ×2 is its climax)
+const FIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'trapdoor'];
 const finGame = (g) => !!g && FIN_GAMES.includes(g.gameType);
 function finKey(g, p) { if (!p.finK) p.finK = (g.finNextId = (g.finNextId || 0) + 1); return p.finK; }
 function finBegin(pin, g, why) {
@@ -8402,6 +8632,10 @@ function finBegin(pin, g, why) {
     if (g.snow) g.snow.balls = [];
     if (g.kingdoms && g.kingdoms.paused) { g.kingdoms.paused = false; io.to(pin).emit('kd:pause', { paused: false, endsMs: 0 }); }
     if (g.paint && g.paint.paused) { g.paint.paused = false; io.to(pin).emit('pc:pause', { paused: false, endsMs: 0 }); }
+    if (g.td) {
+      if (g.td.paused) { Trap.resume(g.td, now); io.to(pin).emit('td:pause', { id: g.td.id, paused: false, ago: 0, phase: 'final', r: g.td.r, endsMs: 0 }); }
+      if (g.td.phase !== 'done') g.td.phase = 'final';            // the platform stands still from here
+    }
     if (g.escape && g.escape.paused) {
       Escape.shiftTimers(g.escape, g.players, now - g.escape.pausedAt);
       g.escape.paused = false;
@@ -8429,7 +8663,7 @@ function finRescue(pin, g, e) {
 function finAgain(g, payload) { return payload && Object.assign({}, payload, { ago: Math.max(0, Date.now() - ((g.finEnd && g.finEnd.at) || Date.now())) }); }
 function finFinalLeft(g) { return g && g.finalizing ? Math.max(0, g.finalizing.until - Date.now()) : 0; }
 // the teacher paused one of the four games (its clock stands still)
-function finPaused(g) { return !!((g.snow && g.snow.paused) || (g.escape && g.escape.paused) || (g.kingdoms && g.kingdoms.paused) || (g.paint && g.paint.paused)); }
+function finPaused(g) { return !!((g.snow && g.snow.paused) || (g.escape && g.escape.paused) || (g.kingdoms && g.kingdoms.paused) || (g.paint && g.paint.paused) || (g.td && g.td.paused)); }
 // the last 30 s and «⏸ Pausa» / «+30 s»: the ×2 chips stop with the clock (`hold`) and come back with the new seconds
 // (`again`: no second banner)
 function finFrenzyAgain(pin, g, paused) {
@@ -8547,6 +8781,7 @@ function finFinish(pin, g) {
     else if (g.gameType === 'paint') end = pcEndPayloads(g);
     else if (g.gameType === 'snow') end = snEndPayloads(g);
     else if (g.gameType === 'escape') end = esEndPayloads(g);
+    else if (g.gameType === 'trapdoor') end = tdEndPayloads(g);
   } catch (e) { console.error('[finFinish]', g.gameType, e); }
   g.finalizing = null;
   g.finFrenzy = false;
@@ -8566,6 +8801,7 @@ setInterval(() => {
   Object.entries(games).forEach(([pin, g]) => {
     try {
       if (!finGame(g) || g.state !== 'active' || g.finalizing || !g.endsAt || !g.startedAt) return;
+      if (g.gameType === 'trapdoor') return;       // Las Trampillas: the Final Round (×2) is its climax, no last-30-s frenzy
       if (finPaused(g)) return;
       const left = g.endsAt - now;
       const running = g.gameType !== 'escape' || (g.escape && g.escape.phase === 'run');
@@ -8597,6 +8833,7 @@ function endGame(pin, force) {
   g.state = 'ended';
   if (g.gameType === 'kingdoms') kdClearTimers(g);
   if (g.gameType === 'paint') pcStop(g);
+  if (g.gameType === 'trapdoor') { tdStop(g); if (g.td) g.td.phase = 'done'; }
   // 🆕 2026-06-08 (Fernando): the moment a room dies, sweep every
   // student's inbox for unread force-pull messages targeting THIS pin
   // and mark them read. That stops the "¡Tu maestra te llama!"
@@ -8695,7 +8932,7 @@ io.on('connection', (socket) => {
       if (typeof a === 'function') cb = a;
       else if (a && typeof a === 'object') opts = a;
     }
-    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'halcon', 'warmup', 'reading', 'hsksim'];
+    const validTypes = ['mochi-mash', 'pinata', 'dragon-eye', 'monopoly', 'sixseven', 'kingdoms', 'paint', 'snow', 'escape', 'halcon', 'trapdoor', 'warmup', 'reading', 'hsksim'];
     const type = validTypes.includes(opts.gameType) ? opts.gameType : 'mochi-mash';
     // 🔑 2026-10-15 — creating ANY room needs a teacher (his words: "maestros crear un juego needs first time key access,
     // then it's safe"): a remembered teacher device (the dtd cookie the page's connection carried: a /maestro login
@@ -8728,6 +8965,7 @@ io.on('connection', (socket) => {
       type === 'snow'         ? 240 :
       type === 'escape'       ? 300 :    // three zones + three zona segura phases
       type === 'halcon'       ? Halcon.timeCapS(Halcon.R.ROUNDS) :   // the same: hcStart sets the cap for the rounds picked
+      type === 'trapdoor'     ? tdCapS(Trap.R.ROUNDS) :   // Las Trampillas: 7 rounds (the lobby offers 5 / 7 / 10); its tick owns the clock
       type === 'mochi-mash'   ? Mochi.R.DURATION :   // 3 min (the lobby offers 2 / 3 / 4)
       type === 'warmup'       ? 3600 :   // 1 hour ceiling; teacher exits manually
       type === 'reading'      ? 3600 :   // 1 hour ceiling; teacher controls flow
@@ -8863,6 +9101,9 @@ io.on('connection', (socket) => {
     if (g.gameType === 'paint' && g.paint && g.state === 'active') {
       io.to(socket.id).emit('pc:init', pcInitPayload(g, null));
     }
+    if (g.gameType === 'trapdoor' && g.td && g.state === 'active') {
+      io.to(socket.id).emit('td:init', tdInitPayload(g, null));
+    }
     if (g.gameType === 'snow' && g.snow && g.state === 'active') {
       io.to(socket.id).emit('sn:init', snInitPayload(g, null));
     }
@@ -8963,6 +9204,8 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
     g.duration = Math.max(15, Math.min(600, Number(duration) || 60));
+    // Las Trampillas counts in rounds: a duration becomes the rounds that fit (the lobby's 5 · 7 · 10 sets them directly)
+    if (g.gameType === 'trapdoor' && g.state === 'lobby') { g.tdRounds = tdRoundsFor(g.duration); g.duration = tdCapS(g.tdRounds); }
     broadcast(pin);
   });
 
@@ -8976,7 +9219,42 @@ io.on('connection', (socket) => {
     g.feed.push({ type: 'swap', name: p.name, team: p.team, t: Date.now() });
     io.to(playerId).emit('team-changed', { team: p.team });
     if (g.gameType === 'paint' && g.paint) io.to(pin).emit('pc:roster', pcRoster(g));
+    if (g.gameType === 'trapdoor' && g.td) { const d = tdKidOf(g, p); if (d) d.team = tdTeam(p); io.to(pin).emit('td:roster', tdRoster(g)); }
     broadcast(pin);
+  });
+
+  // Las Trampillas: the teacher picks the arena (El Palacio de Dubái, El Templo del Cielo, El Jardín de la Luna) and the
+  // rounds (5 · 7 · 10, up to 15) in the lobby; «Otra ronda» moves on to the next arena by itself
+  socket.on('host:td-arena', (data, cb) => {
+    const { pin, arena } = data || {};
+    const g = games[pin];
+    const a = Number(arena);
+    if (!g || g.hostId !== socket.id || g.gameType !== 'trapdoor' || g.state !== 'lobby' || !Number.isInteger(a) || a < 0 || a >= TD_ARENAS) { if (typeof cb === 'function') cb({ ok: false }); return; }
+    g.tdArena = a;
+    io.to(pin).emit('td:arena', { arena: a });
+    g._lastBcast = 0;
+    broadcast(pin);
+    if (typeof cb === 'function') cb({ ok: true, arena: a });
+  });
+  socket.on('host:td-rounds', (data, cb) => {
+    const { pin, rounds } = data || {};
+    const g = games[pin];
+    if (!g || g.hostId !== socket.id || g.gameType !== 'trapdoor' || g.state !== 'lobby' || !Number.isFinite(Number(rounds))) { if (typeof cb === 'function') cb({ ok: false }); return; }
+    g.tdRounds = Trap.clampRounds(rounds);
+    g.duration = tdCapS(g.tdRounds);
+    g._lastBcast = 0;
+    broadcast(pin);
+    if (typeof cb === 'function') cb({ ok: true, rounds: g.tdRounds });
+  });
+  // Las Trampillas «⏭ Saltar»: «¡YA!» → round 1 now; a tally → the next round now (the ceremony has host:fin-skip)
+  socket.on('host:td-skip', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || g.gameType !== 'trapdoor' || !g.td || g.state !== 'active' || g.finalizing) return;
+      const now = Date.now();
+      tdEvents(pin, g, Trap.skip(g.td, now, Math.random), now);
+    } catch (e) { console.error('[host:td-skip]', e); }
   });
 
   // Dragones Pintores v2: the teacher picks the round's world in the lobby (Dubái, la Gran Muralla, el río Li, Shanghái)
@@ -9012,8 +9290,11 @@ io.on('connection', (socket) => {
     ids.forEach((id, i) => {
       g.players[id].team = i % 2 === 0 ? 'red' : 'gold';
       io.to(id).emit('team-changed', { team: g.players[id].team });
+      const d = tdKidOf(g, g.players[id]);
+      if (d) d.team = tdTeam(g.players[id]);
     });
     if (g.gameType === 'paint' && g.paint) io.to(pin).emit('pc:roster', pcRoster(g));
+    if (g.gameType === 'trapdoor' && g.td) io.to(pin).emit('td:roster', tdRoster(g));
     broadcast(pin);
   });
 
@@ -9022,7 +9303,7 @@ io.on('connection', (socket) => {
     if (!g || g.hostId !== socket.id) return;
     if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye') && g.state !== 'lobby') return;   // Monopolio / Vuelo: a second click never deals again
     // Reinos / Pintores: a second click (or a reconnected projector) must not wipe a round that is already running.
-    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata' || g.gameType === 'sixseven') && g.state !== 'lobby') return;
+    if ((g.gameType === 'kingdoms' || g.gameType === 'paint' || g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata' || g.gameType === 'sixseven' || g.gameType === 'trapdoor') && g.state !== 'lobby') return;
     // Some game types don't use question sets at all (their content is
     // generated server-side or teacher-driven). Don't gate them on
     // questions.length, otherwise Start silently does nothing and the
@@ -9058,6 +9339,8 @@ io.on('connection', (socket) => {
     if (g.gameType === 'kingdoms') { g.kdCaptains = kdPickCaptains(g.kdCaptains); io.to(pin).emit('kd:captains', g.kdCaptains); }
     // Dragones Pintores: two of the gang captain the kingdoms too (they cheer on the phones and speak in the ending)
     if (g.gameType === 'paint') { g.pcCaptains = kdPickCaptains(g.pcCaptains); io.to(pin).emit('pc:captains', g.pcCaptains); }
+    // Las Trampillas: the same (they cheer on the phones and the projector, and speak in the ending)
+    if (g.gameType === 'trapdoor') { g.tdCaptains = kdPickCaptains(g.tdCaptains); io.to(pin).emit('td:captains', g.tdCaptains); }
     // Batalla de Nieve: one of the gang leads the survivors, another the ice team (VS intro on the projector).
     if (g.gameType === 'snow') {
       const c = kdPickCaptains(g.snCaptains ? { red: g.snCaptains.sun, gold: g.snCaptains.ice } : null);
@@ -9109,6 +9392,7 @@ io.on('connection', (socket) => {
 
       if (g.gameType === 'kingdoms') kdStart(pin, g);
       if (g.gameType === 'paint') pcStart(pin, g);
+      if (g.gameType === 'trapdoor') tdStart(pin, g);      // «¡YA!», then its tick runs the rounds, deals the questions, ends the match
       if (g.gameType === 'snow') snStart(pin, g);
       if (g.gameType === 'escape') esStart(pin, g);
       if (g.gameType === 'halcon') hcStart(pin, g);
@@ -9187,7 +9471,7 @@ io.on('connection', (socket) => {
       }
       broadcast(pin);
       // Every question-driven game auto-deals the first question (Dragones Pintores: kids ask with «Recargar»).
-      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'sixseven') Object.keys(g.players).forEach((pid) => {
+      if (g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'halcon' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'sixseven' && g.gameType !== 'trapdoor') Object.keys(g.players).forEach((pid) => {
         const q = nextQuestionFor(g, pid);
         if (q) io.to(pid).emit('question', q);
       });
@@ -9196,7 +9480,7 @@ io.on('connection', (socket) => {
         endGame(pin);
       }, g.duration * 1000);
       // Dàfùwēng · Monopolio: its room tick owns the clock (intro, +30 s, pause, «¡FINAL!»): no generic end timer
-      if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye') && g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+      if ((g.gameType === 'monopoly' || g.gameType === 'dragon-eye' || g.gameType === 'trapdoor') && g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
     }, COUNTDOWN_MS);
   });
 
@@ -9290,6 +9574,15 @@ io.on('connection', (socket) => {
     if (g.gameType === 'kingdoms') { kdClearTimers(g); g.kingdoms = null; }
     if (g.gameType === 'paint') { const was = g.paint; pcStop(g); g.paint = null; if (was) g.pcWorld = ((was.sky.world | 0) + 1) % PC_WORLDS; io.to(pin).emit('pc:world', { world: g.pcWorld | 0 }); }
     if (g.gameType === 'snow') { snStop(g); g.snow = null; }
+    // Las Trampillas: «Otra ronda» = the next arena (Dubái → el Templo del Cielo → el Jardín de la Luna → Dubái…)
+    if (g.gameType === 'trapdoor') {
+      const was = g.td;
+      tdStop(g);
+      g.td = null;
+      if (was) g.tdArena = (was.arena + 1) % TD_ARENAS;
+      Object.values(g.players).forEach((p) => { p.tdQKind = null; p.tdMeKey = ''; });
+      io.to(pin).emit('td:arena', { arena: g.tdArena | 0 });
+    }
     // La Gran Fuga v2: «Otra ronda» = the next route (Dubái → China → Dubái…)
     if (g.gameType === 'escape') { const was = g.escape; esStop(g); g.escape = null; if (was) g.esRoute = EscapeMap.routeIdx((was.route | 0) + 1); io.to(pin).emit('es:route', { route: EscapeMap.routeIdx(g.esRoute) }); }
     if (g.gameType === 'halcon') { hcStop(g); g.halcon = null; }
@@ -9595,6 +9888,17 @@ io.on('connection', (socket) => {
         if (player.currentQ) io.to(socket.id).emit('question', { qid: player.currentQ.qid, text: player.currentQ.text, answers: player.currentQ.answers, image: player.currentQ.image });
         return;
       }
+      // Las Trampillas: a late joiner rises at the next round; a rejoin keeps everything (on the floor / in the pit, wings)
+      // and gets its open question again; the room's tick deals every new one
+      if (g.gameType === 'trapdoor' && g.td) {
+        tdAttach(g, player);
+        if (player.currentQ && player.lastQuestionAt && Date.now() - player.lastQuestionAt > 20000) { player.currentQ = null; player.tdQKind = null; }
+        player.tdMeKey = '';
+        io.to(socket.id).emit('td:init', tdInitPayload(g, socket.id));
+        io.to(pin).emit('td:roster', tdRoster(g));
+        if (player.currentQ) io.to(socket.id).emit('question', { qid: player.currentQ.qid, text: player.currentQ.text, answers: player.currentQ.answers, image: player.currentQ.image, td: player.tdQKind || 'wings' });
+        return;
+      }
       // Batalla de Nieve: a late joiner walks in as a survivor with a 10 s shield; a rejoin keeps everything.
       if (g.gameType === 'snow' && g.snow) {
         snAttach(g, socket.id, player, true);
@@ -9737,6 +10041,10 @@ io.on('connection', (socket) => {
     } else if (g.gameType === 'paint') {
       if (g.paint && g.paint.paused) { p.currentQ = cqData; io.to(socket.id).emit('answer-stale', { reason: 'paused' }); return; }
       pcAnswer(pin, g, socket.id, p, correct, correctText, choiceIdx === -1 ? 'timeup' : '');   // -1 = the phone's own 20 s ran out
+    } else if (g.gameType === 'trapdoor') {
+      // Las Trampillas: paused → the question stays open (the phone gets its tiles back)
+      if (!g.td || g.td.paused) { if (g.td) p.currentQ = cqData; io.to(socket.id).emit('answer-stale', { reason: g.td ? 'paused' : 'not-playing' }); return; }
+      tdAnswer(pin, g, socket.id, p, correct, correctText, choiceIdx === -1 ? 'timeup' : '');   // -1 = the phone's own 20 s ran out
     } else if (g.gameType === 'snow') {
       snAnswer(pin, g, socket.id, p, correct, correctText);
     } else if (g.gameType === 'escape') {
@@ -9797,6 +10105,8 @@ io.on('connection', (socket) => {
       nextDelay = correct ? -1 : 1400;
     } else if (g.gameType === 'paint' || g.gameType === 'snow') {
       nextDelay = -1;                       // back to flying / walking; the kid asks for the next question
+    } else if (g.gameType === 'trapdoor') {
+      nextDelay = -1;                       // Las Trampillas: the room's tick deals the next one (when it gives something)
     } else if (g.gameType === 'escape') {
       nextDelay = -1;                       // esAnswer deals the next one, only while the crew is running
     } else if (g.gameType === 'mochi-mash' && g.mm) {
@@ -9814,7 +10124,25 @@ io.on('connection', (socket) => {
     }
     // Reinos de Colores sends its own small kd:plant diffs; skipping the full-room 'state' push here
     // keeps 30 phones from receiving ~5 full state objects per second.
-    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'monopoly' && g.gameType !== 'dragon-eye') broadcast(pin);
+    if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'monopoly' && g.gameType !== 'dragon-eye' && g.gameType !== 'trapdoor') broadcast(pin);
+  });
+
+  // Las Trampillas: a tap on the floor = where my character should run (an intent: the server clamps it onto the floor,
+  // takes at most Trap.R.GO_RATE a second, and moves the character itself; nobody runs into the hub or an open hole)
+  socket.on('player:td-go', (data) => {
+    try {
+      const { pin, x, y } = data || {};
+      const g = games[pin];
+      if (!g || g.gameType !== 'trapdoor' || !g.td || g.state !== 'active' || g.td.paused || g.finalizing) return;
+      if (typeof x !== 'number' || typeof y !== 'number') return;
+      const p = g.players[socket.id];
+      if (!p || !p.tdK) return;
+      const now = Date.now();
+      const r = p.tdGo || (p.tdGo = { t: 0, n: 0 });
+      if (now - r.t >= 1000) { r.t = now; r.n = 0; }
+      if (++r.n > Trap.R.GO_RATE) return;
+      Trap.go(g.td, p.tdK, x, y);
+    } catch (e) { console.error('[player:td-go]', e); }
   });
 
   // Dragones Pintores v2: a tap on the sky = where my dragon should fly (an intent: the server clamps it, takes at most
@@ -9979,6 +10307,7 @@ io.on('connection', (socket) => {
       if (!g || g.hostId !== socket.id || g.state !== 'active' || g.finalizing) return;
       if (g.gameType === 'kingdoms') kdPause(pin, g, !!paused);
       if (g.gameType === 'paint') pcPause(pin, g, !!paused);
+      if (g.gameType === 'trapdoor') tdPause(pin, g, !!paused);
       if (g.gameType === 'snow') snPause(pin, g, !!paused);
       if (g.gameType === 'escape') esPause(pin, g, !!paused);
       if (g.gameType === 'halcon') hcPause(pin, g, !!paused);
@@ -10172,6 +10501,17 @@ io.on('connection', (socket) => {
       broadcast(pin);
       return;
     }
+    // Las Trampillas counts in rounds: «+30 s» = 2 rondas más (up to 15; not once the Final Round is on)
+    if (g.gameType === 'trapdoor' && g.td) {
+      if (!Trap.addRounds(g.td, Trap.R.MORE)) { io.to(socket.id).emit('td:rounds', { id: g.td.id, rounds: g.td.rounds, r: g.td.r, refused: true }); return; }
+      const now = Date.now();
+      g.endsAt = Trap.endsAt(g.td, now);
+      g.duration = tdCapS(g.td.rounds);
+      io.to(pin).emit('td:rounds', { id: g.td.id, rounds: g.td.rounds, r: g.td.r, endsMs: Math.max(0, g.endsAt - now) });
+      g._lastBcast = 0;
+      broadcast(pin);
+      return;
+    }
     if (g.gameType === 'sixseven' && g.ss) {   // the same for 6-7 Swing
       if (!Sixseven.addTime(g.ss, add)) return;
       g.endsAt = g.ss.endsAt;
@@ -10269,6 +10609,17 @@ io.on('connection', (socket) => {
     if (finGame(g) && g.state === 'ended') {
       const one = g.finEnd && finAgain(g, g.finEnd.forPlayer(socket.id) || g.finEnd.guest());
       if (one) io.to(socket.id).emit('game-end', one);
+      return;
+    }
+    // Las Trampillas: the platform again (where I am, on the floor or in the pit, my wings), the open question again; the
+    // room's tick deals every new one
+    if (g.gameType === 'trapdoor' && g.state === 'active' && g.td) {
+      const fresh = !tdKidOf(g, p);
+      tdAttach(g, p);
+      if (fresh) io.to(pin).emit('td:roster', tdRoster(g));
+      p.tdMeKey = '';
+      io.to(socket.id).emit('td:init', tdInitPayload(g, socket.id));
+      if (p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image, td: p.tdQKind || 'wings' });
       return;
     }
     if (g.gameType === 'paint' && g.state === 'active' && g.paint) {
@@ -11369,6 +11720,7 @@ io.on('connection', (socket) => {
           }
           if (stillExists.endTimer) clearTimeout(stillExists.endTimer);
           if (stillExists.gameType === 'paint') pcStop(stillExists);
+          if (stillExists.gameType === 'trapdoor') tdStop(stillExists);
           if (stillExists.gameType === 'snow') snStop(stillExists);
           if (stillExists.gameType === 'escape') esStop(stillExists);
           if (stillExists.gameType === 'halcon') hcStop(stillExists);
@@ -11413,6 +11765,7 @@ io.on('connection', (socket) => {
               Date.now() - stillThere.disconnectedAt >= 4 * 60 * 1000) {
             delete stillExists.players[grabbedSocketId];
             if (stillExists.gameType === 'paint' && stillExists.paint) io.to(currentPin).emit('pc:roster', pcRoster(stillExists));
+            if (stillExists.gameType === 'trapdoor' && stillExists.td) io.to(currentPin).emit('td:roster', tdRoster(stillExists));
             broadcast(currentPin);
           }
         }, 5 * 60 * 1000);
@@ -11430,6 +11783,7 @@ setInterval(() => {
     if (g.state !== 'active') return;
     if (g.gameType === 'warmup') return;       // teacher-driven flashcards, no questions
     if (g.gameType === 'paint') return;        // questions are on demand («Recargar»)
+    if (g.gameType === 'trapdoor') return;     // Las Trampillas: its room tick deals every question (wings, comeback)
     if (g.gameType === 'kingdoms' && g.kingdoms && g.kingdoms.paused) return;   // paused: the open questions wait
     if (g.gameType === 'snow') return;         // questions are on demand (the stations)
     if (g.gameType === 'escape' && !(g.escape && g.escape.phase === 'run' && !g.escape.paused)) return;   // only while the crew runs

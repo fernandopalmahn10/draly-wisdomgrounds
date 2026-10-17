@@ -59,6 +59,7 @@
         : game === 'dragon-eye' && name === 'music-battle' ? '/assets/dragon/music-race.mp3'      // Vuelo del Dragón: the race loop
         : game === 'mochi-mash' && name === 'music-battle' ? '/assets/mochi/music-mash.mp3'     // Mochi Mash: the polka
         : game === 'pinata' && name === 'music-battle' ? '/assets/pinata/music-fiesta.mp3'          // Piñata Tigre: the party loop
+        : game === 'trapdoor' && name === 'music-battle' ? '/assets/trapdoor/music-rounds.mp3'     // Las Trampillas: the rounds' beat
         : game === 'sixseven' && name === 'music-battle' ? '/assets/sixseven/music-swing.mp3' : A + name + '.mp3');   // 6-7 Swing: the dance loop
       music.loop = true;
       music.volume = vol == null ? 0.35 : vol;
@@ -100,9 +101,9 @@
     };
   }
 
-  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'halcon', 'mochi-mash', 'pinata', 'sixseven', 'monopoly', 'dragon-eye'];
-  // the games whose ending is the shared Mario Party ceremony (js/party.js, 2026-10-16)
-  const PARTY_GAMES = ['kingdoms', 'paint', 'snow', 'escape'];
+  const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'halcon', 'mochi-mash', 'pinata', 'sixseven', 'monopoly', 'dragon-eye', 'trapdoor'];
+  // the games whose ending is the shared Mario Party ceremony (js/party.js, 2026-10-16; Las Trampillas 2026-10-17)
+  const PARTY_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'trapdoor'];
   const P = () => window.DralyParty || null;
   const buzz = (p) => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) {} };
   let game = null;
@@ -282,6 +283,7 @@
     if (window.MonoPhone) window.MonoPhone.lobby(game === 'monopoly' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.DragonPhone) window.DragonPhone.lobby(game === 'dragon-eye' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.PaintPhone && window.PaintPhone.lobby) window.PaintPhone.lobby(game === 'paint' ? document.querySelector('#screen-lobby .lobby-header') : null);
+    if (window.TrapdoorPhone && window.TrapdoorPhone.lobby) window.TrapdoorPhone.lobby(game === 'trapdoor' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.MochiPhone) window.MochiPhone.lobby(game === 'mochi-mash' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.PinataPhone) window.PinataPhone.lobby(game === 'pinata' ? document.querySelector('#screen-lobby .lobby-header') : null);
     if (window.SixSevenPhone) window.SixSevenPhone.lobby(game === 'sixseven' ? document.querySelector('#screen-lobby .lobby-header') : null);
@@ -339,7 +341,7 @@
       return;
     }
     const id = captains && ctx && captains[ctx.getTeam()];
-    const capGame = game === 'kingdoms' || game === 'paint';      // Dragones Pintores has captains too (2026-10-16)
+    const capGame = game === 'kingdoms' || game === 'paint' || game === 'trapdoor';      // Dragones Pintores (2026-10-16) and Las Trampillas have captains too
     box.classList.toggle('hidden', !(capGame && C && id));
     if (!(capGame && C && id)) return;
     $('kdp-cap-img').src = C.pose(id, 'hello');
@@ -466,7 +468,7 @@
     kdPaused = !!v;
     if (P()) P().pauseCard(kdPaused, { mode: 'phone' });
     hold(kdPaused);
-    if (kdPaused) stopMusic(); else if (on && (game === 'kingdoms' || game === 'paint')) playMusic('music-battle', 0.32);
+    if (kdPaused) stopMusic(); else if (on && (game === 'kingdoms' || game === 'paint' || game === 'trapdoor')) playMusic(game === 'trapdoor' && document.body.classList.contains('tp-lastround') ? 'music-final' : 'music-battle', 0.32);
   }
   holdSrcs.push(() => kdPaused);
   let ceremony = null;
@@ -541,6 +543,11 @@
     s.on('kd:captains', (c) => { captains = c; if (on) capDecor(); });
     s.on('pc:init', (d) => { setMode(true, 'paint'); scores = d.teamScores || scores; if (d.captains) captains = d.captains; paintBar(); });
     s.on('pc:captains', (c) => { captains = c; if (on) capDecor(); });
+    // Las Trampillas: the same team skin (lobby, captains, music, pause card, the shared ending)
+    s.on('td:init', (d) => { setMode(true, 'trapdoor'); scores = d.score || scores; if (d.captains) captains = d.captains; paintBar(); if (d && !!d.paused !== kdPaused) setPaused(d.paused); });
+    s.on('td:captains', (c) => { captains = c; if (on) capDecor(); });
+    s.on('td:pause', (d) => { if (on) setPaused(d && d.paused); });
+    s.on('td:tally', (d) => { if (d && d.score) { scores = d.score; paintBar(); } });
     s.on('kd:pause', (d) => { if (on) setPaused(d && d.paused); });
     s.on('pc:pause', (d) => { if (on) setPaused(d && d.paused); });
     s.on('kd:init', (d) => { if (d && !!d.paused !== kdPaused) setPaused(d.paused); });
@@ -556,7 +563,7 @@
       stopMusic();
       P().clearChip();
       const why = d && d.why;
-      const sub = why === 'time' ? '¡Se acabó el tiempo!' : why === 'escaped' ? '¡Despegamos! ¿Qué rango ganamos?' : why === 'allFrozen' ? '¿Quién ganó la batalla?' : '¡Fin de la ronda!';
+      const sub = why === 'time' && game === 'trapdoor' ? '¡Terminó la ronda final!' : why === 'time' ? '¡Se acabó el tiempo!' : why === 'escaped' ? '¡Despegamos! ¿Qué rango ganamos?' : why === 'allFrozen' ? '¿Quién ganó la batalla?' : '¡Fin de la ronda!';
       P().final({ mode: 'phone', ms: d && d.ms, sub, play: (url, vol) => sfx(url, vol), buzz });
     });
     s.on('fin:skip', () => { if (ceremony && ceremony.root) ceremony.skip(); });
@@ -599,7 +606,7 @@
     s.on('kd:plant', (d) => { if (d.teamScores) { scores = d.teamScores; paintBar(); } if (on && d.playerId !== s.id && (d.flipped || []).length >= 3) sfx('surround', 0.35); });
     s.on('countdown', () => { streak = 0; myPaint = 0; curQid = null; if (!on) return; countdownDecor(); countdownPose(); });
     s.on('question', (q) => {
-      if (!on || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye' || game === 'paint') return;      // 6-7 Swing, Monopolio, Vuelo, Pintores v2: their own screen and clock
+      if (!on || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye' || game === 'paint' || game === 'trapdoor') return;      // 6-7 Swing, Monopolio, Vuelo, Pintores v2, Las Trampillas: their own screen and clock
       afterRender(() => {
         ensureBar();
         const hasImg = $('question-image-wrap') && $('question-image-wrap').style.display !== 'none';
@@ -615,7 +622,7 @@
       if (on && e.target.closest && e.target.closest('.answer-btn')) { answered = true; stopQuestionTimer(); sfx('tap', 0.6); }
     }, true);
     s.on('answer-result', (r) => {
-      if (!on || !r || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye' || game === 'paint') return;
+      if (!on || !r || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye' || game === 'paint' || game === 'trapdoor') return;
       answered = true;
       stopQuestionTimer();
       streak = r.correct ? streak + 1 : 0;

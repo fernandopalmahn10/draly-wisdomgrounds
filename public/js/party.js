@@ -1,5 +1,6 @@
 // DralyParty — the Mario Party ending (and the small «in between» pieces) shared by Reinos de Colores (kingdoms),
-// Dragones Pintores (paint), Batalla de Nieve en Ski Dubái (snow) and La Gran Fuga de Dubái (escape). His rules
+// Dragones Pintores (paint), Batalla de Nieve en Ski Dubái (snow), La Gran Fuga de Dubái (escape) and Las Trampillas
+// (trapdoor, 2026-10-17). His rules
 // «Feelings at the end of class» and «Feelings in between too: no dead phones» (mochi-mash/CLAUDE.md).
 //   final(o)        «¡FINAL!» on a phone or the projector (the server's 2.4 s beat, then game-end)
 //   Ceremony(o)     the show: the reveal (suspense) → the winners celebrate, the others react → the bonus stars one by
@@ -67,6 +68,19 @@
       ico: { survive: '☀️', freeze: '❄️', right: '✅', hits: '🎯' },
       value: (id, v) => (id === 'survive' ? `${fmt(v)} s sin congelarse` : id === 'freeze' ? pl(v, 'congelado', 'congelados')
         : id === 'right' ? pl(v, 'acierto', 'aciertos') : pl(v, 'bola certera', 'bolas certeras')),
+      podium: (r) => pl(r.value, 'punto', 'puntos'),
+    },
+    // Las Trampillas (2026-10-17): after each drop every kid still standing = 1 point for their kingdom (Final Round ×2)
+    trapdoor: {
+      title: 'Las Trampillas', reveal: 'columns', sides: KD_SIDES, order: ['red', 'gold'],
+      unit: ['punto', 'puntos'], question: '¿Qué reino quedó más en pie?',
+      winTitle: (s) => `¡Gana el ${s.name}!`, tieTitle: '¡Empate en las trampillas!',
+      champion: (s) => `¡Campeón: ${s.name}!`, tieChampion: '¡Empate en las trampillas!',
+      mood: 'enpie', myLabel: 'Tu reino',
+      mvpLabel: (s) => `Más en pie del ${s.name}`,
+      ico: { stand: '💪', saved: '✨', right: '✅', back: '⬆️' },
+      value: (id, v) => (id === 'stand' ? `${pl(v, 'ronda seguida', 'rondas seguidas')} en pie` : id === 'saved' ? `${pl(v, 'vez', 'veces')} salvado por sus alas`
+        : id === 'right' ? pl(v, 'acierto', 'aciertos') : `${pl(v, 'vuelta', 'vueltas')} desde el foso`),
       podium: (r) => pl(r.value, 'punto', 'puntos'),
     },
     escape: {
@@ -150,6 +164,19 @@
       aciertos();
       if (me.hits > 0) fact(me.hits, me.hits === 1 ? 'bola certera' : 'bolas certeras');
       if (me.score > 0) fact(me.score, me.score === 1 ? 'punto' : 'puntos');
+    } else if (game === 'trapdoor') {
+      title = tie ? '¡Empate! ¡Qué trampillas!' : won ? '¡Tu reino quedó en pie!' : `¡Buen intento, ${side.name}!`;
+      if (me.stood > 0) {
+        big = { pre: 'Aguantaste ', n: me.stood, post: me.stood === 1 ? ' ronda en pie' : ' rondas en pie' };
+        sub = '¡Cada ronda en pie sumó para tu reino!';
+      } else if (me.backs > 0) {
+        big = { pre: 'Volviste del foso ', n: me.backs, post: me.backs === 1 ? ' vez' : ' veces' };
+        sub = '¡Respondiendo bien siempre se vuelve!';
+      } else { zero = true; sub = 'Responde bien: ¡alas! Y corre lejos de las trampillas rosas'; }
+      if (me.saved > 0) fact(me.saved, me.saved === 1 ? 'vez te salvaron tus alas' : 'veces te salvaron tus alas');
+      if (me.backs > 0 && me.stood > 0) fact(me.backs, me.backs === 1 ? 'vuelta del foso' : 'vueltas del foso');
+      aciertos();
+      if (me.best >= 2) fact(me.best, 'rondas seguidas en pie');
     } else {     // escape (co-op): the crew's rank is the headline, the card says what this kid gave the crew
       const rk = (fin.extra && fin.extra.rank) || { name: 'Exploradores del Zoco' };
       title = `¡${rk.name}!`;

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Las Trampillas · Anfitrión</title>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/kingdoms.css?v=20261017pv2">
+  <link rel="stylesheet" href="/css/mochi.css?v=20261015s">
+  <link rel="stylesheet" href="/css/party.css?v=20261017td">
+  <link rel="stylesheet" href="/css/trapdoor.css?v=20261017td">
+</head>
+<body class="kd-bg th-body">
+  <button class="kd-mute" id="mute-btn">🔊 Sonido</button>
+
+  <!-- LOBBY: the PIN, this match's arena (the teacher can pick another), the rounds, the two kingdoms, «Así se juega» -->
+  <main id="screen-lobby" class="kd-lobby th-lobby">
+    <h1 class="kd-title kd-display">Las Trampillas</h1>
+    <p class="kd-sub">¡Que no te trague el suelo! · huye del rosa, responde y gana alas</p>
+
+    <div class="th-lobby-top">
+      <div class="kd-pin-card">
+        <img class="kd-pin-pose" src="/assets/dralingo/point.webp" alt="">
+        <div>
+          <div class="kd-pin-label">PIN</div>
+          <div class="kd-pin" id="pin-display">····</div>
+        </div>
+        <div class="kd-join">Entren desde el teléfono en<br><b id="join-url">esta dirección</b></div>
+      </div>
+      <section class="th-arena-card" aria-label="La arena de esta partida">
+        <img id="arena-bg" src="/assets/trapdoor/dubai/bg.webp" alt="">
+        <div class="th-arena-info">
+          <small id="arena-n">Arena 1 de 3</small>
+          <b id="arena-name">El Palacio de Dubái</b>
+          <span id="arena-place"></span>
+        </div>
+        <div class="th-arena-btns">
+          <button class="kd-btn small" id="arena-prev" type="button" aria-label="Arena anterior">◀</button>
+          <button class="kd-btn small" id="arena-next" type="button">Cambiar arena ▶</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="kd-kingdoms">
+      <section class="kd-king red">
+        <div class="kd-king-head">
+          <img src="/assets/kingdoms/dralingo/flag-red.webp" alt="">
+          <div>
+            <div class="kd-king-name">Reino del Fuego</div>
+            <div class="kd-king-count" id="count-red">0 jugadores</div>
+          </div>
+        </div>
+        <div class="kd-chips" id="players-red"></div>
+      </section>
+      <div class="kd-vs">VS</div>
+      <section class="kd-king gold">
+        <div class="kd-king-head">
+          <img src="/assets/kingdoms/dralingo/flag.webp" alt="">
+          <div>
+            <div class="kd-king-name">Reino del Mar</div>
+            <div class="kd-king-count" id="count-gold">0 jugadores</div>
+          </div>
+        </div>
+        <div class="kd-chips" id="players-gold"></div>
+      </section>
+    </div>
+    <p class="kd-hint">Toca a un jugador para cambiarlo de reino.</p>
+
+    <div class="kd-lobby-tools">
+      <div class="th-rounds" role="group" aria-label="Rondas">Rondas
+        <button type="button" data-r="5">5</button><button type="button" data-r="7" class="on">7</button><button type="button" data-r="10">10</button>
+        <small id="rounds-time">≈ 1:40 min</small>
+      </div>
+      <button class="kd-btn" id="balance-btn">⚖️ Equilibrar</button>
+      <button class="kd-btn go" id="start-btn" disabled>¡A las trampillas!</button>
+    </div>
+    <div class="kd-set" id="set-display">Cargando preguntas…</div>
+
+    <!-- the same three steps the phones show (kids don't read: big pictures, few words) -->
+    <ol class="th-howto">
+      <li><span class="th-howto-pic">👆</span><b>Toca el suelo</b><small>tu personaje corre ahí</small></li>
+      <li><span class="th-howto-pic"><span class="tp-step-ico pink"><i></i></span></span><b>¡Huye del rosa!</b><small>en el 0, las trampillas rosas se abren</small></li>
+      <li><span class="th-howto-pic"><img src="/assets/trapdoor/wings.webp" alt=""></span><b>Responde bien: ¡alas!</b><small>te salvan una vez · ¿caíste? responde y vuelves</small></li>
+    </ol>
+  </main>
+
+  <!-- COUNTDOWN: the match's two captains face off, the arena under the number -->
+  <div id="screen-countdown" class="kd-count pc-vs hidden">
+    <div class="kd-cap red hidden" id="cap-red"><img id="cap-red-img" alt=""><div class="kd-cap-tag"><b id="cap-red-name"></b><span>Reino del Fuego</span></div></div>
+    <div class="th-count-mid"><div class="kd-count-num" id="countdown-num">3</div><div class="th-count-arena" id="count-arena"></div></div>
+    <div class="kd-cap gold hidden" id="cap-gold"><img id="cap-gold-img" alt=""><div class="kd-cap-tag"><b id="cap-gold-name"></b><span>Reino del Mar</span></div></div>
+  </div>
+
+  <!-- ACTIVE: the whole platform on the arena's art; the score and the round on top; captains + rosters on the sides;
+       the pit at the bottom (who fell, rising when they come back); the teacher's buttons -->
+  <main id="screen-active" class="th-arena hidden">
+    <canvas id="td-host-canvas" class="th-canvas" aria-label="La plataforma de las trampillas"></canvas>
+    <div class="th-top">
+      <div class="th-pin">PIN <span id="active-pin-display">····</span></div>
+      <div class="th-team red"><div class="th-n" id="score-red">0</div><div><b>Reino del Fuego</b><small id="up-red">0 en pie</small></div></div>
+      <div class="th-round" id="th-round"><b id="round-label">¡Prepárense!</b><span class="tp-dots" id="round-dots"></span></div>
+      <div class="th-team gold"><div><b>Reino del Mar</b><small id="up-gold">0 en pie</small></div><div class="th-n" id="score-gold">0</div></div>
+      <div style="width:140px"></div>
+    </div>
+    <aside class="th-side red">
+      <div class="th-side-head"><img class="hidden" id="side-cap-red" alt=""><div><b>Reino del Fuego</b><small id="side-capname-red"></small></div></div>
+      <ul class="th-roster" id="roster-red"></ul>
+    </aside>
+    <aside class="th-side gold">
+      <div class="th-side-head"><img class="hidden" id="side-cap-gold" alt=""><div><b>Reino del Mar</b><small id="side-capname-gold"></small></div></div>
+      <ul class="th-roster" id="roster-gold"></ul>
+    </aside>
+    <div class="th-pitstrip" id="pitstrip"><h3>El foso<small>Responden para volver arriba</small></h3><span class="th-pit-empty" id="pit-empty">¡Nadie en el foso!</span></div>
+    <div class="th-band" id="th-band" aria-live="polite"><b id="th-band-title"></b><small id="th-band-sub"></small><span class="tp-band-dots" id="th-band-dots"></span></div>
+    <div class="th-say" id="th-say"><img id="th-say-img" src="/assets/dralingo/point.webp" alt=""><p id="th-say-text"></p></div>
+    <div class="th-bottom">
+      <button class="kd-btn small" id="pause-btn">⏸ Pausa</button>
+      <button class="kd-btn small" id="add-time-btn" title="Dos rondas más">+30 s · 2 rondas más</button>
+      <button class="kd-btn small" id="skip-btn">⏭ Saltar</button>
+      <button class="kd-btn small" id="end-now-btn">Terminar</button>
+    </div>
+  </main>
+
+  <!-- END (a fallback: the Mario Party ceremony of js/party.js covers it) -->
+  <main id="screen-win" class="kd-end hidden">
+    <img class="kd-crown" id="win-pose" src="/assets/dralingo/victory.webp" alt="">
+    <div class="kd-winner" id="win-banner">¡Gana el Reino del Fuego!</div>
+    <div class="kd-final">
+      <div class="red">Reino del Fuego<b id="final-red">0</b>puntos</div>
+      <div class="gold">Reino del Mar<b id="final-gold">0</b>puntos</div>
+    </div>
+    <div class="kd-end-tools">
+      <button class="kd-btn" onclick="location.href='/'">🏠 Inicio</button>
+      <button class="kd-btn go" id="play-again-btn">🔄 Otra ronda</button>
+    </div>
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- 🔑 2026-10-15: creating a game needs a teacher the first time on a device (js/teacher-gate.js) -->
+  <script src="/js/teacher-gate.js?v=20261017s"></script>
+  <script src="/js/sounds.js"></script>
+  <script src="/js/cast.js?v=20261017td"></script>
+  <script src="/js/dralingo-fx.js?v=20261017art"></script>
+  <script src="/js/trapdoor-arena.js?v=20261017td"></script>
+  <script src="/js/saga.js?v=20261013a"></script>
+  <script src="/js/halcon-board.js?v=20261017art"></script>
+  <script src="/js/trapdoor-render.js?v=20261017td"></script>
+  <script src="/js/mochi-stage.js?v=20261014a"></script>
+  <script src="/js/party.js?v=20261017td"></script>
+  <script src="/js/host-trapdoor.js?v=20261017td"></script>
+  <script src="/js/live-game.js?v=20261011c"></script>
+</body>
+</html>

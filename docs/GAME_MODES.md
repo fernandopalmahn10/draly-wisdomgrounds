@@ -102,7 +102,15 @@ copy belongs on the player's phone.
 
 ## Status (2026-10-11)
 
-Live modes: **Ojos de Halcón** (`halcon`, built 2026-10-13 on a branch, not deployed: Super Mario Party «Looking for Love»
+Live modes: **Las Trampillas** (`trapdoor`, built 2026-10-17 on a branch, not deployed: #2 of his Mario Party series, the
+round platform whose pie slices drop like trapdoors (his video 4:43-5:41) — the whole class on one platform as their
+full-body characters, Fuego vs Mar on red / blue rings, tap the floor to run there (the server moves everyone), pink
+slices jump around during the 5…0 count and the ones lit at «0» open; a right answer = golden wings that save you once,
+the fallen answer in the pit to come back; each round a kingdom scores its share still standing out of 10 (the Final
+Round ×2); three arenas (El Palacio de Dubái, El Templo del Cielo, El Jardín de la Luna); the shared Mario Party
+ending; rules `core/trapdoor.js` + the platform `js/trapdoor-arena.js`, phone `js/player-trapdoor.js`, projector
+`host-trapdoor.html` + `js/host-trapdoor.js`, both draw `js/trapdoor-render.js` + `css/trapdoor.css`; spec
+`docs/specs/las-trampillas.md`), **Ojos de Halcón** (`halcon`, built 2026-10-13 on a branch, not deployed: Super Mario Party «Looking for Love»
 recreated board by board — the class is dealt into boards of 4, every kid plays as their full-body saga character on
 their own board, +5/+3/+2/+1 by speed inside the board; spec `docs/specs/ojos-de-halcon.md`; it replaced the first
 attempt «Ojo de Halcón» (`look`), retired and removed 2026-10-14 by his decision), **Reinos de Colores** (`kingdoms`, built 2026-10-10, Dubai upgrade 2026-10-11: landmarks, captains, zoom on

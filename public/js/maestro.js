@@ -410,8 +410,10 @@
           });
       },
     },
+    // Las Trampillas (2026-10-17): Mario Party's trapdoor platform
+    { id: 'trapdoor',  label: 'Las Trampillas',      emoji: '🕳️', blurb: 'Whole class on a round platform: pink trapdoors open at 0; right answers give wings (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-trapdoor.html', '/player.html') },
     // Ojos de Halcón (2026-10-13) replaced the first «Ojo de Halcón» (`look`, retired 2026-10-14)
-    { id: 'halcon',    label: 'Ojos de Halcón',      emoji: '🦅', blurb: 'Look at the right window first, boards of 4 (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-halcon.html', '/player.html') },
+    { id: 'halcon',   label: 'Ojos de Halcón',      emoji: '🦅', blurb: 'Look at the right window first, boards of 4 (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-halcon.html', '/player.html') },
     { id: 'escape',    label: 'La Gran Fuga de Dubái', emoji: '🚀', blurb: 'Whole class runs from Robotín: Dubai or China route', launch: (ctx) => _genericLaunch(ctx, '/host-escape.html', '/player.html') },
     { id: 'snow',      label: 'Batalla de Nieve',   emoji: '❄️', blurb: 'Walk Dubai, snowball fight', launch: (ctx) => _genericLaunch(ctx, '/host-snow.html', '/player.html') },
     { id: 'paint',     label: 'Dragones Pintores',  emoji: '🎨', blurb: 'Tap to fly, paint the sky, win the wonders', launch: (ctx) => _genericLaunch(ctx, '/host-paint.html', '/player.html') },

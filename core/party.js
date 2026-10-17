@@ -1,4 +1,4 @@
-// The Mario Party ending shared by Reinos de Colores, Dragones Pintores, Batalla de Nieve and La Gran Fuga (his rule
+// The Mario Party ending shared by Reinos de Colores, Dragones Pintores, Batalla de Nieve, La Gran Fuga and Las Trampillas (his rule
 // «Feelings at the end of class», mochi-mash/CLAUDE.md). No sockets: the rules every one of those games' endings uses.
 //   FINAL_MS   «¡FINAL!» on every screen before the ceremony (a flag tap or paint strokes already on their way for
 //              GRACE_MS still count; a quiz answer during «¡FINAL!» comes back unused: the round is over)

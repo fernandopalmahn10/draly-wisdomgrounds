@@ -22,11 +22,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/kingdoms.css?v=20261017pv2">
   <link rel="stylesheet" href="/css/paint.css?v=20261017pv2">
+  <link rel="stylesheet" href="/css/trapdoor.css?v=20261017td">
   <link rel="stylesheet" href="/css/snow.css?v=20261016eq">
   <link rel="stylesheet" href="/css/escape.css?v=20261017ev2">
   <link rel="stylesheet" href="/css/halcon.css?v=20261014a">
   <link rel="stylesheet" href="/css/mochi.css?v=20261015s">
-  <link rel="stylesheet" href="/css/party.css?v=20261017ev2">
+  <link rel="stylesheet" href="/css/party.css?v=20261017td">
   <link rel="stylesheet" href="/css/pinata.css?v=20261015s">
   <!-- Dàfùwēng · Monopolio v2 «El Gran Tablero de Dubái» -->
   <link rel="stylesheet" href="/css/monopoly.css?v=20261017art">
@@ -521,6 +522,47 @@
     </div>
   </div>
 
+  <!-- Las Trampillas (js/player-trapdoor.js + js/trapdoor-render.js, css/trapdoor.css): the whole round platform like the
+       Mario Party camera; tap the floor and my character runs there; the question is a compact card UNDER the platform
+       (run up there, answer down here: two areas, no mode switch); a right answer = golden wings for this round's drop,
+       in the pit = back up. Kids don't read: «Así se juega» in 3 pictured steps, a tapping hand, one big line saying
+       what to do now. -->
+  <div id="screen-trapdoor" class="hidden">
+    <div class="tp" id="tp">
+      <div class="tp-hud" id="tp-hud">
+        <div class="tp-side red"><span class="tp-num"><i aria-hidden="true">🔥</i><b id="tp-r">0</b></span><small id="tp-r-up">0 en pie</small></div>
+        <div class="tp-mid"><span class="tp-round" id="tp-round">Ronda 1</span><span class="tp-dots" id="tp-dots" aria-hidden="true"></span><span class="tp-lead" id="tp-lead">¡Empate!</span></div>
+        <div class="tp-side gold"><small id="tp-g-up">0 en pie</small><span class="tp-num"><b id="tp-g">0</b><i aria-hidden="true">🌊</i></span></div>
+      </div>
+      <div class="tp-stage" id="tp-stage">
+        <canvas id="tp-canvas" class="tp-canvas" aria-label="La plataforma: toca donde quieres correr"></canvas>
+        <div class="tp-band" id="tp-band" aria-live="polite"><b id="tp-band-title"></b><small id="tp-band-sub"></small><span class="tp-band-dots" id="tp-band-dots"></span></div>
+        <div class="tp-run" id="tp-run" aria-live="assertive"></div>
+        <div class="tp-pit hidden" id="tp-pit"><img class="tp-pit-bg" id="tp-pit-bg" alt=""><img class="tp-pit-me" id="tp-pit-me" alt=""><span id="tp-pit-text">En el foso</span></div>
+        <div class="tp-moment" id="tp-moment" aria-live="polite"><img id="tp-moment-img" alt=""><div><b id="tp-moment-title"></b><small id="tp-moment-sub"></small></div></div>
+        <div class="tp-hand hidden" id="tp-hand" aria-hidden="true"><i></i><span>👆</span><em>¡Toca el suelo!</em></div>
+      </div>
+      <div class="tp-status" id="tp-status" aria-live="polite"><span id="tp-status-ico">🏃</span><b id="tp-status-text">¡Toca el suelo para correr!</b></div>
+      <div class="tp-card" id="tp-card" aria-hidden="true">
+        <div class="tp-q-clock"><i id="tp-q-bar"></i></div>
+        <div class="tp-q-head" id="tp-q-head">✨ Responde bien: ¡alas para esta caída!</div>
+        <div class="tp-q"><img id="tp-q-img" alt=""><p id="tp-q-text"></p></div>
+        <div class="tp-ans" id="tp-ans"></div>
+        <div class="tp-verdict" id="tp-verdict" aria-live="assertive"></div>
+        <div class="tp-rest" id="tp-rest" aria-live="polite"><img id="tp-rest-img" alt=""><div><b id="tp-rest-text">¡Mira la plataforma!</b><small id="tp-rest-sub"></small></div></div>
+      </div>
+      <div class="tp-help hidden" id="tp-help" role="dialog" aria-labelledby="tp-help-title">
+        <div class="tp-help-title" id="tp-help-title">¡Las Trampillas!</div>
+        <ol class="tp-steps">
+          <li><span class="tp-step-pic"><img id="tp-help-me" alt=""><i class="tap">👆</i></span><span><b>Toca el suelo</b>tu personaje corre ahí</span></li>
+          <li><span class="tp-step-pic"><img id="tp-help-wings" alt=""><i class="wing">✨</i></span><span><b>Responde bien: ¡alas!</b>si el suelo rosa se abre, te salvan una vez</span></li>
+          <li><span class="tp-step-pic pit"><img id="tp-help-pit" alt=""><i class="up">⬆️</i></span><span><b>¿Caíste? Responde</b>y vuelves arriba</span></li>
+        </ol>
+        <button class="tp-help-go" id="tp-help-go" type="button">¡A jugar!</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Batalla de Nieve en Ski Dubái: walk your avatar around Dubai (js/player-snow.js). Kids don't read: a 3-step card
        first, a big prompt over the map saying what to do next, the action named on every button. -->
   <div id="screen-snow" class="hidden">
@@ -698,11 +740,14 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261017pv2"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261017td"></script>
   <script src="/js/player-kingdoms.js?v=20261016eq"></script>
   <script src="/js/paint-worlds.js?v=20261017pv2"></script>
   <script src="/js/paint-render.js?v=20261017pv2"></script>
   <script src="/js/player-paint.js?v=20261017pv2"></script>
+  <script src="/js/trapdoor-arena.js?v=20261017td"></script>
+  <script src="/js/trapdoor-render.js?v=20261017td"></script>
+  <script src="/js/player-trapdoor.js?v=20261017td"></script>
   <script src="/js/snow-map.js?v=20261012b"></script>
   <script src="/js/snow-render.js?v=20261017art"></script>
   <script src="/js/player-snow.js?v=20261017art"></script>
@@ -715,7 +760,7 @@
   <script src="/js/monopoly-board.js?v=20261017art"></script>
   <script src="/js/player-monopoly.js?v=20261017art"></script>
   <script src="/js/mochi-stage.js?v=20261014a"></script>
-  <script src="/js/party.js?v=20261017ev2"></script>
+  <script src="/js/party.js?v=20261017td"></script>
   <script src="/js/player-mochi.js?v=20261015s"></script>
   <script src="/js/pinata-stage.js?v=20261015b"></script>
   <script src="/js/player-pinata.js?v=20261015s"></script>
@@ -724,10 +769,10 @@
   <script src="/js/dragon-course.js?v=20261016dr"></script>
   <script src="/js/dragon-sky.js?v=20261017art"></script>
   <script src="/js/player-dragon.js?v=20261017art"></script>
-  <script src="/js/cast.js?v=20261017art"></script>
+  <script src="/js/cast.js?v=20261017td"></script>
   <script src="/js/dralingo-fx.js?v=20261017art"></script>
   <script src="/js/saga.js?v=20261013a"></script>
-  <script src="/js/player.js?v=20261017pv2"></script>
+  <script src="/js/player.js?v=20261017td"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

@@ -545,6 +545,12 @@ the checklist for any new game mode.
   Reinos de Colores, Dragones Pintores, Batalla de Nieve and La Gran Fuga got the Mario Party ending 2026-10-16 (branch
   `ending-pass`): one shared ceremony (`js/party.js` + `css/party.css` + `core/party.js`), the last 30 s doubled, live
   news between questions; «As built · 2026-10-16» in each spec.
+  «Las Trampillas» (new 2026-10-17, `trapdoor`, #2 of the Mario Party series, his video 4:43-5:41, spec
+  `docs/specs/las-trampillas.md`): the whole class on one round platform whose pie slices drop like trapdoors at «0»,
+  Fuego vs Mar; tap the floor to run (the server moves everyone); a right answer = wings that save you once; the
+  fallen answer in the pit to come back; each round a kingdom scores its share standing out of 10 (Final Round ×2: a
+  share, never a head count, so a kingdom with one kid more never wins by size); three arenas, «Otra ronda» = the next;
+  the shared Mario Party ending (it has no last-30-s frenzy: the Final Round is its climax).
 - **The kid's phone is the product** (his correction 2026-10-11: "a beautiful projector is useless if everybody else's
   UI is terrible"). Every game ships a phone experience that feels like a competition, better than Kahoot: big colored
   answer tiles, a per-question timer with ticking, live team score, Dralingo pose reactions (right / wrong / streak /

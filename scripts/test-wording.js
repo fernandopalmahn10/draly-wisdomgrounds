@@ -24,6 +24,8 @@ const FILES = [
   'public/js/party.js', 'core/party.js', 'public/host-kingdoms.html', 'public/js/host-kingdoms.js', 'public/js/player-kingdoms.js', 'core/kingdoms.js',
   'public/host-paint.html', 'public/js/host-paint.js', 'public/js/player-paint.js', 'core/paint.js', 'core/snow.js', 'core/escape.js', 'public/js/cast.js',
   'public/js/paint-render.js', 'public/js/paint-worlds.js',
+  // Las Trampillas (2026-10-17)
+  'public/host-trapdoor.html', 'public/js/host-trapdoor.js', 'public/js/player-trapdoor.js', 'public/js/trapdoor-render.js', 'public/js/trapdoor-arena.js', 'core/trapdoor.js',
   ...fs.readdirSync(path.join(ROOT, 'core/packs')).filter((f) => f.endsWith('.js')).map((f) => 'core/packs/' + f),
 ];
 const RULES = [
@@ -31,9 +33,9 @@ const RULES = [
   { re: /pollinations/i, why: 'no outside AI pictures drawn at runtime (mochi-mash CLAUDE.md, 2026-10-11)' },
   { re: /\bChinese\b/, why: 'Spanish text says "Chino Mandarín", never "Chinese"', only: /\.(html)$/ },
   // (Spanish never uses macrons or carons: any of these in a game file is pinyin WITH tone marks)
-  { re: /[āēīōūǎěǐǒǔǖǘǚǜ]/, why: 'games show pinyin without tone marks (mochi-mash CLAUDE.md)', only: /sixseven|dragon|party|paint/ },
+  { re: /[āēīōūǎěǐǒǔǖǘǚǜ]/, why: 'games show pinyin without tone marks (mochi-mash CLAUDE.md)', only: /sixseven|dragon|party|paint|trapdoor/ },
   // (the old Vuelo del Dragón showed hanzi on the projector and the phone: the remake must never bring them back)
-  { re: /[㐀-鿿]/, why: 'no hanzi on game screens (root CLAUDE.md: games show pinyin, no hanzi)', only: /dragon|party|paint/ },
+  { re: /[㐀-鿿]/, why: 'no hanzi on game screens (root CLAUDE.md: games show pinyin, no hanzi)', only: /dragon|party|paint|trapdoor/ },
 ];
 
 // blank out comments but keep line numbers

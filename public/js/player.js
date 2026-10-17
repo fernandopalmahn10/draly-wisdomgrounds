@@ -22,6 +22,10 @@
   if (window.PaintPhone) {
     window.PaintPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
   }
+  // Las Trampillas phone module (public/js/player-trapdoor.js): the platform, tap to run, the question card under it
+  if (window.TrapdoorPhone) {
+    window.TrapdoorPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
+  }
   // Batalla de Nieve en Ski Dubái phone module (public/js/player-snow.js)
   if (window.SnowPhone) {
     window.SnowPhone.init({ socket, getPin: () => pin, getTeam: () => team, showScreen: (n) => showScreen(n), markActivity: () => markActivity() });
@@ -399,6 +403,7 @@
       'monopoly':    'monopoly',     // the board is the kid's main screen (player-monopoly.js)
       'kingdoms':    'question',
       'paint':       'paint',
+      'trapdoor':    'trapdoor',     // the platform is the kid's main screen (player-trapdoor.js)
       'snow':        'snow',
       'escape':      'question',     // the zona segura room comes with es:init when the crew is in one
       'halcon':      'halcon',       // the kid's Mario Party board is the only screen
@@ -690,7 +695,7 @@
       // 6-7 Swing (since the 2026-10-15 remake: Fuego vs Mar fill the pans of the golden balance)
       teamLabel = isRed ? 'Equipo Fuego' : 'Equipo Mar';
       teamMascot = isRed ? '🔥' : '🌊';
-    } else if (gameType === 'kingdoms' || gameType === 'paint') {
+    } else if (gameType === 'kingdoms' || gameType === 'paint' || gameType === 'trapdoor') {
       teamLabel = isRed ? 'Reino del Fuego' : 'Reino del Mar';
       teamMascot = isRed ? '🔥' : '🌊';
     } else if (gameType === 'snow') {
@@ -801,6 +806,7 @@
     if (gameType === 'monopoly') return;   // Dàfùwēng · Monopolio: the question is a sheet on the board (player-monopoly.js)
     if (gameType === 'dragon-eye') return; // Vuelo del Dragón: the question is a sheet under the race (player-dragon.js)
     if (gameType === 'paint') return;      // Dragones Pintores v2: the question is a sheet over the sky (player-paint.js)
+    if (gameType === 'trapdoor') return;   // Las Trampillas: the question is a card under the platform (player-trapdoor.js)
     // 6-7 Swing: its own screen (the sum + two giant buttons), drawn by player-sixseven.js (it listens to 'question')
     if (q.gameMode === 'sixseven' || gameType === 'sixseven') return;
     $('question-text').textContent = q.text;
@@ -2490,6 +2496,7 @@
     if (gameType === 'monopoly') return;   // Dàfùwēng · Monopolio: player-monopoly.js shows the verdict on its question sheet
     if (gameType === 'dragon-eye') return; // Vuelo del Dragón: player-dragon.js shows the verdict and opens the flight
     if (gameType === 'paint') return;      // Dragones Pintores v2: player-paint.js shows the verdict on its sheet
+    if (gameType === 'trapdoor') return;   // Las Trampillas: player-trapdoor.js shows the verdict on its card
 
     // 6-7 Swing: player-sixseven.js shows the verdict on its own screen (the swing, the coins, the wobble)
     if (gameType === 'sixseven') return;
@@ -2784,14 +2791,14 @@
       const lobbyVisible = $('screen-lobby') && !$('screen-lobby').classList.contains('hidden');
       const countdownVisible = $('screen-countdown') && !$('screen-countdown').classList.contains('hidden');
       if (lobbyVisible || countdownVisible) {
-        showScreen(gameType === 'snow' ? 'snow' : gameType === 'halcon' ? 'halcon' : gameType === 'sixseven' ? 'sixseven' : gameType === 'dragon-eye' ? 'dragon' : gameType === 'paint' ? 'paint' : 'question');   // the snow map / the board is the kid's main screen
+        showScreen(gameType === 'snow' ? 'snow' : gameType === 'halcon' ? 'halcon' : gameType === 'sixseven' ? 'sixseven' : gameType === 'dragon-eye' ? 'dragon' : gameType === 'paint' ? 'paint' : gameType === 'trapdoor' ? 'trapdoor' : 'question');   // the snow map / the board is the kid's main screen
         stopLobbyFlappy();
       }
     }
   });
 
   function showScreen(name) {
-    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'mochi', 'pinata', 'dragon', 'monopoly', 'sixseven', 'kd-plant', 'paint', 'snow', 'escape', 'halcon', 'wu', 'rd', 'end'].forEach((n) => {
+    ['join', 'lobby', 'countdown', 'question', 'result', 'mash', 'mochi', 'pinata', 'dragon', 'monopoly', 'sixseven', 'kd-plant', 'paint', 'trapdoor', 'snow', 'escape', 'halcon', 'wu', 'rd', 'end'].forEach((n) => {
       const el = $('screen-' + n);
       if (el) el.classList.toggle('hidden', n !== name);
     });
