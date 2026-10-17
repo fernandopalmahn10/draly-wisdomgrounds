@@ -83,8 +83,46 @@ const io = new Server(server, {
   pingTimeout: 20000,
   // Allow both transports; clients prefer websocket first but fall back to
   // polling on locked-down networks.
-  transports: ['websocket', 'polling']
+  transports: ['websocket', 'polling'],
+  // 🔒 2026-10-17 — a socket only from the platform's own pages (see _socketOriginOk below)
+  allowRequest: (req, done) => {
+    const ok = _socketOriginOk(req);
+    if (!ok) _noteRefusedOrigin(req.headers.origin);
+    done(null, ok);
+  },
 });
+// 🔒 2026-10-17 — which pages may open a live-game socket. WebSockets ignore CORS, so a page on ANY site could open one
+// from a teacher's browser (the remembered-teacher cookie may ride along) and act as that teacher's projector. On a
+// socket handshake a browser always names the page's site in Origin: it must be ours (the address the request reached,
+// app.dralingo.app / dralingo.app / www, the old Render address, localhost while developing (never on Render);
+// DRALY_SOCKET_ORIGINS adds hosts, comma-separated). No Origin at all = not a page on another site (the test scripts
+// and bots, a same-origin polling request): let in, every teacher check still applies. «null» (a sandboxed frame, a
+// file) is not, nor JSONP polling (`j=`: a <script> tag on another site sends no Origin; our client never uses it) or
+// a request the browser itself marks cross-site.
+const _SOCKET_HOSTS = new Set(['app.dralingo.app', 'dralingo.app', 'www.dralingo.app']
+  .concat(process.env.RENDER ? [] : ['localhost', '127.0.0.1', '[::1]'])
+  .concat(String(process.env.DRALY_SOCKET_ORIGINS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean)));
+function _socketOriginOk(req) {
+  const h = (req && req.headers) || {};
+  // (engine.io picks JSONP by its decoded query, `_query.j`, filled before it asks us; the raw URL as a fallback)
+  if ((req && req._query && typeof req._query.j === 'string') || /[?&](j|%6a)=/i.test(String((req && req.url) || ''))) return false;
+  if (h.origin === undefined || h.origin === '') return h['sec-fetch-site'] !== 'cross-site';
+  let u;
+  try { u = new URL(String(h.origin)); } catch (_) { return false; }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') return false;
+  if (u.host.toLowerCase() === String(h.host || '').toLowerCase()) return true;   // the same address the page came from
+  const host = u.hostname.toLowerCase();   // (no port; an IPv6 keeps its brackets)
+  if (_SOCKET_HOSTS.has(host) || host === MOVE_FROM_HOST) return true;
+  try { return host === new URL(MOVE_TO_ORIGIN).hostname.toLowerCase(); } catch (_) { return false; }
+}
+const _refusedOrigins = new Map();   // origin → when it was last written to the log (once an hour each)
+function _noteRefusedOrigin(origin) {
+  const k = String(origin).slice(0, 120), now = Date.now();
+  if (now - (_refusedOrigins.get(k) || 0) < 3600e3) return;
+  if (_refusedOrigins.size > 500) _refusedOrigins.clear();
+  _refusedOrigins.set(k, now);
+  console.warn('[security] socket refused: a page on another site (origin ' + JSON.stringify(k) + ')');
+}
 
 // 🆕 2026-10-12 — the platform's address is now https://app.dralingo.app (through his Cloudflare). localStorage is per
 // address, so a PAGE opened at the old Render address hands the phone's saved data to the new address once, then goes
@@ -467,20 +505,35 @@ function _adminFailCount(ip) {
   _adminFailHits.set(ip, arr);
   return arr.length;
 }
-function _adminNoteFail(ip) {
+function _adminNoteFail(ip, limit = 10) {
   const now = Date.now();
   const arr = (_adminFailHits.get(ip) || []).filter((t) => now - t < (10 * 60 * 1000));
   arr.push(now);
   _adminFailHits.set(ip, arr);
   // 📓 Phase 2: security log — surfaces in Render's log stream so a brute-
   // force shows up as a burst of these. The 10th fail flips the turnstile.
-  console.warn('[security] admin-auth FAIL ip=' + ip + ' fails=' + arr.length + '/10'
-    + (arr.length === 10 ? ' → IP LOCKED for 10 min' : ''));
+  console.warn('[security] admin-auth FAIL ip=' + ip + ' fails=' + arr.length + '/' + limit
+    + (arr.length === limit ? ' → LOCKED for 10 min' : ''));
   if (_adminFailHits.size > 5000) {
     for (const [k, v] of _adminFailHits) {
       if (!v.length || now - v[v.length - 1] > (10 * 60 * 1000)) _adminFailHits.delete(k);
     }
   }
+}
+// 🔒 2026-10-17 — whose wrong codes a check counts on (HTTP _adminAuth and the sockets' _socketCode): an address, 10 in
+// 10 min; a remembered teacher device never its school's address (kids on the same Wi-Fi never stop the teacher) but
+// itself, 10 (its own cookie: signed, made only from a right code, different on every device, so one laptop's typos
+// never stop her other devices), and all of that teacher's devices together 30 (a fresh cookie is one right code away:
+// the cookie alone would never run out). → { waits(), miss() }
+const _deviceKey = (reqOrHeaders) => 'device:' + require('crypto').createHash('sha256')
+  .update(String(SimLock.readCookie(reqOrHeaders, 'dtd') || '')).digest('hex').slice(0, 24);
+function _turnstile(dev, reqOrHeaders, ip) {
+  if (!dev) return { waits: () => _adminFailCount(ip) >= 10, miss: () => _adminNoteFail(ip) };
+  const dk = _deviceKey(reqOrHeaders), tk = 'teacher:' + _ownerOfTeacher(dev);
+  return {
+    waits: () => _adminFailCount(dk) >= 10 || _adminFailCount(tk) >= 30,
+    miss: () => { _adminNoteFail(dk); _adminNoteFail(tk, 30); },
+  };
 }
 
 app.get('/api/admin/disk-status', (req, res) => {
@@ -561,10 +614,13 @@ function _adminAuth(req, res) {
   // Brute-force turnstile (see helpers above): too many FAILED auths from
   // one IP → 429. Only failures are counted, so legitimate dashboard
   // polling with the correct code is never throttled.
-  const ip = _clientIp(req);
   // 🔒 2026-10-15: a remembered teacher device is never locked out with its school's address (kids or an old tab
-  // sending wrong codes from the same Wi-Fi must not strand the teacher mid-class)
-  if (_adminFailCount(ip) >= 10 && !LevelKeys.teacherDevice(req)) {
+  // sending wrong codes from the same Wi-Fi must not strand the teacher mid-class). 🔒 2026-10-17: its own wrong codes
+  // count on the device and its teacher instead (_turnstile, the same rule as the sockets), so it can't try codes
+  // without limit
+  const dev = LevelKeys.teacherDevice(req);
+  const ts = _turnstile(dev, req, dev ? null : _clientIp(req));
+  if (ts.waits()) {
     if (res) res.status(429).json({ ok: false, error: 'demasiados intentos, espera unos minutos' });
     return null;
   }
@@ -586,7 +642,7 @@ function _adminAuth(req, res) {
   // Otherwise look up as a teacher code
   const teacher = givenPw ? Teachers.getByTeacherId(givenPw) : null;
   if (!teacher) {
-    _adminNoteFail(ip);
+    ts.miss();
     if (res) res.status(401).json({ ok: false, error: 'wrong password' });
     return null;
   }
@@ -5429,12 +5485,8 @@ const COUNTDOWN_MS = 3500;
 //
 // This solves user feedback 2026-05-27: "I should be super admin and
 // have that privilege everywhere — don't make me re-enter passwords."
-function isAdminPassword(password) {
-  if (!password) return false;
-  const p = String(password).trim();
-  if (_legacyPwOk(p)) return true;   // constant-time
-  return !!Teachers.getByTeacherId(p);
-}
+// 🔒 2026-10-17: a socket checks a code ONLY through _socketCode below (the wrong-code turnstile); the old
+// isAdminPassword / isSuperAdminPassword are gone so no new handler reads a code without it.
 // ── 🔒 2026-10-16 — who opened a live room, and who may take its projector back (host:create / host:reclaim) ──────
 // A room's owner is a teacher's uid ('*' = the legacy super-admin password or its remembered device).
 const _ownerOfTeacher = (t) => (t ? (t.teacher ? t.teacher.uid : '*') : null);
@@ -5457,20 +5509,64 @@ function _mayReclaim(g, socket, password, token) {
   const mine = (w) => !!w && (w.superAdmin || w.owner === g.hostOwner);
   const dev = LevelKeys.teacherDevice((socket.handshake && socket.handshake.headers) || {});
   if (dev && mine({ owner: _ownerOfTeacher(dev), superAdmin: !!dev.isSuperAdmin })) return 'ok';
-  if (!password) return 'not-host';
-  if (_adminFailCount(_socketIp(socket)) >= 10) return 'wait';
-  return mine(_ownerOfCode(password)) ? 'ok' : 'not-host';
+  const c = _socketCode(socket, password);   // (a wrong code counts; 'wait' comes before a code is read)
+  if (c.why === 'wait') return 'wait';
+  return c.ok && mine(c) ? 'ok' : 'not-host';
 }
-// True ONLY for super-admin credentials: the legacy WU_ADMIN_PASSWORD, OR a
-// teacher code whose record has isSuperAdmin:true. Used to gate super-only
-// live tools (e.g. the random-Spanish prompt broadcast in Modo Maestro).
-function isSuperAdminPassword(password) {
-  if (!password) return false;
-  const p = String(password).trim();
-  if (_legacyPwOk(p)) return true;   // constant-time
-  const t = Teachers.getByTeacherId(p);
-  return !!(t && t.isSuperAdmin);
+// ── 🔒 2026-10-17 — ONE door for every teacher code a live-game socket sends ───────────────────────────────────────
+// The projector-lock review found the warm-up presets, the warm-up and reading teacher tools and the exam / warm-up /
+// reading branch of host:reclaim reading codes with no turnstile: any socket could try codes as fast as it liked
+// (Cloudflare's rate limit covers only HTTP /api). Every socket handler checks a code here, never by itself (the old
+// isAdminPassword / isSuperAdminPassword are gone; `superAdmin` in the answer gates the super-only live tools, e.g.
+// the random-Spanish prompt broadcast in Modo Maestro):
+//   · an address with 10 wrong codes in 10 min waits (the admin turnstile, shared with HTTP), checked BEFORE the code
+//     is read: a waiting address learns nothing, not even from a right code;
+//   · every wrong code really sent counts; an empty one, or one retired by «Cambiar mi código», never does;
+//   · a remembered teacher device (the dtd cookie on the handshake) never waits for its school's address: its own
+//     wrong codes count on the device (10) and on its teacher's devices together (30) instead (_turnstile: kids on the
+//     same Wi-Fi can't stop the teacher, and the teacher's devices can't try codes without limit either);
+//   · a code this connection already proved goes on, and `owner` (a room's own projector, proved by its room token: an
+//     F5 or a dropped connection) lets that room's own teacher's code through while the address waits: a running class
+//     never freezes because the school's address filled up with wrong codes. Any other code on that path waits too and
+//     counts as a miss for that teacher (10 like everywhere, then even the right one waits), so a stolen token can't
+//     test the opener's code without limit. Being a room's host is NOT proof (a warm-up, reading or exam room goes to
+//     any teacher code on reclaim: a host socket gets only the plain rule, so it can't test the opener's code).
+// → { ok: true, owner, superAdmin } | { ok: false, why: 'none' | 'wait' | 'retired' | 'wrong' }
+const _codeMark = (p) => require('crypto').createHash('sha256').update('draly-socket-code:' + p).digest('hex');
+function _socketCode(socket, password, owner) {
+  const p = String(password == null ? '' : password).trim();
+  if (!p) return { ok: false, why: 'none' };
+  const data = socket.data || (socket.data = {});
+  const mark = p.length <= 512 ? _codeMark(p) : null;   // (a code is ~10 characters: megabytes are just wrong, cheaply)
+  const proved = !!mark && Array.isArray(data.dralyCodes) && data.dralyCodes.includes(mark);
+  let ts = null, waiting = false;
+  if (!proved) {
+    const hs = (socket.handshake && socket.handshake.headers) || {};
+    const dev = LevelKeys.teacherDevice(hs);
+    ts = _turnstile(dev, hs, dev ? null : _socketIp(socket));
+    waiting = ts.waits();
+    if (waiting && !owner) return { ok: false, why: 'wait' };
+  }
+  const who = mark ? _ownerOfCode(p) : null;
+  if (waiting) {   // (only a room token gets here: see `owner` above)
+    const okey = 'room-owner:' + owner;
+    if (_adminFailCount(okey) >= 10) return { ok: false, why: 'wait' };
+    if (!(who && who.owner === owner)) {
+      if (!(mark && !who && Teachers.isRetired(p))) _adminNoteFail(okey);
+      return { ok: false, why: 'wait' };
+    }
+  }
+  if (!who) {
+    if (mark && Teachers.isRetired(p)) return { ok: false, why: 'retired' };
+    if (ts) ts.miss();
+    return { ok: false, why: 'wrong' };
+  }
+  if (!proved) data.dralyCodes = (data.dralyCodes || []).concat(mark).slice(-4);
+  return { ok: true, owner: who.owner, superAdmin: who.superAdmin };
 }
+// the room's own projector = the one that carries its room token (only the tab that opened the room got it)
+const _roomOwnerFor = (g, token) => (g && g.hostOwner && g.hostToken && token
+  && _safeEqual(String(token), g.hostToken)) ? g.hostOwner : null;
 
 function genPin() {
   // Prefer short 3-digit PINs (100-999) so kids can type them in 1 second.
@@ -8426,17 +8522,13 @@ io.on('connection', (socket) => {
     // receives: host:reclaim gives the room back only to them (see _mayReclaim).
     let hostOwner = null;
     {
-      const ip = _socketIp(socket);
       const dev = LevelKeys.teacherDevice(socket.handshake.headers || {});
       if (dev) hostOwner = _ownerOfTeacher(dev);
       else {
-        if (_adminFailCount(ip) >= 10) return cb({ error: 'Muchos intentos. Espera 10 minutos y vuelve a intentarlo.', needTeacherKey: true });
-        if (!isAdminPassword(opts.password)) {
-          if (opts.password && !Teachers.isRetired(opts.password)) _adminNoteFail(ip);
-          return cb({ error: 'Falta tu código de maestra: escríbelo una vez en este aparato.', needTeacherKey: true });
-        }
-        const byCode = _ownerOfCode(opts.password);
-        hostOwner = byCode ? byCode.owner : null;
+        const c = _socketCode(socket, opts.password);
+        if (c.why === 'wait') return cb({ error: 'Muchos intentos. Espera 10 minutos y vuelve a intentarlo.', needTeacherKey: true });
+        if (!c.ok) return cb({ error: 'Falta tu código de maestra: escríbelo una vez en este aparato.', needTeacherKey: true });
+        hostOwner = c.owner;
       }
       if (type === 'hsksim' && !_simPayload(String(opts.simId || 'hsk1-sim1'))) return cb({ error: 'unknown simId' });
     }
@@ -8533,18 +8625,18 @@ io.on('connection', (socket) => {
     if (!g) return cb({ ok: false, error: 'no-game' });
     // Auth: warmup/reading teacher tools validate via the admin password.
     const isWarmupTool = (g.gameType === 'warmup' || g.gameType === 'reading' || g.gameType === 'hsksim');   // 🔒 exam rooms too (2026-10-15)
-    if (isWarmupTool && !isAdminPassword(password)) {
-      return cb({ ok: false, error: 'bad-password' });
+    // 🔒 2026-10-17: the code goes through _socketCode (it was read with no turnstile: any socket could try codes here);
+    // the room's own projector (its token) with its own teacher's code never waits for the address
+    if (isWarmupTool) {
+      const c = _socketCode(socket, password, _roomOwnerFor(g, hostToken));
+      if (!c.ok) return cb({ ok: false, error: c.why === 'wait' ? 'wait' : 'bad-password' });
     }
     // 🔒 2026-10-16: every other room goes back only to the teacher who opened it (it used to go to anyone who knew the
     // PIN, even while the teacher's projector was still connected): this projector's room secret (an F5 in the same
     // tab), the same teacher's remembered device or code (another tab or browser), or a super admin.
     if (!isWarmupTool) {
       const may = _mayReclaim(g, socket, password, hostToken);
-      if (may !== 'ok') {
-        if (may === 'not-host' && password && !isAdminPassword(password) && !Teachers.isRetired(password)) _adminNoteFail(_socketIp(socket));
-        return cb({ ok: false, error: may });
-      }
+      if (may !== 'ok') return cb({ ok: false, error: may });
     }
     // Move host identity to this socket; cancel any pending teardown.
     g.hostId = socket.id;
@@ -8952,14 +9044,11 @@ io.on('connection', (socket) => {
     // Wrong codes count in the admin turnstile like every other teacher check.
     // 🔒 2026-10-15: a remembered teacher device's monitor counts too; only a code actually sent (and not a retired one)
     // counts as a wrong guess, so kids in the room can't lock the school's address out by spamming this
-    const ip = _socketIp(socket);
     const tdev = LevelKeys.teacherDevice(socket.handshake.headers || {});
     if (!tdev) {
-      if (_adminFailCount(ip) >= 10) return cb({ ok: false, error: 'demasiados intentos' });
-      if (!isAdminPassword(password)) {
-        if (password && !Teachers.isRetired(password)) _adminNoteFail(ip);
-        return cb({ ok: false, error: 'not-teacher' });
-      }
+      const c = _socketCode(socket, password);
+      if (c.why === 'wait') return cb({ ok: false, error: 'demasiados intentos' });
+      if (!c.ok) return cb({ ok: false, error: 'not-teacher' });
     }
     if (g) {
       if (g.endTimer) clearTimeout(g.endTimer);
@@ -10241,14 +10330,17 @@ io.on('connection', (socket) => {
     // Also push the cleared state (test.active = false)
     io.to(pin).emit('rd:state', readingBuildStateMsg(g));
   }
+  // 🔒 2026-10-17: only the room's own projector gets its code read, through _socketCode (the turnstile)
+  function readingHostCode(g, socket, password) {
+    if (!g || g.gameType !== 'reading' || g.hostId !== socket.id) return { ok: false, why: 'not-host' };
+    return _socketCode(socket, password);
+  }
   function readingRequireHost(g, socket, password) {
-    if (!g || g.gameType !== 'reading') return false;
-    return g.hostId === socket.id && isAdminPassword(password);
+    return readingHostCode(g, socket, password).ok;
   }
   socket.on('rd:auth', ({ pin, password }, cb) => {
-    const g = games[pin];
-    const ok = readingRequireHost(g, socket, password);
-    if (typeof cb === 'function') cb({ ok });
+    const c = readingHostCode(games[pin], socket, password);
+    if (typeof cb === 'function') cb(c.why === 'wait' ? { ok: false, wait: true } : { ok: c.ok });
   });
   // Teacher flips the on-screen language between pinyin (HSK1 Chinese) and
   // Spanish translation. Image + audio (Chinese narration) stay the same.
@@ -10420,14 +10512,18 @@ io.on('connection', (socket) => {
     io.to(pin).emit('rd:state', readingBuildStateMsg(g));
   });
 
+  // 🔒 2026-10-17: only the room's own projector gets its code read, through _socketCode (the turnstile)
+  function wuHostCode(g, socket, password) {
+    if (!g || g.gameType !== 'warmup' || g.hostId !== socket.id) return { ok: false, why: 'not-host' };
+    return _socketCode(socket, password);
+  }
   function wuRequireHost(g, socket, password) {
-    if (!g || g.gameType !== 'warmup') return false;
-    return g.hostId === socket.id && isAdminPassword(password);
+    return wuHostCode(g, socket, password).ok;
   }
   function wuRequireAdmin(g, socket, password) {
     if (!g || g.gameType !== 'warmup') return false;
     // Host path — the teacher can ALWAYS edit, even while frozen.
-    if (g.hostId === socket.id && isAdminPassword(password)) return true;
+    if (g.hostId === socket.id && wuRequireHost(g, socket, password)) return true;
     // Delegate path — no password needed, identity comes from the player name
     const p = g.players[socket.id];
     if (!p) return false;
@@ -10442,12 +10538,13 @@ io.on('connection', (socket) => {
   }
   socket.on('wu:auth', ({ pin, password }, cb) => {
     const g = games[pin];
-    const ok = wuRequireAdmin(g, socket, password);
+    const c = wuHostCode(g, socket, password);   // (the host's code is read once: a wrong one counts once)
+    const ok = c.ok || (c.why === 'not-host' && wuRequireAdmin(g, socket, password));
     // Surface super-admin status so the host page can reveal super-only
     // tools (the random-Spanish prompt bar). Host path only — delegates
     // are never super admins.
-    const isSuper = ok && g && g.hostId === socket.id && isSuperAdminPassword(password);
-    if (typeof cb === 'function') cb({ ok, isSuperAdmin: !!isSuper });
+    const isSuper = c.ok && c.superAdmin;
+    if (typeof cb === 'function') cb(Object.assign({ ok, isSuperAdmin: !!isSuper }, c.why === 'wait' ? { wait: true } : {}));
   });
   function wuStatePayload(g) {
     return {
@@ -10474,7 +10571,7 @@ io.on('connection', (socket) => {
   socket.on('wu:set-visible-exps', ({ pin, password, exps }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!wuRequireHost(g, socket, password)) return;
     if (!g.warmup) return;
     g.warmup.visibleExps = (Array.isArray(exps) && exps.length) ? exps.slice(0, 12) : null;
     wuEmitState(g, pin);
@@ -10485,7 +10582,7 @@ io.on('connection', (socket) => {
   socket.on('wu:add-custom-word', ({ pin, password, pinyin, es, hanzi, icon }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!wuRequireHost(g, socket, password)) return;
     if (!g.warmup) return;
     if (!g.warmup.customWords) g.warmup.customWords = [];
     const p = String(pinyin || '').trim().slice(0, 40);
@@ -10505,7 +10602,7 @@ io.on('connection', (socket) => {
   socket.on('wu:remove-custom-word', ({ pin, password, id }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!wuRequireHost(g, socket, password)) return;
     if (!g.warmup || !g.warmup.customWords) return;
     g.warmup.customWords = g.warmup.customWords.filter((w) => w.id !== id);
     wuEmitState(g, pin);
@@ -10516,7 +10613,7 @@ io.on('connection', (socket) => {
   socket.on('wu:set-frozen', ({ pin, password, frozen, names }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!wuRequireHost(g, socket, password)) return;
     if (!g.warmup) return;
     // Two modes:
     //  • Global freeze  → { frozen:true }  pauses ALL asistentes at once.
@@ -10536,7 +10633,7 @@ io.on('connection', (socket) => {
   socket.on('wu:set-timer', ({ pin, password, seconds }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!wuRequireHost(g, socket, password)) return;
     if (!g.warmup) return;
     const s = Number(seconds);
     if (Number.isFinite(s) && s > 0) {
@@ -10552,7 +10649,7 @@ io.on('connection', (socket) => {
   socket.on('wu:fx', ({ pin, password, kind }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!wuRequireHost(g, socket, password)) return;
     const ok = ['rain', 'confetti', 'zombies', 'moto', 'shake', 'sixseven', 'flash', 'stars', 'tiger',
                 'dralingo', 'gang'];
     if (!ok.includes(kind) && !Saga.burst(kind)) return;   // + the saga cast bursts (public/js/saga.js)
@@ -10566,7 +10663,7 @@ io.on('connection', (socket) => {
   socket.on('wu:anim', ({ pin, password, id, on }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!wuRequireHost(g, socket, password)) return;
     if (!Saga.anim(String(id || ''))) return;   // the saga's animations only (public/js/saga.js)
     // Stash the current state on the room so a kid joining late
     // automatically sees whatever's already on.
@@ -10584,7 +10681,7 @@ io.on('connection', (socket) => {
   socket.on('wu:image', ({ pin, password, url }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!wuRequireHost(g, socket, password)) return;
     // 🔒 2026-10-15: the picker holds signed links; back to the picture's own address, checked against the catalog,
     // then a fresh link for THIS room (it stops working when the room ends).
     const logical = url ? SimLock.logicalUrl(String(url)) : null;
@@ -10598,7 +10695,7 @@ io.on('connection', (socket) => {
   socket.on('wu:set-judge', ({ pin, password, playerName, on }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!wuRequireHost(g, socket, password)) return;
     if (!g.warmup) return;
     if (!g.warmup.judges) g.warmup.judges = new Set();
     const nm = String(playerName || '');
@@ -10622,7 +10719,7 @@ io.on('connection', (socket) => {
   socket.on('wu:prompt-set', ({ pin, password, text }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isSuperAdminPassword(password))) return;
+    if (!wuHostCode(g, socket, password).superAdmin) return;
     if (!g.warmup) g.warmup = { sentence: [], viewMode: 'text', contributors: new Set(), undoStack: [] };
     g.warmup.prompt = String(text || '').slice(0, 160);
     io.to(pin).emit('wu:prompt', { text: g.warmup.prompt });
@@ -10631,7 +10728,7 @@ io.on('connection', (socket) => {
   socket.on('wu:prompt-clear', ({ pin, password }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isSuperAdminPassword(password))) return;
+    if (!wuHostCode(g, socket, password).superAdmin) return;
     if (g.warmup) g.warmup.prompt = '';
     io.to(pin).emit('wu:prompt', { text: '' });
     wuEmitState(g, pin);
@@ -10653,7 +10750,7 @@ io.on('connection', (socket) => {
   socket.on('wu:auto-delegate', ({ pin, password, on }) => {
     const g = games[pin];
     if (!g || g.gameType !== 'warmup') return;
-    if (!(g.hostId === socket.id && isAdminPassword(password))) return;
+    if (!wuRequireHost(g, socket, password)) return;
     if (!g.warmup) return;
     g.warmup.autoDelegateAll = !!on;
     // Retroactively promote everyone already in the room.
@@ -10868,23 +10965,22 @@ io.on('connection', (socket) => {
   // === TEACHER PRESETS (cross-device, server-stored) ===
   // Replaces the old localStorage-per-laptop approach so presets follow
   // the teacher across devices. Anyone authenticated as host can read/write.
-  // The password check uses the warmup pin's game state if available; if
-  // not (e.g. before a game starts), accept the password directly.
-  function wuAuthForPresets(pin, password) {
-    if (!isAdminPassword(password)) return false;
-    if (!pin) return true;             // direct password match before game exists
-    const g = games[pin];
-    if (!g || g.gameType !== 'warmup') return isAdminPassword(password);
-    return g.hostId === undefined ? true : true;  // password alone suffices here
+  // A teacher code is enough (no room needed). 🔒 2026-10-17: checked through _socketCode, so these three can no longer
+  // be used to try codes without limit (any socket could, PIN or not); the projector that proved its code goes on.
+  function wuPresetsRefusal(socket, password) {
+    const c = _socketCode(socket, password);
+    return c.ok ? null : { ok: false, error: c.why === 'wait' ? 'demasiados intentos' : 'bad password' };
   }
   socket.on('wu:presets-list', ({ pin, password }, cb) => {
     if (typeof cb !== 'function') return;
-    if (!isAdminPassword(password)) return cb({ ok: false, error: 'bad password' });
+    const no = wuPresetsRefusal(socket, password);
+    if (no) return cb(no);
     cb({ ok: true, presets: TeacherPresets.list() });
   });
   socket.on('wu:presets-save', ({ pin, password, name, sentence }, cb) => {
     cb = typeof cb === 'function' ? cb : () => {};
-    if (!isAdminPassword(password)) return cb({ ok: false, error: 'bad password' });
+    const no = wuPresetsRefusal(socket, password);
+    if (no) return cb(no);
     try {
       const preset = TeacherPresets.save(name, sentence);
       cb({ ok: true, preset, presets: TeacherPresets.list() });
@@ -10894,7 +10990,8 @@ io.on('connection', (socket) => {
   });
   socket.on('wu:presets-delete', ({ pin, password, id }, cb) => {
     cb = typeof cb === 'function' ? cb : () => {};
-    if (!isAdminPassword(password)) return cb({ ok: false, error: 'bad password' });
+    const no = wuPresetsRefusal(socket, password);
+    if (no) return cb(no);
     const ok = TeacherPresets.remove(id);
     cb({ ok, presets: TeacherPresets.list() });
   });
