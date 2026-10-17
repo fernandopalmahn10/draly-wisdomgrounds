@@ -74,7 +74,7 @@ function preparePlayer(round, p, now, late) {
   p.snSunMs = 0;
   p.snCopos = R.START_COPOS;
   p.snCalor = R.CALOR_MAX;
-  p.snStreak = 0; p.snRight = 0; p.snWrong = 0; p.snFreezes = 0; p.snStuns = 0; p.snChests = 0; p.snJobs = 0; p.snThrows = 0;
+  p.snStreak = 0; p.snRight = 0; p.snWrong = 0; p.snFreezes = 0; p.snStuns = 0; p.snChests = 0; p.snJobs = 0; p.snThrows = 0; p.snHits = 0; p.snBest = 0;
   p.snStunUntil = 0; p.snRespawnUntil = 0; p.snLastThrow = 0; p.snJobAt = 0;
   p.snShieldUntil = late ? now + R.SHIELD_MS : 0;
   p.snFrozenBy = null;
@@ -115,12 +115,14 @@ function castSpell(round, players, now, rand) {
 }
 
 // A kid answered a question. Right: +3 copos (+2 on every 3rd in a row), a survivor gets 1 calor back.
-function answer(p, correct) {
+// `frenzy` = the last 30 s («¡Copos dobles!»): the copos of a right answer count twice (for both sides).
+function answer(p, correct, frenzy) {
   if (!correct) { p.snStreak = 0; p.snWrong = (p.snWrong || 0) + 1; return { gained: 0, racha: false, calor: false }; }
   p.snStreak = (p.snStreak || 0) + 1;
+  p.snBest = Math.max(p.snBest || 0, p.snStreak);
   p.snRight = (p.snRight || 0) + 1;
   const racha = p.snStreak % R.STREAK_EVERY === 0;
-  const gained = R.COPOS_RIGHT + (racha ? R.STREAK_BONUS : 0);
+  const gained = (R.COPOS_RIGHT + (racha ? R.STREAK_BONUS : 0)) * (frenzy ? 2 : 1);
   p.snCopos = Math.min(R.COPOS_MAX, (p.snCopos || 0) + gained);
   let calor = false;
   if (p.snSide === 'sun' && p.snCalor < R.CALOR_MAX) { p.snCalor++; calor = true; }
@@ -178,9 +180,9 @@ function applyHit(round, players, ball, tid, now) {
   if (ball.side === 'ice' && t.snSide === 'sun') {
     t.snCalor = Math.max(0, (t.snCalor || 0) - 1);
     t.snHitAt = now;
-    if (t.snCalor > 0) return Object.assign(base, { type: 'brrr', calor: t.snCalor });
+    if (t.snCalor > 0) { if (by) by.snHits = (by.snHits || 0) + 1; return Object.assign(base, { type: 'brrr', calor: t.snCalor }); }
     turnIce(round, t, now, ball.by);
-    if (by) by.snFreezes = (by.snFreezes || 0) + 1;
+    if (by) { by.snFreezes = (by.snFreezes || 0) + 1; by.snHits = (by.snHits || 0) + 1; }
     return Object.assign(base, { type: 'freeze' });
   }
   if (ball.side === 'sun' && t.snSide === 'ice') {
@@ -188,7 +190,7 @@ function applyHit(round, players, ball, tid, now) {
     if (now < (t.snStunUntil || 0)) return Object.assign(base, { type: 'bonk' });
     t.snStunUntil = now + R.STUN_MS;
     t.snShieldUntil = t.snStunUntil + R.STUN_IMMUNE_MS;
-    if (by) by.snStuns = (by.snStuns || 0) + 1;
+    if (by) { by.snStuns = (by.snStuns || 0) + 1; by.snHits = (by.snHits || 0) + 1; }
     return Object.assign(base, { type: 'stun' });
   }
   return null;
@@ -339,19 +341,34 @@ function scoreOf(p, now) {
   return Math.floor(sunMs(p, now) / 1000) + (p.snFreezes || 0) * R.SCORE_FREEZE + (p.snRight || 0) * R.SCORE_RIGHT + (p.snStuns || 0) * R.SCORE_STUN;
 }
 
-// End of the round: who won, every kid's numbers, the MVP of each side.
+// Bonus stars of the Mario Party ending (core/party.js): the survivor who lasted longest, the best hunter, the most
+// right answers, the best aim (every snowball that hit a kid of the other side: brrr, freeze or stun)
+const STARS = [
+  { id: 'survive', name: 'Más tiempo sin congelarse', unit: 's', val: (r) => r.seconds, ok: (r) => r.seconds >= 10 },
+  { id: 'freeze', name: 'Más congelados', unit: 'congelados', val: (r) => r.freezes, ok: (r) => r.freezes >= 1 },
+  { id: 'right', name: 'Más aciertos', unit: 'aciertos', val: (r) => r.right, ok: (r) => r.right >= 1 },
+  { id: 'hits', name: 'Más bolas certeras', unit: 'bolas', val: (r) => r.hits, ok: (r) => r.hits >= 2 },
+];
+
+// End of the round: who won, every kid's numbers, the MVP of each side, the bonus stars.
 function finish(round, players, now) {
+  const Party = require('./party');
   const c = counts(players);
   const winner = c.sun > 0 ? 'sun' : 'ice';
   const rows = Object.entries(players).filter(([, p]) => p.snSide).map(([id, p]) => ({
-    id, name: p.name, avatar: p.avatar || '', side: p.snSide, score: scoreOf(p, now), seconds: Math.floor(sunMs(p, now) / 1000),
-    freezes: p.snFreezes || 0, right: p.snRight || 0, stuns: p.snStuns || 0, gone: !!p.disconnected,
+    id, k: p.snIdx || 0, name: p.name, avatar: p.avatar || '', skin: p.snSkin, team: p.snSide, side: p.snSide,
+    score: scoreOf(p, now), seconds: Math.floor(sunMs(p, now) / 1000),
+    freezes: p.snFreezes || 0, right: p.snRight || 0, stuns: p.snStuns || 0, hits: p.snHits || 0, best: p.snBest || 0,
+    chests: p.snChests || 0, gone: !!p.disconnected, spell: p.snFrozenBy === 'spell',
   }));
-  rows.sort((a, b) => b.score - a.score || b.seconds - a.seconds);
+  rows.sort((a, b) => b.score - a.score || b.seconds - a.seconds || a.k - b.k);
+  Party.ranks(rows, 'score');
   const sunRows = rows.filter((r) => r.side === 'sun' && !r.gone);
   const mvpSun = (sunRows.length ? sunRows : rows).slice().sort((a, b) => b.seconds - a.seconds || b.score - a.score)[0] || null;
   const mvpIce = rows.filter((r) => r.side === 'ice').sort((a, b) => b.freezes - a.freezes || b.score - a.score)[0] || null;
-  return { winner, counts: c, rows, mvpSun, mvpIce };
+  const stars = Party.stars(rows, STARS);
+  rows.forEach((r) => { r.stars = stars.filter((s) => s.winners.includes(r.k)).map((s) => s.id); });
+  return { winner, counts: c, rows, mvpSun, mvpIce, stars };
 }
 
 // Teacher pause: every timer of the round (and of each kid) moves forward by the paused time.
@@ -369,5 +386,5 @@ function shiftTimers(round, players, ms) {
 module.exports = {
   R, firstIceCount, newRound, preparePlayer, counts, turnIce, castSpell, answer, cantThrow, throwBall, stepBalls,
   applyHit, iceArmor, checkPos, nearStation, doJob, spawnChest, nextChestGap, grabChest, winnerNow, sunMs, scoreOf, finish, warmUp, refuge,
-  shiftTimers, segDist,
+  shiftTimers, segDist, STARS,
 };

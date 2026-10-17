@@ -39,6 +39,7 @@ const Snow = require('./core/snow');                 // Batalla de Nieve en Ski 
 const SnowMap = require('./public/js/snow-map');     // … and its map, shared with the phones and the projector
 const Escape = require('./core/escape');             // La Gran Fuga de Dubái (rules)
 const EscapeMap = require('./public/js/escape-map'); // … and its zona segura rooms, shared with the phones and the projector
+const Party = require('./core/party');               // the Mario Party ending of Reinos / Pintores / Nieve / Fuga (stars, «¡FINAL!»)
 const Halcon = require('./core/halcon');             // Ojos de Halcón: Mario Party «Looking for Love» in boards of 4 (rules)
 const Mono = require('./core/monopoly');             // Dàfùwēng · Monopolio v2: «El Gran Tablero de Dubái», boards of 4 (rules)
 const Dragon = require('./core/dragon');               // Vuelo del Dragón v2: «La Carrera del Cielo de Dubái», races of 4 (rules)
@@ -5551,6 +5552,8 @@ function broadcast(pin) {
 function nextQuestionFor(game, playerId) {
   const p = game.players[playerId];
   if (!p || !game.questions.length) return null;
+  if (game.finalizing) return null;     // «¡FINAL!» (Reinos, Pintores, Nieve, Fuga): the round is over, no new question
+
   if (game.gameType === 'monopoly' && !(game.mn && game.mn.phase === 'play')) return null;   // Monopolio: questions only in play (mnTick deals)
   if (game.gameType === 'dragon-eye' && !(game.dr && game.dr.phase === 'play')) return null;   // Vuelo del Dragón: the same (drTick deals)
 
@@ -6162,7 +6165,7 @@ function kdInitPayload(g, forHost) {
   const k = g.kingdoms;
   const out = {
     board: Kingdoms.publicBoard(k.board), own: k.own, teamScores: g.teamScores, top: kdTop(g),
-    pressure: Kingdoms.castlePressure(k.board, k.own), plantMs: KD_PLANT_MS, captains: k.captains,
+    pressure: Kingdoms.castlePressure(k.board, k.own), plantMs: KD_PLANT_MS, captains: k.captains, paused: !!k.paused,
   };
   if (forHost) {
     out.players = Object.fromEntries(Object.entries(g.players).map(([id, p]) => [id, { name: p.name, team: p.team, avatar: p.avatar || '', score: p.score || 0 }]));
@@ -6189,7 +6192,10 @@ function kdStart(pin, g) {
     leader: null, plants: 0,
     captains: g.kdCaptains || kdPickCaptains(),     // a new pair of the gang leads the kingdoms every round
   };
-  Object.values(g.players).forEach((p) => { p.kdStreak = 0; p.kdCorrect = 0; });
+  Object.values(g.players).forEach((p) => {
+    p.kdStreak = 0; p.kdCorrect = 0;
+    p.kdAnswered = 0; p.kdBest = 0; p.kdTiles = 0; p.kdBig = 0; p.kdLms = 0;   // for the ending's stars and each kid's card
+  });
   g.teamScores = kdTeamScores(g.kingdoms);
   kdEmitInit(pin, g);
 }
@@ -6197,7 +6203,7 @@ function kdStart(pin, g) {
 function kdPrompt(pin, pid, opts) {
   opts = opts || {};
   const g = games[pin];
-  if (!g || !g.kingdoms || g.state !== 'active') return;
+  if (!g || !g.kingdoms || g.state !== 'active' || g.finalizing || g.kingdoms.paused) return;     // «¡FINAL!» / paused: no new flag prompt
   const p = g.players[pid];
   if (!p || !(p.kdFlags > 0)) return;
   const k = g.kingdoms;
@@ -6226,6 +6232,8 @@ function kdApplyPlant(pin, pid, tileId, auto) {
   const p = g.players[pid];
   if (!p || !p.kdPending) return;
   if (!auto && !p.kdOpen) return;        // tap with no prompt open (e.g. between the two flags of a double)
+  if (g.finalizing && (auto || Date.now() - g.finalizing.at > Party.GRACE_MS)) return;   // «¡FINAL!»: only a tap already on its way counts
+  if (g.kingdoms.paused) return;                                    // paused: the flag waits (the resume prompts again)
   p.kdOpen = false;
   const k = g.kingdoms;
   if (p.kdTimer) { clearTimeout(p.kdTimer); p.kdTimer = null; }
@@ -6244,6 +6252,9 @@ function kdApplyPlant(pin, pid, tileId, auto) {
     const taken = Kingdoms.landmarksTaken(k.board, result);
     const lmPoints = auto ? 0 : taken.reduce((s, x) => s + Kingdoms.LANDMARKS[x.lm].bonus, 0);
     p.score = (p.score || 0) + 1 + result.flipped.length + lmPoints;
+    p.kdTiles = (p.kdTiles || 0) + 1 + result.flipped.length;            // the ending's «Más territorio» / «Mayor conquista»
+    p.kdBig = Math.max(p.kdBig || 0, 1 + result.flipped.length);
+    if (!auto) p.kdLms = (p.kdLms || 0) + taken.length;
     taken.forEach((x) => events.push({ type: 'landmark', tile: x.tile, lm: x.lm, from: x.from, team: p.team, by: p.name, bonus: Kingdoms.LANDMARKS[x.lm].bonus }));
   }
   // Castle pressure: banner once when it reaches ALERT_AT, siege bonus once when fully surrounded.
@@ -6263,7 +6274,7 @@ function kdApplyPlant(pin, pid, tileId, auto) {
   if (leader !== k.leader && k.plants > 3) events.push({ type: 'lead', team: leader });
   k.leader = leader;
   io.to(pin).emit('kd:plant', {
-    by: p.name, playerId: pid, team: p.team, auto: !!auto, fallback, double, playerScore: p.score || 0,
+    by: p.name, playerId: pid, team: p.team, auto: !!auto, fallback, double, playerScore: p.score || 0, playerTiles: p.kdTiles || 0,
     tile: result ? result.tile : null, from: result ? result.from : null,
     flipped: result ? result.flipped : [], teamScores: g.teamScores, top: kdTop(g), pressure, events,
   });
@@ -6285,27 +6296,51 @@ function kdApplyPlant(pin, pid, tileId, auto) {
   }, KD_NEXT_Q_MS);
 }
 
+// Teacher «⏸ Pausa» (2026-10-16): the clock stops, plant windows wait, answers come back unused (the question stays open),
+// taps are refused; on resume the clock moves on by the paused time and every kid still holding a flag gets a fresh 8 s.
+function kdPause(pin, g, paused) {
+  const k = g.kingdoms;
+  if (!k || !!k.paused === !!paused || g.finalizing) return;
+  const now = Date.now();
+  if (paused) {
+    k.paused = true;
+    k.pausedAt = now;
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+    Object.values(g.players).forEach((p) => { if (p.kdTimer) { clearTimeout(p.kdTimer); p.kdTimer = null; } p.kdOpen = false; });
+  } else {
+    const shift = now - k.pausedAt;
+    k.paused = false;
+    g.endsAt += shift;
+    if (g.endTimer) clearTimeout(g.endTimer);
+    g.endTimer = setTimeout(() => { if (games[pin] === g && g.state === 'active') endGame(pin); }, Math.max(0, g.endsAt - now));
+    Object.entries(g.players).forEach(([pid, p]) => { if (p.kdPending && p.kdFlags > 0 && !p.disconnected) kdPrompt(pin, pid); });
+  }
+  io.to(pin).emit('kd:pause', { paused: !!k.paused, endsMs: Math.max(0, g.endsAt - now) });
+  finFrenzyAgain(pin, g, !!k.paused);
+  g._lastBcast = 0;
+  broadcast(pin);
+}
+
 // === 🎨 DRAGONES PINTORES (gameType 'paint') — Dralingo take on Color Clash ===
 // Every phone runs its own little platformer (physics on the phone). The server owns: energy (seconds of flying, refilled
 // by right answers), which surface tiles belong to which kingdom, and a 5 Hz broadcast of everyone's position + the tiles
 // painted since the last tick. Questions are on demand: the kid taps «Recargar» (player:pc-ask).
 const PC_TICK_MS = 200;
 const PC_START_ENERGY = 8;
-const PC_ENERGY_PER_RIGHT = 10;
-const PC_ENERGY_MAX = 30;
+const PC_ENERGY_MAX = Paint.ENERGY_MAX;     // (a right answer's fire: core/paint.js reward())
 const PC_BLAZE_MS = 6000;           // «Llamarada» after 3 right answers in a row: paints a wider strip
 const PC_MAX_PAINT_PER_MSG = 16;
 const PC_FLIP_COOLDOWN_MS = 1500;    // a cloud can't change colour again for 1.5 s (no farming points by standing still)
 const PC_LEAD_ANNOUNCE_MS = 4000;    // lead-change announcements at most every 4 s (a tied round would spam sounds)
 
 function pcPreparePlayer(p) {
-  if (typeof p.pcEnergy !== 'number') { p.pcEnergy = PC_START_ENERGY; p.pcStreak = 0; p.pcBlazeUntil = 0; p.pcTiles = 0; }
+  if (typeof p.pcEnergy !== 'number') { p.pcEnergy = PC_START_ENERGY; p.pcStreak = 0; p.pcBlazeUntil = 0; p.pcTiles = 0; p.pcRight = 0; p.pcAnswered = 0; p.pcBest = 0; p.pcBlazes = 0; }
 }
 function pcInitPayload(g, pid) {
   const k = g.paint;
   const p = pid ? g.players[pid] : null;
   return {
-    level: k.level, own: k.own, teamScores: g.teamScores, energy: p ? p.pcEnergy : 0, energyMax: PC_ENERGY_MAX,
+    level: k.level, own: k.own, teamScores: g.teamScores, energy: p ? p.pcEnergy : 0, energyMax: PC_ENERGY_MAX, captains: g.pcCaptains || null, paused: !!k.paused,
     players: Object.fromEntries(Object.entries(g.players).map(([id, pl]) => [id, { name: pl.name, team: pl.team, avatar: pl.avatar || '' }])),
   };
 }
@@ -6320,6 +6355,7 @@ function pcStart(pin, g) {
   };
   Object.values(g.players).forEach((p) => {
     p.pcEnergy = PC_START_ENERGY; p.pcStreak = 0; p.pcBlazeUntil = 0; p.pcTiles = 0; p.pcSeen = 0;
+    p.pcRight = 0; p.pcAnswered = 0; p.pcBest = 0; p.pcBlazes = 0;      // for the ending's stars and each kid's card
     p.score = 0;
     p.currentQ = null;   // questions are on demand here: never carry last round's open question into this one
   });
@@ -6383,15 +6419,44 @@ function pcTick(pin, id) {
     io.to(pin).emit('pc:paint', { tiles, teamScores: g.teamScores, events, scores });
   }
 }
+// Teacher «⏸ Pausa» (2026-10-16): the clock stops, the dragons stand still (no fire burnt, no clouds painted), «Recargar»
+// waits; an answer comes back unused (the question stays open); on resume the clock moves on by the paused time.
+function pcPause(pin, g, paused) {
+  const k = g.paint;
+  if (!k || !!k.paused === !!paused || g.finalizing) return;
+  const now = Date.now();
+  if (paused) {
+    k.paused = true;
+    k.pausedAt = now;
+    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+  } else {
+    const shift = now - k.pausedAt;
+    k.paused = false;
+    g.endsAt += shift;
+    Object.values(g.players).forEach((p) => { if (p.pcBlazeUntil) p.pcBlazeUntil += shift; p.pcSeen = 0; });
+    if (g.endTimer) clearTimeout(g.endTimer);
+    g.endTimer = setTimeout(() => { if (games[pin] === g && g.state === 'active') endGame(pin); }, Math.max(0, g.endsAt - now));
+  }
+  io.to(pin).emit('pc:pause', { paused: !!k.paused, endsMs: Math.max(0, g.endsAt - now) });
+  finFrenzyAgain(pin, g, !!k.paused);
+  g._lastBcast = 0;
+  broadcast(pin);
+}
 function pcAnswer(pin, g, pid, p, correct, correctText) {
   if (!g.paint) return;
   pcPreparePlayer(p);
+  p.pcAnswered = (p.pcAnswered || 0) + 1;
   if (correct) {
     p.pcStreak = (p.pcStreak || 0) + 1;
-    p.pcEnergy = Math.min(PC_ENERGY_MAX, p.pcEnergy + PC_ENERGY_PER_RIGHT);
-    const blaze = p.pcStreak % 3 === 0;
+    p.pcRight = (p.pcRight || 0) + 1;
+    p.pcBest = Math.max(p.pcBest || 0, p.pcStreak);
+    // 3 in a row = a «Llamarada»; the last 30 s («¡Fuego doble!»): twice the fire and always a Llamarada
+    const rw = Paint.reward(p.pcStreak, !!g.finFrenzy);
+    p.pcEnergy = Math.min(PC_ENERGY_MAX, p.pcEnergy + rw.energy);
+    const blaze = rw.blaze;
     if (blaze) p.pcBlazeUntil = Date.now() + PC_BLAZE_MS;
-    io.to(pid).emit('answer-result', { correct: true, correctText, paint: { energy: p.pcEnergy, blaze, blazeMs: PC_BLAZE_MS, streak: p.pcStreak } });
+    if (p.pcStreak % 3 === 0) p.pcBlazes = (p.pcBlazes || 0) + 1;      // the «Más llamaradas» star: earned by a streak only
+    io.to(pid).emit('answer-result', { correct: true, correctText, paint: { energy: p.pcEnergy, blaze, blazeMs: PC_BLAZE_MS, streak: p.pcStreak, gain: rw.energy, frenzy: !!g.finFrenzy } });
   } else {
     p.pcStreak = 0;
     io.to(pid).emit('answer-result', { correct: false, correctText, paint: { energy: p.pcEnergy, streak: 0 } });
@@ -6567,7 +6632,7 @@ function snTick(pin, id) {
   const dt = Math.min(0.25, Math.max(0, (now - (k.lastStep || now)) / 1000));
   k.lastStep = now;
   k.n = (k.n || 0) + 1;
-  if (k.paused) return;
+  if (k.paused || g.finalizing) return;     // paused, or «¡FINAL!»: nothing moves
   if (!k.spellCast) {
     if (now >= k.spellAt) snSpell(pin, g, now);
   } else if (!k.ending) {
@@ -6608,15 +6673,14 @@ function snTick(pin, id) {
       setTimeout(() => {
         if (games[pin] !== g || g.state !== 'active' || g.snow !== k) return;
         if (!Snow.winnerNow(k, g.players, Date.now())) { k.ending = false; return; }   // someone came back meanwhile
-        if (g.endTimer) clearTimeout(g.endTimer);
-        endGame(pin);
+        finBegin(pin, g, 'allFrozen');
       }, 2600);
     }
   }
 }
 function snAnswer(pin, g, pid, p, correct, correctText) {
   if (!g.snow) return;
-  const r = Snow.answer(p, correct);
+  const r = Snow.answer(p, correct, !!g.finFrenzy);       // the last 30 s: «¡Copos dobles!»
   io.to(pid).emit('answer-result', {
     correct, correctText,
     snow: { gained: r.gained, racha: r.racha, calor: r.calor, copos: p.snCopos, calorNow: p.snCalor, streak: p.snStreak || 0, side: p.snSide },
@@ -6643,41 +6707,70 @@ function snPause(pin, g, paused) {
     g.endTimer = setTimeout(() => { if (games[pin] && games[pin].state === 'active') endGame(pin); }, Math.max(0, g.endsAt - now));
   }
   io.to(pin).emit('sn:pause', { paused: k.paused, spellInMs: k.spellCast ? 0 : Math.max(0, k.spellAt - now) });
+  finFrenzyAgain(pin, g, !!k.paused);
   Object.keys(g.players).forEach((pid) => snSendMe(g, pid));
   g._lastBcast = 0;
   broadcast(pin);
 }
-// End: the winner side, every kid's numbers. Each phone gets its own game-end (won/lost for the platform's end screen).
-function snFinish(pin, g) {
+// End: the winner side, every kid's numbers, the bonus stars (core/snow.js finish) for the Mario Party ceremony on every
+// screen (js/party.js; built once by finFinish and kept for a screen that reconnects). The `snow` object is the old
+// end screen's data, kept as it was.
+function snEndPayloads(g) {
   const k = g.snow;
-  if (!k) return;
+  if (!k) return null;
   snStop(g);
-  const now = Date.now();
-  const fin = Snow.finish(k, g.players, now);
-  const lite = (r) => r && ({ idx: (g.players[r.id] || {}).snIdx, name: r.name, skin: (g.players[r.id] || {}).snSkin, side: r.side, score: r.score, seconds: r.seconds, freezes: r.freezes, right: r.right });
-  Object.entries(g.players).forEach(([id, p]) => { if (p.snRound === k.id) p.score = Snow.scoreOf(p, now); });
-  const common = {
-    winner: fin.winner,
+  const at = g.finalizing ? g.finalizing.at : Date.now();      // the seconds of «¡FINAL!» are not survived seconds
+  const fin = Snow.finish(k, g.players, at);
+  const old = (r) => r && ({ idx: (g.players[r.id] || {}).snIdx, name: r.name, skin: (g.players[r.id] || {}).snSkin, side: r.side, score: r.score, seconds: r.seconds, freezes: r.freezes, right: r.right });
+  Object.values(g.players).forEach((p) => { if (p.snRound === k.id) p.score = Snow.scoreOf(p, at); });
+  const byK = {};
+  fin.rows.forEach((r) => { byK[r.k] = r; });
+  const lite = (r) => Party.lite(r, r && r.score);
+  const live = fin.rows.filter((r) => !r.gone);
+  const finCommon = {
+    game: 'snow', winner: fin.winner, why: g.finalizing ? g.finalizing.why : 'time', count: live.length,
+    totals: { sun: fin.counts.sun, ice: fin.counts.ice, total: fin.counts.total },
+    captains: g.snCaptains || null,
+    stars: Party.publicStars(fin.stars, byK, (r) => r.score),
+    mvp: { sun: lite(fin.mvpSun), ice: lite(fin.mvpIce) },
+  };
+  const crews = (n) => ({ sun: live.filter((r) => r.side === 'sun').slice(0, n).map(lite), ice: live.filter((r) => r.side === 'ice').slice(0, n).map(lite) });
+  // the phones: what their ceremony draws (a few kids of each side, the stars, their card); the projector: everything
+  const common = { winner: fin.winner, snow: { winner: fin.winner, counts: fin.counts }, fin: Object.assign({ crews: crews(6), top: [] }, finCommon) };
+  const hostOnly = {
     snow: {
-      winner: fin.winner, counts: fin.counts, mvpSun: lite(fin.mvpSun), mvpIce: lite(fin.mvpIce),
-      top: fin.rows.slice(0, 8).map(lite),
-      survivors: fin.rows.filter((r) => r.side === 'sun' && !r.gone).slice(0, 14).map(lite),
+      winner: fin.winner, counts: fin.counts, mvpSun: old(fin.mvpSun), mvpIce: old(fin.mvpIce),
+      top: fin.rows.slice(0, 8).map(old),
+      survivors: fin.rows.filter((r) => r.side === 'sun' && !r.gone).slice(0, 14).map(old),
     },
     leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.score, team: r.side, avatar: r.avatar })),
+    fin: Object.assign({ crews: crews(12), top: live.slice(0, 10).map(lite) }, finCommon),
   };
-  g.teamScores = { red: fin.counts.sun, gold: fin.counts.ice };
-  io.to(g.hostId).emit('game-end', Object.assign({ teamScores: g.teamScores }, common));
-  Object.entries(g.players).forEach(([pid, p]) => {
-    if (p.disconnected || p.snRound !== k.id) return;
-    const won = p.snSide === fin.winner;
-    const other = p.team === 'red' ? 'gold' : 'red';
-    const row = fin.rows.find((r) => r.id === pid) || {};
-    io.to(pid).emit('game-end', Object.assign({}, common, {
-      teamScores: { [p.team]: won ? 1 : 0, [other]: won ? 0 : 1 },
-      scores: { [pid]: row.score || 0 },
-      me: { won, side: p.snSide, score: row.score || 0, seconds: row.seconds || 0, freezes: row.freezes || 0, right: row.right || 0, stuns: row.stuns || 0 },
-    }));
+  const teamScores = { red: fin.counts.sun, gold: fin.counts.ice };
+  const cards = {};
+  fin.rows.forEach((r) => {
+    cards[r.k] = {
+      won: r.side === fin.winner, score: r.score,
+      me: {
+        k: r.k, team: r.side, side: r.side, skin: r.skin, won: r.side === fin.winner, tie: false, stars: r.stars, rank: r.rank,
+        mvp: (fin.mvpSun && fin.mvpSun.k === r.k && r.seconds > 0) || (fin.mvpIce && fin.mvpIce.k === r.k && r.freezes > 0) || false,
+        score: r.score, seconds: r.seconds, freezes: r.freezes, right: r.right, answered: r.right + ((g.players[r.id] || {}).snWrong || 0),
+        hits: r.hits, stuns: r.stuns, best: r.best, spell: r.spell,
+      },
+    };
   });
+  return {
+    teamScores, host: Object.assign({ teamScores }, common, hostOnly),
+    keyOf: (p) => (p && p.snRound === k.id ? p.snIdx : null),
+    guest: () => Object.assign({ teamScores }, common, { me: { k: 0, guest: true } }),
+    forPlayer(pid) {
+      const p = g.players[pid];
+      const c = p && cards[this.keyOf(p)];
+      if (!c) return null;
+      const other = p.team === 'red' ? 'gold' : 'red';
+      return Object.assign({}, common, { teamScores: { [p.team]: c.won ? 1 : 0, [other]: c.won ? 0 : 1 }, scores: { [pid]: c.score }, me: c.me });
+    },
+  };
 }
 
 // === 🦅 OJOS DE HALCÓN (gameType 'halcon') — Super Mario Party «Looking for Love», played in boards of 4 ===
@@ -7809,7 +7902,7 @@ function esTickInner(pin, id) {
   const dt = Math.min(0.25, Math.max(0, (now - (k.lastStep || now)) / 1000));
   k.lastStep = now;
   k.n = (k.n || 0) + 1;
-  if (k.paused) return;
+  if (k.paused || g.finalizing) return;     // paused, or «¡FINAL!»: the chase stands still
   // the last minute: once per round (phones + projector stage it)
   if (!k.milestones.lastmin && g.endsAt && g.endsAt - now <= 60000 && g.endsAt - now > 1000 && g.duration >= 150 && k.phase !== 'escape') {
     k.milestones.lastmin = true;
@@ -7876,8 +7969,7 @@ function esTickInner(pin, id) {
   } else if (k.phase === 'escape') {
     if (now >= k.phaseUntil && !k.ending) {
       k.ending = true;
-      if (g.endTimer) clearTimeout(g.endTimer);
-      endGame(pin);
+      finBegin(pin, g, 'escaped');           // the jet took off: «¡FINAL!», then the ceremony
     }
   }
   // who is in the game (joins, leaves): a fresh roster for every screen
@@ -7890,7 +7982,7 @@ function esAnswer(pin, g, pid, p, correct, correctText) {
   const k = g.escape;
   if (!k) return;
   const n = Escape.kidsOn(g.players, k).length;
-  const r = Escape.answer(k, p, correct, n);
+  const r = Escape.answer(k, p, correct, n, !!g.finFrenzy);   // the last 30 s: every turbo a súper turbo
   p.lastQuestionAt = Date.now();     // the global watchdog must not push a question over the turbo screen
   io.to(pid).emit('answer-result', {
     correct, correctText,
@@ -7928,46 +8020,281 @@ function esPause(pin, g, paused) {
     });
   }
   io.to(pin).emit('es:pause', Object.assign(esPublic(g, now), { paused: k.paused }));
+  finFrenzyAgain(pin, g, !!k.paused);
   g._lastBcast = 0;
   broadcast(pin);
 }
-// End: the crew's rank, the awards, every kid's own numbers (each phone gets its own game-end).
-function esFinish(pin, g) {
+// End: the crew's rank, the awards and stars, every kid's own numbers, for the Mario Party ceremony on every screen
+// (js/party.js; built once by finFinish and kept for a screen that reconnects). The `escape` object is the old end
+// screen's data, kept as it was. Co-op: the crew is shown in join order, never ranked in front of the class.
+function esEndPayloads(g) {
   const k = g.escape;
-  if (!k) return;
+  if (!k) return null;
   esStop(g);
   const fin = Escape.finish(k, g.players);
-  const lite = (r) => r && ({ idx: (g.players[r.id] || {}).esIdx, name: r.name, skin: (g.players[r.id] || {}).esSkin, score: r.score, turbos: r.turbos, best: r.best, safe: r.safe, waves: r.waves, reach: r.reach });
+  const old = (r) => r && ({ idx: (g.players[r.id] || {}).esIdx, name: r.name, skin: (g.players[r.id] || {}).esSkin, score: r.score, turbos: r.turbos, best: r.best, safe: r.safe, waves: r.waves, reach: r.reach });
   Object.entries(g.players).forEach(([, p]) => { if (p.esRound === k.id) p.score = (fin.rows.find((r) => g.players[r.id] === p) || {}).score || 0; });
-  const awards = { turbos: lite(fin.awards.turbos), fastest: lite(fin.awards.fastest), streak: lite(fin.awards.streak) };
-  const common = {
-    winner: fin.escaped ? 'crew' : 'tie',
-    escape: {
-      rank: fin.rank, levelsCleared: fin.levelsCleared, hearts: fin.hearts, escaped: fin.escaped, level: k.level, zaps: fin.zaps,
-      turbos: fin.turbos, awards, top: fin.rows.slice(0, 8).map(lite), // the whole crew, in join order (no public ranking of who did less)
-      crew: fin.rows.filter((r) => !r.gone).map(lite).sort((a, b) => (a.idx || 0) - (b.idx || 0)).slice(0, 40),
-      cast: g.esCast || null,
-    },
-    leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.score, team: 'crew', avatar: r.avatar })),
+  const awards = { turbos: old(fin.awards.turbos), fastest: old(fin.awards.fastest), streak: old(fin.awards.streak) };
+  const byK = {};
+  fin.rows.forEach((r) => { byK[r.k] = r; });
+  const lite = (r) => Party.lite(r, r && r.score);
+  const crew = fin.rows.filter((r) => !r.gone).slice().sort((x, y) => (x.k || 0) - (y.k || 0));
+  const finCommon = {
+    game: 'escape', winner: fin.escaped ? 'crew' : 'robot', why: g.finalizing ? g.finalizing.why : 'time', count: crew.length,
+    totals: { crew: fin.turbos }, captains: g.esCast || null,
+    stars: Party.publicStars(fin.stars, byK, (r) => r.score),
+    top: [], mvp: {},
+    extra: { rank: fin.rank, levelsCleared: fin.levelsCleared, hearts: fin.hearts, escaped: fin.escaped, level: k.level, zaps: fin.zaps },
   };
-  g.teamScores = { red: fin.levelsCleared, gold: 0 };
-  io.to(g.hostId).emit('game-end', Object.assign({ teamScores: g.teamScores }, common));
-  Object.entries(g.players).forEach(([pid, p]) => {
-    if (p.disconnected || p.esRound !== k.id) return;
-    const other = p.team === 'red' ? 'gold' : 'red';
-    const row = fin.rows.find((r) => r.id === pid) || {};
-    const mine = Object.keys(awards).filter((a) => awards[a] && fin.awards[a] && fin.awards[a].id === pid);
-    io.to(pid).emit('game-end', Object.assign({}, common, {
-      teamScores: { [p.team]: fin.escaped ? 1 : 0, [other]: 0 },
-      scores: { [pid]: row.score || 0 },
-      me: { score: row.score || 0, turbos: row.turbos || 0, supers: row.supers || 0, best: row.best || 0, safe: row.safe || 0, waves: row.waves || 0, reach: row.reach, awards: mine },
-    }));
+  const escOld = { rank: fin.rank, levelsCleared: fin.levelsCleared, hearts: fin.hearts, escaped: fin.escaped, level: k.level, zaps: fin.zaps, turbos: fin.turbos, cast: g.esCast || null };
+  // the phones: a dozen crewmates for their ceremony; the projector: the whole crew (in join order, never ranked)
+  const common = { winner: fin.escaped ? 'crew' : 'tie', escape: escOld, fin: Object.assign({ crews: { crew: crew.slice(0, 12).map(lite) } }, finCommon) };
+  const hostOnly = {
+    escape: Object.assign({}, escOld, { awards, top: fin.rows.slice(0, 8).map(old), crew: crew.map(old).slice(0, 40) }),
+    leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.score, team: 'crew', avatar: r.avatar })),
+    fin: Object.assign({ crews: { crew: crew.slice(0, 40).map(lite) } }, finCommon),
+  };
+  const teamScores = { red: fin.levelsCleared, gold: 0 };
+  const cards = {};
+  fin.rows.forEach((r) => {
+    const p = g.players[r.id] || {};
+    cards[r.k] = {
+      score: r.score,
+      me: {
+        k: r.k, team: 'crew', skin: r.skin, won: fin.escaped, tie: false, stars: r.stars, mvp: false,
+        score: r.score || 0, turbos: r.turbos || 0, supers: r.supers || 0, best: r.best || 0, safe: r.safe || 0, waves: r.waves || 0, reach: r.reach,
+        right: r.right || 0, answered: (r.right || 0) + (p.esWrong || 0),
+        awards: Object.keys(fin.awards).filter((a) => fin.awards[a] && fin.awards[a].id === r.id),
+      },
+    };
   });
+  return {
+    teamScores, host: Object.assign({ teamScores }, common, hostOnly),
+    keyOf: (p) => (p && p.esRound === k.id ? p.esIdx : null),
+    guest: () => Object.assign({ teamScores }, common, { me: { k: 0, guest: true } }),
+    forPlayer(pid) {
+      const p = g.players[pid];
+      const c = p && cards[this.keyOf(p)];
+      if (!c) return null;
+      const other = p.team === 'red' ? 'gold' : 'red';
+      return Object.assign({}, common, { teamScores: { [p.team]: fin.escaped ? 1 : 0, [other]: 0 }, scores: { [pid]: c.score }, me: c.me });
+    },
+  };
 }
 
-function endGame(pin) {
+// === 🏁 THE MARIO PARTY ENDING of Reinos de Colores, Dragones Pintores, Batalla de Nieve, La Gran Fuga (2026-10-16) ===
+// His rule «Feelings at the end of class» (CLAUDE.md): when a round ends (the clock, «Terminar», the ice team froze
+// everyone, the jet took off) every screen shows «¡FINAL!» for Party.FINAL_MS (an action already on its way for
+// GRACE_MS still counts), then game-end carries `fin` (the reveal, the winners, the bonus stars, the podium) and each
+// phone its own card (`me`). The end payloads are built ONCE (g.finEnd) and sent again to a projector or a phone that
+// reconnects. «⏭ Saltar» on the projector (host:fin-skip) jumps every phone to its card (fin:skip).
+// The last 30 s of these games (g.finFrenzy, the fin:frenzy event, one 0.5 s check for every room): Reinos «¡Banderas
+// dobles!», Pintores «¡Fuego doble!», Nieve «¡Copos dobles!», La Gran Fuga «¡Súper turbos!» (rules in each core file).
+const FIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape'];
+const finGame = (g) => !!g && FIN_GAMES.includes(g.gameType);
+function finKey(g, p) { if (!p.finK) p.finK = (g.finNextId = (g.finNextId || 0) + 1); return p.finK; }
+function finBegin(pin, g, why) {
+  if (!finGame(g) || g.state !== 'active' || g.finalizing) return false;
+  const now = Date.now();
+  if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
+  const token = { at: now, until: now + Party.FINAL_MS, why: why || 'time' };
+  g.finalizing = token;
+  g.finFrenzy = false;
+  // the end is armed first, so nothing below can leave a room stuck in «¡FINAL!» (code review 2026-10-16)
+  setTimeout(() => {
+    if (games[pin] !== g || g.finalizing !== token || g.state !== 'active') return;
+    try { endGame(pin, true); } catch (e) { finRescue(pin, g, e); }
+  }, Party.FINAL_MS);
+  try {
+    // a paused round ends now: its clocks move on by the paused time first (a pause is never «survived» seconds), then
+    // the pause card goes (the «¡FINAL!» card covers every screen)
+    if (g.snow && g.snow.paused) {
+      Snow.shiftTimers(g.snow, g.players, now - g.snow.pausedAt);
+      g.snow.paused = false;
+      io.to(pin).emit('sn:pause', { paused: false, spellInMs: 0 });
+    }
+    if (g.snow) g.snow.balls = [];
+    if (g.kingdoms && g.kingdoms.paused) { g.kingdoms.paused = false; io.to(pin).emit('kd:pause', { paused: false, endsMs: 0 }); }
+    if (g.paint && g.paint.paused) { g.paint.paused = false; io.to(pin).emit('pc:pause', { paused: false, endsMs: 0 }); }
+    if (g.escape && g.escape.paused) {
+      Escape.shiftTimers(g.escape, g.players, now - g.escape.pausedAt);
+      g.escape.paused = false;
+      io.to(pin).emit('es:pause', Object.assign(esPublic(g, now), { paused: false }));
+    }
+    Object.values(g.players).forEach((p) => { p.currentQ = null; });
+  } catch (e) { console.error('[finBegin]', g.gameType, e); }
+  io.to(pin).emit('fin:final', { ms: Party.FINAL_MS, why: token.why, game: g.gameType });
+  g._lastBcast = 0;
+  broadcast(pin);
+  return true;
+}
+// endGame threw during «¡FINAL!» (it never has; belt and braces): the room still ends, every screen gets a plain end
+function finRescue(pin, g, e) {
+  console.error('[finRescue]', g.gameType, e);
+  g.finalizing = null;
+  g.finFrenzy = false;
+  g.state = 'ended';
+  try { io.to(pin).emit('game-end', { teamScores: g.teamScores || { red: 0, gold: 0 }, winner: 'tie', leaderboard: [] }); } catch (_) {}
+  broadcast(pin);
+}
+// what a screen that (re)connects during «¡FINAL!» needs
+// the ending sent again (a reload, a reconnect, a reclaimed projector): `ago` = how long ago the round ended, so the
+// screen joins the show where the others are, or goes straight to its card / the podium
+function finAgain(g, payload) { return payload && Object.assign({}, payload, { ago: Math.max(0, Date.now() - ((g.finEnd && g.finEnd.at) || Date.now())) }); }
+function finFinalLeft(g) { return g && g.finalizing ? Math.max(0, g.finalizing.until - Date.now()) : 0; }
+// the teacher paused one of the four games (its clock stands still)
+function finPaused(g) { return !!((g.snow && g.snow.paused) || (g.escape && g.escape.paused) || (g.kingdoms && g.kingdoms.paused) || (g.paint && g.paint.paused)); }
+// the last 30 s and «⏸ Pausa» / «+30 s»: the ×2 chips stop with the clock (`hold`) and come back with the new seconds
+// (`again`: no second banner)
+function finFrenzyAgain(pin, g, paused) {
+  if (!finGame(g) || !g.finFrenzy || g.state !== 'active' || g.finalizing) return;
+  if (paused) io.to(pin).emit('fin:frenzy', { game: g.gameType, off: true, hold: true });
+  else io.to(pin).emit('fin:frenzy', { game: g.gameType, endsMs: Math.max(0, g.endsAt - Date.now()), again: true });
+}
+// A projector that reclaims its room (host:reclaim, after that handler's own checks and the game's init): the last 30 s,
+// «¡FINAL!» still on, or the whole ceremony again after the end. Call: `finReclaim(socket.id, g);`
+function finReclaim(sid, g) {
+  if (!finGame(g)) return;
+  if (g.state === 'active' && g.finFrenzy && g.endsAt && !finPaused(g)) io.to(sid).emit('fin:frenzy', { game: g.gameType, endsMs: Math.max(0, g.endsAt - Date.now()) });
+  if (g.state === 'active' && g.finalizing) io.to(sid).emit('fin:final', { ms: finFinalLeft(g), why: g.finalizing.why, game: g.gameType });
+  if (g.state === 'ended' && g.finEnd) io.to(sid).emit('game-end', finAgain(g, g.finEnd.host));
+}
+// Reinos de Colores: kingdom points, each kid's flags (tiles, the biggest capture, landmarks), the bonus stars
+function kdEndPayloads(g) {
+  const k = g.kingdoms;
+  const rows = Object.values(g.players).filter((p) => p.team && (!p.disconnected || (p.score || 0) > 0 || (p.kdTiles || 0) > 0)).map((p) => ({
+    k: finKey(g, p), name: p.name, skin: hcSkin(p), team: p.team, points: p.score || 0, tiles: p.kdTiles || 0, big: p.kdBig || 0,
+    best: p.kdBest || 0, lms: p.kdLms || 0, right: p.kdCorrect || 0, answered: p.kdAnswered || 0,
+  }));
+  const fin = Kingdoms.finish(rows, g.teamScores);
+  const byK = {};
+  fin.rows.forEach((r) => { byK[r.k] = r; });
+  const lite = (r) => Party.lite(r, r && r.points);
+  const lms = { red: [], gold: [] };
+  if (k) Object.entries(k.board.landmarks || {}).forEach(([id, key]) => { const t = k.own[id]; if (lms[t]) lms[t].push(key); });
+  const mvpR = byK[fin.mvp.red], mvpG = byK[fin.mvp.gold];
+  const common = {
+    winner: fin.winner,
+    mvpRed: mvpR ? { name: mvpR.name, score: mvpR.points } : null,
+    mvpGold: mvpG ? { name: mvpG.name, score: mvpG.points } : null,
+    leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.points, team: r.team, avatar: '' })),
+    fin: {
+      game: 'kingdoms', winner: fin.winner, why: g.finalizing ? g.finalizing.why : 'time', count: fin.rows.length,
+      totals: fin.totals, captains: (k && k.captains) || g.kdCaptains || null,
+      crews: { red: fin.rows.filter((r) => r.team === 'red').slice(0, 12).map(lite), gold: fin.rows.filter((r) => r.team === 'gold').slice(0, 12).map(lite) },
+      stars: Party.publicStars(fin.stars, byK, (r) => r.points),
+      top: fin.rows.slice(0, 10).map(lite), mvp: { red: lite(mvpR), gold: lite(mvpG) },
+      extra: { lms },
+    },
+  };
+  const cards = {};
+  fin.rows.forEach((r) => {
+    cards[r.k] = {
+      score: r.points,
+      me: {
+        k: r.k, team: r.team, skin: r.skin, won: fin.winner === r.team, tie: fin.winner === 'tie', mvp: fin.mvp[r.team] === r.k,
+        stars: r.stars, rank: r.rank, of: fin.rows.length,
+        points: r.points, tiles: r.tiles, share: r.share, big: r.big, best: r.best, lms: r.lms, right: r.right, answered: r.answered,
+      },
+    };
+  });
+  return finPack(g, common, fin.totals, cards);
+}
+// Dragones Pintores: clouds of each kingdom, each kid's painting (strokes, clouds still theirs, llamaradas), the stars
+function pcEndPayloads(g) {
+  const rows = Object.values(g.players).filter((p) => p.team && (!p.disconnected || (p.score || 0) > 0 || (p.pcTiles || 0) > 0)).map((p) => ({
+    k: finKey(g, p), name: p.name, skin: hcSkin(p), team: p.team, owned: p.score || 0, painted: p.pcTiles || 0, best: p.pcBest || 0,
+    blazes: p.pcBlazes || 0, right: p.pcRight || 0, answered: p.pcAnswered || 0,
+  }));
+  const fin = Paint.finish(rows, g.teamScores);
+  const byK = {};
+  fin.rows.forEach((r) => { byK[r.k] = r; });
+  const lite = (r) => Party.lite(r, r && r.owned);
+  const common = {
+    winner: fin.winner,
+    leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.owned, team: r.team, avatar: '' })),
+    fin: {
+      game: 'paint', winner: fin.winner, why: g.finalizing ? g.finalizing.why : 'time', count: fin.rows.length,
+      totals: fin.totals, captains: g.pcCaptains || null,
+      crews: { red: fin.rows.filter((r) => r.team === 'red').slice(0, 12).map(lite), gold: fin.rows.filter((r) => r.team === 'gold').slice(0, 12).map(lite) },
+      stars: Party.publicStars(fin.stars, byK, (r) => r.owned),
+      top: fin.rows.slice(0, 10).map(lite), mvp: { red: lite(byK[fin.mvp.red]), gold: lite(byK[fin.mvp.gold]) },
+    },
+  };
+  const cards = {};
+  fin.rows.forEach((r) => {
+    cards[r.k] = {
+      score: r.owned,
+      me: {
+        k: r.k, team: r.team, skin: r.skin, won: fin.winner === r.team, tie: fin.winner === 'tie', mvp: fin.mvp[r.team] === r.k,
+        stars: r.stars, rank: r.rank, of: fin.rows.length,
+        owned: r.owned, painted: r.painted, share: r.share, best: r.best, blazes: r.blazes, right: r.right, answered: r.answered,
+      },
+    };
+  });
+  return finPack(g, common, fin.totals, cards);
+}
+// the team games' end: one host payload, each phone its own (by the kid's stable key, so a rejoin finds its card)
+function finPack(g, common, totals, cards) {
+  const teamScores = { red: totals.red || 0, gold: totals.gold || 0 };
+  // the phones get what their ceremony draws: no leaderboard, no podium rows, a few kids of each kingdom
+  const f = common.fin;
+  const phone = Object.assign({}, common, { fin: Object.assign({}, f, { top: [], crews: { red: (f.crews.red || []).slice(0, 6), gold: (f.crews.gold || []).slice(0, 6) } }) });
+  delete phone.leaderboard;
+  return {
+    teamScores, host: Object.assign({ teamScores }, common),
+    keyOf: (p) => (p ? p.finK || null : null),
+    guest: () => Object.assign({ teamScores }, phone, { me: { k: 0, guest: true } }),
+    forPlayer(pid) {
+      const p = g.players[pid];
+      const c = p && cards[this.keyOf(p)];
+      if (!c) return null;
+      return Object.assign({ teamScores }, phone, { scores: { [pid]: c.score }, me: c.me });
+    },
+  };
+}
+// endGame for these four games: build the ending once, send the projector its show and each phone its own card
+function finFinish(pin, g) {
+  let end = null;
+  try {
+    if (g.gameType === 'kingdoms') end = kdEndPayloads(g);
+    else if (g.gameType === 'paint') end = pcEndPayloads(g);
+    else if (g.gameType === 'snow') end = snEndPayloads(g);
+    else if (g.gameType === 'escape') end = esEndPayloads(g);
+  } catch (e) { console.error('[finFinish]', g.gameType, e); }
+  g.finalizing = null;
+  g.finFrenzy = false;
+  if (!end) { io.to(pin).emit('game-end', { teamScores: g.teamScores || { red: 0, gold: 0 }, winner: 'tie', leaderboard: [] }); return; }
+  end.at = Date.now();
+  g.finEnd = end;
+  g.teamScores = end.teamScores;
+  io.to(g.hostId).emit('game-end', end.host);
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (p.disconnected) return;
+    io.to(pid).emit('game-end', end.forPlayer(pid) || end.guest());
+  });
+}
+// the last 30 s of a round (all four games): one check every 0.5 s; +30 s can switch it off again
+setInterval(() => {
+  const now = Date.now();
+  Object.entries(games).forEach(([pin, g]) => {
+    try {
+      if (!finGame(g) || g.state !== 'active' || g.finalizing || !g.endsAt || !g.startedAt) return;
+      if (finPaused(g)) return;
+      const left = g.endsAt - now;
+      const running = g.gameType !== 'escape' || (g.escape && g.escape.phase === 'run');
+      const on = running && left <= Party.FRENZY_MS && left > 1200 && g.duration >= 60;
+      if (on && !g.finFrenzy) { g.finFrenzy = true; io.to(pin).emit('fin:frenzy', { game: g.gameType, endsMs: left }); }
+      else if (!on && g.finFrenzy && (left > Party.FRENZY_MS + 1000 || !running)) { g.finFrenzy = false; io.to(pin).emit('fin:frenzy', { game: g.gameType, off: true }); }
+    } catch (e) { console.error('[fin:frenzy]', e); }
+  });
+}, 500);
+
+function endGame(pin, force) {
   const g = games[pin];
   if (!g) return;
+  // Reinos, Pintores, Nieve, La Gran Fuga: every way a round ends plays «¡FINAL!» first (finBegin calls back with force)
+  if (finGame(g) && g.state === 'active' && !force) { finBegin(pin, g, 'time'); return; }
   // Flush any pending warmup sentence to contributors' histories before
   // the game ends — otherwise a final un-cleared sentence is lost.
   if (g.gameType === 'warmup' && g.warmup && g.warmup.sentence && g.warmup.sentence.length) {
@@ -7999,17 +8326,10 @@ function endGame(pin) {
     g.warmup.frozen = false;
     g.warmup.frozenNames = [];
   }
-  // Batalla de Nieve: survivors vs the ice team, its own game-end per phone (core/snow.js finish()).
-  if (g.gameType === 'snow') {
+  // Reinos de Colores, Dragones Pintores, Batalla de Nieve, La Gran Fuga: the Mario Party ending (finFinish)
+  if (finGame(g)) {
     if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
-    snFinish(pin, g);
-    broadcast(pin);
-    return;
-  }
-  // La Gran Fuga de Dubái: the crew's rank and each kid's own numbers (core/escape.js finish()).
-  if (g.gameType === 'escape') {
-    if (g.endTimer) { clearTimeout(g.endTimer); g.endTimer = null; }
-    esFinish(pin, g);
+    finFinish(pin, g);
     broadcast(pin);
     return;
   }
@@ -8413,7 +8733,10 @@ io.on('connection', (socket) => {
     g.state = 'countdown';
     broadcast(pin);
     // Reinos de Colores: the two captains are revealed during the countdown (projector VS intro, phones).
+    g.finalizing = null; g.finEnd = null; g.finFrenzy = false;
     if (g.gameType === 'kingdoms') { g.kdCaptains = kdPickCaptains(g.kdCaptains); io.to(pin).emit('kd:captains', g.kdCaptains); }
+    // Dragones Pintores: two of the gang captain the kingdoms too (they cheer on the phones and speak in the ending)
+    if (g.gameType === 'paint') { g.pcCaptains = kdPickCaptains(g.pcCaptains); io.to(pin).emit('pc:captains', g.pcCaptains); }
     // Batalla de Nieve: one of the gang leads the survivors, another the ice team (VS intro on the projector).
     if (g.gameType === 'snow') {
       const c = kdPickCaptains(g.snCaptains ? { red: g.snCaptains.sun, gold: g.snCaptains.ice } : null);
@@ -8559,6 +8882,13 @@ io.on('connection', (socket) => {
   socket.on('host:end-now', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
+    // Reinos, Pintores, Nieve, La Gran Fuga: «Terminar» plays «¡FINAL!» first (also from the pause card), never twice
+    if (finGame(g)) {
+      if (g.state !== 'active') return;
+      if (g.finalizing && Date.now() > g.finalizing.until + 2000) { try { endGame(pin, true); } catch (e) { finRescue(pin, g, e); } return; }
+      finBegin(pin, g, 'end');
+      return;
+    }
     if ((g.gameType === 'snow' || g.gameType === 'escape' || g.gameType === 'halcon' || g.gameType === 'mochi-mash' || g.gameType === 'pinata' || g.gameType === 'sixseven') && g.state !== 'active') return;      // already over: no second end show
     // Ojos de Halcón: «Terminar» plays «¡FINAL!» first (paused: straight to the finale, the pause holds every timer)
     if (g.gameType === 'halcon' && g.halcon && !g.halcon.paused) {
@@ -8637,6 +8967,7 @@ io.on('connection', (socket) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
     if (g.endTimer) clearTimeout(g.endTimer);
+    g.finalizing = null; g.finEnd = null; g.finFrenzy = false;     // (the Mario Party ending of the four games below)
     if (g.gameType === 'kingdoms') { kdClearTimers(g); g.kingdoms = null; }
     if (g.gameType === 'paint') { pcStop(g); g.paint = null; }
     if (g.gameType === 'snow') { snStop(g); g.snow = null; }
@@ -8730,7 +9061,7 @@ io.on('connection', (socket) => {
     }
     // Mochi Mash / Ojos de Halcón: a kid of this game whose phone dropped around the end (a new socket) gets its slot
     // back and its own end card again, and stays in the room for «Otra ronda»
-    if (g.state === 'ended' && ((g.gameType === 'mochi-mash' && g.mm) || (g.gameType === 'halcon' && g.halcon) || (g.gameType === 'pinata' && g.pn) || (g.gameType === 'sixseven' && g.ss))) {
+    if (g.state === 'ended' && ((g.gameType === 'mochi-mash' && g.mm) || (g.gameType === 'halcon' && g.halcon) || (g.gameType === 'pinata' && g.pn) || (g.gameType === 'sixseven' && g.ss) || (finGame(g) && g.finEnd))) {
       const nm = String(name || '').trim().slice(0, 20).toLowerCase();
       const ex = nm ? Object.entries(g.players).find(([, p]) => p.name.toLowerCase() === nm) : null;
       if (ex) {
@@ -8744,7 +9075,8 @@ io.on('connection', (socket) => {
         socket.join(pin);
         cb({ ok: true, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: pl.studentCode });
         io.to(socket.id).emit('state', publicState(g));
-        const one = g.gameType === 'mochi-mash' ? mmEndPayloads(g).forPlayer(socket.id)
+        const one = finGame(g) ? finAgain(g, g.finEnd.forPlayer(socket.id) || g.finEnd.guest())
+          : g.gameType === 'mochi-mash' ? mmEndPayloads(g).forPlayer(socket.id)
           : g.gameType === 'pinata' ? pnEndPayloads(g).forPlayer(socket.id)
           : g.gameType === 'sixseven' ? ssEndPayloads(g).forPlayer(socket.id) : hcEndPayloads(g).forPlayer(socket.id);
         if (one) setTimeout(() => io.to(socket.id).emit('game-end', one), 60);
@@ -8852,6 +9184,16 @@ io.on('connection', (socket) => {
     }
     // If joining/rejoining mid-game, sync them up
     if (g.state === 'active') {
+      // Reinos / Pintores / Nieve / La Gran Fuga during «¡FINAL!»: that card, then the ceremony (game-end) like everyone
+      if (finGame(g) && g.finalizing) {
+        io.to(socket.id).emit('fin:final', { ms: finFinalLeft(g), why: g.finalizing.why, game: g.gameType });
+        return;
+      }
+      // … and in the last 30 s, the phone learns it (a moment later: its skin switches on with the room's state first)
+      if (finGame(g) && g.finFrenzy && g.endsAt && !finPaused(g)) {
+        const sid = socket.id;
+        setTimeout(() => { if (games[pin] === g && g.finFrenzy && !g.finalizing && !finPaused(g)) io.to(sid).emit('fin:frenzy', { game: g.gameType, endsMs: Math.max(0, g.endsAt - Date.now()) }); }, 400);
+      }
       // === READING: send the current page + audio play state so the
       // late-joining student lands on the correct page with audio in sync. ===
       if (g.gameType === 'reading' && g.reading) {
@@ -9027,6 +9369,8 @@ io.on('connection', (socket) => {
     if (!p) return;
     // 6-7 Swing v2: its own judge (core/sixseven.js answer) and its own open sum (p.ssQ), never p.currentQ
     if (g.gameType === 'sixseven' && g.ss) { ssAnswer(pin, g, socket, p, choiceIdx, qid); return; }
+    // «¡FINAL!» (Reinos, Pintores, Nieve, La Gran Fuga): the round is over, the answer comes back unused
+    if (g.finalizing) { io.to(socket.id).emit('answer-stale', { reason: 'final' }); return; }
     // If the player has no open question at all → tell the client so they can recover
     // (otherwise their answer buttons stay disabled forever — the "frozen" bug).
     if (!p.currentQ) {
@@ -9067,6 +9411,7 @@ io.on('connection', (socket) => {
       }
       pnAnswer(pin, g, socket, p, correct, correctText);
     } else if (g.gameType === 'paint') {
+      if (g.paint && g.paint.paused) { p.currentQ = cqData; io.to(socket.id).emit('answer-stale', { reason: 'paused' }); return; }
       pcAnswer(pin, g, socket.id, p, correct, correctText);
     } else if (g.gameType === 'snow') {
       snAnswer(pin, g, socket.id, p, correct, correctText);
@@ -9075,11 +9420,14 @@ io.on('connection', (socket) => {
     } else if (g.gameType === 'kingdoms') {
       // Reinos de Colores: right answer = a flag to plant (3 in a row = 2 flags). The next question waits
       // until the flag is planted (kid taps a tile, or the server auto-plants after KD_PLANT_MS).
+      if (g.kingdoms && g.kingdoms.paused) { p.currentQ = cqData; io.to(socket.id).emit('answer-stale', { reason: 'paused' }); return; }
+      p.kdAnswered = (p.kdAnswered || 0) + 1;
       if (correct) {
         p.kdStreak = (p.kdStreak || 0) + 1;
         p.kdCorrect = (p.kdCorrect || 0) + 1;
+        p.kdBest = Math.max(p.kdBest || 0, p.kdStreak);
         if (g.kingdoms) {
-          p.kdFlags = (p.kdStreak % 3 === 0) ? 2 : 1;
+          p.kdFlags = Kingdoms.flagsFor(p.kdStreak, !!g.finFrenzy);     // 3 in a row = 2 flags; the last 30 s: twice the flags
           kdPrompt(pin, socket.id, { correctText });
         } else {
           io.to(socket.id).emit('answer-result', { correct: true, correctText });
@@ -9150,7 +9498,7 @@ io.on('connection', (socket) => {
     try {
       const { pin, x, y, f, moving, spent } = data || {};
       const g = games[pin];
-      if (!g || g.gameType !== 'paint' || !g.paint || g.state !== 'active') return;
+      if (!g || g.gameType !== 'paint' || !g.paint || g.state !== 'active' || g.paint.paused) return;
       const p = g.players[socket.id];
       if (!p || !Number.isFinite(x) || !Number.isFinite(y)) return;
       pcPreparePlayer(p);
@@ -9176,6 +9524,8 @@ io.on('connection', (socket) => {
       const { pin, tiles } = data || {};
       const g = games[pin];
       if (!g || g.gameType !== 'paint' || !g.paint || g.state !== 'active' || !Array.isArray(tiles)) return;
+      if (g.finalizing && Date.now() - g.finalizing.at > Party.GRACE_MS) return;    // «¡FINAL!»: only strokes already on their way count
+      if (g.paint.paused) return;                                                     // paused: nobody paints
       const p = g.players[socket.id];
       const pos = g.paint.pos[socket.id];
       if (!p || !pos || !(p.pcEnergy > 0)) return;
@@ -9209,7 +9559,7 @@ io.on('connection', (socket) => {
     try {
       const { pin } = data || {};
       const g = games[pin];
-      if (!g || g.gameType !== 'paint' || g.state !== 'active') return;
+      if (!g || g.gameType !== 'paint' || g.state !== 'active' || g.finalizing || (g.paint && g.paint.paused)) return;
       const p = g.players[socket.id];
       if (!p) return;
       if (p.currentQ) {
@@ -9224,7 +9574,7 @@ io.on('connection', (socket) => {
   // Batalla de Nieve: position (8 Hz from each phone), snowballs, stations, pearls/dates, the ❄️ chest.
   const snGame = (data) => {
     const g = games[data && data.pin];
-    if (!g || g.gameType !== 'snow' || !g.snow || g.state !== 'active') return null;
+    if (!g || g.gameType !== 'snow' || !g.snow || g.state !== 'active' || g.finalizing) return null;   // «¡FINAL!»: the map stands still
     const p = g.players[socket.id];
     if (!p || p.snRound !== g.snow.id) return null;
     if (p.snPid !== socket.id) snAttach(g, socket.id, p, false);   // a reconnected socket that hasn't re-joined yet
@@ -9309,7 +9659,7 @@ io.on('connection', (socket) => {
   socket.on('player:es-pos', (data) => {
     try {
       const g = games[data && data.pin];
-      if (!g || g.gameType !== 'escape' || !g.escape || g.state !== 'active') return;
+      if (!g || g.gameType !== 'escape' || !g.escape || g.state !== 'active' || g.finalizing) return;
       const k = g.escape;
       const p = g.players[socket.id];
       if (!p || p.esRound !== k.id || k.phase !== 'zone' || !k.room) return;
@@ -9335,7 +9685,7 @@ io.on('connection', (socket) => {
   socket.on('host:es-skip', (data) => {
     try {
       const g = games[data && data.pin];
-      if (!g || g.hostId !== socket.id || g.state !== 'active' || g.gameType !== 'escape' || !g.escape || g.escape.paused) return;
+      if (!g || g.hostId !== socket.id || g.state !== 'active' || g.gameType !== 'escape' || !g.escape || g.escape.paused || g.finalizing) return;
       if (Escape.skipZone(g.escape, Date.now())) io.to(data.pin).emit('es:moment', { type: 'skip' });
     } catch (e) { console.error('[host:es-skip]', e); }
   });
@@ -9343,7 +9693,9 @@ io.on('connection', (socket) => {
     try {
       const { pin, paused } = data || {};
       const g = games[pin];
-      if (!g || g.hostId !== socket.id || g.state !== 'active') return;
+      if (!g || g.hostId !== socket.id || g.state !== 'active' || g.finalizing) return;
+      if (g.gameType === 'kingdoms') kdPause(pin, g, !!paused);
+      if (g.gameType === 'paint') pcPause(pin, g, !!paused);
       if (g.gameType === 'snow') snPause(pin, g, !!paused);
       if (g.gameType === 'escape') esPause(pin, g, !!paused);
       if (g.gameType === 'halcon') hcPause(pin, g, !!paused);
@@ -9409,6 +9761,15 @@ io.on('connection', (socket) => {
       if (!p || !Mochi.inGame(g.mm, p)) return;
       Mochi.taps(g.mm, p, Number(data.mid), data.n, Date.now());
     } catch (e) { console.error('[player:mm-taps]', e); }
+  });
+  // Reinos / Pintores / Nieve / La Gran Fuga teacher «⏭ Saltar» on the ceremony: every phone jumps to its own card.
+  socket.on('host:fin-skip', (data) => {
+    try {
+      const pin = data && data.pin;
+      const g = games[pin];
+      if (!g || g.hostId !== socket.id || !finGame(g) || g.state !== 'ended') return;
+      io.to(pin).except(g.hostId).emit('fin:skip', {});
+    } catch (e) { console.error('[host:fin-skip]', e); }
   });
   // Mochi Mash teacher «⏭ Saltar»: the intro → play now; after the end → every phone jumps to its own card.
   socket.on('host:mm-skip', (data) => {
@@ -9485,7 +9846,7 @@ io.on('connection', (socket) => {
   socket.on('host:add-time', (data) => {
     const { pin, seconds } = data || {};
     const g = games[pin];
-    if (!g || g.hostId !== socket.id || g.state !== 'active') return;
+    if (!g || g.hostId !== socket.id || g.state !== 'active' || g.finalizing) return;
     const add = Math.max(10, Math.min(120, Number(seconds) || 30)) * 1000;
     // Dàfùwēng · Monopolio: its room tick owns the clock; the teacher's pick (g.duration) stays for the next round
     if (g.gameType === 'monopoly' && g.mn) {
@@ -9542,10 +9903,11 @@ io.on('connection', (socket) => {
     g.extraSecs = (g.extraSecs || 0) + add / 1000;   // only for this round: host:reset gives it back (playtest 2026-10-11)
     if (g.endTimer) clearTimeout(g.endTimer);
     g.endTimer = null;
-    if (!(g.snow && g.snow.paused) && !(g.escape && g.escape.paused) && !(g.halcon && g.halcon.paused)) g.endTimer = setTimeout(() => {   // paused: the resume re-arms it
+    if (!(g.snow && g.snow.paused) && !(g.escape && g.escape.paused) && !(g.halcon && g.halcon.paused) && !(g.kingdoms && g.kingdoms.paused) && !(g.paint && g.paint.paused)) g.endTimer = setTimeout(() => {   // paused: the resume re-arms it
       if (!games[pin] || games[pin].state !== 'active') return;
       endGame(pin);
     }, Math.max(0, g.endsAt - Date.now()));
+    if (!finPaused(g) && g.endsAt - Date.now() <= Party.FRENZY_MS + 1000) finFrenzyAgain(pin, g, false);   // still the last 30 s: the ×2 chips get the new seconds (paused: on «Seguir»)
     g._lastBcast = 0;
     broadcast(pin);
   });
@@ -9616,6 +9978,14 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('dr:init', drInitPayload(g, socket.id));
         if (g.dr.phase === 'play' && p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
       }
+      return;
+    }
+    // Reinos / Pintores / Nieve / La Gran Fuga: «¡FINAL!» again (never a question then), or the ceremony + card again
+    if (finGame(g) && g.state === 'active' && g.finalizing) { io.to(socket.id).emit('fin:final', { ms: finFinalLeft(g), why: g.finalizing.why, game: g.gameType }); return; }
+    if (finGame(g) && g.state === 'active' && g.finFrenzy && g.endsAt && !finPaused(g)) io.to(socket.id).emit('fin:frenzy', { game: g.gameType, endsMs: Math.max(0, g.endsAt - Date.now()) });
+    if (finGame(g) && g.state === 'ended') {
+      const one = g.finEnd && finAgain(g, g.finEnd.forPlayer(socket.id) || g.finEnd.guest());
+      if (one) io.to(socket.id).emit('game-end', one);
       return;
     }
     if (g.gameType === 'paint' && g.state === 'active' && g.paint) {
@@ -10766,6 +11136,7 @@ setInterval(() => {
     if (g.state !== 'active') return;
     if (g.gameType === 'warmup') return;       // teacher-driven flashcards, no questions
     if (g.gameType === 'paint') return;        // questions are on demand («Recargar»)
+    if (g.gameType === 'kingdoms' && g.kingdoms && g.kingdoms.paused) return;   // paused: the open questions wait
     if (g.gameType === 'snow') return;         // questions are on demand (the stations)
     if (g.gameType === 'escape' && !(g.escape && g.escape.phase === 'run' && !g.escape.paused)) return;   // only while the crew runs
     if (g.gameType === 'halcon') return;       // no questions on the phones: the boards run the rounds

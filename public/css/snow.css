@@ -271,6 +271,7 @@ body.sn-on .kdp-side.gold { background: var(--sn-ice); }
 .sn-how li > .sn-ico-station b { width: 26px; height: 26px; font-size: 1rem; border-width: 2px; }
 .sn-how li > .sn-ico-ball { width: 46px; height: 46px; flex: none; border-width: 3px; margin: 0 2px; }
 .kdp-cap small { font-weight: 800; color: var(--sn-ice-deep); }
+body.sn-on:has(#sn-help:not(.hidden)) .muted-toggle { visibility: hidden; }
 body.sn-on:has(#screen-snow:not(.hidden)) .muted-toggle { top: auto !important; bottom: 158px !important; right: 8px !important; padding: 4px 8px !important; font-size: .85rem; }
 @media (max-height: 700px) { .sn-joy { width: 112px; height: 112px; } .sn-throw { width: 104px; height: 104px; } .sn-use { min-height: 72px; } }
 @media (prefers-reduced-motion: reduce) {

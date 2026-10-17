@@ -180,7 +180,44 @@ function publicBoard(board) {
   };
 }
 
+// ---------- Mario Party touches (2026-10-16 ending pass) ----------
+// «¡Banderas dobles!» in the last 30 s: every right answer earns twice the flags (a streak's double becomes three,
+// never more, so a kid is never stuck planting for long). The same for both kingdoms: an early lead is never safe.
+function flagsFor(streak, frenzy) {
+  const base = streak > 0 && streak % 3 === 0 ? 2 : 1;
+  return frenzy ? Math.min(3, base * 2) : base;
+}
+
+// ---------- the ending (core/party.js: «¡FINAL!», the reveal, the winners, the bonus stars, each kid's card) ----------
+// rows: [{ k, name, skin, team, points, tiles, big, best, lms, right, answered }]
+//   points  the kid's own points (1 + every tile a flag of theirs flipped + landmark bonuses they tapped)
+//   tiles   tiles their flags took (the plant + the surround), big = the most in one flag, lms = landmarks they tapped
+const STARS = [
+  { id: 'tiles', name: 'Más territorio', unit: 'casillas', val: (r) => r.tiles, ok: (r) => r.tiles >= 1 },
+  { id: 'big', name: 'Mayor conquista', unit: 'casillas de una vez', val: (r) => r.big, ok: (r) => r.big >= 3 },
+  { id: 'streak', name: 'Racha más larga', unit: 'seguidas', val: (r) => r.best, ok: (r) => r.best >= 3 },
+  { id: 'lms', name: 'Más monumentos', unit: 'monumentos', val: (r) => r.lms, ok: (r) => r.lms >= 1 },
+];
+function finish(rows, totals) {
+  const Party = require('./party');
+  const t = { red: (totals && totals.red) || 0, gold: (totals && totals.gold) || 0 };
+  const winner = t.red > t.gold ? 'red' : t.gold > t.red ? 'gold' : 'tie';
+  const sorted = rows.slice().sort((a, b) => b.points - a.points || b.tiles - a.tiles || a.k - b.k);
+  Party.ranks(sorted, 'points');
+  const raw = { red: 0, gold: 0 };
+  rows.forEach((r) => { if (raw[r.team] != null) raw[r.team] += r.tiles; });
+  const mvp = {};
+  ['red', 'gold'].forEach((team) => { const top = sorted.find((r) => r.team === team && r.points > 0); mvp[team] = top ? top.k : null; });
+  const st = Party.stars(rows, STARS);
+  rows.forEach((r) => {
+    r.share = Party.share(r.tiles, raw[r.team]);
+    r.stars = st.filter((s) => s.winners.includes(r.k)).map((s) => s.id);
+  });
+  return { totals: t, winner, raw, mvp, stars: st, rows: sorted };
+}
+
 module.exports = {
   SIEGE_BONUS, ALERT_AT, LANDMARKS, SIDE_LANDMARKS, radiusFor, buildBoard, initialOwnership, validTargets,
   enclosedPockets, plant, bestTarget, castlePressure, tileCounts, landmarkScore, landmarksTaken, publicBoard,
+  flagsFor, STARS, finish,
 };

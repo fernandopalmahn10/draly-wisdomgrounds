@@ -22,6 +22,7 @@
   let muted = false;
   let scores = { red: 0, gold: 0 };
   let myPaint = 0;             // Dragones Pintores: clouds this kid owns (from pc:paint / game-end)
+  let myKd = 0;                // Reinos de Colores: tiles my flags took this round (kd:plant playerTiles)
   let curQid = null;           // question on screen (a resync re-sends the same one: keep its countdown)
   let streak = 0;
   let qTimer = null;
@@ -84,7 +85,8 @@
     wrap('stopGameTheme', () => stopMusic());
     wrap('stopMusic', () => stopMusic());
     // (Mochi Mash, Piñata Tigre: the ceremony keeps the result secret until the reveal, so no win / lose sound at game-end)
-    const ownReveal = () => game === 'mochi-mash' || game === 'pinata' || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye';
+    // (Reinos, Pintores, Nieve, La Gran Fuga since 2026-10-16: the shared ceremony of js/party.js reveals it)
+    const ownReveal = () => game === 'mochi-mash' || game === 'pinata' || game === 'sixseven' || game === 'monopoly' || game === 'dragon-eye' || PARTY_GAMES.includes(game);
     wrap('winMusic', () => { stopMusic(); if (!ownReveal()) sfx('sting-win', 0.9); });
     wrap('winFanfare', () => {});
     wrap('loseMusic', () => { stopMusic(); if (!ownReveal()) sfx('wrong', 0.5); });
@@ -99,6 +101,10 @@
   }
 
   const SKIN_GAMES = ['kingdoms', 'paint', 'snow', 'escape', 'halcon', 'mochi-mash', 'pinata', 'sixseven', 'monopoly', 'dragon-eye'];
+  // the games whose ending is the shared Mario Party ceremony (js/party.js, 2026-10-16)
+  const PARTY_GAMES = ['kingdoms', 'paint', 'snow', 'escape'];
+  const P = () => window.DralyParty || null;
+  const buzz = (p) => { try { if (navigator.vibrate) navigator.vibrate(p); } catch (_) {} };
   let game = null;
   function setMode(v, gt) {
     if (gt) game = gt;
@@ -332,8 +338,9 @@
       return;
     }
     const id = captains && ctx && captains[ctx.getTeam()];
-    box.classList.toggle('hidden', !(game === 'kingdoms' && C && id));
-    if (!(game === 'kingdoms' && C && id)) return;
+    const capGame = game === 'kingdoms' || game === 'paint';      // Dragones Pintores has captains too (2026-10-16)
+    box.classList.toggle('hidden', !(capGame && C && id));
+    if (!(capGame && C && id)) return;
     $('kdp-cap-img').src = C.pose(id, 'hello');
     $('kdp-cap-text').innerHTML = '';
     $('kdp-cap-text').append(document.createTextNode((C.fem(id) ? 'Tu capitana: ' : 'Tu capitán: ')),
@@ -362,8 +369,8 @@
       sub.textContent = sn
         ? (sn.racha ? `¡Racha! +${sn.gained} copos ❄️` : `+${sn.gained} copos ❄️`)
         : paint
-          ? (paint.blaze ? '¡LLAMARADA! 🔥🔥 Pintas más ancho' : '¡+10 s de fuego! 🔥')
-          : (streak >= 3 && streak % 3 === 0 ? '¡Bandera doble! 🚩🚩' : '¡Ganaste una bandera! 🚩');
+          ? (paint.frenzy ? `¡FUEGO DOBLE! +${paint.gain || 20} s y llamarada 🔥🔥` : paint.blaze ? '¡LLAMARADA! 🔥🔥 Pintas más ancho' : `¡+${paint.gain || 10} s de fuego! 🔥`)
+          : (r && r.kingdoms && r.kingdoms.flags >= 3 ? '¡Tres banderas! 🚩🚩🚩' : r && r.kingdoms && r.kingdoms.flags === 2 ? '¡Bandera doble! 🚩🚩' : '¡Ganaste una bandera! 🚩');
       box.appendChild(sub);
       if (sn && sn.calor) {
         const w = document.createElement('div');
@@ -393,6 +400,43 @@
         box.appendChild(again);
       }
     }
+    if (game === 'kingdoms' || game === 'paint') liveStrip(box, correct);
+  }
+  // Reinos / Pintores, between two questions (his rule «no dead phones»): the kingdoms' live score, what I have done, and
+  // my captain reacting to this answer (a kind line on a miss), so the wait before the next question is never empty
+  function liveStrip(box, correct) {
+    if (!ctx) return;
+    const team = ctx.getTeam();
+    const mine = scores[team] || 0, theirs = scores[team === 'red' ? 'gold' : 'red'] || 0;
+    const strip = document.createElement('div');
+    strip.className = 'kdp-live ' + team;
+    const sc = document.createElement('div');
+    sc.className = 'kdp-live-score';
+    const a = document.createElement('b'); a.className = 'red'; a.textContent = '🔥 ' + (scores.red || 0);
+    const g = document.createElement('b'); g.className = 'gold'; g.textContent = (scores.gold || 0) + ' 🌊';
+    const gap = document.createElement('span');
+    gap.textContent = mine > theirs ? `¡Tu reino gana por ${mine - theirs}!` : mine < theirs ? (theirs - mine === 1 ? '¡Falta 1 para alcanzarlos!' : `¡Faltan ${theirs - mine} para alcanzarlos!`) : '¡Empate!';
+    sc.append(a, gap, g);
+    strip.appendChild(sc);
+    const my = game === 'paint' ? myPaint : myKd;
+    const cap = captains && captains[team];
+    const C = window.DralingoCast;
+    if (C && cap) {
+      const say = document.createElement('div');
+      say.className = 'kdp-live-say';
+      const im = document.createElement('img'); im.alt = ''; im.src = C.pose(cap, correct ? 'cheer' : 'hello');
+      const t = document.createElement('span');
+      t.textContent = correct ? C.line(cap, 'battle') : C.line(cap, 'oops');
+      say.append(im, t);
+      strip.appendChild(say);
+    }
+    if (my > 0) {
+      const me = document.createElement('div');
+      me.className = 'kdp-live-me';
+      me.textContent = game === 'paint' ? `☁️ Tus nubes: ${my}` : `🚩 Tus casillas: ${my}`;
+      strip.appendChild(me);
+    }
+    box.appendChild(strip);
   }
   // Batalla de Nieve end: survived or frozen, my points, seconds survived, kids I froze
   function snowEnd(data) {
@@ -414,9 +458,36 @@
     if (meEl && meEl.parentNode.firstChild) meEl.parentNode.firstChild.nodeValue = 'Tus puntos: ';
     if (meEl) meEl.textContent = (me.score || 0) + ' ⭐';
   }
+  // Reinos, Pintores, Nieve, La Gran Fuga: the shared Mario Party ceremony on the phone (js/party.js), then my card
+  // «⏸ Pausa» in Reinos / Pintores (2026-10-16): the card over everything, the question's clock held
+  let kdPaused = false;
+  function setPaused(v) {
+    kdPaused = !!v;
+    if (P()) P().pauseCard(kdPaused, { mode: 'phone' });
+    hold(kdPaused);
+    if (kdPaused) stopMusic(); else if (on && (game === 'kingdoms' || game === 'paint')) playMusic('music-battle', 0.32);
+  }
+  holdSrcs.push(() => kdPaused);
+  let ceremony = null;
+  function partyEnd(data) {
+    if (!P() || !data || !data.fin) return false;
+    const box = $('screen-end');
+    if (!box) return false;
+    P().hideFinal();
+    document.body.classList.add('pf-ended');
+    stopMusic();
+    const name = ($('lobby-name') && $('lobby-name').textContent) || '';
+    ceremony = new (P().Ceremony)({
+      mode: 'phone', game, data, mount: box,
+      play: (url, vol) => sfx(url, vol), buzz,
+      me: { name, skin: data.me && data.me.skin },
+    });
+    return true;
+  }
   function endDecor(data) {
     const emoji = $('end-emoji');
     if (!emoji) return;
+    if (PARTY_GAMES.includes(game) && partyEnd(data)) return;
     if (game === 'snow') { snowEnd(data); return; }
     if (ESC()) { ESC().end(data); return; }
     if (game === 'halcon' && window.HalconPhone) { window.HalconPhone.end(data); return; }
@@ -467,7 +538,49 @@
     s.on('team-changed', () => afterRender(() => { paintLobby(); paintBar(); }));
     s.on('kd:init', (d) => { setMode(true, 'kingdoms'); scores = d.teamScores || scores; if (d.captains) captains = d.captains; paintBar(); });
     s.on('kd:captains', (c) => { captains = c; if (on) capDecor(); });
-    s.on('pc:init', (d) => { setMode(true, 'paint'); scores = d.teamScores || scores; paintBar(); });
+    s.on('pc:init', (d) => { setMode(true, 'paint'); scores = d.teamScores || scores; if (d.captains) captains = d.captains; paintBar(); });
+    s.on('pc:captains', (c) => { captains = c; if (on) capDecor(); });
+    s.on('kd:pause', (d) => { if (on) setPaused(d && d.paused); });
+    s.on('pc:pause', (d) => { if (on) setPaused(d && d.paused); });
+    s.on('kd:init', (d) => { if (d && !!d.paused !== kdPaused) setPaused(d.paused); });
+    s.on('pc:init', (d) => { if (d && !!d.paused !== kdPaused) setPaused(d.paused); });
+    // ---------- the Mario Party ending (Reinos, Pintores, Nieve, La Gran Fuga) ----------
+    // «¡FINAL!»: the question closes (its clock stops), the music stops, the band covers everything
+    s.on('fin:final', (d) => {
+      if (!on || !P()) return;
+      if (kdPaused) setPaused(false);
+      stopQuestionTimer();
+      answered = true;
+      document.querySelectorAll('.answer-btn').forEach((b) => { b.disabled = true; });
+      stopMusic();
+      P().clearChip();
+      const why = d && d.why;
+      const sub = why === 'time' ? '¡Se acabó el tiempo!' : why === 'escaped' ? '¡Despegamos! ¿Qué rango ganamos?' : why === 'allFrozen' ? '¿Quién ganó la batalla?' : '¡Fin de la ronda!';
+      P().final({ mode: 'phone', ms: d && d.ms, sub, play: (url, vol) => sfx(url, vol), buzz });
+    });
+    s.on('fin:skip', () => { if (ceremony && ceremony.root) ceremony.skip(); });
+    // the last 30 s: what doubles in this game, on every phone (Nieve also gets its toast, La Gran Fuga its own band)
+    s.on('fin:frenzy', (d) => {
+      if (!on || !P() || !d) return;
+      if (d.off) { P().clearChip(); return; }
+      if (d.again) {      // after «⏸ Pausa» / «+30 s»: the chip with the new seconds, no second banner
+        const lbl = game === 'kingdoms' ? 'Banderas ×2' : game === 'paint' ? 'Fuego ×2' : game === 'snow' ? 'Copos ×2' : '';
+        if (lbl) P().chip(lbl, d.endsMs);
+        return;
+      }
+      const cap = ctx && captains && captains[ctx.getTeam()];
+      if (game === 'kingdoms') {
+        P().news('¡Últimos 30 segundos!', { sub: '¡Banderas dobles! Cada acierto: 2 banderas', kind: 'alarm', cast: cap, ms: 2800 });
+        P().chip('Banderas ×2', d.endsMs);
+      } else if (game === 'paint') {
+        P().news('¡Últimos 30 segundos!', { sub: '¡Fuego doble! Cada acierto: +20 s y llamarada', kind: 'alarm', cast: cap, ms: 2800 });
+        P().chip('Fuego ×2', d.endsMs);
+      } else if (game === 'snow') {
+        P().chip('Copos ×2', d.endsMs);       // the map's toast says it once; the chip stays for the 30 s
+      }
+      sfx('streak', 0.7);
+      buzz([60, 40, 60]);
+    });
     // Batalla de Nieve: survivors / ice counts and my side for the question-screen bar
     const snCounts = (c) => { if (c) { snowInfo.sun = c.sun || 0; snowInfo.ice = c.ice || 0; } };
     s.on('sn:init', (d) => { setMode(true, 'snow'); snCounts(d.counts); if (d.me) snowInfo.side = d.me.side; if (d.captains) captains = d.captains; paintBar(); });
@@ -508,12 +621,20 @@
       streak = r.correct ? streak + 1 : 0;
       afterRender(() => resultDecor(!!r.correct, r.correctText, r));
     });
-    s.on('game-end', (d) => { if (!on) return; stopQuestionTimer(); afterRender(() => endDecor(d)); });
+    s.on('game-end', (d) => { if (!on) return; stopQuestionTimer(); if (P()) { P().clearChip(); P().clearNews(); } afterRender(() => endDecor(d)); });
+    s.on('state', (st) => {
+      if (st && st.state === 'lobby' && ceremony) { ceremony.stop(); ceremony = null; document.body.classList.remove('pf-ended'); }
+      if (st && st.state === 'lobby' && P()) { P().hideFinal(); P().clearChip(); P().clearNews(); if (kdPaused) setPaused(false); }
+    });
+    s.on('countdown', () => { if (kdPaused) setPaused(false); if (ceremony) { ceremony.stop(); ceremony = null; } document.body.classList.remove('pf-ended'); if (P()) { P().hideFinal(); P().clearChip(); P().clearNews(); } myKd = 0; });
+    s.on('kd:plant', (d) => { if (d.playerId === s.id && typeof d.playerScore === 'number') myKd = d.playerTiles != null ? d.playerTiles : myKd; });
     s.on('kd:prompt', () => sfx('flag', 0.6));
   }
 
   window.KingdomsSkin = {
     init, sfx, hold,
+    captain: () => (captains && ctx ? captains[ctx.getTeam()] : null),
+    ceremony: () => ceremony,
     holdWhen: (fn) => { if (typeof fn === 'function') holdSrcs.push(fn); },
     // Mochi Mash: the team bar from its own meter events, the mute state for its Web Audio pops, the frenzy music
     setScores: (s) => { if (s) { scores = { red: s.red || 0, gold: s.gold || 0 }; if (on) paintBar(); } },

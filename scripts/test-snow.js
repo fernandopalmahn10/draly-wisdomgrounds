@@ -346,4 +346,43 @@ let now = 1e6;
 // segment distance helper
 eq(Math.round(S.segDist(0, 0, 10, 0, 5, 3).d2), 9, 'segment distance');
 
+// ---------- 2026-10-16 ending pass: «¡Copos dobles!» in the last 30 s, every snowball that hits, the stars ----------
+{
+  const p = { snSide: 'sun', snCopos: 0, snCalor: 3, snStreak: 0 };
+  eq(S.answer(p, true, false).gained, 3, 'a right answer: +3 copos');
+  eq(S.answer(p, true, true).gained, 6, 'the last 30 s: twice the copos');
+  eq(S.answer(p, true, true).gained, 10, '3 in a row in the last 30 s: (3 + 2) × 2');
+  eq(p.snBest, 3, 'the best streak is kept for the ending');
+  S.answer(p, false, true);
+  eq(p.snBest, 3, 'a miss keeps the best streak');
+  eq(S.answer(p, true, true).gained, 6, 'never more than twice');
+}
+{
+  now += 100000;
+  const { round, players } = room(6, now);
+  S.castSpell(round, players, now, () => 0);
+  Object.values(players).forEach((pl) => { pl.snSkin = 'dralingo'; });     // (the server sets each kid's character)
+  const ice = Object.values(players).filter((pl) => pl.snSide === 'ice');
+  const sun = Object.values(players).filter((pl) => pl.snSide === 'sun');
+  const ball = (by, side) => ({ id: 1, by, side });
+  const iceId = Object.keys(players).find((id) => players[id] === ice[0]);
+  const sunId = Object.keys(players).find((id) => players[id] === sun[0]);
+  const t0 = now + 20000;
+  sun.forEach((pl) => { pl.snShieldUntil = 0; }); ice.forEach((pl) => { pl.snShieldUntil = 0; pl.snRespawnUntil = 0; });
+  const target = Object.keys(players).find((id) => players[id] === sun[1]);
+  S.applyHit(round, players, ball(iceId, 'ice'), target, t0);
+  eq(ice[0].snHits, 1, 'an ice snowball that hits a survivor counts as a hit (brrr)');
+  S.applyHit(round, players, ball(iceId, 'ice'), target, t0 + 10);
+  S.applyHit(round, players, ball(iceId, 'ice'), target, t0 + 20);
+  eq(ice[0].snFreezes, 1, '… the third freezes');
+  eq(ice[0].snHits, 3, '… and every one counts');
+  const fin = S.finish(round, players, t0 + 30000);
+  ok(fin.rows.every((r) => r.k > 0 && r.skin && (r.team === 'sun' || r.team === 'ice')), 'every row has its id, character and side for the ceremony');
+  ok(fin.stars.length >= 2 && fin.stars.length <= 4, 'the bonus stars of the round');
+  ok(fin.stars.find((s) => s.id === 'freeze').winners.includes(ice[0].snIdx), 'Más congelados');
+  ok(fin.stars.find((s) => s.id === 'hits').winners.includes(ice[0].snIdx), 'Más bolas certeras (2 or more)');
+  ok(fin.stars.find((s) => s.id === 'survive'), 'Más tiempo sin congelarse');
+  ok(JSON.stringify(fin.rows.map((r) => r.rank)) === JSON.stringify(fin.rows.map((r) => r.rank).slice().sort((a, b) => a - b)), 'ranks follow the points');
+  eq(ice[0].snSide, 'ice', 'stars never change a side');
+}
 console.log(`snow: all ${checks} checks passed`);
