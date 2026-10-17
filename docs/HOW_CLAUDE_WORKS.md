@@ -371,6 +371,10 @@ A separate Emirati Arabic (Khaleeji) track:
     rooms since 2026-10-17 (they still ask for the teacher code too), so one teacher code can no longer take a
     colleague's projector. A reload of the warm-up, reading or exam page opens a new room, and only the warm-up comes
     back by itself after a dropped Wi-Fi.
+  - **Closing an exam room (2026-10-17):** «Cerrar la sala» closes only for the teacher who opened the exam (their
+    monitor, their remembered laptop or their code) or the super admin. Before, any teacher code closed any running exam,
+    so one code tried over the 3-digit PINs could close every exam in the school mid-exam. The monitor now says why if
+    a close is refused instead of going back to /maestro as if it had worked.
 - **Data:** student records, rooms and results live on Render's **permanent disk** (`data/`), never
   in the code or on GitHub.
 - **Room to grow (checked 2026-10-12):** one Starter server (half a CPU, 512 MB) used at most 40 % of its memory and

@@ -5571,6 +5571,23 @@ function _socketCode(socket, password, owner) {
 // the room's own projector = the one that carries its room token (only the tab that opened the room got it)
 const _roomOwnerFor = (g, token) => (g && g.hostOwner && g.hostToken && token
   && _safeEqual(String(token), g.hostToken)) ? g.hostOwner : null;
+// 🔒 2026-10-17 (his decision) — who may close an exam room («Cerrar la sala», socket host:end): the owner rule of
+// _mayReclaim on top of the teacher check. Before, any teacher code or remembered teacher device closed ANY exam room:
+// one code tried over the 900 PINs closed every running exam mid-exam. A teacher always (a remembered teacher device,
+// or a code through _socketCode), and then only the room's own projector (its room token), the teacher who opened it
+// (`owner`: g.hostOwner, or `owner` in hsk-rooms.json for a room not hydrated yet) or a super admin. A room with no
+// owner on record (saved before 2026-10-17) closes only for a super admin or its own projector. A right code refused
+// here never counts as a wrong one. `g` = the live exam room or null. → 'ok' | 'wait' | 'not-teacher' | 'not-owner'
+function _mayCloseExam(g, owner, socket, password, token) {
+  const ownTab = !!(g && g.hostToken && token && _safeEqual(String(token), g.hostToken));
+  const mine = (w) => !!w && (ownTab || w.superAdmin || (!!owner && w.owner === owner));
+  const dev = LevelKeys.teacherDevice((socket.handshake && socket.handshake.headers) || {});
+  if (dev && mine({ owner: _ownerOfTeacher(dev), superAdmin: !!dev.isSuperAdmin })) return 'ok';
+  const c = _socketCode(socket, password, _roomOwnerFor(g, token));   // (a wrong code counts; 'wait' before it is read)
+  if (c.why === 'wait') return 'wait';
+  if (!c.ok) return dev ? 'not-owner' : 'not-teacher';
+  return mine(c) ? 'ok' : 'not-owner';
+}
 
 function genPin() {
   // Prefer short 3-digit PINs (100-999) so kids can type them in 1 second.
@@ -9037,24 +9054,25 @@ io.on('connection', (socket) => {
 
   // 🔒 2026-10-15 — «Cerrar la sala» on the exam monitor (host-hsk.js): the room closes for good (it used to do nothing,
   // so a PIN kept opening the exam for 6 h). Its PIN, its page and its files stop working; kids who already took it
-  // can still hand it in (their submit ticket). The teacher's socket, or anyone with a teacher code (a monitor that
-  // reconnected under a new socket).
-  socket.on('host:end', ({ pin, password } = {}, cb) => {
+  // can still hand it in (their submit ticket). Since 2026-10-17 only the teacher who opened it (any socket: a monitor
+  // that reconnected under a new socket too), its own projector or a super admin, always with a teacher check.
+  socket.on('host:end', ({ pin, password, hostToken } = {}, cb) => {
     cb = typeof cb === 'function' ? cb : () => {};
     pin = String(pin || '');
     const g = games[pin];
     const isExam = (g && g.gameType === 'hsksim') || (!g && HSK_ROOMS.has(pin));
-    if (!isExam) return cb({ ok: false });
+    const owner = !isExam ? null : g ? (g.hostOwner || null) : ((HSK_ROOMS.get(pin) || {}).owner || null);
     // always the teacher code (the monitor sends it), even from the host socket: closing ends the exam for everyone.
     // Wrong codes count in the admin turnstile like every other teacher check.
     // 🔒 2026-10-15: a remembered teacher device's monitor counts too; only a code actually sent (and not a retired one)
     // counts as a wrong guess, so kids in the room can't lock the school's address out by spamming this
-    const tdev = LevelKeys.teacherDevice(socket.handshake.headers || {});
-    if (!tdev) {
-      const c = _socketCode(socket, password);
-      if (c.why === 'wait') return cb({ ok: false, error: 'demasiados intentos' });
-      if (!c.ok) return cb({ ok: false, error: 'not-teacher' });
-    }
+    // 🔒 2026-10-17 (his decision): and only the room's own projector, the teacher who opened it or a super admin
+    // (_mayCloseExam). The teacher check comes before the PIN is looked at, and an unknown PIN answers like a room that
+    // is not yours: a socket learns nothing about which PINs are running exams (kids' PIN guesses count in player:join).
+    const may = _mayCloseExam(isExam ? (g || null) : null, owner, socket, password, hostToken);
+    if (may === 'wait') return cb({ ok: false, error: 'demasiados intentos' });
+    if (may === 'not-teacher') return cb({ ok: false, error: 'not-teacher' });
+    if (!isExam || may !== 'ok') return cb({ ok: false, error: 'not-owner' });
     if (g) {
       if (g.endTimer) clearTimeout(g.endTimer);
       io.to(pin).emit('host-left');

@@ -79,8 +79,10 @@
     sock.__dralyGate = true;
     var emit = sock.emit;
     sock.emit = function (ev) {
-      if (ev === 'host:reclaim') {
-        // the room's token rides along; so does a code typed on this page (another browser of the same teacher)
+      if (ev === 'host:reclaim' || ev === 'host:end') {
+        // the room's token rides along; so does a code typed on this page (another browser of the same teacher).
+        // «Cerrar la sala» (host:end, 2026-10-17) too: an exam room closes only for its own projector, its teacher or a
+        // super admin
         var args = Array.prototype.slice.call(arguments, 1);
         var i = -1;
         args.forEach(function (a, k) { if (i < 0 && a && typeof a === 'object') i = k; });
@@ -91,7 +93,7 @@
           if (code && !o.password) o.password = code;
           args[i] = o;
         }
-        return emit.apply(sock, ['host:reclaim'].concat(args));
+        return emit.apply(sock, [ev].concat(args));
       }
       if (ev !== 'host:create') return emit.apply(sock, arguments);
       var opts = null, cb = null;

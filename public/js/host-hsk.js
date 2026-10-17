@@ -309,9 +309,28 @@
   $('hh-end-btn').addEventListener('click', () => {
     if (!confirm('¿Cerrar la sala? Los alumnos que aún no terminen perderán su progreso.')) return;
     // 🔒 2026-10-15: the room really closes now (its PIN, page and files stop; finished kids can still hand in)
-    socket.emit('host:end', { pin, password: pw });
-    // a tab /maestro opened in place can't close itself: back to the dashboard instead of a dead room
-    setTimeout(() => { window.close(); location.href = '/maestro.html'; }, 600);
+    // 🔒 2026-10-17: only for the teacher who opened it, its own monitor (teacher-gate.js adds the room's token) or a
+    // super admin. Wait for the answer: a refused close used to send the teacher back to /maestro as if it had worked.
+    const btn = $('hh-end-btn');
+    btn.disabled = true;
+    let answered = false;
+    const again = (msg) => { answered = true; btn.disabled = false; alert(msg); };
+    const late = setTimeout(() => { if (!answered) again('La sala no respondió. Revisa tu conexión y vuelve a pulsar «Terminar sala».'); }, 6000);
+    socket.emit('host:end', { pin, password: pw }, (r) => {
+      clearTimeout(late);
+      if (r && r.ok) {   // (even after «no respondió»: the room did close)
+        answered = true;
+        // a tab /maestro opened in place can't close itself: back to the dashboard instead of a dead room
+        window.close();
+        location.href = '/maestro.html';
+        return;
+      }
+      if (answered) return;
+      const why = r && r.error;
+      again(why === 'not-owner' ? 'No se cerró: solo la maestra que abrió esta sala (o un administrador) puede cerrarla.'
+        : why === 'demasiados intentos' ? 'No se cerró: hubo muchos códigos equivocados desde esta red. Espera 10 minutos y vuelve a intentarlo.'
+        : 'No se cerró: el código de maestra de este monitor ya no sirve (¿lo cambiaste?). La sala se cerrará sola en unas horas.');
+    });
   });
 
   // ── 🎯 FORCE-IMPOSE picker (lobby + active) ───────────────────────

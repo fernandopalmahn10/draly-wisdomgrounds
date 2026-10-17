@@ -14,7 +14,10 @@
 // while the address waits, while any other code still waits; only the room's projector gets its code read by the
 // host-only tools; a warm-up / reading / exam reclaim reads its code once (the owner check after it, 2026-10-17, counts
 // nothing more, and right codes refused by it never count); super-admin tools still need a super-admin code; handshakes from other sites are refused (WebSocket
-// and polling), ours and the ones with no Origin (test scripts, bots) are let in.
+// and polling), ours and the ones with no Origin (test scripts, bots) are let in. Closing an exam room (host:end, his
+// decision 2026-10-17): only its own monitor (room token), the teacher who opened it (remembered device or code) or a
+// super admin, always with a teacher check; one code over all 900 PINs closes nothing, an unknown PIN answers like a
+// room that is not yours, and the owner survives a restart (a room saved without one closes only for a super admin).
 'use strict';
 const http = require('http');
 const fs = require('fs');
@@ -378,19 +381,73 @@ async function run() {
   ok((await emitAck(rh, 'rd:auth', { pin: rd.pin, password: ENNI })).ok === true, '… while its own teacher\'s code still works');
   rh.close(); rk.close();
 
-  section('closing an exam room (host:end)');
+  section('closing an exam room (host:end): its own monitor, its teacher or a super admin (his decision 2026-10-17)');
+  const look = browser();
+  const isOpen = async (p) => (await get('/api/hsk-sim/room/' + p, { headers: { 'CF-Connecting-IP': look.ip } })).status === 200;
+  const examBy = async (code) => {
+    const s = sock(browser());
+    return Object.assign({ s }, await emitAck(s, 'host:create', { gameType: 'hsksim', simId: 'yct1-sim1', password: code }));
+  };
   const ep = sock(browser());
   const ex = await emitAck(ep, 'host:create', { gameType: 'hsksim', simId: 'yct1-sim1', password: ENNI });
+  ok(ex.pin && ex.hostToken, 'Ms Enni opens an exam room');
+  const ekid = sock(browser());
+  let kicked = 0;
+  ekid.on('host-left', () => { kicked++; });
+  const kj = await emitAck(ekid, 'player:join', { pin: ex.pin, name: 'Exam Kid', studentCode: '' });
+  ok(kj && kj.ok, 'a kid joins it');
+  const kidEnd = await emitAck(ekid, 'host:end', { pin: ex.pin });
+  ok(kidEnd.ok === false && kidEnd.error === 'not-teacher', 'a kid\'s phone in the room closes nothing (no teacher code)');
+  ok((await emitAck(ekid, 'host:end', { pin: '0000' })).error === 'not-teacher', '… and an unknown PIN answers the same (host:end tells nobody which PINs are exams)');
+  const tokOnly = await emitAck(sock(browser()), 'host:end', { pin: ex.pin, hostToken: ex.hostToken });
+  ok(tokOnly.ok === false && tokOnly.error === 'not-teacher', 'the room\'s token alone (no teacher) closes nothing');
+  const oth = sock(browser());
+  ok((await emitAck(oth, 'host:end', { pin: ex.pin, password: OTHER })).error === 'not-owner', 'another teacher\'s code does not close it (it used to)');
+  ok((await emitAck(oth, 'host:end', { pin: '0000', password: OTHER })).error === 'not-owner', '… and to her an unknown PIN looks the same');
+  const owr = await emitAck(sock(browser()), 'host:create', { gameType: 'warmup', password: OTHER });
+  ok(owr.pin && (await emitAck(oth, 'host:end', { pin: owr.pin, password: OTHER })).ok === false, '… nor her own warm-up room (host:end closes exam rooms only)');
+  oth.close();
+  const sweep = sock(browser());
+  const answers = new Set();
+  for (let p = 100; p <= 999; p++) answers.add((await emitAck(sweep, 'host:end', { pin: String(p), password: OTHER })).error || 'closed');
+  sweep.close();
+  ok(answers.size === 1 && answers.has('not-owner'), 'one teacher code tried over all 900 PINs closes no exam (one answer for every PIN)');
+  ok(await isOpen(ex.pin) && kicked === 0, '… Ms Enni\'s exam still runs and its kids never saw «host-left»');
+  const oLap = browser();
+  ok((await remember(oLap, OTHER)).status === 200, 'Ms Prueba\'s laptop is remembered');
+  const ol = sock(oLap);
+  ok((await emitAck(ol, 'host:end', { pin: ex.pin })).error === 'not-owner', '… and closes none of Ms Enni\'s exams (a remembered teacher device used to close any)');
+  ok((await emitAck(ol, 'host:end', { pin: ex.pin, password: OTHER })).error === 'not-owner', '… not with her code either');
+  ol.close();
+  ok(await isOpen(ex.pin) && kicked === 0, 'the exam still runs');
+  const e2 = await examBy(ENNI);
+  const eLap = browser();
+  ok((await remember(eLap, ENNI)).status === 200, 'Ms Enni\'s other laptop is remembered');
+  ok((await emitAck(sock(eLap), 'host:end', { pin: e2.pin })).ok === true && !(await isOpen(e2.pin)), 'the teacher who opened an exam closes it from her remembered laptop (no code needed)');
+  const e3 = await examBy(ENNI);
+  ok((await emitAck(sock(browser()), 'host:end', { pin: e3.pin, password: ENNI })).ok === true && !(await isOpen(e3.pin)), '… or with her code from any browser (a monitor that reconnected)');
+  const e4 = await examBy(ENNI);
+  ok((await emitAck(sock(browser()), 'host:end', { pin: e4.pin, password: SEED })).ok === true && !(await isOpen(e4.pin)), 'a super admin closes any exam room');
+  const e5 = await examBy(ENNI);
+  ok((await emitAck(e5.s, 'host:end', { pin: e5.pin, hostToken: e5.hostToken, password: OTHER })).ok === true && !(await isOpen(e5.pin)),
+    'its own monitor (the room token) closes it with any teacher\'s code (a shared laptop whose saved code changed)');
+  [e2, e3, e4, e5].forEach((e) => e.s.close());
   const eb = browser();
   const es = sock(eb);
   for (let i = 0; i < 10; i++) await emitAck(es, 'host:end', { pin: ex.pin, password: 'WRONG-' + i });
   const e1 = await emitAck(es, 'host:end', { pin: ex.pin, password: ENNI });
   ok(e1.ok === false && e1.error === WAIT, 'ten wrong codes → the address waits for host:end too');
+  const ep3 = sock({ jar: {}, ip: eb.ip });
+  ok((await emitAck(ep3, 'host:end', { pin: ex.pin, hostToken: ex.hostToken, password: OTHER })).error === WAIT, 'the room\'s token with another teacher\'s code waits there (no way to test codes)');
+  ep3.close();
   const ep2 = sock({ jar: {}, ip: eb.ip });
   const back2 = await emitAck(ep2, 'host:reclaim', { pin: ex.pin, hostToken: ex.hostToken, password: ENNI });
   ok(back2.ok === true, 'the exam\'s own projector moves to that school Wi-Fi');
-  ok((await emitAck(ep2, 'host:end', { pin: ex.pin, password: ENNI })).ok === true, '… and closes its room with its teacher\'s code while the address waits');
-  ep.close(); es.close(); ep2.close();
+  ok(await isOpen(ex.pin) && kicked === 0, 'the exam survived every refused close');
+  const left = waitFor(ekid, 'host-left', null, 2000);
+  ok((await emitAck(ep2, 'host:end', { pin: ex.pin, password: ENNI, hostToken: ex.hostToken })).ok === true, '… and its monitor closes its room with its teacher\'s code while the address waits');
+  ok(!!(await left) && kicked === 1 && !(await isOpen(ex.pin)), 'only that real close sends its kids «host-left»');
+  ep.close(); es.close(); ep2.close(); ekid.close();
 
   section('sockets only from the platform\'s own pages');
   const tryWs = (origin) => new Promise((res) => {
@@ -422,6 +479,24 @@ async function run() {
   await sleep(200);
   const refusedLines = allLog.split('\n').filter((l) => l.includes('socket refused') && l.includes('"https://evil.example"'));
   ok(refusedLines.length === 1, 'a refused site is written to the log once (not once per try)');
+
+  section('closing an exam room after a restart (its owner on the data disk)');
+  const rs = await examBy(ENNI);
+  rs.s.close();
+  await sleep(250);
+  await stopServer();
+  const roomsFile = path.join(DATA, 'hsk-rooms.json');
+  const disk = JSON.parse(fs.readFileSync(roomsFile, 'utf8'));
+  ok(disk[rs.pin] && disk[rs.pin].owner, 'the exam room is on the data disk with its owner');
+  disk['7777'] = { pin: '7777', simId: 'yct1-sim1', createdAt: Date.now(), fx: null };   // a room saved before 2026-10-17
+  fs.writeFileSync(roomsFile, JSON.stringify(disk));
+  await startServer();
+  // (no lookup first: host:end reads the owner of a room not loaded yet straight from hsk-rooms.json)
+  ok((await emitAck(sock(browser()), 'host:end', { pin: rs.pin, password: OTHER })).error === 'not-owner', 'after a restart another teacher still cannot close it');
+  ok((await emitAck(sock(browser()), 'host:end', { pin: rs.pin, password: ENNI })).ok === true && !(await isOpen(rs.pin)), '… its teacher can');
+  ok((await emitAck(sock(browser()), 'host:end', { pin: '7777', password: ENNI })).error === 'not-owner', 'an exam room with no owner on record closes for no regular teacher');
+  ok(await isOpen('7777') && (await emitAck(sock(browser()), 'host:end', { pin: '7777', password: SEED })).ok === true && !(await isOpen('7777')),
+    '… only for a super admin');
 
   ok(!/TypeError|Cannot read prop/.test(allLog), 'no error in the server log');
 }
