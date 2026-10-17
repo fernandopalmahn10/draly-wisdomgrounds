@@ -1,6 +1,7 @@
 // La Gran Fuga de Dubái (gameType 'escape') — the rules, no sockets (server.js glues them to the room).
-// Co-op: the whole class against Robotín, the museum's goofy guard robot with a glitch. Three Dubai zones in a row
-// (public/js/escape-map.js LEVELS). Each zone has two parts:
+// Co-op: the whole class against Robotín, the museum's goofy guard robot with a glitch. v2 (2026-10-17, spec
+// docs/specs/gran-fuga-v2.md): each round is a ROUTE of three zones (public/js/escape-map.js ROUTES: Dubái, then China),
+// each run's pace set from the time left on the clock. Each zone has two parts:
 //   RUN   answering is the engine: every right answer is a turbo for the crew (3 in a row = súper turbo). Robotín rolls
 //         behind at a steady speed that grows each zone; if he reaches the crew: «¡Zap!» (tickle lightning), everybody is
 //         dizzy 3 s and the crew slides back a little. Never a full restart.
@@ -34,18 +35,26 @@ const R = {
   // … and every 14-22 s his glitch makes him sprint for 2.5 s («¡Robotín acelera!»), harder each zone: zone 1 is calm,
   // zone 2 has close calls, zone 3 zaps an average class now and then (a strong class stays ahead)
   SPRINT_GAP_MS: [14000, 22000], SPRINT_MS: 2500, SPRINT_FRAC: [0.9, 1.3, 1.7],
+  // v2 (classroom playtest: an average class never saw a zap nor «¡Robotín se acerca!», the runs felt safe): in a sprint he
+  // also lunges at a crew that is far ahead, closing in fast until he is just under the alarm line, never past it on his
+  // own (a close call for every class that keeps answering; a slow crew still gets the tickle-zap)
+  LUNGE_K: 2.5, LUNGE_FAR: 3,
   CATCH_BACK: 6,              // a zap: the crew slides back 6 m …
   CATCH_KNOCK: 16,            // … and Robotín bounces back to 16 m behind, dazed for 2.5 s
   DIZZY_MS: 3000, ROBOT_DAZE_MS: 2500, ZAP_CD_MS: 4000,
   // «¡Robotín se acerca!» under 7 / 5 / 3 m per zone, off again 4 m later (under the zone's target gap, so the alarm
   // means «he's about to catch us», not «zone 3»; design review 2026-10-13: with one 8 m line it stayed on all zone 3)
   CLOSE_M: [7, 5, 3], CLOSE_OFF: 4,
-  PUSH_AFTER_S: 55, PUSH_K: 0.02,   // a run that drags on: Dralingo pushes, the jog gets 2 %/s faster
-  RUN_TARGET_S: [25, 80], ZONE_BUDGET_S: 150,
-  ZONE_INTRO_MS: 3500, WAVES: 3, WAVE_MS: [[12000, 11000, 10000], [11000, 10500, 9500], [10500, 10000, 9000]],
-  WAVE_REST_MS: 3000, ZONE_DIZZY_MS: 2000, MAX_LOST_PER_WAVE: 2, REPLAY_HEARTS: 3, FREE_PER: 10, CLEAR_BONUS: 1,
+  // a run that drags on: Dralingo pushes, the jog gets 2 %/s faster (after 1.2× the run's planned time; 55 s before v2)
+  PUSH_AFTER_S: 55, PUSH_AFTER_K: 1.2, PUSH_K: 0.02,
+  RUN_TARGET_S: [22, 80], ZONE_BUDGET_S: 132, SPARE_S: 6,
+  // v2: the zona segura a little shorter (the playtest's 4-minute rounds ended one wave short of the jet)
+  ZONE_INTRO_MS: 3000, WAVES: 3, WAVE_MS: [[10000, 9500, 9000], [9500, 9000, 8500], [9000, 8500, 8000]],
+  // v2 (classroom playtest: 3-6 kids of 25 outside a 9 s wave is normal at 7-10, and cost the class the jet): one kid in
+  // five may miss a wave for free (at least one), then 1 ❤️, 2 ❤️ only when over 40 % of the class is out
+  WAVE_REST_MS: 2500, ZONE_DIZZY_MS: 2000, MAX_LOST_PER_WAVE: 2, REPLAY_HEARTS: 3, FREE_PER: 5, MANY_OUT: 0.4, CLEAR_BONUS: 1,
   AWAY_MS: 8000,              // a phone silent for 8 s in the room is «away»: it can't cost the crew hearts
-  CLEARED_MS: 4200, CAUGHT_MS: 4200, ESCAPE_MS: 7000,
+  CLEARED_MS: 4200, CAUGHT_MS: 4200, ESCAPE_MS: 7500,
   SPEED: 140,                 // walking speed in the room (px/s)
 };
 
@@ -53,14 +62,34 @@ const isOn = (p) => p && !p.disconnected;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // Expected crew pace (m/s) for a round of `durationS` seconds: three runs + three zona segura phases fit the round.
+// (v2: only the round's first guess and the tests' simulated classes; the server sets every run's pace with retimeRun.)
 function paceFor(durationS) {
   const run = clamp(((durationS || 300) - R.ZONE_BUDGET_S) / R.LEVELS, R.RUN_TARGET_S[0], R.RUN_TARGET_S[1]);
   return R.L / run;
 }
+// How long the zona segura of `level` lasts (s): the intro, its three waves and the rests after them.
+function zoneSeconds(level) {
+  const w = R.WAVE_MS[Math.max(1, Math.min(R.LEVELS, level)) - 1];
+  return (R.ZONE_INTRO_MS + w.reduce((a, b) => a + b, 0) + R.WAVES * R.WAVE_REST_MS) / 1000;
+}
+// v2 pacing: at the start of every run the crew's pace comes from the time left on the clock. What the zonas seguras and
+// the cards still to come need is set aside; the runs left share the rest. A class that answers at the expected rate
+// reaches the jet before the bell at 4, 5 or 6 minutes (the playtest's 4-minute rounds ended one wave short of it).
+// A replayed zone or a slow run eats into the next runs' share: they get quicker, never longer than 80 s.
+function retimeRun(round, timeLeftS) {
+  if (!(timeLeftS > 0)) return round.pace;
+  let fixed = R.SPARE_S;
+  for (let l = round.level; l <= R.LEVELS; l++) fixed += zoneSeconds(l) + (l < R.LEVELS ? R.CLEARED_MS : R.ESCAPE_MS) / 1000;
+  const runsLeft = R.LEVELS - round.level + 1;
+  const runS = clamp((timeLeftS - fixed) / runsLeft, R.RUN_TARGET_S[0], R.RUN_TARGET_S[1]);
+  round.pace = R.L / runS;
+  round.runTarget = runS;
+  return round.pace;
+}
 
-function newRound(seed, now, durationS) {
+function newRound(seed, now, durationS, route) {
   const round = {
-    id: seed + ':' + now, seed, startedAt: now, pace: paceFor(durationS),
+    id: seed + ':' + now, seed, startedAt: now, pace: paceFor(durationS), route: EscapeMap.routeIdx(route), runTarget: 0,
     level: 1, phase: 'run', phaseAt: now, phaseUntil: 0, hearts: R.HEARTS, replayed: {}, replay: false, replayCount: 0,
     crew: 0, robot: -R.GAP0, pending: 0, wakeAt: now + R.WAKE_MS, dazeUntil: 0, dizzyUntil: 0, lastZapAt: 0,
     zaps: 0, turbos: 0, levelsCleared: 0, escaped: false,
@@ -119,7 +148,8 @@ function stepRun(round, players, dt, now) {
   const ev = [];
   if (round.phase !== 'run' || round.paused) return ev;
   const runS = Math.max(0, (now - round.phaseAt) / 1000);
-  const push = runS > R.PUSH_AFTER_S ? 1 + (runS - R.PUSH_AFTER_S) * R.PUSH_K : 1;
+  const pushAfter = round.runTarget ? round.runTarget * R.PUSH_AFTER_K : R.PUSH_AFTER_S;
+  const push = runS > pushAfter ? 1 + (runS - pushAfter) * R.PUSH_K : 1;
   const base = round.pace * R.BASE_FRAC * push;
   const dizzy = now < round.dizzyUntil;
   let move = dizzy ? base * 0.25 * dt : base * dt;
@@ -133,9 +163,14 @@ function stepRun(round, players, dt, now) {
       if (now < round.sprintAt + R.SPRINT_MS) sprint = true;
       else round.sprintAt = now + nextSprint();
     }
-    if (sprint && !round.sprintSaid) { round.sprintSaid = true; ev.push({ type: 'sprint' }); }
+    const close = R.CLOSE_M[round.level - 1];
+    if (sprint && !round.sprintSaid) { round.sprintSaid = true; round.lungeFar = gap > close + R.LUNGE_FAR; ev.push({ type: 'sprint' }); }
     if (!sprint) round.sprintSaid = false;
-    const v = robotSpeed(round) + Math.max(0, gap - R.TARGET_GAP[round.level - 1]) * R.RUBBER_K + (sprint ? round.pace * R.SPRINT_FRAC[round.level - 1] : 0);
+    // a crew far ahead: he lunges (closing in fast) and trips once he is just under the alarm line; a crew already
+    // near: the classic sprint
+    const lunge = sprint && round.lungeFar ? Math.max(0, gap - (close - 1)) * R.LUNGE_K : 0;
+    const v = robotSpeed(round) + Math.max(0, gap - R.TARGET_GAP[round.level - 1]) * R.RUBBER_K + (sprint ? (round.lungeFar ? lunge : round.pace * R.SPRINT_FRAC[round.level - 1]) : 0);
+    if (sprint && round.lungeFar && gap <= close - 0.5) { round.sprintAt = now + nextSprint(); round.sprintSaid = false; round.lungeFar = false; }
     round.robot += v * dt;
   }
   if (round.crew >= R.L) { ev.push({ type: 'done' }); return ev; }
@@ -163,7 +198,7 @@ function startZone(round, now) {
   round.skipped = false;
   round.phase = 'zone';
   round.phaseAt = now;
-  round.room = EscapeMap.buildRoom(round.seed, round.level);
+  round.room = EscapeMap.buildRoom(round.seed, round.level, round.route);
   round.wave = 0;
   round.zones = [];
   round.waveAt = 0; round.waveUntil = 0; round.waveResolved = true;
@@ -185,9 +220,13 @@ function startWave(round, players, now) {
   round.waveResolved = false;
   Object.entries(players).forEach(([pid, p]) => {
     p.esEnter = null; p.esReach = null;
-    // a kid who is already standing where a zone lights up is safe, but that's luck, not speed: no «fastest» time
+    // «Más rápido» times the reaction, not the luck of where a kid stood (playtest 2026-10-16: won in 0.3 s by a kid
+    // one step from a zone; code review 2026-10-17): the walk to the nearest zone in a straight line is taken off the
+    // time, and a kid already standing inside one when it lights up gets no time at all
     const pos = round.pos[pid];
-    p.esReachSkip = !!pos && EscapeMap.zoneAt(round.zones, pos.x, pos.y) >= 0;
+    const dist = pos ? EscapeMap.zoneDist(round.zones, pos.x, pos.y) : 0;
+    p.esReachSkip = !!pos && dist <= 0;
+    p.esStartDist = dist;
   });
   return round.zones;
 }
@@ -224,7 +263,11 @@ function resolveWave(round, players, now) {
     p.esWaves = (p.esWaves || 0) + 1;
     if (safe.has(pid)) {
       p.esSafe = (p.esSafe || 0) + 1;
-      if (p.esReach && !p.esReachSkip) { p.esReachMs = (p.esReachMs || 0) + (p.esReach - round.waveAt); p.esReachN = (p.esReachN || 0) + 1; }
+      if (p.esReach && !p.esReachSkip) {
+        const walk = 1000 * (p.esStartDist || 0) / R.SPEED;          // the straight walk there: not part of the reaction
+        p.esReachMs = (p.esReachMs || 0) + Math.max(0, p.esReach - round.waveAt - walk);
+        p.esReachN = (p.esReachN || 0) + 1;
+      }
     } else {
       out.push(pid);
       p.esDizzyUntil = now + R.ZONE_DIZZY_MS;
@@ -234,8 +277,8 @@ function resolveWave(round, players, now) {
   // fair to a class (classroom playtest 2026-10-13: two distracted kids out of 17 cost the whole class zone 1, no class
   // ever escaped): one kid in ten may miss a wave for free, 1 ❤️ for a few more, 2 ❤️ only when over a third is out
   const n = present.length;
-  const counted = Math.max(0, out.length - Math.floor(n / R.FREE_PER));
-  const lost = counted ? Math.min(out.length > n / 3 ? R.MAX_LOST_PER_WAVE : 1, round.hearts) : 0;
+  const counted = Math.max(0, out.length - Math.max(1, Math.floor(n / R.FREE_PER)));
+  const lost = counted ? Math.min(out.length > n * R.MANY_OUT ? R.MAX_LOST_PER_WAVE : 1, round.hearts) : 0;
   round.hearts = Math.max(0, round.hearts - lost);
   return { safe: Array.from(safe), out, lost, hearts: round.hearts, n };
 }
@@ -295,17 +338,21 @@ function checkPos(round, p, pid, x, y, now) {
 }
 
 // ---------- the end ----------
-// Team rank: «Pilotos del Cielo» (escaped with 3+ hearts) · «Viajeros del Burj» (escaped with fewer, or 2 zones with
-// 3+ hearts) · «Exploradores del Zoco». Stars 1..3 from the hearts left.
-function rankOf(levelsCleared, hearts) {
+// Team rank and stars follow how far the crew got (v2, classroom playtest: a class caught at a gate refills to 3 ❤️, so
+// stars from the hearts alone gave a caught class more stars than one that escaped):
+//   «Pilotos del Cielo» ★★★  escaped in the jet with 3+ hearts
+//   «Viajeros del Burj» ★★   escaped with fewer hearts · ★ reached the last place without escaping
+//   «Exploradores del Zoco» ★ otherwise
+// Escaping always earns more stars than not escaping. The ids stay; the names (and the badge's picture) are the
+// route's (China: «Viajeros de la Muralla», «Exploradores del Mercado»).
+function rankOf(levelsCleared, hearts, route) {
   const escaped = levelsCleared >= R.LEVELS;
   let id = 'zoco';
   if (escaped && hearts >= 3) id = 'cielo';
-  else if (escaped || (levelsCleared >= 2 && hearts >= 3)) id = 'burj';
-  // stars from the hearts left, never more than the zones cleared + 1 (ending in zone 1 with every heart isn't 3 stars)
-  const stars = Math.min(hearts >= 5 ? 3 : hearts >= 3 ? 2 : 1, levelsCleared + 1);
-  const name = { cielo: 'Pilotos del Cielo', burj: 'Viajeros del Burj', zoco: 'Exploradores del Zoco' }[id];
-  return { id, name, stars };
+  else if (escaped || levelsCleared >= 2) id = 'burj';
+  const stars = escaped ? (hearts >= 3 ? 3 : 2) : 1;
+  const rt = EscapeMap.route(route);
+  return { id, name: rt.ranks[id], stars, art: rt.rankArt[id] };
 }
 // Bonus stars of the Mario Party ending (core/party.js). Co-op: every kid at the top shares the star (a whole crew that
 // was safe in every wave all get «Más olas a salvo»); the crew itself is never ranked in front of the class.
@@ -337,7 +384,7 @@ function finish(round, players) {
   const awards = { turbos, fastest, streak };
   const stars = Party.stars(pool, STARS);
   rows.forEach((r) => { r.stars = stars.filter((s) => s.winners.includes(r.k)).map((s) => s.id); });
-  return { rank: rankOf(round.levelsCleared, round.hearts), levelsCleared: round.levelsCleared, hearts: round.hearts, escaped: round.escaped, zaps: round.zaps, turbos: round.turbos, rows, awards, stars };
+  return { rank: rankOf(round.levelsCleared, round.hearts, round.route), route: round.route, levelsCleared: round.levelsCleared, hearts: round.hearts, escaped: round.escaped, zaps: round.zaps, turbos: round.turbos, rows, awards, stars };
 }
 
 // Teacher pause: every timer moves forward by the paused time.
@@ -352,7 +399,7 @@ function shiftTimers(round, players, ms) {
 }
 
 module.exports = {
-  R, paceFor, newRound, preparePlayer, kidsOn, robotSpeed, turboGain, answer, stepRun,
+  R, paceFor, zoneSeconds, retimeRun, newRound, preparePlayer, kidsOn, robotSpeed, turboGain, answer, stepRun,
   startZone, spawnPos, startWave, occupancy, resolveWave, afterZone, startRun, clearLevel, caught, skipZone, checkPos,
   rankOf, finish, shiftTimers, STARS,
 };

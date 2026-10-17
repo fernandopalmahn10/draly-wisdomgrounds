@@ -24,14 +24,30 @@ function reach(room, sx, sy) {
   }
   return seen;
 }
+// v2: every route's three rooms (16×16, the walls of its picture + 3 seeded props)
+ok(M.ROUTES.length >= 2, 'at least two routes (Dubái, China)');
+eq(M.ROUTES[0].id, 'dubai', 'Dubái first: the main stage');
+M.ROUTES.forEach((rt) => {
+  eq(rt.zones.length, 3, `${rt.id}: three zones`);
+  rt.zones.forEach((zid, i) => {
+    const z = M.ZONES[zid];
+    ok(z && z.name && z.room && z.exit && z.at && z.icon && z.layout, `${rt.id}: zone ${zid} is complete (names, gate, icon, walls)`);
+    eq(z.exit === 'jet', i === 2, `${rt.id}: Hamdan's jet waits at the end of zone 3 only`);
+    ok(z.props.every((k) => M.PROP_ART[k]), `${zid}: every prop has its picture`);
+  });
+  ok(rt.ranks.cielo && rt.ranks.burj && rt.ranks.zoco && rt.rankArt.cielo, `${rt.id}: rank names and pictures`);
+});
+eq(M.zoneOf(1, 3).id, 'muralla', 'China route, zone 3 = la Gran Muralla');
+eq(M.zoneOf(M.ROUTES.length, 1).id, M.zoneOf(0, 1).id, 'routes wrap around');
 for (let seed = 1; seed <= 300; seed++) {
-  for (const level of [1, 2, 3]) {
-    const r = M.buildRoom(seed * 7919, level);
-    eq(Array.from(r.grid), Array.from(M.buildRoom(seed * 7919, level).grid), `seed ${seed} L${level}: same seed, same room`);
-    eq(r.cols * r.rows, 240, `seed ${seed} L${level}: 20×12 room`);
+  for (const route of M.ROUTES.map((_, i) => i)) for (const level of [1, 2, 3]) {
+    const r = M.buildRoom(seed * 7919, level, route);
+    eq(Array.from(r.grid), Array.from(M.buildRoom(seed * 7919, level, route).grid), `seed ${seed} R${route} L${level}: same seed, same room`);
+    eq(r.cols * r.rows, 256, `seed ${seed} L${level}: 16×16 room`);
+    eq(r.zone, M.zoneOf(route, level).id, `seed ${seed} R${route} L${level}: the route's zone`);
     ok(r.props.some((p) => p.kind === 'dock'), `seed ${seed} L${level}: Robotín's dock`);
-    ok(r.props.length >= 4, `seed ${seed} L${level}: the room has its props (${r.props.length})`);
-    const seen = reach(r, 10, 6);
+    ok(r.props.length >= 1 + (r.layout.props == null ? 2 : Math.min(1, r.layout.props)), `seed ${seed} R${route} L${level}: the room has its props (${r.props.length})`);
+    const seen = reach(r, 8, 8);
     let floor = 0, got = 0;
     for (let i = 0; i < r.grid.length; i++) if (r.grid[i] === M.FLOOR) { floor++; if (seen[i]) got++; }
     eq(got, floor, `seed ${seed} L${level}: no walled-in pockets`);
@@ -65,11 +81,25 @@ for (let seed = 1; seed <= 300; seed++) {
 }
 
 // ---------- pace + turbos ----------
-near(E.R.L / E.paceFor(300), 50, 0.01, '5 min round: 50 s per run');
-near(E.R.L / E.paceFor(240), 30, 0.01, '4 min round: 30 s per run');
-near(E.R.L / E.paceFor(360), 70, 0.01, '6 min round: 70 s per run');
-near(E.R.L / E.paceFor(60), 25, 0.01, 'a tiny test round never goes under 25 s per run');
+near(E.R.L / E.paceFor(300), 56, 0.01, '5 min round: 56 s per run');
+near(E.R.L / E.paceFor(240), 36, 0.01, '4 min round: 36 s per run');
+near(E.R.L / E.paceFor(360), 76, 0.01, '6 min round: 76 s per run');
+near(E.R.L / E.paceFor(60), 22, 0.01, 'a tiny test round never goes under 22 s per run');
 near(E.R.L / E.paceFor(9999), 80, 0.01, 'never over 80 s per run');
+// v2: the zona segura budget matches the rules (intro + 3 waves + rests), and each run's pace comes from the clock
+near(E.zoneSeconds(1), (E.R.ZONE_INTRO_MS + E.R.WAVE_MS[0].reduce((a, b) => a + b) + 3 * E.R.WAVE_REST_MS) / 1000, 1e-9, 'zona segura seconds');
+ok(E.zoneSeconds(1) <= 40 && E.zoneSeconds(3) <= 38, `the zona segura is short (${E.zoneSeconds(1)} s, ${E.zoneSeconds(3)} s)`);
+{
+  const r = E.newRound(1, 0, 240, 0);
+  E.retimeRun(r, 240);
+  ok(r.runTarget > 30 && r.runTarget < 36, `4 min: the first run gets ${r.runTarget.toFixed(1)} s`);
+  r.level = 3; E.retimeRun(r, 70);
+  ok(r.runTarget >= E.R.RUN_TARGET_S[0] && r.runTarget < 25, `little time left: the last run is quick (${r.runTarget.toFixed(1)} s)`);
+  r.level = 2; E.retimeRun(r, 900);
+  eq(r.runTarget, E.R.RUN_TARGET_S[1], 'lots of time: never longer than 80 s');
+  const before = r.pace; E.retimeRun(r, 0);
+  eq(r.pace, before, 'no clock: the pace stays');
+}
 const now0 = 1e9;
 function room(n, dur) {
   const round = E.newRound(4242, now0, dur || 300);
@@ -159,16 +189,56 @@ function room(n, dur) {
     return { done, zaps, s: (now - now0) / 1000 };
   };
   let avg = 0, strong = 0;
-  for (let k = 1; k <= 6; k++) {
+  const RUNS = 24;          // (Robotín's sprint gaps are random: enough runs for a steady count)
+  for (let k = 1; k <= RUNS; k++) {
     const a = run3(20, 0.13, 0.7, k * 77), b = run3(20, 0.16, 0.9, k * 77);
     ok(a.done && b.done, 'zone 3: the crew reaches the jet');
     ok(a.s < 90, `zone 3: an average class still gets there in time (${a.s.toFixed(1)} s)`);
     avg += a.zaps; strong += b.zaps;
   }
-  ok(avg >= 2, `zone 3: an average class meets Robotín's zap (${avg} zaps in 6 runs)`);
-  ok(avg <= 6 * 4, `zone 3: but not all the time (${avg} in 6 runs)`);
+  ok(avg >= RUNS / 12, `zone 3: an average class meets Robotín's zap (${avg} zaps in ${RUNS} runs)`);
+  ok(avg <= RUNS * 4, `zone 3: but not all the time (${avg} in ${RUNS} runs)`);
   ok(strong < avg, `a stronger class gets zapped less (${strong} vs ${avg})`);
-  console.log(`zone 3 tickle-zaps in 6 runs of 20 kids: average class ${avg}, strong class ${strong}`);
+  console.log(`zone 3 tickle-zaps in ${RUNS} runs of 20 kids: average class ${avg}, strong class ${strong}`);
+}
+{
+  // v2 pacing, the whole episode on the clock (the playtest's 4-minute rounds ended one wave short of the jet): a class
+  // answering at the expected rate reaches the jet before the bell at 4, 5 and 6 minutes, whatever its size; a class
+  // that answers much less doesn't always (the jet is earned). The zonas seguras take their real time (every kid safe).
+  const episode = (n, durS, rate, p, seed) => {
+    const round = E.newRound(seed, now0, durS, 0);
+    const players = {};
+    for (let i = 0; i < n; i++) players['p' + i] = E.preparePlayer(round, { name: 'K' + i });
+    const ids = Object.keys(players);
+    const endsAt = now0 + durS * 1000;
+    let now = now0, s = seed, until = 0;
+    const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    E.retimeRun(round, durS);
+    while (now < endsAt) {
+      now += 100;
+      if (round.phase === 'run') {
+        ids.forEach((pid) => { if (rnd() < rate * 0.1) E.answer(round, players[pid], rnd() < p, n, endsAt - now <= 30000); });
+        if (E.stepRun(round, players, 0.1, now).some((e) => e.type === 'done')) { E.startZone(round, now); until = now + E.zoneSeconds(round.level) * 1000; }
+      } else if (round.phase === 'zone' && now >= until) {
+        if (round.level >= E.R.LEVELS) return { escaped: true, left: (endsAt - now) / 1000 };
+        E.clearLevel(round); round.phase = 'cleared'; until = now + E.R.CLEARED_MS;
+      } else if (round.phase === 'cleared' && now >= until) { E.startRun(round, now, false); E.retimeRun(round, (endsAt - now) / 1000); }
+    }
+    return { escaped: false, level: round.level, crew: round.crew };
+  };
+  for (const dur of [240, 300, 360]) {
+    const spare = [];
+    for (const n of [5, 12, 20, 30]) {
+      let got = 0, left = 0;
+      for (let k = 1; k <= 6; k++) { const r = episode(n, dur, 0.13, 0.7, k * 131 + n); if (r.escaped) { got++; left += r.left; } }
+      ok(got >= 5, `${dur / 60} min, ${n} kids: an average class reaches the jet (${got}/6, ${got ? (left / got).toFixed(0) : '-'} s to spare)`);
+      spare.push(`${n} kids ${got}/6 ~${got ? (left / got).toFixed(0) : '-'} s`);
+    }
+    console.log(`${dur / 60} min, an average class: ${spare.join(' · ')} (the jet's 7.5 s take-off after that)`);
+    let weak = 0;
+    for (let k = 1; k <= 6; k++) if (episode(20, dur, 0.05, 0.5, k * 17).escaped) weak++;
+    if (dur === 240) console.log(`4 min, 20 kids answering far less: ${weak}/6 escape`);
+  }
 }
 {
   // Robotín's speed grows each zone, and more on a replay
@@ -241,6 +311,31 @@ const centre = (z) => ({ x: (z.x + z.w / 2) * T, y: (z.y + z.h / 2) * T + 6 });
   ok(r.out.includes(ids[3]), 'a kid who stayed outside is caught');
   eq(players[ids[0]].esReachN, 0, 'already inside: no reach time');
   eq(players[ids[1]].esReachN, 1, 'walked in: reach time counted');
+}
+{
+  // v2 (playtest 2026-10-16: «Más rápido» won in 0.3 s by a kid one step from a zone; code review 2026-10-17): the time
+  // is the reaction — the straight walk to the nearest zone comes off it — and a kid already inside one gets none
+  const { round, players } = zoneRoom(3);
+  E.startWave(round, players, now0 + 4000);
+  const z = round.zones[0];
+  const [a, b, c] = Object.keys(players);
+  round.pos[a] = { x: z.x * T - 20, y: (z.y + 1.5) * T, f: 2, at: now0 + 4500 };       // 20 px from its edge
+  round.pos[b] = { x: z.x * T - 140, y: (z.y + 1.5) * T, f: 2, at: now0 + 4500 };      // 140 px away (if no other zone is nearer)
+  round.pos[c] = { x: (z.x + 1.5) * T, y: (z.y + 1.5) * T, f: 2, at: now0 + 4500 };    // inside it
+  round.wave = 0;                                   // the same wave again: the same zones light up (deterministic)
+  E.startWave(round, players, now0 + 5000);
+  eq(JSON.stringify(round.zones[0]), JSON.stringify(z), 'the same zones');
+  ok(players[c].esReachSkip && !players[a].esReachSkip && !players[b].esReachSkip, 'inside when it lit up: no time; outside: timed');
+  const da = players[a].esStartDist, db = players[b].esStartDist;
+  ok(da > 0 && da <= 21 && db > da, `the walk to the nearest zone is remembered (${da.toFixed(0)} px, ${db.toFixed(0)} px)`);
+  // both step in 0.6 s after their walk: the same reaction time, whoever stood nearer
+  const inAt = (d) => now0 + 5000 + 600 + Math.round(1000 * d / E.R.SPEED);
+  players[a].esReach = inAt(da); players[b].esReach = inAt(db); players[c].esReach = now0 + 5000;
+  [a, b, c].forEach((pid) => { round.pos[pid] = { x: (z.x + 1.5) * T, y: (z.y + 1.5) * T, f: 2, at: now0 + 9000 }; });
+  E.resolveWave(round, players, now0 + 10000);
+  near(players[a].esReachMs, 600, 2, 'a kid next to the zone: 0.6 s of reaction');
+  near(players[b].esReachMs, 600, 2, 'a kid farther away: the same 0.6 s (the walk is not counted)');
+  eq(players[c].esReachN || 0, 0, 'already inside: no time');
 }
 {
   // hearts at 0: caught at the gate once (replay with 3 hearts), never twice; zone 3 done = escape
@@ -321,16 +416,75 @@ const centre = (z) => ({ x: (z.x + z.w / 2) * T, y: (z.y + z.h / 2) * T + 6 });
   ok(!E.checkPos(round, p, 'p0', pos.x + 30, pos.y, now0 + 400).ok, 'dizzy kids stay put');
 }
 
+{
+  // v2 (classroom playtest: 20 kids right 70 % of the time at one answer per 2-5 s never saw a zap or «¡Robotín se
+  // acerca!»): his glitch sprint now lunges at a crew far ahead — a close call in every run — and trips just behind
+  // them; such a class still is hardly ever zapped
+  const runAt = (level, seed) => {
+    const { round, players } = room(20, 300);
+    round.level = level;
+    let now = now0, done = false, closes = 0, zaps = 0, s = seed;
+    const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    const ids = Object.keys(players);
+    for (let i = 0; i < 3000 && !done; i++) {
+      now += 100;
+      ids.forEach((pid) => { if (rnd() < 0.2 * 0.1) E.answer(round, players[pid], rnd() < 0.7, 20); });
+      const ev = E.stepRun(round, players, 0.1, now);
+      if (ev.some((e) => e.type === 'close')) closes++;
+      if (ev.some((e) => e.type === 'zap')) zaps++;
+      done = ev.some((e) => e.type === 'done');
+    }
+    return { closes, zaps, done };
+  };
+  let closes = 0, zaps = 0, runs = 0, withClose = 0;
+  for (const level of [1, 2, 3]) for (let k = 1; k <= 6; k++) {
+    const r = runAt(level, k * 59 + level);
+    ok(r.done, `level ${level}: a lively class reaches the zone`);
+    runs++; closes += r.closes; zaps += r.zaps; if (r.closes) withClose++;
+  }
+  ok(withClose >= runs * 0.6, `close calls in most runs of a lively class (${withClose}/${runs} runs, ${closes} alarms)`);
+  ok(zaps <= runs * 0.5, `… but hardly any zap (${zaps} in ${runs} runs)`);
+  console.log(`a lively class (20 kids, 70 % at 0.2 answers/s): «¡Robotín se acerca!» in ${withClose}/${runs} runs, ${zaps} zaps`);
+}
+{
+  // v2 (classroom playtest: 3-6 kids of 25 outside a 9 s wave is normal at 7-10): one kid in five is free, 2 ❤️ only
+  // when over 40 % of the class is out
+  const lostWith = (n, outN) => {
+    const { round, players } = zoneRoom(n);
+    E.startWave(round, players, now0 + 4000);
+    const c = centre(round.zones[0]);
+    const ids = Object.keys(players);
+    ids.forEach((pid, i) => { round.pos[pid] = i < outN ? round.pos[pid] : { x: c.x, y: c.y, f: 2, at: now0 + 9000 }; round.pos[pid].at = now0 + 9000; });
+    const outside = ids.slice(0, outN).filter((pid) => M.zoneAt(round.zones, round.pos[pid].x, round.pos[pid].y) < 0).length;
+    return { lost: E.resolveWave(round, players, now0 + 10000).lost, outside };
+  };
+  let r = lostWith(25, 5);
+  ok(r.outside < 5 || r.lost === 0, `25 kids, 5 outside: free (${r.lost})`);
+  r = lostWith(25, 9);
+  ok(r.outside < 9 || r.lost === 1, `25 kids, 9 outside: 1 heart (${r.lost})`);
+  r = lostWith(25, 12);
+  ok(r.outside < 12 || r.lost === 2, `25 kids, 12 outside (over 40 %): 2 hearts (${r.lost})`);
+  r = lostWith(3, 1);
+  ok(r.outside < 1 || r.lost === 0, 'a class of 3: one kid may miss a wave for free');
+}
+
 // ---------- ranks + the end ----------
-eq(E.rankOf(3, 5), { id: 'cielo', name: 'Pilotos del Cielo', stars: 3 }, 'escaped with every heart');
+eq(E.rankOf(3, 5), { id: 'cielo', name: 'Pilotos del Cielo', stars: 3, art: M.JET }, 'escaped with every heart');
+eq(E.rankOf(3, 1, 1).name, 'Viajeros de la Muralla', 'the China route names its ranks');
+eq(E.rankOf(0, 5, 1).name, 'Exploradores del Mercado', '… all of them');
+eq(E.rankOf(1, 1, 0).name, 'Exploradores del Zoco', 'the Dubái route keeps v1 names');
 eq(E.rankOf(3, 3).id, 'cielo', 'escaped with 3 hearts');
 eq(E.rankOf(3, 1).id, 'burj', 'escaped with 1 heart');
 eq(E.rankOf(2, 4).id, 'burj', '2 zones, 4 hearts');
-eq(E.rankOf(2, 1).id, 'zoco', '2 zones, 1 heart');
+eq(E.rankOf(2, 1).id, 'burj', '2 zones (reached the last place), even with 1 heart');
 eq(E.rankOf(0, 5).id, 'zoco', 'still in zone 1');
-eq(E.rankOf(1, 1).stars, 1, 'stars from hearts');
+// v2 (classroom playtest: a class caught at a gate refills to 3 ❤️ and got more stars than one that escaped): the stars
+// follow the progress — escaping always earns more than not escaping
+eq(E.rankOf(3, 2).stars, 2, 'escaped with 2 hearts: two stars');
+eq(E.rankOf(3, 4).stars, 3, 'escaped with 4 hearts: three stars');
+eq(E.rankOf(2, 5).stars, 1, 'not escaped, every heart: one star');
 eq(E.rankOf(0, 5).stars, 1, 'still in zone 1: one star whatever the hearts');
-eq(E.rankOf(1, 5).stars, 2, 'one zone cleared: at most two stars');
+for (let h = 0; h <= 5; h++) for (let h2 = 0; h2 <= 5; h2++) for (const lc of [0, 1, 2]) ok(E.rankOf(3, h).stars > E.rankOf(lc, h2).stars, `escaping (${h} ❤️) beats ${lc} zones (${h2} ❤️)`);
 {
   const { round, players } = room(3);
   const [a, b, c] = Object.values(players);

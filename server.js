@@ -5661,6 +5661,8 @@ function publicState(game) {
   if (game.gameType === 'sixseven') out.ssStyle = Sixseven.cleanStyle(game.ssStyle);
   // Dragones Pintores v2: the world of this round (the phones' lobby shows its picture and name)
   if (game.gameType === 'paint') out.pcWorld = game.paint ? game.paint.sky.world : (game.pcWorld | 0);
+  // La Gran Fuga v2: the route of this round (the phones' lobby shows its three places)
+  if (game.gameType === 'escape') out.esRoute = game.escape ? game.escape.route : EscapeMap.routeIdx(game.esRoute);
   // HSK rooms expose simId so kid clients know what to load when
   // state flips to 'active'. fx is the current animation overlay.
   if (game.gameType === 'hsksim' && game.hsk) {
@@ -8066,9 +8068,11 @@ function ssFinish(pin, g) {
 }
 
 // === 🚀 LA GRAN FUGA DE DUBÁI (gameType 'escape') — Kahoot «Robot Run» style co-op chase, Dralingo episode ===
-// Rules in core/escape.js, rooms in public/js/escape-map.js (spec docs/specs/gran-fuga-de-dubai.md). The whole class
-// runs from Robotín through three Dubai zones: right answers are turbos (the run is server-timed, 10 Hz physics, 5 Hz
-// broadcast), then the «zona segura» waves in a top-down room (phones walk their avatar, the server checks positions).
+// Rules in core/escape.js, routes and rooms in public/js/escape-map.js (spec docs/specs/gran-fuga-v2.md; v1:
+// gran-fuga-de-dubai.md). The whole class runs from Robotín through the three zones of the round's route (Dubái, China;
+// g.esRoute, picked in the lobby, «Otra ronda» = the next one): right answers are turbos (the run is server-timed, 10 Hz
+// physics, 5 Hz broadcast, its pace set from the clock at every run), then the «zona segura» waves in a top-down room
+// (phones walk their avatar, the server checks positions).
 // Kids are numbered per round (p.esIdx) so the broadcasts stay small and survive rejoins. Every timer is checked against
 // the round object, so a stale timer never touches a new round.
 const ES_TICK_MS = 100;
@@ -8095,6 +8099,7 @@ function esPosArray(g, now) {
 function esPublic(g, now) {
   const k = g.escape;
   return {
+    route: k.route, zone: EscapeMap.zoneOf(k.route, k.level).id,
     level: k.level, phase: k.phase, L: Escape.R.L, crew: Math.round(k.crew * 10) / 10, robot: Math.round(k.robot * 10) / 10,
     hearts: k.hearts, levelsCleared: k.levelsCleared, replay: k.replay, paused: k.paused, close: k.phase === 'run' && !!k.closeSaid,
     wakeMs: Math.max(0, k.wakeAt - now), dizzyMs: Math.max(0, k.dizzyUntil - now), phaseMs: k.phaseUntil ? Math.max(0, k.phaseUntil - now) : 0,
@@ -8144,8 +8149,9 @@ function esDeal(pin, g) {
 function esStart(pin, g) {
   esStop(g);
   const now = Date.now();
-  g.escape = Escape.newRound(1 + Math.floor(Math.random() * 1e6), now, g.duration);
+  g.escape = Escape.newRound(1 + Math.floor(Math.random() * 1e6), now, g.duration, g.esRoute | 0);
   g.escape.tick = null;
+  if (g.endsAt) Escape.retimeRun(g.escape, (g.endsAt - now) / 1000);      // v2: the run's pace from the clock
   Object.entries(g.players).forEach(([pid, p]) => {
     p.esRound = null; p.esPid = null; p.score = 0;
     // each kid starts the pack at a random spot, so «Otra ronda» never replays the same question order
@@ -8242,6 +8248,7 @@ function esTickInner(pin, id) {
   } else if (k.phase === 'cleared' || k.phase === 'caught') {
     if (now >= k.phaseUntil) {
       Escape.startRun(k, now, k.phase === 'caught');
+      if (g.endsAt) Escape.retimeRun(k, (g.endsAt - now) / 1000);      // v2: what's left on the clock sets this run's pace
       esPhase(pin, g);
       esDeal(pin, g);
     }
@@ -8323,9 +8330,9 @@ function esEndPayloads(g) {
     totals: { crew: fin.turbos }, captains: g.esCast || null,
     stars: Party.publicStars(fin.stars, byK, (r) => r.score),
     top: [], mvp: {},
-    extra: { rank: fin.rank, levelsCleared: fin.levelsCleared, hearts: fin.hearts, escaped: fin.escaped, level: k.level, zaps: fin.zaps },
+    extra: { rank: fin.rank, route: fin.route, levelsCleared: fin.levelsCleared, hearts: fin.hearts, escaped: fin.escaped, level: k.level, zaps: fin.zaps },
   };
-  const escOld = { rank: fin.rank, levelsCleared: fin.levelsCleared, hearts: fin.hearts, escaped: fin.escaped, level: k.level, zaps: fin.zaps, turbos: fin.turbos, cast: g.esCast || null };
+  const escOld = { rank: fin.rank, route: fin.route, levelsCleared: fin.levelsCleared, hearts: fin.hearts, escaped: fin.escaped, level: k.level, zaps: fin.zaps, turbos: fin.turbos, cast: g.esCast || null };
   // the phones: a dozen crewmates for their ceremony; the projector: the whole crew (in join order, never ranked)
   const common = { winner: fin.escaped ? 'crew' : 'tie', escape: escOld, fin: Object.assign({ crews: { crew: crew.slice(0, 12).map(lite) } }, finCommon) };
   const hostOnly = {
@@ -8984,6 +8991,18 @@ io.on('connection', (socket) => {
     if (typeof cb === 'function') cb({ ok: true, world: w });
   });
 
+  // La Gran Fuga v2: the teacher picks the round's route in the lobby (Dubái, China); «Otra ronda» moves on by itself
+  socket.on('host:es-route', (data, cb) => {
+    const { pin, route } = data || {};
+    const g = games[pin];
+    const r = Number(route);
+    if (!g || g.hostId !== socket.id || g.gameType !== 'escape' || g.state !== 'lobby'
+      || !Number.isInteger(r) || r < 0 || r >= EscapeMap.ROUTES.length) { if (typeof cb === 'function') cb({ ok: false }); return; }
+    g.esRoute = r;
+    io.to(pin).emit('es:route', { route: r });
+    if (typeof cb === 'function') cb({ ok: true, route: r });
+  });
+
   socket.on('host:auto-balance', ({ pin }) => {
     const g = games[pin];
     if (!g || g.hostId !== socket.id) return;
@@ -9271,7 +9290,8 @@ io.on('connection', (socket) => {
     if (g.gameType === 'kingdoms') { kdClearTimers(g); g.kingdoms = null; }
     if (g.gameType === 'paint') { const was = g.paint; pcStop(g); g.paint = null; if (was) g.pcWorld = ((was.sky.world | 0) + 1) % PC_WORLDS; io.to(pin).emit('pc:world', { world: g.pcWorld | 0 }); }
     if (g.gameType === 'snow') { snStop(g); g.snow = null; }
-    if (g.gameType === 'escape') { esStop(g); g.escape = null; }
+    // La Gran Fuga v2: «Otra ronda» = the next route (Dubái → China → Dubái…)
+    if (g.gameType === 'escape') { const was = g.escape; esStop(g); g.escape = null; if (was) g.esRoute = EscapeMap.routeIdx((was.route | 0) + 1); io.to(pin).emit('es:route', { route: EscapeMap.routeIdx(g.esRoute) }); }
     if (g.gameType === 'halcon') { hcStop(g); g.halcon = null; }
     if (g.gameType === 'monopoly') { mnStop(g); g.mn = null; }   // (each kid keeps its id k; a new game makes new boards)
     if (g.gameType === 'dragon-eye') { drStop(g); g.dr = null; }  // (the same: a new game deals new races)

@@ -412,7 +412,7 @@
     },
     // Ojos de Halcón (2026-10-13) replaced the first «Ojo de Halcón» (`look`, retired 2026-10-14)
     { id: 'halcon',    label: 'Ojos de Halcón',      emoji: '🦅', blurb: 'Look at the right window first, boards of 4 (Mario Party)', launch: (ctx) => _genericLaunch(ctx, '/host-halcon.html', '/player.html') },
-    { id: 'escape',    label: 'La Gran Fuga de Dubái', emoji: '🚀', blurb: 'Whole class runs from Robotín', launch: (ctx) => _genericLaunch(ctx, '/host-escape.html', '/player.html') },
+    { id: 'escape',    label: 'La Gran Fuga de Dubái', emoji: '🚀', blurb: 'Whole class runs from Robotín: Dubai or China route', launch: (ctx) => _genericLaunch(ctx, '/host-escape.html', '/player.html') },
     { id: 'snow',      label: 'Batalla de Nieve',   emoji: '❄️', blurb: 'Walk Dubai, snowball fight', launch: (ctx) => _genericLaunch(ctx, '/host-snow.html', '/player.html') },
     { id: 'paint',     label: 'Dragones Pintores',  emoji: '🎨', blurb: 'Tap to fly, paint the sky, win the wonders', launch: (ctx) => _genericLaunch(ctx, '/host-paint.html', '/player.html') },
     { id: 'kingdoms',  label: 'Reinos de Colores',  emoji: '🏰', blurb: 'Plant flags, conquer the map', launch: (ctx) => _genericLaunch(ctx, '/host-kingdoms.html', '/player.html') },

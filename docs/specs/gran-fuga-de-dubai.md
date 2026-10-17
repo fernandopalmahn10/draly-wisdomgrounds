@@ -1,5 +1,8 @@
 # La Gran Fuga de Dubái · new pin game
 
+> **v2 «Las rutas de la fuga» (2026-10-17): `docs/specs/gran-fuga-v2.md`** (routes of real places drawn as art, the
+> painted rooms, the phone's chase strip, pacing from the clock). This file is v1 and its history.
+
 Status: **BUILT 2026-10-13 on a worktree branch, local only, not deployed** (gameType `escape`). What was built and how
 it differs from this proposal: § «As built» at the end, with the scorecard. His brief: "/watch https://www.youtube.com/watch?v=tDNcgM7b7oU
 and construct with all the better criteria: frontend-design, Emil Kowalski, taste and impeccable". The video is Kahoot!
