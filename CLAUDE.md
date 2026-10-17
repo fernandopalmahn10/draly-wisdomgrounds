@@ -170,7 +170,8 @@ the checklist for any new game mode.
   rooms follow the same owner rule AND still need a teacher code** (his decision 2026-10-17; before, ANY teacher code
   took them, even mid-class: one code tried over the 900 PINs took every one, and an old sleeping warm-up tab took a
   newer room whose PIN came back): the code first (`_socketCode`), then `_mayReclaim`. An exam room keeps its owner on
-  the data disk (`owner` in `hsk-rooms.json`, a teacher uid, never sent) so a restart never hands it to anyone; one
+  the data disk (`owner` in `hsk-rooms.json`: a teacher uid, or `'*'` for the legacy password; never sent) so a
+  restart never hands it to anyone; one
   saved before that has no owner and goes back only to a super admin. Of the three pages only the warm-up reclaims
   (on a dropped connection, with its token); reading and exam projectors never do (a reload opens a new room).
   `games` has no prototype (`Object.create(null)`) and reclaim takes digit PINs only.

@@ -366,9 +366,11 @@ A separate Emirati Arabic (Khaleeji) track:
     remembered teacher laptop never waits because of its school's Wi-Fi, and a running class keeps working), and only
     the platform's own pages can open a live connection (a page on another site is refused).
   - **Projectors (2026-10-16/17):** a running room's projector goes back only to the teacher who opened it: the same
-    tab after a reload or a dropped Wi-Fi; nobody else while that projector is still on; once it is off, the same
-    teacher from another laptop or the super admin. Games since 2026-10-16; warm-up, reading and exam rooms since
-    2026-10-17 (they still ask for the teacher code too), so one teacher code can no longer take a colleague's class.
+    tab after a dropped Wi-Fi (in the games also after a reload); nobody else while that projector is still on; once it
+    is off, the same teacher from another laptop or the super admin. Games since 2026-10-16; warm-up, reading and exam
+    rooms since 2026-10-17 (they still ask for the teacher code too), so one teacher code can no longer take a
+    colleague's projector. A reload of the warm-up, reading or exam page opens a new room, and only the warm-up comes
+    back by itself after a dropped Wi-Fi.
 - **Data:** student records, rooms and results live on Render's **permanent disk** (`data/`), never
   in the code or on GitHub.
 - **Room to grow (checked 2026-10-12):** one Starter server (half a CPU, 512 MB) used at most 40 % of its memory and
