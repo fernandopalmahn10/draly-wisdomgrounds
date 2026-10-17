@@ -372,7 +372,8 @@ A separate Emirati Arabic (Khaleeji) track:
     colleague's projector. A reload of the warm-up, reading or exam page opens a new room. After a dropped Wi-Fi all
     three come back by themselves with the same PIN (reading and exam since 2026-10-17; the exam monitor also after a
     server restart): while offline the projector says «Sin conexión · reconectando…», and if the room can't come back it
-    says why in plain Spanish with a way forward (open a new room, type today's code, try again).
+    says why in plain Spanish with a way forward (open a new room, type today's code, try again). The warm-up got those
+    notices on 2026-10-17 too (before, a refusal left it silent), from the same shared piece (`js/host-reconnect.js`).
   - **Closing an exam room (2026-10-17):** «Cerrar la sala» closes only for the teacher who opened the exam (their
     monitor, their remembered laptop or their code) or the super admin. Before, any teacher code closed any running exam,
     so one code tried over the 3-digit PINs could close every exam in the school mid-exam. The monitor now says why if

@@ -13,6 +13,8 @@
 // Loaded after teacher-gate.js; the page calls, right after io():
 //   DralyReconnect.watch(socket, { pin: () => pin, code: () => code, setCode(c) {…}, room: 'la lectura',
 //     holdsMinutes: 10, newRoom: { label: 'Abrir una lectura nueva', go() {…} }, onBack(resp) {…} })
+// Used by host-reading.js, host-hsk.js and host-warmup.js (the warm-up too since 2026-10-17: its own reclaim showed a
+// refusal only in the console).
 // Test: scripts/test-host-reclaim.js (the server's answers, and this file in a small fake page).
 // =========================================================================
 (function () {
