@@ -67,6 +67,21 @@
   let testTimerInt        = null;     // ticks the per-question countdown
   let currentTestQIdx     = -1;       // 0-based; -1 when no test active
 
+  // STABILITY (2026-10-17): a dropped Wi-Fi gives this page a NEW connection while the room still points at the old
+  // one, so every rd:* control stopped working quietly (the server checks the host's connection) and a reload opened
+  // a new room with a new PIN. Like the warm-up, the page takes its own room back on reconnect (its token + the code);
+  // the server sends rd:state again, and the page repaints where it was. The notices: public/js/host-reconnect.js.
+  if (window.DralyReconnect) {
+    window.DralyReconnect.watch(socket, {
+      pin: () => pin,
+      code: () => adminPw,
+      setCode: (c) => { adminPw = c; },
+      room: 'la lectura',
+      holdsMinutes: 10,   // (server.js: a reading room waits 10 minutes for its projector)
+      newRoom: { label: 'Abrir una lectura nueva', go: () => location.reload() },
+    });
+  }
+
   const $ = (id) => document.getElementById(id);
   $('mute-btn').addEventListener('click', () => {
     const muted = window.toggleMute();
