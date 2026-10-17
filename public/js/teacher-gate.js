@@ -92,6 +92,17 @@
           if (t && !o.hostToken) o.hostToken = t;
           if (code && !o.password) o.password = code;
           args[i] = o;
+          // a room taken back without its token (another laptop of the same teacher, an exam room after a restart)
+          // comes with a fresh one: keep it, so the next Wi-Fi blip comes back by the token at once
+          if (ev === 'host:reclaim') {
+            args = args.map(function (a) {
+              if (typeof a !== 'function') return a;
+              return function (resp) {
+                if (resp && resp.ok && resp.hostToken) keepToken(o.pin, resp.hostToken);
+                return a.apply(this, arguments);
+              };
+            });
+          }
         }
         return emit.apply(sock, [ev].concat(args));
       }

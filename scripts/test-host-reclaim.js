@@ -211,7 +211,8 @@ async function run() {
   ok((await emitAck(s12, 'host:reclaim', { pin: c2.pin })).ok === false, 'another teacher\'s device cannot take it after its projector is gone either');
   s12.close();
   const s13 = sock(browser());
-  ok((await emitAck(s13, 'host:reclaim', { pin: c2.pin, password: ENNI })).ok === true, 'its teacher\'s code takes it back');
+  const c2back = await emitAck(s13, 'host:reclaim', { pin: c2.pin, password: ENNI });
+  ok(c2back.ok === true, 'its teacher\'s code takes it back');
   s13.close();
 
   section('warm-up, reading and exam rooms: the owner rule, and still the teacher code (his decision 2026-10-17)');
@@ -477,7 +478,7 @@ async function run() {
   ok(rightLate.ok === false && rightLate.error === 'wait', '… and reclaim stops reading codes from it too (even a right one)');
   s18.close();
   const brute2 = sock(Object.assign(browser(), { ip: brute.ip }));
-  const tokenOk = await emitAck(brute2, 'host:reclaim', { pin: c2.pin, hostToken: c2.hostToken });
+  const tokenOk = await emitAck(brute2, 'host:reclaim', { pin: c2.pin, hostToken: c2back.hostToken });   // (the code reclaim above handed out a fresh token)
   ok(tokenOk.ok === true, 'a projector with its room\'s token is never stopped by its address\'s wrong codes');
   brute2.close();
 
@@ -515,6 +516,9 @@ async function run() {
   // the monitor itself reconnecting after the restart, before anything else looked its room up (2026-10-17)
   ok((await once(browser(), { pin: yRoom.pin })).error === 'no-game', 'after a restart, a socket with no code learns nothing about an exam room on the disk');
   ok((await once(browser(), { pin: yRoom.pin, password: 'WRONG-' + rnd(3) })).error === 'bad-password', '… nor with a wrong code (the «bad-password» every PIN gives)');
+  ok((await once(browser(), { pin: yRoom.pin, password: OTHER })).error === 'no-game', '… nor another teacher');
+  ok(((await get('/api/room-alive/' + yRoom.pin, { headers: { 'CF-Connecting-IP': '203.0.113.50' } })).json || {}).alive === false,
+    '… and none of them woke the room up from the disk (it is loaded only for its own teacher)');
   const mon = sock(browser());
   const monSeen = [];
   mon.on('state', (s) => monSeen.push(s));
@@ -524,9 +528,45 @@ async function run() {
   mon.emit('host:start', { pin: yRoom.pin });
   await sleep(400);
   ok(monSeen.some((s) => s.state === 'countdown' || s.state === 'active'), '… and «Empezar» works');
+  // (review 2026-10-17) a room loaded from the disk has no token: the reclaim answers a fresh one, so the monitor's
+  // NEXT Wi-Fi blip comes back by the token at once, even while the server still holds its old connection
+  ok(/^[0-9a-f]{32}$/.test(String(yBack.hostToken || '')) && yBack.hostToken !== yRoom.hostToken, '… and its answer carries a fresh room token');
+  const blip = sock(browser());
+  const blipBack = await emitAck(blip, 'host:reclaim', { pin: yRoom.pin, hostToken: yBack.hostToken, password: ENNI });
+  ok(blipBack.ok === true && !blipBack.hostToken, 'its next Wi-Fi blip comes back by that token at once, the old connection still open');
+  blip.close();
   mon.close();
   await sleep(250);
   ok((await once(browser(), { pin: yRoom.pin, password: OTHER })).error === 'no-game', '… and another teacher\'s code still cannot take it');
+
+  section('a room taken back without its token gets a fresh one (review 2026-10-17)');
+  const t1 = sock(browser());
+  const tRoom = await emitAck(t1, 'host:create', { gameType: 'mochi-mash', password: ENNI });
+  t1.close();
+  await sleep(250);
+  const t2 = sock(browser());
+  const tBack = await emitAck(t2, 'host:reclaim', { pin: tRoom.pin, password: ENNI });
+  ok(tBack.ok === true && /^[0-9a-f]{32}$/.test(String(tBack.hostToken || '')) && tBack.hostToken !== tRoom.hostToken,
+    'taken back with the teacher code (no token): the answer carries a fresh token');
+  t2.close();
+  await sleep(250);
+  const t3 = sock(browser());
+  ok((await emitAck(t3, 'host:reclaim', { pin: tRoom.pin, hostToken: tRoom.hostToken })).ok === false, '… the old token no longer opens the room');
+  const tAgain = await emitAck(t3, 'host:reclaim', { pin: tRoom.pin, hostToken: tBack.hostToken });
+  ok(tAgain.ok === true && !tAgain.hostToken, '… the fresh one does (and a token answer carries no new token)');
+  t3.close();
+
+  section('the home page «¿volver a tu juego?» check counts PIN guesses (review 2026-10-17)');
+  const rs = sock(browser());
+  const rRoom = await emitAck(rs, 'host:create', { gameType: 'mochi-mash', password: ENNI });
+  const ipA = { headers: { 'CF-Connecting-IP': '203.0.113.7' } }, ipB = { headers: { 'CF-Connecting-IP': '203.0.113.8' } };
+  const first = await get('/api/room-alive/' + rRoom.pin, ipA);
+  ok((first.json || {}).alive === true && /no-store/.test(first.headers['cache-control'] || ''), 'a running room answers alive (never cached)');
+  for (let p = 9000; p < 9060; p++) await get('/api/room-alive/' + p, ipA);
+  ok(((await get('/api/room-alive/' + rRoom.pin, ipA)).json || {}).alive === false, 'after 60 empty PINs that address hears «not alive» for every PIN, running ones too');
+  ok(((await get('/api/room-alive/' + rRoom.pin, ipB)).json || {}).alive === true, '… another address is not affected');
+  ok(((await get('/api/room-alive/abc', ipB)).json || {}).alive === false, 'a PIN that is not digits is never a room');
+  rs.close();
 
   section('odd PINs');
   const odd = sock(laptop);
@@ -789,7 +829,14 @@ async function reconnectSide() {
 
   blip();
   lastAsk().cb({ ok: false, error: 'host-live' });
-  ok(card() && /Otra pantalla/.test(card().textContent), 'another screen holds the room: a card says so');
+  ok(!card() && /Reconectando/.test(body()), 'another screen holds the room right after a blip (usually its own old connection, still closing): the yellow bar stays, no card');
+  for (let i = 0; i < 8; i++) {
+    const n = asks().length;
+    tick(5000);
+    if (asks().length !== n + 1) break;
+    lastAsk().cb({ ok: false, error: 'host-live' });
+  }
+  ok(card() && /Otra pantalla/.test(card().textContent), '… still so after 40 s of tries every 5 s: a card says so');
   const n3 = asks().length;
   tick(15000);
   ok(asks().length === n3 + 1, '… and it tries again by itself (that screen\'s connection may be dying)');

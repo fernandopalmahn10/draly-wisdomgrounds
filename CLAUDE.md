@@ -190,12 +190,18 @@ the checklist for any new game mode.
   `games` has no prototype (`Object.create(null)`) and reclaim takes digit PINs only.
   **Nobody else learns whether a PIN is a running room** (2026-10-17; before, `host:reclaim` answered an empty PIN
   'no-game' and a running room 'host-live' / 'not-host' / 'bad-password', to any socket and with no limit, and a running
-  exam room's PIN lets a stranger join it): `_mayReclaim` checks who asks first, the same way for every PIN. Only the
-  room's own projector (its token), its teacher or a super admin hear how that room is ('host-live', or 'bad-password'
-  when the code is missing); anyone else hears 'no-game' (a colleague's room too), or 'bad-password' / 'wait' for a
-  wrong code / a waiting address, for running rooms and empty PINs alike. The room's token is checked before anything
-  else and counts no PIN guess: its own projector is never slowed. A new socket handler that takes a PIN answers the
-  same way, or counts unknown PINs like `player:join` (`_pinMiss`).
+  exam room's PIN lets a stranger join it): `_mayReclaim` checks who asks first, the same way for every PIN. Its teacher
+  or a super admin (without the token) hear how that room is ('host-live' while its projector is still connected, or
+  'bad-password' when the code is missing); the room's own projector with its token just gets it back; anyone else
+  hears 'no-game' (a colleague's room too), or 'bad-password' / 'wait' for a wrong code / a waiting address, for
+  running rooms and empty PINs alike. The room's token is checked before anything else and counts no PIN guess: its own
+  projector is never slowed. A room taken back WITHOUT its token (another laptop, an exam room loaded from the disk
+  after a restart, which is loaded only for its own teacher) answers a fresh token that `teacher-gate.js` keeps, so its
+  next Wi-Fi blip comes back by the token at once and an old tab's token stops working. `js/host-reconnect.js` reads
+  'host-live' right after a blip as the projector's own old connection still closing (yellow bar, 8 tries × 5 s)
+  before its red card. The home page's `/api/room-alive` counts unknown PINs like a join (review 2026-10-17: it was an
+  unlimited list of the running rooms). A new endpoint or socket handler that takes a PIN answers the same way, or
+  counts unknown PINs like `player:join` (`_pinMiss`, and `_pinBlocked` answers «nothing» once out of guesses).
   The key screen shows only when a NEW room waits, never over an F5 of a running one. A new host page needs nothing
   extra as long as it loads `teacher-gate.js`; a test script that reclaims passes the create answer's `hostToken`.
   Test: `scripts/test-host-reclaim.js`.
