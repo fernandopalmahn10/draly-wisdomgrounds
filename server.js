@@ -5614,6 +5614,8 @@ function publicState(game) {
   };
   // 6-7 Swing: the round style the teacher picked (the phones' lobby shows «Hoy: En Chino»)
   if (game.gameType === 'sixseven') out.ssStyle = Sixseven.cleanStyle(game.ssStyle);
+  // Dragones Pintores v2: the world of this round (the phones' lobby shows its picture and name)
+  if (game.gameType === 'paint') out.pcWorld = game.paint ? game.paint.sky.world : (game.pcWorld | 0);
   // HSK rooms expose simId so kid clients know what to load when
   // state flips to 'active'. fx is the current animation overlay.
   if (game.gameType === 'hsksim' && game.hsk) {
@@ -6427,70 +6429,157 @@ function kdPause(pin, g, paused) {
   broadcast(pin);
 }
 
-// === 🎨 DRAGONES PINTORES (gameType 'paint') — Dralingo take on Color Clash ===
-// Every phone runs its own little platformer (physics on the phone). The server owns: energy (seconds of flying, refilled
-// by right answers), which surface tiles belong to which kingdom, and a 5 Hz broadcast of everyone's position + the tiles
-// painted since the last tick. Questions are on demand: the kid taps «Recargar» (player:pc-ask).
-const PC_TICK_MS = 200;
-const PC_START_ENERGY = 8;
-const PC_ENERGY_MAX = Paint.ENERGY_MAX;     // (a right answer's fire: core/paint.js reward())
-const PC_BLAZE_MS = 6000;           // «Llamarada» after 3 right answers in a row: paints a wider strip
-const PC_MAX_PAINT_PER_MSG = 16;
-const PC_FLIP_COOLDOWN_MS = 1500;    // a cloud can't change colour again for 1.5 s (no farming points by standing still)
+// === 🎨 DRAGONES PINTORES v2 (gameType 'paint') — «El Cielo de las Maravillas» (spec docs/specs/dragones-pintores-v2.md) ===
+// Each round is a world (Dubái de noche, la Gran Muralla, el río Li, Shanghái; core/paint.js + js/paint-worlds.js). The
+// server flies every dragon itself at 10 Hz: a phone's tap is only an intent (player:pc-go), clamped to the sky and
+// rate-limited; the dragon flies there at a fixed speed burning fire, and the server paints every cloud its brush touches
+// on the way (phones never send paint). The three landmark islands are captured by staying inside their ring. Positions
+// go out at 5 Hz (pc:pos, only when something moved), paint / islands / news on change (pc:paint), the roster when it
+// changes (pc:roster). Questions on demand («Recargar»: player:pc-ask) and pushed by the server when a dragon runs out
+// of fire; one nobody answers is closed as «time up» after Paint.R.Q_SERVER_MS.
+const PC_TICK_MS = Paint.R.TICK_MS;
+const PC_ENERGY_MAX = Paint.ENERGY_MAX;
 const PC_LEAD_ANNOUNCE_MS = 4000;    // lead-change announcements at most every 4 s (a tied round would spam sounds)
+const PC_LOST_HOLD_MS = 2500;       // an island's «lost» waits this long: taken by the other kingdom meanwhile = one capture moment
+const PC_WORLDS = Paint.WORLDS.length;
+const pcTeam = (p) => (p && p.team === 'gold' ? 'gold' : 'red');
+const pcCode = (t) => (t === 'red' ? 1 : t === 'gold' ? 2 : 0);
 
-function pcPreparePlayer(p) {
-  if (typeof p.pcEnergy !== 'number') { p.pcEnergy = PC_START_ENERGY; p.pcStreak = 0; p.pcBlazeUntil = 0; p.pcTiles = 0; p.pcRight = 0; p.pcAnswered = 0; p.pcBest = 0; p.pcBlazes = 0; }
+function pcEnsureK(g, p) { if (!p.pcK) p.pcK = (g.pcNextK = (g.pcNextK || 0) + 1); return p.pcK; }
+// a kid's dragon for this round: at its kingdom's home with the start fire, its stats at zero (a late joiner too)
+function pcFresh(g, p) {
+  const k = g.paint;
+  pcEnsureK(g, p);
+  const team = pcTeam(p);
+  const [x, y] = Paint.spawn(k.sky, team, p.pcK);
+  p.pcD = { key: p.pcK, team, x, y, tx: x, ty: y, fire: Paint.R.START_FIRE, blazeUntil: 0, strokes: 0, lms: 0, face: team === 'gold' ? -1 : 1, away: false };
+  p.pcRound = k.id;
+  p.pcStreak = 0; p.pcRight = 0; p.pcAnswered = 0; p.pcBest = 0; p.pcBlazes = 0; p.pcWind = 0;
+  p.pcGo = { t: 0, n: 0 }; p.pcSentFire = -1; p.pcNextQAt = 0; p.pcWantQ = false; p.pcWrongRow = 0;
+  p.score = 0;
+  p.currentQ = null;     // questions are on demand here: never carry last round's open question into this one
 }
+const pcHas = (g, p) => !!(g.paint && p && p.pcD && p.pcRound === g.paint.id);
+// an open question older than the phone's 20 s (a kid back after a drop): closed quietly, the tick deals a fresh one
+function pcStaleQ(p) {
+  if (p && p.currentQ && p.lastQuestionAt && Date.now() - p.lastQuestionAt > 20000) { p.currentQ = null; p.pcNextQAt = 0; }
+}
+function pcRoster(g) {
+  const out = {};
+  Object.values(g.players).forEach((p) => { if (p.pcK && (p.team === 'red' || p.team === 'gold')) out[p.pcK] = [p.name, p.team, p.avatar || '']; });
+  return out;
+}
+// [[k, x, y, tx, ty, flags]]  flags: 1 Llamarada · 2 no fire · 4 away · 8 facing left
+function pcPosArr(g, now) {
+  const arr = [];
+  Object.values(g.players).forEach((p) => {
+    if (!pcHas(g, p)) return;
+    const d = p.pcD;
+    const f = ((d.blazeUntil || 0) > now ? 1 : 0) | (d.fire > 0 ? 0 : 2) | (p.disconnected ? 4 : 0) | (d.face < 0 ? 8 : 0);
+    arr.push([p.pcK, Math.round(d.x), Math.round(d.y), Math.round(d.tx), Math.round(d.ty), f]);
+  });
+  return arr;
+}
+const pcLmState = (k) => k.board.lm.map((s) => [Math.round(s.v * 100) / 100, pcCode(s.owner)]);
 function pcInitPayload(g, pid) {
   const k = g.paint;
   const p = pid ? g.players[pid] : null;
+  const now = Date.now();
   return {
-    level: k.level, own: k.own, teamScores: g.teamScores, energy: p ? p.pcEnergy : 0, energyMax: PC_ENERGY_MAX, captains: g.pcCaptains || null, paused: !!k.paused,
-    players: Object.fromEntries(Object.entries(g.players).map(([id, pl]) => [id, { name: pl.name, team: pl.team, avatar: pl.avatar || '' }])),
+    id: k.id, world: k.sky.world, seed: k.sky.seed,
+    own: k.board.own.map(pcCode), lm: pcLmState(k), teamScores: g.teamScores, clouds: k.clouds || { red: 0, gold: 0 },
+    me: p ? pcEnsureK(g, p) : null, energy: p && p.pcD ? p.pcD.fire : 0, energyMax: PC_ENERGY_MAX,
+    captains: g.pcCaptains || null, paused: !!k.paused, roster: pcRoster(g), pos: pcPosArr(g, now), t: now,
+    scores: Object.fromEntries(Object.values(g.players).filter((pl) => pl.pcK).map((pl) => [pl.pcK, pl.score || 0])),
+    speed: [Paint.R.SPEED, Paint.R.BLAZE_SPEED], brush: [Paint.R.BRUSH, Paint.R.BLAZE_BRUSH],
+    endsMs: g.endsAt ? Math.max(0, g.endsAt - (k.paused ? k.pausedAt : now)) : 0,
+    q: !!(p && p.currentQ),
   };
 }
 function pcStart(pin, g) {
   pcStop(g);
-  const level = Paint.buildLevel(1 + Math.floor(Math.random() * 1e6));
+  const world = (((g.pcWorld | 0) % PC_WORLDS) + PC_WORLDS) % PC_WORLDS;
+  const sky = Paint.buildSky(world, 1 + Math.floor(Math.random() * 1e6));
   g.paint = {
-    level, surfaceSet: new Set(level.surfaces), own: {}, pos: {}, posDirty: false,
-    pending: [], leader: null, leadAt: 0, milestones: {}, total: level.surfaces.length, tick: null,
-    by: {},        // tile id -> lower-case name of the kid who painted it last (names survive a rejoin, socket ids don't)
-    flipAt: {},    // tile id -> time of its last colour change
+    id: (g.pcRounds = (g.pcRounds || 0) + 1), sky, board: Paint.newBoard(sky), clouds: { red: 0, gold: 0 },
+    leader: null, leadAt: 0, milestones: {}, tick: null, tickN: 0, lastT: Date.now(), posKey: '', lmKey: '', paused: false,
   };
-  Object.values(g.players).forEach((p) => {
-    p.pcEnergy = PC_START_ENERGY; p.pcStreak = 0; p.pcBlazeUntil = 0; p.pcTiles = 0; p.pcSeen = 0;
-    p.pcRight = 0; p.pcAnswered = 0; p.pcBest = 0; p.pcBlazes = 0;      // for the ending's stars and each kid's card
-    p.score = 0;
-    p.currentQ = null;   // questions are on demand here: never carry last round's open question into this one
-  });
+  Object.values(g.players).forEach((p) => pcFresh(g, p));
   g.teamScores = { red: 0, gold: 0 };
   Object.keys(g.players).forEach((pid) => io.to(pid).emit('pc:init', pcInitPayload(g, pid)));
   io.to(g.hostId).emit('pc:init', pcInitPayload(g, null));
   const tick = setInterval(() => pcTick(pin, tick), PC_TICK_MS);
   g.paint.tick = tick;
 }
-// A kid's score = clouds they own right now (the last painter of each tile), so the crown goes to who holds the sky.
+// A kid's score = clouds they own right now (the last painter of each cloud), so the crown goes to who holds the sky.
 function pcScoreByOwner(g) {
-  const c = {};
-  Object.values(g.paint.by).forEach((who) => { c[who] = (c[who] || 0) + 1; });
-  Object.values(g.players).forEach((pl) => { pl.score = c[String(pl.name || '').toLowerCase()] || 0; });
+  const c = Paint.cloudsBy(g.paint.board);
+  Object.values(g.players).forEach((pl) => { pl.score = (pl.pcK && c[pl.pcK]) || 0; });
 }
-// Final recount + last batch of tiles, so the winner is decided on every cloud painted (called from endGame).
+function pcRecount(g) {
+  const t = Paint.totals(g.paint.board);
+  g.teamScores = { red: t.red, gold: t.gold };
+  g.paint.clouds = t.clouds;
+  pcScoreByOwner(g);
+  return t;
+}
+// Final recount + the last batch of paint, so the winner is decided on every cloud painted (called from endGame).
 function pcFlush(pin, g) {
   if (!g || !g.paint) return;
-  g.teamScores = Paint.counts(g.paint.own);
-  pcScoreByOwner(g);
-  if (g.paint.pending.length) {
-    const tiles = g.paint.pending;
-    g.paint.pending = [];
-    const scores = Object.fromEntries(Object.entries(g.players).map(([id, pl]) => [id, pl.score || 0]));
-    io.to(pin).emit('pc:paint', { tiles, teamScores: g.teamScores, events: [], scores });
-  }
+  pcSendPaint(pin, g, Date.now(), true);
+  pcRecount(g);
 }
 function pcStop(g) {
   if (g && g.paint && g.paint.tick) { clearInterval(g.paint.tick); g.paint.tick = null; }
+}
+const pcNames = (g, keys) => (keys || []).slice(0, 3).map((key) => { const p = Object.values(g.players).find((pl) => pl.pcK === key); return p ? p.name : null; }).filter(Boolean);
+// paint + islands + news since the last send (one small message to the room)
+function pcSendPaint(pin, g, now, force) {
+  const k = g.paint;
+  const b = k.board;
+  const lm = pcLmState(k);
+  const lmKey = JSON.stringify(lm);
+  const lostDue = (k.lostQ || []).some((l) => now - l.at >= PC_LOST_HOLD_MS);
+  if (!force && !b.flips.length && !b.events.length && lmKey === k.lmKey && !lostDue) return;
+  k.lmKey = lmKey;
+  const flips = b.flips.map(([i, t]) => [i, pcCode(t)]);
+  const raw = b.events;
+  b.flips = [];
+  b.events = [];
+  const before = g.teamScores ? Object.assign({}, g.teamScores) : { red: 0, gold: 0 };
+  const t = pcRecount(g);
+  const events = [];
+  const lostQ = k.lostQ || (k.lostQ = []);
+  raw.forEach((ev) => {
+    if (ev.type === 'capture') {
+      const held = lostQ.find((l) => l.lm === ev.lm);
+      k.lostQ = lostQ.filter((l) => l.lm !== ev.lm);
+      events.push({ type: 'capture', lm: ev.lm, team: ev.team, from: ev.from || (held ? held.team : null), names: pcNames(g, ev.keys) });
+    } else if (ev.type === 'lost') {
+      lostQ.push({ lm: ev.lm, team: ev.team, by: ev.by, at: now });
+    } else if (ev.type === 'wind') events.push({ type: 'wind', team: ev.team, k: ev.k, n: ev.n });
+  });
+  // a «lost» nobody turned into a capture within PC_LOST_HOLD_MS: now it is news («¡Burj Khalifa queda libre!»)
+  k.lostQ = (k.lostQ || []).filter((l) => {
+    if (now - l.at < PC_LOST_HOLD_MS && !force) return true;
+    events.push({ type: 'lost', lm: l.lm, team: l.team, by: l.by });
+    return false;
+  });
+  const leader = t.red > t.gold ? 'red' : t.gold > t.red ? 'gold' : k.leader;
+  if (leader && leader !== k.leader) {
+    if ((t.red + t.gold) > 12 && now - (k.leadAt || 0) > PC_LEAD_ANNOUNCE_MS && !g.finalizing) {
+      events.push({ type: 'lead', team: leader });
+      k.leadAt = now;
+    }
+    k.leader = leader;
+  }
+  const painted = (t.clouds.red + t.clouds.gold) / Math.max(1, k.sky.clouds.length);
+  [0.25, 0.5, 0.75].forEach((m) => { if (painted >= m && !k.milestones[m]) { k.milestones[m] = true; events.push({ type: 'milestone', pct: Math.round(m * 100) }); } });
+  const msg = { f: flips, ts: g.teamScores, cl: t.clouds, lm, ev: events };
+  if (flips.length || force || before.red !== t.red || before.gold !== t.gold) {
+    msg.sc = Object.fromEntries(Object.values(g.players).filter((pl) => pl.pcK).map((pl) => [pl.pcK, pl.score || 0]));
+  }
+  io.to(pin).emit('pc:paint', msg);
 }
 function pcTick(pin, id) {
   const g = games[pin];
@@ -6498,35 +6587,53 @@ function pcTick(pin, id) {
   if (!g || !g.paint || (id && g.paint.tick !== id)) { if (id) clearInterval(id); return; }
   if (g.state !== 'active') return pcStop(g);
   const k = g.paint;
-  if (k.posDirty) {
-    k.posDirty = false;
-    const arr = [];
-    Object.entries(k.pos).forEach(([id, v]) => { if (g.players[id]) arr.push([id, v[0], v[1], v[2], g.players[id].team === 'red' ? 0 : 1]); });
-    io.to(pin).emit('pc:pos', arr);
-  }
-  if (k.pending.length) {
-    const tiles = k.pending;
-    k.pending = [];
-    g.teamScores = Paint.counts(k.own);
-    pcScoreByOwner(g);
-    const events = [];
-    const now = Date.now();
-    const leader = g.teamScores.red > g.teamScores.gold ? 'red' : g.teamScores.gold > g.teamScores.red ? 'gold' : k.leader;
-    if (leader && leader !== k.leader) {
-      if ((g.teamScores.red + g.teamScores.gold) > 12 && now - (k.leadAt || 0) > PC_LEAD_ANNOUNCE_MS) {
-        events.push({ type: 'lead', team: leader });
-        k.leadAt = now;
-      }
-      k.leader = leader;
+  const now = Date.now();
+  const dt = Math.min(0.25, Math.max(0, (now - k.lastT) / 1000));
+  k.lastT = now;
+  if (k.paused) return;
+  // «¡FINAL!»: the dragons stop where they are (a flight already on its way counts for the shared 0.6 s grace)
+  if (g.finalizing && now - g.finalizing.at > Party.GRACE_MS) return;
+  k.tickN++;
+  const ds = [];
+  Object.values(g.players).forEach((p) => {
+    if (!pcHas(g, p)) return;
+    p.pcD.away = !!p.disconnected;
+    p.pcD.team = pcTeam(p);
+    ds.push(p.pcD);
+  });
+  Paint.step(k.board, ds, dt, now);
+  Object.entries(g.players).forEach(([pid, p]) => {
+    if (!pcHas(g, p) || p.disconnected) return;
+    const d = p.pcD;
+    const whole = Math.ceil(d.fire);
+    if (whole !== p.pcSentFire) { p.pcSentFire = whole; io.to(pid).emit('pc:energy', { energy: Math.round(d.fire * 100) / 100 }); }
+    if (g.finalizing) return;
+    // out of fire (or «Recargar» tapped): a question comes (after a «¡Casi!» it waits for the phone's verdict first)
+    if ((d.fire <= 0 || p.pcWantQ) && !p.currentQ && now >= (p.pcNextQAt || 0)) {
+      p.pcWantQ = false;
+      const q = nextQuestionFor(g, pid);
+      if (q) io.to(pid).emit('question', q);
     }
-    const painted = (g.teamScores.red + g.teamScores.gold) / k.total;
-    [0.25, 0.5, 0.75].forEach((m) => { if (painted >= m && !k.milestones[m]) { k.milestones[m] = true; events.push({ type: 'milestone', pct: Math.round(m * 100) }); } });
-    const scores = Object.fromEntries(Object.entries(g.players).map(([id, pl]) => [id, pl.score || 0]));
-    io.to(pin).emit('pc:paint', { tiles, teamScores: g.teamScores, events, scores });
+    // a question nobody answers: «time up» on the server too (the phone's own clock says 20 s)
+    if (p.currentQ && p.lastQuestionAt && now - p.lastQuestionAt > Paint.R.Q_SERVER_MS) {
+      const cq = p.currentQ;
+      p.currentQ = null;
+      pcAnswer(pin, g, pid, p, false, cq.answers[cq.correctIdx], 'timeup');
+    }
+  });
+  if (k.tickN % 2 === 0) {
+    const arr = pcPosArr(g, now);
+    const full = k.tickN % 20 === 0;
+    const sent = k.sent || (k.sent = {});
+    const out = full ? arr : arr.filter((row) => { const was = sent[row[0]]; return !was || was.some((v, i) => v !== row[i]); });
+    arr.forEach((row) => { sent[row[0]] = row; });
+    if (out.length) io.to(pin).emit('pc:pos', { t: now, d: out, full: full || undefined });
+    pcSendPaint(pin, g, now, false);
   }
 }
-// Teacher «⏸ Pausa» (2026-10-16): the clock stops, the dragons stand still (no fire burnt, no clouds painted), «Recargar»
-// waits; an answer comes back unused (the question stays open); on resume the clock moves on by the paused time.
+// Teacher «⏸ Pausa» (2026-10-16): the clock stops, the dragons and the islands stand still (no fire burnt, no clouds
+// painted), «Recargar» waits; an answer comes back unused (the question stays open); on resume every clock moves on by
+// the paused time (the end, the Llamaradas, the open questions' 23 s).
 function pcPause(pin, g, paused) {
   const k = g.paint;
   if (!k || !!k.paused === !!paused || g.finalizing) return;
@@ -6538,8 +6645,13 @@ function pcPause(pin, g, paused) {
   } else {
     const shift = now - k.pausedAt;
     k.paused = false;
+    k.lastT = now;
     g.endsAt += shift;
-    Object.values(g.players).forEach((p) => { if (p.pcBlazeUntil) p.pcBlazeUntil += shift; p.pcSeen = 0; });
+    Object.values(g.players).forEach((p) => {
+      if (p.pcD && p.pcD.blazeUntil > k.pausedAt) p.pcD.blazeUntil += shift;
+      if (p.currentQ && p.lastQuestionAt) p.lastQuestionAt += shift;
+      if (p.pcNextQAt) p.pcNextQAt += shift;
+    });
     if (g.endTimer) clearTimeout(g.endTimer);
     g.endTimer = setTimeout(() => { if (games[pin] === g && g.state === 'active') endGame(pin); }, Math.max(0, g.endsAt - now));
   }
@@ -6548,24 +6660,40 @@ function pcPause(pin, g, paused) {
   g._lastBcast = 0;
   broadcast(pin);
 }
-function pcAnswer(pin, g, pid, p, correct, correctText) {
+// A right answer: fire (+ a Llamarada on 3 in a row, or always in the last 30 s) and, while the kid's kingdom trails by
+// 12 or more, «Viento a favor» (core/paint.js comeback: capped at the gap). A guess under 450 ms counts as wrong.
+function pcAnswer(pin, g, pid, p, correct, correctText, why) {
   if (!g.paint) return;
-  pcPreparePlayer(p);
+  if (!pcHas(g, p)) pcFresh(g, p);
+  const d = p.pcD;
+  const now = Date.now();
+  if (correct && why !== 'timeup' && Paint.tooFast(p.lastQuestionAt, now)) { correct = false; why = 'fast'; }
   p.pcAnswered = (p.pcAnswered || 0) + 1;
   if (correct) {
     p.pcStreak = (p.pcStreak || 0) + 1;
     p.pcRight = (p.pcRight || 0) + 1;
     p.pcBest = Math.max(p.pcBest || 0, p.pcStreak);
-    // 3 in a row = a «Llamarada»; the last 30 s («¡Fuego doble!»): twice the fire and always a Llamarada
+    p.pcWrongRow = 0;
     const rw = Paint.reward(p.pcStreak, !!g.finFrenzy);
-    p.pcEnergy = Math.min(PC_ENERGY_MAX, p.pcEnergy + rw.energy);
-    const blaze = rw.blaze;
-    if (blaze) p.pcBlazeUntil = Date.now() + PC_BLAZE_MS;
+    d.fire = Math.min(PC_ENERGY_MAX, d.fire + rw.energy);
+    if (rw.blaze) d.blazeUntil = now + Paint.R.BLAZE_MS;
     if (p.pcStreak % 3 === 0) p.pcBlazes = (p.pcBlazes || 0) + 1;      // the «Más llamaradas» star: earned by a streak only
-    io.to(pid).emit('answer-result', { correct: true, correctText, paint: { energy: p.pcEnergy, blaze, blazeMs: PC_BLAZE_MS, streak: p.pcStreak, gain: rw.energy, frenzy: !!g.finFrenzy } });
+    const wind = g.finalizing ? [] : Paint.comeback(g.paint.board, d.team, d.x, d.y, now);
+    if (wind.length) {
+      Paint.applyFlips(g.paint.board, wind, d.team, d.key, now);
+      d.strokes = (d.strokes || 0) + wind.length;
+      p.pcWind = (p.pcWind || 0) + wind.length;
+      g.paint.board.events.push({ type: 'wind', team: d.team, k: p.pcK, n: wind.length });
+    }
+    p.pcSentFire = Math.ceil(d.fire);
+    io.to(pid).emit('answer-result', { correct: true, correctText, paint: { energy: d.fire, blaze: rw.blaze, blazeMs: Paint.R.BLAZE_MS, streak: p.pcStreak, gain: rw.energy, frenzy: !!g.finFrenzy, wind: wind.length, windIds: wind } });
   } else {
     p.pcStreak = 0;
-    io.to(pid).emit('answer-result', { correct: false, correctText, paint: { energy: p.pcEnergy, streak: 0 } });
+    p.pcWrongRow = (p.pcWrongRow || 0) + 1;
+    // the next question waits for the «¡Casi!» on the phone (longer after two in a row: «guessing» loses to thinking)
+    const wait = p.pcWrongRow >= 2 ? Paint.R.WRONG_WAIT2_MS : Paint.R.WRONG_WAIT_MS;
+    p.pcNextQAt = now + wait;
+    io.to(pid).emit('answer-result', { correct: false, correctText, paint: { energy: d.fire, streak: 0, why: why || '', wait } });
   }
 }
 
@@ -8308,9 +8436,9 @@ function kdEndPayloads(g) {
 }
 // Dragones Pintores: clouds of each kingdom, each kid's painting (strokes, clouds still theirs, llamaradas), the stars
 function pcEndPayloads(g) {
-  const rows = Object.values(g.players).filter((p) => p.team && (!p.disconnected || (p.score || 0) > 0 || (p.pcTiles || 0) > 0)).map((p) => ({
-    k: finKey(g, p), name: p.name, skin: hcSkin(p), team: p.team, owned: p.score || 0, painted: p.pcTiles || 0, best: p.pcBest || 0,
-    blazes: p.pcBlazes || 0, right: p.pcRight || 0, answered: p.pcAnswered || 0,
+  const rows = Object.values(g.players).filter((p) => p.team && (!p.disconnected || (p.score || 0) > 0 || (p.pcD && p.pcD.strokes > 0))).map((p) => ({
+    k: finKey(g, p), name: p.name, skin: hcSkin(p), team: p.team, owned: p.score || 0, painted: (p.pcD && p.pcD.strokes) || 0, best: p.pcBest || 0,
+    blazes: p.pcBlazes || 0, right: p.pcRight || 0, answered: p.pcAnswered || 0, lms: (p.pcD && p.pcD.lms) || 0,
   }));
   const fin = Paint.finish(rows, g.teamScores);
   const byK = {};
@@ -8321,7 +8449,7 @@ function pcEndPayloads(g) {
     leaderboard: fin.rows.map((r) => ({ name: r.name, score: r.owned, team: r.team, avatar: '' })),
     fin: {
       game: 'paint', winner: fin.winner, why: g.finalizing ? g.finalizing.why : 'time', count: fin.rows.length,
-      totals: fin.totals, captains: g.pcCaptains || null,
+      totals: fin.totals, captains: g.pcCaptains || null, world: g.paint ? g.paint.sky.world : (g.pcWorld | 0),
       crews: { red: fin.rows.filter((r) => r.team === 'red').slice(0, 12).map(lite), gold: fin.rows.filter((r) => r.team === 'gold').slice(0, 12).map(lite) },
       stars: Party.publicStars(fin.stars, byK, (r) => r.owned),
       top: fin.rows.slice(0, 10).map(lite), mvp: { red: lite(byK[fin.mvp.red]), gold: lite(byK[fin.mvp.gold]) },
@@ -8334,7 +8462,7 @@ function pcEndPayloads(g) {
       me: {
         k: r.k, team: r.team, skin: r.skin, won: fin.winner === r.team, tie: fin.winner === 'tie', mvp: fin.mvp[r.team] === r.k,
         stars: r.stars, rank: r.rank, of: fin.rows.length,
-        owned: r.owned, painted: r.painted, share: r.share, best: r.best, blazes: r.blazes, right: r.right, answered: r.answered,
+        owned: r.owned, painted: r.painted, share: r.share, best: r.best, blazes: r.blazes, right: r.right, answered: r.answered, lms: r.lms,
       },
     };
   });
@@ -8786,7 +8914,20 @@ io.on('connection', (socket) => {
     p.team = p.team === 'red' ? 'gold' : 'red';
     g.feed.push({ type: 'swap', name: p.name, team: p.team, t: Date.now() });
     io.to(playerId).emit('team-changed', { team: p.team });
+    if (g.gameType === 'paint' && g.paint) io.to(pin).emit('pc:roster', pcRoster(g));
     broadcast(pin);
+  });
+
+  // Dragones Pintores v2: the teacher picks the round's world in the lobby (Dubái, la Gran Muralla, el río Li, Shanghái)
+  socket.on('host:pc-world', (data, cb) => {
+    const { pin, world } = data || {};
+    const g = games[pin];
+    if (!g || g.hostId !== socket.id || g.gameType !== 'paint' || g.state === 'active' || g.state === 'countdown') { if (typeof cb === 'function') cb({ ok: false }); return; }
+    const w = Number(world);
+    if (!Number.isInteger(w) || w < 0 || w >= PC_WORLDS) { if (typeof cb === 'function') cb({ ok: false }); return; }
+    g.pcWorld = w;
+    io.to(pin).emit('pc:world', { world: w });
+    if (typeof cb === 'function') cb({ ok: true, world: w });
   });
 
   socket.on('host:auto-balance', ({ pin }) => {
@@ -8799,6 +8940,7 @@ io.on('connection', (socket) => {
       g.players[id].team = i % 2 === 0 ? 'red' : 'gold';
       io.to(id).emit('team-changed', { team: g.players[id].team });
     });
+    if (g.gameType === 'paint' && g.paint) io.to(pin).emit('pc:roster', pcRoster(g));
     broadcast(pin);
   });
 
@@ -9072,7 +9214,7 @@ io.on('connection', (socket) => {
     if (g.endTimer) clearTimeout(g.endTimer);
     g.finalizing = null; g.finEnd = null; g.finFrenzy = false;     // (the Mario Party ending of the four games below)
     if (g.gameType === 'kingdoms') { kdClearTimers(g); g.kingdoms = null; }
-    if (g.gameType === 'paint') { pcStop(g); g.paint = null; }
+    if (g.gameType === 'paint') { const was = g.paint; pcStop(g); g.paint = null; if (was) g.pcWorld = ((was.sky.world | 0) + 1) % PC_WORLDS; io.to(pin).emit('pc:world', { world: g.pcWorld | 0 }); }
     if (g.gameType === 'snow') { snStop(g); g.snow = null; }
     if (g.gameType === 'escape') { esStop(g); g.escape = null; }
     if (g.gameType === 'halcon') { hcStop(g); g.halcon = null; }
@@ -9370,8 +9512,12 @@ io.on('connection', (socket) => {
         return;
       }
       if (g.gameType === 'paint' && g.paint) {
-        pcPreparePlayer(player);
+        const fresh = !pcHas(g, player);
+        if (fresh) pcFresh(g, player);
+        pcStaleQ(player);
         io.to(socket.id).emit('pc:init', pcInitPayload(g, socket.id));
+        io.to(pin).emit('pc:roster', pcRoster(g));
+        if (player.currentQ) io.to(socket.id).emit('question', { qid: player.currentQ.qid, text: player.currentQ.text, answers: player.currentQ.answers, image: player.currentQ.image });
         return;
       }
       // Batalla de Nieve: a late joiner walks in as a survivor with a 10 s shield; a rejoin keeps everything.
@@ -9515,7 +9661,7 @@ io.on('connection', (socket) => {
       pnAnswer(pin, g, socket, p, correct, correctText);
     } else if (g.gameType === 'paint') {
       if (g.paint && g.paint.paused) { p.currentQ = cqData; io.to(socket.id).emit('answer-stale', { reason: 'paused' }); return; }
-      pcAnswer(pin, g, socket.id, p, correct, correctText);
+      pcAnswer(pin, g, socket.id, p, correct, correctText, choiceIdx === -1 ? 'timeup' : '');   // -1 = the phone's own 20 s ran out
     } else if (g.gameType === 'snow') {
       snAnswer(pin, g, socket.id, p, correct, correctText);
     } else if (g.gameType === 'escape') {
@@ -9596,67 +9742,26 @@ io.on('connection', (socket) => {
     if (g.gameType !== 'kingdoms' && g.gameType !== 'paint' && g.gameType !== 'snow' && g.gameType !== 'escape' && g.gameType !== 'mochi-mash' && g.gameType !== 'pinata' && g.gameType !== 'monopoly' && g.gameType !== 'dragon-eye') broadcast(pin);
   });
 
-  // Dragones Pintores: position (8 Hz from each phone), painted tiles, and «Recargar» (ask for a question).
-  socket.on('player:pc-pos', (data) => {
+  // Dragones Pintores v2: a tap on the sky = where my dragon should fly (an intent: the server clamps it, takes at most
+  // Paint.R.GO_RATE a second, and flies the dragon itself), and «Recargar» (ask for a question).
+  socket.on('player:pc-go', (data) => {
     try {
-      const { pin, x, y, f, moving, spent } = data || {};
+      const { pin, x, y } = data || {};
       const g = games[pin];
       if (!g || g.gameType !== 'paint' || !g.paint || g.state !== 'active' || g.paint.paused) return;
+      if (g.finalizing && Date.now() - g.finalizing.at > Party.GRACE_MS) return;    // «¡FINAL!»: only taps already on their way count
+      if (typeof x !== 'number' || typeof y !== 'number') return;
       const p = g.players[socket.id];
-      if (!p || !Number.isFinite(x) || !Number.isFinite(y)) return;
-      pcPreparePlayer(p);
+      if (!p || !pcHas(g, p)) return;
       const now = Date.now();
-      const dt = p.pcSeen ? Math.min(0.4, Math.max(0, (now - p.pcSeen) / 1000)) : 0;
-      p.pcSeen = now;
-      const before = Math.ceil(p.pcEnergy);
-      // Charge the fire the phone actually burnt in its own simulation (a laggy phone runs slower than the clock),
-      // never more than the real time that passed. Older phones without `spent` pay real time while moving.
-      const burn = Number.isFinite(spent) ? Math.max(0, Math.min(spent, dt + 0.05)) : (moving ? dt : 0);
-      // ...and a dragon that clearly moved pays at least half the real time, whatever the phone reports.
-      const prev = g.paint.pos[socket.id];
-      const moved = !!prev && (Math.abs(x - prev[0]) > 3 || Math.abs(y - prev[1]) > 3);
-      const charge = Math.max(burn, moved ? dt * 0.5 : 0);
-      if (charge > 0) p.pcEnergy = Math.max(0, p.pcEnergy - charge);
-      g.paint.pos[socket.id] = [Math.round(x), Math.round(y), f ? 1 : 0];
-      g.paint.posDirty = true;
-      if (Math.ceil(p.pcEnergy) !== before) io.to(socket.id).emit('pc:energy', { energy: p.pcEnergy });
-    } catch (e) { console.error('[player:pc-pos]', e); }
-  });
-  socket.on('player:pc-paint', (data) => {
-    try {
-      const { pin, tiles } = data || {};
-      const g = games[pin];
-      if (!g || g.gameType !== 'paint' || !g.paint || g.state !== 'active' || !Array.isArray(tiles)) return;
-      if (g.finalizing && Date.now() - g.finalizing.at > Party.GRACE_MS) return;    // «¡FINAL!»: only strokes already on their way count
-      if (g.paint.paused) return;                                                     // paused: nobody paints
-      const p = g.players[socket.id];
-      const pos = g.paint.pos[socket.id];
-      if (!p || !pos || !(p.pcEnergy > 0)) return;
-      const lv = g.paint.level;
-      const px = pos[0] / lv.tile;
-      const py = pos[1] / lv.tile;
-      const now = Date.now();
-      const reach = (p.pcBlazeUntil || 0) > now ? 6 : 3;
-      const who = String(p.name || '').toLowerCase();
-      const refused = [];
-      tiles.slice(0, PC_MAX_PAINT_PER_MSG).forEach((id) => {
-        if (!Number.isInteger(id) || !g.paint.surfaceSet.has(id)) return;
-        const tx = id % lv.cols;
-        const ty = Math.floor(id / lv.cols);
-        if (Math.abs(tx + 0.5 - px) > reach || Math.abs(ty - py) > reach) return;
-        if (g.paint.own[id] === p.team) return;
-        if (now - (g.paint.flipAt[id] || 0) < PC_FLIP_COOLDOWN_MS) {
-          if (g.paint.own[id]) refused.push([id, g.paint.own[id] === 'red' ? 0 : 1]);   // phone painted it early: undo
-          return;
-        }
-        g.paint.flipAt[id] = now;
-        g.paint.own[id] = p.team;
-        g.paint.by[id] = who;
-        g.paint.pending.push([id, p.team === 'red' ? 0 : 1]);
-        p.pcTiles = (p.pcTiles || 0) + 1;   // strokes, for stats; the score is clouds owned (pcScoreByOwner)
-      });
-      if (refused.length) io.to(socket.id).emit('pc:paint', { tiles: refused });
-    } catch (e) { console.error('[player:pc-paint]', e); }
+      const r = p.pcGo || (p.pcGo = { t: 0, n: 0 });
+      if (now - r.t >= 1000) { r.t = now; r.n = 0; }
+      if (++r.n > Paint.R.GO_RATE) return;
+      const t = Paint.clampTarget(g.paint.sky, x, y);
+      if (!t) return;
+      p.pcD.tx = t[0];
+      p.pcD.ty = t[1];
+    } catch (e) { console.error('[player:pc-go]', e); }
   });
   socket.on('player:pc-ask', (data) => {
     try {
@@ -9669,8 +9774,8 @@ io.on('connection', (socket) => {
         io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
         return;
       }
-      const q = nextQuestionFor(g, socket.id);
-      if (q) io.to(socket.id).emit('question', q);
+      if (!pcHas(g, p)) return;
+      p.pcWantQ = true;                 // the room's tick deals it (at once, or after a «¡Casi!» wait)
     } catch (e) { console.error('[player:pc-ask]', e); }
   });
 
@@ -10092,6 +10197,8 @@ io.on('connection', (socket) => {
       return;
     }
     if (g.gameType === 'paint' && g.state === 'active' && g.paint) {
+      if (!pcHas(g, p)) { pcFresh(g, p); io.to(pin).emit('pc:roster', pcRoster(g)); }
+      pcStaleQ(p);
       io.to(socket.id).emit('pc:init', pcInitPayload(g, socket.id));
       if (p.currentQ) io.to(socket.id).emit('question', { qid: p.currentQ.qid, text: p.currentQ.text, answers: p.currentQ.answers, image: p.currentQ.image });
       return;
@@ -11230,6 +11337,7 @@ io.on('connection', (socket) => {
           if (stillThere && stillThere.disconnected && stillThere.disconnectedAt &&
               Date.now() - stillThere.disconnectedAt >= 4 * 60 * 1000) {
             delete stillExists.players[grabbedSocketId];
+            if (stillExists.gameType === 'paint' && stillExists.paint) io.to(currentPin).emit('pc:roster', pcRoster(stillExists));
             broadcast(currentPin);
           }
         }, 5 * 60 * 1000);

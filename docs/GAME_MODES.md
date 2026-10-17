@@ -107,7 +107,9 @@ recreated board by board — the class is dealt into boards of 4, every kid play
 their own board, +5/+3/+2/+1 by speed inside the board; spec `docs/specs/ojos-de-halcon.md`; it replaced the first
 attempt «Ojo de Halcón» (`look`), retired and removed 2026-10-14 by his decision), **Reinos de Colores** (`kingdoms`, built 2026-10-10, Dubai upgrade 2026-10-11: landmarks, captains, zoom on
 the phone; spec `docs/specs/reinos-de-colores.md`), **Dragones
-Pintores** (`paint`, Gimkit Color Clash in Dralingo style, built 2026-10-11, spec `docs/specs/dragones-pintores.md`), **Batalla de Nieve en
+Pintores** (`paint`, Gimkit Color Clash in Dralingo style, built 2026-10-11, spec `docs/specs/dragones-pintores.md`; remade 2026-10-17 as
+«El Cielo de las Maravillas»: a new world each round — Dubái de noche, la Gran Muralla, el río Li, Shanghái — tap the sky
+and the dragon flies there painting clouds, three landmark islands to capture; spec `docs/specs/dragones-pintores-v2.md`), **Batalla de Nieve en
 Ski Dubái** (`snow`, Gimkit 2D-map infection game, built 2026-10-12 on a branch, not deployed yet, spec `docs/specs/batalla-de-nieve.md`), **La Gran Fuga de Dubái** (`escape`, Kahoot «Robot Run» co-op chase, built
 2026-10-13 on a branch, not deployed yet, spec `docs/specs/gran-fuga-de-dubai.md`; these four got the Mario Party ending on
 2026-10-16, branch `ending-pass`: «¡FINAL!», a reveal, winners vs the others, bonus stars, the projector's podium and each

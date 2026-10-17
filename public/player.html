@@ -20,12 +20,13 @@
   <link rel="stylesheet" href="/css/warmup.css?v=20261015s">
   <link rel="stylesheet" href="/css/reading.css?v=20260603d">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/kingdoms.css?v=20261016eq">
+  <link rel="stylesheet" href="/css/kingdoms.css?v=20261017pv2">
+  <link rel="stylesheet" href="/css/paint.css?v=20261017pv2">
   <link rel="stylesheet" href="/css/snow.css?v=20261016eq">
   <link rel="stylesheet" href="/css/escape.css?v=20261013b">
   <link rel="stylesheet" href="/css/halcon.css?v=20261014a">
   <link rel="stylesheet" href="/css/mochi.css?v=20261015s">
-  <link rel="stylesheet" href="/css/party.css?v=20261016eq">
+  <link rel="stylesheet" href="/css/party.css?v=20261017pv2">
   <link rel="stylesheet" href="/css/pinata.css?v=20261015s">
   <!-- Dàfùwēng · Monopolio v2 «El Gran Tablero de Dubái» -->
   <link rel="stylesheet" href="/css/monopoly.css?v=20261017art">
@@ -475,38 +476,48 @@
     <div class="kdp-done" id="kdp-done"></div>
   </div>
 
-  <!-- Dragones Pintores: the phone platformer -->
-  <!-- Dragones Pintores phone. His rule 2026-10-11: kids don't read, so the fire rule explains itself:
-       a 3-step picture card at the start, a big «Recargar» bar, and a full card when the fire runs out. -->
+  <!-- Dragones Pintores v2 «El Cielo de las Maravillas» (js/player-paint.js + js/paint-render.js, css/paint.css): the
+       round's world on one canvas; tap or drag a finger on the sky and my dragon flies there, painting the clouds it
+       passes; the landmark islands are captured by staying in their ring. Kids don't read: «Así se juega» in 3 pictured
+       steps, a tapping hand, the question rising by itself when the fire runs out. -->
   <div id="screen-paint" class="hidden">
-    <div class="pc-top">
-      <div class="pc-score" id="pc-score"></div>
-      <div class="pc-energy" aria-label="Fuego"><div class="pc-energy-fill" id="pc-energy-fill"></div><span id="pc-energy-text">🔥 8 s</span></div>
-    </div>
-    <div class="pc-stage">
-      <canvas id="pc-canvas" class="pc-canvas"></canvas>
-      <div class="pc-card hidden" id="pc-help" role="dialog" aria-labelledby="pc-help-title">
-        <img class="pc-card-pose" id="pc-help-pose" alt="">
-        <div class="pc-card-title" id="pc-help-title">¡A pintar el cielo!</div>
-        <ol class="pc-steps">
-          <li><span class="pc-step-ico">◀ ▶ ⬆</span><span>Muévete y salta</span></li>
-          <li><span class="pc-step-ico" id="pc-help-tile">🎨</span><span>Pisa las nubes y se pintan de tu color</span></li>
-          <li><span class="pc-step-ico">🔥</span><span>Volar gasta fuego. ¿Se acabó? Toca <b>Recargar</b> y responde</span></li>
+    <div class="pp" id="pp">
+      <canvas id="pp-canvas" class="pp-canvas" aria-label="El cielo: toca donde quieres que vuele tu dragón"></canvas>
+      <div class="pp-hud" id="pp-hud">
+        <div class="pp-race">
+          <div class="pp-side red"><span class="pp-num"><i aria-hidden="true">🔥</i><b id="pp-r">0</b></span><span class="pp-isl" id="pp-isl-red"></span></div>
+          <div class="pp-mid"><div class="pp-tug" id="pp-tug" aria-hidden="true"><i></i></div><span class="pp-lead" id="pp-lead">¡Empate!</span></div>
+          <div class="pp-side gold"><span class="pp-isl" id="pp-isl-gold"></span><span class="pp-num"><b id="pp-g">0</b><i aria-hidden="true">🌊</i></span></div>
+        </div>
+        <div class="pp-me">
+          <div class="pp-fire" id="pp-fire" aria-label="Tu fuego"><i id="pp-fire-fill"></i><span id="pp-fire-text">🔥 12 s</span></div>
+          <span class="pp-mine none" id="pp-mine" title="Tus nubes">☁️ <b id="pp-mine-n">0</b> <small>mías</small></span>
+          <span class="pp-clock" id="pp-clock">-:--</span>
+        </div>
+      </div>
+      <div class="pp-pointers" id="pp-pointers" aria-label="Las maravillas fuera de la pantalla: toca una para volar ahí"></div>
+      <div class="pp-world" id="pp-world" aria-live="polite"><small id="pp-world-n"></small><b id="pp-world-name"></b><span class="pp-world-isl" id="pp-world-isl"></span></div>
+      <div class="pp-moment" id="pp-moment" aria-live="polite"><img id="pp-moment-img" alt=""><div><b id="pp-moment-title"></b><small id="pp-moment-sub"></small></div></div>
+      <div class="pp-hand hidden" id="pp-hand" aria-hidden="true"><i></i><span>👆</span><em>¡Toca el cielo!</em></div>
+      <div class="pp-capchip" id="pp-capchip" aria-live="polite"><img id="pp-capchip-img" alt=""><span id="pp-capchip-text"></span><i><b id="pp-capchip-fill"></b></i></div>
+      <button class="pp-recharge" id="pp-recharge" type="button"><b>🔥 ¡Recargar fuego!</b><small id="pp-recharge-sub">Una pregunta = +10 s de fuego</small></button>
+      <div class="pp-sheet down" id="pp-sheet" aria-hidden="true">
+        <div class="pp-q-clock"><i id="pp-q-bar"></i></div>
+        <div class="pp-q-head" id="pp-q-head">🔥 Responde bien: +10 s de fuego</div>
+        <div class="pp-q"><img id="pp-q-img" alt=""><p id="pp-q-text"></p></div>
+        <div class="pp-ans" id="pp-ans"></div>
+        <div class="pp-verdict" id="pp-verdict" aria-live="assertive"></div>
+      </div>
+      <div class="pp-help hidden" id="pp-help" role="dialog" aria-labelledby="pp-help-title">
+        <img class="pp-help-dragon" id="pp-help-dragon" alt="">
+        <div class="pp-help-title" id="pp-help-title">¡A pintar el cielo!</div>
+        <ol class="pp-steps">
+          <li><span class="pp-step-ico tap">👆</span><span><b>Toca el cielo</b>tu dragón vuela ahí y pinta las nubes</span></li>
+          <li><span class="pp-step-ico isl"><img id="pp-help-island" alt=""></span><span><b>Conquista las maravillas</b>quédate en su anillo: +10</span></li>
+          <li><span class="pp-step-ico fire">🔥</span><span><b>¿Sin fuego? Responde</b>cada acierto: +10 s de vuelo</span></li>
         </ol>
-        <button class="pc-card-btn" id="pc-help-go" type="button">¡A volar!</button>
+        <button class="pp-help-go" id="pp-help-go" type="button">¡A volar!</button>
       </div>
-      <div class="pc-card pc-empty hidden" id="pc-empty" role="alertdialog" aria-labelledby="pc-empty-title">
-        <img class="pc-card-pose" src="/assets/kingdoms/dralingo/shocked.webp" alt="">
-        <div class="pc-card-title" id="pc-empty-title">¡Te quedaste sin fuego!</div>
-        <p class="pc-card-text">Responde una pregunta y vuelve a volar</p>
-        <button class="pc-card-btn pc-fire" id="pc-empty-go" type="button">🔥 ¡Recargar ahora!</button>
-      </div>
-    </div>
-    <button class="pc-recharge" id="pc-recharge" type="button"><b>🔥 ¡Recargar fuego!</b><small id="pc-recharge-sub">Responde una pregunta</small></button>
-    <div class="pc-controls">
-      <button class="pc-btn" id="pc-left" aria-label="Izquierda">◀</button>
-      <button class="pc-btn" id="pc-right" aria-label="Derecha">▶</button>
-      <button class="pc-btn pc-jump" id="pc-jump" aria-label="Saltar">⬆</button>
     </div>
   </div>
 
@@ -687,10 +698,11 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261016eq"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261017pv2"></script>
   <script src="/js/player-kingdoms.js?v=20261016eq"></script>
-  <script src="/js/paint-render.js?v=20261017art"></script>
-  <script src="/js/player-paint.js?v=20261017art"></script>
+  <script src="/js/paint-worlds.js?v=20261017pv2"></script>
+  <script src="/js/paint-render.js?v=20261017pv2"></script>
+  <script src="/js/player-paint.js?v=20261017pv2"></script>
   <script src="/js/snow-map.js?v=20261012b"></script>
   <script src="/js/snow-render.js?v=20261017art"></script>
   <script src="/js/player-snow.js?v=20261017art"></script>
@@ -703,7 +715,7 @@
   <script src="/js/monopoly-board.js?v=20261017art"></script>
   <script src="/js/player-monopoly.js?v=20261017art"></script>
   <script src="/js/mochi-stage.js?v=20261014a"></script>
-  <script src="/js/party.js?v=20261017art"></script>
+  <script src="/js/party.js?v=20261017pv2"></script>
   <script src="/js/player-mochi.js?v=20261015s"></script>
   <script src="/js/pinata-stage.js?v=20261015b"></script>
   <script src="/js/player-pinata.js?v=20261015s"></script>
@@ -715,7 +727,7 @@
   <script src="/js/cast.js?v=20261017art"></script>
   <script src="/js/dralingo-fx.js?v=20261017art"></script>
   <script src="/js/saga.js?v=20261013a"></script>
-  <script src="/js/player.js?v=20261017art"></script>
+  <script src="/js/player.js?v=20261017pv2"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

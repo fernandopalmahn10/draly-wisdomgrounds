@@ -43,13 +43,13 @@
     },
     paint: {
       title: 'Dragones Pintores', reveal: 'columns', sides: KD_SIDES, order: ['red', 'gold'],
-      unit: ['nube', 'nubes'], question: '¿Qué reino pintó más cielo?',
+      unit: ['punto', 'puntos'], question: '¿Qué reino ganó el cielo?',     // v2: clouds + 10 per island held
       winTitle: (s) => `¡El ${s.name} pintó el cielo!`, tieTitle: '¡Empate en el cielo!',
       champion: (s) => `¡Campeón del cielo: ${s.name}!`, tieChampion: '¡Empate en el cielo!',
       mood: 'pintado', myLabel: 'Tu reino',
       mvpLabel: (s) => `Más cielo del ${s.name}`,
-      ico: { painted: '🎨', sky: '☁️', streak: '🔥', blaze: '🔥' },
-      value: (id, v) => (id === 'painted' ? pl(v, 'nube pintada', 'nubes pintadas') : id === 'sky' ? `${pl(v, 'nube', 'nubes')} con su color al final`
+      ico: { painted: '🎨', lm: '🏝️', sky: '☁️', streak: '🔥', blaze: '🔥' },
+      value: (id, v) => (id === 'painted' ? pl(v, 'nube pintada', 'nubes pintadas') : id === 'lm' ? pl(v, 'maravilla conquistada', 'maravillas conquistadas') : id === 'sky' ? `${pl(v, 'nube', 'nubes')} con su color al final`
         : id === 'streak' ? `${fmt(v)} seguidas` : pl(v, 'llamarada', 'llamaradas')),
       podium: (r) => `${pl(r.value, 'nube', 'nubes')} al final`,
     },
@@ -121,7 +121,11 @@
       if (me.painted > 0) {
         big = { pre: 'Pintaste ', n: me.painted, post: me.painted === 1 ? ' nube' : ' nubes' };
         sub = me.owned > 0 ? `${pl(me.owned, 'nube sigue', 'nubes siguen')} con tu color al final` : '¡Cada nube cuenta para tu reino!';
-      } else { zero = true; sub = 'Responde, recarga tu fuego y vuela pintando nubes'; }
+      } else if (me.lms > 0) {
+        big = { pre: 'Conquistaste ', n: me.lms, post: me.lms === 1 ? ' maravilla' : ' maravillas' };
+        sub = '¡Cada maravilla vale +10 para tu reino!';
+      } else { zero = true; sub = 'Toca el cielo para volar, pinta nubes y conquista maravillas'; }
+      if (me.lms > 0 && me.painted > 0) fact(me.lms, me.lms === 1 ? 'maravilla' : 'maravillas');
       aciertos();
       if (me.best >= 2) fact(me.best, 'racha');
       if (me.blazes > 0) fact(me.blazes, me.blazes === 1 ? 'llamarada' : 'llamaradas');
