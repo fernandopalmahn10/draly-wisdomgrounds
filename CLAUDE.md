@@ -174,6 +174,13 @@ the checklist for any new game mode.
   restart never hands it to anyone; one
   saved before that has no owner and goes back only to a super admin. Of the three pages only the warm-up reclaims
   (on a dropped connection, with its token); reading and exam projectors never do (a reload opens a new room).
+  **Closing an exam room follows the same owner rule** (his decision 2026-10-17; before, any teacher code or remembered
+  teacher device closed ANY exam room: one code tried over the 900 PINs closed every running exam mid-exam): «Cerrar la
+  sala» (socket `host:end`) needs a teacher (remembered device, or a code through `_socketCode`) and then the room's own
+  monitor (its token, which `teacher-gate.js` adds to `host:end` too), the teacher who opened it, or a super admin
+  (`_mayCloseExam`); an exam room with no owner on record closes only for a super admin (or after its 6 h). An unknown
+  PIN answers like a room that is not yours, so `host:end` never tells a socket which PINs are running exams. The
+  monitor waits for the answer and says why a close was refused.
   `games` has no prototype (`Object.create(null)`) and reclaim takes digit PINs only.
   The key screen shows only when a NEW room waits, never over an F5 of a running one. A new host page needs nothing
   extra as long as it loads `teacher-gate.js`; a test script that reclaims passes the create answer's `hostToken`.
@@ -384,7 +391,8 @@ the checklist for any new game mode.
   file ids hide the old «(CORRECT)» names). Who gets in (`_simGrant` in server.js): a teacher (/maestro code in X-Admin-Pw,
   or a remembered teacher device); a kid who JOINED a teacher's open exam room (socket `player:join` answers with a room
   pass, so they are on the teacher's roster; a bare PIN loads nothing), for THAT room's sim (opening, taking over or
-  closing a room needs the teacher code, «Terminar sala» = socket `host:end`; 60 never-used PINs from one address in
+  closing a room needs the teacher code, and taking over or closing it also the owner rule, § In class; «Terminar sala» =
+  socket `host:end`; 60 never-used PINs from one address in
   10 min pause its room lookups); whoever may use the sim's level (`levelAccess`, § Three levels: the level's key on
   this device or on the logged-in kid's account, «Desbloquear», grandfathered), solo by link (`/yct-sim.html?sim=…`);
   the local harness `?debug=1&direct=1` on localhost only. Everyone else: the level's key screen («Entra a Mis Tareas»
