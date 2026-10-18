@@ -106,6 +106,7 @@
   let hwLevelLabel = '';
   let hwFolders = null;        // [{ id, label, short }] from /api/homework/enter, or null
   let hwBase = null;           // { href, level, words }: the level's vocabulary base on /audios (core/levels.js), or null
+  let hwTareas = null;         // 🏆 2026-10-18 { level, ids, sent, who }: the level's homework audios («Hacer mis tareas»)
   function hwExps() {
     if (hwFolders) {
       const out = {};
@@ -443,6 +444,7 @@
         hwLevelLabel = data.levelName || '';
         hwFolders = Array.isArray(data.folders) && data.folders.length ? data.folders : null;
         hwBase = data.base && data.base.href ? data.base : null;
+        hwTareas = data.tareas && Array.isArray(data.tareas.ids) && data.tareas.ids.length ? data.tareas : null;
         document.body.classList.toggle('hw-no-daily', data.daily === false);   // Desafíos = HSK 1 words (above YCT 1)
         try {
           localStorage.setItem(STORAGE_ACCESS_KEY, ac);
@@ -3980,6 +3982,7 @@
     else renderFolderRoot();
     renderNextUp();
     renderBaseEntry();
+    renderTareasEntry();
     // Refresh reading state once; its callback re-renders (no fetch loop).
     fetchReadingTests();
   }
@@ -4049,6 +4052,49 @@
       : /^hsk/.test(hwBase.level) ? ['#3c5bb0', '#16275a'] : null;
     if (look && $('pt-base-book')) { $('pt-base-book').style.setProperty('--rd-c1', look[0]); $('pt-base-book').style.setProperty('--rd-c2', look[1]); }
     $('pt-base-sub').textContent = n ? n + ' de ' + hwBase.words + ' sellos' : hwBase.words + ' palabras con audio';
+  }
+  // 🏆 «Hacer mis tareas» (2026-10-18, La Ruta Dorada redesign): the homework audios of the kid's level, with a red count
+  // of the ones not marked «¡Ya la mandé!» yet. It opens «Tus tareas» on the level's page (/audios/<level>?from=homework
+  // #tareas: the page's back arrow then returns here). The marks live on the kid's account (server: hwTareas.sent, from
+  // this login); this phone adds its taps not saved yet when it holds THIS kid's account (localStorage draly_tareas,
+  // written by /audios), or its own marks when it never met an account (they join it at the next visit); a sibling's
+  // never count. Drawn here, beside «La Ruta Dorada de <nivel>», with that card's look.
+  function renderTareasEntry() {
+    let a = $('pt-tareas');
+    const show = !!hwTareas && !hwFolder;
+    if (!show) { if (a) a.hidden = true; return; }
+    const base = $('pt-base');
+    if (!a) {
+      a = document.createElement('a');
+      a.id = 'pt-tareas';
+      a.className = 'pt-base pt-tareas';
+      a.innerHTML = '<span class="pt-base-book" aria-hidden="true" style="padding:0;overflow:hidden;background:#f3e2b3">' +
+        '<img src="/assets/cast/aileen-talk.webp" alt="" width="56" height="62" style="width:56px;height:62px;object-fit:cover;object-position:50% 8%"></span>' +
+        '<span class="pt-base-text"><b class="pt-base-title">Hacer mis tareas</b><span class="pt-base-sub" id="pt-tareas-sub"></span></span>' +
+        '<span id="pt-tareas-n" style="flex:none;padding:4px 10px;border-radius:999px;background:#c62828;color:#fff;font-weight:900;font-size:.85rem;white-space:nowrap"></span>' +
+        '<span class="pt-base-go" aria-hidden="true">›</span>';
+      if (base && base.parentNode) base.parentNode.insertBefore(a, base.nextSibling);
+      else { const dock = document.querySelector('.pt-dock'); if (dock && dock.parentNode) dock.parentNode.insertBefore(a, dock); else return; }
+    }
+    a.hidden = false;
+    a.href = '/audios/' + encodeURIComponent(hwTareas.level) + '?from=homework#tareas';
+    const ids = hwTareas.ids.filter((x) => typeof x === 'string');
+    const sent = new Set(Array.isArray(hwTareas.sent) ? hwTareas.sent : []);
+    try {
+      const o = JSON.parse(localStorage.getItem('draly_tareas') || 'null');
+      const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+      if (isObj(o) && o.who && o.who === hwTareas.who && isObj(o.pend)) {
+        Object.keys(o.pend).forEach((id) => { const p = o.pend[id]; if (!isObj(p)) return; if (p.s === 1) sent.add(id); if (p.s === 0) sent.delete(id); });
+      } else if (isObj(o) && !o.who && isObj(o.marks)) {
+        Object.keys(o.marks).forEach((id) => { if (isObj(o.marks[id]) && o.marks[id].s) sent.add(id); });
+      }
+    } catch (_) { /* the account's word is enough */ }
+    const left = ids.filter((id) => !sent.has(id)).length;
+    $('pt-tareas-sub').textContent = left ? 'Escucha el audio, graba tu video y mándalo' : '¡Todas mandadas!';
+    const n = $('pt-tareas-n');
+    n.textContent = left + ' por mandar';
+    n.hidden = !left;
+    a.setAttribute('aria-label', 'Hacer mis tareas' + (left ? ': ' + left + ' por mandar' : ': todas mandadas'));
   }
   function renderNextUp() {
     const b = $('pt-next');

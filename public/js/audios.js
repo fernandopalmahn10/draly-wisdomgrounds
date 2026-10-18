@@ -379,7 +379,11 @@
     if (player.readyState >= 1) go(); else player.addEventListener('loadedmetadata', go, { once: true });
     player.load();
     mediaInfo(KIND[t.kind] ? KIND[t.kind].title : t.code);
+    heard();
   }
+  // 🏆 2026-10-18: playing a homework's audio here marks it «Escuchada» on La Ruta Dorada («Tus tareas», js/ruta.js:
+  // the kid's account when logged in, else this phone)
+  function heard() { if (hw && window.Ruta && window.Ruta.markHeard) { try { window.Ruta.markHeard(hw.id, ruta); } catch (_) {} } }
   function seekTrack(k, sec) {
     sec = Math.max(0, Math.min(hw.tracks[k].dur - 0.2, sec));
     if (cur && cur.kind === 'track' && cur.t === k) { player.currentTime = sec; if (player.paused) player.play().catch(() => {}); }
@@ -392,6 +396,7 @@
     player.playbackRate = slow ? 0.8 : 1;
     player.play().catch(() => {});
     mark(k, i);
+    heard();
   }
   function stop() {
     try { player.pause(); } catch (_) {}

@@ -1,20 +1,47 @@
 // =========================================================================
-// ruta.js · La Ruta Dorada (/audios), phase 2 (2026-10-15)
+// ruta.js · La Ruta Dorada (/audios): the picker and each module's page
+// phase 2 (2026-10-15) · redesign (his picks 2026-10-18, «it's not clear, it's messy, the tareas are left behind»)
 // =========================================================================
-// His pick: "like choosing a world in a Nintendo game". Two screens, drawn by js/audios.js's router:
+// His pick for the picker: "like choosing a world in a Nintendo game". Two screens, drawn by js/audios.js's router:
 //   Ruta.picker(main, ctx)        /audios          one big glossy card per module of core/levels.js (YCT 1, New
 //                                                  HSK 1, HSK 1, and every level added there later). Swipe (touch,
 //                                                  mouse drag), arrow keys, the ‹ › buttons or the dots: the next card
 //                                                  flies in with depth and a little bounce (a spring, transform and
 //                                                  opacity only). Reduced motion: a calm crossfade. The first frame is
-//                                                  still (a whole class may open it at once).
-//   Ruta.path(main, ctx, module)  /audios/<level>  the module's golden route: 1 La Base, 2 El Entrenamiento (since
-//                                                  phase 4: its practice worlds, js/entrenamiento.js), 3 El Simulacro
-//                                                  Dorado (the level's sims), then the homework audios of the level.
+//                                                  still (a whole class may open it at once). Its own band at the top
+//                                                  with «Volver» (to Mis tareas when the kid came from there, else the
+//                                                  platform home); a red «N por mandar» on the card of a module with
+//                                                  homework to send.
+//   Ruta.path(main, ctx, module)  /audios/<level>  the module page (redesign 2026-10-18, his approved clickable design
+//                                                  .claude/handoff/ruta-design): ONE clear ladder + the homework beside it.
+//       · the band: «Volver a mis tareas» (came from /homework) or «Todos los mundos», always visible (sticky)
+//       · the hero: the module's wonder (YCT 1 Dubái, New HSK 1 the Li River, HSK 1 the Great Wall; a later level takes
+//         the next), its jewel colour, Dralingo pointing at the ladder and ONE direct instruction that follows this
+//         kid's state («¡Empieza aquí! Toca el 1, La Base…», «¡Ahora el 2! Practica La Familia…», «¡Ya puedes hacer el
+//         examen!…», locked: «Escribe la clave de New HSK 1 para abrir tu ruta.»)
+//       · the ladder: 1 La Base → 2 El Entrenamiento → 3 El Simulacro Dorado, three picture cards in a row with arrows
+//         (laptop) or stacked with down-arrows (phone). A card is current (gold glow, red «¡Empieza aquí!», the big gold
+//         button with a direct verb), started (a soft «Seguir…»), done (green tick, «Repasar»), locked (grey art,
+//         padlock, one plain line of how it opens) or soon («Muy pronto»), with red badges («300 por marcar»).
+//         DONE, as the code counts it: La Base = every word sealed; El Entrenamiento = every regular world (not Pinyin,
+//         not the «Simulacro del examen») with the Dorado's % or more; El Simulacro Dorado = every simulation taken.
+//         CURRENT = the step with the next useful thing to do: a practice world the kid's seals opened and not at the %
+//         yet (the 2, «practise what you just earned»), else La Base until every word is sealed, else the practice left
+//         (Pinyin, the exam world), else the next simulation; a locked module's current step is its key (card 1).
+//       · «Tus tareas» (right column on a laptop, below on a phone; a red «Tareas: N por mandar» in the phone's hero jumps
+//         to #tareas): Aileen says what to do, one picture card per homework audio of the level (newest first, 3 and
+//         «Ver todas mis tareas»): «Escuchar» plays its three audios right there, «¡Ya la mandé!» = sent. «Nueva» /
+//         «Escuchada ✓» / «✓ Mandada». A logged-in kid's marks live on the ACCOUNT (POST /api/ruta/tareas, any phone);
+//         a phone without login keeps them in localStorage draly_tareas and they join the account at the first login
+//         (like La Base's seals: `who` = the account the mirror holds, `pend` = not saved yet, `held` = a sibling's).
 // What is open comes from the server (GET /api/ruta-dorada, LevelKeys.access per level: a teacher, the logged-in
-// kid's account, this device's key). A locked module shows its locks and «Escribe la clave de <nivel>», which opens
-// the phase-1 key screen at /audios/<level>/clave and comes back here. The sims only reach this page when open, and
-// each one opens its player through the same key check at the player's door.
+// kid's account, this device's key). «Escribe la clave de <nivel>» opens the phase-1 key screen at
+// /audios/<level>/clave and comes back here. The sims only reach this page when open, and each one opens its player
+// through the same key check at the player's door. Nothing that worked before got lost: La Base's meter (card 1's bar),
+// El Entrenamiento's worlds (a coin row on card 2; its button opens the world or /audios/<level>/entrenamiento), the
+// simulations (numbered chips on card 3, the button opens the next one), the «Libro dorado» with its mistakes, the key
+// box (card 1 of a locked module), the «dorado=cerrado#paso-3» moment, the new-world pop (card 2's badge), the seals
+// and scores sync for a logged-in kid, the «Entra con tu código» paths. The study PDFs are the super admin's only.
 // No hanzi here, no em dash (scripts/test-audios-base.js).
 // =========================================================================
 (function () {
@@ -55,11 +82,59 @@
     return out;
   }
   const lookStyle = (l) => '--c1:' + l[0] + ';--c2:' + l[1] + ';--c3:' + l[2];
+  const rgbOf = (hex) => { const n = parseInt(String(hex).slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255].join(','); };
   // Dralingo in his platform look; a different pose on each card, a new mix on every visit («alive, randomized»)
   const POSES = ['/assets/dralingo/hello.webp', '/assets/dralingo/power.webp', '/assets/dralingo/wise.webp'];
   const shuffled = (a) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = b[i]; b[i] = b[j]; b[j] = t; } return b; };
   const visitPoses = shuffled(POSES);
   const poseOf = (i) => visitPoses[i % visitPoses.length];
+  // each module's wonder (Dubai the main stage, China rounds it out: his direction 2026-10-17) and where its picture
+  // keeps its landmark in a wide banner; a later level takes the next one free
+  const WONDERS = {
+    dubai: { src: '/assets/paint/dubai/bg.webp', pos: '50% 80%' },
+    rio: { src: '/assets/paint/rio/bg.webp', pos: '50% 62%' },
+    muralla: { src: '/assets/paint/muralla/bg.webp', pos: '50% 58%' },
+    shanghai: { src: '/assets/paint/shanghai/bg.webp', pos: '50% 70%' },
+  };
+  const FAMILY_WONDER = { yct: 'dubai', newhsk: 'rio', hsk: 'muralla' };
+  function wondersFor(modules) {
+    const used = new Set();
+    const out = {};
+    modules.forEach((m) => {
+      let w = FAMILY_WONDER[m.family];
+      if (!w || used.has(w)) w = Object.keys(WONDERS).find((k) => !used.has(k)) || 'dubai';
+      used.add(w);
+      out[m.slug] = WONDERS[w];
+    });
+    return out;
+  }
+  // La Base's card: a little fan of three word pictures of THAT level's pack (public, glossy clay look); a later level
+  // without one shows its base's own peek pictures once open, else Dralingo with the book
+  const FAN = {
+    newhsk1: ['familia/baba', 'familia/jia', 'familia/gou'],
+    yct1: ['familia/mama', 'comida/pingguo', 'mascotas/mao'],
+    hsk1: ['viajes/feiji', 'viajes/zhongguo', 'mercado/cha'],
+  };
+  // a homework's picture: its theme in the level's pack, else the homework's own cover
+  const HW_THEMES = [
+    [/famil/, { any: 'familia/jia' }],
+    [/restaur|comida|comer|cocin/, { newhsk1: 'restaurante/fandian', hsk1: 'mercado/fandian', yct1: 'comida/mifan' }],
+    [/escuel|clase|colegio/, { any: 'escuela/xuexiao' }],
+    [/mercad|tienda|compr/, { newhsk1: 'tienda/shangdian', hsk1: 'mercado/shangdian', yct1: 'comida/shangdian' }],
+    [/clima|tiempo|lluv|calor|frio/, { newhsk1: 'rutina/tianqi', hsk1: 'tiempo/tianqi' }],
+    [/mascot|perr|gato/, { yct1: 'mascotas/gou', newhsk1: 'familia/gou', hsk1: 'familia/gou' }],
+    [/salud|hospital|medic|doctor|enferm/, { newhsk1: 'salud/yiyuan', hsk1: 'personas/yiyuan' }],
+    [/viaj|china|aeropuert|avion/, { newhsk1: 'china/feiji', hsk1: 'viajes/feiji' }],
+  ];
+  const plain = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  function hwPic(h, slug) {
+    const t = plain(h.title);
+    for (const [re, map] of HW_THEMES) {
+      const p = re.test(t) ? (map[slug] || map.any) : null;
+      if (p && FAN[slug]) return '/assets/packs/' + slug + '/' + p + '.webp';
+    }
+    return h.thumb || h.cover || '';
+  }
 
   const I = {
     book: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.5 5.2c2.9-1.2 6-1 8.8.9v13.4c-2.8-1.8-5.9-2-8.8-.9zM21.5 5.2c-2.9-1.2-6-1-8.8.9v13.4c2.8-1.8 5.9-2 8.8-.9z"/></svg>',
@@ -68,17 +143,17 @@
     lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11.5V8a4 4 0 0 1 8 0v3.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><rect x="4.5" y="11" width="15" height="10.5" rx="2.6" fill="currentColor"/></svg>',
     soon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" d="M7 3.5h10M7 20.5h10M8 3.5c0 4.6 8 4.7 8 8.5s-8 3.9-8 8.5M16 3.5c0 4.6-8 4.7-8 8.5s8 3.9 8 8.5"/></svg>',
     key: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2.4"/><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="M12.2 12H21M18 12v3.2M21 12v2.4"/></svg>',
-    left: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    left: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     right: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    go: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M6.6 2.8v4.6h4.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    send: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3.4 20.6l17.9-8.1a.6.6 0 0 0 0-1.1L3.4 3.4a.6.6 0 0 0-.8.7L4.6 11l9 1-9 1-2 6.9a.6.6 0 0 0 .8.7z"/></svg>',
   };
   const sky = '<svg class="rd-sky" viewBox="0 0 400 110" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><use href="#rd-sky"/></svg>' +
     '<svg class="rd-sky rd-sky-mirror" viewBox="0 0 400 110" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><use href="#rd-sky"/></svg>';
-  const skyWide = '<svg class="rd-sky" viewBox="0 0 800 110" preserveAspectRatio="xMinYMax slice" aria-hidden="true" focusable="false">' +
-    '<use href="#rd-sky" x="0" y="0" width="400" height="110"/><use href="#rd-sky" x="400" y="0" width="400" height="110"/></svg>';
 
   // ── what a module holds, for this visitor ─────────────────────────
   // base / train / gold: 'open' | 'locked' | 'soon' (nothing yet). El Entrenamiento (phase 4) exists for every level
@@ -95,7 +170,7 @@
   }
   // El Entrenamiento's worlds for this visitor (phase 4): the server's answer (the account's seals, a teacher's opening,
   // the account's best %), plus what THIS phone holds (its own seals open a world too; a key-only phone's own scores)
-  // → [{ key, kind, n, short, open, best }]
+  // → [{ key, kind, n, short, open, best, sealed, count }]
   function trainWorldsOf(ctx, m, pr) {
     if (!m.train || !Array.isArray(m.train.worlds)) return [];
     const E = window.Entrenamiento;
@@ -104,15 +179,12 @@
       const pw = pr && w.kind === 'world' ? pr.worlds.find((x) => x.n === w.n) : null;
       const best = w.best != null ? w.best : (mine[w.key] != null ? Number(mine[w.key]) : null);
       return { key: w.key, kind: w.kind, n: w.n, short: w.short, open: !!w.open || !!(pw && pw.train), best,
-        sealed: pw ? pw.sealed : 0, count: pw ? pw.count : 0 };
+        via: w.open ? w.via || null : (pw && pw.train ? pw.via : null), sealed: pw ? pw.sealed : 0, count: pw ? pw.count : 0 };
     });
     const regular = list.filter((w) => w.kind === 'world');
     list.forEach((w) => { if (w.kind === 'simulacro' && !w.open) w.open = regular.length > 0 && regular.every((x) => x.open); });
     return list;
   }
-  const ABC = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17l3.4-10h.6l3.4 10M4.7 13.5h4.8M13.5 7v10h3.3a2.6 2.6 0 0 0 0-5.2h-3.3 3a2.4 2.4 0 0 0 0-4.8z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const EXAM = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.4" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
-  const sellos = (n, of) => n + ' de ' + of + ' sellos';   // the same wording as La Base: «7 de 83 sellos»
 
   // ── what this visitor's seals add up to in an open module (phase 3, 2026-10-16) ──
   // A logged-in kid: their account (server `progress`), or this phone's mirror when it already holds THEIR account (it
@@ -128,7 +200,7 @@
     const mine = !!(P && ctx.ruta.who && AB && AB.who && cb && AB.who(cb.level) === ctx.ruta.who);
     const seals = (!P || mine) && cb ? ctx.sealsOf(cb) : null;
     let next = 1;
-    const worlds = list.map((w) => {
+    const worlds = (Array.isArray(list) ? list : []).map((w) => {
       const first = w.first || next;
       next = first + w.count;
       const pw = P ? (P.worlds || []).find((x) => x.n === w.n) : null;
@@ -140,6 +212,8 @@
     });
     return { sealed: worlds.reduce((a, w) => a + w.sealed, 0), words: m.base.words, base: cb, worlds };
   }
+  // how many worlds a base has (the catalog lists them; an older one counted them)
+  const worldCount = (cb) => (!cb ? 0 : Array.isArray(cb.worlds) ? cb.worlds.length : Number(cb.worlds) || 0);
   // La Base's meter (the same look as audios.js meterHtml), from the per-world counts
   const meterOf = (p) => '<span class="au-meter" aria-hidden="true">' +
     p.worlds.map((w) => '<i style="--w:' + w.count + ';--p:' + (w.sealed / w.count).toFixed(3) + '"></i>').join('') + '</span>';
@@ -149,8 +223,178 @@
     const C = window.DralingoCast;
     if (!C) return '';
     const f = C.pick(1)[0];
-    return '<div class="rd-friend' + (cls ? ' ' + cls : '') + '"><img src="' + esc(C.pose(f, 'ruta')) + '" alt="" width="200" height="240" decoding="async">' +
+    return '<div class="rd-friend' + (cls ? ' ' + cls : '') + '"><img src="' + esc(C.pose(f, 'ruta')) + '" alt="" width="200" height="240" decoding="async" loading="lazy">' +
       '<p class="rd-bubble"><b>' + esc(C.name(f)) + '</b>' + esc(C.line(f, 'ruta')) + '</p></div>';
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // the homework done marks (2026-10-18): «Escuchada» (the audio played) and «¡Ya la mandé!» (sent on WhatsApp)
+  // ════════════════════════════════════════════════════════════════════
+  // localStorage draly_tareas = { v: 1, who, marks: { id: { h: 1, s: 1 } }, pend: { id: { h: 1, s: 1 | 0 } }, held }
+  //   who   = the account the mirror holds (the server's opaque id; never the kid's code), null = this phone's own
+  //   marks = what the page shows (the account's after a save, plus this phone's taps)
+  //   pend  = taps not saved on the account yet (s: 0 = «mandada» undone)
+  //   held  = a sibling's unsaved taps, kept for their next login on this phone: { who: pend }
+  // A logged-in kid: every tap goes up (batched, retried offline, sent on pagehide). Nobody logged in: the marks stay on
+  // the phone and join the account at the first login (a union). Server: /api/ruta/tareas (server.js).
+  const TKEY = 'draly_tareas';
+  const idOk = (id) => typeof id === 'string' && /^[a-z0-9-]{3,60}$/.test(id);
+  const isObj = (o) => !!o && typeof o === 'object' && !Array.isArray(o);
+  function tRead() {
+    let o = null;
+    try { o = JSON.parse(localStorage.getItem(TKEY) || 'null'); } catch (_) { o = null; }
+    if (!isObj(o)) o = {};
+    if (!isObj(o.marks)) o.marks = {};
+    if (!isObj(o.pend)) o.pend = {};
+    return o;
+  }
+  function tWrite(o) { try { localStorage.setItem(TKEY, JSON.stringify(o)); } catch (_) {} }
+  // marks + pend → what shows (a copy)
+  function tApply(marks, pend) {
+    const out = {};
+    Object.keys(marks || {}).forEach((id) => { if (idOk(id) && isObj(marks[id])) out[id] = { h: marks[id].h ? 1 : 0, s: marks[id].s ? 1 : 0 }; });
+    Object.keys(pend || {}).forEach((id) => {
+      const p = pend[id];
+      if (!idOk(id) || !isObj(p)) return;
+      const e = out[id] || (out[id] = { h: 0, s: 0 });
+      if (p.h === 1) e.h = 1;
+      if (p.s === 1) { e.s = 1; e.h = 1; }
+      if (p.s === 0) e.s = 0;
+    });
+    return out;
+  }
+  const tSync = { mode: null, who: null, timer: 0, busy: null, tries: 0, onChange: null };
+  // the mirror now holds `who`'s account; `acct` = that account's marks for `ids` (from /api/ruta-dorada), or null
+  // when not known here (a homework page): what this phone holds for `who` goes up, a sibling's waits for them
+  function tSettle(who, acct, ids) {
+    const o = tRead();
+    if (o.who !== who) {
+      if (!o.who) {                                              // the first time this phone meets the account: a union
+        const mine = tApply(o.marks, o.pend);
+        o.pend = {};
+        Object.keys(mine).forEach((id) => {
+          const a = acct && acct[id];
+          const p = {};
+          if (mine[id].h && !(a && a.h)) p.h = 1;
+          if (mine[id].s && !(a && a.s)) p.s = 1;
+          if (p.h || p.s) o.pend[id] = p;
+        });
+      } else {                                                   // a sibling's mirror: theirs waits, never mixed
+        const held = isObj(o.held) ? o.held : {};
+        if (Object.keys(o.pend).length) held[o.who] = Object.assign({}, isObj(held[o.who]) ? held[o.who] : {}, o.pend);
+        o.pend = isObj(held[who]) ? held[who] : {};
+        delete held[who];
+        const keys = Object.keys(held);
+        keys.slice(0, Math.max(0, keys.length - 4)).forEach((k) => { delete held[k]; });   // a family phone: 4 kids at most
+        if (keys.length) o.held = held; else delete o.held;
+      }
+      o.marks = {};
+      o.who = who;
+    }
+    if (acct) {                                                  // the account's word for these ids
+      (ids || Object.keys(acct)).forEach((id) => { if (acct[id]) o.marks[id] = { h: acct[id].h ? 1 : 0, s: acct[id].s ? 1 : 0 }; else delete o.marks[id]; });
+    }
+    o.v = 1;
+    tWrite(o);
+    tSync.mode = 'account';
+    tSync.who = who;
+    if (Object.keys(o.pend).length) tLater(300);
+  }
+  function tLater(ms) { clearTimeout(tSync.timer); tSync.timer = setTimeout(() => { tSync.timer = 0; tFlush(); }, ms); }
+  function tBody(o) {
+    const heard = [], sent = [], unsent = [];
+    Object.keys(o.pend).forEach((id) => {
+      const p = o.pend[id];
+      if (!idOk(id) || !isObj(p)) { delete o.pend[id]; return; }
+      if (p.s === 1) sent.push(id); else if (p.s === 0) unsent.push(id);
+      if (p.h === 1 && p.s !== 1) heard.push(id);
+    });
+    return { who: o.who || null, heard: heard.slice(0, 60), sent: sent.slice(0, 60), unsent: unsent.slice(0, 60) };
+  }
+  function tFlush() {
+    if (tSync.mode !== 'account') return Promise.resolve();
+    if (tSync.busy) return tSync.busy;
+    const o = tRead();
+    const body = tBody(o);
+    if (!body.heard.length && !body.sent.length && !body.unsent.length) return Promise.resolve();
+    const sentPend = JSON.parse(JSON.stringify(o.pend));
+    tSync.busy = fetch('/api/ruta/tareas', { method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then((r) => r.json().catch(() => null).then((d) => ({ status: r.status, d })), () => ({ status: 0, d: null }))
+      .then(({ status, d }) => {
+        tSync.busy = null;
+        const n = tRead();
+        const drop = () => { Object.keys(sentPend).forEach((id) => { if (JSON.stringify(n.pend[id]) === JSON.stringify(sentPend[id])) delete n.pend[id]; }); };
+        if (d && d.ok && isObj(d.marks)) {
+          tSync.tries = 0;
+          drop();
+          if (d.who && n.who === d.who) n.marks = d.marks;
+          tWrite(n);
+          if (tSync.onChange) tSync.onChange();
+          if (Object.keys(n.pend).length) tLater(400);
+          return;
+        }
+        if (status === 409) { tSync.mode = null; if (tSync.onChange) tSync.onChange(true); return; }   // another kid logged in: ask again
+        if (status === 401 || status === 403) { tSync.mode = 'device'; return; }   // the login ended: they wait for it
+        if (status === 400) { drop(); tWrite(n); return; }                        // an id the catalog lost: never retried
+        tSync.tries += 1;
+        if (tSync.tries <= 6) tLater(Math.min(60000, 2000 * Math.pow(2, tSync.tries - 1)));
+      });
+    return tSync.busy;
+  }
+  window.addEventListener('online', () => { tSync.tries = 0; if (tSync.mode === 'account') tFlush(); });
+  window.addEventListener('pagehide', () => {
+    if (tSync.mode !== 'account' || tSync.busy) return;
+    const o = tRead();
+    const body = tBody(o);
+    if (!body.heard.length && !body.sent.length && !body.unsent.length) return;
+    try { fetch('/api/ruta/tareas', { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {}); } catch (_) {}
+  });
+  // a tap: kind 'h' (heard) | 's' (sent) | 'u' (sent undone). ruta = the route state (who is here)
+  function tMark(id, kind, ruta) {
+    if (!idOk(id)) return;
+    const account = !!(ruta && ruta.student && ruta.who);
+    if (account && tSync.who !== ruta.who) tSettle(ruta.who, null);
+    const o = tRead();
+    const cur = tApply(o.marks, o.pend)[id] || { h: 0, s: 0 };
+    if (kind === 'h' && cur.h) return;
+    if (kind === 's' && cur.s) return;
+    if (kind === 'u' && !cur.s) return;
+    // the phone's own marks always change; the account's only through pend (a phone that never met an account keeps no pend)
+    if (o.who || account) {
+      const p = isObj(o.pend[id]) ? o.pend[id] : {};
+      if (kind === 'h') p.h = 1;
+      if (kind === 's') { p.s = 1; p.h = 1; }
+      if (kind === 'u') p.s = 0;
+      o.pend[id] = p;
+    } else {
+      const e = isObj(o.marks[id]) ? o.marks[id] : (o.marks[id] = {});
+      if (kind === 'h') e.h = 1;
+      if (kind === 's') { e.s = 1; e.h = 1; }
+      if (kind === 'u') delete e.s;
+    }
+    o.v = 1;
+    tWrite(o);
+    if (account) tLater(kind === 'h' ? 1500 : 600);
+  }
+  // what shows for these ids: for a logged-in kid the account's marks (route state) + this phone's unsaved taps for them
+  function tMarksFor(ruta, acct) {
+    const o = tRead();
+    if (ruta && ruta.student && ruta.who) {
+      if (o.who === ruta.who) return tApply(Object.assign({}, o.marks, acct || {}), o.pend);
+      if (!o.who) return tApply(Object.assign({}, acct || {}), tApply(o.marks, o.pend));   // the phone's own, about to join
+      return tApply(acct || {}, null);
+    }
+    return tApply(o.marks, o.pend);
+  }
+  const unsentOf = (hws, marks) => hws.filter((h) => !(marks[h.id] && marks[h.id].s)).length;
+
+  // ── the band at the top of both screens: the way back, always visible ──
+  function bandHtml(back, title) {
+    return '<header class="rp-band" data-back><div class="rp-band-in">' +
+      '<a class="rp-back" href="' + esc(back.href) + '"' + (back.nav ? ' data-nav' : '') + ' data-back>' + I.left + '<span>' + esc(back.label) + '</span></a>' +
+      (title ? '<a class="rp-band-title" href="/audios" data-nav aria-label="La Ruta Dorada: todos los mundos">' + esc(title) + '</a>' : '<span class="rp-band-title" aria-hidden="true">La Ruta Dorada</span>') +
+      '</div></header>';
   }
 
   // ── the picker: big glossy cards that fly ─────────────────────────
@@ -158,37 +402,48 @@
   function leave() {
     if (live) { live.destroy(); live = null; }
     if (readyIo) { readyIo.disconnect(); readyIo = null; }
+    hwStop();
+    tSync.onChange = null;
+    document.body.classList.remove('rp-on');
   }
 
-  function cardHtml(m, i, look, ctx) {
+  function cardHtml(m, i, look, ctx, toSend) {
     const st = statesOf(m);
     const pr = progressOf(ctx, m);
     const seals = pr ? pr.sealed : 0;
     // a locked module: the gold lock seal of the key screen next to its words (kids who don't read see the lock)
     const status = !m.open
       ? '<span class="rd-card-status is-locked"><span class="rd-lockseal" aria-hidden="true">' + I.lock + '</span><span id="rd-s-' + esc(m.slug) + '">Se abre con la clave</span></span>'
-      : '<span class="rd-card-status" id="rd-s-' + esc(m.slug) + '">' + (m.base ? sellos(seals, m.base.words) : 'Tu ruta está abierta') + '</span>';
+      : '<span class="rd-card-status" id="rd-s-' + esc(m.slug) + '">' + (m.base ? seals + ' de ' + m.base.words + ' sellos' : 'Tu ruta está abierta') + '</span>';
     const mini = [['base', 'La Base', I.book], ['train', 'Entrenamiento', I.target], ['gold', 'Simulacro', I.trophy]]
       .map(([k, label, icon]) => '<li class="is-' + st[k] + '"><i>' + (st[k] === 'locked' ? I.lock : icon) + '</i>' + label + '</li>').join('');
+    const badge = toSend ? '<span class="rd-card-badge">' + toSend + ' por mandar</span>' : '';
     return '<div class="rd-slide' + (m.name.length > 6 ? ' is-long' : '') + '" role="tabpanel" id="rd-p-' + esc(m.slug) + '" aria-labelledby="rd-t-' + esc(m.slug) + '" data-i="' + i + '">' +
       '<a class="rd-card' + (m.open ? '' : ' is-locked') + '" href="/audios/' + esc(m.slug) + '" data-nav style="' + lookStyle(look) + '"' +
-        ' aria-label="Entrar a ' + esc(m.name) + '" aria-describedby="rd-s-' + esc(m.slug) + '" draggable="false">' +
+        ' aria-label="Entrar a ' + esc(m.name) + (toSend ? ', ' + toSend + (toSend === 1 ? ' tarea' : ' tareas') + ' por mandar' : '') + '" aria-describedby="rd-s-' + esc(m.slug) + '" draggable="false">' +
         sky +
-        '<img class="rd-card-dragon" src="' + poseOf(i) + '" alt="" width="432" height="480" decoding="async" draggable="false"' + (i === ctx.start ? ' fetchpriority="high"' : '') + '>' +
+        '<img class="rd-card-dragon" src="' + poseOf(i) + '" alt="" width="432" height="480" decoding="async" draggable="false"' + (i === ctx.start ? ' fetchpriority="high"' : ' loading="lazy"') + '>' +
         '<span class="rd-card-text"><span class="rd-card-name">' + esc(m.name) + '</span>' +
           '<span class="rd-card-sub">' + esc(FAMILY_SUB[m.family] || ('Examen ' + (m.exam || m.name))) + '</span></span>' +
         '<ol class="rd-mini" aria-hidden="true">' + mini + '</ol>' +
         '<span class="rd-card-foot">' + status + '<span class="rd-card-go">Entrar' + I.right + '</span></span>' +
         '<span class="rd-card-gloss" aria-hidden="true"></span><span class="rd-card-shine" aria-hidden="true"></span>' +
-        '<span class="rd-card-shade" aria-hidden="true"></span>' +
+        '<span class="rd-card-shade" aria-hidden="true"></span>' + badge +
       '</a></div>';
   }
 
   function picker(main, ctx) {
     leave();
     const mods = ctx.ruta.modules || [];
-    if (!mods.length) { main.innerHTML = '<p class="au-error">Muy pronto: tus mundos de Chino Mandarín.</p>'; return; }
+    // the way back (his rule 2026-10-18 «every screen has a way back»): to Mis tareas when the kid came from there
+    // (the route's «La Ruta Dorada» or a link with ?from=homework), else the platform's home
+    const qFrom = new URLSearchParams(location.search).get('from');
+    const fromHw = qFrom === 'homework' || store.get('draly_ruta_from') === 'homework' || store.get('draly_pick_from') === 'homework';
+    store.set('draly_pick_from', fromHw ? 'homework' : '');
     store.set('draly_ruta_from', '');   // the kid chose «all worlds»: the routes' back arrow leads here again, not to Mis tareas
+    const back = fromHw ? { href: '/homework.html', label: 'Volver a mis tareas' } : { href: '/', label: 'Volver al inicio' };
+    document.body.classList.add('rp-on');
+    if (!mods.length) { main.innerHTML = bandHtml(back) + '<p class="au-error">Muy pronto: tus mundos de Chino Mandarín.</p>'; return; }
     const looks = looksFor(mods);
     // the first card: the one this tab was on (back from a path), else the kid's own module (or a level this device
     // holds the key of), else the last one chosen on this phone, else the first
@@ -197,14 +452,24 @@
     if (start == null) start = 0;
     ctx.start = start;
     const anon = !ctx.ruta.student && !ctx.ruta.teacher;
+    // a red «N por mandar» on the kid's own module (or one this phone already marked a homework of): never on every card
+    const o = tRead();
+    const toSendOf = (m) => {
+      if (ctx.ruta.teacher) return 0;
+      const hws = ctx.homeworksOf(m.slug);
+      if (!hws.length) return 0;
+      const marks = tMarksFor(ctx.ruta, m.tareas);
+      const touched = hws.some((h) => marks[h.id] && (marks[h.id].h || marks[h.id].s)) || hws.some((h) => o.marks[h.id]);
+      return m.slug === ctx.ruta.home || touched ? unsentOf(hws, marks) : 0;
+    };
     const friend = window.DralingoCast ? window.DralingoCast.pick(1)[0] : null;
-    main.innerHTML =
+    main.innerHTML = bandHtml(back) +
       '<section class="rd-pick">' +
         '<h1 class="rd-h1" id="rd-h1">Elige tu mundo</h1>' +
-        '<p class="rd-lede">Cada mundo es un nivel de Chino Mandarín.</p>' +
+        '<p class="rd-lede">Cada mundo es un nivel de Chino Mandarín. Toca el tuyo.</p>' +
         '<div class="rd-carousel" role="region" aria-roledescription="carrusel" aria-labelledby="rd-h1">' +
           '<div class="rd-stage' + (calmMotion() ? ' is-calm' : '') + '" id="rd-stage">' +
-            mods.map((m, i) => cardHtml(m, i, looks[m.slug], ctx)).join('') + '</div>' +
+            mods.map((m, i) => cardHtml(m, i, looks[m.slug], ctx, toSendOf(m))).join('') + '</div>' +
           '<div class="rd-ctrl"' + (mods.length < 2 ? ' hidden' : '') + '>' +
             '<button class="rd-arrow" type="button" data-dir="-1" aria-controls="rd-stage" aria-label="Mundo anterior">' + I.left + '</button>' +
             '<div class="rd-dots" role="tablist" aria-label="Mundos">' +
@@ -434,195 +699,361 @@
     };
   }
 
-  // ── a module's path: the golden route of three levels ─────────────
+  // ════════════════════════════════════════════════════════════════════
+  // a module's page: the ladder + «Tus tareas» (redesign 2026-10-18)
+  // ════════════════════════════════════════════════════════════════════
+  // The three steps for this visitor → { steps: [{ key, n, state, current, … }], say } (state: 'fresh' | 'started' |
+  // 'done' | 'locked' | 'soon'; current: the one with the next useful thing to do). See the header for «done» / «current».
+  function ladderOf(ctx, m) {
+    const st = statesOf(m);
+    const anon = !ctx.ruta.student && !ctx.ruta.teacher;
+    const cb = m.base && (ctx.catalog.bases || []).find((x) => x.id === m.base.id);
+    const pr = progressOf(ctx, m);
+    const tw = trainWorldsOf(ctx, m, pr);
+    const need = (m.dorado && m.dorado.pct) || 70;
+    const regular = tw.filter((w) => w.kind === 'world');
+    const atGoal = (w) => w.best != null && (w.kind !== 'world' || w.best >= need);
+    const href = (p) => '/audios/' + m.slug + p;
+
+    // 1 · La Base
+    const words = m.base ? m.base.words : 0;
+    const sealed = pr ? pr.sealed : 0;
+    const s1 = { key: 'base', n: 1, title: 'La Base', line: 'Marca las palabras que ya sabes' };
+    if (st.base === 'soon') Object.assign(s1, { state: 'soon', status: 'Todas las palabras con su audio', opens: 'Muy pronto' });
+    else if (st.base === 'locked') Object.assign(s1, { state: 'locked', status: words + ' palabras con audio', opens: 'Se abre con la clave' });
+    else {
+      const left = Math.max(0, words - sealed);
+      const firstOpen = pr && pr.worlds.find((w) => w.sealed < w.count);
+      Object.assign(s1, {
+        state: sealed >= words && words ? 'done' : (sealed ? 'started' : 'fresh'),
+        status: sealed + ' de ' + words + ' sellos', pct: words ? sealed / words : 0, meter: pr ? meterOf(pr) : '',
+        badge: left && sealed < words ? left + ' por marcar' : '',
+        go: cb ? '/audios/' + cb.id + (sealed && firstOpen ? '#mundo-' + firstOpen.n : '') : null,
+        world: firstOpen || null,
+      });
+    }
+    // 2 · El Entrenamiento
+    const s2 = { key: 'train', n: 2, title: 'El Entrenamiento', line: 'Practica cada mundo jugando' };
+    const openRegular = regular.filter((w) => w.open);
+    const todoRegular = openRegular.filter((w) => !atGoal(w));
+    const todoExtra = tw.filter((w) => w.kind !== 'world' && w.open && !atGoal(w));
+    const counted = regular.filter(atGoal).length;
+    if (st.train === 'soon') Object.assign(s2, { state: 'soon', status: 'Rondas como en el examen', opens: 'Muy pronto' });
+    else if (st.train === 'locked') Object.assign(s2, { state: 'locked', status: worldCount(cb) ? worldCount(cb) + ' mundos para practicar' : 'Mundo por mundo', opens: 'Se abre con la clave' });
+    else if (!tw.some((w) => w.open)) {
+      Object.assign(s2, { state: 'locked', byProgress: true, status: '0 de ' + regular.length + ' mundos abiertos', pct: 0,
+        opens: 'Se abre al marcar todas las palabras de un mundo' });
+    } else {
+      const played = tw.some((w) => w.best != null);
+      const next = todoRegular[0] || (todoExtra.length && (!pr || sealed >= words) ? todoExtra[0] : null) || null;
+      Object.assign(s2, {
+        state: regular.length && counted >= regular.length ? 'done' : (played ? 'started' : 'fresh'),
+        status: counted + ' de ' + regular.length + ' mundos con ' + need + ' %', pct: regular.length ? counted / regular.length : 0,
+        badge: todoRegular.length ? todoRegular.length + ' para practicar' : '',
+        go: next ? href('/entrenamiento/' + next.key) : href('/entrenamiento'), list: href('/entrenamiento'), next, worlds: regular, need,
+      });
+    }
+    // 3 · El Simulacro Dorado
+    const s3 = { key: 'gold', n: 3, title: 'El Simulacro Dorado', line: 'El examen completo, como el día del examen' };
+    const sims = Array.isArray(m.sims) ? m.sims : [];
+    const takenOf = (s) => s.best != null || !!s.taken;
+    if (st.gold === 'soon') Object.assign(s3, { state: 'soon', status: 'El examen con su audio original', opens: 'Muy pronto' });
+    else if (st.gold === 'locked' && !st.goldEarn) Object.assign(s3, { state: 'locked', status: m.simCount + (m.simCount === 1 ? ' simulacro' : ' simulacros') + ' con el audio del examen', opens: 'Se abre con la clave' });
+    else if (st.goldEarn) {
+      const d = m.dorado;
+      const n = d.login ? counted : (d.practiced || 0);
+      const of = d.of || regular.length;
+      Object.assign(s3, { state: 'locked', earn: true, login: !!d.login, status: n + ' de ' + of + ' mundos con ' + d.pct + ' %', pct: of ? n / of : 0,
+        opens: d.login ? 'Tus puntos cuentan cuando entras con tu código' : 'Se abre con ' + d.pct + ' % en cada mundo de El Entrenamiento',
+        taken: m.golden && Array.isArray(m.golden.taken) ? m.golden.taken : [] });
+    } else {
+      const taken = sims.filter(takenOf);
+      const nextSim = sims.find((s) => !takenOf(s)) || null;
+      const books = sims.filter((s) => s.book);
+      const lastBook = books.filter(takenOf).slice(-1)[0] || books[0] || null;
+      Object.assign(s3, {
+        state: sims.length && taken.length >= sims.length ? 'done' : (taken.length ? 'started' : 'fresh'),
+        status: taken.length + ' de ' + sims.length + ' simulacros hechos', pct: sims.length ? taken.length / sims.length : 0,
+        badge: !sims.length ? '' : !taken.length ? '¡Listo!' : nextSim ? (sims.length - taken.length) + ' por hacer' : '',
+        sims, nextSim, go: nextSim ? nextSim.href : (lastBook ? lastBook.book : null), book: lastBook,
+        login: !!(m.golden && m.golden.login), pdf: m.golden && m.golden.pdf ? m.golden.pdf : null, mb: m.golden && m.golden.mb,
+      });
+    }
+    // which step is current (the next useful thing to do). A world the kid's seals (or their teacher) opened and not at
+    // the % yet comes first: «practise what you just earned» (a teacher visiting has no practice of their own)
+    const earned = ctx.ruta.teacher ? [] : todoRegular;
+    let cur = null;
+    if (!m.open) cur = ([s1, s2, s3].find((s) => s.state !== 'soon') || s1).n;   // a locked module: its key first
+    else if (s2.state !== 'locked' && s2.state !== 'soon' && earned.length) cur = 2;
+    else if (s1.state === 'fresh' || s1.state === 'started') cur = 1;
+    else if (s2.state !== 'locked' && s2.state !== 'soon' && s2.next) cur = 2;
+    else if (s3.state === 'fresh' || s3.state === 'started') cur = 3;
+    const steps = [s1, s2, s3];
+    steps.forEach((s) => { s.current = s.n === cur; });
+    // the one instruction, for this kid now
+    let say;
+    if (!m.open) say = 'Escribe la clave de ' + m.name + ' para abrir tu ruta. Está en el mensaje de tu maestra.';
+    else if (cur === 1) {
+      say = s1.state === 'fresh' ? '¡Empieza aquí! Toca el 1, La Base, y marca las palabras que ya sabes.'
+        : (s1.world ? '¡Sigue con el 1! Marca las palabras del mundo ' + (s1.world.short || s1.world.n) + ': te ' + ((s1.world.count - s1.world.sealed) === 1 ? 'falta 1.' : 'faltan ' + (s1.world.count - s1.world.sealed) + '.')
+          : '¡Sigue con el 1, La Base! Marca las palabras que ya sabes.');
+    } else if (cur === 2) {
+      const w = s2.next;
+      const name = w ? (w.kind === 'pinyin' ? 'el Pinyin' : w.kind === 'simulacro' ? 'las preguntas del examen' : 'el mundo ' + (w.short || w.n)) : '';
+      say = w && w.kind === 'world' && w.best == null && w.via === 'seals' ? '¡Ahora el 2! Practica ' + name + ': ya marcaste todas sus palabras.'
+        : w && w.kind === 'world' && w.best == null ? '¡Ahora el 2! Toca el 2 y practica ' + name + '.'
+        : w && w.kind === 'world' ? '¡Ahora el 2! Juega otra vez ' + name + ' hasta llegar a ' + need + ' %.'
+        : '¡Ahora el 2! Practica ' + name + ' en El Entrenamiento.';
+    } else if (cur === 3) {
+      say = s3.state === 'fresh' ? '¡Ya puedes hacer el examen! Toca el 3, El Simulacro Dorado.'
+        : '¡Sigue con el 3! Haz el Simulacro ' + (s3.nextSim ? s3.nextSim.n : '') + '.';
+    } else if (s3.earn) {
+      say = s3.login ? 'Entra con tu código para que cuenten tus puntos y se abra el 3, El Simulacro Dorado.'
+        : 'Practica cada mundo con ' + need + ' % o más y se abre el 3, El Simulacro Dorado.';
+    } else if (s3.state === 'done') say = '¡Terminaste tu ruta! Repasa tus errores en el libro dorado.';
+    else say = '¡Muy bien! Repasa cuando quieras.';
+    return { steps, say, st, anon, cb, pr, tw };
+  }
+
+  // one step card (the design's picture card)
+  function stepHtml(s, m, L) {
+    const cls = 'rp-step is-' + s.state + (s.current ? ' is-current' : '');
+    // the picture: La Base = a fan of three word pictures, El Entrenamiento = Dralingo's power pose, the Dorado = the star
+    let art;
+    if (s.key === 'base') {
+      const fan = FAN[m.slug];
+      const peek = !fan && L.cb && m.open && Array.isArray(L.cb.peek) ? L.cb.peek.slice(0, 3) : null;
+      const pics = fan ? fan.map((p) => '/assets/packs/' + m.slug + '/' + p + '.webp') : peek;
+      art = pics && pics.length === 3
+        ? '<span class="rp-fan" aria-hidden="true"><img class="rp-fan-l" src="' + esc(pics[0]) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' +
+          '<img class="rp-fan-r" src="' + esc(pics[2]) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' +
+          '<img class="rp-fan-c" src="' + esc(pics[1]) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' +
+          '<span class="rp-fan-seal">¡Me la sé!</span></span>'
+        : '<img class="rp-art-img" src="/assets/dralingo/wise.webp" alt="" width="432" height="480" loading="lazy" decoding="async">';
+    } else if (s.key === 'train') art = '<img class="rp-art-img" src="/assets/dralingo/power.webp" alt="" width="454" height="480" loading="lazy" decoding="async">';
+    else art = '<img class="rp-art-img" src="/assets/dralingo/star-hold.webp" alt="" width="347" height="600" loading="lazy" decoding="async">';
+    const mark = s.state === 'done' ? '<span class="rp-mark is-done" role="img" aria-label="Hecho">' + I.check + '</span>'
+      : s.state === 'locked' ? '<span class="rp-mark is-locked" role="img" aria-label="Bloqueado">' + I.lock + '</span>' : '';
+    // what the card says about the kid's progress
+    let extra = '';
+    if (s.key === 'train' && s.worlds && s.worlds.length) {
+      // one small coin per practice world: gold with a check at the %, red = open to play, dashed = not open yet. The
+      // row opens the worlds' page (/audios/<level>/entrenamiento: every world's tile, as before)
+      const coins = '<ol class="rp-coins" aria-hidden="true">' + s.worlds.map((w) => {
+        const done = w.best != null && w.best >= s.need;
+        return '<li class="' + (done ? 'is-done' : w.open ? 'is-open' : '') + '" data-w="' + w.n + '"' +
+          (!w.open && w.count ? ' style="--p:' + Math.round((w.sealed / w.count) * 100) + '"' : '') + '>' + (done ? I.check : w.n) + '</li>';
+      }).join('') + '</ol>';
+      extra = s.list ? '<a class="rp-coins-link" href="' + esc(s.list) + '" data-nav aria-label="Ver los ' + s.worlds.length + ' mundos de El Entrenamiento">' + coins + I.right + '</a>' : coins;
+    }
+    if (s.key === 'gold' && Array.isArray(s.sims) && s.sims.length) {
+      // the simulations: a numbered chip each (gold with a check once passed, 60 %: YCT and HSK pass at 120 / 200; a
+      // try below it is «Otra vez», never a low number on screen)
+      extra = '<ol class="rp-sims" aria-label="Los simulacros">' + s.sims.map((x) => {
+        const pass = x.best != null && x.best >= 60;
+        const tried = x.best != null || x.taken;
+        const label = 'Simulacro ' + x.n + (pass ? ': tu mejor ' + x.best + ' %' : tried ? ': ya lo intentaste, otra vez' : '');
+        return '<li><a class="rp-sim' + (pass ? ' is-pass' : tried ? ' is-tried' : '') + (s.nextSim === x ? ' is-next' : '') + '" href="' + esc(x.href) + '" aria-label="' + esc(label) + '">' +
+          (pass ? I.check : '') + '<b>' + (Number(x.n) || 0) + '</b></a></li>';
+      }).join('') + '</ol>';
+      if (s.book) {
+        const k = s.book.mistakes;
+        const tag = s.book.taken && k != null ? (k === 0 ? 'sin errores' : k + (k === 1 ? ' error' : ' errores')) : '';
+        extra += '<a class="rp-book" href="' + esc(s.book.book) + '" data-nav>' + I.book + '<span>Libro dorado del Simulacro ' + (Number(s.book.n) || 0) + '</span>' +
+          (tag ? '<b>' + tag + '</b>' : '') + '</a>';
+      }
+      if (s.login) extra += '<p class="rp-note">Tu libro dorado se abre en tu cuenta: <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">entra con tu código</a>.</p>';
+      // (the study PDFs download for the super admin only: his rule 2026-10-18)
+      if (s.pdf) extra += '<a class="rp-pdf" href="' + esc(s.pdf) + '" download>Libro en PDF (solo administración)</a>';
+    }
+    if (s.key === 'gold' && s.earn && s.taken && s.taken.length) {
+      // while the Dorado is closed: the books of the simulations the kid took in a teacher's room (taken anywhere is enough)
+      extra = s.taken.map((x) => {
+        const k = x.mistakes;
+        return '<a class="rp-book" href="' + esc(x.book) + '" data-nav>' + I.book + '<span>Libro dorado del Simulacro ' + (Number(x.n) || 0) + '</span>' +
+          (k != null ? '<b>' + (k === 0 ? 'sin errores' : k + (k === 1 ? ' error' : ' errores')) + '</b>' : '') + '</a>';
+      }).join('');
+    }
+    // the button: a direct verb on the current step, soft «Seguir…» on a started one, «Repasar» on a done one
+    let act = '';
+    const btn = (href, label, kind, nav) => '<a class="rp-btn rp-btn-' + kind + '" href="' + esc(href) + '"' + (nav ? ' data-nav' : '') + '>' + esc(label) + (kind === 'go' ? I.go : '') + '</a>';
+    if (s.state === 'locked' || s.state === 'soon') {
+      if (s.current && !m.open) {
+        // a locked module: its key is the first step (the key box)
+        act = '<p class="rp-opens">' + I.key + '<span>Se escribe una sola vez y abre los 3 pasos</span></p>' +
+          btn('/audios/' + m.slug + '/clave', 'Escribe la clave de ' + m.name, 'go', false) +
+          (L.anon ? '<p class="rp-alt">¿Ya eres alumno? <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug + '/clave') + '">Entra con tu código</a></p>' : '');
+      } else if (s.key === 'gold' && s.earn && s.login) {
+        act = '<p class="rp-opens">' + I.lock + '<span>' + esc(s.opens) + '</span></p>' + btn('/homework.html?next=' + encodeURIComponent('/audios/' + m.slug), 'Entrar con mi código', 'soft', false);
+      } else act = '<p class="rp-opens">' + (s.state === 'soon' ? I.soon : I.lock) + '<span>' + esc(s.opens) + '</span></p>';
+    } else if (s.key === 'base') {
+      const label = s.current ? (s.state === 'fresh' ? 'Empezar aquí' : s.state === 'done' ? 'Repasar' : 'Seguir marcando') : (s.state === 'done' ? 'Repasar' : s.state === 'started' ? 'Seguir marcando' : 'Empezar');
+      act = s.go ? btn(s.go, label, s.current ? 'go' : s.state === 'done' ? 'done' : 'soft', true) : '';
+    } else if (s.key === 'train') {
+      const label = s.current ? (s.next && s.next.kind === 'world' ? 'Practicar aquí' : 'Practicar') : (s.state === 'done' ? 'Repasar' : s.state === 'started' ? 'Seguir practicando' : 'Entrar');
+      act = btn(s.current ? s.go : s.list, label, s.current ? 'go' : s.state === 'done' ? 'done' : 'soft', true);
+    } else {
+      const label = s.nextSim ? (s.current ? 'Hacer el Simulacro ' + s.nextSim.n : (s.state === 'started' ? 'Seguir: Simulacro ' : 'Simulacro ') + s.nextSim.n) : 'Repasar';
+      act = s.go ? btn(s.go, label, s.current ? 'go' : s.state === 'done' ? 'done' : 'soft', !s.nextSim) : '';
+    }
+    const bar = s.meter ? '<span class="rp-bar is-meter">' + s.meter + '</span>'
+      : '<span class="rp-bar" aria-hidden="true"><i style="width:' + Math.round((s.pct || 0) * 100) + '%"></i></span>';
+    return '<li class="' + cls + '" id="paso-' + s.n + '" data-step="' + s.key + '">' +
+      (s.current ? '<span class="rp-tag">¡Empieza aquí!</span>' : '') +
+      '<div class="rp-art is-' + s.key + '">' + art + '<b class="rp-num" aria-hidden="true">' + s.n + '</b>' + mark + '</div>' +
+      '<div class="rp-body">' +
+        '<h2 class="rp-step-t"><span class="au-sr">Paso ' + s.n + ': </span>' + s.title + '</h2>' +
+        '<p class="rp-line">' + esc(s.line) + '</p>' + bar +
+        '<p class="rp-status"><span>' + esc(s.status) + '</span>' + (s.badge ? '<span class="rp-badge">' + esc(s.badge) + '</span>' : '') + '</p>' +
+        extra + '<div class="rp-act">' + act + '</div>' +
+      '</div></li>';
+  }
+
+  // ── «Tus tareas»: the homework audios of the level ─────────────────
+  const KIND_T = { words: 'Las palabras', dialogue: 'Escucha, lee, repite', video: 'Tu video' };
+  const HW_SHOW = 3;
+  function tareasHtml(ctx, m, hws, marks) {
+    if (!hws.length) return '';
+    const toSend = unsentOf(hws, marks);
+    const showLogin = !ctx.ruta.student && !ctx.ruta.teacher;
+    const cards = hws.map((h, i) => {
+      const e = marks[h.id] || {};
+      const state = e.s ? 'sent' : e.h ? 'heard' : 'new';
+      const pic = hwPic(h, m.slug);
+      // (the picture and the name open the homework's own page: its lines with pinyin and Spanish, the PDF's audio codes)
+      return '<li class="rp-hw is-' + state + '" data-hw="' + esc(h.id) + '"' + (i >= HW_SHOW ? ' hidden' : '') + '>' +
+        '<a class="rp-hw-open" href="/audios/' + esc(h.id) + '" data-nav>' +
+          '<img class="rp-hw-pic" src="' + esc(pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async"' +
+            (h.thumb && pic !== h.thumb ? ' data-alt="' + esc(h.thumb) + '"' : '') + '>' +
+          '<span class="rp-hw-kicker">Tarea · Experiencia ' + (Number(h.exp) || 0) + (h.round > 1 ? ' · Ronda ' + (Number(h.round) || 0) : '') + '</span>' +
+          '<h3 class="rp-hw-title">' + esc(h.title) + '</h3>' +
+          '<span class="rp-hw-state" data-state>' + (state === 'sent' ? I.check + 'Mandada' : state === 'heard' ? 'Escuchada' + I.check : 'Nueva') + '</span>' +
+        '</a>' +
+        '<div class="rp-hw-body">' +
+          '<div class="rp-hw-acts">' +
+            '<button type="button" class="rp-hw-play" data-play aria-pressed="false">' + (state === 'new' ? I.play + '<span>Escuchar</span>' : I.again + '<span>Otra vez</span>') + '</button>' +
+            (state === 'sent' ? '' : '<button type="button" class="rp-hw-send" data-send>¡Ya la mandé!</button>') +
+          '</div>' +
+          '<p class="rp-hw-now" data-now hidden><span data-now-t></span><span class="rp-hw-line"><i data-now-f></i></span></p>' +
+          '<p class="rp-hw-undo" data-undo hidden>¿Fue sin querer? <button type="button" data-unsend>Deshacer</button></p>' +
+        '</div></li>';
+    }).join('');
+    return '<aside class="rp-tareas" id="tareas" aria-labelledby="rp-tareas-t" tabindex="-1">' +
+      '<div class="rp-tareas-head"><h2 class="rp-tareas-t" id="rp-tareas-t">Tus tareas</h2>' +
+        '<span class="rp-badge" data-tosend' + (toSend ? '' : ' hidden') + '>' + toSend + ' por mandar</span></div>' +
+      '<div class="rp-aileen"><img src="/assets/cast/aileen-talk.webp" alt="Aileen" width="312" height="480" loading="lazy" decoding="async">' +
+        '<p class="rp-aileen-say">«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»</p></div>' +
+      '<ul class="rp-hw-list">' + cards + '</ul>' +
+      (hws.length > HW_SHOW ? '<button type="button" class="rp-hw-more" data-more aria-expanded="false">Ver todas mis tareas (' + hws.length + ')</button>' : '') +
+      (showLogin ? '<p class="rp-hw-login">Tus marcas quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug + '#tareas') + '">Entra con tu código para guardarlas en tu cuenta</a>.</p>' : '') +
+      '</aside>';
+  }
+
+  // one homework's three audios, in a row, with the shared <audio> (one sound at a time)
+  let hwNow = null;   // { id, k, tracks, li }
+  const audioEl = () => document.getElementById('au-player');
+  function hwUi(playing) {
+    if (!hwNow || !hwNow.li) return;
+    const b = hwNow.li.querySelector('[data-play]');
+    const now = hwNow.li.querySelector('[data-now]');
+    if (b) { b.setAttribute('aria-pressed', String(!!playing)); b.innerHTML = playing ? I.pause + '<span>Pausa</span>' : I.play + '<span>Seguir</span>'; }
+    if (now) now.hidden = false;
+    const t = hwNow.tracks[hwNow.k];
+    const tt = hwNow.li.querySelector('[data-now-t]');
+    if (tt && t) tt.textContent = 'Audio ' + (hwNow.k + 1) + ' de ' + hwNow.tracks.length + ' · ' + (KIND_T[t.kind] || t.code || '');
+  }
+  function hwReset(li) {
+    if (!li) return;
+    const b = li.querySelector('[data-play]');
+    if (b) { b.setAttribute('aria-pressed', 'false'); b.innerHTML = li.classList.contains('is-new') ? I.play + '<span>Escuchar</span>' : I.again + '<span>Otra vez</span>'; }
+    const now = li.querySelector('[data-now]');
+    if (now) now.hidden = true;
+    const f = li.querySelector('[data-now-f]');
+    if (f) f.style.width = '0';
+  }
+  const onHwPlaying = () => { if (hwNow) { hwUi(true); if (hwNow.onHeard) hwNow.onHeard(hwNow.id); } };
+  const onHwPause = () => { if (hwNow && !hwNow.switching) hwUi(false); };
+  const onHwTime = () => {
+    const p = audioEl();
+    if (!hwNow || !p || !hwNow.li) return;
+    const t = hwNow.tracks[hwNow.k];
+    const f = hwNow.li.querySelector('[data-now-f]');
+    if (f && t && t.dur) f.style.width = Math.min(100, (p.currentTime / t.dur) * 100) + '%';
+  };
+  const onHwEnded = () => {
+    if (!hwNow) return;
+    if (hwNow.k + 1 < hwNow.tracks.length) { hwNow.k += 1; hwTrack(); return; }
+    const li = hwNow.li;
+    hwNow = null;
+    hwReset(li);
+  };
+  function hwTrack() {
+    const p = audioEl();
+    if (!p || !hwNow) return;
+    hwNow.switching = true;
+    p.src = hwNow.tracks[hwNow.k].src;
+    p.playbackRate = 1;
+    p.play().catch(() => {});
+    hwNow.switching = false;
+    hwUi(true);
+  }
+  function hwListen(on) {
+    const p = audioEl();
+    if (!p) return;
+    const f = on ? 'addEventListener' : 'removeEventListener';
+    p[f]('playing', onHwPlaying);
+    p[f]('pause', onHwPause);
+    p[f]('timeupdate', onHwTime);
+    p[f]('ended', onHwEnded);
+  }
+  function hwStop() {
+    hwListen(false);
+    if (hwNow) { const p = audioEl(); try { if (p) p.pause(); } catch (_) {} hwReset(hwNow.li); hwNow = null; }
+  }
+
+  // ── the page ──────────────────────────────────────────────────────
   function path(main, ctx, m) {
     leave();
     const mods = ctx.ruta.modules || [];
-    const i = Math.max(0, mods.indexOf(m));
     const look = looksFor(mods)[m.slug];
-    const st = statesOf(m);
-    const anon = !ctx.ruta.student && !ctx.ruta.teacher;
+    const wonder = wondersFor(mods)[m.slug];
     store.set('draly_ruta_at', m.slug);
     // back: to the worlds, or to «Mis tareas» when the kid came from there (the home-screen app has no back button)
     const qFrom = new URLSearchParams(location.search).get('from');
     if (qFrom === 'homework') store.set('draly_ruta_from', 'homework');
     const fromHw = store.get('draly_ruta_from') === 'homework';
-    const back = fromHw ? '<a class="au-back" href="/homework.html">' + I.left + 'Volver a mis tareas</a>'
-      : '<a class="au-back" data-nav href="/audios">' + I.left + 'Todos los mundos</a>';
-
-    const hero = '<section class="rd-hero' + (m.name.length > 6 ? ' is-long' : '') + (m.open ? '' : ' is-locked') + '" style="' + lookStyle(look) + '">' +
-      skyWide + '<img class="rd-hero-dragon" src="' + poseOf(i) + '" alt="" width="432" height="480" decoding="async">' +
-      '<h1 class="rd-hero-name">' + esc(m.name) + '</h1>' +
-      '<p class="rd-hero-sub">' + esc(FAMILY_SUB[m.family] || ('Examen ' + (m.exam || m.name))) + '</p>' +
-      (m.open ? '' : '<span class="rd-seal" aria-hidden="true">' + I.lock + '</span>') +
-      '<span class="rd-card-gloss" aria-hidden="true"></span></section>';
-
-    const friend = friendRow('');
-
-    const keyBox = m.open ? '' :
-      '<div class="rd-keybox"><span class="rd-keybox-seal" aria-hidden="true">' + I.lock + '</span>' +
-        '<div class="rd-keybox-body"><h2 class="rd-keybox-title">Tu ruta se abre con la clave de ' + esc(m.name) + '</h2>' +
-        '<p>Está en el mensaje de tu maestra. Se escribe una sola vez y abre La Base, El Entrenamiento y El Simulacro Dorado.</p>' +
-        '<a class="rd-btn rd-btn-gold" href="/audios/' + esc(m.slug) + '/clave">' + I.key + 'Escribe la clave de ' + esc(m.name) + '</a>' +
-        (anon ? '<p class="rd-keybox-alt">¿Ya eres alumno? <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug + '/clave') + '">Entra con tu código</a></p>' : '') +
-        '</div></div>';
-
-    // 1 · La Base
-    const b = m.base && (ctx.catalog.bases || []).find((x) => x.id === m.base.id);
-    const pr = progressOf(ctx, m);
-    let baseBody;
-    if (st.base === 'open' && b && pr) {
-      const go = pr.sealed ? (pr.sealed >= b.words ? 'Repasar' : 'Seguir') : 'Empezar';
-      baseBody = '<p class="rd-stop-text">Las ' + b.words + ' palabras con su dibujo, una frase y el audio.</p>' +
-        '<div class="rd-progress">' + meterOf(pr) + '<p>' + sellos(pr.sealed, b.words) + '</p></div>' +
-        '<a class="rd-btn rd-btn-red" href="/audios/' + esc(b.id) + '" data-nav>' + I.play + go + '</a>';
-    } else if (st.base === 'locked') {
-      baseBody = '<p class="rd-stop-text">Las ' + m.base.words + ' palabras con su dibujo, una frase y el audio.</p>' +
-        '<p class="rd-stop-state">' + I.lock + 'Se abre con la clave</p>';
-    } else {
-      baseBody = '<p class="rd-stop-text">Todas las palabras del nivel, con su dibujo y el audio.</p><p class="rd-soon">Muy pronto</p>';
-    }
-    // 2 · El Entrenamiento (phase 4): one tile per practice world. A world opens with every seal of that world in La
-    // Base (or a teacher): an open tile plays it (/audios/<level>/entrenamiento/<world>) and shows the kid's best, a closed
-    // one leads to that world in La Base with its seals so far. «Pinyin básico» (HSK 1) is open from the start; the
-    // «Simulacro del examen» opens with every world.
-    const need = (m.dorado && m.dorado.pct) || 70;
-    const tw = trainWorldsOf(ctx, m, pr);
-    let trainBody;
-    if (st.train === 'open' && tw.length) {
-      const regular = tw.filter((w) => w.kind === 'world');
-      const ready = regular.filter((w) => w.open).length;
-      const counted = regular.filter((w) => w.best != null && w.best >= need).length;
-      const trainHref = '/audios/' + m.slug + '/entrenamiento';
-      trainBody = '<p class="rd-stop-text">Rondas de 10 preguntas como en el examen, con audio y la respuesta al instante.</p>' +
-        '<div class="rd-train">' +
-        '<p class="rd-train-count"><b>' + ready + '</b> de ' + regular.length + ' mundos listos para entrenar</p>' +
-        '<ol class="rd-worlds" aria-label="Los mundos de El Entrenamiento">' + tw.map((w) => {
-          const extra = w.kind !== 'world';
-          // (the pack's «Simulacro del examen» is «Examen» on its tile: step 3's «El Simulacro Dorado» is another thing)
-          const name = extra ? (w.kind === 'pinyin' ? 'Pinyin' : 'Examen') : (w.short || ('Mundo ' + w.n));
-          const done = w.best != null && (extra || w.best >= need);
-          let href, label, coin, meta, cls = 'rd-world';
-          if (w.open) {
-            href = trainHref + '/' + w.key;
-            coin = done && !extra ? I.check : (w.kind === 'pinyin' ? ABC : w.kind === 'simulacro' ? EXAM : String(w.n));
-            meta = w.best != null ? w.best + ' %' : 'Jugar';
-            label = (extra ? '' : 'Mundo ' + w.n + ', ') + name + ': ' + (w.best != null ? 'tu mejor ' + w.best + ' %' : 'listo para jugar');
-            cls += ' is-ready' + (done && !extra ? ' is-done' : '');
-          } else if (w.kind === 'simulacro') {
-            href = trainHref;
-            coin = I.lock;
-            meta = 'Con todos';
-            label = 'Preguntas del examen: se abren cuando todos tus mundos estén listos';
-          } else {
-            const left = Math.max(0, w.count - w.sealed);
-            href = b ? '/audios/' + b.id + '#mundo-' + w.n : trainHref;
-            coin = String(w.n);
-            meta = w.count ? w.sealed + '/' + w.count : '';
-            label = 'Mundo ' + w.n + ', ' + name + ': ' + (left === 1 ? 'falta 1 sello' : 'faltan ' + left + ' sellos') + ' en La Base';
-          }
-          const pie = !w.open && w.kind === 'world' && w.count ? ' style="--p:' + Math.round((w.sealed / w.count) * 100) + '"' : '';
-          return '<li><a class="' + cls + '"' + (w.kind === 'world' ? ' data-w="' + w.n + '"' : '') + ' href="' + esc(href) + '" data-nav aria-label="' + esc(label) + '">' +
-            '<b class="rd-world-n" aria-hidden="true"' + pie + '>' + coin + '</b>' +
-            '<span class="rd-world-name" aria-hidden="true">' + esc(name) + '</span>' +
-            '<span class="rd-world-meta" aria-hidden="true">' + esc(meta) + '</span></a></li>';
-        }).join('') + '</ol>' +
-        '<p class="rd-train-hint">' + (!ready ? 'Pon «¡Me la sé!» en todas las palabras de un mundo y ese mundo se abre aquí.'
-          : counted === regular.length ? '¡Todos tus mundos tienen ' + need + ' % o más!'
-          : 'Cada mundo con ' + need + ' % o más te acerca a El Simulacro Dorado.') + '</p>' +
-        '<a class="rd-btn rd-btn-red" href="' + esc(trainHref) + '" data-nav>' + I.target + 'Entrar al Entrenamiento</a></div>';
-    } else if (st.train === 'locked') {
-      trainBody = '<p class="rd-stop-text">Rondas de 10 preguntas como en el examen, con audio y la respuesta al instante.</p>' +
-        '<p class="rd-stop-state">' + I.lock + 'Se abre con la clave</p>';
-    } else {
-      trainBody = '<p class="rd-stop-text">Practica cada mundo como en el examen, con audio y la respuesta al instante.</p>' +
-        '<p class="rd-soon">' + I.soon + 'Muy pronto</p>';
-    }
-    // 3 · El Simulacro Dorado: the level's simulations (only when open: each opens its player through the key check)
-    let goldBody;
-    // 📖 phase 5: a taken simulation's «Libro dorado» ribbon with its latest try's mistakes (`alone`: a ribbon of its own,
-    // named after its simulation, while El Simulacro Dorado is still closed)
-    const bookRow = (s, alone) => {
-      if (!s.book) return '';
-      const n = s.mistakes;
-      const tag = !s.taken || n == null ? '' : n === 0 ? '<span class="rd-sim-book-n is-zero">' + I.check + '<span>Sin errores</span></span>'
-        : '<span class="rd-sim-book-n">' + n + (n === 1 ? ' error' : ' errores') + '</span>';
-      const label = 'Libro dorado del Simulacro ' + s.n + (s.taken && n != null ? (n === 0 ? ', sin errores' : ', ' + n + (n === 1 ? ' error' : ' errores') + ' para repasar') : '');
-      return '<a class="rd-sim-book' + (alone ? ' is-alone' : '') + '" href="' + esc(s.book) + '" data-nav aria-label="' + esc(label) + '">' + I.book +
-        '<span class="rd-sim-book-t" aria-hidden="true">' + (alone ? 'Libro dorado del Simulacro ' + (Number(s.n) || 0) : 'Libro dorado') + '</span>' + tag + '</a>';
-    };
-    if (st.goldEarn) {
-      // the key opens it, but (El Entrenamiento live) the kid earns it: every world practised with pct % or more
-      const d = m.dorado;
-      // taken anywhere is enough (his pick after the build): a simulation the kid took in a teacher's room opens its own
-      // book now; the others and the PDF come with El Simulacro Dorado (the server sends only the taken ones, to this kid)
-      const GT = m.golden && Array.isArray(m.golden.taken) ? m.golden.taken : [];
-      const takenBooks = GT.length ? '<div class="rd-gold-taken"><p class="rd-gold-taken-t">' + (GT.length === 1 ? 'Tu libro dorado' : 'Tus libros dorados') + '</p>' +
-        '<ul class="rd-books">' + GT.map((s) => '<li>' + bookRow(Object.assign({ taken: true }, s), true) + '</li>').join('') + '</ul>' +
-        '<p class="rd-gold-pdf">' + I.lock + '<span>El libro en PDF llega con El Simulacro Dorado.</span></p></div>' : '';
-      // (phase 4) one coin per world that counts: gold with a check once that world has the %, else its best so far
-      const regular = tw.filter((w) => w.kind === 'world');
-      const goal = regular.length ? '<ol class="rd-goal" aria-hidden="true">' + regular.map((w) => {
-        const on = w.best != null && w.best >= d.pct;
-        return '<li class="' + (on ? 'is-on' : '') + '"><b>' + (on ? I.check : w.n) + '</b><span>' + esc(w.short || '') + '</span>' +
-          (w.best != null ? '<span class="rd-goal-pct">' + w.best + ' %</span>' : '') + '</li>';
-      }).join('') + '</ol>' : '';
-      const counted = regular.filter((w) => w.best != null && w.best >= d.pct).length;
-      goldBody = '<p class="rd-stop-text">' + m.simCount + (m.simCount === 1 ? ' simulacro completo' : ' simulacros completos') + ' con el audio original del examen.</p>' +
-        '<p class="rd-stop-state">' + I.lock + 'Se abre cuando practiques cada mundo con ' + d.pct + ' %</p>' + goal +
-        '<p class="rd-train-count"><b>' + (d.login ? counted : (d.practiced || 0)) + '</b> de ' + (d.of || regular.length) + ' mundos con ' + d.pct + ' % o más</p>' +
-        (d.login
-          ? '<p class="rd-gold-note">Tus puntos quedan en este teléfono: entra con tu código para que cuenten.</p>' +
-            '<a class="rd-btn rd-btn-red" href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">Entrar con mi código</a>'
-          : (st.train === 'open' ? '<a class="rd-btn rd-btn-gold" href="/audios/' + esc(m.slug) + '/entrenamiento" data-nav>' + I.target + 'Practicar en El Entrenamiento</a>' : '')) +
-        takenBooks;
-    } else if (st.gold === 'open') {
-      // 📖 phase 5: a simulation the kid took (a teacher: every one) gets its «Libro dorado» under the tile, with the
-      // latest try's mistakes; the PDF of the whole golden book once every simulation is taken (the server decides)
-      const G = m.golden;
-      let pdf = '';
-      if (G && G.pdf) {
-        pdf = '<div class="rd-gold-pdf is-ready"><p><b>El libro dorado en PDF</b>' + (G.mb ? '<span>' + String(Number(G.mb) || 0).replace('.', ',') + ' MB</span>' : '') + '</p>' +
-          '<a class="rd-btn rd-btn-gold" href="' + esc(G.pdf) + '" download>' + I.down + 'Descargar el libro</a></div>';
-      } else if (G && G.login) {
-        pdf = '<p class="rd-gold-note">Tu libro dorado se abre en tu cuenta: <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">entra con tu código</a> para ver tus errores de cada simulacro.</p>';
-      } else if (G && G.left > 0) {
-        pdf = '<p class="rd-gold-pdf">' + I.lock + '<span>' + (G.left === 1 ? 'Haz el simulacro que falta para descargar el libro.' : 'Haz los ' + G.left + ' simulacros que faltan para descargar el libro.') + '</span></p>';
-      }
-      goldBody = '<p class="rd-stop-text">El examen completo con el audio original, como el día del examen.</p>' +
-        '<ul class="rd-sims">' + m.sims.map((s) =>
-          '<li' + (s.book ? ' class="has-book"' : '') + '><a class="rd-sim' + (s.best != null ? ' is-done' : '') + '" href="' + esc(s.href) + '">' +
-            '<b class="rd-sim-n" aria-hidden="true">' + s.n + '</b>' +
-            '<span class="rd-sim-name">Simulacro ' + s.n + '</span>' +
-            '<span class="rd-sim-meta">' + s.questions + ' preguntas</span>' +
-            // the kid's best try: from the exam's pass line (60 %: YCT and HSK pass at 120 / 200) its score with a gold
-            // check; below it, never a low number on screen, just «Otra vez» (a kid reads a low score as failing)
-            (s.best == null ? '' : s.best >= 60
-              ? '<span class="rd-sim-best is-pass"><span class="au-sr">Tu mejor resultado: </span>' + I.check + s.best + ' %</span>'
-              : '<span class="rd-sim-best"><span class="au-sr">Ya lo intentaste. </span>' + I.again + 'Otra vez</span>') +
-          '</a>' + bookRow(s) + '</li>').join('') + '</ul>' + pdf;
-    } else if (st.gold === 'locked') {
-      goldBody = '<p class="rd-stop-text">' + m.simCount + (m.simCount === 1 ? ' simulacro completo' : ' simulacros completos') + ' con el audio original del examen.</p>' +
-        '<p class="rd-stop-state">' + I.lock + 'Se abre con la clave</p>';
-    } else {
-      goldBody = '<p class="rd-stop-text">El examen completo con el audio original.</p><p class="rd-soon">Muy pronto</p>';
-    }
-    const stop = (k, n, title, icon, body, next) => '<li class="rd-stop is-' + st[k] + '" id="paso-' + n + '"' + (next ? ' data-next="' + next + '"' : '') + '>' +
-      '<span class="rd-coin" aria-hidden="true">' + (st[k] === 'locked' ? I.lock : icon) + '<b>' + n + '</b></span>' +
-      '<div class="rd-stop-body"><h2 class="rd-stop-title"><span class="au-sr">Paso ' + n + ': </span>' + title + '</h2>' + body + '</div></li>';
-
+    const back = fromHw ? { href: '/homework.html', label: 'Volver a mis tareas' } : { href: '/audios', label: 'Todos los mundos', nav: true };
+    const L = ladderOf(ctx, m);
     const hws = ctx.homeworksOf(m.slug);
-    main.innerHTML = back + hero + friend + keyBox +
-      '<ol class="rd-route" aria-label="La Ruta Dorada de ' + esc(m.name) + '">' +
-        stop('base', 1, 'La Base', I.book, baseBody, st.train) +
-        stop('train', 2, 'El Entrenamiento', I.target, trainBody, st.gold) +
-        stop('gold', 3, 'El Simulacro Dorado', I.trophy, goldBody) +
-      '</ol>' +
-      (hws.length ? '<h2 class="au-h2">Audios de las tareas</h2><div class="au-cards">' + hws.map((h, k) => ctx.cardHtml(h, k === 0)).join('') + '</div>' : '');
-    if (pr) celebrateNewWorlds(main, m, pr);
+    // a logged-in kid: their account's marks meet this phone's (a phone's marks from before the login join it)
+    if (ctx.ruta.student && ctx.ruta.who) tSettle(ctx.ruta.who, m.tareas || {}, hws.map((h) => h.id));
+    const marks = tMarksFor(ctx.ruta, m.tareas);
+    const toSend = unsentOf(hws, marks);
+    const cb = L.cb;
+    const facts = [worldCount(cb) ? worldCount(cb) + ' mundos' : '', m.base ? m.base.words + ' palabras' : '', m.simCount ? 'el examen al final' : ''].filter(Boolean).join(' · ');
+    document.body.classList.add('rp-on');
+    const hero = '<section class="rp-hero' + (m.name.length > 6 ? ' is-long' : '') + '" style="--hero-rgb:' + rgbOf(look[2]) + '">' +
+      '<img class="rp-hero-bg" src="' + esc(wonder.src) + '" alt="" width="1600" height="900" decoding="async" fetchpriority="high" style="object-position:' + wonder.pos + '">' +
+      '<span class="rp-hero-shade" aria-hidden="true"></span>' +
+      '<div class="rp-hero-text"><div class="rp-hero-top"><div class="rp-hero-head"><h1 class="rp-hero-name" tabindex="-1">' + esc(m.name) + '</h1>' +
+        (m.open ? '' : '<span class="rd-seal rp-hero-seal" aria-hidden="true">' + I.lock + '</span>') + '</div>' +
+        // (a phone: the red «Tareas: N por mandar» jumps down to «Tus tareas»; a laptop shows them beside the ladder)
+        (hws.length ? '<a class="rp-hero-tareas" href="#tareas"' + (toSend ? '' : ' hidden') + '>Tareas: ' + toSend + ' por mandar</a>' : '') + '</div>' +
+        '<p class="rp-hero-sub">' + esc(facts || (FAMILY_SUB[m.family] || '')) + '</p>' +
+        '<p class="rp-say" id="rp-say">' + esc(L.say) + '</p></div>' +
+      '<img class="rp-hero-dragon" src="/assets/dralingo/point.webp" alt="Dralingo señala el paso que toca" width="332" height="480" decoding="async" fetchpriority="high">' +
+      '</section>';
+    const ladder = '<h2 class="rp-ladder-t">Tu camino, paso a paso</h2>' +
+      '<ol class="rp-ladder" aria-label="La Ruta Dorada de ' + esc(m.name) + '">' + L.steps.map((s) => stepHtml(s, m, L)).join('') + '</ol>';
+    main.innerHTML = '<div class="rp" style="' + lookStyle(look) + '">' + bandHtml(back, 'La Ruta Dorada') +
+      '<div class="rp-grid' + (hws.length ? ' has-tareas' : '') + '"><div class="rp-main">' + hero + ladder + '</div>' +
+      tareasHtml(ctx, m, hws, marks) + '</div></div>';
+    wireTareas(main, ctx, m, hws);
+    if (L.pr) celebrateNewWorlds(main, m, L.pr);
     // a logged-in kid: this phone's seals meet their account (a phone's seals from before the login join it, taps not
     // saved yet go up); when the account changed, the route asks the server again and redraws (js/audios.js)
     const AB = window.AudiosBase;
+    const b = cb;
     if (ctx.ruta.student && m.open && b && AB && AB.sync) {
       const at = location.pathname;
       AB.sync(b.level, b.words).then((r) => { if (r && (r.sent || r.changed) && location.pathname === at && ctx.refresh) ctx.refresh(true); }, () => {});
@@ -635,20 +1066,110 @@
     }
     // a simulation's link that is not earned yet lands here (server.js: /audios/<level>?dorado=cerrado#paso-3): step 3
     // comes into view and lights up once, so the kid sees how it opens
-    if (location.hash === '#paso-3') {
-      const s3 = main.querySelector('#paso-3');
-      if (s3) {
-        try { s3.scrollIntoView({ block: 'center', behavior: calmMotion() ? 'auto' : 'smooth' }); } catch (_) { s3.scrollIntoView(); }
-        if (/dorado=cerrado/.test(location.search) && s3.animate && !calmMotion()) {
-          try { s3.querySelector('.rd-coin').animate([{ boxShadow: '0 0 0 0 rgba(216, 176, 90, .7)' }, { boxShadow: '0 0 0 16px rgba(216, 176, 90, 0)' }], { duration: 1100, delay: 350, iterations: 2, easing: 'cubic-bezier(.23, 1, .32, 1)' }); } catch (_) {}
+    if (location.hash === '#paso-3' || location.hash === '#tareas') {
+      const el = main.querySelector(location.hash);
+      if (el) {
+        try { el.scrollIntoView({ block: 'center', behavior: calmMotion() ? 'auto' : 'smooth' }); } catch (_) { el.scrollIntoView(); }
+        if (location.hash === '#paso-3' && /dorado=cerrado/.test(location.search) && el.animate && !calmMotion()) {
+          try { el.animate([{ boxShadow: '0 0 0 0 rgba(216, 176, 90, .75)' }, { boxShadow: '0 0 0 18px rgba(216, 176, 90, 0)' }], { duration: 1100, delay: 350, iterations: 2, easing: 'cubic-bezier(.23, 1, .32, 1)' }); } catch (_) {}
         }
       }
     }
+    // the page's one calm moment: «¡Empieza aquí!» nods once, a moment after the page is still (never on reduced motion)
+    const tag = main.querySelector('.rp-tag');
+    if (tag && tag.animate && !calmMotion() && !location.hash) {
+      try { tag.animate([{ transform: 'translate(-50%, 0)' }, { transform: 'translate(-50%, -5px)', offset: 0.4 }, { transform: 'translate(-50%, 0)' }], { duration: 620, delay: 900, easing: 'cubic-bezier(.23, 1, .32, 1)' }); } catch (_) {}
+    }
+  }
+
+  // the homework cards: «Escuchar» plays here, «¡Ya la mandé!» marks it sent (account or phone), «Deshacer» undoes it
+  function wireTareas(main, ctx, m, hws) {
+    const box = main.querySelector('#tareas');
+    if (!box) return;
+    const byId = new Map(hws.map((h) => [h.id, h]));
+    const paint = () => {
+      const marks = tMarksFor(ctx.ruta, m.tareas);
+      box.querySelectorAll('.rp-hw').forEach((li) => {
+        const e = marks[li.getAttribute('data-hw')] || {};
+        const state = e.s ? 'sent' : e.h ? 'heard' : 'new';
+        if (li.classList.contains('is-' + state)) return;
+        li.classList.remove('is-new', 'is-heard', 'is-sent');
+        li.classList.add('is-' + state);
+        const tag = li.querySelector('[data-state]');
+        if (tag) tag.innerHTML = state === 'sent' ? I.check + 'Mandada' : state === 'heard' ? 'Escuchada' + I.check : 'Nueva';
+        const acts = li.querySelector('.rp-hw-acts');
+        const send = li.querySelector('[data-send]');
+        if (state === 'sent' && send) send.remove();
+        if (state !== 'sent' && !send && acts) acts.insertAdjacentHTML('beforeend', '<button type="button" class="rp-hw-send" data-send>¡Ya la mandé!</button>');
+        if (!(hwNow && hwNow.li === li)) hwReset(li);
+      });
+      const n = unsentOf(hws, marks);
+      const badge = box.querySelector('[data-tosend]');
+      if (badge) { badge.hidden = !n; badge.textContent = n + ' por mandar'; }
+      const heroTag = main.querySelector('.rp-hero-tareas');
+      if (heroTag) { heroTag.hidden = !n; heroTag.textContent = 'Tareas: ' + n + ' por mandar'; }
+    };
+    tSync.onChange = (again) => { if (again && ctx.refresh) ctx.refresh(true); else paint(); };
+    // the phone hero's «Tareas: N por mandar» scrolls down here (no address change: the page's router would redraw)
+    const heroTag = main.querySelector('.rp-hero-tareas');
+    if (heroTag) heroTag.addEventListener('click', (e) => {
+      e.preventDefault();
+      try { box.scrollIntoView({ block: 'start', behavior: calmMotion() ? 'auto' : 'smooth' }); } catch (_) { box.scrollIntoView(); }
+      try { box.focus({ preventScroll: true }); } catch (_) {}
+    });
+    box.querySelectorAll('.rp-hw-pic[data-alt]').forEach((img) => img.addEventListener('error', () => { const a = img.getAttribute('data-alt'); img.removeAttribute('data-alt'); if (a) img.src = a; }, { once: true }));
+    box.addEventListener('click', (e) => {
+      const more = e.target.closest('[data-more]');
+      if (more) {
+        box.querySelectorAll('.rp-hw[hidden]').forEach((li) => { li.hidden = false; });
+        more.remove();
+        return;
+      }
+      const li = e.target.closest('.rp-hw');
+      if (!li) return;
+      const id = li.getAttribute('data-hw');
+      const h = byId.get(id);
+      if (!h) return;
+      if (e.target.closest('[data-play]')) {
+        const p = audioEl();
+        if (!p) return;
+        if (hwNow && hwNow.id === id) {                    // the same homework: pause / go on (inside the tap: iPhone)
+          if (p.paused) p.play().catch(() => {}); else p.pause();
+          return;
+        }
+        hwStop();
+        hwListen(true);
+        hwNow = { id, k: 0, tracks: (h.tracks || []).filter((t) => t && t.src), li, onHeard: (x) => { tMark(x, 'h', ctx.ruta); paint(); } };
+        if (!hwNow.tracks.length) { hwNow = null; return; }
+        hwTrack();
+        return;
+      }
+      if (e.target.closest('[data-send]')) {
+        tMark(id, 's', ctx.ruta);
+        paint();
+        const undo = li.querySelector('[data-undo]');
+        if (undo) { undo.hidden = false; clearTimeout(undo._t); undo._t = setTimeout(() => { undo.hidden = true; }, 8000); }
+        const tag = li.querySelector('[data-state]');
+        if (tag && tag.animate && !calmMotion()) {
+          try { tag.animate([{ transform: 'scale(.6)', opacity: 0.3 }, { transform: 'scale(1.12)', opacity: 1, offset: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.23, 1, .32, 1)' }); } catch (_) {}
+        }
+        const say = document.getElementById('au-say');
+        if (say) { say.textContent = ''; setTimeout(() => { say.textContent = h.title + ': mandada.'; }, 30); }
+        return;
+      }
+      if (e.target.closest('[data-unsend]')) {
+        tMark(id, 'u', ctx.ruta);
+        const undo = li.querySelector('[data-undo]');
+        if (undo) undo.hidden = true;
+        paint();
+      }
+    });
   }
 
   // ── the route's one moment (phase 3): a world that became ready for El Entrenamiento since this phone last saw the
-  // route pops its gold coin once, when it comes into view («so kids see what their seals earn»). The first look at
-  // a route only remembers what is ready (no fireworks for the past). localStorage draly_ruta_ready: { slug: [n…] }.
+  // route pops on card 2 (its badge says «¡Nuevo mundo!» and its coin pops, once), when it comes into view («so kids see
+  // what their seals earn»). The first look at a route only remembers what is ready (no fireworks for the past).
+  // localStorage draly_ruta_ready: { slug: [n…] }.
   let readyIo = null;
   function celebrateNewWorlds(main, m, pr) {
     if (readyIo) { readyIo.disconnect(); readyIo = null; }
@@ -657,36 +1178,39 @@
     try { seen = JSON.parse(store.getL('draly_ruta_ready') || 'null'); } catch (_) { seen = null; }
     if (!seen || typeof seen !== 'object' || Array.isArray(seen)) seen = {};
     const before = Array.isArray(seen[m.slug]) ? seen[m.slug] : null;
-    // remembered once the kid has seen it (a redraw before the tile came into view must not swallow the moment)
+    // remembered once the kid has seen it (a redraw before the card came into view must not swallow the moment)
     const remember = () => { seen[m.slug] = now; store.setL('draly_ruta_ready', JSON.stringify(seen)); };
     const fresh = before ? now.filter((n) => before.indexOf(n) < 0) : [];
-    const tiles = fresh.map((n) => main.querySelector('.rd-world[data-w="' + n + '"]')).filter(Boolean);
-    if (!tiles.length || !tiles[0].animate) { remember(); return; }
-    const pop = (tile, i) => {
-      if (i === 0) remember();
-      const coin = tile.querySelector('.rd-world-n');
+    const card = main.querySelector('#paso-2');
+    const coins = fresh.map((n) => main.querySelector('#paso-2 .rp-coins li[data-w="' + n + '"]')).filter(Boolean);
+    if (!fresh.length || !card || !card.animate) { remember(); return; }
+    let badge = card.querySelector('.rp-badge');
+    if (!badge) {
+      const status = card.querySelector('.rp-status');
+      if (status) { status.insertAdjacentHTML('beforeend', '<span class="rp-badge"></span>'); badge = status.querySelector('.rp-badge'); }
+    }
+    if (badge) badge.textContent = fresh.length === 1 ? '¡Nuevo mundo!' : '¡' + fresh.length + ' mundos nuevos!';
+    const pop = () => {
+      remember();
       try {
-        if (calmMotion()) { coin.animate([{ opacity: 0.25 }, { opacity: 1 }], { duration: 320, delay: i * 80, easing: 'ease-out', fill: 'backwards' }); return; }
-        coin.animate([
-          { transform: 'scale(.55) rotate(-24deg)', opacity: 0.2 },
-          { transform: 'scale(1.16) rotate(7deg)', opacity: 1, offset: 0.62 },
-          { transform: 'none', opacity: 1 },
-        ], { duration: 560, delay: i * 90, easing: 'cubic-bezier(.23, 1, .32, 1)', fill: 'backwards' });
-        tile.animate([
-          { boxShadow: 'inset 0 0 0 2px #b88b2c, 0 0 0 0 rgba(216, 176, 90, .55)' },
-          { boxShadow: 'inset 0 0 0 2px #b88b2c, 0 0 0 10px rgba(216, 176, 90, 0)' },
-        ], { duration: 900, delay: i * 90 + 200, easing: 'cubic-bezier(.23, 1, .32, 1)' });
-      } catch (_) { /* an old phone: the tile is simply gold */ }
+        if (calmMotion()) { if (badge) badge.animate([{ opacity: 0.25 }, { opacity: 1 }], { duration: 320, easing: 'ease-out', fill: 'backwards' }); return; }
+        if (badge) badge.animate([{ transform: 'scale(.55) rotate(-10deg)', opacity: 0.2 }, { transform: 'scale(1.16) rotate(3deg)', opacity: 1, offset: 0.62 }, { transform: 'none', opacity: 1 }],
+          { duration: 560, easing: 'cubic-bezier(.23, 1, .32, 1)', fill: 'backwards' });
+        coins.forEach((c, i) => c.animate([{ transform: 'scale(.55)', opacity: 0.2 }, { transform: 'scale(1.2)', opacity: 1, offset: 0.62 }, { transform: 'none', opacity: 1 }],
+          { duration: 520, delay: 120 + i * 90, easing: 'cubic-bezier(.23, 1, .32, 1)', fill: 'backwards' }));
+      } catch (_) { /* an old phone: the badge simply says it */ }
     };
-    if (!('IntersectionObserver' in window)) { tiles.forEach(pop); return; }
+    if (!('IntersectionObserver' in window)) { pop(); return; }
     readyIo = new IntersectionObserver((entries) => {
       if (!entries.some((en) => en.isIntersecting)) return;
       readyIo.disconnect();
       readyIo = null;
-      tiles.forEach(pop);
-    }, { threshold: 0.7 });
-    readyIo.observe(tiles[0]);
+      pop();
+    }, { threshold: 0.6 });
+    readyIo.observe(card);
   }
 
-  window.Ruta = { picker, path, leave, get live() { return live; } };
+  // a homework audio played on its own page (/audios/<id>, js/audios.js) counts as «Escuchada» too
+  const markHeard = (id, ruta) => tMark(id, 'h', ruta);
+  window.Ruta = { picker, path, leave, markHeard, get live() { return live; } };
 })();
