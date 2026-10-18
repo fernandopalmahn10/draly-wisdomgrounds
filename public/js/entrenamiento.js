@@ -203,6 +203,8 @@
   }
 
   // ── /audios/<level>/entrenamiento: the worlds ──
+  // El Simulacro Dorado runs in class with the teacher (the route state's `solo: false`, a kid's view only)
+  const inClass = (ctx) => !!(ctx && ctx.ruta && ctx.ruta.solo === false && !ctx.ruta.teacher);
   function worldsPage(main, ctx, m) {
     document.body.classList.add('au-is-train');
     document.title = 'El Entrenamiento · ' + m.name + ' · Dralingo';
@@ -230,7 +232,13 @@
     let goal = '<section class="tr-goal" aria-labelledby="tr-goal-t">' +
       '<span class="tr-goal-cup" aria-hidden="true">' + I.trophy + '</span>' +
       '<div class="tr-goal-body"><h2 class="tr-goal-title" id="tr-goal-t">El Simulacro Dorado</h2>';
-    if (d.open && d.rule === 'practice') goal += '<p class="tr-goal-text">' + (d.via === 'practice' ? '¡Lo abriste practicando!' : '¡Está abierto para ti!') + '</p>' +
+    // (2026-10-18) El Simulacro Dorado in class (server.js DORADO_SELF_SERVE off → the route's `solo: false`): the
+    // teacher opens it with a PIN, so the meter says «tell your profe», never «open the simulations»
+    if (inClass(ctx)) goal += counted >= regular.length && regular.length
+      ? '<p class="tr-goal-text">¡Terminaste El Entrenamiento! Avísale a tu profe: ya puedes hacer El Simulacro Dorado en clase.</p>' +
+        '<a class="tr-goal-link" href="/audios/' + esc(m.slug) + '#paso-3" data-nav>Avisarle a mi profe' + I.next + '</a>'
+      : '<p class="tr-goal-text">Tu profe lo abre en clase cuando cada mundo tenga ' + need + ' % o más: <b>' + counted + ' de ' + regular.length + '</b>.</p>';
+    else if (d.open && d.rule === 'practice') goal += '<p class="tr-goal-text">' + (d.via === 'practice' ? '¡Lo abriste practicando!' : '¡Está abierto para ti!') + '</p>' +
       '<a class="tr-goal-link" href="/audios/' + esc(m.slug) + '#paso-3" data-nav>Ver los simulacros' + I.next + '</a>';
     else if (d.rule === 'key' || d.open) goal += '<p class="tr-goal-text">Ya está abierto con tu clave.</p>';
     else goal += '<p class="tr-goal-text">Se abre cuando cada mundo tenga ' + need + ' % o más: <b>' + counted + ' de ' + regular.length + '</b>.</p>';
@@ -675,7 +683,8 @@
         (record && best != null ? '<p class="tr-record">' + I.trophy + '¡Nuevo récord!</p>' : (best != null && best > F.pct ? '<p class="tr-end-best">Tu mejor ronda: ' + best + ' %</p>' : '')) +
         (F.teacher ? '<p class="tr-end-best">Ronda de maestro: no se guarda.</p>' : '') +
         (F.doradoNow ? '<a class="tr-dorado" href="/audios/' + esc(m.slug) + '#paso-3" data-nav><span class="tr-dorado-cup" aria-hidden="true">' + I.trophy + '</span>' +
-          '<span><b>¡Abriste El Simulacro Dorado!</b><span>Todos tus mundos tienen ' + need + ' % o más.</span></span></a>'
+          (inClass(P.ctx) ? '<span><b>¡Terminaste El Entrenamiento!</b><span>Todos tus mundos tienen ' + need + ' % o más. Avísale a tu profe: ya puedes hacer El Simulacro Dorado.</span></span></a>'
+            : '<span><b>¡Abriste El Simulacro Dorado!</b><span>Todos tus mundos tienen ' + need + ' % o más.</span></span></a>')
           : (change ? '<p class="tr-end-change">' + change + '</p>' : '')) +
         // the gold button is what comes next: another round below the %, the next world once this one counts; right
         // under the score, so a small phone shows it without scrolling
