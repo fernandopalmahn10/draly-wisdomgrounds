@@ -2489,7 +2489,8 @@
     inp.classList.toggle('hidden', !superAdmin);
     if (superAdmin) {
       $('m-bc-class-list').innerHTML = codes.map((c) => '<option value="' + escapeHtml(c) + '">').join('');
-      if (!inp.value) inp.value = codes[0] || '';   // (never a real class code as a default: his rule 2026-10-18)
+      // (no default value: the list offers the codes; a real class code is never pre-filled, his rule 2026-10-18,
+      // /maestro may be on the projector)
     } else {
       const was = sel.value;
       sel.innerHTML = codes.map((c) => '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>').join('');
