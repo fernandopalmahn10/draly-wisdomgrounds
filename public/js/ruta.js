@@ -950,7 +950,7 @@
           : '<p class="rp-aileen-say">«Estas son las tareas de ' + esc(m.name) + '. ¡Escuchá el audio cuando quieras!»</p></div>') +
       '<ul class="rp-hw-list">' + cards + '</ul>' +
       (hws.length > HW_SHOW ? '<button type="button" class="rp-hw-more" data-more aria-expanded="false">' + (mine ? 'Ver todas mis tareas' : 'Ver todas las tareas') + ' (' + hws.length + ')</button>' : '') +
-      (showLogin && mine ? '<p class="rp-hw-login">Tus marcas quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug + '#tareas') + '">Entra con tu código para guardarlas en tu cuenta</a></p>' : '') +
+      (showLogin && mine ? '<p class="rp-hw-login">Tus marcas quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">Entra con tu código para guardarlas en tu cuenta</a></p>' : '') +
       '</aside>';
   }
 

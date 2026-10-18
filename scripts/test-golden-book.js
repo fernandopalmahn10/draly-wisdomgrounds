@@ -489,12 +489,14 @@ async function server() {
   }
   ok((await get('/golden-media/yct1sim/book.pdf', as(S1))).status === 403, 'the PDF → kid S1 (4 simulations left): refused');
 
-  section('kid ALL (every simulation taken): the PDF');
+  // (2026-10-18, his rule: the study PDFs download only for the super admin; every visitor in scripts/test-ruta-tareas.js)
+  section('kid ALL (every simulation taken): every book, the PDF stays the super admin\'s');
   r = await gb(ALL, 'yct1', 2);
-  ok(r.status === 200 && r.json.mine.wrong.length === 1 && r.json.pdf.ready && /^\/golden-media\/yct1sim\/book\.pdf/.test(r.json.pdf.href), 'their book of Simulacro 2 (1 mistake) offers the PDF');
-  r = await get('/golden-media/yct1sim/book.pdf', as(ALL));
+  ok(r.status === 200 && r.json.mine.wrong.length === 1 && !r.json.pdf.ready && r.json.pdf.href === null, 'their book of Simulacro 2 (1 mistake), no PDF');
+  ok((await get('/golden-media/yct1sim/book.pdf', as(ALL))).status === 403, '… the PDF refused even with every simulation taken');
+  r = await get('/golden-media/yct1sim/book.pdf', teacher(SEED));
   ok(r.status === 200 && /application\/pdf/.test(r.headers['content-type'] || '') && r.text.slice(0, 5) === '%PDF-' && /no-store/.test(r.headers['cache-control'] || '') && /attachment/.test(r.headers['content-disposition'] || ''),
-    'the PDF downloads (private, no-store, as a file)');
+    'the super admin downloads it (private, no-store, as a file)');
   r = await gb(ALL, 'yct1', 1);
   ok(r.status === 200 && r.json.mine.wrong.length === 0, 'Simulacro 1 with zero mistakes: the celebration (wrong = [])');
 
@@ -527,10 +529,10 @@ async function server() {
   ok(mR.golden.taken.length === Y.sims.length && mR.golden.pdf === null, '… the route lists their five books, no PDF');
   ok((await unlock(kR1.studentCode, 'yct1')).json.ok, 'a teacher opens kid R\'s Dorado');
   r = await gb(R1, 'yct1', 3);
-  ok(r.status === 200 && r.json.dorado === true && /book\.pdf/.test(r.json.pdf.href || ''), 'now the book offers the PDF');
-  ok((await get('/golden-media/yct1sim/book.pdf', as(R1))).status === 200, '… and it downloads');
+  ok(r.status === 200 && r.json.dorado === true && r.json.pdf.href === null, 'now every book opens (the PDF stays the super admin\'s)');
+  ok((await get('/golden-media/yct1sim/book.pdf', as(R1))).status === 403, '… the PDF refused');
   mR = mod(await ruta(as(R1)), 'yct1');
-  ok(mR.dorado.open && mR.sims.every((s) => s.book) && /book\.pdf/.test(mR.golden.pdf || '') && !mR.golden.closed, '… the route: every simulation with its book, the PDF');
+  ok(mR.dorado.open && mR.sims.every((s) => s.book) && mR.golden.pdf === null && !mR.golden.closed, '… the route: every simulation with its book, no PDF');
 
   section('old HSK: the mistakes map onto the book too');
   r = await gb(H1, 'hsk1', 1);
@@ -546,13 +548,13 @@ async function server() {
   let m = mod(await ruta(as(S1)), 'yct1');
   ok(m.sims[0].taken && m.sims[0].mistakes === 1 && m.sims[0].book === '/audios/yct1/libro/1', 'kid S1: Simulacro 1 «Libro dorado» with its mistakes');
   ok(m.sims.slice(1).every((s) => !s.taken && s.book === null && s.mistakes === null), '… the others as today (no book)');
-  ok(m.golden && m.golden.left === 4 && m.golden.pdf === null && !m.golden.login, '… «Haz los 4 simulacros que faltan para descargar el libro»');
+  ok(m.golden && m.golden.left === 4 && m.golden.pdf === null && !m.golden.login, '… 4 simulations left, no PDF');
   m = mod(await ruta(as(ALL)), 'yct1');
-  ok(m.sims.every((s) => s.taken && s.book) && m.golden.left === 0 && /^\/golden-media\/yct1sim\/book\.pdf/.test(m.golden.pdf), 'kid ALL: every book and the PDF');
+  ok(m.sims.every((s) => s.taken && s.book) && m.golden.left === 0 && m.golden.pdf === null, 'kid ALL: every book, no PDF (the super admin\'s only)');
   m = mod(await ruta(as(BL)), 'yct1');
   ok(m.sims[0].best === 0 && !m.sims[0].taken && m.sims[0].book === null, 'kid BL (blank try): no book');
   m = mod(await ruta(teacher(SEED)), 'yct1');
-  ok(m.sims.every((s) => s.book && !s.taken) && m.golden.pdf, 'a teacher: every book and the PDF');
+  ok(m.sims.every((s) => s.book && !s.taken) && m.golden.pdf, 'the super admin: every book and the PDF');
   const rt = await get('/api/ruta-dorada', as(S1));
   ok(!CJK.test(rt.text) && !/"ans"|"wrong"|"pics"/.test(rt.text), 'the route state carries counts only (no answer, no file)');
 
