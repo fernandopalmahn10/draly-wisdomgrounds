@@ -27,6 +27,8 @@ const FILES = [
   // Las Trampillas (2026-10-17)
   'public/host-trapdoor.html', 'public/js/host-trapdoor.js', 'public/js/player-trapdoor.js', 'public/js/trapdoor-render.js', 'public/js/trapdoor-arena.js', 'core/trapdoor.js',
   ...fs.readdirSync(path.join(ROOT, 'core/packs')).filter((f) => f.endsWith('.js')).map((f) => 'core/packs/' + f),
+  // Papás, the parents' view (2026-10-18)
+  'public/js/papas.js', 'public/js/papas-plan.js',
 ];
 const RULES = [
   { re: /(?<!New )\bHSK ?2\b/, why: 'kids/parents see "New HSK 1", never "HSK 2" (root CLAUDE.md, 2026-10-11)' },
@@ -36,6 +38,7 @@ const RULES = [
   { re: /[āēīōūǎěǐǒǔǖǘǚǜ]/, why: 'games show pinyin without tone marks (mochi-mash CLAUDE.md)', only: /sixseven|dragon|party|paint|trapdoor/ },
   // (the old Vuelo del Dragón showed hanzi on the projector and the phone: the remake must never bring them back)
   { re: /[㐀-鿿]/, why: 'no hanzi on game screens (root CLAUDE.md: games show pinyin, no hanzi)', only: /dragon|party|paint|trapdoor/ },
+  { re: /[㐀-鿿]/, why: 'no hanzi on Papás (the parents\' view shows pinyin + Spanish, 2026-10-18)', only: /papas/ },
 ];
 
 // blank out comments but keep line numbers

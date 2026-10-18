@@ -78,6 +78,8 @@
   <link rel="stylesheet" href="/css/portal.css?v=20261018a">
   <!-- 🆕 2026-10-18: the «¿Eres tú?» card of an automatic account (js/ruta-auto.js) -->
   <link rel="stylesheet" href="/css/ruta-auto.css?v=20261018v3">
+  <!-- 👨‍👩‍👧 2026-10-18: Papás («Mi Dralingo» part 2, js/papas.js) -->
+  <link rel="stylesheet" href="/css/papas.css?v=20261018p1">
 </head>
 <body class="hw-bg hw-pastel hw-portal">
 
@@ -396,189 +398,207 @@
     </div>
   </div>
 
-  <!-- SCREEN: PARENT VIEW — Spanish digest of what the kid has learned -->
-  <div id="screen-parents" class="container hw-parents hidden">
-    <div class="hw-parents-card">
-      <div class="hw-parents-header">
-        <button class="btn btn-ghost btn-sm" id="hw-parents-back">← Volver</button>
-        <div class="hw-parents-titlebar">
-          <h1 class="hw-parents-title">Progreso de tu hijo/a</h1>
-          <p class="hw-parents-sub">Resumen para padres y madres</p>
+  <!-- SCREEN: PAPÁS — 2026-10-18 «Mi Dralingo» part 2 (his approved design: .claude/handoff/kidhome-design/Papas.dc.html;
+       his words about the old one: "very poor… not easy to read… easy to get lost in"). One clear page: the family-garden
+       banner with Latifa and «Volver», «Lo más importante esta semana» (Aileen), four big numbers, La Ruta Dorada in
+       small scenes, «Cómo ayudar en casa» (Profe Fer), and rows that open everything else in a sheet with its own
+       «Volver». Drawn by js/papas.js + css/papas.css from /api/homework/insights; what it says comes from
+       js/papas-plan.js, the same file the server uses. No code is shown here (his rule 2026-10-18). -->
+  <div id="screen-parents" class="pp hidden">
+    <div class="pp-wrap">
+      <header class="pp-banner">
+        <img class="pp-banner-bg" src="/assets/escape/jardin/bg.webp" srcset="/assets/escape/jardin/bg-s.webp 480w, /assets/escape/jardin/bg.webp 1600w" sizes="(min-width: 900px) 1180px, 100vw" alt="" draggable="false">
+        <div class="pp-banner-top">
+          <button class="pp-back" id="hw-parents-back" type="button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            <span>Volver</span>
+          </button>
+          <span class="pp-kid"><span class="pp-kid-av" id="hw-parents-avatar"></span><span class="pp-kid-name" id="hw-parents-name"></span></span>
+        </div>
+        <img class="pp-banner-latifa" src="/assets/cast/latifa-hello.webp" alt="" width="206" height="480" draggable="false">
+        <div class="pp-banner-text">
+          <p class="pp-kicker">Para papás y mamás</p>
+          <h1 class="pp-title">Así va su aprendizaje</h1>
+          <p class="pp-level" id="pp-level">Chino Mandarín</p>
+        </div>
+      </header>
+
+      <div class="pp-grid">
+        <div class="pp-col pp-col-main">
+          <!-- ① ONE action for this week, in direct words, with one button (js/papas-plan.js `focus`) -->
+          <section class="pp-focus" id="pp-focus" aria-labelledby="pp-focus-k">
+            <p class="pp-focus-k" id="pp-focus-k">Lo más importante esta semana</p>
+            <p class="pp-focus-t" id="pp-focus-t">Cargando…</p>
+            <div class="pp-focus-acts" id="pp-focus-acts"></div>
+            <img class="pp-focus-art" src="/assets/cast/aileen-talk.webp" alt="" width="312" height="480" draggable="false">
+          </section>
+          <!-- ② four big numbers, each with its picture -->
+          <section class="pp-nums" id="pp-nums" aria-label="Su progreso en números"></section>
+          <!-- ③ La Ruta Dorada: one small scene per experience, done / current / later, the trophy at the end -->
+          <section class="pp-card pp-ruta" id="pp-ruta" aria-labelledby="pp-ruta-h">
+            <div class="pp-ruta-head">
+              <h2 class="pp-h2" id="pp-ruta-h">La Ruta Dorada</h2>
+              <span class="pp-ruta-of" id="pp-ruta-of"></span>
+            </div>
+            <ol class="pp-strip" id="pp-strip"></ol>
+            <p class="pp-ruta-say" id="pp-ruta-say"></p>
+            <a class="pp-link" id="pp-ruta-go" href="/audios" hidden><span>Ver La Ruta Dorada</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+          </section>
+        </div>
+
+        <div class="pp-col pp-col-side">
+          <!-- ④ 3 short tips for this week's experience (the old «Tips para mí» tab and the questions, picked) -->
+          <section class="pp-card pp-help" aria-labelledby="pp-help-h">
+            <div class="pp-help-head">
+              <img src="/assets/cast/fer-cheer.webp" alt="" width="287" height="480" draggable="false">
+              <h2 class="pp-h2" id="pp-help-h">Cómo ayudar en casa (5 minutos)</h2>
+            </div>
+            <ol class="pp-tips" id="pp-tips"></ol>
+            <button class="pp-link" type="button" data-open="ideas"><span>Más ideas para casa</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
+          </section>
+          <!-- ⑤ everything else, one tap away (nothing of the old Papás is lost) -->
+          <nav class="pp-rows" aria-label="Más para papás">
+            <button class="pp-row" type="button" data-open="mensajes">
+              <img class="pp-row-pic is-round" src="/assets/cast/fer-hello.webp" alt="" width="40" height="40" draggable="false">
+              <span class="pp-row-t"><b>Mensajes de la profe</b><small>Lo que la profe le escribió</small></span>
+              <span class="pp-badge" id="pp-badge-msgs" hidden></span>
+              <svg class="pp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="pp-row" type="button" data-open="sabe">
+              <img class="pp-row-pic" src="/assets/dralingo/thumbsup.webp" alt="" width="40" height="40" draggable="false">
+              <span class="pp-row-t"><b>Lo que ya sabe hacer</b><small>Sus logros y sus palabras con audio</small></span>
+              <svg class="pp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="pp-row" type="button" data-open="preguntas">
+              <img class="pp-row-pic is-round" src="/assets/cast/hamdan-hello.webp" alt="" width="40" height="40" draggable="false">
+              <span class="pp-row-t"><b>Preguntas para hacerle hoy</b><small>Ideas para conversar en casa</small></span>
+              <span class="pp-count" id="pp-count-preguntas" hidden></span>
+              <svg class="pp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="pp-row" type="button" data-open="examenes">
+              <img class="pp-row-pic" src="/assets/dralingo/star-hold.webp" alt="" width="40" height="40" draggable="false">
+              <span class="pp-row-t"><b>Exámenes en clase</b><small>Sus simulacros y sus errores</small></span>
+              <span class="pp-count" id="pp-count-examenes" hidden></span>
+              <svg class="pp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="pp-row" type="button" data-open="historias">
+              <span class="pp-row-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M2.5 5.2c2.9-1.2 6-1 8.8.9v13.4c-2.8-1.8-5.9-2-8.8-.9zM21.5 5.2c-2.9-1.2-6-1-8.8.9v13.4c2.8-1.8 5.9-2 8.8-.9z"/></svg></span>
+              <span class="pp-row-t"><b>Historias leídas</b><small>Las historias de clase y su nota</small></span>
+              <span class="pp-count" id="pp-count-historias" hidden></span>
+              <svg class="pp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="pp-row" type="button" data-open="reporte">
+              <span class="pp-row-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="2.4"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4"/></svg></span>
+              <span class="pp-row-t"><b>El reporte del mes</b><small>Su diploma, listo para WhatsApp</small></span>
+              <svg class="pp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="pp-row" type="button" data-open="guias">
+              <span class="pp-row-ico" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h11l5 5v10a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5z"/><path d="M15 4.5v5h5"/></svg></span>
+              <span class="pp-row-t"><b>Guías de las tareas</b><small>Para repasar juntos en casa</small></span>
+              <svg class="pp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="pp-row" type="button" data-open="tareas">
+              <img class="pp-row-pic is-round" src="/assets/cast/aileen-hello.webp" alt="" width="40" height="40" draggable="false">
+              <span class="pp-row-t"><b>Ver sus tareas</b><small>Sus tareas están en su inicio</small></span>
+              <svg class="pp-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </nav>
         </div>
       </div>
-      <div class="hw-parents-hero">
-        <div class="hw-parents-avatar-frame">
-          <div class="hw-parents-avatar" id="hw-parents-avatar"></div>
-        </div>
-        <div class="hw-parents-hero-info">
-          <div class="hw-parents-hero-name" id="hw-parents-name">—</div>
-          <div class="hw-parents-hero-code">Código: <strong id="hw-parents-code">····</strong></div>
-          <div class="hw-parents-stats" id="hw-parents-stats"></div>
-          <!-- 🌱 0 → 2000 lifetime sentence-saved progress bar. Drives a
-               mystical tier label (Semilla → Bambú → Loto → Fénix → Dragón
-               Despierto) so the journey feels like a quest, not a number. -->
-          <div class="hw-parents-progress" id="hw-parents-progress"></div>
-        </div>
-      </div>
-      <!-- Expandable per-sentence detail (toggled by the "oraciones
-           correctas" pill) — what the kid wrote vs the right answer. -->
-      <div class="hw-parents-sentences-panel hidden" id="hw-parents-sentences-panel"></div>
+    </div>
 
-      <!-- TAB SWITCHER — progreso | tips | guías (scrollable on phones) -->
-      <div class="hw-parents-tabs">
-        <button class="hw-parents-tab active" data-tab="progress" type="button">📊 Progreso</button>
-        <button class="hw-parents-tab" data-tab="tips" type="button">💡 Tips para mí</button>
-        <button class="hw-parents-tab" data-tab="guias" type="button">📘 Guías</button>
-        <button class="hw-parents-tab" data-tab="reporte" type="button">📋 Generar reporte</button>
-      </div>
-
-      <!-- ============ TAB: PROGRESO ============ -->
-      <div class="hw-parents-tabpanel" id="hw-parents-tabpanel-progress">
-        <div class="hw-parents-encouragement" id="hw-parents-encouragement">
-          Aquí verás todo lo que tu hijo/a ha aprendido. Anímalo/a a practicar todos los días — incluso 5 minutos hacen mucha diferencia. 🌱
-        </div>
-
-        <div class="hw-parents-section-title">🌟 Lo que tu hijo/a ya sabe hacer</div>
-        <div class="hw-parents-insights" id="hw-parents-insights">
-          <div class="hw-parents-empty">Todavía no ha completado ninguna tarea. ¡Anímalo/a a hacer la primera!</div>
-        </div>
-
-        <div class="hw-parents-section-title">💬 Preguntas que puedes hacerle hoy</div>
-        <p class="hw-parents-section-intro">Ideas concretas para conversar con tu hijo/a sobre lo que ya aprendió. Cada tarea o examen aprobado genera una pregunta nueva. Desliza →</p>
-        <div class="hw-parents-conversations" id="hw-parents-conversations">
-          <div class="hw-parents-empty">Cuando complete una tarea o examen, aquí aparecerán preguntas para hacerle.</div>
-        </div>
-
-        <div class="hw-parents-section-title">🎯 Tareas pendientes</div>
-        <div class="hw-parents-remaining" id="hw-parents-remaining">
-          <div class="hw-parents-empty">¡Ha intentado todas las tareas! Bien hecho.</div>
-        </div>
-
-        <div class="hw-parents-section-title">📖 Historias leídas</div>
-        <div class="hw-parents-tests" id="hw-parents-tests">
-          <div class="hw-parents-empty">Aún no ha leído ninguna historia en clase. Pregúntale a la maestra.</div>
-        </div>
-
-        <!-- 📝 EXÁMENES REALES — HSK simulation attempts the kid has done.
-             User feedback 2026-06-04 (Fernando): parents need a clear view
-             of every real HSK exam simulation the kid sat, with score,
-             percentage, and date. Empty state explains what these are. -->
-        <div class="hw-parents-section-title">📝 Exámenes reales</div>
-        <p class="hw-parents-section-intro">Estas son las simulaciones del examen oficial que tu hijo/a ya hizo en clase. Verás todos los intentos con la fecha, los puntos y el porcentaje.</p>
-        <div class="hw-parents-hsk" id="hw-parents-hsk">
-          <div class="hw-parents-empty">Aún no ha hecho ninguna simulación del HSK. Estas son los exámenes oficiales que practicamos en clase — cuando tu hijo/a haga su primera, aquí verás el resultado.</div>
-        </div>
-
-        <!-- HSK1 Niveles — collapsed by default. User feedback 2026-05-27:
-             "don't display all word lists at once. It should be a dropdown
-             Nivel de HSK1 → HSK1 (later HSK2 etc)." -->
-        <details class="hw-parents-levels-wrap">
-          <summary class="hw-parents-levels-summary">
-            🎯 <strong>Nivel</strong> · Palabras que tu hijo/a está aprendiendo
-            <span class="hw-parents-levels-arrow">▼</span>
-          </summary>
-          <div class="hw-parents-levels-inner">
-            <!-- 🆕 2026-10-12 — texts set per level by renderParentLevelHead() (YCT 1 / New HSK 1 / HSK 1) -->
-            <details class="hw-parents-hsk-section" open>
-              <summary class="hw-parents-hsk-summary" id="hw-parents-level-current">📘 HSK 1 — 150 palabras (nivel actual)</summary>
-              <p class="hw-parents-levels-intro" id="hw-parents-level-intro">HSK 1 es el primer nivel del examen oficial de chino. Las palabras están divididas en 8 experiencias temáticas. Practica las que ya estudió en clase.</p>
-              <div class="hw-parents-levels" id="hw-parents-levels">
-                <div class="hw-parents-empty">Cargando…</div>
+    <!-- 📄 the sheet each row opens: a clear title, «Volver» and ✕ (Esc too), one part shown at a time -->
+    <div class="pp-sheet" id="pp-sheet" hidden>
+      <div class="pp-sheet-scrim" data-close></div>
+      <div class="pp-sheet-card" role="dialog" aria-modal="true" aria-labelledby="pp-sheet-title" tabindex="-1">
+        <header class="pp-sheet-head">
+          <button class="pp-sheet-back" type="button" data-close>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+            <span>Volver</span>
+          </button>
+          <h2 class="pp-sheet-title" id="pp-sheet-title"></h2>
+          <button class="pp-sheet-x" type="button" data-close aria-label="Cerrar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </header>
+        <div class="pp-sheet-body" id="pp-sheet-body">
+          <section class="pp-part" data-part="sabe" data-title="Lo que ya sabe hacer" hidden>
+            <div id="pp-sabe"></div>
+          </section>
+          <section class="pp-part" data-part="preguntas" data-title="Preguntas para hacerle hoy" hidden>
+            <p class="pp-intro">Hazle una pregunta al día. Que conteste en voz alta, en Chino Mandarín o en español.</p>
+            <div id="pp-preguntas"></div>
+          </section>
+          <section class="pp-part" data-part="examenes" data-title="Exámenes en clase" hidden>
+            <p class="pp-intro">Los simulacros del examen oficial que hizo en clase con la profe: la fecha, los puntos y el porcentaje.</p>
+            <div id="pp-examenes"></div>
+          </section>
+          <section class="pp-part" data-part="historias" data-title="Historias leídas" hidden>
+            <div id="pp-historias"></div>
+          </section>
+          <section class="pp-part" data-part="reporte" data-title="El reporte del mes" hidden>
+            <p class="pp-intro">Elige el mes. Se abre su diploma, listo para guardar como PDF o mandar por WhatsApp.</p>
+            <div class="hw-report-months" id="hw-report-months"></div>
+          </section>
+          <section class="pp-part" data-part="guias" data-title="Guías de las tareas" hidden>
+            <p class="pp-intro">Las guías de estudio de cada tarea. Ábranla juntos y lean las frases en voz alta.</p>
+            <div class="hw-guias-list" id="hw-guias-list"></div>
+          </section>
+          <section class="pp-part" data-part="ideas" data-title="Más ideas para casa" hidden>
+            <!-- the old «Tips para mí» tab, all of it -->
+            <div class="hw-parents-speak-banner">
+              🗣️ <strong>Lo más importante:</strong> que diga las palabras EN VOZ ALTA. No basta con saberlas — tienen que poder pronunciarlas.
+            </div>
+            <div class="hw-tip-card">
+              <div class="hw-tip-icon">🎲</div>
+              <div class="hw-tip-body">
+                <div class="hw-tip-title">Práctica aleatoria, cualquier día</div>
+                <p>Los recordatorios sorpresa funcionan mejor que sesiones largas. En el carro, en la cena, antes de dormir: pídele que diga una oración que ya aprendió. 30 segundos basta.</p>
               </div>
-            </details>
-            <details class="hw-parents-hsk-section">
-              <summary class="hw-parents-hsk-summary hw-parents-hsk-locked" id="hw-parents-level-next">🔒 New HSK 1 — próximamente</summary>
-              <p class="hw-parents-levels-intro" id="hw-parents-level-next-intro">Cuando termine HSK 1, desbloqueará New HSK 1.</p>
-            </details>
-          </div>
-        </details>
-      </div>
-
-      <!-- ============ TAB: TIPS ============ -->
-      <!-- Consolidated parenting advice — the user said: "make a tab
-           button that says tips and condense everything. Tell parents to
-           practice randomly, read out loud, write it down, encourage." -->
-      <div class="hw-parents-tabpanel hidden" id="hw-parents-tabpanel-tips">
-        <div class="hw-parents-speak-banner">
-          🗣️ <strong>Lo más importante:</strong> que diga las palabras EN VOZ ALTA. No basta con saberlas — tienen que poder pronunciarlas.
-        </div>
-
-        <div class="hw-tip-card">
-          <div class="hw-tip-icon">🎲</div>
-          <div class="hw-tip-body">
-            <div class="hw-tip-title">Práctica aleatoria, cualquier día</div>
-            <p>Los recordatorios sorpresa funcionan mejor que sesiones largas. En el carro, en la cena, antes de dormir: pídele que diga una oración que ya aprendió. 30 segundos basta.</p>
-          </div>
-        </div>
-
-        <div class="hw-tip-card">
-          <div class="hw-tip-icon">🗣️</div>
-          <div class="hw-tip-body">
-            <div class="hw-tip-title">EN VOZ ALTA, siempre</div>
-            <p>Leer en silencio no construye memoria muscular. Pídele que repita cada respuesta tres veces en voz alta — fuerte, claro, con expresión.</p>
-          </div>
-        </div>
-
-        <div class="hw-tip-card">
-          <div class="hw-tip-icon">✍️</div>
-          <div class="hw-tip-body">
-            <div class="hw-tip-title">Escribir también ayuda</div>
-            <p>Después de hacer una tarea, dale papel y pídele que escriba las 5 oraciones a mano. Ver-decir-escribir es lo que sella el aprendizaje.</p>
-          </div>
-        </div>
-
-        <div class="hw-tip-card">
-          <div class="hw-tip-icon">👨‍🏫</div>
-          <div class="hw-tip-body">
-            <div class="hw-tip-title">Que él/ella te enseñe a ti</div>
-            <p>Cuando los niños son maestros, aprenden el doble. Hazte el que no sabe nada y pídele que te enseñe cómo decir "amo a mi mamá" en chino.</p>
-          </div>
-        </div>
-
-        <div class="hw-tip-card">
-          <div class="hw-tip-icon">🌟</div>
-          <div class="hw-tip-body">
-            <div class="hw-tip-title">Celebra los pequeños logros</div>
-            <p>"¡Bien dicho!" o "¡me encantó cómo lo pronunciaste!" valen oro. Los kids de 7-10 años aprenden con elogio específico, no con presión.</p>
-          </div>
-        </div>
-
-        <div class="hw-tip-card">
-          <div class="hw-tip-icon">⏱️</div>
-          <div class="hw-tip-body">
-            <div class="hw-tip-title">5 minutos por día &gt; 1 hora a la semana</div>
-            <p>El cerebro consolida con repetición espaciada. Es mejor practicar 5 minutos al día durante 6 días que 30 minutos un solo día.</p>
-          </div>
-        </div>
-
-        <div class="hw-tip-card">
-          <div class="hw-tip-icon">🚫</div>
-          <div class="hw-tip-body">
-            <div class="hw-tip-title">No corrijas demasiado</div>
-            <p>Si dice algo incorrecto, repite la versión correcta con calma — no lo regañes. Los errores son parte del aprendizaje, no fallas.</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- ============ TAB: GUÍAS ============ -->
-      <!-- Downloadable study guides (PDF) per lesson, grouped by experience.
-           Populated from /api/guides. -->
-      <div class="hw-parents-tabpanel hidden" id="hw-parents-tabpanel-guias">
-        <div class="hw-parents-encouragement">
-          📘 Aquí están las <strong>guías de estudio</strong> para repasar en casa con tu hijo/a. Cada guía cubre una lección. Descárgala o ábrela en tu teléfono. 🗣️ Practiquen las frases EN VOZ ALTA juntos.
-        </div>
-        <div class="hw-guias-list" id="hw-guias-list">
-          <div class="hw-parents-empty">Cargando guías…</div>
-        </div>
-      </div>
-
-      <!-- ============ TAB: GENERAR REPORTE ============ -->
-      <div class="hw-parents-tabpanel hidden" id="hw-parents-tabpanel-reporte">
-        <div class="hw-parents-encouragement">
-          📋 Genera la <strong>boleta de calificaciones</strong> de tu hijo/a. Elige el mes y se crea una tarjeta lista para <strong>compartir por WhatsApp</strong> o guardar como PDF. 🐉
-        </div>
-        <div class="hw-report-months" id="hw-report-months">
-          <div class="hw-parents-empty">Cargando meses…</div>
+            </div>
+            <div class="hw-tip-card">
+              <div class="hw-tip-icon">🗣️</div>
+              <div class="hw-tip-body">
+                <div class="hw-tip-title">EN VOZ ALTA, siempre</div>
+                <p>Leer en silencio no construye memoria muscular. Pídele que repita cada respuesta tres veces en voz alta — fuerte, claro, con expresión.</p>
+              </div>
+            </div>
+            <div class="hw-tip-card">
+              <div class="hw-tip-icon">✍️</div>
+              <div class="hw-tip-body">
+                <div class="hw-tip-title">Escribir también ayuda</div>
+                <p>Después de hacer una tarea, dale papel y pídele que escriba las 5 oraciones a mano. Ver-decir-escribir es lo que sella el aprendizaje.</p>
+              </div>
+            </div>
+            <div class="hw-tip-card">
+              <div class="hw-tip-icon">👨‍🏫</div>
+              <div class="hw-tip-body">
+                <div class="hw-tip-title">Que él/ella te enseñe a ti</div>
+                <p>Cuando los niños son maestros, aprenden el doble. Hazte el que no sabe nada y pídele que te enseñe cómo decir "amo a mi mamá" en chino.</p>
+              </div>
+            </div>
+            <div class="hw-tip-card">
+              <div class="hw-tip-icon">🌟</div>
+              <div class="hw-tip-body">
+                <div class="hw-tip-title">Celebra los pequeños logros</div>
+                <p>"¡Bien dicho!" o "¡me encantó cómo lo pronunciaste!" valen oro. Los kids de 7-10 años aprenden con elogio específico, no con presión.</p>
+              </div>
+            </div>
+            <div class="hw-tip-card">
+              <div class="hw-tip-icon">⏱️</div>
+              <div class="hw-tip-body">
+                <div class="hw-tip-title">5 minutos por día &gt; 1 hora a la semana</div>
+                <p>El cerebro consolida con repetición espaciada. Es mejor practicar 5 minutos al día durante 6 días que 30 minutos un solo día.</p>
+              </div>
+            </div>
+            <div class="hw-tip-card">
+              <div class="hw-tip-icon">🚫</div>
+              <div class="hw-tip-body">
+                <div class="hw-tip-title">No corrijas demasiado</div>
+                <p>Si dice algo incorrecto, repite la versión correcta con calma — no lo regañes. Los errores son parte del aprendizaje, no fallas.</p>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -663,10 +683,12 @@
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/hw-i18n.js?v=20261018f2"></script>
+  <script src="/js/hw-i18n.js?v=20261018p1"></script>
   <script src="/js/portal.js?v=20261013c"></script>
   <script src="/js/ruta-auto.js?v=20261018v3"></script>
-  <script src="/js/homework.js?v=20261018v3"></script>
+  <script src="/js/papas-plan.js?v=20261018p1"></script>
+  <script src="/js/papas.js?v=20261018p1"></script>
+  <script src="/js/homework.js?v=20261018p1"></script>
   <script src="/js/super-admin-badge.js?v=20261011c"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>

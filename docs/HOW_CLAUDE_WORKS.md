@@ -140,7 +140,7 @@ add a code, in /maestro → Teachers. The levels live in one list, `core/levels.
   Instalar app · Salir); tap your avatar = Ajustes. Game-show moments on the phone: a welcome (the kid and Dralingo
   over a gold | sky split, once per visit), a results reveal for every tarea (count-up, stars, the kid + a gang member,
   confetti only when passed, a kind «¡Casi!» otherwise, ▶ Siguiente / 🔁 Otra vez), level-up and streak banners, a
-  «¡Combo x3!» chip in the quiz. The parents' view is calmer (white report, a 2 × 2 grid of counts). All of it lives
+  «¡Combo x3!» chip in the quiz. The parents' view is its own page since 2026-10-18 (§ 2.4 Papás). All of it lives
   in `css/portal.css` + `js/portal.js` (without `hw-portal` on `<body>` the moments and the new styling switch off; a full
   rollback is reverting the commit, the home markup changed too); the gang poses it shows come from
   one map in portal.js (`POSES`).
@@ -407,7 +407,33 @@ uppercase plain words, «300 palabras» or a year); it first proves itself on a 
 Parents open their child's progress with the same codes. A privacy guard makes sure a code only
 opens the matching child.
 
-- progress bar (0 → 2000), activities, saved sentences
+**Papás, remade 2026-10-18 («Mi Dralingo» part 2, his approved design `.claude/handoff/kidhome-design/Papas.dc.html`;
+his words about the old one: "very poor… not easy to read… easy to get lost in").** One clear page, top to bottom:
+- a banner with art (the family garden, Latifa, «Volver», the kid's avatar + name, «Chino Mandarín · <nivel>»);
+- **«Lo más importante esta semana»** (Aileen): ONE action with one button, in this order: a homework to send (the
+  newest not sent) → practice below the goal in the current experience → words to mark → El Entrenamiento done:
+  «Avísale a la profe» (WhatsApp / copy) → «¡Va muy bien!» (with a passed simulation: its golden book);
+- **four big numbers**: palabras que ya sabe (La Base seals, «N de M») · experiencias completas «N de 8» (every word
+  marked + its practice at the goal + its homework sent, or none yet) · tareas mandadas (red «Falta N de esta semana»
+  = the newest experience's homework not sent) · simulacro en clase (the latest %, ✓ when passed; else «Aún no · La
+  profe lo hace al final»);
+- **La Ruta Dorada strip**: one small scene per experience (done ✓ / current with a gold arrow / later), the Dubai
+  trophy at the end, and «Va en la Experiencia N…»;
+- **«Cómo ayudar en casa (5 minutos)»** (Profe Fer): 3 tips for this week's experience (its words, a question from a
+  passed tarea of that experience, the video); «Más ideas para casa» keeps all 7 old tips;
+- rows that open a sheet («Volver», ✕, Esc): Mensajes de la profe (badge) · Lo que ya sabe hacer (achievements, the
+  level's words per world with 🔊, what they wrote) · Preguntas para hacerle hoy · Exámenes en clase (tries + golden
+  book mistakes) · Historias leídas · El reporte del mes · Guías de las tareas · «Ver sus tareas» (the kid's home:
+  pending tareas live there now, not in Papás).
+Gone: the stat pills with hidden toggles, «Camino del idioma» (it said HSK1+ even for YCT 1), the tabs, the code.
+Files: `public/js/papas.js` + `css/papas.css` (drawn from `/api/homework/insights`), `public/js/papas-plan.js` (the
+numbers and «Lo más importante»: ONE file the server and the page both run), server.js `_papasRuta` (the payload's
+`ruta`: only when the /homework session is this same kid; built from RutaProgress.state, `_rutaExps`, Train.worldsOf,
+`_tareaMarks`, Golden), small scenes in `public/assets/scenes/`, English in hw-i18n.js (its Papás block).
+`node scripts/test-papas.js` (port 4460: the plan, made-up kids at every stage, only the kid's own record, the
+English of every phrase) must pass.
+
+- progress bar (0 → 2000), activities, saved sentences (before 2026-10-18; see Papás above)
 - **📝 Exámenes reales**: the child's official-test results
 - **report cards**: the teacher's notes become a branded monthly report card ("Generar reporte")
 - word-list audio, and an English dashboard option
@@ -780,7 +806,7 @@ intro is long"), and I'll turn it into exact changes.
   simulations and word sets
 - **HSK2:**
   - Bolsa de Palabras experiences 4–8
-  - the parents view still labels HSK2 kids as HSK1
+  - the month's report card (Papás → «El reporte del mes») still prints «HSK1» and a few hanzi for every level
   - daily challenges are HSK1-themed for everyone
 - **Security Phase 3:** Cloudflare in front of the site
 - **Old work to check:** the HSK1 «Viajando por China» and HSK2 Store Roblox worlds have open items

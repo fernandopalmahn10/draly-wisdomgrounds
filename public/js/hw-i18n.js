@@ -55,6 +55,89 @@
       .replace(/(\d+) mundos? practicados?/g, (_, n) => n + (n === '1' ? ' world practiced' : ' worlds practiced'))
       .replace(/(\d+) tareas? hechas?/g, (_, n) => n + ' done');
   } });
+  // 👨‍👩‍👧 2026-10-18 · Papás («Mi Dralingo» part 2: homework.html #screen-parents + js/papas.js). Kept apart like the
+  // blocks above. The experiences' names (New HSK 1, HSK 1) go in too: the sentences below name them.
+  (function () {
+    var M = {
+      'Para papás y mamás': 'For moms and dads', 'Así va su aprendizaje': 'How their learning is going', 'Chino Mandarín': 'Mandarin Chinese',
+      'Lo más importante esta semana': 'The most important thing this week', 'Ver La Ruta Dorada': 'See the Golden Route',
+      'Cómo ayudar en casa (5 minutos)': 'How to help at home (5 minutes)', 'Más ideas para casa': 'More ideas for home',
+      'Mensajes de la profe': 'Messages from the teacher', 'Lo que la profe le escribió': 'What the teacher wrote to them',
+      'Lo que ya sabe hacer': 'What they can already do', 'Sus logros y sus palabras con audio': 'Their achievements and their words with audio',
+      'Preguntas para hacerle hoy': 'Questions to ask them today', 'Ideas para conversar en casa': 'Ideas to talk about at home',
+      'Exámenes en clase': 'Exams in class', 'Sus simulacros y sus errores': 'Their practice exams and their mistakes',
+      'Las historias de clase y su nota': 'The class stories and their score',
+      'El reporte del mes': 'The month\'s report', 'Su diploma, listo para WhatsApp': 'Their diploma, ready for WhatsApp',
+      'Guías de las tareas': 'Homework guides', 'Para repasar juntos en casa': 'To review together at home',
+      'Ver sus tareas': 'See their homework', 'Sus tareas están en su inicio': 'Their homework is on their home screen',
+      'Su progreso en números': 'Their progress in numbers', 'Más para papás': 'More for parents',
+      'Hazle una pregunta al día. Que conteste en voz alta, en Chino Mandarín o en español.': 'Ask them one question a day. Let them answer out loud, in Mandarin Chinese or in Spanish.',
+      'Los simulacros del examen oficial que hizo en clase con la profe: la fecha, los puntos y el porcentaje.': 'The official exam practice tests they took in class with the teacher: the date, the points and the percentage.',
+      'Elige el mes. Se abre su diploma, listo para guardar como PDF o mandar por WhatsApp.': 'Choose the month. Their diploma opens, ready to save as a PDF or send on WhatsApp.',
+      'Las guías de estudio de cada tarea. Ábranla juntos y lean las frases en voz alta.': 'The study guide of each homework. Open it together and read the phrases out loud.',
+      'Para ver su Ruta Dorada, vuelve a entrar con su código.': 'To see their Golden Route, sign in again with their code.', 'Entrar de nuevo': 'Sign in again',
+      'Ayúdale a mandar su tarea: graben juntos su video y mándenlo a la profe por WhatsApp.': 'Help them send their homework: record their video together and send it to the teacher on WhatsApp.',
+      '¡Terminó El Entrenamiento! Avísale a la profe: ya puede hacer El Simulacro Dorado en clase.': 'They finished the Training! Tell the teacher: they can now take the Golden Practice Exam in class.',
+      '¡Va muy bien! Sigan así: 5 minutos al día en casa hacen la diferencia.': 'It\'s going very well! Keep it up: 5 minutes a day at home make the difference.',
+      'Ver la tarea': 'See the homework', 'Ver su libro dorado': 'See their golden book', 'Practicar ahora': 'Practise now', 'Marcar palabras': 'Mark words', 'Avisar a la profe': 'Tell the teacher',
+      'Copiar mensaje': 'Copy message', '¡Mensaje copiado!': 'Message copied!',
+      'palabras que ya sabe': 'words they know', 'experiencias completas': 'experiences complete', 'mandadas': 'sent',
+      'tareas por WhatsApp': 'homework on WhatsApp', 'Falta 1 de esta semana': '1 left this week', 'Al día': 'Up to date', 'Pronto': 'Soon',
+      'La profe las manda pronto': 'The teacher sends them soon', 'simulacro en clase': 'practice exam in class', '¡Aprobado!': 'Passed!',
+      'Para aprobar: 60 %': 'To pass: 60 %', 'Aún no': 'Not yet', 'La profe lo hace al final': 'The teacher does it at the end',
+      'El Simulacro Dorado': 'The Golden Practice Exam',
+      'Pídele que te enseñe 3 palabras de hoy, con su dibujo.': 'Ask them to teach you 3 words from today, with their picture.',
+      'Pregúntale «Ni hao ma?» y celebra su respuesta, aunque no sea perfecta.': 'Ask them «Ni hao ma?» and celebrate their answer, even if it isn\'t perfect.',
+      'Graben juntos el video de la tarea y mándenlo el mismo día.': 'Record the homework video together and send it the same day.',
+      'Que lo diga EN VOZ ALTA: 5 minutos al día valen más que una hora a la semana.': 'Have them say it OUT LOUD: 5 minutes a day are worth more than an hour a week.',
+      'historias leídas': 'stories read', 'Sus logros': 'Their achievements', 'Sus palabras': 'Their words',
+      'Todavía no tiene logros. Cuando apruebe su primera tarea, aparece aquí.': 'No achievements yet. When they pass their first homework, it shows up here.',
+      'YCT 1 es el primer nivel del examen oficial de Chino Mandarín para niños. Toca 🔊 para oír cada palabra y pídele que la repita.': 'YCT 1 is the first level of the official Mandarin Chinese exam for children. Tap 🔊 to hear each word and ask them to repeat it.',
+      'New HSK 1 es el primer nivel del nuevo examen oficial de Chino Mandarín. Toca 🔊 para oír cada palabra y pídele que la repita.': 'New HSK 1 is the first level of the new official Mandarin Chinese exam. Tap 🔊 to hear each word and ask them to repeat it.',
+      'HSK 1 es el primer nivel del examen oficial de Chino Mandarín. Toca 🔊 para oír cada palabra y pídele que la repita.': 'HSK 1 is the first level of the official Mandarin Chinese exam. Tap 🔊 to hear each word and ask them to repeat it.',
+      'Las palabras de su nivel llegan pronto.': 'The words of their level are coming soon.', 'Lo que escribió en sus tareas': 'What they wrote in their homework',
+      'Escribió:': 'Wrote:', 'Correcto:': 'Correct:', 'Identificó eventos y personajes de la historia': 'Identified events and characters of the story',
+      'Cuando apruebe una tarea o lea una historia, aquí aparecen preguntas para hacerle.': 'When they pass a homework or read a story, questions to ask them appear here.',
+      'Aprobó. Pídele que te cuente qué le gustó del examen.': 'They passed. Ask them what they liked about the exam.',
+      'Aún no aprueba este examen. Lo repasan en clase y en El Entrenamiento.': 'They haven\'t passed this exam yet. They review it in class and in the Training.',
+      'Aún no hizo ningún simulacro. La profe lo hace en clase, al final de La Ruta Dorada.': 'They haven\'t taken a practice exam yet. The teacher does it in class, at the end of the Golden Route.',
+      'Sus errores, en el libro dorado': 'Their mistakes, in the golden book', 'Ver el libro dorado': 'See the golden book', 'Sin errores': 'No mistakes',
+      '1 error para repasar': '1 mistake to review',
+      'Aún no lee historias en clase. Cuando lea la primera, aquí ves su nota.': 'They haven\'t read stories in class yet. When they read the first one, you\'ll see their score here.',
+      'La Familia Grande': 'The Big Family', 'Un Día en la Escuela': 'A Day at School', 'El Restaurante Chino': 'The Chinese Restaurant',
+      'La Tienda de Ropa': 'The Clothes Shop', 'Mi Rutina y el Clima': 'My Routine and the Weather', 'Deportes y Salud': 'Sports and Health',
+      'Aventura por China': 'Adventure through China', 'Palabras Mágicas II': 'Magic Words II', 'La Escuela': 'School', 'El Mercado': 'The Market',
+      'Tiempo y Clima': 'Time and Weather', 'Viajes': 'Trips', 'La Casa': 'The House',
+    };
+    for (var k in M) if (DICT.map[k] === undefined) DICT.map[k] = M[k];
+    var nm = function (s) { return DICT.map[s] !== undefined ? DICT.map[s] : s; };
+    PATTERNS.push({ re: /^de (\d+)$/, en: 'of $1' });
+    PATTERNS.push({ re: /^(\d+) de (\d+)$/, en: '$1 of $2' });
+    PATTERNS.push({ re: /^Faltan (\d+) de esta semana$/, en: '$1 left this week' });
+    PATTERNS.push({ re: /^(\d+) experiencias y el examen$/, en: '$1 experiences and the exam' });
+    PATTERNS.push({ re: /^de (\d+) palabras marcadas$/, en: 'of $1 words marked' });
+    PATTERNS.push({ re: /^de (\d+) tareas aprobadas$/, en: 'of $1 homeworks passed' });
+    PATTERNS.push({ re: /^(\d+) errores para repasar$/, en: '$1 mistakes to review' });
+    PATTERNS.push({ re: /^Ayúdale a mandar la tarea de la Experiencia (\d+), (.+): graben juntos su video y mándenlo a la profe por WhatsApp\.$/,
+      en: function (_, n, x) { return 'Help them send the homework of Experience ' + n + ', ' + nm(x) + ': record their video together and send it to the teacher on WhatsApp.'; } });
+    PATTERNS.push({ re: /^Ayúdale a practicar la Experiencia (\d+)(?:, (.+?),)? hasta llegar al (\d+) %: (?:todavía no la practica|hoy va en (\d+) %)\.$/,
+      en: function (_, n, x, g, b) { return 'Help them practise Experience ' + n + (x ? ', ' + nm(x) + ',' : '') + ' until they reach ' + g + ' %: ' + (b ? 'today they are at ' + b + ' %.' : 'they haven\'t practised it yet.'); } });
+    PATTERNS.push({ re: /^Ayúdale a marcar las palabras que ya sabe de la Experiencia (\d+)(?:, (.+))?: le faltan? (\d+)\.$/,
+      en: function (_, n, x, k) { return 'Help them mark the words they already know in Experience ' + n + (x ? ', ' + nm(x) : '') + ': ' + k + ' to go.'; } });
+    PATTERNS.push({ re: /^¡Va muy bien! Aprobó El Simulacro Dorado con (\d+) %\. Pídele que te cuente cómo le fue\.$/,
+      en: 'It\'s going very well! They passed the Golden Practice Exam with $1 %. Ask them to tell you how it went.' });
+    PATTERNS.push({ re: /^Va en la Experiencia (\d+), (.+)\. Cuando termine las (\d+), la profe le hace El Simulacro Dorado en clase\.$/,
+      en: function (_, n, x, of) { return 'They are on Experience ' + n + ', ' + nm(x) + '. When they finish all ' + of + ', the teacher gives them the Golden Practice Exam in class.'; } });
+    PATTERNS.push({ re: /^¡Terminó las (\d+) experiencias y aprobó El Simulacro Dorado!$/, en: 'They finished all $1 experiences and passed the Golden Practice Exam!' });
+    PATTERNS.push({ re: /^¡Terminó las (\d+) experiencias! Ahora la profe le hace El Simulacro Dorado en clase\.$/, en: 'They finished all $1 experiences! Now the teacher gives them the Golden Practice Exam in class.' });
+    PATTERNS.push({ re: /^Experiencia (\d+), (.+): (completa|va aquí|después)$/,
+      en: function (_, n, x, s) { return 'Experience ' + n + ', ' + nm(x) + ': ' + (s === 'completa' ? 'complete' : s === 'va aquí' ? 'they are here' : 'later'); } });
+    PATTERNS.push({ re: /^Pídele que te enseñe 3 palabras de (.+), con su dibujo\.$/, en: function (_, x) { return 'Ask them to teach you 3 words from ' + nm(x) + ', with their picture.'; } });
+    PATTERNS.push({ re: /^Entendió la historia «(.+)»$/, en: 'Understood the story «$1»' });
+    PATTERNS.push({ re: /^Sacó (\d+)\/100 en el examen de lectura$/, en: 'Scored $1/100 on the reading test' });
+    PATTERNS.push({ re: /^Pídele que te cuente la historia de «(.+)» con sus propias palabras\.$/, en: 'Ask them to tell you the story of «$1» in their own words.' });
+    PATTERNS.push({ re: /^Pregúntale: «¿Qué pasó en la historia de (.+)\? Cuéntamela en Chino Mandarín o en español\.»$/, en: 'Ask them: «What happened in the story of $1? Tell it to me in Mandarin Chinese or in Spanish.»' });
+  })();
 
   // Quick reject: nothing to translate unless the text has latin
   // letters (hanzi-only, pinyin-only-with-tones still passes but

@@ -2906,255 +2906,29 @@
         showScreen('parents');
       });
   }
+  // 2026-10-18 · Papás («Mi Dralingo» part 2, his approved design): js/papas.js draws the whole page (the old stat pills,
+  // «Camino del idioma», the tabs and the pending tareas are gone; everything else lives in its rows and sheets, and the
+  // pending tareas are the kid's home: «Ver sus tareas»). It borrows from here what only this file has: the avatar, the
+  // voice, the inbox, the guides, the month reports and the way home.
   function renderParentView(data) {
-    renderAvatarInto($('hw-parents-avatar'), data.avatar);
-    $('hw-parents-name').textContent = (data.displayName && data.displayName !== 'Anon') ? data.displayName : 'Tu hijo/a';
-    $('hw-parents-code').textContent = data.code;
-    const t = data.totals || {};
-    // Stats row — user feedback 2026-05-27 asked for word count
-    // ("palabras aprendidas, oraciones, estimated according to records").
-    // Added wordsLearned (unique pinyin tokens from correct answers) and
-    // sentencesCorrect alongside the existing tareas/historias stats.
-    const stories = t.readingTestsTaken || 0;
-    const attempts = t.readingTestAttempts || 0;
-    const storiesExtra = (attempts > stories) ? ` <small>(${attempts} veces)</small>` : '';
-    const wordsLearned = t.wordsLearned || 0;
-    // 🆕 2026-10-12 — the level's own word count (null for YCT 1: no fixed list to count against)
-    const wordsTotal   = t.wordsTotal === undefined ? (t.wordsTotalHsk1 || 150) : t.wordsTotal;
-    const sentCorrect  = t.sentencesCorrect || 0;
-    $('hw-parents-stats').innerHTML = `
-      <span class="hw-parents-stat">📚 <strong>${t.assignmentsMastered || 0}</strong>/${t.assignmentsAvailable || 0} tareas dominadas</span>
-      <span class="hw-parents-stat">📖 <strong>${stories}</strong> historia${stories === 1 ? '' : 's'} leída${stories === 1 ? '' : 's'}${storiesExtra}</span>
-      <span class="hw-parents-stat hw-parents-stat-pill is-clickable" id="hw-parents-pill-words" role="button">🌱 <strong>${wordsLearned}</strong>${wordsTotal ? '/' + wordsTotal : ''} palabras aprendidas <small>(estimado · toca para ver)</small></span>
-      <span class="hw-parents-stat hw-parents-stat-pill is-clickable" id="hw-parents-pill-sentences" role="button">✏️ <strong>${sentCorrect}</strong> oraciones correctas <small>(toca para ver)</small></span>`;
-    // 🌱 0→2000 lifetime progress bar — counts every sentence the kid has
-    // saved (warmup, daily-bonus, edits). User asked for "papas section
-    // count flawless"; this is the source of truth, computed server-side
-    // from rec.sentencesBuilt.length so retries can't game it.
-    const saved = t.sentencesSavedTotal || 0;
-    const goal  = t.sentencesSavedGoal  || 2000;
-    const pct = Math.min(100, Math.round((saved / goal) * 100));
-    // Tiered milestone label so the bar feels like a journey, not a number.
-    const milestone =
-        saved >= 2000 ? '🐲 ¡Dragón Despierto!'
-      : saved >= 1000 ? '🔥 Fénix'
-      : saved >=  500 ? '🪷 Loto'
-      : saved >=  200 ? '🎋 Bambú'
-      : '🌱 Semilla';
-    const bar = $('hw-parents-progress');
-    if (bar) {
-      bar.innerHTML = `
-        <div class="hw-pp-head">
-          <span class="hw-pp-icon">🌱</span>
-          <span class="hw-pp-title">Camino del idioma</span>
-          <span class="hw-pp-tier">${milestone}</span>
-        </div>
-        <div class="hw-pp-bar"><div class="hw-pp-fill" style="width:${pct}%"></div></div>
-        <div class="hw-pp-meta"><strong>${saved.toLocaleString('es-ES')}</strong> / ${goal.toLocaleString('es-ES')} oraciones guardadas · ${pct}%</div>
-        <div class="hw-pp-note">Cada oración que ${escapeHtml((data.displayName || 'tu hijo/a').split(' ')[0])} guarda en clase suma 1. Meta: 2 000 oraciones (fluidez HSK1+).</div>`;
-    }
-    // Expandable per-sentence panel: shows exactly what the kid wrote vs the
-    // right answer, marked ✓ / ✗, grouped by lesson. User feedback: "oraciones
-    // correctas should expand to see what is correct and what is incorrect."
-    renderSentenceDetail(data.sentenceDetail || []);
-    const sentPill = $('hw-parents-pill-sentences');
-    if (sentPill) {
-      sentPill.addEventListener('click', () => {
-        const panel = $('hw-parents-sentences-panel');
-        if (!panel) return;
-        const show = panel.classList.contains('hidden');
-        panel.classList.toggle('hidden', !show);
-        if (show) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      });
-    }
-    // User feedback 2026-05-27: "once you click on the green bar, then
-    // it's when you should display what the kid already knows."
-    // → Tapping the palabras-aprendidas pill scrolls to + opens the
-    // HSK dropdown so the parent sees the full word list on demand.
-    const wordsPill = $('hw-parents-pill-words');
-    if (wordsPill) {
-      wordsPill.addEventListener('click', () => {
-        const wrap = document.querySelector('.hw-parents-levels-wrap');
-        if (wrap) {
-          wrap.open = true;
-          // Also open the HSK1 sub-section
-          const hsk1 = wrap.querySelector('.hw-parents-hsk-section');
-          if (hsk1) hsk1.open = true;
-          wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-    }
-    const insightsWrap = $('hw-parents-insights');
-    // Merge: assignment-based insights (from server) + reading-test
-    // insights (synthesized client-side from passed stories). User
-    // feedback 2026-05-27: "Lo que tu hijo ya sabe hacer should also
-    // trigger progress according to records of tests and stories."
-    const allInsights = (data.insights || []).slice();
-    (data.tests || []).forEach((t) => {
-      if (t.score >= 60) {  // mastered if ≥60%
-        allInsights.push({
-          insight: {
-            title: `Tu hijo/a entendió la historia "${t.storyTitle || t.storyId}"`,
-            bullets: [
-              `Sacó ${t.score}/100 en el examen de lectura`,
-              'Identificó eventos y personajes de la historia',
-              'Practicó vocabulario HSK1 en contexto real',
-            ],
-            encouragement: `Pídele que te cuente la historia de "${t.storyTitle || t.storyId}" con sus propias palabras.`,
-          },
-          score: t.score,
-          total: 100,
-          lastAttemptAt: t.ts,
-          fromTest: true,
-        });
-      }
+    if (!window.DralyPapas) return;
+    window.DralyPapas.render(data, {
+      avatar: (el, v) => renderAvatarInto(el, v),
+      speak: (text, btn) => speakChinese(text, btn),
+      openInbox,
+      unread: () => _inboxUnread,
+      guides: fetchGuides,
+      reports: fetchReportMonths,
+      home: (where) => {
+        renderList();
+        showScreen('list');
+        if (where !== 'tareas') return;
+        const t = $('pt-tareas');
+        const el = t && !t.hidden ? t : $('hw-tabs');
+        if (el) el.scrollIntoView({ block: 'center' });
+      },
     });
-    if (!allInsights.length) {
-      insightsWrap.innerHTML = '<div class="hw-parents-empty">Todavía no tiene logros con 60% o más. ¡Anímalo/a a practicar más!</div>';
-      insightsWrap.dataset.hasMore = 'false';
-    } else {
-      insightsWrap.innerHTML = '';
-      allInsights.forEach((row) => {
-        const card = document.createElement('div');
-        card.className = 'hw-parents-insight-card' + (row.fromTest ? ' from-test' : '');
-        const dateStr = row.lastAttemptAt ? new Date(row.lastAttemptAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-        card.innerHTML = `
-          <div class="hw-parents-insight-head">
-            <span class="hw-parents-insight-title">${escapeHtml(row.insight.title)}</span>
-            <span class="hw-parents-insight-score">${row.score}/${row.total} <small>pts · ${dateStr}</small></span>
-          </div>
-          <ul class="hw-parents-insight-bullets">
-            ${row.insight.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join('')}
-          </ul>
-          ${row.insight.encouragement ? `<div class="hw-parents-insight-tip">💡 ${escapeHtml(row.insight.encouragement)}</div>` : ''}`;
-        insightsWrap.appendChild(card);
-      });
-      insightsWrap.dataset.hasMore = allInsights.length > 1 ? 'true' : 'false';
-    }
-    const testsWrap = $('hw-parents-tests');
-    if (!data.tests || !data.tests.length) {
-      testsWrap.innerHTML = '<div class="hw-parents-empty">Aún no ha hecho exámenes de lectura en clase. Pregúntale a la maestra cuándo serán.</div>';
-    } else {
-      testsWrap.innerHTML = '';
-      data.tests.forEach((t) => {
-        const row = document.createElement('div');
-        row.className = 'hw-parents-test-row';
-        const dateStr = new Date(t.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-        // Suggested question: prompt the parent to bring up the story
-        const question = `Pregúntale: "¿Qué pasó en la historia de ${escapeHtml(t.storyTitle || t.storyId)}? Cuéntamela en chino o en español."`;
-        row.innerHTML = `
-          <div class="hw-parents-test-main">
-            <span class="hw-parents-test-title">📖 ${escapeHtml(t.storyTitle || t.storyId)}</span>
-            <span class="hw-parents-test-score">${t.score}/100 pts</span>
-            <span class="hw-parents-test-date">${dateStr}</span>
-          </div>
-          <div class="hw-parents-test-question">💬 ${question}</div>`;
-        testsWrap.appendChild(row);
-      });
-    }
-    // === 📝 EXÁMENES REALES — HSK simulation attempts ===
-    // User feedback 2026-06-04 (Fernando): parents should see every real
-    // HSK exam their kid sat — Sim 1 / Sim 2 / Sim 3 etc — with the date
-    // and percentage. We show ALL attempts (not just the best) so they
-    // can see the kid's progression: "Did 60% on first try, 80% on the
-    // retake". Empty state explains what these are.
-    const hskWrap = $('hw-parents-hsk');
-    if (hskWrap) {
-      const hskRows = Array.isArray(data.hskResults) ? data.hskResults : [];
-      if (!hskRows.length) {
-        hskWrap.innerHTML = '<div class="hw-parents-empty">Aún no ha hecho ninguna simulación del ' + escapeHtml(data.levelExam || 'HSK') + '. Estas son los exámenes oficiales que practicamos en clase — cuando tu hijo/a haga su primera, aquí verás el resultado.</div>';
-      } else {
-        hskWrap.innerHTML = '';
-        hskRows.forEach((r) => {
-          const row = document.createElement('div');
-          row.className = 'hw-parents-hsk-row';
-          // Same "passed if ≥ 60%" convention as the rest of the parent
-          // view (HSK official passing line is also 60%).
-          const passed = (r.percent != null) && r.percent >= 60;
-          const dateStr = new Date(r.ts).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
-          const pctStr = (r.percent != null) ? Math.round(r.percent) + '%' : '—';
-          row.innerHTML = `
-            <div class="hw-parents-hsk-main">
-              <span class="hw-parents-hsk-title">📝 ${escapeHtml(r.title)}</span>
-              <span class="hw-parents-hsk-score ${passed ? 'is-passed' : 'is-low'}">${r.score}/${r.total} <small>· ${pctStr}</small></span>
-              <span class="hw-parents-hsk-date">${dateStr}</span>
-            </div>
-            <div class="hw-parents-hsk-note">${passed
-              ? '✅ Aprobó — Felicítalo/a y pídele que te cuente qué le gustó del examen.'
-              : '🌱 Aún no aprueba este examen. Anímalo/a a repasar y volverlo a intentar.'}</div>`;
-          hskWrap.appendChild(row);
-        });
-      }
-    }
-    // === REMAINING / NOT-YET-DONE TAREAS ===
-    // User feedback 2026-05-27: parents need to nudge kids on tareas
-    // they haven't started. Show each remaining tarea as a row with a
-    // direct button that closes the parent view and opens the assignment.
-    const remainingWrap = $('hw-parents-remaining');
-    if (remainingWrap) {
-      if (!data.remaining || !data.remaining.length) {
-        remainingWrap.innerHTML = '<div class="hw-parents-empty">¡Felicidades! Ya intentó todas las tareas disponibles.</div>';
-      } else {
-        remainingWrap.innerHTML = '';
-        data.remaining.forEach((r) => {
-          const row = document.createElement('div');
-          row.className = 'hw-parents-remaining-row';
-          row.innerHTML = `
-            <div class="hw-parents-remaining-info">
-              <div class="hw-parents-remaining-title">${escapeHtml(r.title)}</div>
-              <div class="hw-parents-remaining-sub">${escapeHtml(r.subtitle)} · ${r.totalPoints} pts</div>
-            </div>
-            <button class="btn btn-jade btn-sm" data-id="${escapeHtml(r.assignmentId)}">🎯 Hacerla ahora</button>`;
-          row.querySelector('button').addEventListener('click', () => {
-            openAssignment(r.assignmentId);
-          });
-          remainingWrap.appendChild(row);
-        });
-      }
-    }
-    // === HSK1 LEVELS — what your kid should know by now ===
-    // For each experience (EXP1..EXP8): show total word count, list all
-    // words with hanzi+pinyin+Spanish, and (if we can infer it) the kid's
-    // evidence of having used the word in a graded submission.
-    renderParentLevelHead(data);
-    if (Array.isArray(data.levelWords)) renderPackLevelWords(data.levelWords);   // YCT 1 / New HSK 1: the level's own words
-    else renderHsk1Levels();
-
-    // === CONVERSATION PROMPTS — what to ask the kid ===
-    // Concrete questions parents can ask, drawn from each mastered
-    // assignment's encouragement string. Reinforces SPEAKING the
-    // language, not just typing it.
-    const convWrap = $('hw-parents-conversations');
-    if (convWrap) {
-      if (!data.conversationPrompts || !data.conversationPrompts.length) {
-        convWrap.innerHTML = '<div class="hw-parents-empty">Aún no hay temas — cuando complete una tarea aparecerán aquí.</div>';
-      } else {
-        convWrap.innerHTML = '';
-        data.conversationPrompts.forEach((c) => {
-          const row = document.createElement('div');
-          row.className = 'hw-parents-conv-row';
-          row.innerHTML = `
-            <div class="hw-parents-conv-title">${escapeHtml(c.assignmentTitle)}</div>
-            <div class="hw-parents-conv-prompt">💬 ${escapeHtml(c.prompt)}</div>`;
-          convWrap.appendChild(row);
-        });
-      }
-    }
   }
-  // Parent-view tab switcher: progreso ↔ tips ↔ guías
-  document.querySelectorAll('.hw-parents-tab').forEach((tabBtn) => {
-    tabBtn.addEventListener('click', () => {
-      const target = tabBtn.dataset.tab;
-      document.querySelectorAll('.hw-parents-tab').forEach((b) => {
-        b.classList.toggle('active', b.dataset.tab === target);
-      });
-      document.querySelectorAll('.hw-parents-tabpanel').forEach((p) => {
-        p.classList.toggle('hidden', p.id !== ('hw-parents-tabpanel-' + target));
-      });
-      if (target === 'guias') fetchGuides();
-      if (target === 'reporte') fetchReportMonths();
-    });
-  });
 
   // === 📋 REPORT CARDS ===
   function fetchReportMonths() {
@@ -3355,29 +3129,6 @@
     setTimeout(() => { try { URL.revokeObjectURL(url); } catch (_) {} }, 60000);
   }
 
-  // Render the expandable per-sentence detail (correct ✓ / incorrect ✗).
-  function renderSentenceDetail(detail) {
-    const panel = $('hw-parents-sentences-panel');
-    if (!panel) return;
-    if (!detail || !detail.length) {
-      panel.innerHTML = '<div class="hw-parents-empty">Aún no hay oraciones entregadas. Cuando tu hijo/a haga una tarea, aquí verás qué escribió.</div>';
-      return;
-    }
-    panel.innerHTML = detail.map((d) => `
-      <div class="hw-sent-group">
-        <div class="hw-sent-group-head">${escapeHtml(d.assignmentTitle)} <span class="hw-sent-group-score">${d.correct}/${d.rows.length} ✓</span></div>
-        ${d.rows.map((r) => `
-          <div class="hw-sent-row ${r.correct ? 'ok' : 'bad'}">
-            <span class="hw-sent-mark">${r.correct ? '✓' : '✗'}</span>
-            <span class="hw-sent-body">
-              <span class="hw-sent-es">${escapeHtml(r.es)}</span>
-              <span class="hw-sent-given">Escribió: <strong>${escapeHtml(r.student || '—')}</strong></span>
-              ${r.correct ? '' : `<span class="hw-sent-expected">Correcto: <strong>${escapeHtml(r.expected)}</strong></span>`}
-            </span>
-          </div>`).join('')}
-      </div>`).join('');
-  }
-
   // === 📘 GUÍAS (study-guide PDFs) ===
   let _guidesLoaded = false;
   function fetchGuides() {
@@ -3416,118 +3167,6 @@
         </a>`;
     }).join('');
   }
-  // 🆕 2026-10-12 — the «Nivel» block names the kid's real level (YCT 1 / New HSK 1 / HSK 1) and the next one
-  function renderParentLevelHead(data) {
-    const name = data.levelName || 'HSK 1';
-    const head = $('hw-parents-level-current');
-    if (head) head.textContent = (data.levelEmoji || '📘') + ' ' + name + (data.totals && data.totals.wordsTotal ? ' — ' + data.totals.wordsTotal + ' palabras' : '') + ' (nivel actual)';
-    const intro = $('hw-parents-level-intro');
-    if (intro) {
-      intro.textContent = data.level === 'yct1'
-        ? 'YCT 1 es el primer nivel del examen oficial de chino para niños. Las palabras están divididas en los mundos de sus tareas. Practica las que ya estudió en clase.'
-        : data.level === 'hsk2'
-          ? 'New HSK 1 es el primer nivel del nuevo examen oficial de chino. Las palabras están divididas en 8 experiencias temáticas. Practica las que ya estudió en clase.'
-          : 'HSK 1 es el primer nivel del examen oficial de chino. Las palabras están divididas en 8 experiencias temáticas. Practica las que ya estudió en clase.';
-    }
-    const next = $('hw-parents-level-next');
-    if (next) next.textContent = '🔒 ' + (data.levelNext || 'New HSK 1') + ' — próximamente';
-    const nextIntro = $('hw-parents-level-next-intro');
-    if (nextIntro) nextIntro.textContent = 'Cuando termine ' + name + ', desbloqueará ' + (data.levelNext || 'New HSK 1') + '.';
-  }
-  // the words of a pack level, per world (hanzi + pinyin + Spanish, same cards as the HSK 1 list)
-  function renderPackLevelWords(lists) {
-    const wrap = $('hw-parents-levels');
-    if (!wrap) return;
-    wrap.innerHTML = '';
-    lists.forEach((w, idx) => {
-      const card = document.createElement('details');
-      card.className = 'hw-level-card';
-      if (idx < 2) card.open = true;
-      card.innerHTML = `
-        <summary class="hw-level-summary">
-          <span class="hw-level-num">${escapeHtml(w.emoji || '📁')}</span>
-          <span class="hw-level-label">${escapeHtml(w.name)}</span>
-          <span class="hw-level-count">${w.words.length} palabras</span>
-          <span class="hw-level-toggle">▼</span>
-        </summary>
-        <div class="hw-level-body">
-          <p class="hw-level-tip">💡 Practica con tu hijo/a: pídele que traduzca cada palabra al chino EN VOZ ALTA. Si no la sabe, dile la pinyin tres veces y que la repita.</p>
-          <div class="hw-level-words">
-            ${w.words.map((x) => `
-              <div class="hw-level-word">
-                ${x.image ? `<img class="hw-level-pic" src="${escapeHtml(x.image)}" alt="" loading="lazy">` : ''}
-                ${x.hz ? `<span class="hw-level-word-hanzi">${escapeHtml(x.hz)}</span>` : ''}
-                <span class="hw-level-word-pinyin">${escapeHtml(x.py || '')}</span>
-                <span class="hw-level-word-es">${escapeHtml(x.es || '')}</span>
-                ${x.hz ? `<button type="button" class="hw-level-speak" data-pin="${escapeHtml(x.hz)}" aria-label="Escuchar ${escapeHtml(x.py || '')}">🔊</button>` : ''}
-              </div>`).join('')}
-          </div>
-        </div>`;
-      wrap.appendChild(card);
-    });
-    bindLevelSpeak(wrap);
-  }
-  function bindLevelSpeak(wrap) {
-    if (wrap._speakBound) return;
-    wrap._speakBound = true;
-    wrap.addEventListener('click', (e) => {
-      const b = e.target.closest('.hw-level-speak');
-      if (!b) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const pin = b.getAttribute('data-pin') || '';
-      if (pin) speakChinese(pin, b);
-    });
-  }
-  // === HSK1 Levels render ===
-  // Shows EXP1..EXP8 with word counts + expandable word lists. The
-  // parent can pop open any level and quiz their kid on those words.
-  function renderHsk1Levels() {
-    const wrap = $('hw-parents-levels');
-    if (!wrap || !window.WU_WORDS || !window.WU_EXPERIENCES) return;
-    // Group words by exp
-    const byExp = {};
-    window.WU_WORDS.forEach((w) => {
-      if (!byExp[w.exp]) byExp[w.exp] = [];
-      byExp[w.exp].push(w);
-    });
-    wrap.innerHTML = '';
-    Object.keys(window.WU_EXPERIENCES).forEach((expKey, idx) => {
-      const meta = window.WU_EXPERIENCES[expKey];
-      const words = byExp[expKey] || [];
-      const card = document.createElement('details');
-      card.className = 'hw-level-card';
-      // Auto-open the first 2 levels so parents see the format immediately
-      if (idx < 2) card.open = true;
-      card.innerHTML = `
-        <summary class="hw-level-summary">
-          <span class="hw-level-num">${escapeHtml(meta.short || expKey.toUpperCase())}</span>
-          <span class="hw-level-label">${escapeHtml(meta.label || expKey)}</span>
-          <span class="hw-level-count">${words.length} palabras</span>
-          <span class="hw-level-toggle">▼</span>
-        </summary>
-        <div class="hw-level-body">
-          <p class="hw-level-tip">💡 Practica con tu hijo/a: pídele que traduzca cada palabra al chino EN VOZ ALTA. Si no la sabe, dile la pinyin tres veces y que la repita.</p>
-          <div class="hw-level-words">
-            ${words.map((w) => `
-              <div class="hw-level-word">
-                <span class="hw-level-icon">${escapeHtml(w.icon || '·')}</span>
-                <span class="hw-level-word-hanzi">${escapeHtml(w.hanzi || '')}</span>
-                <span class="hw-level-word-pinyin">${escapeHtml(w.pinyin || '')}</span>
-                <span class="hw-level-word-es">${escapeHtml(w.es || '')}</span>
-                <button type="button" class="hw-level-speak" data-pin="${escapeHtml(w.pinyin || '')}" aria-label="Escuchar ${escapeHtml(w.pinyin || '')}">🔊</button>
-              </div>`).join('')}
-          </div>
-        </div>`;
-      wrap.appendChild(card);
-    });
-    // 🔊 Audio for the papás word list — same play→cache→replay TTS trick
-    // used in Modo Curioso (speakChinese object-URL cache + server disk
-    // cache, so the 2nd tap is instant and never re-synthesizes). Bound
-    // once via delegation because the list is bulk-rendered every open.
-    bindLevelSpeak(wrap);
-  }
-
   $('hw-parents-back').addEventListener('click', () => {
     renderList();
     showScreen('list');
