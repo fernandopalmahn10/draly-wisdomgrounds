@@ -6,7 +6,7 @@
   <title>YCT · Simulación</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Noto+Sans+SC:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/yct-sim.css?v=20261011a">
+  <link rel="stylesheet" href="/css/yct-sim.css?v=20261018a">
 </head>
 <body class="yct-body">
 
@@ -20,6 +20,8 @@
       <input class="y-input" id="y-code" type="text" placeholder="Tu código de estudiante" autocomplete="off">
       <button class="y-btn y-btn-jade y-btn-xl" id="y-enter" type="button">Entrar a la sala →</button>
       <p id="y-gate-err" class="y-err"></p>
+      <!-- ← 2026-10-18 (his rule: every screen has a way back): js/yct-sim.js points it at the page before -->
+      <a class="y-btn y-btn-ghost y-back" id="y-gate-back" href="/">← Volver</a>
     </div>
   </div>
 
@@ -37,11 +39,15 @@
   <!-- Exam shell (cover, listening, review, reading) -->
   <div id="y-exam" class="hidden">
     <header class="y-header">
+      <!-- ← the cover's way back, always on screen (2026-10-18); js/yct-sim.js shows it only on the cover -->
+      <a class="y-hback hidden" id="y-cover-back" href="/audios">← Volver</a>
       <div class="y-brand"><img src="/assets/dralingo.png" alt=""><span>Dralingo</span></div>
       <div class="y-header-title" id="y-title">YCT</div>
       <div class="y-header-right">
         <span class="y-clock hidden" id="y-clock"><span class="y-clock-ico">⏱</span><span id="y-clock-txt">--:--</span></span>
         <button class="y-mute" id="y-mute" type="button" title="Silenciar">🔊</button>
+        <!-- a solo exam (by link, no room): a way out mid-test, after a confirm (2026-10-18) -->
+        <button class="y-exit hidden" id="y-exit" type="button">✕ Salir</button>
       </div>
     </header>
 
@@ -148,6 +154,6 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/yct-sim.js?v=20261015c"></script>
+  <script src="/js/yct-sim.js?v=20261018a"></script>
 </body>
 </html>

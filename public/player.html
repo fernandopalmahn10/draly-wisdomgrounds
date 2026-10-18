@@ -12,25 +12,26 @@
   <meta name="apple-mobile-web-app-title" content="Dralingo">
   <title>Draly Wisdom Grounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/back.css?v=20261018a">
   <link rel="stylesheet" href="/css/styles.css?v=20261016eq">
   <link rel="stylesheet" href="/css/dralingo.css">
   <!-- Vuelo del Dragón v2 «La Carrera del Cielo de Dubái» -->
-  <link rel="stylesheet" href="/css/dragon.css?v=20261017art">
-  <link rel="stylesheet" href="/css/sixseven.css?v=20261017art">
+  <link rel="stylesheet" href="/css/dragon.css?v=20261018a">
+  <link rel="stylesheet" href="/css/sixseven.css?v=20261018a">
   <link rel="stylesheet" href="/css/warmup.css?v=20261015s">
   <link rel="stylesheet" href="/css/reading.css?v=20260603d">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/kingdoms.css?v=20261017pv2">
   <link rel="stylesheet" href="/css/paint.css?v=20261017pv2">
-  <link rel="stylesheet" href="/css/trapdoor.css?v=20261017td">
-  <link rel="stylesheet" href="/css/snow.css?v=20261016eq">
-  <link rel="stylesheet" href="/css/escape.css?v=20261017ev2">
-  <link rel="stylesheet" href="/css/halcon.css?v=20261014a">
-  <link rel="stylesheet" href="/css/mochi.css?v=20261015s">
+  <link rel="stylesheet" href="/css/trapdoor.css?v=20261018a">
+  <link rel="stylesheet" href="/css/snow.css?v=20261018a">
+  <link rel="stylesheet" href="/css/escape.css?v=20261018a">
+  <link rel="stylesheet" href="/css/halcon.css?v=20261018a">
+  <link rel="stylesheet" href="/css/mochi.css?v=20261018a">
   <link rel="stylesheet" href="/css/party.css?v=20261017td">
-  <link rel="stylesheet" href="/css/pinata.css?v=20261015s">
+  <link rel="stylesheet" href="/css/pinata.css?v=20261018a">
   <!-- Dàfùwēng · Monopolio v2 «El Gran Tablero de Dubái» -->
-  <link rel="stylesheet" href="/css/monopoly.css?v=20261017art">
+  <link rel="stylesheet" href="/css/monopoly.css?v=20261018a">
   <!-- Lobby layout + lobby mini-game (the little plane while kids wait).
        These rules used to live in flappy.css, which was deleted with the
        retired Flappy Dragon game (2026-10-10); the lobby itself is shared. -->
@@ -47,6 +48,7 @@
       text-align: center;
       flex-shrink: 0;
     }
+    .player-lobby-back { align-self: flex-start; flex-shrink: 0; position: relative; z-index: 5; }
     .lobby-flappy-wrap {
       position: relative;
       width: 100%;
@@ -130,6 +132,23 @@
 
   <!-- LOBBY (waiting) — with a tiny Flappy mini-game to pass the time -->
   <div id="screen-lobby" class="hidden player-screen lobby-screen">
+    <!-- ← 2026-10-18 (his rule: every screen has a way back; a kid must be able to leave): while the teacher has not
+         started, back to the home card (a wrong PIN, the wrong room). Once a round runs the screen belongs to the game
+         (no mis-tap throws a kid out mid-class); the final screen has «🏠 Inicio». -->
+    <a class="dw-back player-lobby-back" id="player-lobby-back" href="/" aria-label="Salir de la sala y volver al inicio">Volver</a>
+    <script>
+      // pulled in from Mis tareas (the teacher's call): back there, where her next call reaches the kid again
+      (function () {
+        try {
+          var r = document.referrer ? new URL(document.referrer) : null;
+          if (r && r.origin === location.origin && /^\/homework(\.html)?$/.test(r.pathname)) {
+            var a = document.getElementById('player-lobby-back');
+            a.href = '/homework';
+            a.setAttribute('aria-label', 'Salir de la sala y volver a mis tareas');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <div class="lobby-header">
       <div id="lobby-mascot" style="font-size:3.5rem;">🐉</div>
       <h2 id="lobby-team-name" style="font-family:'ZCOOL XiaoWei',serif; font-size:1.4rem; margin:2px 0;">¡Hola!</h2>

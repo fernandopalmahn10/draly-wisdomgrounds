@@ -351,3 +351,15 @@ body:not(.tp-asking) .tp-rest { opacity: 1; }
   .tp-moment.show, .tp-moment { transform: translate(-50%, 0) !important; }
   .tp-verdict.show { transform: translate(-50%, 0) !important; }
 }
+
+/* ── a laptop's short screen (2026-10-18, his rule: nothing opens zoomed in, no needed button below the fold) ──
+   1366 × 768 leaves ~650 px under the browser's bars: the rounds and «¡A las trampillas!» come right under the PIN and
+   the arena, the two kingdoms after them. A fullscreen projector keeps the full
+   layout (with the browser's bars showing it gets the same order: harmless). */
+@media (max-height: 860px) {
+  .th-lobby { display: flex; flex-direction: column; }
+  .th-lobby > .kd-lobby-tools, .th-lobby > .kd-set { order: 1; }
+  .th-lobby > .kd-lobby-tools { margin: 14px 0 6px; }
+  .th-lobby > .kd-kingdoms, .th-lobby > .kd-hint { order: 2; }
+  .th-lobby > .th-howto { order: 3; }
+}

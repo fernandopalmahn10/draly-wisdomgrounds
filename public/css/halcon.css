@@ -633,3 +633,19 @@ body.hc-ended .hc-mute { left: auto; right: 376px; transform: none; }
   .hcs.zoom { transition: opacity .2s !important; transform: none !important; }
   .hcs-confetti { display: none; }
 }
+
+/* ── a laptop's short screen (2026-10-18, his rule: nothing opens zoomed in, no needed button below the fold) ──
+   1366 × 768 leaves ~650 px under the browser's bars: the start button and its settings come right under the PIN,
+   the three pictured steps after them. A fullscreen projector (900 px) keeps the full layout
+   (with the browser's bars showing it gets the same order: harmless). */
+@media (max-height: 860px) {
+  .hc-lobby-left > .hc-steps { order: 2; }
+  .hc-lobby-left > .hc-tools { order: 1; }
+  .hc-lobby-left > .hc-set { order: 1; }
+}
+/* the projector lobby opened on a phone (2026-10-18): one column, nothing wider than the screen */
+@media (max-width: 760px) {
+  .hc-lobby { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 100vh; min-height: 100dvh; }
+  .hc-lobby > * { min-width: 0; }
+  .hc-qr { display: none; }
+}

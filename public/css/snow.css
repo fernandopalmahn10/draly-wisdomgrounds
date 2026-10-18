@@ -278,3 +278,7 @@ body.sn-on:has(#screen-snow:not(.hidden)) .muted-toggle { top: auto !important; 
   .sn-snowfall { display: none; } .sn-use, .sn-copos.empty, .sn-q-warn, .sn-frozen img, .sn-you img { animation: none; }
   .sn-spell-rays, .sn-spell-title, .sn-spell-kid, .sn-spell-sub { animation: none; }
 }
+/* the projector lobby opened on a phone (2026-10-18): nothing wider than the screen */
+@media (max-width: 760px) {
+  .sn-lobby-row { grid-template-columns: minmax(0, 1fr); }
+}

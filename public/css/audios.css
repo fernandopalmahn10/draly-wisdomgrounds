@@ -40,7 +40,7 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-html { scroll-padding-top: calc(var(--bar-h) + var(--safe-top) + 8px); }
+html { scroll-padding-top: calc(var(--bar-h) + var(--safe-top) + 14px); }   /* under the sticky band or the base's bar */
 button, a { touch-action: manipulation; }
 body {
   background: var(--crema);
@@ -72,11 +72,17 @@ p, li { text-wrap: pretty; }
 .au-top {
   background: var(--rojo);
   color: var(--crema);
-  padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+  padding: calc(9px + env(safe-area-inset-top, 0px)) 12px 11px;
   text-align: center;
   box-shadow: inset 0 -3px 0 var(--oro);   /* the gold rule under the cover band of the PDFs */
+  /* ← «Volver» on the left, the brand in the middle; the band stays on screen (his rule 2026-10-18: a way back always
+     visible, also on a page that opens scrolled to a step) */
+  position: sticky; top: 0; z-index: 45;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; column-gap: 10px;
 }
-.au-brand { text-decoration: none; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; border-radius: 8px; }
+.au-top-back { grid-column: 1; justify-self: start; --dwb-font: var(--sans); }
+.au-brand { grid-column: 2; text-decoration: none; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; border-radius: 8px; }
+@media (max-width: 459px) { .au-top { grid-template-columns: auto 1fr; } .au-brand { justify-self: center; } }
 .au-word { font-weight: 800; font-size: 1.12rem; letter-spacing: .38em; padding-left: .38em; line-height: 1.2; }
 .au-sub { font-size: .82rem; font-weight: 600; color: var(--oro-claro); }
 .au-top :focus-visible { outline-color: var(--crema); }
@@ -94,6 +100,8 @@ body.au-is-base .au-main { max-width: none; padding: 0; }
   font-weight: 800; color: var(--rojo); text-decoration: none; margin: 0 0 6px -2px; border-radius: 8px;
 }
 .au-back svg { width: 18px; height: 18px; flex: none; }
+/* the header band's «Volver» took this link's address (js/audios.js): one way back on screen, not two */
+body.au-has-topback .au-main > .au-back { display: none; }
 .au-h1 { font-weight: 800; font-size: 2rem; line-height: 1.08; letter-spacing: -.015em; color: var(--rojo); }
 .au-lede { margin-top: 6px; color: var(--tinta-2); font-size: 1rem; }
 .au-h2 { margin: 30px 0 12px; font-weight: 800; font-size: 1.3rem; line-height: 1.15; letter-spacing: -.01em; color: var(--rojo); }
@@ -194,6 +202,8 @@ body.au-is-base .au-main { max-width: none; padding: 0; }
 
 /* ── Detail: one homework ──────────────────────────────────────────── */
 .au-hero img { width: 100%; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 14px; display: block; background: var(--crema-2); }
+/* a laptop's short screen: the picture gives way so the first audio's play button is on the first screen (2026-10-18) */
+@media (min-width: 640px) { .au-hero img { max-height: 36vh; } }
 .au-hero-meta { margin: 0 0 8px; color: var(--tinta-2); font-size: .88rem; }
 .au-hero h1 { font-weight: 800; font-size: 2rem; line-height: 1.1; letter-spacing: -.015em; color: var(--rojo); margin: 14px 0 4px; }
 .au-hero p.au-tag { color: var(--tinta-2); margin: 0 0 6px; }
@@ -292,11 +302,13 @@ body.au-is-base .au-main { max-width: none; padding: 0; }
   box-shadow: 0 1px 0 var(--linea);
 }
 .bs-bar .bs-wrap { height: 100%; display: flex; align-items: center; gap: 6px; }
+/* «← Volver» (css/back.css) in the book's colours */
 .bs-bar-back {
-  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin-left: -10px;
-  color: var(--rojo); border-radius: 12px; text-decoration: none;
+  flex: none; margin-left: -4px;
+  --dwb-font: var(--sans); --dwb-fg: var(--rojo); --dwb-bg: var(--papel); --dwb-line: var(--linea); --dwb-shadow: rgba(90, 16, 16, .14);
+  --dwb-bg-hover: var(--crema-2); --dwb-focus: var(--rojo);
 }
-.bs-bar-back svg { width: 22px; height: 22px; }
+.bs-bar-back:visited { color: var(--rojo); }
 /* the tabs scroll sideways when a book has more worlds than the phone has room for (HSK 1: 8); centred otherwise */
 .bs-tabs {
   flex: 1; display: flex; gap: 4px; min-width: 0; padding: 5px 6px; overflow-x: auto; overscroll-behavior-x: contain;
@@ -725,6 +737,19 @@ body.bs-has-now .bs-end { padding-bottom: 110px; }
   .bs-rp-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .bs-level { font-size: 8.5rem; }
   .bs-cover-top.is-long .bs-level { font-size: 6rem; }
+}
+/* a laptop is wide but short (1366 × 768 leaves ~650 px under the browser's bars): the cover's title and Dralingo follow
+   the screen's height, so the cover never looks zoomed in and its first step («Seguir») sits well inside the first
+   screen (his rule 2026-10-18: nothing opens zoomed in) */
+@media (min-width: 640px) and (max-height: 900px) {
+  .bs-cover .bs-wrap { padding-top: clamp(20px, 3.4vh, 40px); padding-bottom: clamp(22px, 3.4vh, 40px); }
+  .bs-cover .bs-cover-top { --dw: min(40%, 420px, calc(100% - 530px), 50vh); }
+  .bs-dragon { top: clamp(64px, 10vh, 96px); }
+  .bs-bubble { top: clamp(30px, 5.5vh, 52px); }
+}
+@media (min-width: 1000px) and (max-height: 900px) {
+  .bs-level { font-size: clamp(5.2rem, 14.5vh, 8.5rem); }
+  .bs-cover-top.is-long .bs-level { font-size: clamp(4rem, 10.5vh, 6rem); }
 }
 @media (max-width: 359px) {
   .bs-grid { grid-template-columns: 1fr; }

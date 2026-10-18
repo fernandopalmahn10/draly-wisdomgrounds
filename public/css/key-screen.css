@@ -85,19 +85,14 @@ body.ks-root { min-height: 100vh; min-height: 100dvh; }
   border: 1px solid rgba(212, 172, 82, .55); border-radius: 18px; pointer-events: none;
 }
 .ks-word { margin: 4px 0 0; font: 800 .82rem/1 var(--ks-sans); letter-spacing: .32em; text-indent: .32em; color: var(--ks-oro-claro); }
-/* La Ruta Dorada (phase 2): back to the level's path, inside the gold frame's top-left corner */
-.ks-routeback {
-  position: absolute; z-index: 2; left: 14px; top: calc(14px + var(--ks-safe-top)); display: inline-flex; align-items: center; gap: 4px;
-  min-height: 44px; padding: 0 12px 0 6px; border-radius: 12px; color: var(--ks-papel); text-decoration: none;
-  font: 700 .88rem/1 var(--ks-sans); transition: background-color 160ms ease, transform 140ms var(--ks-ease);
+/* «← Volver» (css/back.css, his rule 2026-10-18: always a clear way back): inside the gold frame's top-left corner
+   (La Ruta Dorada's path, or home); a little smaller where the stage is narrow, so it never touches the DRALINGO word
+   (a phone; a laptop's stage is 44 % of the screen from 860 px) */
+.ks-routeback { position: absolute; z-index: 2; left: 16px; top: calc(16px + var(--ks-safe-top)); --dwb-font: var(--ks-sans); }
+@media (min-width: 860px) { .ks-routeback { left: 24px; top: 24px; } }
+@media (max-width: 559px), (min-width: 860px) and (max-width: 1199px) {
+  .ks-routeback { padding: 0 13px 0 10px; font-size: 15px; }
 }
-.ks-routeback svg { width: 20px; height: 20px; flex: none; }
-.ks-routeback:active { transform: scale(.96); }
-@media (hover: hover) and (pointer: fine) { .ks-routeback:hover { background: rgba(255, 253, 248, .1); } }
-/* the arrow alone (its name stays for screen readers) wherever the label could touch the centred DRALINGO word: a
-   phone, and a laptop's narrow stage (the stage is 44 % of the screen from 860 px); inside the gold frame on a laptop */
-@media (min-width: 860px) { .ks-routeback { left: 26px; top: 26px; } }
-@media (max-width: 559px), (min-width: 860px) and (max-width: 1199px) { .ks-routeback span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; } .ks-routeback { padding: 0; width: 44px; justify-content: center; } }
 .ks-hero { position: relative; width: min(230px, 62vw); margin-top: 14px; }
 .ks-dragon { display: block; width: 100%; height: auto; filter: drop-shadow(0 14px 18px rgba(30, 4, 4, .45)); user-select: none; -webkit-user-drag: none; }
 .ks-bubble {

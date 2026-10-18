@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Elegir preguntas · Draly Wisdom Grounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/back.css?v=20261018a">
   <style>
     :root { --ink: #1d2440; --soft: #55607f; --paper: #fff7e3; --gold: #ffc93c; }
     body { margin: 0; min-height: 100vh; font-family: 'Nunito', sans-serif; color: var(--ink);
@@ -31,13 +32,15 @@
     .tile.off { opacity: .55; cursor: not-allowed; box-shadow: 0 3px 0 var(--ink); }
     .legacy { margin-top: 28px; text-align: center; font-weight: 700; color: var(--soft); }
     .legacy a { color: var(--ink); }
-    .back { font: inherit; font-weight: 800; background: var(--paper); border: 3px solid var(--ink); border-radius: 14px; padding: 6px 14px; cursor: pointer; }
+    /* «← Volver» (css/back.css) in the games' sticker look */
+    .back { --dwb-bg: var(--paper); --dwb-fg: var(--ink); --dwb-line: var(--ink); --dwb-shadow: var(--ink); --dwb-bg-hover: #fff; --dwb-focus: var(--gold); border-width: 3px; }
   </style>
 </head>
 <body>
 <main>
   <div class="top">
-    <button class="back" onclick="location.href='/games.html'">← Juegos</button>
+    <!-- ← «Volver» (his rule 2026-10-18): one step up (round → world → level → exam), then the games list -->
+    <a class="dw-back back" id="back" href="/games.html">Volver</a>
     <div class="game"><span class="game-emoji" id="game-emoji">🎮</span><h1 id="game-name">Elige las preguntas</h1></div>
   </div>
   <nav class="crumbs" id="crumbs" aria-label="Dónde estás"></nav>
@@ -63,6 +66,7 @@
   // Launched from /maestro: the host page must keep ?livegame=1 so the class is pulled into the game.
   const LIVE = new URLSearchParams(location.search).get('livegame') === '1' ? '&livegame=1' : '';
   const info = GAMES[game] || GAMES.kingdoms;
+  if (LIVE) document.getElementById('back').href = '/maestro.html';   // launched from Teacher Mode: back there
   document.getElementById('game-emoji').textContent = info.emoji;
   document.getElementById('game-name').textContent = info.name;
   document.getElementById('legacy-link').href = '/sets.html?game=' + encodeURIComponent(game);
@@ -85,7 +89,16 @@
   const countRounds = (w) => (w.rounds || []).length;
   const levelReady = (l) => (l.worlds || []).some(countRounds);
 
+  // «Volver»: one step up inside the picker, the games list from the first step (a real link: a teacher may land here
+  // from a bookmark with no history)
+  $('back').addEventListener('click', (e) => {
+    if (!path.length) return;
+    e.preventDefault();
+    path.length -= 1;
+    render();
+  });
   function render() {
+    $('back').setAttribute('aria-label', path.length ? 'Volver a: ' + (['¿Qué examen?', '¿Qué nivel?', '¿Qué mundo?'][path.length - 1]) : (LIVE ? 'Volver a Modo Maestro' : 'Volver a los juegos'));
     const grid = $('grid');
     grid.innerHTML = '';
     const crumbs = $('crumbs');

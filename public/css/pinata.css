@@ -819,3 +819,21 @@ body.kd-phone.pt-on .kdp-status.behind { background: #ffe0a8; color: #7a2a12; }
 .pth-rside.win .ptf-mascot { animation: pt-mascot-win 1s var(--pt-ease-pop) both; }
 .pth-rside.lose .ptf-mascot { filter: drop-shadow(0 6px 4px rgba(20, 16, 40, .35)) saturate(.55); transform: translateY(6%) scale(.9); }
 @media (prefers-reduced-motion: reduce) { .pth-rside.win .ptf-mascot { animation: none !important; } }
+
+/* ── a laptop's short screen (2026-10-18, his rule: nothing opens zoomed in, no needed button below the fold) ──
+   1366 × 768 leaves ~650 px under the browser's bars: the start button and its settings come right under the PIN,
+   the three pictured steps after them. A fullscreen projector (900 px) keeps the full layout
+   (with the browser's bars showing it gets the same order: harmless). */
+@media (max-height: 860px) {
+  .pth-left > .pth-steps { order: 2; }
+  .pth-left > .pth-tools { order: 1; }
+  .pth-left > .pth-set { order: 1; }
+}
+/* the projector lobby opened on a phone (2026-10-18): one column, nothing wider than the screen */
+@media (max-width: 760px) {
+  .pth-lobby { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 100vh; min-height: 100dvh; }
+  .pth-lobby > * { min-width: 0; }
+  .pth-qr { display: none; }
+  .pth-pin-card { grid-template-columns: auto minmax(0, 1fr); }
+  .pth-join { min-width: 0; overflow-wrap: anywhere; }
+}

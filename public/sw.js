@@ -5,7 +5,7 @@
 //   2. shows push notifications (ready for when the platform starts sending them);
 //   3. tapping a notification opens (or focuses) the page it points to.
 // Bump VERSION when offline.html or its pictures change.
-const VERSION = 'draly-sw-1';
+const VERSION = 'draly-sw-2';   // 2: offline.html got its «← Volver» (2026-10-18)
 const OFFLINE_URL = '/offline.html';
 const PRECACHE = [OFFLINE_URL, '/assets/app/icon-192.png', '/assets/dralingo/anim/wise-still.webp'];
 

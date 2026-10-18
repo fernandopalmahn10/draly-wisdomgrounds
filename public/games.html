@@ -14,6 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/back.css?v=20261018a">
   <!-- Redesigned 2026-10-11 in the same sticker look as the home page and /packs.html (his brief: taste on the whole
        platform). Quiet page: no music. Games are a data list below; a new game = one entry in GAMES. -->
   <style>
@@ -23,8 +24,8 @@
       background: linear-gradient(180deg, #9fdcf7 0%, #c6ecfb 55%, #ffd6e2 100%); }
     main { max-width: 1100px; margin: 0 auto; padding: 22px 16px 60px; }
     .top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-    .back { font: inherit; font-weight: 800; color: var(--ink); background: var(--paper); border: 3px solid var(--ink);
-      border-radius: 14px; padding: 6px 14px; cursor: pointer; text-decoration: none; }
+    /* «← Volver» (css/back.css, his rule 2026-10-18) in the sticker look */
+    .back { --dwb-bg: var(--paper); --dwb-fg: var(--ink); --dwb-line: var(--ink); --dwb-shadow: var(--ink); --dwb-bg-hover: #fff; --dwb-focus: var(--blue); border-width: 3px; }
     .back:focus-visible, .play:focus-visible { outline: 4px solid var(--blue); outline-offset: 3px; }
     h1 { font-family: 'Baloo 2', sans-serif; font-weight: 800; margin: 0; font-size: clamp(2rem, 6vw, 2.8rem); line-height: 1; }
     .set { margin: 10px 0 0; font-weight: 800; color: var(--soft); }
@@ -54,7 +55,7 @@
 <body>
 <main>
   <div class="top">
-    <a class="back" id="back" href="/">← Inicio</a>
+    <a class="dw-back back" id="back" href="/" aria-label="Volver al inicio">Volver</a>
     <h1>Elige un juego</h1>
   </div>
   <p class="set" id="set-line">Primero el juego, después las preguntas.</p>
@@ -116,7 +117,7 @@
   const setId = new URLSearchParams(location.search).get('setId');
   if (setId) {
     // Arrived from the uploaded-sets page: show which set, and Play goes straight to the game.
-    document.getElementById('back').textContent = '← Series';
+    document.getElementById('back').setAttribute('aria-label', 'Volver a las series');
     document.getElementById('back').href = '/sets.html';
     fetch('/api/sets/' + encodeURIComponent(setId)).then((r) => r.json()).then((s) => {
       const line = document.getElementById('set-line');

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>My Sets · Draly Wisdomgrounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/back.css?v=20261018a">
   <link rel="stylesheet" href="/css/styles.css?v=20261011a">
   <link rel="stylesheet" href="/css/dralingo.css">
 </head>
@@ -15,9 +16,16 @@
   <img src="/assets/dralingo.png" alt="Dralingo" class="dralingo-corner">
 
   <div class="container">
+    <!-- ← «Volver» (his rule 2026-10-18): back to the game's question packs (?game=…), else the games list -->
     <div class="hub-back">
-      <button class="btn btn-ghost" onclick="location.href='/'">← Back</button>
+      <a class="dw-back dw-back--dark" id="sets-back" href="/games.html">Volver</a>
     </div>
+    <script>
+      (function () {
+        var g = new URLSearchParams(location.search).get('game');
+        if (g && /^[a-z0-9-]+$/.test(g)) document.getElementById('sets-back').href = '/packs.html?game=' + g;
+      })();
+    </script>
 
     <h1 class="hub-title" style="font-size:2.5rem; margin-bottom:8px;">📚 My Sets</h1>
     <p class="hub-tagline" style="margin-bottom:8px;" id="game-context">Pick a question pack to battle with — or upload a new one.</p>

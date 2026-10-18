@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/styles.css?v=20261011a">
-  <link rel="stylesheet" href="/css/hsk-sim.css?v=20260621e">
+  <link rel="stylesheet" href="/css/hsk-sim.css?v=20261018a">
 </head>
 <body class="hsk-body">
 
@@ -20,6 +20,8 @@
       <input class="input" id="hsk-code"   type="text" placeholder="Tu código de estudiante" autocomplete="off">
       <button class="btn btn-jade btn-xl" id="hsk-enter" style="width:100%;">Entrar a la sala →</button>
       <p id="hsk-gate-err" class="hsk-err"></p>
+      <!-- ← 2026-10-18 (his rule: every screen has a way back): js/hsk-sim.js points it at the page before -->
+      <a class="btn btn-ghost hsk-back" id="hsk-gate-back" href="/">← Volver</a>
     </div>
   </div>
 
@@ -47,6 +49,8 @@
       <div class="hsk-topbar-meta">
         <span class="hsk-topbar-title" id="hsk-title">…</span>
         <span class="hsk-topbar-progress" id="hsk-progress">0/30</span>
+        <!-- a solo exam (by link, no room): a way out mid-test, after a confirm (2026-10-18) -->
+        <button class="hsk-exit" id="hsk-exit" type="button" hidden>✕ Salir</button>
       </div>
       <div class="hsk-topbar-section" id="hsk-section-name">…</div>
     </div>
@@ -81,6 +85,6 @@
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/sounds.js?v=20260524n"></script>
   <script src="/js/saga.js?v=20261013a"></script>
-  <script src="/js/hsk-sim.js?v=20261015c"></script>
+  <script src="/js/hsk-sim.js?v=20261018a"></script>
 </body>
 </html>

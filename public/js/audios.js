@@ -72,6 +72,43 @@
         $('#au-retry').addEventListener('click', load);
       });
   }
+
+  // ← «Volver» (his rule 2026-10-18: "La Ruta Dorada doesn't have an escape button to go back"): one button in the header
+  // band, which stays on screen. Each view still says where back is with its own `.au-back` link (ruta.js, entrenamiento.js,
+  // libro.js, a homework's page); the band's button takes its address as soon as it is drawn (the link itself stays,
+  // hidden by css/audios.css). A screen without one (the picker, a teacher's look at a kid's book) goes back to where
+  // the visitor came from: Mis tareas, /maestro, else the home page (a link, not history: a kid may land from WhatsApp).
+  const topBack = $('#au-top-back');
+  function cameFrom() {
+    let from = '';
+    try { const r = document.referrer ? new URL(document.referrer) : null; if (r && r.origin === location.origin) from = r.pathname; } catch (_) {}
+    if (/^\/(homework|tareas?)(\.html)?\/?$/.test(from)) return { href: '/homework', to: 'mis tareas' };
+    if (/^\/(maestro|maestra|teacher)(\.html)?\/?$/.test(from)) return { href: '/maestro.html', to: 'Modo Maestro' };
+    return { href: '/', to: 'el inicio' };
+  }
+  // The contract for a view (also the La Ruta Dorada redesign): its `.au-back` as a direct child of #au-main, or its own
+  // «Volver» drawn with the shared `.dw-back` / `[data-back]` (then the band's button steps aside and the view's shows).
+  let lastBack = '';
+  function hoistBack() {
+    if (!topBack) return;
+    const ownBack = !!main.querySelector('.dw-back, [data-back]');
+    const own = main.querySelector(':scope > .au-back');
+    const b = own ? { href: own.getAttribute('href'), to: own.textContent.trim(), nav: own.hasAttribute('data-nav') } : cameFrom();
+    const key = [ownBack, b.href, b.to, !!b.nav].join('|');
+    if (key === lastBack) return;                          // (a text update in the page: nothing to do)
+    lastBack = key;
+    topBack.hidden = ownBack;
+    document.body.classList.toggle('au-has-topback', !ownBack);   // the view's `.au-back` shows again when the band steps aside
+    const label = /^volver/i.test(b.to) ? b.to : 'Volver: ' + b.to;
+    topBack.setAttribute('href', b.href);
+    topBack.toggleAttribute('data-nav', !!b.nav);
+    topBack.setAttribute('aria-label', label);
+    topBack.title = label;
+  }
+  if (topBack) {
+    hoistBack();
+    new MutationObserver(hoistBack).observe(main, { childList: true, subtree: true });
+  }
   load();
 
   // the picker ↔ a path: the chosen card grows into the path's banner (View Transitions, where the phone has them);

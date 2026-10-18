@@ -17,12 +17,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <!-- 2026-10-13 remake: the teacher's control room in the platform's sticker world (spec docs/specs/maestro-remake.md).
        teacher-dashboard.css is this page's only stylesheet; maestro.css stays for host-hsk.html. -->
-  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261016p5">
+  <link rel="stylesheet" href="/css/back.css?v=20261018a">
+  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261018a">
 </head>
 <body class="m-app">
 
   <!-- LOGIN -->
   <main id="m-login" class="m-login">
+    <!-- ← 2026-10-18 (his rule: every screen has a way back): the sign-in leads back to the home page -->
+    <a class="dw-back dw-back--float m-login-back" href="/" aria-label="Volver al inicio">Volver</a>
     <div class="m-login-card">
       <div class="m-login-stage" aria-hidden="true">
         <img class="m-login-cast" id="m-login-cast-a" alt="" hidden>

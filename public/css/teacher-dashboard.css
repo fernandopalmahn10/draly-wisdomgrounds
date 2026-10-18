@@ -129,6 +129,9 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--ink); flex
   background-position: 0 0, center bottom;
   background-repeat: no-repeat;
 }
+/* «← Volver» to the home page (css/back.css, 2026-10-18), in the dashboard's sticker ink */
+.m-login-back { --dwb-line: var(--ink); --dwb-shadow: var(--ink); --dwb-fg: var(--ink); --dwb-bg: var(--paper); }
+.m-login-back:visited { color: var(--ink); }
 .m-login-card {
   width: 100%; max-width: 420px;
   display: grid; gap: 10px;

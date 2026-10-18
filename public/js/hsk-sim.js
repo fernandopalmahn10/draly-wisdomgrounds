@@ -189,6 +189,29 @@
     });
   })();
 
+  // ← 2026-10-18 (his rule: every screen has a way back): the PIN card goes back to the page the kid came from, else
+  // the home card; a solo exam (by link) may be left mid-test after a confirm (a room's exam is the teacher's)
+  (function bindWaysBack() {
+    // only pages that never lead back into an exam (the player page re-joins the room, /homework?next= comes back):
+    // La Ruta Dorada, Mis tareas, the home card
+    let back = solo ? '/audios' : '/';
+    try {
+      const r = document.referrer ? new URL(document.referrer) : null;
+      if (r && r.origin === location.origin) {
+        if (/^\/audios(\/[a-z0-9-]+)*\/?$/i.test(r.pathname)) back = r.pathname + r.search + r.hash;
+        else if (/^\/(homework(\.html)?)?$/.test(r.pathname)) back = r.pathname;
+      }
+    } catch (_) {}
+    const gb = $('hsk-gate-back');
+    if (gb) gb.href = back;
+    const ex = $('hsk-exit');
+    if (!ex || !solo) return;
+    ex.hidden = false;
+    ex.addEventListener('click', () => {
+      if (window.confirm('¿Salir del simulacro? Lo que respondiste en este intento no se guarda.')) location.href = back;
+    });
+  })();
+
   function tryEnter() {
     accessCode  = $('hsk-access').value.trim();
     studentCode = $('hsk-code').value.trim();

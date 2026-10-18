@@ -144,8 +144,14 @@
   var ALERT = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M12 7v6" stroke="#f8e3dc" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="16.8" r="1.5" fill="#f8e3dc"/></svg>';
   function build() {
     if (!document.querySelector('link[data-ks-css]')) {
+      // the shared «← Volver» first (key-screen.css places it), then the key screen's own look
+      if (!document.querySelector('link[href^="/css/back.' + 'css"]')) {   // (split: a ?v= bump never stamps this test)
+        var b = document.createElement('link');
+        b.rel = 'stylesheet'; b.href = '/css/back.css?v=20261018a';
+        document.head.appendChild(b);
+      }
       var l = document.createElement('link');
-      l.rel = 'stylesheet'; l.href = '/css/key-screen.css?v=20261015f'; l.setAttribute('data-ks-css', '1');
+      l.rel = 'stylesheet'; l.href = '/css/key-screen.css?v=20261018a'; l.setAttribute('data-ks-css', '1');
       document.head.appendChild(l);
     }
     var el = document.createElement('div');
@@ -157,6 +163,8 @@
     el.innerHTML =
       '<div class="ks-layout">' +
         '<header class="ks-stage">' +
+          // ← «Volver» (his rule 2026-10-18): back to the screen the teacher came from (the games list), else Teacher Mode
+          '<a class="dw-back dw-back--dark ks-routeback ks-back" href="/maestro.html">Volver</a>' +
           '<p class="ks-word" translate="no">DRALINGO</p>' +
           '<div class="ks-hero">' +
             '<p class="ks-bubble" lang="zh-Latn-pinyin" translate="no">Lǎoshī hǎo!</p>' +
@@ -179,7 +187,6 @@
             '<button class="ks-go" type="submit">Entrar</button>' +
           '</form>' +
           '<p class="ks-alt">¿Olvidaste tu código? Pídeselo a Profe Fer.</p>' +
-          '<p class="ks-alt"><a class="ks-link ks-back" href="/">← Volver</a></p>' +
         '</div></main>' +
       '</div>';
     var reveal = function () { el.style.visibility = ''; };
@@ -188,9 +195,14 @@
     setTimeout(reveal, 1500);
 
     var form = el.querySelector('form'), input = el.querySelector('.ks-input'), go = el.querySelector('.ks-go');
-    el.querySelector('.ks-back').addEventListener('click', function (e) {
-      if (history.length > 1) { e.preventDefault(); history.back(); }
-    });
+    // «Volver»: the page of this site the teacher came from (the question packs, the games list), else Teacher Mode — a
+    // real link, never history (it could leave the platform)
+    try {
+      var ref = document.referrer ? new URL(document.referrer) : null;
+      if (ref && ref.origin === location.origin && ref.pathname !== location.pathname && !/^\/host/.test(ref.pathname)) {
+        el.querySelector('.ks-back').href = ref.pathname + ref.search;
+      }
+    } catch (_) { /* Teacher Mode */ }
     var err = el.querySelector('.ks-error'), eye = el.querySelector('.ks-show');
     var hideT = null;
     var setShown = function (showIt) {

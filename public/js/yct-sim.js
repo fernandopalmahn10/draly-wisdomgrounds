@@ -90,6 +90,28 @@
   }
 
   $('y-waiting-home').addEventListener('click', goHome);
+  // ← 2026-10-18 (his rule: every screen has a way back): the PIN card and the cover go back to the page the kid came
+  // from (La Ruta Dorada, Mis tareas), else La Ruta Dorada (solo) or the home card (a room). In a room the cover's
+  // way back leaves the room like «Volver a mi perfil»; mid-exam only a solo kid may leave, after a confirm (a room's
+  // exam is the teacher's: its waiting screen keeps «Volver a mi perfil»).
+  // only pages that never lead back into an exam (review: the player page re-joins the room, the other exam page
+  // forwards here, /homework?next= comes straight back): La Ruta Dorada (with its #paso-3), Mis tareas, the home card
+  const backHref = (function () {
+    try {
+      const r = document.referrer ? new URL(document.referrer) : null;
+      if (r && r.origin === location.origin) {
+        if (/^\/audios(\/[a-z0-9-]+)*\/?$/i.test(r.pathname)) return r.pathname + r.search + r.hash;
+        if (/^\/(homework(\.html)?)?$/.test(r.pathname)) return r.pathname;
+      }
+    } catch (_) {}
+    return solo ? '/audios' : '/';
+  })();
+  ['y-gate-back', 'y-cover-back'].forEach((id) => { const a = $(id); if (a) a.href = backHref; });
+  if (!solo && $('y-cover-back')) $('y-cover-back').addEventListener('click', (e) => { e.preventDefault(); goHome(); });
+  if (solo && $('y-exit')) {
+    $('y-exit').addEventListener('click', () => confirmBox('¿Salir del simulacro?',
+      'Lo que respondiste en este intento no se guarda. Puedes empezarlo otra vez cuando quieras.', () => { location.href = backHref; }));
+  }
   function goHome() {
     try { if (socket) socket.disconnect(); } catch (_) {}
     let code = studentCode;
@@ -228,6 +250,8 @@
     phase = which === 'cover' ? 'cover' : phase;
     $('y-cover').classList.toggle('hidden', which !== 'cover');
     $('y-runner').classList.toggle('hidden', which === 'cover');
+    if ($('y-exit')) $('y-exit').classList.toggle('hidden', !solo || which === 'cover');   // the cover has its own «← Volver»
+    if ($('y-cover-back')) $('y-cover-back').classList.toggle('hidden', which !== 'cover');
   }
 
   // ── LISTENING: the screen follows one continuous audio track ───────

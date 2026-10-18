@@ -712,3 +712,20 @@ body:not(.mm-on) .mm-prompt { display: none; }
   .mmf-capline, .mmh-capline, .mmi-capt, .mmh-capt.cheer img { animation: none !important; }
   .mmh-capt-say { transition: none !important; }
 }
+
+/* ── a laptop's short screen (2026-10-18, his rule: nothing opens zoomed in, no needed button below the fold) ──
+   1366 × 768 leaves ~650 px under the browser's bars: the start button and its settings come right under the PIN,
+   the three pictured steps after them. A fullscreen projector (900 px) keeps the full layout
+   (with the browser's bars showing it gets the same order: harmless). */
+@media (max-height: 860px) {
+  .mmh-left > .mmh-steps { order: 2; }
+  .mmh-left > .mmh-tools { order: 1; }
+  .mmh-left > .mmh-set { order: 1; }
+}
+/* the projector lobby opened on a phone (2026-10-18): one column, nothing wider than the screen */
+@media (max-width: 760px) {
+  .mmh-lobby { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 100vh; min-height: 100dvh; }
+  .mmh-lobby > * { min-width: 0; }
+  .mmh-qr { display: none; }
+  .mmh-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

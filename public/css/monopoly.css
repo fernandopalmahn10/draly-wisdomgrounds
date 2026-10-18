@@ -708,3 +708,20 @@ body.mnh::before { content: ''; position: fixed; left: 0; right: 0; bottom: 0; h
   .mnx-prompt .mn-hand, .mni-pic .mn-hand, .mnh-step .mn-hand, .mn-confetti, .mnb-pop, .mnx-clock.last, .mnh-tile.ping { animation: none !important; }
   .mnq, .mnx-card, .mnx-banner, .mnx-tick { transition: none !important; }
 }
+
+/* ── a laptop's short screen (2026-10-18, his rule: nothing opens zoomed in, no needed button below the fold) ──
+   1366 × 768 leaves ~650 px under the browser's bars: the start button and its settings come right under the PIN,
+   the three pictured steps after them. A fullscreen projector (900 px) keeps the full layout
+   (with the browser's bars showing it gets the same order: harmless). */
+@media (max-height: 860px) {
+  .mnh-left { display: flex; flex-direction: column; }
+  .mnh-left > .mnh-steps { order: 2; }
+  .mnh-left > .mnh-hint { order: 1; }
+  .mnh-left > .mnh-tools { order: 1; }
+}
+/* the projector lobby opened on a phone (2026-10-18): one column, nothing wider than the screen */
+@media (max-width: 760px) {
+  .mnh-lobby { grid-template-columns: minmax(0, 1fr); height: auto; min-height: 100vh; min-height: 100dvh; }
+  .mnh-lobby > * { min-width: 0; }
+  .mnh-qr { display: none; }
+}

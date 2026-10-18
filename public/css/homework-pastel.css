@@ -129,9 +129,12 @@ body.hw-pastel .btn:active:not(:disabled) { transform: translateY(4px); box-shad
 body.hw-pastel .btn:disabled { opacity: .55; transform: none; box-shadow: 0 3px 0 var(--hp-ink); cursor: not-allowed; }
 
 /* Back buttons: neutral white sticker, same as "← Inicio" on games.html */
-body.hw-pastel :is(#hw-daily-back, #hw-reading-back, #hw-settings-back, #hw-parents-back, #hw-asg-back, #hw-folder-back) {
+body.hw-pastel :is(#hw-daily-back, #hw-reading-back, #hw-settings-back, #hw-parents-back, #hw-asg-back, #hw-folder-back, #hw-avatar-back) {
   background: #fff;
+  white-space: nowrap; flex-shrink: 0;   /* «← Volver» on one line, also on a 360 px phone (2026-10-18) */
 }
+/* the avatar picker's way back (2026-10-18): the card's top-left corner, above the greeting */
+body.hw-pastel .hw-avatar-pick-card .hw-avatar-back { display: flex; align-items: center; align-self: flex-start; width: fit-content; min-height: 44px; margin: 0 auto 6px 0; }
 
 /* ── Inputs ──────────────────────────────────────────────────────────── */
 body.hw-pastel .input {
@@ -191,6 +194,11 @@ body.hw-pastel :is(.hw-myexams-close, .hw-inbox-close, .hw-mistakes-close, .hw-c
   .hw-sent-corner-close, .hw-tr-close, .hw-tr-back, .hw-sk-back, .hw-sk-help):active {
   transform: translateY(3px);
   box-shadow: 0 1px 0 var(--hp-ink);
+}
+/* the round's and the word sack's way back in words (his rule 2026-10-18: «← Volver», it was the arrow alone): the
+   same white sticker, as a pill */
+body.hw-pastel :is(.hw-tr-back, .hw-sk-back) {
+  width: auto; min-width: 52px; padding: 0 16px; border-radius: 999px; font-size: 1rem; white-space: nowrap; flex: none;
 }
 /* soft "note" boxes (instructions, tips) */
 body.hw-pastel :is(.hw-asg-instructions, .hw-reading-instructions, .hw-parents-encouragement, .hw-parents-levels-intro) {
@@ -2319,7 +2327,8 @@ body.hw-pastel .hw-entry-dralingo { pointer-events: auto; cursor: pointer; }
 .hw-entry-home {
   position: fixed; top: 12px; left: 12px; z-index: 3; text-decoration: none;
   background: #fff; color: var(--hp-ink); border: 2.5px solid var(--hp-ink); border-radius: 999px;
-  padding: 7px 14px; font: 900 .95rem/1 var(--hp-head); box-shadow: 0 3px 0 var(--hp-ink);
+  padding: 7px 16px; font: 900 1rem/1 var(--hp-head); box-shadow: 0 3px 0 var(--hp-ink);
+  display: inline-flex; align-items: center; min-height: 44px; box-sizing: border-box;   /* «← Volver», a 44 px target (2026-10-18) */
 }
 .hw-entry-home:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--hp-ink); }
 /* «No encontramos ese código. ¿Es tu nombre?» — two big choices instead of a silent «Anon» account */

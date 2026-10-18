@@ -502,9 +502,8 @@ body.hw-portal:has(#hw-pin-stack) .hw-folder-bar {
   box-shadow: var(--pt-e2);
 }
 body.hw-portal .hw-folder-crumb { font-size: 1.1rem; }
-/* ← alone (the word stays for screen readers): the world's name gets the room */
-body.hw-portal #hw-folder-back { width: 56px; min-width: 56px !important; padding: 0 !important; font-size: 0 !important; }
-body.hw-portal #hw-folder-back::before { content: '←'; font: 800 1.6rem/1 var(--pt-head); }
+/* «← Volver» in words (his rule 2026-10-18: a clear way back; it was the arrow alone), the world's name beside it */
+body.hw-portal #hw-folder-back { flex: none; width: auto; min-width: 0 !important; padding: 0 16px !important; white-space: nowrap; }
 
 /* one round / tarea = a level-select card */
 body.hw-portal .hw-card { box-shadow: var(--pt-e2); }

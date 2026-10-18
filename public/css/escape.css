@@ -507,3 +507,17 @@ body.es-on:has(#screen-escape:not(.hidden)) .muted-toggle { top: auto !important
   .es-band.out { opacity: 0; }
   .es-takeoff-me { opacity: 0; }
 }
+
+/* ── a laptop's short screen (2026-10-18, his rule: nothing opens zoomed in, no needed button below the fold) ──
+   1366 × 768 leaves ~650 px under the browser's bars: «¡Empezar la fuga!» and the time come right under the PIN,
+   the route and «Así se juega» after them; the robot and Dralingo a little smaller. A fullscreen projector keeps the full
+   layout (with the browser's bars showing it gets the same order: harmless). */
+@media (max-height: 860px) {
+  .es-lobby { display: flex; flex-direction: column; padding-top: 40px; }
+  .es-lobby > .es-tools, .es-lobby > .kd-set { order: 1; }
+  .es-lobby > .es-tools { margin: 14px 0 6px; }
+  .es-lobby > .es-route { order: 2; }
+  .es-lobby > .es-howto { order: 3; }
+  .es-lobby-robot { width: 112px; height: 112px; }
+  .es-lobby-dralingo { height: 118px; }
+}

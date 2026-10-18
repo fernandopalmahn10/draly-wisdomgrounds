@@ -37,7 +37,10 @@
   }
 
   if (!pw) {
-    document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#ffd24a;font-family:Nunito;"><h2>🔒 Falta tu código de maestra.</h2><p>Entra desde <a href="/maestro" style="color:#5be8d1;">Modo Maestro</a> y vuelve a lanzar la simulación.</p></div>';
+    // 2026-10-18 (his rule: every screen has a way back): a clear «← Volver» to Teacher Mode, readable on any background
+    document.body.innerHTML = '<div style="max-width:520px;margin:40px auto;padding:28px 24px;text-align:center;color:#1d2440;background:#fff7e3;border:3px solid #1d2440;border-radius:22px;font-family:Nunito,sans-serif;">' +
+      '<h2 style="margin:0 0 8px;">🔒 Falta tu código de maestra</h2><p style="margin:0 0 18px;">Entra desde Modo Maestro y vuelve a lanzar la simulación.</p>' +
+      '<a class="dw-back" href="/maestro.html">Volver a Modo Maestro</a></div>';
     return;
   }
 

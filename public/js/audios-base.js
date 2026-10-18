@@ -355,10 +355,10 @@
     let h = '<div class="bs">';
     // sticky thumb index
     // back: to the level's folder, or to /homework when the kid came from the portal (?from=homework; the home-screen app
-    // has no browser back button)
+    // has no browser back button). «← Volver» in words since 2026-10-18 (his rule: a clear way back on every screen)
     const back = ctx.from === 'homework'
-      ? '<a class="bs-bar-back" href="/homework" aria-label="Volver a mis tareas">' + ICON.back + '</a>'
-      : '<a class="bs-bar-back" href="/audios/' + esc(d.level) + '" data-nav aria-label="Volver a ' + esc(d.levelName) + '">' + ICON.back + '</a>';
+      ? '<a class="dw-back dw-back--sm bs-bar-back" href="/homework" aria-label="Volver a mis tareas">Volver</a>'
+      : '<a class="dw-back dw-back--sm bs-bar-back" href="/audios/' + esc(d.level) + '" data-nav aria-label="Volver a ' + esc(d.levelName) + '">Volver</a>';
     h += '<nav class="bs-bar" aria-label="Mundos de la base"><div class="bs-wrap">' + back +
       '<div class="bs-tabs">' + W.map((w) => '<a class="bs-tab" href="#mundo-' + w.n + '" data-tab="' + w.n + '" aria-label="Mundo ' + w.n + ': ' + esc(w.name) + '">' +
         '<span aria-hidden="true">' + w.n + '</span><span class="bs-tab-name" aria-hidden="true">' + esc(w.short) + '</span></a>').join('') + '</div>' +

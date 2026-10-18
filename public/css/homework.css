@@ -4496,6 +4496,17 @@ body.hw-lv-hsk2 .hw-hud { border-color: rgba(91, 232, 209, 0.5); }
   border-radius: 8px; padding: 2px 8px;
 }
 .hw-tr-txtopts { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 480px; }
+/* a laptop is wide but short (1366 × 768 leaves ~650 px): the picture follows the screen's height and the answers sit
+   two by two, so all four are on the first screen (2026-10-18, his rule: nothing opens zoomed in) */
+@media (min-width: 760px) and (max-height: 860px) {
+  .hw-tr-img img { max-height: min(240px, 30vh); }
+  .hw-tr-txtopts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 720px; }
+}
+/* a small phone (360 × 640): the same, so a picture question shows its four answers on the first screen */
+@media (max-width: 759px) and (max-height: 700px) {
+  .hw-tr-img img { max-height: 24vh; }
+  .hw-tr-txtopts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+}
 .hw-tr-txtopt {
   position: relative; display: flex; align-items: center; gap: 12px;
   border: 2px solid rgba(255, 255, 255, 0.16); border-radius: 14px;

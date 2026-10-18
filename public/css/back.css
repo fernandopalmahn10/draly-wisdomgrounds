@@ -1,0 +1,81 @@
+/* ===================================================================== */
+/* «← Volver» · ONE way back on every screen of the platform             */
+/* His rule 2026-10-18 (mochi-mash/CLAUDE.md § Always): every page,      */
+/* step, card and overlay shows a clear «← Volver» (or ✕ on an overlay)  */
+/* to the screen it came from, always visible on phone and projector.    */
+/*                                                                       */
+/*   <a class="dw-back" href="/">Volver</a>          a link (preferred:  */
+/*                     a kid may land from WhatsApp with no history)     */
+/*   <button class="dw-back" type="button">Volver</button>   a step back */
+/*   .dw-back--float   pinned to the top-left corner of the screen       */
+/*   .dw-back--dark    on a dark or coloured band                        */
+/*   .dw-close         the ✕ of an overlay (44 px round)                 */
+/*                                                                       */
+/* The arrow is drawn here (the same on every font); the text is only    */
+/* «Volver» (or «Volver a …»), so /homework's English toggle reads it.   */
+/* An area tints it with its own palette through the variables below.    */
+/* ===================================================================== */
+.dw-back {
+  -webkit-appearance: none; appearance: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  box-sizing: border-box; min-height: 44px; min-width: 44px; margin: 0; padding: 0 18px 0 13px;
+  border: 2px solid var(--dwb-line, rgba(28, 26, 23, .18)); border-radius: 999px;
+  background: var(--dwb-bg, #fffdf8); color: var(--dwb-fg, #1c1a17);
+  box-shadow: 0 2px 0 var(--dwb-shadow, rgba(28, 26, 23, .16)), 0 8px 18px -12px rgba(28, 26, 23, .45);
+  font-family: var(--dwb-font, inherit); font-size: 16px; font-weight: 800; line-height: 1; letter-spacing: 0;
+  text-decoration: none; text-transform: none; white-space: nowrap; cursor: pointer;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none;
+  transition: transform 140ms cubic-bezier(.23, 1, .32, 1), background-color 160ms ease, border-color 160ms ease;
+}
+.dw-back::before {
+  content: ''; flex: none; width: 19px; height: 19px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 12H5.5M11.5 5l-7 7 7 7' fill='none' stroke='%23000' stroke-width='2.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 12H5.5M11.5 5l-7 7 7 7' fill='none' stroke='%23000' stroke-width='2.9' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.dw-back:visited { color: var(--dwb-fg, #1c1a17); }
+.dw-back:active { transform: translateY(1px) scale(.97); }
+@media (hover: hover) and (pointer: fine) {
+  .dw-back:hover { background: var(--dwb-bg-hover, #f3ecdc); border-color: var(--dwb-line-hover, rgba(28, 26, 23, .32)); }
+}
+.dw-back:focus-visible { outline: 3px solid var(--dwb-focus, #1c1a17); outline-offset: 2px; }
+.dw-back[hidden] { display: none !important; }
+
+/* pinned to the top-left corner: always on screen, whatever scrolls under it */
+.dw-back--float {
+  position: fixed; z-index: 70;
+  top: calc(10px + env(safe-area-inset-top, 0px)); left: calc(10px + env(safe-area-inset-left, 0px));
+}
+/* on a dark or coloured band (La Ruta Dorada's red header, a game's night sky) */
+.dw-back--dark {
+  --dwb-bg: rgba(255, 253, 248, .14); --dwb-fg: #fffdf8; --dwb-line: rgba(255, 253, 248, .42);
+  --dwb-shadow: rgba(0, 0, 0, .28); --dwb-bg-hover: rgba(255, 253, 248, .24); --dwb-line-hover: rgba(255, 253, 248, .7);
+  --dwb-focus: #fffdf8;
+}
+.dw-back--dark:visited { color: #fffdf8; }
+/* a narrower one inside a crowded bar (still a 44 px target) */
+.dw-back--sm { padding: 0 14px 0 10px; font-size: 15px; }
+
+/* the projector pages' lobbies (js/host-back.js): above the title, its own width; pinned in the corner on a phone the
+   page steps down under it */
+.host-back--title { align-self: flex-start; justify-self: start; width: max-content; max-width: 100%; margin: 0 0 2px; }
+@media (max-width: 700px) { body:has(> .host-back--float:not([hidden])) { padding-top: 58px; } }
+
+/* the ✕ of an overlay */
+.dw-close {
+  -webkit-appearance: none; appearance: none;
+  display: inline-grid; place-items: center; box-sizing: border-box; width: 44px; height: 44px; margin: 0; padding: 0;
+  border: 2px solid var(--dwb-line, rgba(28, 26, 23, .18)); border-radius: 50%;
+  background: var(--dwb-bg, #fffdf8); color: var(--dwb-fg, #1c1a17);
+  box-shadow: 0 2px 0 var(--dwb-shadow, rgba(28, 26, 23, .16));
+  font: 800 20px/1 system-ui, sans-serif; cursor: pointer; touch-action: manipulation;
+  transition: transform 140ms cubic-bezier(.23, 1, .32, 1), background-color 160ms ease;
+}
+.dw-close:active { transform: scale(.94); }
+@media (hover: hover) and (pointer: fine) { .dw-close:hover { background: var(--dwb-bg-hover, #f3ecdc); } }
+.dw-close:focus-visible { outline: 3px solid var(--dwb-focus, #1c1a17); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dw-back, .dw-close { transition: none; }
+  .dw-back:active, .dw-close:active { transform: none; }
+}
+@media print { .dw-back, .dw-close { display: none !important; } }

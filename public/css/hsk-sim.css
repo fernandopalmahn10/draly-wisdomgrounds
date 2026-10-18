@@ -77,6 +77,13 @@
   color: #5be8d1;
   font-size: 0.85rem;
 }
+/* ← the ways back (2026-10-18, his rule: every screen has a way back): the PIN card, a solo exam's «Salir» */
+.hsk-back { display: flex; align-items: center; justify-content: center; width: 100%; margin-top: 10px; text-decoration: none; box-sizing: border-box; }
+.hsk-exit {
+  min-height: 44px; padding: 0 14px; border-radius: 10px; cursor: pointer; white-space: nowrap;
+  background: transparent; color: #e7faff; border: 1.5px solid rgba(231, 250, 255, 0.45); font: 800 .9rem 'Nunito', sans-serif;
+}
+.hsk-exit[hidden] { display: none; }
 .hsk-topbar-section {
   margin-top: 4px;
   font-size: 0.82rem;

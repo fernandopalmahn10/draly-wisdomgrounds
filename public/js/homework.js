@@ -773,6 +773,20 @@
     try { fetch('/api/homework/logout', { method: 'POST', credentials: 'same-origin', keepalive: true }).catch(() => {}); } catch (_) {}
     location.href = '/';
   });
+  // ← the avatar picker (2026-10-18, his rule: every screen has a way back): back to the code card, like «Salir» but
+  // staying on the page (a wrong name typed, a brother's code). The code box gets the kid's student code (it held the
+  // typed name: «Entrar» again would make a second account); never while the picked avatar is saving
+  const avatarBack = $('hw-avatar-back');
+  if (avatarBack) avatarBack.addEventListener('click', () => {
+    if ($('hw-avatar-grid').style.pointerEvents === 'none') return;
+    if (studentCode) $('hw-student-code').value = studentCode;
+    accessCode = '';
+    studentCode = '';
+    removePinnedStack();
+    try { fetch('/api/homework/logout', { method: 'POST', credentials: 'same-origin', keepalive: true }).catch(() => {}); } catch (_) {}
+    $('hw-avatar-err').textContent = '';
+    showScreen('entry');
+  });
   $('hw-list-parents').addEventListener('click', openParentView);
   $('hw-list-settings').addEventListener('click', openSettings);
   $('hw-list-avatar').addEventListener('click', () => openSettings());   // tap your character = your settings (game menus)
@@ -3834,7 +3848,7 @@
     const ov = document.createElement('div');
     ov.id = 'hw-tr-play';
     ov.innerHTML = '<div class="hw-tr-playhead">'
-      + '<button type="button" class="hw-tr-back" id="hw-tr-back">←</button>'
+      + '<button type="button" class="hw-tr-back" id="hw-tr-back">← Volver</button>'
       + '<div class="hw-tr-playtitles"><div class="hw-tr-kicker">'
       + (mode ? escapeHtml(mode.kicker) : sess.tier.icon + ' TIER ' + sess.tier.tier + ' · ENTRENAMIENTO') + '</div>'
       + '<div class="hw-tr-playtitle">' + escapeHtml(mode ? mode.title : sess.expLabel) + '</div></div>'
@@ -4769,7 +4783,7 @@
     ov.className = 'hw-sk';
     ov.innerHTML = `
       <div class="hw-sk-head">
-        <button type="button" class="hw-sk-back" id="hw-sack-back">←</button>
+        <button type="button" class="hw-sk-back" id="hw-sack-back">← Volver</button>
         <div class="hw-sk-headmid">
           <div class="hw-sk-kicker">🎒 BOLSA DE PALABRAS</div>
           <div class="hw-sk-title">${escapeHtml(asg.title)}</div>
