@@ -4974,7 +4974,8 @@ function _rutaExps(lvl) {
     if (img) {
       const file = path.join(__dirname, 'public', 'assets', 'packs', slug, w.id, img + '.webp');
       let v = '0';
-      try { const st = fs.statSync(file); v = (st.size + Math.round(st.mtimeMs)).toString(36); } catch (_) { /* listed above */ }
+      // (its content's hash: the same on every deploy, new only when the picture is)
+      try { v = require('crypto').createHash('sha1').update(fs.readFileSync(file)).digest('hex').slice(0, 8); } catch (_) { /* listed above */ }
       _rutaExpFiles[slug + '/' + n] = file;
       pic = '/ruta-exp/' + slug + '/' + n + '.webp?v=' + v;
     }
