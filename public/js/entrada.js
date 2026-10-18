@@ -59,11 +59,14 @@
   const AVATARS = ((window.Saga && window.Saga.AVATARS) || []).map((a) => ({ id: a.id, label: String(a.label || a.id).replace(/^[^A-Za-zÀ-ÿ]+/, '').trim() || a.id }));
 
   // ── state ─────────────────────────────────────────────────────────
+  // answer: what «Soy nuevo» sends about this phone's automatic account ('resume' = «Sí, soy yo», 'fresh' = «¿No eres
+  // tú?» / «No, soy otro alumno»: a new account, that one untouched; security review F1) · ask: the account «¿Eres tú?»
+  // is about · relock: the phone remembers the kid but their level's key changed since (type the new key, F2)
   const S = {
     step: 'load', hola: null, kid: null, oldCodes: null, key: '', lvl: null, name: '', avatar: null, account: null,
-    busy: false, parked: null, answer: null, prefill: '', keyTyped: '', user: false,
+    busy: false, ask: null, answer: null, prefill: '', keyTyped: '', user: false, relock: false,
   };
-  const BACK = { quien: () => (S.kid ? 'hola' : 'home'), clave: 'quien', nivel: 'clave', codigo: 'hola', tengo: 'quien', eres: 'quien', door: 'quien' };
+  const BACK = { quien: () => (S.relock ? 'llave' : (S.kid ? 'hola' : 'home')), clave: 'quien', nivel: 'clave', codigo: 'hola', tengo: 'quien', eres: 'quien', door: 'quien' };
   const backOf = (step) => { const b = BACK[step]; return typeof b === 'function' ? b() : (b || 'quien'); };
   const nextLine = () => { const n = $('hw-entry-next'); return n && !n.hidden ? n.textContent : ''; };
 
@@ -79,11 +82,10 @@
   function viewLoad() {
     return '<div class="en-wrap is-load">' + brand + '<img class="en-load-dr" src="' + ART.hello + '" alt="" width="140" height="157"></div>';
   }
-  function viewHola() {
+  function holaHero() {
     const k = S.kid || {};
     const lvl = k.levelName ? k.levelName + (k.exp && k.exp.n ? ' · Experiencia ' + k.exp.n : '') : '';
-    return '<div class="en-wrap is-hola">' +
-      '<section class="en-hola" aria-labelledby="en-h">' + brand +
+    return '<section class="en-hola" aria-labelledby="en-h">' + brand +
         '<div class="en-hola-stage">' +
           '<img class="en-hola-av en-pop" src="' + esc(avatarUrl(k.avatar)) + '" alt="Tu avatar" width="152" height="152">' +
           '<img class="en-hola-dr" id="en-hola-dr" src="' + ART.hello + '" alt="Dralingo te saluda" width="160" height="212">' +
@@ -92,7 +94,25 @@
         (k.name ? '<p class="en-hola-name">' + esc(k.name) + '</p>' : '') +
         (lvl ? '<p class="en-pill">' + esc(lvl) + '</p>' : '') +
       '</section>' +
-      (nextLine() ? '<p class="en-next">' + esc(nextLine()) + '</p>' : '') +
+      (nextLine() ? '<p class="en-next">' + esc(nextLine()) + '</p>' : '');
+  }
+  // 🔒 2026-10-18 (security review F2): the phone remembers the kid, but their level's key changed since («Cambiar» +
+  // «Cerrar en todos los aparatos»): the new key only, nothing else to type (POST /api/entrada/reabrir)
+  function viewLlave() {
+    return '<div class="en-wrap is-llave">' + holaHero() +
+      '<div class="en-hola-go">' +
+        '<form class="en-form en-relock" data-form="reabrir" novalidate>' +
+          '<p class="en-hola-note">Este teléfono te recuerda: escribe la clave nueva de tu nivel.</p>' +
+          '<label class="en-label" for="en-key3">La clave nueva</label>' +
+          '<input id="en-key3" class="en-in en-in-key" type="text" placeholder="••••-••" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" maxlength="30">' +
+          '<p class="en-err" role="alert"></p>' +
+          '<button type="submit" class="en-btn en-btn-red en-btn-xl"><span>Entrar</span>' + I.go + '</button>' +
+        '</form>' +
+        '<button type="button" class="en-btn en-btn-soft" data-go="quien">¿No eres tú?</button>' +
+      '</div></div>';
+  }
+  function viewHola() {
+    return '<div class="en-wrap is-hola">' + holaHero() +
       '<div class="en-hola-go">' +
         '<button type="button" class="en-btn en-btn-red en-btn-xl" data-act="vamos"><span>¡Vamos!</span>' + I.go + '</button>' +
         '<p class="en-hola-note">Este teléfono te recuerda: no tienes que escribir nada.</p>' +
@@ -112,7 +132,11 @@
       DOOR);
   }
   function viewEres() {
-    return card('eres', '<h1 class="en-h" id="en-h" tabindex="-1">Antes de seguir</h1><div class="en-mount" id="en-mount"></div>');
+    // (F4: a kid of the key is shown by name and avatar, never their code: the next person on a shared phone)
+    const a = S.ask || {};
+    return card('eres', '<h1 class="en-h" id="en-h" tabindex="-1">Antes de seguir</h1>' +
+      (a.kind === 'key' ? '<img class="en-eres-av" src="' + esc(avatarUrl(a.avatar)) + '" alt="" width="76" height="76">' : '') +
+      '<div class="en-mount" id="en-mount"></div>');
   }
   function levelList() {
     const names = (S.hola && S.hola.levels) || [];
@@ -179,7 +203,7 @@
   function viewDoor() {
     return '<button type="button" class="en-fixed-back" data-go="quien">' + I.back + '<span>Volver</span></button>';
   }
-  const VIEWS = { load: viewLoad, hola: viewHola, quien: viewQuien, eres: viewEres, clave: viewClave, nivel: viewNivel, codigo: viewCodigo, tengo: viewTengo, door: viewDoor };
+  const VIEWS = { load: viewLoad, hola: viewHola, llave: viewLlave, quien: viewQuien, eres: viewEres, clave: viewClave, nivel: viewNivel, codigo: viewCodigo, tengo: viewTengo, door: viewDoor };
 
   // ── showing a state ───────────────────────────────────────────────
   let helloTimer = 0;
@@ -188,7 +212,8 @@
     S.step = step;
     S.busy = false;
     root.innerHTML = VIEWS[step]();
-    ['load', 'hola', 'quien', 'eres', 'clave', 'nivel', 'codigo', 'tengo'].forEach((s) => scr.classList.toggle('is-' + s, s === step));
+    if (step === 'hola' || step === 'llave') S.answer = null;   // (back on the kid this phone remembers: nothing answered yet)
+    ['load', 'hola', 'llave', 'quien', 'eres', 'clave', 'nivel', 'codigo', 'tengo'].forEach((s) => scr.classList.toggle('is-' + s, s === step));
     scr.classList.toggle('en-door', step === 'door');
     const box = root.firstElementChild;
     if (box && !calm() && step !== 'load' && step !== 'door') { box.classList.add('en-in-anim'); }
@@ -200,14 +225,14 @@
       const sc = $('hw-student-code');
       if (sc && !ls.get('dralyHwAccessCode') && sc.value === ls.get('dralyStudentCode')) sc.value = '';
     }
-    if (step === 'hola') wakeHello();
+    if (step === 'hola' || step === 'llave') wakeHello();
     if (step === 'eres') mountEres();
     // the focus follows a tap (a screen reader hears the new title; a phone opens its keyboard on the box to type)
     if (S.user) {
-      const f = step === 'clave' ? $('en-key') : step === 'tengo' ? (S.prefill ? $('en-key2') : $('en-code')) : step === 'door' ? $('hw-access-code') : $('en-h');
+      const f = step === 'clave' ? $('en-key') : step === 'llave' ? $('en-key3') : step === 'tengo' ? (S.prefill ? $('en-key2') : $('en-code')) : step === 'door' ? $('hw-access-code') : $('en-h');
       if (f) { try { f.focus({ preventScroll: step === 'hola' }); } catch (_) {} }
     }
-    if (step !== 'hola') window.scrollTo(0, 0);
+    if (step !== 'hola' && step !== 'llave') window.scrollTo(0, 0);
   }
   // Dralingo waves for real once the page has loaded (the still first: a whole class may open the page at once)
   function wakeHello() {
@@ -265,21 +290,27 @@
       showErr((d && d.error) || NET);
     });
   }
+  // «Soy nuevo» (security review F1): after «¿No eres tú?» it is always a new account; otherwise this phone's account with
+  // progress (parked after «Salir», or an automatic one) asks «¿Eres tú?» first; the server asks too when it must
   function nuevo() {
-    const p = S.hola && S.hola.parked;
-    if (p && p.progress && p.progress.any && !S.answer) { go('eres'); return; }
+    if (S.answer) { go('clave'); return; }
+    const h = S.hola || {};
+    const has = (x) => !!(x && x.progress && x.progress.any);
+    const p = has(h.parked) ? h.parked : (has(h.auto) ? Object.assign({ kind: 'auto' }, h.auto) : null);
+    if (p) { S.ask = p; go('eres'); return; }
     go('clave');
   }
-  // «¿Eres tú?» for this phone's parked account (js/ruta-auto.js's card)
+  // «¿Eres tú?» for this phone's account (js/ruta-auto.js's card). A kid of the key: name + avatar only, never the code
+  // (F4); «Sí, soy yo» = their code (typed: the box stays empty) + the key
   function mountEres() {
     const m = $('en-mount');
-    const p = S.parked || (S.hola && S.hola.parked);
+    const p = S.ask;
     if (!m || !p || !window.DralyAuto || !window.DralyAuto.eresTu) { go('clave'); return; }
-    window.DralyAuto.eresTu(m, { code: p.code, name: p.name, progress: p.progress || {} }, {}).then((a) => {
+    window.DralyAuto.eresTu(m, { code: p.kind === 'auto' ? p.code : '', name: p.name || 'Tu cuenta', progress: p.progress || {} }, {}).then((a) => {
       S.user = true;
       if (p.kind === 'key') {
-        if (a === 'me') { S.prefill = p.code; go('tengo'); return; }   // their own account: their code + the key
-        S.answer = 'other'; go('clave'); return;
+        if (a === 'me') { S.prefill = ''; go('tengo'); return; }      // their own account: their code + the key
+        S.answer = 'fresh'; go('clave'); return;
       }
       S.answer = a === 'me' ? 'resume' : 'fresh';                       // an automatic account: «Soy nuevo» makes it theirs, or a new one
       if (S.lvl && S.key) { go('nivel'); return; }
@@ -324,9 +355,23 @@
         go('codigo');
         return;
       }
-      if (d && d.why === 'parked' && d.account) { S.parked = d.account; go('eres'); return; }
+      if (d && d.why === 'parked' && d.account) { S.ask = d.account; go('eres'); return; }
       if (d && d.why === 'key') { S.key = ''; go('clave'); showErr(d.error || NET, $('en-key')); return; }
       showErr((d && d.error) || (status ? NET : NET), d && d.why === 'name' ? input : null);
+    });
+  }
+  // (F2) the level's new key, on the phone that remembers the kid
+  function submitReabrir(form) {
+    const input = $('en-key3');
+    const key = (input.value || '').trim();
+    if (!key) { showErr('Escribe la clave nueva.', input); return; }
+    const btn = form.querySelector('[type="submit"]');
+    busy(btn, true);
+    post('/api/entrada/reabrir', { key }).then(({ d }) => {
+      busy(btn, false);
+      if (d && d.ok) { ls.del('dralyHwOut'); S.relock = false; enter(d); return; }
+      if (d && d.why === 'none') { S.kid = null; S.relock = false; go('quien'); return; }
+      showErr((d && d.error) || NET, input);
     });
   }
   function submitEntrar(form) {
@@ -375,12 +420,14 @@
       const to = t.getAttribute('data-go');
       if (S.step === 'nivel') { const n = $('en-name'); if (n) S.name = n.value; }
       if (to === 'quien' && S.step === 'eres') S.answer = null;
+      // «¿No eres tú?» (F1): whatever comes next is another kid: «Soy nuevo» makes a fresh account, never this one's
+      if (to === 'quien' && (S.step === 'hola' || S.step === 'llave')) S.answer = 'fresh';
       go(to);
       return;
     }
     const act = t.getAttribute('data-act');
     if (act === 'vamos') vamos(t);
-    else if (act === 'tengo') { S.prefill = S.prefill || ''; go('tengo'); }
+    else if (act === 'tengo') { S.prefill = ''; go('tengo'); }
     else if (act === 'nuevo') nuevo();
     else if (act === 'copy') copyCode(t);
   });
@@ -394,6 +441,7 @@
     if (k === 'clave') submitClave(f);
     else if (k === 'crear') submitCrear(f);
     else if (k === 'entrar') submitEntrar(f);
+    else if (k === 'reabrir') submitReabrir(f);
   });
   root.addEventListener('input', (e) => {
     if (e.target.classList && e.target.classList.contains('en-in')) {
@@ -416,6 +464,7 @@
     getJ('/api/entrada/hola').then(({ d }) => {
       S.hola = d && d.ok ? d : { kid: null, auto: null, parked: null, levels: [] };
       if (S.hola.kid) { S.kid = S.hola.kid; go('hola'); return; }
+      if (S.hola.relock) { S.kid = S.hola.relock; S.relock = true; go('llave'); return; }   // (F2) the level's key changed
       // today's families: the class code + student code this phone saved (never after «Salir»: a brother or sister)
       const ac = ls.get('dralyHwAccessCode'), sc = ls.get('dralyStudentCode');
       if (ls.get('dralyHwOut') !== '1' && ac && sc) {
@@ -428,7 +477,7 @@
     });
   }
   // the entry screen shown again with nobody logged in (homework.js: the avatar picker's «Volver»): ask the server again
-  function restart() { S.kid = null; S.oldCodes = null; S.account = null; S.answer = null; S.parked = null; start(); }
+  function restart() { S.kid = null; S.oldCodes = null; S.account = null; S.answer = null; S.ask = null; S.relock = false; start(); }
 
   // ── «¿Salir de tu cuenta en este teléfono?» (homework.js «Salir») ─────────────
   function confirmOut(keyMode) {

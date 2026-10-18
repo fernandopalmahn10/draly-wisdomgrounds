@@ -181,6 +181,8 @@
     ['Con la clave nueva que te mande tu profe.', 'With the new key your teacher sends you.'],
     ['La clave nueva', 'The new key'], ['Abrir', 'Open'], ['Abriendo…', 'Opening…'], ['Escribe la clave nueva.', 'Type the new key.'],
     ['Entra con tu código primero.', 'Sign in with your code first.'],
+    ['Este teléfono te recuerda: escribe la clave nueva de tu nivel.', 'This phone remembers you: type your level\'s new key.'],
+    ['demasiados intentos, espera unos minutos', 'too many tries, wait a few minutes'],
     ['La primera vez, la app te pide tu código y la clave de tu nivel (la del mensaje de tu profe). Anota tu código:',
       'The first time, the app asks for your code and your level key (the one in your teacher\'s message). Write your code down:'],
   ].forEach(function (p) { DICT.map[p[0]] = p[1]; });

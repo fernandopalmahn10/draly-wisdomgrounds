@@ -676,6 +676,9 @@ function _studentOf(req) {
   return s && s.kind === 's' ? Students.get(s.code) : null;
 }
 LevelKeys.configure({ teacherOf: _teacherOf, studentOf: _studentOf });
+// 🔒 2026-10-18 (security review F2): every kid session carries its account's kidGen («Cerrar su sesión en todos los
+// teléfonos» in /maestro bumps it: the sessions made before stop at once). peek: never wakes an archived account.
+SimLock.configureSessions({ genOf: (code) => { const p = Students.peek(code); return p ? Number(p.rec.kidGen) || 0 : 0; } });
 // The one question every locked level asks (La Base now; El Entrenamiento and El Simulacro Dorado in phases 2-4):
 // may this request use level X? → { ok, level, via: 'teacher' | 'student' | 'key', studentCode? }
 const levelAccess = (req, level) => LevelKeys.access(req, level);
@@ -1396,10 +1399,9 @@ app.delete('/api/admin/custom-assignment/:id', (req, res) => {
 });
 app.get('/api/homework/custom-assignments/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const rec = Students.get(req.params.code);
-  if (!rec) return res.json({ ok: true, assignments: [] });
-  // 🔒 2026-10-18 (ownership): only the kid's own phone reads their list (the same proof as every homework write)
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  // 🔒 2026-10-18 (ownership; security review F6: one answer for an unknown code and «not yours», _hwKid)
+  const rec = _hwKid(req, res, req.params.code);
+  if (!rec) return;
   const list = CustomAsg.listForStudent(rec.code).map((a) => ({
     id: a.id,
     title: a.title,
@@ -1412,9 +1414,8 @@ app.get('/api/homework/custom-assignments/:code', (req, res) => {
 });
 app.get('/api/homework/custom-assignment/:id', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const rec = Students.get(req.query.studentCode);
-  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });   // 🔒 2026-10-18
+  const rec = _hwKid(req, res, req.query.studentCode);   // 🔒 2026-10-18 (ownership, F6)
+  if (!rec) return;
   const a = CustomAsg.get(req.params.id);
   if (!a || a.status !== 'active') return res.status(404).json({ ok: false, error: 'no encontrada' });
   if (a.targetStudents.indexOf(rec.code) < 0) return res.status(403).json({ ok: false, error: 'no es para ti' });
@@ -1434,10 +1435,9 @@ app.get('/api/homework/custom-assignment/:id', (req, res) => {
 app.post('/api/homework/custom-assignment/submit', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, assignmentId, answers } = req.body || {};
-  const rec = Students.get(studentCode);
-  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
-  // 🔒 2026-10-18 (ownership): a grade lands only on the caller's own record, never on a classmate's by a typed code
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  // 🔒 2026-10-18 (ownership): a grade lands only on the caller's own record, never on a classmate's by a typed code (F6)
+  const rec = _hwKid(req, res, studentCode);
+  if (!rec) return;
   const a = CustomAsg.get(assignmentId);
   if (!a || a.status !== 'active') return res.status(404).json({ ok: false, error: 'no encontrada' });
   if (a.targetStudents.indexOf(rec.code) < 0) return res.status(403).json({ ok: false, error: 'no es para ti' });
@@ -1817,9 +1817,8 @@ app.delete('/api/admin/student/:code/note/:ts', (req, res) => {
 // month so a fresh card can be generated even before any notes exist.
 app.get('/api/homework/reports/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const rec = Students.get(req.params.code);
-  if (!rec) return res.status(404).json({ ok: false, error: 'no student' });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, req.params.code);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   // 🗓 Build the month list from ANY activity, not just teacher notes.
   // User reported: in May the option appeared because there were notes;
   // in June, the May button disappeared because no notes were added to
@@ -1841,9 +1840,8 @@ app.get('/api/homework/reports/:code', (req, res) => {
 // Full report-card payload for one month: notes, computed grade, stats.
 app.get('/api/homework/report/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const rec = Students.get(req.params.code);
-  if (!rec) return res.status(404).json({ ok: false, error: 'no student' });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, req.params.code);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   const month = /^\d{4}-\d{2}$/.test(String(req.query.month || '')) ? req.query.month
               : new Date().toISOString().slice(0, 7);
   const notes = Students.getNotes(rec.code).filter((n) => n.month === month);
@@ -1996,9 +1994,8 @@ app.post('/api/admin/broadcast', (req, res) => {
 app.get('/api/homework/inbox', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const code = req.query.studentCode;
-  const rec = Students.get(code);
-  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, code);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   rec.lastSeen = Date.now();   // ← presence heartbeat
   // 🔒 2026-10-15: `from` held the sending teacher's CODE on messages older than today: never sent to a phone
   const inbox = Students.getInbox(rec.code, 30).map((m) => { const o = Object.assign({}, m); delete o.from; return o; });
@@ -2011,9 +2008,8 @@ app.get('/api/homework/inbox', (req, res) => {
 app.post('/api/homework/ping', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode } = req.body || {};
-  const rec = Students.get(studentCode);
-  if (!rec) return res.status(404).json({ ok: false, error: 'student not found' });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, studentCode);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   rec.lastSeen = Date.now();
   res.json({ ok: true, lastSeen: rec.lastSeen });
 });
@@ -2137,8 +2133,8 @@ app.post('/api/admin/gif-push', (req, res) => {
 app.post('/api/homework/inbox/:msgId/read', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode } = req.body || {};
-  const rec = Students.get(studentCode);   // 🔒 2026-10-18 (ownership): only the kid's own inbox
-  if (!rec || !_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, studentCode);   // 🔒 2026-10-18 (ownership): only the kid's own inbox (F6)
+  if (!rec) return;
   const ok = Students.markMessageRead(rec.code, req.params.msgId);
   res.json({ ok });
 });
@@ -2147,8 +2143,8 @@ app.post('/api/homework/inbox/:msgId/read', (req, res) => {
 app.post('/api/homework/inbox/read-all', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode } = req.body || {};
-  const rec = Students.get(studentCode);   // 🔒 2026-10-18 (ownership): only the kid's own inbox
-  if (!rec || !_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, studentCode);   // 🔒 2026-10-18 (ownership): only the kid's own inbox (F6)
+  if (!rec) return;
   const count = Students.markAllMessagesRead(rec.code);
   res.json({ ok: true, marked: count });
 });
@@ -2300,15 +2296,16 @@ app.delete('/api/admin/teachers/:teacherId', (req, res) => {
 //      → grades, persists to student-records, returns { score, breakdown }
 // All endpoints gate on isAccessCodeValid() — no admin password needed
 // for students. The teacher hands out one of the 5 codes to her class.
-function _hwCheckAccess(req, res) {
+// opts.classCodeOnly (2026-10-18, /api/homework/enter): only a real class code, never the session below
+function _hwCheckAccess(req, res, opts) {
   const code = req.body && req.body.accessCode
             || req.query && req.query.accessCode
             || '';
   if (!Assignments.isAccessCodeValid(code)) {
     // 🆕 2026-10-18 (la entrada): a kid who came in with the level key has no class code: their session on this phone is
     // the pass when the page sends NO class code (each endpoint still asks _hwOwnsStudent whose record it may touch).
-    // A wrong class code is still refused, and the old form's login always needs a real one.
-    if (!String(code || '').trim() && req.path !== '/api/homework/enter' && _entradaSessionKid(req)) return true;
+    // A wrong class code is still refused, and the old form's login always needs a real one (classCodeOnly).
+    if (!String(code || '').trim() && !(opts && opts.classCodeOnly) && _entradaSessionKid(req)) return true;
     res.status(401).json({ ok: false, error: 'Código de acceso incorrecto' });
     return false;
   }
@@ -2386,8 +2383,34 @@ function _hwCodeMiss(req) {
   if (_hwMissesAll.length === 600) console.warn('[security] 600 unknown student codes in one hour from many addresses → unknown-code logins paused');
   if (_hwMisses.size > 5000) for (const [k, v] of _hwMisses) if (!v.length || now - v[v.length - 1] > 10 * 60 * 1000) _hwMisses.delete(k);
 }
+// 🔒 2026-10-18 (security review F6) — the kid a homework call names, only when this request may touch that record
+// (_hwOwnsStudent: the kid's session or remembered phone, or their own class code). An unknown code and «not yours» get
+// ONE answer (403 «no autorizado»), counted per ADDRESS only (_hwMisses: never the platform-wide bucket, so nobody can
+// block other families), 429 once that address is out of tries; a probe never brings an archived account back (peek
+// first, Students.get only once ownership is proven). → the record, or null (already answered)
+function _hwAddrMissBlocked(req) {
+  const now = Date.now();
+  return (_hwMisses.get(_clientIp(req)) || []).filter((t) => now - t < 10 * 60 * 1000).length >= 60;
+}
+function _hwAddrMiss(req) {
+  const now = Date.now();
+  const ip = _clientIp(req);
+  const arr = (_hwMisses.get(ip) || []).filter((t) => now - t < 10 * 60 * 1000);
+  arr.push(now);
+  _hwMisses.set(ip, arr);
+  if (arr.length === 60) console.warn('[security] student-code probing ip=' + ip + ' → lookups of unknown codes paused 10 min');
+  if (_hwMisses.size > 5000) for (const [k, v] of _hwMisses) if (!v.length || now - v[v.length - 1] > 10 * 60 * 1000) _hwMisses.delete(k);
+}
+function _hwKid(req, res, code) {
+  const p = code ? Students.peek(String(code)) : null;
+  if (p && _hwOwnsStudent(req, p.rec)) return Students.get(p.rec.code);
+  if (_hwAddrMissBlocked(req)) { res.status(429).json({ ok: false, error: 'demasiados intentos, espera unos minutos' }); return null; }
+  _hwAddrMiss(req);
+  res.status(403).json({ ok: false, error: 'no autorizado' });
+  return null;
+}
 app.post('/api/homework/enter', (req, res) => {
-  if (!_hwCheckAccess(req, res)) return;
+  if (!_hwCheckAccess(req, res, { classCodeOnly: true })) return;
   if (!_enterRateLimit(req)) { console.warn('[security] homework/enter flood ip=' + _clientIp(req)); return res.status(429).json({ ok: false, error: 'demasiados intentos, espera un momento' }); }
   try {
     const { displayName, accessCode, meta } = req.body || {};
@@ -2497,10 +2520,10 @@ app.post('/api/homework/avatar', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, avatar } = req.body || {};
   // 🔒 Phase 2: bind the write to ownership — can't edit a kid in another
-  // classroom even with a valid access code. (rec null → setter 400s below.)
-  const rec = Students.get(studentCode);
-  if (rec && !_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
-  const ok = Students.setAvatar(studentCode, avatar);
+  // classroom even with a valid access code. (2026-10-18 F6: an unknown code answers the same as «not yours»)
+  const rec = _hwKid(req, res, studentCode);
+  if (!rec) return;
+  const ok = Students.setAvatar(rec.code, avatar);
   if (!ok) return res.status(400).json({ ok: false, error: 'avatar inválido o estudiante no encontrado' });
   res.json({ ok: true });
 });
@@ -2508,11 +2531,11 @@ app.post('/api/homework/avatar', (req, res) => {
 app.post('/api/homework/rename', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, displayName } = req.body || {};
-  const rec0 = Students.get(studentCode);   // 🔒 Phase 2 ownership bind
-  if (rec0 && !_hwOwnsStudent(req, rec0)) return res.status(403).json({ ok: false, error: 'no autorizado' });
-  const ok = Students.setDisplayName(studentCode, displayName);
+  const rec0 = _hwKid(req, res, studentCode);   // 🔒 Phase 2 ownership bind (2026-10-18 F6: one answer)
+  if (!rec0) return;
+  const ok = Students.setDisplayName(rec0.code, displayName);
   if (!ok) return res.status(400).json({ ok: false, error: 'nombre inválido o estudiante no encontrado' });
-  const rec = Students.get(studentCode);
+  const rec = Students.get(rec0.code);
   res.json({ ok: true, displayName: rec ? rec.displayName : null });
 });
 // Reset a kid's submissions for a specific assignment (clean slate).
@@ -2520,9 +2543,9 @@ app.post('/api/homework/reset', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, assignmentId } = req.body || {};
   if (!assignmentId) return res.status(400).json({ ok: false, error: 'assignmentId requerido' });
-  const rec = Students.get(studentCode);   // 🔒 Phase 2 ownership bind
-  if (rec && !_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
-  const removed = Students.resetAssignmentSubmissions(studentCode, assignmentId);
+  const rec = _hwKid(req, res, studentCode);   // 🔒 Phase 2 ownership bind (2026-10-18 F6: one answer)
+  if (!rec) return;
+  const removed = Students.resetAssignmentSubmissions(rec.code, assignmentId);
   res.json({ ok: true, removed });
 });
 // 👨‍👩‍👧 2026-10-18 · Papás («Mi Dralingo» part 2, his approved design): the kid's La Ruta Dorada for the parents' view.
@@ -2609,9 +2632,8 @@ function _papasPrompts(insights, level) {
 app.get('/api/homework/insights/:code', (req, res) => {
   res.set('Cache-Control', 'private, no-store');   // (2026-10-18: a kid's progress, never kept by a cache)
   if (!_hwCheckAccess(req, res)) return;
-  const rec = Students.get(req.params.code);
-  if (!rec) return res.status(404).json({ ok: false, error: 'Estudiante no encontrado' });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, req.params.code);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   const subs = Students.getAssignmentSubmissions(rec.code, 100);
   // Map each submission to its assignment definition + insight. Take the
   // BEST attempt per assignment, then keep only those with score ≥ 60%.
@@ -3063,7 +3085,9 @@ app.get('/api/guides', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   let cc = null;
   try {
-    const rec = Students.get(req.query.studentCode);
+    // (2026-10-18 F6: only the kid's own record picks the class's guides; a probe never restores an archived account)
+    const p = req.query.studentCode ? Students.peek(String(req.query.studentCode)) : null;
+    const rec = p && _hwOwnsStudent(req, p.rec) ? p.rec : null;
     cc = rec && rec.classroomCode ? rec.classroomCode : null;
   } catch (_) {}
   res.json({ ok: true, guides: Guides.list(cc) });
@@ -3130,10 +3154,9 @@ app.post('/api/homework/submit', (req, res) => {
   const { studentCode, assignmentId, answers, accessCode } = req.body || {};
   const a = Assignments.getAssignment(assignmentId);
   if (!a) return res.status(404).json({ ok: false, error: 'Asignación no encontrada' });
-  const rec = Students.get(studentCode);
-  if (!rec) return res.status(401).json({ ok: false, error: 'Código de estudiante inválido — vuelve a entrar' });
   // 🔒 2026-10-12 — only from the kid's own classroom code (same IDOR guard as avatar / rename / insights)
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, studentCode);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   const result = Assignments.gradeSubmission(a, answers);
   Students.logAssignmentSubmission(rec.code, {
     assignmentId: a.id,
@@ -3194,8 +3217,10 @@ app.post('/api/homework/trainer/check', (req, res) => {
 app.post('/api/homework/trainer/submit', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, tier, exp, answers, accessCode } = req.body || {};
-  const rec = Students.get(studentCode);
-  if (!rec) return res.status(401).json({ ok: false, error: 'Código de estudiante inválido — vuelve a entrar' });
+  // 🔒 2026-10-18 (security review F6): a trainer grade lands only on the caller's own record (the same proof as every
+  // homework write, one answer for an unknown code and «not yours»)
+  const rec = _hwKid(req, res, studentCode);
+  if (!rec) return;
   const result = SimTrainer.grade(tier, exp, answers);
   if (!result) return res.status(404).json({ ok: false, error: 'entrenamiento no encontrado' });
   const tMeta = SimTrainer.TIERS.find((x) => x.tier === Number(tier));
@@ -3905,9 +3930,8 @@ app.get('/api/admin/student/:code/hsk-attempt', (req, res) => {
 // detail (use my-hsk-attempt below for that).
 app.get('/api/homework/my-hsk-attempts/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const rec = Students.get(req.params.code);
-  if (!rec) return res.status(404).json({ ok: false, error: 'no such student' });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });   // 🔒 2026-10-18
+  const rec = _hwKid(req, res, req.params.code);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   const rows = (Array.isArray(rec.hskResults) ? rec.hskResults : [])
     .slice()
     .sort((a, b) => (b.ts || 0) - (a.ts || 0))
@@ -3933,10 +3957,9 @@ app.get('/api/homework/my-hsk-attempts/:code', (req, res) => {
 // · yīshēng" not just "R1-22").
 app.get('/api/homework/my-hsk-attempt/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const rec = Students.get(req.params.code);
-  if (!rec) return res.status(404).json({ ok: false, error: 'no such student' });
   // 🔒 2026-10-15: the exam's pictures and recordings come with it, so only from the kid's own classroom code
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, req.params.code);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   const ts = parseInt(req.query.ts, 10);
   if (!ts) return res.status(400).json({ ok: false, error: 'ts required' });
   const attempt = (rec.hskResults || []).find((r) => r.ts === ts);
@@ -4318,8 +4341,10 @@ app.get('/api/homework/reading-tests', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const code = req.query.studentCode;
   // 🔒 2026-10-18 (ownership): a kid's own tries only for their own phone; anyone else gets the plain list
-  const own = code ? Students.get(code) : null;
-  res.json({ ok: true, stories: _hwReadingListFor(own && _hwOwnsStudent(req, own) ? own.code : null) });
+  // (F6: peek first, a probe never brings an archived account back; the answer is the same plain list either way)
+  const p = code ? Students.peek(String(code)) : null;
+  const own = p && _hwOwnsStudent(req, p.rec) ? Students.get(p.rec.code) : null;
+  res.json({ ok: true, stories: _hwReadingListFor(own ? own.code : null) });
 });
 
 // Full story content (pages + questions, NO correctIdx in the choices).
@@ -4331,8 +4356,8 @@ app.get('/api/homework/reading-test/:storyId', (req, res) => {
   // we're in bootstrap "unlocked for all" mode.
   const studentCode = req.query.studentCode;
   if (!READING_UNLOCKED_FOR_ALL) {
-    const rec0 = Students.get(studentCode);
-    const rec = rec0 && _hwOwnsStudent(req, rec0) ? rec0 : null;   // 🔒 2026-10-18 (ownership): a classmate's tries open nothing
+    const p0 = studentCode ? Students.peek(String(studentCode)) : null;   // (F6: a probe never restores an archived account)
+    const rec = p0 && _hwOwnsStudent(req, p0.rec) ? Students.get(p0.rec.code) : null;   // 🔒 2026-10-18 (ownership): a classmate's tries open nothing
     const hasAttempted = rec && Array.isArray(rec.testResults)
       && rec.testResults.some((t) => t.storyId === story.id);
     if (!hasAttempted) {
@@ -4366,10 +4391,9 @@ app.post('/api/homework/reading-test/submit', (req, res) => {
   const { studentCode, storyId, answers, accessCode } = req.body || {};
   const story = (ReadingStory.STORIES || {})[storyId];
   if (!story) return res.status(404).json({ ok: false, error: 'Historia no encontrada' });
-  const rec = Students.get(studentCode);
-  if (!rec) return res.status(401).json({ ok: false, error: 'Código de estudiante inválido' });
   // 🔒 2026-10-18 (ownership): a reading-test grade lands only on the caller's own record
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, studentCode);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   const arr = Array.isArray(answers) ? answers : [];
   const pointsPerQ = 20;
   let score = 0;
@@ -4404,10 +4428,10 @@ app.post('/api/homework/reading-test/submit', (req, res) => {
 // why they got it wrong."
 app.get('/api/homework/reading-review/:storyId', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const rec = Students.get(req.query.studentCode);
-  if (!rec || !Array.isArray(rec.testResults)) return res.json({ ok: true, attempt: null });
-  // 🔒 2026-10-18 (ownership): a try's answers (with the right ones) only for the kid's own phone
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  // 🔒 2026-10-18 (ownership): a try's answers (with the right ones) only for the kid's own phone (F6: one answer)
+  const rec = _hwKid(req, res, req.query.studentCode);
+  if (!rec) return;
+  if (!Array.isArray(rec.testResults)) return res.json({ ok: true, attempt: null });
   const attempts = rec.testResults.filter((t) => t.storyId === req.params.storyId);
   if (!attempts.length) return res.json({ ok: true, attempt: null });
   // Best score, tie → most recent.
@@ -4426,18 +4450,16 @@ app.get('/api/homework/reading-review/:storyId', (req, res) => {
 // Same data the in-game "Mis oraciones" shows, exposed via REST.
 app.get('/api/homework/sentences/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const rec = Students.get(req.params.code);
-  if (!rec) return res.json({ ok: true, sentences: [] });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, req.params.code);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   res.json({ ok: true, sentences: Students.getHistory(rec.code, 100) });  // newest-first
 });
 // Kid deletes ONE of their own saved sentences (junk / accidental save).
 app.post('/api/homework/sentences/delete', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, ts } = req.body || {};
-  const rec = Students.get(studentCode);
-  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, studentCode);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   const ok = Students.deleteHistoryEntry(rec.code, ts);
   res.json({ ok, sentences: Students.getHistory(rec.code, 100) });
 });
@@ -4447,9 +4469,8 @@ app.post('/api/homework/sentences/delete', (req, res) => {
 app.post('/api/homework/sentences/save', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, words } = req.body || {};
-  const rec = Students.get(studentCode);
-  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, studentCode);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   if (!Array.isArray(words) || !words.length) return res.status(400).json({ ok: false, error: 'oración vacía' });
   Students.appendSentence(rec.code, words.slice(0, 24), '');
   res.json({ ok: true, sentences: Students.getHistory(rec.code, 100) });
@@ -4518,9 +4539,8 @@ function _todayServer() { return new Date().toISOString().slice(0, 10); }
 const DAILY_MILESTONES = [30, 50, 100];
 app.get('/api/homework/daily', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const rec = Students.get(req.query.studentCode);
-  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });   // 🔒 2026-10-18
+  const rec = _hwKid(req, res, req.query.studentCode);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : _todayServer();
   const prog = Students.getProgress(rec.code);
   // 🆕 Preview tomorrow's mode so the daily card can tease "mañana: 🧠
@@ -4546,10 +4566,9 @@ app.get('/api/homework/daily', (req, res) => {
 app.post('/api/homework/daily/complete', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, date, correct } = req.body || {};
-  const rec = Students.get(studentCode);
-  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
   // 🔒 2026-10-18 (ownership): swords and streaks land only on the caller's own record
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const rec = _hwKid(req, res, studentCode);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   const d = /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date : _todayServer();
   const result = Students.awardDaily(rec.code, d, correct);
   // 🎁 Mystery-bonus day: double the swords. The base award already
@@ -4578,9 +4597,8 @@ app.post('/api/homework/daily/complete', (req, res) => {
 app.post('/api/homework/daily/sentence-bonus', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode, date, wordIds } = req.body || {};
-  const rec = Students.get(studentCode);
-  if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });   // 🔒 2026-10-18
+  const rec = _hwKid(req, res, studentCode);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   if (!Array.isArray(wordIds) || wordIds.length < 2) {
     return res.json({ ok: false, reason: 'short' });
   }
@@ -4677,9 +4695,8 @@ app.post('/api/maestro/emirati/sentence/mark', (req, res) => {
 // sees which sentences they got wrong + the correct answer.
 app.get('/api/homework/assignment-review/:id', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
-  const rec = Students.get(req.query.studentCode);
-  if (!rec) return res.json({ ok: true, attempt: null });
-  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });   // 🔒 2026-10-18
+  const rec = _hwKid(req, res, req.query.studentCode);   // 🔒 2026-10-18 (ownership; F6: one answer, no restore on a probe)
+  if (!rec) return;
   const subs = Students.getAssignmentSubmissions(rec.code, 100).filter((s) => s.assignmentId === req.params.id);
   if (!subs.length) return res.json({ ok: true, attempt: null });
   const best = subs.slice().sort((a, b) => (b.score - a.score) || (b.ts - a.ts))[0];
@@ -5454,7 +5471,8 @@ app.post('/api/ruta/auto/merge', (req, res) => {
 // key's level open on the account (a key grant with its gen: «Cerrar en todos los aparatos» still ends it) and on the
 // device. It answers ONLY to its own session, the phone holding it, or its code + the key of a level it has: never to a
 // class code + its code (_hwOwnsStudent, _autoLoginRefused). The code alone never opens an account on a new phone.
-// THE PHONE KEEPS IT: `dkid` (httpOnly, signed 'K', a year: the code, parked or not, the account's firstSeen) = "this phone
+// THE PHONE KEEPS IT: `dkid` (httpOnly, signed 'K', a year: the code, parked or not, the account's firstSeen, its level
+// + that level's key generation, its kidGen: F2 below) = "this phone
 // holds kid X", for every account made or entered here (the dauto idea); _kidRenew renews the 12 h session from it (a page
 // view never wakes an archived account). One kid per phone: a new account or a login here takes the cookie. «Salir»
 // parks it (/api/homework/logout: no «¡Hola de nuevo!», no renewal, until the kid comes in again with code + key), and so
@@ -5471,29 +5489,53 @@ app.post('/api/ruta/auto/merge', (req, res) => {
 // (a school's Wi-Fi never waits); new accounts 120 an hour per address, 5 a day per phone, 300 an hour for the platform.
 // Requests from other sites are refused (_autoSameSite). One uniform line for a wrong pair
 // («El código o la clave no coinciden»): it never says which of the two was wrong, nor whether a code exists.
+// SECURITY REVIEW (2026-10-18, on top of the merge):
+//   F1 «Soy nuevo» takes the phone's automatic account only after «Sí, soy yo» (resume) or when it is empty and nameless;
+//      «¿No eres tú?» always makes a fresh account
+//   F2 dkid carries the level's key generation and the kid's kidGen: «Cerrar en todos los aparatos» → type the new key
+//      (/reabrir); «Cerrar su sesión en todos los teléfonos» (/maestro) → sessions and phones end, code + key again
+//   F3 /entrar: a wrong key is a key guess only; a wrong code with a right key counts per phone, per address and in its
+//      own platform bucket (never the old form's)
+//   F4 a parked key account never shows its code (name + avatar); «Salir» forgets the code on a key kid's phone
+//   F5 /entrar never opens an unclaimed automatic account away from its phone (M3)
 // Test: scripts/test-entrada.js.
 const KID_COOKIE = 'dkid';
 const KID_TTL = 365 * 24 * 3600e3;
 const ENTRADA_BAD_KEY = 'Esa clave no es. Revísala en el mensaje de tu profe.';
 const ENTRADA_BAD_PAIR = 'El código o la clave no coinciden. Revísalos y vuelve a intentarlo.';
 const _entradaWaitMsg = (wait) => 'Ya fueron muchos intentos. Espera ' + wait + (wait === 1 ? ' minuto' : ' minutos') + ' y vuelve a intentarlo.';
-// (req or a socket's handshake) → { code, parked, born } | null
+// 🔒 2026-10-18 (security review F2) dkid can be revoked: it also carries the account's level + that level's key
+// generation (`lg`, «Cambiar» + «Cerrar en todos los aparatos» bump it) and the account's `kidGen` (`kg`, /maestro
+// «Cerrar su sesión en todos los teléfonos»). A level generation that moved = «Este teléfono te recuerda: escribe la
+// clave nueva de tu nivel» (the key only, POST /api/entrada/reabrir); a kidGen that moved = like parked: code + key.
+// (req or a socket's handshake) → { code, parked, born, lg, kg } | null
 function _kidCookie(reqOrHs) {
   const v = SimLock.verify(SimLock.readCookie(reqOrHs, KID_COOKIE), 'K');
-  return v && /^[A-Z2-9]{4,6}$/.test(v[0]) && v.length >= 3 ? { code: v[0], parked: v[1] === '1', born: String(v[2] || '') } : null;
+  return v && /^[A-Z2-9]{4,6}$/.test(v[0]) && v.length >= 3
+    ? { code: v[0], parked: v[1] === '1', born: String(v[2] || ''), lg: String(v[3] || ''), kg: String(v[4] || '0') } : null;
 }
 // the cookie's account, only when it is that very account (the same firstSeen) and never merged away → { rec, archived } | null
 function _kidHeld(k) {
   const p = k ? Students.peek(k.code) : null;
   return p && !p.rec.mergedInto && String(Number(p.rec.firstSeen) || 0) === k.born ? p : null;
 }
-function _kidSetCookie(req, res, rec, parked) {
-  SimLock.setCookie(req, res, KID_COOKIE, SimLock.sign('K', [rec.code, parked ? '1' : '0', String(Number(rec.firstSeen) || 0)], KID_TTL), KID_TTL);
+// the account's level and its key generation now ('hsk2:1'), and its kidGen ('0')
+const _kidLg = (rec) => { const l = LevelKeys.classLevel(rec) || Levels.DEFAULT; return l + ':' + LevelKeys.genOf(l); };
+const _kidKg = (rec) => String(Number(rec && rec.kidGen) || 0);
+// 'ok' (this phone holds the kid) · 'key' (the level's key changed since: type the new key) · 'out' (parked, or the
+// kid's sessions were closed: code + key) · null (no such account)
+function _kidState(k, p) {
+  if (!k || !p) return null;
+  if (k.parked || k.kg !== _kidKg(p.rec)) return 'out';
+  return k.lg === _kidLg(p.rec) ? 'ok' : 'key';
 }
-// does THIS phone hold `rec` (not parked)?
+function _kidSetCookie(req, res, rec, parked) {
+  SimLock.setCookie(req, res, KID_COOKIE, SimLock.sign('K', [rec.code, parked ? '1' : '0', String(Number(rec.firstSeen) || 0), _kidLg(rec), _kidKg(rec)], KID_TTL), KID_TTL);
+}
+// does THIS phone hold `rec` (not parked, nothing closed since)?
 function _kidDeviceHolds(req, rec) {
   const k = _kidCookie(req);
-  return !!(k && !k.parked && rec && k.code === rec.code && _kidHeld(k));
+  return !!(k && rec && k.code === rec.code && _kidState(k, _kidHeld(k)) === 'ok');
 }
 // the logged-in kid of a homework call (their session): the pass when the page sends no class code
 function _entradaSessionKid(req) { return _studentOf(req); }
@@ -5512,9 +5554,8 @@ function _kidRenew(req, res, next) {
     const s = SimLock.session(req);
     if (s && Students.peek(s.code)) return next();              // a session already (this kid, or another kid's login)
     const k = _kidCookie(req);
-    if (!k || k.parked) return next();
     const p = _kidHeld(k);
-    if (!p || p.archived || _autoUnclaimed(p.rec)) return next();
+    if (!p || _kidState(k, p) !== 'ok' || p.archived || _autoUnclaimed(p.rec)) return next();
     _autoSession(req, res, p.rec);                              // the same session as a login, read by this request too
   } catch (e) { console.warn('[entrada] renew failed:', e.message); }
   next();
@@ -5568,10 +5609,30 @@ function _entradaSummary(rec, how) {
   } catch (_) { /* no experience line */ }
   return Object.assign({ name: rec.displayName || '', avatar: rec.avatar || null, exp, how }, _entradaLevel(lvl));
 }
-// a parked account of this phone, for «¿Eres tú?» (its code: this phone held it)
+// a parked account of this phone, for «¿Eres tú?». An automatic account shows its code (its own «¿Eres tú?» design); a
+// key account NEVER (security review F4: on a shared phone the next person must not learn it): name + avatar only
 function _entradaParked(rec, kind) {
   const m = _autoMeOf(rec, true);
-  return { kind, code: m.code, name: m.name, placeholder: m.placeholder, progress: m.progress };
+  const out = { kind, name: m.name, placeholder: m.placeholder, avatar: rec.avatar || null, progress: m.progress };
+  if (kind === 'auto') out.code = m.code;
+  return out;
+}
+// does the account have this level (its class level, or one opened on it)?
+const _entradaHas = (r, l) => LevelKeys.classLevel(r) === l || !!(r && r.levelAccess && r.levelAccess[l]);
+// 🔒 2026-10-18 (security review F3) /entrar's own counters for a wrong CODE with a right key: per phone (10 / 15 min),
+// per address (the same 60 / 10 min as the homework lookups, _hwMisses) and its own bucket for the platform (600 / hour,
+// never the old form's): a wrong key is a key guess only (LevelKeys.noteWrong), never a code guess
+let _entradaMissAll = [];
+function _entradaCodeBlocked(req, dev) {
+  const now = Date.now();
+  _entradaMissAll = _entradaMissAll.filter((t) => now - t < 3600e3);
+  return _entradaMissAll.length >= 600 || _hwAddrMissBlocked(req) || !_autoHit('ec:' + dev, 15 * 60 * 1000, 10, true);
+}
+function _entradaCodeMiss(req, dev) {
+  _hwAddrMiss(req);
+  _autoHit('ec:' + dev, 15 * 60 * 1000, 10);
+  _entradaMissAll.push(Date.now());
+  if (_entradaMissAll.length === 600) console.warn('[security] 600 wrong codes with a right level key in one hour → code + key logins paused');
 }
 // the kid comes in on this phone: the key's level on the account and the device, the session, and dkid (one kid per
 // phone: a different automatic account here rests, its own cookie goes once it is this account)
@@ -5605,13 +5666,15 @@ function _entradaPayload(req, res, rec, o) {
     isNew: !!(o && o.isNew), assignments: Assignments.listAssignments(level), submissions: Students.getAssignmentSubmissions(rec.code, 100),
   };
 }
-// GET /api/entrada/hola → { ok, kid: summary | null, auto: account | null, parked: { kind, code, name, progress } | null,
-// levels: ['YCT 1', …] }: the kid this phone remembers (its session, dkid, a named automatic account), an unnamed automatic
-// account for «Soy nuevo» to turn into the kid's, or a parked account for «¿Eres tú?». Never wakes an archived one.
+// GET /api/entrada/hola → { ok, kid: summary | null, relock: summary | null, auto: account | null, parked: { kind, name,
+// avatar, progress, code (automatic accounts only) } | null, levels: ['YCT 1', …] }: the kid this phone remembers (its
+// session, dkid, a named automatic account), the kid whose level key changed since (relock: type the new key), an unnamed
+// automatic account (auto: «Soy nuevo» asks about it when it has progress), or a parked account for «¿Eres tú?». Never
+// wakes an archived one.
 app.get('/api/entrada/hola', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
   if (!_autoHit('eh:' + _clientIp(req), 5 * 60 * 1000, 4000)) return res.status(429).set('Retry-After', '30').json({ ok: false, error: 'Espera un momento.' });
-  const out = { ok: true, kid: null, auto: null, parked: null, levels: Levels.LEVELS.map((l) => l.name) };
+  const out = { ok: true, kid: null, relock: null, auto: null, parked: null, levels: Levels.LEVELS.map((l) => l.name) };
   const s = SimLock.session(req);
   const live = s && s.kind === 's' ? Students.peek(s.code) : null;
   if (live && !live.archived && !live.rec.mergedInto) {
@@ -5621,8 +5684,11 @@ app.get('/api/entrada/hola', (req, res) => {
   }
   const k = _kidCookie(req);
   const kp = _kidHeld(k);
-  if (kp && !k.parked) { out.kid = _entradaSummary(kp.rec, 'device'); return res.json(out); }
-  if (kp) out.parked = _entradaParked(kp.rec, 'key');
+  const ks = _kidState(k, kp);
+  if (ks === 'ok') { out.kid = _entradaSummary(kp.rec, 'device'); return res.json(out); }
+  // (F2) the level's key changed since this phone came in: «escribe la clave nueva de tu nivel» (never the code)
+  if (ks === 'key') { out.relock = _entradaSummary(kp.rec, 'relock'); return res.json(out); }
+  if (ks === 'out') out.parked = _entradaParked(kp.rec, 'key');
   const a = _autoCookie(req);
   const ap = _autoHeld(a);
   if (ap && _autoUnclaimed(ap.rec)) {
@@ -5657,7 +5723,7 @@ app.post('/api/entrada/vamos', (req, res) => {
     const s = SimLock.session(req);
     const live = s && s.kind === 's' ? Students.peek(s.code) : null;
     if (live && !live.rec.mergedInto) rec = Students.get(s.code);   // (a real step: an archived kid comes back)
-    if (!rec) { const k = _kidCookie(req); const kp = _kidHeld(k); if (kp && !k.parked) rec = Students.get(k.code); }
+    if (!rec) { const k = _kidCookie(req); const kp = _kidHeld(k); if (_kidState(k, kp) === 'ok') rec = Students.get(k.code); }
     if (!rec) { const a = _autoCookie(req); const ap = _autoHeld(a); if (ap && !a.parked && _autoUnclaimed(ap.rec)) rec = Students.get(a.code); }
     if (!rec) return res.status(401).json({ ok: false, why: 'none', error: 'Entra con tu código y la clave de tu nivel.' });
     if (!s || s.code !== rec.code) _autoSession(req, res, rec);
@@ -5676,8 +5742,9 @@ app.post('/api/entrada/clave', (req, res) => {
   res.json(Object.assign({ ok: true }, _entradaLevel(ck.level)));
 });
 // POST /api/entrada/crear { key, name, avatar, resume?, fresh? } → { ok, created, converted, account: { code, name, avatar,
-// level, levelName } } | { ok: false, why: 'parked', account } (this phone's parked automatic account: «¿Eres tú?» →
-// resume: true makes it the kid's, fresh: true a new one) | 400 name / avatar / key | 401 the key | 429
+// level, levelName } } | { ok: false, why: 'parked', account } (this phone's automatic account, parked or with progress or
+// a name: «¿Eres tú?» → resume: true makes it the kid's, fresh: true a new one; «¿No eres tú?» always sends fresh) |
+// 400 name / avatar / key | 401 the key | 429
 app.post('/api/entrada/crear', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
   if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
@@ -5694,8 +5761,14 @@ app.post('/api/entrada/crear', (req, res) => {
     const a = _autoCookie(req);
     const held = _autoHeld(a);
     if (held && _autoUnclaimed(held.rec)) {
-      if (a.parked && !b.resume && !b.fresh) return res.json({ ok: false, why: 'parked', account: _entradaParked(held.rec, 'auto') });
-      if (!a.parked || b.resume) { rec = Students.claimByKey(a.code, { name, avatar, level: ck.level }); converted = !!rec; }
+      // 🔒 2026-10-18 (security review F1): the phone's automatic account becomes this kid's only (a) when «¿Eres tú?» was
+      // answered «Sí, soy yo» (resume), or (b) when it is an empty, nameless account in use on this phone (nothing of
+      // anyone's to take) and the kid didn't say «¿No eres tú?» (fresh). Anything else asks «¿Eres tú?» first; fresh =
+      // a new account, that one untouched (it rests: _entradaIn parks it)
+      const prog = ((_autoMeOf(held.rec, true) || {}).progress || {}).any;
+      const quiet = !a.parked && !!held.rec.autoName && !prog;
+      if (b.resume || (quiet && !b.fresh)) { rec = Students.claimByKey(a.code, { name, avatar, level: ck.level }); converted = !!rec; }
+      else if (!b.fresh) return res.json({ ok: false, why: 'parked', account: _entradaParked(held.rec, 'auto') });
     }
     if (!rec) {
       if (!_entradaRateOk(req, ck.dev)) return res.status(429).set('Retry-After', '120').json({ ok: false, why: 'rate', error: 'Espera un momento y vuelve a intentarlo.' });
@@ -5721,20 +5794,25 @@ app.post('/api/entrada/entrar', (req, res) => {
   if (!LevelKeys.normalizeKey(String(b.key || '').slice(0, 80))) return res.status(400).json({ ok: false, why: 'key', error: 'Escribe la clave de tu nivel.' });
   const ip = _clientIp(req);
   const dev = LevelKeys.deviceId(req, res);
+  // (security review F3) the per-phone and per-address checks first; this door's own platform bucket, never the old
+  // form's (a stranger must never be able to block every family's code + key)
   const wait = LevelKeys.guessWait(ip, dev);
   if (wait) return res.status(429).json({ ok: false, wait, error: _entradaWaitMsg(wait) });
-  if (_hwCodeMissBlocked(req)) return res.status(429).json({ ok: false, error: 'Ya fueron muchos intentos. Espera unos minutos y vuelve a intentarlo.' });
+  if (_entradaCodeBlocked(req, dev)) return res.status(429).json({ ok: false, error: 'Ya fueron muchos intentos. Espera unos minutos y vuelve a intentarlo.' });
   const level = LevelKeys.levelOfKey(String(b.key).slice(0, 80));
+  // a wrong key: a key guess only (the key screen's counters), never a code guess
+  if (!level) { LevelKeys.noteWrong(ip, dev); return res.status(401).json({ ok: false, error: ENTRADA_BAD_PAIR }); }
   const p = Students.peek(code);
-  const has = (r, l) => LevelKeys.classLevel(r) === l || !!(r.levelAccess && r.levelAccess[l]);
-  if (!p || !level || p.rec.mergedInto || !has(p.rec, level)) {
-    _hwCodeMiss(req);
-    LevelKeys.noteWrong(ip, dev);
+  // (security review F5, the M3 rule) an UNCLAIMED automatic account answers only on the phone that holds it: anywhere
+  // else its code is a code that does not exist (it becomes the kid's through «Soy nuevo» on that phone)
+  const fine = !!(p && !p.rec.mergedInto && _entradaHas(p.rec, level) && (!_autoUnclaimed(p.rec) || _autoDeviceHolds(req, p.rec)));
+  if (!fine) {
+    _entradaCodeMiss(req, dev);                                    // a right key with a wrong code: a code guess
     return res.status(401).json({ ok: false, error: ENTRADA_BAD_PAIR });
   }
   try {
     let rec = Students.get(code);                                  // (an archived kid comes back)
-    if (_autoUnclaimed(rec)) rec = Students.claimByKey(rec.code, {}) || rec;   // its code + the key: the family's own now
+    if (_autoUnclaimed(rec)) rec = Students.claimByKey(rec.code, {}) || rec;   // its code + the key on ITS phone: the family's own now
     _entradaIn(req, res, rec, level, dev);
     res.json(_entradaPayload(req, res, Students.get(rec.code), { isNew: false }));
   } catch (e) {
@@ -5761,8 +5839,50 @@ app.post('/api/entrada/nivel', (req, res) => {
     if (prev && LevelKeys.recordOpenVia(rec, prev) === 'grandfathered') Students.setLevelAccess(rec.code, prev, 'grandfathered');
     Students.setLevel(rec.code, ck.level, prev);
     _autoSession(req, res, Students.get(rec.code));
+    // (F2) the phone's dkid names the kid's level: re-issued for the new one (else it would ask the key again)
+    const k = _kidCookie(req);
+    if (k && k.code === rec.code && _kidHeld(k)) _kidSetCookie(req, res, Students.get(rec.code), false);
   }
   res.json(Object.assign({ ok: true, moved }, _entradaLevel(ck.level)));
+});
+// 🔒 2026-10-18 (security review F2) POST /api/entrada/reabrir { key } → the portal's answer | 401: the level's key
+// changed since this phone came in («Cambiar» + «Cerrar en todos los aparatos»): «Este teléfono te recuerda: escribe la
+// clave nueva de tu nivel». The KEY only (this phone still holds the kid: dkid, the same firstSeen and kidGen); a key of
+// a level the account doesn't have = the same uniform line, counted like any wrong key
+app.post('/api/entrada/reabrir', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
+  const k = _kidCookie(req);
+  const kp = _kidHeld(k);
+  if (_kidState(k, kp) !== 'key') return res.status(401).json({ ok: false, why: 'none', error: 'Entra con tu código y la clave de tu nivel.' });
+  const ck = _entradaKey(req, res);
+  if (!ck) return;
+  if (!_entradaHas(kp.rec, ck.level)) {
+    LevelKeys.noteWrong(ck.ip, ck.dev);
+    return res.status(401).json({ ok: false, why: 'key', error: ENTRADA_BAD_KEY });
+  }
+  try {
+    const rec = Students.get(k.code);                              // (an archived kid comes back: a real step)
+    _entradaIn(req, res, rec, ck.level, ck.dev);
+    res.json(_entradaPayload(req, res, Students.get(rec.code), { isNew: false }));
+  } catch (e) {
+    console.error('[entrada] reabrir failed:', e.message);
+    res.status(500).json({ ok: false, error: 'No se pudo entrar. Vuelve a intentarlo.' });
+  }
+});
+// 🔒 2026-10-18 (security review F2) /maestro (super admin), a kid's profile: «Cerrar su sesión en todos los teléfonos» —
+// the account's kidGen moves on: every session (core/sim-lock.js) and every remembered phone (dkid) of this kid stop at
+// once; they come back with their code + the level key (a class kid's old class code + code still logs in too)
+app.post('/api/admin/student/:code/close-sessions', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  const session = _adminAuth(req, res);
+  if (!session) return;
+  if (!session.isSuperAdmin) return res.status(403).json({ ok: false, error: 'super admin only' });
+  const p = Students.peek(req.params.code);
+  if (!p) return res.status(404).json({ ok: false, error: 'student not found' });
+  const gen = Students.bumpKidGen(p.rec.code);
+  console.log('[entrada] a kid\'s sessions were closed on every phone (super admin)');
+  res.json({ ok: true, kidGen: gen });
 });
 // 🔒 2026-10-18 (ownership): may this socket's phone use this EXISTING account in a PIN room (rename it, save results on
 // it)? The same proof as every homework write (_hwOwnsStudent): the kid's session or remembered-device cookie on the
@@ -5780,7 +5900,7 @@ function _entradaPinTag(socket, g, rec) {
     const hs = (socket && socket.handshake) || {};
     const s = SimLock.session(hs);
     const k = _kidCookie(hs);
-    const mine = (s && s.kind === 's' && s.code === rec.code) || (k && !k.parked && k.code === rec.code && _kidHeld(k));
+    const mine = (s && s.kind === 's' && s.code === rec.code) || (k && k.code === rec.code && _kidState(k, _kidHeld(k)) === 'ok');
     if (!mine) return;
     const t = g && g.hostOwner && g.hostOwner !== '*' ? Teachers.getByUid(g.hostOwner) : null;
     const lvl = LevelKeys.classLevel(rec);

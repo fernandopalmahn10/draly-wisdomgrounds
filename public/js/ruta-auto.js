@@ -287,7 +287,9 @@
       box.setAttribute('role', 'group');
       box.setAttribute('aria-labelledby', 'ra-eres-t');
       box.innerHTML = '<p class="ra-eres-k">Este teléfono ya tiene un alumno</p>' +
-        '<p class="ra-eres-who" id="ra-eres-t"><b>' + esc(acc.name || 'Tu cuenta') + '</b><span>código ' + esc(acc.code) + '</span></p>' +
+        // (2026-10-18, security review F4: a kid of the level key is asked without their code: the next person on a
+        // shared phone never learns it)
+        '<p class="ra-eres-who" id="ra-eres-t"><b>' + esc(acc.name || 'Tu cuenta') + '</b>' + (acc.code ? '<span>código ' + esc(acc.code) + '</span>' : '') + '</p>' +
         (bits.length ? '<p class="ra-eres-p">' + esc(bits.join(' · ')) + '</p>' : '') +
         '<p class="ra-eres-q">¿Eres tú?</p>' +
         '<button type="button" class="ra-btn ra-btn-gold" data-a="me">Sí, soy yo</button>' +

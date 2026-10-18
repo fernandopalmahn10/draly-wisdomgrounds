@@ -51,6 +51,12 @@ const SEEDED = {
     inbox: [{ id: 'm1', text: 'Hola', ts: NOW - DAY, read: false }] },
 };
 fs.writeFileSync(path.join(DATA, 'student-records.json'), JSON.stringify(SEEDED));
+// (2026-10-18, security review F6) a kid resting in the archive: a probe must never bring them back
+fs.writeFileSync(path.join(DATA, 'student-archive.json'), JSON.stringify({
+  ARCH: { code: 'ARCH', displayName: 'Archivada Prueba', avatar: 'camel', classroomCode: CLASS, classroomId: null, firstSeen: NOW - 90 * DAY,
+    lastSeen: NOW - 60 * DAY, sentencesBuilt: [], level: 'hsk2' },
+}));
+const archived = () => { try { return JSON.parse(fs.readFileSync(path.join(DATA, 'student-archive.json'), 'utf8')); } catch (_) { return {}; } };
 
 function req(method, p, o = {}) {
   return new Promise((resolve, reject) => {
@@ -161,6 +167,54 @@ async function run() {
   const triedOf = (resp) => ((resp.json && resp.json.stories) || []).some((s) => s.best != null || s.triedInClass || s.bestScore != null);
   ok(listBad.status === 200 && !triedOf(listBad), 'reading-tests: a stranger gets the plain list, none of the kid\'s tries');
   ok(listGood.status === 200 && triedOf(listGood), 'reading-tests: the kid\'s own phone sees their tries');
+
+  // ── 2026-10-18 security review F6: no code-existence oracle, no restore on a probe, a per-address cap ──
+  section('one answer for an unknown code and for «not yours» (no oracle)');
+  const PROBE = '198.51.100.90';
+  const cases = [
+    ['GET', (c) => '/api/homework/custom-assignments/' + c + '?' + q({ accessCode: OTHER }), null, 'custom assignments'],
+    ['GET', (c) => '/api/homework/custom-assignment/x?' + q({ accessCode: OTHER, studentCode: c }), null, 'custom assignment'],
+    ['POST', () => '/api/homework/custom-assignment/submit', (c) => ({ accessCode: OTHER, studentCode: c, assignmentId: 'x', answers: [] }), 'custom-assignment submit'],
+    ['POST', () => '/api/homework/trainer/submit', (c) => ({ accessCode: OTHER, studentCode: c, tier: 1, exp: 'exp1', answers: [] }), 'trainer submit'],
+    ['POST', () => '/api/homework/reading-test/submit', (c) => ({ accessCode: OTHER, studentCode: c, storyId: STORY, answers: [] }), 'reading-test submit'],
+    ['GET', (c) => '/api/homework/reading-review/' + STORY + '?' + q({ accessCode: OTHER, studentCode: c }), null, 'reading review'],
+    ['GET', (c) => '/api/homework/daily?' + q({ accessCode: OTHER, studentCode: c, date: today }), null, 'daily'],
+    ['POST', () => '/api/homework/daily/complete', (c) => ({ accessCode: OTHER, studentCode: c, date: today, correct: 1 }), 'daily complete'],
+    ['POST', () => '/api/homework/daily/sentence-bonus', (c) => ({ accessCode: OTHER, studentCode: c, date: today, wordIds: ['a', 'b'] }), 'sentence bonus'],
+    ['POST', () => '/api/homework/inbox/m1/read', (c) => ({ accessCode: OTHER, studentCode: c }), 'inbox read'],
+    ['POST', () => '/api/homework/inbox/read-all', (c) => ({ accessCode: OTHER, studentCode: c }), 'inbox read-all'],
+    ['GET', (c) => '/api/homework/inbox?' + q({ accessCode: OTHER, studentCode: c }), null, 'inbox'],
+    ['GET', (c) => '/api/homework/my-hsk-attempts/' + c + '?' + q({ accessCode: OTHER }), null, 'exam attempts'],
+    ['GET', (c) => '/api/homework/assignment-review/x?' + q({ accessCode: OTHER, studentCode: c }), null, 'assignment review'],
+    ['GET', (c) => '/api/homework/insights/' + c + '?' + q({ accessCode: OTHER }), null, 'insights'],
+    ['GET', (c) => '/api/homework/reports/' + c + '?' + q({ accessCode: OTHER }), null, 'reports'],
+    ['POST', () => '/api/homework/ping', (c) => ({ accessCode: OTHER, studentCode: c }), 'ping'],
+    ['POST', () => '/api/homework/avatar', (c) => ({ accessCode: OTHER, studentCode: c, avatar: 'camel' }), 'avatar'],
+    ['POST', () => '/api/homework/rename', (c) => ({ accessCode: OTHER, studentCode: c, displayName: 'Otro' }), 'rename'],
+  ];
+  const call = (m, u, b, c, ip) => (m === 'GET' ? get(u(c), { ip }) : post(u(c), b(c), { ip }));
+  for (const [m, u, b, what] of cases) {
+    const known = await call(m, u, b, 'KIDA', PROBE);
+    const unknown = await call(m, u, b, 'ZQZQ', PROBE);
+    const asleep = await call(m, u, b, 'ARCH', PROBE);
+    ok(known.status === 403 && unknown.status === known.status && unknown.text === known.text && asleep.text === known.text,
+      what + ': «not yours», an unknown code and an archived one get the same answer (' + known.status + '/' + unknown.status + '/' + asleep.status + ')');
+  }
+  await sleep(1300);
+  ok(!records().ARCH && archived().ARCH, 'no probe brought the archived kid back');
+  r = await post('/api/homework/trainer/submit', Object.assign({ tier: 1, exp: 'exp1', answers: [] }, mine), { ip: PROBE });
+  ok(r.status !== 403, 'trainer/submit: the kid\'s own phone gets past the ownership check (' + r.status + ')');
+  // a per-ADDRESS cap (never the platform's): the probing address waits, the kid's own phone there still works, others too
+  for (let i = 0; i < 30; i++) await get('/api/homework/daily?' + q({ accessCode: OTHER, studentCode: 'ZQ' + (20 + i) + 'Z', date: today }), { ip: PROBE });
+  r = await get('/api/homework/daily?' + q({ accessCode: OTHER, studentCode: 'ZQZQ', date: today }), { ip: PROBE });
+  ok(r.status === 429, 'after 60 misses the probing address waits (429)');
+  r = await get('/api/homework/daily?' + q(Object.assign({ date: today }, mine)), { ip: PROBE });
+  ok(r.status === 200, '… the kid\'s own phone on that same address still works (ownership first)');
+  r = await get('/api/homework/daily?' + q({ accessCode: OTHER, studentCode: 'ZQZQ', date: today }), { ip: '198.51.100.91' });
+  ok(r.status === 403, '… and another address is never blocked by it');
+  r = await get('/api/homework/daily?' + q({ accessCode: CLASS, studentCode: 'ARCH', date: today }), { ip: '198.51.100.92' });
+  await sleep(1300);
+  ok(r.status === 200 && records().ARCH, 'the archived kid\'s own phone (their class code) brings them back, as always');
 
   section('PIN games: a stranger\'s join never renames or links the kid');
   const host = sock();

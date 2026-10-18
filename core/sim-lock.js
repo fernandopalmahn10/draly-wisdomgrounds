@@ -219,16 +219,22 @@ function setCookie(req, res, name, value, maxAgeMs) {
   res.append('Set-Cookie', name + '=' + (value || '') + '; Path=/; Max-Age=' + Math.max(0, Math.floor((maxAgeMs || 0) / 1000)) +
     '; HttpOnly; SameSite=Lax' + (https(req) ? '; Secure' : ''));
 }
+// 🔒 2026-10-18 (security review F2): a kid's sessions carry the account's `kidGen` (server.js plugs in genOf(code));
+// «Cerrar su sesión en todos los teléfonos» in /maestro bumps it and every session made before stops at once. A session
+// without the field (made before) counts as generation 0.
+const sessionHooks = { genOf: () => 0 };
+function configureSessions(h) { Object.assign(sessionHooks, h || {}); }
+const genOfCode = (code) => { try { return String(Number(sessionHooks.genOf(code)) || 0); } catch (_) { return '0'; } };
 // → { kind: 's', code, level } | null (server.js re-checks the student still exists)
 function session(req) {
   const v = verify(readCookie(req), 'c');
   if (!v) return null;
-  if (v[0] === 's' && v[1] && v[2]) return { kind: 's', code: v[1], level: v[2] };
+  if (v[0] === 's' && v[1] && v[2] && String(v[3] || '0') === genOfCode(v[1])) return { kind: 's', code: v[1], level: v[2] };
   return null;
 }
 // → the cookie's value (server.js: an automatic account's renewed session is read by the same request, 2026-10-18)
 function setSession(req, res, kind, code, level) {
-  const tok = sign('c', [kind, code || '', level || ''], COOKIE_TTL);
+  const tok = sign('c', [kind, code || '', level || '', genOfCode(code)], COOKIE_TTL);
   setCookie(req, res, COOKIE, tok, COOKIE_TTL);
   return tok;
 }
@@ -257,7 +263,7 @@ function sendPage(res, name) {
 module.exports = {
   DIR, PAGES, NO_STORE, COOKIE,
   relOf, isSimMediaUrl, simOfUrl, logicalUrl, rewrite, linkFor, ticket, ticketGrant, roomPass, roomPassOk, openMedia, hmacHex,
-  session, setSession, isLocalDev, sendPage, scan,
+  session, setSession, configureSessions, isLocalDev, sendPage, scan,
   sign, verify, readCookie, setCookie, https,
   _sign: sign, _verify: verify,   // tests
 };

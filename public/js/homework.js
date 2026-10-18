@@ -847,14 +847,21 @@
     hwLogout();
   });
   function hwLogout() {
+    const keyKid = hwKeyMode;
     accessCode = '';
     studentCode = '';
     removePinnedStack();
-    // 2026-10-16: the kid's session on this phone ends too (a brother or sister on the same phone never stamps La Base
-    // seals or saves results on this kid's account); one tap on «Entrar» brings it back
-    try { fetch('/api/homework/logout', { method: 'POST', credentials: 'same-origin', keepalive: true }).catch(() => {}); } catch (_) {}
     markOut();
-    location.href = '/';
+    // 2026-10-18 (security review F4): a kid of the level key leaves no code on a shared phone (they come back with their
+    // code + the key; a class kid's saved codes stay, as before)
+    if (keyKid) { try { localStorage.removeItem(STORAGE_CODE_KEY); } catch (_) {} }
+    // 2026-10-16: the kid's session on this phone ends too (a brother or sister on the same phone never stamps La Base
+    // seals or saves results on this kid's account). 2026-10-18 (L4): the page waits for that (1.5 s at most) before
+    // leaving, so the next page never finds the session still open
+    let gone = false;
+    const leave = () => { if (gone) return; gone = true; location.href = '/'; };
+    try { fetch('/api/homework/logout', { method: 'POST', credentials: 'same-origin', keepalive: true }).then(leave, leave); } catch (_) { leave(); }
+    setTimeout(leave, 1500);
   }
   // 2026-10-18 (security review M2): «Salir» is remembered on the phone (dralyHwOut) until the next «Entrar»: meanwhile no
   // page logs the saved kid in again by itself (La Ruta Dorada's first steps, js/ruta-auto.js; the key screen), so a

@@ -33,7 +33,7 @@
   min-height: 48px; font-family: var(--en-body); font-weight: 800;
 }
 /* hola: the red is the hero itself (its bottom edge = the horizon), the page is gold */
-#screen-entry.en-on.is-hola, #screen-entry.en-on.is-load { background: var(--en-gold); }
+#screen-entry.en-on.is-hola, #screen-entry.en-on.is-llave, #screen-entry.en-on.is-load { background: var(--en-gold); }
 /* the skyline in gold light (the design's overlay) */
 #screen-entry.en-on .hw-life::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 44vh;
@@ -42,7 +42,7 @@
 @media (max-width: 640px) { #screen-entry.en-on .hw-life::after { height: 30vh; } }
 /* the old card is the transitional door only; «← Volver» (home) on «¡Hola de nuevo!» only (the cards have their own) */
 #screen-entry.en-on > .hw-entry-card { display: none; }
-#screen-entry.en-on:not(.is-hola):not(.is-load) > .hw-entry-home { display: none; }
+#screen-entry.en-on:not(.is-hola):not(.is-llave):not(.is-load) > .hw-entry-home { display: none; }
 #screen-entry.en-on.en-door { justify-content: flex-start; align-items: center; padding: 72px 16px 64px; }
 #screen-entry.en-on.en-door > .hw-entry-card { display: block; }
 #screen-entry.en-on.en-door > .en-root { flex: 0 0 0; height: 0; }
@@ -94,7 +94,7 @@
 @keyframes enSpin { to { transform: rotate(360deg); } }
 
 /* ── ¡Hola de nuevo! ── */
-.en-wrap.is-hola { padding-top: 0; }
+.en-wrap.is-hola, .en-wrap.is-llave { padding-top: 0; }
 .en-hola { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0 26px; }
 .en-hola::before {   /* the red hero spans the whole window, its bottom edge a soft horizon */
   content: ''; position: absolute; z-index: -1; top: 0; bottom: 0; left: 50%; width: 100vw; transform: translateX(-50%);
@@ -234,8 +234,23 @@
 .en-lock { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-weight: 700; font-size: .84rem; line-height: 1.4; color: var(--en-ink-2); }
 .en-lock svg { width: 20px; height: 20px; flex: none; margin-top: 1px; }
 
-/* «¿Eres tú?» inside a card (js/ruta-auto.js draws it) */
+/* «¿Eres tú?» inside a card (js/ruta-auto.js draws it); a kid of the key shows their avatar, never their code (F4) */
 .en-mount:empty { display: none; }
+.en-eres-av {
+  align-self: center; width: 76px; height: 76px; border-radius: 50%; object-fit: cover; background: var(--en-sand);
+  box-shadow: 0 0 0 4px var(--en-gold);
+}
+/* «Este teléfono te recuerda: escribe la clave nueva de tu nivel» (the level's key changed, F2): on the gold, a white box */
+.en-relock { gap: 8px; }
+.en-relock .en-label { color: var(--en-red); margin: 0; }
+.en-relock .en-in { background: var(--en-cream); }
+@media (max-height: 720px) {   /* the key box needs the room on a short screen: a smaller hero */
+  .en-wrap.is-llave .en-hola { padding-bottom: 14px; gap: 4px; }
+  .en-wrap.is-llave .en-hola-stage { height: 116px; }
+  .en-wrap.is-llave .en-hola-av { width: 96px; }
+  .en-wrap.is-llave .en-hola-t { font-size: 1.8rem; }
+  .en-wrap.is-llave .en-hola-go { padding-top: 12px; gap: 8px; }
+}
 
 /* ── «¿Salir de tu cuenta en este teléfono?» (over the portal) ── */
 .en-sheet {
@@ -279,7 +294,7 @@
   #screen-entry.en-on .hw-life-bubble { display: none; }
 }
 @media (max-width: 400px) {
-  .en-wrap.is-hola .en-brand { font-size: 1.3rem; }
+  .en-wrap.is-hola .en-brand, .en-wrap.is-llave .en-brand { font-size: 1.3rem; }
 }
 @media (max-width: 380px) {
   .en-wrap { padding-left: 12px; padding-right: 12px; }

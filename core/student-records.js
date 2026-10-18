@@ -353,6 +353,15 @@ function claimByKey(code, o) {
   scheduleSave();
   return rec;
 }
+// 🔒 2026-10-18 (security review F2) «Cerrar su sesión en todos los teléfonos» (/maestro, super admin): every session and
+// remembered phone (dkid) of this kid stops; they come back with their code + the level key. → the new generation or null
+function bumpKidGen(code) {
+  const rec = get(code);
+  if (!rec) return null;
+  rec.kidGen = (Number(rec.kidGen) || 0) + 1;
+  scheduleSave();
+  return rec.kidGen;
+}
 // Counts for /api/_diag and the teacher dashboard. `classroomCodes` (a Set) limits the count to one teacher's classes.
 function archiveStats(classroomCodes) {
   let bytes = 0;
@@ -1295,6 +1304,7 @@ module.exports = {
   setRealName,
   createByKey,     // 🆕 2026-10-18 la entrada
   claimByKey,
+  bumpKidGen,      // 🔒 2026-10-18 security review F2
   ARCHIVE_AFTER_DAYS,
   flushNow: persistNow,   // write now (tests; before a planned shutdown)
 };

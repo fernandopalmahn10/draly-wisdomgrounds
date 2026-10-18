@@ -72,6 +72,15 @@ const SEEDED = {
     sentencesBuilt: [], auto: true, autoStep: 'key', autoName: true, level: 'hsk2' },
   OLDK: { code: 'OLDK', displayName: 'Valeria Prueba', avatar: 'aileen', classroomCode: NEWC, classroomId: null, firstSeen: NOW - 90 * DAY, lastSeen: NOW - DAY,
     sentencesBuilt: [], level: 'hsk2', levelAccess: { hsk2: { via: 'teacher', at: NOW - 9 * DAY } } },
+  // (security review F1) a sister's NAMED automatic account with progress, in use on the family phone
+  AUTD: { code: 'AUTD', displayName: 'Martina', avatar: 'latifa', classroomCode: null, classroomId: null, firstSeen: NOW - 7 * DAY, lastSeen: NOW - DAY,
+    sentencesBuilt: [], auto: true, autoStep: 'seal', level: 'hsk2', ruta: { hsk2: { s: '1-30', at: NOW - DAY } } },
+  // an empty nameless automatic account in use on a phone (nothing of anyone's): «Soy nuevo» takes it quietly
+  AUTE: { code: 'AUTE', displayName: 'Dragoncito 815', avatar: null, classroomCode: null, classroomId: null, firstSeen: NOW - 2 * DAY, lastSeen: NOW - DAY,
+    sentencesBuilt: [], auto: true, autoStep: 'key', autoName: true, level: 'hsk2' },
+  // (F5) an unclaimed automatic account: its code + the key opens it only on its own phone
+  AUTF: { code: 'AUTF', displayName: 'Dragoncito 916', avatar: null, classroomCode: null, classroomId: null, firstSeen: NOW - 3 * DAY, lastSeen: NOW - DAY,
+    sentencesBuilt: [], auto: true, autoStep: 'key', autoName: true, level: 'yct1' },
 };
 fs.writeFileSync(path.join(DATA, 'student-records.json'), JSON.stringify(SEEDED));
 
@@ -203,13 +212,28 @@ async function run() {
     await entrar(phone(), accA.code, 'Nube-77'),           // a wrong key
     await entrar(phone(), 'ZZ9ZZ9', KEYS.hsk2),            // a code that doesn't exist
     await entrar(phone(), 'AUTA', KEYS.hsk2),              // someone else's account, another level
+    await entrar(phone(), 'AUTF', KEYS.yct1),              // (F5) an unclaimed automatic account, away from its phone
   ];
   ok(bad.every((x) => x.status === 401 && x.json.error === bad[0].json.error && !x.json.studentCode) && /El código o la clave no coinciden/.test(bad[0].json.error),
     'every wrong pair: the same 401 «El código o la clave no coinciden» (never which one, nor whether the code exists)');
+  // (security review F3) a wrong CODE with a right key counts per phone (10), never on the old form's platform bucket
   const G = phone();
-  for (let i = 0; i < 5; i++) await entrar(G, 'QQ' + (20 + i) + 'QQ', KEYS.hsk2);
+  for (let i = 0; i < 10; i++) await entrar(G, 'QQ' + (20 + i) + 'QQ', KEYS.hsk2);
   r = await entrar(G, accA.code, KEYS.hsk2);
-  ok(r.status === 429 && !G.jar.dsim, 'five wrong pairs from a phone: then a wait, even for the right pair');
+  ok(r.status === 429 && !G.jar.dsim, 'ten wrong codes (with a right key) from a phone: then a wait, even for the right pair');
+  r = await post('/api/homework/enter', { accessCode: NEWC, studentCode: 'OLDK' }, as(phone()));
+  ok(r.json && r.json.ok, '… and the old form\'s logins never wait because of it');
+  const GK = phone();
+  for (let i = 0; i < 4; i++) await entrar(GK, accA.code, 'Nube-' + (30 + i));
+  r = await entrar(GK, accA.code, KEYS.hsk2);
+  ok(r.json && r.json.ok, 'four wrong KEYS (key guesses, never code guesses): the right pair still opens');
+  for (let i = 0; i < 5; i++) await entrar(GK, accA.code, 'Nube-' + (40 + i));
+  r = await entrar(GK, accA.code, KEYS.hsk2);
+  ok(r.status === 429 && r.json.wait >= 1, '… five more: then the key screen\'s wait (5 per phone)');
+  const FP = phone();
+  FP.jar.dauto = autoCookie('AUTF', false, SEEDED.AUTF.firstSeen);
+  r = await entrar(FP, 'AUTF', KEYS.yct1);
+  ok(r.json && r.json.ok && r.json.studentCode === 'AUTF', '(F5) on ITS phone, the automatic account\'s code + key opens it (now the family\'s)');
   ok((await entrar(phone(), accA.code, '')).status === 400, 'a code without a key: 400, nothing opens');
 
   section('the code alone never opens (old form, homework doors)');
@@ -289,9 +313,13 @@ async function run() {
   P.jar.dauto = autoCookie('AUTA', false, SEEDED.AUTA.firstSeen);
   h = await hola(P);
   ok(!h.kid && h.auto && h.auto.code === 'AUTA' && h.auto.placeholder, '«¡Hola de nuevo!» never greets «Dragoncito 512»: it goes to «¿Quién eres?» (the account is offered to «Soy nuevo»)');
+  // (security review F1) an automatic account with progress is never taken without «¿Eres tú?» → «Sí, soy yo»
   r = await crear(P, KEYS.yct1, 'Mateo', 'oryx');
+  ok(r.json && r.json.ok === false && r.json.why === 'parked' && r.json.account.code === 'AUTA' && !P.jar.dkid,
+    '«Crear mi cuenta» on a phone whose automatic account has progress: «¿Eres tú?» first (nothing taken, nothing made)');
+  r = await crear(P, KEYS.yct1, 'Mateo', 'oryx', { resume: true });
   ok(r.json && r.json.ok && r.json.converted === true && r.json.created === false && r.json.account.code === 'AUTA' && !P.jar.dauto && P.jar.dkid,
-    'it becomes THE kid\'s account: the same code, the device\'s dauto gone, dkid set');
+    '«Sí, soy yo»: it becomes THE kid\'s account: the same code, the device\'s dauto gone, dkid set');
   await sleep(1300);
   const a1 = records().AUTA;
   ok(a1 && !a1.auto && a1.wasAuto && a1.byKey && a1.displayName === 'Mateo' && a1.avatar === 'oryx' && !a1.autoName && a1.ruta && a1.ruta.yct1 && a1.ruta.yct1.s === '1-10',
@@ -311,6 +339,29 @@ async function run() {
   made.push(r.json && r.json.account && r.json.account.code);
   await sleep(1300);
   ok(records().AUTC && records().AUTC.auto, '… still automatic');
+  // (F1) the family phone remembers the sister (Martina, a named automatic account): her brother taps «¿No eres tú?» →
+  // «Soy nuevo» (the page sends fresh): a NEW account, Martina's untouched
+  const Fam = phone();
+  Fam.jar.dauto = autoCookie('AUTD', false, SEEDED.AUTD.firstSeen);
+  h = await hola(Fam);
+  ok(h.kid && h.kid.name === 'Martina' && !h.auto, 'the family phone greets the sister («¡Hola de nuevo!», Martina)');
+  r = await crear(Fam, KEYS.hsk2, 'Bruno', 'adric', { fresh: true });
+  ok(r.json && r.json.ok && r.json.created && r.json.account.code !== 'AUTD' && r.json.account.name === 'Bruno', '«¿No eres tú?» → «Soy nuevo»: a NEW account for the brother');
+  made.push(r.json && r.json.account && r.json.account.code);
+  await sleep(1300);
+  const md = records().AUTD;
+  ok(md && md.auto && md.displayName === 'Martina' && !md.byKey && md.ruta && md.ruta.hsk2.s === '1-30', '… the sister\'s account untouched (still hers, her progress, still automatic)');
+  ok((await hola(Fam)).kid.name === 'Bruno', '… and the phone now greets the brother');
+  r = await crear(phone(), KEYS.hsk2, 'Nadie', 'camel');
+  made.push(r.json && r.json.account && r.json.account.code);
+  const Fam2 = phone();
+  Fam2.jar.dauto = autoCookie('AUTD', false, SEEDED.AUTD.firstSeen);
+  r = await crear(Fam2, KEYS.hsk2, 'Bruno', 'adric');
+  ok(r.json && r.json.ok === false && r.json.why === 'parked' && r.json.account.name === 'Martina', 'without fresh, a named automatic account is never taken: «¿Eres tú?» first');
+  const Qt = phone();
+  Qt.jar.dauto = autoCookie('AUTE', false, SEEDED.AUTE.firstSeen);
+  r = await crear(Qt, KEYS.hsk2, 'Elena', 'aileen');
+  ok(r.json && r.json.ok && r.json.converted && r.json.account.code === 'AUTE', 'an empty nameless automatic account in use on the phone: «Soy nuevo» takes it quietly (nothing of anyone\'s)');
 
   // ── 6. a teacher's PIN room ──
   section('a teacher\'s PIN room: the key account joins its teacher\'s class');
@@ -353,7 +404,8 @@ async function run() {
   section('«Salir», another kid on the phone');
   ok((await post('/api/homework/logout', {}, as(A))).json.ok && !A.jar.dsim && A.jar.dkid, '«Salir»: the session ends, the phone keeps the kid parked');
   h = await hola(A);
-  ok(!h.kid && h.parked && h.parked.kind === 'key' && h.parked.code === accA.code, '… «¡Hola de nuevo!» never shows that kid by itself (parked: «¿Eres tú?» data)');
+  ok(!h.kid && h.parked && h.parked.kind === 'key' && h.parked.name === 'Sofía' && h.parked.avatar === 'camel' && !('code' in h.parked),
+    '… «¡Hola de nuevo!» never shows that kid by itself (parked: «¿Eres tú?» with name + avatar, NEVER the code: F4)');
   ok(!(await get('/api/ruta-dorada', as(A))).json.student && !A.jar.dsim, '… no session comes back by itself');
   r = await post('/api/entrada/vamos', {}, as(A));
   ok(r.status === 401 && r.json.why === 'none', '… «¡Vamos!» has nobody to open');
@@ -364,7 +416,7 @@ async function run() {
   ok(r.json && r.json.ok && (await hola(A)).kid.name === 'Valeria Prueba', 'another kid\'s login on the phone: «¡Hola de nuevo!» is that kid now');
   await post('/api/homework/logout', {}, as(A));
   h = await hola(A);
-  ok(!h.kid && h.parked && h.parked.code === accA.code, '… and after her «Salir», the first kid is still parked (never logged in by itself)');
+  ok(!h.kid && h.parked && h.parked.name === 'Sofía' && !('code' in h.parked), '… and after her «Salir», the first kid is still parked (never logged in by itself)');
 
   // ── 8. «Abrir otro nivel» ──
   section('«Abrir otro nivel»');
@@ -396,6 +448,49 @@ async function run() {
   await sleep(1300);
   ok(Object.values(records()).every((x) => x.displayName !== 'Anon' || !x.byKey), 'never «Anon»');
 
+  // ── 9b. security review F2: a remembered phone can be closed ──
+  section('a leaked key: «Cambiar» + «Cerrar en todos los aparatos» → the remembered phone asks the NEW key only');
+  const P2 = phone();
+  r = await crear(P2, KEYS.hsk2, 'Gael', 'falcon');
+  const k2 = r.json && r.json.account;
+  ok(k2 && CODE6(k2.code), 'a new kid on phone P2 (New HSK 1)');
+  made.push(k2 && k2.code);
+  const P3 = phone();
+  ok((await entrar(P3, k2.code, KEYS.hsk2)).json.ok, '… and the same kid on a second phone P3 (code + key)');
+  const oldKey = KEYS.hsk2;
+  KEYS.hsk2 = 'Estrella-' + (10 + crypto.randomInt(89));
+  ok((await put('/api/admin/level-keys/hsk2', { key: KEYS.hsk2 }, teacher(SEED))).json.ok, 'the super admin changes the New HSK 1 key');
+  ok((await post('/api/admin/level-keys/hsk2/close-devices', {}, teacher(SEED))).json.ok, '… and closes it on every device');
+  delete P2.jar.dsim;                                             // (the 12 h session ends: no renewal now)
+  h = await hola(P2);
+  ok(!h.kid && h.relock && h.relock.name === 'Gael' && !('code' in h.relock), 'phone P2: «Este teléfono te recuerda: escribe la clave nueva» (relock, name only)');
+  ok(!(await get('/api/ruta-dorada', as(P2))).json.student && !P2.jar.dsim, '… no session comes back from the old dkid');
+  ok((await post('/api/entrada/vamos', {}, as(P2))).status === 401, '… «¡Vamos!» opens nothing');
+  r = await post('/api/entrada/reabrir', { key: oldKey }, as(P2));
+  ok(r.status === 401 && /Esa clave no es/.test(r.json.error), '… the OLD key: the uniform «Esa clave no es»');
+  r = await post('/api/entrada/reabrir', { key: KEYS.yct1 }, as(P2));
+  ok(r.status === 401 && /Esa clave no es/.test(r.json.error), '… a key of a level the kid doesn\'t have: the same line');
+  r = await post('/api/entrada/reabrir', { key: KEYS.hsk2 }, as(P2));
+  ok(r.json && r.json.ok && r.json.studentCode === k2.code && r.json.levelOpen && P2.jar.dsim, '… the NEW key alone: in again (no code to type), the level open');
+  ok((await hola(P2)).kid, '… and remembered again');
+  ok((await post('/api/entrada/reabrir', { key: KEYS.hsk2 }, as(phone()))).status === 401, 'a phone that remembers nobody: /reabrir opens nothing');
+  delete A2.jar.dsim;
+  ok((await hola(A2)).kid, 'a kid of another level (HSK 1) is never asked: their phone still remembers them');
+
+  section('a lost phone: «Cerrar su sesión en todos los teléfonos» (/maestro, super admin)');
+  ok((await post('/api/admin/student/' + k2.code + '/close-sessions', {}, teacher(tch.teacherId))).status === 403, 'a regular teacher: 403');
+  r = await post('/api/admin/student/' + k2.code + '/close-sessions', {}, teacher(SEED));
+  ok(r.json && r.json.ok && r.json.kidGen === 1, 'the super admin closes the kid\'s sessions');
+  ok(P2.jar.dsim && !(await get('/api/ruta-dorada', as(P2))).json.student, 'phone P2: its open session stops AT ONCE');
+  r = await get('/api/homework/inbox?accessCode=&studentCode=' + k2.code, as(P2));
+  ok(r.status === 401 || r.status === 403, '… the homework calls too (' + r.status + ')');
+  h = await hola(P2);
+  ok(!h.kid && !h.relock && h.parked && h.parked.kind === 'key' && !('code' in h.parked), '… «¡Hola de nuevo!» never shows the kid (like parked: code + key)');
+  ok((await post('/api/entrada/vamos', {}, as(P3))).status === 401 && !(await hola(P3)).kid, 'phone P3 too');
+  ok((await post('/api/entrada/reabrir', { key: KEYS.hsk2 }, as(P3))).status === 401, '… and the key alone never brings it back');
+  r = await entrar(P2, k2.code, KEYS.hsk2);
+  ok(r.json && r.json.ok && (await hola(P2)).kid, 'code + key: the kid is back on their phone');
+
   // ── 10. the pages ──
   section('the pages');
   const html = fs.readFileSync(path.join(ROOT, 'public', 'homework.html'), 'utf8');
@@ -410,12 +505,22 @@ async function run() {
     'El que anoté en mi cuaderno', 'Soy nuevo', 'Solo necesito la clave de mi nivel', '¿Tu profe te dio un código de 4 números?', 'Entra aquí',
     'Escribe la clave de tu nivel', 'Está en el mensaje de WhatsApp de tu profe.', 'La clave', 'Seguir', '¡Tu nivel es', 'Elige tu avatar', 'Crear mi cuenta',
     '¡Ya tienes tu cuenta!', 'Tu código de alumno es:', 'Copiar mi código', 'Entra con tu código', 'Tu código de alumno', 'El de tu cuaderno',
-    'La clave de tu nivel', 'El del mensaje de tu profe', '¿Salir de tu cuenta en este teléfono?', 'No, quedarme', 'Sí, salir', 'Antes de seguir'];
+    'La clave de tu nivel', 'El del mensaje de tu profe', '¿Salir de tu cuenta en este teléfono?', 'No, quedarme', 'Sí, salir', 'Antes de seguir',
+    'Este teléfono te recuerda: escribe la clave nueva de tu nivel.'];
   const missing = lines.filter((l) => !js.includes(l) || !dict.includes("'" + l.replace(/'/g, "\\'") + "'"));
   ok(!missing.length, 'every line has its English in hw-i18n.js' + (missing.length ? ' (missing: ' + missing.join(' | ') + ')' : ''));
   ok(/Experiencia \(\\d\+\)/.test(dict) && /La clave dice tu nivel/.test(dict), '… the lines built from a template too (patterns)');
   const ph = [...js.matchAll(/placeholder="([^"]*)"/g)].map((m) => m[1]);
   ok(ph.length >= 4 && ph.every((p) => !/[A-Z0-9]{3,}/.test(p)), 'placeholders are words or dots, never a code (' + ph.join(' | ') + ')');
+  // (security review F1, F4, L4, L5: in the pages)
+  const hw = fs.readFileSync(path.join(ROOT, 'public', 'js', 'homework.js'), 'utf8');
+  const rajs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'ruta-auto.js'), 'utf8');
+  const sv = fs.readFileSync(path.join(ROOT, 'server.js'), 'utf8');
+  ok(/if \(keyKid\) \{ try \{ localStorage\.removeItem\(STORAGE_CODE_KEY\)/.test(hw), '«Salir» forgets the code on a key kid\'s phone (F4)');
+  ok(/\.then\(leave, leave\)/.test(hw) && /setTimeout\(leave, 1500\)/.test(hw), '«Salir» waits for the logout (1.5 s at most) before leaving (L4)');
+  ok(/acc\.code \? '<span>código/.test(rajs), '«¿Eres tú?» shows a code only when there is one (F4)');
+  ok(/S\.answer = 'fresh'/.test(js) && /body\.fresh = true/.test(js), '«¿No eres tú?» → «Soy nuevo» sends fresh (F1)');
+  ok(/_hwCheckAccess\(req, res, \{ classCodeOnly: true \}\)/.test(sv) && !/req\.path !== '\/api\/homework\/enter'/.test(sv), 'the old form\'s login asks for a real class code by a flag, not by its path (L5)');
 }
 
 (async () => {

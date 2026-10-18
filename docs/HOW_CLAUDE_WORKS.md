@@ -445,6 +445,20 @@ block «LA ENTRADA» in server.js).
 - **Limits**: a wrong key counts like the key screen (5 per phone, 30 per address in 15 minutes, then a wait); a wrong code
   + key pair also counts as an unknown student code; 5 new accounts a day per phone (brothers and sisters), 120 an hour
   per address; requests from other sites refused. Every line has its English (the 🌐 toggle).
+- **After the security review (same day)**:
+  - «Soy nuevo» on a phone that holds an automatic account with progress or a name asks «¿Eres tú?» first; only «Sí, soy
+    yo» turns it into the new kid's. «¿No eres tú?» always makes a new account (a sister's account is never taken).
+  - A key that leaked: when you «Cambiar» the key and «Cerrar en todos los aparatos», every phone that remembers a kid of
+    that level shows «Este teléfono te recuerda: escribe la clave nueva de tu nivel» (just the new key, no code).
+  - A lost or stolen phone: in /maestro, a kid's profile has «📵 Cerrar su sesión en todos los teléfonos» (you only):
+    every phone where that kid is signed in signs out at once; they come back with their code + the key.
+  - A wrong key at «Ya tengo mi código» counts as a key guess only; a wrong code counts per phone and per address, so
+    nobody can block other families' logins.
+  - After «Salir» on a shared phone, «¿Eres tú?» shows a key kid's name and avatar, never their code, and the phone
+    forgets the code.
+  - An automatic account's code + key opens it only on the phone that holds it.
+  - Every homework call that names a kid answers the same («no autorizado») for a code that doesn't exist and for a kid
+    who isn't yours, and never wakes an archived account by trying.
 - **Your part**: «Soy nuevo» works only once the three level keys are set in /maestro → Teachers → «Claves de nivel»
   (each level shows its key masked with «Ver»; a level with no key says so). A family with a wrong or missing key just
   sees «Esa clave no es».

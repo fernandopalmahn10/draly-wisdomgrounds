@@ -3600,6 +3600,7 @@
           <div class="m-detail-actions-row">
             <button class="btn btn-gold btn-sm" id="m-detail-send-btn" type="button" aria-expanded="false" aria-controls="m-detail-compose">💬 Send message</button>
             <button class="btn btn-ghost btn-sm m-danger-ghost" id="m-detail-clear-sent-btn" type="button" title="Deletes only the saved sentences; the student stays">🧹 Clear sentences</button>
+            ${_self && _self.isSuperAdmin && !data.auto ? '<button class="btn btn-ghost btn-sm m-danger-ghost" id="m-detail-close-sessions-btn" type="button" title="A lost or stolen phone: every phone this kid is signed in on signs out at once; they come back with their code + the level key">📵 Cerrar su sesión en todos los teléfonos</button>' : ''}
             <button class="btn btn-red btn-sm m-danger-zone" id="m-detail-delete-btn" type="button" title="Delete this student permanently">🗑 Delete student</button>
           </div>
           <div class="m-compose hidden" id="m-detail-compose">
@@ -3682,6 +3683,17 @@
         notify('✓ ' + r.removed + ' sentences deleted.');
         openDetail(data.code);
       }).catch((e) => notify('Could not clear the sentences: ' + e.message));
+    });
+    // 🔒 2026-10-18 (la entrada, security review F2): super admin only — every session and remembered phone of this kid ends
+    const closeBtn = $('m-detail-close-sessions-btn');
+    if (closeBtn) closeBtn.addEventListener('click', () => {
+      if (!confirm('¿Cerrar la sesión de "' + (data.displayName || data.code) + '" en todos los teléfonos?\n\nCada teléfono donde entró deja de recordarlo. Vuelve a entrar con su código y la clave de su nivel. Su progreso no cambia.')) return;
+      adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/close-sessions', pw, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      }).then((r) => r.json()).then((r) => {
+        if (!r.ok) { notify('No se pudo cerrar: ' + (r.error || 'error')); return; }
+        notify('✓ Sesión cerrada en todos los teléfonos.');
+      }).catch((e) => notify('No se pudo cerrar: ' + e.message));
     });
     // Wire delete — irreversible; double-confirm.
     $('m-detail-delete-btn').addEventListener('click', () => {
