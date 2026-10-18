@@ -3687,7 +3687,11 @@
     // 🔒 2026-10-18 (la entrada, security review F2): super admin only — every session and remembered phone of this kid ends
     const closeBtn = $('m-detail-close-sessions-btn');
     if (closeBtn) closeBtn.addEventListener('click', () => {
-      if (!confirm('¿Cerrar la sesión de "' + (data.displayName || data.code) + '" en todos los teléfonos?\n\nCada teléfono donde entró deja de recordarlo. Vuelve a entrar con su código y la clave de su nivel. Su progreso no cambia.')) return;
+      // (security check N3: say honestly what it can't close)
+      const caveat = data.byKey
+        ? '\n\nOjo: quien tenga su código Y la clave de su nivel puede volver a entrar. Si se perdió un teléfono, cambia también la clave de su nivel.'
+        : '\n\nOjo: este alumno usa el código de clase de 4 números (la puerta antigua): un teléfono que guardó ese código y su código de alumno puede volver a entrar.';
+      if (!confirm('¿Cerrar la sesión de "' + (data.displayName || data.code) + '" en todos los teléfonos?\n\nCada teléfono donde entró deja de recordarlo. Vuelve a entrar con su código y la clave de su nivel. Su progreso no cambia.' + caveat)) return;
       adminFetch('/api/admin/student/' + encodeURIComponent(data.code) + '/close-sessions', pw, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
       }).then((r) => r.json()).then((r) => {

@@ -569,7 +569,15 @@
     if (!studentCode || !(accessCode || hwKeyMode)) return;
     fetch('/api/homework/inbox?accessCode=' + encodeURIComponent(accessCode)
         + '&studentCode=' + encodeURIComponent(studentCode))
-      .then((r) => r.json())
+      .then((r) => {
+        // (2026-10-18, security check N4) this tab no longer owns the kid (another kid logged in here, a class change, a
+        // closed session): stop asking, every refused call counts as a guess for this address
+        if (r.status === 401 || r.status === 403 || r.status === 429) {
+          if (window._inboxTimer) { clearInterval(window._inboxTimer); window._inboxTimer = null; }
+          return null;
+        }
+        return r.json();
+      })
       .then((data) => {
         if (!data || !data.ok) return;
         const prevUnread = _inboxUnread;

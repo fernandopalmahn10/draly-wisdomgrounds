@@ -78,6 +78,12 @@ const SEEDED = {
   // an empty nameless automatic account in use on a phone (nothing of anyone's): «Soy nuevo» takes it quietly
   AUTE: { code: 'AUTE', displayName: 'Dragoncito 815', avatar: null, classroomCode: null, classroomId: null, firstSeen: NOW - 2 * DAY, lastSeen: NOW - DAY,
     sentencesBuilt: [], auto: true, autoStep: 'key', autoName: true, level: 'hsk2' },
+  // (security check N1) an automatic account a PIN room renamed (autoName still set, no La Ruta progress), and one with
+  // only sentences built: neither is «nameless and empty»
+  AUTG: { code: 'AUTG', displayName: 'Sofía Juego', avatar: null, classroomCode: null, classroomId: null, firstSeen: NOW - 4 * DAY, lastSeen: NOW - DAY,
+    sentencesBuilt: [], auto: true, autoStep: 'key', autoName: true, level: 'hsk2' },
+  AUTH: { code: 'AUTH', displayName: 'Dragoncito 120', avatar: null, classroomCode: null, classroomId: null, firstSeen: NOW - 4 * DAY, lastSeen: NOW - DAY,
+    sentencesBuilt: [{ words: ['ni', 'hao'], ts: NOW - DAY }], auto: true, autoStep: 'key', autoName: true, level: 'hsk2' },
   // (F5) an unclaimed automatic account: its code + the key opens it only on its own phone
   AUTF: { code: 'AUTF', displayName: 'Dragoncito 916', avatar: null, classroomCode: null, classroomId: null, firstSeen: NOW - 3 * DAY, lastSeen: NOW - DAY,
     sentencesBuilt: [], auto: true, autoStep: 'key', autoName: true, level: 'yct1' },
@@ -362,6 +368,19 @@ async function run() {
   Qt.jar.dauto = autoCookie('AUTE', false, SEEDED.AUTE.firstSeen);
   r = await crear(Qt, KEYS.hsk2, 'Elena', 'aileen');
   ok(r.json && r.json.ok && r.json.converted && r.json.account.code === 'AUTE', 'an empty nameless automatic account in use on the phone: «Soy nuevo» takes it quietly (nothing of anyone\'s)');
+  // (security check N1) a name a PIN room gave it (autoName still set) or sentences built: «¿Eres tú?» first, never quiet
+  const Pg = phone();
+  Pg.jar.dauto = autoCookie('AUTG', false, SEEDED.AUTG.firstSeen);
+  h = await hola(Pg);
+  ok(h.kid && h.kid.name === 'Sofía Juego' && !h.auto, 'an automatic account a PIN room renamed is greeted by its name (never offered as nameless)');
+  r = await crear(Pg, KEYS.hsk2, 'Bruno', 'adric');
+  ok(r.json && r.json.ok === false && r.json.why === 'parked' && r.json.account.code === 'AUTG', '… «Soy nuevo» without fresh asks «¿Eres tú?» (the sister\'s account is never taken quietly)');
+  const Ph = phone();
+  Ph.jar.dauto = autoCookie('AUTH', false, SEEDED.AUTH.firstSeen);
+  r = await crear(Ph, KEYS.hsk2, 'Bruno', 'adric');
+  ok(r.json && r.json.ok === false && r.json.why === 'parked' && r.json.account.code === 'AUTH', 'a placeholder account with sentences built counts as progress: «¿Eres tú?» first');
+  await sleep(1300);
+  ok(records().AUTG && records().AUTG.auto && records().AUTG.displayName === 'Sofía Juego' && records().AUTH && records().AUTH.auto, '… both untouched');
 
   // ── 6. a teacher's PIN room ──
   section('a teacher\'s PIN room: the key account joins its teacher\'s class');

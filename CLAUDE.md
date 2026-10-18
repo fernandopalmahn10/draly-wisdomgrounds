@@ -32,6 +32,14 @@ the checklist for any new game mode.
   buttons are parents, so sleek, beautiful, and it should make sense"): picture cards with the cast's poses, the packs'
   word pictures and the Dubai / China wonder backgrounds, on laptop and phone. A plain text-and-color mock is not a first
   draft.
+- **A kid's record answers only to that kid's own phone** (security fix 2026-10-18, his «do it here»):
+  - Every endpoint that takes a student code goes through `_hwKid` / `_hwOwnsStudent`: the kid's session, their
+    remembered-device cookie (`dkid`, `dauto`), or their own class code with the code.
+  - An unknown code and «not yours» get the same 403, counted per address, and a probe never wakes an archived account.
+  - A PIN join links an existing account (its name, its results) only when the phone proves it (`_joinOwns`); otherwise
+    the kid plays under a fresh account and `guest: true` keeps the phone's own saved code. Exam rooms still link the
+    typed code, because the teacher supervises them on school tablets, but they never rename without proof.
+  - `node scripts/test-homework-ownership.js` must pass, and a new endpoint that takes a code uses the same check.
 - **Never show a real code as an example** (his rule 2026-10-18: the «Mis tareas» login had «1001» as its placeholder,
   "a clue that that is one of the codes"). No class code, level key, PIN or student code is ever a placeholder, a
   default value or an example on a page. Use words («El código de tu maestra») or neutral dots. `scripts/test-wording.js`
@@ -537,6 +545,14 @@ the checklist for any new game mode.
   - To move up a level, the kid types the new key («Abrir otro nivel» in Mi perfil).
   - The 4-digit class code (1001…) is no longer asked of families. Kids join a teacher's class through the PIN in class.
   - A leaked key is changed by the super admin in /maestro.
+  - Built 2026-10-18 (parts 1-2 of «Mi Dralingo»: la entrada `public/js/entrada.js`, Papás `public/js/papas.js` +
+    `papas-plan.js`, shared by the server and the page). Key accounts (`byKey`) answer only to their session, their
+    `dkid` phone cookie, or code + key; the old form refuses them.
+  - `dkid` carries the level's key generation and the account's `kidGen`:
+    - after «Cambiar» + «Cerrar en todos los aparatos» the phone asks for the new key only;
+    - the super admin's «Cerrar su sesión en todos los teléfonos» (kid profile) bumps `kidGen` and asks for code + key.
+  - A PIN room tags an untagged key account with the room owner's class code for its level, only when the phone proves it.
+  - `node scripts/test-entrada.js` and `node scripts/test-papas.js` must pass.
 
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads

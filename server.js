@@ -2050,7 +2050,9 @@ app.get('/api/heartbeat', (req, res) => {
   if (!_hbRateLimit(req)) return res.status(429).json({ ok: false, error: 'rate-limited' });
   const code = String(req.query.code || '').trim();
   if (code) {
-    const rec = Students.get(code);
+    // (2026-10-18, security check N5: a live account only; a probe never wakes an archived one)
+    const live = Students.peek(code);
+    const rec = live && !live.archived ? live.rec : null;
     if (rec) {
       rec.lastSeen = Date.now();
       // 🆕 2026-06-21 (Fernando) — teacher "send to homework profile". If an
@@ -5251,6 +5253,8 @@ function _autoCleanName(raw, code) {
 }
 // what the page may know about the account this phone holds (only ever sent to that phone): its code («Mi código»),
 // its name (or the placeholder), its own class code (L6: «Sí, soy yo» logs in with it, never with another one) and, for
+// an automatic account still wearing the system's placeholder name («Dragoncito NNN», or none): nobody's name yet
+const _autoNameless = (rec) => !!rec && (!rec.displayName || (!!rec.autoName && /^Dragoncito \d{3}$/.test(rec.displayName)));
 // «¿Eres tú?», a few counts of its progress
 function _autoMeOf(rec, withProgress) {
   if (!rec) return null;
@@ -5270,7 +5274,10 @@ function _autoMeOf(rec, withProgress) {
     const sent = t.filter((e) => e && e.s).length, heard = t.filter((e) => e && e.h).length;
     const tries = Array.isArray(rec.hskResults) ? rec.hskResults.length : 0;
     const homework = Array.isArray(rec.assignmentSubmissions) ? rec.assignmentSubmissions.length : 0;
-    out.progress = { seals, sent, heard, worlds, tries, homework, any: seals + heard + worlds + tries + homework > 0 };
+    // (security check N1: sentences built and reading tries are a kid's progress too)
+    const sentences = Array.isArray(rec.sentencesBuilt) ? rec.sentencesBuilt.length : 0;
+    const reads = Array.isArray(rec.testResults) ? rec.testResults.length : 0;
+    out.progress = { seals, sent, heard, worlds, tries, homework, sentences, reads, any: seals + heard + worlds + tries + homework + sentences + reads > 0 };
   }
   return out;
 }
@@ -5678,7 +5685,7 @@ app.get('/api/entrada/hola', (req, res) => {
   const s = SimLock.session(req);
   const live = s && s.kind === 's' ? Students.peek(s.code) : null;
   if (live && !live.archived && !live.rec.mergedInto) {
-    if (_autoUnclaimed(live.rec) && live.rec.autoName) out.auto = _autoMeOf(live.rec, true);
+    if (_autoUnclaimed(live.rec) && _autoNameless(live.rec)) out.auto = _autoMeOf(live.rec, true);
     else out.kid = _entradaSummary(live.rec, 'session');
     return res.json(out);
   }
@@ -5693,7 +5700,7 @@ app.get('/api/entrada/hola', (req, res) => {
   const ap = _autoHeld(a);
   if (ap && _autoUnclaimed(ap.rec)) {
     if (a.parked) { if (!out.parked) out.parked = _entradaParked(ap.rec, 'auto'); }
-    else if (ap.rec.autoName) out.auto = _autoMeOf(ap.rec, true);
+    else if (_autoNameless(ap.rec)) out.auto = _autoMeOf(ap.rec, true);
     else out.kid = _entradaSummary(ap.rec, 'auto');
   }
   res.json(out);
@@ -5704,12 +5711,14 @@ app.post('/api/entrada/hola', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
   if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
   if (!_autoHit('ep:' + _clientIp(req), 60 * 1000, 600)) return res.status(429).json({ ok: false, error: 'Espera un momento.' });
-  if (_hwCodeMissBlocked(req)) return res.status(429).json({ ok: false, error: 'Ya fueron muchos intentos. Espera unos minutos.' });
+  // (security check N2: per ADDRESS only, never the platform-wide bucket: nobody far away can empty every family's
+  // «¡Hola de nuevo!» by filling it with garbage codes)
+  if (_hwAddrMissBlocked(req)) return res.status(429).json({ ok: false, error: 'Ya fueron muchos intentos. Espera unos minutos.' });
   const b = req.body || {};
   const code = Students.normalizeCode(String(b.studentCode || ''));
   const p = code ? Students.peek(code) : null;
   const fine = !!(p && !p.rec.mergedInto && Assignments.isAccessCodeValid(b.accessCode) && !_autoLoginRefused(req, code) && _hwOwnsStudent(req, p.rec));
-  if (!fine) { _hwCodeMiss(req); return res.status(401).json({ ok: false }); }
+  if (!fine) { _hwAddrMiss(req); return res.status(401).json({ ok: false }); }
   res.json({ ok: true, kid: _entradaSummary(p.rec, 'codes') });
 });
 // POST /api/entrada/vamos → the portal's answer (like /api/homework/enter) for the kid this phone remembers (session,
@@ -5766,7 +5775,9 @@ app.post('/api/entrada/crear', (req, res) => {
       // anyone's to take) and the kid didn't say «¿No eres tú?» (fresh). Anything else asks «¿Eres tú?» first; fresh =
       // a new account, that one untouched (it rests: _entradaIn parks it)
       const prog = ((_autoMeOf(held.rec, true) || {}).progress || {}).any;
-      const quiet = !a.parked && !!held.rec.autoName && !prog;
+      // (security check N1: «nameless» = the system's placeholder still there; a name typed since, even in a PIN room, is
+      // a kid's, and sentences or reading tries count as progress)
+      const quiet = !a.parked && _autoNameless(held.rec) && !prog;
       if (b.resume || (quiet && !b.fresh)) { rec = Students.claimByKey(a.code, { name, avatar, level: ck.level }); converted = !!rec; }
       else if (!b.fresh) return res.json({ ok: false, why: 'parked', account: _entradaParked(held.rec, 'auto') });
     }
