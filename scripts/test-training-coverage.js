@@ -491,6 +491,41 @@ function checkLevel(level) {
   })));
   say('    ' + (drillOutside.length ? '✖' : '✔') + ' the drills use only the level\'s words (and the exam\'s own)' + (drillOutside.length ? ': ' + [...new Set(drillOutside)].slice(0, 10).join(', ') : ''));
   if (drillOutside.length) fails.push('drills with words outside the level: ' + [...new Set(drillOutside)].slice(0, 5).join(', '));
+  // a sentence's or a dialogue's wrong photos never relate to it (his screenshots 2026-10-18: «Baba zai chi fan» with
+  // an apple among the wrong photos): (a) never the picture of a word of the line; (b) never the family of another
+  // pictured word of the line, nor a family the line brings to mind, nor a word tied to one of its words
+  const DR = E._drills;
+  const B = DR.baseOf(level);
+  const byN = new Map(B.words.map((x) => [x.n, x]));
+  const unfair = [];
+  let lineDrills = 0, twoPhotos = 0;
+  (E.worldsOf(level) || []).forEach((w) => DR.forWorld(level, w).forEach((q) => {
+    if (!(q.stim === 'sentence' || q.stim === 'dialogue') || !(q.pics || q.imageFile)) return;
+    lineDrills++;
+    if (q.pics && q.answers.length === 2) twoPhotos++;
+    const toks = DR.lineToks(q.say.py);
+    const keys = new Set(toks);
+    for (let i = 0; i + 1 < toks.length; i++) keys.add(toks[i] + toks[i + 1]);
+    const inLine = B.words.filter((x) => keys.has(x.k));
+    const ans = byN.get(q.word);
+    const wrongs = q.tf ? (q.shownWord !== q.word ? [q.shownWord] : []) : (q.optWords || []);
+    wrongs.forEach((n) => {
+      const x = byN.get(n);
+      const why = [];
+      if (!x) why.push('unknown photo');
+      else {
+        if (inLine.some((y) => y.k === x.k || (y.anyPic && (y.anyPic === x.pic || y.anyPic === x.anyPic)))) why.push('(a) a word of the line');
+        const xf = DR.familiesOf(x);
+        if (inLine.some((y) => y.group && y.n !== ans.n && y.k !== ans.k && [...DR.familiesOf(y)].some((f) => xf.has(f)))) why.push('(b) the family of another pictured word');
+        if (Object.keys(DR.EVOKES).some((f) => xf.has(f) && DR.EVOKES[f].some((k) => keys.has(k)))) why.push('(b) a family the line brings to mind');
+        if (DR.RELATED.some((set) => set.includes(x.k) && set.some((k) => keys.has(k)))) why.push('(b) tied to a word of the line');
+      }
+      if (why.length) unfair.push(q.world + ': «' + q.say.py + '» → ' + (x ? x.py : n) + ' ' + why.join(', '));
+    });
+  }));
+  say('    ' + (unfair.length ? '✖' : '✔') + ' ' + lineDrills + ' sentence / dialogue photo drills: no wrong photo relates to its line' + (twoPhotos ? ' (' + twoPhotos + ' with two photos)' : '') +
+    (unfair.length ? ': ' + unfair.length + ' do: ' + unfair.slice(0, 4).join(' | ') : ''));
+  if (unfair.length) fails.push(unfair.length + ' wrong photo(s) relate to their line');
   say('  → ' + (fails.length ? 'FAIL: ' + fails.join('; ') : 'PASS'));
   return { level, name: info.name, fails, words: simWord.size, weak: weak.length, exam: examRows.length, examWeak: examWeak.length, types: typeNeed.size,
     typesOk: [...typeOk.values()].filter(Boolean).length, parts: S.layout.length, partsOk: S.layout.filter((L) => typeOk.get(L.type)).length, outside: outside.size };
