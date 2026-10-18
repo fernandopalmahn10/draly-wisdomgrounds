@@ -262,6 +262,8 @@ the checklist for any new game mode.
   Entrenamiento opens world by world** (all seals of a world in La Base → that same world opens in El Entrenamiento);
   **the Simulacro Dorado stays open with the key until El Entrenamiento is live** (phase 4), then it opens when every
   world is practised with 70 % or more (the % changeable in /maestro) or by the teacher's «Desbloquear».
+  (Superseded 2026-10-18 for kids: the golden simulations are the teacher's, in class with a PIN; see «La Ruta Dorada
+  redesign». The self-serve code stays behind a flag that is OFF.)
 - **El Entrenamiento (his picks 2026-10-16, phase 4)**: practice worlds = the level's curriculum pack worlds (world N ↔
   La Base world N); **«Pinyin básico» (HSK 1) is open from the start; «Simulacro del examen» opens when all worlds are
   ready** (the bridge to the Dorado); only the regular worlds count for the Dorado's % rule. **Quick rounds with game
@@ -427,6 +429,37 @@ the checklist for any new game mode.
   only plays. `node scripts/test-ruta-tareas.js` must pass. Not built yet: the /maestro view and the teacher undo.
 - **Design first**: a clickable design of the new module page (laptop + phone) for him to try and approve before it is
   built into the platform.
+- **The golden simulations are the teacher's** (his decision 2026-10-18: "the golden simulations should be just for me
+  because I will manually put simulations to kids… I need to give them a pin… so the parent communication feels
+  stronger"): kids get La Base and El Entrenamiento on their own; El Simulacro Dorado never starts from a kid's phone.
+  When El Entrenamiento is done, step 3 tells the family to tell the teacher («¡Ya estás listo para El Simulacro
+  Dorado!», a WhatsApp/copy message for the profe), and the teacher runs it in class with a PIN. The self-serve code
+  stays in the platform behind one flag, OFF. A simulation taken in a teacher's room still opens its «Libro dorado».
+- **El Entrenamiento covers every simulation** (his words 2026-10-18: "make sure that the training is actually really
+  covering all the simulations"): every level word, question type and exam part of the level's simulations is
+  practised in El Entrenamiento; `scripts/test-training-coverage.js` checks it and must pass when sims or training change.
+- **Teachers see what kids see**: the teacher view never hides a kid's controls without a trace (2026-10-18 he couldn't
+  find «¡Ya la mandé!» because his computer is the super admin): show them as a calm, inactive preview with one line
+  («Así lo ven tus alumnos…»).
+- **An automatic account, kept forever** (his words 2026-10-18: "it's really hard for people to make an account… make
+  the system automatically give them an account… keep that code forever… remind you: are you sure you are not this
+  student?"): a visitor's first real step in La Ruta Dorada (a level key, a seal, a training round, a homework mark;
+  never a page view) gets a real student account with a generated code, kept on that phone; a friendly card shows the
+  code («anótalo») with an optional name. Before a phone with progress logs into another code or makes a new account:
+  «¿Eres tú? Este teléfono ya tiene a <nombre> · código … · progreso». An automatic account's progress can move into
+  the kid's real account («Pasar mi progreso a esta cuenta»).
+
+### One kid home: the portal + La Ruta Dorada (his direction 2026-10-18, to build after La Ruta Dorada is «perfect»)
+- **Integrate, don't discard** (his words: "not everything is redundant… some things are rescuable… everything should be
+  integrated seamlessly and it should make sense… you have a reason why it is the way it is"): /homework (Mis tareas)
+  and La Ruta Dorada become one home where the homework marks, the word seals and the route are one story. Every button
+  has a reason to exist; remove duplicates and buttons nobody needs.
+- **Keep**:
+  - the Nintendo-Switch-like start when a kid joins (he loves it);
+  - Papás, redesigned: today it is hard to read and easy to get lost in;
+  - Mensajes (teachers writing to their students);
+  - the sentences (Mis oraciones), which get their own new interface later.
+- **Design first**, like the La Ruta Dorada redesign: a clickable design (laptop + phone) for him to approve before building.
 
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads
