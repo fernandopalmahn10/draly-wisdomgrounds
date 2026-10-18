@@ -217,6 +217,19 @@ now called «El Simulacro Dorado se gana practicando» (ON by default; OFF = the
 you turn it off). Each kid's profile shows their best % per world. Answers never travel to the phone before the kid
 answers, and El Entrenamiento never uses the homework endpoints.
 
+**🎧 El Entrenamiento covers every simulation (18 October 2026).** Once the simulations became yours (in class, with a
+PIN), El Entrenamiento has to prepare a kid for everything they ask. Until then it only had written questions with
+written answers; the exams are mostly pictures and listening. Now every practice world also has the exam's own kinds
+of question, made from La Base's pictures, word recordings and example sentences (nothing new to draw or record):
+«Escucha la palabra. ¿Es esta la foto?» (✓ / ✕), «Escucha y toca su foto» (photos A, B, C), «Lee: «mao». ¿Es esta la
+foto?», «Lee la frase y toca su foto», «Escucha la conversación y toca la foto», «Escucha la pregunta y toca la mejor
+respuesta». A heard question never shows its line (only if the sound fails, so nobody gets stuck); after the answer
+the kid sees and hears what it said, with its Spanish. «Simulacro del examen» now also has every listening question of
+every simulation, heard only, in the exam's own Chinese (for old HSK 1 that is the 200 listening questions it never
+had). A check, `scripts/test-training-coverage.js`, measures it for each level: every word of the simulations, every
+kind of question, every part of the exam and the main sentence patterns must have practice; it runs with the other
+tests.
+
 **📖 El libro dorado (La Ruta Dorada, step 5, 16 October 2026).** The printed golden book of a level's simulations
 («YCT 1 · Simulaciones», «New HSK 1 · Simulaciones», «HSK 1 · Simulaciones») on the phone, inside El Simulacro
 Dorado: `/audios/yct1/libro/1` is Simulacro 1's book. **It opens once the kid has taken that simulation** (on their

@@ -119,7 +119,7 @@ module.exports = {
             { k: 'm', py: 'Zuo feiji', es: 'ir en avión' },
           ] },
         { id: 'r2', name: 'Ronda 2', blurb: '¿dónde?, aquí, adelante, atrás, arriba, abajo',
-          words: [W('zai', 'estar en'), W('na', '¿cuál?'), W('nar', '¿dónde?'), W('zhe', 'este / esto'), W('qianmian', 'adelante', 'qianmian'),
+          words: [W('zai', 'estar en'), W('na', '¿cuál?'), W('na', 'ese / eso'), W('nar', '¿dónde?'), W('zhe', 'este / esto'), W('qianmian', 'adelante', 'qianmian'),
             W('houmian', 'atrás', 'houmian'), W('shang', 'arriba / sobre', 'shang'), W('xia', 'abajo / debajo', 'xia')],
           items: [
             { k: 'f', s: 'Shu zai zhuozi ___.', a: 'shang', bank: ['xia', 'qianmian', 'houmian'], t: 'Completa «El libro está SOBRE la mesa»: «Shu zai zhuozi ___.»' },

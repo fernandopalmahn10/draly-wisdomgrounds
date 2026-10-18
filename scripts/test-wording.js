@@ -9,7 +9,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const FILES = [
   'public/index.html', 'public/homework.html', 'public/js/homework.js', 'public/player.html', 'public/js/player.js',
-  'public/audios.html', 'public/js/audios.js', 'public/js/audios-base.js', 'public/js/ruta.js', 'public/js/ruta-auto.js', 'public/js/entrenamiento.js', 'core/entrenamiento.js', 'public/packs.html', 'public/js/portal.js', 'core/assignments.js', 'core/levels.js',
+  'public/audios.html', 'public/js/audios.js', 'public/js/audios-base.js', 'public/js/ruta.js', 'public/js/ruta-auto.js', 'public/js/entrenamiento.js', 'core/entrenamiento.js', 'core/entrenamiento-drills.js', 'public/packs.html', 'public/js/portal.js', 'core/assignments.js', 'core/levels.js',
   'public/host-snow.html', 'public/js/host-snow.js', 'public/js/player-snow.js', 'public/js/player-kingdoms-skin.js',
   'public/host-escape.html', 'public/js/host-escape.js', 'public/js/player-escape.js', 'public/js/escape-render.js', 'public/js/escape-map.js',
   'core/escape.js', 'public/js/cast.js',

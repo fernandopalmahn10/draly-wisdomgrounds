@@ -61,15 +61,20 @@ const RP = require('../core/ruta-progress');
 const E = require('../core/entrenamiento');
 const SimLock = require('../core/sim-lock');
 
-// the right answer of every question of a world, by its text (the same in every build: core/assignments.js relies on
-// it too) — the test's own key, built here from the packs (the server never sends one)
+// the right answer of every question of a world — the test's own key, built here (the server never sends one): a
+// pack question by its text (the same in every build: core/assignments.js relies on it too), an exam drill
+// (core/entrenamiento-drills.js: many share a text) by its text + its options, which are the same in every build
+// (picture and ✓ / ✕ options are tokens of that one drill). key.get(q) takes the question as the phone got it.
+const lookOf = (q) => q.text + '|' + q.answers.slice().sort().join('|');
 function keyOf(level, worldKey) {
   const lvl = Levels.normalize(level);
   const pl = Packs.LEVELS.find((p) => p.id === Levels.info(lvl).pack);
   const w = pl.worlds.find((x) => x.id === worldKey);
-  const key = new Map();
-  for (let i = 0; i < 3; i++) w.rounds.forEach((r) => Packs.buildRound(pl, w, r).forEach((q) => { if (!key.has(q.text)) key.set(q.text, q.correct); }));
-  return key;
+  const byText = new Map(), byLook = new Map();
+  for (let i = 0; i < 3; i++) w.rounds.forEach((r) => Packs.buildRound(pl, w, r).forEach((q) => { if (!byText.has(q.text)) byText.set(q.text, q.correct); }));
+  const W = E.worldsOf(lvl).find((x) => x.key === worldKey);
+  E._drills.forWorld(lvl, W).forEach((q) => byLook.set(lookOf(q), q.correct));
+  return { get: (q) => (typeof q === 'string' ? byText.get(q) : byLook.has(lookOf(q)) ? byLook.get(lookOf(q)) : byText.get(q.text)), drills: byLook.size };
 }
 
 function unit() {
@@ -126,11 +131,17 @@ function unit() {
 
   section('the audio of every question of every pack: never the answer before the kid answers');
   let qs = 0, asks = 0, opts = 0, clips = 0, voices = 0;
-  const leaks = [], spanishAsk = [], empty = [];
+  const leaks = [], spanishAsk = [], empty = [], shown = [];
+  let heard = 0;
   Levels.LEVELS.filter((l) => l.base).forEach((l) => E.worldsOf(l.id).forEach((w) => E._poolOf(l.id, w).forEach((q) => {
     qs++;
     const p = E._voicePlan(q);
-    if (p.ask) {
+    if (p.ask && q.listen) {
+      // an exam drill heard only (2026-10-18): its line is the question, never on the screen (the exam's listening)
+      heard++;
+      if (q.text.includes(p.ask) || (q.answers.includes(p.ask))) shown.push(q.text + ' → ' + p.ask);
+      if (/[áéíóúñ¿¡]/i.test(p.ask)) spanishAsk.push(q.text);
+    } else if (p.ask) {
       asks++;
       // what it says before the answer is already on the screen, in pinyin (the asked word, the line said to you…)
       if (!p.ask.split(/\s+/).every((t) => q.text.includes(t.replace(/,$/, '')))) leaks.push(q.text + ' → ' + p.ask);
@@ -146,6 +157,7 @@ function unit() {
   })));
   ok(qs > 1500, qs + ' questions in every world of the three levels');
   ok(!leaks.length, 'what a question says before the answer is pinyin the screen already shows (' + (leaks.slice(0, 3).join(' | ') || 'none') + ')');
+  ok(heard > 600 && !shown.length, heard + ' exam drills heard only: their line is never on the screen nor an option (' + (shown.slice(0, 2).join(' | ') || 'none') + ')');
   ok(!spanishAsk.length, 'never Spanish read by the Mandarin voice (' + spanishAsk.slice(0, 2).join(' | ') + ')');
   ok(!empty.length, 'every question has audio: the word or line it asks about, or its four options read one by one (' + empty.slice(0, 3).join(' | ') + ')');
   ok(clips > voices, `La Base's own checked clips where they exist: ${clips} clips, ${voices} made by the platform voice`);
@@ -183,21 +195,23 @@ function unit() {
   const r = E.startRound('yct1', 'familia', who, kA, rec, null);
   const txt = JSON.stringify(r);
   ok(r.ok && r.questions.length === E.ROUND_SIZE && r.total === E.ROUND_SIZE, 'world 1 (all its seals): a round of ' + E.ROUND_SIZE + ' questions');
-  ok(!/"correct"|"expected"|"key"|"plan"|"kind"/.test(txt) && r.questions.every((q) => q.answers.length === 4 && new Set(q.answers).size === 4), 'no right answer in it (no correct / expected / key field), four options each');
+  const nOpts = (q) => (q.tf ? 2 : q.pics || q.listen || q.voice.tap ? [3, 4] : 4);
+  ok(!/"correct"|"expected"|"key"|"plan"|"kind"|"show"|"say"/.test(txt) && r.questions.every((q) => [].concat(nOpts(q)).includes(q.answers.length) && new Set(q.answers).size === q.answers.length),
+    'no right answer in it (no correct / expected / key field, nothing an exam drill says), four options each (✓ / ✕: two; the exam\'s photos and heard questions: A B C)');
   ok(!HANZI.test(txt), 'no hanzi');
   ok(r.questions.every((q) => !q.image || q.image.indexOf('/api/ruta/train/pic/') === 0), 'pictures travel as the round\'s own links (a «¿Cómo se dice?» picture is named after its pinyin in the pack)');
-  ok(new Set(r.questions.map((q) => q.text)).size === r.questions.length, 'ten different questions');
+  ok(new Set(r.questions.map(lookOf)).size === r.questions.length, 'ten different questions');
   const K = keyOf('yct1', 'familia');
   const first = r.questions[0];
-  const wrong = first.answers.find((x) => x !== K.get(first.text));
+  const wrong = first.answers.find((x) => x !== K.get(first));
   const a1 = E.answer(r.round, 0, wrong, who);
-  ok(a1.ok && a1.correct === false && a1.expected === K.get(first.text), 'a wrong answer: «no», and the right one comes back now');
-  const a2 = E.answer(r.round, 0, K.get(first.text), who);
+  ok(a1.ok && a1.correct === false && a1.expected === K.get(first), 'a wrong answer: «no», and the right one comes back now');
+  const a2 = E.answer(r.round, 0, K.get(first), who);
   ok(a2.ok && a2.correct === false && a2.again, 'answering the same question again with the right one: still wrong (the first answer counts)');
   ok(E.answer(r.round, 1, 'not an option', who).status === 400 && E.answer(r.round, 99, wrong, who).status === 400, 'an answer that is not an option, or a question not in the round: refused');
   ok(E.answer(r.round, 1, r.questions[1].answers[0], { code: 'BBBB', dev: 'd2' }).status === 403, 'someone else\'s round: refused');
   ok(E.voice(r.round, 2, 'after', who).status === 403, 'the «after» audio (it says the answer) is refused before the question is answered');
-  r.questions.slice(1).forEach((q) => E.answer(r.round, q.i, K.get(q.text), who));
+  r.questions.slice(1).forEach((q) => E.answer(r.round, q.i, K.get(q), who));
   const fin = E.finish(r.round, who, kA, S.get('AAAA'));
   ok(fin.ok && fin.right === 9 && fin.total === 10 && fin.pct === 90 && fin.stars === 3 && fin.saved && fin.best === 90, '9 of 10 → 90 %, three stars, saved: best 90 %');
   ok(E.finish(r.round, who, kA, S.get('AAAA')).pct === 90 && E.answer(r.round, 1, r.questions[1].answers[0], who).status === 409, 'finishing again gives the same result; no answer after the end');
@@ -226,12 +240,76 @@ function unit() {
   const withPic = pr1.questions.find((q) => q.image);
   if (withPic) {
     const pf = E.picture(pr1.round, withPic.i, who);
-    ok(pf.ok && fs.existsSync(pf.file) && /assets[\\/]packs[\\/]/.test(pf.file), 'the round serves the picture from public/assets/packs');
+    ok(pf.ok && fs.existsSync(pf.file) && /assets[\\/]packs[\\/]|protected[\\/]base[\\/][a-z0-9]+-base[\\/]pics[\\/]/.test(pf.file),
+      'the round serves the picture from public/assets/packs (a pack question) or La Base\'s pictures (an exam drill)');
     ok(E.picture(pr1.round, withPic.i, { code: 'BBBB', dev: 'zz' }).status === 403, '… only to the round\'s owner');
   }
+  drills();
   const pr2 = E.startRound('yct1', 'familia', who, kA, S.get('AAAA'), null, '203.0.113.5');
   ok(pr2.ok && E.answer(pr1.round, 0, pr1.questions[0].answers[0], who).status === 410, 'a new round of the same world ends the open one (no second tab to peek at answers)');
   ok(S.flushNow() === true, 'saved');
+}
+
+// the exam drills (core/entrenamiento-drills.js, 2026-10-18): the exam's own kinds in the rounds, through the round
+function drills() {
+  section('the exam drills: photos A B C, ✓ / ✕, heard only, a reading drill, all through the round');
+  const who = { code: 'AAAA', dev: 'd1', tid: null };
+  const kA = { ok: true, via: 'student' };
+  const K = keyOf('yct1', 'familia');
+  ok(K.drills >= 20, 'world 1 of YCT 1 has its exam drills (' + K.drills + ')');
+  const done = {};
+  // (rounds are random: a few rounds until each kind turned up; each is checked in its own round, still open)
+  for (let n = 0; n < 60 && Object.keys(done).length < 4; n++) {
+    const r = E.startRound('yct1', 'familia', who, kA, S.get('AAAA'), null);
+    const raw = JSON.stringify(r);
+    r.questions.forEach((q) => {
+      ok(K.get(q) !== undefined, 'the test knows every question\'s answer (' + q.text.slice(0, 40) + ')');
+      if (q.pics && !done.pics) {
+        done.pics = true;
+        ok(q.pics.length === q.answers.length && q.pics.every((u, k) => u === '/api/ruta/train/pic/' + r.round + '/' + q.i + '/' + k), 'photos A B C: one link per option, by the round');
+        ok(q.answers.every((a) => /^o[0-9a-f]{12}$/.test(a)) && !/webp|pics|roblox|fluent/.test(raw), '… their options are tokens: no picture name or file anywhere in the round');
+        const pf = E.picture(r.round, q.i, who, '1');
+        ok(pf.ok && /protected[\\/]base[\\/]yct1-base[\\/]pics[\\/]/.test(pf.file) && fs.existsSync(pf.file), '… served from La Base\'s pictures');
+        ok(E.picture(r.round, q.i, who, '7').status === 404 && E.picture(r.round, q.i, { code: 'BBBB', dev: 'zz' }, '0').status === 403, '… a photo that is not there: 404; someone else\'s round: 403');
+        ok(Array.isArray(q.alts) && q.alts.every(Boolean), '… with each photo\'s name for a screen reader');
+      }
+      if (q.tf && !done.tf) {
+        done.tf = true;
+        ok(q.answers.length === 2 && q.alts[0] === 'Sí' && q.alts[1] === 'No' && q.image, '✓ / ✕: «Sí» before «No», and its picture');
+        const right = K.get(q);
+        const a = E.answer(r.round, q.i, right, who);
+        ok(a.ok && a.correct === true && a.expected === right && a.show && a.show.py, '… the right one counts, and the line comes back only now (' + (a.show && a.show.py) + ')');
+      }
+      if (q.listen && !done.listen) {
+        done.listen = true;
+        ok(q.alt && !q.text.includes(q.alt) && q.voice.ask && !q.voice.tap, 'heard only: its line is not on the screen (only `alt`, shown when the sound fails)');
+        const v = E.voice(r.round, q.i, 'ask', who);
+        ok(v.ok && (v.file ? fs.existsSync(v.file) : HANZI.test(v.text || '')), '… its audio: La Base\'s own clip, or Chinese for the voice');
+        ok(E.voice(r.round, q.i, 'after', who).status === 403, '… said again only once answered');
+        E.answer(r.round, q.i, q.answers[0], who);
+        ok(E.voice(r.round, q.i, 'after', who).ok, '… and after');
+      }
+      if (q.voice.tap && !done.tap) {
+        done.tap = true;
+        ok(q.py.some(Boolean) && !q.listen, 'a reading drill: its pinyin on the screen, its audio only on a tap (voice.tap)');
+      }
+    });
+  }
+  ok(done.pics && done.tf && done.listen && done.tap, 'every kind turned up in world 1\'s rounds (' + Object.keys(done).join(', ') + ')');
+  // the Simulacro del examen: every listening question of the sims, heard only, in the exam's own Chinese
+  const T1 = { tid: 'T1', dev: 'd9' };
+  ['yct1', 'hsk2', 'hsk1'].forEach((lvl) => {
+    const w = E.worldsOf(lvl).find((x) => x.kind === 'simulacro');
+    const exam = E._drills.forWorld(lvl, w).filter((q) => q.exam && q.listen);
+    const hz = exam.filter((q) => q.say.hz || q.say.file).length;
+    ok(exam.length >= 30 && hz >= exam.length * 0.9, Levels.info(lvl).name + ': ' + exam.length + ' listening questions of the sims heard in «Simulacro del examen», ' + hz + ' in the exam\'s own Chinese or a La Base clip');
+    const sr = E.startRound(lvl, 'simulacro', T1, { ok: true, via: 'teacher' }, null, null);
+    const lq = sr.questions.find((q) => q.listen && !q.pics && !q.tf);
+    if (lq) {
+      const v = E.voice(sr.round, lq.i, 'ask', T1);
+      ok(v.ok && (v.file || HANZI.test(v.text || '')), '… a round\'s heard question reads Chinese (' + (v.text ? v.text.length + ' characters' : 'a clip') + ')');
+    }
+  });
 }
 
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -292,7 +370,7 @@ async function play(ph, level, worldKey, rightN, s) {
   const K = keyOf(level, worldKey);
   let n = 0;
   for (const q of r.json.questions) {
-    const right = K.get(q.text);
+    const right = K.get(q);
     const pick = n < rightN ? right : q.answers.find((x) => x !== right);
     await answer(ph, r.json.round, q.i, pick);
     n++;
@@ -432,10 +510,10 @@ async function server() {
   const other = phone();
   ok((await post('/api/level-key', { level: 'yct1', key: KEYS.yct1 }, as(other))).json.ok && (await answer(other, R.round, 0, q0.answers[0])).status === 403,
     'another phone (with the key) answering kid A\'s round: refused');
-  const firstPick = q0.answers.find((x) => x !== Kf.get(q0.text));
+  const firstPick = q0.answers.find((x) => x !== Kf.get(q0));
   const a1 = await answer(A1, R.round, 0, firstPick);
-  ok(a1.status === 200 && a1.json.correct === false && a1.json.expected === Kf.get(q0.text), 'a wrong answer → «no» + the right answer, now');
-  const again = (await answer(A1, R.round, 0, Kf.get(q0.text))).json;
+  ok(a1.status === 200 && a1.json.correct === false && a1.json.expected === Kf.get(q0), 'a wrong answer → «no» + the right answer, now');
+  const again = (await answer(A1, R.round, 0, Kf.get(q0))).json;
   ok(again.correct === false && again.again === true && again.chosen === firstPick, 'the same question again with the right answer: still wrong, and it says which answer counted');
   const picQ = R.questions.find((q) => q.image);
   if (picQ) {
@@ -445,6 +523,13 @@ async function server() {
     ok((await get(picQ.image, as(other))).status === 403 && (await get(picQ.image, as(anon))).status === 401, '… and to nobody else');
   }
   ok(R.questions.every((q) => !q.image || !/assets|\.webp/.test(q.image)), 'no picture\'s file name in the round (it would say a «¿Cómo se dice?»\'s answer)');
+  const picsQ = R.questions.find((q) => q.pics);
+  if (picsQ) {
+    const pp = await get(picsQ.pics[1], as(A1));
+    ok(pp.status === 200 && /image\/webp/.test(pp.headers['content-type'] || '') && pp.bytes > 500 && /private/.test(pp.headers['cache-control'] || ''), 'an exam drill\'s photo B travels by the round (/pic/<round>/<i>/<k>)');
+    ok((await get(picsQ.pics[1], as(other))).status === 403 && (await get(picsQ.pics[1], as(anon))).status === 401 &&
+      (await get('/api/ruta/train/pic/' + R.round + '/' + picsQ.i + '/9', as(A1))).status === 404, '… to nobody else, and only its own photos');
+  }
   ok((await answer(A1, R.round, 1, 'zzz')).status === 400, 'an answer that is not one of the options: refused');
   const askQ = R.questions.find((q) => q.voice.ask);
   if (askQ) {
@@ -456,7 +541,7 @@ async function server() {
   if (optQ) ok([200, 503].includes((await get('/api/ruta/train/voice/' + R.round + '/' + optQ.i + '/o2', as(A1))).status), 'an option read on its own');
   ok((await get('/api/ruta/train/voice/' + R.round + '/0/after', as(A1))).status !== 403, '… and the «after» audio once answered');
   ok((await get('/api/ruta/train/voice/nope-nope-nope-nope/0/ask', as(A1))).status === 410, 'a round that does not exist: 410');
-  for (const q of R.questions.slice(1)) await answer(A1, R.round, q.i, Kf.get(q.text));
+  for (const q of R.questions.slice(1)) await answer(A1, R.round, q.i, Kf.get(q));
   let f = await finish(A1, R.round);
   ok(f.json.ok && f.json.pct === 90 && f.json.stars === 3 && f.json.saved && f.json.best === 90 && !f.json.record, '9 of 10: 90 %, three stars, saved (a first round is not a «record»)');
   let p = await play(A1, 'yct1', 'familia', 5);

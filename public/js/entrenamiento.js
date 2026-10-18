@@ -392,19 +392,36 @@
     P.root.querySelectorAll('#tr-track li').forEach((li, k) => { li.classList.toggle('is-now', k === P.i); });
     const short = q.answers.every((a) => a.length <= 16);
     const stage = P.root.querySelector('#tr-stage');
-    stage.innerHTML = '<section class="tr-q' + (q.image ? ' has-pic' : '') + '">' +
+    // the exam's own kinds (2026-10-18): a heard-only question shows a big «Escuchar» and no line (alt = its pinyin,
+    // shown only when the sound fails), picture options are photos A B C, a ✓ / ✕ question has two big tiles
+    const LETTERS = 'ABCD';
+    const optHtml = (a, k) => {
+      if (q.pics) {
+        return '<button type="button" class="tr-opt is-pic" data-k="' + k + '" aria-label="Foto ' + LETTERS[k] + (q.alts && q.alts[k] ? ': ' + esc(q.alts[k]) : '') + '">' +
+          '<span class="tr-opt-letter" aria-hidden="true">' + LETTERS[k] + '</span><img src="' + esc(q.pics[k]) + '" alt="" decoding="async"><span class="tr-opt-mark" aria-hidden="true"></span></button>';
+      }
+      if (q.tf) {
+        const yes = k === 0;
+        return '<button type="button" class="tr-opt is-tf ' + (yes ? 'is-yes' : 'is-no') + '" data-k="' + k + '">' +
+          '<span class="tr-tf-icon" aria-hidden="true">' + (yes ? I.check : I.cross) + '</span><span class="tr-opt-text">' + esc((q.alts && q.alts[k]) || (yes ? 'Sí' : 'No')) + '</span>' +
+          '<span class="tr-opt-mark" aria-hidden="true"></span></button>';
+      }
+      return '<button type="button" class="tr-opt" data-k="' + k + '"' + (q.pyAnswers ? ' lang="zh-Latn-pinyin"' : '') + '>' +
+        '<span class="tr-opt-text">' + esc(a) + '</span><span class="tr-opt-mark" aria-hidden="true"></span></button>';
+    };
+    const optsCls = q.pics ? ' is-pics is-' + q.answers.length : q.tf ? ' is-tfs' : (short ? ' is-grid' : '') + (q.pyAnswers ? ' is-py' : '');
+    stage.innerHTML = '<section class="tr-q' + (q.image ? ' has-pic' : '') + (q.listen ? ' is-listen' : '') + '">' +
         (q.image ? '<figure class="tr-pic"><img src="' + esc(q.image) + '" alt="" decoding="async"></figure>' : '') +
         '<div class="tr-ask">' +
-          ((q.voice.ask || q.voice.opts) ? '<button type="button" class="tr-spk" id="tr-spk" aria-label="Escuchar otra vez">' + I.sound + '</button>' : '') +
+          ((q.voice.ask || q.voice.opts) ? '<button type="button" class="tr-spk" id="tr-spk" aria-label="' + (q.listen ? 'Escuchar' : 'Escuchar otra vez') + '">' + I.sound + '</button>' : '') +
           '<h1 class="tr-text" tabindex="-1"><span class="au-sr">Pregunta ' + (P.i + 1) + ' de ' + P.R.total + ': </span>' + textHtml(q.text, q.py) + '</h1>' +
-        '</div></section>' +
+        '</div>' +
+        (q.listen && q.alt ? '<p class="tr-alt" id="tr-alt" hidden>No se oye: lee «<span class="tr-py" lang="zh-Latn-pinyin">' + esc(q.alt) + '</span>»</p>' : '') +
+      '</section>' +
       // the round's friend waits in the space between the question and the tiles (it shrinks away on a small screen
       // or a question with a picture: never in the way of a tile)
-      (P.friend && window.DralingoCast && !q.image ? '<div class="tr-buddy" aria-hidden="true"><img src="' + esc(window.DralingoCast.pose(P.friend, 'hello')) + '" alt="" width="200" height="240" decoding="async"></div>' : '') +
-      '<div class="tr-opts' + (short ? ' is-grid' : '') + (q.pyAnswers ? ' is-py' : '') + '" role="group" aria-label="Respuestas">' +
-        q.answers.map((a, k) => '<button type="button" class="tr-opt" data-k="' + k + '"' + (q.pyAnswers ? ' lang="zh-Latn-pinyin"' : '') + '>' +
-          '<span class="tr-opt-text">' + esc(a) + '</span><span class="tr-opt-mark" aria-hidden="true"></span></button>').join('') +
-      '</div>';
+      (P.friend && window.DralingoCast && !q.image && !q.pics ? '<div class="tr-buddy" aria-hidden="true"><img src="' + esc(window.DralingoCast.pose(P.friend, 'hello')) + '" alt="" width="200" height="240" decoding="async"></div>' : '') +
+      '<div class="tr-opts' + optsCls + '" role="group" aria-label="Respuestas">' + q.answers.map(optHtml).join('') + '</div>';
     P.spk = stage.querySelector('#tr-spk');
     if (P.spk) P.spk.addEventListener('click', () => speakQuestion(true));
     stage.querySelectorAll('.tr-opt').forEach((b) => b.addEventListener('click', () => choose(Number(b.dataset.k))));
@@ -413,20 +430,30 @@
     if (!calm() && stage.animate) {
       try { stage.animate([{ opacity: 0, transform: 'translate3d(18px,0,0)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.23,1,.32,1)' }); } catch (_) {}
     }
-    later(() => speakQuestion(false), calm() ? 150 : 320);
+    // (a reading drill speaks only when the kid taps its speaker: the exam's reading part is read, not heard)
+    if (!q.voice.tap) later(() => speakQuestion(false), calm() ? 150 : 320);
   }
   // the question's audio: the word / line it asks about, else its four options one by one (each tile lights up)
   function speakQuestion(again) {
     const P = play;
-    if (!P || P.locked || muted) return;
+    if (!P || P.locked) return;
     const q = P.R.questions[P.i];
+    // (sounds off: nothing plays by itself; a tap on the speaker still plays the line, or a heard-only question could
+    // never be answered)
+    if (muted && !again) return;
     stopVoice();
     const token = seqToken;
     const i = P.i;
     if (P.spk) P.spk.classList.add('is-on');
     const done = () => { if (P.spk && token === seqToken) P.spk.classList.remove('is-on'); };
-    // (no sound came: the speaker goes away instead of looking broken; the question still plays)
-    const silent = () => { if (P.spk && token === seqToken) { P.spk.hidden = true; P.spk.closest('.tr-ask').classList.add('no-spk'); } };
+    // (no sound came: the speaker goes away instead of looking broken; the question still plays. A heard-only question
+    // keeps its speaker and shows its line instead: never stuck)
+    const silent = () => {
+      if (!P.spk || token !== seqToken) return;
+      const alt = q.listen && P.root.querySelector('#tr-alt');
+      if (alt) { alt.hidden = false; return; }
+      P.spk.hidden = true; P.spk.closest('.tr-ask').classList.add('no-spk');
+    };
     if (q.voice.ask) { voice(voiceUrl(i, 'ask')).then((okv) => { done(); if (!okv && token === seqToken) silent(); }); return; }
     if (!q.voice.opts) { done(); return; }
     const tiles = P.root.querySelectorAll('.tr-opt');
@@ -508,20 +535,27 @@
     const C = window.DralingoCast;
     const last = P.i >= P.R.questions.length - 1;
     const answerHtml = '«' + (q.pyAnswers ? '<span class="tr-py" lang="zh-Latn-pinyin">' + esc(d.expected) + '</span>' : esc(d.expected)) + '»';
+    // an exam drill says what its line was, now that it is answered: «Oíste «mao»: gato» (a reading drill: «mao»: gato)
+    const shownHtml = d.show && d.show.py ? (q.listen ? 'Oíste ' : '') + '«<span class="tr-py" lang="zh-Latn-pinyin">' + esc(d.show.py) + '</span>»' + (d.show.es ? ': ' + esc(d.show.es) : '') : '';
+    const shownText = d.show && d.show.py ? (q.listen ? 'Oíste ' : '') + d.show.py + (d.show.es ? ': ' + d.show.es : '') : '';
+    // (a picture or ✓ / ✕ answer is named by its tile: the green photo, «Sí» / «No»)
+    const expLabel = q.alts && ek >= 0 ? q.alts[ek] : d.expected;
     if (right) {
       // Dralingo or one of the gang, a different one now and then («alive, randomized, not overdone»)
-      const useFriend = C && P.friend && (moment || Math.random() < 0.35);
+      const useFriend = C && P.friend && (moment || Math.random() < 0.35) && !shownHtml;
       const pose = useFriend ? C.pose(P.friend, 'win') : DRAGON.power;
       const title = moment ? '¡' + P.streak + ' seguidas!' : pick1(RIGHT_WORDS);
       const line = useFriend ? C.name(P.friend) + ': ' + C.line(P.friend, 'win') : '';
-      say(title + (line ? ' ' + line : ''));
-      showFeed(moment ? 'is-right is-streak' : 'is-right', pose, title, line, true, last);
+      say(title + (line ? ' ' + line : '') + (shownText ? ' ' + shownText : ''));
+      if (shownHtml) showFeed(moment ? 'is-right is-streak' : 'is-right', pose, title, shownHtml, true, last, true);
+      else showFeed(moment ? 'is-right is-streak' : 'is-right', pose, title, line, true, last);
     } else {
       const useFriend = C && P.friend && Math.random() < 0.5;
       const pose = useFriend ? C.pose(P.friend, 'oops') : DRAGON.wise;
       const title = pick1(['¡Uy!', 'Casi', 'Esta no era']);
-      say(title + '. Era ' + d.expected);
-      showFeed('is-wrong', pose, title, 'Era ' + answerHtml, true, last, true);
+      const was = q.pics ? 'Era la foto ' + 'ABCD'[ek] : q.tf ? 'Era «' + esc(expLabel) + '»' : 'Era ' + answerHtml;
+      say(title + '. ' + (q.pics ? 'Era la foto ' + 'ABCD'[ek] : 'Era ' + expLabel) + (shownText ? '. ' + shownText : ''));
+      showFeed('is-wrong', pose, title, was + (shownHtml ? '. ' + shownHtml : ''), true, last, true);
     }
     // the tiles stay in sight above the sheet, the lower of the one tapped and the right one included (a small phone
     // scrolls a little; the tiles keep the sheet's height as scroll margin)
