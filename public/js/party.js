@@ -73,13 +73,13 @@
     // Las Trampillas (2026-10-17): after each drop every kid still standing = 1 point for their kingdom (Final Round ×2)
     trapdoor: {
       title: 'Las Trampillas', reveal: 'columns', sides: KD_SIDES, order: ['red', 'gold'],
-      unit: ['punto', 'puntos'], question: '¿Qué reino quedó más en pie?',
+      unit: ['punto', 'puntos'], question: '¿Qué reino aguantó más?',
       winTitle: (s) => `¡Gana el ${s.name}!`, tieTitle: '¡Empate en las trampillas!',
       champion: (s) => `¡Campeón: ${s.name}!`, tieChampion: '¡Empate en las trampillas!',
       mood: 'enpie', myLabel: 'Tu reino',
       mvpLabel: (s) => `Más en pie del ${s.name}`,
       ico: { stand: '💪', saved: '✨', right: '✅', back: '⬆️' },
-      value: (id, v) => (id === 'stand' ? `${pl(v, 'ronda seguida', 'rondas seguidas')} en pie` : id === 'saved' ? `${pl(v, 'vez', 'veces')} salvado por sus alas`
+      value: (id, v) => (id === 'stand' ? `${pl(v, 'ronda seguida', 'rondas seguidas')} en pie` : id === 'saved' ? `${pl(v, 'rescate', 'rescates')} de sus alas`
         : id === 'right' ? pl(v, 'acierto', 'aciertos') : `${pl(v, 'vuelta', 'vueltas')} desde el foso`),
       podium: (r) => pl(r.value, 'punto', 'puntos'),
     },

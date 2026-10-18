@@ -391,7 +391,10 @@ function finish(rows, totalsIn) {
   const t = { red: (totalsIn && totalsIn.red) || 0, gold: (totalsIn && totalsIn.gold) || 0 };
   const winner = t.red > t.gold ? 'red' : t.gold > t.red ? 'gold' : 'tie';
   const sorted = rows.slice().sort((a, b) => b.pts - a.pts || b.best - a.best || b.right - a.right || a.k - b.k);
-  Party.ranks(sorted, 'pts');
+  // many kids stand every round (equal points): the place goes to the longer run, then the more right answers;
+  // only a full tie shares it (a podium of three «1» read as a mistake in the design review)
+  sorted.forEach((r) => { r.rankKey = r.pts + '|' + r.best + '|' + r.right; });
+  Party.ranks(sorted, 'rankKey');
   const mvp = {};
   ['red', 'gold'].forEach((team) => { const top = sorted.find((r) => r.team === team && r.pts > 0); mvp[team] = top ? top.k : null; });
   const st = Party.stars(rows, STARS);

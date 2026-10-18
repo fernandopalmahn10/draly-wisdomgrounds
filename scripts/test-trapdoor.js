@@ -366,7 +366,9 @@ function at(m, k, slice, r) { const d = m.kids[k]; const [x, y] = A.pointAt(A.sl
   ];
   const fin = T.finish(rows, { red: 11, gold: 8 });
   ok(fin.winner === 'red', 'the kingdom with more points wins');
-  ok(fin.rows[0].rank === 1 && fin.rows[1].rank === 1 && fin.rows[0].k === 1, 'a tie on points shares the rank (the longer run first)');
+  ok(fin.rows[0].rank === 1 && fin.rows[1].rank === 2 && fin.rows[0].k === 1, 'equal points: the longer run takes the place');
+  const twin = T.finish([Object.assign({}, rows[0], { k: 7 }), Object.assign({}, rows[0], { k: 8 })], { red: 10, gold: 0 });
+  ok(twin.rows[0].rank === 1 && twin.rows[1].rank === 1, 'a full tie (points, run, right answers) shares the place');
   ok(fin.stars.length <= Party.MAX_STARS && fin.stars.find((s) => s.id === 'stand').winners.join() === '1', 'Siempre en pie: the longest run');
   ok(fin.stars.find((s) => s.id === 'saved').winners.join() === '1', 'Alas salvadoras');
   ok(fin.stars.find((s) => s.id === 'back').winners.join() === '2', 'Vuelta épica');

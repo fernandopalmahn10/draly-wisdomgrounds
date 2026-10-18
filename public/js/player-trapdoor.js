@@ -436,19 +436,18 @@
     if (!box) return;
     const st = myState.st;
     let ico = '🏃', txt = '¡Toca el suelo para correr!', cls = '';
-    if (st === 'down') { ico = '🕳️'; txt = noComeback() ? 'Caíste en la ronda final: ¡anima a tu reino!' : '¡Caíste! Responde bien y vuelves arriba'; cls = 'pit'; }
+    const ph = rd && rd.r > 0 && scene && scene.rd ? TA().phaseAt(scene.clock(performance.now()), scene.rd.final) : '';
+    // «0»: only a kid whose own slice burns is told to run; the others are told to stay put (the pill says the same)
+    const onPink = !!(me && scene && scene.lockSet && scene.lockSet.includes(TA().sliceOf(me.x, me.y)));
+    if (st === 'down') { ico = '🕳️'; txt = noComeback() ? 'Caíste en la ronda final: ¡anima a tu reino!' : '¡Caíste al foso!'; cls = 'pit'; }
     else if (st === 'wait') { ico = '⬆️'; txt = lastRound() ? 'Es la ronda final: ¡mira cómo termina!' : myState.wingsNext ? '¡Subes con alas en la próxima ronda!' : '¡Subes en la próxima ronda!'; cls = 'wait'; }
     else if (myState.hover) { ico = 'wings'; txt = '¡Tus alas te sostienen!'; cls = 'wings'; }
+    else if (ph === 'lock' && onPink && myState.wings) { ico = 'wings'; txt = '¡Estás en el rosa! Tus alas te cuidan'; cls = 'wings'; }
+    else if (ph === 'lock' && onPink) { ico = '⚠️'; txt = '¡CORRE lejos del rosa!'; cls = 'hot'; }
+    else if (ph === 'lock') { ico = '✋'; txt = '¡Quieto ahí! Tu suelo no se abre'; cls = 'safe'; }
+    else if (ph === 'open' || ph === 'close' || ph === 'tally') { ico = '⭐'; txt = '¡Sigues en pie!'; cls = 'ok'; }
     else if (myState.wings) { ico = 'wings'; txt = '¡Tienes alas! Ahora ¡esquiva el rosa!'; cls = 'wings'; }
-    else if (rd && rd.r > 0) {
-      const ph = scene && scene.rd ? TA().phaseAt(scene.clock(performance.now()), scene.rd.final) : '';
-      // «0»: only a kid whose own slice burns is told to run; the others are told to stay put (the pill says the same)
-      const onPink = !!(me && scene && scene.lockSet && scene.lockSet.includes(TA().sliceOf(me.x, me.y)));
-      if (ph === 'lock' && onPink) { ico = '⚠️'; txt = '¡CORRE lejos del rosa!'; cls = 'hot'; }
-      else if (ph === 'lock') { ico = '✋'; txt = '¡Quieto ahí! Tu suelo no se abre'; cls = 'safe'; }
-      else if (ph === 'open' || ph === 'close' || ph === 'tally') { ico = '⭐'; txt = '¡Sigues en pie!'; cls = 'ok'; }
-      else { ico = '❓'; txt = 'Sin alas: ¡responde o esquiva!'; cls = 'nowings'; }
-    }
+    else if (rd && rd.r > 0) { ico = '❓'; txt = 'Sin alas: ¡responde o esquiva!'; cls = 'nowings'; }
     const key = ico + txt + cls;
     if (box.dataset.k === key) return;
     box.dataset.k = key;
@@ -472,7 +471,8 @@
     else if (cls === 'ok') { title = '¡Sigues en pie!'; sub = 'Cada ronda en pie suma para tu reino'; pose = 'ok'; }
     else if (myState.wings) { title = '¡Tienes alas!'; sub = 'Si tu suelo se abre, vuelas. ¡Igual esquiva el rosa!'; pose = 'ok'; }
     else if (rd && rd.r > 0) { title = '¡Esquiva el rosa!'; sub = 'En el 0, el suelo rosa se abre'; }
-    box.className = 'tp-rest ' + (cls || '');
+    // my character wears the golden wings on the card while I have them (the kid connects «alas» with the picture)
+    box.className = 'tp-rest ' + (cls || '') + ((myState.wings || myState.hover) && st === 'up' ? ' haswings' : '');
     $('tp-rest-text').textContent = title;
     $('tp-rest-sub').textContent = sub;
     const sk = HB() ? HB().skinFor(roster[myK] && roster[myK][2], roster[myK] && roster[myK][0]) : null;
@@ -806,7 +806,7 @@
     card0.classList.toggle('gold', my === 'gold');
     $('tp-help-title').textContent = my === 'red' ? '¡Eres del Reino del Fuego!' : '¡Eres del Reino del Mar!';
     const sk = HB() ? HB().skinFor(roster[myK] && roster[myK][2], roster[myK] && roster[myK][0]) : 'dralingo';
-    if (HB()) { $('tp-help-me').src = HB().art(sk, 'idle'); $('tp-help-wings').src = HB().art(sk, 'ok'); $('tp-help-pit').src = HB().art(sk, 'no'); }
+    if (HB()) { $('tp-help-me').src = HB().art(sk, 'idle'); $('tp-help-wings').src = HB().art(sk, 'ok'); }
   }
   function hideHelp() { clearTimeout(helpT); const c = $('tp-help'); if (c && !c.classList.contains('hidden')) { c.classList.add('hidden'); showHand(); } }
   const helpOpen = () => { const c = $('tp-help'); return !!c && !c.classList.contains('hidden'); };

@@ -132,6 +132,7 @@ body:not(.tp-asking) .tp-rest { opacity: 1; }
 .tp-rest div { display: grid; gap: 6px; min-width: 0; }
 .tp-rest b { font: 800 1.45rem/1.1 'Baloo 2', sans-serif; color: var(--tp-ink); }
 .tp-rest small { font: 700 1rem/1.25 'Nunito', sans-serif; color: #4a5070; }
+.tp-rest.haswings img { padding: 0 16px; background: url('/assets/trapdoor/wings.webp') center 30% / 100% auto no-repeat; }
 .tp-rest.wings { border-color: #e0a92b; background: radial-gradient(circle at 30% 40%, #fffdf0, #ffe9a3); }
 .tp-rest.wings b { color: #7a4a00; }
 .tp-rest.pit { border-color: #6b1a3c; background: radial-gradient(circle at 30% 40%, #fff, #ffe0ee); }
@@ -206,6 +207,8 @@ body:not(.tp-asking) .tp-rest { opacity: 1; }
 .tp-step-pic img { height: 58px; width: auto; max-width: 60px; object-fit: contain; }
 .tp-step-pic i { position: absolute; right: -4px; bottom: -4px; font-style: normal; font-size: 1.3rem; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .3)); }
 .tp-step-pic.pit { background: #12324a; }
+.tp-step-pic .tp-step-ico.pink { width: 100%; height: 100%; background: none; }
+.tp-step-pic.wings img { padding: 0 6px; background: url('/assets/trapdoor/wings.webp') center 30% / 100% auto no-repeat; }
 .tp-help-go { justify-self: center; min-width: 60%; min-height: 54px; border: 3px solid #fff; border-radius: 18px; background: linear-gradient(180deg, #ffb347, #ff6a00); color: #fff;
   font: 800 1.35rem/1 'Baloo 2', sans-serif; box-shadow: 0 5px 0 #a63a00; touch-action: manipulation; }
 .tp-help-go { transition: transform .12s ease-out; }

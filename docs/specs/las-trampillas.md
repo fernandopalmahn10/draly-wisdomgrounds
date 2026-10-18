@@ -60,9 +60,10 @@ like the video). A class plays several matches with «Otra ronda» (the next are
   the roulette schedule included, never the final set); `td:lock` / `td:open` / `td:tally` at those instants; `td:me`
   per kid on a change; `td:roster` on joins and team changes. No `state` pushes during play.
 - Which slice a kid is on = the slice of their feet point. Falls are judged on the server's position at the OPEN instant,
-  with a **lag grace**: a kid already running off the dropping slice gets 180 ms more of their run (at most 18 units)
-  first, because their phone shows them that far ahead (the network lag); a kid standing still, too far from the seam
-  or running the wrong way still falls. A fall is drawn from where the server judged the feet, never from safe floor.
+  with a **lag grace**: a kid already running off the dropping slice gets a little more of their run first, because
+  their phone shows them that far ahead: their own one-way lag (the room pings every phone every 3 s, the median of
+  the last 5) + a tick, between 180 and 400 ms of running; a kid standing still, too far from the seam or running the
+  wrong way still falls. A fall is drawn from where the server judged the feet, never from safe floor.
 
 ## Phone (the product, 390×844 and 360×640)
 Top: Fuego vs Mar points + who is still standing, the round dots, «Sonido». Middle (flex): **the whole platform**
@@ -99,6 +100,118 @@ ronda» (the next arena), F5 reclaim with the room token (`teacher-gate.js`), ar
 Every wait has a timeout: phases are timer-driven, a question nobody answers closes at 20 s (phone) / 21 s (server).
 
 ## Ending (shared ceremony)
-«¡FINAL!» → the reveal «¿Qué reino quedó más en pie?» → «¡Gana el Reino del …!» → bonus stars (at most 4): **Siempre en
+«¡FINAL!» → the reveal «¿Qué reino aguantó más?» → «¡Gana el Reino del …!» → bonus stars (at most 4): **Siempre en
 pie** (longest run of rounds standing), **Alas salvadoras** (times the wings saved them), **Más aciertos**, **Vuelta
 épica** (comebacks from the pit) → each phone's card («Aguantaste N rondas en pie», wings, comebacks, aciertos).
+
+---
+
+## As built · 2026-10-17 (branch `trapdoor`, not deployed)
+
+What changed from the plan above, after three reviews (below): the kingdoms score **their share standing out of 10**
+each round (a head count gave the bigger side of an odd class 70 % of the wins in the first sim); the doors judge falls
+with a **lag grace** that follows each phone (the room pings every phone every 3 s; the grace = that kid's one-way lag +
+a tick, 180-400 ms of running; see Movement); after a right answer the next question waits **1 s** (the verdict stays
+readable); «too fast» is timed on the wall clock from the deal (a teacher's pause counts as reading time); at «0» only a
+kid whose own slice burns is told «¡CORRE!» (the others «¡Quieto ahí!»); the Final Round deals no pit or «rise with
+wings» questions after «0» and never promises «la próxima ronda»; the podium breaks equal points by the longer run,
+then the right answers; «Siempre en pie» shared by more than 6 kids is skipped; the reveal asks «¿Qué reino aguantó
+más?».
+
+### Files
+- New: `core/trapdoor.js` (the rules: rounds, the roulette plan, the uniform drop at «0», falls / wings / the grace,
+  questions, comebacks, the tally, pause, +2 rondas, skip, stars, ranks), `public/js/trapdoor-arena.js` (UMD, shared by
+  the server and both screens: the platform's geometry, the clock of a round, the runner's step, the three arenas),
+  `public/js/trapdoor-render.js` (the canvas: the arena, the tilted platform, the doors swinging over the pit art, every
+  kid's saga character on a red / blue ring, wings, falls, rises, tags), `public/js/player-trapdoor.js` (the phone),
+  `public/host-trapdoor.html` + `public/js/host-trapdoor.js` (the projector), `public/css/trapdoor.css` (phone `tp-*`,
+  projector `th-*`), `scripts/test-trapdoor.js`, `scripts/test-trapdoor-live.js`, `scripts/playtest/trapdoor.js`,
+  `docs/specs/las-trampillas.md`, art and sounds in `public/assets/trapdoor/`.
+- Shared files, trapdoor parts only: `server.js` (the «LAS TRAMPILLAS» block `td*`; handlers `player:td-go`,
+  `host:td-arena`, `host:td-rounds`, `host:td-skip`; the `td:ping` lag probe; join / rejoin / resync / late joiner /
+  swap / balance / 5-min cleanup / F5 reclaim; a trapdoor answer for an old question is refused as stale; the shared
+  ending), `public/player.html`, `public/js/player.js`, `public/js/player-kingdoms-skin.js`, `public/js/party.js` +
+  `public/css/party.css` (the reveal, the card, the stars), `public/js/cast.js` (moods `trampa` + `enpie`, Aileen in
+  voseo), `games.html`, `sets.html`, `packs.html`, `js/maestro.js`, `scripts/test-wording.js`, `docs/GAME_MODES.md`,
+  `docs/HOW_CLAUDE_WORKS.md`, `CLAUDE.md`; `?v=` bumped to `20261017td`.
+
+### Art and weight
+10 pictures on his unlimited Higgsfield (Nano Banana Pro, zero credits): a floor, a background and a pit for each arena
++ the golden wings; originals in `assets-library/higgsfield/2026-10-17/trapdoor/`. Shipped as WebP: Dubái 456 KB,
+Templo 230 KB, Luna 505 KB (bg 1600 w, floor 900², pit 960 w), wings 26 KB; music `music-rounds.mp3` 211 KB (Kenney),
+7 recorded effects 53 KB. A phone loads one arena: **≈ 0.75 MB** of media + ≈ 150 KB of new code (uncompressed).
+
+### Network and cheap phones
+`td:pos` ≈ 4.8 messages a second per screen, only the kids that moved (everyone every 2 s); one tiny `td:ping` per phone
+every 3 s; no `state` pushes during play (≈ 10 per kid in a whole match: lobby, start, end). The canvas keeps a static
+layer (background, rim, floor, seams) and redraws only the moving parts; sprites are scaled once per size (1/8 steps),
+the wings' glow blurred once, the hub's gradients made once per layout; reduced motion: no bobbing, no shake, no card
+nudge, a short fade instead of the drop.
+
+### Tests
+- `scripts/test-trapdoor.js` 1306 checks: geometry, the runner (never through the hub or into an open hole), the clock,
+  the roulette, the uniform drop (8000 draws), falls / wings / the lag grace (quick vs slow phone), the tally shares,
+  questions (too fast, waits, the 1 s pause, the «0» instant, the Final Round's pit), the teacher, the ending, ranks and
+  every card, and **360 simulated classes**: a kingdom answering 85 % vs 55 % wins 99 % (loses 1 %), 75 % vs 62 % wins
+  76 %, equal kingdoms 41 / 53 (ties 6 %); per round 1.7 falls, 4.4 saves by wings, 1.3 comebacks; 8.1 questions a kid.
+- `scripts/test-trapdoor-live.js` 92 checks on a real server: lobby (arena, rounds), intents, clamping, no teleport, the
+  tap rate limit, the wings question, a guess, «¡Casi!» waits, «0» closing the question, who falls / is saved / gets
+  away, the pit's questions, the tally, a late joiner, +2 rondas, pause (an answer right after «Seguir» is not too
+  fast), a reconnect, the projector's F5, a comeback at once, the server's time-up, the lag probe, «Terminar», the cards,
+  «Otra ronda».
+- Bots (`scripts/playtest-bots.js --game trapdoor`): 4 / 20 / 30 kids PASS (79 / 383 / 549 questions, 0 frozen, 0
+  errors, the ending seen). The whole unit suite (25 files) 0 failing + asset-guard; every live suite (10) on a
+  throw-away server: all pass.
+
+### Reviews
+- **Code review** (agent-skills:code-reviewer, 4 important + 12 minor): all fixed: the lag grace + falls drawn from the
+  server's spot, the 1 s pause after a right answer + tiles armed 450 ms after they arrive, the sprite cache (1/8 steps),
+  the glow and the hub's gradients made once, the clock wrapped (30 faults → the ending), wings need time before «0»,
+  old-question taps refused, «¡FINAL!» stops the round clock, ghost kids off the screens, the rosters reset on «Otra
+  ronda», «Siempre en pie» capped, the 15-round refusal says so, the Final Round copy, reduced motion, the pit strip.
+  Kept (already in every game, not trapdoor's): the countdown timer in `host:start`, the projector's reclaim ignoring a
+  refusal, an F5 with `?livegame=1` opening a new room.
+- **Classroom playtest** (classroom-playtester agent, 6 matches, 3 arenas, 30 bots, real browsers at 1600×900,
+  390×844, 360×640, lag kids at 0-250 ms): nothing froze, 0 server errors. Fixed: two opposite messages at «0»; the
+  header cut at two-digit counts and 10-15 rounds («¡Nos falta 1!»); «Así se juega» clipped at 360×640; the lag (the
+  grace now follows each phone, the phone no longer pulls itself back on a slow connection); the Final Round's pit copy;
+  ⏭ Saltar silent mid-round (now greyed with a hint); the pink vanishing before the doors; the projector lobby's cards
+  cut; name tags over the hub's count. Kept: the shared «Sonido» pill over the phone lobby's third step at 360 px, the
+  phone watchdog's resync during the 3-2-1 (every game).
+- **Fresh-eyes design review** (screenshots): fixed: a saturated magenta in every round (the pastel pink vanished),
+  my ring turns hot pink when my slice burns, «TÚ» bigger with a pointer, the projector's names bigger, idle wings
+  smaller, my character wears the wings on the card, «¡Huye del rosa!» in «Así se juega», the podium ranks (no more three
+  «1»), the pit's status line shorter, «¿Qué reino aguantó más?», «2 rescates de sus alas». Kept: the phone's star
+  screens were caught before their figures fly in (they do); the lobby's «camel Benja» chips are the test bots' raw
+  avatar names (real phones send the character's emoji); the start screen's dragon and the ending's grid / glow are
+  the shared skin and ceremony (all games); the card keeps its fixed height (the platform must not jump when a question
+  comes).
+- impeccable detector (run once): 16 findings → the pit strip's heading level and the lobby's red fixed; the rest are
+  pictures filled at run time, text on game panels the detector can't see, and the game's own glows.
+
+### Scorecard · Las Trampillas · 2026-10-17 · branch `trapdoor`
+```
+Hard gates: bots PASS (4/20/30 + the playtester's 30) · teacher controls ✓ (⏸ Pausa, «+30 s» = 2 rondas más, ⏭ Saltar,
+            Terminar, Sonido, Otra ronda = next arena, F5 reclaim, arena + rounds in the lobby, Equilibrar) · saga only ✓
+            · Spanish/pinyin/level ✓ (questions from the packs; test-wording 85 files clean) · kid-safe ✓ (no text or
+            logos in the art, nobody touching)
+1 Real place ........ 1/2  three real places with their own pit (a Dubai palace hall on the night skyline, the Temple of
+                           Heaven's round marble altar, a Suzhou moon-gate garden); but nothing in the place is worth
+                           points: the video's minigame has no prizes (like Ojos de Halcón)
+2 The gang .......... 2/2  captains' VS in the countdown, their lines on leads and in the ending (moods trampa / enpie,
+                           Aileen in voseo), every kid's full-body saga character on a team ring on both screens
+3 Every tap ......... 2/2  tap-to-run answers in the same frame (prediction, ripple), the tapping hand, «Así se juega»
+                           with 3 pictured steps, «¡CORRE!» only when my slice burns / «¡Quieto ahí!», the pit window
+                           and card say exactly what to do
+4 Feedback .......... 2/2  «¡ALAS!», «¡Tus alas te salvaron!», «¡Caíste!», «¡De vuelta arriba!», too fast / time up,
+                           tally bands, recorded sounds per event; one moment at a time (a pill, throttled)
+5 Finale ............ 2/2  2 → 3 trapdoors → the Final Round's bowtie ×2 with its own band and music, lead changes,
+                           «¡FINAL!», the reveal, the winners, 4 bonus stars, the podium, each phone's own card
+6 Fair, no stall .... 2/2  the server judges every fall and answer, share scoring (no size bias, 360 simulated
+                           classes), guesses wrong, waits after misses, a lag grace per phone, nobody without something
+                           to do (pit questions, late joiners rise), every wait timed, teacher controls mid-round, F5
+7 Product feel ...... 2/2  Higgsfield arenas, pits and wings, recorded music and effects, the phone at 390 and 360 as
+                           finished as the projector
+Total 13/14 → ships (≥ 12, no 0). The missing point: a landmark or prize worth points in the arena; the minigame has
+none, and adding one would change it (his call).
+```

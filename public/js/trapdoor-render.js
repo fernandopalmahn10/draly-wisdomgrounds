@@ -489,10 +489,11 @@
         g.beginPath();
         pts.forEach(([x, y], i) => { const p = P(L, x, y, 0); if (i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); });
         g.closePath();
-        g.fillStyle = hot ? `rgba(255,40,150,${(0.55 + 0.25 * pulse).toFixed(3)})` : `rgba(255,79,180,${(0.36 + 0.14 * pulse).toFixed(3)})`;
+        // a saturated magenta in every round (a pastel pink vanished on a washed-out projector); «0» burns deeper
+        g.fillStyle = hot ? `rgba(255,30,140,${(0.7 + 0.2 * pulse).toFixed(3)})` : `rgba(255,45,160,${(0.5 + 0.16 * pulse).toFixed(3)})`;
         g.fill();
-        g.lineWidth = Math.max(2, L.k * (hot ? 1.6 : 1.1));
-        g.strokeStyle = hot ? 'rgba(255,235,248,0.95)' : 'rgba(255,190,230,0.85)';
+        g.lineWidth = Math.max(2, L.k * (hot ? 1.8 : 1.4));
+        g.strokeStyle = hot ? 'rgba(255,245,252,0.98)' : 'rgba(255,215,240,0.95)';
         g.stroke();
       });
     }
@@ -622,8 +623,10 @@
       g.strokeStyle = team.ring;
       g.stroke();
       if (me) {
-        const pu = still ? 0.5 : 0.5 + 0.5 * Math.sin(nowPerf / 220);
-        g.strokeStyle = `rgba(255,216,77,${(0.55 + 0.4 * pu).toFixed(2)})`;
+        // my pulsing ring: gold, or hot pink while my own slice burns at «0»
+        const danger = onLit && hot;
+        const pu = still ? 0.5 : 0.5 + 0.5 * Math.sin(nowPerf / (danger ? 90 : 220));
+        g.strokeStyle = danger ? `rgba(255,40,150,${(0.65 + 0.35 * pu).toFixed(2)})` : `rgba(255,216,77,${(0.55 + 0.4 * pu).toFixed(2)})`;
         g.lineWidth = Math.max(2, k * 1.3);
         g.beginPath(); g.ellipse(fx, fy, rr * (1.25 + 0.12 * pu), rr * TILT * (1.25 + 0.12 * pu), 0, 0, Math.PI * 2); g.stroke();
       }
@@ -651,7 +654,7 @@
       const opt = o || {};
       // the wings behind the body (flapping over the hole, a slow glow otherwise)
       if (opt.wings) {
-        const wi = scaled(WINGS, hPx * (opt.hover ? 0.72 : 0.6) * this.dpr);
+        const wi = scaled(WINGS, hPx * (opt.hover ? 0.72 : 0.5) * this.dpr);   // idle wings smaller (they hid name tags)
         const flap = reduced() ? 1 : opt.hover ? 0.55 + 0.45 * Math.abs(Math.sin(nowPerf / 75)) : 0.9 + 0.1 * Math.sin(nowPerf / 300);
         if (wi) {
           const ww = (wi.width / this.dpr) * 1.1, wh = (wi.height / this.dpr) * flap;
@@ -693,7 +696,8 @@
     drawTags(g, list, nowPerf) {
       if (!this.labels) return;
       const host = this.mode === 'host';
-      const fs = host ? Math.max(12, Math.min(17, this.L.k * 3.2)) : 12;
+      const fs = host ? Math.max(14, Math.min(19, this.L.k * 3.6)) : 11;
+      const fsMe = 16;
       g.font = `800 ${fs}px "Nunito", system-ui, sans-serif`;
       g.textAlign = 'center'; g.textBaseline = 'middle';
       const placed = [];
@@ -711,8 +715,9 @@
         if (!host && !mine) { if (others >= 3 || !meD || Math.hypot(d.x - meD.x, d.y - meD.y) > 34) return; }
         const text = mine ? 'TÚ' : d.name || '';
         if (!text) return;
-        const w = g.measureText(text).width + (mine ? 18 : 12), h = fs + (mine ? 9 : 6);
-        const x = d.headX, y = d.headY - h * 0.6 - (mine ? 4 : 2);
+        if (mine) g.font = `900 ${fsMe}px "Nunito", system-ui, sans-serif`;
+        const w = g.measureText(text).width + (mine ? 20 : 12), h = (mine ? fsMe : fs) + (mine ? 10 : 6);
+        const x = d.headX, y = d.headY - h * 0.6 - (mine ? 9 : 2);
         const box = [x - w / 2, y - h / 2, x + w / 2, y + h / 2];
         const hits = (b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]);
         if (placed.some(hits) || (!mine && hits(hubBox))) return;
@@ -726,8 +731,14 @@
         g.beginPath();
         g.moveTo(box[0] + r, box[1]); g.lineTo(box[2] - r, box[1]); g.arc(box[2] - r, y, r, -Math.PI / 2, Math.PI / 2); g.lineTo(box[0] + r, box[3]); g.arc(box[0] + r, y, r, Math.PI / 2, Math.PI * 1.5); g.closePath();
         g.fill(); g.stroke();
+        if (mine) {                    // a pointer from «TÚ» down to my head
+          g.beginPath(); g.moveTo(x - 6, box[3] - 1); g.lineTo(x + 6, box[3] - 1); g.lineTo(x, box[3] + 7); g.closePath();
+          g.fillStyle = '#ffd84d'; g.fill(); g.stroke();
+          g.fillRect(x - 5, box[3] - 2.5, 10, 2.5);
+        }
         g.fillStyle = mine ? '#4a2a00' : '#1d2440';
         g.fillText(text, x, y + 0.5);
+        if (mine) g.font = `800 ${fs}px "Nunito", system-ui, sans-serif`;
       });
       void nowPerf;
     }
