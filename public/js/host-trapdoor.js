@@ -194,7 +194,7 @@
       scene.round({ r: d.r, rounds: d.rounds, kind: d.kind, final: d.final, jumps: d.jumps }, d.ago, performance.now());
       if (d.set) scene.lock(d.set);
       if (d.open && d.set) scene.open(d.set, [], [], performance.now() - 400);
-    }
+    } else { scene.rd = null; scene.lockSet = null; scene.doors = null; }    // «¡YA!» of a new match: no round yet
     scene.paused = false;
     if (d.paused) scene.pause(true, performance.now());
     if (d.captains) { captains = d.captains; paintCaptains(false); }
@@ -286,6 +286,10 @@
     if (!scene.resize()) return;
     scene.frame(t, dt);
     tickSounds();
+    // ⏭ Saltar only does something during «¡YA!» and a tally: lit then, greyed (with a hint) otherwise
+    const canSkip = !scene.paused && !scene.frozen && (!scene.rd || TA.phaseAt(scene.clock(t), scene.rd.final) === 'tally');
+    const sb = $('skip-btn');
+    if (sb.disabled === canSkip) { sb.disabled = !canSkip; sb.title = canSkip ? 'Saltar a la siguiente ronda' : 'Se puede saltar el «¡YA!» y el «+N en pie» entre rondas'; }
     if (pitDirty && t - pitAt > 500) { pitAt = t; pitDirty = false; renderPit(); renderRosters(); paintTop(); }
   }
   let lastHub = null;

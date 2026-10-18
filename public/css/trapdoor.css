@@ -24,7 +24,8 @@
 .tp-side.gold .tp-num { background: linear-gradient(180deg, #2f7ce6, #1a4fb8); }
 .tp-side.me .tp-num { border-color: #fff; box-shadow: 0 0 0 3px var(--tp-gold), 0 3px 0 rgba(0, 0, 0, .35); }
 .tp-num b.bump, .tp-num.bump { animation: tpBump .4s cubic-bezier(.3, 1.6, .5, 1); }
-.tp-side small { font: 800 .8rem/1 'Nunito', sans-serif; color: #fff; opacity: .92; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tp-side small { display: grid; justify-items: center; gap: 1px; min-width: 30px; font: 800 .64rem/1 'Nunito', sans-serif; color: #fff; opacity: .92; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tp-side small b { font: 800 1.1rem/1 'Baloo 2', sans-serif; }
 .tp-mid { display: grid; justify-items: center; gap: 3px; min-width: 0; }
 .tp-round { font: 800 1rem/1 'Baloo 2', sans-serif; color: var(--tp-gold); white-space: nowrap; letter-spacing: .01em; }
 body.tp-lastround .tp-round { color: #ff7ab8; }
@@ -32,9 +33,10 @@ body.tp-lastround .tp-round { color: #ff7ab8; }
 .tp-dots i, .tp-band-dots i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, .28); }
 .tp-dots i.done, .tp-band-dots i.done { background: rgba(255, 255, 255, .78); }
 .tp-dots i.now, .tp-band-dots i.now { background: var(--tp-gold); box-shadow: 0 0 0 2px rgba(255, 201, 60, .35); }
+.tp-dots.many { gap: 2px; } .tp-dots.many i { width: 5px; height: 5px; }
 .tp-lead { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 900 .82rem/1 'Nunito', sans-serif; color: #fff; }
 .tp-lead.ahead { color: #c4ffb8; } .tp-lead.behind { color: #ffd9ad; }
-@media (max-width: 370px) { .tp-num { min-width: 50px; font-size: 1.3rem; padding: 0 6px; } .tp-side small { font-size: .72rem; } .tp-lead { font-size: .74rem; } }
+@media (max-width: 370px) { .tp-num { min-width: 50px; font-size: 1.3rem; padding: 0 6px; } .tp-side small { font-size: .6rem; } .tp-side small b { font-size: 1rem; } .tp-lead { font-size: .74rem; } }
 /* «Sonido»: a round icon on the platform's top-right corner (the shared button; the label is clipped) */
 body.tp-on:has(#screen-trapdoor:not(.hidden)) .muted-toggle { top: calc(env(safe-area-inset-top, 0px) + 62px) !important; right: 8px !important; left: auto !important;
   bottom: auto !important; width: 34px !important; height: 30px !important; padding: 0 0 0 7px !important; overflow: hidden !important; white-space: nowrap !important;
@@ -112,7 +114,7 @@ body:has(.tp-pit:not(.hidden)) .tp-moment { left: calc(50% + 66px); width: min(c
 .tp-status { position: relative; isolation: isolate; }
 .tp-status.hot { background: #d61a73; }
 .tp-status.hot::after { content: ''; position: absolute; inset: 0; z-index: -1; background: #ff4f9e; animation: tpHot .3s ease-in-out infinite alternate; }
-.tp-status.ok { background: #1f7a4a; }
+.tp-status.ok, .tp-status.safe { background: #1f7a4a; }
 .tp-status.pit { background: #6b1a3c; }
 .tp-status.wait { background: #8a5a00; }
 .tp-status.flash { animation: tpFlash .7s cubic-bezier(.3, 1.6, .5, 1); }
@@ -183,6 +185,16 @@ body:not(.tp-asking) .tp-rest { opacity: 1; }
 .tp-help .tp-step-pic img { height: 46px; }
 .tp-help .tp-help-go { min-height: 46px; font-size: 1.2rem; }
 .tp-help.hidden { display: none; }
+/* a short phone (360×640): the three steps keep their bold line only, so «¡A jugar!» stays in view */
+@media (max-height: 700px) {
+  .tp-help { gap: 4px; padding: 8px 10px; }
+  .tp-help-title { font-size: 1.1rem; }
+  .tp-help .tp-steps { gap: 4px; }
+  .tp-help .tp-steps li > span:last-child { font-size: 0; }
+  .tp-help .tp-step-pic { width: 40px; height: 40px; }
+  .tp-help .tp-step-pic img { height: 36px; }
+  .tp-help .tp-help-go { min-height: 42px; font-size: 1.1rem; }
+}
 .tp-help.red { border-color: var(--tp-red-d); } .tp-help.gold { border-color: var(--tp-blue-d); }
 .tp-help-title { text-align: center; font: 800 1.35rem/1.1 'Baloo 2', sans-serif; }
 .tp-help.red .tp-help-title { color: var(--tp-red-d); } .tp-help.gold .tp-help-title { color: var(--tp-blue-d); }
@@ -257,8 +269,8 @@ body:not(.tp-asking) .tp-rest { opacity: 1; }
   gap: 4px; padding: 0 12px 6px 214px; border-radius: 20px; overflow: hidden; border: 3px solid rgba(255, 255, 255, .7); background: #0d2236 var(--td-pit-bg, none) center / cover no-repeat;
   box-shadow: 0 8px 20px rgba(0, 0, 0, .5); }
 .th-pitstrip::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10, 6, 30, .82) 0, rgba(10, 6, 30, .35) 150px, rgba(10, 6, 30, .1) 60%); }
-.th-pitstrip h3 { position: absolute; left: 14px; top: 12px; width: 190px; margin: 0; display: grid; gap: 4px; color: #fff; font: 800 1.35rem/1.05 'Baloo 2', sans-serif; z-index: 1; }
-.th-pitstrip h3 small { font: 700 .82rem/1.1 'Nunito', sans-serif; color: #ffe9a8; }
+.th-pitstrip h2 { position: absolute; left: 14px; top: 12px; width: 190px; margin: 0; display: grid; gap: 4px; color: #fff; font: 800 1.35rem/1.05 'Baloo 2', sans-serif; z-index: 1; }
+.th-pitstrip h2 small { font: 700 .82rem/1.1 'Nunito', sans-serif; color: #ffe9a8; }
 .th-pitkid { position: relative; z-index: 1; display: grid; justify-items: center; width: 54px; animation: tpPitIn .4s cubic-bezier(.3, 1.4, .5, 1); }
 .th-pitkid img { height: 54px; width: auto; max-width: 64px; object-fit: contain; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .5)); }
 .th-pitkid span { max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 800 .7rem/1.1 'Nunito', sans-serif; color: #fff; padding: 1px 5px; border-radius: 6px; }
@@ -296,18 +308,18 @@ body:not(.tp-asking) .tp-rest { opacity: 1; }
 .th-rounds button { min-width: 54px; min-height: 44px; border-radius: 14px; border: 3px solid var(--tp-ink); background: #fff; font: 800 1.15rem/1 'Baloo 2', sans-serif; cursor: pointer; }
 .th-rounds button.on { background: var(--tp-gold); box-shadow: 0 3px 0 #a67c00; }
 .th-howto { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: min(1180px, 94vw); margin: 10px auto 0; padding: 0; list-style: none; }
-.th-howto li { display: grid; justify-items: center; gap: 4px; padding: 10px; border-radius: 18px; background: rgba(255, 255, 255, .92); border: 3px solid rgba(29, 36, 64, .12); text-align: center; }
+.th-howto li { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 12px; row-gap: 2px; padding: 8px 14px; border-radius: 18px; background: rgba(255, 255, 255, .92); border: 3px solid rgba(29, 36, 64, .12); text-align: left; }
 .th-howto b { font: 800 1.15rem/1.1 'Baloo 2', sans-serif; }
 .th-howto small { font: 700 .92rem/1.2 'Nunito', sans-serif; color: #4a5070; }
-.th-howto-pic { height: 64px; display: grid; place-items: center; font-size: 2.6rem; }
-.th-howto-pic img { height: 64px; width: auto; }
+.th-howto-pic { grid-row: span 2; width: 60px; height: 56px; display: grid; place-items: center; font-size: 2.4rem; }
+.th-howto-pic img { height: 54px; width: auto; }
 .th-howto-pic .tp-step-ico.pink i { width: 48px; height: 48px; }
 
 .th-count-mid { display: grid; justify-items: center; gap: 10px; }
 .th-count-arena { padding: 6px 18px; border-radius: 999px; background: rgba(12, 8, 34, .82); color: #fff; border: 3px solid var(--tp-gold);
   font: 800 1.5rem/1.1 'Baloo 2', sans-serif; text-align: center; }
 /* (the shared Reinos reds and blues: a touch deeper under white text from the back of a room) */
-.th-lobby .kd-king.red { background: #d63428; } .th-lobby .kd-king.gold { background: #2266cf; }
+.th-lobby .kd-king.red { background: #c42c22; } .th-lobby .kd-king.gold { background: #2266cf; }
 .th-lobby .kd-hint, .th-lobby .kd-set { color: var(--tp-ink); }
 .th-rounds small { font: 700 .9rem/1 'Nunito', sans-serif; opacity: .8; }
 .th-side-head img.hidden { display: none; }

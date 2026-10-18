@@ -322,6 +322,9 @@
         hot = true;
         lit = this.lockSet;
         if (!lit) { let s = null; for (const j of this.rd.jumps) if (j[0] <= t) s = j[1]; lit = s != null ? TA().setOf(this.rd.kind, s) : null; hot = false; }
+      } else if (this.rd && phase === 'open' && !this.doors && this.lockSet) {
+        hot = true;                    // my clock is past «0» but the doors haven't arrived yet (the tick): keep burning
+        lit = this.lockSet;
       }
       this.litNow = lit; this.hotNow = hot;
       if (lit && !(this.doors && phase !== 'lock')) this.drawWarn(g, lit, hot, nowPerf, still);
@@ -694,6 +697,11 @@
       g.font = `800 ${fs}px "Nunito", system-ui, sans-serif`;
       g.textAlign = 'center'; g.textBaseline = 'middle';
       const placed = [];
+      // the hub's number counts as placed: a name never covers the count (only my «TÚ» may)
+      const hubBox = (() => {
+        const L = this.L, Rh = TA().R_HUB * L.k, hh = HUB_H * L.k * DEPTH, nf = Rh * 1.25;
+        return [L.cx - nf * 0.5, L.cy - hh - nf * 0.62, L.cx + nf * 0.5, L.cy - hh + nf * 0.5];
+      })();
       const meD = this.kids[this.me];
       const order = list.slice().filter((d) => d.headY != null);
       if (!host && meD) order.sort((a, b) => (a === meD ? -1 : b === meD ? 1 : Math.hypot(a.x - meD.x, a.y - meD.y) - Math.hypot(b.x - meD.x, b.y - meD.y)));
@@ -706,7 +714,8 @@
         const w = g.measureText(text).width + (mine ? 18 : 12), h = fs + (mine ? 9 : 6);
         const x = d.headX, y = d.headY - h * 0.6 - (mine ? 4 : 2);
         const box = [x - w / 2, y - h / 2, x + w / 2, y + h / 2];
-        if (placed.some((b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) return;
+        const hits = (b) => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]);
+        if (placed.some(hits) || (!mine && hits(hubBox))) return;
         placed.push(box);
         if (!mine) others++;
         const team = COL[d.team === 'gold' ? 'gold' : 'red'];

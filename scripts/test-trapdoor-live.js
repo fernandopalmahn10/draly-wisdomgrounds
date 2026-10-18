@@ -60,7 +60,8 @@ function next(s, ev, ms, match) {
   const kids = [];
   function kidOn(s, name) {
     s.__name = name;
-    const kid = { s, name, q: null, qs: [], init: null, pos: {}, posMsgs: [], results: [], me: null, closes: [] };
+    const kid = { s, name, q: null, qs: [], init: null, pos: {}, posMsgs: [], results: [], me: null, closes: [], pings: [] };
+    s.on('td:ping', (m, cb) => { kid.pings.push(m); if (typeof cb === 'function') cb(1); });   // the room measures the lag
     s.on('question', (q) => { q.__at = Date.now(); kid.q = q; kid.qAt = Date.now(); kid.qs.push(q); });
     s.on('td:init', (d) => { kid.init = d; kid.k = d.me; (d.pos || []).forEach((r) => { kid.pos[r[0]] = r; }); });
     s.on('td:pos', (m) => { kid.posMsgs.push([Date.now(), m]); (m.d || []).forEach((r) => { kid.pos[r[0]] = r; }); });
@@ -331,6 +332,10 @@ function next(s, ev, ms, match) {
     const tu = await next(late.s, 'answer-result', R.Q_SERVER_MS + 3000);
     ok(!tu.correct && tu.td.why === 'timeup' && late.qs.includes(tq), 'a pit question nobody answers: the server closes it (time up) and another comes');
   } else console.log('  (Abril got away at «0»: the time-up check is skipped)');
+
+  // the room pings every phone every 3 s; from the second ping on it reports the lag it measured (the doors' grace)
+  const pg = kids[0].pings;
+  ok(pg.length >= 2 && pg.slice(1).every((p) => typeof p.lag === 'number' && p.lag >= 0 && p.lag < 250), `the room measures each phone's lag (${pg.length} pings, last ${pg.length ? pg[pg.length - 1].lag : '-'} ms)`);
 
   // ---------- «Terminar» → «¡FINAL!» → the ceremony ----------
   const fin = next(host2, 'fin:final', 3000);

@@ -28,8 +28,10 @@ const R = {
   Q_MIN_LEFT_MS: 3000,     // no new wings question with less than this before «0»
   RETURN_MIN_MS: 1800,     // a comeback rises at once only with at least this before «0» (else at the next round)
   RIGHT_PAUSE_MS: 1000,    // after a right answer the next question waits this long (the verdict stays readable)
-  GRACE_MS: 180,           // the doors open: a kid already dashing off the dropping slice gets this much more running…
-  GRACE_MAX: 18,           // …at most this far (world units): the phone runs ahead of the server by the network lag
+  GRACE_MS: 180,           // the doors open: a kid already dashing off the dropping slice gets this much more running
+  GRACE_MAX_MS: 400,       // …more on a slow connection (their lag + a tick, measured), never more than this
+                           //    (the phone runs ahead of the server by the network lag: what the kid saw is what counts)
+  PING_EVERY_MS: 3000,     // the room measures each phone's round trip this often (the median of the last 5)
   JUMP_FIRST_MS: 760,      // the roulette: a new place every ~0.76 s at first…
   JUMP_LAST_MS: 470,       // …down to ~0.47 s at the end of the count (×0.85 in the second half of the game)
 };
@@ -157,6 +159,12 @@ function lock(m, rand, ev) {
   m.phase = 'lock';
   ev.push({ type: 'lock', s, set: m.drop.set });
 }
+// How far ahead a kid's phone shows them (world units): their one-way lag (d.lagMs, measured by the room's pings)
+// + the server's tick, between GRACE_MS and GRACE_MAX_MS of running
+function graceOf(d) {
+  const ms = Math.max(R.GRACE_MS, Math.min(R.GRACE_MAX_MS, (d.lagMs || 0) + R.TICK_MS));
+  return (R.SPEED * ms) / 1000;
+}
 // the doors open: everyone whose feet are on a dropping slice falls, unless they have wings (used up: they hover)
 function openDoors(m, ev) {
   const set = (m.drop && m.drop.set) || [];
@@ -165,13 +173,12 @@ function openDoors(m, ev) {
   m.open = open;
   m.phase = 'open';
   const falls = [], saves = [];
-  const grace = Math.min(R.GRACE_MAX, (R.SPEED * R.GRACE_MS) / 1000);
   Object.values(m.kids).forEach((d) => {
     if (d.st !== 'up' || !open[A.sliceOf(d.x, d.y)]) return;
     // a kid mid-dash: their phone already shows them a step further (the lag); if that step is off the dropping
     // slices, it counts (what they saw is what happened); never more than GRACE_MAX
     if (!d.away && Math.hypot(d.tx - d.x, d.ty - d.y) > 0.05) {
-      const [gx, gy] = A.move(d.x, d.y, d.tx, d.ty, grace, null);
+      const [gx, gy] = A.move(d.x, d.y, d.tx, d.ty, graceOf(d), null);
       if (!open[A.sliceOf(gx, gy)]) { d.x = gx; d.y = gy; d.graced = (d.graced || 0) + 1; return; }
     }
     if (d.wings) { d.wings = false; d.hover = true; d.saved++; saves.push(d.k); return; }
@@ -274,7 +281,12 @@ function go(m, k, x, y) {
 function wantQ(m, k, now) {
   const d = m.kids[k];
   if (!d || d.away || m.paused || m.phase === 'final' || m.phase === 'done') return null;
-  if (d.st === 'down') return m.phase === 'intro' ? null : 'back';
+  if (d.st === 'down') {
+    if (m.phase === 'intro') return null;
+    // the Final Round past the last moment a comeback can rise: no question that could only promise a next round
+    if (m.final && !(BEFORE_LOCK[m.phase] && msToLock(m, now) >= R.RETURN_MIN_MS)) return null;
+    return 'back';
+  }
   if (d.st === 'wait') return d.wingsNext || m.final ? null : 'pre';     // the Final Round has no next round to rise into
   if (d.st === 'up' && !d.wings && BEFORE_LOCK[m.phase] && msToLock(m, now) >= R.Q_MIN_LEFT_MS) return 'wings';
   return null;
@@ -392,6 +404,6 @@ function finish(rows, totalsIn) {
 
 module.exports = {
   R, A, ROUND_MS, other, clampRounds, timeCapMs, newGame, kidOf, addKid, bounds, msToLock, hubNumber, planJumps,
-  startRound, freeSpot, lock, openDoors, closeDoors, tally, advance, stepKids, go, wantQ, tooFast, answer, pause, resume, addRounds,
+  startRound, freeSpot, lock, graceOf, openDoors, closeDoors, tally, advance, stepKids, go, wantQ, tooFast, answer, pause, resume, addRounds,
   skip, endsAt, STARS, finish,
 };

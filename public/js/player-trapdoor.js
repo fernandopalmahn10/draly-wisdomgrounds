@@ -37,8 +37,11 @@
   let myK = null, me = null;             // me: { x, y, tx, ty }
   let myState = { st: 'up', wings: false, wingsNext: false, hover: false };
   let speed = 92;
+  let lagMs = 60;                         // my one-way lag as the room measured it (td:ping)
   let rd = null;                          // { r, rounds, kind, final }
   const lastRound = () => !!(rd && rd.final);   // the Final Round: there is no «próxima ronda» to promise
+  // …and from «0» on, no comeback either (the room deals no more pit questions then)
+  const noComeback = () => { if (!lastRound() || !scene || !scene.rd) return false; const ph = TA().phaseAt(scene.clock(performance.now()), true); return !(ph === 'title' || ph === 'roulette' || ph === 'count'); };
   let score = { red: 0, gold: 0 }, stand = { red: 0, gold: 0 };
   let paused = false, finalOn = false, captains = null;
   let skew = null;
@@ -121,7 +124,7 @@
         scene.round({ r: d.r, rounds: d.rounds, kind: d.kind, final: d.final, jumps: d.jumps }, d.ago, performance.now());
         if (d.set) scene.lock(d.set);
         if (d.open && d.set) scene.open(d.set, [], [], performance.now() - 400);
-      }
+      } else { scene.rd = null; scene.lockSet = null; scene.doors = null; }    // «¡YA!» of a new match: no round yet
       scene.paused = false;
       if (paused) scene.pause(true, performance.now());
       finalOn = false;
@@ -146,16 +149,21 @@
       const d = scene.kids[myK];
       if (d && !me && d.sx != null) me = { x: d.sx, y: d.sy, tx: d.tx, ty: d.ty };
       if (d && me && (m.d || []).some((row) => row[0] === myK)) {
-        // the server's position is ~a round trip behind mine: a big gap (a refused tap, a rejoin) eases me back at once,
+        // the server's position trails mine by my lag (+ its tick): compare with where it will be by then, so a fast
+        // run on a slow connection is not pulled back; a big gap (a refused tap, a rejoin) eases me back at once,
         // a small one only while I stand still
-        const err = Math.hypot(d.sx - me.x, d.sy - me.y);
+        const ahead = (d.f & 14) ? [d.sx, d.sy] : TA().move(d.sx, d.sy, d.tx, d.ty, (speed * (lagMs + 60)) / 1000, (d.f & 16) ? null : scene.openMap());
+        const eNow = Math.hypot(d.sx - me.x, d.sy - me.y), eAhead = Math.hypot(ahead[0] - me.x, ahead[1] - me.y);
+        const err = Math.min(eNow, eAhead), toward = eAhead <= eNow ? ahead : [d.sx, d.sy];
         const still = Math.hypot(me.tx - me.x, me.ty - me.y) < 0.3;
-        if (err > 18) { me.x += (d.sx - me.x) * 0.6; me.y += (d.sy - me.y) * 0.6; }
+        if (err > 18) { me.x += (toward[0] - me.x) * 0.5; me.y += (toward[1] - me.y) * 0.5; }
         else if (err > 2 && still && Math.hypot(me.tx - d.tx, me.ty - d.ty) < 1) { me.x += (d.sx - me.x) * 0.3; me.y += (d.sy - me.y) * 0.3; }
         // my last tap didn't reach the server (Wi-Fi blip, rate limit): send it again
         if (!paused && !finalOn && myState.st === 'up' && Math.hypot(d.tx - me.tx, d.ty - me.ty) > 1.5 && now - lastGo > 450) sendGo(me.tx, me.ty, true);
       }
     });
+    // the room measures my round trip (its doors' grace follows my lag); it tells me the lag it measured
+    s.on('td:ping', (m, ack) => { if (m && m.lag >= 0) lagMs = Math.min(400, m.lag); if (typeof ack === 'function') ack(1); });
     s.on('td:round', (m) => {
       if (!scene || !m || m.id !== matchId) return;
       const now = performance.now();
@@ -191,7 +199,7 @@
       if ((m.falls || []).includes(myK)) {
         const F = scene.kids[myK] && scene.kids[myK].fall;          // the server's judgement wins over my prediction
         if (F) me = { x: F.x, y: F.y, tx: F.x, ty: F.y };
-        moment({ kind: 'fall', title: '¡Caíste!', sub: 'Responde bien y vuelves arriba', mine: true, big: true });
+        moment({ kind: 'fall', title: '¡Caíste!', sub: noComeback() ? 'Era la ronda final: ¡anima a tu reino!' : 'Responde bien y vuelves arriba', mine: true, big: true });
         buzz([200]);
       } else if ((m.saves || []).includes(myK)) {
         moment({ kind: 'saved', title: '¡Tus alas te salvaron!', sub: lastRound() ? '¡Sigues en pie en la ronda final!' : 'Las alas se gastaron: gana otras en la próxima', mine: true, big: true });
@@ -428,13 +436,16 @@
     if (!box) return;
     const st = myState.st;
     let ico = '🏃', txt = '¡Toca el suelo para correr!', cls = '';
-    if (st === 'down') { ico = '🕳️'; txt = '¡Caíste! Responde bien y vuelves arriba'; cls = 'pit'; }
+    if (st === 'down') { ico = '🕳️'; txt = noComeback() ? 'Caíste en la ronda final: ¡anima a tu reino!' : '¡Caíste! Responde bien y vuelves arriba'; cls = 'pit'; }
     else if (st === 'wait') { ico = '⬆️'; txt = lastRound() ? 'Es la ronda final: ¡mira cómo termina!' : myState.wingsNext ? '¡Subes con alas en la próxima ronda!' : '¡Subes en la próxima ronda!'; cls = 'wait'; }
     else if (myState.hover) { ico = 'wings'; txt = '¡Tus alas te sostienen!'; cls = 'wings'; }
     else if (myState.wings) { ico = 'wings'; txt = '¡Tienes alas! Ahora ¡esquiva el rosa!'; cls = 'wings'; }
     else if (rd && rd.r > 0) {
       const ph = scene && scene.rd ? TA().phaseAt(scene.clock(performance.now()), scene.rd.final) : '';
-      if (ph === 'lock') { ico = '⚠️'; txt = '¡CORRE lejos del rosa!'; cls = 'hot'; }
+      // «0»: only a kid whose own slice burns is told to run; the others are told to stay put (the pill says the same)
+      const onPink = !!(me && scene && scene.lockSet && scene.lockSet.includes(TA().sliceOf(me.x, me.y)));
+      if (ph === 'lock' && onPink) { ico = '⚠️'; txt = '¡CORRE lejos del rosa!'; cls = 'hot'; }
+      else if (ph === 'lock') { ico = '✋'; txt = '¡Quieto ahí! Tu suelo no se abre'; cls = 'safe'; }
       else if (ph === 'open' || ph === 'close' || ph === 'tally') { ico = '⭐'; txt = '¡Sigues en pie!'; cls = 'ok'; }
       else { ico = '❓'; txt = 'Sin alas: ¡responde o esquiva!'; cls = 'nowings'; }
     }
@@ -453,10 +464,11 @@
     if (!box) return;
     const st = myState.st;
     let title = '¡Prepárate!', sub = 'Toca el suelo para correr', pose = 'idle';
-    if (st === 'down') { title = '¡Caíste al foso!'; sub = 'Responde bien y vuelves arriba'; pose = 'no'; }
+    if (st === 'down') { title = '¡Caíste al foso!'; sub = noComeback() ? 'Era la ronda final: ¡anima a tu reino!' : 'Responde bien y vuelves arriba'; pose = 'no'; }
     else if (st === 'wait') { title = lastRound() ? '¡Ronda final!' : '¡Listo!'; sub = lastRound() ? 'Mira cómo termina: ¡anima a tu reino!' : myState.wingsNext ? 'Subes con alas en la próxima ronda' : 'Subes en la próxima ronda'; pose = 'ok'; }
     else if (myState.hover) { title = '¡Tus alas te sostienen!'; sub = 'Cuando el suelo se cierre, aterrizas'; pose = 'ok'; }
     else if (cls === 'hot') { title = '¡CORRE!'; sub = '¡Sal del suelo rosa!'; pose = 'no'; }
+    else if (cls === 'safe') { title = '¡Quieto ahí!'; sub = 'Tu suelo no se abre: ¡no pises el rosa!'; pose = 'ok'; }
     else if (cls === 'ok') { title = '¡Sigues en pie!'; sub = 'Cada ronda en pie suma para tu reino'; pose = 'ok'; }
     else if (myState.wings) { title = '¡Tienes alas!'; sub = 'Si tu suelo se abre, vuelas. ¡Igual esquiva el rosa!'; pose = 'ok'; }
     else if (rd && rd.r > 0) { title = '¡Esquiva el rosa!'; sub = 'En el 0, el suelo rosa se abre'; }
@@ -664,8 +676,9 @@
     hudKey = key;
     $('tp-r').textContent = score.red || 0;
     $('tp-g').textContent = score.gold || 0;
-    $('tp-r-up').textContent = `${counts.red} en pie`;
-    $('tp-g-up').textContent = `${counts.gold} en pie`;
+    // «11» over «en pie» (stacked: two-digit counts leave the middle room for the round and the lead)
+    $('tp-r-up').replaceChildren(el('b', null, String(counts.red)), el('span', null, 'en pie'));
+    $('tp-g-up').replaceChildren(el('b', null, String(counts.gold)), el('span', null, 'en pie'));
     document.querySelector('.tp-side.red').classList.toggle('me', my === 'red');
     document.querySelector('.tp-side.gold').classList.toggle('me', my === 'gold');
     $('tp-round').textContent = r.r > 0 ? (r.final ? '¡Ronda final!' : `Ronda ${r.r} de ${r.rounds}`) : `${r.rounds} rondas`;
@@ -673,11 +686,12 @@
     if (dots.dataset.k !== r.r + '/' + r.rounds) {
       dots.dataset.k = r.r + '/' + r.rounds;
       dots.innerHTML = '';
+      dots.classList.toggle('many', r.rounds > 7);            // 10 rounds (or 15 with «+2 rondas»): smaller dots
       for (let i = 1; i <= r.rounds; i++) dots.appendChild(el('i', i < r.r ? 'done' : i === r.r ? 'now' : ''));
     }
     const a = score[my] || 0, b = score[other(my)] || 0;
     const st = $('tp-lead');
-    st.textContent = a > b ? `¡Ganamos por ${a - b}!` : a < b ? `¡Nos faltan ${b - a}!` : '¡Empate!';
+    st.textContent = a > b ? `¡Ganamos por ${a - b}!` : a < b ? `¡Nos falta${b - a === 1 ? '' : 'n'} ${b - a}!` : '¡Empate!';
     st.className = 'tp-lead ' + (a > b ? 'ahead' : a < b ? 'behind' : '');
   }
   function bump(node) { if (!node || reduced()) return; node.classList.remove('bump'); void node.offsetWidth; node.classList.add('bump'); }

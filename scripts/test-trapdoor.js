@@ -214,7 +214,22 @@ function at(m, k, slice, r) { const d = m.kids[k]; const [x, y] = A.pointAt(A.sl
   const f = ev[0].falls.slice().sort().join();
   ok(f === '2,3,4', `dashing a few units from the seam: safe; still, too far or the wrong way: falls (${f})`);
   ok(A.sliceOf(m.kids[1].x, m.kids[1].y) === 4 && m.kids[1].st === 'up', 'the graced kid stands on the safe slice');
-  ok(Math.hypot(m.kids[1].x - A.pointAt(seam - 0.12, 60)[0], m.kids[1].y - A.pointAt(seam - 0.12, 60)[1]) <= R.GRACE_MAX + 1e-6, `the grace is never more than ${R.GRACE_MAX} units`);
+  const g0 = (R.SPEED * R.GRACE_MS) / 1000;
+  ok(Math.hypot(m.kids[1].x - A.pointAt(seam - 0.12, 60)[0], m.kids[1].y - A.pointAt(seam - 0.12, 60)[1]) <= g0 + 1e-6, `the grace on a quick connection: ${g0.toFixed(1)} units`);
+  // a slow connection (the room's pings): the phone shows the kid further ahead, the grace follows (capped)
+  ok(near(T.graceOf({ lagMs: 0 }), g0, 1e-9) && near(T.graceOf({ lagMs: 250 }), (R.SPEED * 350) / 1000, 1e-9) && near(T.graceOf({ lagMs: 5000 }), (R.SPEED * R.GRACE_MAX_MS) / 1000, 1e-9),
+    'the grace = the measured one-way lag + a tick, between 180 and 400 ms of running');
+  const m2 = game(7).m;
+  for (let k = 1; k <= 2; k++) T.addKid(m2, k, 'red', now);
+  T.startRound(m2, 1, now, rand, []);
+  m2.drop = { s: 2, set: [2, 3] };
+  const d1 = m2.kids[1], d2 = m2.kids[2];                  // both ~27 units from the seam, running off it
+  [d1.x, d1.y] = A.pointAt(seam - 0.45, 60); [d1.tx, d1.ty] = A.pointAt(seam + 0.6, 60);
+  [d2.x, d2.y] = A.pointAt(seam - 0.45, 60); [d2.tx, d2.ty] = A.pointAt(seam + 0.6, 60);
+  d1.lagMs = 250;                                            // a slow phone: it already showed her past the seam
+  const ev2 = [];
+  T.openDoors(m2, ev2);
+  ok(!ev2[0].falls.includes(1) && ev2[0].falls.includes(2), 'the same dash: safe on a slow phone (it showed her past the seam), a fall on a quick one');
 }
 // questions: who gets what, when
 {
@@ -285,6 +300,10 @@ function at(m, k, slice, r) { const d = m.kids[k]; const [x, y] = A.pointAt(A.sl
   m.final = true;
   m.kids[2].st = 'wait'; m.kids[2].wingsNext = false;
   ok(T.wantQ(m, 2, now + 3000) === null, 'the Final Round: no «rise with wings» question (there is no next round)');
+  m.kids[2].st = 'down';
+  ok(T.wantQ(m, 2, now + 2000) === 'back', 'the Final Round, early: a fallen kid can still come back');
+  m.phase = 'open';
+  ok(T.wantQ(m, 2, now + b.open + 100) === null, 'the Final Round after «0»: no comeback question (nothing to come back to)');
 }
 // movement on the server: a tap is an intent, runners never teleport
 {

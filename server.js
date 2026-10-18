@@ -6912,6 +6912,20 @@ function tdTickInner(pin, id) {
       }
     }
     tdMe(pid, p, d, false);
+    // the phone's round trip, every 3 s (a tiny ack): the doors' grace follows each kid's own lag (Trap.graceOf)
+    if (now - (p.tdPingAt || 0) >= Trap.R.PING_EVERY_MS) {
+      p.tdPingAt = now;
+      const sock = io.sockets.sockets.get(pid);
+      if (sock) {
+        const t0 = Date.now();
+        sock.timeout(2500).emit('td:ping', { lag: d.lagMs || 0 }, (err) => {     // (timeout: an unanswered ping is dropped)
+          if (err || games[pin] !== g || !g.td || g.td.kids[d.k] !== d) return;
+          p.tdRtts = (p.tdRtts || []).concat(Date.now() - t0).slice(-5);
+          const s = p.tdRtts.slice().sort((a, b) => a - b);
+          d.lagMs = Math.round(s[s.length >> 1] / 2);
+        });
+      }
+    }
   });
   if (m.tickN % 2 === 0) {
     const arr = tdPosArr(m);
