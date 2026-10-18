@@ -16,10 +16,10 @@
 //   door    ⏳ TRANSITIONAL: «¿Tu profe te dio un código de 4 números? Entra aquí» = the old class code + student code card
 //           (homework.html's .hw-entry-card + homework.js tryEnter), for families without their key yet; he removes it once
 //           every family has its key
-// «¡Vamos!» goes to today's portal home (homework.js DralyHw.enterWith; part 3 replaces the home). Every state has a way
+// «¡Vamos!» goes to the kid's home, Mi Dralingo (homework.js DralyHw.enterWith → js/mi-dralingo.js). Every state has a way
 // back; the English toggle translates every line (hw-i18n.js); never a real code as a placeholder (dots and words).
 // Also here: «¿Salir de tu cuenta en este teléfono?» (DralyEntrada.confirmOut, homework.js «Salir») and «Abrir otro nivel»
-// in Ajustes (POST /api/entrada/nivel). No hanzi, no em dash.
+// in Mi perfil (POST /api/entrada/nivel; «Mi Dralingo» part 3 turned Ajustes into Mi perfil). No hanzi, no em dash.
 // =========================================================================
 (function () {
   'use strict';
@@ -287,6 +287,7 @@
       busy(btn, false);
       if (d && d.ok) { enter(d); return; }
       if (status === 401) { S.kid = null; S.user = true; go('quien'); return; }
+      if (S.step === 'load') go('hola');   // (the way back from a trip that could not go straight in: hello again, with the line)
       showErr((d && d.error) || NET);
     });
   }
@@ -456,6 +457,10 @@
   });
 
   // ── start: who is this phone? ─────────────────────────────────────
+  // 🏠 2026-10-18 («Mi Dralingo» part 3): back on /homework in the SAME tab after a trip from the home (La Base, El
+  // Entrenamiento, a homework's audio, Papás' links…): straight into the home, no second «¡Hola de nuevo!» (the home
+  // sets sessionStorage draly_home_in; «Salir» and the avatar picker's «Volver» clear it). A new visit still says hello.
+  const backHome = () => { try { return sessionStorage.getItem('draly_home_in') === '1' && ls.get('dralyHwOut') !== '1'; } catch (_) { return false; } };
   function start() {
     scr.classList.add('en-on');
     root.hidden = false;
@@ -463,13 +468,13 @@
     go('load');
     getJ('/api/entrada/hola').then(({ d }) => {
       S.hola = d && d.ok ? d : { kid: null, auto: null, parked: null, levels: [] };
-      if (S.hola.kid) { S.kid = S.hola.kid; go('hola'); return; }
+      if (S.hola.kid) { S.kid = S.hola.kid; if (backHome()) { vamos(null); return; } go('hola'); return; }
       if (S.hola.relock) { S.kid = S.hola.relock; S.relock = true; go('llave'); return; }   // (F2) the level's key changed
       // today's families: the class code + student code this phone saved (never after «Salir»: a brother or sister)
       const ac = ls.get('dralyHwAccessCode'), sc = ls.get('dralyStudentCode');
       if (ls.get('dralyHwOut') !== '1' && ac && sc) {
         post('/api/entrada/hola', { accessCode: ac, studentCode: sc }).then(({ d: o }) => {
-          if (o && o.ok && o.kid) { S.kid = o.kid; S.oldCodes = { ac, sc }; go('hola'); } else go('quien');
+          if (o && o.ok && o.kid) { S.kid = o.kid; S.oldCodes = { ac, sc }; if (backHome()) { vamos(null); return; } go('hola'); } else go('quien');
         });
         return;
       }

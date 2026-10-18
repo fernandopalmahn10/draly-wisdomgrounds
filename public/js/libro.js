@@ -226,7 +226,11 @@
     }).join('') + '</ol></nav>';
   }
   function headHtml(d, sub) {
-    const back = d.who === 'teacher-kid' ? '' : '<a class="au-back" data-nav href="/audios/' + esc(d.slug) + '#paso-3">' + I.back + 'La Ruta de ' + esc(d.name) + '</a>';
+    // (2026-10-18, «Mi Dralingo» part 3: a book opened from the kid's home, its El Simulacro Dorado, goes back there)
+    let fromHome = false;
+    try { fromHome = sessionStorage.getItem('draly_home_from') === location.pathname; } catch (_) { fromHome = false; }
+    const back = d.who === 'teacher-kid' ? '' : fromHome ? '<a class="au-back" href="/homework#dorado">' + I.back + 'Mi Dralingo</a>'
+      : '<a class="au-back" data-nav href="/audios/' + esc(d.slug) + '#paso-3">' + I.back + 'La Ruta de ' + esc(d.name) + '</a>';
     return back + '<section class="gd-head" style="' + lookStyle(d.slug) + '">' +
       '<img class="gd-head-dragon" src="' + DRAGON.wise + '" alt="" width="432" height="480" decoding="async" fetchpriority="high">' +
       '<h1 class="gd-head-title" tabindex="-1">El libro dorado</h1>' +

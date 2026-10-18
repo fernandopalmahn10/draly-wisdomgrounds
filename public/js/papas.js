@@ -430,5 +430,7 @@
     const p = r ? window.DralyPapasPlan.plan(r) : null;
     return { plan: p, focus: focusOf(p, r, d), ruta: p && p.of ? rutaWords(p) : null, tips: tipsOf(p, r, d), teacher: teacherText(r, d) };
   }
-  window.DralyPapas = { render, close, open: openSheet, texts };
+  // (2026-10-18, «Mi Dralingo» part 3: the kid's home draws the same scene per experience and counts this phone's marks
+  // not saved yet with the same rule: one place for both, so the home and Papás never disagree)
+  window.DralyPapas = { render, close, open: openSheet, texts, sceneOf, withPhone };
 })();

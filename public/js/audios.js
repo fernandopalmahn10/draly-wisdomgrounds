@@ -425,7 +425,11 @@
     hw = h;
     document.title = h.title + ' · Audios · Dralingo';
     const folder = folders().find((f) => f.id === h.level);
-    let html = '<a class="au-back" data-nav href="/audios/' + esc(folder ? folder.id : '') + '">' + ICON.back + esc(folder ? folder.name : 'Todos los mundos') + '</a>' +
+    // (2026-10-18, «Mi Dralingo» part 3: a homework opened from its experience on the kid's home goes back there)
+    let fromHome = new URLSearchParams(location.search).get('from') === 'homework';
+    try { fromHome = fromHome || sessionStorage.getItem('draly_home_from') === location.pathname; } catch (_) { /* a link is enough */ }
+    let html = (fromHome ? '<a class="au-back" href="/homework#exp-' + esc(h.exp) + '">' + ICON.back + 'Mi Dralingo</a>'
+      : '<a class="au-back" data-nav href="/audios/' + esc(folder ? folder.id : '') + '">' + ICON.back + esc(folder ? folder.name : 'Todos los mundos') + '</a>') +
       '<section class="au-hero">' + (h.cover ? '<img src="' + esc(h.cover) + '" alt="">' : '') +
       '<h1>' + esc(h.title) + '</h1>' +
       '<p class="au-hero-meta">' + esc(h.levelName) + ' · Experiencia ' + h.exp + ' · Ronda ' + h.round + '</p>' +

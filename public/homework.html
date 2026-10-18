@@ -82,6 +82,8 @@
   <link rel="stylesheet" href="/css/entrada.css?v=20261018sec1">
   <!-- 👨‍👩‍👧 2026-10-18: Papás («Mi Dralingo» part 2, js/papas.js) -->
   <link rel="stylesheet" href="/css/papas.css?v=20261018p1">
+  <!-- 🏠 2026-10-18: Mi Dralingo, the kid's home («Mi Dralingo» part 3, js/mi-dralingo.js) + Mi perfil -->
+  <link rel="stylesheet" href="/css/mi-dralingo.css?v=20261018h1">
 </head>
 <body class="hw-bg hw-pastel hw-portal">
 
@@ -141,141 +143,30 @@
     </div>
   </div>
 
-  <!-- SCREEN: ASSIGNMENT LIST — student's home -->
-  <div id="screen-list" class="container hw-list hidden">
-    <!-- 2026-10-13 remake (docs/specs/portal-remake.md): the home is a game menu. 1) the hero stage (Dubai, the kid,
-         the level HUD, Dralingo + a friend who peeks in: js/portal.js), 2) «Siguiente» = the next tarea in one tap,
-         3) the dock (Desafíos · Mensajes · Mis oraciones · Mis exámenes), 4) quiet pills (Papás · Ajustes · app · Salir).
-         Every id the JS binds is kept. The pinned 🔑 code + level stack sits over the hero's empty sky corner. -->
-    <section class="pt-hero" aria-label="Tu perfil">
-      <img class="pt-hero-skyline" src="/assets/dubai/skyline-wide.webp" alt="" aria-hidden="true" draggable="false">
-      <div class="pt-hero-id">
-        <button type="button" class="hw-list-avatar-wrap pt-hero-avatar" id="hw-list-avatar" aria-label="Mis ajustes"></button>
-        <div class="pt-hero-hello">
-          <h1 class="hw-list-title">📚 Mis Tareas</h1>
-          <p class="hw-list-sub">Hola <strong id="hw-list-name">…</strong></p>
-        </div>
-      </div>
-      <div class="pt-hero-cast" id="pt-hero-cast" aria-hidden="true"></div>
-      <!-- ⚔️ PROGRESSION HUD — level, XP, DralySwords, streak. Tap → Diario. -->
-      <button class="hw-hud" id="hw-hud" type="button" title="Abre tu Diario">
-        <span class="hw-hud-tier" id="hw-hud-tier">🥉</span>
-        <span class="hw-hud-xp">
-          <span class="hw-hud-lvl" id="hw-hud-lvl">Nivel 1</span>
-          <span class="hw-hud-bar"><span class="hw-hud-fill" id="hw-hud-fill"></span></span>
-        </span>
-        <span class="hw-hud-stat">⚔️ <strong id="hw-hud-swords">0</strong></span>
-        <span class="hw-hud-stat">🔥 <strong id="hw-hud-streak">0</strong></span>
-      </button>
-    </section>
-    <!-- ▶ the next tarea in one tap (filled by renderNextUp() in homework.js; hidden when nothing is pending) -->
-    <button type="button" class="pt-next" id="pt-next" hidden>
-      <span class="pt-next-play" aria-hidden="true">▶</span>
-      <span class="pt-next-text"><span class="pt-next-kicker">Siguiente</span><b class="pt-next-title" id="pt-next-title"></b></span>
-    </button>
-    <!-- 🏆 «La Ruta Dorada de YCT 1» (2026-10-15, was «Empieza aquí»): the kid's module on /audios/<level> (La Base, El
-         Entrenamiento, El Simulacro Dorado). renderBaseEntry() in homework.js shows it when the server's level has a
-         base (core/levels.js `base`) and fills the kid's seal count. -->
-    <a class="pt-base" id="pt-base" href="/audios" hidden>
-      <span class="pt-base-book" id="pt-base-book" aria-hidden="true"><b id="pt-base-level"></b><i><svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 3.5h10v5.2a5 5 0 0 1-10 0z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M7 5.5H4.6a2.6 2.6 0 0 0 2.7 4.4M17 5.5h2.4a2.6 2.6 0 0 1-2.7 4.4M12 13.8v3.4"/><path fill="currentColor" d="M8 20.5h8v-.7a2.6 2.6 0 0 0-2.6-2.6h-2.8A2.6 2.6 0 0 0 8 19.8z"/></svg></i></span>
-      <span class="pt-base-text"><b class="pt-base-title" id="pt-base-title"></b><span class="pt-base-sub" id="pt-base-sub"></span></span>
-      <span class="pt-base-go" aria-hidden="true">›</span>
-    </a>
-    <nav class="pt-dock" aria-label="Menú">
-      <button class="pt-tile pt-tile-gold" id="hw-list-daily" type="button"><span class="pt-tile-ico" aria-hidden="true">⚔️</span><span class="pt-tile-label">Desafíos</span></button>
-      <button class="pt-tile hw-bell-btn" id="hw-list-inbox" type="button" title="Mensajes de mi maestra"><span class="pt-tile-ico" aria-hidden="true">🔔</span><span class="pt-tile-label">Mensajes</span><span class="hw-bell-badge" id="hw-bell-badge" style="display:none;">0</span></button>
-      <button class="pt-tile" id="hw-list-sentences" type="button"><span class="pt-tile-ico" aria-hidden="true">📜</span><span class="pt-tile-label">Mis oraciones</span></button>
-      <button class="pt-tile" id="hw-list-myexams" type="button"><span class="pt-tile-ico" aria-hidden="true">📝</span><span class="pt-tile-label">Mis exámenes</span></button>
-    </nav>
-    <div class="pt-util">
-      <button class="pt-pill" id="hw-list-parents" type="button">👨‍👩‍👧 Papás</button>
-      <button class="pt-pill" id="hw-list-settings" type="button">⚙️ Ajustes</button>
-      <button class="pt-pill pt-pill-gold" id="hw-list-install" type="button" data-pwa-install hidden>📲 Instalar app</button>
-      <button class="pt-pill" id="hw-list-logout" type="button">Salir</button>
-    </div>
-
-    <!-- 📁 FOLDER BREADCRUMB — appears once you open an experience folder.
-         Sticky (CSS position:fixed) so the Volver button is ALWAYS visible
-         on mobile — no more pinch-zooming to find it. -->
-    <div class="hw-folder-bar hidden" id="hw-folder-bar">
-      <button class="btn btn-jade btn-sm hw-volver-btn" id="hw-folder-back">← Volver</button>
-      <span class="hw-folder-crumb" id="hw-folder-crumb"></span>
-    </div>
-
-    <!-- 🗂️ THREE TABS — Pendientes (default) | Completadas | Tu Maestro/a.
-         They DO NOT mix: each tab is its own filtered view of the kid's work.
-         Hidden inside a folder (the folder bar replaces the tab strip). -->
-    <div class="hw-tabs" id="hw-tabs" role="tablist">
-      <button class="hw-tab is-active" role="tab" data-tab="pending" id="hw-tab-pending" type="button">
-        <span class="hw-tab-icon">⏳</span>
-        <span class="hw-tab-label">Pendientes</span>
-        <span class="hw-tab-count" id="hw-tab-count-pending">0</span>
-      </button>
-      <button class="hw-tab" role="tab" data-tab="done" id="hw-tab-done" type="button">
-        <span class="hw-tab-icon">✅</span>
-        <span class="hw-tab-label">Completadas</span>
-        <span class="hw-tab-count" id="hw-tab-count-done">0</span>
-      </button>
-      <button class="hw-tab" role="tab" data-tab="custom" id="hw-tab-custom" type="button">
-        <span class="hw-tab-icon">🎯</span>
-        <span class="hw-tab-label">Tu Maestro/a</span>
-        <span class="hw-tab-count" id="hw-tab-count-custom">0</span>
-      </button>
-    </div>
-
-    <!-- 🎯 CUSTOM tab content — flat list of teacher-sent tareas. Only
-         visible when the "Tu Maestro/a" tab is active. -->
-    <div class="hw-list-grid hw-list-custom hidden" id="hw-list-custom-all"></div>
-
-    <div class="hw-list-section-title hidden" id="hw-sec-tareas">📚 Tareas para armar oraciones</div>
-    <div class="hw-list-grid" id="hw-list-grid">
-      <!-- folder cards (root) OR assignment cards (inside a folder) -->
-    </div>
-
-    <!-- READING TESTS — only shown inside an experience folder. -->
-    <div class="hw-list-section-title hidden" id="hw-sec-lecturas">📖 Exámenes de lectura</div>
-    <div class="hw-list-grid hidden" id="hw-list-readings">
-      <div class="hw-empty">Cargando…</div>
-    </div>
-
-    <!-- 📝 MIS EXÁMENES — the kid's HSK simulation history with the
-         ability to expand any attempt and see exactly what they got
-         wrong. Fernando 2026-06-04: "What if they want to see what
-         they got wrong? Just exactly as if we did in the homework." -->
-    <div class="hw-myexams-overlay hidden" id="hw-myexams-overlay">
-      <div class="hw-myexams-card">
-        <div class="hw-myexams-header">
-          <span class="hw-myexams-title">📝 Mis exámenes</span>
-          <button class="hw-myexams-close" id="hw-myexams-close" type="button" aria-label="Cerrar">✕</button>
-        </div>
-        <p class="hw-myexams-sub">Todos los exámenes que hiciste. Toca uno para ver qué te equivocaste.</p>
-        <div class="hw-myexams-list" id="hw-myexams-list"></div>
-      </div>
-    </div>
-
-    <!-- 📜 MIS ORACIONES — full-screen sentence library 2026-06-04 v2.
-         Fernando: "Mis oraciones is not redesigned. It's not more clean.
-         It's not redesigned and split into categories like Saved by Me
-         and Teachers Sent." Now full-screen + tabs (✍️ Mías / 📤 De la
-         maestra), with the existing month-grouping preserved inside.
-         The teacher tab also gets a category filter strip. -->
-    <div class="hw-sentences-overlay hidden" id="hw-sentences-overlay">
-      <button class="hw-sent-corner-close" id="hw-sentences-corner-close" type="button" aria-label="Cerrar">✕</button>
-      <div class="hw-sentences-sheet">
-        <header class="hw-sent-hero">
-          <button class="hw-sent-back" id="hw-sentences-close" type="button" aria-label="Volver">← Volver</button>
-          <div class="hw-sent-hero-text">
-            <h2 class="hw-sent-title">📜 Mis oraciones</h2>
-            <p class="hw-sent-sub" id="hw-sentences-sub">Tu colección de Chino Mandarín · 🔊 Escucha · ✏️ Edita · 🗑 Borra · 🔍 Toca una palabra para explorarla.</p>
-          </div>
-        </header>
-        <div class="hw-sent-tabs" role="tablist">
-          <button class="hw-sent-tab is-active" data-tab="mine" type="button">✍️ Mías <span class="hw-sent-tab-n" id="hw-sent-tab-n-mine">0</span></button>
-          <button class="hw-sent-tab" data-tab="teacher" type="button">📤 De la maestra <span class="hw-sent-tab-n" id="hw-sent-tab-n-teacher">0</span></button>
+  <!-- SCREEN: MI DRALINGO — the kid's home («Mi Dralingo» part 3, his approved design 2026-10-18 «ALL IS GOOD, YOU HAVE MY
+       OKAY»: .claude/handoff/kidhome-design/Main, Phone, Experiencia, Mensajes, Oraciones, Desafio). Drawn by js/mi-dralingo.js
+       + css/mi-dralingo.css into #md-app: the band (avatar, «¡Hola!», N días seguidos, Papás, Mi perfil) · «Hoy» (one
+       instruction from js/papas-plan.js today(), the same decision as Papás) · La Ruta Dorada as a path of the level's
+       experiences, ending at El Simulacro Dorado · each experience = 1 Palabras → 2 Práctica (+ «De tu profe») → 3 Tu tarea
+       · Mensajes · Mis oraciones · Desafío del día («Muy pronto»). A laptop shows the chosen one beside the path; a phone
+       opens it as its own page, with tabs at the bottom. The parts below are moved into it by the home (their ids are
+       homework.js's). The old home (hero + HUD, ▶ Siguiente, the two «Hacer mis tareas» doors, the Ruta card, the dock,
+       the pills, the tabs and folders, the 🔑 pill) is gone: every one of its doors lives here now (scripts/test-home.js). -->
+  <div id="screen-list" class="md hidden">
+    <div class="md-app" id="md-app" aria-live="off"></div>
+    <!-- the parts js/mi-dralingo.js moves into its views (homework.js fills them, as before) -->
+    <div class="md-parts" hidden>
+      <!-- 📜 Mis oraciones: the kid's saved sentences + the teacher's (homework.js renderMySentences) -->
+      <div class="md-sent" id="md-sent">
+        <div class="hw-sent-tabs md-sent-tabs" role="tablist" aria-label="Oraciones">
+          <button class="hw-sent-tab is-active" data-tab="mine" type="button" role="tab">Mías <span class="hw-sent-tab-n" id="hw-sent-tab-n-mine">0</span></button>
+          <button class="hw-sent-tab" data-tab="teacher" type="button" role="tab">De tu profe <span class="hw-sent-tab-n" id="hw-sent-tab-n-teacher">0</span></button>
         </div>
         <div class="hw-sent-catbar" id="hw-sent-catbar"></div>
         <div class="hw-sentences-list" id="hw-sentences-list"></div>
       </div>
+      <!-- 📝 Mis exámenes: the kid's official-test results, each with its mistakes (homework.js renderMyExams) -->
+      <div class="hw-myexams-list md-exams" id="hw-myexams-list"></div>
     </div>
 
     <!-- 🔍 MODO CURIOSO card — the same big animated word card shown across
@@ -285,6 +176,9 @@
       <div class="wu-pokedex-card" id="wu-pokedex-card"></div>
     </div>
   </div>
+  <!-- one sound at a time for the homework audios played on the home (js/ruta.js, the same player as «Tus tareas») -->
+  <audio id="au-player" preload="none"></audio>
+  <p class="md-sr" id="au-say" aria-live="polite"></p>
 
   <!-- SCREEN: DIARIO — daily challenge, XP/tiers/DralySwords, mini-game -->
   <div id="screen-daily" class="container hw-daily hidden">
@@ -358,62 +252,88 @@
     </div>
   </div>
 
-  <!-- SCREEN: SETTINGS — rename, change avatar, reset score, see code -->
-  <div id="screen-settings" class="container hw-settings hidden">
-    <div class="hw-settings-card">
-      <div class="hw-settings-header">
-        <button class="btn btn-ghost btn-sm" id="hw-settings-back">← Volver</button>
-        <h1 class="hw-settings-title">⚙️ Mis ajustes</h1>
-      </div>
+  <!-- SCREEN: MI PERFIL — «Mi Dralingo» part 3 (his approved design «Perfil», 2026-10-18); it replaces «Ajustes». The kid's
+       code lives HERE only (with «Copiar»; never on Papás, never on the home). The ids are the old Ajustes' (homework.js:
+       name, avatar, code, «Borrar puntajes»; js/entrada.js: «Abrir otro nivel»), so every action works as before. Drawn
+       in the design's look by css/mi-dralingo.css; «Volver» = the home (#), the English switch = hw-i18n.js, «Instalar la
+       app» = js/pwa.js, «Salir» = js/entrada.js's «¿Salir de tu cuenta en este teléfono?». -->
+  <div id="screen-settings" class="md-pf hidden">
+    <header class="md-pf-band">
+      <a class="md-back md-back-light" href="#" data-md-home>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        <span>Volver</span>
+      </a>
+      <h1 class="md-pf-title">Mi perfil</h1>
+    </header>
+    <div class="md-pf-wrap">
+      <section class="md-pf-card" aria-label="Mi código de alumno">
+        <div class="md-pf-av" id="hw-settings-avatar"></div>
+        <div class="md-pf-code">
+          <span class="md-pf-k">Mi código de alumno</span>
+          <code class="md-pf-codev" id="hw-settings-code" translate="no">····</code>
+          <button class="md-pf-copy" id="hw-settings-code-copy" type="button">Copiar mi código</button>
+        </div>
+      </section>
+      <p class="md-pf-note">Anótalo en tu cuaderno: con tu código y la clave de tu nivel entras desde cualquier teléfono.</p>
 
-      <div class="hw-settings-profile">
-        <div class="hw-settings-avatar" id="hw-settings-avatar"></div>
-        <div class="hw-settings-profile-info">
-          <div class="hw-settings-name" id="hw-settings-name">—</div>
-          <div class="hw-settings-code-wrap">
-            <span class="hw-settings-code-label">Tu código secreto:</span>
-            <code class="hw-settings-code" id="hw-settings-code">····</code>
-            <button class="btn btn-ghost btn-sm" id="hw-settings-code-copy">📋 Copiar</button>
+      <details class="md-pf-row">
+        <summary><span class="md-pf-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.2 4-6.5 8-6.5s7 2.3 8 6.5"/></svg></span>
+          <span class="md-pf-rt"><b>Cambiar mi nombre</b><small id="hw-settings-name">—</small></span></summary>
+        <div class="md-pf-body">
+          <label class="md-pf-label" for="hw-settings-name-input">Tu nombre</label>
+          <div class="md-pf-line">
+            <input class="md-pf-in" id="hw-settings-name-input" type="text" maxlength="20" placeholder="Tu nombre" autocomplete="off">
+            <button class="md-pf-save" id="hw-settings-name-save" type="button">Guardar</button>
           </div>
-          <p class="hw-settings-code-hint">Guárdalo en secreto. Si cambias de teléfono, escríbelo para no perder tu progreso.</p>
+          <p class="md-pf-msg" id="hw-settings-name-msg" aria-live="polite"></p>
         </div>
-      </div>
+      </details>
 
-      <!-- Change name -->
-      <div class="hw-settings-section">
-        <div class="hw-settings-section-title">✏️ Cambiar mi nombre</div>
-        <div class="hw-settings-row">
-          <input class="input" id="hw-settings-name-input" type="text" maxlength="20" placeholder="Nombre nuevo">
-          <button class="btn btn-jade" id="hw-settings-name-save">Guardar</button>
+      <details class="md-pf-row">
+        <summary><span class="md-pf-ic md-pf-ic-av" id="md-pf-av-ic" aria-hidden="true"></span>
+          <span class="md-pf-rt"><b>Cambiar mi avatar</b><small>Tus papás lo ven en su página</small></span></summary>
+        <div class="md-pf-body">
+          <div class="hw-avatar-grid md-pf-avgrid" id="hw-settings-avatar-grid"></div>
+          <p class="md-pf-msg" id="hw-settings-avatar-msg" aria-live="polite"></p>
         </div>
-        <p class="hw-settings-msg" id="hw-settings-name-msg"></p>
-      </div>
+      </details>
 
-      <!-- Change avatar -->
-      <div class="hw-settings-section">
-        <div class="hw-settings-section-title">🎨 Cambiar mi avatar</div>
-        <div class="hw-avatar-grid" id="hw-settings-avatar-grid"></div>
-        <p class="hw-settings-msg" id="hw-settings-avatar-msg"></p>
-      </div>
-
-      <!-- 🆕 2026-10-18 (la entrada): «Abrir otro nivel» with the new key the teacher sends (js/entrada.js; Mi perfil in part 3) -->
-      <div class="hw-settings-section" id="hw-settings-level">
-        <div class="hw-settings-section-title">🔑 Abrir otro nivel</div>
-        <p class="hw-settings-help">Con la clave nueva que te mande tu profe.</p>
-        <div class="hw-settings-row">
-          <input class="input" id="hw-settings-level-key" type="text" maxlength="30" placeholder="La clave nueva" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="La clave nueva">
-          <button class="btn btn-jade" id="hw-settings-level-btn" type="button">Abrir</button>
+      <!-- (la entrada, js/entrada.js levelInSettings: POST /api/entrada/nivel) -->
+      <details class="md-pf-row" id="hw-settings-level">
+        <summary><span class="md-pf-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="8" cy="12" r="4.2"/><path d="M12.2 12H21M18 12v3.2M21 12v2.4"/></svg></span>
+          <span class="md-pf-rt"><b>Abrir otro nivel</b><small>Con la clave nueva que te mande tu profe</small></span></summary>
+        <div class="md-pf-body">
+          <label class="md-pf-label" for="hw-settings-level-key">La clave nueva</label>
+          <div class="md-pf-line">
+            <input class="md-pf-in" id="hw-settings-level-key" type="text" maxlength="30" placeholder="La clave nueva" autocomplete="off" autocapitalize="characters" spellcheck="false">
+            <button class="md-pf-save" id="hw-settings-level-btn" type="button">Abrir</button>
+          </div>
+          <p class="md-pf-msg" id="hw-settings-level-msg" aria-live="polite"></p>
         </div>
-        <p class="hw-settings-msg" id="hw-settings-level-msg" aria-live="polite"></p>
-      </div>
+      </details>
 
-      <!-- Reset score per assignment -->
-      <div class="hw-settings-section">
-        <div class="hw-settings-section-title">🔄 Borrar puntajes</div>
-        <p class="hw-settings-help">Empieza una tarea desde cero. Útil si quieres mejorar tu nota.</p>
-        <div class="hw-settings-reset-list" id="hw-settings-reset-list"></div>
-        <p class="hw-settings-msg" id="hw-settings-reset-msg"></p>
-      </div>
+      <button class="md-pf-row md-pf-btn" id="md-pf-en" type="button" role="switch" aria-checked="false">
+        <span class="md-pf-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/></svg></span>
+        <span class="md-pf-rt"><b data-no-i18n>English</b><small>Para profes que no leen español</small></span>
+        <span class="md-pf-switch" aria-hidden="true"><i></i></span>
+      </button>
+
+      <button class="md-pf-row md-pf-btn" type="button" data-pwa-install hidden>
+        <span class="md-pf-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></svg></span>
+        <span class="md-pf-rt"><b>Instalar la app de Dralingo</b><small>Tu Dralingo en la pantalla de tu teléfono</small></span>
+      </button>
+
+      <details class="md-pf-row md-pf-reset">
+        <summary><span class="md-pf-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12a7 7 0 1 0 2.1-5"/><path d="M6.6 2.8v4.6h4.6"/></svg></span>
+          <span class="md-pf-rt"><b>Borrar mis puntajes</b><small>Empezar una tarea desde cero</small></span></summary>
+        <div class="md-pf-body">
+          <p class="md-pf-help">Tu profe ve tu mejor intento. Si quieres empezar una tarea desde cero, bórrala aquí: te preguntamos antes.</p>
+          <div class="md-pf-reset-list" id="hw-settings-reset-list"></div>
+          <p class="md-pf-msg" id="hw-settings-reset-msg" aria-live="polite"></p>
+        </div>
+      </details>
+
+      <button class="md-pf-out" id="hw-list-logout" type="button">Salir</button>
     </div>
   </div>
 
@@ -690,7 +610,7 @@
       <div class="hw-results-breakdown" id="hw-results-breakdown"></div>
       <div class="hw-results-actions">
         <button class="btn btn-ghost" id="hw-results-retry">🔁 Volver a intentarlo</button>
-        <button class="btn btn-jade" id="hw-results-done">📚 Volver a mis tareas</button>
+        <button class="btn btn-jade" id="hw-results-done">🏠 Volver a Mi Dralingo</button>
       </div>
     </div>
   </div>
@@ -702,13 +622,16 @@
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/hw-i18n.js?v=20261018sec1"></script>
+  <script src="/js/hw-i18n.js?v=20261018h1"></script>
   <script src="/js/portal.js?v=20261013c"></script>
   <script src="/js/ruta-auto.js?v=20261018sec1"></script>
-  <script src="/js/papas-plan.js?v=20261018p1"></script>
-  <script src="/js/papas.js?v=20261018p1"></script>
-  <script src="/js/homework.js?v=20261018sec2"></script>
-  <script src="/js/entrada.js?v=20261018sec1"></script>
+  <script src="/js/papas-plan.js?v=20261018h1"></script>
+  <script src="/js/papas.js?v=20261018h1"></script>
+  <!-- 🏠 2026-10-18 «Mi Dralingo» part 3: the homework cards + marks of La Ruta Dorada (js/ruta.js, one code) and the kid's home -->
+  <script src="/js/ruta.js?v=20261018h1"></script>
+  <script src="/js/mi-dralingo.js?v=20261018h1"></script>
+  <script src="/js/homework.js?v=20261018h1"></script>
+  <script src="/js/entrada.js?v=20261018h1"></script>
   <script src="/js/super-admin-badge.js?v=20261011c"></script>
   <script src="/js/pwa.js?v=20261018en1" defer></script>
 </body>

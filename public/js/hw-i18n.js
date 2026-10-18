@@ -191,6 +191,118 @@
   PATTERNS.push({ re: /^¡Listo! Ya tienes (.+)\.$/, en: 'Done! You now have $1.' });
   PATTERNS.push({ re: /^Ya fueron muchos intentos\. Espera (\d+) minutos? y vuelve a intentarlo\.$/, en: 'Too many tries. Wait $1 min and try again.' });
 
+  // 🏠 2026-10-18 «Mi Dralingo» part 3, the kid's home (js/mi-dralingo.js, js/papas-plan.js today(), homework.html Mi perfil,
+  // the homework cards of js/ruta.js); kept apart so other changes merge cleanly. scripts/test-home.js checks every phrase.
+  (function () {
+    var M = {
+      'Hoy': 'Today', 'Hoy · El Simulacro Dorado': 'Today · The Golden Practice Exam', 'Empezar aquí': 'Start here', 'Escribir la clave': 'Type the key',
+      '¡Hoy toca mandar tu tarea!': 'Today: send your homework!',
+      '¡Terminaste El Entrenamiento! Avísale a tu profe: ya puedes hacer El Simulacro Dorado.': 'You finished the Training! Tell your teacher: you can take the Golden Practice Exam now.',
+      '¡Vas muy bien! Muy pronto, tu Ruta Dorada.': 'You\'re doing great! Your Golden Route is coming soon.',
+      'Dralingo señala lo que toca hoy': 'Dralingo points at today\'s step', 'De tu profe': 'From your teacher',
+      '¡Hiciste todas las tareas de tu profe!': 'You did all your teacher\'s homework!', '1 hecha': '1 done', 'Hecha': 'Done', 'Otra vez': 'Again',
+      'Nueva': 'New', 'Hacer': 'Do it', 'Ver mis errores': 'See my mistakes', 'Bolsa de palabras': 'Word bag', 'Tarea especial': 'Special homework',
+      'Entrenamiento de Simulación': 'Exam training', '¡Empieza aquí!': 'Start here!', 'La Ruta Dorada': 'The Golden Route', 'El Simulacro Dorado': 'The Golden Practice Exam',
+      'En clase, con tu profe': 'In class, with your teacher', 'El Simulacro Dorado: en clase, con tu profe': 'The Golden Practice Exam: in class, with your teacher',
+      '1 ronda': '1 round', 'Las 3 rayitas:': 'The 3 little bars:', 'Las 2 rayitas:': 'The 2 little bars:', 'palabras': 'words', 'práctica': 'practice',
+      'tarea mandada': 'homework sent', '¡Experiencia lista! Puedes repasar cuando quieras.': 'Experience done! Review it whenever you like.',
+      'Tu profe te manda la tarea en clase.': 'Your teacher gives you the homework in class.', '1 · Palabras': '1 · Words', 'La Base': 'The Base',
+      'Repasar': 'Review', 'Empezar': 'Start', '2 · Práctica': '2 · Practice', 'El Entrenamiento': 'The Training',
+      'Se abre cuando marques todas sus palabras.': 'It opens when you mark all its words.', 'Marcar palabras': 'Mark words', 'Otra ronda': 'Another round',
+      'Practicar aquí': 'Practise here', 'También: Pinyin básico': 'Also: Basic pinyin', '3 · Tu tarea': '3 · Your homework', 'Se manda por WhatsApp': 'It goes by WhatsApp',
+      '«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá': '«Go! Listen to the audio, record your video and send it to your teacher on WhatsApp. Then tap',
+      '¡Ya la mandé!': 'I sent it!', '»': '»', 'Aileen': 'Aileen', 'Hamdan': 'Hamdan',
+      'Tu profe te manda esta tarea cuando lleguen a esta experiencia en clase.': 'Your teacher sends this homework when your class reaches this experience.',
+      '«¡Qué crack! Terminaste esta experiencia.»': '«You\'re a star! You finished this experience.»', 'Volver a La Ruta Dorada': 'Back to the Golden Route',
+      'Escuchada': 'Listened', 'Mandada': 'Sent', 'Escuchar': 'Listen', 'Pausa': 'Pause', '¿Fue sin querer?': 'By mistake?', 'Deshacer': 'Undo',
+      'Las palabras': 'The words', 'Escucha, lee, repite': 'Listen, read, repeat', 'Tu video': 'Your video',
+      '¡Ya estás listo para El Simulacro Dorado!': 'You\'re ready for the Golden Practice Exam!', 'Avísale a tu profe: lo hacen en clase, con un PIN.': 'Tell your teacher: you take it in class, with a PIN.',
+      'Avisarle a mi profe': 'Tell my teacher', 'Copiar mensaje': 'Copy message', '¡Mensaje copiado!': 'Message copied!',
+      'Se abre en clase con tu profe, cuando termines El Entrenamiento.': 'It opens in class with your teacher, when you finish the Training.',
+      'Libro dorado': 'Golden book', 'Cuando hagas un simulacro en clase, aquí repasas tus errores en tu libro dorado.': 'When you take a practice exam in class, you review your mistakes here in your golden book.',
+      'Practica el examen': 'Practise the exam', 'Simulacro del examen': 'Exam practice',
+      'El simulacro de práctica se abre cuando todas tus experiencias estén listas para practicar.': 'The practice exam opens when all your experiences are ready to practise.',
+      'Mis exámenes': 'My exams', 'Exámenes de lectura': 'Reading tests', 'Disponible': 'Available', 'Leer': 'Read', 'Al final de tu ruta': 'At the end of your route',
+      'Tus simulacros en clase': 'Your practice exams in class', 'Mensajes': 'Messages', 'Volver': 'Back', 'Todo leído': 'All read', '1 mensaje nuevo': '1 new message',
+      'Verla otra vez': 'Watch it again', 'Entrar al juego con el PIN': 'Join the game with the PIN', 'Para toda la clase': 'For the whole class',
+      'Aún no tienes mensajes. Cuando tu profe te escriba, aparece aquí.': 'No messages yet. When your teacher writes to you, it shows up here.',
+      'Ayer': 'Yesterday', 'Tu profe': 'Your teacher', 'Nuevo': 'New', 'Mis oraciones': 'My sentences', 'Mías': 'Mine',
+      '«Escuchá cada oración y decila en voz alta. ¡Vos podés!»': '«Listen to each sentence and say it out loud. You can do it!»',
+      'Desafío del día': 'Daily challenge', 'Muy pronto': 'Coming soon', 'Los juegos de la clase llegan a tu casa': 'The class games are coming to your home',
+      'Estamos preparando un desafío nuevo cada día: el Vuelo del Dragón, La Gran Fuga, Las Trampillas… para jugar en casa con tus palabras.':
+        'We are preparing a new challenge every day: the Dragon Flight, the Great Escape, the Trapdoors… to play at home with your words.',
+      'Mientras tanto: lo que toca hoy': 'Meanwhile: today\'s step', 'Tuyas y de tu profe': 'Yours and your teacher\'s',
+      'Muy pronto: los juegos de la clase': 'Coming soon: the class games', 'Más cosas': 'More', 'La Ruta': 'The Route', 'Oraciones': 'Sentences',
+      'Desafío': 'Challenge', 'pronto': 'soon', 'Menú': 'Menu', 'Cargando tu Ruta Dorada…': 'Loading your Golden Route…',
+      'No se pudo cargar tu Ruta Dorada. Revisa tu internet.': 'Your Golden Route could not load. Check your internet.', 'Volver a intentar': 'Try again',
+      'Para ver tu Ruta Dorada, entra con tu código y la clave de tu nivel.': 'To see your Golden Route, sign in with your code and your level key.',
+      'Entrar de nuevo': 'Sign in again', '¡Hola!': 'Hi!', '¿Cómo te llamas?': 'What\'s your name?', 'Papás': 'Parents', 'Mi perfil': 'My profile',
+      'Lo que elegiste': 'What you chose', 'Mi código de alumno': 'My student code',
+      'Anótalo en tu cuaderno: con tu código y la clave de tu nivel entras desde cualquier teléfono.': 'Write it in your notebook: with your code and your level key you sign in from any phone.',
+      'Cambiar mi nombre': 'Change my name', 'Tu nombre': 'Your name', 'Guardar': 'Save', 'Cambiar mi avatar': 'Change my avatar',
+      'Tus papás lo ven en su página': 'Your parents see it on their page', 'Con la clave nueva que te mande tu profe': 'With the new key your teacher sends you',
+      'English': 'English', 'Para profes que no leen español': 'For teachers who don\'t read Spanish', 'Instalar la app de Dralingo': 'Install the Dralingo app',
+      'Tu Dralingo en la pantalla de tu teléfono': 'Your Dralingo on your phone\'s screen', 'Borrar mis puntajes': 'Clear my scores',
+      'Empezar una tarea desde cero': 'Start a homework from zero',
+      'Tu profe ve tu mejor intento. Si quieres empezar una tarea desde cero, bórrala aquí: te preguntamos antes.': 'Your teacher sees your best try. To start a homework from zero, clear it here: we ask you first.',
+      'Salir': 'Log out', 'Borrar': 'Clear', '🏠 Volver a Mi Dralingo': '🏠 Back to My Dralingo', 'Volver a Mi Dralingo': 'Back to My Dralingo',
+      'Mi Familia': 'My Family', 'El Espejo Mágico': 'The Magic Mirror', 'Mis Mascotas': 'My Pets', 'La Comida': 'The Food', 'Números y Tiempo': 'Numbers and Time',
+      'La Escuela y los Saludos': 'School and Greetings', 'Personas': 'People', 'Números': 'Numbers', 'Pinyin básico': 'Basic pinyin',
+      'Oraciones del restaurante': 'Restaurant sentences',
+    };
+    for (var k in M) if (DICT.map[k] === undefined) DICT.map[k] = M[k];
+    var nm = function (s) { return DICT.map[s] !== undefined ? DICT.map[s] : s; };
+    var HOY = '¡Hoy toca la Experiencia (\\d+)!';
+    PATTERNS.push({ re: new RegExp('^' + HOY + ' Manda tu tarea de (.+)\\.$'), en: function (_, n, x) { return 'Today: Experience ' + n + '! Send your homework of ' + nm(x) + '.'; } });
+    PATTERNS.push({ re: new RegExp('^' + HOY + ' Practica (.+) hasta llegar al (\\d+) %\\.$'), en: function (_, n, x, g) { return 'Today: Experience ' + n + '! Practise ' + nm(x) + ' until you reach ' + g + ' %.'; } });
+    PATTERNS.push({ re: new RegExp('^' + HOY + ' Empieza por marcar sus palabras\\.$'), en: 'Today: Experience $1! Start by marking its words.' });
+    PATTERNS.push({ re: new RegExp('^' + HOY + ' Marca sus palabras: te falta 1\\.$'), en: 'Today: Experience $1! Mark its words: 1 to go.' });
+    PATTERNS.push({ re: new RegExp('^' + HOY + ' Marca sus palabras: te faltan (\\d+)\\.$'), en: 'Today: Experience $1! Mark its words: $2 to go.' });
+    PATTERNS.push({ re: /^¡Aprobaste El Simulacro Dorado con (\d+) %! Repasa tu libro dorado\.$/, en: 'You passed the Golden Practice Exam with $1 %! Review your golden book.' });
+    PATTERNS.push({ re: /^¡Aprobaste El Simulacro Dorado con (\d+) %!$/, en: 'You passed the Golden Practice Exam with $1 %!' });
+    PATTERNS.push({ re: /^¡Vas muy bien! Sigue con la Experiencia (\d+)\.$/, en: 'You\'re doing great! Go on with Experience $1.' });
+    PATTERNS.push({ re: /^Escribe la clave de (.+) para abrir tu Ruta Dorada\.$/, en: 'Type the key of $1 to open your Golden Route.' });
+    PATTERNS.push({ re: /^Hoy · Experiencia (\d+)$/, en: 'Today · Experience $1' });
+    PATTERNS.push({ re: /^¡Hola, (.+)!$/, en: 'Hi, $1!' });
+    PATTERNS.push({ re: /^1 día seguido$/, en: '1 day in a row' });
+    PATTERNS.push({ re: /^(\d+) días seguidos$/, en: '$1 days in a row' });
+    PATTERNS.push({ re: /^(\d+) hechas$/, en: '$1 done' });
+    PATTERNS.push({ re: /^(\d+) rondas$/, en: '$1 rounds' });
+    PATTERNS.push({ re: /^(\d+) preguntas$/, en: '$1 questions' });
+    PATTERNS.push({ re: /^(\d+) preguntas del examen$/, en: '$1 exam questions' });
+    PATTERNS.push({ re: /^(\d+) oraciones$/, en: '$1 sentences' });
+    PATTERNS.push({ re: /^(\d+) de (\d+) experiencias listas$/, en: '$1 of $2 experiences done' });
+    PATTERNS.push({ re: /^(\d+) de (\d+) marcadas$/, en: '$1 of $2 marked' });
+    PATTERNS.push({ re: /^(\d+) por mandar$/, en: '$1 to send' });
+    PATTERNS.push({ re: /^Ver toda La Ruta Dorada de (.+)$/, en: 'See all of the Golden Route of $1' });
+    PATTERNS.push({ re: /^Las experiencias de (.+)$/, en: 'The experiences of $1' });
+    PATTERNS.push({ re: /^Experiencia (\d+): (.+?)(, lista|, toca hoy)?$/, en: function (_, n, x, s) { return 'Experience ' + n + ': ' + nm(x) + (s === ', lista' ? ', done' : s ? ', today' : ''); } });
+    PATTERNS.push({ re: /^Te falta: (.+)\.$/, en: function (_, x) { return 'Still to do: ' + x.replace('las palabras', 'the words').replace('la práctica', 'the practice').replace('tu tarea', 'your homework').replace(/ y /g, ' and ') + '.'; } });
+    PATTERNS.push({ re: /^Se abre con la clave de (.+)\.$/, en: 'It opens with the key of $1.' });
+    PATTERNS.push({ re: /^Meta: (\d+) % en una ronda de 10$/, en: 'Goal: $1 % in a round of 10' });
+    PATTERNS.push({ re: /^Tu mejor ronda: (\d+) % · meta: (\d+) %$/, en: 'Your best round: $1 % · goal: $2 %' });
+    PATTERNS.push({ re: /^Tu mejor ronda: (\d+) %$/, en: 'Your best round: $1 %' });
+    PATTERNS.push({ re: /^Meta: (\d+) %$/, en: 'Goal: $1 %' });
+    PATTERNS.push({ re: /^También: Pinyin básico · (\d+) %$/, en: 'Also: Basic pinyin · $1 %' });
+    PATTERNS.push({ re: /^Simulacro del examen · (\d+) %$/, en: 'Exam practice · $1 %' });
+    PATTERNS.push({ re: /^Tarea · Ronda (\d+)$/, en: 'Homework · Round $1' });
+    PATTERNS.push({ re: /^Audio (\d+) de (\d+) · (.+)$/, en: function (_, a, b, x) { return 'Audio ' + a + ' of ' + b + ' · ' + nm(x); } });
+    // (the same line read piece by piece, « · » by « · »: «Audio 1 de 3» on its own, so one pass gives the whole English)
+    PATTERNS.push({ re: /^Audio (\d+) de (\d+)$/, en: 'Audio $1 of $2' });
+    PATTERNS.push({ re: /^(\d+) de (\d+) prácticas con (\d+) %$/, en: '$1 of $2 practices at $3 %' });
+    PATTERNS.push({ re: /^Simulacro (\d+) · (\d+) %$/, en: 'Practice exam $1 · $2 %' });
+    PATTERNS.push({ re: /^Libro dorado · 1 error$/, en: 'Golden book · 1 mistake' });
+    PATTERNS.push({ re: /^Libro dorado · (\d+) errores$/, en: 'Golden book · $1 mistakes' });
+    PATTERNS.push({ re: /^1 historia se abre cuando la lean en clase\.$/, en: '1 story opens when your class reads it.' });
+    PATTERNS.push({ re: /^(\d+) historias se abren cuando la lean en clase\.$/, en: '$1 stories open when your class reads them.' });
+    PATTERNS.push({ re: /^(\d+) mensajes nuevos$/, en: '$1 new messages' });
+    PATTERNS.push({ re: /^Mi Dralingo · (.+)$/, en: 'My Dralingo · $1' });
+    PATTERNS.push({ re: /^Palabras (listas|empezadas|por hacer), práctica (lista|empezada|por hacer)(?:, tarea (mandada|escuchada|por mandar))?$/, en: function (_, w, p, t) {
+      var W = { listas: 'done', empezadas: 'started', 'por hacer': 'to do' }, Pr = { lista: 'done', empezada: 'started', 'por hacer': 'to do' }, Tt = { mandada: 'sent', escuchada: 'listened', 'por mandar': 'to send' };
+      return 'Words ' + W[w] + ', practice ' + Pr[p] + (t ? ', homework ' + Tt[t] : '');
+    } });
+  })();
+
   // Quick reject: nothing to translate unless the text has latin
   // letters (hanzi-only, pinyin-only-with-tones still passes but
   // simply won't match the dictionary).
@@ -231,7 +343,13 @@
   function trPhrase(t) {
     var hit = DICT.map[t];
     if (hit !== undefined) return hit;
-    return segTranslate(t) || trPattern(t);
+    var out = segTranslate(t) || trPattern(t);
+    // «70 %» kept on one line with a no-break space (js/mi-dralingo.js): read it as a space, keep it in the English
+    if (out === null && t.indexOf(' ') >= 0) {
+      out = trPhrase(t.replace(/ /g, ' '));
+      if (out !== null) out = out.replace(/(\d) %/g, '$1 %');
+    }
+    return out;
   }
 
   function trTextNode(node) {
@@ -247,8 +365,10 @@
     for (var i = 0; i < ATTRS.length; i++) {
       var v = el.getAttribute && el.getAttribute(ATTRS[i]);
       if (v && HAS_LETTERS.test(v)) {
+        // (only a real change: writing the same value is a new mutation, and the observer would loop forever on a
+        // name that stays the same in English, alt="Aileen": a frozen page, 2026-10-18)
         var out = trPhrase(v.trim());
-        if (out !== null) el.setAttribute(ATTRS[i], out);
+        if (out !== null && out !== v) el.setAttribute(ATTRS[i], out);
       }
     }
   }
@@ -337,18 +457,23 @@
       'backdrop-filter:blur(4px)', '-webkit-backdrop-filter:blur(4px)',
       'touch-action:manipulation'
     ].join(';');
-    btn.addEventListener('click', function () {
-      if (lang === 'en') {
-        try { localStorage.setItem(KEY, 'es'); } catch (e) {}
-        location.reload(); // Spanish is the native render — reload restores it everywhere
-      } else {
-        try { localStorage.setItem(KEY, 'en'); } catch (e) {}
-        btn.textContent = '🌐 Español';
-        applyEnglish();
-      }
-    });
+    btn.addEventListener('click', toggleLang);
     document.body.appendChild(btn);
   }
+  function toggleLang() {
+    var btn = document.getElementById('hw-lang-toggle');
+    if (lang === 'en') {
+      try { localStorage.setItem(KEY, 'es'); } catch (e) {}
+      location.reload(); // Spanish is the native render — reload restores it everywhere
+    } else {
+      try { localStorage.setItem(KEY, 'en'); } catch (e) {}
+      if (btn) btn.textContent = '🌐 Español';
+      applyEnglish();
+    }
+  }
+  // 🏠 2026-10-18 («Mi Dralingo» part 3): once the kid is in, the switch lives in Mi perfil («English»), and the floating
+  // pill steps aside (css/mi-dralingo.css hides it under body.md-in: it covered the phone's tabs)
+  window.HwI18n = { lang: function () { return lang; }, toggle: toggleLang };
 
   function boot() {
     makeToggle();

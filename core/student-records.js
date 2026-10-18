@@ -576,7 +576,7 @@ function updateRuta(code, level, mutate, opts) {
   mutate(e);
   if (Object.keys(e).some((k) => k !== 'at')) all[lvl] = e; else delete all[lvl];
   if (Object.keys(all).length) rec.ruta = all; else delete rec.ruta;
-  if (opts && opts.activity) rec.lastSeen = Date.now();
+  if (opts && opts.activity) { rec.lastSeen = Date.now(); _studyDay(rec); }   // (a seal or a practice: a day of «N días seguidos»)
   scheduleSave();
   return rec;
 }
@@ -595,7 +595,7 @@ function updateTareas(code, mutate, opts) {
   const after = Object.keys(all).length ? all : null;
   if (JSON.stringify(after) === before) return rec;
   if (after) rec.tareas = after; else delete rec.tareas;
-  if (opts && opts.activity) rec.lastSeen = Date.now();
+  if (opts && opts.activity) { rec.lastSeen = Date.now(); _studyDay(rec); }   // (a homework mark: a day of «N días seguidos»)
   scheduleSave();
   return rec;
 }
@@ -999,6 +999,42 @@ function _addDay(dateStr, delta) {
   d.setUTCDate(d.getUTCDate() + delta);
   return d.toISOString().slice(0, 10);
 }
+// 🔥 2026-10-18 («Mi Dralingo» part 3, the kid's home): «N días seguidos» = days in a row with a REAL step: a La Base
+// seal, an El Entrenamiento round, a homework mark («Escuchada», «¡Ya la mandé!»), a tarea handed in, the daily
+// challenge. Before, only the daily challenge moved it (and it is «Muy pronto» now). Counted on the kid's own calendar:
+// their phone's time zone (rec.tz, from the login), else UTC. rec.dayDate = the last day that counted; rec.streak = the
+// days in a row up to it (the field the daily always used). A page view never counts.
+function _localDay(rec, at) {
+  const d = new Date(at || Date.now());
+  const tz = rec && typeof rec.tz === 'string' ? rec.tz : '';
+  if (tz) {
+    try { const s = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; } catch (_) { /* an unknown zone: UTC */ }
+  }
+  return d.toISOString().slice(0, 10);
+}
+// a step on `day` (YYYY-MM-DD): the same day counts once, the next day adds one, a gap starts again at 1. A day before
+// the last one (a phone that changed its zone) changes nothing. → true when the count moved
+function _bumpDay(rec, day) {
+  if (!rec || !/^\d{4}-\d{2}-\d{2}$/.test(String(day || ''))) return false;
+  const last = rec.dayDate || rec.dailyDate || null;
+  if (last && last > day) return false;
+  if (last === day) { rec.dayDate = day; if (!(Number(rec.streak) > 0)) rec.streak = 1; return false; }
+  rec.streak = last && last === _addDay(day, -1) ? (Number(rec.streak) || 0) + 1 : 1;
+  rec.dayDate = day;
+  return true;
+}
+const _studyDay = (rec) => _bumpDay(rec, _localDay(rec));
+// what the home shows: { days, today } (days = 0 once a day was missed: a broken streak never shows its old number)
+function streakOf(recOrCode) {
+  const rec = typeof recOrCode === 'string' ? get(recOrCode) : recOrCode;
+  if (!rec) return { days: 0, today: false };
+  const today = _localDay(rec);
+  const last = rec.dayDate || rec.dailyDate || null;
+  const n = Math.max(1, Number(rec.streak) || 0);
+  if (last === today) return { days: n, today: true };
+  if (last && last === _addDay(today, -1)) return { days: n, today: false };
+  return { days: 0, today: false };
+}
 // Award today's daily challenge. Idempotent per local date (one claim/day).
 // `correct` is how many words the kid cleared in the mini-game (capped).
 function awardDaily(code, localDate, correct) {
@@ -1010,10 +1046,9 @@ function awardDaily(code, localDate, correct) {
   if (rec.dailyDate === localDate) {
     return { ok: false, reason: 'already', progress: getProgress(code) };
   }
-  // Streak: +1 if they played yesterday, else reset to 1.
-  const yesterday = _addDay(localDate, -1);
-  const prev = rec.dailyDate;
-  rec.streak = (prev && prev === yesterday) ? (Number(rec.streak) || 0) + 1 : 1;
+  // Streak: +1 if they practised yesterday, else reset to 1 (2026-10-18: the same day count as every real step of
+  // «Mi Dralingo», _bumpDay below: a seal and the daily on the same day count once)
+  _bumpDay(rec, localDate);
   rec.dailyDate = localDate;
   // Rewards — server-computed so the client can't inflate them.
   // XP still scales with effort + streak (drives level progression), but the
@@ -1193,6 +1228,7 @@ function logAssignmentSubmission(code, payload) {
     breakdown:       Array.isArray(payload.breakdown) ? payload.breakdown.slice() : [],
   };
   rec.assignmentSubmissions.push(entry);
+  _studyDay(rec);   // (2026-10-18: a tarea handed in is a day of «N días seguidos»)
   if (rec.assignmentSubmissions.length > 100) {
     // 2026-10-12 — keep each tarea's BEST attempt (a passed round must never turn pending again: YCT kids replay 20
     // game rounds), then fill up to 100 with the most recent attempts; original order kept.
@@ -1272,6 +1308,7 @@ module.exports = {
   deleteHistoryEntry,
   getProgress,
   awardDaily,
+  streakOf,
   normalizeCode,
   listAll,
   logTestResult,

@@ -311,7 +311,11 @@ async function run() {
   const libro = fs.readFileSync(path.join(ROOT, 'public', 'js', 'libro.js'), 'utf8');
   ok(!/para descargar el libro/.test(libro) && !/Llega con El Simulacro Dorado/.test(libro), 'no PDF promise in El libro dorado');
   const hw = fs.readFileSync(path.join(ROOT, 'public', 'js', 'homework.js'), 'utf8');
-  ok(/Hacer mis tareas/.test(hw) && /\?from=homework#tareas/.test(hw), '/homework: «Hacer mis tareas» opens «Tus tareas»');
+  // (2026-10-18, «Mi Dralingo» part 3: the two «Hacer mis tareas» doors are gone: each experience of the kid's home holds
+  // its homework, with the SAME cards and marks as «Tus tareas», js/ruta.js Ruta.hwCards)
+  const md = fs.readFileSync(path.join(ROOT, 'public', 'js', 'mi-dralingo.js'), 'utf8');
+  ok(/data-hw-mount/.test(md) && /Ruta\.hwCards\(/.test(md) && /window\.DralyHome\.render\(HOME\)/.test(hw) && /function hwCards\(/.test(page),
+    '/homework: each experience\'s «3 · Tu tarea» holds its homework (js/ruta.js\'s cards and marks)');
   const i18n = fs.readFileSync(path.join(ROOT, 'public', 'js', 'hw-i18n.js'), 'utf8');
   ok(/Hacer mis tareas/.test(i18n) && /por mandar/.test(i18n), '… and has its English');
 }

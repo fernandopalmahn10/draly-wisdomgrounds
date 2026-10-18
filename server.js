@@ -2565,7 +2565,11 @@ function _papasHwInfo() {
   let list = null;
   try { list = JSON.parse(fs.readFileSync(path.join(__dirname, 'public', 'assets', 'audios', 'catalog.json'), 'utf8')).homeworks; }
   catch (e) { console.warn('[papas] catalog unreadable:', e.message); }
-  (Array.isArray(list) ? list : []).forEach((h) => { if (h && typeof h.id === 'string') m.set(h.id, { exp: Number(h.exp) || null, round: Number(h.round) || null, title: String(h.title || '') }); });
+  // (2026-10-18, «Mi Dralingo» part 3: the kid's home plays each homework right in its experience: its three tracks,
+  // light (address, kind, code, length; never the lines), and its pictures)
+  const light = (t) => ({ src: String(t.src || ''), kind: String(t.kind || ''), code: String(t.code || ''), dur: Number(t.dur) || 0 });
+  (Array.isArray(list) ? list : []).forEach((h) => { if (h && typeof h.id === 'string') m.set(h.id, { exp: Number(h.exp) || null, round: Number(h.round) || null, title: String(h.title || ''),
+    tracks: Array.isArray(h.tracks) ? h.tracks.filter((t) => t && t.src).map(light) : [], thumb: h.thumb || null, cover: h.cover || null }); });
   if (Array.isArray(list)) _papasHw = m;
   return m;
 }
@@ -2628,6 +2632,67 @@ function _papasPrompts(insights, level) {
   });
   return out;
 }
+// 🏠 2026-10-18 · «Mi Dralingo» part 3: THE KID'S HOME (/homework, public/js/mi-dralingo.js, his approved design
+// .claude/handoff/kidhome-design: Main, Phone, Experiencia…). La Ruta Dorada as a path of the level's experiences, «Hoy»
+// (js/papas-plan.js today(): the same decision as Papás' «Lo más importante»), each experience = 1 Palabras → 2 Práctica
+// → 3 Tu tarea, El Simulacro Dorado at the end. GET /api/homework/home?accessCode=&studentCode= (the homework doors:
+// _hwCheckAccess + _hwKid, so an unknown code and «not yours» get the same 403) →
+//   { ok, level, slug, levelName, family, streak: { days, today }, ruta: null | {…} }
+// `ruta` only when the /homework session on this phone is this same kid (like Papás: a class code + a code never shows
+// it): _papasRuta (seals, practice, homework sent, simulations, the plan) + open (LevelKeys.access: La Base and El
+// Entrenamiento open on this request) + key (the level's key screen) + exps (each experience's pack world, its folder
+// picture and a few word pictures, all under neutral names) + marks (heard / sent) + media (each homework's light tracks
+// and pictures, to play it right in its experience) + dorado (RutaProgress) + extra (Pinyin básico, Simulacro del examen)
+// + route (the module page, which keeps everything else). Never the kid's code, never hanzi, never cached.
+function _homeRuta(req, rec, level) {
+  const lvl = level.id;
+  const raw = _papasRuta(rec, level);
+  const slug = raw.slug;
+  const st = RutaProgress.state(rec, lvl);
+  const a = levelAccess(req, lvl);
+  const tw = Train.worldsOf(lvl) || [];
+  const info = _papasHwInfo();
+  const ids = _tareaIdsOf(lvl);
+  const media = {};
+  ids.forEach((id) => { const h = info.get(id); if (h) media[id] = { tracks: h.tracks || [], thumb: h.thumb || null, cover: h.cover || null }; });
+  const extra = (kind) => {
+    const k = tw.find((x) => x.kind === kind);
+    if (!k) return null;
+    const best = st && st.extra && st.extra[kind] != null ? st.extra[kind] : null;
+    // (Pinyin básico is open from the start; the Simulacro del examen once every regular world is open)
+    const open = kind === 'pinyin' || !!(st && st.worlds.length && st.worlds.every((w) => w.train));
+    return { href: '/audios/' + slug + '/entrenamiento/' + k.key, best, open };
+  };
+  return Object.assign(raw, {
+    open: !!a.ok,
+    key: '/audios/' + slug + '/clave',
+    route: '/audios/' + slug,
+    exps: _rutaExps(lvl).map((e) => ({ n: e.n, name: e.name, pic: e.pic, world: _rutaExpWorld[slug + '/' + e.n] || null, peek: _rutaExpPeek[slug + '/' + e.n] || [] })),
+    marks: _tareaMarks(rec, ids),
+    media,
+    dorado: st ? { open: !!st.dorado.open, via: st.dorado.via || null, practiced: st.dorado.practiced, of: st.dorado.of, pct: st.dorado.pct, teacher: !!st.dorado.teacher } : null,
+    extra: { pinyin: extra('pinyin'), simulacro: extra('simulacro') },
+  });
+}
+app.get('/api/homework/home', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_hwCheckAccess(req, res)) return;
+  const rec = _hwKid(req, res, req.query && req.query.studentCode);
+  if (!rec) return;
+  try {
+    const level = Levels.info(rec.level);
+    const me = _studentOf(req);
+    let ruta = null;
+    if (me && me.code === rec.code) {
+      try { ruta = _homeRuta(req, rec, level); } catch (e) { console.warn('[home] ruta failed:', e.message); }
+    }
+    res.json({ ok: true, level: level.id, slug: level.pack || level.id, levelName: level.name, family: level.family,
+      streak: Students.streakOf(rec), ruta });
+  } catch (e) {
+    console.error('[home] failed:', e.message);
+    res.status(500).json({ ok: false, error: 'No se pudo cargar tu inicio. Vuelve a intentarlo.' });
+  }
+});
 // 👨‍👩‍👧 Parent view — returns a digest of what the kid has learned, in
 // Spanish, derived from their completed assignments + reading-mode tests.
 // No password, just access code + student code (parent uses same as kid).
@@ -3273,6 +3338,7 @@ function _hwReadingListFor(code) {
     const triedInClass = !!best;
     return {
       storyId:   s.id,
+      exp:       s.exp || story.exp || null,   // (2026-10-18: its experience, «Mi Dralingo» lists it with it)
       title:     story.title,
       subtitle:  story.subtitle,
       pageCount: story.pages.length,
@@ -5101,6 +5167,9 @@ const _EXP_PIC = { familia: ['jia', 'baba'], escuela: ['xuexiao', 'laoshi'], res
   personas: ['ren'], numeros: ['san'], espejo: ['bizi'], mascotas: ['mao', 'gou'], comida: ['mifan'] };
 const _rutaExpsCache = {};
 const _rutaExpFiles = Object.create(null);   // '<level>/<n>' → the picture's file (only what _rutaExps chose)
+const HOME_PEEK = 4;
+const _rutaExpPeek = Object.create(null);    // '<slug>/<n>' → [the peek pictures' neutral addresses]
+const _rutaExpWorld = Object.create(null);   // '<slug>/<n>' → the pack world's id (the teacher's game rounds name it)
 function _rutaExps(lvl) {
   const l = Levels.normalize(lvl);
   if (!l) return [];
@@ -5127,6 +5196,21 @@ function _rutaExps(lvl) {
       pic = '/ruta-exp/' + slug + '/' + n + '.webp?v=' + v;
     }
     out.push({ n, name: String(w.name || '').replace(/^EXP\s*\d+\s*·\s*/, ''), pic });
+    // 🏠 2026-10-18 («Mi Dralingo» part 3): a few more word pictures of that world for the home's «1 Palabras» step,
+    // under neutral names too (/ruta-exp/<level>/<n>-<k>.webp); kept apart, so /api/ruta-dorada stays as light as before
+    const peek = [];
+    words.concat(files.map((f) => f.replace(/\.webp$/, ''))).forEach((x) => {
+      if (peek.length >= HOME_PEEK || x === img || peek.includes(x) || !files.includes(x + '.webp')) return;
+      peek.push(x);
+    });
+    _rutaExpPeek[slug + '/' + n] = peek.map((x, k) => {
+      const file = path.join(__dirname, 'public', 'assets', 'packs', slug, w.id, x + '.webp');
+      let v = '0';
+      try { v = require('crypto').createHash('sha1').update(fs.readFileSync(file)).digest('hex').slice(0, 8); } catch (_) { /* listed above */ }
+      _rutaExpFiles[slug + '/' + n + '-' + (k + 1)] = file;
+      return '/ruta-exp/' + slug + '/' + n + '-' + (k + 1) + '.webp?v=' + v;
+    });
+    _rutaExpWorld[slug + '/' + n] = w.id;
   });
   _rutaExpsCache[l] = out;
   return out;
@@ -6094,10 +6178,11 @@ function _rutaState(req) {
 // the packs' pictures, only a picture _rutaExps chose. /ruta-exp/<level>/<n>.webp
 app.get('/ruta-exp/:level/:file', (req, res) => {
   const lvl = Levels.normalize(req.params.level);
-  const m = /^(\d{1,2})\.webp$/.exec(String(req.params.file || ''));
+  // (2026-10-18, «Mi Dralingo» part 3: <n>-<k>.webp = the k-th peek picture of experience n, the home's «1 Palabras»)
+  const m = /^(\d{1,2})(?:-([1-9]))?\.webp$/.exec(String(req.params.file || ''));
   if (!lvl || !m) return res.status(404).end();
   _rutaExps(lvl);
-  const file = _rutaExpFiles[(Levels.info(lvl).pack || lvl) + '/' + Number(m[1])];
+  const file = _rutaExpFiles[(Levels.info(lvl).pack || lvl) + '/' + Number(m[1]) + (m[2] ? '-' + Number(m[2]) : '')];
   if (!file) return res.status(404).end();
   res.set({ 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' }).type('image/webp');
   res.sendFile(file, { cacheControl: false }, (err) => { if (err && !res.headersSent) res.status(404).end(); });

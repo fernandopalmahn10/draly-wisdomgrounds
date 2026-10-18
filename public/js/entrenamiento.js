@@ -38,6 +38,10 @@
     get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
   };
+  // 🏠 2026-10-18 («Mi Dralingo» part 3): a world opened from the kid's home (/homework: «Practicar aquí») goes back
+  // there, «Mi Dralingo», in one tap (js/mi-dralingo.js keeps that page's address in sessionStorage draly_home_from)
+  const fromHome = () => { try { return sessionStorage.getItem('draly_home_from') === location.pathname; } catch (_) { return false; } };
+  const homeBack = (back) => (fromHome() ? '<a class="au-back" href="/homework">' + I.back + 'Mi Dralingo</a>' : back);
   const I = {
     back: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     close: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>',
@@ -365,7 +369,7 @@
     }).join('');
     const C = window.DralingoCast;
     const f = C ? C.pick(1)[0] : null;
-    main.innerHTML = '<a class="au-back" data-nav href="/audios/' + esc(m.slug) + '">' + I.back + 'La Ruta de ' + esc(m.name) + '</a>' +
+    main.innerHTML = homeBack('<a class="au-back" data-nav href="/audios/' + esc(m.slug) + '">' + I.back + 'La Ruta de ' + esc(m.name) + '</a>') +
       '<section class="tr-head" style="' + lookStyle(m) + '">' +
         '<img class="tr-head-dragon" src="' + DRAGON.power + '" alt="" width="432" height="480" decoding="async">' +
         '<h1 class="tr-head-title">El Entrenamiento</h1>' +
@@ -402,7 +406,7 @@
   }
   function startCard(main, ctx, m, v, w) {
     const need = (v.dorado && v.dorado.pct) || 70;
-    const back = '<a class="au-back" data-nav href="/audios/' + esc(m.slug) + '/entrenamiento">' + I.back + 'Mis mundos</a>';
+    const back = homeBack('<a class="au-back" data-nav href="/audios/' + esc(m.slug) + '/entrenamiento">' + I.back + 'Mis mundos</a>');
     const where = w.kind === 'world' ? 'Mundo ' + w.n + ' de ' + m.name : (w.kind === 'pinyin' ? 'Para empezar ' + m.name : 'El examen de ' + m.name);
     if (!w.open) {
       const base = m.base ? '/audios/' + m.base.id + (w.n ? '#mundo-' + w.n : '') : '/audios/' + m.slug;
@@ -822,7 +826,7 @@
           : '<span>' + (missing === 1 ? 'Con 1 bien más llegas al ' : 'Con ' + missing + ' bien más llegas al ') + need + ' %, y este mundo cuenta para El Simulacro Dorado.</span>';
     }
     document.body.classList.remove('au-is-play');
-    P.main.innerHTML = '<a class="au-back" data-nav href="/audios/' + esc(m.slug) + '/entrenamiento">' + I.back + 'Mis mundos</a>' +
+    P.main.innerHTML = homeBack('<a class="au-back" data-nav href="/audios/' + esc(m.slug) + '/entrenamiento">' + I.back + 'Mis mundos</a>') +
       '<section class="tr-end" style="' + lookStyle(m) + '" aria-labelledby="tr-end-t">' +
         '<div class="tr-end-stars" aria-hidden="true">' + [0, 1, 2].map((k) => '<i class="tr-end-star' + (k < stars ? ' is-on' : '') + '">' + I.star + '</i>').join('') + '</div>' +
         '<h1 class="tr-end-title" id="tr-end-t"><span class="tr-end-pct"><b id="tr-pct">' + F.pct + '</b> %</span>' +

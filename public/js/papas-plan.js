@@ -80,5 +80,31 @@
       exps, tareas, trainDone, sim, focus };
   }
 
-  return { plan };
+  // «Hoy» on the kid's home («Mi Dralingo» part 3, his approved design 2026-10-18): the SAME decision as «Lo más
+  // importante esta semana» (focus above), in the kid's own words, so the home and Papás never disagree.
+  //   today(plan) → { kind, exp (the experience it opens, or null), step (1 Palabras · 2 Práctica · 3 Tu tarea, or null),
+  //                   dorado (true: it opens El Simulacro Dorado), id (the homework, kind 'tarea'), text }
+  function today(p) {
+    const P = p && typeof p === 'object' ? p : plan({});
+    const f = P.focus || { kind: 'fine' };
+    const exps = Array.isArray(P.exps) ? P.exps : [];
+    const nameOf = (n) => { const e = exps.find((x) => x.n === Number(n)); return e ? e.name : ''; };
+    const hoy = (n) => '¡Hoy toca la Experiencia ' + n + '!';
+    if (f.kind === 'tarea') {
+      if (f.exp) return { kind: 'tarea', exp: f.exp, step: 3, dorado: false, id: f.id, text: hoy(f.exp) + ' Manda tu tarea de ' + (nameOf(f.exp) || f.name) + '.' };
+      return { kind: 'tarea', exp: null, step: 3, dorado: false, id: f.id, text: '¡Hoy toca mandar tu tarea!' };
+    }
+    if (f.kind === 'practice') return { kind: 'practice', exp: f.exp, step: 2, dorado: false, text: hoy(f.exp) + ' Practica ' + f.name + ' hasta llegar al ' + f.goal + ' %.' };
+    if (f.kind === 'words') {
+      const e = exps.find((x) => x.n === f.exp);
+      return { kind: 'words', exp: f.exp, step: 1, dorado: false,
+        text: hoy(f.exp) + (e && e.sealed === 0 ? ' Empieza por marcar sus palabras.' : f.left === 1 ? ' Marca sus palabras: te falta 1.' : ' Marca sus palabras: te faltan ' + f.left + '.') };
+    }
+    if (f.kind === 'teacher') return { kind: 'teacher', exp: null, step: null, dorado: true, text: '¡Terminaste El Entrenamiento! Avísale a tu profe: ya puedes hacer El Simulacro Dorado.' };
+    if (f.sim) return { kind: 'fine', exp: null, step: null, dorado: true, text: '¡Aprobaste El Simulacro Dorado con ' + f.sim.percent + ' %! Repasa tu libro dorado.' };
+    const n = P.current || (exps[0] && exps[0].n) || null;
+    return { kind: 'fine', exp: n, step: null, dorado: false, text: n ? '¡Vas muy bien! Sigue con la Experiencia ' + n + '.' : '¡Vas muy bien! Muy pronto, tu Ruta Dorada.' };
+  }
+
+  return { plan, today };
 });

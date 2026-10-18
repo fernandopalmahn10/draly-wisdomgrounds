@@ -29,6 +29,8 @@ const FILES = [
   ...fs.readdirSync(path.join(ROOT, 'core/packs')).filter((f) => f.endsWith('.js')).map((f) => 'core/packs/' + f),
   // Papás, the parents' view (2026-10-18)
   'public/js/papas.js', 'public/js/papas-plan.js',
+  // Mi Dralingo, the kid's home (2026-10-18)
+  'public/js/mi-dralingo.js',
 ];
 const RULES = [
   { re: /(?<!New )\bHSK ?2\b/, why: 'kids/parents see "New HSK 1", never "HSK 2" (root CLAUDE.md, 2026-10-11)' },
@@ -39,6 +41,7 @@ const RULES = [
   // (the old Vuelo del Dragón showed hanzi on the projector and the phone: the remake must never bring them back)
   { re: /[㐀-鿿]/, why: 'no hanzi on game screens (root CLAUDE.md: games show pinyin, no hanzi)', only: /dragon|party|paint|trapdoor/ },
   { re: /[㐀-鿿]/, why: 'no hanzi on Papás (the parents\' view shows pinyin + Spanish, 2026-10-18)', only: /papas/ },
+  { re: /[㐀-鿿]/, why: 'no hanzi on the kid\'s home (pinyin only in kid UI, 2026-10-18)', only: /mi-dralingo/ },
 ];
 
 // blank out comments but keep line numbers

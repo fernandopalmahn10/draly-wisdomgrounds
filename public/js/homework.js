@@ -14,6 +14,9 @@
 // 2026-10-18 «Mi Dralingo», la entrada (js/entrada.js): the door is now the level key («¡Hola de nuevo!», «Soy nuevo»,
 //   code + key); the access code + student code card below is the TRANSITIONAL door. Every door ends in hwAfterEnter();
 //   a kid of the key has no class code on the phone (hwKeyMode: the calls send none, the session is the pass).
+// 2026-10-18 «Mi Dralingo» part 3: the home after the door is js/mi-dralingo.js (Hoy, La Ruta Dorada as a path of the
+//   level's experiences, Mensajes, Mis oraciones, Desafío, Mi perfil = the old Ajustes). This file keeps the engine and
+//   hands the home its hooks (HOME, renderList → DralyHome.render); the old folders, tabs, dock and pills are gone.
 (function () {
   'use strict';
 
@@ -111,8 +114,8 @@
   const HW_LEVEL_NAMES = { yct1: 'YCT 1', hsk2: 'New HSK 1', hsk1: 'HSK 1' };
   let hwLevelLabel = '';
   let hwFolders = null;        // [{ id, label, short }] from /api/homework/enter, or null
-  let hwBase = null;           // { href, level, words }: the level's vocabulary base on /audios (core/levels.js), or null
-  let hwTareas = null;         // 🏆 2026-10-18 { level, ids, sent, who }: the level's homework audios («Hacer mis tareas»)
+  // (2026-10-18, «Mi Dralingo» part 3: the level's La Base seals and homework audios come to the home from
+  // /api/homework/home, js/mi-dralingo.js: the old «La Ruta Dorada de <nivel>» and «Hacer mis tareas» cards are gone)
   function hwExps() {
     if (hwFolders) {
       const out = {};
@@ -137,11 +140,11 @@
       .then((r) => r.json())
       .then((d) => {
         done();
-        if (!d || !d.ok) { renderNextUp(); return; }
-        trainerMeta = d;
-        if (!hwFolder) renderList();   // repaint the root with the hero
+        if (d && d.ok) trainerMeta = d;
+        // (the home's experiences show each tier as a card of their «De tu profe»)
+        if (window.DralyHome) window.DralyHome.changed();
       })
-      .catch(() => { done(); renderNextUp(); });
+      .catch(() => { done(); if (window.DralyHome) window.DralyHome.changed(); });
   }
   function trainerBest(tid) {
     let best = null;
@@ -151,21 +154,8 @@
     return best;
   }
   let customAssignments = [];  // 🎯 teacher-sent tareas especiales for me
-  // Default lands on ⏳ Pendientes — kid's TODO list. "pending" includes both
-  // brand-new tareas AND ones tried below 80%. Per user: "by default it
-  // should enter in pending and only show the pending."
-  let customFilter = 'pending';    // pill filter: pending | done | all (legacy)
-  // 🗂️ NEW 3-TAB STATE — default to "pending" so the kid sees what they
-  // still owe first. Tabs are MUTUALLY EXCLUSIVE and never mix items.
-  //   pending → HSK1 folders/items NOT done
-  //   done    → HSK1 folders/items DONE
-  //   custom  → tareas the teacher sent ME (flat list, both done + pending)
-  let currentTab = 'pending';
-  function makeCuPill(id, label, count) {
-    return '<button class="hw-cf-pill' + (customFilter === id ? ' is-active' : '')
-      + (count === 0 ? ' is-empty' : '') + '" data-f="' + id + '" type="button">'
-      + label + ' <span class="hw-cf-count">' + count + '</span></button>';
-  }
+  // (2026-10-18, «Mi Dralingo» part 3: the Pendientes / Completadas / Tu Maestro tabs are gone: each tarea lives in its
+  // experience on the home, done = green ✓; a teacher's tarea of no experience is a «De tu profe» card under «Hoy»)
   let submissions = [];        // student's prior submissions
   let readingTests = [];       // [{ storyId, title, subtitle, coverImage, available, bestScore, attempts }]
   let currentReadingStory = null;  // loaded story when on the reading screen
@@ -496,9 +486,11 @@
         hwLevel = (data.levelName && data.level) || (HW_LEVEL_NAMES[data.level] ? data.level : 'hsk1');
         hwLevelLabel = data.levelName || '';
         hwFolders = Array.isArray(data.folders) && data.folders.length ? data.folders : null;
-        hwBase = data.base && data.base.href ? data.base : null;
-        hwTareas = data.tareas && Array.isArray(data.tareas.ids) && data.tareas.ids.length ? data.tareas : null;
         document.body.classList.toggle('hw-no-daily', data.daily === false);   // Desafíos = HSK 1 words (above YCT 1)
+        trainerMeta = null;   // (another kid or level on this tab: the HSK 1 trainer's tiers are asked again)
+        readingTests = [];
+        customAssignments = [];
+        if (window.DralyHome) window.DralyHome.reset();
         try {
           // (2026-10-18, la entrada: a kid of the level key keeps no class code on the phone: the phone remembers them itself)
           if (ac) localStorage.setItem(STORAGE_ACCESS_KEY, ac); else localStorage.removeItem(STORAGE_ACCESS_KEY);
@@ -529,11 +521,12 @@
         if (data.isNew) {
           try { showStudentCodeBanner(data.studentCode); } catch (_) {}
         }
-        // 🎯 HSK1: load the sim-trainer tiers (redesigned home).
+        // 🎯 HSK1: load the sim-trainer tiers (each one a card of its experience on the home).
         try { fetchTrainerMeta(); } catch (_) {}
-        // Pull the daily progression HUD (XP / swords / streak) right away.
-        try { refreshDailyHud(); } catch (_) {}
+        // (2026-10-18, «Mi Dralingo» part 3: no XP / swords HUD on the home any more; its data stays on the account and
+        // the Desafío del día asks for it when it opens. «N días seguidos» comes with the home, /api/homework/home)
         try { refreshCustomAssignments(); } catch (_) {}
+        try { fetchReadingTests(); } catch (_) {}
         // Start inbox polling — every 20s while the kid is logged in.
         // Pulls down any messages the teacher sent.
         fetchInbox();
@@ -747,16 +740,11 @@
     setTimeout(() => { try { ov.remove(); } catch (_) {} }, 8000);
   }
 
+  // the unread count: the home's Mensajes tab / tile (js/mi-dralingo.js) shows it as a red badge
   function renderBellBadge() {
-    const badge = $('hw-bell-badge');
-    if (!badge) return;
-    if (_inboxUnread > 0) {
-      badge.textContent = _inboxUnread > 9 ? '9+' : String(_inboxUnread);
-      badge.style.display = '';
-    } else {
-      badge.style.display = 'none';
-    }
+    if (window.DralyHome) window.DralyHome.changed('inbox');
   }
+  // a new message while the kid is on /homework: a toast; a tap opens Mensajes on the home (Papás keeps its sheet)
   function showInboxToast(msg) {
     if (!msg) return;
     const toast = document.createElement('div');
@@ -768,7 +756,7 @@
         <div class="hw-inbox-toast-text">${escapeHtml(msg.text || '').slice(0, 80)}</div>
       </div>`;
     toast.addEventListener('click', () => {
-      openInbox();
+      if (window.DralyHome) window.DralyHome.go('mensajes'); else openInbox();
       toast.remove();
     });
     document.body.appendChild(toast);
@@ -778,6 +766,21 @@
       setTimeout(() => toast.remove(), 300);
     }, 5000);
   }
+  // everything read (the home's Mensajes on screen, or Papás' sheet)
+  function markInboxRead() {
+    if (!studentCode || !_inboxUnread) return;
+    fetch('/api/homework/inbox/read-all?accessCode=' + encodeURIComponent(accessCode), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentCode }),
+    }).then((r) => {
+      if (!r.ok) return;
+      _inboxUnread = 0;
+      _inbox.forEach((m) => { if (!m.readAt) m.readAt = Date.now(); });
+      renderBellBadge();
+    }).catch(() => {});
+  }
+  // Papás' «Mensajes de la profe»: the same messages in a sheet
   function openInbox() {
     let overlay = document.getElementById('hw-inbox-overlay');
     if (!overlay) {
@@ -796,15 +799,7 @@
     }
     renderInboxList();
     requestAnimationFrame(() => overlay.classList.add('show'));
-    // Mark everything read on the server
-    fetch('/api/homework/inbox/read-all?accessCode=' + encodeURIComponent(accessCode), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ studentCode }),
-    }).then(() => {
-      _inboxUnread = 0;
-      renderBellBadge();
-    });
+    markInboxRead();   // (Mark everything read on the server)
   }
   function closeInbox() {
     const overlay = document.getElementById('hw-inbox-overlay');
@@ -841,7 +836,8 @@
       list.appendChild(row);
     });
   }
-  $('hw-list-inbox').addEventListener('click', openInbox);
+  // (2026-10-18, «Mi Dralingo» part 3: the kid's Mensajes are a screen of the home now, js/mi-dralingo.js; this sheet
+  // stays for Papás' «Mensajes de la profe»)
 
   // «Salir» = leave the portal: back to the home page (2026-10-12: it used to drop the kid on the login card with no
   // way out). The codes stay saved on this phone, so coming back is one tap on «Entrar».
@@ -866,6 +862,7 @@
     // 2026-10-16: the kid's session on this phone ends too (a brother or sister on the same phone never stamps La Base
     // seals or saves results on this kid's account). 2026-10-18 (L4): the page waits for that (1.5 s at most) before
     // leaving, so the next page never finds the session still open
+    try { sessionStorage.removeItem('draly_home_in'); } catch (_) {}   // (the next /homework visit starts at «¿Quién eres?»)
     let gone = false;
     const leave = () => { if (gone) return; gone = true; location.href = '/'; };
     try { fetch('/api/homework/logout', { method: 'POST', credentials: 'same-origin', keepalive: true }).then(leave, leave); } catch (_) { leave(); }
@@ -887,35 +884,20 @@
     removePinnedStack();
     try { fetch('/api/homework/logout', { method: 'POST', credentials: 'same-origin', keepalive: true }).catch(() => {}); } catch (_) {}
     markOut();
+    try { sessionStorage.removeItem('draly_home_in'); } catch (_) {}
     $('hw-avatar-err').textContent = '';
     showScreen('entry');
     if (window.DralyEntrada) window.DralyEntrada.restart();   // (2026-10-18, la entrada: «¿Quién eres?» again, nobody remembered)
   });
-  $('hw-list-parents').addEventListener('click', openParentView);
-  $('hw-list-settings').addEventListener('click', openSettings);
-  $('hw-list-avatar').addEventListener('click', () => openSettings());   // tap your character = your settings (game menus)
-  // 📜 Mis oraciones — kid's saved warmup sentences + 🔊 listen.
-  $('hw-list-sentences').addEventListener('click', openMySentences);
-  $('hw-sentences-close').addEventListener('click', () => $('hw-sentences-overlay').classList.add('hidden'));
-  const sentCornerClose = $('hw-sentences-corner-close');
-  if (sentCornerClose) sentCornerClose.addEventListener('click', () => $('hw-sentences-overlay').classList.add('hidden'));
-  $('hw-sentences-overlay').addEventListener('click', (e) => { if (e.target === $('hw-sentences-overlay')) $('hw-sentences-overlay').classList.add('hidden'); });
+  // (2026-10-18, «Mi Dralingo» part 3: Papás, Mi perfil (was Ajustes), Mis oraciones and Mis exámenes open from the
+  // home, js/mi-dralingo.js, through the hooks below; Mis oraciones and Mis exámenes are drawn inside its screens)
 
   // 📝 Mis exámenes — kid's HSK simulation history with per-attempt
-  // mistake review. Same access pattern as Mis Oraciones. Fernando
-  // 2026-06-04: "they should immediately see what they got wrong in
-  // the records".
-  const myexamsBtn = $('hw-list-myexams');
-  if (myexamsBtn) myexamsBtn.addEventListener('click', openMyExams);
-  const myexamsClose = $('hw-myexams-close');
-  if (myexamsClose) myexamsClose.addEventListener('click', () => $('hw-myexams-overlay').classList.add('hidden'));
-  const myexamsOv = $('hw-myexams-overlay');
-  if (myexamsOv) myexamsOv.addEventListener('click', (e) => { if (e.target === myexamsOv) myexamsOv.classList.add('hidden'); });
-  function openMyExams() {
-    const ov = $('hw-myexams-overlay');
-    if (!ov) return;
-    ov.classList.remove('hidden');
+  // mistake review. Fernando 2026-06-04: "they should immediately see what they got wrong in the records".
+  // (2026-10-18: inside El Simulacro Dorado on the home, js/mi-dralingo.js moves #hw-myexams-list there)
+  function loadMyExams() {
     const list = $('hw-myexams-list');
+    if (!list) return;
     list.innerHTML = '<div class="hw-empty">Cargando…</div>';
     fetch('/api/homework/my-hsk-attempts/' + encodeURIComponent(studentCode)
         + '?accessCode=' + encodeURIComponent(accessCode) + '&studentCode=' + encodeURIComponent(studentCode))
@@ -1047,11 +1029,7 @@
       list.appendChild(card);
     });
   }
-  function openMySentences() {
-    const ov = $('hw-sentences-overlay');
-    ov.classList.remove('hidden');
-    loadMySentences();
-  }
+  // 📜 Mis oraciones (2026-10-18: a screen of the home, «Oraciones»; js/mi-dralingo.js moves #md-sent there and asks this)
   function loadMySentences() {
     const list = $('hw-sentences-list');
     list.innerHTML = '<div class="hw-empty">Cargando…</div>';
@@ -1391,11 +1369,8 @@
     if ($('hw-hud-tier')) $('hw-hud-tier').textContent = (p.tier && p.tier.emoji) || '🥉';
     if ($('hw-hud-swords')) $('hw-hud-swords').textContent = p.swords;
     if ($('hw-hud-streak')) $('hw-hud-streak').textContent = p.streak;
-    // 2026-10-13: a higher level / a longer streak than this phone saw last → a banner on the home (YCT 1 has no HUD)
-    if (window.HwPortal) {
-      const onList = !$('screen-list').classList.contains('hidden') && !document.body.classList.contains('hw-no-daily');
-      window.HwPortal.hud(p, studentCode, onList);
-    }
+    // (2026-10-18, «Mi Dralingo» part 3: the level-up / streak banners of the old HUD are gone with it: XP levels no longer
+    // show on the home, and «N días seguidos» sits in the home's band)
   }
   function openDaily() {
     if (document.body.classList.contains('hw-no-daily')) return;   // YCT 1: Desafíos are above their level
@@ -2835,11 +2810,8 @@
       });
   }
 
-  // === Settings screen ===
-  $('hw-settings-back').addEventListener('click', () => {
-    renderList();
-    showScreen('list');
-  });
+  // === Mi perfil (2026-10-18, «Mi Dralingo» part 3: was «Ajustes»; the same ids, the design's look) ===
+  // its «Volver» is a link to the home (#): js/mi-dralingo.js shows the home again
   function openSettings() {
     renderSettings();
     showScreen('settings');
@@ -2848,6 +2820,8 @@
     $('hw-settings-name').textContent = realName() || '—';
     $('hw-settings-code').textContent = studentCode;
     renderAvatarInto($('hw-settings-avatar'), avatar);
+    const ic = $('md-pf-av-ic');
+    if (ic) renderAvatarInto(ic, avatar);
     $('hw-settings-name-input').value = realName();
     $('hw-settings-name-msg').textContent = '';
     $('hw-settings-avatar-msg').textContent = '';
@@ -2861,6 +2835,7 @@
         saveAvatar(picked).then((ok) => {
           if (!ok) { $('hw-settings-avatar-msg').textContent = ''; return; }
           renderAvatarInto($('hw-settings-avatar'), avatar);
+          if ($('md-pf-av-ic')) renderAvatarInto($('md-pf-av-ic'), avatar);
           // Mark the picked one as selected in the grid
           grid.querySelectorAll('.hw-avatar-option').forEach((b) => {
             b.classList.toggle('selected', b.dataset.name === picked);
@@ -2892,7 +2867,7 @@
             <div class="hw-settings-reset-title">${escapeHtml(a ? a.title : (sub.assignmentTitle || 'Tarea'))}</div>
             <div class="hw-settings-reset-best">Mejor: <strong>${sub.score}/${sub.total} pts</strong></div>
           </div>
-          <button class="btn btn-ghost btn-sm" data-id="${escapeHtml(id)}">🔄 Borrar</button>`;
+          <button class="md-pf-del" type="button" data-id="${escapeHtml(id)}">Borrar</button>`;
         row.querySelector('button').addEventListener('click', () => doResetAssignment(id, a ? a.title : (sub.assignmentTitle || 'Tarea')));
         resetList.appendChild(row);
       });
@@ -2978,13 +2953,11 @@
       unread: () => _inboxUnread,
       guides: fetchGuides,
       reports: fetchReportMonths,
+      // («Ver sus tareas» = the kid's home on today's experience, «Mi Dralingo» part 3; «Volver» = the home)
       home: (where) => {
+        if (window.DralyHome && where === 'tareas') { window.DralyHome.go('today'); return; }
         renderList();
         showScreen('list');
-        if (where !== 'tareas') return;
-        const t = $('pt-tareas');
-        const el = t && !t.hidden ? t : $('hw-tabs');
-        if (el) el.scrollIntoView({ block: 'center' });
       },
     });
   }
@@ -3231,11 +3204,7 @@
     showScreen('list');
   });
 
-  // ── Assignment-list screen
-  // 📁 FOLDER NAVIGATION — login → HSK1 → 8 experiences → assignments.
-  // Pure presentation over the SAME assignment IDs, so every saved score /
-  // parent-card result is untouched. null = root (folders); else 'exp1'…
-  let hwFolder = null;
+  // ── The home (2026-10-18, «Mi Dralingo» part 3: js/mi-dralingo.js draws it; the old folders, tabs and 🔑 pill are gone)
   // 🎯 PASS RULE: a tarea is only "done/passed" at ≥80%. Below that it stays
   // PENDING and the kid must retry (user 2026-05-28: "cannot pass <80").
   const HW_PASS_PCT = 80;
@@ -3257,56 +3226,9 @@
       return total > 0 && s.score * 100 >= total * HW_PASS_PCT;
     });
   }
-  // Best-effort story→experience grouping for the reading folders.
-  function readingExpOf(r) { return (r && r.exp) || 'exp1'; }
-  (function bindFolderBack() {
-    const b = $('hw-folder-back');
-    if (b) b.addEventListener('click', () => { hwFolder = null; renderList(); });
-  })();
-  // 🗂️ Three-tab bindings. Tabs are MUTUALLY EXCLUSIVE; switching one only
-  // re-renders the root view, never the folder contents.
-  (function bindTabs() {
-    const ids = ['hw-tab-pending', 'hw-tab-done', 'hw-tab-custom'];
-    ids.forEach((id) => {
-      const t = $(id); if (!t) return;
-      t.addEventListener('click', () => {
-        currentTab = t.dataset.tab || 'pending';
-        ids.forEach((x) => { const e = $(x); if (e) e.classList.toggle('is-active', e.id === id); });
-        // Switching tabs always returns to the root view.
-        hwFolder = null;
-        renderList();
-      });
-    });
-  })();
 
-  // 📌 PINNED STACK — top-right, ALWAYS visible (Fernando 2026-09-15:
-  // "pin it or they're gonna forget the code and never see it again").
-  // Two pills: 🔑 student code (tap → re-opens the write-it-down banner)
-  // and, below it, the level chip. The level lives HERE, never next to
-  // the name.
-  function renderPinnedStack() {
-    let stack = document.getElementById('hw-pin-stack');
-    if (!stack) {
-      stack = document.createElement('div');
-      stack.id = 'hw-pin-stack';
-      document.body.appendChild(stack);
-    }
-    stack.innerHTML = '';
-    const codePill = document.createElement('button');
-    codePill.type = 'button';
-    codePill.className = 'hw-pin-code';
-    codePill.innerHTML = '🔑 <b>' + escapeHtml(studentCode || '') + '</b>';
-    codePill.title = 'Tu código de estudiante — tócalo para verlo en grande';
-    codePill.addEventListener('click', () => showStudentCodeBanner(studentCode));
-    stack.appendChild(codePill);
-    const lvl = document.createElement('span');
-    lvl.className = 'hw-pin-level is-' + hwLevel;
-    lvl.textContent = hwLevelName();
-    stack.appendChild(lvl);
-    // Level theme accent on the whole portal (subtle: borders/tabs shift)
-    document.body.classList.toggle('hw-lv-hsk2', hwLevel === 'hsk2');
-    document.body.classList.toggle('hw-lv-yct1', hwLevel === 'yct1');
-  }
+  // (2026-10-18, «Mi Dralingo» part 3: the 🔑 code pill is gone; the kid's code lives in Mi perfil only. A stack left by an
+  // older page version is still removed on «Salir»)
   function removePinnedStack() {
     const s = document.getElementById('hw-pin-stack');
     if (s) s.remove();
@@ -3333,99 +3255,9 @@
     if (okBtn) okBtn.addEventListener('click', () => ov.remove());
   }
   // ═══════════════════════════════════════════════════════════════════
-  // 🎯 SIM TRAINER UI — hero with the 3 tiers on the HSK1 home, a tier
-  // panel with its homeworks, and the mini-test player (real sim
-  // images + audio, instant server-checked feedback).
-  // ═══════════════════════════════════════════════════════════════════
-  // Root can show either the TRAINER home (default for HSK1) or the
-  // classic tabs/folders view (toggle) — Fernando: "pendientes /
-  // completadas / tu maestro should no longer appear at the beginning".
-  let hwClassicView = false;
-  function renderTrainerHero() {
-    let hero = document.getElementById('hw-trainer-hero');
-    const tabsBar = $('hw-tabs');
-    if (hwLevel !== 'hsk1' || !trainerMeta || hwFolder) {
-      if (hero) hero.style.display = 'none';
-      return;
-    }
-    if (!hero) {
-      hero = document.createElement('div');
-      hero.id = 'hw-trainer-hero';
-      if (tabsBar && tabsBar.parentNode) tabsBar.parentNode.insertBefore(hero, tabsBar);
-    }
-    hero.style.display = '';
-    if (hwClassicView) {
-      // slim strip: way back to the trainer home
-      hero.innerHTML = '<button type="button" class="hw-tr-backstrip" id="hw-tr-backhome">← 🎯 Volver al Entrenamiento</button>';
-      hero.querySelector('#hw-tr-backhome').addEventListener('click', () => {
-        hwClassicView = false;
-        renderList();
-        window.scrollTo({ top: 0, behavior: 'instant' });
-      });
-      return;
-    }
-    const rows = trainerMeta.tiers.map((tier) => {
-      const row = (trainerMeta.matrix || {})['t' + tier.tier] || {};
-      const exps = Object.keys(row).filter((e) => row[e] > 0);
-      const done = exps.filter((e) => (trainerBest('trainer-t' + tier.tier + '-' + e) || 0) >= trainerMeta.passPct).length;
-      return '<button type="button" class="hw-tr-tiercard is-t' + tier.tier + '" data-tier="' + tier.tier + '">'
-        + '<span class="hw-tr-tiericon">' + tier.icon + '</span>'
-        + '<span class="hw-tr-tiertitle">' + escapeHtml(tier.title) + '</span>'
-        + '<span class="hw-tr-tierblurb">' + escapeHtml(tier.blurb) + '</span>'
-        + '<span class="hw-tr-tierprog' + (done === exps.length && exps.length ? ' is-done' : '') + '">' + done + '/' + exps.length + ' experiencias dominadas</span>'
-        + '</button>';
-    }).join('');
-    hero.innerHTML =
-      '<div class="hw-tr-herohead">🎯 Entrenamiento de Simulación'
-      + '<small>Mini-exámenes con las imágenes y audios REALES de las 10 simulaciones · elige tu tier y tu experiencia</small></div>'
-      + '<div class="hw-tr-tiers">' + rows + '</div>'
-      + '<button type="button" class="hw-tr-classiclink" id="hw-tr-classic">📖 Tareas clásicas y de tu maestro/a →</button>';
-    hero.querySelectorAll('.hw-tr-tiercard').forEach((b) => {
-      b.addEventListener('click', () => openTierPanel(parseInt(b.dataset.tier, 10)));
-    });
-    hero.querySelector('#hw-tr-classic').addEventListener('click', () => {
-      hwClassicView = true;
-      renderList();
-      window.scrollTo({ top: 0, behavior: 'instant' });
-    });
-  }
-  function openTierPanel(tierNum) {
-    const old = document.getElementById('hw-tr-tierpanel');
-    if (old) old.remove();
-    const tier = trainerMeta.tiers.find((t) => t.tier === tierNum);
-    const row = (trainerMeta.matrix || {})['t' + tierNum] || {};
-    const exps = window.WU_EXPERIENCES || {};
-    const ov = document.createElement('div');
-    ov.id = 'hw-tr-tierpanel';
-    ov.innerHTML = '<div class="hw-tr-panelcard">'
-      + '<button type="button" class="hw-tr-close" id="hw-tr-tierclose">←</button>'
-      + '<div class="hw-tr-paneltitle">' + tier.icon + ' ' + escapeHtml(tier.title) + '</div>'
-      + '<div class="hw-tr-panelblurb">' + escapeHtml(tier.blurb) + ' · elige tu experiencia</div>'
-      + '<div class="hw-tr-expgrid">'
-      + ['exp1','exp2','exp3','exp4','exp5','exp6','exp7','exp8'].map((expId) => {
-          const count = row[expId] || 0;
-          if (!count) return '';
-          const meta = exps[expId] || {};
-          const emoji = (meta.short || '📁').split(' ')[0];
-          const label = (trainerMeta.expLabels || {})[expId] || meta.label || expId;
-          const best = trainerBest('trainer-t' + tierNum + '-' + expId);
-          const badge = best === null ? '<span class="hw-tr-new">🆕</span>'
-            : best >= trainerMeta.passPct ? '<span class="hw-tr-pass">✅ ' + best + '</span>'
-            : '<span class="hw-tr-retry">⏳ ' + best + '</span>';
-          return '<button type="button" class="hw-tr-expcard" data-exp="' + expId + '">'
-            + '<span class="hw-tr-expemoji">' + emoji + '</span>'
-            + '<span class="hw-tr-explabel">' + escapeHtml(label) + '</span>'
-            + '<span class="hw-tr-expcount">' + count + ' preguntas</span>'
-            + badge + '</button>';
-        }).join('')
-      + '</div></div>';
-    document.body.appendChild(ov);
-    ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
-    ov.querySelector('#hw-tr-tierclose').addEventListener('click', () => ov.remove());
-    ov.querySelectorAll('.hw-tr-expcard').forEach((b) => {
-      b.addEventListener('click', () => { ov.remove(); openTrainer(tierNum, b.dataset.exp); });
-    });
-  }
+  // 🎯 SIM TRAINER UI — the mini-test player (real sim images + audio, instant server-checked feedback). Since
+  // 2026-10-18 («Mi Dralingo» part 3) each tier of an experience is a card in that experience's «De tu profe» on the home
+  // (js/mi-dralingo.js → openTrainer(tier, exp)); the old hero with the 3 tiers and the tier panel are gone.
   // 🎉 EPIC CELEBRATION — confetti canvas + 3D-rotating emoji + big
   // COMPLETADO ("go super crazy, Claude style").
   function epicCelebration(opts) {
@@ -3706,7 +3538,8 @@
         if (d && d.ok) submissions.push({ assignmentId: asgId, score: d.score, total: d.total, ts: Date.now() });
         const passPct = !mode && trainerMeta ? trainerMeta.passPct : HW_PASS_PCT;
         const pass = score >= passPct;
-        const nx = pass ? nextUp(hwFolder, mode ? mode.assignmentId : 'trainer-t' + sess.tier.tier + '-' + sess.exp) : null;
+        // (2026-10-18, «Mi Dralingo» part 3: «▶ Siguiente» = the next tarea of the same experience on the home)
+        const nx = pass ? nextUp(mode ? mode.assignmentId : 'trainer-t' + sess.tier.tier + '-' + sess.exp) : null;
         epicCelebration({
           score: score, right: rightCount, of: qs.length, pass: pass, passPct: passPct,
           retry: mode ? () => openAssignment(mode.assignmentId) : () => openTrainer(sess.tier.tier, sess.exp),
@@ -3717,163 +3550,52 @@
     }
     drawQuestion();
   }
+  // 🏠 2026-10-18 · «Mi Dralingo» part 3 (his approved design: «ALL IS GOOD, YOU HAVE MY OKAY»): the kid's home is drawn by
+  // js/mi-dralingo.js (Hoy, La Ruta Dorada as a path of the level's experiences, each experience's three steps, El
+  // Simulacro Dorado, Mensajes, Mis oraciones, Desafío del día, Mi perfil). This file stays the engine: the login, the
+  // players (tareas, game rounds, the HSK 1 trainer, reading tests), Mis oraciones, Mis exámenes, the inbox, Papás, Mi
+  // perfil (was Ajustes). It hands the home what it holds through these hooks (DralyHome.render(HOME)).
+  const HOME = {
+    // what the home draws from: this kid, their level and their teacher's tareas (the same lists the old folders had)
+    state: () => ({
+      code: studentCode, accessCode, keyMode: hwKeyMode, name: realName(), avatar, avatarUrl: ptAvatarUrl() || avatarSrc('dralingo'),
+      level: hwLevel, levelName: hwLevelName(), folders: hwFolders ? hwFolders.slice() : null,
+      assignments: assignments.slice(), submissions: submissions.slice(), custom: taggedCustomAssignments(),
+      readings: (readingTests || []).slice(), trainer: trainerMeta, trainerLoading: trainerMetaLoading,
+      inbox: _inbox.slice(), unread: _inboxUnread, daily: !document.body.classList.contains('hw-no-daily'),
+    }),
+    passed: (a) => assignmentPassed(a),
+    bestPct: (a) => assignmentBestPct(a),
+    trainerBest: (tid) => trainerBest(tid),
+    passPct: HW_PASS_PCT,
+    // doors
+    openAssignment: (id) => openAssignment(id),
+    review: (id, title) => openAssignmentReview(id, title),
+    openTrainer: (tier, exp) => openTrainer(tier, exp),
+    openReading: (storyId) => openReadingTest(storyId),
+    reviewReading: (storyId, title) => openReadingReview(storyId, title),
+    loadMyExams: () => loadMyExams(),
+    loadSentences: () => loadMySentences(),
+    openParents: () => openParentView(),
+    openPerfil: () => openSettings(),
+    openDaily: () => openDaily(),
+    replayAnim: (m) => _showAnimOverlay(m),
+    readAll: () => markInboxRead(),
+    showList: () => showScreen('list'),
+    screen: () => ['list', 'settings', 'assignment', 'results', 'parents', 'reading', 'daily', 'avatar', 'entry']
+      .find((n) => { const el = $('screen-' + n); return el && !el.classList.contains('hidden'); }) || '',
+    avatar: (el, v) => renderAvatarInto(el, v),
+  };
   function renderList() {
-    // never «Hola Anon»: no real name → a tappable «✏️ ¿Cómo te llamas?» that saves it right here
-    const nameEl = $('hw-list-name');
-    const name = realName();
-    nameEl.textContent = name || '✏️ ¿Cómo te llamas?';
-    nameEl.classList.toggle('hw-list-name-ask', !name);
-    nameEl.onclick = name ? null : () => {   // the settings name box (translated, styled), not a browser prompt
-      openSettings();
-      const inp = $('hw-settings-name-input');
-      if (inp) { inp.scrollIntoView({ block: 'center' }); inp.focus(); }
-    };
-    renderAvatarInto($('hw-list-avatar'), avatar);
-    if (window.HwPortal) window.HwPortal.kid(avatar && window.Saga && window.Saga.legacyAvatar(avatar) || avatar);   // the hero friend is never the kid's own avatar
-    renderPinnedStack();
-    // inside a world the hero, «Siguiente», the dock and the pills step away: the folder bar is the top bar
-    $('screen-list').classList.toggle('pt-in-folder', !!hwFolder);
-    if (hwFolder) renderFolderContents(hwFolder);
-    else renderFolderRoot();
-    renderNextUp();
-    renderBaseEntry();
-    renderTareasEntry();
-    // Refresh reading state once; its callback re-renders (no fetch loop).
-    fetchReadingTests();
+    if (window.DralyHome) window.DralyHome.render(HOME);
   }
-
-  // ▶ «Siguiente» (2026-10-13 remake: fast to the core activity): the next thing to play, in one tap. Teacher-sent
-  // tareas first, then the level's tareas in folder order (the open world first); the HSK 1 trainer home: the first
-  // tier · experiencia not passed yet. exclude = the tarea that just ended (in case its submit didn't reach us).
-  function nextUp(preferFolder, exclude) {
-    const custom = taggedCustomAssignments().find((x) => x.status !== 'done' && x.a.id !== exclude);
-    if (custom) return { title: custom.a.title || 'Tarea especial', run: () => openAssignment(custom.a.id) };
-    if (hwLevel === 'hsk1' && trainerMetaLoading && !trainerMeta && !hwClassicView && !preferFolder) return null;
-    if (hwLevel === 'hsk1' && trainerMeta && !hwClassicView && !preferFolder) {
-      for (const tier of trainerMeta.tiers || []) {
-        const row = (trainerMeta.matrix || {})['t' + tier.tier] || {};
-        for (const e of ['exp1', 'exp2', 'exp3', 'exp4', 'exp5', 'exp6', 'exp7', 'exp8']) {
-          const tid = 'trainer-t' + tier.tier + '-' + e;
-          if (!row[e] || tid === exclude || (trainerBest(tid) || 0) >= trainerMeta.passPct) continue;
-          const label = (trainerMeta.expLabels || {})[e] || ((window.WU_EXPERIENCES || {})[e] || {}).label || e;
-          return { title: tier.title + ' · ' + label, run: () => openTrainer(tier.tier, e) };
-        }
-      }
-      return null;
-    }
-    const exps = hwExps();
-    const order = hwFolderIds().filter((f) => exps[f]);
-    if (preferFolder && order.includes(preferFolder)) order.unshift(preferFolder);
-    for (const f of order) {
-      const a = assignments.find((x) => x.expLabel === f && x.id !== exclude && !assignmentPassed(x));
-      if (a) return { title: a.title, run: () => openAssignment(a.id) };
-    }
-    return null;
+  // «▶ Siguiente» in a round's reveal: the next tarea of the same experience on the home (the tarea that just ended
+  // excluded, in case its submit didn't reach us)
+  function nextUp(exclude) {
+    const n = window.DralyHome && window.DralyHome.next ? window.DralyHome.next(exclude) : null;
+    return n && typeof n.run === 'function' ? n : null;
   }
-  // 🏆 «La Ruta Dorada de YCT 1» (2026-10-15, was «Empieza aquí · La base de YCT 1»): the kid's own module on La Ruta
-  // Dorada (/audios/<level>: La Base, El Entrenamiento, El Simulacro Dorado), on the home only. The kid's seals live on
-  // this phone (localStorage draly_base_<level>, written by /audios), so the count is read here too.
-  function renderBaseEntry() {
-    const a = $('pt-base');
-    if (!a) return;
-    a.hidden = !hwBase || !!hwFolder;
-    if (a.hidden) return;
-    // ?from=homework: the path's back arrow then returns here (the home-screen app has no back button)
-    a.href = '/audios/' + encodeURIComponent(hwBase.level) + '?from=homework';
-    // 2026-10-16 (phase 3): the seals live on the kid's account (server: hwBase.seals, fresh from this login: another
-    // phone's stamps included). This phone's mirror adds only its changes not saved yet when it holds THIS kid's
-    // account; a phone that never met the account adds its own seals (they join the account at the next visit to La
-    // Base); a sibling's mirror never counts.
-    let n = 0;
-    try {
-      const o = JSON.parse(localStorage.getItem('draly_base_' + hwBase.level) || 'null');
-      const okN = (x) => Number.isInteger(x) && x >= 1 && x <= hwBase.words;
-      const mine = o && Array.isArray(o.seals) ? o.seals.filter(okN) : [];
-      const acct = Array.isArray(hwBase.seals) ? hwBase.seals.filter(okN) : null;
-      if (!acct) n = mine.length;
-      else if (o && o.who && o.who === hwBase.who) {
-        const s = new Set(acct);
-        const p = o.pend && typeof o.pend === 'object' ? o.pend : {};
-        Object.keys(p).forEach((k) => { const x = Number(k); if (!okN(x)) return; if (p[k]) s.add(x); else s.delete(x); });
-        n = s.size;
-      } else if (o && o.who) n = acct.length;
-      else n = new Set(acct.concat(mine)).size;
-    } catch (_) { n = 0; }
-    // the little book's spine: a long name («New HSK 1») breaks as «New / HSK 1», never «HSK / 1»
-    $('pt-base-level').textContent = hwLevelName().replace(/ (\d+)$/, ' $1');
-    $('pt-base-title').textContent = 'La Ruta Dorada de ' + hwLevelName();
-    // the module's own card colour on La Ruta Dorada (js/ruta.js: YCT Rojo Imperial, New HSK jade, HSK lapis)
-    const look = /^yct/.test(hwBase.level) ? ['#a8352c', '#5a1010'] : /^newhsk/.test(hwBase.level) ? ['#24806b', '#0b3d35']
-      : /^hsk/.test(hwBase.level) ? ['#3c5bb0', '#16275a'] : null;
-    if (look && $('pt-base-book')) { $('pt-base-book').style.setProperty('--rd-c1', look[0]); $('pt-base-book').style.setProperty('--rd-c2', look[1]); }
-    $('pt-base-sub').textContent = n ? n + ' de ' + hwBase.words + ' sellos' : hwBase.words + ' palabras con audio';
-  }
-  // 🏆 «Hacer mis tareas» (2026-10-18, La Ruta Dorada redesign): the homework audios of the kid's level, with a red count
-  // of the ones not marked «¡Ya la mandé!» yet. It opens «Tus tareas» on the level's page (/audios/<level>?from=homework
-  // #tareas: the page's back arrow then returns here). The marks live on the kid's account (server: hwTareas.sent, from
-  // this login); this phone adds its taps not saved yet when it holds THIS kid's account (localStorage draly_tareas,
-  // written by /audios), or its own marks when it never met an account (they join it at the next visit); a sibling's
-  // never count. Drawn here, beside «La Ruta Dorada de <nivel>», with that card's look.
-  function renderTareasEntry() {
-    let a = $('pt-tareas');
-    const show = !!hwTareas && !hwFolder;
-    if (!show) { if (a) a.hidden = true; return; }
-    const base = $('pt-base');
-    if (!a) {
-      a = document.createElement('a');
-      a.id = 'pt-tareas';
-      a.className = 'pt-base pt-tareas';
-      a.innerHTML = '<span class="pt-base-book" aria-hidden="true" style="padding:0;overflow:hidden;background:#f3e2b3">' +
-        '<img src="/assets/cast/aileen-talk.webp" alt="" width="56" height="62" style="width:56px;height:62px;object-fit:cover;object-position:50% 8%"></span>' +
-        '<span class="pt-base-text"><b class="pt-base-title">Hacer mis tareas</b>' +
-        '<span style="display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px"><span id="pt-tareas-n" style="padding:3px 10px;border-radius:999px;background:#c62828;color:#fff;font-weight:900;font-size:.82rem;white-space:nowrap"></span>' +
-        '<span class="pt-base-sub" id="pt-tareas-sub"></span></span></span>' +
-        '<span class="pt-base-go" aria-hidden="true">›</span>';
-      if (base && base.parentNode) base.parentNode.insertBefore(a, base.nextSibling);
-      else { const dock = document.querySelector('.pt-dock'); if (dock && dock.parentNode) dock.parentNode.insertBefore(a, dock); else return; }
-    }
-    a.hidden = false;
-    a.href = '/audios/' + encodeURIComponent(hwTareas.level) + '?from=homework#tareas';
-    const ids = hwTareas.ids.filter((x) => typeof x === 'string');
-    const sent = new Set(Array.isArray(hwTareas.sent) ? hwTareas.sent : []);
-    try {
-      const o = JSON.parse(localStorage.getItem('draly_tareas') || 'null');
-      const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
-      if (isObj(o) && o.who && o.who === hwTareas.who && isObj(o.pend)) {
-        Object.keys(o.pend).forEach((id) => { const p = o.pend[id]; if (!isObj(p)) return; if (p.s === 1) sent.add(id); if (p.s === 0) sent.delete(id); });
-      }
-      // the phone's own marks (made while nobody was logged in) join this kid's account at their next visit to /audios;
-      // a first-version mirror that never met an account kept them in `marks`
-      const own = isObj(o) && isObj(o.phone) ? o.phone : (isObj(o) && !o.who && isObj(o.marks) ? o.marks : {});
-      Object.keys(own).forEach((id) => { if (isObj(own[id]) && own[id].s) sent.add(id); });
-    } catch (_) { /* the account's word is enough */ }
-    const left = ids.filter((id) => !sent.has(id)).length;
-    $('pt-tareas-sub').textContent = left ? 'Escucha, graba y manda tu video' : '¡Todas mandadas!';
-    const n = $('pt-tareas-n');
-    n.textContent = left + ' por mandar';
-    n.hidden = !left;
-    a.setAttribute('aria-label', 'Hacer mis tareas' + (left ? ': ' + left + ' por mandar' : ': todas mandadas'));
-  }
-  function renderNextUp() {
-    const b = $('pt-next');
-    if (!b) return;
-    const n = hwFolder ? null : nextUp();
-    b.hidden = !n;
-    b.onclick = n ? n.run : null;
-    if (n) $('pt-next-title').textContent = n.title;
-  }
-  // empty states get Dralingo's «pointing» pose (POSES map in js/portal.js)
-  function ptEmptyPose(host) {
-    const box = host && host.querySelector('.hw-empty');
-    if (!box || !window.HwPortal || box.querySelector('.pt-empty-pose')) return;
-    const im = document.createElement('img');
-    box.classList.add('pt-empty');
-    im.className = 'pt-empty-pose';
-    im.alt = '';
-    im.src = window.HwPortal.pose('dralingo', 'pointing');
-    box.prepend(im);
-  }
-  // the 2026-10-13 welcome moment (js/portal.js): once per visit, after the list is on screen
+  // the 2026-10-13 welcome moment (js/portal.js): once per visit, after the home is on screen («the Switch-like start»)
   function ptWelcome() {
     if (!window.HwPortal) return;
     window.HwPortal.welcome({ code: studentCode, name: realName(), avatarUrl: ptAvatarUrl(), level: hwLevelName() });
@@ -3883,10 +3605,7 @@
     return isSvgAvatar(avatar) ? avatarSrc(avatar) : '';
   }
 
-  // 🎯 Pull custom assignments the teacher sent to ME. ONLY re-renders the
-  // custom section — not the whole folder root. Previously every fetch
-  // re-rendered the entire grid, which could destroy an HSK1 card mid-tap
-  // on iPhone / Galaxy (the click was registered against a stale node).
+  // 🎯 Pull custom assignments the teacher sent to ME (the home shows them as «De tu profe» under «Hoy»)
   function refreshCustomAssignments() {
     if (!studentCode || !(accessCode || hwKeyMode)) return;
     fetch('/api/homework/custom-assignments/' + encodeURIComponent(studentCode)
@@ -3894,14 +3613,11 @@
       .then((r) => r.json())
       .then((d) => {
         customAssignments = (d && d.assignments) || [];
-        if (!hwFolder) renderCustomSection();
-        updateTabCounts();
-        renderNextUp();   // a teacher-sent tarea goes first in «Siguiente»
+        if (window.DralyHome) window.DralyHome.changed();
       })
       .catch(() => { customAssignments = []; });
   }
-  // Compute the tag for every custom assignment ONCE — used by the tab count
-  // badge AND by the custom-tab list render.
+  // the status of every custom assignment: new / pending (tried below 80 %) / done
   function taggedCustomAssignments() {
     return (customAssignments || []).slice()
       .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
@@ -3915,222 +3631,7 @@
         return { a, status, best };
       });
   }
-  // Renders the FLAT custom-assignment list (all teacher-sent tareas) into
-  // the new dedicated #hw-list-custom-all grid. Only shown when the active
-  // tab is "custom". The Pendientes/Completadas HSK1 tabs never see these.
-  function renderCustomSection() {
-    const wrap = $('hw-list-custom-all');
-    if (!wrap) return;
-    if (hwFolder || currentTab !== 'custom') { wrap.classList.add('hidden'); return; }
-    const tagged = taggedCustomAssignments();
-    wrap.classList.remove('hidden');
-    wrap.innerHTML = '';
-    if (!tagged.length) {
-      wrap.innerHTML = '<div class="hw-empty">Tu maestro/a aún no te ha enviado tareas. ✨</div>';
-      ptEmptyPose(wrap);
-      return;
-    }
-    renderCustomCards(wrap, tagged);
-  }
-  function renderCustomCards(grid, list) {
-    grid.innerHTML = '';
-    list.forEach(({ a, status, best }) => {
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'hw-folder-card hw-custom-card'
-        + (status === 'done' ? ' is-passed' : status === 'pending' ? ' is-pending' : '');
-      const when = a.createdAt ? new Date(a.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: '2-digit' }) : '';
-      const tag = status === 'done'
-          ? '<div class="hw-folder-progress">✓ Completada · ' + (best ? best.score + '/' + best.total : '') + '</div>'
-        : status === 'pending'
-          ? '<div class="hw-folder-progress">⏳ Reintenta · mejor ' + (best ? best.score + '/' + best.total : '0') + '</div>'
-          : '<div class="hw-folder-progress">🆕 ¡Para ti!</div>';
-      card.innerHTML = `
-        <div class="hw-folder-emoji">🎯</div>
-        <div class="hw-folder-name">${escapeHtml(a.title || 'Tarea especial')}</div>
-        <div class="hw-folder-meta">📝 ${a.itemCount} oración${a.itemCount === 1 ? '' : 'es'} · ${when}</div>
-        ${tag}`;
-      card.dataset.assignmentId = a.id;
-      card.addEventListener('click', () => openAssignment(a.id));
-      grid.appendChild(card);
-    });
-  }
-  // ROOT — HSK1 folders, filtered by the active tab. The folder card's
-  // count shows only items that match the tab (so "EXP1 · 2/3 ✓" in Done
-  // means 2 of 3 passed, while in Pendientes it would show "3 por hacer").
-  function renderFolderRoot() {
-    $('hw-folder-bar').classList.add('hidden');
-    $('hw-sec-tareas').classList.add('hidden');
-    $('hw-sec-lecturas').classList.add('hidden');
-    $('hw-list-readings').classList.add('hidden');
-    const tabsBar = $('hw-tabs'); if (tabsBar) tabsBar.classList.remove('hidden');
-    // Level lives in the pinned stack (top-right), never in the title —
-    // "HSK2 next to the avatar reads as if that's my name".
-    const t = document.querySelector('.hw-list-title'); if (t) t.textContent = '📚 Mis Tareas';
-    renderTrainerHero();   // 🎯 3 tiers (HSK1 root only; no-op otherwise)
-    // 🧹 HSK1 trainer home: NO tabs, NO classic grid at the root
-    // (Fernando: "pendientes/completadas/tu maestro no longer at the
-    // beginning"). The classic view lives behind the 📖 link.
-    if (hwLevel === 'hsk1' && trainerMeta && !hwClassicView) {
-      const tb = $('hw-tabs'); if (tb) tb.classList.add('hidden');
-      const g = $('hw-list-grid'); g.classList.add('hidden'); g.innerHTML = '';
-      const cu = $('hw-list-custom-all'); if (cu) cu.classList.add('hidden');
-      return;
-    }
-    // Always refresh the custom flat list (visible only on the custom tab).
-    renderCustomSection();
-    const grid = $('hw-list-grid');
-    updateTabCounts();
-    if (currentTab === 'custom') {
-      // Hide the HSK1 grid; the custom flat list above takes over.
-      grid.classList.add('hidden');
-      grid.innerHTML = '';
-      return;
-    }
-    grid.classList.remove('hidden');
-    grid.innerHTML = '';
-    const exps = hwExps();   // the level's folders: experiencias (HSK) or worlds (YCT)
-    const showDone = currentTab === 'done';
-    hwFolderIds().forEach((expId, worldIdx) => {
-      const exp = exps[expId];
-      if (!exp) return;
-      const eAssigns = assignments.filter((a) => a.expLabel === expId);
-      const eReads = (readingTests || []).filter((r) => readingExpOf(r) === expId);
-      const total = eAssigns.length + eReads.length;
-      const aDone = eAssigns.filter((a) => assignmentPassed(a)).length;
-      const rDone = eReads.filter((r) => r.bestScore != null && r.bestScore >= 80).length;
-      const done = aDone + rDone;
-      const pending = total - done;
-      // Skip folders that don't contribute to the current tab.
-      if (showDone && done === 0) return;
-      if (!showDone && pending === 0) return;
-      const emoji = (exp.short || '📁').split(' ')[0] || '📁';
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'hw-folder-card'
-        + (showDone ? ' hw-folder-done' : ' hw-folder-pending');
-      const meta = showDone
-        ? '<div class="hw-folder-progress">✅ ' + done + ' completada' + (done === 1 ? '' : 's') + '</div>'
-        : '<div class="hw-folder-progress">⏳ ' + pending + ' por hacer</div>';
-      card.innerHTML = `
-        <div class="hw-folder-emoji">${emoji}</div>
-        <div class="hw-folder-name">${escapeHtml(exp.label || expId)}</div>
-        <div class="hw-folder-meta">${total + ' actividad' + (total === 1 ? '' : 'es') + ' en total'}</div>
-        ${meta}
-        ${done && total ? `<span class="pt-world-bar" aria-hidden="true"><i style="width:${Math.round((done / total) * 100)}%"></i></span>` : ''}`;
-      card.dataset.world = String(worldIdx % 8);   // its own tint (portal.css)
-      // 🛡️ data-folder-id mirrors the data-assignment-id approach so the
-      // global capture-phase delegate catches folder taps too, even if
-      // this per-card handler ever fails to attach (e.g. re-render race).
-      card.dataset.folderId = expId;
-      card.addEventListener('click', () => { hwFolder = expId; renderList(); window.scrollTo({top:0, behavior:'instant'}); });
-      grid.appendChild(card);
-    });
-    if (!grid.children.length) {
-      grid.innerHTML = showDone
-        ? '<div class="hw-empty">Aún no has completado ninguna tarea. ¡Vamos a Pendientes! 💪</div>'
-        : '<div class="hw-empty">🎉 ¡Sin pendientes! Has terminado todo lo disponible.</div>';
-      ptEmptyPose(grid);
-    }
-  }
 
-  // FOLDER — assignments (+ readings) inside one experience, filtered by tab.
-  function renderFolderContents(expId) {
-    const heroEl = document.getElementById('hw-trainer-hero');
-    if (heroEl) heroEl.style.display = 'none';   // hero only at root
-    const exp = hwExps()[expId];
-    const tabsBar = $('hw-tabs'); if (tabsBar) tabsBar.classList.add('hidden');
-    // Hide the custom flat list while inside a folder.
-    const cu = $('hw-list-custom-all'); if (cu) cu.classList.add('hidden');
-    $('hw-folder-bar').classList.remove('hidden');
-    const tabLabel = currentTab === 'done' ? ' · ✅ Completadas' : ' · ⏳ Pendientes';
-    $('hw-folder-crumb').textContent = (exp ? exp.label : expId) + tabLabel;
-    const grid = $('hw-list-grid');
-    grid.classList.remove('hidden');
-    grid.innerHTML = '';
-    const showDone = currentTab === 'done';
-    const list = assignments.filter((a) => {
-      if (a.expLabel !== expId) return false;
-      const passed = assignmentPassed(a);
-      return showDone ? passed : !passed;
-    });
-    $('hw-sec-tareas').classList.toggle('hidden', list.length === 0);
-    $('hw-sec-tareas').textContent = hwFolders ? '🎮 Rondas de juego' : '📚 Tareas para armar oraciones';
-    list.forEach((a) => grid.appendChild(buildAssignmentCard(a)));
-    renderReadingsList();
-    if (!list.length && !($('hw-list-readings').children.length)) {
-      grid.innerHTML = showDone
-        ? '<div class="hw-empty">Aún no has completado actividades de esta unidad.</div>'
-        : '<div class="hw-empty">¡Sin pendientes en esta unidad! 🎉</div>';
-      ptEmptyPose(grid);
-    }
-  }
-  // 🔢 Update the 3 tab count badges. Called whenever data changes.
-  function updateTabCounts() {
-    const exps = hwExps();
-    let pendingCount = 0, doneCount = 0;
-    hwFolderIds().forEach((expId) => {
-      if (!exps[expId]) return;
-      const eA = assignments.filter((a) => a.expLabel === expId);
-      const eR = (readingTests || []).filter((r) => readingExpOf(r) === expId);
-      const aDone = eA.filter((a) => assignmentPassed(a)).length;
-      const rDone = eR.filter((r) => r.bestScore != null && r.bestScore >= 80).length;
-      doneCount += aDone + rDone;
-      pendingCount += (eA.length - aDone) + (eR.length - rDone);
-    });
-    const customCount = (customAssignments || []).length;
-    const setTxt = (id, n) => { const el = $(id); if (el) el.textContent = String(n); };
-    setTxt('hw-tab-count-pending', pendingCount);
-    setTxt('hw-tab-count-done', doneCount);
-    setTxt('hw-tab-count-custom', customCount);
-  }
-
-  // One assignment card (+ a review button once attempted) — shared by both
-  // views. Returns a fragment so we can append the card AND a "ver errores".
-  function buildAssignmentCard(a) {
-    const frag = document.createDocumentFragment();
-    const myAttempts = submissions.filter((s) => s.assignmentId === a.id);
-    const bestScore = myAttempts.length ? Math.max(...myAttempts.map((s) => s.score)) : null;
-    const pct = assignmentBestPct(a);
-    const passed = pct != null && pct >= HW_PASS_PCT;
-    const card = document.createElement('button');
-    card.type = 'button';
-    card.className = 'hw-card' + (passed ? ' hw-card-done' : '');
-    // <80% → still PENDING (must retry). Show the score but mark it pending.
-    const statusBadge = bestScore == null
-      ? '<span class="hw-card-badge new">Nueva</span>'
-      : (passed
-          ? `<span class="hw-card-badge done">✓ ${bestScore}/${a.totalPoints} pts</span>`
-          : `<span class="hw-card-badge pending">⏳ ${bestScore}/${a.totalPoints} · reintenta (necesitas 80%)</span>`);
-    const expNum = /^exp\d+$/.test(a.expLabel || '') ? a.expLabel.slice(3) : '';
-    const sameExp = assignments.filter((x) => x.expLabel === a.expLabel);
-    const lessonNo = Math.max(1, sameExp.indexOf(a) + 1);
-    const isQuiz = a.type === 'pack-quiz';
-    const lessonChip = expNum ? `<span class="hw-card-exp">EXP${expNum} / ${lessonNo}</span>`
-      : isQuiz ? '<span class="hw-card-exp">🎮 Juego</span>' : '';
-    card.innerHTML = `
-      <div class="hw-card-head">
-        ${statusBadge}
-        <span class="hw-card-points">${a.totalPoints} pts</span>
-      </div>
-      ${lessonChip}
-      <div class="hw-card-title">${escapeHtml(a.title)}</div>
-      <div class="hw-card-sub">${escapeHtml(a.subtitle)}</div>
-      <div class="hw-card-meta">${a.itemCount} ${isQuiz ? 'preguntas' : 'oraciones'}</div>`;
-    card.dataset.assignmentId = a.id;
-    card.addEventListener('click', () => openAssignment(a.id));
-    frag.appendChild(card);
-    // 🔎 Once attempted, let the kid review exactly what they missed.
-    if (bestScore != null) {
-      const rev = document.createElement('button');
-      rev.type = 'button';
-      rev.className = 'hw-review-btn';
-      rev.textContent = '🔎 Ver mis errores';
-      rev.addEventListener('click', () => openAssignmentReview(a.id, a.title));
-      frag.appendChild(rev);
-    }
-    return frag;
-  }
   // Fetch the kid's best assignment submission breakdown → mistakes modal.
   function openAssignmentReview(id, title) {
     fetch('/api/homework/assignment-review/' + encodeURIComponent(id)
@@ -4146,7 +3647,8 @@
       .catch((e) => alert('Error: ' + e.message));
   }
 
-  // ── Reading-test list (fetched from server)
+  // ── Reading-test list (fetched from server). Since 2026-10-18 («Mi Dralingo» part 3) the home shows them in El Simulacro
+  // Dorado («Exámenes de lectura», each with «Ver mis errores»)
   function fetchReadingTests() {
     if (!studentCode || !(accessCode || hwKeyMode)) return;
     fetch('/api/homework/reading-tests?accessCode=' + encodeURIComponent(accessCode)
@@ -4155,72 +3657,8 @@
       .then((data) => {
         if (!data || !data.ok) return;
         readingTests = data.stories || [];
-        // Re-render so folder counts / readings reflect fresh data — but
-        // NEVER rebuild the root grid on a repeat fetch, or a tap landing
-        // mid-rebuild gets lost or double-fires (the touch regression).
-        if (hwFolder) renderReadingsList();
-        else if (!_readingsLoadedOnce) renderFolderRoot();
-        _readingsLoadedOnce = true;
+        if (window.DralyHome) window.DralyHome.changed();
       }).catch(() => {});
-  }
-  let _readingsLoadedOnce = false;
-  function renderReadingsList() {
-    const wrap = $('hw-list-readings');
-    if (!wrap) return;
-    // Reading tests only show INSIDE an experience folder.
-    if (!hwFolder) {
-      wrap.classList.add('hidden');
-      $('hw-sec-lecturas').classList.add('hidden');
-      return;
-    }
-    // Filter by the active tab — Pendientes shows unstarted/below-80 lecturas,
-    // Completadas shows ≥80 only. (No tab switch inside folder, but the tab
-    // selected on root determines what enters here.)
-    const showDone = currentTab === 'done';
-    const mine = (readingTests || []).filter((r) => {
-      if (readingExpOf(r) !== hwFolder) return false;
-      const passed = r.bestScore != null && r.bestScore >= 80;
-      return showDone ? passed : !passed;
-    });
-    $('hw-sec-lecturas').classList.toggle('hidden', mine.length === 0);
-    wrap.classList.toggle('hidden', mine.length === 0);
-    if (!mine.length) { wrap.innerHTML = ''; return; }
-    wrap.innerHTML = '';
-    mine.forEach((r) => {
-      const card = document.createElement('button');
-      card.type = 'button';
-      card.className = 'hw-card hw-card-reading' + (r.available ? '' : ' hw-card-locked');
-      const status = r.bestScore != null
-        ? `<span class="hw-card-badge done">${r.bestScore}/100 pts</span>`
-        : (r.available ? '<span class="hw-card-badge new">Disponible</span>'
-                       : '<span class="hw-card-badge locked">🔒 Hazlo en clase primero</span>');
-      card.innerHTML = `
-        <div class="hw-card-reading-img" style="background-image:url('${r.coverImage}');"></div>
-        <div class="hw-card-reading-body">
-          <div class="hw-card-head">
-            ${status}
-            <span class="hw-card-points">100 pts</span>
-          </div>
-          <div class="hw-card-title">📖 ${escapeHtml(r.title)}</div>
-          <div class="hw-card-sub">${escapeHtml(r.subtitle || '')}</div>
-          <div class="hw-card-meta">${r.pageCount} páginas · ${r.attempts || 0} intento${r.attempts === 1 ? '' : 's'}</div>
-        </div>`;
-      if (r.available) {
-        card.addEventListener('click', () => openReadingTest(r.storyId));
-      } else {
-        card.addEventListener('click', () => alert('Aún no puedes hacer este examen. Tu maestra debe abrirlo en clase primero.'));
-      }
-      wrap.appendChild(card);
-      // 🔎 Review past mistakes — only once they've attempted it.
-      if (r.bestScore != null) {
-        const rev = document.createElement('button');
-        rev.type = 'button';
-        rev.className = 'hw-review-btn';
-        rev.textContent = '🔎 Ver mis errores';
-        rev.addEventListener('click', () => openReadingReview(r.storyId, r.title));
-        wrap.appendChild(rev);
-      }
-    });
   }
   // Fetch + show which reading-test questions the kid missed (best attempt).
   function openReadingReview(storyId, title) {
@@ -5252,19 +4690,7 @@
     // up on slow phones. Bail immediately if we're not on the list screen.
     const listEl = $('screen-list');
     if (!listEl || listEl.classList.contains('hidden')) return;
-    // ── Folder cards (EXP1-EXP8) — open the folder view
-    const folder = e.target && e.target.closest && e.target.closest('[data-folder-id]');
-    if (folder && !e.target.closest('button[disabled]')) {
-      const fid = folder.dataset.folderId;
-      if (fid && hwFolder !== fid) {
-        e.preventDefault();
-        e.stopPropagation();   // 🛡️ stop the card's own onclick from also firing
-        hwFolder = fid;
-        renderList();
-        window.scrollTo({ top: 0, behavior: 'instant' });
-        return;
-      }
-    }
+    // (2026-10-18, «Mi Dralingo» part 3: no folder cards any more; the home's «De tu profe» buttons carry the tarea's id)
     // ── Assignment cards — open the assignment fetch
     const card = e.target && e.target.closest && e.target.closest('[data-assignment-id]');
     if (!card) return;
@@ -5327,7 +4753,8 @@
         // Volver, Pendientes count is one lower + Completadas one higher.
         // Was: submissions array updated but counts only refreshed on full
         // page reload. Now: live update.
-        try { if (typeof updateTabCounts === 'function') updateTabCounts(); } catch (_) {}
+        // (2026-10-18: the home redraws its marks with the new try: green ✓ at 80 %)
+        try { if (window.DralyHome) window.DralyHome.changed(); } catch (_) {}
       })
       .catch((e) => {
         btns.forEach((b) => { b.disabled = false; b.textContent = '📤 Entregar tarea'; });

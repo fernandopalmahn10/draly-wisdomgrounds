@@ -14,7 +14,7 @@
 //                                                  homework to send.
 //   Ruta.path(main, ctx, module)  /audios/<level>  the module page (redesign 2026-10-18, his approved clickable design
 //                                                  .claude/handoff/ruta-design): ONE clear ladder + the homework beside it.
-//       · the band: «Volver a mis tareas» (came from /homework) or «Todos los mundos», always visible (sticky)
+//       · the band: «Mi Dralingo» (a logged-in kid, or one who came from /homework: their home) or «Todos los mundos», always visible (sticky)
 //       · the hero: the module's wonder (YCT 1 Dubái, New HSK 1 the Li River, HSK 1 the Great Wall; a later level takes
 //         the next), its jewel colour, Dralingo pointing at the ladder and ONE direct instruction that follows this
 //         kid's state («¡Empieza aquí! Toca el 1, La Base…», «¡Ahora el 2! Practica La Familia…», «¡Ya puedes hacer el
@@ -523,7 +523,8 @@
     const fromHw = qFrom === 'homework' || store.get('draly_ruta_from') === 'homework' || store.get('draly_pick_from') === 'homework';
     store.set('draly_pick_from', fromHw ? 'homework' : '');
     store.set('draly_ruta_from', '');   // the kid chose «all worlds»: the routes' back arrow leads here again, not to Mis tareas
-    const back = fromHw ? { href: '/homework.html', label: 'Volver a mis tareas' } : { href: '/', label: 'Volver al inicio' };
+    // (2026-10-18, «Mi Dralingo» part 3: a logged-in kid's way back is always their home, «Mi Dralingo»)
+    const back = fromHw || kidIn(ctx) ? { href: '/homework', label: 'Mi Dralingo' } : { href: '/', label: 'Volver al inicio' };
     // (the page's own band steps aside only once this screen is drawn: an error before that keeps its «Volver»)
     if (!mods.length) { main.innerHTML = bandHtml(back) + '<p class="au-error">Muy pronto: tus mundos de Chino Mandarín.</p>'; document.body.classList.add('rp-on'); return; }
     tSeed(ctx.ruta, idsOfCtx(ctx));
@@ -575,6 +576,8 @@
   // «Tus tareas» is the kid's own level: a phone nobody is logged in on counts every level as its own; a teacher, or a
   // kid looking at another module, only plays its homework (no marks, no counts)
   const mineOf = (ctx, m) => !ctx.ruta.teacher && (!ctx.ruta.student || m.slug === ctx.ruta.home);
+  // a kid logged in on this phone (their home is /homework, «Mi Dralingo»)
+  const kidIn = (ctx) => !!(ctx && ctx.ruta && ctx.ruta.student && !ctx.ruta.teacher);
   // 🔒 2026-10-18: El Simulacro Dorado in class (the server's `solo: false`: a kid never starts one from here; a teacher
   // still sees and opens everything)
   const classMode = (ctx) => ctx.ruta.solo === false && !ctx.ruta.teacher;
@@ -1189,11 +1192,12 @@
   // buttons as a calm preview that does nothing and writes nothing, with «Así lo ven tus alumnos»
   // one homework's card inside its folder (the same marks everywhere: «Escuchar», «¡Ya la mandé!», «Deshacer»)
   // (pic: the folder's own picture, a neutral address from the server; else the homework's theme picture or cover)
-  function hwCardHtml(m, h, state, folderPic) {
+  // (link: what the homework's own page carries, e.g. «?from=homework» from the kid's home: its «Volver» goes back there)
+  function hwCardHtml(m, h, state, folderPic, link) {
     const pic = folderPic || hwPic(h, m.slug);
     // (the picture and the name open the homework's own page: its lines with pinyin and Spanish, the PDF's audio codes)
     return '<li class="rp-hw is-' + state + '" data-hw="' + esc(h.id) + '">' +
-      '<a class="rp-hw-open" href="/audios/' + esc(h.id) + '" data-nav>' +
+      '<a class="rp-hw-open" href="/audios/' + esc(h.id) + esc(link || '') + '" data-nav>' +
         '<img class="rp-hw-pic" src="' + esc(pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async"' +
           (h.thumb && pic !== h.thumb ? ' data-alt="' + esc(h.thumb) + '"' : '') + '>' +
         '<span class="rp-hw-kicker">Tarea · Ronda ' + (Number(h.round) || 1) + '</span>' +
@@ -1326,7 +1330,9 @@
     const qFrom = new URLSearchParams(location.search).get('from');
     if (qFrom === 'homework') store.set('draly_ruta_from', 'homework');
     const fromHw = store.get('draly_ruta_from') === 'homework';
-    const back = fromHw ? { href: '/homework.html', label: 'Volver a mis tareas' } : { href: '/audios', label: 'Todos los mundos', nav: true };
+    // (2026-10-18, «Mi Dralingo» part 3: a logged-in kid's way back is their home, «Mi Dralingo»; the band's title still
+    // opens all the worlds)
+    const back = fromHw || kidIn(ctx) ? { href: '/homework', label: 'Mi Dralingo' } : { href: '/audios', label: 'Todos los mundos', nav: true };
     // (review 2026-10-18) a key-only phone's or a teacher's finished round whose result this device never heard (the page
     // closed first): the server keeps it a few hours (`train.done`), kept here before card 2 counts
     if (m.train && Array.isArray(m.train.done) && m.train.done.length && window.Entrenamiento && window.Entrenamiento.adoptDone) {
@@ -1476,38 +1482,79 @@
       }
       const li = e.target.closest('.rp-hw');
       if (!li) return;
-      const id = li.getAttribute('data-hw');
-      const h = byId.get(id);
+      const h = byId.get(li.getAttribute('data-hw'));
       if (!h) return;
-      if (e.target.closest('[data-play]')) {
-        const p = audioEl();
-        if (!p) return;
-        if (hwNow && hwNow.id === id) {                    // the same homework: pause / go on (inside the tap: iPhone)
-          if (p.paused) p.play().catch(() => {}); else p.pause();
-          return;
-        }
-        hwStop();
-        hwListen(true);
-        hwNow = { id, k: 0, tracks: (h.tracks || []).filter((t) => t && t.src), li, onHeard: (x) => { if (mine) { tMark(x, 'h', ctx.ruta); paint(); } } };
-        if (!hwNow.tracks.length) { hwNow = null; return; }
-        hwTrack();
-        return;
-      }
-      // (a teacher's preview has no data-send / data-unsend: its buttons do nothing and write nothing)
-      if (e.target.closest('[data-send]') && mine) {
-        markTap(id, 's', ctx, m.slug, (r) => accountArrived(r, () => { if (ctx.refresh) ctx.refresh(true); }));
-        paint();
-        sentMoment(li, h.title);
-        return;
-      }
-      if (e.target.closest('[data-unsend]') && mine) {
-        markTap(id, 'u', ctx, m.slug);
-        const undo = li.querySelector('[data-undo]');
-        if (undo) undo.hidden = true;
-        paint();
-      }
+      hwAct(e, li, h, ctx, m, mine, paint);
     });
   }
+  // a tap on one homework card («Escuchar» / «Otra vez» / pause, «¡Ya la mandé!», «Deshacer»): ONE behaviour for «Tus
+  // tareas» and the kid's home (hwCards below). paint() repaints the cards after a mark.
+  function hwAct(e, li, h, ctx, m, mine, paint) {
+    const id = h.id;
+    if (e.target.closest('[data-play]')) {
+      const p = audioEl();
+      if (!p) return;
+      if (hwNow && hwNow.id === id) {                    // the same homework: pause / go on (inside the tap: iPhone)
+        if (p.paused) p.play().catch(() => {}); else p.pause();
+        return;
+      }
+      hwStop();
+      hwListen(true);
+      hwNow = { id, k: 0, tracks: (h.tracks || []).filter((t) => t && t.src), li, onHeard: (x) => { if (mine) { tMark(x, 'h', ctx.ruta); paint(); } } };
+      if (!hwNow.tracks.length) { hwNow = null; return; }
+      hwTrack();
+      return;
+    }
+    // (a teacher's preview has no data-send / data-unsend: its buttons do nothing and write nothing)
+    if (e.target.closest('[data-send]') && mine) {
+      markTap(id, 's', ctx, m.slug, (r) => accountArrived(r, () => { if (ctx.refresh) ctx.refresh(true); }));
+      paint();
+      sentMoment(li, h.title);
+      return;
+    }
+    if (e.target.closest('[data-unsend]') && mine) {
+      markTap(id, 'u', ctx, m.slug);
+      const undo = li.querySelector('[data-undo]');
+      if (undo) undo.hidden = true;
+      paint();
+    }
+  }
+  // 🏠 2026-10-18 («Mi Dralingo» part 3, the kid's home on /homework, js/mi-dralingo.js): ONE experience's homework cards
+  // («3 · Tu tarea»), with the SAME cards, marks, «Deshacer», player and account mirror as «Tus tareas» above (one code).
+  //   box   where they go (its content is replaced)
+  //   ctx   { ruta: { student, who, teacher, home, modules: [{ slug, tareas }] }, homeworksOf(slug), refresh() }
+  //   m     the module ({ slug, tareas }) · hws: that experience's homeworks (catalog entries: id, title, round, tracks…)
+  //   opts  { pic: the experience's picture, link: '?from=homework' (the homework page's way back), onChange() }
+  // → { paint, stop } (stop: the sound ends, e.g. when the kid leaves the experience)
+  function hwCards(box, ctx, m, hws, opts) {
+    const o = opts || {};
+    tSeed(ctx.ruta, idsOfCtx(ctx));
+    const mine = mineOf(ctx, m);
+    const marks0 = tMarksFor(ctx.ruta, m.tareas);
+    const stateOf = (h) => { const e = (mine && marks0[h.id]) || {}; return !mine ? 'other' : e.s ? 'sent' : e.h ? 'heard' : 'new'; };
+    hwStop();
+    box.innerHTML = '<ul class="rp-hw-list">' + hws.map((h) => hwCardHtml(m, h, stateOf(h), o.pic, o.link)).join('') + '</ul>';
+    const byId = new Map(hws.map((h) => [h.id, h]));
+    const paint = () => {
+      if (!mine || !box.isConnected) return;
+      const marks = tMarksFor(ctx.ruta, m.tareas);
+      box.querySelectorAll('.rp-hw').forEach((li) => {
+        if (paintHw(li, hwStateOf(marks, li.getAttribute('data-hw'))) && !(hwNow && hwNow.li === li)) hwReset(li);
+      });
+      if (o.onChange) o.onChange();
+    };
+    tSync.onChange = (again) => { if (again && ctx.refresh) ctx.refresh(true); else paint(); };
+    // (one handler per box, however often the home redraws into it)
+    box.onclick = (e) => {
+      const li = e.target.closest('.rp-hw');
+      if (!li || !box.contains(li) || e.target.closest('.rp-hw-open')) return;
+      const h = byId.get(li.getAttribute('data-hw'));
+      if (h) hwAct(e, li, h, ctx, m, mine, paint);
+    };
+    return { paint, stop: hwStop };
+  }
+  // the marks this phone shows for a level's homework (the home's bars and badges: the same mirror as the cards)
+  const marksFor = (ctx, m) => { tSeed(ctx.ruta, idsOfCtx(ctx)); return tMarksFor(ctx.ruta, m.tareas); };
 
   // ── the route's one moment (phase 3): a world that became ready for El Entrenamiento since this phone last saw the
   // route pops on card 2 (its badge says «¡Nuevo mundo!» and its coin pops, once), when it comes into view («so kids see
@@ -1626,5 +1673,5 @@
     }));
     return hwBar;
   }
-  window.Ruta = { picker, path, leave, markHeard, hwMarks, get live() { return live; } };
+  window.Ruta = { picker, path, leave, markHeard, hwMarks, hwCards, marksFor, get live() { return live; } };
 })();
