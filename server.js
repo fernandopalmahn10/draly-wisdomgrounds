@@ -6841,7 +6841,10 @@ function tdEvents(pin, g, ev, now) {
         if (p.currentQ && p.tdQKind === 'wings') { const qid = p.currentQ.qid; p.currentQ = null; p.tdQKind = null; io.to(pid).emit('td:qclose', { qid, why: 'lock' }); }
       });
     } else if (e.type === 'open') {
-      io.to(pin).emit('td:open', { id: m.id, r: m.r, set: e.set, falls: e.falls, saves: e.saves });
+      // `at`: where each kid on the floor was judged (after the lag grace): falls are drawn from there, never from a
+      // position the phone predicted
+      const r2 = (v) => Math.round(v * 100) / 100;
+      io.to(pin).emit('td:open', { id: m.id, r: m.r, set: e.set, falls: e.falls, saves: e.saves, at: (e.where || []).map(([k, x, y]) => [k, r2(x), r2(y)]) });
     } else if (e.type === 'close') {
       io.to(pin).emit('td:close', { id: m.id, r: m.r });
     } else if (e.type === 'tally') {

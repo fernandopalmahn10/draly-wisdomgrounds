@@ -217,7 +217,16 @@
       if (this.rd && agoMs != null) this.rd.start = nowPerf - agoMs;     // the server's own clock wins
     }
     lock(set) { this.lockSet = (set || []).slice(); }
-    open(set, falls, saves, nowPerf) {
+    // `at`: [[k, x, y]] where the server judged each kid (td:open): a fall or a save is drawn from there
+    open(set, falls, saves, nowPerf, at) {
+      const J = {};
+      (at || []).forEach(([k, x, y]) => { J[k] = [x, y]; });
+      [].concat(falls || [], saves || []).forEach((k) => {
+        const d = this.kids[k], p = J[k];
+        if (!d || !p) return;
+        d.x = d.sx = d.tx = p[0]; d.y = d.sy = d.ty = p[1];
+        if (k === this.me) this.meXY = null;
+      });
       this.lockSet = (set || []).slice();
       this.doors = { set: this.lockSet, runs: runsOf(set), openAt: nowPerf, closeAt: null };
       const A = TA(), SL = A.SLICE, runs = this.doors.runs;

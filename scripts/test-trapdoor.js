@@ -230,6 +230,38 @@ function at(m, k, slice, r) { const d = m.kids[k]; const [x, y] = A.pointAt(A.sl
   const ev2 = [];
   T.openDoors(m2, ev2);
   ok(!ev2[0].falls.includes(1) && ev2[0].falls.includes(2), 'the same dash: safe on a slow phone (it showed her past the seam), a fall on a quick one');
+  // td:open's `at`: every kid on the floor, at the very position its verdict was made on (after the grace)
+  [ev[0], ev2[0]].forEach((op0, i) => {
+    const op = Object.assign({}, op0, { at: op0.where });
+    const sets = [m.drop.set, m2.drop.set][i];
+    ok(op.at.length === [4, 2][i] && op.at.every(([k, x, y]) => {
+      const on = sets.includes(A.sliceOf(x, y));
+      const v = op.falls.includes(k) ? 'fell' : op.saves.includes(k) ? 'saved' : 'stood';
+      return on ? v !== 'stood' : v === 'stood';
+    }), 'the doors report where each kid was judged, and every verdict matches that spot');
+  });
+  ok(ev[0].where.find((r) => r[0] === 1)[1] === m.kids[1].x, 'a graced kid is reported where the grace put her');
+}
+// the phone's words at «0» (A.lockVerdict) never call a kid safe while the server's position is on a burning slice
+{
+  const rand = rng(31);
+  let bad = 0, n = 0;
+  const rp = () => A.pointAt(rand() * 2 * Math.PI, A.R_MIN + rand() * (A.R_MAX - A.R_MIN));
+  for (let i = 0; i < 20000; i++) {
+    const kind = ['quarter', 'three', 'bowtie'][i % 3];
+    const set = A.setOf(kind, Math.floor(rand() * 8));
+    const me = rp(), srv = rand() < 0.5 ? me : rp(), wings = rand() < 0.3;
+    const meOn = set.includes(A.sliceOf(me[0], me[1])), srvOn = set.includes(A.sliceOf(srv[0], srv[1]));
+    const v = A.lockVerdict(me, srv, set, wings);
+    n++;
+    if (srvOn && v === 'safe') bad++;                                   // a promise the doors could break
+    if (!meOn && !srvOn && v !== 'safe') bad++;
+    if (!wings && meOn && v !== 'run') bad++;
+    if (!wings && !meOn && srvOn && v !== 'keep') bad++;
+    if (wings && (meOn || srvOn) && v !== 'wings') bad++;
+  }
+  ok(bad === 0, `«0»: «¡Quieto ahí!» only when both my screen and the server have me off the burning slices (${n} cases)`);
+  ok(A.lockVerdict(null, null, [0, 1], false) === 'safe' && A.lockVerdict([0, -60], null, [0, 1], false) === 'run', 'a phone that knows nothing yet: no false alarm');
 }
 // questions: who gets what, when
 {

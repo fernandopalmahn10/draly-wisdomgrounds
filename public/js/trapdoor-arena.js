@@ -148,8 +148,21 @@
     return pointAt(ang, rr);
   }
 
+  // What a phone tells its kid at «0» (before the doors decide): `me` = where the phone shows me (it runs ahead), `srv`
+  // = the server's last report of me (it trails by the lag). It never says «safe» while either one is on a burning
+  // slice: the server judges its own position, so «¡Quieto ahí!» there would be a promise it can break.
+  // → 'run' (my slice burns: ¡CORRE!) · 'keep' (I'm out on my screen, not yet on the server's: keep going) ·
+  //   'safe' (both off) · and with wings 'wings' instead of 'run' / 'keep'
+  function lockVerdict(me, srv, set, wings) {
+    const on = (p) => !!(p && set && set.indexOf(sliceOf(p[0], p[1])) >= 0);
+    const meOn = on(me), srvOn = on(srv);
+    if (!meOn && !srvOn) return 'safe';
+    if (wings) return 'wings';
+    return meOn ? 'run' : 'keep';
+  }
+
   return {
     R, R_HUB, R_MIN, R_MAX, SLICES, SLICE, TIMING, bounds, phaseAt, hubAt, ARENAS, arena, art,
-    angleOf, sliceOf, sliceMid, pointAt, setOf, optionsOf, kindOf, clampTarget, move, segHitsHub, spawnAt,
+    angleOf, sliceOf, sliceMid, pointAt, setOf, optionsOf, kindOf, clampTarget, move, segHitsHub, spawnAt, lockVerdict,
   };
 });

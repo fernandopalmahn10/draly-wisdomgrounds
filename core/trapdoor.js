@@ -173,14 +173,19 @@ function openDoors(m, ev) {
   m.open = open;
   m.phase = 'open';
   const falls = [], saves = [];
+  // `at`: where the doors found every kid on the floor (after the grace), the very position each verdict was made on:
+  // the screens draw a fall from there and a test can check every verdict against it
+  const at = [];
   Object.values(m.kids).forEach((d) => {
-    if (d.st !== 'up' || !open[A.sliceOf(d.x, d.y)]) return;
+    if (d.st !== 'up') return;
+    if (!open[A.sliceOf(d.x, d.y)]) { at.push([d.k, d.x, d.y]); return; }
     // a kid mid-dash: their phone already shows them a step further (the lag); if that step is off the dropping
     // slices, it counts (what they saw is what happened); never more than GRACE_MAX
     if (!d.away && Math.hypot(d.tx - d.x, d.ty - d.y) > 0.05) {
       const [gx, gy] = A.move(d.x, d.y, d.tx, d.ty, graceOf(d), null);
-      if (!open[A.sliceOf(gx, gy)]) { d.x = gx; d.y = gy; d.graced = (d.graced || 0) + 1; return; }
+      if (!open[A.sliceOf(gx, gy)]) { d.x = gx; d.y = gy; d.graced = (d.graced || 0) + 1; at.push([d.k, d.x, d.y]); return; }
     }
+    at.push([d.k, d.x, d.y]);
     if (d.wings) { d.wings = false; d.hover = true; d.saved++; saves.push(d.k); return; }
     d.st = 'down';
     d.falls++;
@@ -189,7 +194,7 @@ function openDoors(m, ev) {
     d.nextQAt = 0;
     falls.push(d.k);
   });
-  ev.push({ type: 'open', set, falls, saves });
+  ev.push({ type: 'open', set, falls, saves, where: at });
 }
 function closeDoors(m, ev) { m.phase = 'close'; ev.push({ type: 'close' }); }
 // The tally: each kingdom scores the share of its kids still standing, out of ROUND_PTS (10; the Final Round ×2): a

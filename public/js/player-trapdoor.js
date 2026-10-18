@@ -185,14 +185,14 @@
       scene.lock(m.set);
       play('lock', 1, 0.8);
       sfx(K + 'castle-alert.mp3', 0.45);
-      const mine = me && myState.st === 'up' && m.set.includes(TA().sliceOf(me.x, me.y));
-      run(mine);
-      if (mine) buzz([80, 40, 80, 40, 80]);
+      const v = myView();
+      run(v.lock);
+      if (v.lock === 'run' || v.lock === 'keep') buzz([80, 40, 80, 40, 80]);
     });
     s.on('td:open', (m) => {
       if (!scene || !m || m.id !== matchId) return;
       const now = performance.now();
-      scene.open(m.set, m.falls, m.saves, now);
+      scene.open(m.set, m.falls, m.saves, now, m.at);
       play('open', 1, 0.7);
       hideRun();
       if ((m.falls || []).length) setTimeout(() => play('fall', 0.9 + Math.random() * 0.2, 0.55), 160);
@@ -202,6 +202,8 @@
         moment({ kind: 'fall', title: '¡Caíste!', sub: noComeback() ? 'Era la ronda final: ¡anima a tu reino!' : 'Responde bien y vuelves arriba', mine: true, big: true });
         buzz([200]);
       } else if ((m.saves || []).includes(myK)) {
+        const J = (m.at || []).find((row) => row[0] === myK);   // I hover where the doors found me
+        if (J) me = { x: J[1], y: J[2], tx: J[1], ty: J[2] };
         moment({ kind: 'saved', title: '¡Tus alas te salvaron!', sub: lastRound() ? '¡Sigues en pie en la ronda final!' : 'Las alas se gastaron: gana otras en la próxima', mine: true, big: true });
         play('saved', 1, 0.7);
         buzz([40, 30, 40, 30, 120]);
@@ -211,6 +213,7 @@
         const mates = (m.falls || []).filter((k) => roster[k] && roster[k][1] === team()).length;
         if (mates) gangLine(mates === 1 ? '¡Uno de los nuestros cayó! Vamos, ¡vuelve!' : `¡Cayeron ${mates} de los nuestros! ¡Respondan y vuelvan!`, 'oops');
       }
+      statusLine();                    // the doors' verdict shows at once (never a beat of «¡Sigues en pie!» for a fall)
     });
     s.on('td:close', (m) => { if (!scene || !m || m.id !== matchId) return; scene.close(performance.now()); play('close', 1, 0.6); });
     s.on('td:tally', (m) => {
@@ -431,23 +434,40 @@
     if (was && !was.wings && myState.wings && st === 'up') { play('wings', 1, 0.7); wingsFlash(); }
     void force;
   }
+  // What I am right now, never ahead of the server's word: a fall or a save shows the moment the doors' verdict
+  // arrives (td:open marks my character, before td:me), «¡Sigues en pie!» only once the doors have opened for this
+  // round, and at «0» TA().lockVerdict never calls me safe while the server's last report of me is on a burning slice.
+  function myView() {
+    const d0 = scene && scene.kids[myK];
+    const f = d0 && d0.f != null ? d0.f : 0;
+    let st = myState.st;
+    if (st === 'up' && (f & 2)) st = 'down';
+    const hover = st === 'up' && (myState.hover || !!(f & 16));
+    const ph = rd && rd.r > 0 && scene && scene.rd ? TA().phaseAt(scene.clock(performance.now()), scene.rd.final) : '';
+    const doorsIn = !!(scene && scene.doors);
+    let lock = null;
+    if (st === 'up' && !hover && (ph === 'lock' || (ph === 'open' && !doorsIn)) && scene && scene.lockSet) {
+      lock = TA().lockVerdict(me ? [me.x, me.y] : null, d0 && d0.sx != null ? [d0.sx, d0.sy] : null, scene.lockSet, myState.wings);
+    }
+    return { st, hover, ph, doorsIn, lock };
+  }
   function statusLine() {
     const box = $('tp-status');
     if (!box) return;
-    const st = myState.st;
+    const v = myView();
+    const st = v.st;
     let ico = '🏃', txt = '¡Toca el suelo para correr!', cls = '';
-    const ph = rd && rd.r > 0 && scene && scene.rd ? TA().phaseAt(scene.clock(performance.now()), scene.rd.final) : '';
-    // «0»: only a kid whose own slice burns is told to run; the others are told to stay put (the pill says the same)
-    const onPink = !!(me && scene && scene.lockSet && scene.lockSet.includes(TA().sliceOf(me.x, me.y)));
     if (st === 'down') { ico = '🕳️'; txt = noComeback() ? 'Caíste en la ronda final: ¡anima a tu reino!' : '¡Caíste al foso!'; cls = 'pit'; }
     else if (st === 'wait') { ico = '⬆️'; txt = lastRound() ? 'Es la ronda final: ¡mira cómo termina!' : myState.wingsNext ? '¡Subes con alas en la próxima ronda!' : '¡Subes en la próxima ronda!'; cls = 'wait'; }
-    else if (myState.hover) { ico = 'wings'; txt = '¡Tus alas te sostienen!'; cls = 'wings'; }
-    else if (ph === 'lock' && onPink && myState.wings) { ico = 'wings'; txt = '¡Estás en el rosa! Tus alas te cuidan'; cls = 'wings'; }
-    else if (ph === 'lock' && onPink) { ico = '⚠️'; txt = '¡CORRE lejos del rosa!'; cls = 'hot'; }
-    else if (ph === 'lock') { ico = '✋'; txt = '¡Quieto ahí! Tu suelo no se abre'; cls = 'safe'; }
-    else if (ph === 'open' || ph === 'close' || ph === 'tally') { ico = '⭐'; txt = '¡Sigues en pie!'; cls = 'ok'; }
+    else if (v.hover) { ico = 'wings'; txt = '¡Tus alas te sostienen!'; cls = 'wings'; }
+    else if (v.lock === 'wings') { ico = 'wings'; txt = '¡Estás en el rosa! Tus alas te cuidan'; cls = 'wings'; }
+    else if (v.lock === 'run') { ico = '⚠️'; txt = '¡CORRE lejos del rosa!'; cls = 'hot'; }
+    else if (v.lock === 'keep') { ico = '⚠️'; txt = '¡Sigue corriendo! Aún pisas el rosa'; cls = 'hot'; }
+    else if (v.lock === 'safe') { ico = '✋'; txt = '¡Quieto ahí! Tu suelo no se abre'; cls = 'safe'; }
+    else if (v.doorsIn && (v.ph === 'open' || v.ph === 'close' || v.ph === 'tally')) { ico = '⭐'; txt = '¡Sigues en pie!'; cls = 'ok'; }
     else if (myState.wings) { ico = 'wings'; txt = '¡Tienes alas! Ahora ¡esquiva el rosa!'; cls = 'wings'; }
     else if (rd && rd.r > 0) { ico = '❓'; txt = 'Sin alas: ¡responde o esquiva!'; cls = 'nowings'; }
+    runPill(v);
     const key = ico + txt + cls;
     if (box.dataset.k === key) return;
     box.dataset.k = key;
@@ -455,24 +475,25 @@
     const icoEl = $('tp-status-ico');
     if (ico === 'wings') icoEl.innerHTML = '<img src="/assets/trapdoor/wings.webp" alt="">'; else icoEl.textContent = ico;
     $('tp-status-text').textContent = txt;
-    rest(cls);
+    rest(cls, v);
   }
   // the card's resting face (no question open): what to do now, big, with my own character
-  function rest(cls) {
+  function rest(cls, v) {
     const box = $('tp-rest');
     if (!box) return;
-    const st = myState.st;
+    v = v || myView();
+    const st = v.st;
     let title = '¡Prepárate!', sub = 'Toca el suelo para correr', pose = 'idle';
     if (st === 'down') { title = '¡Caíste al foso!'; sub = noComeback() ? 'Era la ronda final: ¡anima a tu reino!' : 'Responde bien y vuelves arriba'; pose = 'no'; }
     else if (st === 'wait') { title = lastRound() ? '¡Ronda final!' : '¡Listo!'; sub = lastRound() ? 'Mira cómo termina: ¡anima a tu reino!' : myState.wingsNext ? 'Subes con alas en la próxima ronda' : 'Subes en la próxima ronda'; pose = 'ok'; }
-    else if (myState.hover) { title = '¡Tus alas te sostienen!'; sub = 'Cuando el suelo se cierre, aterrizas'; pose = 'ok'; }
+    else if (v.hover) { title = '¡Tus alas te sostienen!'; sub = 'Cuando el suelo se cierre, aterrizas'; pose = 'ok'; }
     else if (cls === 'hot') { title = '¡CORRE!'; sub = '¡Sal del suelo rosa!'; pose = 'no'; }
     else if (cls === 'safe') { title = '¡Quieto ahí!'; sub = 'Tu suelo no se abre: ¡no pises el rosa!'; pose = 'ok'; }
     else if (cls === 'ok') { title = '¡Sigues en pie!'; sub = 'Cada ronda en pie suma para tu reino'; pose = 'ok'; }
     else if (myState.wings) { title = '¡Tienes alas!'; sub = 'Si tu suelo se abre, vuelas. ¡Igual esquiva el rosa!'; pose = 'ok'; }
     else if (rd && rd.r > 0) { title = '¡Esquiva el rosa!'; sub = 'En el 0, el suelo rosa se abre'; }
     // my character wears the golden wings on the card while I have them (the kid connects «alas» with the picture)
-    box.className = 'tp-rest ' + (cls || '') + ((myState.wings || myState.hover) && st === 'up' ? ' haswings' : '');
+    box.className = 'tp-rest ' + (cls || '') + ((myState.wings || v.hover) && st === 'up' ? ' haswings' : '');
     $('tp-rest-text').textContent = title;
     $('tp-rest-sub').textContent = sub;
     const sk = HB() ? HB().skinFor(roster[myK] && roster[myK][2], roster[myK] && roster[myK][0]) : null;
@@ -740,13 +761,25 @@
   }
   // «0»: the big «¡CORRE!» when my slice burns (a small «0» otherwise)
   let runT = null;
-  function run(mine) {
+  // verdict: TA().lockVerdict ('run' · 'keep' · 'wings' · 'safe') or null (not on the floor)
+  const RUN_WORDS = { run: '¡CORRE!', keep: '¡Sigue corriendo!', wings: '¡Tus alas te cuidan!', safe: '¡Quieto ahí!' };
+  function run(verdict) {
     const r0 = $('tp-run');
     if (!r0) return;
+    const mine = verdict === 'run' || verdict === 'keep';
     r0.className = 'tp-run show' + (mine ? ' mine' : '');
-    r0.textContent = mine ? '¡CORRE!' : myState.st === 'up' ? (myState.wings ? '¡Tus alas te cuidan!' : '¡Quieto ahí!') : '¡Ahora!';
+    r0.textContent = RUN_WORDS[verdict] || '¡Ahora!';
+    r0.dataset.v = verdict || '';
     clearTimeout(runT);
     runT = setTimeout(hideRun, TA().TIMING.LOCK + 200);
+  }
+  // while the pill shows, it follows the verdict (a kid who runs out sees «¡Quieto ahí!» only once the server agrees)
+  function runPill(v) {
+    const r0 = $('tp-run');
+    if (!r0 || !r0.classList.contains('show') || !v.lock || r0.dataset.v === v.lock) return;
+    r0.dataset.v = v.lock;
+    r0.classList.toggle('mine', v.lock === 'run' || v.lock === 'keep');
+    r0.textContent = RUN_WORDS[v.lock];
   }
   function hideRun() { clearTimeout(runT); const r0 = $('tp-run'); if (r0) r0.className = 'tp-run'; }
 
@@ -865,7 +898,7 @@
     answer: (i) => { if (cur) cur.armAt = 0; answer(i); },
     moment: (m) => moment(m),
     band: (t, s, cls) => band(t, s, cls, 60000),
-    run: (mine) => { run(mine); clearTimeout(runT); },
+    run: (v) => { run(v === true ? 'run' : v === false ? 'safe' : v); clearTimeout(runT); },
     help: (v) => { const c = $('tp-help'); if (!c) return; if (v) { paintHelp(c); c.classList.remove('hidden'); clearTimeout(helpT); } else hideHelp(); },
     hand: (v) => (v ? showHand() : hideHand()),
     // hold the round's clock at `ms` into the round (a still for a screenshot), or let it run again (null)

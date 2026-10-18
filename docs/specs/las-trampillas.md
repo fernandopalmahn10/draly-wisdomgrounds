@@ -189,6 +189,19 @@ nudge, a short fade instead of the drop.
 - impeccable detector (run once): 16 findings → the pit strip's heading level and the lobby's red fixed; the rest are
   pictures filled at run time, text on game panels the detector can't see, and the game's own glows.
 
+### Follow-up · the doors' word, one truth (2026-10-17)
+- `td:open` carries `at`: where the doors judged every kid on the floor (after the lag grace). Both screens draw a fall
+  or a save from there, and a test checks every verdict against it (never against a position report one tick late).
+- The phone never contradicts the server: at «0» it says «¡Quieto ahí!» only when both its own position and the
+  server's last report are off the burning slices (`TrapdoorArena.lockVerdict`: else «¡CORRE!», «¡Sigue corriendo!» or,
+  with wings, «¡Tus alas te cuidan!»); «¡Sigues en pie!» waits for the doors' verdict; a fall or a save shows the moment
+  `td:open` arrives. Found while checking: before this, a kid whose phone ran ahead could read «¡Quieto ahí! Tu suelo
+  no se abre» and then fall, and a fallen kid could see «¡Sigues en pie!» for a beat before «¡Caíste!».
+- `scripts/test-trapdoor-live.js` is deterministic on a slow laptop: round 1 puts four winged kids still on the even
+  slices and four without wings on the odd ones (a quarter is one of each: exactly one save and one fall, whatever
+  drops), every round-1 event is listened for from the round's start, waits are on messages; 8 runs in a row against
+  one low-priority throw-away server all pass.
+
 ### Scorecard · Las Trampillas · 2026-10-17 · branch `trapdoor`
 ```
 Hard gates: bots PASS (4/20/30 + the playtester's 30) · teacher controls ✓ (⏸ Pausa, «+30 s» = 2 rondas más, ⏭ Saltar,

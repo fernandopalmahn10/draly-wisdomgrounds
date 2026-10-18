@@ -239,7 +239,7 @@
   socket.on('td:lock', (m) => { if (!scene || !m || m.id !== matchId) return; scene.lock(m.set); sfx('lock', 0.9); sfx('alert', 0.5); });
   socket.on('td:open', (m) => {
     if (!scene || !m || m.id !== matchId) return;
-    scene.open(m.set, m.falls, m.saves, performance.now());
+    scene.open(m.set, m.falls, m.saves, performance.now(), m.at);
     sfx('open', 0.8);
     if ((m.falls || []).length) setTimeout(() => sfx('fall', 0.6), 160);
     if ((m.saves || []).length) setTimeout(() => sfx('saved', 0.6), 260);
