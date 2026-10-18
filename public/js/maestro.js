@@ -3578,6 +3578,7 @@
           <div class="m-detail-tags">
             <span class="m-detail-code" title="Student code">${escapeHtml(data.code)}</span>
             ${level ? '<span class="m-level-pill is-' + escapeHtml(level) + '">' + escapeHtml(levelLabel(level)) + '</span>' : ''}
+            ${data.auto ? '<span class="m-row-auto" title="Made by itself on La Ruta Dorada (no class code yet). It joins a class when the family logs in at Mis tareas with a class code + this code.">automática</span>' : ''}
             <span class="m-presence${online ? ' is-online' : ''}">${online ? '🟢 ' : ''}${escapeHtml(seen)}</span>
           </div>
           <div class="m-detail-meta">Since ${since} ·
