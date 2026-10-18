@@ -212,20 +212,14 @@ function archiveInactive(days, now) {
   // a restore waiting for its save (≤ 1 s) must reach the live file before the archive is rewritten without it
   if ((saveTimer || archiveDirty) && !persistNow()) return { moved: 0, archived: Object.keys(archive).length, error: 'live file not written' };
   const cutoff = now - days * 86400e3;
-  let moving = Object.keys(records).filter((c) => lastActive(records[c]) < cutoff);
-  // (security review L4, 2026-10-18) an automatic account nobody ever used (no class code, no progress at all) is not a
-  // kid's account: it is removed, never archived, so strangers' empty accounts don't pile up. Everything else rests in
-  // the archive as always.
-  const empty = moving.filter((c) => emptyAuto(records[c]));
-  if (empty.length) {
-    empty.forEach((c) => { delete records[c]; });
-    if (persistNow()) console.log('[students] removed', empty.length, 'automatic accounts never used');
-    moving = moving.filter((c) => !empty.includes(c));
-  }
-  if (!moving.length) return { moved: 0, archived: Object.keys(archive).length, removed: empty.length };
+  const moving = Object.keys(records).filter((c) => lastActive(records[c]) < cutoff);
+  // (2026-10-18) automatic accounts nobody used rest in the archive like every other account: his rule «inactive
+  // accounts are archived, never deleted» (the security review suggested removing them; kept as a count only, to watch)
+  const empty = moving.filter((c) => emptyAuto(records[c])).length;
+  if (!moving.length) return { moved: 0, archived: Object.keys(archive).length };
   const out = moveToArchive(moving);
-  if (empty.length) out.removed = empty.length;
-  if (out.moved) console.log('[students] archived', out.moved, 'accounts inactive', days, 'days ·', out.archived, 'in the archive');
+  if (empty) out.emptyAuto = empty;
+  if (out.moved) console.log('[students] archived', out.moved, 'accounts inactive', days, 'days ·', out.archived, 'in the archive' + (empty ? ' · ' + empty + ' of them automatic and never used' : ''));
   return out;
 }
 // The live accounts `moving` go to the archive, safely: the archive (with them) is written and read back first, then

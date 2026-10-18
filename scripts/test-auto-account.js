@@ -459,14 +459,14 @@ async function run() {
   const a2 = Students.createAuto('Dragoncito 102', 'hsk2', 'tarea');
   ok(a1.code !== a2.code && a1.auto && a1.level === 'yct1' && a2.level === 'hsk2' && !a1.classroomCode, 'createAuto: two codes, their levels, no class code');
   ok([a1, a2].every((a) => CODE6(a.code)) && Students.normalizeCode(a1.code.toLowerCase()) === a1.code && Students.get(a1.code) === a1, '… six characters with a digit, typed in any case');
-  // (L4) one never used goes away when stale; one with progress rests in the archive
+  // one never used and one with progress both rest in the archive when stale: his rule «archived, never deleted»
   const a0 = Students.createAuto('Dragoncito 100', 'yct1', 'tarea');
   a0.firstSeen = a0.lastSeen = Date.now() - 31 * DAY;
   a1.firstSeen = a1.lastSeen = Date.now() - 31 * DAY;
   a1.tareas = { [NEW[0]]: { h: Date.now() - 40 * DAY } };
   const out = Students.archiveInactive();
-  ok(out.removed === 1 && Students.peek(a0.code) === null, 'an automatic account nobody ever used: removed when it goes stale (not archived)');
-  ok(out.moved === 1 && !Students.peek(a1.code).rec.restoredAt && Students.peek(a1.code).archived === true && Students.peek(a2.code).archived === false,
+  ok(out.emptyAuto === 1 && !out.removed && Students.peek(a0.code) && Students.peek(a0.code).archived === true, 'an automatic account nobody ever used: archived when it goes stale, never deleted');
+  ok(out.moved === 2 && !Students.peek(a1.code).rec.restoredAt && Students.peek(a1.code).archived === true && Students.peek(a2.code).archived === false,
     'an automatic account with some progress and no activity for 30 days rests in the archive (peek never wakes it)');
   // (M3) a PIN room never claims an unclaimed automatic account
   const viaPin = Students.getOrProvisionForPin(a2.code, 'Sala', '1002');

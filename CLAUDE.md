@@ -462,6 +462,8 @@ the checklist for any new game mode.
 - **El Entrenamiento covers every simulation** (his words 2026-10-18: "make sure that the training is actually really
   covering all the simulations"): every level word, question type and exam part of the level's simulations is
   practised in El Entrenamiento; `scripts/test-training-coverage.js` checks it and must pass when sims or training change.
+  It uses the simulations' REAL questions, all of them (his pick 2026-10-18, told that kids then practise the exact exam
+  and the class simulation becomes more of a review than a surprise test): no hold-out simulation, no variants.
 - **Teachers see what kids see**: the teacher view never hides a kid's controls without a trace (2026-10-18 he couldn't
   find «¡Ya la mandé!» because his computer is the super admin): show them as a calm, inactive preview with one line
   («Así lo ven tus alumnos…»).
@@ -471,7 +473,17 @@ the checklist for any new game mode.
   never a page view) gets a real student account with a generated code, kept on that phone; a friendly card shows the
   code («anótalo») with an optional name. Before a phone with progress logs into another code or makes a new account:
   «¿Eres tú? Este teléfono ya tiene a <nombre> · código … · progreso». An automatic account's progress can move into
-  the kid's real account («Pasar mi progreso a esta cuenta»).
+  the kid's real account («Pasar mi progreso a esta cuenta»). Built 2026-10-18 (after a security review):
+  - Accounts are created only through `POST /api/ruta/auto` at a real step, never on a page view or a plain listen.
+  - They have no class code, and their 6-character codes always include a digit.
+  - The placeholder name is «Dragoncito NNN»: never «Anon», never the code.
+  - The phone holds a signed year-long `dauto` cookie (code + parked + firstSeen). An unclaimed automatic account answers
+    only on that phone (or to a teacher); anywhere else its code is an unknown code.
+  - «Salir» sets `dralyHwOut`, so nothing logs that kid back in by itself. A parked account comes back only through
+    «¿Eres tú?» → «Sí, soy yo».
+  - A merge moves seals, homework marks, training scores, exam tries and homework into the real account. Stale
+    automatic accounts are archived like every account, never deleted.
+  - `node scripts/test-auto-account.js` must pass.
 
 ### One kid home: the portal + La Ruta Dorada (his direction 2026-10-18, to build after La Ruta Dorada is «perfect»)
 - **Integrate, don't discard** (his words: "not everything is redundant… some things are rescuable… everything should be
