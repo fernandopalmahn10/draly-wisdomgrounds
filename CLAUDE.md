@@ -27,6 +27,16 @@ the checklist for any new game mode.
   first, in direct words («Toca el 1, La Base, donde está la flecha: ahí empiezas»), never indirect lines («Primero la
   base, después el examen»); one highlighted first step with a cast character pointing and «Empieza aquí»; numbered
   steps that read like a ladder; done / to do marks and badges that show progress at a glance.
+  **Designs for kids and parents use our own art from the first draft** (his words 2026-10-18 on a text-only mockup:
+  "it should be more for kids… cards… you have so many assets, why are you not using assets?… the ones touching the
+  buttons are parents, so sleek, beautiful, and it should make sense"): picture cards with the cast's poses, the packs'
+  word pictures and the Dubai / China wonder backgrounds, on laptop and phone. A plain text-and-color mock is not a first
+  draft.
+- **Never show a real code as an example** (his rule 2026-10-18: the «Mis tareas» login had «1001» as its placeholder,
+  "a clue that that is one of the codes"). No class code, level key, PIN or student code is ever a placeholder, a
+  default value or an example on a page. Use words («El código de tu maestra») or neutral dots. `scripts/test-wording.js`
+  fails on any code-shaped placeholder, default or example key in kid and teacher pages. The one example kept on purpose
+  is `PANDA-12` on the key screen, which the server refuses as a key.
 - **Study PDFs download only for the super admin** (his rule 2026-10-18): La Base's vocabulary PDF and the golden book's
   PDF are never a download for kids, parents or regular teachers; the web pages (with their audio) are how families study.
   The server refuses the files, not just the button: `_superOf(req)` in server.js is the only door (`base.json` loses
@@ -453,6 +463,23 @@ the checklist for any new game mode.
   only plays. `node scripts/test-ruta-tareas.js` must pass. Not built yet: the /maestro view and the teacher undo.
 - **Design first**: a clickable design of the new module page (laptop + phone) for him to try and approve before it is
   built into the platform.
+- **Homework by experience, like folders** (his rule 2026-10-18: "basing everything on experiences is so good and we
+  should keep following the same rule… if you keep them all, scroll down in the list then it's going to become messy"):
+  - «Tus tareas» shows every experience of the module (Experiencia 1…8, and more when a module has more), as folders.
+  - Tap one to see its 2-3 homeworks, with the same «Escuchar» / «¡Ya la mandé!» marks.
+  - Never one long list of homeworks. Anything new that holds a level's content follows the same experience folders.
+  - Built 2026-10-18:
+    - The folders come from each module's `exps` (server.js `_rutaExps`), in curriculum order.
+    - The newest homework's folder glows «La más nueva».
+    - A level with no homework audio yet (YCT 1) shows no column.
+- **A practice that's done shows it** (his words 2026-10-18: "whenever I finish a practice on the training it's not
+  recorded… if I already finished it it should be green"): in El Entrenamiento a world played shows its result, and at
+  the % goal it turns green with a ✓. Card 2's «N de 8 mundos con 70 %» counts it right away. This holds for every
+  kind of visitor: a logged-in kid, an automatic account, a phone with only the key, and the teacher's preview, where it
+  is kept on that device and labelled as such.
+  - A teacher's rounds are kept in `draly_train_t_<level>` on that device only, never on an account.
+  - Every training store key starts with `draly_train_`, so other open tabs redraw.
+  - «Done» is green with a ✓ everywhere; gold never means done.
 - **The golden simulations are the teacher's** (his decision 2026-10-18: "the golden simulations should be just for me
   because I will manually put simulations to kids… I need to give them a pin… so the parent communication feels
   stronger"): kids get La Base and El Entrenamiento on their own; El Simulacro Dorado never starts from a kid's phone.
