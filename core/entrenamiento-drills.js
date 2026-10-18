@@ -64,7 +64,7 @@ const PIC = [
 // never guessed from a toneless dialogue
 const RISKY_IN_LINES = new Set(['kou', 'qian', 'xue', 'shu', 'yi', 'er', 'san', 'si', 'wu', 'liu', 'qi', 'ba', 'jiu', 'shi', 're', 'leng', 'sui']);
 // pictures too close to tell apart in one question (two phones, school / university, film / cinema)
-const CONFLICTS = [['dianhua', 'shouji'], ['xuexiao', 'daxue'], ['dianying', 'dianyingyuan', 'dianshi'], ['shangdian', 'yiyuan'], ['cha', 'niunai'],
+const CONFLICTS = [['dianhua', 'shouji'], ['xuexiao', 'daxue'], ['dianying', 'dianyingyuan', 'dianshi'], ['shangdian', 'yiyuan', '¿Adónde vas? Voy al hospital a ver al médico.'], ['cha', 'niunai'],
   ['mifan', 'zaofan', 'wufan', 'wanfan']];
 const clash = (a, b) => CONFLICTS.some((set) => set.includes(a) && set.includes(b));
 
@@ -216,7 +216,7 @@ function wordDrills(lvl, b, w) {
 
 // ── a dialogue (a pack's r item, or authored below) → heard only: the reply, and the picture when it has one ─────────
 // replies: the other replies to choose from (the pack's own wrong ones, else the world's other replies)
-function dialogueDrills(lvl, b, a, reply, replies, uidBase, pic) {
+function dialogueDrills(lvl, b, a, reply, replies, uidBase, pic, es) {
   const out = [];
   const line = a + ' ' + reply;
   const rnd = seeded(uidBase + ':lrep');
@@ -238,44 +238,45 @@ function dialogueDrills(lvl, b, a, reply, replies, uidBase, pic) {
   }
   if (w) {
     const d = picDrill(uidBase + ':ldlg', b, w, { kind: 'ldlg', ex: 'L-pic', stim: 'dialogue', listen: true, text: T.ldlg,
-      say: { py: line }, show: { py: line }, avoid: line });
+      say: { py: line }, show: es ? { py: line, es } : { py: line }, avoid: line });
     if (d) out.push(d);
   }
   return out;
 }
 
-// dialogues written for El Entrenamiento (level words only), each with the word whose picture answers it: the exam's
+// dialogues written for El Entrenamiento (level words only), each with the word whose picture answers it and its
+// Spanish (shown once answered): the exam's
 // «listen to the conversation, choose the picture», where a level's packs have few dialogues with a picture
 const DIALOGUES = {
   yct1: [
-    [2, 'Ni kan, zhe shi shei de bizi?', 'Zhe shi wo de bizi.', 'bizi'],
-    [2, 'Ni de erduo da ma?', 'Bu da, wo de erduo xiao.', 'erduo'],
-    [3, 'Ni jia you gou ma?', 'You, wo jia you yi ge xiao gou.', 'gou'],
-    [3, 'Zhe shi shenme?', 'Zhe shi niao.', 'niao'],
-    [4, 'Ni he shenme?', 'Wo he niunai.', 'niunai'],
-    [4, 'Ni xihuan chi shenme?', 'Wo xihuan chi miantiao.', 'miantiao'],
-    [6, 'Ni qu nar?', 'Wo qu shangdian.', 'shangdian'],
-    [6, 'Ta shi shei?', 'Ta shi wo de laoshi.', 'laoshi'],
+    [2, 'Ni kan, zhe shi shei de bizi?', 'Zhe shi wo de bizi.', 'bizi', '¿De quién es esta nariz? Es mi nariz.'],
+    [2, 'Ni de erduo da ma?', 'Bu da, wo de erduo xiao.', 'erduo', '¿Tus orejas son grandes? No, mis orejas son pequeñas.'],
+    [3, 'Ni jia you gou ma?', 'You, wo jia you yi ge xiao gou.', 'gou', '¿En tu casa hay perro? Sí, en mi casa hay un perrito.'],
+    [3, 'Zhe shi shenme?', 'Zhe shi niao.', 'niao', '¿Qué es esto? Es un pájaro.'],
+    [4, 'Ni he shenme?', 'Wo he niunai.', 'niunai', '¿Qué tomas? Tomo leche.'],
+    [4, 'Ni xihuan chi shenme?', 'Wo xihuan chi miantiao.', 'miantiao', '¿Qué te gusta comer? Me gusta comer fideos.'],
+    [6, 'Ni qu nar?', 'Wo qu shangdian.', 'shangdian', '¿Adónde vas? Voy a la tienda.'],
+    [6, 'Ta shi shei?', 'Ta shi wo de laoshi.', 'laoshi', '¿Quién es él? Es mi maestro.'],
   ],
   hsk2: [
-    [1, 'Ni jia you mao ma?', 'You, wo jia you liang zhi mao.', 'mao'],
-    [3, 'Ni zaofan chi shenme?', 'Wo chi jidan.', 'jidan'],
-    [3, 'Ni yao he cha ma?', 'Bu yao, wo yao he niunai.', 'niunai'],
-    [4, 'Ni mai shenme?', 'Wo mai yi jian yifu.', 'yifu'],
-    [5, 'Jintian tianqi zenmeyang?', 'Xia xue le, hen leng.', 'xue'],
-    [6, 'Ni zai zuo shenme?', 'Wo zai kan dianshi.', 'dianshi'],
-    [7, 'Ni zenme qu Zhongguo?', 'Wo zuo feiji qu.', 'feiji'],
-    [7, 'Ni zuo shenme che qu?', 'Wo zuo huoche qu.', 'huoche'],
+    [1, 'Ni jia you mao ma?', 'You, wo jia you liang zhi mao.', 'mao', '¿En tu casa hay gato? Sí, en mi casa hay dos gatos.'],
+    [3, 'Ni zaofan chi shenme?', 'Wo chi jidan.', 'jidan', '¿Qué desayunas? Como huevo.'],
+    [3, 'Ni yao he cha ma?', 'Bu yao, wo yao he niunai.', 'niunai', '¿Quieres tomar té? No, quiero tomar leche.'],
+    [4, 'Ni mai shenme?', 'Wo mai yi jian yifu.', 'yifu', '¿Qué compras? Compro una prenda de ropa.'],
+    [5, 'Jintian tianqi zenmeyang?', 'Xia xue le, hen leng.', 'xue', '¿Qué tal el clima hoy? Nieva, hace mucho frío.'],
+    [6, 'Ni zai zuo shenme?', 'Wo zai kan dianshi.', 'dianshi', '¿Qué estás haciendo? Estoy viendo la televisión.'],
+    [7, 'Ni zenme qu Zhongguo?', 'Wo zuo feiji qu.', 'feiji', '¿Cómo vas a China? Voy en avión.'],
+    [7, 'Ni zuo shenme che qu?', 'Wo zuo huoche qu.', 'huoche', '¿En qué vas? Voy en tren.'],
   ],
   hsk1: [
-    [1, 'Zhe shi shei de gou?', 'Shi wo erzi de.', 'gou'],
-    [2, 'Ni xiang mai shenme?', 'Wo xiang mai yi ben shu.', 'shu'],
-    [3, 'Ni xiang he shenme?', 'Wo xiang he cha.', 'cha'],
-    [3, 'Ni xihuan chi shenme shuiguo?', 'Wo xihuan chi pingguo.', 'pingguo'],
-    [4, 'Jintian tianqi zenmeyang?', 'Xia yu le.', 'xiayu'],
-    [5, 'Ni zenme qu Beijing?', 'Wo zuo feiji qu.', 'feiji'],
-    [6, 'Ni zai zuo shenme?', 'Wo zai kan dianshi.', 'dianshi'],
-    [7, 'Ni qu nar?', 'Wo qu yiyuan kan yisheng.', 'yiyuan'],
+    [1, 'Zhe shi shei de gou?', 'Shi wo erzi de.', 'gou', '¿De quién es este perro? Es de mi hijo.'],
+    [2, 'Ni xiang mai shenme?', 'Wo xiang mai yi ben shu.', 'shu', '¿Qué quieres comprar? Quiero comprar un libro.'],
+    [3, 'Ni xiang he shenme?', 'Wo xiang he cha.', 'cha', '¿Qué quieres tomar? Quiero tomar té.'],
+    [3, 'Ni xihuan chi shenme shuiguo?', 'Wo xihuan chi pingguo.', 'pingguo', '¿Qué fruta te gusta? Me gustan las manzanas.'],
+    [4, 'Jintian tianqi zenmeyang?', 'Xia yu le.', 'xiayu', '¿Qué tal el clima hoy? Está lloviendo.'],
+    [5, 'Ni zenme qu Beijing?', 'Wo zuo feiji qu.', 'feiji', '¿Cómo vas a Pekín? Voy en avión.'],
+    [6, 'Ni zai zuo shenme?', 'Wo zai kan dianshi.', 'dianshi', '¿Qué estás haciendo? Estoy viendo la televisión.'],
+    [7, 'Ni qu nar?', 'Wo qu yiyuan kan yisheng.', 'yiyuan', '¿Adónde vas? Voy al hospital a ver al médico.'],
   ],
 };
 
@@ -428,7 +429,7 @@ function forWorld(level, w) {
       if (w.kind === 'world') {
         (DIALOGUES[lvl] || []).forEach((d, i) => {
           if (d[0] !== w.n) return;
-          out = out.concat(dialogueDrills(lvl, b, d[1], d[2], replies.concat((DIALOGUES[lvl] || []).map((x) => x[2])), lvl + ':dlg' + i, d[3])
+          out = out.concat(dialogueDrills(lvl, b, d[1], d[2], replies.concat((DIALOGUES[lvl] || []).map((x) => x[2])), lvl + ':dlg' + i, d[3], d[4])
             .filter((x) => x.kind === 'ldlg'));
         });
       }

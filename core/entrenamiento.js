@@ -294,6 +294,7 @@ const isNumWord = (x) => !!x && (/^\d+$/.test(x) || /^(yi|er|san|si|wu|liu|qi|ba
 const COUNTED = new Set(['yue', 'hao', 'sui', 'ge', 'dian', 'fen', 'kuai', 'tian', 'nian', 'ben', 'bei', 'kou', 'ci', 'zhi', 'xingqi', 'jian', 'zhang']);
 const VEHICLES = new Set(['chuzuche', 'feiji', 'che', 'huoche', 'gonggongqiche', 'gongjiaoche', 'ditie', 'chuan', 'qiche']);
 const DRINKS = new Set(['shui', 'cha', 'niunai', 'kafei', 'shenme', 'jiu', 'guozhi', 'tang', 'kele', 'yi', 'bei', 'nainai', 'dian', 'dianr', 'ma', 'le', 'guo']);
+const DRINK_NOUNS = new Set(['shui', 'cha', 'niunai', 'kafei', 'guozhi', 'kele', 'nainiu']);
 const VERBS_BEFORE = new Set(['ai', 'xiang', 'yao', 'xihuan', 'bu', 'mei', 'zai', 'hui', 'neng', 'qu', 'lai', 'keyi']);
 const QWORDS = /\b(shenme|shei|ji|ma|nar|naer|nali|zenme|zenmeyang|duoshao|ne|weishenme)\b/;
 const HANZI_NUM = /^[一二三四五六七八九十两几零百\d]+$/;
@@ -311,13 +312,15 @@ function contextHanzi(k, prevHz, prev, next, next2, end, question, sentence, cap
   // (a number written apart after «shi» is «是» + the number: the packs write 17 as one word, «shiqi»)
   if (k === 'shi') return afterNum || (COUNTED.has(next) && next !== 'hao' && next !== 'ge') ? '十' : '是';
   if (k === 'yu' && prev === 'xia') return '雨';
+  if (k === 'xue' && prev === 'xia') return '雪';                        // xia xue le = 下雪了 (never 下学)
   if (k === 'da' && ['dianhua', 'qiu', 'lanqiu', 'zuqiu'].includes(next)) return '打';
   if (k === 'zai') return next === 'lai' || next === 'gei' ? '再' : '在';
   if (k === 'ba') return end && !afterNum ? '吧' : '八';
   if (k === 'ma') return end ? '吗' : null;
-  if (k === 'he') return DRINKS.has(next) || VERBS_BEFORE.has(prev) ? '喝' : '和';
+  // (a drink before it lists drinks: «shui he niunai» = 水和牛奶; «he kou shui» = 喝口水)
+  if (k === 'he') return DRINK_NOUNS.has(prev) ? '和' : DRINKS.has(next) || next === 'kou' || VERBS_BEFORE.has(prev) ? '喝' : '和';
   if (k === 'hui') return ['jia', 'lai', 'qu', 'gongsi', 'xuexiao', 'beijing', 'zhongguo'].includes(next) ? '回' : null;
-  if (k === 'zuo') return VEHICLES.has(next) || ['chuzu', 'zher', 'zheer', 'zheli', 'nar', 'naer', 'xia', 'zai'].includes(next) || prev === 'qing' ? '坐' : null;
+  if (k === 'zuo') return VEHICLES.has(next) || (next === 'shenme' && VEHICLES.has(next2)) || ['chuzu', 'zher', 'zheer', 'zheli', 'nar', 'naer', 'xia', 'zai'].includes(next) || prev === 'qing' ? '坐' : null;
   if (k === 'jian') return afterNum || prev === 'zhe' || prev === 'na' ? '件' : '见';
   if (k === 'ge') return /\bchang\b/.test(sentence) || ['zhongwen', 'hanyu', 'yingwen'].includes(prev) ? '歌' : null;
   if (k === 'li' && cap) return '李';
