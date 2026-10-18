@@ -14,6 +14,10 @@
 //                         addresses never change (hsk2-… opens newhsk1-…).
 // One <audio> element plays everything, so only one sound at a time.
 // Homework audio needs no login; no hanzi (kid UI rule): pinyin + Spanish.
+// 2026-10-18: a homework's page also has the kid's marks («Escuchada ✓», «¡Ya la mandé!», «✓ Mandada», «Deshacer»),
+// drawn by js/ruta.js (Ruta.hwMarks: the same code as «Tus tareas»); the automatic student account (js/ruta-auto.js)
+// shows its first card after the key screen made one, and the first El Entrenamiento round on a phone with no account
+// makes one (a click listener on «¡A jugar!», the training code itself untouched).
 // =========================================================================
 (function () {
   'use strict';
@@ -73,7 +77,11 @@
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then((s) => ((s && Array.isArray(s.modules)) ? s : null), () => null);
     Promise.all([fetch(fresh('/assets/audios/catalog.json')).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); }), state])
-      .then(([c, s]) => { catalog = c; ruta = s; route(); })
+      .then(([c, s]) => {
+        catalog = c; ruta = s; route();
+        // 🆕 2026-10-18: an automatic account made on the page before (the key screen) shows its card once
+        if (window.DralyAuto) { try { window.DralyAuto.afterRoute(ruta); } catch (_) {} }
+      })
       .catch(() => {
         main.innerHTML = failedHtml('No se pudo cargar La Ruta Dorada. Revisa tu internet.');
         $('#au-retry').addEventListener('click', load);
@@ -153,6 +161,26 @@
   }
   window.addEventListener('pageshow', (e) => { if (e.persisted) refreshState(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshState(); });
+  // the visitor's state again WITHOUT a redraw (2026-10-18: a homework page or El Entrenamiento learns the automatic
+  // account a tap just made; the next screen is drawn with it) → Promise<state | null>
+  function reloadState() {
+    return fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null)).then((s) => { if (s && Array.isArray(s.modules)) { ruta = s; return s; } return null; }, () => null);
+  }
+  // 🆕 2026-10-18: the first El Entrenamiento round on a phone with no account is a first real step: the phone gets its
+  // automatic account (js/ruta-auto.js; its card waits until the round is over). The round itself is untouched: its
+  // score joins the account through El Entrenamiento's usual path (the phone's proofs, at the next visit of the route).
+  main.addEventListener('click', (e) => {
+    if (!e.target.closest('#tr-go, #tr-again') || !ruta || ruta.student || ruta.teacher || !window.DralyAuto) return;
+    const tm = location.pathname.match(/^\/audios?\/([a-z0-9-]+)\/entrenamiento/i);
+    const mod = tm && ruta.modules.find((x) => x.slug === tm[1].toLowerCase() || x.id === tm[1].toLowerCase());
+    if (!mod || !mod.open) return;
+    window.DralyAuto.ensure(mod.slug, 'train').then((r) => {
+      if (!r) return;
+      reloadState();
+      if (r.account && (r.created || r.resumed)) window.DralyAuto.welcome(r.account, { afterRound: true });
+    });
+  }, true);
 
   let shownPath = null;            // the page on screen: going back through #mundo-… anchors only scrolls
   window.addEventListener('popstate', () => {
@@ -281,7 +309,7 @@
   // ── La Ruta Dorada (js/ruta.js draws both screens) ─────────────────
   // what ruta.js needs from this page: the catalog, the visitor's modules, the seals on this phone, the meters and
   // the homework cards (one look for them everywhere)
-  const rutaCtx = () => ({ catalog, ruta, sealsOf, meterHtml, cardHtml, homeworksOf, refresh: refreshState });
+  const rutaCtx = () => ({ catalog, ruta, sealsOf, meterHtml, cardHtml, homeworksOf, refresh: refreshState, reloadState });
   function renderPicker() {
     hw = null;
     document.title = 'La Ruta Dorada · Dralingo';
@@ -355,7 +383,9 @@
       '<section class="au-hero">' + (h.cover ? '<img src="' + esc(h.cover) + '" alt="">' : '') +
       '<h1>' + esc(h.title) + '</h1>' +
       '<p class="au-hero-meta">' + esc(h.levelName) + ' · Experiencia ' + h.exp + ' · Ronda ' + h.round + '</p>' +
-      (h.tagline ? '<p class="au-tag">' + esc(h.tagline) + '</p>' : '') + '</section>';
+      (h.tagline ? '<p class="au-tag">' + esc(h.tagline) + '</p>' : '') + '</section>' +
+      // 🏆 2026-10-18: the kid's marks here too («Escuchada ✓», «¡Ya la mandé!», «✓ Mandada»), drawn by js/ruta.js
+      '<div class="au-marks" data-marks></div>';
     h.tracks.forEach((t, k) => {
       const K = KIND[t.kind] || { title: t.code, how: '' };
       const hasName = t.items.some((it) => /_{2,}/.test(it.py));
@@ -372,8 +402,15 @@
         '<div class="au-lines ' + esc(t.kind) + '">' + t.items.map((it, i) => lineHtml(t, it, i, k)).join('') + '</div></section>';
     });
     html += '<section class="au-end"><h3>¡Ahora graba tu video!</h3>' +
-      '<p>Di las frases seguidas, en una sola toma, aunque tengas errores. Mándaselo a tu profe.</p></section>';
+      '<p>Di las frases seguidas, en una sola toma, aunque tengas errores. Mándaselo a tu profe.</p>' +
+      '<div class="au-marks" data-marks></div></section>';
     main.innerHTML = html;
+    // the marks: the same code as La Ruta Dorada's «Tus tareas» (js/ruta.js): a kid of that level or a phone with no login
+    // marks, a teacher sees the kids' buttons as a preview, a kid of another level only listens (no bar)
+    const mounts = Array.prototype.slice.call(main.querySelectorAll('[data-marks]'));
+    let bar = null;
+    if (window.Ruta && window.Ruta.hwMarks) { try { bar = window.Ruta.hwMarks(mounts, rutaCtx(), h); } catch (e) { console.error('[audios] the homework marks could not be drawn', e); } }
+    if (!bar) mounts.forEach((x) => x.remove());
 
     main.querySelectorAll('.au-play').forEach((b) => b.addEventListener('click', () => toggleTrack(+b.getAttribute('data-t'))));
     main.querySelectorAll('.au-line').forEach((b) => b.addEventListener('click', () => playClip(+b.getAttribute('data-t'), +b.getAttribute('data-i'))));

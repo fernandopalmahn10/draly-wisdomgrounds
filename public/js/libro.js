@@ -290,8 +290,9 @@
         const after = (d.sims || []).filter((s) => s.n > d.n).concat((d.sims || []).filter((s) => s.n < d.n));
         const todo = after.find((s) => !s.taken);
         const again = after.find((s) => s.taken && s.mistakes);
-        // (a kid whose Dorado is still closed can't take a simulation alone yet: no «Hacer» then)
-        if (todo && d.dorado !== false) next = '<a class="gd-btn gd-btn-gold" href="' + esc((/^hsk\d/.test(todo.id) ? '/hsk-sim.html?sim=' : '/yct-sim.html?sim=') + encodeURIComponent(todo.id)) + '">Hacer el Simulacro ' + todo.n + '</a>';
+        // (a kid whose Dorado is still closed can't take a simulation alone yet: no «Hacer» then; since 2026-10-18 the
+        // teacher opens every simulation in class: `solo` false, no «Hacer» for a kid at all)
+        if (todo && d.dorado !== false && d.solo !== false) next = '<a class="gd-btn gd-btn-gold" href="' + esc((/^hsk\d/.test(todo.id) ? '/hsk-sim.html?sim=' : '/yct-sim.html?sim=') + encodeURIComponent(todo.id)) + '">Hacer el Simulacro ' + todo.n + '</a>';
         else if (again) next = '<a class="gd-btn gd-btn-red" href="/audios/' + esc(d.slug) + '/libro/' + again.n + '" data-nav>Repasar el Simulacro ' + again.n + '</a>';
       }
       return '<section class="gd-zero" aria-labelledby="gd-zero-t"><div class="gd-zero-head"><span class="gd-zero-coin" aria-hidden="true"><b>' + q + '</b>' + I.check + '</span>' +
@@ -393,6 +394,13 @@
         if (d.why === 'dorado') {
           return stateCard(main, base, { nav: true, sub: 'Tu repaso de cada simulacro', title: 'Primero, El Simulacro Dorado',
             text: 'Se abre cuando practiques cada mundo de El Entrenamiento con ' + (Number(d.pct) || 70) + ' % o más. Después haces el simulacro y lo repasas aquí.',
+            btn: '<a class="gd-btn gd-btn-gold" href="/audios/' + esc(m.slug) + '#paso-3" data-nav>Ver mi ruta</a>', dragon: DRAGON.power });
+        }
+        // 🔒 2026-10-18: El Simulacro Dorado is the teacher's (server.js DORADO_SELF_SERVE off): a simulation not taken
+        // yet is taken in class, with the teacher's PIN; its book opens here right after
+        if (d.why === 'clase') {
+          return stateCard(main, base, { nav: true, sub: 'Tu repaso de cada simulacro', title: 'El Simulacro ' + base.n + ' lo haces en clase',
+            text: 'Tu profe lo abre en clase con un PIN. Cuando lo termines, su libro dorado se abre aquí con tus errores primero.',
             btn: '<a class="gd-btn gd-btn-gold" href="/audios/' + esc(m.slug) + '#paso-3" data-nav>Ver mi ruta</a>', dragon: DRAGON.power });
         }
         if (d.why === 'taken') {

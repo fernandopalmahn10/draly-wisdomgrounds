@@ -411,10 +411,31 @@
     // after «Empezar de nuevo» the box holds a name, unless the kid found their real code after all (it has a digit)
     const asName = (opts && opts.asName) || ($('hw-student-code').dataset.asName === '1' && !/[2-9]/.test(sc));
     const looksLikeCode = !asName && /^[A-Z2-9]{4,5}$/i.test(sc);
+    // 🆕 2026-10-18 (his words: "make the system remind you: Are you sure you are not this student?"): this phone already
+    // holds an account with progress (its login, or the automatic account La Ruta Dorada gave it) and the kid typed
+    // ANOTHER code or a name (a new account): «¿Eres tú?» first (js/ruta-auto.js). «Sí, soy yo» enters that account (an
+    // automatic one is claimed by this class code), «No, soy otro alumno» goes on, and an automatic account can also
+    // «Pasar mi progreso a esta cuenta» (merged on the server once the typed account's login worked)
+    if (!(opts && opts.eres) && window.DralyAuto) {
+      const again = (extra) => tryEnter(Object.assign({}, opts || {}, { eres: true }, extra || {}));
+      window.DralyAuto.me().then((acc) => {
+        const typed = looksLikeCode ? sc.toUpperCase() : null;
+        if (!acc || !acc.progress || !acc.progress.any || (typed && typed === acc.code)) { again(); return; }
+        window.DralyAuto.eresTu($('hw-entry-err'), acc, { merge: !!acc.auto && !!typed }).then((a) => {
+          if (a === 'me') {
+            $('hw-student-code').value = acc.code;
+            delete $('hw-student-code').dataset.asName;
+            // (an automatic account still called «Dragoncito 382» takes the name the kid just typed)
+            tryEnter({ eres: true, name: !typed && acc.placeholder ? sc : null });
+          } else again(a === 'merge' ? { merge: true } : null);
+        });
+      }, () => again());
+      return;
+    }
     const payload = {
       accessCode: ac,
       studentCode: looksLikeCode ? sc.toUpperCase() : null,
-      displayName: looksLikeCode ? null : sc,
+      displayName: looksLikeCode ? ((opts && opts.name) || null) : sc,
       meta: collectDeviceMeta(),
     };
     fetch('/api/homework/enter', {
@@ -450,6 +471,15 @@
           localStorage.setItem(STORAGE_ACCESS_KEY, ac);
           localStorage.setItem(STORAGE_CODE_KEY, studentCode);
         } catch (_) {}
+        // 🆕 2026-10-18: «Pasar mi progreso a esta cuenta» (the «¿Eres tú?» card): this phone's automatic account joins the
+        // account that just logged in (the server needs both: the automatic account's cookie and this login)
+        if (opts && opts.merge && !data.isNew && window.DralyAuto) {
+          window.DralyAuto.merge().then((d) => {
+            if (d && d.ok) window.DralyAuto.toast('¡Listo! Tu progreso pasó a tu cuenta.');
+            if (hwNext) setTimeout(() => location.replace(hwNext), d && d.ok ? 1400 : 0);
+          });
+          if (hwNext) return;
+        }
         // back to the simulation they came from (a brand-new account first sees its code banner, as always)
         if (hwNext && !data.isNew) { location.replace(hwNext); return; }
         // First-time joiners pick an avatar before seeing the list

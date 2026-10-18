@@ -3256,7 +3256,7 @@
         + (s.sentenceCount || 0) + ' sentences, ' + (s.assignmentCount || 0) + ' homework, ' + (s.testCount || 0) + ' reading tests');
       row.innerHTML = `
         <span class="m-row-avatar"><span class="m-avatar-frame">${renderAvatar(s.avatar)}</span>${s._onlineNow ? '<span class="m-online-dot" title="Online now"></span>' : ''}</span>
-        <span class="m-row-who"><span class="m-row-name">${escapeHtml(name)}</span><span class="m-row-code">${escapeHtml(s.code)}</span></span>
+        <span class="m-row-who"><span class="m-row-name">${escapeHtml(name)}</span><span class="m-row-code">${escapeHtml(s.code)}</span>${s.auto ? '<span class="m-row-auto" title="Made by itself on La Ruta Dorada (no class code yet). It joins a class when the family logs in at Mis tareas with a class code + this code.">automática</span>' : ''}</span>
         <span class="m-row-tags">
           <span class="m-row-levelcell"><span class="m-row-level is-${escapeHtml(s.level || 'hsk1')}" title="Level (from the class code the kid typed)">${escapeHtml(levelLabel(s.level))}</span>${rutaBar}</span>
           <span class="m-row-classroom${s.classroomName ? '' : ' is-none'}" title="Class">${s.classroomName ? '🎓 ' + escapeHtml(s.classroomName) : 'No class'}</span>
@@ -3578,6 +3578,7 @@
           <div class="m-detail-tags">
             <span class="m-detail-code" title="Student code">${escapeHtml(data.code)}</span>
             ${level ? '<span class="m-level-pill is-' + escapeHtml(level) + '">' + escapeHtml(levelLabel(level)) + '</span>' : ''}
+            ${data.auto ? '<span class="m-row-auto" title="Made by itself on La Ruta Dorada (no class code yet). It joins a class when the family logs in at Mis tareas with a class code + this code.">automática</span>' : ''}
             <span class="m-presence${online ? ' is-online' : ''}">${online ? '🟢 ' : ''}${escapeHtml(seen)}</span>
           </div>
           <div class="m-detail-meta">Since ${since} ·

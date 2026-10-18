@@ -571,6 +571,7 @@
     writeSeals(data.level, seals, lastWord, { n, on });
     queueSave(data.level);
     markTapped();
+    if (on) autoStep();
     if (on && !reduced() && btn.animate) {
       btn.querySelector('i').animate([
         { transform: 'scale(1.4) rotate(-14deg)', opacity: 0.2 },
@@ -587,6 +588,19 @@
     } else if (k === world.count) {
       toast('¡Mundo ' + world.n + ' completo!', world.name + ': ¡listo para El Entrenamiento!', false);   // what the seals earn (phase 3)
     }
+  }
+
+  // 🆕 2026-10-18 (automatic accounts, js/ruta-auto.js): the first «¡Me la sé!» on a phone nobody is logged in on is a
+  // first real step: the phone gets its account (or the kid it remembers logs in again), then this phone's seals join it
+  // through the usual first meeting (a union) and the card «¡Ya tienes tu cuenta!» shows once
+  function autoStep() {
+    if (!data || !window.DralyAuto || syncOf(data.level).mode !== 'device') return;
+    const level = data.level, max = data.words.length;
+    window.DralyAuto.ensure(level, 'seal').then((r) => {
+      if (!r) return;
+      syncLevel(level, max);
+      if (r.account && (r.created || r.resumed)) window.DralyAuto.welcome(r.account);
+    });
   }
 
   function toast(title, text, big) {
