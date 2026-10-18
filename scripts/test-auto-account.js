@@ -213,6 +213,26 @@ async function run() {
   r = await auto(Tr, 'hsk1', 'train');
   ok(r.json && r.json.created && r.json.account.level === 'hsk1', "'train': a new account");
   made.push(r.json && r.json.account && r.json.account.code);
+  // (2026-10-18, his words: "whenever I finish a practice on the training it's not recorded") the page asks for the account
+  // AND starts the round with the same tap: the round starts as the phone's (no session yet), the account arrives
+  // mid-round. The round that made the account counts ON it, never as a phone's score.
+  const TR = phone();
+  await seen(TR);
+  await typeKey(TR, 'yct1');
+  const rr0 = await post('/api/ruta/train/round', { level: 'yct1', world: 'familia', s: '1-17' }, as(TR));
+  ok(rr0.json && rr0.json.ok && !TR.jar.dsim, 'the first «¡A jugar!»: the round starts on the phone (no account yet)');
+  r = await auto(TR, 'yct1', 'train');
+  ok(r.json && r.json.created && TR.jar.dsim, '… the same tap makes the automatic account (its session arrives mid-round)');
+  made.push(r.json && r.json.account && r.json.account.code);
+  for (const q of (rr0.json && rr0.json.questions) || []) await post('/api/ruta/train/answer', { round: rr0.json.round, i: q.i, chosen: q.answers[0] }, as(TR));
+  const fin0 = (await post('/api/ruta/train/finish', { round: rr0.json && rr0.json.round }, as(TR))).json || {};
+  ok(fin0.ok && fin0.saved === true && !fin0.phone && !fin0.proof && fin0.best === fin0.pct, 'that round counts ON the new account (saved, its best = its %), never as a phone score (' + fin0.pct + ' %)');
+  const tv0 = (await get('/api/ruta/train?level=yct1&s=1-17', as(TR))).json || {};
+  const fam0 = (tv0.worlds || []).find((w) => w.key === 'familia');
+  ok(tv0.student && fam0 && fam0.best === fin0.pct, '… El Entrenamiento shows it on the world\'s tile (the account\'s best)');
+  const mt0 = ((await ruta(TR)).modules || []).find((m) => m.id === 'yct1');
+  ok(mt0 && mt0.train && mt0.train.worlds.find((w) => w.key === 'familia').best === fin0.pct, '… and the route (card 2 of the module page) counts it');
+  ok(((await me(TR)) || {}).progress.worlds === 1, '… «¿Eres tú?» counts it as a world practised on that account');
 
   const H = phone();
   r = await auto(H, 'newhsk1', 'tarea', NEW[0]);

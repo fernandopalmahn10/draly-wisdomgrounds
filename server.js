@@ -4943,6 +4943,34 @@ function _tareaIdsOf(lvl) {
   const folder = Levels.info(l).pack || l;
   return [..._loadAudioHomeworks()].filter((e) => e[1] === folder).map((e) => e[0]);
 }
+// 🗂️ 2026-10-18 «Homework by experience, like folders» (his rule: "basing everything on experiences is so good and we
+// should keep following the same rule"): a module's experiences = its curriculum pack's regular worlds, in order
+// («EXP3 · El Restaurante Chino» → { n: 3, name: 'El Restaurante Chino', pic }), never Pinyin básico or the Simulacro
+// del examen. pic = one of that world's own glossy pack pictures (public /assets/packs/…), a word that shows the
+// experience (the house for the family, the school, the plane for the trip…), else the world's first picture on disk.
+// La Ruta Dorada's «Tus tareas» draws one folder per experience; a homework audio's `exp` is its experience number.
+const _EXP_PIC = { familia: ['jia', 'baba'], escuela: ['xuexiao', 'laoshi'], restaurante: ['fandian'], tienda: ['yifu', 'shangdian'], rutina: ['tianqi'],
+  salud: ['yiyuan', 'yisheng'], china: ['feiji'], magicas: ['xiexie'], mercado: ['shangdian'], tiempo: ['tianqi'], viajes: ['feiji'], casa: ['dianshi', 'zhuozi'],
+  personas: ['ren'], numeros: ['san'], espejo: ['bizi'], mascotas: ['mao', 'gou'], comida: ['mifan'] };
+const _rutaExpsCache = {};
+function _rutaExps(lvl) {
+  const l = Levels.normalize(lvl);
+  if (!l) return [];
+  if (_rutaExpsCache[l]) return _rutaExpsCache[l];
+  const slug = Levels.info(l).pack || l;
+  const pack = Packs.LEVELS.find((p) => p.id === slug);
+  const out = [];
+  (pack ? pack.worlds : []).filter((w) => w && w.id !== 'pinyin' && w.id !== 'simulacro').forEach((w, i) => {
+    const m = /^EXP\s*(\d+)\s*·\s*/.exec(String(w.name || ''));
+    let files = [];
+    try { files = fs.readdirSync(path.join(__dirname, 'public', 'assets', 'packs', slug, w.id)).filter((f) => /^[a-z0-9-]+\.webp$/.test(f)); } catch (_) { files = []; }
+    const words = (w.rounds || []).flatMap((r) => r.words || []).map((x) => x && x.img).filter(Boolean);
+    const img = (_EXP_PIC[w.id] || []).concat(words).find((x) => files.includes(x + '.webp')) || (files[0] || '').replace(/\.webp$/, '');
+    out.push({ n: m ? Number(m[1]) : i + 1, name: String(w.name || '').replace(/^EXP\s*\d+\s*·\s*/, ''), pic: img ? '/assets/packs/' + slug + '/' + w.id + '/' + img + '.webp' : null });
+  });
+  _rutaExpsCache[l] = out;
+  return out;
+}
 // a kid's marks → { id: { h: 1, s: 1 } } (what is set only; the moments stay on the record), for `ids` or all of them
 function _tareaMarks(rec, ids) {
   const t = rec && rec.tareas && typeof rec.tareas === 'object' && !Array.isArray(rec.tareas) ? rec.tareas : {};
@@ -5406,6 +5434,8 @@ function _rutaState(req) {
       // 🏆 2026-10-18: the logged-in kid's homework marks for this level's audios («Escuchada», «¡Ya la mandé!»), from
       // their account (any phone). The homework audios are open, so a locked module carries them too.
       tareas: rec ? _tareaMarks(rec, _tareaIdsOf(l.id)) : null,
+      // 🗂️ the module's experiences, the folders of «Tus tareas» (public: the curriculum's names and pack pictures)
+      exps: _rutaExps(l.id),
       progress: prog ? {
         sealed: prog.sealed, words: prog.words,
         worlds: prog.worlds.map((w) => ({ n: w.n, short: w.short, count: w.count, sealed: w.sealed, train: w.train, teacher: w.teacher })),

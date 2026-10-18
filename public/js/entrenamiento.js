@@ -13,6 +13,17 @@
 // A key-only phone (nobody logged in) keeps its scores here (localStorage draly_train_<level>, with the server's signed
 // proof) and hands them in at the kid's first login (POST /api/ruta/train/scores; `who` = the account the mirror holds,
 // like La Base's seals; a sibling's scores wait for them in `held`).
+// «A practice that's done shows it» (his words 2026-10-18: "whenever I finish a practice on the training it's not recorded…
+// if I already finished it it should be green"), for EVERY visitor:
+//   · a logged-in kid / an automatic account: the server's best (the round that made the account counts on it)
+//   · a key-only phone: its own scores (draly_train_<level>, above)
+//   · a teacher's device (his computer is the super admin): its rounds are kept ON THIS DEVICE ONLY, in
+//     localStorage draly_train_t_<level> { v, best } (no proof: never sent anywhere, never a kid's score), shown the same
+//     way with «Tus rondas de maestro: solo en este equipo» (before, «Ronda de maestro: no se guarda» and nothing changed)
+//   A played world shows its stars and best %; at the % goal it turns GREEN with a ✓ (tile, the Dorado meter, card 2 of
+//   the module page). A finished round tells the page (ctx.trained: the module page's card 2 counts it at once, no stale
+//   route data after «Volver») and other tabs (localStorage draly_train_ping): this page redraws its worlds quietly when
+//   another tab finishes a round or the tab comes back into view.
 // No hanzi, no em dash, pinyin without tone marks (the packs write it so).
 // =========================================================================
 (function () {
@@ -40,6 +51,7 @@
     trophy: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 3.5h10v5.2a5 5 0 0 1-10 0z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M7 5.5H4.6a2.6 2.6 0 0 0 2.7 4.4M17 5.5h2.4a2.6 2.6 0 0 1-2.7 4.4M12 13.8v3.4"/><path fill="currentColor" d="M8 20.5h8v-.7a2.6 2.6 0 0 0-2.6-2.6h-2.8A2.6 2.6 0 0 0 8 19.8z"/></svg>',
     abc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 17l3.4-10h.6l3.4 10M4.7 13.5h4.8M13.5 7v10h3.3a2.6 2.6 0 0 0 0-5.2h-3.3 3a2.4 2.4 0 0 0 0-4.8z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     exam: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2.4" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+    eye: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>',
   };
   // Dralingo in his platform look (kandura, ghutra, mustache): the gang's lines come from js/cast.js
   const DRAGON = { hello: '/assets/dralingo/hello.webp', power: '/assets/dralingo/power.webp', wise: '/assets/dralingo/wise.webp', cheer: '/assets/dralingo/anim/cheer-still.webp' };
@@ -103,6 +115,35 @@
     return syncing[slug];
   }
   const phoneBest = (slug) => readM(slug).best;
+
+  // ── a teacher's own rounds: on this device only (2026-10-18, «Teachers see what kids see») ──
+  // { v: 1, best: { world: pct } }. Never sent to the server, never joined to an account (there is no proof), and never
+  // read for a kid: only when the server says this visitor is a teacher.
+  const TKEY = (slug) => 'draly_train_t_' + slug;
+  function teacherBest(slug) {
+    let o = null;
+    try { o = JSON.parse(store.get(TKEY(slug)) || 'null'); } catch (_) { o = null; }
+    const b = o && typeof o === 'object' && o.best && typeof o.best === 'object' && !Array.isArray(o.best) ? o.best : {};
+    const out = {};
+    Object.keys(b).forEach((k) => { const n = Number(b[k]); if (/^[a-z0-9-]{1,40}$/.test(k) && Number.isFinite(n) && n >= 0 && n <= 100) out[k] = n; });
+    return out;
+  }
+  // → { best, beat } like keepScore
+  function keepTeacher(slug, key, pct) {
+    const best = teacherBest(slug);
+    const before = best[key] != null ? Number(best[key]) : NaN;
+    if (!(before >= pct)) best[key] = pct;
+    store.set(TKEY(slug), JSON.stringify({ v: 1, best }));
+    return { best: Math.max(pct, Number.isFinite(before) ? before : 0), beat: Number.isFinite(before) && pct > before };
+  }
+  // the scores this device holds for THIS visitor: a teacher's own rounds, a key-only phone's scores, nothing for an account
+  // (an account's best comes from the server). v: { student, teacher } (the train view, or the route state)
+  const localBest = (v, slug) => (v && v.teacher ? teacherBest(slug) : v && !v.student ? phoneBest(slug) : {});
+  const TEACHER_NOTE = 'Tus rondas de maestro: solo en este equipo';
+  const teacherNote = (cls) => '<p class="tr-teacher-note' + (cls ? ' ' + cls : '') + '">' + I.eye + '<span>' + TEACHER_NOTE + '</span></p>';
+  // other tabs learn that a round ended (their worlds and the module page redraw: js/audios.js listens too)
+  const PING = 'draly_train_ping';
+  const ping = (slug, key) => store.set(PING, JSON.stringify({ slug, key, at: Date.now() }));
 
   // ── the seals this phone holds, as ranges (the server counts them: a free tap carries no secret) ──
   function sealRanges(ctx, m) {
@@ -178,6 +219,7 @@
       } catch (_) { /* an old phone: the round ends unsaved */ }
     }
     screen++;
+    shown = null;
     stopVoice();
     timers.forEach(clearTimeout); timers = [];
     play = null;
@@ -205,24 +247,35 @@
   // ── /audios/<level>/entrenamiento: the worlds ──
   // El Simulacro Dorado runs in class with the teacher (the route state's `solo: false`, a kid's view only)
   const inClass = (ctx) => !!(ctx && ctx.ruta && ctx.ruta.solo === false && !ctx.ruta.teacher);
-  function worldsPage(main, ctx, m) {
+  // the screen on screen that may redraw by itself (the worlds, or a world's start card; never a round): another tab
+  // finished a round, or this tab comes back into view → asked again, redrawn only when something changed
+  let shown = null;          // { kind: 'worlds' | 'start', main, ctx, m, key, sig }
+  // quiet: a redraw in place (no «Cargando…», the scroll stays) and only when what shows changed
+  function worldsPage(main, ctx, m, quiet) {
     document.body.classList.add('au-is-train');
     document.title = 'El Entrenamiento · ' + m.name + ' · Dralingo';
-    main.innerHTML = '<p class="au-loading">Cargando tus mundos…</p>';
+    if (!quiet) main.innerHTML = '<p class="au-loading">Cargando tus mundos…</p>';
     const at = location.pathname;
+    const scr = screen;
     fetchJson('/api/ruta/train?level=' + encodeURIComponent(m.slug) + '&s=' + encodeURIComponent(sealRanges(ctx, m))).then(({ status, d }) => {
-      if (location.pathname !== at) return;
+      if (location.pathname !== at || scr !== screen) return;
       if (status === 401) { location.reload(); return; }                 // the key was closed meanwhile: the key screen
-      if (!d || !d.ok) { failBox(main, 'No se pudieron cargar tus mundos. Revisa tu internet.', () => worldsPage(main, ctx, m)); return; }
-      const draw = (v) => drawWorlds(main, ctx, m, v);
-      draw(d);
+      if (!d || !d.ok) { if (!quiet) failBox(main, 'No se pudieron cargar tus mundos. Revisa tu internet.', () => worldsPage(main, ctx, m)); return; }
+      const sig = viewSig(d, m.slug);
+      if (!(quiet && shown && shown.kind === 'worlds' && shown.sig === sig)) drawWorlds(main, ctx, m, d);
+      shown = { kind: 'worlds', main, ctx, m, sig, at };
       // a kid logged in: what this phone practised before the login joins their account, then the page shows it
-      if (d.student && d.who) syncScores(m.slug, d.who).then((r) => { if (r.sent && location.pathname === at) worldsPage(main, ctx, m); });
+      if (d.student && d.who) syncScores(m.slug, d.who).then((r) => { if (r.sent && location.pathname === at && scr === screen) worldsPage(main, ctx, m, true); });
     });
+  }
+  // what a worlds view shows for this visitor: each world open or not and its best (server + this device)
+  function viewSig(v, slug) {
+    const mine = localBest(v, slug);
+    return JSON.stringify([v.student, v.teacher, v.who, (v.worlds || []).map((w) => [w.key, w.open, w.best, mine[w.key]]), v.dorado && [v.dorado.open, v.dorado.pct]]);
   }
   function drawWorlds(main, ctx, m, v) {
     const need = (v.dorado && v.dorado.pct) || 70;
-    const mine = !v.student && !v.teacher ? phoneBest(m.slug) : {};
+    const mine = localBest(v, m.slug);
     const worlds = v.worlds.map((w) => Object.assign({}, w, { best: w.best != null ? w.best : (mine[w.key] != null ? Number(mine[w.key]) : null) }));
     const regular = worlds.filter((w) => w.kind === 'world');
     const counted = regular.filter((w) => w.best != null && w.best >= need).length;
@@ -234,7 +287,12 @@
       '<div class="tr-goal-body"><h2 class="tr-goal-title" id="tr-goal-t">El Simulacro Dorado</h2>';
     // (2026-10-18) El Simulacro Dorado in class (server.js DORADO_SELF_SERVE off → the route's `solo: false`): the
     // teacher opens it with a PIN, so the meter says «tell your profe», never «open the simulations»
-    if (inClass(ctx)) goal += counted >= regular.length && regular.length
+    // A teacher's device: the meter counts THEIR rounds kept here (what a kid sees), and they still open the simulations
+    if (v.teacher) goal += '<p class="tr-goal-text">' + (counted >= regular.length && regular.length
+      ? '¡Todos tus mundos tienen ' + need + ' % o más! Así se abre El Simulacro Dorado para tus alumnos.'
+      : 'Para tus alumnos se abre cuando cada mundo tenga ' + need + ' % o más: <b>' + counted + ' de ' + regular.length + '</b>.') + '</p>' +
+      '<a class="tr-goal-link" href="/audios/' + esc(m.slug) + '#paso-3" data-nav>Ver los simulacros' + I.next + '</a>';
+    else if (inClass(ctx)) goal += counted >= regular.length && regular.length
       ? '<p class="tr-goal-text">¡Terminaste El Entrenamiento! Avísale a tu profe: ya puedes hacer El Simulacro Dorado en clase.</p>' +
         '<a class="tr-goal-link" href="/audios/' + esc(m.slug) + '#paso-3" data-nav>Avisarle a mi profe' + I.next + '</a>'
       : '<p class="tr-goal-text">Tu profe lo abre en clase cuando cada mundo tenga ' + need + ' % o más: <b>' + counted + ' de ' + regular.length + '</b>.</p>';
@@ -244,16 +302,20 @@
     else goal += '<p class="tr-goal-text">Se abre cuando cada mundo tenga ' + need + ' % o más: <b>' + counted + ' de ' + regular.length + '</b>.</p>';
     goal += '<ol class="tr-goal-coins" aria-hidden="true">' + regular.map((w) => '<li class="' + (w.best != null && w.best >= need ? 'is-on' : '') + '">' +
       (w.best != null && w.best >= need ? I.check : w.n) + '</li>').join('') + '</ol>';
-    if (d.login) goal += '<p class="tr-goal-note">Tus puntos quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent(location.pathname) + '">Entra con tu código</a> para que cuenten.</p>';
+    if (d.login && !v.teacher) goal += '<p class="tr-goal-note">Tus puntos quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent(location.pathname) + '">Entra con tu código</a> para que cuenten.</p>';
+    if (v.teacher) goal += teacherNote();
     goal += '</div></section>';
     const rows = worlds.map((w) => {
       const st = starsOf(w.best, need);
       let href = '', state, go = '', cls = 'tr-world';
       if (w.open) {
         href = '/audios/' + m.slug + '/entrenamiento/' + w.key;
-        state = w.best == null ? (w.kind === 'pinyin' ? 'Abierto desde el inicio' : 'Tu primera ronda te espera') : starRow(st) + '<span class="tr-best">' + w.best + ' %</span>';
+        // a world played shows its stars and best %; at the % goal (a regular world) it turns green with a ✓
+        const done = w.kind === 'world' && w.best != null && w.best >= need;
+        state = w.best == null ? (w.kind === 'pinyin' ? 'Abierto desde el inicio' : 'Tu primera ronda te espera') : starRow(st) + '<span class="tr-best">' + w.best + ' %</span>' +
+          (done ? '<span class="tr-ok">' + I.check + 'Listo</span>' : '');
         go = '<span class="tr-go">' + (w.best == null ? 'Jugar' : 'Otra vez') + '</span>';
-        cls += ' is-open' + (w.kind !== 'world' ? ' is-' + w.kind : '');
+        cls += ' is-open' + (w.kind !== 'world' ? ' is-' + w.kind : '') + (done ? ' is-done' : '');
       } else if (w.kind === 'simulacro') {
         state = 'Se abre cuando todos tus mundos estén listos';
         cls += ' is-closed is-simulacro';
@@ -264,7 +326,7 @@
         go = '<span class="tr-go is-quiet">La Base</span>';
         cls += ' is-closed';
       }
-      const label = (w.kind === 'world' ? 'Mundo ' + w.n + ', ' : '') + w.name + ': ' + (w.open ? (w.best == null ? 'listo para jugar' : 'tu mejor ' + w.best + ' %, ' + st + (st === 1 ? ' estrella' : ' estrellas')) : String(state).replace(/<[^>]+>/g, ''));
+      const label = (w.kind === 'world' ? 'Mundo ' + w.n + ', ' : '') + w.name + ': ' + (w.open ? (w.best == null ? 'listo para jugar' : 'tu mejor ' + w.best + ' %, ' + st + (st === 1 ? ' estrella' : ' estrellas') + (/ is-done/.test(cls) ? ', listo' : '')) : String(state).replace(/<[^>]+>/g, ''));
       const inner = coinHtml(w, need) + '<span class="tr-world-body" aria-hidden="true"><span class="tr-world-name">' + esc(w.name) + '</span>' +
         '<span class="tr-world-state">' + (/^</.test(state) ? state : esc(state)) + '</span></span>' + go;
       return '<li>' + (href ? '<a class="' + cls + '" href="' + esc(href) + '" data-nav aria-label="' + esc(label) + '">' + inner + '</a>'
@@ -284,21 +346,26 @@
   }
 
   // ── /audios/<level>/entrenamiento/<world>: start → round → end ──
-  function worldPage(main, ctx, m, key) {
+  function worldPage(main, ctx, m, key, quiet) {
     document.body.classList.add('au-is-train');
-    main.innerHTML = '<p class="au-loading">Cargando…</p>';
+    if (!quiet) main.innerHTML = '<p class="au-loading">Cargando…</p>';
     const at = location.pathname;
+    const scr = screen;
     fetchJson('/api/ruta/train?level=' + encodeURIComponent(m.slug) + '&s=' + encodeURIComponent(sealRanges(ctx, m))).then(({ status, d }) => {
-      if (location.pathname !== at) return;
+      if (location.pathname !== at || scr !== screen || play) return;
       if (status === 401) { location.reload(); return; }
-      if (!d || !d.ok) { failBox(main, 'No se pudo cargar este mundo. Revisa tu internet.', () => worldPage(main, ctx, m, key)); return; }
+      if (!d || !d.ok) { if (!quiet) failBox(main, 'No se pudo cargar este mundo. Revisa tu internet.', () => worldPage(main, ctx, m, key)); return; }
       if (d.student && d.who) syncScores(m.slug, d.who);
       const w = (d.worlds || []).find((x) => x.key === key);
       if (!w) { history.replaceState(null, '', '/audios/' + m.slug + '/entrenamiento'); worldsPage(main, ctx, m); return; }
-      const mine = !d.student && !d.teacher ? phoneBest(m.slug) : {};
+      const mine = localBest(d, m.slug);
       if (w.best == null && mine[w.key] != null) w.best = Number(mine[w.key]);
       document.title = w.name + ' · El Entrenamiento · Dralingo';
-      startCard(main, ctx, m, d, w);
+      const sig = viewSig(d, m.slug);
+      // (a quiet redraw never replaces a start card whose «¡A jugar!» was just tapped: the round is on its way)
+      const going = main.querySelector('#tr-go[aria-busy]');
+      if (!(quiet && (going || (shown && shown.kind === 'start' && shown.sig === sig)))) startCard(main, ctx, m, d, w);
+      shown = { kind: 'start', main, ctx, m, key, sig, at };
     });
   }
   function startCard(main, ctx, m, v, w) {
@@ -322,9 +389,11 @@
         '<li><i aria-hidden="true">' + I.sound + '</i>Escucha</li>' +
         '<li><i aria-hidden="true">' + I.tap + '</i>Toca la respuesta</li>' +
         '<li><i aria-hidden="true">' + I.star + '</i>Gana estrellas</li></ul>' +
-      (w.best != null ? '<p class="tr-start-best">Tu mejor ronda: ' + starRow(st) + '<b>' + w.best + ' %</b></p>' : '') +
+      (w.best != null ? '<p class="tr-start-best">Tu mejor ronda: ' + starRow(st) + '<b>' + w.best + ' %</b>' +
+        (w.kind === 'world' && w.best >= need ? '<span class="tr-ok">' + I.check + 'Listo</span>' : '') + '</p>' : '') +
       '<button type="button" class="tr-btn tr-btn-gold tr-start-go" id="tr-go">' + I.play + '¡A jugar!</button>' +
       (w.kind === 'world' && (w.best == null || w.best < need) ? '<p class="tr-start-need">Con ' + need + ' % este mundo cuenta para El Simulacro Dorado.</p>' : '') +
+      (v.teacher ? teacherNote('is-on-dark') : '') +
       '</section>';
     main.querySelector('#tr-go').addEventListener('click', () => { unlock(); startRound(main, ctx, m, v, w); });
   }
@@ -356,6 +425,7 @@
   }
   function playRound(main, ctx, m, v, w, R) {
     timers.forEach(clearTimeout); timers = [];
+    shown = null;                                                     // (a round: nothing redraws by itself)
     document.body.classList.add('au-is-play');
     const C = window.DralingoCast;
     const friend = C ? C.pick(1)[0] : null;
@@ -619,6 +689,7 @@
     P.main.querySelector('#tr-again').addEventListener('click', () => { unlock(); const m = P.m; startAgain(P.main, P.ctx, m, P.v, P.w); });
   }
   function startAgain(main, ctx, m, v, w) {
+    shown = null;
     main.innerHTML = '<p class="au-loading">Preparando otra ronda…</p>';
     play = null;                                                      // the round on screen is over
     const at = screen;
@@ -650,7 +721,13 @@
     let best = F.best;
     let beat = !!F.record;
     if (F.phone && F.proof) { const kept = keepScore(m.slug, w.key, F.pct, F.proof); best = kept.best; beat = kept.beat; }
-    if (F.teacher) best = null;
+    // a teacher's round: kept on this device only (never sent, never a kid's score), shown like a kid's
+    if (F.teacher) { const kept = keepTeacher(m.slug, w.key, F.pct); best = kept.best; beat = kept.beat; }
+    // the page (card 2 of the module page counts it at once) and the other tabs learn the new best
+    if (best != null) {
+      try { if (P.ctx && P.ctx.trained) P.ctx.trained(m.slug, w.key, best, { saved: !!F.saved, phone: !!F.phone, teacher: !!F.teacher, doradoNow: !!F.doradoNow }); } catch (_) {}
+      ping(m.slug, w.key);
+    }
     const need = F.need || 70;
     const stars = F.stars || 0;
     const C = window.DralingoCast;
@@ -663,15 +740,20 @@
     const list = (v.worlds || []).map((x) => (x.key === w.key && best != null ? Object.assign({}, x, { best: Math.max(best, x.best == null ? 0 : x.best) }) : x));
     const at = list.findIndex((x) => x.key === w.key);
     const nextW = list.slice(at + 1).find((x) => x.open) || null;
-    const record = !F.teacher && beat;
-    // what this round changed on the route, in one line: this world counts now, or how many more right answers it needs
-    const regular = list.filter((x) => x.kind === 'world');
+    const record = beat;
+    // what this round changed on the route, in one line: this world counts now (green, with its ✓), or how many more
+    // right answers it needs. (A teacher's list: their own rounds on this device; the view was drawn before this round.)
+    const mineNow = localBest(v, m.slug);
+    const listed = list.map((x) => (x.best == null && mineNow[x.key] != null ? Object.assign({}, x, { best: Number(mineNow[x.key]) }) : x));
+    const regular = listed.filter((x) => x.kind === 'world');
     const counted = regular.filter((x) => x.best != null && x.best >= need).length;
     const missing = Math.max(0, Math.ceil((need * F.total) / 100) - F.right);
+    const nowDone = w.kind === 'world' && best != null && best >= need;
     let change = '';
-    if (w.kind === 'world' && !F.teacher) {
-      change = good ? '¡' + esc(w.name) + ' cuenta para El Simulacro Dorado! ' + counted + ' de ' + regular.length + ' mundos.'
-        : (missing === 1 ? 'Con 1 bien más llegas al ' : 'Con ' + missing + ' bien más llegas al ') + need + ' %, y este mundo cuenta para El Simulacro Dorado.';
+    if (w.kind === 'world') {
+      change = good ? I.check + '<span>¡' + esc(w.name) + ' cuenta para El Simulacro Dorado! ' + counted + ' de ' + regular.length + ' mundos.</span>'
+        : nowDone ? I.check + '<span>' + esc(w.name) + ' ya cuenta: tu mejor ronda tiene ' + best + ' %. ' + counted + ' de ' + regular.length + ' mundos.</span>'
+          : '<span>' + (missing === 1 ? 'Con 1 bien más llegas al ' : 'Con ' + missing + ' bien más llegas al ') + need + ' %, y este mundo cuenta para El Simulacro Dorado.</span>';
     }
     document.body.classList.remove('au-is-play');
     P.main.innerHTML = '<a class="au-back" data-nav href="/audios/' + esc(m.slug) + '/entrenamiento">' + I.back + 'Mis mundos</a>' +
@@ -681,11 +763,10 @@
           '<span class="au-sr">, ' + stars + (stars === 1 ? ' estrella' : ' estrellas') + '</span></h1>' +
         '<p class="tr-end-count">' + esc(w.name) + ': ' + F.right + ' de ' + F.total + ' bien' + (P.best >= 3 ? ', ' + P.best + ' seguidas' : '') + '</p>' +
         (record && best != null ? '<p class="tr-record">' + I.trophy + '¡Nuevo récord!</p>' : (best != null && best > F.pct ? '<p class="tr-end-best">Tu mejor ronda: ' + best + ' %</p>' : '')) +
-        (F.teacher ? '<p class="tr-end-best">Ronda de maestro: no se guarda.</p>' : '') +
         (F.doradoNow ? '<a class="tr-dorado" href="/audios/' + esc(m.slug) + '#paso-3" data-nav><span class="tr-dorado-cup" aria-hidden="true">' + I.trophy + '</span>' +
           (inClass(P.ctx) ? '<span><b>¡Terminaste El Entrenamiento!</b><span>Todos tus mundos tienen ' + need + ' % o más. Avísale a tu profe: ya puedes hacer El Simulacro Dorado.</span></span></a>'
             : '<span><b>¡Abriste El Simulacro Dorado!</b><span>Todos tus mundos tienen ' + need + ' % o más.</span></span></a>')
-          : (change ? '<p class="tr-end-change">' + change + '</p>' : '')) +
+          : (change ? '<p class="tr-end-change' + (good || nowDone ? ' is-done' : '') + '">' + change + '</p>' : '')) +
         // the gold button is what comes next: another round below the %, the next world once this one counts; right
         // under the score, so a small phone shows it without scrolling
         '<div class="tr-end-acts' + (good && nextW ? ' is-next' : '') + '">' +
@@ -694,6 +775,7 @@
             : '<a class="tr-btn tr-btn-ghost" href="/audios/' + esc(m.slug) + '/entrenamiento" data-nav>Mis mundos</a>') +
         '</div>' +
         (F.phone ? '<p class="tr-end-phone">Tus puntos quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug + '/entrenamiento') + '">Entra con tu código</a> para guardarlos en tu cuenta.</p>' : '') +
+        (F.teacher ? teacherNote() : '') +
         '<div class="tr-end-cast"><img src="' + pose + '" alt="" width="432" height="480" decoding="async">' +
           (line ? '<p class="rd-bubble"><b>' + esc(C.name(f)) + '</b>' + esc(line) + '</p>' : '') + '</div>' +
         '</section>';
@@ -718,10 +800,23 @@
     if (good || F.doradoNow) later(() => sfx('win'), calm() ? 0 : 260 + starsEls.length * 220 + 200);
   }
 
+  // ── no stale screen (2026-10-18): another tab finished a round (its ping, a teacher's or a phone's scores), or this
+  // tab comes back into view → the worlds / the start card ask again and redraw in place when something changed
+  // (never during a round or over its stars)
+  function refreshShown() {
+    const s = shown;
+    if (!s || play || s.at !== location.pathname) return;
+    if (s.kind === 'worlds') worldsPage(s.main, s.ctx, s.m, true);
+    else if (s.kind === 'start') worldPage(s.main, s.ctx, s.m, s.key, true);
+  }
+  window.addEventListener('storage', (e) => { if (e.key && /^draly_train_/.test(e.key)) refreshShown(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshShown(); });
+  window.addEventListener('pageshow', (e) => { if (e.persisted) refreshShown(); });
+
   // ── the router's entry (js/audios.js) ──
   function render(main, ctx, m, key) {
     leave();
     if (key) worldPage(main, ctx, m, key); else worldsPage(main, ctx, m);
   }
-  window.Entrenamiento = { render, leave, syncScores, phoneBest, sealRanges, starsOf };
+  window.Entrenamiento = { render, leave, syncScores, phoneBest, teacherBest, localBest, sealRanges, starsOf, TEACHER_NOTE, _keepTeacher: keepTeacher };
 })();

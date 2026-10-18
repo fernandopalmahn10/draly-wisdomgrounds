@@ -102,15 +102,15 @@
       <p class="hw-entry-next" id="hw-entry-next" hidden>🏆 Entra con tu código y vuelves directo a tu simulacro.</p>
       <label class="hw-entry-label">
         <span>Código de acceso (4 números):</span>
-        <input class="input hw-entry-input" id="hw-access-code" type="tel" inputmode="numeric" placeholder="1001" autocomplete="off" maxlength="4">
+        <input class="input hw-entry-input" id="hw-access-code" type="tel" inputmode="numeric" placeholder="••••" aria-describedby="hw-access-hint" autocomplete="off" maxlength="4">
       </label>
       <label class="hw-entry-label">
         <span>Tu código de estudiante <em>(o tu nombre si es la primera vez)</em>:</span>
-        <input class="input hw-entry-input" id="hw-student-code" type="text" placeholder="XYZN o tu nombre" autocomplete="off" maxlength="20">
+        <input class="input hw-entry-input" id="hw-student-code" type="text" placeholder="Tu código o tu nombre" autocomplete="off" maxlength="20">
       </label>
       <button class="btn btn-jade btn-xl" id="hw-enter-btn">Entrar →</button>
       <p id="hw-entry-err" style="color:var(--red-glow); text-align:center; font-size:0.9rem; min-height:1em;"></p>
-      <p class="hw-entry-hint">💡 Tu maestra te dio el código de acceso. Tu código de estudiante es secreto y se genera la primera vez — luego se guarda en este teléfono.</p>
+      <p class="hw-entry-hint" id="hw-access-hint">💡 Tu maestra te dio el código de acceso. Tu código de estudiante es secreto y se genera la primera vez — luego se guarda en este teléfono.</p>
     </div>
   </div>
 
@@ -663,7 +663,7 @@
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/hw-i18n.js?v=20261018v3"></script>
+  <script src="/js/hw-i18n.js?v=20261018f2"></script>
   <script src="/js/portal.js?v=20261013c"></script>
   <script src="/js/ruta-auto.js?v=20261018v3"></script>
   <script src="/js/homework.js?v=20261018v3"></script>

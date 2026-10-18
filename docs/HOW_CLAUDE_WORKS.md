@@ -217,6 +217,25 @@ now called «El Simulacro Dorado se gana practicando» (ON by default; OFF = the
 you turn it off). Each kid's profile shows their best % per world. Answers never travel to the phone before the kid
 answers, and El Entrenamiento never uses the homework endpoints.
 
+**✅ A practice that's done shows it (18 October 2026, your words: "whenever I finish a practice on the training it's
+not recorded… if I already finished it it should be green… I still keep getting like zero out of eight worlds with
+70%").** What was wrong, found on a test server with the four kinds of visitor:
+- **Your computer is a teacher's** (the super admin), and a teacher's rounds were thrown away on purpose («Ronda de
+  maestro: no se guarda»): the world's tile, the meter and card 2 never moved («0 de 8 mundos con 70 %»). Now a teacher's
+  rounds are kept **on that device only** (never on any account, never sent to the server as a kid's score) and show
+  exactly like a kid's, with one small line «Tus rondas de maestro: solo en este equipo».
+- **A logged-in kid and an automatic account**: the server saved every round (the round that created the automatic
+  account counts on it too), and the worlds page showed it, but the module page drew card 2 from what it had loaded when
+  the page first opened: after «Volver» it still said «0 de 8» until a reload. Now a finished round goes into the page
+  at once, and the module page asks the server again.
+- **Another tab** (a phone with only the key, a teacher, a kid): the other tab's worlds page and module page never
+  refreshed. Now a round finished in one tab redraws the others, and coming back to a tab redraws it when anything changed.
+- **Green with a ✓**: a world at the % goal is green everywhere (its tile with «✓ Listo», the meter's coins, card 2's
+  coins, the end card's «¡Mi Familia cuenta para El Simulacro Dorado! 1 de 8 mundos.»). A world played below the goal
+  shows its stars and best %. Tests: `test-ruta-training.js` (a teacher's round never stored on the server, the route
+  counting a kid's round at once, the page's own stores checked without a browser) and `test-auto-account.js` (the round
+  that makes the account counts on it).
+
 **🎧 El Entrenamiento covers every simulation (18 October 2026).** Once the simulations became yours (in class, with a
 PIN), El Entrenamiento has to prepare a kid for everything they ask. Until then it only had written questions with
 written answers; the exams are mostly pictures and listening. Now every practice world also has the exam's own kinds
@@ -275,10 +294,21 @@ same source as the printed book (`../study/lib/examweb.py`): fix a line in the s
   world (tap = the worlds' page); card 3 a numbered chip per simulation (gold with a tick once passed) and the latest
   «Libro dorado» with its mistakes. A locked level's first step is its key («Escribe la clave de …»).
 - **«Tus tareas»** (right column on a laptop, below on a phone; on a phone the hero's red «Tareas: N por mandar» jumps
-  there): Aileen says «¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá ¡Ya la
-  mandé!», then one picture card per homework audio of the level, newest first (3, then «Ver todas mis tareas»):
-  «Escuchar» plays its three audios right there (playing it on its own page counts too), «¡Ya la mandé!» once the video
-  is sent (a «Deshacer» for a few seconds). «Nueva» / «Escuchada ✓» / «✓ Mandada». **The marks live on the kid's
+  there), **by experience, like folders** (your rule of 18 October 2026: "basing everything on experiences is so good…
+  if you keep them all scroll down in the list then it's going to become messy"): every experience of the module is a
+  folder card (Experiencia 1…8 of New HSK 1 and HSK 1, the names of the level's curriculum pack, each with one of that
+  experience's own pack pictures and its number on the corner), with a red «N por mandar», a green «✓ Mandadas» when
+  all its homework is sent, or a calm «Pronto» when it has no homework audio yet (never an empty box). The newest
+  homework's experience glows gold with «La más nueva» (this week's homework is one tap away; the folders keep the
+  curriculum's order so a kid always finds theirs in the same place). A tap opens that experience's 2-3 homeworks with
+  «← Volver a las experiencias»; Aileen says «¡Dale! Tocá tu experiencia y hacé sus tareas.» on the folders and «¡Dale!
+  Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá ¡Ya la mandé!» inside one. The open
+  folder stays open for that tab (a trip to the homework's own page and back finds it open). «Hacer mis tareas» on
+  /homework lands on these folders. It fits a 1366 × 657 laptop's right column and a 360 px phone (8 folders, two a
+  row). Inside a folder: «Escuchar» plays its three audios right there (playing it on its own page counts too), «¡Ya la
+  mandé!» once the video is sent (a «Deshacer» for a few seconds). «Nueva» / «Escuchada ✓» / «✓ Mandada». The
+  experiences come from the server (`/api/ruta-dorada` → each module's `exps`, server.js `_rutaExps`: the pack's regular
+  worlds, never Pinyin básico or the Simulacro del examen). **The marks live on the kid's
   account** (`/api/ruta/tareas`, `rec.tareas`): a new or lost phone shows them after the login; marks made before
   logging in join the account at the first login; a phone without login keeps them and says «Entra con tu código para
   guardarlas en tu cuenta». No teacher confirmation (your pick). Another level's homework (a kid looking at another
@@ -348,6 +378,14 @@ except after that kid tapped «Salir» (then a brother or sister on the same pho
   hour for the whole platform; requests from other sites, or from a phone that never opened a page, are refused.
 Tests: `node scripts/test-auto-account.js` (port 4460), and the class-only simulations in `test-sims-lock.js`,
 `test-ruta-dorada.js`, `test-golden-book.js`, `test-level-keys.js`.
+
+**🔢 No real code as an example (18 October 2026, your words: "delete the default number 1001… a clue that that is one
+of the codes").** The «Mis tareas» login's class-code box shows neutral dots (••••) and the student box «Tu código o tu
+nombre» (it showed a real class code and a code-shaped XYZN). In /maestro the broadcast form no longer fills in a
+class code by itself, the link example says `/player.html?pin=…`, and the level keys' help explains the shape in words
+(no example key that could be a real one on the projector). The only example left is PANDA-12 on the key screen, which
+the server refuses as a key. `scripts/test-wording.js` now fails on any code-shaped placeholder, default or example key
+in the kids' and teachers' pages.
 
 ### 2.4 Parent control
 

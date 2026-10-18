@@ -380,7 +380,12 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 }
 .rp-coins li svg { width: 14px; height: 14px; }
 .rp-coins li.is-open { border: 0; background: var(--rojo); color: var(--papel); }
-.rp-coins li.is-done { border: 0; color: #3d0707; background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); }
+/* a world at the % goal: green with its ✓ (his words 2026-10-18: "if I already finished it it should be green") */
+.rp-coins li.is-done { border: 0; color: #fff; background: var(--green); box-shadow: 0 3px 8px -4px rgba(31, 107, 69, .7); }
+.rp-coins li.is-done svg { width: 15px; height: 15px; }
+/* a teacher's device: «Tus rondas de maestro: solo en este equipo» (their own rounds, kept on that device only) */
+.rp-teacher-note { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; font-size: .82rem; line-height: 1.3; color: var(--ink-mid); }
+.rp-teacher-note svg { width: 16px; height: 16px; flex: none; color: var(--oro-tinta); }
 .rp-sims { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .rp-sim {
   position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 48px; height: 48px; padding: 0 8px;
@@ -486,15 +491,87 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rp-hw-line i { display: block; width: 0; height: 100%; background: var(--gold-edge); }
 .rp-hw-undo { display: flex; align-items: center; gap: 4px; font-size: .84rem; color: var(--tinta-2); }
 .rp-hw-undo button { min-height: 44px; padding: 0 6px; border: 0; background: none; color: var(--rojo); font: 800 .88rem/1 var(--sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.rp-hw-more {
-  min-height: 48px; padding: 0 14px; border: 0; border-radius: 16px; cursor: pointer; background: var(--crema-2); color: var(--rojo);
-  font: 800 1rem/1.1 var(--sans);
-}
 .rp-hw-login { font-size: .88rem; line-height: 1.4; color: var(--tinta-2); }
 .rp-hw-login a { display: inline-flex; align-items: center; min-height: 44px; color: var(--rojo); font-weight: 800; }
 @media (hover: hover) and (pointer: fine) {
   .rp-hw-send:hover { background: var(--rojo-2); }
-  .rp-hw-more:hover { background: #e8dbbd; }
+}
+/* 🗂️ the experiences as folders (his rule 2026-10-18 «Homework by experience, like folders»): two columns of picture
+   cards (Experiencia 1…8), a tag each («1 por mandar» red · «✓ Mandadas» green · «Pronto» calm), the newest glows */
+.rp-exps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.rp-exps[hidden], .rp-exp-view[hidden], [data-say-folders][hidden], [data-say-hw][hidden] { display: none; }
+.rp-exp {
+  position: relative; width: 100%; min-height: 64px; display: grid; grid-template-columns: 46px minmax(0, 1fr); grid-template-rows: 1fr auto; column-gap: 9px; row-gap: 4px;
+  align-items: center; padding: 9px 9px 9px 10px; border: 0; border-radius: 16px; text-align: left; cursor: pointer;
+  font: inherit; color: var(--tinta); background: var(--papel); box-shadow: inset 0 0 0 2px var(--linea), 0 3px 0 rgba(90, 16, 16, .08);
+  transition: transform 140ms var(--ease-out), box-shadow 160ms ease;
+}
+.rp-exp:active { transform: scale(.97); }
+.rp-exp:focus-visible { outline: 3px solid var(--rojo); outline-offset: 2px; }
+/* the folder's picture with its experience number on the corner (like card 2's coins) */
+.rp-exp-art { grid-row: 1 / span 2; position: relative; width: 46px; height: 46px; align-self: center; }
+.rp-exp-pic { display: block; width: 100%; height: 100%; border-radius: 12px; object-fit: cover; background: var(--crema-2); }
+.rp-exp-num {
+  position: absolute; left: -6px; top: -6px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--rojo); color: var(--papel); font-weight: 900; font-size: .8rem; line-height: 1; box-shadow: 0 0 0 2px var(--papel);
+}
+.rp-exp-k { font-size: .7rem; font-weight: 800; letter-spacing: .01em; color: var(--oro-tinta); }
+.rp-exp-name { grid-column: 2; align-self: end; font-weight: 800; font-size: .84rem; line-height: 1.15; color: var(--rojo); overflow-wrap: break-word; hyphens: auto;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.rp-exp-tag {
+  grid-column: 2; justify-self: start; align-self: start; display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px;
+  font-weight: 900; font-size: .72rem; line-height: 1.25; white-space: nowrap;
+}
+.rp-exp.is-done .rp-exp-num { background: var(--green); }
+.rp-exp.is-soon .rp-exp-num { background: var(--ink-mid); }
+.rp-exp-tag svg { width: 11px; height: 11px; }
+.rp-exp-tag.is-todo { background: var(--red); color: #fff; }
+.rp-exp-tag.is-done { background: var(--green); color: #fff; }
+.rp-exp-tag.is-other { background: var(--oro-palido); color: var(--rojo); }
+.rp-exp-tag.is-soon { background: transparent; color: var(--ink-mid); box-shadow: inset 0 0 0 1.5px var(--linea); }
+.rp-exp.is-todo { box-shadow: inset 0 0 0 2px var(--red), 0 3px 0 rgba(198, 40, 40, .18); background: #fff6f2; }
+.rp-exp.is-done { box-shadow: inset 0 0 0 2px var(--green), 0 3px 0 rgba(31, 107, 69, .14); background: var(--green-pale); }
+/* an experience with no homework yet: calm, never an empty box (its picture and name, «Pronto») */
+.rp-exp.is-soon { cursor: default; background: var(--crema); box-shadow: inset 0 0 0 1.5px var(--linea); }
+.rp-exp.is-soon .rp-exp-pic { filter: saturate(.35); opacity: .7; }
+.rp-exp.is-soon .rp-exp-name { color: var(--ink-mid); }
+/* the newest homework's experience: this week's homework, one tap away */
+.rp-exp.is-latest { box-shadow: 0 0 0 3px var(--gold-btn), inset 0 0 0 2px var(--red), 0 8px 18px -10px rgba(90, 16, 16, .45); }
+.rp-exp.is-latest.is-done { box-shadow: 0 0 0 3px var(--gold-btn), inset 0 0 0 2px var(--green), 0 8px 18px -10px rgba(31, 107, 69, .4); }
+.rp-exp.is-latest { padding-top: 13px; }
+.rp-exp-new {
+  position: absolute; top: -10px; right: 8px; padding: 2px 8px; border-radius: 999px; background: var(--gold-btn); color: var(--rojo);
+  font-weight: 900; font-size: .68rem; line-height: 1.3; box-shadow: 0 2px 0 var(--gold-edge); white-space: nowrap;
+}
+@media (hover: hover) and (pointer: fine) {
+  button.rp-exp:hover { transform: translateY(-1px); }
+}
+/* a folder open: «← Volver a las experiencias», its picture and name, its 2-3 homeworks */
+.rp-exp-view { display: grid; gap: 10px; }
+.rp-exp-back { justify-self: start; min-height: 48px; --dwb-fg: var(--rojo); --dwb-line: var(--linea); }
+.rp-exp-head { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: center; gap: 10px; }
+.rp-exp-hpic { width: 52px; height: 52px; border-radius: 14px; object-fit: cover; background: var(--crema-2); }
+.rp-exp-t { font-weight: 900; font-size: 1.2rem; line-height: 1.1; color: var(--rojo); }
+.rp-exp-t:focus { outline: none; }
+.rp-exp-view .rp-hw-list { grid-template-columns: none; gap: 10px; }
+.rp-exp-view .rp-hw-open { grid-template-columns: 60px minmax(0, 1fr); }
+.rp-exp-view .rp-hw-pic { width: 60px; height: 60px; border-radius: 14px; }
+@media (prefers-reduced-motion: reduce) { .rp-exp, .rp-exp:active { transition: none; transform: none; } }
+/* a phone: a smaller picture, the tag on its own row under it (never past the card's edge at 360 px) */
+@media (max-width: 420px) {
+  .rp-exps { gap: 8px; }
+  .rp-exp { grid-template-columns: 38px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; padding: 9px 8px 9px 9px; }
+  .rp-exp-art { grid-row: 1; width: 38px; height: 38px; }
+  .rp-exp-pic { border-radius: 10px; }
+  .rp-exp-num { min-width: 20px; height: 20px; font-size: .74rem; }
+  .rp-exp-name { align-self: center; }
+  .rp-exp-tag { grid-column: 1 / -1; }
+  .rp-exp-new { right: 6px; }
+}
+/* a tablet (the tareas under the ladder, full width): four folders a row, the homeworks side by side */
+@media (min-width: 760px) and (max-width: 1099px) {
+  .rp-exps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .rp-exp-view .rp-hw-list { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 }
 
 /* a phone: the steps that are not the current one are smaller (the current one comes up sooner on the screen) */
@@ -590,9 +667,12 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
   .rp-body { gap: 4px; padding: 10px 14px 14px; }
   .rp-btn { min-height: 48px; }
   .rp-btn-go { min-height: 50px; }
-  .rp-aileen img { width: 60px; height: 80px; }
-  .rp-tareas { gap: 12px; padding: 18px; }
+  .rp-aileen img { width: 48px; height: 66px; }
+  .rp-aileen-say { padding: 8px 11px; font-size: .88rem; line-height: 1.35; }
+  .rp-tareas { gap: 10px; padding: 16px; }
+  .rp-tareas-t { font-size: 1.7rem; }
   .rp-hw { padding: 10px; }
+  .rp-preview-note { font-size: .84rem; }
 }
 
 /* ── 2026-10-18 ─────────────────────────────────────────────────────── */

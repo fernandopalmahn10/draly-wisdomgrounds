@@ -77,7 +77,8 @@ body.au-is-train .au-main { max-width: 640px; }
   color: var(--oro-tinta); background: var(--papel); border: 2px dashed var(--oro);
 }
 .tr-goal-coins li svg { width: 15px; height: 15px; }
-.tr-goal-coins li.is-on { border: 0; color: #3d0707; background: radial-gradient(circle at 35% 30%, var(--oro-luz) 0%, #d4ac52 56%, #a87d26 100%); }
+/* a world at the % goal: green with its ✓ everywhere (his words 2026-10-18: "if I already finished it it should be green") */
+.tr-goal-coins li.is-on { border: 0; color: #fff; background: var(--verde); box-shadow: 0 4px 10px -6px rgba(16, 81, 47, .8); }
 .tr-goal-link { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin-top: 4px; font-weight: 800; color: var(--rojo); text-decoration: none; }
 .tr-goal-link svg { width: 16px; height: 16px; }
 .tr-goal-note { margin-top: 10px; font-size: .9rem; color: var(--tinta-2); }
@@ -110,11 +111,23 @@ a.tr-world:active { transform: scale(.98); }
   color: var(--oro-tinta); background: var(--crema); border: 2.5px dashed var(--oro); font-weight: 800; font-size: 1.15rem;
 }
 .tr-coin svg { width: 24px; height: 24px; }
-.tr-coin.is-done { border: 0; color: #3d0707; background: radial-gradient(circle at 35% 30%, var(--oro-luz) 0%, #d4ac52 56%, #a87d26 100%); box-shadow: 0 6px 12px -8px rgba(90, 16, 16, .6); }
+.tr-coin.is-done { border: 0; color: #fff; background: var(--verde); box-shadow: 0 6px 12px -8px rgba(16, 81, 47, .8); }
+.tr-coin.is-done svg { width: 26px; height: 26px; }
+/* the whole tile of a world at the % goal turns green (its coin, its ring, a «✓ Listo» chip) */
+.tr-world.is-open.is-done { background: var(--verde-claro); box-shadow: inset 0 0 0 2px var(--verde), 0 3px 0 rgba(29, 122, 78, .3); }
+.tr-world.is-done .tr-world-name { color: var(--verde-tinta); }
+.tr-ok { display: inline-flex; align-items: center; gap: 3px; padding: 2px 9px 2px 6px; border-radius: 999px; background: var(--verde); color: #fff; font-weight: 800; font-size: .8rem; line-height: 1.3; }
+.tr-ok svg { width: 14px; height: 14px; }
+/* a teacher's device: «Tus rondas de maestro: solo en este equipo» */
+.tr-teacher-note { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-size: .86rem; line-height: 1.3; color: var(--tinta-2); }
+.tr-teacher-note svg { width: 17px; height: 17px; flex: none; color: var(--oro-tinta); }
+.tr-start .tr-teacher-note, .tr-end .tr-teacher-note { justify-content: center; color: rgba(247, 241, 228, .88); }
+.tr-start .tr-teacher-note svg, .tr-end .tr-teacher-note svg { color: #f2d98f; }
 .tr-coin.is-extra { border: 0; color: var(--crema); background: var(--rojo); }
 .tr-coin.is-closed { border: 0; color: var(--oro-tinta); background: var(--papel); box-shadow: inset 0 0 0 2px var(--linea); }
 @media (hover: hover) and (pointer: fine) {
   a.tr-world.is-open:hover { box-shadow: inset 0 0 0 2px var(--oro), 0 12px 22px -14px rgba(90, 16, 16, .4); }
+  a.tr-world.is-open.is-done:hover { box-shadow: inset 0 0 0 2px var(--verde), 0 12px 22px -14px rgba(16, 81, 47, .45); }
   a.tr-world.is-closed:hover { box-shadow: inset 0 0 0 1.5px var(--linea); }
 }
 
@@ -137,6 +150,7 @@ a.tr-world:active { transform: scale(.98); }
 .tr-steps svg { width: 21px; height: 21px; }
 .tr-start-best { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 14px; font-weight: 700; font-size: .95rem; }
 .tr-start-best b { font-variant-numeric: tabular-nums; }
+.tr-start-best .tr-ok { margin-left: 2px; }
 .tr-start-best .tr-stars i { color: rgba(247, 241, 228, .35); }
 .tr-start-best .tr-stars i.is-on { color: #f2d98f; }
 .tr-start-go { width: 100%; min-height: 62px; margin-top: 16px; font-size: 1.22rem; }
@@ -322,6 +336,11 @@ body.au-is-play .au-main { padding: 0 12px; }
 .tr-record svg { width: 18px; height: 18px; }
 .tr-end-best { margin-top: 10px; font-weight: 700; font-size: .95rem; color: #e8c878; }
 .tr-end-change { max-width: 34ch; margin-top: 10px; font-weight: 700; font-size: .98rem; line-height: 1.35; color: #f2d98f; }
+/* this world counts now: a green line with its ✓ (the same green as its tile and coins) */
+.tr-end-change.is-done { display: inline-flex; align-items: center; gap: 8px; max-width: 40ch; padding: 8px 14px 8px 10px; border-radius: 16px; background: var(--verde); color: #fff; text-align: left; }
+.tr-end-change.is-done svg { width: 22px; height: 22px; flex: none; }
+.tr-end-change svg { display: none; }
+.tr-end-change.is-done svg { display: block; }
 .tr-end-cast { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: end; gap: 8px; width: 100%; max-width: 420px; margin-top: 12px; text-align: left; }
 .tr-end-cast img { width: 84px; height: auto; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .3)); }
 .tr-end-cast .rd-bubble { color: var(--tinta); min-width: 11em; }

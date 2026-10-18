@@ -29,9 +29,13 @@
 //         yet (the 2, «practise what you just earned»), else La Base until every word is sealed, else the practice left
 //         (Pinyin, the exam world), else the next simulation; a locked module's current step is its key (card 1).
 //       · «Tus tareas» (right column on a laptop, below on a phone; a red «Tareas: N por mandar» in the phone's hero jumps
-//         to #tareas): Aileen says what to do, one picture card per homework audio of the level (newest first, 3 and
-//         «Ver todas mis tareas»): «Escuchar» plays its three audios right there, «¡Ya la mandé!» = sent. «Nueva» /
-//         «Escuchada ✓» / «✓ Mandada». A logged-in kid's marks live on the ACCOUNT (POST /api/ruta/tareas, any phone);
+//         to #tareas): BY EXPERIENCE, LIKE FOLDERS (his rule 2026-10-18): one folder card per experience of the module
+//         (the server's `exps`: the curriculum pack's worlds, Experiencia 1…8, a pack picture each) with «N por mandar» /
+//         «✓ Mandadas» / «Pronto»; the newest homework's experience glows («La más nueva»); a tap opens its 2-3
+//         homeworks with «← Volver a las experiencias» (the open folder is kept per tab: sessionStorage
+//         draly_tareas_exp). Aileen says what to do on each view. Inside a folder: «Escuchar» plays its three audios
+//         right there, «¡Ya la mandé!» = sent. «Nueva» / «Escuchada ✓» / «✓ Mandada». A module with no homework audio
+//         at all (YCT 1 today) has no column. A logged-in kid's marks live on the ACCOUNT (POST /api/ruta/tareas, any phone);
 //         a phone without login keeps them in localStorage draly_tareas and they join the account at the first login
 //         (like La Base's seals: `who` = the account the mirror holds, `pend` = not saved yet, `held` = a sibling's).
 // Round 2 (his asks 2026-10-18, after the redesign went live):
@@ -50,6 +54,10 @@
 //       · The automatic student account (js/ruta-auto.js, server.js «AUTOMATIC STUDENT ACCOUNTS»): the first «¡Ya la
 //         mandé!» on a phone with no account gives it one (listening alone never does: printed PDFs open these pages),
 //         the card «¡Ya tienes tu cuenta!» shows once; «Mi código» on the band (code, Copiar, the name) for a logged-in kid.
+// «A practice that's done shows it» (2026-10-18): card 2's coins and «N de 8 mundos con 70 %» read the server's best
+// for an account and THIS device's scores for a key-only phone or a teacher (Entrenamiento.localBest: a teacher's own
+// rounds, kept on that device only, with «Tus rondas de maestro: solo en este equipo»); a world at the % is a green coin
+// with its ✓. js/audios.js puts a round that just ended into the route data (no stale card 2 after «Volver»).
 // What is open comes from the server (GET /api/ruta-dorada, LevelKeys.access per level: a teacher, the logged-in
 // kid's account, this device's key). «Escribe la clave de <nivel>» opens the phase-1 key screen at
 // /audios/<level>/clave and comes back here. The sims only reach this page when open, and each one opens its player
@@ -194,7 +202,9 @@
   function trainWorldsOf(ctx, m, pr) {
     if (!m.train || !Array.isArray(m.train.worlds)) return [];
     const E = window.Entrenamiento;
-    const mine = !ctx.ruta.student && !ctx.ruta.teacher && E ? E.phoneBest(m.slug) : {};
+    // (2026-10-18) this device's scores for this visitor: a key-only phone's own, or a teacher's own rounds kept here
+    // (his computer is the super admin: before, a teacher's card 2 always said «0 de 8»)
+    const mine = E && E.localBest ? E.localBest(ctx.ruta, m.slug) : {};
     const list = m.train.worlds.map((w) => {
       const pw = pr && w.kind === 'world' ? pr.worlds.find((x) => x.n === w.n) : null;
       const best = w.best != null ? w.best : (mine[w.key] != null ? Number(mine[w.key]) : null);
@@ -921,7 +931,7 @@
         : 'Practica cada mundo con ' + need + ' % o más y se abre el 3, El Simulacro Dorado.';
     } else if (s3.state === 'done') say = '¡Terminaste tu ruta! Repasa tus errores en el libro dorado.';
     else say = '¡Muy bien! Repasa cuando quieras.';
-    return { steps, say, st, anon, cb, pr, tw, cur, msg: s3.cls ? teacherMsg(ctx, m) : '' };
+    return { steps, say, st, anon, cb, pr, tw, cur, teacher: !!ctx.ruta.teacher, msg: s3.cls ? teacherMsg(ctx, m) : '' };
   }
 
   // one step card (the design's picture card)
@@ -954,6 +964,8 @@
           (!w.open && w.count ? ' style="--p:' + Math.round((w.sealed / w.count) * 100) + '"' : '') + '>' + (done ? I.check : w.n) + '</li>';
       }).join('') + '</ol>';
       extra = s.list ? '<a class="rp-coins-link" href="' + esc(s.list) + '" data-nav aria-label="Ver los ' + s.worlds.length + ' mundos de El Entrenamiento">' + coins + I.right + '</a>' : coins;
+      // a teacher's device: the coins are their own rounds, kept here only
+      if (L.teacher && window.Entrenamiento) extra += '<p class="rp-teacher-note">' + I.eye + '<span>' + esc(window.Entrenamiento.TEACHER_NOTE) + '</span></p>';
     }
     if (s.key === 'gold' && s.cls) extra = classChipsHtml(s);
     else if (s.key === 'gold' && Array.isArray(s.sims) && s.sims.length) {
@@ -1082,9 +1094,36 @@
     });
   }
 
-  // ── «Tus tareas»: the homework audios of the level ─────────────────
+  // ── «Tus tareas»: the homework audios of the level, by experience (folders) ─────────────────
   const KIND_T = { words: 'Las palabras', dialogue: 'Escucha, lee, repite', video: 'Tu video' };
-  const HW_SHOW = 3;
+  // 🗂️ «Homework by experience, like folders» (his rule 2026-10-18: "you tap on it and then that experience has two
+  // homeworks or three… if you keep them all scroll down in the list then it's going to become messy"). The module's
+  // experiences come from the server (`exps`: the level's curriculum pack worlds, EXP1…EXP8, each with a pack picture);
+  // a homework's `exp` is its experience. → [{ n, name, pic, hws: [homeworks, round 1 first] }] (an experience a
+  // homework names but the pack doesn't is added from the homework itself: never a homework without its folder)
+  function expsOf(m, hws) {
+    const list = (Array.isArray(m.exps) ? m.exps : []).map((e) => ({ n: Number(e.n) || 0, name: e.name || '', pic: e.pic || '', hws: [] }));
+    hws.forEach((h) => {
+      const n = Number(h.exp) || 0;
+      let e = list.find((x) => x.n === n);
+      if (!e) { e = { n, name: h.title || '', pic: '', hws: [] }; list.push(e); }
+      e.hws.push(h);
+    });
+    list.forEach((e) => { e.hws.sort((a, b) => (a.round || 0) - (b.round || 0)); if (!e.pic && e.hws[0]) e.pic = hwPic(e.hws[0], m.slug); });
+    return list.sort((a, b) => a.n - b.n);
+  }
+  // the folder open on this tab (a trip to a homework's own page and back finds it open again)
+  const OPEN_KEY = 'draly_tareas_exp';
+  const openExpOf = (m) => { const v = store.get(OPEN_KEY) || ''; const p = v.split(':'); return p[0] === m.slug ? Number(p[1]) || 0 : 0; };
+  const setOpenExp = (m, n) => store.set(OPEN_KEY, n ? m.slug + ':' + n : '');
+  // a folder's tag: «N por mandar» (red), «✓ Mandadas» (green, all sent), «N tareas» (only plays), «Pronto» (none yet)
+  function expTag(e, marks, mine, preview) {
+    if (!e.hws.length) return { cls: 'is-soon', html: 'Pronto', say: 'pronto' };
+    if (!mine && !preview) return { cls: 'is-other', html: e.hws.length + (e.hws.length === 1 ? ' tarea' : ' tareas'), say: e.hws.length + (e.hws.length === 1 ? ' tarea' : ' tareas') };
+    const n = preview ? e.hws.length : unsentOf(e.hws, marks);
+    if (n) return { cls: 'is-todo', html: n + ' por mandar', say: n + (n === 1 ? ' tarea por mandar' : ' tareas por mandar') };
+    return { cls: 'is-done', html: I.check + 'Mandadas', say: 'todas mandadas' };
+  }
   // ── one homework's marks: ONE look and ONE behaviour for the module page's cards and the homework's own page
   // (/audios/<homework id>, js/audios.js → Ruta.hwMarks) ──
   // state: 'new' | 'heard' | 'sent' (the kid's own) · 'other' (another level's homework: it only plays) · 'preview' (a
@@ -1148,36 +1187,68 @@
   // (a teacher, or a kid looking at another module) only plays: no marks, no counts
   // 👀 a teacher (2026-10-18, he never saw the kids' buttons: his computer is a teacher's): each card shows the kid's
   // buttons as a calm preview that does nothing and writes nothing, with «Así lo ven tus alumnos»
+  // one homework's card inside its folder (the same marks everywhere: «Escuchar», «¡Ya la mandé!», «Deshacer»)
+  function hwCardHtml(m, h, state) {
+    const pic = hwPic(h, m.slug);
+    // (the picture and the name open the homework's own page: its lines with pinyin and Spanish, the PDF's audio codes)
+    return '<li class="rp-hw is-' + state + '" data-hw="' + esc(h.id) + '">' +
+      '<a class="rp-hw-open" href="/audios/' + esc(h.id) + '" data-nav>' +
+        '<img class="rp-hw-pic" src="' + esc(pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async"' +
+          (h.thumb && pic !== h.thumb ? ' data-alt="' + esc(h.thumb) + '"' : '') + '>' +
+        '<span class="rp-hw-kicker">Tarea · Ronda ' + (Number(h.round) || 1) + '</span>' +
+        '<h4 class="rp-hw-title">' + esc(h.title) + '</h4>' +
+        (state === 'other' ? '' : '<span class="rp-hw-state" data-state>' + stateTag(state === 'preview' ? 'new' : state) + '</span>') +
+      '</a>' +
+      '<div class="rp-hw-body">' + actsHtml(state) + '</div></li>';
+  }
+  // «Tus tareas» = every experience of the module as a folder (picture, name, its tag); a tap opens that experience's
+  // 2-3 homeworks with «← Volver a las experiencias». The newest homework's experience glows («La más nueva»): this
+  // week's homework is one tap away. Folders keep the curriculum's order (Experiencia 1, 2, 3…) so a kid always finds
+  // theirs in the same place. A module with no homework audio at all (YCT 1 today) keeps no column (never an empty box).
   function tareasHtml(ctx, m, hws, marks, mine) {
     if (!hws.length) return '';
     const preview = !mine && !!ctx.ruta.teacher;
     const toSend = mine ? unsentOf(hws, marks) : 0;
     const showLogin = !ctx.ruta.student && !ctx.ruta.teacher;
-    const cards = hws.map((h, i) => {
-      const e = (mine && marks[h.id]) || {};
-      const state = preview ? 'preview' : !mine ? 'other' : e.s ? 'sent' : e.h ? 'heard' : 'new';
-      const pic = hwPic(h, m.slug);
-      // (the picture and the name open the homework's own page: its lines with pinyin and Spanish, the PDF's audio codes)
-      return '<li class="rp-hw is-' + state + '" data-hw="' + esc(h.id) + '"' + (i >= HW_SHOW ? ' hidden' : '') + '>' +
-        '<a class="rp-hw-open" href="/audios/' + esc(h.id) + '" data-nav>' +
-          '<img class="rp-hw-pic" src="' + esc(pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async"' +
-            (h.thumb && pic !== h.thumb ? ' data-alt="' + esc(h.thumb) + '"' : '') + '>' +
-          '<span class="rp-hw-kicker">Tarea · Experiencia ' + (Number(h.exp) || 0) + (h.round > 1 ? ' · Ronda ' + (Number(h.round) || 0) : '') + '</span>' +
-          '<h3 class="rp-hw-title">' + esc(h.title) + '</h3>' +
-          (state === 'other' ? '' : '<span class="rp-hw-state" data-state>' + stateTag(state === 'preview' ? 'new' : state) + '</span>') +
-        '</a>' +
-        '<div class="rp-hw-body">' + actsHtml(state) + '</div></li>';
+    const exps = expsOf(m, hws);
+    const latest = Number(hws[0].exp) || 0;                        // (homeworksOf: the newest first)
+    const open = exps.some((e) => e.n === openExpOf(m) && e.hws.length) ? openExpOf(m) : 0;
+    const stateOf = (h) => { const e = (mine && marks[h.id]) || {}; return preview ? 'preview' : !mine ? 'other' : e.s ? 'sent' : e.h ? 'heard' : 'new'; };
+    const folders = exps.map((e) => {
+      const tag = expTag(e, marks, mine, preview);
+      const isLatest = e.n === latest && e.hws.length;
+      // (the picture carries the experience's number, like card 2's coins: «Experiencia 3» in full for a screen reader
+      // and on the open folder; a compact card keeps all 8 folders on a short laptop's first screen)
+      const inner = '<span class="rp-exp-art" aria-hidden="true"><img class="rp-exp-pic" src="' + esc(e.pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' +
+          '<b class="rp-exp-num">' + e.n + '</b></span>' +
+        '<span class="rp-exp-name">' + esc(e.name) + '</span>' +
+        '<span class="rp-exp-tag ' + tag.cls + '" data-exp-tag>' + tag.html + '</span>' +
+        (isLatest ? '<span class="rp-exp-new">La más nueva</span>' : '');
+      const label = 'Experiencia ' + e.n + ', ' + e.name + ': ' + tag.say + (isLatest ? ', la más nueva' : '');
+      return '<li>' + (e.hws.length
+        ? '<button type="button" class="rp-exp ' + tag.cls + (isLatest ? ' is-latest' : '') + '" data-open-exp="' + e.n + '" aria-label="' + esc(label) + '">' + inner + '</button>'
+        : '<div class="rp-exp is-soon" role="group" aria-label="' + esc(label) + '">' + inner + '</div>') + '</li>';
     }).join('');
-    return '<aside class="rp-tareas' + (mine ? '' : ' is-other') + (preview ? ' is-preview' : '') + '" id="tareas" aria-labelledby="rp-tareas-t" tabindex="-1">' +
+    const views = exps.filter((e) => e.hws.length).map((e) =>
+      '<section class="rp-exp-view" data-exp-view="' + e.n + '" aria-labelledby="rp-exp-t-' + e.n + '"' + (e.n === open ? '' : ' hidden') + '>' +
+        '<button type="button" class="dw-back rp-exp-back" data-close-exp>Volver a las experiencias</button>' +
+        '<div class="rp-exp-head"><img class="rp-exp-hpic" src="' + esc(e.pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' +
+          '<div><span class="rp-exp-k">Experiencia ' + e.n + '</span><h3 class="rp-exp-t" id="rp-exp-t-' + e.n + '" tabindex="-1">' + esc(e.name) + '</h3></div></div>' +
+        '<ul class="rp-hw-list">' + e.hws.map((h) => hwCardHtml(m, h, stateOf(h))).join('') + '</ul>' +
+      '</section>').join('');
+    // Aileen says what to do on each view (folders: tap yours; a folder: listen, record, send, «¡Ya la mandé!»)
+    const sayHw = mine || preview ? '«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»'
+      : '«Estas son las tareas de ' + esc(m.name) + '. ¡Escuchá el audio cuando quieras!»';
+    const sayFolders = mine || preview ? '«¡Dale! Tocá tu experiencia y hacé sus tareas.»' : '«Tocá una experiencia para escuchar sus tareas.»';
+    return '<aside class="rp-tareas' + (mine ? '' : ' is-other') + (preview ? ' is-preview' : '') + (open ? ' is-open' : '') + '" id="tareas" aria-labelledby="rp-tareas-t" tabindex="-1">' +
       '<div class="rp-tareas-head"><h2 class="rp-tareas-t" id="rp-tareas-t">' + (mine ? 'Tus tareas' : 'Tareas de ' + esc(m.name)) + '</h2>' +
         (mine ? '<span class="rp-badge" data-tosend' + (toSend ? '' : ' hidden') + '>' + toSend + ' por mandar</span>' : '') + '</div>' +
-      (preview ? '<p class="rp-preview-note">' + I.eye + '<span><b>Vista de alumno.</b> Así lo ven tus alumnos: tocan «¡Ya la mandé!» cuando mandan su video. Aquí esos botones no marcan nada.</span></p>' : '') +
+      (preview ? '<p class="rp-preview-note">' + I.eye + '<span><b>Vista de alumno:</b> así lo ven tus alumnos. Aquí «¡Ya la mandé!» no marca nada.</span></p>' : '') +
       '<div class="rp-aileen"><img src="/assets/cast/aileen-talk.webp" alt="Aileen" width="312" height="480" loading="lazy" decoding="async">' +
-        (mine || preview ? '<p class="rp-aileen-say">«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»</p></div>'
-          : '<p class="rp-aileen-say">«Estas son las tareas de ' + esc(m.name) + '. ¡Escuchá el audio cuando quieras!»</p></div>') +
-      '<ul class="rp-hw-list">' + cards + '</ul>' +
-      (hws.length > HW_SHOW ? '<button type="button" class="rp-hw-more" data-more aria-expanded="false">' + (mine ? 'Ver todas mis tareas' : 'Ver todas las tareas') + ' (' + hws.length + ')</button>' : '') +
-      (showLogin && mine ? '<p class="rp-hw-login">Tus marcas quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">Entra con tu código para guardarlas en tu cuenta</a></p>' : '') +
+        '<p class="rp-aileen-say"><span data-say-folders' + (open ? ' hidden' : '') + '>' + sayFolders + '</span><span data-say-hw' + (open ? '' : ' hidden') + '>' + sayHw + '</span></p></div>' +
+      '<ul class="rp-exps" aria-label="Las experiencias de ' + esc(m.name) + '"' + (open ? ' hidden' : '') + '>' + folders + '</ul>' +
+      views +
+      (showLogin && mine ? '<p class="rp-hw-login">Tus marcas quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">Entra con tu código</a> para guardarlas en tu cuenta.</p>' : '') +
       '</aside>';
   }
 
@@ -1325,6 +1396,7 @@
     const box = main.querySelector('#tareas');
     if (!box) return;
     const byId = new Map(hws.map((h) => [h.id, h]));
+    const exps = expsOf(m, hws);
     const paint = () => {
       if (!mine) return;
       const marks = tMarksFor(ctx.ruta, m.tareas);
@@ -1336,6 +1408,41 @@
       if (badge) { badge.hidden = !n; badge.textContent = n + ' por mandar'; }
       const heroTag = main.querySelector('.rp-hero-tareas');
       if (heroTag) { heroTag.hidden = !n; heroTag.textContent = 'Tareas: ' + n + ' por mandar'; }
+      // each folder's tag follows its homeworks («1 por mandar» → «✓ Mandadas»)
+      exps.forEach((e) => {
+        const b = box.querySelector('[data-open-exp="' + e.n + '"]');
+        if (!b) return;
+        const t = expTag(e, marks, mine, false);
+        const tag = b.querySelector('[data-exp-tag]');
+        b.classList.remove('is-todo', 'is-done');
+        b.classList.add(t.cls);
+        if (tag) { tag.className = 'rp-exp-tag ' + t.cls; tag.innerHTML = t.html; }
+        b.setAttribute('aria-label', 'Experiencia ' + e.n + ', ' + e.name + ': ' + t.say + (b.classList.contains('is-latest') ? ', la más nueva' : ''));
+      });
+    };
+    // a folder opens in place (its 2-3 homeworks), «← Volver a las experiencias» closes it; the open one is kept for
+    // this tab (a trip to a homework's own page and back finds it open)
+    const showExp = (n, focusTo) => {
+      hwStop();
+      setOpenExp(m, n);
+      box.classList.toggle('is-open', !!n);
+      const grid = box.querySelector('.rp-exps');
+      if (grid) grid.hidden = !!n;
+      box.querySelectorAll('[data-exp-view]').forEach((v) => { v.hidden = Number(v.getAttribute('data-exp-view')) !== n; });
+      const sf = box.querySelector('[data-say-folders]'), sh = box.querySelector('[data-say-hw]');
+      if (sf) sf.hidden = !!n;
+      if (sh) sh.hidden = !n;
+      // (a phone: the opened folder (or the folders again) comes into view when part of it is off the screen; the focus
+      // goes where the eyes go, for a screen reader too)
+      const shownEl = n ? box.querySelector('[data-exp-view="' + n + '"]') : box.querySelector('.rp-exps');
+      const r = (shownEl || box).getBoundingClientRect();
+      if (r.top < 60 || r.bottom > window.innerHeight) {
+        try { box.scrollIntoView({ block: 'start', behavior: calmMotion() ? 'auto' : 'smooth' }); } catch (_) { box.scrollIntoView(); }
+      }
+      const f = focusTo && box.querySelector(focusTo);
+      if (f) { try { f.focus({ preventScroll: true }); } catch (_) {} }
+      const say = document.getElementById('au-say');
+      if (say && n) { const e = exps.find((x) => x.n === n); say.textContent = ''; setTimeout(() => { say.textContent = 'Experiencia ' + n + (e ? ', ' + e.name : '') + ': ' + (e ? e.hws.length : 0) + ' tareas.'; }, 30); }
     };
     tSync.onChange = (again) => { if (again && ctx.refresh) ctx.refresh(true); else paint(); };
     // the phone hero's «Tareas: N por mandar» scrolls down here (no address change: the page's router would redraw)
@@ -1354,10 +1461,11 @@
     });
     box.querySelectorAll('.rp-hw-pic[data-alt]').forEach((img) => img.addEventListener('error', () => { const a = img.getAttribute('data-alt'); img.removeAttribute('data-alt'); if (a) img.src = a; }, { once: true }));
     box.addEventListener('click', (e) => {
-      const more = e.target.closest('[data-more]');
-      if (more) {
-        box.querySelectorAll('.rp-hw[hidden]').forEach((li) => { li.hidden = false; });
-        more.remove();
+      const opener = e.target.closest('[data-open-exp]');
+      if (opener) { const n = Number(opener.getAttribute('data-open-exp')) || 0; showExp(n, '#rp-exp-t-' + n); return; }
+      if (e.target.closest('[data-close-exp]')) {
+        const was = openExpOf(m);
+        showExp(0, '[data-open-exp="' + was + '"]');
         return;
       }
       const li = e.target.closest('.rp-hw');

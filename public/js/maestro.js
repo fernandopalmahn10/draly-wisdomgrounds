@@ -2489,7 +2489,7 @@
     inp.classList.toggle('hidden', !superAdmin);
     if (superAdmin) {
       $('m-bc-class-list').innerHTML = codes.map((c) => '<option value="' + escapeHtml(c) + '">').join('');
-      if (!inp.value) inp.value = codes[0] || '1001';
+      if (!inp.value) inp.value = codes[0] || '';   // (never a real class code as a default: his rule 2026-10-18)
     } else {
       const was = sel.value;
       sel.innerHTML = codes.map((c) => '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>').join('');
@@ -2785,7 +2785,8 @@
   // ── 🔑 2026-10-15 La Ruta Dorada: «Claves de nivel» (super admin) ──────────────────────────────────────────────
   // One key per level opens La Base, El Entrenamiento and El Simulacro Dorado (core/level-keys.js). He sets and changes
   // them here; they are shown masked (this tab may be on the projector) and never written anywhere else.
-  const KEY_EX = 'DRAGON-47';
+  // (never a key as an example, not even a made-up one: it could be a real key on the projector; his rule 2026-10-18)
+  const KEY_EX = 'una palabra de 4 letras o más y un número de 2 cifras';
   function fetchLevelKeys() {
     const list = $('m-keys-list');
     if (!list) return;
@@ -2838,7 +2839,7 @@
           (l.key ? '<button class="btn btn-ghost btn-sm m-danger-ghost m-key-close" type="button" title="Every phone and account that opened this level with the key must type the new key (kids from before the keys and kids you unlocked keep it)">Cerrar en todos los aparatos</button>' : '') +
         '</div>' +
         '<form class="m-key-form hidden" novalidate>' +
-          '<label class="m-form-label"><span>Clave nueva de ' + escapeHtml(l.name) + ' (una palabra y un número, como ' + KEY_EX + ')</span>' +
+          '<label class="m-form-label"><span>Clave nueva de ' + escapeHtml(l.name) + ' (' + KEY_EX + ')</span>' +
           '<input class="input m-key-input" type="text" maxlength="30" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>' +
           '<div class="m-key-form-actions"><button class="btn btn-gold btn-sm" type="submit">Guardar</button>' +
           '<button class="btn btn-ghost btn-sm m-key-cancel" type="button">Cancelar</button></div>' +

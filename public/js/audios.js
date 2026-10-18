@@ -18,6 +18,10 @@
 // drawn by js/ruta.js (Ruta.hwMarks: the same code as «Tus tareas»); the automatic student account (js/ruta-auto.js)
 // shows its first card after the key screen made one, and the first El Entrenamiento round on a phone with no account
 // makes one (a click listener on «¡A jugar!», the training code itself untouched).
+// 2026-10-18 («a practice that's done shows it»): a round that ends on this page goes into the route data at once
+// (ctx.trained), so «Volver» to the module page counts it on card 2 without a reload, and the next picker / path asks the
+// server again; another tab's round (localStorage draly_train_*: its ping, a phone's or a teacher's scores) or a return
+// to this tab redraws the picker / path when the server's answer OR this device's scores changed.
 // =========================================================================
 (function () {
   'use strict';
@@ -149,11 +153,25 @@
     m.train ? m.train.worlds.map((w) => (w.open ? 1 : 0) + ':' + (w.best == null ? '' : w.best)).join(',') : null,
     // (2026-10-18: the kid's homework marks, so marks made on another phone show when the kid comes back to this tab)
     m.tareas ? Object.keys(m.tareas).sort().map((id) => id + (m.tareas[id].h ? 'h' : '') + (m.tareas[id].s ? 's' : '')).join(',') : null]) : null);
+  // (2026-10-18) El Entrenamiento's scores this DEVICE holds for the visitor (a key-only phone's, a teacher's own rounds)
+  // and the ping of the last round any tab finished: part of what the picker / a path showed, so another tab's round or a
+  // return to this tab redraws them even when the server's answer is the same
+  const localSig = () => {
+    const E = window.Entrenamiento;
+    if (!E || !ruta || !Array.isArray(ruta.modules)) return '';
+    let p = '';
+    try { p = localStorage.getItem('draly_train_ping') || ''; } catch (_) {}
+    return p + '|' + JSON.stringify(ruta.modules.map((m) => (m.train ? E.localBest(ruta, m.slug) : null)));
+  };
+  let drawnLocal = '';
   function refreshState(force) {   // force: redraw even when the server says the same (the phone's seals changed)
     if (!catalog || !isWorldView()) return;
     fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : null)).then((s) => {
-        if (!s || !Array.isArray(s.modules) || (force !== true && sig(s) === sig(ruta)) || !isWorldView()) return;
+        if (!s || !Array.isArray(s.modules) || !isWorldView()) return;
+        if (force !== true && sig(s) === sig(ruta) && localSig() === drawnLocal) return;
+        // (a homework audio playing here is never cut by a redraw: the next return to the tab brings the news)
+        if (force !== true && player && !player.paused) return;
         ruta = s;
         firstRoute = true;                     // a quiet redraw: the focus stays where it was
         route();
@@ -161,6 +179,25 @@
   }
   window.addEventListener('pageshow', (e) => { if (e.persisted) refreshState(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshState(); });
+  // another tab finished an El Entrenamiento round (or kept a phone's / a teacher's score): the picker / a path shows it
+  window.addEventListener('storage', (e) => { if (e.key && /^draly_train_/.test(e.key)) refreshState(); });
+  // 🎯 2026-10-18 («a practice that's done shows it»): a round that ended on THIS page. Its best goes into the route data
+  // the page keeps (an account's best: the server has it already, so «Volver» to the path counts it at once, no reload;
+  // a phone's or a teacher's score is read from this device when the path draws), and the next picker / path asks the
+  // server again for the rest (the Dorado's state).
+  let trainDirty = false;
+  function trained(slug, key, best, info) {
+    trainDirty = true;
+    const m = ruta && Array.isArray(ruta.modules) ? ruta.modules.find((x) => x.slug === slug || x.id === slug) : null;
+    if (!m || !m.train || !Array.isArray(m.train.worlds) || !info || !info.saved) return;
+    const w = m.train.worlds.find((x) => x.key === key);
+    if (w) w.best = Math.max(Number(w.best) || 0, Number(best) || 0);
+    const d = m.dorado;
+    if (d && d.rule === 'practice' && d.pct) {
+      d.practiced = m.train.worlds.filter((x) => x.kind === 'world' && x.best != null && x.best >= d.pct).length;
+      if (info.doradoNow) { d.open = true; d.via = 'practice'; }
+    }
+  }
   // the visitor's state again WITHOUT a redraw (2026-10-18: a homework page or El Entrenamiento learns the automatic
   // account a tap just made; the next screen is drawn with it) → Promise<state | null>
   function reloadState() {
@@ -286,6 +323,11 @@
     }
     else if (mod) renderPath(mod);
     else renderPicker();
+    // the picker / a path: what this device's scores were when drawn; after a round on this page, the server's word too
+    if (isWorldView()) {
+      drawnLocal = localSig();
+      if (trainDirty) { trainDirty = false; refreshState(); }
+    }
     // after a tap inside the page, the new screen's heading takes the focus (screen readers hear where they are)
     if (!firstRoute && !base) {
       const h = main.querySelector('h1');
@@ -309,7 +351,7 @@
   // ── La Ruta Dorada (js/ruta.js draws both screens) ─────────────────
   // what ruta.js needs from this page: the catalog, the visitor's modules, the seals on this phone, the meters and
   // the homework cards (one look for them everywhere)
-  const rutaCtx = () => ({ catalog, ruta, sealsOf, meterHtml, cardHtml, homeworksOf, refresh: refreshState, reloadState });
+  const rutaCtx = () => ({ catalog, ruta, sealsOf, meterHtml, cardHtml, homeworksOf, refresh: refreshState, reloadState, trained });
   function renderPicker() {
     hw = null;
     document.title = 'La Ruta Dorada · Dralingo';

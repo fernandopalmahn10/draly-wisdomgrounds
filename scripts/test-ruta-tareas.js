@@ -277,6 +277,24 @@ async function run() {
   const gs = await get('/api/golden/newhsk1/1', teacher(SEED));
   ok(gs.status === 200 && /book\.pdf/.test(gs.json.pdf.href || '') && gs.json.pdf.ready === true, '… for the super admin: its link');
 
+  section('«Tus tareas» by experience, like folders (his rule 2026-10-18)');
+  const st0 = await ruta(phone());
+  const exOf = (id) => (mod(st0, id) || {}).exps || [];
+  for (const [id, n] of [['hsk2', 8], ['hsk1', 8], ['yct1', 6]]) {
+    const ex = exOf(id);
+    ok(ex.length === n && ex.every((e, i) => e.n === i + 1 && e.name && !/^EXP/i.test(e.name) && !/Pinyin|Simulacro/.test(e.name)),
+      `${id}: ${ex.length} experiences, numbered 1-${n}, the curriculum's names (never «EXP3 ·», Pinyin básico or the Simulacro)`);
+    const bad = ex.filter((e) => !e.pic || !/^\/assets\/packs\/[a-z0-9]+\/[a-z0-9-]+\/[a-z0-9-]+\.webp$/.test(e.pic) || !fs.existsSync(path.join(ROOT, 'public', e.pic)));
+    ok(!bad.length, `${id}: each experience has one of its own pack pictures on disk (${bad.map((e) => e.n).join(', ') || 'all there'})`);
+  }
+  ok(exOf('hsk2')[2].name === 'El Restaurante Chino' && exOf('hsk2')[3].pic.indexOf('/newhsk1/tienda/') > 0, 'New HSK 1: Experiencia 3 is «El Restaurante Chino», 4 shows its clothes shop');
+  const noFolder = CAT.homeworks.filter((h) => { const lv = ({ newhsk1: 'hsk2', hsk1: 'hsk1', yct1: 'yct1' })[h.level]; return !exOf(lv).some((e) => e.n === h.exp); });
+  ok(!noFolder.length, 'every homework audio of the catalog has its experience folder (' + (noFolder.map((h) => h.id).join(', ') || 'all') + ')');
+  ok(!JSON.stringify(st0.modules.map((m) => m.exps)).match(/[㐀-鿿]/), 'the folders carry no hanzi');
+  const rjs = fs.readFileSync(path.join(ROOT, 'public', 'js', 'ruta.js'), 'utf8');
+  ok(/data-open-exp/.test(rjs) && /Volver a las experiencias/.test(rjs) && /La más nueva/.test(rjs) && /Pronto/.test(rjs) && !/Ver todas mis tareas/.test(rjs),
+    'js/ruta.js draws the folders («Volver a las experiencias», «La más nueva», «Pronto»), never the old long list («Ver todas mis tareas»)');
+
   section('the pages that draw it');
   const page = fs.readFileSync(path.join(ROOT, 'public', 'js', 'ruta.js'), 'utf8');
   ok(/\/api\/ruta\/tareas/.test(page) && /draly_tareas/.test(page), 'js/ruta.js saves the marks (account) and keeps the phone\'s (draly_tareas)');

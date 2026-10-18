@@ -318,6 +318,45 @@ function drills() {
   });
 }
 
+// The page's own stores (2026-10-18, «a practice that's done shows it»), js/entrenamiento.js run in a sandbox (no browser):
+// a teacher's rounds stay on that device and are never sent; every visitor reads only its own scores. Returns the
+// promise of its async part (the sync of a phone's proofs).
+function pageStores() {
+  section('the page: a teacher\'s rounds stay on the device, every visitor reads its own (js/entrenamiento.js)');
+  const vm = require('vm');
+  const mem = {};
+  const sent = [];
+  const noop = () => {};
+  const sb = {
+    localStorage: { getItem: (k) => (Object.prototype.hasOwnProperty.call(mem, k) ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); }, removeItem: (k) => { delete mem[k]; } },
+    document: { addEventListener: noop, removeEventListener: noop, body: { classList: { add: noop, remove: noop, contains: () => false } }, visibilityState: 'visible' },
+    fetch: (url, o) => { sent.push({ url, body: o && o.body ? JSON.parse(o.body) : null }); return Promise.resolve({ status: 200, json: () => Promise.resolve({ ok: true, who: 'w1', merged: 1, best: {} }) }); },
+    matchMedia: () => ({ matches: false }), setTimeout, clearTimeout, console, location: { pathname: '/audios/yct1' }, history: {}, Audio: function () {},
+    addEventListener: noop, removeEventListener: noop,
+  };
+  sb.window = sb;
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, 'public', 'js', 'entrenamiento.js'), 'utf8'), sb);
+  const EP = sb.Entrenamiento;
+  ok(EP && typeof EP.localBest === 'function' && typeof EP.teacherBest === 'function', 'the page exposes each visitor\'s own scores (localBest, teacherBest)');
+  if (!EP) return Promise.resolve();
+  EP._keepTeacher('yct1', 'familia', 80);
+  EP._keepTeacher('yct1', 'familia', 50);
+  ok(EP.teacherBest('yct1').familia === 80 && JSON.parse(mem.draly_train_t_yct1).best.familia === 80, 'a teacher\'s round is kept on this device (draly_train_t_<level>), its best stays the best (80, not a later 50)');
+  ok(!/proof/i.test(mem.draly_train_t_yct1), '… with no proof: nothing that could join an account');
+  ok(EP.localBest({ teacher: true }, 'yct1').familia === 80, 'a teacher sees their own rounds');
+  ok(EP.localBest({ student: true }, 'yct1').familia === undefined && EP.localBest({ student: false, teacher: false }, 'yct1').familia === undefined,
+    'a kid (an account) or a key-only phone on the same computer never sees the teacher\'s rounds');
+  mem.draly_train_yct1 = JSON.stringify({ v: 1, best: { espejo: 75 }, proofs: { espejo: 'phone-proof-1' }, held: {} });
+  ok(EP.localBest({}, 'yct1').espejo === 75 && EP.localBest({ teacher: true }, 'yct1').espejo === undefined, 'a key-only phone sees its own scores; a teacher\'s view never mixes them in');
+  return EP.syncScores('yct1', 'w1').then(() => {
+    const sc = sent.filter((x) => /\/api\/ruta\/train\/scores$/.test(x.url));
+    ok(sc.length === 1 && JSON.stringify(sc[0].body.proofs) === '["phone-proof-1"]', 'a login sends the phone\'s own proofs only: the teacher\'s rounds never travel');
+    delete mem.draly_train_yct1;
+    sent.length = 0;
+    return EP.syncScores('yct1', 'w1').then(() => ok(!sent.length, '… a device with only a teacher\'s rounds sends nothing'));
+  });
+}
+
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 // 2. its own server
 // ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -550,10 +589,22 @@ async function server() {
   for (const q of R.questions.slice(1)) await answer(A1, R.round, q.i, Kf.get(q));
   let f = await finish(A1, R.round);
   ok(f.json.ok && f.json.pct === 90 && f.json.stars === 3 && f.json.saved && f.json.best === 90 && !f.json.record, '9 of 10: 90 %, three stars, saved (a first round is not a «record»)');
+  // (2026-10-18 «a practice that's done shows it») the route data (card 2 of the module page) counts it at once
+  const mNow = mod(await ruta(as(A1)), 'yct1');
+  ok(mNow.train.worlds.find((w) => w.key === 'familia').best === 90 && mNow.dorado.practiced === 1, 'a logged-in kid: the route counts it right away (world 1 at 90 %, 1 world with 70 %)');
   let p = await play(A1, 'yct1', 'familia', 5);
   ok(p.fin.pct === 50 && p.fin.best === 90 && !p.fin.record && p.fin.stars === 1, 'a later 50 %: saved, the best stays 90');
   v = (await train(A1, 'yct1')).json;
   ok(world(v, 'familia').best === 90, 'the worlds list shows the best: 90');
+
+  section('a teacher\'s round (2026-10-18): graded, never a kid\'s score, never stored on the server');
+  const w3 = E.worldsOf('yct1').filter((w) => w.kind === 'world')[2].key;
+  const tp = await play(teacher(SEED), 'yct1', w3, 8);
+  ok(tp.fin.ok && tp.fin.teacher === true && tp.fin.pct === 80 && !tp.fin.saved && !tp.fin.proof && !tp.fin.phone && tp.fin.best == null,
+    'a teacher\'s device plays world 3: 80 %, nothing saved and no proof (the page keeps it on that device, «Tus rondas de maestro: solo en este equipo»)');
+  ok(world((await train(teacher(SEED), 'yct1')).json, w3).best === null && world((await train(A1, 'yct1')).json, w3).best === null,
+    '… no teacher score on the server, and none on a kid\'s account');
+  ok((await post('/api/ruta/train/scores', { level: 'yct1', who: null, proofs: ['t-not-a-proof'] }, teacher(SEED))).status === 403, '… a teacher has no account to hand scores to');
 
   section('a key-only phone practises; its scores join the account at the first login');
   const P1 = phone();
@@ -654,6 +705,7 @@ async function server() {
 (async () => {
   let crashed = false;
   try { unit(); } catch (e) { crashed = true; failed++; console.log('  ✖ the in-process part crashed: ' + (e && e.stack || e)); }
+  try { await pageStores(); } catch (e) { crashed = true; failed++; console.log('  ✖ the page-stores part crashed: ' + (e && e.stack || e)); }
   try { await server(); } catch (e) { crashed = true; failed++; console.log('  ✖ crashed: ' + (e && e.stack || e)); }
   if (!KEEP) await stopServer();
   if (crashed && allLog) console.log(allLog.slice(-1500));

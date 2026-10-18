@@ -55,5 +55,24 @@ for (const rel of FILES) {
     }
   });
 }
-console.log(fails ? `wording: ${fails} FAIL(S)` : `wording: ${FILES.length} kid/parent files clean`);
+// «Never show a real code as an example» (his rule 2026-10-18: the «Mis tareas» login had «1001» as its placeholder, "a
+// clue that that is one of the codes"): no class code, student code, PIN or level key as a placeholder, a default value
+// or an example, on the kids' pages AND the teachers' (/maestro may be on the projector). PANDA-12 is the key screen's
+// one example on purpose: the server refuses it as a key (core/level-keys.js EXAMPLE).
+const CODE_FILES = FILES.concat(['public/maestro.html', 'public/js/maestro.js', 'public/sets.html', 'public/packs.html']);
+const CODE_RULES = [
+  { re: /placeholder\s*=\s*\\?["'][^"']*?\b(?:\d{3,4}|[A-HJ-NP-Z2-9]{4,6})\b/, why: 'a code-shaped placeholder (a class code, student code or PIN): use words («El código de tu maestra») or neutral dots' },
+  { re: /(?:value\s*=\s*|\|\|\s*)["']\d{4}["']/, why: 'a class code as a default value' },
+  { re: /\b(?!PANDA-12\b)[A-Z]{4,}-\d{2,}\b/, why: 'a level key as an example (only PANDA-12, which the server refuses as a key)' },
+];
+let codeFails = 0;
+for (const rel of [...new Set(CODE_FILES)]) {
+  const file = path.join(ROOT, rel);
+  if (!fs.existsSync(file)) continue;
+  strip(fs.readFileSync(file, 'utf8')).split('\n').forEach((line, i) => {
+    for (const r of CODE_RULES) if (r.re.test(line)) { codeFails++; console.log(`FAIL ${rel}:${i + 1} · ${r.why}\n     ${line.trim().slice(0, 140)}`); }
+  });
+}
+fails += codeFails;
+console.log(fails ? `wording: ${fails} FAIL(S)` : `wording: ${FILES.length} kid/parent files clean, no code as an example in ${CODE_FILES.length} pages`);
 process.exit(fails ? 1 : 0);
