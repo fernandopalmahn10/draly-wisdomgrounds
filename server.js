@@ -4886,15 +4886,16 @@ function audioBaseFor(info) {
 // («Escuchada», «¡Ya la mandé!»): id → its level folder (yct1 · newhsk1 · hsk1), newest first. Read once per boot.
 let _audioHomeworks = null;
 function _loadAudioHomeworks() {
-  if (!_audioHomeworks) {
-    let list = [];
-    try { list = JSON.parse(fs.readFileSync(path.join(__dirname, 'public', 'assets', 'audios', 'catalog.json'), 'utf8')).homeworks || []; }
-    catch (e) { console.warn('[audios] catalog unreadable:', e.message); list = []; }
-    _audioHomeworks = new Map();
-    list.filter((h) => h && typeof h.id === 'string').sort((a, b) => ((b.exp || 0) - (a.exp || 0)) || ((b.round || 0) - (a.round || 0)))
-      .forEach((h) => _audioHomeworks.set(h.id, String(h.level || '')));
-  }
-  return _audioHomeworks;
+  if (_audioHomeworks) return _audioHomeworks;
+  let list;
+  try { list = JSON.parse(fs.readFileSync(path.join(__dirname, 'public', 'assets', 'audios', 'catalog.json'), 'utf8')).homeworks; }
+  catch (e) { console.warn('[audios] catalog unreadable:', e.message); list = null; }
+  const map = new Map();
+  (Array.isArray(list) ? list : []).filter((h) => h && typeof h.id === 'string').sort((a, b) => ((b.exp || 0) - (a.exp || 0)) || ((b.round || 0) - (a.round || 0)))
+    .forEach((h) => map.set(h.id, String(h.level || '')));
+  // (kept only after a good read: one failed read never leaves the marks with an empty catalog until the next deploy)
+  if (Array.isArray(list)) _audioHomeworks = map;
+  return map;
 }
 // an id as a phone sends it → the catalog's id, or null (hsk2-e01-r1 is newhsk1-e01-r1: HSK 2 became New HSK 1)
 function _tareaId(raw) {
@@ -5028,7 +5029,10 @@ function _rutaState(req) {
     const teach = a.ok && a.via === 'teacher';
     const gb = a.ok && (listSims || (rec && !teach)) ? Golden.ofLevel(l.id) : null;
     const gs = gb ? Golden.summary(gb, teach ? null : rec, teach, !!listSims) : null;
-    const takenOnly = gs && !listSims ? gs.sims.filter((s) => s.taken).map((s) => ({ n: s.n, mistakes: s.mistakes, book: _goldenHref(l.id, s.n) })) : null;
+    // (2026-10-18) `at` = when the kid's latest try of a simulation was handed in: the route's «Libro dorado» opens the
+    // book of the simulation taken last
+    const lastAt = (simId) => { const t = rec && !teach ? Golden.latest(rec, simId) : null; return t ? Number(t.ts) || 0 : null; };
+    const takenOnly = gs && !listSims ? gs.sims.filter((s) => s.taken).map((s) => ({ n: s.n, mistakes: s.mistakes, at: lastAt(s.id), book: _goldenHref(l.id, s.n) })) : null;
     return {
       id: l.id, slug: l.pack || l.id, name: l.name, family: l.family, exam: l.exam || '', open: !!a.ok,
       base: b ? Object.assign({ id: b.id, words: b.words }, rb ? { worlds: rb.worlds.map((w) => ({ n: w.n, short: w.short, first: w.first, count: w.count })) } : {}) : null,
@@ -5037,7 +5041,8 @@ function _rutaState(req) {
         const best = tries.filter((t) => t && t.simId === s.id).reduce((m, t) => Math.max(m, Number(t.percent) || 0), -1);
         const g = gs ? gs.sims.find((x) => x.id === s.id) : null;
         return Object.assign({}, s, { best: best >= 0 ? Math.round(best) : null, taken: !!(g && g.taken),
-          mistakes: g && g.taken ? g.mistakes : null, book: g && g.open && (teach || rec) ? _goldenHref(l.id, g.n) : null });
+          mistakes: g && g.taken ? g.mistakes : null, at: g && g.taken ? lastAt(s.id) : null,
+          book: g && g.open && (teach || rec) ? _goldenHref(l.id, g.n) : null });
       }) : [],
       // (the PDF holds every answer: since 2026-10-18 a download for the super admin only, his rule)
       golden: !gs ? null : takenOnly ? (takenOnly.length ? { closed: true, taken: takenOnly, pdf: null } : null)
@@ -5125,12 +5130,13 @@ app.post('/api/ruta/seals', (req, res) => {
 // (his worry: a kid changes or loses the phone)
 // GET  /api/ruta/tareas → { ok, student: false } (nobody logged in: the marks stay on the phone, with a soft «Entra con
 //                         tu código») | { ok, student: true, who, marks: { <homework id>: { h?: 1, s?: 1 } } }
-// POST /api/ruta/tareas { who, heard: [id…], sent: [id…], unsent: [id…] } → { ok, who, marks }
+// POST /api/ruta/tareas { who, heard: [id…], sent: [id…], unsent: [id…] } → { ok, who, marks, unknown? }
 // h = «Escuchada» (the audio played on the page), s = «¡Ya la mandé!» (one tap once the kid sent the video to the
 // teacher on WhatsApp; his pick: no teacher confirmation). Only the logged-in kid's OWN record (the /homework session
-// cookie; never a code in the body), only ids of the audio catalog (a whole batch with one unknown id is refused, the
-// page drops it), at most 60 ids per list. The homework audio pages are open (no key), so the marks need no level key.
-// A phone's marks from before its first login join the account (a union, sent by the page); `who` = the seals' opaque
+// cookie; never a code in the body), only ids of the audio catalog (an unknown id is skipped and named back in
+// `unknown`; the good ones are saved), at most 60 ids per list. The homework audio pages are open (no key), so the
+// marks need no level key. A phone's own marks (made while nobody was logged in) join the next account that logs in on
+// it (a union, sent by the page); `who` = the seals' opaque
 // id of the account: a save from a sibling's mirror is refused (409), never written on this account. Rate: a save
 // counts per kid (60 a minute: the page batches), a read per address (4000 per 5 minutes: a school Wi-Fi is never slowed).
 const _tareaHits = new Map();   // key → [timestamps]
@@ -5162,13 +5168,19 @@ app.post('/api/ruta/tareas', (req, res) => {
   if (!_tareaRate('k:' + rec.code, 60 * 1000, 60)) return res.status(429).set('Retry-After', '20').json({ ok: false, error: 'Espera un momento: tus tareas se guardan enseguida.' });
   const who = _sealWho(rec.code);
   if (b.who != null && String(b.who) !== who) return res.status(409).json({ ok: false, who, error: 'Otra cuenta entró en este teléfono.' });
+  // (an id the catalog does not have, e.g. a homework renamed since the phone marked it, is skipped and named back in
+  // `unknown`: the batch's good marks are saved, never refused for one stale id)
   const lists = {};
+  const unknown = [];
   for (const k of ['heard', 'sent', 'unsent']) {
     const v = b[k] == null ? [] : b[k];
     if (!Array.isArray(v) || v.length > 60) return res.status(400).json({ ok: false, error: 'Lista no válida.' });
-    const ids = v.map(_tareaId);
-    if (ids.some((x) => !x)) return res.status(400).json({ ok: false, error: 'Esa tarea no existe.' });
-    lists[k] = ids;
+    lists[k] = [];
+    v.forEach((raw) => {
+      const id = _tareaId(raw);
+      if (id) lists[k].push(id);
+      else if (unknown.length < 60) unknown.push(typeof raw === 'string' ? raw.slice(0, 60) : String(typeof raw));
+    });
   }
   if (lists.sent.some((id) => lists.unsent.includes(id))) return res.status(400).json({ ok: false, error: 'Una tarea no puede estar mandada y no mandada a la vez.' });
   const now = Date.now();
@@ -5181,7 +5193,7 @@ app.post('/api/ruta/tareas', (req, res) => {
       lists.unsent.forEach((id) => { const e = at(id); delete e.s; });
     }, { activity: true });
   }
-  res.json({ ok: true, who, marks: _tareaMarks(Students.get(rec.code)) });
+  res.json(Object.assign({ ok: true, who, marks: _tareaMarks(Students.get(rec.code)) }, unknown.length ? { unknown } : {}));
 });
 // ── 🎯 El Entrenamiento (phase 4, 2026-10-16): quick rounds graded here (core/entrenamiento.js) ─────────────────────
 // GET  /api/ruta/train?level=yct1&s=1-17,20            → the level's practice worlds for this visitor: open or not (the

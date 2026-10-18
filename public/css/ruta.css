@@ -391,6 +391,12 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rp-sim.is-pass { color: #3d0707; background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); box-shadow: 0 4px 10px -6px rgba(90, 16, 16, .55); }
 .rp-sim.is-tried { box-shadow: inset 0 0 0 2px var(--rojo); }
 .rp-sim.is-next { box-shadow: inset 0 0 0 2.5px var(--gold-edge), 0 0 0 3px rgba(232, 200, 120, .55); }
+/* a taken simulation's mistakes: a small red number on the chip's corner */
+.rp-sim-err {
+  position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--red); color: #fff; font-style: normal; font-weight: 900; font-size: .7rem; line-height: 1; font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--papel);
+}
 .rp-sim:active { transform: scale(.95); }
 .rp-book {
   display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 48px; margin-top: 6px; padding: 8px 12px; border-radius: 14px;

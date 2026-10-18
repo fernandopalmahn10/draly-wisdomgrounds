@@ -58,8 +58,15 @@
   // open (and, only when open, the level's simulations), so a locked base shows its lock instead of its pictures.
   // (a homework audio page and a base never wait on it: if it fails, only the picker and the routes ask to retry)
   let ruta = null;
-  const failedHtml = (msg) => '<p class="au-error">' + msg + '</p>' +
-    '<p style="text-align:center"><button type="button" class="bs-btn bs-btn-red au-press" id="au-retry">Volver a intentar</button></p>';
+  // (an error screen always has its way back: La Ruta Dorada's own band, which hides the page's band, is gone with the
+  // screen that failed, and the error draws its own «Volver»: home from the picker, else the worlds)
+  const failedHtml = (msg) => {
+    document.body.classList.remove('rp-on');
+    const home = /^\/audios?\/?$/.test(location.pathname);
+    return '<p style="margin:0 0 6px"><a class="dw-back" href="' + (home ? '/' : '/audios') + '">' + (home ? 'Volver al inicio' : 'Volver a los mundos') + '</a></p>' +
+      '<p class="au-error">' + msg + '</p>' +
+      '<p style="text-align:center"><button type="button" class="bs-btn bs-btn-red au-press" id="au-retry">Volver a intentar</button></p>';
+  };
   function load() {
     main.innerHTML = '<p class="au-loading">Cargando…</p>';
     const state = fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
@@ -131,7 +138,9 @@
   // (phase 3: a kid's progress too, so seals saved from this phone or opened by a teacher redraw the route)
   const sig = (s) => JSON.stringify(s && s.modules ? s.modules.map((m) => [m.id, m.open, m.sims.length, m.dorado && m.dorado.open,
     m.progress ? [m.progress.sealed, m.progress.worlds.map((w) => (w.train ? 1 : 0) + (w.teacher ? 2 : 0)).join('')] : null,
-    m.train ? m.train.worlds.map((w) => (w.open ? 1 : 0) + ':' + (w.best == null ? '' : w.best)).join(',') : null]) : null);
+    m.train ? m.train.worlds.map((w) => (w.open ? 1 : 0) + ':' + (w.best == null ? '' : w.best)).join(',') : null,
+    // (2026-10-18: the kid's homework marks, so marks made on another phone show when the kid comes back to this tab)
+    m.tareas ? Object.keys(m.tareas).sort().map((id) => id + (m.tareas[id].h ? 'h' : '') + (m.tareas[id].s ? 's' : '')).join(',') : null]) : null);
   function refreshState(force) {   // force: redraw even when the server says the same (the phone's seals changed)
     if (!catalog || !isWorldView()) return;
     fetch('/api/ruta-dorada', { credentials: 'same-origin', cache: 'no-store' })
@@ -420,7 +429,11 @@
   }
   // 🏆 2026-10-18: playing a homework's audio here marks it «Escuchada» on La Ruta Dorada («Tus tareas», js/ruta.js:
   // the kid's account when logged in, else this phone)
-  function heard() { if (hw && window.Ruta && window.Ruta.markHeard) { try { window.Ruta.markHeard(hw.id, ruta); } catch (_) {} } }
+  // (logged out: the phone's own mark, never the account of a kid who logged out here: js/ruta.js decides)
+  function heard() {
+    if (!hw || !window.Ruta || !window.Ruta.markHeard) return;
+    try { window.Ruta.markHeard(hw.id, ruta, (lv) => homeworksOf(lv).map((x) => x.id)); } catch (_) {}
+  }
   function seekTrack(k, sec) {
     sec = Math.max(0, Math.min(hw.tracks[k].dur - 0.2, sec));
     if (cur && cur.kind === 'track' && cur.t === k) { player.currentTime = sec; if (player.paused) player.play().catch(() => {}); }

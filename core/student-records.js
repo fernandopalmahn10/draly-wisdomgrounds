@@ -446,14 +446,18 @@ function updateRuta(code, level, mutate, opts) {
 // 🆕 2026-10-18 (La Ruta Dorada redesign) — the kid's homework audio marks: rec.tareas = { '<homework id>': { h: <when
 // the audio was first played>, s: <when they tapped «¡Ya la mandé!»> } } (ids of public/assets/audios/catalog.json).
 // server.js checks the ids and who asks; this only finds the record (an archived kid comes back), hands the map to
-// `mutate`, drops empty entries and saves. opts.activity: the kid did it (counts as activity). → the record, or null.
+// `mutate`, drops empty entries and saves only when something changed (a repeated tap writes nothing and is not
+// activity). opts.activity: the kid did it (counts as activity). → the record, or null.
 function updateTareas(code, mutate, opts) {
   const rec = get(code);
   if (!rec || typeof mutate !== 'function') return null;
-  const all = rec.tareas && typeof rec.tareas === 'object' && !Array.isArray(rec.tareas) ? rec.tareas : {};
+  const before = JSON.stringify(rec.tareas || null);
+  const all = rec.tareas && typeof rec.tareas === 'object' && !Array.isArray(rec.tareas) ? JSON.parse(before) : {};
   mutate(all);
   Object.keys(all).forEach((k) => { const e = all[k]; if (!e || typeof e !== 'object' || (!e.h && !e.s)) delete all[k]; });
-  if (Object.keys(all).length) rec.tareas = all; else delete rec.tareas;
+  const after = Object.keys(all).length ? all : null;
+  if (JSON.stringify(after) === before) return rec;
+  if (after) rec.tareas = after; else delete rec.tareas;
   if (opts && opts.activity) rec.lastSeen = Date.now();
   scheduleSave();
   return rec;

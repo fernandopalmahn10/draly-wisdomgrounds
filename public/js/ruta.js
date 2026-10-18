@@ -231,13 +231,15 @@
   // ════════════════════════════════════════════════════════════════════
   // the homework done marks (2026-10-18): «Escuchada» (the audio played) and «¡Ya la mandé!» (sent on WhatsApp)
   // ════════════════════════════════════════════════════════════════════
-  // localStorage draly_tareas = { v: 1, who, marks: { id: { h: 1, s: 1 } }, pend: { id: { h: 1, s: 1 | 0 } }, held }
-  //   who   = the account the mirror holds (the server's opaque id; never the kid's code), null = this phone's own
-  //   marks = what the page shows (the account's after a save, plus this phone's taps)
-  //   pend  = taps not saved on the account yet (s: 0 = «mandada» undone)
+  // localStorage draly_tareas = { v: 2, who, marks, pend, held, phone }
+  //   who   = the account the mirror holds (the server's opaque id; never the kid's code)
+  //   marks = that account's marks as this phone last knew them: { id: { h: 1, s: 1 } } (a save's answer, the route data)
+  //   pend  = that kid's taps not saved on the account yet: { id: { h: 1, s: 1 | 0 } } (s: 0 = «mandada» undone)
   //   held  = a sibling's unsaved taps, kept for their next login on this phone: { who: pend }
-  // A logged-in kid: every tap goes up (batched, retried offline, sent on pagehide). Nobody logged in: the marks stay on
-  // the phone and join the account at the first login (a union). Server: /api/ruta/tareas (server.js).
+  //   phone = taps made while NOBODY is logged in: this phone's own, never a kid's (a logged-out phone shows only these)
+  // A logged-in kid: every tap goes up (batched, retried offline, sent on pagehide), and the mirror wins over the route
+  // data the page was drawn with (a save's answer is newer). The phone's own taps join the next account that logs in
+  // (a union), like La Base's seals. Server: /api/ruta/tareas (server.js).
   const TKEY = 'draly_tareas';
   const idOk = (id) => typeof id === 'string' && /^[a-z0-9-]{3,60}$/.test(id);
   const isObj = (o) => !!o && typeof o === 'object' && !Array.isArray(o);
@@ -247,9 +249,12 @@
     if (!isObj(o)) o = {};
     if (!isObj(o.marks)) o.marks = {};
     if (!isObj(o.pend)) o.pend = {};
+    if (!isObj(o.phone)) o.phone = {};
+    // (a first-version mirror that never met an account kept the phone's own marks in `marks`)
+    if (!o.who && Object.keys(o.marks).length) { o.phone = Object.assign({}, o.marks, o.phone); o.marks = {}; }
     return o;
   }
-  function tWrite(o) { try { localStorage.setItem(TKEY, JSON.stringify(o)); } catch (_) {} }
+  function tWrite(o) { o.v = 2; try { localStorage.setItem(TKEY, JSON.stringify(o)); } catch (_) {} }
   // marks + pend → what shows (a copy)
   function tApply(marks, pend) {
     const out = {};
@@ -264,23 +269,15 @@
     });
     return out;
   }
-  const tSync = { mode: null, who: null, timer: 0, busy: null, tries: 0, onChange: null };
-  // the mirror now holds `who`'s account; `acct` = that account's marks for `ids` (from /api/ruta-dorada), or null
-  // when not known here (a homework page): what this phone holds for `who` goes up, a sibling's waits for them
+  // ruta = the route state object the page draws from (js/audios.js keeps it): a save's answer is written back into it
+  const tSync = { mode: null, who: null, timer: 0, busy: null, tries: 0, onChange: null, ruta: null, idsOf: null };
+  // the mirror now holds `who`'s account. acct = that account's marks for `ids` from a FRESH route state (the server's
+  // word then), or null (the homework page, or route data the mirror already learned from): this phone's own taps go up
+  // to this account, a sibling's unsaved taps wait for them
   function tSettle(who, acct, ids) {
     const o = tRead();
     if (o.who !== who) {
-      if (!o.who) {                                              // the first time this phone meets the account: a union
-        const mine = tApply(o.marks, o.pend);
-        o.pend = {};
-        Object.keys(mine).forEach((id) => {
-          const a = acct && acct[id];
-          const p = {};
-          if (mine[id].h && !(a && a.h)) p.h = 1;
-          if (mine[id].s && !(a && a.s)) p.s = 1;
-          if (p.h || p.s) o.pend[id] = p;
-        });
-      } else {                                                   // a sibling's mirror: theirs waits, never mixed
+      if (o.who) {                                               // a sibling's mirror: theirs waits, never mixed
         const held = isObj(o.held) ? o.held : {};
         if (Object.keys(o.pend).length) held[o.who] = Object.assign({}, isObj(held[o.who]) ? held[o.who] : {}, o.pend);
         o.pend = isObj(held[who]) ? held[who] : {};
@@ -288,48 +285,93 @@
         const keys = Object.keys(held);
         keys.slice(0, Math.max(0, keys.length - 4)).forEach((k) => { delete held[k]; });   // a family phone: 4 kids at most
         if (keys.length) o.held = held; else delete o.held;
-      }
+      } else o.pend = {};
       o.marks = {};
       o.who = who;
     }
     if (acct) {                                                  // the account's word for these ids
       (ids || Object.keys(acct)).forEach((id) => { if (acct[id]) o.marks[id] = { h: acct[id].h ? 1 : 0, s: acct[id].s ? 1 : 0 }; else delete o.marks[id]; });
     }
-    o.v = 1;
+    // the phone's own taps (made while nobody was logged in) join this account: a union
+    Object.keys(o.phone).forEach((id) => {
+      const e = o.phone[id];
+      if (!idOk(id) || !isObj(e)) return;
+      const have = tApply(o.marks, o.pend)[id] || {};
+      const p = isObj(o.pend[id]) ? o.pend[id] : {};
+      if (e.h && !have.h) p.h = 1;
+      if (e.s && !have.s) { p.s = 1; p.h = 1; }
+      if (p.h || p.s === 1) o.pend[id] = p;
+    });
+    o.phone = {};
     tWrite(o);
     tSync.mode = 'account';
     tSync.who = who;
     if (Object.keys(o.pend).length) tLater(300);
   }
+  // a fresh route state (a page load, or a refresh that brought news) is the server's word: the mirror learns it once.
+  // After that the mirror (saves' answers) is newer than the route data the page keeps.
+  function tSeed(ruta, idsOf) {
+    if (!ruta) return;
+    tSync.ruta = ruta;
+    if (idsOf) tSync.idsOf = idsOf;
+    if (!(ruta.student && ruta.who) || ruta.__tareasSeeded === ruta.who) return;
+    const acct = {}, ids = [];
+    (ruta.modules || []).forEach((m) => {
+      if (!isObj(m.tareas)) return;
+      Object.assign(acct, m.tareas);
+      if (idsOf) ids.push.apply(ids, idsOf(m.slug));
+    });
+    // (route data asked for while a save was on its way can be older than that save's answer: the mirror keeps it,
+    // the next refresh brings the rest)
+    const raced = tSync.who === ruta.who && (tSync.busy || Date.now() - (tSync.savedAt || 0) < 5000);
+    if (raced) { tLearn(tRead().marks); tSettle(ruta.who, null); } else tSettle(ruta.who, acct, idsOf ? ids : null);
+    try { Object.defineProperty(ruta, '__tareasSeeded', { value: ruta.who, configurable: true }); } catch (_) {}
+  }
+  // a save's answer (the whole account map): into the mirror, and into the route data each module keeps (so a redraw,
+  // the picker or a path → homework → path trip never brings back older marks)
+  function tLearn(marks) {
+    const R = tSync.ruta;
+    if (!R || !Array.isArray(R.modules) || !tSync.idsOf) return;
+    R.modules.forEach((m) => {
+      if (!isObj(m.tareas)) return;
+      const t = {};
+      tSync.idsOf(m.slug).forEach((id) => { if (marks[id]) t[id] = { h: marks[id].h ? 1 : 0, s: marks[id].s ? 1 : 0 }; });
+      m.tareas = t;
+    });
+  }
   function tLater(ms) { clearTimeout(tSync.timer); tSync.timer = setTimeout(() => { tSync.timer = 0; tFlush(); }, ms); }
+  // what goes up now (60 ids per list at most; the rest go in the next save) and the taps it carries
   function tBody(o) {
     const heard = [], sent = [], unsent = [];
     Object.keys(o.pend).forEach((id) => {
       const p = o.pend[id];
-      if (!idOk(id) || !isObj(p)) { delete o.pend[id]; return; }
-      if (p.s === 1) sent.push(id); else if (p.s === 0) unsent.push(id);
-      if (p.h === 1 && p.s !== 1) heard.push(id);
+      if (!idOk(id) || !isObj(p)) return;
+      if (p.s === 1 && sent.length < 60) sent.push(id);
+      else if (p.s === 0 && unsent.length < 60) unsent.push(id);
+      if (p.h === 1 && p.s !== 1 && heard.length < 60) heard.push(id);
     });
-    return { who: o.who || null, heard: heard.slice(0, 60), sent: sent.slice(0, 60), unsent: unsent.slice(0, 60) };
+    const carried = {};
+    heard.concat(sent, unsent).forEach((id) => { carried[id] = JSON.parse(JSON.stringify(o.pend[id])); });
+    return { body: { who: o.who || null, heard, sent, unsent }, carried };
   }
   function tFlush() {
     if (tSync.mode !== 'account') return Promise.resolve();
     if (tSync.busy) return tSync.busy;
     const o = tRead();
-    const body = tBody(o);
+    const { body, carried } = tBody(o);
     if (!body.heard.length && !body.sent.length && !body.unsent.length) return Promise.resolve();
-    const sentPend = JSON.parse(JSON.stringify(o.pend));
     tSync.busy = fetch('/api/ruta/tareas', { method: 'POST', credentials: 'same-origin', cache: 'no-store',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then((r) => r.json().catch(() => null).then((d) => ({ status: r.status, d })), () => ({ status: 0, d: null }))
       .then(({ status, d }) => {
         tSync.busy = null;
         const n = tRead();
-        const drop = () => { Object.keys(sentPend).forEach((id) => { if (JSON.stringify(n.pend[id]) === JSON.stringify(sentPend[id])) delete n.pend[id]; }); };
+        // only the taps this save carried, and only when no newer tap on the same homework came meanwhile
+        const drop = () => { Object.keys(carried).forEach((id) => { if (JSON.stringify(n.pend[id]) === JSON.stringify(carried[id])) delete n.pend[id]; }); };
         if (d && d.ok && isObj(d.marks)) {
           tSync.tries = 0;
           drop();
-          if (d.who && n.who === d.who) n.marks = d.marks;
+          if (d.who && n.who === d.who) { n.marks = d.marks; tLearn(d.marks); tSync.savedAt = Date.now(); }
           tWrite(n);
           if (tSync.onChange) tSync.onChange();
           if (Object.keys(n.pend).length) tLater(400);
@@ -337,7 +379,7 @@
         }
         if (status === 409) { tSync.mode = null; if (tSync.onChange) tSync.onChange(true); return; }   // another kid logged in: ask again
         if (status === 401 || status === 403) { tSync.mode = 'device'; return; }   // the login ended: they wait for it
-        if (status === 400) { drop(); tWrite(n); return; }                        // an id the catalog lost: never retried
+        if (status === 400) { drop(); tWrite(n); return; }                        // a broken batch: never retried
         tSync.tries += 1;
         if (tSync.tries <= 6) tLater(Math.min(60000, 2000 * Math.pow(2, tSync.tries - 1)));
       });
@@ -346,47 +388,45 @@
   window.addEventListener('online', () => { tSync.tries = 0; if (tSync.mode === 'account') tFlush(); });
   window.addEventListener('pagehide', () => {
     if (tSync.mode !== 'account' || tSync.busy) return;
-    const o = tRead();
-    const body = tBody(o);
+    const { body } = tBody(tRead());
     if (!body.heard.length && !body.sent.length && !body.unsent.length) return;
     try { fetch('/api/ruta/tareas', { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {}); } catch (_) {}
   });
-  // a tap: kind 'h' (heard) | 's' (sent) | 'u' (sent undone). ruta = the route state (who is here)
+  // a tap: kind 'h' (heard) | 's' (sent) | 'u' (sent undone). ruta = the route state (who is here). Nobody logged in:
+  // the tap is the phone's own (never a kid's account, even the kid who logged out on this phone)
   function tMark(id, kind, ruta) {
     if (!idOk(id)) return;
     const account = !!(ruta && ruta.student && ruta.who);
     if (account && tSync.who !== ruta.who) tSettle(ruta.who, null);
     const o = tRead();
-    const cur = tApply(o.marks, o.pend)[id] || { h: 0, s: 0 };
+    const cur = (account ? tApply(o.marks, o.pend) : tApply(o.phone, null))[id] || { h: 0, s: 0 };
     if (kind === 'h' && cur.h) return;
     if (kind === 's' && cur.s) return;
     if (kind === 'u' && !cur.s) return;
-    // the phone's own marks always change; the account's only through pend (a phone that never met an account keeps no pend)
-    if (o.who || account) {
+    if (account) {
       const p = isObj(o.pend[id]) ? o.pend[id] : {};
       if (kind === 'h') p.h = 1;
       if (kind === 's') { p.s = 1; p.h = 1; }
       if (kind === 'u') p.s = 0;
       o.pend[id] = p;
     } else {
-      const e = isObj(o.marks[id]) ? o.marks[id] : (o.marks[id] = {});
+      const e = isObj(o.phone[id]) ? o.phone[id] : (o.phone[id] = {});
       if (kind === 'h') e.h = 1;
       if (kind === 's') { e.s = 1; e.h = 1; }
       if (kind === 'u') delete e.s;
     }
-    o.v = 1;
     tWrite(o);
     if (account) tLater(kind === 'h' ? 1500 : 600);
   }
-  // what shows for these ids: for a logged-in kid the account's marks (route state) + this phone's unsaved taps for them
+  // what shows: a logged-in kid = the mirror of their account (it wins: it is newer than the route data the page was
+  // drawn with) + their taps not saved yet; nobody logged in = only this phone's own taps
   function tMarksFor(ruta, acct) {
     const o = tRead();
     if (ruta && ruta.student && ruta.who) {
-      if (o.who === ruta.who) return tApply(Object.assign({}, o.marks, acct || {}), o.pend);
-      if (!o.who) return tApply(Object.assign({}, acct || {}), tApply(o.marks, o.pend));   // the phone's own, about to join
-      return tApply(acct || {}, null);
+      if (o.who === ruta.who) return tApply(Object.assign({}, acct || {}, o.marks), o.pend);
+      return tApply(Object.assign({}, acct || {}), tApply(o.phone, null));   // (not met yet: the phone's own are about to join)
     }
-    return tApply(o.marks, o.pend);
+    return tApply(o.phone, null);
   }
   const unsentOf = (hws, marks) => hws.filter((h) => !(marks[h.id] && marks[h.id].s)).length;
 
@@ -443,8 +483,9 @@
     store.set('draly_pick_from', fromHw ? 'homework' : '');
     store.set('draly_ruta_from', '');   // the kid chose «all worlds»: the routes' back arrow leads here again, not to Mis tareas
     const back = fromHw ? { href: '/homework.html', label: 'Volver a mis tareas' } : { href: '/', label: 'Volver al inicio' };
-    document.body.classList.add('rp-on');
-    if (!mods.length) { main.innerHTML = bandHtml(back) + '<p class="au-error">Muy pronto: tus mundos de Chino Mandarín.</p>'; return; }
+    // (the page's own band steps aside only once this screen is drawn: an error before that keeps its «Volver»)
+    if (!mods.length) { main.innerHTML = bandHtml(back) + '<p class="au-error">Muy pronto: tus mundos de Chino Mandarín.</p>'; document.body.classList.add('rp-on'); return; }
+    tSeed(ctx.ruta, idsOfCtx(ctx));
     const looks = looksFor(mods);
     // the first card: the one this tab was on (back from a path), else the kid's own module (or a level this device
     // holds the key of), else the last one chosen on this phone, else the first
@@ -453,15 +494,14 @@
     if (start == null) start = 0;
     ctx.start = start;
     const anon = !ctx.ruta.student && !ctx.ruta.teacher;
-    // a red «N por mandar» on the kid's own module (or one this phone already marked a homework of): never on every card
-    const o = tRead();
+    // a red «N por mandar»: the same rule as the module page («Tus tareas» is the kid's own level: mineOf), and on a
+    // phone nobody is logged in on only for a level whose homework it already marked (never a badge on every card)
     const toSendOf = (m) => {
-      if (ctx.ruta.teacher) return 0;
       const hws = ctx.homeworksOf(m.slug);
-      if (!hws.length) return 0;
+      if (!hws.length || !mineOf(ctx, m)) return 0;
       const marks = tMarksFor(ctx.ruta, m.tareas);
-      const touched = hws.some((h) => marks[h.id] && (marks[h.id].h || marks[h.id].s)) || hws.some((h) => o.marks[h.id]);
-      return m.slug === ctx.ruta.home || touched ? unsentOf(hws, marks) : 0;
+      if (!ctx.ruta.student && !hws.some((h) => marks[h.id] && (marks[h.id].h || marks[h.id].s))) return 0;
+      return unsentOf(hws, marks);
     };
     const friend = window.DralingoCast ? window.DralingoCast.pick(1)[0] : null;
     main.innerHTML = bandHtml(back) +
@@ -488,7 +528,12 @@
           '<a class="rd-btn rd-btn-red" href="/homework.html?next=%2Faudios">Entrar con mi código</a></div></div>' : friendRow('is-pick')) +
       '</section>';
     live = carousel(main, mods, start);
+    document.body.classList.add('rp-on');
   }
+  // «Tus tareas» is the kid's own level: a phone nobody is logged in on counts every level as its own; a teacher, or a
+  // kid looking at another module, only plays its homework (no marks, no counts)
+  const mineOf = (ctx, m) => !ctx.ruta.teacher && (!ctx.ruta.student || m.slug === ctx.ruta.home);
+  const idsOfCtx = (ctx) => (slug) => ctx.homeworksOf(slug).map((h) => h.id);
 
   // ── the flying carousel ───────────────────────────────────────────
   // pos = which card is in the middle (0, 1, 2…; fractions while flying). Each frame writes transform/opacity only;
@@ -771,7 +816,9 @@
       const taken = sims.filter(takenOf);
       const nextSim = sims.find((s) => !takenOf(s)) || null;
       const books = sims.filter((s) => s.book);
-      const lastBook = books.filter(takenOf).slice(-1)[0] || books[0] || null;
+      // the book of the simulation taken last (the server's `at`), else the highest one taken, else the first book
+      const takenBooks = books.filter(takenOf);
+      const lastBook = takenBooks.reduce((best, x) => (!best || (Number(x.at) || 0) >= (Number(best.at) || 0) ? x : best), null) || books[0] || null;
       Object.assign(s3, {
         state: sims.length && taken.length >= sims.length ? 'done' : (taken.length ? 'started' : 'fresh'),
         status: taken.length + ' de ' + sims.length + ' simulacros hechos', pct: sims.length ? taken.length / sims.length : 0,
@@ -854,9 +901,12 @@
       extra = '<ol class="rp-sims" aria-label="Los simulacros">' + s.sims.map((x) => {
         const pass = x.best != null && x.best >= 60;
         const tried = x.best != null || x.taken;
-        const label = 'Simulacro ' + x.n + (pass ? ': tu mejor ' + x.best + ' %' : tried ? ': ya lo intentaste, otra vez' : '');
+        // (a taken simulation's mistakes, in a small red number on its corner: its book has them to review)
+        const err = x.taken && Number(x.mistakes) > 0 ? Number(x.mistakes) : 0;
+        const label = 'Simulacro ' + x.n + (pass ? ': tu mejor ' + x.best + ' %' : tried ? ': ya lo intentaste, otra vez' : '') +
+          (err ? ', ' + err + (err === 1 ? ' error' : ' errores') + ' para repasar en su libro dorado' : '');
         return '<li><a class="rp-sim' + (pass ? ' is-pass' : tried ? ' is-tried' : '') + (s.nextSim === x ? ' is-next' : '') + '" href="' + esc(x.href) + '" aria-label="' + esc(label) + '">' +
-          (pass ? I.check : '') + '<b>' + (Number(x.n) || 0) + '</b></a></li>';
+          (pass ? I.check : '') + '<b>' + (Number(x.n) || 0) + '</b>' + (err ? '<i class="rp-sim-err" aria-hidden="true">' + err + '</i>' : '') + '</a></li>';
       }).join('') + '</ol>';
       if (s.book) {
         const k = s.book.mistakes;
@@ -1030,14 +1080,14 @@
     const back = fromHw ? { href: '/homework.html', label: 'Volver a mis tareas' } : { href: '/audios', label: 'Todos los mundos', nav: true };
     const L = ladderOf(ctx, m);
     const hws = ctx.homeworksOf(m.slug);
-    // a logged-in kid: their account's marks meet this phone's (a phone's marks from before the login join it)
-    if (ctx.ruta.student && ctx.ruta.who) tSettle(ctx.ruta.who, m.tareas || {}, hws.map((h) => h.id));
+    // a logged-in kid: a fresh route state teaches the mirror their account's marks once (a phone's own marks join
+    // the account); after that the mirror (saves' answers) wins over the route data this page keeps
+    tSeed(ctx.ruta, idsOfCtx(ctx));
     const marks = tMarksFor(ctx.ruta, m.tareas);
-    const mine = !ctx.ruta.teacher && (!ctx.ruta.student || m.slug === ctx.ruta.home);
+    const mine = mineOf(ctx, m);
     const toSend = mine ? unsentOf(hws, marks) : 0;
     const cb = L.cb;
     const facts = [worldCount(cb) ? worldCount(cb) + ' mundos' : '', m.base ? m.base.words + ' palabras' : '', m.simCount ? 'el examen al final' : ''].filter(Boolean).join(' · ');
-    document.body.classList.add('rp-on');
     const hero = '<section class="rp-hero' + (m.name.length > 6 ? ' is-long' : '') + '" style="--hero-rgb:' + rgbOf(look[2]) + '">' +
       '<img class="rp-hero-bg" src="' + esc(wonder.src) + '" alt="" width="1600" height="900" decoding="async" fetchpriority="high" style="object-position:' + wonder.pos + '">' +
       '<span class="rp-hero-shade" aria-hidden="true"></span>' +
@@ -1057,6 +1107,7 @@
       '<div class="rp-grid' + (hws.length ? ' has-tareas' : '') + '"><div class="rp-main">' + hero + ladder + '</div>' +
       tareasHtml(ctx, m, hws, marks, mine) + '</div></div>';
     wireTareas(main, ctx, m, hws, mine);
+    document.body.classList.add('rp-on');   // (drawn: the page's own band steps aside for this screen's band)
     if (L.pr) celebrateNewWorlds(main, m, L.pr);
     // a logged-in kid: this phone's seals meet their account (a phone's seals from before the login join it, taps not
     // saved yet go up); when the account changed, the route asks the server again and redraws (js/audios.js)
@@ -1227,6 +1278,8 @@
   }
 
   // a homework audio played on its own page (/audios/<id>, js/audios.js) counts as «Escuchada» too
-  const markHeard = (id, ruta) => tMark(id, 'h', ruta);
+  // (idsOf: slug → that level's homework ids, so the route data the page loaded with is learned BEFORE this tap's save:
+  // a later trip to the level's page never shows older marks than the save's answer)
+  const markHeard = (id, ruta, idsOf) => { tSeed(ruta, idsOf); tMark(id, 'h', ruta); };
   window.Ruta = { picker, path, leave, markHeard, get live() { return live; } };
 })();

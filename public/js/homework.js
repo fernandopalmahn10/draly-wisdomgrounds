@@ -4100,9 +4100,11 @@
       const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
       if (isObj(o) && o.who && o.who === hwTareas.who && isObj(o.pend)) {
         Object.keys(o.pend).forEach((id) => { const p = o.pend[id]; if (!isObj(p)) return; if (p.s === 1) sent.add(id); if (p.s === 0) sent.delete(id); });
-      } else if (isObj(o) && !o.who && isObj(o.marks)) {
-        Object.keys(o.marks).forEach((id) => { if (isObj(o.marks[id]) && o.marks[id].s) sent.add(id); });
       }
+      // the phone's own marks (made while nobody was logged in) join this kid's account at their next visit to /audios;
+      // a first-version mirror that never met an account kept them in `marks`
+      const own = isObj(o) && isObj(o.phone) ? o.phone : (isObj(o) && !o.who && isObj(o.marks) ? o.marks : {});
+      Object.keys(own).forEach((id) => { if (isObj(own[id]) && own[id].s) sent.add(id); });
     } catch (_) { /* the account's word is enough */ }
     const left = ids.filter((id) => !sent.has(id)).length;
     $('pt-tareas-sub').textContent = left ? 'Escucha, graba y manda tu video' : '¡Todas mandadas!';

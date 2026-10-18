@@ -174,15 +174,31 @@ async function run() {
   ok(same((await marks(B1)).json.marks, {}) && (await marks(B1)).json.who !== g.json.who, 'the classmate\'s account is untouched, with an id of its own');
   await save(A1, { unsent: [NEW[0]] });
 
-  section('only catalog ids, only lists, never too many');
-  for (const [body, why] of [[{ heard: ['nope-e01-r1'] }, 'an id the catalog does not have'], [{ heard: [NEW[0], 'x'] }, 'one bad id in a good batch'],
-    [{ sent: NEW[0] }, 'not a list'], [{ heard: [12] }, 'a number'], [{ heard: ['../catalog'] }, 'a path'], [{ heard: ['__proto__'] }, '__proto__'],
-    [{ sent: [NEW[0]], unsent: [NEW[0]] }, 'sent and not sent at once'], [{ heard: Array.from({ length: 61 }, () => NEW[0]) }, '61 ids in one list'],
-    [{ heard: ['a'.repeat(200)] }, 'a very long id']]) {
+  section('only catalog ids (the others skipped and named back), only lists, never too many');
+  const before = (await marks(A1)).json.marks;
+  for (const [body, why] of [[{ heard: ['nope-e01-r1'] }, 'an id the catalog does not have'], [{ heard: [12] }, 'a number'],
+    [{ heard: ['../catalog'] }, 'a path'], [{ heard: ['__proto__'] }, '__proto__'], [{ heard: ['a'.repeat(200)] }, 'a very long id']]) {
+    const r = await save(A1, body);
+    ok(r.status === 200 && r.json.ok && Array.isArray(r.json.unknown) && r.json.unknown.length === 1 && same(r.json.marks, before), `skipped and named back: ${why}`);
+  }
+  ok(!JSON.stringify((await save(A1, { heard: ['a'.repeat(200)] })).json.unknown).includes('a'.repeat(61)), '… an id named back is cut to 60 characters');
+  let mix = await save(A1, { sent: [NEW[0], 'nope-e09-r9'] });
+  ok(mix.status === 200 && same(mix.json.unknown, ['nope-e09-r9']) && mix.json.marks[NEW[0]].s === 1, 'a good id next to a stale one: the good one is saved, the stale one named back');
+  mix = await save(A1, { unsent: [NEW[0]] });
+  ok(mix.status === 200 && !('unknown' in mix.json) && !mix.json.marks[NEW[0]].s, '… (and taken back: no `unknown` when every id is good)');
+  for (const [body, why] of [[{ sent: NEW[0] }, 'not a list'], [{ sent: [NEW[0]], unsent: [NEW[0]] }, 'sent and not sent at once'],
+    [{ heard: Array.from({ length: 61 }, () => NEW[0]) }, '61 ids in one list']]) {
     const r = await save(A1, body);
     ok(r.status === 400 && r.json && r.json.ok === false, `refused: ${why}`);
   }
-  ok(same((await marks(A1)).json.marks, { [NEW[0]]: { h: 1 }, [NEW[1]]: { h: 1, s: 1 }, [OLD[0]]: { h: 1 } }), '… nothing of it reached the account');
+  ok(same((await marks(A1)).json.marks, { [NEW[0]]: { h: 1 }, [NEW[1]]: { h: 1, s: 1 }, [OLD[0]]: { h: 1 } }), '… nothing else reached the account');
+  // a tap the account already has writes nothing (no save, no activity)
+  await sleep(1500);
+  const recFile = path.join(DATA, 'student-records.json');
+  const t0 = fs.statSync(recFile).mtimeMs;
+  ok((await save(A1, { heard: [NEW[0]], sent: [NEW[1]] })).status === 200, 'the same marks again');
+  await sleep(1600);
+  ok(fs.statSync(recFile).mtimeMs === t0, '… the student file is not written again (nothing changed)');
   const w409 = await save(A1, { who: 'aaaaaaaaaaaa', sent: [NEW[0]] });
   ok(w409.status === 409 && w409.json.who === g.json.who && !(await marks(A1)).json.marks[NEW[0]].s,
     'a save from another account\'s mirror (a sibling logged in meanwhile): 409 with this account\'s id, nothing written');
@@ -243,6 +259,7 @@ async function run() {
 
   const gl = mod(await ruta(teacher(SEED)), 'hsk2');
   ok(gl && gl.golden && /\/golden-media\/.+\/book\.pdf/.test(gl.golden.pdf || ''), 'the route data names the golden book\'s PDF to the super admin');
+  ok(gl.sims.length > 0 && gl.sims.every((s) => 'at' in s && s.at === null), 'each simulation carries `at` (the latest try: none for a teacher)');
   const gt = mod(await ruta(teacher(T2.teacherId)), 'hsk2');
   ok(gt && gt.golden && gt.golden.pdf === null, '… never to a regular teacher');
   const gk = mod(await ruta(as(A1)), 'hsk2');
