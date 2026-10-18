@@ -139,7 +139,9 @@ function unit() {
     if (p.ask && q.listen) {
       // an exam drill heard only (2026-10-18): its line is the question, never on the screen (the exam's listening)
       heard++;
-      if (q.text.includes(p.ask) || (q.answers.includes(p.ask))) shown.push(q.text + ' → ' + p.ask);
+      // (as a whole word: «cha» is not shown by «Escucha»)
+      const word = new RegExp('(^|[^a-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü])' + p.ask.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^a-zāáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜü])', 'i');
+      if (word.test(q.text) || (q.answers.includes(p.ask))) shown.push(q.text + ' → ' + p.ask);
       if (/[áéíóúñ¿¡]/i.test(p.ask)) spanishAsk.push(q.text);
     } else if (p.ask) {
       asks++;
@@ -258,6 +260,7 @@ function drills() {
   const K = keyOf('yct1', 'familia');
   ok(K.drills >= 20, 'world 1 of YCT 1 has its exam drills (' + K.drills + ')');
   const done = {};
+  const answered = new Set();
   // (rounds are random: a few rounds until each kind turned up; each is checked in its own round, still open)
   for (let n = 0; n < 60 && Object.keys(done).length < 4; n++) {
     const r = E.startRound('yct1', 'familia', who, kA, S.get('AAAA'), null);
@@ -267,7 +270,8 @@ function drills() {
       if (q.pics && !done.pics) {
         done.pics = true;
         ok(q.pics.length === q.answers.length && q.pics.every((u, k) => u === '/api/ruta/train/pic/' + r.round + '/' + q.i + '/' + k), 'photos A B C: one link per option, by the round');
-        ok(q.answers.every((a) => /^o[0-9a-f]{12}$/.test(a)) && !/webp|pics|roblox|fluent/.test(raw), '… their options are tokens: no picture name or file anywhere in the round');
+        // (the round's own `pics` key is fine: a file name, a pictures folder or a source is not)
+        ok(q.answers.every((a) => /^o[0-9a-f]{12}$/.test(a)) && !/\.webp|\/pics\/|roblox|fluent/.test(raw), '… their options are tokens: no picture name or file anywhere in the round');
         const pf = E.picture(r.round, q.i, who, '1');
         ok(pf.ok && /protected[\\/]base[\\/]yct1-base[\\/]pics[\\/]/.test(pf.file) && fs.existsSync(pf.file), '… served from La Base\'s pictures');
         ok(E.picture(r.round, q.i, who, '7').status === 404 && E.picture(r.round, q.i, { code: 'BBBB', dev: 'zz' }, '0').status === 403, '… a photo that is not there: 404; someone else\'s round: 403');
@@ -278,9 +282,11 @@ function drills() {
         ok(q.answers.length === 2 && q.alts[0] === 'Sí' && q.alts[1] === 'No' && q.image, '✓ / ✕: «Sí» before «No», and its picture');
         const right = K.get(q);
         const a = E.answer(r.round, q.i, right, who);
+        answered.add(r.round + ':' + q.i);
         ok(a.ok && a.correct === true && a.expected === right && a.show && a.show.py, '… the right one counts, and the line comes back only now (' + (a.show && a.show.py) + ')');
       }
-      if (q.listen && !done.listen) {
+      // (a heard ✓ / ✕ drill is both: the ✓ / ✕ check above may have answered it already, so take a fresh one)
+      if (q.listen && !done.listen && !answered.has(r.round + ':' + q.i)) {
         done.listen = true;
         ok(q.alt && !q.text.includes(q.alt) && q.voice.ask && !q.voice.tap, 'heard only: its line is not on the screen (only `alt`, shown when the sound fails)');
         const v = E.voice(r.round, q.i, 'ask', who);
