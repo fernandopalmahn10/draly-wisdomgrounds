@@ -159,7 +159,8 @@
     if (enter.animate && !calm()) {
       try { enter.animate([{ opacity: 0, transform: 'translateY(24px) scale(.97)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: 'cubic-bezier(.23, 1, .32, 1)' }); } catch (_) {}
     }
-    setTimeout(() => { const f = s.querySelector('[data-copy]'); if (f) { try { f.focus({ preventScroll: true }); } catch (_) {} } }, 40);
+    // (the title takes the focus: a screen reader hears it, a keyboard tabs on to «Copiar»)
+    setTimeout(() => { const f = s.querySelector('#ra-t'); if (f) { f.tabIndex = -1; try { f.focus({ preventScroll: true }); } catch (_) {} } }, 40);
     return s;
   }
 

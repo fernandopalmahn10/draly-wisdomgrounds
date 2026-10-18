@@ -852,7 +852,7 @@
       Object.assign(s3, {
         cls: true, sims, taken, book: lastBook, ready, login: !!(m.dorado && m.dorado.login),
         state: all ? 'done' : ready ? 'ready' : 'locked',
-        status: taken.length ? taken.length + ' de ' + m.simCount + ' hechos en clase' : m.simCount + (m.simCount === 1 ? ' simulacro' : ' simulacros') + ' con el audio del examen',
+        status: taken.length ? taken.length + ' de ' + m.simCount + ' hechos en clase' : m.simCount + (m.simCount === 1 ? ' simulacro' : ' simulacros') + ' con tu profe',
         pct: m.simCount ? taken.length / m.simCount : 0,
         badge: ready && !all ? '¡Avísale a tu profe!' : '',
         opens: 'Se abre en clase con tu profe, cuando termines El Entrenamiento',
@@ -1028,7 +1028,9 @@
   // not taken yet is a plain number (the teacher opens it in class), never a link to a player
   function classChipsHtml(s) {
     let out = '';
-    if (s.sims.length) {
+    // (the chips only once a simulation was taken: before that they would be plain numbers, and the card's button must
+    // stay on a short laptop's first screen)
+    if (s.sims.length && s.taken.length) {
       out = '<ol class="rp-sims" aria-label="Los simulacros">' + s.sims.map((x) => {
         const n = Number(x.n) || 0;
         const pass = x.best != null && x.best >= 60;
