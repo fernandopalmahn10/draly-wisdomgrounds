@@ -27,6 +27,9 @@ const R = {
   Q_SERVER_MS: 21000,      // a question nobody answers is closed as «time up» by the server (the phone says 20 s)
   Q_MIN_LEFT_MS: 3000,     // no new wings question with less than this before «0»
   RETURN_MIN_MS: 1800,     // a comeback rises at once only with at least this before «0» (else at the next round)
+  RIGHT_PAUSE_MS: 1000,    // after a right answer the next question waits this long (the verdict stays readable)
+  GRACE_MS: 180,           // the doors open: a kid already dashing off the dropping slice gets this much more running…
+  GRACE_MAX: 18,           // …at most this far (world units): the phone runs ahead of the server by the network lag
   JUMP_FIRST_MS: 760,      // the roulette: a new place every ~0.76 s at first…
   JUMP_LAST_MS: 470,       // …down to ~0.47 s at the end of the count (×0.85 in the second half of the game)
 };
@@ -162,8 +165,15 @@ function openDoors(m, ev) {
   m.open = open;
   m.phase = 'open';
   const falls = [], saves = [];
+  const grace = Math.min(R.GRACE_MAX, (R.SPEED * R.GRACE_MS) / 1000);
   Object.values(m.kids).forEach((d) => {
     if (d.st !== 'up' || !open[A.sliceOf(d.x, d.y)]) return;
+    // a kid mid-dash: their phone already shows them a step further (the lag); if that step is off the dropping
+    // slices, it counts (what they saw is what happened); never more than GRACE_MAX
+    if (!d.away && Math.hypot(d.tx - d.x, d.ty - d.y) > 0.05) {
+      const [gx, gy] = A.move(d.x, d.y, d.tx, d.ty, grace, null);
+      if (!open[A.sliceOf(gx, gy)]) { d.x = gx; d.y = gy; d.graced = (d.graced || 0) + 1; return; }
+    }
     if (d.wings) { d.wings = false; d.hover = true; d.saved++; saves.push(d.k); return; }
     d.st = 'down';
     d.falls++;
@@ -265,7 +275,7 @@ function wantQ(m, k, now) {
   const d = m.kids[k];
   if (!d || d.away || m.paused || m.phase === 'final' || m.phase === 'done') return null;
   if (d.st === 'down') return m.phase === 'intro' ? null : 'back';
-  if (d.st === 'wait') return d.wingsNext ? null : 'pre';
+  if (d.st === 'wait') return d.wingsNext || m.final ? null : 'pre';     // the Final Round has no next round to rise into
   if (d.st === 'up' && !d.wings && BEFORE_LOCK[m.phase] && msToLock(m, now) >= R.Q_MIN_LEFT_MS) return 'wings';
   return null;
 }
@@ -288,9 +298,9 @@ function answer(m, k, kind, correct, now, rand) {
   d.streak++;
   d.bestStreak = Math.max(d.bestStreak, d.streak);
   d.wrongRow = 0;
-  d.nextQAt = 0;
+  d.nextQAt = now + R.RIGHT_PAUSE_MS;          // the verdict («¡ALAS!», «¡ARRIBA!») stays readable before the next one
   out.streak = d.streak;
-  if (kind === 'wings' && d.st === 'up' && BEFORE_LOCK[m.phase] && !m.paused) {
+  if (kind === 'wings' && d.st === 'up' && BEFORE_LOCK[m.phase] && msToLock(m, now) > 0 && !m.paused) {
     d.wings = true;
     out.wings = true;
   } else if (kind === 'back' && d.st === 'down') {
@@ -359,7 +369,7 @@ function endsAt(m, now) {
 // rows: [{ k, name, skin, team, pts, stood, best, saved, backs, right, answered, falls }]
 //   pts    points for the kingdom (rounds standing; the Final Round ×2): the podium
 const STARS = [
-  { id: 'stand', name: 'Siempre en pie', unit: 'rondas seguidas', val: (r) => r.best, ok: (r) => r.best >= 3 },
+  { id: 'stand', name: 'Siempre en pie', unit: 'rondas seguidas', val: (r) => r.best, ok: (r) => r.best >= 3, maxShare: 6 },
   { id: 'saved', name: 'Alas salvadoras', unit: 'veces', val: (r) => r.saved, ok: (r) => r.saved >= 1, maxShare: 6 },
   { id: 'right', name: 'Más aciertos', unit: 'aciertos', val: (r) => r.right, ok: (r) => r.right >= 2 },
   { id: 'back', name: 'Vuelta épica', unit: 'vueltas', val: (r) => r.backs, ok: (r) => r.backs >= 1, maxShare: 4 },

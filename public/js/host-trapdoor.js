@@ -178,6 +178,7 @@
   socket.on('td:init', (d) => {
     if (!d || d.arena == null) return;
     const fresh = matchId !== d.id || !scene;
+    if (matchId !== d.id) kpts = d.sc || {};  // a new match: no points from the last one on the side rosters (an F5: the room's)
     matchId = d.id;
     if (!scene) scene = new window.TrapdoorRender.Scene($('td-host-canvas'), { mode: 'host' });
     if (fresh || arenaIdx !== d.arena) { arenaIdx = d.arena; scene.setArena(d.arena); document.documentElement.style.setProperty('--td-pit-bg', `url("${TA.art(TA.arena(d.arena), 'pit')}")`); }
@@ -267,7 +268,7 @@
   socket.on('td:rise', (m) => { if (!scene || !m || m.id !== matchId) return; scene.rise(m.k, m.x, m.y, performance.now()); sfx('back', 0.45); risePit([m.k]); });
   socket.on('td:rounds', (d) => {
     if (!d || d.id !== matchId) return;
-    if (d.refused) { banner('La ronda final ya empezó'); return; }
+    if (d.refused) { banner(d.why === 'max' ? `Ya son ${d.rounds} rondas: es el máximo` : 'La ronda final ya empezó'); return; }
     if (rd) rd.rounds = d.rounds;
     if (scene && scene.rd) scene.rd.rounds = d.rounds;
     band('¡+2 rondas!', `Ahora son ${d.rounds}`, '', 1300);
@@ -350,22 +351,33 @@
     const key = down.map((d) => d.k + ':' + (d.f & 6)).join(',');
     if (box.dataset.k === key) return;
     box.dataset.k = key;
-    box.querySelectorAll('.th-pitkid:not(.up)').forEach((n) => n.remove());
+    // kids already in the strip keep their figure (no entry animation again); only newcomers drop in
+    const shown = down.slice(0, 15);
+    const keep = {};
+    shown.forEach((d) => { keep[d.k] = true; });
+    box.querySelectorAll('.th-pitkid:not(.up)').forEach((n) => { if (n.classList.contains('more') || !keep[n.dataset.k]) n.remove(); });
     $('pit-empty').hidden = down.length > 0;
     const HB = window.HalconBoard;
-    down.slice(0, 15).forEach((d) => {
+    shown.forEach((d) => {
       const v = roster[d.k];
-      const fig = document.createElement('div');
-      fig.className = 'th-pitkid ' + (v[1] === 'gold' ? 'gold' : 'red') + (d.f & 4 ? ' ready' : '');
-      fig.dataset.k = d.k;
-      const im = document.createElement('img');
-      im.alt = '';
-      im.src = HB ? HB.art(HB.skinFor(v[2], v[0]), d.f & 4 ? 'ok' : 'no') : '/assets/dralingo/hello.webp';
-      const n = document.createElement('span'); n.textContent = v[0];
-      fig.append(im, n);
-      box.appendChild(fig);
+      const ready = !!(d.f & 4);
+      const src = HB ? HB.art(HB.skinFor(v[2], v[0]), ready ? 'ok' : 'no') : '/assets/dralingo/hello.webp';
+      let fig = box.querySelector(`.th-pitkid[data-k="${d.k}"]:not(.up)`);
+      const fresh = !fig;
+      if (fresh) {
+        fig = document.createElement('div');
+        fig.dataset.k = d.k;
+        const im = document.createElement('img');
+        im.alt = '';
+        const n = document.createElement('span'); n.textContent = v[0];
+        fig.append(im, n);
+      }
+      fig.className = 'th-pitkid ' + (v[1] === 'gold' ? 'gold' : 'red') + (ready ? ' ready' : '');
+      const im = fig.querySelector('img');
+      if (im.getAttribute('src') !== src) im.src = src;
+      if (fresh) box.appendChild(fig);        // (moving a figure that is there would replay its entry)
     });
-    if (down.length > 15) { const more = document.createElement('span'); more.className = 'th-pit-empty th-pitkid'; more.textContent = `+${down.length - 15}`; box.appendChild(more); }
+    if (down.length > 15) { const more = document.createElement('span'); more.className = 'th-pit-empty th-pitkid more'; more.textContent = `+${down.length - 15}`; box.appendChild(more); }
   }
   // kids rising out of the pit: their figure flies up out of the strip
   function risePit(ks) {
@@ -432,7 +444,7 @@
   const FINAL_SUB = { time: '¡Terminó la ronda final!', end: '¡Fin de la partida!' };
   socket.on('fin:final', (d) => {
     stopMusic();
-    if (scene) scene.frozen = true;
+    if (scene) { scene.frozen = true; scene.pause(true, performance.now()); }   // no roulette or count goes on under «¡FINAL!»
     $('th-band').classList.remove('show');
     $('th-say').classList.remove('show');
     if (window.DralyParty) { DralyParty.clearChip(); DralyParty.final({ mode: 'host', ms: d && d.ms, sub: FINAL_SUB[d && d.why] || FINAL_SUB.end, play: playUrl }); }

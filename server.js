@@ -6777,7 +6777,7 @@ function tdRoster(g) {
 // [[k, x, y, tx, ty, flags]]  flags: 1 wings · 2 in the pit · 4 waiting to rise · 8 phone away · 16 hovering on wings
 const tdR1 = (v) => Math.round(v * 10) / 10;
 function tdPosArr(m) {
-  return Object.values(m.kids).map((d) => [d.k, tdR1(d.x), tdR1(d.y), tdR1(d.tx), tdR1(d.ty),
+  return Object.values(m.kids).filter((d) => !d.gone).map((d) => [d.k, tdR1(d.x), tdR1(d.y), tdR1(d.tx), tdR1(d.ty),
     (d.wings ? 1 : 0) | (d.st === 'down' ? 2 : 0) | (d.st === 'wait' ? 4 : 0) | (d.away ? 8 : 0) | (d.hover ? 16 : 0)]);
 }
 // how far into the current round / the intro the clock is (paused: where it stopped)
@@ -6796,6 +6796,7 @@ function tdInitPayload(g, pid) {
     me: d ? d.k : null, st: d ? d.st : null, wings: !!(d && d.wings), wingsNext: !!(d && d.wingsNext),
     captains: g.tdCaptains || null, paused: !!m.paused, endsMs: Math.max(0, Trap.endsAt(m, now) - now),
     speed: Trap.R.SPEED, q: !!(p && p.currentQ), qKind: p && p.currentQ ? p.tdQKind || null : null,
+    sc: p ? undefined : Object.fromEntries(Object.values(m.kids).map((x) => [x.k, x.pts])),   // the projector's rosters after an F5
   };
 }
 function tdStart(pin, g) {
@@ -6853,7 +6854,23 @@ function tdEvents(pin, g, ev, now) {
     }
   });
 }
+// The match's only clock: a fault is logged, and one that keeps failing (~3 s) sends the class to the ending
+// instead of leaving a frozen platform on the projector.
 function tdTick(pin, id) {
+  try {
+    tdTickInner(pin, id);
+    const g = games[pin];
+    if (g && g.td) g.td.errs = 0;
+  } catch (e) {
+    console.error('[tdTick]', e);
+    const g = games[pin];
+    if (g && g.td && (g.td.errs = (g.td.errs || 0) + 1) >= 30 && g.state === 'active' && !g.finalizing) {
+      tdStop(g);
+      try { finBegin(pin, g, 'time'); } catch (e2) { console.error('[tdTick] ending', e2); }
+    }
+  }
+}
+function tdTickInner(pin, id) {
   const g = games[pin];
   // A room that vanished (or a newer match) stops its own old interval: no ticking forever after a host leaves.
   if (!g || !g.td || (id && g.td.tick !== id)) { if (id) clearInterval(id); return; }
@@ -6874,7 +6891,7 @@ function tdTick(pin, id) {
     const d = m.kids[p.tdK];
     if (d) { d.team = tdTeam(p); d.away = !!p.disconnected; }
   });
-  Object.values(m.kids).forEach((d) => { if (!byK[d.k]) d.away = true; });     // left the room (the 5-min cleanup)
+  Object.values(m.kids).forEach((d) => { d.gone = !byK[d.k]; if (d.gone) d.away = true; });     // left the room (the 5-min cleanup): off every screen
   tdEvents(pin, g, Trap.advance(m, now, Math.random), now);
   if (g.finalizing || g.state !== 'active') return;
   Trap.stepKids(m, dt);
@@ -6891,7 +6908,7 @@ function tdTick(pin, id) {
       const kind = Trap.wantQ(m, d.k, now);
       if (kind) {
         const q = nextQuestionFor(g, pid);
-        if (q) { p.tdQKind = kind; io.to(pid).emit('question', Object.assign({}, q, { td: kind })); }
+        if (q) { p.tdQKind = kind; p.tdDealtAt = now; io.to(pid).emit('question', Object.assign({}, q, { td: kind })); }
       }
     }
     tdMe(pid, p, d, false);
@@ -6910,7 +6927,9 @@ function tdAnswer(pin, g, pid, p, correct, correctText, why) {
   if (!m) return;
   const d = tdKidOf(g, p) || tdAttach(g, p);
   const now = Date.now();
-  if (correct && why !== 'timeup' && Trap.tooFast(p.lastQuestionAt, now)) { correct = false; why = 'fast'; }
+  // «a guess» is timed from the deal on the wall clock (p.tdDealtAt): a teacher's pause is reading time too, so a kid
+  // who answers the moment the game resumes is not called too fast (lastQuestionAt is shifted by pauses: the time-up)
+  if (correct && why !== 'timeup' && Trap.tooFast(p.tdDealtAt || p.lastQuestionAt, now)) { correct = false; why = 'fast'; }
   const kind = p.tdQKind || 'wings';
   p.tdQKind = null;
   const res = Trap.answer(m, d.k, kind, correct, now, Math.random);
@@ -8633,7 +8652,7 @@ function finBegin(pin, g, why) {
     if (g.kingdoms && g.kingdoms.paused) { g.kingdoms.paused = false; io.to(pin).emit('kd:pause', { paused: false, endsMs: 0 }); }
     if (g.paint && g.paint.paused) { g.paint.paused = false; io.to(pin).emit('pc:pause', { paused: false, endsMs: 0 }); }
     if (g.td) {
-      if (g.td.paused) { Trap.resume(g.td, now); io.to(pin).emit('td:pause', { id: g.td.id, paused: false, ago: 0, phase: 'final', r: g.td.r, endsMs: 0 }); }
+      if (g.td.paused) { Trap.resume(g.td, now); io.to(pin).emit('td:pause', { id: g.td.id, paused: false, ago: tdAgo(g.td, now), phase: 'final', r: g.td.r, endsMs: 0 }); }
       if (g.td.phase !== 'done') g.td.phase = 'final';            // the platform stands still from here
     }
     if (g.escape && g.escape.paused) {
@@ -10009,6 +10028,12 @@ io.on('connection', (socket) => {
     // client holding an older qid than the server's freshly-assigned one. We
     // accept the answer using the SERVER's currentQ.qid as ground truth as
     // long as a question exists. (qid is informational, not security.)
+    // Las Trampillas deals the next question right after an answer: a late tap meant for the old one is never judged
+    // against the new one (the phone keeps the new question's tiles)
+    if (g.gameType === 'trapdoor' && qid != null && p.currentQ.qid != null && qid !== p.currentQ.qid) {
+      io.to(socket.id).emit('answer-stale', { reason: 'old-question' });
+      return;
+    }
     const cqData = p.currentQ;
     const correct = cqData.correctIdx === choiceIdx;
     const correctText = cqData.answers[cqData.correctIdx];
@@ -10503,7 +10528,7 @@ io.on('connection', (socket) => {
     }
     // Las Trampillas counts in rounds: «+30 s» = 2 rondas más (up to 15; not once the Final Round is on)
     if (g.gameType === 'trapdoor' && g.td) {
-      if (!Trap.addRounds(g.td, Trap.R.MORE)) { io.to(socket.id).emit('td:rounds', { id: g.td.id, rounds: g.td.rounds, r: g.td.r, refused: true }); return; }
+      if (!Trap.addRounds(g.td, Trap.R.MORE)) { io.to(socket.id).emit('td:rounds', { id: g.td.id, rounds: g.td.rounds, r: g.td.r, refused: true, why: g.td.rounds >= Trap.R.ROUNDS_MAX ? 'max' : 'final' }); return; }
       const now = Date.now();
       g.endsAt = Trap.endsAt(g.td, now);
       g.duration = tdCapS(g.td.rounds);

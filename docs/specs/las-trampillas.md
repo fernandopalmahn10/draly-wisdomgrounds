@@ -25,9 +25,10 @@ are earned again every round (every round every kid answers). The wings question
 running). **Kids who fell answer to come back**: in the pit their phone keeps asking; a right answer brings them back up
 at once (rising onto the platform) if there is still time before «0» this round (≥ 1.8 s), else at the start of the next
 round. While they wait for that start, one more right answer = they come up with wings. Nobody just watches.
-**2 · Fuego vs Mar.** Red vs blue rings, the whole class (10-30) on one platform. After each drop every kid still
-standing scores **1 point for their kingdom** (the Final Round counts double: «¡vale doble!»); the kingdom with more
-points wins («¡Gana el Reino del Fuego!»), then the shared Mario Party ending (`core/party.js`, `js/party.js`).
+**2 · Fuego vs Mar.** Red vs blue rings, the whole class (10-30) on one platform. After each drop each kingdom scores
+**its share still standing, out of 10** (8 of 10 standing = 8 points; the Final Round counts double: «¡vale doble!»), so
+an odd class (7 vs 6) is a fair fight; the kingdom with more points wins («¡Gana el Reino del Fuego!»), then the shared
+Mario Party ending (`core/party.js`, `js/party.js`).
 **3 · The arena (Claude's pick, Dubai + China).** Three arenas, the teacher picks one in the lobby, «Otra ronda» = the
 next: **El Palacio de Dubái** (a royal hall's round marble mosaic, gold and turquoise, the night skyline through the
 arches; the pit = a pool of giant floating cushions), **El Templo del Cielo** (Pekín: the round white marble altar, the
@@ -58,7 +59,10 @@ like the video). A class plays several matches with «Otra ronda» (the next are
 - Positions out at 5 Hz (`td:pos`, only the kids that moved, everyone every 2 s); round plan once per round (`td:round`,
   the roulette schedule included, never the final set); `td:lock` / `td:open` / `td:tally` at those instants; `td:me`
   per kid on a change; `td:roster` on joins and team changes. No `state` pushes during play.
-- Which slice a kid is on = the slice of their feet point. Falls are judged on the server's position at the OPEN instant.
+- Which slice a kid is on = the slice of their feet point. Falls are judged on the server's position at the OPEN instant,
+  with a **lag grace**: a kid already running off the dropping slice gets 180 ms more of their run (at most 18 units)
+  first, because their phone shows them that far ahead (the network lag); a kid standing still, too far from the seam
+  or running the wrong way still falls. A fall is drawn from where the server judged the feet, never from safe floor.
 
 ## Phone (the product, 390×844 and 360×640)
 Top: Fuego vs Mar points + who is still standing, the round dots, «Sonido». Middle (flex): **the whole platform**
@@ -80,7 +84,7 @@ wings, 🕳️ in the pit); bottom: **«El foso»** strip with the fallen kids (
 bands for «¡YA!», «Ronda N», «¡Ronda final!», «+N en pie». Lobby: PIN, the arena (picture + «Cambiar arena»), rounds
 5 · 7 · 10, the kingdoms, Equilibrar, «Así se juega», start. Countdown: the captains' VS.
 
-## Fairness (sim `scripts/test-trapdoor.js`, 200+ simulated classes)
+## Fairness (sim `scripts/test-trapdoor.js`, 360 simulated classes)
 - A stronger kingdom usually wins (more wings, faster comebacks); chance still matters (where you stand at «0»).
 - Server judges answers: a guess under 450 ms = wrong; one answer per question; a wrong one waits 2 s (3.4 s after two
   in a row) before the next; the wings question closes at «0»: mashing never earns anything.

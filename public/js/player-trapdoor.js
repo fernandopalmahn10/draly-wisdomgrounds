@@ -38,6 +38,7 @@
   let myState = { st: 'up', wings: false, wingsNext: false, hover: false };
   let speed = 92;
   let rd = null;                          // { r, rounds, kind, final }
+  const lastRound = () => !!(rd && rd.final);   // the Final Round: there is no «próxima ronda» to promise
   let score = { red: 0, gold: 0 }, stand = { red: 0, gold: 0 };
   let paused = false, finalOn = false, captains = null;
   let skew = null;
@@ -188,10 +189,12 @@
       hideRun();
       if ((m.falls || []).length) setTimeout(() => play('fall', 0.9 + Math.random() * 0.2, 0.55), 160);
       if ((m.falls || []).includes(myK)) {
+        const F = scene.kids[myK] && scene.kids[myK].fall;          // the server's judgement wins over my prediction
+        if (F) me = { x: F.x, y: F.y, tx: F.x, ty: F.y };
         moment({ kind: 'fall', title: '¡Caíste!', sub: 'Responde bien y vuelves arriba', mine: true, big: true });
         buzz([200]);
       } else if ((m.saves || []).includes(myK)) {
-        moment({ kind: 'saved', title: '¡Tus alas te salvaron!', sub: 'Las alas se gastaron: gana otras en la próxima', mine: true, big: true });
+        moment({ kind: 'saved', title: '¡Tus alas te salvaron!', sub: lastRound() ? '¡Sigues en pie en la ronda final!' : 'Las alas se gastaron: gana otras en la próxima', mine: true, big: true });
         play('saved', 1, 0.7);
         buzz([40, 30, 40, 30, 120]);
       }
@@ -282,7 +285,7 @@
       hideMoment(true);
       hideBand();
       hideRun();
-      if (scene) scene.frozen = true;
+      if (scene) { scene.frozen = true; scene.pause(true, performance.now()); }   // no roulette or count goes on under «¡FINAL!»
       if (me) { me.tx = me.x; me.ty = me.y; }
     });
     s.on('game-end', () => { if (on) { finalOn = true; stopLoop(); closeCard(true); } });
@@ -413,7 +416,7 @@
         const sk = HB() ? HB().skinFor(roster[myK] && roster[myK][2], roster[myK] && roster[myK][0]) : 'dralingo';
         $('tp-pit-me').src = HB() ? HB().art(sk, st === 'wait' ? 'ok' : 'no') : '/assets/dralingo/hello.webp';
         pit.classList.toggle('ready', st === 'wait');
-        $('tp-pit-text').textContent = st === 'wait' ? (myState.wingsNext ? '¡Listo! Subes con alas' : '¡Listo! Subes en la próxima ronda') : `En ${a.pitName}`;
+        $('tp-pit-text').textContent = st === 'wait' ? (lastRound() ? 'Es la ronda final: ¡mira!' : myState.wingsNext ? '¡Listo! Subes con alas' : '¡Listo! Subes en la próxima ronda') : `En ${a.pitName}`;
       }
     }
     statusLine();
@@ -426,7 +429,7 @@
     const st = myState.st;
     let ico = '🏃', txt = '¡Toca el suelo para correr!', cls = '';
     if (st === 'down') { ico = '🕳️'; txt = '¡Caíste! Responde bien y vuelves arriba'; cls = 'pit'; }
-    else if (st === 'wait') { ico = '⬆️'; txt = myState.wingsNext ? '¡Subes con alas en la próxima ronda!' : '¡Subes en la próxima ronda!'; cls = 'wait'; }
+    else if (st === 'wait') { ico = '⬆️'; txt = lastRound() ? 'Es la ronda final: ¡mira cómo termina!' : myState.wingsNext ? '¡Subes con alas en la próxima ronda!' : '¡Subes en la próxima ronda!'; cls = 'wait'; }
     else if (myState.hover) { ico = 'wings'; txt = '¡Tus alas te sostienen!'; cls = 'wings'; }
     else if (myState.wings) { ico = 'wings'; txt = '¡Tienes alas! Ahora ¡esquiva el rosa!'; cls = 'wings'; }
     else if (rd && rd.r > 0) {
@@ -451,7 +454,7 @@
     const st = myState.st;
     let title = '¡Prepárate!', sub = 'Toca el suelo para correr', pose = 'idle';
     if (st === 'down') { title = '¡Caíste al foso!'; sub = 'Responde bien y vuelves arriba'; pose = 'no'; }
-    else if (st === 'wait') { title = '¡Listo!'; sub = myState.wingsNext ? 'Subes con alas en la próxima ronda' : 'Subes en la próxima ronda'; pose = 'ok'; }
+    else if (st === 'wait') { title = lastRound() ? '¡Ronda final!' : '¡Listo!'; sub = lastRound() ? 'Mira cómo termina: ¡anima a tu reino!' : myState.wingsNext ? 'Subes con alas en la próxima ronda' : 'Subes en la próxima ronda'; pose = 'ok'; }
     else if (myState.hover) { title = '¡Tus alas te sostienen!'; sub = 'Cuando el suelo se cierre, aterrizas'; pose = 'ok'; }
     else if (cls === 'hot') { title = '¡CORRE!'; sub = '¡Sal del suelo rosa!'; pose = 'no'; }
     else if (cls === 'ok') { title = '¡Sigues en pie!'; sub = 'Cada ronda en pie suma para tu reino'; pose = 'ok'; }
@@ -494,8 +497,8 @@
       card(true);
       return;
     }
-    const wasUp = isCardUp();
-    cur = { qid: q.qid, kind: q.td, t0: performance.now(), tapped: false, done: false, heldAt: 0, heldSum: 0, armAt: performance.now() + (wasUp ? 200 : ARM_MS) };
+    // armed ARM_MS after it arrives, always (the server calls < 450 ms from the deal a guess: never arm sooner)
+    cur = { qid: q.qid, kind: q.td, t0: performance.now(), tapped: false, done: false, heldAt: 0, heldSum: 0, armAt: performance.now() + ARM_MS };
     const box = $('tp-card');
     box.classList.toggle('nopic', !q.image);
     box.dataset.kind = q.td || 'wings';
@@ -628,7 +631,7 @@
       let head = '¡Correcto!', sub = '';
       if (td.kind === 'wings' && td.wings) { head = '¡ALAS! ✨'; sub = 'Te salvan una vez si tu suelo cae'; }
       else if (td.back === 'now') { head = '¡ARRIBA! ⬆️'; sub = '¡Vuelves a la plataforma!'; }
-      else if (td.back === 'next') { head = '¡Correcto!'; sub = 'Subes al empezar la próxima ronda'; }
+      else if (td.back === 'next') { head = '¡Correcto!'; sub = lastRound() ? 'Era la ronda final: ¡mira cómo termina!' : 'Subes al empezar la próxima ronda'; }
       else if (td.kind === 'pre' && td.wings) { head = '¡ALAS! ✨'; sub = 'Subes con alas en la próxima ronda'; }
       if (td.streak >= 3) sub += (sub ? ' · ' : '') + `racha ${td.streak}`;
       verdict('ok', head, sub);

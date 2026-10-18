@@ -61,6 +61,21 @@
     SCALED[key] = cv;
     return cv;
   }
+  // the hovering wings' golden glow, blurred once per sprite (shadowBlur every frame is costly on a cheap phone)
+  const GLOW = new WeakMap();
+  function glowOf(cv, dpr) {
+    let gl = GLOW.get(cv);
+    if (gl) return gl;
+    const pad = Math.ceil(14 * dpr);
+    gl = document.createElement('canvas');
+    gl.width = cv.width + pad * 2; gl.height = cv.height + pad * 2;
+    const x = gl.getContext('2d');
+    x.shadowColor = 'rgba(255,214,90,0.9)'; x.shadowBlur = 12 * dpr;
+    x.drawImage(cv, pad, pad);
+    gl.pad = pad;
+    GLOW.set(cv, gl);
+    return gl;
+  }
 
   // ---------- geometry on screen ----------
   // a point of the floor (world x, y; z = how far below the floor) → screen px
@@ -205,13 +220,34 @@
     open(set, falls, saves, nowPerf) {
       this.lockSet = (set || []).slice();
       this.doors = { set: this.lockSet, runs: runsOf(set), openAt: nowPerf, closeAt: null };
+      const A = TA(), SL = A.SLICE, runs = this.doors.runs;
+      const into = (ang, s) => { let a = ang - s * SL; if (a < 0) a += 2 * Math.PI; return a; };
+      const runAt = (x, y) => { const ang = A.angleOf(x, y); return runs.find(([s, n]) => into(ang, s) < n * SL + 1e-6) || null; };
       (falls || []).forEach((k) => {
         const d = this.kids[k];
-        if (!d || d.x == null) return;
-        const ang = TA().angleOf(d.x, d.y);
-        const run = this.doors.runs.find(([s, n]) => { let a = ang - s * TA().SLICE; if (a < 0) a += 2 * Math.PI; return a < n * TA().SLICE + 1e-6; });
-        d.fall = { t0: nowPerf, x: d.x, y: d.y, run };
+        if (!d) return;
+        let x = d.x, y = d.y;
+        if (x == null) { x = d.sx; y = d.sy; }
+        if (x == null) return;
+        let run = runAt(x, y);
+        // the phone ran ahead of the server (the lag): fall from where the server judged the feet, never from safe floor
+        if (!run && d.sx != null) { x = d.sx; y = d.sy; run = runAt(x, y); }
+        if (!run && runs.length) {                       // still outside (an old position): the nearest edge of a hole
+          const ang = A.angleOf(x, y), rr = Math.max(A.R_MIN + 4, Math.min(A.R_MAX - 6, Math.hypot(x, y)));
+          let best = null, bd = 9;
+          runs.forEach(([s, n]) => {
+            [s * SL + 0.08, (s + n) * SL - 0.08].forEach((a) => {
+              let da = Math.abs(a - ang) % (2 * Math.PI); da = Math.min(da, 2 * Math.PI - da);
+              if (da < bd) { bd = da; best = [a, [s, n]]; }
+            });
+          });
+          [x, y] = A.pointAt(best[0], rr);
+          run = best[1];
+        }
+        d.x = x; d.y = y;
+        d.fall = { t0: nowPerf, x, y, run };
         d.f = (d.f || 0) | 2;
+        if (k === this.me) this.meXY = null;
       });
       (saves || []).forEach((k) => {
         const d = this.kids[k];
@@ -404,17 +440,23 @@
       const L = this.L, k = L.k, Rh = TA().R_HUB, a = this.arena;
       const h = HUB_H * k * DEPTH;
       const [cx, cy] = [L.cx, L.cy];
+      // the gradients are made once per layout (not every frame)
+      const key = cx + '|' + cy + '|' + k + '|' + a.id;
+      if (this.hubKey !== key || !this.hubCache) {
+        const sg = g.createLinearGradient(cx - Rh * k, 0, cx + Rh * k, 0);
+        sg.addColorStop(0, a.rim[2]); sg.addColorStop(0.45, a.rim[0]); sg.addColorStop(1, a.rim[2]);
+        const top = (c0, c1) => { const tg = g.createRadialGradient(cx, cy - h - Rh * k * TILT * 0.3, 2, cx, cy - h, Rh * k); tg.addColorStop(0, c0); tg.addColorStop(1, c1); return tg; };
+        this.hubCache = { sg, tgN: top('#4b3a86', '#221848'), tgZ: top('#5a1030', '#2a0716') };
+        this.hubKey = key;
+      }
+      const HC0 = this.hubCache;
       // the side
-      const sg = g.createLinearGradient(cx - Rh * k, 0, cx + Rh * k, 0);
-      sg.addColorStop(0, a.rim[2]); sg.addColorStop(0.45, a.rim[0]); sg.addColorStop(1, a.rim[2]);
-      g.fillStyle = sg;
+      g.fillStyle = HC0.sg;
       g.beginPath(); g.ellipse(cx, cy, Rh * k, Rh * k * TILT, 0, 0, Math.PI); g.lineTo(cx - Rh * k, cy - h); g.ellipse(cx, cy - h, Rh * k, Rh * k * TILT, 0, Math.PI, 0, true); g.closePath(); g.fill();
       // the top
       const n = this.rd ? TA().hubAt(t, this.rd.final) : null;
       const zero = n === 0;
-      const tg = g.createRadialGradient(cx, cy - h - Rh * k * TILT * 0.3, 2, cx, cy - h, Rh * k);
-      tg.addColorStop(0, zero ? '#5a1030' : '#4b3a86'); tg.addColorStop(1, zero ? '#2a0716' : '#221848');
-      g.fillStyle = tg;
+      g.fillStyle = zero ? HC0.tgZ : HC0.tgN;
       g.beginPath(); g.ellipse(cx, cy - h, Rh * k, Rh * k * TILT, 0, 0, Math.PI * 2); g.fill();
       g.strokeStyle = a.rim[0]; g.lineWidth = Math.max(2, k * 1.4);
       g.beginPath(); g.ellipse(cx, cy - h, Rh * k * 0.97, Rh * k * TILT * 0.97, 0, 0, Math.PI * 2); g.stroke();
@@ -531,6 +573,11 @@
       const F = d.fall;
       const t = (nowPerf - F.t0) / 1000;
       if (t > 1.15 || !F.run) { d.fall = null; return; }
+      if (reduced()) {                 // reduced motion: no drop, a short fade where they stood
+        if (t > 0.45) { d.fall = null; return; }
+        g.save(); g.globalAlpha = 1 - t / 0.45; this.drawSprite(g, d, F.x, F.y, 0, 'no', 1, nowPerf, {}); g.restore();
+        return;
+      }
       const L = this.L;
       const hop = t < 0.18 ? Math.sin((t / 0.18) * Math.PI) * 5 : 0;
       const drop = t < 0.18 ? 0 : 0.5 * 420 * Math.pow(t - 0.18, 2);       // units below the floor
@@ -593,7 +640,10 @@
       const L = this.L, k = L.k;
       const hPx = CH * k * scale;
       const url = spriteUrl(d.skin, pose);
-      const sp = scaled(url, hPx * this.dpr) || scaled(spriteUrl(d.skin, 'idle'), hPx * this.dpr);
+      // cached at a few sizes only (a falling kid shrinks every frame: one canvas per size would pile up)
+      const qs = Math.max(0.25, Math.round(scale * 8) / 8), fit = scale / qs;
+      const hq = CH * k * qs * this.dpr;
+      const sp = scaled(url, hq) || scaled(spriteUrl(d.skin, 'idle'), hq);
       const [fx, fy] = P(L, x, y, z);
       const opt = o || {};
       // the wings behind the body (flapping over the hole, a slow glow otherwise)
@@ -603,10 +653,10 @@
         if (wi) {
           const ww = (wi.width / this.dpr) * 1.1, wh = (wi.height / this.dpr) * flap;
           const cy = fy - hPx * 0.66;
-          g.save();
-          if (opt.hover) { g.shadowColor = 'rgba(255,214,90,0.9)'; g.shadowBlur = 12; }
-          g.drawImage(wi, fx - ww / 2, cy - wh / 2, ww, wh);
-          g.restore();
+          if (opt.hover) {
+            const gw = glowOf(wi, this.dpr), kx = ww / wi.width, ky = wh / wi.height;
+            g.drawImage(gw, fx - ww / 2 - gw.pad * kx, cy - wh / 2 - gw.pad * ky, gw.width * kx, gw.height * ky);
+          } else g.drawImage(wi, fx - ww / 2, cy - wh / 2, ww, wh);
         } else {
           g.fillStyle = 'rgba(255,214,90,0.85)';
           g.beginPath(); g.ellipse(fx - hPx * 0.32, fy - hPx * 0.62, hPx * 0.3, hPx * 0.16 * flap, -0.5, 0, Math.PI * 2); g.ellipse(fx + hPx * 0.32, fy - hPx * 0.62, hPx * 0.3, hPx * 0.16 * flap, 0.5, 0, Math.PI * 2); g.fill();
@@ -617,7 +667,7 @@
         g.beginPath(); g.ellipse(fx, fy - hPx * 0.5, hPx * 0.22, hPx * 0.48, 0, 0, Math.PI * 2); g.fill();
         return;
       }
-      const w = sp.width / this.dpr, h = sp.height / this.dpr;
+      const w = (sp.width / this.dpr) * fit, h = (sp.height / this.dpr) * fit;
       g.save();
       g.translate(fx, fy);
       if (opt.spin) g.rotate(opt.spin);

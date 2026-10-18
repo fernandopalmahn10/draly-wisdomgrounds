@@ -204,6 +204,7 @@ function next(s, ev, ms, match) {
   const lockAt1 = Date.now();
   const posBefore = next(host, 'td:open', 3000, (m) => m.r === 1);
   const openM = await posBefore;
+  const tallyP = next(host, 'td:tally', 9000, (m) => m.r === 1);    // listened for now: the pit's questions below take a while
   judged(openM, lockM.set, kids);
   ok(openM.saves.includes(sofi.k), 'Sofi stood on a falling slice: her wings saved her');
   ok(openM.falls.includes(mateo.k), 'Mateo stood on it without wings: he fell');
@@ -226,7 +227,7 @@ function next(s, ev, ms, match) {
   mateo.s.emit('player:answer', { pin, qid: pq.qid, choiceIdx: correctOf(pq) }, () => {});
   const rp = await res6;
   ok(rp.correct && rp.td.wings && rp.td.kind === 'pre', 'waiting to rise: a right answer = he rises with wings');
-  const tally1 = await next(host, 'td:tally', 4000, (m) => m.r === 1);
+  const tally1 = await tallyP;
   const teams = { red: kids.filter((k) => k.team === 'red'), gold: kids.filter((k) => k.team === 'gold') };
   ['red', 'gold'].forEach((t) => {
     const present = teams[t].length;
@@ -256,6 +257,8 @@ function next(s, ev, ms, match) {
   const pz = next(host, 'td:pause', 2000);
   host.emit('host:pause', { pin, paused: true });
   ok((await pz).paused, '«⏸ Pausa»');
+  const aq = late.q;                   // Abril's wings question, dealt as she rose (well under 1 s before the pause)
+  const aqAge = aq ? Date.now() - aq.__at : -1;
   const frozenAt = valen.pos[valen.k].slice();
   valen.s.emit('player:td-go', { pin, x: -frozenAt[1], y: -frozenAt[2] });
   await sleep(700);
@@ -269,6 +272,14 @@ function next(s, ev, ms, match) {
   host.emit('host:pause', { pin, paused: false });
   const po = await pzOff;
   ok(!po.paused && po.ago >= 0 && po.ago < B.lock, '«Seguir»: the round goes on where it stood');
+  // the pause was reading time: a right answer the moment the game resumes is not «too fast»
+  ok(aq && aqAge < 1500, `the late joiner had a fresh wings question when the pause came (${aqAge} ms old)`);
+  if (aq && late.q && late.q.qid === aq.qid) {
+    const rr = next(late.s, 'answer-result', 2000);
+    late.s.emit('player:answer', { pin, qid: aq.qid, choiceIdx: correctOf(aq) }, () => {});
+    const ar = await rr;
+    ok(ar.correct && ar.td && ar.td.why !== 'fast' && ar.td.wings, `answered right after «Seguir»: wings, not «too fast» (${ar.td && ar.td.why})`);
+  }
   // a reconnect: Valen's phone drops and comes back with the same name
   const vk = valen.k;
   valen.s.close();
