@@ -130,7 +130,9 @@
     if (!/^\d{3,4}$/.test(roomPin)) { $('y-gate-err').textContent = 'Tu PIN debe ser de 3 o 4 dígitos.'; return; }
     $('y-gate-err').textContent = 'Entrando a la sala…';
     socket = io();
-    socket.emit('player:join', { pin: roomPin, name: realName() || studentCode, avatar: '', studentCode }, (resp) => {
+    let savedClass = '';
+    try { savedClass = localStorage.getItem('dralyHwAccessCode') || ''; } catch (_) {}
+    socket.emit('player:join', { pin: roomPin, name: realName() || studentCode, avatar: '', studentCode, accessCode: savedClass }, (resp) => {
       if (!resp || !resp.ok) {
         $('y-gate-err').textContent = (resp && resp.error) || 'PIN no válido. Pregúntale a tu maestra.';
         try { socket.disconnect(); } catch (_) {}

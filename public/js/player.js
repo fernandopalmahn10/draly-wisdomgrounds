@@ -246,7 +246,7 @@
         try { return localStorage.getItem('dralyStudentCode') || null; }
         catch (_) { return null; }
       })();
-      socket.emit('player:join', { pin, name: myName, avatar: getMyAvatar(), studentCode: savedCode }, (resp) => {
+      socket.emit('player:join', { pin, name: myName, avatar: getMyAvatar(), studentCode: savedCode, accessCode: savedClassCode() }, (resp) => {
         if (resp.ok) {
           myPlayerId = resp.playerId; // new socket id after reconnect
           team = resp.team;
@@ -260,7 +260,8 @@
           document.body.classList.add('gametype-' + gameType);
           if (resp.studentCode) {
             myStudentCode = resp.studentCode;
-            try { localStorage.setItem('dralyStudentCode', resp.studentCode); } catch (_) {}
+            // (2026-10-18: a «guest» answer means the server didn't link this phone's saved code: keep it)
+            if (!resp.guest) { try { localStorage.setItem('dralyStudentCode', resp.studentCode); } catch (_) {} }
             const chip = document.getElementById('wu-player-code');
             if (chip) chip.textContent = resp.studentCode;
           }
@@ -342,7 +343,7 @@
       try { return localStorage.getItem('dralyStudentCode') || null; }
       catch (_) { return null; }
     })();
-    socket.emit('player:join', { pin: p, name, avatar: getMyAvatar(), studentCode: savedCode }, (resp) => {
+    socket.emit('player:join', { pin: p, name, avatar: getMyAvatar(), studentCode: savedCode, accessCode: savedClassCode() }, (resp) => {
       if (!resp.ok) {
         const msg = resp.error || 'No pudimos entrar. Inténtalo otra vez.';
         $('join-error').textContent = msg;
@@ -360,8 +361,11 @@
       // as savedCode, or a freshly-generated one if savedCode was null).
       if (resp.studentCode) {
         myStudentCode = resp.studentCode;
-        try { localStorage.setItem('dralyStudentCode', resp.studentCode); }
-        catch (_) { /* ignore */ }
+        // (2026-10-18: a «guest» answer means the server didn't link this phone's saved code: keep it)
+        if (!resp.guest) {
+          try { localStorage.setItem('dralyStudentCode', resp.studentCode); }
+          catch (_) { /* ignore */ }
+        }
         const chip = document.getElementById('wu-player-code');
         if (chip) chip.textContent = resp.studentCode;
       }
@@ -432,6 +436,11 @@
   // (hosts print it as text); the phone's picker shows the picture.
   const SAGA_AV = (window.Saga && window.Saga.AVATARS) || [];
   const AVATAR_CHOICES = SAGA_AV.map((x) => x.emoji);
+  // 🔒 2026-10-18 (ownership): the class code saved with the student code at /homework travels with every join, so the
+  // server may link this phone to its own account (the same proof as homework; a typed classmate's code links nothing)
+  function savedClassCode() {
+    try { return localStorage.getItem('dralyHwAccessCode') || ''; } catch (_) { return ''; }
+  }
   function getMyAvatar() {
     const v = localStorage.getItem('dralyAvatar');
     return AVATAR_CHOICES.includes(v) ? v : (AVATAR_CHOICES[0] || '🐉');   // an old animal emoji → Dralingo

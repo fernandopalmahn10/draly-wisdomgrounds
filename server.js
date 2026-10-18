@@ -1398,6 +1398,8 @@ app.get('/api/homework/custom-assignments/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.params.code);
   if (!rec) return res.json({ ok: true, assignments: [] });
+  // 🔒 2026-10-18 (ownership): only the kid's own phone reads their list (the same proof as every homework write)
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const list = CustomAsg.listForStudent(rec.code).map((a) => ({
     id: a.id,
     title: a.title,
@@ -1412,6 +1414,7 @@ app.get('/api/homework/custom-assignment/:id', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.query.studentCode);
   if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });   // 🔒 2026-10-18
   const a = CustomAsg.get(req.params.id);
   if (!a || a.status !== 'active') return res.status(404).json({ ok: false, error: 'no encontrada' });
   if (a.targetStudents.indexOf(rec.code) < 0) return res.status(403).json({ ok: false, error: 'no es para ti' });
@@ -1433,6 +1436,8 @@ app.post('/api/homework/custom-assignment/submit', (req, res) => {
   const { studentCode, assignmentId, answers } = req.body || {};
   const rec = Students.get(studentCode);
   if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  // 🔒 2026-10-18 (ownership): a grade lands only on the caller's own record, never on a classmate's by a typed code
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const a = CustomAsg.get(assignmentId);
   if (!a || a.status !== 'active') return res.status(404).json({ ok: false, error: 'no encontrada' });
   if (a.targetStudents.indexOf(rec.code) < 0) return res.status(403).json({ ok: false, error: 'no es para ti' });
@@ -2132,7 +2137,9 @@ app.post('/api/admin/gif-push', (req, res) => {
 app.post('/api/homework/inbox/:msgId/read', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode } = req.body || {};
-  const ok = Students.markMessageRead(studentCode, req.params.msgId);
+  const rec = Students.get(studentCode);   // 🔒 2026-10-18 (ownership): only the kid's own inbox
+  if (!rec || !_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const ok = Students.markMessageRead(rec.code, req.params.msgId);
   res.json({ ok });
 });
 
@@ -2140,7 +2147,9 @@ app.post('/api/homework/inbox/:msgId/read', (req, res) => {
 app.post('/api/homework/inbox/read-all', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const { studentCode } = req.body || {};
-  const count = Students.markAllMessagesRead(studentCode);
+  const rec = Students.get(studentCode);   // 🔒 2026-10-18 (ownership): only the kid's own inbox
+  if (!rec || !_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
+  const count = Students.markAllMessagesRead(rec.code);
   res.json({ ok: true, marked: count });
 });
 
@@ -3601,10 +3610,14 @@ app.post('/api/hsk-sim/:simId/submit', (req, res) => {
     }
   }
   const resolvedName = (displayName && String(displayName).trim()) || nameFromSocket || studentCode;
-  const rec = Students.getOrProvisionForPin(studentCode, resolvedName, classroomFromRoom);
+  // 🔒 2026-10-18 (ownership): the result still lands on the typed code in the teacher's room, but an EXISTING account is
+  // renamed only by its own phone (the same proof as homework)
+  const known0 = studentCode ? Students.peek(studentCode) : null;
+  const nameOk = !known0 || _hwOwnsStudent(req, known0.rec);
+  const rec = Students.getOrProvisionForPin(studentCode, nameOk ? resolvedName : null, classroomFromRoom);
   if (!rec) return res.status(400).json({ ok: false, error: 'no se pudo crear el registro de estudiante' });
   // Retroactive upgrade — same as heartbeat.
-  if (resolvedName && rec.displayName === rec.code && resolvedName !== rec.code) {
+  if (nameOk && resolvedName && rec.displayName === rec.code && resolvedName !== rec.code) {
     rec.displayName = String(resolvedName).slice(0, 24);
   }
   const result = _simGrade(req.params.simId, answers || {});
@@ -3807,6 +3820,7 @@ app.get('/api/homework/my-hsk-attempts/:code', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.params.code);
   if (!rec) return res.status(404).json({ ok: false, error: 'no such student' });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });   // 🔒 2026-10-18
   const rows = (Array.isArray(rec.hskResults) ? rec.hskResults : [])
     .slice()
     .sort((a, b) => (b.ts || 0) - (a.ts || 0))
@@ -4115,12 +4129,15 @@ app.post('/api/hsk-sim/heartbeat', (req, res) => {
     }
   }
   const resolvedName = (displayName && String(displayName).trim()) || nameFromSocket || studentCode;
-  const rec = Students.getOrProvisionForPin(studentCode, resolvedName, classroomFromRoom);
+  // 🔒 2026-10-18 (ownership): an EXISTING account is renamed only by its own phone (the same proof as homework)
+  const known1 = studentCode ? Students.peek(studentCode) : null;
+  const nameOk = !known1 || _hwOwnsStudent(req, known1.rec);
+  const rec = Students.getOrProvisionForPin(studentCode, nameOk ? resolvedName : null, classroomFromRoom);
   // Retroactive upgrade: if the record's displayName is still the
   // raw code (legacy guest record) and we now have a real name,
   // upgrade it. Saves the teacher from seeing "ABCD" in the Cuaderno
   // after we already learned the kid is "Lin".
-  if (rec && resolvedName && rec.displayName === rec.code && resolvedName !== rec.code) {
+  if (nameOk && rec && resolvedName && rec.displayName === rec.code && resolvedName !== rec.code) {
     rec.displayName = String(resolvedName).slice(0, 24);
     try { Students._save && Students._save(); } catch (_) {}
   }
@@ -4213,7 +4230,9 @@ app.get('/api/hsk-sim/results', (req, res) => {
 app.get('/api/homework/reading-tests', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const code = req.query.studentCode;
-  res.json({ ok: true, stories: _hwReadingListFor(code) });
+  // 🔒 2026-10-18 (ownership): a kid's own tries only for their own phone; anyone else gets the plain list
+  const own = code ? Students.get(code) : null;
+  res.json({ ok: true, stories: _hwReadingListFor(own && _hwOwnsStudent(req, own) ? own.code : null) });
 });
 
 // Full story content (pages + questions, NO correctIdx in the choices).
@@ -4225,7 +4244,8 @@ app.get('/api/homework/reading-test/:storyId', (req, res) => {
   // we're in bootstrap "unlocked for all" mode.
   const studentCode = req.query.studentCode;
   if (!READING_UNLOCKED_FOR_ALL) {
-    const rec = Students.get(studentCode);
+    const rec0 = Students.get(studentCode);
+    const rec = rec0 && _hwOwnsStudent(req, rec0) ? rec0 : null;   // 🔒 2026-10-18 (ownership): a classmate's tries open nothing
     const hasAttempted = rec && Array.isArray(rec.testResults)
       && rec.testResults.some((t) => t.storyId === story.id);
     if (!hasAttempted) {
@@ -4261,6 +4281,8 @@ app.post('/api/homework/reading-test/submit', (req, res) => {
   if (!story) return res.status(404).json({ ok: false, error: 'Historia no encontrada' });
   const rec = Students.get(studentCode);
   if (!rec) return res.status(401).json({ ok: false, error: 'Código de estudiante inválido' });
+  // 🔒 2026-10-18 (ownership): a reading-test grade lands only on the caller's own record
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const arr = Array.isArray(answers) ? answers : [];
   const pointsPerQ = 20;
   let score = 0;
@@ -4297,6 +4319,8 @@ app.get('/api/homework/reading-review/:storyId', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.query.studentCode);
   if (!rec || !Array.isArray(rec.testResults)) return res.json({ ok: true, attempt: null });
+  // 🔒 2026-10-18 (ownership): a try's answers (with the right ones) only for the kid's own phone
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const attempts = rec.testResults.filter((t) => t.storyId === req.params.storyId);
   if (!attempts.length) return res.json({ ok: true, attempt: null });
   // Best score, tie → most recent.
@@ -4409,6 +4433,7 @@ app.get('/api/homework/daily', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.query.studentCode);
   if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });   // 🔒 2026-10-18
   const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : _todayServer();
   const prog = Students.getProgress(rec.code);
   // 🆕 Preview tomorrow's mode so the daily card can tease "mañana: 🧠
@@ -4436,6 +4461,8 @@ app.post('/api/homework/daily/complete', (req, res) => {
   const { studentCode, date, correct } = req.body || {};
   const rec = Students.get(studentCode);
   if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  // 🔒 2026-10-18 (ownership): swords and streaks land only on the caller's own record
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });
   const d = /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date : _todayServer();
   const result = Students.awardDaily(rec.code, d, correct);
   // 🎁 Mystery-bonus day: double the swords. The base award already
@@ -4466,6 +4493,7 @@ app.post('/api/homework/daily/sentence-bonus', (req, res) => {
   const { studentCode, date, wordIds } = req.body || {};
   const rec = Students.get(studentCode);
   if (!rec) return res.status(404).json({ ok: false, error: 'estudiante no encontrado' });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });   // 🔒 2026-10-18
   if (!Array.isArray(wordIds) || wordIds.length < 2) {
     return res.json({ ok: false, reason: 'short' });
   }
@@ -4564,6 +4592,7 @@ app.get('/api/homework/assignment-review/:id', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.query.studentCode);
   if (!rec) return res.json({ ok: true, attempt: null });
+  if (!_hwOwnsStudent(req, rec)) return res.status(403).json({ ok: false, error: 'no autorizado' });   // 🔒 2026-10-18
   const subs = Students.getAssignmentSubmissions(rec.code, 100).filter((s) => s.assignmentId === req.params.id);
   if (!subs.length) return res.json({ ok: true, attempt: null });
   const best = subs.slice().sort((a, b) => (b.score - a.score) || (b.ts - a.ts))[0];
@@ -5648,6 +5677,14 @@ app.post('/api/entrada/nivel', (req, res) => {
   }
   res.json(Object.assign({ ok: true, moved }, _entradaLevel(ck.level)));
 });
+// 🔒 2026-10-18 (ownership): may this socket's phone use this EXISTING account in a PIN room (rename it, save results on
+// it)? The same proof as every homework write (_hwOwnsStudent): the kid's session or remembered-device cookie on the
+// socket, or the class code saved with the code on that phone (sent as `accessCode`); legacy untagged accounts as before
+function _joinOwns(socket, rec, accessCode) {
+  if (!rec) return false;
+  const hs = (socket && socket.handshake) || {};
+  return _hwOwnsStudent({ headers: hs.headers || {}, body: { accessCode: String(accessCode || '') }, query: {} }, rec);
+}
 // player:join (a teacher's PIN room): a key account with no class code takes the room owner's class code for its level,
 // only when the phone proves it holds the account (its session or dkid on the socket); never an unclaimed automatic one
 function _entradaPinTag(socket, g, rec) {
@@ -10620,7 +10657,7 @@ io.on('connection', (socket) => {
     broadcast(pin);
   });
 
-  socket.on('player:join', ({ pin, name, avatar, studentCode }, cb) => {
+  socket.on('player:join', ({ pin, name, avatar, studentCode, accessCode }, cb) => {
     cb = typeof cb === 'function' ? cb : () => {};
     const g = games[pin];
     // 🔒 2026-10-15 (security review): joining an exam room hands out its room pass, so PINs must not be found by
@@ -10755,9 +10792,17 @@ io.on('connection', (socket) => {
     // client sent a known code, link to that record. Otherwise generate
     // a fresh code. The code lives in the kid's localStorage so the
     // same phone = same record = same sentence history forever.
-    const studentRec = Students.getOrCreate(studentCode, cleanName);
+    // 🔒 2026-10-18 (ownership): an EXISTING account is linked (its name updated, the game's results saved on it) only
+    // when this phone proves it is that kid's (_joinOwns); a typed classmate's code makes a fresh account instead
+    const known = studentCode ? Students.peek(studentCode) : null;
+    // An exam room (hsksim) is the teacher's own class, often on school tablets with no proof: the typed code still links
+    // (the teacher sees the roster), but an unproven join never renames that account
+    const proven = !known || _joinOwns(socket, known.rec, accessCode);
+    const guestLink = !proven && g.gameType !== 'hsksim';
+    const studentRec = Students.getOrCreate(guestLink ? null : studentCode, proven || guestLink ? cleanName : '');
     _entradaPinTag(socket, g, studentRec);   // 🆕 2026-10-18 (la entrada): a key account joins its teacher's class here
     player.studentCode = studentRec.code;
+    player.guestLink = guestLink;   // the phone keeps its own saved code (player.js never overwrites it with this one)
     if (g.gameType === 'monopoly') mnEnsureId(g, player);     // the projector knows every kid (k + character) from the lobby
     if (g.gameType === 'dragon-eye') drEnsureId(g, player);
     if (g.gameType === 'mochi-mash') mmEnsureId(g, player);   // the projector knows every kid (k + character) from the lobby
@@ -10776,6 +10821,7 @@ io.on('connection', (socket) => {
       rejoined: isRejoin,
       gameState: g.state,
       studentCode: player.studentCode,
+      guest: !!player.guestLink,
       // 🔒 2026-10-15: an exam room's pass (this kid is now on the teacher's roster): the room's sim loads with it
       roomPass: g.gameType === 'hsksim' && g.hsk && g.hsk.simId ? SimLock.roomPass(String(pin), g.hsk.simId, (HSK_ROOMS.get(String(pin)) || {}).createdAt) : undefined,
     });

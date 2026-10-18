@@ -241,11 +241,14 @@
       const last = JSON.parse(localStorage.getItem('dralyLastJoin') || '{}');
       if (last && last.name) displayName = last.name;
     } catch (_) {}
+    let savedClass = '';
+    try { savedClass = localStorage.getItem('dralyHwAccessCode') || ''; } catch (_) {}
     _hskSocket.emit('player:join', {
       pin: roomPin,
       name: displayName,
       avatar: '',
       studentCode,
+      accessCode: savedClass,   // 🔒 2026-10-18: lets the server see this phone owns the code (renames need it)
     }, (resp) => {
       if (!resp || !resp.ok) {
         $('hsk-gate-err').textContent = (resp && resp.error) || 'PIN no válido. Pregúntale a tu maestra.';
