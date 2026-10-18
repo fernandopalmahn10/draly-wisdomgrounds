@@ -2525,10 +2525,89 @@ app.post('/api/homework/reset', (req, res) => {
   const removed = Students.resetAssignmentSubmissions(studentCode, assignmentId);
   res.json({ ok: true, removed });
 });
+// 👨‍👩‍👧 2026-10-18 · Papás («Mi Dralingo» part 2, his approved design): the kid's La Ruta Dorada for the parents' view.
+// Only for the logged-in kid's OWN record (the /homework session cookie must be this same kid: the insights door alone,
+// a class code + a student code, never shows it). Built from the builders the kid's route already uses
+// (RutaProgress.state: seals and the best % per world · _rutaExps: the experiences' names and pictures · Train.worldsOf:
+// the practice links · _tareaIdsOf + _tareaMarks: the homework sent · Golden.latest + attemptView: the simulations
+// taken), then worked out by public/js/papas-plan.js, the same file the page runs (four numbers, the experiences done /
+// current / later, «Lo más importante esta semana»). Cheap: one record, the level's ~10 worlds and ~10 homeworks.
+const PapasPlan = require('./public/js/papas-plan.js');
+let _papasHw = null;   // homework id → { exp, round, title } from the audio catalog (read once per boot, like the marks')
+function _papasHwInfo() {
+  if (_papasHw) return _papasHw;
+  const m = new Map();
+  let list = null;
+  try { list = JSON.parse(fs.readFileSync(path.join(__dirname, 'public', 'assets', 'audios', 'catalog.json'), 'utf8')).homeworks; }
+  catch (e) { console.warn('[papas] catalog unreadable:', e.message); }
+  (Array.isArray(list) ? list : []).forEach((h) => { if (h && typeof h.id === 'string') m.set(h.id, { exp: Number(h.exp) || null, round: Number(h.round) || null, title: String(h.title || '') }); });
+  if (Array.isArray(list)) _papasHw = m;
+  return m;
+}
+function _papasRuta(rec, level) {
+  const lvl = level.id;
+  const slug = level.pack || lvl;
+  const st = RutaProgress.state(rec, lvl);            // null: the level has no La Base yet
+  const b = RutaProgress.baseOf(lvl);
+  const exps = _rutaExps(lvl);
+  const tw = Train.worldsOf(lvl) || [];
+  const ids = _tareaIdsOf(lvl);
+  const marks = _tareaMarks(rec, ids);
+  const info = _papasHwInfo();
+  const ab = audioBaseFor(level);
+  // the simulations of this level the kid took (the latest try of each), for «simulacro en clase» and its golden book
+  const gb = Golden.ofLevel(lvl);
+  const books = [];
+  if (gb) gb.sims.forEach((s) => {
+    const t = Golden.latest(rec, s.id);
+    if (!t) return;
+    const v = Golden.attemptView(t, s);
+    books.push({ n: s.n, percent: v.percent, passed: v.passed, at: v.ts, mistakes: Golden.mistakesOf(t), book: _goldenHref(lvl, s.n) });
+  });
+  const last = books.reduce((m, x) => (!m || x.at >= m.at ? x : m), null);
+  const raw = {
+    level: lvl, slug, name: level.name, who: _sealWho(rec.code),
+    base: ab ? { href: ab.href, level: ab.level } : null,
+    pct: st ? st.dorado.pct : RutaProgress.getSettings().doradoPct,
+    words: st ? st.words : 0,
+    seals: st ? [...RutaProgress.sealsOf(rec, lvl)].sort((x, y) => x - y) : [],
+    worlds: (st ? st.worlds : []).map((w) => {
+      const e = exps.find((x) => x.n === w.n);
+      const bw = b ? b.worlds.find((x) => x.n === w.n) : null;
+      const k = tw.find((x) => x.kind === 'world' && x.n === w.n);
+      return { n: w.n, name: (e && e.name) || w.name || w.short, pic: e ? e.pic : null, first: bw ? bw.first : 0, count: w.count,
+        best: w.practiced, open: !!w.train, train: k ? '/audios/' + slug + '/entrenamiento/' + k.key : null };
+    }),
+    hws: ids.map((id) => { const i = info.get(id) || {}; return { id, exp: i.exp || null, round: i.round || null, title: i.title || '', sent: !!(marks[id] && marks[id].s) }; }),
+    sim: last ? { n: last.n, percent: last.percent, passed: last.passed, at: last.at } : null,
+    books: books.sort((x, y) => x.n - y.n),
+  };
+  raw.plan = PapasPlan.plan(raw);
+  return raw;
+}
+// the questions to ask at home, by experience («Cómo ayudar en casa» picks this week's): each passed tarea's own
+// encouragement (core/assignments.js parentInsight), its experience from the tarea's world (a pack world by its order
+// among the level's experiences, or EXP1…EXP8)
+function _papasPrompts(insights, level) {
+  const pack = Packs.LEVELS.find((p) => p.id === (level.pack || level.id));
+  const order = pack ? pack.worlds.filter((w) => w && w.id !== 'pinyin' && w.id !== 'simulacro').map((w) => w.id) : [];
+  const out = [];
+  (insights || []).forEach((row) => {
+    const a = Assignments.getAssignment(row.assignmentId);
+    const text = row.insight && row.insight.encouragement;
+    if (!a || !text || (a.level || 'hsk1') !== level.id) return;   // (a tarea of the kid's level only)
+    const lab = String(a.expLabel || '');
+    const m = /^exp\s*(\d+)$/i.exec(lab);
+    const exp = m ? Number(m[1]) : (order.indexOf(lab) + 1 || null);
+    if (exp) out.push({ exp, text: String(text) });
+  });
+  return out;
+}
 // 👨‍👩‍👧 Parent view — returns a digest of what the kid has learned, in
 // Spanish, derived from their completed assignments + reading-mode tests.
 // No password, just access code + student code (parent uses same as kid).
 app.get('/api/homework/insights/:code', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');   // (2026-10-18: a kid's progress, never kept by a cache)
   if (!_hwCheckAccess(req, res)) return;
   const rec = Students.get(req.params.code);
   if (!rec) return res.status(404).json({ ok: false, error: 'Estudiante no encontrado' });
@@ -2700,6 +2779,14 @@ app.get('/api/homework/insights/:code', (req, res) => {
     conversationPrompts,
     sentenceDetail,
     hskResults: hskRows,
+    // 👨‍👩‍👧 2026-10-18 · Papás: La Ruta Dorada (seals, practice, homework sent, simulations, «Lo más importante»), only
+    // when the /homework session on this phone is this same kid (null otherwise: the page asks to come in again)
+    ruta: (() => {
+      const me = _studentOf(req);
+      if (!me || me.code !== rec.code) return null;
+      try { return Object.assign(_papasRuta(rec, level), { prompts: _papasPrompts(insights, level) }); }
+      catch (e) { console.warn('[papas] ruta failed:', e.message); return null; }
+    })(),
     totals: {
       assignmentAttempts:    subs.length,
       // of THIS level's tareas (a kid who moved up keeps the old logros in the list, not in the count)
