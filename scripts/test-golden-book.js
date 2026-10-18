@@ -518,7 +518,8 @@ async function server() {
   ok((await get('/golden-media/yct1sim/book.pdf', as(R1))).status === 403, 'the PDF: refused');
   let mR = mod(await ruta(as(R1)), 'yct1');
   ok(!mR.dorado.open && mR.sims.length === 0 && mR.golden && mR.golden.closed && mR.golden.pdf === null &&
-    JSON.stringify(mR.golden.taken) === JSON.stringify([{ n: 1, mistakes: 2, book: '/audios/yct1/libro/1' }]), 'the route: the Dorado still closed, only Simulacro 1\'s «Libro dorado» with its 2 mistakes');
+    JSON.stringify(mR.golden.taken.map(({ at, ...s }) => s)) === JSON.stringify([{ n: 1, mistakes: 2, book: '/audios/yct1/libro/1' }]) &&
+    mR.golden.taken.every((s) => typeof s.at === 'number' && s.at > 0), 'the route: the Dorado still closed, only Simulacro 1\'s «Libro dorado» with its 2 mistakes (and when it was taken)');
   const anyTaken = (st) => (st.modules || []).some((x) => x.golden && x.golden.taken);
   ok(!anyTaken(await ruta(as(K1))) && !anyTaken(await ruta(as(anon))) && !anyTaken(await ruta(as(D1))), '… sent only to the kid who took it (not a key-only phone, a visitor or another kid)');
   for (let n = 2; n <= Y.sims.length; n++) ok((await takeInRoom(R1, kR1.studentCode, 'yct1-sim' + n, [])).status === 200, 'kid R takes Simulacro ' + n + ' in a room too');
