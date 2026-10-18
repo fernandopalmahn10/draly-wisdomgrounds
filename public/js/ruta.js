@@ -150,6 +150,7 @@
     pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>',
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M6.6 2.8v4.6h4.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     send: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3.4 20.6l17.9-8.1a.6.6 0 0 0 0-1.1L3.4 3.4a.6.6 0 0 0-.8.7L4.6 11l9 1-9 1-2 6.9a.6.6 0 0 0 .8.7z"/></svg>',
   };
   const sky = '<svg class="rd-sky" viewBox="0 0 400 110" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><use href="#rd-sky"/></svg>' +
@@ -786,7 +787,8 @@
     if (!m.open) cur = ([s1, s2, s3].find((s) => s.state !== 'soon') || s1).n;   // a locked module: its key first
     else if (s2.state !== 'locked' && s2.state !== 'soon' && earned.length) cur = 2;
     else if (s1.state === 'fresh' || s1.state === 'started') cur = 1;
-    else if (s2.state !== 'locked' && s2.state !== 'soon' && s2.next) cur = 2;
+    // (the extra worlds, Pinyin and the exam questions, never hold the kid back from El Simulacro Dorado)
+    else if (s2.state !== 'locked' && s2.state !== 'soon' && s2.next && s2.next.kind === 'world') cur = 2;
     else if (s3.state === 'fresh' || s3.state === 'started') cur = 3;
     const steps = [s1, s2, s3];
     steps.forEach((s) => { s.current = s.n === cur; });
@@ -812,7 +814,7 @@
         : 'Practica cada mundo con ' + need + ' % o más y se abre el 3, El Simulacro Dorado.';
     } else if (s3.state === 'done') say = '¡Terminaste tu ruta! Repasa tus errores en el libro dorado.';
     else say = '¡Muy bien! Repasa cuando quieras.';
-    return { steps, say, st, anon, cb, pr, tw };
+    return { steps, say, st, anon, cb, pr, tw, cur };
   }
 
   // one step card (the design's picture card)
@@ -912,13 +914,15 @@
   // ── «Tus tareas»: the homework audios of the level ─────────────────
   const KIND_T = { words: 'Las palabras', dialogue: 'Escucha, lee, repite', video: 'Tu video' };
   const HW_SHOW = 3;
-  function tareasHtml(ctx, m, hws, marks) {
+  // mine: the kid's own level (a phone nobody logged in on counts every level as its own); another level's homework
+  // (a teacher, or a kid looking at another module) only plays: no marks, no counts
+  function tareasHtml(ctx, m, hws, marks, mine) {
     if (!hws.length) return '';
-    const toSend = unsentOf(hws, marks);
+    const toSend = mine ? unsentOf(hws, marks) : 0;
     const showLogin = !ctx.ruta.student && !ctx.ruta.teacher;
     const cards = hws.map((h, i) => {
-      const e = marks[h.id] || {};
-      const state = e.s ? 'sent' : e.h ? 'heard' : 'new';
+      const e = (mine && marks[h.id]) || {};
+      const state = !mine ? 'other' : e.s ? 'sent' : e.h ? 'heard' : 'new';
       const pic = hwPic(h, m.slug);
       // (the picture and the name open the homework's own page: its lines with pinyin and Spanish, the PDF's audio codes)
       return '<li class="rp-hw is-' + state + '" data-hw="' + esc(h.id) + '"' + (i >= HW_SHOW ? ' hidden' : '') + '>' +
@@ -927,25 +931,26 @@
             (h.thumb && pic !== h.thumb ? ' data-alt="' + esc(h.thumb) + '"' : '') + '>' +
           '<span class="rp-hw-kicker">Tarea · Experiencia ' + (Number(h.exp) || 0) + (h.round > 1 ? ' · Ronda ' + (Number(h.round) || 0) : '') + '</span>' +
           '<h3 class="rp-hw-title">' + esc(h.title) + '</h3>' +
-          '<span class="rp-hw-state" data-state>' + (state === 'sent' ? I.check + 'Mandada' : state === 'heard' ? 'Escuchada' + I.check : 'Nueva') + '</span>' +
+          (state === 'other' ? '' : '<span class="rp-hw-state" data-state>' + (state === 'sent' ? I.check + 'Mandada' : state === 'heard' ? 'Escuchada' + I.check : 'Nueva') + '</span>') +
         '</a>' +
         '<div class="rp-hw-body">' +
           '<div class="rp-hw-acts">' +
-            '<button type="button" class="rp-hw-play" data-play aria-pressed="false">' + (state === 'new' ? I.play + '<span>Escuchar</span>' : I.again + '<span>Otra vez</span>') + '</button>' +
-            (state === 'sent' ? '' : '<button type="button" class="rp-hw-send" data-send>¡Ya la mandé!</button>') +
+            '<button type="button" class="rp-hw-play" data-play aria-pressed="false">' + (state === 'new' || state === 'other' ? I.play + '<span>Escuchar</span>' : I.again + '<span>Otra vez</span>') + '</button>' +
+            (state === 'sent' || state === 'other' ? '' : '<button type="button" class="rp-hw-send" data-send>¡Ya la mandé!</button>') +
           '</div>' +
           '<p class="rp-hw-now" data-now hidden><span data-now-t></span><span class="rp-hw-line"><i data-now-f></i></span></p>' +
           '<p class="rp-hw-undo" data-undo hidden>¿Fue sin querer? <button type="button" data-unsend>Deshacer</button></p>' +
         '</div></li>';
     }).join('');
-    return '<aside class="rp-tareas" id="tareas" aria-labelledby="rp-tareas-t" tabindex="-1">' +
-      '<div class="rp-tareas-head"><h2 class="rp-tareas-t" id="rp-tareas-t">Tus tareas</h2>' +
-        '<span class="rp-badge" data-tosend' + (toSend ? '' : ' hidden') + '>' + toSend + ' por mandar</span></div>' +
+    return '<aside class="rp-tareas' + (mine ? '' : ' is-other') + '" id="tareas" aria-labelledby="rp-tareas-t" tabindex="-1">' +
+      '<div class="rp-tareas-head"><h2 class="rp-tareas-t" id="rp-tareas-t">' + (mine ? 'Tus tareas' : 'Tareas de ' + esc(m.name)) + '</h2>' +
+        (mine ? '<span class="rp-badge" data-tosend' + (toSend ? '' : ' hidden') + '>' + toSend + ' por mandar</span>' : '') + '</div>' +
       '<div class="rp-aileen"><img src="/assets/cast/aileen-talk.webp" alt="Aileen" width="312" height="480" loading="lazy" decoding="async">' +
-        '<p class="rp-aileen-say">«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»</p></div>' +
+        (mine ? '<p class="rp-aileen-say">«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»</p></div>'
+          : '<p class="rp-aileen-say">«Estas son las tareas de ' + esc(m.name) + '. ¡Escuchá el audio cuando quieras!»</p></div>') +
       '<ul class="rp-hw-list">' + cards + '</ul>' +
-      (hws.length > HW_SHOW ? '<button type="button" class="rp-hw-more" data-more aria-expanded="false">Ver todas mis tareas (' + hws.length + ')</button>' : '') +
-      (showLogin ? '<p class="rp-hw-login">Tus marcas quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug + '#tareas') + '">Entra con tu código para guardarlas en tu cuenta</a>.</p>' : '') +
+      (hws.length > HW_SHOW ? '<button type="button" class="rp-hw-more" data-more aria-expanded="false">' + (mine ? 'Ver todas mis tareas' : 'Ver todas las tareas') + ' (' + hws.length + ')</button>' : '') +
+      (showLogin && mine ? '<p class="rp-hw-login">Tus marcas quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug + '#tareas') + '">Entra con tu código para guardarlas en tu cuenta</a></p>' : '') +
       '</aside>';
   }
 
@@ -1028,7 +1033,8 @@
     // a logged-in kid: their account's marks meet this phone's (a phone's marks from before the login join it)
     if (ctx.ruta.student && ctx.ruta.who) tSettle(ctx.ruta.who, m.tareas || {}, hws.map((h) => h.id));
     const marks = tMarksFor(ctx.ruta, m.tareas);
-    const toSend = unsentOf(hws, marks);
+    const mine = !ctx.ruta.teacher && (!ctx.ruta.student || m.slug === ctx.ruta.home);
+    const toSend = mine ? unsentOf(hws, marks) : 0;
     const cb = L.cb;
     const facts = [worldCount(cb) ? worldCount(cb) + ' mundos' : '', m.base ? m.base.words + ' palabras' : '', m.simCount ? 'el examen al final' : ''].filter(Boolean).join(' · ');
     document.body.classList.add('rp-on');
@@ -1038,17 +1044,19 @@
       '<div class="rp-hero-text"><div class="rp-hero-top"><div class="rp-hero-head"><h1 class="rp-hero-name" tabindex="-1">' + esc(m.name) + '</h1>' +
         (m.open ? '' : '<span class="rd-seal rp-hero-seal" aria-hidden="true">' + I.lock + '</span>') + '</div>' +
         // (a phone: the red «Tareas: N por mandar» jumps down to «Tus tareas»; a laptop shows them beside the ladder)
-        (hws.length ? '<a class="rp-hero-tareas" href="#tareas"' + (toSend ? '' : ' hidden') + '>Tareas: ' + toSend + ' por mandar</a>' : '') + '</div>' +
+        (hws.length && mine ? '<a class="rp-hero-tareas" href="#tareas"' + (toSend ? '' : ' hidden') + '>Tareas: ' + toSend + ' por mandar</a>' : '') + '</div>' +
         '<p class="rp-hero-sub">' + esc(facts || (FAMILY_SUB[m.family] || '')) + '</p>' +
-        '<p class="rp-say" id="rp-say">' + esc(L.say) + '</p></div>' +
+        '<p class="rp-say" id="rp-say">' + esc(L.say) +
+          // (a phone: the current step may be further down; one tap brings it up)
+          (L.cur > 1 ? '<a class="rp-say-go" href="#paso-' + L.cur + '">Ver el paso ' + L.cur + I.down + '</a>' : '') + '</p></div>' +
       '<img class="rp-hero-dragon" src="/assets/dralingo/point.webp" alt="Dralingo señala el paso que toca" width="332" height="480" decoding="async" fetchpriority="high">' +
       '</section>';
     const ladder = '<h2 class="rp-ladder-t">Tu camino, paso a paso</h2>' +
       '<ol class="rp-ladder" aria-label="La Ruta Dorada de ' + esc(m.name) + '">' + L.steps.map((s) => stepHtml(s, m, L)).join('') + '</ol>';
     main.innerHTML = '<div class="rp" style="' + lookStyle(look) + '">' + bandHtml(back, 'La Ruta Dorada') +
       '<div class="rp-grid' + (hws.length ? ' has-tareas' : '') + '"><div class="rp-main">' + hero + ladder + '</div>' +
-      tareasHtml(ctx, m, hws, marks) + '</div></div>';
-    wireTareas(main, ctx, m, hws);
+      tareasHtml(ctx, m, hws, marks, mine) + '</div></div>';
+    wireTareas(main, ctx, m, hws, mine);
     if (L.pr) celebrateNewWorlds(main, m, L.pr);
     // a logged-in kid: this phone's seals meet their account (a phone's seals from before the login join it, taps not
     // saved yet go up); when the account changed, the route asks the server again and redraws (js/audios.js)
@@ -1083,11 +1091,12 @@
   }
 
   // the homework cards: «Escuchar» plays here, «¡Ya la mandé!» marks it sent (account or phone), «Deshacer» undoes it
-  function wireTareas(main, ctx, m, hws) {
+  function wireTareas(main, ctx, m, hws, mine) {
     const box = main.querySelector('#tareas');
     if (!box) return;
     const byId = new Map(hws.map((h) => [h.id, h]));
     const paint = () => {
+      if (!mine) return;
       const marks = tMarksFor(ctx.ruta, m.tareas);
       box.querySelectorAll('.rp-hw').forEach((li) => {
         const e = marks[li.getAttribute('data-hw')] || {};
@@ -1112,6 +1121,13 @@
     tSync.onChange = (again) => { if (again && ctx.refresh) ctx.refresh(true); else paint(); };
     // the phone hero's «Tareas: N por mandar» scrolls down here (no address change: the page's router would redraw)
     const heroTag = main.querySelector('.rp-hero-tareas');
+    const sayGo = main.querySelector('.rp-say-go');
+    if (sayGo) sayGo.addEventListener('click', (e) => {
+      const el = main.querySelector(sayGo.getAttribute('href'));
+      if (!el) return;
+      e.preventDefault();
+      try { el.scrollIntoView({ block: 'center', behavior: calmMotion() ? 'auto' : 'smooth' }); } catch (_) { el.scrollIntoView(); }
+    });
     if (heroTag) heroTag.addEventListener('click', (e) => {
       e.preventDefault();
       try { box.scrollIntoView({ block: 'start', behavior: calmMotion() ? 'auto' : 'smooth' }); } catch (_) { box.scrollIntoView(); }
@@ -1139,7 +1155,7 @@
         }
         hwStop();
         hwListen(true);
-        hwNow = { id, k: 0, tracks: (h.tracks || []).filter((t) => t && t.src), li, onHeard: (x) => { tMark(x, 'h', ctx.ruta); paint(); } };
+        hwNow = { id, k: 0, tracks: (h.tracks || []).filter((t) => t && t.src), li, onHeard: (x) => { if (mine) { tMark(x, 'h', ctx.ruta); paint(); } } };
         if (!hwNow.tracks.length) { hwNow = null; return; }
         hwTrack();
         return;

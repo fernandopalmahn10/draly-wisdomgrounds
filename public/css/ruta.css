@@ -39,7 +39,11 @@ body.rp-on .au-main { max-width: none; padding: 0; }
   .rp-back { font-size: 1.06rem; padding: 0 20px 0 12px; }
   .rp-band-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, calc(-50% - 1px)); font-size: 1.4rem; }
 }
-@media (max-width: 359px) { .rp-band-title { font-size: 1rem; } }
+@media (max-width: 380px) {
+  .rp-band-in { gap: 6px; padding: 0 10px 3px; }
+  .rp-back { padding: 0 12px 0 8px; gap: 4px; font-size: .95rem; }
+  .rp-band-title { font-size: .95rem; padding: 0; }
+}
 
 /* ── the picker ─────────────────────────────────────────────────────── */
 .rd-pick { display: grid; justify-items: center; text-align: center; max-width: 1120px; margin: 0 auto; padding: 16px 16px 28px; }
@@ -99,11 +103,10 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rd-card-sub { font-weight: 700; font-size: calc(var(--cw) * .05); line-height: 1.2; color: var(--gold); }
 /* (2026-10-18) the homework this kid still has to send in this module: a red badge in the card's corner */
 .rd-card-badge {
-  position: absolute; z-index: 10; top: calc(var(--cw) * .06); right: calc(var(--cw) * .06); padding: 5px 11px; border-radius: 999px;
+  position: absolute; z-index: 10; top: calc(var(--cw) * .345); right: calc(var(--cw) * .06); padding: 5px 11px; border-radius: 999px;
   background: #c62828; color: #fff; font-weight: 900; font-size: max(13px, calc(var(--cw) * .045)); line-height: 1.15;
   box-shadow: 0 4px 10px rgba(0, 0, 0, .3); font-variant-numeric: tabular-nums;
 }
-.is-long .rd-card-badge { top: auto; bottom: calc(var(--cw) * .24); }
 
 /* the route in small: 1 La Base · 2 Entrenamiento · 3 Simulacro */
 .rd-mini {
@@ -188,10 +191,10 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rd-arrow[aria-disabled="true"] { opacity: .35; cursor: default; box-shadow: none; }
 .rd-arrow[aria-disabled="true"]:active { transform: none; }
 .rd-dots { position: relative; display: flex; }
-.rd-dot { width: 40px; height: 48px; padding: 0; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; border-radius: 10px; }
+.rd-dot { width: 48px; height: 48px; padding: 0; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; border-radius: 10px; }
 .rd-dot i { width: 10px; height: 10px; border-radius: 50%; background: rgba(90, 16, 16, .24); }
 .rd-dot-now {
-  position: absolute; left: 7px; top: 50%; width: 26px; height: 10px; margin-top: -5px; border-radius: 5px;
+  position: absolute; left: 11px; top: 50%; width: 26px; height: 10px; margin-top: -5px; border-radius: 5px;
   background: var(--oro); pointer-events: none; will-change: transform; transition: transform 300ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
@@ -271,12 +274,16 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rp-hero-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .rp-hero-name { min-width: 0; font-weight: 800; font-size: 2.5rem; line-height: .95; letter-spacing: -.03em; text-shadow: 0 2px 12px rgba(0, 0, 0, .3); }
 .rp-hero-name:focus { outline: none; }
-.rp-hero-sub { font-weight: 700; font-size: .9rem; line-height: 1.25; color: #f3e2b3; text-shadow: 0 1px 6px rgba(0, 0, 0, .35); }
+.rp-hero-sub { max-width: 62%; font-weight: 700; font-size: .9rem; line-height: 1.25; color: #f3e2b3; text-shadow: 0 1px 6px rgba(0, 0, 0, .35); }
 .rp-say {
   position: relative; margin-top: auto; width: min(60%, 260px); padding: 11px 14px; border-radius: 18px 18px 4px 18px;
   background: var(--papel); color: var(--tinta); font-weight: 800; font-size: 1rem; line-height: 1.3; text-wrap: pretty;
   box-shadow: 0 8px 18px rgba(0, 0, 0, .28);
 }
+.rp-say-go {
+  display: flex; align-items: center; gap: 4px; min-height: 44px; margin: 4px 0 -6px; color: var(--red); font-weight: 900; font-size: .92rem; text-decoration: none;
+}
+.rp-say-go svg { width: 18px; height: 18px; }
 .rp-hero-dragon {
   position: absolute; z-index: 1; right: -8px; bottom: -6px; width: auto; height: 62%; max-height: 190px; pointer-events: none;
   transform: scaleX(-1); filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .38));
@@ -435,6 +442,7 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rp-hw.is-new { background: #fff3ef; box-shadow: inset 0 0 0 3px var(--red); }
 .rp-hw.is-heard { background: var(--papel); box-shadow: inset 0 0 0 2px var(--linea); }
 .rp-hw.is-sent { background: var(--green-pale); box-shadow: inset 0 0 0 2px var(--green); }
+.rp-hw.is-other { background: var(--papel); box-shadow: inset 0 0 0 2px var(--linea); }
 /* the picture and the name: one link to the homework's own page (its lines, its audio codes) */
 .rp-hw-open {
   display: grid; grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: auto auto 1fr; column-gap: 12px; row-gap: 2px; align-items: start;
@@ -462,7 +470,7 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rp-hw-acts svg { width: 16px; height: 16px; flex: none; }
 .rp-hw-play { background: var(--gold-btn); color: var(--rojo); box-shadow: 0 4px 0 var(--gold-edge); }
 .rp-hw-play:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--gold-edge); }
-.rp-hw:not(.is-new) .rp-hw-play { background: var(--oro-palido); box-shadow: none; }
+.rp-hw:not(.is-new):not(.is-other) .rp-hw-play { background: var(--oro-palido); box-shadow: none; }
 .rp-hw:not(.is-new) .rp-hw-play[aria-pressed="true"] { background: var(--gold-btn); }
 .rp-hw-send { flex: 1.25 !important; background: var(--rojo); color: var(--papel); }
 .rp-hw-send:active { transform: scale(.97); }
@@ -477,10 +485,21 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
   font: 800 1rem/1.1 var(--sans);
 }
 .rp-hw-login { font-size: .88rem; line-height: 1.4; color: var(--tinta-2); }
-.rp-hw-login a { display: inline; color: var(--rojo); font-weight: 800; }
+.rp-hw-login a { display: inline-flex; align-items: center; min-height: 44px; color: var(--rojo); font-weight: 800; }
 @media (hover: hover) and (pointer: fine) {
   .rp-hw-send:hover { background: var(--rojo-2); }
   .rp-hw-more:hover { background: #e8dbbd; }
+}
+
+/* a phone: the steps that are not the current one are smaller (the current one comes up sooner on the screen) */
+@media (max-width: 759px) {
+  .rp-step:not(.is-current) { grid-template-columns: 84px minmax(0, 1fr); padding: 12px; }
+  .rp-step:not(.is-current) .rp-art { width: 84px; height: 84px; grid-row: 1 / span 3; }
+  .rp-step:not(.is-current) .rp-line { display: none; }
+  .rp-step:not(.is-current) .rp-num { width: 28px; height: 28px; font-size: 1rem; left: 4px; top: 4px; }
+  .rp-step:not(.is-current) .rp-mark { width: 26px; height: 26px; right: 4px; top: 4px; }
+  .rp-step:not(.is-current) .rp-act { margin-top: 8px; }
+  .rp-step:not(.is-current) .rp-btn { min-height: 48px; }
 }
 
 /* ── a small phone (360 px) ── */
@@ -489,8 +508,10 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
   .rp-hero, .rp-hero-text { min-height: 250px; }
   .rp-hero-name { font-size: 2.15rem; }
   .rp-say { width: min(64%, 230px); font-size: .94rem; padding: 10px 12px; }
-  .rp-step { grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; padding: 12px; }
-  .rp-art { width: 96px; height: 96px; }
+  .rp-step.is-current { grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; padding: 12px; }
+  .rp-step.is-current .rp-art { width: 96px; height: 96px; }
+  .rp-step:not(.is-current) { grid-template-columns: 72px minmax(0, 1fr); }
+  .rp-step:not(.is-current) .rp-art { width: 72px; height: 72px; }
   .rp-step-t { font-size: 1.18rem; }
   .rp-hw-open { grid-template-columns: 64px minmax(0, 1fr); }
   .rp-hw-pic { width: 64px; height: 64px; }
@@ -506,7 +527,8 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
   .rp-hero-text { padding: 22px 260px 22px 32px; gap: 10px; justify-content: flex-start; }
   .rp-hero-head { max-width: none; }
   .rp-hero-name { font-size: clamp(2.6rem, 4.6vw, 3.5rem); }
-  .rp-hero-sub { font-size: 1.08rem; }
+  .rp-hero-sub { max-width: none; font-size: 1.08rem; }
+  .rp-say-go { display: none; }
   .rp-say { margin-top: 2px; width: auto; max-width: 600px; padding: 13px 20px; border-radius: 20px; font-size: clamp(1.05rem, 1.45vw, 1.25rem); }
   .rp-hero-dragon { right: 24px; bottom: -6px; height: calc(100% - 4px); max-height: 240px; }
   .rp-hero-top { display: contents; }

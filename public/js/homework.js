@@ -4070,8 +4070,9 @@
       a.className = 'pt-base pt-tareas';
       a.innerHTML = '<span class="pt-base-book" aria-hidden="true" style="padding:0;overflow:hidden;background:#f3e2b3">' +
         '<img src="/assets/cast/aileen-talk.webp" alt="" width="56" height="62" style="width:56px;height:62px;object-fit:cover;object-position:50% 8%"></span>' +
-        '<span class="pt-base-text"><b class="pt-base-title">Hacer mis tareas</b><span class="pt-base-sub" id="pt-tareas-sub"></span></span>' +
-        '<span id="pt-tareas-n" style="flex:none;padding:4px 10px;border-radius:999px;background:#c62828;color:#fff;font-weight:900;font-size:.85rem;white-space:nowrap"></span>' +
+        '<span class="pt-base-text"><b class="pt-base-title">Hacer mis tareas</b>' +
+        '<span style="display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px"><span id="pt-tareas-n" style="padding:3px 10px;border-radius:999px;background:#c62828;color:#fff;font-weight:900;font-size:.82rem;white-space:nowrap"></span>' +
+        '<span class="pt-base-sub" id="pt-tareas-sub"></span></span></span>' +
         '<span class="pt-base-go" aria-hidden="true">›</span>';
       if (base && base.parentNode) base.parentNode.insertBefore(a, base.nextSibling);
       else { const dock = document.querySelector('.pt-dock'); if (dock && dock.parentNode) dock.parentNode.insertBefore(a, dock); else return; }
@@ -4090,7 +4091,7 @@
       }
     } catch (_) { /* the account's word is enough */ }
     const left = ids.filter((id) => !sent.has(id)).length;
-    $('pt-tareas-sub').textContent = left ? 'Escucha el audio, graba tu video y mándalo' : '¡Todas mandadas!';
+    $('pt-tareas-sub').textContent = left ? 'Escucha, graba y manda tu video' : '¡Todas mandadas!';
     const n = $('pt-tareas-n');
     n.textContent = left + ' por mandar';
     n.hidden = !left;

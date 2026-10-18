@@ -36,7 +36,7 @@
   // 🏆 2026-10-18 (La Ruta Dorada redesign): «Hacer mis tareas» on the home (homework.js renderTareasEntry). Kept apart
   // from the big dictionary line so other changes to it merge cleanly.
   DICT.map['Hacer mis tareas'] = 'Do my homework';
-  DICT.map['Escucha el audio, graba tu video y mándalo'] = 'Listen to the audio, record your video and send it';
+  DICT.map['Escucha, graba y manda tu video'] = 'Listen, record and send your video';
   DICT.map['¡Todas mandadas!'] = 'All sent!';
   PATTERNS.push({ re: /^(\d+) por mandar$/, en: '$1 to send' });
 
