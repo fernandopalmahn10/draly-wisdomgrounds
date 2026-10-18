@@ -443,6 +443,21 @@ function updateRuta(code, level, mutate, opts) {
   scheduleSave();
   return rec;
 }
+// 🆕 2026-10-18 (La Ruta Dorada redesign) — the kid's homework audio marks: rec.tareas = { '<homework id>': { h: <when
+// the audio was first played>, s: <when they tapped «¡Ya la mandé!»> } } (ids of public/assets/audios/catalog.json).
+// server.js checks the ids and who asks; this only finds the record (an archived kid comes back), hands the map to
+// `mutate`, drops empty entries and saves. opts.activity: the kid did it (counts as activity). → the record, or null.
+function updateTareas(code, mutate, opts) {
+  const rec = get(code);
+  if (!rec || typeof mutate !== 'function') return null;
+  const all = rec.tareas && typeof rec.tareas === 'object' && !Array.isArray(rec.tareas) ? rec.tareas : {};
+  mutate(all);
+  Object.keys(all).forEach((k) => { const e = all[k]; if (!e || typeof e !== 'object' || (!e.h && !e.s)) delete all[k]; });
+  if (Object.keys(all).length) rec.tareas = all; else delete rec.tareas;
+  if (opts && opts.activity) rec.lastSeen = Date.now();
+  scheduleSave();
+  return rec;
+}
 // 🆕 2026-06-21 (Fernando) — teacher-managed classroom. Sets the student's
 // classroomId (a classrooms.js id, or '' to unassign). Unlike setClassroomCode
 // this is NEVER touched by login, so the teacher's filing sticks.
@@ -1124,6 +1139,7 @@ module.exports = {
   setLevel,
   setLevelAccess,
   updateRuta,
+  updateTareas,
   resetAssignmentSubmissions,
   sendMessage,
   getInbox,
