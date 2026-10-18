@@ -4,7 +4,8 @@
 // Drawn by js/audios.js's router inside La Ruta Dorada's page:
 //   /audios/<level>/libro/<n>   simulation n's golden book: «Mis resultados», «Repasa tus N errores» (the wrong questions
 //                               of the kid's latest try, each a full card with its play button), «Así es el examen»
-//                               (the solved examples), then the whole simulation, part by part, and the PDF
+//                               (the solved examples), then the whole simulation, part by part (the PDF: only for
+//                               the super admin since 2026-10-18; nobody else sees a word about it)
 // One phone card per question, as the printed golden book prints it (same source: ../study/lib/examweb.py): its photos
 // (4:3, the book's letter tabs over the exam's painted-out ones), its own play button with the original exam recording
 // of that question, the pinyin with tone marks, the Spanish, the question in bold and the answer in gold.
@@ -245,12 +246,9 @@
         (p.pages || p.mb ? '<p>' + [p.pages ? (Number(p.pages) || 0) + ' páginas' : '', p.mb ? mb(p.mb) + ' MB' : ''].filter(Boolean).join(', ') + '</p>' : '') +
         '<a class="gd-btn gd-btn-gold" href="' + esc(p.href) + '" download>' + I.down + 'Descargar el libro</a></div></section>';
     }
-    const left = Number(p.left) || 0;
-    // (a kid whose Dorado is still closed: the PDF, every answer, comes with it)
-    const why = p.dorado === false ? 'Llega con El Simulacro Dorado: practica cada mundo de El Entrenamiento con ' + (Number(d.pct) || 70) + ' % o más.'
-      : (left === 1 ? 'Haz el simulacro que falta para descargar el libro.' : 'Haz los ' + left + ' simulacros que faltan para descargar el libro.');
-    return '<section class="gd-pdf"><span class="gd-pdf-ic" aria-hidden="true">' + I.lock + '</span><div class="gd-pdf-body"><h2 class="gd-pdf-t">El libro en PDF</h2>' +
-      '<p>' + why + '</p></div></section>';
+    // (2026-10-18, his rule: the study PDFs download for the super admin only; the server sends `href` to nobody else,
+    // and families never read about a PDF: this web book, with its audio, is how they study)
+    return '';
   }
   function resultsHtml(d, parts) {
     const m = d.mine;

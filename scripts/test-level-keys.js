@@ -288,8 +288,11 @@ async function run() {
   const right = await post('/api/level-key', { level: 'yct1', key: ' luna — 58 ' }, as(k));
   ok(right.json && right.json.ok && right.json.saved === false && cookieOk(right.setCookie, 'dlv_yct1'), 'the right key (any case, spaces, dashes): this device keeps YCT 1 (httpOnly cookie)');
   ok(await openBase(k, BASES[0]), '… La Base YCT 1 opens');
-  for (const u of baseFiles(BASES[0])) ok(mediaOk(await fetchMedia(u, as(k))), `… ${u.split('?')[0]} loads (private, never at Cloudflare)`);
-  ok(/attachment|inline/.test((await get(baseFiles(BASES[0])[4], as(k))).headers['content-disposition'] || '') , '… the PDF downloads');
+  for (const u of baseFiles(BASES[0]).slice(0, 4)) ok(mediaOk(await fetchMedia(u, as(k))), `… ${u.split('?')[0]} loads (private, never at Cloudflare)`);
+  // (2026-10-18, his rule: the study PDFs download only for the super admin; scripts/test-ruta-tareas.js checks every visitor)
+  ok((await get(baseFiles(BASES[0])[4], as(k))).status === 403, '… but not the PDF (the super admin\'s only)');
+  const sa = await get(baseFiles(BASES[0])[4], { headers: T(SEED) });
+  ok(sa.status === 200 && /attachment|inline/.test(sa.headers['content-disposition'] || ''), '… the super admin downloads it');
   ok(isKeyScreen(await get('/audios/hsk1-base', as(k)), 'HSK 1') && (await get('/base-media/hsk1-base/base.json', as(k))).status === 401, '… that level only (HSK 1 still asks)');
   ok(isPlayer(await get(pageOf(simOf('yct1')[0]), as(k))), '… the YCT 1 sims open');
   const pay = await get('/api/hsk-sim/' + simOf('yct1')[0], as(k));

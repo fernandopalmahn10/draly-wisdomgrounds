@@ -7,26 +7,58 @@
 /* flight between cards (a spring in js/ruta.js: transform and opacity   */
 /* only) and the gold sweep when one lands. Every size inside a card is  */
 /* a share of its width (--cw), so the card scales like a real object.   */
-/* Then each module's path: a golden route of three steps.               */
+/* Then each module's page (redesign 2026-10-18, his approved design):   */
+/* the band with the way back, the hero with its wonder and Dralingo's   */
+/* one instruction, the ladder 1 → 2 → 3 and «Tus tareas» beside it.     */
 /* Uses the tokens of css/audios.css (:root). One light theme.           */
 /* ===================================================================== */
 .rd-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 
+/* ── the band (picker and module page): the way back, always visible ── */
+/* (the page's own red band steps aside: these two screens draw theirs, with «Volver» in it) */
+body.rp-on .au-top { display: none; }
+body.rp-on .au-main { max-width: none; padding: 0; }
+.rp-band {
+  position: sticky; top: 0; z-index: 40; background: var(--rojo); color: var(--papel);
+  padding-top: env(safe-area-inset-top, 0px); box-shadow: inset 0 -3px 0 var(--oro-claro);
+}
+.rp-band-in { position: relative; max-width: 1440px; margin: 0 auto; height: 60px; padding: 0 12px 3px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rp-back {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 48px; min-width: 0; padding: 0 16px 0 10px; border-radius: 999px;
+  background: rgba(255, 253, 248, .14); color: var(--papel); text-decoration: none; font-weight: 800; font-size: 1rem; line-height: 1.1;
+  transition: background-color 160ms ease, transform 140ms var(--ease-out);
+}
+.rp-back span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-back svg { width: 20px; height: 20px; flex: none; }
+.rp-back:active { transform: scale(.97); }
+.rp-band-title { flex: none; display: inline-flex; align-items: center; min-height: 48px; padding: 0 4px; font-weight: 800; font-size: 1.15rem; color: #e8c878; text-decoration: none; white-space: nowrap; border-radius: 8px; }
+.rp-band :focus-visible { outline-color: var(--papel); }
+@media (hover: hover) and (pointer: fine) { .rp-back:hover { background: rgba(255, 253, 248, .24); } }
+@media (min-width: 760px) {
+  .rp-band-in { height: 64px; padding: 0 28px 3px; }
+  .rp-back { font-size: 1.06rem; padding: 0 20px 0 12px; }
+  .rp-band-title { position: absolute; left: 50%; top: 50%; transform: translate(-50%, calc(-50% - 1px)); font-size: 1.4rem; }
+}
+@media (max-width: 380px) {
+  .rp-band-in { gap: 6px; padding: 0 10px 3px; }
+  .rp-back { padding: 0 12px 0 8px; gap: 4px; font-size: .95rem; }
+  .rp-band-title { font-size: .95rem; padding: 0; }
+}
+
 /* ── the picker ─────────────────────────────────────────────────────── */
-body.au-is-pick .au-main { max-width: 1120px; padding-top: 20px; }
-.rd-pick { display: grid; justify-items: center; text-align: center; }
+.rd-pick { display: grid; justify-items: center; text-align: center; max-width: 1120px; margin: 0 auto; padding: 16px 16px 28px; }
 .rd-h1 { font-weight: 800; font-size: clamp(2rem, 8.4vw, 3rem); line-height: 1.02; letter-spacing: -.025em; color: var(--rojo); }
 .rd-lede { margin-top: 8px; max-width: 32ch; color: var(--tinta-2); font-size: 1rem; }
 
 /* the stage spans the whole screen (the neighbours fly in from its edges); the page itself never scrolls sideways */
 body.au-is-pick { overflow-x: hidden; }
 @supports (overflow-x: clip) { body.au-is-pick { overflow-x: clip; } }
-/* the golden visitor (css/dorado.css) never stands over the cards' ‹ › nor over a route's key box */
+/* the golden visitor (css/dorado.css) never stands over the cards' ‹ › nor over a route's ladder */
 body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rd-carousel { justify-self: stretch; width: auto; margin-inline: calc(50% - 50vw); }
 .rd-stage {
-  --cw: clamp(228px, min(74vw, 300px, calc((100vh - 300px) / 1.42)), 300px);
-  --cw: clamp(228px, min(74vw, 300px, calc((100svh - 300px) / 1.42)), 300px);
+  --cw: clamp(228px, min(74vw, 300px, calc((100vh - 310px) / 1.42)), 300px);
+  --cw: clamp(228px, min(74vw, 300px, calc((100svh - 310px) / 1.42)), 300px);
   position: relative; height: calc(var(--cw) * 1.42 + 46px); overflow: hidden;
   touch-action: pan-y pinch-zoom; -webkit-user-select: none; user-select: none; cursor: grab;   /* sideways = our swipe; zoom stays */
 }
@@ -69,6 +101,12 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rd-card-name { font-weight: 800; font-size: calc(var(--cw) * .2); line-height: .86; letter-spacing: -.035em; text-shadow: 0 2px 12px rgba(0, 0, 0, .22); }
 .is-long .rd-card-name { font-size: calc(var(--cw) * .145); }
 .rd-card-sub { font-weight: 700; font-size: calc(var(--cw) * .05); line-height: 1.2; color: var(--gold); }
+/* (2026-10-18) the homework this kid still has to send in this module: a red badge in the card's corner */
+.rd-card-badge {
+  position: absolute; z-index: 10; top: calc(var(--cw) * .345); right: calc(var(--cw) * .06); padding: 5px 11px; border-radius: 999px;
+  background: #c62828; color: #fff; font-weight: 900; font-size: max(13px, calc(var(--cw) * .045)); line-height: 1.15;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .3); font-variant-numeric: tabular-nums;
+}
 
 /* the route in small: 1 La Base · 2 Entrenamiento · 3 Simulacro */
 .rd-mini {
@@ -120,7 +158,7 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 }
 .rd-card-go svg { width: 1.05em; height: 1.05em; }
 .rd-card.is-locked .rd-card-go { background: rgba(247, 241, 228, .14); color: var(--crema); box-shadow: inset 0 0 0 1.5px rgba(232, 200, 120, .7); }
-/* a locked module: the gold lock seal of the key screen, in the corner */
+/* a locked module: the gold lock seal of the key screen */
 .rd-seal {
   position: absolute; z-index: 7; top: calc(var(--cw) * .075); right: calc(var(--cw) * .075); width: calc(var(--cw) * .17); height: calc(var(--cw) * .17);
   border-radius: 50%; display: grid; place-items: center; color: #3d0707; transform: rotate(-8deg);
@@ -153,10 +191,10 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rd-arrow[aria-disabled="true"] { opacity: .35; cursor: default; box-shadow: none; }
 .rd-arrow[aria-disabled="true"]:active { transform: none; }
 .rd-dots { position: relative; display: flex; }
-.rd-dot { width: 40px; height: 44px; padding: 0; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; border-radius: 10px; }
+.rd-dot { width: 48px; height: 48px; padding: 0; border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; border-radius: 10px; }
 .rd-dot i { width: 10px; height: 10px; border-radius: 50%; background: rgba(90, 16, 16, .24); }
 .rd-dot-now {
-  position: absolute; left: 7px; top: 50%; width: 26px; height: 10px; margin-top: -5px; border-radius: 5px;
+  position: absolute; left: 11px; top: 50%; width: 26px; height: 10px; margin-top: -5px; border-radius: 5px;
   background: var(--oro); pointer-events: none; will-change: transform; transition: transform 300ms var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
@@ -174,7 +212,7 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rd-join p { margin-top: 4px; font-size: .95rem; color: var(--tinta-2); }
 .rd-join .rd-btn { margin-top: 12px; }
 
-/* buttons of the route (the same family as La Base's) */
+/* buttons of the picker (the same family as La Base's) */
 .rd-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 50px; padding: 0 20px;
   border: 0; border-radius: 999px; cursor: pointer; text-decoration: none; white-space: nowrap;
@@ -189,37 +227,7 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
   .rd-btn-gold:hover { background: #f2d98f; }
 }
 
-/* ── a module's path ────────────────────────────────────────────────── */
-body.au-is-path .au-main { max-width: 720px; }
-.rd-hero {
-  position: relative; overflow: hidden; isolation: isolate; height: clamp(184px, 50vw, 240px); margin-top: 2px; padding: 22px 22px 0;
-  border-radius: 22px; color: var(--crema);
-  background:
-    radial-gradient(70% 90% at 80% 70%, var(--c1) 0%, rgba(0, 0, 0, 0) 72%),
-    linear-gradient(168deg, var(--c2) 0%, var(--c2) 40%, var(--c3) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 22px 34px -24px rgba(28, 6, 6, .6), 0 8px 16px -10px rgba(28, 6, 6, .3);
-}
-.rd-hero::before { content: ''; position: absolute; inset: 0 0 50% 0; z-index: 6; pointer-events: none; background: linear-gradient(180deg, rgba(255, 255, 255, .13), rgba(255, 255, 255, 0)); }
-.rd-hero::after { content: ''; position: absolute; inset: 8px; z-index: 6; pointer-events: none; border: 1.5px solid rgba(232, 200, 120, .58); border-radius: 15px; }
-/* the banner: the skyline twice in a row, cut on the right (behind Dralingo), the same height on a phone and a laptop */
-.rd-hero .rd-sky { bottom: 0; height: 46%; aspect-ratio: auto; opacity: .45; }
-.rd-hero .rd-card-gloss { z-index: 5; }
-/* Dralingo stands inside the gold frame, clear of the words (his head below its top line) */
-.rd-hero-dragon { position: absolute; z-index: 3; right: -6px; bottom: -10%; height: 100%; width: auto; pointer-events: none; filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .36)); }
-.rd-hero-name { position: relative; z-index: 4; max-width: 58%; font-weight: 800; font-size: clamp(2.9rem, 16vw, 4.4rem); line-height: .86; letter-spacing: -.035em; text-shadow: 0 2px 12px rgba(0, 0, 0, .22); }
-.rd-hero.is-long .rd-hero-name { max-width: 74%; font-size: clamp(1.9rem, 9.4vw, 3.4rem); white-space: nowrap; }   /* «New HSK 1» on one line */
-.rd-hero-sub { position: relative; z-index: 4; max-width: 54%; margin-top: 10px; font-weight: 700; font-size: 1rem; line-height: 1.25; color: #e8c878; }
-.rd-hero .rd-seal { --cw: 300px; top: auto; right: auto; bottom: 16px; left: 18px; width: 52px; height: 52px; }
-/* a screen's heading takes the focus after a tap (for screen readers, js/audios.js): it is not a control, no ring */
-.rd-hero-name:focus, .rd-h1:focus { outline: none; }
-
-/* the chosen card grows into this banner (View Transitions, js/audios.js swap()) */
-.rd-slide.is-active .rd-card, .rd-hero { view-transition-name: rd-world; }
-::view-transition-group(rd-world) { animation-duration: 420ms; animation-timing-function: cubic-bezier(.32, .72, 0, 1); }
-::view-transition-old(rd-world), ::view-transition-new(rd-world) { height: 100%; object-fit: cover; animation-duration: 260ms; }
-::view-transition-old(root), ::view-transition-new(root) { animation-duration: 200ms; }
-
-/* a friend of the gang, cheering along */
+/* a friend of the gang, cheering along (the picker; El Entrenamiento and El libro dorado reuse it) */
 .rd-friend { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: end; gap: 8px; margin-top: 12px; }
 .rd-friend img { width: 64px; height: auto; }
 .rd-bubble {
@@ -230,191 +238,365 @@ body.au-is-path .au-main { max-width: 720px; }
 .rd-bubble b { display: block; font-size: .8rem; font-weight: 800; color: var(--oro-tinta); }
 .rd-friend.is-pick { width: 100%; max-width: 420px; margin-top: 18px; text-align: left; }
 .rd-bubble::after { content: ''; position: absolute; left: -7px; bottom: 12px; border: 8px solid transparent; border-left: 0; border-right-color: var(--papel); }
+.rd-h1:focus { outline: none; }
 
-/* a locked module: one way in, the level's key */
-.rd-keybox {
-  position: relative; margin-top: 14px; padding: 18px 18px 20px; border-radius: var(--r); background: var(--rojo); color: var(--crema);
-}
-.rd-keybox-seal {
-  position: absolute; right: 16px; top: -18px; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; color: #3d0707;
-  background: radial-gradient(circle at 35% 30%, #f0d58e 0%, #d1a94b 58%, #b08530 100%); transform: rotate(-8deg);
-  box-shadow: 0 8px 14px -8px rgba(20, 2, 2, .65), inset 0 0 0 2.5px rgba(61, 7, 7, .7), inset 0 0 0 4.5px #e7c873;
-}
-.rd-keybox-seal svg { width: 24px; height: 24px; }
-.rd-keybox-title { padding-right: 56px; font-weight: 800; font-size: 1.22rem; line-height: 1.2; letter-spacing: -.01em; }
-.rd-keybox p { margin-top: 6px; color: var(--crema-78); font-size: .97rem; }
-.rd-keybox .rd-btn { width: 100%; margin-top: 14px; font-size: clamp(.9rem, 4.2vw, 1.02rem); padding: 0 14px; }
-.rd-keybox-alt a { color: #e8c878; font-weight: 800; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
-.rd-keybox :focus-visible { outline-color: var(--crema); }
+/* the chosen card grows into the module page's banner (View Transitions, js/audios.js swap()) */
+.rd-slide.is-active .rd-card, .rp-hero { view-transition-name: rd-world; }
+::view-transition-group(rd-world) { animation-duration: 420ms; animation-timing-function: cubic-bezier(.32, .72, 0, 1); }
+::view-transition-old(rd-world), ::view-transition-new(rd-world) { height: 100%; object-fit: cover; animation-duration: 260ms; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 200ms; }
 
-/* the golden route: three steps on one gold line (solid as far as the kid can go, dashed after) */
-.rd-route { list-style: none; margin: 26px 0 0; padding: 0; }
-.rd-stop { position: relative; display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 14px; padding-bottom: 28px; }
-.rd-stop:last-child { padding-bottom: 6px; }
-.rd-stop:not(:last-child)::before {
-  content: ''; position: absolute; left: 28.5px; top: 66px; bottom: 6px; width: 3px; border-radius: 2px; background: var(--oro);
+/* ════════════════════════════════════════════════════════════════════ */
+/* a module's page (redesign 2026-10-18): the ladder + «Tus tareas»     */
+/* phone first (one column: hero, ladder stacked with ↓, tareas), then  */
+/* the ladder in a row (760 px), then the tareas on the right (1100 px) */
+/* ════════════════════════════════════════════════════════════════════ */
+.rp {
+  --gold-btn: #e8c878; --gold-edge: #b88b2c; --red: #c62828; --green: #1f6b45; --green-pale: #eef6f0; --ink-soft: #4a3f36; --ink-mid: #6b5d4f;
+  --wash: #efe4c9;
 }
-.rd-stop[data-next="soon"]::before, .rd-stop[data-next="locked"]::before {
-  opacity: .8; border-radius: 0; background: linear-gradient(to bottom, var(--oro) 55%, rgba(184, 139, 44, 0) 55%) 0 0 / 3px 12px repeat-y;
-}
-.rd-coin { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; }
-.rd-coin svg { width: 27px; height: 27px; }
-.rd-coin b {
-  position: absolute; left: -5px; top: -5px; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center;
-  background: var(--rojo); color: var(--crema); font-weight: 800; font-size: .8rem; box-shadow: 0 0 0 3px var(--crema);
-}
-.rd-stop.is-open .rd-coin {
-  background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); color: #3d0707;
-  box-shadow: 0 8px 16px -8px rgba(90, 16, 16, .6), inset 0 0 0 2.5px rgba(61, 7, 7, .16);
-}
-.rd-stop.is-soon .rd-coin { background: var(--crema); border: 2.5px dashed var(--oro); color: var(--oro-tinta); }
-.rd-stop.is-soon .rd-coin b { background: var(--oro-tinta); }
-.rd-stop.is-locked .rd-coin { background: var(--crema-2); color: var(--oro-tinta); box-shadow: inset 0 0 0 2.5px var(--oro); }
-.rd-stop-body { min-width: 0; padding-top: 4px; }
-.rd-stop-title { font-weight: 800; font-size: 1.38rem; line-height: 1.15; letter-spacing: -.012em; color: var(--rojo); }
-.rd-stop-text { margin-top: 4px; max-width: 46ch; color: var(--tinta-2); font-size: .98rem; }
-.rd-progress { max-width: 360px; margin-top: 12px; }
-.rd-progress .au-meter { height: 10px; }
-.rd-progress p { margin-top: 6px; font-weight: 700; font-size: .92rem; color: var(--tinta); font-variant-numeric: tabular-nums; }
-.rd-stop .rd-btn { margin-top: 14px; }
-.rd-soon {
-  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 13px 6px 10px; border-radius: 999px;
-  background: var(--oro-palido); color: var(--rojo); font-weight: 800; font-size: .88rem;
-}
-.rd-soon svg { width: 16px; height: 16px; color: var(--oro-tinta); }
-.rd-stop-state { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-weight: 700; font-size: .92rem; color: var(--oro-tinta); }
-.rd-stop-state svg { width: 16px; height: 16px; }
+.rp-grid { max-width: 1440px; margin: 0 auto; padding: 16px 16px 26px; display: grid; gap: 18px; }
+.rp-main { min-width: 0; display: grid; gap: 16px; align-content: start; }
 
-/* El Entrenamiento (phase 3): what the kid's seals already open there, world by world. Each world is a small gold-leaf
-   tile like the simulations below: ready = the gold coin with a check, not yet = the dashed coin with its number and
-   how many seals it has. A tap opens that world in La Base. */
-.rd-train { margin-top: 14px; }
-.rd-train-count { margin-top: 12px; font-weight: 700; font-size: .95rem; color: var(--tinta); font-variant-numeric: tabular-nums; }
-.rd-train .rd-train-count { margin-top: 0; }
-.rd-train-count b { font-weight: 800; color: var(--rojo); }
-.rd-worlds { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 8px; }
-.rd-world {
-  display: grid; justify-items: center; align-content: start; gap: 3px; height: 100%; min-height: 92px; padding: 10px 6px 9px;
-  border-radius: 12px; text-decoration: none; color: var(--tinta); background: var(--papel); box-shadow: inset 0 0 0 1.5px var(--linea);
-  transition: transform 140ms var(--ease-out), box-shadow 200ms ease;
+/* ── the hero: the module's wonder, its name, Dralingo pointing, one instruction ── */
+.rp-hero {
+  position: relative; overflow: hidden; isolation: isolate; min-height: 272px; border-radius: 26px; color: var(--papel);
+  background: rgb(var(--hero-rgb, 42, 23, 72));
+  box-shadow: 0 18px 30px -22px rgba(28, 6, 6, .55);
 }
-.rd-world:active { transform: scale(.97); }
-.rd-world:focus-visible { border-radius: 12px; }
-.rd-world-n {
-  width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 2px;
-  font-weight: 800; font-size: 1rem; color: var(--oro-tinta); background: var(--crema); border: 2px dashed var(--oro);
+.rp-hero-bg { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; }
+.rp-hero-shade {
+  position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, rgba(var(--hero-rgb), .84) 0%, rgba(var(--hero-rgb), .38) 52%, rgba(var(--hero-rgb), .08) 100%);
 }
-.rd-world-n svg { width: 18px; height: 18px; }
-.rd-world-name { max-width: 100%; font-weight: 800; font-size: .82rem; line-height: 1.15; text-align: center; overflow-wrap: anywhere; color: var(--rojo); }
-.rd-world-meta { font-size: .82rem; font-weight: 700; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
-/* ready: the gold check coin on paper with a gold edge (the gold-leaf tiles stay the Simulacro Dorado's, the end of the route) */
-.rd-world.is-ready { background: var(--papel); box-shadow: inset 0 0 0 2px var(--oro); }
-/* not yet: the dashed coin fills like a pie as its seals come in (--p = % of the world's seals) */
-.rd-world:not(.is-ready) .rd-world-n { background: conic-gradient(var(--oro-palido) calc(var(--p, 0) * 1%), var(--crema) 0); }
-.rd-world.is-ready .rd-world-n {
-  border: 0; color: #3d0707; background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%);
-  box-shadow: 0 5px 10px -6px rgba(90, 16, 16, .55);
+.rp-hero::after { content: ''; position: absolute; inset: 7px; z-index: 3; pointer-events: none; border: 1.5px solid rgba(232, 200, 120, .5); border-radius: 20px; }
+.rp-hero-text { position: relative; z-index: 2; min-height: 272px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 16px 18px 16px; }
+.rp-hero-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.rp-hero-name { min-width: 0; font-weight: 800; font-size: 2.5rem; line-height: .95; letter-spacing: -.03em; text-shadow: 0 2px 12px rgba(0, 0, 0, .3); }
+.rp-hero-name:focus { outline: none; }
+.rp-hero-sub { max-width: 62%; font-weight: 700; font-size: .9rem; line-height: 1.25; color: #f3e2b3; text-shadow: 0 1px 6px rgba(0, 0, 0, .35); }
+.rp-say {
+  position: relative; margin-top: auto; width: min(60%, 260px); padding: 11px 14px; border-radius: 18px 18px 4px 18px;
+  background: var(--papel); color: var(--tinta); font-weight: 800; font-size: 1rem; line-height: 1.3; text-wrap: pretty;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .28);
 }
-.rd-world.is-ready .rd-world-meta { color: var(--oro-tinta); font-weight: 800; }
-/* (phase 4) an open world plays: a red coin until it has the Dorado's %, then the gold check; the extra worlds (Pinyin,
-   the Simulacro del examen) carry their own sign */
-.rd-world.is-ready:not(.is-done) .rd-world-n { color: var(--crema); background: var(--rojo); }
-.rd-world .rd-world-n svg { width: 18px; height: 18px; }
-.rd-world:not(.is-ready) .rd-world-n svg { color: var(--oro-tinta); }
-.rd-train-hint { margin-top: 10px; max-width: 46ch; font-size: .9rem; color: var(--tinta-2); }
-.rd-train .rd-btn { margin-top: 14px; }
-/* a route's buttons never run past a small phone's edge (a long label wraps) */
-.rd-stop .rd-btn { max-width: 100%; white-space: normal; text-align: center; line-height: 1.15; padding-top: 6px; padding-bottom: 6px; }
-/* El Simulacro Dorado not earned yet (phase 4): one coin per world that counts, gold with a check once it has the % */
-.rd-goal { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); gap: 6px; max-width: 420px; }
-.rd-goal li { display: grid; justify-items: center; gap: 3px; font-size: .74rem; font-weight: 700; color: var(--tinta-2); font-variant-numeric: tabular-nums; text-align: center; }
-.rd-goal li span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rd-goal b {
-  width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: .85rem; font-weight: 800;
-  color: var(--oro-tinta); background: var(--crema); border: 2px dashed var(--oro);
+.rp-say-go {
+  display: flex; align-items: center; gap: 4px; min-height: 44px; margin: 4px 0 -6px; color: var(--red); font-weight: 900; font-size: .92rem; text-decoration: none;
 }
-.rd-goal b svg { width: 16px; height: 16px; }
-.rd-goal li.is-on { color: var(--oro-tinta); }
-.rd-goal li.is-on b { border: 0; color: #3d0707; background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); box-shadow: 0 5px 10px -6px rgba(90, 16, 16, .55); }
-.rd-goal .rd-goal-pct { margin-top: -2px; font-weight: 800; color: var(--tinta); }
-.rd-goal li.is-on .rd-goal-pct { color: var(--oro-tinta); }
-.rd-gold-note { margin-top: 10px; max-width: 46ch; font-size: .92rem; color: var(--tinta-2); }
-/* a narrow sim tile: its best (or «Otra vez») goes under the name instead of over the coin */
-@media (max-width: 400px) { .rd-sims .rd-sim-best { position: static; margin-top: 6px; } }
-@media (hover: hover) and (pointer: fine) {
-  .rd-world:hover { box-shadow: inset 0 0 0 2px var(--oro), 0 10px 20px -12px rgba(90, 16, 16, .35); }
+.rp-say-go svg { width: 18px; height: 18px; }
+.rp-hero-dragon {
+  position: absolute; z-index: 1; right: -8px; bottom: -6px; width: auto; height: 62%; max-height: 190px; pointer-events: none;
+  transform: scaleX(-1); filter: drop-shadow(0 10px 14px rgba(0, 0, 0, .38));
 }
+.rp-hero-top { align-self: stretch; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; }
+.rp-hero-tareas {
+  flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 13px; border-radius: 999px; background: var(--red); color: #fff;
+  font-weight: 900; font-size: .82rem; text-decoration: none; white-space: nowrap; box-shadow: 0 4px 10px rgba(0, 0, 0, .3);
+}
+.rp-hero-tareas[hidden] { display: none; }
+.rp-hero-seal { --cw: 260px; top: auto; right: auto; left: auto; position: relative; display: inline-grid; width: 44px; height: 44px; margin-top: 2px; }
+.rp-hero-seal svg { width: 20px; height: 20px; }
+.rp-hero.is-long .rp-hero-name { white-space: nowrap; }
 
-/* El Simulacro Dorado: one gold medal per simulation */
-.rd-sims { list-style: none; margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-/* the climax of the route: gold-leaf tiles (one gold edge, no shadow), not a settings list */
-.rd-sim {
-  position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; height: 100%; padding: 12px 12px 12px;
-  border-radius: 14px; color: var(--tinta); text-decoration: none;
+/* ── the ladder ── */
+.rp-ladder-t { margin-top: 2px; font-weight: 800; font-size: 1.5rem; line-height: 1.1; color: var(--rojo); }
+.rp-ladder { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 44px; }
+/* phone: picture + words side by side, the button under both */
+.rp-step {
+  position: relative; display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 14px; row-gap: 4px; align-content: start;
+  padding: 14px; border-radius: 24px; background: var(--papel); box-shadow: inset 0 0 0 2px var(--linea);
+}
+.rp-step:not(:last-child)::after {           /* ↓ to the next step */
+  content: ''; position: absolute; left: 50%; bottom: -38px; width: 30px; height: 30px; margin-left: -15px; background: var(--oro-claro);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.rp-body { display: contents; }
+.rp-art {
+  position: relative; grid-column: 1; grid-row: 1 / span 4; align-self: start; width: 112px; height: 112px; overflow: hidden;
+  border-radius: 18px; display: flex; align-items: center; justify-content: center;
+}
+.rp-art.is-base { background: #fbe3d2; }
+.rp-art.is-train { background: #d9efe3; }
+.rp-art.is-gold { background: #f6e6b4; }
+.rp-art-img { height: 94%; width: auto; max-width: 100%; object-fit: contain; margin-top: 10%; }
+.rp-step-t, .rp-line, .rp-bar, .rp-status { grid-column: 2; }
+.rp-step > .rp-body > :not(.rp-step-t):not(.rp-line):not(.rp-bar):not(.rp-status):not(.rp-art) { grid-column: 1 / -1; }
+.rp-step-t { font-weight: 800; font-size: 1.3rem; line-height: 1.08; letter-spacing: -.01em; color: var(--tinta); }
+.rp-line { font-size: .9rem; font-weight: 600; line-height: 1.3; color: var(--ink-soft); }
+.rp-bar { display: block; height: 9px; margin-top: 3px; border-radius: 999px; background: var(--wash); overflow: hidden; }
+.rp-bar > i { display: block; height: 100%; border-radius: 999px; background: var(--gold-edge); }
+.rp-bar.is-meter { height: auto; background: none; overflow: visible; }
+.rp-bar .au-meter { height: 9px; gap: 2px; }
+.rp-bar .au-meter > i { background: var(--wash); }
+.rp-bar .au-meter > i::after { background: var(--gold-edge); }
+.rp-status { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: .84rem; font-weight: 800; line-height: 1.25; color: var(--ink-mid); font-variant-numeric: tabular-nums; }
+.rp-badge {
+  display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; background: var(--red); color: #fff;
+  font-weight: 900; font-size: .78rem; line-height: 1.2; white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.rp-badge[hidden] { display: none; }
+/* the number of the step, and its mark (done ✓ / locked) */
+.rp-num {
+  position: absolute; left: 6px; top: 6px; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center;
+  font-weight: 800; font-size: 1.15rem; line-height: 1; background: var(--papel); color: var(--ink-mid); box-shadow: 0 2px 6px rgba(90, 16, 16, .15);
+}
+.rp-mark { position: absolute; right: 6px; top: 6px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; }
+.rp-mark svg { width: 17px; height: 17px; }
+.rp-mark.is-done { background: var(--green); color: #fff; box-shadow: 0 4px 10px rgba(31, 107, 69, .35); }
+.rp-mark.is-locked { background: var(--papel); color: var(--ink-mid); }
+/* La Base: three word pictures in a little fan */
+.rp-fan { position: relative; width: 100%; height: 100%; }
+.rp-fan img { position: absolute; display: block; height: auto; aspect-ratio: 1; object-fit: cover; background: #fff; border-radius: 14%; box-shadow: 0 4px 10px rgba(90, 16, 16, .2); }
+.rp-fan-l { left: 4%; top: 34%; width: 46%; transform: rotate(-10deg); }
+.rp-fan-r { right: 4%; top: 34%; width: 46%; transform: rotate(10deg); }
+.rp-fan-c { left: 22%; top: 26%; width: 56%; box-shadow: 0 6px 14px rgba(90, 16, 16, .26) !important; }
+.rp-fan-seal { display: none; }
+/* states */
+.rp-step.is-current { margin-top: 10px; box-shadow: 0 0 0 4px var(--gold-btn), 0 12px 26px rgba(90, 16, 16, .2); }
+.rp-step.is-current .rp-num { background: var(--gold-edge); color: var(--papel); }
+.rp-step.is-done { box-shadow: inset 0 0 0 2px var(--green); }
+.rp-step.is-done .rp-num { background: var(--green); color: #fff; }
+.rp-step.is-done .rp-bar > i, .rp-step.is-done .rp-bar .au-meter > i::after { background: var(--green); }
+.rp-step.is-started:not(.is-current) { box-shadow: inset 0 0 0 2px var(--oro-claro); }
+.rp-step.is-started:not(.is-current) .rp-num { background: var(--rojo); color: var(--papel); }
+.rp-step.is-locked:not(.is-current) .rp-art, .rp-step.is-soon .rp-art { filter: grayscale(.85); opacity: .7; }
+.rp-step.is-locked:not(.is-current) .rp-step-t, .rp-step.is-soon .rp-step-t { color: var(--ink-mid); }
+.rp-tag {
+  position: absolute; z-index: 5; top: -15px; left: 50%; transform: translate(-50%, 0); padding: 5px 15px; border-radius: 999px;
+  background: var(--red); color: #fff; font-weight: 900; font-size: .9rem; line-height: 1.2; white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(198, 40, 40, .35); pointer-events: none;
+}
+/* what each card holds of the kid's progress */
+.rp-coins-link { display: flex; align-items: center; gap: 6px; min-height: 48px; margin-top: 2px; padding: 4px 6px; border-radius: 12px; color: var(--oro-tinta); text-decoration: none; }
+.rp-coins-link > svg { width: 18px; height: 18px; flex: none; margin-left: auto; }
+.rp-coins { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.rp-coins-link .rp-coins { margin: 0; }
+@media (hover: hover) and (pointer: fine) { .rp-coins-link:hover { background: var(--crema); } }
+.rp-coins li {
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: .78rem;
+  color: var(--oro-tinta); background: conic-gradient(var(--oro-palido) calc(var(--p, 0) * 1%), var(--crema) 0); border: 2px dashed var(--oro);
+}
+.rp-coins li svg { width: 14px; height: 14px; }
+.rp-coins li.is-open { border: 0; background: var(--rojo); color: var(--papel); }
+.rp-coins li.is-done { border: 0; color: #3d0707; background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); }
+.rp-sims { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.rp-sim {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 48px; height: 48px; padding: 0 8px;
+  border-radius: 14px; text-decoration: none; font-weight: 800; font-size: 1.05rem; color: var(--rojo);
   background: linear-gradient(160deg, #fffaf0 0%, #f6e7c4 100%); box-shadow: inset 0 0 0 1.5px #c9a14a;
-  transition: transform 140ms var(--ease-out), box-shadow 200ms ease;
+  transition: transform 140ms var(--ease-out);
 }
-.rd-sim:active { transform: scale(.97); }
-.rd-sim-n {
-  width: 42px; height: 42px; margin-bottom: 6px; border-radius: 50%; display: grid; place-items: center;
-  background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); color: #3d0707; font-weight: 800; font-size: 1.15rem;
-  box-shadow: 0 5px 10px -6px rgba(90, 16, 16, .55);
+.rp-sim svg { width: 14px; height: 14px; }
+.rp-sim.is-pass { color: #3d0707; background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); box-shadow: 0 4px 10px -6px rgba(90, 16, 16, .55); }
+.rp-sim.is-tried { box-shadow: inset 0 0 0 2px var(--rojo); }
+.rp-sim.is-next { box-shadow: inset 0 0 0 2.5px var(--gold-edge), 0 0 0 3px rgba(232, 200, 120, .55); }
+.rp-sim:active { transform: scale(.95); }
+.rp-book {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-height: 48px; margin-top: 6px; padding: 8px 12px; border-radius: 14px;
+  background: var(--rojo); color: var(--crema); text-decoration: none; font-weight: 800; font-size: .9rem; line-height: 1.15;
 }
-.rd-sim-name { font-weight: 800; font-size: 1rem; line-height: 1.2; color: var(--rojo); }
-.rd-sim-meta { font-size: .85rem; color: var(--tinta-2); }
-.rd-sim-best {
-  position: absolute; right: 8px; top: 10px; display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px 3px 6px; border-radius: 999px;
-  background: var(--papel); color: var(--rojo); font-weight: 800; font-size: .76rem; font-variant-numeric: tabular-nums;
-  box-shadow: inset 0 0 0 1.5px rgba(90, 16, 16, .35);
+.rp-book > svg { width: 18px; height: 18px; flex: none; color: #f3dc9a; }
+.rp-book b { padding: 2px 8px; border-radius: 999px; font-size: .74rem; color: #3d0707; background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); }
+.rp-note { margin-top: 6px; font-size: .84rem; color: var(--tinta-2); }
+.rp-note a, .rp-alt a { display: inline-flex; align-items: center; min-height: 44px; color: var(--rojo); font-weight: 800; }
+.rp-pdf { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; font-size: .84rem; font-weight: 800; color: var(--oro-tinta); }
+/* the button: a direct verb on the current step */
+.rp-act { display: grid; gap: 6px; margin-top: 10px; }
+.rp-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 50px; padding: 8px 14px; border-radius: 16px;
+  text-decoration: none; text-align: center; font-weight: 800; font-size: 1rem; line-height: 1.15;
+  transition: transform 140ms var(--ease-out), box-shadow 140ms var(--ease-out), background-color 160ms ease;
 }
-.rd-sim-best svg { width: 12px; height: 12px; }
-.rd-sim-best.is-pass { background: var(--rojo); color: var(--crema); box-shadow: none; }
-.rd-sim-best.is-pass svg { color: #e8c878; }
-/* 📖 phase 5: a taken simulation's «Libro dorado», a red ribbon under its gold tile (one tile, two taps: the exam
-   again, or its golden book with the latest try's mistakes) */
-.rd-sims li.has-book { display: flex; flex-direction: column; }
-.rd-sims li.has-book .rd-sim { height: auto; flex: 1; border-radius: 14px 14px 0 0; }
-.rd-sim-book {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; min-height: 48px; padding: 8px 12px; border-radius: 0 0 14px 14px;
-  color: #f3dc9a; background: var(--rojo); text-decoration: none; font-weight: 800; font-size: .92rem; line-height: 1.15;
-  transition: transform 140ms var(--ease-out), background-color 200ms ease;
-}
-.rd-sim-book:active { transform: scale(.97); }
-.rd-sim-book > svg { width: 18px; height: 18px; flex: none; }
-.rd-sim-book-t { color: var(--crema); }
-.rd-sim-book-n {
-  display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 999px; font-size: .76rem;
-  color: #3d0707; background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); font-variant-numeric: tabular-nums;
-}
-.rd-sim-book-n svg { width: 12px; height: 12px; }
-.rd-gold-pdf { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: .92rem; color: var(--tinta-2); }
-.rd-gold-pdf > svg { width: 18px; height: 18px; flex: none; color: var(--oro-tinta); }
-.rd-gold-pdf.is-ready { flex-wrap: wrap; justify-content: space-between; gap: 10px 14px; padding: 12px 14px; border-radius: 14px;
-  background: linear-gradient(160deg, #fffaf0 0%, #f6e7c4 100%); box-shadow: inset 0 0 0 1.5px #c9a14a; }
-.rd-gold-pdf.is-ready p { display: grid; gap: 1px; }
-.rd-gold-pdf.is-ready b { font-weight: 800; font-size: 1rem; color: var(--rojo); }
-.rd-gold-pdf.is-ready span { font-size: .85rem; }
-/* while El Simulacro Dorado is still closed: the books of the simulations the kid took in a teacher's room */
-.rd-gold-taken { margin-top: 18px; padding-top: 14px; border-top: 1.5px solid var(--linea); }
-.rd-gold-taken-t { font-weight: 800; font-size: 1rem; color: var(--rojo); }
-.rd-books { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
-.rd-sim-book.is-alone { border-radius: 14px; padding: 10px 14px; }
-@media (hover: hover) and (pointer: fine) { .rd-sim-book:hover { background: var(--rojo-2); } }
-@media (prefers-reduced-motion: reduce) { .rd-sim-book:active { transform: none; } }
+.rp-btn svg { width: 20px; height: 20px; flex: none; }
+.rp-btn-go { min-height: 54px; background: var(--gold-btn); color: var(--rojo); font-size: 1.1rem; box-shadow: 0 5px 0 var(--gold-edge); }
+.rp-btn-go:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--gold-edge); }
+.rp-btn-soft { background: var(--papel); color: var(--rojo); box-shadow: inset 0 0 0 2px var(--oro-claro); }
+.rp-btn-done { background: var(--green-pale); color: var(--green); box-shadow: inset 0 0 0 2px var(--green); }
+.rp-btn-soft:active, .rp-btn-done:active { transform: scale(.98); }
+.rp-opens { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; text-align: center; font-weight: 700; font-size: .88rem; line-height: 1.25; color: var(--ink-mid); }
+.rp-opens svg { width: 16px; height: 16px; flex: none; }
+.rp-alt { text-align: center; font-size: .88rem; color: var(--tinta-2); }
 @media (hover: hover) and (pointer: fine) {
-  .rd-sim:hover { box-shadow: inset 0 0 0 2px var(--oro), 0 10px 20px -12px rgba(90, 16, 16, .35); }
-  .rd-card:hover .rd-card-go { filter: brightness(1.04); }
+  .rp-btn-go:hover { background: #efd590; }
+  .rp-btn-soft:hover { background: #fff8e8; }
+  .rp-sim:hover { box-shadow: inset 0 0 0 2px var(--oro), 0 8px 16px -10px rgba(90, 16, 16, .35); }
+  .rp-book:hover { background: var(--rojo-2); }
 }
 
-/* ── wider screens ──────────────────────────────────────────────────── */
-@media (min-width: 560px) {
-  .rd-sims { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .rd-keybox .rd-btn { width: auto; padding: 0 22px; }
+/* ── «Tus tareas» ── */
+.rp-tareas {
+  display: grid; gap: 14px; align-content: start; padding: 18px 16px; border-radius: 26px; background: var(--papel);
+  box-shadow: inset 0 0 0 2px var(--linea); scroll-margin-top: 76px;
+}
+.rp-tareas:focus { outline: none; }
+.rp-tareas-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; }
+.rp-tareas-t { font-weight: 800; font-size: 1.7rem; line-height: 1.05; letter-spacing: -.01em; color: var(--rojo); }
+.rp-aileen { display: flex; align-items: flex-end; gap: 8px; }
+.rp-aileen img { flex: none; width: 62px; height: 86px; object-fit: contain; object-position: bottom; }
+.rp-aileen-say { position: relative; padding: 10px 12px; border-radius: 16px 16px 16px 4px; background: var(--oro-palido); font-weight: 700; font-size: .9rem; line-height: 1.4; }
+.rp-hw-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.rp-hw { display: flex; flex-direction: column; padding: 12px; border-radius: 20px; }
+.rp-hw[hidden] { display: none; }
+.rp-hw.is-new { background: #fff3ef; box-shadow: inset 0 0 0 3px var(--red); }
+.rp-hw.is-heard { background: var(--papel); box-shadow: inset 0 0 0 2px var(--linea); }
+.rp-hw.is-sent { background: var(--green-pale); box-shadow: inset 0 0 0 2px var(--green); }
+.rp-hw.is-other { background: var(--papel); box-shadow: inset 0 0 0 2px var(--linea); }
+/* the picture and the name: one link to the homework's own page (its lines, its audio codes) */
+.rp-hw-open {
+  display: grid; grid-template-columns: 76px minmax(0, 1fr); grid-template-rows: auto auto 1fr; column-gap: 12px; row-gap: 2px; align-items: start;
+  color: var(--tinta); text-decoration: none; border-radius: 14px;
+}
+.rp-hw-pic { grid-column: 1; grid-row: 1 / span 3; width: 76px; height: 76px; border-radius: 16px; object-fit: cover; background: var(--crema-2); }
+.rp-hw-kicker { grid-column: 2; font-size: .76rem; font-weight: 800; color: var(--oro-tinta); }
+.rp-hw-title { grid-column: 2; font-weight: 900; font-size: 1.08rem; line-height: 1.15; }
+.rp-hw-state { grid-column: 2; }
+.rp-hw-body { display: grid; }
+@media (hover: hover) and (pointer: fine) { .rp-hw-open:hover .rp-hw-title { text-decoration: underline; text-underline-offset: 3px; } }
+.rp-hw-state {
+  justify-self: start; align-self: start; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; padding: 3px 9px; border-radius: 999px;
+  font-weight: 900; font-size: .76rem; line-height: 1.2; white-space: nowrap;
+}
+.rp-hw-state svg { width: 12px; height: 12px; }
+.rp-hw.is-new .rp-hw-state { background: var(--red); color: #fff; }
+.rp-hw.is-heard .rp-hw-state { background: var(--oro-palido); color: var(--rojo); }
+.rp-hw.is-sent .rp-hw-state { background: var(--green); color: #fff; }
+.rp-hw-acts { display: flex; gap: 8px; margin-top: 8px; }
+.rp-hw-acts button {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 48px; padding: 8px 10px; border: 0; border-radius: 16px;
+  cursor: pointer; font: 800 .95rem/1.1 var(--sans); transition: transform 140ms var(--ease-out), box-shadow 140ms var(--ease-out);
+}
+.rp-hw-acts svg { width: 16px; height: 16px; flex: none; }
+.rp-hw-play { background: var(--gold-btn); color: var(--rojo); box-shadow: 0 4px 0 var(--gold-edge); }
+.rp-hw-play:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--gold-edge); }
+.rp-hw:not(.is-new):not(.is-other) .rp-hw-play { background: var(--oro-palido); box-shadow: none; }
+.rp-hw:not(.is-new) .rp-hw-play[aria-pressed="true"] { background: var(--gold-btn); }
+.rp-hw-send { flex: 1.25 !important; background: var(--rojo); color: var(--papel); }
+.rp-hw-send:active { transform: scale(.97); }
+.rp-hw-now { display: grid; gap: 4px; margin-top: 4px; font-size: .8rem; font-weight: 700; color: var(--ink-mid); }
+.rp-hw-now[hidden], .rp-hw-undo[hidden] { display: none; }
+.rp-hw-line { display: block; height: 5px; border-radius: 999px; background: var(--wash); overflow: hidden; }
+.rp-hw-line i { display: block; width: 0; height: 100%; background: var(--gold-edge); }
+.rp-hw-undo { display: flex; align-items: center; gap: 4px; font-size: .84rem; color: var(--tinta-2); }
+.rp-hw-undo button { min-height: 44px; padding: 0 6px; border: 0; background: none; color: var(--rojo); font: 800 .88rem/1 var(--sans); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.rp-hw-more {
+  min-height: 48px; padding: 0 14px; border: 0; border-radius: 16px; cursor: pointer; background: var(--crema-2); color: var(--rojo);
+  font: 800 1rem/1.1 var(--sans);
+}
+.rp-hw-login { font-size: .88rem; line-height: 1.4; color: var(--tinta-2); }
+.rp-hw-login a { display: inline-flex; align-items: center; min-height: 44px; color: var(--rojo); font-weight: 800; }
+@media (hover: hover) and (pointer: fine) {
+  .rp-hw-send:hover { background: var(--rojo-2); }
+  .rp-hw-more:hover { background: #e8dbbd; }
+}
+
+/* a phone: the steps that are not the current one are smaller (the current one comes up sooner on the screen) */
+@media (max-width: 759px) {
+  .rp-step:not(.is-current) { grid-template-columns: 84px minmax(0, 1fr); padding: 12px; }
+  .rp-step:not(.is-current) .rp-art { width: 84px; height: 84px; grid-row: 1 / span 3; }
+  .rp-step:not(.is-current) .rp-line { display: none; }
+  .rp-step:not(.is-current) .rp-num { width: 28px; height: 28px; font-size: 1rem; left: 4px; top: 4px; }
+  .rp-step:not(.is-current) .rp-mark { width: 26px; height: 26px; right: 4px; top: 4px; }
+  .rp-step:not(.is-current) .rp-act { margin-top: 8px; }
+  .rp-step:not(.is-current) .rp-btn { min-height: 48px; }
+}
+
+/* ── a small phone (360 px) ── */
+@media (max-width: 380px) {
+  .rp-grid { padding: 12px 12px 22px; }
+  .rp-hero, .rp-hero-text { min-height: 250px; }
+  .rp-hero-name { font-size: 2.15rem; }
+  .rp-say { width: min(64%, 230px); font-size: .94rem; padding: 10px 12px; }
+  .rp-step.is-current { grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; padding: 12px; }
+  .rp-step.is-current .rp-art { width: 96px; height: 96px; }
+  .rp-step:not(.is-current) { grid-template-columns: 72px minmax(0, 1fr); }
+  .rp-step:not(.is-current) .rp-art { width: 72px; height: 72px; }
+  .rp-step-t { font-size: 1.18rem; }
+  .rp-hw-open { grid-template-columns: 64px minmax(0, 1fr); }
+  .rp-hw-pic { width: 64px; height: 64px; }
+  .rp-hw-acts button { font-size: .9rem; padding: 8px; }
+}
+
+/* ── a laptop: the ladder in a row (760 px), the tareas on the right (1100 px) ── */
+@media (min-width: 760px) {
+  .rp-grid { padding: 20px 28px 28px; gap: 22px; }
+  .rp-ladder-t { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .rp-hero, .rp-hero-text { min-height: clamp(188px, 26vh, 236px); }
+  .rp-hero-shade { background: linear-gradient(90deg, rgba(var(--hero-rgb), .88) 0%, rgba(var(--hero-rgb), .55) 46%, rgba(var(--hero-rgb), 0) 78%); }
+  .rp-hero-text { padding: 22px 260px 22px 32px; gap: 10px; justify-content: flex-start; }
+  .rp-hero-head { max-width: none; }
+  .rp-hero-name { font-size: clamp(2.6rem, 4.6vw, 3.5rem); }
+  .rp-hero-sub { max-width: none; font-size: 1.08rem; }
+  .rp-say-go { display: none; }
+  .rp-say { margin-top: 2px; width: auto; max-width: 600px; padding: 13px 20px; border-radius: 20px; font-size: clamp(1.05rem, 1.45vw, 1.25rem); }
+  .rp-hero-dragon { right: 24px; bottom: -6px; height: calc(100% - 4px); max-height: 240px; }
+  .rp-hero-top { display: contents; }
+  .rp-hero-tareas { order: 5; margin-top: 2px; }
+  .rp-ladder { flex-direction: row; align-items: stretch; gap: 38px; padding-top: 12px; }
+  .rp-step { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 0; border-radius: 26px; }
+  .rp-step:not(:last-child)::after {
+    left: auto; right: -33px; bottom: auto; top: 50%; margin: -14px 0 0; width: 28px; height: 28px;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 6l6 6-6 6' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 6l6 6-6 6' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+  .rp-art { align-self: stretch; width: auto; height: clamp(116px, 19vh, 172px); border-radius: 26px 26px 0 0; flex: none; }
+  .rp-art-img { height: 88%; margin-top: 8%; }
+  .rp-fan { width: auto; height: 84%; aspect-ratio: 3 / 2; }
+  .rp-fan-l { left: 0; top: 14%; width: 42%; transform: rotate(-9deg); }
+  .rp-fan-r { right: 0; top: 14%; width: 42%; transform: rotate(9deg); }
+  .rp-fan-c { left: 26%; top: 2%; width: 48%; }
+  .rp-fan-seal {
+    position: absolute; left: 57%; top: 54%; width: 31%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; text-align: center;
+    border: 3px dashed var(--red); color: var(--red); background: rgba(255, 253, 248, .92); font-weight: 900; font-size: clamp(.58rem, .75vw, .72rem); line-height: 1.05;
+    transform: rotate(-12deg);
+  }
+  .rp-num { left: 12px; top: 12px; width: 42px; height: 42px; font-size: 1.45rem; }
+  .rp-mark { right: 12px; top: 12px; width: 38px; height: 38px; }
+  .rp-mark svg { width: 20px; height: 20px; }
+  .rp-body { display: flex; flex-direction: column; gap: 5px; flex: 1; padding: 12px 16px 16px; }
+  .rp-step-t { font-size: clamp(1.25rem, 1.75vw, 1.6rem); }
+  .rp-line { font-size: .92rem; }
+  .rp-act { margin-top: auto; padding-top: 8px; }
+  .rp-step.is-current { margin-top: 0; transform: translateY(-4px); box-shadow: 0 0 0 5px var(--gold-btn), 0 18px 34px rgba(90, 16, 16, .22); }
+  .rp-tag { top: -16px; font-size: .95rem; padding: 6px 16px; }
+  .rp-tareas { padding: 20px; }
+  .rp-hw-list { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .rp-grid { padding: 20px 32px 28px; }
+  .rp-grid.has-tareas { grid-template-columns: minmax(0, 1fr) clamp(340px, 27vw, 400px); gap: 26px; align-items: start; }
+  .rp-hero-tareas { display: none; }
+  .rp-tareas { padding: 22px; }
+  .rp-tareas-t { font-size: 2rem; }
+  .rp-aileen img { width: 74px; height: 98px; }
+  .rp-aileen-say { font-size: .94rem; }
+  .rp-hw-list { grid-template-columns: none; }
+  .rp-hw-open { grid-template-columns: 84px minmax(0, 1fr); column-gap: 14px; }
+  .rp-hw-pic { width: 84px; height: 84px; }
+}
+/* a short laptop screen (1366 × 768 and smaller): the ladder still fits above the fold */
+@media (min-width: 760px) and (max-height: 820px) {
+  .rp-grid { padding-top: 16px; gap: 16px; }
+  .rp-main { gap: 12px; }
+  .rp-hero-text { padding-top: 18px; padding-bottom: 18px; gap: 8px; }
+  .rp-art { height: clamp(104px, 16vh, 140px); }
+  .rp-body { gap: 4px; padding: 10px 14px 14px; }
+  .rp-btn { min-height: 48px; }
+  .rp-btn-go { min-height: 50px; }
+  .rp-aileen img { width: 60px; height: 80px; }
+  .rp-tareas { gap: 12px; padding: 18px; }
+  .rp-hw { padding: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-card:active, .rd-arrow:active, .rd-btn:active, .rp-btn:active, .rp-sim:active, .rp-back:active, .rp-hw-acts button:active { transform: none; }
+  .rp-step.is-current { transform: none; }
+  .rd-dot-now { transition: none; }
 }
 @media (min-width: 900px) {
   .rd-stage {
-    --cw: clamp(260px, min(340px, calc((100vh - 310px) / 1.42)), 340px);
-    --cw: clamp(260px, min(340px, calc((100svh - 310px) / 1.42)), 340px);
+    --cw: clamp(260px, min(340px, calc((100vh - 320px) / 1.42)), 340px);
+    --cw: clamp(260px, min(340px, calc((100svh - 320px) / 1.42)), 340px);
   }
   .rd-lede { max-width: none; }
   .rd-friend { grid-template-columns: 76px minmax(0, 1fr); }
@@ -423,14 +605,4 @@ body.au-is-path .au-main { max-width: 720px; }
 @media (max-width: 380px) {
   .rd-join { grid-template-columns: 70px minmax(0, 1fr); }
   .rd-join-friend { width: 70px; }
-  .rd-stop { grid-template-columns: 52px minmax(0, 1fr); gap: 12px; }
-  .rd-stop:not(:last-child)::before { left: 24.5px; top: 58px; }   /* the line through the middle of the smaller coin */
-  .rd-coin { width: 52px; height: 52px; }
-  .rd-coin svg { width: 23px; height: 23px; }
-  .rd-sims { gap: 8px; }
-  .rd-sim { padding: 10px; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .rd-card:active, .rd-arrow:active, .rd-btn:active, .rd-sim:active, .rd-world:active { transform: none; }
-  .rd-dot-now { transition: none; }
 }

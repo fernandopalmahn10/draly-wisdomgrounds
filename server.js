@@ -662,6 +662,9 @@ function _teacherOf(req) {
   if (req) req._dralyTeacher = t;
   return t;
 }
+// 🔒 2026-10-18 (his rule: study PDFs download only for the super admin): a super admin's code in X-Admin-Pw or a
+// remembered super-admin device. La Base's vocabulary PDF and the golden book's PDF answer only to this.
+const _superOf = (req) => { const t = _teacherOf(req); return !!(t && t.isSuperAdmin); };
 // The logged-in kid's record (the /homework session): Students.get brings an archived kid back.
 function _studentOf(req) {
   const s = SimLock.session(req);
@@ -2428,6 +2431,11 @@ app.post('/api/homework/enter', (req, res) => {
     // only to the kid's own login (their own class code), like everything else of their record
     const base = audioBaseFor(Levels.info(level));
     if (base && ownsBefore) { base.seals = [...RutaProgress.sealsOf(rec, level)].sort((a, b) => a - b); base.who = _sealWho(rec.code); }
+    // 🏆 2026-10-18: «Hacer mis tareas» on their home: their level's homework audios and the ones marked «¡Ya la mandé!»
+    // on their account (the phone adds its own marks not saved yet); only to the kid's own login, like the seals
+    const tIds = ownsBefore ? _tareaIdsOf(level) : [];
+    const tMarks = tIds.length ? _tareaMarks(rec, tIds) : null;
+    const tareas = tIds.length ? { level: Levels.info(level).pack || level, ids: tIds, sent: tIds.filter((id) => tMarks[id] && tMarks[id].s), who: _sealWho(rec.code) } : null;
     res.json({
       ok: true,
       studentCode: rec.code,
@@ -2440,7 +2448,8 @@ app.post('/api/homework/enter', (req, res) => {
       folders: Assignments.levelFolders(level),       // pack-quiz levels: one folder per world (else null)
       daily: Levels.info(level).daily !== false,      // Desafíos (HSK 1 words): off below HSK 1
       base,                                           // its vocabulary base on /audios («Empieza aquí»), or null
-      levelOpen,                                      // 🔑 its levels are open on this phone (else the base asks the key)
+      tareas,                                         // its homework audios + the ones sent («Hacer mis tareas»), or null
+      levelOpen,                                     // 🔑 its levels are open on this phone (else the base asks the key)
       isNew: isNew,                                   // show the code banner once
       assignments: Assignments.listAssignments(level), // portal reshapes by level
       submissions: Students.getAssignmentSubmissions(rec.code, 100),
@@ -4873,6 +4882,44 @@ function audioBaseFor(info) {
   const b = _loadAudioBases().find((x) => x.id === info.base);
   return b ? { href: '/audios/' + b.id, level: b.level, words: b.words } : null;
 }
+// 🏆 2026-10-18 (La Ruta Dorada redesign): the homework audios of the same catalog, for the kid's done marks
+// («Escuchada», «¡Ya la mandé!»): id → its level folder (yct1 · newhsk1 · hsk1), newest first. Read once per boot.
+let _audioHomeworks = null;
+function _loadAudioHomeworks() {
+  if (!_audioHomeworks) {
+    let list = [];
+    try { list = JSON.parse(fs.readFileSync(path.join(__dirname, 'public', 'assets', 'audios', 'catalog.json'), 'utf8')).homeworks || []; }
+    catch (e) { console.warn('[audios] catalog unreadable:', e.message); list = []; }
+    _audioHomeworks = new Map();
+    list.filter((h) => h && typeof h.id === 'string').sort((a, b) => ((b.exp || 0) - (a.exp || 0)) || ((b.round || 0) - (a.round || 0)))
+      .forEach((h) => _audioHomeworks.set(h.id, String(h.level || '')));
+  }
+  return _audioHomeworks;
+}
+// an id as a phone sends it → the catalog's id, or null (hsk2-e01-r1 is newhsk1-e01-r1: HSK 2 became New HSK 1)
+function _tareaId(raw) {
+  if (typeof raw !== 'string' || raw.length > 60) return null;
+  let id = raw.trim().toLowerCase();
+  Levels.LEVELS.forEach((l) => { if (l.pack && l.pack !== l.id && id.indexOf(l.id + '-') === 0) id = l.pack + id.slice(l.id.length); });
+  return _loadAudioHomeworks().has(id) ? id : null;
+}
+// the homework ids of a level (its curriculum folder), newest first
+function _tareaIdsOf(lvl) {
+  const l = Levels.normalize(lvl);
+  if (!l) return [];
+  const folder = Levels.info(l).pack || l;
+  return [..._loadAudioHomeworks()].filter((e) => e[1] === folder).map((e) => e[0]);
+}
+// a kid's marks → { id: { h: 1, s: 1 } } (what is set only; the moments stay on the record), for `ids` or all of them
+function _tareaMarks(rec, ids) {
+  const t = rec && rec.tareas && typeof rec.tareas === 'object' && !Array.isArray(rec.tareas) ? rec.tareas : {};
+  const out = {};
+  (ids || Object.keys(t)).forEach((id) => {
+    const e = Object.prototype.hasOwnProperty.call(t, id) ? t[id] : null;
+    if (e && (e.h || e.s)) out[id] = Object.assign({}, e.h ? { h: 1 } : {}, e.s ? { s: 1 } : {});
+  });
+  return out;
+}
 app.get(['/audios', '/audio', '/audios/:id', '/audio/:id'], (req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   // 🔑 2026-10-15: a level's base (/audios/yct1-base, /audios/hsk2-base…) opens only for whoever may use that level;
@@ -4945,6 +4992,7 @@ function _rutaSimsOf(level) {
 // has earned it (a teacher, or the kid's practice / «Desbloquear»). A locked module carries none of it.
 function _rutaState(req) {
   const teacher = !!_teacherOf(req);
+  const superAdmin = _superOf(req);   // 🔒 2026-10-18: the golden book's PDF link is only theirs
   const rec = _studentOf(req);
   const bases = _loadAudioBases();
   const live = RutaProgress.getSettings().trainingLive;
@@ -4991,11 +5039,15 @@ function _rutaState(req) {
         return Object.assign({}, s, { best: best >= 0 ? Math.round(best) : null, taken: !!(g && g.taken),
           mistakes: g && g.taken ? g.mistakes : null, book: g && g.open && (teach || rec) ? _goldenHref(l.id, g.n) : null });
       }) : [],
+      // (the PDF holds every answer: since 2026-10-18 a download for the super admin only, his rule)
       golden: !gs ? null : takenOnly ? (takenOnly.length ? { closed: true, taken: takenOnly, pdf: null } : null)
         : { sims: gs.sims.length, left: gs.left, login: !teach && !rec, mb: gs.pdf.mb,
-          pdf: gs.pdf.ready ? '/golden-media/' + gb.id + '/book.pdf?v=' + encodeURIComponent((gb.pdf && gb.pdf.v) || '') : null },
+          pdf: superAdmin ? '/golden-media/' + gb.id + '/book.pdf?v=' + encodeURIComponent((gb.pdf && gb.pdf.v) || '') : null },
       dorado,
       train,
+      // 🏆 2026-10-18: the logged-in kid's homework marks for this level's audios («Escuchada», «¡Ya la mandé!»), from
+      // their account (any phone). The homework audios are open, so a locked module carries them too.
+      tareas: rec ? _tareaMarks(rec, _tareaIdsOf(l.id)) : null,
       progress: prog ? {
         sealed: prog.sealed, words: prog.words,
         worlds: prog.worlds.map((w) => ({ n: w.n, short: w.short, count: w.count, sealed: w.sealed, train: w.train, teacher: w.teacher })),
@@ -5005,7 +5057,7 @@ function _rutaState(req) {
   });
   // who: the logged-in kid's opaque id (the same as /api/ruta/seals): the route trusts a phone's seal mirror only when
   // it holds this kid's account
-  return { ok: true, teacher, student: !!rec, who: rec ? _sealWho(rec.code) : null, home: home ? (Levels.info(home).pack || home) : null, modules };
+  return { ok: true, teacher, superAdmin, student: !!rec, who: rec ? _sealWho(rec.code) : null, home: home ? (Levels.info(home).pack || home) : null, modules };
 }
 app.get('/api/ruta-dorada', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
@@ -5068,6 +5120,68 @@ app.post('/api/ruta/seals', (req, res) => {
   const out = RutaProgress.applySeals(rec.code, lvl, b.add, b.remove);
   if (!out.ok) return res.status(out.status || 400).json({ ok: false, error: out.error });
   res.json({ ok: true, who, seals: out.seals });
+});
+// ── 🏆 La Ruta Dorada redesign (2026-10-18): the homework done marks live on the kid's ACCOUNT ─────────────────────
+// (his worry: a kid changes or loses the phone)
+// GET  /api/ruta/tareas → { ok, student: false } (nobody logged in: the marks stay on the phone, with a soft «Entra con
+//                         tu código») | { ok, student: true, who, marks: { <homework id>: { h?: 1, s?: 1 } } }
+// POST /api/ruta/tareas { who, heard: [id…], sent: [id…], unsent: [id…] } → { ok, who, marks }
+// h = «Escuchada» (the audio played on the page), s = «¡Ya la mandé!» (one tap once the kid sent the video to the
+// teacher on WhatsApp; his pick: no teacher confirmation). Only the logged-in kid's OWN record (the /homework session
+// cookie; never a code in the body), only ids of the audio catalog (a whole batch with one unknown id is refused, the
+// page drops it), at most 60 ids per list. The homework audio pages are open (no key), so the marks need no level key.
+// A phone's marks from before its first login join the account (a union, sent by the page); `who` = the seals' opaque
+// id of the account: a save from a sibling's mirror is refused (409), never written on this account. Rate: a save
+// counts per kid (60 a minute: the page batches), a read per address (4000 per 5 minutes: a school Wi-Fi is never slowed).
+const _tareaHits = new Map();   // key → [timestamps]
+function _tareaRate(key, win, max) {
+  const now = Date.now();
+  const arr = (_tareaHits.get(key) || []).filter((t) => now - t < win);
+  if (arr.length >= max) { _tareaHits.set(key, arr); return false; }
+  arr.push(now);
+  _tareaHits.set(key, arr);
+  return true;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _tareaHits) if (!v.length || now - v[v.length - 1] > 10 * 60 * 1000) _tareaHits.delete(k);
+  if (_tareaHits.size > 50000) _tareaHits.clear();
+}, 60 * 1000).unref();
+app.get('/api/ruta/tareas', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_tareaRate('i:' + _clientIp(req), 5 * 60 * 1000, 4000)) return res.status(429).set('Retry-After', '30').json({ ok: false, error: 'Espera un momento.' });
+  const rec = _studentOf(req);
+  if (!rec) return res.json({ ok: true, student: false });
+  res.json({ ok: true, student: true, who: _sealWho(rec.code), marks: _tareaMarks(rec) });
+});
+app.post('/api/ruta/tareas', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  const b = req.body && typeof req.body === 'object' ? req.body : {};
+  const rec = _studentOf(req);
+  if (!rec) return res.status(403).json({ ok: false, student: false, error: 'Entra con tu código para guardar tus tareas en tu cuenta.' });
+  if (!_tareaRate('k:' + rec.code, 60 * 1000, 60)) return res.status(429).set('Retry-After', '20').json({ ok: false, error: 'Espera un momento: tus tareas se guardan enseguida.' });
+  const who = _sealWho(rec.code);
+  if (b.who != null && String(b.who) !== who) return res.status(409).json({ ok: false, who, error: 'Otra cuenta entró en este teléfono.' });
+  const lists = {};
+  for (const k of ['heard', 'sent', 'unsent']) {
+    const v = b[k] == null ? [] : b[k];
+    if (!Array.isArray(v) || v.length > 60) return res.status(400).json({ ok: false, error: 'Lista no válida.' });
+    const ids = v.map(_tareaId);
+    if (ids.some((x) => !x)) return res.status(400).json({ ok: false, error: 'Esa tarea no existe.' });
+    lists[k] = ids;
+  }
+  if (lists.sent.some((id) => lists.unsent.includes(id))) return res.status(400).json({ ok: false, error: 'Una tarea no puede estar mandada y no mandada a la vez.' });
+  const now = Date.now();
+  const any = lists.heard.length + lists.sent.length + lists.unsent.length > 0;
+  if (any) {
+    Students.updateTareas(rec.code, (all) => {
+      const at = (id) => (Object.prototype.hasOwnProperty.call(all, id) && all[id] && typeof all[id] === 'object' ? all[id] : (all[id] = {}));
+      lists.heard.forEach((id) => { const e = at(id); if (!e.h) e.h = now; });
+      lists.sent.forEach((id) => { const e = at(id); if (!e.h) e.h = now; if (!e.s) e.s = now; });   // sent = heard too
+      lists.unsent.forEach((id) => { const e = at(id); delete e.s; });
+    }, { activity: true });
+  }
+  res.json({ ok: true, who, marks: _tareaMarks(Students.get(rec.code)) });
 });
 // ── 🎯 El Entrenamiento (phase 4, 2026-10-16): quick rounds graded here (core/entrenamiento.js) ─────────────────────
 // GET  /api/ruta/train?level=yct1&s=1-17,20            → the level's practice worlds for this visitor: open or not (the
@@ -5211,14 +5325,14 @@ app.post('/api/ruta/train/scores', (req, res) => {
 // ── 📖 El libro dorado (phase 5, 2026-10-16): the golden book on the web (core/golden.js) ──────────────────────────
 // GET /api/golden/<level>/<n>[?de=<teacher link>] → simulation n's book for THIS visitor, or why not (never cached)
 // GET /golden-media/<book>/<n|ex>/<p|a><i>           → a photo / a clip of that simulation (or of the examples), by index
-// GET /golden-media/<book>/book.pdf                  → the PDF, once every simulation is taken and the Dorado open (or a teacher)
+// GET /golden-media/<book>/book.pdf                  → the PDF, for the super admin only (his rule 2026-10-18)
 // Doors, in order (his picks): the level's key (LevelKeys.access, the one door: 401 = the key screen) → a kid's account
 // (a key-only phone has none: «Entra con tu código») → THAT simulation taken (Golden.taken: a graded try on the record
 // that really answered the exam). Taken anywhere is enough (his pick after the build): a simulation taken in a
 // teacher's room opens its own book (its photos, clips and the examples) even before El Simulacro Dorado
 // (RutaProgress.doradoOpen); a simulation not taken answers `why: 'dorado'` while the Dorado is closed (the kid can't
-// take it alone yet), else `why: 'taken'`; the PDF needs the Dorado and every simulation taken. A teacher (code header
-// or remembered teacher device) passes them all; with ?de= (the sealed link of /maestro's «Ver su libro») and a teacher
+// take it alone yet), else `why: 'taken'`; the PDF is the super admin's only (2026-10-18). A teacher (code header
+// or remembered teacher device) passes the other doors; with ?de= (the sealed link of /maestro's «Ver su libro») and a teacher
 // session that may see that kid, the page shows that kid's mistakes. Views only read: nothing here writes on a record.
 // Rates (fixed windows of 5 minutes, counted AFTER the door so nobody spends another's budget on a school's one Wi-Fi):
 // a teacher never waits; a kid's account 600 book views and 6000 files; refused or unknown requests 300 per address.
@@ -5261,8 +5375,9 @@ function _goldenDoor(req, lvl) {
   if (!rec) return { ok: false, status: 403, why: 'login' };
   return { ok: true, teacher: false, rec, dorado: RutaProgress.doradoOpen(a, rec, lvl) };
 }
-// the PDF holds every answer: a teacher, or the Dorado open and every simulation of the book taken
-const _goldenPdfOk = (door, b) => !!(door.ok && (door.teacher || (door.dorado && b.sims.every((s) => Golden.taken(door.rec, s.id)))));
+// the PDF holds every answer: since 2026-10-18 (his rule «study PDFs download only for the super admin») only a super
+// admin downloads it (a kid, a parent or a regular teacher studies on the web pages, with their audio)
+const _goldenPdfOk = (req) => _superOf(req);
 const _goldenSimOk = (door, sim) => !!(door.ok && sim && (door.teacher || Golden.taken(door.rec, sim.id)));
 const _goldenHref = (lvl, n) => '/audios/' + (Levels.info(lvl).pack || lvl) + '/libro/' + n;
 app.get('/api/golden/:level/:n', (req, res) => {
@@ -5304,8 +5419,8 @@ app.get('/api/golden/:level/:n', (req, res) => {
   const mine = Golden.attemptView(rec ? Golden.latest(rec, sim.id) : null, sim);
   res.json(Object.assign({ ok: true, who: kid ? 'teacher-kid' : (door.teacher ? 'teacher' : 'kid'), kid, dorado: !!door.dorado }, head, {
     sim: Golden.simView(b, sim.n), examples: Golden.examplesView(b), review: b.review || [], mine, sims: sum.sims,
-    pdf: Object.assign({}, sum.pdf, { left: door.teacher ? 0 : sum.left, dorado: !!door.dorado,
-      href: _goldenPdfOk(door, b) ? '/golden-media/' + b.id + '/book.pdf?v=' + encodeURIComponent((b.pdf && b.pdf.v) || '') : null }),
+    pdf: Object.assign({}, sum.pdf, { left: door.teacher ? 0 : sum.left, dorado: !!door.dorado, ready: _goldenPdfOk(req),
+      href: _goldenPdfOk(req) ? '/golden-media/' + b.id + '/book.pdf?v=' + encodeURIComponent((b.pdf && b.pdf.v) || '') : null }),
   }));
 });
 function _goldenMediaDoor(req, res, bookId) {
@@ -5323,8 +5438,8 @@ function _goldenMediaDoor(req, res, bookId) {
 app.get('/golden-media/:book/book.pdf', (req, res) => {
   const d = _goldenMediaDoor(req, res, req.params.book);
   if (!d) return;
-  // the PDF holds every answer: only with the Dorado open and every simulation of the book taken (or a teacher)
-  if (!_goldenPdfOk(d.door, d.b)) return res.status(403).type('text').send('Forbidden');
+  // the PDF holds every answer: a super admin only (2026-10-18); everyone else studies on the web pages
+  if (!_goldenPdfOk(req)) return res.status(403).type('text').send('Forbidden');
   const name = String(d.b.title || d.b.id).replace(/[^\w .·-]/g, '');
   res.type('application/pdf').set('Content-Disposition', 'attachment; filename="' + d.b.id + '.pdf"; filename*=UTF-8\'\'' + encodeURIComponent(name + '.pdf'));
   res.sendFile(Golden.pdfFile(d.b), { cacheControl: false, lastModified: false }, (err) => {
@@ -5368,6 +5483,20 @@ function _baseOf(raw) {
   const l = Levels.LEVELS.find((x) => x.base && x.base === id);
   return l ? { id, level: l.id, pack: l.pack } : null;
 }
+// a base's page data without its `book` (the PDF's address, pages, size): what everyone but the super admin gets
+// (2026-10-18). Kept in memory per base, read again when the file changes (a rebuild while the server runs).
+const _baseJsonCache = new Map();   // base id → { mtime, text }
+function _baseJsonNoPdf(id) {
+  const file = path.join(BASE_DIR, id, 'base.json');
+  let st;
+  try { st = fs.statSync(file); } catch (_) { return null; }
+  const c = _baseJsonCache.get(id);
+  if (c && c.mtime === st.mtimeMs) return c.text;
+  let text;
+  try { const d = JSON.parse(fs.readFileSync(file, 'utf8')); delete d.book; text = JSON.stringify(d); } catch (_) { return null; }
+  _baseJsonCache.set(id, { mtime: st.mtimeMs, text });
+  return text;
+}
 function _baseMediaFile(req, res) {
   res.set({ 'CDN-Cache-Control': 'no-store', 'Cloudflare-CDN-Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
     'X-Robots-Tag': 'noindex', 'Cross-Origin-Resource-Policy': 'same-origin' });
@@ -5378,6 +5507,15 @@ function _baseMediaFile(req, res) {
   }
   if (!LevelKeys.access(req, b.level).ok) {
     return res.status(401).set('Cache-Control', 'private, no-store').json({ ok: false, locked: true, level: b.level });
+  }
+  // 🔒 2026-10-18 (his rule): the vocabulary PDF is a download for the super admin only; families study on the page
+  // (with its audio). The page's data names the PDF only to the super admin, so nobody else sees a download button.
+  const superAdmin = _superOf(req);
+  if (rest === 'book.pdf' && !superAdmin) return res.status(403).set('Cache-Control', 'private, no-store').type('text').send('Forbidden');
+  if (rest === 'base.json' && !superAdmin) {
+    const j = _baseJsonNoPdf(b.id);
+    if (!j) return res.status(404).set('Cache-Control', 'no-store').type('text').send('Not found');
+    return res.set('Cache-Control', 'private, no-cache').type(BASE_TYPES['.json']).send(j);
   }
   const file = rest === 'book.pdf' ? path.join(STUDY_DIR, b.pack + '-vocabulario.pdf') : path.join(BASE_DIR, b.id, rest);
   const ext = path.extname(file).toLowerCase();
