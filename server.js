@@ -293,6 +293,8 @@ app.use(express.json({ limit: '5mb' }));
 // 🆕 2026-10-18: an automatic account's session comes back from its device cookie before ANY route reads a session
 // (security review L5; the function lives with the automatic accounts, «AUTOMATIC STUDENT ACCOUNTS» below)
 app.use(_autoRenew);
+// 🆕 2026-10-18 (la entrada): the same for a kid the phone remembers from the entrance (its `dkid` cookie, «LA ENTRADA» below)
+app.use(_kidRenew);
 // The move to app.dralingo.app (see MOVE_PAGE above): the old address leaves a phone's big saved data here once...
 app.post('/api/move/start', (req, res) => {
   const now = Date.now();
@@ -1638,6 +1640,7 @@ app.get('/api/admin/students/:code', (req, res) => {
     // to keep, rename, or merge into an existing student.
     isGuestPinJoin: !!rec.isGuestPinJoin,
     auto: !!(rec.auto && !rec.classroomCode),   // 🆕 2026-10-18: made by La Ruta Dorada by itself («automática»)
+    byKey: !!(rec.byKey && !rec.classroomCode),   // 🆕 2026-10-18 (la entrada): made with the level key, no class yet («con clave»)
     levelKey: _levelState(rec),   // 🔑 2026-10-15: is their level open on their account, and how
     ruta: _rutaAdmin(rec),        // 🏆 2026-10-16: La Ruta Dorada per level (seals, El Entrenamiento, El Simulacro Dorado)
   });
@@ -2293,6 +2296,10 @@ function _hwCheckAccess(req, res) {
             || req.query && req.query.accessCode
             || '';
   if (!Assignments.isAccessCodeValid(code)) {
+    // 🆕 2026-10-18 (la entrada): a kid who came in with the level key has no class code: their session on this phone is
+    // the pass when the page sends NO class code (each endpoint still asks _hwOwnsStudent whose record it may touch).
+    // A wrong class code is still refused, and the old form's login always needs a real one.
+    if (!String(code || '').trim() && req.path !== '/api/homework/enter' && _entradaSessionKid(req)) return true;
     res.status(401).json({ ok: false, error: 'Código de acceso incorrecto' });
     return false;
   }
@@ -2311,6 +2318,11 @@ function _hwCheckAccess(req, res) {
 // ever locked out. Returns true if the request may touch this student.
 function _hwOwnsStudent(req, rec) {
   if (!rec) return false;
+  // 🆕 2026-10-18 (la entrada): the kid's own session on this phone (or the phone holding them, `dkid`) owns their record.
+  // An account made with the level key answers to nothing else: never a class code + its code (the code alone never
+  // opens an account on a new phone: there it takes the code AND the level key, POST /api/entrada/entrar)
+  if (_entradaOwns(req, rec)) return true;
+  if (rec.byKey) return false;
   // Legacy record with no classroom tag — can't bind, preserve old access.
   // 🔒 2026-10-18 (security review M3): except an UNCLAIMED automatic account, which only the device holding it (its
   // dauto cookie) may use: its 6-character code alone opens nothing anywhere else
@@ -3065,7 +3077,7 @@ app.get('/api/homework/trainer/session/:tier/:exp', (req, res) => {
   // 🔒 2026-10-15: these are the Old HSK 1 simulations' own pictures and recordings: only for the classes of that level
   // (the portal offers the trainer to them only), as signed links like every sim file
   const trainerLevel = _simLevel(Object.keys(HskSim.SIMULATIONS)[0]);
-  if (Teachers.levelForAccessCode(req.query.accessCode) !== trainerLevel) return res.status(403).json({ ok: false, error: 'Este entrenamiento es de otro nivel' });
+  if (_hwReqLevel(req, req.query.accessCode) !== trainerLevel) return res.status(403).json({ ok: false, error: 'Este entrenamiento es de otro nivel' });
   const s = SimTrainer.getSession(req.params.tier, req.params.exp);
   if (!s) return res.status(404).json({ ok: false, error: 'entrenamiento no encontrado' });
   res.set('Cache-Control', 'private, no-store');
@@ -3075,7 +3087,7 @@ app.get('/api/homework/trainer/session/:tier/:exp', (req, res) => {
 app.post('/api/homework/trainer/check', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   // 🔒 2026-10-15: each verdict tells the answer of an Old HSK 1 sim question: that level's classes only, like the session
-  if (Teachers.levelForAccessCode(req.body && req.body.accessCode) !== _simLevel(Object.keys(HskSim.SIMULATIONS)[0])) {
+  if (_hwReqLevel(req, req.body && req.body.accessCode) !== _simLevel(Object.keys(HskSim.SIMULATIONS)[0])) {
     return res.status(403).json({ ok: false, error: 'Este entrenamiento es de otro nivel' });
   }
   const { qid, answer } = req.body || {};
@@ -5111,7 +5123,7 @@ function _autoMeOf(rec, withProgress) {
   if (!rec) return null;
   const lvl = LevelKeys.classLevel(rec);
   // (placeholder: the name the system gave it, still there; a name typed since, even in a PIN room, is the kid's)
-  const out = { code: rec.code, name: rec.displayName || '', placeholder: !rec.displayName || (!!rec.autoName && /^Dragoncito \d{3}$/.test(rec.displayName)), auto: _autoUnclaimed(rec),
+  const out = { code: rec.code, name: rec.displayName || '', placeholder: !rec.displayName || (!!rec.autoName && /^Dragoncito \d{3}$/.test(rec.displayName)), auto: _autoUnclaimed(rec), byKey: !!rec.byKey,
     who: _sealWho(rec.code), level: lvl ? (Levels.info(lvl).pack || lvl) : null, levelName: lvl ? Levels.info(lvl).name : null,
     classroomCode: rec.classroomCode || null };
   if (withProgress) {
@@ -5149,12 +5161,14 @@ function _autoRenew(req, res, next) {
 // does not exist (the caller counts the miss and answers like a wrong code). → true = refuse it
 function _autoLoginRefused(req, code) {
   const p = code ? Students.peek(code) : null;
-  return !!(p && _autoUnclaimed(p.rec) && !_autoDeviceHolds(req, p.rec));
+  // (2026-10-18, la entrada: an account made with the level key never logs in with a class code: its code + the key)
+  return !!(p && ((_autoUnclaimed(p.rec) && !_autoDeviceHolds(req, p.rec)) || p.rec.byKey));
 }
 // /api/homework/enter, the key screen's silent login: a login on a device holding an automatic account. Its own code
 // with a class code = the claim (the device cookie goes: a normal account now); another kid's own login = that kid is
 // on this phone now (parked).
 function _autoAfterLogin(req, res, rec, owns) {
+  _kidAfterLogin(req, res, rec, owns);   // 🆕 2026-10-18 (la entrada): another kid's login parks the kid this phone remembers
   try {
     const a = _autoCookie(req);
     if (!a || !owns || !rec) return;
@@ -5302,6 +5316,362 @@ app.post('/api/ruta/auto/merge', (req, res) => {
   console.log('[auto] an automatic account was merged into a class account (' + merged.seals + ' seals, ' + merged.sent + ' sent, ' + merged.tries + ' tries)');
   res.json({ ok: true, merged, account: _autoMeOf(Students.get(to.code), true) });
 });
+// ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// 🆕 2026-10-18 · «MI DRALINGO», PART 1: LA ENTRADA. His pick: "the level key is the family's one password" (he asked for
+// something easy that is still password-protected and places kids in their level from home, without a teacher's approval)
+// ════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+// /homework opens on the entrance (public/js/entrada.js, his approved design «Entrada», states hola · quien · clave · nivel
+// · codigo · tengo):
+//   hola    this phone remembers a kid: «¡Hola de nuevo!» → «¡Vamos!», nothing to type. Remembered = a live session, the
+//           phone's `dkid` (below), its unparked automatic account once it has a name (dauto), or the OLD saved class code
+//           + student code of today's families (POST /api/entrada/hola checks them like a login; «¡Vamos!» then logs in
+//           with them exactly as the old card did: no family is locked out)
+//   quien   «Ya tengo mi código» · «Soy nuevo»
+//   clave → nivel → codigo   «Soy nuevo»: the level key from the teacher's WhatsApp (it tells the level: «¡Tu nivel es New
+//           HSK 1!»), a name + a saga avatar, «Crear mi cuenta» → the six-character code («anótalo», «Copiar») → «¡Vamos!»
+//           (the portal home). A phone holding an unclaimed automatic account turns THAT account into the kid's (its
+//           progress is never split; a parked one asks «¿Eres tú?» first)
+//   tengo   «Ya tengo mi código»: the student code (4 to 6 characters: old accounts too) AND the level key
+//   the transitional door «¿Tu profe te dio un código de 4 números? Entra aquí»: the old class code + student code form
+//           (/api/homework/enter, unchanged) for families without a key yet; he removes it once every family has its key
+// THE ACCOUNT (`byKey`, core/student-records.js createByKey / claimByKey): no class code, six characters with a digit, the
+// key's level open on the account (a key grant with its gen: «Cerrar en todos los aparatos» still ends it) and on the
+// device. It answers ONLY to its own session, the phone holding it, or its code + the key of a level it has: never to a
+// class code + its code (_hwOwnsStudent, _autoLoginRefused). The code alone never opens an account on a new phone.
+// THE PHONE KEEPS IT: `dkid` (httpOnly, signed 'K', a year: the code, parked or not, the account's firstSeen) = "this phone
+// holds kid X", for every account made or entered here (the dauto idea); _kidRenew renews the 12 h session from it (a page
+// view never wakes an archived account). One kid per phone: a new account or a login here takes the cookie. «Salir»
+// parks it (/api/homework/logout: no «¡Hola de nuevo!», no renewal, until the kid comes in again with code + key), and so
+// does another kid's login on this phone (_autoAfterLogin).
+// HOMEWORK without a class code: _hwCheckAccess takes the kid's session as the pass (the page sends no class code) and
+// _hwOwnsStudent the kid's own session; the HSK 1 trainer reads the session's level (_hwReqLevel).
+// A TEACHER: a key account that joins a teacher's PIN room (player:join), proven by that phone's own cookies (its session
+// or dkid: a typed code alone never moves a kid into a class), takes the room owner's class code for its level
+// (core/teachers.js codeLevels), so it shows on that teacher's /maestro roster. Never an unclaimed automatic account
+// (security review M3). Until then only the super admin sees it (the roster's «con clave» tag).
+// LIMITS: a wrong key counts on the key screen's counters (LevelKeys.noteWrong: 5 per phone + 30 per address in 15 min);
+// a wrong code + key pair counts there AND as an unknown student code (60 per address in 10 min, 600 an hour for all);
+// old saved codes that no longer match count like a login miss; «¡Hola de nuevo!» and «¡Vamos!» 600 a minute per address
+// (a school's Wi-Fi never waits); new accounts 120 an hour per address, 5 a day per phone, 300 an hour for the platform.
+// Requests from other sites are refused (_autoSameSite). One uniform line for a wrong pair
+// («El código o la clave no coinciden»): it never says which of the two was wrong, nor whether a code exists.
+// Test: scripts/test-entrada.js.
+const KID_COOKIE = 'dkid';
+const KID_TTL = 365 * 24 * 3600e3;
+const ENTRADA_BAD_KEY = 'Esa clave no es. Revísala en el mensaje de tu profe.';
+const ENTRADA_BAD_PAIR = 'El código o la clave no coinciden. Revísalos y vuelve a intentarlo.';
+const _entradaWaitMsg = (wait) => 'Ya fueron muchos intentos. Espera ' + wait + (wait === 1 ? ' minuto' : ' minutos') + ' y vuelve a intentarlo.';
+// (req or a socket's handshake) → { code, parked, born } | null
+function _kidCookie(reqOrHs) {
+  const v = SimLock.verify(SimLock.readCookie(reqOrHs, KID_COOKIE), 'K');
+  return v && /^[A-Z2-9]{4,6}$/.test(v[0]) && v.length >= 3 ? { code: v[0], parked: v[1] === '1', born: String(v[2] || '') } : null;
+}
+// the cookie's account, only when it is that very account (the same firstSeen) and never merged away → { rec, archived } | null
+function _kidHeld(k) {
+  const p = k ? Students.peek(k.code) : null;
+  return p && !p.rec.mergedInto && String(Number(p.rec.firstSeen) || 0) === k.born ? p : null;
+}
+function _kidSetCookie(req, res, rec, parked) {
+  SimLock.setCookie(req, res, KID_COOKIE, SimLock.sign('K', [rec.code, parked ? '1' : '0', String(Number(rec.firstSeen) || 0)], KID_TTL), KID_TTL);
+}
+// does THIS phone hold `rec` (not parked)?
+function _kidDeviceHolds(req, rec) {
+  const k = _kidCookie(req);
+  return !!(k && !k.parked && rec && k.code === rec.code && _kidHeld(k));
+}
+// the logged-in kid of a homework call (their session): the pass when the page sends no class code
+function _entradaSessionKid(req) { return _studentOf(req); }
+// does this request's own kid (its session, or this phone's dkid) own `rec`? (_hwOwnsStudent asks it first)
+function _entradaOwns(req, rec) {
+  if (!rec) return false;
+  const s = SimLock.session(req);
+  if (s && s.kind === 's' && s.code === rec.code) return true;
+  return _kidDeviceHolds(req, rec);
+}
+// every request (mounted right after _autoRenew): the remembered kid's session comes back from dkid (pages and API only)
+function _kidRenew(req, res, next) {
+  const raw = String((req.headers && req.headers.cookie) || '');
+  if (raw.indexOf(KID_COOKIE + '=') < 0 || !/^\/(api\/|audios?(\/|$)|base-media\/|golden-media\/|yct-sim|hsk-sim)/.test(req.path)) return next();
+  try {
+    const s = SimLock.session(req);
+    if (s && Students.peek(s.code)) return next();              // a session already (this kid, or another kid's login)
+    const k = _kidCookie(req);
+    if (!k || k.parked) return next();
+    const p = _kidHeld(k);
+    if (!p || p.archived || _autoUnclaimed(p.rec)) return next();
+    _autoSession(req, res, p.rec);                              // the same session as a login, read by this request too
+  } catch (e) { console.warn('[entrada] renew failed:', e.message); }
+  next();
+}
+// «Salir» on /homework: the kid this phone remembers rests (no «¡Hola de nuevo!», no renewal)
+function _kidPark(req, res) {
+  try { const k = _kidCookie(req); const p = _kidHeld(k); if (k && p && !k.parked) _kidSetCookie(req, res, p.rec, true); } catch (_) { /* ignore */ }
+}
+// a login to ANOTHER account on this phone (the old form, the key screen's silent login): the remembered kid rests
+function _kidAfterLogin(req, res, rec, owns) {
+  try {
+    const k = _kidCookie(req);
+    if (!k || !owns || !rec || k.code === rec.code || k.parked) return;
+    const p = _kidHeld(k);
+    if (p) _kidSetCookie(req, res, p.rec, true);
+  } catch (_) { /* ignore */ }
+}
+// a new account here? (120 an hour per address, 5 a day per phone: brothers and sisters, 300 an hour for everyone)
+function _entradaRateOk(req, dev) {
+  const ip = 'ki:' + _clientIp(req), d = 'kd:' + dev;
+  if (!_autoHit('k*', 3600e3, 300, true) || !_autoHit(ip, 3600e3, 120, true) || !_autoHit(d, 86400e3, 5, true)) return false;
+  _autoHit('k*', 3600e3, 300); _autoHit(ip, 3600e3, 120); _autoHit(d, 86400e3, 5);
+  return true;
+}
+// the level key typed here → { level, ip, dev }, or null with the answer already sent (a wait; nothing typed; a wrong key
+// = one uniform line and a counted guess, the key screen's counters)
+function _entradaKey(req, res) {
+  const ip = _clientIp(req);
+  const dev = LevelKeys.deviceId(req, res);
+  const wait = LevelKeys.guessWait(ip, dev);
+  if (wait) { res.status(429).json({ ok: false, wait, error: _entradaWaitMsg(wait) }); return null; }
+  const typed = String((req.body || {}).key || '').slice(0, 80);
+  if (!LevelKeys.normalizeKey(typed)) { res.status(400).json({ ok: false, why: 'key', error: 'Escribe la clave de tu nivel.' }); return null; }
+  const level = LevelKeys.levelOfKey(typed);
+  if (!level) { LevelKeys.noteWrong(ip, dev); res.status(401).json({ ok: false, why: 'key', error: ENTRADA_BAD_KEY }); return null; }
+  return { level, ip, dev };
+}
+const _entradaLevel = (lvl) => { const i = Levels.info(lvl); return { level: i.pack || i.id, levelId: i.id, levelName: i.name, family: i.family }; };
+// what the entrance shows of an account (only ever to the phone that holds it): name, avatar, level and the experience it
+// is on (the first La Base world not finished: its seals or the practice %; none before any progress)
+function _entradaSummary(rec, how) {
+  const lvl = LevelKeys.classLevel(rec) || Levels.DEFAULT;
+  let exp = null;
+  try {
+    const st = RutaProgress.state(rec, lvl);
+    if (st && st.worlds.length && (st.sealed > 0 || st.worlds.some((w) => w.practiced != null))) {
+      const pct = RutaProgress.getSettings().doradoPct;
+      const w = st.worlds.find((x) => x.sealed < x.count || !(x.practiced >= pct)) || st.worlds[st.worlds.length - 1];
+      exp = { n: w.n, name: w.name };
+    }
+  } catch (_) { /* no experience line */ }
+  return Object.assign({ name: rec.displayName || '', avatar: rec.avatar || null, exp, how }, _entradaLevel(lvl));
+}
+// a parked account of this phone, for «¿Eres tú?» (its code: this phone held it)
+function _entradaParked(rec, kind) {
+  const m = _autoMeOf(rec, true);
+  return { kind, code: m.code, name: m.name, placeholder: m.placeholder, progress: m.progress };
+}
+// the kid comes in on this phone: the key's level on the account and the device, the session, and dkid (one kid per
+// phone: a different automatic account here rests, its own cookie goes once it is this account)
+function _entradaIn(req, res, rec, level, dev) {
+  Students.setLevelAccess(rec.code, level, 'key', LevelKeys.genOf(level));
+  LevelKeys.rememberDevice(req, res, level);
+  LevelKeys.clearDevice(dev);
+  const a = _autoCookie(req);
+  const ap = _autoHeld(a);
+  if (a && (!ap || a.code === rec.code)) _autoDropCookie(req, res);
+  else if (ap && !a.parked) _autoSetCookie(req, res, ap.rec, true);
+  _autoSession(req, res, Students.get(rec.code));
+  _kidSetCookie(req, res, rec, false);
+}
+// the same answer as /api/homework/enter, for the portal home (today's; part 3 replaces it). keyMode: the page sends no
+// class code (the session is the pass); a class account keeps its own class code as before
+function _entradaPayload(req, res, rec, o) {
+  const level = LevelKeys.classLevel(rec) || Levels.DEFAULT;
+  const info = Levels.info(level);
+  const levelOpen = _openLevelOnDevice(req, res, rec, level);
+  const base = audioBaseFor(info);
+  if (base) { base.seals = [...RutaProgress.sealsOf(rec, level)].sort((x, y) => x - y); base.who = _sealWho(rec.code); }
+  const tIds = _tareaIdsOf(level);
+  const tMarks = tIds.length ? _tareaMarks(rec, tIds) : null;
+  const tareas = tIds.length ? { level: info.pack || level, ids: tIds, sent: tIds.filter((id) => tMarks[id] && tMarks[id].s), who: _sealWho(rec.code) } : null;
+  const classAcct = !!(rec.classroomCode && !rec.byKey && !_autoUnclaimed(rec));
+  return {
+    ok: true, studentCode: rec.code, displayName: rec.displayName, avatar: rec.avatar || null, avatarOptions: Students.AVATAR_OPTIONS,
+    classroomCode: classAcct ? rec.classroomCode : null, keyMode: !classAcct,
+    level, levelName: info.name, folders: Assignments.levelFolders(level), daily: info.daily !== false, base, tareas, levelOpen,
+    isNew: !!(o && o.isNew), assignments: Assignments.listAssignments(level), submissions: Students.getAssignmentSubmissions(rec.code, 100),
+  };
+}
+// GET /api/entrada/hola → { ok, kid: summary | null, auto: account | null, parked: { kind, code, name, progress } | null,
+// levels: ['YCT 1', …] }: the kid this phone remembers (its session, dkid, a named automatic account), an unnamed automatic
+// account for «Soy nuevo» to turn into the kid's, or a parked account for «¿Eres tú?». Never wakes an archived one.
+app.get('/api/entrada/hola', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_autoHit('eh:' + _clientIp(req), 5 * 60 * 1000, 4000)) return res.status(429).set('Retry-After', '30').json({ ok: false, error: 'Espera un momento.' });
+  const out = { ok: true, kid: null, auto: null, parked: null, levels: Levels.LEVELS.map((l) => l.name) };
+  const s = SimLock.session(req);
+  const live = s && s.kind === 's' ? Students.peek(s.code) : null;
+  if (live && !live.archived && !live.rec.mergedInto) {
+    if (_autoUnclaimed(live.rec) && live.rec.autoName) out.auto = _autoMeOf(live.rec, true);
+    else out.kid = _entradaSummary(live.rec, 'session');
+    return res.json(out);
+  }
+  const k = _kidCookie(req);
+  const kp = _kidHeld(k);
+  if (kp && !k.parked) { out.kid = _entradaSummary(kp.rec, 'device'); return res.json(out); }
+  if (kp) out.parked = _entradaParked(kp.rec, 'key');
+  const a = _autoCookie(req);
+  const ap = _autoHeld(a);
+  if (ap && _autoUnclaimed(ap.rec)) {
+    if (a.parked) { if (!out.parked) out.parked = _entradaParked(ap.rec, 'auto'); }
+    else if (ap.rec.autoName) out.auto = _autoMeOf(ap.rec, true);
+    else out.kid = _entradaSummary(ap.rec, 'auto');
+  }
+  res.json(out);
+});
+// POST /api/entrada/hola { accessCode, studentCode } → { ok, kid } | 401: today's families, whose phone saved the OLD class
+// code + student code: the same proof as their login (their own class code), counted like a login miss when it fails
+app.post('/api/entrada/hola', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
+  if (!_autoHit('ep:' + _clientIp(req), 60 * 1000, 600)) return res.status(429).json({ ok: false, error: 'Espera un momento.' });
+  if (_hwCodeMissBlocked(req)) return res.status(429).json({ ok: false, error: 'Ya fueron muchos intentos. Espera unos minutos.' });
+  const b = req.body || {};
+  const code = Students.normalizeCode(String(b.studentCode || ''));
+  const p = code ? Students.peek(code) : null;
+  const fine = !!(p && !p.rec.mergedInto && Assignments.isAccessCodeValid(b.accessCode) && !_autoLoginRefused(req, code) && _hwOwnsStudent(req, p.rec));
+  if (!fine) { _hwCodeMiss(req); return res.status(401).json({ ok: false }); }
+  res.json({ ok: true, kid: _entradaSummary(p.rec, 'codes') });
+});
+// POST /api/entrada/vamos → the portal's answer (like /api/homework/enter) for the kid this phone remembers (session,
+// dkid, its unparked automatic account) | 401 why: 'none' (the page shows «¿Quién eres?»)
+app.post('/api/entrada/vamos', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
+  if (!_autoHit('ev:' + _clientIp(req), 60 * 1000, 600)) return res.status(429).json({ ok: false, error: 'Espera un momento.' });
+  try {
+    let rec = null;
+    const s = SimLock.session(req);
+    const live = s && s.kind === 's' ? Students.peek(s.code) : null;
+    if (live && !live.rec.mergedInto) rec = Students.get(s.code);   // (a real step: an archived kid comes back)
+    if (!rec) { const k = _kidCookie(req); const kp = _kidHeld(k); if (kp && !k.parked) rec = Students.get(k.code); }
+    if (!rec) { const a = _autoCookie(req); const ap = _autoHeld(a); if (ap && !a.parked && _autoUnclaimed(ap.rec)) rec = Students.get(a.code); }
+    if (!rec) return res.status(401).json({ ok: false, why: 'none', error: 'Entra con tu código y la clave de tu nivel.' });
+    if (!s || s.code !== rec.code) _autoSession(req, res, rec);
+    res.json(_entradaPayload(req, res, rec, { isNew: false }));
+  } catch (e) {
+    console.error('[entrada] vamos failed:', e.message);
+    res.status(500).json({ ok: false, error: 'No se pudo entrar. Vuelve a intentarlo.' });
+  }
+});
+// POST /api/entrada/clave { key } → { ok, level, levelId, levelName, family } («¡Tu nivel es New HSK 1!») | a uniform 401
+app.post('/api/entrada/clave', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
+  const ck = _entradaKey(req, res);
+  if (!ck) return;
+  res.json(Object.assign({ ok: true }, _entradaLevel(ck.level)));
+});
+// POST /api/entrada/crear { key, name, avatar, resume?, fresh? } → { ok, created, converted, account: { code, name, avatar,
+// level, levelName } } | { ok: false, why: 'parked', account } (this phone's parked automatic account: «¿Eres tú?» →
+// resume: true makes it the kid's, fresh: true a new one) | 400 name / avatar / key | 401 the key | 429
+app.post('/api/entrada/crear', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
+  const b = req.body && typeof req.body === 'object' ? req.body : {};
+  const name = _autoCleanName(b.name, '');
+  if (!name) return res.status(400).json({ ok: false, why: 'name', error: 'Escribe tu nombre con letras (de 2 a 24).' });
+  const avatar = Students.AVATAR_OPTIONS.includes(b.avatar) ? b.avatar : null;
+  if (!avatar) return res.status(400).json({ ok: false, why: 'avatar', error: 'Elige tu avatar.' });
+  const ck = _entradaKey(req, res);
+  if (!ck) return;
+  try {
+    let rec = null;
+    let converted = false;
+    const a = _autoCookie(req);
+    const held = _autoHeld(a);
+    if (held && _autoUnclaimed(held.rec)) {
+      if (a.parked && !b.resume && !b.fresh) return res.json({ ok: false, why: 'parked', account: _entradaParked(held.rec, 'auto') });
+      if (!a.parked || b.resume) { rec = Students.claimByKey(a.code, { name, avatar, level: ck.level }); converted = !!rec; }
+    }
+    if (!rec) {
+      if (!_entradaRateOk(req, ck.dev)) return res.status(429).set('Retry-After', '120').json({ ok: false, why: 'rate', error: 'Espera un momento y vuelve a intentarlo.' });
+      rec = Students.createByKey(name, avatar, ck.level);
+    }
+    _entradaIn(req, res, rec, ck.level, ck.dev);
+    console.log('[entrada] ' + (converted ? 'an automatic account became a kid\'s account' : 'a new account') + ' with the key of ' + Levels.info(ck.level).name);   // (never its code)
+    res.json({ ok: true, created: !converted, converted, account: Object.assign({ code: rec.code, name: rec.displayName, avatar: rec.avatar }, _entradaLevel(ck.level)) });
+  } catch (e) {
+    console.error('[entrada] crear failed:', e.message);
+    res.status(500).json({ ok: false, error: 'No se pudo crear la cuenta. Vuelve a intentarlo.' });
+  }
+});
+// POST /api/entrada/entrar { code, key } → the portal's answer | one uniform 401 «El código o la clave no coinciden» (an
+// unknown code, a wrong key, a key of a level the account doesn't have: all the same, all counted) | 400 | 429
+app.post('/api/entrada/entrar', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
+  if (!_enterRateLimit(req)) return res.status(429).json({ ok: false, error: 'Espera un momento.' });
+  const b = req.body || {};
+  const code = Students.normalizeCode(String(b.code || ''));
+  if (!code) return res.status(400).json({ ok: false, why: 'code', error: 'Escribe tu código de alumno.' });
+  if (!LevelKeys.normalizeKey(String(b.key || '').slice(0, 80))) return res.status(400).json({ ok: false, why: 'key', error: 'Escribe la clave de tu nivel.' });
+  const ip = _clientIp(req);
+  const dev = LevelKeys.deviceId(req, res);
+  const wait = LevelKeys.guessWait(ip, dev);
+  if (wait) return res.status(429).json({ ok: false, wait, error: _entradaWaitMsg(wait) });
+  if (_hwCodeMissBlocked(req)) return res.status(429).json({ ok: false, error: 'Ya fueron muchos intentos. Espera unos minutos y vuelve a intentarlo.' });
+  const level = LevelKeys.levelOfKey(String(b.key).slice(0, 80));
+  const p = Students.peek(code);
+  const has = (r, l) => LevelKeys.classLevel(r) === l || !!(r.levelAccess && r.levelAccess[l]);
+  if (!p || !level || p.rec.mergedInto || !has(p.rec, level)) {
+    _hwCodeMiss(req);
+    LevelKeys.noteWrong(ip, dev);
+    return res.status(401).json({ ok: false, error: ENTRADA_BAD_PAIR });
+  }
+  try {
+    let rec = Students.get(code);                                  // (an archived kid comes back)
+    if (_autoUnclaimed(rec)) rec = Students.claimByKey(rec.code, {}) || rec;   // its code + the key: the family's own now
+    _entradaIn(req, res, rec, level, dev);
+    res.json(_entradaPayload(req, res, Students.get(rec.code), { isNew: false }));
+  } catch (e) {
+    console.error('[entrada] entrar failed:', e.message);
+    res.status(500).json({ ok: false, error: 'No se pudo entrar. Vuelve a intentarlo.' });
+  }
+});
+// POST /api/entrada/nivel { key } → { ok, moved, level, levelId, levelName } («Abrir otro nivel», Ajustes today, Mi perfil
+// in part 3): the logged-in kid types the key of another level: it opens on the account and this phone, and becomes the
+// kid's level (moving up = the new key, his rule); the old level stays theirs
+app.post('/api/entrada/nivel', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
+  const rec = _studentOf(req);
+  if (!rec) return res.status(401).json({ ok: false, why: 'login', error: 'Entra con tu código primero.' });
+  const ck = _entradaKey(req, res);
+  if (!ck) return;
+  const prev = LevelKeys.classLevel(rec);
+  Students.setLevelAccess(rec.code, ck.level, 'key', LevelKeys.genOf(ck.level));
+  LevelKeys.rememberDevice(req, res, ck.level);
+  LevelKeys.clearDevice(ck.dev);
+  const moved = prev !== ck.level;
+  if (moved) {
+    if (prev && LevelKeys.recordOpenVia(rec, prev) === 'grandfathered') Students.setLevelAccess(rec.code, prev, 'grandfathered');
+    Students.setLevel(rec.code, ck.level, prev);
+    _autoSession(req, res, Students.get(rec.code));
+  }
+  res.json(Object.assign({ ok: true, moved }, _entradaLevel(ck.level)));
+});
+// player:join (a teacher's PIN room): a key account with no class code takes the room owner's class code for its level,
+// only when the phone proves it holds the account (its session or dkid on the socket); never an unclaimed automatic one
+function _entradaPinTag(socket, g, rec) {
+  try {
+    if (!rec || !rec.byKey || rec.classroomCode || rec.mergedInto || _autoUnclaimed(rec)) return;
+    const hs = (socket && socket.handshake) || {};
+    const s = SimLock.session(hs);
+    const k = _kidCookie(hs);
+    const mine = (s && s.kind === 's' && s.code === rec.code) || (k && !k.parked && k.code === rec.code && _kidHeld(k));
+    if (!mine) return;
+    const t = g && g.hostOwner && g.hostOwner !== '*' ? Teachers.getByUid(g.hostOwner) : null;
+    const lvl = LevelKeys.classLevel(rec);
+    const code = t && lvl ? (t.accessCodes || []).find((c) => Teachers.levelForAccessCode(c) === lvl) : null;
+    if (!code) return;
+    Students.setClassroomCode(rec.code, code);
+    console.log('[entrada] a key account joined its teacher\'s class in a PIN room (' + Levels.info(lvl).name + ')');
+  } catch (e) { console.warn('[entrada] PIN tag failed:', e.message); }
+}
+// the level of a homework request: its class code's, else (la entrada) the logged-in kid's
+function _hwReqLevel(req, code) {
+  if (Assignments.isAccessCodeValid(code)) return Teachers.levelForAccessCode(code);
+  const rec = _studentOf(req);
+  return rec ? LevelKeys.classLevel(rec) : Teachers.levelForAccessCode(code);
+}
 // the route state's 2026-10-18 extras: the class mode of El Simulacro Dorado (DORADO_SELF_SERVE off: no player links for
 // a kid) and `me` (the logged-in kid's code and name, for «Mi código» and the first-account card)
 function _rutaExtras(req, st) {
@@ -5923,6 +6293,7 @@ app.get('/golden-media/:book/:where/:name', (req, res) => {
 app.post('/api/homework/logout', (req, res) => {
   SimLock.setCookie(req, res, SimLock.COOKIE, '', 0);
   _autoPark(req, res);   // 🆕 2026-10-18: a device's automatic account rests too (no renewal on page views)
+  _kidPark(req, res);    // 🆕 2026-10-18 (la entrada): and the kid this phone remembers (no «¡Hola de nuevo!» by itself)
   res.set('Cache-Control', 'no-store').json({ ok: true });
 });
 // ── 🔑 La Base files: /base-media/<base id>/<file> (2026-10-15) ────────────────────────────────────────────────────
@@ -10385,6 +10756,7 @@ io.on('connection', (socket) => {
     // a fresh code. The code lives in the kid's localStorage so the
     // same phone = same record = same sentence history forever.
     const studentRec = Students.getOrCreate(studentCode, cleanName);
+    _entradaPinTag(socket, g, studentRec);   // 🆕 2026-10-18 (la entrada): a key account joins its teacher's class here
     player.studentCode = studentRec.code;
     if (g.gameType === 'monopoly') mnEnsureId(g, player);     // the projector knows every kid (k + character) from the lobby
     if (g.gameType === 'dragon-eye') drEnsureId(g, player);

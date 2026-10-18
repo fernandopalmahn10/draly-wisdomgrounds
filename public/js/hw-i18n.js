@@ -56,6 +56,56 @@
       .replace(/(\d+) tareas? hechas?/g, (_, n) => n + ' done');
   } });
 
+  // 🆕 2026-10-18 «Mi Dralingo», la entrada (js/entrada.js) and its server answers (server.js «LA ENTRADA»); kept apart
+  // from the big dictionary line so other changes to it merge cleanly
+  [
+    ['Mi Dralingo', 'My Dralingo'], ['¡Hola de nuevo!', 'Welcome back!'], ['Dralingo te saluda', 'Dralingo says hi'],
+    ['Tu avatar', 'Your avatar'],
+    ['Este teléfono te recuerda: no tienes que escribir nada.', 'This phone remembers you: no need to type anything.'],
+    ['¿No eres tú?', 'Not you?'], ['¿Quién eres?', 'Who are you?'], ['Antes de seguir', 'Before we go on'],
+    ['Ya tengo mi código', 'I already have my code'], ['El que anoté en mi cuaderno', 'The one I wrote in my notebook'],
+    ['Soy nuevo', 'I\'m new'], ['Solo necesito la clave de mi nivel', 'I only need my level key'],
+    ['¿Tu profe te dio un código de 4 números?', 'Did your teacher give you a 4-number code?'], ['Entra aquí', 'Come in here'],
+    ['Escribe la clave de tu nivel', 'Type your level key'],
+    ['Está en el mensaje de WhatsApp de tu profe.', 'It is in your teacher\'s WhatsApp message.'],
+    ['La clave', 'The key'], ['Seguir', 'Next'], ['¡Tu nivel es', 'Your level is'], ['Elige tu avatar', 'Pick your avatar'],
+    ['Crear mi cuenta', 'Create my account'], ['¡Ya tienes tu cuenta!', 'You have your account!'],
+    ['Tu código de alumno es:', 'Your student code is:'],
+    ['Anótalo en tu cuaderno. Este teléfono ya lo recuerda; en otro teléfono te pedimos tu código y la clave de tu nivel.',
+      'Write it in your notebook. This phone remembers it; on another phone we ask for your code and your level key.'],
+    ['Copiar mi código', 'Copy my code'], ['¡Copiado!', 'Copied!'], ['Entra con tu código', 'Sign in with your code'],
+    ['Tu código de alumno', 'Your student code'], ['El de tu cuaderno', 'The one in your notebook'],
+    ['La clave de tu nivel', 'Your level key'], ['El del mensaje de tu profe', 'The one in your teacher\'s message'],
+    ['En un teléfono nuevo pedimos las dos: así nadie entra solo con tu código. Tu progreso te espera completo.',
+      'On a new phone we ask for both: that way nobody gets in with just your code. All your progress is waiting for you.'],
+    ['Escribe la clave de tu nivel.', 'Type your level key.'], ['Escribe tu código de alumno.', 'Type your student code.'],
+    ['Escribe tu nombre.', 'Type your name.'], ['Elige tu avatar.', 'Pick your avatar.'],
+    ['Escribe tu nombre con letras (de 2 a 24).', 'Type your name with letters (2 to 24).'],
+    ['Esa clave no es. Revísala en el mensaje de tu profe.', 'That is not the key. Check it in your teacher\'s message.'],
+    ['El código o la clave no coinciden. Revísalos y vuelve a intentarlo.', 'The code or the key don\'t match. Check them and try again.'],
+    ['Revisa tu internet y vuelve a intentarlo.', 'Check your internet and try again.'],
+    ['Entra con tu código y la clave de tu nivel.', 'Sign in with your code and your level key.'],
+    ['Espera un momento y vuelve a intentarlo.', 'Wait a moment and try again.'], ['Espera un momento.', 'Wait a moment.'],
+    ['No se pudo crear la cuenta. Vuelve a intentarlo.', 'The account could not be created. Try again.'],
+    ['No se pudo entrar. Vuelve a intentarlo.', 'Could not sign in. Try again.'],
+    ['Ya fueron muchos intentos. Espera unos minutos y vuelve a intentarlo.', 'Too many tries. Wait a few minutes and try again.'],
+    ['Ya fueron muchos intentos. Espera unos minutos.', 'Too many tries. Wait a few minutes.'],
+    ['¿Salir de tu cuenta en este teléfono?', 'Log out of your account on this phone?'],
+    ['Tu progreso queda guardado. Para volver necesitas tu código y la clave de tu nivel.', 'Your progress stays saved. To come back you need your code and your level key.'],
+    ['Tu progreso queda guardado. Tus códigos siguen en este teléfono.', 'Your progress stays saved. Your codes stay on this phone.'],
+    ['No, quedarme', 'No, stay'], ['Sí, salir', 'Yes, log out'],
+    ['🔑 Abrir otro nivel', '🔑 Open another level'], ['Abrir otro nivel', 'Open another level'],
+    ['Con la clave nueva que te mande tu profe.', 'With the new key your teacher sends you.'],
+    ['La clave nueva', 'The new key'], ['Abrir', 'Open'], ['Abriendo…', 'Opening…'], ['Escribe la clave nueva.', 'Type the new key.'],
+    ['Entra con tu código primero.', 'Sign in with your code first.'],
+    ['La primera vez, la app te pide tu código y la clave de tu nivel (la del mensaje de tu profe). Anota tu código:',
+      'The first time, the app asks for your code and your level key (the one in your teacher\'s message). Write your code down:'],
+  ].forEach(function (p) { DICT.map[p[0]] = p[1]; });
+  PATTERNS.push({ re: /^Experiencia (\d+)$/, en: 'Experience $1' });
+  PATTERNS.push({ re: /^La clave dice tu nivel: (.+) o ([^,]+)\.$/, en: 'The key tells your level: $1 or $2.' });
+  PATTERNS.push({ re: /^¡Listo! Ya tienes (.+)\.$/, en: 'Done! You now have $1.' });
+  PATTERNS.push({ re: /^Ya fueron muchos intentos\. Espera (\d+) minutos? y vuelve a intentarlo\.$/, en: 'Too many tries. Wait $1 min and try again.' });
+
   // Quick reject: nothing to translate unless the text has latin
   // letters (hanzi-only, pinyin-only-with-tones still passes but
   // simply won't match the dictionary).

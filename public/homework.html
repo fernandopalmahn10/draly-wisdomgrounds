@@ -78,6 +78,8 @@
   <link rel="stylesheet" href="/css/portal.css?v=20261018a">
   <!-- 🆕 2026-10-18: the «¿Eres tú?» card of an automatic account (js/ruta-auto.js) -->
   <link rel="stylesheet" href="/css/ruta-auto.css?v=20261018v3">
+  <!-- 🆕 2026-10-18: «Mi Dralingo», la entrada (js/entrada.js): the level key is the family's one password -->
+  <link rel="stylesheet" href="/css/entrada.css?v=20261018en1">
 </head>
 <body class="hw-bg hw-pastel hw-portal">
 
@@ -94,6 +96,12 @@
       <img alt="" draggable="false"><span class="hw-life-bubble"></span>
     </button>
     <a class="hw-entry-home" href="/" aria-label="Volver al inicio">← Volver</a>
+    <!-- 🆕 2026-10-18 «Mi Dralingo» · la entrada (his approved design «Entrada»): ¡Hola de nuevo! · ¿Quién eres? · the level
+         key · name + avatar · the new code · code + key. Drawn by js/entrada.js; without it the old card below shows. -->
+    <div class="en-root" id="en-root" hidden></div>
+    <!-- ⏳ TRANSITIONAL (2026-10-18): the old class code + student code card. With js/entrada.js it is the small door
+         «¿Tu profe te dio un código de 4 números? Entra aquí», for families who don't have their level key yet. He removes
+         it once every family has its key (then this card, tryEnter's form part and DralyHw.tryOld can go). -->
     <div class="hw-entry-card">
       <img class="hw-entry-dralingo" id="hw-entry-dralingo" src="/assets/dralingo/anim/hello-still.webp" alt="Dralingo" width="148" height="166" draggable="false">
       <h1 class="hw-entry-title">Mis Tareas</h1>
@@ -386,6 +394,17 @@
         <p class="hw-settings-msg" id="hw-settings-avatar-msg"></p>
       </div>
 
+      <!-- 🆕 2026-10-18 (la entrada): «Abrir otro nivel» with the new key the teacher sends (js/entrada.js; Mi perfil in part 3) -->
+      <div class="hw-settings-section" id="hw-settings-level">
+        <div class="hw-settings-section-title">🔑 Abrir otro nivel</div>
+        <p class="hw-settings-help">Con la clave nueva que te mande tu profe.</p>
+        <div class="hw-settings-row">
+          <input class="input" id="hw-settings-level-key" type="text" maxlength="30" placeholder="La clave nueva" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="La clave nueva">
+          <button class="btn btn-jade" id="hw-settings-level-btn" type="button">Abrir</button>
+        </div>
+        <p class="hw-settings-msg" id="hw-settings-level-msg" aria-live="polite"></p>
+      </div>
+
       <!-- Reset score per assignment -->
       <div class="hw-settings-section">
         <div class="hw-settings-section-title">🔄 Borrar puntajes</div>
@@ -663,11 +682,12 @@
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
-  <script src="/js/hw-i18n.js?v=20261018f2"></script>
+  <script src="/js/hw-i18n.js?v=20261018en1"></script>
   <script src="/js/portal.js?v=20261013c"></script>
   <script src="/js/ruta-auto.js?v=20261018v3"></script>
-  <script src="/js/homework.js?v=20261018v3"></script>
+  <script src="/js/homework.js?v=20261018en1"></script>
+  <script src="/js/entrada.js?v=20261018en1"></script>
   <script src="/js/super-admin-badge.js?v=20261011c"></script>
-  <script src="/js/pwa.js?v=20261012a" defer></script>
+  <script src="/js/pwa.js?v=20261018en1" defer></script>
 </body>
 </html>

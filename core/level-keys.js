@@ -223,6 +223,8 @@ function grandfathered(rec, level) {
   // an account La Ruta Dorada made by itself (2026-10-18, rec.auto) is never «from before the keys», even on a server
   // with no key yet: it is made on an open page (a homework mark), so its level must never open without the key
   if (rec.auto) return false;
+  // (2026-10-18, la entrada) nor an account made or claimed with the level key: it holds its level as a key on the account
+  if (rec.byKey) return false;
   const g = goLiveAt();
   if (!g) return true;                                             // no key set yet: every enrolled kid keeps their level
   if (!(Number(rec.firstSeen) > 0 && Number(rec.firstSeen) < g)) return false;   // registered after the go-live

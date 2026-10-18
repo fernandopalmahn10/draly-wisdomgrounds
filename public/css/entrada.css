@@ -1,0 +1,294 @@
+/* ===================================================================== */
+/* «Mi Dralingo» · la entrada (2026-10-18) · js/entrada.js               */
+/* His approved design «Entrada» (kidhome-design/Entrada.dc.html): Rojo  */
+/* Imperial over Oro, the Dubai skyline, Dralingo in his kandura, the    */
+/* cast on the choices. States: hola · quien · clave · nivel · codigo ·  */
+/* tengo · eres, and the transitional door (the old card). Every rule is */
+/* scoped to #screen-entry.en-on / .en-*: without js/entrada.js the old  */
+/* login card shows exactly as before. Tap targets 48 px and more; fits  */
+/* 360×640 up to 1440×900 at 100 %; reduced motion = no movement.        */
+/* ===================================================================== */
+@font-face { font-family: 'Noto Sans'; src: url('/assets/fonts/study/noto-sans-600.woff2') format('woff2'); font-weight: 500 600; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Noto Sans'; src: url('/assets/fonts/study/noto-sans-800.woff2') format('woff2'); font-weight: 700 900; font-style: normal; font-display: swap; }
+
+#screen-entry.en-on {
+  --en-red: #5a1010; --en-red-2: #7a1d14; --en-red-deep: #2e0606; --en-gold: #e8c878; --en-gold-2: #b88b2c;
+  --en-gold-line: #c79c3e; --en-cream: #fffdf8; --en-paper: #fffaf0; --en-sand: #f3e2b3; --en-ink: #1c1a17;
+  --en-ink-2: #4a3f36; --en-ink-3: #6b5d4f; --en-green: #1f6b45; --en-err: #b3261e;
+  --en-ease: cubic-bezier(.23, 1, .32, 1);
+  --en-head: 'Baloo 2', 'Nunito', system-ui, sans-serif;
+  --en-body: 'Noto Sans', 'Nunito', 'Segoe UI', system-ui, sans-serif;
+  padding: 0;
+  justify-content: flex-start;
+  align-items: stretch;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: linear-gradient(180deg, var(--en-red) 0%, var(--en-red-2) 46%, var(--en-gold) 46%, var(--en-gold) 100%);
+  color: var(--en-cream);
+  font-family: var(--en-body);
+}
+/* «← Volver» to the home page (on «¡Hola de nuevo!»), in the entrance's colours */
+#screen-entry.en-on > .hw-entry-home {
+  background: var(--en-cream); color: var(--en-red); border-color: transparent; box-shadow: 0 3px 0 rgba(0, 0, 0, .25);
+  min-height: 48px; font-family: var(--en-body); font-weight: 800;
+}
+/* hola: the red is the hero itself (its bottom edge = the horizon), the page is gold */
+#screen-entry.en-on.is-hola, #screen-entry.en-on.is-load { background: var(--en-gold); }
+/* the skyline in gold light (the design's overlay) */
+#screen-entry.en-on .hw-life::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 44vh;
+  background: linear-gradient(180deg, rgba(232, 200, 120, .85) 0%, rgba(232, 200, 120, 0) 60%);
+}
+@media (max-width: 640px) { #screen-entry.en-on .hw-life::after { height: 30vh; } }
+/* the old card is the transitional door only; «← Volver» (home) on «¡Hola de nuevo!» only (the cards have their own) */
+#screen-entry.en-on > .hw-entry-card { display: none; }
+#screen-entry.en-on:not(.is-hola):not(.is-load) > .hw-entry-home { display: none; }
+#screen-entry.en-on.en-door { justify-content: flex-start; align-items: center; padding: 72px 16px 64px; }
+#screen-entry.en-on.en-door > .hw-entry-card { display: block; }
+#screen-entry.en-on.en-door > .en-root { flex: 0 0 0; height: 0; }
+
+.en-root { position: relative; z-index: 2; flex: 1 0 auto; display: flex; flex-direction: column; width: 100%; }
+.en-root[hidden] { display: none; }
+.en-root *, .en-root *::before, .en-root *::after, .en-sheet, .en-sheet * { box-sizing: border-box; }
+.en-wrap {
+  width: 100%; max-width: 460px; margin: 0 auto; flex: 1 0 auto; display: flex; flex-direction: column;
+  padding: 10px 16px calc(58px + env(safe-area-inset-bottom, 0px));
+}
+.en-brand {
+  margin: 0; min-height: 44px; display: flex; align-items: center; justify-content: center; text-align: center;
+  font: 800 1.5rem/1 var(--en-head); color: var(--en-gold); letter-spacing: .01em; text-shadow: 0 2px 0 rgba(0, 0, 0, .22);
+}
+.en-next {
+  margin: 4px 0 8px; padding: 8px 12px; border-radius: 14px; background: rgba(255, 253, 248, .16);
+  font-weight: 800; font-size: .92rem; line-height: 1.3; text-align: center; color: var(--en-cream);
+}
+.en-in-anim { animation: enIn 240ms var(--en-ease) both; }
+@keyframes enIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* ── buttons ── */
+.en-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 54px; padding: 8px 18px;
+  border: 0; border-radius: 16px; cursor: pointer; text-decoration: none; text-align: center; font-family: var(--en-body);
+  font-weight: 800; font-size: 1.08rem; line-height: 1.15; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  transition: transform 140ms var(--en-ease), box-shadow 140ms var(--en-ease), background-color 160ms ease, opacity 160ms ease;
+}
+.en-btn svg { width: 20px; height: 20px; flex: none; }
+.en-btn:focus-visible, .en-opt:focus-visible, .en-av:focus-visible, .en-back:focus-visible, .en-link:focus-visible, .en-in:focus-visible {
+  outline: 3px solid var(--en-ink); outline-offset: 3px;
+}
+.en-btn[disabled] { opacity: .65; cursor: progress; }
+.en-btn-red { background: var(--en-red); color: var(--en-cream); box-shadow: 0 5px 0 var(--en-red-deep); }
+.en-btn-red:active:not([disabled]) { transform: translateY(3px); box-shadow: 0 2px 0 var(--en-red-deep); }
+.en-btn-xl { min-height: 62px; font-size: 1.3rem; border-radius: 18px; }
+.en-btn-gold { background: var(--en-gold); color: var(--en-red); box-shadow: 0 5px 0 var(--en-gold-2); }
+.en-btn-gold:active:not([disabled]) { transform: translateY(3px); box-shadow: 0 2px 0 var(--en-gold-2); }
+.en-btn-light { background: var(--en-sand); color: var(--en-red); min-height: 50px; font-size: 1rem; }
+.en-btn-light:active:not([disabled]) { transform: scale(.98); }
+.en-btn-light.is-done { background: #eef6f0; color: var(--en-green); box-shadow: inset 0 0 0 2px var(--en-green); }
+.en-btn-soft { background: rgba(255, 253, 248, .82); color: var(--en-red); min-height: 50px; font-size: 1rem; }
+.en-btn-soft:active:not([disabled]) { transform: scale(.98); }
+.en-busy::after {
+  content: ''; width: 18px; height: 18px; border-radius: 50%; border: 3px solid currentColor; border-right-color: transparent;
+  animation: enSpin .8s linear infinite;
+}
+@keyframes enSpin { to { transform: rotate(360deg); } }
+
+/* ── ¡Hola de nuevo! ── */
+.en-wrap.is-hola { padding-top: 0; }
+.en-hola { position: relative; isolation: isolate; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0 26px; }
+.en-hola::before {   /* the red hero spans the whole window, its bottom edge a soft horizon */
+  content: ''; position: absolute; z-index: -1; top: 0; bottom: 0; left: 50%; width: 100vw; transform: translateX(-50%);
+  background: linear-gradient(180deg, var(--en-red) 0%, var(--en-red-2) 100%);
+  border-radius: 0 0 50% 50% / 0 0 30px 30px; box-shadow: 0 10px 0 rgba(90, 16, 16, .18);
+}
+.en-hola-stage { position: relative; width: min(300px, 84vw); height: clamp(148px, 25vh, 212px); margin-top: 2px; }
+.en-hola-av {
+  position: absolute; left: 4%; top: 50%; width: clamp(112px, 18.5vh, 152px); height: auto; aspect-ratio: 1; transform: translateY(-50%);
+  border-radius: 50%; object-fit: cover; background: var(--en-sand);
+  box-shadow: 0 0 0 6px var(--en-gold), 0 14px 30px rgba(0, 0, 0, .35);
+}
+.en-hola-dr { position: absolute; right: 0; bottom: 0; height: 100%; width: auto; max-width: 52%; object-fit: contain; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .25)); }
+.en-hola-t { margin: 4px 0 0; font: 800 clamp(2rem, 5.6vh, 2.65rem)/1 var(--en-head); color: var(--en-cream); text-align: center; letter-spacing: 0; }
+.en-hola-t:focus, .en-h:focus { outline: none; }
+.en-hola-name {
+  margin: 0; max-width: 100%; font: 800 clamp(1.35rem, 3.6vh, 1.75rem)/1.1 var(--en-head); color: var(--en-sand);
+  text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.en-pill {
+  margin: 4px 0 0; padding: 6px 14px; border-radius: 999px; background: rgba(255, 253, 248, .16);
+  font-weight: 800; font-size: .9rem; color: var(--en-cream); text-align: center;
+}
+.en-hola-go { margin-top: auto; padding-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+.en-hola-note { margin: 0; text-align: center; font-weight: 800; font-size: .86rem; line-height: 1.35; color: var(--en-red); }
+.en-hola .en-pop { animation: enPop 420ms cubic-bezier(.3, 1.5, .5, 1) both; }
+@keyframes enPop { from { opacity: 0; transform: translateY(-50%) scale(.82); } to { opacity: 1; transform: translateY(-50%) scale(1); } }
+.en-load-dr { width: 140px; height: auto; margin: 18vh auto 0; display: block; opacity: .95; }
+
+/* ── the cards ── */
+.en-card {
+  position: relative; margin-top: 8px; padding: 16px 18px 18px; border-radius: 26px; background: var(--en-cream); color: var(--en-ink);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, .3); display: flex; flex-direction: column; gap: 12px;
+}
+.en-back {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 16px 0 10px;
+  border: 0; border-radius: 16px; background: var(--en-sand); color: var(--en-red); font: 800 .95rem/1 var(--en-body);
+  cursor: pointer; text-decoration: none; -webkit-tap-highlight-color: transparent;
+}
+.en-back svg { width: 18px; height: 18px; }
+.en-back:active { transform: scale(.97); }
+.en-h { margin: 0; font: 800 1.85rem/1.05 var(--en-head); color: var(--en-red); letter-spacing: 0; }
+.en-label { margin: 2px 0 -4px; font-weight: 800; font-size: .98rem; color: var(--en-ink); }
+.en-in {
+  width: 100%; min-height: 54px; padding: 12px 16px; border-radius: 14px; border: 2px solid var(--en-gold-line); background: var(--en-paper);
+  color: var(--en-ink); font: 800 1.15rem/1.2 var(--en-body); letter-spacing: 0; -webkit-user-select: text; user-select: text;
+}
+.en-in::placeholder { color: #9a8b74; font-weight: 700; letter-spacing: 0; text-transform: none; }
+.en-in:focus { outline: none; border-color: var(--en-red); box-shadow: 0 0 0 3px rgba(90, 16, 16, .18); }
+.en-in-key { text-transform: uppercase; letter-spacing: .12em; }
+.en-in[aria-invalid="true"] { border-color: var(--en-err); }
+.en-err { margin: 0; min-height: 0; font-weight: 800; font-size: .95rem; line-height: 1.35; color: var(--en-err); }
+.en-err:empty { display: none; }
+.en-form { display: flex; flex-direction: column; gap: 12px; margin: 0; }
+
+/* quien: the two big choices with the cast */
+.en-opt {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 86px; padding: 10px 14px; border: 0; border-radius: 18px;
+  background: var(--en-paper); color: var(--en-ink); box-shadow: inset 0 0 0 2px var(--en-gold-line); text-align: left; cursor: pointer;
+  font-family: var(--en-body); -webkit-tap-highlight-color: transparent;
+  transition: transform 140ms var(--en-ease), box-shadow 140ms var(--en-ease);
+}
+.en-opt img { width: 58px; height: 66px; object-fit: contain; flex: none; }
+.en-opt span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.en-opt b { font-weight: 900; font-size: 1.15rem; line-height: 1.15; }
+.en-opt small { font-weight: 700; font-size: .84rem; line-height: 1.3; color: var(--en-ink-3); }
+.en-opt:active { transform: scale(.98); }
+.en-opt-gold { background: var(--en-gold); color: var(--en-red); box-shadow: 0 5px 0 var(--en-gold-2); }
+.en-opt-gold small { color: #6b4a12; }
+.en-opt-gold:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--en-gold-2); }
+@media (hover: hover) {
+  .en-opt:hover { box-shadow: inset 0 0 0 2px var(--en-red); }
+  .en-opt-gold:hover { box-shadow: 0 5px 0 var(--en-gold-2), inset 0 0 0 2px var(--en-red); }
+}
+
+/* the transitional door: a calm line, never a third big choice */
+.en-doorline {
+  margin: 2px 0 0; padding-top: 10px; border-top: 2px dashed #e2d4b4; display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: center; column-gap: 6px; row-gap: 0; text-align: center; font-weight: 700; font-size: .88rem; color: var(--en-ink-2);
+}
+.en-link {
+  min-height: 48px; padding: 0 8px; border: 0; background: none; color: var(--en-red); font: 900 .92rem/1 var(--en-body);
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.en-fixed-back {
+  position: fixed; top: 12px; left: 12px; z-index: 5; display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 16px 0 10px;
+  border: 0; border-radius: 999px; background: var(--en-cream); color: var(--en-red); font: 800 1rem/1 var(--en-body);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, .25); cursor: pointer;
+}
+.en-fixed-back svg { width: 18px; height: 18px; }
+
+/* clave: Profe Fer says where the key is */
+.en-say { display: flex; align-items: flex-end; gap: 8px; }
+.en-say img { width: 56px; height: 66px; object-fit: contain; flex: none; }
+.en-bubble {
+  margin: 0; padding: 9px 12px; border-radius: 14px 14px 14px 4px; background: var(--en-sand); font-weight: 700; font-size: .9rem;
+  line-height: 1.38; color: var(--en-ink);
+}
+
+/* nivel: the level's wonder, Dralingo's thumbs up */
+.en-level { position: relative; height: 108px; border-radius: 18px; overflow: hidden; flex: none; background: var(--en-red); }
+.en-level-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.en-level::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(8, 34, 29, .86) 0%, rgba(8, 34, 29, .2) 100%); }
+.en-level.is-yct::after { background: linear-gradient(90deg, rgba(46, 6, 6, .86) 0%, rgba(46, 6, 6, .18) 100%); }
+.en-level.is-hsk::after { background: linear-gradient(90deg, rgba(14, 26, 58, .86) 0%, rgba(14, 26, 58, .18) 100%); }
+.en-level-txt { position: absolute; z-index: 1; left: 14px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 2px; color: var(--en-cream); max-width: 64%; }
+.en-level-k { font-weight: 800; font-size: .85rem; color: var(--en-sand); }
+.en-level-n { font: 800 2rem/1 var(--en-head); color: var(--en-cream); text-shadow: 0 2px 6px rgba(0, 0, 0, .35); }
+.en-level-n:focus { outline: none; }
+.en-level-dr { position: absolute; z-index: 1; right: 4px; bottom: -6px; width: 98px; height: 112px; object-fit: contain; }
+.en-avs { display: grid; grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); gap: 8px; justify-items: center; }
+.en-av {
+  position: relative; width: 54px; height: 54px; padding: 0; border: 0; border-radius: 50%; background: var(--en-sand); cursor: pointer;
+  box-shadow: 0 0 0 2px #e2d4b4; transition: transform 140ms var(--en-ease), box-shadow 140ms var(--en-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.en-av img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.en-av:active { transform: scale(.94); }
+.en-av[aria-checked="true"] { box-shadow: 0 0 0 4px var(--en-gold-2); transform: scale(1.06); }
+.en-av[aria-checked="true"]::after {
+  content: '✓'; position: absolute; right: -4px; bottom: -4px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--en-green); color: #fff; font: 900 13px/1 var(--en-body); box-shadow: 0 0 0 2px var(--en-cream);
+}
+
+/* codigo: the new code in gold tiles */
+.en-done { display: flex; align-items: center; gap: 10px; }
+.en-done img { width: 84px; height: 92px; object-fit: contain; flex: none; }
+.en-code { margin: 0; display: grid; grid-template-columns: repeat(var(--n, 6), minmax(0, 1fr)); gap: 6px; }
+.en-code span {
+  display: flex; align-items: center; justify-content: center; aspect-ratio: .82; border-radius: 12px;
+  background: linear-gradient(var(--en-sand), var(--en-gold)); box-shadow: 0 4px 0 var(--en-gold-2);
+  font: 800 clamp(1.5rem, 7vw, 1.95rem)/1 var(--en-head); color: var(--en-red); font-variant-numeric: tabular-nums;
+}
+.en-note { margin: 0; font-weight: 700; font-size: .92rem; line-height: 1.4; color: var(--en-ink-2); }
+
+/* tengo: why both */
+.en-lock { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-weight: 700; font-size: .84rem; line-height: 1.4; color: var(--en-ink-2); }
+.en-lock svg { width: 20px; height: 20px; flex: none; margin-top: 1px; }
+
+/* «¿Eres tú?» inside a card (js/ruta-auto.js draws it) */
+.en-mount:empty { display: none; }
+
+/* ── «¿Salir de tu cuenta en este teléfono?» (over the portal) ── */
+.en-sheet {
+  position: fixed; inset: 0; z-index: 9600; display: flex; align-items: flex-end; justify-content: center;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)); background: rgba(28, 10, 8, .55);
+  font-family: 'Noto Sans', 'Nunito', system-ui, sans-serif;
+}
+.en-sheet-card {
+  width: 100%; max-width: 420px; padding: 18px; border-radius: 22px; background: #fff3ef; color: #1c1a17;
+  box-shadow: inset 0 0 0 2px #c62828, 0 -6px 30px rgba(28, 10, 8, .3); display: flex; flex-direction: column; gap: 10px;
+}
+.en-sheet-t { margin: 0; font-weight: 900; font-size: 1.15rem; line-height: 1.25; }
+.en-sheet-p { margin: 0; font-weight: 700; font-size: .95rem; line-height: 1.4; color: #4a3f36; }
+.en-sheet-row { display: flex; gap: 8px; }
+.en-sheet-row .en-btn { flex: 1; min-height: 50px; font-size: 1rem; }
+.en-btn-stay { background: #fffdf8; color: #5a1010; box-shadow: inset 0 0 0 2px #c79c3e; }
+.en-btn-out { background: #c62828; color: #fff; }
+.en-btn-stay:active, .en-btn-out:active { transform: scale(.97); }
+@media (min-width: 700px) { .en-sheet { align-items: center; } }
+
+/* ── short laptop screens (1366×657) and small phones (360×640) ── */
+@media (max-height: 720px) {
+  .en-brand { min-height: 40px; font-size: 1.35rem; }
+  .en-card { gap: 10px; padding: 12px 16px 14px; }
+  .en-h { font-size: 1.6rem; }
+  .en-in { min-height: 50px; padding: 10px 14px; }
+  .en-btn { min-height: 50px; }
+  .en-btn-xl { min-height: 56px; }
+  .en-opt { min-height: 78px; }
+  .en-level { height: 92px; }
+  .en-level-n { font-size: 1.75rem; }
+  .en-level-dr { width: 84px; height: 98px; }
+  .en-avs { gap: 6px; }
+  .en-done img { width: 66px; height: 72px; }
+  .en-say img { width: 48px; height: 56px; }
+}
+@media (max-width: 640px) {
+  /* phones: the friend peeks in from the brand row's right corner, small and without its bubble, never over a card */
+  #screen-entry.en-on .hw-life-peek, #screen-entry.en-on .hw-life-peek.is-right { top: 2px; right: 6px; left: auto; bottom: auto; width: auto; height: 56px; }
+  #screen-entry.en-on .hw-life-peek img { width: auto; height: 56px; }
+  #screen-entry.en-on .hw-life-bubble { display: none; }
+}
+@media (max-width: 400px) {
+  .en-wrap.is-hola .en-brand { font-size: 1.3rem; }
+}
+@media (max-width: 380px) {
+  .en-wrap { padding-left: 12px; padding-right: 12px; }
+  .en-card { padding-left: 14px; padding-right: 14px; }
+  .en-avs { grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); }
+  .en-av { width: 50px; height: 50px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .en-in-anim, .en-hola .en-pop { animation: none; }
+  .en-btn, .en-opt, .en-av { transition: none; }
+  .en-busy::after { animation-duration: 2.4s; }
+}

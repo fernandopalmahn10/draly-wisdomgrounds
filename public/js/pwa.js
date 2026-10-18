@@ -78,7 +78,9 @@
     card.appendChild(step(3, ['Toca ', txt('b', '', '«Agregar»'), '. ¡Listo! Dralingo aparece con las demás apps.']));
     if (code) {
       var box = txt('div', 'pwa-codes');
-      box.appendChild(txt('div', '', 'La primera vez, la app te pide tus códigos. Anótalos:'));
+      // (2026-10-18, la entrada: a kid of the level key has no class code: the app asks their code AND the level key)
+      box.appendChild(txt('div', '', ac ? 'La primera vez, la app te pide tus códigos. Anótalos:'
+        : 'La primera vez, la app te pide tu código y la clave de tu nivel (la del mensaje de tu profe). Anota tu código:'));
       if (ac) { box.appendChild(doc.createTextNode('Código de acceso: ')); box.appendChild(txt('b', '', ac)); box.appendChild(txt('br')); }
       box.appendChild(doc.createTextNode('Tu código de estudiante: '));
       box.appendChild(txt('b', '', code));

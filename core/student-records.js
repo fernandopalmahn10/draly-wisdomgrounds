@@ -6,6 +6,8 @@
 //
 // Storage: a single JSON file at data/student-records.json (auto-created).
 // Writes are debounced 1 second so a flurry of activity doesn't thrash disk.
+// 2026-10-18: six-character codes too (automatic accounts, createAuto; accounts made with the level key at /homework,
+// createByKey / claimByKey: `byKey`, server.js «LA ENTRADA»).
 // =========================================================================
 'use strict';
 const fs = require('fs');
@@ -318,6 +320,38 @@ function setRealName(code, displayName) {
   const rec = get(code);
   if (rec && rec.autoName) { delete rec.autoName; scheduleSave(); }
   return true;
+}
+// 🆕 2026-10-18 · «Mi Dralingo», la entrada (his pick: "the level key is the family's one password"): an account the
+// family makes at /homework with the level key the teacher sent («Soy nuevo»), server.js «LA ENTRADA» decides.
+//   byKey: <when>   made (or claimed) with a level key: it answers ONLY to its own session or the phone holding it (the
+//                   `dkid` cookie), or to its code + the level key on a new phone; never to a class code + its code
+// The same shape and code generator as an automatic account (six characters with a digit: nothing but the key binds
+// it), the kid's real name and avatar, its level (the key's), NO class code (a teacher's PIN room tags it later).
+function createByKey(name, avatar, level) {
+  const code = generateCode(6, true);
+  const rec = { code, displayName: String(name || '').slice(0, 24), avatar: AVATAR_OPTIONS.includes(avatar) ? avatar : null,
+    classroomCode: null, classroomId: null, firstSeen: Date.now(), lastSeen: Date.now(), sentencesBuilt: [] };
+  records[code] = rec;
+  rec.byKey = Date.now();
+  if (level) setLevel(rec.code, level);
+  scheduleSave();
+  return rec;
+}
+// An AUTOMATIC account (createAuto) becomes the kid's key account: «Soy nuevo» on the phone that holds it (its progress is
+// never split) or its code + the level key. It stops being automatic (`wasAuto` keeps where it came from); name and avatar
+// only when given (a code + key login keeps what it has). → the record, or null
+function claimByKey(code, o) {
+  const rec = get(code);
+  if (!rec) return null;
+  const opts = o || {};
+  if (rec.auto) { rec.wasAuto = rec.autoStep || true; delete rec.auto; delete rec.autoStep; }
+  rec.byKey = rec.byKey || Date.now();
+  if (opts.name) { rec.displayName = String(opts.name).slice(0, 24); delete rec.autoName; }
+  if (opts.avatar && AVATAR_OPTIONS.includes(opts.avatar)) rec.avatar = opts.avatar;
+  if (opts.level) setLevel(rec.code, opts.level);
+  rec.lastSeen = Date.now();
+  scheduleSave();
+  return rec;
 }
 // Counts for /api/_diag and the teacher dashboard. `classroomCodes` (a Set) limits the count to one teacher's classes.
 function archiveStats(classroomCodes) {
@@ -1085,6 +1119,7 @@ function listAll() {
       // 🆕 2026-10-18: an account La Ruta Dorada made by itself, not claimed by a class code yet (the roster's «automática»)
       auto: !!(r.auto && !r.classroomCode),
       autoBorn: !!r.auto,                                   // (its origin: never «from before the keys», server.js _levelState)
+      byKey: !!r.byKey,                                     // 🆕 2026-10-18: made with the level key at /homework (la entrada)
       firstSeen: r.firstSeen || 0,
       lastSeen: r.lastSeen || 0,
       sentenceCount:   Array.isArray(r.sentencesBuilt)         ? r.sentencesBuilt.length         : 0,
@@ -1258,6 +1293,8 @@ module.exports = {
   peek,
   createAuto,
   setRealName,
+  createByKey,     // 🆕 2026-10-18 la entrada
+  claimByKey,
   ARCHIVE_AFTER_DAYS,
   flushNow: persistNow,   // write now (tests; before a planned shutdown)
 };

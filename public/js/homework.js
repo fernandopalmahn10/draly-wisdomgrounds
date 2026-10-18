@@ -11,6 +11,9 @@
 //   - Tap feedback + Undo button on the assignment stage
 //   - Student code hidden from main list — only revealed inside Settings
 //     (it's a "secret" the kid shares with parents, not main UI noise)
+// 2026-10-18 «Mi Dralingo», la entrada (js/entrada.js): the door is now the level key («¡Hola de nuevo!», «Soy nuevo»,
+//   code + key); the access code + student code card below is the TRANSITIONAL door. Every door ends in hwAfterEnter();
+//   a kid of the key has no class code on the phone (hwKeyMode: the calls send none, the session is the pass).
 (function () {
   'use strict';
 
@@ -314,6 +317,7 @@
       if (!reduce) {
         const swap = () => later(() => {
           if (!visible()) return;   // already logged in: never load the animation for a hidden screen
+          if (!dr.offsetParent) return;   // (2026-10-18: the old card hidden behind the new entrance, js/entrada.js)
           const im = new Image(); im.onload = () => { if (visible()) dr.src = im.src; }; im.src = '/assets/dralingo/anim/' + pose + '.webp';
         }, 1500);
         if (document.readyState === 'complete') swap(); else window.addEventListener('load', swap);
@@ -423,8 +427,13 @@
       const again = (extra) => tryEnter(Object.assign({}, opts || {}, { eres: true }, extra || {}));
       window.DralyAuto.me().then((acc) => {
         const typed = looksLikeCode ? sc.toUpperCase() : null;
+        // (2026-10-18, la entrada: this phone's own kid of the level key typed their code here: their «¡Vamos!»)
+        if (acc && acc.byKey && acc.session && typed === acc.code && window.DralyEntrada) { window.DralyEntrada.vamos(); return; }
         if (!acc || !acc.progress || !acc.progress.any || (typed && typed === acc.code)) { again(); return; }
         window.DralyAuto.eresTu($('hw-entry-err'), acc, { merge: !!acc.auto && !!typed }).then((a) => {
+          // (2026-10-18, la entrada: a kid of the level key never logs in with a class code: «Sí, soy yo» = their own phone's
+          // «¡Vamos!», js/entrada.js)
+          if (a === 'me' && acc.byKey && window.DralyEntrada) { window.DralyEntrada.vamos(); return; }
           if (a === 'me') {
             $('hw-student-code').value = acc.code;
             delete $('hw-student-code').dataset.asName;
@@ -444,21 +453,38 @@
       displayName: looksLikeCode ? ((opts && opts.name) || null) : sc,
       meta: collectDeviceMeta(),
     };
-    fetch('/api/homework/enter', {
+    // (2026-10-18, la entrada: returns the answer, so the «¡Hola de nuevo!» screen knows when the old codes worked)
+    return fetch('/api/homework/enter', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
       .then((r) => r.json())
       .then((data) => {
-        if (data && data.codeNotFound) { showNewOrCode(sc); return; }
+        if (data && data.codeNotFound) { showNewOrCode(sc); return data; }
         if (!data || !data.ok) {
           $('hw-entry-err').textContent = data && data.error ? data.error : 'No se pudo entrar';
-          return;
+          return data;
         }
+        hwAfterEnter(data, ac, opts);
+        return data;
+      })
+      .catch((e) => {
+        $('hw-entry-err').textContent = 'Error de conexión: ' + e.message;
+        return null;
+      });
+  }
+  // 🆕 2026-10-18 (la entrada, js/entrada.js): what a login answer does, whichever door it came through: the old card
+  // (class code + student code), «¡Vamos!» on «¡Hola de nuevo!», a new account («Soy nuevo») or code + level key.
+  // ac = the class code typed, or '' for a kid who came in with the level key (keyMode: the session is the pass, the page
+  // sends no class code; a class account's own code comes back as data.classroomCode)
+  let hwKeyMode = false;
+  function hwAfterEnter(data, ac, opts) {
         $('hw-entry-err').textContent = '';   // no «Entrando…» left behind after «Salir»
         delete $('hw-student-code').dataset.asName;
         if (stopEntryLife) stopEntryLife();
+        hwKeyMode = !!data.keyMode && !ac;
+        if (!ac && data.classroomCode && !data.keyMode) ac = data.classroomCode;
         accessCode = ac;
         studentCode = data.studentCode;
         displayName = data.displayName;
@@ -474,7 +500,8 @@
         hwTareas = data.tareas && Array.isArray(data.tareas.ids) && data.tareas.ids.length ? data.tareas : null;
         document.body.classList.toggle('hw-no-daily', data.daily === false);   // Desafíos = HSK 1 words (above YCT 1)
         try {
-          localStorage.setItem(STORAGE_ACCESS_KEY, ac);
+          // (2026-10-18, la entrada: a kid of the level key keeps no class code on the phone: the phone remembers them itself)
+          if (ac) localStorage.setItem(STORAGE_ACCESS_KEY, ac); else localStorage.removeItem(STORAGE_ACCESS_KEY);
           localStorage.setItem(STORAGE_CODE_KEY, studentCode);
           localStorage.removeItem('dralyHwOut');   // (logged in again: «Salir» is over, 2026-10-18)
         } catch (_) {}
@@ -516,11 +543,18 @@
             fetchInbox();
           }, 20000);
         }
-      })
-      .catch((e) => {
-        $('hw-entry-err').textContent = 'Error de conexión: ' + e.message;
-      });
   }
+  // 🆕 2026-10-18 (la entrada): the doors js/entrada.js opens into this portal. enterWith(answer) = a login answer from
+  // /api/entrada/* (keyMode, or a class account's own class code); tryOld(opts) = the old card's «Entrar» with what its
+  // boxes hold (the saved class code + student code on «¡Hola de nuevo!»), → Promise<answer>; next = ?next= (back to a
+  // simulation or La Ruta Dorada); keyMode() = this kid came in with the level key (no class code on the phone)
+  window.DralyHw = {
+    enterWith: (data, opts) => hwAfterEnter(data, '', opts || {}),
+    tryOld: (opts) => tryEnter(opts),
+    next: hwNext,
+    keyMode: () => hwKeyMode,
+    code: () => studentCode,
+  };
 
   // === INBOX (messages from teacher) ===
   // Poll every 20s while on the list screen. Updates the 🔔 badge.
@@ -532,7 +566,7 @@
   const _inboxShown = (m) => m && (m.actionType !== 'anim' || _sagaAnimUrls.has(m.actionUrl));
   let _inboxUnread = 0;
   function fetchInbox() {
-    if (!studentCode || !accessCode) return;
+    if (!studentCode || !(accessCode || hwKeyMode)) return;
     fetch('/api/homework/inbox?accessCode=' + encodeURIComponent(accessCode)
         + '&studentCode=' + encodeURIComponent(studentCode))
       .then((r) => r.json())
@@ -804,6 +838,15 @@
   // «Salir» = leave the portal: back to the home page (2026-10-12: it used to drop the kid on the login card with no
   // way out). The codes stay saved on this phone, so coming back is one tap on «Entrar».
   $('hw-list-logout').addEventListener('click', () => {
+    // 🆕 2026-10-18 (la entrada, his approved design «Mi perfil»): «¿Salir de tu cuenta en este teléfono?» first (a kid of the
+    // level key comes back with code + key); js/entrada.js draws it, «No, quedarme» changes nothing
+    if (window.DralyEntrada && window.DralyEntrada.confirmOut) {
+      window.DralyEntrada.confirmOut(hwKeyMode).then((yes) => { if (yes) hwLogout(); });
+      return;
+    }
+    hwLogout();
+  });
+  function hwLogout() {
     accessCode = '';
     studentCode = '';
     removePinnedStack();
@@ -812,7 +855,7 @@
     try { fetch('/api/homework/logout', { method: 'POST', credentials: 'same-origin', keepalive: true }).catch(() => {}); } catch (_) {}
     markOut();
     location.href = '/';
-  });
+  }
   // 2026-10-18 (security review M2): «Salir» is remembered on the phone (dralyHwOut) until the next «Entrar»: meanwhile no
   // page logs the saved kid in again by itself (La Ruta Dorada's first steps, js/ruta-auto.js; the key screen), so a
   // brother or sister never lands on this kid's account. The codes stay saved: «Entrar» is still one tap.
@@ -831,6 +874,7 @@
     markOut();
     $('hw-avatar-err').textContent = '';
     showScreen('entry');
+    if (window.DralyEntrada) window.DralyEntrada.restart();   // (2026-10-18, la entrada: «¿Quién eres?» again, nobody remembered)
   });
   $('hw-list-parents').addEventListener('click', openParentView);
   $('hw-list-settings').addEventListener('click', openSettings);
@@ -1313,7 +1357,7 @@
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
   function fetchDaily(cb) {
-    if (!studentCode || !accessCode) { if (cb) cb(null); return; }
+    if (!studentCode || !(accessCode || hwKeyMode)) { if (cb) cb(null); return; }
     fetch('/api/homework/daily?studentCode=' + encodeURIComponent(studentCode)
         + '&accessCode=' + encodeURIComponent(accessCode) + '&date=' + localDateStr())
       .then((r) => r.json())
@@ -4190,7 +4234,7 @@
   // re-rendered the entire grid, which could destroy an HSK1 card mid-tap
   // on iPhone / Galaxy (the click was registered against a stale node).
   function refreshCustomAssignments() {
-    if (!studentCode || !accessCode) return;
+    if (!studentCode || !(accessCode || hwKeyMode)) return;
     fetch('/api/homework/custom-assignments/' + encodeURIComponent(studentCode)
         + '?accessCode=' + encodeURIComponent(accessCode))
       .then((r) => r.json())
@@ -4450,7 +4494,7 @@
 
   // ── Reading-test list (fetched from server)
   function fetchReadingTests() {
-    if (!studentCode || !accessCode) return;
+    if (!studentCode || !(accessCode || hwKeyMode)) return;
     fetch('/api/homework/reading-tests?accessCode=' + encodeURIComponent(accessCode)
        + '&studentCode=' + encodeURIComponent(studentCode))
       .then((r) => r.json())

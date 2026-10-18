@@ -114,7 +114,9 @@ How to add a game is documented in `docs/GAME_MODES.md`.
 
 ### 2.3 Homework portal (`/homework`)
 
-Kids enter with a **class access code** plus **their student code**. The access code also sets
+Since 18 October 2026 kids come in through **la entrada** («Mi Dralingo», part 1, below): the level key is the family's
+one password (a new kid types the key and gets their own code; a remembered phone just taps «¡Vamos!»). The old way
+stays behind a small transitional door: a **class access code** plus **their student code**. The access code also sets
 their level: 1001 is Old HSK 1, 1002 is New HSK 1, 1003 is YCT 1 (2026-10-12). You can change any code's level, or
 add a code, in /maestro → Teachers. The levels live in one list, `core/levels.js`.
 
@@ -401,6 +403,52 @@ the server refuses as a key. `scripts/test-wording.js` now fails on any code-sha
 in the kids' and teachers' pages, the class tools (warm-up, reading, the exam monitor) and the exam players included:
 placeholders set from code too, `??` and 3-digit PIN defaults, examples like «como 1003», keys in any case (never
 uppercase plain words, «300 palabras» or a year); it first proves itself on a few lines it must catch and must let pass.
+
+**🚪 La entrada: the level key is the family's one password («Mi Dralingo», part 1, 18 October 2026, your pick: something
+easy that is still password-protected and puts kids in their level from home without a teacher's approval).** /homework
+(the address families and the home-screen app already use) now opens on your approved design «Entrada»: red over gold,
+the Dubai skyline, Dralingo in his kandura, the gang peeking in (`public/js/entrada.js` + `css/entrada.css`; the server's
+block «LA ENTRADA» in server.js).
+- **«¡Hola de nuevo!»** when the phone remembers the kid: their avatar beside Dralingo, their name, «New HSK 1 ·
+  Experiencia 3» (the first La Base world they haven't finished), one big «¡Vamos!» and «¿No eres tú?». Nothing to type.
+  Remembered = the kid's session, the phone's own year-long cookie (`dkid`: any account made or entered at la entrada),
+  an automatic account of La Ruta Dorada that already has a name, or **today's families**: the old class code + student
+  code the phone saved (checked like a login; «¡Vamos!» then logs in with them exactly as the old card did). Never after
+  «Salir» (a brother or sister on the same phone).
+- **«¿Quién eres?»**: «Ya tengo mi código» (Adric) or «Soy nuevo» (Aileen).
+- **«Soy nuevo»**: the kid types the level key from your WhatsApp message (Profe Fer says where it is); the key tells the
+  level («¡Tu nivel es New HSK 1!» over that level's wonder, Dralingo's thumbs up); «¿Cómo te llamas?» and the saga
+  avatars; «Crear mi cuenta» makes a real account: no class code, its level from the key (open on the account and on the
+  phone), a six-character code (like the automatic accounts) shown in gold tiles with «Anótalo en tu cuaderno» and
+  «Copiar mi código»; «¡Vamos!» goes to the portal home (today's; part 3 replaces it). A phone that holds an automatic
+  account from La Ruta Dorada turns THAT account into the kid's (same code, its seals and practice kept); if that account
+  is resting after «Salir», «¿Eres tú?» asks first.
+- **«Ya tengo mi código»** (a new or lost phone): the student code AND the level key, both. Old 4-character class accounts
+  work too (with their level's key). Anything wrong gives one line, «El código o la clave no coinciden», never which one,
+  and counts as a guess. The code alone never opens an account: a key account never logs in with a class code + its code
+  (the old form treats it as a code that doesn't exist, and every homework call with a class code + its code says no).
+- **The transitional door**: a small line «¿Tu profe te dio un código de 4 números? Entra aquí» opens the old class code
+  + student code card, exactly as before, for families who don't have their key yet. Marked TRANSITIONAL in the code: it
+  goes once every family has its key (your call).
+- **Homework without a class code**: a kid of the key has no class code, so the portal's calls lean on their session on
+  that phone (an empty class code + their session; a wrong class code is still refused). Today's portal works the same.
+- **Your classes**: a key kid has no class code. The first time they play in a teacher's PIN room ON THEIR OWN PHONE (its
+  cookies prove it: a code typed on another phone moves nobody), their account takes that teacher's class code for their
+  level, so they show on that teacher's /maestro list. Before that only you (super admin) see them, with a small «con
+  clave» tag. Never for an automatic account nobody claimed (the security review's rule). A room opened with the old
+  shared password tags nobody.
+- **«Salir»** now asks «¿Salir de tu cuenta en este teléfono?» (your «Mi perfil» design): «No, quedarme» / «Sí, salir».
+  After it the phone stops remembering the kid by itself: they come back with code + key (a key kid) or the transitional
+  door (a class kid). Another kid's login on the phone does the same for the first kid.
+- **«Abrir otro nivel»** (Ajustes for now; «Mi perfil» in part 3): the kid types the new key you send: that level opens on
+  their account and phone and becomes their level (the old one stays theirs).
+- **Limits**: a wrong key counts like the key screen (5 per phone, 30 per address in 15 minutes, then a wait); a wrong code
+  + key pair also counts as an unknown student code; 5 new accounts a day per phone (brothers and sisters), 120 an hour
+  per address; requests from other sites refused. Every line has its English (the 🌐 toggle).
+- **Your part**: «Soy nuevo» works only once the three level keys are set in /maestro → Teachers → «Claves de nivel»
+  (each level shows its key masked with «Ver»; a level with no key says so). A family with a wrong or missing key just
+  sees «Esa clave no es».
+Tests: `node scripts/test-entrada.js` (port 4470: every door above, the PIN room tag, «Salir», the pages' English).
 
 ### 2.4 Parent control
 
