@@ -521,8 +521,22 @@ the checklist for any new game mode.
   - the Nintendo-Switch-like start when a kid joins (he loves it);
   - Papás, redesigned: today it is hard to read and easy to get lost in;
   - Mensajes (teachers writing to their students);
-  - the sentences (Mis oraciones), which get their own new interface later.
+  - the sentences (Mis oraciones), which get their own new interface later;
+  - «Desafío del día» (his words 2026-10-18: "later on… the games already made will become games for daily
+    challenges, so leave it there"). It shows as «Muy pronto» with the games' art until the pin games become daily
+    challenges.
 - **Design first**, like the La Ruta Dorada redesign: a clickable design (laptop + phone) for him to approve before building.
+  v1/v2 on 2026-10-18: https://claude.ai/artifact/HaZwEVT2RMfhyfuTBasKWx (La Ruta Dorada as a path of the 8 experiences;
+  each experience = 1 Palabras → 2 Práctica → 3 Tu tarea; tabs La Ruta · Mensajes · Oraciones · Desafío; Papás; Mi perfil).
+- **The level key is the family's one password** (his pick 2026-10-18, after asking for something easy that is still
+  password-protected and places kids in their level from home without teacher approval):
+  - A new kid types the level key the teacher sent on WhatsApp. The key protects the content, and it also tells the
+    level: «¡Tu nivel es New HSK 1!». The kid then picks a name and avatar and gets their own 6-character code («anótalo»).
+  - The phone remembers the kid: «¡Hola de nuevo!» → «¡Vamos!», with nothing to type.
+  - On a new or lost phone the kid types their code AND the level key; the code alone never opens an account.
+  - To move up a level, the kid types the new key («Abrir otro nivel» in Mi perfil).
+  - The 4-digit class code (1001…) is no longer asked of families. Kids join a teacher's class through the PIN in class.
+  - A leaked key is changed by the super admin in /maestro.
 
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads
