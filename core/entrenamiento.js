@@ -32,6 +32,7 @@ const Levels = require('./levels');
 const Packs = require('./packs');
 const RP = require('./ruta-progress');
 const SimLock = require('./sim-lock');
+const Drills = require('./entrenamiento-drills');   // the exam's own kinds of question (2026-10-18)
 
 const BASE_DIR = path.join(__dirname, '..', 'protected', 'base');
 const ROUND_SIZE = 10;
@@ -132,7 +133,9 @@ function shuffle(list) {
   }
   return a;
 }
-// every question of the world's pack rounds (built fresh: options and their order change each time), one per text
+// every question of the world's pack rounds (built fresh: options and their order change each time), one per text,
+// and the world's exam drills (core/entrenamiento-drills.js: the exam's picture and listening kinds; many share their
+// text, so one per drill)
 function poolOf(lvl, w) {
   const pl = packLevelOf(lvl);
   const seen = new Set();
@@ -142,6 +145,7 @@ function poolOf(lvl, w) {
     seen.add(q.text);
     out.push(q);
   }));
+  Drills.forWorld(lvl, w).forEach((q) => { if (!seen.has(q.uid)) { seen.add(q.uid); out.push(q); } });
   return out;
 }
 // ~10 questions with a mix of kinds (word → pinyin, pinyin → meaning, sentences, dialogues…), never two neighbours
@@ -214,6 +218,8 @@ function isPinyin(text) {
 // sentence asked about, the line someone says, the exam passage), opts = the four options one by one (they are pinyin),
 // after = once answered (the right answer, the sentence with its blank filled, the reply). es = the Spanish asked.
 function voicePlan(q) {
+  // a drill says its own line (a La Base clip, the exam's Chinese, or its pinyin), before and again after the answer
+  if (q.drill) return { ask: q.say.py, opts: false, after: q.say.py, es: q.say.es || null };
   const gs = groups(q.text);
   const allPinyin = q.answers.every(isPinyin);
   const plan = { ask: null, opts: false, after: null, es: null };
@@ -421,12 +427,24 @@ function getRound(id, who) {
 // (image: an opaque link of the round, never the picture's own file name: the pack names a word's picture after its
 // pinyin, «baba.webp» under «¿Cómo se dice «papá»?», which would be the answer. A «¿Cómo se dice?» asks Spanish in
 // its «…»: never set in the pinyin type even when a Spanish word happens to spell like pinyin, «casa / familia».)
+// (a drill (core/entrenamiento-drills.js) adds what the phone needs to draw it: pics = one link per option (picture
+// options, by the round: tokens and links say nothing of the picture), alts = each option's Spanish for a screen
+// reader (✓ / ✕: «Sí» / «No»), tf = a ✓ / ✕ question, listen = its line is heard, never shown (alt = that line, shown
+// only when the sound fails: never stuck), voice.tap = a reading drill, its audio only when the kid taps it)
 const publicRound = (r) => ({
   round: r.id, level: r.level, world: r.world, total: r.qs.length,
-  questions: r.qs.map((q, i) => ({ i, text: q.text, image: q.image ? '/api/ruta/train/pic/' + r.id + '/' + i : null, answers: q.answers,
-    py: groups(q.text).map((g) => q.kind !== 'es2zh' && isPinyin(g.replace(/_{2,}/g, ' '))),
-    pyAnswers: q.answers.every(isPinyin),
-    voice: { ask: !!q.plan.ask, opts: !!q.plan.opts } })),
+  questions: r.qs.map((q, i) => {
+    const o = { i, text: q.text, image: q.image || q.imageFile ? '/api/ruta/train/pic/' + r.id + '/' + i : null, answers: q.answers,
+      py: groups(q.text).map((g) => q.kind !== 'es2zh' && isPinyin(g.replace(/_{2,}/g, ' '))),
+      pyAnswers: !q.labels && q.answers.every(isPinyin),
+      voice: { ask: !!q.plan.ask, opts: !!q.plan.opts } };
+    if (q.pics) o.pics = q.answers.map((a, k) => '/api/ruta/train/pic/' + r.id + '/' + i + '/' + k);
+    if (q.labels) o.alts = q.answers.map((a) => q.labels[a] || '');
+    if (q.tf) o.tf = true;
+    if (q.listen) { o.listen = true; o.alt = q.say.py; }
+    if (q.tap) o.voice.tap = true;
+    return o;
+  }),
 });
 // A new round of world `key` (the caller checked LevelKeys.access; this checks the world is open for this kid).
 // ip: the request's address (one address never holds more than PER_ADDRESS open rounds: nobody can push every other
@@ -459,8 +477,11 @@ function startRound(level, key, who, a, rec, claimed, ip) {
   }
   const r = {
     id: crypto.randomBytes(15).toString('base64url'), level: lvl, world: W.key, rk: recKey(W), kind: W.kind, owner, ip: addr, teacher: !!who.tid, at: now,
-    qs: picked.map((q) => ({ text: q.text, image: q.image && q.image !== 'none' ? q.image : null, answers: shuffle(q.answers), correct: q.correct, kind: q.kind,
-      plan: voicePlan(q) })),
+    qs: picked.map((q) => Object.assign({ text: q.text, image: q.image && q.image !== 'none' ? q.image : null, answers: q.fixed ? q.answers.slice() : shuffle(q.answers),
+      correct: q.correct, kind: q.kind, plan: voicePlan(q) },
+    // a drill's own parts (✓ / ✕ keeps «Sí» before «No»)
+    q.drill ? { drill: true, imageFile: q.imageFile || null, pics: q.pics || null, labels: q.labels || null, say: q.say, show: q.show || null,
+      listen: !!q.listen, tap: !!q.tap, tf: !!q.tf } : {})),
     ans: [], done: null, voice: 0,
   };
   rounds.set(r.id, r);
@@ -475,11 +496,13 @@ function answer(id, i, chosen, who) {
   if (!Number.isInteger(n) || n < 0 || n >= r.qs.length) return fail(400, 'Esa pregunta no está en la ronda.');
   const q = r.qs[n];
   // (asked again, e.g. a lost reply and another tile tapped: the first answer stands, and which one it was comes back)
-  if (r.ans[n]) return { ok: true, correct: r.ans[n].ok, expected: q.correct, after: !!q.plan.after, again: true, chosen: r.ans[n].c };
+  // (a drill also says, now, what its line was: «Decía «mao»: gato»)
+  const show = q.show ? { show: q.show } : {};
+  if (r.ans[n]) return Object.assign({ ok: true, correct: r.ans[n].ok, expected: q.correct, after: !!q.plan.after, again: true, chosen: r.ans[n].c }, show);
   if (typeof chosen !== 'string' || !q.answers.includes(chosen)) return fail(400, 'Esa respuesta no está en la pregunta.');
   const right = chosen === q.correct;
   r.ans[n] = { c: chosen, ok: right };
-  return { ok: true, correct: right, expected: q.correct, after: !!q.plan.after };
+  return Object.assign({ ok: true, correct: right, expected: q.correct, after: !!q.plan.after }, show);
 }
 const starsOf = (pct, need) => (pct >= Math.max(90, need) ? 3 : pct >= need ? 2 : pct >= 40 ? 1 : 0);
 // The end of a round: the % from the answers given here. A logged-in kid's best goes on their record (and may open
@@ -527,6 +550,14 @@ function voice(id, i, part, who) {
   r.vp[vk] = (r.vp[vk] || 0) + 1;
   if (r.vp[vk] > 12 || ++r.voice > VOICE_MAX) return fail(429, 'Espera un momento.');
   const q = r.qs[n];
+  // a drill's line: La Base's own clip, else the exam's own Chinese, else its pinyin read by the platform voice
+  if (q.say && (part === 'ask' || part === 'after')) {
+    if (part === 'after' && !r.ans[n]) return fail(403, 'answer first');
+    if (q.say.file && fs.existsSync(q.say.file)) return { ok: true, file: q.say.file };
+    if (q.say.hz) return { ok: true, text: q.say.hz };
+    const sp = speechFor(r.level, q.say.py, q.say.es);
+    return sp ? Object.assign({ ok: true }, sp) : fail(404, 'nothing to say');
+  }
   let text = null, es = null;
   if (part === 'ask') text = q.plan.ask;
   else if (part === 'after') {
@@ -608,13 +639,22 @@ function mergeProofs(code, level, proofs, who) {
 // → { ok, file } | { ok: false, status }
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 const PACK_PICS = path.join(PUBLIC_DIR, 'assets', 'packs') + path.sep;
-function picture(id, i, who) {
+// k: one of a drill's picture options, by its place in the round (the drills' pictures are La Base's: under
+// protected/base/<level>-base/pics, behind the same key as this round)
+const BASE_PICS = path.join(Drills.BASE_DIR) + path.sep;
+function picture(id, i, who, k) {
   const { r, error } = getRound(id, who);
   if (error) return error;
   const q = r.qs[Number(i)];
-  if (!q || !q.image) return fail(404, 'no picture');
-  const abs = path.join(PUBLIC_DIR, q.image);
-  if (abs.indexOf(PACK_PICS) !== 0 || !fs.existsSync(abs)) return fail(404, 'no picture');
+  if (!q) return fail(404, 'no picture');
+  let abs = null;
+  if (k !== undefined && k !== null) {
+    if (!/^[0-3]$/.test(String(k)) || !q.pics) return fail(404, 'no picture');
+    abs = q.pics[q.answers[Number(k)]] || null;
+  } else if (q.imageFile) abs = q.imageFile;
+  else if (q.image) abs = path.join(PUBLIC_DIR, q.image);
+  const inside = abs && (abs.indexOf(PACK_PICS) === 0 || (abs.indexOf(BASE_PICS) === 0 && path.basename(path.dirname(abs)) === 'pics'));
+  if (!inside || !fs.existsSync(abs)) return fail(404, 'no picture');
   return { ok: true, file: abs };
 }
 // the level a round is of (server.js asks LevelKeys.access for it before anything else), or null
@@ -638,5 +678,5 @@ module.exports = {
   configure, worldsOf, view, worldIn, recKey,
   startRound, answer, finish, voice, picture, mergeProofs, bestOf, starsOf, roundLevel,
   // tests
-  _voicePlan: voicePlan, _isPinyin: isPinyin, _speechText: speechText, _speechFor: speechFor, _rounds: rounds, _poolOf: poolOf,
+  _voicePlan: voicePlan, _isPinyin: isPinyin, _speechText: speechText, _speechFor: speechFor, _rounds: rounds, _poolOf: poolOf, _drills: Drills,
 };

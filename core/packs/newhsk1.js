@@ -79,6 +79,9 @@ const worlds = [
       items: [
         f('Wo ___ shuo Hanyu.', 'hui', ['kan', 'du', 'ting'], 'Completa «Sé hablar chino mandarín»: «Wo ___ shuo Hanyu.»'),
         f('Wo mai le yi ___ shu.', 'ben', ['zhi', 'jian', 'kou'], 'Completa «Compré un libro»: «Wo mai le yi ___ shu.»'),
+        // dì (the order: dì yī, dì èr…), in the simulations' own options (2026-10-18)
+        f('Jintian shi wo ___ yi tian shang xue.', 'di', ['de', 'ge', 'le'], 'Completa «Hoy es mi primer día de escuela»: «Jintian shi wo ___ yi tian shang xue.»'),
+        { k: 'q', t: '¿Cómo se dice «la segunda clase» en Chino Mandarín?', a: 'di er ge ke', w: ['er ge ke', 'liang ge ke', 'er ke'] },
       ] },
     ],
   },
@@ -132,6 +135,10 @@ const worlds = [
       items: [
         f('Wo you liang ___ gou.', 'zhi', ['ben', 'jian', 'kou'], 'Completa «Tengo dos perros»: «Wo you liang ___ gou.»'),
         { k: 'q', t: '¿Cuánto es «wu» + «san»?', a: 'ba', w: ['qi', 'liu', 'jiu'] },
+        // gè and the prices, as the simulations ask them (2026-10-18)
+        f('Wo mai le san ___ pingguo.', 'ge', ['ben', 'jian', 'zhi'], 'Completa «Compré tres manzanas»: «Wo mai le san ___ pingguo.»'),
+        { k: 'm', py: 'Zhe jian yifu ershi kuai.', es: 'Esta ropa cuesta veinte yuanes.' },
+        { k: 'r', a: 'Zhege beizi duoshao qian?', b: 'Shiwu kuai.', w: ['Liang ge.', 'Xingqitian.', 'Zai zhuozi shang.'] },
       ] },
     ],
   },

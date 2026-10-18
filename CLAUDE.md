@@ -343,6 +343,29 @@ the checklist for any new game mode.
   Teachers → the switch is labelled «El Simulacro Dorado se gana practicando». `node scripts/test-ruta-training.js`
   (port 4430: boot 1 = phase 3 where a kid takes a sim, boot 2 = the launch) must pass; the key-door tests run with the
   switch seeded OFF (`ruta-settings.json` in their temp folder).
+- **El Entrenamiento covers every simulation** (his words 2026-10-18, once the simulations became the teacher's, run in
+  class with a PIN: "we will just need the base and the training… make sure that the training is actually really
+  covering all the simulations"). `node scripts/test-training-coverage.js` must pass: per level it reads the sims
+  (`content/golden/<book>.json`) and every question El Entrenamiento can ask, and checks (a) every level word of the
+  sims in 2+ practice questions (a word spelled like another, shi = ser / diez, also in a question of its own) and every
+  word above the level the exam itself uses in 1+, (b) every kind of exam question (listen ✓ / ✕ picture, listen →
+  picture, listen → written answer, read a word ✓ / ✕, read a sentence → picture, reply, fill-in, short text) in 10+
+  questions, each kind of stimulus (word / sentence / dialogue / statement + question) in 5+, heard only when the
+  exam's is heard, (c) every part of the exam layout, (d) the sims' sentence patterns in 5+, (e) the drills: every
+  heard line sayable, every picture on disk, two drills that look the same have one answer, only level + exam words.
+  A new sim, a changed pack or a new level: re-run it. The exam's kinds come from `core/entrenamiento-drills.js`
+  (exam drills, added to every world's pool by `poolOf`): from La Base, every word whose picture really shows it
+  (`PIC`: people, body, animals, food, places, things, transport, weather, faces, numbers; one person per question,
+  numbers only beside numbers, look-alike pictures never together) gets listen ✓ / ✕, listen → photos A B C, read
+  ✓ / ✕, and its example sentence (only when the sentence's Spanish names the word) listen → photo, listen ✓ / ✕, read →
+  photo; the packs' dialogues heard only (choose the reply; the picture when one word of it has one) + a few written
+  dialogues per level (`DIALOGUES`, level words only); «Simulacro del examen» gets every listening question of every
+  sim heard only (the exam's own Chinese: `core/yct/<sim>.json`, old HSK `content/train/hsk1sim-heard.json`, exported
+  once from `study/hsk1sim/transcripts.py`) and the reading lines its pack rounds leave out. Picture and ✓ / ✕ options
+  are opaque tokens fixed per drill (pictures travel as `/api/ruta/train/pic/<round>/<i>/<k>`, La Base's own files,
+  behind the key); a heard question sends its line only as `alt`, shown when the sound fails (never stuck); a reading
+  drill speaks only on a tap (`voice.tap`); the line and its Spanish come back with the answer (`show`). Drills are the
+  same in every build (only the round's order changes): the tests key them by text + options.
 - **Built (phase 5, 2026-10-16): El libro dorado.** One source with the printed golden books: `../study/lib/examweb.py
   <book> --repo <checkout>` (exam.py's own Exam: the sim data, texts.py / transcripts.py, the photos as the book
   processes them) writes `content/golden/<book>.json` (never served as is) + `protected/golden/<book>/<n>/p<NN>.webp`
@@ -407,7 +430,8 @@ the checklist for any new game mode.
   `node scripts/test-sims-lock.js`, `node scripts/test-ruta-dorada.js` (port 4410: every kind of visitor, nothing
   protected reaches one who may not open it), `node scripts/test-ruta-progress.js` (port 4420: seals, the unlock
   engine, /maestro's «Desbloquear», archive), `node scripts/test-ruta-training.js` (port 4430: El Entrenamiento, the
-  grading, the Dorado rule ON at launch) and `node scripts/test-golden-book.js` (port 4440: El libro dorado, every
+  grading, the Dorado rule ON at launch), `node scripts/test-training-coverage.js` (no server: El Entrenamiento covers
+  every simulation) and `node scripts/test-golden-book.js` (port 4440: El libro dorado, every
   visitor's doors, the media by index, the web against the printed books) must pass.
 
 ### La Ruta Dorada redesign (his picks 2026-10-18, after «it's not clear, it's messy, the tareas are left behind»)

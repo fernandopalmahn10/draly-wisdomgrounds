@@ -240,6 +240,44 @@ body.au-is-play .au-main { padding: 0 12px; }
   .tr-opt:not(:disabled):hover { box-shadow: inset 0 0 0 2.5px var(--oro), 0 4px 0 #c49a3f; }
 }
 
+/* ── the exam's own kinds (2026-10-18): heard only, photos A B C, ✓ / ✕ ─────────── */
+/* heard only: the speaker is the question (big, first), the line never on the screen */
+.tr-q.is-listen .tr-ask { grid-template-columns: auto minmax(0, 1fr); gap: 16px; }
+.tr-q.is-listen .tr-spk { width: 84px; height: 84px; }
+.tr-q.is-listen .tr-spk svg { width: 40px; height: 40px; }
+.tr-q.is-listen .tr-text { font-size: clamp(1.12rem, 5vw, 1.36rem); }
+.tr-alt { margin: 12px 0 0; padding: 10px 12px; border-radius: 14px; background: var(--oro-palido); font-weight: 700; font-size: 1rem; color: var(--tinta); }
+.tr-alt .tr-py { color: var(--rojo); font: 700 1.2em/1.2 var(--py); }
+/* photos to choose from: like the exam's A B C, each a big square tile that presses down */
+.tr-opts.is-pics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.tr-opts.is-pics.is-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tr-opt.is-pic { flex-direction: column; justify-content: center; padding: 8px; min-height: 0; aspect-ratio: 1 / 1; background: #fff; }
+.tr-opt.is-pic img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; pointer-events: none; }
+.tr-opt-letter {
+  position: absolute; left: 8px; top: 8px; z-index: 1; width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--rojo); color: var(--crema); font: 800 .95rem/1 var(--sans);
+}
+.tr-opt.is-pic .tr-opt-mark { top: 8px; right: 8px; margin-top: 0; z-index: 1; }
+.tr-opt.is-pic.is-right { background: #fff; }
+.tr-opt.is-pic.is-wrong { background: #fff; }
+.tr-opt.is-pic.is-out { opacity: .38; }
+/* ✓ / ✕: two big tiles side by side, the sign above the word */
+.tr-opts.is-tfs { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tr-opt.is-tf { flex-direction: column; justify-content: center; gap: 6px; min-height: 96px; padding: 12px; text-align: center; font-size: 1.2rem; }
+.tr-tf-icon { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.tr-tf-icon svg { width: 26px; height: 26px; }
+.tr-opt.is-yes .tr-tf-icon { background: var(--verde); }
+.tr-opt.is-no .tr-tf-icon { background: var(--mal); }
+.tr-opt.is-tf .tr-opt-mark { top: 8px; right: 8px; margin-top: 0; }
+@media (min-width: 560px) {
+  .tr-opts.is-pics { gap: 14px; }
+  .tr-opt-letter { width: 32px; height: 32px; font-size: 1.05rem; }
+}
+@media (max-height: 700px) {
+  .tr-q.is-listen .tr-spk { width: 68px; height: 68px; }
+  .tr-opt.is-tf { min-height: 76px; }
+}
+
 /* the sheet: who reacts, a few words, the big «Siguiente» (it slides up under the tiles; the page keeps room for it) */
 .tr-feed {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: end; gap: 4px 12px;

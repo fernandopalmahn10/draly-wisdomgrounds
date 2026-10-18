@@ -5321,6 +5321,17 @@ app.get('/api/ruta/train/pic/:round/:i', (req, res) => {
   res.set({ 'X-Content-Type-Options': 'nosniff', 'Cross-Origin-Resource-Policy': 'same-origin', 'Cache-Control': 'private, max-age=3600' }).type('image/webp');
   res.sendFile(out.file, { cacheControl: false }, (err) => { if (err && !res.headersSent) res.status(404).set('Cache-Control', 'no-store').end(); });
 });
+// one picture option of an exam drill («toca la foto»: core/entrenamiento-drills.js), by its place in the round: the
+// same doors as the question's picture, never a file name
+app.get('/api/ruta/train/pic/:round/:i/:k', (req, res) => {
+  const d = _trainRoundDoor(req, res, req.params.round);
+  if (!d) return;
+  if (!_trainRate('v:' + _clientIp(req), 5 * 60 * 1000, 40000)) return res.status(429).set('Retry-After', '20').json({ ok: false });
+  const out = Train.picture(String(req.params.round), req.params.i, _trainWho(req, res, d.a), String(req.params.k));
+  if (!out.ok) return res.status(out.status || 404).json({ ok: false });
+  res.set({ 'X-Content-Type-Options': 'nosniff', 'Cross-Origin-Resource-Policy': 'same-origin', 'Cache-Control': 'private, max-age=3600' }).type('image/webp');
+  res.sendFile(out.file, { cacheControl: false }, (err) => { if (err && !res.headersSent) res.status(404).set('Cache-Control', 'no-store').end(); });
+});
 app.post('/api/ruta/train/scores', (req, res) => {
   const b = req.body || {};
   const d = _trainDoor(req, res, b.level);
