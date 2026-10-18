@@ -197,7 +197,7 @@ function unit() {
   const r = E.startRound('yct1', 'familia', who, kA, rec, null);
   const txt = JSON.stringify(r);
   ok(r.ok && r.questions.length === E.ROUND_SIZE && r.total === E.ROUND_SIZE, 'world 1 (all its seals): a round of ' + E.ROUND_SIZE + ' questions');
-  const nOpts = (q) => (q.tf ? 2 : q.pics || q.listen || q.voice.tap ? [3, 4] : 4);
+  const nOpts = (q) => (q.tf ? 2 : q.pics ? [2, 3, 4] : q.listen || q.voice.tap ? [3, 4] : 4);   // (a line's photos: 2 when only one wrong photo is safe)
   ok(!/"correct"|"expected"|"key"|"plan"|"kind"|"show"|"say"/.test(txt) && r.questions.every((q) => [].concat(nOpts(q)).includes(q.answers.length) && new Set(q.answers).size === q.answers.length),
     'no right answer in it (no correct / expected / key field, nothing an exam drill says), four options each (✓ / ✕: two; the exam\'s photos and heard questions: A B C)');
   ok(!HANZI.test(txt), 'no hanzi');

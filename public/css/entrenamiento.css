@@ -251,6 +251,8 @@ body.au-is-play .au-main { padding: 0 12px; }
 /* photos to choose from: like the exam's A B C, each a big square tile that presses down */
 .tr-opts.is-pics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .tr-opts.is-pics.is-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* (a sentence with only one safe wrong photo: two photos, side by side) */
+.tr-opts.is-pics.is-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .tr-opt.is-pic { flex-direction: column; justify-content: center; padding: 8px; min-height: 0; aspect-ratio: 1 / 1; background: #fff; }
 .tr-opt.is-pic img { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; pointer-events: none; }
 .tr-opt-letter {

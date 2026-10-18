@@ -64,7 +64,7 @@ const PIC = [
 // never guessed from a toneless dialogue
 const RISKY_IN_LINES = new Set(['kou', 'qian', 'xue', 'shu', 'yi', 'er', 'san', 'si', 'wu', 'liu', 'qi', 'ba', 'jiu', 'shi', 're', 'leng', 'sui']);
 // pictures too close to tell apart in one question (two phones, school / university, film / cinema)
-const CONFLICTS = [['dianhua', 'shouji'], ['xuexiao', 'daxue'], ['dianying', 'dianyingyuan', 'dianshi'], ['shangdian', 'yiyuan', '¿Adónde vas? Voy al hospital a ver al médico.'], ['cha', 'niunai'],
+const CONFLICTS = [['dianhua', 'shouji'], ['xuexiao', 'daxue'], ['dianying', 'dianyingyuan', 'dianshi'], ['shangdian', 'yiyuan'], ['cha', 'niunai'],
   ['mifan', 'zaofan', 'wufan', 'wanfan']];
 const clash = (a, b) => CONFLICTS.some((set) => set.includes(a) && set.includes(b));
 
@@ -116,7 +116,7 @@ function baseOf(lvl) {
         const p = PIC.find(([key, , re]) => key === k && (!re || re.test(String(w.es || ''))));
         return {
           n: w.n, world: w.world, py: untone(w.py), es: String(w.es || ''), k, group: p ? p[1] : null,
-          pic: p ? file(w.pic) : null, au: file(w.au),
+          pic: p ? file(w.pic) : null, anyPic: file(w.pic), au: file(w.au),
           sent: Array.isArray(w.ex) ? untone(w.ex.join('')) : '', sentEs: String(w.exes || ''), sentAu: file(w.exau),
         };
       });
@@ -128,20 +128,98 @@ function baseOf(lvl) {
   return out;
 }
 const picturable = (b) => b.words.filter((w) => w.pic && w.group);
-// the keys of every level word in a line (toneless tokens, a word written as two tokens too: «da dianhua»)
-function lineKeys(line) {
+// a line's toneless tokens in order (a number word counts as a number only where it counts something: «Jintian shi er
+// hao» has no «shi» = diez in it, «wan ba!» no «ba» = ocho)
+const NUM = new Set(['yi', 'er', 'san', 'si', 'wu', 'liu', 'qi', 'ba', 'jiu', 'shi', 'liang']);
+const COUNTED = new Set(['ge', 'sui', 'dian', 'hao', 'yue', 'kuai', 'yuan', 'ben', 'bei', 'kou', 'zhi', 'jian', 'tian', 'nian', 'fen', 'fenzhong',
+  'xiaoshi', 'ci', 'zhang', 'mao']);
+function lineToks(line) {
   const toks = String(line || '').toLowerCase().split(/[^a-züv0-9']+/).map((t) => plain(t)).filter(Boolean);
+  return toks.filter((t, i) => {
+    if (t !== 'shi' && t !== 'ba') return true;
+    const nx = toks[i + 1], pv = toks[i - 1];
+    return (nx && (COUNTED.has(nx) || NUM.has(nx))) || (pv && NUM.has(pv) && pv !== t);
+  });
+}
+// the keys of every level word in a line (a word written as two tokens too: «da dianhua»)
+function lineKeys(line) {
+  const toks = lineToks(line);
   const set = new Set(toks);
   for (let i = 0; i + 1 < toks.length; i++) set.add(toks[i] + toks[i + 1]);
   return set;
 }
+// ── a line's own words, and what it brings to mind (his screenshots 2026-10-18: «Baba zai chi fan» offered A casa,
+// B manzana, C papá, and a kid can argue for the apple) ────────────────────────────────────────────────────────────
+// A wrong photo of a sentence or a dialogue never relates to it:
+//   (a) never the picture of a word of the line (any level word, pictured in the drills or not);
+//   (b) never a photo of the same family as another pictured word of the line, nor of a family the line brings to
+//       mind (EVOKES: «chi fan» → no food, drink or mouth; «zuo chuzuche» → no transport; «xia yu» → no weather; a
+//       «ta» or a «wo» → no person), nor a word tied to one of the line's words (RELATED: a school and its teacher,
+//       books and pupils; a doctor and the hospital; a shop, money and what you buy; work and money; screens; «zuo»
+//       and a chair; clothes and the people who wear them).
+// Families: food and drink are one; a picture that also looks like another family counts for both (EXTRA: «sui» is a
+// birthday cake, «yu» is fish to eat, «re» / «leng» are the weather, «jia» is the family and its pets, a shop sells
+// food and things), and the body, the faces and the people are kin (a face has a mouth, a person has a face).
+const familyOf = (group) => (group === 'drink' ? 'food' : group);
+const EXTRA = { sui: ['food'], yu: ['food'], re: ['weather'], leng: ['weather'], jia: ['person', 'animal'], shangdian: ['food', 'thing'],
+  yiyuan: ['face'], dianyingyuan: ['food'] };
+const KIN = { body: ['face', 'person'], face: ['body'], person: ['body', 'face'] };
+const familiesOf = (x) => {
+  const f = new Set([familyOf(x.group)].concat(EXTRA[x.k] || []));
+  [...f].forEach((g) => (KIN[g] || []).forEach((k) => f.add(k)));
+  return f;
+};
+const EVOKES = {
+  food: ['chi', 'he', 'fan', 'chifan', 'cai', 'haochi', 'e', 'ke', 'kou', 'bei', 'beizi', 'zaofan', 'wufan', 'wanfan', 'zuofan', 'fandian',
+    'shuiguo', 'tang', 'shui', 'mai', 'shangdian', 'chaoshi'],
+  body: ['chi', 'he', 'kan', 'kanjian', 'ting', 'tingjian', 'shuo', 'shuohua', 'chang', 'changge', 'xie', 'du', 'gezi', 'zhang', 'kou', 'toufa',
+    'bizi', 'erduo', 'yanjing', 'shou'],
+  person: ['wo', 'ni', 'nin', 'ta', 'women', 'nimen', 'tamen', 'dajia', 'ren', 'shei', 'haizi', 'xiaopengyou', 'pengyou', 'tongxue',
+    'xiansheng', 'nushi', 'xiaojie', 'laoshi', 'yisheng', 'xuesheng', 'jiaren', 'baba', 'mama', 'gege', 'jiejie', 'didi', 'meimei', 'erzi', 'nuer',
+    'yifu', 'chuan'],
+  place: ['zai', 'qu', 'lai', 'hui', 'huijia', 'dao', 'zhu', 'nar', 'naer', 'zher', 'zheer', 'nali', 'zheli', 'nabian', 'zhebian', 'li',
+    'limian', 'waimian', 'shangmian', 'xiamian', 'qianmian', 'houmian', 'pangbian', 'jia', 'shangke', 'xiake', 'shangxue', 'shangban', 'xiaban'],
+  vehicle: ['zuo', 'kai', 'kaiche', 'che', 'qu', 'lai', 'hui', 'dao', 'zou', 'lu'],
+  weather: ['tianqi', 'xia', 'yu', 'xue', 'leng', 're', 'feng', 'tian', 'xiayu'],
+  face: ['gaoxing', 'kuaile', 'ku', 'lei', 'bing', 'shengbing', 'shuijiao', 'shui', 'xiuxi', 'leng', 're', 'mang', 'haochi', 'xihuan', 'ai', 'meishi'],
+  animal: ['zhi', 'dongwu', 'gou', 'mao', 'niao', 'yu', 'xiaogou', 'xiaomao', 'jia'],
+  thing: ['kan', 'du', 'dushu', 'kanshu', 'xie', 'mai', 'dianhua', 'dadianhua', 'kai', 'wan', 'xuexi', 'yong', 'shangdian'],
+};
+// words tied together: a line with one of them never offers another as a wrong photo
+const RELATED = [
+  ['xuexiao', 'daxue', 'xiaoxue', 'zhongxue', 'laoshi', 'xuesheng', 'tongxue', 'shu', 'xuexi', 'xue', 'shangke', 'xiake', 'shangxue', 'ke', 'hanyu', 'hanzi', 'zi'],
+  ['yisheng', 'yiyuan', 'bing', 'shengbing', 'kanbing'],
+  ['shangdian', 'chaoshi', 'shudian', 'qian', 'mai', 'kuai', 'yuan', 'duoshao', 'yifu', 'dongxi'],
+  ['dianying', 'dianyingyuan', 'dianshi', 'diannao', 'shouji', 'dianhua', 'dadianhua'],
+  ['zuo', 'yizi', 'zhuozi'],
+  ['gongzuo', 'shangban', 'xiaban', 'gongsi', 'qian'],
+  ['mao', 'niunai', 'yu'],
+  ['shui', 'yu'],
+];
+// what a line rules out for the wrong photos of answer w: { flat, pics, fams, keys (RELATED words) }
+function lineGuard(b, line, w) {
+  const keys = lineKeys(line);
+  const pics = new Set(), fams = new Set(), related = new Set();
+  b.words.forEach((x) => {
+    if (!keys.has(x.k)) return;
+    if (x.anyPic) pics.add(x.anyPic);
+    if (x.group && x.n !== w.n && x.k !== w.k) familiesOf(x).forEach((f) => fams.add(f));
+  });
+  Object.keys(EVOKES).forEach((f) => { if (EVOKES[f].some((k) => keys.has(k))) { fams.add(f); (KIN[f] || []).forEach((g) => { if (f !== 'person') fams.add(g); }); } });
+  RELATED.forEach((set) => { if (set.some((k) => keys.has(k))) set.forEach((k) => related.add(k)); });
+  return { flat: lineToks(line).join(''), pics, fams, related };
+}
+// is x a safe wrong photo for a line? (the test checks the same over every drill)
+const lineSafe = (guard, x) => !(guard.flat.indexOf(x.k) >= 0 || guard.pics.has(x.pic) || guard.pics.has(x.anyPic) || guard.related.has(x.k) ||
+  [...familiesOf(x)].some((f) => guard.fams.has(f)));
 // up to n distractor pictures for word w: never one spelled alike or sharing a meaning, never a second person, numbers
-// only beside numbers, never a word the line mentions (`avoid`: the line's text); this world's words first
-function distractors(b, w, n, rnd, avoid) {
-  const flat = plain(avoid || '');
+// only beside numbers, never kin of the answer (a face beside a mouth, a person beside a hand); for a line (`guard`),
+// nothing of the line or of what it brings to mind; this world's words first
+function distractors(b, w, n, rnd, guard) {
+  const kin = new Set(KIN[familyOf(w.group)] || []);
   const ok = (x) => x !== w && x.k !== w.k && x.pic !== w.pic && (w.group === 'number') === (x.group === 'number') &&
-    !(w.group === 'person' && x.group === 'person') && !(avoid && flat.indexOf(x.k) >= 0) &&
-    !esWords(x.es).some((m) => esWords(w.es).includes(m));
+    !(w.group === 'person' && x.group === 'person') && !esWords(x.es).some((m) => esWords(w.es).includes(m)) &&
+    !kin.has(familyOf(x.group)) && !(guard && !lineSafe(guard, x));
   const pool = picturable(b).filter(ok);
   const near = pool.filter((x) => x.world === w.world);
   const far = pool.filter((x) => x.world !== w.world);
@@ -166,31 +244,33 @@ const T = {
   ltext: 'Escucha y toca la respuesta correcta.',
   lmean: 'Escucha y toca lo que significa.',
 };
-// a ✓ / ✕ drill: the picture of the word (true) or of another one (false), half and half by the drill's own stream
+// a ✓ / ✕ drill: the picture of the word (true) or of another one (false), half and half by the drill's own stream; a
+// line's «No» photo is never of the line or of what it brings to mind (none safe: the drill shows the word's own photo)
 function tfDrill(uid, b, w, o) {
   const rnd = seeded(uid);
-  const truth = rnd() < 0.5;
-  const other = truth ? null : distractors(b, w, 1, rnd, o.avoid)[0];
-  if (!truth && !other) return null;
+  let truth = rnd() < 0.5;
+  const other = truth ? null : distractors(b, w, 1, rnd, o.guard)[0];
+  if (!truth && !other) truth = true;
   const yes = token(uid, 'si'), no = token(uid, 'no');
   return Object.assign({
     uid, drill: true, kind: o.kind, ex: o.ex, stim: o.stim, listen: !!o.listen, tap: !o.listen, tf: true, fixed: true,
     text: o.text, answers: [yes, no], correct: truth ? yes : no, labels: { [yes]: 'Sí', [no]: 'No' },
-    imageFile: truth ? w.pic : other.pic, key: w.k, word: w.n, say: o.say, show: o.show,
+    imageFile: truth ? w.pic : other.pic, shownWord: truth ? w.n : other.n, key: w.k, word: w.n, say: o.say, show: o.show,
   }, o.more || {});
 }
-// a «choose the picture» drill: the word's picture and two others (the exam shows three: A, B, C)
+// a «choose the picture» drill: the word's picture and two others (the exam shows three: A, B, C); a line with only
+// one safe wrong photo gets two options, with none no drill (never a doubtful photo)
 function picDrill(uid, b, w, o) {
   const rnd = seeded(uid);
-  const others = distractors(b, w, 2, rnd, o.avoid);
-  if (others.length < 2) return null;
+  const others = distractors(b, w, 2, rnd, o.guard);
+  if (others.length < (o.guard ? 1 : 2)) return null;
   const opts = [w].concat(others);
   const answers = opts.map((x) => token(uid, x.n));
   const pics = {}, labels = {};
   opts.forEach((x, i) => { pics[answers[i]] = x.pic; labels[answers[i]] = x.es; });
   return Object.assign({
     uid, drill: true, kind: o.kind, ex: o.ex, stim: o.stim, listen: !!o.listen, tap: !o.listen,
-    text: o.text, answers, correct: answers[0], pics, labels, key: w.k, word: w.n, say: o.say, show: o.show,
+    text: o.text, answers, correct: answers[0], pics, labels, optWords: others.map((x) => x.n), key: w.k, word: w.n, say: o.say, show: o.show,
   }, o.more || {});
 }
 function wordDrills(lvl, b, w) {
@@ -206,10 +286,11 @@ function wordDrills(lvl, b, w) {
   if (w.sent && w.sentAu && namesMeaning(w.sentEs, w.es) && plain(w.sent).indexOf(w.k) >= 0) {
     const sSay = { py: w.sent, es: w.sentEs, file: w.sentAu };
     const sShow = { py: w.sent, es: w.sentEs };
-    out.push(picDrill(base + ':lpics', b, w, { kind: 'lpic', ex: 'L-pic', stim: 'sentence', listen: true, text: T.lpicS, say: sSay, show: sShow, avoid: w.sent }));
-    out.push(tfDrill(base + ':ltfs', b, w, { kind: 'ltf', ex: 'L-tf', stim: 'sentence', listen: true, text: T.ltfS, say: sSay, show: sShow, avoid: w.sent }));
+    const guard = lineGuard(b, w.sent, w);
+    out.push(picDrill(base + ':lpics', b, w, { kind: 'lpic', ex: 'L-pic', stim: 'sentence', listen: true, text: T.lpicS, say: sSay, show: sShow, guard }));
+    out.push(tfDrill(base + ':ltfs', b, w, { kind: 'ltf', ex: 'L-tf', stim: 'sentence', listen: true, text: T.ltfS, say: sSay, show: sShow, guard }));
     out.push(picDrill(base + ':rpic', b, w, { kind: 'rpic', ex: 'R-pic', stim: 'sentence', listen: false,
-      text: 'Lee la frase y toca su foto: «' + w.sent + '»', say: sSay, show: sShow, avoid: w.sent }));
+      text: 'Lee la frase y toca su foto: «' + w.sent + '»', say: sSay, show: sShow, guard }));
   }
   return out.filter(Boolean);
 }
@@ -238,7 +319,7 @@ function dialogueDrills(lvl, b, a, reply, replies, uidBase, pic, es) {
   }
   if (w) {
     const d = picDrill(uidBase + ':ldlg', b, w, { kind: 'ldlg', ex: 'L-pic', stim: 'dialogue', listen: true, text: T.ldlg,
-      say: { py: line }, show: es ? { py: line, es } : { py: line }, avoid: line });
+      say: { py: line }, show: es ? { py: line, es } : { py: line }, guard: lineGuard(b, line, w) });
     if (d) out.push(d);
   }
   return out;
@@ -462,4 +543,7 @@ function forWorld(level, w) {
   return out;
 }
 
-module.exports = { forWorld, baseOf, PIC, BASE_DIR, _untone: untone, _namesMeaning: namesMeaning, DIALOGUES };
+module.exports = { forWorld, baseOf, PIC, BASE_DIR, DIALOGUES,
+  // the fairness rules of a line's wrong photos (scripts/test-training-coverage.js checks every drill against them)
+  EVOKES, RELATED, EXTRA, KIN, familyOf, familiesOf, lineToks, lineGuard, lineSafe,
+  _untone: untone, _namesMeaning: namesMeaning };
