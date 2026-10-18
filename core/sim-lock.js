@@ -226,8 +226,11 @@ function session(req) {
   if (v[0] === 's' && v[1] && v[2]) return { kind: 's', code: v[1], level: v[2] };
   return null;
 }
+// → the cookie's value (server.js: an automatic account's renewed session is read by the same request, 2026-10-18)
 function setSession(req, res, kind, code, level) {
-  setCookie(req, res, COOKIE, sign('c', [kind, code || '', level || ''], COOKIE_TTL), COOKIE_TTL);
+  const tok = sign('c', [kind, code || '', level || ''], COOKIE_TTL);
+  setCookie(req, res, COOKIE, tok, COOKIE_TTL);
+  return tok;
 }
 
 // ── local test harness: yct-sim.html?debug=1&direct=1… opens without a room on this PC only ───────────────────────

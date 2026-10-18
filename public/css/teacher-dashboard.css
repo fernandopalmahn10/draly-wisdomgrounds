@@ -454,6 +454,11 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--ink); flex
 .m-row-who { display: grid; min-width: 0; }
 .m-row-name { font-weight: 800; font-size: 1.0625rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .m-row-code { font-weight: 800; font-size: 0.8125rem; letter-spacing: 0.08em; color: var(--ink-soft); }
+/* 2026-10-18: an account La Ruta Dorada made by itself (no class code yet) */
+.m-row-auto {
+  justify-self: start; margin-top: 2px; padding: 1px 8px; border-radius: 999px; font-weight: 800; font-size: 0.75rem; line-height: 1.4;
+  color: #6b4a00; background: #fbecc2; box-shadow: inset 0 0 0 1px #e2c26a;
+}
 .m-row-tags { display: contents; }
 .m-row-level, .m-level-pill {
   justify-self: start;

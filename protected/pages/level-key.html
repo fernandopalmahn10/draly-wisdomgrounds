@@ -135,6 +135,14 @@
       busy(true, text || '¡Listo! Abriendo…');
       setTimeout(function () { location.reload(); }, reduce ? 200 : 700);
     }
+    // 🆕 2026-10-18 (automatic accounts, server.js /api/ruta/auto): the right key is a first real step. A phone with no
+    // login gets its own student account here (La Ruta Dorada shows its code once, after the reload); a logged-in kid or
+    // a teacher gets nothing new. Never longer than 2.5 s: the level opens anyway.
+    function autoAccount() {
+      var ask = fetch('/api/ruta/auto', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ level: S.level, step: 'key' }) }).then(function () {}, function () {});
+      return Promise.race([ask, new Promise(function (r) { setTimeout(r, 2500); })]);
+    }
     input.addEventListener('input', function () { if (input.getAttribute('aria-invalid')) setError(''); });
 
     form.addEventListener('submit', function (e) {
@@ -155,7 +163,7 @@
         body: JSON.stringify({ level: S.level, key: key }) })
         .then(function (r) { return r.json().catch(function () { return null; }); })
         .then(function (d) {
-          if (d && d.ok) { opened(); return; }
+          if (d && d.ok) { busy(true, '¡Listo! Abriendo…'); autoAccount().then(function () { opened(); }); return; }
           busy(false);
           setError((d && d.error) || 'Esa clave no es. Revísala en el mensaje de tu maestra.');
           input.focus();

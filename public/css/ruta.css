@@ -594,7 +594,65 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
   .rp-hw { padding: 10px; }
 }
 
+/* ── 2026-10-18 ─────────────────────────────────────────────────────── */
+/* «Mi código» on the band (the logged-in kid, or the phone's automatic account: js/ruta-auto.js) */
+.rp-me {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 14px; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--gold-btn); color: var(--rojo); font: 800 .98rem/1.1 var(--sans); box-shadow: 0 3px 0 var(--gold-edge);
+  transition: transform 140ms var(--ease-out), box-shadow 140ms var(--ease-out);
+}
+.rp-me svg { width: 20px; height: 20px; flex: none; }
+.rp-me:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--gold-edge); }
+@media (hover: hover) and (pointer: fine) { .rp-me:hover { background: #efd590; } }
+@media (max-width: 559px) { .rp-band.has-me .rp-band-title { display: none; } }
+@media (max-width: 380px) { .rp-me { padding: 0 10px; font-size: .9rem; gap: 4px; } }
+
+/* card 3 in class (the teacher opens El Simulacro Dorado with a PIN): ready = the family tells the teacher */
+.rp-step.is-ready:not(.is-current) { box-shadow: inset 0 0 0 2px var(--gold-btn); }
+.rp-btn-wa { min-height: 54px; background: #1f8f4e; color: #fff; font-size: 1.08rem; box-shadow: 0 5px 0 #146a38; }
+.rp-btn-wa svg { width: 22px; height: 22px; }
+.rp-btn-wa:active { transform: translateY(3px); box-shadow: 0 2px 0 #146a38; }
+.rp-sim.is-class { color: var(--ink-mid); background: var(--crema); box-shadow: inset 0 0 0 1.5px var(--linea); }
+.rp-act .rp-btn-soft svg { width: 18px; height: 18px; }
+@media (hover: hover) and (pointer: fine) { .rp-btn-wa:hover { background: #22a159; } }
+
+/* a teacher's look at «Tus tareas»: the kids' buttons, calm, doing nothing («Así lo ven tus alumnos») */
+.rp-preview-note {
+  display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 14px; background: #eef3fb; color: #1b2f6b;
+  font-size: .88rem; font-weight: 600; line-height: 1.4; box-shadow: inset 0 0 0 1.5px #c7d5ef;
+}
+.rp-preview-note svg { width: 18px; height: 18px; flex: none; margin-top: 1px; }
+.rp-hw.is-preview { background: var(--papel); box-shadow: inset 0 0 0 2px var(--linea); }
+.rp-hw.is-preview .rp-hw-state { background: var(--red); color: #fff; }
+.rp-hw-send.is-preview, .rp-hwbar .rp-hw-send.is-preview {
+  flex: 1.25; display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 8px 10px; border-radius: 16px;
+  background: var(--papel); color: var(--ink-mid); box-shadow: inset 0 0 0 2px var(--linea); font: 800 .95rem/1.1 var(--sans);
+  border: 2px dashed transparent; cursor: default; user-select: none;
+}
+.rp-hw-prev { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: .8rem; font-weight: 800; color: #1b2f6b; }
+.rp-hw-prev svg { width: 15px; height: 15px; flex: none; }
+
+/* the homework's own page (/audios/<homework id>): the same marks under its title and after «¡Ahora graba tu video!» */
+.au-marks { margin: 12px 0 4px; }
+.au-end .au-marks { margin: 14px 0 0; text-align: left; }
+.rp-hwbar { display: grid; gap: 4px; padding: 12px; border-radius: 20px; text-align: left; }
+.rp-hwbar.is-new { background: #fff3ef; box-shadow: inset 0 0 0 3px var(--red); }
+.rp-hwbar.is-heard { background: var(--papel); box-shadow: inset 0 0 0 2px var(--oro-claro); }
+.rp-hwbar.is-sent { background: var(--green-pale); box-shadow: inset 0 0 0 2px var(--green); }
+.rp-hwbar.is-preview { background: #eef3fb; box-shadow: inset 0 0 0 1.5px #c7d5ef; }
+.rp-hwbar-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+.rp-hwbar .rp-hw-state { margin-top: 0; }
+.rp-hwbar.is-new .rp-hw-state, .rp-hwbar.is-preview .rp-hw-state { background: var(--red); color: #fff; }
+.rp-hwbar.is-heard .rp-hw-state { background: var(--oro-palido); color: var(--rojo); }
+.rp-hwbar.is-sent .rp-hw-state { background: var(--green); color: #fff; }
+.rp-hwbar-t { margin: 0; flex: 1 1 200px; font-size: .92rem; font-weight: 700; line-height: 1.35; color: var(--tinta); }
+.rp-hwbar .rp-hw-acts { margin-top: 6px; }
+.rp-hwbar .rp-hw-acts:empty { display: none; }
+.rp-hwbar .rp-hw-acts button, .rp-hwbar .rp-hw-acts .is-preview { flex: 1; }
+.rp-hwbar.is-sent .rp-hw-acts { display: none; }
+
 @media (prefers-reduced-motion: reduce) {
+  .rp-me:active, .rp-btn-wa:active { transform: none; }
   .rd-card:active, .rd-arrow:active, .rd-btn:active, .rp-btn:active, .rp-sim:active, .rp-back:active, .rp-hw-acts button:active { transform: none; }
   .rp-step.is-current { transform: none; }
   .rd-dot-now { transition: none; }

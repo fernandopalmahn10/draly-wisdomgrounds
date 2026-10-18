@@ -34,6 +34,22 @@
 //         «Escuchada ✓» / «✓ Mandada». A logged-in kid's marks live on the ACCOUNT (POST /api/ruta/tareas, any phone);
 //         a phone without login keeps them in localStorage draly_tareas and they join the account at the first login
 //         (like La Base's seals: `who` = the account the mirror holds, `pend` = not saved yet, `held` = a sibling's).
+// Round 2 (his asks 2026-10-18, after the redesign went live):
+//       · El Simulacro Dorado is the TEACHER's ("the golden simulations should be just for me… I enable it through pin"):
+//         server.js DORADO_SELF_SERVE is off, the route state says `solo: false` and sends no player link to a kid. Card 3
+//         (classMode) never starts a simulation: locked with «Se abre en clase con tu profe, cuando termines El
+//         Entrenamiento»; once El Entrenamiento is done (card 2 done, or the teacher opened the Dorado) it is the current
+//         step, Dralingo says «¡Terminaste El Entrenamiento! Avísale a tu profe…», and its big button «Avisarle a mi profe»
+//         opens WhatsApp with a ready message (wa.me with no number: the family picks the teacher; the kid's name when the
+//         account has a real one) + «Copiar mensaje». The simulations taken in class keep their chips and «Libro dorado».
+//         A teacher still sees and opens everything (the chips link the players).
+//       · A teacher's look at «Tus tareas» (his computer is a teacher's, so he never saw the kids' buttons): each card
+//         shows the kid's buttons as a calm preview that does nothing and writes nothing («Así lo ven tus alumnos»).
+//       · The homework's own page (/audios/<homework id>) has the same marks (Ruta.hwMarks, called by js/audios.js): ONE
+//         implementation with «Tus tareas» (the mirror, the account, the phone's own marks, «Deshacer»).
+//       · The automatic student account (js/ruta-auto.js, server.js «AUTOMATIC STUDENT ACCOUNTS»): the first «¡Ya la
+//         mandé!» on a phone with no account gives it one (listening alone never does: printed PDFs open these pages),
+//         the card «¡Ya tienes tu cuenta!» shows once; «Mi código» on the band (code, Copiar, the name) for a logged-in kid.
 // What is open comes from the server (GET /api/ruta-dorada, LevelKeys.access per level: a teacher, the logged-in
 // kid's account, this device's key). «Escribe la clave de <nivel>» opens the phase-1 key screen at
 // /audios/<level>/clave and comes back here. The sims only reach this page when open, and each one opens its player
@@ -152,6 +168,9 @@
     again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2.1-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/><path d="M6.6 2.8v4.6h4.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     down: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     send: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3.4 20.6l17.9-8.1a.6.6 0 0 0 0-1.1L3.4 3.4a.6.6 0 0 0-.8.7L4.6 11l9 1-9 1-2 6.9a.6.6 0 0 0 .8.7z"/></svg>',
+    copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>',
+    eye: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>',
+    badge: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="9" cy="11" r="2.4" fill="currentColor"/><path d="M5.8 16.4a3.4 3.4 0 0 1 6.4 0M14 10h4M14 14h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
   };
   const sky = '<svg class="rd-sky" viewBox="0 0 400 110" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><use href="#rd-sky"/></svg>' +
     '<svg class="rd-sky rd-sky-mirror" viewBox="0 0 400 110" preserveAspectRatio="xMidYMax meet" aria-hidden="true" focusable="false"><use href="#rd-sky"/></svg>';
@@ -431,11 +450,22 @@
   const unsentOf = (hws, marks) => hws.filter((h) => !(marks[h.id] && marks[h.id].s)).length;
 
   // ── the band at the top of both screens: the way back, always visible ──
-  function bandHtml(back, title) {
-    return '<header class="rp-band" data-back><div class="rp-band-in">' +
+  // me (2026-10-18): the logged-in kid (their own login, or the phone's automatic account) gets «Mi código» on the right:
+  // their code, «Copiar» and their name (js/ruta-auto.js)
+  function bandHtml(back, title, me) {
+    return '<header class="rp-band' + (me ? ' has-me' : '') + '" data-back><div class="rp-band-in">' +
       '<a class="rp-back" href="' + esc(back.href) + '"' + (back.nav ? ' data-nav' : '') + ' data-back>' + I.left + '<span>' + esc(back.label) + '</span></a>' +
       (title ? '<a class="rp-band-title" href="/audios" data-nav aria-label="La Ruta Dorada: todos los mundos">' + esc(title) + '</a>' : '<span class="rp-band-title" aria-hidden="true">La Ruta Dorada</span>') +
+      (me && me.code && window.DralyAuto ? '<button type="button" class="rp-me" data-me>' + I.badge + '<span>Mi código</span></button>' : '') +
       '</div></header>';
+  }
+  function wireMe(main, ctx) {
+    const b = main.querySelector('[data-me]');
+    if (!b) return;
+    b.addEventListener('click', () => {
+      const me = ctx.ruta.me;
+      if (me && window.DralyAuto) window.DralyAuto.codeSheet(me, (acc) => { me.name = acc.name; me.placeholder = !!acc.placeholder; });
+    });
   }
 
   // ── the picker: big glossy cards that fly ─────────────────────────
@@ -445,6 +475,7 @@
     if (readyIo) { readyIo.disconnect(); readyIo = null; }
     hwStop();
     tSync.onChange = null;
+    hwBar = null;
     document.body.classList.remove('rp-on');
   }
 
@@ -504,7 +535,7 @@
       return unsentOf(hws, marks);
     };
     const friend = window.DralingoCast ? window.DralingoCast.pick(1)[0] : null;
-    main.innerHTML = bandHtml(back) +
+    main.innerHTML = bandHtml(back, null, ctx.ruta.me) +
       '<section class="rd-pick">' +
         '<h1 class="rd-h1" id="rd-h1">Elige tu mundo</h1>' +
         '<p class="rd-lede">Cada mundo es un nivel de Chino Mandarín. Toca el tuyo.</p>' +
@@ -528,11 +559,15 @@
           '<a class="rd-btn rd-btn-red" href="/homework.html?next=%2Faudios">Entrar con mi código</a></div></div>' : friendRow('is-pick')) +
       '</section>';
     live = carousel(main, mods, start);
+    wireMe(main, ctx);
     document.body.classList.add('rp-on');
   }
   // «Tus tareas» is the kid's own level: a phone nobody is logged in on counts every level as its own; a teacher, or a
   // kid looking at another module, only plays its homework (no marks, no counts)
   const mineOf = (ctx, m) => !ctx.ruta.teacher && (!ctx.ruta.student || m.slug === ctx.ruta.home);
+  // 🔒 2026-10-18: El Simulacro Dorado in class (the server's `solo: false`: a kid never starts one from here; a teacher
+  // still sees and opens everything)
+  const classMode = (ctx) => ctx.ruta.solo === false && !ctx.ruta.teacher;
   const idsOfCtx = (ctx) => (slug) => ctx.homeworksOf(slug).map((h) => h.id);
 
   // ── the flying carousel ───────────────────────────────────────────
@@ -805,6 +840,25 @@
     const takenOf = (s) => s.best != null || !!s.taken;
     if (st.gold === 'soon') Object.assign(s3, { state: 'soon', status: 'El examen con su audio original', opens: 'Muy pronto' });
     else if (st.gold === 'locked' && !st.goldEarn) Object.assign(s3, { state: 'locked', status: m.simCount + (m.simCount === 1 ? ' simulacro' : ' simulacros') + ' con el audio del examen', opens: 'Se abre con la clave' });
+    else if (classMode(ctx)) {
+      // 🔒 2026-10-18 (his decision): El Simulacro Dorado is the teacher's. A kid never starts one here: it is taken in
+      // class with the teacher's PIN. Once El Entrenamiento is done (every world with the %, or the teacher opened it),
+      // this card is the step to do: tell the teacher (WhatsApp). The simulations taken in class keep their books.
+      const taken = sims.length ? sims.filter((s) => s.taken).map((s) => ({ n: s.n, mistakes: s.mistakes, at: s.at, book: s.book }))
+        : (m.golden && Array.isArray(m.golden.taken) ? m.golden.taken : []);
+      const ready = s2.state === 'done' || !!(m.dorado && m.dorado.open && m.dorado.via === 'teacher');
+      const all = sims.length > 0 && sims.every(takenOf) && taken.length >= sims.length;
+      const lastBook = taken.filter((x) => x.book).reduce((best, x) => (!best || (Number(x.at) || 0) >= (Number(best.at) || 0) ? x : best), null);
+      Object.assign(s3, {
+        cls: true, sims, taken, book: lastBook, ready, login: !!(m.dorado && m.dorado.login),
+        state: all ? 'done' : ready ? 'ready' : 'locked',
+        status: taken.length ? taken.length + ' de ' + m.simCount + ' hechos en clase' : m.simCount + (m.simCount === 1 ? ' simulacro' : ' simulacros') + ' con el audio del examen',
+        pct: m.simCount ? taken.length / m.simCount : 0,
+        badge: ready && !all ? '¡Avísale a tu profe!' : '',
+        opens: 'Se abre en clase con tu profe, cuando termines El Entrenamiento',
+        go: lastBook ? lastBook.book : null,
+      });
+    }
     else if (st.goldEarn) {
       const d = m.dorado;
       const n = d.login ? counted : (d.practiced || 0);
@@ -836,7 +890,7 @@
     else if (s1.state === 'fresh' || s1.state === 'started') cur = 1;
     // (the extra worlds, Pinyin and the exam questions, never hold the kid back from El Simulacro Dorado)
     else if (s2.state !== 'locked' && s2.state !== 'soon' && s2.next && s2.next.kind === 'world') cur = 2;
-    else if (s3.state === 'fresh' || s3.state === 'started') cur = 3;
+    else if (s3.state === 'fresh' || s3.state === 'started' || s3.state === 'ready') cur = 3;
     const steps = [s1, s2, s3];
     steps.forEach((s) => { s.current = s.n === cur; });
     // the one instruction, for this kid now
@@ -853,15 +907,21 @@
         : w && w.kind === 'world' && w.best == null ? '¡Ahora el 2! Toca el 2 y practica ' + name + '.'
         : w && w.kind === 'world' ? '¡Ahora el 2! Juega otra vez ' + name + ' hasta llegar a ' + need + ' %.'
         : '¡Ahora el 2! Practica ' + name + ' en El Entrenamiento.';
+    } else if (cur === 3 && s3.cls) {
+      say = s3.taken.length ? '¡Muy bien! Avísale a tu profe: tu próximo Simulacro Dorado es en clase.'
+        : '¡Terminaste El Entrenamiento! Avísale a tu profe: ya puedes hacer El Simulacro Dorado en clase.';
     } else if (cur === 3) {
       say = s3.state === 'fresh' ? '¡Ya puedes hacer el examen! Toca el 3, El Simulacro Dorado.'
         : '¡Sigue con el 3! Haz el Simulacro ' + (s3.nextSim ? s3.nextSim.n : '') + '.';
+    } else if (s3.cls && s3.state === 'locked') {
+      say = s3.login ? 'Entra con tu código para que cuenten tus puntos de El Entrenamiento.'
+        : 'Practica cada mundo con ' + need + ' % o más. Después, tu profe abre El Simulacro Dorado en clase.';
     } else if (s3.earn) {
       say = s3.login ? 'Entra con tu código para que cuenten tus puntos y se abra el 3, El Simulacro Dorado.'
         : 'Practica cada mundo con ' + need + ' % o más y se abre el 3, El Simulacro Dorado.';
     } else if (s3.state === 'done') say = '¡Terminaste tu ruta! Repasa tus errores en el libro dorado.';
     else say = '¡Muy bien! Repasa cuando quieras.';
-    return { steps, say, st, anon, cb, pr, tw, cur };
+    return { steps, say, st, anon, cb, pr, tw, cur, msg: s3.cls ? teacherMsg(ctx, m) : '' };
   }
 
   // one step card (the design's picture card)
@@ -895,7 +955,8 @@
       }).join('') + '</ol>';
       extra = s.list ? '<a class="rp-coins-link" href="' + esc(s.list) + '" data-nav aria-label="Ver los ' + s.worlds.length + ' mundos de El Entrenamiento">' + coins + I.right + '</a>' : coins;
     }
-    if (s.key === 'gold' && Array.isArray(s.sims) && s.sims.length) {
+    if (s.key === 'gold' && s.cls) extra = classChipsHtml(s);
+    else if (s.key === 'gold' && Array.isArray(s.sims) && s.sims.length) {
       // the simulations: a numbered chip each (gold with a check once passed, 60 %: YCT and HSK pass at 120 / 200; a
       // try below it is «Otra vez», never a low number on screen)
       extra = '<ol class="rp-sims" aria-label="Los simulacros">' + s.sims.map((x) => {
@@ -918,7 +979,7 @@
       // (the study PDFs download for the super admin only: his rule 2026-10-18)
       if (s.pdf) extra += '<a class="rp-pdf" href="' + esc(s.pdf) + '" download>Libro en PDF (solo administración)</a>';
     }
-    if (s.key === 'gold' && s.earn && s.taken && s.taken.length) {
+    if (s.key === 'gold' && !s.cls && s.earn && s.taken && s.taken.length) {
       // while the Dorado is closed: the books of the simulations the kid took in a teacher's room (taken anywhere is enough)
       extra = s.taken.map((x) => {
         const k = x.mistakes;
@@ -929,7 +990,8 @@
     // the button: a direct verb on the current step, soft «Seguir…» on a started one, «Repasar» on a done one
     let act = '';
     const btn = (href, label, kind, nav) => '<a class="rp-btn rp-btn-' + kind + '" href="' + esc(href) + '"' + (nav ? ' data-nav' : '') + '>' + esc(label) + (kind === 'go' ? I.go : '') + '</a>';
-    if (s.state === 'locked' || s.state === 'soon') {
+    if (s.key === 'gold' && s.cls) act = classActHtml(s, m, L);
+    else if (s.state === 'locked' || s.state === 'soon') {
       if (s.current && !m.open) {
         // a locked module: its key is the first step (the key box)
         act = '<p class="rp-opens">' + I.key + '<span>Se escribe una sola vez y abre los 3 pasos</span></p>' +
@@ -961,18 +1023,137 @@
       '</div></li>';
   }
 
+  // ── card 3 in class (2026-10-18, DORADO_SELF_SERVE off in server.js): the teacher opens El Simulacro Dorado ──
+  // the simulations as numbered chips: one taken in class opens its golden book (its mistakes in red on the corner); one
+  // not taken yet is a plain number (the teacher opens it in class), never a link to a player
+  function classChipsHtml(s) {
+    let out = '';
+    if (s.sims.length) {
+      out = '<ol class="rp-sims" aria-label="Los simulacros">' + s.sims.map((x) => {
+        const n = Number(x.n) || 0;
+        const pass = x.best != null && x.best >= 60;
+        const err = x.taken && Number(x.mistakes) > 0 ? Number(x.mistakes) : 0;
+        if (x.taken && x.book) {
+          const label = 'Simulacro ' + n + ': hecho en clase' + (err ? ', ' + err + (err === 1 ? ' error' : ' errores') + ' para repasar en su libro dorado' : ', abre su libro dorado');
+          return '<li><a class="rp-sim' + (pass ? ' is-pass' : ' is-tried') + '" href="' + esc(x.book) + '" data-nav aria-label="' + esc(label) + '">' + (pass ? I.check : '') + '<b>' + n + '</b>' +
+            (err ? '<i class="rp-sim-err" aria-hidden="true">' + err + '</i>' : '') + '</a></li>';
+        }
+        return '<li><span class="rp-sim is-class" role="img" aria-label="Simulacro ' + n + ': en clase con tu profe"><b>' + n + '</b></span></li>';
+      }).join('') + '</ol>';
+    }
+    // the book of the simulation taken last (or, while the list is not sent, every book taken)
+    const books = s.sims.length ? (s.book ? [s.book] : []) : s.taken.filter((x) => x.book);
+    out += books.map((x) => {
+      const k = x.mistakes;
+      return '<a class="rp-book" href="' + esc(x.book) + '" data-nav>' + I.book + '<span>Libro dorado del Simulacro ' + (Number(x.n) || 0) + '</span>' +
+        (k != null ? '<b>' + (k === 0 ? 'sin errores' : k + (k === 1 ? ' error' : ' errores')) + '</b>' : '') + '</a>';
+    }).join('');
+    return out;
+  }
+  // the message the family sends the teacher (the kid's name when the account has a real one; never the placeholder,
+  // never the code: the family picks the chat)
+  function teacherMsg(ctx, m) {
+    const me = ctx.ruta.me;
+    const name = me && me.name && !me.placeholder ? me.name : '';
+    return '¡Hola, profe! ' + (name ? 'Soy ' + name + '. ' : '') + 'Terminé El Entrenamiento de ' + m.name + '. ¡Ya puedo hacer El Simulacro Dorado!';
+  }
+  const WA_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.2a9.7 9.7 0 0 0-8.4 14.6L2.3 21.7l5-1.3A9.7 9.7 0 1 0 12 2.2zm0 17.7a8 8 0 0 1-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 19.9zm4.4-6c-.2-.1-1.4-.7-1.7-.8-.2-.1-.4-.1-.5.1l-.8.9c-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.7-1.8c-.2-.5-.4-.4-.5-.4h-.5a.9.9 0 0 0-.7.3 2.8 2.8 0 0 0-.9 2.1 4.9 4.9 0 0 0 1 2.6 11.2 11.2 0 0 0 4.3 3.8c1.6.7 2.2.7 3 .6a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .2-1.2c-.1-.1-.2-.2-.4-.3z"/></svg>';
+  function classActHtml(s, m, L) {
+    if (s.state === 'ready') {
+      // the big button helps the family tell the teacher (WhatsApp with no number: the family picks the teacher's chat)
+      return '<a class="rp-btn rp-btn-wa" href="' + esc('https://wa.me/?text=' + encodeURIComponent(L.msg)) + '" data-tell target="_blank" rel="noopener">' + WA_ICON + '<span>Avisarle a mi profe</span></a>' +
+        '<button type="button" class="rp-btn rp-btn-soft" data-tell-copy>' + I.copy + '<span>Copiar mensaje</span></button>' +
+        '<p class="rp-opens">' + I.trophy + '<span>Tu profe lo abre en clase con un PIN</span></p>';
+    }
+    if (s.state === 'done') return s.go ? '<a class="rp-btn rp-btn-done" href="' + esc(s.go) + '" data-nav>Repasar</a>' : '';
+    return '<p class="rp-opens">' + I.lock + '<span>' + esc(s.opens) + '</span></p>' +
+      (s.login && L.anon ? '<p class="rp-alt"><a href="/homework.html?next=' + encodeURIComponent('/audios/' + m.slug) + '">Entra con tu código</a> para que cuenten tus puntos</p>' : '');
+  }
+
+  // «Copiar mensaje»: the same text for a family that writes to the teacher another way
+  function wireTell(main, L) {
+    const b = main.querySelector('[data-tell-copy]');
+    if (!b || !L.msg) return;
+    b.addEventListener('click', () => {
+      if (window.DralyAuto) { window.DralyAuto.copyText(L.msg, b, '¡Mensaje copiado!'); return; }
+      try { navigator.clipboard.writeText(L.msg).then(() => { b.lastChild.textContent = '¡Mensaje copiado!'; }, () => {}); } catch (_) {}
+    });
+  }
+
   // ── «Tus tareas»: the homework audios of the level ─────────────────
   const KIND_T = { words: 'Las palabras', dialogue: 'Escucha, lee, repite', video: 'Tu video' };
   const HW_SHOW = 3;
+  // ── one homework's marks: ONE look and ONE behaviour for the module page's cards and the homework's own page
+  // (/audios/<homework id>, js/audios.js → Ruta.hwMarks) ──
+  // state: 'new' | 'heard' | 'sent' (the kid's own) · 'other' (another level's homework: it only plays) · 'preview' (a
+  // teacher: the kid's buttons, calm, doing nothing)
+  const stateTag = (state) => (state === 'sent' ? I.check + 'Mandada' : state === 'heard' ? 'Escuchada' + I.check : 'Nueva');
+  const SEND_BTN = '<button type="button" class="rp-hw-send" data-send>¡Ya la mandé!</button>';
+  const playBtn = (state) => '<button type="button" class="rp-hw-play" data-play aria-pressed="false">' +
+    (state === 'new' || state === 'other' || state === 'preview' ? I.play + '<span>Escuchar</span>' : I.again + '<span>Otra vez</span>') + '</button>';
+  const NOW_HTML = '<p class="rp-hw-now" data-now hidden><span data-now-t></span><span class="rp-hw-line"><i data-now-f></i></span></p>';
+  // noPlay: the homework's own page plays its three audios itself
+  function actsHtml(state, noPlay) {
+    if (state === 'preview') {
+      return '<div class="rp-hw-acts">' + (noPlay ? '' : playBtn(state)) + '<span class="rp-hw-send is-preview" aria-hidden="true">¡Ya la mandé!</span></div>' +
+        (noPlay ? '' : NOW_HTML) + '<p class="rp-hw-prev">' + I.eye + '<span>Así lo ven tus alumnos</span></p>';
+    }
+    return '<div class="rp-hw-acts">' + (noPlay ? '' : playBtn(state)) + (state === 'sent' || state === 'other' ? '' : SEND_BTN) + '</div>' +
+      (noPlay ? '' : NOW_HTML) +
+      (state === 'other' ? '' : '<p class="rp-hw-undo" data-undo hidden>¿Fue sin querer? <button type="button" data-unsend>Deshacer</button></p>');
+  }
+  // a card or a bar to a new state (→ false when it already was); the tag, the «¡Ya la mandé!» button
+  function paintHw(el, state) {
+    if (el.classList.contains('is-' + state)) return false;
+    el.classList.remove('is-new', 'is-heard', 'is-sent');
+    el.classList.add('is-' + state);
+    el.querySelectorAll('[data-state]').forEach((tag) => { tag.innerHTML = stateTag(state); });
+    const acts = el.querySelector('.rp-hw-acts');
+    const send = el.querySelector('[data-send]');
+    if (state === 'sent' && send) send.remove();
+    if (state !== 'sent' && !send && acts) acts.insertAdjacentHTML('beforeend', SEND_BTN);
+    return true;
+  }
+  const hwStateOf = (marks, id) => { const e = marks[id] || {}; return e.s ? 'sent' : e.h ? 'heard' : 'new'; };
+  // a kid's tap: «¡Ya la mandé!» ('s') or «Deshacer» ('u') (the audio playing marks 'h' by itself). A phone with no
+  // account: the tap is the phone's own, and «¡Ya la mandé!» is a first real step: the phone gets its automatic account
+  // (js/ruta-auto.js; listening alone never makes one: a printed PDF's audio is opened by every family). onAccount: the
+  // page settles with the new account (the phone's marks join it).
+  function markTap(id, kind, ctx, level, onAccount) {
+    tMark(id, kind, ctx.ruta);
+    const R = ctx.ruta;
+    if (kind !== 's' || (R && (R.teacher || (R.student && R.who))) || !window.DralyAuto || !level) return;
+    window.DralyAuto.ensure(level, 'tarea', id).then((r) => { if (r && onAccount) onAccount(r); });
+  }
+  // after a «¡Ya la mandé!» tap: «Deshacer» for 8 s, the tag pops, the screen reader hears it
+  function sentMoment(el, title) {
+    const undo = el.querySelector('[data-undo]');
+    if (undo) { undo.hidden = false; clearTimeout(undo._t); undo._t = setTimeout(() => { undo.hidden = true; }, 8000); }
+    const tag = el.querySelector('[data-state]');
+    if (tag && tag.animate && !calmMotion()) {
+      try { tag.animate([{ transform: 'scale(.6)', opacity: 0.3 }, { transform: 'scale(1.12)', opacity: 1, offset: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.23, 1, .32, 1)' }); } catch (_) {}
+    }
+    const say = document.getElementById('au-say');
+    if (say) { say.textContent = ''; setTimeout(() => { say.textContent = title + ': mandada.'; }, 30); }
+  }
+  // the new automatic account: the card once («¡Ya tienes tu cuenta!»), then the page asks the server again (the marks,
+  // the seals and the scores this phone holds join the account through their usual paths)
+  function accountArrived(r, again) {
+    if (r && r.account && (r.created || r.resumed) && window.DralyAuto) window.DralyAuto.welcome(r.account);
+    if (again) again();
+  }
   // mine: the kid's own level (a phone nobody logged in on counts every level as its own); another level's homework
   // (a teacher, or a kid looking at another module) only plays: no marks, no counts
+  // 👀 a teacher (2026-10-18, he never saw the kids' buttons: his computer is a teacher's): each card shows the kid's
+  // buttons as a calm preview that does nothing and writes nothing, with «Así lo ven tus alumnos»
   function tareasHtml(ctx, m, hws, marks, mine) {
     if (!hws.length) return '';
+    const preview = !mine && !!ctx.ruta.teacher;
     const toSend = mine ? unsentOf(hws, marks) : 0;
     const showLogin = !ctx.ruta.student && !ctx.ruta.teacher;
     const cards = hws.map((h, i) => {
       const e = (mine && marks[h.id]) || {};
-      const state = !mine ? 'other' : e.s ? 'sent' : e.h ? 'heard' : 'new';
+      const state = preview ? 'preview' : !mine ? 'other' : e.s ? 'sent' : e.h ? 'heard' : 'new';
       const pic = hwPic(h, m.slug);
       // (the picture and the name open the homework's own page: its lines with pinyin and Spanish, the PDF's audio codes)
       return '<li class="rp-hw is-' + state + '" data-hw="' + esc(h.id) + '"' + (i >= HW_SHOW ? ' hidden' : '') + '>' +
@@ -981,22 +1162,16 @@
             (h.thumb && pic !== h.thumb ? ' data-alt="' + esc(h.thumb) + '"' : '') + '>' +
           '<span class="rp-hw-kicker">Tarea · Experiencia ' + (Number(h.exp) || 0) + (h.round > 1 ? ' · Ronda ' + (Number(h.round) || 0) : '') + '</span>' +
           '<h3 class="rp-hw-title">' + esc(h.title) + '</h3>' +
-          (state === 'other' ? '' : '<span class="rp-hw-state" data-state>' + (state === 'sent' ? I.check + 'Mandada' : state === 'heard' ? 'Escuchada' + I.check : 'Nueva') + '</span>') +
+          (state === 'other' ? '' : '<span class="rp-hw-state" data-state>' + stateTag(state === 'preview' ? 'new' : state) + '</span>') +
         '</a>' +
-        '<div class="rp-hw-body">' +
-          '<div class="rp-hw-acts">' +
-            '<button type="button" class="rp-hw-play" data-play aria-pressed="false">' + (state === 'new' || state === 'other' ? I.play + '<span>Escuchar</span>' : I.again + '<span>Otra vez</span>') + '</button>' +
-            (state === 'sent' || state === 'other' ? '' : '<button type="button" class="rp-hw-send" data-send>¡Ya la mandé!</button>') +
-          '</div>' +
-          '<p class="rp-hw-now" data-now hidden><span data-now-t></span><span class="rp-hw-line"><i data-now-f></i></span></p>' +
-          '<p class="rp-hw-undo" data-undo hidden>¿Fue sin querer? <button type="button" data-unsend>Deshacer</button></p>' +
-        '</div></li>';
+        '<div class="rp-hw-body">' + actsHtml(state) + '</div></li>';
     }).join('');
-    return '<aside class="rp-tareas' + (mine ? '' : ' is-other') + '" id="tareas" aria-labelledby="rp-tareas-t" tabindex="-1">' +
+    return '<aside class="rp-tareas' + (mine ? '' : ' is-other') + (preview ? ' is-preview' : '') + '" id="tareas" aria-labelledby="rp-tareas-t" tabindex="-1">' +
       '<div class="rp-tareas-head"><h2 class="rp-tareas-t" id="rp-tareas-t">' + (mine ? 'Tus tareas' : 'Tareas de ' + esc(m.name)) + '</h2>' +
         (mine ? '<span class="rp-badge" data-tosend' + (toSend ? '' : ' hidden') + '>' + toSend + ' por mandar</span>' : '') + '</div>' +
+      (preview ? '<p class="rp-preview-note">' + I.eye + '<span><b>Vista de alumno.</b> Así lo ven tus alumnos: tocan «¡Ya la mandé!» cuando mandan su video. Aquí esos botones no marcan nada.</span></p>' : '') +
       '<div class="rp-aileen"><img src="/assets/cast/aileen-talk.webp" alt="Aileen" width="312" height="480" loading="lazy" decoding="async">' +
-        (mine ? '<p class="rp-aileen-say">«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»</p></div>'
+        (mine || preview ? '<p class="rp-aileen-say">«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»</p></div>'
           : '<p class="rp-aileen-say">«Estas son las tareas de ' + esc(m.name) + '. ¡Escuchá el audio cuando quieras!»</p></div>') +
       '<ul class="rp-hw-list">' + cards + '</ul>' +
       (hws.length > HW_SHOW ? '<button type="button" class="rp-hw-more" data-more aria-expanded="false">' + (mine ? 'Ver todas mis tareas' : 'Ver todas las tareas') + ' (' + hws.length + ')</button>' : '') +
@@ -1103,10 +1278,12 @@
       '</section>';
     const ladder = '<h2 class="rp-ladder-t">Tu camino, paso a paso</h2>' +
       '<ol class="rp-ladder" aria-label="La Ruta Dorada de ' + esc(m.name) + '">' + L.steps.map((s) => stepHtml(s, m, L)).join('') + '</ol>';
-    main.innerHTML = '<div class="rp" style="' + lookStyle(look) + '">' + bandHtml(back, 'La Ruta Dorada') +
+    main.innerHTML = '<div class="rp" style="' + lookStyle(look) + '">' + bandHtml(back, 'La Ruta Dorada', ctx.ruta.me) +
       '<div class="rp-grid' + (hws.length ? ' has-tareas' : '') + '"><div class="rp-main">' + hero + ladder + '</div>' +
       tareasHtml(ctx, m, hws, marks, mine) + '</div></div>';
     wireTareas(main, ctx, m, hws, mine);
+    wireMe(main, ctx);
+    wireTell(main, L);
     document.body.classList.add('rp-on');   // (drawn: the page's own band steps aside for this screen's band)
     if (L.pr) celebrateNewWorlds(main, m, L.pr);
     // a logged-in kid: this phone's seals meet their account (a phone's seals from before the login join it, taps not
@@ -1129,7 +1306,7 @@
       const el = main.querySelector(location.hash);
       if (el) {
         try { el.scrollIntoView({ block: 'center', behavior: calmMotion() ? 'auto' : 'smooth' }); } catch (_) { el.scrollIntoView(); }
-        if (location.hash === '#paso-3' && /dorado=cerrado/.test(location.search) && el.animate && !calmMotion()) {
+        if (location.hash === '#paso-3' && /dorado=(cerrado|clase)/.test(location.search) && el.animate && !calmMotion()) {
           try { el.animate([{ boxShadow: '0 0 0 0 rgba(216, 176, 90, .75)' }, { boxShadow: '0 0 0 18px rgba(216, 176, 90, 0)' }], { duration: 1100, delay: 350, iterations: 2, easing: 'cubic-bezier(.23, 1, .32, 1)' }); } catch (_) {}
         }
       }
@@ -1150,18 +1327,7 @@
       if (!mine) return;
       const marks = tMarksFor(ctx.ruta, m.tareas);
       box.querySelectorAll('.rp-hw').forEach((li) => {
-        const e = marks[li.getAttribute('data-hw')] || {};
-        const state = e.s ? 'sent' : e.h ? 'heard' : 'new';
-        if (li.classList.contains('is-' + state)) return;
-        li.classList.remove('is-new', 'is-heard', 'is-sent');
-        li.classList.add('is-' + state);
-        const tag = li.querySelector('[data-state]');
-        if (tag) tag.innerHTML = state === 'sent' ? I.check + 'Mandada' : state === 'heard' ? 'Escuchada' + I.check : 'Nueva';
-        const acts = li.querySelector('.rp-hw-acts');
-        const send = li.querySelector('[data-send]');
-        if (state === 'sent' && send) send.remove();
-        if (state !== 'sent' && !send && acts) acts.insertAdjacentHTML('beforeend', '<button type="button" class="rp-hw-send" data-send>¡Ya la mandé!</button>');
-        if (!(hwNow && hwNow.li === li)) hwReset(li);
+        if (paintHw(li, hwStateOf(marks, li.getAttribute('data-hw'))) && !(hwNow && hwNow.li === li)) hwReset(li);
       });
       const n = unsentOf(hws, marks);
       const badge = box.querySelector('[data-tosend]');
@@ -1211,21 +1377,15 @@
         hwTrack();
         return;
       }
-      if (e.target.closest('[data-send]')) {
-        tMark(id, 's', ctx.ruta);
+      // (a teacher's preview has no data-send / data-unsend: its buttons do nothing and write nothing)
+      if (e.target.closest('[data-send]') && mine) {
+        markTap(id, 's', ctx, m.slug, (r) => accountArrived(r, () => { if (ctx.refresh) ctx.refresh(true); }));
         paint();
-        const undo = li.querySelector('[data-undo]');
-        if (undo) { undo.hidden = false; clearTimeout(undo._t); undo._t = setTimeout(() => { undo.hidden = true; }, 8000); }
-        const tag = li.querySelector('[data-state]');
-        if (tag && tag.animate && !calmMotion()) {
-          try { tag.animate([{ transform: 'scale(.6)', opacity: 0.3 }, { transform: 'scale(1.12)', opacity: 1, offset: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.23, 1, .32, 1)' }); } catch (_) {}
-        }
-        const say = document.getElementById('au-say');
-        if (say) { say.textContent = ''; setTimeout(() => { say.textContent = h.title + ': mandada.'; }, 30); }
+        sentMoment(li, h.title);
         return;
       }
-      if (e.target.closest('[data-unsend]')) {
-        tMark(id, 'u', ctx.ruta);
+      if (e.target.closest('[data-unsend]') && mine) {
+        markTap(id, 'u', ctx, m.slug);
         const undo = li.querySelector('[data-undo]');
         if (undo) undo.hidden = true;
         paint();
@@ -1280,6 +1440,75 @@
   // a homework audio played on its own page (/audios/<id>, js/audios.js) counts as «Escuchada» too
   // (idsOf: slug → that level's homework ids, so the route data the page loaded with is learned BEFORE this tap's save:
   // a later trip to the level's page never shows older marks than the save's answer)
-  const markHeard = (id, ruta, idsOf) => { tSeed(ruta, idsOf); tMark(id, 'h', ruta); };
-  window.Ruta = { picker, path, leave, markHeard, get live() { return live; } };
+  const markHeard = (id, ruta, idsOf) => {
+    if (ruta && ruta.teacher) return;                    // (a teacher's listening marks nothing)
+    tSeed(ruta, idsOf);
+    tMark(id, 'h', ruta);
+    if (hwBar && hwBar.id === id) hwBar.paint();
+  };
+
+  // ── 2026-10-18: the homework's own page (/audios/<homework id>) has the kid's marks too: «Escuchada ✓» (the audio
+  // played), «¡Ya la mandé!», «✓ Mandada», «Deshacer». The SAME code as «Tus tareas» above (the mirror, the account, the
+  // phone's own marks, the rules): js/audios.js gives the places for the bar (under the title, and after «¡Ahora graba tu
+  // video!») and the page's context (ruta = the route state, reloadState = ask the server again, homeworksOf).
+  //   a kid of that level, or a phone nobody is logged in on → the marks (account or phone, like the module page)
+  //   a teacher → the kid's buttons as a calm preview («Así lo ven tus alumnos»), nothing written
+  //   a logged-in kid on another level's homework → no bar (it only plays, like the module page)
+  let hwBar = null;   // { id, paint } of the bar on screen
+  function hwMarks(mounts, ctx, h) {
+    let R = ctx.ruta;
+    const modOf = () => (R && Array.isArray(R.modules) ? R.modules.find((x) => x.slug === h.level || x.id === h.level) : null);
+    const preview = !!(R && R.teacher);
+    const mod0 = modOf();
+    const mine = !preview && (!R || !R.student || !!(mod0 && mod0.slug === R.home));
+    if (!mine && !preview) return null;
+    const idsOf = idsOfCtx(ctx);
+    if (mine && R) tSeed(R, idsOf);
+    const stateNow = () => (preview ? 'preview' : hwStateOf(tMarksFor(R, (modOf() || {}).tareas), h.id));
+    const login = mine && !(R && R.student);
+    const st = stateNow();
+    mounts.forEach((el, k) => {
+      el.innerHTML = '<div class="rp-hwbar is-' + st + '" data-hwbar>' +
+        '<div class="rp-hwbar-head"><span class="rp-hw-state" data-state>' + stateTag(st === 'preview' ? 'new' : st) + '</span>' +
+        '<p class="rp-hwbar-t">' + (preview ? '<b>Vista de alumno.</b> Tocan «¡Ya la mandé!» cuando mandan su video.'
+          : k === 0 ? 'Cuando mandes tu video a tu profe por WhatsApp, toca <b>¡Ya la mandé!</b>' : '¿Ya se lo mandaste a tu profe?') + '</p></div>' +
+        actsHtml(st, true) +
+        (login && k === mounts.length - 1 ? '<p class="rp-hw-login">Tus marcas quedan en este teléfono. <a href="/homework.html?next=' + encodeURIComponent('/audios/' + h.id) + '">Entra con tu código para guardarlas en tu cuenta</a></p>' : '') +
+        '</div>';
+    });
+    const bars = mounts.map((el) => el.querySelector('[data-hwbar]')).filter(Boolean);
+    const paint = () => { if (!preview) { const s = stateNow(); bars.forEach((b) => paintHw(b, s)); } };
+    hwBar = { id: h.id, paint };
+    tSync.onChange = (again) => {
+      if (!again) { paint(); return; }
+      if (ctx.reloadState) ctx.reloadState().then((r) => { if (r) { R = r; tSeed(R, idsOf); } paint(); });
+    };
+    // a new automatic account (the first «¡Ya la mandé!» on a phone with none): the page learns it, the phone's marks join it
+    const arrived = (r) => accountArrived(r, () => {
+      if (!ctx.reloadState) return;
+      ctx.reloadState().then((r2) => {
+        if (!r2) return;
+        R = r2;
+        tSeed(R, idsOf);
+        paint();
+        bars.forEach((b) => { const l = b.querySelector('.rp-hw-login'); if (l && R.student) l.remove(); });
+      });
+    });
+    bars.forEach((b) => b.addEventListener('click', (e) => {
+      if (preview) return;
+      if (e.target.closest('[data-send]')) {
+        markTap(h.id, 's', { ruta: R }, h.level, arrived);
+        paint();
+        sentMoment(b, h.title);
+        return;
+      }
+      if (e.target.closest('[data-unsend]')) {
+        markTap(h.id, 'u', { ruta: R }, h.level);
+        bars.forEach((x) => { const u = x.querySelector('[data-undo]'); if (u) u.hidden = true; });
+        paint();
+      }
+    }));
+    return hwBar;
+  }
+  window.Ruta = { picker, path, leave, markHeard, hwMarks, get live() { return live; } };
 })();

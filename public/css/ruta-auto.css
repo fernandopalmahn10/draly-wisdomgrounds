@@ -1,0 +1,116 @@
+/* ===================================================================== */
+/* The automatic student account (2026-10-18) · js/ruta-auto.js          */
+/* The first-account card and «Mi código» (a sheet over La Ruta Dorada), */
+/* and the «¿Eres tú?» card inside the /homework login. Its own tokens   */
+/* (the books' palette: Rojo Imperial, Oro, Crema), so it looks the same */
+/* on audios.html and homework.html. Tap targets 48 px and more.          */
+/* ===================================================================== */
+.ra-root {
+  --ra-rojo: #5a1010; --ra-rojo-2: #741a1a; --ra-oro: #b88b2c; --ra-oro-claro: #e8c878; --ra-oro-tinta: #85631d;
+  --ra-crema: #f7f1e4; --ra-papel: #fffdf8; --ra-tinta: #1c1a17; --ra-tinta-2: #6b645a; --ra-linea: #e2d4b4;
+  --ra-gold-btn: #f3d27a; --ra-gold-edge: #b88b2c; --ra-ease: cubic-bezier(.23, 1, .32, 1);
+  font-family: 'Noto Sans', 'Nunito', 'Segoe UI', system-ui, sans-serif; color: var(--ra-tinta);
+}
+html.ra-lock, html.ra-lock body { overflow: hidden; }
+
+/* ── the sheet ── */
+.ra-sheet {
+  position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; justify-content: center;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px)); background: rgba(28, 10, 8, .55);
+  overflow-y: auto; overscroll-behavior: contain;
+}
+.ra-card {
+  position: relative; width: 100%; max-width: 440px; margin: auto 0 0; padding: 18px 18px 16px; border-radius: 26px;
+  background: var(--ra-papel); box-shadow: 0 -6px 30px rgba(28, 10, 8, .3), inset 0 0 0 2px var(--ra-linea);
+  display: grid; gap: 10px; justify-items: center; text-align: center;
+}
+.ra-card.is-first { box-shadow: 0 -6px 30px rgba(28, 10, 8, .3), inset 0 0 0 3px var(--ra-gold-btn); }
+.ra-x {
+  position: absolute; top: 8px; right: 8px; width: 48px; height: 48px; border: 0; border-radius: 50%; display: grid; place-items: center;
+  background: var(--ra-crema); color: var(--ra-rojo); cursor: pointer;
+}
+.ra-x svg { width: 20px; height: 20px; }
+.ra-dragon { width: 92px; height: auto; margin-top: -2px; }
+.ra-t { margin: 0; padding: 0 40px; font-weight: 900; font-size: 1.45rem; line-height: 1.1; letter-spacing: -.01em; color: var(--ra-rojo); }
+.ra-lede { margin: 0; font-weight: 800; font-size: 1rem; color: var(--ra-tinta-2); }
+.ra-code { margin: 0; display: flex; gap: 8px; justify-content: center; }
+.ra-code span {
+  display: grid; place-items: center; width: 54px; height: 64px; border-radius: 14px; font-weight: 900; font-size: 2.1rem; line-height: 1;
+  font-variant-numeric: tabular-nums; color: #3d0707; background: radial-gradient(circle at 35% 30%, #f8e7b4 0%, #dcb560 58%, #b0852c 100%);
+  box-shadow: 0 5px 0 #8f6820, 0 10px 18px -10px rgba(90, 16, 16, .6);
+}
+.ra-note { margin: 0; max-width: 34ch; font-weight: 700; font-size: .95rem; line-height: 1.4; color: var(--ra-tinta); }
+.ra-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 50px; padding: 8px 16px; border: 0;
+  border-radius: 16px; cursor: pointer; text-decoration: none; text-align: center; font-family: inherit; font-weight: 800; font-size: 1.02rem; line-height: 1.15;
+  transition: transform 140ms var(--ra-ease), box-shadow 140ms var(--ra-ease), background-color 160ms ease;
+}
+.ra-btn svg { width: 20px; height: 20px; flex: none; }
+.ra-btn:disabled { opacity: .6; cursor: default; }
+.ra-btn-gold { background: var(--ra-gold-btn); color: var(--ra-rojo); box-shadow: 0 5px 0 var(--ra-gold-edge); }
+.ra-btn-gold:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--ra-gold-edge); }
+.ra-btn-red { background: var(--ra-rojo); color: var(--ra-papel); }
+.ra-btn-red:active { transform: scale(.97); }
+.ra-btn-soft { background: var(--ra-papel); color: var(--ra-rojo); box-shadow: inset 0 0 0 2px var(--ra-oro-claro); }
+.ra-btn-soft:active { transform: scale(.98); }
+.ra-name { width: 100%; display: grid; gap: 6px; margin: 4px 0 0; padding: 12px; border-radius: 18px; background: var(--ra-crema); text-align: left; }
+.ra-label { font-weight: 800; font-size: .95rem; color: var(--ra-rojo); }
+.ra-label span { font-weight: 700; color: var(--ra-tinta-2); }
+.ra-row { display: flex; gap: 8px; }
+.ra-input {
+  flex: 1; min-width: 0; min-height: 50px; padding: 0 14px; border: 2px solid var(--ra-linea); border-radius: 14px; background: #fff;
+  font-family: inherit; font-weight: 700; font-size: 1.05rem; line-height: 1; color: var(--ra-tinta);
+}
+.ra-input:focus { outline: none; border-color: var(--ra-oro); box-shadow: 0 0 0 3px rgba(232, 200, 120, .45); }
+.ra-row .ra-btn { width: auto; flex: none; }
+.ra-err { margin: 0; min-height: 1.2em; font-weight: 800; font-size: .86rem; color: #b3261e; }
+.ra-err:empty { min-height: 0; }
+@media (hover: hover) and (pointer: fine) {
+  .ra-btn-gold:hover { background: #efd590; }
+  .ra-btn-red:hover { background: var(--ra-rojo-2); }
+  .ra-btn-soft:hover, .ra-x:hover { background: #fff3db; }
+}
+@media (min-width: 640px) {
+  .ra-sheet { align-items: center; padding: 24px; }
+  .ra-card { margin: auto; padding: 22px 26px 20px; }
+  .ra-dragon { width: 104px; }
+}
+/* a short laptop screen (1366 × 657 under the browser bars): the dragon steps aside so the card fits */
+@media (max-height: 700px) and (min-width: 640px) {
+  .ra-card { gap: 8px; padding-top: 16px; }
+  .ra-dragon { display: none; }
+}
+@media (max-width: 380px) {
+  .ra-card { padding: 16px 12px 14px; }
+  .ra-t { font-size: 1.28rem; }
+  .ra-code span { width: 48px; height: 58px; font-size: 1.85rem; }
+  .ra-dragon { width: 76px; }
+}
+@media (max-height: 660px) and (max-width: 639px) { .ra-dragon { display: none; } }
+
+/* ── «¿Eres tú?» (inside the /homework login card) ── */
+.ra-eres {
+  display: grid; gap: 8px; margin-top: 8px; padding: 14px; border-radius: 20px; text-align: center; background: var(--ra-papel);
+  box-shadow: inset 0 0 0 3px var(--ra-gold-btn); color: var(--ra-tinta); font-size: 1rem;
+}
+.ra-eres-k { margin: 0; font-weight: 800; font-size: .9rem; color: var(--ra-oro-tinta); }
+.ra-eres-who { margin: 0; display: grid; gap: 2px; }
+.ra-eres-who b { font-weight: 900; font-size: 1.3rem; line-height: 1.1; color: var(--ra-rojo); }
+.ra-eres-who span { font-weight: 800; font-size: .95rem; letter-spacing: .06em; color: var(--ra-tinta-2); }
+.ra-eres-p { margin: 0; font-weight: 700; font-size: .92rem; color: var(--ra-tinta); }
+.ra-eres-q { margin: 2px 0 0; font-weight: 900; font-size: 1.2rem; color: var(--ra-rojo); }
+
+/* ── a short line at the bottom (after the merge) ── */
+.ra-toast {
+  position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 1001; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; max-width: calc(100vw - 32px); padding: 12px 18px; border-radius: 16px;
+  background: #1f6b45; color: #fff; font-weight: 800; font-size: 1rem; line-height: 1.25; box-shadow: 0 10px 26px rgba(0, 0, 0, .25);
+  transition: opacity 240ms ease, transform 240ms var(--ra-ease);
+}
+.ra-toast svg { width: 20px; height: 20px; flex: none; }
+.ra-toast.is-out { opacity: 0; transform: translate(-50%, 8px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ra-btn:active { transform: none; }
+  .ra-toast { transition: none; }
+}

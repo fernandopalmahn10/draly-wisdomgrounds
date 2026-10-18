@@ -294,14 +294,15 @@ async function run() {
   const sa = await get(baseFiles(BASES[0])[4], { headers: T(SEED) });
   ok(sa.status === 200 && /attachment|inline/.test(sa.headers['content-disposition'] || ''), '… the super admin downloads it');
   ok(isKeyScreen(await get('/audios/hsk1-base', as(k)), 'HSK 1') && (await get('/base-media/hsk1-base/base.json', as(k))).status === 401, '… that level only (HSK 1 still asks)');
-  ok(isPlayer(await get(pageOf(simOf('yct1')[0]), as(k))), '… the YCT 1 sims open');
+  // 🔒 2026-10-18 (his decision): El Simulacro Dorado is the teacher's (server.js DORADO_SELF_SERVE off): the key opens
+  // the level, never a simulation alone (a teacher's room: scripts/test-sims-lock.js)
+  const sp = await get(pageOf(simOf('yct1')[0]), as(k));
+  ok(sp.status === 302 && /^\/audios\/yct1\?dorado=clase#paso-3$/.test(sp.headers.location || ''), '… a YCT 1 sim\'s link goes to the route\'s card 3 (the teacher opens it in class)');
   const pay = await get('/api/hsk-sim/' + simOf('yct1')[0], as(k));
-  ok(pay.json && pay.json.ok && pay.json.sim.ticket, '… with their payload');
-  ok((await get('/api/hsk-sim/' + simOf('hsk2')[0], as(k))).status === 401, '… and no New HSK 1 sim');
-  const guest = await post('/api/hsk-sim/' + simOf('yct1')[0] + '/submit', { studentCode: newKid.studentCode, answers: {}, ticket: pay.json.sim.ticket }, as(k));
-  ok(guest.json && guest.json.ok && guest.json.saved === false && guest.json.guest, 'a key-only phone: graded, not saved on a typed code');
-  const proven = await post('/api/hsk-sim/' + simOf('yct1')[0] + '/submit', { studentCode: newKid.studentCode, accessCode: '1003', answers: {}, ticket: pay.json.sim.ticket }, as(k));
-  ok(proven.json && proven.json.ok && proven.json.saved !== false, '… saved when the phone proves whose it is (class code + student code)');
+  ok(pay.status === 403 && pay.json && !pay.json.sim && /profe/.test(pay.json.error || ''), '… its payload is refused on a phone alone');
+  ok((await get('/api/hsk-sim/' + simOf('hsk2')[0], as(k))).status === 401, '… and a New HSK 1 sim still asks its key');
+  const guest = await post('/api/hsk-sim/' + simOf('yct1')[0] + '/submit', { studentCode: newKid.studentCode, accessCode: '1003', answers: {} }, as(k));
+  ok(guest.status >= 400 && !(guest.json && guest.json.result), 'a key-only phone hands nothing in alone (no grade, nothing saved)');
   ok(((await get('/api/level-access', as(k))).json.levels || {}).yct1 === true, '/api/level-access: YCT 1 open on this phone');
 
   // ── 7. wrong guesses: 5 per device, 30 per address ──

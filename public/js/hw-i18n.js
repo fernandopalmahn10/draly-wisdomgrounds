@@ -39,6 +39,22 @@
   DICT.map['Escucha, graba y manda tu video'] = 'Listen, record and send your video';
   DICT.map['¡Todas mandadas!'] = 'All sent!';
   PATTERNS.push({ re: /^(\d+) por mandar$/, en: '$1 to send' });
+  // 🆕 2026-10-18 (automatic accounts): the «¿Eres tú?» card in the login (js/ruta-auto.js)
+  DICT.map['Este teléfono ya tiene un alumno'] = 'This phone already has a student';
+  DICT.map['¿Eres tú?'] = 'Is it you?';
+  DICT.map['Sí, soy yo'] = 'Yes, it\'s me';
+  DICT.map['No, soy otro alumno'] = 'No, I\'m another student';
+  DICT.map['Pasar mi progreso a esta cuenta'] = 'Move my progress to this account';
+  DICT.map['¡Listo! Tu progreso pasó a tu cuenta.'] = 'Done! Your progress moved to your account.';
+  DICT.map['Tu cuenta'] = 'Your account';
+  PATTERNS.push({ re: /^código ([A-Z2-9]{4,5})$/, en: 'code $1' });
+  PATTERNS.push({ re: /^(\d+ (?:sellos?|tareas? mandadas?|tareas? escuchadas?|mundos? practicados?|tareas? hechas?))( · .+)?$/, en: function (t) {
+    return t.replace(/(\d+) sellos?/g, (_, n) => n + (n === '1' ? ' stamp' : ' stamps'))
+      .replace(/(\d+) tareas? mandadas?/g, (_, n) => n + ' sent')
+      .replace(/(\d+) tareas? escuchadas?/g, (_, n) => n + ' listened')
+      .replace(/(\d+) mundos? practicados?/g, (_, n) => n + (n === '1' ? ' world practiced' : ' worlds practiced'))
+      .replace(/(\d+) tareas? hechas?/g, (_, n) => n + ' done');
+  } });
 
   // Quick reject: nothing to translate unless the text has latin
   // letters (hanzi-only, pinyin-only-with-tones still passes but

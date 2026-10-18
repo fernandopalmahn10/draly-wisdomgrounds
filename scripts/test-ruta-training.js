@@ -307,8 +307,11 @@ async function startServer(extraEnv) {
   try { await get('/health'); console.error('port ' + PORT + ' is busy: stop that server first'); process.exit(2); } catch (_) { /* free */ }
   srv = spawn(process.execPath, ['server.js'], {
     cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'],
+    // (2026-10-18: El Simulacro Dorado taken ALONE is off by his decision, server.js DORADO_SELF_SERVE; this test plays the
+    // kept code that earns it by practice (the same «earned» state that makes card 3 «¡Avísale a tu profe!»), so its server
+    // runs with the flag ON. The flag OFF: test-sims-lock, test-ruta-dorada, test-golden-book, test-level-keys.)
     env: Object.assign({}, process.env, { PORT: String(PORT), DRALY_DATA_DIR: DATA, STUDENT_DATA_DIR: '', SIM_LOCK_SECRET: SECRET,
-      WU_ADMIN_PASSWORD: LEGACY, DRALY_SEED_ADMIN_CODE: SEED, RENDER: '', DRALY_TRAINING_BUILT: '' }, extraEnv || {}),
+      WU_ADMIN_PASSWORD: LEGACY, DRALY_SEED_ADMIN_CODE: SEED, RENDER: '', DRALY_TRAINING_BUILT: '', DRALY_DORADO_SELF_SERVE: '1' }, extraEnv || {}),
   });
   srv.stdout.on('data', (d) => { allLog += d; });
   srv.stderr.on('data', (d) => { allLog += d; });

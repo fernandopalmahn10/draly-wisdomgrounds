@@ -86,7 +86,7 @@ async function startServer() {
   srv = spawn(process.execPath, ['server.js'], {
     cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'],
     env: Object.assign({}, process.env, { PORT: String(PORT), DRALY_DATA_DIR: DATA, STUDENT_DATA_DIR: '', SIM_LOCK_SECRET: SECRET,
-      WU_ADMIN_PASSWORD: LEGACY, DRALY_SEED_ADMIN_CODE: SEED, RENDER: '' }),
+      WU_ADMIN_PASSWORD: LEGACY, DRALY_SEED_ADMIN_CODE: SEED, RENDER: '', DRALY_DORADO_SELF_SERVE: '' }),
   });
   srv.stdout.on('data', (d) => { allLog += d; });
   srv.stderr.on('data', (d) => { allLog += d; });
@@ -122,6 +122,26 @@ async function stopServer() {
 async function enter(ph, accessCode, name, code) {
   const body = code ? { accessCode, studentCode: code } : { accessCode, displayName: name };
   return (await post('/api/homework/enter', body, as(ph))).json || {};
+}
+// a simulation taken in a teacher's PIN room (2026-10-18: the only way a kid takes one), handed in blank
+const { io } = require('socket.io-client');
+const emitAck = (s, ev, payload, ms = 5000) => new Promise((res) => {
+  const t = setTimeout(() => res({ timeout: true }), ms);
+  s.emit(ev, payload, (r) => { clearTimeout(t); res(r || {}); });
+});
+async function takeInRoom(ph, code, simId) {
+  const host = io('http://127.0.0.1:' + PORT, { transports: ['websocket'], forceNew: true });
+  const kid = io('http://127.0.0.1:' + PORT, { transports: ['websocket'], forceNew: true });
+  try {
+    const created = await emitAck(host, 'host:create', { gameType: 'hsksim', simId, password: LEGACY });
+    const joined = created && created.pin ? await emitAck(kid, 'player:join', { pin: created.pin, name: 'Sala ' + code, studentCode: code }) : {};
+    if (!joined || !joined.roomPass) return null;
+    const q = '?pin=' + created.pin + '&pass=' + encodeURIComponent(joined.roomPass);
+    const p = await get('/api/hsk-sim/' + simId + q, as(ph));
+    const r = await post('/api/hsk-sim/' + simId + '/submit' + q, { answers: {}, ticket: p.json && p.json.sim && p.json.sim.ticket, pin: created.pin, pass: joined.roomPass, studentCode: code }, as(ph));
+    await emitAck(host, 'host:end', { pin: created.pin, password: LEGACY });
+    return r;
+  } finally { host.close(); kid.close(); }
 }
 
 async function run() {
@@ -209,12 +229,17 @@ async function run() {
   ok(k1.home === 'yct1' && !k1.student, 'the picker lands on YCT 1 (the level this device holds)');
   ok(ky.sims.length === ky.simCount && ky.sims.length >= 5 && ky.sims.every((s, i) => s.n === i + 1 && simLevelRe.yct1.test(s.id) && s.questions > 0),
     `its ${ky.sims.length} simulations in order, each with its question count`);
-  ok(ky.sims.every((s) => s.href === pageOf(s.id) && s.best === null), '… each linking to its player (no score yet)');
+  // 🔒 2026-10-18 (his decision): El Simulacro Dorado is the teacher's (server.js DORADO_SELF_SERVE off): the route lists
+  // the simulations (their chips, scores, books) but never a player's link to a kid; a sim's link goes to card 3
+  ok(k1.solo === false && ky.dorado && ky.dorado.solo === false, 'the route says El Simulacro Dorado is taken in class (solo: false)');
+  ok(ky.sims.every((s) => s.href === null && s.best === null), '… no player\'s link in it (no score yet)');
   ok(mod(k1, 'hsk1').sims.length === 0 && mod(k1, 'hsk2').sims.length === 0, 'no list of the locked modules\' simulations');
-  ok(!/\/sim-media\/|\/base-media\/|"answer"|"ticket"/.test(k1._r.text), 'still no media links or answers in the state');
+  ok(!/\/sim-media\/|\/base-media\/|"answer"|"ticket"|sim\.html/.test(k1._r.text), 'still no media links, answers or player links in the state');
   for (const s of ky.sims) {
-    ok(isPlayer(await get(s.href, as(kd))), `${s.id}: its player opens on this device (through the key check)`);
-    ok(isKeyScreen(await get(s.href, as(phone())), 'YCT 1'), `${s.id}: the same link asks the key on another phone (no bypass)`);
+    const r = await get(pageOf(s.id), as(kd));
+    ok(r.status === 302 && r.headers.location === '/audios/yct1?dorado=clase#paso-3', `${s.id}: its link goes to the route's card 3 on this device (the teacher opens it in class)`);
+    ok(isKeyScreen(await get(pageOf(s.id), as(phone())), 'YCT 1'), `${s.id}: the same link asks the key on another phone (no bypass)`);
+    ok((await get('/api/hsk-sim/' + s.id, as(kd))).status === 403, `${s.id}: no payload alone`);
   }
   const back = await get('/audios/yct1/clave', as(kd));
   ok(back.status === 302 && back.headers.location === '/audios/yct1', 'the key address sends an open device back to the path');
@@ -228,11 +253,11 @@ async function run() {
   const g1 = await ruta(as(gf));
   ok(g1.student && g1.home === 'yct1' && mod(g1, 'yct1').open && !mod(g1, 'hsk1').open, 'their own module first, open; other levels locked');
   const gy = mod(g1, 'yct1');
-  ok(gy.sims.length >= 5 && gy.sims.every((s) => s.href === pageOf(s.id)), 'their level\'s simulations are listed');
-  // a try lands on their record → the path shows their best
-  const pay = await get('/api/hsk-sim/' + gy.sims[0].id, as(gf));
-  const sub = pay.json && pay.json.ok ? await post('/api/hsk-sim/' + gy.sims[0].id + '/submit', { studentCode: oldKid.studentCode, answers: {}, ticket: pay.json.sim.ticket }, as(gf)) : null;
-  ok(sub && sub.json && sub.json.ok, 'they hand in a simulation');
+  ok(gy.sims.length >= 5 && gy.sims.every((s) => s.href === null), 'their level\'s simulations are listed (no player\'s link: the teacher opens them)');
+  ok((await get('/api/hsk-sim/' + gy.sims[0].id, as(gf))).status === 403, '… none of them loads alone');
+  // a try in their teacher's room lands on their record → the path shows their best
+  const sub = await takeInRoom(gf, oldKid.studentCode, gy.sims[0].id);
+  ok(sub && sub.json && sub.json.ok, 'they hand in a simulation in their teacher\'s room (PIN)');
   const g2 = await ruta(as(gf));
   const done = mod(g2, 'yct1').sims[0];
   ok(done && typeof done.best === 'number' && done.best >= 0 && done.best <= 100 && mod(g2, 'yct1').sims.slice(1).every((s) => s.best === null), 'the path shows their best on that simulation only');
@@ -248,6 +273,7 @@ async function run() {
   section('a teacher');
   const t1 = await ruta({ headers: Object.assign({ 'CF-Connecting-IP': '198.51.100.250' }, T(SEED)) });
   ok(t1.teacher && t1.modules.every((m) => m.open) && t1.home == null, 'every module open, no module of their own');
+  ok(t1.solo === true, '… and every simulation\'s player (a teacher still sees and opens everything)');
   ok(t1.modules.every((m) => m.sims.length === m.simCount && m.sims.every((s) => simLevelRe[m.id] && simLevelRe[m.id].test(s.id) && s.href === pageOf(s.id))),
     'each module lists its own simulations (Old HSK 1 on the HSK player, YCT and New HSK on the YCT player)');
   const tdev = phone();

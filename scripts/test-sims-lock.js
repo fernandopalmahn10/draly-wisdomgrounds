@@ -11,7 +11,10 @@
 // ticket still hands in, a student's ticket only on their own record); nobody else takes over or closes a room;
 // signed links expire, can't open another sim's file, carry no student code; every protected answer is private +
 // no-store; ?debug=1&direct=1 opens only on this PC, never with another Host or through a proxy; PIN guessing from one
-// address pauses there only. Since the key model (2026-10-15, second round; scripts/test-level-keys.js tests the keys
+// address pauses there only. Since 2026-10-18 (his decision) El Simulacro Dorado is the teacher's: a kid with their level
+// open never takes a simulation alone (the link → the route's card 3, the payload 403) and takes it in the teacher's room
+// instead; the kept self-serve code is checked on a second server with env DRALY_DORADO_SELF_SERVE=1 (port + 1).
+// Since the key model (2026-10-15, second round; scripts/test-level-keys.js tests the keys
 // themselves) this server never gets a key: every kid enrolled here is "before the go-live" and keeps their level, a
 // refusal is the level's key screen, and La Base is locked too. Its own temporary data folder; throw-away codes.
 'use strict';
@@ -113,7 +116,7 @@ async function startServer() {
   // --keep: a detached server that outlives this script (stop it by its port afterwards)
   const srv = spawn(process.execPath, ['server.js'], {
     cwd: ROOT, env: Object.assign({}, process.env, { PORT: String(PORT), SIM_LOCK_SECRET: SECRET, WU_ADMIN_PASSWORD: TEACHER,
-      DRALY_DATA_DIR: DATA, STUDENT_DATA_DIR: '', DRALY_SEED_ADMIN_CODE: 'T-' + crypto.randomBytes(5).toString('hex').toUpperCase() }),
+      DRALY_DATA_DIR: DATA, STUDENT_DATA_DIR: '', DRALY_SEED_ADMIN_CODE: 'T-' + crypto.randomBytes(5).toString('hex').toUpperCase(), DRALY_DORADO_SELF_SERVE: '' }),
     stdio: KEEP ? 'ignore' : ['ignore', 'pipe', 'pipe'], detached: KEEP,
   });
   let log = '';
@@ -258,19 +261,13 @@ async function run() {
       const pg = await get(pageOf(id), { jar: kid.jar });
       const api = await get('/api/hsk-sim/' + id, { jar: kid.jar });
       if (mine) {
-        ok(isPlayer(pg) && noStore(pg), `${lvl} kid opens ${id} (page ${pg.status})`);
-        ok(api.json && api.json.ok && scoredHaveNoKey(api.json.sim) && oldUrls(api.json.sim).length === 0 && api.json.sim.ticket,
-          `${lvl} kid gets ${id}: no answer key, only signed links, a ticket`);
-        ok(noStore(api), `${id} payload is private/no-store`);
-        const ls = links(api.json && api.json.sim);
-        const audio = ls.find((u) => /\.(m4a|mp3)$/.test(u));
-        const pic = ls.find((u) => /\.(webp|jpe?g|png)$/.test(u));
-        const ra = audio ? await fetchMedia(audio) : { status: 0, headers: {} };
-        const rp = pic ? await fetchMedia(pic) : { status: 0, headers: {} };
-        ok(mediaOk(ra) && (ra.status === 206) && /^audio\//.test(ra.headers['content-type'] || ''), `${id}: its recording plays in pieces (${ra.status} ${ra.headers['content-type']})`);
-        ok(mediaOk(rp) && /^image\//.test(rp.headers['content-type'] || ''), `${id}: a picture loads (${rp.status})`);
-        ok(!ls.some((u) => Buffer.from(u.split('/')[2].split('.')[0], 'base64url').toString().includes(kid.code)), `${id}: no student code inside a link`);
-        ok(!/\((TRUE|FALSE|CORRECT)\)/i.test(ls.join(' ')), `${id}: no answer hint in a file name`);
+        // 🔒 2026-10-18 (his decision): El Simulacro Dorado is the teacher's (server.js DORADO_SELF_SERVE off): a kid
+        // whose level is open never takes a simulation alone; the link goes to the route's card 3 («tu profe lo abre en
+        // clase»), the payload is refused. The same kid in a teacher's room: below and in «teacher room (PIN)».
+        const slug = lvl === 'yct' ? 'yct1' : lvl === 'nhsk' ? 'newhsk1' : 'hsk1';
+        ok(pg.status === 302 && pg.headers.location === '/audios/' + slug + '?dorado=clase#paso-3' && noStore(pg), `${lvl} kid: ${id}'s link goes to the route's card 3 (${pg.status})`);
+        ok(api.status === 403 && api.json && !api.json.sim && /profe/.test(api.json.error || '') && !/listening|ticket/.test(api.text), `${lvl} kid gets no ${id} payload alone (${api.status})`);
+        ok(noStore(api), `${id} refusal is private/no-store`);
       } else {
         ok(pg.status === 401 && isLocked(pg), `${lvl} kid gets that level's key screen for ${id} (other level, page ${pg.status})`);
         ok(api.status === 401 && !/listening/.test(api.text), `${lvl} kid gets no ${id} payload (${api.status})`);
@@ -278,19 +275,27 @@ async function run() {
     }
     ok(isPlayer(await get('/yct-sim.html', { jar: kid.jar })) || isPlayer(await get('/hsk-sim.html', { jar: kid.jar })), `${lvl} kid keeps the PIN box page`);
   }
-  // a solo exam is saved on the kid's own record, whatever code the page sends
+  // a kid alone hands nothing in (no payload, so no ticket; a submit without one is refused, nothing saved)
   const y = kids.yct;
-  const p1 = (await get('/api/hsk-sim/yct1-sim1', { jar: y.jar })).json;
-  const sub = await post('/api/hsk-sim/yct1-sim1/submit', { studentCode: kids.ohsk.code, answers: { 'L1-1': 'T' }, ticket: p1 && p1.sim && p1.sim.ticket }, { jar: y.jar });
-  ok(sub.json && sub.json.ok && sub.json.result && sub.json.saved !== false && sub.json.result.review, 'a student hands in a solo exam and gets the review');
+  const solo = await post('/api/hsk-sim/yct1-sim1/submit', { studentCode: y.code, answers: { 'L1-1': 'T' } }, { jar: y.jar });
+  ok(solo.status === 403 && !(solo.json && solo.json.result), 'a kid alone hands nothing in (no grade, nothing saved)');
+  ok(((await get('/api/homework/my-hsk-attempts/' + y.code + '?accessCode=1003')).json.attempts || []).length === 0, '… nothing on their record');
+  // the same kid in their teacher's room (PIN + the room pass from joining): the exam, the review, their own record
+  const hostY = sock(), kidY = sock();
+  const cY = await emitAck(hostY, 'host:create', { gameType: 'hsksim', simId: 'yct1-sim1', password: TEACHER });
+  const jY = cY.pin ? await emitAck(kidY, 'player:join', { pin: cY.pin, name: 'Lock Yct', studentCode: y.code }) : {};
+  const qY = '?pin=' + cY.pin + '&pass=' + encodeURIComponent(jY.roomPass || '');
+  const p1 = (await get('/api/hsk-sim/yct1-sim1' + qY, { jar: y.jar })).json;
+  ok(p1 && p1.ok && scoredHaveNoKey(p1.sim) && p1.sim.ticket, 'in the teacher\'s room the same phone loads the exam (no answer key)');
+  const roomLs = links(p1 && p1.sim);
+  ok(roomLs.length > 0 && !roomLs.some((u) => Buffer.from(u.split('/')[2].split('.')[0], 'base64url').toString().includes(y.code)), '… its links carry no student code');
+  const sub = await post('/api/hsk-sim/yct1-sim1/submit' + qY, { studentCode: y.code, answers: { 'L1-1': 'T' }, pin: cY.pin, pass: jY.roomPass, ticket: p1 && p1.sim && p1.sim.ticket }, { jar: y.jar });
+  ok(sub.json && sub.json.ok && sub.json.result && sub.json.saved !== false && sub.json.result.review, '… hands it in and gets the review');
+  await emitAck(hostY, 'host:end', { pin: cY.pin, password: TEACHER });
+  hostY.close(); kidY.close();
   const mineA = (await get('/api/homework/my-hsk-attempts/' + y.code + '?accessCode=1003')).json;
   const otherA = (await get('/api/homework/my-hsk-attempts/' + kids.ohsk.code + '?accessCode=1001')).json;
-  ok(mineA && mineA.attempts && mineA.attempts.length === 1 && otherA && otherA.attempts && otherA.attempts.length === 0, 'the grade landed on the logged-in kid only');
-  // a student's ticket (no cookie) also hands in on their own record only, never on a classmate's
-  const t2 = await post('/api/hsk-sim/yct1-sim1/submit', { studentCode: kids.ohsk.code, answers: {}, ticket: p1.sim.ticket });
-  const mineB = (await get('/api/homework/my-hsk-attempts/' + y.code + '?accessCode=1003')).json;
-  const otherB = (await get('/api/homework/my-hsk-attempts/' + kids.ohsk.code + '?accessCode=1001')).json;
-  ok(t2.json && t2.json.ok && mineB.attempts.length === 2 && otherB.attempts.length === 0, 'a student\'s ticket saves on their own record, whatever code is sent');
+  ok(mineA && mineA.attempts && mineA.attempts.length === 1 && otherA && otherA.attempts && otherA.attempts.length === 0, 'the grade landed on that kid only');
   const det = await get('/api/homework/my-hsk-attempt/' + y.code + '?accessCode=1003&ts=' + mineA.attempts[0].ts);
   ok(det.json && det.json.ok && oldUrls(det.json).length === 0 && noStore(det), '«Mis exámenes» shows the attempt with signed links only');
   ok((await get('/api/homework/my-hsk-attempt/' + y.code + '?accessCode=1001&ts=' + mineA.attempts[0].ts)).status === 403, '«Mis exámenes» of a kid needs their own classroom code');
@@ -299,7 +304,7 @@ async function run() {
   const s1 = await post('/api/sim-access/session', { accessCode: '1003', studentCode: y.code }, { jar: jar2 });
   ok(s1.json && s1.json.ok && s1.json.kind === 'student' && s1.json.open === true && s1.json.sims.includes('yct1-sim1') && !s1.json.sims.includes('newhsk1-sim1') && jar2.dsim && jar2.dlv_yct1,
     'a saved student code makes a session for its level');
-  ok(isPlayer(await get('/yct-sim.html?sim=yct1-sim2', { jar: jar2 })), '… which opens the exam');
+  ok((await get('/base-media/yct1-base/base.json', { jar: jar2 })).status === 200, '… which opens the level (La Base; the exams are the teacher\'s)');
   ok((await post('/api/sim-access/session', { accessCode: '1003', studentCode: 'ZZZZ' })).status === 401, 'an unknown student code makes no session');
   ok((await post('/api/sim-access/session', { accessCode: '0000', studentCode: y.code })).status === 401, 'a wrong access code makes no session');
   ok((await post('/api/sim-access/session', { accessCode: '1001', studentCode: y.code })).status === 403, 'another classroom\'s access code makes no session');
@@ -315,13 +320,16 @@ async function run() {
   ok(trq && (await post('/api/homework/trainer/check', { accessCode: '1001', qid: trq.qid, answer: 'A' })).status === 200 &&
     (await post('/api/homework/trainer/check', { accessCode: '1003', qid: trq.qid, answer: 'A' })).status === 403, 'trainer verdicts (they tell the answer) for the HSK 1 classes only');
   // a kid moved to another level: the old session stops at the next request
+  // (the level's door, seen through La Base: since 2026-10-18 no kid takes a simulation alone)
+  const baseOk = async (id, jar) => (await get('/base-media/' + id + '/base.json', { jar })).status === 200;
   const mover = await enroll('1003', 'Lock Mover');
-  ok(isPlayer(await get('/yct-sim.html?sim=yct1-sim1', { jar: mover.jar })), 'the mover opens a YCT sim');
+  ok(await baseOk('yct1-base', mover.jar), 'the mover opens YCT 1');
   const moved = await post('/api/homework/enter', { accessCode: '1002', studentCode: mover.code }, { jar: mover.jar });
   ok(moved.json && moved.json.level === 'hsk2', '… then logs in with the New HSK 1 code (level changes)');
-  ok(isPlayer(await get('/yct-sim.html?sim=newhsk1-sim1', { jar: mover.jar })), '… New HSK 1 opens (no key exists yet on this server)');
-  ok(isPlayer(await get('/yct-sim.html?sim=yct1-sim1', { jar: mover.jar })), '… the phone that opened YCT 1 keeps it (a device keeps an opened level)');
-  ok(isLocked(await get('/yct-sim.html?sim=yct1-sim1', { jar: { dsim: mover.jar.dsim } })), '… but the session alone no longer opens YCT 1 (the account is New HSK 1 now)');
+  ok(await baseOk('newhsk1-base', mover.jar), '… New HSK 1 opens (no key exists yet on this server)');
+  ok(await baseOk('yct1-base', mover.jar), '… the phone that opened YCT 1 keeps it (a device keeps an opened level)');
+  ok(!(await baseOk('yct1-base', { dsim: mover.jar.dsim })), '… but the session alone no longer opens YCT 1 (the account is New HSK 1 now)');
+  ok(isLocked(await get('/yct-sim.html?sim=yct1-sim1', { jar: { dsim: mover.jar.dsim } })), '… and a YCT 1 sim\'s link asks the key');
   // the New HSK 1 «Simulacro» homework (pack rounds made from the sims) still works for a logged-in kid
   const enter2 = await post('/api/homework/enter', { accessCode: '1002', studentCode: kids.nhsk.code });
   const sima = ((enter2.json && enter2.json.assignments) || []).find((a) => /simulacro/i.test(a.id + ' ' + a.title));
@@ -336,7 +344,16 @@ async function run() {
   const T = { 'X-Admin-Pw': encodeURIComponent(TEACHER) };
   for (const id of sims) {
     const r = await get('/api/hsk-sim/' + id, { headers: T });
-    ok(r.json && r.json.ok && oldUrls(r.json.sim).length === 0, `teacher gets ${id}`);
+    ok(r.json && r.json.ok && oldUrls(r.json.sim).length === 0 && noStore(r), `teacher gets ${id}`);
+    // (its files: before 2026-10-18 checked through a kid's solo payload; now a kid takes them in a teacher's room)
+    const ls = links(r.json && r.json.sim);
+    const audio = ls.find((u) => /\.(m4a|mp3)$/.test(u));
+    const pic = ls.find((u) => /\.(webp|jpe?g|png)$/.test(u));
+    const ra = audio ? await fetchMedia(audio) : { status: 0, headers: {} };
+    const rp = pic ? await fetchMedia(pic) : { status: 0, headers: {} };
+    ok(mediaOk(ra) && (ra.status === 206) && /^audio\//.test(ra.headers['content-type'] || ''), `${id}: its recording plays in pieces (${ra.status} ${ra.headers['content-type']})`);
+    ok(mediaOk(rp) && /^image\//.test(rp.headers['content-type'] || ''), `${id}: a picture loads (${rp.status})`);
+    ok(!/\((TRUE|FALSE|CORRECT)\)/i.test(ls.join(' ')), `${id}: no answer hint in a file name`);
   }
   const tsub = await post('/api/hsk-sim/newhsk1-sim1/submit', { studentCode: 'TEACH', answers: {} }, { headers: T });
   ok(tsub.json && tsub.json.ok && tsub.json.saved === false, 'a teacher\'s try is graded, never saved');
@@ -467,4 +484,49 @@ async function run() {
   fine.close();
   ok(isPlayer(await get('/yct-sim.html?pin=' + c1.pin, { headers: OUT })), 'a live room\'s page still opens (it holds no exam): a class sharing that address is never locked out');
   host1.close();
+  await keptSelfServe();
+}
+
+// ── 11. the kept code (2026-10-18): El Simulacro Dorado taken alone is OFF (his decision), but the code stays, behind ONE
+// flag. A second, short server with env DRALY_DORADO_SELF_SERVE=1 shows it still works (his call alone to switch it on).
+async function keptSelfServe() {
+  section('the kept self-serve code (env DRALY_DORADO_SELF_SERVE=1, a second server)');
+  const P2 = PORT + 1;
+  const D2 = fs.mkdtempSync(path.join(os.tmpdir(), 'draly-simlock-on-'));
+  fs.writeFileSync(path.join(D2, 'ruta-settings.json'), JSON.stringify({ trainingLive: false, doradoPct: 70, trainingLaunchAt: Date.now() }));
+  const srv2 = spawn(process.execPath, ['server.js'], { cwd: ROOT, stdio: 'ignore',
+    env: Object.assign({}, process.env, { PORT: String(P2), SIM_LOCK_SECRET: SECRET, WU_ADMIN_PASSWORD: TEACHER, DRALY_DATA_DIR: D2, STUDENT_DATA_DIR: '',
+      DRALY_SEED_ADMIN_CODE: 'T-' + crypto.randomBytes(5).toString('hex').toUpperCase(), DRALY_DORADO_SELF_SERVE: '1' }) });
+  const r2 = (method, p, o = {}) => new Promise((resolve) => {
+    const h = Object.assign({}, o.headers || {});
+    if (o.jar && Object.keys(o.jar).length) h.Cookie = Object.entries(o.jar).map(([k, v]) => k + '=' + v).join('; ');
+    const data = o.body !== undefined ? Buffer.from(JSON.stringify(o.body)) : null;
+    if (data) { h['Content-Type'] = 'application/json'; h['Content-Length'] = data.length; }
+    const q = http.request({ host: '127.0.0.1', port: P2, method, path: p, headers: h }, (res) => {
+      let t = '';
+      res.on('data', (c) => { t += c; });
+      res.on('end', () => { (res.headers['set-cookie'] || []).forEach((c) => { const m = /^([^=]+)=([^;]*)/.exec(c); if (m && o.jar) o.jar[m[1]] = m[2]; }); let j = null; try { j = JSON.parse(t); } catch (_) {} resolve({ status: res.statusCode, json: j, text: t }); });
+    });
+    q.on('error', () => resolve({ status: 0, json: null, text: '' }));
+    if (data) q.write(data);
+    q.end();
+  });
+  try {
+    let up = false;
+    for (let i = 0; i < 60 && !up; i++) { await sleep(500); up = (await r2('GET', '/health')).status === 200; }
+    ok(up, 'the second server starts with the flag ON');
+    const jar = {};
+    const e = await r2('POST', '/api/homework/enter', { jar, body: { accessCode: '1003', displayName: 'Kept ' + Date.now().toString(36).slice(-4) } });
+    const pay = await r2('GET', '/api/hsk-sim/yct1-sim1', { jar });
+    ok(e.json && e.json.ok && pay.json && pay.json.ok && pay.json.sim.ticket, 'ON: a kid with their level takes a simulation alone again (payload + ticket)');
+    const sub = await r2('POST', '/api/hsk-sim/yct1-sim1/submit', { jar, body: { answers: { 'L1-1': 'T' }, ticket: pay.json && pay.json.sim && pay.json.sim.ticket } });
+    ok(sub.json && sub.json.ok && sub.json.saved !== false, '… and it is saved on their record');
+    const st = await r2('GET', '/api/ruta-dorada', { jar });
+    const y1 = st.json && st.json.modules.find((x) => x.id === 'yct1');
+    ok(st.json && st.json.solo === true && y1 && y1.sims.every((s) => /^\/yct-sim\.html\?sim=/.test(s.href || '')), '… the route lists the players\' links again (solo: true)');
+  } finally {
+    srv2.kill();
+    await sleep(300);
+    try { fs.rmSync(D2, { recursive: true, force: true }); } catch (_) {}
+  }
 }

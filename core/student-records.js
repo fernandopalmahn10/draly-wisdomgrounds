@@ -206,6 +206,13 @@ function archiveInactive(days, now) {
   const cutoff = now - days * 86400e3;
   const moving = Object.keys(records).filter((c) => lastActive(records[c]) < cutoff);
   if (!moving.length) return { moved: 0, archived: Object.keys(archive).length };
+  const out = moveToArchive(moving);
+  if (out.moved) console.log('[students] archived', out.moved, 'accounts inactive', days, 'days ·', out.archived, 'in the archive');
+  return out;
+}
+// The live accounts `moving` go to the archive, safely: the archive (with them) is written and read back first, then
+// the live file (without them); if the live write fails they go straight back. → { moved, archived, error? }
+function moveToArchive(moving) {
   moving.forEach((c) => { archive[c] = records[c]; });
   try {
     ensureDir();
@@ -226,9 +233,52 @@ function archiveInactive(days, now) {
     archiveDirty = true;
     return { moved: 0, archived: Object.keys(archive).length, error: 'live file not written' };
   }
-  const total = Object.keys(archive).length;
-  console.log('[students] archived', moving.length, 'accounts inactive', days, 'days ·', total, 'in the archive');
-  return { moved: moving.length, archived: total };
+  return { moved: moving.length, archived: Object.keys(archive).length };
+}
+// 🆕 2026-10-18 (automatic accounts): ONE account to the archive now (an automatic account whose progress moved into
+// the kid's real account, «Pasar mi progreso a esta cuenta»). `stamp` is written on it first (e.g. { mergedInto,
+// mergedAt }). Like every archived account it comes back if its code is used again. → { moved, archived, error? }
+function archiveOne(code, stamp) {
+  const c = normalizeCode(code);
+  if (!c || !records[c]) return { moved: 0, archived: Object.keys(archive).length, error: 'not a live account' };
+  if (archiveBroken) return { moved: 0, archived: 0, error: 'archive unreadable' };
+  if ((saveTimer || archiveDirty) && !persistNow()) return { moved: 0, archived: Object.keys(archive).length, error: 'live file not written' };
+  if (stamp && typeof stamp === 'object') Object.assign(records[c], stamp);
+  const out = moveToArchive([c]);
+  if (out.moved) console.log('[students] archived 1 account (' + ((stamp && stamp.archivedWhy) || 'by hand') + ')');
+  return out;
+}
+// An account as it is now, live or resting in the archive, WITHOUT bringing it back (get() restores an archived one:
+// right for a kid typing their code, wrong for a page view). → { rec, archived } | null. Read-only: never write to it.
+function peek(code) {
+  const c = normalizeCode(code);
+  if (!c) return null;
+  if (records[c]) return { rec: records[c], archived: false };
+  if (archive[c]) return { rec: archive[c], archived: true };
+  return null;
+}
+// 🆕 2026-10-18 (his words: "make the system automatically give them an account"): an account La Ruta Dorada makes by
+// itself at a visitor's first real step (a level key, a seal, a training round, a homework mark; server.js
+// /api/ruta/auto decides). The same shape and code generator as a /homework login (getOrCreate), plus
+//   auto: true      the system made it (the /maestro roster shows «automática» while it has no class code)
+//   autoStep        what made it ('key' | 'seal' | 'train' | 'tarea')
+//   autoName: true  its name is the friendly placeholder (never «Anon»), until the family types the kid's name
+// No class code (a class code login at /homework claims it, see server.js). → the record
+function createAuto(name, level, step) {
+  const rec = getOrCreate(null, name);
+  rec.auto = true;
+  rec.autoStep = String(step || '').slice(0, 8);
+  rec.autoName = true;
+  if (level) setLevel(rec.code, level);
+  scheduleSave();
+  return rec;
+}
+// the kid's real name typed on La Ruta Dorada (or at /homework): the placeholder is gone for good
+function setRealName(code, displayName) {
+  if (!setDisplayName(code, displayName)) return false;
+  const rec = get(code);
+  if (rec && rec.autoName) { delete rec.autoName; scheduleSave(); }
+  return true;
 }
 // Counts for /api/_diag and the teacher dashboard. `classroomCodes` (a Set) limits the count to one teacher's classes.
 function archiveStats(classroomCodes) {
@@ -988,6 +1038,8 @@ function listAll() {
       device: r.device || null,
       locale: r.locale || null,
       tz: r.tz || null,
+      // 🆕 2026-10-18: an account La Ruta Dorada made by itself, not claimed by a class code yet (the roster's «automática»)
+      auto: !!(r.auto && !r.classroomCode),
       firstSeen: r.firstSeen || 0,
       lastSeen: r.lastSeen || 0,
       sentenceCount:   Array.isArray(r.sentencesBuilt)         ? r.sentencesBuilt.length         : 0,
@@ -1156,6 +1208,10 @@ module.exports = {
   AVATAR_OPTIONS,
   archiveInactive,
   archiveStats,
+  archiveOne,
+  peek,
+  createAuto,
+  setRealName,
   ARCHIVE_AFTER_DAYS,
   flushNow: persistNow,   // write now (tests; before a planned shutdown)
 };

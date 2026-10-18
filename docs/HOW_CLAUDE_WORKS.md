@@ -275,6 +275,58 @@ same source as the printed book (`../study/lib/examweb.py`): fix a line in the s
 Tests: `node scripts/test-ruta-tareas.js` (port 4450: the marks on the account, two phones, the anonymous path, the
 PDFs for the super admin only).
 
+**🔒 El Simulacro Dorado is yours, in class (18 October 2026, your words: "the golden simulations should be just for me
+because I will manually put simulations to kids… I enable it through pin").** A kid never starts a simulation from La
+Ruta Dorada any more: they take it in your room with your PIN, exactly as before. The code that let a kid take one alone
+is kept but switched off by one flag (`DORADO_SELF_SERVE` in server.js, OFF; turning it back on is your call, an env
+setting on Render, no code change). What families see on card 3 «El Simulacro Dorado»:
+- **Before El Entrenamiento is done**: a padlock and one line, «Se abre en clase con tu profe, cuando termines El
+  Entrenamiento».
+- **Once El Entrenamiento is done** (every world with 70 %, or you opened it): card 3 becomes the step to do, Dralingo
+  says «¡Terminaste El Entrenamiento! Avísale a tu profe: ya puedes hacer El Simulacro Dorado en clase.», and its big green
+  button **«Avisarle a mi profe»** opens WhatsApp with the message ready («¡Hola, profe! Soy Ana. Terminé El Entrenamiento
+  de New HSK 1. ¡Ya puedo hacer El Simulacro Dorado!»; no number in it, so the family picks your chat), plus «Copiar
+  mensaje» for families who write another way.
+- **The simulations taken in your room** keep their numbered chips, their mistakes and their «Libro dorado» (a simulation
+  taken anywhere opens its own book, your earlier pick). A book not taken yet says «El Simulacro N lo haces en clase».
+- **A simulation's old link** (bookmarks, WhatsApp) lands on card 3. Teachers and you still see and open everything.
+
+**👀 What kids see, on a teacher's computer (18 October 2026, you asked "where is the option for the kids to mark…").**
+Your computer is a teacher's, so «Tus tareas» showed you only «Escuchar». Now each homework card shows the kids' buttons
+as a calm preview (a dashed «¡Ya la mandé!» that does nothing) with «Así lo ven tus alumnos», and a note on top. The
+homework's own audio page (`/audios/<homework>`, the printed PDFs' link) now has the kid's marks too, under the title and
+after «¡Ahora graba tu video!»: «Nueva» / «Escuchada ✓» / «✓ Mandada», «¡Ya la mandé!» and «Deshacer» for a few seconds,
+the same code and the same rules as «Tus tareas» (the kid's account when logged in, the phone otherwise). YCT 1 has no
+homework audios yet, so its module page simply has no «Tus tareas» column (never an empty box).
+
+**🪪 Automatic student accounts (18 October 2026, your words: "make the system automatically give them an account… keep
+that code forever… remind you: Are you sure you are not this student?").** A family that opens La Ruta Dorada without a
+student account gets a real one, by itself, at its first real step: typing the level's key, the first «¡Me la sé!», the
+first El Entrenamiento round, or the first «¡Ya la mandé!». Only opening pages (or WhatsApp's link preview, or a class
+opening a link) never makes one, and listening to a homework's audio doesn't either (every family with a printed PDF
+does that). A phone that remembers a /homework login logs that kid in again instead (no duplicate for your students).
+- **The account**: the same kind of account and code as a /homework login, its level (the module's), no class code yet,
+  marked «automática»; its name is a friendly placeholder («Dragoncito 382») until the family types the kid's name.
+- **The phone keeps it**: the same login as /homework plus a device cookie for a year, so a reload, a new tab or the
+  home-screen app stay in the same account; one account per phone, never a second one.
+- **The first time**, a card: «¡Ya tienes tu cuenta de Dralingo! Tu código es K7P2» with «Copiar mi código», «¿Cómo te
+  llamas?» + «Guardar» and «Ahora no». Later, **«Mi código»** on the red band of La Ruta Dorada shows it again (and the
+  name can be changed there).
+- **«¿Eres tú?»**: at /homework (and every «Entra con tu código» link), when a phone that holds an account with progress
+  types ANOTHER code or a new name, a card asks first: «Este teléfono ya tiene un alumno: Ana · código K7P2 · 120 sellos ·
+  2 tareas mandadas. ¿Eres tú?» → «Sí, soy yo» (enters that account; an automatic one joins the class code typed) or «No,
+  soy otro alumno». When the phone's account is automatic and a code was typed, also **«Pasar mi progreso a esta cuenta»**:
+  once that account's login works, its seals and homework marks join it, each El Entrenamiento world keeps the best %, and
+  the automatic account rests in the archive. It never touches that account's exam results, levels or your data, and it
+  needs both proofs on that phone (the automatic account and the real login).
+- **Your students**: an automatic account joins a class the first time the family logs in at Mis tareas with a class
+  code + its code (or joins a PIN room with it). Until then you (super admin) see it in the student list with a small
+  «automática» tag; regular teachers don't see it. With no progress it ages into the 30-day archive like any account.
+- **Limits**: 30 new accounts an hour per internet address (a whole class), 3 a day per phone, 300 an hour for the whole
+  platform; requests from other sites are refused.
+Tests: `node scripts/test-auto-account.js` (port 4460), and the class-only simulations in `test-sims-lock.js`,
+`test-ruta-dorada.js`, `test-golden-book.js`, `test-level-keys.js`.
+
 ### 2.4 Parent control
 
 Parents open their child's progress with the same codes. A privacy guard makes sure a code only
@@ -360,6 +412,10 @@ recordings, pictures and the La Base PDF are protected:
 - **You can open any kid early**: «Desbloquear» in the kid's profile in /maestro.
 - **A kid in your room** gets in with your PIN, no key, for that room's simulation only. «Terminar sala» on the monitor
   really closes the room: its PIN, page and files stop working (a kid who already finished can still hand in).
+- **Since 18 October 2026 that is the ONLY way a kid takes a simulation** (your decision: the golden simulations are
+  yours, opened with your PIN). The key opens La Base, El Entrenamiento and the books of the simulations a kid took; a
+  simulation's own link takes a kid to card 3 of their route («Se abre en clase con tu profe»). The old «take it alone»
+  code is kept, switched off (`DORADO_SELF_SERVE`, see «El Simulacro Dorado is yours, in class» above).
 - **A teacher** opens everything. Creating any game needs your teacher code the **first time on a device** (the
   /maestro login does it, or the teacher-key screen that appears on the game page); then that device is remembered for
   90 days. «Log out» in /maestro forgets it.
@@ -633,7 +689,10 @@ intro is long"), and I'll turn it into exact changes.
   cards, each module's golden route), progress on the kid's account (seals on any phone, «Desbloquear» / «Volver a
   bloquear» per step, the rules in /maestro), El Entrenamiento (quick rounds per world, the Dorado earned by
   practice) and El libro dorado (each simulation's book once taken, mistakes first; the PDF yours only), and the module page
-  redesign of 18 October (one ladder + «Tus tareas» with the done marks on the account).
+  redesign of 18 October (one ladder + «Tus tareas» with the done marks on the account). Round 2 of 18 October: El
+  Simulacro Dorado in class only (card 3 «Avisarle a mi profe»), the kids' buttons previewed for teachers and on each
+  homework's audio page, automatic student accounts with «Mi código» and «¿Eres tú?». Still open: the /maestro view of
+  the homework marks and the teacher's undo; a way in /maestro to merge two accounts by hand.
   First week of El libro dorado: listen to a few play buttons per level (each clip is cut from the exam recording by
   the times the import measured), and say if the book should also open for a kid who took a simulation in your room
   before earning El Simulacro Dorado (today it follows the Dorado's door). First week of El Entrenamiento:
