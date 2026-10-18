@@ -425,7 +425,8 @@
           if (a === 'me') {
             $('hw-student-code').value = acc.code;
             delete $('hw-student-code').dataset.asName;
-            tryEnter({ eres: true });
+            // (an automatic account still called «Dragoncito 382» takes the name the kid just typed)
+            tryEnter({ eres: true, name: !typed && acc.placeholder ? sc : null });
           } else again(a === 'merge' ? { merge: true } : null);
         });
       }, () => again());
@@ -434,7 +435,7 @@
     const payload = {
       accessCode: ac,
       studentCode: looksLikeCode ? sc.toUpperCase() : null,
-      displayName: looksLikeCode ? null : sc,
+      displayName: looksLikeCode ? ((opts && opts.name) || null) : sc,
       meta: collectDeviceMeta(),
     };
     fetch('/api/homework/enter', {
