@@ -303,7 +303,9 @@ async function serverTests() {
   ok(noSession.status === 200 && noSession.json.ruta === null, 'a phone with no /homework session: no `ruta` (the page asks to come in again)');
   const t0 = texts(noSession.json);
   ok(t0.focus.reload && t0.focus.btn === 'Entrar de nuevo', '… the page says «Para ver su Ruta Dorada, vuelve a entrar con su código.»');
-  ok((await get('/api/homework/insights/' + KIDS.HALF.code + '?accessCode=' + CLASS.yct1, as(phones.HALF))).status === 403, 'another class\'s code: refused, as before');
+  // (since la entrada: the kid's own session proves the record, whatever class code the page sends; a phone without it
+  // and with another class's code is refused, as before)
+  ok((await get('/api/homework/insights/' + KIDS.HALF.code + '?accessCode=' + CLASS.yct1, as(bare))).status === 403, 'another class\'s code from a phone that is not the kid\'s: refused, as before');
   ok((await get('/api/homework/insights/' + KIDS.HALF.code + '?accessCode=0000', as(phones.HALF))).status === 401, 'a code that is no class code: refused, as before');
   const out = await post('/api/homework/logout', {}, as(phones.HALF));
   ok(out.status === 200 && (await insights(phones.HALF, KIDS.HALF)).json.ruta === null, '«Salir»: the same phone gets no `ruta` any more');
