@@ -9,6 +9,28 @@ recording → official test pipeline, toolbox, pending work) is `docs/HOW_CLAUDE
 the checklist for any new game mode.
 
 ## Always
+- **Every screen has a way back** (his rule 2026-10-18: "La Ruta Dorada doesn't have an escape button to go back. Make
+  sure nowhere on the platform you get this bug"): every page, step, card and overlay shows a clear «← Volver» (or ✕ on
+  an overlay) to the screen it came from, always visible on phone and projector; a check for it is part of every new
+  or changed screen (a page-by-page sweep of the platform when he reported it). One look: `css/back.css` (`.dw-back`
+  «Volver», tinted with `--dwb-*`; a real link, never browser history). Projector lobbies: `js/host-back.js` (hidden
+  once the game runs, so «Terminar» stays the only exit mid-class). /audios views: the sticky band's «Volver» takes the
+  view's `.au-back` (a direct child of `#au-main`); a view that draws its own band marks its link `[data-back]` and the
+  band steps aside. An error card always keeps a way back.
+- **Nothing opens zoomed in** (his rule 2026-10-18: "teachers might miss a button because they might believe the
+  interface is like that"): every page fits the screen at the browser's normal 100 % on a laptop (1366×768,
+  1440×900), the projector (1600×900) and phones (390×844, 360×640): no CSS `zoom`/scale on the page, nothing wider than
+  the window, no part of the interface pushed off-screen; check those sizes on every new or changed screen, plus
+  1366×657 (what a 1366×768 laptop really shows under the browser bars: it caught most fit problems in the sweep).
+  A lobby's start button and a page's first action sit on that first screen.
+- **Super obvious, like Duolingo** (his direction 2026-10-18): every screen tells a kid or parent exactly what to do
+  first, in direct words («Toca el 1, La Base, donde está la flecha: ahí empiezas»), never indirect lines («Primero la
+  base, después el examen»); one highlighted first step with a cast character pointing and «Empieza aquí»; numbered
+  steps that read like a ladder; done / to do marks and badges that show progress at a glance.
+- **Study PDFs download only for the super admin** (his rule 2026-10-18): La Base's vocabulary PDF and the golden book's
+  PDF are never a download for kids, parents or regular teachers; the web pages (with their audio) are how families study.
+  The server refuses the files, not just the button: `_superOf(req)` in server.js is the only door (`base.json` loses
+  its `book` for everyone else); a new study PDF uses the same check.
 - **Media must be in git**: Render serves only what is committed. After adding any asset-backed feature (images, audio
   under `public/assets/…`, sim media under `protected/…`) run `git status --short` / `git ls-files "<asset dir>" | wc -l`
   and confirm the media is staged before saying it is live. On-disk ≠ deployed.
@@ -256,7 +278,8 @@ the checklist for any new game mode.
   play button cut from the original exam recording, pinyin with tones, the Spanish and the answer in gold, simulation by
   simulation, from the same source as the printed book (`study/<level>sim`, `exam.py`). **Mistakes first**: after a
   sim the book opens on «Repasa tus N errores» (that kid's wrong questions, each with its play button), then the whole
-  simulation; teachers see the same list. **The PDF downloads once the kid has taken every simulation of the level**
+  simulation; teachers see the same list. ~~**The PDF downloads once the kid has taken every simulation of the level**~~
+  (superseded 2026-10-18: study PDFs download only for the super admin, see § Always) 
   and has the Dorado (it holds every answer; a lighter web copy under 9 MB).
 - **Built (phase 3, 2026-10-16): progress on the kid's account, one unlock engine.** `core/ruta-progress.js` is the
   ONLY place that decides a step (the key is still the level's door: `LevelKeys.access` first, the engine after it).
@@ -386,6 +409,24 @@ the checklist for any new game mode.
   engine, /maestro's «Desbloquear», archive), `node scripts/test-ruta-training.js` (port 4430: El Entrenamiento, the
   grading, the Dorado rule ON at launch) and `node scripts/test-golden-book.js` (port 4440: El libro dorado, every
   visitor's doors, the media by index, the web against the printed books) must pass.
+
+### La Ruta Dorada redesign (his picks 2026-10-18, after «it's not clear, it's messy, the tareas are left behind»)
+- **A module page = one clear ladder + the homework beside it**: the big module card with the ladder 1 La Base → 2 El
+  Entrenamiento → 3 El Simulacro Dorado (done / next / locked at a glance), and «Tus tareas» next to it (right on a
+  laptop, below on a phone) with each homework's audio. It uses the whole screen on a laptop and stays one column on a
+  phone. A visible «← Volver» everywhere.
+- **Super obvious first step**: a cast character points at the next step with «Empieza aquí» (La Base first: «Toca el
+  1, La Base: marca las palabras que ya sabes»), the steps read like a ladder, and red badges say what waits («3
+  palabras por marcar», «1 tarea nueva»). Direct words only.
+- **Homework done marks, with no extra load** (he left it to Claude: "not too many steps… you decide"): playing a
+  homework's audio marks it «Escuchada ✓» by itself; one tap «¡Ya la mandé!» when the kid has sent their video on
+  WhatsApp marks it done, on the kid's account (profile, «Hacer mis tareas», /maestro see it). Teachers confirm nothing
+  (they may undo a wrong mark). Built 2026-10-18: `GET/POST /api/ruta/tareas` → `rec.tareas` (session only, the kid's
+  own record, catalog ids, another account's `who` → 409, 60 saves a minute); the phone mirror is `draly_tareas`
+  (marks made before login join the account at login, like the seals); «Deshacer» for 8 s; another level's homework
+  only plays. `node scripts/test-ruta-tareas.js` must pass. Not built yet: the /maestro view and the teacher undo.
+- **Design first**: a clickable design of the new module page (laptop + phone) for him to try and approve before it is
+  built into the platform.
 
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads
