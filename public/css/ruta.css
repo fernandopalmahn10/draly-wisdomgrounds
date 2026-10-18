@@ -251,7 +251,8 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 /* phone first (one column: hero, ladder stacked with ↓, tareas), then  */
 /* the ladder in a row (760 px), then the tareas on the right (1100 px) */
 /* ════════════════════════════════════════════════════════════════════ */
-.rp {
+/* (2026-10-18: also the picker's band, for «Mi código», and a homework page's marks, .au-marks) */
+.rp, .rp-band, .au-marks {
   --gold-btn: #e8c878; --gold-edge: #b88b2c; --red: #c62828; --green: #1f6b45; --green-pale: #eef6f0; --ink-soft: #4a3f36; --ink-mid: #6b5d4f;
   --wash: #efe4c9;
 }

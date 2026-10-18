@@ -3459,6 +3459,7 @@ function _accessSession(req, res) {
   if (!rec.classroomCode || !_hwOwnsStudent(req, rec)) return fail(403, 'no autorizado');
   const level = LevelKeys.classLevel(rec);
   SimLock.setSession(req, res, 's', rec.code, level);
+  _autoAfterLogin(req, res, rec, true);   // 🆕 2026-10-18: this kid on a device holding an automatic account (claim / park)
   const open = _openLevelOnDevice(req, res, rec, level);
   res.json({ ok: true, kind: 'student', level, levelName: Levels.info(level).name, open, sims: _simsOfLevel(level) });
 }

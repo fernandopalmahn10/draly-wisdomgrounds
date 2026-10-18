@@ -178,7 +178,7 @@
     window.DralyAuto.ensure(mod.slug, 'train').then((r) => {
       if (!r) return;
       reloadState();
-      if (r.account && (r.created || r.resumed)) window.DralyAuto.welcome(r.account);
+      if (r.account && (r.created || r.resumed)) window.DralyAuto.welcome(r.account, { afterRound: true });
     });
   }, true);
 

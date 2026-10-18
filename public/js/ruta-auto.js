@@ -177,11 +177,19 @@
       writeMine(m);
       sheet(acc, 'first', opts && opts.onSaved);
     };
-    // never over a training round: the card waits until the round is over (its star screen or the worlds' page)
+    // never over a training round: the card waits until the round is over (its star screen or the worlds' page).
+    // opts.afterRound: the round is about to start (the «¡A jugar!» tap): wait for it to begin, then to end (15 s at most
+    // for a round that never started)
     const busy = () => document.body.classList.contains('au-is-play');
-    if (!busy()) { show(); return; }
-    const mo = new MutationObserver(() => { if (!busy()) { mo.disconnect(); setTimeout(show, 600); } });
+    let seenPlay = busy();
+    if (!seenPlay && !(opts && opts.afterRound)) { show(); return; }
+    let t = 0;
+    const mo = new MutationObserver(() => {
+      if (busy()) { seenPlay = true; return; }
+      if (seenPlay) { mo.disconnect(); clearTimeout(t); setTimeout(show, 600); }
+    });
     mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    if (!seenPlay) t = setTimeout(() => { if (!seenPlay) { mo.disconnect(); show(); } }, 15000);
   }
   function afterRoute(ruta) {
     if (!ruta || !ruta.me || !ruta.me.auto) return;
