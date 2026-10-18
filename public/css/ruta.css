@@ -399,7 +399,7 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rp-book > svg { width: 18px; height: 18px; flex: none; color: #f3dc9a; }
 .rp-book b { padding: 2px 8px; border-radius: 999px; font-size: .74rem; color: #3d0707; background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); }
 .rp-note { margin-top: 6px; font-size: .84rem; color: var(--tinta-2); }
-.rp-note a, .rp-alt a { color: var(--rojo); font-weight: 800; }
+.rp-note a, .rp-alt a { display: inline-flex; align-items: center; min-height: 44px; color: var(--rojo); font-weight: 800; }
 .rp-pdf { display: inline-flex; align-items: center; min-height: 44px; margin-top: 4px; font-size: .84rem; font-weight: 800; color: var(--oro-tinta); }
 /* the button: a direct verb on the current step */
 .rp-act { display: grid; gap: 6px; margin-top: 10px; }
@@ -417,7 +417,6 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
 .rp-opens { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 40px; text-align: center; font-weight: 700; font-size: .88rem; line-height: 1.25; color: var(--ink-mid); }
 .rp-opens svg { width: 16px; height: 16px; flex: none; }
 .rp-alt { text-align: center; font-size: .88rem; color: var(--tinta-2); }
-.rp-alt a { display: inline-flex; align-items: center; min-height: 44px; }
 @media (hover: hover) and (pointer: fine) {
   .rp-btn-go:hover { background: #efd590; }
   .rp-btn-soft:hover { background: #fff8e8; }

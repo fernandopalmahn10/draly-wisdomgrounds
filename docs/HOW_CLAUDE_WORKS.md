@@ -157,7 +157,7 @@ folders (YCT 1 · New HSK 1 · HSK 1). Pinned first in YCT 1: `/audios/yct1-base
 digitally: the 83 words in its 6 worlds, each card like the book (number, picture, pinyin, Spanish, sentence with the
 word in red), tap the picture to hear the word and the sentence to hear the sentence, a «¡Me la sé!» seal to stamp
 (saved on the phone, progress per world and x/83), «Escuchar el mundo» plays a whole world, the tones with sound, the
-repaso, and «Descargar el libro (PDF)». It is exported from the book's own source (`study/lib/web.py`), so the page and
+repaso (the PDF is a download for you only, since 18 October 2026). It is exported from the book's own source (`study/lib/web.py`), so the page and
 the PDF never disagree; every reading was checked with local Whisper. YCT 1 kids see «Empieza aquí · La base de
 YCT 1» on their /homework home. HSK 1 has its own base the same way (`/audios/hsk1-base`, «HSK 1 · Vocabulario»:
 150 words in 8 worlds, pinned above its homework audios; HSK 1 kids see «Empieza aquí · La base de HSK 1»), and so
@@ -230,15 +230,50 @@ button with the original exam recording of that question only (cut from the reco
 per question), the pinyin with tone marks, the Spanish and the answer in gold. Zero mistakes = a celebration line from
 the gang. **Taken anywhere is enough** (your pick after the build): a simulation taken in your room opens its own
 book even before the kid earns El Simulacro Dorado (the route keeps showing how the Dorado opens, plus that
-simulation's «Libro dorado»); the other simulations and the PDF still need the Dorado. **The PDF downloads once every
-simulation of the level is taken and the Dorado is open** (a web copy under 9 MB); before that the page and the route
-say how many are left, or that the PDF comes with El Simulacro Dorado. On the route, a simulation the kid took gets a red «Libro dorado» ribbon
+simulation's «Libro dorado»); the other simulations still need the Dorado. **The PDF is yours only** (your rule of
+18 October 2026: the study PDFs, La Base's and the golden book's, download only for the super admin; families study on
+the web pages with their audio): nobody else sees a download button or a line about it, and the server refuses the file
+to anyone else. On the route, a simulation the kid took gets a red «Libro dorado» ribbon
 with its mistakes count; a phone that only has the key is asked to «Entra con tu código» (the book lives on an
-account). Teachers see every book and the PDF; in a kid's profile each simulation they took shows its mistakes and
+account). Teachers see every book (the PDF only you); in a kid's profile each simulation they took shows its mistakes and
 «📖 Ver su libro» (that kid's mistakes view; the link works only on a teacher's device, and a kid holding it sees only
 their own book). Nothing of a book travels to a phone that may not open it: the questions come one simulation at a
 time from the server, and the photos and clips are served by number, checked on every file. The content comes from the
 same source as the printed book (`../study/lib/examweb.py`): fix a line in the study book, rebuild it, export again.
+
+**🪜 The module page, redesigned (La Ruta Dorada, 18 October 2026, your approved design «I like it, green light»).**
+`/audios/<level>` is now one clear ladder with the homework beside it (`public/js/ruta.js` + `css/ruta.css`):
+- **A red band at the top** with the way back, always visible: «Volver a mis tareas» when the kid came from /homework,
+  else «Todos los mundos» («La Ruta Dorada» in the middle opens the worlds). The worlds' picker has the same band
+  («Volver a mis tareas», or «Volver al inicio»).
+- **The hero**: the level's wonder (YCT 1 Dubái at night, New HSK 1 the Li River, HSK 1 the Great Wall; a new level takes
+  the next one) in its jewel colour, Dralingo in his kandura pointing at the ladder, and one direct instruction for
+  this kid now: «¡Empieza aquí! Toca el 1, La Base…», «¡Sigue con el 1! Marca las palabras del mundo Escuela: te faltan
+  12.», «¡Ahora el 2! Practica el mundo Familia: ya marcaste todas sus palabras.», «¡Ya puedes hacer el examen! Toca el
+  3…», «¡Terminaste tu ruta!…», or for a locked level «Escribe la clave de New HSK 1 para abrir tu ruta.» (on a phone
+  a «Ver el paso N» link scrolls to it).
+- **The ladder 1 → 2 → 3**: three picture cards (La Base = three word pictures of the level, El Entrenamiento =
+  Dralingo's power pose, El Simulacro Dorado = Dralingo with the star), in a row with arrows on a laptop and stacked
+  with ↓ on a phone. The step to do now glows gold with a red «¡Empieza aquí!» and a big gold button with the verb
+  («Empezar aquí», «Seguir marcando», «Practicar aquí», «Hacer el Simulacro 1»); a started step has a soft «Seguir…»,
+  a finished one a green tick and «Repasar», a locked one a padlock and one line of how it opens. Red badges say what
+  waits («300 por marcar», «1 para practicar», «¡Listo!», «¡Nuevo mundo!»). Finished = every word sealed / every
+  world with the Dorado's % / every simulation taken. La Base's seal meter is card 1's bar; card 2 has one coin per
+  world (tap = the worlds' page); card 3 a numbered chip per simulation (gold with a tick once passed) and the latest
+  «Libro dorado» with its mistakes. A locked level's first step is its key («Escribe la clave de …»).
+- **«Tus tareas»** (right column on a laptop, below on a phone; on a phone the hero's red «Tareas: N por mandar» jumps
+  there): Aileen says «¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá ¡Ya la
+  mandé!», then one picture card per homework audio of the level, newest first (3, then «Ver todas mis tareas»):
+  «Escuchar» plays its three audios right there (playing it on its own page counts too), «¡Ya la mandé!» once the video
+  is sent (a «Deshacer» for a few seconds). «Nueva» / «Escuchada ✓» / «✓ Mandada». **The marks live on the kid's
+  account** (`/api/ruta/tareas`, `rec.tareas`): a new or lost phone shows them after the login; marks made before
+  logging in join the account at the first login; a phone without login keeps them and says «Entra con tu código para
+  guardarlas en tu cuenta». No teacher confirmation (your pick). Another level's homework (a kid looking at another
+  module, a teacher) only plays.
+- **/homework**: «Hacer mis tareas» under «La Ruta Dorada de <nivel>», with the red count of tareas not sent yet; it
+  opens «Tus tareas». The picker's module cards show «N por mandar» too.
+Tests: `node scripts/test-ruta-tareas.js` (port 4450: the marks on the account, two phones, the anonymous path, the
+PDFs for the super admin only).
 
 ### 2.4 Parent control
 
@@ -597,7 +632,8 @@ intro is long"), and I'll turn it into exact changes.
   simulations behind it), teacher devices for hosting, «Cambiar mi código», the tab itself (the flying module
   cards, each module's golden route), progress on the kid's account (seals on any phone, «Desbloquear» / «Volver a
   bloquear» per step, the rules in /maestro), El Entrenamiento (quick rounds per world, the Dorado earned by
-  practice) and El libro dorado (each simulation's book once taken, mistakes first, the PDF once all are taken).
+  practice) and El libro dorado (each simulation's book once taken, mistakes first; the PDF yours only), and the module page
+  redesign of 18 October (one ladder + «Tus tareas» with the done marks on the account).
   First week of El libro dorado: listen to a few play buttons per level (each clip is cut from the exam recording by
   the times the import measured), and say if the book should also open for a kid who took a simulation in your room
   before earning El Simulacro Dorado (today it follows the Dorado's door). First week of El Entrenamiento:
