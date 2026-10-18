@@ -180,14 +180,18 @@
   window.addEventListener('pageshow', (e) => { if (e.persisted) refreshState(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshState(); });
   // another tab finished an El Entrenamiento round (or kept a phone's / a teacher's score): the picker / a path shows it
-  window.addEventListener('storage', (e) => { if (e.key && /^draly_train_/.test(e.key)) refreshState(); });
+  // (never for the sound switch, draly_train_sound: a mute tap is no news)
+  window.addEventListener('storage', (e) => { if (e.key && /^draly_train_(?!sound$)/.test(e.key)) refreshState(); });
   // 🎯 2026-10-18 («a practice that's done shows it»): a round that ended on THIS page. Its best goes into the route data
   // the page keeps (an account's best: the server has it already, so «Volver» to the path counts it at once, no reload;
   // a phone's or a teacher's score is read from this device when the path draws), and the next picker / path asks the
   // server again for the rest (the Dorado's state).
   let trainDirty = false;
+  // (a result that arrives after the kid already went back to the picker or a path, review 2026-10-18: that screen asks
+  // again now and redraws: its ping makes this device's part differ)
   function trained(slug, key, best, info) {
     trainDirty = true;
+    if (isWorldView()) setTimeout(() => { if (trainDirty && isWorldView()) { trainDirty = false; refreshState(); } }, 0);
     const m = ruta && Array.isArray(ruta.modules) ? ruta.modules.find((x) => x.slug === slug || x.id === slug) : null;
     if (!m || !m.train || !Array.isArray(m.train.worlds) || !info || !info.saved) return;
     const w = m.train.worlds.find((x) => x.key === key);

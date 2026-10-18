@@ -18,12 +18,15 @@
 //   · a logged-in kid / an automatic account: the server's best (the round that made the account counts on it)
 //   · a key-only phone: its own scores (draly_train_<level>, above)
 //   · a teacher's device (his computer is the super admin): its rounds are kept ON THIS DEVICE ONLY, in
-//     localStorage draly_train_t_<level> { v, best } (no proof: never sent anywhere, never a kid's score), shown the same
-//     way with «Tus rondas de maestro: solo en este equipo» (before, «Ronda de maestro: no se guarda» and nothing changed)
+//     localStorage draly_train_t_<level> { v: 2, by: { <tw>: { best } } } (no proof: never sent anywhere, never a kid's
+//     score), per PERSON on the device (`tw`, the server's opaque id: teacher B never sees teacher A's, a kid logged in on
+//     a teacher device has their own), shown the same way with «Tus rondas de maestro: solo en este equipo»
 //   A played world shows its stars and best %; at the % goal it turns GREEN with a ✓ (tile, the Dorado meter, card 2 of
 //   the module page). A finished round tells the page (ctx.trained: the module page's card 2 counts it at once, no stale
 //   route data after «Volver») and other tabs (localStorage draly_train_ping): this page redraws its worlds quietly when
-//   another tab finishes a round or the tab comes back into view.
+//   another tab finishes a round or the tab comes back into view. A round's result is recorded ONCE wherever it arrives
+//   (recordResult: the star screen, «Ver mis estrellas» answered after the kid left, the back button's keepalive); a
+//   page closed before the answer gets it back from the server (`done`: that phone's or teacher's finished rounds).
 // No hanzi, no em dash, pinyin without tone marks (the packs write it so).
 // =========================================================================
 (function () {
@@ -117,28 +120,50 @@
   const phoneBest = (slug) => readM(slug).best;
 
   // ── a teacher's own rounds: on this device only (2026-10-18, «Teachers see what kids see») ──
-  // { v: 1, best: { world: pct } }. Never sent to the server, never joined to an account (there is no proof), and never
-  // read for a kid: only when the server says this visitor is a teacher.
+  // localStorage draly_train_t_<level> = { v: 2, by: { <tw>: { best: { world: pct }, at } } }. Never sent to the server,
+  // never joined to an account (there is no proof), and never read for a kid: only when the server says this visitor is a
+  // teacher. `tw` (the review of 2026-10-18) = the server's opaque id of WHO the teacher is on this device (their uid, and
+  // the kid logged in there too, server.js _trainTeacherWho): teacher B on a shared laptop never sees teacher A's green
+  // worlds, and a kid logged in at /homework on a remembered teacher device never sees or writes into the teacher's.
+  // No `tw` (an old server) = nothing kept. A first-version store ({ v: 1, best }) belongs to nobody: it is never shown.
   const TKEY = (slug) => 'draly_train_t_' + slug;
-  function teacherBest(slug) {
+  const TEACHERS_MAX = 4;                                   // a shared laptop: four people's rounds at most
+  const okTw = (tw) => typeof tw === 'string' && /^[a-f0-9]{8,40}$/.test(tw);
+  function readT(slug) {
     let o = null;
     try { o = JSON.parse(store.get(TKEY(slug)) || 'null'); } catch (_) { o = null; }
-    const b = o && typeof o === 'object' && o.best && typeof o.best === 'object' && !Array.isArray(o.best) ? o.best : {};
+    const by = o && typeof o === 'object' && o.v === 2 && o.by && typeof o.by === 'object' && !Array.isArray(o.by) ? o.by : {};
+    return { v: 2, by };
+  }
+  function cleanBest(b) {
     const out = {};
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return out;
     Object.keys(b).forEach((k) => { const n = Number(b[k]); if (/^[a-z0-9-]{1,40}$/.test(k) && Number.isFinite(n) && n >= 0 && n <= 100) out[k] = n; });
     return out;
   }
+  function teacherBest(slug, tw) {
+    if (!okTw(tw)) return {};
+    const e = readT(slug).by[tw];
+    return e ? cleanBest(e.best) : {};
+  }
   // → { best, beat } like keepScore
-  function keepTeacher(slug, key, pct) {
-    const best = teacherBest(slug);
+  function keepTeacher(slug, key, pct, tw) {
+    if (!okTw(tw)) return { best: pct, beat: false };     // (the end card shows it; kept nowhere)
+    const o = readT(slug);
+    const best = o.by[tw] ? cleanBest(o.by[tw].best) : {};
     const before = best[key] != null ? Number(best[key]) : NaN;
+    const result = { best: Math.max(pct, Number.isFinite(before) ? before : 0), beat: Number.isFinite(before) && pct > before };
+    if (before >= pct && o.by[tw]) return result;            // (nothing new: nothing written, no news for the other tabs)
     if (!(before >= pct)) best[key] = pct;
-    store.set(TKEY(slug), JSON.stringify({ v: 1, best }));
-    return { best: Math.max(pct, Number.isFinite(before) ? before : 0), beat: Number.isFinite(before) && pct > before };
+    o.by[tw] = { best, at: Date.now() };
+    const ids = Object.keys(o.by).sort((a, b) => (Number(o.by[a].at) || 0) - (Number(o.by[b].at) || 0));
+    ids.slice(0, Math.max(0, ids.length - TEACHERS_MAX)).forEach((k) => { delete o.by[k]; });
+    store.set(TKEY(slug), JSON.stringify(o));
+    return result;
   }
   // the scores this device holds for THIS visitor: a teacher's own rounds, a key-only phone's scores, nothing for an account
-  // (an account's best comes from the server). v: { student, teacher } (the train view, or the route state)
-  const localBest = (v, slug) => (v && v.teacher ? teacherBest(slug) : v && !v.student ? phoneBest(slug) : {});
+  // (an account's best comes from the server). v: { student, teacher, tw } (the train view, or the route state)
+  const localBest = (v, slug) => (v && v.teacher ? teacherBest(slug, v.tw) : v && !v.student ? phoneBest(slug) : {});
   const TEACHER_NOTE = 'Tus rondas de maestro: solo en este equipo';
   const teacherNote = (cls) => '<p class="tr-teacher-note' + (cls ? ' ' + cls : '') + '">' + I.eye + '<span>' + TEACHER_NOTE + '</span></p>';
   // other tabs learn that a round ended (their worlds and the module page redraw: js/audios.js listens too)
@@ -211,11 +236,16 @@
   let screen = 0;           // bumped by every leave(): an answer that arrives after the kid moved on draws nothing
   const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
   function leave() {
-    // every question answered but the round not handed in (× at the end, the back button): it still counts
-    if (play && !play.finished && play.results.filter((x) => x != null).length === play.R.questions.length) {
+    // every question answered but the round not handed in (× at the end, the back button, Android's back): it still
+    // counts. The server grades it, and its answer is RECORDED here like the star screen's (review 2026-10-18: before,
+    // a key-only phone's proof and a teacher's round were dropped, and an account's card 2 stayed «0 de 8»). (The
+    // server's `done` list brings it back too when the page itself was closed before the answer came: worldsPage.)
+    const P = play;
+    if (P && !P.finished && P.results.filter((x) => x != null).length === P.R.questions.length) {
       try {
         fetch('/api/ruta/train/finish', { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ round: play.R.round }) }).catch(() => {});
+          body: JSON.stringify({ round: P.R.round }) })
+          .then((r) => r.json().catch(() => null)).then((d) => { if (d && d.ok) { P.finished = true; recordResult(P, d); } }).catch(() => {});
       } catch (_) { /* an old phone: the round ends unsaved */ }
     }
     screen++;
@@ -261,6 +291,7 @@
       if (location.pathname !== at || scr !== screen) return;
       if (status === 401) { location.reload(); return; }                 // the key was closed meanwhile: the key screen
       if (!d || !d.ok) { if (!quiet) failBox(main, 'No se pudieron cargar tus mundos. Revisa tu internet.', () => worldsPage(main, ctx, m)); return; }
+      if (adoptDone(m.slug, d.done, d)) ping(m.slug, '');               // a round the page never heard about
       const sig = viewSig(d, m.slug);
       if (!(quiet && shown && shown.kind === 'worlds' && shown.sig === sig)) drawWorlds(main, ctx, m, d);
       shown = { kind: 'worlds', main, ctx, m, sig, at };
@@ -356,6 +387,7 @@
       if (status === 401) { location.reload(); return; }
       if (!d || !d.ok) { if (!quiet) failBox(main, 'No se pudo cargar este mundo. Revisa tu internet.', () => worldPage(main, ctx, m, key)); return; }
       if (d.student && d.who) syncScores(m.slug, d.who);
+      if (adoptDone(m.slug, d.done, d)) ping(m.slug, '');
       const w = (d.worlds || []).find((x) => x.key === key);
       if (!w) { history.replaceState(null, '', '/audios/' + m.slug + '/entrenamiento'); worldsPage(main, ctx, m); return; }
       const mine = localBest(d, m.slug);
@@ -706,8 +738,10 @@
     P.finishing = true;
     stopVoice();
     const send = (tries) => post('/api/ruta/train/finish', { round: P.R.round }).then(({ status, d }) => {
+      // the result is recorded even when the kid already left (back during a slow «Ver mis estrellas»): only the
+      // star screen needs the round on screen
+      if (d && d.ok) { P.finished = true; recordResult(P, d); if (play === P) endCard(d); return; }
       if (play !== P) return;
-      if (d && d.ok) { P.finished = true; endCard(d); return; }
       if (status === 410 || status === 403) { P.finished = true; gone(); return; }
       if (tries < 2) { later(() => send(tries + 1), 1000 * (tries + 1)); return; }
       P.finishing = false;
@@ -715,19 +749,51 @@
     });
     send(0);
   }
+  // ── a round's result, recorded ONCE wherever the round ends (review 2026-10-18: a kid who answered all 10 and pressed
+  // back, or left while «Ver mis estrellas» was on its way on a slow Wi-Fi, lost it): its star screen, «×», the back
+  // button (leave()'s keepalive), or an answer that came after the kid moved on. A key-only phone keeps its score and
+  // proof, a teacher's device its own round, the page counts it (ctx.trained: card 2), other tabs hear it (ping), and the
+  // screen on show (the worlds, a world's start card) redraws when the kid already left the round. → { best, beat }
+  function recordResult(P, F) {
+    if (!P || !F || !F.ok) return { best: null, beat: false };
+    if (P.recorded) return P.recorded;
+    const slug = P.m.slug, key = P.w.key;
+    let best = F.best != null ? F.best : null;
+    let beat = !!F.record;
+    if (F.phone && F.proof) { const kept = keepScore(slug, key, F.pct, F.proof); best = kept.best; beat = kept.beat; }
+    // a teacher's round: kept on this device only, for THIS teacher (never sent, never a kid's score), shown like a kid's
+    if (F.teacher) { const kept = keepTeacher(slug, key, F.pct, P.v && P.v.tw); best = kept.best; beat = kept.beat; }
+    P.recorded = { best, beat };
+    if (best != null) {
+      try { if (P.ctx && P.ctx.trained) P.ctx.trained(slug, key, best, { saved: !!F.saved, phone: !!F.phone, teacher: !!F.teacher, doradoNow: !!F.doradoNow }); } catch (_) {}
+      ping(slug, key);
+      if (play !== P) refreshShown();
+    }
+    return P.recorded;
+  }
+  // a finished round the page never heard about (the phone closed the page before the answer came): the server keeps its
+  // result for that same phone or teacher for the round's hours (GET /api/ruta/train `done`), and it is kept here like a
+  // star screen's (idempotent: the best stays the best, a proof is kept once). v = the train view (or the route's module).
+  // → how many results it added (0 when this device already had them all: the caller pings other tabs only on news, so
+  // two open tabs never keep asking each other)
+  function adoptDone(slug, done, v) {
+    if (!Array.isArray(done) || !done.length || !v) return 0;
+    let n = 0;
+    const snap = () => (store.get(MKEY(slug)) || '') + '|' + (store.get(TKEY(slug)) || '');
+    const before = snap();
+    done.slice(0, 40).forEach((x) => {
+      const pct = Number(x && x.pct);
+      if (!x || typeof x.world !== 'string' || !/^[a-z0-9-]{1,40}$/.test(x.world) || !Number.isFinite(pct) || pct < 0 || pct > 100) return;
+      if (v.teacher) { keepTeacher(slug, x.world, pct, v.tw); n++; }
+      else if (!v.student && typeof x.proof === 'string') { keepScore(slug, x.world, pct, x.proof); n++; }
+    });
+    return n && snap() !== before ? n : 0;
+  }
   function endCard(F) {
     const P = play;
     const { m, v, w } = P;
-    let best = F.best;
-    let beat = !!F.record;
-    if (F.phone && F.proof) { const kept = keepScore(m.slug, w.key, F.pct, F.proof); best = kept.best; beat = kept.beat; }
-    // a teacher's round: kept on this device only (never sent, never a kid's score), shown like a kid's
-    if (F.teacher) { const kept = keepTeacher(m.slug, w.key, F.pct); best = kept.best; beat = kept.beat; }
-    // the page (card 2 of the module page counts it at once) and the other tabs learn the new best
-    if (best != null) {
-      try { if (P.ctx && P.ctx.trained) P.ctx.trained(m.slug, w.key, best, { saved: !!F.saved, phone: !!F.phone, teacher: !!F.teacher, doradoNow: !!F.doradoNow }); } catch (_) {}
-      ping(m.slug, w.key);
-    }
+    // (recorded already by finishRound; a direct call records it here)
+    const { best, beat } = recordResult(P, F);
     const need = F.need || 70;
     const stars = F.stars || 0;
     const C = window.DralingoCast;
@@ -809,7 +875,7 @@
     if (s.kind === 'worlds') worldsPage(s.main, s.ctx, s.m, true);
     else if (s.kind === 'start') worldPage(s.main, s.ctx, s.m, s.key, true);
   }
-  window.addEventListener('storage', (e) => { if (e.key && /^draly_train_/.test(e.key)) refreshShown(); });
+  window.addEventListener('storage', (e) => { if (e.key && /^draly_train_(?!sound$)/.test(e.key)) refreshShown(); });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshShown(); });
   window.addEventListener('pageshow', (e) => { if (e.persisted) refreshShown(); });
 
@@ -818,5 +884,6 @@
     leave();
     if (key) worldPage(main, ctx, m, key); else worldsPage(main, ctx, m);
   }
-  window.Entrenamiento = { render, leave, syncScores, phoneBest, teacherBest, localBest, sealRanges, starsOf, TEACHER_NOTE, _keepTeacher: keepTeacher };
+  window.Entrenamiento = { render, leave, syncScores, phoneBest, teacherBest, localBest, adoptDone, sealRanges, starsOf, TEACHER_NOTE,
+    _keepTeacher: keepTeacher, _recordResult: recordResult };
 })();

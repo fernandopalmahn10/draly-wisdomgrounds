@@ -232,7 +232,20 @@ not recorded… if I already finished it it should be green… I still keep gett
   refreshed. Now a round finished in one tab redraws the others, and coming back to a tab redraws it when anything changed.
 - **Green with a ✓**: a world at the % goal is green everywhere (its tile with «✓ Listo», the meter's coins, card 2's
   coins, the end card's «¡Mi Familia cuenta para El Simulacro Dorado! 1 de 8 mundos.»). A world played below the goal
-  shows its stars and best %. Tests: `test-ruta-training.js` (a teacher's round never stored on the server, the route
+  shows its stars and best %.
+- **The code review's follow-ups (same day):**
+  - A round that ends without its star screen still counts: a kid who answers all 10 and presses back (Android's too),
+    or leaves while «Ver mis estrellas» is on its way on a slow Wi-Fi. Its result is recorded once wherever it arrives
+    (the screen on show redraws, card 2 counts it), and when the page itself was closed first, the server hands a
+    phone's or a teacher's finished round back to that same phone or teacher for a few hours (`done` in
+    `/api/ruta/train` and the route), so it still turns green.
+  - A teacher's rounds belong to the person, not the computer: teacher B on a shared laptop never sees teacher A's
+    green worlds, and a kid logged in on a remembered teacher computer has their own place (an opaque id from the
+    server, never a code).
+  - Gold never means done: La Base's finished world tabs and card 3's passed simulations are green with a ✓ too.
+  - The folders' pictures travel under neutral addresses (`/ruta-exp/<level>/<n>.webp`), never the pack's pinyin file
+    names.
+  Tests: `test-ruta-training.js` (a teacher's round never stored on the server, the route
   counting a kid's round at once, the page's own stores checked without a browser) and `test-auto-account.js` (the round
   that makes the account counts on it).
 
@@ -385,7 +398,9 @@ nombre» (it showed a real class code and a code-shaped XYZN). In /maestro the b
 class code by itself, the link example says `/player.html?pin=…`, and the level keys' help explains the shape in words
 (no example key that could be a real one on the projector). The only example left is PANDA-12 on the key screen, which
 the server refuses as a key. `scripts/test-wording.js` now fails on any code-shaped placeholder, default or example key
-in the kids' and teachers' pages.
+in the kids' and teachers' pages, the class tools (warm-up, reading, the exam monitor) and the exam players included:
+placeholders set from code too, `??` and 3-digit PIN defaults, examples like «como 1003», keys in any case (never
+uppercase plain words, «300 palabras» or a year); it first proves itself on a few lines it must catch and must let pass.
 
 ### 2.4 Parent control
 

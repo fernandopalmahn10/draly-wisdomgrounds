@@ -394,7 +394,8 @@ body.au-is-pick .dorado, body.au-is-path .dorado { display: none !important; }
   transition: transform 140ms var(--ease-out);
 }
 .rp-sim svg { width: 14px; height: 14px; }
-.rp-sim.is-pass { color: #3d0707; background: radial-gradient(circle at 35% 30%, #f6e2a4 0%, #d4ac52 56%, #a87d26 100%); box-shadow: 0 4px 10px -6px rgba(90, 16, 16, .55); }
+/* a simulation passed: green with its ✓ (his rule 2026-10-18: gold never means done) */
+.rp-sim.is-pass { color: #fff; background: var(--green); box-shadow: 0 4px 10px -6px rgba(31, 107, 69, .7); }
 .rp-sim.is-tried { box-shadow: inset 0 0 0 2px var(--rojo); }
 .rp-sim.is-next { box-shadow: inset 0 0 0 2.5px var(--gold-edge), 0 0 0 3px rgba(232, 200, 120, .55); }
 /* a taken simulation's mistakes: a small red number on the chip's corner */

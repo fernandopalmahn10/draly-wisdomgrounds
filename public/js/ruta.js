@@ -1188,8 +1188,9 @@
   // 👀 a teacher (2026-10-18, he never saw the kids' buttons: his computer is a teacher's): each card shows the kid's
   // buttons as a calm preview that does nothing and writes nothing, with «Así lo ven tus alumnos»
   // one homework's card inside its folder (the same marks everywhere: «Escuchar», «¡Ya la mandé!», «Deshacer»)
-  function hwCardHtml(m, h, state) {
-    const pic = hwPic(h, m.slug);
+  // (pic: the folder's own picture, a neutral address from the server; else the homework's theme picture or cover)
+  function hwCardHtml(m, h, state, folderPic) {
+    const pic = folderPic || hwPic(h, m.slug);
     // (the picture and the name open the homework's own page: its lines with pinyin and Spanish, the PDF's audio codes)
     return '<li class="rp-hw is-' + state + '" data-hw="' + esc(h.id) + '">' +
       '<a class="rp-hw-open" href="/audios/' + esc(h.id) + '" data-nav>' +
@@ -1234,7 +1235,7 @@
         '<button type="button" class="dw-back rp-exp-back" data-close-exp>Volver a las experiencias</button>' +
         '<div class="rp-exp-head"><img class="rp-exp-hpic" src="' + esc(e.pic) + '" alt="" width="200" height="200" loading="lazy" decoding="async">' +
           '<div><span class="rp-exp-k">Experiencia ' + e.n + '</span><h3 class="rp-exp-t" id="rp-exp-t-' + e.n + '" tabindex="-1">' + esc(e.name) + '</h3></div></div>' +
-        '<ul class="rp-hw-list">' + e.hws.map((h) => hwCardHtml(m, h, stateOf(h))).join('') + '</ul>' +
+        '<ul class="rp-hw-list">' + e.hws.map((h) => hwCardHtml(m, h, stateOf(h), e.pic)).join('') + '</ul>' +
       '</section>').join('');
     // Aileen says what to do on each view (folders: tap yours; a folder: listen, record, send, «¡Ya la mandé!»)
     const sayHw = mine || preview ? '«¡Dale! Escuchá el audio, grabá tu video y mandáselo a tu profe por WhatsApp. Después tocá <b>¡Ya la mandé!</b>»'
@@ -1326,6 +1327,11 @@
     if (qFrom === 'homework') store.set('draly_ruta_from', 'homework');
     const fromHw = store.get('draly_ruta_from') === 'homework';
     const back = fromHw ? { href: '/homework.html', label: 'Volver a mis tareas' } : { href: '/audios', label: 'Todos los mundos', nav: true };
+    // (review 2026-10-18) a key-only phone's or a teacher's finished round whose result this device never heard (the page
+    // closed first): the server keeps it a few hours (`train.done`), kept here before card 2 counts
+    if (m.train && Array.isArray(m.train.done) && m.train.done.length && window.Entrenamiento && window.Entrenamiento.adoptDone) {
+      try { window.Entrenamiento.adoptDone(m.slug, m.train.done, ctx.ruta); } catch (_) {}
+    }
     const L = ladderOf(ctx, m);
     const hws = ctx.homeworksOf(m.slug);
     // a logged-in kid: a fresh route state teaches the mirror their account's marks once (a phone's own marks join
@@ -1442,7 +1448,7 @@
       const f = focusTo && box.querySelector(focusTo);
       if (f) { try { f.focus({ preventScroll: true }); } catch (_) {} }
       const say = document.getElementById('au-say');
-      if (say && n) { const e = exps.find((x) => x.n === n); say.textContent = ''; setTimeout(() => { say.textContent = 'Experiencia ' + n + (e ? ', ' + e.name : '') + ': ' + (e ? e.hws.length : 0) + ' tareas.'; }, 30); }
+      if (say && n) { const e = exps.find((x) => x.n === n); say.textContent = ''; setTimeout(() => { say.textContent = 'Experiencia ' + n + (e ? ', ' + e.name : '') + ': ' + (e ? e.hws.length : 0) + (e && e.hws.length === 1 ? ' tarea.' : ' tareas.'); }, 30); }
     };
     tSync.onChange = (again) => { if (again && ctx.refresh) ctx.refresh(true); else paint(); };
     // the phone hero's «Tareas: N por mandar» scrolls down here (no address change: the page's router would redraw)

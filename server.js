@@ -4953,6 +4953,7 @@ const _EXP_PIC = { familia: ['jia', 'baba'], escuela: ['xuexiao', 'laoshi'], res
   salud: ['yiyuan', 'yisheng'], china: ['feiji'], magicas: ['xiexie'], mercado: ['shangdian'], tiempo: ['tianqi'], viajes: ['feiji'], casa: ['dianshi', 'zhuozi'],
   personas: ['ren'], numeros: ['san'], espejo: ['bizi'], mascotas: ['mao', 'gou'], comida: ['mifan'] };
 const _rutaExpsCache = {};
+const _rutaExpFiles = Object.create(null);   // '<level>/<n>' → the picture's file (only what _rutaExps chose)
 function _rutaExps(lvl) {
   const l = Levels.normalize(lvl);
   if (!l) return [];
@@ -4966,7 +4967,18 @@ function _rutaExps(lvl) {
     try { files = fs.readdirSync(path.join(__dirname, 'public', 'assets', 'packs', slug, w.id)).filter((f) => /^[a-z0-9-]+\.webp$/.test(f)); } catch (_) { files = []; }
     const words = (w.rounds || []).flatMap((r) => r.words || []).map((x) => x && x.img).filter(Boolean);
     const img = (_EXP_PIC[w.id] || []).concat(words).find((x) => files.includes(x + '.webp')) || (files[0] || '').replace(/\.webp$/, '');
-    out.push({ n: m ? Number(m[1]) : i + 1, name: String(w.name || '').replace(/^EXP\s*\d+\s*·\s*/, ''), pic: img ? '/assets/packs/' + slug + '/' + w.id + '/' + img + '.webp' : null });
+    const n = m ? Number(m[1]) : i + 1;
+    // (review 2026-10-18) served under a neutral name, /ruta-exp/<level>/<n>.webp: the pack names a picture after its
+    // word's pinyin («jia.webp»), which a folder never needs to say; ?v= changes when the picture does
+    let pic = null;
+    if (img) {
+      const file = path.join(__dirname, 'public', 'assets', 'packs', slug, w.id, img + '.webp');
+      let v = '0';
+      try { const st = fs.statSync(file); v = (st.size + Math.round(st.mtimeMs)).toString(36); } catch (_) { /* listed above */ }
+      _rutaExpFiles[slug + '/' + n] = file;
+      pic = '/ruta-exp/' + slug + '/' + n + '.webp?v=' + v;
+    }
+    out.push({ n, name: String(w.name || '').replace(/^EXP\s*\d+\s*·\s*/, ''), pic });
   });
   _rutaExpsCache[l] = out;
   return out;
@@ -5400,7 +5412,9 @@ function _rutaState(req) {
     // %); a key-only phone adds its own seals and scores on the page (they never travel in this state)
     const tv = a.ok && rb ? Train.view(l.id, rec, a, null) : null;
     const train = tv ? { live, ready: tv.ready, of: tv.of,
-      worlds: tv.worlds.map((w) => ({ key: w.key, kind: w.kind, n: w.n, short: w.short, emoji: w.emoji, open: w.open, via: w.via, best: w.best })) } : null;
+      worlds: tv.worlds.map((w) => ({ key: w.key, kind: w.kind, n: w.n, short: w.short, emoji: w.emoji, open: w.open, via: w.via, best: w.best })),
+      // (review 2026-10-18) a key-only phone's or a teacher's finished rounds the page may never have heard (card 2 counts them)
+      done: rec && !teacher ? [] : Train.doneFor(l.id, _trainWho(req, null, a)) } : null;
     const listSims = a.ok && dorado && dorado.open;
     // 📖 phase 5: the golden book of each simulation (core/golden.js): once the logged-in kid took that simulation (a
     // teacher: every one), its «Libro dorado» with the latest try's mistakes, and the PDF once every one is taken AND
@@ -5434,7 +5448,8 @@ function _rutaState(req) {
       // 🏆 2026-10-18: the logged-in kid's homework marks for this level's audios («Escuchada», «¡Ya la mandé!»), from
       // their account (any phone). The homework audios are open, so a locked module carries them too.
       tareas: rec ? _tareaMarks(rec, _tareaIdsOf(l.id)) : null,
-      // 🗂️ the module's experiences, the folders of «Tus tareas» (public: the curriculum's names and pack pictures)
+      // 🗂️ the module's experiences, the folders of «Tus tareas» (public: the curriculum's names and pack pictures, served
+      // under neutral names by /ruta-exp/<level>/<n>.webp)
       exps: _rutaExps(l.id),
       progress: prog ? {
         sealed: prog.sealed, words: prog.words,
@@ -5445,8 +5460,22 @@ function _rutaState(req) {
   });
   // who: the logged-in kid's opaque id (the same as /api/ruta/seals): the route trusts a phone's seal mirror only when
   // it holds this kid's account
-  return { ok: true, teacher, superAdmin, student: !!rec, who: rec ? _sealWho(rec.code) : null, home: home ? (Levels.info(home).pack || home) : null, modules };
+  // tw: a teacher device's opaque person id (El Entrenamiento keeps a teacher's own rounds on the device under it)
+  return { ok: true, teacher, superAdmin, student: !!rec, who: rec ? _sealWho(rec.code) : null, tw: teacher ? _trainTeacherWho(req) : null,
+    home: home ? (Levels.info(home).pack || home) : null, modules };
 }
+// 🗂️ an experience folder's picture by its number (review 2026-10-18: never the pack's pinyin file name); public like
+// the packs' pictures, only a picture _rutaExps chose. /ruta-exp/<level>/<n>.webp
+app.get('/ruta-exp/:level/:file', (req, res) => {
+  const lvl = Levels.normalize(req.params.level);
+  const m = /^(\d{1,2})\.webp$/.exec(String(req.params.file || ''));
+  if (!lvl || !m) return res.status(404).end();
+  _rutaExps(lvl);
+  const file = _rutaExpFiles[(Levels.info(lvl).pack || lvl) + '/' + Number(m[1])];
+  if (!file) return res.status(404).end();
+  res.set({ 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' }).type('image/webp');
+  res.sendFile(file, { cacheControl: false }, (err) => { if (err && !res.headersSent) res.status(404).end(); });
+});
 app.get('/api/ruta-dorada', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
   LevelKeys.deviceId(req, res);   // (2026-10-18: a device the platform has seen, its dkd id: the homework mark's account step needs it)
@@ -5615,7 +5644,19 @@ function _trainWho(req, res, a, create) {
   if (create) dev = LevelKeys.deviceId(req, res);
   else { const c = SimLock.readCookie(req, LevelKeys.DEVICE_COOKIE); if (/^[a-f0-9]{24}$/.test(c)) dev = c; }
   return { code: a && a.via !== 'teacher' && a.studentCode ? a.studentCode : null, dev,
-    tid: t ? (t.teacher ? String(t.teacher.uid || t.teacher.teacherId) : '*') : null };
+    tid: t ? (t.teacher ? String(t.teacher.uid || t.teacher.teacherId) : '*') : null, tw: t ? _trainTeacherWho(req) : null };
+}
+// (review 2026-10-18) WHO plays on a teacher device, as an opaque id: the teacher (their uid, or the legacy password) AND
+// the kid logged in at /homework on that device, if any. js/entrenamiento.js keeps a teacher's own rounds on the device
+// under it (localStorage draly_train_t_<level>), so teacher B on a shared laptop never sees teacher A's green worlds, and a
+// kid logged in on a remembered teacher device never sees or writes into the teacher's. Never the teacher's code, never
+// the kid's code (an HMAC). → 'hex' | null (not a teacher)
+function _trainTeacherWho(req) {
+  const t = _teacherOf(req);
+  if (!t) return null;
+  const tid = t.teacher ? String(t.teacher.uid || t.teacher.teacherId) : '*';
+  const kid = _studentOf(req);
+  return SimLock.hmacHex('train-teacher:' + tid + '|' + (kid ? kid.code : ''), 12);
 }
 const _trainOwner = (who) => (who.tid ? 't:' + who.tid : who.code ? 's:' + who.code : 'd:' + who.dev);
 // the level's door for a training call → { lvl, a } or null (the response is written)
@@ -5641,8 +5682,12 @@ app.get('/api/ruta/train', (req, res) => {
   const rec = _trainRec(d.a);
   const v = Train.view(d.lvl, rec, d.a, _trainClaimed(d.lvl, req.query.s));
   const info = Levels.info(d.lvl);
+  // (review 2026-10-18) tw = a teacher device's opaque person id (its own rounds are kept under it); done = the finished
+  // rounds of THIS phone or teacher whose result the page may never have heard (Train.doneFor; an account needs none)
+  const tw = d.a.via === 'teacher' ? _trainTeacherWho(req) : null;
   res.json(Object.assign({ ok: true, slug: info.pack || d.lvl, name: info.name, base: info.base || null, student: !!rec, teacher: d.a.via === 'teacher',
-    who: rec ? _sealWho(rec.code) : null, live: RutaProgress.getSettings().trainingLive }, v));
+    who: rec ? _sealWho(rec.code) : null, tw, live: RutaProgress.getSettings().trainingLive }, v,
+    { done: rec ? [] : Train.doneFor(d.lvl, _trainWho(req, res, d.a)) }));
 });
 app.post('/api/ruta/train/round', (req, res) => {
   const b = req.body || {};

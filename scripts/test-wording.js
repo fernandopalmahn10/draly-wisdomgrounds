@@ -59,18 +59,62 @@ for (const rel of FILES) {
 // clue that that is one of the codes"): no class code, student code, PIN or level key as a placeholder, a default value
 // or an example, on the kids' pages AND the teachers' (/maestro may be on the projector). PANDA-12 is the key screen's
 // one example on purpose: the server refuses it as a key (core/level-keys.js EXAMPLE).
-const CODE_FILES = FILES.concat(['public/maestro.html', 'public/js/maestro.js', 'public/sets.html', 'public/packs.html']);
+// (2026-10-18 review: the class tools, the exam players and their scripts too; placeholders set from code; `??` and
+// 3-digit PIN defaults; visible examples like «como 1003»; keys in any case. Never uppercase plain words, «300
+// palabras» or a year. The rule proves itself on the lines below before it reads a page.)
+const CODE_FILES = FILES.concat([
+  'public/maestro.html', 'public/js/maestro.js', 'public/sets.html', 'public/packs.html',
+  'public/host-warmup.html', 'public/js/host-warmup.js', 'public/host-reading.html', 'public/js/host-reading.js',
+  'public/host-hsk.html', 'public/js/host-hsk.js', 'public/js/host-reconnect.js', 'public/js/auto-host.js', 'public/js/host-back.js', 'public/js/enter.js',
+  'protected/pages/yct-sim.html', 'public/js/yct-sim.js', 'protected/pages/hsk-sim.html', 'public/js/hsk-sim.js',
+]);
+// a code as it could be typed: a class code (4 digits) or a PIN (3), never a year; a student code (4-6 of its alphabet
+// A-H J-N P-Z 2-9 with a digit, or 4 such capitals), never an uppercase plain word of the pages
+const YEAR = /^(?:19|20)\d{2}$/;
+const PLAIN = new Set(['PIN', 'HSK', 'YCT', 'NAME', 'TEXT', 'DATE', 'CHAT', 'TEAM', 'MENU', 'PASS', 'SALA', 'MAPA', 'MESA', 'TAREA', 'TAREAS', 'CLAVE', 'PANDA', 'DRALY', 'NUEVA', 'NUEVO', 'BASE', 'FASE', 'META', 'EXAM', 'DUBAI', 'AUDIO', 'VIDEO']);
+const codeToken = (s) => (String(s).match(/[A-Za-z0-9]+/g) || []).some((t) => (/^\d{3,4}$/.test(t) && !YEAR.test(t)) ||
+  (/^[A-HJ-NP-Z2-9]{4,6}$/.test(t) && !PLAIN.has(t) && (/\d/.test(t) || t.length === 4)));
+const UNITS = /^\s*(?:%|palabras|preguntas|mundos|minutos|segundos|sellos|veces|años|niños|alumnos|words|questions|px)\b/i;
 const CODE_RULES = [
-  { re: /placeholder\s*=\s*\\?["'][^"']*?\b(?:\d{3,4}|[A-HJ-NP-Z2-9]{4,6})\b/, why: 'a code-shaped placeholder (a class code, student code or PIN): use words («El código de tu maestra») or neutral dots' },
-  { re: /(?:value\s*=\s*|\|\|\s*)["']\d{4}["']/, why: 'a class code as a default value' },
-  { re: /\b(?!PANDA-12\b)[A-Z]{4,}-\d{2,}\b/, why: 'a level key as an example (only PANDA-12, which the server refuses as a key)' },
+  // a placeholder: the HTML attribute, `.placeholder = …`, setAttribute('placeholder', …), or `placeholder: …`
+  { test: (l) => { const out = []; const re = /placeholder\s*(?:=\s*\\?|:\s*|['"]\s*,\s*)["'`]([^"'`]*)["'`]/g; let m; while ((m = re.exec(l))) out.push(m[1]); return out.some(codeToken); },
+    why: 'a code-shaped placeholder (a class code, student code or PIN): use words («Tu código o tu nombre») or neutral dots' },
+  // a default value: value="1001", .value = '1001', || '1001', ?? '1001', a 3-digit PIN too
+  // (a slider's or a number box's value is a setting, never a code: type="range" / "number", min / max / step)
+  { test: (l) => { if (/type\s*=\s*["'](?:range|number)["']|\b(?:min|max|step)\s*=/.test(l)) return false;
+      const re = /(?:\bvalue\s*=\s*|\|\|\s*|\?\?\s*)["'`](\d{3,4})["'`]/g; let m; while ((m = re.exec(l))) if (!YEAR.test(m[1])) return true; return false; },
+    why: 'a class code or PIN as a default value' },
+  // a visible example: «como 1003», «por ejemplo K7P2Q9», «e.g. 1001» (never «como 300 palabras»)
+  { test: (l) => { const re = /(?:\b[Cc]omo|\b[Ee]jemplo:?|\b[Ee]j\.|\bp\. ?ej\.|\be\.g\.|\b[Ee]xample:?|\bsuch as|\blike)\s*[«"'(]?\s*(?:<b[^>]*>)?\s*([A-Za-z0-9]{3,6})\b/g; let m;
+      while ((m = re.exec(l))) { const rest = l.slice(m.index + m[0].length); if (codeToken(m[1]) && !UNITS.test(rest) && !/^[-\s]?\d/.test(rest)) return true; } return false; },
+    why: 'a code as a visible example («como 1003»): say it in words' },
+  // a level key as an example, any case: DRAGON-47, DRAGON47, DRAGON 47, Dragon-47 (only PANDA-12: the server refuses it)
+  // (a dash or nothing between: «¡ÚLTIMOS 30 SEGUNDOS!» is a plain word and a number)
+  { test: (l) => /\b(?!PANDA-?12\b)[A-ZÁÉÍÓÚÑ]{4,}-?\d{2,}\b/.test(l) ||
+      /(?<![\w/.\-])(?![Pp]anda-12\b)[A-ZÁÉÍÓÚÑ]?[a-záéíóúñ]{3,}-\d{2,}(?![\w.\-])/.test(l),
+    why: 'a level key as an example (only PANDA-12, which the server refuses as a key)' },
+];
+const codeHits = (line) => CODE_RULES.filter((r) => r.test(line));
+// the rule proves itself first: what it must catch, and what it must leave alone
+const MUST_FAIL = [
+  '<input id="hw-access-code" placeholder="1001">', '<input placeholder="XYZN o tu nombre">', '<input placeholder="/player.html?pin=1234">',
+  "input.setAttribute('placeholder', '1002');", "el.placeholder = 'K7P2Q9';", "inp.value = codes[0] ?? '1001';", "const pin = saved || '123';",
+  'Escribe el código de tu clase, como 1003.', 'Una palabra y un número (por ejemplo DRAGON-47).', 'como Dragon-47', 'la clave DRAGON47', '<input value="1002">',
+];
+const MUST_PASS = [
+  'Es una palabra y un número, como <b translate="no">PANDA-12</b> (con o sin guion).', 'como PANDA-12', '300 palabras con audio', 'como 300 palabras',
+  'Simulacros de 2026', '<input placeholder="PIN de la sala">', '<input placeholder="Tu código o tu nombre">', '<input placeholder="••••">',
+  'HOLA MUNDO · PANDA · DUBAI', '¡ÚLTIMOS 30 SEGUNDOS!', '<input type="range" id="duration-slider" min="60" max="600" step="30" value="180">', '<link rel="preload" href="/assets/fonts/study/noto-sans-800.woff2">', 'como el día del examen', 'value="2026"',
+  '<input placeholder="New class name (e.g. HSK1 Saturday AM)">', 'Lesson 1 · Week 1',
 ];
 let codeFails = 0;
+MUST_FAIL.forEach((l) => { if (!codeHits(l).length) { codeFails++; console.log('FAIL the code rule misses: ' + l); } });
+MUST_PASS.forEach((l) => { const h = codeHits(l); if (h.length) { codeFails++; console.log('FAIL the code rule wrongly flags: ' + l + ' · ' + h[0].why); } });
 for (const rel of [...new Set(CODE_FILES)]) {
   const file = path.join(ROOT, rel);
-  if (!fs.existsSync(file)) continue;
+  if (!fs.existsSync(file)) { if (CODE_FILES.indexOf(rel) >= FILES.length) { codeFails++; console.log('FAIL a page the code rule must read is missing: ' + rel); } continue; }
   strip(fs.readFileSync(file, 'utf8')).split('\n').forEach((line, i) => {
-    for (const r of CODE_RULES) if (r.re.test(line)) { codeFails++; console.log(`FAIL ${rel}:${i + 1} · ${r.why}\n     ${line.trim().slice(0, 140)}`); }
+    for (const r of codeHits(line)) { codeFails++; console.log(`FAIL ${rel}:${i + 1} · ${r.why}\n     ${line.trim().slice(0, 140)}`); }
   });
 }
 fails += codeFails;

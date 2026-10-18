@@ -325,10 +325,11 @@ body.au-has-topback .au-main > .au-back { display: none; }
 }
 .bs-tab:active { transform: scale(.94); }
 .bs-tab.is-here { background: var(--rojo); color: var(--oro-claro); }
-.bs-tab.is-done:not(.is-here) { background: var(--oro-palido); color: var(--rojo); }
+/* a world whose every word is sealed: green with its ✓ (his rule 2026-10-18: gold never means done) */
+.bs-tab.is-done:not(.is-here) { background: #eef6f0; color: #1f6b45; box-shadow: inset 0 0 0 1.5px #1f6b45; }
 .bs-tab.is-done::after {
   content: ''; position: absolute; right: -3px; top: -4px; width: 15px; height: 15px; border-radius: 50%; box-shadow: 0 0 0 2px var(--crema);
-  background: var(--oro) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2.4 5.2l1.7 1.7 3.6-3.8' fill='none' stroke='%235a1010' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
+  background: #1f6b45 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2.4 5.2l1.7 1.7 3.6-3.8' fill='none' stroke='%23ffffff' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 100% no-repeat;
 }
 .bs-tab-name { display: none; }
 .bs-count {

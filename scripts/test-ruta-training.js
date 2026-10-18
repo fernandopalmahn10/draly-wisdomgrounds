@@ -339,15 +339,52 @@ function pageStores() {
   const EP = sb.Entrenamiento;
   ok(EP && typeof EP.localBest === 'function' && typeof EP.teacherBest === 'function', 'the page exposes each visitor\'s own scores (localBest, teacherBest)');
   if (!EP) return Promise.resolve();
-  EP._keepTeacher('yct1', 'familia', 80);
-  EP._keepTeacher('yct1', 'familia', 50);
-  ok(EP.teacherBest('yct1').familia === 80 && JSON.parse(mem.draly_train_t_yct1).best.familia === 80, 'a teacher\'s round is kept on this device (draly_train_t_<level>), its best stays the best (80, not a later 50)');
+  // (review 2026-10-18) the teacher store belongs to the PERSON on the device (the server's opaque `tw`), never the device
+  const TA = 'aaaaaaaaaaaa', TB = 'bbbbbbbbbbbb', TK = 'cccccccccccc';   // teacher A, teacher B, a kid logged in on A's device
+  mem.draly_train_t_yct1 = JSON.stringify({ v: 1, best: { familia: 100 } });                 // a first-version store: nobody's
+  ok(EP.teacherBest('yct1', TA).familia === undefined, 'a first-version teacher store (no person on it) is never shown');
+  EP._keepTeacher('yct1', 'familia', 80, TA);
+  EP._keepTeacher('yct1', 'familia', 50, TA);
+  ok(EP.teacherBest('yct1', TA).familia === 80 && JSON.parse(mem.draly_train_t_yct1).by[TA].best.familia === 80,
+    'a teacher\'s round is kept on this device for that teacher (draly_train_t_<level>), its best stays the best (80, not a later 50)');
   ok(!/proof/i.test(mem.draly_train_t_yct1), '… with no proof: nothing that could join an account');
-  ok(EP.localBest({ teacher: true }, 'yct1').familia === 80, 'a teacher sees their own rounds');
+  ok(EP.localBest({ teacher: true, tw: TA }, 'yct1').familia === 80, 'teacher A sees their own rounds');
+  ok(EP.localBest({ teacher: true, tw: TB }, 'yct1').familia === undefined, 'teacher B on the same laptop never sees teacher A\'s green worlds');
+  EP._keepTeacher('yct1', 'espejo', 90, TK);
+  ok(EP.teacherBest('yct1', TK).espejo === 90 && EP.teacherBest('yct1', TK).familia === undefined && EP.teacherBest('yct1', TA).espejo === undefined,
+    'a kid logged in on a remembered teacher device has their own place: they never see, nor write into, the teacher\'s');
+  ok(EP.localBest({ teacher: true }, 'yct1').familia === undefined && EP._keepTeacher('yct1', 'familia', 70).best === 70 && EP.teacherBest('yct1', TA).familia === 80,
+    'no person id from the server: nothing shown, nothing kept');
   ok(EP.localBest({ student: true }, 'yct1').familia === undefined && EP.localBest({ student: false, teacher: false }, 'yct1').familia === undefined,
     'a kid (an account) or a key-only phone on the same computer never sees the teacher\'s rounds');
   mem.draly_train_yct1 = JSON.stringify({ v: 1, best: { espejo: 75 }, proofs: { espejo: 'phone-proof-1' }, held: {} });
-  ok(EP.localBest({}, 'yct1').espejo === 75 && EP.localBest({ teacher: true }, 'yct1').espejo === undefined, 'a key-only phone sees its own scores; a teacher\'s view never mixes them in');
+  ok(EP.localBest({}, 'yct1').espejo === 75 && EP.localBest({ teacher: true, tw: TA }, 'yct1').espejo === undefined, 'a key-only phone sees its own scores; a teacher\'s view never mixes them in');
+  // (review 2026-10-18) a round that ends without its star screen still counts: the result is recorded once, wherever it comes
+  const calls = [];
+  const P = { m: { slug: 'yct1' }, w: { key: 'mascotas' }, v: { student: false, teacher: false }, ctx: { trained: (...a) => calls.push(a) } };
+  const F = { ok: true, phone: true, pct: 80, proof: 'phone-proof-2', right: 8, total: 10 };
+  const r1 = EP._recordResult(P, F), r2 = EP._recordResult(P, F);
+  const mirror = JSON.parse(mem.draly_train_yct1);
+  ok(r1.best === 80 && r2 === r1 && mirror.best.mascotas === 80 && mirror.proofs.mascotas === 'phone-proof-2' && calls.length === 1 && /mascotas/.test(mem.draly_train_ping || ''),
+    'a round left by «back» (no star screen on show): its score and proof are kept once, the page counts it once (ctx.trained), other tabs hear it');
+  const PT = { m: { slug: 'yct1' }, w: { key: 'comida' }, v: { teacher: true, tw: TA }, ctx: {} };
+  ok(EP._recordResult(PT, { ok: true, teacher: true, pct: 70 }).best === 70 && EP.teacherBest('yct1', TA).comida === 70, '… a teacher\'s too, for that teacher');
+  ok(EP._recordResult({ m: { slug: 'yct1' }, w: { key: 'numeros' }, v: {}, ctx: {} }, { ok: false, status: 410 }).best === null, '… a round that is gone records nothing');
+  // the server's `done` list (a result the page never heard: the phone closed first) is kept like a star screen's
+  ok(EP.adoptDone('yct1', [{ world: 'escuela', pct: 90, proof: 'phone-proof-3' }, { world: '../x', pct: 99 }], { student: false, teacher: false }) === 1 &&
+    JSON.parse(mem.draly_train_yct1).proofs.escuela === 'phone-proof-3', 'a phone takes back a finished round\'s score and proof from the server (a bad entry ignored)');
+  ok(EP.adoptDone('yct1', [{ world: 'numeros', pct: 75 }], { teacher: true, tw: TB }) === 1 && EP.teacherBest('yct1', TB).numeros === 75 && EP.teacherBest('yct1', TA).numeros === undefined,
+    '… a teacher too, under that teacher');
+  ok(EP.adoptDone('yct1', [{ world: 'numeros', pct: 75, proof: 'x' }], { student: true }) === 0, '… an account takes nothing (the server kept its best)');
+  ok(EP.adoptDone('yct1', [{ world: 'escuela', pct: 90, proof: 'phone-proof-3' }], { student: false, teacher: false }) === 0 &&
+    EP.adoptDone('yct1', [{ world: 'numeros', pct: 75 }], { teacher: true, tw: TB }) === 0,
+    '… and the same list again is no news (two open tabs never keep asking each other)');
+  const src = fs.readFileSync(path.join(ROOT, 'public', 'js', 'entrenamiento.js'), 'utf8');
+  ok(/recordResult\(P, d\); if \(play === P\) endCard\(d\)/.test(src) && /keepalive[\s\S]{0,400}\.then\(\(d\) => \{ if \(d && d\.ok\) \{ P\.finished = true; recordResult\(P, d\)/.test(src),
+    'the page records a round\'s result even when the kid left: «Ver mis estrellas» answered late, and the back button\'s keepalive');
+  const au = fs.readFileSync(path.join(ROOT, 'public', 'js', 'audios.js'), 'utf8');
+  ok(/draly_train_\(\?!sound\$\)/.test(src) && /draly_train_\(\?!sound\$\)/.test(au) && !/\^draly_train_\/\.test/.test(src + au), 'a mute tap (draly_train_sound) never makes other tabs ask again');
+  mem.draly_train_yct1 = JSON.stringify({ v: 1, best: { espejo: 75 }, proofs: { espejo: 'phone-proof-1' }, held: {} });
   return EP.syncScores('yct1', 'w1').then(() => {
     const sc = sent.filter((x) => /\/api\/ruta\/train\/scores$/.test(x.url));
     ok(sc.length === 1 && JSON.stringify(sc[0].body.proofs) === '["phone-proof-1"]', 'a login sends the phone\'s own proofs only: the teacher\'s rounds never travel');
@@ -606,6 +643,24 @@ async function server() {
     '… no teacher score on the server, and none on a kid\'s account');
   ok((await post('/api/ruta/train/scores', { level: 'yct1', who: null, proofs: ['t-not-a-proof'] }, teacher(SEED))).status === 403, '… a teacher has no account to hand scores to');
 
+  section('who plays on a teacher device, and the rounds a page never heard (review 2026-10-18)');
+  const tvA = (await train(teacher(SEED), 'yct1')).json;
+  ok(/^[a-f0-9]{12}$/.test(tvA.tw || '') && !String(tvA.tw).includes(SEED), 'a teacher device gets an opaque person id (tw), never its code');
+  const made = (await post('/api/admin/teachers', { displayName: 'Profe B', levels: ['yct1'] }, teacher(SEED))).json;
+  const codeB = made && made.teacher && made.teacher.teacherId;
+  const tvB = codeB ? (await train(teacher(codeB), 'yct1')).json : {};
+  ok(codeB && tvB.teacher && /^[a-f0-9]{12}$/.test(tvB.tw || '') && tvB.tw !== tvA.tw, 'teacher B on the same laptop: another id (never teacher A\'s green worlds)');
+  const onTeacherDevice = { jar: Object.assign({}, A1.jar), headers: Object.assign({}, A1.headers, T(SEED)) };   // kid A logged in on A's teacher device
+  const tvK = (await train(onTeacherDevice, 'yct1')).json;
+  ok(tvK.teacher && /^[a-f0-9]{12}$/.test(tvK.tw || '') && tvK.tw !== tvA.tw, '… a kid logged in at /homework on a teacher device: their own id, never the teacher\'s');
+  const stA = await ruta(teacher(SEED));
+  ok(stA.tw === tvA.tw && !(await ruta(as(A1))).tw, 'the route state carries the same id for the teacher (card 2 reads the same rounds), none for a kid');
+  ok(Array.isArray(tvA.done) && tvA.done.some((x) => x.world === w3 && x.pct === 80 && !x.proof),
+    'teacher A: the round finished above comes back in `done` (a page closed before its answer still counts it)');
+  ok(!(tvB.done || []).some((x) => x.world === w3) && !(tvK.done || []).some((x) => x.world === w3), '… never to teacher B, nor to a kid on that device');
+  const mA0 = mod(stA, 'yct1');
+  ok(mA0.train && Array.isArray(mA0.train.done) && mA0.train.done.some((x) => x.world === w3), '… and the route (card 2) gets it too');
+
   section('a key-only phone practises; its scores join the account at the first login');
   const P1 = phone();
   const kidP = await enter(P1, '1003', 'Entrena P ' + stamp36);
@@ -614,6 +669,13 @@ async function server() {
   ok((await post('/api/level-key', { level: 'yct1', key: KEYS.yct1 }, as(P1))).json.ok, 'their phone types the key, nobody logged in');
   p = await play(P1, 'yct1', 'familia', 8, '1-17');
   ok(p.fin.ok && p.fin.phone && !p.fin.saved && typeof p.fin.proof === 'string' && p.fin.pct === 80, 'they play world 1 (their phone\'s seals): 80 %, kept on the phone with a proof');
+  // (review 2026-10-18) the phone closed the page before the answer came: the server gives it back to THAT phone only
+  const dn = (await train(P1, 'yct1', '1-17')).json.done || [];
+  ok(dn.some((x) => x.world === 'familia' && x.pct === 80 && x.proof === p.fin.proof), '… the server hands that finished round back to the same phone (`done`, with its proof)');
+  const otherPhone = phone();
+  await post('/api/level-key', { level: 'yct1', key: KEYS.yct1 }, as(otherPhone));
+  ok(!((await train(otherPhone, 'yct1', '1-17')).json.done || []).length, '… never to another phone');
+  ok((mod(await ruta(as(P1)), 'yct1').train.done || []).some((x) => x.proof === p.fin.proof), '… the route (card 2) gets it too');
   ok((await post('/api/ruta/train/scores', { level: 'yct1', who: null, proofs: [p.fin.proof] }, as(P1))).status === 403, 'nobody logged in: nothing joins an account');
   ok((await enter(P1, '1003', null, kidP.studentCode)).levelOpen === true, 'kid P logs in on that phone (the key joins the account)');
   const whoP = (await train(P1, 'yct1')).json.who;

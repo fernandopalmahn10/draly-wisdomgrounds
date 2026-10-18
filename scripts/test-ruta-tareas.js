@@ -284,10 +284,19 @@ async function run() {
     const ex = exOf(id);
     ok(ex.length === n && ex.every((e, i) => e.n === i + 1 && e.name && !/^EXP/i.test(e.name) && !/Pinyin|Simulacro/.test(e.name)),
       `${id}: ${ex.length} experiences, numbered 1-${n}, the curriculum's names (never «EXP3 ·», Pinyin básico or the Simulacro)`);
-    const bad = ex.filter((e) => !e.pic || !/^\/assets\/packs\/[a-z0-9]+\/[a-z0-9-]+\/[a-z0-9-]+\.webp$/.test(e.pic) || !fs.existsSync(path.join(ROOT, 'public', e.pic)));
-    ok(!bad.length, `${id}: each experience has one of its own pack pictures on disk (${bad.map((e) => e.n).join(', ') || 'all there'})`);
+    // (review 2026-10-18) by a neutral address, never the pack's pinyin file name
+    const bad = [];
+    for (const e of ex) {
+      const r = e.pic && /^\/ruta-exp\/[a-z0-9]+\/\d{1,2}\.webp\?v=[a-z0-9]+$/.test(e.pic) ? await get(e.pic) : null;
+      if (!r || r.status !== 200 || !/image\/webp/.test(r.headers['content-type'] || '') || r.text.length < 500) bad.push(e.n);
+    }
+    ok(!bad.length, `${id}: each experience shows one of its own pack pictures, by a neutral address (${bad.join(', ') || 'all there'})`);
   }
-  ok(exOf('hsk2')[2].name === 'El Restaurante Chino' && exOf('hsk2')[3].pic.indexOf('/newhsk1/tienda/') > 0, 'New HSK 1: Experiencia 3 is «El Restaurante Chino», 4 shows its clothes shop');
+  const shop = await get(exOf('hsk2')[3].pic.split('?')[0]);
+  ok(exOf('hsk2')[2].name === 'El Restaurante Chino' && shop.text === fs.readFileSync(path.join(ROOT, 'public', 'assets', 'packs', 'newhsk1', 'tienda', 'yifu.webp'), 'utf8'),
+    'New HSK 1: Experiencia 3 is «El Restaurante Chino», 4 shows its clothes shop');
+  ok((await get('/ruta-exp/newhsk1/9.webp')).status === 404 && (await get('/ruta-exp/zz9/1.webp')).status === 404 && (await get('/ruta-exp/newhsk1/..%2Fx.webp')).status === 404,
+    '… and nothing else by that address (an experience that does not exist, a level that does not exist, a path)');
   const noFolder = CAT.homeworks.filter((h) => { const lv = ({ newhsk1: 'hsk2', hsk1: 'hsk1', yct1: 'yct1' })[h.level]; return !exOf(lv).some((e) => e.n === h.exp); });
   ok(!noFolder.length, 'every homework audio of the catalog has its experience folder (' + (noFolder.map((h) => h.id).join(', ') || 'all') + ')');
   ok(!JSON.stringify(st0.modules.map((m) => m.exps)).match(/[㐀-鿿]/), 'the folders carry no hanzi');

@@ -480,6 +480,7 @@ function startRound(level, key, who, a, rec, claimed, ip) {
   }
   const r = {
     id: crypto.randomBytes(15).toString('base64url'), level: lvl, world: W.key, rk: recKey(W), kind: W.kind, owner, ip: addr, teacher: !!who.tid, at: now,
+    tw: who.tid ? (who.tw || null) : null,   // (a teacher device: who plays on it, server.js _trainTeacherWho)
     qs: picked.map((q) => Object.assign({ text: q.text, image: q.image && q.image !== 'none' ? q.image : null, answers: q.fixed ? q.answers.slice() : shuffle(q.answers),
       correct: q.correct, kind: q.kind, plan: voicePlan(q) },
     // a drill's own parts (✓ / ✕ keeps «Sí» before «No»)
@@ -660,6 +661,25 @@ function picture(id, i, who, k) {
   if (!inside || !fs.existsSync(abs)) return fail(404, 'no picture');
   return { ok: true, file: abs };
 }
+// The finished rounds of THIS phone or teacher in a level, for a page that never heard their result (review 2026-10-18:
+// the phone closed the page, or the kid left before «Ver mis estrellas» answered): a key-only phone gets its score with
+// its proof again (bound to that phone: nothing new), a teacher's device its %. An account needs none (the server kept
+// its best at the finish). Only the same owner (and, on a teacher device, the same person), only while the round lives
+// (3 h, or until a new round of that world). → [{ world, pct, proof? }]
+function doneFor(level, who) {
+  const lvl = Levels.normalize(level);
+  if (!lvl || !who || who.code || (!who.tid && !who.dev)) return [];
+  const owner = ownerOf(who);
+  const out = [];
+  const now = Date.now();
+  for (const r of rounds.values()) {
+    if (r.level !== lvl || r.owner !== owner || !r.done || !r.done.ok || now - r.at > ROUND_TTL) continue;
+    if (who.tid && (r.tw || null) !== (who.tw || null)) continue;
+    if (r.done.phone && r.done.proof) out.push({ world: r.world, pct: r.done.pct, proof: r.done.proof });
+    else if (r.done.teacher) out.push({ world: r.world, pct: r.done.pct });
+  }
+  return out.slice(-30);
+}
 // the level a round is of (server.js asks LevelKeys.access for it before anything else), or null
 function roundLevel(id) {
   const r = typeof id === 'string' ? rounds.get(id) : null;
@@ -679,7 +699,7 @@ function bestOf(rec, level) {
 module.exports = {
   ROUND_SIZE, EXTRA,
   configure, worldsOf, view, worldIn, recKey,
-  startRound, answer, finish, voice, picture, mergeProofs, bestOf, starsOf, roundLevel,
+  startRound, answer, finish, voice, picture, mergeProofs, bestOf, starsOf, roundLevel, doneFor,
   // tests
   _voicePlan: voicePlan, _isPinyin: isPinyin, _speechText: speechText, _speechFor: speechFor, _rounds: rounds, _poolOf: poolOf, _drills: Drills,
 };
