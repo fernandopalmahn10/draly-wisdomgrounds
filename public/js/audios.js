@@ -175,7 +175,7 @@
     const tm = location.pathname.match(/^\/audios?\/([a-z0-9-]+)\/entrenamiento/i);
     const mod = tm && ruta.modules.find((x) => x.slug === tm[1].toLowerCase() || x.id === tm[1].toLowerCase());
     if (!mod || !mod.open) return;
-    window.DralyAuto.ensure(mod.slug, 'train').then((r) => {
+    window.DralyAuto.ensure(mod.slug, 'train', null, { afterRound: true }).then((r) => {
       if (!r) return;
       reloadState();
       if (r.account && (r.created || r.resumed)) window.DralyAuto.welcome(r.account, { afterRound: true });

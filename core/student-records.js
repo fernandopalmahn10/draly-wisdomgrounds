@@ -177,6 +177,14 @@ function loadArchive() {
   const n = Object.keys(archive).length;
   if (n) console.log('[students]', n, 'accounts in the archive');
 }
+// an automatic account (2026-10-18) with no class code and nothing done on it: no seals or practice, no homework mark,
+// no exam try, no homework round, no sentence, no points
+function emptyAuto(rec) {
+  if (!rec || !rec.auto || rec.classroomCode) return false;
+  const has = (v) => (Array.isArray(v) ? v.length > 0 : !!(v && typeof v === 'object' && Object.keys(v).length));
+  return !has(rec.ruta) && !has(rec.tareas) && !has(rec.hskResults) && !has(rec.assignmentSubmissions) &&
+    !has(rec.sentencesBuilt) && !has(rec.testResults) && !(Number(rec.xp) > 0);
+}
 function lastActive(rec) {
   return Math.max(Number(rec && rec.lastSeen) || 0, Number(rec && rec.firstSeen) || 0, Number(rec && rec.restoredAt) || 0);
 }
@@ -192,7 +200,7 @@ function restoreArchived(code) {
   records[code] = rec;
   archiveDirty = true;
   scheduleSave();
-  console.log('[students] restored', code, 'from the archive');
+  console.log('[students] an account came back from the archive');   // (2026-10-18: never a student code in the log)
   return rec;
 }
 // Move every account with no activity for `days` days into the archive. Order on disk: the archive (with them) first,
@@ -204,9 +212,19 @@ function archiveInactive(days, now) {
   // a restore waiting for its save (≤ 1 s) must reach the live file before the archive is rewritten without it
   if ((saveTimer || archiveDirty) && !persistNow()) return { moved: 0, archived: Object.keys(archive).length, error: 'live file not written' };
   const cutoff = now - days * 86400e3;
-  const moving = Object.keys(records).filter((c) => lastActive(records[c]) < cutoff);
-  if (!moving.length) return { moved: 0, archived: Object.keys(archive).length };
+  let moving = Object.keys(records).filter((c) => lastActive(records[c]) < cutoff);
+  // (security review L4, 2026-10-18) an automatic account nobody ever used (no class code, no progress at all) is not a
+  // kid's account: it is removed, never archived, so strangers' empty accounts don't pile up. Everything else rests in
+  // the archive as always.
+  const empty = moving.filter((c) => emptyAuto(records[c]));
+  if (empty.length) {
+    empty.forEach((c) => { delete records[c]; });
+    if (persistNow()) console.log('[students] removed', empty.length, 'automatic accounts never used');
+    moving = moving.filter((c) => !empty.includes(c));
+  }
+  if (!moving.length) return { moved: 0, archived: Object.keys(archive).length, removed: empty.length };
   const out = moveToArchive(moving);
+  if (empty.length) out.removed = empty.length;
   if (out.moved) console.log('[students] archived', out.moved, 'accounts inactive', days, 'days ·', out.archived, 'in the archive');
   return out;
 }
@@ -264,14 +282,41 @@ function peek(code) {
 //   autoStep        what made it ('key' | 'seal' | 'train' | 'tarea')
 //   autoName: true  its name is the friendly placeholder (never «Anon»), until the family types the kid's name
 // No class code (a class code login at /homework claims it, see server.js). → the record
+// (security review 2026-10-18: six characters with a digit, generateCode(6, true): an unclaimed automatic account has no
+// class code to bind it, so its code alone must not be guessable)
 function createAuto(name, level, step) {
-  const rec = getOrCreate(null, name);
+  const code = generateCode(6, true);
+  const rec = { code, displayName: String(name || '').slice(0, 24), avatar: null, classroomCode: null, classroomId: null,
+    firstSeen: Date.now(), lastSeen: Date.now(), sentencesBuilt: [] };   // (the shape of getOrCreate's new record)
+  records[code] = rec;
   rec.auto = true;
   rec.autoStep = String(step || '').slice(0, 8);
   rec.autoName = true;
   if (level) setLevel(rec.code, level);
   scheduleSave();
   return rec;
+}
+// «Pasar mi progreso a esta cuenta» (security review L3, 2026-10-18): the automatic account's exam tries and homework
+// rounds MOVE into the kid's real account (an exam taken in a room never disappears from it); each try keeps its moment
+// and says where it came from (migratedFrom, like migrateHskAttempt). → { tries, homework } moved
+function moveResults(fromCode, toCode) {
+  const from = get(fromCode), to = get(toCode);
+  if (!from || !to || from.code === to.code) return { tries: 0, homework: 0 };
+  const out = { tries: 0, homework: 0 };
+  const now = Date.now();
+  if (Array.isArray(from.hskResults) && from.hskResults.length) {
+    if (!Array.isArray(to.hskResults)) to.hskResults = [];
+    from.hskResults.forEach((t) => { if (t && typeof t === 'object') { to.hskResults.push(Object.assign({}, t, { migratedFrom: from.code, migratedAt: now })); out.tries++; } });
+    from.hskResults = [];
+  }
+  if (Array.isArray(from.assignmentSubmissions) && from.assignmentSubmissions.length) {
+    if (!Array.isArray(to.assignmentSubmissions)) to.assignmentSubmissions = [];
+    from.assignmentSubmissions.forEach((s) => { if (s && typeof s === 'object') { to.assignmentSubmissions.push(s); out.homework++; } });
+    to.assignmentSubmissions.sort((a, b) => (Number(a.ts) || 0) - (Number(b.ts) || 0));
+    from.assignmentSubmissions = [];
+  }
+  if (out.tries || out.homework) scheduleSave();
+  return out;
 }
 // the kid's real name typed on La Ruta Dorada (or at /homework): the placeholder is gone for good
 function setRealName(code, displayName) {
@@ -297,25 +342,28 @@ function scheduleSave() {
 
 // Generate a fresh unique 4-character code. ~30M possibilities, collision
 // is astronomically rare but we check anyway.
-function generateCode() {
+// 2026-10-18 (security review): `len` 6 + `digit` for the automatic accounts (server.js): six characters of the same
+// alphabet with at least one digit (~880 million codes, and never mistaken for a typed name at /homework).
+function generateCode(len, digit) {
+  const n = len || 4;
+  const pick = () => ALPHABET[require('crypto').randomInt(ALPHABET.length)];
   for (let attempt = 0; attempt < 20; attempt++) {
     let code = '';
-    for (let i = 0; i < 4; i++) {
-      code += ALPHABET[require('crypto').randomInt(ALPHABET.length)];
-    }
+    for (let i = 0; i < n; i++) code += pick();
+    if (digit && !/[2-9]/.test(code)) continue;
     if (!records[code] && !archive[code]) return code;   // an archived kid keeps their code
   }
-  // Fallback to 5 chars on the cosmically-unlikely path
+  // Fallback to one more character on the cosmically-unlikely path
   let code = '';
-  for (let i = 0; i < 5; i++) code += ALPHABET[require('crypto').randomInt(ALPHABET.length)];
-  return code;
+  for (let i = 0; i < n + 1; i++) code += pick();
+  return digit && !/[2-9]/.test(code) ? code.slice(0, -1) + '7' : code;
 }
 
-// Sanitize an incoming code (uppercase, alphanumeric only, 4 chars).
+// Sanitize an incoming code (uppercase, alphanumeric only, 4-5 chars; 6 since 2026-10-18: the automatic accounts).
 function normalizeCode(code) {
   if (!code || typeof code !== 'string') return null;
   const cleaned = code.toUpperCase().replace(/[^A-Z2-9]/g, '');
-  if (cleaned.length < 4 || cleaned.length > 5) return null;
+  if (cleaned.length < 4 || cleaned.length > 6) return null;
   return cleaned;
 }
 
@@ -354,7 +402,9 @@ function getOrProvisionForPin(typedCode, displayName, classroomCode) {
         rec.displayName = clean;
       }
     }
-    if (classroomCode && !rec.classroomCode) rec.classroomCode = String(classroomCode).trim().toUpperCase();
+    // (2026-10-18: an UNCLAIMED automatic account is never tagged by a PIN join: only the phone holding it, at
+    // /homework, claims it with a class code; its results still land on it)
+    if (classroomCode && !rec.classroomCode && !rec.auto) rec.classroomCode = String(classroomCode).trim().toUpperCase();
     rec.lastSeen = Date.now();
     scheduleSave();
     return rec;
@@ -1040,6 +1090,7 @@ function listAll() {
       tz: r.tz || null,
       // 🆕 2026-10-18: an account La Ruta Dorada made by itself, not claimed by a class code yet (the roster's «automática»)
       auto: !!(r.auto && !r.classroomCode),
+      autoBorn: !!r.auto,                                   // (its origin: never «from before the keys», server.js _levelState)
       firstSeen: r.firstSeen || 0,
       lastSeen: r.lastSeen || 0,
       sentenceCount:   Array.isArray(r.sentencesBuilt)         ? r.sentencesBuilt.length         : 0,
@@ -1209,6 +1260,7 @@ module.exports = {
   archiveInactive,
   archiveStats,
   archiveOne,
+  moveResults,
   peek,
   createAuto,
   setRealName,

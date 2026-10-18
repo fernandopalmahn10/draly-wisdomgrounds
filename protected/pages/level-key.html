@@ -184,7 +184,9 @@
       return fetch('/api/level-access/session', { method: 'POST', headers: h, body: JSON.stringify(body || {}), credentials: 'same-origin' })
         .then(function (r) { return r.json(); }).catch(function () { return null; });
     }
-    var ac = ls('dralyHwAccessCode'), sc = ls('dralyStudentCode');
+    // (2026-10-18, security review M2: after «Salir» at /homework, dralyHwOut, the saved kid is never logged in again by
+    // itself here: a brother or sister typing the key opens the level on this phone, never on that kid's account)
+    var ac = ls('dralyHwOut') === '1' ? '' : ls('dralyHwAccessCode'), sc = ls('dralyStudentCode');
     var teacher = ls('dralyMaestroPw') || ls('mochi.maestroPw');
     var ready = function () {
       root.classList.remove('is-checking');

@@ -50,26 +50,65 @@
   }
 
   // ── a first real step ─────────────────────────────────────────────
-  const tries = {};
-  function ensure(level, step, id) {
-    const k = step + ':' + level;
-    if (tries[k]) return tries[k];
-    // 1) a phone that remembers a /homework login (the class code + the kid's code): that kid, again (the key screen does
-    //    the same): their step lands on their real account, never on a new one
+  // (security review M2, 2026-10-18) After «Salir» at /homework (localStorage dralyHwOut, cleared by the next «Entrar»)
+  // the kid saved on this phone is never logged in again by itself, and this phone's PARKED automatic account is never
+  // resumed by itself: the server answers why: 'parked' and the page asks «¿Eres tú?» (askParked). «Sí, soy yo» resumes it
+  // (POST /api/ruta/auto/resume); «No, soy otro alumno» keeps this step on the phone only, and the next step asks for a
+  // new account for this kid (`fresh`, sessionStorage draly_auto_notme). One account per page once found.
+  const S = { result: null, busy: null, refused: {}, asked: false };
+  const NOTME = 'draly_auto_notme';
+  const ss = {
+    get(k) { try { return sessionStorage.getItem(k) || ''; } catch (_) { return ''; } },
+    set(k, v) { try { if (v) sessionStorage.setItem(k, v); else sessionStorage.removeItem(k); } catch (_) {} },
+  };
+  // opts.afterRound: an El Entrenamiento round is starting: a «¿Eres tú?» waits until it is over
+  function ensure(level, step, id, opts) {
+    if (S.result) return Promise.resolve(S.result);
+    if (S.busy) return S.busy;
+    if (S.refused[step + ':' + level]) return Promise.resolve(null);   // (no key here, a teacher… : not again on this page)
+    S.busy = firstStep(level, step, id, opts || {}).then((r) => {
+      S.busy = null;
+      if (r && (r.account || r.relogged)) S.result = r;
+      return r;
+    }, () => { S.busy = null; return null; });
+    return S.busy;
+  }
+  function firstStep(level, step, id, opts) {
+    // 1) a phone that remembers a /homework login (the class code + the kid's code), unless that kid tapped «Salir»: that
+    //    kid, again (the key screen does the same): their step lands on their real account, never on a new one
     const ac = ls.get('dralyHwAccessCode'), sc = ls.get('dralyStudentCode');
-    const relog = ac && sc && sc !== readMine().code
+    const relog = ls.get('dralyHwOut') !== '1' && ac && sc && sc !== readMine().code
       ? post('/api/level-access/session', { accessCode: ac, studentCode: sc }).then(({ d }) => (d && d.ok && d.kind === 'student' ? { relogged: true, account: null } : null))
       : Promise.resolve(null);
-    tries[k] = relog.then((r) => {
+    return relog.then((r) => {
       if (r) return r;
       // 2) the automatic account (the server says no to a teacher, a page from elsewhere, too many at once)
-      return post('/api/ruta/auto', { level, step, id: id || undefined }).then(({ d }) => {
-        if (!d || !d.ok || !d.account) return null;
+      const fresh = !!ss.get(NOTME);
+      return post('/api/ruta/auto', { level, step, id: id || undefined, fresh: fresh || undefined }).then(({ d }) => {
+        if (d && d.ok === false && d.why === 'parked' && d.account) return parked(d.account, opts);
+        if (!d || !d.ok || !d.account) {
+          if (d && d.why && d.why !== 'rate') S.refused[step + ':' + level] = true;
+          return null;
+        }
+        if (d.created) ss.set(NOTME, '');
         remember(d.account);
         return { account: d.account, created: !!d.created, resumed: !!d.resumed };
       });
-    }).catch(() => null);
-    return tries[k];
+    });
+  }
+  // this phone's parked account: «¿Eres tú?» once per page
+  function parked(acc, opts) {
+    if (S.asked) return null;
+    S.asked = true;
+    return api.askParked(acc, opts).then((a) => {
+      if (a === 'other') { ss.set(NOTME, acc.code); return null; }
+      if (a !== 'me') return null;
+      return post('/api/ruta/auto/resume', {}).then(({ d }) => {
+        if (!d || !d.ok || !d.account) return null;
+        remember(d.account);
+        return { account: d.account, resumed: true };
+      });
+    });
   }
 
   // ── the sheet (the first card, «Mi código») ───────────────────────
@@ -178,19 +217,48 @@
       writeMine(m);
       sheet(acc, 'first', opts && opts.onSaved);
     };
-    // never over a training round: the card waits until the round is over (its star screen or the worlds' page).
-    // opts.afterRound: the round is about to start (the «¡A jugar!» tap): wait for it to begin, then to end (15 s at most
-    // for a round that never started)
+    whenFree(show, opts && opts.afterRound);
+  }
+  // never over a training round: `fn` waits until the round is over (its star screen or the worlds' page). afterRound:
+  // the round is about to start (the «¡A jugar!» tap): wait for it to begin, then to end (15 s at most for a round that
+  // never started)
+  function whenFree(fn, afterRound) {
     const busy = () => document.body.classList.contains('au-is-play');
     let seenPlay = busy();
-    if (!seenPlay && !(opts && opts.afterRound)) { show(); return; }
+    if (!seenPlay && !afterRound) { fn(); return; }
     let t = 0;
     const mo = new MutationObserver(() => {
       if (busy()) { seenPlay = true; return; }
-      if (seenPlay) { mo.disconnect(); clearTimeout(t); setTimeout(show, 600); }
+      if (seenPlay) { mo.disconnect(); clearTimeout(t); setTimeout(fn, 600); }
     });
     mo.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-    if (!seenPlay) t = setTimeout(() => { if (!seenPlay) { mo.disconnect(); show(); } }, 15000);
+    if (!seenPlay) t = setTimeout(() => { if (!seenPlay) { mo.disconnect(); fn(); } }, 15000);
+  }
+  // «¿Eres tú?» over La Ruta Dorada for this phone's PARKED automatic account (after «Salir» or another kid's login,
+  // security review M2): the same card as the /homework one, in a sheet → Promise<'me' | 'other' | null (closed)>
+  function askParked(acc, opts) {
+    return new Promise((resolve) => {
+      whenFree(() => {
+        if (open) close(open);
+        const s = document.createElement('div');
+        s.className = 'ra-root ra-sheet';
+        s.setAttribute('role', 'dialog');
+        s.setAttribute('aria-modal', 'true');
+        s.setAttribute('aria-labelledby', 'ra-eres-t');
+        s._back = document.activeElement;
+        s.innerHTML = '<div class="ra-card is-ask"><button type="button" class="ra-x" data-close aria-label="Cerrar">' + I.close + '</button>' +
+          '<img class="ra-dragon" src="/assets/dralingo/wise.webp" alt="" width="200" height="222" decoding="async"><div data-mount></div></div>';
+        document.body.appendChild(s);
+        document.documentElement.classList.add('ra-lock');
+        open = s;
+        let done = false;
+        const finish = (v) => { if (done) return; done = true; close(s); resolve(v); };
+        s._esc = (e) => { if (e.key === 'Escape') { e.preventDefault(); finish(null); } };
+        document.addEventListener('keydown', s._esc, true);
+        s.addEventListener('click', (e) => { if (e.target === s || e.target.closest('[data-close]')) finish(null); });
+        eresTu(s.querySelector('[data-mount]'), acc, {}).then((a) => finish(a));
+      }, opts && opts.afterRound);
+    });
   }
   function afterRoute(ruta) {
     if (!ruta || !ruta.me || !ruta.me.auto) return;
@@ -253,5 +321,7 @@
     setTimeout(() => { t.classList.add('is-out'); setTimeout(() => t.remove(), 260); }, 3600);
   }
 
-  window.DralyAuto = { ensure, welcome, afterRoute, codeSheet: (acc, onSaved) => sheet(acc, 'code', onSaved), me, eresTu, merge, remember, copyText, toast, close: () => close(open) };
+  // (one object: ensure() asks api.askParked, so a test can stand in for the card)
+  const api = { ensure, welcome, afterRoute, codeSheet: (acc, onSaved) => sheet(acc, 'code', onSaved), me, eresTu, askParked, merge, remember, copyText, toast, close: () => close(open) };
+  window.DralyAuto = api;
 })();

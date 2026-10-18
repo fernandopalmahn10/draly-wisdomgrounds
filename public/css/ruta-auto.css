@@ -35,9 +35,11 @@ html.ra-lock, html.ra-lock body { overflow: hidden; }
 .ra-dragon { width: 92px; height: auto; margin-top: -2px; }
 .ra-t { margin: 0; padding: 0 40px; font-weight: 900; font-size: 1.45rem; line-height: 1.1; letter-spacing: -.01em; color: var(--ra-rojo); }
 .ra-lede { margin: 0; font-weight: 800; font-size: 1rem; color: var(--ra-tinta-2); }
-.ra-code { margin: 0; display: flex; gap: 8px; justify-content: center; }
+/* (2026-10-18: the automatic accounts' codes have SIX characters: the tiles share the card's width, 54 px at most) */
+.ra-code { margin: 0; width: 100%; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 54px); gap: 8px; justify-content: center; }
 .ra-code span {
-  display: grid; place-items: center; width: 54px; height: 64px; border-radius: 14px; font-weight: 900; font-size: 2.1rem; line-height: 1;
+  display: grid; place-items: center; width: 100%; aspect-ratio: 54 / 64; border-radius: 14px; font-weight: 900;
+  font-size: clamp(1.4rem, 6.6vw, 2.1rem); line-height: 1;
   font-variant-numeric: tabular-nums; color: #3d0707; background: radial-gradient(circle at 35% 30%, #f8e7b4 0%, #dcb560 58%, #b0852c 100%);
   box-shadow: 0 5px 0 #8f6820, 0 10px 18px -10px rgba(90, 16, 16, .6);
 }
@@ -85,7 +87,7 @@ html.ra-lock, html.ra-lock body { overflow: hidden; }
 @media (max-width: 380px) {
   .ra-card { padding: 16px 12px 14px; }
   .ra-t { font-size: 1.28rem; }
-  .ra-code span { width: 48px; height: 58px; font-size: 1.85rem; }
+  .ra-code { gap: 6px; }
   .ra-dragon { width: 76px; }
 }
 @media (max-height: 660px) and (max-width: 639px) { .ra-dragon { display: none; } }
@@ -101,6 +103,9 @@ html.ra-lock, html.ra-lock body { overflow: hidden; }
 .ra-eres-who span { font-weight: 800; font-size: .95rem; letter-spacing: .06em; color: var(--ra-tinta-2); }
 .ra-eres-p { margin: 0; font-weight: 700; font-size: .92rem; color: var(--ra-tinta); }
 .ra-eres-q { margin: 2px 0 0; font-weight: 900; font-size: 1.2rem; color: var(--ra-rojo); }
+/* the same card in a sheet over La Ruta Dorada (a parked account after «Salir», 2026-10-18) */
+.ra-card.is-ask [data-mount] { width: 100%; }
+.ra-card.is-ask .ra-eres { margin: 0; padding: 0 0 2px; box-shadow: none; background: none; }
 
 /* ── a short line at the bottom (after the merge) ── */
 .ra-toast {

@@ -17,6 +17,9 @@
   const $ = (id) => document.getElementById(id);
   const STORAGE_CODE_KEY = 'dralyStudentCode';
   const STORAGE_ACCESS_KEY = 'dralyHwAccessCode';
+  // a typed student code: 4-5 characters (the class accounts), or 6 of the codes' own alphabet with a digit (the
+  // automatic accounts La Ruta Dorada makes, 2026-10-18: never a 6-letter name like «Andrea»)
+  const isStudentCode = (s) => /^[A-Z2-9]{4,5}$/i.test(s) || (/^[A-HJ-NP-Z2-9]{6}$/i.test(s) && /[2-9]/.test(s));
 
   // Returns the URL for a stored avatar value. Avatars are stored as a
   // simple lowercase filename ('mochi', 'dragon', etc.). Legacy emoji
@@ -275,7 +278,7 @@
   try {
     const params = new URLSearchParams(location.search);
     const fromCode = (params.get('code') || '').trim().toUpperCase();
-    if (fromCode && /^[A-Z2-9]{4,5}$/.test(fromCode)) {
+    if (fromCode && isStudentCode(fromCode)) {
       $('hw-student-code').value = fromCode;
       const remembered = (localStorage.getItem(STORAGE_ACCESS_KEY) || '').trim();
       const from = params.get('from');
@@ -410,7 +413,7 @@
     $('hw-entry-err').textContent = 'Entrando…';
     // after «Empezar de nuevo» the box holds a name, unless the kid found their real code after all (it has a digit)
     const asName = (opts && opts.asName) || ($('hw-student-code').dataset.asName === '1' && !/[2-9]/.test(sc));
-    const looksLikeCode = !asName && /^[A-Z2-9]{4,5}$/i.test(sc);
+    const looksLikeCode = !asName && isStudentCode(sc);
     // 🆕 2026-10-18 (his words: "make the system remind you: Are you sure you are not this student?"): this phone already
     // holds an account with progress (its login, or the automatic account La Ruta Dorada gave it) and the kid typed
     // ANOTHER code or a name (a new account): «¿Eres tú?» first (js/ruta-auto.js). «Sí, soy yo» enters that account (an
@@ -425,6 +428,9 @@
           if (a === 'me') {
             $('hw-student-code').value = acc.code;
             delete $('hw-student-code').dataset.asName;
+            // (security review L6: an account with a class already logs in with ITS OWN class code, never the one typed:
+            // one tap never moves a kid to another class)
+            if (!acc.auto && acc.classroomCode) $('hw-access-code').value = acc.classroomCode;
             // (an automatic account still called «Dragoncito 382» takes the name the kid just typed)
             tryEnter({ eres: true, name: !typed && acc.placeholder ? sc : null });
           } else again(a === 'merge' ? { merge: true } : null);
@@ -470,6 +476,7 @@
         try {
           localStorage.setItem(STORAGE_ACCESS_KEY, ac);
           localStorage.setItem(STORAGE_CODE_KEY, studentCode);
+          localStorage.removeItem('dralyHwOut');   // (logged in again: «Salir» is over, 2026-10-18)
         } catch (_) {}
         // 🆕 2026-10-18: «Pasar mi progreso a esta cuenta» (the «¿Eres tú?» card): this phone's automatic account joins the
         // account that just logged in (the server needs both: the automatic account's cookie and this login)
@@ -803,8 +810,13 @@
     // 2026-10-16: the kid's session on this phone ends too (a brother or sister on the same phone never stamps La Base
     // seals or saves results on this kid's account); one tap on «Entrar» brings it back
     try { fetch('/api/homework/logout', { method: 'POST', credentials: 'same-origin', keepalive: true }).catch(() => {}); } catch (_) {}
+    markOut();
     location.href = '/';
   });
+  // 2026-10-18 (security review M2): «Salir» is remembered on the phone (dralyHwOut) until the next «Entrar»: meanwhile no
+  // page logs the saved kid in again by itself (La Ruta Dorada's first steps, js/ruta-auto.js; the key screen), so a
+  // brother or sister never lands on this kid's account. The codes stay saved: «Entrar» is still one tap.
+  function markOut() { try { localStorage.setItem('dralyHwOut', '1'); } catch (_) {} }
   // ← the avatar picker (2026-10-18, his rule: every screen has a way back): back to the code card, like «Salir» but
   // staying on the page (a wrong name typed, a brother's code). The code box gets the kid's student code (it held the
   // typed name: «Entrar» again would make a second account); never while the picked avatar is saving
@@ -816,6 +828,7 @@
     studentCode = '';
     removePinnedStack();
     try { fetch('/api/homework/logout', { method: 'POST', credentials: 'same-origin', keepalive: true }).catch(() => {}); } catch (_) {}
+    markOut();
     $('hw-avatar-err').textContent = '';
     showScreen('entry');
   });
@@ -2687,7 +2700,7 @@
   function realName() {
     const n = String(displayName || '').trim();
     if (!n || n.toLowerCase() === 'anon' || n.toUpperCase() === String(studentCode || '').toUpperCase()) return '';
-    if (/^[A-Z2-9]{4,5}$/i.test(n) && /[2-9]/.test(n)) return '';   // a code saved as a name («K7MQ»), not a name
+    if (isStudentCode(n) && /[2-9]/.test(n)) return '';   // a code saved as a name («K7MQ»), not a name
     return n;
   }
   function saveName(name) {

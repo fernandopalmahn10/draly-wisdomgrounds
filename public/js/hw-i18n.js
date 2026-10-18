@@ -47,7 +47,7 @@
   DICT.map['Pasar mi progreso a esta cuenta'] = 'Move my progress to this account';
   DICT.map['¡Listo! Tu progreso pasó a tu cuenta.'] = 'Done! Your progress moved to your account.';
   DICT.map['Tu cuenta'] = 'Your account';
-  PATTERNS.push({ re: /^código ([A-Z2-9]{4,5})$/, en: 'code $1' });
+  PATTERNS.push({ re: /^código ([A-Z2-9]{4,6})$/, en: 'code $1' });
   PATTERNS.push({ re: /^(\d+ (?:sellos?|tareas? mandadas?|tareas? escuchadas?|mundos? practicados?|tareas? hechas?))( · .+)?$/, en: function (t) {
     return t.replace(/(\d+) sellos?/g, (_, n) => n + (n === '1' ? ' stamp' : ' stamps'))
       .replace(/(\d+) tareas? mandadas?/g, (_, n) => n + ' sent')

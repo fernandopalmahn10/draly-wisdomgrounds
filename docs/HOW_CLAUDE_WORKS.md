@@ -317,26 +317,35 @@ that code forever… remind you: Are you sure you are not this student?").** A f
 student account gets a real one, by itself, at its first real step: typing the level's key, the first «¡Me la sé!», the
 first El Entrenamiento round, or the first «¡Ya la mandé!». Only opening pages (or WhatsApp's link preview, or a class
 opening a link) never makes one, and listening to a homework's audio doesn't either (every family with a printed PDF
-does that). A phone that remembers a /homework login logs that kid in again instead (no duplicate for your students).
-- **The account**: the same kind of account and code as a /homework login, its level (the module's), no class code yet,
-  marked «automática»; its name is a friendly placeholder («Dragoncito 382») until the family types the kid's name.
+does that). A phone that remembers a /homework login logs that kid in again instead (no duplicate for your students),
+except after that kid tapped «Salir» (then a brother or sister on the same phone never lands on that kid's account).
+- **The account**: the same kind of account as a /homework login, with a SIX-character code (letters and at least one
+  number, like K7P2Q9: nothing else protects an account that has no class yet), its level (the module's), no class code
+  yet, marked «automática»; its name is a friendly placeholder («Dragoncito 382») until the family types the kid's name.
 - **The phone keeps it**: the same login as /homework plus a device cookie for a year, so a reload, a new tab or the
-  home-screen app stay in the same account; one account per phone, never a second one.
-- **The first time**, a card: «¡Ya tienes tu cuenta de Dralingo! Tu código es K7P2» with «Copiar mi código», «¿Cómo te
+  home-screen app stay in the same account; one account per phone, never a second one by itself.
+- **After «Salir»** (or when another kid logs in at Mis tareas on that phone) the account rests: nothing logs it in by
+  itself. The next real step asks «¿Eres tú? Este teléfono ya tiene a Dragoncito 382 · código K7P2Q9 · …» → «Sí, soy yo»
+  brings it back; «No, soy otro alumno» keeps that step on the phone, and the next step gives the other kid their own
+  account.
+- **The first time**, a card: «¡Ya tienes tu cuenta de Dralingo! Tu código es K7P2Q9» with «Copiar mi código», «¿Cómo te
   llamas?» + «Guardar» and «Ahora no». Later, **«Mi código»** on the red band of La Ruta Dorada shows it again (and the
   name can be changed there).
-- **«¿Eres tú?»**: at /homework (and every «Entra con tu código» link), when a phone that holds an account with progress
-  types ANOTHER code or a new name, a card asks first: «Este teléfono ya tiene un alumno: Ana · código K7P2 · 120 sellos ·
-  2 tareas mandadas. ¿Eres tú?» → «Sí, soy yo» (enters that account; an automatic one joins the class code typed) or «No,
-  soy otro alumno». When the phone's account is automatic and a code was typed, also **«Pasar mi progreso a esta cuenta»**:
-  once that account's login works, its seals and homework marks join it, each El Entrenamiento world keeps the best %, and
-  the automatic account rests in the archive. It never touches that account's exam results, levels or your data, and it
-  needs both proofs on that phone (the automatic account and the real login).
-- **Your students**: an automatic account joins a class the first time the family logs in at Mis tareas with a class
-  code + its code (or joins a PIN room with it). Until then you (super admin) see it in the student list with a small
-  «automática» tag; regular teachers don't see it. With no progress it ages into the 30-day archive like any account.
-- **Limits**: 30 new accounts an hour per internet address (a whole class), 3 a day per phone, 300 an hour for the whole
-  platform; requests from other sites are refused.
+- **«¿Eres tú?» at /homework** (and every «Entra con tu código» link): when a phone that holds an account with progress
+  types ANOTHER code or a new name, a card asks first: «Este teléfono ya tiene un alumno: Ana · código K7P2Q9 · 120 sellos ·
+  2 tareas mandadas. ¿Eres tú?» → «Sí, soy yo» (enters that account with ITS OWN class code; an automatic one joins the
+  class code typed) or «No, soy otro alumno». When the phone's account is automatic and a code was typed, also **«Pasar mi
+  progreso a esta cuenta»**: once that account's login works, its seals and homework marks join it, each El Entrenamiento
+  world keeps the best %, and its exam results and homework rounds move into it (an exam taken in your room never gets
+  lost); then the automatic account rests in the archive for good. It never changes that account's own results, levels or
+  your data, and it needs both proofs on that phone (the automatic account and the real login).
+- **Your students**: an automatic account joins a class the first time the family logs in at Mis tareas, ON THE PHONE
+  THAT HOLDS IT, with a class code + its code. On any other phone its code works like a wrong code (so nobody can take a
+  family's account with a guessed code), and a PIN room never moves it into a class. Until then you (super admin) see it
+  in the student list with a small «automática» tag; regular teachers don't see it. An automatic account nobody ever used
+  (no seal, no mark, no practice) is removed after 30 days; one with progress rests in the archive like any account.
+- **Limits**: 120 new accounts an hour per internet address (two classes on one school Wi-Fi), 3 a day per phone, 300 an
+  hour for the whole platform; requests from other sites, or from a phone that never opened a page, are refused.
 Tests: `node scripts/test-auto-account.js` (port 4460), and the class-only simulations in `test-sims-lock.js`,
 `test-ruta-dorada.js`, `test-golden-book.js`, `test-level-keys.js`.
 

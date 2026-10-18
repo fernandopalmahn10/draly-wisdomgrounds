@@ -290,6 +290,9 @@ app.use(express.static(path.join(__dirname, 'public'), {
   },
 }));
 app.use(express.json({ limit: '5mb' }));
+// 🆕 2026-10-18: an automatic account's session comes back from its device cookie before ANY route reads a session
+// (security review L5; the function lives with the automatic accounts, «AUTOMATIC STUDENT ACCOUNTS» below)
+app.use(_autoRenew);
 // The move to app.dralingo.app (see MOVE_PAGE above): the old address leaves a phone's big saved data here once...
 app.post('/api/move/start', (req, res) => {
   const now = Date.now();
@@ -1468,7 +1471,7 @@ app.get('/api/admin/students', (req, res) => {
     const lv = _levelState(s);
     const out = Object.assign({}, s, { classroomId: c ? c.id : null, classroomName: c ? c.name : null, levelOpen: lv.open, levelVia: lv.via,
       rutaBar: _rutaBar(s) });   // 🏆 La Ruta Dorada of their class level, in one small bar (2026-10-16)
-    delete out.rawLevel; delete out.levelSince; delete out.levelAccess; delete out.ruta;
+    delete out.rawLevel; delete out.levelSince; delete out.levelAccess; delete out.ruta; delete out.autoBorn;
     return out;
   });
   res.json({
@@ -1643,7 +1646,7 @@ app.get('/api/admin/students/:code', (req, res) => {
 // s = a record or a Students.listAll() row → { level, levelName, open, via: 'key' | 'teacher' | 'grandfathered' | null }
 function _levelState(s) {
   const rec = { level: 'rawLevel' in s ? s.rawLevel : s.level, classroomCode: s.classroomCode, firstSeen: s.firstSeen,
-    levelSince: s.levelSince, levelAccess: s.levelAccess, auto: s.auto };   // (auto: never grandfathered, 2026-10-18)
+    levelSince: s.levelSince, levelAccess: s.levelAccess, auto: 'autoBorn' in s ? s.autoBorn : !!s.auto };   // (the account's ORIGIN: never grandfathered, 2026-10-18 L8)
   const lvl = LevelKeys.classLevel(rec);
   const via = lvl ? LevelKeys.recordOpenVia(rec, lvl) : null;
   return { level: lvl, levelName: lvl ? Levels.info(lvl).name : null, open: !!via, via: via || null };
@@ -2309,7 +2312,9 @@ function _hwCheckAccess(req, res) {
 function _hwOwnsStudent(req, rec) {
   if (!rec) return false;
   // Legacy record with no classroom tag — can't bind, preserve old access.
-  if (!rec.classroomCode) return true;
+  // 🔒 2026-10-18 (security review M3): except an UNCLAIMED automatic account, which only the device holding it (its
+  // dauto cookie) may use: its 6-character code alone opens nothing anywhere else
+  if (!rec.classroomCode) return !(rec.auto && !rec.mergedInto) || _autoDeviceHolds(req, rec);
   const presented = String(
     (req.body && req.body.accessCode) || (req.query && req.query.accessCode) || ''
   ).trim().toUpperCase();
@@ -2364,7 +2369,12 @@ app.post('/api/homework/enter', (req, res) => {
   if (!_hwCheckAccess(req, res)) return;
   if (!_enterRateLimit(req)) { console.warn('[security] homework/enter flood ip=' + _clientIp(req)); return res.status(429).json({ ok: false, error: 'demasiados intentos, espera un momento' }); }
   try {
-    const { studentCode, displayName, accessCode, meta } = req.body || {};
+    const { displayName, accessCode, meta } = req.body || {};
+    // 🔒 2026-10-18 (security review M3): an UNCLAIMED automatic account answers here only on the device holding it (its
+    // dauto cookie): anywhere else its code is a code that does not exist (the same answer and the same counted miss
+    // below; with a name, a new account like any unknown code), so a class code + a guessed code never takes one over
+    // (no session, no level on this device). '#' normalizes to no code at all.
+    const studentCode = _autoLoginRefused(req, (req.body || {}).studentCode) ? '#' : (req.body || {}).studentCode;
     // 🆕 2026-10-12 — never an «Anon» account: no code and no name is refused, and a short name («Luis», «María»)
     // that looks like a code but matches no student comes back as codeNotFound (the client asks «¿eres nuevo/a?»
     // and resends it as a name).
@@ -4953,37 +4963,57 @@ function _tareaMarks(rec, ids) {
 //   'key'   the level's key typed right (protected/pages/level-key.html)        · the level open on this device
 //   'seal'  the first «¡Me la sé!» (js/audios-base.js)                           · the level open
 //   'train' the first El Entrenamiento round («¡A jugar!», js/audios.js)          · the level open
-//   'tarea' the first homework mark («Escuchada», «¡Ya la mandé!», js/ruta.js)    · a homework id of the audio catalog
-// (a phone that remembers a /homework login logs that kid in again first, js/ruta-auto.js: no duplicate for real kids)
-// THE ACCOUNT: Students.createAuto, the same shape and code generator as a /homework login, `auto: true`, level = the
-// module's (its key's), a friendly placeholder name («Dragoncito 382»: never «Anon», never the code, since names show on
-// rosters and projectors), NO class code (no safe default: a level's class codes belong to teachers; see CLAIM).
-// THE PHONE KEEPS IT: the same signed session as a login (dsim, 12 h) + `dauto` (httpOnly, signed, a year) = "this device
-// made automatic account X". While X is live, unclaimed and not parked, any request renews the session (_autoRenew: a
-// reload, a new tab, the home-screen app keep the same account); a page view never counts as activity and never wakes an
-// archived one. One per device: a step on a device that holds one resumes it (from the archive too), never a second.
+//   'tarea' the first «¡Ya la mandé!» (js/ruta.js; never the «Escuchada» of a play) · a homework id of the audio catalog
+//                                                                                   + a device already seen (dkd)
+// (a phone that remembers a /homework login logs that kid in again first, js/ruta-auto.js, unless that kid tapped
+// «Salir» there: localStorage dralyHwOut, cleared by the next «Entrar». No duplicate for real kids, no sibling on them.)
+// THE ACCOUNT: Students.createAuto: the same record shape as a /homework login, a SIX-character code of the same alphabet
+// with a digit (security review M3: nothing else binds an unclaimed account), `auto: true`, level = the module's (its
+// key's), a friendly placeholder name («Dragoncito 382»: never «Anon», never the code, since names show on rosters and
+// projectors), NO class code (no safe default: a level's class codes belong to teachers; see CLAIM).
+// THE PHONE KEEPS IT: the same signed session as a login (dsim, 12 h) + `dauto` (httpOnly, signed, a year: the code, parked
+// or not, and the account's firstSeen, so a code handed out again never answers to an old cookie) = "this device holds
+// automatic account X". While X is live, unclaimed, never merged and not parked, any request renews the session
+// (_autoRenew, mounted right after express.json: a reload, a new tab, the home-screen app keep the same account); a page
+// view never counts as activity and never wakes an archived one. One per device: never a second one by itself.
 // A readable cookie `draly_auto_new` asks the page to show «¡Ya tienes tu cuenta de Dralingo!» once.
-// CLAIM: with no class code, the first /homework login with a real class code + its code takes it (like any untagged
-// account: tagged, a session; `auto` stays as its origin, the roster's «automática» goes) and the device cookie is dropped.
-// PARK: «Salir» at /homework, or a /homework login to ANOTHER account on this device, parks it (no renewal on page views;
-// a later real step, «¿Eres tú? Sí, soy yo» or the merge still find it).
+// CLAIM: an UNCLAIMED automatic account answers at /homework ONLY on the device holding its dauto (security review M3):
+// there its code + a real class code takes it (tagged, a session; `auto` stays as its origin, the roster's «automática»
+// goes) and the device cookie is dropped. Anywhere else its code counts as a wrong code (the same answer, the same miss).
+// A PIN room never tags one (core/student-records.js). A teacher still finds it in /maestro.
+// PARK: «Salir» at /homework, or a /homework login to ANOTHER account on this device, parks it: no renewal, and a later
+// step NEVER resumes it by itself (security review M2: a sister on the same phone): /api/ruta/auto answers
+// `why: 'parked'` with the account's «Mi código» summary, the page asks «¿Eres tú?» and only «Sí, soy yo» resumes it
+// (POST /api/ruta/auto/resume); «No, soy otro alumno» keeps that step on the phone, and the next step asks for a new
+// account (`fresh: true`), which then becomes this device's account.
 // MERGE («Pasar mi progreso a esta cuenta», the /homework «¿Eres tú?» card): BOTH proofs on this device, the automatic
 // account (dauto) AND a /homework login to the other account (its session, from that kid's own class code). Seals and
-// homework marks join (a union), each El Entrenamiento world keeps the best %; never the typed account's exam tries,
-// levels or teacher data. The automatic account then rests in the archive (mergedInto) and the device cookie goes.
-// LIMITS: 30 new accounts an hour per address (a class), 3 a day per device (dkd), 300 an hour for the platform; a request
-// from another site (Origin, Sec-Fetch-Site) is refused. With no progress they simply age into the 30-day archive.
+// homework marks join (a union), each El Entrenamiento world keeps the best %, and its exam tries and homework rounds MOVE
+// into the real account (L3: an exam taken in a room never disappears); never the typed account's own tries, levels or
+// teacher data. The automatic account then rests in the archive (mergedInto: never resumed or merged again).
+// LIMITS: 120 new accounts an hour per address (two classes on one school Wi-Fi), 3 a day per device (dkd), 300 an hour
+// for the platform; a request from another site (Origin, Sec-Fetch-Site) is refused. An automatic account nobody ever
+// used is removed when it goes stale (core/student-records.js archiveInactive); one with progress rests in the archive.
 // Test: scripts/test-auto-account.js.
 const AUTO_COOKIE = 'dauto';
 const AUTO_TTL = 365 * 24 * 3600e3;
 const AUTO_STEPS = ['key', 'seal', 'train', 'tarea'];
-const _autoUnclaimed = (rec) => !!(rec && rec.auto && !rec.classroomCode);
+// usable as this device's automatic account: made by the system, not claimed by a class code, never merged away
+const _autoUnclaimed = (rec) => !!(rec && rec.auto && !rec.classroomCode && !rec.mergedInto);
 function _autoCookie(req) {
   const v = SimLock.verify(SimLock.readCookie(req, AUTO_COOKIE), 'A');
-  return v && /^[A-Z2-9]{4,5}$/.test(v[0]) ? { code: v[0], parked: v[1] === '1' } : null;
+  return v && /^[A-Z2-9]{4,6}$/.test(v[0]) && v.length >= 3 ? { code: v[0], parked: v[1] === '1', born: String(v[2] || '') } : null;
 }
-const _autoSetCookie = (req, res, code, parked) => SimLock.setCookie(req, res, AUTO_COOKIE, SimLock.sign('A', [code, parked ? '1' : '0'], AUTO_TTL), AUTO_TTL);
+// the device cookie's account, only when it is that very account (the same firstSeen: L2) → { rec, archived } | null
+function _autoHeld(a) {
+  const p = a ? Students.peek(a.code) : null;
+  return p && String(Number(p.rec.firstSeen) || 0) === a.born ? p : null;
+}
+const _autoSetCookie = (req, res, rec, parked) => SimLock.setCookie(req, res, AUTO_COOKIE,
+  SimLock.sign('A', [rec.code, parked ? '1' : '0', String(Number(rec.firstSeen) || 0)], AUTO_TTL), AUTO_TTL);
 const _autoDropCookie = (req, res) => SimLock.setCookie(req, res, AUTO_COOKIE, '', 0);
+// does THIS device hold `rec` (an automatic account) through its dauto?
+const _autoDeviceHolds = (req, rec) => { const a = _autoCookie(req); return !!(a && rec && a.code === rec.code && _autoHeld(a)); };
 // a cookie this same request reads from now on (the handlers after us see the renewed session)
 function _autoReqCookie(req, name, value) {
   const keep = String((req.headers && req.headers.cookie) || '').split(';').map((x) => x.trim()).filter((x) => x && x.split('=')[0] !== name);
@@ -5000,7 +5030,7 @@ function _autoSameSite(req) {
   if (site && site !== 'same-origin') return false;
   return _socketOriginOk(req);
 }
-const _autoHits = new Map();   // '*' | 'i:<ip>' | 'd:<device>' | 'n:<code>' | 'm:<ip>' | 'g:<ip>' → [timestamps]
+const _autoHits = new Map();   // '*' | 'i:<ip>' | 'd:<device>' | 'n:<code>' | 'm:<ip>' | 'g:<ip>' | 'r:<ip>' → [timestamps]
 function _autoHit(key, win, max, dry) {
   const now = Date.now();
   const arr = (_autoHits.get(key) || []).filter((t) => now - t < win);
@@ -5014,13 +5044,15 @@ setInterval(() => {
   for (const [k, v] of _autoHits) if (!v.length || now - v[v.length - 1] > 25 * 3600e3) _autoHits.delete(k);
   if (_autoHits.size > 50000) _autoHits.clear();
 }, 10 * 60 * 1000).unref();
-// a new account here? (30 an hour per address, 3 a day per device, 300 an hour for everyone) → false = wait
+// a new account here? (120 an hour per address, 3 a day per device, 300 an hour for everyone) → false = wait
 function _autoRateOk(req, res) {
   const ip = 'i:' + _clientIp(req), dev = 'd:' + LevelKeys.deviceId(req, res);
-  if (!_autoHit('*', 3600e3, 300, true) || !_autoHit(ip, 3600e3, 30, true) || !_autoHit(dev, 86400e3, 3, true)) return false;
-  _autoHit('*', 3600e3, 300); _autoHit(ip, 3600e3, 30); _autoHit(dev, 86400e3, 3);
+  if (!_autoHit('*', 3600e3, 300, true) || !_autoHit(ip, 3600e3, 120, true) || !_autoHit(dev, 86400e3, 3, true)) return false;
+  _autoHit('*', 3600e3, 300); _autoHit(ip, 3600e3, 120); _autoHit(dev, 86400e3, 3);
   return true;
 }
+// a device the platform has seen before (its dkd id, given by /api/ruta-dorada, a key, a training round)
+const _autoKnownDevice = (req) => /^[a-f0-9]{24}$/.test(SimLock.readCookie(req, LevelKeys.DEVICE_COOKIE));
 // «Dragoncito 382»: friendly, never a real kid's name, never the code (rosters and projectors show names)
 const _autoPlaceholder = () => 'Dragoncito ' + (100 + require('crypto').randomInt(900));
 // a name typed for the kid: letters (accents too), spaces, an apostrophe or a dash; 2-24 characters; never the code
@@ -5032,13 +5064,15 @@ function _autoCleanName(raw, code) {
   return s;
 }
 // what the page may know about the account this phone holds (only ever sent to that phone): its code («Mi código»),
-// its name (or the placeholder), and, for «¿Eres tú?», a few counts of its progress
+// its name (or the placeholder), its own class code (L6: «Sí, soy yo» logs in with it, never with another one) and, for
+// «¿Eres tú?», a few counts of its progress
 function _autoMeOf(rec, withProgress) {
   if (!rec) return null;
   const lvl = LevelKeys.classLevel(rec);
   // (placeholder: the name the system gave it, still there; a name typed since, even in a PIN room, is the kid's)
   const out = { code: rec.code, name: rec.displayName || '', placeholder: !rec.displayName || (!!rec.autoName && /^Dragoncito \d{3}$/.test(rec.displayName)), auto: _autoUnclaimed(rec),
-    who: _sealWho(rec.code), level: lvl ? (Levels.info(lvl).pack || lvl) : null, levelName: lvl ? Levels.info(lvl).name : null };
+    who: _sealWho(rec.code), level: lvl ? (Levels.info(lvl).pack || lvl) : null, levelName: lvl ? Levels.info(lvl).name : null,
+    classroomCode: rec.classroomCode || null };
   if (withProgress) {
     let seals = 0, worlds = 0;
     Object.keys(rec.ruta && typeof rec.ruta === 'object' ? rec.ruta : {}).forEach((l) => {
@@ -5054,7 +5088,8 @@ function _autoMeOf(rec, withProgress) {
   }
   return out;
 }
-// every request: an automatic account's session comes back from its device cookie (pages and API only, cheap check)
+// every request (mounted right after express.json): an automatic account's session comes back from its device cookie
+// (pages and API only, cheap check)
 function _autoRenew(req, res, next) {
   const raw = String((req.headers && req.headers.cookie) || '');
   if (raw.indexOf(AUTO_COOKIE + '=') < 0 || !/^\/(api\/|audios?(\/|$)|base-media\/|golden-media\/|yct-sim|hsk-sim)/.test(req.path)) return next();
@@ -5063,29 +5098,37 @@ function _autoRenew(req, res, next) {
     if (s && Students.peek(s.code)) return next();            // a session already (this kid, or another kid's login)
     const a = _autoCookie(req);
     if (!a || a.parked) return next();
-    const p = Students.peek(a.code);
+    const p = _autoHeld(a);
     if (!p || p.archived || !_autoUnclaimed(p.rec)) return next();
     _autoSession(req, res, p.rec);
   } catch (e) { console.warn('[auto] renew failed:', e.message); }
   next();
 }
-app.use(_autoRenew);
-// /api/homework/enter: a login on a device holding an automatic account. Its own code with a class code = the claim (the
-// device cookie goes: a normal account now); another kid's own login = that kid is on this phone now (parked).
+// M3: an UNCLAIMED automatic account's code at /homework from a device that does not hold it → treated as a code that
+// does not exist (the caller counts the miss and answers like a wrong code). → true = refuse it
+function _autoLoginRefused(req, code) {
+  const p = code ? Students.peek(code) : null;
+  return !!(p && _autoUnclaimed(p.rec) && !_autoDeviceHolds(req, p.rec));
+}
+// /api/homework/enter, the key screen's silent login: a login on a device holding an automatic account. Its own code
+// with a class code = the claim (the device cookie goes: a normal account now); another kid's own login = that kid is
+// on this phone now (parked).
 function _autoAfterLogin(req, res, rec, owns) {
   try {
     const a = _autoCookie(req);
     if (!a || !owns || !rec) return;
-    if (a.code === rec.code) _autoDropCookie(req, res);
-    else if (!a.parked) _autoSetCookie(req, res, a.code, true);
+    const p = _autoHeld(a);
+    if (!p || a.code === rec.code) { _autoDropCookie(req, res); return; }
+    if (!a.parked) _autoSetCookie(req, res, p.rec, true);
   } catch (e) { console.warn('[auto] after login:', e.message); }
 }
-// /api/homework/logout («Salir»): the device's automatic account rests (no renewal) until a real step or «Sí, soy yo»
+// /api/homework/logout («Salir»): the device's automatic account rests: no renewal, and no step resumes it by itself
 function _autoPark(req, res) {
-  try { const a = _autoCookie(req); if (a && !a.parked) _autoSetCookie(req, res, a.code, true); } catch (_) { /* ignore */ }
+  try { const a = _autoCookie(req); const p = _autoHeld(a); if (a && p && !a.parked) _autoSetCookie(req, res, p.rec, true); } catch (_) { /* ignore */ }
 }
-// POST /api/ruta/auto { level, step: 'key'|'seal'|'train'|'tarea', id? } → { ok, created, resumed?, account } |
-// { ok: false, why: 'teacher' | 'key' | 'login' | 'rate' | 'site' }
+// POST /api/ruta/auto { level, step: 'key'|'seal'|'train'|'tarea', id?, fresh? } → { ok, created, resumed?, account } |
+// { ok: false, why: 'teacher' | 'key' | 'device' | 'login' | 'rate' | 'site' } | { ok: false, why: 'parked', account }
+// fresh: true = «No, soy otro alumno» was the answer to this device's parked account: a new account for this kid
 app.post('/api/ruta/auto', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
   if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
@@ -5099,27 +5142,48 @@ app.post('/api/ruta/auto', (req, res) => {
   const cur = _studentOf(req);
   if (cur) return res.json({ ok: true, created: false, account: _autoMeOf(cur) });
   if (step !== 'tarea' && !LevelKeys.access(req, level).ok) return res.status(401).json({ ok: false, why: 'key' });
+  // (L4) the open homework pages: only a device the platform has already seen (its page set dkd), never a bare POST
+  if (step === 'tarea' && !_autoKnownDevice(req)) return res.status(403).json({ ok: false, why: 'device' });
   const a = _autoCookie(req);
-  if (a) {
-    const old = Students.get(a.code);                          // (a real step: an archived account comes back)
-    if (old && _autoUnclaimed(old)) {
+  const held = _autoHeld(a);
+  if (held && _autoUnclaimed(held.rec)) {
+    // this device's own account, parked («Salir», another kid's login): never resumed by itself (M2), unless this
+    // phone said «No, soy otro alumno» (fresh): then a new account for this kid, below
+    if (a.parked && !b.fresh) return res.json({ ok: false, why: 'parked', account: _autoMeOf(held.rec, true) });
+    if (!a.parked) {
+      const old = Students.get(a.code);                          // (a real step: an archived one comes back)
       _autoSession(req, res, old);
-      if (a.parked) _autoSetCookie(req, res, old.code, false);
       return res.json({ ok: true, created: false, resumed: true, account: _autoMeOf(old) });
     }
-    if (old) return res.json({ ok: false, why: 'login' });     // claimed by a class code since: it logs in at /homework
+  } else if (held && held.rec.classroomCode && !held.rec.mergedInto) {
+    return res.json({ ok: false, why: 'login' });                // claimed by a class code since: it logs in at /homework
   }
   if (!_autoRateOk(req, res)) return res.status(429).set('Retry-After', '120').json({ ok: false, why: 'rate', error: 'Espera un momento.' });
   const rec = Students.createAuto(_autoPlaceholder(), level, step);
   _autoSession(req, res, rec);
-  _autoSetCookie(req, res, rec.code, false);
+  _autoSetCookie(req, res, rec, false);
   res.append('Set-Cookie', 'draly_auto_new=1; Path=/; Max-Age=86400; SameSite=Lax' + (SimLock.https(req) ? '; Secure' : ''));
-  console.log('[auto] an automatic account was made (' + step + ', ' + level + ')');   // (never its code)
+  console.log('[auto] an automatic account was made (' + step + ', ' + level + (b.fresh ? ', another kid on a phone that had one' : '') + ')');   // (never its code)
   res.json({ ok: true, created: true, account: _autoMeOf(rec) });
 });
-// GET /api/ruta/me → { ok, account: null | { code, name, placeholder, auto, who, level, levelName, progress, session,
-// parked?, archived? } }: the account this phone holds (its login, else its automatic account, parked or resting in the
-// archive: never woken by this read). For «Mi código» and the /homework «¿Eres tú?» card.
+// POST /api/ruta/auto/resume → { ok, resumed, account } | { ok: false, why: 'auto' }: «¿Eres tú? Sí, soy yo» for this
+// device's parked automatic account (the only way back to it after «Salir»)
+app.post('/api/ruta/auto/resume', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
+  if (!_autoHit('r:' + _clientIp(req), 60 * 1000, 30)) return res.status(429).set('Retry-After', '30').json({ ok: false, error: 'Espera un momento.' });
+  if (_teacherOf(req)) return res.json({ ok: false, why: 'teacher' });
+  const a = _autoCookie(req);
+  const held = _autoHeld(a);
+  if (!held || !_autoUnclaimed(held.rec)) return res.status(403).json({ ok: false, why: 'auto', error: 'Este teléfono no tiene una cuenta automática.' });
+  const rec = Students.get(a.code);                              // (an archived one comes back: the kid said it is theirs)
+  _autoSession(req, res, rec);
+  if (a.parked) _autoSetCookie(req, res, rec, false);
+  res.json({ ok: true, resumed: true, account: _autoMeOf(rec) });
+});
+// GET /api/ruta/me → { ok, account: null | { code, name, placeholder, auto, who, level, levelName, classroomCode,
+// progress, session, parked?, archived? } }: the account this phone holds (its login, else its automatic account, parked
+// or resting in the archive: never woken by this read). For «Mi código» and the «¿Eres tú?» cards.
 app.get('/api/ruta/me', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
   if (!_autoHit('m:' + _clientIp(req), 5 * 60 * 1000, 4000)) return res.status(429).set('Retry-After', '30').json({ ok: false, error: 'Espera un momento.' });
@@ -5127,7 +5191,7 @@ app.get('/api/ruta/me', (req, res) => {
   const live = s ? Students.peek(s.code) : null;
   if (live && !live.archived) return res.json({ ok: true, account: Object.assign(_autoMeOf(live.rec, true), { session: true }) });
   const a = _autoCookie(req);
-  const p = a ? Students.peek(a.code) : null;
+  const p = _autoHeld(a);
   if (p && _autoUnclaimed(p.rec)) return res.json({ ok: true, account: Object.assign(_autoMeOf(p.rec, true), { session: false, parked: a.parked, archived: p.archived }) });
   res.json({ ok: true, account: null });
 });
@@ -5143,10 +5207,10 @@ app.post('/api/ruta/me/name', (req, res) => {
   Students.setRealName(rec.code, name);
   res.json({ ok: true, account: _autoMeOf(Students.get(rec.code)) });
 });
-// the automatic account's progress joins `to` (a union of seals and homework marks, the best % per practice world);
-// nothing else of either account changes → the counts that moved
+// the automatic account's progress joins `to`: a union of seals and homework marks, the best % per practice world, and
+// its exam tries + homework rounds moved over (L3); nothing else of either account changes → the counts that moved
 function _autoMerge(from, to) {
-  const out = { seals: 0, worlds: 0, heard: 0, sent: 0 };
+  const out = { seals: 0, worlds: 0, heard: 0, sent: 0, tries: 0, homework: 0 };
   const ruta = from.ruta && typeof from.ruta === 'object' && !Array.isArray(from.ruta) ? from.ruta : {};
   Object.keys(ruta).forEach((lvl) => {
     if (!Levels.normalize(lvl)) return;
@@ -5172,16 +5236,20 @@ function _autoMerge(from, to) {
       });
     }, { activity: true });
   }
+  const moved = Students.moveResults(from.code, to.code);
+  out.tries = moved.tries;
+  out.homework = moved.homework;
   return out;
 }
-// POST /api/ruta/auto/merge → { ok, merged: { seals, worlds, heard, sent }, account } | { ok: false, why: 'auto' | 'login' }
+// POST /api/ruta/auto/merge → { ok, merged: { seals, worlds, heard, sent, tries, homework }, account } |
+// { ok: false, why: 'auto' | 'login' }
 // «Pasar mi progreso a esta cuenta»: this device's automatic account (dauto) into the account just logged in at /homework
 app.post('/api/ruta/auto/merge', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
   if (!_autoSameSite(req)) return res.status(403).json({ ok: false, why: 'site' });
   if (!_autoHit('g:' + _clientIp(req), 3600e3, 20)) return res.status(429).set('Retry-After', '120').json({ ok: false, error: 'Espera un momento.' });
   const a = _autoCookie(req);
-  const p = a ? Students.peek(a.code) : null;
+  const p = _autoHeld(a);
   if (!p || !_autoUnclaimed(p.rec)) return res.status(403).json({ ok: false, why: 'auto', error: 'Este teléfono no tiene una cuenta automática.' });
   const to = _studentOf(req);
   if (!to || to.code === p.rec.code || !to.classroomCode) return res.status(403).json({ ok: false, why: 'login', error: 'Entra con tu código primero.' });
@@ -5190,7 +5258,7 @@ app.post('/api/ruta/auto/merge', (req, res) => {
   const arch = Students.archiveOne(from.code, { mergedInto: to.code, mergedAt: Date.now(), archivedWhy: 'merged into a class account' });
   if (arch.error) console.warn('[auto] merged, but the automatic account stays live:', arch.error);
   _autoDropCookie(req, res);
-  console.log('[auto] an automatic account was merged into a class account (' + merged.seals + ' seals, ' + merged.sent + ' sent)');
+  console.log('[auto] an automatic account was merged into a class account (' + merged.seals + ' seals, ' + merged.sent + ' sent, ' + merged.tries + ' tries)');
   res.json({ ok: true, merged, account: _autoMeOf(Students.get(to.code), true) });
 });
 // the route state's 2026-10-18 extras: the class mode of El Simulacro Dorado (DORADO_SELF_SERVE off: no player links for
@@ -5351,6 +5419,7 @@ function _rutaState(req) {
 }
 app.get('/api/ruta-dorada', (req, res) => {
   res.set('Cache-Control', 'private, no-store');
+  LevelKeys.deviceId(req, res);   // (2026-10-18: a device the platform has seen, its dkd id: the homework mark's account step needs it)
   try { res.json(_rutaExtras(req, _rutaState(req))); } catch (e) {
     console.error('[ruta-dorada] state failed:', e.message);
     res.status(500).json({ ok: false, error: 'No se pudo cargar La Ruta Dorada.' });
