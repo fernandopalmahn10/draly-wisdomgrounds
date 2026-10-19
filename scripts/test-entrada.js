@@ -516,12 +516,18 @@ async function run() {
   const js = fs.readFileSync(path.join(ROOT, 'public', 'js', 'entrada.js'), 'utf8');
   const dict = fs.readFileSync(path.join(ROOT, 'public', 'js', 'hw-i18n.js'), 'utf8');
   ok(/\/js\/entrada\.js\?v=\w+/.test(html) && /\/css\/entrada\.css\?v=\w+/.test(html) && /id="en-root"/.test(html), 'homework.html loads the entrance (with ?v=) and keeps the old card as the door');
-  ok(/TRANSITIONAL/.test(html) && /TRANSITIONAL/.test(js), 'the old form is marked transitional in the page and the code');
+  // 🚪 2026-10-19 (his words: "close the old door where kids type a four-number code"): no line leads to the old card,
+  // its boxes never show, and saved codes that stop working land on «Entra con tu código» (never on the old card)
+  const ecss = fs.readFileSync(path.join(ROOT, 'public', 'css', 'entrada.css'), 'utf8');
+  ok(/CLOSED 2026-10-19/.test(html) && /CLOSED 2026-10-19/.test(js), 'the old door is marked closed in the page and the code');
+  ok(!/4 números|Entra aquí|data-go="door"/.test(js), 'nothing in the entrance leads to the old 4-number door');
+  ok(/en-door > \.hw-entry-card :is\(\.hw-entry-sub, \.hw-entry-label, #hw-enter-btn, \.hw-entry-hint\) \{ display: none !important; \}/.test(ecss), 'the old card never shows a box to type a class code');
+  ok(/S\.prefill = isCode\(saved\)[^\n]*\n\s*go\('tengo'\)/.test(js) && !/go\('door', \{ keepErr/.test(js), 'saved codes that stop working → «Entra con tu código» with the code in its box, never the old card');
   const states = ['hola', 'quien', 'clave', 'nivel', 'codigo', 'tengo'];
   ok(states.every((s) => new RegExp('function view' + s[0].toUpperCase() + s.slice(1) + '\\(').test(js)), 'every state of the design is drawn (' + states.join(' · ') + ')');
   // every Spanish line the entrance writes has its English (hw-i18n.js)
   const lines = ['Mi Dralingo', '¡Hola de nuevo!', 'Este teléfono te recuerda: no tienes que escribir nada.', '¿No eres tú?', '¿Quién eres?', 'Ya tengo mi código',
-    'El que anoté en mi cuaderno', 'Soy nuevo', 'Solo necesito la clave de mi nivel', '¿Tu profe te dio un código de 4 números?', 'Entra aquí',
+    'El que anoté en mi cuaderno', 'Soy nuevo', 'Solo necesito la clave de mi nivel', 'Este teléfono recuerda tu código: escribe la clave de tu nivel.',
     'Escribe la clave de tu nivel', 'Está en el mensaje de WhatsApp de tu profe.', 'La clave', 'Seguir', '¡Tu nivel es', 'Elige tu avatar', 'Crear mi cuenta',
     '¡Ya tienes tu cuenta!', 'Tu código de alumno es:', 'Copiar mi código', 'Entra con tu código', 'Tu código de alumno', 'El de tu cuaderno',
     'La clave de tu nivel', 'El del mensaje de tu profe', '¿Salir de tu cuenta en este teléfono?', 'No, quedarme', 'Sí, salir', 'Antes de seguir',

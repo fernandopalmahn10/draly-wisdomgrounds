@@ -23,6 +23,14 @@ the checklist for any new game mode.
   the window, no part of the interface pushed off-screen; check those sizes on every new or changed screen, plus
   1366×657 (what a 1366×768 laptop really shows under the browser bars: it caught most fit problems in the sweep).
   A lobby's start button and a page's first action sit on that first screen.
+- **Every page scrolls by finger and by mouse wheel** (his words 2026-10-19 on the new kid home: "it's unscrollable for
+  mobile… I need to pinch zoom… and on computers too… I cannot test it"): the home shipped with a dead page because
+  `<body>` stayed a scroll box (styles.css: `overflow-x: hidden` + `overscroll-behavior: none`) with nothing to scroll,
+  and «none» stopped every swipe and wheel before it reached the page. A page whose `<body>` stops being the 100 %-high
+  scroller (`height: auto`) also takes `overflow: visible; overflow-x: clip` (css/mi-dralingo.css `body.md-in`).
+  Full-page screenshots and `window.scrollTo` hide this bug (both still worked): check every new or changed page with a
+  REAL wheel at 390×844, 360×640 and 1366×657, the scroll check in the platform-screenshots skill (`scroll-check/`).
+  A headless test browser cannot fake a finger swipe (it moves 0 even on pages that scroll): the wheel is the check.
 - **Super obvious, like Duolingo** (his direction 2026-10-18): every screen tells a kid or parent exactly what to do
   first, in direct words («Toca el 1, La Base, donde está la flecha: ahí empiezas»), never indirect lines («Primero la
   base, después el examen»); one highlighted first step with a cast character pointing and «Empieza aquí»; numbered
@@ -544,6 +552,11 @@ the checklist for any new game mode.
   - On a new or lost phone the kid types their code AND the level key; the code alone never opens an account.
   - To move up a level, the kid types the new key («Abrir otro nivel» in Mi perfil).
   - The 4-digit class code (1001…) is no longer asked of families. Kids join a teacher's class through the PIN in class.
+    **The old door is closed** (his words 2026-10-19: "close the old door where kids type a four-number code. We don't
+    need that"): no line leads to the old class code + student code card, and its boxes never show. A phone that saved
+    the old codes still enters with nothing to type («¡Hola de nuevo!» → «¡Vamos!»); when they stop working it lands on
+    «Entra con tu código» with the code in its box. Still open (needs his OK, once every family has its key on
+    WhatsApp): the server refusing class-code logins (`/api/homework/enter`) and class codes as proof of a kid's record.
   - A leaked key is changed by the super admin in /maestro.
   - Built 2026-10-18 (parts 1-2 of «Mi Dralingo»: la entrada `public/js/entrada.js`, Papás `public/js/papas.js` +
     `papas-plan.js`, shared by the server and the page). Key accounts (`byKey`) answer only to their session, their

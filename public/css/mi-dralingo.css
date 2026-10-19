@@ -58,8 +58,13 @@ body:has(#screen-list.md:not(.hidden)), body:has(#screen-settings.md-pf:not(.hid
 body:has(#screen-list.md:not(.hidden))::before, body:has(#screen-settings.md-pf:not(.hidden))::before { display: none !important; }
 body.md-in #hw-lang-toggle { display: none !important; }
 /* the page itself scrolls once the kid is in (styles.css makes <body> a 100 %-high scroll box: a phone's address bar then
-   never folds away, and «Empezar aquí» / «Volver» could not bring a step or the top into view) */
-body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; }
+   never folds away, and «Empezar aquí» / «Volver» could not bring a step or the top into view).
+   🩹 2026-10-19 (his words: "it's unscrollable for mobile… and on computers too"): <body> must stop being a scroll box
+   too. styles.css gives it overflow-x: hidden (= a scroll box) + overscroll-behavior: none; with height: auto it had
+   nothing to scroll and «none» kept every swipe and wheel from reaching the page: the home did not move at all.
+   overflow-x: clip cuts sideways overflow without making a scroll box (older phones skip it and keep visible; the page
+   still never scrolls sideways: <html> keeps overflow-x: hidden). Check: scroll-check in the platform-screenshots skill */
+body.md-in { height: auto; min-height: 100vh; min-height: 100dvh; overflow: visible; overflow-x: clip; }
 #screen-list.md :is(a, button, summary, [tabindex]):focus-visible,
 #screen-settings.md-pf :is(a, button, summary, input):focus-visible { outline: 3px solid var(--md-ink); outline-offset: 3px; }
 /* (a view's heading takes the focus when it opens, for screen readers: no ring around a title nobody can tap) */

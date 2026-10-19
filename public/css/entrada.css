@@ -45,6 +45,9 @@
 #screen-entry.en-on:not(.is-hola):not(.is-llave):not(.is-load) > .hw-entry-home { display: none; }
 #screen-entry.en-on.en-door { justify-content: flex-start; align-items: center; padding: 72px 16px 64px; }
 #screen-entry.en-on.en-door > .hw-entry-card { display: block; }
+/* 🚪 2026-10-19 the old door is closed (his words: "we don't need that"): the old card runs only for a phone that saved
+   the old codes, and shows only Dralingo, the title and its «¿Eres tú?» question: no box to type a class code into */
+#screen-entry.en-on.en-door > .hw-entry-card :is(.hw-entry-sub, .hw-entry-label, #hw-enter-btn, .hw-entry-hint) { display: none !important; }
 #screen-entry.en-on.en-door > .en-root { flex: 0 0 0; height: 0; }
 
 .en-root { position: relative; z-index: 2; flex: 1 0 auto; display: flex; flex-direction: column; width: 100%; }
@@ -170,15 +173,6 @@
   .en-opt-gold:hover { box-shadow: 0 5px 0 var(--en-gold-2), inset 0 0 0 2px var(--en-red); }
 }
 
-/* the transitional door: a calm line, never a third big choice */
-.en-doorline {
-  margin: 2px 0 0; padding-top: 10px; border-top: 2px dashed #e2d4b4; display: flex; flex-wrap: wrap; align-items: center;
-  justify-content: center; column-gap: 6px; row-gap: 0; text-align: center; font-weight: 700; font-size: .88rem; color: var(--en-ink-2);
-}
-.en-link {
-  min-height: 48px; padding: 0 8px; border: 0; background: none; color: var(--en-red); font: 900 .92rem/1 var(--en-body);
-  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
-}
 .en-fixed-back {
   position: fixed; top: 12px; left: 12px; z-index: 5; display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 16px 0 10px;
   border: 0; border-radius: 999px; background: var(--en-cream); color: var(--en-red); font: 800 1rem/1 var(--en-body);

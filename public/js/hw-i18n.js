@@ -148,7 +148,7 @@
     ['¿No eres tú?', 'Not you?'], ['¿Quién eres?', 'Who are you?'], ['Antes de seguir', 'Before we go on'],
     ['Ya tengo mi código', 'I already have my code'], ['El que anoté en mi cuaderno', 'The one I wrote in my notebook'],
     ['Soy nuevo', 'I\'m new'], ['Solo necesito la clave de mi nivel', 'I only need my level key'],
-    ['¿Tu profe te dio un código de 4 números?', 'Did your teacher give you a 4-number code?'], ['Entra aquí', 'Come in here'],
+    ['Este teléfono recuerda tu código: escribe la clave de tu nivel.', 'This phone remembers your code: type your level key.'],
     ['Escribe la clave de tu nivel', 'Type your level key'],
     ['Está en el mensaje de WhatsApp de tu profe.', 'It is in your teacher\'s WhatsApp message.'],
     ['La clave', 'The key'], ['Seguir', 'Next'], ['¡Tu nivel es', 'Your level is'], ['Elige tu avatar', 'Pick your avatar'],

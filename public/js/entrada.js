@@ -13,9 +13,11 @@
 //   codigo  the six-character code in gold tiles, «anótalo», «Copiar mi código», «¡Vamos!»
 //   tengo   the student code AND the level key → POST /api/entrada/entrar (one uniform answer when they don't match)
 //   eres    «¿Eres tú?» for this phone's parked account (after «Salir») before «Soy nuevo» (js/ruta-auto.js draws it)
-//   door    ⏳ TRANSITIONAL: «¿Tu profe te dio un código de 4 números? Entra aquí» = the old class code + student code card
-//           (homework.html's .hw-entry-card + homework.js tryEnter), for families without their key yet; he removes it once
-//           every family has its key
+//   door    🚪 CLOSED 2026-10-19 (his words: "close the old door where kids type a four-number code. We don't need that"):
+//           nobody types a class code any more (no line leads to it). The old card (homework.html's .hw-entry-card +
+//           homework.js tryEnter) only runs for a phone that SAVED the old class code + student code: it logs in with them
+//           with nothing to type, and shows only its «¿Eres tú?» question (never its boxes). When those saved codes no
+//           longer work: «Entra con tu código», the code already in its box, the level key to type
 // «¡Vamos!» goes to the kid's home, Mi Dralingo (homework.js DralyHw.enterWith → js/mi-dralingo.js). Every state has a way
 // back; the English toggle translates every line (hw-i18n.js); never a real code as a placeholder (dots and words).
 // Also here: «¿Salir de tu cuenta en este teléfono?» (DralyEntrada.confirmOut, homework.js «Salir») and «Abrir otro nivel»
@@ -28,6 +30,7 @@
   const root = $('en-root');
   if (!scr || !root) return;
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const isCode = (s) => /^[A-Za-z0-9]{4,8}$/.test(String(s || '').trim());
   const ls = {
     get(k) { try { return localStorage.getItem(k) || ''; } catch (_) { return ''; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
@@ -79,7 +82,6 @@
     if (to === 'home') return '<a class="en-back" href="/">' + I.back + '<span>Volver</span></a>';
     return '<button type="button" class="en-back" data-go="' + to + '">' + I.back + '<span>Volver</span></button>';
   }
-  const DOOR = '<p class="en-doorline"><span>¿Tu profe te dio un código de 4 números?</span><button type="button" class="en-link" data-go="door">Entra aquí</button></p>';
   const brand = '<p class="en-brand">Mi Dralingo</p>';
 
   // ── the states ────────────────────────────────────────────────────
@@ -132,8 +134,7 @@
     return card('quien',
       '<h1 class="en-h" id="en-h" tabindex="-1">¿Quién eres?</h1>' +
       '<button type="button" class="en-opt" data-act="tengo"><img src="' + ART.adric + '" alt="" width="58" height="66"><span><b>Ya tengo mi código</b><small>El que anoté en mi cuaderno</small></span></button>' +
-      '<button type="button" class="en-opt en-opt-gold" data-act="nuevo"><img src="' + ART.aileen + '" alt="" width="58" height="66"><span><b>Soy nuevo</b><small>Solo necesito la clave de mi nivel</small></span></button>' +
-      DOOR);
+      '<button type="button" class="en-opt en-opt-gold" data-act="nuevo"><img src="' + ART.aileen + '" alt="" width="58" height="66"><span><b>Soy nuevo</b><small>Solo necesito la clave de mi nivel</small></span></button>');
   }
   function viewEres() {
     // (F4: a kid of the key is shown by name and avatar, never their code: the next person on a shared phone)
@@ -201,8 +202,7 @@
         '<p class="en-err" role="alert"></p>' +
         '<button type="submit" class="en-btn en-btn-red">Entrar</button>' +
       '</form>' +
-      '<p class="en-lock">' + I.lock + '<span>En un teléfono nuevo pedimos las dos: así nadie entra solo con tu código. Tu progreso te espera completo.</span></p>' +
-      DOOR);
+      '<p class="en-lock">' + I.lock + '<span>En un teléfono nuevo pedimos las dos: así nadie entra solo con tu código. Tu progreso te espera completo.</span></p>');
   }
   function viewDoor() {
     return '<button type="button" class="en-fixed-back" data-go="quien">' + I.back + '<span>Volver</span></button>';
@@ -280,9 +280,14 @@
       const auto = S.hola && S.hola.auto;
       if (auto && auto.progress && auto.progress.any) { go('door'); window.DralyHw.tryOld(); return; }   // «¿Eres tú?» + «Pasar mi progreso» there
       busy(btn, true);
+      const saved = S.oldCodes.sc;
       Promise.resolve(window.DralyHw.tryOld({ eres: true })).then((d) => {
         busy(btn, false);
-        if (!d || !d.ok) go('door', { keepErr: true });   // what the old card says, with its boxes
+        if (d && d.ok) return;
+        // (2026-10-19, the old door is closed: never its boxes) the saved codes no longer work: their code + the level key
+        S.kid = null; S.oldCodes = null; S.prefill = isCode(saved) ? saved.toUpperCase() : '';
+        go('tengo');
+        showErr('Este teléfono recuerda tu código: escribe la clave de tu nivel.');
       });
       return;
     }
