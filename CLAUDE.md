@@ -553,6 +553,24 @@ the checklist for any new game mode.
     - the super admin's «Cerrar su sesión en todos los teléfonos» (kid profile) bumps `kidGen` and asks for code + key.
   - A PIN room tags an untagged key account with the room owner's class code for its level, only when the phone proves it.
   - `node scripts/test-entrada.js` and `node scripts/test-papas.js` must pass.
+- **The kid's home** (part 3, built 2026-10-18: /homework = «Mi Dralingo», `public/js/mi-dralingo.js`):
+  - «Hoy» always comes from `papas-plan.js`, never its own logic. The kid's `today()` follows the ladder inside the
+    current experience (1 Palabras → 2 Práctica → 3 Tu tarea). A homework that is due shows as the red «N por mandar»
+    badge plus a reminder line, never as the start step while words are untouched. Papás' «Lo más importante» puts
+    homework first for parents. Both read one plan, so their facts never contradict (design review 2026-10-18: a new kid
+    was told to send homework before learning a word).
+  - Done is green ✓ only when it is true everywhere: no «¡Experiencia lista!» while new teacher work for it is listed.
+    A locked step shows a lock and one line, never a button.
+  - Homework cards are made only through `Ruta.hwCards`.
+  - Every view is a hash view with a real «Volver».
+  - The student code is shown only in Mi perfil.
+  - `DESAFIO_LIVE` stays false until the pin games become daily challenges.
+  - Every new teacher tarea names its experience (`expN` or its world); otherwise it lands in «De tu profe» under «Hoy».
+  - The streak counts a day only with a real step (seal, practice round, homework mark, tarea handed in, daily) on the
+    kid's own calendar; page views never count.
+  - A new hw-i18n pattern must settle: its English, translated again, stays the same (2026-10-18 `alt="Aileen"`
+    re-translated forever and froze the laptop's browser).
+  - `node scripts/test-home.js` must pass.
 
 ## Levels: YCT mode everywhere (his direction 2026-10-12)
 - "The whole platform has to have YCT mode": every place that checks, picks or shows a student's level reads
