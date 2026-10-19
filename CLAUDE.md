@@ -695,8 +695,16 @@ the checklist for any new game mode.
 - Three tracks per PDF with the PDF's own codes (EXP3.1 words · EXP3.2 dialogue · EXP3.3 the six video lines); built by
   `scripts/audios-build.js` from `content/audios/<id>.json` with the platform's Google voices (words + PROFE = Wavenet-A,
   TÚ = Wavenet-D). Fix a wrong reading in the JSON's `zh`, then rebuild that id.
-- New PDFs arrive in `../TAREAS/` (Cowork copies them there); a SessionStart hook lists any without audio. Build them
-  with the `tarea-audio` skill. TAREAS also holds kids' videos: never open, copy, commit or upload them.
+- **Every new or re-made storybook gets its audio on the platform** (his ask 2026-10-19: "every time a new storybook is
+  created, there should be something that triggers it to also make it on the platform"). Finished PDFs land in his own
+  folder `C:\Users\ferpa\Downloads\IMPORTANT DOCUMENTS\TAREAS\<LEVEL>\<EXPERIENCE>\` (where he keeps them since
+  2026-10-18) or the workspace copy `../TAREAS/`: `tools/tareas/tareas.py scan` reads both, skips files he names
+  «OUTDATED …», takes the newest PDF of an id, and marks it NEW (no audio) or UPDATED (its audio came from another PDF:
+  fingerprints in `tools/tareas/built.json`, written by `tareas.py done <id>` after each build). The SessionStart hook
+  says so at the start of every Code window; build them with the `tarea-audio` skill right away (his standing ask),
+  then ask about a class before going live. 2026-10-19 the watcher only read the workspace copy and missed La Tienda
+  (new) and La Familia Grande (a new story under the same id). TAREAS also holds kids' videos: never open, copy,
+  commit or upload them.
 - Commit `content/audios/<id>.json`, `public/assets/audios/<id>/` and `public/assets/audios/catalog.json` together.
   From a worktree, `node scripts/audios-build.js <id> --cache <main checkout>/content/audios/.cache` reuses the voices.
 - **Dralingo Dorado** (2026-10-11): about one visit in ten, a golden 3D Dralingo pops up in the corner of /audios

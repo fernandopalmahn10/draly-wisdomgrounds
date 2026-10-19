@@ -265,11 +265,16 @@ async function serverTests() {
   p = P('HALF');
   ok(p.sealed === 123 && p.complete === 2 && p.current === 3, 'halfway: 123 of 300 words, experiences 1-2 complete (words + practice + homework), on 3');
   ok(same(p.exps.map((e) => e.state), ['done', 'done', 'current', 'later', 'later', 'later', 'later', 'later']), '… the strip: done, done, current, later…');
-  ok(p.tareas.sent === 1 && p.tareas.week.exp === 3 && p.tareas.week.left === 1 && p.focus.kind === 'tarea' && p.focus.exp === 3,
-    '… 1 homework sent, experience 3\'s waits (heard is not sent): «Ayúdale a mandar la tarea de la Experiencia 3»');
+  // (2026-10-19: «this week» = the NEWEST experience with homework in the catalog, which grows as storybooks arrive:
+  // La Tienda made it experience 4. The kid's own experience 3 homework is only heard, so still 1 sent)
+  const WEEK = NEWHW[0].exp;
+  const WEEK_LEFT = NEWHW.filter((h) => h.exp === WEEK && !(KIDS.HALF.tareas[h.id] && KIDS.HALF.tareas[h.id].s)).length;
+  ok(p.tareas.sent === 1 && p.tareas.week.exp === WEEK && p.tareas.week.left === WEEK_LEFT && p.focus.kind === 'tarea' && p.focus.exp === WEEK,
+    '… 1 homework sent (heard is not sent), this week\'s homework waits: «Ayúdale a mandar la tarea de la Experiencia ' + WEEK + '»');
   t = T('HALF');
   ok(t.ruta && /^Va en la Experiencia 3, El Restaurante Chino\. Cuando termine las 8, la profe le hace El Simulacro Dorado en clase\.$/.test(t.ruta.say), '… «' + (t.ruta && t.ruta.say) + '»');
-  ok(t.tips.length === 3 && /El Restaurante Chino/.test(t.tips[0]) && /video/.test(t.tips[2]), '… 3 tips for experience 3 (its words, a question, the video)');
+  const weekName = (p.exps.find((e) => e.n === WEEK) || {}).name || '?';
+  ok(t.tips.length === 3 && t.tips[0].includes(weekName) && /video/.test(t.tips[2]), '… 3 tips for this week\'s experience ' + WEEK + ', ' + weekName + ' (its words, a question, the video)');
   p = P('PRAC');
   ok(p.focus.kind === 'practice' && p.focus.exp === 3 && p.focus.best === 55 && p.focus.goal === 70, 'homework all sent: practise experience 3, 55 % of 70 %');
   t = T('PRAC');

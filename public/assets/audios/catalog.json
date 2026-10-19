@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-15T11:40:09.602Z",
+ "updated": "2026-10-19T11:55:11.656Z",
  "levels": [
   {
    "id": "yct1",
@@ -206,14 +206,14 @@
    "exp": 1,
    "round": 1,
    "title": "La Familia Grande",
-   "tagline": "Hoy es tu cumpleaños. Llega toda la familia y la profe pregunta quiénes son. ¿Sabes presentarlos?",
+   "tagline": "Llega toda la familia a la casa. Y llega la vecina, la señora Wáng, que quiere saber quién es quién. ¿Sabes presentarlos?",
    "cover": "/assets/audios/newhsk1-e01-r1/cover.jpg",
    "tracks": [
     {
      "code": "EXP1.1",
      "kind": "words",
      "src": "/assets/audios/newhsk1-e01-r1/EXP1.1.mp3",
-     "dur": 60.37,
+     "dur": 61.03,
      "parts": [
       {
        "at": 0,
@@ -234,142 +234,142 @@
       [
        1,
        4.41,
-       5.18
+       5.28
       ],
       [
        1,
-       5.98,
-       6.75
+       6.08,
+       6.95
       ],
       [
        2,
-       8.63,
-       9.36
+       8.97,
+       9.59
       ],
       [
        2,
-       10.16,
-       10.9
+       10.39,
+       11.01
       ],
       [
        3,
-       12.72,
-       13.49
+       12.81,
+       13.55
       ],
       [
        3,
-       14.29,
-       15.05
+       14.35,
+       15.08
       ],
       [
        4,
-       16.92,
-       17.55
+       16.91,
+       17.59
       ],
       [
        4,
-       18.35,
-       18.97
+       18.39,
+       19.07
       ],
       [
        5,
-       20.77,
-       21.5
+       20.87,
+       21.55
       ],
       [
        5,
-       22.3,
-       23.04
+       22.35,
+       23.03
       ],
       [
        6,
-       24.87,
-       25.55
+       24.83,
+       25.58
       ],
       [
        6,
-       26.35,
-       27.03
+       26.38,
+       27.13
       ],
       [
        7,
-       28.83,
-       29.51
+       28.98,
+       29.56
       ],
       [
        7,
-       30.31,
-       30.99
+       30.36,
+       30.95
       ],
       [
        8,
-       32.79,
-       33.38
+       32.75,
+       33.63
       ],
       [
        8,
-       34.18,
-       34.77
+       34.43,
+       35.3
       ],
       [
        9,
-       36.57,
-       37.2
+       37.32,
+       37.95
       ],
       [
        9,
-       38,
-       38.63
+       38.75,
+       39.38
       ],
       [
        10,
-       40.43,
-       41.09
+       41.18,
+       41.85
       ],
       [
        10,
-       41.89,
-       42.56
+       42.65,
+       43.31
       ],
       [
        11,
-       44.36,
-       44.9
+       45.11,
+       45.9
       ],
       [
        11,
-       45.7,
-       46.23
+       46.7,
+       47.48
       ],
       [
        12,
-       48.03,
-       48.83
+       49.38,
+       50.14
       ],
       [
        12,
-       49.63,
-       50.44
+       50.94,
+       51.71
       ],
       [
        13,
-       52.36,
-       53.01
+       53.58,
+       54.07
       ],
       [
        13,
-       53.81,
-       54.45
+       54.87,
+       55.37
       ],
       [
        14,
-       56.25,
-       56.99
+       57.17,
+       57.8
       ],
       [
        14,
-       57.79,
-       58.53
+       58.6,
+       59.23
       ]
      ],
      "items": [
@@ -379,43 +379,43 @@
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-1.mp3"
       },
       {
-       "py": "shēngrì",
-       "es": "cumpleaños",
+       "py": "jiārén",
+       "es": "familia",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-2.mp3"
-      },
-      {
-       "py": "kuàilè",
-       "es": "feliz",
-       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-3.mp3"
-      },
-      {
-       "py": "jièshào",
-       "es": "presentar",
-       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-4.mp3"
       },
       {
        "py": "gēge",
        "es": "hermano mayor",
-       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-5.mp3"
+       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-3.mp3"
       },
       {
        "py": "jiějie",
        "es": "hermana mayor",
-       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-6.mp3"
+       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-4.mp3"
       },
       {
        "py": "dìdi",
        "es": "hermano menor",
-       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-7.mp3"
+       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-5.mp3"
       },
       {
        "py": "mèimei",
        "es": "hermana menor",
-       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-8.mp3"
+       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-6.mp3"
+      },
+      {
+       "py": "nǚshì",
+       "es": "señora",
+       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-7.mp3"
       },
       {
        "py": "nín",
        "es": "usted",
+       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-8.mp3"
+      },
+      {
+       "py": "fēicháng",
+       "es": "muchísimo",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-9.mp3"
       },
       {
@@ -429,23 +429,23 @@
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-11.mp3"
       },
       {
-       "py": "jiā",
-       "es": "casa / familia",
+       "py": "érzi",
+       "es": "hijo",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-12.mp3"
       },
       {
-       "py": "jīntiān",
-       "es": "hoy",
+       "py": "nǚ'ér",
+       "es": "hija",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-13.mp3"
       },
       {
-       "py": "zhè shì",
-       "es": "este es",
+       "py": "ài",
+       "es": "amar",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-14.mp3"
       },
       {
-       "py": "lǎoshī",
-       "es": "maestra",
+       "py": "shéi",
+       "es": "quién",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.1-15.mp3"
       }
      ]
@@ -454,14 +454,14 @@
      "code": "EXP1.2",
      "kind": "dialogue",
      "src": "/assets/audios/newhsk1-e01-r1/EXP1.2.mp3",
-     "dur": 82.29,
+     "dur": 80.32,
      "parts": [
       {
        "at": 0,
        "label": "Escucha la conversación"
       },
       {
-       "at": 27.24,
+       "at": 26.63,
        "label": "Ahora repite cada frase"
       }
      ],
@@ -469,116 +469,116 @@
       [
        0,
        0.4,
-       3.26
+       3.84
       ],
       [
        1,
-       3.96,
-       6.67
+       4.54,
+       8.4
       ],
       [
        2,
-       7.37,
-       10.76
+       9.1,
+       10.49
       ],
       [
        3,
-       11.46,
-       16.25
+       11.19,
+       14.73
       ],
       [
        4,
-       16.95,
-       19.76
+       15.43,
+       16.11
       ],
       [
        5,
-       20.46,
-       22.34
+       16.81,
+       21.96
       ],
       [
        6,
-       23.04,
-       25.34
+       22.66,
+       24.73
       ],
       [
        0,
-       27.24,
-       30.1
+       26.63,
+       30.07
       ],
       [
        1,
-       34.87,
-       37.58
+       35.57,
+       39.42
       ],
       [
        2,
-       42.17,
-       45.56
+       45.44,
+       46.84
       ],
       [
        3,
-       51.01,
-       55.79
+       49.79,
+       53.33
       ],
       [
        4,
-       62.96,
-       65.78
+       58.95,
+       59.63
       ],
       [
        5,
-       70.49,
-       72.38
+       61.68,
+       66.83
       ],
       [
        6,
-       75.93,
-       78.23
+       74.46,
+       76.53
       ]
      ],
      "items": [
       {
-       "py": "dàjiā hǎo! jīntiān shì shéi de shēngrì?",
-       "es": "¡Hola a todos! ¿De quién es el cumpleaños hoy?",
+       "py": "nǐ hǎo! wǒ shì Wáng nǚshì. tāmen shì shéi?",
+       "es": "¡Hola! Soy la señora Wáng. ¿Quiénes son?",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.2-1.mp3",
        "who": "profe"
       },
       {
-       "py": "shì wǒ de shēngrì! wǒ jiào Dani.",
-       "es": "¡Es mi cumpleaños! Me llamo Dani.",
+       "py": "Wáng nǚshì, nín hǎo! zhè shì wǒ de jiārén.",
+       "es": "¡Señora Wáng, buenas! Esta es mi familia.",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.2-2.mp3",
        "who": "tu"
       },
       {
-       "py": "shēngrì kuàilè, Dani! tāmen shì shéi?",
-       "es": "¡Feliz cumpleaños, Dani! ¿Quiénes son?",
+       "py": "zhè shì nǐ gēge ba?",
+       "es": "Este es tu hermano mayor, ¿no?",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.2-3.mp3",
        "who": "profe"
       },
       {
-       "py": "wǒ jièshào wǒ de jiā. zhè shì wǒ gēge, zhè shì wǒ jiějie.",
-       "es": "Les presento a mi familia. Mi hermano mayor y mi hermana mayor.",
+       "py": "duì! zhè shì wǒ gēge, zhè shì wǒ jiějie.",
+       "es": "¡Sí! Mi hermano mayor, mi hermana mayor.",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.2-4.mp3",
        "who": "tu"
       },
       {
-       "py": "zhè shì wǒ dìdi, zhè shì wǒ mèimei.",
-       "es": "Mi hermano menor y mi hermana menor.",
+       "py": "tāmen ne?",
+       "es": "¿Y ellos?",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.2-5.mp3",
-       "who": "tu"
-      },
-      {
-       "py": "hǎo! shēngrì kuàilè!",
-       "es": "¡Muy bien! ¡Feliz cumpleaños!",
-       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.2-6.mp3",
        "who": "profe"
       },
       {
-       "py": "xièxie nín! wǒ hěn kuàilè!",
-       "es": "¡Gracias (usted)! ¡Estoy muy feliz!",
-       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.2-7.mp3",
+       "py": "zhè shì wǒ dìdi, zhè shì wǒ mèimei. wǒ fēicháng ài wǒ de jiārén!",
+       "es": "Mi hermano menor, mi hermana menor. ¡Quiero muchísimo a mi familia!",
+       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.2-6.mp3",
        "who": "tu"
+      },
+      {
+       "py": "hěn hǎo! xièxie dàjiā!",
+       "es": "¡Muy bien! ¡Gracias a todos!",
+       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.2-7.mp3",
+       "who": "profe"
       }
      ]
     },
@@ -586,14 +586,14 @@
      "code": "EXP1.3",
      "kind": "video",
      "src": "/assets/audios/newhsk1-e01-r1/EXP1.3.mp3",
-     "dur": 66.53,
+     "dur": 68.13,
      "parts": [
       {
        "at": 0,
        "label": "Repite cada frase"
       },
       {
-       "at": 47.36,
+       "at": 48.5,
        "label": "Ahora todo seguido, como tu video"
       }
      ],
@@ -606,57 +606,57 @@
       [
        1,
        9.69,
-       11.57
+       11.26
       ],
       [
        2,
-       15.7,
-       17.24
+       14.96,
+       17.88
       ],
       [
        3,
-       20.9,
-       23.81
+       23.46,
+       26.28
       ],
       [
        4,
-       29.4,
-       32.21
+       31.71,
+       33.65
       ],
       [
        5,
-       37.65,
-       40.82
+       37.86,
+       41.42
       ],
       [
        0,
-       47.36,
-       50.61
+       48.5,
+       51.74
       ],
       [
        1,
-       51.21,
-       53.09
+       52.34,
+       53.91
       ],
       [
        2,
-       53.69,
-       55.23
+       54.51,
+       57.43
       ],
       [
        3,
-       55.83,
-       58.74
+       58.03,
+       60.84
       ],
       [
        4,
-       59.34,
-       62.16
+       61.44,
+       63.38
       ],
       [
        5,
-       62.76,
-       65.93
+       63.98,
+       67.53
       ]
      ],
      "items": [
@@ -666,28 +666,28 @@
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.3-1.mp3"
       },
       {
-       "py": "jīntiān shì wǒ de shēngrì!",
-       "es": "¡Hoy es mi cumpleaños!",
+       "py": "zhè shì wǒ de jiārén.",
+       "es": "Esta es mi familia.",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.3-2.mp3"
-      },
-      {
-       "py": "wǒ jièshào wǒ de jiā.",
-       "es": "Les presento a mi familia.",
-       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.3-3.mp3"
       },
       {
        "py": "zhè shì wǒ gēge, zhè shì wǒ jiějie.",
        "es": "Mi hermano mayor, mi hermana mayor.",
-       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.3-4.mp3"
+       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.3-3.mp3"
       },
       {
        "py": "zhè shì wǒ dìdi, zhè shì wǒ mèimei.",
        "es": "Mi hermano menor, mi hermana menor.",
+       "clip": "/assets/audios/newhsk1-e01-r1/EXP1.3-4.mp3"
+      },
+      {
+       "py": "Wáng nǚshì, nín hǎo!",
+       "es": "¡Señora Wáng, buenas!",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.3-5.mp3"
       },
       {
-       "py": "nín hǎo, lǎoshī! xièxie dàjiā!",
-       "es": "¡Buenas, profe! ¡Gracias a todos!",
+       "py": "wǒ fēicháng ài wǒ de jiārén! xièxie dàjiā!",
+       "es": "¡Quiero muchísimo a mi familia! ¡Gracias a todos!",
        "clip": "/assets/audios/newhsk1-e01-r1/EXP1.3-6.mp3"
       }
      ]
@@ -1190,6 +1190,502 @@
     }
    ],
    "thumb": "/assets/audios/newhsk1-e03-r1/cover-s.webp"
+  },
+  {
+   "id": "newhsk1-e04-r1",
+   "level": "newhsk1",
+   "levelName": "New HSK 1",
+   "exp": 4,
+   "round": 1,
+   "title": "La Tienda",
+   "tagline": "Vas de compras con mamá. Ves una ropa preciosa… y un celular carísimo. ¿Sabes decir cuál es bonito, cuál es caro y cuál te llevas?",
+   "cover": "/assets/audios/newhsk1-e04-r1/cover.jpg",
+   "tracks": [
+    {
+     "code": "EXP4.1",
+     "kind": "words",
+     "src": "/assets/audios/newhsk1-e04-r1/EXP4.1.mp3",
+     "dur": 59.32,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha y repite"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       0.93
+      ],
+      [
+       0,
+       1.73,
+       2.25
+      ],
+      [
+       1,
+       4.05,
+       4.78
+      ],
+      [
+       1,
+       5.58,
+       6.31
+      ],
+      [
+       2,
+       8.13,
+       8.73
+      ],
+      [
+       2,
+       9.53,
+       10.12
+      ],
+      [
+       3,
+       11.92,
+       12.34
+      ],
+      [
+       3,
+       13.14,
+       13.56
+      ],
+      [
+       4,
+       15.36,
+       16.06
+      ],
+      [
+       4,
+       16.86,
+       17.56
+      ],
+      [
+       5,
+       19.36,
+       19.97
+      ],
+      [
+       5,
+       20.77,
+       21.39
+      ],
+      [
+       6,
+       23.19,
+       24
+      ],
+      [
+       6,
+       24.8,
+       25.62
+      ],
+      [
+       7,
+       27.56,
+       28.33
+      ],
+      [
+       7,
+       29.13,
+       29.9
+      ],
+      [
+       8,
+       31.78,
+       32.49
+      ],
+      [
+       8,
+       33.29,
+       34
+      ],
+      [
+       9,
+       35.8,
+       36.54
+      ],
+      [
+       9,
+       37.34,
+       38.09
+      ],
+      [
+       10,
+       39.93,
+       40.58
+      ],
+      [
+       10,
+       41.38,
+       42.03
+      ],
+      [
+       11,
+       43.83,
+       44.56
+      ],
+      [
+       11,
+       45.36,
+       46.09
+      ],
+      [
+       12,
+       47.92,
+       48.59
+      ],
+      [
+       12,
+       49.39,
+       50.07
+      ],
+      [
+       13,
+       51.87,
+       52.53
+      ],
+      [
+       13,
+       53.33,
+       54
+      ],
+      [
+       14,
+       55.8,
+       56.26
+      ],
+      [
+       14,
+       57.06,
+       57.52
+      ]
+     ],
+     "items": [
+      {
+       "py": "jiàn",
+       "es": "(una) prenda",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-1.mp3"
+      },
+      {
+       "py": "hǎokàn",
+       "es": "bonito",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-2.mp3"
+      },
+      {
+       "py": "zhēn",
+       "es": "de verdad / qué…",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-3.mp3"
+      },
+      {
+       "py": "guì",
+       "es": "caro",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-4.mp3"
+      },
+      {
+       "py": "piányi",
+       "es": "barato",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-5.mp3"
+      },
+      {
+       "py": "xīn",
+       "es": "nuevo",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-6.mp3"
+      },
+      {
+       "py": "shǒujī",
+       "es": "celular",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-7.mp3"
+      },
+      {
+       "py": "chāoshì",
+       "es": "supermercado",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-8.mp3"
+      },
+      {
+       "py": "yìxiē",
+       "es": "un poco de",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-9.mp3"
+      },
+      {
+       "py": "shāngdiàn",
+       "es": "tienda",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-10.mp3"
+      },
+      {
+       "py": "mǎi",
+       "es": "comprar",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-11.mp3"
+      },
+      {
+       "py": "dōngxi",
+       "es": "cosas",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-12.mp3"
+      },
+      {
+       "py": "yīfu",
+       "es": "ropa",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-13.mp3"
+      },
+      {
+       "py": "duōshǎo",
+       "es": "¿cuánto?",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-14.mp3"
+      },
+      {
+       "py": "kuài",
+       "es": "yuan",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.1-15.mp3"
+      }
+     ]
+    },
+    {
+     "code": "EXP4.2",
+     "kind": "dialogue",
+     "src": "/assets/audios/newhsk1-e04-r1/EXP4.2.mp3",
+     "dur": 72.95,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Escucha la conversación"
+      },
+      {
+       "at": 24.36,
+       "label": "Ahora repite cada frase"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       2.3
+      ],
+      [
+       1,
+       3,
+       5.99
+      ],
+      [
+       2,
+       6.69,
+       10.03
+      ],
+      [
+       3,
+       10.73,
+       12.55
+      ],
+      [
+       4,
+       13.25,
+       15.71
+      ],
+      [
+       5,
+       16.41,
+       19
+      ],
+      [
+       6,
+       19.7,
+       22.46
+      ],
+      [
+       0,
+       24.36,
+       26.26
+      ],
+      [
+       1,
+       29.83,
+       32.82
+      ],
+      [
+       2,
+       37.76,
+       41.1
+      ],
+      [
+       3,
+       46.48,
+       48.3
+      ],
+      [
+       4,
+       51.78,
+       54.24
+      ],
+      [
+       5,
+       58.52,
+       61.11
+      ],
+      [
+       6,
+       65.54,
+       68.3
+      ]
+     ],
+     "items": [
+      {
+       "py": "nǐ hǎo! nǐ xiǎng mǎi shénme?",
+       "es": "¡Hola! ¿Qué quieres comprar?",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.2-1.mp3",
+       "who": "profe"
+      },
+      {
+       "py": "wǒ xiǎng mǎi yīfu. zhè jiàn zhēn hǎokàn!",
+       "es": "Quiero comprar ropa. ¡Esta está preciosa!",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.2-2.mp3",
+       "who": "tu"
+      },
+      {
+       "py": "zhè jiàn yǒu dà yìdiǎnr de ma? duōshǎo qián?",
+       "es": "¿La tienen más grande? ¿Cuánto cuesta?",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.2-3.mp3",
+       "who": "tu"
+      },
+      {
+       "py": "yǒu. wǔshíqī kuài.",
+       "es": "Sí. Cincuenta y siete yuanes.",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.2-4.mp3",
+       "who": "profe"
+      },
+      {
+       "py": "tài guì le! nà jiàn xīn de ne?",
+       "es": "¡Demasiado caro! ¿Y esa nueva?",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.2-5.mp3",
+       "who": "tu"
+      },
+      {
+       "py": "nà jiàn sānshísān kuài, hěn piányi.",
+       "es": "Esa cuesta treinta y tres, es muy barata.",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.2-6.mp3",
+       "who": "profe"
+      },
+      {
+       "py": "hǎo! wǒ mǎi nà jiàn. xièxie!",
+       "es": "¡Bien! Me llevo esa. ¡Gracias!",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.2-7.mp3",
+       "who": "tu"
+      }
+     ]
+    },
+    {
+     "code": "EXP4.3",
+     "kind": "video",
+     "src": "/assets/audios/newhsk1-e04-r1/EXP4.3.mp3",
+     "dur": 80.68,
+     "parts": [
+      {
+       "at": 0,
+       "label": "Repite cada frase"
+      },
+      {
+       "at": 57.35,
+       "label": "Ahora todo seguido, como tu video"
+      }
+     ],
+     "segs": [
+      [
+       0,
+       0.4,
+       5.02
+      ],
+      [
+       1,
+       12.99,
+       14.9
+      ],
+      [
+       2,
+       19.09,
+       22.53
+      ],
+      [
+       3,
+       28.85,
+       32.08
+      ],
+      [
+       4,
+       38.1,
+       41.09
+      ],
+      [
+       5,
+       46.78,
+       50.31
+      ],
+      [
+       0,
+       57.35,
+       61.97
+      ],
+      [
+       1,
+       62.57,
+       64.49
+      ],
+      [
+       2,
+       65.09,
+       68.53
+      ],
+      [
+       3,
+       69.13,
+       72.36
+      ],
+      [
+       4,
+       72.96,
+       75.95
+      ],
+      [
+       5,
+       76.55,
+       80.08
+      ]
+     ],
+     "items": [
+      {
+       "py": "dàjiā hǎo! wǒ jiào ___. wǒ qù mǎi dōngxi.",
+       "es": "¡Hola a todos! Me llamo ___. Voy de compras.",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.3-1.mp3"
+      },
+      {
+       "py": "zhè jiàn yīfu zhēn hǎokàn!",
+       "es": "¡Esta ropa está preciosa!",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.3-2.mp3"
+      },
+      {
+       "py": "duōshǎo qián? wǔshíqī kuài? tài guì le!",
+       "es": "¿Cuánto cuesta? ¿57 yuanes? ¡Demasiado caro!",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.3-3.mp3"
+      },
+      {
+       "py": "nà jiàn xīn de hěn piányi, wǒ mǎi nà jiàn.",
+       "es": "Esa nueva es muy barata, me llevo esa.",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.3-4.mp3"
+      },
+      {
+       "py": "zhège shǒujī hěn piàoliang, yě hěn guì!",
+       "es": "¡Este celular es muy bonito, y muy caro!",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.3-5.mp3"
+      },
+      {
+       "py": "wǒ qù chāoshì mǎi yìxiē shuǐguǒ. zàijiàn!",
+       "es": "Voy al súper a comprar un poco de fruta. ¡Adiós!",
+       "clip": "/assets/audios/newhsk1-e04-r1/EXP4.3-6.mp3"
+      }
+     ]
+    }
+   ],
+   "thumb": "/assets/audios/newhsk1-e04-r1/cover-s.webp"
   },
   {
    "id": "hsk1-e01-r1",

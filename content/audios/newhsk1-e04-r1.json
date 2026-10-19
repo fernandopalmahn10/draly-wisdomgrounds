@@ -1,0 +1,57 @@
+{
+ "id": "newhsk1-e04-r1",
+ "level": "newhsk1",
+ "exp": 4,
+ "round": 1,
+ "title": "La Tienda",
+ "tagline": "Vas de compras con mamá. Ves una ropa preciosa… y un celular carísimo. ¿Sabes decir cuál es bonito, cuál es caro y cuál te llevas?",
+ "pdf": "DRALINGO_NewHSK1_E04_R1_LaTienda.pdf",
+ "tracks": [
+  {
+   "code": "EXP4.1",
+   "kind": "words",
+   "items": [
+    { "py": "jiàn", "es": "(una) prenda", "zh": "件" },
+    { "py": "hǎokàn", "es": "bonito", "zh": "好看" },
+    { "py": "zhēn", "es": "de verdad / qué…", "zh": "真" },
+    { "py": "guì", "es": "caro", "zh": "贵" },
+    { "py": "piányi", "es": "barato", "zh": "便宜" },
+    { "py": "xīn", "es": "nuevo", "zh": "新" },
+    { "py": "shǒujī", "es": "celular", "zh": "手机" },
+    { "py": "chāoshì", "es": "supermercado", "zh": "超市" },
+    { "py": "yìxiē", "es": "un poco de", "zh": "一些" },
+    { "py": "shāngdiàn", "es": "tienda", "zh": "商店" },
+    { "py": "mǎi", "es": "comprar", "zh": "买" },
+    { "py": "dōngxi", "es": "cosas", "zh": "东西" },
+    { "py": "yīfu", "es": "ropa", "zh": "衣服" },
+    { "py": "duōshǎo", "es": "¿cuánto?", "zh": "多少" },
+    { "py": "kuài", "es": "yuan", "zh": "块" }
+   ]
+  },
+  {
+   "code": "EXP4.2",
+   "kind": "dialogue",
+   "items": [
+    { "who": "profe", "py": "nǐ hǎo! nǐ xiǎng mǎi shénme?", "es": "¡Hola! ¿Qué quieres comprar?", "zh": "你好！你想买什么？" },
+    { "who": "tu", "py": "wǒ xiǎng mǎi yīfu. zhè jiàn zhēn hǎokàn!", "es": "Quiero comprar ropa. ¡Esta está preciosa!", "zh": "我想买衣服。这件真好看！" },
+    { "who": "tu", "py": "zhè jiàn yǒu dà yìdiǎnr de ma? duōshǎo qián?", "es": "¿La tienen más grande? ¿Cuánto cuesta?", "zh": "这件有大一点儿的吗？多少钱？" },
+    { "who": "profe", "py": "yǒu. wǔshíqī kuài.", "es": "Sí. Cincuenta y siete yuanes.", "zh": "有。五十七块。" },
+    { "who": "tu", "py": "tài guì le! nà jiàn xīn de ne?", "es": "¡Demasiado caro! ¿Y esa nueva?", "zh": "太贵了！那件新的呢？" },
+    { "who": "profe", "py": "nà jiàn sānshísān kuài, hěn piányi.", "es": "Esa cuesta treinta y tres, es muy barata.", "zh": "那件三十三块，很便宜。" },
+    { "who": "tu", "py": "hǎo! wǒ mǎi nà jiàn. xièxie!", "es": "¡Bien! Me llevo esa. ¡Gracias!", "zh": "好！我买那件。谢谢！" }
+   ]
+  },
+  {
+   "code": "EXP4.3",
+   "kind": "video",
+   "items": [
+    { "py": "dàjiā hǎo! wǒ jiào ___. wǒ qù mǎi dōngxi.", "es": "¡Hola a todos! Me llamo ___. Voy de compras.", "zh": ["大家好！我叫", "我去买东西。"] },
+    { "py": "zhè jiàn yīfu zhēn hǎokàn!", "es": "¡Esta ropa está preciosa!", "zh": "这件衣服真好看！" },
+    { "py": "duōshǎo qián? wǔshíqī kuài? tài guì le!", "es": "¿Cuánto cuesta? ¿57 yuanes? ¡Demasiado caro!", "zh": "多少钱？五十七块？太贵了！" },
+    { "py": "nà jiàn xīn de hěn piányi, wǒ mǎi nà jiàn.", "es": "Esa nueva es muy barata, me llevo esa.", "zh": "那件新的很便宜，我买那件。" },
+    { "py": "zhège shǒujī hěn piàoliang, yě hěn guì!", "es": "¡Este celular es muy bonito, y muy caro!", "zh": "这个手机很漂亮，也很贵！" },
+    { "py": "wǒ qù chāoshì mǎi yìxiē shuǐguǒ. zàijiàn!", "es": "Voy al súper a comprar un poco de fruta. ¡Adiós!", "zh": "我去超市买一些水果。再见！" }
+   ]
+  }
+ ]
+}
