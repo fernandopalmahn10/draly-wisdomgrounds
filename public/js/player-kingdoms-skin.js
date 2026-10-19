@@ -471,8 +471,10 @@
     kdPaused = !!v;
     if (P()) P().pauseCard(kdPaused, { mode: 'phone' });
     hold(kdPaused);
-    if (kdPaused) stopMusic(); else if (on && (game === 'kingdoms' || game === 'paint' || game === 'trapdoor')) playMusic(game === 'trapdoor' && document.body.classList.contains('tp-lastround') ? 'music-final' : 'music-battle', 0.32);
+    // (in the hurry — the last 30 s, Las Trampillas' Final Round — the phone has no music of its own: the projector plays it)
+    if (kdPaused) stopMusic(); else if (on && (game === 'kingdoms' || game === 'paint' || game === 'trapdoor') && !hurrying()) playMusic('music-battle', 0.32);
   }
+  const hurrying = () => !!(P() && P().hurryOn && P().hurryOn());
   holdSrcs.push(() => kdPaused);
   let ceremony = null;
   function partyEnd(data) {
@@ -565,15 +567,26 @@
       document.querySelectorAll('.answer-btn').forEach((b) => { b.disabled = true; });
       stopMusic();
       P().clearChip();
+      if (P().hurryGlow) P().hurryGlow(false);
       const why = d && d.why;
       const sub = why === 'time' && game === 'trapdoor' ? '¡Terminó la ronda final!' : why === 'time' ? '¡Se acabó el tiempo!' : why === 'escaped' ? '¡Despegamos! ¿Qué rango ganamos?' : why === 'allFrozen' ? '¿Quién ganó la batalla?' : '¡Fin de la ronda!';
       P().final({ mode: 'phone', ms: d && d.ms, sub, play: (url, vol) => sfx(url, vol), buzz });
     });
     s.on('fin:skip', () => { if (ceremony && ceremony.root) ceremony.skip(); });
     // the last 30 s: what doubles in this game, on every phone (Nieve also gets its toast, La Gran Fuga its own band)
+    // «¡Rápido!» (2026-10-19): the jingle on every phone (was the short streak blip), the alarm lights at the edges, and
+    // the phone's own music steps aside (the projector plays the game's music faster and higher: never 30 copies)
     s.on('fin:frenzy', (d) => {
       if (!on || !P() || !d) return;
-      if (d.off) { P().clearChip(); return; }
+      if (d.off) {
+        P().clearChip();
+        if (d.hold) return;           // «⏸ Pausa» in the last 30 s: the hurry waits with the clock (no music back)
+        if (P().hurryGlow) P().hurryGlow(false);
+        if (!kdPaused && (game === 'kingdoms' || game === 'paint' || game === 'snow')) playMusic('music-battle', 0.32);
+        return;
+      }
+      if (P().hurryGlow) P().hurryGlow(true);
+      stopMusic();
       if (d.again) {      // after «⏸ Pausa» / «+30 s»: the chip with the new seconds, no second banner
         const lbl = game === 'kingdoms' ? 'Banderas ×2' : game === 'paint' ? 'Recarga doble' : game === 'snow' ? 'Copos ×2' : '';
         if (lbl) P().chip(lbl, d.endsMs);
@@ -589,8 +602,8 @@
       } else if (game === 'snow') {
         P().chip('Copos ×2', d.endsMs);       // the map's toast says it once; the chip stays for the 30 s
       }
-      sfx('streak', 0.7);
-      buzz([60, 40, 60]);
+      sfx(P().SND && P().SND.hurry ? P().SND.hurry : 'streak', 0.85);
+      buzz([60, 40, 60, 40, 140]);
     });
     // Batalla de Nieve: survivors / ice counts and my side for the question-screen bar
     const snCounts = (c) => { if (c) { snowInfo.sun = c.sun || 0; snowInfo.ice = c.ice || 0; } };
@@ -634,9 +647,9 @@
     s.on('game-end', (d) => { if (!on) return; stopQuestionTimer(); if (P()) { P().clearChip(); P().clearNews(); } afterRender(() => endDecor(d)); });
     s.on('state', (st) => {
       if (st && st.state === 'lobby' && ceremony) { ceremony.stop(); ceremony = null; document.body.classList.remove('pf-ended'); }
-      if (st && st.state === 'lobby' && P()) { P().hideFinal(); P().clearChip(); P().clearNews(); if (kdPaused) setPaused(false); }
+      if (st && st.state === 'lobby' && P()) { P().hideFinal(); P().clearChip(); P().clearNews(); if (P().hurryGlow) P().hurryGlow(false); if (kdPaused) setPaused(false); }
     });
-    s.on('countdown', () => { if (kdPaused) setPaused(false); if (ceremony) { ceremony.stop(); ceremony = null; } document.body.classList.remove('pf-ended'); if (P()) { P().hideFinal(); P().clearChip(); P().clearNews(); } myKd = 0; });
+    s.on('countdown', () => { if (P() && P().hurryGlow) P().hurryGlow(false); if (kdPaused) setPaused(false); if (ceremony) { ceremony.stop(); ceremony = null; } document.body.classList.remove('pf-ended'); if (P()) { P().hideFinal(); P().clearChip(); P().clearNews(); } myKd = 0; });
     s.on('kd:plant', (d) => { if (d.playerId === s.id && typeof d.playerScore === 'number') myKd = d.playerTiles != null ? d.playerTiles : myKd; });
     s.on('kd:prompt', () => sfx('flag', 0.6));
   }

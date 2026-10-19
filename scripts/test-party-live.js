@@ -212,10 +212,14 @@ async function playOne(game) {
   const sum = (o) => Object.values(o || {}).reduce((a, b) => a + (b || 0), 0);
   ok(K.some((e) => e.me.k !== K[0].me.k), `${game}: the cards are personal`);
   ok(sum(fin.totals) >= 0, `${game}: totals add up`);
-  // a phone that reconnects after the end gets its card again (same name = same slot)
+  // a phone that reconnects after the end gets its card again (same name = same slot). Its old connection is gone first:
+  // since 2026-10-19 a name whose phone is still connected is never taken by another connection (scripts/test-samename-live.js)
+  kids[1].s.close();
+  await sleep(400);
   const again = connect();
   const back = next(again, 'game-end', 5000);
   const j = await ack(again, 'player:join', { pin, name: kids[1].name });
+  kids[1].s = again;
   ok(j && j.ok !== false && j.gameState === 'ended', `${game}: a phone back after the end gets its slot`);
   const B = await back;
   ok(B.me && B.me.k === K[1].me.k, `${game}: … and the same card`);

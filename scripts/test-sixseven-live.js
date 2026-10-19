@@ -285,7 +285,10 @@ async function answer(kid, right, waitMs) {
   ok(endH.teamScores.red === endH.sixseven.totals.r && endH.teamScores.gold === endH.sixseven.totals.g, 'teamScores = the gold');
   ok(Array.isArray(endH.sixseven.stars) && endH.sixseven.top.length >= 1, 'stars and the podium');
 
-  // a phone that reconnects after the end gets its card
+  // a phone that reconnects after the end gets its card (its old connection gone first: since 2026-10-19 a name whose
+  // phone is still connected is never taken by another connection, scripts/test-samename-live.js)
+  kids[1].s.close();
+  await sleep(400);
   const again = connect();
   const gE = next(again, 'game-end', 4000);
   const j2 = await ack(again, 'player:join', { pin, name: 'Seis1' });

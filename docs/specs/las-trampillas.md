@@ -228,3 +228,73 @@ Hard gates: bots PASS (4/20/30 + the playtester's 30) · teacher controls ✓ (�
 Total 13/14 → ships (≥ 12, no 0). The missing point: a landmark or prize worth points in the arena; the minigame has
 none, and adding one would change it (his call).
 ```
+
+## Fixes · 2026-10-19 (his report: "my laptop … the screen can't display anything of the game" · "the sound 30 seconds before ending doesn't match … like a hurry up … or a Mario Party sound")
+
+### The empty game screen (root cause, every pin game)
+- Reproduced in a real browser on a throw-away server: every size draws when one device joins (1366×657 · 1366×768 ·
+  1440×900 · 1920×1080 · 844×390 · 390×844 · 360×640), and so do a late join, a tab behind another, a frozen page, a
+  Wi-Fi blip through the start, a resize mid-play and «Otra ronda». **The blank screen came from the same name on two
+  devices** (his phone and his laptop): `player:join` found the slot by name and MOVED it to the new connection while
+  the first device was still connected. That device stayed in the room with no player: it heard the countdown and
+  «active» (player.js switched it to #screen-trapdoor) but never its own `td:init`, so the canvas was never drawn (a
+  dark screen), and its 12 s resync was answered with nothing, until the PIN was typed again (which stole the slot
+  back). Checked in all 11 pin games at 1366×657 + 390×844: the first device was dead in trapdoor, paint, snow, escape,
+  halcon, mochi-mash, pinata, sixseven, monopoly, dragon-eye; kingdoms showed its board but never got a question.
+- **One name, one device** (server.js `_slotByName`, every name path of `player:join`: lobby/active and the three
+  after-the-end paths): a name whose phone is connected right now is never taken by another connection. The same phone
+  again (the code it keeps: a reload, a second tab) takes its slot back and the old tab hears `player:elsewhere` (it
+  leaves the room and shows «Tu juego sigue en otra pantalla · Jugar aquí · ← Volver al inicio»; it never joins again
+  by itself, so two tabs can't take the game from each other). Any other device (a second device, or two kids called
+  the same) gets its own slot with a free name: «Fernando 2» (the account keeps the typed name). A phone whose
+  connection is gone comes back to its slot by name, as always. Exam rooms keep their rule (teacher-supervised tablets).
+- **No dead screen, ever**: `player:resync` from a phone of the room with no slot answers `player:gone` and player.js
+  joins again by itself; player.js asks the room again when a tab comes back into view; Las Trampillas shows Dralingo
+  «Entrando a la plataforma…» until its `td:init` and asks for it (1.4 s, then every 3 s).
+- **Landscape** (laptops, tablets, a phone turned sideways; `(orientation: landscape) and (min-aspect-ratio: 5/4)`):
+  the platform on the left as big as the screen allows (1366×657: 896×563 px, was 1366×300), the question card in a
+  right column with the question and its four answers as one block; at 844×390 the answers were below the screen. The
+  phone keeps 24 px over the platform for «TÚ».
+- Tests: `scripts/test-samename-live.js` (live, 28 checks), `scripts/check-trapdoor-screens.js` (a real browser: 7
+  sizes, the twin device, a page that drops its first td:init; 56 checks; run by hand: `--url --password`, needs
+  playwright-core); against the old code it fails 6 (tiles off-screen at 844×390, the twin's phone blank, the missed
+  init blank). test-party-live / test-sixseven-live now close the old connection before «a phone that reconnects
+  after the end» (a live phone's name is no longer taken by another connection).
+
+### «¡Rápido!» · the hurry of the Final Round (and of the shared last 30 s)
+- What he heard: at the Final Round both screens switched from the rounds' chiptune beat (Kenney «Retro Beat», 125 BPM,
+  quiet: mean −24 dB) to Reinos' final-30-s loop (Kenney «Time Driving», a band loop, mean −16 dB) at a higher volume:
+  another style, ~10 dB louder, an 8 s loop. (The shared last-30-s frenzy is off in Las Trampillas.)
+- Now, like Mario Party's hurry up: the band «¡RONDA FINAL!» with a «¡RÁPIDO!» tag that lands with a shake; the
+  «¡Rápido!» jingle (1.6 s: the Retro jingles' whole-tone run, then again a major third higher over rising toms, then
+  two high stabs; `scripts/hurry-sounds.js` from the CC0 Kenney packs → `public/assets/party/hurry.mp3`, peak −3 dB);
+  then the SAME rounds' beat comes back faster and higher (playbackRate 1.2 with the pitch following, a little louder)
+  and climbs to 1.3 by «0»; the hub's clock ticks and tocks twice a second for 5-4-3 and four times a second for 2-1,
+  each tick a little higher (`TrapdoorArena.tickAt`, `party/tick.mp3` + `tock.mp3`); red alarm lights breathe at the
+  screen's edges (`body.pf-hurry`, never over the play, off under «¡FINAL!»; reduced motion: still).
+- The projector carries the music; each phone plays the jingle and the clock and its own music steps aside (never 30
+  copies of the music); a phone back in the middle of the Final Round gets the lights, no jingle.
+- The same moment in the shared last 30 s (js/party.js `hurryHost`): Reinos, Pintores and Nieve projectors play the
+  jingle and their OWN battle music faster and higher instead of «Time Driving» (Nieve also at «¡Último refugio!»), and
+  their last 10 s tick-tock 2 then 4 times a second; La Gran Fuga gets the jingle and the lights (its chase music already
+  has its own moods); every phone of the four: the jingle instead of the short streak blip, the lights, its music steps
+  aside (back after «+30 s»).
+- Checked with an audio log in a real browser (projector + phone): the jingle, then music-rounds at ×1.20 → ×1.30 vol
+  .5, tick/tock every 500 ms then 250 ms; the phone: the jingle, no music, the same clock.
+
+### Code review (agent-skills:code-reviewer, 2026-10-19): 5 important + 12 minor, fixed
+- A «Fernando 2» whose page reloads (its link still says «Fernando») finds its own slot by its code (`_slotByName`
+  looks for this phone's slot first) and player.js rewrites the link's name, so a reload never makes a «Fernando 3».
+- The kid's account keeps the typed name on every reconnect (`acctName` on the slot), never the room's «Fernando 2».
+- The «elsewhere» tab never hides behind «Reconectando…» (no reconnect overlay while elsewhere; the card always on top);
+  a refused rejoin keeps «← Volver al inicio»; the trapdoor platform and its clock stop under the card
+  (`draly:elsewhere`); the hurry lights go out.
+- After the end, the slot's own code goes only to that same phone (a classmate typing a dropped kid's name gets the
+  card, never the code: `guest`).
+- A resync (now also on every return to the tab) re-sends the last 30 s as `again` (chip + lights, no second jingle);
+  a teacher's «⏸ Pausa» in the last 30 s (`hold`) keeps the hurry, «Seguir» brings the fast music back without a
+  second jingle; the projectors' hurry starts only with the server's fin:frenzy (rounds of 60 s or more); Nieve's
+  «¡Último refugio!» hurry is not undone by «+30 s»; the escape and snow phones' own last-30-s sounds play after the
+  jingle; `_tellElsewhere` leaves every room (board / race rooms too); resyncs are not queued while offline; a phone
+  whose storage fails keeps its code in memory for its rejoins; «Entrando a la plataforma…» has «← Volver al inicio»;
+  test-dragon-live / test-escape-live close the old connection before a same-name rejoin.

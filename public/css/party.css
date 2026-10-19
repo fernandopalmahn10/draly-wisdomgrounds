@@ -339,6 +339,16 @@ body.pf-on .pf-news, body.pf-on .pf-chip { display: none; }
 body.pf-chip-host .kd-banner { top: 156px; }
 .kd-timer.pf-frenzy { background: #d8382e !important; color: #fff !important; animation: pf-chip-beat 1s ease-in-out infinite; }
 .pf-news.show ~ .pf-chip { opacity: 0; transition: opacity .2s; }
+/* «¡Rápido!» (js/party.js hurryGlow, 2026-10-19): alarm lights at the screen's edges while the last stretch runs: a red
+   glow that breathes on the hurry beat, only at the borders (never over the play, never a tap target), opacity only */
+body.pf-hurry::after { content: ''; position: fixed; inset: 0; z-index: 44; pointer-events: none;
+  box-shadow: inset 0 0 0 4px rgba(255, 59, 92, .9), inset 0 0 42px 12px rgba(255, 40, 90, .55);
+  animation: pf-hurry-glow .42s ease-in-out infinite alternate; }
+@keyframes pf-hurry-glow { from { opacity: .4; } to { opacity: 1; } }
+@media (max-width: 600px) {           /* a phone: a thinner light, so the answer tiles keep their colours */
+  body.pf-hurry::after { box-shadow: inset 0 0 0 3px rgba(255, 59, 92, .9), inset 0 0 22px 5px rgba(255, 40, 90, .5); }
+}
+body.pf-on.pf-hurry::after { display: none; }          /* never over the ceremony */
 
 /* ---------- phone sizes ---------- */
 @media (max-height: 700px) {
@@ -351,6 +361,7 @@ body.pf-chip-host .kd-banner { top: 156px; }
   .pf-stage, .pf .mmk.cheer .mmk-img, .pf-capline, .pf-col-lms img, .pf-stamp, .pf-frost-crew .mmk, .pf-stop.on, .pf-stop.takeoff img, .pf-rank.show,
   .pf-rank-stars .mm-star, .pf-side.win .pf-side-cap, .pf-bubble, .pf-badge, .pf-who .mmk, .pf-val, .pf-mine, .pf-mystar, .pf-pod .mmk, .pf-mate,
   .pf-final-band, .pf-final-band b, .pf-chip, .kd-timer.pf-frenzy, .pf-pod-stars { animation: none !important; }
+  body.pf-hurry::after { animation: none !important; opacity: .7; }
   .pf-news { transition: none; }
   .pf-route-fill { transition: none; }
 }

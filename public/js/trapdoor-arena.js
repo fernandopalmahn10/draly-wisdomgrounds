@@ -49,6 +49,18 @@
     if (t >= b.lock && t < b.close) return 0;
     return null;
   }
+  // the hub's clock: which tick of the count it is at ms `t` (null outside the count) → { i, n, fast }. A round ticks once
+  // a second; the Final Round («¡Rápido!», 2026-10-19) ticks twice a second, then four times a second in its last 2 s
+  // (the screens play tick / tock, rising): the hurry of Mario Party's last seconds
+  function tickAt(t, final) {
+    const b = bounds(final);
+    if (t < b.count || t >= b.lock) return null;
+    const into = t - b.count;
+    const n = Math.max(1, 5 - Math.floor(into / 1000));
+    if (!final) return { i: Math.floor(into / 1000), n, fast: 0 };
+    if (into < 3000) return { i: Math.floor(into / 500), n, fast: 1 };
+    return { i: 6 + Math.floor((into - 3000) / 250), n, fast: 2 };
+  }
 
   // Three arenas: Dubai first (the main stage), then China. `pit` is the place the fallen land in (their phones show it).
   const ARENAS = [
@@ -162,7 +174,7 @@
   }
 
   return {
-    R, R_HUB, R_MIN, R_MAX, SLICES, SLICE, TIMING, bounds, phaseAt, hubAt, ARENAS, arena, art,
+    R, R_HUB, R_MIN, R_MAX, SLICES, SLICE, TIMING, bounds, phaseAt, hubAt, tickAt, ARENAS, arena, art,
     angleOf, sliceOf, sliceMid, pointAt, setOf, optionsOf, kindOf, clampTarget, move, segHitsHub, spawnAt, lockVerdict,
   };
 });

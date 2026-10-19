@@ -159,6 +159,7 @@ function next(s, ev, ms, match) {
   ok(fromHost === onPhones, `each zap reached only the zapped kid's phone (projector ${fromHost} · phones ${onPhones})`);
   // reconnect mid-stun: a new socket, the same name → es:init carries her lock with the time left
   valen.s.close();
+  await sleep(80);           // (the old connection closes first; short: she is still stunned for 1.8 s)
   const s2 = connect();
   const reInit = next(s2, 'es:init', 5000);
   valen.s = s2; valen.q = null;

@@ -13,7 +13,7 @@
   <title>Draly Wisdom Grounds</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Nunito:wght@400;700;800;900&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/back.css?v=20261018a">
-  <link rel="stylesheet" href="/css/styles.css?v=20261016eq">
+  <link rel="stylesheet" href="/css/styles.css?v=20261019tf">
   <link rel="stylesheet" href="/css/dralingo.css">
   <!-- Vuelo del Dragón v2 «La Carrera del Cielo de Dubái» -->
   <link rel="stylesheet" href="/css/dragon.css?v=20261018a">
@@ -23,12 +23,12 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/kingdoms.css?v=20261017pv2">
   <link rel="stylesheet" href="/css/paint.css?v=20261017pv2">
-  <link rel="stylesheet" href="/css/trapdoor.css?v=20261018a">
+  <link rel="stylesheet" href="/css/trapdoor.css?v=20261019tf">
   <link rel="stylesheet" href="/css/snow.css?v=20261018a">
   <link rel="stylesheet" href="/css/escape.css?v=20261019ch">
   <link rel="stylesheet" href="/css/halcon.css?v=20261018a">
   <link rel="stylesheet" href="/css/mochi.css?v=20261018a">
-  <link rel="stylesheet" href="/css/party.css?v=20261017td">
+  <link rel="stylesheet" href="/css/party.css?v=20261019tf">
   <link rel="stylesheet" href="/css/pinata.css?v=20261018a">
   <!-- Dàfùwēng · Monopolio v2 «El Gran Tablero de Dubái» -->
   <link rel="stylesheet" href="/css/monopoly.css?v=20261018a">
@@ -555,7 +555,7 @@
       </div>
       <div class="tp-stage" id="tp-stage">
         <canvas id="tp-canvas" class="tp-canvas" aria-label="La plataforma: toca donde quieres correr"></canvas>
-        <div class="tp-band" id="tp-band" aria-live="polite"><b id="tp-band-title"></b><small id="tp-band-sub"></small><span class="tp-band-dots" id="tp-band-dots"></span></div>
+        <div class="tp-band" id="tp-band" aria-live="polite"><i class="tp-band-kick" id="tp-band-kick"></i><b id="tp-band-title"></b><small id="tp-band-sub"></small><span class="tp-band-dots" id="tp-band-dots"></span></div>
         <div class="tp-run" id="tp-run" aria-live="assertive"></div>
         <div class="tp-pit hidden" id="tp-pit"><img class="tp-pit-bg" id="tp-pit-bg" alt=""><img class="tp-pit-me" id="tp-pit-me" alt=""><span id="tp-pit-text">En el foso</span></div>
         <div class="tp-moment" id="tp-moment" aria-live="polite"><img id="tp-moment-img" alt=""><div><b id="tp-moment-title"></b><small id="tp-moment-sub"></small></div></div>
@@ -580,6 +580,8 @@
         <button class="tp-help-go" id="tp-help-go" type="button">¡A jugar!</button>
       </div>
     </div>
+    <!-- until this phone has its platform (td:init): never an empty screen; it asks the room by itself (2026-10-19) -->
+    <div class="tp-wait" id="tp-wait" role="status"><img src="/assets/dralingo/hello.webp" alt=""><b>Entrando a la plataforma…</b><small>Un momento: Dralingo te lleva al juego</small><a class="tp-wait-out" href="/">← Volver al inicio</a></div>
   </div>
 
   <!-- Batalla de Nieve en Ski Dubái: walk your avatar around Dubai (js/player-snow.js). Kids don't read: a 3-step card
@@ -759,27 +761,27 @@
   <script src="/js/rewards.js?v=20260525c"></script>
   <script src="/js/sentence-categories.js?v=20260606a"></script>
   <script src="/js/kingdoms-board.js?v=20261011d"></script>
-  <script src="/js/player-kingdoms-skin.js?v=20261019ch"></script>
+  <script src="/js/player-kingdoms-skin.js?v=20261019tf"></script>
   <script src="/js/player-kingdoms.js?v=20261016eq"></script>
   <script src="/js/paint-worlds.js?v=20261017pv2"></script>
   <script src="/js/paint-render.js?v=20261017pv2"></script>
   <script src="/js/player-paint.js?v=20261017pv2"></script>
-  <script src="/js/trapdoor-arena.js?v=20261017td"></script>
-  <script src="/js/trapdoor-render.js?v=20261017td"></script>
-  <script src="/js/player-trapdoor.js?v=20261017td"></script>
+  <script src="/js/trapdoor-arena.js?v=20261019tf"></script>
+  <script src="/js/trapdoor-render.js?v=20261019tf"></script>
+  <script src="/js/player-trapdoor.js?v=20261019tf"></script>
   <script src="/js/snow-map.js?v=20261012b"></script>
   <script src="/js/snow-render.js?v=20261017art"></script>
-  <script src="/js/player-snow.js?v=20261017art"></script>
+  <script src="/js/player-snow.js?v=20261019tf"></script>
   <script src="/js/escape-map.js?v=20261017ev2"></script>
   <script src="/js/escape-render.js?v=20261019ch"></script>
-  <script src="/js/player-escape.js?v=20261019cg"></script>
+  <script src="/js/player-escape.js?v=20261019tf"></script>
   <script src="/js/halcon-board.js?v=20261017art"></script>
   <script src="/js/player-halcon.js?v=20261014a"></script>
   <script src="/js/monopoly-map.js?v=20261016a"></script>
   <script src="/js/monopoly-board.js?v=20261017art"></script>
   <script src="/js/player-monopoly.js?v=20261017art"></script>
   <script src="/js/mochi-stage.js?v=20261014a"></script>
-  <script src="/js/party.js?v=20261019ch"></script>
+  <script src="/js/party.js?v=20261019tf"></script>
   <script src="/js/player-mochi.js?v=20261015s"></script>
   <script src="/js/pinata-stage.js?v=20261015b"></script>
   <script src="/js/player-pinata.js?v=20261015s"></script>
@@ -791,7 +793,7 @@
   <script src="/js/cast.js?v=20261017td"></script>
   <script src="/js/dralingo-fx.js?v=20261017art"></script>
   <script src="/js/saga.js?v=20261013a"></script>
-  <script src="/js/player.js?v=20261018o1"></script>
+  <script src="/js/player.js?v=20261019tf"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

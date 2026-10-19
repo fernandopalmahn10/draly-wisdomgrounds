@@ -161,7 +161,8 @@
     // the platform as big as the box allows: its width, and its height + the kids standing on its far edge
     layout() {
       const W = this.w, H = this.h;
-      const top = this.inset.top || 0, bot = this.inset.bottom || 0, left = this.inset.left || 0, right = this.inset.right || 0;
+      // (the phone: room over the far edge for my «TÚ» tag, which a kid standing at the back would push off the top)
+      const top = (this.inset.top || 0) + (this.mode === 'phone' ? 24 : 0), bot = this.inset.bottom || 0, left = this.inset.left || 0, right = this.inset.right || 0;
       const R = TA().R;
       const padX = this.mode === 'host' ? 12 : 6;
       const kW = (W - left - right - 2 * padX) / (2 * R * 1.06);

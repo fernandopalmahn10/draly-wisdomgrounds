@@ -93,6 +93,25 @@ ok(A.clampTarget('a', 3) === null && A.clampTarget(NaN, 1) === null && A.clampTa
   ok(slices.size === 8, 'forty kids start spread over all eight slices');
 }
 
+// ---------- the hub's clock: one tick a second; the Final Round's «¡Rápido!» ticks faster and faster (2026-10-19) ----------
+{
+  const ticks = (final) => {
+    const b = A.bounds(final), seen = [];
+    let last = null;
+    for (let t = 0; t < b.end; t += 10) { const k = A.tickAt(t, final); const key = k ? k.i : null; if (key !== last) { if (k) seen.push([t - b.count, k]); last = key; } }
+    return seen;
+  };
+  const n = ticks(false), f = ticks(true);
+  ok(n.length === 5 && n.map(([t]) => t).join() === '0,1000,2000,3000,4000' && n.every(([, k]) => !k.fast), 'a round: five ticks, one a second (5 … 1)');
+  ok(n.map(([, k]) => k.n).join() === '5,4,3,2,1', '… each with the hub\'s number');
+  ok(f.length === 14, `the Final Round: 14 ticks in its 5 s count (${f.length})`);
+  ok(f.slice(0, 6).every(([t], i) => t === i * 500 && f[i][1].fast === 1), '… twice a second for 5, 4, 3');
+  ok(f.slice(6).every(([t], i) => t === 3000 + i * 250 && f[6 + i][1].fast === 2), '… four times a second for 2 and 1');
+  ok(f.every(([, k], i) => k.i === i), '… numbered in order (tick, tock, tick…)');
+  const b = A.bounds(true);
+  ok(A.tickAt(b.count - 1, true) === null && A.tickAt(b.lock, true) === null, 'no tick before the count or from «0» on');
+}
+
 // ---------- a match on the clock ----------
 function game(n, opts) {
   const now = 1e6;

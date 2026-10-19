@@ -27,9 +27,21 @@
     stopMusic();
     musicName = name;
     if (muted) return;
-    try { music = new Audio(A + name + '.mp3'); music.loop = true; music.volume = vol || 0.4; music.play().catch(() => {}); } catch (_) {}
+    try {
+      music = new Audio(A + name + '.mp3'); music.loop = true; music.volume = vol || 0.4;
+      if (name === 'music-battle' && window.DralyParty) DralyParty.hurryApply(music);   // (back from a pause in the last 30 s: still fast)
+      music.play().catch(() => {});
+    } catch (_) {}
   }
   function stopMusic() { if (music) { try { music.pause(); } catch (_) {} } music = null; musicName = null; }
+  // «¡Rápido!» (the last 30 s, 2026-10-19): the jingle, then the battle music back faster and higher (js/party.js); before,
+  // another loop (music-final) that didn't match took over
+  function hurryUp() {
+    if (!window.DralyParty) { playMusic('music-final', 0.42); return; }
+    if (DralyParty.hurryOn()) return;            // (once: a resent fin:frenzy never replays the jingle)
+    DralyParty.hurryHost({ play: playUrl, music: () => (musicName === 'music-battle' ? music : null), vol: 0.42 });
+  }
+  const hurryOff = () => { if (window.DralyParty) DralyParty.hurryHostOff(music); };
 
   let pin = null;
   let state = null;
@@ -100,6 +112,7 @@
   });
   $('play-again-btn').addEventListener('click', () => {
     if (ceremony) { ceremony.stop(); ceremony = null; }
+    hurryOff();
     socket.emit('host:reset', { pin });
     captains = null;
     showScreen('lobby');
@@ -402,9 +415,12 @@
       if (sec === 30 && !warned[30]) {
         warned[30] = 1;
         bigFx('spotlight', { text: '¡Últimos 30 segundos! ¡Banderas dobles!', poses: ['countdown'] }, 0) || say('¡Últimos 30 segundos! Cada acierto vale dos banderas.', 'countdown');
-        playMusic('music-final', 0.42);
+        // («¡Rápido!» comes with the server's fin:frenzy: only rounds of 60 s or more, and «+30 s» takes it back)
       }
-      if (sec <= 10 && sec > 0 && !warned['t' + sec]) { warned['t' + sec] = 1; sfx('tick', 0.5); $('timer-display').classList.add('urgent'); }
+      if (sec <= 10 && sec > 0 && !warned['t' + sec]) { warned['t' + sec] = 1; $('timer-display').classList.add('urgent'); }
+      // the last 10 s: a clock that ticks and tocks twice, then four times a second (was one tick a second)
+      const ci = window.DralyParty ? DralyParty.clockIdx(left) : -1;
+      if (ci >= 0 && ci !== warned.clock) { warned.clock = ci; DralyParty.hurryClock(ci, playUrl); }
       if (sec > 10) $('timer-display').classList.remove('urgent');
     }, 250);
   }
@@ -419,6 +435,7 @@
   socket.on('fin:final', (d) => {
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
     if ($('timer-display')) { $('timer-display').textContent = '0:00'; $('timer-display').classList.remove('urgent'); }
+    hurryOff();
     stopMusic();
     hideDralingo();
     $('lm-moment').className = 'kd-lm-moment hidden';
@@ -431,9 +448,11 @@
   // the last 30 s, from the server (it can switch off again after «+30 s»): a banner, a ribbon with the seconds, a red clock
   socket.on('fin:frenzy', (d) => {
     if (!d || !window.DralyParty) return;
-    if (d.off) { DralyParty.clearChip(); if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy'); return; }
+    // (`hold` = «⏸ Pausa» in the last 30 s: the hurry waits with the clock; a real `off` = «+30 s» gave the time back)
+    if (d.off) { DralyParty.clearChip(); if (!d.hold) hurryOff(); if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy'); return; }
     if (!d.again) banner('🚩🚩 ¡Últimos 30 segundos! ¡Banderas dobles!');
     DralyParty.chip('Banderas ×2', d.endsMs, 'host');
+    if (d.again) { DralyParty.hurryGlow(true); DralyParty.hurryApply(music); } else if (!hostPaused) hurryUp();   // (after «Seguir»: no second jingle)
     if ($('timer-display')) $('timer-display').classList.add('pf-frenzy');
   });
   // «⏸ Pausa» (2026-10-16): the clock stops, plant windows / dragons wait; the card lets the buttons under it work

@@ -52,7 +52,9 @@
   // ---------- quick sounds (Web Audio: the clicks land on time) ----------
   let actx = null, loading = false;
   const bufs = {};
-  const BUF = { tick: K + 'tick.mp3', pop: MO + 'pop.mp3', gold: MO + 'gold.mp3', open: TD + 'open.mp3', close: TD + 'close.mp3', fall: TD + 'fall.mp3', wings: TD + 'wings.mp3', saved: TD + 'saved.mp3', back: TD + 'back.mp3', lock: TD + 'lock.mp3', whoosh: K + 'whoosh.mp3' };
+  const PA = '/assets/party/';
+  const BUF = { tick: K + 'tick.mp3', pop: MO + 'pop.mp3', gold: MO + 'gold.mp3', open: TD + 'open.mp3', close: TD + 'close.mp3', fall: TD + 'fall.mp3', wings: TD + 'wings.mp3', saved: TD + 'saved.mp3', back: TD + 'back.mp3', lock: TD + 'lock.mp3', whoosh: K + 'whoosh.mp3',
+    hurry: PA + 'hurry.mp3', clockTick: PA + 'tick.mp3', clockTock: PA + 'tock.mp3' };
   function audioReady() {
     if (actx) { if (actx.state === 'suspended') actx.resume().catch(() => {}); return; }
     try {
@@ -92,7 +94,15 @@
     closeCard(true);
     hideMoment(true);
     hideBand();
+    hurry(false);
     document.body.classList.remove('tp-final', 'tp-pitting', 'tp-lastround');
+  }
+  // «¡Rápido!» (the Final Round, 2026-10-19): the alarm lights at the edges and, on the phone, no music of its own (the
+  // projector plays the beat faster and higher; the phone plays the jingle and the clock that speeds up)
+  function hurry(v) {
+    const P = window.DralyParty;
+    if (P && P.hurryGlow) P.hurryGlow(!!v);
+    if (v && skin() && skin().music) skin().music(null);
   }
   const team = () => (ctx ? ctx.getTeam() : 'red');
 
@@ -102,6 +112,7 @@
     s.on('td:init', (d) => {
       if (!d || d.arena == null) return;
       setOn(true);
+      clearTimeout(initT); initT = null; initTries = 0;
       const same = matchId === d.id && scene;
       matchId = d.id;
       speed = d.speed || 92;
@@ -120,6 +131,8 @@
       captains = d.captains || captains;
       paused = !!d.paused;
       rd = d.r > 0 ? { r: d.r, rounds: d.rounds, kind: d.kind, final: d.final } : { r: 0, rounds: d.rounds, kind: null, final: false };
+      document.body.classList.toggle('tp-lastround', !!rd.final);
+      hurry(!!rd.final);                  // (a phone back in the middle of the Final Round: its lights, no jingle)
       if (d.r > 0) {
         scene.round({ r: d.r, rounds: d.rounds, kind: d.kind, final: d.final, jumps: d.jumps }, d.ago, performance.now());
         if (d.set) scene.lock(d.set);
@@ -276,6 +289,7 @@
       if (st.tdArena != null && st.tdArena !== arenaPick) { arenaPick = st.tdArena; if (lobbyBox) paintLobby(); }
       if (st.tdRounds != null && st.tdRounds !== roundsPick) { roundsPick = st.tdRounds; if (lobbyBox) paintLobby(); }
       if (st.state === 'lobby') { setOn(false); matchId = null; }
+      if (st.state === 'active' && st.gameType === 'trapdoor' && !on) armInitCheck();
     });
     s.on('question', (q) => { if (on && q && q.td && !finalOn) showQuestion(q); });
     s.on('answer-result', (r) => { if (on && r && r.td) onResult(r); });
@@ -291,6 +305,7 @@
     s.on('fin:final', () => {
       if (!on) return;
       finalOn = true;
+      hurry(false);
       document.body.classList.add('tp-final');
       closeCard(true);
       hideMoment(true);
@@ -299,9 +314,29 @@
       if (scene) { scene.frozen = true; scene.pause(true, performance.now()); }   // no roulette or count goes on under «¡FINAL!»
       if (me) { me.tx = me.x; me.ty = me.y; }
     });
-    s.on('game-end', () => { if (on) { finalOn = true; stopLoop(); closeCard(true); } });
-    s.on('countdown', () => { matchId = null; finalOn = false; document.body.classList.remove('tp-final', 'tp-lastround'); if (scene) scene.frozen = false; });
+    s.on('game-end', () => { if (on) { finalOn = true; hurry(false); stopLoop(); closeCard(true); } });
+    s.on('countdown', () => { matchId = null; finalOn = false; hurry(false); document.body.classList.remove('tp-final', 'tp-lastround'); if (scene) scene.frozen = false; });
+    // this phone's game went on in another tab (player.js shows its card): the platform stands still, its clock is quiet
+    window.addEventListener('draly:elsewhere', () => { clearTimeout(initT); initT = null; setOn(false); });
     bind();
+  }
+
+  // ---------- a phone that shows the game without its platform asks the room again (2026-10-19) ----------
+  // (his laptop: the room was playing, the screen was the game's, but its td:init never came: a dark empty platform
+  // until he typed the PIN again.) While #screen-trapdoor shows «Entrando a la plataforma…» (no td:init yet), ask for
+  // the platform: player.js's resync → the server re-sends td:init, or says this phone has no slot (player:gone) and
+  // player.js joins again by itself.
+  let initT = null, initTries = 0;
+  function armInitCheck() {
+    if (on || initT) return;
+    initT = setTimeout(function chk() {
+      initT = null;
+      if (on) { initTries = 0; return; }
+      const scr = $('screen-trapdoor');
+      if (!scr || scr.classList.contains('hidden')) return;          // not on the game's screen: nothing to fix (yet)
+      if (window.DralyPlayer) window.DralyPlayer.resync('trapdoor-init');
+      if (++initTries < 15) initT = setTimeout(chk, 3000);
+    }, 1400);
   }
 
   // ---------- the loop ----------
@@ -321,7 +356,8 @@
     lastT = t;
     stepMe(dt);
     frameAt(t, dt);
-    if (t - hudAt > 150) { hudAt = t; hud(); tickSounds(); }
+    tickSounds();                         // (every frame: the Final Round's clock ticks 4 times a second)
+    if (t - hudAt > 150) { hudAt = t; hud(); }
     if (t - actAt > 3000) { actAt = t; ctx.markActivity(); }
   }
   function frameAt(t, dt) {
@@ -329,14 +365,17 @@
     scene.meXY = me && myState.st === 'up' ? [me.x, me.y] : null;
     scene.frame(t, dt);
   }
-  // the hub's count: a tick each second (the last two higher), from the round's own clock
+  // the hub's count: a tick each second (the last two higher), from the round's own clock; the Final Round's clock
+  // ticks and tocks twice, then four times a second, rising (TA().tickAt)
   let lastHub = null;
   function tickSounds() {
     if (!scene || !scene.rd || paused || finalOn) { lastHub = null; return; }
-    const n = TA().hubAt(scene.clock(performance.now()), scene.rd.final);
-    if (n !== lastHub) {
-      if (n != null && n > 0) play('tick', n <= 2 ? 1.25 : 1, 0.55);
-      lastHub = n;
+    const k = TA().tickAt(scene.clock(performance.now()), scene.rd.final);
+    const key = k ? scene.rd.r + ':' + k.i : null;
+    if (key !== lastHub) {
+      lastHub = key;
+      if (k && k.fast) play(k.i % 2 ? 'clockTock' : 'clockTick', 1 + k.i * 0.025, k.fast === 2 ? 0.8 : 0.65);
+      else if (k) play('tick', k.n <= 2 ? 1.25 : 1, 0.55);
     }
   }
   // my run: the same step as the server (around the hub, never into an open hole)
@@ -719,10 +758,13 @@
 
   // ---------- the big bands over the platform («¡YA!», «Ronda N», «¡RONDA FINAL!», the tally) ----------
   let bandT = null;
-  function band(title, sub, cls, ms, dots) {
+  // `kick`: a small tag over the title («¡Rápido!» on the Final Round)
+  function band(title, sub, cls, ms, dots, kick) {
     const b = $('tp-band');
     if (!b) return;
-    b.className = 'tp-band ' + (cls || '');
+    b.className = 'tp-band ' + (cls || '') + (kick ? ' kick' : '');
+    const kk = $('tp-band-kick');
+    if (kk) kk.textContent = kick || '';
     $('tp-band-title').textContent = title;
     $('tp-band-sub').textContent = sub || '';
     const d = $('tp-band-dots');
@@ -742,14 +784,17 @@
   }
   function roundBand(m) {
     if (m.final) {
-      band('¡RONDA FINAL!', '¡Vale doble! Caen 4 trampillas', 'final', 2000, [m.r, m.rounds]);
-      sfx(K + 'streak.mp3', 0.7);
-      skin() && skin().music && skin().music('music-final', 0.42);
+      // «¡Rápido!»: the jingle on my phone, the lights at the edges, my clock speeds up (tickSounds); the projector
+      // carries the beat, faster and higher (never 30 copies of the music)
+      band('¡RONDA FINAL!', '¡Vale doble! Caen 4 trampillas', 'final', 2000, [m.r, m.rounds], '¡Rápido!');
+      hurry(true);
+      play('hurry', 1, 0.85);
+      buzz([60, 40, 60, 40, 140]);
     } else {
       const sub = m.kind === 'three' && m.r === Math.floor(m.rounds / 2) + 1 ? '¡Ahora caen 3 trampillas!' : m.kind === 'three' ? 'Caen 3 trampillas' : 'Caen 2 trampillas';
       band(`Ronda ${m.r}`, sub, m.kind === 'three' ? 'three' : '', 1400, [m.r, m.rounds]);
+      sfx(HC + 'round.mp3', 0.55);
     }
-    sfx(HC + 'round.mp3', 0.55);
   }
   function tallyBand(m, my, up) {
     const add = m.add || {};

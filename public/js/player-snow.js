@@ -167,7 +167,7 @@
     s.on('fin:frenzy', (d) => {
       if (!map || !d || d.off || d.again) return;
       toast(my.side === 'ice' ? '❄️❄️ ¡Copos dobles! Últimos 30 s: ¡atrapa a los últimos!' : '❄️❄️ ¡Copos dobles! Últimos 30 s: ¡aguanta!', 'gold', 3000);
-      sfx('copos', 0.6);
+      setTimeout(() => sfx('copos', 0.6), 1650);     // (after the «¡Rápido!» jingle, js/party.js)
     });
     bindControls();
   }

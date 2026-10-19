@@ -70,6 +70,33 @@
   // question, push a fresh question if idle, etc.) so we get unstuck.
   let lastActivityAt = Date.now();
   function markActivity() { lastActivityAt = Date.now(); }
+  // 2026-10-19 (his laptop showed Las Trampillas empty until he typed the PIN again): «elsewhere» = this tab's game moved
+  // to another tab of the same phone (the server said player:elsewhere): it waits on a card with «Jugar aquí», and never
+  // joins again by itself (two tabs would take the game from each other forever)
+  let elsewhere = false;
+  let memCode = null;          // this phone's code in memory (a phone whose localStorage fails still rejoins as itself)
+  // the room calls this phone «Fernando 2»: the page's own link says so too, so a reload comes back to the same slot
+  // (never written to dralyLastJoin: the exam pages read that as the kid's real name)
+  function keepName() {
+    try { const u = new URL(location.href); if (u.searchParams.get('name') && u.searchParams.get('name') !== myName) { u.searchParams.set('name', myName); history.replaceState(history.state, '', u.toString()); } } catch (_) {}
+  }
+  const inGameScreen = () => {
+    const onLobby = $('screen-lobby')  && !$('screen-lobby').classList.contains('hidden');
+    const onJoin  = $('screen-join')   && !$('screen-join').classList.contains('hidden');
+    const onEnd   = $('screen-end')    && !$('screen-end').classList.contains('hidden');
+    return !(onLobby || onJoin || onEnd);
+  };
+  // ask the room what this phone should be showing (the open question, the game's init); at most every 2.5 s
+  let lastResyncAt = 0;
+  function resync(why) {
+    if (!pin || !myName || elsewhere || !socket.connected) return;     // (offline: the reconnect's join does it)
+    const now = Date.now();
+    if (now - lastResyncAt < 2500) return;
+    lastResyncAt = now;
+    markActivity();
+    try { socket.emit('player:resync', { pin, why: why || '' }); } catch (_) {}
+  }
+  window.DralyPlayer = { resync: (why) => resync(why), get pin() { return pin; } };
 
   setInterval(() => {
     if (!pin || !myName) return;
@@ -78,16 +105,15 @@
     if (document.hidden) return;
     // Skip if we're explicitly on a "waiting" screen like join/lobby/end —
     // these are intentional pauses, not freezes.
-    const onLobby = $('screen-lobby')  && !$('screen-lobby').classList.contains('hidden');
-    const onJoin  = $('screen-join')   && !$('screen-join').classList.contains('hidden');
-    const onEnd   = $('screen-end')    && !$('screen-end').classList.contains('hidden');
-    if (onLobby || onJoin || onEnd) return;
+    if (!inGameScreen()) return;
     if (Date.now() - lastActivityAt > 12000) {
       console.warn('[watchdog] 12s without activity — pinging resync');
-      try { socket.emit('player:resync', { pin }); } catch (_) {}
+      resync('watchdog');
       markActivity(); // don't spam
     }
   }, 3000);
+  // a phone that comes back to this tab (screen on again, another app, another tab) catches up at once, not 12 s later
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && inGameScreen()) resync('visible'); });
 
   // Server's response to a resync ping. Mostly the server will already have
   // pushed us a fresh question by now; this handler clears any pending
@@ -220,16 +246,19 @@
   });
 
   // Auto-rejoin on socket reconnect (handles phone sleep, network blips, tab switches)
-  function showReconnectOverlay(message) {
+  // `back`: a refusal (not «Reconectando…»): the card keeps a way back to the home's join card (2026-10-19)
+  function showReconnectOverlay(message, back) {
     let el = document.getElementById('reconnect-overlay');
     if (!el) {
       el = document.createElement('div');
       el.id = 'reconnect-overlay';
       el.className = 'reconnect-overlay';
-      el.innerHTML = '<div class="reconnect-spinner">🐉</div><div class="reconnect-text"></div>';
+      el.innerHTML = '<div class="reconnect-spinner">🐉</div><div class="reconnect-text"></div><a class="elsewhere-out hidden" href="/">← Volver al inicio</a>';
       document.body.appendChild(el);
     }
     el.querySelector('.reconnect-text').textContent = message || 'Reconectando…';
+    const out = el.querySelector('.elsewhere-out');
+    if (out) out.classList.toggle('hidden', !back);
     el.classList.remove('hidden');
   }
   function hideReconnectOverlay() {
@@ -237,19 +266,70 @@
     if (el) el.classList.add('hidden');
   }
   socket.on('disconnect', (reason) => {
-    if (pin && myName) showReconnectOverlay('Reconectando…');
+    if (pin && myName && !elsewhere) showReconnectOverlay('Reconectando…');
   });
   socket.on('connect', () => {
     // On any reconnect (after the first), re-emit player:join with stored credentials
-    if (pin && myName) {
+    // (not a tab whose game went to another tab of this phone: it waits for its «Jugar aquí», on top)
+    if (pin && myName && elsewhere) { hideReconnectOverlay(); showElsewhere(); return; }
+    if (pin && myName) rejoin();
+  });
+  // the room has no game for this phone any more (its slot is gone: it would show an empty game screen): join again
+  let goneAt = 0;
+  socket.on('player:gone', (d) => {
+    if (!pin || !myName || elsewhere || (d && d.pin && String(d.pin) !== String(pin))) return;
+    if (Date.now() - goneAt < 4000) return;
+    goneAt = Date.now();
+    rejoin();
+  });
+  // this phone's game moved to another tab / window of the same phone: a calm card, never an empty game screen
+  socket.on('player:elsewhere', (d) => {
+    if (!pin || (d && d.pin && String(d.pin) !== String(pin))) return;
+    elsewhere = true;
+    clearAnswerHeartbeat();
+    hideSendingOverlay();
+    hideReconnectOverlay();
+    try { if (window.MochiSounds && MochiSounds.stopGameTheme) MochiSounds.stopGameTheme(); } catch (_) {}
+    try { if (window.DralyParty && DralyParty.hurryGlow) DralyParty.hurryGlow(false); } catch (_) {}
+    // the game modules stand still under the card (Las Trampillas stops its loop and its clock)
+    try { window.dispatchEvent(new CustomEvent('draly:elsewhere')); } catch (_) {}
+    showElsewhere();
+  });
+  function showElsewhere() {
+    let el = document.getElementById('elsewhere-card');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'elsewhere-card';
+      el.className = 'reconnect-overlay elsewhere-card';
+      el.setAttribute('role', 'alertdialog');
+      el.innerHTML = '<img class="elsewhere-img" src="/assets/dralingo/wise.webp" alt=""><div class="reconnect-text">Tu juego sigue en otra pantalla</div>'
+        + '<p class="elsewhere-sub">Juega allí, o toca «Jugar aquí» para seguir en esta.</p><button type="button" class="elsewhere-btn">Jugar aquí</button>'
+        + '<a class="elsewhere-out" href="/">← Volver al inicio</a>';
+      document.body.appendChild(el);
+      el.querySelector('.elsewhere-btn').addEventListener('click', () => {
+        elsewhere = false;
+        el.classList.add('hidden');
+        rejoin();
+      });
+    }
+    document.body.appendChild(el);      // (again: always on top of any other overlay)
+    el.classList.remove('hidden');
+  }
+  function rejoin() {
+    {
       const savedCode = (function () {
         try { return localStorage.getItem('dralyStudentCode') || null; }
         catch (_) { return null; }
       })();
-      socket.emit('player:join', { pin, name: myName, avatar: getMyAvatar(), studentCode: savedCode, accessCode: savedClassCode() }, (resp) => {
+      socket.emit('player:join', { pin, name: myName, avatar: getMyAvatar(), studentCode: savedCode || memCode, accessCode: savedClassCode() }, (resp) => {
+        if (!resp) return;
         if (resp.ok) {
           myPlayerId = resp.playerId; // new socket id after reconnect
           team = resp.team;
+          // (2026-10-19) the room may play this phone under another name («Fernando 2»: its name is playing on another
+          // device right now): keep it, so the next reconnect finds this phone's own slot
+          if (resp.name && resp.name !== myName) { myName = resp.name; if ($('lobby-name')) $('lobby-name').textContent = myName; keepName(); }
+          if (!memCode && resp.studentCode && !resp.guest) memCode = resp.studentCode;
           if (resp.gameType) gameType = resp.gameType;
           // === Reset body gametype-* class on reconnect ===
           // Otherwise stale CSS from a previous gameType leaks through —
@@ -274,13 +354,13 @@
           routePlayerForGameState(resp.gameState, gameType);
           hideReconnectOverlay();
         } else {
-          showReconnectOverlay(resp.error || 'No pudimos volver a entrar. Revisa tu conexión.');
+          showReconnectOverlay(resp.error || 'No pudimos volver a entrar. Revisa tu conexión.', true);
         }
       });
     }
-  });
+  }
   socket.on('connect_error', () => {
-    if (pin && myName) showReconnectOverlay('Reconectando…');
+    if (pin && myName && !elsewhere) showReconnectOverlay('Reconectando…');
   });
 
   // Unlock audio on first tap
@@ -354,7 +434,10 @@
       }
       pin = p;
       team = resp.team;
-      myName = name;
+      myName = resp.name || name;    // (2026-10-19: «Fernando 2» when «Fernando» is playing on another device right now)
+      if (myName !== name) keepName();
+      elsewhere = false;
+      memCode = savedCode || (!resp.guest && resp.studentCode) || null;   // (a phone whose storage fails: its code in memory)
       myPlayerId = resp.playerId;
       gameType = resp.gameType || 'mochi-mash';
       // Persist the canonical code the server returned (may be the same

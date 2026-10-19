@@ -10337,6 +10337,55 @@ function endGame(pin, force) {
   broadcast(pin);
 }
 
+// ---------- one name, one device (2026-10-19, player:join) ----------
+// a room's slot still in use: its kid's connection is open right now (not a phone that dropped and is coming back)
+function _slotLive(g, id) {
+  const p = g && g.players[id];
+  if (!p || p.disconnected) return false;
+  const s = io.sockets.sockets.get(id);
+  return !!(s && s.connected);
+}
+// the same phone again: it sends the code it keeps (its saved code = the slot's account, or the code it sent before)
+const _samePhone = (p, code) => !!(code && p && (code === p.studentCode || code === p.phoneCode));
+// the slot a join may take by its name → { entry: [id, player] | null, elsewhereId, taken }. A name playing right now on
+// ANOTHER phone is never taken (taken: true); the same phone's other tab gives it back and is told (elsewhereId).
+function _slotByName(g, name, sid, code) {
+  const nm = String(name || '').trim().slice(0, 20).toLowerCase();
+  // this phone's own slot first (its code): a «Fernando 2» whose page reloads types «Fernando» again (the link's name)
+  if (nm && code && g.gameType !== 'hsksim') {
+    const own = Object.entries(g.players).find(([, p]) => {
+      if (!_samePhone(p, code)) return false;
+      const n = String(p.name || '').toLowerCase(), base = n.replace(/ \d+$/, '');
+      return n === nm || (base !== n && nm.startsWith(base) && base.length >= Math.min(nm.length, 14));
+    });
+    if (own) return { entry: own, elsewhereId: own[0] !== sid && _slotLive(g, own[0]) ? own[0] : null, taken: false };
+  }
+  const ex = nm ? Object.entries(g.players).find(([, p]) => String(p.name || '').toLowerCase() === nm) : null;
+  if (!ex || ex[0] === sid || g.gameType === 'hsksim' || !_slotLive(g, ex[0])) return { entry: ex || null, elsewhereId: null, taken: false };
+  if (_samePhone(ex[1], code)) return { entry: ex, elsewhereId: ex[0], taken: false };
+  return { entry: null, elsewhereId: null, taken: true };
+}
+// the same phone's other tab, still open, whose slot a new tab just took: it hears where its game went (a card with
+// «Jugar aquí»), never a silent room with no game of its own
+function _tellElsewhere(id, pin) {
+  const old = id ? io.sockets.sockets.get(id) : null;
+  if (!old) return;
+  old.data = old.data || {};
+  old.data.elsewhere = String(pin);
+  old.emit('player:elsewhere', { pin: String(pin) });
+  for (const r of Array.from(old.rooms)) if (r !== old.id) old.leave(r);   // the PIN room and any board / race room
+}
+// a free name in this room for a second «Fernando»: «Fernando 2», «Fernando 3»… (20 characters at most, like any name)
+function _freeName(g, name) {
+  const taken = new Set(Object.values(g.players).map((p) => String(p.name || '').toLowerCase()));
+  for (let n = 2; n < 100; n++) {
+    const suf = ' ' + n;
+    const cand = name.slice(0, 20 - suf.length).trimEnd() + suf;
+    if (!taken.has(cand.toLowerCase())) return cand;
+  }
+  return name.slice(0, 15).trimEnd() + ' ' + (100 + Math.floor(Math.random() * 900));
+}
+
 io.on('connection', (socket) => {
   let currentPin = null;
   let role = null;
@@ -11050,21 +11099,27 @@ io.on('connection', (socket) => {
       return cb({ ok: false, error: paused ? 'Espera unos minutos y vuelve a escribir el PIN.' : 'No hay ningún juego con ese PIN. Revisa el número.' });
     }
     if (paused && g.gameType === 'hsksim') return cb({ ok: false, error: 'Espera unos minutos y vuelve a escribir el PIN.' });
+    const sentCode = typeof studentCode === 'string' && studentCode ? studentCode.slice(0, 64) : null;
     // Dàfùwēng · Monopolio: a kid of this game whose phone dropped around the end (a new socket) gets its slot back and
     // its own board's ceremony + card again, and stays in the room for «Otra ronda»
+    // (2026-10-19: never a slot whose name is playing right now on another phone: _slotByName)
     if (g.state === 'ended' && g.gameType === 'monopoly' && g.mn) {
-      const nm = String(name || '').trim().slice(0, 20).toLowerCase();
-      const ex = nm ? Object.entries(g.players).find(([, p]) => p.name.toLowerCase() === nm) : null;
+      const sl = _slotByName(g, name, socket.id, sentCode);
+      const ex = sl.entry;
       if (ex) {
         const [oldId, pl] = ex;
         pl.disconnected = false;
         pl.disconnectedAt = null;
         if (pl.cleanupTimer) { clearTimeout(pl.cleanupTimer); pl.cleanupTimer = null; }
-        if (oldId !== socket.id) { g.players[socket.id] = pl; delete g.players[oldId]; }
+        if (oldId !== socket.id) { g.players[socket.id] = pl; delete g.players[oldId]; _tellElsewhere(sl.elsewhereId, pin); }
         currentPin = pin;
         role = 'player';
         socket.join(pin);
-        cb({ ok: true, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: pl.studentCode });
+        if (socket.data) socket.data.elsewhere = null;
+        // (2026-10-19 review: the slot's own code only to that same phone; a classmate typing a dropped kid's name after
+        // the end gets the card but never that kid's code)
+        const mine = _samePhone(pl, sentCode);
+        cb({ ok: true, name: pl.name, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: mine ? pl.studentCode : undefined, guest: !mine });
         io.to(socket.id).emit('state', publicState(g));
         const one = mnEndPayloads(g).forPlayer(socket.id);
         if (one) setTimeout(() => io.to(socket.id).emit('game-end', one), 60);
@@ -11073,18 +11128,22 @@ io.on('connection', (socket) => {
     }
     // Vuelo del Dragón: the same (its own race's ceremony + card again)
     if (g.state === 'ended' && g.gameType === 'dragon-eye' && g.dr) {
-      const nm = String(name || '').trim().slice(0, 20).toLowerCase();
-      const ex = nm ? Object.entries(g.players).find(([, p]) => p.name.toLowerCase() === nm) : null;
+      const sl = _slotByName(g, name, socket.id, sentCode);
+      const ex = sl.entry;
       if (ex) {
         const [oldId, pl] = ex;
         pl.disconnected = false;
         pl.disconnectedAt = null;
         if (pl.cleanupTimer) { clearTimeout(pl.cleanupTimer); pl.cleanupTimer = null; }
-        if (oldId !== socket.id) { g.players[socket.id] = pl; delete g.players[oldId]; }
+        if (oldId !== socket.id) { g.players[socket.id] = pl; delete g.players[oldId]; _tellElsewhere(sl.elsewhereId, pin); }
         currentPin = pin;
         role = 'player';
         socket.join(pin);
-        cb({ ok: true, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: pl.studentCode });
+        if (socket.data) socket.data.elsewhere = null;
+        // (2026-10-19 review: the slot's own code only to that same phone; a classmate typing a dropped kid's name after
+        // the end gets the card but never that kid's code)
+        const mine = _samePhone(pl, sentCode);
+        cb({ ok: true, name: pl.name, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: mine ? pl.studentCode : undefined, guest: !mine });
         io.to(socket.id).emit('state', publicState(g));
         const one = drEndPayloads(g).forPlayer(socket.id);
         if (one) setTimeout(() => io.to(socket.id).emit('game-end', one), 60);
@@ -11094,18 +11153,22 @@ io.on('connection', (socket) => {
     // Mochi Mash / Ojos de Halcón: a kid of this game whose phone dropped around the end (a new socket) gets its slot
     // back and its own end card again, and stays in the room for «Otra ronda»
     if (g.state === 'ended' && ((g.gameType === 'mochi-mash' && g.mm) || (g.gameType === 'halcon' && g.halcon) || (g.gameType === 'pinata' && g.pn) || (g.gameType === 'sixseven' && g.ss) || (finGame(g) && g.finEnd))) {
-      const nm = String(name || '').trim().slice(0, 20).toLowerCase();
-      const ex = nm ? Object.entries(g.players).find(([, p]) => p.name.toLowerCase() === nm) : null;
+      const sl = _slotByName(g, name, socket.id, sentCode);
+      const ex = sl.entry;
       if (ex) {
         const [oldId, pl] = ex;
         pl.disconnected = false;
         pl.disconnectedAt = null;
         if (pl.cleanupTimer) { clearTimeout(pl.cleanupTimer); pl.cleanupTimer = null; }
-        if (oldId !== socket.id) { g.players[socket.id] = pl; delete g.players[oldId]; }
+        if (oldId !== socket.id) { g.players[socket.id] = pl; delete g.players[oldId]; _tellElsewhere(sl.elsewhereId, pin); }
         currentPin = pin;
         role = 'player';
         socket.join(pin);
-        cb({ ok: true, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: pl.studentCode });
+        if (socket.data) socket.data.elsewhere = null;
+        // (2026-10-19 review: the slot's own code only to that same phone; a classmate typing a dropped kid's name after
+        // the end gets the card but never that kid's code)
+        const mine = _samePhone(pl, sentCode);
+        cb({ ok: true, name: pl.name, team: pl.team, playerId: socket.id, gameType: g.gameType, rejoined: true, gameState: 'ended', studentCode: mine ? pl.studentCode : undefined, guest: !mine });
         io.to(socket.id).emit('state', publicState(g));
         const one = finGame(g) ? finAgain(g, g.finEnd.forPlayer(socket.id) || g.finEnd.guest())
           : g.gameType === 'mochi-mash' ? mmEndPayloads(g).forPlayer(socket.id)
@@ -11117,13 +11180,22 @@ io.on('connection', (socket) => {
     }
     // «Otra ronda» keeps the same PIN: tell the kid to try again, not to wait for a new PIN (class test 2026-10-12)
     if (g.state === 'ended') return cb({ ok: false, error: 'Esta ronda terminó. Cuando tu maestro empiece otra, vuelve a tocar «¡Entrar!».' });
-    const cleanName = String(name || '').trim().slice(0, 20);
+    let cleanName = String(name || '').trim().slice(0, 20);
     if (!cleanName) return cb({ ok: false, error: 'Escribe tu nombre.' });
+    const typedName = cleanName;   // (the kid's account keeps the name they typed, never the room's «Fernando 2»)
 
     // Look for existing player by name (case-insensitive). If found, attach to that slot.
-    const existingEntry = Object.entries(g.players).find(
-      ([id, p]) => p.name.toLowerCase() === cleanName.toLowerCase()
-    );
+    // 🆕 2026-10-19 (Las Trampillas, his laptop showed an empty game): a name that is playing RIGHT NOW on another
+    // connection is never taken from it. Before, the second device (his phone, or a classmate with the same name) moved
+    // the slot to itself and the first one stayed in the room with no player: it got the countdown and «active» but never
+    // its own game (td:init, questions…) → a dark, empty screen until the PIN was typed again. Now: the same phone again
+    // (its saved code: a reload, a second tab) takes its slot back and the old tab is told (`player:elsewhere`); any other
+    // device gets a slot of its own with a free name («Fernando 2»). A slot whose connection is gone is a reconnect, as
+    // always. Exam rooms keep their old rule (the teacher supervises the tablets).
+    const slot = _slotByName(g, cleanName, socket.id, sentCode);
+    const existingEntry = slot.entry;
+    const elsewhereId = slot.elsewhereId;
+    if (slot.taken) cleanName = _freeName(g, cleanName);
 
     let player;
     let isRejoin = false;
@@ -11142,6 +11214,7 @@ io.on('connection', (socket) => {
           clearTimeout(player.cleanupTimer);
           player.cleanupTimer = null;
         }
+        if (elsewhereId === oldId) _tellElsewhere(oldId, pin);
       }
       // Refresh avatar on rejoin so kids can change it across rounds
       if (avatar && typeof avatar === 'string') player.avatar = String(avatar).slice(0, 8);
@@ -11162,7 +11235,9 @@ io.on('connection', (socket) => {
         recentTaps: [],
         currentQ: null,
         disconnected: false,
-        disconnectedAt: null
+        disconnectedAt: null,
+        phoneCode: sentCode,      // the code this phone sent (its own, even when the room plays it as a guest): «the same phone»
+        acctName: typedName,      // the name the kid typed (its account's), even when the room calls it «Fernando 2»
       };
       g.players[socket.id] = player;
       g.feed.push({ type: 'join', name: cleanName, team: player.team, t: Date.now() });
@@ -11179,7 +11254,7 @@ io.on('connection', (socket) => {
     // (the teacher sees the roster), but an unproven join never renames that account
     const proven = !known || _joinOwns(socket, known.rec, accessCode);
     const guestLink = !proven && g.gameType !== 'hsksim';
-    const studentRec = Students.getOrCreate(guestLink ? null : studentCode, proven || guestLink ? cleanName : '');
+    const studentRec = Students.getOrCreate(guestLink ? null : studentCode, proven || guestLink ? ((isRejoin && player.acctName) || typedName) : '');
     _entradaPinTag(socket, g, studentRec);   // 🆕 2026-10-18 (la entrada): a key account joins its teacher's class here
     player.studentCode = studentRec.code;
     player.guestLink = guestLink;   // the phone keeps its own saved code (player.js never overwrites it with this one)
@@ -11192,9 +11267,11 @@ io.on('connection', (socket) => {
     currentPin = pin;
     role = 'player';
     socket.join(pin);
+    if (socket.data) socket.data.elsewhere = null;
 
     cb({
       ok: true,
+      name: player.name,            // (a second device with a name already playing: «Fernando 2», the phone shows it)
       team: player.team,
       playerId: socket.id,
       gameType: g.gameType,
@@ -11994,11 +12071,17 @@ io.on('connection', (socket) => {
   // question if one is open + pushes a NEW question if the player is idle
   // (no mash window, no pending dice roll, etc).
   // This is the last-resort safety net that gets stuck players unstuck.
-  socket.on('player:resync', ({ pin }) => {
+  socket.on('player:resync', (data) => {
+    const pin = data && data.pin;
     const g = games[pin];
     if (!g) return;
     const p = g.players[socket.id];
-    if (!p) return;
+    if (!p) {
+      // (2026-10-19) a phone of this room with no slot any more (it never got its game: an empty screen): it joins again
+      // by itself (player.js), never «exit and type the PIN again». Not a tab told its game went to another tab.
+      if (role === 'player' && String(currentPin) === String(pin) && !(socket.data && socket.data.elsewhere === String(pin))) io.to(socket.id).emit('player:gone', { pin: String(pin) });
+      return;
+    }
     const now = Date.now();
     const inAction =
       (p.mashUntil && p.mashUntil > now) ||
@@ -12047,7 +12130,9 @@ io.on('connection', (socket) => {
     }
     // Reinos / Pintores / Nieve / La Gran Fuga: «¡FINAL!» again (never a question then), or the ceremony + card again
     if (finGame(g) && g.state === 'active' && g.finalizing) { io.to(socket.id).emit('fin:final', { ms: finFinalLeft(g), why: g.finalizing.why, game: g.gameType }); return; }
-    if (finGame(g) && g.state === 'active' && g.finFrenzy && g.endsAt && !finPaused(g)) io.to(socket.id).emit('fin:frenzy', { game: g.gameType, endsMs: Math.max(0, g.endsAt - Date.now()) });
+    // (`again`: a resync — now also on every return to the tab — gives the chip and the lights, never the jingle and the
+    // news a second time; a phone joining in the last 30 s still gets them all, player:join)
+    if (finGame(g) && g.state === 'active' && g.finFrenzy && g.endsAt && !finPaused(g)) io.to(socket.id).emit('fin:frenzy', { game: g.gameType, endsMs: Math.max(0, g.endsAt - Date.now()), again: true });
     if (finGame(g) && g.state === 'ended') {
       const one = g.finEnd && finAgain(g, g.finEnd.forPlayer(socket.id) || g.finEnd.guest());
       if (one) io.to(socket.id).emit('game-end', one);

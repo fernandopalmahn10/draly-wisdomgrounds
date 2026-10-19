@@ -27,9 +27,21 @@
     if (musicName === name) return;
     stopMusic(); musicName = name;
     if (muted) return;
-    try { music = new Audio(A + name + '.mp3'); music.loop = true; music.volume = vol || 0.4; music.play().catch(() => {}); } catch (_) {}
+    try {
+      music = new Audio(A + name + '.mp3'); music.loop = true; music.volume = vol || 0.4;
+      if (name === 'music-battle' && window.DralyParty) DralyParty.hurryApply(music);   // (back from a pause in the last 30 s: still fast)
+      music.play().catch(() => {});
+    } catch (_) {}
   }
   function stopMusic() { if (music) { try { music.pause(); } catch (_) {} } music = null; musicName = null; }
+  // «¡Rápido!» (the last 30 s, 2026-10-19): the jingle, then the battle music back faster and higher (js/party.js); before,
+  // another loop (music-final) that didn't match took over
+  function hurryUp() {
+    if (!window.DralyParty) { playMusic('music-final', 0.42); return; }
+    if (DralyParty.hurryOn()) return;            // (once: a resent fin:frenzy never replays the jingle)
+    DralyParty.hurryHost({ play: playUrl, music: () => (musicName === 'music-battle' ? music : null), vol: 0.42 });
+  }
+  const hurryOff = () => { if (window.DralyParty) DralyParty.hurryHostOff(music); };
 
   $('mute-btn').addEventListener('click', () => {
     muted = window.toggleMute ? window.toggleMute() : !muted;
@@ -89,7 +101,7 @@
   $('start-btn').addEventListener('click', () => socket.emit('host:start', { pin }));
   $('add-time-btn').addEventListener('click', () => { socket.emit('host:add-time', { pin, seconds: 30 }); banner('+30 segundos ⏱'); });
   $('end-now-btn').addEventListener('click', () => { if (confirm('¿Terminar la ronda ahora?')) socket.emit('host:end-now', { pin }); });
-  $('play-again-btn').addEventListener('click', () => { if (ceremony) { ceremony.stop(); ceremony = null; } socket.emit('host:reset', { pin }); showScreen('lobby'); playMusic('music-lobby', 0.35); });
+  $('play-again-btn').addEventListener('click', () => { if (ceremony) { ceremony.stop(); ceremony = null; } hurryOff(); socket.emit('host:reset', { pin }); showScreen('lobby'); playMusic('music-lobby', 0.35); });
   socket.on('host:start-error', (e) => alert(e && e.message ? e.message : 'No se pudo empezar.'));
   // the round's world: the teacher picks another in the lobby; «Otra ronda» moves on to the next one by itself
   const pickWorld = (dir) => { if (pin) socket.emit('host:pc-world', { pin, world: (((worldPick + dir) % PW.WORLDS.length) + PW.WORLDS.length) % PW.WORLDS.length }, () => {}); };
@@ -374,8 +386,11 @@
       const sec = Math.ceil(left / 1000);
       $('timer-display').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
       if (sec === 60 && !warned[60]) { warned[60] = 1; banner('⏱ ¡Queda 1 minuto!'); }
-      if (sec === 30 && !warned[30]) { warned[30] = 1; say('¡Últimos 30 segundos! Cada acierto: recarga doble y llamarada.', 'point'); playMusic('music-final', 0.42); }
-      if (sec <= 10 && sec > 0 && !warned['t' + sec]) { warned['t' + sec] = 1; sfx('tick', 0.5); $('timer-display').classList.add('urgent'); }
+      if (sec === 30 && !warned[30]) { warned[30] = 1; say('¡Últimos 30 segundos! Cada acierto: recarga doble y llamarada.', 'point'); }   // («¡Rápido!»: with the server's fin:frenzy)
+      if (sec <= 10 && sec > 0 && !warned['t' + sec]) { warned['t' + sec] = 1; $('timer-display').classList.add('urgent'); }
+      // the last 10 s: a clock that ticks and tocks twice, then four times a second (was one tick a second)
+      const ci = window.DralyParty ? DralyParty.clockIdx(left) : -1;
+      if (ci >= 0 && ci !== warned.clock) { warned.clock = ci; DralyParty.hurryClock(ci, playUrl); }
       lastTen(sec <= 10 && sec > 0 ? sec : 0);
     }, 250);
   }
@@ -398,6 +413,7 @@
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
     if ($('timer-display')) { $('timer-display').textContent = '0:00'; $('timer-display').classList.remove('urgent', 'pf-frenzy'); }
     lastTen(0);
+    hurryOff();
     stopMusic();
     hideDralingo();
     if (scene) scene.frozen = true;
@@ -408,9 +424,11 @@
   // the last 30 s, from the server (it can switch off again after «+30 s»): a banner, a ribbon, a red clock, fireworks
   socket.on('fin:frenzy', (d) => {
     if (!d || !window.DralyParty) return;
-    if (d.off) { DralyParty.clearChip(); $('timer-display').classList.remove('pf-frenzy'); if (scene) scene.frenzy = false; document.body.classList.remove('ph-frenzy'); return; }
+    // (`hold` = «⏸ Pausa» in the last 30 s: the hurry waits with the clock; a real `off` = «+30 s» gave the time back)
+    if (d.off) { DralyParty.clearChip(); if (!d.hold) hurryOff(); $('timer-display').classList.remove('pf-frenzy'); if (scene) scene.frenzy = false; document.body.classList.remove('ph-frenzy'); return; }
     if (!d.again) banner('⚡ ¡Últimos 30 segundos! ¡Recarga doble!');
     DralyParty.chip('Recarga doble', d.endsMs, 'host');
+    if (d.again) { DralyParty.hurryGlow(true); DralyParty.hurryApply(music); } else if (!hostPaused) hurryUp();   // (after «Seguir»: no second jingle)
     $('timer-display').classList.add('pf-frenzy');
     if (scene) scene.frenzy = true;
     document.body.classList.add('ph-frenzy');

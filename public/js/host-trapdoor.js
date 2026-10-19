@@ -12,8 +12,10 @@
   const NAMES = { red: 'Reino del Fuego', gold: 'Reino del Mar' };
   const SHORT = { red: 'Fuego', gold: 'Mar' };
   const A = '/assets/kingdoms/', TD = '/assets/trapdoor/', HC = '/assets/halcon/';
+  const PA = '/assets/party/';
   const SFX = { tick: A + 'tick.mp3', whoosh: A + 'whoosh.mp3', win: A + 'sting-win.mp3', alert: A + 'castle-alert.mp3', star: '/assets/monopoly/star.mp3',
-    open: TD + 'open.mp3', close: TD + 'close.mp3', fall: TD + 'fall.mp3', saved: TD + 'saved.mp3', back: TD + 'back.mp3', lock: TD + 'lock.mp3', round: HC + 'round.mp3', start: HC + 'start.mp3', streak: A + 'streak.mp3' };
+    open: TD + 'open.mp3', close: TD + 'close.mp3', fall: TD + 'fall.mp3', saved: TD + 'saved.mp3', back: TD + 'back.mp3', lock: TD + 'lock.mp3', round: HC + 'round.mp3', start: HC + 'start.mp3', streak: A + 'streak.mp3',
+    hurry: PA + 'hurry.mp3', clockTick: PA + 'tick.mp3', clockTock: PA + 'tock.mp3' };
   const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   let pin = null, state = null, muted = false;
@@ -24,15 +26,44 @@
   let raf = 0, lastT = 0;
   let music = null, musicName = null;
 
-  function sfx(name, vol) { if (muted) return; try { const a = new Audio(SFX[name] || name); a.volume = vol || 0.6; a.play().catch(() => {}); } catch (_) {} }
+  // `rate`: faster and higher (the Final Round's rising tick-tock)
+  function sfx(name, vol, rate) {
+    if (muted) return;
+    try {
+      const a = new Audio(SFX[name] || name);
+      a.volume = vol || 0.6;
+      if (rate && rate !== 1 && window.DralyParty) DralyParty.hurryMusic(a, rate);
+      a.play().catch(() => {});
+    } catch (_) {}
+  }
+  // the music: the rounds' beat (Kenney's Retro Beat), and in the Final Round the same beat faster and higher («hurry»,
+  // js/party.js hurryMusic) and a little louder: it rises, never another loop that doesn't match (2026-10-19)
+  const HURRY_VOL = 0.5;
   function playMusic(name, vol) {
     if (musicName === name) return;
     stopMusic(); musicName = name;
     if (muted) return;
-    const url = name === 'rounds' ? TD + 'music-rounds.mp3' : A + name + '.mp3';
-    try { music = new Audio(url); music.loop = true; music.volume = vol || 0.4; music.play().catch(() => {}); } catch (_) {}
+    const url = name === 'rounds' || name === 'hurry' ? TD + 'music-rounds.mp3' : A + name + '.mp3';
+    try {
+      music = new Audio(url); music.loop = true; music.volume = vol || 0.4;
+      if (name === 'hurry' && window.DralyParty) DralyParty.hurryMusic(music);
+      music.play().catch(() => {});
+    } catch (_) {}
   }
   function stopMusic() { if (music) { try { music.pause(); } catch (_) {} } music = null; musicName = null; }
+  // «¡Rápido!» (the Final Round): the alarm lights, the jingle, then the beat back faster and higher; a projector that
+  // joins the Final Round late (an F5) gets the lights and the music without the jingle
+  let hurryT = null;
+  const inFinal = () => !!(rd && rd.final) && !$('screen-active').classList.contains('hidden');
+  function hurryStart(jingle) {
+    if (window.DralyParty) DralyParty.hurryGlow(true);
+    clearTimeout(hurryT);
+    if (!jingle) { playMusic('hurry', HURRY_VOL); return; }
+    stopMusic();
+    sfx('hurry', 0.95);
+    hurryT = setTimeout(() => { if (inFinal() && !hostPaused && !(scene && scene.frozen)) playMusic('hurry', HURRY_VOL); }, 1450);
+  }
+  function hurryEnd() { clearTimeout(hurryT); hurryT = null; if (window.DralyParty) DralyParty.hurryGlow(false); }
 
   $('mute-btn').addEventListener('click', () => {
     muted = window.toggleMute ? window.toggleMute() : !muted;
@@ -159,6 +190,7 @@
   // ---------- countdown ----------
   socket.on('countdown', () => {
     showScreen('countdown');
+    hurryEnd();
     stopMusic();
     const a = TA.arena(arenaPick);
     $('count-arena').textContent = `${a.name} · ${roundsPick} rondas`;
@@ -201,7 +233,7 @@
     // (a projector whose connection dropped during the countdown never got «¡A jugar!»: straight to the platform)
     if ($('screen-active').classList.contains('hidden') && !ceremony) showScreen('active');
     if (fresh && d.phase === 'intro') { band('¡YA!', TA.arena(d.arena).name, 'start', 1900); sfx('start', 0.7); }
-    playMusic(d.final ? 'music-final' : 'rounds', 0.32);
+    if (d.final && d.r > 0) hurryStart(false); else { hurryEnd(); playMusic('rounds', 0.32); }
     scene.resize();
     paintTop();
     renderRosters();
@@ -224,16 +256,15 @@
     (m.enter || []).forEach((k) => { const row = (m.pos || []).find((x) => x[0] === k); if (row) scene.rise(k, row[1], row[2], now); });
     if ((m.enter || []).length) { sfx('back', 0.5); risePit(m.enter); }
     if (m.final) {
-      band('¡Ronda final!', '¡Vale doble! Caen 4 trampillas', 'final', 2100, [m.r, m.rounds]);
-      sfx('streak', 0.8);
-      playMusic('music-final', 0.42);
+      band('¡Ronda final!', '¡Vale doble! Caen 4 trampillas', 'final', 2100, [m.r, m.rounds], '¡Rápido!');
+      hurryStart(true);
       $('add-time-btn').disabled = true;
     } else {
       const sub = m.kind === 'three' ? (m.r === Math.floor(m.rounds / 2) + 1 ? '¡Ahora caen 3 trampillas!' : 'Caen 3 trampillas') : 'Caen 2 trampillas';
       band(`Ronda ${m.r}`, sub, m.kind === 'three' ? 'three' : '', 1450, [m.r, m.rounds]);
       $('add-time-btn').disabled = false;
+      sfx('round', 0.6);                          // (the Final Round has its «¡Rápido!» jingle instead)
     }
-    sfx('round', 0.6);
     paintTop();
   });
   socket.on('td:lock', (m) => { if (!scene || !m || m.id !== matchId) return; scene.lock(m.set); sfx('lock', 0.9); sfx('alert', 0.5); });
@@ -292,11 +323,26 @@
     if (sb.disabled === canSkip) { sb.disabled = !canSkip; sb.title = canSkip ? 'Saltar a la siguiente ronda' : 'Se puede saltar el «¡YA!» y el «+N en pie» entre rondas'; }
     if (pitDirty && t - pitAt > 500) { pitAt = t; pitDirty = false; renderPit(); renderRosters(); paintTop(); }
   }
-  let lastHub = null;
+  // the hub's count: a tick each second; the Final Round's clock ticks and tocks faster and faster, rising (TA.tickAt),
+  // and its beat climbs with it (faster and higher toward «0»)
+  let lastTick = null, rateAt = 0;
   function tickSounds() {
-    if (!scene || !scene.rd || scene.paused || scene.frozen) { lastHub = null; return; }
-    const n = TA.hubAt(scene.clock(performance.now()), scene.rd.final);
-    if (n !== lastHub) { if (n != null && n > 0) sfx('tick', n <= 2 ? 0.75 : 0.5); lastHub = n; }
+    if (!scene || !scene.rd || scene.paused || scene.frozen) { lastTick = null; return; }
+    const t = scene.clock(performance.now());
+    const k = TA.tickAt(t, scene.rd.final);
+    const key = k ? scene.rd.r + ':' + k.i : null;
+    if (key !== lastTick) {
+      lastTick = key;
+      if (k && k.fast) sfx(k.i % 2 ? 'clockTock' : 'clockTick', k.fast === 2 ? 0.9 : 0.75, 1 + k.i * 0.025);
+      else if (k) sfx('tick', k.n <= 2 ? 0.75 : 0.5);
+    }
+    if (scene.rd.final && music && musicName === 'hurry' && window.DralyParty && performance.now() - rateAt > 240) {
+      rateAt = performance.now();
+      const b = TA.bounds(true);
+      const into = Math.max(0, Math.min(1, (t - b.count) / TA.TIMING.COUNT));
+      const want = Math.round((DralyParty.HURRY_RATE + 0.1 * into) * 50) / 50;
+      if (Math.abs(music.playbackRate - want) > 0.001) DralyParty.hurryMusic(music, want);
+    }
   }
 
   // ---------- the top, the sides, the pit ----------
@@ -393,9 +439,11 @@
 
   // ---------- bands, Dralingo / the captains ----------
   let bandT = null;
-  function band(title, sub, cls, ms, dots) {
+  // `kick`: a small tag over the title («¡Rápido!» on the Final Round)
+  function band(title, sub, cls, ms, dots, kick) {
     const b = $('th-band');
-    b.className = 'th-band ' + (cls || '');
+    b.className = 'th-band ' + (cls || '') + (kick ? ' kick' : '');
+    $('th-band-kick').textContent = kick || '';
     $('th-band-title').textContent = title;
     $('th-band-sub').textContent = sub || '';
     const d = $('th-band-dots');
@@ -436,7 +484,7 @@
     hostPaused = !!v;
     $('pause-btn').textContent = hostPaused ? '▶ Seguir' : '⏸ Pausa';
     if (window.DralyParty) DralyParty.pauseCard(hostPaused, { mode: 'host' });
-    if (hostPaused) stopMusic(); else if (!$('screen-active').classList.contains('hidden')) playMusic(rd && rd.final ? 'music-final' : 'rounds', 0.32);
+    if (hostPaused) { clearTimeout(hurryT); stopMusic(); } else if (!$('screen-active').classList.contains('hidden') && !(scene && scene.frozen)) { if (rd && rd.final) playMusic('hurry', HURRY_VOL); else playMusic('rounds', 0.32); }
   }
   $('pause-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: !hostPaused }));
   socket.on('td:pause', (d) => { if (!d) return; if (scene) scene.pause(!!d.paused, performance.now(), d.paused ? null : d.ago); showHostPaused(d.paused); });
@@ -447,6 +495,7 @@
   const playUrl = (url, vol) => { if (muted) return; try { const a = new Audio(url); a.volume = vol == null ? 0.7 : vol; a.play().catch(() => {}); } catch (_) {} };
   const FINAL_SUB = { time: '¡Terminó la ronda final!', end: '¡Fin de la partida!' };
   socket.on('fin:final', (d) => {
+    hurryEnd();
     stopMusic();
     if (scene) { scene.frozen = true; scene.pause(true, performance.now()); }   // no roulette or count goes on under «¡FINAL!»
     $('th-band').classList.remove('show');
@@ -468,6 +517,7 @@
   }
   socket.on('state', (s) => { if (s && s.state === 'lobby' && ceremony) { ceremony.stop(); ceremony = null; } });
   socket.on('game-end', (d) => {
+    hurryEnd();
     stopMusic();
     cancelAnimationFrame(raf); raf = 0;           // the frozen platform under the ceremony needs no more frames
     if (partyEnd(d)) return;
@@ -477,7 +527,7 @@
     $('win-banner').textContent = d.winner === 'red' || d.winner === 'gold' ? `¡Gana el ${NAMES[d.winner]}!` : '¡Empate en las trampillas!';
   });
 
-  function showScreen(name) { ['lobby', 'countdown', 'active', 'win'].forEach((n) => $('screen-' + n).classList.toggle('hidden', n !== name)); if (name === 'lobby') { rd = null; $('add-time-btn').disabled = false; } }
+  function showScreen(name) { ['lobby', 'countdown', 'active', 'win'].forEach((n) => $('screen-' + n).classList.toggle('hidden', n !== name)); if (name === 'lobby') { rd = null; hurryEnd(); $('add-time-btn').disabled = false; } }
 
   window.TrapdoorHost = {
     scene: () => scene,

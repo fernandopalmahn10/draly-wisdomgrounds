@@ -183,6 +183,7 @@ function none(s, ev, ms) {
     kids[0].s.emit('player:dr-beats', { pin, mid: ra2.dragon.mid, n: 2 });
     await sleep(150);
     kids[0].s.disconnect();
+    await sleep(300);          // (its old connection closes first: a live name is never taken by another connection, 2026-10-19)
     const s2 = connect();
     s2.on('dr:race', () => {});
     const back = next(s2, 'dr:init', 4000);
@@ -237,6 +238,7 @@ function none(s, ev, ms) {
   cards.forEach((c) => ok(c.me.won === winners.includes(c.me.k), 'the won flag matches'));
   // a reconnect after the end: its card again
   kids[1].s.disconnect();
+  await sleep(300);
   const s3 = connect();
   const again2 = next(s3, 'game-end', 3000);
   const j3 = await ack(s3, 'player:join', { pin, name: 'Mateo', avatar: '🐪' });

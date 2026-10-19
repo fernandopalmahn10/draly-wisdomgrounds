@@ -239,7 +239,7 @@
     // the last 30 s: «¡Súper turbos!» (every right answer is a súper turbo)
     s.on('fin:frenzy', (d) => {
       if (!on || !d || d.off || d.again) return;
-      sfx('super-v2', 0.6); buzz([60, 40, 60]);
+      setTimeout(() => sfx('super-v2', 0.6), 1650); buzz([60, 40, 60]);   // (after the «¡Rápido!» jingle, js/party.js)
       band({ kind: 'time', img: D + 'power.webp', title: '🚀 ¡Súper turbos!', sub: 'Últimos 30 s: cada acierto es un súper turbo', ms: 2400 });
     });
     bindControls();

@@ -194,6 +194,7 @@
   $('resume-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: false }));
   $('play-again-btn').addEventListener('click', () => {
     if (ceremony) { ceremony.stop(); ceremony = null; }
+    if (window.DralyParty && DralyParty.hurryGlow) DralyParty.hurryGlow(false);
     socket.emit('host:reset', { pin });
     es = null;
     showScreen('lobby');
@@ -945,6 +946,7 @@
     if ($('timer-display')) { $('timer-display').textContent = '0:00'; $('timer-display').classList.remove('urgent'); }
     ended = true;                 // (before showPaused: its «Seguir» path would start the chase music again)
     nearKids = []; zappedAt = {}; // (no red rings or lightning under «¡FINAL!»)
+    if (window.DralyParty && DralyParty.hurryGlow) DralyParty.hurryGlow(false);
     stopMusic();
     hideDralingo();
     showPaused(false);
@@ -972,11 +974,14 @@
   // the last 30 s («¡Súper turbos!»): every right answer is a súper turbo; a ribbon with the seconds, a red clock
   socket.on('fin:frenzy', (d) => {
     if (!d || !window.DralyParty) return;
-    if (d.off) { DralyParty.clearChip(); if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy'); return; }
+    if (d.off) { DralyParty.clearChip(); if (!d.hold && DralyParty.hurryGlow) DralyParty.hurryGlow(false); if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy'); return; }
     if (!d.again) {
       banner('🚀 ¡Últimos 30 segundos! ¡Súper turbos!', 'time');
       say('¡Últimos 30 segundos! ¡Cada acierto es un súper turbo!', 'power');
+      // «¡Rápido!» (2026-10-19): the jingle and the alarm lights (the chase music keeps its own mood: it already rises)
+      if (DralyParty.SND && DralyParty.SND.hurry) playUrl(DralyParty.SND.hurry, 0.85);
     }
+    if (DralyParty.hurryGlow) DralyParty.hurryGlow(true);
     DralyParty.chip('Súper turbos', d.endsMs, 'host');
     if ($('timer-display')) $('timer-display').classList.add('pf-frenzy');
   });

@@ -893,6 +893,16 @@ body::before {
   text-align: center;
   padding: 0 20px;
 }
+/* 2026-10-19: this phone's game went on in another tab of the same phone (player.js player:elsewhere) */
+.elsewhere-card { gap: 12px; padding: 16px; }
+.elsewhere-card .elsewhere-img { width: min(150px, 34vw); height: auto; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .45)); }
+.elsewhere-card .reconnect-text { font: 800 1.45rem/1.15 'Baloo 2', 'Nunito', sans-serif; letter-spacing: 0; color: #ffe9a8; }
+.elsewhere-sub { margin: 0; max-width: 320px; color: #fff; font: 700 1rem/1.3 'Nunito', sans-serif; text-align: center; }
+.elsewhere-btn { min-width: 220px; min-height: 56px; margin-top: 4px; border: 3px solid #fff; border-radius: 18px; color: #fff; cursor: pointer;
+  background: linear-gradient(180deg, #ffb347, #ff6a00); box-shadow: 0 5px 0 #a63a00; font: 800 1.35rem/1 'Baloo 2', 'Nunito', sans-serif;
+  transition: transform .12s ease-out; touch-action: manipulation; }
+.elsewhere-btn:active { transform: translateY(3px) scale(.98); box-shadow: 0 2px 0 #a63a00; }
+.elsewhere-out { color: #fff; opacity: .85; font: 700 .95rem/1 'Nunito', sans-serif; text-decoration: underline; padding: 10px; }
 
 /* Sticky PIN badge — visible during active game so latecomers can join */
 .sticky-pin {

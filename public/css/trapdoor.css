@@ -61,6 +61,14 @@ body.tp-on:has(#screen-trapdoor:not(.hidden)) .pf-news { top: calc(env(safe-area
 .tp-band.final b { font-size: 2.5rem; color: #ff7ab8; -webkit-text-stroke: 2px #4a0628; }
 .tp-band.final { background: linear-gradient(90deg, rgba(60, 4, 30, 0), rgba(60, 4, 30, .82) 18%, rgba(60, 4, 30, .82) 82%, rgba(60, 4, 30, 0)); }
 .tp-band.three small { color: #ffb3dd; }
+/* «¡Rápido!»: the Final Round's tag over the band's title (phone + projector), it lands with a little shake */
+.tp-band-kick { display: none; padding: 3px 14px 4px; border-radius: 999px; background: #ff2d5f; color: #fff; border: 3px solid #fff; font: 800 1.05rem/1 'Baloo 2', sans-serif;
+  font-style: normal; letter-spacing: .04em; text-transform: uppercase; box-shadow: 0 3px 0 rgba(60, 4, 20, .55); transform: rotate(-4deg); }
+.tp-band.kick .tp-band-kick, .th-band.kick .tp-band-kick { display: block; }
+.tp-band.kick.show .tp-band-kick, .th-band.kick.show .tp-band-kick { animation: tpKick .5s cubic-bezier(.3, 1.6, .5, 1) .08s both; }
+.th-band .tp-band-kick { font-size: 1.9rem; padding: 6px 26px 8px; border-width: 4px; }
+@keyframes tpKick { 0% { transform: rotate(-4deg) scale(.65); opacity: 0; } 55% { transform: rotate(3deg) scale(1.1); opacity: 1; } 75% { transform: rotate(-6deg) scale(.98); }
+  100% { transform: rotate(-4deg) scale(1); opacity: 1; } }
 .tp-band.tally { top: auto; bottom: 10px; }
 .tp-band.tally b { font-size: 1.7rem; }
 .tp-band.tally.red b { color: #ffcfc2; } .tp-band.tally.gold b { color: #cfe3ff; }
@@ -208,6 +216,7 @@ body:not(.tp-asking) .tp-rest { opacity: 1; }
 .tp-step-pic i { position: absolute; right: -4px; bottom: -4px; font-style: normal; font-size: 1.3rem; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .3)); }
 .tp-step-pic.pit { background: #12324a; }
 .tp-step-pic .tp-step-ico.pink { width: 100%; height: 100%; background: none; }
+.tp-step-pic .tp-step-ico.pink i { position: static; }     /* (the pink floor in the middle of its box, not the tap's corner) */
 .tp-step-pic.wings img { padding: 0 6px; background: url('/assets/trapdoor/wings.webp') center 30% / 100% auto no-repeat; }
 .tp-help-go { justify-self: center; min-width: 60%; min-height: 54px; border: 3px solid #fff; border-radius: 18px; background: linear-gradient(180deg, #ffb347, #ff6a00); color: #fff;
   font: 800 1.35rem/1 'Baloo 2', sans-serif; box-shadow: 0 5px 0 #a63a00; touch-action: manipulation; }
@@ -347,9 +356,51 @@ body:not(.tp-asking) .tp-rest { opacity: 1; }
   .tp-band, .tp-run, .tp-moment, .tp-verdict, .th-band, .th-say { transition: opacity .15s linear !important; transform: none !important; }
   .tp-status.hot::after { animation: none !important; opacity: .5; }
   .tp-run.mine, .tp-pit-me, .tp-hand span, .tp-hand i, .th-pitkid, .th-pitkid img, .tp-help, .tp-pit.ready .tp-pit-me,
-  .tp-card.nudge, .tp-verdict .dots { animation: none !important; }
+  .tp-card.nudge, .tp-verdict .dots, .tp-band-kick { animation: none !important; }
   .tp-moment.show, .tp-moment { transform: translate(-50%, 0) !important; }
   .tp-verdict.show { transform: translate(-50%, 0) !important; }
+}
+
+/* ── until this phone has its platform (td:init): Dralingo «Entrando a la plataforma…», never a dark empty screen
+   (2026-10-19, his laptop). player-trapdoor.js asks the room again by itself while this shows. ── */
+.tp-wait { position: absolute; inset: 0; z-index: 30; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 24px;
+  background: radial-gradient(circle at 50% 40%, #2a1f63, #120c2c 70%); color: #fff; text-align: center; }
+.tp-wait img { width: min(160px, 36vw); height: auto; filter: drop-shadow(0 8px 12px rgba(0, 0, 0, .45)); animation: tpBob 1.6s ease-in-out infinite; }
+.tp-wait b { font: 800 1.5rem/1.1 'Baloo 2', sans-serif; color: #ffe9a8; }
+.tp-wait small { font: 700 1rem/1.3 'Nunito', sans-serif; opacity: .9; }
+.tp-wait-out { margin-top: 14px; padding: 10px 14px; color: #fff; opacity: .8; font: 700 .95rem/1 'Nunito', sans-serif; text-decoration: underline; }
+body.tp-on .tp-wait { display: none; }
+@media (prefers-reduced-motion: reduce) { .tp-wait img { animation: none; } }
+
+/* ── landscape: a laptop, a tablet or a phone turned sideways (2026-10-19, his laptop) ──
+   The platform on the left, as big as the screen allows; the question card in a right column (full height), so the
+   four answers are always on screen (at 844×390 the portrait stack pushed them below it) and the platform is no longer
+   a strip under a card as wide as the laptop. */
+@media (orientation: landscape) and (min-aspect-ratio: 5/4) {
+  :root { --tp-side: clamp(300px, 36vw, 470px); }
+  .tp { display: grid; grid-template-columns: minmax(0, 1fr) var(--tp-side); grid-template-rows: auto minmax(0, 1fr) auto; }
+  .tp-hud { grid-column: 1 / -1; grid-row: 1; }
+  .tp-stage { grid-column: 1; grid-row: 2; min-height: 0; }
+  .tp-status { grid-column: 1; grid-row: 3; }
+  .tp-card { grid-column: 2; grid-row: 2 / 4; height: auto; min-height: 0; border-top: 0; border-left: 4px solid var(--tp-ink);
+    padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 12px); }
+  .tp-q-head { white-space: normal; text-align: center; }
+  /* the question and its four answers as one block in the middle of the column (no gap between them on a tall laptop) */
+  .tp-q { margin-top: auto; }
+  .tp-ans { flex: 0 0 auto; grid-auto-rows: clamp(58px, 15vh, 132px); margin-bottom: auto; }
+  .tp-rest { flex-direction: column; text-align: center; }
+  .tp-rest img { height: min(170px, 42%); max-width: 70%; }
+  .tp-help { left: auto; right: 8px; top: 64px; bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); width: calc(var(--tp-side) - 16px); height: auto; }
+  body.tp-on:has(#screen-trapdoor:not(.hidden)) .muted-toggle { right: calc(var(--tp-side) + 8px) !important; }
+}
+@media (orientation: landscape) and (min-aspect-ratio: 5/4) and (min-height: 560px) {
+  .tp-q img { width: 76px; height: 76px; }
+  .tp-q p { font-size: 1.12rem; }
+  /* «Así se juega» in the tall column: room for each step's second line and bigger pictures */
+  .tp-help .tp-steps li > span:last-child { font-size: .9rem; }
+  .tp-help .tp-steps { gap: 10px; }
+  .tp-help .tp-step-pic { width: 60px; height: 60px; }
+  .tp-help .tp-step-pic img { height: 54px; }
 }
 
 /* ── a laptop's short screen (2026-10-18, his rule: nothing opens zoomed in, no needed button below the fold) ──

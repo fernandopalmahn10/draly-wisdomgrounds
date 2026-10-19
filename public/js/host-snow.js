@@ -47,9 +47,22 @@
     stopMusic();
     musicName = url;
     if (muted) return;
-    try { music = new Audio(url); music.loop = true; music.volume = vol || 0.4; music.play().catch(() => {}); } catch (_) {}
+    try {
+      music = new Audio(url); music.loop = true; music.volume = vol || 0.4;
+      if (url === BATTLE_MUSIC && window.DralyParty) DralyParty.hurryApply(music);   // (back from a pause in the hurry: still fast)
+      music.play().catch(() => {});
+    } catch (_) {}
   }
   function stopMusic() { if (music) { try { music.pause(); } catch (_) {} } music = null; musicName = null; }
+  // «¡Rápido!» (the last 30 s and «¡Último refugio!», 2026-10-19): the jingle, then the battle music back faster and
+  // higher (js/party.js); before, another loop (music-final) that didn't match took over
+  function hurryUp() {
+    if (!window.DralyParty) { playMusic(FINAL_MUSIC, 0.42); return; }
+    if (DralyParty.hurryOn()) return;
+    DralyParty.hurryHost({ play: playUrl, music: () => (musicName === BATTLE_MUSIC ? music : null), vol: 0.42 });
+  }
+  const hurryOff = () => { if (window.DralyParty) DralyParty.hurryHostOff(music); };
+  let refuge = false;          // «¡Último refugio!» (the last survivors): its hurry runs to the end
   function heartbeat(on) {
     if (heart) { try { heart.pause(); } catch (_) {} heart = null; }
     if (!on || muted) return;
@@ -99,6 +112,7 @@
   $('resume-btn').addEventListener('click', () => socket.emit('host:pause', { pin, paused: false }));
   $('play-again-btn').addEventListener('click', () => {
     if (ceremony) { ceremony.stop(); ceremony = null; }
+    hurryOff();
     socket.emit('host:reset', { pin });
     heartbeat(false);
     showScreen('lobby');
@@ -259,7 +273,8 @@
       banner(`☀️ ¡Último refugio! Quedan ${m.kids.length}: ${names}`, 'sun');
       heartbeat(true);
       bigFx('spotlight', { text: `¡Quedan ${m.kids.length}! ¡Último refugio! ☀️`, poses: ['countdown'] }, 0) || say(`¡Quedan ${m.kids.length}! ${names}: ¡resistan!`, 'countdown');
-      playMusic(FINAL_MUSIC, 0.42);
+      refuge = true;             // (the hurry stays on to the end: «+30 s» never takes it back now)
+      if (!paused) hurryUp();
     } else if (m.type === 'last1') {
       const k = (m.kids || [])[0];
       if (k) { banner(`☀️ ¡Solo queda ${k.name}!`, 'sun'); say(`¡Todo depende de ${k.name}! ☀️`, 'shocked'); }
@@ -394,6 +409,7 @@
   // ---------- timer ----------
   function startTimer() {
     warned = {};
+    refuge = false;
     $('timer-display').classList.remove('urgent');
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
@@ -407,9 +423,12 @@
         const sc = captains && captains.sun;
         (sc && Cast && bigFx('cameo', { char: sc, mood: 'battle', text: '¡Últimos 30 segundos! ' + Cast.line(sc, 'battle') }, 0))
           || bigFx('spotlight', { text: '¡Últimos 30 segundos! ¡Resistan! ☀️', poses: ['countdown'] }, 0) || say('¡Últimos 30 segundos! Supervivientes: ¡resistan!', 'countdown');
-        playMusic(FINAL_MUSIC, 0.42);
+        // («¡Rápido!» comes with the server's fin:frenzy: only rounds of 60 s or more, and «+30 s» takes it back)
       }
-      if (sec <= 10 && sec > 0 && !warned['t' + sec]) { warned['t' + sec] = 1; sfx('tick', 0.5); $('timer-display').classList.add('urgent'); }
+      if (sec <= 10 && sec > 0 && !warned['t' + sec]) { warned['t' + sec] = 1; $('timer-display').classList.add('urgent'); }
+      // the last 10 s: a clock that ticks and tocks twice, then four times a second (was one tick a second)
+      const ci = window.DralyParty ? DralyParty.clockIdx(left) : -1;
+      if (ci >= 0 && ci !== warned.clock) { warned.clock = ci; DralyParty.hurryClock(ci, playUrl); }
       if (sec > 10) $('timer-display').classList.remove('urgent');
     }, 250);
   }
@@ -459,6 +478,7 @@
   socket.on('fin:final', (d) => {
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
     if ($('timer-display')) { $('timer-display').textContent = '0:00'; $('timer-display').classList.remove('urgent'); }
+    hurryOff();
     stopMusic();
     hideDralingo();
     heartbeat(false);
@@ -471,9 +491,11 @@
   // the last 30 s, from the server (it can switch off again after «+30 s»): a banner, a ribbon with the seconds, a red clock
   socket.on('fin:frenzy', (d) => {
     if (!d || !window.DralyParty) return;
-    if (d.off) { DralyParty.clearChip(); if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy'); return; }
+    // (`hold` = «⏸ Pausa» in the last 30 s: the hurry waits with the clock; a real `off` = «+30 s» gave the time back)
+    if (d.off) { DralyParty.clearChip(); if (!d.hold && !refuge) hurryOff(); if ($('timer-display')) $('timer-display').classList.remove('pf-frenzy'); return; }
     if (!d.again) banner('❄️❄️ ¡Últimos 30 segundos! ¡Copos dobles!');
     DralyParty.chip('Copos ×2', d.endsMs, 'host');
+    if (d.again) { DralyParty.hurryGlow(true); DralyParty.hurryApply(music); } else if (!paused) hurryUp();   // (after «Seguir»: no second jingle)
     if ($('timer-display')) $('timer-display').classList.add('pf-frenzy');
   });
   function partyEnd(d) {

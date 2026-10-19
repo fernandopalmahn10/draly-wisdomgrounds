@@ -208,7 +208,54 @@
     final: '/assets/halcon/final.mp3', drum: '/assets/mochi/drum.mp3', star: '/assets/mochi/star.mp3', aww: '/assets/halcon/aww.mp3',
     win: '/assets/kingdoms/sting-win.mp3', whoosh: '/assets/kingdoms/whoosh.mp3', pop: '/assets/halcon/pop.mp3', freeze: '/assets/snow/freeze.mp3',
     jet: '/assets/escape/jet.mp3',
+    // «¡Rápido!» (scripts/hurry-sounds.js, Kenney CC0): the jingle and the clock's tick-tock of the last stretch
+    hurry: '/assets/party/hurry.mp3', tick: '/assets/party/tick.mp3', tock: '/assets/party/tock.mp3',
   };
+
+  // ---------- «¡Rápido!» · the hurry of the last stretch (2026-10-19, his words: "like a hurry up, hurry up kind of
+  // sound, or maybe a Mario Party sound") ----------
+  // Like Mario Party's hurry up: a short jingle, then the game's OWN music comes back faster and higher (never another
+  // loop that doesn't match), a clock ticking faster and faster, alarm lights at the screen's edges (never over the
+  // play). The music only on the projector: a phone plays the jingle and the ticking, its own music steps aside (never
+  // 30 copies of the music). Reinos, Pintores and Nieve at their last 30 s, La Gran Fuga's «¡Súper turbos!» (jingle and
+  // lights: its chase music already has its own mood), Las Trampillas' Final Round.
+  const HURRY_RATE = 1.2;
+  // an <audio>: faster AND higher (the pitch follows the speed, like a record spun faster), or back to normal (rate 1)
+  function hurryMusic(audio, rate) {
+    if (!audio) return;
+    const r = rate == null ? HURRY_RATE : rate;
+    try { audio.preservesPitch = false; audio.mozPreservesPitch = false; audio.webkitPreservesPitch = false; } catch (_) {}
+    try { audio.playbackRate = r; } catch (_) {}
+  }
+  // a projector's music made by its own playMusic(): faster and higher when the hurry is on (a pause / an F5 in it)
+  const hurryOn = () => DOM && document.body.classList.contains('pf-hurry');
+  function hurryApply(audio, rate) { if (audio && hurryOn()) hurryMusic(audio, rate); }
+  // the alarm lights at the screen's edges (css/party.css body.pf-hurry); off with false
+  function hurryGlow(on) { if (DOM) document.body.classList.toggle('pf-hurry', !!on); }
+  // the clock of a match's last 10 s: which tick it is when `left` ms remain (twice a second, then four times a second in
+  // the last 3 s), or -1 outside them; an even tick ticks, an odd one tocks (hurryClock plays it)
+  function clockIdx(left) { if (!(left > 0) || left > 10000) return -1; return left <= 3000 ? 14 + Math.floor((3000 - left) / 250) : Math.floor((10000 - left) / 500); }
+  function hurryClock(i, play) { if (i >= 0 && play) play(i % 2 ? SND.tock : SND.tick, i >= 14 ? 0.9 : 0.7); }
+  // a projector's «¡Rápido!» (Reinos, Pintores, Nieve): the lights, the jingle (its music waits), then its own music back
+  // faster and higher, a little louder. o: { play(url, vol), music: () => the page's playing <audio> | null, vol }
+  let hurryT = 0;
+  function hurryHost(o) {
+    o = o || {};
+    hurryGlow(true);
+    if (o.play) o.play(SND.hurry, 0.95);
+    const a0 = o.music && o.music();
+    if (a0) { try { a0.pause(); } catch (_) {} }
+    clearTimeout(hurryT);
+    hurryT = setTimeout(() => {
+      const a = o.music && o.music();
+      if (!a || !hurryOn()) return;                // (paused, «¡FINAL!», muted, «+30 s» took it back: nothing to resume)
+      hurryMusic(a);
+      if (o.vol) a.volume = o.vol;
+      a.play().catch(() => {});
+    }, 1450);
+  }
+  // …and off («+30 s» gave the time back, «¡FINAL!», a new round): the lights out, the music at its normal speed
+  function hurryHostOff(audio) { clearTimeout(hurryT); hurryGlow(false); if (audio) hurryMusic(audio, 1); }
   function el(tag, cls, txt) {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -830,6 +877,7 @@
 
   return Object.assign(api, {
     final, hideFinal, news, clearNews, chip, clearChip, pauseCard, Ceremony, hold, SND,
+    hurryMusic, hurryApply, hurryGlow, hurryOn, hurryHost, hurryHostOff, hurryClock, clockIdx, HURRY_RATE,
     holdNews: (v) => { newsHold = !!v; },
     current: () => current,
     figure,
