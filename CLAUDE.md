@@ -787,6 +787,13 @@ the checklist for any new game mode.
   (to their team, the board, their character), the gang reacts, the live race or team state stays on screen, and a
   short moment fills any wait. A plain «espera» screen between questions is a bug. The game's own identity (6-7's
   hand-swing and shout, Mochi's mash…) is felt DURING play, not only in the ending.
+- **The game's feeling happens to ME, on my phone, with its sound** (his words 2026-10-19 on La Gran Fuga: "the robot is
+  not chasing you at any time, just in the animation while you're busy answering… there are no zap sounds whenever the
+  little robot electrifies… I don't think the sound matches the vibe… you got 70% right but there's this 30% that
+  really makes the difference"): the game's core threat or thrill (a chase, a race, a trap) acts on each kid personally
+  and in real time while they answer, not only in a projector animation; every visible effect (a zap, a spark, a hit)
+  has a real sound on the phone; the music fits the game's feeling (a chase sounds like a chase) and is not a short
+  generic loop.
 - **Design skills on every kid/teacher screen** (his question 2026-10-13: "have you been using Emil Kowalski, taste and
   impeccable?"): any new or changed screen of the platform or a pin game gets a pass with `emil-design-eng` (motion,
   press feel, timing), `design-taste-frontend` (layout and visual direction) and `impeccable` (critique + polish)
