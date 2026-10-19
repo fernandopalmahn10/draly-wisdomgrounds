@@ -12,12 +12,26 @@
   const $ = (id) => document.getElementById(id);
   const R = window.EscapeRender, M = window.EscapeMap, Cast = window.DralingoCast || null;
   const A = '/assets/kingdoms/', ES = '/assets/escape/', D = '/assets/dralingo/';
+  // (chase pass 2026-10-19: a real zap — crackle + buzz —, his sparks and his siren; the old zap / glitch / turbo files
+  // were too quiet to hear or 27 ms long; scripts/escape-sounds.js builds them all from the Kenney packs)
   const SFX = {
     tick: A + 'tick.mp3', whoosh: A + 'whoosh.mp3', win: A + 'sting-win.mp3', cleared: A + 'landmark.mp3', alert: A + 'castle-alert.mp3',
-    turbo: ES + 'turbo.mp3', super: ES + 'super.mp3', zap: ES + 'zap.mp3', glitch: ES + 'glitch.mp3', safe: ES + 'safe.mp3',
-    heart: ES + 'heart.mp3', wave: ES + 'wave.mp3', jet: ES + 'jet.mp3', pop: A + 'tap.mp3',
+    turbo: ES + 'turbo-v2.mp3', super: ES + 'super-v2.mp3', zap: ES + 'zap-crackle.mp3', glitch: ES + 'spark.mp3', siren: ES + 'siren.mp3',
+    safe: ES + 'safe.mp3', heart: ES + 'heart-v2.mp3', wave: ES + 'wave.mp3', jet: ES + 'jet.mp3', pop: A + 'tap.mp3',
   };
-  const MUSIC = { lobby: A + 'music-lobby.mp3', run: ES + 'music-run.mp3', zone: ES + 'music-zone.mp3', final: A + 'music-final.mp3' };
+  // ---------- music: ONE constant map (to swap the chase track: `node scripts/escape-sounds.js --music <file>` prints
+  // its line). The chase track reacts to the danger (Web Audio: a low-pass filter + its speed + its volume, MOODS):
+  //   calm   Robotín asleep, the cards between places: muffled      chase  the run: the track
+  //   danger the crew's alarm, his sprint, or a quarter of the class with him right behind them: a little faster
+  //   zone   the zona segura: hiding, the chase muffled outside      final  the last minute: faster still
+  const MUSIC = {
+    lobby: { src: A + 'music-lobby.mp3' },
+    chase: { src: ES + 'music-chase.mp3', pre: 0.25, loop: 70.2394 },   // «Desert Storm» by lemonmusicstudio (Pixabay), drum & bass, 82 / 164 BPM: his pick 2026-10-19
+  };
+  const MOODS = {     // f = the filter's cutoff (Hz), r = speed, v = volume
+    calm: { f: 900, r: 1, v: 0.26 }, chase: { f: 16000, r: 1, v: 0.34 }, danger: { f: 16000, r: 1.07, v: 0.4 },
+    zone: { f: 650, r: 0.98, v: 0.3 }, final: { f: 16000, r: 1.12, v: 0.42 },
+  };
   const reduced = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const ESCAPE_MS = 7500;     // core/escape.js R.ESCAPE_MS: the boarding + take-off on the stage
 
@@ -32,6 +46,7 @@
   let pausedClockAt = 0;     // when the pause began (the round clock shows the time left at that moment)
   let room = null, zones = [], occ = {}, kids = {}, waveUntil = 0, waveTotal = 10000, flashAt = 0, zapTargets = [];
   let dashes = {};            // idx → { t0, super }
+  let zappedAt = {};          // the chase pass: idx → when HIS Robotín zapped that kid (lightning on the runner, dizzy)
   let escapeAt = 0;           // performance.now() when the boarding began (phase 'escape')
   let paused = false, warned = {}, timerInterval = null;
   let canvas = null, g2 = null, raf = 0, lastFrame = 0, dralingoAt = null;
@@ -48,21 +63,85 @@
     lastSfx[name] = now;
     try { const a = new Audio(SFX[name]); a.volume = vol || 0.6; a.play().catch(() => {}); } catch (_) {}
   }
+  // the lobby's loop: a plain <audio>
   function playMusic(name, vol) {
+    if (name !== 'lobby') return;
+    Deck.stop();
     if (musicName === name) return;
-    stopMusic();
+    stopLobby();
     musicName = name;
-    if (muted || !MUSIC[name]) return;
-    try { music = new Audio(MUSIC[name]); music.loop = true; music.volume = vol || 0.36; music.play().catch(() => {}); } catch (_) {}
+    if (muted) return;
+    try { music = new Audio(MUSIC.lobby.src); music.loop = true; music.volume = vol || 0.36; music.play().catch(() => {}); } catch (_) {}
   }
-  function stopMusic() { if (music) { try { music.pause(); } catch (_) {} } music = null; musicName = null; }
+  function stopLobby() { if (music) { try { music.pause(); } catch (_) {} } music = null; musicName = null; }
+  function stopMusic() { stopLobby(); Deck.stop(); }
+  // the chase track: decoded once, looped exactly (MUSIC.chase.pre / loop: the file carries a quarter second of itself
+  // before and after the loop, so the encoder's padding never makes a gap), its mood glides (0.6 s)
+  const Deck = (() => {
+    let ac = null, buf = null, loading = null, src = null, filt = null, gain = null, mood = null, want = null, fb = null;
+    const ctx = () => { if (!ac) { try { const C = window.AudioContext || window.webkitAudioContext; if (C) ac = new C(); } catch (_) { ac = null; } } return ac; };
+    function load() {
+      const c = ctx();
+      if (!c) return Promise.resolve(null);
+      if (!loading) loading = fetch(MUSIC.chase.src).then((r) => r.arrayBuffer()).then((b) => new Promise((res) => c.decodeAudioData(b, res, () => res(null)))).then((d) => { buf = d; return d; }).catch(() => null);
+      return loading;
+    }
+    function play(m) {
+      want = m;
+      if (muted) return;
+      const c = ctx();
+      if (!c) { fallback(m); return; }
+      if (c.state === 'suspended') c.resume().catch(() => {});
+      if (!buf) { load().then((d) => { if (d && want) play(want); else if (!d && want) fallback(want); }); return; }
+      if (!src) {
+        const T = MUSIC.chase;
+        src = c.createBufferSource(); src.buffer = buf; src.loop = true;
+        src.loopStart = T.pre || 0; src.loopEnd = T.loop ? (T.pre || 0) + T.loop : buf.duration;
+        filt = c.createBiquadFilter(); filt.type = 'lowpass'; filt.frequency.value = MOODS[m].f; filt.Q.value = 0.7;
+        gain = c.createGain(); gain.gain.value = 0;
+        src.connect(filt); filt.connect(gain); gain.connect(c.destination);
+        src.start(0, T.pre || 0);
+        mood = null;
+      }
+      setMood(m);
+    }
+    function setMood(m) {
+      if (!src || mood === m || !MOODS[m]) return;
+      mood = m;
+      const M = MOODS[m], t = ac.currentTime;
+      [[filt.frequency, M.f, true], [src.playbackRate, M.r], [gain.gain, M.v]].forEach(([p, v, exp]) => {
+        p.cancelScheduledValues(t); p.setValueAtTime(p.value, t);
+        if (exp) p.exponentialRampToValueAtTime(Math.max(40, v), t + 0.6); else p.linearRampToValueAtTime(v, t + 0.6);
+      });
+    }
+    function stop() {
+      want = null; mood = null;
+      if (fb) { try { fb.pause(); } catch (_) {} fb = null; }
+      if (!src) return;
+      const s = src, gn = gain, t = ac.currentTime;
+      src = null;
+      try {
+        if (ac.state === 'suspended') s.stop();         // (stopped while held by a pause: gone at once, nothing left to resume)
+        else { gn.gain.cancelScheduledValues(t); gn.gain.setValueAtTime(gn.gain.value, t); gn.gain.linearRampToValueAtTime(0, t + 0.3); s.stop(t + 0.35); }
+      } catch (_) {}
+    }
+    // no Web Audio: the same track as a plain loop, its mood only as its volume
+    function fallback(m) {
+      if (!fb) { try { fb = new Audio(MUSIC.chase.src); fb.loop = true; fb.play().catch(() => {}); } catch (_) { fb = null; } }
+      if (fb) fb.volume = MOODS[m].v;
+    }
+    // a teacher's pause holds the track where it is (the chase picks up again from there on «Seguir»)
+    function hold(v) { if (!ac || !src) { if (fb) { try { if (v) fb.pause(); else fb.play().catch(() => {}); } catch (_) {} } return; } if (v) ac.suspend().catch(() => {}); else ac.resume().catch(() => {}); }
+    return { play, stop, load, hold, mood: () => mood || (fb ? 'fallback' : null) };
+  })();
   $('mute-btn').addEventListener('click', () => {
     muted = window.toggleMute ? window.toggleMute() : !muted;
     $('mute-btn').textContent = muted ? '🔇 Sin sonido' : '🔊 Sonido';
-    if (muted) stopMusic(); else if (!$('screen-lobby').classList.contains('hidden')) playMusic('lobby');
+    if (muted) stopMusic(); else if (!$('screen-lobby').classList.contains('hidden')) playMusic('lobby'); else musicFor(true);
   });
   document.addEventListener('click', () => {
     if (window.unlockAudio) window.unlockAudio();
+    Deck.load();
     if (!$('screen-lobby').classList.contains('hidden')) playMusic('lobby', 0.33);
   }, { once: true });
 
@@ -222,6 +301,7 @@
   socket.on('es:cast', (c) => { cast = c; });
   socket.on('countdown', () => {
     showScreen('countdown');
+    ended = false; lastMinute = false;
     stopMusic();
     startLobbyLoop();
     const z1 = M.zoneOf(routePick, 1);
@@ -271,9 +351,10 @@
     const fresh = !es || es.round !== d.round;
     applyPublic(d);
     roster = d.players || {};
+    if (Array.isArray(d.nz)) nearKids = d.nz;
     cast = d.cast || cast;
     if (d.route != null) routePick = d.route;
-    if (fresh) { crewShown = crewM; robotShown = robotM; dashes = {}; warned = {}; R.preload(null, es.route); }
+    if (fresh) { crewShown = crewM; robotShown = robotM; dashes = {}; warned = {}; zappedAt = {}; nearKids = []; lastMinute = false; ended = false; R.preload(null, es.route); Deck.load(); }
     canvas = $('es-canvas');
     g2 = canvas.getContext('2d');
     if (d.phase === 'zone') enterZone(d); else leaveZone();
@@ -286,7 +367,7 @@
     if (state && state.state === 'active' && $('screen-active').classList.contains('hidden') && $('screen-countdown').classList.contains('hidden')) {
       showScreen('active'); startTimer();
     }
-    musicFor();
+    musicFor(true);
   });
   socket.on('es:roster', (d) => { roster = d.players || roster; });
   socket.on('es:tick', (d) => {
@@ -295,10 +376,22 @@
     if (d.occ) { occ = {}; d.occ.forEach(([zid, n, safe]) => { occ[zid] = { n, safe }; }); }
     if (typeof d.wl === 'number' && d.wl > 0) waveUntil = Date.now() + d.wl;
   });
+  // the chase pass: the kids he is right behind (sent to the projector only, when the list changes)
+  socket.on('es:nz', (nz) => {
+    if (Array.isArray(nz) && !testHold) { nearKids = nz; musicFor(); }
+  });
   socket.on('es:turbo', (d) => {
     dashes[d.idx] = { t0: performance.now(), super: !!d.super };
     pop(d);
     sfx(d.super ? 'super' : 'turbo', d.super ? 0.55 : 0.32, d.super ? 200 : 120);
+  });
+  // the chase pass: Robotín reached one kid (that kid's phone has the full zap): the projector shows who — lightning on
+  // the runner, a cyan chip with the name, the crackle (a few at once never make a wall of noise)
+  socket.on('es:pzap', (d) => {
+    if (!d || !es || es.phase !== 'run') return;
+    zappedAt[d.idx] = performance.now();
+    sfx('zap', 0.4, 450);
+    pop({ idx: d.idx, name: d.name, zap: true });
   });
   socket.on('es:zap', (d) => {
     crewM = d.crew; robotM = d.robot;
@@ -314,10 +407,10 @@
   socket.on('es:moment', (m) => {
     if (m.type === 'close') { say('¡Robotín se acerca! ¡Respondan rápido! 🚀', 'power'); sfx('alert', 0.45, 3000); }
     if (m.type === 'skip') { banner('⏭ Zona segura terminada: ¡seguimos!', 'safe'); }
-    if (m.type === 'sprint') { sprintUntil = Date.now() + 2500; sfx('glitch', 0.5, 4000); if (Date.now() - momentAt > 3000) banner('⚡ ¡Robotín acelera!', 'robo'); }
+    if (m.type === 'sprint') { sprintUntil = Date.now() + 2500; sfx('siren', 0.4, 6000); sfx('glitch', 0.45, 4000); musicFor(true); if (Date.now() - momentAt > 3000) banner('⚡ ¡Robotín acelera!', 'robo'); }
     if (m.type === 'lastmin') {
       banner('⏱ ¡Último minuto!');
-      playMusic('final', 0.4);
+      lastMinute = true; musicFor(true);           // the chase track, faster still
       const c = cheer(3);
       if (!(c && bigFx('cameo', { char: c, mood: 'chase', text: '¡Último minuto! ' + Cast.line(c, 'chase') }))) say('¡Último minuto! ¡Todos a responder!', 'power');
     }
@@ -334,8 +427,8 @@
     if (d.clearedLevel && d.phase === 'cleared') clearedMoment(d.clearedLevel, d.heartBack);
     if (d.phase === 'caught') caughtMoment();
     if (d.phase === 'escape') escapeMoment();
-    if (d.phase === 'run') { crewShown = 0; robotShown = d.robot; wakeUntil = Date.now() + (d.wakeMs || 0); dashes = {}; setTimeout(() => wakeMoment(d.replay), 300); }
-    musicFor();
+    if (d.phase === 'run') { crewShown = 0; robotShown = d.robot; wakeUntil = Date.now() + (d.wakeMs || 0); dashes = {}; zappedAt = {}; nearKids = []; setTimeout(() => wakeMoment(d.replay), 300); }
+    musicFor(true);
   });
   socket.on('es:wave', (w) => {
     zones = w.zones || [];
@@ -368,11 +461,22 @@
     }
   });
 
-  function musicFor() {
-    if (!es || paused) return;
-    if (musicName === 'final' && es.phase !== 'escape') return;     // the last minute keeps its music
-    if (es.phase === 'run') playMusic('run', 0.34);
-    else if (es.phase === 'zone') playMusic('zone', 0.3);
+  // the chase music's mood right now (called on every step of the episode and twice a second from the stage)
+  let lastMinute = false, nearKids = [], musicAt = 0;
+  let ended = false;          // «¡FINAL!» or the ceremony: the chase music stays silent until the next round's countdown
+  function musicFor(force) {
+    if (ended || !es || paused || ceremony) return;
+    if (es.phase === 'escape') return;                               // (the jet's own sounds)
+    if (!force && Date.now() - musicAt < 450) return;
+    musicAt = Date.now();
+    stopLobby();
+    let m = 'chase';
+    if (es.phase === 'zone') m = 'zone';
+    else if (es.phase === 'cleared' || es.phase === 'caught') m = 'calm';
+    else if (Date.now() < wakeUntil) m = 'calm';
+    else if (closeFlag || Date.now() < sprintUntil || nearKids.length >= Math.max(2, crewList().length / 4)) m = 'danger';
+    if (lastMinute && es.phase !== 'zone') m = 'final';
+    Deck.play(m);
   }
 
   // ---------- the zona segura room ----------
@@ -435,6 +539,7 @@
     Object.values(kids).forEach((k) => { const d = Math.hypot(k.tx - k.x, k.ty - k.y); k.moving = d > 1.5; const b = Math.min(1, dt * 10); k.x += (k.tx - k.x) * b; k.y += (k.ty - k.y) * b; });
     if (room) drawZone(now); else if (es.phase === 'escape') drawEscape(now); else drawRun(now);
     hud(now);
+    if (es.phase === 'run') musicFor();          // (throttled: the danger may have changed)
     placeSay();
   }
 
@@ -450,9 +555,10 @@
   // who runs on screen: the kids dashing right now first, then by join order (a turbo always shows its kid)
   function shownCrew(list) {
     if (list.length <= MAX_SHOWN) return list;
-    const dashing = list.filter((k) => dashes[k.idx]);
-    const rest = list.filter((k) => !dashes[k.idx]);
-    return dashing.concat(rest).slice(0, MAX_SHOWN).sort((a, b) => a.idx - b.idx);
+    // first the kids being zapped right now, then the ones dashing, then the ones he is right behind
+    const pn = performance.now();
+    const rank = (k) => (pn - (zappedAt[k.idx] || -1e9) < 1600 ? 0 : dashes[k.idx] ? 1 : nearKids.includes(k.idx) ? 2 : 3);
+    return list.slice().sort((a, b) => rank(a) - rank(b) || a.idx - b.idx).slice(0, MAX_SHOWN).sort((a, b) => a.idx - b.idx);
   }
   // the pack: two staggered rows (front = even, back = odd), columns towards Robotín; a dashing kid jumps ahead,
   // cheering, with a gold ring and a speed trail
@@ -497,11 +603,17 @@
     const zapping = now - zapAt < 900;
     const waking = Date.now() < wakeUntil;
     const sprinting = Date.now() < sprintUntil;
-    R.robotin(g, rx, base + 4, rs, { t: sprinting ? t * 1.6 : t, mood: zapping ? 'zap' : (dazed ? 'dizzy' : (closeFlag || sprinting ? 'happy' : 'chase')), moving: !waking && !dazed, glitch: true });
+    // (the chase pass: his eyes glow red when he is close to the crew or right behind several kids; a siren in a sprint)
+    const zappingOne = Object.values(zappedAt).some((at) => performance.now() - at < 700);
+    const eyes = closeFlag || sprinting ? 1 : Math.min(1, nearKids.length / Math.max(3, all.length * 0.3));
+    R.robotin(g, rx, base + 4, rs, { t: sprinting ? t * 1.6 : t, mood: zapping || zappingOne ? 'zap' : (dazed ? 'dizzy' : 'chase'), moving: !waking && !dazed, glitch: true, eyes, siren: sprinting });
     // the back row first, then the front row; the speed trails under everyone
     packed.forEach((p) => { if (p.dash > 2) trail(g, p.x, p.y, size, p.dash, p.sup); });
+    // (the chase pass: a runner HIS Robotín just zapped is dizzy; the ones he is right behind get a red ring)
+    const pn = performance.now();
     packed.slice().sort((p, q) => p.y - q.y).forEach((p) => {
-      R.kid(g, { x: p.x, y: p.y, skin: p.k.skin, idx: p.k.idx, moving: true, dizzy: dz, cheer: p.dash > 2, glow: p.dash > 2, f: 0 }, size, t);
+      const zp = pn - (zappedAt[p.k.idx] || -1e9) < 1800;
+      R.kid(g, { x: p.x, y: p.y, skin: p.k.skin, idx: p.k.idx, moving: true, dizzy: dz || zp, cheer: p.dash > 2 && !zp, glow: p.dash > 2, danger: !zp && nearKids.includes(p.k.idx), f: 0 }, size, t);
     });
     // Dralingo leads the crew, pointing the way (his platform look)
     const dr = R.img(D + 'point.webp');
@@ -527,8 +639,12 @@
     // the zap: lightning from the broom to a few runners
     if (zapping) {
       const tip = { x: rx + rs * 0.6, y: base - rs * 0.42 };
-      packed.slice(-5).forEach((p, i) => R.zap(g, tip.x, tip.y, p.x, p.y - size * 0.5, 4, Math.floor(now / 50) + i * 13));
+      packed.slice(-5).forEach((p, i) => R.zap(g, tip.x, tip.y, p.x, p.y - size * 0.5, 4, (reduced() ? 7 : Math.floor(now / 50)) + i * 13));
     }
+    // … and to each runner he zapped in the last 0.9 s (his personal zaps)
+    packed.forEach((p, i) => {
+      if (pn - (zappedAt[p.k.idx] || -1e9) < 900) R.zap(g, rx + rs * 0.6, base - rs * 0.42, p.x, p.y - size * 0.5, 3.5, (reduced() ? 7 : Math.floor(now / 50)) + i * 17);
+    });
     $('danger').classList.toggle('on', es.phase === 'run' && closeFlag && !waking);
   }
   function trail(g, x, y, size, dash, sup) {
@@ -714,13 +830,13 @@
       if (!d) return;
       popAt = Date.now();
       const el = document.createElement('div');
-      el.className = 'es-pop' + (d.super ? ' super' : '') + (d.more ? ' more' : '');
-      if (d.more) el.textContent = `+${d.more} turbos más 🚀`;
+      el.className = 'es-pop' + (d.super ? ' super' : '') + (d.zap ? ' zap' : '') + (d.more ? ' more' : '');
+      if (d.more) el.textContent = `+${d.more} más 🚀`;
       else {
         const sk = (roster[d.idx] || {}).skin;
         if (sk) { const im = document.createElement('img'); im.src = R.SKIN_URL(sk); im.alt = ''; el.appendChild(im); }
         const b = document.createElement('b'); b.textContent = d.name;
-        const s = document.createElement('span'); s.textContent = d.super ? '¡Súper turbo! 🔥' : '¡Turbo! 🚀';
+        const s = document.createElement('span'); s.textContent = d.zap ? '⚡ ¡Zap de Robotín!' : d.super ? '¡Súper turbo! 🔥' : '¡Turbo! 🚀';
         el.append(b, s);
       }
       $('pops').appendChild(el);
@@ -815,7 +931,7 @@
   function showPaused(on) {
     $('paused').classList.toggle('hidden', !on);
     $('pause-btn').textContent = on ? '▶ Seguir' : '⏸ Pausa';
-    if (on) stopMusic(); else musicFor();
+    if (on) { stopLobby(); Deck.hold(true); } else { Deck.hold(false); musicFor(true); }
   }
 
   // ---------- the Mario Party ending (js/party.js, 2026-10-16): «¡FINAL!», the ceremony, «Otra ronda» ----------
@@ -827,6 +943,8 @@
   socket.on('fin:final', (d) => {
     if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
     if ($('timer-display')) { $('timer-display').textContent = '0:00'; $('timer-display').classList.remove('urgent'); }
+    ended = true;                 // (before showPaused: its «Seguir» path would start the chase music again)
+    nearKids = []; zappedAt = {}; // (no red rings or lightning under «¡FINAL!»)
     stopMusic();
     hideDralingo();
     showPaused(false);
@@ -869,6 +987,7 @@
     stopRafTimer = setTimeout(() => { cancelAnimationFrame(raf); raf = 0; }, 3000);    // the stage is gone: no more frames
     const ex = d && d.fin && d.fin.extra;      // (a projector reloaded during the ceremony: the backdrop from the ending's data)
     if (ex) document.documentElement.style.setProperty('--es-world-bg', `url("${M.art(M.zoneOf(ex.route || 0, ex.escaped ? 3 : (ex.level || 1)).id, 'bg')}")`);
+    ended = true;
     stopMusic(); hideDralingo(); showPaused(false);
     if (!$('moment').classList.contains('hidden')) $('moment').classList.add('hidden');
     $('escape-ribbon').classList.add('hidden');
@@ -966,7 +1085,7 @@
   // test hooks for headless screenshots (browsers here barely run animation frames): draw now, read the state, stage moments
   window.EscapeHost = {
     frame: () => { if (es && g2) { resize(); frame(performance.now()); } return { es, crewM, robotM, kids: Object.keys(kids).length, zones: zones.length }; },
-    debug: () => ({ pin, es, roster, occ, paused, routePick }),
+    debug: () => ({ pin, es, roster, occ, paused, routePick, music: { mood: Deck.mood(), ended, lobby: musicName }, nearKids }),
     skipCountdown: () => { showScreen('active'); startTimer(); resize(); return true; },
     moment: (kind, level) => {
       if (kind === 'zap') { zapAt = performance.now(); dizzyUntil = Date.now() + 3000; return bigMoment({ kind: 'zap', robot: 'zap', title: '¡ZAP!', sub: '¡Cosquillas eléctricas! Todos mareados 3 s', ms: 60000 }, true); }
@@ -980,6 +1099,14 @@
     unstage: (phase) => { if (es) es.phase = phase || 'run'; escapeHoldU = null; testHold = false; $('escape-ribbon').classList.add('hidden'); return true; },
     turbo: (idx, sup) => { const p = roster[idx] || {}; dashes[idx] = { t0: performance.now() - 450, super: !!sup }; pop({ idx, name: p.name || 'Ana', super: !!sup }); },
     hold: (v) => { testHold = !!v; if (!v) { dashes = {}; escapeHoldU = null; $('pops').innerHTML = ''; } return testHold; },
+    // the chase pass: hold a personal zap on runner `zap` (lightning, dizzy, its cyan chip) and red rings on `near`
+    chase: (o) => {
+      o = o || {};
+      if (o.zap != null) { zappedAt[o.zap] = performance.now() + 1e7; const p = roster[o.zap] || {}; pop({ idx: o.zap, name: p.name || 'Ana', zap: true }); }
+      if (Array.isArray(o.near)) nearKids = o.near;
+      if (es && g2) { resize(); frame(performance.now()); }
+      return { near: nearKids, zapped: Object.keys(zappedAt), mood: Deck.mood() };
+    },
     say: (text, pose) => { lastSay = 0; say(text, pose); return true; },
   };
 })();

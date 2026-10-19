@@ -168,3 +168,173 @@ Total 14/14 → ships (≥ 12, no 0)
   still won't reach the jet: a 5- or 6-minute round (the lobby's time slider) gives it room.
 - **China route art on a slow school network:** the Jardín is the heaviest place (456 KB), loaded during the Mercado's
   zona segura.
+
+## Chase pass · 2026-10-19 (branch `escape-chase`, not deployed)
+
+### Why
+His words after playing v2: "I love how the robot is animated but … kids will never look at the teacher dashboard …
+there are no zap sounds whenever the little robot electrifies … the robot is not chasing you at any time, just in the
+animation while you're busy answering, that's why it doesn't really feel like a persecution, and I don't think the sound
+matches the vibe of the game … it doesn't feel like a minigame where you're afraid of a robot … you got 70% right but
+there's this 30% that really makes the difference". What we found: Robotín chased the CREW as one group (a strong class
+got 0 zaps a run, nobody was ever personally in danger); `zap.mp3` peaked at −24 dB (inaudible under the music: it was
+there and nobody could hear it), `turbo` −15 dB, `super` −18 dB, `glitch.mp3` was a 27 ms click; the projector's music
+was a 10.5 s Kenney loop; the beautiful zap lived on the projector only.
+
+### What changed
+- **Robotín chases ME** (`core/escape.js` `stepChase`, `chaseAnswer`, `chaseView`, the `CH_*` constants). Every kid has
+  their own distance to Robotín (`p.esGap`, 14 m at the start of every run, never more than 16 m), judged by the server.
+  He closes in second by second only while MY question is open (not on the result screen, in his 3 s wake, a pause, my
+  stun or my shield). His speed follows my own pace and accuracy (`CH_K` metres per question at my usual pace, × 0.55-1.12
+  by my recent accuracy): every kid feels him come in every question, and what keeps him away is answering RIGHT. A right
+  answer = I dash 7.5 m away (a súper turbo 9.5 m), a wrong one = he gains 2.5 m (a stumble alone never zaps). Every
+  18-32 s of my open questions, if I am more than 9 m ahead, he LUNGES (a siren): 1.8 s at 1.5× plus a swoop down to
+  5-7.5 m behind me; for 3 s after a lunge he can only trip, never zap (a scare, not a trap).
+- **The personal zap**: when he reaches me, a full-screen electric moment on MY phone (my full-body character in an
+  electric halo, his lightning from the broom, crackling arcs, sparks, one soft flash, «¡ZAP! ¡Robotín te alcanzó!»), the
+  crackle + buzz sound, a long vibration; then my tiles locked under a draining ring with the seconds (1.8 s in all; the
+  question's 20 s clock waits, so my question is never shortened), then a 3.5 s shield (a cyan bubble around me, he
+  waits). Never out of play: the same question is mine again. **Fairness**: at most one zap per kid every 45 s (reached
+  inside that, he trips back to 6 m: «¡Robotín tropezó!»), the gap resets to 14 m after a zap and at every new run.
+  **A personal zap costs the crew nothing** (co-op, nobody is blamed). The crew-wide zap of v2 (the whole crew caught,
+  rare) now only slows the crew: it no longer locks every phone for 3 s (the whole-episode simulation showed those locks
+  cost a 5-kid class the jet in 6-minute rounds).
+- **Fear that builds with MY distance** (phone, `public/js/player-escape.js`): the strip draws MY Robotín at MY distance
+  (16 m = the strip's left edge), bigger as he nears, his eyes glowing red and a red glow behind him when close, his
+  antenna a red / blue siren in a lunge, «¡Detrás de ti!» over his shoulder under 4 m; his treads (metal clanks) faster
+  and louder as he nears (every 950 → 270 ms), my heartbeat under 7 m (880 → 440 ms) with a light buzz under 4 m; the
+  screen's edges pulse red (one fixed layer UNDER the question and the tiles, three levels, opacity only); the row's pill
+  says what he is doing («🤖 Robotín a 12 m», «¡Está a 6 m!», «😱 ¡Está detrás de ti!», «🚨 ¡Robotín acelera!»,
+  «😵 ¡Robotín tropezó!», «⚡ ¡Zap! Espera…», «🛡️ ¡Escudo! Responde»). The result says what my answer did («💨 ¡Lo
+  alejaste! Robotín a 14 m», «😅 ¡Por un pelo!», «🤖 Robotín se acercó: a 4 m») while the strip shows the gap open
+  (+7,5 m) or me stumbling. Light on cheap phones: the strip's one canvas at ~30 fps, no layout read per frame, the
+  treads and heartbeat through Web Audio (decoded once), the zap's halo drawn once into a sprite. Reduced motion: no
+  flash, no shake, no pulses (the sounds stay); the global mute silences all of it. Phones play no music any more.
+- **Sound that matches** (`scripts/escape-sounds.js` builds them all, peak −4 dB after a limiter: mp3 rings over metal
+  clanks): `zap-crackle` (Kenney zap2 + forceField buzz + a flickering computerNoise crackle + an explosionCrunch snap),
+  `spark` (his sparks / glitch, replaces the 27 ms `glitch.mp3`), `siren` (highUp/highDown wee-woo over radar1 and his
+  engine), `step` (impactMetal clank + concrete thud + servo rumble), `heartbeat` (impactSoft heavy + medium, low-passed),
+  `dash` (two wooshes), `stumble` (a punch thud + phaserUp), `shield` (forceField + powerUp2), `trip` (impactMetal +
+  plate + a falling «piu»), and `turbo-v2` / `super-v2` / `heart-v2` (the same Kenney sources as before, at a level kids
+  hear). All from the free CC0 Kenney packs in `assets-library/kenney/` (only the outputs are committed). 13 files,
+  1.1 MB with the music.
+- **Music that reacts** (projector only, `public/js/host-escape.js` `MUSIC` + `MOODS` + `Deck`): ONE chase track for the
+  whole episode through Web Audio, its mood set live: calm (Robotín asleep, between places: muffled), chase, danger (the
+  crew's alarm, his sprint, or a quarter of the class with him right behind them: 7 % faster), zone (the zona segura:
+  hiding, the chase muffled outside), final (the last minute: 12 % faster). The track, **his pick 2026-10-19: «Desert
+  Storm» (drum & bass) by lemonmusicstudio, Pixabay Content License**
+  (https://pixabay.com/music/drum-n-bass-desert-storm-109271/; free in a game, never a standalone download; «Content ID
+  Registered»: a YouTube/Instagram video using it may get a claim). The full track stays in
+  `assets-library/pixabay/2026-10-19-escape-music/`; the game ships a 70.2 s loop (24 bars at 82 / 164 BPM, 112 kbps
+  stereo, 0.95 MB): cut on the first beat of a bar (the beat whose kick is the strongest), whole phrases, where its end
+  flows back into its start (likeness 0.98), its first 40 ms crossfaded from what follows its end, written with a
+  quarter second of itself before and after so the encoder's padding never makes a gap. Seam check (decoded, as a
+  player hears it): the high-frequency energy at the loop point sits at the median of the ±240 ms around it, no spike.
+  **To swap**: `node scripts/escape-sounds.js --music <track.mp3>` writes `music-chase.mp3` and prints the one line for
+  `MUSIC.chase`. The old `music-run.mp3` / `music-zone.mp3` are gone (the first placeholder loop never shipped).
+- **The projector is secondary** (his words) and stays beautiful: who Robotín zaps (lightning from his broom to that
+  runner, the runner dizzy, a cyan chip «⚡ ¡Zap de Robotín!» with the kid's name, the crackle at most every 0.45 s), red
+  rings on the kids he is right behind, his eyes red and his antenna a siren in a sprint (which now plays the siren and
+  his sparks, not the 27 ms click). The how-to steps say «¡Robotín te persigue!» / «¡Robotín persigue a cada uno!».
+- The ceremony's card adds «N escapes de Robotín por un pelo» (dashed away from under 4 m).
+- Server: per kid an `es:g` during a run (`{ g, v, st, sh, lu, lt }`, volatile, at most ~3 a second and only when
+  something changed: the phone glides between with the same formula), events to that phone only (`es:pzap`, `es:lunge`,
+  `es:trip`, `es:near`), `es:pzap` with the name to the projector, `es:nz` (the kids in danger) to the projector only
+  when it changes, `me.ch` + `pzaps` in `es:init` (a phone back mid-stun gets its lock with the time left), `gap` /
+  `from` in `answer-result`, `chase` constants in `es:init` (one source). An answer during a stun is refused
+  (`answer-stale` «stunned»). A pause moves every chase timer.
+
+### Numbers (`scripts/test-escape.js`, 30 runs × 3 zones × 3 min per kind of kid, a new run every 45 s)
+| Kid | answers | zaps a minute of running | questions with him under 7 m | «¡Está detrás de ti!» |
+|---|---|---|---|---|
+| strong (3.5 s, 92 % right) | 11.6 / min | 0.08 | 14 % | 4 % |
+| average (6 s, 72 %) | 7.4 / min | 0.21 | 31 % | 12 % |
+| slow (11 s, 50 %) | 4.4 / min | 0.26 | 53 % | 30 % |
+| young (14 s, 45 %, time-ups) | 3.7 / min | 0.23 | 60 % | 34 % |
+| away (never answers) | 2.7 / min | 0.22 | 88 % | 42 % |
+Cap 1.33 a minute (one per 45 s); never a zap every question; he comes closer in (almost) every question for every kind.
+Whole episodes on the clock (every kid's Robotín running, a stunned kid not answering): an average class still reaches
+the jet 6/6 at 4, 5 and 6 minutes with 5, 12, 20 and 30 kids (17-82 s to spare), with 0.6-2.1 personal zaps per kid per
+round.
+
+### Tests
+| Test | Result |
+|---|---|
+| `node scripts/test-escape.js` (+ the chase: closing only with a question open, wake / pause / stun / shield, dash, stumble floor, zap → stun → shield → reset, trip inside 45 s, «detrás» once, lunge swoop, new run, pause shifts, crew zap locks nobody, the kinds of kids, the episodes, a pause mid-stun, an answer while paused) | 652,262 checks pass |
+| `node scripts/test-escape-live.js` (+ real sockets: my own Robotín a few times a second and closing, dash / stumble in the answer, a kid who keeps missing gets zapped on her phone only (projector hears who; every zap on exactly one phone), a phone back mid-stun gets its lock with the time left, the lock ends by itself with the shield up, she answers again; an answer during the stun refused, no dash; the same question back after a reconnect mid-stun; a resync of the same phone gets no shield) | 69 checks pass |
+| `playtest-bots.js --game escape --seconds 60` (the bots answer at random: 25 % right; a bot taps again after a «stunned» refusal) | 4 PASS (4 personal zaps) · 20 PASS (6) · 30 PASS (7) · 0 frozen · 0 errors · `es:g` at most 1.9 a second per bot (ceiling 4) |
+| `test-party.js` · `asset-guard.js` | pass |
+
+### Reviews and what changed (round 2)
+- **Code review** (agent-skills:code-reviewer on 079e6825c, «no critical»), with the main window's list:
+  - the projector's chase music played on through «¡FINAL!» and the ceremony (a pause's «Seguir» path restarted it):
+    an `ended` flag from «¡FINAL!» / game-end to the next countdown;
+  - the stun was only enforced on the phone: the server now refuses an answer during a stun (`answer-stale`
+    «stunned», the question stays the kid's, the phone taps again after) and never deals the next question inside one;
+  - a pause during a stun unlocked the tiles: the phone holds its stun through the pause and puts the lock back on
+    «Seguir»; `chaseView` reads the paused moment, not the wall clock;
+  - the lock vanished when the question was re-sent (a reconnect): it goes back on top; the red edges and a stun or
+    shield never outlive the run (zona segura, cards, «¡FINAL!», a new countdown);
+  - load: the danger list goes to the projector only when it changes (`es:nz`), `es:g` only when something changed and
+    volatile (a bot measured ≤ 2 a second, was 3.3), the zap's full-screen canvas gives its memory back when hidden,
+    the light buzz only on the first 3 heartbeats of an approach, an answer while paused forgets its open time;
+  - a phone whose question has been open more than 25 s of its own time (locked, in a pocket) is no longer chased nor
+    shown in danger on the projector; a phone back in a run gets 2.5 s of shield; the phone glides only while the
+    server is really talking to it (no chase played under a Wi-Fi drop);
+  - the zap's pictures and halo are made before the first zap, the strip stops drawing under the full-screen zap, the
+    reduced-motion check is read once, the lightning holds still under reduced motion, a pause holds the projector's
+    track where it is (it used to start again from the top).
+- **The zap screen** now shows Robotín as he caught me: his chase look with red glowing eyes in a red glow, the lightning
+  from his antenna (it was his smiling «zap» picture with the broom).
+- **Real-browser flow** (playwright-cli, `scratchpad/flow.sh`): pause mid-stun (the lock holds through the pause,
+  comes back with the time left, ends by itself), a stun across the change to the zona segura (gone, no red edge),
+  «Terminar» mid-stun (lock gone, the projector's music silent through «¡FINAL!» and the ceremony), «Otra ronda»
+  (lobby, nothing left): 14/14.
+- Tests added: `test-escape.js` (a pause mid-stun: the view holds the time left, «Seguir» goes on with it; an answer
+  while paused moves nothing and forgets its open time), `test-escape-live.js` (an answer during the stun is refused,
+  no dash; the same question comes back after a reconnect mid-stun), the bot handler (a ceiling of 4 `es:g` per
+  bot-second; a bot taps again after a «stunned» refusal, like a kid).
+- **Classroom playtest** (classroom-playtester agent: projector 1600×900 + phones at 390×844 and 360×640 + 15-17 socket
+  kids of their own pace and accuracy, 4 rounds of 4 minutes with Pausa / +30 s / Saltar zona / Terminar / Otra ronda,
+  reloads mid-run and mid-stun, one phone left unanswered; bots 20 and 30 × 120 s PASS, 0 frozen, 0 errors, every
+  ceremony card): no freezes, no dead phones, no console errors, every phone got its question back (longest gap 2.7 s),
+  no chase leak into the zona segura or the ceremony, the projector's music through every mood and silent from
+  «¡FINAL!». Fixed after it:
+  - a pause during a zap left that phone locked after «Seguir» for about the pause's length (the phone's own 12 s
+    resync re-started the stun from «now»): the phone's chase clock now holds at the moment the pause began, like the
+    server's; a real zap + a 15 s pause + «Seguir» ends the lock with the time that was left (flow check);
+  - that same 12 s resync handed out the 2.5 s rejoin shield (free shields for a kid who was just thinking, and a whole
+    class unchased for the pause's length after a long pause): the shield is given only when a NEW socket takes the
+    kid over, never during a pause (live test: a resync of the same phone gets no shield);
+  - red rings under «¡FINAL!» on the projector (cleared at the final); the strip's place label lost its «1/3» to a long
+    pill (the counter comes first now: «1/3 · El Museo»).
+  - Reported, not changed (older than this pass): at 360×640 the «Sonido» chip covers part of the lobby's «Así se
+    juega» card.
+- **Real-browser flow** now 18/18 (the long-pause-after-a-real-zap case added).
+
+### Scorecard · La Gran Fuga · chase pass · 2026-10-19 · branch `escape-chase`
+```
+Hard gates: bots PASS (4/20/30 × 60 s, 20/30 × 120 s; 0 frozen, 0 errors) · teacher controls ✓ (⏸ Pausa holds every
+            kid's chase, stun and shield; +30 s; ⏭ Saltar zona; Terminar; Sonido; Otra ronda; F5 reclaim) · saga only ✓
+            · Spanish/pinyin/level ✓ · kid-safe ✓ (a goofy robot's tickle-zap, no scary art; red eyes and a red glow,
+            a heartbeat, never a jump scare; reduced motion: no flash, no shake, no pulses)
+1 Real place ........ 2/2  unchanged: the two routes of real places, the gates, Hamdan's jet
+2 The gang .......... 2/2  unchanged: Fer's intro, Dralingo leads, the cast cheers, Hamdan at the jet; Robotín now a real
+                           character on every phone (his chase look, red eyes, siren, trips, a shield he waits behind)
+3 Every tap ......... 2/2  a right answer = I dash away (whoosh, +7,5 m, «¡Lo alejaste!»), a wrong one = I stumble and
+                           he gains; «Así se juega» says «¡Robotín te persigue!»; a locked tile says why («¡Zap!
+                           Espera…» + the seconds)
+4 Feedback .......... 2/2  every zap has its crackle on the phone and the projector, sparks and the siren have sound; the
+                           big moments one at a time (the full-screen zap at most once per kid per 45 s); the projector's
+                           zap chips throttled
+5 Finale ............ 2/2  danger now builds second by second inside every question (treads faster, heartbeat, red
+                           edges, «¡Está detrás de ti!»), the music speeds up with the danger and in the last minute,
+                           then the boarding, «¡FINAL!» and the ceremony as before («escapes por un pelo» on the card)
+6 Fair, no stall .... 2/2  his speed follows each kid's pace and accuracy; one zap per kid per 45 s at most (trips
+                           inside it), never a zap every question, never out of play, a stun never shortens a question,
+                           a zap costs the crew nothing, a phone in a pocket stops being chased after 25 s; the class
+                           still reaches the jet 6/6 at 4, 5 and 6 minutes
+7 Product feel ...... 2/2  real sound that matches (a crackle-and-buzz zap you can hear, treads, heartbeat, siren) and
+                           the chase music he picked, reacting to the danger; the persecution happens on MY phone
+Total 14/14 → ships (≥ 12, no 0)
+```

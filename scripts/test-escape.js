@@ -143,7 +143,7 @@ function room(n, dur) {
   ok(zap, 'a class that never answers gets caught');
   ok(now - now0 < 60000, `caught within a minute (${(now - now0) / 1000} s)`);
   ok(round.crew >= 0 && round.crew - round.robot >= E.R.CATCH_KNOCK - 0.01, 'after the zap Robotín is knocked back 16 m');
-  ok(Object.values(players).every((p) => p.esDizzyUntil === now + E.R.DIZZY_MS), 'every kid dizzy 3 s');
+  ok(round.dizzyUntil === now + E.R.DIZZY_MS && Object.values(players).every((p) => p.esZapped === 1 && !p.esDizzyUntil), 'the crew dizzy 3 s (slower), no phone locked by it (the chase pass: only personal zaps stun)');
   ok(round.phase === 'run', 'the run goes on (no restart)');
   const again = E.stepRun(round, players, 0.1, now + 100);
   ok(!again.some((e) => e.type === 'zap'), 'no second zap right away');
@@ -211,28 +211,36 @@ function room(n, dur) {
     for (let i = 0; i < n; i++) players['p' + i] = E.preparePlayer(round, { name: 'K' + i });
     const ids = Object.keys(players);
     const endsAt = now0 + durS * 1000;
-    let now = now0, s = seed, until = 0;
+    let now = now0, s = seed, until = 0, stuns = 0;
     const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
     E.retimeRun(round, durS);
+    round.rand = rnd;
     while (now < endsAt) {
       now += 100;
       if (round.phase === 'run') {
-        ids.forEach((pid) => { if (rnd() < rate * 0.1) E.answer(round, players[pid], rnd() < p, n, endsAt - now <= 30000); });
+        // the chase pass: each kid's own Robotín runs too, and a stunned kid can't answer (the crew still gets there)
+        ids.forEach((pid) => {
+          const kid = players[pid];
+          const ev = E.stepChase(round, kid, true, 0.1, now);
+          if (ev && ev.type === 'pzap') stuns++;
+          if (now < (kid.esStunUntil || 0)) return;
+          if (rnd() < rate * 0.1) { const right = rnd() < p; const r = E.answer(round, kid, right, n, endsAt - now <= 30000); E.chaseAnswer(round, kid, right, !!r.super, now); }
+        });
         if (E.stepRun(round, players, 0.1, now).some((e) => e.type === 'done')) { E.startZone(round, now); until = now + E.zoneSeconds(round.level) * 1000; }
       } else if (round.phase === 'zone' && now >= until) {
-        if (round.level >= E.R.LEVELS) return { escaped: true, left: (endsAt - now) / 1000 };
+        if (round.level >= E.R.LEVELS) return { escaped: true, left: (endsAt - now) / 1000, stuns };
         E.clearLevel(round); round.phase = 'cleared'; until = now + E.R.CLEARED_MS;
       } else if (round.phase === 'cleared' && now >= until) { E.startRun(round, now, false); E.retimeRun(round, (endsAt - now) / 1000); }
     }
-    return { escaped: false, level: round.level, crew: round.crew };
+    return { escaped: false, level: round.level, crew: round.crew, stuns };
   };
   for (const dur of [240, 300, 360]) {
     const spare = [];
     for (const n of [5, 12, 20, 30]) {
-      let got = 0, left = 0;
-      for (let k = 1; k <= 6; k++) { const r = episode(n, dur, 0.13, 0.7, k * 131 + n); if (r.escaped) { got++; left += r.left; } }
+      let got = 0, left = 0, stuns = 0;
+      for (let k = 1; k <= 6; k++) { const r = episode(n, dur, 0.13, 0.7, k * 131 + n); stuns += r.stuns; if (r.escaped) { got++; left += r.left; } }
       ok(got >= 5, `${dur / 60} min, ${n} kids: an average class reaches the jet (${got}/6, ${got ? (left / got).toFixed(0) : '-'} s to spare)`);
-      spare.push(`${n} kids ${got}/6 ~${got ? (left / got).toFixed(0) : '-'} s`);
+      spare.push(`${n} kids ${got}/6 ~${got ? (left / got).toFixed(0) : "-"} s, ${(stuns / 6 / n).toFixed(1)} zaps a kid`);
     }
     console.log(`${dur / 60} min, an average class: ${spare.join(' · ')} (the jet's 7.5 s take-off after that)`);
     let weak = 0;
@@ -466,6 +474,199 @@ const centre = (z) => ({ x: (z.x + z.w / 2) * T, y: (z.y + z.h / 2) * T + 6 });
   ok(r.outside < 12 || r.lost === 2, `25 kids, 12 outside (over 40 %): 2 hearts (${r.lost})`);
   r = lostWith(3, 1);
   ok(r.outside < 1 || r.lost === 0, 'a class of 3: one kid may miss a wave for free');
+}
+
+// ---------- the chase pass (2026-10-19): Robotín chases EACH kid ----------
+{
+  const CH = E.R;
+  // he closes in only while MY question is open, after the wake, never in my shield, my stun or a pause
+  const { round, players } = room(4);
+  const p = players.p0;
+  let now = now0;
+  E.stepChase(round, p, true, 0.1, now);
+  eq(p.esGap, CH.CH_G0, 'a new run: he starts 14 m behind me');
+  now = round.wakeAt - 100; E.stepChase(round, p, true, 1, now);
+  eq(p.esGap, CH.CH_G0, 'asleep (the wake): he waits');
+  now = round.wakeAt + 100; E.stepChase(round, p, false, 1, now);
+  eq(p.esGap, CH.CH_G0, 'no question open (the result screen): he waits');
+  E.stepChase(round, p, true, 1, now);
+  near(p.esGap, CH.CH_G0 - E.chaseSpeed(round, p), 1e-9, 'a question open: he closes at his speed');
+  const v0 = E.chaseSpeed(round, p);
+  near(v0 * CH.CH_PACE0, CH.CH_K[0], 1e-9, 'his speed: CH_K metres per question at my usual pace');
+  round.paused = true; const g1 = p.esGap; E.stepChase(round, p, true, 1, now);
+  eq(p.esGap, g1, 'Pausa: he stands still');
+  round.paused = false;
+  // a right answer = I dash away (never past 16 m); a súper turbo farther; a wrong one = he gains, never to 0
+  p.esGap = 5; let a = E.chaseAnswer(round, p, true, false, now);
+  eq(a.gap, 5 + CH.CH_DASH, 'a right answer: +7.5 m');
+  p.esGap = 5; a = E.chaseAnswer(round, p, true, true, now);
+  eq(a.gap, 5 + CH.CH_DASH_SUPER, 'a súper turbo: +9.5 m');
+  p.esGap = 15; a = E.chaseAnswer(round, p, true, true, now);
+  eq(a.gap, CH.CH_GMAX, 'never farther than 16 m (he stays in sight)');
+  p.esGap = 6; a = E.chaseAnswer(round, p, false, false, now);
+  eq(a.gap, 6 - CH.CH_STUMBLE, 'a wrong answer: he gains 2.5 m');
+  p.esGap = 2; a = E.chaseAnswer(round, p, false, false, now);
+  eq(a.gap, CH.CH_FLOOR, 'a stumble alone never zaps (he stops 1.5 m behind)');
+  p.esGap = 1; a = E.chaseAnswer(round, p, false, false, now);
+  eq(a.gap, 1, '… and never pushes him back either');
+  p.esGap = 3; p.esEscapes = 0; E.chaseAnswer(round, p, true, false, now);
+  eq(p.esEscapes, 1, 'dashing away from under 4 m = an escape «por un pelo»');
+  // he reaches me: a zap (stunned 1.8 s, then a 3.5 s shield, back to 14 m); inside his 45 s he trips instead
+  p.esGap = 0.01; p.esShieldUntil = 0; p.esLungeAt = now + 99999;
+  const ev = E.stepChase(round, p, true, 0.5, now);
+  eq(ev && ev.type, 'pzap', 'he reaches me: a zap on me');
+  eq(p.esStunUntil, now + CH.CH_STUN_MS, 'stunned 1.8 s');
+  eq(p.esShieldUntil, now + CH.CH_STUN_MS + CH.CH_SHIELD_MS, 'then the shield');
+  eq(p.esGap, CH.CH_G0, 'the gap resets after a zap');
+  eq(round.pzaps, 1, 'the round counts it');
+  ok(!players.p1.esStunUntil || players.p1.esStunUntil <= now, 'a zap is mine alone (my crewmates go on)');
+  eq(round.crew, 0, '… and the crew loses nothing');
+  const g2 = p.esGap; E.stepChase(round, p, true, 1, now + 500);
+  eq(p.esGap, g2, 'stunned: he waits');
+  E.stepChase(round, p, true, 1, now + CH.CH_STUN_MS + 1000);
+  eq(p.esGap, g2, 'my shield: he waits');
+  const open0 = p.esOpenMs;
+  E.stepChase(round, p, true, 1, now + 300);
+  eq(p.esOpenMs, open0, 'the stun is not my answer time (my question is not shortened)');
+  p.esGap = 0.01; p.esShieldUntil = 0; p.esStunUntil = 0;
+  const ev2 = E.stepChase(round, p, true, 0.5, now + 20000);
+  eq(ev2 && ev2.type, 'trip', 'reached again inside 45 s: he trips (no second zap)');
+  eq(p.esGap, CH.CH_TRIP_TO, '… back to 6 m');
+  p.esGap = 0.01;
+  const ev3 = E.stepChase(round, p, true, 0.5, now + CH.CH_ZAP_MIN_MS + 1);
+  eq(ev3 && ev3.type, 'pzap', 'after 45 s he may zap me again');
+  // «¡Está detrás de ti!» once under 4 m, again only after I got past 7 m
+  const q = players.p2;
+  let t = round.wakeAt + 1000;
+  q.esLungeAt = t + 1e9; E.stepChase(round, q, true, 0.01, t);
+  q.esGap = 4.2; let nears = 0;
+  for (let i = 0; i < 40; i++) { t += 100; const e = E.stepChase(round, q, true, 0.1, t); if (e && e.type === 'near') nears++; }
+  eq(nears, 1, 'under 4 m: «¡Está detrás de ti!» once');
+  q.esGap = 8; E.stepChase(round, q, true, 0.01, t += 100); q.esGap = 3.9; const again = E.stepChase(round, q, true, 0.01, t += 100);
+  eq(again && again.type, 'near', '… and again after he fell back past 7 m');
+  // his lunges: a siren, for 1.8 s he swoops in
+  const L = players.p3;
+  t = round.wakeAt + 1000;
+  E.stepChase(round, L, true, 0.01, t);
+  L.esLungeAt = t + 100; L.esGap = 15;
+  const lu = E.stepChase(round, L, true, 0.1, t + 200);
+  eq(lu && lu.type, 'lunge', 'a lunge (the siren on my phone)');
+  const gl = L.esGap; E.stepChase(round, L, true, 1, t + 400);
+  near(gl - L.esGap, E.chaseSpeed(round, L) * CH.CH_LUNGE_X + (gl - L.esLungeTo) * CH.CH_LUNGE_K, 1e-9, 'lunging: 1.5× his speed + the swoop towards his target');
+  ok(L.esLungeTo >= CH.CH_LUNGE_TO[0] && L.esLungeTo <= CH.CH_LUNGE_TO[1], 'his swoop aims 5-7.5 m behind me');
+  ok(E.chaseView(round, L, t + 400, true).lu > 0, 'my phone hears the lunge');
+  // a new run: everyone starts 14 m back again (the 45 s carry over)
+  E.startRun(round, t + 5000, false);
+  E.stepChase(round, p, true, 0.01, t + 5000);
+  eq(p.esGap, CH.CH_G0, 'a new run: 14 m again');
+  ok(p.esZapAt > 0, '… his 45 s on me carry over');
+  eq(E.chaseView(round, players.p1, t + 5000, true).g, CH.CH_G0, 'a kid who has not stepped yet sees him 14 m back');
+  // a pause DURING my stun (review 2026-10-19): my phone keeps hearing the time that was left, not the wall clock; on
+  // «Seguir» every timer moves by the pause; an answer while paused moves nothing and forgets its open time
+  {
+    const PS = players.p1;
+    const t1 = round.wakeAt + 30000;
+    E.stepChase(round, PS, true, 0.01, t1);
+    PS.esStunUntil = t1 + 1500; PS.esShieldUntil = t1 + 5000;
+    round.paused = true; round.pausedAt = t1;
+    const v1 = E.chaseView(round, PS, t1 + 4000, true);
+    eq([v1.st, v1.sh, v1.v], [1500, 5000, 0], 'paused mid-stun: the stun and the shield left stay as they were, he stands still');
+    PS.esOpenMs = 4000;
+    eq(E.chaseAnswer(round, PS, true, false, t1 + 4000), null, 'an answer while paused moves nothing');
+    eq(PS.esOpenMs, 0, '… and forgets its open time');
+    E.shiftTimers(round, { p1: PS }, 7000);
+    round.paused = false;
+    const v2 = E.chaseView(round, PS, t1 + 7000, true);
+    eq(v2.st, 1500, '«Seguir»: the stun goes on with the time that was left');
+  }
+  // a pause moves my stun, shield, lunge and his 45 s too
+  const sh = { esStunUntil: 100, esShieldUntil: 200, esLungeAt: 300, esLungeUntil: 400, esZapAt: 500 };
+  E.shiftTimers({ pos: {} }, { a: sh }, 1000);
+  eq([sh.esStunUntil, sh.esShieldUntil, sh.esLungeAt, sh.esLungeUntil, sh.esZapAt], [1100, 1200, 1300, 1400, 1500], 'Pausa: every chase timer waits');
+}
+{
+  // the whole crew caught (the v2 crew zap, rare): the crew slides back and is dizzy (slower), but no tiles lock
+  const { round, players } = room(6);
+  round.robot = round.crew; round.wakeAt = 0;
+  const ev = E.stepRun(round, players, 0.1, now0 + 10000).find((e) => e.type === 'zap');
+  ok(ev, 'the crew is caught');
+  ok(Object.values(players).every((p) => !(p.esStunUntil > now0) && p.esZapped === 1), 'nobody stunned by it: the crew slows down, every kid keeps answering');
+}
+{
+  // zaps per kid per minute of running (zone 1..3), a kid of each kind, many runs: everyone hears him coming every
+  // question; a strong kid is hardly ever zapped, a slow or young kid more but never every question and never past the cap
+  const minute = 60000;
+  const gauss = (r) => { let u = 0; while (u === 0) u = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * r()); };
+  const kid = (prof, level, minutes, seed) => {
+    let s = seed;
+    const r = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+    const { round, players } = room(1);
+    round.level = level; round.rand = r;
+    const p = players.p0;
+    let now = now0, open = true, need = 0, have = 0, restUntil = 0, streak = 0, came = false, closedQ = 0;
+    const st = { zaps: 0, trips: 0, qs: 0, red: 0, behind: 0, lunges: 0 };
+    let red = false, behind = false;
+    const draw = () => (prof.afk ? 1e9 : Math.max(1.2, prof.median * Math.exp(0.45 * gauss(r))));
+    need = draw();
+    E.stepChase(round, p, true, 0, now);
+
+    const end = now0 + minutes * minute;
+    let runStart = now0;
+    while (now < end) {
+      now += 100;
+      // a run is ~45 s: a new run every 45 s (wake included), like a real round
+      if (now - runStart >= 45000) { E.startRun(round, now, false); runStart = now; }
+      if (!open && now >= restUntil) { open = true; need = draw(); have = 0; red = false; behind = false; came = false; }
+      if (open && now >= (p.esStunUntil || 0)) {
+        have += 0.1;
+        const timeUp = have >= 20;
+        if (have >= need || timeUp) {
+          const right = !timeUp && r() < prof.p;
+          streak = right ? streak + 1 : 0;
+          if (came) closedQ++;
+          E.chaseAnswer(round, p, right, right && streak % 3 === 0, now);
+          st.qs++; if (red) st.red++; if (behind) st.behind++;
+          open = false; restUntil = now + (right ? 1300 : 1600);
+        }
+      }
+      const g0 = p.esGap;
+      const e = E.stepChase(round, p, open, 0.1, now);
+      if (open && (p.esGap < g0 || (e && (e.type === 'pzap' || e.type === 'trip')))) came = true;
+      if (open && p.esGap < E.R.CH_WARN) red = true;
+      if (open && p.esGap < E.R.CH_NEAR) behind = true;
+      if (e) st[{ pzap: 'zaps', trip: 'trips', lunge: 'lunges' }[e.type] || 'other'] = (st[{ pzap: 'zaps', trip: 'trips', lunge: 'lunges' }[e.type] || 'other'] || 0) + 1;
+    }
+    st.closedQ = closedQ;
+    return st;
+  };
+  const KINDS = {
+    strong: { median: 3.5, p: 0.92 },     // quick and right 92 %
+    average: { median: 6, p: 0.72 },
+    slow: { median: 11, p: 0.5 },
+    young: { median: 14, p: 0.45 },       // the youngest: slow, often wrong, time-ups
+    away: { afk: true, p: 0 },            // never answers (time-ups only)
+  };
+  const per = {};
+  const MIN = 3, RUNS = 30;
+  Object.entries(KINDS).forEach(([name, prof]) => {
+    const tot = { zaps: 0, trips: 0, qs: 0, red: 0, behind: 0, lunges: 0, closedQ: 0 };
+    for (const level of [1, 2, 3]) for (let k = 1; k <= RUNS; k++) { const s = kid(prof, level, MIN, k * 97 + level * 7 + name.length); Object.keys(tot).forEach((x) => { tot[x] += s[x] || 0; }); }
+    const mins = MIN * RUNS * 3;
+    per[name] = { zpm: tot.zaps / mins, red: tot.red / tot.qs, behind: tot.behind / tot.qs, lpm: tot.lunges / mins, qpm: tot.qs / mins, closed: tot.closedQ / tot.qs, tpm: tot.trips / mins };
+  });
+  const cap = minute / E.R.CH_ZAP_MIN_MS;
+  Object.entries(per).forEach(([name, x]) => {
+    ok(x.zpm <= cap + 1e-9, `${name}: never more than one zap per 45 s (${x.zpm.toFixed(2)}/min, cap ${cap.toFixed(2)})`);
+    ok(x.zpm < x.qpm / 3, `${name}: never zapped every question (${x.zpm.toFixed(2)} zaps vs ${x.qpm.toFixed(1)} questions a minute)`);
+    if (name !== 'away') ok(x.closed > 0.9, `${name}: he comes closer in (almost) every question (${(100 * x.closed).toFixed(0)} %)`);
+  });
+  ok(per.strong.zpm <= 0.2, `a strong kid is hardly ever zapped (${per.strong.zpm.toFixed(2)}/min)`);
+  ok(per.strong.red >= 0.08, `… but still has close calls (red in ${(100 * per.strong.red).toFixed(0)} % of questions)`);
+  ok(per.average.zpm >= 0.1 && per.average.zpm <= 0.6, `an average kid meets a zap now and then (${per.average.zpm.toFixed(2)}/min)`);
+  ok(per.slow.zpm <= 0.9 && per.young.zpm <= 0.9, `a slow or young kid: more, but well under the cap (${per.slow.zpm.toFixed(2)}, ${per.young.zpm.toFixed(2)}/min)`);
+  ok(per.strong.zpm < per.average.zpm && per.average.zpm < per.slow.zpm, 'answering right keeps him away (strong < average < slow)');
+  ok(per.young.red <= 0.75, `the youngest are not in the red all the time (${(100 * per.young.red).toFixed(0)} % of questions)`);
+  Object.entries(per).forEach(([name, x]) => console.log(`chase · ${name.padEnd(7)} ${x.zpm.toFixed(2)} zaps/min · ${x.tpm.toFixed(2)} trips/min · ${x.lpm.toFixed(1)} lunges/min · red in ${(100 * x.red).toFixed(0)} % of questions · «¡Está detrás de ti!» in ${(100 * x.behind).toFixed(0)} % · ${x.qpm.toFixed(1)} questions/min`));
 }
 
 // ---------- ranks + the end ----------

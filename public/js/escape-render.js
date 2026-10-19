@@ -18,6 +18,8 @@
   // Robotín's pictures, one per mood (art batch 2026-10-17)
   const ROBO_MOODS = ['idle', 'chase', 'zap', 'dizzy', 'happy'];
   const ROBO_URL = (m) => '/assets/escape/robotin/' + (ROBO_MOODS.includes(m) ? m : 'idle') + '.webp';
+  // where his eyes (x, y, radius as fractions of the picture's width / height / width) and his antenna bulb are, per picture
+  const ROBO_PTS = { chase: { eyes: [[0.629, 0.511, 0.052], [0.771, 0.525, 0.042]], antenna: [0.616, 0.139] } };
   // a one-off drawing (a card, a band, the meter) redraws itself once a picture it needs has loaded
   const waiters = new Map();
   function onLoad(url, key, fn) {
@@ -85,7 +87,30 @@
     const pic = img(ROBO_URL(mood));
     if (ready(pic)) {
       const h = s * 1.08, w = h * pic.naturalWidth / pic.naturalHeight;
-      g.drawImage(pic, -w / 2, -h + s * 0.02, w, h);
+      const px = -w / 2, py = -h + s * 0.02;
+      g.drawImage(pic, px, py, w, h);
+      // the chase pass (2026-10-19): his eyes glow red as he closes in on a kid (o.eyes 0..1), and in a lunge his
+      // antenna flashes red / blue like a siren (o.siren). Points are fractions of the chase picture.
+      const pts = ROBO_PTS[mood];
+      if (pts && o.eyes > 0) {
+        const a = Math.min(1, o.eyes);
+        pts.eyes.forEach(([fx, fy, fr]) => {
+          const ex = px + fx * w, ey = py + fy * h, er = fr * w;
+          const halo = g.createRadialGradient(ex, ey, er * 0.2, ex, ey, er * 2.6);
+          halo.addColorStop(0, `rgba(255,70,60,${0.55 * a})`); halo.addColorStop(1, 'rgba(255,70,60,0)');
+          g.fillStyle = halo; ell(g, ex, ey, er * 2.6, er * 2.6); g.fill();
+          const core = g.createRadialGradient(ex, ey, 0, ex, ey, er * 1.05);
+          core.addColorStop(0, `rgba(255,236,200,${0.95 * a})`); core.addColorStop(0.45, `rgba(255,60,50,${0.9 * a})`); core.addColorStop(1, `rgba(200,20,30,${0.55 * a})`);
+          g.fillStyle = core; ell(g, ex, ey, er, er); g.fill();
+        });
+      }
+      if (pts && o.siren) {
+        const on = Math.floor(t * 8) % 2 === 0;
+        const [ax, ay] = pts.antenna, axp = px + ax * w, ayp = py + ay * h, ar = w * 0.11;
+        const sg = g.createRadialGradient(axp, ayp, 0, axp, ayp, ar);
+        sg.addColorStop(0, on ? 'rgba(255,90,80,.95)' : 'rgba(90,160,255,.95)'); sg.addColorStop(1, on ? 'rgba(255,60,50,0)' : 'rgba(60,120,255,0)');
+        g.fillStyle = sg; ell(g, axp, ayp, ar, ar); g.fill();
+      }
       if (o.glitch !== false && (t % 2.4) < 0.14) {
         g.globalAlpha = 0.5;
         g.fillStyle = '#ff6ad5'; g.fillRect(-w * 0.42 + s * 0.05, -s * 0.66, w * 0.84, s * 0.035);
@@ -210,6 +235,12 @@
     const S = size;
     const bob = k.moving && !k.dizzy ? -Math.abs(Math.sin(t * 11 + (k.idx || 0))) * S * 0.08 : 0;
     g.fillStyle = 'rgba(29,36,64,.24)'; ell(g, k.x, k.y + 1, S * 0.3, S * 0.1); g.fill();
+    // the chase pass: Robotín is right behind this kid (a red ring that pulses; the projector shows who is in danger)
+    if (k.danger) {
+      const pz = still() ? 0.7 : 0.55 + 0.45 * Math.abs(Math.sin(t * 7 + (k.idx || 0)));
+      g.strokeStyle = `rgba(240,68,58,${pz})`; g.lineWidth = Math.max(2.5, S * 0.09);
+      ell(g, k.x, k.y + 1, S * 0.42, S * 0.17); g.stroke();
+    }
     if (k.me || k.safe || k.glow) {
       g.strokeStyle = k.safe ? SAFE : GOLD; g.lineWidth = Math.max(2, S * 0.08);
       ell(g, k.x, k.y + 1, S * 0.38, S * 0.15); g.stroke();
@@ -230,6 +261,21 @@
     else { g.fillStyle = GOLD; ell(g, 0, -S / 2, S / 3, S / 3); g.fill(); }
     g.restore();
     if (k.dizzy) stars(g, k.x, k.y - S * 1.12, S * 0.34, t + (k.idx || 0));
+    if (k.shield) shield(g, k.x, k.y - S * 0.55, S * 0.66, t, k.shield);
+  }
+  // the chase pass: the shield after a zap (Robotín waits): a cyan bubble with a shine; a (0..1) fades it out
+  function shield(g, x, y, r, t, a) {
+    a = Math.max(0, Math.min(1, a === true ? 1 : a));
+    const wob = still() ? 0 : Math.sin(t * 6) * r * 0.025;
+    g.save();
+    g.globalAlpha = a;
+    const bg = g.createRadialGradient(x - r * 0.3, y - r * 0.35, r * 0.1, x, y, r + wob);
+    bg.addColorStop(0, 'rgba(220,252,255,.18)'); bg.addColorStop(0.75, 'rgba(127,246,255,.22)'); bg.addColorStop(1, 'rgba(63,214,224,.55)');
+    g.fillStyle = bg; ell(g, x, y, r + wob, r - wob); g.fill();
+    g.strokeStyle = 'rgba(27,143,163,.9)'; g.lineWidth = Math.max(2, r * 0.06); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = Math.max(1.5, r * 0.07); g.lineCap = 'round';
+    g.beginPath(); g.arc(x, y, r * 0.78, Math.PI * 1.12, Math.PI * 1.42); g.stroke();
+    g.restore();
   }
   // one name tag, a fixed size on screen (s = world → css px scale). Returns its box (world units), or draws nothing
   // when `avoid` (boxes already taken) leaves no room above the head or below the feet (mine always shows).
@@ -459,6 +505,6 @@
 
   window.EscapeRender = {
     INK, SAFE, SAFE_DEEP, ROBO, ROBO_DEEP, GOLD, DANGER, SKIN_URL, BODY_URL, img, ready, preload, onLoad, roomArt, rr, ell,
-    robotin, onRobot, zap, star, stars, kid, tag, strip, scene, goal, jet, room, zone,
+    robotin, onRobot, zap, star, stars, kid, tag, strip, scene, goal, jet, room, zone, shield,
   };
 })();

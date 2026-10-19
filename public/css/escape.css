@@ -162,6 +162,8 @@ body.es-host {
 .es-pop.super { background: linear-gradient(180deg, #fff3c4, var(--es-turbo-hot)); }
 .es-pop.super span { color: var(--es-ink); }
 .es-pop.more { padding: 8px 22px; font: 800 1.3rem/1 'Baloo 2', sans-serif; }
+.es-pop.zap { background: linear-gradient(180deg, var(--es-robo-soft), #8fe9f2); border-color: var(--es-robo-deep); }   /* the chase pass: who Robotín zapped */
+.es-pop.zap span { color: var(--es-robo-deep); }
 @keyframes esPop { 0% { opacity: 0; transform: translateY(-14px) scale(.92); } 16% { opacity: 1; transform: none; } 88% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
 /* Dralingo's bubble rides above him at the front of the crew */
 .es-run-say { position: absolute; left: 0; top: 0; z-index: 3; margin: 0; max-width: 300px; pointer-events: none; background: var(--es-paper);
@@ -506,6 +508,61 @@ body.es-on:has(#screen-escape:not(.hidden)) .muted-toggle { top: auto !important
   .es-pintro-vs, .es-pbadge, .es-strip-gap.close, body.es-on.es-dizzy .answer-btn { animation: none !important; }
   .es-band.out { opacity: 0; }
   .es-takeoff-me { opacity: 0; }
+}
+
+/* ── the chase pass (2026-10-19): Robotín chases EACH kid (js/player-escape.js) ──
+   The red edges: one fixed layer UNDER the question and the tiles (z-index −1: it shows in the margins around them, never
+   over them); only its class changes (lv1 far-ish, lv2 «¡Cerca!», lv3 «¡Está detrás de ti!»); the pulse is opacity only. */
+.es-edge { position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: 0; transition: opacity .3s ease-out;
+  box-shadow: inset 0 0 34px 12px rgba(240,68,58,.85); }
+.es-edge.lv1 { opacity: .28; }
+.es-edge.lv2 { opacity: .55; animation: esEdge .9s ease-in-out infinite alternate; }
+.es-edge.lv3 { opacity: .9; animation: esEdge .42s ease-in-out infinite alternate; }
+@keyframes esEdge { from { opacity: .45; } to { opacity: 1; } }
+.es-strip.danger { border-color: var(--es-danger); box-shadow: 0 4px 0 var(--es-danger); }
+/* the row's pill says what MY Robotín is doing */
+.es-strip-gap.warn { background: #ff8a1f; color: var(--es-ink); }
+.es-strip-gap.danger { background: var(--es-danger); animation: esRail .4s ease-in-out infinite alternate; }
+.es-strip-gap.zap { background: var(--es-robo); color: var(--es-ink); }
+.es-strip-gap.shield { background: var(--es-robo-soft); color: var(--es-ink); }
+.es-strip-gap.ok { background: var(--es-safe); color: var(--es-ink); }
+/* the result: one line about my Robotín under the turbo («¡Lo alejaste! Robotín a 14 m» / «Robotín se acercó: a 4 m») */
+.es-res-chase { display: inline-block; margin: 6px auto 0; padding: 4px 12px 3px; border: 3px solid var(--es-ink); border-radius: 999px;
+  font: 800 1rem/1.15 'Baloo 2', Nunito, sans-serif; box-shadow: 0 3px 0 var(--es-ink); animation: esChaseIn .28s .18s var(--es-ease-out) both; }
+@keyframes esChaseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.es-res-chase.ok { background: var(--es-safe-soft); color: #11703d; }
+.es-res-chase.no { background: #ffe1dc; color: #b3261e; }
+/* stunned (1.8 s): my tiles grey and locked under a draining ring with the seconds; the question waits for me */
+body.es-on.es-stunned .answers { position: relative; }
+body.es-on.es-stunned .answer-btn { pointer-events: none; filter: grayscale(.9) brightness(.92); animation: esWobble .18s linear infinite alternate; }
+.es-lock { position: absolute; inset: -4px; z-index: 5; display: grid; place-items: center; align-content: center; gap: 6px; pointer-events: auto;
+  border-radius: 20px; background: rgba(23,51,74,.55); color: #fff; text-align: center; animation: esLockIn .18s var(--es-ease-out) both; }
+.es-lock span { font: 800 1.35rem/1 'Baloo 2', Nunito, sans-serif; text-shadow: 0 2px 0 var(--es-ink); }
+@property --es-lp { syntax: '<number>'; inherits: false; initial-value: 1; }
+.es-lock-ring { --es-lp: 1; width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; border: 4px solid var(--es-ink);
+  background: conic-gradient(var(--es-robo) calc(var(--es-lp) * 360deg), rgba(255,255,255,.25) 0); box-shadow: 0 4px 0 var(--es-ink);
+  animation: esLockDrain var(--es-lock-ms, 1800ms) linear forwards; }
+.es-lock-ring b { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; background: var(--es-paper); color: var(--es-ink);
+  font: 800 2rem/1 'Baloo 2', sans-serif; font-variant-numeric: tabular-nums; }
+@keyframes esLockDrain { from { --es-lp: 1; } to { --es-lp: 0; } }
+@keyframes esLockIn { from { opacity: 0; transform: scale(1.06); } to { opacity: 1; transform: none; } }
+/* the zap on MY phone: full screen for ~0.95 s (my full-body character, his lightning, sparks; the words on top) */
+.es-zapfx { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden;
+  background: radial-gradient(circle at 50% 62%, #3a8fb3 0%, #17334a 55%, #0b1a2c 100%); animation: esZapIn .12s ease-out both; }
+.es-zapfx canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.es-zapfx-words { position: absolute; left: 0; right: 0; top: calc(9vh + env(safe-area-inset-top)); display: grid; justify-items: center; gap: 6px; text-align: center; }
+.es-zapfx-words b { font: 800 clamp(4rem, 24vw, 7rem)/0.9 'Baloo 2', sans-serif; color: var(--es-robo); -webkit-text-stroke: 4px var(--es-ink); paint-order: stroke fill;
+  text-shadow: 0 7px 0 var(--es-ink); animation: esZapWord .5s var(--es-ease-out) both; }
+.es-zapfx-words span { font: 800 1.3rem/1.1 'Baloo 2', Nunito, sans-serif; color: var(--es-ink); background: var(--es-paper); border: 3px solid var(--es-ink);
+  border-radius: 999px; padding: 5px 16px 4px; box-shadow: 0 4px 0 var(--es-ink); }
+.es-zapfx.out { animation: esZapOut .2s var(--es-ease-out) forwards; }
+@keyframes esZapIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes esZapOut { to { opacity: 0; transform: scale(1.04); } }
+@keyframes esZapWord { 0% { transform: scale(1.6) rotate(-8deg); opacity: 0; } 60% { transform: scale(.94) rotate(-3deg); opacity: 1; } 100% { transform: rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .es-edge.lv2, .es-edge.lv3, .es-strip-gap.danger, body.es-on.es-stunned .answer-btn, .es-lock, .es-zapfx, .es-zapfx.out, .es-zapfx-words b, .es-res-chase { animation: none !important; }
+  .es-zapfx.out { opacity: 0; }
+  .es-lock-ring { animation: none; --es-lp: .5; }
 }
 
 /* ── a laptop's short screen (2026-10-18, his rule: nothing opens zoomed in, no needed button below the fold) ──

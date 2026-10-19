@@ -7,6 +7,10 @@
 // the route's next place; the projector's F5 (a new socket with the room token) gets the episode back; a late joiner
 // gets its number and the room; «Terminar» → «¡FINAL!» → the ceremony names the route's own places and rank; «Otra
 // ronda» = the next route.
+// The chase pass (2026-10-19): every phone hears its OWN Robotín a few times a second and he comes closer while its
+// question is open; a right answer = a dash away, a wrong one = he gains; a kid who keeps missing gets zapped (her phone
+// only, the projector hears who), a phone back mid-stun gets its lock with the time left, the lock ends by itself (then
+// her shield) and she answers again.
 'use strict';
 const assert = require('assert');
 const { io } = require('socket.io-client');
@@ -105,6 +109,79 @@ function next(s, ev, ms, match) {
   ok(th.name === 'Sofi' && th.idx === sofi.init.me.idx, 'the projector pops the name of the kid who gave it');
   const r2 = await answer(kids[1], false);
   ok(r2 && !r2.correct && !r2.escape.turbo, 'a wrong answer is no turbo (nothing lost)');
+
+  // ---------- the chase pass (2026-10-19): each kid's own Robotín ----------
+  ok(typeof r1.escape.gap === 'number' && r1.escape.gap > r1.escape.from, `a right answer: I dash away from MY Robotín (${r1.escape.from} → ${r1.escape.gap} m)`);
+  ok(typeof r2.escape.gap === 'number' && r2.escape.gap < r2.escape.from, `a wrong answer: he gains on me (${r2.escape.from} → ${r2.escape.gap} m)`);
+  ok(hi.chase && hi.chase.g0 === E.R.CH_G0 && sofi.init.me.ch && sofi.init.me.ch.g === E.R.CH_G0, 'every phone starts with its own Robotín 14 m back (the numbers come from the server)');
+  const awake = await next(kids[2].s, 'es:g', 8000, (c) => c.v > 0);      // (asleep the first 3 s of a run)
+  ok(awake && awake.v > 0, `Robotín wakes up and comes for Valen (${awake.v} m/s)`);
+  const gs = [awake];
+  const onG = (c) => gs.push(c);
+  kids[2].s.on('es:g', onG);
+  await sleep(1500);
+  kids[2].s.off('es:g', onG);
+  ok(gs.length >= 4, `my phone hears MY Robotín a few times a second (${gs.length - 1} in 1.5 s)`);
+  ok(gs[gs.length - 1].g < gs[0].g || gs.some((c) => c.lu > 0), `my question open: he comes closer (${gs[0].g} → ${gs[gs.length - 1].g} m)`);
+  // Valen keeps missing: he catches HER (a zap on her phone only), her tiles lock 1.8 s, then her shield; a phone that
+  // reconnects mid-stun gets the lock back with the time left; the crew loses nothing
+  const valen = kids[2];
+  // every zap a phone hears must be its own: count them on every phone and on the projector (who + how many)
+  const phonePz = [];
+  const watchAll = kids.map((k) => { const h = () => phonePz.push(k.init.me.idx); k.s.on('es:pzap', h); return [k, h]; });
+  const hostPz = [];
+  host.on('es:pzap', (d) => hostPz.push(d));
+  const pz = next(valen.s, 'es:pzap', 45000);
+  // she misses until he is right behind her (each miss = he gains 2.5 m), then she hesitates on the next question
+  let misses = 0, last = null;
+  for (let i = 0; i < 10 && !(last && last.escape.gap <= 2); i++) { last = await answer(valen, false).catch(() => null); if (last) misses++; }
+  ok(last && last.escape.gap <= 2, `after ${misses} misses he is right behind her (${last && last.escape.gap} m)`);
+  const zap = await pz;
+  ok(zap && zap.stunMs === E.R.CH_STUN_MS && zap.shieldMs === E.R.CH_SHIELD_MS, `he reaches Valen: a zap on her phone (stunned ${zap.stunMs} ms, then a ${zap.shieldMs} ms shield) after ${misses} misses`);
+  // an answer that arrives during her stun (a tap in flight when the zap landed) is not judged: no dash over the zap,
+  // the question stays hers
+  for (let i = 0; i < 20 && !valen.q; i++) await sleep(50);
+  const inFlight = valen.q;
+  ok(inFlight, 'her question is still open when he zaps her');
+  const stale = next(valen.s, 'answer-stale', 1500);
+  const judged = [];
+  const onRes = (r) => judged.push(r);
+  valen.s.on('answer-result', onRes);
+  valen.s.emit('player:answer', { pin, qid: inFlight.qid, choiceIdx: correctOf(inFlight) });
+  const st = await stale;
+  await sleep(250);
+  valen.s.off('answer-result', onRes);
+  ok(st && st.reason === 'stunned' && !judged.length, `an answer during the stun is refused («${st && st.reason}», no dash, ${judged.length} judged)`);
+  await sleep(300);
+  ok(hostPz.some((d) => d.idx === valen.init.me.idx && d.name === 'Valen'), 'the projector hears who Robotín zapped');
+  watchAll.forEach(([k, h]) => k.s.off('es:pzap', h));
+  const fromHost = hostPz.map((d) => d.idx).sort().join(','), onPhones = phonePz.slice().sort().join(',');
+  ok(fromHost === onPhones, `each zap reached only the zapped kid's phone (projector ${fromHost} · phones ${onPhones})`);
+  // reconnect mid-stun: a new socket, the same name → es:init carries her lock with the time left
+  valen.s.close();
+  const s2 = connect();
+  const reInit = next(s2, 'es:init', 5000);
+  valen.s = s2; valen.q = null;
+  s2.on('question', (q) => { valen.q = q; });
+  s2.on('answer-result', (r) => valen.results.push(r));
+  await ack(s2, 'player:join', { pin, name: 'Valen' });
+  const ri = await reInit;
+  ok(ri.me && ri.me.ch && ri.me.ch.st > 0 && ri.me.ch.st <= E.R.CH_STUN_MS, `back mid-stun: the phone gets its lock again (${ri.me && ri.me.ch && ri.me.ch.st} ms left)`);
+  ok(ri.me.pzaps === 1, 'and knows it was zapped once');
+  for (let i = 0; i < 20 && !valen.q; i++) await sleep(50);
+  ok(valen.q && valen.q.qid === inFlight.qid, 'the same question comes back to the phone (still hers after the stun)');
+  // the lock ends by itself; her question is still hers and answering works again
+  const free = await next(s2, 'es:g', 5000, (c) => c.st === 0);
+  ok(free && free.sh > 0, `the stun ends by itself, her shield is up (${free.sh} ms)`);
+  for (let i = 0; i < 30 && !valen.q; i++) await sleep(100);
+  const r3 = await answer(valen, true);
+  ok(r3 && r3.correct && typeof r3.escape.gap === 'number', 'after the stun she answers again (never out of play)');
+  // the phone's own 12 s resync (same socket) is no reconnect: it never hands out a free shield (classroom playtest)
+  await next(s2, 'es:g', 8000, (c) => c.sh === 0);
+  const rs = next(s2, 'es:init', 4000);
+  s2.emit('player:resync', { pin });
+  const rsi = await rs;
+  ok(rsi.me && rsi.me.ch && rsi.me.ch.sh === 0, `a resync of the same phone gets no shield (${rsi.me && rsi.me.ch && rsi.me.ch.sh} ms)`);
 
   // everyone answers right until the crew reaches the zona segura
   let zone = null;

@@ -13,6 +13,8 @@ module.exports = (bot, ctx) => {
   const E = ctx.report.escape || (ctx.report.escape = {
     inits: 0, phases: {}, turbos: 0, supers: 0, zaps: 0, waves: 0, safe: 0, out: 0, heartsLost: 0, hearts: null,
     switchedFull: 0, dawdled: 0, corrections: 0, reachedZone: 0, moments: {}, endRank: null, levelsCleared: null, maxCrew: 0,
+    // the chase pass: each bot's own Robotín (zaps on it, his lunges and trips, «¡Está detrás de ti!», its sync messages)
+    pzaps: 0, lunges: 0, trips: 0, nears: 0, gSyncs: 0, minGap: null,
   });
   const T = EscapeMap.TILE;
   let phase = 'run', room = null, zones = [], me = null, idx = 0, dizzyUntil = 0, paused = false;
@@ -47,6 +49,35 @@ module.exports = (bot, ctx) => {
   bot.on('es:phase', setPhase);
   bot.on('es:pause', (d) => { paused = !!d.paused; });
   bot.on('es:zap', () => { if (idx === 1) E.zaps++; });
+  // the chase pass: a stunned bot is like a kid whose tiles are locked: its question waits (a legitimate pause); a tap
+  // that lands during the stun comes back «stunned» and the kid taps again once the lock is gone
+  let lastQ = null;
+  bot.on('question', (q) => { lastQ = q; });
+  bot.on('es:pzap', (d) => { E.pzaps++; st.graceUntil = now() + ((d && d.stunMs) || 1800) + 500; });
+  bot.on('answer-stale', (d) => {
+    if (!d || d.reason !== 'stunned' || !lastQ) return;
+    E.stunnedTaps = (E.stunnedTaps || 0) + 1;
+    const q = lastQ;
+    st.graceUntil = now() + (d.ms || 1800) + 1500;
+    setTimeout(() => { if (lastQ === q) bot.emit('player:answer', { pin: ctx.pin, qid: q.qid, choiceIdx: Math.floor(Math.random() * ((q.answers && q.answers.length) || 2)) }, () => {}); }, (d.ms || 1800) + 300);
+  });
+  bot.on('es:lunge', () => { E.lunges++; });
+  bot.on('es:trip', () => { E.trips++; });
+  bot.on('es:near', () => { E.nears++; });
+  // es:g goes out only when something changed, ~3 a second at most: a ceiling of 4 per bot-second of running (more =
+  // the server is flooding phones; a report error makes the run CHECK)
+  let gN = 0, gFirst = 0, gLast = 0;
+  bot.on('es:g', (c) => {
+    E.gSyncs++; gN++; const t = now(); if (!gFirst) gFirst = t; gLast = t;
+    if (c && typeof c.g === 'number') E.minGap = E.minGap == null ? c.g : Math.min(E.minGap, c.g);
+  });
+  bot.on('game-end', () => {
+    const secs = (gLast - gFirst) / 1000;
+    if (secs < 5) return;
+    const rate = gN / secs;
+    E.gMaxPerSec = Math.max(E.gMaxPerSec || 0, Math.round(rate * 100) / 100);
+    if (rate > 4) ctx.report.errors.push({ who: ctx.name, ev: 'es:g-flood', d: Math.round(rate * 10) / 10 + ' a second' });
+  });
   bot.on('es:tick', (d) => {
     if (typeof d.c === 'number') E.maxCrew = Math.max(E.maxCrew, d.c + (level - 1) * 100);
     if (d.occ) occ = d.occ;

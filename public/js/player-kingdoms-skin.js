@@ -47,6 +47,9 @@
     } catch (_) {}
   }
   function playMusic(name, vol) {
+    // La Gran Fuga (chase pass 2026-10-19): the projector plays the chase music; the phones play the chase itself (his
+    // treads, my heartbeat, the zaps), never 30 copies of the music
+    if (game === 'escape') { stopMusic(); return; }
     if (musicName === name && music && !music.paused) return;
     stopMusic();
     musicName = name;

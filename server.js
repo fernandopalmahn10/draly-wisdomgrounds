@@ -9703,10 +9703,23 @@ function esPublic(g, now) {
   };
 }
 function esMe(g, p, now, extra) {
+  const k = g.escape;
   return Object.assign({
     idx: p.esIdx, turbos: p.esTurbos || 0, best: p.esBest || 0, streak: p.esStreak || 0, safe: p.esSafe || 0, waves: p.esWaves || 0,
     dizzyMs: Math.max(0, (p.esDizzyUntil || 0) - now),
+    // the chase pass: my own Robotín (gap, his speed, my stun / shield / his lunge), so a phone that reconnects mid-stun
+    // gets its lock back with the time left
+    ch: k && k.phase === 'run' ? Escape.chaseView(k, p, now, !!p.currentQ) : null, pzaps: p.esPZaps || 0,
   }, extra || {});
+}
+// The chase pass (2026-10-19): what MY Robotín just did goes to my phone only; the projector hears who got zapped.
+function esChaseEvent(pin, g, pid, p, ev) {
+  if (ev.type === 'pzap') {
+    io.to(pid).emit('es:pzap', { stunMs: ev.stunMs, shieldMs: ev.shieldMs, n: p.esPZaps || 0, g: p.esGap });
+    io.to(g.hostId).emit('es:pzap', { idx: p.esIdx, name: p.name });
+  } else if (ev.type === 'lunge') io.to(pid).emit('es:lunge', { ms: ev.ms });
+  else if (ev.type === 'trip') io.to(pid).emit('es:trip', { g: p.esGap });
+  else if (ev.type === 'near') io.to(pid).emit('es:near', { g: p.esGap });
 }
 function esSendMe(g, pid, extra) {
   const p = g.players[pid];
@@ -9715,11 +9728,15 @@ function esSendMe(g, pid, extra) {
 function esInitPayload(g, pid) {
   const k = g.escape;
   const now = Date.now();
+  const R = Escape.R;
   const out = Object.assign(esPublic(g, now), {
     seed: k.seed, round: k.id, players: esRoster(g), pos: k.phase === 'zone' ? esPosArray(g, now) : [], cast: g.esCast || null,
+    // the chase pass: the phone draws my Robotín with the server's own numbers (one source: core/escape.js)
+    chase: { g0: R.CH_G0, gmax: R.CH_GMAX, warn: R.CH_WARN, near: R.CH_NEAR, lx: R.CH_LUNGE_X, lk: R.CH_LUNGE_K },
   });
   const p = pid ? g.players[pid] : null;
   if (p && p.esRound === k.id) out.me = esMe(g, p, now, k.pos[pid] ? { x: k.pos[pid].x, y: k.pos[pid].y } : {});
+  if (!pid) out.nz = k.phase === 'run' ? (k.near || []) : [];     // (the projector: the kids he is right behind)
   return out;
 }
 // Bring a kid into the running round (start, late join, rejoin with a new socket id).
@@ -9728,7 +9745,12 @@ function esAttach(g, pid, p) {
   const fresh = p.esRound !== k.id;
   Escape.preparePlayer(k, p);
   if (fresh) p.esSkin = EscapeMap.skinFor(p.avatar, p.name);
-  if (p.esPid && p.esPid !== pid && k.pos[p.esPid]) { k.pos[pid] = k.pos[p.esPid]; delete k.pos[p.esPid]; }
+  const takeover = !!p.esPid && p.esPid !== pid;          // a NEW socket for this kid (a reload, a real reconnect)
+  if (takeover && k.pos[p.esPid]) { k.pos[pid] = k.pos[p.esPid]; delete k.pos[p.esPid]; }
+  // the chase pass: a phone really back in a run gets 2.5 s of shield (never zapped before its question has even
+  // redrawn); never for a resync of the same socket (every 12 s while a kid thinks or the teacher pauses: the
+  // classroom playtest saw free shields and a whole class unchased after a long pause), never during a pause
+  if (!fresh && takeover && k.phase === 'run' && !k.paused && p.esRunN === k.runN) p.esShieldUntil = Math.max(p.esShieldUntil || 0, Date.now() + 2500);
   p.esPid = pid;
   if (k.phase === 'zone' && k.room && !k.pos[pid]) { const s = Escape.spawnPos(k, p.esIdx); k.pos[pid] = { x: s.x, y: s.y, f: 2, at: Date.now() }; }
 }
@@ -9806,6 +9828,31 @@ function esTickInner(pin, id) {
         esPhase(pin, g);
       }
     });
+    // the chase pass: every kid's own Robotín (closing while that kid's question is open); each phone gets its own
+    // numbers ~3 times a second (and at once on an event), the projector the kids he is right behind
+    if (k.phase === 'run') {
+      const sync = k.n % 3 === 0;
+      const near = [];
+      Object.entries(g.players).forEach(([pid, p]) => {
+        if (p.disconnected || p.esRound !== k.id) return;
+        // a question open for more than 25 s of its own time is a phone that is not there (locked, in a pocket: a live
+        // phone's own 20 s clock always answers): he stops chasing it, it never shows in danger on the projector
+        const open = !!p.currentQ && (p.esOpenMs || 0) < 25000;
+        const ev = Escape.stepChase(k, p, open, dt, now);
+        if (ev) esChaseEvent(pin, g, pid, p, ev);
+        if (sync || ev) {
+          // only when something changed (his distance, his speed, my stun / shield / his lunge starting or ending);
+          // volatile: a phone on weak Wi-Fi never gets a backlog of old distances
+          const view = Escape.chaseView(k, p, now, open);
+          const sig = view.g + '|' + view.v + '|' + (view.st > 0) + '|' + (view.sh > 0) + '|' + (view.lu > 0);
+          if (ev || sig !== p.esGSig) { p.esGSig = sig; io.to(pid).volatile.emit('es:g', view); }
+        }
+        if (open && p.esRunN === k.runN && p.esGap < Escape.R.CH_WARN && now >= (p.esShieldUntil || 0)) near.push(p.esIdx);
+      });
+      // the kids he is right behind: the projector only, and only when the list changes
+      const nsig = near.join(',');
+      if (nsig !== k.nearSig) { k.nearSig = nsig; k.near = near; io.to(g.hostId).emit('es:nz', near); }
+    }
     if (k.phase === 'run' && k.n % 2 === 0) {
       io.to(pin).emit('es:tick', { c: Math.round(k.crew * 10) / 10, r: Math.round(k.robot * 10) / 10, d: now < k.dizzyUntil ? 1 : 0, cl: k.closeSaid ? 1 : 0 });
     }
@@ -9864,18 +9911,23 @@ function esAnswer(pin, g, pid, p, correct, correctText) {
   if (!k) return;
   const n = Escape.kidsOn(g.players, k).length;
   const r = Escape.answer(k, p, correct, n, !!g.finFrenzy);   // the last 30 s: every turbo a súper turbo
+  // the chase pass: a right answer = I dash away from MY Robotín (a súper turbo farther), a wrong one = he gains
+  const ch = Escape.chaseAnswer(k, p, correct, !!r.super, Date.now());
   p.lastQuestionAt = Date.now();     // the global watchdog must not push a question over the turbo screen
   io.to(pid).emit('answer-result', {
     correct, correctText,
-    escape: { turbo: !!r.turbo, super: !!r.super, gain: r.gain || 0, streak: p.esStreak || 0, turbos: p.esTurbos || 0, crew: Math.round(k.crew * 10) / 10, robot: Math.round(k.robot * 10) / 10 },
+    escape: { turbo: !!r.turbo, super: !!r.super, gain: r.gain || 0, streak: p.esStreak || 0, turbos: p.esTurbos || 0, crew: Math.round(k.crew * 10) / 10, robot: Math.round(k.robot * 10) / 10,
+      gap: ch ? ch.gap : null, from: ch ? ch.from : null },
   });
   if (r.turbo) io.to(g.hostId).emit('es:turbo', { idx: p.esIdx, name: p.name, super: r.super, gain: r.gain, streak: p.esStreak });
-  // the next question only while the crew is still running (a zone or a big moment may have started meanwhile)
+  // the next question only while the crew is still running (a zone or a big moment may have started meanwhile); never
+  // inside a stun (a new question would wipe the lock on the phone)
+  const wait = Math.max(correct ? ES_NEXT_Q_MS.right : ES_NEXT_Q_MS.wrong, (p.esStunUntil || 0) - Date.now() + 50);
   setTimeout(() => {
     if (games[pin] !== g || g.state !== 'active' || g.escape !== k || k.phase !== 'run' || k.paused || !g.players[pid] || g.players[pid].currentQ) return;
     const q = nextQuestionFor(g, pid);
     if (q) io.to(pid).emit('question', q);
-  }, correct ? ES_NEXT_Q_MS.right : ES_NEXT_Q_MS.wrong);
+  }, wait);
 }
 // Teacher pause: nothing moves, the clock stops; on resume every timer moves forward.
 function esPause(pin, g, paused) {
@@ -9943,7 +9995,7 @@ function esEndPayloads(g) {
       score: r.score,
       me: {
         k: r.k, team: 'crew', skin: r.skin, won: fin.escaped, tie: false, stars: r.stars, mvp: false,
-        score: r.score || 0, turbos: r.turbos || 0, supers: r.supers || 0, best: r.best || 0, safe: r.safe || 0, waves: r.waves || 0, reach: r.reach,
+        score: r.score || 0, turbos: r.turbos || 0, supers: r.supers || 0, best: r.best || 0, safe: r.safe || 0, waves: r.waves || 0, reach: r.reach, escapes: r.escapes || 0,
         right: r.right || 0, answered: (r.right || 0) + (p.esWrong || 0),
         awards: Object.keys(fin.awards).filter((a) => fin.awards[a] && fin.awards[a].id === r.id),
       },
@@ -11431,6 +11483,13 @@ io.on('connection', (socket) => {
     } else if (g.gameType === 'snow') {
       snAnswer(pin, g, socket.id, p, correct, correctText);
     } else if (g.gameType === 'escape') {
+      // the chase pass: stunned = my tiles are locked; an answer in flight when the zap lands is not judged (no dash
+      // over the zap): the question stays mine and the phone gets its tiles back once the lock ends
+      if (g.escape && g.escape.phase === 'run' && Date.now() < (p.esStunUntil || 0)) {
+        p.currentQ = cqData;
+        io.to(socket.id).emit('answer-stale', { reason: 'stunned', ms: p.esStunUntil - Date.now() });
+        return;
+      }
       esAnswer(pin, g, socket.id, p, correct, correctText);
     } else if (g.gameType === 'kingdoms') {
       // Reinos de Colores: right answer = a flag to plant (3 in a row = 2 flags). The next question waits

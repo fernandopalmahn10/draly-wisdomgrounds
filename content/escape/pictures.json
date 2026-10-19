@@ -31,7 +31,6 @@
     { "world": "cast", "slug": "hamdan-jet", "ref": "cast/hamdan-hello.webp", "bg": "GREEN", "subject": "CAST WHO=Hamdan, SCENE: standing at the top of a small aircraft stair, waving everybody aboard with a big smile. Pure flat green #00FF00 background.", "replaces": "the goal of zone 3 and the escape moment (today: the hamdan-hello sticker next to the plane)" }
   ],
   "music": [
-    { "slug": "music-run", "note": "A recorded chase loop with an Arabic flavour (oud + darbuka, 120-130 bpm, 30-60 s seamless). Today: Kenney 'Mission Plausible' (CC0) in public/assets/escape/music-run.mp3." },
-    { "slug": "music-zone", "note": "A tense-but-silly ticking loop for the zona segura waves. Today: Kenney 'Wacky Waiting' (CC0) in public/assets/escape/music-zone.mp3." }
+    { "slug": "music-chase", "note": "Chase pass 2026-10-19: ONE chase track for the whole episode on the projector (phones play no music), its mood set live by Web Audio (calm / chase / danger / zone / final: a filter and its speed, host-escape.js MOODS). His pick 2026-10-19: a 70.2 s loop of 'Desert Storm' (drum & bass) by lemonmusicstudio, Pixabay Content License, https://pixabay.com/music/drum-n-bass-desert-storm-109271/ (the full track stays in assets-library/pixabay/2026-10-19-escape-music/). Swap: node scripts/escape-sounds.js --music <file> and paste the printed line into host-escape.js MUSIC. Replaces Kenney 'Mission Plausible' (music-run) and 'Wacky Waiting' (music-zone)." }
   ]
 }

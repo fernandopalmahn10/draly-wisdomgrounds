@@ -56,6 +56,31 @@ const R = {
   AWAY_MS: 8000,              // a phone silent for 8 s in the room is «away»: it can't cost the crew hearts
   CLEARED_MS: 4200, CAUGHT_MS: 4200, ESCAPE_MS: 7500,
   SPEED: 140,                 // walking speed in the room (px/s)
+  // ---- chase pass (2026-10-19, his words: "the robot is not chasing you at any time … it doesn't feel like a
+  // persecution"): Robotín chases EACH kid. My own distance to him (p.esGap, metres) closes second by second while MY
+  // question is open; a right answer = I dash away, a wrong one = I stumble (he gains); when he reaches me = a personal
+  // zap (stunned, tiles locked, the question's clock held), then a shield. His speed follows my own answering pace
+  // (CH_K metres per answer at my usual pace: a quick kid meets a quick Robotín, a slow kid a slow one), so every kid
+  // feels him coming, and what keeps him away is answering RIGHT. Fair to the youngest: at most one zap per kid every
+  // 45 s (inside that he trips instead), the gap resets after a zap, a stun never shortens the question, a zap never
+  // takes a kid out of play and costs the crew nothing (co-op: nobody is blamed).
+  CH_G0: 14,                  // metres behind me at the start of every run and after a zap
+  CH_GMAX: 16,                // never farther: he is always in sight
+  CH_K: [2.6, 2.9, 3.2],      // metres he closes during one of my questions at my usual pace, zone 1..3
+  CH_PACE0: 7, CH_PACE: [3, 16], CH_EMA: 0.35,   // my answering pace (s): a first guess, its clamps, how fast it adapts
+  // … and with my recent accuracy (a kid who keeps missing meets a gentler Robotín, a kid who never misses a keener
+  // one: the youngest still feel him, the strongest still get close calls)
+  CH_ACC0: 0.75, CH_ACC_EMA: 0.25, CH_ACC_K: [0.55, 1.12],
+  CH_V: [0.15, 1.6],          // his closing speed (m/s), whatever my pace
+  CH_DASH: 7.5, CH_DASH_SUPER: 9.5,              // a right answer / a súper turbo: I dash this far away
+  CH_STUMBLE: 2.5, CH_FLOOR: 1.5,                // a wrong answer: he gains 2.5 m (a stumble alone never zaps)
+  // his lunges (a siren on my phone): for 1.8 s he speeds up (1.5×) and swoops in on a kid who is far ahead, down to
+  // 5-7.5 m (a close call even for the quickest kids); he lunges only at a kid more than 9 m ahead
+  CH_LUNGE_EVERY: [18000, 32000], CH_LUNGE_MS: 1800, CH_LUNGE_X: 1.5, CH_LUNGE_TO: [5, 7.5], CH_LUNGE_K: 1.3, CH_LUNGE_FAR: 9,
+  CH_WINDED_MS: 3000,                            // … and for 3 s after a lunge he can only trip, never zap (a scare, not a trap)
+  CH_STUN_MS: 1800, CH_SHIELD_MS: 3500,          // a zap: stunned 1.8 s, then a shield (he waits)
+  CH_ZAP_MIN_MS: 45000, CH_TRIP_TO: 6,           // at most one zap per kid per 45 s; inside it he trips back to 6 m
+  CH_NEAR: 4, CH_NEAR_OFF: 7, CH_WARN: 7,        // «¡Está detrás de ti!» under 4 m (again once past 7 m); red under 7
 };
 
 const isOn = (p) => p && !p.disconnected;
@@ -92,7 +117,7 @@ function newRound(seed, now, durationS, route) {
     id: seed + ':' + now, seed, startedAt: now, pace: paceFor(durationS), route: EscapeMap.routeIdx(route), runTarget: 0,
     level: 1, phase: 'run', phaseAt: now, phaseUntil: 0, hearts: R.HEARTS, replayed: {}, replay: false, replayCount: 0,
     crew: 0, robot: -R.GAP0, pending: 0, wakeAt: now + R.WAKE_MS, dazeUntil: 0, dizzyUntil: 0, lastZapAt: 0,
-    zaps: 0, turbos: 0, levelsCleared: 0, escaped: false,
+    zaps: 0, turbos: 0, levelsCleared: 0, escaped: false, runN: 1, pzaps: 0,
     room: null, zones: [], wave: 0, waveAt: 0, waveUntil: 0, waveResolved: false, pos: {}, idx: 0,
     paused: false, pausedAt: 0, milestones: {}, log: [],
   };
@@ -107,6 +132,9 @@ function preparePlayer(round, p) {
   p.esStreak = 0; p.esBest = 0; p.esTurbos = 0; p.esSupers = 0; p.esRight = 0; p.esWrong = 0;
   p.esSafe = 0; p.esWaves = 0; p.esReachMs = 0; p.esReachN = 0; p.esZapped = 0;
   p.esDizzyUntil = 0; p.esEnter = null; p.esReach = null;
+  // the chase pass: my own Robotín (chaseReset fills the rest on my first step of each run)
+  p.esRunN = 0; p.esPace = R.CH_PACE0; p.esAcc = R.CH_ACC0; p.esZapAt = -1e15; p.esPZaps = 0; p.esTrips = 0; p.esNears = 0; p.esEscapes = 0;
+  p.esGap = R.CH_G0; p.esStunUntil = 0; p.esShieldUntil = 0; p.esLungeAt = 0; p.esLungeUntil = 0; p.esOpenMs = 0;
   return p;
 }
 
@@ -184,11 +212,112 @@ function stepRun(round, players, dt, now) {
     round.dazeUntil = now + R.ROBOT_DAZE_MS;
     round.dizzyUntil = now + R.DIZZY_MS;
     round.sprintAt = now + R.ROBOT_DAZE_MS + nextSprint();       // no sprint right after a zap
-    kidsOn(players, round).forEach((p) => { p.esDizzyUntil = now + R.DIZZY_MS; p.esZapped = (p.esZapped || 0) + 1; });
+    // the chase pass: the whole crew caught slows the crew (dizzy 3 s, 6 m back) but locks nobody's tiles any more: the
+    // zaps that stun a kid are the personal ones (stepChase). (Locking every phone 3 s per crew zap cost a 5-kid class
+    // the jet in 6-minute rounds, the simulation of 2026-10-19.)
+    kidsOn(players, round).forEach((p) => { p.esZapped = (p.esZapped || 0) + 1; });
     ev.push({ type: 'zap', crew: round.crew, robot: round.robot });
   } else if (gap < R.CLOSE_M[round.level - 1] && !round.closeSaid) { round.closeSaid = true; ev.push({ type: 'close' }); }
   else if (gap > R.CLOSE_M[round.level - 1] + R.CLOSE_OFF) round.closeSaid = false;
   return ev;
+}
+
+// ---------- the chase pass: Robotín chases ME (2026-10-19) ----------
+const nextLunge = (rand) => R.CH_LUNGE_EVERY[0] + (rand || Math.random)() * (R.CH_LUNGE_EVERY[1] - R.CH_LUNGE_EVERY[0]);
+// his closing speed on me (m/s): CH_K metres per question at my usual pace, faster in later zones and on a replay
+function chaseSpeed(round, p) {
+  const pace = clamp(p.esPace || R.CH_PACE0, R.CH_PACE[0], R.CH_PACE[1]);
+  const acc = clamp(0.55 + 0.45 * (p.esAcc == null ? R.CH_ACC0 : p.esAcc) / R.CH_ACC0, R.CH_ACC_K[0], R.CH_ACC_K[1]);
+  const k = R.CH_K[Math.max(1, Math.min(R.LEVELS, round.level)) - 1] * acc * (round.replay ? R.REPLAY_MULT : 1);
+  return clamp(k / pace, R.CH_V[0], R.CH_V[1]);
+}
+// how fast he closes on me right now (m/s): his speed, and in a lunge 1.5× plus the swoop towards his lunge target
+function chaseV(round, p, now) {
+  const v = chaseSpeed(round, p);
+  if (!(now < (p.esLungeUntil || 0))) return v;
+  return v * R.CH_LUNGE_X + Math.max(0, (p.esGap || 0) - (p.esLungeTo || R.CH_LUNGE_TO[1])) * R.CH_LUNGE_K;
+}
+// a fresh chase for me: every run starts with him 14 m behind (the 45 s of his broom carry over)
+function chaseReset(round, p, now) {
+  p.esRunN = round.runN;
+  p.esGap = R.CH_G0;
+  p.esStunUntil = 0; p.esShieldUntil = 0; p.esLungeUntil = 0; p.esOpenMs = 0; p.esNearSaid = false;
+  p.esLungeAt = Math.max(now, round.wakeAt || 0) + nextLunge(round.rand);
+}
+// One step of MY chase (dt seconds). `open` = I have a question to answer right now. He closes in only while it is
+// open (never on the result screen, in the wake, a pause, my stun or my shield). Returns one event or null:
+//   { type: 'lunge', ms }   he lunges (a siren on my phone)
+//   { type: 'pzap' }        he reached me: stunned CH_STUN_MS, then the shield; the gap back to 14 m
+//   { type: 'trip' }        he reached me inside his 45 s: he trips back to 6 m («¡Uf!»)
+//   { type: 'near' }        under 4 m («¡Está detrás de ti!»), once until I am past 7 m again
+function stepChase(round, p, open, dt, now) {
+  if (round.phase !== 'run' || round.paused) return null;
+  if (p.esRunN !== round.runN) chaseReset(round, p, now);
+  const stunned = now < (p.esStunUntil || 0);
+  if (open && !stunned) p.esOpenMs = (p.esOpenMs || 0) + dt * 1000;      // my answer time (the stun is not mine)
+  if (!open || stunned || now < round.wakeAt || now < (p.esShieldUntil || 0)) return null;
+  let ev = null;
+  // (he lunges only at a kid far ahead: on a kid already close a lunge would just be a zap; it waits)
+  if (now >= (p.esLungeAt || 0) && now >= (p.esLungeUntil || 0) && p.esGap > R.CH_LUNGE_FAR) {
+    p.esLungeUntil = now + R.CH_LUNGE_MS;
+    p.esLungeAt = p.esLungeUntil + nextLunge(round.rand);
+    p.esLungeTo = R.CH_LUNGE_TO[0] + (round.rand || Math.random)() * (R.CH_LUNGE_TO[1] - R.CH_LUNGE_TO[0]);
+    ev = { type: 'lunge', ms: R.CH_LUNGE_MS };
+  }
+  p.esGap -= chaseV(round, p, now) * dt;
+  if (p.esGap <= 0) {
+    // a lunge never zaps by itself: reached during one (or just after it) he trips, out of breath
+    const winded = now < (p.esLungeUntil || 0) + R.CH_WINDED_MS;
+    p.esLungeUntil = 0;
+    if (!winded && now - (p.esZapAt == null ? -1e15 : p.esZapAt) >= R.CH_ZAP_MIN_MS) {
+      p.esZapAt = now;
+      p.esPZaps = (p.esPZaps || 0) + 1;
+      p.esStunUntil = now + R.CH_STUN_MS;
+      p.esShieldUntil = p.esStunUntil + R.CH_SHIELD_MS;
+      p.esGap = R.CH_G0;
+      p.esNearSaid = false;
+      p.esLungeAt = Math.max(p.esLungeAt, p.esShieldUntil + nextLunge(round.rand));
+      round.pzaps = (round.pzaps || 0) + 1;
+      return { type: 'pzap', stunMs: R.CH_STUN_MS, shieldMs: R.CH_SHIELD_MS };
+    }
+    p.esGap = R.CH_TRIP_TO;
+    p.esTrips = (p.esTrips || 0) + 1;
+    p.esNearSaid = false;
+    return { type: 'trip' };
+  }
+  if (p.esGap < R.CH_NEAR && !p.esNearSaid) { p.esNearSaid = true; p.esNears = (p.esNears || 0) + 1; if (!ev) ev = { type: 'near' }; }
+  else if (p.esGap > R.CH_NEAR_OFF) p.esNearSaid = false;
+  return ev;
+}
+// I answered (during a run): my pace learns from it; right = I dash away (súper turbo farther), wrong = he gains
+// (a stumble alone never zaps: he needs the next second of my next question). Returns { gap, from } or null.
+function chaseAnswer(round, p, correct, sup, now) {
+  if (round.phase !== 'run' || round.paused) { p.esOpenMs = 0; return null; }
+  if (p.esRunN !== round.runN) chaseReset(round, p, now);
+  const t = (p.esOpenMs || 0) / 1000;
+  p.esOpenMs = 0;
+  if (t > 0.3) p.esPace = (p.esPace || R.CH_PACE0) * (1 - R.CH_EMA) + clamp(t, 1, 20) * R.CH_EMA;
+  p.esAcc = (p.esAcc == null ? R.CH_ACC0 : p.esAcc) * (1 - R.CH_ACC_EMA) + (correct ? 1 : 0) * R.CH_ACC_EMA;
+  const from = p.esGap;
+  if (correct) {
+    p.esGap = Math.min(R.CH_GMAX, p.esGap + (sup ? R.CH_DASH_SUPER : R.CH_DASH));
+    if (from < R.CH_NEAR) p.esEscapes = (p.esEscapes || 0) + 1;       // «¡Por un pelo!»
+  } else if (p.esGap > R.CH_FLOOR) p.esGap = Math.max(R.CH_FLOOR, p.esGap - R.CH_STUMBLE);
+  return { gap: Math.round(p.esGap * 10) / 10, from: Math.round(from * 10) / 10 };
+}
+// what my phone needs to draw my chase (sent a few times a second; the phone glides between)
+function chaseView(round, p, now, open) {
+  if (p.esRunN !== round.runN) return { g: R.CH_G0, v: 0, st: 0, sh: 0, lu: 0, lt: 0 };      // (a new run: he starts 14 m back)
+  if (round.paused && round.pausedAt) now = round.pausedAt;     // (a pause holds every timer: the time left as it was)
+  const stun = Math.max(0, (p.esStunUntil || 0) - now), shield = Math.max(0, (p.esShieldUntil || 0) - now);
+  const lunge = Math.max(0, (p.esLungeUntil || 0) - now);
+  const moving = open && !stun && !shield && now >= round.wakeAt && round.phase === 'run' && !round.paused;
+  return {
+    g: Math.round((p.esGap == null ? R.CH_G0 : p.esGap) * 10) / 10,
+    // his base speed (the phone glides with it); in a lunge it adds the swoop itself towards `lt` (the same formula)
+    v: moving ? Math.round(chaseSpeed(round, p) * 100) / 100 : 0,
+    st: stun, sh: shield, lu: lunge, lt: lunge ? Math.round((p.esLungeTo || R.CH_LUNGE_TO[1]) * 10) / 10 : 0,
+  };
 }
 
 // ---------- zona segura ----------
@@ -301,6 +430,7 @@ function startRun(round, now, replay) {
   round.dazeUntil = 0; round.dizzyUntil = 0; round.lastZapAt = 0; round.closeSaid = false; round.sprintAt = 0; round.sprintSaid = false;
   round.replay = !!replay;
   round.zones = []; round.wave = 0; round.room = null; round.pos = {};
+  round.runN = (round.runN || 1) + 1;          // the chase pass: every kid's own Robotín starts again 14 m behind
 }
 function clearLevel(round) {
   round.levelsCleared = Math.max(round.levelsCleared, round.level);
@@ -369,6 +499,7 @@ function finish(round, players) {
     name: p.name, avatar: p.avatar || '', turbos: p.esTurbos || 0, supers: p.esSupers || 0, best: p.esBest || 0,
     right: p.esRight || 0, safe: p.esSafe || 0, waves: p.esWaves || 0, zapped: p.esZapped || 0,
     reach: p.esReachN ? Math.round(p.esReachMs / p.esReachN) : null, reachN: p.esReachN || 0, gone: !!p.disconnected,
+    escapes: p.esEscapes || 0, pzaps: p.esPZaps || 0,     // the chase pass: «¡por un pelo!» escapes, zaps on me
   }));
   // a kid's points: turbos (súper = 3) + 2 per safe wave
   rows.forEach((r) => { r.score = r.turbos + r.supers * 2 + r.safe * 2; });
@@ -395,11 +526,15 @@ function shiftTimers(round, players, ms) {
     if (p.esDizzyUntil) p.esDizzyUntil += ms;
     if (p.esEnter) p.esEnter.at += ms;
     if (p.esReach) p.esReach += ms;
+    // the chase pass: my stun, shield, lunge and the 45 s of his broom wait too
+    ['esStunUntil', 'esShieldUntil', 'esLungeAt', 'esLungeUntil'].forEach((k) => { if (p[k]) p[k] += ms; });
+    if (p.esZapAt > 0) p.esZapAt += ms;
   });
 }
 
 module.exports = {
   R, paceFor, zoneSeconds, retimeRun, newRound, preparePlayer, kidsOn, robotSpeed, turboGain, answer, stepRun,
+  chaseSpeed, chaseV, chaseReset, stepChase, chaseAnswer, chaseView,
   startZone, spawnPos, startWave, occupancy, resolveWave, afterZone, startRun, clearLevel, caught, skipZone, checkPos,
   rankOf, finish, shiftTimers, STARS,
 };

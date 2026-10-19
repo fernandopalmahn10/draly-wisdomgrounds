@@ -187,6 +187,8 @@
       sub = ex.escaped ? '¡Escaparon en el jet de Hamdan!' : `La tripulación llegó hasta ${escReached(ex)}`;
       if (zero) sub = 'Cada respuesta correcta es un turbo para la tripulación';
       if (me.turbos > 0 && me.safe > 0) fact(me.safe, me.safe === 1 ? 'ola a salvo' : 'olas a salvo');
+      // the chase pass (2026-10-19): Robotín was right behind me and I dashed away
+      if (me.escapes > 0) fact(me.escapes, me.escapes === 1 ? 'escape de Robotín por un pelo' : 'escapes de Robotín por un pelo');
       if (me.supers > 0) fact(me.supers, me.supers === 1 ? 'súper turbo' : 'súper turbos');
       if (me.best >= 2) fact(me.best, 'racha');
       aciertos();
