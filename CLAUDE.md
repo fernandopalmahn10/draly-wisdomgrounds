@@ -258,6 +258,19 @@ the checklist for any new game mode.
   seed creates a super admin only on the very first boot of an empty disk, never again (one-shot flag), and never with
   a code written in the source. Teacher codes never reach a kid's phone (inbox, special assignments, sentences) or a log
   line. The legacy password is the `WU_ADMIN_PASSWORD` env var only (no default in the code: unset = none).
+  **Editing a teacher** (his ask 2026-10-19: "edit the teachers' name and their codes and passwords"; super admin,
+  /maestro → Teachers): «Editar nombre y datos», «Cambiar código» (one window with «Cambiar mi código»: write one or
+  🎲 «Sugerir» → «¿Seguro?» → the new code shown ONCE with «Copiar»), each class code a button. Endpoints name a
+  teacher by uid (never a code in a URL), all behind `_teacherEditGate` (same-site, super admin, `_editRateOk`). 🎲 codes
+  come from `core/cartoon-codes.js` (animal + describer + food/thing + 2 digits, his «super cartoon style»; a new word
+  joins only after the same kid-safety check: no insult, body joke, slang, brand or double meaning anywhere in Latin
+  America or Spain). A typed teacher code is found with accents, spaces or without dashes, and codes stay unique without
+  their dashes. **Renaming a class code moves everything it tags**: live and archived kids first (refused while the
+  archive can't be read), then the code and its level, then classrooms and guides; the old code is retired (no other
+  class may take it, its own teacher may take it back); a code still on any kid is never given to another class;
+  anything new that stores a class code joins the rename. The old boot migrations of core/teachers.js are one-shot
+  (`oldSeedsDone`: they used to re-add codes and re-create two teachers on every boot, undoing a rename).
+  `node scripts/test-teacher-edit.js` must pass.
 - **A socket checks a teacher code only through `_socketCode`** (server.js, 2026-10-17; the projector-lock review found
   the warm-up presets, the warm-up / reading tools and the exam / warm-up / reading `host:reclaim` reading codes with no
   limit, and Cloudflare's rate limit covers only HTTP `/api`). Never compare a code in a socket handler yourself (the
