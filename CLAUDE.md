@@ -794,6 +794,17 @@ the checklist for any new game mode.
   and in real time while they answer, not only in a projector animation; every visible effect (a zap, a spark, a hit)
   has a real sound on the phone; the music fits the game's feeling (a chase sounds like a chase) and is not a short
   generic loop.
+- **Every player screen works on any device and heals itself** (his report 2026-10-19 on Las Trampillas: "my cell phone
+  responded pretty good, my laptop… in horizontal mode the screen can't display anything of the game… I had to work
+  around by exiting and entering the PIN again… make sure this bug doesn't prevail"): a kid's game screen works on a
+  phone (portrait and sideways) AND a laptop (1366×657 up to 1920×1080), and a screen that missed the game's start or
+  lost its connection catches up by itself; «exit and re-enter the PIN» is never the fix. Check a new or changed game's
+  player at those sizes, including a late join and a tab that was hidden when the game started.
+  **One name, one device** (the cause that day, in 10 of 11 games: his phone and laptop both joined as «Fernando», the
+  second took the first one's slot and left it on an empty screen; two kids called Sofía did the same): a name playing
+  right now on another connection is never taken; the same phone (its saved code) takes its slot back and the old tab
+  shows «Tu juego sigue en otra pantalla»; another device plays as «Name 2» (`_slotByName` in server.js,
+  `scripts/test-samename-live.js`, `scripts/check-trapdoor-screens.js` for the sizes).
 - **Design skills on every kid/teacher screen** (his question 2026-10-13: "have you been using Emil Kowalski, taste and
   impeccable?"): any new or changed screen of the platform or a pin game gets a pass with `emil-design-eng` (motion,
   press feel, timing), `design-taste-frontend` (layout and visual direction) and `impeccable` (critique + polish)
