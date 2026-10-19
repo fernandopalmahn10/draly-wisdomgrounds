@@ -24,7 +24,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.DRALY_DATA_DIR || path.join(__dirname, '..', 'data');   // tests: their own folder (2026-10-19)
 const FILE_PATH = path.join(DATA_DIR, 'classrooms.json');
 
 let classrooms = {};   // id -> { id, name, code, ts }
@@ -37,10 +37,13 @@ function ensureDir() {
 }
 function persistNow() {
   ensureDir();
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   try {
     fs.writeFileSync(FILE_PATH, JSON.stringify(classrooms, null, 2), 'utf8');
+    return true;
   } catch (e) {
     console.warn('[classrooms] failed to persist:', e.message);
+    return false;
   }
 }
 function scheduleSave() {
@@ -111,4 +114,14 @@ function findByCode(code) {
   return Object.values(classrooms).find((c) => c.code && c.code === cc) || null;
 }
 
-module.exports = { load, create, update, remove, get, list, findByCode };
+// 🆕 2026-10-19 a class code renamed in /maestro → Teachers: the classrooms tied to it follow. → how many
+function renameCode(from, to) {
+  const f = normCode(from), t = normCode(to);
+  if (!f || !t || f === t) return 0;
+  let n = 0;
+  Object.values(classrooms).forEach((c) => { if (c && c.code === f) { c.code = t; n++; } });
+  if (n) persistNow();
+  return n;
+}
+
+module.exports = { load, create, update, remove, get, list, findByCode, renameCode };

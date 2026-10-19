@@ -453,7 +453,8 @@ async function run() {
   ok((await get('/api/admin/students', { headers: Object.assign({}, school, T(NEW)) })).status === 429, '10 really wrong codes from that address lock it…');
   ok((await get('/api/admin/students', { jar: me.jar, headers: Object.assign({}, school, T(NEW)) })).status === 200, '… except a remembered teacher device (never stranded mid-class)');
   const sug = (await get('/api/admin/teachers/suggest-code', { headers: T(NEW) })).json;
-  ok(sug && /^T-[A-Z0-9]{8}$/.test(sug.code), '«nuevo código al azar» offers a code of the usual shape');
+  // (2026-10-19: 🎲 «Sugerir» offers a cartoon code: animal-describer-thing-NN, scripts/test-teacher-edit.js checks the words)
+  ok(sug && /^[A-Z]+-[A-Z]+-[A-Z]+-\d{2}$/.test(sug.code) && sug.code.length <= 24, '🎲 «Sugerir» offers a cartoon code');
 
   // ── 14. teacher codes never reach a kid's phone ──
   section('teacher codes stay off kids\' phones');

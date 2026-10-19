@@ -26,6 +26,8 @@ const Golden = require('./core/golden');             // 📖 El libro dorado: th
 const SentenceCategories = require('./core/sentence-categories');
 const Assignments = require('./core/assignments');
 const Teachers = require('./core/teachers');
+// (2026-10-19) a class code still on kids' accounts is never handed to another class (new, added or renamed codes)
+Teachers.configure({ classCodesOnKids: () => Students.classroomCodesInUse() });
 const Levels = require('./core/levels');
 const Packs = require('./core/packs');
 const Saga = require('./public/js/saga');   // the saga cast + animations (2026-10-12)
@@ -634,7 +636,9 @@ function _adminAuth(req, res) {
   const givenPw = _adminPw(req);
   // 🔒 2026-10-15: a code changed with «Cambiar mi código» is refused but never counted as a guess (every tab and
   // projector that still holds it keeps asking until it is reloaded, and that must not lock the school out)
-  if (givenPw && Teachers.isRetired(givenPw)) {
+  // (2026-10-19: only when no teacher holds it: a live code typed with its accents or without its dashes is never
+  // «retired» because an old code once looked like it)
+  if (givenPw && Teachers.isRetired(givenPw) && !Teachers.getByTeacherId(givenPw)) {
     if (res) res.status(401).json({ ok: false, retired: true, error: 'Este código ya se cambió. Entra con tu código nuevo.' });
     return null;
   }
@@ -2207,11 +2211,26 @@ function _changeTeacherCode(req, res, teacherId, newCode, isSelf) {
   if (isSelf) LevelKeys.rememberTeacher(req, res, { teacher: Teachers.getByTeacherId(out.teacher.teacherId) });
   res.json({ ok: true, teacher: out.teacher });
 }
+// 🔒 2026-10-19 — the teacher edits' rate: per signed-in teacher (60 changes / 300 🎲 ideas in 10 minutes: «ese código no
+// se puede usar» must not become a way to test codes) plus a looser cap per address (200 / 900), so one teacher at a
+// school's shared address never stalls another. → false = wait
+function _editRateOk(req, session, light) {
+  const win = 10 * 60 * 1000;
+  const who = (light ? 'ts:u:' : 'te:u:') + (session && session.teacher ? session.teacher.uid : 'legacy');
+  const addr = (light ? 'ts:a:' : 'te:a:') + _clientIp(req);
+  const max = light ? 300 : 60, amax = light ? 900 : 200;
+  if (!_autoHit(who, win, max, true) || !_autoHit(addr, win, amax, true)) return false;
+  _autoHit(who, win, max);
+  _autoHit(addr, win, amax);
+  return true;
+}
 app.post('/api/admin/my-code', (req, res) => {
   res.set('Cache-Control', 'no-store');
+  if (!_autoSameSite(req)) return res.status(403).json({ ok: false, error: 'Abre /maestro y cámbialo desde ahí.' });
   const session = _adminAuth(req, res);
   if (!session) return;
   if (!session.teacher) return res.status(400).json({ ok: false, error: 'Entraste con la contraseña de respaldo (WU_ADMIN_PASSWORD): esa se cambia en Render, no aquí.' });
+  if (!_editRateOk(req, session)) return res.status(429).json({ ok: false, error: 'Muchos intentos seguidos. Espera unos minutos.' });
   _changeTeacherCode(req, res, session.teacher.teacherId, (req.body || {}).newCode, true);
 });
 app.put('/api/admin/teachers/:teacherId/code', (req, res) => {
@@ -2222,11 +2241,142 @@ app.put('/api/admin/teachers/:teacherId/code', (req, res) => {
   const self = session.teacher && Teachers.getByTeacherId(req.params.teacherId) === session.teacher;
   _changeTeacherCode(req, res, req.params.teacherId, (req.body || {}).newCode, !!self);
 });
-app.get('/api/admin/teachers/suggest-code', (req, res) => {   // a random code of the usual shape (T-XXXXXXXX)
-  res.set('Cache-Control', 'no-store');
+// 🎲 «Sugerir» (2026-10-19, his ask: "send suggestions super cartoon style"): an animal + a describer + a food or thing +
+// 2 digits (core/cartoon-codes.js), free and never a retired code; every signed-in teacher (their own «Cambiar mi
+// código») and the super admin (anyone's). Made on the server with crypto randomness; never logged.
+app.get('/api/admin/teachers/suggest-code', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
   const session = _adminAuth(req, res);
   if (!session) return;
+  if (!_editRateOk(req, session, true)) return res.status(429).json({ ok: false, error: 'Muchas ideas seguidas. Espera un momento.' });
   res.json({ ok: true, code: Teachers.suggestCode() });
+});
+
+// ── 🆕 2026-10-19 /maestro → Teachers: edit a teacher (super admin; his ask: "edit the teachers' name and their codes
+// and passwords") ─────────────────────────────────────────────────────────────────────────────────────────────────
+// A teacher is named by uid in these URLs (never by a code: addresses reach access logs). Every change: the super
+// admin's code (X-Admin-Pw), a page of ours (_autoSameSite), the edit rate (_editRateOk), written at once, logged with
+// the teacher's name only (core/teachers.js), never a code. (The older /api/admin/teachers/:teacherId/… routes stay
+// only for pages loaded before this; /maestro no longer calls them: remove them once no old tab is left.)
+function _teacherEditGate(req, res, light) {
+  res.set('Cache-Control', 'private, no-store');
+  if (!_autoSameSite(req)) { res.status(403).json({ ok: false, error: 'Abre /maestro y cámbialo desde ahí.' }); return null; }
+  const session = _adminAuth(req, res);
+  if (!session) return null;
+  if (!session.isSuperAdmin) { res.status(403).json({ ok: false, error: 'Solo el super admin puede cambiar esto.' }); return null; }
+  if (!_editRateOk(req, session, light)) { res.status(429).json({ ok: false, error: 'Muchos cambios seguidos. Espera unos minutos.' }); return null; }
+  return session;
+}
+const _NO_TEACHER = 'No encontramos a esa maestra o maestro. Abre la pestaña otra vez.';
+const _teacherOfUid = (uid) => (typeof uid === 'string' && uid.length <= 40 ? Teachers.getByUid(uid) : null);
+// name / email / country → { ok, teacher, changed }
+app.put('/api/admin/teacher/:uid/profile', (req, res) => {
+  if (!_teacherEditGate(req, res)) return;
+  if (!_teacherOfUid(req.params.uid)) return res.status(404).json({ ok: false, error: _NO_TEACHER });
+  const b = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const patch = {};
+  ['displayName', 'email', 'country'].forEach((k) => { if (Object.prototype.hasOwnProperty.call(b, k)) patch[k] = b[k]; });
+  const out = Teachers.updateProfile(req.params.uid, patch);
+  res.status(out.ok ? 200 : 400).json(out);
+});
+// the teacher's login code («contraseña»): the same change as «Cambiar mi código» (old code retired, devices ask again,
+// special assignments follow); the super admin's own row keeps this device remembered. → { ok, teacher } (the new code
+// is teacher.teacherId: the window shows it once)
+app.put('/api/admin/teacher/:uid/code', (req, res) => {
+  const session = _teacherEditGate(req, res);
+  if (!session) return;
+  const t = _teacherOfUid(req.params.uid);
+  if (!t) return res.status(404).json({ ok: false, error: _NO_TEACHER });
+  _changeTeacherCode(req, res, t.teacherId, (req.body || {}).newCode, !!(session.teacher && session.teacher === t));
+});
+// the rest of the row by uid too (review 2026-10-19: these took the teacher's code in the URL): a class code's level
+// { code, level }, a new class code { level }, and deleting a teacher (never the super admin; their kids keep their code,
+// which is then never given to another class)
+app.put('/api/admin/teacher/:uid/class-codes/level', (req, res) => {
+  if (!_teacherEditGate(req, res)) return;
+  const t = _teacherOfUid(req.params.uid);
+  if (!t) return res.status(404).json({ ok: false, error: _NO_TEACHER });
+  const out = Teachers.setCodeLevel(t.teacherId, (req.body || {}).code, (req.body || {}).level);
+  if (!out) return res.status(400).json({ ok: false, error: 'Ese código o ese nivel no existe. Abre la pestaña otra vez.' });
+  res.json({ ok: true, teacher: out });
+});
+app.post('/api/admin/teacher/:uid/class-codes', (req, res) => {
+  if (!_teacherEditGate(req, res)) return;
+  const t = _teacherOfUid(req.params.uid);
+  if (!t) return res.status(404).json({ ok: false, error: _NO_TEACHER });
+  const out = Teachers.addAccessCode(t.teacherId, (req.body || {}).level);
+  if (!out) return res.status(400).json({ ok: false, error: 'Ese nivel no existe. Abre la pestaña otra vez.' });
+  res.json({ ok: true, code: out.code, teacher: out.teacher });
+});
+app.delete('/api/admin/teacher/:uid', (req, res) => {
+  if (!_teacherEditGate(req, res)) return;
+  const t = _teacherOfUid(req.params.uid);
+  if (!t) return res.status(404).json({ ok: false, error: _NO_TEACHER });
+  if (!Teachers.deleteTeacher(t.teacherId)) return res.status(400).json({ ok: false, error: 'El super admin no se puede borrar.' });
+  res.json({ ok: true });
+});
+// 🎲 a class code: 4 digits, free (no class, no kids, never retired)
+app.get('/api/admin/class-codes/suggest', (req, res) => {
+  if (!_teacherEditGate(req, res, true)) return;
+  res.json({ ok: true, code: Teachers.suggestClassCode() });
+});
+// Before renaming a class code: is the new one allowed, and how many kids move? { from, to? } → { ok, from, to, kids:
+// { live, archived }, classrooms } | 400 { error }
+app.post('/api/admin/teacher/:uid/class-code/check', (req, res) => {
+  if (!_teacherEditGate(req, res, true)) return;
+  const b = req.body || {};
+  const t = _teacherOfUid(req.params.uid);
+  if (!t) return res.status(404).json({ ok: false, error: _NO_TEACHER });
+  const from = String(b.from == null ? '' : b.from).trim().toUpperCase();
+  if (!(t.accessCodes || []).includes(from)) return res.status(400).json({ ok: false, error: 'Ese código de clase ya no es de esta maestra. Abre la pestaña otra vez.' });
+  const info = { ok: true, from, kids: Students.countByClassroomCode(from), classrooms: Classrooms.list().filter((c) => c.code === from).length };
+  if (b.to != null && String(b.to).trim()) {
+    const c = Teachers.checkClassCodeRename(t.uid, from, b.to);
+    if (!c.ok) return res.status(400).json(Object.assign(info, { ok: false, error: c.error }));
+    info.to = c.to;
+  }
+  res.json(info);
+});
+// Rename a class code everywhere it lives, so no kid or data is lost: every account tagged with it (live and in the
+// archive: their names, results, homework, seals, level all stay; they only carry the new code), then the teacher's
+// code list and the code's level (codeLevels), its named classrooms and guides. The old code stops existing at once and
+// is retired (no other class may take it; this teacher may take it back). A kid with a session or a remembered phone
+// keeps going; a phone that only saved the old class code asks for the kid's code + level key (the 4-number door is
+// closed); PIN rooms tag new kids with the new code. Refused (nothing changed) when the archive can't be read or the
+// disk refuses. { from, to } → { ok, teacher, from, to, kids: { live, archived }, classrooms, guides }
+app.put('/api/admin/teacher/:uid/class-code', (req, res) => {
+  if (!_teacherEditGate(req, res)) return;
+  const b = req.body || {};
+  const t = _teacherOfUid(req.params.uid);
+  if (!t) return res.status(404).json({ ok: false, error: _NO_TEACHER });
+  const c = Teachers.checkClassCodeRename(t.uid, b.from, b.to);
+  if (!c.ok) return res.status(400).json(c);
+  const NOT_CHANGED = 'No se pudo guardar: el código de clase no cambió y ningún alumno se movió. Vuelve a intentarlo en un momento.';
+  const s = Students.renameClassroomCode(c.from, c.to);     // 1. the kids, written at once (undone by itself on failure)
+  if (!s.ok) {
+    console.warn('[teachers] a class code rename was refused: ' + (s.error === 'archive' ? 'the archive file is unreadable' : 'the student file was not written'));
+    return res.status(503).json({ ok: false, error: s.error === 'archive'
+      ? 'Ahora no se puede: el archivo de cuentas archivadas no se puede leer y esos alumnos no se moverían. El código de clase no cambió.'
+      : NOT_CHANGED });
+  }
+  let done = Teachers.commitClassCodeRename(t.uid, c.from, c.to);   // 2. the teacher's code + its level
+  if (!done.ok) {
+    const back = Students.renameClassroomCode(c.to, c.from);
+    if (back.ok) {
+      console.warn('[teachers] a class code rename was undone (the teacher file was not written)');
+      return res.status(503).json({ ok: false, error: NOT_CHANGED });
+    }
+    // (review 2026-10-19) the kids could not move back either: the teacher follows them in memory (saved by the next
+    // write), so no kid is left on a code nobody owns
+    done = Teachers.commitClassCodeRename(t.uid, c.from, c.to, true);
+    console.warn('[teachers] a class code rename: the disk refused twice; kept in memory' + (done.ok ? '' : ' FAILED: the kids carry a code no teacher owns'));
+    return res.status(503).json({ ok: false, error: 'Los alumnos ya pasaron al código nuevo, pero el disco no respondió bien. Abre esta pestaña otra vez en un minuto para comprobarlo.' });
+  }
+  let classrooms = 0, guides = 0;                                     // 3. what else carries the class code
+  try { classrooms = Classrooms.renameCode(c.from, c.to); } catch (e) { console.warn('[teachers] classrooms not renamed:', e.message); }
+  try { guides = Guides.renameClassroomCode(c.from, c.to); } catch (e) { console.warn('[teachers] guides not renamed:', e.message); }
+  console.log('[teachers] class code rename: ' + s.live + ' kids moved, ' + s.archived + ' archived, ' + classrooms + ' classrooms, ' + guides + ' guides');
+  res.json({ ok: true, teacher: done.teacher, from: c.from, to: c.to, kids: { live: s.live, archived: s.archived }, classrooms, guides });
 });
 
 // ── 🔑 2026-10-15 «Claves de nivel» (super-admin): see, set and change each level's key (core/level-keys.js) ──────
@@ -2307,7 +2457,9 @@ function _hwCheckAccess(req, res, opts) {
     // 🆕 2026-10-18 (la entrada): a kid who came in with the level key has no class code: their session on this phone is
     // the pass when the page sends NO class code (each endpoint still asks _hwOwnsStudent whose record it may touch).
     // A wrong class code is still refused, and the old form's login always needs a real one (classCodeOnly).
-    if (!String(code || '').trim() && !(opts && opts.classCodeOnly) && _entradaSessionKid(req)) return true;
+    // 🆕 2026-10-19: a class code the super admin renamed (retired) counts as no code for a kid with a session: a page
+    // that was open at that moment keeps working (its kid's record already carries the new code); it opens nothing else
+    if ((!String(code || '').trim() || Teachers.isRetiredClassCode(code)) && !(opts && opts.classCodeOnly) && _entradaSessionKid(req)) return true;
     res.status(401).json({ ok: false, error: 'Código de acceso incorrecto' });
     return false;
   }

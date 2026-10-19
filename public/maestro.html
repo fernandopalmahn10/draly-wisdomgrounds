@@ -18,7 +18,7 @@
   <!-- 2026-10-13 remake: the teacher's control room in the platform's sticker world (spec docs/specs/maestro-remake.md).
        teacher-dashboard.css is this page's only stylesheet; maestro.css stays for host-hsk.html. -->
   <link rel="stylesheet" href="/css/back.css?v=20261018a">
-  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261018v2">
+  <link rel="stylesheet" href="/css/teacher-dashboard.css?v=20261019te">
 </head>
 <body class="m-app">
 
@@ -163,7 +163,7 @@
             <h2 class="m-h2 m-teachers-title">Teachers</h2>
             <button class="btn btn-gold btn-sm" id="m-new-teacher-btn" type="button">➕ Create teacher</button>
           </div>
-          <p class="m-teachers-help">Each teacher gets a private teacher code (to sign in here) and one class code per level (public: students type it at /homework). The level of a class code decides which homework its kids get.</p>
+          <p class="m-teachers-help">Cada maestra tiene un código privado para entrar aquí y un código de clase por nivel; el nivel del código decide qué tareas reciben sus alumnos. «Editar nombre y datos» cambia su nombre, «Cambiar código» le da un código nuevo para entrar, y tocar un código de clase (sus 4 números) lo cambia sin perder a ningún alumno.</p>
           <div id="m-teachers-list" class="m-teachers-list"></div>
         </section>
 
@@ -227,25 +227,108 @@
       </aside>
     </div>
 
-    <!-- 🔑 2026-10-15 «Cambiar mi código» (and, for the super admin, another teacher's code): the old code stops at once -->
+    <!-- 🔑 2026-10-15 «Cambiar mi código» (and, for the super admin, another teacher's code): the old code stops at once.
+         2026-10-19: three steps in the window (write or 🎲 → «¿Seguro?» → the new code shown once with «Copiar») -->
     <div id="m-mycode-modal" class="m-modal hidden">
-      <div class="m-modal-card">
-        <button class="m-modal-close" id="m-mycode-close" type="button" aria-label="Close">✕</button>
+      <div class="m-modal-card m-step-card">
+        <button class="m-modal-close" id="m-mycode-close" type="button" aria-label="Cerrar">✕</button>
         <h2 id="m-mycode-title">🔑 Cambiar mi código</h2>
-        <p class="m-modal-sub" id="m-mycode-sub">Your new teacher code: to sign in here and to open games. The old code stops working at once, on every device. / Tu código nuevo: la clave vieja deja de funcionar en todos los aparatos.</p>
-        <label class="m-form-label">
-          <span>Código nuevo: 8 o más letras y números (new code)</span>
-          <input class="input m-code-input" id="m-mycode-new" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false">
-        </label>
-        <label class="m-form-label">
-          <span>Escríbelo otra vez (type it again)</span>
-          <input class="input m-code-input" id="m-mycode-again" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false">
-        </label>
-        <div class="m-mycode-actions">
-          <button class="btn btn-gold btn-xl" id="m-mycode-save" type="button">Cambiar el código</button>
-          <button class="btn btn-ghost btn-sm" id="m-mycode-random" type="button" title="Fill in a random code of the usual shape">🎲 Código al azar</button>
+        <div class="m-step" data-step="form">
+          <p class="m-modal-sub" id="m-mycode-sub"></p>
+          <label class="m-form-label" for="m-mycode-new"><span>Código nuevo: de 8 a 24 letras y números (los guiones valen)</span></label>
+          <div class="m-code-field">
+            <input class="input m-code-input" id="m-mycode-new" type="text" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="m-mycode-hint">
+            <button class="btn btn-ghost m-dice" id="m-mycode-random" type="button"><span class="m-dice-face" aria-hidden="true">🎲</span> Sugerir</button>
+          </div>
+          <p class="m-field-hint" id="m-mycode-hint">🎲 inventa uno divertido: un animal, cómo es, una comida o una cosa y dos números. Toca otra vez para otro.</p>
+          <button class="btn btn-gold btn-xl" id="m-mycode-review" type="button">Revisar</button>
+          <p class="m-modal-msg is-error" id="m-mycode-msg" role="alert"></p>
         </div>
-        <p class="m-modal-msg" id="m-mycode-msg" role="status"></p>
+        <div class="m-step hidden" data-step="confirm">
+          <p class="m-step-ask" id="m-mycode-ask"></p>
+          <p class="m-bigcode" id="m-mycode-preview" translate="no"></p>
+          <ul class="m-what" id="m-mycode-what"></ul>
+          <div class="m-step-actions">
+            <button class="btn btn-ghost btn-xl" type="button" data-step-back>← Volver</button>
+            <button class="btn btn-gold btn-xl" id="m-mycode-save" type="button">Sí, cambiarlo</button>
+          </div>
+          <p class="m-modal-msg is-error" id="m-mycode-msg2" role="alert"></p>
+        </div>
+        <div class="m-step hidden" data-step="done">
+          <p class="m-done-badge"><span aria-hidden="true">✓</span> <span id="m-mycode-done-title">Código cambiado</span></p>
+          <p class="m-done-line" id="m-mycode-line"></p>
+          <p class="m-bigcode is-new" id="m-mycode-final" translate="no"></p>
+          <button class="btn btn-gold btn-xl" id="m-mycode-copy" type="button">📋 Copiar</button>
+          <button class="btn btn-ghost btn-xl" id="m-mycode-done" type="button">Listo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✏️ 2026-10-19 /maestro → Teachers (super admin): a teacher's name, email and country -->
+    <div id="m-tedit-modal" class="m-modal hidden">
+      <div class="m-modal-card m-step-card">
+        <button class="m-modal-close" id="m-tedit-close" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="m-tedit-title">✏️ Editar nombre y datos</h2>
+        <form class="m-step" data-step="form" id="m-tedit-form" novalidate>
+          <p class="m-modal-sub">El nombre se ve en este panel y en los mensajes que reciben sus alumnos.</p>
+          <label class="m-form-label"><span>Nombre</span>
+            <input class="input" id="m-tedit-name" type="text" maxlength="60" autocomplete="off" spellcheck="false"></label>
+          <label class="m-form-label"><span>Correo (opcional)</span>
+            <input class="input" id="m-tedit-email" type="email" maxlength="120" autocomplete="off" spellcheck="false"></label>
+          <label class="m-form-label"><span>País (opcional): sus 2 o 3 letras, como MX, AE o AR</span>
+            <input class="input m-tedit-country" id="m-tedit-country" type="text" maxlength="3" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>
+          <button class="btn btn-gold btn-xl" type="submit">Revisar</button>
+          <p class="m-modal-msg is-error" id="m-tedit-msg" role="alert"></p>
+        </form>
+        <div class="m-step hidden" data-step="confirm">
+          <p class="m-step-ask">¿Guardar estos cambios?</p>
+          <dl class="m-diff" id="m-tedit-diff"></dl>
+          <div class="m-step-actions">
+            <button class="btn btn-ghost btn-xl" type="button" data-step-back>← Volver</button>
+            <button class="btn btn-gold btn-xl" id="m-tedit-save" type="button">Sí, guardar</button>
+          </div>
+          <p class="m-modal-msg is-error" id="m-tedit-msg2" role="alert"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📚 2026-10-19 /maestro → Teachers (super admin): rename a class code everywhere it lives (server.js) -->
+    <div id="m-cc-modal" class="m-modal hidden">
+      <div class="m-modal-card m-step-card">
+        <button class="m-modal-close" id="m-cc-close" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="m-cc-title">📚 Cambiar un código de clase</h2>
+        <div class="m-step" data-step="form">
+          <p class="m-modal-sub" id="m-cc-sub"></p>
+          <label class="m-form-label" for="m-cc-new"><span>Código de clase nuevo: 4 números</span></label>
+          <div class="m-code-field">
+            <input class="input m-code-input m-cc-input" id="m-cc-new" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" spellcheck="false" placeholder="••••">
+            <button class="btn btn-ghost m-dice" id="m-cc-random" type="button"><span class="m-dice-face" aria-hidden="true">🎲</span> Sugerir</button>
+          </div>
+          <p class="m-field-hint m-cc-calm">Los alumnos pasan solos al código nuevo y no pierden nada. Antes de cambiarlo te mostramos qué pasa.</p>
+          <button class="btn btn-gold btn-xl" id="m-cc-review" type="button">Revisar</button>
+          <p class="m-modal-msg is-error" id="m-cc-msg" role="alert"></p>
+        </div>
+        <div class="m-step hidden" data-step="confirm">
+          <p class="m-step-ask" id="m-cc-ask"></p>
+          <p class="m-cc-swap" translate="no"><span class="m-bigcode is-old" id="m-cc-from"></span><span class="m-cc-arrow" aria-hidden="true">→</span><span class="m-bigcode" id="m-cc-to"></span></p>
+          <p class="m-cc-count" id="m-cc-count"></p>
+          <div class="m-kids-box">
+            <h3 class="m-kids-title">Qué pasa con los alumnos</h3>
+            <ul class="m-what" id="m-cc-what"></ul>
+          </div>
+          <div class="m-step-actions">
+            <button class="btn btn-ghost btn-xl" type="button" data-step-back>← Volver</button>
+            <button class="btn btn-gold btn-xl" id="m-cc-save" type="button">Sí, cambiarlo</button>
+          </div>
+          <p class="m-modal-msg is-error" id="m-cc-msg2" role="alert"></p>
+        </div>
+        <div class="m-step hidden" data-step="done">
+          <p class="m-done-badge"><span aria-hidden="true">✓</span> La clase ya usa su código nuevo</p>
+          <p class="m-done-line" id="m-cc-line"></p>
+          <p class="m-bigcode is-new" id="m-cc-final" translate="no"></p>
+          <button class="btn btn-gold btn-xl" id="m-cc-copy" type="button">📋 Copiar</button>
+          <button class="btn btn-ghost btn-xl" id="m-cc-done" type="button">Listo</button>
+        </div>
       </div>
     </div>
 
@@ -510,7 +593,7 @@
   <script src="/js/warmup-vocab.js?v=20260706a"></script>
   <script src="/js/saga.js?v=20261013a"></script>
   <script src="/js/cast.js?v=20261017td"></script>
-  <script src="/js/maestro.js?v=20261018sec2"></script>
+  <script src="/js/maestro.js?v=20261019te"></script>
   <script src="/js/pwa.js?v=20261012a" defer></script>
 </body>
 </html>

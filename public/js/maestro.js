@@ -2676,11 +2676,14 @@
     const l = mLevels.find((x) => x.id === (id || 'hsk1'));
     return l ? l.teacherName : String(id);
   }
-  function fetchTeachers() {
+  // quiet (2026-10-19, after an edit in a window): the rows stay until the new ones arrive, so the page does not jump
+  function fetchTeachers(quiet) {
     const list = $('m-teachers-list');
-    list.innerHTML = '<div class="m-empty">Loading teachers…</div>';
-    fetchLevelKeys();   // 🔑 the «Claves de nivel» panel sits on top of this tab (2026-10-15)
-    fetchRutaRules();   // 🏆 and La Ruta Dorada's rules under it (2026-10-16)
+    if (quiet !== true) {
+      list.innerHTML = '<div class="m-empty">Loading teachers…</div>';
+      fetchLevelKeys();   // 🔑 the «Claves de nivel» panel sits on top of this tab (2026-10-15)
+      fetchRutaRules();   // 🏆 and La Ruta Dorada's rules under it (2026-10-16)
+    }
     adminFetch('/api/admin/levels', pw).then((r) => r.json())
       .then((d) => { if (d && d.ok && Array.isArray(d.levels)) mLevels = d.levels; })
       .catch(() => {})
@@ -2693,93 +2696,100 @@
       .catch(() => { list.innerHTML = '<div class="m-empty">Could not load the teachers. Check the connection, then open this tab again.</div>'; });
   }
   // 🆕 2026-10-12 — change a classroom code's level / add a code with a level (super admin)
-  function setCodeLevel(teacherId, code, level, sel) {
+  // (2026-10-19: a teacher is named by uid in the address, never by her code: addresses reach access logs)
+  function setCodeLevel(uid, code, level, sel) {
     sel.disabled = true;
-    adminFetch('/api/admin/teachers/' + encodeURIComponent(teacherId) + '/codes/' + encodeURIComponent(code), pw, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ level }),
+    adminFetch('/api/admin/teacher/' + encodeURIComponent(uid) + '/class-codes/level', pw, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, level }),
     }).then((r) => r.json()).then((d) => {
       sel.disabled = false;
-      if (!d || !d.ok) { notify('Error: ' + (d && d.error || '')); fetchTeachers(); return; }
+      if (!d || !d.ok) { notify('Error: ' + (d && d.error || '')); fetchTeachers(true); return; }
       sel.closest('.m-code-chip').classList.add('is-saved');
       setTimeout(() => { const c = sel.closest('.m-code-chip'); if (c) c.classList.remove('is-saved'); }, 1200);
-    }).catch(() => { sel.disabled = false; notify('Network error'); });
+    }).catch(() => { sel.disabled = false; notify('Sin conexión. Vuelve a intentarlo.', 'error'); });
   }
-  function addCode(teacherId, level, displayName) {
-    if (!confirm('Add a new ' + levelLabel(level) + ' classroom code for ' + displayName + '?')) return;
-    adminFetch('/api/admin/teachers/' + encodeURIComponent(teacherId) + '/codes', pw, {
+  function addCode(uid, level, displayName) {
+    if (!confirm('¿Añadir un código de clase de ' + levelLabel(level) + ' para ' + displayName + '?')) return;
+    adminFetch('/api/admin/teacher/' + encodeURIComponent(uid) + '/class-codes', pw, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ level }),
     }).then((r) => r.json()).then((d) => {
       if (!d || !d.ok) { notify('Error: ' + (d && d.error || '')); return; }
-      notify('New classroom code: ' + d.code + ' (' + levelLabel(level) + ')');
-      fetchTeachers();
-    }).catch(() => notify('Network error'));
+      notify('✓ Código de clase nuevo: ' + d.code + ' (' + levelLabel(level) + ')');
+      fetchTeachers(true);
+    }).catch(() => notify('Sin conexión. Vuelve a intentarlo.', 'error'));
   }
+  // 2026-10-19 (his ask: edit the teachers' names, codes and class codes): the row in Spanish, with ✏️ name and data,
+  // 🔑 a new sign-in code and a pencil on each class code. Only the super admin sees this tab.
   function renderTeachers(teachers) {
     const list = $('m-teachers-list');
     list.innerHTML = '';
     if (!teachers.length) {
-      list.innerHTML = '<div class="m-empty">No teachers yet. Create the first one ↑</div>';
+      list.innerHTML = '<div class="m-empty">Todavía no hay maestras. Crea la primera ↑</div>';
       return;
     }
     teachers.forEach((t) => {
       const row = document.createElement('div');
       row.className = 'm-teacher-row' + (t.isSuperAdmin ? ' is-super' : '');
-      const since = t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : 'unknown';
+      const since = t.createdAt ? new Date(t.createdAt).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
       row.innerHTML = `
         <div class="m-teacher-main">
-          <div class="m-teacher-name">${escapeHtml(t.displayName || 'Anon')}${t.isSuperAdmin ? ' <span class="m-teacher-badge">👑 Super admin</span>' : ''}</div>
-          <div class="m-teacher-meta">${escapeHtml(t.email || 'no email')}${t.country ? ' · ' + escapeHtml(t.country) : ''} · since ${since}</div>
+          <div class="m-teacher-name">${escapeHtml(t.displayName || 'Sin nombre')}${t.isSuperAdmin ? ' <span class="m-teacher-badge">👑 Super admin</span>' : ''}</div>
+          <div class="m-teacher-meta">${escapeHtml(t.email || 'sin correo')}${t.country ? ' · ' + escapeHtml(t.country) : ''}${since ? ' · desde ' + escapeHtml(since) : ''}</div>
+          <button class="btn btn-ghost btn-sm m-teacher-edit" type="button">✏️ Editar nombre y datos</button>
         </div>
         <div class="m-teacher-codes">
           <div class="m-teacher-code-row">
-            <span class="m-teacher-code-label">🔑 Teacher code:</span>
-            <code class="m-teacher-code is-secret" data-secret="${escapeHtml(t.teacherId)}" aria-label="Hidden teacher code">••••••</code>
-            <button class="btn btn-ghost btn-sm m-secret-btn" type="button" aria-pressed="false" title="The private sign-in code: hidden so a projector never shows it">Show</button>
-            <button class="btn btn-ghost btn-sm m-code-change-btn" type="button" title="Give this teacher a new code: the old one stops working at once">🔑 Change code</button>
+            <span class="m-teacher-code-label">🔑 Código para entrar:</span>
+            <code class="m-teacher-code is-secret" data-secret="${escapeHtml(t.teacherId)}" aria-label="Código oculto" translate="no">••••••</code>
+            <button class="btn btn-ghost btn-sm m-secret-btn" type="button" aria-pressed="false" title="El código privado para entrar: oculto para que el proyector nunca lo muestre">Ver</button>
+            <button class="btn btn-ghost btn-sm m-code-change-btn" type="button" title="Un código nuevo para entrar: el anterior deja de funcionar al momento">🔑 Cambiar código</button>
           </div>
           <div class="m-teacher-code-row m-teacher-code-row--codes">
-            <span class="m-teacher-code-label">📚 Classroom codes:</span>
-            ${(t.accessCodes || []).map((c) => `<span class="m-code-chip"><code class="m-teacher-code">${escapeHtml(c)}</code>`
-              + `<select class="m-code-level" data-code="${escapeHtml(c)}" aria-label="Level of code ${escapeHtml(c)}">`
+            <span class="m-teacher-code-label">📚 Códigos de clase:</span>
+            ${(t.accessCodes || []).map((c) => `<span class="m-code-chip"><button class="m-teacher-code m-cc-edit" type="button" data-code="${escapeHtml(c)}" translate="no"`
+              + ` aria-label="Cambiar el código de clase ${escapeHtml(c)}" title="Cambiar este código de clase (los alumnos pasan solos al nuevo)">${escapeHtml(c)}<span class="m-cc-pen" aria-hidden="true">✏️</span></button>`
+              + `<select class="m-code-level" data-code="${escapeHtml(c)}" aria-label="Nivel del código ${escapeHtml(c)}">`
               + mLevels.map((l) => `<option value="${escapeHtml(l.id)}"${((t.codeLevels || {})[c] || 'hsk1') === l.id ? ' selected' : ''}>${escapeHtml(l.emoji + ' ' + l.teacherName)}</option>`).join('')
               + `</select></span>`).join('')}
             <span class="m-code-add">
-              <span class="m-code-add-label">New code:</span>
-              <select class="m-code-add-level" aria-label="Level of the new code">${mLevels.map((l) => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.emoji + ' ' + l.teacherName)}</option>`).join('')}</select>
-              <button class="btn btn-ghost btn-sm m-code-add-btn" type="button">➕ Add</button>
+              <span class="m-code-add-label">Nuevo:</span>
+              <select class="m-code-add-level" aria-label="Nivel del código nuevo">${mLevels.map((l) => `<option value="${escapeHtml(l.id)}">${escapeHtml(l.emoji + ' ' + l.teacherName)}</option>`).join('')}</select>
+              <button class="btn btn-ghost btn-sm m-code-add-btn" type="button">➕ Añadir</button>
             </span>
           </div>
         </div>
-        ${t.isSuperAdmin ? '' : `<button class="btn btn-red btn-sm m-teacher-del" data-id="${escapeHtml(t.teacherId)}" type="button">🗑️ Delete</button>`}`;
+        ${t.isSuperAdmin ? '' : `<button class="btn btn-red btn-sm m-teacher-del" type="button">🗑️ Borrar</button>`}`;
       const del = row.querySelector('.m-teacher-del');
-      if (del) del.addEventListener('click', () => deleteTeacher(t.teacherId, t.displayName));
+      if (del) del.addEventListener('click', () => deleteTeacher(t.uid, t.displayName));
       // 2026-10-13: private codes stay masked (the Teachers tab may be on the projector in front of the class)
       const secretBtn = row.querySelector('.m-secret-btn');
       const secret = row.querySelector('.m-teacher-code.is-secret, .m-teacher-code[data-secret]');
       if (secretBtn && secret) secretBtn.addEventListener('click', () => {
         const show = secretBtn.getAttribute('aria-pressed') !== 'true';
         secretBtn.setAttribute('aria-pressed', String(show));
-        secretBtn.textContent = show ? 'Hide' : 'Show';
+        secretBtn.textContent = show ? 'Ocultar' : 'Ver';
         secret.textContent = show ? secret.dataset.secret : '••••••';
         secret.classList.toggle('is-secret', !show);
-        secret.setAttribute('aria-label', show ? 'Teacher code' : 'Hidden teacher code');
+        secret.setAttribute('aria-label', show ? 'Código para entrar' : 'Código oculto');
       });
       row.querySelectorAll('.m-code-level').forEach((sel) => {
         const was = sel.value;
         sel.addEventListener('change', () => {
           // one code = a whole class: confirm before every kid on it changes level
-          if (!confirm('Change classroom code ' + sel.dataset.code + ' to ' + levelLabel(sel.value) + '?\n\n'
-            + 'Every kid who types ' + sel.dataset.code + ' gets ' + levelLabel(sel.value) + ' homework from their next login.')) {
+          if (!confirm('¿Cambiar el código de clase ' + sel.dataset.code + ' a ' + levelLabel(sel.value) + '?\n\n'
+            + 'Cada alumno que entra con ' + sel.dataset.code + ' recibe las tareas de ' + levelLabel(sel.value) + ' desde su próxima entrada.')) {
             sel.value = was;
             return;
           }
-          setCodeLevel(t.teacherId, sel.dataset.code, sel.value, sel);
+          setCodeLevel(t.uid, sel.dataset.code, sel.value, sel);
         });
       });
       row.querySelector('.m-code-add-btn').addEventListener('click', () => {
-        addCode(t.teacherId, row.querySelector('.m-code-add-level').value, t.displayName || t.teacherId);
+        addCode(t.uid, row.querySelector('.m-code-add-level').value, t.displayName || 'esta maestra');
       });
-      row.querySelector('.m-code-change-btn').addEventListener('click', () => openCodeModal({ teacherId: t.teacherId, displayName: t.displayName }));
+      row.querySelector('.m-teacher-edit').addEventListener('click', () => openTeacherEdit(t));
+      row.querySelector('.m-code-change-btn').addEventListener('click', () => openCodeModal(t));
+      row.querySelectorAll('.m-cc-edit').forEach((b) => b.addEventListener('click', () => openClassCodeModal(t, b.dataset.code)));
       list.appendChild(row);
     });
   }
@@ -2970,65 +2980,328 @@
   // ── 🔑 2026-10-15 «Cambiar mi código» (every teacher) · another teacher's code (super admin) ─────────────────────
   // The super-admin code was served to everyone in an old comment of this file: the code can now be changed here.
   // The old code stops at once on every device; this browser keeps working with the new one.
-  let _codeTarget = null;    // null = my own code · { teacherId, displayName } = another teacher's (super admin)
+  // 2026-10-19: one flow for everyone, in three steps inside the window (write it or 🎲 → «¿Seguro?» → the new code
+  // shown once, with «Copiar»); the super admin opens the same window from a teacher's row (by uid, never the code
+  // in the address).
+  // ── windows in steps (form → confirm → done): the three teacher edits share these ─────────────────────────────
+  function stepTo(modal, step) {
+    modal.querySelectorAll('.m-step').forEach((s) => s.classList.toggle('hidden', s.dataset.step !== step));
+    const card = modal.querySelector('.m-modal-card');
+    if (card) card.scrollTop = 0;
+    const box = modal.querySelector('.m-step[data-step="' + step + '"]');
+    // the field on the first step; «Copiar» on the last; on «¿Seguro?» the window itself (a held Enter never confirms)
+    const el = step === 'form' ? box && box.querySelector('input') : step === 'done' ? box && box.querySelector('.btn-gold') : card;
+    setTimeout(() => { try { if (el && !modal.classList.contains('hidden')) el.focus({ preventScroll: true }); } catch (_) {} }, 40);
+  }
+  document.querySelectorAll('.m-step-card [data-step-back]').forEach((b) => b.addEventListener('click', () => {
+    const m = b.closest('.m-modal');
+    if (m) stepTo(m, 'form');
+  }));
+  function busyBtn(btn, label) {
+    if (label) { btn.dataset.idle = btn.textContent; btn.textContent = label; btn.disabled = true; btn.setAttribute('aria-busy', 'true'); }
+    else { if (btn.dataset.idle) btn.textContent = btn.dataset.idle; btn.disabled = false; btn.removeAttribute('aria-busy'); }
+  }
+  // the response with its status (a refused value goes back to the field; a server or network trouble stays put)
+  const jsonOf = (r) => r.json().catch(() => null).then((d) => ({ status: r.status, d }));
+  function copyBtn(btn, text) {
+    const done = () => {
+      btn.classList.add('is-copied');
+      const was = btn.dataset.idle2 || btn.textContent;
+      btn.dataset.idle2 = was;
+      btn.textContent = '✓ Copiado';
+      clearTimeout(btn._copyT);
+      btn._copyT = setTimeout(() => { btn.textContent = was; btn.classList.remove('is-copied'); }, 1800);
+    };
+    copyText(text).then(done).catch(() => { window.prompt('Copia este código:', text); });
+  }
+  function rollDice(btn) {
+    btn.classList.remove('is-rolling');
+    void btn.offsetWidth;   // (restart the little roll on every tap)
+    btn.classList.add('is-rolling');
+  }
+
+  // ── 🔑 the sign-in code («contraseña») ──
+  let _codeTarget = null;    // null = my own code · a teacher row (super admin): { uid, teacherId, displayName }
+  let _codeNew = '';
+  const _isSelfRow = (t) => !t || !!(_self && _self.teacherId && t.teacherId === _self.teacherId);
+  const _nameOf = (t) => (t && t.displayName) || 'esta maestra';
+  // the same rules as the server (core/teachers.js validateNewCode): accents folded, spaces → one dash, 8-24 characters
+  function codeShape(raw) {
+    const c = String(raw || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().replace(/\s+/g, '-').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    if (!c) return { error: 'Escribe el código nuevo o toca 🎲 Sugerir.' };
+    if (c.replace(/-/g, '').length < 8) return { error: 'El código necesita al menos 8 letras o números.' };
+    if (c.length > 24) return { error: 'El código puede tener 24 caracteres como máximo.' };
+    if (!/[A-Z]/.test(c) || !/[0-9]/.test(c)) return { error: 'Usa letras y números juntos: unas palabras y unos números.' };
+    return { code: c };
+  }
   function openCodeModal(target) {
     _codeTarget = target || null;
-    $('m-mycode-title').textContent = target ? '🔑 Cambiar el código de ' + (target.displayName || 'esta maestra') : '🔑 Cambiar mi código';
-    $('m-mycode-sub').textContent = target
-      ? 'Su código viejo deja de funcionar al momento, en todos los aparatos. Dale el nuevo en privado. (Their old code stops working at once.)'
-      : 'Tu código nuevo sirve para entrar aquí y para abrir juegos. El viejo deja de funcionar al momento, en todos los aparatos. (The old code stops working at once, on every device.)';
+    _codeNew = '';
+    const self = _isSelfRow(target);
+    $('m-mycode-title').textContent = self ? '🔑 Cambiar mi código' : '🔑 Código para entrar · ' + _nameOf(target);
+    $('m-mycode-sub').textContent = self
+      ? 'Tu código sirve para entrar aquí y para abrir juegos.'
+      : 'Es el código con el que ' + _nameOf(target) + ' entra aquí y abre juegos.';
     $('m-mycode-new').value = '';
-    $('m-mycode-again').value = '';
     $('m-mycode-msg').textContent = '';
-    $('m-mycode-random').classList.toggle('hidden', !(_self && _self.isSuperAdmin));
+    $('m-mycode-msg2').textContent = '';
     $('m-mycode-modal').classList.remove('hidden');
-    setTimeout(() => { try { $('m-mycode-new').focus(); } catch (_) {} }, 40);
+    stepTo($('m-mycode-modal'), 'form');
+  }
+  // a toast waits until its window closes (review 2026-10-19: over an open window it covered the title and repeated
+  // the done step's own badge)
+  let _afterClose = null;
+  function toastOnClose(msg) { _afterClose = msg; }
+  function flushToast() { const m = _afterClose; _afterClose = null; if (m) notify(m); }
+  function closeCodeModal() {
+    flushToast();
+    $('m-mycode-modal').classList.add('hidden');
+    $('m-mycode-final').textContent = '';     // the new code is shown once: it does not stay in the page
+    $('m-mycode-preview').textContent = '';
+    $('m-mycode-new').value = '';
+    _codeNew = '';
   }
   $('m-mycode-btn').addEventListener('click', () => openCodeModal(null));
-  $('m-mycode-close').addEventListener('click', () => $('m-mycode-modal').classList.add('hidden'));
+  $('m-mycode-close').addEventListener('click', closeCodeModal);
+  $('m-mycode-done').addEventListener('click', closeCodeModal);
   $('m-mycode-random').addEventListener('click', () => {
-    adminFetch('/api/admin/teachers/suggest-code', pw).then((r) => r.json()).then((d) => {
-      if (!d || !d.ok) return;
+    const btn = $('m-mycode-random');
+    rollDice(btn);
+    adminFetch('/api/admin/teachers/suggest-code', pw).then(jsonOf).then(({ d }) => {
+      if (!d || !d.ok) { $('m-mycode-msg').textContent = (d && d.error) || 'No salió una idea. Toca 🎲 otra vez.'; return; }
       $('m-mycode-new').value = d.code;
-      $('m-mycode-again').value = d.code;
-    }).catch(() => {});
+      $('m-mycode-msg').textContent = '';
+    }).catch(() => { $('m-mycode-msg').textContent = 'Sin conexión. Vuelve a intentarlo.'; });
   });
+  function reviewCode() {
+    const s = codeShape($('m-mycode-new').value);
+    if (s.error) { $('m-mycode-msg').textContent = s.error; $('m-mycode-new').focus(); return; }
+    _codeNew = s.code;
+    const self = _isSelfRow(_codeTarget);
+    $('m-mycode-ask').textContent = self ? '¿Cambiar tu código por este?' : '¿Darle a ' + _nameOf(_codeTarget) + ' este código nuevo?';
+    $('m-mycode-preview').textContent = s.code;
+    $('m-mycode-what').innerHTML = (self
+      ? ['Tu código de ahora deja de funcionar al momento, en todos los aparatos.',
+        'Las otras computadoras y proyectores te pedirán el código nuevo.',
+        'En esta computadora sigues dentro.']
+      : ['Su código de ahora deja de funcionar al momento, en todos sus aparatos.',
+        'Sus computadoras y proyectores le pedirán el código nuevo.',
+        'Sus alumnos, sus clases y sus tareas especiales no cambian.']).map((x) => '<li>' + escapeHtml(x) + '</li>').join('');
+    $('m-mycode-msg2').textContent = '';
+    stepTo($('m-mycode-modal'), 'confirm');
+  }
+  $('m-mycode-review').addEventListener('click', reviewCode);
+  $('m-mycode-new').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); reviewCode(); } });
   $('m-mycode-save').addEventListener('click', () => {
-    const a = $('m-mycode-new').value.trim();
-    const b = $('m-mycode-again').value.trim();
-    const msg = $('m-mycode-msg');
-    if (!a) { msg.textContent = 'Type the new code.'; $('m-mycode-new').focus(); return; }
-    if (a.toUpperCase() !== b.toUpperCase()) { msg.textContent = 'The two codes are not the same. / Los dos códigos no coinciden.'; $('m-mycode-again').focus(); return; }
+    const btn = $('m-mycode-save');
+    if (btn.disabled || !_codeNew) return;
     const target = _codeTarget;
-    const self = !target || (_self && _self.teacherId && target.teacherId === _self.teacherId);
-    if (!confirm(self ? 'Change your teacher code now?\n\nThe old code stops working at once on every device (other computers and projectors will ask for the new one).'
-      : 'Change the code of ' + (target.displayName || 'this teacher') + ' now?\n\nTheir old code stops working at once.')) return;
-    msg.textContent = 'Saving…';
-    const url = target ? '/api/admin/teachers/' + encodeURIComponent(target.teacherId) + '/code' : '/api/admin/my-code';
-    adminFetch(url, pw, { method: target ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newCode: a }) })
-      .then((r) => r.json()).then((d) => {
-        if (!d || !d.ok) { msg.textContent = (d && d.error) || 'Could not change the code.'; return; }
+    const self = _isSelfRow(target);
+    const url = target ? '/api/admin/teacher/' + encodeURIComponent(target.uid) + '/code' : '/api/admin/my-code';
+    busyBtn(btn, 'Cambiando…');
+    adminFetch(url, pw, { method: target ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ newCode: _codeNew }) })
+      .then(jsonOf).then(({ status, d }) => {
+        busyBtn(btn);
+        if (!d || !d.ok) {
+          const err = (d && d.error) || 'No se pudo cambiar el código. Vuelve a intentarlo.';
+          if (status === 400) { stepTo($('m-mycode-modal'), 'form'); $('m-mycode-msg').textContent = err; }
+          else $('m-mycode-msg2').textContent = err;
+          return;
+        }
+        const code = d.teacher.teacherId;
         if (self) {
-          pw = d.teacher.teacherId;
+          pw = code;
           try { localStorage.setItem(STORAGE_PW, pw); } catch (_) {}
           try { if (localStorage.getItem('mochi.maestroPw')) localStorage.setItem('mochi.maestroPw', pw); } catch (_) {}
         }
-        $('m-mycode-modal').classList.add('hidden');
-        notify(self ? '✓ Code changed. Use the new one from now on (keep it private).' : '✓ The code of ' + (target.displayName || 'the teacher') + ' changed.');
-        if (!$('m-tabpanel-teachers').classList.contains('hidden')) fetchTeachers();
+        $('m-mycode-done-title').textContent = self ? 'Tu código cambió' : 'Código cambiado';
+        $('m-mycode-final').textContent = code;
+        $('m-mycode-line').textContent = self
+          ? 'Este es tu código nuevo. Anótalo en un lugar seguro: el anterior ya no funciona.'
+          : 'Dale este código nuevo a la maestra: el anterior ya no funciona.';
+        $('m-mycode-preview').textContent = '';
+        _codeNew = '';
+        stepTo($('m-mycode-modal'), 'done');
+        toastOnClose(self ? '✓ Tu código cambió.' : '✓ El código de ' + _nameOf(target) + ' cambió.');
+        if (!$('m-tabpanel-teachers').classList.contains('hidden')) fetchTeachers(true);
         fetchRoster();
-      }).catch(() => { msg.textContent = 'Network error. Try again.'; });
+      }).catch(() => { busyBtn(btn); $('m-mycode-msg2').textContent = 'Sin conexión. Vuelve a intentarlo.'; });
+  });
+  $('m-mycode-copy').addEventListener('click', () => copyBtn($('m-mycode-copy'), $('m-mycode-final').textContent));
+
+  // ── ✏️ a teacher's name, email and country (super admin) ──
+  let _editTarget = null;
+  const _EDIT_LABELS = { displayName: 'Nombre', email: 'Correo', country: 'País' };
+  let _editNext = null;
+  function openTeacherEdit(t) {
+    _editTarget = t;
+    _editNext = null;
+    $('m-tedit-title').textContent = '✏️ ' + _nameOf(t);
+    $('m-tedit-name').value = t.displayName || '';
+    $('m-tedit-email').value = t.email || '';
+    $('m-tedit-country').value = t.country || '';
+    $('m-tedit-msg').textContent = '';
+    $('m-tedit-msg2').textContent = '';
+    $('m-tedit-modal').classList.remove('hidden');
+    stepTo($('m-tedit-modal'), 'form');
+  }
+  $('m-tedit-close').addEventListener('click', () => $('m-tedit-modal').classList.add('hidden'));
+  $('m-tedit-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const t = _editTarget;
+    if (!t) return;
+    const msg = $('m-tedit-msg');
+    const next = {
+      displayName: $('m-tedit-name').value.replace(/\s+/g, ' ').trim(),
+      email: $('m-tedit-email').value.trim(),
+      country: $('m-tedit-country').value.trim().toUpperCase(),
+    };
+    if (!next.displayName) { msg.textContent = 'Escribe el nombre.'; $('m-tedit-name').focus(); return; }
+    if (next.email && !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(next.email)) { msg.textContent = 'Ese correo no parece bien escrito. Revísalo o déjalo vacío.'; $('m-tedit-email').focus(); return; }
+    if (next.country && !/^[A-Z]{2,3}$/.test(next.country)) { msg.textContent = 'El país son 2 o 3 letras, o déjalo vacío.'; $('m-tedit-country').focus(); return; }
+    const changed = Object.keys(next).filter((k) => (t[k] || '') !== next[k]);
+    if (!changed.length) { msg.textContent = 'No cambiaste nada.'; return; }
+    msg.textContent = '';
+    _editNext = {};
+    changed.forEach((k) => { _editNext[k] = next[k]; });
+    $('m-tedit-diff').innerHTML = changed.map((k) => '<div class="m-diff-row"><dt>' + _EDIT_LABELS[k] + '</dt><dd>' +
+      '<span class="m-diff-old">' + escapeHtml(t[k] || '(vacío)') + '</span><span class="m-diff-arrow" aria-label="cambia a">→</span>' +
+      '<span class="m-diff-new">' + escapeHtml(next[k] || '(vacío)') + '</span></dd></div>').join('');
+    $('m-tedit-msg2').textContent = '';
+    stepTo($('m-tedit-modal'), 'confirm');
+  });
+  $('m-tedit-save').addEventListener('click', () => {
+    const btn = $('m-tedit-save');
+    const t = _editTarget;
+    if (btn.disabled || !t || !_editNext) return;
+    busyBtn(btn, 'Guardando…');
+    adminFetch('/api/admin/teacher/' + encodeURIComponent(t.uid) + '/profile', pw, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(_editNext),
+    }).then(jsonOf).then(({ status, d }) => {
+      busyBtn(btn);
+      if (!d || !d.ok) {
+        const err = (d && d.error) || 'No se pudo guardar. Vuelve a intentarlo.';
+        if (status === 400) { stepTo($('m-tedit-modal'), 'form'); $('m-tedit-msg').textContent = err; }
+        else $('m-tedit-msg2').textContent = err;
+        return;
+      }
+      $('m-tedit-modal').classList.add('hidden');
+      notify('✓ Datos de ' + _nameOf(d.teacher) + ' guardados.');
+      fetchTeachers(true);
+      if (_isSelfRow(t)) fetchRoster();     // (his own name in the top bar)
+    }).catch(() => { busyBtn(btn); $('m-tedit-msg2').textContent = 'Sin conexión. Vuelve a intentarlo.'; });
   });
 
-  function deleteTeacher(teacherId, displayName) {
-    // (the private teacher code is not printed: the Teachers tab keeps it masked)
-    if (!confirm(`Delete the teacher "${displayName}"?\n\nTheir students will be orphaned (you can reassign them later).`)) return;
-    adminFetch('/api/admin/teachers/' + encodeURIComponent(teacherId), pw, { method: 'DELETE' })
+  // ── 📚 a class code, renamed everywhere it lives (super admin; server.js moves every kid) ──
+  let _ccTarget = null, _ccFrom = '', _ccTo = '';
+  function openClassCodeModal(t, code) {
+    _ccTarget = t;
+    _ccFrom = String(code || '');
+    _ccTo = '';
+    const self = _isSelfRow(t);
+    const lvl = levelLabel((t.codeLevels || {})[_ccFrom] || 'hsk1');
+    $('m-cc-sub').innerHTML = (self ? 'Tu clase' : 'Clase de <b>' + escapeHtml(_nameOf(t)) + '</b>') + ' · ' + escapeHtml(lvl) +
+      ' · código de ahora: <b class="m-cc-now" translate="no">' + escapeHtml(_ccFrom) + '</b>';
+    $('m-cc-new').value = '';
+    $('m-cc-msg').textContent = '';
+    $('m-cc-msg2').textContent = '';
+    $('m-cc-modal').classList.remove('hidden');
+    stepTo($('m-cc-modal'), 'form');
+  }
+  const closeCc = () => { flushToast(); $('m-cc-modal').classList.add('hidden'); };
+  $('m-cc-close').addEventListener('click', closeCc);
+  $('m-cc-done').addEventListener('click', closeCc);
+  $('m-cc-new').addEventListener('input', () => {
+    const el = $('m-cc-new');
+    const v = el.value.replace(/\D+/g, '').slice(0, 4);
+    if (v !== el.value) el.value = v;
+  });
+  $('m-cc-random').addEventListener('click', () => {
+    rollDice($('m-cc-random'));
+    adminFetch('/api/admin/class-codes/suggest', pw).then(jsonOf).then(({ d }) => {
+      if (!d || !d.ok) { $('m-cc-msg').textContent = (d && d.error) || 'No salió una idea. Toca 🎲 otra vez.'; return; }
+      $('m-cc-new').value = d.code;
+      $('m-cc-msg').textContent = '';
+    }).catch(() => { $('m-cc-msg').textContent = 'Sin conexión. Vuelve a intentarlo.'; });
+  });
+  const _plural = (n, one, many) => n + ' ' + (n === 1 ? one : many);
+  function reviewClassCode() {
+    const t = _ccTarget;
+    const msg = $('m-cc-msg');
+    const to = $('m-cc-new').value.trim();
+    if (!/^\d{4}$/.test(to)) { msg.textContent = 'Escribe 4 números o toca 🎲 Sugerir.'; $('m-cc-new').focus(); return; }
+    if (to[0] === '0') { msg.textContent = 'Que no empiece con 0: del 1000 al 9999.'; $('m-cc-new').focus(); return; }
+    const btn = $('m-cc-review');
+    if (btn.disabled || !t) return;
+    busyBtn(btn, 'Revisando…');
+    adminFetch('/api/admin/teacher/' + encodeURIComponent(t.uid) + '/class-code/check', pw, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: _ccFrom, to }),
+    }).then(jsonOf).then(({ d }) => {
+      busyBtn(btn);
+      if (!d || !d.ok) { msg.textContent = (d && d.error) || 'No se pudo revisar. Vuelve a intentarlo.'; $('m-cc-new').focus(); return; }
+      msg.textContent = '';
+      _ccTo = d.to;
+      const live = (d.kids && d.kids.live) || 0, arch = (d.kids && d.kids.archived) || 0;
+      $('m-cc-ask').textContent = _isSelfRow(t) ? '¿Cambiar el código de tu clase?' : '¿Cambiar el código de la clase de ' + _nameOf(t) + '?';
+      $('m-cc-from').textContent = d.from;
+      $('m-cc-to').textContent = d.to;
+      $('m-cc-count').textContent = !live && !arch
+        ? 'Ningún alumno tiene este código todavía.'
+        : _plural(live, 'alumno pasa', 'alumnos pasan') + ' al código nuevo' +
+          (arch ? ', y ' + _plural(arch, 'cuenta archivada', 'cuentas archivadas') + ' (vuelven ya con el código nuevo)' : '') + '.' +
+          (d.classrooms ? ' Sus grupos de «Classrooms» también.' : '');
+      // what changes for kids (his brief: say it in the window), with the real old number
+      $('m-cc-what').innerHTML = [
+        'Siguen con su nombre, sus resultados, sus tareas, sus sellos y su nivel.',
+        'Los que entran con la clave de su nivel no notan nada.',
+        'Un teléfono que ya recuerda al alumno entra solo. Uno que solo guardó el ' + d.from + ' le pedirá su código y la clave de su nivel.',
+        'En clase con PIN, los alumnos nuevos quedan en el código nuevo.',
+        'El ' + d.from + ' deja de funcionar y ninguna otra clase lo podrá usar.',
+      ].map((x) => '<li>' + escapeHtml(x) + '</li>').join('');
+      $('m-cc-msg2').textContent = '';
+      stepTo($('m-cc-modal'), 'confirm');
+    }).catch(() => { busyBtn(btn); msg.textContent = 'Sin conexión. Vuelve a intentarlo.'; });
+  }
+  $('m-cc-review').addEventListener('click', reviewClassCode);
+  $('m-cc-new').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); reviewClassCode(); } });
+  $('m-cc-save').addEventListener('click', () => {
+    const btn = $('m-cc-save');
+    const t = _ccTarget;
+    if (btn.disabled || !t || !_ccTo) return;
+    busyBtn(btn, 'Cambiando…');
+    adminFetch('/api/admin/teacher/' + encodeURIComponent(t.uid) + '/class-code', pw, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: _ccFrom, to: _ccTo }),
+    }).then(jsonOf).then(({ status, d }) => {
+      busyBtn(btn);
+      if (!d || !d.ok) {
+        const err = (d && d.error) || 'No se pudo cambiar. Vuelve a intentarlo.';
+        if (status === 400) { stepTo($('m-cc-modal'), 'form'); $('m-cc-msg').textContent = err; }
+        else $('m-cc-msg2').textContent = err;
+        return;
+      }
+      const moved = ((d.kids && d.kids.live) || 0) + ((d.kids && d.kids.archived) || 0);
+      $('m-cc-final').textContent = d.to;
+      $('m-cc-line').textContent = _isSelfRow(t)
+        ? 'Tu clase ahora entra con este código. ' + (moved ? 'Tus alumnos ya están en él.' : '')
+        : 'Avísale a ' + _nameOf(t) + ': su clase ahora entra con este código. ' + (moved ? 'Sus alumnos ya están en él.' : '');
+      stepTo($('m-cc-modal'), 'done');
+      toastOnClose('✓ Código de clase cambiado' + (moved ? ': ' + _plural(moved, 'alumno pasó', 'alumnos pasaron') + ' al código nuevo.' : '.'));
+      _ccTo = '';
+      fetchTeachers(true);
+      fetchRoster();
+    }).catch(() => { busyBtn(btn); $('m-cc-msg2').textContent = 'Sin conexión. Vuelve a intentarlo.'; });
+  });
+  $('m-cc-copy').addEventListener('click', () => copyBtn($('m-cc-copy'), $('m-cc-final').textContent));
+
+  function deleteTeacher(uid, displayName) {
+    // (the private teacher code is not printed: the Teachers tab keeps it masked; by uid since 2026-10-19)
+    if (!confirm(`¿Borrar a «${displayName}»?\n\nSus alumnos se quedan sin maestra (puedes pasarlos a otra después).`)) return;
+    adminFetch('/api/admin/teacher/' + encodeURIComponent(uid), pw, { method: 'DELETE' })
       .then((r) => r.json())
       .then((data) => {
         if (!data || !data.ok) { notify('Error: ' + (data && data.error || '')); return; }
-        fetchTeachers();
-      });
+        fetchTeachers(true);
+      }).catch(() => notify('Sin conexión. Vuelve a intentarlo.', 'error'));
   }
   // Create-teacher modal
   $('m-new-teacher-btn').addEventListener('click', () => {
@@ -3062,7 +3335,7 @@
         $('m-result-access-code').textContent = (data.teacher.accessCodes || [])
           .map((c) => c + ' (' + levelLabel(cl[c]) + ')').join(' · ');
         $('m-new-teacher-result').classList.remove('hidden');
-        fetchTeachers();   // refresh list in background
+        fetchTeachers(true);   // refresh list in background
       });
   });
 

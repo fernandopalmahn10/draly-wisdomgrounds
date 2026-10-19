@@ -31,6 +31,12 @@
 // (never shown, never a secret) that cookies and stored references use
 // instead of the code. Codes never go into a log line.
 //
+// ── EDITING A TEACHER (2026-10-19, super admin, /maestro → Teachers) ────────
+// updateProfile() changes a name / email / country; the 🎲 «Sugerir» code is a cartoon one (core/cartoon-codes.js);
+// a CLASS code can be renamed: server.js moves every kid tagged with it (live and archived), its named classrooms and
+// guides, then commitClassCodeRename() moves the code + its level here and retires the old one (teachers-meta.json
+// retiredClass: no other class may take it again). The old boot migrations are one-shot since that day.
+//
 // ── PHONE SWITCHING ──────────────────────────────────────────────────
 // All teacher data lives in data/teachers.json on Render's persistent
 // disk. The teacher's localStorage on each device holds only their
@@ -42,25 +48,57 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const Levels = require('./levels');
+const CartoonCodes = require('./cartoon-codes');
 
 const DATA_DIR = process.env.DRALY_DATA_DIR || path.join(__dirname, '..', 'data');   // tests: their own folder
 const FILE_PATH = path.join(DATA_DIR, 'teachers.json');
 // One-shot facts about the teacher table that must survive even if teachers.json is lost or unreadable: a super-admin
 // existed once (so the boot seed never runs again) and the hashes of retired codes (never reused).
 const META_PATH = path.join(DATA_DIR, 'teachers-meta.json');
-let meta = { superAdminSeenAt: 0, retired: [] };
+// retiredClass (2026-10-19): class codes renamed in /maestro → Teachers, [{ h: hash, by: teacher uid }]: no other class
+// may take one again (old phones and printed sheets must never land in someone else's class); the same teacher may
+// take hers back (an undo). retiredLoose: the same retired teacher codes by their letters and digits alone (a code
+// typed without its dashes, see getByTeacherId). oldSeedsDone: the one-shot flag of the old boot migrations (load()).
+const META_DEFAULTS = () => ({ superAdminSeenAt: 0, retired: [], retiredLoose: [], retiredClass: [], oldSeedsDone: 0 });
+let meta = META_DEFAULTS();
 function loadMeta() {
-  try { meta = Object.assign({ superAdminSeenAt: 0, retired: [] }, JSON.parse(fs.readFileSync(META_PATH, 'utf8')) || {}); }
-  catch (_) { meta = { superAdminSeenAt: 0, retired: [] }; }
-  if (!Array.isArray(meta.retired)) meta.retired = [];
+  if (!fs.existsSync(META_PATH)) meta = META_DEFAULTS();
+  else {
+    try { meta = Object.assign(META_DEFAULTS(), JSON.parse(fs.readFileSync(META_PATH, 'utf8')) || {}); }
+    catch (e) {
+      // 2026-10-19 (review): never start from zero on an unreadable meta file: a lost one-shot flag would run the seed or
+      // the old migrations again, a lost retirement could hand an old class code to another class. Kept aside, and the
+      // flags fail safe (on: the legacy WU_ADMIN_PASSWORD still lets him in to restore a backup).
+      const aside = META_PATH.replace(/\.json$/, '.unreadable-' + Date.now() + '.json');
+      try { fs.renameSync(META_PATH, aside); } catch (_) { /* ignore */ }
+      console.error('[teachers] teachers-meta.json unreadable, kept as', path.basename(aside), '-', e.message);
+      meta = Object.assign(META_DEFAULTS(), { superAdminSeenAt: Date.now(), oldSeedsDone: Date.now() });
+    }
+  }
+  ['retired', 'retiredLoose', 'retiredClass'].forEach((k) => { if (!Array.isArray(meta[k])) meta[k] = []; });
 }
+// → true once written (written whole: a crash mid-write never leaves a cut-off file)
 function saveMeta() {
   ensureDir();
-  try { fs.writeFileSync(META_PATH, JSON.stringify(meta, null, 2), 'utf8'); }
-  catch (e) { console.warn('[teachers] failed to write the meta file:', e.message); }
+  try {
+    const tmp = META_PATH + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(meta, null, 2), 'utf8');
+    fs.renameSync(tmp, META_PATH);
+    return true;
+  } catch (e) { console.warn('[teachers] failed to write the meta file:', e.message); return false; }
 }
-const codeHash = (code) => crypto.createHash('sha256').update('draly-teacher-code:' + normalizeTeacherId(code)).digest('hex').slice(0, 32);
-const isRetired = (code) => !!normalizeTeacherId(code) && meta.retired.includes(codeHash(code));
+const _hashOf = (norm) => crypto.createHash('sha256').update('draly-teacher-code:' + norm).digest('hex').slice(0, 32);
+const codeHash = (code) => _hashOf(normalizeTeacherId(code));
+const looseHash = (code) => crypto.createHash('sha256').update('draly-teacher-loose:' + looseTeacherId(code)).digest('hex').slice(0, 32);
+// (2026-10-19: also typed with its accents or without its dashes, see getByTeacherId. Callers look the code up FIRST:
+// a live code is never «retired» because of how it was typed)
+const isRetired = (code) => !!normalizeTeacherId(code) && (meta.retired.includes(codeHash(code)) ||
+  meta.retired.includes(_hashOf(foldTeacherId(code))) || meta.retiredLoose.includes(looseHash(code)));
+// class codes (4 digits kids typed at /homework): stored trimmed, in capitals (getByAccessCode)
+const normClassCode = (code) => String(code == null ? '' : code).replace(/\s+/g, '').toUpperCase();
+const classHash = (code) => crypto.createHash('sha256').update('draly-class-code:' + normClassCode(code)).digest('hex').slice(0, 32);
+const _retiredClass = (code) => { const h = classHash(code); return meta.retiredClass.find((r) => r && r.h === h) || null; };
+const isRetiredClassCode = (code) => !!normClassCode(code) && !!_retiredClass(code);
 const newUid = () => crypto.randomBytes(9).toString('base64url');
 // The first seeded super-admin's code, as a hash (the code itself was exposed and must not live in the source): the
 // record still holding it, or null once he changed it.
@@ -79,12 +117,18 @@ function ensureDir() {
   }
 }
 
+// → true once written (2026-10-19: the /maestro edits undo themselves when the disk refuses)
 function persistNow() {
   ensureDir();
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   try {
-    fs.writeFileSync(FILE_PATH, JSON.stringify(teachers, null, 2), 'utf8');
+    const tmp = FILE_PATH + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(teachers, null, 2), 'utf8');
+    fs.renameSync(tmp, FILE_PATH);                 // a crash mid-write never leaves a cut-off file
+    return true;
   } catch (e) {
     console.warn('[teachers] failed to persist:', e.message);
+    return false;
   }
 }
 function scheduleSave() {
@@ -136,6 +180,13 @@ function afterLoad() {
     meta.superAdminSeenAt = Date.now();
     saveMeta();
   }
+  // 🆕 2026-10-19: the old boot migrations ran (or had nothing to do) on a table with teachers: never again. Names and
+  // class codes are edited in /maestro now, and a migration run on every boot would undo him (class codes 1002 / 1003
+  // pushed back onto the first super-admin) or bring a renamed «Ms Enni» / «Ms Nicole» back as a new account.
+  if (!meta.oldSeedsDone && Object.keys(teachers).length) {
+    meta.oldSeedsDone = Date.now();
+    saveMeta();
+  }
 }
 
 function load() {
@@ -144,7 +195,7 @@ function load() {
   if (!fs.existsSync(FILE_PATH)) {
     teachers = {};
     seedIfEmpty();
-    if (Object.keys(teachers).length) applyNamedSetup20260923();
+    if (Object.keys(teachers).length && !meta.oldSeedsDone) applyNamedSetup20260923();
     afterLoad();
     return;
   }
@@ -169,6 +220,16 @@ function load() {
   // to start an empty table and seed over the file).
   try {
     seedIfEmpty();
+    if (!meta.oldSeedsDone) runOldSeeds();
+  } catch (e) {
+    console.warn('[teachers] a boot migration failed (accounts kept):', e.message);
+  }
+  afterLoad();
+}
+// The one-time migrations of 2026-05 → 2026-10-12, kept for a disk that never ran them; one-shot since 2026-10-19
+// (meta.oldSeedsDone, set by afterLoad).
+function runOldSeeds() {
+  {
     // One-time migration: rename the old default "Sra. Emaar" to the
     // new "🐉 Dralingo 老师" on the existing persistent-disk record.
     // (The disk already has the old name from the first seed.)
@@ -195,10 +256,7 @@ function load() {
     }
     seedYctCode20261012();
     applyNamedSetup20260923();
-  } catch (e) {
-    console.warn('[teachers] a boot migration failed (accounts kept):', e.message);
   }
-  afterLoad();
 }
 
 // 🆕 2026-10-12 (Fernando) — YCT door: access code 1003 (level yct1) on the super-admin, like 1002 for New HSK 1.
@@ -253,10 +311,27 @@ function normalizeTeacherId(id) {
   if (!id || typeof id !== 'string') return null;
   return id.toUpperCase().replace(/[^A-Z0-9-]/g, '');
 }
+// 🆕 2026-10-19 (the cartoon codes are Spanish words joined by dashes, given by WhatsApp or out loud): a code typed with
+// its accents («dragón»), with spaces or without the dashes still finds its teacher. The exact form is tried first (no
+// code that worked stops working: one saved before this keeps its old letters, e.g. an accented letter dropped), then
+// accents folded, then the letters and digits alone (validateNewCode keeps those unique; two codes that would share
+// them answer neither). It widens no guess space: the same letters still have to be right.
+function foldTeacherId(id) {
+  if (!id || typeof id !== 'string') return null;
+  return id.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9-]/g, '');
+}
+const looseTeacherId = (id) => (foldTeacherId(id) || '').replace(/-/g, '');
 // Get a teacher by login code. Returns the full record or null.
 function getByTeacherId(id) {
   const n = normalizeTeacherId(id);
-  return n ? (teachers[n] || null) : null;
+  if (!n) return null;
+  if (teachers[n]) return teachers[n];
+  const f = foldTeacherId(id);
+  if (f && teachers[f]) return teachers[f];
+  const l = looseTeacherId(id);
+  if (l.length < 8) return null;
+  const hits = Object.keys(teachers).filter((k) => looseTeacherId(k) === l);
+  return hits.length === 1 ? teachers[hits[0]] : null;
 }
 // Find which teacher owns a given classroom access code. Returns the
 // teacher record or null. Used when a student enters /homework.html and
@@ -311,20 +386,37 @@ function generateTeacherId() {
   }
   return 'T-' + randomCode(10);  // statistical impossibility fallback
 }
-// A random code of the same shape, for the super-admin's «nuevo código al azar» in /maestro
-function suggestCode() { return 'T-' + randomCode(8); }
-// Generate a 4-digit numeric classroom code. Kid-friendly typing.
+// 🎲 «Sugerir» in /maestro (2026-10-19, his ask: "send suggestions super cartoon style"): an animal + a describer + a
+// food or thing + 2 digits (core/cartoon-codes.js), only one validateNewCode accepts (never a teacher's code, a class
+// code or a retired code). Was 'T-' + 8 random characters (still the fallback).
+function suggestCode() {
+  return CartoonCodes.suggest((c) => validateNewCode(c).ok) || ('T-' + randomCode(8));
+}
+// The class codes kids' accounts are tagged with (server.js hands Students.classroomCodesInUse here: this file never
+// reads student records). A code still on kids, even with no teacher (a deleted teacher's class), is never given to
+// another class: those kids would show up in its roster.
+let _codesOnKids = () => new Set();
+function configure(o) { if (o && typeof o.classCodesOnKids === 'function') _codesOnKids = o.classCodesOnKids; }
+function _onKids() { try { return _codesOnKids() || new Set(); } catch (_) { return new Set(); } }
+// Generate a 4-digit numeric classroom code (1000-9999). Kid-friendly typing. Never one in use, still on kids or
+// retired (a renamed class's old code). crypto randomness since 2026-10-19.
 function generateAccessCode() {
-  const used = new Set();
+  const used = _onKids();
   Object.values(teachers).forEach((t) => {
     (t.accessCodes || []).forEach((c) => used.add(c));
   });
-  for (let i = 0; i < 200; i++) {
-    const candidate = String(1000 + Math.floor(Math.random() * 9000));
-    if (!used.has(candidate)) return candidate;
+  for (let i = 0; i < 400; i++) {
+    const candidate = String(crypto.randomInt(1000, 10000));
+    if (!used.has(candidate) && !isRetiredClassCode(candidate)) return candidate;
+  }
+  for (let n = 1000; n < 10000; n++) {               // (nearly all taken: the first free one)
+    const c = String(n);
+    if (!used.has(c) && !isRetiredClassCode(c)) return c;
   }
   return String(Date.now() % 100000);  // fallback if 9000 codes exhausted
 }
+// 🎲 for a class code in /maestro → Teachers (2026-10-19): the same shape as a new class's code
+function suggestClassCode() { return generateAccessCode(); }
 
 // === CRUD ===
 // Create a new teacher. Returns the new record (with codes filled in).
@@ -388,13 +480,17 @@ function setCodeLevel(teacherId, code, level) {
 // numbers and dashes), at least one letter and one number, not a class code, not another teacher's code, not a code
 // that was ever retired. → { ok: true, code } | { ok: false, error } (Spanish, shown to the teacher).
 function validateNewCode(raw, forTeacherId) {
-  const code = normalizeTeacherId(String(raw || '').trim());
+  // (2026-10-19: accents folded, «dragón» → DRAGON; spaces between words become one dash)
+  const code = foldTeacherId(String(raw || '').trim().replace(/\s+/g, '-')) || '';
   if (!code || code.replace(/-/g, '').length < 8) return { ok: false, error: 'El código necesita al menos 8 letras o números.' };
   if (code.length > 24) return { ok: false, error: 'El código puede tener 24 caracteres como máximo.' };
   if (!/[A-Z]/.test(code) || !/[0-9]/.test(code)) return { ok: false, error: 'Usa letras y números juntos (por ejemplo, una palabra y unos números).' };
-  const self = getByTeacherId(forTeacherId);
-  if (self && self.teacherId === code) return { ok: false, error: 'Ese ya es el código actual.' };
-  if (teachers[code] || isRetired(code)) return { ok: false, error: 'Ese código no se puede usar. Elige otro.' };
+  const self = forTeacherId ? getByTeacherId(forTeacherId) : null;
+  if (self && looseTeacherId(self.teacherId) === looseTeacherId(code)) return { ok: false, error: 'Ese ya es el código actual.' };
+  // (never one that differs from another teacher's only by dashes: a code typed without them must find ONE teacher)
+  if (teachers[code] || isRetired(code) || Object.keys(teachers).some((k) => looseTeacherId(k) === looseTeacherId(code))) {
+    return { ok: false, error: 'Ese código no se puede usar. Elige otro.' };
+  }
   if (getByAccessCode(code)) return { ok: false, error: 'Ese es un código de clase. Elige otro.' };
   if (process.env.WU_ADMIN_PASSWORD && normalizeTeacherId(process.env.WU_ADMIN_PASSWORD) === code) return { ok: false, error: 'Ese código no se puede usar. Elige otro.' };
   return { ok: true, code };
@@ -415,6 +511,7 @@ function changeCode(teacherId, newCodeRaw, onRename) {
   if (!t.uid) t.uid = newUid();
   teachers[v.code] = t;
   if (!meta.retired.includes(codeHash(old))) meta.retired.push(codeHash(old));
+  if (!meta.retiredLoose.includes(looseHash(old))) meta.retiredLoose.push(looseHash(old));   // (2026-10-19)
   saveMeta();
   persistNow();                                    // at once: a restart right after must already know the new code
   try { if (typeof onRename === 'function') onRename(old, v.code); } catch (e) { console.warn('[teachers] rename hook failed:', e.message); }
@@ -426,14 +523,118 @@ function getByUid(uid) {
   return Object.values(teachers).find((t) => t && t.uid === uid) || null;
 }
 
+// ── 🆕 2026-10-19 /maestro → Teachers (super admin): a teacher's name, and a class code renamed ──────────────────────
+// Name / email / country of one teacher (by uid). Only the fields given change; an empty email or country clears it.
+// → { ok, teacher: row, changed: [fields] } | { ok: false, error } (Spanish, shown in the window)
+function updateProfile(uid, patch) {
+  const t = getByUid(uid);
+  if (!t) return { ok: false, error: 'No encontramos a esa maestra o maestro. Abre la pestaña otra vez.' };
+  const p = patch && typeof patch === 'object' ? patch : {};
+  const next = {};
+  if ('displayName' in p) {
+    // eslint-disable-next-line no-control-regex
+    const n = String(p.displayName == null ? '' : p.displayName).replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim();
+    if (!n) return { ok: false, error: 'Escribe el nombre.' };
+    if (n.length > 60) return { ok: false, error: 'El nombre puede tener 60 letras como máximo.' };
+    next.displayName = n;
+  }
+  if ('email' in p) {
+    const e = String(p.email == null ? '' : p.email).trim();
+    if (e && (e.length > 120 || !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(e))) return { ok: false, error: 'Ese correo no parece bien escrito. Revísalo o déjalo vacío.' };
+    next.email = e || null;
+  }
+  if ('country' in p) {
+    const c = String(p.country == null ? '' : p.country).trim().toUpperCase();
+    if (c && !/^[A-Z]{2,3}$/.test(c)) return { ok: false, error: 'El país son 2 o 3 letras, o déjalo vacío.' };
+    next.country = c || null;
+  }
+  const changed = Object.keys(next).filter((k) => (t[k] == null ? null : t[k]) !== next[k]);
+  if (!changed.length) return { ok: true, teacher: row(t), changed: [] };
+  const before = {};
+  changed.forEach((k) => { before[k] = t[k]; t[k] = next[k]; });
+  if (!persistNow()) {
+    changed.forEach((k) => { t[k] = before[k]; });
+    return { ok: false, error: 'No se pudo guardar. Vuelve a intentarlo.' };
+  }
+  console.log('[teachers] a teacher\'s ' + (changed.includes('displayName') ? 'name' : 'details') + ' changed (' +
+    (t.isSuperAdmin ? 'super-admin, ' : '') + String(t.displayName || '').slice(0, 30) + ')');
+  return { ok: true, teacher: row(t), changed };
+}
+// The rules for a class code (the 4 numbers kids typed at /homework, like the ones createTeacher makes): 4 digits from
+// 1000 to 9999, not another class's, not a retired one (a renamed class's old code; the same teacher may take hers
+// back), never a teacher code. `current`: the code being renamed; `uid`: its teacher. → { ok, code } | { ok: false, error }
+// `kidsMoved`: the rename's own kids already carry it (commitClassCodeRename runs after server.js moved them)
+function validateNewClassCode(raw, current, uid, kidsMoved) {
+  const code = normClassCode(raw);
+  if (!/^\d{4}$/.test(code)) return { ok: false, error: 'El código de clase son 4 números.' };
+  if (code[0] === '0') return { ok: false, error: 'Que no empiece con 0: del 1000 al 9999.' };
+  if (current && code === normClassCode(current)) return { ok: false, error: 'Ese ya es el código de esta clase.' };
+  if (getByAccessCode(code)) return { ok: false, error: 'Otra clase ya usa ese código. Elige otro.' };
+  if (!kidsMoved && _onKids().has(code)) return { ok: false, error: 'Ese código lo tienen alumnos de una clase anterior. Elige otro.' };
+  const r = _retiredClass(code);
+  if (r && !(uid && r.by === uid)) return { ok: false, error: 'Ese código ya lo usó otra clase y no se puede repetir. Elige otro.' };
+  if (teachers[code] || isRetired(code) || (process.env.WU_ADMIN_PASSWORD && normClassCode(process.env.WU_ADMIN_PASSWORD) === code)) {
+    return { ok: false, error: 'Ese código no se puede usar. Elige otro.' };
+  }
+  return { ok: true, code };
+}
+// May teacher `uid` rename class code `from` to `to`? (no change yet) → { ok, teacher, from, to } | { ok: false, error }
+function checkClassCodeRename(uid, fromRaw, toRaw, kidsMoved) {
+  const t = getByUid(uid);
+  if (!t) return { ok: false, error: 'No encontramos a esa maestra o maestro. Abre la pestaña otra vez.' };
+  const from = normClassCode(fromRaw);
+  if (!from || !(t.accessCodes || []).includes(from)) return { ok: false, error: 'Ese código de clase ya no es de esta maestra. Abre la pestaña otra vez.' };
+  const v = validateNewClassCode(toRaw, from, t.uid, kidsMoved);
+  if (!v.ok) return v;
+  return { ok: true, teacher: t, from, to: v.code };
+}
+// The teacher's side of a class-code rename (server.js moves the kids FIRST, then calls this): the code takes the same
+// place in accessCodes, its level moves with it (codeLevels), and the old code is retired (only this teacher may take
+// it back). The retirement is written first (teachers-meta.json), then the teacher file; undone if the disk refuses.
+// `keepOnFail` (server.js, when the kids could not be moved back either): kept in memory and saved by the next write,
+// so the kids and their teacher never disagree. → { ok, teacher: row, pending? } | { ok: false, error }
+function commitClassCodeRename(uid, fromRaw, toRaw, keepOnFail) {
+  const c = checkClassCodeRename(uid, fromRaw, toRaw, true);
+  if (!c.ok) return c;
+  const { teacher: t, from, to } = c;
+  const before = { accessCodes: t.accessCodes.slice(), codeLevels: Object.assign({}, t.codeLevels || {}), retiredClass: meta.retiredClass.slice() };
+  const undo = () => { t.accessCodes = before.accessCodes; t.codeLevels = before.codeLevels; meta.retiredClass = before.retiredClass; };
+  t.accessCodes = t.accessCodes.map((x) => (x === from ? to : x));
+  if (t.codeLevels && typeof t.codeLevels === 'object' && Object.prototype.hasOwnProperty.call(t.codeLevels, from)) {
+    t.codeLevels[to] = t.codeLevels[from];
+    delete t.codeLevels[from];
+  }
+  const toHash = classHash(to);
+  meta.retiredClass = meta.retiredClass.filter((r) => r && r.h !== toHash);      // taken back by its own teacher
+  meta.retiredClass.push({ h: classHash(from), by: t.uid, at: Date.now() });
+  const metaOk = saveMeta();
+  const fileOk = metaOk && persistNow();
+  if (!fileOk) {
+    if (keepOnFail) {
+      scheduleSave();
+      console.warn('[teachers] a class code was changed in memory only (the disk refused; saved by the next write)');
+      return { ok: true, teacher: row(t), pending: true };
+    }
+    undo();
+    if (metaOk) saveMeta();                                   // (the retirement goes back too)
+    return { ok: false, error: 'No se pudo guardar. Vuelve a intentarlo.' };
+  }
+  console.log('[teachers] a class code was changed (' + String(t.displayName || '').slice(0, 30) + ')');
+  return { ok: true, teacher: row(t) };
+}
+
 // Delete a teacher (super-admin only). Their students get orphaned
 // (classroomCode survives on the records but no teacher owns the code).
 function deleteTeacher(teacherId) {
   const n = normalizeTeacherId(teacherId);
   if (!n || !teachers[n]) return false;
   if (teachers[n].isSuperAdmin) return false;  // can't delete super admin
+  // (2026-10-19) a deleted teacher's code is retired like a changed one: never taken again, an old tab hears «ya se cambió»
+  if (!meta.retired.includes(codeHash(n))) meta.retired.push(codeHash(n));
+  if (!meta.retiredLoose.includes(looseHash(n))) meta.retiredLoose.push(looseHash(n));
+  saveMeta();
   delete teachers[n];
-  scheduleSave();
+  persistNow();
   return true;
 }
 // Touch lastSeen on each successful login.
@@ -445,6 +646,7 @@ function touchLastSeen(teacherId) {
 function row(t) {
   return {
     teacherId: t.teacherId,
+    uid: t.uid,            // (2026-10-19) /maestro's edit calls name a teacher by uid, never by the code in the URL
     displayName: t.displayName,
     email: t.email,
     country: t.country,
@@ -485,4 +687,11 @@ module.exports = {
   validateNewCode,
   suggestCode,
   isRetired,
+  configure,
+  updateProfile,
+  validateNewClassCode,
+  checkClassCodeRename,
+  commitClassCodeRename,
+  suggestClassCode,
+  isRetiredClassCode,
 };

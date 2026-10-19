@@ -523,6 +523,54 @@ function setClassroomCode(code, classroomCode) {
   }
   return true;
 }
+// 🆕 2026-10-19 (/maestro → Teachers, super admin: a class code renamed) — every account tagged with class code `from`
+// moves to `to`, the live ones AND the ones resting in the archive (a kid who comes back later must land in the same
+// class at the same level), plus the old top-level `accessCode` some early records kept. Nothing else changes (not
+// lastSeen: a rename is not the kid's activity; homework history keeps the code it was typed with). Written at once,
+// the live file then the archive; when the disk refuses, every account goes back as it was and the answer says so.
+// Refused while the archive file can't be read (its accounts could not move). → { ok, live, archived } | { ok: false, error }
+const _ccNorm = (c) => String(c == null ? '' : c).trim().toUpperCase();
+// every class code some account (live or archived) is tagged with: a code still on kids is never handed to another
+// class (a deleted teacher's kids keep theirs)
+function classroomCodesInUse() {
+  const s = new Set();
+  [records, archive].forEach((map) => Object.values(map).forEach((r) => {
+    if (r && r.classroomCode) s.add(_ccNorm(r.classroomCode));
+    if (r && typeof r.accessCode === 'string' && r.accessCode.trim()) s.add(_ccNorm(r.accessCode));   // (early records' own field)
+  }));
+  return s;
+}
+function countByClassroomCode(code) {
+  const c = _ccNorm(code);
+  const n = (map) => Object.values(map).filter((r) => r && _ccNorm(r.classroomCode) === c).length;
+  return c ? { live: n(records), archived: n(archive) } : { live: 0, archived: 0 };
+}
+function renameClassroomCode(fromCode, toCode) {
+  const from = _ccNorm(fromCode), to = _ccNorm(toCode);
+  if (!from || !to || from === to) return { ok: false, error: 'codes' };
+  if (archiveBroken) return { ok: false, error: 'archive' };
+  const undo = [];
+  const out = { ok: true, live: 0, archived: 0 };
+  const move = (rec, where) => {
+    if (!rec || typeof rec !== 'object') return;
+    let hit = false;
+    if (rec.classroomCode != null && _ccNorm(rec.classroomCode) === from) { undo.push([rec, 'classroomCode', rec.classroomCode]); rec.classroomCode = to; hit = true; }
+    if (typeof rec.accessCode === 'string' && _ccNorm(rec.accessCode) === from) { undo.push([rec, 'accessCode', rec.accessCode]); rec.accessCode = to; hit = true; }
+    if (hit) out[where]++;
+  };
+  Object.values(records).forEach((r) => move(r, 'live'));
+  Object.values(archive).forEach((r) => move(r, 'archived'));
+  if (!undo.length) return out;
+  if (out.archived) archiveDirty = true;
+  const wrote = persistNow();
+  if (!wrote || (out.archived && archiveDirty)) {        // the live file or the archive refused: everything back
+    undo.reverse().forEach(([rec, k, v]) => { rec[k] = v; });
+    if (out.archived) archiveDirty = true;
+    persistNow();
+    return { ok: false, error: 'disk' };
+  }
+  return out;
+}
 // 🆕 2026-09-15 — HSK level per student, stamped at every /homework entry
 // from the access code they typed (Teachers.levelForAccessCode). So a kid
 // who moves up just starts using the HSK2 code and their portal reshapes.
@@ -1350,6 +1398,9 @@ module.exports = {
   setAvatar,
   setDisplayName,
   setClassroomCode,
+  renameClassroomCode,     // 🆕 2026-10-19 a class code renamed in /maestro
+  countByClassroomCode,
+  classroomCodesInUse,
   setLevel,
   setLevelAccess,
   updateRuta,

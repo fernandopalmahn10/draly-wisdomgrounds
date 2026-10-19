@@ -17,7 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const DATA_DIR   = path.join(__dirname, '..', 'data');
+const DATA_DIR   = process.env.DRALY_DATA_DIR || path.join(__dirname, '..', 'data');   // tests: their own folder (2026-10-19)
 const GUIDES_DIR = path.join(DATA_DIR, 'guides');
 const MANIFEST   = path.join(DATA_DIR, 'guides.json');
 
@@ -86,6 +86,16 @@ function list(classroomCode) {
     .sort((a, b) => (a.exp || '').localeCompare(b.exp || '') || (a.ts - b.ts));
 }
 
+// 🆕 2026-10-19 a class code renamed in /maestro → Teachers: the guides meant for that class follow. → how many
+function renameClassroomCode(from, to) {
+  const f = String(from || '').trim().toUpperCase(), t = String(to || '').trim().toUpperCase();
+  if (!f || !t || f === t) return 0;
+  let n = 0;
+  Object.values(guides).forEach((g) => { if (g && g.classroomCode === f) { g.classroomCode = t; n++; } });
+  if (n) persist();
+  return n;
+}
+
 try { load(); } catch (e) { console.error('[guides] load crashed:', e.message); guides = {}; }
 
-module.exports = { addGuide, deleteGuide, get, filePath, list, load };
+module.exports = { addGuide, deleteGuide, get, filePath, list, load, renameClassroomCode };

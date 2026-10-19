@@ -803,6 +803,87 @@ input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--ink); flex
 .m-teacher-result-label { display: block; font-size: 0.8125rem; font-weight: 800; color: #285a3c; margin-bottom: 2px; }
 .m-teacher-result-code { display: inline-block; padding: 4px 12px; font-weight: 900; font-size: 1.125rem; letter-spacing: 0.1em; background: #fff; border: 2px solid var(--ink); border-radius: 8px; user-select: all; }
 .m-teacher-result-hint { font-size: 0.875rem; font-weight: 700; margin-top: 8px; }
+/* 2026-10-19 · editing a teacher (super admin): ✏️ name and data, a pencil on each class code */
+/* (fresh-eyes review: every button of the row at least 40 px; «Cambiar código» is never the smallest) */
+.m-teacher-edit { margin-top: 8px; min-height: 40px; padding: 4px 12px; font-size: 0.875rem; }
+.m-teacher-row .m-code-change-btn, .m-teacher-row .m-secret-btn { min-height: 40px; padding: 4px 12px; font-size: 0.875rem; }
+/* a class code is its own button: its 4 numbers + ✏️ (the level beside it stays a plain menu) */
+.m-teacher-code.m-cc-edit {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 2px 10px;
+  font-size: 1rem; line-height: 1; color: var(--ink); cursor: pointer;
+  transition: transform 100ms var(--ease-out), background-color 150ms ease;
+}
+.m-cc-pen { font-size: 0.8125rem; letter-spacing: 0; }
+.m-teacher-code.m-cc-edit:active { transform: translateY(1px) scale(0.97); }
+@media (hover: hover) and (pointer: fine) { .m-teacher-code.m-cc-edit:hover { background: var(--gold-soft); } }
+/* the decision of a «¿Seguro?» step reads first */
+.m-step-ask { margin: 0 0 12px; font-weight: 800; font-size: 1.125rem; line-height: 1.3; color: var(--ink); }
+
+/* windows in steps: write → «¿Seguro?» → done (the code shown once) */
+.m-step-card .m-step:not(.hidden) { animation: m-step-in 200ms var(--ease-out) both; }
+@keyframes m-step-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.m-code-field { display: flex; gap: 8px; align-items: stretch; }
+.m-code-field .input { flex: 1 1 auto; min-width: 0; min-height: 52px; font-size: 1.0625rem; }
+.m-dice { flex: 0 0 auto; min-height: 52px; padding: 8px 14px; white-space: nowrap; border-color: var(--ink); background: var(--paper-hi); box-shadow: var(--drop-sm); }
+.m-dice-face { display: inline-block; font-size: 1.25rem; }
+.m-dice.is-rolling .m-dice-face { animation: m-dice-roll 400ms var(--ease-out); }
+@keyframes m-dice-roll { 0% { transform: rotate(0) scale(1); } 45% { transform: rotate(-200deg) scale(1.25); } 100% { transform: rotate(-360deg) scale(1); } }
+.m-field-hint { margin: 8px 2px 4px; color: var(--ink-soft); font-weight: 700; font-size: 0.875rem; }
+.m-cc-input { letter-spacing: 0.3em; font-size: 1.375rem; text-align: center; font-variant-numeric: tabular-nums; }
+.m-cc-input::placeholder { letter-spacing: 0.3em; }
+.m-bigcode {
+  margin: 4px 0 12px; padding: 14px 16px;
+  font: 900 clamp(1.125rem, 4.6vw, 1.625rem)/1.2 'Nunito', sans-serif; letter-spacing: 0.04em; text-align: center;
+  overflow-wrap: anywhere; user-select: all; font-variant-numeric: tabular-nums;
+  background: #fff; border: 2px solid var(--ink); border-radius: 14px; box-shadow: var(--drop-sm);
+}
+.m-bigcode.is-new { background: var(--mint); }
+/* the one authored moment: the new code lands (a rare action, so a little delight is earned) */
+.m-step[data-step="done"]:not(.hidden) .m-bigcode.is-new { animation: m-code-land 280ms var(--ease-out) 60ms both; }
+@keyframes m-code-land { from { opacity: 0.35; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+.m-bigcode.is-old { color: var(--ink-soft); text-decoration: line-through; text-decoration-thickness: 2px; background: var(--paper-hi); border-color: var(--line-2); box-shadow: none; }
+.m-what { margin: 0 0 4px; padding-left: 1.2em; display: grid; gap: 6px; font-weight: 700; font-size: 0.9375rem; }
+.m-what li::marker { color: var(--jade); }
+.m-kids-box { margin: 14px 0 6px; padding: 12px 14px; background: var(--butter); border: 2px solid var(--line-2); border-radius: var(--r-card); }
+.m-kids-title { margin: 0 0 8px; font: 800 1.0625rem/1.2 'Baloo 2', 'Nunito', sans-serif; }
+.m-step-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 10px; margin-top: 6px; }
+/* a long «¿Seguro?» (the class code's) keeps its two buttons in reach, paper around them like .m-sticky-go */
+.m-step-card .m-step-actions { position: sticky; bottom: 0; z-index: 3; padding: 8px 0 4px; background: var(--paper);
+  box-shadow: 0 -10px 16px 2px var(--paper), 0 22px 0 8px var(--paper); }
+.m-step-actions .btn-xl { margin-top: 0; }
+.m-done-badge {
+  display: flex; align-items: center; justify-content: center; gap: 8px; width: fit-content; margin: 4px auto 12px; padding: 6px 14px;
+  font-weight: 900; color: #14623a; background: var(--mint); border: 2px solid rgba(26, 122, 67, 0.35); border-radius: 999px;   /* 5.4:1 on mint */
+}
+.m-done-line { margin: 12px 4px 4px; font-weight: 800; text-align: center; }
+.btn.is-copied { background: var(--mint); }
+.m-cc-swap { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 6px 0 8px; }
+.m-cc-swap .m-bigcode { margin: 0; min-width: 5.5ch; letter-spacing: 0.12em; }
+.m-cc-arrow { font-size: 1.5rem; font-weight: 900; color: var(--ink-soft); }
+.m-cc-count { margin: 4px 0 12px; font-weight: 800; text-align: center; }
+.m-cc-now { letter-spacing: 0.08em; }
+.m-diff { margin: 0 0 12px; display: grid; gap: 8px; }
+.m-diff-row { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: 10px; align-items: baseline; padding: 10px 12px; background: #fff; border: 2px solid var(--line-2); border-radius: 12px; }
+.m-diff dt { font-weight: 800; color: var(--ink-soft); font-size: 0.875rem; }
+.m-diff dd { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font-weight: 800; overflow-wrap: anywhere; }
+.m-diff-old { color: var(--ink-soft); text-decoration: line-through; }
+.m-diff-arrow { color: var(--ink-soft); }
+.m-diff-new { color: var(--ink); }
+/* phones: the code gets the whole width (a cartoon code is ~20 letters), 🎲 under it */
+@media (max-width: 480px) {
+  .m-code-field { flex-wrap: wrap; }
+  .m-dice { flex: 1 1 100%; }
+  .m-code-field .input:not(.m-cc-input) { letter-spacing: 0.03em; }
+}
+@media (max-width: 360px) {
+  .m-step-actions { grid-template-columns: 1fr; }
+  .m-step-actions [data-step-back] { order: 2; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .m-step-card .m-step:not(.hidden) { animation: m-fade 120ms ease-out both; }
+  .m-dice.is-rolling .m-dice-face { animation: none; }
+  .m-step[data-step="done"]:not(.hidden) .m-bigcode.is-new { animation: m-fade 120ms ease-out both; }
+}
 
 /* ── Modals ───────────────────────────────────────────────────── */
 .m-modal {
